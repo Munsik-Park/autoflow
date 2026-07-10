@@ -206,8 +206,13 @@ if [ -f "$DIGEST_JSONL" ]; then
         | \$lines | map(.review_max_severity as \$s | \$enum | index(\$s) != null) | all
       ' '$DIGEST_JSONL' >/dev/null 2>&1"
 
-    assert_true "AC2-dogfood-non-stub (DR6): line 1's gates.gate_plan.avg is a real score (> 0), not the illustration placeholder" \
-      "jq -e 'select(.gates.gate_plan.avg != null) | .gates.gate_plan.avg > 0' <(head -n1 '$DIGEST_JSONL') >/dev/null 2>&1"
+    if [ -s "$DIGEST_JSONL" ]; then
+      assert_true "AC2-dogfood-non-stub (DR6): line 1's gates.gate_plan.avg is a real score (> 0), not the illustration placeholder" \
+        "jq -e 'select(.gates.gate_plan.avg != null) | .gates.gate_plan.avg > 0' <(head -n1 '$DIGEST_JSONL') >/dev/null 2>&1"
+    else
+      echo "  SKIP: AC2-dogfood-non-stub (digest empty — public empty-start tree, D4)"
+      TESTS=$((TESTS + 1))
+    fi
 
     # -------------------------------------------------------------------------
     # AC-7 (issue #979, D2) — one-shot value-preserving corpus migration.
@@ -219,12 +224,26 @@ if [ -f "$DIGEST_JSONL" ]; then
     # -------------------------------------------------------------------------
     assert_true "AC7-migration-no-old-field: no docs/cycle-digest.jsonl line carries the retired codex_max_severity key" \
       "! grep -q 'codex_max_severity' '$DIGEST_JSONL'"
-    assert_true "AC7-migration-value-preserving: the migrated prefix (first snapshot-length lines) of $DIGEST_JSONL still has review_max_severity equal to its own codex_max_severity_before value captured pre-migration ($DIGEST_JSONL_BACKUP); lines appended after migration are out of this assertion's scope" \
-      "jq -e -n --slurpfile before '$DIGEST_JSONL_BACKUP' '
-        [inputs] as \$after
-        | (\$before | length) <= (\$after | length)
-        and ([range(0; \$before|length)] | map(\$before[.].codex_max_severity == \$after[.].review_max_severity) | all)
-      ' '$DIGEST_JSONL' >/dev/null 2>&1"
+    # AC7-migration-value-preserving fires only when the live digest actually
+    # carries the migrated dogfood corpus as its prefix — matched by the full
+    # .issue prefix vector (#953,#954,#951,#847,#973, in order), not a bare
+    # [ -s ] non-empty guard (which would re-arm a guaranteed FAIL on this
+    # repo's own records) and not a line-1-only match (which a future own #953
+    # could re-arm). Empty / own digest → SKIP (feature design §4.3).
+    SNAP_ISSUES="$(jq -r '.issue // empty' "$DIGEST_JSONL_BACKUP" 2>/dev/null | tr '\n' ',')"
+    NSNAP="$(jq -s 'length' "$DIGEST_JSONL_BACKUP" 2>/dev/null)"
+    LIVE_ISSUES="$(head -n "$NSNAP" "$DIGEST_JSONL" 2>/dev/null | jq -r '.issue // empty' 2>/dev/null | tr '\n' ',')"
+    if [ -n "$LIVE_ISSUES" ] && [ "$LIVE_ISSUES" = "$SNAP_ISSUES" ]; then
+      assert_true "AC7-migration-value-preserving: the migrated prefix (first snapshot-length lines) of $DIGEST_JSONL still has review_max_severity equal to its own codex_max_severity_before value captured pre-migration ($DIGEST_JSONL_BACKUP); lines appended after migration are out of this assertion's scope" \
+        "jq -e -n --slurpfile before '$DIGEST_JSONL_BACKUP' '
+          [inputs] as \$after
+          | (\$before | length) <= (\$after | length)
+          and ([range(0; \$before|length)] | map(\$before[.].codex_max_severity == \$after[.].review_max_severity) | all)
+        ' '$DIGEST_JSONL' >/dev/null 2>&1"
+    else
+      echo "  SKIP: AC7-migration-value-preserving (migrated dogfood corpus not present — public empty-start tree, D4)"
+      TESTS=$((TESTS + 1))
+    fi
   else
     assert_true "AC2-schema-fixture-missing: tests/fixtures/cycle-digest-schema.json exists (F8)" "false"
   fi
