@@ -357,8 +357,8 @@ echo "=== V8 — four-site rename sweep: AC1-DIGEST-EMPTIED -> AC1-DIGEST-NO-INH
 
 assert_true "V8-old-id-gone-in-suite: grep -n AC1-DIGEST-EMPTIED tests/test-issue-985-doc-assertions.sh returns zero matches" \
   "[ -z \"\$(grep -n 'AC1-DIGEST-EMPTIED' '$SUITE_985' 2>/dev/null)\" ]"
-assert_true "V8-old-id-gone-repowide: grep -rn AC1-DIGEST-EMPTIED tests/ docs/ returns zero matches" \
-  "[ -z \"\$(grep -rn 'AC1-DIGEST-EMPTIED' '$PROJECT_ROOT/tests' '$PROJECT_ROOT/docs' 2>/dev/null)\" ]"
+assert_true "V8-old-id-gone-repowide: grep -rn AC1-DIGEST-EMPTIED tests/ docs/ returns zero matches (self-exclusion: this meta-suite is exempt, per 985 AC1-NO-DANGLING-REF's own-file exclusion discipline)" \
+  "[ -z \"\$(git -C '$PROJECT_ROOT' grep -n 'AC1-DIGEST-EMPTIED' -- tests/ docs/ ':!tests/test-issue-1-guard-contract.sh' 2>/dev/null)\" ]"
 assert_true "V8-sibling-id-distinct-unaffected: AC1-NO-DANGLING-REF still resolves as a distinct, un-renamed ID in the suite" \
   "grep -qF 'AC1-NO-DANGLING-REF' '$SUITE_985'"
 
