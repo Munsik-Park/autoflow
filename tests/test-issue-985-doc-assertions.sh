@@ -25,8 +25,11 @@
 #                             host-purity fixture set (L4) returns empty.
 #     AC1-INTERNAL-DOCS-ABSENT RED - each removed path is absent from
 #                             git ls-files.
-#     AC1-DIGEST-EMPTIED      RED - docs/cycle-digest.jsonl has 0 lines
-#                             (public tree starts empty; path preserved - D4).
+#     AC1-DIGEST-NO-INHERITED-RECORDS
+#                             RED - docs/cycle-digest.jsonl carries no record
+#                             predating the public-release date floor
+#                             (2026-07-11); path preserved, empty tree PASSes,
+#                             own appends PASS, inherited history FAILs - D4.
 #     AC1-NO-DANGLING-REF     RED - no surviving tracked file references the
 #                             adr/0001 basename once it is deleted (known
 #                             inbound refs per feature design Part 7/W4).
@@ -82,7 +85,7 @@
 # are not expected to be Red now.
 #
 # RED expectation (pre-implementation, this commit): AC1-SWEEP, AC1-DOMAIN,
-# AC1-INTERNAL-DOCS-ABSENT, AC1-DIGEST-EMPTIED, AC1-NO-DANGLING-REF,
+# AC1-INTERNAL-DOCS-ABSENT, AC1-DIGEST-NO-INHERITED-RECORDS, AC1-NO-DANGLING-REF,
 # AC2-KEY-CONSISTENT, AC3-SPDX-COVERAGE, AC3-WORKFLOW-COUNT, AC4-INSTALL-PATH,
 # AC4-LICENSE-SUMMARY, AC-LICENSE all FAIL (target artifacts/tokens absent
 # from current HEAD; verified this session against the design branch tree).
@@ -193,9 +196,19 @@ assert_false "AC1-INTERNAL-DOCS-ABSENT: docs/adr/0001-*.md is absent from git ls
 assert_true "AC1-BACKLOG-EMPTY-START: docs/improvement-backlog.md is tracked with no internal finding blocks" \
   "git ls-files --error-unmatch 'docs/improvement-backlog.md' >/dev/null 2>&1 && ! grep -qE '^### \`(xissue-scan-|[a-zA-Z0-9_-]+-[0-9])' '$PROJECT_ROOT/docs/improvement-backlog.md' 2>/dev/null"
 
-# AC1-DIGEST-EMPTIED: public tree starts with an empty cycle-digest.jsonl.
-assert_true "AC1-DIGEST-EMPTIED: docs/cycle-digest.jsonl has 0 lines (path preserved, D4)" \
-  "[ -f '$CYCLE_DIGEST' ] && [ \"\$(wc -l < '$CYCLE_DIGEST' | tr -d ' ')\" = '0' ]"
+# AC1-DIGEST-NO-INHERITED-RECORDS: the public tree carries no inherited
+# internal-dogfood history in docs/cycle-digest.jsonl. The invariant D4 protects
+# is provenance ("no pre-release record leaked"), not a permanent zero count:
+# the digest is a WRITE-ONLY-FORWARD data plane, so this repo's own first
+# HANDOFF append is legitimate and must not FAIL. Discriminator: the
+# public-release date floor (2026-07-11). Provenance rests on
+# emit-cycle-digest.sh:158 copying date: $s.date from the cycle's state file,
+# which for any own public cycle is PREFLIGHT-stamped on/after the release date
+# (the repo has no public history before it); the inherited snapshot corpus is
+# all dated 2026-07-09 < floor. Empty tree → [inputs]=[] → all=true → PASS.
+RELEASE_DATE='2026-07-11'
+assert_true "AC1-DIGEST-NO-INHERITED-RECORDS: docs/cycle-digest.jsonl carries no record predating the public release (path preserved, D4)" \
+  "[ -f '$CYCLE_DIGEST' ] && jq -e -n --arg floor '$RELEASE_DATE' '[inputs] as \$l | \$l | map(.date >= \$floor) | all' '$CYCLE_DIGEST' >/dev/null 2>&1"
 
 # AC1-NO-DANGLING-REF: once docs/adr/0001 is deleted, no surviving tracked
 # file references its basename (known inbound refs per feature design
