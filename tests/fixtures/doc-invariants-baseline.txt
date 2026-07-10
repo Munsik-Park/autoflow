@@ -1,0 +1,270 @@
+# Issue #951 — capture-before-delete baseline (E5, feature §7.1)
+# Captured at RED time, before the five suites are deleted at GREEN.
+# Full stdout of each suite over the current tree (HEAD: 012d890).
+# Used by the RED suite (tests/test-issue-951-registry.sh) as the equivalence
+# oracle: the runner must reproduce the same PASS/FAIL verdict set for the
+# permanent (migrated) assertions of each suite (see migration map, feature §6).
+# Cycle-scoped/diff-delta assertions in the 'retired' column are NOT part of
+# the reproduction obligation (they are dropped/promoted/deferred per §6 disposition table).
+
+===== SUITE: tests/test-issue-794-doc-assertions.sh =====
+=== Pre-flight: target files present ===
+  PASS: present: docs/autoflow-guide.md
+  PASS: present: docs/external-review-sequencing.md
+  PASS: present: CLAUDE.md
+  PASS: present: docs/git-workflow.md
+
+=== AC1/AC6: ordering — target-centric lead precedes *Secondary (multi-repo):* (RED discriminators) ===
+  PASS: autoflow-guide.md HANDOFF step 4: host-only lead precedes secondary sub-repo bullet (lead=579 < secondary=580)
+  PASS: autoflow-guide.md Merge Sequencing: target-centric intro precedes secondary 5-step lead (lead=631 < secondary=635)
+  PASS: external-review-sequencing.md Per-issue procedure: host-only cycle heading precedes multi-repo cycle heading (lead=39 < secondary=43)
+  PASS: external-review-sequencing.md: demoted Multi-repo cycle subsection carries the *Secondary (multi-repo):* lead-in
+  PASS: external-review-sequencing.md: ### Payload schema section removed (dispatch machine retired, issue #795)
+  PASS: CLAUDE.md PR Flow: host-only-target-centric lead precedes secondary sub-repo case (lead=365 < secondary=366)
+  PASS: CLAUDE.md PR Issue Auto-Close: single-PR primary sentence precedes secondary two-PR block (lead=371 < secondary=373)
+  PASS: git-workflow.md Issue Auto-Close: retained single-PR Closes example precedes appended secondary cross-ref pointer (lead=212 < secondary=215)
+
+=== AC6: cross-document consistency — no residual in-scope file leads multi-repo-first ===
+    (aggregate of the six AC1 ordering checks above; a single absent marker or
+     reversed order anywhere fails the cross-doc consistency sweep)
+  PASS: AC6: FAIL_so_far reflects any AC1 ordering miss (informational aggregate, not a new independent check)
+
+=== AC2: preserved-token manifest (grep -c >= 1 per file; expected PASS pre- and post-change) ===
+  PASS: autoflow-guide.md: 'Part of Munsik-Park/autoflow#N' preserved
+  PASS: autoflow-guide.md: 'Closes #N' preserved
+  PASS: autoflow-guide.md: 'blocked-by-review' preserved
+  PASS: autoflow-guide.md: 'blocked-by-subrepo' preserved
+  PASS: autoflow-guide.md: 'subrepo-merged' removed
+  PASS: autoflow-guide.md: 'repository_dispatch' removed
+  PASS: autoflow-guide.md: dispatch payload triple 'subrepo_pr' removed
+  PASS: autoflow-guide.md: dispatch payload triple 'merge_commit_sha' removed (reworded to concept word)
+  PASS: external-review-sequencing.md: 'blocked-by-review' preserved
+  PASS: external-review-sequencing.md: 'blocked-by-subrepo' preserved
+  PASS: external-review-sequencing.md: 'subrepo-merged' removed
+  PASS: external-review-sequencing.md: 'repository_dispatch' removed
+  PASS: external-review-sequencing.md: dispatch payload field 'subrepo_pr' removed
+  PASS: external-review-sequencing.md: dispatch payload field 'merge_commit_sha' preserved (reconcile-preflight prose)
+  PASS: external-review-sequencing.md: gitlink 'BASE' guard token preserved
+  PASS: external-review-sequencing.md: gitlink 'MAIN' guard token preserved
+  PASS: external-review-sequencing.md: gitlink 'TARGET' guard token preserved
+  PASS: external-review-sequencing.md: exit codes 64/65 removed (payload validation)
+  PASS: external-review-sequencing.md: exit codes 75-80 removed (dispatch verification)
+  PASS: CLAUDE.md: 'HOST-CLOSE-LINE' marker preserved
+  PASS: CLAUDE.md: 'Part of Munsik-Park/autoflow#N' preserved
+  PASS: CLAUDE.md: 'Closes #N' preserved
+  PASS: CLAUDE.md: 'blocked-by-review' preserved
+  PASS: git-workflow.md: 'blocked-by-subrepo' preserved
+  PASS: git-workflow.md: 'subrepo-merged' preserved
+  PASS: git-workflow.md: 'merge_commit_sha' preserved
+  PASS: git-workflow.md: gitlink 'BASE'/'MAIN'/'TARGET' tokens preserved
+  PASS: git-workflow.md: fenced 'Closes #<issue-number>' example preserved
+
+=== AC3: invariant preservation — no-merge [MUST] / plain-prose verbatim (grep -F; expected PASS) ===
+  PASS: autoflow-guide.md:548 no-merge [MUST] (gh pr merge / push to default branch) verbatim
+  PASS: autoflow-guide.md:589 no-merge [MUST] (steps 1, 4, or 5) verbatim
+  PASS: CLAUDE.md:211 plain-prose 'Merging is external; AutoFlow does not merge' verbatim
+  PASS: CLAUDE.md:310 hook-gate 'AutoFlow never merges; merging is external' verbatim
+  PASS: external-review-sequencing.md is NOT keyed for the no-merge invariant (grounded exclusion, ledger E3)
+
+=== AC4: generalize-only — per-file [MUST]/[DENY] rule markers + GATE: definition headings, count_after == count_before (diff-scoped) ===
+  PASS: docs/autoflow-guide.md: no net-new [MUST]/[DENY] rule marker or GATE: definition heading beyond the #953-mandated cycle-digest markers (added=0, removed=0, exempt=0)
+  PASS: docs/external-review-sequencing.md: no net-new [MUST]/[DENY] rule marker or GATE: definition heading beyond the #953-mandated cycle-digest markers (added=0, removed=0, exempt=0)
+  PASS: CLAUDE.md: no net-new [MUST]/[DENY] rule marker or GATE: definition heading beyond the #953-mandated cycle-digest markers (added=0, removed=0, exempt=0)
+  PASS: docs/git-workflow.md: no net-new [MUST]/[DENY] rule marker or GATE: definition heading beyond the #953-mandated cycle-digest markers (added=0, removed=0, exempt=0)
+
+=== AC5: scope boundary (S7 vs S11b/#799) — no physical removal of multi-repo-only mechanisms ===
+  PASS: AC5a: 'HOST-CLOSE-LINE' still exists (not physically removed; S11b-only)
+  PASS: AC5b: 'Part of Munsik-Park/autoflow#N' still exists in autoflow-guide.md (not physically removed)
+  PASS: AC5c: 'Part of Munsik-Park/autoflow#N' still exists in CLAUDE.md (not physically removed)
+  PASS: AC5d-keep: 'blocked-by-subrepo' label gate still exists in autoflow-guide.md
+  PASS: AC5d-invert: 'subrepo-merged' status-check machine removed from autoflow-guide.md
+  PASS: AC5e: sub-repo sequencing still exists in git-workflow.md (frozen L120-157)
+
+=== AC1/AC6 negative guard: git-workflow.md Merge Sequencing / Pointer reconciliation byte-unchanged ===
+    (feature §3/§10.1, ledger E5 — these sections are OUT of the S7 change surface;
+     #794 must NOT touch L120-157, they were already re-narrated target-centric by #793)
+  PASS: git-workflow.md L120-157 (Merge Sequencing + Pointer reconciliation) has no diff hunk vs merge-base
+
+==============================
+Results: 57/57 passed, 0 failed
+==============================
+===== END SUITE: tests/test-issue-794-doc-assertions.sh (exit=0) =====
+
+===== SUITE: tests/test-issue-796-doc-assertions.sh =====
+=== Pre-flight: target files present ===
+  PASS: present: CLAUDE.md
+  PASS: present: docs/teammate-contracts.md
+  PASS: present: docs/repo-boundary-rules.md
+  PASS: present: .claude/agents/autoflow-implementer.md
+
+=== AC1 / WI-1: CLAUDE.md:26 read-access inert-marking (RED discriminator) ===
+  PASS: WI1a: marker '*Secondary (multi-repo):*' + qualifier 'when the host contains submodules' + read-access sentence adjacent (single line)
+  PASS: WI1b: scope-constraint substring 'modifications outside the assigned scope' survives
+
+=== AC1 / WI-2: CLAUDE.md Agent Teams vocabulary — sub-repo AIs -> teammates (RED discriminator) ===
+  PASS: WI2a (:49): 'coordinates sub-repo AIs' no longer present
+  PASS: WI2a': (:49) 'coordinates teammates' present
+  PASS: WI2b (:104): 'Communication with sub-repo AIs uses' no longer present
+  PASS: WI2b' (:104): 'Communication with teammates uses' present
+  PASS: WI2c (:139): 'outside every sub-repo AI'\''s scope' no longer present
+  PASS: WI2c' (:139): 'outside every teammate'\''s scope' present
+  PASS: WI2d (:145): 'orchestrator and sub-repo AIs follow the same rules' no longer present
+  PASS: WI2d' (:145): 'orchestrator and teammates follow the same rules' present
+  PASS: WI2-guard: Deployment Topology 'sub-repo AIs own their directories' unchanged (out of scope)
+
+=== AC1 / WI-3: teammate-contracts.md:39/:43 push-primary, fork secondary (RED discriminator) ===
+  PASS: WI3a: marker adjacent to the fork-branch clause
+  PASS: WI3b: a push-to-origin/target-primary sentence exists
+  PASS: WI3c: push-to-origin/target-primary sentence precedes the fork-and-PR sentence (line 40 < 41)
+
+=== AC1 / WI-4: autoflow-implementer.md:13-14 target-scope primary (RED discriminator) ===
+  PASS: WI4a: marker adjacent to the sub-repo-directory clause
+  PASS: WI4b: 'target scope' primary reading present on the scope-constraint line
+
+=== AC2: preservation guards (fully automated; expected PASS pre- and post-edit) ===
+  PASS: AC2a: fork/upstream mechanics retained in teammate-contracts.md
+  PASS: AC2b: CLAUDE.md read-access clause text still present (not deleted; matches both pre- and post-edit wording)
+  PASS: AC2c: repo-boundary-rules.md Permission Matrix header row present verbatim
+  PASS: AC2d: Permission Matrix Submodule AI row present verbatim
+  PASS: AC2e: Permission Matrix Test AI row present
+  PASS: AC2f: Permission Matrix Evaluation AI row present
+  PASS: AC2g: Permission Matrix Orchestrator AI row present
+  PASS: AC2h: no deletion-only hunk removes fork-branch content (teammate-contracts.md)
+
+=== AC3: generalize-only — no new [MUST]/[DENY]/threshold/gate introduced ===
+  PASS: AC3a: no net-new [MUST]/[DENY] tag introduced by the diff (added=0, removed=0, exempt_955=0)
+
+==============================
+Results: 29/29 passed, 0 failed
+==============================
+===== END SUITE: tests/test-issue-796-doc-assertions.sh (exit=0) =====
+
+===== SUITE: tests/test-issue-797-doc-invocation.sh =====
+=== Pre-flight: target files present ===
+  PASS: present: tests/plugin/manual-scenarios-797.md
+  PASS: present: tests/plugin/manual-scenarios-792.md
+
+=== AC1a — manual-scenarios-792.md:25 corrected invocation dialect ===
+  PASS: AC1a: 'bash setup/init.sh --target' present in 792.md
+  PASS: AC1a: no bare-sh 'init.sh' invocation remains in 792.md
+
+=== AC1b — manual-scenarios-797.md:55 corrected invocation dialect ===
+  PASS: AC1b: 'bash <path-to-claude-autoflow>/setup/init.sh --target' present in 797.md
+  PASS: AC1b: no bare-sh 'init.sh' invocation remains in 797.md
+
+=== AC2 — whole-repo class sweep (non-vacuity keystone) ===
+  sweep matches (0):
+  PASS: AC2: whole-repo *.md class sweep for '\bsh [^ ]*init.sh' == 0 matches (found: 0)
+
+=== AC3 — drift-check.sh over-correction guard ===
+  PASS: AC3: no 'bash ...drift-check.sh' in tests/plugin/manual-scenarios-797.md (over-correction)
+  PASS: AC3: no 'bash ...drift-check.sh' in tests/plugin/manual-scenarios-792.md (over-correction)
+  drift-check.sh 'sh' mention count: 797.md=1, 792.md=3 (confirmatory, no hardcoded expectation)
+
+=== AC4 — scope containment (diff base = cycle-3 pre-edit HEAD) ===
+  PASS: AC4: README.md absent from change set
+  PASS: AC4: setup/SETUP-GUIDE.md absent from change set
+  PASS: AC4: setup/init.sh absent from change set
+
+==============================
+Results: 12/12 passed, 0 failed
+==============================
+===== END SUITE: tests/test-issue-797-doc-invocation.sh (exit=0) =====
+
+===== SUITE: tests/test-issue-800-doc-assertions.sh =====
+=== AC5-ROUTE (RED discriminator) — forward-routing rule in BOTH docs ===
+  PASS: AC5-ROUTE-b: CLAUDE.md Issue Management states the AutoFlow-framework→claude-autoflow branch (new rule text, not the pre-existing host-repo bullet)
+  PASS: AC5-ROUTE-c: repo-boundary-rules.md Backlog states the forward-routing rule (llmroute)
+
+=== AC5-NOTE-FLIP (RED discriminator) — transition note executed-state flip ===
+  PASS: AC5-NOTE-FLIP-neg: stale '...is not current operation' phrase absent
+  PASS: AC5-NOTE-FLIP-pos: transition note states 'executed in S12 (#800)'
+
+=== AC5-COHERENCE (cycle-2 RED discriminator, PR #947 Codex Medium F2) ===
+  PASS: AC5-COHERENCE-a-neg: CLAUDE.md Issue Management drops the unscoped 'hosts no tracker of its own; its work items are filed against the host repository' sentence
+  PASS: AC5-COHERENCE-a-pos: CLAUDE.md Issue Management scopes tracker placement by repo composition (D4 literal 'Tracker placement follows')
+  PASS: AC5-COHERENCE-b-neg: Backlog drops the unscoped 'live in the host repository; no target scope hosts its own tracker' sentence
+  PASS: AC5-COHERENCE-b-pos: Backlog scopes tracker placement by repo composition (D4 literal 'Tracker placement follows')
+
+=== AC4-PR-RULE (RED discriminator) — Closes→Part-of service-PR rule documented ===
+  PASS: AC4-PR-RULE-b (#82 guard): no bare unfenced 'Closes #<digits>' plaintext introduced
+
+=== AC6-PRESERVE (guard, PASS pre+post) — framework-routing invariants intact ===
+  PASS: AC6a: 'Forks do not host issues' retained in CLAUDE.md
+  PASS: AC6b: 'ai:<agent>' label-routing language retained in CLAUDE.md
+  PASS: AC6c: Permission Matrix table header retained in repo-boundary-rules.md
+  PASS: AC6d: no contiguous run >15 deleted lines in CLAUDE.md/repo-boundary-rules.md diff
+
+=== AC7-SCOPE (guard) — diff ⊆ Issue-Management/Backlog + test/CI surface ===
+  changed files: 0
+  PASS: AC7-SCOPE: git diff --name-only ⊆ allow-list (no disallowed files)
+
+=== AC-CI-REGISTER (guard) — suite wired into e2e-dummy-target.yml ===
+  PASS: AC-CI-a: e2e-dummy-target.yml references test-issue-800-doc-assertions.sh
+  PASS: AC-CI-b: reference appears in a 'paths:' trigger block
+  PASS: AC-CI-c: reference appears in a 'run:' step
+
+==============================
+Results: 19/19 passed, 0 failed
+==============================
+===== END SUITE: tests/test-issue-800-doc-assertions.sh (exit=0) =====
+
+===== SUITE: tests/test-issue-949-manifest-regen-doc.sh =====
+=== AC1 (RED discriminator) — GREEN [MUST] manifest-regen item ===
+  PASS: AC1-a: GREEN section carries a [MUST] item naming setup/gen-manifest-hashes.sh
+  PASS: AC1-b: GREEN section states the same-commit obligation (stage the regenerated manifest in this/the same commit)
+  PASS: AC1-c1: GREEN section documents the git diff --name-only <base>...HEAD predicate
+  PASS: AC1-c2: GREEN section documents the jq .artifacts[].source read of setup/manifest.json
+  PASS: AC1-c3: GREEN section states the intersection/non-empty trigger predicate (intersects)
+  PASS: AC1-c4 (self-entry exclusion, DC-6): GREEN section carries the 'any path other than setup/manifest.json itself' exclusion clause
+
+=== AC1-EXEC (executable oracle) — the documented pipeline actually detects ===
+  intersection: 
+  FAIL: AC1-EXEC: comm -12 <(git diff --name-only $BASE...HEAD) <(jq sources, excl. self) is non-empty for this cycle's own diff
+  PASS: AC1-EXEC-doc: GREEN section documents the executed mechanical predicate (same tokens as AC1-c)
+
+=== AC2 (RED discriminator) — VALIDATE manifest-coherence checklist item ===
+  PASS: AC2: VALIDATE section carries a manifest-coherence checklist item
+
+=== AC2-COHERENCE (guard) — GREEN and VALIDATE reference the SAME detector ===
+  PASS: AC2-COHERENCE-a: GREEN section references 'Derived artifacts'
+  PASS: AC2-COHERENCE-b: VALIDATE section references 'Derived artifacts'
+
+=== AC3 (RED discriminator) — ARCHITECT committed-surface allow-list convention ===
+  PASS: AC3: ARCHITECT section states the pre-register setup/manifest.json allow-list convention
+
+=== AC-CANON (RED discriminator) — canonical 'Derived artifacts' subsection ===
+  PASS: AC-CANON-heading: docs/submodule-common-rules.md carries a '### Derived artifacts' heading
+  PASS: AC-CANON-body: the Derived artifacts subsection names setup/manifest.json, setup/gen-manifest-hashes.sh, the diff-∩-sources trigger, and the same-commit obligation
+
+=== AC-DOGFOOD (Green-state guard, conditional — NOT a RED discriminator) ===
+  PASS (vacuous): AC-DOGFOOD — diff-∩-sources is empty pre-GREEN, consequent not evaluated
+
+=== AC-CLOSURE (guard) — manifest source-row membership unchanged ===
+  PASS: AC-CLOSURE: jq '.artifacts[].source' source-row set is identical at <base> and HEAD
+
+=== AC-CI-REGISTER (RED discriminator) — suite wired into e2e-dummy-target.yml ===
+  PASS: AC-CI-a: e2e-dummy-target.yml references test-issue-949-manifest-regen-doc.sh
+  PASS: AC-CI-b: reference appears in a 'paths:' trigger block
+  PASS: AC-CI-c: reference appears in a 'run:' step
+
+=== AC-SCOPE (guard) — diff ⊆ allow-list (pre-registers setup/manifest.json) ===
+  changed files: 0
+  PASS: AC-SCOPE-containment: git diff --name-only ⊆ allow-list (no disallowed files)
+  PASS (vacuous): AC-SCOPE-manifest-in-diff — diff-∩-sources is empty pre-GREEN, consequent not evaluated
+
+=== AC-PRESERVE (guard) — existing GREEN/VALIDATE/ARCHITECT content survives ===
+  PASS: AC-PRESERVE-a: GREEN's existing [MUST] 'Do NOT implement behavior not covered by tests' retained
+  PASS: AC-PRESERVE-b: GREEN's existing [MUST] 'Stay on the change surface' retained
+  PASS: AC-PRESERVE-c: GREEN's existing [MUST] 'Tests verify correctness' retained
+  PASS: AC-PRESERVE-d: VALIDATE item 1 (automated tests all PASS) retained
+  PASS: AC-PRESERVE-e: VALIDATE item 2 (minimal-implementation check) retained
+  PASS: AC-PRESERVE-f: VALIDATE item 3 (manual checklist) retained
+  PASS: AC-PRESERVE-g: VALIDATE item 4 (maintained-docs check) retained
+  PASS: AC-PRESERVE-h: ARCHITECT output-artifact prose ('Feature Design Document' / 'Verification Design Document') retained
+  PASS: AC-PRESERVE-deletion-audit: no contiguous run >15 deleted lines in docs/autoflow-guide.md / docs/submodule-common-rules.md diff
+
+==============================
+Results: 29/30 passed, 1 failed
+==============================
+===== END SUITE: tests/test-issue-949-manifest-regen-doc.sh (exit=1) =====

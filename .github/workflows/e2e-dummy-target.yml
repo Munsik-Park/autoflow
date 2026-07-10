@@ -1,0 +1,291 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# .github/workflows/e2e-dummy-target.yml — throwaway dummy-target E2E suite (issue #797 [#785-S10])
+#
+# Runs the composed end-to-end acceptance suite (tests/plugin/verify-e2e-dummy-target.sh),
+# which provisions a structurally-real, zero-submodule dummy library target, installs the
+# AutoFlow tool into it via setup/init.sh, and drives the already-unit-covered mechanisms
+# (install, manifest, drift, host-purity, single-repo HANDOFF gate + create-host-pr.sh label
+# runtime) end-to-end AS A COMPOSITION — the PILOT gate before claude-autoflow itself becomes
+# the first reversal case (S11a #798). The suite COMPOSES; it delegates the unit-level
+# assertions to verify-install-into-target.sh / verify-package.sh / test-issue-788-host-purity-delta.sh
+# as whole-suite regressions and adds only the composition-only arms.
+#
+# Why GitHub Actions: the suite is pure POSIX sh + jq/cmp/diff/grep/awk/git with no node/npm,
+# no bats, and no submodule checkout — the same zero-infra rationale as plugin-package.yml /
+# host-purity-delta.yml / schema-hook-contract.yml. ubuntu-latest ships bash 5.x + git + jq;
+# the delegated regression suites walk the merge-base against origin/main, so checkout uses
+# fetch-depth: 0.
+#
+# One file per subject: this is a DEDICATED sibling workflow (not a job added to
+# plugin-package.yml), matching the four existing advisory workflows' one-file-per-subject
+# convention and keeping the E2E's path-filter independent of the packaging suite's.
+#
+# Enforcement level: ADVISORY. This repo's plan provides no branch-protection /
+# required-status-checks, so a red run here does NOT auto-block merge; it surfaces a
+# pass/fail signal the external reviewer confirms green before merging.
+
+name: e2e-dummy-target
+
+on:
+  pull_request:
+    paths:
+      - '.gitmodules'
+      - 'tests/test-issue-798-topology-flip.sh'
+      - 'tests/test-issue-799-inert-cleanup.sh'
+      - 'tests/test-issue-843-doc-assertions.sh'
+      - 'docs/phases/analysis.md'
+      - 'docs/evaluation-system.md'
+      - 'docs/security-checklist.md'
+      - 'tests/test-issue-952-wizard-removal.sh'
+      - 'tests/test-issue-955-subagent-background-ban.sh'
+      - 'tests/test-issue-964-sigpipe-safe-pipes.sh'
+      - 'tests/test-issue-846-doc-assertions.sh'
+      - 'tests/test-issue-848-doc-assertions.sh'
+      - 'tests/test-issue-844-doc-assertions.sh'
+      - 'tests/test-issue-847-doc-assertions.sh'
+      - 'tests/run-doc-invariants.sh'
+      - 'tests/fixtures/doc-invariants.json'
+      - 'tests/lib/base-ref.sh'
+      - 'docs/repo-boundary-rules.md'
+      - 'docs/doc-invariant-registry.md'
+      - 'scripts/resync-submodules.sh'
+      - 'tests/plugin/verify-e2e-dummy-target.sh'
+      - 'tests/plugin/verify-install-into-target.sh'
+      - 'tests/plugin/verify-package.sh'
+      - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'tests/fixtures/**'
+      - 'setup/**'
+      - 'plugin/autoflow/hooks/**'
+      - 'scripts/handoff/**'
+      - 'docs/autoflow-guide.md'
+      - 'docs/design-rationale.md'
+      - '.codex/review.md'
+      - 'CLAUDE.md'
+      - 'README.md'
+      - 'docs/submodule-common-rules.md'
+      - 'docs/teammate-common-rules.md'
+      - 'docs/teammate-contracts.md'
+      - 'docs/external-review-sequencing.md'
+      - 'docs/INDEX.md'
+      - 'docs/maintained-docs.md'
+      - 'docs/git-workflow.md'
+      - 'tests/manual/issue-847-manual-scenarios.md'
+      - '.claude/agents/autoflow-analyzer.md'
+      - '.claude/agents/autoflow-planner.md'
+      - '.claude/agents/autoflow-implementer.md'
+      - '.claude/agents/autoflow-tester.md'
+      - '.claude/agents/autoflow-evaluator.md'
+      - 'scripts/cleanup/cleanup-issue.sh'
+      - 'scripts/test/check-cleanup-issue-boundary.sh'
+      - 'scripts/test/check-repo-key.sh'
+      - '.github/workflows/e2e-dummy-target.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.gitmodules'
+      - 'tests/test-issue-798-topology-flip.sh'
+      - 'tests/test-issue-799-inert-cleanup.sh'
+      - 'tests/test-issue-843-doc-assertions.sh'
+      - 'docs/phases/analysis.md'
+      - 'docs/evaluation-system.md'
+      - 'docs/security-checklist.md'
+      - 'tests/test-issue-952-wizard-removal.sh'
+      - 'tests/test-issue-955-subagent-background-ban.sh'
+      - 'tests/test-issue-964-sigpipe-safe-pipes.sh'
+      - 'tests/test-issue-846-doc-assertions.sh'
+      - 'tests/test-issue-848-doc-assertions.sh'
+      - 'tests/test-issue-844-doc-assertions.sh'
+      - 'tests/test-issue-847-doc-assertions.sh'
+      - 'tests/run-doc-invariants.sh'
+      - 'tests/fixtures/doc-invariants.json'
+      - 'tests/lib/base-ref.sh'
+      - 'docs/repo-boundary-rules.md'
+      - 'docs/doc-invariant-registry.md'
+      - 'scripts/resync-submodules.sh'
+      - 'tests/plugin/verify-e2e-dummy-target.sh'
+      - 'tests/plugin/verify-install-into-target.sh'
+      - 'tests/plugin/verify-package.sh'
+      - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'tests/fixtures/**'
+      - 'setup/**'
+      - 'plugin/autoflow/hooks/**'
+      - 'scripts/handoff/**'
+      - 'docs/autoflow-guide.md'
+      - 'docs/design-rationale.md'
+      - '.codex/review.md'
+      - 'CLAUDE.md'
+      - 'README.md'
+      - 'docs/submodule-common-rules.md'
+      - 'docs/teammate-common-rules.md'
+      - 'docs/teammate-contracts.md'
+      - 'docs/external-review-sequencing.md'
+      - 'docs/INDEX.md'
+      - 'docs/maintained-docs.md'
+      - 'docs/git-workflow.md'
+      - 'tests/manual/issue-847-manual-scenarios.md'
+      - '.claude/agents/autoflow-analyzer.md'
+      - '.claude/agents/autoflow-planner.md'
+      - '.claude/agents/autoflow-implementer.md'
+      - '.claude/agents/autoflow-tester.md'
+      - '.claude/agents/autoflow-evaluator.md'
+      - 'scripts/cleanup/cleanup-issue.sh'
+      - 'scripts/test/check-cleanup-issue-boundary.sh'
+      - 'scripts/test/check-repo-key.sh'
+      - '.github/workflows/e2e-dummy-target.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-dummy-target:
+    name: throwaway dummy-target E2E acceptance suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Run throwaway dummy-target E2E acceptance suite
+        run: bash tests/plugin/verify-e2e-dummy-target.sh
+
+      # Topology-flip absence guard (S11a #798): claude-autoflow is the first
+      # reversal case this workflow pilots — the zero-submodule single-repo
+      # state must stay asserted in CI (CI has no glob discovery; registered by
+      # filename per the sibling suites). See tests/test-issue-798-topology-flip.sh.
+      - name: Run topology-flip detach guard (#798)
+        run: bash tests/test-issue-798-topology-flip.sh
+
+      # Inert/delete cleanup guard (S11b #799): the post-#798 doc surface
+      # (README consumed-tool flow, inert services=llmroute self-references,
+      # INDEX.md/maintained-docs.md inert routing, git-workflow.md deferral
+      # note) must stay corrected. CI has no glob discovery; registered by
+      # filename per the sibling suites. See
+      # tests/test-issue-799-inert-cleanup.sh.
+      - name: Run inert-cleanup guard (#799)
+        run: bash tests/test-issue-799-inert-cleanup.sh
+
+      # Doc-invariant registry runner (#951): the single runner that replaces
+      # the per-issue doc-assertion suites (794/796/797/800/949 migrated into
+      # tests/fixtures/doc-invariants.json and deleted). It reads the registry
+      # via jq, resolves each entry's section by durable heading anchor, and
+      # evaluates every permanent STATE invariant against the current tree.
+      # Registering a new invariant thereafter is a data append to the registry
+      # with no workflow edit. CI has no glob discovery; registered by filename
+      # per the sibling suites. See tests/run-doc-invariants.sh and
+      # docs/doc-invariant-registry.md.
+      - name: Run doc-invariant registry runner (#951)
+        run: bash tests/run-doc-invariants.sh
+
+      # init.sh legacy wizard removal + Language Rule user-scope reversion
+      # guard (#952): the no-arg usage guard, the removed
+      # replace_placeholders/prompt/sed_inplace machinery, the delivered
+      # CLAUDE.md Language Rule absence, the submodule-common-rules
+      # non-substituted notation, and the README/SETUP-GUIDE stale-template
+      # purge must stay asserted. CI has no glob discovery; registered by
+      # filename per the sibling suites. See
+      # tests/test-issue-952-wizard-removal.sh.
+      - name: Run wizard-removal guard (#952)
+        run: bash tests/test-issue-952-wizard-removal.sh
+
+      # Subagent run_in_background prohibition guard (#955): the canonical
+      # [MUST] clause (docs/teammate-common-rules.md > Bash Execution Mode),
+      # its mirror (docs/submodule-common-rules.md), the five
+      # .claude/agents/autoflow-*.md role-contract bullets, the
+      # teammate-contracts.md in-script-agent coverage, the CLAUDE.md
+      # orchestrator-only counterpart + idle-handling reading, and the
+      # autoflow-guide.md REFINE/VERIFY foreground notes must stay asserted.
+      # CI has no glob discovery; registered by filename per the sibling
+      # suites. See tests/test-issue-955-subagent-background-ban.sh.
+      - name: Run subagent background-ban guard (#955)
+        run: bash tests/test-issue-955-subagent-background-ban.sh
+
+      # SIGPIPE-safe assertion pipes guard (#964): the repo-wide zero-remaining
+      # hazard-shape guard (grep -[ABC] context producer piped directly into
+      # grep -q), the 949 AC-CI-b local guard, the source-extraction
+      # negative-equivalence fixture, and the Testing Standards SIGPIPE-safe
+      # convention must stay asserted. CI has no glob discovery; registered by
+      # filename per the sibling suites. See
+      # tests/test-issue-964-sigpipe-safe-pipes.sh.
+      - name: Run SIGPIPE-safe assertion pipes guard (#964)
+        run: bash tests/test-issue-964-sigpipe-safe-pipes.sh
+      # Review-triage hardening guard (#846): the .codex/review.md
+      # label-clear fallback + gh pr view --json labels verification, the
+      # verbatim dual-file 7-attempt cap window phrase in
+      # docs/autoflow-guide.md step 6.5 and docs/design-rationale.md
+      # Decision 9, and the durable host-PR record on cap-fire + user
+      # re-entry must stay asserted. CI has no glob discovery; registered by
+      # filename per the sibling suites. See
+      # tests/test-issue-846-doc-assertions.sh.
+      - name: Run review-triage hardening guard (#846)
+        run: bash tests/test-issue-846-doc-assertions.sh
+
+      # Pointer-bump procedure + propagation-batching guard (#848): the
+      # DELIVER/HANDOFF *Secondary* pointer-bump actor+format single-source,
+      # HANDOFF step 3 review-response re-bump [MUST] + git ls-tree check,
+      # step 6.5 propagation-batching norm, the git-workflow.md stale
+      # machine-verify retirement correction, and the CLAUDE.md Commit
+      # Ownership pointer-bump row must stay asserted. CI has no glob
+      # discovery; registered by filename per the sibling suites.
+      # See tests/test-issue-848-doc-assertions.sh.
+      - name: Run pointer-bump procedure guard (#848)
+        run: bash tests/test-issue-848-doc-assertions.sh
+      # Structure-gate doc-accuracy guard (#843): docs/phases/analysis.md and
+      # docs/evaluation-system.md must state that the hook does NOT gate
+      # gate_hypothesis_structure (orchestrator-judged) and must agree with
+      # the already-correct tests/fixtures/gate-schema.json /
+      # docs/security-checklist.md surfaces; analysis.md must document the
+      # issue auto-close pre-verification procedure. CI has no glob
+      # discovery; registered by filename per the sibling suites. See
+      # tests/test-issue-843-doc-assertions.sh.
+      - name: Run structure-gate doc-accuracy guard (#843)
+        run: bash tests/test-issue-843-doc-assertions.sh
+      # PREFLIGHT disposition & re-entry matrix guard (#844): the PR-less
+      # active:false(awaiting-user) preserve/do-NOT-delete disposition (and
+      # its CLAUDE.md PR Wait Rule mirror), the requested-issue active:true
+      # Resume procedure (4 ordered steps, textually separate from
+      # review-response entry), the aligned dev/YYYY-MM-DD-issue-N
+      # branch-source convention, the teammate-common-rules.md same-issue
+      # scoped Absolute rule, and the GATE:HYPOTHESIS/AUDIT "Third FAIL →
+      # human" off-by-one correction (diagram mirror unchanged) must stay
+      # asserted. CI has no glob discovery; registered by filename per the
+      # sibling suites. See tests/test-issue-844-doc-assertions.sh.
+      - name: Run PREFLIGHT matrix consistency guard (#844)
+        run: bash tests/test-issue-844-doc-assertions.sh
+
+      # INTEGRATE deploy/CI-path conditional verification guard (#847): the
+      # new "### Deploy/CI-path conditional verification" INTEGRATE
+      # subsection (trigger glob set for .gitmodules/.github/workflows/
+      # Jenkinsfile/deploy-*.sh/.env + the (a)/(b)/(c) bundle + mandatory
+      # FAIL->RED disposition + defined no-op), the frozen TRIGGER_REGEX
+      # byte-identity anchor, and the VALIDATE item 6 dual-anchor cross-
+      # reference must stay asserted. CI has no glob discovery; registered
+      # by filename per the sibling suites. See
+      # tests/test-issue-847-doc-assertions.sh.
+      - name: Run deploy/CI-path conditional verification guard (#847)
+        run: bash tests/test-issue-847-doc-assertions.sh
+
+      # Cleanup archive-semantics guard (#978): scripts/cleanup/cleanup-issue.sh
+      # replaces its unconditional `find -delete` with an archive `mv` to
+      # $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<date>/ — this suite guards
+      # the move (not delete), set integrity (count + byte content), the
+      # number-boundary match, the destination-exists conflict-suffix, repo-tree
+      # non-interference (git status --porcelain unchanged + the hook still
+      # reading a co-resident live issue as active), and the exit-65
+      # inside-repo-root refuse guard. CI has no glob discovery; registered by
+      # filename per the sibling suites. See
+      # scripts/test/check-cleanup-issue-boundary.sh.
+      - name: Run cleanup archive-semantics guard (#978)
+        run: bash scripts/test/check-cleanup-issue-boundary.sh
+
+      # Repo-key derivation guard (#978): the bounded introspection subcommand
+      # `cleanup-issue.sh --print-repo-key [<url>|--no-origin]` normalizes an
+      # origin URL (scp / https / ssh:// / trailing-slash+.git forms) to the
+      # same Munsik-Park__autoflow slug, falls back to a runtime-computed
+      # path-encoded slug with --no-origin, agrees with the live-remote no-arg
+      # read, and is parsed above the .autoflow-dir existence gate (CWD
+      # independence). CI has no glob discovery; registered by filename per the
+      # sibling suites. See scripts/test/check-repo-key.sh.
+      - name: Run repo-key derivation guard (#978)
+        run: bash scripts/test/check-repo-key.sh

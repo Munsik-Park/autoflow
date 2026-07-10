@@ -1,0 +1,16 @@
+{
+  "active": true,
+  "issue": "#CANON",
+  "title": "canonical schema fixture",
+  "date": "2026-01-01",
+  "cycle": 1,
+  "mode": "new-issue",
+  "phase": "in-progress",
+  "phases": {
+    "gate_hypothesis_structure": { "evaluator": "", "scores": {} },
+    "gate_hypothesis_cause":     { "evaluator": "", "scores": {}, "verdict": "pending" },
+    "gate_plan":                 { "evaluator": "", "scores": { "a": { "score": 8 }, "b": { "score": 8 } } },
+    "audit":                     { "evaluator": "", "scores": { "a": { "score": 8 }, "b": { "score": 8 } } },
+    "gate_quality":              { "evaluator": "", "scores": { "a": { "score": 8 }, "b": { "score": 8 } } }
+  }
+}

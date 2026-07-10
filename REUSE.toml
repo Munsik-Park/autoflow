@@ -1,0 +1,24 @@
+version = 1
+
+# REUSE 3.3 bulk annotations (issue #985 [chore · #984-S1]).
+# Inline SPDX headers cover the header-bearing source set
+# (.sh/.py/.bats/.yml/.js/.mjs). This file bulk-covers the file types that
+# carry no inline header comment syntax (Markdown / JSON / JSONL / plain text)
+# plus the extension-less / dot-file tracked members, so every tracked path is
+# REUSE-covered and `reuse lint` passes.
+
+[[annotations]]
+path = [
+  "**/*.md",
+  "**/*.json",
+  "**/*.jsonl",
+  "**/*.txt",
+  "**/*.gitkeep",
+  "**/*.example",
+  ".gitignore",
+  "LICENSE",
+  "tests/issue-92/mock-gh/gh",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Munsik-Park"
+SPDX-License-Identifier = "Elastic-2.0"

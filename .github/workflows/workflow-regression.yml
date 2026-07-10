@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# .github/workflows/workflow-regression.yml — deliberation workflow script regression (issue #153)
+#
+# Mock-runtime regression for the deliberation workflow reference scripts
+# (.claude/workflows/{architect-deliberation,verify-cause-branch}.js). The harness
+# (test/workflows/run.mjs) locks their pure control-flow logic — convergence rule,
+# counter threading, ledger-authority branching, VERIFY next_action mapping,
+# missing-response handling, the arg guards — against a mock Workflow runtime. It does
+# NOT exercise a live Claude Code Workflow runtime (that is the operator-side smoke
+# scenario in docs/teammate-contracts.md > Verification scenarios).
+#
+# Why GitHub Actions and not Jenkins: the project's Jenkins pipeline is provisioned for
+# compose/shell validation and carries no node runtime — making the regression a hard
+# Jenkins gate failed build #5 (node absent on the agent). Following the same rationale
+# already documented in .github/workflows/image-scan.yml ("GitHub Actions is the
+# zero-infra place for [a check Jenkins can't host]"), the regression runs here on
+# ubuntu-latest, where a node runtime is guaranteed and pinned.
+#
+# The harness reads only host-repo files (.claude/workflows/*.js, test/workflows/*) and
+# uses solely node: builtins — no submodule checkout and no npm install are needed.
+#
+# Enforcement level: ADVISORY. This repo's plan does not provide GitHub branch-protection
+# / required-status-checks (private-repo plan limitation — the API returns 403). So a red
+# run here does NOT auto-block merge; it surfaces a pass/fail signal that the external
+# reviewer verifies green before merging (the "CI green" precondition in
+# docs/external-review-sequencing.md), the same enforcement path as every other CI check.
+
+name: workflow-regression
+
+on:
+  pull_request:
+    paths:
+      - '.claude/workflows/**'
+      - 'test/workflows/**'
+      - '.github/workflows/workflow-regression.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.claude/workflows/**'
+      - 'test/workflows/**'
+      - '.github/workflows/workflow-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    name: Mock-runtime regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Pin Node runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '20'
+
+      - name: Run workflow regression harness
+        run: node test/workflows/run.mjs

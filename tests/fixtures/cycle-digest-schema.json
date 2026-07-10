@@ -1,0 +1,29 @@
+{
+  "$comment": "Machine-readable schema fixture for docs/cycle-digest.jsonl (issue #953 §4). Single source of truth read by tests/test-issue-953-cycle-digest.sh to jq-validate each JSONL line's shape. Mirrors the tests/fixtures/gate-schema.json precedent the gate hook consumes (check-autoflow-gate.sh:220). Field names are CANONICAL per feature design §4 (terminal_cycle/gates/below7/escaped_defects/review_max_severity) — do not diverge to the earlier draft names (cycle/per_gate/sub7_items/escaped_defect) or the pre-#979 name codex_max_severity (renamed backend-neutral, issue #979 AC-7).",
+  "top_level_keys": [
+    "issue",
+    "terminal_cycle",
+    "date",
+    "mode",
+    "gates",
+    "regressions",
+    "architect",
+    "loop_check_class",
+    "review_max_severity",
+    "escaped_defects"
+  ],
+  "gate_keys": [
+    "gate_hypothesis_structure",
+    "gate_hypothesis_cause",
+    "gate_plan",
+    "audit",
+    "gate_quality"
+  ],
+  "gate_object_pass_shape_keys": ["pass", "avg", "items", "below7"],
+  "gate_object_verdict_shape_keys": ["verdict"],
+  "mode_enum": ["new-issue", "review-response"],
+  "review_max_severity_enum": ["None", "Low", "Medium", "High", "Critical"],
+  "regressions_keys": ["gate_plan", "verify", "audit", "gate_quality", "review_autofix_cycles"],
+  "architect_keys": ["rounds", "escalate"],
+  "escaped_defect_item_keys": ["class", "nominal_rubric_item", "surface", "codex_anchor"]
+}

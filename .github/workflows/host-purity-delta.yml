@@ -1,0 +1,79 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# .github/workflows/host-purity-delta.yml — diff-scoped host-purity DELTA guard (issue #788)
+#
+# Runs the host-purity acceptance suite (tests/test-issue-788-host-purity-delta.sh),
+# which drives scripts/test/check-host-purity-delta.sh over hermetic temp repos.
+# The guard fails a cycle when a service-identifier token (the denylist lives in
+# tests/fixtures/host-purity-tokens.txt) is NEWLY introduced on an added line of a
+# changed host tool/mechanism file (merge-base..HEAD delta), so a generalized
+# framework repo does not silently re-accrete service names.
+#
+# Why GitHub Actions: the suite is pure bash + git with no node/npm, no bats, and
+# no submodule checkout — the same zero-infra rationale as schema-hook-contract.yml /
+# workflow-regression.yml. ubuntu-latest ships bash 5.x + git; the guard needs the
+# merge-base against origin/main, so checkout uses fetch-depth: 0.
+#
+# Enforcement level: ADVISORY. This repo's plan provides no GitHub branch-protection /
+# required-status-checks (private-repo plan limitation — the API returns 403), so a red
+# run here does NOT auto-block merge; it surfaces a pass/fail signal that the external
+# reviewer confirms green before merging, the same enforcement path as every other CI check.
+
+name: host-purity-delta
+
+on:
+  pull_request:
+    # Scanner include surface — a changed in-scope host tool file must run the
+    # guard. Kept in lock-step with the `include` globs in
+    # tests/fixtures/host-purity-paths.txt (enforced by the AC7 drift check).
+    paths:
+      - '.claude/hooks/**'
+      - '.claude/agents/**'
+      - '.claude/workflows/**'
+      - 'scripts/**'
+      - 'setup/**'
+      - '.github/workflows/**'
+      - 'Jenkinsfile'
+      - '*.sh'
+      # Guard's own config + suite: under tests/** (excluded from the scanner's
+      # SCAN scope) but a change to the denylist / path policy / suite must still
+      # re-run the acceptance guard.
+      - 'tests/fixtures/host-purity-tokens.txt'
+      - 'tests/fixtures/host-purity-paths.txt'
+      - 'tests/test-issue-788-host-purity-delta.sh'
+  push:
+    branches: [main]
+    # Scanner include surface — mirror of the pull_request block above. Kept in
+    # lock-step with the `include` globs in tests/fixtures/host-purity-paths.txt
+    # (enforced by the AC7 drift check).
+    paths:
+      - '.claude/hooks/**'
+      - '.claude/agents/**'
+      - '.claude/workflows/**'
+      - 'scripts/**'
+      - 'setup/**'
+      - '.github/workflows/**'
+      - 'Jenkinsfile'
+      - '*.sh'
+      # Guard's own config + suite: under tests/** (excluded from the scanner's
+      # SCAN scope) but a change to the denylist / path policy / suite must still
+      # re-run the acceptance guard.
+      - 'tests/fixtures/host-purity-tokens.txt'
+      - 'tests/fixtures/host-purity-paths.txt'
+      - 'tests/test-issue-788-host-purity-delta.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  host-purity-delta:
+    name: host-purity DELTA guard acceptance suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Run host-purity DELTA acceptance suite
+        run: bash tests/test-issue-788-host-purity-delta.sh

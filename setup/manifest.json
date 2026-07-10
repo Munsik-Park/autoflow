@@ -1,0 +1,299 @@
+{
+  "version": "0.1.0",
+  "artifacts": [
+    {
+      "source": "setup/thin-root-layer/methodology/METHODOLOGY.md",
+      "dest": ".claude/autoflow/METHODOLOGY.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "ee2c06aa7993279fd73b4562e5a9a44cdef39c3bec828d1d1d3a2966a8051f94"
+    },
+    {
+      "source": "CLAUDE.md",
+      "dest": ".claude/autoflow/CLAUDE.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "07d2db18015a285e479a698d5645f8081dbd330eb0808e5b405851e8d9183f7f"
+    },
+    {
+      "source": "docs/adr/0000-adr-template.md",
+      "dest": ".claude/autoflow/docs/adr/0000-adr-template.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "861cffb902793dc98df802bcdd18d4d9e8e1fd24e2b885e3f647035d3007b602"
+    },
+    {
+      "source": "docs/adr/0003-autoflow-ends-at-handoff.md",
+      "dest": ".claude/autoflow/docs/adr/0003-autoflow-ends-at-handoff.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "2f4389c53702b85ccd035ac4e033fee5c65a41098894ca0165ccce095a6080fd"
+    },
+    {
+      "source": "docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md",
+      "dest": ".claude/autoflow/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "9557553bdf025e980164b7303de764a93bca68d4b082d97974eeac7e0845a7e6"
+    },
+    {
+      "source": "docs/adr/0016-adr-conformance-gate-scoring.md",
+      "dest": ".claude/autoflow/docs/adr/0016-adr-conformance-gate-scoring.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "4fd861c97d61caf22c434dd514e1a5478d9abcd932a329fe74d63e5c8b776caf"
+    },
+    {
+      "source": "docs/adr/README.md",
+      "dest": ".claude/autoflow/docs/adr/README.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "5c036a99eadf866f92180643c90a455e4225517ab4a9bd48c5903a60ef60867e"
+    },
+    {
+      "source": "docs/autoflow-guide.md",
+      "dest": ".claude/autoflow/docs/autoflow-guide.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "88447714678d705dcb586ef68b5cf0c59e4b154fbfd2e4f0e66a57f95ae3ea8e"
+    },
+    {
+      "source": "docs/design-rationale.md",
+      "dest": ".claude/autoflow/docs/design-rationale.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "bbe862123d034443fe720c7e2a6e9df2716a942ec97f113172756a60c36f29c5"
+    },
+    {
+      "source": "docs/development-guideline.md",
+      "dest": ".claude/autoflow/docs/development-guideline.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "5b507e9c4d40c87b662f2beef39a37fbc1fe9dea5be1cdbb6944988086b3cfc5"
+    },
+    {
+      "source": "docs/doc-invariant-registry.md",
+      "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "3e57e02e4a8104c13beb316cf99f27b3478f23a6f99bf9f9ec7ffab102757772"
+    },
+    {
+      "source": "docs/evaluation-system.md",
+      "dest": ".claude/autoflow/docs/evaluation-system.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "10ad881ee72b3927af375f8ec26bf1665ee6e5219d85ded70df0ed70f8a8417d"
+    },
+    {
+      "source": "docs/external-review-sequencing.md",
+      "dest": ".claude/autoflow/docs/external-review-sequencing.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "67174c29a8c9cd0f72dba6484a6290a176fa7368dada8b54552bea812b95256d"
+    },
+    {
+      "source": "docs/git-workflow.md",
+      "dest": ".claude/autoflow/docs/git-workflow.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "d9772a45110aed9b486a4a0f4de2856778ec1b67ade0beb45ebd9daff74bed14"
+    },
+    {
+      "source": "docs/improvement-backlog.md",
+      "dest": ".claude/autoflow/docs/improvement-backlog.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "5086c8cbc56203401b534f8ff7bc4f067490b867fd3d2aebb548eaa81892aebe"
+    },
+    {
+      "source": "docs/INDEX.md",
+      "dest": ".claude/autoflow/docs/INDEX.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "0ea2293f3c34128ba6d1e0651df02dc826a60eb95fd40403cb42e4222d337d5d"
+    },
+    {
+      "source": "docs/maintained-docs.md",
+      "dest": ".claude/autoflow/docs/maintained-docs.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "c26e65802b600937a926ed8e43902c6bd15bbfbb9a0d2522190f85853629fd3a"
+    },
+    {
+      "source": "docs/phases/analysis.md",
+      "dest": ".claude/autoflow/docs/phases/analysis.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "cc4034f29274887a0499592c774b68e4653ee3d3f8bc7e72f26003a3c5277929"
+    },
+    {
+      "source": "docs/pr-body-guide.md",
+      "dest": ".claude/autoflow/docs/pr-body-guide.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "3998b46a0a41baea97d022db1c2ea26a208c513b4fd497db2c5db624433a5ac5"
+    },
+    {
+      "source": "docs/repo-boundary-rules.md",
+      "dest": ".claude/autoflow/docs/repo-boundary-rules.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "90e083ec7cc6f2b43bf4b33f717955855fc5e5097394b421bc0720595d515013"
+    },
+    {
+      "source": "docs/reviewer-backend.md",
+      "dest": ".claude/autoflow/docs/reviewer-backend.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "b76fd558e4b6e201fb42be9c6d1a118aea10f010ac1ed7817f4b0815dc1e2dc1"
+    },
+    {
+      "source": "docs/security-checklist.md",
+      "dest": ".claude/autoflow/docs/security-checklist.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "e49ba9cd1d74a1a9535c6ff4a4dab5c59d0c2e0995a12e882ddeb08a1b210ad7"
+    },
+    {
+      "source": "docs/submodule-common-rules.md",
+      "dest": ".claude/autoflow/docs/submodule-common-rules.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "2bd947fdbe86e575acb15ca0cca60a7d70d60034df1bee2d4984a37f05a13b49"
+    },
+    {
+      "source": "docs/teammate-common-rules.md",
+      "dest": ".claude/autoflow/docs/teammate-common-rules.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "8fbff945ce06524434ef609c9e61e7ebedfa0711d36e549435ffc22088ee2ee6"
+    },
+    {
+      "source": "docs/teammate-contracts.md",
+      "dest": ".claude/autoflow/docs/teammate-contracts.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "7c61e82bdc7c1c1d539c5a6b8a53a10884ae9dcbd992133582c8f1aab6f02cd2"
+    },
+    {
+      "source": "docs/title-guide.md",
+      "dest": ".claude/autoflow/docs/title-guide.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "beb01eebb85f5b14961135d092e2fc395f5e99f5db646ac5133d5461fc524d29"
+    },
+    {
+      "source": "docs/tool-delivery-contract.md",
+      "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "d264479b5485a26c5fa30c7289c1a612252924a2949fd7be1d610b3ee3990e38"
+    },
+    {
+      "source": ".claude/workflows/architect-deliberation.js",
+      "dest": ".claude/workflows/architect-deliberation.js",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "e582915312ae533f4983149b439dfe067b8453b3faa0ae42a059a926a3a41677"
+    },
+    {
+      "source": ".claude/workflows/verify-cause-branch.js",
+      "dest": ".claude/workflows/verify-cause-branch.js",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "913e58cd5ac4b7fc911cf070607c7079ec14e62681f14317b9c7de226de63abd"
+    },
+    {
+      "source": "setup/thin-root-layer/drift-check.sh",
+      "dest": ".claude/autoflow/drift-check.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "d18a20370494beeec0649ce3ae67b063c5c83698ab9d43bf429107a541f9f579"
+    },
+    {
+      "source": "setup/thin-root-layer/claude-md-shim.md",
+      "dest": ".claude/autoflow/claude-md-shim.md",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "c34017b961cb841b1e026163992d19f7cd14eb577ec85215717744aa0e8f04da"
+    },
+    {
+      "source": "setup/thin-root-layer/settings-pin.json",
+      "dest": ".claude/autoflow/settings-pin.json",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "ea331c7b7b3b7f0802b22a2c78ede51fc3dff9b7b7160cc5ecba6f53b803500f"
+    },
+    {
+      "source": "setup/thin-root-layer/claude-md-shim.md",
+      "dest": "CLAUDE.md",
+      "tier": "root-layer",
+      "kind": "shim-stamp",
+      "sha256": "c34017b961cb841b1e026163992d19f7cd14eb577ec85215717744aa0e8f04da"
+    },
+    {
+      "source": "setup/thin-root-layer/settings-pin.json",
+      "dest": ".claude/settings.json",
+      "tier": "root-layer",
+      "kind": "json-merge",
+      "sha256": "ea331c7b7b3b7f0802b22a2c78ede51fc3dff9b7b7160cc5ecba6f53b803500f"
+    },
+    {
+      "source": "CLAUDE.local.md.example",
+      "dest": "CLAUDE.local.md",
+      "tier": "root-layer",
+      "kind": "scaffold",
+      "sha256": "95d8942ddeead61307c014550a118fcb8fb7616a547d47ee553d8e92fb6c67c2"
+    },
+    {
+      "source": "scripts/review/codex-review-pr.sh",
+      "dest": "scripts/review/codex-review-pr.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "d008fcf445805a0ad65da27e9ba2bfb2417f28f60e74550095168a317bcdf88b"
+    },
+    {
+      "source": "scripts/review/lib/claude-isolation.sh",
+      "dest": "scripts/review/lib/claude-isolation.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "f87cd303a1a582a7bfe69839857e8fe5a9404d963ec2ebdface385f049f3ffb0"
+    },
+    {
+      "source": "scripts/preflight/check-review-backend.sh",
+      "dest": "scripts/preflight/check-review-backend.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "2a2e04093232e7e418cf84fae664b13c245615bebc06f4bb137750861bbd0246"
+    },
+    {
+      "source": ".codex/review.md",
+      "dest": ".codex/review.md",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "66749cff5335a4e1354f30a3827142a1d8779fdc14fd97f3af1c9152d132461c"
+    },
+    {
+      "source": "AGENTS.md",
+      "dest": "AGENTS.md",
+      "tier": "root-layer",
+      "kind": "scaffold",
+      "sha256": "f90535b46d56906c7be048f4eb0c4b6953368f91de1bf842251cab5a752fc83e"
+    },
+    {
+      "source": ".claude/autoflow.local.json",
+      "dest": ".claude/autoflow.local.json",
+      "tier": "root-layer",
+      "kind": "scaffold",
+      "sha256": "83c874995db25cb41d68caac324ec7df19e4f08527c76fa31d2d975844d31737"
+    },
+    {
+      "source": "setup/manifest.json",
+      "dest": ".claude/autoflow/manifest.json",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": null
+    }
+  ]
+}

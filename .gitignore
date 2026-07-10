@@ -1,0 +1,19 @@
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Auto-Flow per-cycle local working state (state JSON + DIAGNOSE/ARCHITECT
+# scratch docs) — orchestration-internal, never repo deliverables.
+.autoflow/*
+!.autoflow/.gitkeep
+
+CLAUDE.local.md
+.env
+
+# LibreChat deploy-side ignore rules (infra/librechat secrets, clients/* secrets,
+# scripts/verify run artifacts, .deploy.lock, live-smoke results) moved with the
+# deploy artifacts into the services/librechat-deploy submodule's own .gitignore
+# (services nesting refactor). The host repo no longer tracks those paths.
+
+# Runtime audit/review scratch logs (SHA-keyed audit.json) — tooling output,
+# never repo deliverables.
+logs/

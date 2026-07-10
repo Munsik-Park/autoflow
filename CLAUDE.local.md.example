@@ -1,0 +1,63 @@
+# CLAUDE.local.md — Local Overrides (Example)
+
+> This file is `.gitignore`d and allows individual developers to customize
+> Claude Code behavior without affecting the shared CLAUDE.md.
+
+---
+
+## When to Use This File
+
+Use `CLAUDE.local.md` for:
+- Personal preferences (editor settings, output verbosity)
+- Local environment specifics (custom paths, local service URLs)
+- Temporary overrides during development
+- Machine-specific tool configurations
+
+---
+
+## Example Overrides
+
+### Local Development URLs
+
+```markdown
+## Local Services
+- Backend API: http://localhost:8080
+- Frontend Dev Server: http://localhost:3000
+- Database: postgresql://localhost:5432/mydb
+```
+
+### Personal Preferences
+
+```markdown
+## Preferences
+- Always show file paths as relative paths
+- Use verbose test output
+- Prefer detailed commit messages
+```
+
+### Temporary Overrides
+
+```markdown
+## Temporary
+- Skip integration tests (local DB is down)
+- Focus on issue #42 only
+```
+
+---
+
+## Setup
+
+1. Copy this file:
+   ```bash
+   cp CLAUDE.local.md.example CLAUDE.local.md
+   ```
+
+2. Edit `CLAUDE.local.md` with your local settings
+
+3. Ensure `.gitignore` includes `CLAUDE.local.md`:
+   ```
+   # Claude Code local overrides
+   CLAUDE.local.md
+   ```
+
+> **Note**: `CLAUDE.local.md` takes precedence over `CLAUDE.md` for any conflicting instructions. Use responsibly — don't override Auto-Flow process rules.

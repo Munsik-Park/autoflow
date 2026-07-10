@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# tests/issue-92/mock-gh/gh — gh CLI shim for AC2 (cycle 1) and AC3.h-l (cycle 2).
+#
+# Cycle 1 contract (sink-style — preserved):
+#   - When $GH_INVOCATION_LOG is set, records each argv element on its own line.
+#   - Exits 0 so the script under test continues normally.
+#
+# Cycle 2 extension (fixture-driven dispatch table):
+#   - When the call matches a cycle-2 callsite, returns crafted stdout from a
+#     per-call env var. Other invocations preserve cycle 1 behavior.
+#   - Dispatch table (more-specific patterns first):
+#       gh pr view <N> ... --json state,labels         → $GH_MOCK_PR_VIEW_STATE_LABELS_BODY
+#       gh pr view <N> ... --json headRefOid           → $GH_MOCK_PR_VIEW_HEAD_BODY
+#       gh api repos/<owner>/<repo>/git/trees/<SHA>... → $GH_MOCK_API_TREES_BODY
+#       gh api repos/<owner>/<repo>/pulls/<N>          → $GH_MOCK_API_PULLS_BODY
+#       (other)                                        → cycle 1 sink behavior
+#
+#   - Per-call failure override: $GH_MOCK_EXIT (when non-zero, exit with that
+#     code before any output — exercises the workflow's `set -e` propagation).
+
+set -euo pipefail
+
+# Optional per-call exit override (cycle 2).
+if [ -n "${GH_MOCK_EXIT:-}" ] && [ "${GH_MOCK_EXIT}" != "0" ]; then
+  exit "$GH_MOCK_EXIT"
+fi
+
+# Cycle 2 dispatch table — fixture-driven responses for specific argv patterns.
+#
+# Pattern: `gh pr view <N> [--repo <repo>] --json state,labels`
+#
+# Note on case-pattern shape: case patterns are glob-matched against the full
+# string; quoted segments are literal text only, with no implicit token
+# boundaries. Production calls produce a single space between `pr` and `view`
+# (e.g. ` pr view 42 ... `), so the pattern uses `pr*view*--json <fields>`
+# (with the surrounding `*`s eating the rest of the argv) rather than
+# space-padded segments which would require two spaces between adjacent tokens.
+case " $* " in
+  *"pr"*"view"*"--json state,labels"*)
+    printf '%s\n' "${GH_MOCK_PR_VIEW_STATE_LABELS_BODY:-{\}}"
+    exit 0
+    ;;
+  *"pr"*"view"*"--json headRefOid"*)
+    printf '%s\n' "${GH_MOCK_PR_VIEW_HEAD_BODY:-{\}}"
+    exit 0
+    ;;
+esac
+
+# Pattern: `gh api repos/<owner>/<repo>/git/trees/<SHA>...`
+# Pattern: `gh api repos/<owner>/<repo>/pulls/<N>/files` (cycle 3 — more specific)
+# Pattern: `gh api repos/<owner>/<repo>/pulls/<N>` (any --jq)
+#
+# CRITICAL ordering invariant (cycle 3 verification design §3.1):
+# the `*/pulls/*/files*` clause MUST appear BEFORE the bare `*/pulls/*`
+# clause. The bare pattern would otherwise consume `/pulls/N/files`
+# URLs and return `GH_MOCK_API_PULLS_BODY` instead of
+# `GH_MOCK_API_PULLS_FILES_BODY`, silently breaking T3-NEW-host-diff.
+# Do not reorder.
+if [ "${1:-}" = "api" ] && [ -n "${2:-}" ]; then
+  case "$2" in
+    *"/git/trees/"*)
+      printf '%s\n' "${GH_MOCK_API_TREES_BODY:-{\}}"
+      exit 0
+      ;;
+    *"/pulls/"*"/files"*)
+      printf '%s\n' "${GH_MOCK_API_PULLS_FILES_BODY:-[]}"
+      exit 0
+      ;;
+    *"/pulls/"*)
+      printf '%s\n' "${GH_MOCK_API_PULLS_BODY:-{\}}"
+      exit 0
+      ;;
+  esac
+fi
+
+# Cycle 1 sink behavior — record argv to log and exit 0.
+if [ -z "${GH_INVOCATION_LOG:-}" ]; then
+  echo "mock gh: GH_INVOCATION_LOG not set" >&2
+  exit 78
+fi
+
+printf '%s\n' "$@" >> "$GH_INVOCATION_LOG"
+exit 0

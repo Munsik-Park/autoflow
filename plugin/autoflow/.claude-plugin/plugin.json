@@ -1,0 +1,8 @@
+{
+  "name": "autoflow",
+  "description": "AutoFlow methodology engine for Claude Code: phase gate hooks, role subagents, and the epic-dash skill. State is kept in the target project's .autoflow (CLAUDE_PROJECT_DIR); methodology prose (CLAUDE.md, docs/) ships separately as the thin root layer.",
+  "version": "0.1.0",
+  "author": { "name": "Munsik-Park" },
+  "homepage": "https://github.com/Munsik-Park/autoflow",
+  "repository": "https://github.com/Munsik-Park/autoflow"
+}

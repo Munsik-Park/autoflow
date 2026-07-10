@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# .github/workflows/schema-hook-contract.yml — state-schema ↔ gate-hook contract test (issue #223)
+#
+# Guards against silent drift between the runtime AutoFlow state JSON
+# (.autoflow/issue-{N}.json) and the gate hook (.claude/hooks/check-autoflow-gate.sh).
+# The contract test (tests/test-issue-223-schema-hook-contract.sh) treats
+# tests/fixtures/gate-schema.json as the single source of truth and asserts — in BOTH
+# directions — that the hook's hardcoded jq paths, numeric thresholds (7.5 / 7 / 3),
+# gated phase-key set, and dual-language security-key set still match the declared
+# schema. A schema-only edit or a hook-only edit that diverges turns the test red.
+#
+# Why GitHub Actions: the test is pure bash + jq with no node/npm and no submodule
+# checkout — the same zero-infra rationale as workflow-regression.yml / image-scan.yml.
+# ubuntu-latest ships bash 5.x and jq pre-installed; the test is also kept bash-3.2
+# portable so the same script runs locally on macOS during AutoFlow VALIDATE.
+#
+# Enforcement level: ADVISORY. This repo's plan provides no GitHub branch-protection /
+# required-status-checks (private-repo plan limitation — the API returns 403), so a red
+# run here does NOT auto-block merge; it surfaces a pass/fail signal that the external
+# reviewer confirms green before merging (the "CI green" precondition in
+# docs/external-review-sequencing.md), the same enforcement path as every other CI check.
+
+name: schema-hook-contract
+
+on:
+  pull_request:
+    paths:
+      - '.claude/hooks/check-autoflow-gate.sh'
+      - 'tests/fixtures/gate-schema.json'
+      - 'tests/fixtures/autoflow-state-canonical.json'
+      - 'tests/test-issue-223-schema-hook-contract.sh'
+      - 'CLAUDE.md'
+      - '.github/workflows/schema-hook-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.claude/hooks/check-autoflow-gate.sh'
+      - 'tests/fixtures/gate-schema.json'
+      - 'tests/fixtures/autoflow-state-canonical.json'
+      - 'tests/test-issue-223-schema-hook-contract.sh'
+      - 'CLAUDE.md'
+      - '.github/workflows/schema-hook-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: state-schema ↔ gate-hook contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Run schema↔hook contract test
+        run: bash tests/test-issue-223-schema-hook-contract.sh

@@ -1,0 +1,34 @@
+# Ratchet baseline for the installed-bundle host-purity scan (issue #797 E2a).
+#
+# This is a PRE-S11a RATCHET BASELINE, not a permanent allowlist. Each line is
+# the bundle-relative path (relative to the installed `.claude/autoflow/`
+# directory) of a shipped file that currently carries a host-purity-tokens.txt
+# hit -- verified by installing into a throwaway dummy target and running:
+#
+#   grep -rliE -f tests/fixtures/host-purity-tokens.txt <target>/.claude/autoflow
+#
+# The E2a arm in tests/plugin/verify-e2e-dummy-target.sh checks this baseline
+# in BOTH directions:
+#   (a) no file beyond this list may offend (a new leak -> FAIL, the leak
+#       class stays closed -- see ledger E15);
+#   (b) every entry on this list must still currently offend (a file cleaned
+#       up without updating this baseline -> FAIL, forcing a ratchet-down
+#       edit here so the baseline never drifts stale).
+#
+# This baseline burns down via epic #785 stages S11a/S11b (claude-autoflow
+# itself becoming the first reversal case, then generalizing the shipped
+# doc set) and is expected to shrink to an empty list, at which point E2a
+# converges back to the absolute zero-hit scan it started as (ledger E14).
+# Adding a NEW entry here to suppress a newly-introduced leak is forbidden --
+# only removals (as files are cleaned) are legitimate edits to this file.
+.claude/autoflow/CLAUDE.md
+.claude/autoflow/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md
+.claude/autoflow/docs/adr/README.md
+.claude/autoflow/docs/autoflow-guide.md
+.claude/autoflow/docs/development-guideline.md
+.claude/autoflow/docs/external-review-sequencing.md
+.claude/autoflow/docs/git-workflow.md
+.claude/autoflow/docs/maintained-docs.md
+.claude/autoflow/docs/phases/analysis.md
+.claude/autoflow/docs/security-checklist.md
+.claude/autoflow/docs/submodule-common-rules.md

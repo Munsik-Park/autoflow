@@ -1,0 +1,55 @@
+# Scope + allowlist for the host-purity DELTA guard.
+# Prefixed globs, one per line; '#' comments and blank lines ignored.
+#
+# Precedence is a TOTAL, per-path rule (not first-match): allow > exclude > include.
+# A path is scanned iff it matches some `include` glob, matches no `exclude` glob,
+# AND matches no `allow` glob. `allow` therefore overrides both `include` and
+# `exclude`, which is what lets `allow scripts/webhook/**` carve a pending-MOVE
+# exemption out of `include scripts/**` regardless of line order.
+#
+# Glob semantics (scanner-applied, not git-pathspec): `**` matches any characters
+# including `/`; a single `*` matches within one path segment (not `/`); every
+# other character is literal.
+
+# host tool / mechanism files that must stay service-agnostic
+include .claude/hooks/**
+include .claude/agents/**
+include .claude/workflows/**
+include scripts/**
+include setup/**
+include .github/workflows/**
+include Jenkinsfile
+include *.sh
+
+# out of scope (exclude tier = structurally not host-tool surface): prose
+# legitimately names services; tests carry token fixtures. docs/** (incl. ADR /
+# decoupling-plan) is EXCLUDE, not allow — the "docs pass" property is an
+# exclude-tier property, not an allow-tier exemption; the two tiers are kept
+# distinct for legibility.
+exclude docs/**
+exclude tests/**
+exclude scripts/test/**
+exclude .autoflow/**
+
+# live-product tooling pending MOVE (host-service-decoupling-plan.md §10). NOTE:
+# the tokens fixture tests/fixtures/host-purity-tokens.txt is NOT listed here — it
+# is already covered by `exclude tests/**` and matches no `include` glob, so an
+# `allow` for it would be a dead entry. `allow` is reserved for paths that DO match
+# an include glob and must be carved back out (the pending-MOVE set under
+# `include scripts/**`).
+allow scripts/webhook/**
+allow scripts/seed/**
+allow scripts/poc-smoke.sh
+allow scripts/live-smoke.sh
+allow scripts/check-env-contract.sh
+allow infra/**
+allow clients/**
+
+# generated artifact (issue #792): setup/manifest.json is emitted by
+# setup/gen-manifest-hashes.sh and its rows verbatim-mirror docs/** paths (the
+# markdown-link doc closure, e.g. docs/adr/0001-...librechat-submodule-boundary.md).
+# docs/** is exclude-tier because prose/paths legitimately name services; the
+# generated mirror of those paths inherits that property. Hand-authored setup
+# logic (init.sh, thin-root-layer/*, gen-manifest-hashes.sh) stays in scope
+# under `include setup/**`.
+allow setup/manifest.json

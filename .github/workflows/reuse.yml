@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+#
+# .github/workflows/reuse.yml — REUSE 3.3 compliance lint (issue #985 [#984-S1]).
+# Runs the FSFE reuse tool over the whole tree; asserts every tracked file
+# carries an SPDX license/copyright annotation (inline header or REUSE.toml).
+# Additive to the existing 5 workflows — distinct name / trigger paths, no
+# collision. The reuse-action is pinned by full commit SHA (supply-chain).
+
+name: REUSE compliance
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  reuse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: REUSE Compliance Check
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0

@@ -1,0 +1,19 @@
+{
+  "$comment": "Machine-readable contract source for the AutoFlow gate hook (issue #223). Single source of truth read by tests/test-issue-223-schema-hook-contract.sh to assert the hook's in-script literals/keys/paths equal these declared values. Values mirror .claude/hooks/check-autoflow-gate.sh EXACTLY; do not edit one without the other or the contract test fails (that is the drift signal).",
+  "thresholds": {
+    "avg_min": 7.5,
+    "item_min": 7,
+    "security_block_max": 3
+  },
+  "security_keys": ["security", "보안"],
+  "gated_phase_keys": ["gate_hypothesis_cause", "gate_plan", "audit", "gate_quality"],
+  "paths": {
+    "active": ".active",
+    "verdict": ".phases.gate_hypothesis_cause.verdict"
+  },
+  "$comment_closed_world": "Issue #245 cycle-2 closed-world vocabulary. The hook validator (AUTOFLOW-SCHEMA-VALIDATION) accepts ONLY these top-level keys (or a fix_regression_cycle_N matching cycle_key_grammar), verdicts in verdict_enum (or empty/absent — gate-not-triggered, CLAUDE.md verdict rule), and scores in score_range; every other shape → MALFORMED → fail-closed. Mirror the hook EXACTLY (drift = contract-test failure).",
+  "top_level_keys": ["active", "issue", "title", "date", "cycle", "mode", "phase", "phases", "fix_regression"],
+  "cycle_key_grammar": "^fix_regression_cycle_[0-9]+$",
+  "verdict_enum": ["pending", "evaluated", "skipped (feat issue)"],
+  "score_range": { "min": 0, "max": 10 }
+}

@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# .github/workflows/plugin-package.yml — plugin packaging acceptance suite (issue #790)
+#
+# Runs the plugin packaging acceptance suite (tests/plugin/verify-package.sh), which
+# validates the shipped plugin under plugin/autoflow/ and the self-hosted marketplace
+# at .claude-plugin/marketplace.json: manifest/marketplace validity, hooks.json wiring
+# under ${CLAUDE_PLUGIN_ROOT}, state-path separation via ${CLAUDE_PROJECT_DIR}, byte-copy
+# parity with the .claude/ originals, engine-core-unchanged (empty diff), structure
+# conformance, and the README settings-pin reference snippet (AC1-AC6).
+#
+# Why GitHub Actions: the suite is pure POSIX sh + jq/cmp/diff -r/grep/git with no
+# node/npm, no bats, and no submodule checkout — the same zero-infra rationale as
+# host-purity-delta.yml / schema-hook-contract.yml. ubuntu-latest ships bash 5.x +
+# git + jq; the engine-core-unchanged check needs the merge-base against origin/main,
+# so checkout uses fetch-depth: 0.
+#
+# Enforcement level: ADVISORY. This repo's plan provides no branch-protection /
+# required-status-checks, so a red run here does NOT auto-block merge; it surfaces a
+# pass/fail signal the external reviewer confirms green before merging.
+
+name: plugin-package
+
+on:
+  pull_request:
+    paths:
+      - 'plugin/**'
+      - '.claude-plugin/**'
+      - '.claude/hooks/**'
+      - '.claude/agents/**'
+      - '.claude/skills/**'
+      - 'tests/plugin/verify-package.sh'
+      - '.github/workflows/plugin-package.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'plugin/**'
+      - '.claude-plugin/**'
+      - '.claude/hooks/**'
+      - '.claude/agents/**'
+      - '.claude/skills/**'
+      - 'tests/plugin/verify-package.sh'
+      - '.github/workflows/plugin-package.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  plugin-package:
+    name: plugin packaging acceptance suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Run plugin packaging acceptance suite
+        run: bash tests/plugin/verify-package.sh

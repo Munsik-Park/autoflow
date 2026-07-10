@@ -1,0 +1,12 @@
+{
+  "name": "autoflow",
+  "owner": { "name": "Munsik-Park" },
+  "plugins": [
+    {
+      "name": "autoflow",
+      "source": "./plugin/autoflow",
+      "description": "AutoFlow phase-gate engine (hooks + role subagents + epic-dash skill).",
+      "version": "0.1.0"
+    }
+  ]
+}

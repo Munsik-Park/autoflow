@@ -1,0 +1,11 @@
+# service-identifier tokens forbidden as NEW additions in host tool files.
+# One extended-regexp (ERE) per line; '#' comments and blank lines ignored.
+# Each entry is wrapped by the scanner as a whole-token, case-insensitive match
+# ( (^|[^[:alnum:]_])(<entry>)([^[:alnum:]_]|$) via grep -iE ), so a domain-style
+# token supplies its own metachar escaping here (connev\.io), and a new token is
+# a data edit only.
+librechat
+jeungpyeong
+cbnu
+portone
+connev\.io
