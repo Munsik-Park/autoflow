@@ -20,6 +20,10 @@
 
 set -euo pipefail
 
+# Pin byte-order collation so manifest row order is a function of the source tree
+# alone, not the invoking shell's locale (issue #16 — Derived-artifacts rule).
+export LC_ALL=C
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
