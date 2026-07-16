@@ -300,7 +300,7 @@
       "dest": "scripts/handoff/emit-cycle-digest.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "4edd568f3f6cc86c4acd41963a9b71d6ea24eb6592ef5bb0b0a282672f429285"
+      "sha256": "25983a0b199b5de925a160b4fe1acc602bba714064fd56b2049c1c72f6627b77"
     },
     {
       "source": "scripts/handoff/create-host-pr.sh",

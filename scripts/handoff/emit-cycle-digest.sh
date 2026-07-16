@@ -179,6 +179,7 @@ LINE="$(jq -c -n \
 ')"
 
 # Append-only write (never a truncating redirect).
+mkdir -p "$(dirname "$DIGEST")"
 printf '%s\n' "$LINE" >> "$DIGEST"
 
 ANCHOR_LINE="$(wc -l < "$DIGEST" | tr -d ' ')"
