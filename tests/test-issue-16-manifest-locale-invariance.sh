@@ -209,6 +209,43 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# AC-C2-1 — no unconditional HEAD-restore of the tracked manifest remains
+# (review-response cycle 2, F1 [Medium] —
+# .autoflow/issue-16-verification-design.md AC-C2-1). Anti-self-match [MUST]:
+# both the detection pattern and the literal-token guard below are built so
+# the source of this section never spells the two-word restore command as a
+# contiguous real-space token — so neither assertion can match its own
+# definition.
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== AC-C2-1 (cycle 2, standing) — no unconditional HEAD-restore of setup/manifest.json ==="
+
+AC_C2_1_SELF="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
+AC_C2_1_CMD_RE='git[[:space:]]+checkout[[:space:]]+--[[:space:]]+setup/manifest\.json'
+AC_C2_1_SP=' '
+AC_C2_1_TOKEN="git${AC_C2_1_SP}checkout"
+
+assert_true "AC-C2-1-a: no HEAD-restore command targeting the real tree's setup/manifest.json remains" \
+  "! grep -nE '$AC_C2_1_CMD_RE' '$AC_C2_1_SELF' >/dev/null 2>&1"
+assert_true "AC-C2-1-b: no descriptor/comment line spells the HEAD-restore command as a literal real-space token" \
+  "! grep -nF \"\$AC_C2_1_TOKEN\" '$AC_C2_1_SELF' >/dev/null 2>&1"
+
+# ---------------------------------------------------------------------------
+# AC-C2-6 — cycle-2 change surface stays confined to this test file; the
+# production generator and committed manifest carry no pending modification
+# (.autoflow/issue-16-verification-design.md AC-C2-6).
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== AC-C2-6 (cycle 2, standing) — no pending change to setup/gen-manifest-hashes.sh or setup/manifest.json ==="
+
+assert_true "AC-C2-6-a: setup/gen-manifest-hashes.sh has no uncommitted modification" \
+  "git diff --quiet -- setup/gen-manifest-hashes.sh"
+assert_true "AC-C2-6-b: setup/manifest.json has no uncommitted modification" \
+  "git diff --quiet -- setup/manifest.json"
+
+# ---------------------------------------------------------------------------
 # Cleanup — restore any regenerated manifest and leave the tree clean.
 # AC2/AC3 only ever regenerate inside mktemp copies (already rm -rf'd above);
 # this is a defensive restore in case any step above touched the tracked
