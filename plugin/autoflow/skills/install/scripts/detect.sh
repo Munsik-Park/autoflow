@@ -131,6 +131,12 @@ if [ "$_have_git" = 1 ] && git -C "$TARGET_ROOT" rev-parse --git-dir >/dev/null 
       ORG="${_p%%/*}"
       REPO="${_p##*/}"
       ;;
+    git@github.com*:*/*)         # GitHub SSH host-alias (~/.ssh/config), e.g. github.com-work/-personal
+      _p="${_url#*:}"           # "org/repo.git" — path after the first colon
+      _p="${_p%.git}"
+      ORG="${_p%%/*}"
+      REPO="${_p##*/}"
+      ;;
   esac
   _head=$(git -C "$TARGET_ROOT" symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null)
   [ -n "$_head" ] && DEFAULT_BRANCH="${_head#refs/remotes/origin/}"

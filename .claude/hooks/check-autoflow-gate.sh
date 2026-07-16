@@ -100,11 +100,27 @@ if [ "$TOOL_NAME" = "Bash" ]; then
 
   DEFAULT_BRANCH=$(git -C "${CLAUDE_PROJECT_DIR:-.}" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
   DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
-  if printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}git[[:space:]]+push\b" \
-     && printf '%s' "$SCAN" | grep -qE "(\borigin[[:space:]]+(HEAD:)?${DEFAULT_BRANCH}\b|:[[:space:]]*${DEFAULT_BRANCH}\b)"; then
-    echo "BLOCKED: AutoFlow does not push to ${DEFAULT_BRANCH} — push the dev branch and open a PR (CLAUDE.md > HANDOFF)." >&2
-    exit 2
-  fi
+  # Segment-scoped default-branch-push deny (issue #3): the "git push" and the
+  # "target is the default branch" patterns must co-occur in ONE command segment,
+  # not merely somewhere in the multi-line scan buffer. Splitting on the shell
+  # command separators turns each separator into a newline so the per-segment
+  # loop treats one command at a time — a composite cleanup command whose only
+  # push is a delete-refspec to a non-default branch no longer AND-matches an
+  # unrelated `… origin <default>` sub-command.
+  # NOTE (C2): the replacement is a POSIX literal backslash-newline (an escaped
+  # real newline), NOT the `\n` escape — `\n`-in-replacement is undefined by POSIX
+  # and a sed that emits literal `n` would collapse segmentation and let a
+  # default-branch push slip (fail-open in a security gate). The literal form is
+  # standard-guaranteed on BSD (macOS operator) and GNU (CI) sed alike.
+  _bp_segs=$(printf '%s' "$SCAN" | sed -E 's/(&&|\|\||[;&|])/\
+/g')
+  while IFS= read -r _bp_seg; do
+    if printf '%s' "$_bp_seg" | grep -qE "^[[:space:]]*git[[:space:]]+push\b" \
+       && printf '%s' "$_bp_seg" | grep -qE "(\borigin[[:space:]]+(HEAD:)?${DEFAULT_BRANCH}\b|:[[:space:]]*${DEFAULT_BRANCH}\b)"; then
+      echo "BLOCKED: AutoFlow does not push to ${DEFAULT_BRANCH} — push the dev branch and open a PR (CLAUDE.md > HANDOFF)." >&2
+      exit 2
+    fi
+  done <<< "$_bp_segs"
 fi
 
 # ── Section 1b: Agent spawn must declare an explicit model (state-independent) ──
