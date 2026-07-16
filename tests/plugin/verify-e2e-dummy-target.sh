@@ -553,6 +553,39 @@ else
   failc "E3a-x" "#10" "prerequisite install failed"
 fi
 
+# ── E3a-y (issue #10, cycle 2, review-response Finding 1): actually EXECUTE ──
+# the installed emit-cycle-digest.sh against the fresh dummy target with
+# synthesized minimal state, confirming docs/cycle-digest.jsonl creation and
+# the path:line stdout. E3a-x above checks only existence + exec bit, not
+# execution -- reviewer-cited coverage gap. Placed after E1d's POST_LIST
+# capture (:392) so the files this arm creates (docs/cycle-digest.jsonl,
+# .autoflow/*) are not in E1d's newly-created-path scan set (verification
+# design §3 RR2-AC3 ordering note).
+echo "== E3a-y (issue #10 c2): installed emit-cycle-digest.sh executes on a docs-less fresh target =="
+if [ "$DRIVE_PASS" -eq 1 ] && [ -f "$DUMMY/scripts/handoff/emit-cycle-digest.sh" ]; then
+  if [ -e "$DUMMY/docs/cycle-digest.jsonl" ]; then
+    failc "E3a-y" "#10" "precondition violated -- $DUMMY/docs/cycle-digest.jsonl already exists before the run"
+  else
+    mkdir -p "$DUMMY/.autoflow"
+    cat > "$DUMMY/.autoflow/issue-0.json" <<'EOF'
+{ "issue": "#0", "cycle": 1, "date": "2026-07-16", "mode": "new-issue", "phases": {} }
+EOF
+    : > "$DUMMY/.autoflow/ledger.md"
+    E3AY_OUT=$(cd "$DUMMY" && bash scripts/handoff/emit-cycle-digest.sh \
+      .autoflow/issue-0.json .autoflow/ledger.md "" 2>&1)
+    E3AY_CODE=$?
+    if [ "$E3AY_CODE" -eq 0 ] && [ -f "$DUMMY/docs/cycle-digest.jsonl" ] \
+      && [ "$E3AY_OUT" = "docs/cycle-digest.jsonl:1" ] \
+      && jq -e . < "$DUMMY/docs/cycle-digest.jsonl" >/dev/null 2>&1; then
+      pass "E3a-y: installed emit-cycle-digest.sh creates docs/cycle-digest.jsonl on a docs-less target and prints docs/cycle-digest.jsonl:1"
+    else
+      failc "E3a-y" "#10" "exit=$E3AY_CODE stdout='$E3AY_OUT' file-exists=$([ -f "$DUMMY/docs/cycle-digest.jsonl" ] && echo yes || echo no)"
+    fi
+  fi
+else
+  failc "E3a-y" "#10" "prerequisite install failed or emit-cycle-digest.sh not installed"
+fi
+
 DUMMY_DRIFT="$DUMMY/.claude/autoflow/drift-check.sh"
 
 echo "== E3b: installed drift-check.sh exits 0 on the clean install (in-target) =="

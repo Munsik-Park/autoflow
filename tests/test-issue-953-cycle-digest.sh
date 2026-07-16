@@ -297,6 +297,62 @@ EOF
   rm -rf "$TMP_REPO" "/tmp/f7-out-$$.log" 2>/dev/null
 
   # -------------------------------------------------------------------------
+  # RR2-AC1 / RR2-AC2 (issue #10, cycle 2, review-response Finding 1 —
+  # emit-cycle-digest.sh:182 has no mkdir -p for the DIGEST parent, so a
+  # fresh target with no root docs/ aborts under set -euo pipefail). These
+  # are deliberately NEW, SEPARATE arms from the AC2-F7 block above: that
+  # block pre-creates "$TMP_REPO/docs" (see `mkdir -p "$TMP_REPO/.autoflow"
+  # "$TMP_REPO/docs"` a few lines up), which structurally masks this defect
+  # (verification-design DCR-A, BLOCKING). RR2-AC1 must run in a temp dir
+  # that deliberately OMITS docs/.
+  # -------------------------------------------------------------------------
+  echo ""
+  echo "=== RR2-AC1 / RR2-AC2 — docs-less invocation + source-shape guard (#10 c2) ==="
+
+  RR2_TMP="$(mktemp -d)"
+  mkdir -p "$RR2_TMP/scripts/handoff" "$RR2_TMP/.autoflow"
+  cp "$EMIT_SCRIPT" "$RR2_TMP/scripts/handoff/emit-cycle-digest.sh"
+  chmod +x "$RR2_TMP/scripts/handoff/emit-cycle-digest.sh"
+  cat > "$RR2_TMP/.autoflow/issue-0.json" <<'EOF'
+{ "issue": "#0", "cycle": 1, "date": "2026-07-16", "mode": "new-issue", "phases": {} }
+EOF
+  : > "$RR2_TMP/.autoflow/ledger.md"
+
+  assert_true "RR2-AC1-precondition: the docs-less temp target has no docs/ dir before the run" \
+    "[ ! -d '$RR2_TMP/docs' ]"
+
+  ( cd "$RR2_TMP" && bash scripts/handoff/emit-cycle-digest.sh \
+      .autoflow/issue-0.json .autoflow/ledger.md "" \
+      >/tmp/rr2-ac1-out-$$.log 2>&1 )
+  RR2_AC1_EXIT=$?
+
+  assert_true "RR2-AC1-exit0: emit-cycle-digest.sh exits 0 on a docs-less fresh target (issue #10 Finding 1)" \
+    "[ '$RR2_AC1_EXIT' -eq 0 ]"
+  assert_true "RR2-AC1-file-created: docs/cycle-digest.jsonl is created under the docs-less target" \
+    "[ -f '$RR2_TMP/docs/cycle-digest.jsonl' ]"
+  assert_true "RR2-AC1-line-count: the created docs/cycle-digest.jsonl has exactly 1 line" \
+    "[ -f '$RR2_TMP/docs/cycle-digest.jsonl' ] && [ \"\$(wc -l < '$RR2_TMP/docs/cycle-digest.jsonl' | tr -d ' ')\" = '1' ]"
+
+  rm -rf "$RR2_TMP" "/tmp/rr2-ac1-out-$$.log" 2>/dev/null
+
+  # RR2-AC2 — source-shape guard: a `mkdir -p` targeting the DIGEST parent
+  # directory must appear BEFORE the `>> "$DIGEST"` append line in the
+  # shipped source (not merely in a caller's temp-dir setup). Locate the
+  # append line via the `>> "$DIGEST"` token (not a "line with both '>>' and
+  # cycle-digest.jsonl" match — the literal `cycle-digest.jsonl` is not on
+  # the append line at HEAD, verification design §3 RR2-AC2 ordering-anchor
+  # precision note), so a token-based match here does not vacuously pass.
+  RR2_MKDIR_LINE="$(grep -n 'mkdir[[:space:]]\+-p.*dirname.*DIGEST\|mkdir[[:space:]]\+-p.*REPO_ROOT.*docs' "$EMIT_SCRIPT" | head -1 | cut -d: -f1)"
+  RR2_APPEND_LINE="$(grep -n '>>[[:space:]]*"\$DIGEST"' "$EMIT_SCRIPT" | head -1 | cut -d: -f1)"
+
+  assert_true "RR2-AC2-mkdir-present: emit-cycle-digest.sh contains a mkdir -p targeting the DIGEST parent directory" \
+    "[ -n '$RR2_MKDIR_LINE' ]"
+  assert_true "RR2-AC2-append-present: the >> \"\$DIGEST\" append line is locatable by token match" \
+    "[ -n '$RR2_APPEND_LINE' ]"
+  assert_true "RR2-AC2-ordering: the mkdir -p line appears strictly before the >> \"\$DIGEST\" append line" \
+    "[ -n '$RR2_MKDIR_LINE' ] && [ -n '$RR2_APPEND_LINE' ] && [ '$RR2_MKDIR_LINE' -lt '$RR2_APPEND_LINE' ]"
+
+  # -------------------------------------------------------------------------
   # Findings-carrying leg (VERIFY step-3 ruling — escaped_defects RED): a
   # Medium+ review cycle's terminal record must carry a POPULATED
   # escaped_defects array; the feature-design §4 schema and the F8 fixture's
