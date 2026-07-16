@@ -144,6 +144,41 @@ run_hook 0 "git push dev branch"        "$NOSTATE" "$(bash_json 'git push -u ori
 run_hook 0 "cd && gh pr create"         "$NOSTATE" "$(bash_json 'cd /x && gh pr create -t t -b b')"
 run_hook 0 "plain git status"           "$NOSTATE" "$(bash_json 'git status')"
 
+echo "Issue #3 (D2) — default-branch push segmentation (.autoflow/issue-3-verification-design.md §1 AC-2a..2g,2j)"
+# All arms below are state-independent (Section 1, before the activity check)
+# and pin CLAUDE_PROJECT_DIR to $NOSTATE (no origin/HEAD) so DEFAULT_BRANCH
+# falls back to 'main' deterministically (gate:106).
+AC2A_CMD=$'git checkout main && git pull --ff-only origin main\ngit branch -d dev/x\ngit push origin --delete dev/x'
+run_hook 0 "AC-2a: compound cleanup (checkout+pull, branch -d, push --delete) allowed" \
+  "$NOSTATE" "$(bash_json "$AC2A_CMD")"
+run_hook 2 "AC-2b: bare 'git push origin main' denied" \
+  "$NOSTATE" "$(bash_json 'git push origin main')"
+run_hook 2 "AC-2c: same-segment compound 'cd x && git push origin main' denied" \
+  "$NOSTATE" "$(bash_json 'cd x && git push origin main')"
+run_hook 2 "AC-2d: alternate refspec 'git push origin HEAD:main' denied" \
+  "$NOSTATE" "$(bash_json 'git push origin HEAD:main')"
+run_hook 2 "AC-2d: alternate refspec 'git push origin :main' denied" \
+  "$NOSTATE" "$(bash_json 'git push origin :main')"
+run_hook 0 "AC-2e: delete-refspec safeguard 'git push origin --delete dev/x' allowed" \
+  "$NOSTATE" "$(bash_json 'git push origin --delete dev/x')"
+run_hook 0 "AC-2f: cross-segment false-negative guard (unrelated 'origin main' mention + push dev/x) allowed" \
+  "$NOSTATE" "$(bash_json 'echo origin main && git push origin dev/x')"
+
+echo "AC-2g: copy parity — plugin/autoflow/hooks and .claude/hooks copies are byte-identical"
+if diff -q "$PROJECT_ROOT/plugin/autoflow/hooks/check-autoflow-gate.sh" "$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh" >/dev/null 2>&1; then
+  echo "  PASS: AC-2g: hook copies byte-identical"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: AC-2g: hook copies differ (plugin/autoflow/hooks vs .claude/hooks)"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "AC-2j: label-gate untouched — existing blocked-by-review/blocked-by-subrepo true-positive arms stay green (regression guard)"
+run_hook 2 "AC-2j: gh pr edit --remove-label blocked-by-review still denied" \
+  "$NOSTATE" "$(bash_json 'gh pr edit 9 --remove-label blocked-by-review')"
+run_hook 2 "AC-2j: gh api -X DELETE .../labels/blocked-by-subrepo still denied" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-subrepo -X DELETE')"
+
 echo "P1 — boundary match fires score gate on chained forms (active, empty scores)"
 run_hook 2 "cd && git push (Gate 3)"    "$ACTIVE"  "$(bash_json 'cd /x && git push -u origin dev/x')"
 run_hook 2 "a && gh pr create (Gate 4)" "$ACTIVE"  "$(bash_json 'true && gh pr create -t t')"

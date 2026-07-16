@@ -75,6 +75,45 @@ the gate's threat model (preventing routine agent merge/push, not a
 hostile operator). No further refinement is planned unless a realistic
 non-adversarial false-positive surfaces.
 
+### Segment-scoped co-occurrence refinement (applied)
+
+A gate whose deny condition is the **AND of two or more patterns** MUST
+require the patterns to co-occur in the **same command segment**, not
+merely anywhere in `SCAN`. Two independent greps over the whole buffer
+false-positive on composite commands: in the post-merge cleanup batch
+`git pull --ff-only origin main; git push origin --delete dev/x`, one
+grep matches the `git push` in the delete sub-command and the other
+matches `origin main` in the unrelated pull sub-command, and the AND
+holds even though no sub-command pushes to the default branch (issue #3).
+
+Split `SCAN` on the shell separators, then match per segment:
+
+```sh
+_segs=$(printf '%s' "$SCAN" | sed -E 's/(&&|\|\||[;&|])/\
+/g')
+while IFS= read -r _seg; do
+  if printf '%s' "$_seg" | grep -qE "^[[:space:]]*git[[:space:]]+push\b" \
+     && printf '%s' "$_seg" | grep -qE "<second pattern>"; then
+    ...deny...
+  fi
+done <<< "$_segs"
+```
+
+Within a segment the command token is anchored with `^[[:space:]]*` —
+this is not the bare-`^` anti-pattern P1 prohibits: after separator
+splitting, segment-start *is* the command boundary, so the anchor is
+equivalent to `CMD_BOUNDARY` applied to the unsplit buffer. The sed
+replacement is a POSIX **literal backslash-newline** (an escaped real
+newline), never the `\n` escape — `\n` in a replacement is undefined by
+POSIX, and a sed emitting a literal `n` would collapse segmentation and
+fail *open* in a security gate; the literal form is standard-guaranteed
+on BSD and GNU sed alike.
+
+Single-pattern gates are unaffected — `CMD_BOUNDARY` matching over the
+whole `SCAN` remains correct for them, since one pattern has no
+co-occurrence to mis-scope. Reference: the default-branch push deny in
+`.claude/hooks/check-autoflow-gate.sh` (segment-scoped since issue #3).
+
 ## Rule P2 — Unconditional Denies Precede the Activity Check
 
 A hook has two classes of gate:
