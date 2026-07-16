@@ -289,6 +289,34 @@
       "sha256": "83c874995db25cb41d68caac324ec7df19e4f08527c76fa31d2d975844d31737"
     },
     {
+      "source": "scripts/preflight/scan-cross-issue-recurrence.sh",
+      "dest": "scripts/preflight/scan-cross-issue-recurrence.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "8836011300da12e02ad6cdb680ca88434434f9dcb6f91161eb4c52abff3f9848"
+    },
+    {
+      "source": "scripts/handoff/emit-cycle-digest.sh",
+      "dest": "scripts/handoff/emit-cycle-digest.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "4edd568f3f6cc86c4acd41963a9b71d6ea24eb6592ef5bb0b0a282672f429285"
+    },
+    {
+      "source": "scripts/handoff/create-host-pr.sh",
+      "dest": "scripts/handoff/create-host-pr.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "51ab937a11d3240fc81df55a4519d2653f9dce9aa1abd92801586168a60d05f4"
+    },
+    {
+      "source": "scripts/cleanup/cleanup-issue.sh",
+      "dest": "scripts/cleanup/cleanup-issue.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "404837e92773fb3bb8b98f69eee3e15cc008cde5cc2a39b5321e6800c38786da"
+    },
+    {
       "source": "setup/manifest.json",
       "dest": ".claude/autoflow/manifest.json",
       "tier": "root-layer",

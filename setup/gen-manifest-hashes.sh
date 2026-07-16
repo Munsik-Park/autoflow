@@ -151,6 +151,21 @@ build_rows() {
   emit_row ".claude/autoflow.local.json" \
            ".claude/autoflow.local.json" "root-layer" "scaffold" "file"
 
+  # Root-layer tier: methodology-step scripts (issue #10). Four scripts the
+  # stamped docs (autoflow-guide.md PREFLIGHT 1.5 / HANDOFF 4·6.7,
+  # git-workflow.md Post-Merge Cleanup) instruct a consumer to run but which
+  # 0.1.0 never registered, so install_into_target never delivered them.
+  # Source-path-preserved copies (identity dest), same shape as the reviewer-
+  # backend script rows above; none source a sibling lib (no extra rows).
+  emit_row "scripts/preflight/scan-cross-issue-recurrence.sh" \
+           "scripts/preflight/scan-cross-issue-recurrence.sh" "root-layer" "copy" "file"
+  emit_row "scripts/handoff/emit-cycle-digest.sh" \
+           "scripts/handoff/emit-cycle-digest.sh" "root-layer" "copy" "file"
+  emit_row "scripts/handoff/create-host-pr.sh" \
+           "scripts/handoff/create-host-pr.sh" "root-layer" "copy" "file"
+  emit_row "scripts/cleanup/cleanup-issue.sh" \
+           "scripts/cleanup/cleanup-issue.sh" "root-layer" "copy" "file"
+
   # Manifest self-entry (copied last; cannot hash itself pre-write).
   emit_row "setup/manifest.json" \
            ".claude/autoflow/manifest.json" "root-layer" "copy" "null"
