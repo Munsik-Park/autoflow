@@ -191,21 +191,28 @@ fi
 echo ""
 echo "=== AC5 — manifest change is order-only (set/hash/dest/kind + count equality vs. pre-fix baseline) ==="
 
+# Record whether the gate fixture existed BEFORE this run seeded it — a fixture
+# created in this same invocation is byte-derived from the current manifest, so
+# comparing against it proves nothing (self-comparison). Only a fixture carried
+# in from an earlier (pre-fix) run is an independent oracle.
+baseline_preexisted=0
+[ -f "$BASELINE_FIXTURE" ] && baseline_preexisted=1
+
 if [ ! -f "$BASELINE_FIXTURE" ]; then
   mkdir -p "$PROJECT_ROOT/.autoflow"
   cp "$MANIFEST_JSON" "$BASELINE_FIXTURE"
   echo "  (fixture) captured pre-fix baseline: $BASELINE_FIXTURE"
 fi
 
-if [ -f "$BASELINE_FIXTURE" ]; then
+if [ "$baseline_preexisted" -eq 1 ]; then
   assert_true "AC5-set-hash-equality: sorted (source, sha256, dest, kind) tuples of the committed manifest equal the pre-fix baseline's" \
     "diff <(jq -r '.artifacts[] | \"\(.source)\t\(.sha256)\t\(.dest)\t\(.kind)\"' '$MANIFEST_JSON' | sort) \
           <(jq -r '.artifacts[] | \"\(.source)\t\(.sha256)\t\(.dest)\t\(.kind)\"' '$BASELINE_FIXTURE' | sort) >/dev/null 2>&1"
   assert_true "AC5-count-equality: artifact count is unchanged vs. the pre-fix baseline" \
     "[ \"\$(jq '.artifacts | length' '$MANIFEST_JSON')\" = \"\$(jq '.artifacts | length' '$BASELINE_FIXTURE')\" ]"
 else
-  skip_test "AC5: pre-fix baseline fixture absent (cycle-scoped gate — not re-derivable without the pre-fix tree)"
-  skip_test "AC5: pre-fix baseline fixture absent (cycle-scoped gate — not re-derivable without the pre-fix tree)"
+  skip_test "AC5: baseline fixture seeded this run — no independent pre-fix oracle to compare against"
+  skip_test "AC5: baseline fixture seeded this run — no independent pre-fix oracle to compare against"
 fi
 
 # ---------------------------------------------------------------------------
@@ -244,15 +251,6 @@ assert_true "AC-C2-6-a: setup/gen-manifest-hashes.sh has no uncommitted modifica
   "git diff --quiet -- setup/gen-manifest-hashes.sh"
 assert_true "AC-C2-6-b: setup/manifest.json has no uncommitted modification" \
   "git diff --quiet -- setup/manifest.json"
-
-# ---------------------------------------------------------------------------
-# Cleanup — restore any regenerated manifest and leave the tree clean.
-# AC2/AC3 only ever regenerate inside mktemp copies (already rm -rf'd above);
-# this is a defensive restore in case any step above touched the tracked
-# setup/manifest.json in the real working tree.
-# ---------------------------------------------------------------------------
-
-( cd "$PROJECT_ROOT" && git checkout -- setup/manifest.json 2>/dev/null )
 
 echo ""
 echo "=============================="
