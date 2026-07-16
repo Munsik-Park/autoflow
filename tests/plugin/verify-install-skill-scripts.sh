@@ -287,6 +287,12 @@ MOCK_GH_DIR=$(mktemp -d)
 IDENTITY_PRESENT_TARGET=$(mktemp -d)  # AD4(i): CLAUDE.local.md pre-exists
 IDENTITY_ABSENT_TARGET=$(mktemp -d)   # AD4(ii): CLAUDE.local.md absent
 SSH_TARGET=$(mktemp -d)               # AD1 (F3): SSH-form GitHub origin
+ALIAS_TARGET=$(mktemp -d)             # issue #3 AC-1a: SSH host-alias origin
+                                       # (git@github.com-work:org/repo.git)
+ALIAS2_TARGET=$(mktemp -d)            # issue #3 AC-1c: second alias-suffix
+                                       # form (github.com-personal)
+NONGITHUB_SSH_TARGET=$(mktemp -d)     # issue #3 AC-1d(ii): non-GitHub SSH
+                                       # remote (omission regression guard)
 IDENTITY_UNKNOWN_TARGET=$(mktemp -d)  # AD4 (F3): unknown-TOPOLOGY label
 CRASH_TARGET=$(mktemp -d)             # AC-M1a/AC-M1b/AC-M1-D2 (cycle 3): shared,
                                        # stub overwritten in place per arm
@@ -322,6 +328,7 @@ cleanup() {
          "$MULTI_TOPO_TARGET" "$EMPTY_CACHE" "$MOCK_GH_DIR" \
          "$IDENTITY_PRESENT_TARGET" "$IDENTITY_ABSENT_TARGET" \
          "$SSH_TARGET" "$IDENTITY_UNKNOWN_TARGET" "$CRASH_TARGET" \
+         "$ALIAS_TARGET" "$ALIAS2_TARGET" "$NONGITHUB_SSH_TARGET" \
          "$SLASHBRANCH_TARGET" "$ORACLE_TAMPER_TARGET" "$DEGRADE_TARGET" \
          "$CRASH_CACHE" "$MISSING_ORACLE_CACHE" "$BACKEND_TARGET" "$NOJQ_DIR" \
          "$BACKEND5_TARGET"
@@ -642,6 +649,76 @@ if [ "$DETECT_CODE" -eq 0 ] \
   pass "AD1 (F3, SSH form): SSH origin derives ORG=dummy-org REPO=ssh-dummy (parity with https arm)"
 else
   failc "AD1 (F3, SSH form)" "expected ORG=dummy-org REPO=ssh-dummy from an SSH-form origin; got exit=$DETECT_CODE ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO)"
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Issue #3 (D1) — SSH host-alias remote ORG/REPO derivation
+# .autoflow/issue-3-verification-design.md §1 AC-1a/1b/1c/1d
+# ══════════════════════════════════════════════════════════════════════════════
+
+echo "== AC-1a: SSH host-alias origin (git@github.com-work:...) -> ORG=dummy-org REPO=alias-dummy =="
+( cd "$ALIAS_TARGET" && git init -q \
+    && git -c user.email=test@example.com -c user.name=test commit -q --allow-empty -m init \
+    && git remote add origin "git@github.com-work:dummy-org/alias-dummy.git" \
+    && git update-ref refs/remotes/origin/main "$(git -C "$ALIAS_TARGET" rev-parse HEAD)" )
+run_detect "$ALIAS_TARGET" "$REPO_ROOT"
+if [ "$DETECT_CODE" -eq 0 ] \
+   && [ "$(get_kv "$DETECT_OUT" ORG)" = "dummy-org" ] \
+   && [ "$(get_kv "$DETECT_OUT" REPO)" = "alias-dummy" ]; then
+  pass "AC-1a: host-alias SSH origin derives ORG=dummy-org REPO=alias-dummy"
+else
+  failc "AC-1a" "expected ORG=dummy-org REPO=alias-dummy from git@github.com-work:dummy-org/alias-dummy.git; got exit=$DETECT_CODE ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO) -- at HEAD the *github.com[:/]* glob does not match the '-work' alias suffix so ORG/REPO stay empty"
+fi
+
+echo "== AC-1b: parity -- existing plain SSH (AD1 F3) and https (AD1) arms still derive identical ORG/REPO after the fix =="
+run_detect "$SSH_TARGET" "$REPO_ROOT"
+if [ "$(get_kv "$DETECT_OUT" ORG)" = "dummy-org" ] && [ "$(get_kv "$DETECT_OUT" REPO)" = "ssh-dummy" ]; then
+  pass "AC-1b: plain SSH origin (AD1 F3) unaffected by the alias fix"
+else
+  failc "AC-1b (SSH)" "expected ORG=dummy-org REPO=ssh-dummy from the plain SSH arm to remain unaffected; got ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO)"
+fi
+run_detect "$GITHUB_TARGET" "$REPO_ROOT"
+if [ "$(get_kv "$DETECT_OUT" ORG)" = "dummy-org" ] && [ "$(get_kv "$DETECT_OUT" REPO)" = "throwaway-dummy" ]; then
+  pass "AC-1b: https origin (AD1) unaffected by the alias fix"
+else
+  failc "AC-1b (https)" "expected ORG=dummy-org REPO=throwaway-dummy from the plain https arm to remain unaffected; got ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO)"
+fi
+
+echo "== AC-1c: alias-suffix-general -- github.com-personal alias also derives, .git stripped =="
+( cd "$ALIAS2_TARGET" && git init -q \
+    && git -c user.email=test@example.com -c user.name=test commit -q --allow-empty -m init \
+    && git remote add origin "git@github.com-personal:o/r.git" \
+    && git update-ref refs/remotes/origin/main "$(git -C "$ALIAS2_TARGET" rev-parse HEAD)" )
+run_detect "$ALIAS2_TARGET" "$REPO_ROOT"
+if [ "$DETECT_CODE" -eq 0 ] \
+   && [ "$(get_kv "$DETECT_OUT" ORG)" = "o" ] \
+   && [ "$(get_kv "$DETECT_OUT" REPO)" = "r" ]; then
+  pass "AC-1c: github.com-personal alias derives ORG=o REPO=r (general, not alias-string-specific)"
+else
+  failc "AC-1c" "expected ORG=o REPO=r from git@github.com-personal:o/r.git; got exit=$DETECT_CODE ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO)"
+fi
+
+echo "== AC-1d(i): non-GitHub HTTPS remote (existing AD1 omission arm) -> empty ORG/REPO, unchanged =="
+run_detect "$NONGITHUB_TARGET" "$REPO_ROOT"
+if [ "$DETECT_CODE" -eq 0 ] \
+   && [ -z "$(get_kv "$DETECT_OUT" ORG)" ] \
+   && [ -z "$(get_kv "$DETECT_OUT" REPO)" ]; then
+  pass "AC-1d(i): non-GitHub HTTPS remote stays omitted (empty ORG/REPO), exit 0"
+else
+  failc "AC-1d(i)" "expected empty ORG/REPO exit 0 on a non-GitHub HTTPS remote; got exit=$DETECT_CODE ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO)"
+fi
+
+echo "== AC-1d(ii): non-GitHub SSH remote -> empty ORG/REPO (GitHub-scoped fix, DCR-1 (A)) =="
+( cd "$NONGITHUB_SSH_TARGET" && git init -q \
+    && git -c user.email=test@example.com -c user.name=test commit -q --allow-empty -m init \
+    && git remote add origin "git@gitlab.example.com:foo/bar.git" )
+run_detect "$NONGITHUB_SSH_TARGET" "$REPO_ROOT"
+if [ "$DETECT_CODE" -eq 0 ] \
+   && [ -z "$(get_kv "$DETECT_OUT" ORG)" ] \
+   && [ -z "$(get_kv "$DETECT_OUT" REPO)" ]; then
+  pass "AC-1d(ii): non-GitHub SSH remote stays omitted (empty ORG/REPO), exit 0 (GitHub-only invariant preserved)"
+else
+  failc "AC-1d(ii)" "expected empty ORG/REPO exit 0 on a non-GitHub SSH remote (git@gitlab.example.com:...); got exit=$DETECT_CODE ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO) -- a host-agnostic git@*:*/* fix (DCR-1 (B), rejected) would wrongly derive here"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
