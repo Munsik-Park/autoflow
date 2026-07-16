@@ -131,7 +131,7 @@ if [ "$_have_git" = 1 ] && git -C "$TARGET_ROOT" rev-parse --git-dir >/dev/null 
       ORG="${_p%%/*}"
       REPO="${_p##*/}"
       ;;
-    git@github.com*:*/*)         # GitHub SSH host-alias (~/.ssh/config), e.g. github.com-work/-personal
+    git@github.com[-_]*:*/*)     # GitHub SSH host-alias (~/.ssh/config), e.g. github.com-work/github.com_personal — the [-_] separator excludes github.com-prefixed foreign hosts (github.com.evil…); the exact git@github.com: form is caught by the preceding *github.com[:/]* arm
       _p="${_url#*:}"           # "org/repo.git" — path after the first colon
       _p="${_p%.git}"
       ORG="${_p%%/*}"
