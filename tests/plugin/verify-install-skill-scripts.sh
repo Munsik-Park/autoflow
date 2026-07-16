@@ -293,6 +293,9 @@ ALIAS2_TARGET=$(mktemp -d)            # issue #3 AC-1c: second alias-suffix
                                        # form (github.com-personal)
 NONGITHUB_SSH_TARGET=$(mktemp -d)     # issue #3 AC-1d(ii): non-GitHub SSH
                                        # remote (omission regression guard)
+GITHUB_PREFIXED_HOST_TARGET=$(mktemp -d)  # issue #3 AC-1d(iii): host merely
+                                       # starting with "github.com" (over-match
+                                       # regression guard, PR #12 Low finding)
 IDENTITY_UNKNOWN_TARGET=$(mktemp -d)  # AD4 (F3): unknown-TOPOLOGY label
 CRASH_TARGET=$(mktemp -d)             # AC-M1a/AC-M1b/AC-M1-D2 (cycle 3): shared,
                                        # stub overwritten in place per arm
@@ -329,6 +332,7 @@ cleanup() {
          "$IDENTITY_PRESENT_TARGET" "$IDENTITY_ABSENT_TARGET" \
          "$SSH_TARGET" "$IDENTITY_UNKNOWN_TARGET" "$CRASH_TARGET" \
          "$ALIAS_TARGET" "$ALIAS2_TARGET" "$NONGITHUB_SSH_TARGET" \
+         "$GITHUB_PREFIXED_HOST_TARGET" \
          "$SLASHBRANCH_TARGET" "$ORACLE_TAMPER_TARGET" "$DEGRADE_TARGET" \
          "$CRASH_CACHE" "$MISSING_ORACLE_CACHE" "$BACKEND_TARGET" "$NOJQ_DIR" \
          "$BACKEND5_TARGET"
@@ -719,6 +723,19 @@ if [ "$DETECT_CODE" -eq 0 ] \
   pass "AC-1d(ii): non-GitHub SSH remote stays omitted (empty ORG/REPO), exit 0 (GitHub-only invariant preserved)"
 else
   failc "AC-1d(ii)" "expected empty ORG/REPO exit 0 on a non-GitHub SSH remote (git@gitlab.example.com:...); got exit=$DETECT_CODE ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO) -- a host-agnostic git@*:*/* fix (DCR-1 (B), rejected) would wrongly derive here"
+fi
+
+echo "== AC-1d(iii): github.com-prefixed non-GitHub host -> empty ORG/REPO (PR #12 Low finding regression guard) =="
+( cd "$GITHUB_PREFIXED_HOST_TARGET" && git init -q \
+    && git -c user.email=test@example.com -c user.name=test commit -q --allow-empty -m init \
+    && git remote add origin "git@github.com.evil.example:evil-org/evil-repo.git" )
+run_detect "$GITHUB_PREFIXED_HOST_TARGET" "$REPO_ROOT"
+if [ "$DETECT_CODE" -eq 0 ] \
+   && [ -z "$(get_kv "$DETECT_OUT" ORG)" ] \
+   && [ -z "$(get_kv "$DETECT_OUT" REPO)" ]; then
+  pass "AC-1d(iii): github.com-prefixed non-GitHub host stays omitted (empty ORG/REPO), exit 0"
+else
+  failc "AC-1d(iii)" "expected empty ORG/REPO exit 0 on git@github.com.evil.example:evil-org/evil-repo.git (host merely starts with github.com); got exit=$DETECT_CODE ORG=$(get_kv "$DETECT_OUT" ORG) REPO=$(get_kv "$DETECT_OUT" REPO) -- the git@github.com*:*/* alias arm over-matches any host prefixed with github.com, wrongly deriving ORG/REPO for a spoofed non-GitHub remote"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
