@@ -720,6 +720,53 @@ else
   failc "AC2e" "setup/manifest.json absent — cannot check sha256 freshness"
 fi
 
+# ── AC-1 (issue #10): exact registration of the 4 methodology-step scripts ────
+echo "== AC-1 (issue #10): 4 methodology-step scripts registered as root-layer/copy, count==46 =="
+if [ -f "$MANIFEST" ]; then
+  _ac1_bad=""
+  for _ac1_src in \
+    "scripts/preflight/scan-cross-issue-recurrence.sh" \
+    "scripts/handoff/emit-cycle-digest.sh" \
+    "scripts/handoff/create-host-pr.sh" \
+    "scripts/cleanup/cleanup-issue.sh"
+  do
+    _ac1_match=$(jq -r --arg s "$_ac1_src" \
+      '.artifacts[] | select(.source == $s)' "$MANIFEST" 2>/dev/null)
+    if [ -z "$_ac1_match" ]; then
+      _ac1_bad="$_ac1_bad [missing:$_ac1_src]"
+      continue
+    fi
+    _ac1_count=$(printf '%s' "$_ac1_match" | jq -s 'length')
+    if [ "$_ac1_count" != "1" ]; then
+      _ac1_bad="$_ac1_bad [$_ac1_src: expected 1 entry, found $_ac1_count]"
+      continue
+    fi
+    _ac1_dest=$(printf '%s' "$_ac1_match" | jq -r '.dest')
+    _ac1_tier=$(printf '%s' "$_ac1_match" | jq -r '.tier')
+    _ac1_kind=$(printf '%s' "$_ac1_match" | jq -r '.kind')
+    if [ "$_ac1_dest" != "$_ac1_src" ]; then
+      _ac1_bad="$_ac1_bad [$_ac1_src: dest='$_ac1_dest' != source]"
+    fi
+    if [ "$_ac1_tier" != "root-layer" ]; then
+      _ac1_bad="$_ac1_bad [$_ac1_src: tier='$_ac1_tier' != root-layer]"
+    fi
+    if [ "$_ac1_kind" != "copy" ]; then
+      _ac1_bad="$_ac1_bad [$_ac1_src: kind='$_ac1_kind' != copy]"
+    fi
+  done
+  _ac1_total=$(jq -r '.artifacts | length' "$MANIFEST" 2>/dev/null)
+  if [ "$_ac1_total" != "46" ]; then
+    _ac1_bad="$_ac1_bad [artifacts|length=$_ac1_total != 46]"
+  fi
+  if [ -z "$_ac1_bad" ]; then
+    pass "AC-1 (issue #10): all 4 scripts registered (source==dest, root-layer/copy) and artifacts|length==46"
+  else
+    failc "AC-1 (issue #10)" "registration gap or field mismatch:$_ac1_bad"
+  fi
+else
+  failc "AC-1 (issue #10)" "setup/manifest.json absent — cannot check registration"
+fi
+
 # ══════════════════════════════════════════════════════════════════════════════
 # W3 — drift detector
 # ══════════════════════════════════════════════════════════════════════════════

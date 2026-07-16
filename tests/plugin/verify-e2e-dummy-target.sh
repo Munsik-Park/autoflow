@@ -31,9 +31,11 @@
 #     E1b   `setup/init.sh --target <dummy> </dev/null` exits 0 (non-interactive)
 #     E1c   pre-existing CLAUDE.md prose survives + shim fence present
 #     E1d   installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md,
-#           scripts/review/**, scripts/preflight/**, .codex/**, AGENTS.md
+#           scripts/review/**, scripts/preflight/**, scripts/handoff/**,
+#           scripts/cleanup/**, .codex/**, AGENTS.md
 #           (#979 reviewer-backend delivery, source-path-preserved dests,
-#           ledger E12)
+#           ledger E12; scripts/handoff/**, scripts/cleanup/** widened for
+#           issue #10 manifest-registration-gap fix)
 #     E1e   second install run is idempotent (single fence, byte-identical)
 #
 #   W-E2 bundle-in-target host-purity (composition boundary of item 4):
@@ -370,7 +372,7 @@ else
   failc "E1c" "S5/#792" "prerequisite E1b failed or CLAUDE.md absent"
 fi
 
-echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, .codex/**, AGENTS.md =="
+echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, .codex/**, AGENTS.md =="
 if [ "$DRIVE_PASS" -eq 1 ]; then
   if cmp -s "$SNAP_DIR/package.json" "$DUMMY/package.json"; then
     pass "E1d: package.json byte-unchanged"
@@ -397,16 +399,26 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # source-path-preserved precedent), .codex/review.md and AGENTS.md (copy +
   # scaffold rows; on a real repo these paths pre-exist, but the E1a dummy
   # fixture starts empty so install genuinely creates them here).
+  # issue #10 widening (verification-design DCR-1 / feature design C4): the
+  # manifest-registration-gap fix registers 4 methodology-step scripts the
+  # stamped docs already instruct a consumer to run. scripts/preflight/scan-
+  # cross-issue-recurrence.sh is already covered by the scripts/preflight/*
+  # arm above; scripts/handoff/emit-cycle-digest.sh, scripts/handoff/create-
+  # host-pr.sh, and scripts/cleanup/cleanup-issue.sh land under
+  # scripts/handoff/** and scripts/cleanup/**, neither previously allow-
+  # listed, so the case pattern is widened to admit these two new dest
+  # classes (same source-path-preserved copy-row shape as scripts/review/*
+  # and scripts/preflight/*).
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done
   if [ -z "$BAD_NEW" ]; then
-    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, .codex/**, or AGENTS.md"
+    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, .codex/**, or AGENTS.md"
   else
-    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//.codex//AGENTS.md:$BAD_NEW"
+    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//.codex//AGENTS.md:$BAD_NEW"
   fi
 else
   failc "E1d" "S5/#792" "skipped -- prerequisite E1b failed"
@@ -509,6 +521,36 @@ COPYDESTS
   fi
 else
   failc "E3a" "S5/#792" "prerequisite install failed or manifest.json absent"
+fi
+
+# ── E3a-x (issue #10, DCR-2 settled IN scope): installed exec bit on the 4 ────
+# new methodology-step scripts. init.sh:93 copies via plain `cp` (no -p), so
+# mode preservation is umask/platform-adjacent, not guaranteed by install
+# logic; the Post-Merge Cleanup [MUST] wrapper invokes
+# ./scripts/cleanup/cleanup-issue.sh <N> directly and the allow-list entry
+# Bash(./scripts/cleanup/cleanup-issue.sh:*) presumes a +x delivered file.
+echo "== E3a-x (issue #10): installed exec bit set on the 4 new methodology-step script dests =="
+if [ "$DRIVE_PASS" -eq 1 ]; then
+  NOT_EXEC=""
+  for _xdest in \
+    "scripts/preflight/scan-cross-issue-recurrence.sh" \
+    "scripts/handoff/emit-cycle-digest.sh" \
+    "scripts/handoff/create-host-pr.sh" \
+    "scripts/cleanup/cleanup-issue.sh"
+  do
+    if [ -f "$DUMMY/$_xdest" ]; then
+      [ -x "$DUMMY/$_xdest" ] || NOT_EXEC="$NOT_EXEC $_xdest"
+    else
+      NOT_EXEC="$NOT_EXEC [missing:$_xdest]"
+    fi
+  done
+  if [ -z "$NOT_EXEC" ]; then
+    pass "E3a-x: all 4 new methodology-step script dests are installed with the execute bit set"
+  else
+    failc "E3a-x" "#10" "dest(s) missing or not executable in installed target:$NOT_EXEC"
+  fi
+else
+  failc "E3a-x" "#10" "prerequisite install failed"
 fi
 
 DUMMY_DRIFT="$DUMMY/.claude/autoflow/drift-check.sh"

@@ -287,8 +287,19 @@ assert_true "AC-R3-b: manifest sha256 for docs/INDEX.md matches current source h
 # admit 42 also when docs/improvement-backlog.md is present AND no
 # docs/adr/0001-*.md row survives — a 42 satisfying neither the #979 nor the
 # #985 arm still FAILs.
-assert_true "AC-R3-c: manifest artifact count stays 35, is 36 solely via the #951 docs/doc-invariant-registry.md manifest-closure row (ledger E14), is 42 solely via the #979 reviewer-backend-selection delivery rows (docs/reviewer-backend.md closure, ledger E12) or the #985 adr/0001-removed + improvement-backlog.md-restored net-zero swap (ledger Q1), or is 43 solely via the #979 cycle-9 scripts/review/lib/claude-isolation.sh manifest row (ledger E13)" \
-  "count=\$(jq '.artifacts | length' '$MANIFEST'); [ \"\$count\" = \"35\" ] || { [ \"\$count\" = \"36\" ] && jq -e '.artifacts[] | select(.source == \"docs/doc-invariant-registry.md\")' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"42\" ] && jq -e '.artifacts[] | select(.source == \"docs/reviewer-backend.md\")' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"42\" ] && jq -e '.artifacts[] | select(.source == \"docs/improvement-backlog.md\")' '$MANIFEST' >/dev/null 2>&1 && ! jq -e '.artifacts[] | select(.source | test(\"^docs/adr/0001-\"))' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"43\" ] && jq -e '.artifacts[] | select(.source == \"scripts/review/lib/claude-isolation.sh\")' '$MANIFEST' >/dev/null 2>&1; }"
+#
+# issue-#10 arm (ledger, GATE:PLAN this cycle): the manifest-registration-gap
+# fix adds 4 root-layer/copy rows for methodology-step scripts the stamped
+# docs already instruct a consumer to run (scripts/preflight/scan-cross-
+# issue-recurrence.sh, scripts/handoff/emit-cycle-digest.sh, scripts/handoff/
+# create-host-pr.sh, scripts/cleanup/cleanup-issue.sh), on top of the 42-row
+# #979/#985 baseline (42 -> 46). The guard is widened the same single-witness
+# way as the 36/43 arms above: admit exactly 46 solely via the presence of
+# the scripts/cleanup/cleanup-issue.sh row (a source unique to this change)
+# — a count that is neither 35, 36, 42, 43, nor 46, or a 46 lacking that
+# specific row, still FAILs.
+assert_true "AC-R3-c: manifest artifact count stays 35, is 36 solely via the #951 docs/doc-invariant-registry.md manifest-closure row (ledger E14), is 42 solely via the #979 reviewer-backend-selection delivery rows (docs/reviewer-backend.md closure, ledger E12) or the #985 adr/0001-removed + improvement-backlog.md-restored net-zero swap (ledger Q1), is 43 solely via the #979 cycle-9 scripts/review/lib/claude-isolation.sh manifest row (ledger E13), or is 46 solely via the issue-#10 scripts/cleanup/cleanup-issue.sh manifest row" \
+  "count=\$(jq '.artifacts | length' '$MANIFEST'); [ \"\$count\" = \"35\" ] || { [ \"\$count\" = \"36\" ] && jq -e '.artifacts[] | select(.source == \"docs/doc-invariant-registry.md\")' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"42\" ] && jq -e '.artifacts[] | select(.source == \"docs/reviewer-backend.md\")' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"42\" ] && jq -e '.artifacts[] | select(.source == \"docs/improvement-backlog.md\")' '$MANIFEST' >/dev/null 2>&1 && ! jq -e '.artifacts[] | select(.source | test(\"^docs/adr/0001-\"))' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"43\" ] && jq -e '.artifacts[] | select(.source == \"scripts/review/lib/claude-isolation.sh\")' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"46\" ] && jq -e '.artifacts[] | select(.source == \"scripts/cleanup/cleanup-issue.sh\")' '$MANIFEST' >/dev/null 2>&1; }"
 
 # =============================================================================
 # Cycle 3 (issue #961) — ADR-0016 gate-wiring propagation into operative docs
