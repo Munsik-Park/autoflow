@@ -16,6 +16,13 @@
       "sha256": "07d2db18015a285e479a698d5645f8081dbd330eb0808e5b405851e8d9183f7f"
     },
     {
+      "source": "docs/INDEX.md",
+      "dest": ".claude/autoflow/docs/INDEX.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "0ea2293f3c34128ba6d1e0651df02dc826a60eb95fd40403cb42e4222d337d5d"
+    },
+    {
       "source": "docs/adr/0000-adr-template.md",
       "dest": ".claude/autoflow/docs/adr/0000-adr-template.md",
       "tier": "reference",
@@ -105,13 +112,6 @@
       "tier": "reference",
       "kind": "copy",
       "sha256": "5086c8cbc56203401b534f8ff7bc4f067490b867fd3d2aebb548eaa81892aebe"
-    },
-    {
-      "source": "docs/INDEX.md",
-      "dest": ".claude/autoflow/docs/INDEX.md",
-      "tier": "reference",
-      "kind": "copy",
-      "sha256": "0ea2293f3c34128ba6d1e0651df02dc826a60eb95fd40403cb42e4222d337d5d"
     },
     {
       "source": "docs/maintained-docs.md",
