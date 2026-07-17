@@ -721,6 +721,11 @@ else
     "scripts/cleanup/cleanup-issue.sh"
     "scripts/test/check-cleanup-issue-boundary.sh"
     "scripts/test/check-repo-key.sh"
+    # #11 cycle files: plugin-namespaced spawn-role fix — dual-pattern hook
+    # arms (both copies already admitted above), P3 doc row, gate-hardening
+    # RED oracles.
+    "docs/gate-matching-standard.md"
+    "tests/test-gate-hardening.sh"
   )
   disallowed=""
   while IFS= read -r f; do
