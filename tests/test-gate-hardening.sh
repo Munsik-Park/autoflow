@@ -280,6 +280,30 @@ run_hook 2 "AC-2s-2: trailing-backslash-at-EOF label-DELETE denied" \
 run_hook 0 "AC-2s-3: over-block guard — trailing-backslash innocuous 'echo done\\' allowed" \
   "$NOSTATE" "$(bash_json 'echo done\')"
 
+echo "Issue #13 (AUDIT fix-loop cycle 3, user-approved) — AC-2t: the AC-2s fold-sed fix"
+echo "  joins a backslash-newline continuation, but the joined line can ITSELF end in a"
+echo "  bare trailing backslash at EOF — re-triggering the same BSD sed N-at-EOF discard"
+echo "  one loop iteration later. A single fold pass is not enough for a 2+ hop chain."
+# AC-2t-1: 2-hop payload — 'git push ' + backslash-newline + 'origin main' + bare
+# trailing backslash at EOF. After the first join, the resulting logical line
+# itself ends in a trailing backslash with no following line, reproducing
+# AC-2s's N-at-EOF discard *inside* the fold loop.
+run_hook 2 "AC-2t-1: 2-hop fold-then-EOF-backslash 'git push \\<NL>origin main\\' denied" \
+  "$NOSTATE" "$(bash_json $'git push \\\norigin main\\')"
+# AC-2t-2: same 2-hop shape on the label-gate co-occurrence deny.
+run_hook 2 "AC-2t-2: 2-hop fold-then-EOF-backslash label-DELETE denied" \
+  "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review \\\n  -X DELETE\\')"
+# AC-2t-3: 3-hop variant (two intermediate continuations before the final
+# bare-EOF backslash) — current (pre-fix) measured exit is 0 (bypass); this
+# arm asserts the fix must generalize past a single re-trigger, not just 2-hop.
+run_hook 2 "AC-2t-3: 3-hop fold-then-EOF-backslash 'git push \\<NL>-u \\<NL>origin main\\' denied" \
+  "$NOSTATE" "$(bash_json $'git push \\\n-u \\\norigin main\\')"
+# AC-2t-4 (over-block guard): an innocuous 2-hop backslash-continued command
+# must stay allowed — the multi-hop fix must not turn every continuation
+# chain into a blanket deny.
+run_hook 0 "AC-2t-4: over-block guard — innocuous 2-hop 'echo a \\<NL>b\\' allowed" \
+  "$NOSTATE" "$(bash_json $'echo a \\\nb\\')"
+
 echo "P1 — boundary match fires score gate on chained forms (active, empty scores)"
 run_hook 2 "cd && git push (Gate 3)"    "$ACTIVE"  "$(bash_json 'cd /x && git push -u origin dev/x')"
 run_hook 2 "a && gh pr create (Gate 4)" "$ACTIVE"  "$(bash_json 'true && gh pr create -t t')"

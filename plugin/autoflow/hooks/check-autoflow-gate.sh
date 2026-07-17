@@ -87,29 +87,71 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # shell command, but it leaves a literal newline in SCAN, so the per-segment
   # `while read` loops below (which read one physical line at a time) would split
   # that one command into several segments and let a same-segment co-occurrence
-  # AND fail OPEN in a security gate (issue #13 AUDIT regression). The `\n` here
-  # is a PATTERN-side newline match against the embedded newline that `N` pulls
-  # into the pattern space; `\n`-in-pattern is honored by BSD (macOS operator)
-  # and GNU (CI) sed alike, and is distinct from the undefined `\n`-in-REPLACEMENT
-  # that NOTE (C2) below avoids. The `/\\$/N … s/\\\n/ /; ta` loop only joins a
-  # newline PRECEDED by a backslash; a bare newline is a real command separator
-  # and is deliberately left intact (over-block guard).
+  # AND fail OPEN in a security gate (issue #13 AUDIT regression). A bare newline
+  # (a physical line NOT ending in `\`) is a real command separator and is
+  # deliberately left intact (over-block guard).
   #
-  # BSD/GNU DIVERGENCE (issue #13 AUDIT cycle 2): `N` is NOT alike on the LAST
-  # line of the buffer when it ends in a trailing `\` (a continuation with no
-  # following line to append). BSD `N` at EOF has no next line, so it DISCARDS
-  # the pattern space — _JOINED goes EMPTY and the whole segment-based deny fails
-  # OPEN; GNU `N` at EOF prints (preserves) the pattern space. The earlier
-  # "BSD/GNU both honor" wording did not hold at this EOF boundary. Fix: the
-  # leading `$s/\\$//` strips a bare trailing backslash on the LAST line BEFORE
-  # the fold loop, so a lone continuation-at-EOF collapses to a plain command on
-  # both seds (verified on /usr/bin/sed and gsed).
-  _JOINED=$(printf '%s' "$SCAN" | sed -e '$s/\\$//' -e ':a' -e '/\\$/N' -e 's/\\\n/ /' -e 'ta')
-  # NOTE (C4): fail-closed invariant. If the fold ever empties a non-empty SCAN on
-  # some residual sed/input combination (e.g. a multi-line command whose final
-  # joined line still ends in `\` re-hits the BSD N-at-EOF discard inside the `ta`
-  # loop), fall back to the raw SCAN so the segment scan runs against real content
-  # and the deny fires — never against an empty buffer that would fail OPEN.
+  # IMPLEMENTATION (issue #13 AUDIT cycle 3, user-approved): the fold is a pure
+  # POSIX-shell while-read loop, NOT `sed`. Rationale: BSD and GNU `sed` diverge
+  # on `N` at the LAST line of the buffer when it ends in a trailing `\` (a
+  # continuation with no following line to append) — BSD `N` at EOF has no next
+  # line and DISCARDS the pattern space, so _JOINED went EMPTY and the whole
+  # segment-based deny failed OPEN. The cycle-2 `$s/\\$//` pre-strip covered only
+  # a trailing `\` already present on the LAST physical line; it did NOT cover the
+  # case where a mid-fold join RE-CREATED a trailing `\` on the new last line
+  # INSIDE the `N`/`ta` loop, re-triggering the same BSD N-at-EOF discard one
+  # iteration later on 2+-hop composite input (AC-2t). Rather than patch the sed
+  # program again, this removes the divergent primitive entirely. The loop reads
+  # physical lines in order; when a line ends in a bare trailing `\` it strips
+  # that `\` and joins the next line with a single space (chaining permitted); a
+  # final line whose `\` has no following line to append keeps its content with
+  # the `\` removed; a bare newline is preserved as a real separator. It is a
+  # TOTAL function — input/content is never discarded on any platform or input
+  # shape, so the BSD/GNU sed N-at-EOF divergence cannot participate.
+  #
+  # The loop is driven by a `<<<` here-string (as the label/default-branch denies
+  # below already are) rather than a `printf … |` pipe, so it runs in THIS shell
+  # and its assignments to _JOINED persist. It deliberately does NOT wrap the
+  # `case` in `$( … )` command substitution: macOS /bin/bash 3.2.57 mis-parses a
+  # `case` pattern's `)` inside `$( )` as the substitution's closing paren.
+  # Primitives used: `read` / `case` / `printf`-free string append / `${v%\\}`
+  # parameter expansion — POSIX sh; no external tool is invoked.
+  _JOINED=''
+  _acc=''       # current logical line being assembled
+  _cont=0       # 1 while the previous physical line ended in a continuation `\`
+  _first=1      # 1 until the first completed logical line is appended
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    if [ "$_cont" = 1 ]; then
+      _acc="$_acc $_line"     # join continuation with a single space
+    else
+      _acc="$_line"
+    fi
+    case "$_acc" in
+      *\\)
+        _acc="${_acc%\\}"     # strip the bare trailing backslash; keep assembling
+        _cont=1
+        ;;
+      *)
+        _cont=0               # completed logical line — append, newline-separated
+        if [ "$_first" = 1 ]; then _JOINED="$_acc"; _first=0
+        else _JOINED="$_JOINED
+$_acc"; fi
+        ;;
+    esac
+  done <<< "$SCAN"
+  # Continuation `\` on the final line with no following line to append: content
+  # is preserved (the backslash was already stripped), nothing is discarded.
+  if [ "$_cont" = 1 ]; then
+    if [ "$_first" = 1 ]; then _JOINED="$_acc"; else _JOINED="$_JOINED
+$_acc"; fi
+  fi
+  # NOTE (C4): fail-closed assertion (defense-in-depth). The while-read fold above
+  # is a total function, so a non-empty SCAN always yields a non-empty _JOINED and
+  # this guard is not reachable in normal operation. It is retained deliberately:
+  # in a security gate an explicit fail-closed invariant is worth its zero cost —
+  # should a future refactor reintroduce a path that empties a non-empty SCAN,
+  # fall back to the raw SCAN so the segment scan runs against real content and
+  # the deny fires, never against an empty buffer that would fail OPEN.
   [ -n "$SCAN" ] && [ -z "$_JOINED" ] && _JOINED=$SCAN
   # NOTE (C2): the replacement is a POSIX literal backslash-newline (an escaped
   # real newline), NOT the `\n` escape — `\n`-in-replacement is undefined by
