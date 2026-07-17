@@ -83,6 +83,20 @@ skip_test() {
   echo "  SKIP: $desc"
 }
 
+# resolve_baseline_fixture <root> — evaluates test-16's own BASELINE_FIXTURE
+# assignment line (captured later into AC1_FIXTURE_LINE) against a given
+# PROJECT_ROOT, restoring this script's own PROJECT_ROOT afterward. Shared
+# by AC1, AC3-migration, and AC-preserve so each tracks test-16's real
+# constant rather than a hardcoded copy of the path (verification design
+# §1 AC1a).
+resolve_baseline_fixture() {
+  local root="$1" save="$PROJECT_ROOT"
+  # shellcheck disable=SC1090,SC2034
+  eval "PROJECT_ROOT=\"$root\"; $AC1_FIXTURE_LINE"
+  printf '%s' "$BASELINE_FIXTURE"
+  PROJECT_ROOT="$save"
+}
+
 # ---------------------------------------------------------------------------
 # AC1 — static discriminator: source test-16's REAL BASELINE_FIXTURE
 # constant (not a hardcoded literal), so this assertion tracks the fix and
@@ -100,10 +114,7 @@ assert_true "AC1-a: test-16 declares a BASELINE_FIXTURE constant" \
 # assignment line only (not the whole script, which would re-run test-16's
 # body).
 AC1_PROJECT_ROOT="$PROJECT_ROOT"
-# shellcheck disable=SC1090
-eval "PROJECT_ROOT=\"$AC1_PROJECT_ROOT\"; $AC1_FIXTURE_LINE"
-AC1_RESOLVED_FIXTURE="$BASELINE_FIXTURE"
-PROJECT_ROOT="$AC1_PROJECT_ROOT"   # restore; the eval above may have rebound it
+AC1_RESOLVED_FIXTURE="$(resolve_baseline_fixture "$AC1_PROJECT_ROOT")"
 
 AC1_FIXTURE_DIR="$(dirname "$AC1_RESOLVED_FIXTURE" 2>/dev/null)"
 AC1_TOPLEVEL_DIR="$PROJECT_ROOT/.autoflow"
@@ -180,10 +191,7 @@ else
   # so this assertion tracks test-16's real seed logic rather than a
   # hardcoded copy of it.
   AC3_PROJECT_ROOT="$AC3_TMP"
-  # shellcheck disable=SC1090
-  eval "PROJECT_ROOT=\"$AC3_PROJECT_ROOT\"; $AC1_FIXTURE_LINE"
-  AC3_BASELINE_FIXTURE="$BASELINE_FIXTURE"
-  PROJECT_ROOT="$AC1_PROJECT_ROOT"   # restore this script's own PROJECT_ROOT
+  AC3_BASELINE_FIXTURE="$(resolve_baseline_fixture "$AC3_PROJECT_ROOT")"
 
   # Direct replay of the seed shape (mkdir + migration rm -f, if test-16
   # carries one, + cp), evaluated against the sandbox tree so this guard is
@@ -219,10 +227,7 @@ else
   AC_PRES_TMP="$(mktemp -d)"
 
   AC_PRES_PROJECT_ROOT="$AC_PRES_TMP"
-  # shellcheck disable=SC1090
-  eval "PROJECT_ROOT=\"$AC_PRES_PROJECT_ROOT\"; $AC1_FIXTURE_LINE"
-  AC_PRES_FIXTURE="$BASELINE_FIXTURE"
-  PROJECT_ROOT="$AC1_PROJECT_ROOT"   # restore
+  AC_PRES_FIXTURE="$(resolve_baseline_fixture "$AC_PRES_PROJECT_ROOT")"
 
   # Run 1: no fixture present -> baseline_preexisted must be 0 (SKIP arm).
   run1_baseline_preexisted=0
