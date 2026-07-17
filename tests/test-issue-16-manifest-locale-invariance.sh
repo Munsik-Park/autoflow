@@ -29,7 +29,7 @@
 #         own PASS/FAIL summary; does not duplicate its assertions here).
 #   AC5 — the manifest change is order-only: same .source/.sha256/.dest/.kind
 #         set + same artifact count vs. a pre-fix baseline captured to the
-#         gitignored scratch fixture .autoflow/issue-16-manifest-baseline.json
+#         gitignored scratch fixture .autoflow/fixtures/issue-16-manifest-baseline.json
 #         during this RED commit. Self-SKIPs when that fixture is absent
 #         (cycle-scoped gate — verification design §1 AC5 "Resolved, round 2").
 #
@@ -56,7 +56,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 GEN_MANIFEST_SH="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
 MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
-BASELINE_FIXTURE="$PROJECT_ROOT/.autoflow/issue-16-manifest-baseline.json"
+BASELINE_FIXTURE="$PROJECT_ROOT/.autoflow/fixtures/issue-16-manifest-baseline.json"
 ADR_0016_TEST="$PROJECT_ROOT/tests/adr-0016-conformance-check.sh"
 
 PASS=0; FAIL=0; TESTS=0
@@ -199,7 +199,11 @@ baseline_preexisted=0
 [ -f "$BASELINE_FIXTURE" ] && baseline_preexisted=1
 
 if [ ! -f "$BASELINE_FIXTURE" ]; then
-  mkdir -p "$PROJECT_ROOT/.autoflow"
+  # Remove the pre-relocation top-level copy this suite used to leave on the
+  # hook's discovery surface ("$AUTOFLOW_DIR"/*.json), which fail-closed-blocks
+  # score-gated commands until deleted (issue #18 one-time migration).
+  rm -f "$PROJECT_ROOT/.autoflow/issue-16-manifest-baseline.json"
+  mkdir -p "$PROJECT_ROOT/.autoflow/fixtures"
   cp "$MANIFEST_JSON" "$BASELINE_FIXTURE"
   echo "  (fixture) captured pre-fix baseline: $BASELINE_FIXTURE"
 fi

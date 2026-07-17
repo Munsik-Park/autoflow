@@ -518,6 +518,10 @@ else
     "plugin/autoflow/hooks/check-autoflow-gate.sh"
     "docs/gate-matching-standard.md"
     "tests/test-gate-hardening.sh"
+    # #18 cycle files: fixture-glob isolation fix — locale-invariance
+    # manifest regression update + new glob-isolation RED oracle.
+    "tests/test-issue-16-manifest-locale-invariance.sh"
+    "tests/test-issue-18-fixture-glob-isolation.sh"
   )
   disallowed=""
   while IFS= read -r f; do

@@ -588,6 +588,10 @@ else
     "tests/test-issue-979-probe.sh"
     "tests/test-issue-979-review-backend.sh"
     "tests/test-issue-985-doc-assertions.sh"
+    # #18 cycle files: fixture-glob isolation fix — locale-invariance
+    # manifest regression update + new glob-isolation RED oracle.
+    "tests/test-issue-16-manifest-locale-invariance.sh"
+    "tests/test-issue-18-fixture-glob-isolation.sh"
   )
   disallowed=""
   while IFS= read -r f; do
