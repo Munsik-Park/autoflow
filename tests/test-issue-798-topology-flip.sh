@@ -412,6 +412,12 @@ else
     # manifest regression update + new glob-isolation RED oracle.
     "tests/test-issue-16-manifest-locale-invariance.sh"
     "tests/test-issue-18-fixture-glob-isolation.sh"
+    # #6 cycle file: severity-parse fail-loud + '='-tolerant grammar RED
+    # suite (per-issue test isolation, #18 precedent).
+    "tests/test-issue-6-severity-parse-contract.sh"
+    # #6 GREEN change surface: the emitter whose severity grammar the #6
+    # cycle widens + fail-louds (feature design §4.1).
+    "scripts/handoff/emit-cycle-digest.sh"
   )
   disallowed=""
   while IFS= read -r f; do

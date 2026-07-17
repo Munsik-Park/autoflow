@@ -70,23 +70,33 @@ MAX_SEV="None"
 ESCAPED='[]'
 
 if [ -n "$FINDINGS_MD" ] && [ -f "$FINDINGS_MD" ]; then
-  _sev="$(grep -oiE 'max_severity:?[[:space:]]*(None|Low|Medium|High|Critical)' "$FINDINGS_MD" \
+  _sev="$(grep -oiE 'max_severity[[:space:]]*[:=]?[[:space:]]*(None|Low|Medium|High|Critical)([[:space:]]|$)' "$FINDINGS_MD" \
            | grep -oiE '(None|Low|Medium|High|Critical)' | tail -1 || true)"
-  if [ -n "$_sev" ]; then
-    case "$(printf '%s' "$_sev" | tr '[:upper:]' '[:lower:]')" in
-      none) MAX_SEV="None" ;; low) MAX_SEV="Low" ;; medium) MAX_SEV="Medium" ;;
-      high) MAX_SEV="High" ;; critical) MAX_SEV="Critical" ;;
-    esac
+  # Fail-loud (feature design §4.1(b)): a *present* findings file whose
+  # max_severity does not resolve to a valid enum is a producer/consumer
+  # contract violation, not a legitimately-clean review. Abort BEFORE record
+  # assembly so no defaulted-None record is appended.
+  if [ -z "$_sev" ]; then
+    echo "emit-cycle-digest: review-findings present but max_severity is unparseable: $FINDINGS_MD" >&2
+    echo "  expected max_severity: <None|Low|Medium|High|Critical> (separator : or =); offending line(s): \
+$(grep -iE 'max_severity' "$FINDINGS_MD" | head -3 | tr '\n' ';' || printf '(no max_severity line found)')" >&2
+    exit 1
   fi
+  # _sev is guaranteed one of the five enums here; normalize as before.
+  case "$(printf '%s' "$_sev" | tr '[:upper:]' '[:lower:]')" in
+    none) MAX_SEV="None" ;; low) MAX_SEV="Low" ;; medium) MAX_SEV="Medium" ;;
+    high) MAX_SEV="High" ;; critical) MAX_SEV="Critical" ;;
+  esac
 
   # Escaped-defect items: each finding is a `- severity: <Sev>` list entry
-  # followed by indented `key: value` lines (the same tolerant line grammar as
-  # max_severity above; fields mirror the step-6.5 review-triage classification
-  # of the Codex comment — .codex/review.md finding fields). Each block yields
-  # one canonical item {class, nominal_rubric_item, surface, codex_anchor};
-  # a field absent from a block degrades to "" (tolerant default). A findings
-  # file with no `- severity:` entries leaves escaped_defects at [] (clean or
-  # summary-only input).
+  # followed by indented `key: value` lines (colon-separated only — narrower
+  # than the max_severity grammar above, which also tolerates `=`; fields
+  # mirror the step-6.5 review-triage classification of the Codex comment —
+  # .codex/review.md finding fields). Each block yields one canonical item
+  # {class, nominal_rubric_item, surface, codex_anchor}; a field absent from
+  # a block degrades to "" (tolerant default, not fail-loud — unlike
+  # max_severity above). A findings file with no `- severity:` entries
+  # leaves escaped_defects at [] (clean or summary-only input).
   _items="$(awk '
     function flush() {
       if (inblock) {

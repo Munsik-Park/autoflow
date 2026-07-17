@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "88447714678d705dcb586ef68b5cf0c59e4b154fbfd2e4f0e66a57f95ae3ea8e"
+      "sha256": "bca6961c614de885492357fdf6f1dcf3df4ae0efd8a01bcd8cecac09b1162ccb"
     },
     {
       "source": "docs/design-rationale.md",
@@ -300,7 +300,7 @@
       "dest": "scripts/handoff/emit-cycle-digest.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "25983a0b199b5de925a160b4fe1acc602bba714064fd56b2049c1c72f6627b77"
+      "sha256": "a70e1816e6633b61cb5c071ae9824011f5708839673ca66f8a2176aee583e482"
     },
     {
       "source": "scripts/handoff/create-host-pr.sh",
