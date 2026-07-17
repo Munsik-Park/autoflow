@@ -324,6 +324,61 @@ run_hook 0 "undeclared general-purpose with NO state → allowed (pre-PREFLIGHT)
 run_hook 0 "undeclared general-purpose with inactive state → allowed" \
   "$INACTIVE" "$(agent_json 'general-purpose' 'summarize the issue thread')"
 
+echo "#11 — plugin-namespaced subagent_type (<plugin>:<agent>) resolves via resolve_spawn_role()"
+# AC1 — namespaced form must resolve to the same role as its bare sibling.
+# 0-flip discriminating oracles (verification-design AC1): the $ACTIVE→2 cases
+# below are NOT self-distinguishing on exit code alone (an undeclared
+# fall-through also exits 2), so each of the five widened arms additionally
+# gets a case that flips 2→0 across the fix — analyzer/evaluator on $ACTIVE
+# (never gated), implementer/tester/planner on $PASSING (gate already passing).
+run_hook 0 "namespaced analyzer → allowed (analysis, never gated)" \
+  "$ACTIVE" "$(agent_json 'autoflow:autoflow-analyzer' 'analyze the issue scope')"
+run_hook 0 "namespaced evaluator → allowed (evaluation, never gated)" \
+  "$ACTIVE" "$(agent_json 'autoflow:autoflow-evaluator' 'score the plan rubric')"
+run_hook 2 "namespaced implementer → gate_plan fires (empty scores)" \
+  "$ACTIVE" "$(agent_json 'autoflow:autoflow-implementer' 'make the failing tests pass')"
+run_hook 2 "namespaced tester → gate_plan fires (empty scores)" \
+  "$ACTIVE" "$(agent_json 'autoflow:autoflow-tester' 'author the acceptance checks')"
+run_hook 2 "namespaced planner → gate_hypothesis fires (no verdict)" \
+  "$ACTIVE" "$(agent_json 'autoflow:autoflow-planner' 'synthesize the plan')"
+# 0-flip mirrors on $PASSING — canonical RED oracles per verification design:
+# pre-fix these fall through to undeclared → exit 2; post-fix the gate has
+# already passed → exit 0. A typo in one widened arm would still satisfy the
+# $ACTIVE→2 assertions above (undeclared also → 2) but fails here.
+run_hook 0 "namespaced implementer w/ passing gate_plan → allowed" \
+  "$PASSING" "$(agent_json 'autoflow:autoflow-implementer' 'make the failing tests pass')"
+run_hook 0 "namespaced tester w/ passing gate_plan → allowed" \
+  "$PASSING" "$(agent_json 'autoflow:autoflow-tester' 'author the acceptance checks')"
+run_hook 0 "namespaced planner w/ skip-verdict (feat) → allowed" \
+  "$PASSING" "$(agent_json 'autoflow:autoflow-planner' 'synthesize the plan')"
+
+# AC1 second-consumer path — is_score_gated_surface() also calls
+# resolve_spawn_role() (the corrupt/multi-active fail-closed branch, mirrors
+# the bare autoflow-evaluator/$MALFORMED case at line 244). 0-flip oracle:
+# pre-fix namespaced value falls through to _role="" → fail-closed deny → 2;
+# post-fix → evaluation → exempt → 0. Proves the fix reaches BOTH call sites.
+run_hook 0 "namespaced evaluator under malformed state → stays spawnable (fail-closed path)" \
+  "$MALFORMED" "$(agent_json 'autoflow:autoflow-evaluator' 'score this plan against the rubric')"
+# Defense-in-depth (optional per verification design): same fixture family,
+# mirrors the bare research-only coverage at $SCHEMA_CORRUPT (line 256).
+run_hook 0 "namespaced evaluator under schema-corrupt state → stays spawnable (fail-closed path)" \
+  "$SCHEMA_CORRUPT" "$(agent_json 'autoflow:autoflow-evaluator' 'score this plan against the rubric')"
+
+echo "#11 — AC3: research built-ins stay bare-only (no accidental widening by the fix)"
+# Load-bearing caveat: this fails if the fix normalizes the plugin prefix
+# BEFORE the whole case (a blanket strip), which would also admit a
+# namespaced research spelling. It constrains the fix to a scoped,
+# per-autoflow-arm dual-pattern (feature-design §1).
+run_hook 2 "namespaced Explore does NOT resolve to research → blocked" \
+  "$ACTIVE" "$(agent_json 'foo:Explore' 'search the repository')"
+run_hook 0 "bare Explore → research allowed (guard both directions)" \
+  "$ACTIVE" "$(agent_json 'Explore' 'search the repository')"
+
+# AC4 (byte-identical hook copies) is already covered by the existing AC-2g
+# diff check above (line ~167); it stays green pre-fix by design (the two
+# copies are already byte-identical) and fails the instant GREEN edits only
+# one copy. No duplicate case added here.
+
 echo "#242 — gate decisions use the in-memory snapshot; the state file is never re-read (no TOCTOU)"
 REREAD=$(grep -cE 'jq[^|]*"\$STATE_FILE"' "$HOOK" 2>/dev/null || true)
 if [ "${REREAD:-0}" -eq 0 ]; then
