@@ -339,8 +339,16 @@ run_hook 2 "namespaced implementer → gate_plan fires (empty scores)" \
   "$ACTIVE" "$(agent_json 'autoflow:autoflow-implementer' 'make the failing tests pass')"
 run_hook 2 "namespaced tester → gate_plan fires (empty scores)" \
   "$ACTIVE" "$(agent_json 'autoflow:autoflow-tester' 'author the acceptance checks')"
-run_hook 2 "namespaced planner → gate_hypothesis fires (no verdict)" \
-  "$ACTIVE" "$(agent_json 'autoflow:autoflow-planner' 'synthesize the plan')"
+# NOTE: unlike implementer/tester, the planning gate only fires when
+# gate_hypothesis_cause.verdict is present and does not contain "skip" (bug
+# issues). $ACTIVE carries no gate_hypothesis_cause key at all, so VERDICT
+# reads empty and the gate does NOT fire — bare `autoflow-planner` on $ACTIVE
+# exits 0 too (no $ACTIVE arm exists for the bare planner above, for the same
+# reason). The truthful, still-discriminating case mirrors the bare planner's
+# existing SCHEMA_CORRUPT coverage (line ~251-252): a corrupt `.phases` makes
+# the verdict read fail and the planning branch fails closed (exit 2).
+run_hook 2 "namespaced planner, schema-corrupt state → blocked (verdict-guard fail-closed)" \
+  "$SCHEMA_CORRUPT" "$(agent_json 'autoflow:autoflow-planner' 'synthesize the plan')"
 # 0-flip mirrors on $PASSING — canonical RED oracles per verification design:
 # pre-fix these fall through to undeclared → exit 2; post-fix the gate has
 # already passed → exit 0. A typo in one widened arm would still satisfy the
