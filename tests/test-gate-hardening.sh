@@ -179,6 +179,64 @@ run_hook 2 "AC-2j: gh pr edit --remove-label blocked-by-review still denied" \
 run_hook 2 "AC-2j: gh api -X DELETE .../labels/blocked-by-subrepo still denied" \
   "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-subrepo -X DELETE')"
 
+echo "Issue #13 (T1) — AC-2k: label-gate no-over-block, cross-segment unrelated pair allowed"
+# Segment-scoped label-gate condition B: the label path and -X DELETE must
+# co-occur in ONE segment. Here the label path is in segment 1 (GET, no
+# -X DELETE) and -X DELETE is in segment 2 (unrelated URL) — neither segment
+# alone satisfies the AND, so this must allow (EXIT 0) once T1 lands.
+# Currently EXIT 2 (whole-buffer AND) → RED.
+run_hook 0 "AC-2k: ';'-separated unrelated pair (label GET ; unrelated DELETE) allowed" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-review ; curl -X DELETE https://example.com/unrelated')"
+run_hook 0 "AC-2k: '&&'-separated unrelated pair (label GET && unrelated DELETE) allowed" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-review && curl -X DELETE https://example.com/unrelated')"
+
+echo "Issue #13 (T2 / DCR-2 A) — AC-2l: P2 default-branch deny, git -c interposition base case"
+run_hook 2 "AC-2l: 'git -c k=v push origin main' denied (interposed -c must not bypass)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v push origin main')"
+
+echo "Issue #13 — AC-2m: P2 interposition option-variant matrix (all denied)"
+run_hook 2 "AC-2m: 'git -C /path push origin main' denied" \
+  "$NOSTATE" "$(bash_json 'git -C /path push origin main')"
+run_hook 2 "AC-2m: 'git -c a=b -c c=d push origin main' denied (repeated -c)" \
+  "$NOSTATE" "$(bash_json 'git -c a=b -c c=d push origin main')"
+run_hook 2 "AC-2m: 'git -c k=v push origin HEAD:main' denied (alt refspec)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v push origin HEAD:main')"
+run_hook 2 "AC-2m: 'git -c k=v push origin :main' denied (alt refspec)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v push origin :main')"
+
+echo "Issue #13 — AC-2n: interposition over-block guard (must stay allowed; not a RED arm)"
+run_hook 0 "AC-2n: 'git -c k=v commit -m x' allowed (not a push at all)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v commit -m x')"
+run_hook 0 "AC-2n: 'git -c k=v push origin dev/x' allowed (non-default target, no active gate)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v push origin dev/x')"
+
+echo "Issue #13 — AC-2o: Gate 3 score-gate witness under -c interposition"
+run_hook 2 "AC-2o: active empty-scores 'git -c k=v push -u origin dev/x' blocked (Gate 3 fires)" \
+  "$ACTIVE" "$(bash_json 'git -c k=v push -u origin dev/x')"
+run_hook 0 "AC-2o: passing scores 'git -c k=v push -u origin dev/x' allowed (no over-block)" \
+  "$PASSING" "$(bash_json 'git -c k=v push -u origin dev/x')"
+
+echo "Issue #13 — AC-2p: third site (is_score_gated_surface :197) fail-closed under interposition"
+run_hook 2 "AC-2p (RED-minimum): malformed state 'git -c k=v push origin dev/x' blocked (:295 fail-closed fires)" \
+  "$MALFORMED" "$(bash_json 'git -c k=v push origin dev/x')"
+run_hook 2 "AC-2p (additive): two-concatenated-object state 'git -c k=v push origin dev/x' blocked (same :295 path)" \
+  "$TWO_OBJ" "$(bash_json 'git -c k=v push origin dev/x')"
+
+echo "Issue #13 — AC-2q (doc-grep partial): gate-matching-standard.md records label-gate segmentation + git -c interposition allowance"
+# Automatable slice only — semantic correctness of the prose is a manual
+# review item (.autoflow/issue-13-manual-scenarios.md), not asserted here.
+GATE_DOC="$PROJECT_ROOT/docs/gate-matching-standard.md"
+if grep -qiE 'blocked-by-(review|subrepo)' "$GATE_DOC" \
+   && grep -qi 'segment' "$GATE_DOC" \
+   && grep -qi 'interposition' "$GATE_DOC" \
+   && grep -qE -- '-[cC]\b' "$GATE_DOC"; then
+  echo "  PASS: AC-2q: doc records label-gate segmentation + git -c interposition allowance"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: AC-2q: doc-grep — gate-matching-standard.md is missing label-gate segmentation and/or git -c interposition record"
+  FAIL=$((FAIL + 1))
+fi
+
 echo "P1 — boundary match fires score gate on chained forms (active, empty scores)"
 run_hook 2 "cd && git push (Gate 3)"    "$ACTIVE"  "$(bash_json 'cd /x && git push -u origin dev/x')"
 run_hook 2 "a && gh pr create (Gate 4)" "$ACTIVE"  "$(bash_json 'true && gh pr create -t t')"

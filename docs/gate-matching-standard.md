@@ -75,6 +75,43 @@ the gate's threat model (preventing routine agent merge/push, not a
 hostile operator). No further refinement is planned unless a realistic
 non-adversarial false-positive surfaces.
 
+### Token-interposition refinement — `git` global options (applied)
+
+`git` accepts global options **between the binary and the subcommand** —
+`git -c protocol.version=2 push origin main`, `git -C <path> push …`. A
+gate fragment that assumes `git` and `push` are adjacent
+(`git[[:space:]]+push`) is bypassed by this interposition: the push is not
+detected and the deny/score-gate does not fire (issue #13, carried from
+issue #3). Tolerate zero or more interposed value-bearing global options
+in the push fragment:
+
+```sh
+# `-c key=value` / `-C <path>` may sit between `git` and `push`
+GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
+#   ${CMD_BOUNDARY}${GIT_PUSH}                       # Gate 3 (score-gated push)
+#   ${CMD_BOUNDARY}(${GIT_PUSH}|gh …pr create)\b     # is_score_gated_surface
+#   ^[[:space:]]*${GIT_PUSH}                          # per-segment P2 deny
+```
+
+Define the fragment **once at global scope** (before the Bash guard and
+before `is_score_gated_surface`) so every consumer — the P2 default-branch
+deny, Gate 3, and `is_score_gated_surface` (also reached on the Agent
+path) — references one set value; a copy defined inside the Bash guard is
+unset on the Agent path and the regex silently voids.
+
+**Scope (P1 threat model):** the interposition tolerated is the `-c`/`-C`
+form that arises in **normal** operation (protocol negotiation, work-tree
+selection). Only `-c`/`-C` are matched; other global options
+(`--no-pager`, `--git-dir=`, `--work-tree=`, …) interposed before `push`
+are **accepted residual** — pushing those ahead of `push` is an evasion
+construction, not a routine form, and generalizing to arbitrary flags
+would miss separate-argument value forms (`-C <path>`) anyway. **Residual
+(accepted, documented):** a quoted `-c` value containing spaces
+(`git -c 'a.b=c d' push …`) is collapsed by SCAN quote-stripping and slips
+— the same already-accepted quoted-value limitation as the Body-stripping
+refinement. `gh` takes no such global-option interposition and is left
+unchanged (no over-generalization).
+
 ### Segment-scoped co-occurrence refinement (applied)
 
 A gate whose deny condition is the **AND of two or more patterns** MUST
@@ -113,6 +150,20 @@ Single-pattern gates are unaffected — `CMD_BOUNDARY` matching over the
 whole `SCAN` remains correct for them, since one pattern has no
 co-occurrence to mis-scope. Reference: the default-branch push deny in
 `.claude/hooks/check-autoflow-gate.sh` (segment-scoped since issue #3).
+
+**Second consumer — the label-gate deny (issue #13).** The
+`blocked-by-(review|subrepo)` gate-label deny has two forms: the
+`--remove-label blocked-by-(review|subrepo)` form is a **single pattern**
+(unaffected, matched over the whole `SCAN`), while the `gh api … -X DELETE
+…/labels/blocked-by-(review|subrepo)` REST form is an **AND** of the label
+path and the `-X DELETE` method. That REST form must co-occur in **one
+segment**, or an unrelated pair — a label GET in one sub-command and an
+unrelated `curl -X DELETE …/other` in the next
+(`gh api …/labels/blocked-by-review ; curl -X DELETE …/unrelated`) —
+false-positives over the whole buffer. Both denies now share the single
+`_SEGMENTS` split computed once from `SCAN`, so the fragile literal-newline
+`sed` primitive has one source of truth rather than a per-deny copy that
+could drift.
 
 ## Rule P2 — Unconditional Denies Precede the Activity Check
 
