@@ -82,12 +82,25 @@ GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
 if [ "$TOOL_NAME" = "Bash" ]; then
   # Shell-separator segment split shared by the co-occurrence denies below
   # (label-gate REST form, default-branch push). Computed once from SCAN.
+  # NOTE (C3): fold backslash-newline line-continuations into ONE logical line
+  # BEFORE the separator split. A `\`<newline> continuation is a single logical
+  # shell command, but it leaves a literal newline in SCAN, so the per-segment
+  # `while read` loops below (which read one physical line at a time) would split
+  # that one command into several segments and let a same-segment co-occurrence
+  # AND fail OPEN in a security gate (issue #13 AUDIT regression). The `\n` here
+  # is a PATTERN-side newline match against the embedded newline that `N` pulls
+  # into the pattern space — BSD (macOS operator) and GNU (CI) sed both honor
+  # `\n`-in-pattern; this is distinct from the undefined `\n`-in-REPLACEMENT that
+  # NOTE (C2) below avoids. The `/\\$/N … s/\\\n/ /; ta` loop only joins a
+  # newline PRECEDED by a backslash; a bare newline is a real command separator
+  # and is deliberately left intact (over-block guard).
+  _JOINED=$(printf '%s' "$SCAN" | sed -e ':a' -e '/\\$/N' -e 's/\\\n/ /' -e 'ta')
   # NOTE (C2): the replacement is a POSIX literal backslash-newline (an escaped
   # real newline), NOT the `\n` escape — `\n`-in-replacement is undefined by
   # POSIX and a sed that emits literal `n` would collapse segmentation and let a
   # co-occurrence deny fail OPEN in a security gate. The literal form is
   # standard-guaranteed on BSD (macOS operator) and GNU (CI) sed alike.
-  _SEGMENTS=$(printf '%s' "$SCAN" | sed -E 's/(&&|\|\||[;&|])/\
+  _SEGMENTS=$(printf '%s' "$_JOINED" | sed -E 's/(&&|\|\||[;&|])/\
 /g')
 
   if printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+merge\b"; then

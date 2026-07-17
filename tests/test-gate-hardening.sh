@@ -237,6 +237,27 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+echo "Issue #13 (AUDIT regression) — AC-2r: backslash-newline continuation is a single logical"
+echo "  command, not a segment boundary — _SEGMENTS splits on physical newlines, so a"
+echo "  backslash-continued command currently escapes the same-segment AND checks"
+# AC-2r-1: label-gate co-occurrence AND (blocked-by-review path + -X DELETE) must
+# still fire when the two tokens are joined by a backslash-newline continuation
+# (one logical shell command). Reproduces the reported bypass payload verbatim.
+run_hook 2 "AC-2r: label-gate backslash-continuation bypass 'blocked-by-review \\<NL> -X DELETE' denied" \
+  "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review \\\n  -X DELETE')"
+# AC-2r-2: same defect surface on the P2 default-branch push deny — a
+# backslash-continued 'git push \<NL> origin main' is one logical command.
+run_hook 2 "AC-2r: P2 push-deny backslash-continuation 'git push \\<NL> origin main' denied" \
+  "$NOSTATE" "$(bash_json $'git push \\\n origin main')"
+# AC-2r-3 (over-block guard): a REAL newline-separated pair of independent
+# commands — not a backslash continuation — must stay allowed. The label path
+# has no -X DELETE in its own segment, and the -X DELETE belongs to an
+# unrelated curl call on the next line; legitimate newline segmentation must
+# not regress. Distinct from AC-2k ('; '/'&&'-separated) — this is a bare
+# newline-separated pair.
+run_hook 0 "AC-2r: over-block guard — real newline-separated unrelated pair allowed" \
+  "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review\ncurl -X DELETE https://api.example.com/unrelated')"
+
 echo "P1 — boundary match fires score gate on chained forms (active, empty scores)"
 run_hook 2 "cd && git push (Gate 3)"    "$ACTIVE"  "$(bash_json 'cd /x && git push -u origin dev/x')"
 run_hook 2 "a && gh pr create (Gate 4)" "$ACTIVE"  "$(bash_json 'true && gh pr create -t t')"

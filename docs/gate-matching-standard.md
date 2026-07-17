@@ -109,8 +109,14 @@ would miss separate-argument value forms (`-C <path>`) anyway. **Residual
 (accepted, documented):** a quoted `-c` value containing spaces
 (`git -c 'a.b=c d' push …`) is collapsed by SCAN quote-stripping and slips
 — the same already-accepted quoted-value limitation as the Body-stripping
-refinement. `gh` takes no such global-option interposition and is left
-unchanged (no over-generalization).
+refinement. Likewise a **`-c` alias indirection**
+(`git -c alias.p=push p origin main`) defines a `push` alias and invokes it
+under a different verb, so the literal `push` token never appears at the
+subcommand position the `${GIT_PUSH}` fragment scans — **accepted residual**
+(pre-existing, not introduced by this refinement): resolving an alias to its
+expansion is outside a token-regex gate's reach, and the construction is an
+evasion form, not a routine one. `gh` takes no such global-option
+interposition and is left unchanged (no over-generalization).
 
 ### Segment-scoped co-occurrence refinement (applied)
 
