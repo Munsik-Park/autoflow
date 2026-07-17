@@ -89,13 +89,14 @@ $(grep -iE 'max_severity' "$FINDINGS_MD" | head -3 | tr '\n' ';' || printf '(no 
   esac
 
   # Escaped-defect items: each finding is a `- severity: <Sev>` list entry
-  # followed by indented `key: value` lines (the same tolerant line grammar as
-  # max_severity above; fields mirror the step-6.5 review-triage classification
-  # of the Codex comment — .codex/review.md finding fields). Each block yields
-  # one canonical item {class, nominal_rubric_item, surface, codex_anchor};
-  # a field absent from a block degrades to "" (tolerant default). A findings
-  # file with no `- severity:` entries leaves escaped_defects at [] (clean or
-  # summary-only input).
+  # followed by indented `key: value` lines (colon-separated only — narrower
+  # than the max_severity grammar above, which also tolerates `=`; fields
+  # mirror the step-6.5 review-triage classification of the Codex comment —
+  # .codex/review.md finding fields). Each block yields one canonical item
+  # {class, nominal_rubric_item, surface, codex_anchor}; a field absent from
+  # a block degrades to "" (tolerant default, not fail-loud — unlike
+  # max_severity above). A findings file with no `- severity:` entries
+  # leaves escaped_defects at [] (clean or summary-only input).
   _items="$(awk '
     function flush() {
       if (inblock) {
