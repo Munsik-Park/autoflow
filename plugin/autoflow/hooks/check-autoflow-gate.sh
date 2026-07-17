@@ -121,6 +121,15 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   _cont=0       # 1 while the previous physical line ended in a continuation `\`
   _first=1      # 1 until the first completed logical line is appended
   while IFS= read -r _line || [ -n "$_line" ]; do
+    # CR normalization (issue #13 AUDIT cycle 4, user-approved): strip a trailing
+    # CR from each physical line before the continuation check. `read` splits on
+    # LF only, so a CRLF-style continuation (`\`+CR+LF) leaves the CR on the line
+    # and `_acc` ends in CR, not the literal `\` the `*\\)` case matches — the
+    # fold misses and the composite command passes through unmerged (same bypass
+    # class as AC-2t, via a CRLF line ending). By real shell semantics `\`+CR+LF
+    # is NOT a line continuation (only `\`+LF is); this normalization is a
+    # DELIBERATE over-block so the gate is never weaker on CRLF input than on LF.
+    _line="${_line%$'\r'}"
     if [ "$_cont" = 1 ]; then
       _acc="$_acc $_line"     # join continuation with a single space
     else

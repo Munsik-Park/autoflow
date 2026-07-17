@@ -304,6 +304,30 @@ run_hook 2 "AC-2t-3: 3-hop fold-then-EOF-backslash 'git push \\<NL>-u \\<NL>orig
 run_hook 0 "AC-2t-4: over-block guard — innocuous 2-hop 'echo a \\<NL>b\\' allowed" \
   "$NOSTATE" "$(bash_json $'echo a \\\nb\\')"
 
+echo "Issue #13 (AUDIT fix-loop cycle 4, user-approved) — AC-2u: CR normalization"
+echo "  before the backslash-newline fold. The AC-2t fold loop only strips a bare"
+echo "  trailing backslash before LF; a CRLF-style continuation ('\\' + CR + LF)"
+echo "  leaves a trailing CR on the joined line that is not the literal backslash"
+echo "  the fold regex expects, so the join does not happen and the continuation"
+echo "  passes through unmerged — the same class of bypass as AC-2t but via a"
+echo "  CRLF line ending instead of a bare-EOF re-trigger."
+# AC-2u-1: single-hop CRLF continuation on the P2 default-branch push deny —
+# 'git push ' + backslash + CR + LF + 'origin main'. Current (pre-fix)
+# measured exit is 0 (bypass); fix must normalize CR before folding.
+run_hook 2 "AC-2u-1: CRLF-continuation 'git push \\<CR><NL>origin main' denied" \
+  "$NOSTATE" "$(bash_json $'git push \\\r\norigin main')"
+# AC-2u-2: same CRLF-continuation shape on the label-gate co-occurrence deny.
+# Current (pre-fix) measured exit is 0 (bypass).
+run_hook 2 "AC-2u-2: CRLF-continuation label-DELETE 'blocked-by-review \\<CR><NL>  -X DELETE' denied" \
+  "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review \\\r\n  -X DELETE')"
+# AC-2u-3 (over-block guard): a REAL CRLF-newline-separated pair of genuinely
+# independent commands — no backslash continuation at all — must stay
+# allowed. Distinct from AC-2r-3 (bare-LF, label-path content): this uses a
+# CRLF line ending with unrelated echo commands, to confirm CR normalization
+# does not turn every CRLF-terminated line into a folded/blocked one.
+run_hook 0 "AC-2u-3: over-block guard — CRLF-separated unrelated pair 'echo x<CR><NL>echo y' allowed" \
+  "$NOSTATE" "$(bash_json $'echo x\r\necho y')"
+
 echo "P1 — boundary match fires score gate on chained forms (active, empty scores)"
 run_hook 2 "cd && git push (Gate 3)"    "$ACTIVE"  "$(bash_json 'cd /x && git push -u origin dev/x')"
 run_hook 2 "a && gh pr create (Gate 4)" "$ACTIVE"  "$(bash_json 'true && gh pr create -t t')"
