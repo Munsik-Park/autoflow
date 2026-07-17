@@ -63,12 +63,113 @@ CMD_BOUNDARY='(^|[;&|]|&&|\|\|)[[:space:]]*'
 #   2. delete single- and double-quoted substrings (inline --body "...").
 SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 
+# `git` may carry global options (-c key=value, -C <path>) between the binary
+# and the subcommand: `git -c protocol.version=2 push origin main`. Match zero
+# or more such option tokens so push detection is not bypassed (issue #13).
+# Scope: -c/-C interposition that arises in NORMAL operation. Adversarial
+# wrappers (subshell/backtick/command-substitution) stay out of P1's threat
+# model and are NOT covered here (docs/gate-matching-standard.md > P1). Defined
+# at global scope (before the Bash guard and the is_score_gated_surface
+# definition) so all three consumers — the P2 default-branch deny, Gate 3, and
+# is_score_gated_surface (called on the Agent path too) — reference a set value.
+GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
+
 # ── Section 1: Unconditional blocks (state-independent — P2) ──
 # AutoFlow never merges and never pushes to the default branch through the
 # agent's tools. Enforced regardless of any .autoflow state so that a
 # terminal phase setting active:false (or a removed state file) cannot
 # disable the prohibition. Merging is performed by external review.
 if [ "$TOOL_NAME" = "Bash" ]; then
+  # Shell-separator segment split shared by the co-occurrence denies below
+  # (label-gate REST form, default-branch push). Computed once from SCAN.
+  # NOTE (C3): fold backslash-newline line-continuations into ONE logical line
+  # BEFORE the separator split. A `\`<newline> continuation is a single logical
+  # shell command, but it leaves a literal newline in SCAN, so the per-segment
+  # `while read` loops below (which read one physical line at a time) would split
+  # that one command into several segments and let a same-segment co-occurrence
+  # AND fail OPEN in a security gate (issue #13 AUDIT regression). A bare newline
+  # (a physical line NOT ending in `\`) is a real command separator and is
+  # deliberately left intact (over-block guard).
+  #
+  # IMPLEMENTATION (issue #13 AUDIT cycle 3, user-approved): the fold is a pure
+  # POSIX-shell while-read loop, NOT `sed`. Rationale: BSD and GNU `sed` diverge
+  # on `N` at the LAST line of the buffer when it ends in a trailing `\` (a
+  # continuation with no following line to append) — BSD `N` at EOF has no next
+  # line and DISCARDS the pattern space, so _JOINED went EMPTY and the whole
+  # segment-based deny failed OPEN. The cycle-2 `$s/\\$//` pre-strip covered only
+  # a trailing `\` already present on the LAST physical line; it did NOT cover the
+  # case where a mid-fold join RE-CREATED a trailing `\` on the new last line
+  # INSIDE the `N`/`ta` loop, re-triggering the same BSD N-at-EOF discard one
+  # iteration later on 2+-hop composite input (AC-2t). Rather than patch the sed
+  # program again, this removes the divergent primitive entirely. The loop reads
+  # physical lines in order; when a line ends in a bare trailing `\` it strips
+  # that `\` and joins the next line with a single space (chaining permitted); a
+  # final line whose `\` has no following line to append keeps its content with
+  # the `\` removed; a bare newline is preserved as a real separator. It is a
+  # TOTAL function — input/content is never discarded on any platform or input
+  # shape, so the BSD/GNU sed N-at-EOF divergence cannot participate.
+  #
+  # The loop is driven by a `<<<` here-string (as the label/default-branch denies
+  # below already are) rather than a `printf … |` pipe, so it runs in THIS shell
+  # and its assignments to _JOINED persist. It deliberately does NOT wrap the
+  # `case` in `$( … )` command substitution: macOS /bin/bash 3.2.57 mis-parses a
+  # `case` pattern's `)` inside `$( )` as the substitution's closing paren.
+  # Primitives used: `read` / `case` / `printf`-free string append / `${v%\\}`
+  # parameter expansion — POSIX sh; no external tool is invoked.
+  _JOINED=''
+  _acc=''       # current logical line being assembled
+  _cont=0       # 1 while the previous physical line ended in a continuation `\`
+  _first=1      # 1 until the first completed logical line is appended
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    # CR normalization (issue #13 AUDIT cycle 4, user-approved): strip a trailing
+    # CR from each physical line before the continuation check. `read` splits on
+    # LF only, so a CRLF-style continuation (`\`+CR+LF) leaves the CR on the line
+    # and `_acc` ends in CR, not the literal `\` the `*\\)` case matches — the
+    # fold misses and the composite command passes through unmerged (same bypass
+    # class as AC-2t, via a CRLF line ending). By real shell semantics `\`+CR+LF
+    # is NOT a line continuation (only `\`+LF is); this normalization is a
+    # DELIBERATE over-block so the gate is never weaker on CRLF input than on LF.
+    _line="${_line%$'\r'}"
+    if [ "$_cont" = 1 ]; then
+      _acc="$_acc $_line"     # join continuation with a single space
+    else
+      _acc="$_line"
+    fi
+    case "$_acc" in
+      *\\)
+        _acc="${_acc%\\}"     # strip the bare trailing backslash; keep assembling
+        _cont=1
+        ;;
+      *)
+        _cont=0               # completed logical line — append, newline-separated
+        if [ "$_first" = 1 ]; then _JOINED="$_acc"; _first=0
+        else _JOINED="$_JOINED
+$_acc"; fi
+        ;;
+    esac
+  done <<< "$SCAN"
+  # Continuation `\` on the final line with no following line to append: content
+  # is preserved (the backslash was already stripped), nothing is discarded.
+  if [ "$_cont" = 1 ]; then
+    if [ "$_first" = 1 ]; then _JOINED="$_acc"; else _JOINED="$_JOINED
+$_acc"; fi
+  fi
+  # NOTE (C4): fail-closed assertion (defense-in-depth). The while-read fold above
+  # is a total function, so a non-empty SCAN always yields a non-empty _JOINED and
+  # this guard is not reachable in normal operation. It is retained deliberately:
+  # in a security gate an explicit fail-closed invariant is worth its zero cost —
+  # should a future refactor reintroduce a path that empties a non-empty SCAN,
+  # fall back to the raw SCAN so the segment scan runs against real content and
+  # the deny fires, never against an empty buffer that would fail OPEN.
+  [ -n "$SCAN" ] && [ -z "$_JOINED" ] && _JOINED=$SCAN
+  # NOTE (C2): the replacement is a POSIX literal backslash-newline (an escaped
+  # real newline), NOT the `\n` escape — `\n`-in-replacement is undefined by
+  # POSIX and a sed that emits literal `n` would collapse segmentation and let a
+  # co-occurrence deny fail OPEN in a security gate. The literal form is
+  # standard-guaranteed on BSD (macOS operator) and GNU (CI) sed alike.
+  _SEGMENTS=$(printf '%s' "$_JOINED" | sed -E 's/(&&|\|\||[;&|])/\
+/g')
+
   if printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+merge\b"; then
     echo "BLOCKED: AutoFlow does not merge — 'gh pr merge' is denied (CLAUDE.md > HANDOFF)." >&2
     echo "Merging, issue close, and deployment are owned by an external review process." >&2
@@ -90,9 +191,24 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # Section-1 deny): a quoted label value or a `sh -c "…"`/backtick wrapper is
   # stripped by SCAN and slips — the threat model is the naive self-clear, and
   # the bare form is what callers write.
-  if printf '%s' "$SCAN" | grep -qE "[[:space:]]--remove-label[[:space:]=]+blocked-by-(review|subrepo)\b" \
-     || { printf '%s' "$SCAN" | grep -qE "/labels/blocked-by-(review|subrepo)\b" \
-          && printf '%s' "$SCAN" | grep -qE "(-X[[:space:]]*|--method[[:space:]=]+)DELETE\b"; }; then
+  # (A) --remove-label <gate label> is a single-pattern gate — unaffected by
+  # segment scoping (one pattern has no co-occurrence to mis-scope).
+  # (B) the `gh api … -X DELETE …/labels/<gate label>` REST form is an AND of
+  # two patterns; require them to co-occur in ONE segment so unrelated
+  # sub-commands (…/labels/blocked-by-review GET ; curl -X DELETE …/other)
+  # no longer false-positive over the whole buffer (issue #13; P1 refinement).
+  _label_deny=0
+  if printf '%s' "$SCAN" | grep -qE "[[:space:]]--remove-label[[:space:]=]+blocked-by-(review|subrepo)\b"; then
+    _label_deny=1
+  else
+    while IFS= read -r _seg; do
+      if printf '%s' "$_seg" | grep -qE "/labels/blocked-by-(review|subrepo)\b" \
+         && printf '%s' "$_seg" | grep -qE "(-X[[:space:]]*|--method[[:space:]=]+)DELETE\b"; then
+        _label_deny=1; break
+      fi
+    done <<< "$_SEGMENTS"
+  fi
+  if [ "$_label_deny" = 1 ]; then
     echo "BLOCKED: AutoFlow does not clear the 'blocked-by-review' / 'blocked-by-subrepo' gate labels." >&2
     echo "blocked-by-review is the Codex reviewer's step (.codex/review.md); blocked-by-subrepo is the operator's step at merge — AutoFlow owns neither." >&2
     exit 2
@@ -107,20 +223,17 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # loop treats one command at a time — a composite cleanup command whose only
   # push is a delete-refspec to a non-default branch no longer AND-matches an
   # unrelated `… origin <default>` sub-command.
-  # NOTE (C2): the replacement is a POSIX literal backslash-newline (an escaped
-  # real newline), NOT the `\n` escape — `\n`-in-replacement is undefined by POSIX
-  # and a sed that emits literal `n` would collapse segmentation and let a
-  # default-branch push slip (fail-open in a security gate). The literal form is
-  # standard-guaranteed on BSD (macOS operator) and GNU (CI) sed alike.
-  _bp_segs=$(printf '%s' "$SCAN" | sed -E 's/(&&|\|\||[;&|])/\
-/g')
+  # Reuses the shared $_SEGMENTS split (computed once above) so the fragile
+  # segmentation primitive has a single source — see the _SEGMENTS NOTE (C2) for
+  # the sed literal-newline rationale. The interposition-tolerant $GIT_PUSH
+  # fragment lets `git -c k=v push origin <default>` still match (issue #13).
   while IFS= read -r _bp_seg; do
-    if printf '%s' "$_bp_seg" | grep -qE "^[[:space:]]*git[[:space:]]+push\b" \
+    if printf '%s' "$_bp_seg" | grep -qE "^[[:space:]]*${GIT_PUSH}" \
        && printf '%s' "$_bp_seg" | grep -qE "(\borigin[[:space:]]+(HEAD:)?${DEFAULT_BRANCH}\b|:[[:space:]]*${DEFAULT_BRANCH}\b)"; then
       echo "BLOCKED: AutoFlow does not push to ${DEFAULT_BRANCH} — push the dev branch and open a PR (CLAUDE.md > HANDOFF)." >&2
       exit 2
     fi
-  done <<< "$_bp_segs"
+  done <<< "$_SEGMENTS"
 fi
 
 # ── Section 1b: Agent spawn must declare an explicit model (state-independent) ──
@@ -194,7 +307,7 @@ resolve_spawn_role() {
 # definition keeps the two branches from silently drifting apart on a future
 # edit to that surface (issue #843 REFINE).
 is_score_gated_surface() {
-  if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}(git[[:space:]]+push|gh[[:space:]]+pr[[:space:]]+create)\b"; then
+  if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}(${GIT_PUSH}|gh[[:space:]]+pr[[:space:]]+create)\b"; then
     return 0
   elif [ "$TOOL_NAME" = "Agent" ]; then
     # Research is read-only and evaluation must stay spawnable (it produces the
@@ -456,7 +569,7 @@ if [ "$TOOL_NAME" = "Agent" ]; then
 fi
 
 # ── Gate 3: git push → AUDIT + GATE:QUALITY pass required ──
-if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}git[[:space:]]+push\b"; then
+if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_PUSH}"; then
   block_with_scores "git push requires AUDIT pass" "audit"
   block_with_scores "git push requires GATE:QUALITY pass" "gate_quality"
 fi

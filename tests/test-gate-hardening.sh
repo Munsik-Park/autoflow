@@ -179,6 +179,155 @@ run_hook 2 "AC-2j: gh pr edit --remove-label blocked-by-review still denied" \
 run_hook 2 "AC-2j: gh api -X DELETE .../labels/blocked-by-subrepo still denied" \
   "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-subrepo -X DELETE')"
 
+echo "Issue #13 (T1) — AC-2k: label-gate no-over-block, cross-segment unrelated pair allowed"
+# Segment-scoped label-gate condition B: the label path and -X DELETE must
+# co-occur in ONE segment. Here the label path is in segment 1 (GET, no
+# -X DELETE) and -X DELETE is in segment 2 (unrelated URL) — neither segment
+# alone satisfies the AND, so this must allow (EXIT 0) once T1 lands.
+# Currently EXIT 2 (whole-buffer AND) → RED.
+run_hook 0 "AC-2k: ';'-separated unrelated pair (label GET ; unrelated DELETE) allowed" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-review ; curl -X DELETE https://example.com/unrelated')"
+run_hook 0 "AC-2k: '&&'-separated unrelated pair (label GET && unrelated DELETE) allowed" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-review && curl -X DELETE https://example.com/unrelated')"
+
+echo "Issue #13 (T2 / DCR-2 A) — AC-2l: P2 default-branch deny, git -c interposition base case"
+run_hook 2 "AC-2l: 'git -c k=v push origin main' denied (interposed -c must not bypass)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v push origin main')"
+
+echo "Issue #13 — AC-2m: P2 interposition option-variant matrix (all denied)"
+run_hook 2 "AC-2m: 'git -C /path push origin main' denied" \
+  "$NOSTATE" "$(bash_json 'git -C /path push origin main')"
+run_hook 2 "AC-2m: 'git -c a=b -c c=d push origin main' denied (repeated -c)" \
+  "$NOSTATE" "$(bash_json 'git -c a=b -c c=d push origin main')"
+run_hook 2 "AC-2m: 'git -c k=v push origin HEAD:main' denied (alt refspec)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v push origin HEAD:main')"
+run_hook 2 "AC-2m: 'git -c k=v push origin :main' denied (alt refspec)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v push origin :main')"
+
+echo "Issue #13 — AC-2n: interposition over-block guard (must stay allowed; not a RED arm)"
+run_hook 0 "AC-2n: 'git -c k=v commit -m x' allowed (not a push at all)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v commit -m x')"
+run_hook 0 "AC-2n: 'git -c k=v push origin dev/x' allowed (non-default target, no active gate)" \
+  "$NOSTATE" "$(bash_json 'git -c k=v push origin dev/x')"
+
+echo "Issue #13 — AC-2o: Gate 3 score-gate witness under -c interposition"
+run_hook 2 "AC-2o: active empty-scores 'git -c k=v push -u origin dev/x' blocked (Gate 3 fires)" \
+  "$ACTIVE" "$(bash_json 'git -c k=v push -u origin dev/x')"
+run_hook 0 "AC-2o: passing scores 'git -c k=v push -u origin dev/x' allowed (no over-block)" \
+  "$PASSING" "$(bash_json 'git -c k=v push -u origin dev/x')"
+
+echo "Issue #13 — AC-2p: third site (is_score_gated_surface :197) fail-closed under interposition"
+run_hook 2 "AC-2p (RED-minimum): malformed state 'git -c k=v push origin dev/x' blocked (:295 fail-closed fires)" \
+  "$MALFORMED" "$(bash_json 'git -c k=v push origin dev/x')"
+run_hook 2 "AC-2p (additive): two-concatenated-object state 'git -c k=v push origin dev/x' blocked (same :295 path)" \
+  "$TWO_OBJ" "$(bash_json 'git -c k=v push origin dev/x')"
+
+echo "Issue #13 — AC-2q (doc-grep partial): gate-matching-standard.md records label-gate segmentation + git -c interposition allowance"
+# Automatable slice only — semantic correctness of the prose is a manual
+# review item (.autoflow/issue-13-manual-scenarios.md), not asserted here.
+GATE_DOC="$PROJECT_ROOT/docs/gate-matching-standard.md"
+if grep -qiE 'blocked-by-(review|subrepo)' "$GATE_DOC" \
+   && grep -qi 'segment' "$GATE_DOC" \
+   && grep -qi 'interposition' "$GATE_DOC" \
+   && grep -qE -- '-[cC]\b' "$GATE_DOC"; then
+  echo "  PASS: AC-2q: doc records label-gate segmentation + git -c interposition allowance"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: AC-2q: doc-grep — gate-matching-standard.md is missing label-gate segmentation and/or git -c interposition record"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "Issue #13 (AUDIT regression) — AC-2r: backslash-newline continuation is a single logical"
+echo "  command, not a segment boundary — _SEGMENTS splits on physical newlines, so a"
+echo "  backslash-continued command currently escapes the same-segment AND checks"
+# AC-2r-1: label-gate co-occurrence AND (blocked-by-review path + -X DELETE) must
+# still fire when the two tokens are joined by a backslash-newline continuation
+# (one logical shell command). Reproduces the reported bypass payload verbatim.
+run_hook 2 "AC-2r: label-gate backslash-continuation bypass 'blocked-by-review \\<NL> -X DELETE' denied" \
+  "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review \\\n  -X DELETE')"
+# AC-2r-2: same defect surface on the P2 default-branch push deny — a
+# backslash-continued 'git push \<NL> origin main' is one logical command.
+run_hook 2 "AC-2r: P2 push-deny backslash-continuation 'git push \\<NL> origin main' denied" \
+  "$NOSTATE" "$(bash_json $'git push \\\n origin main')"
+# AC-2r-3 (over-block guard): a REAL newline-separated pair of independent
+# commands — not a backslash continuation — must stay allowed. The label path
+# has no -X DELETE in its own segment, and the -X DELETE belongs to an
+# unrelated curl call on the next line; legitimate newline segmentation must
+# not regress. Distinct from AC-2k ('; '/'&&'-separated) — this is a bare
+# newline-separated pair.
+run_hook 0 "AC-2r: over-block guard — real newline-separated unrelated pair allowed" \
+  "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review\ncurl -X DELETE https://api.example.com/unrelated')"
+
+echo "Issue #13 (AUDIT fix-loop cycle 2) — AC-2s: BSD sed N-command failure on a"
+echo "  trailing-backslash LAST line of the SCAN buffer discards the pattern space,"
+echo "  so _JOINED / _SEGMENTS go empty and the P2 unconditional-deny checks never fire"
+echo "  (macOS/BSD sed only — GNU sed preserves the line on the same input)"
+# AC-2s-1: the SCAN buffer's last (only) line ends in a single trailing
+# backslash with nothing after it (no continuation content follows — this is
+# the failure shape, distinct from AC-2r's mid-buffer backslash-newline
+# continuation which has a following line to join). On BSD sed, `N` at EOF
+# with no next line fails and the pattern space is discarded, so _JOINED
+# becomes empty and the P2 default-branch push deny never fires.
+run_hook 2 "AC-2s-1: trailing-backslash-at-EOF 'git push origin main\\' denied" \
+  "$NOSTATE" "$(bash_json 'git push origin main\')"
+# AC-2s-2: same EOF-trailing-backslash shape on the label-gate co-occurrence
+# deny (blocked-by-review path + -X DELETE in one logical command).
+run_hook 2 "AC-2s-2: trailing-backslash-at-EOF label-DELETE denied" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-review -X DELETE\')"
+# AC-2s-3 (over-block guard): an innocuous command that happens to end in a
+# trailing backslash must stay allowed — the fold-failure fix must not turn
+# every trailing-backslash command into a blanket deny.
+run_hook 0 "AC-2s-3: over-block guard — trailing-backslash innocuous 'echo done\\' allowed" \
+  "$NOSTATE" "$(bash_json 'echo done\')"
+
+echo "Issue #13 (AUDIT fix-loop cycle 3, user-approved) — AC-2t: the AC-2s fold-sed fix"
+echo "  joins a backslash-newline continuation, but the joined line can ITSELF end in a"
+echo "  bare trailing backslash at EOF — re-triggering the same BSD sed N-at-EOF discard"
+echo "  one loop iteration later. A single fold pass is not enough for a 2+ hop chain."
+# AC-2t-1: 2-hop payload — 'git push ' + backslash-newline + 'origin main' + bare
+# trailing backslash at EOF. After the first join, the resulting logical line
+# itself ends in a trailing backslash with no following line, reproducing
+# AC-2s's N-at-EOF discard *inside* the fold loop.
+run_hook 2 "AC-2t-1: 2-hop fold-then-EOF-backslash 'git push \\<NL>origin main\\' denied" \
+  "$NOSTATE" "$(bash_json $'git push \\\norigin main\\')"
+# AC-2t-2: same 2-hop shape on the label-gate co-occurrence deny.
+run_hook 2 "AC-2t-2: 2-hop fold-then-EOF-backslash label-DELETE denied" \
+  "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review \\\n  -X DELETE\\')"
+# AC-2t-3: 3-hop variant (two intermediate continuations before the final
+# bare-EOF backslash) — current (pre-fix) measured exit is 0 (bypass); this
+# arm asserts the fix must generalize past a single re-trigger, not just 2-hop.
+run_hook 2 "AC-2t-3: 3-hop fold-then-EOF-backslash 'git push \\<NL>-u \\<NL>origin main\\' denied" \
+  "$NOSTATE" "$(bash_json $'git push \\\n-u \\\norigin main\\')"
+# AC-2t-4 (over-block guard): an innocuous 2-hop backslash-continued command
+# must stay allowed — the multi-hop fix must not turn every continuation
+# chain into a blanket deny.
+run_hook 0 "AC-2t-4: over-block guard — innocuous 2-hop 'echo a \\<NL>b\\' allowed" \
+  "$NOSTATE" "$(bash_json $'echo a \\\nb\\')"
+
+echo "Issue #13 (AUDIT fix-loop cycle 4, user-approved) — AC-2u: CR normalization"
+echo "  before the backslash-newline fold. The AC-2t fold loop only strips a bare"
+echo "  trailing backslash before LF; a CRLF-style continuation ('\\' + CR + LF)"
+echo "  leaves a trailing CR on the joined line that is not the literal backslash"
+echo "  the fold regex expects, so the join does not happen and the continuation"
+echo "  passes through unmerged — the same class of bypass as AC-2t but via a"
+echo "  CRLF line ending instead of a bare-EOF re-trigger."
+# AC-2u-1: single-hop CRLF continuation on the P2 default-branch push deny —
+# 'git push ' + backslash + CR + LF + 'origin main'. Current (pre-fix)
+# measured exit is 0 (bypass); fix must normalize CR before folding.
+run_hook 2 "AC-2u-1: CRLF-continuation 'git push \\<CR><NL>origin main' denied" \
+  "$NOSTATE" "$(bash_json $'git push \\\r\norigin main')"
+# AC-2u-2: same CRLF-continuation shape on the label-gate co-occurrence deny.
+# Current (pre-fix) measured exit is 0 (bypass).
+run_hook 2 "AC-2u-2: CRLF-continuation label-DELETE 'blocked-by-review \\<CR><NL>  -X DELETE' denied" \
+  "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review \\\r\n  -X DELETE')"
+# AC-2u-3 (over-block guard): a REAL CRLF-newline-separated pair of genuinely
+# independent commands — no backslash continuation at all — must stay
+# allowed. Distinct from AC-2r-3 (bare-LF, label-path content): this uses a
+# CRLF line ending with unrelated echo commands, to confirm CR normalization
+# does not turn every CRLF-terminated line into a folded/blocked one.
+run_hook 0 "AC-2u-3: over-block guard — CRLF-separated unrelated pair 'echo x<CR><NL>echo y' allowed" \
+  "$NOSTATE" "$(bash_json $'echo x\r\necho y')"
+
 echo "P1 — boundary match fires score gate on chained forms (active, empty scores)"
 run_hook 2 "cd && git push (Gate 3)"    "$ACTIVE"  "$(bash_json 'cd /x && git push -u origin dev/x')"
 run_hook 2 "a && gh pr create (Gate 4)" "$ACTIVE"  "$(bash_json 'true && gh pr create -t t')"
