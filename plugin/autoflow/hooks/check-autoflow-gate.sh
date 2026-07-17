@@ -177,12 +177,12 @@ resolve_spawn_role() {
     esac
   else
     case "$_subtype" in
-      Explore|Plan|claude-code-guide) _role="research" ;;
-      autoflow-analyzer)              _role="analysis" ;;
-      autoflow-planner)               _role="planning" ;;
-      autoflow-implementer)           _role="implementation" ;;
-      autoflow-tester)                _role="testing" ;;
-      autoflow-evaluator)             _role="evaluation" ;;
+      Explore|Plan|claude-code-guide)             _role="research" ;;
+      autoflow-analyzer|*:autoflow-analyzer)      _role="analysis" ;;
+      autoflow-planner|*:autoflow-planner)        _role="planning" ;;
+      autoflow-implementer|*:autoflow-implementer) _role="implementation" ;;
+      autoflow-tester|*:autoflow-tester)          _role="testing" ;;
+      autoflow-evaluator|*:autoflow-evaluator)    _role="evaluation" ;;
     esac
   fi
   printf '%s' "$_role"
