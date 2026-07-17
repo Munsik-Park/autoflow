@@ -258,6 +258,28 @@ run_hook 2 "AC-2r: P2 push-deny backslash-continuation 'git push \\<NL> origin m
 run_hook 0 "AC-2r: over-block guard — real newline-separated unrelated pair allowed" \
   "$NOSTATE" "$(bash_json $'gh api repos/o/r/issues/9/labels/blocked-by-review\ncurl -X DELETE https://api.example.com/unrelated')"
 
+echo "Issue #13 (AUDIT fix-loop cycle 2) — AC-2s: BSD sed N-command failure on a"
+echo "  trailing-backslash LAST line of the SCAN buffer discards the pattern space,"
+echo "  so _JOINED / _SEGMENTS go empty and the P2 unconditional-deny checks never fire"
+echo "  (macOS/BSD sed only — GNU sed preserves the line on the same input)"
+# AC-2s-1: the SCAN buffer's last (only) line ends in a single trailing
+# backslash with nothing after it (no continuation content follows — this is
+# the failure shape, distinct from AC-2r's mid-buffer backslash-newline
+# continuation which has a following line to join). On BSD sed, `N` at EOF
+# with no next line fails and the pattern space is discarded, so _JOINED
+# becomes empty and the P2 default-branch push deny never fires.
+run_hook 2 "AC-2s-1: trailing-backslash-at-EOF 'git push origin main\\' denied" \
+  "$NOSTATE" "$(bash_json 'git push origin main\')"
+# AC-2s-2: same EOF-trailing-backslash shape on the label-gate co-occurrence
+# deny (blocked-by-review path + -X DELETE in one logical command).
+run_hook 2 "AC-2s-2: trailing-backslash-at-EOF label-DELETE denied" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/9/labels/blocked-by-review -X DELETE\')"
+# AC-2s-3 (over-block guard): an innocuous command that happens to end in a
+# trailing backslash must stay allowed — the fold-failure fix must not turn
+# every trailing-backslash command into a blanket deny.
+run_hook 0 "AC-2s-3: over-block guard — trailing-backslash innocuous 'echo done\\' allowed" \
+  "$NOSTATE" "$(bash_json 'echo done\')"
+
 echo "P1 — boundary match fires score gate on chained forms (active, empty scores)"
 run_hook 2 "cd && git push (Gate 3)"    "$ACTIVE"  "$(bash_json 'cd /x && git push -u origin dev/x')"
 run_hook 2 "a && gh pr create (Gate 4)" "$ACTIVE"  "$(bash_json 'true && gh pr create -t t')"

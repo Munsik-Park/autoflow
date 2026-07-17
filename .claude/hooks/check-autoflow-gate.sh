@@ -89,12 +89,28 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # that one command into several segments and let a same-segment co-occurrence
   # AND fail OPEN in a security gate (issue #13 AUDIT regression). The `\n` here
   # is a PATTERN-side newline match against the embedded newline that `N` pulls
-  # into the pattern space — BSD (macOS operator) and GNU (CI) sed both honor
-  # `\n`-in-pattern; this is distinct from the undefined `\n`-in-REPLACEMENT that
-  # NOTE (C2) below avoids. The `/\\$/N … s/\\\n/ /; ta` loop only joins a
+  # into the pattern space; `\n`-in-pattern is honored by BSD (macOS operator)
+  # and GNU (CI) sed alike, and is distinct from the undefined `\n`-in-REPLACEMENT
+  # that NOTE (C2) below avoids. The `/\\$/N … s/\\\n/ /; ta` loop only joins a
   # newline PRECEDED by a backslash; a bare newline is a real command separator
   # and is deliberately left intact (over-block guard).
-  _JOINED=$(printf '%s' "$SCAN" | sed -e ':a' -e '/\\$/N' -e 's/\\\n/ /' -e 'ta')
+  #
+  # BSD/GNU DIVERGENCE (issue #13 AUDIT cycle 2): `N` is NOT alike on the LAST
+  # line of the buffer when it ends in a trailing `\` (a continuation with no
+  # following line to append). BSD `N` at EOF has no next line, so it DISCARDS
+  # the pattern space — _JOINED goes EMPTY and the whole segment-based deny fails
+  # OPEN; GNU `N` at EOF prints (preserves) the pattern space. The earlier
+  # "BSD/GNU both honor" wording did not hold at this EOF boundary. Fix: the
+  # leading `$s/\\$//` strips a bare trailing backslash on the LAST line BEFORE
+  # the fold loop, so a lone continuation-at-EOF collapses to a plain command on
+  # both seds (verified on /usr/bin/sed and gsed).
+  _JOINED=$(printf '%s' "$SCAN" | sed -e '$s/\\$//' -e ':a' -e '/\\$/N' -e 's/\\\n/ /' -e 'ta')
+  # NOTE (C4): fail-closed invariant. If the fold ever empties a non-empty SCAN on
+  # some residual sed/input combination (e.g. a multi-line command whose final
+  # joined line still ends in `\` re-hits the BSD N-at-EOF discard inside the `ta`
+  # loop), fall back to the raw SCAN so the segment scan runs against real content
+  # and the deny fires — never against an empty buffer that would fail OPEN.
+  [ -n "$SCAN" ] && [ -z "$_JOINED" ] && _JOINED=$SCAN
   # NOTE (C2): the replacement is a POSIX literal backslash-newline (an escaped
   # real newline), NOT the `\n` escape — `\n`-in-replacement is undefined by
   # POSIX and a sed that emits literal `n` would collapse segmentation and let a
