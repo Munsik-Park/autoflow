@@ -159,9 +159,14 @@ the hook owns the role→gate mapping:
 
 | Channel | Declaration |
 |---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` (defined in `.claude/agents/`) |
+| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Team spawn | teammate `name` prefix: `analysis-`, `plan-`, `impl-` / `dev-`, `test-`, `eval-` |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
+
+The `<plugin>:<agent>` prefix is accepted for the `autoflow-*` types only —
+the built-in research types stay bare (no namespace), since Claude Code
+built-ins are never plugin-namespaced and widening them would let a
+`foo:Explore` value bypass an active-cycle gate as research.
 
 **Channel precedence**: a team spawn (teammate `name` present) is declared by
 the name prefix ALONE — `subagent_type` is not consulted. Otherwise a mixed
