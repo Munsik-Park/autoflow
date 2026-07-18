@@ -630,7 +630,7 @@ assert_true "AC-C2-8: script tracks a mergeable_confirmed flag (post-loop classi
 assert_true "AC-C2-8: the in-loop tolerance guard (GH_TIMED_OUT/GH_RC/empty-body) is still present" \
   "printf '%s' \"\$SCRIPT_SRC_FULL\" | grep -qF 'GH_TIMED_OUT'"
 
-M_GATE_CONTEXT="$(grep -A3 -F '-n "$m"' "$SCRIPT" 2>/dev/null || true)"
+M_GATE_CONTEXT="$(grep -A3 -F -e '-n "$m"' "$SCRIPT" 2>/dev/null || true)"
 assert_true "AC-C2-8: an -n \"\$m\" gate exists around the in-loop success path (symmetric w/ precheck's -z \$pre_mergeable arm)" \
   "[ -n \"\$M_GATE_CONTEXT\" ]"
 assert_true "AC-C2-8: mergeable_confirmed=1 is set inside that -n \"\$m\" gate (not unconditionally after the m/s parse)" \
