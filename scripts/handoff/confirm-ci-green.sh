@@ -33,7 +33,9 @@
 # Tunables (env vars — the Approach-5 timeout / reconfirm policy as parameters):
 #   CI_POLL_TIMEOUT_SECS   (default 900) Total finite poll budget (deadline).
 #                          Generous so a normally-slow Jenkins build is not clipped.
-#   CI_POLL_INTERVAL_SECS  (default 20)  Sleep between poll iterations.
+#   CI_POLL_INTERVAL_SECS  (default 20)  Sleep between poll iterations — also
+#                          caps the one-shot precheck read (pre_bound =
+#                          min(CI_POLL_INTERVAL_SECS, remaining-to-deadline)).
 #   Both validated as non-negative integers; non-numeric -> exit 64.
 #
 # Exit-code contract (feature §4):
@@ -41,9 +43,16 @@
 #   10  not mergeable    — CONFLICTING/DIRTY/!MERGEABLE at precheck OR on a
 #                          mid-poll flip; stderr carries the reserved
 #                          [HANDOFF-INTERNAL-RETRY] token. No poll on precheck.
+#                          Only on a JSON-confirmed read; a failed/timed-out/
+#                          empty precheck read falls through to the bounded
+#                          poll, never 10.
 #   11  0 checks         — MERGEABLE but no check ever published within the bound.
 #   12  red build        — a check concluded FAILURE/ERROR/CANCELLED/TIMED_OUT.
 #   13  still pending     — checks present but never all-green at the deadline (slow CI).
+#   14  inconclusive     — could not confirm mergeable within the bound; gh
+#                          transport/auth/parse failure suspected (NOT a
+#                          conflict); bounded; stderr carries the reserved
+#                          [HANDOFF-INTERNAL-RETRY] token. NOT green.
 #   64  usage / bad arg / bad env int.
 #
 # `set -uo pipefail` (not -e): the poll intentionally tolerates a transient
@@ -88,9 +97,9 @@ REPO_ARGS=()
 # sleep+kill watchdog (holds on macOS with no GNU timeout — the incident box).
 # Captures the command's stdout to $2 (a tempfile, NOT a $(...) subshell — a
 # subshell would lose the RC/TIMED_OUT globals; ledger E14). Sets GH_RC and
-# GH_TIMED_OUT (1 iff the watchdog fired). Used per in-loop `gh` round-trip so
-# a hung call (stalled network / no-TTY auth prompt) is killed and control
-# returns to the loop head for the deadline re-test.
+# GH_TIMED_OUT (1 iff the watchdog fired). Used for the precheck and per
+# in-loop `gh` round-trip so a hung call (stalled network / no-TTY auth
+# prompt) is killed and control returns for the deadline re-test.
 gh_bounded() {
   local bound="$1" outfile="$2"; shift 2
   GH_TIMED_OUT=0
@@ -147,23 +156,49 @@ is_not_mergeable() {
 
 # ---------------------------------------------------------------------------
 # 1. PRECHECK (before any poll) — read mergeable/mergeStateStatus first.
-# ---------------------------------------------------------------------------
-pre_body="$(gh pr view "$PR" "${REPO_ARGS[@]}" --json mergeable,mergeStateStatus 2>/dev/null)"
-
-pre_mergeable="$(printf '%s' "$pre_body" | jq -r '.mergeable // empty' 2>/dev/null)"
-pre_state="$(printf '%s' "$pre_body" | jq -r '.mergeStateStatus // empty' 2>/dev/null)"
-
-if is_not_mergeable "$pre_mergeable" "$pre_state"; then
-  echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (gitlink -> Reconcile preflight; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
-  exit 10
-fi
-
-# ---------------------------------------------------------------------------
-# 2. POLL (only reached when MERGEABLE/CLEAN), deadline-bounded and finite.
+#    The deadline is computed FIRST so the precheck participates in the same
+#    finite budget. The precheck is only an EARLY-EXIT optimization for a
+#    JSON-confirmed not-mergeable read: any failed/timed-out/empty/non-JSON
+#    read falls through to the bounded poll (which re-reads mergeable each
+#    iteration), never exit 10.
 # ---------------------------------------------------------------------------
 deadline=$(( $(date +%s) + CI_POLL_TIMEOUT_SECS ))
 saw_checks=0
+mergeable_confirmed=0
 
+now="$(date +%s)"; remaining=$(( deadline - now ))
+pre_bound="$CI_POLL_INTERVAL_SECS"
+[ "$remaining" -lt "$pre_bound" ] && pre_bound="$remaining"
+[ "$pre_bound" -lt 1 ] && pre_bound=1
+
+pre_out="$(mktemp)"
+gh_bounded "$pre_bound" "$pre_out" \
+  gh pr view "$PR" "${REPO_ARGS[@]}" --json mergeable,mergeStateStatus
+pre_body="$(cat "$pre_out")"; rm -f "$pre_out"
+
+if [ "${GH_TIMED_OUT:-0}" -eq 1 ] || [ "${GH_RC:-0}" -ne 0 ] || [ -z "$pre_body" ]; then
+  : # inconclusive precheck read (timeout / non-zero RC / empty body) — fall through.
+else
+  pre_mergeable="$(printf '%s' "$pre_body" | jq -r '.mergeable // empty' 2>/dev/null)"
+  pre_state="$(printf '%s' "$pre_body" | jq -r '.mergeStateStatus // empty' 2>/dev/null)"
+  if [ -z "$pre_mergeable" ]; then
+    : # non-empty but non-JSON / field-absent body → jq degraded mergeable to
+      # empty: inconclusive, NOT a confirmed conflict; fall through (do NOT set
+      # the flag, do NOT classify). A well-formed read never yields an empty
+      # mergeable, so empty unambiguously marks a bad read.
+  else
+    mergeable_confirmed=1
+    if is_not_mergeable "$pre_mergeable" "$pre_state"; then
+      echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (gitlink -> Reconcile preflight; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
+      exit 10
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 2. POLL (reached on a mergeable precheck OR a degraded-precheck fall-through),
+#    deadline-bounded and finite.
+# ---------------------------------------------------------------------------
 while [ "$(date +%s)" -lt "$deadline" ]; do
   now="$(date +%s)"
   remaining=$(( deadline - now ))
@@ -193,6 +228,12 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   # D5 — re-read mergeable every iteration; early-exit 10 on a mid-poll flip.
   m="$(printf '%s' "$body" | jq -r '.mergeable // empty' 2>/dev/null)"
   s="$(printf '%s' "$body" | jq -r '.mergeStateStatus // empty' 2>/dev/null)"
+  # A good in-loop read (non-empty parsed mergeable) confirms mergeable state —
+  # gated symmetrically with the precheck [ -z "$pre_mergeable" ] arm so a
+  # degraded-but-nonempty body does not set the flag.
+  if [ -n "$m" ]; then
+    mergeable_confirmed=1
+  fi
   if is_not_mergeable "$m" "$s"; then
     echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${s:-unknown}) — PR flipped mid-poll; do NOT wait on CI; branch by cause (gitlink -> Reconcile preflight; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
     exit 10
@@ -225,6 +266,10 @@ done
 # ---------------------------------------------------------------------------
 # 3. TIMEOUT — deadline reached without a terminal classification.
 # ---------------------------------------------------------------------------
+if [ "$mergeable_confirmed" -eq 0 ]; then
+  echo "[HANDOFF-INTERNAL-RETRY] could not confirm PR mergeable state within ${CI_POLL_TIMEOUT_SECS}s — gh transport/auth/network failure suspected (not a merge conflict); check gh auth/connectivity and re-run — NOT green" >&2
+  exit 14
+fi
 if [ "$saw_checks" -eq 0 ]; then
   echo "MERGEABLE but no check published within ${CI_POLL_TIMEOUT_SECS}s — suspect webhook / scan fallback (PeriodicFolderTrigger / synchronize re-push); NOT green" >&2
   exit 11
