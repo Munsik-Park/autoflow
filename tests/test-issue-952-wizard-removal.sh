@@ -595,6 +595,15 @@ else
     # #6 cycle file: severity-parse fail-loud + '='-tolerant grammar RED
     # suite (per-issue test isolation, #18 precedent).
     "tests/test-issue-6-severity-parse-contract.sh"
+    # #25 cycle files (GATE:PLAN PASS, ledger issue-25 E14): HANDOFF step-5
+    # confirm-ci-green.sh helper + RED suite + mock gh fixture
+    # (setup/gen-manifest-hashes.sh already admitted above; docs/
+    # autoflow-guide.md, docs/external-review-sequencing.md,
+    # docs/git-workflow.md, docs/maintained-docs.md, setup/manifest.json
+    # are outside this suite's all_files scan set).
+    "scripts/handoff/confirm-ci-green.sh"
+    "tests/issue-25/mock-gh/gh"
+    "tests/test-issue-25-confirm-ci-green.sh"
   )
   disallowed=""
   while IFS= read -r f; do

@@ -721,7 +721,7 @@ else
 fi
 
 # ── AC-1 (issue #10): exact registration of the 4 methodology-step scripts ────
-echo "== AC-1 (issue #10): 4 methodology-step scripts registered as root-layer/copy, count==46 =="
+echo "== AC-1 (issue #10): 4 methodology-step scripts registered as root-layer/copy, count==47 =="
 if [ -f "$MANIFEST" ]; then
   _ac1_bad=""
   for _ac1_src in \
@@ -755,11 +755,11 @@ if [ -f "$MANIFEST" ]; then
     fi
   done
   _ac1_total=$(jq -r '.artifacts | length' "$MANIFEST" 2>/dev/null)
-  if [ "$_ac1_total" != "46" ]; then
-    _ac1_bad="$_ac1_bad [artifacts|length=$_ac1_total != 46]"
+  if [ "$_ac1_total" != "47" ]; then
+    _ac1_bad="$_ac1_bad [artifacts|length=$_ac1_total != 47]"
   fi
   if [ -z "$_ac1_bad" ]; then
-    pass "AC-1 (issue #10): all 4 scripts registered (source==dest, root-layer/copy) and artifacts|length==46"
+    pass "AC-1 (issue #10): all 4 scripts registered (source==dest, root-layer/copy) and artifacts|length==47"
   else
     failc "AC-1 (issue #10)" "registration gap or field mismatch:$_ac1_bad"
   fi
