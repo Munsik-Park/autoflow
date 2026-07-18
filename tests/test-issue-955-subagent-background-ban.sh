@@ -414,6 +414,14 @@ else
   # (six rows -> seven rows). AC4-CLOSURE additionally admits this exact
   # seven-row addition set with zero removals -- any other added/removed
   # source still FAILs.
+  #
+  # #25 lockstep update (ledger issue-25 E14, GATE:PLAN PASS): the
+  # HANDOFF step-5 confirm-ci-green.sh helper is delivered as one
+  # additive manifest source row, scripts/handoff/confirm-ci-green.sh,
+  # on top of whatever closure set already sits at <base> (the #951/#979
+  # rows above are already folded into main by the time this cycle
+  # branched). AC4-CLOSURE additionally admits this single-row addition
+  # with zero removals -- any other added/removed source still FAILs.
   AC4_CLOSURE_ADDED="$(comm -13 <(printf '%s\n' "$BASE_SOURCES") <(printf '%s\n' "$HEAD_SOURCES"))"
   AC4_CLOSURE_REMOVED="$(comm -23 <(printf '%s\n' "$BASE_SOURCES") <(printf '%s\n' "$HEAD_SOURCES"))"
   AC979_CLOSURE_SET="$(printf '%s\n' \
@@ -431,8 +439,8 @@ else
     'scripts/preflight/check-review-backend.sh' \
     'scripts/review/codex-review-pr.sh' \
     'scripts/review/lib/claude-isolation.sh' | sort -u)"
-  assert_true "AC4-CLOSURE: manifest source-row set is identical at <base> and HEAD, or the only delta is the #951 docs/doc-invariant-registry.md manifest-closure row (§DR-8, ledger E14), is the #979 reviewer-backend-selection six-row delivery set (ledger E12), or is the #979 cycle-9 seven-row delivery set (six-row set plus scripts/review/lib/claude-isolation.sh, ledger E13)" \
-    "[ \"\$HEAD_SOURCES\" = \"\$BASE_SOURCES\" ] || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/doc-invariant-registry.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_C9_CLOSURE_SET\" ]; }"
+  assert_true "AC4-CLOSURE: manifest source-row set is identical at <base> and HEAD, or the only delta is the #951 docs/doc-invariant-registry.md manifest-closure row (§DR-8, ledger E14), is the #979 reviewer-backend-selection six-row delivery set (ledger E12), is the #979 cycle-9 seven-row delivery set (six-row set plus scripts/review/lib/claude-isolation.sh, ledger E13), or is the #25 confirm-ci-green.sh single-row delivery set (ledger issue-25 E14)" \
+    "[ \"\$HEAD_SOURCES\" = \"\$BASE_SOURCES\" ] || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/doc-invariant-registry.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_C9_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'scripts/handoff/confirm-ci-green.sh' ]; }"
 fi
 
 # =============================================================================
@@ -736,6 +744,18 @@ else
     # #6 GREEN change surface: the emitter whose severity grammar the #6
     # cycle widens + fail-louds (feature design §4.1).
     "scripts/handoff/emit-cycle-digest.sh"
+    # #25 cycle files (GATE:PLAN PASS, ledger issue-25 E14): HANDOFF step-5
+    # confirm-ci-green.sh helper + RED suite + mock gh fixture, and the
+    # manifest hash regen this new source row requires (docs/autoflow-
+    # guide.md, docs/external-review-sequencing.md, docs/git-workflow.md,
+    # docs/maintained-docs.md, setup/manifest.json already admitted above).
+    "scripts/handoff/confirm-ci-green.sh"
+    "setup/gen-manifest-hashes.sh"
+    "tests/issue-25/mock-gh/gh"
+    "tests/test-issue-25-confirm-ci-green.sh"
+    # #25 VERIFY re-run: the mock-gh fixture path fix (8912a72) also updates
+    # this suite's own AC-1 assertion count (46→47), so it lands in the diff.
+    "tests/plugin/verify-install-into-target.sh"
   )
   disallowed=""
   while IFS= read -r f; do
