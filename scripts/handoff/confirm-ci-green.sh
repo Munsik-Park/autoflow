@@ -154,6 +154,31 @@ is_not_mergeable() {
   [ "$1" != "MERGEABLE" ] || [ "$2" = "CONFLICTING" ] || [ "$2" = "DIRTY" ]
 }
 
+# clamp_to_interval <remaining> -> echoes min(CI_POLL_INTERVAL_SECS, remaining),
+# floored at 1. Shared clamp used by both the precheck bound and the
+# per-iteration poll sub-bound so a `gh_bounded` watchdog call never
+# outlives the deadline.
+clamp_to_interval() {
+  local remaining="$1" b="$CI_POLL_INTERVAL_SECS"
+  [ "$remaining" -lt "$b" ] && b="$remaining"
+  [ "$b" -lt 1 ] && b=1
+  printf '%s' "$b"
+}
+
+# sleep_to_deadline — recompute remaining against $deadline and sleep
+# min(CI_POLL_INTERVAL_SECS, remaining) so a sleep never overshoots the
+# deadline by a full interval. Shared by the in-loop transient-failure
+# tolerance branch and the end-of-iteration clamped-sleep.
+sleep_to_deadline() {
+  local now remaining sl
+  now="$(date +%s)"; remaining=$(( deadline - now ))
+  if [ "$remaining" -gt 0 ]; then
+    sl="$CI_POLL_INTERVAL_SECS"
+    [ "$remaining" -lt "$sl" ] && sl="$remaining"
+    sleep "$sl"
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # 1. PRECHECK (before any poll) — read mergeable/mergeStateStatus first.
 #    The deadline is computed FIRST so the precheck participates in the same
@@ -167,9 +192,7 @@ saw_checks=0
 mergeable_confirmed=0
 
 now="$(date +%s)"; remaining=$(( deadline - now ))
-pre_bound="$CI_POLL_INTERVAL_SECS"
-[ "$remaining" -lt "$pre_bound" ] && pre_bound="$remaining"
-[ "$pre_bound" -lt 1 ] && pre_bound=1
+pre_bound="$(clamp_to_interval "$remaining")"
 
 pre_out="$(mktemp)"
 gh_bounded "$pre_bound" "$pre_out" \
@@ -205,9 +228,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   [ "$remaining" -le 0 ] && break
 
   # Per-call watchdog sub-bound: min(interval, remaining-to-deadline), >=1.
-  sub_bound="$CI_POLL_INTERVAL_SECS"
-  [ "$remaining" -lt "$sub_bound" ] && sub_bound="$remaining"
-  [ "$sub_bound" -lt 1 ] && sub_bound=1
+  sub_bound="$(clamp_to_interval "$remaining")"
 
   poll_out="$(mktemp)"
   gh_bounded "$sub_bound" "$poll_out" \
@@ -217,11 +238,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   # A hung call was killed, or a transient non-zero / empty read: tolerate,
   # re-test the deadline at the loop head, and continue within the budget.
   if [ "${GH_TIMED_OUT:-0}" -eq 1 ] || [ "${GH_RC:-0}" -ne 0 ] || [ -z "$body" ]; then
-    now="$(date +%s)"; remaining=$(( deadline - now ))
-    if [ "$remaining" -gt 0 ]; then
-      sl="$CI_POLL_INTERVAL_SECS"; [ "$remaining" -lt "$sl" ] && sl="$remaining"
-      sleep "$sl"
-    fi
+    sleep_to_deadline
     continue
   fi
 
@@ -256,11 +273,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
 
   # clamped-sleep: min(interval, remaining) so the loop cannot overshoot the
   # deadline by a full interval.
-  now="$(date +%s)"; remaining=$(( deadline - now ))
-  if [ "$remaining" -gt 0 ]; then
-    sl="$CI_POLL_INTERVAL_SECS"; [ "$remaining" -lt "$sl" ] && sl="$remaining"
-    sleep "$sl"
-  fi
+  sleep_to_deadline
 done
 
 # ---------------------------------------------------------------------------
