@@ -753,6 +753,9 @@ else
     "setup/gen-manifest-hashes.sh"
     "tests/issue-25/mock-gh/gh"
     "tests/test-issue-25-confirm-ci-green.sh"
+    # #25 VERIFY re-run: the mock-gh fixture path fix (8912a72) also updates
+    # this suite's own AC-1 assertion count (46→47), so it lands in the diff.
+    "tests/plugin/verify-install-into-target.sh"
   )
   disallowed=""
   while IFS= read -r f; do
