@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
 # tests/issue-25/mock-gh/gh — gh CLI shim for confirm-ci-green.sh RED suite
 # (Issue #25). Pattern per tests/issue-92/mock-gh/gh (fixture-driven dispatch
 # on argv shape).
