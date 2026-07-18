@@ -44,8 +44,9 @@
 #                          mid-poll flip; stderr carries the reserved
 #                          [HANDOFF-INTERNAL-RETRY] token. No poll on precheck.
 #                          Only on a JSON-confirmed read; a failed/timed-out/
-#                          empty precheck read falls through to the bounded
-#                          poll, never 10.
+#                          empty/non-JSON read — at the precheck OR mid-poll —
+#                          falls through to the bounded poll (or, mid-poll, to a
+#                          retry within the budget), never 10.
 #   11  0 checks         — MERGEABLE but no check ever published within the bound.
 #   12  red build        — a check concluded FAILURE/ERROR/CANCELLED/TIMED_OUT.
 #   13  still pending     — checks present but never all-green at the deadline (slow CI).
@@ -70,8 +71,12 @@ REPO=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --pr) PR="${2:-}"; shift 2 ;;
-    --repo) REPO="${2:-}"; shift 2 ;;
+    --pr)
+      [ "$#" -ge 2 ] || { echo "missing value for --pr" >&2; usage; exit 64; }
+      PR="$2"; shift 2 ;;
+    --repo)
+      [ "$#" -ge 2 ] || { echo "missing value for --repo" >&2; usage; exit 64; }
+      REPO="$2"; shift 2 ;;
     -h|--help) echo "usage: $0 --pr <N> [--repo <owner/name>]"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; usage; exit 64 ;;
   esac
@@ -245,12 +250,19 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   # D5 — re-read mergeable every iteration; early-exit 10 on a mid-poll flip.
   m="$(printf '%s' "$body" | jq -r '.mergeable // empty' 2>/dev/null)"
   s="$(printf '%s' "$body" | jq -r '.mergeStateStatus // empty' 2>/dev/null)"
-  # A good in-loop read (non-empty parsed mergeable) confirms mergeable state —
-  # gated symmetrically with the precheck [ -z "$pre_mergeable" ] arm so a
-  # degraded-but-nonempty body does not set the flag.
-  if [ -n "$m" ]; then
-    mergeable_confirmed=1
-  fi
+  # A non-empty but non-JSON / field-absent body → jq degraded mergeable to
+  # empty: inconclusive THIS iteration, NOT a confirmed mid-poll flip. Rejoin
+  # the transient-tolerance path (skip classification, clamped-sleep, retry
+  # within the budget) — symmetric with the precheck [ -z "$pre_mergeable" ]
+  # arm. Do NOT set mergeable_confirmed, do NOT classify this read. If every
+  # remaining iteration degrades this way through the deadline, the post-loop
+  # classifier lands it on exit 11 (healthy precheck already set
+  # mergeable_confirmed=1 at the precheck) or exit 14 (precheck also degraded,
+  # flag still 0) — never 10.
+  if [ -z "$m" ]; then sleep_to_deadline; continue; fi
+  # Reached only on a well-formed read (non-empty parsed mergeable) — confirm
+  # the mergeable state was observed this cycle.
+  mergeable_confirmed=1
   if is_not_mergeable "$m" "$s"; then
     echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${s:-unknown}) — PR flipped mid-poll; do NOT wait on CI; branch by cause (gitlink -> Reconcile preflight; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
     exit 10
