@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bca6961c614de885492357fdf6f1dcf3df4ae0efd8a01bcd8cecac09b1162ccb"
+      "sha256": "2288290bc22a4552b49c551b37221d3312afaa668e1ce15e6c6125a12173d029"
     },
     {
       "source": "docs/design-rationale.md",
@@ -97,14 +97,14 @@
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "67174c29a8c9cd0f72dba6484a6290a176fa7368dada8b54552bea812b95256d"
+      "sha256": "d97b80b9efd23ed905e45c8f4d51a4341391d525c74e337ee0f2371bcb9be4a0"
     },
     {
       "source": "docs/git-workflow.md",
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d9772a45110aed9b486a4a0f4de2856778ec1b67ade0beb45ebd9daff74bed14"
+      "sha256": "d0c0675a066f3f3fb8ddbff036157649ccc854f83894839f342d93e50431b3e7"
     },
     {
       "source": "docs/improvement-backlog.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c26e65802b600937a926ed8e43902c6bd15bbfbb9a0d2522190f85853629fd3a"
+      "sha256": "afcd92dcce956ed9c9ec2ed06dcb7f6afe3b92b4d30c591e7f9abc1179d20103"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -308,6 +308,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "51ab937a11d3240fc81df55a4519d2653f9dce9aa1abd92801586168a60d05f4"
+    },
+    {
+      "source": "scripts/handoff/confirm-ci-green.sh",
+      "dest": "scripts/handoff/confirm-ci-green.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "f4f3157bddc83356d69d71609e2093986ddffbde72f8b7724b30c8fb2668e50c"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",

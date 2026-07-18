@@ -76,7 +76,7 @@ If `MAIN == BASE`, no concurrent reconcile happened — bump to `TARGET` and pus
 **Post-reconcile gate** — before/after pushing, confirm **all three**, and do not report "reconciled" until all hold:
 
 - **Pointer == `TARGET`**: `git ls-tree HEAD services` equals `TARGET` — the merge-order gate's pointer-equality requirement the operator verifies before removing `blocked-by-subrepo`. Verify this *before* pushing.
-- `gh pr view <host-PR> --json mergeable,mergeStateStatus` returns `mergeable: MERGEABLE` and `mergeStateStatus: CLEAN` (no longer `CONFLICTING`/`DIRTY`).
+- The generic mergeable + check-rollup confirmation runs `scripts/handoff/confirm-ci-green.sh --pr <host-PR>` (the shared step-5 helper — issue #25), which asserts `mergeable: MERGEABLE` / `mergeStateStatus: CLEAN` (no longer `CONFLICTING`/`DIRTY`) and a green GitHub-surfaced check rollup. Using the shared script here keeps the generic mergeable/rollup check from diverging into an independently-maintained second copy; the pointer-equality bullet above and the authenticated-Jenkins bullet below stay as this doc's own gitlink **superset** additions.
 - The Jenkins rebuild on the new head commit is `result: SUCCESS`, queried via the **authenticated** API (the environment provides `JENKINS_URL` / `JENKINS_USER` / `JENKINS_API_TOKEN`):
   ```bash
   curl -s -u "$JENKINS_USER:$JENKINS_API_TOKEN" \

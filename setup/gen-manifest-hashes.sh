@@ -167,6 +167,8 @@ build_rows() {
            "scripts/handoff/emit-cycle-digest.sh" "root-layer" "copy" "file"
   emit_row "scripts/handoff/create-host-pr.sh" \
            "scripts/handoff/create-host-pr.sh" "root-layer" "copy" "file"
+  emit_row "scripts/handoff/confirm-ci-green.sh" \
+           "scripts/handoff/confirm-ci-green.sh" "root-layer" "copy" "file"
   emit_row "scripts/cleanup/cleanup-issue.sh" \
            "scripts/cleanup/cleanup-issue.sh" "root-layer" "copy" "file"
 
