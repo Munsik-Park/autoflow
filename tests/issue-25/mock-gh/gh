@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# tests/issue-25/mock-gh/gh — gh CLI shim for confirm-ci-green.sh RED suite
+# (Issue #25). Pattern per tests/issue-92/mock-gh/gh (fixture-driven dispatch
+# on argv shape).
+#
+# Contract (verification design "gh-call shape" note, §1):
+#   - precheck call: `gh pr view <N> [--repo R] --json mergeable,mergeStateStatus`
+#     (no statusCheckRollup) — returns $GH_MOCK_PRECHECK_BODY.
+#   - poll call: `gh pr view <N> [--repo R] --json mergeable,mergeStateStatus,statusCheckRollup`
+#     (statusCheckRollup present) — returns the Nth line of
+#     $GH_MOCK_POLL_SEQUENCE_FILE (1-indexed by a call counter persisted in
+#     $GH_MOCK_POLL_COUNTER_FILE), clamped to the last line once the sequence
+#     is exhausted. Falls back to $GH_MOCK_POLL_BODY when no sequence file is
+#     set.
+#   - every invocation is logged as ONE space-joined argv line to
+#     $GH_INVOCATION_LOG (when set) — this is what lets a test assert
+#     ordering (AC1), a zero-poll-call count (AC2), and "no mutating gh
+#     subcommand ever appears" (AC6).
+#   - $GH_MOCK_EXIT (when set and non-zero) forces this call to fail before
+#     any dispatch, for the "unknown/mutating-call defense" negative case.
+
+set -uo pipefail
+
+ARGS="$*"
+
+if [ -n "${GH_INVOCATION_LOG:-}" ]; then
+  printf '%s\n' "$ARGS" >> "$GH_INVOCATION_LOG"
+fi
+
+if [ -n "${GH_MOCK_EXIT:-}" ] && [ "${GH_MOCK_EXIT}" != "0" ]; then
+  exit "$GH_MOCK_EXIT"
+fi
+
+case "$ARGS" in
+  *"pr view"*"statusCheckRollup"*)
+    COUNTER_FILE="${GH_MOCK_POLL_COUNTER_FILE:-}"
+    IDX=0
+    if [ -n "$COUNTER_FILE" ]; then
+      IDX="$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)"
+      echo $((IDX + 1)) > "$COUNTER_FILE"
+    fi
+    SEQ_FILE="${GH_MOCK_POLL_SEQUENCE_FILE:-}"
+    if [ -n "$SEQ_FILE" ] && [ -f "$SEQ_FILE" ]; then
+      LINES="$(wc -l < "$SEQ_FILE" | tr -d ' ')"
+      if [ "$IDX" -lt "$LINES" ]; then
+        sed -n "$((IDX + 1))p" "$SEQ_FILE"
+      else
+        tail -n 1 "$SEQ_FILE"
+      fi
+    else
+      printf '%s\n' "${GH_MOCK_POLL_BODY:-{\}}"
+    fi
+    exit 0
+    ;;
+  *"pr view"*)
+    printf '%s\n' "${GH_MOCK_PRECHECK_BODY:-{\}}"
+    exit 0
+    ;;
+esac
+
+# Any other gh subcommand (e.g. a mutating call the script must never issue,
+# AC6) — logged above already; exit 0 harmlessly so a defect doesn't hang the
+# test, the assertion is on the invocation log, not on this exit code.
+exit 0
