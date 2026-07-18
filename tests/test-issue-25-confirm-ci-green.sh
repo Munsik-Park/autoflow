@@ -47,6 +47,18 @@
 #   AC7, AC8 — FAIL (docs not yet restructured; current text asserted against
 #   the design's stable tokens does not contain them).
 #
+# Cycle-2 (review-response, PR #28 Medium finding) RED expectation - added by
+# .autoflow/issue-25-c2-verification-design.md: AC-C2-1a, AC-C2-1b, AC-C2-2,
+# AC-C2-3, AC-C2-5, AC-C2-7, AC-C2-8 FAIL against current HEAD (precheck is
+# unbounded raw command substitution -- confirm-ci-green.sh:151 -- and any
+# failed/empty/non-JSON precheck read is misclassified as a JSON-confirmed
+# CONFLICTING, exit 10, per feature design section 1). AC-C2-4 and AC-C2-6 are
+# **passing-at-RED regression guards** (design section 3): the current script
+# already exits 10 with zero poll calls on a genuine CONFLICTING/DIRTY
+# precheck, and already exits 0 on a fast, valid precheck -- both are
+# unaffected by the c2 fix's failure-path change, so they hold both before
+# and after GREEN.
+#
 # Self-guard (SIGPIPE-safe pipes, docs/submodule-common-rules.md > Testing
 # Standards item 6): every assertion in this file captures its producer into
 # a variable before matching (`x=$(...); printf '%s\n' "$x" | grep -qF ...`
@@ -150,7 +162,10 @@ run_confirm() {
   out="$(mktemp)"
   ( PATH="$MOCK_GH_DIR:$PATH" \
     GH_INVOCATION_LOG="${GH_INVOCATION_LOG:-}" \
+    GH_MOCK_EXIT="${GH_MOCK_EXIT:-}" \
     GH_MOCK_PRECHECK_BODY="${GH_MOCK_PRECHECK_BODY:-}" \
+    GH_MOCK_PRECHECK_EXIT="${GH_MOCK_PRECHECK_EXIT:-}" \
+    GH_MOCK_PRECHECK_SLEEP="${GH_MOCK_PRECHECK_SLEEP:-}" \
     GH_MOCK_POLL_BODY="${GH_MOCK_POLL_BODY:-}" \
     GH_MOCK_POLL_SEQUENCE_FILE="${GH_MOCK_POLL_SEQUENCE_FILE:-}" \
     GH_MOCK_POLL_COUNTER_FILE="${GH_MOCK_POLL_COUNTER_FILE:-}" \
@@ -436,6 +451,207 @@ run_confirm --pr 42 --repo owner/name
 REPO_LOG="$(cat "$GH_INVOCATION_LOG" 2>/dev/null || true)"
 assert_true "AC9: --repo owner/name is forwarded to the gh pr view call argv" \
   "printf '%s' \"\$REPO_LOG\" | grep -qF -- '--repo owner/name'"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-1a (hung precheck self-bounds, recovers via poll -> exit 0) ==="
+# verification design AC-C2-1a: mock precheck sleeps well past pre_bound
+# (min(CI_POLL_INTERVAL_SECS,remaining)=1 with CI_POLL_INTERVAL_SECS=1); a
+# healthy poll fixture is paired so the fixture hazard (design §1) is
+# honored. Outer ceiling = CI_POLL_TIMEOUT_SECS(2) + interval(1) + slack(2).
+
+C2_1A_LOG="$(mktemp)"
+C2_1A_INV_LOG="$(mktemp)"
+run_bounded 5 "$C2_1A_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$C2_1A_INV_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_PRECHECK_SLEEP=100 \
+  GH_MOCK_POLL_BODY="$POLL_ALL_GREEN_CHECKRUN" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 42
+
+assert_true "AC-C2-1a: the outer 5s harness watchdog never had to fire (precheck self-bounded, not the unbounded raw call)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-C2-1a: exit code is 0 (bounded precheck fell through, healthy poll confirmed green)" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 0 ]"
+rm -f "$C2_1A_LOG" "$C2_1A_INV_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-1b (precheck+poll never confirm mergeable -> bounded whole-script, exit 14) ==="
+# verification design AC-C2-1b: GH_MOCK_EXIT fails EVERY gh call (precheck
+# AND poll), so mergeable is never confirmed through the whole budget. The
+# post-loop mergeable_confirmed==0 branch must land on the new distinct code
+# 14, never conflated with the genuine-conflict 10.
+
+C2_1B_LOG="$(mktemp)"
+C2_1B_INV_LOG="$(mktemp)"
+run_bounded 5 "$C2_1B_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$C2_1B_INV_LOG" \
+  GH_MOCK_EXIT=1 \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$POLL_ALL_GREEN_CHECKRUN" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 42
+
+assert_true "AC-C2-1b: the outer 5s harness watchdog never had to fire (script self-terminated on its own budget)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-C2-1b: exit code is 14 (never confirmed mergeable through precheck+poll — transport failure, not a conflict)" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 14 ]"
+C2_1B_EXIT="$RB_EXIT"
+rm -f "$C2_1B_LOG" "$C2_1B_INV_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-2 (precheck gh failure != CONFLICTING, recovers via poll to exit 0) ==="
+# verification design AC-C2-2: a precheck-SCOPED failure (GH_MOCK_PRECHECK_EXIT,
+# NOT the all-calls GH_MOCK_EXIT, which would also fail the poll and mask
+# recovery) paired with a healthy poll must recover to exit 0 — the direct
+# kill of the reviewer's reproduced false-conflict case.
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_EXIT=1
+GH_MOCK_PRECHECK_BODY=""
+GH_MOCK_POLL_BODY="$POLL_ALL_GREEN_CHECKRUN"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-C2-2: a precheck-only gh failure recovers via the poll to exit 0 (not misclassified as a conflict)" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+assert_false "AC-C2-2: exit code is NOT 10 (transport failure != genuine conflict)" \
+  "[ \"\$RUN_EXIT\" -eq 10 ]"
+assert_false "AC-C2-2: stderr does NOT carry the genuine not-mergeable prose" \
+  "printf '%s' \"\$RUN_OUTPUT\" | grep -qF 'not mergeable ('"
+GH_MOCK_PRECHECK_EXIT=""
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-3 (empty / malformed / field-absent precheck body != CONFLICTING, recovers via poll) ==="
+# verification design AC-C2-3, §1 fixture hazard: every fall-through case
+# pins an explicit well-formed green poll body (not the {} default), so a
+# spurious mid-poll exit 10 cannot masquerade as this AC's outcome.
+
+C2_3_CASE_DESCS="EMPTY NONJSON EMPTYOBJ FIELDABSENT"
+C2_3_CASE_EMPTY=""
+C2_3_CASE_NONJSON="not json"
+C2_3_CASE_EMPTYOBJ="{}"
+C2_3_CASE_FIELDABSENT='{"foo":1}'
+
+for c2_3_case in $C2_3_CASE_DESCS; do
+  case "$c2_3_case" in
+    EMPTY) c2_3_body="$C2_3_CASE_EMPTY" ;;
+    NONJSON) c2_3_body="$C2_3_CASE_NONJSON" ;;
+    EMPTYOBJ) c2_3_body="$C2_3_CASE_EMPTYOBJ" ;;
+    FIELDABSENT) c2_3_body="$C2_3_CASE_FIELDABSENT" ;;
+  esac
+  GH_INVOCATION_LOG="$(mktemp)"
+  GH_MOCK_PRECHECK_BODY="$c2_3_body"
+  GH_MOCK_POLL_BODY="$POLL_ALL_GREEN_CHECKRUN"
+  GH_MOCK_POLL_SEQUENCE_FILE=""
+  GH_MOCK_POLL_COUNTER_FILE=""
+  CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+  assert_true "AC-C2-3 ($c2_3_case): precheck body falls through (not exit 10) and recovers to exit 0" \
+    "[ \"\$RUN_EXIT\" -eq 0 ]"
+  rm -f "$GH_INVOCATION_LOG"
+done
+GH_MOCK_PRECHECK_BODY=""
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-4 (genuine CONFLICTING/DIRTY still exit 10, zero poll calls — regression guard) ==="
+# Passing-at-RED regression guard (design §3): the current script already
+# exits 10 with zero poll calls on a JSON-confirmed CONFLICTING/DIRTY
+# precheck, unaffected by the c2 failure-path change. A would-be-green poll
+# fixture is configured so an erroneous poll invocation would be caught.
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_CONFLICTING_DIRTY"
+GH_MOCK_POLL_BODY="$POLL_ALL_GREEN_CHECKRUN"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+run_confirm --pr 42
+
+assert_true "AC-C2-4: a JSON-confirmed CONFLICTING/DIRTY precheck still exits 10" \
+  "[ \"\$RUN_EXIT\" -eq 10 ]"
+assert_true "AC-C2-4: stderr still carries the reserved HANDOFF-INTERNAL-RETRY token (unchanged)" \
+  "printf '%s' \"\$RUN_OUTPUT\" | grep -qF 'HANDOFF-INTERNAL-RETRY'"
+C2_4_POLL_COUNT="$(grep -cF 'statusCheckRollup' "$GH_INVOCATION_LOG" 2>/dev/null)"
+C2_4_POLL_COUNT="${C2_4_POLL_COUNT:-0}"
+assert_true "AC-C2-4: zero poll calls even though a (would-be-green) poll fixture is configured" \
+  "[ \"\$C2_4_POLL_COUNT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-5 (exit 14 is distinct and contracted) ==="
+
+assert_true "AC-C2-5: the observed never-confirmed-mergeable outcome (AC-C2-1b) is exactly 14" \
+  "[ \"\$C2_1B_EXIT\" -eq 14 ]"
+assert_false "AC-C2-5: the never-confirmed-mergeable outcome is NOT any existing code (0/10/11/12/13/64)" \
+  "[ \"\$C2_1B_EXIT\" -eq 0 ] || [ \"\$C2_1B_EXIT\" -eq 10 ] || [ \"\$C2_1B_EXIT\" -eq 11 ] || [ \"\$C2_1B_EXIT\" -eq 12 ] || [ \"\$C2_1B_EXIT\" -eq 13 ] || [ \"\$C2_1B_EXIT\" -eq 64 ]"
+
+SCRIPT_SRC_FULL="$(cat "$SCRIPT" 2>/dev/null || true)"
+assert_true "AC-C2-5: confirm-ci-green.sh header exit-code table documents a 14 row" \
+  "printf '%s' \"\$SCRIPT_SRC_FULL\" | grep -qE '^#[[:space:]]*14[[:space:]]'"
+
+STEP5_BODY_C2="$(extract_section '^5\. Confirm CI is green' "$AUTOFLOW_GUIDE")"
+STEP5_JOINED_C2="$(printf '%s' "$STEP5_BODY_C2" | tr '\n' ' ')"
+assert_true "AC-C2-5: docs/autoflow-guide.md step 5 contract lists exit 14" \
+  "printf '%s' \"\$STEP5_JOINED_C2\" | grep -qE '\\b14\\b'"
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-7 (header + doc consistency: bound applies to precheck, 14 documented, 10 clarified) ==="
+
+GH_BOUNDED_DOC="$(sed -n '/^# Bounded execution/,/^gh_bounded()/p' "$SCRIPT" 2>/dev/null || true)"
+assert_false "AC-C2-7: the gh_bounded comment no longer claims in-loop-only usage" \
+  "printf '%s' \"\$GH_BOUNDED_DOC\" | grep -qF 'Used per in-loop \`gh\` round-trip so'"
+assert_true "AC-C2-7: the gh_bounded doc-comment now also names the precheck (not just the exit-code table)" \
+  "printf '%s' \"\$GH_BOUNDED_DOC\" | grep -qF 'precheck'"
+assert_true "AC-C2-7: header documents the failed/timed-out/empty precheck falling through (10 clarified to a JSON-confirmed read only)" \
+  "printf '%s' \"\$SCRIPT_SRC_FULL\" | grep -qF 'falls through'"
+assert_true "AC-C2-7: autoflow-guide.md step 5 documents the precheck fall-through (not an immediate conflict)" \
+  "printf '%s' \"\$STEP5_JOINED_C2\" | grep -qF 'falls through'"
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-8 (mid-poll mergeable_confirmed flag: gated symmetrically with the precheck) ==="
+# verification design AC-C2-8 (static assessment): the in-loop tolerance
+# guard is intact, and mergeable_confirmed=1 on a good in-loop read is gated
+# inside the [ -n "$m" ] branch — symmetric with the precheck's
+# [ -z "$pre_mergeable" ] fall-through arm — so a degraded-but-nonempty
+# in-loop body does not set the flag.
+
+assert_true "AC-C2-8: script tracks a mergeable_confirmed flag (post-loop classifier input)" \
+  "printf '%s' \"\$SCRIPT_SRC_FULL\" | grep -qF 'mergeable_confirmed'"
+assert_true "AC-C2-8: the in-loop tolerance guard (GH_TIMED_OUT/GH_RC/empty-body) is still present" \
+  "printf '%s' \"\$SCRIPT_SRC_FULL\" | grep -qF 'GH_TIMED_OUT'"
+
+M_GATE_CONTEXT="$(grep -A3 -F '-n "$m"' "$SCRIPT" 2>/dev/null || true)"
+assert_true "AC-C2-8: an -n \"\$m\" gate exists around the in-loop success path (symmetric w/ precheck's -z \$pre_mergeable arm)" \
+  "[ -n \"\$M_GATE_CONTEXT\" ]"
+assert_true "AC-C2-8: mergeable_confirmed=1 is set inside that -n \"\$m\" gate (not unconditionally after the m/s parse)" \
+  "printf '%s' \"\$M_GATE_CONTEXT\" | grep -qF 'mergeable_confirmed=1'"
+
+# =============================================================================
+echo ""
+echo "=== AC-C2-6 (bounding does not clip a fast, valid precheck — regression guard) ==="
+# Passing-at-RED regression guard (design §3): the current unbounded script
+# already proceeds to the poll and exits 0 on a fast, valid precheck; the c2
+# bound must not make this spuriously fail.
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$POLL_ALL_GREEN_CHECKRUN"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-C2-6: a fast, valid precheck still proceeds to poll and exits 0 under the new bound" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
 rm -f "$GH_INVOCATION_LOG"
 
 # =============================================================================

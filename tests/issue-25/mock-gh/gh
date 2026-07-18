@@ -7,7 +7,11 @@
 #
 # Contract (verification design "gh-call shape" note, §1):
 #   - precheck call: `gh pr view <N> [--repo R] --json mergeable,mergeStateStatus`
-#     (no statusCheckRollup) — returns $GH_MOCK_PRECHECK_BODY.
+#     (no statusCheckRollup) — returns $GH_MOCK_PRECHECK_BODY. Uses `-`
+#     (unset-only) parameter expansion, NOT `:-` (unset-or-empty): an
+#     explicitly-empty $GH_MOCK_PRECHECK_BODY ("") prints a genuinely empty
+#     body (simulating a failed/empty gh read), distinct from leaving the var
+#     unset (defaults to "{}"). This distinction is required by cycle-2 AC-C2-3.
 #   - poll call: `gh pr view <N> [--repo R] --json mergeable,mergeStateStatus,statusCheckRollup`
 #     (statusCheckRollup present) — returns the Nth line of
 #     $GH_MOCK_POLL_SEQUENCE_FILE (1-indexed by a call counter persisted in
@@ -20,6 +24,15 @@
 #     subcommand ever appears" (AC6).
 #   - $GH_MOCK_EXIT (when set and non-zero) forces this call to fail before
 #     any dispatch, for the "unknown/mutating-call defense" negative case.
+#   - $GH_MOCK_PRECHECK_EXIT (when set and non-zero) — cycle-2 (issue #25 c2,
+#     verification design D2b) — forces ONLY the precheck-shape call (this
+#     arm, argv without statusCheckRollup) to exit with it; the poll-shape
+#     call is unaffected, so a precheck-only transport failure can be modelled
+#     while a healthy poll still confirms mergeable (AC-C2-2).
+#   - $GH_MOCK_PRECHECK_SLEEP (when set) — cycle-2 (verification design D2)
+#     — sleeps that many seconds on ONLY the precheck-shape call before
+#     responding, to simulate a hang that the precheck's own bound must cut
+#     off (AC-C2-1a/1b). Does not affect poll-shape calls.
 
 set -uo pipefail
 
@@ -55,7 +68,13 @@ case "$ARGS" in
     exit 0
     ;;
   *"pr view"*)
-    printf '%s\n' "${GH_MOCK_PRECHECK_BODY:-{\}}"
+    if [ -n "${GH_MOCK_PRECHECK_SLEEP:-}" ]; then
+      sleep "$GH_MOCK_PRECHECK_SLEEP"
+    fi
+    if [ -n "${GH_MOCK_PRECHECK_EXIT:-}" ] && [ "${GH_MOCK_PRECHECK_EXIT}" != "0" ]; then
+      exit "$GH_MOCK_PRECHECK_EXIT"
+    fi
+    printf '%s\n' "${GH_MOCK_PRECHECK_BODY-{\}}"
     exit 0
     ;;
 esac
