@@ -630,10 +630,10 @@ assert_true "AC-C2-8: script tracks a mergeable_confirmed flag (post-loop classi
 assert_true "AC-C2-8: the in-loop tolerance guard (GH_TIMED_OUT/GH_RC/empty-body) is still present" \
   "printf '%s' \"\$SCRIPT_SRC_FULL\" | grep -qF 'GH_TIMED_OUT'"
 
-M_GATE_CONTEXT="$(grep -A3 -F -e '-n "$m"' "$SCRIPT" 2>/dev/null || true)"
-assert_true "AC-C2-8: an -n \"\$m\" gate exists around the in-loop success path (symmetric w/ precheck's -z \$pre_mergeable arm)" \
+M_GATE_CONTEXT="$(grep -A3 -F -e '-n "$m"' -e '-z "$m"' "$SCRIPT" 2>/dev/null || true)"
+assert_true "AC-C2-8: a mergeable-emptiness guard (-n \"\$m\" or -z \"\$m\") exists around the in-loop success path (symmetric w/ precheck's -z \$pre_mergeable arm)" \
   "[ -n \"\$M_GATE_CONTEXT\" ]"
-assert_true "AC-C2-8: mergeable_confirmed=1 is set inside that -n \"\$m\" gate (not unconditionally after the m/s parse)" \
+assert_true "AC-C2-8: mergeable_confirmed=1 is set inside a guard that excludes the empty-\$m path (co-occurs with the captured guard context)" \
   "printf '%s' \"\$M_GATE_CONTEXT\" | grep -qF 'mergeable_confirmed=1'"
 
 # =============================================================================
@@ -652,6 +652,210 @@ CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
 
 assert_true "AC-C2-6: a fast, valid precheck still proceeds to poll and exits 0 under the new bound" \
   "[ \"\$RUN_EXIT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C3-1 (mid-poll malformed/field-absent body != 10, recovers via later green poll) ==="
+# verification design AC-C3-1: a mid-poll body that is non-empty, rc-0, but
+# malformed / mergeable-absent must NOT exit 10 (RED at HEAD: is_not_mergeable
+# "" "" -> true -> exit 10 on iter-1, iter-2 never reached). Parametrized over
+# the same malformed shapes as AC-C2-3's precheck parametrization.
+for MALFORMED_BODY in 'not json' '{}' '{"foo":1}'; do
+  GH_INVOCATION_LOG="$(mktemp)"
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+  SEQ_FILE="$(mktemp)"
+  printf '%s\n' "$MALFORMED_BODY" > "$SEQ_FILE"
+  printf '%s\n' "$POLL_ALL_GREEN_CHECKRUN" >> "$SEQ_FILE"
+  COUNTER_FILE="$(mktemp)"; echo 0 > "$COUNTER_FILE"
+  GH_MOCK_POLL_SEQUENCE_FILE="$SEQ_FILE"
+  GH_MOCK_POLL_COUNTER_FILE="$COUNTER_FILE"
+  CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+  assert_false "AC-C3-1: malformed mid-poll body ($MALFORMED_BODY) does NOT exit 10" \
+    "[ \"\$RUN_EXIT\" -eq 10 ]"
+  assert_true "AC-C3-1: malformed mid-poll body ($MALFORMED_BODY) recovers via the later green poll -> exit 0" \
+    "[ \"\$RUN_EXIT\" -eq 0 ]"
+  rm -f "$GH_INVOCATION_LOG" "$SEQ_FILE" "$COUNTER_FILE"
+done
+
+# =============================================================================
+echo ""
+echo "=== AC-C3-2 (persistent malformed mid-poll, healthy precheck -> bounded, non-conflict terminal, never 10) ==="
+# verification design AC-C3-2 / §0 environment note: this box has neither
+# timeout nor gtimeout, so the finite-termination proof is driven under the
+# suite's outer run_bounded watchdog (NOT a bare run_confirm) — load-bearing
+# because at RED the malformed-continue path does not exist yet and a
+# regression there could hang. D-C3-1 (resolved): healthy precheck already
+# sets mergeable_confirmed=1 at :213, so the post-loop classifier lands on
+# exit 11 (saw_checks==0), not 14. Primary assertion is the robust != 10;
+# secondary is the firm == 11 binding.
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY='not json'
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+
+AC_C3_2_LOG="$(mktemp)"
+run_bounded 5 "$AC_C3_2_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$GH_MOCK_PRECHECK_BODY" \
+  GH_MOCK_POLL_BODY="$GH_MOCK_POLL_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 42
+
+assert_true "AC-C3-2: the outer 5s harness watchdog never had to fire (finite termination of the malformed-continue loop)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_false "AC-C3-2: a persistently-malformed mid-poll under a healthy precheck does NOT exit 10 (the finding's actual kill)" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 10 ]"
+assert_true "AC-C3-2 (secondary, firm D-C3-1): exact terminal code is 11 (healthy precheck already confirmed mergeable at :213)" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 11 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC_C3_2_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C3-3 (genuine mid-poll flip MERGEABLE -> CONFLICTING still exit 10 — regression guard) ==="
+# Passing-at-RED regression guard: reuses the existing AC-FLIP fixture. A
+# well-formed CONFLICTING read has non-empty m, so the new [ -z "$m" ] arm
+# never fires on it — holds both before and after GREEN.
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+SEQ_FILE="$(mktemp)"
+printf '%s\n' "$POLL_EMPTY_ROLLUP" > "$SEQ_FILE"
+printf '%s\n' "$POLL_FLIPPED_CONFLICTING" >> "$SEQ_FILE"
+COUNTER_FILE="$(mktemp)"; echo 0 > "$COUNTER_FILE"
+GH_MOCK_POLL_SEQUENCE_FILE="$SEQ_FILE"
+GH_MOCK_POLL_COUNTER_FILE="$COUNTER_FILE"
+CI_POLL_TIMEOUT_SECS=10 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-C3-3: a genuine mid-poll flip to CONFLICTING still exits 10 (fix does not narrow the mid-poll-flip contract)" \
+  "[ \"\$RUN_EXIT\" -eq 10 ]"
+POLL_CALLS_AC_C3_3="$(grep -cF 'statusCheckRollup' "$GH_INVOCATION_LOG" 2>/dev/null)"
+POLL_CALLS_AC_C3_3="${POLL_CALLS_AC_C3_3:-0}"
+assert_true "AC-C3-3: exactly 2 poll calls issued (flip observed on the 2nd, no 3rd call)" \
+  "[ \"\$POLL_CALLS_AC_C3_3\" -eq 2 ]"
+rm -f "$GH_INVOCATION_LOG" "$SEQ_FILE" "$COUNTER_FILE"
+
+# =============================================================================
+echo ""
+echo "=== AC-C3-4 (mid-poll fall-through arm present + symmetric with precheck — static) ==="
+# verification design AC-C3-4: a [ -z "$m" ] (empty parsed mergeable)
+# fall-through arm exists BEFORE the is_not_mergeable call at the mid-poll
+# site, and the degraded-read flag invariant (mergeable_confirmed=1
+# unreachable on an empty $m) holds under EITHER the c2 -n "$m" wrapper form
+# or the c3 early -z "$m" -> continue form (must not pin the literal -n "$m"
+# wrapper — that would fail once Fix 1 lands).
+
+MIDPOLL_BLOCK="$(sed -n '/D5 — re-read mergeable every iteration/,/^  fi$/p' "$SCRIPT" 2>/dev/null || true)"
+assert_true "AC-C3-4: a [ -z \"\$m\" ]-shaped guard exists in the mid-poll block, before is_not_mergeable is called" \
+  "printf '%s' \"\$MIDPOLL_BLOCK\" | grep -qF -- '-z \"\$m\"'"
+
+MIDPOLL_ZGUARD_TO_ISNOTMERGEABLE="$(awk '/D5 — re-read mergeable every iteration/{f=1} f{print} f && /is_not_mergeable/{exit}' "$SCRIPT" 2>/dev/null || true)"
+ZGUARD_LINE="$(printf '%s\n' "$MIDPOLL_ZGUARD_TO_ISNOTMERGEABLE" | grep -nF -- '-z "$m"' | head -n 1 | cut -d: -f1 || true)"
+ISNOTMERGEABLE_LINE="$(printf '%s\n' "$MIDPOLL_ZGUARD_TO_ISNOTMERGEABLE" | grep -nF 'is_not_mergeable "$m"' | head -n 1 | cut -d: -f1 || true)"
+assert_true "AC-C3-4: the [ -z \"\$m\" ] guard appears BEFORE the is_not_mergeable \"\$m\" call in the mid-poll block" \
+  "[ -n \"\$ZGUARD_LINE\" ] && [ -n \"\$ISNOTMERGEABLE_LINE\" ] && [ \"\$ZGUARD_LINE\" -lt \"\$ISNOTMERGEABLE_LINE\" ]"
+
+# Degraded-read flag invariant: accept either the c2 -n "$m" wrapper form or
+# the c3 -z "$m" -> continue form (same acceptance rule as the AC-C2-8
+# relaxation above).
+INVARIANT_GATE_CONTEXT="$(grep -A3 -F -e '-n "$m"' -e '-z "$m"' "$SCRIPT" 2>/dev/null || true)"
+assert_true "AC-C3-4: mergeable_confirmed=1 co-occurs with a guard that excludes the empty-\$m path (either accepted form)" \
+  "[ -n \"\$INVARIANT_GATE_CONTEXT\" ] && printf '%s' \"\$INVARIANT_GATE_CONTEXT\" | grep -qF 'mergeable_confirmed=1'"
+
+# =============================================================================
+echo ""
+echo "=== AC-C3-5 (doc: exit-10 line generalized to name the mid-poll fall-through) ==="
+# verification design AC-C3-5: docs/autoflow-guide.md step-5 exit-code
+# contract and the script header no longer describe the "malformed/empty
+# read falls through, never 10" guard as precheck-only.
+
+SCRIPT_SRC_FULL_C3="$(cat "$SCRIPT" 2>/dev/null || true)"
+TEN_ROW_C3="$(printf '%s' "$SCRIPT_SRC_FULL_C3" | grep -E '^#[[:space:]]*10[[:space:]]' -A5 2>/dev/null || true)"
+assert_false "AC-C3-5: the script header's 10-row no longer scopes the fall-through to the precheck only" \
+  "printf '%s' \"\$TEN_ROW_C3\" | grep -qF 'empty precheck read falls through'"
+
+STEP5_BODY_C3="$(extract_section '^5\. Confirm CI is green' "$AUTOFLOW_GUIDE")"
+STEP5_JOINED_C3="$(printf '%s' "$STEP5_BODY_C3" | tr '\n' ' ')"
+assert_false "AC-C3-5: docs/autoflow-guide.md step 5's 10 line no longer restricts the fall-through wording to 'precheck read'" \
+  "printf '%s' \"\$STEP5_JOINED_C3\" | grep -qF 'empty / non-JSON precheck read is'"
+assert_true "AC-C3-5: docs/autoflow-guide.md step 5's 10 line names the mid-poll site alongside the precheck" \
+  "printf '%s' \"\$STEP5_JOINED_C3\" | grep -qF 'mid-poll'"
+
+# =============================================================================
+echo ""
+echo "=== AC-C3-6 (dangling --pr last token -> bounded termination + exit 64, not hang) ==="
+# verification design AC-C3-6 / Finding 2: RED at HEAD is a genuine infinite
+# loop (shift 2 at $#=1 fails without consuming any argument under set -uo
+# pipefail, no -e), so this invocation MUST be wrapped in run_bounded — a
+# bare run_confirm would hang the whole suite. GREEN reaches usage; exit 64.
+
+AC_C3_6_LOG="$(mktemp)"
+run_bounded 5 "$AC_C3_6_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  bash "$SCRIPT" --pr
+
+assert_true "AC-C3-6: the outer 5s harness watchdog never had to fire (script self-terminates, no hang)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-C3-6: a dangling --pr (no value) terminates finitely with exit 64 via the usage path" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 64 ]"
+rm -f "$AC_C3_6_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C3-7 (dangling --repo last token -> bounded termination + exit 64) ==="
+# verification design AC-C3-7 / D-C3-2: a value-taking --repo as the
+# dangling last token is a malformed invocation, not a silent REPO="".
+
+AC_C3_7_LOG="$(mktemp)"
+run_bounded 5 "$AC_C3_7_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  bash "$SCRIPT" --pr 42 --repo
+
+assert_true "AC-C3-7: the outer 5s harness watchdog never had to fire (script self-terminates, no hang)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-C3-7: a dangling --repo (no value) terminates finitely with exit 64 via the usage path" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 64 ]"
+rm -f "$AC_C3_7_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-C3-8 (well-formed argv unaffected by the bounds check — regression guard) ==="
+# Passing-at-RED regression guard: every argv shape here already terminates
+# today; the fix must leave them untouched. Re-asserts AC9/AC1 shapes plus a
+# new -h/--help -> exit 0 case.
+
+GH_INVOCATION_LOG="$(mktemp)"
+run_confirm
+assert_true "AC-C3-8: missing --pr -> exit 64 (unaffected by the bounds check)" "[ \"\$RUN_EXIT\" -eq 64 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+run_confirm --pr abc
+assert_true "AC-C3-8: non-numeric --pr -> exit 64 (unaffected by the bounds check)" "[ \"\$RUN_EXIT\" -eq 64 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+run_confirm --bogus-flag
+assert_true "AC-C3-8: unknown flag -> exit 64 (unaffected by the bounds check)" "[ \"\$RUN_EXIT\" -eq 64 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_CONFLICTING_DIRTY"
+run_confirm --pr 42 --repo owner/name
+REPO_LOG_C3="$(cat "$GH_INVOCATION_LOG" 2>/dev/null || true)"
+assert_true "AC-C3-8: --pr N --repo owner/name still forwards --repo to the gh pr view call argv" \
+  "printf '%s' \"\$REPO_LOG_C3\" | grep -qF -- '--repo owner/name'"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+run_confirm -h
+assert_true "AC-C3-8: -h -> exit 0" "[ \"\$RUN_EXIT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+run_confirm --help
+assert_true "AC-C3-8: --help -> exit 0" "[ \"\$RUN_EXIT\" -eq 0 ]"
 rm -f "$GH_INVOCATION_LOG"
 
 # =============================================================================
