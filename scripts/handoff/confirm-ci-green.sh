@@ -148,9 +148,7 @@ is_not_mergeable() {
 # ---------------------------------------------------------------------------
 # 1. PRECHECK (before any poll) — read mergeable/mergeStateStatus first.
 # ---------------------------------------------------------------------------
-pre_out="$(mktemp)"
-gh pr view "$PR" "${REPO_ARGS[@]}" --json mergeable,mergeStateStatus >"$pre_out" 2>/dev/null
-pre_body="$(cat "$pre_out")"; rm -f "$pre_out"
+pre_body="$(gh pr view "$PR" "${REPO_ARGS[@]}" --json mergeable,mergeStateStatus 2>/dev/null)"
 
 pre_mergeable="$(printf '%s' "$pre_body" | jq -r '.mergeable // empty' 2>/dev/null)"
 pre_state="$(printf '%s' "$pre_body" | jq -r '.mergeStateStatus // empty' 2>/dev/null)"
