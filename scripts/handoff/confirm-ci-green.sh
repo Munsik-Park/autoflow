@@ -137,19 +137,33 @@ gh_bounded() {
   return 0
 }
 
-# Classify a poll body's statusCheckRollup into "<total> <fail> <green>".
+# Classify a poll body's statusCheckRollup into "<total> <fail> <green>". A
+# stale CANCELLED/FAILURE left standing by a concurrency-cancelled run must not
+# outvote a same-name later SUCCESS, so reduce each check to its latest entry
+# per identity first (dedup) before bucketing (feature #30 §3.2).
 classify_rollup() {
   jq -r '
-    (.statusCheckRollup // []) as $r
+    def ident:
+      if .__typename == "CheckRun" and ((.name // "") != "") then
+        "CheckRun \(.workflowName // "") \(.name)"
+      elif .__typename == "StatusContext" and ((.context // "") != "") then
+        "StatusContext \(.context)"
+      else
+        "RAW \(tojson)"
+      end;
+    def green_entry:
+      (.__typename == "CheckRun" and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
+      or (.__typename == "StatusContext" and (.state == "SUCCESS"));
+    ( .statusCheckRollup // [] )
+    | group_by(ident)
+    | map( max_by([ .startedAt // "", .completedAt // "", .createdAt // "",
+                    (if green_entry then 0 else 1 end) ]) ) as $r
     | ($r | length) as $t
     | ([ $r[] | select(
           (.__typename == "CheckRun" and (.conclusion | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT")))
           or (.__typename == "StatusContext" and (.state | IN("FAILURE","ERROR")))
         )] | length) as $f
-    | ([ $r[] | select(
-          (.__typename == "CheckRun" and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
-          or (.__typename == "StatusContext" and (.state == "SUCCESS"))
-        )] | length) as $g
+    | ([ $r[] | select(green_entry) ] | length) as $g
     | "\($t) \($f) \($g)"
   ' 2>/dev/null
 }
