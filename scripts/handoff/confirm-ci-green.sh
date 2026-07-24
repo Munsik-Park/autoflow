@@ -170,6 +170,7 @@ classify_rollup() {
       or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
     def ts_key: [ .startedAt // "", .completedAt // "", .createdAt // "" ];
     def start_key: [ .startedAt // "", .createdAt // "" ];
+    def tie_key: ts_key + [ (if green_entry then 0 else 1 end) ];
     def has_start:
       if .__typename == "CheckRun" then (.startedAt // "") != ""
       else (.createdAt // "") != "" end;
@@ -179,12 +180,12 @@ classify_rollup() {
         ( [ .[] | select(non_terminal) ] ) as $nt
         | ( [ .[] | select(non_terminal | not) ] ) as $tm
         | if ($nt | length) == 0 then
-            max_by(ts_key + [ (if green_entry then 0 else 1 end) ])
+            max_by(tie_key)
           elif ($tm | length) > 0
                and ([ $nt[] | has_start ] | all)
                and (($tm | max_by(start_key) | start_key) > ($nt | max_by(start_key) | start_key))
           then
-            ( $tm | max_by(ts_key + [ (if green_entry then 0 else 1 end) ]) )
+            ( $tm | max_by(tie_key) )
           else
             ( $nt | max_by(ts_key) )
           end
