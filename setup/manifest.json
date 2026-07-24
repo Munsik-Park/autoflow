@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7c61e82bdc7c1c1d539c5a6b8a53a10884ae9dcbd992133582c8f1aab6f02cd2"
+      "sha256": "0ff2f63ced05dea3597b6c4e97c7fe5cebdb1186d0a7a26195215cd8ff237de5"
     },
     {
       "source": "docs/title-guide.md",
@@ -195,14 +195,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e582915312ae533f4983149b439dfe067b8453b3faa0ae42a059a926a3a41677"
+      "sha256": "679e4e374d8aabf9b1fb9aaa499c3cd748b13f701d7d61b4be65aafa10b2094a"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "913e58cd5ac4b7fc911cf070607c7079ec14e62681f14317b9c7de226de63abd"
+      "sha256": "315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",

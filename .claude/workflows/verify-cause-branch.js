@@ -12,7 +12,7 @@
 // orchestrator enforces in CLAUDE.md > Flow Control.
 export const meta = {
   name: 'verify-cause-branch',
-  description: 'Isolated VERIFY cause-branch: Test-AI + Developer-AI self-check on a test failure; returns only the canonical next action.',
+  description: 'Isolated VERIFY cause-branch: Test-AI + Developer-AI self-check on a test failure; returns only the canonical next action. Invoke with args {issue: "N", failLog: "<path>"} (both required).',
   phases: [
     { title: 'Self-check', detail: 'test-AI and dev-AI each self-check against the acceptance criterion (one round)' },
   ],
@@ -24,7 +24,31 @@ export const meta = {
 // Normalize defensively: parse a string, accept an object if a future runtime
 // passes one — forward-compatible either way.
 const argv = typeof args === 'string'
-  ? (() => { try { return JSON.parse(args) } catch (_) { return {} } })()
+  ? (() => {
+      try { return JSON.parse(args) }
+      catch (_) {
+        // Prose fallback (issue #14): the skill channel forwards the operator's free
+        // text verbatim as `args`. Free text is not JSON, so parsing threw. Salvage the
+        // issue number by decreasing anchor strength (first hit wins):
+        //   tier 1  #(\d+)               — a hashed token (#215) is an explicit issue ref
+        //   tier 2  \bissue\s+#?(\d+)\b  — the word "issue" anchors the number, so an
+        //                                  incidental leading digit (the "2" in "v2") loses
+        //   tier 3  bare (\d+)           — adopted ONLY when exactly one number is present;
+        //                                  two-or-more bare runs is ambiguous -> fail loud.
+        // No match / ambiguous -> {} -> the loud-fail guard below fires unchanged (no new
+        // error type; the single Stage-4 guard stays the sole throw site). `failLog`
+        // deliberately gets NO salvage (DCR-3 asymmetry: a filesystem path has no reliable
+        // prose shape); its guard stays a hard requirement.
+        const hash = args.match(/#(\d+)/)
+        const labeled = hash ? null : args.match(/\bissue\s+#?(\d+)\b/i)
+        const all = hash || labeled ? null : args.match(/\d+/g)
+        const issue = hash ? hash[1]
+          : labeled ? labeled[1]
+          : (all && all.length === 1) ? all[0]
+          : null
+        return issue ? { issue } : {}
+      }
+    })()
   : (args || {})
 // System boundary: reject missing required args loudly rather than proceeding with placeholders.
 if (!argv.issue) throw new Error('verify-cause-branch: args.issue is required')

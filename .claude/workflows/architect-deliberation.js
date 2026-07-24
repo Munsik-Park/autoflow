@@ -8,7 +8,7 @@
 // Requires Claude Code v2.1.154+ (Workflow runtime).
 export const meta = {
   name: 'architect-deliberation',
-  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict.',
+  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict. Invoke with args {issue: "N"} (issue number required).',
   phases: [
     { title: 'Draft', detail: 'dev drafts feature design, test drafts verification design (independent)' },
     { title: 'Converge', detail: 'cross-review rounds under the Discussion Protocol until mutual ACCEPT or the round cap' },
@@ -29,7 +29,29 @@ const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_
 // Normalize defensively: parse a string, accept an object if a future runtime
 // passes one — forward-compatible either way.
 const argv = typeof args === 'string'
-  ? (() => { try { return JSON.parse(args) } catch (_) { return {} } })()
+  ? (() => {
+      try { return JSON.parse(args) }
+      catch (_) {
+        // Prose fallback (issue #14): the skill channel forwards the operator's free
+        // text verbatim as `args`. Free text is not JSON, so parsing threw. Salvage the
+        // issue number by decreasing anchor strength (first hit wins):
+        //   tier 1  #(\d+)               — a hashed token (#215) is an explicit issue ref
+        //   tier 2  \bissue\s+#?(\d+)\b  — the word "issue" anchors the number, so an
+        //                                  incidental leading digit (the "2" in "v2") loses
+        //   tier 3  bare (\d+)           — adopted ONLY when exactly one number is present;
+        //                                  two-or-more bare runs is ambiguous -> fail loud.
+        // No match / ambiguous -> {} -> the loud-fail guard below fires unchanged (no new
+        // error type; the single Stage-4 guard stays the sole throw site).
+        const hash = args.match(/#(\d+)/)
+        const labeled = hash ? null : args.match(/\bissue\s+#?(\d+)\b/i)
+        const all = hash || labeled ? null : args.match(/\d+/g)
+        const issue = hash ? hash[1]
+          : labeled ? labeled[1]
+          : (all && all.length === 1) ? all[0]
+          : null
+        return issue ? { issue } : {}
+      }
+    })()
   : (args || {})
 // System boundary: reject a missing required arg loudly rather than proceeding with a placeholder path.
 if (!argv.issue) throw new Error('architect-deliberation: args.issue is required')
