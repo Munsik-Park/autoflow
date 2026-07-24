@@ -29,13 +29,24 @@ const argv = typeof args === 'string'
       catch (_) {
         // Prose fallback (issue #14): the skill channel forwards the operator's free
         // text verbatim as `args`. Free text is not JSON, so parsing threw. Salvage the
-        // issue number, preferring a hashed token (#215) over a bare digit run so an
-        // incidental leading digit (the "2" in "v2") is not adopted. No digit match ->
-        // {} -> the loud-fail guard below still fires unchanged. `failLog` deliberately
-        // gets NO salvage (DCR-3 asymmetry: a filesystem path has no reliable prose
-        // shape); its guard stays a hard requirement.
-        const m = args.match(/#(\d+)/) || args.match(/(\d+)/)
-        return m ? { issue: m[1] } : {}
+        // issue number by decreasing anchor strength (first hit wins):
+        //   tier 1  #(\d+)               — a hashed token (#215) is an explicit issue ref
+        //   tier 2  \bissue\s+#?(\d+)\b  — the word "issue" anchors the number, so an
+        //                                  incidental leading digit (the "2" in "v2") loses
+        //   tier 3  bare (\d+)           — adopted ONLY when exactly one number is present;
+        //                                  two-or-more bare runs is ambiguous -> fail loud.
+        // No match / ambiguous -> {} -> the loud-fail guard below fires unchanged (no new
+        // error type; the single Stage-4 guard stays the sole throw site). `failLog`
+        // deliberately gets NO salvage (DCR-3 asymmetry: a filesystem path has no reliable
+        // prose shape); its guard stays a hard requirement.
+        const hash = args.match(/#(\d+)/)
+        const labeled = hash ? null : args.match(/\bissue\s+#?(\d+)\b/i)
+        const all = hash || labeled ? null : args.match(/\d+/g)
+        const issue = hash ? hash[1]
+          : labeled ? labeled[1]
+          : (all && all.length === 1) ? all[0]
+          : null
+        return issue ? { issue } : {}
       }
     })()
   : (args || {})
