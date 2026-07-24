@@ -8,7 +8,7 @@
 // Requires Claude Code v2.1.154+ (Workflow runtime).
 export const meta = {
   name: 'architect-deliberation',
-  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict.',
+  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict. Invoke with args {issue: "N"} (issue number required).',
   phases: [
     { title: 'Draft', detail: 'dev drafts feature design, test drafts verification design (independent)' },
     { title: 'Converge', detail: 'cross-review rounds under the Discussion Protocol until mutual ACCEPT or the round cap' },
@@ -29,7 +29,18 @@ const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_
 // Normalize defensively: parse a string, accept an object if a future runtime
 // passes one — forward-compatible either way.
 const argv = typeof args === 'string'
-  ? (() => { try { return JSON.parse(args) } catch (_) { return {} } })()
+  ? (() => {
+      try { return JSON.parse(args) }
+      catch (_) {
+        // Prose fallback (issue #14): the skill channel forwards the operator's free
+        // text verbatim as `args`. Free text is not JSON, so parsing threw. Salvage the
+        // issue number, preferring a hashed token (#215) over a bare digit run so an
+        // incidental leading digit (the "2" in "v2") is not adopted. No digit match ->
+        // {} -> the loud-fail guard below still fires unchanged.
+        const m = args.match(/#(\d+)/) || args.match(/(\d+)/)
+        return m ? { issue: m[1] } : {}
+      }
+    })()
   : (args || {})
 // System boundary: reject a missing required arg loudly rather than proceeding with a placeholder path.
 if (!argv.issue) throw new Error('architect-deliberation: args.issue is required')

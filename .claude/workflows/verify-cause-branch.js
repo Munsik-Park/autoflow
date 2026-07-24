@@ -12,7 +12,7 @@
 // orchestrator enforces in CLAUDE.md > Flow Control.
 export const meta = {
   name: 'verify-cause-branch',
-  description: 'Isolated VERIFY cause-branch: Test-AI + Developer-AI self-check on a test failure; returns only the canonical next action.',
+  description: 'Isolated VERIFY cause-branch: Test-AI + Developer-AI self-check on a test failure; returns only the canonical next action. Invoke with args {issue: "N", failLog: "<path>"} (both required).',
   phases: [
     { title: 'Self-check', detail: 'test-AI and dev-AI each self-check against the acceptance criterion (one round)' },
   ],
@@ -24,7 +24,20 @@ export const meta = {
 // Normalize defensively: parse a string, accept an object if a future runtime
 // passes one — forward-compatible either way.
 const argv = typeof args === 'string'
-  ? (() => { try { return JSON.parse(args) } catch (_) { return {} } })()
+  ? (() => {
+      try { return JSON.parse(args) }
+      catch (_) {
+        // Prose fallback (issue #14): the skill channel forwards the operator's free
+        // text verbatim as `args`. Free text is not JSON, so parsing threw. Salvage the
+        // issue number, preferring a hashed token (#215) over a bare digit run so an
+        // incidental leading digit (the "2" in "v2") is not adopted. No digit match ->
+        // {} -> the loud-fail guard below still fires unchanged. `failLog` deliberately
+        // gets NO salvage (DCR-3 asymmetry: a filesystem path has no reliable prose
+        // shape); its guard stays a hard requirement.
+        const m = args.match(/#(\d+)/) || args.match(/(\d+)/)
+        return m ? { issue: m[1] } : {}
+      }
+    })()
   : (args || {})
 // System boundary: reject missing required args loudly rather than proceeding with placeholders.
 if (!argv.issue) throw new Error('verify-cause-branch: args.issue is required')

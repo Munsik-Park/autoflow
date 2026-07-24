@@ -195,14 +195,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e582915312ae533f4983149b439dfe067b8453b3faa0ae42a059a926a3a41677"
+      "sha256": "cd544fe2ff908b32be1c6c0b55a16261c6b43c10d0ca37fdf188bab0ca56659c"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "913e58cd5ac4b7fc911cf070607c7079ec14e62681f14317b9c7de226de63abd"
+      "sha256": "4e145a21afd8cc69d5f305286131eb31fc5fb90d872f5b27062d767bde78cfd7"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
