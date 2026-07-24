@@ -54,17 +54,25 @@ function makeAgent(responder, calls) {
 // run. `extractIssue` mirrors architect-deliberation.js:31-44's string-arg
 // normalization so the fixture targets the same issue id the script resolves
 // (needed for the JSON-string-args test which drives issue '7').
-// DCR-1 (issue #14): mirror the SAME catch-path prose-salvage rule the scripts
-// adopt (hash-first /#(\d+)/, falling back to bare /(\d+)/, only when JSON.parse
-// throws) so a prose-args fixture lands at the id the script itself resolves.
-// This is the single source of the resolution rule at test time.
+// DCR-1 (issue #14, c2): mirror the SAME catch-path three-tier prose-salvage rule
+// the scripts adopt (tier 1 hash /#(\d+)/, tier 2 issue-anchored /\bissue\s+#?(\d+)\b/i,
+// tier 3 bare /(\d+)/ adopted ONLY when exactly one number is present -- otherwise
+// ambiguous -> {} -> the loud-fail guard fires) so a prose-args fixture lands at the
+// id the script itself resolves. This is the single source of the resolution rule at
+// test time.
 function extractIssue(args) {
   const argv = typeof args === 'string'
     ? (() => {
         try { return JSON.parse(args) }
         catch (_) {
-          const m = args.match(/#(\d+)/) || args.match(/(\d+)/)
-          return m ? { issue: m[1] } : {}
+          const hash = args.match(/#(\d+)/)
+          const labeled = hash ? null : args.match(/\bissue\s+#?(\d+)\b/i)
+          const all = hash || labeled ? null : args.match(/\d+/g)
+          const issue = hash ? hash[1]
+            : labeled ? labeled[1]
+            : (all && all.length === 1) ? all[0]
+            : null
+          return issue ? { issue } : {}
         }
       })()
     : (args || {})
@@ -299,14 +307,14 @@ await test('ARCHITECT: prose args, bare number, no hash resolves via fallback', 
   assert.match(result.artifacts[0], /issue-215-/)
 })
 
-await test('ARCHITECT: prose args, no hash + incidental earlier digit — accepted-residual (records decision, not correct behavior)', async () => {
+await test('ARCHITECT: prose args, no hash + incidental earlier digit resolves 215 not 2 — reviewer witness fix lock (c2)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft') || label === 'ledger') return 'ok'
     return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch('v2 caching for issue 215', responder)
-  assert.match(result.artifacts[0], /issue-2-/)
-  assert.doesNotMatch(result.artifacts[0], /issue-215-/)
+  assert.match(result.artifacts[0], /issue-215-/)
+  assert.doesNotMatch(result.artifacts[0], /issue-2-/)
 })
 
 await test('ARCHITECT: prose args, no extractable digits still fails loudly', async () => {
@@ -314,6 +322,23 @@ await test('ARCHITECT: prose args, no extractable digits still fails loudly', as
     () => arch('please run the architect deliberation', phase, parallel, makeAgent(() => 'x', []), mockConsole),
     /args\.issue is required/,
   )
+})
+
+await test('ARCHITECT: prose args, >=2 bare digit runs, no #/no issue-label — ambiguity loud-fail (c2, NEW)', async () => {
+  await assert.rejects(
+    () => arch('v2 build 42 for the caching layer', phase, parallel, makeAgent(() => 'x', []), mockConsole),
+    /args\.issue is required/,
+  )
+})
+
+await test('ARCHITECT: prose args, single bare digit, no #/no issue-label — tier-3 unique-adopt success (c2, NEW)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft') || label === 'ledger') return 'ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { result } = await runArch('build 42', responder)
+  assert.match(result.artifacts[0], /issue-42-/)
+  assert.equal(result.verdict, 'CONVERGED')
 })
 
 // ---- VERIFY -------------------------------------------------------------------
@@ -399,6 +424,24 @@ await test('meta: verify-cause-branch.js description states the args contract (i
   // file (top-of-file comment, code), so an unscoped /failLog/ over the whole source would
   // pass vacuously both pre- and post-fix.
   assert.match(src, /description:[^\n]*failLog/)
+})
+
+// ---- source-parity drift guard (issue #14, c2, DCR-4 ADOPTED) -----------------
+// Weak drift-guard, not a behavioral test (verification design c2 §2 case 13): the
+// three-tier salvage is hand-duplicated across architect-deliberation.js,
+// verify-cause-branch.js, and this harness's extractIssue() mirror above. Assert
+// the tier-2 anchor literal and the tier-3 uniqueness-guard literal appear in all
+// three copies verbatim. Guard literal reconciled to the feature-design §3
+// reference implementation's exact form (`all && all.length === 1`), per
+// GATE:PLAN instruction, rather than the `?.length === 1` shorthand.
+await test('source-parity: tier-2 anchor + tier-3 uniqueness guard identical across all three copies (c2, NEW)', async () => {
+  const archSrc = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
+  const verifySrc = readFileSync(join(root, '.claude/workflows/verify-cause-branch.js'), 'utf8')
+  const harnessSrc = readFileSync(join(root, 'test/workflows/run.mjs'), 'utf8')
+  for (const [label, src] of [['architect-deliberation.js', archSrc], ['verify-cause-branch.js', verifySrc], ['run.mjs extractIssue()', harnessSrc]]) {
+    assert.ok(src.includes('\\bissue\\s+#?(\\d+)\\b'), `${label} missing tier-2 anchor literal`)
+    assert.ok(src.includes('all && all.length === 1'), `${label} missing tier-3 uniqueness guard literal`)
+  }
 })
 
 console.log(failures ? `\n${failures} test(s) FAILED` : '\nall workflow regression tests passed')
