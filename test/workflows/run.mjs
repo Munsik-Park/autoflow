@@ -51,7 +51,7 @@ function makeAgent(responder, calls) {
 // Fixture support for AC2 (issue #845): the real fs.existsSync check the
 // implementation is expected to add runs against real on-disk artifacts, so
 // the harness must write/remove the two draft artifacts around each ARCHITECT
-// run. `extractIssue` mirrors architect-deliberation.js:23-25's string-arg
+// run. `extractIssue` mirrors architect-deliberation.js:31-44's string-arg
 // normalization so the fixture targets the same issue id the script resolves
 // (needed for the JSON-string-args test which drives issue '7').
 // DCR-1 (issue #14): mirror the SAME catch-path prose-salvage rule the scripts
