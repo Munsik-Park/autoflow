@@ -54,9 +54,19 @@ function makeAgent(responder, calls) {
 // run. `extractIssue` mirrors architect-deliberation.js:23-25's string-arg
 // normalization so the fixture targets the same issue id the script resolves
 // (needed for the JSON-string-args test which drives issue '7').
+// DCR-1 (issue #14): mirror the SAME catch-path prose-salvage rule the scripts
+// adopt (hash-first /#(\d+)/, falling back to bare /(\d+)/, only when JSON.parse
+// throws) so a prose-args fixture lands at the id the script itself resolves.
+// This is the single source of the resolution rule at test time.
 function extractIssue(args) {
   const argv = typeof args === 'string'
-    ? (() => { try { return JSON.parse(args) } catch (_) { return {} } })()
+    ? (() => {
+        try { return JSON.parse(args) }
+        catch (_) {
+          const m = args.match(/#(\d+)/) || args.match(/(\d+)/)
+          return m ? { issue: m[1] } : {}
+        }
+      })()
     : (args || {})
   return argv.issue
 }
@@ -249,6 +259,63 @@ await test('ARCHITECT: draft non-null but artifact missing -> early ESCALATE', a
   assert.ok(!calls.some((c) => /-r\d/.test(c.label)), 'no Converge-round call should be made')
 })
 
+// ---- ARCHITECT: prose-args salvage (issue #14) --------------------------------
+
+await test('ARCHITECT: prose args, hashed number (reported shape) resolves and converges', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
+  }
+  const { result } = await runArch('issue #215 — architect deliberation for the caching layer', responder)
+  assert.match(result.artifacts[0], /issue-215-/)
+  assert.equal(result.verdict, 'CONVERGED')
+})
+
+await test('ARCHITECT: prose args, hash + incidental leading digit resolves 215 not 2 (DCR-2(a) lock)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft') || label === 'ledger') return 'ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { result } = await runArch('v2 caching for issue #215', responder)
+  assert.match(result.artifacts[0], /issue-215-/)
+})
+
+await test('ARCHITECT: valid-JSON string without issue still fails loudly (DCR-2(b) lock)', async () => {
+  await assert.rejects(
+    () => arch('{"other":"215"}', phase, parallel, makeAgent(() => 'x', []), mockConsole),
+    /args\.issue is required/,
+  )
+})
+
+await test('ARCHITECT: prose args, bare number, no hash resolves via fallback', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft') || label === 'ledger') return 'ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { result } = await runArch('deliberation for issue 215', responder)
+  assert.match(result.artifacts[0], /issue-215-/)
+})
+
+await test('ARCHITECT: prose args, no hash + incidental earlier digit — accepted-residual (records decision, not correct behavior)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft') || label === 'ledger') return 'ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { result } = await runArch('v2 caching for issue 215', responder)
+  assert.match(result.artifacts[0], /issue-2-/)
+  assert.doesNotMatch(result.artifacts[0], /issue-215-/)
+})
+
+await test('ARCHITECT: prose args, no extractable digits still fails loudly', async () => {
+  await assert.rejects(
+    () => arch('please run the architect deliberation', phase, parallel, makeAgent(() => 'x', []), mockConsole),
+    /args\.issue is required/,
+  )
+})
+
 // ---- VERIFY -------------------------------------------------------------------
 
 const combos = [
@@ -300,6 +367,38 @@ await test('VERIFY: args delivered as a JSON string (real runtime form) resolves
   // next_action RED proves fix_test + no_problem mapped over a string-delivered payload.
   const { result } = await runVerify(JSON.stringify({ issue: '1', failLog: '/tmp/f.log' }), responder)
   assert.equal(result.next_action, 'RED')
+})
+
+// ---- VERIFY: prose-args salvage asymmetry (issue #14) -------------------------
+
+await test('VERIFY: prose issue, no failLog — asymmetry lock (DCR-3): issue salvaged, failLog still hard-required', async () => {
+  await assert.rejects(
+    () => verify('issue #215 — verify cause branch', phase, parallel, makeAgent(() => 'x', []), mockConsole),
+    /args\.failLog is required/,
+  )
+})
+
+await test('VERIFY: prose args, no digits still fails on the issue guard', async () => {
+  await assert.rejects(
+    () => verify('please run the verify cause branch', phase, parallel, makeAgent(() => 'x', []), mockConsole),
+    /args\.issue is required/,
+  )
+})
+
+// ---- meta-doc contract exposure (issue #14, F1) --------------------------------
+
+await test('meta: architect-deliberation.js description states the args contract', async () => {
+  const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
+  assert.match(src, /description:[^\n]*issue/i)
+})
+
+await test('meta: verify-cause-branch.js description states the args contract (issue + failLog)', async () => {
+  const src = readFileSync(join(root, '.claude/workflows/verify-cause-branch.js'), 'utf8')
+  assert.match(src, /description:[^\n]*issue/i)
+  // Scoped to the description line specifically -- failLog already appears elsewhere in the
+  // file (top-of-file comment, code), so an unscoped /failLog/ over the whole source would
+  // pass vacuously both pre- and post-fix.
+  assert.match(src, /description:[^\n]*failLog/)
 })
 
 console.log(failures ? `\n${failures} test(s) FAILED` : '\nall workflow regression tests passed')
