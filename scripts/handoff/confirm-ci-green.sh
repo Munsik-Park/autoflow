@@ -137,10 +137,14 @@ gh_bounded() {
   return 0
 }
 
-# Classify a poll body's statusCheckRollup into "<total> <fail> <green>". A
-# stale CANCELLED/FAILURE left standing by a concurrency-cancelled run must not
-# outvote a same-name later SUCCESS, so reduce each check to its latest entry
-# per identity first (dedup) before bucketing (feature #30 §3.2).
+# Classify a poll body's statusCheckRollup into "<total> <fail> <green>", one row
+# per check identity. A same-identity group with ANY non-terminal (QUEUED/PENDING/
+# WAITING/in-progress) entry is pending outright — a stale CANCELLED/FAILURE left by
+# a concurrency-cancelled run must not outvote the live replacement run on timestamp
+# recency (real CheckRun rollup objects carry no createdAt, so a timestamp key cannot
+# rank a null-timestamp replacement above a completed stale entry). Timestamp order
+# (with a fail-safe non-green tie-break) selects the representative only WITHIN an
+# all-terminal group by latest-per-identity dedup (feature #30 c2 §3).
 classify_rollup() {
   jq -r '
     def ident:
@@ -154,15 +158,25 @@ classify_rollup() {
     def green_entry:
       (.__typename == "CheckRun" and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
       or (.__typename == "StatusContext" and (.state == "SUCCESS"));
+    def fail_entry:
+      (.__typename == "CheckRun" and (.conclusion | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT")))
+      or (.__typename == "StatusContext" and (.state | IN("FAILURE","ERROR")));
+    def non_terminal:
+      (.__typename == "CheckRun" and (.conclusion == null))
+      or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
     ( .statusCheckRollup // [] )
     | group_by(ident)
-    | map( max_by([ .startedAt // "", .completedAt // "", .createdAt // "",
-                    (if green_entry then 0 else 1 end) ]) ) as $r
+    | map(
+        if any(.[]; non_terminal) then
+          ( [ .[] | select(non_terminal) ]
+            | max_by([ .startedAt // "", .completedAt // "", .createdAt // "" ]) )
+        else
+          max_by([ .startedAt // "", .completedAt // "", .createdAt // "",
+                   (if green_entry then 0 else 1 end) ])
+        end
+      ) as $r
     | ($r | length) as $t
-    | ([ $r[] | select(
-          (.__typename == "CheckRun" and (.conclusion | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT")))
-          or (.__typename == "StatusContext" and (.state | IN("FAILURE","ERROR")))
-        )] | length) as $f
+    | ([ $r[] | select(fail_entry) ] | length) as $f
     | ([ $r[] | select(green_entry) ] | length) as $g
     | "\($t) \($f) \($g)"
   ' 2>/dev/null
