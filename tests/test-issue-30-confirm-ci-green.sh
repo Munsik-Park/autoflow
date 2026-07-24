@@ -908,6 +908,302 @@ echo "  (issue-25 suite: $ISSUE25_RESULTS_LINE_30)"
 echo "  (issue-30 whole-suite fence: this script's own Results footer below covers AC-30-1..-29)"
 
 # =============================================================================
+# Cycle 4 (review-response, PR #31 codex 3rd review Medium finding) — AC-30-31 .. -40
+# Per .autoflow/issue-30-verification-design.md cycle-4 §1/§4. Fix target:
+# classify_rollup()'s branch-A representative-selection arm (:170-176) — the
+# any(non_terminal) absolute-priority veto over-excludes a comparably-newer
+# terminal from the candidate pool. AC-30-1..-30 above remain regression
+# fences unchanged.
+#
+# RED expectation: AC-30-31, -32, -36 FAIL — branch A excludes the
+# comparably-newer terminal, so each fixture classifies "1 0 0", never
+# short-circuits, and runs to the poll deadline -> exit 13 (Case A/SC expect
+# 12, Case B expects 0). AC-30-33, -34, -35, -37, -39, -40 are
+# passing-at-RED regression / over-correction fences (HEAD already pends
+# these). AC-30-38 is passing-at-RED (both suites already green).
+# =============================================================================
+
+echo ""
+echo "=== AC-30-31 (primary kill — reviewer Case A: older IN_PROGRESS + newer FAILURE -> exit 12, not 13) ==="
+
+AC31_FWD='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":"2026-07-24T09:40:00Z","completedAt":null},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+AC31_REV='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":"2026-07-24T09:40:00Z","completedAt":null}
+]}'
+
+for AC31_ORDER_NAME in FWD REV; do
+  AC31_BODY_VAR="AC31_$AC31_ORDER_NAME"
+  GH_INVOCATION_LOG="$(mktemp)"
+  AC31_LOG="$(mktemp)"
+  run_bounded 8 "$AC31_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+    GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+    GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+    GH_MOCK_POLL_BODY="${!AC31_BODY_VAR}" \
+    CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+    bash "$SCRIPT" --pr 357
+
+  assert_true "AC-30-31 ($AC31_ORDER_NAME): outer watchdog never fired (script self-terminated)" \
+    "[ \"\$RB_KILLED\" -eq 0 ]"
+  assert_true "AC-30-31 ($AC31_ORDER_NAME): older IN_PROGRESS + newer FAILURE resolves -> exit 12" \
+    "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 12 ]"
+  assert_false "AC-30-31 ($AC31_ORDER_NAME): exit code is NOT 13 (the false-pending the reviewer found)" \
+    "[ \"\$RB_EXIT\" -eq 13 ]"
+  rm -f "$GH_INVOCATION_LOG" "$AC31_LOG"
+done
+
+# =============================================================================
+echo ""
+echo "=== AC-30-32 (reviewer's missing test — Case B SUCCESS twin: older IN_PROGRESS + newer SUCCESS -> exit 0, not 13) ==="
+
+AC32_FWD='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":"2026-07-24T09:40:00Z","completedAt":null},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+AC32_REV='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":"2026-07-24T09:40:00Z","completedAt":null}
+]}'
+
+for AC32_ORDER_NAME in FWD REV; do
+  AC32_BODY_VAR="AC32_$AC32_ORDER_NAME"
+  GH_INVOCATION_LOG="$(mktemp)"
+  AC32_LOG="$(mktemp)"
+  run_bounded 8 "$AC32_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+    GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+    GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+    GH_MOCK_POLL_BODY="${!AC32_BODY_VAR}" \
+    CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+    bash "$SCRIPT" --pr 357
+
+  assert_true "AC-30-32 ($AC32_ORDER_NAME): outer watchdog never fired (script self-terminated)" \
+    "[ \"\$RB_KILLED\" -eq 0 ]"
+  assert_true "AC-30-32 ($AC32_ORDER_NAME): older IN_PROGRESS + newer SUCCESS resolves -> exit 0" \
+    "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 0 ]"
+  assert_false "AC-30-32 ($AC32_ORDER_NAME): exit code is NOT 13 (green PR hanging to deadline)" \
+    "[ \"\$RB_EXIT\" -eq 13 ]"
+  rm -f "$GH_INVOCATION_LOG" "$AC32_LOG"
+done
+
+# =============================================================================
+echo ""
+echo "=== AC-30-33 (Case C — c2-protected pending, must NOT regress; re-run AC-30-12 fixture unchanged) ==="
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC33_LOG="$(mktemp)"
+run_bounded 8 "$AC33_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC12_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+
+assert_true "AC-30-33: outer watchdog never fired (script self-terminated)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-30-33: stale-terminal + timestamp-less non-terminal (AC-30-12 shape) stays pending -> exit 13" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC33_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-34 (Case D — equal begin-timestamp FAILURE tie -> pending, not exit 12) ==="
+
+AC34_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":"2026-07-24T09:48:00Z","completedAt":null},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC34_LOG="$(mktemp)"
+run_bounded 8 "$AC34_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC34_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+
+assert_true "AC-30-34: outer watchdog never fired (script self-terminated)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-30-34: equal-startedAt IN_PROGRESS/FAILURE tie stays pending -> exit 13" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+assert_false "AC-30-34: exit code is NOT 12 (the tie must not resolve toward the terminal)" \
+  "[ \"\$RB_EXIT\" -eq 12 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC34_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-35 (Case E — older terminal beside newer non-terminal -> pending, not exit 12) ==="
+
+AC35_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":"2026-07-24T09:48:00Z","completedAt":null}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC35_LOG="$(mktemp)"
+run_bounded 8 "$AC35_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC35_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+
+assert_true "AC-30-35: outer watchdog never fired (script self-terminated)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-30-35: older terminal FAILURE beside newer live IN_PROGRESS stays pending -> exit 13" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+assert_false "AC-30-35: exit code is NOT 12 (an older/superseded terminal must not win)" \
+  "[ \"\$RB_EXIT\" -eq 12 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC35_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-36 (StatusContext leg — createdAt basis, FAILURE and SUCCESS twins, both array orders) ==="
+
+AC36_FAIL_FWD='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"PENDING","createdAt":"2026-07-24T09:40:00Z"},
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"FAILURE","createdAt":"2026-07-24T09:48:00Z"}
+]}'
+AC36_FAIL_REV='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"FAILURE","createdAt":"2026-07-24T09:48:00Z"},
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"PENDING","createdAt":"2026-07-24T09:40:00Z"}
+]}'
+AC36_SUCCESS_FWD='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"PENDING","createdAt":"2026-07-24T09:40:00Z"},
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"SUCCESS","createdAt":"2026-07-24T09:48:00Z"}
+]}'
+AC36_SUCCESS_REV='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"SUCCESS","createdAt":"2026-07-24T09:48:00Z"},
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"PENDING","createdAt":"2026-07-24T09:40:00Z"}
+]}'
+
+for AC36_CASE in "FAIL_FWD:12" "FAIL_REV:12" "SUCCESS_FWD:0" "SUCCESS_REV:0"; do
+  AC36_BODY_VAR="AC36_${AC36_CASE%%:*}"
+  AC36_EXPECT="${AC36_CASE##*:}"
+  GH_INVOCATION_LOG="$(mktemp)"
+  AC36_LOG="$(mktemp)"
+  run_bounded 8 "$AC36_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+    GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+    GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+    GH_MOCK_POLL_BODY="${!AC36_BODY_VAR}" \
+    CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+    bash "$SCRIPT" --pr 357
+
+  assert_true "AC-30-36 (${AC36_CASE%%:*}): outer watchdog never fired (script self-terminated)" \
+    "[ \"\$RB_KILLED\" -eq 0 ]"
+  assert_true "AC-30-36 (${AC36_CASE%%:*}): StatusContext createdAt-basis resolves -> exit $AC36_EXPECT" \
+    "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq $AC36_EXPECT ]"
+  assert_false "AC-30-36 (${AC36_CASE%%:*}): exit code is NOT 13 (false-pending on the createdAt slot)" \
+    "[ \"\$RB_EXIT\" -eq 13 ]"
+  rm -f "$GH_INVOCATION_LOG" "$AC36_LOG"
+done
+
+# =============================================================================
+echo ""
+echo "=== AC-30-37 (multi non-terminal — one incomparable -> pending, not exit 12) ==="
+
+AC37_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":"2026-07-24T09:40:00Z","completedAt":null},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"QUEUED","conclusion":null,"startedAt":null,"completedAt":null},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC37_LOG="$(mktemp)"
+run_bounded 8 "$AC37_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC37_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+
+assert_true "AC-30-37: outer watchdog never fired (script self-terminated)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-30-37: comparable + timestamp-less non-terminals beside newer FAILURE stays pending -> exit 13" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+assert_false "AC-30-37: exit code is NOT 12 (a single incomparable non-terminal must block the override)" \
+  "[ \"\$RB_EXIT\" -eq 12 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC37_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-39 (Case D2 — equal begin-timestamp SUCCESS tie -> pending, the false-green fence [MUST]) ==="
+
+AC39_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":"2026-07-24T09:40:00Z","completedAt":null},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC39_LOG="$(mktemp)"
+run_bounded 8 "$AC39_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC39_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+
+assert_true "AC-30-39: outer watchdog never fired (script self-terminated)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-30-39: equal-startedAt IN_PROGRESS/SUCCESS tie stays pending -> exit 13" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+assert_false "AC-30-39: exit code is NOT 0 (the false-green a full-ts_key override would produce)" \
+  "[ \"\$RB_EXIT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC39_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-40 (has_start type-appropriate slot — the injection false-result fence [MUST]) ==="
+
+AC40_FAIL_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":null,"createdAt":"2026-07-24T09:59:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+AC40_SUCCESS_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"IN_PROGRESS","conclusion":null,"startedAt":null,"createdAt":"2026-07-24T09:59:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+
+for AC40_TWIN in FAIL SUCCESS; do
+  AC40_BODY_VAR="AC40_${AC40_TWIN}_BODY"
+  GH_INVOCATION_LOG="$(mktemp)"
+  AC40_LOG="$(mktemp)"
+  run_bounded 8 "$AC40_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+    GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+    GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+    GH_MOCK_POLL_BODY="${!AC40_BODY_VAR}" \
+    CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+    bash "$SCRIPT" --pr 357
+
+  assert_true "AC-30-40 ($AC40_TWIN twin): outer watchdog never fired (script self-terminated)" \
+    "[ \"\$RB_KILLED\" -eq 0 ]"
+  assert_true "AC-30-40 ($AC40_TWIN twin): startedAt-less CheckRun w/ injected createdAt beside newer terminal stays pending -> exit 13" \
+    "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+  assert_false "AC-30-40 ($AC40_TWIN twin): exit code is NOT 12 (false red via createdAt-slot injection)" \
+    "[ \"\$RB_EXIT\" -eq 12 ]"
+  assert_false "AC-30-40 ($AC40_TWIN twin): exit code is NOT 0 (false green via createdAt-slot injection)" \
+    "[ \"\$RB_EXIT\" -eq 0 ]"
+  rm -f "$GH_INVOCATION_LOG" "$AC40_LOG"
+done
+
+# =============================================================================
+echo ""
+echo "=== AC-30-38 (full existing issue-30 + issue-25 suites still green) ==="
+
+ISSUE25_OUTPUT_38="$(bash "$ISSUE25_SUITE" 2>&1)"
+ISSUE25_RC_38=$?
+assert_true "AC-30-38: tests/test-issue-25-confirm-ci-green.sh exits 0" \
+  "[ \"\$ISSUE25_RC_38\" -eq 0 ]"
+ISSUE25_RESULTS_LINE_38="$(printf '%s\n' "$ISSUE25_OUTPUT_38" | grep -E '^Results: ' | tail -n 1)"
+assert_true "AC-30-38: issue-25 suite reports 0 failed" \
+  "printf '%s' \"\$ISSUE25_RESULTS_LINE_38\" | grep -qE '0 failed'"
+echo "  (issue-25 suite: $ISSUE25_RESULTS_LINE_38)"
+echo "  (issue-30 whole-suite fence: this script's own Results footer below covers AC-30-1..-37, -39 and -40)"
+
+# =============================================================================
 # Results
 # ---------------------------------------------------------------------------
 echo ""
