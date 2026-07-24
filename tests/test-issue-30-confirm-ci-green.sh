@@ -398,6 +398,311 @@ assert_true "AC-30-11: classify_rollup() header comment mentions dedup/latest-pe
   "printf '%s' \"\$CLASSIFY_HEADER\" | grep -qiE 'dedup|latest'"
 
 # =============================================================================
+# Cycle 2 (review-response, PR #31 Codex Medium finding) — AC-30-12 .. -23
+# Per .autoflow/issue-30-verification-design.md cycle-2 §1/§4. Fix target:
+# classify_rollup()'s status-branched reduction (pending short-circuit on a
+# positive non_terminal predicate). AC-30-1..-11 above remain regression
+# fences unchanged.
+# =============================================================================
+
+echo ""
+echo "=== AC-30-12 (primary kill — reviewer C1: stale CANCELLED w/ts + timestamp-less QUEUED replacement -> pending, not exit 12) ==="
+
+AC12_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"CANCELLED","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"QUEUED","conclusion":null,"startedAt":null,"completedAt":null}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC12_LOG="$(mktemp)"
+run_bounded 5 "$AC12_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC12_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+
+assert_true "AC-30-12: outer watchdog never fired (script self-terminated at its own deadline)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-30-12: stale CANCELLED + timestamp-less QUEUED resolves to pending -> exit 13 at deadline" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+assert_false "AC-30-12: exit code is NOT 12 (the false-red the reviewer found)" \
+  "[ \"\$RB_EXIT\" -eq 12 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC12_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-13 (CheckRun conclusion==null family — QUEUED/PENDING/WAITING/IN_PROGRESS all resolve to pending) ==="
+
+for PENDING_STATUS in QUEUED PENDING WAITING IN_PROGRESS; do
+  AC13_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"CANCELLED","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"'"$PENDING_STATUS"'","conclusion":null,"startedAt":null,"completedAt":null}
+]}'
+  GH_INVOCATION_LOG="$(mktemp)"
+  AC13_LOG="$(mktemp)"
+  run_bounded 5 "$AC13_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+    GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+    GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+    GH_MOCK_POLL_BODY="$AC13_BODY" \
+    CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+    bash "$SCRIPT" --pr 357
+
+  assert_true "AC-30-13 ($PENDING_STATUS): resolves to pending -> exit 13, not 12" \
+    "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+  rm -f "$GH_INVOCATION_LOG" "$AC13_LOG"
+done
+
+# =============================================================================
+echo ""
+echo "=== AC-30-14 (stale FAILURE + timestamp-less pending replacement -> pending, not exit 12) ==="
+
+AC14_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"QUEUED","conclusion":null,"startedAt":null,"completedAt":null}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC14_LOG="$(mktemp)"
+run_bounded 5 "$AC14_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC14_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+
+assert_true "AC-30-14: stale FAILURE + timestamp-less QUEUED resolves to pending -> exit 13" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+assert_false "AC-30-14: exit code is NOT 12" \
+  "[ \"\$RB_EXIT\" -eq 12 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC14_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-15 (order-independence: AC-30-12 fixture classifies identically under both array orders) ==="
+
+AC15_ORDER_A="$AC12_BODY"
+AC15_ORDER_B='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"QUEUED","conclusion":null,"startedAt":null,"completedAt":null},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"CANCELLED","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC15_LOG_A="$(mktemp)"
+run_bounded 5 "$AC15_LOG_A" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC15_ORDER_A" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+AC15_EXIT_A="$RB_EXIT"
+rm -f "$GH_INVOCATION_LOG" "$AC15_LOG_A"
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC15_LOG_B="$(mktemp)"
+run_bounded 5 "$AC15_LOG_B" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC15_ORDER_B" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+AC15_EXIT_B="$RB_EXIT"
+rm -f "$GH_INVOCATION_LOG" "$AC15_LOG_B"
+
+assert_true "AC-30-15: [terminal,pending] order -> exit 13" "[ \"\$AC15_EXIT_A\" -eq 13 ]"
+assert_true "AC-30-15: [pending,terminal] order -> exit 13" "[ \"\$AC15_EXIT_B\" -eq 13 ]"
+assert_true "AC-30-15: both orders agree (no order-dependent flap)" "[ \"\$AC15_EXIT_A\" -eq \"\$AC15_EXIT_B\" ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-16 (no-createdAt regression guard: AC-30-12 fixture already carries no createdAt on any entry) ==="
+
+assert_false "AC-30-16: AC-30-12 fixture body contains no createdAt key (live CheckRun shape)" \
+  "printf '%s' \"\$AC12_BODY\" | grep -q 'createdAt'"
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC16_LOG="$(mktemp)"
+run_bounded 5 "$AC16_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC12_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+assert_true "AC-30-16: createdAt-free stale-terminal + pending pair still resolves to pending -> exit 13" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC16_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-17 (multi-terminal + one pending: two stale terminals + one timestamp-less pending -> pending) ==="
+
+AC17_ORDER_A='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:30:00Z","completedAt":"2026-07-24T09:32:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"CANCELLED","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"QUEUED","conclusion":null,"startedAt":null,"completedAt":null}
+]}'
+AC17_ORDER_B='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"QUEUED","conclusion":null,"startedAt":null,"completedAt":null},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"CANCELLED","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:30:00Z","completedAt":"2026-07-24T09:32:00Z"}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC17_LOG_A="$(mktemp)"
+run_bounded 5 "$AC17_LOG_A" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC17_ORDER_A" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+AC17_EXIT_A="$RB_EXIT"
+rm -f "$GH_INVOCATION_LOG" "$AC17_LOG_A"
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC17_LOG_B="$(mktemp)"
+run_bounded 5 "$AC17_LOG_B" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC17_ORDER_B" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+AC17_EXIT_B="$RB_EXIT"
+rm -f "$GH_INVOCATION_LOG" "$AC17_LOG_B"
+
+assert_true "AC-30-17: two-terminal + one pending resolves to pending -> exit 13 (order A)" "[ \"\$AC17_EXIT_A\" -eq 13 ]"
+assert_true "AC-30-17: two-terminal + one pending resolves to pending -> exit 13 (order B)" "[ \"\$AC17_EXIT_B\" -eq 13 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-18 (cycle-1 timestamped-pending preserved — AC-30-9 regression fence) ==="
+
+GH_INVOCATION_LOG="$(mktemp)"
+AC18_LOG="$(mktemp)"
+run_bounded 5 "$AC18_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC9_BODY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 357
+assert_true "AC-30-18: real-timestamp pending (AC-30-9 shape) still resolves to pending -> exit 13" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+rm -f "$GH_INVOCATION_LOG" "$AC18_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-19 (no over-suppression — genuine latest red preserved, AC-30-3 fence) ==="
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC3_BODY"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+assert_true "AC-30-19: stale SUCCESS + later genuine FAILURE still exits 12 (not masked to pending)" \
+  "[ \"\$RUN_EXIT\" -eq 12 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-20 (all-terminal tie unchanged — AC-30-6 fence) ==="
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC6_ORDER_A"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+AC20_EXIT_A="$RUN_EXIT"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC6_ORDER_B"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+AC20_EXIT_B="$RUN_EXIT"
+rm -f "$GH_INVOCATION_LOG"
+
+assert_true "AC-30-20: all-terminal tie order A still exits 12 (status-priority key inert)" "[ \"\$AC20_EXIT_A\" -eq 12 ]"
+assert_true "AC-30-20: all-terminal tie order B still exits 12" "[ \"\$AC20_EXIT_B\" -eq 12 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-21 (full existing issue-30 + issue-25 suites still green) ==="
+
+ISSUE25_OUTPUT_21="$(bash "$ISSUE25_SUITE" 2>&1)"
+ISSUE25_RC_21=$?
+assert_true "AC-30-21: tests/test-issue-25-confirm-ci-green.sh exits 0" \
+  "[ \"\$ISSUE25_RC_21\" -eq 0 ]"
+ISSUE25_RESULTS_LINE_21="$(printf '%s\n' "$ISSUE25_OUTPUT_21" | grep -E '^Results: ' | tail -n 1)"
+assert_true "AC-30-21: issue-25 suite reports 0 failed" \
+  "printf '%s' \"\$ISSUE25_RESULTS_LINE_21\" | grep -qE '0 failed'"
+echo "  (issue-25 suite: $ISSUE25_RESULTS_LINE_21)"
+echo "  (issue-30 whole-suite fence: this script's own Results footer below covers AC-30-1..-23)"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-22 (predicate is positive conclusion==null, NOT terminal-complement — genuine-latest-fail preserved) ==="
+
+AC22_ORDER_A='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"STALE","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+AC22_ORDER_B='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"},
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"STALE","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC22_ORDER_A"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+AC22_EXIT_A="$RUN_EXIT"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC22_ORDER_B"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+AC22_EXIT_B="$RUN_EXIT"
+rm -f "$GH_INVOCATION_LOG"
+
+assert_true "AC-30-22: {STALE earlier, genuine FAILURE latest} exits 12 (order A) — unrecognized-terminal stays terminal" \
+  "[ \"\$AC22_EXIT_A\" -eq 12 ]"
+assert_true "AC-30-22: {STALE earlier, genuine FAILURE latest} exits 12 (order B)" \
+  "[ \"\$AC22_EXIT_B\" -eq 12 ]"
+assert_false "AC-30-22: exit code is NOT 13 (a complement predicate would wrongly mask the failure as pending)" \
+  "[ \"\$AC22_EXIT_A\" -eq 13 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-23 (StatusContext non_terminal leg — SC pending short-circuit, PENDING + EXPECTED variants) ==="
+
+for SC_STATE in PENDING EXPECTED; do
+  AC23_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"FAILURE","createdAt":"2026-07-24T09:40:00Z"},
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"'"$SC_STATE"'"}
+]}'
+  GH_INVOCATION_LOG="$(mktemp)"
+  AC23_LOG="$(mktemp)"
+  run_bounded 5 "$AC23_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+    GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+    GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+    GH_MOCK_POLL_BODY="$AC23_BODY" \
+    CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+    bash "$SCRIPT" --pr 357
+
+  assert_true "AC-30-23 ($SC_STATE): same-context stale FAILURE + $SC_STATE resolves to pending -> exit 13, not 12" \
+    "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+  rm -f "$GH_INVOCATION_LOG" "$AC23_LOG"
+done
+
+# =============================================================================
 # Results
 # ---------------------------------------------------------------------------
 echo ""
