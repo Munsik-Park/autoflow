@@ -142,9 +142,13 @@ gh_bounded() {
 # WAITING/in-progress) entry is pending outright — a stale CANCELLED/FAILURE left by
 # a concurrency-cancelled run must not outvote the live replacement run on timestamp
 # recency (real CheckRun rollup objects carry no createdAt, so a timestamp key cannot
-# rank a null-timestamp replacement above a completed stale entry). Timestamp order
+# rank a null-timestamp replacement above a completed stale entry). Narrowed (c4 §3.3):
+# that non-terminal veto is overridden only when a terminal entry is strictly newer, by a
+# comparable run-start timestamp (startedAt/createdAt), than EVERY non-terminal sibling
+# (each of which must itself carry a comparable run-start) — then the terminal represents
+# the group; otherwise the non-terminal-wins pending behavior stands. Timestamp order
 # (with a fail-safe non-green tie-break) selects the representative only WITHIN an
-# all-terminal group by latest-per-identity dedup (feature #30 c2 §3).
+# all-terminal group by latest-per-identity dedup (feature #30 c2 §3 / c4 §3.3).
 classify_rollup() {
   jq -r '
     def ident:
@@ -165,14 +169,25 @@ classify_rollup() {
       (.__typename == "CheckRun" and (.conclusion == null))
       or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
     def ts_key: [ .startedAt // "", .completedAt // "", .createdAt // "" ];
+    def start_key: [ .startedAt // "", .createdAt // "" ];
+    def has_start:
+      if .__typename == "CheckRun" then (.startedAt // "") != ""
+      else (.createdAt // "") != "" end;
     ( .statusCheckRollup // [] )
     | group_by(ident)
     | map(
-        if any(.[]; non_terminal) then
-          ( [ .[] | select(non_terminal) ] | max_by(ts_key) )
-        else
-          max_by(ts_key + [ (if green_entry then 0 else 1 end) ])
-        end
+        ( [ .[] | select(non_terminal) ] ) as $nt
+        | ( [ .[] | select(non_terminal | not) ] ) as $tm
+        | if ($nt | length) == 0 then
+            max_by(ts_key + [ (if green_entry then 0 else 1 end) ])
+          elif ($tm | length) > 0
+               and ([ $nt[] | has_start ] | all)
+               and (($tm | max_by(start_key) | start_key) > ($nt | max_by(start_key) | start_key))
+          then
+            ( $tm | max_by(ts_key + [ (if green_entry then 0 else 1 end) ]) )
+          else
+            ( $nt | max_by(ts_key) )
+          end
       ) as $r
     | ($r | length) as $t
     | ([ $r[] | select(fail_entry) ] | length) as $f
