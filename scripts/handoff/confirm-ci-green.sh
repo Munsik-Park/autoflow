@@ -149,11 +149,11 @@ classify_rollup() {
   jq -r '
     def ident:
       if .__typename == "CheckRun" and ((.name // "") != "") then
-        "CheckRun \(.workflowName // "") \(.name)"
+        ["CheckRun", (.workflowName // ""), .name]
       elif .__typename == "StatusContext" and ((.context // "") != "") then
-        "StatusContext \(.context)"
+        ["StatusContext", .context]
       else
-        "RAW \(tojson)"
+        ["RAW", tojson]
       end;
     def green_entry:
       (.__typename == "CheckRun" and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))

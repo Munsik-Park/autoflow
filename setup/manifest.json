@@ -314,7 +314,7 @@
       "dest": "scripts/handoff/confirm-ci-green.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b214f350ff41313e2e87ed7f5d4fdbe9ca3b520943b6005b7d18e98551c4db30"
+      "sha256": "8e5e68f970456ae44493218af3718c1ef845165e69fb0d5c8c263b5f4403954e"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",
