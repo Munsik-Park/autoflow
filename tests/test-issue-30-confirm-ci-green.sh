@@ -703,6 +703,211 @@ for SC_STATE in PENDING EXPECTED; do
 done
 
 # =============================================================================
+# Cycle 3 (review-response, PR #31 codex re-review Medium finding) — AC-30-24 .. -30
+# Per .autoflow/issue-30-verification-design.md cycle-3 §1/§4. Fix target:
+# classify_rollup()'s def ident (:150-157) — space-join string key collides
+# across a (workflowName,name) word-boundary shift. AC-30-1..-23 above remain
+# regression fences unchanged.
+#
+# [MUST] carry-forward from GATE:PLAN (issue-30-ledger.md Cycle 3): the
+# colliding pair's SUCCESS entry MUST have a LATER timestamp than the
+# FAILURE entry — a non-timestamped colliding pair already exits 12 at HEAD
+# via the fail-safe rank tie-break (AC-30-6 class) and would wrongly
+# pass-at-RED. Both fixtures below give the SUCCESS entry the later
+# startedAt/completedAt.
+# =============================================================================
+
+echo ""
+echo "=== AC-30-24 (primary kill — reviewer collision fixture: distinct (workflowName,name) pairs collide under space-join) ==="
+
+AC24_FWD='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Build Linux","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"Linux","workflowName":"CI Build","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+AC24_REV='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"Linux","workflowName":"CI Build","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"},
+{"__typename":"CheckRun","name":"Build Linux","workflowName":"CI","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC24_FWD"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+AC24_EXIT_FWD="$RUN_EXIT"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC24_REV"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+AC24_EXIT_REV="$RUN_EXIT"
+rm -f "$GH_INVOCATION_LOG"
+
+assert_true "AC-30-24: (CI,Build Linux)FAILURE + (CI Build,Linux)SUCCESS stay two distinct groups -> exit 12 (fwd order)" \
+  "[ \"\$AC24_EXIT_FWD\" -eq 12 ]"
+assert_false "AC-30-24: exit code is NOT 0 (the false-green the reviewer found, fwd order)" \
+  "[ \"\$AC24_EXIT_FWD\" -eq 0 ]"
+assert_true "AC-30-24: same collision pair -> exit 12 (rev order)" \
+  "[ \"\$AC24_EXIT_REV\" -eq 12 ]"
+assert_false "AC-30-24: exit code is NOT 0 (rev order)" \
+  "[ \"\$AC24_EXIT_REV\" -eq 0 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-25 (word-boundary collision class — generalization, no shared literal tokens) ==="
+
+AC25_FWD='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"C","workflowName":"A B","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"CheckRun","name":"B C","workflowName":"A","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"}
+]}'
+AC25_REV='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[
+{"__typename":"CheckRun","name":"B C","workflowName":"A","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:48:00Z","completedAt":"2026-07-24T09:50:00Z"},
+{"__typename":"CheckRun","name":"C","workflowName":"A B","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"}
+]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC25_FWD"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+AC25_EXIT_FWD="$RUN_EXIT"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC25_REV"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+AC25_EXIT_REV="$RUN_EXIT"
+rm -f "$GH_INVOCATION_LOG"
+
+assert_true "AC-30-25: (A B,C)FAILURE + (A,B C)SUCCESS stay two distinct groups -> exit 12 (fwd order)" \
+  "[ \"\$AC25_EXIT_FWD\" -eq 12 ]"
+assert_true "AC-30-25: same word-boundary pair -> exit 12 (rev order)" \
+  "[ \"\$AC25_EXIT_REV\" -eq 12 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-26 (legitimate same-identity dedup preserved — AC-30-1 fence, space-in-name) ==="
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC1_BODY"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+
+assert_true "AC-30-26: genuinely-equal (CI,\"Tests: Ubuntu\") identity (space-in-name) still dedups -> exit 0" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-27 (absent-workflowName dedup-by-name preserved — AC-30-5 fence) ==="
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC5_BODY"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+
+assert_true "AC-30-27: absent-workflowName same-name entries still dedup under the array key -> exit 0" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-28 (StatusContext identity via array key preserved — AC-30-8 fence) ==="
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC8A_ALL_GREEN"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+assert_true "AC-30-28: distinct-context StatusContext entries stay separate under array key -> exit 0" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC8A_ONE_RED"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+assert_true "AC-30-28: distinct-context one FAILURE under array key -> exit 12" \
+  "[ \"\$RUN_EXIT\" -eq 12 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$AC8B_BODY"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 357
+assert_true "AC-30-28: same-context stale FAILURE + later SUCCESS still dedups under array key -> exit 0" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-29 (RAW-branch smoke/regression fence — mixed key population classifies cleanly, total=3) ==="
+
+# run_confirm/RUN_EXIT cannot verify this AC: the mixed body classifies
+# "3 0 2" (green!=total, fail=0), which the script does NOT short-circuit on
+# (loops to the poll deadline, exit 13, which encodes nothing about total);
+# and any jq error would be swallowed by classify_rollup's own 2>/dev/null.
+# So this AC pipes the fixture through the SAME jq program (extracted
+# verbatim from the script under test, not retyped) directly, capturing
+# stderr separately from stdout — the only c3 AC not exercised via
+# run_confirm/RUN_EXIT (documented harness carve-out, §0.2/§2).
+AC29_JQ_PROGRAM="$(sed -n "/^classify_rollup() {/,/^}/p" "$SCRIPT" \
+  | sed -n "/jq -r '/,/2>\/dev\/null/p" \
+  | sed '1d;$d')"
+
+assert_true "AC-30-29: classify_rollup's jq program was extracted from the script (non-empty)" \
+  "[ -n \"\$AC29_JQ_PROGRAM\" ]"
+
+AC29_BODY='{"statusCheckRollup":[
+{"__typename":"CheckRun","name":"Tests: Ubuntu","workflowName":"CI","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-07-24T09:40:00Z","completedAt":"2026-07-24T09:42:00Z"},
+{"__typename":"StatusContext","context":"continuous-integration/jenkins/pr-merge","state":"SUCCESS","createdAt":"2026-07-24T09:40:00Z"},
+{"__typename":"Foreign","weird":"shape"}
+]}'
+
+AC29_STDOUT_FILE="$(mktemp)"
+AC29_STDERR_FILE="$(mktemp)"
+printf '%s' "$AC29_BODY" | jq -r "$AC29_JQ_PROGRAM" >"$AC29_STDOUT_FILE" 2>"$AC29_STDERR_FILE"
+AC29_LINE="$(cat "$AC29_STDOUT_FILE")"
+AC29_STDERR="$(cat "$AC29_STDERR_FILE")"
+rm -f "$AC29_STDOUT_FILE" "$AC29_STDERR_FILE"
+
+assert_true "AC-30-29: mixed CheckRun+StatusContext+RAW-fallback body classifies as \"3 0 2\" (three groups, total=3)" \
+  "[ \"\$AC29_LINE\" = \"3 0 2\" ]"
+assert_true "AC-30-29: classify_rollup's jq program emits no stderr on the mixed body" \
+  "[ -z \"\$AC29_STDERR\" ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-30-30 (full existing issue-30 + issue-25 suites still green) ==="
+
+ISSUE25_OUTPUT_30="$(bash "$ISSUE25_SUITE" 2>&1)"
+ISSUE25_RC_30=$?
+assert_true "AC-30-30: tests/test-issue-25-confirm-ci-green.sh exits 0" \
+  "[ \"\$ISSUE25_RC_30\" -eq 0 ]"
+ISSUE25_RESULTS_LINE_30="$(printf '%s\n' "$ISSUE25_OUTPUT_30" | grep -E '^Results: ' | tail -n 1)"
+assert_true "AC-30-30: issue-25 suite reports 0 failed" \
+  "printf '%s' \"\$ISSUE25_RESULTS_LINE_30\" | grep -qE '0 failed'"
+echo "  (issue-25 suite: $ISSUE25_RESULTS_LINE_30)"
+echo "  (issue-30 whole-suite fence: this script's own Results footer below covers AC-30-1..-29)"
+
+# =============================================================================
 # Results
 # ---------------------------------------------------------------------------
 echo ""
