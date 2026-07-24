@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7c61e82bdc7c1c1d539c5a6b8a53a10884ae9dcbd992133582c8f1aab6f02cd2"
+      "sha256": "d031ec879be916b77bf3b0be26385582d82ecf90f2508d9c9da7a600701ca273"
     },
     {
       "source": "docs/title-guide.md",
