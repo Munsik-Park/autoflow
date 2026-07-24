@@ -164,15 +164,14 @@ classify_rollup() {
     def non_terminal:
       (.__typename == "CheckRun" and (.conclusion == null))
       or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
+    def ts_key: [ .startedAt // "", .completedAt // "", .createdAt // "" ];
     ( .statusCheckRollup // [] )
     | group_by(ident)
     | map(
         if any(.[]; non_terminal) then
-          ( [ .[] | select(non_terminal) ]
-            | max_by([ .startedAt // "", .completedAt // "", .createdAt // "" ]) )
+          ( [ .[] | select(non_terminal) ] | max_by(ts_key) )
         else
-          max_by([ .startedAt // "", .completedAt // "", .createdAt // "",
-                   (if green_entry then 0 else 1 end) ])
+          max_by(ts_key + [ (if green_entry then 0 else 1 end) ])
         end
       ) as $r
     | ($r | length) as $t
