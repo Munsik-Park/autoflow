@@ -80,13 +80,11 @@ on:
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
       - '.github/workflows/e2e-dummy-target.yml'
-      # #26 cycle suite. Appended at the TAIL of this block on purpose: the
-      # #799 AC6-ci guard reads the trigger list through a fixed
-      # `grep -A40 '^ *paths:'` window, whose last in-window entry is already
-      # `docs/git-workflow.md` — any insertion above it pushes that literal
-      # out of the window and reds a guard unrelated to this cycle. The `push:`
-      # block below carries the same entry near its head, which is what
-      # AC-CI-b (`grep -B20` → `paths:`) reads.
+      # #26 cycle suite — appended at the TAIL of this block on purpose: #799's
+      # AC6-ci guard reads this list through a fixed `grep -A40 '^ *paths:'`
+      # window whose last in-window entry is `docs/git-workflow.md`, so any
+      # insertion above it pushes that literal out and reds an unrelated guard.
+      # Order pinned by registry entry 26-AC15a.
       - 'tests/test-issue-26-verify-architect-route.sh'
       - 'tests/manual/issue-26-manual-scenarios.md'
   push:

@@ -189,7 +189,7 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | VERIFY → GREEN | implementation issue → Developer AI re-implements |
 | VERIFY → RED | test issue → Test AI fixes test → re-Red → GREEN re-entry |
 | VERIFY → Evaluation AI | deadlock (both claim "no problem") → Evaluation AI arbitrates; its verdict routes to RED (test misreads an AC), GREEN (implementation misses an AC), or human (undecidable), and hands off to ARCHITECT when it finds the acceptance criteria themselves mutually unsatisfiable (design contradiction — row below) |
-| VERIFY → ARCHITECT | design contradiction — the arbitration finds implementation and test each faithful to the design while the acceptance criteria are mutually unsatisfiable, reproduced by measurement and recorded in the GREEN blocker report `.autoflow/issue-{N}-*-green-blocker.md` → ARCHITECT re-deliberation → GATE:PLAN re-evaluation → RED re-entry; consumes the existing GATE:PLAN → ARCHITECT cap, no new cap |
+| VERIFY → ARCHITECT | design contradiction — the arbitration finds implementation and test each faithful to the design while the acceptance criteria are mutually unsatisfiable, reproduced by measurement and recorded in the GREEN blocker report `.autoflow/issue-{N}-*-green-blocker.md` → ARCHITECT re-deliberation → GATE:PLAN re-evaluation → RED re-entry (cap: see Regressions line below) |
 | VALIDATE → AUDIT | automated tests all PASS + manual checklist itemized |
 | AUDIT → GATE:QUALITY | security audit PASS |
 | GATE:QUALITY → DELIVER | completion evaluation PASS |
