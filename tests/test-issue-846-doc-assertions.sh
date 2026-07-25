@@ -495,6 +495,10 @@ else
     # #6 cycle file: severity-parse fail-loud + '='-tolerant grammar RED
     # suite (per-issue test isolation, #18 precedent).
     "tests/test-issue-6-severity-parse-contract.sh"
+    # #26 cycle files: VERIFY → ARCHITECT design-contradiction route — the
+    # cycle-scoped RED suite + its manual scenarios (feature design §3.2).
+    "tests/test-issue-26-verify-architect-route.sh"
+    "tests/manual/issue-26-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

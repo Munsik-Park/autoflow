@@ -552,6 +552,10 @@ else
     # #6 cycle file: severity-parse fail-loud + '='-tolerant grammar RED
     # suite (per-issue test isolation, #18 precedent).
     "tests/test-issue-6-severity-parse-contract.sh"
+    # #26 cycle files: VERIFY → ARCHITECT design-contradiction route — the
+    # cycle-scoped RED suite + its manual scenarios (feature design §3.2).
+    "tests/test-issue-26-verify-architect-route.sh"
+    "tests/manual/issue-26-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -614,13 +618,30 @@ else
   # edited in place, full literal old+new lines where a line is
   # replaced/removed outright — so any *other* future edit to these
   # sentences still trips the guard.
+  # #26 amends four CLAUDE.md clauses in place and inserts one row (VERIFY →
+  # ARCHITECT design-contradiction route, feature design §2.1/§2.2/§2.3/§2.4/
+  # §2.9): the Flow Control deadlock row gains the arbitration's outcome
+  # enumeration, a new `VERIFY → ARCHITECT` row is inserted after it, the
+  # `GREEN → VERIFY` entry condition admits the mutually-unsatisfiable case,
+  # the Regressions line's GATE:PLAN clause folds the re-deliberation into the
+  # existing cap, and the Human-escalation clause is narrowed. Same carve-out
+  # shape as #844/#978/#985 — a substring common to BOTH the old and new line
+  # for each in-place edit, plus one for the pure insertion. The #26
+  # Human-escalation substring below REPLACES the pre-#26 full-sentence-pair
+  # entry: §2.3 splits that pair, so the old entry would match neither line
+  # and would survive only as a dead filter silently pre-authorising a future
+  # edit that restores the unqualified escalation sentence (ledger E21).
   claude_md_offwindow_changes() {
     git diff "$BASE_REF"...HEAD -- CLAUDE.md 2>/dev/null \
       | grep -E '^[+-]' \
       | grep -vE '^(\+\+\+|---)' \
       | grep -vF 'Codex review auto-resolution (Medium+ found at HANDOFF)' \
       | grep -vF 'Submodule pointer bump (`services` gitlink)' \
-      | grep -vF 'VERIFY deadlock unresolved by Evaluation AI arbitration → human. HANDOFF internal retry exhausted → human.' \
+      | grep -vF 'unresolved by Evaluation AI arbitration → human' \
+      | grep -vF '| VERIFY → Evaluation AI | deadlock (both claim "no problem")' \
+      | grep -vF '| VERIFY → ARCHITECT | design contradiction' \
+      | grep -vF '| GREEN → VERIFY | implementation done' \
+      | grep -vF 'GATE:PLAN FAIL → ARCHITECT (max 3×' \
       | grep -vF 'read its own state file to choose the mode: `active:true` → resume the in-progress cycle' \
       | grep -vF 'retained alongside the state file and' \
       | grep -vF 'Once the PR is observed merged or closed, prior-cycle resolution' \

@@ -418,6 +418,10 @@ else
     # #6 GREEN change surface: the emitter whose severity grammar the #6
     # cycle widens + fail-louds (feature design §4.1).
     "scripts/handoff/emit-cycle-digest.sh"
+    # #26 cycle files: VERIFY → ARCHITECT design-contradiction route — the
+    # cycle-scoped RED suite + its manual scenarios (feature design §3.2).
+    "tests/test-issue-26-verify-architect-route.sh"
+    "tests/manual/issue-26-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

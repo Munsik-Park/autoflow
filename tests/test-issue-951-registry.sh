@@ -176,31 +176,84 @@ done
 # for every present/absent/ordered entry, a mutated copy of its target file
 # (literal stripped/injected, or the 'before' anchor removed) must flip the
 # verdict to FAIL, proving the migrated check still bites.
+#
+# The removal mutation is MATCH-AWARE: it strips lines with the SAME grep
+# flavor the runner itself uses for that entry (run-doc-invariants.sh:149-156
+# body_has / :158-166 first_line_of — `-F` for match:"fixed", `-E` for
+# match:"regex"). A fixed-string removal applied to a match:"regex" entry
+# strips 0 lines whenever the pattern carries ERE metacharacters (`^`, `\|`,
+# `[^|]*`, `(a|b)`); the "mutated" fixture is then byte-identical to the
+# source, the runner correctly re-reports PASS, and this leg misreads a
+# perfectly intact check as "no teeth". That is the round-1 VERIFY failure —
+# the registry held 85/85 match:"fixed" entries until this cycle added the
+# first match:"regex" ones.
+#
+# An INEFFECTIVE mutation is a leg FAILURE, never a skip. If the mutated file
+# comes out byte-identical to the source, or the mutator itself errored (e.g.
+# an invalid ERE), or the entry's shape is one the mutator cannot express
+# (absent + match:"regex" — literal injection cannot synthesise a string in an
+# arbitrary ERE's language), the entry is still counted into `total` and NOT
+# into `ok`, and a diagnostic naming it is printed. No entry is ever dropped
+# from the denominator, so the leg cannot be made vacuous by adding a shape
+# the mutator does not handle.
+
+# mutate_remove <src> <pattern> <match-mode> <dest>
+# Returns 0 on a well-formed mutation (including "every line removed", grep
+# exit 1 — a valid maximal mutation); non-zero only on a real grep error
+# (exit >=2, e.g. an invalid ERE), which the caller reports as no-teeth.
+mutate_remove() {
+  local src="$1" pat="$2" match="$3" dest="$4" rc
+  if [ "$match" = "regex" ]; then
+    grep -vE -- "$pat" "$src" > "$dest" 2>/dev/null; rc=$?
+  else
+    grep -vF -- "$pat" "$src" > "$dest" 2>/dev/null; rc=$?
+  fi
+  [ "$rc" -le 1 ]
+}
+
+# mutation_teeth_check [registry-path]
+# Defaults to the real registry ($REGISTRY, its CI invocation). The optional
+# argument lets the suite drive the leg against a single-entry fixture registry
+# so the leg's OWN failure paths (unsupported shape / byte-identical mutation /
+# mutator error) are exercised hermetically — see the self-tests below.
 mutation_teeth_check() {
-  [ -f "$REGISTRY" ] && [ -f "$RUNNER" ] || return 1
-  local ids total=0 ok=0 tdir
-  ids="$(jq -r '.invariants[].id' "$REGISTRY" 2>/dev/null)" || return 1
+  local registry="${1:-$REGISTRY}"
+  [ -f "$registry" ] && [ -f "$RUNNER" ] || return 1
+  local ids total=0 ok=0 tdir diag=""
+  ids="$(jq -r '.invariants[].id' "$registry" 2>/dev/null)" || return 1
   [ -n "$ids" ] || return 1
   tdir="$TMP_ROOT/teeth"
   mkdir -p "$tdir"
-  local id entry file predicate literal before section match srcfile mutated relmut regfile verdict
+  local id entry file predicate literal before section match srcfile mutated relmut regfile verdict why
   while IFS= read -r id; do
     [ -n "$id" ] || continue
-    entry="$(jq -c --arg id "$id" '.invariants[] | select(.id == $id)' "$REGISTRY")"
+    entry="$(jq -c --arg id "$id" '.invariants[] | select(.id == $id)' "$registry")"
     file="$(printf '%s' "$entry" | jq -r '.file')"
     predicate="$(printf '%s' "$entry" | jq -r '.predicate')"
+    match="$(printf '%s' "$entry" | jq -r '.match // "fixed"')"
     srcfile="$PROJECT_ROOT/$file"
     [ -f "$srcfile" ] || continue
     mutated="$tdir/$(basename "$file").$$.mut"
+    rm -f "$mutated"
+    why=""
     case "$predicate" in
       present)
         literal="$(printf '%s' "$entry" | jq -r '.literal')"
-        grep -vF "$literal" "$srcfile" > "$mutated" 2>/dev/null || cp "$srcfile" "$mutated"
+        mutate_remove "$srcfile" "$literal" "$match" "$mutated" \
+          || why="mutator error (match=$match): pattern is not a usable ${match} pattern"
         ;;
       absent)
         literal="$(printf '%s' "$entry" | jq -r '.literal')"
         section="$(printf '%s' "$entry" | jq -r '.section // ""')"
-        if [ -n "$section" ]; then
+        if [ "$match" = "regex" ]; then
+          # Injection cannot synthesise a witness string for an arbitrary ERE.
+          # Deliberately produce an unmutated copy so the byte-identity check
+          # below FAILS this entry loudly (with the diagnostic) instead of
+          # skipping it — extend the mutator (e.g. an explicit witness field)
+          # if an absent + match:"regex" entry is ever added.
+          cp "$srcfile" "$mutated"
+          why="unsupported shape: absent + match:\"regex\" has no injectable witness"
+        elif [ -n "$section" ]; then
           # Section-scoped absent entry: an EOF-append lands OUTSIDE a
           # non-last target section (the runner's extractor closes the body
           # at the next same-or-higher-level heading / section_end / ---
@@ -227,25 +280,119 @@ mutation_teeth_check() {
         ;;
       ordered)
         before="$(printf '%s' "$entry" | jq -r '.before')"
-        grep -vF "$before" "$srcfile" > "$mutated" 2>/dev/null || cp "$srcfile" "$mutated"
+        mutate_remove "$srcfile" "$before" "$match" "$mutated" \
+          || why="mutator error (match=$match): 'before' anchor is not a usable ${match} pattern"
         ;;
       *) continue ;;
     esac
     total=$((total + 1))
+
+    # Effectiveness gate: a mutation that changed nothing — or that never ran
+    # at all because the mutator itself errored — proves nothing. This counts
+    # the entry into `total` WITHOUT counting it into `ok`, so the leg FAILs —
+    # it is a failure path, not a skip.
+    #
+    # `why` is consulted FIRST and UNCONDITIONALLY, not merely as the diagnostic
+    # text of the byte-identity branch. A mutator error (grep exit >=2, e.g. an
+    # invalid ERE) leaves an EMPTY "$mutated" — which is NOT byte-identical to
+    # the source — so a byte-identity-only gate never fires: the runner is then
+    # driven against the empty file, correctly reports FAIL for the entry's
+    # predicate, and the entry is credited with teeth it never demonstrated.
+    # That was VERIFY step-4 FINDING 4-A (.autoflow/issue-26-verify-checks.md
+    # §2.2): the comment above already promised this contract; this condition is
+    # what implements it.
+    if [ -n "$why" ] || [ ! -f "$mutated" ] || cmp -s "$srcfile" "$mutated"; then
+      diag="$diag  - $id [$predicate/$match]: ${why:-ineffective mutation — mutated fixture is byte-identical to $file}
+"
+      continue
+    fi
+
     relmut="tests/fixtures/.tmp-951-$$/teeth/$(basename "$mutated")"
     regfile="$tdir/reg-$$.json"
     jq --arg id "$id" --arg file "$relmut" \
       '{ "$comment": "teeth-fixture", invariants: [ (.invariants[] | select(.id == $id) | .file = $file) ] }' \
-      "$REGISTRY" > "$regfile"
+      "$registry" > "$regfile"
     verdict="$(verdict_for_id "$regfile" "$id")"
-    [ "$verdict" = "FAIL" ] && ok=$((ok + 1))
+    if [ "$verdict" = "FAIL" ]; then
+      ok=$((ok + 1))
+    else
+      diag="$diag  - $id [$predicate/$match]: mutated fixture still reports $verdict (expected FAIL) — entry has no teeth
+"
+    fi
   done <<EOF_IDS
 $ids
 EOF_IDS
+  if [ -n "$diag" ]; then
+    printf 'negative-teeth leg: %s/%s entries bit their mutated fixture; offenders:\n%s' \
+      "$ok" "$total" "$diag" >&2
+  fi
   [ "$total" -gt 0 ] && [ "$ok" -eq "$total" ]
 }
 assert_true "negative-teeth leg: every present/absent/ordered entry FAILs its mutated fixture (data-driven, C1)" \
   "mutation_teeth_check"
+
+# ---------------------------------------------------------------------------
+# Teeth-leg self-tests — issue #26, VERIFY step-3 FINDING 3-E / step-4
+# FINDING 4-A (.autoflow/issue-26-verify-checks.md §1.6, §2.2).
+#
+# The three failure paths above are fail-loud scaffolding for entry shapes the
+# real registry does not hold today, so deleting any of them left the suite at
+# 93/93 — un-exercised code guarding the exact round-1 regression (a mutation
+# that changes nothing must never be read as "the entry bit"). Each is now
+# driven against a hermetic single-entry registry, asserting BOTH halves of the
+# documented contract: the entry is counted into `total` and NOT into `ok` (the
+# leg returns non-zero, never a silent skip), and a diagnostic NAMES the shape.
+#
+# Each fixture literal is chosen so the leg's verdict INVERTS if its branch is
+# removed — e.g. the absent+regex witness carries no ERE metacharacter, so a
+# mutator without that branch would EOF-append it, the runner would report FAIL,
+# and the entry would be wrongly credited. That is what makes these legs
+# discriminate rather than merely pass.
+# ---------------------------------------------------------------------------
+
+TEETH_SELFTEST_DIR="$TMP_ROOT/teeth-selftest"
+mkdir -p "$TEETH_SELFTEST_DIR"
+
+mk_selftest_registry() {     # <out-path> <one-entry-json>
+  printf '{"$comment":"teeth-leg self-test (#26)","invariants":[%s]}\n' "$2" > "$1"
+}
+
+# (a) absent + match:"regex" — injection cannot synthesise a witness for an
+#     arbitrary ERE, so the mutator refuses the shape by design.
+mk_selftest_registry "$TEETH_SELFTEST_DIR/absent-regex.json" \
+  "{\"id\":\"26-selftest-absent-regex\",\"origin_issue\":26,\"intent\":\"existence\",\"file\":\"$ANCHOR_FIXTURE_REL\",\"section\":null,\"predicate\":\"absent\",\"match\":\"regex\",\"literal\":\"selftest-absent-regex-witness-26\",\"scope\":\"permanent\"}"
+SELFTEST_ABSENT_REGEX_OUT="$(mutation_teeth_check "$TEETH_SELFTEST_DIR/absent-regex.json" 2>&1)"
+SELFTEST_ABSENT_REGEX_RC=$?
+
+assert_true "teeth self-test (a): an absent+match:\"regex\" entry is NOT credited with teeth — leg returns non-zero (FINDING 3-E)" \
+  "[ '$SELFTEST_ABSENT_REGEX_RC' -ne 0 ]"
+assert_true "teeth self-test (a): the diagnostic names the unsupported shape, not a generic no-teeth message" \
+  "printf '%s' \"\$SELFTEST_ABSENT_REGEX_OUT\" | grep -qF 'unsupported shape: absent + match:\"regex\"'"
+
+# (b) byte-identical mutation — the literal matches no line, so `grep -v`
+#     reproduces the source exactly and the "mutation" proves nothing.
+mk_selftest_registry "$TEETH_SELFTEST_DIR/byte-identical.json" \
+  "{\"id\":\"26-selftest-byte-identical\",\"origin_issue\":26,\"intent\":\"existence\",\"file\":\"$ANCHOR_FIXTURE_REL\",\"section\":null,\"predicate\":\"present\",\"match\":\"fixed\",\"literal\":\"selftest-literal-absent-from-the-fixture-26\",\"scope\":\"permanent\"}"
+SELFTEST_BYTE_IDENTICAL_OUT="$(mutation_teeth_check "$TEETH_SELFTEST_DIR/byte-identical.json" 2>&1)"
+SELFTEST_BYTE_IDENTICAL_RC=$?
+
+assert_true "teeth self-test (b): a byte-identical mutation is NOT credited with teeth — leg returns non-zero (round-1 failure class)" \
+  "[ '$SELFTEST_BYTE_IDENTICAL_RC' -ne 0 ]"
+assert_true "teeth self-test (b): the diagnostic names the byte-identity hazard" \
+  "printf '%s' \"\$SELFTEST_BYTE_IDENTICAL_OUT\" | grep -qF 'byte-identical'"
+
+# (c) mutator error — an invalid ERE makes grep exit 2 and leave an EMPTY
+#     destination, which is NOT byte-identical to the source. FINDING 4-A: the
+#     gate must consult `why`, or this shape is silently credited with teeth.
+mk_selftest_registry "$TEETH_SELFTEST_DIR/mutator-error.json" \
+  "{\"id\":\"26-selftest-mutator-error\",\"origin_issue\":26,\"intent\":\"existence\",\"file\":\"$ANCHOR_FIXTURE_REL\",\"section\":null,\"predicate\":\"present\",\"match\":\"regex\",\"literal\":\"[unclosed\",\"scope\":\"permanent\"}"
+SELFTEST_MUTATOR_ERROR_OUT="$(mutation_teeth_check "$TEETH_SELFTEST_DIR/mutator-error.json" 2>&1)"
+SELFTEST_MUTATOR_ERROR_RC=$?
+
+assert_true "teeth self-test (c): a mutator error (invalid ERE) is NOT credited with teeth — leg returns non-zero (FINDING 4-A)" \
+  "[ '$SELFTEST_MUTATOR_ERROR_RC' -ne 0 ]"
+assert_true "teeth self-test (c): the diagnostic names the mutator error, as the leg's own comment promises" \
+  "printf '%s' \"\$SELFTEST_MUTATOR_ERROR_OUT\" | grep -qF 'mutator error (match=regex)'"
 
 # Window-equivalence spot-check (ledger E12 worked example): the 794 ordering
 # entry over CLAUDE.md's level-3 "### PR Flow" heading is self-contained

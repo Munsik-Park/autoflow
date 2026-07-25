@@ -80,12 +80,23 @@ on:
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
       - '.github/workflows/e2e-dummy-target.yml'
+      # #26 cycle suite. Appended at the TAIL of this block on purpose: the
+      # #799 AC6-ci guard reads the trigger list through a fixed
+      # `grep -A40 '^ *paths:'` window, whose last in-window entry is already
+      # `docs/git-workflow.md` — any insertion above it pushes that literal
+      # out of the window and reds a guard unrelated to this cycle. The `push:`
+      # block below carries the same entry near its head, which is what
+      # AC-CI-b (`grep -B20` → `paths:`) reads.
+      - 'tests/test-issue-26-verify-architect-route.sh'
+      - 'tests/manual/issue-26-manual-scenarios.md'
   push:
     branches: [main]
     paths:
       - '.gitmodules'
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
+      - 'tests/test-issue-26-verify-architect-route.sh'
+      - 'tests/manual/issue-26-manual-scenarios.md'
       - 'tests/test-issue-843-doc-assertions.sh'
       - 'docs/phases/analysis.md'
       - 'docs/evaluation-system.md'
@@ -177,6 +188,17 @@ jobs:
       # docs/doc-invariant-registry.md.
       - name: Run doc-invariant registry runner (#951)
         run: bash tests/run-doc-invariants.sh
+
+      # VERIFY → ARCHITECT design-contradiction route guard (#26, cycle-scoped):
+      # the count/diff-shaped assertions the permanent registry structurally
+      # cannot hold (tests/run-doc-invariants.sh rejects any predicate that is
+      # not present|absent|ordered) — the Regressions-line `max N×` multiset
+      # fence, the no-workflow-script-diff preservation fence, and the replaced
+      # (not appended) #799 CLAUDE.md content carve-out. CI has no glob
+      # discovery; registered by filename per the sibling suites. See
+      # tests/test-issue-26-verify-architect-route.sh.
+      - name: Run VERIFY→ARCHITECT route guard (#26)
+        run: bash tests/test-issue-26-verify-architect-route.sh
 
       # init.sh legacy wizard removal + Language Rule user-scope reversion
       # guard (#952): the no-arg usage guard, the removed
