@@ -247,60 +247,22 @@ assert_true "AC-R3-a: manifest sha256 for docs/maintained-docs.md matches curren
   "[ \"\$(jq -r '.artifacts[] | select(.source==\"docs/maintained-docs.md\") | .sha256' '$MANIFEST')\" = \"\$(shasum -a 256 '$MAINTAINED_DOCS' | awk '{print \$1}')\" ]"
 assert_true "AC-R3-b: manifest sha256 for docs/INDEX.md matches current source hash" \
   "[ \"\$(jq -r '.artifacts[] | select(.source==\"docs/INDEX.md\") | .sha256' '$MANIFEST')\" = \"\$(shasum -a 256 '$INDEX_MD' | awk '{print \$1}')\" ]"
-# #951 retired-guard disposition: docs/doc-invariant-registry.md enters the
-# manifest's markdown-link closure this cycle (a hard requirement, ledger
-# E14/§DR-8 — linking it from docs/INDEX.md deterministically pulls in one
-# additive source+sha256 row). This cycle-2 regression guard's "stays 35"
-# baseline predates that addition; narrowed to admit exactly that one
-# expected artifact — a genuinely unexpected count (neither 35 nor 36, or an
-# artifact list not containing the new doc) still FAILs.
+# AC-R3-c (manifest artifact-count allow-list) — RETIRED.
 #
-# #979 lockstep update: the reviewer-backend-selection delivery surface
-# (feature design §4 rows 1-6, GATE:PLAN PASS avg 9.0, ledger E12) adds six
-# more manifest rows on top of the #951 closure baseline (36 -> 42): three
-# copy rows (scripts/review/codex-review-pr.sh, scripts/preflight/check-
-# review-backend.sh, .codex/review.md), two scaffold rows (AGENTS.md,
-# .claude/autoflow.local.json), plus docs/reviewer-backend.md via the same
-# markdown-link doc-closure mechanism as #951. The guard is widened the same
-# way it was widened for the 951 cycle: admit exactly 42 solely via the
-# presence of docs/reviewer-backend.md (the new closure-doc row) — a count
-# that is neither 36 nor 42, or a 42 lacking that specific doc, still FAILs.
+# It admitted a hard-coded set of counts (35 / 36 / 42 / 43 / 46), each via a
+# witness row, and had to be widened by hand on every manifest addition. It
+# was widened five times; the sixth addition arrived un-widened and reddened
+# this suite for every unrelated cycle. A count-shaped predicate is, by
+# docs/doc-invariant-registry.md §1-2, a cycle-scoped guard — it can never be
+# a permanent invariant, and a cycle-scoped guard left live past its cycle is
+# a defect. The durable property it was reaching for (the committed manifest
+# matches its sources) is carried without any snapshot by the regenerate-and-
+# compare checks: tests/test-issue-16-manifest-locale-invariance.sh AC2,
+# tests/test-issue-953-cycle-digest.sh AC6-regen-idempotence, and
+# tests/plugin/verify-package.sh AC5d. AC-R3-a/b above are unaffected — they
+# are state predicates over two named sources, not a count.
 #
-# #979 cycle-9 lockstep update (ledger E13): the GATE:PLAN-approved reviewer-
-# isolation design factors the reviewer-backend probe env scrub into a
-# shared lib, scripts/review/lib/claude-isolation.sh, delivered as one
-# additive copy row on top of the 42-row #979 closure baseline (42 -> 43).
-# The guard is narrowed the same way as the 36/42 arms above: admit exactly
-# 43 solely via the presence of that one new manifest row — a count that is
-# neither 35, 36, 42, nor 43, or a 43 lacking that specific source, still
-# FAILs.
-#
-# #985 lockstep update (ledger Q1, GATE:QUALITY): the public-release doc
-# sweep nets back down from the 43-row #979-cycle-9 baseline to 42 via two
-# offsetting manifest-row changes on the same commit — docs/adr/0001-*.md's
-# row is removed (ADR deleted from the public tree) while
-# docs/improvement-backlog.md's row is restored (ledger Q1 empty-start
-# restore, superseding the doc's original full deletion) — a coincidental
-# same count as the #979 42-row baseline but a different row composition.
-# The guard is widened with a #985-specific arm so a 42 reached via this
-# swap is admitted on its own grounds, not merely via the #979 branch above:
-# admit 42 also when docs/improvement-backlog.md is present AND no
-# docs/adr/0001-*.md row survives — a 42 satisfying neither the #979 nor the
-# #985 arm still FAILs.
-#
-# issue-#10 arm (ledger, GATE:PLAN this cycle): the manifest-registration-gap
-# fix adds 4 root-layer/copy rows for methodology-step scripts the stamped
-# docs already instruct a consumer to run (scripts/preflight/scan-cross-
-# issue-recurrence.sh, scripts/handoff/emit-cycle-digest.sh, scripts/handoff/
-# create-host-pr.sh, scripts/cleanup/cleanup-issue.sh), on top of the 42-row
-# #979/#985 baseline (42 -> 46). The guard is widened the same single-witness
-# way as the 36/43 arms above: admit exactly 46 solely via the presence of
-# the scripts/cleanup/cleanup-issue.sh row (a source unique to this change)
-# — a count that is neither 35, 36, 42, 43, nor 46, or a 46 lacking that
-# specific row, still FAILs.
-assert_true "AC-R3-c: manifest artifact count stays 35, is 36 solely via the #951 docs/doc-invariant-registry.md manifest-closure row (ledger E14), is 42 solely via the #979 reviewer-backend-selection delivery rows (docs/reviewer-backend.md closure, ledger E12) or the #985 adr/0001-removed + improvement-backlog.md-restored net-zero swap (ledger Q1), is 43 solely via the #979 cycle-9 scripts/review/lib/claude-isolation.sh manifest row (ledger E13), or is 46 solely via the issue-#10 scripts/cleanup/cleanup-issue.sh manifest row" \
-  "count=\$(jq '.artifacts | length' '$MANIFEST'); [ \"\$count\" = \"35\" ] || { [ \"\$count\" = \"36\" ] && jq -e '.artifacts[] | select(.source == \"docs/doc-invariant-registry.md\")' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"42\" ] && jq -e '.artifacts[] | select(.source == \"docs/reviewer-backend.md\")' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"42\" ] && jq -e '.artifacts[] | select(.source == \"docs/improvement-backlog.md\")' '$MANIFEST' >/dev/null 2>&1 && ! jq -e '.artifacts[] | select(.source | test(\"^docs/adr/0001-\"))' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"43\" ] && jq -e '.artifacts[] | select(.source == \"scripts/review/lib/claude-isolation.sh\")' '$MANIFEST' >/dev/null 2>&1; } || { [ \"\$count\" = \"46\" ] && jq -e '.artifacts[] | select(.source == \"scripts/cleanup/cleanup-issue.sh\")' '$MANIFEST' >/dev/null 2>&1; }"
-
+# Disposition recorded: docs/doc-invariant-registry.md §5.
 # =============================================================================
 # Cycle 3 (issue #961) — ADR-0016 gate-wiring propagation into operative docs
 # Verification Design (issue #961) §4: block_file() generalizes the ADR-only

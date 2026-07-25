@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3e57e02e4a8104c13beb316cf99f27b3478f23a6f99bf9f9ec7ffab102757772"
+      "sha256": "f5f56726cf8a95d029174031ff1db4b1c3b5c30013a9e253bdbabc63e1b20e84"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -321,7 +321,7 @@
       "dest": "scripts/cleanup/cleanup-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "404837e92773fb3bb8b98f69eee3e15cc008cde5cc2a39b5321e6800c38786da"
+      "sha256": "1fe25369be7c480187e136b95d1e7203400e93c0eba75fc0791bb134c688495a"
     },
     {
       "source": "setup/manifest.json",

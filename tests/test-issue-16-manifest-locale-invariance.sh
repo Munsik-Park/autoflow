@@ -27,11 +27,11 @@
 #         confirmation only, zero new code — re-runs
 #         tests/adr-0016-conformance-check.sh as a subprocess and checks its
 #         own PASS/FAIL summary; does not duplicate its assertions here).
-#   AC5 — the manifest change is order-only: same .source/.sha256/.dest/.kind
-#         set + same artifact count vs. a pre-fix baseline captured to the
-#         gitignored scratch fixture .autoflow/fixtures/issue-16-manifest-baseline.json
-#         during this RED commit. Self-SKIPs when that fixture is absent
-#         (cycle-scoped gate — verification design §1 AC5 "Resolved, round 2").
+#   AC5 — RETIRED. It asserted "the manifest change is order-only" against a
+#         baseline snapshot, a one-time migration check whose cycle merged long
+#         ago. Its own header already labelled it a cycle-scoped gate, and
+#         docs/doc-invariant-registry.md §2 retires a cycle-scoped guard when
+#         its cycle's PR merges. Disposition recorded in that document §5.
 #
 # RED expectation (this commit, no LC_ALL pin in setup/gen-manifest-hashes.sh
 # yet): AC1 FAILs (grep target absent). AC3 FAILs when the runner's ambient
@@ -44,9 +44,7 @@
 # AC2 may PASS or FAIL depending on the runner's own ambient locale (verif.
 # design §3 item 6 — not a coverage gap, AC3 is the honest discriminator).
 # AC4 stays green (zero new code, pre-existing arms are order-insensitive by
-# construction). AC5 captures its baseline fixture during this RED run (first
-# invocation) and then runs as a real gate; a later standing re-run without
-# the fixture self-SKIPs.
+# construction).
 # =============================================================================
 
 set -uo pipefail
@@ -56,7 +54,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 GEN_MANIFEST_SH="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
 MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
-BASELINE_FIXTURE="$PROJECT_ROOT/.autoflow/fixtures/issue-16-manifest-baseline.json"
 ADR_0016_TEST="$PROJECT_ROOT/tests/adr-0016-conformance-check.sh"
 
 PASS=0; FAIL=0; TESTS=0
@@ -179,44 +176,6 @@ if [ -x "$ADR_0016_TEST" ] || [ -f "$ADR_0016_TEST" ]; then
     "[ '$AC4_EXIT' -eq 0 ]"
 else
   assert_true "AC4-adr0016-suite-exists: tests/adr-0016-conformance-check.sh exists" "false"
-fi
-
-# ---------------------------------------------------------------------------
-# AC5 — the manifest change is order-only (same .source/.sha256/.dest/.kind
-# set + count vs. a pre-fix baseline). Self-SKIPs when the RED-captured
-# gitignored baseline fixture is absent (cycle-scoped gate — verification
-# design §1 AC5 "Resolved, round 2").
-# ---------------------------------------------------------------------------
-
-echo ""
-echo "=== AC5 — manifest change is order-only (set/hash/dest/kind + count equality vs. pre-fix baseline) ==="
-
-# Record whether the gate fixture existed BEFORE this run seeded it — a fixture
-# created in this same invocation is byte-derived from the current manifest, so
-# comparing against it proves nothing (self-comparison). Only a fixture carried
-# in from an earlier (pre-fix) run is an independent oracle.
-baseline_preexisted=0
-[ -f "$BASELINE_FIXTURE" ] && baseline_preexisted=1
-
-if [ ! -f "$BASELINE_FIXTURE" ]; then
-  # Remove the pre-relocation top-level copy this suite used to leave on the
-  # hook's discovery surface ("$AUTOFLOW_DIR"/*.json), which fail-closed-blocks
-  # score-gated commands until deleted (issue #18 one-time migration).
-  rm -f "$PROJECT_ROOT/.autoflow/issue-16-manifest-baseline.json"
-  mkdir -p "$PROJECT_ROOT/.autoflow/fixtures"
-  cp "$MANIFEST_JSON" "$BASELINE_FIXTURE"
-  echo "  (fixture) captured pre-fix baseline: $BASELINE_FIXTURE"
-fi
-
-if [ "$baseline_preexisted" -eq 1 ]; then
-  assert_true "AC5-set-hash-equality: sorted (source, sha256, dest, kind) tuples of the committed manifest equal the pre-fix baseline's" \
-    "diff <(jq -r '.artifacts[] | \"\(.source)\t\(.sha256)\t\(.dest)\t\(.kind)\"' '$MANIFEST_JSON' | sort) \
-          <(jq -r '.artifacts[] | \"\(.source)\t\(.sha256)\t\(.dest)\t\(.kind)\"' '$BASELINE_FIXTURE' | sort) >/dev/null 2>&1"
-  assert_true "AC5-count-equality: artifact count is unchanged vs. the pre-fix baseline" \
-    "[ \"\$(jq '.artifacts | length' '$MANIFEST_JSON')\" = \"\$(jq '.artifacts | length' '$BASELINE_FIXTURE')\" ]"
-else
-  skip_test "AC5: baseline fixture seeded this run — no independent pre-fix oracle to compare against"
-  skip_test "AC5: baseline fixture seeded this run — no independent pre-fix oracle to compare against"
 fi
 
 # ---------------------------------------------------------------------------
