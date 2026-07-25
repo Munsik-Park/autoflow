@@ -100,6 +100,7 @@ orchestrator does not modify sub-repo files — see
 | Host PR Template | `.github/pull_request_template.md` | Host PR body shape, sub-repo merge dependency checklist, or the `<!-- HOST-CLOSE-LINE -->` marker contract changes (issue #92) | Orchestrator AI |
 | Host PR Creation Script | `scripts/handoff/create-host-pr.sh` | The `--draft` / `--no-subrepo-dep` / label contract or the body-file rendering contract changes (issue #92) | Orchestrator AI |
 | CI-Green Confirm Script | `scripts/handoff/confirm-ci-green.sh` (+ `tests/test-issue-25-confirm-ci-green.sh`, `tests/test-issue-30-confirm-ci-green.sh`) | The mergeable-precheck / early-block / finite-poll / exit-code contract (`0`/`10`/`11`/`12`/`13`/`14`/`64`), the `CI_POLL_TIMEOUT_SECS`/`CI_POLL_INTERVAL_SECS` tunables, or the rollup latest-per-identity dedup classification (issue #30) change (issue #25) | Orchestrator AI |
+| Phase-Marker Emitter Script | `scripts/canary/emit-phase-marker.sh` (+ `tests/test-issue-35-phase-marker.sh`) | The four-flag CLI (`--issue`/`--cycle`/`--phase`/`--event`), the `.autoflow/issue-{N}-phases.jsonl` record schema (`issue`/`cycle`/`phase`/`event`/`ts`/`schema_version`), the single-`ts`-producer contract, or the stdout `path:line` anchor contract changes (issue #35) | Orchestrator AI |
 
 ### Sub-repo (`services/librechat`)
 

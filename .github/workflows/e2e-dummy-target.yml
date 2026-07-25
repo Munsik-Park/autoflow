@@ -93,9 +93,23 @@ on:
       # passes on the first window alone.
       - 'tests/test-issue-26-verify-architect-route.sh'
       - 'tests/manual/issue-26-manual-scenarios.md'
+      # #35 cycle surface. TAIL here (pull_request), for the reason the #26
+      # comment above records: #799's AC6-ci reads this list through a fixed
+      # `grep -A40 '^ *paths:'` window, and inserting above
+      # `docs/maintained-docs.md` pushes that literal out of the window and reds
+      # an unrelated guard (reproduced 2026-07-26).
+      - 'tests/test-issue-35-phase-marker.sh'
+      - 'scripts/canary/**'
   push:
     branches: [main]
     paths:
+      # #35 cycle surface. HEAD here (push), mirroring #26's pinned asymmetry:
+      # this suite's own E3-CI-b reads back from the suite path with `grep -B30`
+      # and must reach a `paths:` line, which only a near-`paths:` occurrence
+      # satisfies. Placement in the two blocks is NOT interchangeable
+      # (reproduced 2026-07-26: TAIL in both reds E3-CI-b).
+      - 'tests/test-issue-35-phase-marker.sh'
+      - 'scripts/canary/**'
       - '.gitmodules'
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
@@ -315,3 +329,13 @@ jobs:
       # sibling suites. See scripts/test/check-repo-key.sh.
       - name: Run repo-key derivation guard (#978)
         run: bash scripts/test/check-repo-key.sh
+
+      # Phase-marker emitter guard (#35): the canary emitter
+      # `scripts/canary/emit-phase-marker.sh` appends one phase-transition
+      # record per invocation to `.autoflow/issue-<N>-phases.jsonl` and prints
+      # only a `path:line` anchor, so orchestrator context growth can be joined
+      # to phase boundaries from local session logs. CI has no glob discovery;
+      # registered by filename per the sibling suites.
+      # See tests/test-issue-35-phase-marker.sh.
+      - name: Run phase-marker emitter guard (#35)
+        run: bash tests/test-issue-35-phase-marker.sh

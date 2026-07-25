@@ -260,6 +260,11 @@ if [[ -z "$BASE_REF" ]]; then
 else
   diff_files="$(git diff --name-only "$BASE_REF"...HEAD 2>/dev/null || true)"
   allow_list=(
+    # #35 cycle files: phase-marker emitter + its suite (this cycle's only two
+    # not-already-listed delivered paths; the six allow-list suites, the
+    # e2e-dummy-target workflow and docs/maintained-docs.md are already members).
+    "scripts/canary/emit-phase-marker.sh"
+    "tests/test-issue-35-phase-marker.sh"
     # HANDOFF step 6.7 digest co-ride: every terminal cycle appends one record
     # to the durable corpus on the same PR branch (autoflow-guide.md > HANDOFF 6.7),
     # so the digest file is a standing expected surface for every cycle diff.
