@@ -64,14 +64,14 @@ done
 [ -n "$PHASE" ] || die "--phase is required"
 [ -n "$EVENT" ] || die "--event is required"
 
-case "$ISSUE" in
-  0 | 0* | *[!0-9]*)
-    die "--issue must be a positive integer without leading zeros (got: $ISSUE)" ;;
-esac
-case "$CYCLE" in
-  0 | 0* | *[!0-9]*)
-    die "--cycle must be a positive integer without leading zeros (got: $CYCLE)" ;;
-esac
+require_canonical_positive_int() {
+  case "$2" in
+    0 | 0* | *[!0-9]*)
+      die "--$1 must be a positive integer without leading zeros (got: $2)" ;;
+  esac
+}
+require_canonical_positive_int issue "$ISSUE"
+require_canonical_positive_int cycle "$CYCLE"
 
 case "$EVENT" in
   enter | exit) ;;
