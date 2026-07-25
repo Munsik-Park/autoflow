@@ -8,7 +8,7 @@
       "name": "autoflow",
       "source": "./plugin/autoflow",
       "description": "AutoFlow phase-gate engine (hooks + role subagents + epic-dash skill).",
-      "version": "0.1.1"
+      "version": "0.1.2"
     }
   ]
 }
