@@ -80,12 +80,27 @@ on:
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
       - '.github/workflows/e2e-dummy-target.yml'
+      # #26 cycle suite. Placement differs per block and is NOT interchangeable:
+      #   - here (pull_request): TAIL, because #799's AC6-ci reads this list
+      #     through a fixed `grep -A40 '^ *paths:'` window whose last in-window
+      #     entry is `docs/git-workflow.md` — inserting above it pushes that
+      #     literal out of the window and reds an unrelated guard. Order pinned
+      #     by registry entry 26-AC15a.
+      #   - push block below: HEAD, because #26's AC-CI-b reads back from the
+      #     suite path with `grep -B20` and must reach that block's `paths:`.
+      # Head-inserting there does cost the second -A40 window its
+      # `docs/git-workflow.md` occurrence; AC6-ci asserts existence, so it still
+      # passes on the first window alone.
+      - 'tests/test-issue-26-verify-architect-route.sh'
+      - 'tests/manual/issue-26-manual-scenarios.md'
   push:
     branches: [main]
     paths:
       - '.gitmodules'
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
+      - 'tests/test-issue-26-verify-architect-route.sh'
+      - 'tests/manual/issue-26-manual-scenarios.md'
       - 'tests/test-issue-843-doc-assertions.sh'
       - 'docs/phases/analysis.md'
       - 'docs/evaluation-system.md'
@@ -177,6 +192,17 @@ jobs:
       # docs/doc-invariant-registry.md.
       - name: Run doc-invariant registry runner (#951)
         run: bash tests/run-doc-invariants.sh
+
+      # VERIFY → ARCHITECT design-contradiction route guard (#26, cycle-scoped):
+      # the count/diff-shaped assertions the permanent registry structurally
+      # cannot hold (tests/run-doc-invariants.sh rejects any predicate that is
+      # not present|absent|ordered) — the Regressions-line `max N×` multiset
+      # fence, the no-workflow-script-diff preservation fence, and the replaced
+      # (not appended) #799 CLAUDE.md content carve-out. CI has no glob
+      # discovery; registered by filename per the sibling suites. See
+      # tests/test-issue-26-verify-architect-route.sh.
+      - name: Run VERIFY→ARCHITECT route guard (#26)
+        run: bash tests/test-issue-26-verify-architect-route.sh
 
       # init.sh legacy wizard removal + Language Rule user-scope reversion
       # guard (#952): the no-arg usage guard, the removed

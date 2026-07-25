@@ -756,6 +756,10 @@ else
     # #25 VERIFY re-run: the mock-gh fixture path fix (8912a72) also updates
     # this suite's own AC-1 assertion count (46→47), so it lands in the diff.
     "tests/plugin/verify-install-into-target.sh"
+    # #26 cycle files: VERIFY → ARCHITECT design-contradiction route — the
+    # cycle-scoped RED suite + its manual scenarios (feature design §3.2).
+    "tests/test-issue-26-verify-architect-route.sh"
+    "tests/manual/issue-26-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

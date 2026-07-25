@@ -183,12 +183,13 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | GATE:PLAN → DISPATCH | plan evaluation PASS |
 | DISPATCH → RED | task instructions delivered (Test AI starts first) |
 | RED → GREEN | tests written + Red confirmed (all fail) |
-| GREEN → VERIFY | implementation done |
+| GREEN → VERIFY | implementation done (or, when the acceptance criteria are mutually unsatisfiable, the satisfiable subset implemented and the contradiction recorded — see GREEN playbook) |
 | VERIFY → REFINE | all tests PASS + minimal-implementation and mock-boundary fidelity checks pass |
 | REFINE → VALIDATE | refactor done + Green re-confirmed |
 | VERIFY → GREEN | implementation issue → Developer AI re-implements |
 | VERIFY → RED | test issue → Test AI fixes test → re-Red → GREEN re-entry |
-| VERIFY → Evaluation AI | deadlock (both claim "no problem") → Evaluation AI arbitrates |
+| VERIFY → Evaluation AI | deadlock (both claim "no problem") → Evaluation AI arbitrates; its verdict routes to RED (test misreads an AC), GREEN (implementation misses an AC), or human (undecidable), and hands off to ARCHITECT when it finds the acceptance criteria themselves mutually unsatisfiable (design contradiction — row below) |
+| VERIFY → ARCHITECT | design contradiction — the arbitration finds implementation and test each faithful to the design while the acceptance criteria are mutually unsatisfiable, reproduced by measurement and recorded in the GREEN blocker report `.autoflow/issue-{N}-*-green-blocker.md` → ARCHITECT re-deliberation → GATE:PLAN re-evaluation → RED re-entry (cap: see Regressions line below) |
 | VALIDATE → AUDIT | automated tests all PASS + manual checklist itemized |
 | AUDIT → GATE:QUALITY | security audit PASS |
 | GATE:QUALITY → DELIVER | completion evaluation PASS |
@@ -202,8 +203,8 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | HANDOFF → RED | CI failure (code issue) → fix tests/implementation and re-flow |
 | HANDOFF → user | HANDOFF internal retry exhausted (2×) |
 
-**Regressions** (cap semantics: "max N×" = N regressions permitted; the gate escalates to a human on the **(N+1)th** FAIL — e.g. `max 2×` → escalate on the 3rd FAIL): GATE:HYPOTHESIS cause FAIL → DIAGNOSE (max 2×). GATE:PLAN FAIL → ARCHITECT (max 3×). VERIFY FAIL → cause-branched fix (max 3 round-trips). REFINE FAIL → Developer AI fixes and re-runs (max 2×; on second failure, abandon refactor and proceed to VALIDATE with the Green state). AUDIT FAIL → fix and re-evaluate (max 2×). GATE:QUALITY FAIL → RED (max 3×). INTEGRATE FAIL → RED. HANDOFF failure → cause classification: code issue → RED; environment / push rejection → HANDOFF internal retry (max 2×). reviewer-review auto-resolution (Medium+ found at HANDOFF) → review-response (max 7×; on the 7th consecutive (per the count window in `docs/autoflow-guide.md` step 6.5) without the `blocked-by-review` label clearing, pause for the user).
-**Human escalation**: a gate's own regression cap exhausted without a pass (each gate's cap is the "max N×" on the Regressions line above, which fixes the escalation timing — this is **per-gate**, not a cross-gate running total). VERIFY deadlock unresolved by Evaluation AI arbitration → human. HANDOFF internal retry exhausted → human.
+**Regressions** (cap semantics: "max N×" = N regressions permitted; the gate escalates to a human on the **(N+1)th** FAIL — e.g. `max 2×` → escalate on the 3rd FAIL): GATE:HYPOTHESIS cause FAIL → DIAGNOSE (max 2×). GATE:PLAN FAIL → ARCHITECT (max 3×; a VERIFY design contradiction re-deliberation consumes this same counter, so ARCHITECT re-entries are capped at 3 per cycle regardless of which phase triggered them). VERIFY FAIL → cause-branched fix (max 3 round-trips). REFINE FAIL → Developer AI fixes and re-runs (max 2×; on second failure, abandon refactor and proceed to VALIDATE with the Green state). AUDIT FAIL → fix and re-evaluate (max 2×). GATE:QUALITY FAIL → RED (max 3×). INTEGRATE FAIL → RED. HANDOFF failure → cause classification: code issue → RED; environment / push rejection → HANDOFF internal retry (max 2×). reviewer-review auto-resolution (Medium+ found at HANDOFF) → review-response (max 7×; on the 7th consecutive (per the count window in `docs/autoflow-guide.md` step 6.5) without the `blocked-by-review` label clearing, pause for the user).
+**Human escalation**: a gate's own regression cap exhausted without a pass (each gate's cap is the "max N×" on the Regressions line above, which fixes the escalation timing — this is **per-gate**, not a cross-gate running total). VERIFY deadlock other than a design contradiction, unresolved by Evaluation AI arbitration → human. HANDOFF internal retry exhausted → human.
 **PR creation**: at HANDOFF, the orchestrator opens the PR(s), places `Closes #N` on the host PR, and confirms CI is green. Merging is external; AutoFlow does not merge.
 
 ### Phase Playbook Loading Contract

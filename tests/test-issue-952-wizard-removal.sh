@@ -604,6 +604,10 @@ else
     "scripts/handoff/confirm-ci-green.sh"
     "tests/issue-25/mock-gh/gh"
     "tests/test-issue-25-confirm-ci-green.sh"
+    # #26 cycle files: VERIFY → ARCHITECT design-contradiction route — the
+    # cycle-scoped RED suite + its manual scenarios (feature design §3.2).
+    "tests/test-issue-26-verify-architect-route.sh"
+    "tests/manual/issue-26-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

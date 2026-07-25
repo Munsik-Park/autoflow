@@ -98,7 +98,8 @@ flowchart TD
     GREEN --> VER
     VER -->|test issue| RED
     VER -->|impl issue| GREEN
-    VER -->|deadlock| HUMAN
+    VER -->|deadlock other than a design contradiction| HUMAN
+    VER -.->|design contradiction<br/>AC set unsatisfiable| ARC
     VER -->|PASS| REF
     REF --> VAL
     VAL --> AUD
@@ -142,6 +143,7 @@ GATE:PLAN
     │
     ▼
 DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
+                          └─ design contradiction (AC set unsatisfiable) ─► ARCHITECT (≤3×) → GATE:PLAN → RED
                                                        │
                                                        ▼
                                                    VALIDATE
@@ -371,6 +373,7 @@ The Developer AI writes the minimum code that passes the tests.
    - [MUST] Do NOT implement behavior not covered by tests.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
+   - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
 3. Before committing, if this change touched a manifest-registered source, run
    the manifest regen and stage the result in the same commit.
    - [MUST] If `git diff --name-only <base>...HEAD` intersects
@@ -402,7 +405,7 @@ Run the tests; on failure, branch by cause.
        ├─ fix_test + no_problem → RED            → fix test → re-confirm Red → re-enter GREEN
        ├─ no_problem + fix_impl → GREEN          → fix implementation → re-run VERIFY
        ├─ fix_test + fix_impl   → SEQUENTIAL_FIX → fix test first → Red → fix impl → Green
-       ├─ no_problem + no_problem → EVALUATION_AI → deadlock: Evaluation AI judges against acceptance criteria
+       ├─ no_problem + no_problem → EVALUATION_AI → deadlock: Evaluation AI judges against acceptance criteria — except on a design contradiction (see Deadlock resolution below)
        └─ a missing/errored self-check → EVALUATION_AI (recorded as "missing", never as no_problem)
 3. Minimal-implementation check (Test AI):
    diff analysis: are there parts of the impl diff not covered by any test?
@@ -424,7 +427,19 @@ interface is a masked failure — issue #309 shipped three mock-masked integrati
 through every internal gate; only external review caught them. The check is a sampled
 re-derivation against HEAD, not a re-read of the test's own claims.
 
-**Deadlock resolution**: Evaluation AI judges against the acceptance criteria as the objective baseline.
+**Deadlock resolution**: Evaluation AI judges against the acceptance criteria as the objective baseline — except on a design contradiction, where that oracle is the contradicted artifact and the verdict is ARCHITECT re-deliberation. Its verdict is one of four:
+
+- the test misreads an acceptance criterion → RED;
+- the implementation misses an acceptance criterion → GREEN;
+- **design contradiction** — implementation and test are each faithful to the design and the
+  acceptance criteria are mutually unsatisfiable, reproduced by measurement → **ARCHITECT
+  re-deliberation**. The Developer AI has already recorded the contradiction in
+  `.autoflow/issue-{N}-*-green-blocker.md` at GREEN (see GREEN step 2): the conflicting AC IDs,
+  the measurement that reproduces the conflict, and `path:line` anchors. The re-deliberation
+  returns through GATE:PLAN and re-enters RED, and consumes the existing GATE:PLAN → ARCHITECT cap
+  (max 3× per cycle; the 4th → human);
+- undecidable → human.
+
 **Max round-trips**: GREEN ↔ VERIFY max 3. After 3 unresolved → human.
 
 **Foreground execution note**: a short re-verification (a suite re-run) is a foreground command — the assigned Developer AI runs it foreground and reports, or the orchestrator runs it directly foreground — never a background spawn-and-wait (`docs/teammate-common-rules.md` > Bash Execution Mode).
