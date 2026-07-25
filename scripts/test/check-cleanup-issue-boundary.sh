@@ -243,6 +243,34 @@ fi
 
 # ---------------------------------------------------------------------------
 echo ""
+echo "=== AC-FIX: .autoflow/fixtures/ scratch is archived, subdir preserved ==="
+# ---------------------------------------------------------------------------
+# The per-issue scratch fixture lives one level down (issue #18 — the gate
+# hook's discovery glob is single-level, so a non-state JSON parked at the top
+# level fail-closed-blocks). The FIXTURES-ONLY shape is the load-bearing case:
+# it leaves the top-level match list empty, and an unguarded `printf | while`
+# over an empty list ends on a false test, which under `set -e` aborts the run
+# before anything is archived. Exercised here because the other AC-* cases all
+# seed a top-level file and would never reach that path.
+ARCHIVE_ROOT_FIX="$(mktemp -d)"
+G=99900244     # AC-FIX target — fixtures-only, NO top-level file
+
+mkdir -p "$AF/fixtures"
+printf '%s' "issue-${G} fixture seed" > "$AF/fixtures/issue-${G}-baseline.json"
+
+AC_FIX_OUT="$(AUTOFLOW_ARCHIVE_ROOT="$ARCHIVE_ROOT_FIX" "$CLEAN" "$G" 2>&1)"; AC_FIX_RC=$?
+
+assert_true "AC-FIX: wrapper exits 0 on a fixtures-only issue (no top-level file)" \
+  "[ '$AC_FIX_RC' -eq 0 ]"
+assert_true "AC-FIX: it reports an archive, not 'nothing to archive'" \
+  "printf '%s' \"\$AC_FIX_OUT\" | grep -qF 'archived 1 file(s)'"
+assert_true "AC-FIX: the live fixture is gone from .autoflow/fixtures/" \
+  "[ ! -e '$AF/fixtures/issue-${G}-baseline.json' ]"
+assert_true "AC-FIX: it landed under the archive's fixtures/ subdir, not flattened" \
+  "[ -n \"\$(find '$ARCHIVE_ROOT_FIX' -type f -path '*/fixtures/issue-${G}-baseline.json' 2>/dev/null)\" ]"
+
+# ---------------------------------------------------------------------------
+echo ""
 echo "=== AC-3 hardening: exit-65 refuse when AUTOFLOW_ARCHIVE_ROOT is inside the repo tree ==="
 # ---------------------------------------------------------------------------
 E_JSON="issue-${E} state seed"

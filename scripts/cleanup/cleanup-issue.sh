@@ -160,11 +160,22 @@ for N in "$@"; do
   # Number-boundary match: `issue-<N>.*` (state json) OR `issue-<N>-*` (companions).
   # A bare `issue-<N>*` would also match `issue-<N>3` etc. — see review finding.
   matches="$(find "$AUTOFLOW_DIR" -maxdepth 1 -type f \( -name "issue-${N}.*" -o -name "issue-${N}-*" \) 2>/dev/null || true)"
-  if [ -z "$matches" ]; then
+
+  # Per-issue scratch FIXTURES live one level down, in `.autoflow/fixtures/`:
+  # the gate hook's discovery glob is single-level (`"$AUTOFLOW_DIR"/*.json`),
+  # so a non-state JSON parked at the top level fail-closed-blocks every
+  # score-gated command until removed — issue #18 moved such fixtures into the
+  # subdir to stay off that glob. They are the same issue's scratch and are
+  # archived with it, under the same digits-only guard and the same
+  # number-boundary match. The `fixtures/` prefix is preserved in the archive so
+  # a fixture cannot overwrite a top-level file that happens to share its name.
+  fixtures="$(find "$AUTOFLOW_DIR/fixtures" -maxdepth 1 -type f \( -name "issue-${N}.*" -o -name "issue-${N}-*" \) 2>/dev/null || true)"
+
+  if [ -z "$matches" ] && [ -z "$fixtures" ]; then
     echo "issue #${N}: no .autoflow/issue-${N}.* or issue-${N}-* files — nothing to archive"
     continue
   fi
-  count="$(printf '%s\n' "$matches" | grep -c .)"
+  count="$( { printf '%s\n' "$matches"; printf '%s\n' "$fixtures"; } | grep -c . )"
 
   # Non-destructive archive move: a `-2`, `-3`, … conflict suffix rather than
   # overwriting a prior same-day archive (issue re-opened + re-closed).
@@ -176,9 +187,21 @@ for N in "$@"; do
   # Portable per-file move (BSD/macOS + GNU/Linux CI); filenames never contain
   # newlines. `mv` = atomic within a filesystem, copy+unlink across filesystems;
   # byte content is preserved either way.
-  printf '%s\n' "$matches" | while IFS= read -r f; do
-    [ -n "$f" ] && mv "$f" "$dest/"
-  done
+  # Each loop is guarded: with an empty list the `while` body's last command is
+  # a false `[ -n "" ]`, so the pipeline exits 1 and `set -e` would abort the
+  # run mid-issue. Reachable since the early-continue now only fires when BOTH
+  # lists are empty — a fixtures-only issue leaves `$matches` empty.
+  if [ -n "$matches" ]; then
+    printf '%s\n' "$matches" | while IFS= read -r f; do
+      [ -n "$f" ] && mv "$f" "$dest/"
+    done
+  fi
+  if [ -n "$fixtures" ]; then
+    mkdir -p "$dest/fixtures"
+    printf '%s\n' "$fixtures" | while IFS= read -r f; do
+      [ -n "$f" ] && mv "$f" "$dest/fixtures/"
+    done
+  fi
   echo "issue #${N}: archived ${count} file(s) → ${dest}"
 done
 
