@@ -405,7 +405,7 @@ Run the tests; on failure, branch by cause.
        ├─ fix_test + no_problem → RED            → fix test → re-confirm Red → re-enter GREEN
        ├─ no_problem + fix_impl → GREEN          → fix implementation → re-run VERIFY
        ├─ fix_test + fix_impl   → SEQUENTIAL_FIX → fix test first → Red → fix impl → Green
-       ├─ no_problem + no_problem → EVALUATION_AI → deadlock: Evaluation AI judges against acceptance criteria
+       ├─ no_problem + no_problem → EVALUATION_AI → deadlock: Evaluation AI judges against acceptance criteria — except on a design contradiction (see Deadlock resolution below)
        └─ a missing/errored self-check → EVALUATION_AI (recorded as "missing", never as no_problem)
 3. Minimal-implementation check (Test AI):
    diff analysis: are there parts of the impl diff not covered by any test?

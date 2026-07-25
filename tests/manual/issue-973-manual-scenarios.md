@@ -51,7 +51,7 @@ one lone newline, so `grep -q .` (which requires a non-newline character)
 still reports no match — identical to the pre-fix empty-producer direct path.
 
 **Multi-line table producer (site 10, `848:335 commit_ownership_table`):**
-confirm the target row (`CLAUDE.md:362`, the "Submodule pointer bump" row) is
+confirm the target row (`CLAUDE.md:363`, the "Submodule pointer bump" row) is
 a single physical line — `commit_ownership_table`'s output is intra-line for
 this row, so the capture-then-printf transform preserves the per-row match
 (a wrapped row would not match in either form, but the pre-fix assertion is
