@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1a35413ad77a45925386e140ce5296d44f2e80933df24b30011db3e2196fd493"
+      "sha256": "6ff818ad4b5430272efcc6b76240a82090719319e37ccd76eee3fe4b1f5b8137"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -314,7 +314,7 @@
       "dest": "scripts/handoff/confirm-ci-green.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "37f85bf5a05faef169847af912643daa7fed734429ff7fddcd089f30abddb9c9"
+      "sha256": "e0987922ea4cc10772b4f2998a69e9794ea851119c67c942e86d70952a1784e2"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",

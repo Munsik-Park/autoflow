@@ -137,19 +137,62 @@ gh_bounded() {
   return 0
 }
 
-# Classify a poll body's statusCheckRollup into "<total> <fail> <green>".
+# Classify a poll body's statusCheckRollup into "<total> <fail> <green>", one row
+# per check identity. A same-identity group with ANY non-terminal (QUEUED/PENDING/
+# WAITING/in-progress) entry is pending outright — a stale CANCELLED/FAILURE left by
+# a concurrency-cancelled run must not outvote the live replacement run on timestamp
+# recency (real CheckRun rollup objects carry no createdAt, so a timestamp key cannot
+# rank a null-timestamp replacement above a completed stale entry). Narrowed (c4 §3.3):
+# that non-terminal veto is overridden only when a terminal entry is strictly newer, by a
+# comparable run-start timestamp (startedAt/createdAt), than EVERY non-terminal sibling
+# (each of which must itself carry a comparable run-start) — then the terminal represents
+# the group; otherwise the non-terminal-wins pending behavior stands. Timestamp order
+# (with a fail-safe non-green tie-break) selects the representative only WITHIN an
+# all-terminal group by latest-per-identity dedup (feature #30 c2 §3 / c4 §3.3).
 classify_rollup() {
   jq -r '
-    (.statusCheckRollup // []) as $r
+    def ident:
+      if .__typename == "CheckRun" and ((.name // "") != "") then
+        ["CheckRun", (.workflowName // ""), .name]
+      elif .__typename == "StatusContext" and ((.context // "") != "") then
+        ["StatusContext", .context]
+      else
+        ["RAW", tojson]
+      end;
+    def green_entry:
+      (.__typename == "CheckRun" and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
+      or (.__typename == "StatusContext" and (.state == "SUCCESS"));
+    def fail_entry:
+      (.__typename == "CheckRun" and (.conclusion | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT")))
+      or (.__typename == "StatusContext" and (.state | IN("FAILURE","ERROR")));
+    def non_terminal:
+      (.__typename == "CheckRun" and (.conclusion == null))
+      or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
+    def ts_key: [ .startedAt // "", .completedAt // "", .createdAt // "" ];
+    def start_key: [ .startedAt // "", .createdAt // "" ];
+    def tie_key: ts_key + [ (if green_entry then 0 else 1 end) ];
+    def has_start:
+      if .__typename == "CheckRun" then (.startedAt // "") != ""
+      else (.createdAt // "") != "" end;
+    ( .statusCheckRollup // [] )
+    | group_by(ident)
+    | map(
+        ( [ .[] | select(non_terminal) ] ) as $nt
+        | ( [ .[] | select(non_terminal | not) ] ) as $tm
+        | if ($nt | length) == 0 then
+            max_by(tie_key)
+          elif ($tm | length) > 0
+               and ([ $nt[] | has_start ] | all)
+               and (($tm | max_by(start_key) | start_key) > ($nt | max_by(start_key) | start_key))
+          then
+            ( $tm | max_by(tie_key) )
+          else
+            ( $nt | max_by(ts_key) )
+          end
+      ) as $r
     | ($r | length) as $t
-    | ([ $r[] | select(
-          (.__typename == "CheckRun" and (.conclusion | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT")))
-          or (.__typename == "StatusContext" and (.state | IN("FAILURE","ERROR")))
-        )] | length) as $f
-    | ([ $r[] | select(
-          (.__typename == "CheckRun" and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
-          or (.__typename == "StatusContext" and (.state == "SUCCESS"))
-        )] | length) as $g
+    | ([ $r[] | select(fail_entry) ] | length) as $f
+    | ([ $r[] | select(green_entry) ] | length) as $g
     | "\($t) \($f) \($g)"
   ' 2>/dev/null
 }
