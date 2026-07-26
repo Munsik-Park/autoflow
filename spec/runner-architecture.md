@@ -21,6 +21,27 @@ split.
 The LLM keeps the work only an LLM can do: the declared `agents` of each step —
 analysis, deliberation, implementation, testing, evaluation, ingestion.
 
+## Execution model — no teammates (decided 2026-07-26)
+
+The new structure does not use Agent Teams / teammates at all. The need that
+teammates served — multi-party discussion (deliberation, brainstorming) — is
+already met by isolated deliberation, which the engine drives directly between
+per-role sessions. Every `agents` entry in a step declaration is realized as an
+**ephemeral isolated session**: created by the session manager for that step,
+fed only the role's declared `input`, discarded when the step ends. Roles never
+message each other; everything that crosses between roles or steps is a
+persisted artifact.
+
+Consequences: the current runner's teammate-lifecycle rules — idle-notification
+handling, foreground-only bash for spawned teammates, the phase-boundary
+respawn for model switches, team-size caps, message-based report formats — do
+not carry over. Each existed because of Claude Code's team/turn mechanics; the
+*intent* behind them (fresh context per phase, artifact-anchored reporting) is
+preserved by construction, since every session is fresh and artifact-fed by
+default. What is deliberately preserved is the role separation itself — the
+test role designs from acceptance criteria, never from the implementation —
+which is an isolation property of the declaration, not a teams property.
+
 ## Components
 
 | Component | Responsibility | Invariants it enforces |
@@ -74,6 +95,39 @@ exists and section-parsing as fallback. Nothing more is specified now —
 prompt wording, context-window strategy, token budgets, and parallelism are
 operator-side (handoff §4), and freezing an adapter interface before a second
 provider exists would repeat the premature-schema failure mode.
+
+## Verification principle — equivalence, not quality (decided 2026-07-26)
+
+The methodology and the models are unchanged and already validated (13
+terminal-cycle records in `docs/cycle-digest.jsonl`); this work converts the
+execution structure — interactive inside Claude Code → external,
+non-interactive. The verification target is therefore **behavioral
+equivalence** of the new harness, not output quality:
+
+1. **Declaration consistency** — machine lint of `spec/`: every `next` target
+   resolves, every `agents` role exists, every gate names its criteria, every
+   bounded edge has a cap value in the binding.
+2. **Flow simulation with synthetic inputs** — mock role outputs and synthetic
+   score sets drive every routing edge, *including the failure paths no real
+   cycle can force deterministically* (gate FAIL, cap exhaustion, verify
+   deadlock and its four arbitration outcomes, review-severity re-entry,
+   security ≤ 3 block). Follows the existing `test/workflows/run.mjs`
+   mock-runtime idiom.
+3. **Digest-corpus replay as the regression oracle** — the 13 recorded cycles
+   are the validated flow's ground truth; the engine's routing must reproduce
+   their recorded outcomes from the same conditions. The validated past is the
+   answer key; no new answer key is authored.
+4. **The interactive→non-interactive deltas** — the only genuinely new risk
+   surface: every `escalate` edge needs a defined non-interactive stop
+   protocol (persist state, notify, exit — not a dialog); re-running any
+   side-effect step must not duplicate a branch/commit/PR/comment
+   (check-then-act, tested by double-execution); and each interactive-era rule
+   is audited for whether its reason still exists in the new structure.
+
+Output quality is out of scope for this conversion. It becomes a question only
+when a model actually changes (M3), where minimal-qualification checks
+(isolation-leak markers, planted-defect detection, evaluator ranking on
+known-good vs known-bad artifacts) gate a new binding before any real cycle.
 
 ## What is deliberately not designed
 
