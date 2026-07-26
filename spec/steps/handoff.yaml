@@ -1,0 +1,15 @@
+step: handoff
+kind: mechanical              # PR creation, CI confirmation, review triggering — routing
+agents: [ingest]              # only the review-finding classification uses an LLM
+requires: [pushed-branch, change-set, test-result]
+produces: [pr, review-findings, cycle-digest]
+done-when: PR open with CI green, external review triggered, findings triaged —
+           no PR retains a review block
+next:
+  review-clean: end           # hand off the open PR; merge/close/deploy are external
+  review-findings: diagnose   # review-response cycle — bounded (invariant 6);
+                              # user pause on contract change / ambiguity / low
+                              # confidence / loop-check match
+  ci-code-failure: red
+  env-failure: handoff        # internal retry — bounded
+  cap-exhausted: escalate

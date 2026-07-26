@@ -1,0 +1,6 @@
+step: deliver
+kind: mechanical              # push + teammate shutdown — no LLM required
+requires: [change-set]
+produces: [pushed-branch]
+next:
+  pushed: integrate

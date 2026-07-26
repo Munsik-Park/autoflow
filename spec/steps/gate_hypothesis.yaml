@@ -1,0 +1,12 @@
+step: gate_hypothesis
+kind: gate
+applies-to: bug               # feat issues route past this gate at diagnose
+requires: [hypotheses, verification-results]
+agents: [evaluator]           # fresh session (invariant 2)
+verdict: computed             # runner derives pass/fail from raw scores (invariant 3)
+criteria: hypothesis          # resolved in the criteria layer — not declared here
+next:
+  pass: architect
+  fail: diagnose              # bounded retry — cap value in the binding (invariant 6)
+  non-code-root-cause: escalate
+  cap-exhausted: escalate

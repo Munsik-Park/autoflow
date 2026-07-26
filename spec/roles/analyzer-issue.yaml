@@ -1,0 +1,10 @@
+role: analyzer-issue
+mission: analyze the problem from the issue text alone
+input:
+  - issue                   # never the code — zero tool use is normal for this role
+output:
+  format: markdown
+  must_contain: [problem, proposed-resolution, assumptions]
+context:
+  desc: the issue body only. Reading code would share the structure analyzer's bias
+        and make the necessity cross-check ceremonial.

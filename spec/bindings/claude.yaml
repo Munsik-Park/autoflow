@@ -1,0 +1,36 @@
+# Claude Code binding — the current production runner, written down as an overlay.
+# Source of the model table: CLAUDE.md > Spawn Model — Phase-by-Phase.
+runner: claude-code            # Agent Teams + Workflow + PreToolUse gate hook
+
+roles:                         # role defaults
+  dev:                { provider: claude, model: opus, effort: high }
+  test:               { provider: claude, model: sonnet }   # complex tests fall back to opus
+  evaluator:          { provider: claude, model: sonnet }
+  analyzer-structure: { provider: claude, model: sonnet }
+  analyzer-issue:     { provider: claude, model: sonnet }
+  ingest:             { provider: claude, model: sonnet }
+
+steps:                         # step-scoped overrides of the role default
+  architect:    { dev: opus, test: opus }
+  gate_plan:    { evaluator: opus }    # reverted from sonnet per the CLAUDE.md revert rule
+  gate_quality: { evaluator: opus }    # reverted from sonnet per the CLAUDE.md revert rule
+  green:        { dev: opus }
+  verify:       { dev: opus, test: opus, evaluator: opus }
+  refine:       { dev: sonnet }        # fresh spawn at the VERIFY→REFINE boundary
+
+caps:                          # bound values — the declaration only requires that bounds exist
+  architect.loop: 6            # deliberation rounds before ESCALATE
+  gate_hypothesis.retry: 2
+  gate_plan.retry: 3           # shared with verify design-contradiction re-entries
+  verify.round-trips: 3
+  refine.retry: 2
+  audit.retry: 2
+  gate_quality.retry: 3
+  handoff.env-retry: 2
+  handoff.review-response: 7
+
+mechanisms:                    # how this runner realizes the portable invariants
+  deliberation-isolation: Workflow           # invariant 7 — in-script sub-agents
+  fresh-session: Agent spawn per call        # invariant 2
+  gate-computation: .claude/hooks/check-autoflow-gate.sh   # invariant 3
+  ledger: .autoflow/issue-{N}-ledger.md      # invariant 8 — append-only

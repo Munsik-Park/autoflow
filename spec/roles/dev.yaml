@@ -1,0 +1,12 @@
+role: dev
+mission: propose the feature design that satisfies the issue, then implement the
+         minimum general code that passes the tests
+input:
+  - issue
+  - accepted_from_previous_round   # rejected proposals are not injected
+output:
+  format: markdown
+  must_contain: [design, rationale, open_questions]
+context:
+  desc: repository structure and the issue body. The counterpart role's draft only
+        after the round closes.

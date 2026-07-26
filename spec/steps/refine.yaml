@@ -1,0 +1,8 @@
+step: refine
+agents: [dev]
+requires: [implementation, tests]
+produces: [refactor]          # may be empty; the re-run happens either way
+done-when: mechanical simplification applied (or none found) and all tests pass again
+next:
+  green-reconfirmed: validate
+  cap-exhausted: validate     # abandon the refactor, keep the verified Green state

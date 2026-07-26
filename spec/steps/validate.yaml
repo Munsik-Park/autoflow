@@ -1,0 +1,8 @@
+step: validate
+kind: mechanical              # automated checks + checklist itemization — no LLM judgment
+requires: [test-result, manual-scenarios, affected-docs]
+produces: [validation-report]
+done-when: automated tests all pass, manual scenarios itemized (delegated items do
+           not block), maintained docs updated, derived artifacts coherent
+next:
+  done: audit

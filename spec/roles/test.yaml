@@ -1,0 +1,12 @@
+role: test
+mission: design and write the verification that decides whether the acceptance
+         criteria are satisfied
+input:
+  - acceptance-criteria            # not the developer's intended implementation
+  - accepted_from_previous_round
+output:
+  format: markdown + test code
+  must_contain: [verification-design, tests, untestable-items]
+context:
+  desc: acceptance criteria and the repository's test conventions. Untestable items
+        carry a stated reason and an alternative (design change / manual / mock).

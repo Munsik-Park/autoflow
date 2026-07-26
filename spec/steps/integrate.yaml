@@ -1,0 +1,9 @@
+step: integrate
+kind: mechanical              # build + health + integration suite — no LLM required
+requires: [pushed-branch]
+produces: [integration-result]
+done-when: the project-level integration suite passes, or the project registers
+           no integration layer (a defined no-op, not a discretionary skip)
+next:
+  pass: handoff
+  fail: red

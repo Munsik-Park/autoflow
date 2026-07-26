@@ -1,0 +1,11 @@
+step: green
+agents: [dev]
+requires: [tests, feature-design]
+produces: [implementation]
+done-when: the minimum general implementation that satisfies the acceptance
+           criteria is committed — no behavior outside tests, no hard-coding to
+           test inputs, change surface within the plan
+next:
+  done: verify
+  ac-contradiction: verify    # satisfiable subset implemented; the recorded
+                              # contradiction is what verify's arbitration adjudicates

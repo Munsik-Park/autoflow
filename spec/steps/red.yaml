@@ -1,0 +1,8 @@
+step: red
+agents: [test]
+requires: [verification-design, feature-design]
+produces: [tests, manual-scenarios]
+done-when: all automated tests written and failing (Red confirmed); a test that
+           does not fail is investigated, not accepted
+next:
+  red-confirmed: green

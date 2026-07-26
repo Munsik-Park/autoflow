@@ -1,0 +1,10 @@
+step: audit
+kind: gate
+requires: [change-diff]
+agents: [evaluator]           # fresh session (invariant 2)
+verdict: computed             # (invariant 3)
+criteria: security            # the project-specific security checklist — criteria layer
+next:
+  pass: gate_quality
+  fail: green                 # fix and re-evaluate — bounded
+  cap-exhausted: escalate

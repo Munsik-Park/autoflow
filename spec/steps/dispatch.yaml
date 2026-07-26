@@ -1,0 +1,6 @@
+step: dispatch
+kind: mechanical              # task assignment — no LLM judgment
+requires: [feature-design, verification-design]
+produces: [task-assignments]  # artifact paths only — no discussion history crosses (invariant 7)
+next:
+  assigned: red               # the test role starts first

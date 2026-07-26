@@ -1,0 +1,10 @@
+step: gate_quality
+kind: gate
+requires: [change-set, test-result, audit-result]
+agents: [evaluator]           # fresh session (invariant 2)
+verdict: computed             # (invariant 3)
+criteria: quality
+next:
+  pass: deliver
+  fail: red                   # bounded
+  cap-exhausted: escalate

@@ -1,0 +1,9 @@
+step: preflight
+kind: mechanical              # git state, prior-cycle reconciliation — no LLM required
+requires: [issue, repo]
+produces: [cycle-state, work-branch]
+done-when: prior cycles resolved, working tree clean, remote synced, branch created
+next:
+  ready: diagnose
+  paused-prior-cycle: escalate      # another cycle active, or a pending human decision
+  dirty-unresolvable: escalate

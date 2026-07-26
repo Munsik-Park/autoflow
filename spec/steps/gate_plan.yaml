@@ -1,0 +1,10 @@
+step: gate_plan
+kind: gate
+requires: [feature-design, verification-design]
+agents: [evaluator]           # fresh session (invariant 2)
+verdict: computed             # (invariant 3)
+criteria: plan
+next:
+  pass: dispatch
+  fail: architect             # bounded — shared with verify's design-contradiction re-entry
+  cap-exhausted: escalate

@@ -1,0 +1,10 @@
+role: ingest
+mission: classify external review findings by severity, without judging the code
+input:
+  - review-comments
+output:
+  format: markdown
+  must_contain: [max_severity, findings, low_confidence_items]
+context:
+  desc: the reviewer's posted comments only. Severity classification feeds routing;
+        the fix itself re-enters the flow as a new cycle.

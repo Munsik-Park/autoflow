@@ -1,0 +1,13 @@
+role: evaluator
+mission: score the deliverable against externally supplied criteria
+session: fresh                     # never reused — no prior history (invariant 2)
+input:
+  - deliverable
+  - criteria                       # resolved from the criteria layer, not authored here
+output:
+  format: json
+  must_contain: [scores]           # raw scores with reasons; the verdict is not this
+                                   # role's to declare — the runner computes it (invariant 3)
+context:
+  desc: only the deliverable and the criteria. No investment in the process that
+        produced the work.

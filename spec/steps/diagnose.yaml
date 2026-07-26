@@ -1,0 +1,16 @@
+step: diagnose
+requires: [issue, cycle-state]
+agents:
+  - analyzer-structure        # sees code only — the issue is withheld (invariant 1)
+  - analyzer-issue            # sees the issue only — the code is withheld
+produces: [structure-report, issue-report, necessity-scores, hypotheses, task-decomposition]
+done-when: both isolated analyses complete and necessity is scored against the
+           actual structure; bug issues additionally carry ≥3 cause hypotheses
+           ("not a code bug" among them) with lightweight verification
+next:
+  code-change-needed-bug: gate_hypothesis
+  code-change-needed-feat: architect     # feat issues skip the cause gate
+  already-satisfied: close               # new-issue mode; review-response replies on the PR
+  non-code-lever: escalate
+  intake-prerequisite-missing: escalate  # planning/design prerequisite → user decides
+  loop-check-match: escalate             # review-response only: same complaint class recurs

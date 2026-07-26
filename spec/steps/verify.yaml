@@ -1,0 +1,17 @@
+step: verify
+requires: [implementation, tests, verification-design]
+loop:
+  kind: self-check            # single round on failure — no internal loop
+  participants: [dev, test]
+  isolated: true              # (invariant 7); re-entry is bounded by the round-trip cap
+produces: [test-result, coverage-check, mock-fidelity-check]
+done-when: all tests pass, the diff is covered by tests (or excepted with reason),
+           and every test double matches the real interface at HEAD
+next:
+  pass: refine
+  test-issue: red             # the test misreads an acceptance criterion
+  impl-issue: green           # the implementation misses an acceptance criterion
+  design-contradiction: architect   # AC set mutually unsatisfiable, reproduced by measurement
+  undecidable: escalate
+# A deadlock (both sides claim "no problem") or a missing self-check routes to a
+# fresh evaluator arbitration, whose verdict selects one of the outcomes above.

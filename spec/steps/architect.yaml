@@ -1,0 +1,12 @@
+step: architect
+requires: [issue, diagnosis]
+loop:
+  kind: deliberation
+  participants: [dev, test]   # role names only; the model is unknown here
+  until: mutual_accept        # grounded ACCEPT, empty counters, never on round 1
+  carry: accepted_only        # rejected proposals do not enter the next round
+  isolated: true              # cross-talk never reaches the coordinator (invariant 7)
+produces: [feature-design, verification-design, ledger-entries]
+next:
+  converged: gate_plan
+  escalate: escalate          # cap reached without mutual ACCEPT — cap value in the binding

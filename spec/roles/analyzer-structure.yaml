@@ -1,0 +1,10 @@
+role: analyzer-structure
+mission: describe the code structure of the affected area as it actually is
+input:
+  - code                    # never the issue — isolation is the input list itself
+output:
+  format: markdown
+  must_contain: [structure, existing-mechanisms]
+context:
+  desc: repository code for the affected area. The issue text is withheld by design;
+        knowing the problem would bias the reading toward "structure that solves it".
