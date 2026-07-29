@@ -16,6 +16,9 @@ Aside from this terminal divergence, every rule, retry cap, evaluation category,
 threshold is preserved from upstream. Single-repo projects are supported as the degenerate case
 (DELIVER pushes one branch, INTEGRATE / HANDOFF collapse to a single PR flow).
 
+The reviewer backend used at `HANDOFF` step 6 is configurable — see
+[`docs/reviewer-backend.md`](docs/reviewer-backend.md).
+
 ---
 
 ## What Is AutoFlow?
