@@ -189,6 +189,20 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 
 **The tempting shortcut** is to have HANDOFF auto-promote or auto-merge once findings are addressed. That is rejected: merging stays external (the host-PR `Closes #N` and the merge-sequencing workflow), and the orchestrator is structurally barred from clearing the gate label itself. Auto-resolution improves the PR that is handed off; it does not take over the hand-off.
 
+### Decision 10: Gate Scoring Carries Its Own Counter-Hypothesis Step
+
+**Problem.** The framework's confirmation-bias defenses divide into **counter-hypothesis forcing**, where the actor is made to argue the opposite case, and **evaluator independence**, where the actor is replaced by a disinterested one. The four rubric-scored gates carried only the Type-B device — independence — and none of the Type-A device; this decision adds it. Type-A appears at DIAGNOSE ("the code may not be the bug"), at ARCHITECT (first-exchange devil's advocate) and at RED (Red confirmation); Type-B is the gates' fresh-spawn evaluator (Decision 2) and the hook's distrust of a self-reported PASS (Decision 3). A fresh evaluator removes self-interest, but the scoring frame it inherits is still "how good is each item" — nothing asks "if this deliverable must FAIL, what is the ground?".
+
+**Evidence.** **#287 cycle 1** — GATE:PLAN avg 8.8 and GATE:QUALITY avg 8.9 both PASS, contradicted in the same cycle by external Medium findings that those gates' own rubric items cover (`useSearchEnabled` mechanism misread → Feasibility; `/d/library` blast radius → Dependencies/Scope; a spec-seeded `search.enabled: true` masking the missing wiring → Test coverage). The response then was a model revert (`CLAUDE.md` > Spawn Model), which changed *who* scores, not *how*. **#309** ([`autoflow-guide.md`](autoflow-guide.md) > VERIFY) — three mock-masked integration gaps passed every internal gate and only external review caught them; the remedy adopted, the mock-boundary fidelity check at VERIFY step 4, was itself a counter-argument procedure. In both cases the defect was caught by an adversarial reading, and in both cases the fix the framework reached for was Type-A.
+
+**Decision.** The Evaluation AI contract gains a pre-scoring step ([`teammate-contracts.md`](teammate-contracts.md) > Evaluation AI > Pre-scoring FAIL hypothesis): form the "this must FAIL" hypothesis, search for its strongest rubric-framed ground with the deliverable's anchors re-derived from source, attempt refutation, and only then score. The search and its disposition are recorded in the additive `fail_hypothesis` output field, whose non-emptiness is enforced by the orchestrator's acceptance of the report (reject + re-spawn, capped), not by a machine validator — the hook still reads only `scores`.
+
+**Conclusion recorded.** Independence is necessary but not sufficient: it removes self-interest, not the leniency framing. The pre-scoring FAIL hypothesis supplies the missing frame.
+
+**What it does not do.** It is not a stricter gate. Rubric item counts, PASS thresholds (each ≥ 7, avg ≥ 7.5, security ≤ 3) and regression caps are unchanged, and a refuted FAIL case never moves a score — the obligation is to search, not to deduct. If gate FAIL rates rise materially after adoption, that is observable through the same evidence anchor the Spawn-Model revert rule uses (gate verdicts persist in the PR/issue thread).
+
+**Route.** Recorded here rather than as a new ADR, per [`development-guideline.md`](development-guideline.md) > ADR Policy, which accepts "an ADR **or** a documented owner decision". The owner's own artifact makes that call: issue #40's *ADR 후보 대조* section defers the ADR-necessity judgment to DIAGNOSE intake triage and asks only that the relationship to ADR-0016 be recorded, while AC5 asks for the decision to land in this document. The relationship is the one ADR-0016 already set — extend an existing evaluation procedure rather than add a rubric item.
+
 ---
 
 ## Generalization Rationale
