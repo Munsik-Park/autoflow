@@ -427,6 +427,59 @@ echo "=== C5-AC-1 (doc contract) — docs/reviewer-backend.md states the parse-f
 assert_true "C5-AC-1 (doc): docs/reviewer-backend.md names the present-but-unparseable/empty fail-closed contract" \
   "[ -f '$REVIEWER_BACKEND_MD' ] && grep -qiE 'unparseable|not valid JSON' '$REVIEWER_BACKEND_MD' && grep -qiE 'empty' '$REVIEWER_BACKEND_MD'"
 
+# =============================================================================
+# Codex backend completion/stdio guard — regression from the 0.146.0 CLI probe:
+# `codex exec` prints "Reading additional input from stdin..." and reads from
+# inherited stdin when it is not closed. The review wrapper must not let a parent
+# orchestrator's open stdin hold a background review silently; it must also emit a
+# backend-neutral completion marker with the real codex exit code.
+# =============================================================================
+echo ""
+echo "=== Codex backend stdio/completion guard — stdin closed, exit marker emitted ==="
+
+TMP_REPO6="$(mktemp -d)"
+(cd "$PROJECT_ROOT" && tar --exclude='.git' -cf - .) | (cd "$TMP_REPO6" && tar -xf -) 2>/dev/null
+(cd "$TMP_REPO6" && git init -q && git config user.email t@example.com && git config user.name t && git add -A && git commit -q -m fixture) >/dev/null 2>&1
+
+FAKEBIN6="$(mktemp -d)"
+CODEX_CAP6="$(mktemp)"
+cat > "$FAKEBIN6/gh" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  *"pr view"*"--json state,headRefName"*) printf 'OPEN\tmain\n' ;;
+  *) echo "unexpected gh stub call: $*" >&2; exit 1 ;;
+esac
+EOF
+chmod +x "$FAKEBIN6/gh"
+cat > "$FAKEBIN6/codex" <<EOF
+#!/usr/bin/env bash
+{
+  echo "ARGV:\$*"
+  if IFS= read -r leaked_stdin; then
+    echo "STDIN_LEAK:\$leaked_stdin"
+  else
+    echo "STDIN_EOF"
+  fi
+} > "$CODEX_CAP6"
+exit 7
+EOF
+chmod +x "$FAKEBIN6/codex"
+
+WRAPPER_LOG6="$(mktemp)"
+printf 'PARENT_STDIN_MUST_NOT_REACH_CODEX\n' | \
+  ( cd "$TMP_REPO6" && PATH="$FAKEBIN6:$PATH" \
+      bash "$TMP_REPO6/$WRAPPER_REL" --pr 123 --expected-head main >"$WRAPPER_LOG6" 2>&1 )
+WRAPPER6_EXIT=$?
+
+assert_true "codex backend: wrapper propagates the codex subprocess exit code" \
+  "[ '$WRAPPER6_EXIT' -eq 7 ]"
+assert_true "codex backend: wrapper emits a completion marker with the real exit code" \
+  "grep -qE '\\[review\\] codex completed for PR #123 \\(exit=7\\)' '$WRAPPER_LOG6'"
+assert_true "codex backend: parent stdin is closed before codex exec, so no stdin payload reaches the subprocess" \
+  "grep -q '^STDIN_EOF$' '$CODEX_CAP6' && ! grep -q 'PARENT_STDIN_MUST_NOT_REACH_CODEX' '$CODEX_CAP6'"
+
+rm -rf "$TMP_REPO6" "$FAKEBIN6" "$CODEX_CAP6" "$WRAPPER_LOG6" 2>/dev/null
+
 # ---------------------------------------------------------------------------
 # Results.
 # ---------------------------------------------------------------------------
