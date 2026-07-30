@@ -27,7 +27,6 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations` (or `blocking_issues` when score-blocking). A surviving case may coexist with a score of 7 or higher: the routing obligation is to record it, not to lower the item.
 - **[MUST]** Assign scores only after the FAIL hypothesis has been formed, searched, and dispositioned. Scoring never precedes the search.
 - **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less teammate report (`CLAUDE.md` > Execution Principles > *Verify teammate claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
-- This is a search obligation, not a deduction obligation: the procedure requires hypothesizing and refuting, never lowering a score for a case that was refuted.
 
 ---
 
