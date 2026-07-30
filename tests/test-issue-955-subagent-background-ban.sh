@@ -765,6 +765,10 @@ else
     # cycle-scoped RED suite + its manual scenarios (feature design §3.2).
     "tests/test-issue-26-verify-architect-route.sh"
     "tests/manual/issue-26-manual-scenarios.md"
+    # #40 cycle files (consider-the-opposite pre-scoring): docs/teammate-contracts.md
+    # is already admitted above; the two new cycle-scoped RED suites are not.
+    "tests/test-issue-40-doc-assertions.sh"
+    "tests/test-issue-40-hook-additive.sh"
   )
   disallowed=""
   while IFS= read -r f; do
