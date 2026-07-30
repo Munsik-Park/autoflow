@@ -177,7 +177,10 @@ is narrated, never used to abort an install or gate a cycle.
 
 - `codex` — a fresh `~/.codex/sessions/<date>/rollout-*.jsonl` +
   `pgrep -f "pull request #<N>"` + an advancing rollout `mtime` (the long-run
-  health signal); the review runs in the background to completion.
+  health signal); the review runs in the background to completion. The wrapper
+  closes `codex exec` stdin (`< /dev/null`) so an inherited parent stdin cannot
+  hold the review open, and prints completion marker
+  `[review] codex completed for PR #<N> (exit=…)` when the subprocess returns.
 - `claude` — the wrapper runs `claude -p` **synchronously** and prints a
   completion marker `[review] claude completed for PR #<N> (exit=…)` when the
   subprocess returns. That marker is the start/finish signal; a non-zero exit

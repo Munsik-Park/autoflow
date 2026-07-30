@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "63fe02fd996df38fcc2c94d1a5bba12f8bbd38d5af4e62f086d8d2c7a280020a"
+      "sha256": "d65613327fcfccf26dd1622ae0357187e6ad2abe5c5268019eeda5eee7dab705"
     },
     {
       "source": "docs/design-rationale.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b76fd558e4b6e201fb42be9c6d1a118aea10f010ac1ed7817f4b0815dc1e2dc1"
+      "sha256": "32ef6a3e50b3d8a68674afced01a5571144782652f6285bd0f47457b474d7de7"
     },
     {
       "source": "docs/security-checklist.md",
@@ -251,7 +251,7 @@
       "dest": "scripts/review/codex-review-pr.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "d008fcf445805a0ad65da27e9ba2bfb2417f28f60e74550095168a317bcdf88b"
+      "sha256": "63ea552f2068cd6a6caa538b0299770d1b651b8565e46ba0fb7994881b3c0b59"
     },
     {
       "source": "scripts/review/lib/claude-isolation.sh",

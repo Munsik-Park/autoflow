@@ -220,8 +220,15 @@ if [[ "$BACKEND" == "claude" ]]; then
   exit "$claude_rc"
 fi
 
-codex exec \
-  -s workspace-write \
-  -c sandbox_workspace_write.network_access=true \
-  -c approval_policy="never" \
-  "$PROMPT"
+if codex exec \
+     -s workspace-write \
+     -c sandbox_workspace_write.network_access=true \
+     -c approval_policy="never" \
+     "$PROMPT" < /dev/null; then
+  codex_rc=0
+else
+  codex_rc=$?
+fi
+
+echo "[review] codex completed for PR #${PR} (exit=${codex_rc})"
+exit "$codex_rc"
