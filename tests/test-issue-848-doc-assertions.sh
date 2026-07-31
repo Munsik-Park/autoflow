@@ -557,6 +557,13 @@ else
     "docs/phases/analysis.md"
     "docs/teammate-common-rules.md"
     "tests/test-issue-223-schema-hook-contract.sh"
+    # #43 cycle files (reporting-channel contract): the cycle-scoped RED
+    # suite and its manual-scenario lane. The doc surfaces this cycle edits
+    # (CLAUDE.md, docs/teammate-contracts.md, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json, the workflow) are already admitted
+    # above; only these are new.
+    "tests/manual/issue-43-manual-scenarios.md"
+    "tests/test-issue-43-report-channel-contract.sh"
   )
   disallowed=""
   while IFS= read -r f; do
