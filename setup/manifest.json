@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a04cce37e2438f0d09e1e5e04d1885baa88ac997a62ab31cd205f802d3f7a7fa"
+      "sha256": "f3ff360a9636befb3759030c23a886f754ca1df341a4073931101e9805eb75a6"
     },
     {
       "source": "docs/INDEX.md",
@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d65613327fcfccf26dd1622ae0357187e6ad2abe5c5268019eeda5eee7dab705"
+      "sha256": "0acbff8df8edf80ab8c00b2fdb0552c716a1cc94bebd12625b396207a0767274"
     },
     {
       "source": "docs/design-rationale.md",
@@ -118,14 +118,14 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fad4f3f67c915110af0924dd6a4fe3b23d4b1af13978a89c695cdff84ab757bf"
+      "sha256": "d8d41d4509c46a9185f516cc28f904df3528be8f34060eea8013128a42a2bbdf"
     },
     {
       "source": "docs/phases/analysis.md",
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cc4034f29274887a0499592c774b68e4653ee3d3f8bc7e72f26003a3c5277929"
+      "sha256": "15037480ee0d8c5f81f1e77277977b0490d5abd3112f96cbc5075cf672dc1057"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -167,14 +167,14 @@
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8fbff945ce06524434ef609c9e61e7ebedfa0711d36e549435ffc22088ee2ee6"
+      "sha256": "925300cce90848305ac5ad7434c5d73a96a27be705bb517ea62b631fdc37ad08"
     },
     {
       "source": "docs/teammate-contracts.md",
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7c3e7834e78e3f98e053bca669bc10a246038f4cdfdff9ef9567f8e75d1799a7"
+      "sha256": "5e9a6ac4956b855404a74bd3df2cd7486ee20ca0b2bf34bf8e21bbe6723059e9"
     },
     {
       "source": "docs/title-guide.md",

@@ -146,6 +146,8 @@ context discipline applies: Phase A/B/3 write their bodies to `.autoflow/issue-{
 and return only an anchor + one-line summary (`CLAUDE.md` > Cost Control > Orchestrator
 context discipline).
 
+Spawn channel: all five DIAGNOSE spawns — intake readiness triage, Phase A, Phase B, Phase 3, and the review-response loop check — are anonymous direct spawns (a `subagent_type` only, with no `team_name`/`name` pair), so each one's anchor + summary reaches the orchestrator as the spawn's own return value. See [`CLAUDE.md`](../../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
+
 ## Spot-check & escalation discipline (incomplete-output guard)
 
 The orchestrator's DIAGNOSE spot-checks — the reads that confirm a Phase A/B/3

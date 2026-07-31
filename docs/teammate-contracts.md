@@ -8,6 +8,7 @@
 - Independent evaluator that does not participate in planning or implementation.
 - Bias prevention: a fresh agent is spawned every call.
 - Default spawn model: `sonnet` (rubric-scored gates — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY). Revert conditions: CLAUDE.md > Spawn Model.
+- Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores; under a named spawn the final turn text is discarded and the gate deadlocks on a report that never arrives (`docs/teammate-common-rules.md` > Result delivery path by spawn mode). Contract: `CLAUDE.md` > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
 
 ### Evaluation AI Prompt Rules
 1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `docs/teammate-contracts.md`, target file paths.
