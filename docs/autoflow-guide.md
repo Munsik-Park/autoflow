@@ -326,7 +326,7 @@ does not receive the round-by-round messages.
 
 ### Testability-driven design
 
-When the Test AI flags an item as "not automatable", the team discusses whether a feature-design change makes it testable. If not, the item stays as a manual scenario with a stated reason.
+When the Test AI flags an item as "not automatable", the team discusses whether a feature-design change makes it testable. If not, the item stays as a manual scenario with a stated reason (except where the composition-oracle clause applies).
 
 ### Agreement criteria
 

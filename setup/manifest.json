@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d45c813ae9163dda2a7951b408bd7ee6f279ee8446fb4a561c7dc325f900237c"
+      "sha256": "488fd6a8b0c4805f079444fc1086e70b9c0a03bc155da73bf2a0256b59188cbd"
     },
     {
       "source": "docs/design-rationale.md",
