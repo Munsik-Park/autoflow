@@ -40,6 +40,7 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - Operates independently from the Developer AI — tests are written from acceptance criteria, not from the developer's intended implementation.
 - Default spawn model: `sonnet` at RED (acceptance criteria → test code). Complex test scenarios fall back to `opus`, with the rationale recorded in the Test AI report.
 - **[MUST]** Runs verification (jest/build) in the **foreground**; never uses `run_in_background` — a spawned teammate has no future turn to receive a background-completion notification. See [`teammate-common-rules.md`](teammate-common-rules.md) > Bash Execution Mode.
+- **[MUST]** Reports to the orchestrator via `SendMessage(to: "team-lead")` — this role is spawned as a **named team spawn**, whose final turn text is discarded by the runtime, so a report that exists only as the final response is lost with no error. See [`teammate-common-rules.md`](teammate-common-rules.md) > Result delivery path by spawn mode.
 
 ---
 
@@ -52,6 +53,7 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - Common rules: see [`docs/submodule-common-rules.md`](submodule-common-rules.md).
 - Default spawn model: `opus` at GREEN and VERIFY (implementation surface, self-check sycophancy risk). REFINE uses `sonnet` (mechanical `/simplify` application) — spawned fresh on the VERIFY → REFINE boundary, since mid-lifetime model switching is not supported.
 - **[MUST]** Runs verification (jest/build) in the **foreground**; never uses `run_in_background` — a spawned teammate has no future turn to receive a background-completion notification. See [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Testing Standards > Bash execution mode.
+- **[MUST]** Reports to the orchestrator via `SendMessage(to: "team-lead")` — this role is spawned as a **named team spawn**, whose final turn text is discarded by the runtime, so a report that exists only as the final response is lost with no error. See [`teammate-common-rules.md`](teammate-common-rules.md) > Result delivery path by spawn mode.
 
 The Submodule AI operates as the Developer AI directly in the target repo. *Secondary (multi-repo):* when the host contains submodules (see [`CLAUDE.md`](../CLAUDE.md#deployment-topology) > Deployment Topology), the target repo is the AI's assigned sub-repo, the fork/upstream procedure above applies, and PR creation remains the orchestrator's. The role contract is otherwise unchanged.
 

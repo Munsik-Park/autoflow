@@ -9,16 +9,13 @@
 # §5.0 (ratified 15-entry set), §6 (RED execution order [MUST]), §7 (Green
 # judgment conditions).
 #
-# RED STATE (this commit): the 10 discriminators below are TEMPORARY. They
-# stage the 9 `present`-direction + 1 `ordered` literals that do not yet exist
-# in the live tree (verification design §5.0 rows 1, 2, 4, 5, 8-13). GREEN
-# appends all 15 ratified entries to tests/fixtures/doc-invariants.json
-# (origin_issue: 43) in the SAME commit that deletes these 10 discriminators
-# from this file — each literal moves exactly once. The 5 already-green rows
-# (3, 6, 7, 14, 15 — preservation / scoping guards) are NOT staged here; they
-# carry no RED signal and enter the registry directly at GREEN.
+# GREEN STATE (this commit): the 10 temporary discriminators are DELETED. All
+# 15 ratified entries (verification design §5.0) now live in
+# tests/fixtures/doc-invariants.json under origin_issue: 43 — each literal
+# moved exactly once, so R43-COUNT reads 15 and the permanent runner
+# (tests/run-doc-invariants.sh) owns every STATE-shaped assertion.
 #
-# What remains here permanently (does not delete at GREEN) — DELTA-shaped /
+# What remains here permanently — DELTA-shaped /
 # byte-invariance / count / meta guards the permanent registry structurally
 # cannot hold (tests/run-doc-invariants.sh rejects any predicate outside
 # present|absent|ordered):
@@ -34,16 +31,12 @@
 #   A43-LITERAL-CONTIGUOUS — meta guard over the append: (a) no
 #     origin_issue:43 literal/before/after carries an embedded newline,
 #     (b) each entry re-checks in its OWN predicate's direction with its own
-#     `match` flavor (DIRECTION_BAD == 0). Vacuously passes at RED (zero
-#     origin_issue:43 entries exist yet) — the real check runs at GREEN.
+#     `match` flavor (DIRECTION_BAD == 0), over all 15 promoted entries.
 #   S43-UNTOUCHED          — this cycle's diff touches none of the three
 #     asserted non-edits: docs/teammate-common-rules.md,
 #     .claude/agents/autoflow-*.md, docs/maintained-docs.md.
 #
-# Expected RED verdict: 11 FAIL (the 10 staged literals + R43-COUNT reading
-# 0 != 15). H43-BYTES, M43-REGEN-CLEAN, S43-UNTOUCHED PASS; the 5 unstaged
-# preservation/scoping rows are green at HEAD by design and are not counted
-# as a RED shortfall.
+# Expected verdict post-GREEN: 0 FAIL.
 # =============================================================================
 
 set -uo pipefail
@@ -116,43 +109,6 @@ first_line_of() {            # body literal match -> line number or empty
 echo "=== issue #43 — report-channel contract (cycle-scoped) ==="
 
 # ---------------------------------------------------------------------------
-# Staged discriminators (verification design §5.0, rows 1,2,4,5,8-13).
-# TEMPORARY — deleted at GREEN promotion into tests/fixtures/doc-invariants.json.
-# ---------------------------------------------------------------------------
-echo ""
-echo "AC1 — docs/teammate-contracts.md: SendMessage [MUST] clause in the named-role sections (staged)"
-
-TESTAI_BODY="$(extract_section "Test AI (testing teammate)" "$CONTRACTS")"
-DEVAI_BODY="$(extract_section "Submodule AI (per sub-repo, Developer AI)" "$CONTRACTS")"
-
-assert_true "43-AC1-testai-channel: Test AI section carries the SendMessage [MUST] channel clause" \
-  "body_has \"\$TESTAI_BODY\" '**[MUST]** Reports to the orchestrator via \`SendMessage(to: \"team-lead\")\`'"
-assert_true "43-AC1-testai-pointer: Test AI section points to Result delivery path by spawn mode" \
-  "body_has \"\$TESTAI_BODY\" 'Result delivery path by spawn mode'"
-assert_true "43-AC1-devai-channel: Submodule AI section carries the SendMessage [MUST] channel clause" \
-  "body_has \"\$DEVAI_BODY\" '**[MUST]** Reports to the orchestrator via \`SendMessage(to: \"team-lead\")\`'"
-assert_true "43-AC1-devai-pointer: Submodule AI section points to Result delivery path by spawn mode" \
-  "body_has \"\$DEVAI_BODY\" 'Result delivery path by spawn mode'"
-
-echo ""
-echo "AC2 — CLAUDE.md > Execution Principles: [DENY] on the final-message idiom + summary-absent idle reading (staged)"
-
-EXEC_BODY="$(extract_section "Execution Principles" "$CLAUDE_MD")"
-
-assert_true "43-AC2-deny-marker: Execution Principles carries a standalone [DENY] marker" \
-  "body_has \"\$EXEC_BODY\" '**[DENY]**'"
-assert_true "43-AC2-deny-scope: the DENY clause names the mode it binds (named team spawn)" \
-  "body_has \"\$EXEC_BODY\" 'named team spawn'"
-assert_true "43-AC2-idiom-anon-only: the final-message idiom is scoped to anonymous direct spawns only" \
-  "body_has \"\$EXEC_BODY\" 'idiom belongs to anonymous direct spawns only'"
-assert_true "43-AC2-summary-absent: a summary-absent idle notification reads as report not sent" \
-  "body_has \"\$EXEC_BODY\" 'a notification with no \`summary\` field reads as **report not sent**'"
-assert_true "43-AC2-recovery-path: the recovery path names re-requesting the report with SendMessage" \
-  "body_has \"\$EXEC_BODY\" 're-requesting the report with \`SendMessage\`'"
-assert_true "43-AC2-idle-order: 'Teammate idle handling' precedes 'Named-spawn non-delivery reading'" \
-  "{ bln=\$(first_line_of \"\$EXEC_BODY\" 'Teammate idle handling'); aln=\$(first_line_of \"\$EXEC_BODY\" 'Named-spawn non-delivery reading'); [ -n \"\$bln\" ] && [ -n \"\$aln\" ] && [ \"\$bln\" -lt \"\$aln\" ]; }"
-
-# ---------------------------------------------------------------------------
 # H43-BYTES — the gate hook and gate-schema fixture are byte-unchanged (AC3).
 # ---------------------------------------------------------------------------
 echo ""
@@ -201,8 +157,7 @@ assert_true "R43-COUNT: origin_issue==43 entry count == 15 (currently $COUNT43)"
 # ---------------------------------------------------------------------------
 # A43-LITERAL-CONTIGUOUS — meta guard on the registry append itself.
 # (a) no embedded newline. (b) predicate-direction-aware re-check, grep
-# flavor per entry `match`. Vacuously PASSes at RED (0 entries exist yet) —
-# the real check runs post-GREEN-promotion over 15 entries.
+# flavor per entry `match`, over the 15 promoted entries.
 # ---------------------------------------------------------------------------
 echo ""
 echo "A43-LITERAL-CONTIGUOUS — no origin_issue:43 registry literal carries an embedded newline, and each re-checks in its predicate's direction"
@@ -241,8 +196,8 @@ done < <(jq -r '.invariants[] | select(.origin_issue==43) |
    (if .predicate=="ordered" then .before else .literal end),
    (.after // "")] | @tsv' "$REGISTRY")
 
-echo "  (info) A43-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/$COUNT43 origin_issue:43 entries mismatch their predicate direction (0 expected post-GREEN over 15)"
-assert_true "A43-LITERAL-CONTIGUOUS (b): every origin_issue:43 entry matches its predicate direction (vacuous PASS at RED, 0 expected post-GREEN)" \
+echo "  (info) A43-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/$COUNT43 origin_issue:43 entries mismatch their predicate direction (0 expected)"
+assert_true "A43-LITERAL-CONTIGUOUS (b): every origin_issue:43 entry matches its predicate direction" \
   "[ \"$DIRECTION_BAD\" -eq 0 ]"
 
 # ---------------------------------------------------------------------------

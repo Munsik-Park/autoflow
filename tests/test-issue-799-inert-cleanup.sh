@@ -700,6 +700,8 @@ else
       | grep -vF '+Test AI and Developer AI are the only named spawns; every other role is anonymous direct.' \
       | grep -vF '+`Workflow`-based facilitation (ARCHITECT, VERIFY cause-branch) is not an' \
       | grep -vF '+Why the mode matters, not just the model: a named spawn' \
+      | grep -vF '+- **[DENY]** **"final message" instruction in a named-spawn prompt**' \
+      | grep -vF '+- **Named-spawn non-delivery reading**' \
       | grep -vE '^\+(\|---\|---\|---\|)?$'
   }
   assert_false "AC6-scope: CLAUDE.md diff confined to the #846 Regressions cap clause (no other CLAUDE.md content change)" \
