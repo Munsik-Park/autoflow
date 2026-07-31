@@ -106,6 +106,10 @@ on:
       # `grep -A40 '^ *paths:'` window, and inserting above an in-window entry
       # pushes it out of the window and reds an unrelated guard.
       - 'tests/test-issue-43-report-channel-contract.sh'
+      # #27 cycle surface (composition-oracle verification-design requirement).
+      # TAIL here, mirroring the #43/#35 entries immediately above.
+      - 'tests/test-issue-27-composition-oracle.sh'
+      - 'tests/manual/issue-27-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -173,6 +177,10 @@ on:
       # own placement immediately above; no read-back guard in either block
       # pins the HEAD slot for this cycle's suite.
       - 'tests/test-issue-43-report-channel-contract.sh'
+      # #27 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-27-composition-oracle.sh'
+      - 'tests/manual/issue-27-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -374,3 +382,15 @@ jobs:
       # See tests/test-issue-35-phase-marker.sh.
       - name: Run phase-marker emitter guard (#35)
         run: bash tests/test-issue-35-phase-marker.sh
+
+      # Composition-oracle guard (#27, cycle-scoped): the count/diff-shaped
+      # assertions the permanent registry structurally cannot hold (the
+      # REQUIRED-token count fence, the new section's stack-neutrality guard,
+      # the GATE:PLAN/Regressions over-build fences, the .claude/ bounded-diff
+      # fence, the workflow-regression harness composition oracle, the
+      # manifest-freshness composition oracle, and the pre-existing-registry
+      # regression fence). CI has no glob discovery; registered by filename
+      # per the sibling suites. See
+      # tests/test-issue-27-composition-oracle.sh.
+      - name: Run composition-oracle guard (#27)
+        run: bash tests/test-issue-27-composition-oracle.sh
