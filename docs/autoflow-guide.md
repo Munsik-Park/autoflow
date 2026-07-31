@@ -279,15 +279,50 @@ does not receive the round-by-round messages.
 |----------------------|-------------------|--------|
 | (criterion 1) | automated | pytest / API test / etc. |
 | (criterion 2) | manual    | scenario doc (delegated to user) |
-| (criterion 3) | environment-dependent | introduce mock or propose design change |
+| (criterion 3) | environment-dependent | introduce mock or propose design change (except where the composition-oracle clause applies) |
 
-- For untestable items: state the reason and the alternative (design change / manual delegation / mock).
+- For untestable items: state the reason and the alternative (design change / manual delegation (except where the composition-oracle clause applies) / mock (same exception)).
 - Design-change request: parts of the feature design that should be revised so they become testable.
 - Committed-surface allow-list: when the design's change surface includes a
   manifest-registered source, pre-register `setup/manifest.json` as a
   derived member of the allow-list at design time (Change Surface Rules >
   Derived artifacts) — do not wait for a test/CI failure to admit it
   (#800 `607720e`).
+
+#### Composition oracle
+
+- **[MUST]** When the design's change surface names shared state that a **settled decision** also
+  names, the verification design must assign at least one oracle that drives that contact point
+  through the **real execution environment** — no mock, stub, fake, or simulation may stand in for the shared state.
+- **Trigger** — a set intersection, not a judgment. Let `T` be the set of shared-state identifiers named by the design's change surface,
+  and `S` the set of shared-state identifiers referenced by the governing settled decisions; the clause
+  fires when `T ∩ S ≠ ∅`. One oracle is owed **per element** of `T ∩ S`. A single oracle may discharge
+  several elements, provided every element is traced by some oracle — each oracle's row carries the
+  intersecting identifier(s) as its trace.
+- **Settled decision** — an accepted or proposed ADR under `docs/adr/`, a prior issue's agreed
+  design, or an entry in this issue's decision ledger (`.autoflow/issue-{N}-ledger.md`).
+- **Shared state** — state that outlives a single call and that more than one decision reads or
+  writes. The obligation binds to no concrete realization; the following are examples only, and
+  deleting them leaves the trigger fully computable: e.g. a datastore collection or field and the
+  query layer over it, a hardware register or firmware setting, a file-format field, a
+  wire-protocol field, a shared memory region.
+- **[MUST]** State the determination once in the verification design. When the sets do not meet,
+  declare that explicitly — a `no intersection` determination. An absent statement is not read as
+  "not triggered".
+- When no such oracle can be built, that is a **design-change request** (the bullet above), not a
+  manual-scenario fallback and not a mock. This clause narrows the untestable-items bullet and the
+  table's environment-dependent row above for triggered composition contact points; both keep
+  offering mock or manual delegation for every other untestable item.
+- **Complements, does not replace, the VERIFY mock-boundary check.** Step 4's
+  `Mock-boundary fidelity check (Test AI)` compares a double's *shape* against the real interface;
+  this clause covers **composition-time behavior** — what the change does when it meets the real
+  state a settled decision contracted over. The two axes are independent; neither subsumes the
+  other. The reactive counterpart is the VERIFY → ARCHITECT design-contradiction route, which
+  catches the same class after implementation.
+- **Effective from** — the obligation binds verification designs authored after this clause lands;
+  a cycle already past ARCHITECT is not retroactively deficient. The determination is the Test AI's
+  to author, and the ARCHITECT facilitator may record it on the Test AI's behalf when it writes the
+  converged artifact.
 
 ### Testability-driven design
 
