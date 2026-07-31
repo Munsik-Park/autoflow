@@ -111,10 +111,33 @@ echo "=== AC1 no-arg init.sh does not enter the dead wizard ==="
 # (a bare non-zero-exit check alone is not a valid discriminator here: the
 # unedited wizard also exits non-zero on the first unanswered required
 # prompt, PROJECT_NAME).
+# Bounded run (issue #46): bare `timeout` is GNU coreutils and absent on stock
+# macOS — exit 127 there replaces init.sh's usage line with `command not
+# found`, a false AC1 FAIL. Reuse the repo's timeout/gtimeout + sleep-kill
+# watchdog idiom (tests/test-issue-979-probe.sh run_bounded).
 NOARG_TMP="$(mktemp -d)"
-NOARG_OUT="$(cd "$NOARG_TMP" && timeout 5 bash "$INIT_SH" </dev/null 2>&1)"
-NOARG_EXIT=$?
-rm -rf "$NOARG_TMP"
+NOARG_LOG="$(mktemp)"
+NOARG_TBIN=""
+if command -v timeout >/dev/null 2>&1; then
+  NOARG_TBIN="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then
+  NOARG_TBIN="gtimeout"
+fi
+if [ -n "$NOARG_TBIN" ]; then
+  (cd "$NOARG_TMP" && "$NOARG_TBIN" 5 bash "$INIT_SH" </dev/null) >"$NOARG_LOG" 2>&1
+  NOARG_EXIT=$?
+else
+  (cd "$NOARG_TMP" && bash "$INIT_SH" </dev/null) >"$NOARG_LOG" 2>&1 &
+  NOARG_PID=$!
+  ( sleep 5; kill "$NOARG_PID" 2>/dev/null ) &
+  NOARG_WPID=$!
+  wait "$NOARG_PID" 2>/dev/null
+  NOARG_EXIT=$?
+  kill "$NOARG_WPID" 2>/dev/null
+  wait "$NOARG_WPID" 2>/dev/null
+fi
+NOARG_OUT="$(cat "$NOARG_LOG")"
+rm -rf "$NOARG_TMP" "$NOARG_LOG"
 
 TESTS=$((TESTS + 1))
 if [ "$NOARG_EXIT" -ne 0 ]; then
