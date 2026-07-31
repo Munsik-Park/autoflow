@@ -82,6 +82,11 @@ emerge, humans adjust the criteria.
   "type": "hypothesis_evaluation | plan_evaluation | security_audit | quality_evaluation | doc_evaluation",
   "target": "scope name",
   "issue": "#N",
+  "fail_hypothesis": {
+    "case": "strongest rubric-framed reason this deliverable should FAIL",
+    "disposition": "refuted | survived | none_found",
+    "reflected_in": ["rubric item name"]
+  },
   "scores": { "item": { "score": 8, "reason": "evidence" } },
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
@@ -91,6 +96,18 @@ emerge, humans adjust the criteria.
 
 The `scores` object is what the gate hook reads. Each item is either a number
 (`8`) or an object (`{"score": 8, "reason": "..."}`). The hook accepts both.
+
+`fail_hypothesis` records the pre-scoring consider-the-opposite search required by
+[`teammate-contracts.md`](teammate-contracts.md) > Evaluation AI > Pre-scoring FAIL
+hypothesis. It is narrative/audit material: nothing reads it programmatically and no
+gate consumes it. It is placed before `scores` because the ordering is the procedure —
+the search precedes scoring.
+
+| Key | Type | Required | Meaning |
+|-----|------|----------|---------|
+| `case` | string, non-empty | always | The strongest FAIL argument found. With `disposition: "none_found"` it states **what was searched** (which items, which anchors re-derived), so the record is evidence of the search rather than a blank. |
+| `disposition` | enum `refuted` \| `survived` \| `none_found` | always | Outcome of the refutation attempt. |
+| `reflected_in` | array of rubric item names | always present (`[]` when `disposition != "survived"`) | Which scored item(s) recorded the surviving case — the join between the narrative record and the numeric `scores`. "Recorded" does not imply "scored down": an item listed here may still score ≥ 7. |
 
 ---
 
@@ -120,6 +137,8 @@ allow-list in `tests/fixtures/gate-schema.json`, which both omit it:
 - `gate_plan` — GATE:PLAN (hook-gated)
 - `audit` — AUDIT (hook-gated)
 - `gate_quality` — GATE:QUALITY (hook-gated)
+
+- **[MUST]** When an evaluation's `fail_hypothesis` is recorded in state, it is written at `phases.<phase_key>.fail_hypothesis` — a sibling of `evaluator` and `scores` inside the phase object. **[DENY]** Never at the state file's top level and never as an entry inside `scores`: the hook's state-file validator is closed-world at top level and score-shaped inside `scores`, so either placement makes it fail closed (MALFORMED, exit 2) and deadlocks `git push` / `gh pr create` for the whole cycle. Recording is permitted, not required — the durable record is the evaluator's report.
 
 See [`CLAUDE.md`](../CLAUDE.md#autoflow-state-tracking-hook-integration) for the
 full schema.

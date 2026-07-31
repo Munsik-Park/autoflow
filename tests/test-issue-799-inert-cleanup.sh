@@ -561,6 +561,14 @@ else
     # cycle-scoped RED suite + its manual scenarios (feature design §3.2).
     "tests/test-issue-26-verify-architect-route.sh"
     "tests/manual/issue-26-manual-scenarios.md"
+    # #40 cycle files (consider-the-opposite pre-scoring): the F1/F2 contract
+    # amendment lands on docs/teammate-contracts.md (design-rationale.md,
+    # evaluation-system.md, maintained-docs.md, setup/manifest.json, and
+    # tests/fixtures/doc-invariants.json are already admitted above), plus
+    # the two new cycle-scoped RED suites.
+    "docs/teammate-contracts.md"
+    "tests/test-issue-40-doc-assertions.sh"
+    "tests/test-issue-40-hook-additive.sh"
   )
   disallowed=""
   while IFS= read -r f; do

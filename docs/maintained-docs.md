@@ -40,7 +40,8 @@ orchestrator does not modify sub-repo files — see
 |----------|------|-------------|------------|
 | AutoFlow Guide | `docs/autoflow-guide.md` | Phase definitions, transitions, or regressions change (phase-body source of truth; `CLAUDE.md` routes to it via the Phase Playbook Loading Contract) | Orchestrator AI |
 | DIAGNOSE Analysis Playbook | `docs/phases/analysis.md` | The DIAGNOSE 3-Phase analysis procedure (Phase A/B/3 isolation rules), the Type 1 / Type 2 necessity scoring rubric and PASS/FAIL disposition, or the structure- / confirmation-bias safeguards change (single source of truth for DIAGNOSE; issue #222) | Orchestrator AI |
-| Evaluation System | `docs/evaluation-system.md` | Scoring categories, thresholds, or output format change | Orchestrator AI |
+| Evaluation System | `docs/evaluation-system.md` | Scoring categories, thresholds, the pre-scoring evaluation procedure, or output format change | Orchestrator AI |
+| Teammate Contracts | `docs/teammate-contracts.md` | Role contract or evaluation procedure changes | Orchestrator AI |
 | Design Rationale | `docs/design-rationale.md` | New design decisions or rule justifications | Orchestrator AI / Human |
 | Git Workflow | `docs/git-workflow.md` | Branch naming, commit rules, or PR flow changes | Orchestrator AI |
 | Repo Boundary Rules | `docs/repo-boundary-rules.md` | Cross-repo coordination rules change | Orchestrator AI |
