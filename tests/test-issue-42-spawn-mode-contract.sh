@@ -7,25 +7,23 @@
 # Verification design: .autoflow/issue-42-verification-design.md §1 (L2 lane),
 # §2 AC1/AC4 [MUST] (RED execution order), §5/§6 (Green judgment conditions).
 #
-# Permanent STATE invariants for AC1/AC2/AC3/AC6 (16 entries) live in the
+# Permanent STATE invariants for AC1/AC2/AC3/AC4/AC6 (28 entries) live in the
 # registry (tests/fixtures/doc-invariants.json, origin_issue 42) and run via
 # tests/run-doc-invariants.sh — NOT duplicated here.
 #
-# This file carries only what the registry structurally cannot hold pre-GREEN
-# (§2 AC1/AC4 [MUST]) plus DELTA-shaped / byte-invariance / meta guards:
+# The 12 discriminators this file carried at RED (9 for AC1, 3 for AC4) were
+# TEMPORARY. Their `section` was a heading GREEN had not created yet
+# (`### Spawn mode by role lifetime` in CLAUDE.md, `### Result delivery path
+# by spawn mode` in docs/teammate-common-rules.md), and registering them
+# before GREEN would have made step 0b's dangling-anchor check BLOCK the
+# ENTIRE runner (exit 1), hiding every other origin_issue==42 entry's
+# individual FAIL. GREEN created both headings and promoted all 12 into the
+# permanent registry in the SAME commit that deleted them from this file, so
+# the registry count moved 16 -> 28 and this file now holds none of them.
 #
-#   42-AC1-* (9) / 42-AC4-* (3) — TEMPORARY discriminators (12 total). Their
-#     `section` is a heading GREEN has not created yet (`### Spawn mode by
-#     role lifetime` in CLAUDE.md, `### Result delivery path by spawn mode`
-#     in docs/teammate-common-rules.md). Registering them in the permanent
-#     registry before GREEN would make step 0b's dangling-anchor check BLOCK
-#     the ENTIRE runner (exit 1), hiding every other origin_issue==42 entry's
-#     individual FAIL (verification design §2 AC1 [MUST]). So RED expresses
-#     them here as whole-file `grep -qF` failures, labeled with their FUTURE
-#     registry entry id (verification design §2 AC1 [MUST] naming
-#     convention), and GREEN promotes them into the registry in the SAME
-#     commit that removes them from this file (§6 condition 1 checks this
-#     via `grep -cE '42-(AC1|AC4)-' this-file` == 0 post-GREEN).
+# What remains here is only what the registry structurally cannot hold —
+# DELTA-shaped / byte-invariance / meta guards:
+#
 #   AC2-UNTOUCHED  — DELTA guard: this cycle's diff does not touch the
 #     PREFLIGHT step-1.5 / HANDOFF step-6.7 descriptions in
 #     docs/autoflow-guide.md (resolve_base_ref, fail-loud, never SKIP).
@@ -40,15 +38,12 @@
 #     PREDICATE-APPROPRIATE direction (present/ordered -> found; absent ->
 #     NOT found) with the grep flavor the entry's own `match` field selects.
 #
-# RED expectation (this commit, docs not yet amended):
-#   42-AC1-* (9) and 42-AC4-* (3) all FAIL (their section heading is absent).
-#   AC2-UNTOUCHED, H-BYTES, M42-REGEN-CLEAN PASS (no diff yet / hook
-#   untouched / manifest already clean).
-#   A42-LITERAL-CONTIGUOUS (a) PASSes (no embedded newlines in any
-#   origin_issue:42 literal). (b) FAILs for the 8 discriminator entries whose
-#   text does not exist yet and PASSes for the 8 preservation-guard entries
-#   already present pre-GREEN — a mixed, direction-aware result, matching the
-#   registry's own discriminator/preservation split (verification design §3).
+# Green expectation (post-promotion): every assertion PASSes. All 28
+# origin_issue:42 entries now resolve in their own predicate's direction, so
+# A42-LITERAL-CONTIGUOUS (b) expects DIRECTION_BAD == 0 over 28 entries — the
+# promotion's own oracle. A non-zero value means a promoted literal does not
+# match its target file, or a preservation guard was broken by this cycle's
+# edits.
 # =============================================================================
 
 set -uo pipefail
@@ -81,39 +76,6 @@ assert_true() {
 }
 
 echo "=== issue #42 — spawn-mode-by-lifetime contract (cycle-scoped) ==="
-
-# ---------------------------------------------------------------------------
-# 42-AC1-* (9) / 42-AC4-* (3) — TEMPORARY discriminators, RED->L1 promotion
-# pending (verification design §2 AC1/AC4 [MUST]). Whole-file grep because
-# the section heading does not exist pre-GREEN.
-# ---------------------------------------------------------------------------
-echo ""
-echo "42-AC1-* / 42-AC4-* — temporary pre-promotion discriminators (12)"
-
-assert_true "42-AC1-must-marker: CLAUDE.md carries the [MUST] spawn-mode-fixed-by-lifetime sentence" \
-  "grep -qF '**[MUST]** A role'\''s spawn mode is fixed by its lifetime requirement, not by its phase' '$CLAUDE_MD'"
-assert_true "42-AC1-anon-eval: CLAUDE.md lists Evaluation AI (GATE:HYPOTHESIS/GATE:PLAN/AUDIT/GATE:QUALITY/VERIFY arbitration) as anonymous direct" \
-  "grep -qF 'Evaluation AI (GATE:HYPOTHESIS structure/cause, GATE:PLAN, AUDIT, GATE:QUALITY, VERIFY arbitration) | anonymous direct' '$CLAUDE_MD'"
-assert_true "42-AC1-anon-diagnose: CLAUDE.md lists the 5 DIAGNOSE spawns as anonymous direct" \
-  "grep -qF 'DIAGNOSE (intake readiness triage, Phase A, Phase B, Phase 3, review-response loop check) | anonymous direct' '$CLAUDE_MD'"
-assert_true "42-AC1-anon-handoff: CLAUDE.md scopes the HANDOFF row to ingestion/Low-judgment + digest emitter + PREFLIGHT scan" \
-  "grep -qF 'HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5), cycle digest emitter (6.7), PREFLIGHT cross-issue recurrence scan (1.5)' '$CLAUDE_MD'"
-assert_true "42-AC1-handoff-scope: CLAUDE.md's HANDOFF row re-attributes auto-resolution re-entry to the named Test AI / Developer AI rows" \
-  "grep -qF 'the auto-resolution it feeds is re-entered through the named Test AI / Developer AI rows' '$CLAUDE_MD'"
-assert_true "42-AC1-named-lifetime: CLAUDE.md's named-spawn closed-set sentence is present" \
-  "grep -qF 'Test AI and Developer AI are the only named spawns; every other role is anonymous direct.' '$CLAUDE_MD'"
-assert_true "42-AC1-criterion: CLAUDE.md's decision rule is context-continuity, not invocation count" \
-  "grep -qF 'Decision rule: must the role be re-entered retaining its prior call'\''s context? Yes — named team spawn; no — anonymous direct spawn.' '$CLAUDE_MD'"
-assert_true "42-AC1-boundary-exception: CLAUDE.md names the VERIFY -> REFINE boundary respawn as the sole exception" \
-  "grep -qF 'The VERIFY → REFINE boundary respawn is the sole exception' '$CLAUDE_MD'"
-assert_true "42-AC1-workflow-excluded: CLAUDE.md excludes Workflow-based facilitation from both spawn modes" \
-  "grep -qF 'facilitation (ARCHITECT, VERIFY cause-branch) is not an' '$CLAUDE_MD'"
-assert_true "42-AC4-anon-return: docs/teammate-common-rules.md states the anonymous-mode delivery path" \
-  "grep -qF 'the spawn'\''s return value (sync) or a task notification (background)' '$COMMON_RULES'"
-assert_true "42-AC4-named-loss: docs/teammate-common-rules.md states the named-mode text is discarded" \
-  "grep -qF 'discarded — never delivered to the lead' '$COMMON_RULES'"
-assert_true "42-AC4-evidence-anchor: docs/teammate-common-rules.md cites the #40-cycle 12/12 observation as its evidence anchor" \
-  "grep -qF 'Observed, not guaranteed: across all 12 subagents of the #40 cycle' '$COMMON_RULES'"
 
 # ---------------------------------------------------------------------------
 # AC2-UNTOUCHED — DELTA guard: PREFLIGHT 1.5 / HANDOFF 6.7 descriptions are
@@ -254,9 +216,9 @@ done < <(jq -r '.invariants[] | select(.origin_issue==42) |
    (if .predicate=="ordered" then .before else .literal end),
    (.after // "")] | @tsv' "$REGISTRY")
 
-echo "  (info) A42-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/16 origin_issue:42 entries mismatch their predicate direction pre-GREEN (8 discriminators expected here; 8 preservation guards already match)"
-assert_true "A42-LITERAL-CONTIGUOUS (b): exactly the 8 known discriminators mismatch pre-GREEN (expected Red; 0 expected post-GREEN)" \
-  "[ \"$DIRECTION_BAD\" -eq 8 ]"
+echo "  (info) A42-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/28 origin_issue:42 entries mismatch their predicate direction post-GREEN (0 expected — all 12 promoted discriminators and all 16 pre-existing entries resolve)"
+assert_true "A42-LITERAL-CONTIGUOUS (b): every origin_issue:42 entry matches its predicate direction (0 expected post-GREEN)" \
+  "[ \"$DIRECTION_BAD\" -eq 0 ]"
 
 echo ""
 echo "=============================="
