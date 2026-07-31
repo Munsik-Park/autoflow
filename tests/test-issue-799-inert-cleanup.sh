@@ -569,6 +569,13 @@ else
     "docs/teammate-contracts.md"
     "tests/test-issue-40-doc-assertions.sh"
     "tests/test-issue-40-hook-additive.sh"
+    # #42 cycle files (spawn mode by role lifetime): the cycle-scoped RED
+    # suite and its manual-scenario lane. The doc surfaces this cycle edits
+    # (CLAUDE.md, the six docs/, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json, the workflow) are already admitted
+    # above; only these are new.
+    "tests/manual/issue-42-manual-scenarios.md"
+    "tests/test-issue-42-spawn-mode-contract.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -644,6 +651,15 @@ else
   # entry: §2.3 splits that pair, so the old entry would match neither line
   # and would survive only as a dead filter silently pre-authorising a future
   # edit that restores the unqualified escalation sentence (ledger E21).
+  # #42 (spawn mode by role lifetime) adds 12 filters plus one anchored regex:
+  # F1-a appends a sentence to the Spawn role declaration [MUST] (one substring
+  # common to BOTH the old and new line) and F1-b inserts the whole
+  # `### Spawn mode by role lifetime` subsection (one +-prefixed substring per
+  # inserted content line). The 6 content-free inserted lines reach the chain as
+  # a bare `+`, which no literal filter can match, and the table separator is generic
+  # enough that a literal filter would pre-authorise any future CLAUDE.md table
+  # insertion — one anchored regex admits exactly those and nothing with
+  # content. Additive only: no filter above is removed or widened (ledger E21).
   claude_md_offwindow_changes() {
     git diff "$BASE_REF"...HEAD -- CLAUDE.md 2>/dev/null \
       | grep -E '^[+-]' \
@@ -664,7 +680,20 @@ else
       | grep -vF -- '-Part of '"conn""ev-llm/claude-autoflow"'#N' \
       | grep -vF -- '+Part of Munsik-Park/autoflow#N' \
       | grep -vF 'Tracker placement follows each repo'"'"'s composition (D4, settled in S12 #800): AutoFlow-framework work items are filed in this host repository (`' \
-      | grep -vF -- '-- **Forward routing (post-#785 inversion).**'
+      | grep -vF -- '-- **Forward routing (post-#785 inversion).**' \
+      | grep -vF '**[MUST] Spawn role declaration**: every `Agent` spawn made while an AutoFlow cycle is active' \
+      | grep -vF '+### Spawn mode by role lifetime' \
+      | grep -vF '+**[MUST]** A role' \
+      | grep -vF '+| Role (where it occurs) | Spawn mode | Lifetime requirement |' \
+      | grep -vF '+| Evaluation AI (GATE:HYPOTHESIS structure/cause, GATE:PLAN, AUDIT, GATE:QUALITY, VERIFY arbitration)' \
+      | grep -vF '+| DIAGNOSE (intake readiness triage, Phase A, Phase B, Phase 3, review-response loop check)' \
+      | grep -vF '+| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5), cycle digest emitter (6.7), PREFLIGHT cross-issue recurrence scan (1.5)' \
+      | grep -vF '+| Test AI (RED, VERIFY self-check, REFINE Green re-confirmation) | named team spawn' \
+      | grep -vF '+| Developer AI (GREEN, VERIFY self-check, REFINE) | named team spawn' \
+      | grep -vF '+Test AI and Developer AI are the only named spawns; every other role is anonymous direct.' \
+      | grep -vF '+`Workflow`-based facilitation (ARCHITECT, VERIFY cause-branch) is not an' \
+      | grep -vF '+Why the mode matters, not just the model: a named spawn' \
+      | grep -vE '^\+(\|---\|---\|---\|)?$'
   }
   assert_false "AC6-scope: CLAUDE.md diff confined to the #846 Regressions cap clause (no other CLAUDE.md content change)" \
     "ctx=\$(claude_md_offwindow_changes); printf '%s\n' \"\$ctx\" | grep -q ."

@@ -81,6 +81,21 @@ agent_json() {
     "$(printf '%s' "$subtype" | jq -Rs .)"
 }
 
+# agent_team_json <prompt> <team_name> <name> — issue #42 H42-BEHAVIOR-EQ.
+# resolve_spawn_role() reads .tool_input.name ALONE to classify a team spawn
+# (check-autoflow-gate.sh:274) — team_name is not consulted. It is carried
+# here only for payload realism; omitting `name` would silently degrade this
+# payload to the direct channel and make the differential compare itself
+# against itself (verification design §2 AC5 [MUST]). `model` is required
+# for the same reason as agent_json's.
+agent_team_json() {
+  local prompt="$1" team_name="$2" name="$3"
+  printf '{"tool_name":"Agent","tool_input":{"prompt":%s,"team_name":%s,"name":%s,"model":"sonnet"}}' \
+    "$(printf '%s' "$prompt" | jq -Rs .)" \
+    "$(printf '%s' "$team_name" | jq -Rs .)" \
+    "$(printf '%s' "$name" | jq -Rs .)"
+}
+
 # assert_static <desc> <condition_exit>
 # Wrap a pure-bash conditional that returns 0=pass / nonzero=fail.
 assert_static() {
@@ -688,6 +703,64 @@ run_hook_stderr 2 "multiple active" \
 run_hook_stderr 2 "multiple active" \
   "B11l: undeclared Agent spawn (unknown subagent_type, no name prefix) blocked under ≥2 active files" \
   "$B11_AB_DIR" "$(agent_json 'do something' 'SomeUnknownType')"
+
+# ---------------------------------------------------------------------------
+# H42-BEHAVIOR-EQ — issue #42 AC5 permanent behavioral oracle.
+# ---------------------------------------------------------------------------
+# CLAUDE.md > Spawn Model > Spawn mode by role lifetime (issue #42) is a
+# DOCUMENT-LEVEL contract: it binds each role to a spawn CHANNEL (anonymous
+# direct vs. named team). The hook (byte-unchanged, AC5) classifies the
+# declaration CHANNEL only and does not enforce that contract — an `eval-`
+# team spawn still passes the hook even though the #42 contract confines
+# Evaluation AI to anonymous direct spawns
+# (docs/gate-matching-standard.md > Rule P3, 42-AC3-p3-eval-note).
+# This block is the ONLY mechanical oracle for that "hook = floor, contract =
+# ceiling" claim: it proves the hook's role-classification path is reached
+# identically whether the spawn declares its role via subagent_type (direct)
+# or via a team `name` prefix (team), for BOTH an exempt role (evaluation)
+# and a gated role (implementation), plus a negative control (no prefix).
+#
+# Deliberately NOT reused: B11's five arms above all run against
+# $B11_AB_DIR, a multi-active (≥2 active state files) fail-closed CARVE-OUT
+# fixture — a corrupted-state repair path, not the normal single-active role
+# gate this contract is about. All 5 arms below share ONE single-active
+# fixture (verification design §2 AC5 [MUST]) so exit-code differences can
+# only be attributed to spawn CHANNEL, never to fixture drift.
+echo ""
+echo "H42-BEHAVIOR-EQ — hook classifies declaration channel identically for direct vs. team spawns (issue #42 AC5)"
+
+H42_FAIL_JSON=$(jq '
+  .active = true |
+  .phases.gate_hypothesis_cause.verdict = "skipped (feat issue)" |
+  .phases.gate_plan.scores    = {"a":3,"b":3} |
+  .phases.audit.scores        = {"a":8,"b":8} |
+  .phases.gate_quality.scores = {"a":8,"b":8}
+' <<< "$CANON_JSON")
+H42_DIR=$(stage_fixture "$H42_FAIL_JSON")
+
+# Differential arm 1 — evaluation is exempt from GATE:PLAN on BOTH channels.
+run_hook 0 "H42-BEHAVIOR-EQ: direct evaluation spawn (autoflow-evaluator) exempt under GATE:PLAN-not-passed" \
+  "$H42_DIR" "$(agent_json 'score this plan against the rubric' 'autoflow-evaluator')"
+run_hook 0 "H42-BEHAVIOR-EQ: team evaluation spawn (name eval-gate-plan) exempt under GATE:PLAN-not-passed" \
+  "$H42_DIR" "$(agent_team_json 'score this plan against the rubric' 'issue-42-team' 'eval-gate-plan')"
+
+# Differential arm 2 — implementation is gated by GATE:PLAN on BOTH channels
+# (proves the team channel actually reaches the role-classification path,
+# rather than merely defaulting to research/undeclared — verification
+# design §2 AC5 requirement 2).
+run_hook_stderr 2 "GATE:PLAN pass" \
+  "H42-BEHAVIOR-EQ: direct implementation spawn (autoflow-implementer) blocked under GATE:PLAN-not-passed" \
+  "$H42_DIR" "$(agent_json 'implement the fix and commit' 'autoflow-implementer')"
+run_hook_stderr 2 "GATE:PLAN pass" \
+  "H42-BEHAVIOR-EQ: team implementation spawn (name impl-green) blocked under GATE:PLAN-not-passed" \
+  "$H42_DIR" "$(agent_team_json 'implement the fix and commit' 'issue-42-team' 'impl-green')"
+
+# Positive control 3 — a team spawn with no recognized role prefix stays
+# undeclared and is denied, same as an undeclared direct spawn (B11l above),
+# so the 2 ALLOW results are not misread as "the hook allows everything".
+run_hook_stderr 2 "without a declared AutoFlow role" \
+  "H42-BEHAVIOR-EQ: team spawn with no role-prefixed name is denied (undeclared, positive control)" \
+  "$H42_DIR" "$(agent_team_json 'do something' 'issue-42-team' 'no-prefix-name')"
 
 # ---------------------------------------------------------------------------
 # Results

@@ -75,7 +75,7 @@ Other phases either have no teammate spawn or are run by the orchestrator: PREFL
 
 **[MUST]** Every `Agent` spawn (in either `subagent_type` or `team_name` form) declares the `model` parameter explicitly (`model: "sonnet"` or `model: "opus"`). Without it the host session model is inherited and this per-phase policy is bypassed. Enforced by the hook (`.claude/hooks/check-autoflow-gate.sh`, PreToolUse `Agent`): a spawn without `model` is denied, independent of Auto-Flow state — research and evaluation spawns included. The orchestrator's own model follows the user's session settings (outside this policy). Note: `SendMessage` is not a spawn — it delivers to an existing teammate — and therefore carries no `model` parameter.
 
-**[MUST] Spawn role declaration**: every `Agent` spawn made while an AutoFlow cycle is active (`active:true` state file present) declares its **role structurally** — direct spawns use a dedicated `subagent_type` (`autoflow-analyzer` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator`, defined in `.claude/agents/`); team spawns carry a role prefix on the teammate `name` (`analysis-` / `plan-` / `impl-` or `dev-` / `test-` / `eval-`); the built-in research types (`Explore` / `Plan` / `claude-code-guide`) count as declared. On a team spawn the name prefix decides ALONE (`subagent_type` is not consulted — a mixed payload must not reclassify an `impl-*` teammate as research). The hook owns the role→gate mapping (analysis / evaluation / research pass; planning → GATE:HYPOTHESIS; implementation / testing → GATE:PLAN) and **denies an undeclared spawn while a cycle is active**. The spawn prompt is never used to infer the spawn's class — prompt-keyword inference both over-blocked benign spawns (which were then re-worded to slip past, training evasion) and let keyword-free implementation spawns bypass GATE:PLAN. A spawn declares **who it is**; it never declares which gate applies to it. See `docs/gate-matching-standard.md` > P3.
+**[MUST] Spawn role declaration**: every `Agent` spawn made while an AutoFlow cycle is active (`active:true` state file present) declares its **role structurally** — direct spawns use a dedicated `subagent_type` (`autoflow-analyzer` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator`, defined in `.claude/agents/`); team spawns carry a role prefix on the teammate `name` (`analysis-` / `plan-` / `impl-` or `dev-` / `test-` / `eval-`); the built-in research types (`Explore` / `Plan` / `claude-code-guide`) count as declared. On a team spawn the name prefix decides ALONE (`subagent_type` is not consulted — a mixed payload must not reclassify an `impl-*` teammate as research). The hook owns the role→gate mapping (analysis / evaluation / research pass; planning → GATE:HYPOTHESIS; implementation / testing → GATE:PLAN) and **denies an undeclared spawn while a cycle is active**. The spawn prompt is never used to infer the spawn's class — prompt-keyword inference both over-blocked benign spawns (which were then re-worded to slip past, training evasion) and let keyword-free implementation spawns bypass GATE:PLAN. A spawn declares **who it is**; it never declares which gate applies to it. See `docs/gate-matching-standard.md` > P3. Which channel each role uses is fixed by *Spawn mode by role lifetime* below.
 
 **[MUST]** On the VERIFY → REFINE transition the Developer AI lifetime is shut down and a fresh `sonnet` teammate is spawned at REFINE entry. Mid-lifetime model switching is not supported by the runtime, so the model change requires a phase-boundary respawn (mirrors the DISPATCH-entry respawn in [Cost Control](#cost-control)).
 
@@ -88,6 +88,24 @@ Other phases either have no teammate spawn or are run by the orchestrator: PREFL
 - Sonnet 5 release notes: https://www.anthropic.com/news/claude-sonnet-5
 - Opus 4.8 release notes: https://www.anthropic.com/news/claude-opus-4-8
 - Long-session degradation user reports: `anthropics/claude-code` issues #54991, #56367, #53459, #34685, #62144 (all OPEN, 2026-04~05)
+
+### Spawn mode by role lifetime
+
+**[MUST]** A role's spawn mode is fixed by its lifetime requirement, not by its phase, its model, or the convenience of the calling turn. Decision rule: must the role be re-entered retaining its prior call's context? Yes — named team spawn; no — anonymous direct spawn.
+
+| Role (where it occurs) | Spawn mode | Lifetime requirement |
+|---|---|---|
+| Evaluation AI (GATE:HYPOTHESIS structure/cause, GATE:PLAN, AUDIT, GATE:QUALITY, VERIFY arbitration) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call, so there is no prior context to retain |
+| DIAGNOSE (intake readiness triage, Phase A, Phase B, Phase 3, review-response loop check) | anonymous direct | single-shot — writes its body to `.autoflow/issue-{N}-*.md` and returns an anchor + one-line summary |
+| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5), cycle digest emitter (6.7), PREFLIGHT cross-issue recurrence scan (1.5) | anonymous direct | single-shot — ingests or serializes and returns; the auto-resolution it feeds is re-entered through the named Test AI / Developer AI rows |
+| Test AI (RED, VERIFY self-check, REFINE Green re-confirmation) | named team spawn | re-entered across phases retaining its prior call's context — the #40 cycle ran one Test AI through RED → RED2 → VERIFY |
+| Developer AI (GREEN, VERIFY self-check, REFINE) | named team spawn | re-entered across phases retaining its prior call's context. The VERIFY → REFINE boundary respawn is the sole exception — the model change forces a fresh teammate (see the [MUST] above) |
+
+Test AI and Developer AI are the only named spawns; every other role is anonymous direct.
+
+`Workflow`-based facilitation (ARCHITECT, VERIFY cause-branch) is not an `Agent` spawn and therefore carries neither mode — its Developer-AI / Test-AI participants are in-script workflow sub-agents and its result returns through the Facilitator Return Contract (`docs/teammate-contracts.md` > Facilitator).
+
+Why the mode matters, not just the model: a named spawn's final turn text is discarded by the runtime, so a single-shot role spawned into a mailbox carries the loss risk with none of the lifetime benefit — see `docs/teammate-common-rules.md` > Result delivery path by spawn mode.
 
 ## Context Injection — Role-Scoped Document Routing
 

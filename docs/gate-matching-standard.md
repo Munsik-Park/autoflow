@@ -248,6 +248,8 @@ The trust model matches the score gates: the AI *records* a fact (its
 declared role), the hook *computes* the verdict. A false declaration is an
 explicit, auditable act — unlike keyword omission, it leaves evidence.
 
+The hook classifies the declaration channel only; it does not enforce spawn mode. An `eval-` prefixed team spawn is admitted by the mapping above, while [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime confines the Evaluation AI to an anonymous direct spawn — the two are not in conflict. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): narrowing the hook to the contract would deny a spawn shape that a corrupted-state repair path still needs, so the contract binds the caller and the hook stays permissive.
+
 ## Verification Requirement
 
 Each repo's gate-hardening change ships a regression matrix (modelled on

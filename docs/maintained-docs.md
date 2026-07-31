@@ -47,7 +47,7 @@ orchestrator does not modify sub-repo files — see
 | Repo Boundary Rules | `docs/repo-boundary-rules.md` | Cross-repo coordination rules change | Orchestrator AI |
 | Submodule Common Rules | `docs/submodule-common-rules.md` | Sub-repo Discussion Protocol or fork-and-PR contract changes | Orchestrator AI |
 | Teammate Common Rules | `docs/teammate-common-rules.md` | Shared teammate behavior rules change | Orchestrator AI |
-| Gate-Matching Standard | `docs/gate-matching-standard.md` | Hook command-matching rule (P1), unconditional-deny ordering (P2), or the udcim reference commit changes | Orchestrator AI |
+| Gate-Matching Standard | `docs/gate-matching-standard.md` | Hook command-matching rule (P1), unconditional-deny ordering (P2), declared-role spawn classification (P3), or the udcim reference commit changes | Orchestrator AI |
 | Doc-Invariant Registry | `docs/doc-invariant-registry.md` | The permanent-vs-cycle-scoped guard-lifecycle rule, the registry schema/runner contract, or the retired-guard disposition record changes (issue #951) | Orchestrator AI |
 | Security Checklist | `docs/security-checklist.md` | New threat surface in host scope, or stack changes | Human |
 | External Review Sequencing | `docs/external-review-sequencing.md` | The reviewer-facing merge-sequencing procedure (label, draft, dispatch, status check) or the host-only dispatch shortcut changes (issue #92) | Orchestrator AI |

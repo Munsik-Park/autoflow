@@ -117,6 +117,17 @@ Agent Teams runtime. See [`teammate-contracts.md`](teammate-contracts.md) > Faci
 and [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) >
 Deliberation Isolation.
 
+### Result delivery path by spawn mode
+
+| Spawn mode | Where the final turn text goes | Required delivery action |
+|---|---|---|
+| anonymous direct (`subagent_type`, no `team_name`/`name`) | the spawn's return value (sync) or a task notification (background) | none — the final text is the report; write the body to `.autoflow/*` and return an anchor + one-line summary |
+| named team spawn (`team_name` + role-prefixed `name`) | discarded — never delivered to the lead | **[MUST]** report via `SendMessage(to: "team-lead")`; a report that exists only as the final turn text is lost with no error |
+
+Observed, not guaranteed: across all 12 subagents of the #40 cycle, delivery matched the `SendMessage` call count 12 out of 12 — every spawn that called it once was received, every spawn that never called it was not, and no transport failure occurred. Three of those losses (`eval-gate-plan-40`, `eval-quality-40`, `test-red-40`) were recovered only by re-requesting the report. This describes current Claude Code Agent Teams behavior, re-derivable through `tests/manual/issue-42-manual-scenarios.md` M1 — treat it as an observation to re-check, not a runtime guarantee.
+
+Which roles use which mode is fixed by [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
+
 ---
 
 ## Discussion Protocol (Single Source of Truth)

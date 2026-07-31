@@ -100,6 +100,7 @@ on:
       # an unrelated guard (reproduced 2026-07-26).
       - 'tests/test-issue-35-phase-marker.sh'
       - 'scripts/canary/**'
+      - 'tests/test-issue-42-spawn-mode-contract.sh'
   push:
     branches: [main]
     paths:
@@ -162,6 +163,7 @@ on:
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
       - '.github/workflows/e2e-dummy-target.yml'
+      - 'tests/test-issue-42-spawn-mode-contract.sh'
 
 permissions:
   contents: read
@@ -217,6 +219,18 @@ jobs:
       # tests/test-issue-26-verify-architect-route.sh.
       - name: Run VERIFY→ARCHITECT route guard (#26)
         run: bash tests/test-issue-26-verify-architect-route.sh
+
+      # Spawn-mode-by-lifetime contract guard (#42, cycle-scoped): the
+      # DELTA-shaped and meta assertions the permanent registry structurally
+      # cannot hold — the PREFLIGHT step-1.5 / HANDOFF step-6.7 no-touch
+      # fence, the gate hook + gate-schema byte-invariance fence, the
+      # manifest regen-clean check, and the registry-append meta guard
+      # (no embedded newline; every origin_issue:42 literal re-checked in its
+      # own predicate's direction). CI has no glob discovery; registered by
+      # filename per the sibling suites. See
+      # tests/test-issue-42-spawn-mode-contract.sh.
+      - name: Run spawn-mode contract guard (#42)
+        run: bash tests/test-issue-42-spawn-mode-contract.sh
 
       # init.sh legacy wizard removal + Language Rule user-scope reversion
       # guard (#952): the no-arg usage guard, the removed
