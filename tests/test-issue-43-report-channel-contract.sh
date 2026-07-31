@@ -46,8 +46,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 . "$SCRIPT_DIR/lib/base-ref.sh"
 
 REGISTRY="$SCRIPT_DIR/fixtures/doc-invariants.json"
-CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
-CONTRACTS="$PROJECT_ROOT/docs/teammate-contracts.md"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 GEN_MANIFEST="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
 GATE_HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
@@ -94,16 +92,6 @@ body_has() {                 # body literal match
   else
     grep -qF -- "$literal" <<<"$body"
   fi
-}
-
-first_line_of() {            # body literal match -> line number or empty
-  local body="$1" literal="$2" match="${3:-fixed}" out
-  if [ "$match" = "regex" ]; then
-    out="$(grep -nE -- "$literal" <<<"$body" || true)"
-  else
-    out="$(grep -nF -- "$literal" <<<"$body" || true)"
-  fi
-  printf '%s\n' "$out" | head -1 | cut -d: -f1
 }
 
 echo "=== issue #43 — report-channel contract (cycle-scoped) ==="
