@@ -547,6 +547,16 @@ else
     "docs/evaluation-system.md"
     "tests/test-issue-40-doc-assertions.sh"
     "tests/test-issue-40-hook-additive.sh"
+    # #42 cycle files (spawn mode by role lifetime): the cycle-scoped RED
+    # suite and its manual-scenario lane. The doc surfaces this cycle edits
+    # (CLAUDE.md, the six docs/, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json, the workflow) are already admitted
+    # above; only these are new.
+    "tests/manual/issue-42-manual-scenarios.md"
+    "tests/test-issue-42-spawn-mode-contract.sh"
+    "docs/phases/analysis.md"
+    "docs/teammate-common-rules.md"
+    "tests/test-issue-223-schema-hook-contract.sh"
   )
   disallowed=""
   while IFS= read -r f; do
