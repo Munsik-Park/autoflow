@@ -583,6 +583,15 @@ else
     # above; only these are new.
     "tests/manual/issue-43-manual-scenarios.md"
     "tests/test-issue-43-report-channel-contract.sh"
+    # #27 cycle files (composition oracle): the cycle-scoped RED suite and
+    # its manual-scenario lane. .claude/workflows/architect-deliberation.js
+    # is covered by its own content-line carve-out below, not this
+    # path allow-list. The doc surfaces this cycle edits
+    # (docs/autoflow-guide.md, docs/teammate-contracts.md,
+    # setup/manifest.json, tests/fixtures/doc-invariants.json, the workflow)
+    # are already admitted above.
+    "tests/manual/issue-27-manual-scenarios.md"
+    "tests/test-issue-27-composition-oracle.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -785,6 +794,11 @@ else
   # ONLY for the SPDX header the REUSE-lint sweep prepends to every
   # header-bearing tracked source (test-issue-985-doc-assertions.sh
   # AC3-SPDX-COVERAGE) — a pure two-line addition, no content-line change.
+  # #27 parity-carried exception (same shape): also admits the
+  # composition-oracle two-literal Test-AI prompt edit in
+  # architect-deliberation.js (feature design §3.4 — the test-draft
+  # artifact-contents clause and the round-prompt ACCEPT condition), via a
+  # substring common to BOTH the old and new line for each in-place edit.
   # Any OTHER content change under .claude/workflows/** still trips the
   # guard.
   workflows_touched_ac6="$(printf '%s\n' "$diff_files" | grep '^\.claude/workflows/' || true)"
@@ -795,11 +809,13 @@ else
     wf_offwindow="$(git diff "$BASE_REF"...HEAD -- "$wf" 2>/dev/null \
       | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
       | grep -vF '+// SPDX-FileCopyrightText: 2026 Munsik-Park' \
-      | grep -vF '+// SPDX-License-Identifier: Elastic-2.0' || true)"
+      | grep -vF '+// SPDX-License-Identifier: Elastic-2.0' \
+      | grep -vF 'design-change requests for untestable items' \
+      | grep -vF 'Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method' || true)"
     # REUSE-IgnoreEnd
     [[ -n "$wf_offwindow" ]] && workflows_admitted_ac6="no"
   done <<< "$workflows_touched_ac6"
-  assert_true "AC6-scope: diff does not touch .claude/workflows/**, OR only the #985 SPDX-header two-line addition (ledger Q1)" \
+  assert_true "AC6-scope: diff does not touch .claude/workflows/**, OR only the #985 SPDX-header two-line addition / #27 composition-oracle two-literal prompt edit (ledger Q1)" \
     "[ '$workflows_admitted_ac6' = 'yes' ]"
 fi
 

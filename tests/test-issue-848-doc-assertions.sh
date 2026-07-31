@@ -564,6 +564,17 @@ else
     # above; only these are new.
     "tests/manual/issue-43-manual-scenarios.md"
     "tests/test-issue-43-report-channel-contract.sh"
+    # #27 cycle files (composition oracle): the cycle-scoped RED suite and
+    # its manual-scenario lane, plus the F5 source
+    # (.claude/workflows/architect-deliberation.js — the composition-oracle
+    # two-literal Test-AI prompt edit, feature design §3.4). The doc
+    # surfaces this cycle edits (docs/autoflow-guide.md,
+    # docs/teammate-contracts.md, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json, the workflow) are already
+    # admitted above.
+    "tests/manual/issue-27-manual-scenarios.md"
+    "tests/test-issue-27-composition-oracle.sh"
+    ".claude/workflows/architect-deliberation.js"
   )
   disallowed=""
   while IFS= read -r f; do
