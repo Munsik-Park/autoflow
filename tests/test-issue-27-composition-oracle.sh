@@ -38,6 +38,10 @@
 # anchor. Verified empirically this round: with this scoping,
 # `bash tests/run-doc-invariants.sh` reports 184/216 passed (32 new FAILs,
 # zero regression among the 184 pre-existing entries) — see AC-27-22 below.
+# (Historical, RED-phase note: the 184 baseline is this cycle's own; a later
+# VERIFY retired an unrelated #26 registry entry, so AC-27-22 itself now
+# derives its expected pre-existing count from the registry rather than a
+# fixed number — see the comment at AC-27-22's own definition below.)
 #
 #   AC-27-2 (count half) — fence (PASS pre+post, NOT a RED discriminator):
 #                     the `REQUIRED`-as-tag token count in the shipped files
@@ -339,15 +343,24 @@ assert_true "AC-27-21b: every copy-kind artifact's recorded sha256 matches its c
 
 # =============================================================================
 echo ""
-echo "=== AC-27-22 (composition oracle for S4, fence, PASS pre+post) — 184 pre-existing registry invariants stay PASS ==="
+echo "=== AC-27-22 (composition oracle for S4, fence, PASS pre+post) — pre-existing registry invariants stay PASS ==="
+# B2 (184) was the pre-existing count measured at this cycle's HEAD (verification
+# design §0.4). It is no longer the live baseline: issue #27's own VERIFY
+# (GATE:QUALITY Impact-scope regression) retired the stale #26 cycle-scoped
+# guard's dangling registry entry (26-AC15a), which is an orthogonal,
+# legitimately-landed change on this same branch, not a regression. Deriving
+# the expected pre-existing count from the registry itself (total minus this
+# cycle's own 27-AC* entries) keeps this fence meaningful against future
+# unrelated registry churn instead of re-hardcoding a new magic number.
 
 REGISTRY_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
 PRE_EXISTING_FAILS="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"
 PRE_EXISTING_PASSES="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  PASS: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"
+PRE_EXISTING_TOTAL="$(jq '[.invariants[] | select(.id | startswith("27-AC") | not)] | length' "$PROJECT_ROOT/tests/fixtures/doc-invariants.json")"
 assert_true "AC-27-22a: no pre-existing (non-27-AC) registry entry FAILs (got: $PRE_EXISTING_FAILS)" \
   "[ \"$PRE_EXISTING_FAILS\" -eq 0 ]"
-assert_true "AC-27-22b: pre-existing (non-27-AC) registry PASS count == B2 (184) (got: $PRE_EXISTING_PASSES)" \
-  "[ \"$PRE_EXISTING_PASSES\" -eq 184 ]"
+assert_true "AC-27-22b: pre-existing (non-27-AC) registry PASS count == every pre-existing (non-27-AC) entry (got: $PRE_EXISTING_PASSES of $PRE_EXISTING_TOTAL)" \
+  "[ \"$PRE_EXISTING_PASSES\" -eq \"$PRE_EXISTING_TOTAL\" ]"
 
 # =============================================================================
 echo ""
