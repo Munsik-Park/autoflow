@@ -172,6 +172,19 @@ extract_section() {          # heading_text file
   ' "$file"
 }
 
+# Extracts the VERIFY step-4 (Mock-boundary fidelity check) block's own body
+# — from its own line through (excluding) the closing code-fence line. Scoped
+# to exactly that block, unlike a whole-file diff, so an unrelated line
+# elsewhere in the file that happens to contain the same cross-reference
+# literal (AC-27-8's complementarity paragraph, which the composition-oracle
+# rule is required to carry per feature design §2.4/DR-3) cannot false-
+# positive this preservation fence. Fixed by VERIFY (issue #27 cause-branch:
+# the prior whole-file-diff form flagged AC-27-8's own cross-reference line
+# as a step-4 mutation).
+extract_step4_block() {      # file
+  awk '/^4\. Mock-boundary fidelity check \(Test AI\):/{f=1} f{ if ($0 ~ /^```/) exit; print }' "$1"
+}
+
 count_heading() {            # anchor file
   local anchor="$1" file="$2"
   awk -v h="$anchor" '
@@ -227,8 +240,15 @@ else
     echo "  BLOCK: no comparison base resolvable (override / GITHUB_BASE_REF / origin/main / main all unavailable) — AC-27-9's diff half counted FAIL, never skipped"
     TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
   else
-    assert_false "AC-27-9-diff: cycle diff introduces no changed line inside the VERIFY step-4 block" \
-      "cd '$PROJECT_ROOT' && git diff \"$BASE_REF\"...HEAD -- docs/autoflow-guide.md | grep -E '^[+-].*Mock-boundary fidelity check \\(Test AI\\)'"
+    HEAD_STEP4="$(extract_step4_block "$GUIDE")"
+    BASE_STEP4="$(cd "$PROJECT_ROOT" && git show "$BASE_REF:docs/autoflow-guide.md" 2>/dev/null | awk '/^4\. Mock-boundary fidelity check \(Test AI\):/{f=1} f{ if ($0 ~ /^```/) exit; print }')"
+    if [ -n "$HEAD_STEP4" ] && [ "$HEAD_STEP4" = "$BASE_STEP4" ]; then
+      STEP4_UNCHANGED=true
+    else
+      STEP4_UNCHANGED=false
+    fi
+    assert_true "AC-27-9-diff: VERIFY step-4 block content byte-identical between $BASE_REF and HEAD (scoped to the block itself, not the whole-file diff)" \
+      "[ \"$STEP4_UNCHANGED\" = true ]"
   fi
 fi
 
