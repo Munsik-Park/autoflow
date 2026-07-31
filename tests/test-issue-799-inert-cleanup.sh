@@ -576,6 +576,13 @@ else
     # above; only these are new.
     "tests/manual/issue-42-manual-scenarios.md"
     "tests/test-issue-42-spawn-mode-contract.sh"
+    # #43 cycle files (reporting-channel contract): the cycle-scoped RED
+    # suite and its manual-scenario lane. The doc surfaces this cycle edits
+    # (CLAUDE.md, docs/teammate-contracts.md, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json, the workflow) are already admitted
+    # above; only these are new.
+    "tests/manual/issue-43-manual-scenarios.md"
+    "tests/test-issue-43-report-channel-contract.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -693,6 +700,8 @@ else
       | grep -vF '+Test AI and Developer AI are the only named spawns; every other role is anonymous direct.' \
       | grep -vF '+`Workflow`-based facilitation (ARCHITECT, VERIFY cause-branch) is not an' \
       | grep -vF '+Why the mode matters, not just the model: a named spawn' \
+      | grep -vF '+- **[DENY]** **"final message" instruction in a named-spawn prompt**' \
+      | grep -vF '+- **Named-spawn non-delivery reading**' \
       | grep -vE '^\+(\|---\|---\|---\|)?$'
   }
   assert_false "AC6-scope: CLAUDE.md diff confined to the #846 Regressions cap clause (no other CLAUDE.md content change)" \

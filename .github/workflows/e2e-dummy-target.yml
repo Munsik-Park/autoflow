@@ -101,6 +101,11 @@ on:
       - 'tests/test-issue-35-phase-marker.sh'
       - 'scripts/canary/**'
       - 'tests/test-issue-42-spawn-mode-contract.sh'
+      # #43 cycle surface. TAIL here (pull_request), for the reason the #26/#35
+      # comments above record: #799's AC6-ci reads this list through a fixed
+      # `grep -A40 '^ *paths:'` window, and inserting above an in-window entry
+      # pushes it out of the window and reds an unrelated guard.
+      - 'tests/test-issue-43-report-channel-contract.sh'
   push:
     branches: [main]
     paths:
@@ -164,6 +169,10 @@ on:
       - 'scripts/test/check-repo-key.sh'
       - '.github/workflows/e2e-dummy-target.yml'
       - 'tests/test-issue-42-spawn-mode-contract.sh'
+      # #43 cycle surface. TAIL here (push) as well — mirrors the #42 entry's
+      # own placement immediately above; no read-back guard in either block
+      # pins the HEAD slot for this cycle's suite.
+      - 'tests/test-issue-43-report-channel-contract.sh'
 
 permissions:
   contents: read
@@ -231,6 +240,18 @@ jobs:
       # tests/test-issue-42-spawn-mode-contract.sh.
       - name: Run spawn-mode contract guard (#42)
         run: bash tests/test-issue-42-spawn-mode-contract.sh
+
+      # Reporting-channel contract guard (#43, cycle-scoped): the DELTA-shaped
+      # and meta assertions the permanent registry structurally cannot hold —
+      # the gate hook + gate-schema byte-invariance fence, the manifest
+      # regen-clean check, the origin_issue==43 registry entry count, the
+      # registry-append meta guard (no embedded newline; every origin_issue:43
+      # literal re-checked in its own predicate's direction), and the
+      # three-surface untouched-scope fence. CI has no glob discovery;
+      # registered by filename per the sibling suites. See
+      # tests/test-issue-43-report-channel-contract.sh.
+      - name: Run report-channel contract guard (#43)
+        run: bash tests/test-issue-43-report-channel-contract.sh
 
       # init.sh legacy wizard removal + Language Rule user-scope reversion
       # guard (#952): the no-arg usage guard, the removed
