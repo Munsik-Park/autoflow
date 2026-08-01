@@ -666,6 +666,13 @@ else
     # above.
     "tests/manual/issue-27-manual-scenarios.md"
     "tests/test-issue-27-composition-oracle.sh"
+    # #7 cycle files: V4 oracle hardening + trap-based temp cleanup RED suite
+    # and its manual-scenario lane, plus the hardened meta-suite itself
+    # (tests/test-issue-1-guard-contract.sh gains a scored emit_own_record
+    # oracle and a WORKROOT + trap ... EXIT cleanup seam).
+    "tests/test-issue-1-guard-contract.sh"
+    "tests/test-issue-7-oracle-hardening.sh"
+    "tests/manual/issue-7-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

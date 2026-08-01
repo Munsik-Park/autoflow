@@ -8,7 +8,8 @@
 # (.autoflow/issue-1-verification-design.md). This suite does NOT modify
 # tests/test-issue-953-cycle-digest.sh or tests/test-issue-985-doc-assertions.sh
 # (GREEN's job) — it INVOKES them (on the live tree, and in isolated
-# `mktemp -d` temp copies per the 953 F7 pattern) and asserts on their
+# `mktemp -d` temp copies per the 953 F7 pattern, all created under one
+# session work root that an EXIT trap removes) and asserts on their
 # output/exit code/source text. The two target suites encode mutually
 # exclusive premises about docs/cycle-digest.jsonl's lifecycle state
 # (diagnosis H1); this meta-suite is the oracle that the feature design's
@@ -110,9 +111,28 @@ assert_false() {
 # real docs/cycle-digest.jsonl.
 # ---------------------------------------------------------------------------
 
+# Single session work root: every temp copy is created UNDER it, so one trap
+# removes them all even when the run aborts (SIGINT/SIGTERM, or a future early
+# return) between mktemp -d and the paired inline `rm -rf`. INT and TERM are
+# trapped alongside EXIT, not left to EXIT alone: a signal arriving while
+# make_temp_copy is inside its tar-pipeline command substitution kills bash by
+# default disposition (rc 143) WITHOUT running the EXIT handler, leaking
+# $WORKROOT (measured 10/10 at a ~65 ms poll-then-signal offset; clean at
+# >=200 ms, so it is a real gap, not a settle-window artifact). Subshell-proof —
+# make_temp_copy is invoked as `TMP_X="$(make_temp_copy)"`, so a `TMPDIRS+=(…)`
+# append inside the helper would never reach this shell (pattern per
+# tests/test-issue-223-schema-hook-contract.sh:328-333).
+# GUARD_CONTRACT_WORKROOT_PARENT: test-only override naming the PARENT under
+# which this root is created, so a cycle guard can assert that parent is empty
+# after an interrupted run. Unset in normal runs — then this line is
+# behaviourally identical to a bare `mktemp -d`.
+WORKROOT="$(mktemp -d ${GUARD_CONTRACT_WORKROOT_PARENT:+-p "$GUARD_CONTRACT_WORKROOT_PARENT"})" \
+  || { echo "mktemp failed (WORKROOT)" >&2; exit 1; }
+trap 'rm -rf "$WORKROOT"' EXIT INT TERM
+
 make_temp_copy() {
   local tmp
-  tmp="$(mktemp -d)"
+  tmp="$(mktemp -d -p "$WORKROOT")"
   (cd "$PROJECT_ROOT" && tar --exclude='.git' -cf - .) | (cd "$tmp" && tar -xf -) 2>/dev/null
   mkdir -p "$tmp/.autoflow" "$tmp/docs"
   printf '%s' "$tmp"
@@ -143,7 +163,8 @@ seed_digest_lines() {
 # emitter copies date: $s.date verbatim, so the seeded state file's date IS
 # the record's date, per feature design §5.2 Round-1 update).
 emit_own_record() {
-  local tmp="$1" seed_date="$2"
+  local tmp="$1" seed_date="$2" maxsev="${3:-None}"
+  local digest="$tmp/docs/cycle-digest.jsonl"
   cat > "$tmp/.autoflow/issue-1.json" <<EOF
 { "active": true, "issue": "#1", "title": "fixture", "date": "$seed_date", "cycle": 1, "mode": "new-issue",
   "phases": {
@@ -156,10 +177,41 @@ emit_own_record() {
 }
 EOF
   printf '# Ledger\n- ARCHITECT rounds: 0, escalate: false\n- loop_check_class: none\n' > "$tmp/.autoflow/issue-1-ledger.md"
-  printf '# Review findings\nmax_severity: None\nescaped_defects: []\n' > "$tmp/.autoflow/issue-1-review-findings.md"
-  ( cd "$tmp" && bash scripts/handoff/emit-cycle-digest.sh \
-      .autoflow/issue-1.json .autoflow/issue-1-ledger.md .autoflow/issue-1-review-findings.md \
-      >/dev/null 2>&1 )
+  printf '# Review findings\nmax_severity: %s\nescaped_defects: []\n' "$maxsev" \
+    > "$tmp/.autoflow/issue-1-review-findings.md"
+
+  # Scored oracle (#7 R1): the emitter's exit status, the appended line-count
+  # delta and the appended record's .date are all asserted here, INSIDE the
+  # helper, so they are structurally ordered before the caller's AC1 assertion
+  # (no caller-side ordering rule to violate later). Scored rather than
+  # fail-fast: the suite runs `set -uo pipefail` WITHOUT `-e` (line 63) so one
+  # bad condition does not abort the run and hide V5-V8.
+  local pre=0
+  [ -f "$digest" ] && pre="$(wc -l < "$digest" | tr -d ' ')"
+
+  # `local emit_out` declared before the assignment: `local x="$(cmd)"` masks
+  # cmd's status in local's own status — the exact bug this oracle exists to
+  # catch. 2>&1 is captured, not discarded, so a FAIL carries the emitter's own
+  # diagnostic instead of forcing a manual repro.
+  local emit_out
+  local rc=0
+  emit_out="$( cd "$tmp" && bash scripts/handoff/emit-cycle-digest.sh \
+      .autoflow/issue-1.json .autoflow/issue-1-ledger.md .autoflow/issue-1-review-findings.md 2>&1 )" || rc=$?
+  [ "$rc" -eq 0 ] || echo "    emit-cycle-digest.sh (date=$seed_date) exited $rc: $emit_out"
+
+  local post=0
+  [ -f "$digest" ] && post="$(wc -l < "$digest" | tr -d ' ')"
+
+  # Delta, not absolute: make_temp_copy tar-copies the live tree including
+  # docs/cycle-digest.jsonl, so `pre` is this repo's current record count, not
+  # 0. The delta form is stable for the file's whole life. The count is
+  # measured by the harness rather than read off the emitter's own anchor line.
+  assert_true "V4-emit-rc-$seed_date: emit-cycle-digest.sh exits 0 while seeding the temp copy" \
+    "[ '$rc' -eq 0 ]"
+  assert_true "V4-emit-appended-one-$seed_date: the seeding run appended exactly one digest record ($pre -> $post)" \
+    "[ \$(( $post - $pre )) -eq 1 ]"
+  assert_true "V4-emit-date-$seed_date: the appended record's .date round-trips the seeded state file's date" \
+    "[ \"\$(tail -n 1 '$digest' | jq -r '.date')\" = '$seed_date' ]"
 }
 
 run_985_in() {
