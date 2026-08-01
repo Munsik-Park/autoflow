@@ -226,8 +226,20 @@ else
   fi
   assert_true "AC9: diff touches no .claude/hooks/** path, OR only check-autoflow-gate.sh with its plugin mirror byte-identical (#843 parity-carried exception)" \
     "[ '$hooks_admitted_ac9' = 'yes' ]"
-  assert_false "AC9: diff touches no .claude/workflows/** path" \
-    "printf '%s\n' \"\$diff_files_ac9\" | grep -q '^\\.claude/workflows/'"
+  # #27 parity-carried exception (same shape as the #843 hooks exception
+  # above): .claude/workflows/** is allowed to change ONLY for the
+  # composition-oracle two-literal Test-AI prompt edit in
+  # architect-deliberation.js (feature design §3.4 — the test-draft artifact-
+  # contents clause and the round-prompt ACCEPT condition), confirmed
+  # confined to exactly those two template literals. A substring common to
+  # BOTH the old and new line admits each in-place edit; any OTHER content
+  # change under .claude/workflows/** still trips the guard.
+  workflows_offwindow_ac9="$(git diff "$BASE_REF"...HEAD -- .claude/workflows 2>/dev/null \
+    | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
+    | grep -vF 'design-change requests for untestable items' \
+    | grep -vF 'Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method' || true)"
+  assert_true "AC9: diff touches no .claude/workflows/** path, OR only the #27 composition-oracle two-literal prompt edit (parity-carried exception)" \
+    "[ -z \"\$workflows_offwindow_ac9\" ]"
 fi
 
 # =============================================================================
@@ -449,6 +461,16 @@ else
     # above; only these are new.
     "tests/manual/issue-43-manual-scenarios.md"
     "tests/test-issue-43-report-channel-contract.sh"
+    # #27 cycle files (composition oracle): the cycle-scoped RED suite and
+    # its manual-scenario lane. .claude/workflows/architect-deliberation.js
+    # is the F5 parity-carried-exception source (see AC9 above); the doc
+    # surfaces this cycle edits (docs/autoflow-guide.md,
+    # docs/teammate-contracts.md, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json, the workflow) are already
+    # admitted above.
+    "tests/manual/issue-27-manual-scenarios.md"
+    "tests/test-issue-27-composition-oracle.sh"
+    ".claude/workflows/architect-deliberation.js"
   )
   disallowed=""
   while IFS= read -r f; do

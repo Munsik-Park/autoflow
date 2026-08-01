@@ -80,18 +80,14 @@ on:
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
       - '.github/workflows/e2e-dummy-target.yml'
-      # #26 cycle suite. Placement differs per block and is NOT interchangeable:
-      #   - here (pull_request): TAIL, because #799's AC6-ci reads this list
-      #     through a fixed `grep -A40 '^ *paths:'` window whose last in-window
-      #     entry is `docs/git-workflow.md` — inserting above it pushes that
-      #     literal out of the window and reds an unrelated guard. Order pinned
-      #     by registry entry 26-AC15a.
-      #   - push block below: HEAD, because #26's AC-CI-b reads back from the
-      #     suite path with `grep -B20` and must reach that block's `paths:`.
-      # Head-inserting there does cost the second -A40 window its
-      # `docs/git-workflow.md` occurrence; AC6-ci asserts existence, so it still
-      # passes on the first window alone.
-      - 'tests/test-issue-26-verify-architect-route.sh'
+      # #26 cycle-scoped RED suite (tests/test-issue-26-verify-architect-route.sh)
+      # retired at issue #27's VERIFY (GATE:QUALITY Impact-scope regression):
+      # PR #33 merged 2026-07-25, and docs/doc-invariant-registry.md §2
+      # (Retirement) requires a cycle-scoped guard's deletion — along with any
+      # allow-list entry naming it (registry entry 26-AC15a, removed in the
+      # same commit) — once its own PR merges. The manual-scenario doc below
+      # is not a cycle-scoped guard (no DELTA/count predicate; a Tier-2/3
+      # scenario record) and stays registered.
       - 'tests/manual/issue-26-manual-scenarios.md'
       # #35 cycle surface. TAIL here (pull_request), for the reason the #26
       # comment above records: #799's AC6-ci reads this list through a fixed
@@ -106,6 +102,10 @@ on:
       # `grep -A40 '^ *paths:'` window, and inserting above an in-window entry
       # pushes it out of the window and reds an unrelated guard.
       - 'tests/test-issue-43-report-channel-contract.sh'
+      # #27 cycle surface (composition-oracle verification-design requirement).
+      # TAIL here, mirroring the #43/#35 entries immediately above.
+      - 'tests/test-issue-27-composition-oracle.sh'
+      - 'tests/manual/issue-27-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -119,7 +119,9 @@ on:
       - '.gitmodules'
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
-      - 'tests/test-issue-26-verify-architect-route.sh'
+      # #26 cycle-scoped RED suite retired at issue #27's VERIFY (PR #33
+      # merged; docs/doc-invariant-registry.md §2). The manual-scenario doc
+      # is not a cycle-scoped guard and stays registered.
       - 'tests/manual/issue-26-manual-scenarios.md'
       - 'tests/test-issue-843-doc-assertions.sh'
       - 'docs/phases/analysis.md'
@@ -173,6 +175,10 @@ on:
       # own placement immediately above; no read-back guard in either block
       # pins the HEAD slot for this cycle's suite.
       - 'tests/test-issue-43-report-channel-contract.sh'
+      # #27 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-27-composition-oracle.sh'
+      - 'tests/manual/issue-27-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -217,17 +223,6 @@ jobs:
       # docs/doc-invariant-registry.md.
       - name: Run doc-invariant registry runner (#951)
         run: bash tests/run-doc-invariants.sh
-
-      # VERIFY → ARCHITECT design-contradiction route guard (#26, cycle-scoped):
-      # the count/diff-shaped assertions the permanent registry structurally
-      # cannot hold (tests/run-doc-invariants.sh rejects any predicate that is
-      # not present|absent|ordered) — the Regressions-line `max N×` multiset
-      # fence, the no-workflow-script-diff preservation fence, and the replaced
-      # (not appended) #799 CLAUDE.md content carve-out. CI has no glob
-      # discovery; registered by filename per the sibling suites. See
-      # tests/test-issue-26-verify-architect-route.sh.
-      - name: Run VERIFY→ARCHITECT route guard (#26)
-        run: bash tests/test-issue-26-verify-architect-route.sh
 
       # Spawn-mode-by-lifetime contract guard (#42, cycle-scoped): the
       # DELTA-shaped and meta assertions the permanent registry structurally
@@ -374,3 +369,15 @@ jobs:
       # See tests/test-issue-35-phase-marker.sh.
       - name: Run phase-marker emitter guard (#35)
         run: bash tests/test-issue-35-phase-marker.sh
+
+      # Composition-oracle guard (#27, cycle-scoped): the count/diff-shaped
+      # assertions the permanent registry structurally cannot hold (the
+      # REQUIRED-token count fence, the new section's stack-neutrality guard,
+      # the GATE:PLAN/Regressions over-build fences, the .claude/ bounded-diff
+      # fence, the workflow-regression harness composition oracle, the
+      # manifest-freshness composition oracle, and the pre-existing-registry
+      # regression fence). CI has no glob discovery; registered by filename
+      # per the sibling suites. See
+      # tests/test-issue-27-composition-oracle.sh.
+      - name: Run composition-oracle guard (#27)
+        run: bash tests/test-issue-27-composition-oracle.sh

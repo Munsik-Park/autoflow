@@ -34,8 +34,9 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 ## Test AI (testing teammate)
 - Participates in plan synthesis (ARCHITECT) from a verification perspective — "how will this design be verified?"
 - Authors the verification design document: acceptance criteria → verification method (automated / manual / environment-dependent / requires design change).
+- **[MUST]** Assigns a composition oracle — an oracle driving the contact point through the real execution environment, non-mock — whenever the design's change surface names shared state a settled decision also names, and states the determination (including the negative case) in the verification design. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > Output artifacts > *Composition oracle*.
 - Writes test code before implementation (Test First) and confirms Red.
-- For untestable items: states the reason and proposes alternatives (design change / manual scenario / mock).
+- For untestable items: states the reason and proposes alternatives (design change / manual scenario (except where the composition-oracle clause applies) / mock (same exception)).
 - Performs minimal-implementation verification after implementation: detects code outside test coverage.
 - Operates independently from the Developer AI — tests are written from acceptance criteria, not from the developer's intended implementation.
 - Default spawn model: `sonnet` at RED (acceptance criteria → test code). Complex test scenarios fall back to `opus`, with the rationale recorded in the Test AI report.
