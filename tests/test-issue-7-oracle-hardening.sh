@@ -116,14 +116,19 @@ note_deferred() {
   echo "  DEFERRED-OBSERVABLE: $1"
 }
 
-# Membership check, scoped to the suite's own allow_list=( ... ) array block
-# (not a whole-file grep — a path mentioned only in a surrounding comment
-# outside the block must not satisfy this).
+# Extracts a suite file's own allow_list=( ... ) array block (not a
+# whole-file grep — a path mentioned only in a surrounding comment outside
+# the block must not satisfy membership).
+extract_allow_list_block() {
+  awk '/allow_list=\(/{f=1; next} f && /^  \)/{f=0} f' "$1"
+}
+
+# Membership check against an already-extracted allow_list block (caller
+# extracts once per suite file, not once per path, to avoid re-scanning the
+# same file for every canonical path checked against it).
 assert_allow_list_membership() {
-  local desc="$1" suite_file="$2" path="$3"
+  local desc="$1" block="$2" path="$3"
   TESTS=$((TESTS + 1))
-  local block
-  block="$(awk '/allow_list=\(/{f=1; next} f && /^  \)/{f=0} f' "$suite_file")"
   if printf '%s\n' "$block" | grep -qF "\"$path\""; then
     echo "  PASS: $desc"
     PASS=$((PASS + 1))
@@ -319,9 +324,10 @@ echo ""
 echo "=== AC-7-7 — prior-cycle scope-guard allow-list membership ==="
 
 for suite in "${ALLOW_LIST_SUITES[@]}"; do
+  suite_block="$(extract_allow_list_block "$PROJECT_ROOT/$suite")"
   for p in "${CANONICAL_PATHS[@]}"; do
     assert_allow_list_membership "AC-7-7-membership: $suite allow_list block admits \"$p\"" \
-      "$PROJECT_ROOT/$suite" "$p"
+      "$suite_block" "$p"
   done
 done
 
