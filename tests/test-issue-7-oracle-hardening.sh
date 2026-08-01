@@ -368,6 +368,10 @@ echo "=== AC-7-7b — DELTA-lane fence (change surface, emitter untouched) ==="
 source "$BASE_REF_LIB"
 if BASE_REF="$(resolve_base_ref 2>/dev/null)" && [ -n "$BASE_REF" ]; then
   CHANGED="$(git -C "$PROJECT_ROOT" diff --name-only "$BASE_REF"...HEAD 2>/dev/null)"
+  # docs/cycle-digest.jsonl: HANDOFF step 6.7 mandates a digest co-ride commit
+  # in the same PR (CLAUDE.md > AutoFlow State Tracking > Companion artifact);
+  # the six sibling scope-guard suites (798, 799, 846, 848, 952, 955) already
+  # admit this path in their own allow-lists.
   ALLOW_SURFACE="tests/test-issue-1-guard-contract.sh
 tests/test-issue-798-topology-flip.sh
 tests/test-issue-799-inert-cleanup.sh
@@ -377,7 +381,8 @@ tests/test-issue-846-doc-assertions.sh
 tests/test-issue-952-wizard-removal.sh
 tests/test-issue-7-oracle-hardening.sh
 .github/workflows/e2e-dummy-target.yml
-tests/manual/issue-7-manual-scenarios.md"
+tests/manual/issue-7-manual-scenarios.md
+docs/cycle-digest.jsonl"
   OUT_OF_SURFACE="$(comm -23 <(printf '%s\n' "$CHANGED" | sort -u) <(printf '%s\n' "$ALLOW_SURFACE" | sort -u))"
   export OUT_OF_SURFACE
   assert_true "AC-7-7b-change-surface-subset: git diff --name-only vs base is a subset of the F1-F10 allow-list" \
