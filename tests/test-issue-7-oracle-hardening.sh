@@ -383,10 +383,24 @@ tests/test-issue-7-oracle-hardening.sh
 .github/workflows/e2e-dummy-target.yml
 tests/manual/issue-7-manual-scenarios.md
 docs/cycle-digest.jsonl"
-  OUT_OF_SURFACE="$(comm -23 <(printf '%s\n' "$CHANGED" | sort -u) <(printf '%s\n' "$ALLOW_SURFACE" | sort -u))"
-  export OUT_OF_SURFACE
-  assert_true "AC-7-7b-change-surface-subset: git diff --name-only vs base is a subset of the F1-F10 allow-list" \
-    "[ -z \"\$OUT_OF_SURFACE\" ]"
+  # The change-surface subset property holds only for the issue-7 cycle's own
+  # dev branch (the F1-F10 surface is that PR's contract, not every PR's) —
+  # this workflow runs on every PR matching its paths: filter, so enforce the
+  # subset lane only on an issue-7 dev branch (GITHUB_HEAD_REF in PR CI, the
+  # checked-out branch locally); the emitter byte-identity fence is branch-
+  # independent and stays enforced on every run.
+  HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
+  case "$HEAD_BRANCH" in
+    dev/*-issue-7|dev/*-issue-7-*)
+      OUT_OF_SURFACE="$(comm -23 <(printf '%s\n' "$CHANGED" | sort -u) <(printf '%s\n' "$ALLOW_SURFACE" | sort -u))"
+      export OUT_OF_SURFACE
+      assert_true "AC-7-7b-change-surface-subset: git diff --name-only vs base is a subset of the F1-F10 allow-list" \
+        "[ -z \"\$OUT_OF_SURFACE\" ]"
+      ;;
+    *)
+      note_deferred "AC-7-7b-change-surface-subset: cycle-scoped subset lane inert off the issue-7 dev branch (head: ${HEAD_BRANCH:-unknown}) — the F1-F10 surface is the issue-7 PR's contract, not this branch's."
+      ;;
+  esac
   assert_true "AC-7-7b-emitter-unchanged: scripts/handoff/emit-cycle-digest.sh is byte-identical to base" \
     "git diff --quiet '$BASE_REF' -- scripts/handoff/emit-cycle-digest.sh"
 else
