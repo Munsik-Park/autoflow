@@ -265,7 +265,14 @@ if grep -q 'GUARD_CONTRACT_WORKROOT_PARENT' "$GUARD_SUITE"; then
     PRE_O3_GIT_STATUS="$(git -C "$PROJECT_ROOT" status --porcelain)"
     PRE_O3_DIGEST_SHA="$(sha256_of "$DIGEST")"
 
-    ( cd "$PROJECT_ROOT" && GUARD_CONTRACT_WORKROOT_PARENT="$PARENT_DIR" bash "$GUARD_SUITE_REL" >/dev/null 2>&1 ) &
+    # No `( ... ) &` subshell wrapper here — VERIFY round 2 measured that
+    # `kill -TERM` on a subshell-wrapper PID does not propagate to the guard
+    # process it wraps (SIGTERM is delivered to the exact PID only, unlike
+    # SIGINT's foreground-process-group propagation), so the guard survives
+    # 3/3 and the TERM leg never observes a real interrupt. Launching bash
+    # directly in the background makes `$!` the guard-suite process itself,
+    # so both TERM and INT are delivered to the process the trap is on.
+    GUARD_CONTRACT_WORKROOT_PARENT="$PARENT_DIR" bash "$GUARD_SUITE" >/dev/null 2>&1 &
     CHILD_PID=$!
 
     NON_VACUOUS=1
