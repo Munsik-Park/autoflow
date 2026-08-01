@@ -339,6 +339,14 @@ assert_true "AC-7-7a-push-paths: push paths: names tests/test-issue-7-oracle-har
 assert_true "AC-7-7a-run-step: workflow has a run: step invoking tests/test-issue-7-oracle-hardening.sh" \
   "grep -qE 'run: bash tests/test-issue-7-oracle-hardening\\.sh' '$WORKFLOW'"
 
+assert_true "AC-7-7d-pr-paths: pull_request paths: names tests/test-issue-1-guard-contract.sh (ledger E15 item 2 — AC-7-7d's permanence claim requires the workflow to actually trigger when F1 itself changes)" \
+  "awk '/^  pull_request:/{f=1} /^  push:/{f=0} f' '$WORKFLOW' | grep -qF 'tests/test-issue-1-guard-contract.sh'"
+assert_true "AC-7-7d-push-paths: push paths: names tests/test-issue-1-guard-contract.sh (ledger E15 item 2)" \
+  "awk '/^  push:/{f=1} f' '$WORKFLOW' | grep -qF 'tests/test-issue-1-guard-contract.sh'"
+assert_true "AC-7-7a-f10-pr-paths: pull_request paths: names tests/manual/issue-7-manual-scenarios.md (ledger E15 item 3 — issue-26/27 manual-scenario paths: registration precedent)" \
+  "awk '/^  pull_request:/{f=1} /^  push:/{f=0} f' '$WORKFLOW' | grep -qF 'tests/manual/issue-7-manual-scenarios.md'"
+assert_true "AC-7-7a-f10-push-paths: push paths: names tests/manual/issue-7-manual-scenarios.md (ledger E15 item 3)" \
+  "awk '/^  push:/{f=1} f' '$WORKFLOW' | grep -qF 'tests/manual/issue-7-manual-scenarios.md'"
 assert_true "AC-7-7d-run-step: workflow has a run: step invoking tests/test-issue-1-guard-contract.sh as its own permanent step" \
   "grep -qE 'run: bash tests/test-issue-1-guard-contract\\.sh' '$WORKFLOW'"
 
