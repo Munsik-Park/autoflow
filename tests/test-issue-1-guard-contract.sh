@@ -111,9 +111,14 @@ assert_false() {
 # real docs/cycle-digest.jsonl.
 # ---------------------------------------------------------------------------
 
-# Single session work root: every temp copy is created UNDER it, so one EXIT
-# trap removes them all even when the run aborts (SIGINT, or a future early
-# return) between mktemp -d and the paired inline `rm -rf`. Subshell-proof —
+# Single session work root: every temp copy is created UNDER it, so one trap
+# removes them all even when the run aborts (SIGINT/SIGTERM, or a future early
+# return) between mktemp -d and the paired inline `rm -rf`. INT and TERM are
+# trapped alongside EXIT, not left to EXIT alone: a signal arriving while
+# make_temp_copy is inside its tar-pipeline command substitution kills bash by
+# default disposition (rc 143) WITHOUT running the EXIT handler, leaking
+# $WORKROOT (measured 10/10 at a ~65 ms poll-then-signal offset; clean at
+# >=200 ms, so it is a real gap, not a settle-window artifact). Subshell-proof —
 # make_temp_copy is invoked as `TMP_X="$(make_temp_copy)"`, so a `TMPDIRS+=(…)`
 # append inside the helper would never reach this shell (pattern per
 # tests/test-issue-223-schema-hook-contract.sh:328-333).
@@ -123,7 +128,7 @@ assert_false() {
 # behaviourally identical to a bare `mktemp -d`.
 WORKROOT="$(mktemp -d ${GUARD_CONTRACT_WORKROOT_PARENT:+-p "$GUARD_CONTRACT_WORKROOT_PARENT"})" \
   || { echo "mktemp failed (WORKROOT)" >&2; exit 1; }
-trap 'rm -rf "$WORKROOT"' EXIT
+trap 'rm -rf "$WORKROOT"' EXIT INT TERM
 
 make_temp_copy() {
   local tmp
