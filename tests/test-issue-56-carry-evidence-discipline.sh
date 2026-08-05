@@ -206,13 +206,20 @@ if [[ -f "$CI_WORKFLOW" ]]; then
   # as long as the comment line + the `run:` step reference the filename elsewhere (this
   # repo's own e2e-dummy-target.yml carries a comment + run: line beyond the two paths:
   # entries, so a naive >=2 total does not discriminate a dropped paths: entry). Split the
-  # file at the `push:` trigger boundary, then scan each half UNBOUNDED (no fixed -B window
-  # — a bounded window has finite headroom above the entry and silently loses reach as more
-  # entries are added above it by future issues) for whether a `paths:` header precedes the
-  # reference anywhere in that half. Single pass, single match per half (verified: neither
-  # half's #56 comment line repeats the filename), fail-closed if no match is found at all.
+  # file at the `push:` trigger boundary, then scan each half UNBOUNDED WITHIN ITS OWN
+  # SECTION (no fixed -B window — a bounded window has finite headroom above the entry and
+  # silently loses reach as more entries are added above it by future issues) for whether a
+  # `paths:` header precedes the reference anywhere in that half. PUSH_SECTION is bounded at
+  # the NEXT top-level key (`permissions:`) — left unbounded to EOF it would swallow the
+  # entire `jobs:` section, where this suite's own registration comment (e2e-dummy-target.yml
+  # around the #56 step) and its `run:` line ALSO mention the filename, and the block's own
+  # `paths:` header (from any surviving sibling entry) would already have set the flag by
+  # then — a dropped push `paths:` entry would still read "yes" off those later mentions
+  # (GATE:QUALITY FAIL #3, ledger L16, mutation-proven). PR_SECTION needs no such bound: it
+  # already ends at `push:`, before the `jobs:` section exists in the scan at all, so it
+  # cannot pick up a later comment/run: mention.
   PR_SECTION="$(awk '/^  push:/{exit} {print}' "$CI_WORKFLOW")"
-  PUSH_SECTION="$(awk 'f{print} /^  push:/{f=1}' "$CI_WORKFLOW")"
+  PUSH_SECTION="$(awk 'f && /^[a-zA-Z]/{exit} f{print} /^  push:/{f=1}' "$CI_WORKFLOW")"
 
   PR_PATHS_PRECEDES="$(printf '%s\n' "$PR_SECTION" | awk '/^ *paths:/{p=1} /test-issue-56-carry-evidence-discipline\.sh/{print (p==1)?"yes":"no"; f=1; exit} END{if(!f) print "no"}')"
   assert_true "AC-56-11a-pr: reference appears in the pull_request 'paths:' trigger block" \
