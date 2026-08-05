@@ -34,7 +34,7 @@ one prior cycle whose report-loss measurement motivates the migration.
 - `docs/autoflow-guide.md` VERIFY steps 3 and 4 — their specified inputs.
 - `docs/teammate-contracts.md` > Test AI versus `.claude/agents/autoflow-tester.md` — duty-by-duty
   comparison of the contract against the direct-spawn substrate.
-- `grep -rn "TeamCreate"` across `*.md`, `*.sh`, `*.js` — one hit, prose in `CLAUDE.md`.
+- `grep -rn "TeamCreate"` across `*.md`, `*.sh`, `*.js` — one hit, prose in `CLAUDE.md` (one hit outside this ADR — its own Q4 discussion necessarily names the tool).
 - `.claude/workflows/architect-deliberation.js` — whether context-free multi-round convergence is
   already demonstrated in-repo.
 - `docs/cycle-digest.jsonl` — whether any recorded field reports a step-3 or step-4 detection.
@@ -140,7 +140,7 @@ precedence rule attached.
 
 *What becomes of `TeamCreate` and the cross-service coordination channel?*
 
-`TeamCreate` has exactly one occurrence in the repository and it is prose, in `CLAUDE.md`
+`TeamCreate` has exactly one occurrence in the repository outside this ADR, and it is prose, in `CLAUDE.md`
 > Communication — Agent Teams. No script, hook, workflow, or test invokes it. The cross-service
 `SendMessage` coordination path is therefore **unexercised in this topology** — a host with zero
 submodules. Pruning `TeamCreate` from the contract is admissible in the migration slice, and a

@@ -55,7 +55,7 @@
       "dest": ".claude/autoflow/docs/adr/0017-teammate-removal-feasibility.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "90212a5d4eea7bc3a5176404f7627f5fdb050a8ed2ca3840973709259237ce0e"
+      "sha256": "2c558b04bdf13c91d84a4597b9f4cb228a9172a97f336677e833b07e1762fd63"
     },
     {
       "source": "docs/adr/README.md",
