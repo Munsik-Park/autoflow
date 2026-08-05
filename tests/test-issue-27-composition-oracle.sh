@@ -321,9 +321,34 @@ assert_true "AC-27-20d: node --check .claude/workflows/architect-deliberation.js
 echo ""
 echo "=== AC-27-21 (composition oracle for S9, reclassified fence, PASS pre+post) — manifest freshness ==="
 
+# AC-27-21a was a global artifact-count fence (== B6, 47) — the retired
+# ADR-0016 AC-R3-c count-guard class (docs/doc-invariant-registry.md:113):
+# it reds on any legitimate later cycle's manifest addition/removal (e.g.
+# issue #51's ADR-0017 row), not just a #27 regression. Converted to the
+# documented drift-immune shape: a state predicate over the three NAMED
+# sources this cycle actually registers/edits, matching what B6 protected
+# (the "Manifest freshness" comment block above) — same shape as
+# tests/test-issue-43-report-channel-contract.sh:134-143's issue-scoped
+# precedent, applied here to named sources rather than an origin_issue tag
+# (the manifest schema carries no origin_issue field).
 MANIFEST_ARTIFACT_COUNT="$(jq '.artifacts | length' "$MANIFEST")"
-assert_true "AC-27-21a: setup/manifest.json artifact count == B6 (47) (got: $MANIFEST_ARTIFACT_COUNT)" \
-  "[ \"$MANIFEST_ARTIFACT_COUNT\" -eq 47 ]"
+echo "  (info) AC-27-21a: setup/manifest.json artifact count is currently $MANIFEST_ARTIFACT_COUNT (informational — not asserted; see conversion note above)"
+
+AC_27_21A_NAMED_SOURCES=(
+  "docs/autoflow-guide.md"
+  "docs/teammate-contracts.md"
+  ".claude/workflows/architect-deliberation.js"
+)
+AC_27_21A_BAD=0
+for src in "${AC_27_21A_NAMED_SOURCES[@]}"; do
+  cnt="$(jq -r --arg s "$src" '[.artifacts[] | select(.source == $s)] | length' "$MANIFEST")"
+  if [ "$cnt" -ne 1 ]; then
+    AC_27_21A_BAD=$((AC_27_21A_BAD + 1))
+    echo "  (info) AC-27-21a: manifest artifact row count for '$src' == $cnt (expected 1)"
+  fi
+done
+assert_true "AC-27-21a: setup/manifest.json carries exactly one artifact row for each of this cycle's three registered sources (drift-immune: named-source state predicate, not a global count)" \
+  "[ '$AC_27_21A_BAD' -eq 0 ]"
 
 STALE=""
 while IFS=$'\t' read -r src rec_hash; do

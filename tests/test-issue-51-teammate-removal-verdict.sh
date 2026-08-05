@@ -469,14 +469,23 @@ MANUAL_REL="tests/manual/issue-51-manual-scenarios.md"
 assert_true "AC12-run-step: workflow has a fixed run: step invoking $SUITE_REL" \
   "grep -qE 'run: bash tests/test-issue-51-teammate-removal-verdict\\.sh' '$WORKFLOW'"
 
+# Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973):
+# awk's buffered output piped directly into a short-circuiting `grep -q`
+# consumer can SIGPIPE the producer under `set -o pipefail`, flipping a
+# logically-passing assertion to a flaky FAIL. Capture each block once, then
+# match the captured string.
+PR_PATHS_CTX="$(awk '/^  pull_request:/{f=1} /^  push:/{f=0} f' "$WORKFLOW")"
+PUSH_PATHS_CTX="$(awk '/^  push:/{f=1} f' "$WORKFLOW")"
+export PR_PATHS_CTX PUSH_PATHS_CTX
+
 assert_true "AC12-pr-paths-suite: pull_request paths: names $SUITE_REL" \
-  "awk '/^  pull_request:/{f=1} /^  push:/{f=0} f' '$WORKFLOW' | grep -qF '$SUITE_REL'"
+  "printf '%s\n' \"\$PR_PATHS_CTX\" | grep -qF '$SUITE_REL'"
 assert_true "AC12-push-paths-suite: push paths: names $SUITE_REL" \
-  "awk '/^  push:/{f=1} f' '$WORKFLOW' | grep -qF '$SUITE_REL'"
+  "printf '%s\n' \"\$PUSH_PATHS_CTX\" | grep -qF '$SUITE_REL'"
 assert_true "AC12-pr-paths-manual: pull_request paths: names $MANUAL_REL" \
-  "awk '/^  pull_request:/{f=1} /^  push:/{f=0} f' '$WORKFLOW' | grep -qF '$MANUAL_REL'"
+  "printf '%s\n' \"\$PR_PATHS_CTX\" | grep -qF '$MANUAL_REL'"
 assert_true "AC12-push-paths-manual: push paths: names $MANUAL_REL" \
-  "awk '/^  push:/{f=1} f' '$WORKFLOW' | grep -qF '$MANUAL_REL'"
+  "printf '%s\n' \"\$PUSH_PATHS_CTX\" | grep -qF '$MANUAL_REL'"
 
 RUNNER_LINE="$(grep -n "name: Run doc-invariant registry runner (#951)" "$WORKFLOW" | head -1 | cut -d: -f1)"
 SUITE_LINE="$(grep -nE "run: bash tests/test-issue-51-teammate-removal-verdict\\.sh" "$WORKFLOW" | head -1 | cut -d: -f1)"
