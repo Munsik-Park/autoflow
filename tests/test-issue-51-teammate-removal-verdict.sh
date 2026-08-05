@@ -299,9 +299,13 @@ FENCE_FILES=(
   "docs/teammate-contracts.md"
   "docs/teammate-common-rules.md"
   "docs/autoflow-guide.md"
-  "docs/cycle-digest.jsonl"
   "tests/fixtures/cycle-digest-schema.json"
 )
+# docs/cycle-digest.jsonl is deliberately NOT fenced here: HANDOFF step 6.7
+# mandates a digest co-ride commit in the same PR (CLAUDE.md > AutoFlow State
+# Tracking > Companion artifact) — an append-only record, not a migration-slice
+# edit. tests/fixtures/cycle-digest-schema.json (the schema itself) stays
+# fenced. Precedent: commit edc9d62 (#7 cycle, identical situation).
 if on_issue_51_branch; then
   BASE_REF6="$(resolve_base_ref)"
   if [ -z "$BASE_REF6" ]; then
