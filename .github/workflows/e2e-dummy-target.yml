@@ -114,6 +114,11 @@ on:
       - 'tests/test-issue-7-oracle-hardening.sh'
       - 'tests/test-issue-1-guard-contract.sh'
       - 'tests/manual/issue-7-manual-scenarios.md'
+      # #51 cycle surface. TAIL here, mirroring the #7/#27/#43/#35 entries
+      # above for the same reason those comments record (#799's AC6-ci fixed
+      # `grep -A40 '^ *paths:'` window).
+      - 'tests/test-issue-51-teammate-removal-verdict.sh'
+      - 'tests/manual/issue-51-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -192,6 +197,10 @@ on:
       - 'tests/test-issue-7-oracle-hardening.sh'
       - 'tests/test-issue-1-guard-contract.sh'
       - 'tests/manual/issue-7-manual-scenarios.md'
+      # #51 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-51-teammate-removal-verdict.sh'
+      - 'tests/manual/issue-51-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -415,3 +424,18 @@ jobs:
       # tests/test-issue-7-oracle-hardening.sh.
       - name: Run oracle-hardening guard (#7)
         run: bash tests/test-issue-7-oracle-hardening.sh
+
+      # Teammate-removal feasibility verdict (#51, cycle-scoped): the
+      # assertions the permanent registry structurally cannot hold — the
+      # base-relative Status fence and the migration-slice DELTA /
+      # byte-invariance fence (both lane A-delta, branch-scoped), the manifest
+      # and registry composition oracles driven through their real producers,
+      # the CI-wiring assertions on this file, and the origin_issue==51 entry
+      # count. Placed at the job TAIL, strictly below the doc-invariant
+      # registry runner step, so an unrelated cycle's broken registry entry
+      # reds the runner's own step first (job steps halt at the first failure)
+      # rather than a step bearing this cycle's name. CI has no glob
+      # discovery; registered by filename per the sibling suites. See
+      # tests/test-issue-51-teammate-removal-verdict.sh.
+      - name: Run teammate-removal feasibility verdict (#51)
+        run: bash tests/test-issue-51-teammate-removal-verdict.sh

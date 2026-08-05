@@ -20,7 +20,7 @@
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0ea2293f3c34128ba6d1e0651df02dc826a60eb95fd40403cb42e4222d337d5d"
+      "sha256": "f13ea872b220b2e56a7c8d75009d319c3522a8a1457b15daef202275346d82ae"
     },
     {
       "source": "docs/adr/0000-adr-template.md",
@@ -51,11 +51,18 @@
       "sha256": "4fd861c97d61caf22c434dd514e1a5478d9abcd932a329fe74d63e5c8b776caf"
     },
     {
+      "source": "docs/adr/0017-teammate-removal-feasibility.md",
+      "dest": ".claude/autoflow/docs/adr/0017-teammate-removal-feasibility.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "90212a5d4eea7bc3a5176404f7627f5fdb050a8ed2ca3840973709259237ce0e"
+    },
+    {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5c036a99eadf866f92180643c90a455e4225517ab4a9bd48c5903a60ef60867e"
+      "sha256": "1290fecf6c252d30d2f075a88c8453598f31c7d7d8c1f31d56668cdc2df247af"
     },
     {
       "source": "docs/autoflow-guide.md",
@@ -118,7 +125,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d8d41d4509c46a9185f516cc28f904df3528be8f34060eea8013128a42a2bbdf"
+      "sha256": "61a5f90ee8274ae3f9ec017c6006a5be3fcc02d00403cf36269202d6f5a94aa3"
     },
     {
       "source": "docs/phases/analysis.md",
