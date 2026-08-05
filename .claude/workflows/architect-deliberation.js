@@ -23,6 +23,11 @@ const MAX_ROUNDS = 6 // Decision 7: explicit cap; a round = one Developer-AI <->
 const REASON_DRAFT_AGENT_MISSING = 'draft agent missing'
 const REASON_DRAFT_ARTIFACT_MISSING = 'draft artifact missing'
 const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_MISSING} for N consecutive round(s)`
+// Evidence discipline for the carry channel (issue #56). Declared once and interpolated into
+// BOTH round prompts so the dev and test channels cannot drift apart. The framing is emitted
+// only alongside carried counters; the counter rule governs every round, including round 1.
+const CARRY_NON_EVIDENTIARY = ' The carried counters below are a checklist of topics to re-verify, NOT evidence — they were written against an earlier version of the documents and may already be resolved.'
+const COUNTER_EVIDENCE_RULE = ' Before raising or sustaining any counter — especially one that reverts or deletes an existing constraint — re-read the counterpart document\'s CURRENT state and cite `path:line` from it; when the counter is that required content is MISSING, name the section where it would belong instead. A counter grounded only in carried text or round history is invalid.'
 // The Claude Code Workflow runtime delivers the `args` input to the script as a
 // JSON STRING, not the parsed object the tool doc implies (verified empirically
 // via the args-probe diagnostic: a `{issue}` object arrives as typeof === 'string').
@@ -129,16 +134,14 @@ const MAX_CONSECUTIVE_NULL = 2 // two consecutive both-null rounds => persistent
 while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   round++
   // Thread last round's open counters into this round so fresh sub-agents must resolve them.
-  const carry = openCounters.length
-    ? ` Open counters still unresolved from the previous round — you MUST address each before ACCEPT: ${JSON.stringify(openCounters)}.`
-    : ''
+  const carry = openCounters.length ? `${CARRY_NON_EVIDENTIARY} Open counters still unresolved from the previous round — you MUST address each before ACCEPT, either by resolving it or by dismissing it with the current \`path:line\` that already satisfies it: ${JSON.stringify(openCounters)}.` : ''
   const [dev, test] = await parallel([
     () => agent(
-      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND). Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND). Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: `dev-r${round}`, phase: 'Converge', model: 'opus' },
     ),
     () => agent(
-      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol. Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol. Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: `test-r${round}`, phase: 'Converge', model: 'opus' },
     ),
   ])
