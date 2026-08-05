@@ -283,7 +283,7 @@ assert_true "V3-empirical-empty-pass: the date-floor predicate itself PASSes on 
 assert_true "V3-floor-predicate-present: tests/test-issue-985-doc-assertions.sh's AC1 assertion contains the --arg floor date predicate" \
   "grep -qF -- '--arg floor' '$SUITE_985'"
 assert_false "V3-linecount-predicate-gone: the AC1-DIGEST assertion block no longer asserts a literal wc -l line count" \
-  "grep -A1 -E 'AC1-DIGEST-(EMPTIED|NO-INHERITED-RECORDS)' '$SUITE_985' | grep -qF 'wc -l'"
+  "ctx=\$(grep -A1 -E 'AC1-DIGEST-(EMPTIED|NO-INHERITED-RECORDS)' '$SUITE_985'); printf '%s\n' \"\$ctx\" | grep -qF 'wc -l'"
 assert_true "V3-renamed-id-present: the assertion ID is AC1-DIGEST-NO-INHERITED-RECORDS (feature §5.4 rename)" \
   "grep -qF 'AC1-DIGEST-NO-INHERITED-RECORDS' '$SUITE_985'"
 

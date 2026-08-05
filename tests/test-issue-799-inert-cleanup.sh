@@ -599,6 +599,19 @@ else
     "tests/test-issue-1-guard-contract.sh"
     "tests/test-issue-7-oracle-hardening.sh"
     "tests/manual/issue-7-manual-scenarios.md"
+    # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
+    # decision record, the cycle-scoped RED suite + manual-scenario lane.
+    # docs/adr/README.md, setup/manifest.json, docs/INDEX.md,
+    # docs/maintained-docs.md, tests/fixtures/doc-invariants.json,
+    # docs/doc-invariant-registry.md, .github/workflows/e2e-dummy-target.yml,
+    # tests/plugin/verify-install-into-target.sh,
+    # tests/plugin/verify-install-skill-scripts.sh,
+    # tests/plugin/verify-e2e-dummy-target.sh,
+    # tests/test-issue-979-bundle-delivery.sh and this cycle's other sibling
+    # suites are already admitted above.
+    "docs/adr/0017-teammate-removal-feasibility.md"
+    "tests/manual/issue-51-manual-scenarios.md"
+    "tests/test-issue-51-teammate-removal-verdict.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -739,6 +752,11 @@ else
     case "$adr_f" in
       "docs/adr/0001-host-orchestrator-and-librechat-submodule-""boundary.md")
         continue ;;
+      "docs/adr/0017-teammate-removal-feasibility.md")
+        # #51 cycle files: brand-new file this cycle authors in full — same
+        # unconditional-admit shape as the 0001 arm above (nothing to
+        # byte-window against a base that has no prior version).
+        continue ;;
       "docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md")
         adr_0015_offwindow="$(git diff "$BASE_REF"...HEAD -- "$PROJECT_ROOT/$adr_f" 2>/dev/null \
           | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
@@ -753,7 +771,8 @@ else
       "docs/adr/README.md")
         adr_readme_offwindow="$(git diff "$BASE_REF"...HEAD -- "$PROJECT_ROOT/$adr_f" 2>/dev/null \
           | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
-          | grep -vF '0001-host-orchestrator-and-librechat-submodule-'"boundary.md" || true)"
+          | grep -vF '0001-host-orchestrator-and-librechat-submodule-'"boundary.md" \
+          | grep -vF '0017-teammate-removal-feasibility.md' || true)"
         [[ -n "$adr_readme_offwindow" ]] && adr_admitted_ac6="no"
         ;;
       *)

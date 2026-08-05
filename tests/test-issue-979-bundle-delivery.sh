@@ -109,7 +109,7 @@ echo ""
 echo "=== SETUP-GUIDE.md Reviewer backend subsection (AC-4) ==="
 
 assert_true "AC-4: SETUP-GUIDE.md Prerequisites documents a Reviewer backend subsection (codex default, claude opt-in, config file, fail-closed)" \
-  "awk '/^## Prerequisites/{f=1;next} f && /^## /{exit} f' '$SETUP_GUIDE' | grep -qi 'reviewer backend'"
+  "ctx=\$(awk '/^## Prerequisites/{f=1;next} f && /^## /{exit} f' '$SETUP_GUIDE'); printf '%s\n' \"\$ctx\" | grep -qi 'reviewer backend'"
 
 echo ""
 echo "=============================="

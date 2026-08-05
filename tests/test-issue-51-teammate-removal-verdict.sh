@@ -475,7 +475,11 @@ assert_true "AC12-run-step: workflow has a fixed run: step invoking $SUITE_REL" 
 # logically-passing assertion to a flaky FAIL. Capture each block once, then
 # match the captured string.
 PR_PATHS_CTX="$(awk '/^  pull_request:/{f=1} /^  push:/{f=0} f' "$WORKFLOW")"
-PUSH_PATHS_CTX="$(awk '/^  push:/{f=1} f' "$WORKFLOW")"
+# Bounded at the next top-level key (e.g. `permissions:`) — an unbounded
+# capture ran to EOF and let a match against a LATER `run:` step (which also
+# names the suite/manual file) silently stand in for a `paths:` entry,
+# masking a deleted paths: row (mutation-tested finding, GATE:QUALITY E36).
+PUSH_PATHS_CTX="$(awk '/^  push:/{f=1;next} /^[A-Za-z]/{f=0} f' "$WORKFLOW")"
 export PR_PATHS_CTX PUSH_PATHS_CTX
 
 assert_true "AC12-pr-paths-suite: pull_request paths: names $SUITE_REL" \

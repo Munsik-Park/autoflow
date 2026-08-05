@@ -344,7 +344,11 @@ echo "=== AC-7-7a / AC-7-7d — workflow CI registration ==="
 # logically-passing assertion to a flaky FAIL. Capture each block once, then
 # match the captured string across every check below.
 PR_PATHS_CTX7="$(awk '/^  pull_request:/{f=1} /^  push:/{f=0} f' "$WORKFLOW")"
-PUSH_PATHS_CTX7="$(awk '/^  push:/{f=1} f' "$WORKFLOW")"
+# Bounded at the next top-level key (e.g. `permissions:`) — an unbounded
+# capture ran to EOF and let a match against a LATER `run:` step (which also
+# names the suite/manual file) silently stand in for a `paths:` entry,
+# masking a deleted paths: row (mutation-tested finding, GATE:QUALITY E36).
+PUSH_PATHS_CTX7="$(awk '/^  push:/{f=1;next} /^[A-Za-z]/{f=0} f' "$WORKFLOW")"
 export PR_PATHS_CTX7 PUSH_PATHS_CTX7
 
 assert_true "AC-7-7a-pr-paths: pull_request paths: names tests/test-issue-7-oracle-hardening.sh" \

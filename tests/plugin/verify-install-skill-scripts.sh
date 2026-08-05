@@ -464,7 +464,7 @@ echo "== AC-T3 (static): SKILL.md Step-1 region names the cache-copy drift-check
 INSTALL_SKILL_MD="$REPO_ROOT/plugin/autoflow/skills/install/SKILL.md"
 if [ ! -f "$INSTALL_SKILL_MD" ]; then
   failc "AC-T3" "install SKILL.md missing at $INSTALL_SKILL_MD"
-elif awk '/^## Step 1/,/^## Step [2-9]/' "$INSTALL_SKILL_MD" | grep -i 'cache' | grep -qi 'drift-check'; then
+elif _step1_ctx="$(awk '/^## Step 1/,/^## Step [2-9]/' "$INSTALL_SKILL_MD")" && printf '%s\n' "$_step1_ctx" | grep -qi 'cache' && printf '%s\n' "$_step1_ctx" | grep -qi 'drift-check'; then
   pass "AC-T3: SKILL.md Step-1 region carries a line naming both 'cache' and 'drift-check' (trust-source mechanism documented; verification-design §2 AC-T3 pinned token pair)"
 else
   failc "AC-T3" "expected the SKILL.md Step-1 region (## Step 1 .. next ## Step) to contain a line matching both 'cache' and 'drift-check' (case-insensitive) -- the read-only trust-source mechanism (cache-copy oracle execution) must be documented where the detection step is narrated"
