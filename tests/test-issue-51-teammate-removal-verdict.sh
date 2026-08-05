@@ -389,7 +389,7 @@ export O2_OUT
 
 assert_true "O2(a)-exit0: the real registry runner exits 0" "[ '$O2_RC' -eq 0 ]"
 assert_true "O2(a)-0failed: the real registry runner's Results line reports 0 failed" \
-  "printf '%s' \"\$O2_OUT\" | grep -qE '0 failed$'"
+  "printf '%s' \"\$O2_OUT\" | grep -qE '^Results:.*, 0 failed$'"
 
 O2_COUNT51="$(jq -r '[.invariants[] | select(.origin_issue==51)] | length' "$REGISTRY")"
 assert_true "O2(b)-issue-scoped-count: origin_issue==51 registry entry count is exactly 12 (currently $O2_COUNT51)" \

@@ -159,8 +159,16 @@ echo "=== AC1 (B): fidelity — capture-before-delete baseline reproduction (§D
 # Positive leg: every registry entry evaluates PASS against the CURRENT
 # (pre-migration) tree — the permanent invariants already hold today, which
 # is exactly what the captured baseline shows for the migrated suites.
+# Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973,
+# GATE:QUALITY E36/E37): run_runner's buffered output piped directly into a
+# short-circuiting `grep -q` can SIGPIPE the producer under `set -o
+# pipefail`. Captured once, reused for both the presence and absence check.
+AC1_POSITIVE_LEG_OUT=""
+if [ -f "$REGISTRY" ] && [ -f "$RUNNER" ]; then
+  AC1_POSITIVE_LEG_OUT="$(run_runner "$REGISTRY")"
+fi
 assert_true "positive leg: every registry entry PASSes against the current tree" \
-  "[ -f '$REGISTRY' ] && [ -f '$RUNNER' ] && run_runner '$REGISTRY' | grep -qE '^Results: ' && ! run_runner '$REGISTRY' | grep -qE '^  FAIL:'"
+  "[ -f '$REGISTRY' ] && [ -f '$RUNNER' ] && printf '%s\n' \"\$AC1_POSITIVE_LEG_OUT\" | grep -qE '^Results: ' && ! printf '%s\n' \"\$AC1_POSITIVE_LEG_OUT\" | grep -qE '^  FAIL:'"
 
 # Coverage-floor leg: each migrated suite (794/796/797/800/949) is
 # represented by at least one registry entry via origin_issue provenance —

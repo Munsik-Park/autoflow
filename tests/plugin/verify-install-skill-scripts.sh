@@ -464,7 +464,22 @@ echo "== AC-T3 (static): SKILL.md Step-1 region names the cache-copy drift-check
 INSTALL_SKILL_MD="$REPO_ROOT/plugin/autoflow/skills/install/SKILL.md"
 if [ ! -f "$INSTALL_SKILL_MD" ]; then
   failc "AC-T3" "install SKILL.md missing at $INSTALL_SKILL_MD"
-elif _step1_ctx="$(awk '/^## Step 1/,/^## Step [2-9]/' "$INSTALL_SKILL_MD")" && printf '%s\n' "$_step1_ctx" | grep -qi 'cache' && printf '%s\n' "$_step1_ctx" | grep -qi 'drift-check'; then
+# Provenance (GATE:QUALITY E37): the prior SIGPIPE-safety pass (E36) fixed
+# this line's direct `awk | grep -q` pipe by splitting it into two
+# INDEPENDENT captured greps (one per token), which silently weakened AC-T3
+# from "one line names both tokens" to "each token appears somewhere in the
+# region" — a Step-1 region with cache-lines and drift-check-lines but ZERO
+# co-occurring lines still passed (evaluator mutation-proved: 53/53). This
+# edit restores per-line co-occurrence in the SIGPIPE-safe form: capture the
+# region once, then match a single co-occurrence regex against it.
+# awk's buffered output piped directly into a short-circuiting `grep -q`
+# consumer can SIGPIPE the producer under `set -o pipefail`. The capture
+# preserves the ORIGINAL per-line co-occurrence semantics (GATE:QUALITY E37):
+# a single `grep -qiE 'cache.*drift-check|drift-check.*cache'` requires both
+# tokens on the SAME line, in either order -- two independent `grep -qi`
+# calls (one per token) would each match against a different line and pass
+# on a region with zero co-occurring lines (the #120 weaker-proxy class).
+elif _step1_ctx="$(awk '/^## Step 1/,/^## Step [2-9]/' "$INSTALL_SKILL_MD")" && printf '%s\n' "$_step1_ctx" | grep -qiE 'cache.*drift-check|drift-check.*cache'; then
   pass "AC-T3: SKILL.md Step-1 region carries a line naming both 'cache' and 'drift-check' (trust-source mechanism documented; verification-design §2 AC-T3 pinned token pair)"
 else
   failc "AC-T3" "expected the SKILL.md Step-1 region (## Step 1 .. next ## Step) to contain a line matching both 'cache' and 'drift-check' (case-insensitive) -- the read-only trust-source mechanism (cache-copy oracle execution) must be documented where the detection step is narrated"

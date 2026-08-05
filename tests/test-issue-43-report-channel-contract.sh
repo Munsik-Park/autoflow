@@ -195,7 +195,8 @@ assert_true "A43-LITERAL-CONTIGUOUS (b): every origin_issue:43 entry matches its
 echo ""
 echo "S43-UNTOUCHED — this cycle's diff does not touch the three asserted non-edit surfaces"
 
-# Branch-scoped (ea68a4c idiom, GATE:QUALITY E36): this is issue #43's own
+# Provenance: was unconditional (ran on every PR); narrowed here to
+# branch-scoped (ea68a4c idiom, GATE:QUALITY E36) — this is issue #43's own
 # cycle-PR non-edit promise, not a durable state property — one of its three
 # surfaces, docs/maintained-docs.md, is a file OTHER cycles legitimately edit
 # (e.g. issue #51 registers a new ADR row there), so an unconditional
