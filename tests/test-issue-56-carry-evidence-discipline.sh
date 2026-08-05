@@ -21,6 +21,12 @@
 #   AC-56-4a — RED discriminator: the citation rule is declared ONCE
 #             (`const COUNTER_EVIDENCE_RULE`) and interpolated at both round
 #             prompt sites (D2 structural symmetry).
+#   AC-56-8  — fence (PASS pre+post): the workflow-regression harness
+#             (`node test/workflows/run.mjs`) still exits 0, still prints
+#             `all workflow regression tests passed`, and its `ok`-line count
+#             equals the literal `EXPECTED_OK` pinned below (verification
+#             design §6 pinning rule, ledger L10) — never a derived `31 + N`,
+#             which would absorb a silent test loss.
 #   AC-56-9  — fence (PASS pre+post): change-surface bound to this cycle's
 #             `.claude/` subset (`.claude/workflows/architect-deliberation.js`
 #             only); `verify-cause-branch.js` sha256 unchanged (B4).
@@ -91,6 +97,25 @@ assert_true "AC-56-4a-interp: \${COUNTER_EVIDENCE_RULE} interpolated exactly twi
 
 # =============================================================================
 echo ""
+echo "=== AC-56-8 (regression fence, PASS pre+post) — workflow-regression harness ==="
+
+# EXPECTED_OK pinning rule (verification design §6, ledger L10): a literal integer,
+# never a derived expression — an open `31 + N` would absorb an accidental test loss,
+# which is the failure this fence exists to catch. Measured at RED close: B1 (31) +
+# six new run.mjs tests (AC-56-1b/2b/3b/4b/5/14b) = 37.
+EXPECTED_OK=37
+
+HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
+HARNESS_EXIT=$?
+OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -cE '^[[:space:]]*ok\b' || true)"
+assert_true "AC-56-8a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
+assert_true "AC-56-8b: harness reports 'all workflow regression tests passed'" \
+  "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
+assert_true "AC-56-8c: harness ok-line count == EXPECTED_OK ($EXPECTED_OK) (got: $OK_COUNT)" \
+  "[ \"$OK_COUNT\" -eq $EXPECTED_OK ]"
+
+# =============================================================================
+echo ""
 echo "=== AC-56-9 (fence, PASS pre+post) — change-surface bound to architect-deliberation.js alone ==="
 
 if [[ ! -f "$BASEREF_LIB" ]]; then
@@ -107,7 +132,7 @@ else
     CLAUDE_DIFF_SUBSET="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD | grep '^\.claude/' || true)"
     EXPECTED_SUBSET=".claude/workflows/architect-deliberation.js"
     assert_true "AC-56-9a: cycle diff's .claude/ subset == '$EXPECTED_SUBSET' (got: '$(printf '%s' "$CLAUDE_DIFF_SUBSET" | paste -sd, -)')" \
-      "[ \"\$(printf '%s' '$CLAUDE_DIFF_SUBSET')\" = \"$EXPECTED_SUBSET\" ] || [ -z \"\$(printf '%s' '$CLAUDE_DIFF_SUBSET')\" ]"
+      "[ \"\$(printf '%s' '$CLAUDE_DIFF_SUBSET')\" = \"$EXPECTED_SUBSET\" ]"
   fi
 fi
 
@@ -136,18 +161,34 @@ fi
 
 # =============================================================================
 echo ""
-echo "=== AC-56-11 (Test-AI-owned surface) — cycle suite registered in e2e-dummy-target.yml ==="
+echo "=== AC-56-11 (Test-AI-owned surface) — cycle suite registered in BOTH paths: trigger blocks + a run: step ==="
 
 if [[ -f "$CI_WORKFLOW" ]]; then
-  PATHS_BLOCK_COUNT="$(grep -c "test-issue-56-carry-evidence-discipline.sh" "$CI_WORKFLOW" || true)"
-  assert_true "AC-56-11a: e2e-dummy-target.yml references test-issue-56-carry-evidence-discipline.sh at least twice (paths: x2) (got: $PATHS_BLOCK_COUNT)" \
-    "[ \"$PATHS_BLOCK_COUNT\" -ge 2 ]"
+  # Context-scoped idiom (tests/test-issue-27-composition-oracle.sh:373-374): a file-wide
+  # occurrence count (>=2) passes vacuously even when BOTH `paths:` entries are missing,
+  # as long as the comment line + the `run:` step reference the filename elsewhere (this
+  # repo's own e2e-dummy-target.yml carries a comment + run: line beyond the two paths:
+  # entries, so a naive >=2 total does not discriminate a dropped paths: entry). Split the
+  # file at the `push:` trigger boundary and require the nearest line preceding the
+  # reference to be a `paths:` header WITHIN EACH half — capture first, then match
+  # (SIGPIPE-safe per docs/submodule-common-rules.md > Testing Standards).
+  PR_SECTION="$(awk '/^  push:/{exit} {print}' "$CI_WORKFLOW")"
+  PUSH_SECTION="$(awk 'f{print} /^  push:/{f=1}' "$CI_WORKFLOW")"
+
+  PR_CTX="$(printf '%s\n' "$PR_SECTION" | grep -B90 'test-issue-56-carry-evidence-discipline.sh' || true)"
+  assert_true "AC-56-11a-pr: reference appears in the pull_request 'paths:' trigger block" \
+    "printf '%s\n' \"\$PR_CTX\" | grep -q '^ *paths:'"
+
+  PUSH_CTX="$(printf '%s\n' "$PUSH_SECTION" | grep -B90 'test-issue-56-carry-evidence-discipline.sh' || true)"
+  assert_true "AC-56-11a-push: reference appears in the push 'paths:' trigger block" \
+    "printf '%s\n' \"\$PUSH_CTX\" | grep -q '^ *paths:'"
+
   assert_true "AC-56-11b: reference appears in a 'run:' step" \
     "ctx=\$(grep -A2 'test-issue-56-carry-evidence-discipline.sh' '$CI_WORKFLOW'); printf '%s\n' \"\$ctx\" | grep -q 'run: bash tests/test-issue-56-carry-evidence-discipline.sh'"
 else
-  assert_true "AC-56-11a: $CI_WORKFLOW exists" "false"
-  echo "  BLOCK: AC-56-11b unmeasurable (workflow file missing) — counted FAIL, never skipped"
-  TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
+  assert_true "AC-56-11a-pr: $CI_WORKFLOW exists" "false"
+  echo "  BLOCK: AC-56-11a-push/AC-56-11b unmeasurable (workflow file missing) — counted FAIL, never skipped"
+  TESTS=$((TESTS + 2)); FAIL=$((FAIL + 2))
 fi
 
 # =============================================================================
