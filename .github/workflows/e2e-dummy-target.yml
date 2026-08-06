@@ -119,6 +119,12 @@ on:
       # comments record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window).
       - 'tests/test-issue-56-carry-evidence-discipline.sh'
       - 'tests/manual/issue-56-manual-scenarios.md'
+      # #59 cycle surface (adoption-side evidence discipline). TAIL here,
+      # mirroring the #7/#27/#43/#35/#56 entries above for the same reason
+      # those comments record (#799's AC6-ci fixed `grep -A40 '^ *paths:'`
+      # window has zero headroom above this file's first `paths:` block).
+      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
+      - 'tests/manual/issue-59-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -201,6 +207,10 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-56-carry-evidence-discipline.sh'
       - 'tests/manual/issue-56-manual-scenarios.md'
+      # #59 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
+      - 'tests/manual/issue-59-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -435,3 +445,15 @@ jobs:
       # tests/test-issue-56-carry-evidence-discipline.sh.
       - name: Run carry-channel evidence discipline guard (#56)
         run: bash tests/test-issue-56-carry-evidence-discipline.sh
+
+      # Adoption-side evidence discipline guard (#59, cycle-scoped): the
+      # count/position/order-shaped assertions the permanent registry
+      # structurally cannot hold — the ADOPTION_EVIDENCE_RULE
+      # declaration/interpolation discriminators, the cross-cycle
+      # change-surface re-run fence (AC-59-11d, multi-minute), the ok-count
+      # cross-pin equality with test-issue-27, and the derived-artifact /
+      # SPDX / negative-control fences. CI has no glob discovery; registered
+      # by filename per the sibling suites. See
+      # tests/test-issue-59-adoption-evidence-discipline.sh.
+      - name: Run adoption-evidence discipline guard (#59)
+        run: bash tests/test-issue-59-adoption-evidence-discipline.sh
