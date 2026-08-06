@@ -901,8 +901,8 @@ install_driver_copy "$FX27D"
 require_copy_fidelity "$FX27D"
 OUT27D="$(cd "$FX27D" && bash tests/issue-59-full-sweep-driver.sh "$BASE27D_SHA" 2>&1)"
 rm -rf "$FX27D"
-assert_true "AC-59-27d: an unnamed regression (test-issue-777-fixture.sh, confirmed absent from the live NAMED_SUITES array: in_named=$UNNAMED_PROBE_IN_NAMED) is bucketed REGRESSED (UNNAMED and drives Unnamed regressions: 1" \
-  "[ \"$UNNAMED_PROBE_IN_NAMED\" -eq 0 ] && has \"\$OUT27D\" 'REGRESSED (UNNAMED' && has \"\$OUT27D\" 'Unnamed regressions: 1'"
+assert_true "AC-59-27d: an unnamed regression (test-issue-777-fixture.sh, confirmed absent from the live NAMED_SUITES array: in_named=$UNNAMED_PROBE_IN_NAMED) is bucketed REGRESSED (UNNAMED and drives Unnamed regressions (NEW finding): 1" \
+  "[ \"$UNNAMED_PROBE_IN_NAMED\" -eq 0 ] && has \"\$OUT27D\" 'REGRESSED (UNNAMED' && has \"\$OUT27D\" 'Unnamed regressions (NEW finding): 1'"
 
 # =============================================================================
 echo ""
