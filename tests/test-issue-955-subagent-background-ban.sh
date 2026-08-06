@@ -553,6 +553,11 @@ if [[ -z "$BASE_REF" ]]; then
   skip_no_base "AC-SCOPE"
 else
   allow_list=(
+    # #59 release co-ride (user-directed version bump 0.1.4 -> 0.1.5, f52f720
+    # precedent): plugin/marketplace version files ship on the same PR per
+    # operator instruction.
+    "plugin/autoflow/.claude-plugin/plugin.json"
+    ".claude-plugin/marketplace.json"
     # #35 cycle files: phase-marker emitter + its suite (this cycle's only two
     # not-already-listed delivered paths; the six allow-list suites, the
     # e2e-dummy-target workflow and docs/maintained-docs.md are already members).
