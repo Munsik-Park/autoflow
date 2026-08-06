@@ -599,6 +599,14 @@ else
     "tests/test-issue-1-guard-contract.sh"
     "tests/test-issue-7-oracle-hardening.sh"
     "tests/manual/issue-7-manual-scenarios.md"
+    # #56 cycle files (carry-channel evidence discipline): the cycle-scoped
+    # RED suite and its manual-scenario lane. .claude/workflows/
+    # architect-deliberation.js is covered by its own content-line carve-out
+    # below, not this path allow-list. The doc/CI surfaces this cycle edits
+    # (setup/manifest.json, tests/fixtures/doc-invariants.json,
+    # .github/workflows/e2e-dummy-target.yml) are already admitted above.
+    "tests/manual/issue-56-manual-scenarios.md"
+    "tests/test-issue-56-carry-evidence-discipline.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -806,8 +814,16 @@ else
   # architect-deliberation.js (feature design §3.4 — the test-draft
   # artifact-contents clause and the round-prompt ACCEPT condition), via a
   # substring common to BOTH the old and new line for each in-place edit.
-  # Any OTHER content change under .claude/workflows/** still trips the
-  # guard.
+  # #56 parity-carried exception (same shape, GATE:QUALITY FAIL #4 / ledger
+  # L18, user-approved same-PR sibling fix): admits the carry-channel
+  # evidence-discipline edit in architect-deliberation.js — the two hoisted
+  # `CARRY_NON_EVIDENTIARY` / `COUNTER_EVIDENCE_RULE` const declarations (and
+  # their doc-comment) as pure additions, plus the carry-ternary collapse and
+  # the dev-prompt line, each admitted via a substring common to BOTH the old
+  # and new line (the test-prompt line reuses the #27 substring already
+  # above — the edit only inserts `${COUNTER_EVIDENCE_RULE}` before `${carry}`
+  # on a line the #27 filter already fully admits). Any OTHER content change
+  # under .claude/workflows/** still trips the guard.
   workflows_touched_ac6="$(printf '%s\n' "$diff_files" | grep '^\.claude/workflows/' || true)"
   workflows_admitted_ac6="yes"
   while IFS= read -r wf; do
@@ -818,11 +834,20 @@ else
       | grep -vF '+// SPDX-FileCopyrightText: 2026 Munsik-Park' \
       | grep -vF '+// SPDX-License-Identifier: Elastic-2.0' \
       | grep -vF 'design-change requests for untestable items' \
-      | grep -vF 'Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method' || true)"
+      | grep -vF 'Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method' \
+      | grep -vF 'Evidence discipline for the carry channel (issue #56)' \
+      | grep -vF 'BOTH round prompts so the dev and test channels cannot drift apart' \
+      | grep -vF 'only alongside carried counters; the counter rule governs every round' \
+      | grep -vF 'const CARRY_NON_EVIDENTIARY = ' \
+      | grep -vF 'const COUNTER_EVIDENCE_RULE = ' \
+      | grep -vF 'const carry = openCounters.length' \
+      | grep -vF 'Open counters still unresolved from the previous round — you MUST address each before ACCEPT' \
+      | grep -vF "    : ''" \
+      | grep -vF 'both documents are mutually consistent and complete AND you have no open concerns' || true)"
     # REUSE-IgnoreEnd
     [[ -n "$wf_offwindow" ]] && workflows_admitted_ac6="no"
   done <<< "$workflows_touched_ac6"
-  assert_true "AC6-scope: diff does not touch .claude/workflows/**, OR only the #985 SPDX-header two-line addition / #27 composition-oracle two-literal prompt edit (ledger Q1)" \
+  assert_true "AC6-scope: diff does not touch .claude/workflows/**, OR only the #985 SPDX-header two-line addition / #27 composition-oracle two-literal prompt edit / #56 carry-channel evidence-discipline edit (ledger Q1, L18)" \
     "[ '$workflows_admitted_ac6' = 'yes' ]"
 fi
 

@@ -114,6 +114,11 @@ on:
       - 'tests/test-issue-7-oracle-hardening.sh'
       - 'tests/test-issue-1-guard-contract.sh'
       - 'tests/manual/issue-7-manual-scenarios.md'
+      # #56 cycle surface (carry-channel evidence discipline). TAIL here,
+      # mirroring the #7/#27/#43/#35 entries above for the same reason those
+      # comments record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window).
+      - 'tests/test-issue-56-carry-evidence-discipline.sh'
+      - 'tests/manual/issue-56-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -192,6 +197,10 @@ on:
       - 'tests/test-issue-7-oracle-hardening.sh'
       - 'tests/test-issue-1-guard-contract.sh'
       - 'tests/manual/issue-7-manual-scenarios.md'
+      # #56 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-56-carry-evidence-discipline.sh'
+      - 'tests/manual/issue-56-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -415,3 +424,14 @@ jobs:
       # tests/test-issue-7-oracle-hardening.sh.
       - name: Run oracle-hardening guard (#7)
         run: bash tests/test-issue-7-oracle-hardening.sh
+
+      # Carry-channel evidence discipline guard (#56, cycle-scoped): the
+      # count/position-shaped assertions the permanent registry structurally
+      # cannot hold — the CARRY_NON_EVIDENTIARY / COUNTER_EVIDENCE_RULE
+      # constant-placement discriminators, the change-surface fence bound to
+      # architect-deliberation.js alone, and the manifest-hash derived-
+      # artifact gate. CI has no glob discovery; registered by filename per
+      # the sibling suites. See
+      # tests/test-issue-56-carry-evidence-discipline.sh.
+      - name: Run carry-channel evidence discipline guard (#56)
+        run: bash tests/test-issue-56-carry-evidence-discipline.sh

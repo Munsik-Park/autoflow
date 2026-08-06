@@ -541,6 +541,14 @@ else
     "tests/test-issue-1-guard-contract.sh"
     "tests/test-issue-7-oracle-hardening.sh"
     "tests/manual/issue-7-manual-scenarios.md"
+    # #56 cycle files (carry-channel evidence discipline): the cycle-scoped
+    # RED suite and its manual-scenario lane. .claude/workflows/
+    # architect-deliberation.js is already admitted above (#27 entry); the
+    # doc/CI surfaces this cycle edits (setup/manifest.json,
+    # tests/fixtures/doc-invariants.json,
+    # .github/workflows/e2e-dummy-target.yml) are already admitted above.
+    "tests/manual/issue-56-manual-scenarios.md"
+    "tests/test-issue-56-carry-evidence-discipline.sh"
   )
   disallowed=""
   while IFS= read -r f; do
