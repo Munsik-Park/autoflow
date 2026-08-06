@@ -254,17 +254,266 @@ await test('ARCHITECT: single transient one-side-null still converges (regressio
   assert.equal(result.rounds, 2)
 })
 
-await test('ARCHITECT: draft non-null but artifact missing -> early ESCALATE', async () => {
+await test('ARCHITECT: draft non-null with a withheld artifact no longer early-ESCALATEs (regression lock on the §D7 capability removal, issue #62)', async () => {
+  // REWRITTEN IN PLACE (issue #62, §D7/§D8) — was "draft non-null but artifact
+  // missing -> early ESCALATE". The artifact-existence check (the
+  // `import('node:fs')` block) is retired; this same driver (omitArtifact:
+  // 'verif') must now converge normally instead of early-ESCALATEing.
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
   }
   const { result, calls } = await runArch({ issue: '845-4' }, responder, { omitArtifact: 'verif' })
-  assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.rounds, 0, 'Converge loop must not be entered on a missing artifact')
-  assert.match(result.escalation, /draft artifact missing/)
-  assert.ok(!calls.some((c) => /-r\d/.test(c.label)), 'no Converge-round call should be made')
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.ok(result.rounds > 0, 'Converge loop must be entered even when a draft artifact was withheld')
+  assert.ok(!String(result.escalation ?? '').includes('draft artifact missing'))
+  assert.ok(calls.some((c) => /-r\d/.test(c.label)), 'Converge-round calls must be made')
+})
+
+// ---- ARCHITECT: sequential test->dev rounds + carry compaction + citation
+// partitioning by mutability (issue #62) ----------------------------------
+// Verification design §1/§5 (.autoflow/issue-62-verification-design.md). The
+// 15 cases below are RED against the current concurrent-round script; several
+// (marked in-line) pass vacuously pre-fix by construction — see the
+// verification design's per-AC RED column for which.
+
+await test('ARCHITECT: test-side call completes before the dev-side call is invoked (awaited-timer flag) (AC-62-1)', async () => {
+  let testResolved = false
+  let devSawTestResolved = null
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'test-r1') {
+      return new Promise((resolve) => setTimeout(() => {
+        testResolved = true
+        resolve({ response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] })
+      }, 15))
+    }
+    if (label === 'dev-r1') {
+      devSawTestResolved = testResolved
+      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  await runArch({ issue: '62-1' }, responder)
+  assert.equal(devSawTestResolved, true, 'dev-r1 must be invoked only after test-r1 has resolved')
+})
+
+await test('ARCHITECT: dev-rN prompt carries the same-round test-rN counter token (AC-62-2)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'test-r1') return { response: 'COUNTER', counters: ['TEST_PEER_TOKEN_62'], accept_grounds: [] }
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: ['dev-c1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-2' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  assert.match(devR1, /TEST_PEER_TOKEN_62/)
+})
+
+await test('ARCHITECT: test-r2 lacks the round-2 dev token but carries the round-1 one via ${carry} (AC-62-3)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: ['R1_DEV_TOKEN_62'], accept_grounds: [] }
+    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
+    if (label === 'dev-r2') return { response: 'COUNTER', counters: ['R2_DEV_TOKEN_62'], accept_grounds: [] }
+    if (label === 'test-r2') return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-3' }, responder)
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  assert.doesNotMatch(testR2, /R2_DEV_TOKEN_62/)
+  assert.match(testR2, /R1_DEV_TOKEN_62/)
+})
+
+await test('ARCHITECT: recorded call-log index of test-rN precedes dev-rN, every round (AC-62-4)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r < 3) return { response: 'COUNTER', counters: [`c${r}`], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-4' }, responder)
+  for (let r = 1; r <= 3; r++) {
+    const testIdx = calls.findIndex((c) => c.label === `test-r${r}`)
+    const devIdx = calls.findIndex((c) => c.label === `dev-r${r}`)
+    assert.ok(testIdx >= 0 && devIdx >= 0, `round ${r} calls must exist`)
+    assert.ok(testIdx < devIdx, `round ${r}: test-r${r} (idx ${testIdx}) must precede dev-r${r} (idx ${devIdx})`)
+  }
+})
+
+await test('ARCHITECT: test-side null in a round still lets dev run that round (AC-62-8 new case)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r === 1 && label.startsWith('test-')) return null
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { result, calls } = await runArch({ issue: '62-5' }, responder)
+  assert.ok(calls.some((c) => c.label === 'dev-r1'), 'dev-r1 must still be invoked despite test-r1 being null')
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.equal(result.rounds, 2)
+})
+
+await test('ARCHITECT: carried counter argument prose tail is absent from both r2 prompts (AC-62-9)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: 'R1_AGENDA_62', locator: 'src/x.js:1', argument: 'R1_ARG_TAIL_62 verbose reasoning' }], accept_grounds: [] }
+    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-6' }, responder)
+  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  assert.doesNotMatch(devR2, /R1_ARG_TAIL_62/)
+  assert.doesNotMatch(testR2, /R1_ARG_TAIL_62/)
+})
+
+await test('ARCHITECT: no counter lost to compaction — every open counter agenda reaches both r2 prompts (AC-62-10)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: 'AGENDA_A_62', locator: 'a' }, { agenda: 'AGENDA_B_62', locator: 'b' }], accept_grounds: [] }
+    if (label === 'test-r1') return { response: 'COUNTER', counters: [{ agenda: 'AGENDA_C_62', locator: 'c' }], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-7' }, responder)
+  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  for (const tok of ['AGENDA_A_62', 'AGENDA_B_62', 'AGENDA_C_62']) {
+    assert.ok(devR2.includes(tok), `dev-r2 must carry ${tok}`)
+    assert.ok(testR2.includes(tok), `test-r2 must carry ${tok}`)
+  }
+})
+
+await test('ARCHITECT: bare-string counter normalized into agenda + placeholder locator (AC-62-11a)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: ['STALE_PROBE_62'], accept_grounds: [] }
+    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-8' }, responder)
+  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  for (const p of [devR2, testR2]) {
+    assert.match(p, /STALE_PROBE_62/)
+    assert.match(p, /unspecified/)
+  }
+})
+
+await test('ARCHITECT: partial-record counter (locator only) normalized without dropping content (AC-62-11b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ locator: 'PARTIAL_PROBE_62' }], accept_grounds: [] }
+    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-9' }, responder)
+  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  // Double-encoded form: the item's own JSON becomes the agenda, then the
+  // whole carry array is JSON.stringify'd again for the carry sentence — the
+  // escaped quotes only appear once that double-encoding happens (post-fix).
+  const doubleEncoded = '{\\"locator\\":\\"PARTIAL_PROBE_62\\"}'
+  for (const p of [devR2, testR2]) {
+    assert.ok(p.includes('PARTIAL_PROBE_62'), 'the locator content must reach the carry')
+    assert.ok(p.includes(doubleEncoded), 'the item JSON must become the carried agenda (double-encoded), nothing dropped')
+  }
+})
+
+await test('ARCHITECT: null counter item normalized to empty agenda + placeholder, never {} or undefined (AC-62-11c)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: [null], accept_grounds: [] }
+    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-10' }, responder)
+  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  for (const p of [devR2, testR2]) {
+    assert.match(p, /unspecified/)
+    assert.doesNotMatch(p, /\{\}/)
+    assert.doesNotMatch(p, /undefined/)
+  }
+})
+
+await test('ARCHITECT: over-long agenda and locator truncated at their module constants with the marker (AC-62-12)', async () => {
+  const AGENDA_MAX = 80
+  const LOCATOR_MAX = 120
+  const marker = '…[truncated]'
+  const longAgenda = 'A'.repeat(100)
+  const longLocator = 'L'.repeat(200)
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: longAgenda, locator: longLocator }], accept_grounds: [] }
+    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-11' }, responder)
+  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  for (const p of [devR2, testR2]) {
+    assert.ok(p.includes('A'.repeat(AGENDA_MAX) + marker), 'agenda must be capped at AGENDA_MAX with the truncation marker')
+    assert.ok(p.includes('L'.repeat(LOCATOR_MAX) + marker), 'locator must be capped at LOCATOR_MAX with the truncation marker')
+    assert.ok(!p.includes(longAgenda), 'un-truncated agenda tail must be absent')
+    assert.ok(!p.includes(longLocator), 'un-truncated locator tail must be absent')
+  }
+})
+
+await test('ARCHITECT: dev-r1 prompt instructs section/item-ID citation for mutable design-doc targets (AC-62-15)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-12' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  assert.match(devR1, /cite it by section heading or item ID, never by line number/)
+})
+
+await test('ARCHITECT: dev-r1 prompt reserves path:line citation for immutable repository source (AC-62-16)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-13' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  assert.match(devR1, /reserve `path:line` for immutable repository source files/)
+})
+
+await test('ARCHITECT: dev-r1 prompt directs recording each counter argument as a named open-concern entry (AC-62-28i)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-14' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  assert.match(devR1, /record its argument as a named open-concern entry/)
+})
+
+await test('ARCHITECT: test-r1 prompt does not carry the dev-only open-concern-record instruction (AC-62-28ii)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '62-15' }, responder)
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  assert.doesNotMatch(testR1, /record its argument as a named open-concern entry/)
 })
 
 // ---- ARCHITECT: carry-channel evidence discipline (issue #56) -----------------
