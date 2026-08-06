@@ -185,10 +185,26 @@ suite_result_at_ref() {
   suite_counts "$out"
 }
 
-# NOTE (RED, cycle 2): `base_measured()` — the ONE place the -1/-1/-1 unmeasurable sentinel
-# is to be interpreted (AC-59-19a/D2) — is deliberately NOT defined here. It is GREEN's
-# implementation (feature design D1/D2); RED only adds the assertions below that call it, so
-# they fail loudly (command not found) until GREEN supplies the function.
+# The ONE place the `-1 -1 -1` unmeasurable sentinel emitted by suite_counts /
+# suite_result_at_ref above is interpreted (cycle 2, feature design D1/D2). Every consumer of
+# a base triple must lead its comparison with this predicate: without it the delta comparison
+# is true for every non-negative HEAD total once the base total reads -1, so an unmeasured
+# base prints a green delta line (codex Medium on PR #61). AC-59-19b greps for exactly that
+# leading conjunct, so this comment states the condition in prose rather than in its source
+# form — a literal copy here would be counted as a 13th, unguarded delta condition.
+#
+# The shape check `^[0-9]+$` is deliberately wider than `!= -1` — it also rejects an empty
+# field (what `read` yields when the helper printed nothing) and any non-numeric value, both
+# of which would otherwise reach `[ ... -ge ... ]` and surface as `integer expression
+# expected` under a misleading label. Measurability only: a measured-but-red base
+# (15 18 3) is ACCEPTED (D4).
+base_measured() {
+  local field
+  for field in "$@"; do
+    [[ "$field" =~ ^[0-9]+$ ]] || return 1
+  done
+  return 0
+}
 
 # Cycle-scoped diff-dependent lanes (AC-59-10, 11a, 11b, 11d, 15(a)) are this cycle's OWN PR
 # contract — scoped to the issue-59 dev branch, mirroring commit ea68a4c
@@ -334,8 +350,11 @@ echo "=== every unconditional cross-cycle change-surface guard re-run against th
 case "$HEAD_BRANCH" in
   dev/*-issue-59|dev/*-issue-59-*)
     if [[ -z "$BASE_REF" ]]; then
-      echo "  BLOCK: no comparison base resolvable — AC-59-11d/AC-59-18 counted FAIL, never skipped"
-      TESTS=$((TESTS + 9)); FAIL=$((FAIL + 9))
+      # 7 AC-59-21 preconditions + 7 AC-59-11d deltas + 2 AC-59-18 — the fallback must cost
+      # exactly what the lane would otherwise contribute, or the suite total would depend on
+      # whether the base resolved.
+      echo "  BLOCK: no comparison base resolvable — AC-59-21/AC-59-11d/AC-59-18 counted FAIL, never skipped"
+      TESTS=$((TESTS + 16)); FAIL=$((FAIL + 16))
     else
       OUT_798="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
       OUT_799="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
@@ -367,20 +386,37 @@ case "$HEAD_BRANCH" in
       read -r BP955 BT955 BF955 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-955-subagent-background-ban.sh")"
       read -r BPT1 BTT1 BFT1 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-1-guard-contract.sh")"
 
+      # Each lane is two counted assertions (D3): a neutral-noun-phrase precondition naming
+      # the base measurement, then the delta verdict whose condition LEADS with the same
+      # guard — so an unmeasured base fails both lines instead of printing a green delta.
+      assert_true "AC-59-21-798: base measurement of test-issue-798-topology-flip.sh at $BASE_REF (got base $BP798/$BT798, $BF798 failed)" \
+        "base_measured \"$BP798\" \"$BT798\" \"$BF798\""
       assert_true "AC-59-11d-798: test-issue-798-topology-flip.sh — 0 failed at HEAD, total not below base (got: $P798/$T798 vs base $BP798/$BT798)" \
-        "[ \"$F798\" -eq 0 ] && [ \"$T798\" -ge \"$BT798\" ]"
+        "base_measured \"$BP798\" \"$BT798\" \"$BF798\" && [ \"$F798\" -eq 0 ] && [ \"$T798\" -ge \"$BT798\" ]"
+      assert_true "AC-59-21-799: base measurement of test-issue-799-inert-cleanup.sh at $BASE_REF (got base $BP799/$BT799, $BF799 failed)" \
+        "base_measured \"$BP799\" \"$BT799\" \"$BF799\""
       assert_true "AC-59-11d-799: test-issue-799-inert-cleanup.sh — 0 failed at HEAD, total not below base (got: $P799/$T799 vs base $BP799/$BT799)" \
-        "[ \"$F799\" -eq 0 ] && [ \"$T799\" -ge \"$BT799\" ]"
+        "base_measured \"$BP799\" \"$BT799\" \"$BF799\" && [ \"$F799\" -eq 0 ] && [ \"$T799\" -ge \"$BT799\" ]"
+      assert_true "AC-59-21-846: base measurement of test-issue-846-doc-assertions.sh at $BASE_REF (got base $BP846/$BT846, $BF846 failed)" \
+        "base_measured \"$BP846\" \"$BT846\" \"$BF846\""
       assert_true "AC-59-11d-846: test-issue-846-doc-assertions.sh — 0 failed at HEAD, total not below base (got: $P846/$T846 vs base $BP846/$BT846)" \
-        "[ \"$F846\" -eq 0 ] && [ \"$T846\" -ge \"$BT846\" ]"
+        "base_measured \"$BP846\" \"$BT846\" \"$BF846\" && [ \"$F846\" -eq 0 ] && [ \"$T846\" -ge \"$BT846\" ]"
+      assert_true "AC-59-21-848: base measurement of test-issue-848-doc-assertions.sh at $BASE_REF (got base $BP848/$BT848, $BF848 failed)" \
+        "base_measured \"$BP848\" \"$BT848\" \"$BF848\""
       assert_true "AC-59-11d-848: test-issue-848-doc-assertions.sh — 0 failed at HEAD, total not below base (got: $P848/$T848 vs base $BP848/$BT848)" \
-        "[ \"$F848\" -eq 0 ] && [ \"$T848\" -ge \"$BT848\" ]"
+        "base_measured \"$BP848\" \"$BT848\" \"$BF848\" && [ \"$F848\" -eq 0 ] && [ \"$T848\" -ge \"$BT848\" ]"
+      assert_true "AC-59-21-952: base measurement of test-issue-952-wizard-removal.sh at $BASE_REF (got base $BP952/$BT952, $BF952 failed)" \
+        "base_measured \"$BP952\" \"$BT952\" \"$BF952\""
       assert_true "AC-59-11d-952: test-issue-952-wizard-removal.sh — 0 failed at HEAD, total not below base (got: $P952/$T952 vs base $BP952/$BT952)" \
-        "[ \"$F952\" -eq 0 ] && [ \"$T952\" -ge \"$BT952\" ]"
+        "base_measured \"$BP952\" \"$BT952\" \"$BF952\" && [ \"$F952\" -eq 0 ] && [ \"$T952\" -ge \"$BT952\" ]"
+      assert_true "AC-59-21-955: base measurement of test-issue-955-subagent-background-ban.sh at $BASE_REF (got base $BP955/$BT955, $BF955 failed)" \
+        "base_measured \"$BP955\" \"$BT955\" \"$BF955\""
       assert_true "AC-59-11d-955: test-issue-955-subagent-background-ban.sh — 0 failed at HEAD, total not below base (got: $P955/$T955 vs base $BP955/$BT955)" \
-        "[ \"$F955\" -eq 0 ] && [ \"$T955\" -ge \"$BT955\" ]"
+        "base_measured \"$BP955\" \"$BT955\" \"$BF955\" && [ \"$F955\" -eq 0 ] && [ \"$T955\" -ge \"$BT955\" ]"
+      assert_true "AC-59-21-test1: base measurement of test-issue-1-guard-contract.sh at $BASE_REF (got base $BPT1/$BTT1, $BFT1 failed)" \
+        "base_measured \"$BPT1\" \"$BTT1\" \"$BFT1\""
       assert_true "AC-59-11d-test1: test-issue-1-guard-contract.sh (N1 aggregator) — 0 failed at HEAD, total not below base (got: $PT1/$TT1 vs base $BPT1/$BTT1)" \
-        "[ \"$FT1\" -eq 0 ] && [ \"$TT1\" -ge \"$BTT1\" ]"
+        "base_measured \"$BPT1\" \"$BTT1\" \"$BFT1\" && [ \"$FT1\" -eq 0 ] && [ \"$TT1\" -ge \"$BTT1\" ]"
 
       # AC-59-18 reuses the 952/955 real re-runs above rather than invoking them a second
       # time (the manifest same-commit obligation's diff-membership fences live inside those
@@ -434,8 +470,9 @@ echo ""
 echo "=== AC-59-12c — the yml edit moves no other cycle's fixed CI window (E22 canonical list: 799+798+27+35+56) ==="
 
 if [[ -z "$BASE_REF" ]]; then
-  echo "  BLOCK: no comparison base resolvable — AC-59-12c counted FAIL, never skipped"
-  TESTS=$((TESTS + 5)); FAIL=$((FAIL + 5))
+  # 5 AC-59-21 preconditions + 5 AC-59-12c deltas (same accounting invariant as AC-59-11d).
+  echo "  BLOCK: no comparison base resolvable — AC-59-21/AC-59-12c counted FAIL, never skipped"
+  TESTS=$((TESTS + 10)); FAIL=$((FAIL + 10))
 else
   OUT_799_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
   OUT_798_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
@@ -457,16 +494,27 @@ else
   read -r BP35W BT35W BF35W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-35-phase-marker.sh")"
   read -r BP56W BT56W BF56W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-56-carry-evidence-discipline.sh")"
 
+  # Two counted assertions per lane, same shape as AC-59-11d above (D3).
+  assert_true "AC-59-21-799W: base measurement of test-issue-799-inert-cleanup.sh at $BASE_REF (got base $BP799W/$BT799W, $BF799W failed)" \
+    "base_measured \"$BP799W\" \"$BT799W\" \"$BF799W\""
   assert_true "AC-59-12c-799: test-issue-799-inert-cleanup.sh window (AC6-ci -A40) unaffected — 0 failed, total not below base (got: $P799W/$T799W vs base $BP799W/$BT799W)" \
-    "[ \"$F799W\" -eq 0 ] && [ \"$T799W\" -ge \"$BT799W\" ]"
+    "base_measured \"$BP799W\" \"$BT799W\" \"$BF799W\" && [ \"$F799W\" -eq 0 ] && [ \"$T799W\" -ge \"$BT799W\" ]"
+  assert_true "AC-59-21-798W: base measurement of test-issue-798-topology-flip.sh at $BASE_REF (got base $BP798W/$BT798W, $BF798W failed)" \
+    "base_measured \"$BP798W\" \"$BT798W\" \"$BF798W\""
   assert_true "AC-59-12c-798: test-issue-798-topology-flip.sh window unaffected — 0 failed, total not below base (got: $P798W/$T798W vs base $BP798W/$BT798W)" \
-    "[ \"$F798W\" -eq 0 ] && [ \"$T798W\" -ge \"$BT798W\" ]"
+    "base_measured \"$BP798W\" \"$BT798W\" \"$BF798W\" && [ \"$F798W\" -eq 0 ] && [ \"$T798W\" -ge \"$BT798W\" ]"
+  assert_true "AC-59-21-27W: base measurement of test-issue-27-composition-oracle.sh at $BASE_REF (got base $BP27W/$BT27W, $BF27W failed)" \
+    "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\""
   assert_true "AC-59-12c-27: test-issue-27-composition-oracle.sh window unaffected — 0 failed, total not below base (got: $P27W/$T27W vs base $BP27W/$BT27W)" \
-    "[ \"$F27W\" -eq 0 ] && [ \"$T27W\" -ge \"$BT27W\" ]"
+    "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\" && [ \"$F27W\" -eq 0 ] && [ \"$T27W\" -ge \"$BT27W\" ]"
+  assert_true "AC-59-21-35W: base measurement of test-issue-35-phase-marker.sh at $BASE_REF (got base $BP35W/$BT35W, $BF35W failed)" \
+    "base_measured \"$BP35W\" \"$BT35W\" \"$BF35W\""
   assert_true "AC-59-12c-35: test-issue-35-phase-marker.sh (control) unaffected — 0 failed, total not below base (got: $P35W/$T35W vs base $BP35W/$BT35W)" \
-    "[ \"$F35W\" -eq 0 ] && [ \"$T35W\" -ge \"$BT35W\" ]"
+    "base_measured \"$BP35W\" \"$BT35W\" \"$BF35W\" && [ \"$F35W\" -eq 0 ] && [ \"$T35W\" -ge \"$BT35W\" ]"
+  assert_true "AC-59-21-56W: base measurement of test-issue-56-carry-evidence-discipline.sh at $BASE_REF (got base $BP56W/$BT56W, $BF56W failed)" \
+    "base_measured \"$BP56W\" \"$BT56W\" \"$BF56W\""
   assert_true "AC-59-12c-56: test-issue-56-carry-evidence-discipline.sh (control) unaffected — 0 failed, total not below base (got: $P56W/$T56W vs base $BP56W/$BT56W)" \
-    "[ \"$F56W\" -eq 0 ] && [ \"$T56W\" -ge \"$BT56W\" ]"
+    "base_measured \"$BP56W\" \"$BT56W\" \"$BF56W\" && [ \"$F56W\" -eq 0 ] && [ \"$T56W\" -ge \"$BT56W\" ]"
 fi
 
 # =============================================================================
