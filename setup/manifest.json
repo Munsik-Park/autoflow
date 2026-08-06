@@ -1,5 +1,5 @@
 {
-  "version": "0.1.4",
+  "version": "0.1.5",
   "artifacts": [
     {
       "source": "setup/thin-root-layer/methodology/METHODOLOGY.md",
@@ -195,7 +195,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "d9dee331815d1f17e399c3391deede562c3618d2e63780d740ff567dcb860391"
+      "sha256": "df9b4790a5dc3b187d98aeddf72d8b4fd631aec282c9e6d8652e56594db23630"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",

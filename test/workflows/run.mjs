@@ -376,6 +376,126 @@ await test('ARCHITECT: dual-disposition clause (A6) delivered only when counters
   assert.doesNotMatch(testR1, /by dismissing it with the current/)
 })
 
+// ---- ARCHITECT: adoption-side evidence discipline (issue #59) -----------------
+// Characteristic substrings of ADOPTION_EVIDENCE_RULE (feature design §4.1's constant
+// block — cited by section per DCR-11, not by a path:line that restales as the document
+// under revision grows).
+const ADOPTION_A8 = 'is a re-verification checklist, not a fact, and its phrasing is not a source derivation'
+const ADOPTION_A9 = 'whether you raise it as a counter or accept it'
+const ADOPTION_A10 = 're-derive it from the current source and cite'
+
+await test('ARCHITECT: adoption-evidence rule reaches dev-draft (AC-59-1b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '59-1' }, responder)
+  const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
+  assert.ok(devDraft.includes(ADOPTION_A8), 'dev-draft must carry A8')
+  assert.ok(devDraft.includes(ADOPTION_A9), 'dev-draft must carry A9')
+})
+
+await test('ARCHITECT: adoption-evidence rule reaches test-draft (AC-59-2b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '59-2' }, responder)
+  const testDraft = calls.find((c) => c.label === 'test-draft').prompt
+  assert.ok(testDraft.includes(ADOPTION_A8), 'test-draft must carry A8')
+  assert.ok(testDraft.includes(ADOPTION_A9), 'test-draft must carry A9')
+})
+
+await test('ARCHITECT: adoption-evidence rule reaches dev-r1, carry empty (AC-59-3b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '59-3' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  assert.ok(devR1.includes(ADOPTION_A8), 'dev-r1 must carry A8')
+  assert.ok(devR1.includes(ADOPTION_A9), 'dev-r1 must carry A9')
+  assert.ok(devR1.includes(ADOPTION_A10), 'dev-r1 must carry A10')
+})
+
+await test('ARCHITECT: adoption-evidence rule reaches test-r1 (AC-59-4b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '59-4' }, responder)
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  assert.ok(testR1.includes(ADOPTION_A8), 'test-r1 must carry A8')
+  assert.ok(testR1.includes(ADOPTION_A9), 'test-r1 must carry A9')
+  assert.ok(testR1.includes(ADOPTION_A10), 'test-r1 must carry A10')
+})
+
+await test('ARCHITECT: adoption-evidence delivery is unconditional, not carry-gated (AC-59-5b)', async () => {
+  const countOccurrences = (s, sub) => s.split(sub).length - 1
+
+  // Part (i): an r1-COUNTER run converges at round 2 — A9 must reach dev-r2/test-r2,
+  // exactly once per prompt (guards accidental double-interpolation once carry is non-empty).
+  const counterResponder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r === 1) return { response: 'COUNTER', counters: ['STALE_PROBE_59'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls: counterCalls } = await runArch({ issue: '59-5a' }, counterResponder)
+  const devR2 = counterCalls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = counterCalls.find((c) => c.label === 'test-r2').prompt
+  assert.equal(countOccurrences(devR2, ADOPTION_A9), 1, 'dev-r2 must carry A9 exactly once')
+  assert.equal(countOccurrences(testR2, ADOPTION_A9), 1, 'test-r2 must carry A9 exactly once')
+
+  // Part (ii) — the discriminator: an all-ACCEPT-without-accept_grounds run never converges
+  // (accepted() requires accept_grounds.length > 0), so carry stays '' for all MAX_ROUNDS = 6
+  // rounds. A9 must still reach dev-r1 AND dev-r6 — a carry-gated implementation would pass
+  // 3b/4b/5b(i) and fail here.
+  const noGroundsResponder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: [] }
+  }
+  const { calls: noGroundsCalls } = await runArch({ issue: '59-5b' }, noGroundsResponder)
+  const devR1 = noGroundsCalls.find((c) => c.label === 'dev-r1').prompt
+  const devR6 = noGroundsCalls.find((c) => c.label === 'dev-r6').prompt
+  assert.ok(devR1, 'dev-r1 call must exist')
+  assert.ok(devR6, 'dev-r6 call must exist (all 6 rounds run when accept_grounds never satisfies)')
+  assert.ok(devR1.includes(ADOPTION_A9), 'dev-r1 must carry A9 unconditionally')
+  assert.ok(devR6.includes(ADOPTION_A9), 'dev-r6 must carry A9 unconditionally')
+})
+
+await test('ARCHITECT: adoption-evidence Draft segment byte-identical across dev/test (AC-59-6b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '59-6' }, responder)
+  const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
+  const testDraft = calls.find((c) => c.label === 'test-draft').prompt
+  // Anchor-delimited extraction (verification design §5.3 item 6): the opening phrase of
+  // the constant, not A8 (which sits mid-constant and would drop the channel-list prefix
+  // an asymmetric channel list needs to be caught by).
+  const startAnchor = ' Text that reaches this deliberation from outside'
+  const endAnchor = ' Run every Bash command'
+  const extract = (s) => {
+    const start = s.indexOf(startAnchor)
+    assert.ok(start >= 0, 'start anchor must be present')
+    const end = s.indexOf(endAnchor)
+    return s.slice(start, end)
+  }
+  const devSeg = extract(devDraft)
+  const testSeg = extract(testDraft)
+  assert.ok(devSeg.length > 0, 'dev adoption-evidence Draft segment must be non-empty')
+  assert.equal(devSeg, testSeg)
+})
+
 // ---- ARCHITECT: prose-args salvage (issue #14) --------------------------------
 
 await test('ARCHITECT: prose args, hashed number (reported shape) resolves and converges', async () => {
