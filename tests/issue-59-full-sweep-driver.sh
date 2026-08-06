@@ -38,6 +38,9 @@
 # INCONCLUSIVE in that case, never PASSED (the same discipline AC-59-15
 # exists to enforce on the re-run lanes it gates).
 #
+# A base whose worktree could not be created is INCONCLUSIVE, never `ALREADY
+# RED`: `base_exit` is only meaningful when the base run actually executed.
+#
 # Usage: bash tests/issue-59-full-sweep-driver.sh [BASE_REF]
 #   BASE_REF defaults to resolve_base_ref (tests/lib/base-ref.sh).
 # =============================================================================
@@ -47,6 +50,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BASEREF_LIB="$PROJECT_ROOT/tests/lib/base-ref.sh"
+SWEEP_MIN_ELAPSED="${SWEEP_MIN_ELAPSED:-600}"
 
 # The suites this cycle's own acceptance criteria already name as expected to
 # regress/change — a hit here is EXPECTED, not a new finding (AC-59-11d ∪
@@ -87,6 +91,7 @@ START_TS=$(date +%s)
 UNNAMED_REGRESSIONS=()
 NAMED_REGRESSIONS=()
 CLEAN=()
+INCONCLUSIVE=()
 
 echo "Full-tree sweep driver (issue #59, D24) — base: $BASE_REF"
 echo "Self-excluding: tests/test-issue-59-*.sh"
@@ -101,20 +106,42 @@ for suite in "$PROJECT_ROOT"/tests/test-issue-*.sh; do
   cur_out="$(cd "$PROJECT_ROOT" && bash "$suite" 2>&1)"
   cur_exit=$?
 
-  worktree="$(mktemp -d)"
-  git -C "$PROJECT_ROOT" worktree add -q --detach "$worktree" "$BASE_REF" 2>/dev/null
-  base_out=""
-  base_exit=1
-  if [[ -f "$worktree/tests/$base" ]]; then
-    base_out="$(cd "$worktree" && bash "tests/$base" 2>&1)"
-    base_exit=$?
+  base_setup_fail=""
+  worktree="$(mktemp -d "${TMPDIR:-/tmp}/autoflow-sweep-wt.XXXXXX" 2>/dev/null)" || worktree=""
+  if [[ -z "$worktree" ]]; then
+    base_setup_fail="mktemp -d failed"
+  else
+    git -C "$PROJECT_ROOT" worktree add -q --detach "$worktree" "$BASE_REF" 2>/dev/null
+    add_status=$?
+    [[ "$add_status" -ne 0 ]] && base_setup_fail="git worktree add exit $add_status"
   fi
-  git -C "$PROJECT_ROOT" worktree remove --force "$worktree" 2>/dev/null
+
+  base_out=""
+  base_exit=-1
+  base_measured=0
+  base_present=0
+  if [[ -z "$base_setup_fail" ]]; then
+    if [[ -f "$worktree/tests/$base" ]]; then
+      base_present=1
+      base_out="$(cd "$worktree" && bash "tests/$base" 2>&1)"
+      base_exit=$?
+      base_measured=1
+    fi
+    git -C "$PROJECT_ROOT" worktree remove --force "$worktree" 2>/dev/null
+  else
+    [[ -n "$worktree" ]] && rm -rf "$worktree"
+  fi
 
   if [[ "$cur_exit" -eq 0 ]]; then
     echo "  clean (exit 0)"
     CLEAN+=("$base")
-  elif [[ "$base_exit" -ne 0 ]]; then
+  elif [[ -n "$base_setup_fail" ]]; then
+    echo "  INCONCLUSIVE: base worktree setup failed for $base ($base_setup_fail) — base never measured; not classified as an existing red base or as a regression"
+    INCONCLUSIVE+=("$base")
+  elif [[ "$base_present" -eq 0 ]]; then
+    echo "  NEW AT HEAD: $base absent at $BASE_REF — no base run to compare against, cur exit $cur_exit"
+    CLEAN+=("$base")
+  elif [[ "$base_measured" -eq 1 && $base_exit -ne 0 ]]; then
     echo "  ALREADY RED on $BASE_REF (not a #59 regression) — cur exit $cur_exit, base exit $base_exit"
     CLEAN+=("$base")
   elif is_named "$base"; then
@@ -131,20 +158,26 @@ ELAPSED=$((END_TS - START_TS))
 
 echo ""
 echo "=============================="
-echo "Elapsed: ${ELAPSED}s (budget >= 600s — a shorter run is INCONCLUSIVE, never PASSED)"
+echo "Elapsed: ${ELAPSED}s (budget >= ${SWEEP_MIN_ELAPSED}s — a shorter run is INCONCLUSIVE, never PASSED)"
 echo "Clean/already-red: ${#CLEAN[@]}"
 echo "Named regressions (expected): ${#NAMED_REGRESSIONS[@]} ${NAMED_REGRESSIONS[*]:-}"
 echo "Unnamed regressions (NEW finding): ${#UNNAMED_REGRESSIONS[@]} ${UNNAMED_REGRESSIONS[*]:-}"
+echo "Inconclusive (base never measured): ${#INCONCLUSIVE[@]} ${INCONCLUSIVE[*]:-}"
 echo "=============================="
 
-if [[ "$ELAPSED" -lt 600 ]]; then
-  echo "INCONCLUSIVE: elapsed ${ELAPSED}s < 600s budget — result not trustworthy under this budget, never counted PASSED"
+if [[ "$ELAPSED" -lt "$SWEEP_MIN_ELAPSED" ]]; then
+  echo "INCONCLUSIVE: elapsed ${ELAPSED}s < ${SWEEP_MIN_ELAPSED}s budget — result not trustworthy under this budget, never counted PASSED"
   exit 2
 fi
 
 if [[ "${#UNNAMED_REGRESSIONS[@]}" -gt 0 ]]; then
   echo "FAIL: unnamed regression(s) found — a live guard escaped this cycle's design"
   exit 1
+fi
+
+if [[ "${#INCONCLUSIVE[@]}" -gt 0 ]]; then
+  echo "INCONCLUSIVE: ${#INCONCLUSIVE[@]} suite(s) never measured — never counted PASSED"
+  exit 2
 fi
 
 echo "PASS: every regression against $BASE_REF is a suite this cycle's own acceptance criteria already name"
