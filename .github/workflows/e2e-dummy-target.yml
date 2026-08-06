@@ -125,6 +125,11 @@ on:
       # window has zero headroom above this file's first `paths:` block).
       - 'tests/test-issue-59-adoption-evidence-discipline.sh'
       - 'tests/manual/issue-59-manual-scenarios.md'
+      # #62 cycle surface (sequential rounds / carry compaction / citation
+      # partitioning). TAIL here for the same reason the #56/#59 comments
+      # above record.
+      - 'tests/test-issue-62-sequential-rounds.sh'
+      - 'tests/manual/issue-62-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -211,6 +216,10 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-59-adoption-evidence-discipline.sh'
       - 'tests/manual/issue-59-manual-scenarios.md'
+      # #62 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-62-sequential-rounds.sh'
+      - 'tests/manual/issue-62-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -457,3 +466,15 @@ jobs:
       # tests/test-issue-59-adoption-evidence-discipline.sh.
       - name: Run adoption-evidence discipline guard (#59)
         run: bash tests/test-issue-59-adoption-evidence-discipline.sh
+
+      # Sequential-round / carry-compaction / citation-partitioning guard
+      # (#62, cycle-scoped): the structural and count-shaped assertions the
+      # permanent registry cannot hold — the single-`parallel(`-site
+      # discriminator, the non-comment `import(` fence, the ok-count
+      # cross-pin bump in its two foreign homes, the six branch-diff
+      # allow-list admissions, and the manifest-hash derived-artifact gate
+      # widened to three sources. CI has no glob discovery; registered by
+      # filename per the sibling suites. See
+      # tests/test-issue-62-sequential-rounds.sh.
+      - name: Run sequential-round deliberation guard (#62)
+        run: bash tests/test-issue-62-sequential-rounds.sh

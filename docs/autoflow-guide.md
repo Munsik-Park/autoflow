@@ -264,6 +264,13 @@ returned verdict — spot-checking targeted artifact excerpts against re-derived
 full read-and-score is GATE:PLAN's); it does not facilitate the discussion turn-by-turn and
 does not receive the round-by-round messages.
 
+**Artifact-existence check (orchestrator-side).** On a `CONVERGED` return the orchestrator must
+confirm both design artifacts exist and are non-empty before GATE:PLAN — `.autoflow/issue-{N}-feature-design.md`
+and `.autoflow/issue-{N}-verification-design.md` — and treat a missing or empty one as
+ESCALATE-equivalent rather than proceeding. The workflow script cannot perform this check itself:
+the hosted Workflow runtime injects no filesystem access and rejects `import(` at parse time, so
+the capability lives at the layer that has a shell.
+
 **Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the facilitator passes each in-script sub-agent only the documents its design task needs (e.g. the relevant `docs/adr/*`, `docs/design-rationale.md`). **Deliberation Isolation is unchanged** — the round-by-round cross-talk stays inside the workflow and only the verdict returns to the orchestrator.
 
 **Roles**:
