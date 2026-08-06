@@ -65,6 +65,31 @@
 #                holds against all three of its fences (AC-56-10a, 955's
 #                AC4-DOGFOOD, 952's AC5/AC5(T2)).
 #
+# --- cycle 2 (review-response, codex Medium: unguarded -1/-1/-1 sentinel) ---
+#   AC-59-19a  — unconditional, RED discriminator: `base_measured` is the ONE
+#                place the sentinel is interpreted (7-row table).
+#   AC-59-19b  — unconditional, RED discriminator, self-scoped structural grep:
+#                no delta comparison bypasses the guard (12 `-ge $BT...`
+#                conditions, all 12 also carry a `base_measured` conjunct).
+#   AC-59-20a  — unconditional, characterization: the worktree-add failure
+#                path is reachable via real git and returns the sentinel.
+#   AC-59-20b  — unconditional, characterization: the Results:-less parse path
+#                returns the sentinel.
+#   AC-59-20c  — unconditional, RED discriminator: the real `suite_result_at_ref`
+#                composed with the real `base_measured`, no re-typed copy.
+#   AC-59-21   — branch-scoped: each of the 12 AC-59-11d/12c lanes gets a
+#                separate base-measurement precondition assertion, plus the
+#                `base_measured` conjunct leading its own delta condition.
+#   AC-59-22a  — unconditional, RED discriminator, self-scoped structural grep:
+#                12 precondition labels + 12 delta labels exist, each naming
+#                its suite; no precondition label carries a claim-shaped verb.
+#   AC-59-22b  — unconditional, RED discriminator: every precondition label
+#                interpolates the base failed count ($BF...).
+#   AC-59-23   — regression fence (VERIFY evidence, not a lane in this file):
+#                full suite + the six guard suites (798/799/846/848/952/955).
+#   AC-59-24   — manual (tests/manual/issue-59-manual-scenarios.md): a genuine
+#                host-level worktree failure also produces the loud FAIL.
+#
 # AC-59-15(b) (full-tree sweep determination) is NOT a lane in this suite — it
 # is a standalone VERIFY-phase driver authored alongside this file:
 # tests/issue-59-full-sweep-driver.sh (D24). Running it here would be directly
@@ -159,6 +184,11 @@ suite_result_at_ref() {
   git -C "$PROJECT_ROOT" worktree remove --force "$wt" >/dev/null 2>&1
   suite_counts "$out"
 }
+
+# NOTE (RED, cycle 2): `base_measured()` — the ONE place the -1/-1/-1 unmeasurable sentinel
+# is to be interpreted (AC-59-19a/D2) — is deliberately NOT defined here. It is GREEN's
+# implementation (feature design D1/D2); RED only adds the assertions below that call it, so
+# they fail loudly (command not found) until GREEN supplies the function.
 
 # Cycle-scoped diff-dependent lanes (AC-59-10, 11a, 11b, 11d, 15(a)) are this cycle's OWN PR
 # contract — scoped to the issue-59 dev branch, mirroring commit ea68a4c
@@ -529,6 +559,102 @@ OUT_T1_SPDX="$(cd "$PROJECT_ROOT" && bash tests/test-issue-1-guard-contract.sh 2
 read -r PT1S TT1S FT1S <<<"$(suite_counts "$OUT_T1_SPDX")"
 assert_true "AC-59-17b: real re-run of test-issue-1-guard-contract.sh (N1 aggregator) == 32/32, 0 failed (got: $PT1S/$TT1S, $FT1S failed)" \
   "[ \"$TT1S\" -eq 32 ] && [ \"$FT1S\" -eq 0 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-19a (unconditional, RED discriminator) — base_measured is the ONE place the sentinel is interpreted ==="
+
+# Each reject-case condition is prefixed with a function-existence check
+# (`declare -F base_measured`) before the negation. Without it, "base_measured: command not
+# found" is a nonzero exit that `!` negates to true — the exact vacuous-PASS-on-unmeasured
+# defect class this cycle exists to fix, now inside the guard's own RED test. The prefix makes
+# the assertion FAIL loud today (function absent) and become a real negative check once GREEN
+# defines the function.
+assert_true "AC-59-19a-1: base_measured rejects the unmeasurable sentinel (-1 -1 -1)" \
+  "declare -F base_measured >/dev/null && ! base_measured \"-1\" \"-1\" \"-1\""
+assert_true "AC-59-19a-2: base_measured rejects a partial sentinel (-1 5 0)" \
+  "declare -F base_measured >/dev/null && ! base_measured \"-1\" \"5\" \"0\""
+assert_true "AC-59-19a-3: base_measured rejects a partial sentinel (5 -1 0)" \
+  "declare -F base_measured >/dev/null && ! base_measured \"5\" \"-1\" \"0\""
+assert_true "AC-59-19a-4: base_measured rejects a partial sentinel (5 5 -1)" \
+  "declare -F base_measured >/dev/null && ! base_measured \"5\" \"5\" \"-1\""
+assert_true "AC-59-19a-5: base_measured rejects an empty field (what read produces on empty output)" \
+  "declare -F base_measured >/dev/null && ! base_measured \"\" \"5\" \"0\""
+assert_true "AC-59-19a-6: base_measured accepts a real CI shape with p<t, an environment-conditional sub-test not registering (15 18 0)" \
+  "base_measured \"15\" \"18\" \"0\""
+assert_true "AC-59-19a-7: base_measured accepts a positive control (5 5 0)" \
+  "base_measured \"5\" \"5\" \"0\""
+
+# =============================================================================
+echo ""
+echo "=== AC-59-19b (unconditional, RED discriminator, self-scoped structural grep) — no delta comparison bypasses the guard ==="
+
+# The pattern literal is split across quote boundaries so this definition line cannot itself
+# satisfy the pattern it defines (self-scoping, matching the file's existing structural
+# assertions' convention). Quote-agnostic (M12): the 12 conditions live inside assert_true's
+# quoted argument, so their source has a backslash-escaped quote (\"$BT...\"), but the pattern
+# also accepts a bare quote.
+DELTA_GE_PATTERN='-ge'" +"'\\?"\$BT'
+DELTA_GE_LINE_COUNT="$(grep -cE -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" || true)"
+DELTA_GE_GUARDED_COUNT="$(grep -E -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" | grep -c 'base_measured' || true)"
+
+assert_true "AC-59-19b-total: exactly 12 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
+  "[ \"$DELTA_GE_LINE_COUNT\" -eq 12 ]"
+assert_true "AC-59-19b-guarded: all 12 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
+  "[ \"$DELTA_GE_GUARDED_COUNT\" -eq 12 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-20a (unconditional, characterization) — the worktree-add failure path is reachable via real git ==="
+
+read -r P20A T20A F20A <<<"$(suite_result_at_ref 'refs/heads/__autoflow-issue59-nonexistent__' 'test-issue-35-phase-marker.sh')"
+assert_true "AC-59-20a: suite_result_at_ref returns the unmeasurable sentinel for an unresolvable ref, real git (got: $P20A $T20A $F20A)" \
+  "[ \"$P20A\" = \"-1\" ] && [ \"$T20A\" = \"-1\" ] && [ \"$F20A\" = \"-1\" ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-20b (unconditional, characterization) — the Results:-less parse path returns the sentinel ==="
+
+read -r P20B T20B F20B <<<"$(suite_counts 'no Results line in this output')"
+assert_true "AC-59-20b: suite_counts returns the unmeasurable sentinel when no Results: line is present (got: $P20B $T20B $F20B)" \
+  "[ \"$P20B\" = \"-1\" ] && [ \"$T20B\" = \"-1\" ] && [ \"$F20B\" = \"-1\" ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-20c (unconditional, RED discriminator) — real suite_result_at_ref composed with real base_measured ==="
+
+read -r P20C1 T20C1 F20C1 <<<"$(suite_result_at_ref 'refs/heads/__autoflow-issue59-nonexistent__' 'test-issue-35-phase-marker.sh')"
+assert_true "AC-59-20c-reject: base_measured rejects the real suite_result_at_ref output for an unmeasurable base (got: $P20C1 $T20C1 $F20C1)" \
+  "declare -F base_measured >/dev/null && ! base_measured \"$P20C1\" \"$T20C1\" \"$F20C1\""
+
+read -r P20C2 T20C2 F20C2 <<<"$(suite_counts 'Results: 15/18 passed, 0 failed')"
+assert_true "AC-59-20c-accept: base_measured accepts the real suite_counts output for a measured base (got: $P20C2 $T20C2 $F20C2)" \
+  "base_measured \"$P20C2\" \"$T20C2\" \"$F20C2\""
+
+# =============================================================================
+echo ""
+echo "=== AC-59-22a (unconditional, RED discriminator, self-scoped structural grep) — precondition/delta labels are separately attributable ==="
+
+# Split literals so this definition cannot match itself (same self-scoping convention as
+# AC-59-19b above).
+PRECOND_LABEL_PATTERN='assert_true "AC-59-21'"-"
+DELTA_11D_LABEL_PATTERN='assert_true "AC-59-11d'"-"
+DELTA_12C_LABEL_PATTERN='assert_true "AC-59-12c'"-"
+
+PRECOND_LABEL_COUNT="$(grep -cE "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true)"
+DELTA_LABEL_COUNT="$(( $(grep -cE "$DELTA_11D_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true) + $(grep -cE "$DELTA_12C_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true) ))"
+CLAIM_SHAPED_PRECOND="$(grep -E "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" | grep -cE 'succeeded|not below' || true)"
+
+assert_true "AC-59-22a: 12 base-precondition labels and 12 delta labels exist, each naming its suite, and no precondition label carries a claim-shaped verb that would invert under FAIL: (got: precond=$PRECOND_LABEL_COUNT, delta=$DELTA_LABEL_COUNT, claim-shaped=$CLAIM_SHAPED_PRECOND)" \
+  "[ \"$PRECOND_LABEL_COUNT\" -eq 12 ] && [ \"$DELTA_LABEL_COUNT\" -eq 12 ] && [ \"$CLAIM_SHAPED_PRECOND\" -eq 0 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-22b (unconditional, RED discriminator) — every precondition label interpolates the base failed count ==="
+
+BF_INTERP_COUNT="$(grep -E "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" | grep -cE '\$BF[0-9A-Za-z]*' || true)"
+assert_true "AC-59-22b: all 12 base-precondition labels interpolate \$BF... (base failed count) alongside \$BP.../\$BT... (got: $BF_INTERP_COUNT of 12)" \
+  "[ \"$BF_INTERP_COUNT\" -eq 12 ]"
 
 # =============================================================================
 # Results
