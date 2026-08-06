@@ -234,11 +234,27 @@ else
   # confined to exactly those two template literals. A substring common to
   # BOTH the old and new line admits each in-place edit; any OTHER content
   # change under .claude/workflows/** still trips the guard.
+  # #56 parity-carried exception (same shape, GATE:QUALITY FAIL #4 / ledger
+  # L18, user-approved same-PR sibling fix): admits the carry-channel
+  # evidence-discipline edit — the two hoisted CARRY_NON_EVIDENTIARY /
+  # COUNTER_EVIDENCE_RULE const declarations (and their doc-comment) as pure
+  # additions, plus the carry-ternary collapse and the dev-prompt line via a
+  # substring common to both old and new (the test-prompt line reuses the
+  # #27 substring immediately above it).
   workflows_offwindow_ac9="$(git diff "$BASE_REF"...HEAD -- .claude/workflows 2>/dev/null \
     | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
     | grep -vF 'design-change requests for untestable items' \
-    | grep -vF 'Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method' || true)"
-  assert_true "AC9: diff touches no .claude/workflows/** path, OR only the #27 composition-oracle two-literal prompt edit (parity-carried exception)" \
+    | grep -vF 'Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method' \
+    | grep -vF 'Evidence discipline for the carry channel (issue #56)' \
+    | grep -vF 'BOTH round prompts so the dev and test channels cannot drift apart' \
+    | grep -vF 'only alongside carried counters; the counter rule governs every round' \
+    | grep -vF 'const CARRY_NON_EVIDENTIARY = ' \
+    | grep -vF 'const COUNTER_EVIDENCE_RULE = ' \
+    | grep -vF 'const carry = openCounters.length' \
+    | grep -vF 'Open counters still unresolved from the previous round — you MUST address each before ACCEPT' \
+    | grep -vF "    : ''" \
+    | grep -vF 'both documents are mutually consistent and complete AND you have no open concerns' || true)"
+  assert_true "AC9: diff touches no .claude/workflows/** path, OR only the #27 composition-oracle two-literal prompt edit / #56 carry-channel evidence-discipline edit (parity-carried exception, ledger L18)" \
     "[ -z \"\$workflows_offwindow_ac9\" ]"
 fi
 
@@ -478,6 +494,16 @@ else
     "tests/test-issue-1-guard-contract.sh"
     "tests/test-issue-7-oracle-hardening.sh"
     "tests/manual/issue-7-manual-scenarios.md"
+    # #56 cycle files (carry-channel evidence discipline): the cycle-scoped
+    # RED suite and its manual-scenario lane, plus test/workflows/run.mjs
+    # itself (this cycle's six new prompt-construction tests — not
+    # previously admitted by any prior cycle here). .claude/workflows/
+    # architect-deliberation.js is the F5 parity-carried-exception source
+    # (see AC9 above); setup/manifest.json, tests/fixtures/doc-invariants.json
+    # and .github/workflows/e2e-dummy-target.yml are already admitted above.
+    "test/workflows/run.mjs"
+    "tests/manual/issue-56-manual-scenarios.md"
+    "tests/test-issue-56-carry-evidence-discipline.sh"
     # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
     # decision record + its README registration row, the cycle-scoped RED
     # suite + manual-scenario lane, and this cycle's own defect-fix pass over

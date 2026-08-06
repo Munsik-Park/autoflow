@@ -673,6 +673,14 @@ else
     "tests/test-issue-1-guard-contract.sh"
     "tests/test-issue-7-oracle-hardening.sh"
     "tests/manual/issue-7-manual-scenarios.md"
+    # #56 cycle files (carry-channel evidence discipline): the cycle-scoped
+    # RED suite and its manual-scenario lane. test/workflows/run.mjs and
+    # .claude/workflows/architect-deliberation.js are already admitted
+    # above; the doc/CI surfaces this cycle edits (setup/manifest.json,
+    # tests/fixtures/doc-invariants.json,
+    # .github/workflows/e2e-dummy-target.yml) are already admitted above.
+    "tests/manual/issue-56-manual-scenarios.md"
+    "tests/test-issue-56-carry-evidence-discipline.sh"
     # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
     # decision record, the cycle-scoped RED suite + manual-scenario lane.
     # docs/adr/README.md, setup/manifest.json, docs/INDEX.md,
@@ -715,6 +723,19 @@ echo "=== G5 CI registration ==="
 
 assert_true "G5: tests/test-issue-952-wizard-removal.sh referenced in e2e-dummy-target.yml run: step" \
   "grep -qF 'test-issue-952-wizard-removal.sh' '$CI_WORKFLOW'"
+# SIGPIPE-safe capture-then-match (docs/submodule-common-rules.md > Testing Standards item
+# 6, issues #964/#973): the prior direct `awk ... | grep -qF ...` piped a context-producing
+# awk into a short-circuiting grep -qF under this script's own `set -uo pipefail` — when the
+# match sits near the START of a long awk output (the push: block spans to EOF), grep exits
+# before awk finishes writing, and the resulting SIGPIPE (awk exit 141) flips a logically-
+# passing assertion to a flaky/deterministic FAIL (reproduced: consistently 141 for the push
+# half here, GATE:QUALITY FAIL #4 investigation, unrelated to #56's own diff content).
+pr_paths_ctx="$(awk '/^on:/{f=1} f && /pull_request:/{p=1} p && /^  push:/{exit} p' "$CI_WORKFLOW")"
+assert_true "G5: e2e-dummy-target.yml pull_request paths: trigger lists this suite" \
+  "printf '%s\n' \"\$pr_paths_ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+push_paths_ctx="$(awk '/^  push:/{f=1} f' "$CI_WORKFLOW")"
+assert_true "G5: e2e-dummy-target.yml push paths: trigger lists this suite" \
+  "printf '%s\n' \"\$push_paths_ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
 # Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973):
 # awk's buffered output piped directly into a short-circuiting `grep -q`
 # consumer can SIGPIPE the producer under `set -o pipefail`. Capture each

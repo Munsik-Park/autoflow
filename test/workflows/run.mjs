@@ -267,6 +267,115 @@ await test('ARCHITECT: draft non-null but artifact missing -> early ESCALATE', a
   assert.ok(!calls.some((c) => /-r\d/.test(c.label)), 'no Converge-round call should be made')
 })
 
+// ---- ARCHITECT: carry-channel evidence discipline (issue #56) -----------------
+// Verification design §1 AC-56-1b/2b/3b/4b/5/14b (.autoflow/issue-56-verification-design.md).
+// A1 = 'are a checklist of topics to re-verify, NOT evidence', A2 = 'may already be resolved'
+// (the non-evidentiary / staleness carry framing, D3: conditional on carry). A6 = 'by
+// dismissing it with the current' (D4 dual disposition, also carry-conditional). The citation
+// rule (A3 trimmed + A7 absence-case escape) is D3 unconditional — delivered every round
+// including round 1, where `carry` is empty.
+
+await test('ARCHITECT: carry framing (A1 non-evidentiary + A2 staleness) delivered on round 2, both roles (AC-56-1b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r === 1) return { response: 'COUNTER', counters: ['STALE_PROBE_56'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '56-1' }, responder)
+  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  assert.match(devR2, /are a checklist of topics to re-verify, NOT evidence/)
+  assert.match(devR2, /may already be resolved/)
+  assert.match(testR2, /are a checklist of topics to re-verify, NOT evidence/)
+  assert.match(testR2, /may already be resolved/)
+})
+
+await test('ARCHITECT: carry framing absent on round 1 (no counters carried yet) (AC-56-2b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r === 1) return { response: 'COUNTER', counters: ['STALE_PROBE_56'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '56-2' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  assert.doesNotMatch(devR1, /are a checklist of topics to re-verify, NOT evidence/)
+  assert.doesNotMatch(devR1, /may already be resolved/)
+  assert.doesNotMatch(testR1, /are a checklist of topics to re-verify, NOT evidence/)
+  assert.doesNotMatch(testR1, /may already be resolved/)
+})
+
+await test('ARCHITECT: citation rule + absence-case escape delivered to dev on round 1 (AC-56-3b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '56-3' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  assert.match(devR1, /re-read the counterpart document/)
+  assert.match(devR1, /name the section where it would belong/)
+})
+
+await test('ARCHITECT: citation rule + absence-case escape delivered to test on round 1 (AC-56-4b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '56-4' }, responder)
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  assert.match(testR1, /re-read the counterpart document/)
+  assert.match(testR1, /name the section where it would belong/)
+})
+
+await test('ARCHITECT: evidence-discipline segment byte-identical between dev and test round-1 prompts (AC-56-5)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '56-5' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  // Anchor-delimited extraction (verification design §1 AC-56-5): the substring between
+  // the two literal anchors shared verbatim by both round-1 prompts.
+  const extract = (s) => {
+    const startAnchor = 'leave "accept_grounds" empty.'
+    const endAnchor = ' Run every Bash command'
+    const start = s.indexOf(startAnchor) + startAnchor.length
+    const end = s.indexOf(endAnchor)
+    return s.slice(start, end)
+  }
+  const devSeg = extract(devR1)
+  const testSeg = extract(testR1)
+  assert.ok(devSeg.length > 0, 'dev evidence-discipline segment must be non-empty')
+  assert.equal(devSeg, testSeg)
+})
+
+await test('ARCHITECT: dual-disposition clause (A6) delivered only when counters are carried (AC-56-14b)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r === 1) return { response: 'COUNTER', counters: ['STALE_PROBE_56'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '56-6' }, responder)
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  assert.match(devR2, /by dismissing it with the current/)
+  assert.match(testR2, /by dismissing it with the current/)
+  assert.doesNotMatch(devR1, /by dismissing it with the current/)
+  assert.doesNotMatch(testR1, /by dismissing it with the current/)
+})
+
 // ---- ARCHITECT: prose-args salvage (issue #14) --------------------------------
 
 await test('ARCHITECT: prose args, hashed number (reported shape) resolves and converges', async () => {

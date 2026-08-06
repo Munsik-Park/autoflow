@@ -307,13 +307,25 @@ fi
 echo ""
 echo "=== AC-27-20 (composition oracle for S8, fence, PASS pre+post) — workflow-regression harness ==="
 
+# B14 update (GATE:QUALITY FAIL #4 / ledger L18, issue #56, user-approved same-PR sibling
+# fix): #56 added six run.mjs tests (31 -> 37). Bumped the literal here rather than
+# branch-scoping it per the ea68a4c idiom (tests/test-issue-7-oracle-hardening.sh AC-7-7b):
+# issue #27 is long since merged and has no live dev branch to scope to, so a branch-scoped
+# form here would defer PERMANENTLY (never assert again), silently disabling this fence
+# rather than keeping it meaningful — unlike #56/#7's own cycle-scoped assertions, this one
+# still functions as a standing shared-harness regression lock across every cycle, not a
+# single cycle's own baseline. A plain literal bump will need repeating by each future
+# cycle that adds run.mjs tests; that recurring cost is accepted as the trade-off for
+# keeping the check live (a structural fix — e.g. retiring this duplicate check in favor of
+# #56's own branch-scoped AC-56-8 fence — is a candidate follow-up, out of this cycle's
+# scope).
 HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
 HARNESS_EXIT=$?
 OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -c '^\s*ok' || true)"
 assert_true "AC-27-20a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
 assert_true "AC-27-20b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-assert_true "AC-27-20c: harness ok-line count == B14 (31) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 31 ]"
+assert_true "AC-27-20c: harness ok-line count == B14 (37) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 37 ]"
 assert_true "AC-27-20d: node --check .claude/workflows/architect-deliberation.js exits 0 (cheaper subset)" \
   "node --check '$WORKFLOW_JS'"
 
