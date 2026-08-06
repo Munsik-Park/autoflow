@@ -118,3 +118,38 @@ label's suite name and the `-1` fields.
 **Fail:** any AC-59-21 precondition lane prints a `PASS` label despite the
 host-level failure, its paired delta lane does not also FAIL, or the suite
 exits zero.
+
+---
+
+## M5 — Genuine host-level worktree failure against the full-sweep driver (Tier 3, environment-dependent, cycle 3)
+
+**Source AC:** AC-59-34 — a *genuine* host-level worktree failure (read-only
+`TMPDIR`, disk full, stale worktree lock) driving `tests/issue-59-full-sweep-driver.sh`
+as a real program also produces the per-suite `INCONCLUSIVE` line and a non-zero
+exit — never `ALREADY RED`, never `PASS`. This mirrors M4 above for the sibling
+suite, applied to the driver: AC-59-25/26 already drive the *same branch*
+through the real binary (an unresolvable ref), only the *cause* differs here,
+and a fake `git` standing in for the real host failure is rejected for a
+`T ∩ S` contact point for the same composition-oracle reason M4 cites
+(`.autoflow/issue-59-verification-design.md` cycle-3 §1, DCR-C3-6, inheriting
+DCR-C2-5).
+
+**Setup:** Point `TMPDIR` at a read-only directory before invoking the driver,
+so its `mktemp -d "${TMPDIR:-/tmp}/autoflow-sweep-wt.XXXXXX"` cannot write:
+
+```
+TMPDIR=/path/to/a/read-only/dir bash tests/issue-59-full-sweep-driver.sh
+```
+
+**Procedure:** Run the driver as above on the `dev/*-issue-59*` branch with a
+resolvable `BASE_REF` (or the default resolution), and inspect the per-suite
+lines and the run-level exit code.
+
+**Pass:** each suite whose base cannot be measured prints the per-suite
+`INCONCLUSIVE:` line naming that suite, no line reads `ALREADY RED`, the
+summary reports a non-zero inconclusive count, and the driver exits non-zero.
+No literal is pinned beyond the suite name and the words `INCONCLUSIVE` /
+`ALREADY RED`.
+
+**Fail:** any `ALREADY RED … base exit` line, any inconclusive suite counted
+into `Clean/already-red`, or an exit of `0`.

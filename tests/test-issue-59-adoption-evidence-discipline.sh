@@ -90,6 +90,68 @@
 #   AC-59-24   — manual (tests/manual/issue-59-manual-scenarios.md): a genuine
 #                host-level worktree failure also produces the loud FAIL.
 #
+# --- Cycle 3 (review-response) — codex Medium on PR #61: the DRIVER's own
+# `git worktree add` failure was silently reported as a measured `ALREADY RED`
+# (.autoflow/issue-59-verification-design.md cycle-3 section, `:1544-`). Fixed
+# in tests/issue-59-full-sweep-driver.sh; the lanes below exercise the REAL
+# driver file, `cp`'d byte-for-byte into a throwaway `git init` fixture repo
+# and run as a program (route (iv), verification design cycle-3 §1) — never a
+# re-typed copy of its logic.
+#   AC-59-25   — RED discriminator: an unresolvable base ref is reported as
+#                per-suite INCONCLUSIVE, never a fabricated ALREADY RED.
+#   AC-59-26   — RED discriminator: a suite absent at a resolvable base is
+#                labelled NEW AT HEAD, never ALREADY RED (the second
+#                fabricated route the same mechanism opens).
+#   AC-59-27   — characterization, four shapes: green-HEAD/unmeasurable-base
+#                stays clean (a); a genuinely measured red base still
+#                classifies ALREADY RED (b); a named (c) / unnamed (d)
+#                regression against a resolvable, measured base still
+#                classifies correctly.
+#   AC-59-28   — RED discriminator, self-scoped structural grep over the
+#                driver: the base-exit seed is never a literal exit-status
+#                value, every base-exit comparison is measured-guarded, the
+#                ALREADY RED verdict form has exactly one home, and the
+#                per-suite INCONCLUSIVE label is distinct from both
+#                script-level INCONCLUSIVE exits.
+#   AC-59-29   — RED discriminator: the driver's real exit code is 0 only for
+#                a clean sweep with a resolvable, measured base; 2 while any
+#                suite is inconclusive; 1 while an unnamed regression exists
+#                (outranking INCONCLUSIVE — asserted structurally, conjunct
+#                P); and the 600s budget default is unchanged (conjunct D).
+#                GATE:PLAN carry-note (ledger E48): the clean-fixture row is
+#                pinned to a resolvable base SHA, not an unresolvable ref, so
+#                it genuinely exercises a successful worktree add + base run.
+#   AC-59-31   — characterization: standalone execution against the LIVE tree
+#                still prints its banner + self-exclusion notice, bash -n
+#                stays clean, no worktree residue.
+#   AC-59-32   — RED discriminator (sound only once the driver's `mktemp -d`
+#                honours a `TMPDIR`-scoped, identifiable template): no
+#                `autoflow-sweep-wt.*` directory survives the failed-add path.
+#   AC-59-35   — characterization: the one lane that drives the LIVE
+#                repository's own worktree channel (a single failed add),
+#                left unchanged.
+#   AC-59-35b  — fixture-hygiene fences bound to every harness-F lane: copy
+#                fidelity held before each run (i), and the live repo carries
+#                exactly one worktree entry + empty status afterward (ii).
+#   AC-59-33   — regression fence (VERIFY evidence, not a lane in this file):
+#                the four cycle-2 structural pins unchanged; a full suite
+#                re-run green with its total risen by exactly the cycle-3
+#                count; the six cycle guard suites (798/799/846/848/952/955)
+#                green; zero CI references to the driver; bash -n clean.
+#                GATE:PLAN carry-note (ledger E48): tests/test-issue-964-
+#                sigpipe-safe-pipes.sh's AC2-A zero-remaining hazard-shape
+#                guard is ALSO included in this regression fence — every
+#                cycle-3 lane below is written without the
+#                `identifier | grep -q`/`| grep -m` shape that guard forbids
+#                (bash-native `[[ ]]`/here-string matching instead), so this
+#                cycle's own additions cannot re-open the count AC2-A closed.
+#   AC-59-34   — manual (tests/manual/issue-59-manual-scenarios.md, scenario
+#                M5): a genuine host-level worktree failure against the
+#                driver also produces the loud FAIL, never ALREADY RED/PASS.
+#   AC-59-30   — WITHDRAWN (source-safety was a property of the withdrawn
+#                seam approach; route (iv) needs no source-safety change).
+#                Id retired, never reused.
+#
 # AC-59-15(b) (full-tree sweep determination) is NOT a lane in this suite — it
 # is a standalone VERIFY-phase driver authored alongside this file:
 # tests/issue-59-full-sweep-driver.sh (D24). Running it here would be directly
@@ -703,6 +765,278 @@ echo "=== AC-59-22b (unconditional, RED discriminator) — every precondition la
 BF_INTERP_COUNT="$(grep -E "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" | grep -cE '\$BF[0-9A-Za-z]*' || true)"
 assert_true "AC-59-22b: all 12 base-precondition labels interpolate \$BF... (base failed count) alongside \$BP.../\$BT... (got: $BF_INTERP_COUNT of 12)" \
   "[ \"$BF_INTERP_COUNT\" -eq 12 ]"
+
+# =============================================================================
+# Cycle 3 (review-response) — AC-59-25 … AC-59-35 (AC-59-30 retired, AC-59-33
+# is a regression-fence procedure, not a lane; see header comment).
+# =============================================================================
+# Route (iv) (verification design cycle-3 §1): every lane below copies the
+# REAL tests/issue-59-full-sweep-driver.sh byte-for-byte into a throwaway
+# `git init` fixture repo and runs it AS A PROGRAM — never a re-typed copy of
+# its logic. `require_copy_fidelity` asserts the copy immediately before each
+# run (AC-59-35b(i)).
+#
+# GATE:PLAN carry-note (ledger E48): every condition below uses bash-native
+# `[[ ... ]]` string matching (the `has`/`has_not` helpers) instead of
+# `identifier | grep -q` / `| grep -m` — a captured string has no concurrent
+# producer process, so the SIGPIPE race tests/test-issue-964-sigpipe-safe-pipes.sh
+# guards against cannot occur here, and this suite's own additions cannot
+# widen that guard's zero-remaining hazard-shape count (AC-59-33 extension).
+
+DRIVER_SRC="$PROJECT_ROOT/tests/issue-59-full-sweep-driver.sh"
+
+has() { [[ "$1" == *"$2"* ]]; }
+
+mk_fixture_repo() {
+  local fx
+  fx="$(mktemp -d)"
+  git -C "$fx" init -q >/dev/null 2>&1
+  git -C "$fx" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init >/dev/null 2>&1
+  printf '%s' "$fx"
+}
+
+# commit_fixture_suite <fx> <suite-basename> <exit-code> <commit-message>
+commit_fixture_suite() {
+  local fx="$1" name="$2" code="$3" msg="$4"
+  mkdir -p "$fx/tests"
+  printf '#!/usr/bin/env bash\nexit %s\n' "$code" >"$fx/tests/$name"
+  chmod +x "$fx/tests/$name"
+  git -C "$fx" add "tests/$name" >/dev/null 2>&1
+  git -C "$fx" -c user.email=t@t -c user.name=t commit -q -m "$msg" >/dev/null 2>&1
+}
+
+install_driver_copy() {
+  local fx="$1"
+  mkdir -p "$fx/tests"
+  cp "$DRIVER_SRC" "$fx/tests/issue-59-full-sweep-driver.sh"
+}
+
+COPY_FIDELITY_CHECKS=0
+COPY_FIDELITY_FAILS=0
+require_copy_fidelity() {
+  local fx="$1"
+  COPY_FIDELITY_CHECKS=$((COPY_FIDELITY_CHECKS + 1))
+  cmp -s "$DRIVER_SRC" "$fx/tests/issue-59-full-sweep-driver.sh" || COPY_FIDELITY_FAILS=$((COPY_FIDELITY_FAILS + 1))
+}
+
+# NAMED_SUITES parsed from the LIVE driver source (never a pinned literal
+# copy — the array is cycle-scoped by its own comment) so rows (c)/(d) below
+# track the live array (verification design cycle-3 §1, AC-59-27 note).
+mapfile -t NAMED_SUITES_LIVE < <(awk '/^NAMED_SUITES=\(/,/^\)/' "$DRIVER_SRC" | grep -oE '"[^"]+"' | tr -d '"')
+NAMED0="${NAMED_SUITES_LIVE[0]:-}"
+UNNAMED_PROBE_IN_NAMED=0
+for _n in "${NAMED_SUITES_LIVE[@]}"; do [[ "$_n" == "test-issue-777-fixture.sh" ]] && UNNAMED_PROBE_IN_NAMED=1; done
+
+# =============================================================================
+echo ""
+echo "=== AC-59-25 (cycle 3, RED discriminator) — unmeasured base is never reported as ALREADY RED ==="
+
+FX25="$(mk_fixture_repo)"
+commit_fixture_suite "$FX25" test-issue-777-fixture.sh 0 base
+commit_fixture_suite "$FX25" test-issue-777-fixture.sh 1 head
+install_driver_copy "$FX25"
+require_copy_fidelity "$FX25"
+OUT25="$(cd "$FX25" && bash tests/issue-59-full-sweep-driver.sh 'refs/heads/__autoflow-issue59-c3-nonexistent__' 2>&1)"
+rm -rf "$FX25"
+
+assert_true "AC-59-25: an unresolvable base ref is reported as per-suite INCONCLUSIVE (naming the suite + the real git worktree add exit status), never a fabricated ALREADY RED, and buckets 0 clean/already-red + 1 inconclusive" \
+  "has \"\$OUT25\" 'INCONCLUSIVE: base worktree setup failed' && has \"\$OUT25\" 'test-issue-777-fixture.sh' && has \"\$OUT25\" 'git worktree add exit' && ! has \"\$OUT25\" 'ALREADY RED on' && has \"\$OUT25\" 'Clean/already-red: 0' && has \"\$OUT25\" 'Inconclusive (base never measured): 1'"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-26 (cycle 3, RED discriminator) — suite absent at a resolvable base gets an honest label, never ALREADY RED ==="
+
+FX26="$(mk_fixture_repo)"
+BASE26_SHA="$(git -C "$FX26" rev-parse HEAD)"
+commit_fixture_suite "$FX26" test-issue-777-fixture.sh 1 head-adds-new-red-suite
+install_driver_copy "$FX26"
+require_copy_fidelity "$FX26"
+OUT26="$(cd "$FX26" && bash tests/issue-59-full-sweep-driver.sh "$BASE26_SHA" 2>&1)"
+rm -rf "$FX26"
+
+assert_true "AC-59-26: a suite absent at a resolvable base is labelled NEW AT HEAD, never ALREADY RED, and is not counted inconclusive (nothing failed — the base measurement never runs)" \
+  "has \"\$OUT26\" 'NEW AT HEAD:' && has \"\$OUT26\" 'test-issue-777-fixture.sh' && ! has \"\$OUT26\" 'ALREADY RED on' && has \"\$OUT26\" 'Inconclusive (base never measured): 0'"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-27 (cycle 3, characterization, four shapes) — every pre-existing verdict survives byte-identical ==="
+
+FX27A="$(mk_fixture_repo)"
+commit_fixture_suite "$FX27A" test-issue-777-fixture.sh 0 base
+commit_fixture_suite "$FX27A" test-issue-777-fixture.sh 0 head-still-green
+install_driver_copy "$FX27A"
+require_copy_fidelity "$FX27A"
+OUT27A="$(cd "$FX27A" && bash tests/issue-59-full-sweep-driver.sh 'refs/heads/__autoflow-issue59-c3-nonexistent2__' 2>&1)"
+rm -rf "$FX27A"
+assert_true "AC-59-27a: a green-at-HEAD suite stays clean even when its base is unmeasurable — an unresolvable base must not manufacture an inconclusive" \
+  "has \"\$OUT27A\" 'clean (exit 0)' && has \"\$OUT27A\" 'Clean/already-red: 1' && has \"\$OUT27A\" 'Inconclusive (base never measured): 0'"
+
+FX27B="$(mk_fixture_repo)"
+commit_fixture_suite "$FX27B" test-issue-777-fixture.sh 1 base-red
+BASE27B_SHA="$(git -C "$FX27B" rev-parse HEAD)"
+commit_fixture_suite "$FX27B" test-issue-777-fixture.sh 1 head-still-red
+install_driver_copy "$FX27B"
+require_copy_fidelity "$FX27B"
+OUT27B="$(cd "$FX27B" && bash tests/issue-59-full-sweep-driver.sh "$BASE27B_SHA" 2>&1)"
+rm -rf "$FX27B"
+assert_true "AC-59-27b: a genuinely measured red base is still classified ALREADY RED — the guard does not over-flag a real measured-red base as inconclusive" \
+  "has \"\$OUT27B\" 'ALREADY RED on' && has \"\$OUT27B\" 'Inconclusive (base never measured): 0'"
+
+FX27C="$(mk_fixture_repo)"
+commit_fixture_suite "$FX27C" "$NAMED0" 0 base-green
+BASE27C_SHA="$(git -C "$FX27C" rev-parse HEAD)"
+commit_fixture_suite "$FX27C" "$NAMED0" 1 head-red
+install_driver_copy "$FX27C"
+require_copy_fidelity "$FX27C"
+OUT27C="$(cd "$FX27C" && bash tests/issue-59-full-sweep-driver.sh "$BASE27C_SHA" 2>&1)"
+rm -rf "$FX27C"
+assert_true "AC-59-27c: a named regression ($NAMED0, element 0 of the live NAMED_SUITES array) is bucketed REGRESSED (named), never unnamed" \
+  "[ -n \"$NAMED0\" ] && has \"\$OUT27C\" 'REGRESSED (named'"
+
+FX27D="$(mk_fixture_repo)"
+commit_fixture_suite "$FX27D" test-issue-777-fixture.sh 0 base-green
+BASE27D_SHA="$(git -C "$FX27D" rev-parse HEAD)"
+commit_fixture_suite "$FX27D" test-issue-777-fixture.sh 1 head-red
+install_driver_copy "$FX27D"
+require_copy_fidelity "$FX27D"
+OUT27D="$(cd "$FX27D" && bash tests/issue-59-full-sweep-driver.sh "$BASE27D_SHA" 2>&1)"
+rm -rf "$FX27D"
+assert_true "AC-59-27d: an unnamed regression (test-issue-777-fixture.sh, confirmed absent from the live NAMED_SUITES array: in_named=$UNNAMED_PROBE_IN_NAMED) is bucketed REGRESSED (UNNAMED and drives Unnamed regressions: 1" \
+  "[ \"$UNNAMED_PROBE_IN_NAMED\" -eq 0 ] && has \"\$OUT27D\" 'REGRESSED (UNNAMED' && has \"\$OUT27D\" 'Unnamed regressions: 1'"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-28 (cycle 3, RED discriminator, self-scoped structural grep) — base-exit is never fabricated, ALREADY RED has one home ==="
+
+# Split literals so these definitions cannot match themselves (same self-scoping
+# convention as AC-59-19b/22a above); scanned over the DRIVER, not this file.
+BASE_EXIT_CMP_PATTERN='base_exit'" "'-ne'
+BASE_EXIT_CMP_COUNT="$(grep -cE -- "$BASE_EXIT_CMP_PATTERN" "$DRIVER_SRC" || true)"
+BASE_EXIT_GUARDED_COUNT="$(grep -E -- "$BASE_EXIT_CMP_PATTERN" "$DRIVER_SRC" | grep -c 'base_measured' || true)"
+BASE_EXIT_SEED_LITERAL_COUNT="$(grep -cE 'base_exit=[0-9]{1,3}$' "$DRIVER_SRC" || true)"
+ALREADY_RED_VERDICT_PATTERN='ALREADY'" "'RED on'
+ALREADY_RED_VERDICT_COUNT="$(grep -cE -- "$ALREADY_RED_VERDICT_PATTERN" "$DRIVER_SRC" || true)"
+INCONCLUSIVE_PER_SUITE_COUNT="$(grep -cE 'INCONCLUSIVE: base worktree setup failed' "$DRIVER_SRC" || true)"
+INCONCLUSIVE_NO_BASE_COUNT="$(grep -cE 'INCONCLUSIVE: no comparison base resolvable' "$DRIVER_SRC" || true)"
+INCONCLUSIVE_ELAPSED_COUNT="$(grep -cE 'INCONCLUSIVE: elapsed' "$DRIVER_SRC" || true)"
+
+assert_true "AC-59-28: base-exit comparisons are all measured-guarded (guarded=$BASE_EXIT_GUARDED_COUNT of $BASE_EXIT_CMP_COUNT), the seed is never a literal 0-255 exit status (got $BASE_EXIT_SEED_LITERAL_COUNT), the ALREADY RED verdict form has exactly one home (got $ALREADY_RED_VERDICT_COUNT), and the per-suite INCONCLUSIVE label is distinct from both script-level INCONCLUSIVE exits (per-suite=$INCONCLUSIVE_PER_SUITE_COUNT, no-base=$INCONCLUSIVE_NO_BASE_COUNT, elapsed=$INCONCLUSIVE_ELAPSED_COUNT)" \
+  "[ \"$BASE_EXIT_CMP_COUNT\" -ge 1 ] && [ \"$BASE_EXIT_GUARDED_COUNT\" -eq \"$BASE_EXIT_CMP_COUNT\" ] && [ \"$BASE_EXIT_SEED_LITERAL_COUNT\" -eq 0 ] && [ \"$ALREADY_RED_VERDICT_COUNT\" -eq 1 ] && [ \"$INCONCLUSIVE_PER_SUITE_COUNT\" -ge 1 ] && [ \"$INCONCLUSIVE_NO_BASE_COUNT\" -eq 1 ] && [ \"$INCONCLUSIVE_ELAPSED_COUNT\" -eq 1 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-29 (cycle 3, RED discriminator) — run-level exit code: never PASS(0) while unmeasured; FAIL(1) outranks INCONCLUSIVE(2); default budget stays 600s ==="
+
+# Shape 1 (clean): PINNED TO A RESOLVABLE BASE SHA (GATE:PLAN carry-note,
+# ledger E48) — a genuinely successful `git worktree add` + base run, not the
+# unresolvable-ref shortcut AC-59-27a already covers.
+FX29C="$(mk_fixture_repo)"
+commit_fixture_suite "$FX29C" test-issue-777-fixture.sh 0 base-green
+BASE29C_SHA="$(git -C "$FX29C" rev-parse HEAD)"
+commit_fixture_suite "$FX29C" test-issue-777-fixture.sh 0 head-still-green
+install_driver_copy "$FX29C"
+require_copy_fidelity "$FX29C"
+(cd "$FX29C" && SWEEP_MIN_ELAPSED=0 bash tests/issue-59-full-sweep-driver.sh "$BASE29C_SHA" >/dev/null 2>&1)
+RC29C=$?
+rm -rf "$FX29C"
+
+# Shape 2 (inconclusive-only, AC-59-25's shape).
+FX29I="$(mk_fixture_repo)"
+commit_fixture_suite "$FX29I" test-issue-777-fixture.sh 0 base
+commit_fixture_suite "$FX29I" test-issue-777-fixture.sh 1 head
+install_driver_copy "$FX29I"
+require_copy_fidelity "$FX29I"
+(cd "$FX29I" && SWEEP_MIN_ELAPSED=0 bash tests/issue-59-full-sweep-driver.sh 'refs/heads/__autoflow-issue59-c3-nonexistent3__' >/dev/null 2>&1)
+RC29I=$?
+rm -rf "$FX29I"
+
+# Shape 3 (unnamed-regression-only, AC-59-27d's shape).
+FX29U="$(mk_fixture_repo)"
+commit_fixture_suite "$FX29U" test-issue-777-fixture.sh 0 base-green
+BASE29U_SHA="$(git -C "$FX29U" rev-parse HEAD)"
+commit_fixture_suite "$FX29U" test-issue-777-fixture.sh 1 head-red
+install_driver_copy "$FX29U"
+require_copy_fidelity "$FX29U"
+(cd "$FX29U" && SWEEP_MIN_ELAPSED=0 bash tests/issue-59-full-sweep-driver.sh "$BASE29U_SHA" >/dev/null 2>&1)
+RC29U=$?
+rm -rf "$FX29U"
+
+# Shape 5 (default-preservation): the clean shape re-run WITHOUT
+# SWEEP_MIN_ELAPSED — pins that the unexported default stays 600s.
+FX29D="$(mk_fixture_repo)"
+commit_fixture_suite "$FX29D" test-issue-777-fixture.sh 0 base-green
+BASE29D_SHA="$(git -C "$FX29D" rev-parse HEAD)"
+commit_fixture_suite "$FX29D" test-issue-777-fixture.sh 0 head-still-green
+install_driver_copy "$FX29D"
+require_copy_fidelity "$FX29D"
+(cd "$FX29D" && bash tests/issue-59-full-sweep-driver.sh "$BASE29D_SHA" >/dev/null 2>&1)
+RC29D=$?
+rm -rf "$FX29D"
+
+assert_true "AC-59-29 (behavioural): real driver exit code — clean+resolvable-base -> 0 (got $RC29C), inconclusive-only -> 2 (got $RC29I), unnamed-regression-only -> 1 (got $RC29U), clean without the SWEEP_MIN_ELAPSED override still -> 2 under the unchanged 600s default (got $RC29D)" \
+  "[ \"$RC29C\" -eq 0 ] && [ \"$RC29I\" -eq 2 ] && [ \"$RC29U\" -eq 1 ] && [ \"$RC29D\" -eq 2 ]"
+
+FAIL_GATE_LINE="$(grep -nF 'FAIL: unnamed regression(s) found' "$DRIVER_SRC" | head -1 | cut -d: -f1)"
+INCONCLUSIVE_BUCKET_GATE_LINE="$(grep -nF 'suite(s) never measured' "$DRIVER_SRC" | head -1 | cut -d: -f1)"
+SUMMARY_BLOCK_LINE="$(grep -nF 'Clean/already-red:' "$DRIVER_SRC" | head -1 | cut -d: -f1)"
+assert_true "AC-59-29 (P): the FAIL(unnamed-regression) exit gate's anchor precedes the run-level INCONCLUSIVE-bucket exit gate's anchor, both after the summary block (FAIL=${FAIL_GATE_LINE:-absent}, INCONCLUSIVE-bucket=${INCONCLUSIVE_BUCKET_GATE_LINE:-absent}, summary=${SUMMARY_BLOCK_LINE:-absent})" \
+  "[ -n \"$FAIL_GATE_LINE\" ] && [ -n \"$INCONCLUSIVE_BUCKET_GATE_LINE\" ] && [ -n \"$SUMMARY_BLOCK_LINE\" ] && [ \"$SUMMARY_BLOCK_LINE\" -lt \"$FAIL_GATE_LINE\" ] && [ \"$FAIL_GATE_LINE\" -lt \"$INCONCLUSIVE_BUCKET_GATE_LINE\" ]"
+
+BUDGET_DEFAULT_PATTERN='SWEEP_MIN_ELAPSED:-'"6"'00'
+BUDGET_DEFAULT_COUNT="$(grep -cE -- "$BUDGET_DEFAULT_PATTERN" "$DRIVER_SRC" || true)"
+assert_true "AC-59-29 (D): the sweep budget's :--defaulted assignment exists with default operand exactly 600 (got $BUDGET_DEFAULT_COUNT)" \
+  "[ \"$BUDGET_DEFAULT_COUNT\" -eq 1 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-31 (cycle 3, characterization) — standalone execution against the LIVE tree is preserved ==="
+
+OUT31="$(cd "$PROJECT_ROOT" && timeout 10 bash tests/issue-59-full-sweep-driver.sh '__autoflow-issue59-c3-nonexistent4__' 2>&1 | head -3)"
+BASH_N_31=0
+bash -n "$DRIVER_SRC" && BASH_N_31=1
+WT_COUNT_31_AFTER="$(git -C "$PROJECT_ROOT" worktree list | wc -l | tr -d ' ')"
+assert_true "AC-59-31: standalone execution against the live tree still prints its banner + self-exclusion notice before entering the suite loop, bash -n stays clean (got $BASH_N_31), and no worktree residue is left (worktree-count-after=$WT_COUNT_31_AFTER)" \
+  "has \"\$OUT31\" 'Full-tree sweep driver (issue #59, D24) — base: __autoflow-issue59-c3-nonexistent4__' && has \"\$OUT31\" 'Self-excluding:' && [ \"$BASH_N_31\" -eq 1 ] && [ \"$WT_COUNT_31_AFTER\" -eq 1 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-32 (cycle 3, RED discriminator) — no temp-directory leak on the failure path ==="
+
+SANDBOX32="$(mktemp -d)"
+FX32="$(mk_fixture_repo)"
+commit_fixture_suite "$FX32" test-issue-777-fixture.sh 0 base
+commit_fixture_suite "$FX32" test-issue-777-fixture.sh 1 head
+install_driver_copy "$FX32"
+require_copy_fidelity "$FX32"
+(cd "$FX32" && TMPDIR="$SANDBOX32" bash tests/issue-59-full-sweep-driver.sh 'refs/heads/__autoflow-issue59-c3-nonexistent5__' >/dev/null 2>&1)
+LEAK_COUNT_32="$(ls -Ad "$SANDBOX32"/autoflow-sweep-wt.* 2>/dev/null | wc -l | tr -d ' ')"
+rm -rf "$FX32" "$SANDBOX32"
+assert_true "AC-59-32: the failed-add path leaves zero autoflow-sweep-wt.* directories under the TMPDIR-honouring sandbox (got $LEAK_COUNT_32) — sound only once the driver allocates via mktemp -d \"\${TMPDIR:-/tmp}/autoflow-sweep-wt.XXXXXX\"; pre-fix, bare mktemp -d does not honour TMPDIR on this host, so this count is a CHARACTERIZATION pre-fix, not a discriminator (recorded in the RED report)" \
+  "[ \"$LEAK_COUNT_32\" -eq 0 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-35 (cycle 3, characterization) — the LIVE repository's worktree channel is driven for real, and left unchanged ==="
+
+WT_COUNT_35_BEFORE="$(git -C "$PROJECT_ROOT" worktree list | wc -l | tr -d ' ')"
+WT35="$(mktemp -d)"
+git -C "$PROJECT_ROOT" worktree add -q --detach "$WT35" 'refs/heads/__autoflow-issue59-c3-nonexistent6__' >/dev/null 2>&1
+RC35=$?
+rm -rf "$WT35"
+WT_COUNT_35_AFTER="$(git -C "$PROJECT_ROOT" worktree list | wc -l | tr -d ' ')"
+assert_true "AC-59-35: a single failed live git worktree add against THIS repository returns a non-zero status (got $RC35) and leaves the live worktree registry unchanged (before=$WT_COUNT_35_BEFORE, after=$WT_COUNT_35_AFTER)" \
+  "[ \"$RC35\" -ne 0 ] && [ \"$WT_COUNT_35_BEFORE\" -eq \"$WT_COUNT_35_AFTER\" ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-59-35b (cycle 3, fixture-hygiene fences) — every harness-F lane exercised the real driver, nothing outside the fixtures was mutated ==="
+
+WT_COUNT_35B_AFTER="$(git -C "$PROJECT_ROOT" worktree list | wc -l | tr -d ' ')"
+STATUS_35B_AFTER="$(git -C "$PROJECT_ROOT" status --short)"
+assert_true "AC-59-35b(i): copy fidelity held immediately before every one of this cycle's harness-F fixture runs (checks=$COPY_FIDELITY_CHECKS, fails=$COPY_FIDELITY_FAILS)" \
+  "[ \"$COPY_FIDELITY_CHECKS\" -eq 11 ] && [ \"$COPY_FIDELITY_FAILS\" -eq 0 ]"
+assert_true "AC-59-35b(ii): after every cycle-3 fixture lane the live repo still has exactly one worktree entry and an empty status (worktree-count=$WT_COUNT_35B_AFTER)" \
+  "[ \"$WT_COUNT_35B_AFTER\" -eq 1 ] && [ -z \"$STATUS_35B_AFTER\" ]"
 
 # =============================================================================
 # Results
