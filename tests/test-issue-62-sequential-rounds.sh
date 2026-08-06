@@ -76,6 +76,81 @@ extract_allow_list_block() {
   awk '/allow_list=\(/{f=1; next} f && /^  \)/{f=0} f' "$1"
 }
 
+# D10 ARM WINDOW extractor (verification design §7.2a): the inclusive line
+# range from the FIRST line matching the workflows_{admitted,touched,offwindow}
+# accumulator seed to the FIRST SUBSEQUENT assert_true "AC(9|6-scope): line.
+# Resolves both pre-D10 (798:249-266, 799:841-868 today) and post-D10 (the
+# manifest-pin replacement block) — if either anchor is absent the extraction
+# is empty, which the structural counts below turn into a FAIL, never a
+# vacuous pass.
+extract_arm_window() {
+  awk '
+    !started && /^[[:space:]]*workflows_(admitted|touched|offwindow)_ac[0-9]/ { started=1 }
+    started { print }
+    started && /^[[:space:]]*assert_true "AC(9|6-scope):/ { exit }
+  ' "$1"
+}
+
+# Mirrors tests/test-issue-59-adoption-evidence-discipline.sh:232-249's
+# suite_result_at_ref() shape (E33 lesson: real re-run in an isolated detached
+# worktree, never a re-implemented copy of the guard's own logic — C3). This
+# variant additionally accepts a mutator callback applied to the worktree
+# BEFORE the guard runs, so AC-62-36(iii)/(iv)'s negative controls drive the
+# REAL guard file against a REAL tampered/deleted on-disk state (O9, non-mock).
+# Always cleans up via `git worktree remove --force`, even on a guard failure,
+# so a failed lane cannot leak a worktree into `git worktree list`.
+guard_result_at_ref_mutated() {
+  local ref="$1" suite_name="$2" mutator="$3"
+  local wt out
+  wt="$(mktemp -d)"
+  if ! git -C "$PROJECT_ROOT" worktree add -q --detach "$wt" "$ref" >/dev/null 2>&1; then
+    rm -rf "$wt"
+    printf '%s' ""
+    return
+  fi
+  if [[ -n "$mutator" ]]; then
+    "$mutator" "$wt" >/dev/null 2>&1 || true
+  fi
+  if [[ -f "$wt/tests/$suite_name" ]]; then
+    out="$(cd "$wt" && bash "tests/$suite_name" 2>&1)"
+  else
+    out=""
+  fi
+  git -C "$PROJECT_ROOT" worktree remove --force "$wt" >/dev/null 2>&1
+  printf '%s' "$out"
+}
+
+# AC-62-36(iii) mutator: tamper the workflow file's setup/manifest.json sha256
+# row to a value that cannot match the live (untouched-by-this-mutator) file —
+# C2/C3's "real guard, real tampered manifest" shape, not a re-implemented copy.
+tamper_workflow_manifest_sha() {
+  local wt="$1"
+  local manifest="$wt/setup/manifest.json"
+  [[ -f "$manifest" ]] || return 1
+  jq '(.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js") | .sha256) = "0000000000000000000000000000000000000000000000000000000000000000"' \
+    "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+}
+
+# AC-62-36(iv) mutator: delete the workflow file AND its manifest row inside
+# the worktree, then commit — the empty-vs-empty vacuity class (C2) the D10
+# predicate must not silently admit. An explicit worktree-local git identity
+# is required for the commit (precedent: tests/test-issue-979-review-backend.sh:73)
+# since a bare `git worktree add` does not guarantee a global identity is
+# configured on every CI runner.
+delete_workflow_and_manifest_row() {
+  local wt="$1"
+  local wf_path=".claude/workflows/architect-deliberation.js"
+  local manifest="$wt/setup/manifest.json"
+  [[ -f "$wt/$wf_path" && -f "$manifest" ]] || return 1
+  git -C "$wt" config user.email "test-issue-62@example.com"
+  git -C "$wt" config user.name "test-issue-62"
+  jq 'del(.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js"))' \
+    "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+  git -C "$wt" rm -q -- "$wf_path" >/dev/null 2>&1
+  git -C "$wt" add -A -- "$manifest" >/dev/null 2>&1
+  git -C "$wt" commit -q -m "AC-62-36(iv) fixture: delete workflow file + manifest row" >/dev/null 2>&1
+}
+
 # =============================================================================
 echo "=== AC-62-5 (RED discriminator) — parallel( appears exactly once, on the Draft site ==="
 
@@ -390,6 +465,102 @@ case "$HEAD_BRANCH" in
     note_deferred "AC-62-35: launch-record gate inert off the issue-62 dev branch (head: ${HEAD_BRANCH:-unknown})."
     ;;
 esac
+
+# =============================================================================
+echo ""
+echo "=== AC-62-36 (RED discriminator, D10) — both scope guards' .claude/workflows/** arm is the manifest-pin oracle, not a substring window ==="
+
+# (i) structural — arm-window-scoped (verification design §7.2a), never a
+# whole-file count: a whole-file grep would still see 798's/799's unrelated
+# grep -vF arms (.claude/hooks/**, docs/adr/**, …) after a correct D10 edit.
+check_arm_structural() {
+  local file="$1"
+  local window vf_count assert_count hardcode_count has_workflows has_manifest
+  window="$(extract_arm_window "$file" | grep -v '^[[:space:]]*#')"
+  vf_count="$(printf '%s\n' "$window" | grep -c 'grep -vF' || true)"
+  assert_count="$(printf '%s\n' "$window" | grep -cE '^[[:space:]]*assert_true "AC(9|6-scope):' || true)"
+  hardcode_count="$(printf '%s\n' "$window" | grep -c 'architect-deliberation\.js' || true)"
+  if printf '%s\n' "$window" | grep -qF '.claude/workflows'; then has_workflows=yes; else has_workflows=no; fi
+  if printf '%s\n' "$window" | grep -qF 'setup/manifest.json'; then has_manifest=yes; else has_manifest=no; fi
+  if [[ "$vf_count" -eq 0 && "$assert_count" -eq 1 && "$hardcode_count" -eq 0 && "$has_workflows" = yes && "$has_manifest" = yes ]]; then
+    echo "yes(grep-vF=$vf_count,assert=$assert_count,hardcode=$hardcode_count,workflows-named=$has_workflows,manifest-named=$has_manifest)"
+  else
+    echo "no(grep-vF=$vf_count,assert=$assert_count,hardcode=$hardcode_count,workflows-named=$has_workflows,manifest-named=$has_manifest)"
+  fi
+}
+
+S798_36I="$(check_arm_structural "$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh")"
+S799_36I="$(check_arm_structural "$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh")"
+assert_true "AC-62-36(i): both guards' .claude/workflows/** arm window has zero grep -vF filters, exactly one assert_true, zero hardcoded 'architect-deliberation.js', and that assert_true names both .claude/workflows/** and setup/manifest.json (798: $S798_36I; 799: $S799_36I)" \
+  "[[ '$S798_36I' == yes* && '$S799_36I' == yes* ]]"
+
+# (ii)/(iii)/(iv) — branch/base-ref-scoped like AC-62-33b (:346-352 idiom):
+# the behavioural non-vacuity check and both negative controls are meaningless
+# unless this branch's own diff actually touches .claude/workflows/** (off
+# that condition the guard's while-loop never iterates and every arm trivially
+# "admits", proving nothing about D10's predicate). No further GITHUB_HEAD_REF
+# split is owed here (unlike AC-62-35): a detached `git worktree add` and
+# `git merge-base HEAD main` resolve identically under CI's fetch-depth:0
+# checkout and a local run, so a two-arm branch gate is the complete idiom.
+case "$HEAD_BRANCH" in
+  dev/*-issue-62|dev/*-issue-62-*)
+    BASE_REF_36="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || true)"
+    if [[ -z "$BASE_REF_36" ]]; then
+      echo "  BLOCK: no comparison base resolvable — AC-62-36(ii)/(iii)/(iv) counted FAIL, never skipped"
+      TESTS=$((TESTS + 3)); FAIL=$((FAIL + 3))
+    else
+      WORKFLOWS_DIFF_36="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF_36"...HEAD -- .claude/workflows 2>/dev/null || true)"
+      OUT_798_36="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"; EXIT_798_36=$?
+      OUT_799_36="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"; EXIT_799_36=$?
+      assert_true "AC-62-36(ii): with the branch diff non-empty for .claude/workflows/** (got: $(printf '%s' "$WORKFLOWS_DIFF_36" | paste -sd, -)), both bash tests/test-issue-798-topology-flip.sh and bash tests/test-issue-799-inert-cleanup.sh exit 0 (798 exit=$EXIT_798_36, 799 exit=$EXIT_799_36)" \
+        "[ -n \"$WORKFLOWS_DIFF_36\" ] && [ $EXIT_798_36 -eq 0 ] && [ $EXIT_799_36 -eq 0 ]"
+
+      # (iii) hermetic negative control (C3, E10/O9 non-mock): tamper the REAL
+      # guard's on-disk manifest sha256 row in a real detached worktree, then
+      # run the REAL guard file — never a re-implemented copy of its logic.
+      OUT_798_TAMPER="$(guard_result_at_ref_mutated HEAD test-issue-798-topology-flip.sh tamper_workflow_manifest_sha)"
+      OUT_799_TAMPER="$(guard_result_at_ref_mutated HEAD test-issue-799-inert-cleanup.sh tamper_workflow_manifest_sha)"
+      M798="$(printf '%s\n' "$OUT_798_TAMPER" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
+      M799="$(printf '%s\n' "$OUT_799_TAMPER" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
+      assert_true "AC-62-36(iii): a stale .claude/workflows/** manifest sha256 row, tampered in a real detached worktree at HEAD, makes the REAL guard file report FAIL specifically on its .claude/workflows/** arm — not merely its unrelated .claude/hooks/** arm (798: $M798, 799: $M799)" \
+        "[ '$M798' = yes ] && [ '$M799' = yes ]"
+
+      # (iv) deletion control (C2): both the workflow file AND its manifest
+      # row are removed in the worktree, closing the empty-vs-empty vacuity
+      # ("" == "" silently admits) a naive equality would fall into.
+      OUT_798_DEL="$(guard_result_at_ref_mutated HEAD test-issue-798-topology-flip.sh delete_workflow_and_manifest_row)"
+      OUT_799_DEL="$(guard_result_at_ref_mutated HEAD test-issue-799-inert-cleanup.sh delete_workflow_and_manifest_row)"
+      D798="$(printf '%s\n' "$OUT_798_DEL" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
+      D799="$(printf '%s\n' "$OUT_799_DEL" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
+      assert_true "AC-62-36(iv): deleting the workflow file AND its manifest row in a real detached worktree does not silently admit (empty-vs-empty vacuity, C2) — the REAL guard reports FAIL on its .claude/workflows/** arm (798: $D798, 799: $D799)" \
+        "[ '$D798' = yes ] && [ '$D799' = yes ]"
+    fi
+    ;;
+  *)
+    note_deferred "AC-62-36(ii)/(iii)/(iv): behavioural + negative-control lanes inert off the issue-62 dev branch (head: ${HEAD_BRANCH:-unknown}) — meaningless without this cycle's own non-empty .claude/workflows/** diff."
+    ;;
+esac
+
+# =============================================================================
+echo ""
+echo "=== AC-62-37 (RED discriminator, fence) — the D10 amendment raises no guard's assertion count and reds no downstream re-runner ==="
+
+extract_results_line() {  # "passed total failed", or empty fields if unmeasurable
+  printf '%s' "$1" | grep -oE 'Results: [0-9]+/[0-9]+ passed, [0-9]+ failed' | tail -1 \
+    | sed -E 's/Results: ([0-9]+)\/([0-9]+) passed, ([0-9]+) failed/\1 \2 \3/'
+}
+
+OUT_798_37="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
+read -r _P798_37 T798_37 F798_37 <<<"$(extract_results_line "$OUT_798_37")"
+OUT_799_37="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
+read -r _P799_37 T799_37 F799_37 <<<"$(extract_results_line "$OUT_799_37")"
+cd "$PROJECT_ROOT" && bash tests/test-issue-59-adoption-evidence-discipline.sh >/dev/null 2>&1
+EXIT_59_37=$?
+cd "$PROJECT_ROOT" && bash tests/test-issue-964-sigpipe-safe-pipes.sh >/dev/null 2>&1
+EXIT_964_37=$?
+
+assert_true "AC-62-37: tests/test-issue-798-topology-flip.sh total >= 20 with 0 failed (got ${T798_37:-0}/${F798_37:-?} failed), tests/test-issue-799-inert-cleanup.sh total >= 31 with 0 failed (got ${T799_37:-0}/${F799_37:-?} failed), tests/test-issue-59-adoption-evidence-discipline.sh exits 0 (got $EXIT_59_37), tests/test-issue-964-sigpipe-safe-pipes.sh exits 0 (got $EXIT_964_37)" \
+  "[ \"${T798_37:-0}\" -ge 20 ] && [ \"${F798_37:-1}\" -eq 0 ] && [ \"${T799_37:-0}\" -ge 31 ] && [ \"${F799_37:-1}\" -eq 0 ] && [ $EXIT_59_37 -eq 0 ] && [ $EXIT_964_37 -eq 0 ]"
 
 # =============================================================================
 # Results
