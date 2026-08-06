@@ -400,7 +400,7 @@ read -r P27R T27R F27R <<<"$(suite_counts "$OUT_27_REAL")"
 assert_true "AC-59-14b: real re-run of test-issue-27-composition-oracle.sh == 23/23, 0 failed (got: $P27R/$T27R, $F27R failed)" \
   "[ \"$T27R\" -eq 23 ] && [ \"$F27R\" -eq 0 ]"
 
-CANON_LITERAL="$(grep -oE '\-eq [0-9]+ \]"$' "$CANON_SUITE" | grep -oE '[0-9]+' | tail -1)"
+CANON_LITERAL="$(grep -F 'AC-27-20c' "$CANON_SUITE" | grep -oE '\-eq [0-9]+ \]"$' | grep -oE '[0-9]+' | tail -1)"
 assert_true "AC-59-14c: cross-pin equality — test-issue-27's ok-count literal ($CANON_LITERAL) == this suite's EXPECTED_OK ($EXPECTED_OK)" \
   "[ \"$CANON_LITERAL\" = \"$EXPECTED_OK\" ]"
 
