@@ -83,3 +83,38 @@ the worked example of the rule operating as intended: every load-bearing claim
 that reached the deliberation from outside the current source was re-verified
 against the live tree before being built upon, rather than adopted on the strength
 of its phrasing or its authority (a gate evaluation).
+
+---
+
+## M4 — Genuine host-level worktree failure (Tier 3, environment-dependent, cycle 2)
+
+**Source AC:** AC-59-24 — a *genuine* host-level worktree failure (disk full,
+stale worktree lock, `mktemp -d` failure) also produces the loud FAIL, not just
+the bogus-ref form. The automated suite's AC-59-20a/20c only exercise the
+unresolvable-ref route through `suite_result_at_ref` (the same `:149` branch,
+but reached via a git-level rejection, not a host-level one); a fake `git`
+standing in for the real host failure was rejected (composition-oracle clause,
+`.autoflow/issue-59-verification-design.md` §4) — the mechanism is identical,
+only the *cause* differs, so this scenario is the boundary that closes it
+manually rather than with a substitute.
+
+**Setup:** Point `TMPDIR` at a read-only directory before invoking the suite, so
+`suite_result_at_ref`'s `mktemp -d` (and the subsequent
+`git worktree add`) cannot write:
+
+```
+TMPDIR=/path/to/a/read-only/dir bash tests/test-issue-59-adoption-evidence-discipline.sh
+```
+
+**Procedure:** Run the suite as above on the `dev/*-issue-59*` branch with a
+resolvable `BASE_REF`, and inspect the output of the 12 AC-59-21 / AC-59-11d /
+AC-59-12c lanes.
+
+**Pass:** each AC-59-21 precondition lane FAILs with its `base measurement of
+<suite> at <ref>` label showing a `-1` triple, its paired delta lane FAILs
+alongside, and the suite exits non-zero. No literal token is pinned beyond the
+label's suite name and the `-1` fields.
+
+**Fail:** any AC-59-21 precondition lane prints a `PASS` label despite the
+host-level failure, its paired delta lane does not also FAIL, or the suite
+exits zero.
