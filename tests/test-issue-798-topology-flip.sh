@@ -241,6 +241,11 @@ else
   # additions, plus the carry-ternary collapse and the dev-prompt line via a
   # substring common to both old and new (the test-prompt line reuses the
   # #27 substring immediately above it).
+  # #59 parity-carried exception (same shape): admits the adoption-side
+  # evidence-discipline edit — the hoisted ADOPTION_EVIDENCE_RULE const
+  # declaration and its one-line doc-comment as pure additions, plus the
+  # dev-draft prompt line via a substring common to both old and new. The
+  # other three interpolation sites reuse the #27/#56 substrings above.
   workflows_offwindow_ac9="$(git diff "$BASE_REF"...HEAD -- .claude/workflows 2>/dev/null \
     | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
     | grep -vF 'design-change requests for untestable items' \
@@ -253,7 +258,10 @@ else
     | grep -vF 'const carry = openCounters.length' \
     | grep -vF 'Open counters still unresolved from the previous round — you MUST address each before ACCEPT' \
     | grep -vF "    : ''" \
-    | grep -vF 'both documents are mutually consistent and complete AND you have no open concerns' || true)"
+    | grep -vF 'both documents are mutually consistent and complete AND you have no open concerns' \
+    | grep -vF 'Adoption discipline for externally-arriving text (issue #59)' \
+    | grep -vF 'const ADOPTION_EVIDENCE_RULE = ' \
+    | grep -vF 'You are the Developer AI in AutoFlow ARCHITECT' || true)"
   assert_true "AC9: diff touches no .claude/workflows/** path, OR only the #27 composition-oracle two-literal prompt edit / #56 carry-channel evidence-discipline edit (parity-carried exception, ledger L18)" \
     "[ -z \"\$workflows_offwindow_ac9\" ]"
 fi
@@ -504,6 +512,10 @@ else
     "test/workflows/run.mjs"
     "tests/manual/issue-56-manual-scenarios.md"
     "tests/test-issue-56-carry-evidence-discipline.sh"
+    # #59 cycle files
+    "tests/test-issue-59-adoption-evidence-discipline.sh"
+    "tests/manual/issue-59-manual-scenarios.md"
+    "tests/issue-59-full-sweep-driver.sh"
   )
   disallowed=""
   while IFS= read -r f; do

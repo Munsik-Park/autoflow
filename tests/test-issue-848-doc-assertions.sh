@@ -592,6 +592,10 @@ else
     "test/workflows/run.mjs"
     "tests/manual/issue-56-manual-scenarios.md"
     "tests/test-issue-56-carry-evidence-discipline.sh"
+    # #59 cycle files
+    "tests/test-issue-59-adoption-evidence-discipline.sh"
+    "tests/manual/issue-59-manual-scenarios.md"
+    "tests/issue-59-full-sweep-driver.sh"
   )
   disallowed=""
   while IFS= read -r f; do

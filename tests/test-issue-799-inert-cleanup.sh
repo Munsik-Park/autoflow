@@ -607,6 +607,10 @@ else
     # .github/workflows/e2e-dummy-target.yml) are already admitted above.
     "tests/manual/issue-56-manual-scenarios.md"
     "tests/test-issue-56-carry-evidence-discipline.sh"
+    # #59 cycle files
+    "tests/test-issue-59-adoption-evidence-discipline.sh"
+    "tests/manual/issue-59-manual-scenarios.md"
+    "tests/issue-59-full-sweep-driver.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -824,6 +828,13 @@ else
   # above — the edit only inserts `${COUNTER_EVIDENCE_RULE}` before `${carry}`
   # on a line the #27 filter already fully admits). Any OTHER content change
   # under .claude/workflows/** still trips the guard.
+  # #59 parity-carried exception (same shape): admits the adoption-side
+  # evidence-discipline edit in architect-deliberation.js — the hoisted
+  # `ADOPTION_EVIDENCE_RULE` const declaration and its one-line doc-comment as
+  # pure additions, plus the dev-draft prompt line via a substring common to
+  # BOTH the old and new line. The other three interpolation sites (test-draft,
+  # dev-round, test-round) reuse the #27/#56 substrings already above. Any
+  # OTHER content change under .claude/workflows/** still trips the guard.
   workflows_touched_ac6="$(printf '%s\n' "$diff_files" | grep '^\.claude/workflows/' || true)"
   workflows_admitted_ac6="yes"
   while IFS= read -r wf; do
@@ -843,7 +854,10 @@ else
       | grep -vF 'const carry = openCounters.length' \
       | grep -vF 'Open counters still unresolved from the previous round — you MUST address each before ACCEPT' \
       | grep -vF "    : ''" \
-      | grep -vF 'both documents are mutually consistent and complete AND you have no open concerns' || true)"
+      | grep -vF 'both documents are mutually consistent and complete AND you have no open concerns' \
+      | grep -vF 'Adoption discipline for externally-arriving text (issue #59)' \
+      | grep -vF 'const ADOPTION_EVIDENCE_RULE = ' \
+      | grep -vF 'You are the Developer AI in AutoFlow ARCHITECT' || true)"
     # REUSE-IgnoreEnd
     [[ -n "$wf_offwindow" ]] && workflows_admitted_ac6="no"
   done <<< "$workflows_touched_ac6"
