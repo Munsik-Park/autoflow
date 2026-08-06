@@ -129,6 +129,37 @@ suite_counts() {
   printf '%s %s %s' "${passed:--1}" "${total:--1}" "${failed:--1}"
 }
 
+# Runs tests/<suite_name> against a git ref OTHER than the live working tree, in an
+# isolated worktree on the SAME host/environment this script itself is running in, and
+# returns the same "passed total failed" triplet suite_counts() extracts.
+#
+# Ledger E33 (PR #61, CI run 31088600592): AC-59-11d/12c originally pinned literal
+# totals measured on the author's local host. Five lanes FAILed on the GitHub Actions
+# runner because environment-conditional sub-tests in the target suites (798/799/955)
+# don't register there, shifting the real total below the local literal — and three
+# more (846/848/952) happened to match by luck. A host-pinned literal cannot be fixed
+# by re-measuring once; the fix is to stop comparing against a fixed number at all and
+# instead compare HEAD against a real re-run of the SAME suite at the comparison base,
+# executed in THIS SAME run (same host, same environment, same conditional-registration
+# behavior) — the delta is environment-invariant even though the absolute totals are not.
+suite_result_at_ref() {
+  local ref="$1" suite_name="$2"
+  local wt out
+  wt="$(mktemp -d)"
+  if ! git -C "$PROJECT_ROOT" worktree add -q --detach "$wt" "$ref" >/dev/null 2>&1; then
+    rm -rf "$wt"
+    printf '%s %s %s' "-1" "-1" "-1"
+    return
+  fi
+  if [[ -f "$wt/tests/$suite_name" ]]; then
+    out="$(cd "$wt" && bash "tests/$suite_name" 2>&1)"
+  else
+    out=""
+  fi
+  git -C "$PROJECT_ROOT" worktree remove --force "$wt" >/dev/null 2>&1
+  suite_counts "$out"
+}
+
 # Cycle-scoped diff-dependent lanes (AC-59-10, 11a, 11b, 11d, 15(a)) are this cycle's OWN PR
 # contract — scoped to the issue-59 dev branch, mirroring commit ea68a4c
 # (tests/test-issue-7-oracle-hardening.sh AC-7-7b) and tests/test-issue-56-…:90 exactly.
@@ -272,44 +303,63 @@ echo "=== every unconditional cross-cycle change-surface guard re-run against th
 
 case "$HEAD_BRANCH" in
   dev/*-issue-59|dev/*-issue-59-*)
-    OUT_798="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
-    OUT_799="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
-    OUT_846="$(cd "$PROJECT_ROOT" && bash tests/test-issue-846-doc-assertions.sh 2>&1)"
-    OUT_848="$(cd "$PROJECT_ROOT" && bash tests/test-issue-848-doc-assertions.sh 2>&1)"
-    OUT_952="$(cd "$PROJECT_ROOT" && bash tests/test-issue-952-wizard-removal.sh 2>&1)"
-    OUT_955="$(cd "$PROJECT_ROOT" && bash tests/test-issue-955-subagent-background-ban.sh 2>&1)"
-    OUT_T1="$(cd "$PROJECT_ROOT" && bash tests/test-issue-1-guard-contract.sh 2>&1)"
+    if [[ -z "$BASE_REF" ]]; then
+      echo "  BLOCK: no comparison base resolvable — AC-59-11d/AC-59-18 counted FAIL, never skipped"
+      TESTS=$((TESTS + 9)); FAIL=$((FAIL + 9))
+    else
+      OUT_798="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
+      OUT_799="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
+      OUT_846="$(cd "$PROJECT_ROOT" && bash tests/test-issue-846-doc-assertions.sh 2>&1)"
+      OUT_848="$(cd "$PROJECT_ROOT" && bash tests/test-issue-848-doc-assertions.sh 2>&1)"
+      OUT_952="$(cd "$PROJECT_ROOT" && bash tests/test-issue-952-wizard-removal.sh 2>&1)"
+      OUT_955="$(cd "$PROJECT_ROOT" && bash tests/test-issue-955-subagent-background-ban.sh 2>&1)"
+      OUT_T1="$(cd "$PROJECT_ROOT" && bash tests/test-issue-1-guard-contract.sh 2>&1)"
 
-    read -r P798 T798 F798 <<<"$(suite_counts "$OUT_798")"
-    read -r P799 T799 F799 <<<"$(suite_counts "$OUT_799")"
-    read -r P846 T846 F846 <<<"$(suite_counts "$OUT_846")"
-    read -r P848 T848 F848 <<<"$(suite_counts "$OUT_848")"
-    read -r P952 T952 F952 <<<"$(suite_counts "$OUT_952")"
-    read -r P955 T955 F955 <<<"$(suite_counts "$OUT_955")"
-    read -r PT1 TT1 FT1 <<<"$(suite_counts "$OUT_T1")"
+      read -r P798 T798 F798 <<<"$(suite_counts "$OUT_798")"
+      read -r P799 T799 F799 <<<"$(suite_counts "$OUT_799")"
+      read -r P846 T846 F846 <<<"$(suite_counts "$OUT_846")"
+      read -r P848 T848 F848 <<<"$(suite_counts "$OUT_848")"
+      read -r P952 T952 F952 <<<"$(suite_counts "$OUT_952")"
+      read -r P955 T955 F955 <<<"$(suite_counts "$OUT_955")"
+      read -r PT1 TT1 FT1 <<<"$(suite_counts "$OUT_T1")"
 
-    assert_true "AC-59-11d-798: test-issue-798-topology-flip.sh == 20/20, 0 failed (got: $P798/$T798, $F798 failed)" \
-      "[ \"$T798\" -eq 20 ] && [ \"$F798\" -eq 0 ]"
-    assert_true "AC-59-11d-799: test-issue-799-inert-cleanup.sh == 31/31, 0 failed (got: $P799/$T799, $F799 failed)" \
-      "[ \"$T799\" -eq 31 ] && [ \"$F799\" -eq 0 ]"
-    assert_true "AC-59-11d-846: test-issue-846-doc-assertions.sh == 23/23, 0 failed (got: $P846/$T846, $F846 failed)" \
-      "[ \"$T846\" -eq 23 ] && [ \"$F846\" -eq 0 ]"
-    assert_true "AC-59-11d-848: test-issue-848-doc-assertions.sh == 32/32, 0 failed (got: $P848/$T848, $F848 failed)" \
-      "[ \"$T848\" -eq 32 ] && [ \"$F848\" -eq 0 ]"
-    assert_true "AC-59-11d-952: test-issue-952-wizard-removal.sh == 53/53, 0 failed (got: $P952/$T952, $F952 failed)" \
-      "[ \"$T952\" -eq 53 ] && [ \"$F952\" -eq 0 ]"
-    assert_true "AC-59-11d-955: test-issue-955-subagent-background-ban.sh == 57/57, 0 failed (got: $P955/$T955, $F955 failed)" \
-      "[ \"$T955\" -eq 57 ] && [ \"$F955\" -eq 0 ]"
-    assert_true "AC-59-11d-test1: test-issue-1-guard-contract.sh (N1 aggregator) == 32/32, 0 failed (got: $PT1/$TT1, $FT1 failed)" \
-      "[ \"$TT1\" -eq 32 ] && [ \"$FT1\" -eq 0 ]"
+      # Same-environment baseline (ledger E33): re-run each suite a SECOND time, at the
+      # comparison base, in THIS SAME job/host — never a literal captured on a different
+      # machine. An environment-conditional lane (e.g. a sub-test that doesn't register
+      # on this specific runner) shifts BOTH the base and head totals identically, so the
+      # delta below stays valid across hosts where a fixed literal is not (that is exactly
+      # what broke on the GitHub Actions runner).
+      read -r BP798 BT798 BF798 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-798-topology-flip.sh")"
+      read -r BP799 BT799 BF799 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-799-inert-cleanup.sh")"
+      read -r BP846 BT846 BF846 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-846-doc-assertions.sh")"
+      read -r BP848 BT848 BF848 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-848-doc-assertions.sh")"
+      read -r BP952 BT952 BF952 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-952-wizard-removal.sh")"
+      read -r BP955 BT955 BF955 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-955-subagent-background-ban.sh")"
+      read -r BPT1 BTT1 BFT1 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-1-guard-contract.sh")"
 
-    # AC-59-18 reuses the 952/955 real re-runs above rather than invoking them a second
-    # time (the manifest same-commit obligation's diff-membership fences live inside those
-    # same suites — verification design §4 E9).
-    assert_true "AC-59-18-955: 955 AC4-DOGFOOD (manifest-in-diff fence) does not regress the suite's own pass count" \
-      "[ \"$F955\" -eq 0 ]"
-    assert_true "AC-59-18-952: 952 AC5/AC5(T2) (manifest-in-diff + tests/plugin/ delegation) does not regress the suite's own pass count" \
-      "[ \"$F952\" -eq 0 ]"
+      assert_true "AC-59-11d-798: test-issue-798-topology-flip.sh — 0 failed at HEAD, total not below base (got: $P798/$T798 vs base $BP798/$BT798)" \
+        "[ \"$F798\" -eq 0 ] && [ \"$T798\" -ge \"$BT798\" ]"
+      assert_true "AC-59-11d-799: test-issue-799-inert-cleanup.sh — 0 failed at HEAD, total not below base (got: $P799/$T799 vs base $BP799/$BT799)" \
+        "[ \"$F799\" -eq 0 ] && [ \"$T799\" -ge \"$BT799\" ]"
+      assert_true "AC-59-11d-846: test-issue-846-doc-assertions.sh — 0 failed at HEAD, total not below base (got: $P846/$T846 vs base $BP846/$BT846)" \
+        "[ \"$F846\" -eq 0 ] && [ \"$T846\" -ge \"$BT846\" ]"
+      assert_true "AC-59-11d-848: test-issue-848-doc-assertions.sh — 0 failed at HEAD, total not below base (got: $P848/$T848 vs base $BP848/$BT848)" \
+        "[ \"$F848\" -eq 0 ] && [ \"$T848\" -ge \"$BT848\" ]"
+      assert_true "AC-59-11d-952: test-issue-952-wizard-removal.sh — 0 failed at HEAD, total not below base (got: $P952/$T952 vs base $BP952/$BT952)" \
+        "[ \"$F952\" -eq 0 ] && [ \"$T952\" -ge \"$BT952\" ]"
+      assert_true "AC-59-11d-955: test-issue-955-subagent-background-ban.sh — 0 failed at HEAD, total not below base (got: $P955/$T955 vs base $BP955/$BT955)" \
+        "[ \"$F955\" -eq 0 ] && [ \"$T955\" -ge \"$BT955\" ]"
+      assert_true "AC-59-11d-test1: test-issue-1-guard-contract.sh (N1 aggregator) — 0 failed at HEAD, total not below base (got: $PT1/$TT1 vs base $BPT1/$BTT1)" \
+        "[ \"$FT1\" -eq 0 ] && [ \"$TT1\" -ge \"$BTT1\" ]"
+
+      # AC-59-18 reuses the 952/955 real re-runs above rather than invoking them a second
+      # time (the manifest same-commit obligation's diff-membership fences live inside those
+      # same suites — verification design §4 E9).
+      assert_true "AC-59-18-955: 955 AC4-DOGFOOD (manifest-in-diff fence) does not regress the suite's own pass count" \
+        "[ \"$F955\" -eq 0 ]"
+      assert_true "AC-59-18-952: 952 AC5/AC5(T2) (manifest-in-diff + tests/plugin/ delegation) does not regress the suite's own pass count" \
+        "[ \"$F952\" -eq 0 ]"
+    fi
     ;;
   *)
     note_deferred "AC-59-11d/AC-59-18: cross-cycle change-surface re-run set inert off the issue-59 dev branch (head: ${HEAD_BRANCH:-unknown}) — a lane that cannot fail off-branch must not count as passing."
@@ -353,28 +403,41 @@ fi
 echo ""
 echo "=== AC-59-12c — the yml edit moves no other cycle's fixed CI window (E22 canonical list: 799+798+27+35+56) ==="
 
-OUT_799_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
-OUT_798_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
-OUT_27_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-27-composition-oracle.sh 2>&1)"
-OUT_35_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-35-phase-marker.sh 2>&1)"
-OUT_56_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-56-carry-evidence-discipline.sh 2>&1)"
+if [[ -z "$BASE_REF" ]]; then
+  echo "  BLOCK: no comparison base resolvable — AC-59-12c counted FAIL, never skipped"
+  TESTS=$((TESTS + 5)); FAIL=$((FAIL + 5))
+else
+  OUT_799_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
+  OUT_798_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
+  OUT_27_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-27-composition-oracle.sh 2>&1)"
+  OUT_35_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-35-phase-marker.sh 2>&1)"
+  OUT_56_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-56-carry-evidence-discipline.sh 2>&1)"
 
-read -r P799W T799W F799W <<<"$(suite_counts "$OUT_799_WINDOW")"
-read -r P798W T798W F798W <<<"$(suite_counts "$OUT_798_WINDOW")"
-read -r P27W T27W F27W <<<"$(suite_counts "$OUT_27_WINDOW")"
-read -r P35W T35W F35W <<<"$(suite_counts "$OUT_35_WINDOW")"
-read -r P56W T56W F56W <<<"$(suite_counts "$OUT_56_WINDOW")"
+  read -r P799W T799W F799W <<<"$(suite_counts "$OUT_799_WINDOW")"
+  read -r P798W T798W F798W <<<"$(suite_counts "$OUT_798_WINDOW")"
+  read -r P27W T27W F27W <<<"$(suite_counts "$OUT_27_WINDOW")"
+  read -r P35W T35W F35W <<<"$(suite_counts "$OUT_35_WINDOW")"
+  read -r P56W T56W F56W <<<"$(suite_counts "$OUT_56_WINDOW")"
 
-assert_true "AC-59-12c-799: test-issue-799-inert-cleanup.sh window (AC6-ci -A40) unaffected == 31/31 (got: $P799W/$T799W)" \
-  "[ \"$T799W\" -eq 31 ] && [ \"$P799W\" -eq \"$T799W\" ]"
-assert_true "AC-59-12c-798: test-issue-798-topology-flip.sh window unaffected == 20/20 (got: $P798W/$T798W)" \
-  "[ \"$T798W\" -eq 20 ] && [ \"$P798W\" -eq \"$T798W\" ]"
-assert_true "AC-59-12c-27: test-issue-27-composition-oracle.sh window unaffected == 23/23 (got: $P27W/$T27W)" \
-  "[ \"$T27W\" -eq 23 ] && [ \"$P27W\" -eq \"$T27W\" ]"
-assert_true "AC-59-12c-35: test-issue-35-phase-marker.sh (control) unaffected == 137/137 (got: $P35W/$T35W)" \
-  "[ \"$T35W\" -eq 137 ] && [ \"$P35W\" -eq \"$T35W\" ]"
-assert_true "AC-59-12c-56: test-issue-56-carry-evidence-discipline.sh (control) unaffected == 10/10 (got: $P56W/$T56W)" \
-  "[ \"$T56W\" -eq 10 ] && [ \"$P56W\" -eq \"$T56W\" ]"
+  # Same-environment baseline (ledger E33 — see suite_result_at_ref's header comment):
+  # a literal count here has the identical host-dependence problem AC-59-11d had.
+  read -r BP799W BT799W BF799W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-799-inert-cleanup.sh")"
+  read -r BP798W BT798W BF798W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-798-topology-flip.sh")"
+  read -r BP27W BT27W BF27W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-27-composition-oracle.sh")"
+  read -r BP35W BT35W BF35W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-35-phase-marker.sh")"
+  read -r BP56W BT56W BF56W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-56-carry-evidence-discipline.sh")"
+
+  assert_true "AC-59-12c-799: test-issue-799-inert-cleanup.sh window (AC6-ci -A40) unaffected — 0 failed, total not below base (got: $P799W/$T799W vs base $BP799W/$BT799W)" \
+    "[ \"$F799W\" -eq 0 ] && [ \"$T799W\" -ge \"$BT799W\" ]"
+  assert_true "AC-59-12c-798: test-issue-798-topology-flip.sh window unaffected — 0 failed, total not below base (got: $P798W/$T798W vs base $BP798W/$BT798W)" \
+    "[ \"$F798W\" -eq 0 ] && [ \"$T798W\" -ge \"$BT798W\" ]"
+  assert_true "AC-59-12c-27: test-issue-27-composition-oracle.sh window unaffected — 0 failed, total not below base (got: $P27W/$T27W vs base $BP27W/$BT27W)" \
+    "[ \"$F27W\" -eq 0 ] && [ \"$T27W\" -ge \"$BT27W\" ]"
+  assert_true "AC-59-12c-35: test-issue-35-phase-marker.sh (control) unaffected — 0 failed, total not below base (got: $P35W/$T35W vs base $BP35W/$BT35W)" \
+    "[ \"$F35W\" -eq 0 ] && [ \"$T35W\" -ge \"$BT35W\" ]"
+  assert_true "AC-59-12c-56: test-issue-56-carry-evidence-discipline.sh (control) unaffected — 0 failed, total not below base (got: $P56W/$T56W vs base $BP56W/$BT56W)" \
+    "[ \"$F56W\" -eq 0 ] && [ \"$T56W\" -ge \"$BT56W\" ]"
+fi
 
 # =============================================================================
 echo ""
