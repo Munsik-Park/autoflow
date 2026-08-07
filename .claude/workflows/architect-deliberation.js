@@ -101,7 +101,10 @@ const LOCATOR_MAX = 120
 const TRUNCATION_MARKER = '…[truncated]'
 const LOCATOR_UNSPECIFIED = 'unspecified'
 // Code-POINT bound, not code-unit: slicing by UTF-16 code unit can split a surrogate pair.
+// UTF-16 code-unit length is always >= code-point length, so a short-enough code-unit
+// length already proves the code-point length is within bound without building the array.
 const capField = (s, n) => {
+  if (s.length <= n) return s
   const cp = Array.from(s)
   return cp.length > n ? cp.slice(0, n).join('') + TRUNCATION_MARKER : s
 }

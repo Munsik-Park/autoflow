@@ -195,7 +195,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "1e72a99a84d899a8b07150bf29ee2ebfeb49c39d131b9694345b3a10d6b21b96"
+      "sha256": "5ff14397d4194f4d80610f4d02b62809785be4de2556d62d73cdc6597b7d998d"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
