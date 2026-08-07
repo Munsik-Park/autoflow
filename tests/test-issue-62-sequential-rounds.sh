@@ -563,6 +563,45 @@ assert_true "AC-62-37: tests/test-issue-798-topology-flip.sh total >= 20 with 0 
   "[ \"${T798_37:-0}\" -ge 20 ] && [ \"${F798_37:-1}\" -eq 0 ] && [ \"${T799_37:-0}\" -ge 31 ] && [ \"${F799_37:-1}\" -eq 0 ] && [ $EXIT_59_37 -eq 0 ] && [ $EXIT_964_37 -eq 0 ]"
 
 # =============================================================================
+echo ""
+echo "=== AC-62-38 (fence, no run.mjs case) — the D10 replacement's pipeline shape trips neither frozen #964 hazard regex ==="
+# Frozen literals, quoted verbatim from tests/test-issue-964-sigpipe-safe-pipes.sh:95
+# (GUARD_REGEX) and :103 (EXTRACTOR_GUARD_REGEX) — never re-derived or reworded
+# here, since a copy that drifts from the frozen source would silently stop
+# discriminating the hazard class #964 exists to catch.
+GUARD_REGEX_964='grep -[ABC] ?[0-9]+ [^)]*\| grep -q'
+EXTRACTOR_GUARD_REGEX_964='(^|[[:space:]"'"'"'])[a-zA-Z_][a-zA-Z0-9_]* \| grep -[qm]'
+
+M798_G="$(grep -cE "$GUARD_REGEX_964" "$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh" || true)"
+M798_E="$(grep -cE "$EXTRACTOR_GUARD_REGEX_964" "$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh" || true)"
+M799_G="$(grep -cE "$GUARD_REGEX_964" "$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh" || true)"
+M799_E="$(grep -cE "$EXTRACTOR_GUARD_REGEX_964" "$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh" || true)"
+assert_true "AC-62-38: neither #964 frozen hazard regex (GUARD_REGEX / EXTRACTOR_GUARD_REGEX, tests/test-issue-964-sigpipe-safe-pipes.sh:95,:103) matches tests/test-issue-798-topology-flip.sh or tests/test-issue-799-inert-cleanup.sh (798: GUARD=$M798_G/EXTRACTOR=$M798_E, 799: GUARD=$M799_G/EXTRACTOR=$M799_E)" \
+  "[ \"$M798_G\" -eq 0 ] && [ \"$M798_E\" -eq 0 ] && [ \"$M799_G\" -eq 0 ] && [ \"$M799_E\" -eq 0 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-62-39 (fence) — the two guards' own change stays inside their own allow-lists; no derived-artifact regeneration owed ==="
+
+check_self_sibling_admission() {
+  local file="$1"
+  local block
+  block="$(extract_allow_list_block "$file" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+  if printf '%s\n' "$block" | grep -qxF '"tests/test-issue-798-topology-flip.sh"' \
+    && printf '%s\n' "$block" | grep -qxF '"tests/test-issue-799-inert-cleanup.sh"'; then
+    echo yes
+  else
+    echo no
+  fi
+}
+
+SELFSIB_798="$(check_self_sibling_admission "$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh")"
+SELFSIB_799="$(check_self_sibling_admission "$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh")"
+MANIFEST_TESTS_ROWS="$(jq -r '.artifacts[].source' "$MANIFEST" | grep -c '^tests/' || true)"
+assert_true "AC-62-39: both guards admit tests/test-issue-798-topology-flip.sh AND tests/test-issue-799-inert-cleanup.sh in their own allow_list (798: $SELFSIB_798, 799: $SELFSIB_799), and setup/manifest.json carries zero 'tests/…' source rows so AC-56-10a/AC-59-9 stay unmoved (got: $MANIFEST_TESTS_ROWS)" \
+  "[ '$SELFSIB_798' = yes ] && [ '$SELFSIB_799' = yes ] && [ \"$MANIFEST_TESTS_ROWS\" -eq 0 ]"
+
+# =============================================================================
 # Results
 # ---------------------------------------------------------------------------
 echo ""
