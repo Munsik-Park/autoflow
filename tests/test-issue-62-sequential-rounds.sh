@@ -133,22 +133,27 @@ tamper_workflow_manifest_sha() {
 
 # AC-62-36(iv) mutator: delete the workflow file AND its manifest row inside
 # the worktree, then commit — the empty-vs-empty vacuity class (C2) the D10
-# predicate must not silently admit. An explicit worktree-local git identity
-# is required for the commit (precedent: tests/test-issue-979-review-backend.sh:73)
-# since a bare `git worktree add` does not guarantee a global identity is
-# configured on every CI runner.
+# predicate must not silently admit. The commit's identity is scoped to THIS
+# invocation only via `git -c user.email=... -c user.name=...` (GATE:QUALITY
+# fix, regression 1/3): `git -C "$wt" config user.email/user.name` writes to
+# the SHARED .git/config of a linked worktree (extensions.worktreeConfig is
+# unset in this repo), which would permanently rewrite the host repository's
+# identity — not scoped to the worktree the way it would be in a standalone
+# git-init'd fixture repo (tests/test-issue-979-review-backend.sh:73 is safe
+# for exactly that reason: that fixture is its own repo, not a linked
+# worktree of the host). `-c` config overrides are process-local and never
+# touch any on-disk config file.
 delete_workflow_and_manifest_row() {
   local wt="$1"
   local wf_path=".claude/workflows/architect-deliberation.js"
   local manifest="$wt/setup/manifest.json"
   [[ -f "$wt/$wf_path" && -f "$manifest" ]] || return 1
-  git -C "$wt" config user.email "test-issue-62@example.com"
-  git -C "$wt" config user.name "test-issue-62"
   jq 'del(.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js"))' \
     "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
   git -C "$wt" rm -q -- "$wf_path" >/dev/null 2>&1
   git -C "$wt" add -A -- "$manifest" >/dev/null 2>&1
-  git -C "$wt" commit -q -m "AC-62-36(iv) fixture: delete workflow file + manifest row" >/dev/null 2>&1
+  git -c user.email="test-issue-62@example.com" -c user.name="test-issue-62" \
+    -C "$wt" commit -q -m "AC-62-36(iv) fixture: delete workflow file + manifest row" >/dev/null 2>&1
 }
 
 # =============================================================================
