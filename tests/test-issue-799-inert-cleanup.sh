@@ -812,59 +812,38 @@ else
   fi
   assert_true "AC6-scope: diff does not touch .claude/hooks/**, OR only check-autoflow-gate.sh with its plugin mirror byte-identical (#843 parity-carried exception)" \
     "[ '$hooks_admitted_ac6' = 'yes' ]"
-  # #985 parity-carried exception: .claude/workflows/** is allowed to change
-  # ONLY for the SPDX header the REUSE-lint sweep prepends to every
-  # header-bearing tracked source (test-issue-985-doc-assertions.sh
-  # AC3-SPDX-COVERAGE) — a pure two-line addition, no content-line change.
-  # #27 parity-carried exception (same shape): also admits the
-  # composition-oracle two-literal Test-AI prompt edit in
-  # architect-deliberation.js (feature design §3.4 — the test-draft
-  # artifact-contents clause and the round-prompt ACCEPT condition), via a
-  # substring common to BOTH the old and new line for each in-place edit.
-  # #56 parity-carried exception (same shape, GATE:QUALITY FAIL #4 / ledger
-  # L18, user-approved same-PR sibling fix): admits the carry-channel
-  # evidence-discipline edit in architect-deliberation.js — the two hoisted
-  # `CARRY_NON_EVIDENTIARY` / `COUNTER_EVIDENCE_RULE` const declarations (and
-  # their doc-comment) as pure additions, plus the carry-ternary collapse and
-  # the dev-prompt line, each admitted via a substring common to BOTH the old
-  # and new line (the test-prompt line reuses the #27 substring already
-  # above — the edit only inserts `${COUNTER_EVIDENCE_RULE}` before `${carry}`
-  # on a line the #27 filter already fully admits). Any OTHER content change
-  # under .claude/workflows/** still trips the guard.
-  # #59 parity-carried exception (same shape): admits the adoption-side
-  # evidence-discipline edit in architect-deliberation.js — the hoisted
-  # `ADOPTION_EVIDENCE_RULE` const declaration and its one-line doc-comment as
-  # pure additions, plus the dev-draft prompt line via a substring common to
-  # BOTH the old and new line. The other three interpolation sites (test-draft,
-  # dev-round, test-round) reuse the #27/#56 substrings already above. Any
-  # OTHER content change under .claude/workflows/** still trips the guard.
+  # #62 window replacement (feature design D10, supersedes the #985/#27/#56/#59
+  # substring chain): the per-cycle grep -vF allow window does not scale — that
+  # cycle's edit leaves 99 surviving lines, 27 of them <=25-char generic
+  # fragments, and admitting those as literals would make the arm match any
+  # future edit under the path. The scope obligation this lane actually owes is
+  # "no cycle sprawls into a workflow file it did not declare", which is a
+  # file-set property, not a line property. Within-file content protection is
+  # NOT dropped — it is carried, permanently and independently of diff size, by
+  # tests/fixtures/doc-invariants.json's scope:"permanent" rows on the workflow
+  # scripts and by the manifest sha256 pin regenerated in the same commit
+  # (AC-56-10a, AC-59-9).
   workflows_touched_ac6="$(printf '%s\n' "$diff_files" | grep '^\.claude/workflows/' || true)"
   workflows_admitted_ac6="yes"
   while IFS= read -r wf; do
     [[ -z "$wf" ]] && continue
-    # REUSE-IgnoreStart
-    wf_offwindow="$(git diff "$BASE_REF"...HEAD -- "$wf" 2>/dev/null \
-      | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
-      | grep -vF '+// SPDX-FileCopyrightText: 2026 Munsik-Park' \
-      | grep -vF '+// SPDX-License-Identifier: Elastic-2.0' \
-      | grep -vF 'design-change requests for untestable items' \
-      | grep -vF 'Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method' \
-      | grep -vF 'Evidence discipline for the carry channel (issue #56)' \
-      | grep -vF 'BOTH round prompts so the dev and test channels cannot drift apart' \
-      | grep -vF 'only alongside carried counters; the counter rule governs every round' \
-      | grep -vF 'const CARRY_NON_EVIDENTIARY = ' \
-      | grep -vF 'const COUNTER_EVIDENCE_RULE = ' \
-      | grep -vF 'const carry = openCounters.length' \
-      | grep -vF 'Open counters still unresolved from the previous round — you MUST address each before ACCEPT' \
-      | grep -vF "    : ''" \
-      | grep -vF 'both documents are mutually consistent and complete AND you have no open concerns' \
-      | grep -vF 'Adoption discipline for externally-arriving text (issue #59)' \
-      | grep -vF 'const ADOPTION_EVIDENCE_RULE = ' \
-      | grep -vF 'You are the Developer AI in AutoFlow ARCHITECT' || true)"
-    # REUSE-IgnoreEnd
-    [[ -n "$wf_offwindow" ]] && workflows_admitted_ac6="no"
+    # No filename allow-list here, deliberately: WHICH workflow files a cycle may
+    # touch is the path-level allow_list arm's obligation (AC10 / AC6-scope), and
+    # duplicating it inside this arm would re-create the two-oracles-for-one-fact
+    # coupling D10 exists to remove. A workflow path with no manifest artifacts[]
+    # row yields an empty man_sha and therefore still fails the equality below, so
+    # sprawl into an unpinned workflow file is caught by this arm as well.
+    wf_sha="$(shasum -a 256 "$PROJECT_ROOT/$wf" 2>/dev/null | awk '{print $1}')"
+    man_sha="$(jq -r --arg s "$wf" '.artifacts[] | select(.source==$s) | .sha256' "$PROJECT_ROOT/setup/manifest.json")"
+    # Both -n guards are load-bearing: -n "$wf_sha" is "still exists in the
+    # worktree" (a DELETED path is listed by git diff --name-only, shasum emits
+    # nothing); -n "$man_sha" is "carries a setup/manifest.json artifacts[] row"
+    # (jq -r on an absent row emits nothing). Without the first, a cycle that
+    # deletes a workflow script together with its manifest row compares "" to ""
+    # and is silently ADMITTED.
+    [[ -n "$wf_sha" && -n "$man_sha" && "$wf_sha" == "$man_sha" ]] || workflows_admitted_ac6="no"
   done <<< "$workflows_touched_ac6"
-  assert_true "AC6-scope: diff does not touch .claude/workflows/**, OR only the #985 SPDX-header two-line addition / #27 composition-oracle two-literal prompt edit / #56 carry-channel evidence-discipline edit (ledger Q1, L18)" \
+  assert_true "AC6-scope: diff touches no .claude/workflows/** path, OR every touched .claude/workflows/** path has a setup/manifest.json sha256 row matching its current content (#62 D10 — supersedes the #985/#27/#56/#59 substring window)" \
     "[ '$workflows_admitted_ac6' = 'yes' ]"
 fi
 
