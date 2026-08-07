@@ -514,6 +514,16 @@ case "$HEAD_BRANCH" in
     # Same local-`main`-absent fallback as AC-62-33b above: a pull_request
     # checkout only has `origin/main`, not a local `main` branch.
     BASE_REF_36="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)"
+    # CI's pull_request checkout has no local `main` branch, only
+    # `origin/main` — but the child guards (798/799) resolve their own base
+    # via a bare `git merge-base HEAD main` internally, so their
+    # .claude/workflows/** arm SKIPs without a local `main` ref, and the
+    # tamper/deletion controls below never produce an arm-FAIL. Create the
+    # ref (no checkout) so the child guards — and worktrees, which share
+    # refs — can resolve it; no-op locally where `main` already exists.
+    if [[ -z "$(cd "$PROJECT_ROOT" && git branch --list main)" ]] && (cd "$PROJECT_ROOT" && git rev-parse --verify origin/main >/dev/null 2>&1); then
+      (cd "$PROJECT_ROOT" && git branch main origin/main) || true
+    fi
     if [[ -z "$BASE_REF_36" ]]; then
       echo "  BLOCK: no comparison base resolvable — AC-62-36(ii)/(iii)/(iv) counted FAIL, never skipped"
       TESTS=$((TESTS + 3)); FAIL=$((FAIL + 3))
