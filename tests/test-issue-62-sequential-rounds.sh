@@ -425,7 +425,9 @@ done
 
 case "$HEAD_BRANCH" in
   dev/*-issue-62|dev/*-issue-62-*)
-    BASE_REF="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || true)"
+    # A pull_request checkout (fetch-depth: 0) has full history but no LOCAL
+    # `main` branch, only `origin/main` — fall back before declaring BLOCK.
+    BASE_REF="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)"
     if [[ -z "$BASE_REF" ]]; then
       echo "  BLOCK: no comparison base resolvable — AC-62-33b counted FAIL, never skipped"
       TESTS=$((TESTS + ${#GUARD_SUITES[@]})); FAIL=$((FAIL + ${#GUARD_SUITES[@]}))
@@ -509,7 +511,9 @@ assert_true "AC-62-36(i): both guards' .claude/workflows/** arm window has zero 
 # checkout and a local run, so a two-arm branch gate is the complete idiom.
 case "$HEAD_BRANCH" in
   dev/*-issue-62|dev/*-issue-62-*)
-    BASE_REF_36="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || true)"
+    # Same local-`main`-absent fallback as AC-62-33b above: a pull_request
+    # checkout only has `origin/main`, not a local `main` branch.
+    BASE_REF_36="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)"
     if [[ -z "$BASE_REF_36" ]]; then
       echo "  BLOCK: no comparison base resolvable — AC-62-36(ii)/(iii)/(iv) counted FAIL, never skipped"
       TESTS=$((TESTS + 3)); FAIL=$((FAIL + 3))
