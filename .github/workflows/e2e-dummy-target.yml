@@ -119,6 +119,17 @@ on:
       # comments record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window).
       - 'tests/test-issue-56-carry-evidence-discipline.sh'
       - 'tests/manual/issue-56-manual-scenarios.md'
+      # #59 cycle surface (adoption-side evidence discipline). TAIL here,
+      # mirroring the #7/#27/#43/#35/#56 entries above for the same reason
+      # those comments record (#799's AC6-ci fixed `grep -A40 '^ *paths:'`
+      # window has zero headroom above this file's first `paths:` block).
+      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
+      - 'tests/manual/issue-59-manual-scenarios.md'
+      # #62 cycle surface (sequential rounds / carry compaction / citation
+      # partitioning). TAIL here for the same reason the #56/#59 comments
+      # above record.
+      - 'tests/test-issue-62-sequential-rounds.sh'
+      - 'tests/manual/issue-62-manual-scenarios.md'
       # #51 cycle surface. TAIL here, mirroring the #7/#27/#43/#35 entries
       # above for the same reason those comments record (#799's AC6-ci fixed
       # `grep -A40 '^ *paths:'` window).
@@ -206,6 +217,14 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-56-carry-evidence-discipline.sh'
       - 'tests/manual/issue-56-manual-scenarios.md'
+      # #59 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
+      - 'tests/manual/issue-59-manual-scenarios.md'
+      # #62 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-62-sequential-rounds.sh'
+      - 'tests/manual/issue-62-manual-scenarios.md'
       # #51 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
@@ -444,6 +463,30 @@ jobs:
       # tests/test-issue-56-carry-evidence-discipline.sh.
       - name: Run carry-channel evidence discipline guard (#56)
         run: bash tests/test-issue-56-carry-evidence-discipline.sh
+
+      # Adoption-side evidence discipline guard (#59, cycle-scoped): the
+      # count/position/order-shaped assertions the permanent registry
+      # structurally cannot hold — the ADOPTION_EVIDENCE_RULE
+      # declaration/interpolation discriminators, the cross-cycle
+      # change-surface re-run fence (AC-59-11d, multi-minute), the ok-count
+      # cross-pin equality with test-issue-27, and the derived-artifact /
+      # SPDX / negative-control fences. CI has no glob discovery; registered
+      # by filename per the sibling suites. See
+      # tests/test-issue-59-adoption-evidence-discipline.sh.
+      - name: Run adoption-evidence discipline guard (#59)
+        run: bash tests/test-issue-59-adoption-evidence-discipline.sh
+
+      # Sequential-round / carry-compaction / citation-partitioning guard
+      # (#62, cycle-scoped): the structural and count-shaped assertions the
+      # permanent registry cannot hold — the single-`parallel(`-site
+      # discriminator, the non-comment `import(` fence, the ok-count
+      # cross-pin bump in its two foreign homes, the six branch-diff
+      # allow-list admissions, and the manifest-hash derived-artifact gate
+      # widened to three sources. CI has no glob discovery; registered by
+      # filename per the sibling suites. See
+      # tests/test-issue-62-sequential-rounds.sh.
+      - name: Run sequential-round deliberation guard (#62)
+        run: bash tests/test-issue-62-sequential-rounds.sh
       # Teammate-removal feasibility verdict (#51, cycle-scoped): the
       # assertions the permanent registry structurally cannot hold — the
       # base-relative Status fence and the migration-slice DELTA /

@@ -319,13 +319,19 @@ echo "=== AC-27-20 (composition oracle for S8, fence, PASS pre+post) — workflo
 # keeping the check live (a structural fix — e.g. retiring this duplicate check in favor of
 # #56's own branch-scoped AC-56-8 fence — is a candidate follow-up, out of this cycle's
 # scope).
+# B14 update (issue #59, D11/D18): #59 added six run.mjs tests for the adoption-side
+# evidence discipline (37 -> 43). Same reasoning as above — the literal is bumped in the
+# same commit as the run.mjs addition, keeping the plain-literal unconditional form. The
+# value has two homes (D18): this literal and EXPECTED_OK in
+# tests/test-issue-59-adoption-evidence-discipline.sh; a future test add or remove edits
+# both in one commit, and that suite's AC-59-14c asserts the two agree.
 HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
 HARNESS_EXIT=$?
 OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -c '^\s*ok' || true)"
 assert_true "AC-27-20a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
 assert_true "AC-27-20b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-assert_true "AC-27-20c: harness ok-line count == B14 (37) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 37 ]"
+assert_true "AC-27-20c: harness ok-line count == B14 (58) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 58 ]"
 assert_true "AC-27-20d: node --check .claude/workflows/architect-deliberation.js exits 0 (cheaper subset)" \
   "node --check '$WORKFLOW_JS'"
 

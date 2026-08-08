@@ -226,36 +226,38 @@ else
   fi
   assert_true "AC9: diff touches no .claude/hooks/** path, OR only check-autoflow-gate.sh with its plugin mirror byte-identical (#843 parity-carried exception)" \
     "[ '$hooks_admitted_ac9' = 'yes' ]"
-  # #27 parity-carried exception (same shape as the #843 hooks exception
-  # above): .claude/workflows/** is allowed to change ONLY for the
-  # composition-oracle two-literal Test-AI prompt edit in
-  # architect-deliberation.js (feature design §3.4 — the test-draft artifact-
-  # contents clause and the round-prompt ACCEPT condition), confirmed
-  # confined to exactly those two template literals. A substring common to
-  # BOTH the old and new line admits each in-place edit; any OTHER content
-  # change under .claude/workflows/** still trips the guard.
-  # #56 parity-carried exception (same shape, GATE:QUALITY FAIL #4 / ledger
-  # L18, user-approved same-PR sibling fix): admits the carry-channel
-  # evidence-discipline edit — the two hoisted CARRY_NON_EVIDENTIARY /
-  # COUNTER_EVIDENCE_RULE const declarations (and their doc-comment) as pure
-  # additions, plus the carry-ternary collapse and the dev-prompt line via a
-  # substring common to both old and new (the test-prompt line reuses the
-  # #27 substring immediately above it).
-  workflows_offwindow_ac9="$(git diff "$BASE_REF"...HEAD -- .claude/workflows 2>/dev/null \
-    | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
-    | grep -vF 'design-change requests for untestable items' \
-    | grep -vF 'Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method' \
-    | grep -vF 'Evidence discipline for the carry channel (issue #56)' \
-    | grep -vF 'BOTH round prompts so the dev and test channels cannot drift apart' \
-    | grep -vF 'only alongside carried counters; the counter rule governs every round' \
-    | grep -vF 'const CARRY_NON_EVIDENTIARY = ' \
-    | grep -vF 'const COUNTER_EVIDENCE_RULE = ' \
-    | grep -vF 'const carry = openCounters.length' \
-    | grep -vF 'Open counters still unresolved from the previous round — you MUST address each before ACCEPT' \
-    | grep -vF "    : ''" \
-    | grep -vF 'both documents are mutually consistent and complete AND you have no open concerns' || true)"
-  assert_true "AC9: diff touches no .claude/workflows/** path, OR only the #27 composition-oracle two-literal prompt edit / #56 carry-channel evidence-discipline edit (parity-carried exception, ledger L18)" \
-    "[ -z \"\$workflows_offwindow_ac9\" ]"
+  # #62 window replacement (feature design D10, supersedes the #985/#27/#56/#59
+  # substring chain): the per-cycle grep -vF allow window does not scale — that
+  # cycle's edit leaves 99 surviving lines, 27 of them <=25-char generic
+  # fragments, and admitting those as literals would make the arm match any
+  # future edit under the path. The scope obligation this lane actually owes is
+  # "no cycle sprawls into a workflow file it did not declare", which is a
+  # file-set property, not a line property. Within-file content protection is
+  # NOT dropped — it is carried, permanently and independently of diff size, by
+  # tests/fixtures/doc-invariants.json's scope:"permanent" rows on the workflow
+  # scripts and by the manifest sha256 pin regenerated in the same commit
+  # (AC-56-10a, AC-59-9).
+  workflows_admitted_ac9="yes"
+  while IFS= read -r wf; do
+    [[ -z "$wf" ]] && continue
+    # No filename allow-list here, deliberately: WHICH workflow files a cycle may
+    # touch is the path-level allow_list arm's obligation (AC10 / AC6-scope), and
+    # duplicating it inside this arm would re-create the two-oracles-for-one-fact
+    # coupling D10 exists to remove. A workflow path with no manifest artifacts[]
+    # row yields an empty man_sha and therefore still fails the equality below, so
+    # sprawl into an unpinned workflow file is caught by this arm as well.
+    wf_sha="$(shasum -a 256 "$PROJECT_ROOT/$wf" 2>/dev/null | awk '{print $1}')"
+    man_sha="$(jq -r --arg s "$wf" '.artifacts[] | select(.source==$s) | .sha256' "$PROJECT_ROOT/setup/manifest.json")"
+    # Both -n guards are load-bearing: -n "$wf_sha" is "still exists in the
+    # worktree" (a DELETED path is listed by git diff --name-only, shasum emits
+    # nothing); -n "$man_sha" is "carries a setup/manifest.json artifacts[] row"
+    # (jq -r on an absent row emits nothing). Without the first, a cycle that
+    # deletes a workflow script together with its manifest row compares "" to ""
+    # and is silently ADMITTED.
+    [[ -n "$wf_sha" && -n "$man_sha" && "$wf_sha" == "$man_sha" ]] || workflows_admitted_ac9="no"
+  done < <(git diff --name-only "$BASE_REF"...HEAD -- .claude/workflows 2>/dev/null || true)
+  assert_true "AC9: diff touches no .claude/workflows/** path, OR every touched .claude/workflows/** path has a setup/manifest.json sha256 row matching its current content (#62 D10 — supersedes the #985/#27/#56/#59 substring window)" \
+    "[ '$workflows_admitted_ac9' = 'yes' ]"
 fi
 
 # =============================================================================
@@ -270,6 +272,11 @@ if [[ -z "$BASE_REF" ]]; then
 else
   diff_files_ac10="$(git diff --name-only "$BASE_REF"...HEAD 2>/dev/null || true)"
   allow_list=(
+    # #59 release co-ride (user-directed version bump 0.1.4 -> 0.1.5, f52f720
+    # precedent): plugin/marketplace version files ship on the same PR per
+    # operator instruction.
+    "plugin/autoflow/.claude-plugin/plugin.json"
+    ".claude-plugin/marketplace.json"
     # #35 cycle files: phase-marker emitter + its suite (this cycle's only two
     # not-already-listed delivered paths; the six allow-list suites, the
     # e2e-dummy-target workflow and docs/maintained-docs.md are already members).
@@ -504,6 +511,13 @@ else
     "test/workflows/run.mjs"
     "tests/manual/issue-56-manual-scenarios.md"
     "tests/test-issue-56-carry-evidence-discipline.sh"
+    # #59 cycle files
+    "tests/test-issue-59-adoption-evidence-discipline.sh"
+    "tests/manual/issue-59-manual-scenarios.md"
+    "tests/issue-59-full-sweep-driver.sh"
+    # #62 cycle files
+    "tests/test-issue-62-sequential-rounds.sh"
+    "tests/manual/issue-62-manual-scenarios.md"
     # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
     # decision record + its README registration row, the cycle-scoped RED
     # suite + manual-scenario lane, and this cycle's own defect-fix pass over

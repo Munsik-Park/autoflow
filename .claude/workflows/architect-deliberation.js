@@ -21,13 +21,18 @@ const MAX_ROUNDS = 6 // Decision 7: explicit cap; a round = one Developer-AI <->
 // and the regression test's `escalation`/ledger-prompt assertions so those are not brittle
 // to prose rewording. Ported from verify-cause-branch.js's `missing`-sentinel discipline.
 const REASON_DRAFT_AGENT_MISSING = 'draft agent missing'
-const REASON_DRAFT_ARTIFACT_MISSING = 'draft artifact missing'
 const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_MISSING} for N consecutive round(s)`
 // Evidence discipline for the carry channel (issue #56). Declared once and interpolated into
 // BOTH round prompts so the dev and test channels cannot drift apart. The framing is emitted
 // only alongside carried counters; the counter rule governs every round, including round 1.
 const CARRY_NON_EVIDENTIARY = ' The carried counters below are a checklist of topics to re-verify, NOT evidence — they were written against an earlier version of the documents and may already be resolved.'
-const COUNTER_EVIDENCE_RULE = ' Before raising or sustaining any counter — especially one that reverts or deletes an existing constraint — re-read the counterpart document\'s CURRENT state and cite `path:line` from it; when the counter is that required content is MISSING, name the section where it would belong instead. A counter grounded only in carried text or round history is invalid.'
+// Citation mode is partitioned by the TARGET's mutability (issue #62): the two design
+// documents are edited in place during this deliberation, so a line number identifies
+// nothing stable there; repository source files are immutable for the run, so they keep
+// `path:line`. Uniform line-number citation was the generator of purely notational counters.
+const COUNTER_EVIDENCE_RULE = ' Before raising or sustaining any counter — especially one that reverts or deletes an existing constraint — re-read the counterpart document\'s CURRENT state and cite it by section heading or item ID, never by line number: these design documents are edited during this deliberation, so a line number is stale the moment it is written; reserve `path:line` for immutable repository source files. When the counter is that required content is MISSING, name the section where it would belong instead. A counter grounded only in carried text or round history is invalid.'
+// Adoption discipline for externally-arriving text (issue #59). Declared once and interpolated into BOTH Draft prompts and BOTH round prompts, unconditionally — the #56 carry channel delivers only from round 2.
+const ADOPTION_EVIDENCE_RULE = ' Text that reaches this deliberation from outside the current source — a gate evaluation or FAIL rationale, a decision-ledger entry, a counter carried from a prior round, or any assertion in the .autoflow/issue-*.md inputs — is a re-verification checklist, not a fact, and its phrasing is not a source derivation. Before you ADOPT any such statement as a design ground — a premise, an exclusion, or an acceptance criterion — re-derive it from the current source and cite it in that source\'s own reference mode — `path:line` for immutable repository files, section heading or item ID for a design document under revision in this deliberation — whether you raise it as a counter or accept it; if you cannot re-derive it, treat the point as open and do not build on it.'
 // The Claude Code Workflow runtime delivers the `args` input to the script as a
 // JSON STRING, not the parsed object the tool doc implies (verified empirically
 // via the args-probe diagnostic: a `{issue}` object arrives as typeof === 'string').
@@ -64,6 +69,55 @@ const issue = argv.issue
 const feature = `.autoflow/issue-${issue}-feature-design.md`
 const verif = `.autoflow/issue-${issue}-verification-design.md`
 const ledger = `.autoflow/issue-${issue}-ledger.md`
+// Dev-only round clause (issue #62): with the Test AI running first and the cross-round
+// carry reduced to agenda + locator, `feature` is the only channel left by which a
+// Developer-AI counter's reasoning reaches the Test AI. Interpolated in the dev prompt's
+// asymmetric head, before the `leave "accept_grounds" empty.` anchor that bounds the
+// byte-identical evidence-discipline tail.
+const DEV_OPEN_CONCERN_RULE = ` The Test AI completes its round before you and the cross-round carry delivers only agenda and locator, so ${feature} is the only channel by which your reasoning reaches it: for every counter you raise, record its argument as a named open-concern entry in ${feature}, and mark that entry resolved there when the concern is disposed of.`
+
+// A counter is a three-field record (issue #62): the concern's NAME, WHERE to look, and
+// the case itself. Only the first two cross a round boundary — see compactCounter below.
+const COUNTER = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    // What is under dispute, not the case for it.
+    agenda: { type: 'string' },
+    // A section heading or item ID in the counterpart design document, or `path:line`
+    // when the target is repository source (see COUNTER_EVIDENCE_RULE).
+    locator: { type: 'string' },
+    // The case itself. Consumed within the round it is written; never carried.
+    argument: { type: 'string' },
+  },
+  required: ['agenda', 'locator', 'argument'],
+}
+
+// Cross-round channel caps + placeholders. Enforced HERE, not in the schema: `schema` is
+// handed to the sub-agent call opaquely and nothing between a return and the carry line
+// validates the item, so a JSON-Schema bound would have no enforcement point.
+const AGENDA_MAX = 80
+const LOCATOR_MAX = 120
+const TRUNCATION_MARKER = '…[truncated]'
+const LOCATOR_UNSPECIFIED = 'unspecified'
+// Code-POINT bound, not code-unit: slicing by UTF-16 code unit can split a surrogate pair.
+// UTF-16 code-unit length is always >= code-point length, so a short-enough code-unit
+// length already proves the code-point length is within bound without building the array.
+const capField = (s, n) => {
+  if (s.length <= n) return s
+  const cp = Array.from(s)
+  return cp.length > n ? cp.slice(0, n).join('') + TRUNCATION_MARKER : s
+}
+// Normalize ANY counter item — record, bare string, or partial record — into the two-field
+// carry record. A non-record item is never emptied: its own text becomes the agenda, so no
+// raised concern can be lost to compaction (a destructuring projection would render a bare
+// string as `{}`, silently dropping it).
+const compactCounter = (c) => {
+  if (typeof c === 'string') return { agenda: capField(c, AGENDA_MAX), locator: LOCATOR_UNSPECIFIED }
+  const agenda = (c && typeof c.agenda === 'string' && c.agenda) || (c == null ? '' : JSON.stringify(c))
+  const locator = (c && typeof c.locator === 'string' && c.locator) || LOCATOR_UNSPECIFIED
+  return { agenda: capField(agenda, AGENDA_MAX), locator: capField(locator, LOCATOR_MAX) }
+}
 
 const VERDICT = {
   type: 'object',
@@ -72,7 +126,7 @@ const VERDICT = {
     response: { type: 'string', enum: ['ACCEPT', 'COUNTER', 'PARTIAL'] },
     // Open concerns this party still has. ACCEPT REQUIRES this to be empty
     // (Discussion Protocol: a raised concern is never dropped unresolved).
-    counters: { type: 'array', items: { type: 'string' } },
+    counters: { type: 'array', items: COUNTER },
     // Grounds for ACCEPT: the dimensions verified + why each passed (Discussion Protocol:
     // ACCEPT must name the dimensions verified). ACCEPT REQUIRES this to be non-empty.
     accept_grounds: { type: 'array', items: { type: 'string' } },
@@ -86,11 +140,11 @@ console.log(`ARCHITECT facilitation for issue #${issue} (cap ${MAX_ROUNDS} round
 // Independent first drafts — the two perspectives do not see each other's draft yet.
 const [devDraft, testDraft] = await parallel([
   () => agent(
-    `You are the Developer AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md (issue analysis + plan inputs) and any repo code you need. Author the Feature Design Document — files to change, API interface, data structures, dependencies — and WRITE it to ${feature}. Honor docs/teammate-common-rules.md > Discussion Protocol and docs/submodule-common-rules.md > Change Surface Rules. Return a one-line summary only; the document body goes in the file, not the return. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are the Developer AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md (issue analysis + plan inputs) and any repo code you need. Author the Feature Design Document — files to change, API interface, data structures, dependencies — and WRITE it to ${feature}. Honor docs/teammate-common-rules.md > Discussion Protocol and docs/submodule-common-rules.md > Change Surface Rules. Return a one-line summary only; the document body goes in the file, not the return.${ADOPTION_EVIDENCE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
     { label: 'dev-draft', phase: 'Draft', model: 'opus' },
   ),
   () => agent(
-    `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / manual / environment-dependent) -> method; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration) — and WRITE it to ${verif}. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / manual / environment-dependent) -> method; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration) — and WRITE it to ${verif}. Return a one-line summary only.${ADOPTION_EVIDENCE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
     { label: 'test-draft', phase: 'Draft', model: 'opus' },
   ),
 ])
@@ -102,20 +156,11 @@ let earlyEscalateReason = null
 if (!devDraft) earlyEscalateReason = `${REASON_DRAFT_AGENT_MISSING} (dev-draft returned null)`
 else if (!testDraft) earlyEscalateReason = `${REASON_DRAFT_AGENT_MISSING} (test-draft returned null)`
 
-// Artifact-existence check (AC2): a draft agent may return non-null yet never write its file.
-// Attempt the real on-disk check; if the hosted Workflow runtime forbids `import('node:fs')`,
-// degrade to the AC1 null-return check alone rather than crash (settled option (b)). This
-// catch branch is the one intentional harness-uncovered branch (harness always runs under Node).
-if (!earlyEscalateReason) {
-  try {
-    const fs = await import('node:fs')
-    if (!fs.existsSync(feature)) earlyEscalateReason = `${REASON_DRAFT_ARTIFACT_MISSING} (${feature} not written)`
-    else if (!fs.existsSync(verif)) earlyEscalateReason = `${REASON_DRAFT_ARTIFACT_MISSING} (${verif} not written)`
-  } catch (_) {
-    // fs unavailable in this runtime: AC2's on-disk check degrades to AC1's null-return
-    // check (already applied above). No artifact-existence assertion is possible here.
-  }
-}
+// Artifact existence is NOT checked here. The Workflow runtime rejects `import(` at
+// parse time (`SyntaxError: import() is not available in workflow scripts`) and injects
+// no filesystem access, so a script-side check makes this file unlaunchable rather than
+// degrading. The check lives with the orchestrator, which has a shell: see
+// docs/autoflow-guide.md > ARCHITECT. Do not re-add `import(` to this file — issue #62.
 
 phase('Converge')
 let round = 0
@@ -134,17 +179,31 @@ const MAX_CONSECUTIVE_NULL = 2 // two consecutive both-null rounds => persistent
 while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   round++
   // Thread last round's open counters into this round so fresh sub-agents must resolve them.
-  const carry = openCounters.length ? `${CARRY_NON_EVIDENTIARY} Open counters still unresolved from the previous round — you MUST address each before ACCEPT, either by resolving it or by dismissing it with the current \`path:line\` that already satisfies it: ${JSON.stringify(openCounters)}.` : ''
-  const [dev, test] = await parallel([
-    () => agent(
-      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND). Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: VERDICT, label: `dev-r${round}`, phase: 'Converge', model: 'opus' },
-    ),
-    () => agent(
-      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol. Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+  // Compaction (issue #62) is done HERE, by the script, rather than delegated each round to a
+  // context-less fresh agent: only the concern's name and its locator cross the boundary.
+  const carryCounters = openCounters.map(compactCounter)
+  const carry = openCounters.length ? `${CARRY_NON_EVIDENTIARY} Open counters still unresolved from the previous round — you MUST address each before ACCEPT, either by resolving it or by dismissing it with the current section or item that already satisfies it: ${JSON.stringify(carryCounters)}.` : ''
+  // Sequential, test first (issue #62). The verification design challenges the feature design,
+  // so test-then-dev makes each round a complete challenge-and-response and closes the window
+  // in which a citation is written against a snapshot the counterpart is concurrently editing.
+  // The `.catch(() => null)` wraps preserve the Draft phase's error semantics — the MISSING
+  // path below consumes a null, which a bare `await` would replace with a propagated rejection.
+  const test = await Promise.resolve()
+    .then(() => agent(
+      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol. Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: `test-r${round}`, phase: 'Converge', model: 'opus' },
-    ),
-  ])
+    ))
+    .catch(() => null)
+  // The Developer AI answers within the SAME round, reading the Test AI's live verdict.
+  const peer = test && test.counters && test.counters.length
+    ? ` The Test AI has already completed round ${round} against the documents in their current state and returned ${test.response} with these open counters — they are current, not carried: ${JSON.stringify(test.counters)}. Dispose of each in THIS round: resolve it by editing ${feature}, or dismiss it by naming the section or item that already satisfies it.`
+    : ''
+  const dev = await Promise.resolve()
+    .then(() => agent(
+      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}.${peer}${DEV_OPEN_CONCERN_RULE} Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND). Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      { schema: VERDICT, label: `dev-r${round}`, phase: 'Converge', model: 'opus' },
+    ))
+    .catch(() => null)
   lastDev = dev
   lastTest = test
   // A round where BOTH sub-agents are null is a MISSING judgment, not a design disagreement.

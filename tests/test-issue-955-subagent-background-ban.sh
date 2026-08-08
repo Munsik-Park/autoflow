@@ -560,6 +560,11 @@ if [[ -z "$BASE_REF" ]]; then
   skip_no_base "AC-SCOPE"
 else
   allow_list=(
+    # #59 release co-ride (user-directed version bump 0.1.4 -> 0.1.5, f52f720
+    # precedent): plugin/marketplace version files ship on the same PR per
+    # operator instruction.
+    "plugin/autoflow/.claude-plugin/plugin.json"
+    ".claude-plugin/marketplace.json"
     # #35 cycle files: phase-marker emitter + its suite (this cycle's only two
     # not-already-listed delivered paths; the six allow-list suites, the
     # e2e-dummy-target workflow and docs/maintained-docs.md are already members).
@@ -815,6 +820,13 @@ else
     "test/workflows/run.mjs"
     "tests/manual/issue-56-manual-scenarios.md"
     "tests/test-issue-56-carry-evidence-discipline.sh"
+    # #59 cycle files
+    "tests/test-issue-59-adoption-evidence-discipline.sh"
+    "tests/manual/issue-59-manual-scenarios.md"
+    "tests/issue-59-full-sweep-driver.sh"
+    # #62 cycle files
+    "tests/test-issue-62-sequential-rounds.sh"
+    "tests/manual/issue-62-manual-scenarios.md"
     # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
     # decision record, the cycle-scoped RED suite + manual-scenario lane, and
     # this cycle's own defect-fix pass over sibling test/plugin suites
