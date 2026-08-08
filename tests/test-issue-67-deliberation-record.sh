@@ -123,9 +123,16 @@ assert_true "AC-67-CONTRACT-nocap: the stale 80/120-cap sentence is gone from th
 # Capture-then-grep, not a piped grep -A/grep -q (tests/test-issue-964-sigpipe-safe-pipes.sh
 # guards against exactly that compound context-mode-producer-into-short-circuit-consumer
 # shape — docs/submodule-common-rules.md > Testing Standards).
+# Fixed-literal (grep -F), not a loose `-qi 'register'`: the ARCHITECT section already
+# contains "register" pre-#67 (the pre-existing "manifest-registered source" / "pre-register"
+# derived-artifact bullets), so a loose case-insensitive match is vacuous — it passes even with
+# the #67 "Record rules" subsection fully reverted (re-verified: `git show
+# main:docs/autoflow-guide.md | grep -A200 '^## ARCHITECT ' | grep -ic register` = 3 on the
+# pre-#67 baseline). The literal below is drawn from the shipped "Record rules" subsection
+# itself and confirmed absent from that same pre-#67 baseline.
 GUIDE_ARCHITECT_SECTION="$(grep -A200 '^## ARCHITECT ' "$AUTOFLOW_GUIDE")"
 assert_true "AC-67-GUIDE-register: autoflow-guide.md > ARCHITECT states the register/record rules" \
-  "printf '%s' \"\$GUIDE_ARCHITECT_SECTION\" | grep -qi 'register'"
+  "printf '%s' \"\$GUIDE_ARCHITECT_SECTION\" | grep -qF 'The register is the durable channel'"
 
 for FILE in "$TEAMMATE_CONTRACTS" "$AUTOFLOW_GUIDE" "$CLAUDE_MD" "$DESIGN_RATIONALE"; do
   assert_true "AC-67-NOSTALE ($(basename "$FILE")): no stale truncated-carry / in-document-closure restatement survives" \
