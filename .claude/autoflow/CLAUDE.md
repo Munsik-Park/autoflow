@@ -436,7 +436,3 @@ Part of Munsik-Park/autoflow#N
 - **Sub-repo common rules**: [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md)
 - **Maintained docs registry**: [`docs/maintained-docs.md`](docs/maintained-docs.md)
 - **Security checklist**: [`docs/security-checklist.md`](docs/security-checklist.md)
-
-<!-- AUTOFLOW-IMPORT:BEGIN (managed by claude-autoflow — do not edit inside) -->
-@./.claude/autoflow/METHODOLOGY.md
-<!-- AUTOFLOW-IMPORT:END -->
