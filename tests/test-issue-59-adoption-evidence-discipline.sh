@@ -18,10 +18,18 @@
 #   AC-59-8a   — RED discriminator: `${ADOPTION_EVIDENCE_RULE}` interpolated
 #                exactly four times.
 #   AC-59-8b   — the four sites are exactly dev-draft/test-draft/dev-r/test-r,
-#                never the `const carry = openCounters.length` ternary line.
+#                never the `const carry = register.size` ternary line
+#                (re-anchored by issue #67, which retargets the carry from
+#                `openCounters` to the issue register).
 #   AC-59-8c   — #56's own constant counts are byte-immutable (D4).
-#   AC-59-8d   — round-prompt insertion ORDER:
-#                `${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${carry}`.
+#   AC-59-8d   — round-prompt insertion ORDER: `${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}`
+#                immediately followed by `${carry}` at the tail, unbroken until issue #67
+#                inserted `${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}` between
+#                ADOPTION_EVIDENCE_RULE and carry (feature design §2.5: both new
+#                round-prompt-scoped constants). Re-anchored, not dropped: the surviving
+#                intent — COUNTER_EVIDENCE_RULE before ADOPTION_EVIDENCE_RULE, both before
+#                the carry-bearing tail — still holds; only the two new record-rule
+#                constants now sit between ADOPTION_EVIDENCE_RULE and carry.
 #   AC-59-9    — fence (PASS pre+post): setup/manifest.json row sha256 ==
 #                live architect-deliberation.js sha256 (derived artifact).
 #   AC-59-10   — fence (PASS only post-GREEN, branch-scoped): the
@@ -183,7 +191,10 @@ B4_SHA="315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
 # EXPECTED_OK (D18/§5.3): one pin with two homes — this literal and
 # tests/test-issue-27-composition-oracle.sh:328. A design-fixed literal integer, never a
 # derived `37 + N` (AC-59-14(c) enforces the cross-pin equality below).
-EXPECTED_OK=58
+# Bumped 58 -> 80 by issue #67 (ARCHITECT deliberation record redesign): two run.mjs
+# tests retired (AC-62-12, AC-62-28i), the register/disposition lane-A discriminators
+# added. Bumped in the same commit as GREEN's architect-deliberation.js change.
+EXPECTED_OK=80
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -303,7 +314,7 @@ DEV_DRAFT_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'Yo
 TEST_DRAFT_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Test AI in AutoFlow ARCHITECT' || true)"
 DEV_ROUND_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Developer AI\. Round' || true)"
 TEST_ROUND_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Test AI\. Round' || true)"
-CARRY_TERNARY_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const carry = openCounters.length' || true)"
+CARRY_TERNARY_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const carry = register.size' || true)"
 
 assert_true "AC-59-8b-dev-draft: exactly one interpolation line matches the dev-draft prompt prefix (got: $DEV_DRAFT_SITE)" \
   "[ \"$DEV_DRAFT_SITE\" -eq 1 ]"
@@ -313,7 +324,7 @@ assert_true "AC-59-8b-dev-round: exactly one interpolation line matches the dev-
   "[ \"$DEV_ROUND_SITE\" -eq 1 ]"
 assert_true "AC-59-8b-test-round: exactly one interpolation line matches the test-round prompt prefix (got: $TEST_ROUND_SITE)" \
   "[ \"$TEST_ROUND_SITE\" -eq 1 ]"
-assert_true "AC-59-8b-unconditional: zero interpolation occurrences sit on the carry ternary line (got: $CARRY_TERNARY_SITE)" \
+assert_true "AC-59-8b-unconditional: zero interpolation occurrences sit on the carry ternary line (re-anchored, issue #67 AC19) (got: $CARRY_TERNARY_SITE)" \
   "[ \"$CARRY_TERNARY_SITE\" -eq 0 ]"
 
 # =============================================================================
@@ -335,8 +346,8 @@ assert_true "AC-59-8c-rule-decl: 'const COUNTER_EVIDENCE_RULE' still declared ex
 echo ""
 echo "=== AC-59-8d (RED discriminator) — round-prompt insertion ORDER ==="
 
-ORDER_COUNT="$(grep -c '\${COUNTER_EVIDENCE_RULE}\${ADOPTION_EVIDENCE_RULE}\${carry}' "$WORKFLOW_JS" || true)"
-assert_true "AC-59-8d: the contiguous sequence \${COUNTER_EVIDENCE_RULE}\${ADOPTION_EVIDENCE_RULE}\${carry} occurs exactly 2 times (got: $ORDER_COUNT)" \
+ORDER_COUNT="$(grep -c '\${COUNTER_EVIDENCE_RULE}\${ADOPTION_EVIDENCE_RULE}\${REGISTER_RULE}\${RECORD_DISCIPLINE_RULE}\${carry}' "$WORKFLOW_JS" || true)"
+assert_true "AC-59-8d: the contiguous sequence \${COUNTER_EVIDENCE_RULE}\${ADOPTION_EVIDENCE_RULE}\${REGISTER_RULE}\${RECORD_DISCIPLINE_RULE}\${carry} occurs exactly 2 times (re-anchored, issue #67 §2.5) (got: $ORDER_COUNT)" \
   "[ \"$ORDER_COUNT\" -eq 2 ]"
 
 # =============================================================================

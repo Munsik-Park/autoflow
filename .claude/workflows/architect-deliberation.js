@@ -24,8 +24,8 @@ const REASON_DRAFT_AGENT_MISSING = 'draft agent missing'
 const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_MISSING} for N consecutive round(s)`
 // Evidence discipline for the carry channel (issue #56). Declared once and interpolated into
 // BOTH round prompts so the dev and test channels cannot drift apart. The framing is emitted
-// only alongside carried counters; the counter rule governs every round, including round 1.
-const CARRY_NON_EVIDENTIARY = ' The carried counters below are a checklist of topics to re-verify, NOT evidence — they were written against an earlier version of the documents and may already be resolved.'
+// only alongside the carried register; the counter rule governs every round, including round 1.
+const CARRY_NON_EVIDENTIARY = ' The register entries below are a checklist of topics to re-verify, NOT evidence — they were written against an earlier version of the documents and may already be resolved.'
 // Citation mode is partitioned by the TARGET's mutability (issue #62): the two design
 // documents are edited in place during this deliberation, so a line number identifies
 // nothing stable there; repository source files are immutable for the run, so they keep
@@ -69,15 +69,22 @@ const issue = argv.issue
 const feature = `.autoflow/issue-${issue}-feature-design.md`
 const verif = `.autoflow/issue-${issue}-verification-design.md`
 const ledger = `.autoflow/issue-${issue}-ledger.md`
-// Dev-only round clause (issue #62): with the Test AI running first and the cross-round
-// carry reduced to agenda + locator, `feature` is the only channel left by which a
-// Developer-AI counter's reasoning reaches the Test AI. Interpolated in the dev prompt's
-// asymmetric head, before the `leave "accept_grounds" empty.` anchor that bounds the
-// byte-identical evidence-discipline tail.
-const DEV_OPEN_CONCERN_RULE = ` The Test AI completes its round before you and the cross-round carry delivers only agenda and locator, so ${feature} is the only channel by which your reasoning reaches it: for every counter you raise, record its argument as a named open-concern entry in ${feature}, and mark that entry resolved there when the concern is disposed of.`
+// Register mechanics (issue #67). Round prompts only: the Draft calls pass no `schema`, so a
+// Draft agent has no `dispositions` channel and round 1's register is empty. Declared once and
+// interpolated byte-identically into both round prompts. It states disposal in its own words —
+// the carry-conditional "by dismissing it with the current" phrasing stays on the carry line,
+// which round 1 never receives.
+const REGISTER_RULE = ' The issue register carried below is this deliberation\'s record: refer to each entry by its short readable name, never by a serial number, and update an entry in place instead of appending a second one — entries are never renumbered. An entry marked `agreed` or `rejected` is not reopened without a newly verified fact. Dispose of every open entry before you ACCEPT: return one item in "dispositions" for each entry you close, naming it and giving it `agreed` or `rejected`. Only the side that raised an entry may close it — a disposition returned by the other side proposes a resolution, which is recorded in the entry\'s conclusion while its status stays open.'
+// Ledger seeding (issue #67). Draft prompts only: the register is empty at Draft time, but the
+// prior deliberation's ledger is the cross-session half of the no-re-litigation rule, and only a
+// Draft agent (which has filesystem access; this script does not) can read it.
+const LEDGER_SEED_RULE = ` Read ${ledger} first if it exists: every entry there under authority "ARCHITECT mutual ACCEPT" or "ARCHITECT rejected" is a settled registered issue — treat it as closed and do not re-litigate it unless you can cite a fact verified now, in that source's own reference mode, that was unavailable when the entry was written.`
+// Record discipline (issue #67). All four prompts: the Draft agents author the documents this
+// rule governs, and the round agents edit them in place.
+const RECORD_DISCIPLINE_RULE = ' Record discipline: the design documents carry only the current design and its conclusions — no round history; measurement logs, command output and code text are never copied into them, so state evidence as one line of what was checked and how, and re-verify it next round with tooling. Name issues with short readable names instead of serial numbers, and write no totals or counts into the documents.'
 
 // A counter is a three-field record (issue #62): the concern's NAME, WHERE to look, and
-// the case itself. Only the first two cross a round boundary — see compactCounter below.
+// the case itself. All three cross a round boundary as a register entry — see toEntry below.
 const COUNTER = {
   type: 'object',
   additionalProperties: false,
@@ -87,36 +94,66 @@ const COUNTER = {
     // A section heading or item ID in the counterpart design document, or `path:line`
     // when the target is repository source (see COUNTER_EVIDENCE_RULE).
     locator: { type: 'string' },
-    // The case itself. Consumed within the round it is written; never carried.
+    // The case itself. Becomes the entry's `conclusion` and DOES cross the round boundary
+    // (issue #67) — the property the retired document-as-durable-channel rule stood in for.
     argument: { type: 'string' },
   },
   required: ['agenda', 'locator', 'argument'],
 }
 
-// Cross-round channel caps + placeholders. Enforced HERE, not in the schema: `schema` is
-// handed to the sub-agent call opaquely and nothing between a return and the carry line
-// validates the item, so a JSON-Schema bound would have no enforcement point.
-const AGENDA_MAX = 80
-const LOCATOR_MAX = 120
-const TRUNCATION_MARKER = '…[truncated]'
+// Register field placeholders (issue #67). No character cap survives: the per-entry bound is
+// structural — a fixed four labelled lines plus one `---` terminator — not lexical.
 const LOCATOR_UNSPECIFIED = 'unspecified'
-// Code-POINT bound, not code-unit: slicing by UTF-16 code unit can split a surrogate pair.
-// UTF-16 code-unit length is always >= code-point length, so a short-enough code-unit
-// length already proves the code-point length is within bound without building the array.
-const capField = (s, n) => {
-  if (s.length <= n) return s
-  const cp = Array.from(s)
-  return cp.length > n ? cp.slice(0, n).join('') + TRUNCATION_MARKER : s
+const NAME_UNSPECIFIED = 'unspecified concern'
+const ENTRY_DELIMITER = '---'
+// Flattening is what makes the line count fixed: every whitespace run — newline, CR, tab, space
+// run — collapses to a single space, then the value is trimmed. Runs BEFORE the never-empty
+// defaulting below, so a field that flattens to '' still takes its placeholder. It replaces, in
+// role, the incidental \n-escaping the retired JSON.stringify carry gave for free.
+const flatten = (v) => (v == null ? '' : String(v)).replace(/\s+/g, ' ').trim()
+// One key normalization, shared by the raise path and the dispose path, so a near-miss name
+// resolves identically in both.
+const normalizeKey = (s) => flatten(s).toLowerCase()
+// Normalize ANY counter item — record, bare string, or partial record — into a register entry.
+// A non-record item is never emptied: its own text becomes the name, so no raised concern can
+// be lost (a destructuring projection would render a bare string as `{}`, silently dropping it).
+const toEntry = (c, raisedBy) => {
+  let name, conclusion, evidence
+  if (typeof c === 'string') {
+    name = c; conclusion = ''; evidence = LOCATOR_UNSPECIFIED
+  } else if (c && typeof c === 'object') {
+    name = (typeof c.agenda === 'string' && c.agenda) || JSON.stringify(c)
+    conclusion = (typeof c.argument === 'string' && c.argument) || ''
+    evidence = (typeof c.locator === 'string' && c.locator) || LOCATOR_UNSPECIFIED
+  } else {
+    name = NAME_UNSPECIFIED; conclusion = ''; evidence = LOCATOR_UNSPECIFIED
+  }
+  return {
+    name: flatten(name) || NAME_UNSPECIFIED,
+    conclusion: flatten(conclusion),
+    evidence: flatten(evidence) || LOCATOR_UNSPECIFIED,
+    status: 'open',
+    raisedBy,
+  }
 }
-// Normalize ANY counter item — record, bare string, or partial record — into the two-field
-// carry record. A non-record item is never emptied: its own text becomes the agenda, so no
-// raised concern can be lost to compaction (a destructuring projection would render a bare
-// string as `{}`, silently dropping it).
-const compactCounter = (c) => {
-  if (typeof c === 'string') return { agenda: capField(c, AGENDA_MAX), locator: LOCATOR_UNSPECIFIED }
-  const agenda = (c && typeof c.agenda === 'string' && c.agenda) || (c == null ? '' : JSON.stringify(c))
-  const locator = (c && typeof c.locator === 'string' && c.locator) || LOCATOR_UNSPECIFIED
-  return { agenda: capField(agenda, AGENDA_MAX), locator: capField(locator, LOCATOR_MAX) }
+// Four labelled content lines + a terminator (emitted after EVERY entry, including the last, so
+// the delimiter count is an exact entry count). Each line begins with its fixed label, so a field
+// whose flattened value is itself `---` renders as `conclusion: ---`, never as a delimiter.
+const renderEntry = (e) => `name: ${e.name}\nconclusion: ${e.conclusion}\nevidence: ${e.evidence}\nstatus: ${e.status} (raised by ${e.raisedBy})\n${ENTRY_DELIMITER}\n`
+const renderRegister = (reg, keep) => [...reg.values()].filter(keep || (() => true)).map(renderEntry).join('')
+
+// A disposition is the RETURNED judgment on a register entry — the script cannot infer
+// agreement. Closed record, matching the discipline COUNTER and VERDICT already carry.
+const DISPOSITION = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    name: { type: 'string' },
+    conclusion: { type: 'string' },
+    evidence: { type: 'string' },
+    status: { type: 'string', enum: ['agreed', 'rejected'] },
+  },
+  required: ['name', 'conclusion', 'evidence', 'status'],
 }
 
 const VERDICT = {
@@ -130,8 +167,12 @@ const VERDICT = {
     // Grounds for ACCEPT: the dimensions verified + why each passed (Discussion Protocol:
     // ACCEPT must name the dimensions verified). ACCEPT REQUIRES this to be non-empty.
     accept_grounds: { type: 'array', items: { type: 'string' } },
+    // Judgments on register entries this party is closing. Required, but an empty array is
+    // valid — a round that disposes of nothing returns []. The enum above states the intent;
+    // the runtime guard is applyDispositions, since `schema` is opaque to this script.
+    dispositions: { type: 'array', items: DISPOSITION },
   },
-  required: ['response', 'counters', 'accept_grounds'],
+  required: ['response', 'counters', 'accept_grounds', 'dispositions'],
 }
 
 phase('Draft')
@@ -140,11 +181,11 @@ console.log(`ARCHITECT facilitation for issue #${issue} (cap ${MAX_ROUNDS} round
 // Independent first drafts — the two perspectives do not see each other's draft yet.
 const [devDraft, testDraft] = await parallel([
   () => agent(
-    `You are the Developer AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md (issue analysis + plan inputs) and any repo code you need. Author the Feature Design Document — files to change, API interface, data structures, dependencies — and WRITE it to ${feature}. Honor docs/teammate-common-rules.md > Discussion Protocol and docs/submodule-common-rules.md > Change Surface Rules. Return a one-line summary only; the document body goes in the file, not the return.${ADOPTION_EVIDENCE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are the Developer AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md (issue analysis + plan inputs) and any repo code you need. Author the Feature Design Document — files to change, API interface, data structures, dependencies — and WRITE it to ${feature}. Honor docs/teammate-common-rules.md > Discussion Protocol and docs/submodule-common-rules.md > Change Surface Rules. Return a one-line summary only; the document body goes in the file, not the return.${ADOPTION_EVIDENCE_RULE}${LEDGER_SEED_RULE}${RECORD_DISCIPLINE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
     { label: 'dev-draft', phase: 'Draft', model: 'opus' },
   ),
   () => agent(
-    `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / manual / environment-dependent) -> method; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration) — and WRITE it to ${verif}. Return a one-line summary only.${ADOPTION_EVIDENCE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / manual / environment-dependent) -> method; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration) — and WRITE it to ${verif}. Return a one-line summary only.${ADOPTION_EVIDENCE_RULE}${LEDGER_SEED_RULE}${RECORD_DISCIPLINE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
     { label: 'test-draft', phase: 'Draft', model: 'opus' },
   ),
 ])
@@ -165,7 +206,54 @@ else if (!testDraft) earlyEscalateReason = `${REASON_DRAFT_AGENT_MISSING} (test-
 phase('Converge')
 let round = 0
 let converged = false
-let openCounters = [] // unresolved concerns carried from the previous round into the next one.
+// The issue register (issue #67): an insertion-ordered map keyed by the normalized concern name,
+// holding EVERY entry raised in the run — open, agreed and rejected alike. Unlike the retired
+// `openCounters`, it is never reassigned, so a disposed entry stays visible and the
+// no-re-litigation rule has something to point at.
+const register = new Map()
+// Raise path: upsert as `open`. A re-raise updates the existing entry in place; `raisedBy` and
+// the display `name` are fixed at first creation, so a carried name token is stable across rounds.
+const raise = (items, side) => {
+  for (const item of Array.isArray(items) ? items : []) {
+    const fresh = toEntry(item, side)
+    const prior = register.get(normalizeKey(fresh.name))
+    if (prior) {
+      prior.conclusion = fresh.conclusion
+      prior.evidence = fresh.evidence
+      prior.status = 'open'
+    } else {
+      register.set(normalizeKey(fresh.name), fresh)
+    }
+  }
+}
+// Dispose path: the runtime guard the advisory schema cannot give. A disposition acts on an
+// EXISTING entry and only with an in-enum status; an ignored item is logged, never applied.
+// Precedence: only the entry's raiser may move it out of `open` — a peer's disposition proposes
+// a resolution (recorded in conclusion/evidence) and leaves the status alone.
+const applyDispositions = (items, side) => {
+  for (const d of Array.isArray(items) ? items : []) {
+    if (!d || typeof d.name !== 'string') {
+      console.log(`disposition ignored (missing or non-string name) from ${side}`)
+      continue
+    }
+    const entry = register.get(normalizeKey(d.name))
+    if (!entry) {
+      console.log(`disposition ignored (unresolvable name "${d.name}") from ${side}`)
+      continue
+    }
+    if (d.status !== 'agreed' && d.status !== 'rejected') {
+      console.log(`disposition ignored (status outside the enum) for "${d.name}" from ${side}`)
+      continue
+    }
+    if (typeof d.conclusion === 'string' && d.conclusion) entry.conclusion = flatten(d.conclusion)
+    if (typeof d.evidence === 'string' && d.evidence) entry.evidence = flatten(d.evidence)
+    if (entry.raisedBy !== side) {
+      console.log(`disposition recorded as a proposal (raised by ${entry.raisedBy}) for "${d.name}"`)
+      continue
+    }
+    entry.status = d.status
+  }
+}
 let lastDev = null
 let lastTest = null
 // A grounded ACCEPT: ACCEPT response + no open counters + named grounds (dimensions verified).
@@ -178,11 +266,10 @@ let consecutiveNull = 0
 const MAX_CONSECUTIVE_NULL = 2 // two consecutive both-null rounds => persistent infra failure, not a design split
 while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   round++
-  // Thread last round's open counters into this round so fresh sub-agents must resolve them.
-  // Compaction (issue #62) is done HERE, by the script, rather than delegated each round to a
-  // context-less fresh agent: only the concern's name and its locator cross the boundary.
-  const carryCounters = openCounters.map(compactCounter)
-  const carry = openCounters.length ? `${CARRY_NON_EVIDENTIARY} Open counters still unresolved from the previous round — you MUST address each before ACCEPT, either by resolving it or by dismissing it with the current section or item that already satisfies it: ${JSON.stringify(carryCounters)}.` : ''
+  // Thread the whole register into this round so fresh sub-agents see every issue raised so far
+  // with its conclusion and status. Rendering is done HERE, by the script, rather than delegated
+  // each round to a context-less fresh agent.
+  const carry = register.size ? `${CARRY_NON_EVIDENTIARY} Issue register — address every entry whose status is open before ACCEPT, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${renderRegister(register)}` : ''
   // Sequential, test first (issue #62). The verification design challenges the feature design,
   // so test-then-dev makes each round a complete challenge-and-response and closes the window
   // in which a citation is written against a snapshot the counterpart is concurrently editing.
@@ -190,7 +277,7 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   // path below consumes a null, which a bare `await` would replace with a propagated rejection.
   const test = await Promise.resolve()
     .then(() => agent(
-      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol. Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol. Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: `test-r${round}`, phase: 'Converge', model: 'opus' },
     ))
     .catch(() => null)
@@ -200,7 +287,7 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
     : ''
   const dev = await Promise.resolve()
     .then(() => agent(
-      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}.${peer}${DEV_OPEN_CONCERN_RULE} Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND). Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}.${peer} Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND). Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: `dev-r${round}`, phase: 'Converge', model: 'opus' },
     ))
     .catch(() => null)
@@ -220,7 +307,11 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   // No agreement on the first exchange (round > 1), and both sides must give a grounded ACCEPT
   // with no open counters (a raised concern is never dropped).
   converged = round > 1 && accepted(dev) && accepted(test)
-  openCounters = [...((dev && dev.counters) || []), ...((test && test.counters) || [])]
+  // Register update, in the design's stated order: raise first (both sides), then dispose.
+  raise(test && test.counters, 'test')
+  raise(dev && dev.counters, 'dev')
+  applyDispositions(test && test.dispositions, 'test')
+  applyDispositions(dev && dev.dispositions, 'dev')
   console.log(`round ${round}: dev=${dev ? dev.response : 'missing'}(${(dev && dev.counters && dev.counters.length) || 0}) test=${test ? test.response : 'missing'}(${(test && test.counters && test.counters.length) || 0})`)
 }
 
@@ -237,9 +328,22 @@ const escalationReason = earlyEscalateReason
 const acceptGrounds = converged
   ? [...((lastDev && lastDev.accept_grounds) || []), ...((lastTest && lastTest.accept_grounds) || [])]
   : []
+// Cross-session persistence (issue #67). A register lives for one run, so a REJECTED entry is
+// written to the append-only ledger under its own authority; the open entries are the ESCALATE
+// branch's grounds — every unresolved concern of the run with its conclusion, not just the last
+// round's counters. Neither source is ever empty by construction: the ESCALATE branch falls back
+// to the escalation reason when no entry is open.
+const rejectedEntries = renderRegister(register, (e) => e.status === 'rejected')
+const openEntries = renderRegister(register, (e) => e.status === 'open')
+const rejectedClause = rejectedEntries
+  ? ` Then append one further entry per rejected register issue below — the decision is that the issue is rejected; its grounds are the entry's own four lines; authority "ARCHITECT rejected"; cycle/phase "ARCHITECT":\n${rejectedEntries}`
+  : ''
+const escalateGrounds = openEntries
+  ? `the open register entries below:\n${openEntries}`
+  : `the register held no open entry, so the grounds are the escalation reason alone: ${escalationReason}`
 const ledgerPrompt = converged
-  ? `Append (do NOT rewrite or delete) to ${ledger} the settled ARCHITECT decisions. For each agreed design decision, append one entry: the decision (one line); its grounds (cite the verified dimensions ${JSON.stringify(acceptGrounds)} and the artifact path:line in ${feature} or ${verif}); authority "ARCHITECT mutual ACCEPT"; cycle/phase "ARCHITECT". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only — never edit existing entries. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
-  : `Append (do NOT rewrite or delete) to ${ledger} EXACTLY ONE outcome entry — do NOT record any design decision as settled: decision "ARCHITECT did not converge — ${escalationReason}"; grounds (unresolved counters: ${JSON.stringify(openCounters)}); authority "ARCHITECT non-convergence"; cycle/phase "ARCHITECT". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
+  ? `Append (do NOT rewrite or delete) to ${ledger} the settled ARCHITECT decisions. For each agreed design decision, append one entry: the decision (one line); its grounds (cite the verified dimensions ${JSON.stringify(acceptGrounds)} and the artifact path:line in ${feature} or ${verif}); authority "ARCHITECT mutual ACCEPT"; cycle/phase "ARCHITECT".${rejectedClause} If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only — never edit existing entries. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
+  : `Append (do NOT rewrite or delete) to ${ledger} EXACTLY ONE outcome entry — do NOT record any design decision as settled: decision "ARCHITECT did not converge — ${escalationReason}"; grounds — ${escalateGrounds}; authority "ARCHITECT non-convergence"; cycle/phase "ARCHITECT". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
 await agent(ledgerPrompt, { label: 'ledger', phase: 'Ledger', model: 'opus' })
 
 return {

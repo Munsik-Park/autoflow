@@ -120,8 +120,12 @@ assert_true "AC-67-CONTRACT-rejected: Facilitator Return Contract names the ARCH
   "grep -qF 'ARCHITECT rejected' '$TEAMMATE_CONTRACTS'"
 assert_true "AC-67-CONTRACT-nocap: the stale 80/120-cap sentence is gone from the Facilitator contract" \
   "! grep -qF 'capped by the script at 80 / 120 code points' '$TEAMMATE_CONTRACTS'"
+# Capture-then-grep, not a piped grep -A/grep -q (tests/test-issue-964-sigpipe-safe-pipes.sh
+# guards against exactly that compound context-mode-producer-into-short-circuit-consumer
+# shape — docs/submodule-common-rules.md > Testing Standards).
+GUIDE_ARCHITECT_SECTION="$(grep -A200 '^## ARCHITECT ' "$AUTOFLOW_GUIDE")"
 assert_true "AC-67-GUIDE-register: autoflow-guide.md > ARCHITECT states the register/record rules" \
-  "grep -A200 '^## ARCHITECT ' '$AUTOFLOW_GUIDE' | grep -qi 'register'"
+  "printf '%s' \"\$GUIDE_ARCHITECT_SECTION\" | grep -qi 'register'"
 
 for FILE in "$TEAMMATE_CONTRACTS" "$AUTOFLOW_GUIDE" "$CLAUDE_MD" "$DESIGN_RATIONALE"; do
   assert_true "AC-67-NOSTALE ($(basename "$FILE")): no stale truncated-carry / in-document-closure restatement survives" \
@@ -151,8 +155,14 @@ assert_true "AC-67-ANCHOR-a1: bash tests/test-issue-56-carry-evidence-discipline
 # bump (verification design §6 step 3). Not a defect in this suite.
 assert_true "AC-67-ANCHOR-a2: bash tests/test-issue-59-adoption-evidence-discipline.sh exits 0 (KNOWN RED mid-cycle — cascades from the harness ok-count/exit-0 pin, bumped only at GREEN)" "[ $EXIT_59 -eq 0 ]"
 
-RETIRED_SWEEP="$(grep -rln 'const carry = openCounters.length' "$PROJECT_ROOT/tests" || true)"
-assert_true "AC-67-ANCHOR-b: no tests/ file still greps/comments the retired literal 'const carry = openCounters.length' (found: $(printf '%s' "$RETIRED_SWEEP" | paste -sd, -))" \
+# Assembled from parts, not written as one contiguous literal: this suite's OWN source
+# must not accidentally match its own sweep pattern (a literal grep argument would sit in
+# this file too, making the sweep vacuously self-positive forever).
+RETIRED_VAR="openCounters"
+RETIRED_PATTERN="const carry = ${RETIRED_VAR}.length"
+SELF="$(basename "${BASH_SOURCE[0]}")"
+RETIRED_SWEEP="$(grep -rln -- "$RETIRED_PATTERN" "$PROJECT_ROOT/tests" | grep -vF "$SELF" || true)"
+assert_true "AC-67-ANCHOR-b: no OTHER tests/ file still greps/comments the retired carry-anchor literal (found: $(printf '%s' "$RETIRED_SWEEP" | paste -sd, -))" \
   "[ -z \"\$(printf '%s' '$RETIRED_SWEEP')\" ]"
 
 NEW_ANCHOR_PROD_COUNT="$(grep -c 'const carry = register.size' "$WORKFLOW_JS" || true)"
@@ -201,6 +211,14 @@ allow_list=(
   "tests/test-issue-56-carry-evidence-discipline.sh"
   "tests/test-issue-59-adoption-evidence-discipline.sh"
   "tests/test-issue-27-composition-oracle.sh"
+  "tests/fixtures/doc-invariants.json"
+  "tests/test-issue-955-subagent-background-ban.sh"
+  "tests/test-issue-798-topology-flip.sh"
+  "tests/test-issue-799-inert-cleanup.sh"
+  "tests/test-issue-846-doc-assertions.sh"
+  "tests/test-issue-952-wizard-removal.sh"
+  "tests/test-issue-848-doc-assertions.sh"
+  "tests/test-issue-62-sequential-rounds.sh"
   ".github/workflows/e2e-dummy-target.yml"
   ".autoflow/issue-67-feature-design.md"
   ".autoflow/issue-67-verification-design.md"

@@ -307,13 +307,17 @@ echo "=== AC-27-20 (composition oracle for S8, fence, PASS pre+post) — workflo
 # value has two homes (D18): this literal and EXPECTED_OK in
 # tests/test-issue-59-adoption-evidence-discipline.sh; a future test add or remove edits
 # both in one commit, and that suite's AC-59-14c asserts the two agree.
+# B14 update (issue #67): the ARCHITECT deliberation record redesign (register +
+# dispositions) retired two run.mjs tests (AC-62-12, AC-62-28i) and added the register/
+# disposition lane-A discriminators, net measured 43 -> 80. Bumped in the same commit as
+# GREEN's architect-deliberation.js change, per this suite's own precedent above.
 HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
 HARNESS_EXIT=$?
 OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -c '^\s*ok' || true)"
 assert_true "AC-27-20a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
 assert_true "AC-27-20b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-assert_true "AC-27-20c: harness ok-line count == B14 (58) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 58 ]"
+assert_true "AC-27-20c: harness ok-line count == B14 (80) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 80 ]"
 assert_true "AC-27-20d: node --check .claude/workflows/architect-deliberation.js exits 0 (cheaper subset)" \
   "node --check '$WORKFLOW_JS'"
 
