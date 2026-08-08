@@ -219,6 +219,7 @@ allow_list=(
   "tests/test-issue-952-wizard-removal.sh"
   "tests/test-issue-848-doc-assertions.sh"
   "tests/test-issue-62-sequential-rounds.sh"
+  "tests/manual/issue-62-manual-scenarios.md"
   "tests/manual/issue-67-manual-scenarios.md"
   ".github/workflows/e2e-dummy-target.yml"
   ".autoflow/issue-67-feature-design.md"
