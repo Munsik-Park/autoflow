@@ -134,6 +134,7 @@ on:
       # dispositions). TAIL here for the same reason the #56/#59/#62 comments above
       # record.
       - 'tests/test-issue-67-deliberation-record.sh'
+      - 'tests/manual/issue-67-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -227,6 +228,7 @@ on:
       # #67 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'tests/test-issue-67-deliberation-record.sh'
+      - 'tests/manual/issue-67-manual-scenarios.md'
 
 permissions:
   contents: read

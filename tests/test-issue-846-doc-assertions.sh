@@ -570,6 +570,7 @@ else
     # tests/test-issue-798-topology-flip.sh, tests/test-issue-799-inert-cleanup.sh
     # and tests/fixtures/doc-invariants.json are already admitted above.
     "tests/test-issue-67-deliberation-record.sh"
+    "tests/manual/issue-67-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do
