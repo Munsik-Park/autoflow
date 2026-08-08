@@ -96,20 +96,11 @@ body_has() {                 # body literal match
 
 echo "=== issue #43 — report-channel contract (cycle-scoped) ==="
 
-# ---------------------------------------------------------------------------
-# H43-BYTES — the gate hook and gate-schema fixture are byte-unchanged (AC3).
-# ---------------------------------------------------------------------------
-echo ""
-echo "H43-BYTES — the gate hook and gate-schema fixture are untouched (AC3)"
-
+# H43-BYTES (retired, #64): the "hook byte-unchanged vs base" fence was a #43
+# cycle-scope seal; it blocked every legitimate later hook change (change-
+# detector anti-pattern) and was removed in the #64 hook-fix PR. BASE_REF is
+# still resolved here because later sections consume it.
 BASE_REF="$(resolve_base_ref)"
-if [ -z "$BASE_REF" ]; then
-  echo "  FAIL: H43-BYTES: resolve_base_ref could not resolve a comparison base (fail-loud, not SKIP)"
-  FAIL=$((FAIL + 1))
-else
-  assert_true "H43-BYTES: hook and gate-schema.json are byte-unchanged vs base" \
-    "git -C '$PROJECT_ROOT' diff --quiet '$BASE_REF' -- '$GATE_HOOK' '$GATE_SCHEMA'"
-fi
 
 # ---------------------------------------------------------------------------
 # M43-REGEN-CLEAN — manifest stays regen-clean for the two manifest-registered

@@ -280,28 +280,10 @@ assert_true "AC-27-13c: 'avg ≥ 7.5' threshold literal still present" "grep -qF
 assert_true "AC-27-13d: 'each ≥ 7' threshold literal still present" "grep -qF 'each ≥ 7' '$CLAUDE_MD'"
 
 # =============================================================================
-echo ""
-echo "=== AC-27-14 (bounded-runtime fence, PASS pre+post) — .claude/ diff confined to architect-deliberation.js ==="
-
-if [[ ! -f "$BASEREF_LIB" ]]; then
-  echo "  BLOCK: tests/lib/base-ref.sh missing — AC-27-14 is base-dependent and cannot be evaluated"
-  TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-else
-  # shellcheck source=/dev/null
-  . "$BASEREF_LIB"
-  BASE_REF="$(cd "$PROJECT_ROOT" && resolve_base_ref "${ISSUE_27_BASE_REF:-}" || true)"
-  if [[ -z "$BASE_REF" ]]; then
-    echo "  BLOCK: no comparison base resolvable — AC-27-14 counted FAIL, never skipped"
-    TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-  else
-    CLAUDE_DIFF_SUBSET="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD | grep '^\.claude/' || true)"
-    EXPECTED_SUBSET=".claude/workflows/architect-deliberation.js"
-    assert_true "AC-27-14a: cycle diff's .claude/ subset == '$EXPECTED_SUBSET' (got: '$(printf '%s' "$CLAUDE_DIFF_SUBSET" | paste -sd, -)')" \
-      "[ \"\$(printf '%s' '$CLAUDE_DIFF_SUBSET')\" = \"$EXPECTED_SUBSET\" ] || [ -z \"\$(printf '%s' '$CLAUDE_DIFF_SUBSET')\" ]"
-    assert_false "AC-27-14b: cycle diff does not touch .claude/hooks/check-autoflow-gate.sh" \
-      "printf '%s\n' \"\$(cd '$PROJECT_ROOT' && git diff --name-only '$BASE_REF'...HEAD)\" | grep -qx '.claude/hooks/check-autoflow-gate.sh'"
-  fi
-fi
+# AC-27-14 (retired, #64): the ".claude/ diff confined to
+# architect-deliberation.js / hook not in cycle diff" fence was a #27
+# cycle-scope seal; it blocked every legitimate later .claude/ change
+# (change-detector anti-pattern) and was removed in the #64 hook-fix PR.
 
 # =============================================================================
 echo ""
