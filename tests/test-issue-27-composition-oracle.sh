@@ -331,7 +331,7 @@ OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -c '^\s*ok' || true)"
 assert_true "AC-27-20a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
 assert_true "AC-27-20b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-assert_true "AC-27-20c: harness ok-line count == B14 (43) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 43 ]"
+assert_true "AC-27-20c: harness ok-line count == B14 (58) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 58 ]"
 assert_true "AC-27-20d: node --check .claude/workflows/architect-deliberation.js exits 0 (cheaper subset)" \
   "node --check '$WORKFLOW_JS'"
 

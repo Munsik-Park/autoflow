@@ -183,7 +183,7 @@ B4_SHA="315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
 # EXPECTED_OK (D18/§5.3): one pin with two homes — this literal and
 # tests/test-issue-27-composition-oracle.sh:328. A design-fixed literal integer, never a
 # derived `37 + N` (AC-59-14(c) enforces the cross-pin equality below).
-EXPECTED_OK=43
+EXPECTED_OK=58
 
 PASS=0; FAIL=0; TESTS=0
 

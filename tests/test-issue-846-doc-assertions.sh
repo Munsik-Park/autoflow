@@ -553,6 +553,9 @@ else
     "tests/test-issue-59-adoption-evidence-discipline.sh"
     "tests/manual/issue-59-manual-scenarios.md"
     "tests/issue-59-full-sweep-driver.sh"
+    # #62 cycle files
+    "tests/test-issue-62-sequential-rounds.sh"
+    "tests/manual/issue-62-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do
