@@ -40,10 +40,17 @@ on the fixed script).
    grounded in a re-derived `path:line` or section/item-ID citation) or
    **navigational** (restates a position already addressed, cites no new
    ground, or is a re-assertion of carried text without re-derivation).
-3. Whether the Developer AI's open-concern entries (AC-62-28's channel) actually
-   appear in `${feature}` as named entries, and whether the Test AI's next-round
-   response engages with them (the residual behavioral risk the automated lane
-   cannot assert — verification design §2.2).
+3. **Superseded by issue #67** (the AC-62-28 document-as-durable-channel mechanism
+   this step originally checked — a Developer-AI counter's argument recorded as a
+   named open-concern entry in `${feature}` — is retired; the channel is now the
+   in-script issue register, `tests/manual/issue-67-manual-scenarios.md` M1/M2).
+   Replacement observation: whether a raised concern's substantive content
+   (its `conclusion`, ex-`argument`) actually appears in the counterpart's
+   next-round prompt as a rendered register entry, and whether the counterpart's
+   response engages with it rather than re-raising it unchanged (the residual
+   behavioral risk the automated lane cannot assert — verification design §2.2,
+   carried forward by `.autoflow/issue-67-verification-design.md` §3's
+   `conclusion-crosses-boundary` mechanism note).
 
 **Baseline for comparison** (the issue's own measurement, not a threshold): 4
 prior runs, 2 `ESCALATE`, terminal counters 0 substantive : 2–3 navigational; the

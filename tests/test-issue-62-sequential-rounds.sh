@@ -2,8 +2,12 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # =============================================================================
-# Test: ARCHITECT sequential rounds + carry compaction + citation partitioning
-# — Issue #62 (cycle-scoped)
+# Test: ARCHITECT sequential rounds + citation partitioning — Issue #62 (cycle-scoped)
+# (the original carry-compaction mechanism this header once described —
+# compactCounter/openCounters — was retired by issue #67's issue-register
+# redesign; this suite's own AC-62-31/AC-59-8d/carry-anchor rows track that
+# retirement, so the header is updated to match rather than describe a
+# mechanism no longer in the shipped script.)
 # =============================================================================
 # Cycle-scoped structural/count/execution guards per the verification design
 # (.autoflow/issue-62-verification-design.md §1/§5 RED plan). Behavioral

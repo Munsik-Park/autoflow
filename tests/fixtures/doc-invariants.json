@@ -235,7 +235,7 @@
     { "id": "59-AC5-adoption-unverified-escape", "origin_issue": 59, "intent": "existence", "file": ".claude/workflows/architect-deliberation.js", "section": null, "predicate": "present", "match": "fixed", "literal": "treat the point as open", "scope": "permanent" },
     { "id": "62-AC15-mutable-target-anchor", "origin_issue": 62, "intent": "existence", "file": ".claude/workflows/architect-deliberation.js", "section": null, "predicate": "present", "match": "fixed", "literal": "cite it by section heading or item ID, never by line number", "scope": "permanent" },
     { "id": "62-AC16-immutable-target-line", "origin_issue": 62, "intent": "existence", "file": ".claude/workflows/architect-deliberation.js", "section": null, "predicate": "present", "match": "fixed", "literal": "reserve `path:line` for immutable repository source files", "scope": "permanent" },
-    { "id": "62-AC28-dev-open-concern-record", "origin_issue": 67, "intent": "coherence", "file": ".claude/workflows/architect-deliberation.js", "section": null, "predicate": "absent", "match": "fixed", "literal": "record its argument as a named open-concern entry", "scope": "permanent" },
+    { "id": "67-AC8-open-concern-rule-gone", "origin_issue": 67, "intent": "coherence", "file": ".claude/workflows/architect-deliberation.js", "section": null, "predicate": "absent", "match": "fixed", "literal": "record its argument as a named open-concern entry", "scope": "permanent" },
     { "id": "62-ACadopt-citation-partition", "origin_issue": 62, "intent": "existence", "file": ".claude/workflows/architect-deliberation.js", "section": null, "predicate": "present", "match": "fixed", "literal": "design document under revision in this deliberation", "scope": "permanent" }
   ]
 }
