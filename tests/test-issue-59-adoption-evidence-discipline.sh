@@ -567,8 +567,10 @@ else
     "base_measured \"$BP798W\" \"$BT798W\" \"$BF798W\" && [ \"$F798W\" -eq 0 ] && [ \"$T798W\" -ge \"$BT798W\" ]"
   assert_true "AC-59-21-27W: base measurement of test-issue-27-composition-oracle.sh at $BASE_REF (got base $BP27W/$BT27W, $BF27W failed)" \
     "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\""
-  assert_true "AC-59-12c-27: test-issue-27-composition-oracle.sh window unaffected — 0 failed, total not below base (got: $P27W/$T27W vs base $BP27W/$BT27W)" \
-    "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\" && [ \"$F27W\" -eq 0 ] && [ \"$T27W\" -ge \"$BT27W\" ]"
+  # #64: AC-27-14a/b were retired (change-detector fence), so 27's total may
+  # legitimately sit below a pre-#64 base; the 27 lane keeps only 0-failed.
+  assert_true "AC-59-12c-27: test-issue-27-composition-oracle.sh window unaffected — 0 failed (got: $P27W/$T27W vs base $BP27W/$BT27W; total pin retired in #64)" \
+    "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\" && [ \"$F27W\" -eq 0 ]"
   assert_true "AC-59-21-35W: base measurement of test-issue-35-phase-marker.sh at $BASE_REF (got base $BP35W/$BT35W, $BF35W failed)" \
     "base_measured \"$BP35W\" \"$BT35W\" \"$BF35W\""
   assert_true "AC-59-12c-35: test-issue-35-phase-marker.sh (control) unaffected — 0 failed, total not below base (got: $P35W/$T35W vs base $BP35W/$BT35W)" \
@@ -600,8 +602,8 @@ assert_true "AC-59-14a3-new-label: the bumped '($EXPECTED_OK)' assertion label i
 
 OUT_27_REAL="$(cd "$PROJECT_ROOT" && bash tests/test-issue-27-composition-oracle.sh 2>&1)"
 read -r P27R T27R F27R <<<"$(suite_counts "$OUT_27_REAL")"
-assert_true "AC-59-14b: real re-run of test-issue-27-composition-oracle.sh == 23/23, 0 failed (got: $P27R/$T27R, $F27R failed)" \
-  "[ \"$T27R\" -eq 23 ] && [ \"$F27R\" -eq 0 ]"
+assert_true "AC-59-14b: real re-run of test-issue-27-composition-oracle.sh == 21/21, 0 failed (got: $P27R/$T27R, $F27R failed; 23→21 after the #64 AC-27-14 retirement)" \
+  "[ \"$T27R\" -eq 21 ] && [ \"$F27R\" -eq 0 ]"
 
 CANON_LITERAL="$(grep -F 'AC-27-20c' "$CANON_SUITE" | grep -oE '\-eq [0-9]+ \]"$' | grep -oE '[0-9]+' | tail -1)"
 assert_true "AC-59-14c: cross-pin equality — test-issue-27's ok-count literal ($CANON_LITERAL) == this suite's EXPECTED_OK ($EXPECTED_OK)" \
@@ -708,10 +710,12 @@ DELTA_GE_PATTERN='-ge'" +"'\\?"\$BT'
 DELTA_GE_LINE_COUNT="$(grep -cE -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" || true)"
 DELTA_GE_GUARDED_COUNT="$(grep -E -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" | grep -c 'base_measured' || true)"
 
-assert_true "AC-59-19b-total: exactly 12 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
-  "[ \"$DELTA_GE_LINE_COUNT\" -eq 12 ]"
-assert_true "AC-59-19b-guarded: all 12 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
-  "[ \"$DELTA_GE_GUARDED_COUNT\" -eq 12 ]"
+# 12 -> 11 in #64: the 27 lane's total-not-below-base clause was retired with
+# the AC-27-14 fence (the 27 lane keeps only its 0-failed requirement).
+assert_true "AC-59-19b-total: exactly 11 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
+  "[ \"$DELTA_GE_LINE_COUNT\" -eq 11 ]"
+assert_true "AC-59-19b-guarded: all 11 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
+  "[ \"$DELTA_GE_GUARDED_COUNT\" -eq 11 ]"
 
 # =============================================================================
 echo ""

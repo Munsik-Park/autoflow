@@ -110,19 +110,9 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# H-BYTES — the gate hook and gate-schema fixture are byte-unchanged (AC5).
-# ---------------------------------------------------------------------------
-echo ""
-echo "H-BYTES — the gate hook and gate-schema fixture are untouched (AC5)"
-
-if [ -z "$BASE_REF" ]; then
-  echo "  FAIL: H-BYTES: resolve_base_ref could not resolve a comparison base (fail-loud, not SKIP)"
-  FAIL=$((FAIL + 1))
-else
-  assert_true "H-BYTES: hook and gate-schema.json are byte-unchanged vs base" \
-    "git -C '$PROJECT_ROOT' diff --quiet '$BASE_REF' -- '$GATE_HOOK' '$GATE_SCHEMA'"
-fi
+# H-BYTES (retired, #64): the "hook byte-unchanged vs base" fence was a #42
+# cycle-scope seal; it blocked every legitimate later hook change (change-
+# detector anti-pattern) and was removed in the #64 hook-fix PR.
 
 # ---------------------------------------------------------------------------
 # M42-REGEN-CLEAN — manifest stays regen-clean (docs/gate-matching-standard.md

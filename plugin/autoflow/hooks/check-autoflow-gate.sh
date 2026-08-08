@@ -352,6 +352,15 @@ ACTIVE_FILES=""
 if [ -d "$AUTOFLOW_DIR" ]; then
   for _sf in "$AUTOFLOW_DIR"/*.json; do
     [ -e "$_sf" ] || continue   # glob had no match → literal path → skip
+    # AUTOFLOW-STATE-FILENAME (issue #64): state files are named issue-<digits>.json
+    # (CLAUDE.md > AutoFlow State Tracking). Any other .autoflow/*.json — e.g. a
+    # VALIDATE launch record (issue-{N}-runtime-launch.json) — is not a state-file
+    # candidate: skip it BEFORE the cat+jq validator so a non-state JSON can never
+    # take the MALFORMED path and fail-closed block push-class commands (#64).
+    _base=${_sf##*/}
+    case "$_base" in issue-*.json) ;; *) continue ;; esac
+    _num=${_base#issue-}; _num=${_num%.json}
+    case "$_num" in ''|*[!0-9]*) continue ;; esac
     # Read the file ONCE into memory and decide parse-validity + active on that
     # single snapshot. Every downstream consumer (ACTIVE, VERDICT, check_scores)
     # reads STATE_JSON, never the file again — so a partial write occurring after

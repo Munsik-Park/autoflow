@@ -556,6 +556,8 @@ else
     # #62 cycle files
     "tests/test-issue-62-sequential-rounds.sh"
     "tests/manual/issue-62-manual-scenarios.md"
+    # #64 cycle files (hook collection-scope fix + fence retirements + version 0.1.6)
+    "tests/test-issue-64-collection-scope.sh"
   )
   disallowed=""
   while IFS= read -r f; do

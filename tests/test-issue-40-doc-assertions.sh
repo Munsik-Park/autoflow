@@ -224,8 +224,9 @@ else
     "threshold_diff_touched '$BASE_REF' docs/teammate-contracts.md"
   assert_false "AC4-DELTA: CLAUDE.md Regressions caps untouched vs base" \
     "threshold_diff_touched '$BASE_REF' CLAUDE.md"
-  assert_true "AC4-DELTA (H-BYTES companion): the gate hook itself is byte-unchanged vs base" \
-    "git -C '$PROJECT_ROOT' diff --quiet '$BASE_REF' -- .claude/hooks/check-autoflow-gate.sh tests/fixtures/gate-schema.json"
+  # AC4-DELTA (H-BYTES companion) retired in the #64 hook-fix PR: the
+  # "hook byte-unchanged vs base" half was a #40 cycle-scope seal
+  # (change-detector anti-pattern); the threshold assertions above remain.
 fi
 
 # ---------------------------------------------------------------------------
