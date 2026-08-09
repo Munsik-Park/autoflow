@@ -328,6 +328,10 @@ ALLOWLIST_52=(
   "tests/test-issue-848-doc-assertions.sh"
   "tests/test-issue-952-wizard-removal.sh"
   "tests/test-issue-955-subagent-background-ban.sh"
+  # precedent: ccbbdbf — "admit docs/cycle-digest.jsonl into ALLOWLIST_55 —
+  # step-6.7 digest co-ride"; this cycle's HANDOFF step-6.7 digest emission
+  # appends the same file, so it co-rides this cycle's commit too.
+  "docs/cycle-digest.jsonl"
 )
 BASE52_CSC="$(resolve_base_ref 2>/dev/null || true)"
 if [ -n "$BASE52_CSC" ]; then
