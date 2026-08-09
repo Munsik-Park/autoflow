@@ -63,6 +63,16 @@ note_deferred() {
 
 HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
 
+# Shared guard for the three branch-scoped checks below (AC:rubric-unchanged,
+# AC:oracle-clause-untouched, change-surface-bounded): each is this cycle's own PR
+# contract and stays inert off the issue-69 dev branch.
+on_issue_branch() {
+  case "$HEAD_BRANCH" in
+    dev/*-issue-69|dev/*-issue-69-*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # =============================================================================
 echo "=== AC:adr-registration — the new verification-depth ADR is registered in all four homes that enumerate ADRs individually ==="
 
@@ -135,52 +145,46 @@ assert_true "AC-69-AMENDMENT-HOME: amendment clause names the issue register and
 echo ""
 echo "=== AC:rubric-unchanged — the GATE:PLAN rubric row set, PASS thresholds, and Regressions max-N multiset are unchanged from the base ref ==="
 
-case "$HEAD_BRANCH" in
-  dev/*-issue-69|dev/*-issue-69-*)
-    BASE_REF="$(resolve_base_ref)" || {
-      echo "  BLOCK: no comparison base resolvable — AC-69-RUBRIC counted FAIL, never skipped"
-      TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-      BASE_REF=""
-    }
-    if [[ -n "$BASE_REF" ]]; then
-      ROWS_HEAD="$(awk '/^### Scoring \(5 items × 10 points\)/{f=1;c++} c==1&&f{print} /^### ADR-conformance check/{if(c==1)f=0}' "$AUTOFLOW_GUIDE" | grep -oE '^\| (Feasibility|Dependencies|Scope|Security|Test plan) ' | sort -u)"
-      ROWS_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | awk '/^### Scoring \(5 items × 10 points\)/{f=1;c++} c==1&&f{print} /^### ADR-conformance check/{if(c==1)f=0}' | grep -oE '^\| (Feasibility|Dependencies|Scope|Security|Test plan) ' | sort -u)"
-      assert_true "AC-69-RUBRIC-rows: GATE:PLAN's 5 rubric row names are unchanged from $BASE_REF" \
-        '[ "$ROWS_HEAD" = "$ROWS_BASE" ]'
-      THRESH_HEAD="$(grep -c 'avg ≥ 7.5, each ≥ 7' "$AUTOFLOW_GUIDE" || true)"
-      THRESH_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | grep -c 'avg ≥ 7.5, each ≥ 7' || true)"
-      assert_true "AC-69-RUBRIC-thresholds: PASS threshold phrasing count is unchanged (head: $THRESH_HEAD, base: $THRESH_BASE)" \
-        "[ \"$THRESH_HEAD\" = \"$THRESH_BASE\" ]"
-      REGR_HEAD="$(grep -oE 'GATE:PLAN FAIL → ARCHITECT \(max [0-9]+×[^)]*\)' "$CLAUDE_MD" || true)"
-      REGR_BASE="$(git show "$BASE_REF:CLAUDE.md" | grep -oE 'GATE:PLAN FAIL → ARCHITECT \(max [0-9]+×[^)]*\)' || true)"
-      assert_true "AC-69-RUBRIC-regressions: GATE:PLAN's Regressions max-N clause is unchanged from $BASE_REF" \
-        '[ "$REGR_HEAD" = "$REGR_BASE" ]'
-    fi
-    ;;
-  *)
-    note_deferred "AC-69-RUBRIC: change-surface-relative guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown})."
-    ;;
-esac
+if on_issue_branch; then
+  BASE_REF="$(resolve_base_ref)" || {
+    echo "  BLOCK: no comparison base resolvable — AC-69-RUBRIC counted FAIL, never skipped"
+    TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
+    BASE_REF=""
+  }
+  if [[ -n "$BASE_REF" ]]; then
+    ROWS_HEAD="$(awk '/^### Scoring \(5 items × 10 points\)/{f=1;c++} c==1&&f{print} /^### ADR-conformance check/{if(c==1)f=0}' "$AUTOFLOW_GUIDE" | grep -oE '^\| (Feasibility|Dependencies|Scope|Security|Test plan) ' | sort -u)"
+    ROWS_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | awk '/^### Scoring \(5 items × 10 points\)/{f=1;c++} c==1&&f{print} /^### ADR-conformance check/{if(c==1)f=0}' | grep -oE '^\| (Feasibility|Dependencies|Scope|Security|Test plan) ' | sort -u)"
+    assert_true "AC-69-RUBRIC-rows: GATE:PLAN's 5 rubric row names are unchanged from $BASE_REF" \
+      '[ "$ROWS_HEAD" = "$ROWS_BASE" ]'
+    THRESH_HEAD="$(grep -c 'avg ≥ 7.5, each ≥ 7' "$AUTOFLOW_GUIDE" || true)"
+    THRESH_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | grep -c 'avg ≥ 7.5, each ≥ 7' || true)"
+    assert_true "AC-69-RUBRIC-thresholds: PASS threshold phrasing count is unchanged (head: $THRESH_HEAD, base: $THRESH_BASE)" \
+      "[ \"$THRESH_HEAD\" = \"$THRESH_BASE\" ]"
+    REGR_HEAD="$(grep -oE 'GATE:PLAN FAIL → ARCHITECT \(max [0-9]+×[^)]*\)' "$CLAUDE_MD" || true)"
+    REGR_BASE="$(git show "$BASE_REF:CLAUDE.md" | grep -oE 'GATE:PLAN FAIL → ARCHITECT \(max [0-9]+×[^)]*\)' || true)"
+    assert_true "AC-69-RUBRIC-regressions: GATE:PLAN's Regressions max-N clause is unchanged from $BASE_REF" \
+      '[ "$REGR_HEAD" = "$REGR_BASE" ]'
+  fi
+else
+  note_deferred "AC-69-RUBRIC: change-surface-relative guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown})."
+fi
 
 # =============================================================================
 echo ""
 echo "=== AC:oracle-clause-untouched — the composition-oracle clause's text is byte-identical to the base ref ==="
 
-case "$HEAD_BRANCH" in
-  dev/*-issue-69|dev/*-issue-69-*)
-    if [[ -n "${BASE_REF:-}" ]]; then
-      ORACLE_HEAD="$(awk '/^#### Composition oracle/{f=1} f&&/^### Testability-driven design/{f=0} f' "$AUTOFLOW_GUIDE")"
-      ORACLE_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | awk '/^#### Composition oracle/{f=1} f&&/^### Testability-driven design/{f=0} f')"
-      # Referenced by NAME (see the AC-69-SCOPE-SYMMETRY comment above) — the clause text
-      # carries parentheses/backticks that eval would otherwise re-parse as shell syntax.
-      assert_true "AC-69-ORACLE-UNTOUCHED: composition-oracle clause text is byte-identical to $BASE_REF" \
-        '[ "$ORACLE_HEAD" = "$ORACLE_BASE" ]'
-    fi
-    ;;
-  *)
-    note_deferred "AC-69-ORACLE-UNTOUCHED: change-surface-relative guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown})."
-    ;;
-esac
+if on_issue_branch; then
+  if [[ -n "${BASE_REF:-}" ]]; then
+    ORACLE_HEAD="$(awk '/^#### Composition oracle/{f=1} f&&/^### Testability-driven design/{f=0} f' "$AUTOFLOW_GUIDE")"
+    ORACLE_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | awk '/^#### Composition oracle/{f=1} f&&/^### Testability-driven design/{f=0} f')"
+    # Referenced by NAME (see the AC-69-SCOPE-SYMMETRY comment above) — the clause text
+    # carries parentheses/backticks that eval would otherwise re-parse as shell syntax.
+    assert_true "AC-69-ORACLE-UNTOUCHED: composition-oracle clause text is byte-identical to $BASE_REF" \
+      '[ "$ORACLE_HEAD" = "$ORACLE_BASE" ]'
+  fi
+else
+  note_deferred "AC-69-ORACLE-UNTOUCHED: change-surface-relative guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown})."
+fi
 
 # =============================================================================
 echo ""
@@ -194,14 +198,21 @@ MANIFEST_SOURCES=(
   "docs/maintained-docs.md"
   "docs/INDEX.md"
 )
+# One jq pass over the manifest (source -> sha256 map) instead of one jq invocation per
+# source — same result, fewer process spawns against the same static file.
+declare -A MANIFEST_SHA_BY_SRC
+while IFS=$'\t' read -r src sha; do
+  MANIFEST_SHA_BY_SRC["$src"]="$sha"
+done < <(jq -r '.artifacts[] | "\(.source)\t\(.sha256)"' "$MANIFEST")
+
 for SRC in "${MANIFEST_SOURCES[@]}"; do
-  MANIFEST_SHA="$(jq -r --arg s "$SRC" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST")"
+  MANIFEST_SHA="${MANIFEST_SHA_BY_SRC[$SRC]:-}"
   CUR_SHA="$(shasum -a 256 "$PROJECT_ROOT/$SRC" | awk '{print $1}')"
   assert_true "AC-69-MANIFEST: setup/manifest.json row for $SRC sha256 matches the live source" \
     "[ \"$MANIFEST_SHA\" = \"$CUR_SHA\" ]"
 done
 if [ -n "$NEW_ADR_PATH" ]; then
-  ADR_MANIFEST_SHA="$(jq -r --arg s "docs/adr/$NEW_ADR_BASENAME" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST")"
+  ADR_MANIFEST_SHA="${MANIFEST_SHA_BY_SRC[docs/adr/$NEW_ADR_BASENAME]:-}"
   ADR_CUR_SHA="$(shasum -a 256 "$NEW_ADR_PATH" | awk '{print $1}')"
   assert_true "AC-69-MANIFEST-adr: setup/manifest.json row for docs/adr/$NEW_ADR_BASENAME sha256 matches the live source" \
     "[ \"$ADR_MANIFEST_SHA\" = \"$ADR_CUR_SHA\" ]"
@@ -304,19 +315,16 @@ if [ -n "$NEW_ADR_PATH" ]; then
   allow_list+=("docs/adr/$NEW_ADR_BASENAME")
 fi
 
-case "$HEAD_BRANCH" in
-  dev/*-issue-69|dev/*-issue-69-*)
-    if [[ -n "${BASE_REF:-}" ]]; then
-      DIFF_FILES="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD)"
-      UNCOVERED="$(comm -23 <(printf '%s\n' "$DIFF_FILES" | sort -u) <(printf '%s\n' "${allow_list[@]}" | sort -u))"
-      assert_true "AC-69-SCOPE: cycle diff, set-differenced against the declared allow_list, is empty (uncovered: $(printf '%s' "$UNCOVERED" | paste -sd, -))" \
-        '[ -z "$UNCOVERED" ]'
-    fi
-    ;;
-  *)
-    note_deferred "AC-69-SCOPE: change-surface guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown}) — this cycle's own PR contract, not every branch's."
-    ;;
-esac
+if on_issue_branch; then
+  if [[ -n "${BASE_REF:-}" ]]; then
+    DIFF_FILES="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD)"
+    UNCOVERED="$(comm -23 <(printf '%s\n' "$DIFF_FILES" | sort -u) <(printf '%s\n' "${allow_list[@]}" | sort -u))"
+    assert_true "AC-69-SCOPE: cycle diff, set-differenced against the declared allow_list, is empty (uncovered: $(printf '%s' "$UNCOVERED" | paste -sd, -))" \
+      '[ -z "$UNCOVERED" ]'
+  fi
+else
+  note_deferred "AC-69-SCOPE: change-surface guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown}) — this cycle's own PR contract, not every branch's."
+fi
 
 # =============================================================================
 echo ""
