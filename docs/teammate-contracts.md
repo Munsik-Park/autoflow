@@ -35,6 +35,7 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - Participates in plan synthesis (ARCHITECT) from a verification perspective — "how will this design be verified?"
 - Authors the verification design document: acceptance criteria → verification method (automated / manual / environment-dependent / requires design change).
 - **[MUST]** Assigns a composition oracle — an oracle driving the contact point through the real execution environment, non-mock — whenever the design's change surface names shared state a settled decision also names, and states the determination (including the negative case) in the verification design. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > Output artifacts > *Composition oracle*.
+- **[MUST]** Justifies **Verification depth**: the verification design carries a risk line, and every verification layer and new spec file states the failure mode it catches that no other layer catches; a layer that cannot name one is dropped rather than argued down. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > Output artifacts > *Verification depth*.
 - Writes test code before implementation (Test First) and confirms Red.
 - For untestable items: states the reason and proposes alternatives (design change / manual scenario (except where the composition-oracle clause applies) / mock (same exception)).
 - Performs minimal-implementation verification after implementation: detects code outside test coverage.
@@ -182,7 +183,7 @@ After the result returns, the orchestrator **verifies** it before accepting — 
 |------|-------|-------|
 | Structure evaluation | Type 1: Behavior gap, Code-change necessity (2) — Type 2: Content gap, Consistency impact, Propagation scope (3) | none (PASS/FAIL single verdict; reuse-neutral; gap-low → close/reply, non-code lever → report to user; no retry. Canonical: [`phases/analysis.md`](phases/analysis.md)) |
 | Hypothesis evaluation | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× |
-| Plan evaluation | Feasibility, Dependencies, Scope, Security, Test plan (5) — Feasibility/Scope carry structural-fit & over-engineering (not scored at DIAGNOSE) | max 3× |
+| Plan evaluation | Feasibility, Dependencies, Scope, Security, Test plan (5) — Feasibility/Scope carry structural-fit & over-engineering across the plan and its verification design (not scored at DIAGNOSE) | max 3× |
 | Security audit | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
 | Quality evaluation | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) | max 3× |
 | Doc evaluation | Accuracy, Completeness, Clarity, Format compliance (4) | one revision |

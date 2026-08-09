@@ -318,6 +318,30 @@ in the two design documents. Consequences for what each artifact carries:
   cross-session half of the no-re-litigation rule. See
   [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
 
+#### Verification depth
+
+- **[MUST]** The verification design opens with a **risk line** — one line naming
+  who is harmed and how if this change is wrong.
+  Depth is justified against that risk, and this clause sets a justification form, never a quantity
+  cap: no layer count, file count, or line budget, because a proxy metric invites the distortion it
+  is meant to prevent (blocking a needed layer, or merging layers to dodge a count).
+- **[MUST]** Every verification layer, and every new spec file, states in one line
+  the failure mode it catches that no other layer catches.
+  A layer that cannot name one is removed from the agreement rather than argued down —
+  undiversified duplication is over-verification, which GATE:PLAN's `Scope` criterion scores as
+  over-engineering.
+- **Amendment** — a risk discovered mid-deliberation may raise depth, provided the reason is
+  recorded as an entry in the **issue register** the facilitation script holds. Depth is revisable,
+  not capped, and the amendment adds no artifact: the register is already the deliberation's
+  durable channel (*Record rules* above).
+- **[MUST]** State the determination once in the verification design. The obligation is
+  unconditional — every verification design has at least one layer — so an absent statement is a
+  missing obligation, not a "not applicable".
+- **Effective from** — the obligation binds verification designs authored after this clause lands;
+  a cycle already past ARCHITECT is not retroactively deficient. The determination is the Test AI's
+  to author, and the ARCHITECT facilitator may record it on the Test AI's behalf when it writes the
+  converged artifact.
+
 #### Composition oracle
 
 - **[MUST]** When the design's change surface names shared state that a **settled decision** also
@@ -383,7 +407,7 @@ The facilitator records the converged decisions in the ledger and returns
 | Security      | Any security implications introduced? |
 | Test plan     | Are acceptance criteria testable? |
 
-`Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
+`Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification layer or new spec file that names no failure mode another layer does not already catch (ARCHITECT > Output artifacts > *Verification depth*) fails Scope on the same clause. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
 
 ### ADR-conformance check (scored within Feasibility / Scope)
 

@@ -36,7 +36,7 @@ not replace them.
 
 | If the issue touches... | Read first |
 | --- | --- |
-| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/design-rationale.md`, `docs/phases/analysis.md`, `docs/adr/0016-adr-conformance-gate-scoring.md`, `docs/adr/0017-teammate-removal-feasibility.md` |
+| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/design-rationale.md`, `docs/phases/analysis.md`, `docs/adr/0016-adr-conformance-gate-scoring.md`, `docs/adr/0017-teammate-removal-feasibility.md`, `docs/adr/0018-verification-depth-justification.md` |
 | Sub-repo implementation (multi-repo instances) | `docs/repo-boundary-rules.md` |
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Tool distribution, install/upgrade, or version pinning | `docs/tool-delivery-contract.md`, `docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md` |
