@@ -229,6 +229,9 @@ allow_list=(
   "tests/manual/issue-62-manual-scenarios.md"
   "tests/manual/issue-67-manual-scenarios.md"
   ".github/workflows/e2e-dummy-target.yml"
+  # HANDOFF step 6.7 appends the cycle digest to the dev branch (PR co-ride) after
+  # the reviewer review, so the digest file is a mandated member of every cycle's diff.
+  "docs/cycle-digest.jsonl"
   ".autoflow/issue-67-feature-design.md"
   ".autoflow/issue-67-verification-design.md"
   ".autoflow/issue-67-ledger.md"
