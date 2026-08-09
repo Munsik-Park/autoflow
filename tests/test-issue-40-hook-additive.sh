@@ -253,26 +253,9 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-# ---------------------------------------------------------------------------
-# H-BYTES — the "hook 무변경" claim, asserted rather than assumed.
-# ---------------------------------------------------------------------------
-echo ""
-echo "H-BYTES — the gate hook and gate-schema fixture are untouched"
-
-. "$SCRIPT_DIR/lib/base-ref.sh"
-BASE_REF="$(resolve_base_ref)"
-if [ -z "$BASE_REF" ]; then
-  echo "  FAIL: H-BYTES: resolve_base_ref could not resolve a comparison base (fail-loud, not SKIP)"
-  FAIL=$((FAIL + 1))
-else
-  if git -C "$PROJECT_ROOT" diff --quiet "$BASE_REF" -- .claude/hooks/check-autoflow-gate.sh tests/fixtures/gate-schema.json; then
-    echo "  PASS: H-BYTES: hook and gate-schema.json are byte-unchanged vs base"
-    PASS=$((PASS + 1))
-  else
-    echo "  FAIL: H-BYTES: hook or gate-schema.json differs from base"
-    FAIL=$((FAIL + 1))
-  fi
-fi
+# H-BYTES (retired, #64): the "hook byte-unchanged vs base" fence was a #40
+# cycle-scope seal; it blocked every legitimate later hook change (change-
+# detector anti-pattern) and was removed in the #64 hook-fix PR.
 
 echo ""
 echo "=============================="

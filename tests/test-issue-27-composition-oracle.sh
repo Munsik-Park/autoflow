@@ -280,28 +280,10 @@ assert_true "AC-27-13c: 'avg ≥ 7.5' threshold literal still present" "grep -qF
 assert_true "AC-27-13d: 'each ≥ 7' threshold literal still present" "grep -qF 'each ≥ 7' '$CLAUDE_MD'"
 
 # =============================================================================
-echo ""
-echo "=== AC-27-14 (bounded-runtime fence, PASS pre+post) — .claude/ diff confined to architect-deliberation.js ==="
-
-if [[ ! -f "$BASEREF_LIB" ]]; then
-  echo "  BLOCK: tests/lib/base-ref.sh missing — AC-27-14 is base-dependent and cannot be evaluated"
-  TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-else
-  # shellcheck source=/dev/null
-  . "$BASEREF_LIB"
-  BASE_REF="$(cd "$PROJECT_ROOT" && resolve_base_ref "${ISSUE_27_BASE_REF:-}" || true)"
-  if [[ -z "$BASE_REF" ]]; then
-    echo "  BLOCK: no comparison base resolvable — AC-27-14 counted FAIL, never skipped"
-    TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-  else
-    CLAUDE_DIFF_SUBSET="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD | grep '^\.claude/' || true)"
-    EXPECTED_SUBSET=".claude/workflows/architect-deliberation.js"
-    assert_true "AC-27-14a: cycle diff's .claude/ subset == '$EXPECTED_SUBSET' (got: '$(printf '%s' "$CLAUDE_DIFF_SUBSET" | paste -sd, -)')" \
-      "[ \"\$(printf '%s' '$CLAUDE_DIFF_SUBSET')\" = \"$EXPECTED_SUBSET\" ] || [ -z \"\$(printf '%s' '$CLAUDE_DIFF_SUBSET')\" ]"
-    assert_false "AC-27-14b: cycle diff does not touch .claude/hooks/check-autoflow-gate.sh" \
-      "printf '%s\n' \"\$(cd '$PROJECT_ROOT' && git diff --name-only '$BASE_REF'...HEAD)\" | grep -qx '.claude/hooks/check-autoflow-gate.sh'"
-  fi
-fi
+# AC-27-14 (retired, #64): the ".claude/ diff confined to
+# architect-deliberation.js / hook not in cycle diff" fence was a #27
+# cycle-scope seal; it blocked every legitimate later .claude/ change
+# (change-detector anti-pattern) and was removed in the #64 hook-fix PR.
 
 # =============================================================================
 echo ""
@@ -325,13 +307,17 @@ echo "=== AC-27-20 (composition oracle for S8, fence, PASS pre+post) — workflo
 # value has two homes (D18): this literal and EXPECTED_OK in
 # tests/test-issue-59-adoption-evidence-discipline.sh; a future test add or remove edits
 # both in one commit, and that suite's AC-59-14c asserts the two agree.
+# B14 update (issue #67): the ARCHITECT deliberation record redesign (register +
+# dispositions) retired two run.mjs tests (AC-62-12, AC-62-28i) and added the register/
+# disposition lane-A discriminators, net measured 43 -> 80. Bumped in the same commit as
+# GREEN's architect-deliberation.js change, per this suite's own precedent above.
 HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
 HARNESS_EXIT=$?
 OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -c '^\s*ok' || true)"
 assert_true "AC-27-20a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
 assert_true "AC-27-20b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-assert_true "AC-27-20c: harness ok-line count == B14 (58) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 58 ]"
+assert_true "AC-27-20c: harness ok-line count == B14 (80) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 80 ]"
 assert_true "AC-27-20d: node --check .claude/workflows/architect-deliberation.js exits 0 (cheaper subset)" \
   "node --check '$WORKFLOW_JS'"
 

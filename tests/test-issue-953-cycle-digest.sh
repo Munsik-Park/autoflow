@@ -524,9 +524,13 @@ assert_true "AC4-no-block: hook does NOT block git push when docs/cycle-digest.j
 # satisfies the scan" case exercised by AC4-no-block above.
 AC4_CONTROL_PDIR="$(mktemp -d)"
 mkdir -p "$AC4_CONTROL_PDIR/.autoflow"
-printf 'not even valid json for a digest line, on purpose\n' > "$AC4_CONTROL_PDIR/.autoflow/cycle-digest.json"
+# Re-keyed for #64: the hook now pre-filters by the state-file naming rule
+# (issue-<digits>.json), so the digest dodges the block by NAME as well as by
+# location. The control therefore stages the same arbitrary content under a
+# state-conforming basename, which still trips the malformed-state block.
+printf 'not even valid json for a digest line, on purpose\n' > "$AC4_CONTROL_PDIR/.autoflow/issue-9991.json"
 AC4_CONTROL_EXIT=$(printf '%s' "$AC4_JSON" | CLAUDE_PROJECT_DIR="$AC4_CONTROL_PDIR" bash "$HOOK" >/dev/null 2>&1; echo $?)
-assert_true "AC4-contrast-control: the same arbitrary content AS an .autoflow/*.json file (no other valid active state) DOES trip the malformed-state block (exit 2), proving the digest's chosen location is what dodges it" \
+assert_true "AC4-contrast-control: the same arbitrary content AS a state-named .autoflow/issue-<digits>.json file (no other valid active state) DOES trip the malformed-state block (exit 2)" \
   "[ '$AC4_CONTROL_EXIT' -eq 2 ]"
 
 rm -rf "$AC4_PDIR" "$AC4_CONTROL_PDIR"

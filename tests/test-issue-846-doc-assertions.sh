@@ -556,6 +556,21 @@ else
     # #62 cycle files
     "tests/test-issue-62-sequential-rounds.sh"
     "tests/manual/issue-62-manual-scenarios.md"
+    # #64 cycle files (hook collection-scope fix + fence retirements + version 0.1.6)
+    "tests/test-issue-64-collection-scope.sh"
+    # #67 cycle files (ARCHITECT deliberation record redesign — register +
+    # dispositions, version 0.1.7): the new cycle-scoped RED suite.
+    # .claude/workflows/architect-deliberation.js, test/workflows/run.mjs,
+    # docs/teammate-contracts.md, docs/autoflow-guide.md, setup/manifest.json,
+    # plugin/autoflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json,
+    # tests/test-issue-56-carry-evidence-discipline.sh,
+    # tests/test-issue-59-adoption-evidence-discipline.sh,
+    # tests/test-issue-27-composition-oracle.sh,
+    # tests/test-issue-955-subagent-background-ban.sh,
+    # tests/test-issue-798-topology-flip.sh, tests/test-issue-799-inert-cleanup.sh
+    # and tests/fixtures/doc-invariants.json are already admitted above.
+    "tests/test-issue-67-deliberation-record.sh"
+    "tests/manual/issue-67-manual-scenarios.md"
     # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
     # decision record, the cycle-scoped RED suite + manual-scenario lane.
     # docs/adr/README.md, setup/manifest.json, docs/INDEX.md,

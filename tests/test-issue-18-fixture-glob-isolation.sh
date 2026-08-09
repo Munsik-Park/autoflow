@@ -78,14 +78,15 @@ else
   mkdir -p "$AC2_TMP/.autoflow/fixtures"
 
   # Arm-A: fixture copy placed directly on the hook's discovery surface
-  # (the top-level .autoflow/*.json glob) — this MUST show the malformed
-  # block; it is the bug mechanism, fix-independent.
-  cp "$MANIFEST_JSON" "$AC2_TMP/.autoflow/probe-arm-a.json"
+  # under a STATE-CONFORMING basename (re-keyed for #64: the hook now
+  # pre-filters by the issue-<digits>.json naming rule, so only a conforming
+  # name reaches the validator) — this MUST show the malformed block.
+  cp "$MANIFEST_JSON" "$AC2_TMP/.autoflow/issue-9990.json"
   AC2_ARM_A_STDERR="$(CLAUDE_PROJECT_DIR="$AC2_TMP" bash "$GATE_HOOK" \
     <<<'{"tool_name":"Bash","tool_input":{"command":"git push"}}' 2>&1 1>/dev/null || true)"
-  rm -f "$AC2_TMP/.autoflow/probe-arm-a.json"
+  rm -f "$AC2_TMP/.autoflow/issue-9990.json"
 
-  assert_true "AC2-arm-A: a non-state JSON at the top-level .autoflow/*.json surface IS reported malformed by the hook" \
+  assert_true "AC2-arm-A: a non-state JSON under a state-conforming name at the top-level .autoflow/*.json surface IS reported malformed by the hook" \
     "printf '%s' \"\$AC2_ARM_A_STDERR\" | grep -qF 'malformed AutoFlow state file'"
 
   # Arm-B: same non-state JSON content, placed under .autoflow/fixtures/ —
@@ -102,19 +103,10 @@ else
   rm -rf "$AC2_TMP" 2>/dev/null
 fi
 
-# ---------------------------------------------------------------------------
-# AC-scope — negative property: the gate hook is byte-unmodified by this
-# fix (ledger E2). Checked both as a working-tree diff-scope guard and as a
-# direct assertion that the discovery-glob line is unchanged.
-# ---------------------------------------------------------------------------
-
-echo ""
-echo "=== AC-scope — check-autoflow-gate.sh is untouched by this fix ==="
-
-assert_true "AC-scope-a: .claude/hooks/check-autoflow-gate.sh has no uncommitted modification" \
-  "git diff --quiet -- .claude/hooks/check-autoflow-gate.sh"
-assert_true "AC-scope-b: the hook's discovery-glob line is byte-unchanged (single-level, non-recursive)" \
-  "grep -qF 'for _sf in \"\$AUTOFLOW_DIR\"/*.json' '$GATE_HOOK'"
+# AC-scope (retired, #64): the "hook untouched by this fix" fence was an #18
+# cycle-scope seal (its own header said so: "byte-unmodified by this fix,
+# ledger E2"); it blocked every legitimate later hook change (change-detector
+# anti-pattern) and was removed in the #64 hook-fix PR.
 
 echo ""
 echo "=============================="

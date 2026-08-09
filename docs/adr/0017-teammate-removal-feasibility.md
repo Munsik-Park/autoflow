@@ -105,7 +105,7 @@ reason and alternative, the design-change requests, the committed-surface allow-
 composition-oracle determination. Step 3's need is an acceptance-criterion to test mapping
 sufficient to attribute each implementation hunk to a test, and element (i) of that enumeration
 supplies it by format. Step 4's input is live repository state by its own wording at
-`docs/autoflow-guide.md:450`, which directs a re-derivation of the real interface at HEAD rather
+`docs/autoflow-guide.md` > VERIFY step 4, which directs a re-derivation of the real interface at HEAD rather
 than a re-read of the test's claims.
 
 The exception, stated because it is the one place the answer is not clean:

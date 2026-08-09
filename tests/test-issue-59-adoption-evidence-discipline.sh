@@ -18,10 +18,18 @@
 #   AC-59-8a   — RED discriminator: `${ADOPTION_EVIDENCE_RULE}` interpolated
 #                exactly four times.
 #   AC-59-8b   — the four sites are exactly dev-draft/test-draft/dev-r/test-r,
-#                never the `const carry = openCounters.length` ternary line.
+#                never the `const carry = register.size` ternary line
+#                (re-anchored by issue #67, which retargets the carry from
+#                `openCounters` to the issue register).
 #   AC-59-8c   — #56's own constant counts are byte-immutable (D4).
-#   AC-59-8d   — round-prompt insertion ORDER:
-#                `${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${carry}`.
+#   AC-59-8d   — round-prompt insertion ORDER: `${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}`
+#                immediately followed by `${carry}` at the tail, unbroken until issue #67
+#                inserted `${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}` between
+#                ADOPTION_EVIDENCE_RULE and carry (feature design §2.5: both new
+#                round-prompt-scoped constants). Re-anchored, not dropped: the surviving
+#                intent — COUNTER_EVIDENCE_RULE before ADOPTION_EVIDENCE_RULE, both before
+#                the carry-bearing tail — still holds; only the two new record-rule
+#                constants now sit between ADOPTION_EVIDENCE_RULE and carry.
 #   AC-59-9    — fence (PASS pre+post): setup/manifest.json row sha256 ==
 #                live architect-deliberation.js sha256 (derived artifact).
 #   AC-59-10   — fence (PASS only post-GREEN, branch-scoped): the
@@ -183,7 +191,10 @@ B4_SHA="315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
 # EXPECTED_OK (D18/§5.3): one pin with two homes — this literal and
 # tests/test-issue-27-composition-oracle.sh:328. A design-fixed literal integer, never a
 # derived `37 + N` (AC-59-14(c) enforces the cross-pin equality below).
-EXPECTED_OK=58
+# Bumped 58 -> 80 by issue #67 (ARCHITECT deliberation record redesign): two run.mjs
+# tests retired (AC-62-12, AC-62-28i), the register/disposition lane-A discriminators
+# added. Bumped in the same commit as GREEN's architect-deliberation.js change.
+EXPECTED_OK=80
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -303,7 +314,7 @@ DEV_DRAFT_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'Yo
 TEST_DRAFT_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Test AI in AutoFlow ARCHITECT' || true)"
 DEV_ROUND_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Developer AI\. Round' || true)"
 TEST_ROUND_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Test AI\. Round' || true)"
-CARRY_TERNARY_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const carry = openCounters.length' || true)"
+CARRY_TERNARY_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const carry = register.size' || true)"
 
 assert_true "AC-59-8b-dev-draft: exactly one interpolation line matches the dev-draft prompt prefix (got: $DEV_DRAFT_SITE)" \
   "[ \"$DEV_DRAFT_SITE\" -eq 1 ]"
@@ -313,7 +324,7 @@ assert_true "AC-59-8b-dev-round: exactly one interpolation line matches the dev-
   "[ \"$DEV_ROUND_SITE\" -eq 1 ]"
 assert_true "AC-59-8b-test-round: exactly one interpolation line matches the test-round prompt prefix (got: $TEST_ROUND_SITE)" \
   "[ \"$TEST_ROUND_SITE\" -eq 1 ]"
-assert_true "AC-59-8b-unconditional: zero interpolation occurrences sit on the carry ternary line (got: $CARRY_TERNARY_SITE)" \
+assert_true "AC-59-8b-unconditional: zero interpolation occurrences sit on the carry ternary line (re-anchored, issue #67 AC19) (got: $CARRY_TERNARY_SITE)" \
   "[ \"$CARRY_TERNARY_SITE\" -eq 0 ]"
 
 # =============================================================================
@@ -335,8 +346,8 @@ assert_true "AC-59-8c-rule-decl: 'const COUNTER_EVIDENCE_RULE' still declared ex
 echo ""
 echo "=== AC-59-8d (RED discriminator) — round-prompt insertion ORDER ==="
 
-ORDER_COUNT="$(grep -c '\${COUNTER_EVIDENCE_RULE}\${ADOPTION_EVIDENCE_RULE}\${carry}' "$WORKFLOW_JS" || true)"
-assert_true "AC-59-8d: the contiguous sequence \${COUNTER_EVIDENCE_RULE}\${ADOPTION_EVIDENCE_RULE}\${carry} occurs exactly 2 times (got: $ORDER_COUNT)" \
+ORDER_COUNT="$(grep -c '\${COUNTER_EVIDENCE_RULE}\${ADOPTION_EVIDENCE_RULE}\${REGISTER_RULE}\${RECORD_DISCIPLINE_RULE}\${carry}' "$WORKFLOW_JS" || true)"
+assert_true "AC-59-8d: the contiguous sequence \${COUNTER_EVIDENCE_RULE}\${ADOPTION_EVIDENCE_RULE}\${REGISTER_RULE}\${RECORD_DISCIPLINE_RULE}\${carry} occurs exactly 2 times (re-anchored, issue #67 §2.5) (got: $ORDER_COUNT)" \
   "[ \"$ORDER_COUNT\" -eq 2 ]"
 
 # =============================================================================
@@ -567,8 +578,10 @@ else
     "base_measured \"$BP798W\" \"$BT798W\" \"$BF798W\" && [ \"$F798W\" -eq 0 ] && [ \"$T798W\" -ge \"$BT798W\" ]"
   assert_true "AC-59-21-27W: base measurement of test-issue-27-composition-oracle.sh at $BASE_REF (got base $BP27W/$BT27W, $BF27W failed)" \
     "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\""
-  assert_true "AC-59-12c-27: test-issue-27-composition-oracle.sh window unaffected — 0 failed, total not below base (got: $P27W/$T27W vs base $BP27W/$BT27W)" \
-    "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\" && [ \"$F27W\" -eq 0 ] && [ \"$T27W\" -ge \"$BT27W\" ]"
+  # #64: AC-27-14a/b were retired (change-detector fence), so 27's total may
+  # legitimately sit below a pre-#64 base; the 27 lane keeps only 0-failed.
+  assert_true "AC-59-12c-27: test-issue-27-composition-oracle.sh window unaffected — 0 failed (got: $P27W/$T27W vs base $BP27W/$BT27W; total pin retired in #64)" \
+    "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\" && [ \"$F27W\" -eq 0 ]"
   assert_true "AC-59-21-35W: base measurement of test-issue-35-phase-marker.sh at $BASE_REF (got base $BP35W/$BT35W, $BF35W failed)" \
     "base_measured \"$BP35W\" \"$BT35W\" \"$BF35W\""
   assert_true "AC-59-12c-35: test-issue-35-phase-marker.sh (control) unaffected — 0 failed, total not below base (got: $P35W/$T35W vs base $BP35W/$BT35W)" \
@@ -600,8 +613,8 @@ assert_true "AC-59-14a3-new-label: the bumped '($EXPECTED_OK)' assertion label i
 
 OUT_27_REAL="$(cd "$PROJECT_ROOT" && bash tests/test-issue-27-composition-oracle.sh 2>&1)"
 read -r P27R T27R F27R <<<"$(suite_counts "$OUT_27_REAL")"
-assert_true "AC-59-14b: real re-run of test-issue-27-composition-oracle.sh == 23/23, 0 failed (got: $P27R/$T27R, $F27R failed)" \
-  "[ \"$T27R\" -eq 23 ] && [ \"$F27R\" -eq 0 ]"
+assert_true "AC-59-14b: real re-run of test-issue-27-composition-oracle.sh == 21/21, 0 failed (got: $P27R/$T27R, $F27R failed; 23→21 after the #64 AC-27-14 retirement)" \
+  "[ \"$T27R\" -eq 21 ] && [ \"$F27R\" -eq 0 ]"
 
 CANON_LITERAL="$(grep -F 'AC-27-20c' "$CANON_SUITE" | grep -oE '\-eq [0-9]+ \]"$' | grep -oE '[0-9]+' | tail -1)"
 assert_true "AC-59-14c: cross-pin equality — test-issue-27's ok-count literal ($CANON_LITERAL) == this suite's EXPECTED_OK ($EXPECTED_OK)" \
@@ -719,10 +732,12 @@ DELTA_GE_PATTERN='-ge'" +"'\\?"\$BT'
 DELTA_GE_LINE_COUNT="$(grep -cE -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" || true)"
 DELTA_GE_GUARDED_COUNT="$(grep -E -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" | grep -c 'base_measured' || true)"
 
-assert_true "AC-59-19b-total: exactly 12 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
-  "[ \"$DELTA_GE_LINE_COUNT\" -eq 12 ]"
-assert_true "AC-59-19b-guarded: all 12 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
-  "[ \"$DELTA_GE_GUARDED_COUNT\" -eq 12 ]"
+# 12 -> 11 in #64: the 27 lane's total-not-below-base clause was retired with
+# the AC-27-14 fence (the 27 lane keeps only its 0-failed requirement).
+assert_true "AC-59-19b-total: exactly 11 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
+  "[ \"$DELTA_GE_LINE_COUNT\" -eq 11 ]"
+assert_true "AC-59-19b-guarded: all 11 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
+  "[ \"$DELTA_GE_GUARDED_COUNT\" -eq 11 ]"
 
 # =============================================================================
 echo ""
