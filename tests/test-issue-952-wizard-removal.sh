@@ -726,6 +726,25 @@ else
     # tests/test-issue-27/59/62/798/799/846/848/955-*.sh are already admitted above.
     "docs/adr/0018-verification-depth-justification.md"
     "tests/test-issue-69-verification-depth.sh"
+    # #55 cycle files (gate-score write contract at the producer site): the
+    # cycle-scoped suite + its manual-scenario lane, and the shape declaration
+    # the CLAUDE.md fence is compared against. CLAUDE.md,
+    # .claude/hooks/check-autoflow-gate.sh,
+    # plugin/autoflow/hooks/check-autoflow-gate.sh,
+    # tests/fixtures/doc-invariants.json, setup/manifest.json and
+    # .github/workflows/e2e-dummy-target.yml are already admitted above.
+    "tests/fixtures/gate-schema.json"
+    "tests/test-issue-55-score-format-contract.sh"
+    "tests/manual/issue-55-manual-scenarios.md"
+    # #52 cycle files (peer-facilitator-premise evidence-anchor correction):
+    # the cycle-scoped suite + its manual-scenario lane. docs/design-rationale.md,
+    # docs/teammate-contracts.md, CLAUDE.md, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json and
+    # .github/workflows/e2e-dummy-target.yml are already admitted above.
+    # Mechanical scope-guard admission per ledger E16/E21 (precedent:
+    # e1612b8 / 56936a0 for #55).
+    "tests/test-issue-52-peer-facilitator-premise.sh"
+    "tests/manual/issue-52-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

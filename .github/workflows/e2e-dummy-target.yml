@@ -145,6 +145,16 @@ on:
       # above for the same reason those comments record (#799's AC6-ci fixed
       # `grep -A40 '^ *paths:'` window).
       - 'tests/test-issue-69-verification-depth.sh'
+      # #55 cycle surface. TAIL here for the same reason the #51 entries above
+      # record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero
+      # headroom, so nothing is inserted above an existing entry).
+      - 'tests/test-issue-55-score-format-contract.sh'
+      - 'tests/manual/issue-55-manual-scenarios.md'
+      # #52 cycle surface. TAIL here for the same reason the #51/#55 entries
+      # above record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has
+      # zero headroom, so nothing is inserted above an existing entry).
+      - 'tests/test-issue-52-peer-facilitator-premise.sh'
+      - 'tests/manual/issue-52-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -246,6 +256,14 @@ on:
       # #69 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'tests/test-issue-69-verification-depth.sh'
+      # #55 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-55-score-format-contract.sh'
+      - 'tests/manual/issue-55-manual-scenarios.md'
+      # #52 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-52-peer-facilitator-premise.sh'
+      - 'tests/manual/issue-52-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -538,3 +556,24 @@ jobs:
       # sibling suites. See tests/test-issue-69-verification-depth.sh.
       - name: Run verification-depth justification guard (#69)
         run: bash tests/test-issue-69-verification-depth.sh
+      # #55 gate-score write contract at the producer site. Cycle-scoped: it
+      # drives the CLAUDE.md SCORE-SHAPE-EXAMPLE fence through the real hook
+      # and the real digest emitter, and asserts its own CI registration on
+      # this file. Placed at the job TAIL, strictly below the doc-invariant
+      # registry runner step, for the reason the #51 comment above records.
+      # CI has no glob discovery; registered by filename per the sibling
+      # suites. See tests/test-issue-55-score-format-contract.sh.
+      - name: Run gate-score write contract (#55)
+        run: bash tests/test-issue-55-score-format-contract.sh
+
+      # #52 peer-teammate-facilitator premise, evidence-anchor correction.
+      # Cycle-scoped: the manual-scenario section skeleton + Observation-
+      # record field completeness, the .claude/workflows/ no-touch fence, this
+      # file's own CI-wiring assertions, and the manifest / doc-invariant-
+      # registry composition oracles driven through their real producers.
+      # Placed at the job TAIL, strictly below the doc-invariant registry
+      # runner step, for the reason the #51 comment above records. CI has no
+      # glob discovery; registered by filename per the sibling suites. See
+      # tests/test-issue-52-peer-facilitator-premise.sh.
+      - name: Run peer-facilitator premise evidence-anchor guard (#52)
+        run: bash tests/test-issue-52-peer-facilitator-premise.sh

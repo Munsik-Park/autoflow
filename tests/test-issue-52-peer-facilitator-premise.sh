@@ -1,0 +1,354 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# =============================================================================
+# Test: issue #52 — peer-teammate-facilitator premise, evidence-anchor
+# correction (cycle-scoped suite)
+# =============================================================================
+# Verification design: .autoflow/issue-52-verification-design.md. AC -> lane
+# -> method table: §1. Automated-lane composition: §4. Composition-oracle
+# determination: §5.
+#
+# Deliverable class: this cycle ships an EVIDENCE RECORD + a corrected DESIGN
+# RECORD, not runtime code. The nine origin_issue:52 permanent registry
+# entries in tests/fixtures/doc-invariants.json (promoted at GREEN, in the
+# SAME commit that creates the headings/pointer text they anchor) hold:
+# claim-site-cited, consistency-propagated, scope-fence-held. What remains in
+# THIS file (content the registry structurally cannot hold — predicates are
+# limited to present|absent|ordered over STATE, and diff-shaped / real-
+# execution assertions are outside its scope):
+#
+#   record-file-shape   — the manual-scenario file's section skeleton AND
+#                          Observation-record field completeness: each of the
+#                          13 fixed field labels, scoped to the Observation
+#                          record section only, carries a non-empty value
+#                          (content never asserted — outcome-neutral), per
+#                          GATE:PLAN carry-forward (ledger E18 item 2)
+#   scope-fence-held(b)  — no path under .claude/workflows/ appears in this
+#                          cycle's own branch diff (diff-shaped, branch-scoped
+#                          via tests/lib/base-ref.sh)
+#   ci-wired             — both new files registered as paths: entries in the
+#                          pull_request AND push blocks, plus a run: step
+#   manifest-freshness   — composition oracle: real setup/gen-manifest-hashes.sh,
+#                          non-destructive protocol (capture -> trap-restore-on-
+#                          any-exit -> run -> compare -> restore), scoped to
+#                          this cycle's three edited sources' sha256 rows plus
+#                          a membership-unchanged assertion
+#   registry-runner-green — composition oracle: real tests/run-doc-invariants.sh,
+#                          id-set-scoped fence (no entry outside 52-* FAILs) +
+#                          overall exit 0 required only on the post-edit tree
+#
+# RED expectation (this commit — the three claim-site docs are unedited, the
+# manual-scenario Observation-record fields carry unfilled placeholder VALUES,
+# e.g. "_(literal used this run)_" — non-empty, just not yet measured):
+#   FAIL (discriminators): ci-wired (no paths:/run: entries yet),
+#     registry-runner-green's overall-exit-0 sub-check (the six 52-*
+#     discriminator registry entries still FAIL pre-edit).
+#   PASS (guards, must stay green throughout): record-file-shape file-exists
+#     + heading skeleton + field-completeness (the file is authored in full
+#     at RED, per Test AI scope, with every field carrying a non-empty
+#     placeholder value; only the VALUE's content changes at GREEN, which
+#     this oracle never asserts), scope-fence-held(b) workflow no-touch
+#     fence, manifest-freshness (both sub-checks — a fence, true before and
+#     after GREEN), registry-runner-green's id-set-scoped sub-check (no
+#     entry OUTSIDE 52-* fails, true from the outset).
+# =============================================================================
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=tests/lib/base-ref.sh
+. "$SCRIPT_DIR/lib/base-ref.sh"
+
+MANUAL_REL="tests/manual/issue-52-manual-scenarios.md"
+MANUAL="$PROJECT_ROOT/$MANUAL_REL"
+SUITE_REL="tests/test-issue-52-peer-facilitator-premise.sh"
+RUNNER="$SCRIPT_DIR/run-doc-invariants.sh"
+MANIFEST="$PROJECT_ROOT/setup/manifest.json"
+GEN_MANIFEST="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
+CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
+
+EDITED_SOURCES=("CLAUDE.md" "docs/design-rationale.md" "docs/teammate-contracts.md")
+
+PASS=0; FAIL=0; TESTS=0
+
+assert_true() {
+  local desc="$1" condition="$2"
+  TESTS=$((TESTS + 1))
+  if (cd "$PROJECT_ROOT" && eval "$condition"); then
+    echo "  PASS: $desc"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: $desc"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+assert_false() {
+  local desc="$1" condition="$2"
+  TESTS=$((TESTS + 1))
+  if (cd "$PROJECT_ROOT" && eval "$condition"); then
+    echo "  FAIL: $desc (forbidden condition held)"
+    FAIL=$((FAIL + 1))
+  else
+    echo "  PASS: $desc"
+    PASS=$((PASS + 1))
+  fi
+}
+
+# =============================================================================
+# record-file-shape — section skeleton + Observation-record field completeness
+# (verification design §1; GATE:PLAN carry-forward, ledger E18 item 2)
+# =============================================================================
+echo "=== record-file-shape ==="
+
+assert_true "record-file-shape-a: $MANUAL_REL exists in the tracked tree" \
+  "[ -f '$MANUAL' ]"
+
+if [ -f "$MANUAL" ]; then
+  assert_true "record-file-shape-b: file title heading matches feature design > Data structures verbatim" \
+    "grep -qxF '# Issue #52 — Manual/Environment-Dependent Verification Scenarios (Tier-3)' '$MANUAL'"
+  assert_true "record-file-shape-c: scenario heading matches feature design > Data structures verbatim" \
+    "grep -qxF \"## M1 — peer-teammate SendMessage injection into the lead's turn stream (Tier 3)\" '$MANUAL'"
+
+  for label in '**Source AC:**' '**Why not automated:**' '**Steps:**' '**Pass condition:**' '**Non-goal:**' '**Observation record:**'; do
+    assert_true "record-file-shape-d: part label '$label' present" \
+      "grep -qF -- '$label' '$MANUAL'"
+  done
+
+  # Observation-record field completeness — the GATE:PLAN carry-forward
+  # (ledger E18 item 2) requires the oracle to pin field COMPLETENESS (a
+  # non-empty VALUE after each label), not headings/labels alone. A
+  # whole-file substring grep is not enough here: blanking every field's
+  # value, or deleting the whole Observation record section, would still
+  # green most labels because the Steps/Pass-condition prose separately
+  # names the same terms ("send confirmation", "receipt confirmation",
+  # "positive control result", ...) in ordinary sentences, not as a
+  # `- **label:**` bullet. So this check (1) scopes extraction to the
+  # Observation record section only (everything from its heading to EOF —
+  # it is the file's last section), and (2) requires each field's exact
+  # `- **<label>:**` bullet to be followed by a non-empty value on that
+  # same line. The VALUE's *content* is never asserted (outcome-neutral;
+  # verification design §2 — the reproduction procedure a scorer uses to
+  # re-check this discriminating power is recorded at ledger E23).
+  OBS_SECTION="$(awk '/^\*\*Observation record:\*\*/{f=1} f' "$MANUAL" 2>/dev/null)"
+  OBS_FIELDS=(
+    'team shape'
+    'peer nonce'
+    'control nonce'
+    'send confirmation (peer hop)'
+    'send confirmation (control, direct to lead)'
+    'receipt confirmation'
+    'positive control result'
+    "peer nonce in lead's stream — occurrences"
+    "peer nonce in lead's stream — per-occurrence envelope"
+    "control nonce in lead's stream — occurrences"
+    "control nonce in lead's stream — per-occurrence envelope"
+    'verdict'
+    'date'
+  )
+  for field in "${OBS_FIELDS[@]}"; do
+    FIELD_LINE="$(printf '%s\n' "$OBS_SECTION" | grep -F -- "- **$field:**" | head -1)"
+    FIELD_VALUE="${FIELD_LINE#"- **$field:**"}"
+    FIELD_VALUE_TRIMMED="$(printf '%s' "$FIELD_VALUE" | sed -E 's/^[[:space:]]+//')"
+    if [ -n "$FIELD_VALUE_TRIMMED" ]; then FIELD_OK=yes; else FIELD_OK=no; fi
+    assert_true "record-file-shape-e: Observation record field '$field' has a non-empty value, scoped to the Observation record section (got: $FIELD_OK)" \
+      "[ '$FIELD_OK' = yes ]"
+  done
+
+  # Receipt-confirmation control (ledger E18 item 1) — the scenario text
+  # itself must instruct a DERIVED token, never the raw peer nonce, echoed
+  # back on receipt; a scenario that told the receiver to echo the nonce
+  # verbatim would structurally block the "injection not observed" branch.
+  assert_true "record-file-shape-f: receipt confirmation is specified as a derived token, not the raw nonce (ledger E18 item 1)" \
+    "grep -qi 'derived token' '$MANUAL'"
+  assert_false "record-file-shape-g: the scenario never instructs echoing the raw peer nonce back as the receipt confirmation" \
+    "grep -qi 'echo the nonce verbatim\|echo the raw nonce back\|echoes the nonce back' '$MANUAL'"
+
+  # Grounded-deviation note (GATE:PLAN carry-forward item 4) — the 2-member
+  # probe team is recorded as a grounded deviation from the issue's written
+  # 3-member procedure.
+  assert_true "record-file-shape-h: the 2-member probe team is recorded as a grounded deviation from the issue's 3-member procedure" \
+    "grep -qi 'deviation' '$MANUAL' && grep -qi '3-member\|three-member' '$MANUAL'"
+else
+  echo "  BLOCK: remaining record-file-shape arms unmeasurable ($MANUAL_REL missing) — counted FAIL, never skipped"
+  TESTS=$((TESTS + 12)); FAIL=$((FAIL + 12))
+fi
+
+# =============================================================================
+# scope-fence-held(b) — no path under .claude/workflows/ appears in this
+# cycle's own branch diff (diff-shaped, branch-scoped; the registry's
+# permanent present-entry on the fence literal covers the STATE half).
+# =============================================================================
+echo ""
+echo "=== scope-fence-held(b) — .claude/workflows/ no-touch fence (branch-scoped) ==="
+
+BASE52="$(resolve_base_ref 2>/dev/null || true)"
+if [ -n "$BASE52" ]; then
+  WORKFLOW_TOUCHED="$(git -C "$PROJECT_ROOT" diff --name-only "${BASE52}...HEAD" 2>/dev/null | grep -c '^\.claude/workflows/' || true)"
+  [ -z "$WORKFLOW_TOUCHED" ] && WORKFLOW_TOUCHED=0
+  assert_true "scope-fence-held-b: git diff vs base touches no path under .claude/workflows/ (got: $WORKFLOW_TOUCHED)" \
+    "[ '$WORKFLOW_TOUCHED' -eq 0 ]"
+else
+  assert_true "scope-fence-held-b: a comparison base is resolvable (resolve_base_ref, fail-loud per tests/lib/base-ref.sh contract)" "false"
+fi
+
+# =============================================================================
+# ci-wired — both new files registered as trigger paths in the pull_request
+# AND push blocks, plus a run: step invoking this suite.
+# =============================================================================
+echo ""
+echo "=== ci-wired ==="
+
+if [ -f "$CI_WORKFLOW" ]; then
+  PR_SECTION="$(awk '/^  push:/{exit} {print}' "$CI_WORKFLOW")"
+  PUSH_SECTION="$(awk 'f && /^[a-zA-Z]/{exit} f{print} /^  push:/{f=1}' "$CI_WORKFLOW")"
+
+  PR_HAS_SUITE=no;    printf '%s\n' "$PR_SECTION"   | grep -qF "'$SUITE_REL'"  && PR_HAS_SUITE=yes
+  PUSH_HAS_SUITE=no;  printf '%s\n' "$PUSH_SECTION" | grep -qF "'$SUITE_REL'"  && PUSH_HAS_SUITE=yes
+  PR_HAS_MANUAL=no;   printf '%s\n' "$PR_SECTION"   | grep -qF "'$MANUAL_REL'" && PR_HAS_MANUAL=yes
+  PUSH_HAS_MANUAL=no; printf '%s\n' "$PUSH_SECTION" | grep -qF "'$MANUAL_REL'" && PUSH_HAS_MANUAL=yes
+
+  assert_true "ci-wired-a1: $SUITE_REL appears in the pull_request paths: block (got: $PR_HAS_SUITE)" "[ '$PR_HAS_SUITE' = yes ]"
+  assert_true "ci-wired-a2: $SUITE_REL appears in the push paths: block (got: $PUSH_HAS_SUITE)" "[ '$PUSH_HAS_SUITE' = yes ]"
+  assert_true "ci-wired-a3: $MANUAL_REL appears in the pull_request paths: block (got: $PR_HAS_MANUAL)" "[ '$PR_HAS_MANUAL' = yes ]"
+  assert_true "ci-wired-a4: $MANUAL_REL appears in the push paths: block (got: $PUSH_HAS_MANUAL)" "[ '$PUSH_HAS_MANUAL' = yes ]"
+
+  RUN_STEP_CTX="$(grep -A2 -F "$SUITE_REL" "$CI_WORKFLOW" 2>/dev/null || true)"
+  RUN_STEP_OK=no; printf '%s\n' "$RUN_STEP_CTX" | grep -qF "run: bash $SUITE_REL" && RUN_STEP_OK=yes
+  assert_true "ci-wired-b: a 'run: bash $SUITE_REL' step exists" "[ '$RUN_STEP_OK' = yes ]"
+
+  # Companion window guard — the fixed grep -A40 '^ *paths:' window (#799's
+  # AC6-ci) must still contain an existing, pre-#52 literal after this
+  # cycle's tail-append.
+  PH="$(grep -A40 '^ *paths:' "$CI_WORKFLOW")"
+  assert_true "ci-wired-window-guard: the fixed grep -A40 '^ *paths:' window still contains 'docs/git-workflow.md' (AC6-ci's own literal — this cycle must tail-append, not push it out)" \
+    "printf '%s\n' \"\$PH\" | grep -qF \"'docs/git-workflow.md'\""
+else
+  assert_true "ci-wired: $CI_WORKFLOW exists" "false"
+  echo "  BLOCK: remaining ci-wired arms unmeasurable (workflow file missing) — counted FAIL, never skipped"
+  TESTS=$((TESTS + 5)); FAIL=$((FAIL + 5))
+fi
+
+# =============================================================================
+# manifest-freshness — composition oracle (verification design §5,
+# manifest-regen-clean; non-destructive protocol, ledger E15).
+# =============================================================================
+echo ""
+echo "=== manifest-freshness (composition oracle: real setup/gen-manifest-hashes.sh) ==="
+
+if [ -f "$GEN_MANIFEST" ] && [ -f "$MANIFEST" ]; then
+  MANIFEST_BACKUP="$(mktemp)"
+  cp "$MANIFEST" "$MANIFEST_BACKUP"
+  restore_manifest() { cp "$MANIFEST_BACKUP" "$MANIFEST"; rm -f "$MANIFEST_BACKUP"; }
+  trap restore_manifest EXIT
+
+  PRE_SOURCES_JSON="$(jq -c '[.artifacts[].source] | sort' "$MANIFEST" 2>/dev/null)"
+
+  ( cd "$PROJECT_ROOT" && bash "$GEN_MANIFEST" >/dev/null 2>&1 )
+  GEN_RC=$?
+
+  ROWS_UNCHANGED=yes
+  if [ "$GEN_RC" -eq 0 ]; then
+    for src in "${EDITED_SOURCES[@]}"; do
+      PRE_SHA="$(jq -r --arg s "$src" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST_BACKUP" 2>/dev/null)"
+      POST_SHA="$(jq -r --arg s "$src" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST" 2>/dev/null)"
+      [ "$PRE_SHA" = "$POST_SHA" ] || ROWS_UNCHANGED=no
+    done
+  else
+    ROWS_UNCHANGED=no
+  fi
+
+  POST_SOURCES_JSON="$(jq -c '[.artifacts[].source] | sort' "$MANIFEST" 2>/dev/null)"
+  MEMBERSHIP_UNCHANGED=no
+  [ "$PRE_SOURCES_JSON" = "$POST_SOURCES_JSON" ] && MEMBERSHIP_UNCHANGED=yes
+
+  assert_true "manifest-freshness-a: real generator regen leaves this cycle's edited-source rows byte-identical (fence — true before and after GREEN)" \
+    "[ '$ROWS_UNCHANGED' = yes ]"
+  assert_true "manifest-freshness-b: regen does not change manifest artifacts[] membership (source set unchanged; guards the backticked-pointer-only rule)" \
+    "[ '$MEMBERSHIP_UNCHANGED' = yes ]"
+
+  restore_manifest
+  trap - EXIT
+else
+  assert_true "manifest-freshness: setup/gen-manifest-hashes.sh and setup/manifest.json both exist" "false"
+fi
+
+# =============================================================================
+# registry-runner-green — composition oracle (verification design §5,
+# registry-runner-clean; id-set-scoped fence, overall exit 0 post-edit only).
+# =============================================================================
+echo ""
+echo "=== registry-runner-green (composition oracle: real tests/run-doc-invariants.sh) ==="
+
+RUNNER_OUT="$(bash "$RUNNER" 2>&1)"
+RUNNER_RC=$?
+FOREIGN_FAILS="$(printf '%s\n' "$RUNNER_OUT" | grep '^  FAIL: ' | grep -vc '^  FAIL: 52-' || true)"
+[ -z "$FOREIGN_FAILS" ] && FOREIGN_FAILS=0
+
+assert_true "registry-runner-green-a: no registry entry OUTSIDE this cycle's 52-* id set FAILs (fence — true from the outset) (got: $FOREIGN_FAILS)" \
+  "[ '$FOREIGN_FAILS' -eq 0 ]"
+assert_true "registry-runner-green-b: the runner reaches its results line rather than aborting on a dangling/ambiguous-anchor BLOCK" \
+  "printf '%s\n' \"\$RUNNER_OUT\" | grep -qE '^Results:'"
+assert_true "registry-runner-green-c: the real registry runner exits 0 (discriminator — required only on the post-edit tree)" \
+  "[ '$RUNNER_RC' -eq 0 ]"
+
+# =============================================================================
+# committed-surface-completeness (GATE:QUALITY carried finding, ledger E21) —
+# same shape as tests/test-issue-55-score-format-contract.sh's own
+# committed-surface-completeness: branch-diff ⊆ this cycle's own allow-list.
+# =============================================================================
+echo ""
+echo "=== committed-surface-completeness (guard) ==="
+
+ALLOWLIST_52=(
+  "CLAUDE.md"
+  "docs/design-rationale.md"
+  "docs/teammate-contracts.md"
+  "setup/manifest.json"
+  "tests/fixtures/doc-invariants.json"
+  "$SUITE_REL"
+  "$MANUAL_REL"
+  ".github/workflows/e2e-dummy-target.yml"
+  # #55's own suite, amended in this cycle's 56936a0 commit to admit these
+  # four paths into its ALLOWLIST_55 (that amendment is itself part of the
+  # diff, so it is admitted here — same reasoning as the six suites below).
+  "tests/test-issue-55-score-format-contract.sh"
+  # Ledger E21 — the mechanical scope-guard admissions this repo's
+  # branch-diff guards require of every cycle (precedent: 5b01eaf for #51,
+  # 26ce222 for #67, e1612b8/56936a0 for #55). Each of the six suites below
+  # carries an allow-list array (plus, for #799, a CLAUDE.md off-window
+  # carve-out filter) governing the branch diff, and each is amended in this
+  # cycle's commit to admit this cycle's two new files; that amendment is
+  # itself part of the diff, so it is admitted here.
+  "tests/test-issue-798-topology-flip.sh"
+  "tests/test-issue-799-inert-cleanup.sh"
+  "tests/test-issue-846-doc-assertions.sh"
+  "tests/test-issue-848-doc-assertions.sh"
+  "tests/test-issue-952-wizard-removal.sh"
+  "tests/test-issue-955-subagent-background-ban.sh"
+  # precedent: ccbbdbf — "admit docs/cycle-digest.jsonl into ALLOWLIST_55 —
+  # step-6.7 digest co-ride"; this cycle's HANDOFF step-6.7 digest emission
+  # appends the same file, so it co-rides this cycle's commit too.
+  "docs/cycle-digest.jsonl"
+)
+BASE52_CSC="$(resolve_base_ref 2>/dev/null || true)"
+if [ -n "$BASE52_CSC" ]; then
+  OUTSIDE_52=""
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    found=no
+    for a in "${ALLOWLIST_52[@]}"; do [ "$f" = "$a" ] && { found=yes; break; }; done
+    [ "$found" = no ] && OUTSIDE_52="${OUTSIDE_52:+$OUTSIDE_52, }$f"
+  done < <(git -C "$PROJECT_ROOT" diff --name-only "${BASE52_CSC}...HEAD" 2>/dev/null)
+  assert_true "committed-surface-completeness: git diff --name-only vs base contains no file outside this cycle's allow-list (outside: ${OUTSIDE_52:-none})" \
+    "[ -z '$OUTSIDE_52' ]"
+else
+  assert_true "committed-surface-completeness: a comparison base is resolvable (resolve_base_ref, fail-loud per tests/lib/base-ref.sh contract)" "false"
+fi
+
+echo "=============================="
+echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"
+echo "=============================="
+[[ $FAIL -eq 0 ]]
