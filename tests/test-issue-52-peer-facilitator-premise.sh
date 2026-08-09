@@ -267,6 +267,56 @@ assert_true "registry-runner-green-b: the runner reaches its results line rather
 assert_true "registry-runner-green-c: the real registry runner exits 0 (discriminator — required only on the post-edit tree)" \
   "[ '$RUNNER_RC' -eq 0 ]"
 
+# =============================================================================
+# committed-surface-completeness (GATE:QUALITY carried finding, ledger E21) —
+# same shape as tests/test-issue-55-score-format-contract.sh's own
+# committed-surface-completeness: branch-diff ⊆ this cycle's own allow-list.
+# =============================================================================
+echo ""
+echo "=== committed-surface-completeness (guard) ==="
+
+ALLOWLIST_52=(
+  "CLAUDE.md"
+  "docs/design-rationale.md"
+  "docs/teammate-contracts.md"
+  "setup/manifest.json"
+  "tests/fixtures/doc-invariants.json"
+  "$SUITE_REL"
+  "$MANUAL_REL"
+  ".github/workflows/e2e-dummy-target.yml"
+  # #55's own suite, amended in this cycle's 56936a0 commit to admit these
+  # four paths into its ALLOWLIST_55 (that amendment is itself part of the
+  # diff, so it is admitted here — same reasoning as the six suites below).
+  "tests/test-issue-55-score-format-contract.sh"
+  # Ledger E21 — the mechanical scope-guard admissions this repo's
+  # branch-diff guards require of every cycle (precedent: 5b01eaf for #51,
+  # 26ce222 for #67, e1612b8/56936a0 for #55). Each of the six suites below
+  # carries an allow-list array (plus, for #799, a CLAUDE.md off-window
+  # carve-out filter) governing the branch diff, and each is amended in this
+  # cycle's commit to admit this cycle's two new files; that amendment is
+  # itself part of the diff, so it is admitted here.
+  "tests/test-issue-798-topology-flip.sh"
+  "tests/test-issue-799-inert-cleanup.sh"
+  "tests/test-issue-846-doc-assertions.sh"
+  "tests/test-issue-848-doc-assertions.sh"
+  "tests/test-issue-952-wizard-removal.sh"
+  "tests/test-issue-955-subagent-background-ban.sh"
+)
+BASE52_CSC="$(resolve_base_ref 2>/dev/null || true)"
+if [ -n "$BASE52_CSC" ]; then
+  OUTSIDE_52=""
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    found=no
+    for a in "${ALLOWLIST_52[@]}"; do [ "$f" = "$a" ] && { found=yes; break; }; done
+    [ "$found" = no ] && OUTSIDE_52="${OUTSIDE_52:+$OUTSIDE_52, }$f"
+  done < <(git -C "$PROJECT_ROOT" diff --name-only "${BASE52_CSC}...HEAD" 2>/dev/null)
+  assert_true "committed-surface-completeness: git diff --name-only vs base contains no file outside this cycle's allow-list (outside: ${OUTSIDE_52:-none})" \
+    "[ -z '$OUTSIDE_52' ]"
+else
+  assert_true "committed-surface-completeness: a comparison base is resolvable (resolve_base_ref, fail-loud per tests/lib/base-ref.sh contract)" "false"
+fi
+
 echo "=============================="
 echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"
 echo "=============================="

@@ -648,6 +648,15 @@ else
     "tests/fixtures/gate-schema.json"
     "tests/test-issue-55-score-format-contract.sh"
     "tests/manual/issue-55-manual-scenarios.md"
+    # #52 cycle files (peer-facilitator-premise evidence-anchor correction):
+    # the cycle-scoped suite + its manual-scenario lane. docs/design-rationale.md,
+    # docs/teammate-contracts.md, CLAUDE.md, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json and
+    # .github/workflows/e2e-dummy-target.yml are already admitted above.
+    # Mechanical scope-guard admission per ledger E16/E21 (precedent:
+    # e1612b8 / 56936a0 for #55).
+    "tests/test-issue-52-peer-facilitator-premise.sh"
+    "tests/manual/issue-52-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

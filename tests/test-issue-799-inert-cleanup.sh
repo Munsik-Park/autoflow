@@ -651,6 +651,15 @@ else
     "tests/fixtures/gate-schema.json"
     "tests/test-issue-55-score-format-contract.sh"
     "tests/manual/issue-55-manual-scenarios.md"
+    # #52 cycle files (peer-facilitator-premise evidence-anchor correction):
+    # the cycle-scoped suite + its manual-scenario lane. docs/design-rationale.md,
+    # docs/teammate-contracts.md, CLAUDE.md, setup/manifest.json,
+    # tests/fixtures/doc-invariants.json and
+    # .github/workflows/e2e-dummy-target.yml are already admitted above.
+    # Mechanical scope-guard admission per ledger E16/E21 (precedent:
+    # e1612b8 / 56936a0 for #55).
+    "tests/test-issue-52-peer-facilitator-premise.sh"
+    "tests/manual/issue-52-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -783,7 +792,8 @@ else
       | grep -vF '+{ "feasibility": { "score": 9, "reason": "evidence" }, "scope": 8 }' \
       | grep -vF '+This object is the value of `phases.<gate>.scores`' \
       | grep -vE '^\+```(json)?$' \
-      | grep -vE '^\+(\|---\|---\|---\|)?$'
+      | grep -vE '^\+(\|---\|---\|---\|)?$' \
+      | grep -vF 'so a nested-team facilitator is not executable; and a peer-teammate facilitator'
   }
   assert_false "AC6-scope: CLAUDE.md diff confined to the #846 Regressions cap clause (no other CLAUDE.md content change)" \
     "ctx=\$(claude_md_offwindow_changes); printf '%s\n' \"\$ctx\" | grep -q ."
