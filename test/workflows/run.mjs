@@ -1221,6 +1221,61 @@ await test('ARCHITECT: adoption-evidence Draft segment byte-identical across dev
   assert.equal(devSeg, testSeg)
 })
 
+// ---- ARCHITECT: verification-depth justification (issue #69) ------------------
+// The depth obligation (docs/autoflow-guide.md > ARCHITECT > Output artifacts >
+// Verification depth) is Test-AI-owned: it must reach the executing agent through the
+// Test-AI Draft prompt AND the Test-AI round prompt's ACCEPT condition (verification
+// design AC:prompt-delivery / AC:accept-gating), not merely be defined in the script —
+// only driving the script with the mock agent and reading the delivered prompt by label
+// can distinguish *defined* from *delivered* (the text-matching registry/cycle-suite
+// layers cannot).
+
+await test('ARCHITECT: verification-depth OBLIGATION TEXT (not just the section path) reaches test-draft and test-r1, and stays off dev-draft/dev-r1 (AC-69-prompt-delivery)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '69-1' }, responder)
+  const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
+  const testDraft = calls.find((c) => c.label === 'test-draft').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  // The obligation's own content ("...names the failure mode it catches that no other layer
+  // catches..."), not merely a "docs/autoflow-guide.md > ... > Verification depth" section-path
+  // reference -- a path-only literal is satisfiable by an unrelated cross-reference and would not
+  // discriminate "defined" from "the obligation's substance actually delivered".
+  const obligationPattern = /failure mode (?:it catches |no other layer catches|that no other layer catches)/
+  assert.match(testDraft, obligationPattern, 'test-draft must carry the Verification depth obligation TEXT')
+  assert.match(testR1, obligationPattern, 'test-r1 must carry the Verification depth obligation TEXT')
+  // ADR-0018 Decision 3: "The obligation is Test-AI-owned; no Developer-AI literal is added." --
+  // negative fence mirroring the #56/#59 doesNotMatch idiom (:534-536, :1032-1035).
+  assert.doesNotMatch(devDraft, obligationPattern, 'dev-draft must NOT carry the Verification depth obligation (Test-AI-owned, ADR-0018 Decision 3)')
+  assert.doesNotMatch(devR1, obligationPattern, 'dev-r1 must NOT carry the Verification depth obligation (Test-AI-owned, ADR-0018 Decision 3)')
+})
+
+await test('ARCHITECT: test-r1 ACCEPT-condition sentence (not merely the prompt at large) gates on the per-layer unique-failure-mode requirement (AC-69-accept-gating)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '69-2' }, responder)
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  // Extract the ACCEPT-condition sentence specifically -- the verification design's method is
+  // "the ACCEPT-condition sentence of the test-r{n} prompt carries the depth clause", and advisory
+  // (mentioned anywhere in the prompt) vs. gating (inside the sentence that actually governs
+  // ACCEPT) is the discriminant a prompt-wide `.includes()` cannot make.
+  const startAnchor = 'Respond ACCEPT ONLY when'
+  const endAnchor = 'Otherwise return COUNTER/PARTIAL'
+  const start = testR1.indexOf(startAnchor)
+  const end = testR1.indexOf(endAnchor)
+  assert.ok(start >= 0, 'ACCEPT-condition start anchor must be present')
+  assert.ok(end > start, 'ACCEPT-condition end anchor must be present and follow the start anchor')
+  const acceptSentence = testR1.slice(start, end)
+  assert.match(acceptSentence, /unique failure mode no other layer catches/, 'the ACCEPT-condition sentence itself must gate on the unique-failure-mode requirement, not merely mention it elsewhere in the prompt')
+})
+
 // ---- ARCHITECT: prose-args salvage (issue #14) --------------------------------
 
 await test('ARCHITECT: prose args, hashed number (reported shape) resolves and converges', async () => {

@@ -215,15 +215,30 @@ if [ -z "$BASE_REF" ]; then
   echo "  FAIL: AC4-DELTA: resolve_base_ref could not resolve a comparison base (fail-loud, not SKIP)"
   FAIL=$((FAIL + 1))
 else
-  threshold_diff_touched() {   # base file -> 0 (untouched) / 1 (touched)
-    git -C "$PROJECT_ROOT" diff "$1" -- "$2" 2>/dev/null \
-      | grep -E '^[+-]' \
-      | grep -qE 'Average.{1,3}7\.5|Each item.{1,3}7|Security.{1,3}3|max 2×|max 3×|one revision'
+  # Value comparison, not a line-touch scan (GATE:QUALITY attempt-2 finding, #69 cycle):
+  # a line-based diff-touch check false-positives the moment ANY unrelated prose shares a
+  # line with a threshold token (e.g. #69 widened the Plan-evaluation row's prose on the
+  # same table row that carries "max 3×", touching the line without moving the value).
+  # Per-token OCCURRENCE-COUNT equality at <base> vs HEAD is the retired change-detector's
+  # honest replacement — docs/doc-invariant-registry.md §1 names line/diff-touch predicates
+  # as the anti-pattern this cycle-scoped DELTA guard exists to avoid; a real value edit
+  # still moves a token's count (added/removed/reworded), while a same-line prose edit that
+  # leaves the token's own text intact does not.
+  threshold_value_changed() {   # base file -> 0 (a token's occurrence count changed) / 1 (all unchanged)
+    local base="$1" file="$2" base_body head_body pat bc hc
+    base_body="$(git -C "$PROJECT_ROOT" show "$base:$file" 2>/dev/null)"
+    head_body="$(cat "$PROJECT_ROOT/$file" 2>/dev/null)"
+    for pat in 'Average.{1,3}7\.5' 'Each item.{1,3}7' 'Security.{1,3}3' 'max 2×' 'max 3×' 'one revision'; do
+      bc="$(printf '%s\n' "$base_body" | grep -cE "$pat" || true)"
+      hc="$(printf '%s\n' "$head_body" | grep -cE "$pat" || true)"
+      [ "$bc" != "$hc" ] && return 0
+    done
+    return 1
   }
   assert_false "AC4-DELTA: docs/teammate-contracts.md PASS Criteria / Evaluation Types thresholds untouched vs base" \
-    "threshold_diff_touched '$BASE_REF' docs/teammate-contracts.md"
+    "threshold_value_changed '$BASE_REF' docs/teammate-contracts.md"
   assert_false "AC4-DELTA: CLAUDE.md Regressions caps untouched vs base" \
-    "threshold_diff_touched '$BASE_REF' CLAUDE.md"
+    "threshold_value_changed '$BASE_REF' CLAUDE.md"
   # AC4-DELTA (H-BYTES companion) retired in the #64 hook-fix PR: the
   # "hook byte-unchanged vs base" half was a #40 cycle-scope seal
   # (change-detector anti-pattern); the threshold assertions above remain.

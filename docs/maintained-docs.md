@@ -67,6 +67,7 @@ orchestrator does not modify sub-repo files — see
 | Handoff Authority ADR | `docs/adr/0003-autoflow-ends-at-handoff.md` | AutoFlow merge/handoff authority changes | Orchestrator AI / Human |
 | ADR-Conformance Gate-Scoring ADR | `docs/adr/0016-adr-conformance-gate-scoring.md` | ADR-conformance gate-scoring policy (ARCHITECT/GATE:PLAN/GATE:QUALITY) changes | Orchestrator AI / Human |
 | Teammate-Removal Feasibility ADR | `docs/adr/0017-teammate-removal-feasibility.md` | The teammate-removal verdict or its migration conditions C1–C8 change, or the pilot (C7) reverses the verdict | Orchestrator AI / Human |
+| Verification-Depth Justification ADR | `docs/adr/0018-verification-depth-justification.md` | The verification-depth obligation, its justification form, or the GATE:PLAN `Scope` widening changes | Orchestrator AI / Human |
 
 > Service-specific documents (deployment runbooks, scripts, clients, infra, review baseline, epic breakdowns, and service ADRs 0002/0004–0014) have moved to `services/librechat-deploy`.
 

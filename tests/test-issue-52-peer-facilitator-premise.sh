@@ -185,8 +185,22 @@ echo ""
 echo "=== scope-fence-held(b) — .claude/workflows/ no-touch fence (branch-scoped) ==="
 
 BASE52="$(resolve_base_ref 2>/dev/null || true)"
+# Branch-scoped fence: it asserts a property of #52's OWN cycle diff. On any
+# other issue's dev branch the branch diff legitimately may touch
+# .claude/workflows/ (first witness: #69's prompt wiring), so the count is
+# taken only on a dev/*-issue-52 branch — same branch-scoping idiom as the
+# #69 suite's on_issue_branch() guards (precedent for the guard-shape fix:
+# the #69-cycle test-issue-40 line-touch -> value-comparison repair).
+HEAD_BRANCH_52="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "${GITHUB_HEAD_REF:-}")"
 if [ -n "$BASE52" ]; then
-  WORKFLOW_TOUCHED="$(git -C "$PROJECT_ROOT" diff --name-only "${BASE52}...HEAD" 2>/dev/null | grep -c '^\.claude/workflows/' || true)"
+  case "$HEAD_BRANCH_52" in
+    dev/*-issue-52|dev/*-issue-52-*)
+      WORKFLOW_TOUCHED="$(git -C "$PROJECT_ROOT" diff --name-only "${BASE52}...HEAD" 2>/dev/null | grep -c '^\.claude/workflows/' || true)"
+      ;;
+    *)
+      WORKFLOW_TOUCHED=0  # deferred: not #52's cycle branch — fence measures #52's own diff only
+      ;;
+  esac
   [ -z "$WORKFLOW_TOUCHED" ] && WORKFLOW_TOUCHED=0
   assert_true "scope-fence-held-b: git diff vs base touches no path under .claude/workflows/ (got: $WORKFLOW_TOUCHED)" \
     "[ '$WORKFLOW_TOUCHED' -eq 0 ]"
@@ -332,6 +346,24 @@ ALLOWLIST_52=(
   # step-6.7 digest co-ride"; this cycle's HANDOFF step-6.7 digest emission
   # appends the same file, so it co-rides this cycle's commit too.
   "docs/cycle-digest.jsonl"
+  # #69 cycle admission — same mechanical scope-guard admission practice
+  # (precedent: the #55 block above; ledger E21 class). #69's cycle diff
+  # touches these paths (verification-depth clause + ADR-0018 + prompt wiring
+  # + its three verification layers + sibling pin/guard repairs), and this
+  # array admits them so an unrelated cycle's diff isn't misattributed.
+  ".claude/workflows/architect-deliberation.js"
+  "docs/INDEX.md"
+  "docs/adr/0018-verification-depth-justification.md"
+  "docs/adr/README.md"
+  "docs/autoflow-guide.md"
+  "docs/evaluation-system.md"
+  "docs/maintained-docs.md"
+  "test/workflows/run.mjs"
+  "tests/test-issue-27-composition-oracle.sh"
+  "tests/test-issue-40-doc-assertions.sh"
+  "tests/test-issue-59-adoption-evidence-discipline.sh"
+  "tests/test-issue-62-sequential-rounds.sh"
+  "tests/test-issue-69-verification-depth.sh"
 )
 BASE52_CSC="$(resolve_base_ref 2>/dev/null || true)"
 if [ -n "$BASE52_CSC" ]; then

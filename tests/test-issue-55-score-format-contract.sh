@@ -496,6 +496,21 @@ if [ -f "$BASEREF_LIB" ]; then
     "docs/teammate-contracts.md"
     "tests/manual/issue-52-manual-scenarios.md"
     "tests/test-issue-52-peer-facilitator-premise.sh"
+    # #69 cycle admission — same mechanical scope-guard admission practice as
+    # the blocks above (ledger E16 class; precedent: the #52 block).
+    ".claude/workflows/architect-deliberation.js"
+    "docs/INDEX.md"
+    "docs/adr/0018-verification-depth-justification.md"
+    "docs/adr/README.md"
+    "docs/autoflow-guide.md"
+    "docs/evaluation-system.md"
+    "docs/maintained-docs.md"
+    "test/workflows/run.mjs"
+    "tests/test-issue-27-composition-oracle.sh"
+    "tests/test-issue-40-doc-assertions.sh"
+    "tests/test-issue-59-adoption-evidence-discipline.sh"
+    "tests/test-issue-62-sequential-rounds.sh"
+    "tests/test-issue-69-verification-depth.sh"
   )
   BASE55="$(resolve_base_ref 2>/dev/null || true)"
   if [ -n "$BASE55" ]; then

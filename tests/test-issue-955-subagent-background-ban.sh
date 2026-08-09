@@ -429,6 +429,13 @@ else
   # docs/INDEX.md -> docs/adr/README.md markdown-link closure mechanism as
   # #951. AC4-CLOSURE additionally admits this single-row addition with
   # zero removals -- any other added/removed source still FAILs.
+  #
+  # #69 lockstep update: the verification-depth justification ADR is
+  # delivered as one additive manifest source row,
+  # docs/adr/0018-verification-depth-justification.md, via the same
+  # docs/adr/README.md markdown-link closure mechanism as #51's 0017 row.
+  # AC4-CLOSURE additionally admits this single-row addition with zero
+  # removals -- any other added/removed source still FAILs.
   AC4_CLOSURE_ADDED="$(comm -13 <(printf '%s\n' "$BASE_SOURCES") <(printf '%s\n' "$HEAD_SOURCES"))"
   AC4_CLOSURE_REMOVED="$(comm -23 <(printf '%s\n' "$BASE_SOURCES") <(printf '%s\n' "$HEAD_SOURCES"))"
   AC979_CLOSURE_SET="$(printf '%s\n' \
@@ -446,8 +453,8 @@ else
     'scripts/preflight/check-review-backend.sh' \
     'scripts/review/codex-review-pr.sh' \
     'scripts/review/lib/claude-isolation.sh' | sort -u)"
-  assert_true "AC4-CLOSURE: manifest source-row set is identical at <base> and HEAD, or the only delta is the #951 docs/doc-invariant-registry.md manifest-closure row (§DR-8, ledger E14), is the #979 reviewer-backend-selection six-row delivery set (ledger E12), is the #979 cycle-9 seven-row delivery set (six-row set plus scripts/review/lib/claude-isolation.sh, ledger E13), is the #25 confirm-ci-green.sh single-row delivery set (ledger issue-25 E14), or is the #51 docs/adr/0017-teammate-removal-feasibility.md single-row delivery set (GATE:QUALITY E36)" \
-    "[ \"\$HEAD_SOURCES\" = \"\$BASE_SOURCES\" ] || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/doc-invariant-registry.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_C9_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'scripts/handoff/confirm-ci-green.sh' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0017-teammate-removal-feasibility.md' ]; }"
+  assert_true "AC4-CLOSURE: manifest source-row set is identical at <base> and HEAD, or the only delta is the #951 docs/doc-invariant-registry.md manifest-closure row (§DR-8, ledger E14), is the #979 reviewer-backend-selection six-row delivery set (ledger E12), is the #979 cycle-9 seven-row delivery set (six-row set plus scripts/review/lib/claude-isolation.sh, ledger E13), is the #25 confirm-ci-green.sh single-row delivery set (ledger issue-25 E14), is the #51 docs/adr/0017-teammate-removal-feasibility.md single-row delivery set (GATE:QUALITY E36), or is the #69 docs/adr/0018-verification-depth-justification.md single-row delivery set" \
+    "[ \"\$HEAD_SOURCES\" = \"\$BASE_SOURCES\" ] || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/doc-invariant-registry.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_C9_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'scripts/handoff/confirm-ci-green.sh' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0017-teammate-removal-feasibility.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0018-verification-depth-justification.md' ]; }"
 fi
 
 # =============================================================================
@@ -855,6 +862,15 @@ else
     "tests/plugin/verify-install-skill-scripts.sh"
     "tests/plugin/verify-e2e-dummy-target.sh"
     "tests/test-issue-979-bundle-delivery.sh"
+    # #69 cycle files: verification-depth justification ADR + its cycle-scoped RED
+    # suite. docs/autoflow-guide.md, docs/evaluation-system.md,
+    # docs/teammate-contracts.md, .claude/workflows/architect-deliberation.js,
+    # docs/adr/README.md, docs/INDEX.md, docs/maintained-docs.md,
+    # setup/manifest.json, tests/fixtures/doc-invariants.json,
+    # test/workflows/run.mjs, .github/workflows/e2e-dummy-target.yml,
+    # tests/test-issue-27/59/62-*.sh are already admitted above.
+    "docs/adr/0018-verification-depth-justification.md"
+    "tests/test-issue-69-verification-depth.sh"
     # #55 cycle files (gate-score write contract at the producer site): the
     # cycle-scoped suite + its manual-scenario lane, and the shape declaration
     # the CLAUDE.md fence is compared against. CLAUDE.md,

@@ -362,34 +362,37 @@ assert_true "AC-62-30c: every 'draft artifact missing' occurrence in run.mjs sit
 
 # =============================================================================
 echo ""
-echo "=== AC-62-31 (RED discriminator) — the two unconditional ok-count pin homes bumped to 80 in the same commit ==="
+echo "=== AC-62-31 (RED discriminator) — the two unconditional ok-count pin homes bumped to 82 in the same commit ==="
 # KNOWN RED mid-cycle: per the task instructions and §5 items 6/9's ordering,
 # these two files are edited by the Developer AI in the GREEN commit, not by
 # this suite's own author. Asserted here anyway (unconditional, per the
 # verification design) so the discriminator is live from RED through GREEN.
-# Bumped 58 -> 80 by issue #67 (a THIRD ok-count pin home feature design §4
-# item 1 did not name — found while landing #67's RED lane): the stale-value
-# guards below now point one generation back (58, the value immediately
-# preceding this bump), mirroring #59's own AC-59-14a2 idiom.
+# Bumped 80 -> 82 by issue #69 (verification-depth AC:prompt-delivery /
+# AC:accept-gating, two new test/workflows/run.mjs assertions landed in the
+# SAME commit as the RED lane, per issue #69's verification design §
+# "harness ok-count pin" — pin bumps land with the harness additions, not
+# GREEN, for this cycle): the stale-value guards below now point one
+# generation back (80, the value immediately preceding this bump), mirroring
+# #67's own generation-advance idiom above.
 
 CANON_27="$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"
 CANON_59="$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh"
 
-NEW_27_EQ="$(grep -c -- '-eq 80 \]"' "$CANON_27" || true)"
-NEW_27_LABEL="$(grep -cF 'AC-27-20c: harness ok-line count == B14 (80)' "$CANON_27" || true)"
-STALE_27_EQ="$(grep -c -- '-eq 58 \]"' "$CANON_27" || true)"
-assert_true "AC-62-31a: test-issue-27's assertion pins -eq 80 exactly once (got: $NEW_27_EQ)" \
+NEW_27_EQ="$(grep -c -- '-eq 82 \]"' "$CANON_27" || true)"
+NEW_27_LABEL="$(grep -cF 'AC-27-20c: harness ok-line count == B14 (82)' "$CANON_27" || true)"
+STALE_27_EQ="$(grep -c -- '-eq 80 \]"' "$CANON_27" || true)"
+assert_true "AC-62-31a: test-issue-27's assertion pins -eq 82 exactly once (got: $NEW_27_EQ)" \
   "[ \"$NEW_27_EQ\" -eq 1 ]"
-assert_true "AC-62-31a-label: the bumped '(80)' assertion label is present exactly once (got: $NEW_27_LABEL)" \
+assert_true "AC-62-31a-label: the bumped '(82)' assertion label is present exactly once (got: $NEW_27_LABEL)" \
   "[ \"$NEW_27_LABEL\" -eq 1 ]"
-assert_true "AC-62-31a-stale: no -eq 58 ok-count literal survives in test-issue-27 (got: $STALE_27_EQ)" \
+assert_true "AC-62-31a-stale: no -eq 80 ok-count literal survives in test-issue-27 (got: $STALE_27_EQ)" \
   "[ \"$STALE_27_EQ\" -eq 0 ]"
 
-NEW_59_EXPECTED="$(grep -cF 'EXPECTED_OK=80' "$CANON_59" || true)"
-STALE_59_EXPECTED="$(grep -cF 'EXPECTED_OK=58' "$CANON_59" || true)"
-assert_true "AC-62-31b: test-issue-59's EXPECTED_OK=80 appears exactly once (got: $NEW_59_EXPECTED)" \
+NEW_59_EXPECTED="$(grep -cF 'EXPECTED_OK=82' "$CANON_59" || true)"
+STALE_59_EXPECTED="$(grep -cF 'EXPECTED_OK=80' "$CANON_59" || true)"
+assert_true "AC-62-31b: test-issue-59's EXPECTED_OK=82 appears exactly once (got: $NEW_59_EXPECTED)" \
   "[ \"$NEW_59_EXPECTED\" -eq 1 ]"
-assert_true "AC-62-31c: no stale EXPECTED_OK=58 survives in test-issue-59 (got: $STALE_59_EXPECTED)" \
+assert_true "AC-62-31c: no stale EXPECTED_OK=80 survives in test-issue-59 (got: $STALE_59_EXPECTED)" \
   "[ \"$STALE_59_EXPECTED\" -eq 0 ]"
 
 OUT_59="$(cd "$PROJECT_ROOT" && bash "$CANON_59" 2>&1)"
