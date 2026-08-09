@@ -735,6 +735,14 @@ else
   # enough that a literal filter would pre-authorise any future CLAUDE.md table
   # insertion — one anchored regex admits exactly those and nothing with
   # content. Additive only: no filter above is removed or widened (ledger E21).
+  # #55 (gate-score write contract at the producer site) replaces the Score
+  # recording sentence in place and appends the marker + `json` fence + its
+  # one-line caption: one substring common to BOTH the old and the new
+  # sentence, one +-prefixed substring per inserted content line, and one
+  # anchored regex for the two fence-delimiter lines (a bare literal `+```
+  # filter would pre-authorise any future CLAUDE.md fence insertion). The
+  # inserted blank lines reach the chain as a bare `+`, already admitted by
+  # the anchored regex below. Additive only (ledger E21).
   claude_md_offwindow_changes() {
     git diff "$BASE_REF"...HEAD -- CLAUDE.md 2>/dev/null \
       | grep -E '^[+-]' \
@@ -770,6 +778,11 @@ else
       | grep -vF '+Why the mode matters, not just the model: a named spawn' \
       | grep -vF '+- **[DENY]** **"final message" instruction in a named-spawn prompt**' \
       | grep -vF '+- **Named-spawn non-delivery reading**' \
+      | grep -vF '**Score recording**: write the Evaluation AI'"'"'s `scores` verbatim' \
+      | grep -vF '+<!-- SCORE-SHAPE-EXAMPLE -->' \
+      | grep -vF '+{ "feasibility": { "score": 9, "reason": "evidence" }, "scope": 8 }' \
+      | grep -vF '+This object is the value of `phases.<gate>.scores`' \
+      | grep -vE '^\+```(json)?$' \
       | grep -vE '^\+(\|---\|---\|---\|)?$'
   }
   assert_false "AC6-scope: CLAUDE.md diff confined to the #846 Regressions cap clause (no other CLAUDE.md content change)" \
