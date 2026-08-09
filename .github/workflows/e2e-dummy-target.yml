@@ -130,6 +130,11 @@ on:
       # above record.
       - 'tests/test-issue-62-sequential-rounds.sh'
       - 'tests/manual/issue-62-manual-scenarios.md'
+      # #67 cycle surface (ARCHITECT deliberation record redesign — register +
+      # dispositions). TAIL here for the same reason the #56/#59/#62 comments above
+      # record.
+      - 'tests/test-issue-67-deliberation-record.sh'
+      - 'tests/manual/issue-67-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -220,6 +225,10 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-62-sequential-rounds.sh'
       - 'tests/manual/issue-62-manual-scenarios.md'
+      # #67 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-67-deliberation-record.sh'
+      - 'tests/manual/issue-67-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -478,3 +487,13 @@ jobs:
       # tests/test-issue-62-sequential-rounds.sh.
       - name: Run sequential-round deliberation guard (#62)
         run: bash tests/test-issue-62-sequential-rounds.sh
+
+      # ARCHITECT deliberation record redesign guard (#67, cycle-scoped): the
+      # two composition oracles (shared harness ok-count, manifest sha256 +
+      # version), doc present/absent pairs, the doc-invariant registry fence,
+      # CI registration, the three-halves carry-anchor re-anchoring, and the
+      # branch-scoped change-surface guard. CI has no glob discovery;
+      # registered by filename per the sibling suites. See
+      # tests/test-issue-67-deliberation-record.sh.
+      - name: Run deliberation record redesign guard (#67)
+        run: bash tests/test-issue-67-deliberation-record.sh

@@ -296,6 +296,28 @@ the capability lives at the layer that has a shell.
   Derived artifacts) — do not wait for a test/CI failure to admit it
   (#800 `607720e`).
 
+#### Record rules
+
+The deliberation's own record lives in the **issue register** the facilitation script holds, not
+in the two design documents. Consequences for what each artifact carries:
+
+- **The design documents are design-only.** They state the current design and its conclusions —
+  no round history, no per-round open/resolved tables, no closure rationale parked for a later
+  round to read. A superseded passage is rewritten, not annotated.
+- **No transcription.** Measurement logs, command output and code text are never copied into a
+  design document. Evidence is one line of *what was checked, how*, re-verified next round with
+  tooling rather than by re-reading the document.
+- **Readable naming, no tallies.** An issue is referred to by a short readable name, never by a
+  serial number, and is updated in place rather than renumbered. Totals and counts are not
+  written into the documents; the register is the count.
+- **The register is the durable channel.** Each entry carries `name` / `conclusion` / `evidence` /
+  `status` (`open` / `agreed` / `rejected`) plus the side that raised it, is rendered into both
+  round prompts every round from round 2 on, and closes only when its **raiser** returns a
+  disposition. On `CONVERGED`, rejected entries are appended to the decision ledger under
+  authority `ARCHITECT rejected`, which the next deliberation's Draft prompts read back — the
+  cross-session half of the no-re-litigation rule. See
+  [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
+
 #### Composition oracle
 
 - **[MUST]** When the design's change surface names shared state that a **settled decision** also

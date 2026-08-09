@@ -15,7 +15,10 @@
 #
 #   AC-56-2a — RED discriminator: placement of the two hoisted constants.
 #             `${CARRY_NON_EVIDENTIARY}` interpolates exactly once, on the
-#             `const carry = openCounters.length` ternary line;
+#             `const carry = register.size` ternary line (re-anchored by issue #67,
+#             which retargets the carry from `openCounters` to the issue register —
+#             the surviving intent is unchanged: the carry-assembly line is not a
+#             prompt-rule interpolation site);
 #             `${COUNTER_EVIDENCE_RULE}` interpolates exactly twice, on the
 #             dev-r/test-r prompt lines, never inside the ternary.
 #   AC-56-4a — RED discriminator: the citation rule is declared ONCE
@@ -97,15 +100,15 @@ assert_true "AC-56-2a-carry-count: \${CARRY_NON_EVIDENTIARY} interpolates exactl
   "[ \"$CARRY_COUNT\" -eq 1 ]"
 
 CARRY_LINE="$(grep -n '\${CARRY_NON_EVIDENTIARY}' "$WORKFLOW_JS" | head -1)"
-assert_true "AC-56-2a-carry-site: the interpolation site is the 'const carry = openCounters.length' ternary line" \
-  "printf '%s' '$CARRY_LINE' | grep -q 'const carry = openCounters.length'"
+assert_true "AC-56-2a-carry-site: the interpolation site is the 'const carry = register.size' ternary line (re-anchored, issue #67 AC19)" \
+  "printf '%s' '$CARRY_LINE' | grep -q 'const carry = register.size'"
 
 RULE_COUNT="$(grep -c '\${COUNTER_EVIDENCE_RULE}' "$WORKFLOW_JS" || true)"
 assert_true "AC-56-2a-rule-count: \${COUNTER_EVIDENCE_RULE} interpolates exactly twice (got: $RULE_COUNT)" \
   "[ \"$RULE_COUNT\" -eq 2 ]"
 
-RULE_NOT_IN_TERNARY="$(grep -n '\${COUNTER_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const carry = openCounters.length' || true)"
-assert_true "AC-56-2a-rule-site: no \${COUNTER_EVIDENCE_RULE} occurrence sits on the carry ternary line (got: $RULE_NOT_IN_TERNARY)" \
+RULE_NOT_IN_TERNARY="$(grep -n '\${COUNTER_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const carry = register.size' || true)"
+assert_true "AC-56-2a-rule-site: no \${COUNTER_EVIDENCE_RULE} occurrence sits on the carry ternary line (re-anchored, issue #67 AC19) (got: $RULE_NOT_IN_TERNARY)" \
   "[ \"$RULE_NOT_IN_TERNARY\" -eq 0 ]"
 
 # =============================================================================
