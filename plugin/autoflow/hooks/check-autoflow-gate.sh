@@ -417,6 +417,7 @@ if [ -z "$STATE_FILE" ] && [ -n "$MALFORMED_STATE" ]; then
   if is_score_gated_surface; then
     echo "BLOCKED: malformed AutoFlow state file: $MALFORMED_STATE" >&2
     echo "A .autoflow/*.json state file is malformed (invalid JSON or schema) — refusing score-gated work on corrupt state. Fix or remove it." >&2
+    echo 'Accepted score shapes: a number 0-10, or {"score": <number 0-10>, "reason": "..."} — a prose string is rejected.' >&2
     exit 2
   fi
 fi
@@ -516,6 +517,7 @@ block_with_scores() {
   if ! result=$(check_scores "$phase_key" 2>/dev/null); then
     echo "BLOCKED: ${gate_name}" >&2
     echo "Reason: state scores are not evaluable (corrupt or non-numeric) — failing closed." >&2
+    echo 'Accepted score shapes: a number 0-10, or {"score": <number 0-10>, "reason": "..."} — a prose string is rejected.' >&2
     echo "State file: $STATE_FILE" >&2
     exit 2
   fi

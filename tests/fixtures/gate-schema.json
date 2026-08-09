@@ -15,5 +15,7 @@
   "top_level_keys": ["active", "issue", "title", "date", "cycle", "mode", "phase", "phases", "fix_regression"],
   "cycle_key_grammar": "^fix_regression_cycle_[0-9]+$",
   "verdict_enum": ["pending", "evaluated", "skipped (feat issue)"],
-  "score_range": { "min": 0, "max": 10 }
+  "score_range": { "min": 0, "max": 10 },
+  "$comment_score_shapes": "Accepted shapes of a single phases.<gate>.scores entry (issue #55). Validated by execution, not by a grep against a hook literal: is_score names neither shape, so each member here is injected into a real state file and driven through the real hook, and the CLAUDE.md SCORE-SHAPE-EXAMPLE fence is compared to this array by shape-set equality.",
+  "score_shapes": [ 8, { "score": 8, "reason": "evidence" } ]
 }

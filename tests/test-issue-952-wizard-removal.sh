@@ -717,6 +717,16 @@ else
     "docs/adr/0017-teammate-removal-feasibility.md"
     "tests/manual/issue-51-manual-scenarios.md"
     "tests/test-issue-51-teammate-removal-verdict.sh"
+    # #55 cycle files (gate-score write contract at the producer site): the
+    # cycle-scoped suite + its manual-scenario lane, and the shape declaration
+    # the CLAUDE.md fence is compared against. CLAUDE.md,
+    # .claude/hooks/check-autoflow-gate.sh,
+    # plugin/autoflow/hooks/check-autoflow-gate.sh,
+    # tests/fixtures/doc-invariants.json, setup/manifest.json and
+    # .github/workflows/e2e-dummy-target.yml are already admitted above.
+    "tests/fixtures/gate-schema.json"
+    "tests/test-issue-55-score-format-contract.sh"
+    "tests/manual/issue-55-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

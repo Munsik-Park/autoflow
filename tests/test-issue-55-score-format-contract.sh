@@ -473,6 +473,18 @@ if [ -f "$BASEREF_LIB" ]; then
     "$MANUAL_PATH"
     ".github/workflows/e2e-dummy-target.yml"
     "setup/manifest.json"
+    # Ledger E16 — the mechanical scope-guard admissions this repo's
+    # branch-diff guards require of every cycle (precedent: 5b01eaf for #51,
+    # 26ce222 for #67). Each of the six suites below carries an
+    # `allow_list=( ... )` array governing the branch diff, and each is
+    # amended in this cycle's commit to admit the members above; that
+    # amendment is itself part of the diff, so it is admitted here.
+    "tests/test-issue-798-topology-flip.sh"
+    "tests/test-issue-799-inert-cleanup.sh"
+    "tests/test-issue-955-subagent-background-ban.sh"
+    "tests/test-issue-846-doc-assertions.sh"
+    "tests/test-issue-848-doc-assertions.sh"
+    "tests/test-issue-952-wizard-removal.sh"
   )
   BASE55="$(resolve_base_ref 2>/dev/null || true)"
   if [ -n "$BASE55" ]; then
@@ -483,7 +495,7 @@ if [ -f "$BASEREF_LIB" ]; then
       for a in "${ALLOWLIST_55[@]}"; do [ "$f" = "$a" ] && { found=yes; break; }; done
       [ "$found" = no ] && OUTSIDE_55="${OUTSIDE_55:+$OUTSIDE_55, }$f"
     done < <(git -C "$PROJECT_ROOT" diff --name-only "${BASE55}...HEAD" 2>/dev/null)
-    assert_true "committed-surface-completeness: git diff --name-only vs base contains no file outside the 9-file allow-list (outside: ${OUTSIDE_55:-none})" \
+    assert_true "committed-surface-completeness: git diff --name-only vs base contains no file outside the cycle allow-list (Part 5's nine members + ledger E16's scope-guard admissions) (outside: ${OUTSIDE_55:-none})" \
       "[ -z '$OUTSIDE_55' ]"
   else
     assert_true "committed-surface-completeness: a comparison base is resolvable (resolve_base_ref, fail-loud per tests/lib/base-ref.sh contract)" "false"
