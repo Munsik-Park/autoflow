@@ -324,6 +324,11 @@ allow_list=(
   # detector (docs/doc-invariant-registry.md §1 anti-pattern), collateral to the
   # Plan-evaluation-row prose widening (#67-precedent guard-agreement obligation).
   "tests/test-issue-40-doc-assertions.sh"
+  # post-merge collateral registrations (origin/main #52/#55 co-landing):
+  # their scope guards required the same mechanical admission of this cycle's
+  # paths, and those edits join this cycle's diff — self-registered here.
+  "tests/test-issue-52-peer-facilitator-premise.sh"
+  "tests/test-issue-55-score-format-contract.sh"
   # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer review.
   "docs/cycle-digest.jsonl"
   # .autoflow/* rows removed (GATE:QUALITY dock, Quality item): .autoflow/ is
