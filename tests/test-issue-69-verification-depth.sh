@@ -320,6 +320,10 @@ allow_list=(
   "tests/test-issue-848-doc-assertions.sh"
   ".github/workflows/e2e-dummy-target.yml"
   "tests/test-issue-952-wizard-removal.sh"
+  # GATE:QUALITY attempt-3 fix: e2d4a78 repaired this sibling's line-touch AC4-DELTA
+  # detector (docs/doc-invariant-registry.md §1 anti-pattern), collateral to the
+  # Plan-evaluation-row prose widening (#67-precedent guard-agreement obligation).
+  "tests/test-issue-40-doc-assertions.sh"
   # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer review.
   "docs/cycle-digest.jsonl"
   # .autoflow/* rows removed (GATE:QUALITY dock, Quality item): .autoflow/ is
