@@ -65,7 +65,7 @@ premise this issue exists to remove (verification design §3).
    This is the **receipt confirmation**: it establishes the peer-to-peer hop
    completed without echoing the raw peer nonce, so an auto-injected copy of
    the raw nonce arriving in the lead's stream by the injection path remains
-   distinguishable from this receipt echo (ledger E15).
+   distinguishable from this receipt echo (ledger E18).
 6. After the receipt-confirmation turn has landed in the lead's context (the
    **bounded observation window**), inspect the lead's own turn stream in
    full — every `SendMessage`-delivered turn and every raw teammate-to-
