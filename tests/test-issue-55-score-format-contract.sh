@@ -485,6 +485,8 @@ if [ -f "$BASEREF_LIB" ]; then
     "tests/test-issue-846-doc-assertions.sh"
     "tests/test-issue-848-doc-assertions.sh"
     "tests/test-issue-952-wizard-removal.sh"
+    # HANDOFF step 6.7 cycle-digest co-ride (precedent: 26ce222 for #67).
+    "docs/cycle-digest.jsonl"
   )
   BASE55="$(resolve_base_ref 2>/dev/null || true)"
   if [ -n "$BASE55" ]; then
