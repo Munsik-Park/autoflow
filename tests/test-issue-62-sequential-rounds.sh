@@ -447,8 +447,15 @@ GUARD_SUITES=(
 
 for suite in "${GUARD_SUITES[@]}"; do
   BLOCK="$(extract_allow_list_block "$PROJECT_ROOT/$suite")"
+  # Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973):
+  # trim the WHOLE block once (sed reads to EOF here, no downstream
+  # short-circuit consumer), then match each path with a here-string —
+  # pipe-free, so grep -q's short-circuit exit can never SIGPIPE the trimmer.
+  # CI witness: run 31303462157, `sed: couldn't flush stdout: Broken pipe`
+  # on this suite's largest allow_list block (test-issue-952-wizard-removal.sh).
+  TRIMMED_BLOCK="$(printf '%s\n' "$BLOCK" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
   for path in "$NEW_PATH_1" "$NEW_PATH_2"; do
-    TRIMMED_MATCH="$(printf '%s\n' "$BLOCK" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -qxF "\"$path\"" && echo yes || echo no)"
+    TRIMMED_MATCH="$(grep -qxF "\"$path\"" <<< "$TRIMMED_BLOCK" && echo yes || echo no)"
     assert_true "AC-62-33a: $suite's allow_list admits $path by exact quoted entry" \
       "[ \"$TRIMMED_MATCH\" = yes ]"
   done
