@@ -209,9 +209,32 @@ CUR_VERIFY_SHA="$(shasum -a 256 "$VERIFY_JS" | awk '{print $1}')"
 assert_true "AC-62-21a: verify-cause-branch.js sha256 unchanged (B11 $B11_SHA) (got: $CUR_VERIFY_SHA)" \
   "[ \"$CUR_VERIFY_SHA\" = \"$B11_SHA\" ]"
 
+# AC-62-21b was a global artifact-count fence (== 47) — the retired
+# ADR-0016 AC-R3-c count-guard class (docs/doc-invariant-registry.md:113),
+# same defect the registry's own row for this class documents at
+# docs/doc-invariant-registry.md:114 (test-issue-27-composition-oracle.sh
+# AC-27-21a, reddened by issue #51's ADR-0017 manifest row, 47 -> 48).
+# Converted to the drift-immune shape used there: a state predicate over the
+# three named sources this suite actually pins manifest-hash freshness for
+# just above (AC-62-20's loop), not a global count.
 MANIFEST_ARTIFACT_COUNT="$(jq '.artifacts | length' "$MANIFEST")"
-assert_true "AC-62-21b: setup/manifest.json artifact count still == 47 (got: $MANIFEST_ARTIFACT_COUNT)" \
-  "[ \"$MANIFEST_ARTIFACT_COUNT\" -eq 47 ]"
+echo "  (info) AC-62-21b: setup/manifest.json artifact count is currently $MANIFEST_ARTIFACT_COUNT (informational — not asserted; see conversion note above)"
+
+AC_62_21B_NAMED_SOURCES=(
+  ".claude/workflows/architect-deliberation.js"
+  "docs/teammate-contracts.md"
+  "docs/autoflow-guide.md"
+)
+AC_62_21B_BAD=0
+for src in "${AC_62_21B_NAMED_SOURCES[@]}"; do
+  cnt="$(jq -r --arg s "$src" '[.artifacts[] | select(.source == $s)] | length' "$MANIFEST")"
+  if [ "$cnt" -ne 1 ]; then
+    AC_62_21B_BAD=$((AC_62_21B_BAD + 1))
+    echo "  (info) AC-62-21b: manifest artifact row count for '$src' == $cnt (expected 1)"
+  fi
+done
+assert_true "AC-62-21b: setup/manifest.json carries exactly one artifact row for each of this suite's three pinned sources (drift-immune: named-source state predicate, not a global count)" \
+  "[ '$AC_62_21B_BAD' -eq 0 ]"
 
 # =============================================================================
 echo ""
@@ -424,8 +447,15 @@ GUARD_SUITES=(
 
 for suite in "${GUARD_SUITES[@]}"; do
   BLOCK="$(extract_allow_list_block "$PROJECT_ROOT/$suite")"
+  # Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973):
+  # trim the WHOLE block once (sed reads to EOF here, no downstream
+  # short-circuit consumer), then match each path with a here-string —
+  # pipe-free, so grep -q's short-circuit exit can never SIGPIPE the trimmer.
+  # CI witness: run 31303462157, `sed: couldn't flush stdout: Broken pipe`
+  # on this suite's largest allow_list block (test-issue-952-wizard-removal.sh).
+  TRIMMED_BLOCK="$(printf '%s\n' "$BLOCK" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
   for path in "$NEW_PATH_1" "$NEW_PATH_2"; do
-    TRIMMED_MATCH="$(printf '%s\n' "$BLOCK" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -qxF "\"$path\"" && echo yes || echo no)"
+    TRIMMED_MATCH="$(grep -qxF "\"$path\"" <<< "$TRIMMED_BLOCK" && echo yes || echo no)"
     assert_true "AC-62-33a: $suite's allow_list admits $path by exact quoted entry" \
       "[ \"$TRIMMED_MATCH\" = yes ]"
   done

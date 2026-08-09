@@ -658,9 +658,20 @@ esac
 echo ""
 echo "=== AC-59-16 (fence, unconditional) — negative-control pins are untouched ==="
 
+# AC-59-16a was a global artifact-count fence (== 47) — the retired
+# ADR-0016 AC-R3-c count-guard class (docs/doc-invariant-registry.md:113),
+# same defect the registry's own row for this class documents at
+# docs/doc-invariant-registry.md:114 (test-issue-27-composition-oracle.sh
+# AC-27-21a, reddened by issue #51's ADR-0017 manifest row, 47 -> 48).
+# Converted to the drift-immune shape used there: a state predicate over the
+# single named source this suite's own AC-59-9 pins manifest-hash freshness
+# for (architect-deliberation.js), not a global count.
 ARTIFACT_COUNT="$(jq '.artifacts | length' "$MANIFEST")"
-assert_true "AC-59-16a: setup/manifest.json artifact count still == 47 (got: $ARTIFACT_COUNT)" \
-  "[ \"$ARTIFACT_COUNT\" -eq 47 ]"
+echo "  (info) AC-59-16a: setup/manifest.json artifact count is currently $ARTIFACT_COUNT (informational — not asserted; see conversion note above)"
+
+AC_59_16A_ROW_COUNT="$(jq -r '[.artifacts[] | select(.source == ".claude/workflows/architect-deliberation.js")] | length' "$MANIFEST")"
+assert_true "AC-59-16a: setup/manifest.json carries exactly one artifact row for architect-deliberation.js (got: $AC_59_16A_ROW_COUNT) (drift-immune: named-source state predicate, not a global count)" \
+  "[ \"$AC_59_16A_ROW_COUNT\" -eq 1 ]"
 
 REGISTRY_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
 PRE_EXISTING_FAILS="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"

@@ -775,11 +775,12 @@ if [ -f "$SELF_ABS" ] && grep -inE "$_E4CLAIM_PATTERN" "$SELF_ABS" >/dev/null 2>
   failc "E4-claim" "single-repo-HANDOFF" "a retired over-claim phrase still survives (whole-suite phrase sweep) in $SELF_ABS"
   _e4claim_ok=0
 fi
-if ! grep -A8 '^# W-E4 ' "$SELF_ABS" 2>/dev/null | grep -qF 'verify-package.sh AC4'; then
+_w_e4_ctx="$(grep -A8 '^# W-E4 ' "$SELF_ABS" 2>/dev/null)"
+if ! printf '%s\n' "$_w_e4_ctx" | grep -qF 'verify-package.sh AC4'; then
   failc "E4-claim" "single-repo-HANDOFF" "W-E4 region is missing the verify-package.sh AC4 cross-reference"
   _e4claim_ok=0
 fi
-if ! grep -A8 '^# W-E4 ' "$SELF_ABS" 2>/dev/null | grep -qF 'scores-gated admit/deny'; then
+if ! printf '%s\n' "$_w_e4_ctx" | grep -qF 'scores-gated admit/deny'; then
   failc "E4-claim" "single-repo-HANDOFF" "W-E4 region is missing the corrected claim wording (scores-gated admit/deny)"
   _e4claim_ok=0
 fi

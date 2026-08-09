@@ -348,7 +348,7 @@ echo ""
 echo "=== AC1-NO-HOSTONLY-BLEED / AC1-XREF-NOCONTRA (guards, PASS pre+post) ==="
 
 assert_false "AC1-NO-HOSTONLY-BLEED: the DELIVER host-only (default) paragraph (before any *Secondary* marker) never gains 'git add services'" \
-  "deliver_section | awk '/\\*Secondary \\(multi-repo\\):\\*/{exit} {print}' | grep -qF 'git add services'"
+  "ctx=\$(deliver_section | awk '/\\*Secondary \\(multi-repo\\):\\*/{exit} {print}'); printf '%s\n' \"\$ctx\" | grep -qF 'git add services'"
 assert_true "AC1-XREF-NOCONTRA: submodule-common-rules.md still states 'Each developer commits only the submodule pointer'" \
   "grep -qF 'Each developer commits **only the submodule pointer**' '$SUBMODULE_RULES'"
 
@@ -621,6 +621,23 @@ else
     # and tests/fixtures/doc-invariants.json are already admitted above.
     "tests/test-issue-67-deliberation-record.sh"
     "tests/manual/issue-67-manual-scenarios.md"
+    # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
+    # decision record + its README registration row, the cycle-scoped RED
+    # suite + manual-scenario lane, and this cycle's own defect-fix pass over
+    # sibling test/plugin suites (SIGPIPE-safe pipe audit + drift-immune
+    # manifest-count conversion, GATE:QUALITY E36). setup/manifest.json,
+    # docs/INDEX.md, docs/maintained-docs.md, tests/fixtures/doc-invariants.json,
+    # docs/doc-invariant-registry.md, .github/workflows/e2e-dummy-target.yml,
+    # tests/test-issue-27-composition-oracle.sh, tests/test-issue-7-oracle-hardening.sh
+    # and tests/test-issue-1-guard-contract.sh are already admitted above.
+    "docs/adr/0017-teammate-removal-feasibility.md"
+    "docs/adr/README.md"
+    "tests/manual/issue-51-manual-scenarios.md"
+    "tests/test-issue-51-teammate-removal-verdict.sh"
+    "tests/plugin/verify-install-into-target.sh"
+    "tests/plugin/verify-install-skill-scripts.sh"
+    "tests/plugin/verify-e2e-dummy-target.sh"
+    "tests/test-issue-979-bundle-delivery.sh"
   )
   disallowed=""
   while IFS= read -r f; do

@@ -186,21 +186,38 @@ assert_true "A43-LITERAL-CONTIGUOUS (b): every origin_issue:43 entry matches its
 echo ""
 echo "S43-UNTOUCHED — this cycle's diff does not touch the three asserted non-edit surfaces"
 
-if [ -z "$BASE_REF" ]; then
-  echo "  FAIL: S43-UNTOUCHED: resolve_base_ref could not resolve a comparison base (fail-loud, not SKIP)"
-  FAIL=$((FAIL + 1))
-else
-  CHANGED_FILES="$(git -C "$PROJECT_ROOT" diff "$BASE_REF"...HEAD --name-only 2>/dev/null)"
-  UNTOUCHED_BAD=0
-  for pattern in 'docs/teammate-common-rules.md' '.claude/agents/autoflow-.*\.md' 'docs/maintained-docs.md'; do
-    if printf '%s\n' "$CHANGED_FILES" | grep -qE -- "^${pattern}$"; then
-      UNTOUCHED_BAD=$((UNTOUCHED_BAD + 1))
-      echo "  (info) S43-UNTOUCHED: diff touches a file matching '$pattern'"
+# Provenance: was unconditional (ran on every PR); narrowed here to
+# branch-scoped (ea68a4c idiom, GATE:QUALITY E36) — this is issue #43's own
+# cycle-PR non-edit promise, not a durable state property — one of its three
+# surfaces, docs/maintained-docs.md, is a file OTHER cycles legitimately edit
+# (e.g. issue #51 registers a new ADR row there), so an unconditional
+# cross-cycle assertion reds an unrelated PR the moment it touches that file.
+# Enforced on dev/*-issue-43* (this cycle's own PR, where the promise has a
+# subject); DEFERRED-OBSERVABLE elsewhere, matching
+# tests/test-issue-7-oracle-hardening.sh's AC-7-7b lane A-delta shape.
+HEAD_BRANCH_43="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
+case "$HEAD_BRANCH_43" in
+  dev/*-issue-43|dev/*-issue-43-*)
+    if [ -z "$BASE_REF" ]; then
+      echo "  FAIL: S43-UNTOUCHED: resolve_base_ref could not resolve a comparison base (fail-loud, not SKIP)"
+      FAIL=$((FAIL + 1))
+    else
+      CHANGED_FILES="$(git -C "$PROJECT_ROOT" diff "$BASE_REF"...HEAD --name-only 2>/dev/null)"
+      UNTOUCHED_BAD=0
+      for pattern in 'docs/teammate-common-rules.md' '.claude/agents/autoflow-.*\.md' 'docs/maintained-docs.md'; do
+        if printf '%s\n' "$CHANGED_FILES" | grep -qE -- "^${pattern}$"; then
+          UNTOUCHED_BAD=$((UNTOUCHED_BAD + 1))
+          echo "  (info) S43-UNTOUCHED: diff touches a file matching '$pattern'"
+        fi
+      done
+      assert_true "S43-UNTOUCHED: diff contains none of the three asserted non-edit surfaces" \
+        "[ \"$UNTOUCHED_BAD\" -eq 0 ]"
     fi
-  done
-  assert_true "S43-UNTOUCHED: diff contains none of the three asserted non-edit surfaces" \
-    "[ \"$UNTOUCHED_BAD\" -eq 0 ]"
-fi
+    ;;
+  *)
+    echo "  DEFERRED-OBSERVABLE: S43-UNTOUCHED: cycle-scoped lane inert off the issue-43 dev branch (head: ${HEAD_BRANCH_43:-unknown})"
+    ;;
+esac
 
 echo ""
 echo "=============================="

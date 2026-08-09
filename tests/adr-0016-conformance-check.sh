@@ -225,10 +225,15 @@ block_file() {
 echo ""
 echo "=== AC-R1 — maintained-docs.md ADR table registers ADR-0016 (cycle 2) ==="
 
+# Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973,
+# GATE:QUALITY E36/E37): block_file's buffered output piped directly into a
+# short-circuiting `grep -q` can SIGPIPE the producer under `set -o
+# pipefail`. Captured once and reused across both checks below.
+ADR_R1_CTX="$(block_file 'ADRs' "$MAINTAINED_DOCS")"
 assert_true "AC-R1-a: a 0016 row exists inside the ADRs table block of maintained-docs.md" \
-  "block_file 'ADRs' '$MAINTAINED_DOCS' | grep -q '0016-adr-conformance-gate-scoring.md'"
+  "printf '%s\n' \"\$ADR_R1_CTX\" | grep -q '0016-adr-conformance-gate-scoring.md'"
 assert_true "AC-R1-b: the matched line is a real 4-column table row (leading + internal pipes)" \
-  "block_file 'ADRs' '$MAINTAINED_DOCS' | grep -qE '^\| .*0016-adr-conformance-gate-scoring\.md.*\| .*\| .*\|'"
+  "printf '%s\n' \"\$ADR_R1_CTX\" | grep -qE '^\| .*0016-adr-conformance-gate-scoring\.md.*\| .*\| .*\|'"
 
 # =============================================================================
 echo ""
@@ -280,22 +285,28 @@ echo "=== AC-961-1 — autoflow-guide.md GATE:PLAN / GATE:QUALITY / ARCHITECT pr
 # window only (block_file below), never a file-global grep.
 assert_true "AC-961-1-a: new '### ADR-conformance check' subsection heading present in autoflow-guide.md" \
   "grep -nE '^#{2,4} ADR-conformance check' '$AUTOFLOW_GUIDE' 2>/dev/null"
+# Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973,
+# GATE:QUALITY E36/E37): each distinct (heading, file) pair captured once,
+# reused across every check against it below.
+ADR_CONFORMANCE_CTX="$(block_file 'ADR-conformance check' "$AUTOFLOW_GUIDE")"
 assert_true "AC-961-1-b: ADR-conformance check subsection (GATE:PLAN) names both Feasibility and Scope" \
-  "block_file 'ADR-conformance check' '$AUTOFLOW_GUIDE' | grep -q 'Feasibility' && block_file 'ADR-conformance check' '$AUTOFLOW_GUIDE' | grep -q 'Scope'"
+  "printf '%s\n' \"\$ADR_CONFORMANCE_CTX\" | grep -q 'Feasibility' && printf '%s\n' \"\$ADR_CONFORMANCE_CTX\" | grep -q 'Scope'"
 assert_true "AC-961-1-c: ADR-conformance check subsection carries T-CAP verbatim ('caps the named item at 6'), window-scoped" \
-  "block_file 'ADR-conformance check' '$AUTOFLOW_GUIDE' | grep -qF 'caps the named item at 6'"
+  "printf '%s\n' \"\$ADR_CONFORMANCE_CTX\" | grep -qF 'caps the named item at 6'"
 assert_true "AC-961-1-d: ADR-conformance check subsection carries T-TRIG-1 verbatim ('divergence from a governing ADR')" \
-  "block_file 'ADR-conformance check' '$AUTOFLOW_GUIDE' | grep -qF 'divergence from a governing ADR'"
+  "printf '%s\n' \"\$ADR_CONFORMANCE_CTX\" | grep -qF 'divergence from a governing ADR'"
 assert_true "AC-961-1-e: ADR-conformance check subsection carries T-TRIG-2 verbatim ('architecture-impacting change with no governing ADR/owner decision')" \
-  "block_file 'ADR-conformance check' '$AUTOFLOW_GUIDE' | grep -qF 'architecture-impacting change with no governing ADR/owner decision'"
+  "printf '%s\n' \"\$ADR_CONFORMANCE_CTX\" | grep -qF 'architecture-impacting change with no governing ADR/owner decision'"
 assert_true "AC-961-1-f: ADR-conformance check subsection carries T-NA verbatim ('N/A by default')" \
-  "block_file 'ADR-conformance check' '$AUTOFLOW_GUIDE' | grep -qF 'N/A by default'"
+  "printf '%s\n' \"\$ADR_CONFORMANCE_CTX\" | grep -qF 'N/A by default'"
 # Item-specific token (NOT the file-global T-CAP) — grep-confirmed absent
 # pre-edit, so this attributes to the new insert rather than to landed prose.
+KNOWN_BLINDSPOT_CTX="$(block_file 'Known blind-spot checks' "$AUTOFLOW_GUIDE")"
 assert_true "AC-961-1-g: GATE:QUALITY blind-spot list carries item-specific 'caps Fit at 6'" \
-  "block_file 'Known blind-spot checks' '$AUTOFLOW_GUIDE' | grep -qF 'caps Fit at 6'"
+  "printf '%s\n' \"\$KNOWN_BLINDSPOT_CTX\" | grep -qF 'caps Fit at 6'"
+AGREEMENT_CRITERIA_CTX="$(block_file 'Agreement criteria' "$AUTOFLOW_GUIDE")"
 assert_true "AC-961-1-h: ARCHITECT Agreement criteria carries T-NONSCORED verbatim ('a divergence is a COUNTER, not an ACCEPT')" \
-  "block_file 'Agreement criteria' '$AUTOFLOW_GUIDE' | grep -qF 'a divergence is a COUNTER, not an ACCEPT'"
+  "printf '%s\n' \"\$AGREEMENT_CRITERIA_CTX\" | grep -qF 'a divergence is a COUNTER, not an ACCEPT'"
 
 # =============================================================================
 echo ""
@@ -305,26 +316,35 @@ assert_true "AC-961-2-a: evaluation-system.md GATE:PLAN row names the embedded A
   "grep -E '^\| Plan evaluation \(GATE:PLAN\).*ADR-conformance' '$EVAL_SYSTEM'"
 assert_true "AC-961-2-b: evaluation-system.md GATE:QUALITY row names the embedded ADR-conformance check" \
   "grep -E '^\| Quality evaluation \(GATE:QUALITY\).*ADR-conformance' '$EVAL_SYSTEM'"
+RESPONSIBILITIES_CTX="$(block_file 'Responsibilities' "$TEAMMATE_CONTRACTS")"
 assert_true "AC-961-2-c: teammate-contracts.md Facilitator Responsibilities names ADR conformance as a first-exchange axis" \
-  "block_file 'Responsibilities' '$TEAMMATE_CONTRACTS' | grep -qi 'ADR conformance'"
+  "printf '%s\n' \"\$RESPONSIBILITIES_CTX\" | grep -qi 'ADR conformance'"
 
 # Cross-doc invariant (the real drift risk per Phase B Approach 2): the cap
 # surface named in evaluation-system.md string-matches the surface named in
 # autoflow-guide.md — same three item names co-occur with the cap in both.
+# Capture-then-match (SIGPIPE-safe form; same per-check independence as
+# before the fix — each token still checked against the SAME captured row,
+# not collapsed to a single-line co-occurrence regex, since that chained-AND
+# structure is the existing, unchanged assertion this fix preserves).
+GATE_PLAN_ROW_CTX="$(grep -E '^\| Plan evaluation \(GATE:PLAN\)' "$EVAL_SYSTEM")"
 assert_true "AC-961-2-d: cross-doc cap-surface co-occurrence — evaluation-system.md GATE:PLAN row names Feasibility, Scope, and the cap value 6" \
-  "grep -E '^\| Plan evaluation \(GATE:PLAN\)' '$EVAL_SYSTEM' | grep -q 'Feasibility' && grep -E '^\| Plan evaluation \(GATE:PLAN\)' '$EVAL_SYSTEM' | grep -q 'Scope' && grep -E '^\| Plan evaluation \(GATE:PLAN\)' '$EVAL_SYSTEM' | grep -qF '6'"
+  "printf '%s\n' \"\$GATE_PLAN_ROW_CTX\" | grep -q 'Feasibility' && printf '%s\n' \"\$GATE_PLAN_ROW_CTX\" | grep -q 'Scope' && printf '%s\n' \"\$GATE_PLAN_ROW_CTX\" | grep -qF '6'"
+GATE_QUALITY_ROW_CTX="$(grep -E '^\| Quality evaluation \(GATE:QUALITY\)' "$EVAL_SYSTEM")"
 assert_true "AC-961-2-e: cross-doc cap-surface co-occurrence — evaluation-system.md GATE:QUALITY row names Fit and the cap value 6" \
-  "grep -E '^\| Quality evaluation \(GATE:QUALITY\)' '$EVAL_SYSTEM' | grep -q 'Fit' && grep -E '^\| Quality evaluation \(GATE:QUALITY\)' '$EVAL_SYSTEM' | grep -qF '6'"
+  "printf '%s\n' \"\$GATE_QUALITY_ROW_CTX\" | grep -q 'Fit' && printf '%s\n' \"\$GATE_QUALITY_ROW_CTX\" | grep -qF '6'"
 
 # [MUST] intro reference-integrity assertion (Round-2 counter — feature §2 /
 # verification §AC2). Appending a 4th blind-spot bullet under the unchanged
 # intro breaks its hard count ('Three defect patterns ... caught only by
 # external (Codex) review') — grep-confirmed present pre-edit at
 # autoflow-guide.md:481, so its removal is a real RED->GREEN transition.
+# Reuses KNOWN_BLINDSPOT_CTX captured above (static file content, safe to
+# reuse across the whole run).
 assert_false "AC-961-2-f: GATE:QUALITY blind-spot intro no longer hard-counts 'Three defect patterns'" \
-  "block_file 'Known blind-spot checks' '$AUTOFLOW_GUIDE' | grep -qF 'Three defect patterns'"
+  "printf '%s\n' \"\$KNOWN_BLINDSPOT_CTX\" | grep -qF 'Three defect patterns'"
 assert_true "AC-961-2-g: GATE:QUALITY blind-spot section carries a distinct-provenance marker for the proactive ADR-0016 check (not a Codex catch)" \
-  "block_file 'Known blind-spot checks' '$AUTOFLOW_GUIDE' | grep -qiE 'proactively-added|ADR-0016'"
+  "printf '%s\n' \"\$KNOWN_BLINDSPOT_CTX\" | grep -qiE 'proactively-added|ADR-0016'"
 
 # =============================================================================
 echo ""

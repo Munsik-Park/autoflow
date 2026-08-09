@@ -721,7 +721,7 @@ else
 fi
 
 # ── AC-1 (issue #10): exact registration of the 4 methodology-step scripts ────
-echo "== AC-1 (issue #10): 4 methodology-step scripts registered as root-layer/copy, count==47 =="
+echo "== AC-1 (issue #10): 4 methodology-step scripts registered as root-layer/copy =="
 if [ -f "$MANIFEST" ]; then
   _ac1_bad=""
   for _ac1_src in \
@@ -754,12 +754,20 @@ if [ -f "$MANIFEST" ]; then
       _ac1_bad="$_ac1_bad [$_ac1_src: kind='$_ac1_kind' != copy]"
     fi
   done
+  # A global artifacts|length==47 fence was dropped here (the retired
+  # ADR-0016 AC-R3-c count-guard class, docs/doc-invariant-registry.md:113):
+  # it reds on any legitimate later cycle's manifest addition (e.g. issue
+  # #51's ADR-0017 row, 47->48), not just an AC-1 registration regression.
+  # The four named-source checks in the loop above already fully discharge
+  # this AC's registration intent (source==dest, tier==root-layer,
+  # kind==copy, exactly one row each) — a drift-immune, named-source state
+  # predicate, same shape as tests/test-issue-27-composition-oracle.sh's
+  # AC-27-21a conversion and the origin_issue-scoped precedent in
+  # tests/test-issue-43-report-channel-contract.sh:134-143.
   _ac1_total=$(jq -r '.artifacts | length' "$MANIFEST" 2>/dev/null)
-  if [ "$_ac1_total" != "47" ]; then
-    _ac1_bad="$_ac1_bad [artifacts|length=$_ac1_total != 47]"
-  fi
+  echo "  (info) AC-1: setup/manifest.json artifact count is currently ${_ac1_total:-unknown} (informational — not asserted; see conversion note above)"
   if [ -z "$_ac1_bad" ]; then
-    pass "AC-1 (issue #10): all 4 scripts registered (source==dest, root-layer/copy) and artifacts|length==47"
+    pass "AC-1 (issue #10): all 4 scripts registered (source==dest, root-layer/copy, exactly one row each)"
   else
     failc "AC-1 (issue #10)" "registration gap or field mismatch:$_ac1_bad"
   fi

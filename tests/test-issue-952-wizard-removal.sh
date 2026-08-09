@@ -704,6 +704,19 @@ else
     # are already admitted above.
     "tests/test-issue-67-deliberation-record.sh"
     "tests/manual/issue-67-manual-scenarios.md"
+    # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
+    # decision record, the cycle-scoped RED suite + manual-scenario lane.
+    # docs/adr/README.md, setup/manifest.json, docs/INDEX.md,
+    # docs/maintained-docs.md, tests/fixtures/doc-invariants.json,
+    # docs/doc-invariant-registry.md, .github/workflows/e2e-dummy-target.yml,
+    # tests/plugin/verify-install-into-target.sh,
+    # tests/plugin/verify-install-skill-scripts.sh,
+    # tests/plugin/verify-e2e-dummy-target.sh,
+    # tests/test-issue-979-bundle-delivery.sh and this cycle's other sibling
+    # suites are already admitted above.
+    "docs/adr/0017-teammate-removal-feasibility.md"
+    "tests/manual/issue-51-manual-scenarios.md"
+    "tests/test-issue-51-teammate-removal-verdict.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -746,6 +759,14 @@ assert_true "G5: e2e-dummy-target.yml pull_request paths: trigger lists this sui
 push_paths_ctx="$(awk '/^  push:/{f=1} f' "$CI_WORKFLOW")"
 assert_true "G5: e2e-dummy-target.yml push paths: trigger lists this suite" \
   "printf '%s\n' \"\$push_paths_ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+# Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973):
+# awk's buffered output piped directly into a short-circuiting `grep -q`
+# consumer can SIGPIPE the producer under `set -o pipefail`. Capture each
+# block once, then match the captured string.
+assert_true "G5: e2e-dummy-target.yml pull_request paths: trigger lists this suite" \
+  "ctx=\$(awk '/^on:/{f=1} f && /pull_request:/{p=1} p && /^  push:/{exit} p' '$CI_WORKFLOW'); printf '%s\n' \"\$ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+assert_true "G5: e2e-dummy-target.yml push paths: trigger lists this suite" \
+  "ctx=\$(awk '/^  push:/{f=1} f' '$CI_WORKFLOW'); printf '%s\n' \"\$ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
 
 # =============================================================================
 # Results
