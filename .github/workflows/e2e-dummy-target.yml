@@ -140,6 +140,11 @@ on:
       # `grep -A40 '^ *paths:'` window).
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
       - 'tests/manual/issue-51-manual-scenarios.md'
+      # #69 cycle surface (verification-depth justification at ARCHITECT /
+      # GATE:PLAN). TAIL here, mirroring the #51/#67/#7/#27/#43/#35 entries
+      # above for the same reason those comments record (#799's AC6-ci fixed
+      # `grep -A40 '^ *paths:'` window).
+      - 'tests/test-issue-69-verification-depth.sh'
   push:
     branches: [main]
     paths:
@@ -238,6 +243,9 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
       - 'tests/manual/issue-51-manual-scenarios.md'
+      # #69 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-69-verification-depth.sh'
 
 permissions:
   contents: read
@@ -520,3 +528,13 @@ jobs:
       # tests/test-issue-51-teammate-removal-verdict.sh.
       - name: Run teammate-removal feasibility verdict (#51)
         run: bash tests/test-issue-51-teammate-removal-verdict.sh
+
+      # Verification-depth justification at ARCHITECT / GATE:PLAN (#69,
+      # cycle-scoped): ADR + registry-home agreement, CI registration, the
+      # rubric/composition-oracle invariance fences, the manifest and
+      # doc-invariant-registry composition oracles, the derived harness
+      # ok-count pin-agreement sweep, and the branch-scoped change-surface
+      # guard. CI has no glob discovery; registered by filename per the
+      # sibling suites. See tests/test-issue-69-verification-depth.sh.
+      - name: Run verification-depth justification guard (#69)
+        run: bash tests/test-issue-69-verification-depth.sh

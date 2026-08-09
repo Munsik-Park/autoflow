@@ -1221,6 +1221,39 @@ await test('ARCHITECT: adoption-evidence Draft segment byte-identical across dev
   assert.equal(devSeg, testSeg)
 })
 
+// ---- ARCHITECT: verification-depth justification (issue #69) ------------------
+// The depth obligation (docs/autoflow-guide.md > ARCHITECT > Output artifacts >
+// Verification depth) is Test-AI-owned: it must reach the executing agent through the
+// Test-AI Draft prompt AND the Test-AI round prompt's ACCEPT condition (verification
+// design AC:prompt-delivery / AC:accept-gating), not merely be defined in the script —
+// only driving the script with the mock agent and reading the delivered prompt by label
+// can distinguish *defined* from *delivered* (the text-matching registry/cycle-suite
+// layers cannot).
+
+await test('ARCHITECT: verification-depth determination reaches test-draft and test-r1 (AC-69-prompt-delivery)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '69-1' }, responder)
+  const testDraft = calls.find((c) => c.label === 'test-draft').prompt
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  assert.ok(testDraft.includes('Verification depth'), 'test-draft must carry the Verification depth determination')
+  assert.ok(testR1.includes('Verification depth'), 'test-r1 must carry the Verification depth determination')
+})
+
+await test('ARCHITECT: test-r1 ACCEPT condition names the per-layer unique-failure-mode requirement (AC-69-accept-gating)', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const { calls } = await runArch({ issue: '69-2' }, responder)
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  assert.ok(testR1.includes('unique failure mode'), 'test-r1 ACCEPT condition must name the unique-failure-mode requirement')
+})
+
 // ---- ARCHITECT: prose-args salvage (issue #14) --------------------------------
 
 await test('ARCHITECT: prose args, hashed number (reported shape) resolves and converges', async () => {
