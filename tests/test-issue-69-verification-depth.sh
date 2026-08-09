@@ -143,6 +143,23 @@ assert_true "AC-69-AMENDMENT-HOME: amendment clause names the issue register and
 
 # =============================================================================
 echo ""
+echo "=== AC:no-quantity-cap — the Verification depth clause introduces no numeric layer/file/line cap, digit- or word-form ==="
+
+# Moved here from the permanent registry (GATE:QUALITY attempt-2 finding): absent +
+# match:"regex" has no negative-teeth-harness-injectable witness
+# (tests/test-issue-951-registry.sh, FINDING 3-E) — the registry's teeth leg requires every
+# entry to demonstrably FAIL against a mutated fixture, and there is no single-mutation
+# witness for "a regex whose whole POINT is matching several literal shapes at once". The
+# cycle suite has no such constraint, and covers the property HONESTLY per the finding: both
+# digit ("at most 3 layers") and word-number ("at most three layers") cap forms, not just
+# the digit form the retired registry regex alone caught.
+VERIFICATION_DEPTH_SECTION="$(awk '/^#### Verification depth/{f=1} f&&/^#### Composition oracle/{f=0} f' "$AUTOFLOW_GUIDE")"
+CAP_PATTERN='\b(at most|no more than|maximum of|up to) (one|two|three|four|five|six|seven|eight|nine|ten|[0-9]+) (layers?|files?|lines?)\b'
+assert_true "AC-69-NO-QUANTITY-CAP: the Verification depth section introduces no digit- or word-form layer/file/line cap" \
+  '! printf "%s" "$VERIFICATION_DEPTH_SECTION" | grep -qE "$CAP_PATTERN"'
+
+# =============================================================================
+echo ""
 echo "=== AC:rubric-unchanged — the GATE:PLAN rubric row set, PASS thresholds, and Regressions max-N multiset are unchanged from the base ref ==="
 
 if on_issue_branch; then
