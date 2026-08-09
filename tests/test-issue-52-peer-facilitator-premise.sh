@@ -19,9 +19,11 @@
 # execution assertions are outside its scope):
 #
 #   record-file-shape   — the manual-scenario file's section skeleton AND
-#                          Observation-record field completeness (send /
-#                          receipt / positive-control values), per GATE:PLAN
-#                          carry-forward (ledger E15 item 2)
+#                          Observation-record field completeness: each of the
+#                          13 fixed field labels, scoped to the Observation
+#                          record section only, carries a non-empty value
+#                          (content never asserted — outcome-neutral), per
+#                          GATE:PLAN carry-forward (ledger E18 item 2)
 #   scope-fence-held(b)  — no path under .claude/workflows/ appears in this
 #                          cycle's own branch diff (diff-shaped, branch-scoped
 #                          via tests/lib/base-ref.sh)
@@ -37,20 +39,19 @@
 #                          overall exit 0 required only on the post-edit tree
 #
 # RED expectation (this commit — the three claim-site docs are unedited, the
-# manual-scenario Observation-record fields are unfilled placeholders):
-#   FAIL (discriminators): record-file-shape field-completeness sub-checks
-#     (the field labels ARE present as unfilled template lines, so the label-
-#     presence assertions PASS; only a real GREEN measurement fills them —
-#     the label-presence check is therefore a guard, not a discriminator; see
-#     inline comment at that section), ci-wired (no paths:/run: entries yet),
+# manual-scenario Observation-record fields carry unfilled placeholder VALUES,
+# e.g. "_(literal used this run)_" — non-empty, just not yet measured):
+#   FAIL (discriminators): ci-wired (no paths:/run: entries yet),
 #     registry-runner-green's overall-exit-0 sub-check (the six 52-*
 #     discriminator registry entries still FAIL pre-edit).
 #   PASS (guards, must stay green throughout): record-file-shape file-exists
-#     + heading skeleton (the file is authored at RED, per Test AI scope),
-#     scope-fence-held(b) workflow no-touch fence, manifest-freshness (both
-#     sub-checks — a fence, true before and after GREEN), registry-runner-
-#     green's id-set-scoped sub-check (no entry OUTSIDE 52-* fails, true from
-#     the outset).
+#     + heading skeleton + field-completeness (the file is authored in full
+#     at RED, per Test AI scope, with every field carrying a non-empty
+#     placeholder value; only the VALUE's content changes at GREEN, which
+#     this oracle never asserts), scope-fence-held(b) workflow no-touch
+#     fence, manifest-freshness (both sub-checks — a fence, true before and
+#     after GREEN), registry-runner-green's id-set-scoped sub-check (no
+#     entry OUTSIDE 52-* fails, true from the outset).
 # =============================================================================
 
 set -uo pipefail
@@ -98,7 +99,7 @@ assert_false() {
 
 # =============================================================================
 # record-file-shape — section skeleton + Observation-record field completeness
-# (verification design §1; GATE:PLAN carry-forward, ledger E15 item 2)
+# (verification design §1; GATE:PLAN carry-forward, ledger E18 item 2)
 # =============================================================================
 echo "=== record-file-shape ==="
 
@@ -117,24 +118,50 @@ if [ -f "$MANUAL" ]; then
   done
 
   # Observation-record field completeness — the GATE:PLAN carry-forward
-  # (ledger E15 item 2) requires the oracle to pin field COMPLETENESS
-  # (send / receipt / positive-control value labels), not headings only.
-  # These label-presence checks are GUARDS: the manual scenario is authored
-  # in full at RED (Test AI scope), so the field labels already exist as
-  # unfilled template lines — only a live GREEN measurement fills their
-  # values, which this automated lane never asserts the content of
-  # (verification design §2 "Outcome-neutrality is the load-bearing
-  # constraint").
-  for field in 'team shape' 'peer nonce' 'control nonce' 'send confirmation' 'receipt confirmation' 'positive control result' 'occurrences' 'envelope' 'verdict' 'date'; do
-    assert_true "record-file-shape-e: Observation record field '$field' present" \
-      "grep -qi -- '$field' '$MANUAL'"
+  # (ledger E18 item 2) requires the oracle to pin field COMPLETENESS (a
+  # non-empty VALUE after each label), not headings/labels alone. A
+  # whole-file substring grep is not enough here: blanking every field's
+  # value, or deleting the whole Observation record section, would still
+  # green most labels because the Steps/Pass-condition prose separately
+  # names the same terms ("send confirmation", "receipt confirmation",
+  # "positive control result", ...) in ordinary sentences, not as a
+  # `- **label:**` bullet. So this check (1) scopes extraction to the
+  # Observation record section only (everything from its heading to EOF —
+  # it is the file's last section), and (2) requires each field's exact
+  # `- **<label>:**` bullet to be followed by a non-empty value on that
+  # same line. The VALUE's *content* is never asserted (outcome-neutral;
+  # verification design §2 — the reproduction procedure a scorer uses to
+  # re-check this discriminating power is recorded at ledger E23).
+  OBS_SECTION="$(awk '/^\*\*Observation record:\*\*/{f=1} f' "$MANUAL" 2>/dev/null)"
+  OBS_FIELDS=(
+    'team shape'
+    'peer nonce'
+    'control nonce'
+    'send confirmation (peer hop)'
+    'send confirmation (control, direct to lead)'
+    'receipt confirmation'
+    'positive control result'
+    "peer nonce in lead's stream — occurrences"
+    "peer nonce in lead's stream — per-occurrence envelope"
+    "control nonce in lead's stream — occurrences"
+    "control nonce in lead's stream — per-occurrence envelope"
+    'verdict'
+    'date'
+  )
+  for field in "${OBS_FIELDS[@]}"; do
+    FIELD_LINE="$(printf '%s\n' "$OBS_SECTION" | grep -F -- "- **$field:**" | head -1)"
+    FIELD_VALUE="${FIELD_LINE#"- **$field:**"}"
+    FIELD_VALUE_TRIMMED="$(printf '%s' "$FIELD_VALUE" | sed -E 's/^[[:space:]]+//')"
+    if [ -n "$FIELD_VALUE_TRIMMED" ]; then FIELD_OK=yes; else FIELD_OK=no; fi
+    assert_true "record-file-shape-e: Observation record field '$field' has a non-empty value, scoped to the Observation record section (got: $FIELD_OK)" \
+      "[ '$FIELD_OK' = yes ]"
   done
 
-  # Receipt-confirmation control (ledger E15 item 1) — the scenario text
+  # Receipt-confirmation control (ledger E18 item 1) — the scenario text
   # itself must instruct a DERIVED token, never the raw peer nonce, echoed
   # back on receipt; a scenario that told the receiver to echo the nonce
   # verbatim would structurally block the "injection not observed" branch.
-  assert_true "record-file-shape-f: receipt confirmation is specified as a derived token, not the raw nonce (ledger E15 item 1)" \
+  assert_true "record-file-shape-f: receipt confirmation is specified as a derived token, not the raw nonce (ledger E18 item 1)" \
     "grep -qi 'derived token' '$MANUAL'"
   assert_false "record-file-shape-g: the scenario never instructs echoing the raw peer nonce back as the receipt confirmation" \
     "grep -qi 'echo the nonce verbatim\|echo the raw nonce back\|echoes the nonce back' '$MANUAL'"
