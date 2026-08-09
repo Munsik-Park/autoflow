@@ -641,6 +641,15 @@ else
     "docs/adr/0017-teammate-removal-feasibility.md"
     "tests/manual/issue-51-manual-scenarios.md"
     "tests/test-issue-51-teammate-removal-verdict.sh"
+    # #69 cycle files: verification-depth justification ADR + its cycle-scoped RED
+    # suite. docs/autoflow-guide.md, docs/evaluation-system.md,
+    # docs/teammate-contracts.md, .claude/workflows/architect-deliberation.js,
+    # docs/adr/README.md, docs/INDEX.md, docs/maintained-docs.md,
+    # setup/manifest.json, tests/fixtures/doc-invariants.json,
+    # test/workflows/run.mjs, .github/workflows/e2e-dummy-target.yml,
+    # tests/test-issue-27/59/62/955-*.sh are already admitted above.
+    "docs/adr/0018-verification-depth-justification.md"
+    "tests/test-issue-69-verification-depth.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -786,6 +795,10 @@ else
         # unconditional-admit shape as the 0001 arm above (nothing to
         # byte-window against a base that has no prior version).
         continue ;;
+      "docs/adr/0018-verification-depth-justification.md")
+        # #69 cycle files: brand-new file this cycle authors in full — same
+        # unconditional-admit shape as the 0017 arm above.
+        continue ;;
       "docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md")
         adr_0015_offwindow="$(git diff "$BASE_REF"...HEAD -- "$PROJECT_ROOT/$adr_f" 2>/dev/null \
           | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
@@ -801,7 +814,8 @@ else
         adr_readme_offwindow="$(git diff "$BASE_REF"...HEAD -- "$PROJECT_ROOT/$adr_f" 2>/dev/null \
           | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
           | grep -vF '0001-host-orchestrator-and-librechat-submodule-'"boundary.md" \
-          | grep -vF '0017-teammate-removal-feasibility.md' || true)"
+          | grep -vF '0017-teammate-removal-feasibility.md' \
+          | grep -vF '0018-verification-depth-justification.md' || true)"
         [[ -n "$adr_readme_offwindow" ]] && adr_admitted_ac6="no"
         ;;
       *)

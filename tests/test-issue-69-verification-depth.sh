@@ -282,6 +282,14 @@ allow_list=(
   "tests/test-issue-27-composition-oracle.sh"
   "tests/test-issue-59-adoption-evidence-discipline.sh"
   "tests/test-issue-62-sequential-rounds.sh"
+  # VERIFY cause-branch fix (RED-side): the 0018 ADR + this suite's own path also cross
+  # these five sibling change-surface/manifest-closure guards' own allow_lists (#67
+  # precedent — a cycle-scoped suite admits its own sibling-registration edits).
+  "tests/test-issue-798-topology-flip.sh"
+  "tests/test-issue-799-inert-cleanup.sh"
+  "tests/test-issue-955-subagent-background-ban.sh"
+  "tests/test-issue-846-doc-assertions.sh"
+  "tests/test-issue-848-doc-assertions.sh"
   ".github/workflows/e2e-dummy-target.yml"
   # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer review.
   "docs/cycle-digest.jsonl"

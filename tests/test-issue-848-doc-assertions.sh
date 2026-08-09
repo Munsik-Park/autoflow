@@ -638,6 +638,15 @@ else
     "tests/plugin/verify-install-skill-scripts.sh"
     "tests/plugin/verify-e2e-dummy-target.sh"
     "tests/test-issue-979-bundle-delivery.sh"
+    # #69 cycle files: verification-depth justification ADR + its cycle-scoped RED
+    # suite. docs/autoflow-guide.md, docs/evaluation-system.md,
+    # docs/teammate-contracts.md, .claude/workflows/architect-deliberation.js,
+    # docs/adr/README.md, docs/INDEX.md, docs/maintained-docs.md,
+    # setup/manifest.json, tests/fixtures/doc-invariants.json,
+    # test/workflows/run.mjs, .github/workflows/e2e-dummy-target.yml,
+    # tests/test-issue-27/59/62-*.sh are already admitted above.
+    "docs/adr/0018-verification-depth-justification.md"
+    "tests/test-issue-69-verification-depth.sh"
   )
   disallowed=""
   while IFS= read -r f; do

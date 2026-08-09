@@ -584,6 +584,15 @@ else
     "docs/adr/0017-teammate-removal-feasibility.md"
     "tests/manual/issue-51-manual-scenarios.md"
     "tests/test-issue-51-teammate-removal-verdict.sh"
+    # #69 cycle files: verification-depth justification ADR + its cycle-scoped RED
+    # suite. docs/autoflow-guide.md, docs/evaluation-system.md,
+    # docs/teammate-contracts.md, .claude/workflows/architect-deliberation.js,
+    # docs/adr/README.md, docs/INDEX.md, docs/maintained-docs.md,
+    # setup/manifest.json, tests/fixtures/doc-invariants.json,
+    # test/workflows/run.mjs, .github/workflows/e2e-dummy-target.yml,
+    # tests/test-issue-27/59/62-*.sh are already admitted above.
+    "docs/adr/0018-verification-depth-justification.md"
+    "tests/test-issue-69-verification-depth.sh"
   )
   disallowed=""
   while IFS= read -r f; do
