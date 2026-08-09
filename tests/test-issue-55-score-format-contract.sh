@@ -487,6 +487,15 @@ if [ -f "$BASEREF_LIB" ]; then
     "tests/test-issue-952-wizard-removal.sh"
     # HANDOFF step 6.7 cycle-digest co-ride (precedent: 26ce222 for #67).
     "docs/cycle-digest.jsonl"
+    # #52 cycle admission — same mechanical scope-guard admission practice as
+    # the block above (precedent: 5b01eaf for #51, 26ce222 for #67). #52's
+    # own commit touches these four paths (two claim-site doc edits, its
+    # cycle-scoped suite, and its manual scenario), and this array is amended
+    # to admit them so an unrelated cycle's own diff isn't misattributed.
+    "docs/design-rationale.md"
+    "docs/teammate-contracts.md"
+    "tests/manual/issue-52-manual-scenarios.md"
+    "tests/test-issue-52-peer-facilitator-premise.sh"
   )
   BASE55="$(resolve_base_ref 2>/dev/null || true)"
   if [ -n "$BASE55" ]; then
