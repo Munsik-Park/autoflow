@@ -313,7 +313,14 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
 
 If `verdict` is empty or contains `skip`, the gate is not triggered for the cause-analysis form. Bug issues must be initialised as `"pending"` so the gate fires.
 
-**Score recording**: write the Evaluation AI's `scores` verbatim (score + reason format).
+**Score recording**: write the Evaluation AI's `scores` verbatim, in the shape the hook validates — shown below. Each item's score is a number in `0`–`10`; the two shapes may be mixed within one gate. A prose string such as `"9 - reason"` is **not** a score: the hook's state-file validator rejects it, and every score-gated `git push` / `gh pr create` / gated `Agent` spawn fails closed until the file is repaired. Format source: [`docs/evaluation-system.md`](docs/evaluation-system.md) > Evaluation Output Format.
+
+<!-- SCORE-SHAPE-EXAMPLE -->
+```json
+{ "feasibility": { "score": 9, "reason": "evidence" }, "scope": 8 }
+```
+
+This object is the value of `phases.<gate>.scores` in `.autoflow/issue-{N}.json`.
 
 **Hook gates** (script computes from `scores`):
 

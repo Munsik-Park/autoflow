@@ -855,6 +855,16 @@ else
     "tests/plugin/verify-install-skill-scripts.sh"
     "tests/plugin/verify-e2e-dummy-target.sh"
     "tests/test-issue-979-bundle-delivery.sh"
+    # #55 cycle files (gate-score write contract at the producer site): the
+    # cycle-scoped suite + its manual-scenario lane, and the shape declaration
+    # the CLAUDE.md fence is compared against. CLAUDE.md,
+    # .claude/hooks/check-autoflow-gate.sh,
+    # plugin/autoflow/hooks/check-autoflow-gate.sh,
+    # tests/fixtures/doc-invariants.json, setup/manifest.json and
+    # .github/workflows/e2e-dummy-target.yml are already admitted above.
+    "tests/fixtures/gate-schema.json"
+    "tests/test-issue-55-score-format-contract.sh"
+    "tests/manual/issue-55-manual-scenarios.md"
   )
   disallowed=""
   while IFS= read -r f; do

@@ -140,6 +140,11 @@ on:
       # `grep -A40 '^ *paths:'` window).
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
       - 'tests/manual/issue-51-manual-scenarios.md'
+      # #55 cycle surface. TAIL here for the same reason the #51 entries above
+      # record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero
+      # headroom, so nothing is inserted above an existing entry).
+      - 'tests/test-issue-55-score-format-contract.sh'
+      - 'tests/manual/issue-55-manual-scenarios.md'
   push:
     branches: [main]
     paths:
@@ -238,6 +243,10 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
       - 'tests/manual/issue-51-manual-scenarios.md'
+      # #55 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-55-score-format-contract.sh'
+      - 'tests/manual/issue-55-manual-scenarios.md'
 
 permissions:
   contents: read
@@ -520,3 +529,13 @@ jobs:
       # tests/test-issue-51-teammate-removal-verdict.sh.
       - name: Run teammate-removal feasibility verdict (#51)
         run: bash tests/test-issue-51-teammate-removal-verdict.sh
+
+      # #55 gate-score write contract at the producer site. Cycle-scoped: it
+      # drives the CLAUDE.md SCORE-SHAPE-EXAMPLE fence through the real hook
+      # and the real digest emitter, and asserts its own CI registration on
+      # this file. Placed at the job TAIL, strictly below the doc-invariant
+      # registry runner step, for the reason the #51 comment above records.
+      # CI has no glob discovery; registered by filename per the sibling
+      # suites. See tests/test-issue-55-score-format-contract.sh.
+      - name: Run gate-score write contract (#55)
+        run: bash tests/test-issue-55-score-format-contract.sh
