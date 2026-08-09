@@ -69,7 +69,7 @@ The Facilitator runs a multi-teammate deliberation in an **isolated sub-context*
 The facilitator is realized as a **project workflow** the orchestrator runs with the `Workflow` tool, **not** as a nested Agent Team. This is the only realization that the Claude Code runtime both supports and documents as isolating:
 
 - A spawned teammate **cannot** create its own team or teammates, and a team's lead is **fixed for the team's lifetime** (no lead transfer). So "a spawned facilitator that leads a nested Developer-AI ↔ Test-AI team" is not executable — ruled out. (Agent Teams > Limitations: <https://code.claude.com/docs/en/agent-teams>.)
-- A peer-teammate facilitator inside the orchestrator's own team is **not** a documented isolation boundary: the docs state teammate messages arrive at the lead automatically and do **not** guarantee that peer-to-peer message *content* is withheld from the lead — so it cannot be relied on to keep the deliberation out of the orchestrator's context.
+- A peer-teammate facilitator inside the orchestrator's own team is rejected on the ground recorded at [`docs/design-rationale.md`](design-rationale.md) > Decision 8, which cites the measurement in `tests/manual/issue-52-manual-scenarios.md` > M1. This bullet does not restate that ground.
 - The `Workflow` tool **is** documented as isolating: "intermediate results stay in script variables instead of landing in Claude's context," and the orchestrator receives one final result. (Workflows: <https://code.claude.com/docs/en/workflows>.)
 
 **Invocation / version / config**:
