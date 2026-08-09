@@ -111,21 +111,31 @@ peer-teammate facilitation (issue Out of Scope).
 - **team shape:** two named members, `test-*` and `dev-*`, in one flat team
   under the orchestrator as lead (deviation from the issue's written 3-member
   procedure — see note above)
-- **peer nonce:** _(literal used this run)_
-- **control nonce:** _(literal used this run, distinct from peer nonce)_
-- **send confirmation (peer hop):** _(yes/no)_
-- **send confirmation (control, direct to lead):** _(yes/no)_
-- **receipt confirmation:** _(yes/no — derived token, not the raw peer nonce,
-  echoed by the dev-\* teammate to the lead)_
-- **positive control result:** _(observed/not observed)_
-- **peer nonce in lead's stream — occurrences:** _(count, 0 if none)_
-- **peer nonce in lead's stream — per-occurrence envelope:** _(for each
-  occurrence: sender, delivery path)_
-- **control nonce in lead's stream — occurrences:** _(count)_
-- **control nonce in lead's stream — per-occurrence envelope:** _(for each
-  occurrence: sender, delivery path)_
-- **verdict:** _(injection observed / injection not observed / inconclusive)_
-- **date:** _(run date)_
+- **peer nonce:** `PN52-KESTREL-7431`
+- **control nonce:** `CN52-ALBATROSS-2986` (distinct from peer nonce)
+- **send confirmation (peer hop):** yes — sender confirmed "step 2 (to
+  dev-probe52, the peer payload) also succeeded"
+- **send confirmation (control, direct to lead):** yes — sender confirmed
+  "step 1 (to team-lead, control nonce) succeeded"
+- **receipt confirmation:** yes — derived token `PN52_KESTREL_7431` (stated
+  reversible transformation: every `-` replaced with `_`; strengthened from
+  the suffix example above so the raw literal is not a substring of the
+  token), echoed by the dev-\* teammate to the lead
+- **positive control result:** observed
+- **peer nonce in lead's stream — occurrences:** 0
+- **peer nonce in lead's stream — per-occurrence envelope:** none — the raw
+  peer nonce literal appeared in no `SendMessage`-delivered turn and no other
+  visible channel. Envelope-level trace only: the `test-*` teammate's idle
+  notification carried the metadata summary `[to dev-probe52] peer probe
+  payload`, which references the peer send without its content.
+- **control nonce in lead's stream — occurrences:** 1
+- **control nonce in lead's stream — per-occurrence envelope:** sender
+  `test-probe52`, delivery path: `SendMessage`-injected turn addressed to the
+  lead
+- **verdict:** injection not observed
+- **date:** 2026-08-09 (runtime: Claude Code Agent Teams, single implicit
+  team, probe members `test-probe52` / `dev-probe52` under the orchestrator
+  as lead)
 
 Recorded as a data point to re-check, not as a runtime guarantee — matching
 how `docs/teammate-common-rules.md` frames the sibling named-spawn delivery
