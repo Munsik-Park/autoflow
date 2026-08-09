@@ -256,6 +256,8 @@
     { "id": "69-AC-scope-mirror-evalsys", "origin_issue": 69, "intent": "existence", "file": "docs/evaluation-system.md", "section": "Evaluation Types", "predicate": "present", "match": "fixed", "literal": "verification design", "scope": "permanent" },
     { "id": "69-AC-scope-mirror-contracts", "origin_issue": 69, "intent": "existence", "file": "docs/teammate-contracts.md", "section": "Evaluation Types", "predicate": "present", "match": "fixed", "literal": "verification design", "scope": "permanent" },
     { "id": "69-AC-no-quantity-cap", "origin_issue": 69, "intent": "coherence", "file": "docs/autoflow-guide.md", "section": "Output artifacts", "predicate": "absent", "match": "regex", "literal": "\\b(at most|no more than|maximum of) [0-9]+ (layers?|files?|lines?)\\b", "scope": "permanent" },
-    { "id": "69-AC-clause-stated-once", "origin_issue": 69, "intent": "existence", "file": "docs/autoflow-guide.md", "section": "Output artifacts", "predicate": "present", "match": "fixed", "literal": "missing obligation, not a", "scope": "permanent" }
+    { "id": "69-AC-clause-stated-once", "origin_issue": 69, "intent": "existence", "file": "docs/autoflow-guide.md", "section": "Output artifacts", "predicate": "present", "match": "fixed", "literal": "missing obligation, not a", "scope": "permanent" },
+    { "id": "69-AC-scope-symmetry-guide", "origin_issue": 69, "intent": "existence", "file": "docs/autoflow-guide.md", "section": "GATE:PLAN — Plan Evaluation", "predicate": "present", "match": "fixed", "literal": "or its verification design", "scope": "permanent" },
+    { "id": "69-reg-readme", "origin_issue": 69, "intent": "existence", "file": "docs/adr/README.md", "section": "Current Drafts", "section_end": null, "predicate": "present", "match": "fixed", "literal": "0018-verification-depth-justification.md", "scope": "permanent" }
   ]
 }

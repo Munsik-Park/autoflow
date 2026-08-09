@@ -302,11 +302,12 @@ allow_list=(
   "tests/test-issue-846-doc-assertions.sh"
   "tests/test-issue-848-doc-assertions.sh"
   ".github/workflows/e2e-dummy-target.yml"
+  "tests/test-issue-952-wizard-removal.sh"
   # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer review.
   "docs/cycle-digest.jsonl"
-  ".autoflow/issue-69-feature-design.md"
-  ".autoflow/issue-69-verification-design.md"
-  ".autoflow/issue-69-ledger.md"
+  # .autoflow/* rows removed (GATE:QUALITY dock, Quality item): .autoflow/ is
+  # gitignored, so no path under it can ever appear in `git diff --name-only`
+  # — those three rows could never fire.
 )
 
 # The new ADR file's exact path is derived, not enumerable in advance (it does not exist
