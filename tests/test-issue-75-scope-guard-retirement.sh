@@ -668,6 +668,13 @@ allow_list=(
   # verification design's stale-cross-reference leg.
   "tests/manual/issue-59-manual-scenarios.md"
   "tests/manual/issue-985-manual-scenarios.md"
+  # GATE:QUALITY RED closure (f3b6d91): these two carried stale references to
+  # deleted lanes/files (69's allow_list data row named the deleted
+  # test-issue-40-doc-assertions.sh; 67's "KNOWN RED mid-cycle" comment cited
+  # the removed AC-59-14b lane) and are restated in this cycle's diff for the
+  # first time, per the same stale-cross-reference leg as the pair above.
+  "tests/test-issue-67-deliberation-record.sh"
+  "tests/test-issue-69-verification-depth.sh"
   # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer
   # review, so the digest file is a mandated member of every cycle's diff.
   "docs/cycle-digest.jsonl"
