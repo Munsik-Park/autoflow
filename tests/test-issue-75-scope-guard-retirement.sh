@@ -131,8 +131,16 @@ assert_true "no file under tests/** contains an embedded NUL byte (hits:${NUL_HI
   '[ -z "$NUL_HITS" ]'
 
 if [ -f "$SUITE_964" ]; then
-  assert_true "964: AC2-B inventory cross-check lane absent (banner+both arms removed)" \
-    '! grep -q "AC2-B inventory\|AC2-B " "$SUITE_964" 2>/dev/null || ! grep -q "AC2-B" "$SUITE_964"'
+  # Corrected (ledger E46): the prior `!A || !B` form degraded to just `!A`
+  # (B's match set -- bare "AC2-B" anywhere -- is a superset of A's, so `!B`
+  # could never independently red once `!A` already covered every case where
+  # it mattered), which let the possessive form "AC2-B's" (:73, present-tense
+  # in a still-live file, no "AC2-B inventory" / "AC2-B " with a space
+  # anywhere) evade detection entirely. AC2-B2 has zero occurrences in the
+  # tree already, so no compound-label exception is needed -- the tightest
+  # true oracle is a single blanket absence of the bare token in any form.
+  assert_true "964: no AC2-B token survives in any form -- bare, possessive, or compound (lane retired; AC2-B2 already has zero occurrences)" \
+    '! grep -q "AC2-B" "$SUITE_964"'
   assert_true "964: AC2-B2 extractor cross-check lane absent" \
     '! grep -q "AC2-B2" "$SUITE_964"'
   assert_true "964: AC1-A lane (FILE_949 reference) absent" \
@@ -350,12 +358,26 @@ if [ -f "$SUITE_59" ]; then
   # on either fragment.
   assert_true "59: AC index no longer claims 'the 12 AC-59-11d/12c lanes' (the live AC-59-21 oracle now covers 7, not 12)" \
     '! grep -q "12 AC-59-11d/12c" "$SUITE_59"'
-  assert_true "59: AC-59-21 index row survives, restated to the current family size" \
-    'grep -q "AC-59-21" "$SUITE_59"'
+  # Real count-consistency oracle (ledger E46), not a bare presence check:
+  # the label previously claimed "restated to the current family size" while
+  # only asserting the AC-59-21 token exists, which a future narrowing
+  # (7 -> 5) would not catch. Extracts the number the index row states and
+  # the real count of "AC-59-21-<suite>" base-measurement assertions in the
+  # file, and requires them equal -- a future narrowing that updates one but
+  # not the other reds this.
+  IDX21_COUNT="$(grep -oE '[0-9]+ AC-59-11d lanes' "$SUITE_59" | grep -oE '^[0-9]+')"
+  LIVE21_COUNT="$(grep -c '"AC-59-21-' "$SUITE_59" || true)"
+  assert_true "59: AC-59-21 index row's stated lane count (${IDX21_COUNT:-none}) matches the real number of AC-59-21-<suite> base-measurement assertions in the file ($LIVE21_COUNT)" \
+    '[ -n "$IDX21_COUNT" ] && [ "$IDX21_COUNT" = "$LIVE21_COUNT" ]'
   assert_true "59: AC index no longer claims '12 precondition labels + 12 delta labels' (the live AC-59-22a oracle now asserts 7 of each)" \
     '! grep -q "12 precondition labels + 12 delta labels" "$SUITE_59"'
-  assert_true "59: AC-59-22a index row survives, restated to the current family size" \
-    'grep -q "AC-59-22a" "$SUITE_59"'
+  # Same real-oracle treatment for AC-59-22a: compare the index row's stated
+  # count against the live assertion's own stated count (its label text,
+  # authored alongside its "-eq" condition), not mere token presence.
+  IDX22A_COUNT="$(grep -oE '[0-9]+ precondition labels \+ [0-9]+ delta labels' "$SUITE_59" | grep -oE '^[0-9]+')"
+  LIVE22A_COUNT="$(grep -oE '[0-9]+ base-precondition labels and [0-9]+ delta labels' "$SUITE_59" | grep -oE '^[0-9]+')"
+  assert_true "59: AC-59-22a index row's stated count (${IDX22A_COUNT:-none}) matches the live assertion's own stated count (${LIVE22A_COUNT:-none})" \
+    '[ -n "$IDX22A_COUNT" ] && [ "$IDX22A_COUNT" = "$LIVE22A_COUNT" ]'
 fi
 if [ -f "$MANUAL_59" ]; then
   assert_true "tests/manual/issue-59-manual-scenarios.md: stale AC-59-12c family/count sentence restated" \
@@ -441,6 +463,38 @@ if [ -f "$SUITE_62" ]; then
     '! grep -q "AC9/AC10 for 798" "$SUITE_62"'
   assert_true "62: postmortem note still names AC9 for 798 and AC6-scope for 799 (both live)" \
     'grep -q "AC9" "$SUITE_62" && grep -q "AC6-scope" "$SUITE_62"'
+fi
+
+echo "--- GATE:QUALITY closed-defect-list sweep (ledger E46): 55's committed-surface-completeness prose + implementation; 964's :73-74 rationale ---"
+if [ -f "$SUITE_55" ]; then
+  # :49-50 (index row) and :70 (Guard-arms sentence) both describe the
+  # committed-surface-completeness lane as a currently-PASSing guard; its
+  # implementation (ALLOWLIST_55 and the lane body) is already fully gone
+  # from this file, so both prose sites are dead. One absence check covers
+  # both -- the token occurs at exactly these two lines.
+  assert_true "55: no longer describes the deleted committed-surface-completeness lane as a live guard (index row + Guard-arms sentence)" \
+    '! grep -q "committed-surface-completeness" "$SUITE_55"'
+  assert_true "55: the surviving guard arms (digest-agreement, single-source) stay indexed, so the restatement narrows rather than guts the sentence" \
+    'grep -q "digest-agreement" "$SUITE_55" && grep -q "single-source" "$SUITE_55"'
+  # Missing implementation-absence assertion (item 4): the lane body /
+  # ALLOWLIST_55 itself -- 55's largest removal, and until now the only
+  # negative this suite carried for 55 was registry-entries-added. Already
+  # true at HEAD (confirmed: zero occurrences), documented against future
+  # reintroduction rather than left unasserted.
+  assert_true "55: ALLOWLIST_55 / the committed-surface-completeness lane body no longer exists in the file" \
+    '! grep -q "ALLOWLIST_55" "$SUITE_55"'
+fi
+if [ -f "$SUITE_964" ]; then
+  # :73-74's naming-rationale comment claims present-tense that "AC2-B's
+  # compound inventory ... stays untouched" -- the referent is retired. The
+  # phrase spans two physical lines ("AC2-B's" ends :73, "compound
+  # inventory" opens :74), so keying on the contiguous string across the
+  # wrap would silently miss it (the 495-token lesson) -- ":74"'s own
+  # closing clause "stays untouched (ledger E8)" is single-line and unique.
+  assert_true "964: naming-rationale comment no longer claims the retired lane's inventory 'stays untouched'" \
+    '! grep -q "stays untouched (ledger E8)" "$SUITE_964"'
+  assert_true "964: the EXTRACTOR_GUARD_REGEX definition this comment explains still exists (rationale restated, not deleted)" \
+    'grep -q "EXTRACTOR_GUARD_REGEX=" "$SUITE_964"'
 fi
 
 if [ -f "$SUITE_69" ]; then
