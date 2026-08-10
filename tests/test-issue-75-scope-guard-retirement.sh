@@ -556,6 +556,12 @@ allow_list=(
   "setup/manifest.json"
   "tests/test-issue-75-scope-guard-retirement.sh"
   "tests/manual/issue-75-manual-scenarios.md"
+  # §3's stale-cross-reference restatement sites -- both files describe a lane
+  # this cycle retires (AC-59-12c's family/count sentence; AC3-WORKFLOW-COUNT's
+  # "file count/names" description) and are restated, not removed, per the
+  # verification design's stale-cross-reference leg.
+  "tests/manual/issue-59-manual-scenarios.md"
+  "tests/manual/issue-985-manual-scenarios.md"
   # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer
   # review, so the digest file is a mandated member of every cycle's diff.
   "docs/cycle-digest.jsonl"
