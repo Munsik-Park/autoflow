@@ -338,6 +338,20 @@ if [ -f "$MANUAL_985" ]; then
   assert_true "tests/manual/issue-985-manual-scenarios.md: description no longer claims the label checks 'file count/names' (checks names only post-fence-removal)" \
     '! grep -q "file count/names" "$MANUAL_985"'
 fi
+if [ -f "$SUITE_69" ]; then
+  assert_true "69: test-issue-40-doc-assertions token absent from its allow_list data row (§3.2 deletes that file)" \
+    '! grep -q "test-issue-40-doc-assertions" "$SUITE_69"'
+fi
+if [ -f "$SUITE_67" ]; then
+  assert_true "67: AC-59-14b token absent from its 'KNOWN RED mid-cycle' comment (§3.6 removes that lane)" \
+    '! grep -q "AC-59-14b" "$SUITE_67"'
+fi
+if [ -f "$SUITE_7" ]; then
+  assert_true "7: DELTA-lane comment no longer claims the six sibling scope-guard suites (798/799/846/848/952/955) already admit docs/cycle-digest.jsonl in their own allow-lists (§3.7 deletes those arrays)" \
+    '! grep -q "admit this path in their own allow-lists" "$SUITE_7"'
+  assert_true "7: DELTA-lane comment still explains the docs/cycle-digest.jsonl / HANDOFF step 6.7 obligation it is restated against, not merely deleted" \
+    'grep -q "docs/cycle-digest.jsonl: HANDOFF step 6.7" "$SUITE_7"'
+fi
 
 # =============================================================================
 # Heavy real re-runs are opt-in (AUTOFLOW_ISSUE75_HEAVY=1), run SERIALLY, and
@@ -505,6 +519,17 @@ assert_true "workflow: 'tests/test-issue-75-scope-guard-retirement.sh' appears i
 PATHS_HITS_MANUAL="$(grep -c "tests/manual/issue-75-manual-scenarios.md" "$CI_WORKFLOW" || true)"
 assert_true "workflow: tests/manual/issue-75-manual-scenarios.md appears in both paths: trigger blocks (count 2, got $PATHS_HITS_MANUAL)" \
   '[ "$PATHS_HITS_MANUAL" -eq 2 ]'
+
+# The composition legs (the real cross-suite re-runs this suite gates behind
+# AUTOFLOW_ISSUE75_HEAVY) have no other venue: fast mode SKIPs them by design
+# (the recursion/runaway fix), so CI's own step is the sole place they ever
+# actually execute. Step-scoped, not job-level (the workflow's own comment
+# above the step states why: a job-level value would leak into every sibling
+# step and re-enter the recursion the sentinel exists to cut) -- so the check
+# is bounded to this suite's own run: step block, capture-then-grep, no pipe.
+WORKFLOW_75_STEP_BLOCK="$(grep -A3 'run: bash tests/test-issue-75-scope-guard-retirement.sh' "$CI_WORKFLOW")"
+assert_true "workflow: the #75 suite's own run: step carries a step-scoped AUTOFLOW_ISSUE75_HEAVY: \"1\" env line (sole venue of the composition legs)" \
+  'printf "%s" "$WORKFLOW_75_STEP_BLOCK" | grep -qE "AUTOFLOW_ISSUE75_HEAVY: *\"1\""'
 
 echo "--- fixed-window readers re-run green after the §3.9 registration edit (cached from the heavy launch above) ---"
 # Class A: forward '^ *paths:' windows. Only the workflow-window guard's own
