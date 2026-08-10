@@ -641,6 +641,10 @@ allow_list=(
   "tests/test-issue-848-doc-assertions.sh"
   "tests/test-issue-952-wizard-removal.sh"
   "tests/test-issue-955-subagent-background-ban.sh"
+  # REFINE (020b823): drops a stale precedent comment (3 deletions, comment-
+  # only) pointing at the now-removed digest emitter — legitimately on this
+  # cycle's own change surface.
+  "scripts/canary/emit-phase-marker.sh"
 )
 
 if on_issue_branch; then
