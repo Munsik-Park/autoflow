@@ -859,6 +859,118 @@ assert_true "AC-C3-8: --help -> exit 0" "[ \"\$RUN_EXIT\" -eq 0 ]"
 rm -f "$GH_INVOCATION_LOG"
 
 # =============================================================================
+echo ""
+echo "=== AC-UNKNOWN-POLLS (transient UNKNOWN precheck enters the poll, settles green) — issue #81 ==="
+# verification design AC-UNKNOWN-POLLS (.autoflow/issue-81-verification-design.md
+# §"Acceptance criteria"): a precheck read of mergeable=UNKNOWN must NOT take
+# the immediate exit-10 path. Today's bug: is_not_mergeable() returns true
+# whenever $1 != "MERGEABLE" (confirm-ci-green.sh:202), so a still-computing
+# UNKNOWN is classified identically to a confirmed CONFLICTING. The bounded
+# poll must be entered instead, and a settling sequence must reach exit 0.
+
+PRECHECK_UNKNOWN='{"mergeable":"UNKNOWN","mergeStateStatus":"UNKNOWN"}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_UNKNOWN"
+SEQ_FILE="$(mktemp)"; printf '%s\n' "$POLL_ALL_GREEN_CHECKRUN" > "$SEQ_FILE"
+COUNTER_FILE="$(mktemp)"; echo 0 > "$COUNTER_FILE"
+GH_MOCK_POLL_SEQUENCE_FILE="$SEQ_FILE"
+GH_MOCK_POLL_COUNTER_FILE="$COUNTER_FILE"
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-UNKNOWN-POLLS: exit code is 0 (a still-computing precheck is NOT a confirmed conflict)" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+POLL_LINE_COUNT="$(grep -cF 'statusCheckRollup' "$GH_INVOCATION_LOG" 2>/dev/null)"
+POLL_LINE_COUNT="${POLL_LINE_COUNT:-0}"
+assert_true "AC-UNKNOWN-POLLS: at least one statusCheckRollup-bearing (poll) gh call was issued (the bounded poll was entered, not skipped)" \
+  "[ \"\$POLL_LINE_COUNT\" -ge 1 ]"
+rm -f "$GH_INVOCATION_LOG" "$SEQ_FILE" "$COUNTER_FILE"
+
+# =============================================================================
+echo ""
+echo "=== AC-UNKNOWN-BOUNDED (persistent UNKNOWN terminates at the deadline, exit 14 EXACTLY) — issue #81 ==="
+# verification design AC-UNKNOWN-BOUNDED / feature design issue Risk ①: a
+# PERSISTENT UNKNOWN (precheck AND every poll body) must still terminate
+# inside the deadline via the existing bounded loop -- never wait past it --
+# and land on exit 14 exactly (mergeable_confirmed never set for this run).
+# Fixture precondition (verification design, stated explicitly): every poll
+# body carries an EMPTY statusCheckRollup so the fail>0/exit-12 branch is
+# never reached and the flag-never-set path is the only reachable one -- the
+# exactness assertion rests on this precondition. Wrapped in the outer
+# run_bounded harness watchdog (AC-C3-6/AC-C3-7 convention) since a
+# mis-implemented fix here would be a genuine hang, not a fast exit.
+
+POLL_UNKNOWN_EMPTY='{"mergeable":"UNKNOWN","mergeStateStatus":"UNKNOWN","statusCheckRollup":[]}'
+
+AC_UNKNOWN_BOUNDED_LOG="$(mktemp)"
+GH_INVOCATION_LOG="$(mktemp)"
+run_bounded 10 "$AC_UNKNOWN_BOUNDED_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$POLL_UNKNOWN_EMPTY" \
+  GH_MOCK_POLL_BODY="$POLL_UNKNOWN_EMPTY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 42
+
+assert_true "AC-UNKNOWN-BOUNDED: the outer harness watchdog never had to fire (bounded loop self-terminates within CI_POLL_TIMEOUT_SECS)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-UNKNOWN-BOUNDED: a persistent UNKNOWN terminates with exit 14 EXACTLY (never 10/11/13, and NOT green)" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 14 ]"
+rm -f "$AC_UNKNOWN_BOUNDED_LOG" "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-UNDETERMINED-AFTER-CONFIRMED (sticky flag: confirmed-then-undetermined exits 11) — issue #81 ==="
+# verification design AC-UNDETERMINED-AFTER-CONFIRMED / feature design "Flag
+# lifetime": mergeable_confirmed is a RUN-SCOPED LATCH, not a per-read
+# verdict -- once a confirmed read sets it, no later undetermined read clears
+# it. A precheck that confirms MERGEABLE, followed by every poll going
+# UNKNOWN through the deadline (empty rollup -- no check ever observed), must
+# NOT regress to exit 14 ("could not confirm mergeable state" -- a FALSE
+# sentence for a run whose precheck DID confirm it). It must report exit 11
+# ("MERGEABLE but no check published"), the true statement of this run.
+
+POLL_UNKNOWN_EMPTY_2='{"mergeable":"UNKNOWN","mergeStateStatus":"UNKNOWN","statusCheckRollup":[]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$POLL_UNKNOWN_EMPTY_2"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=3 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-UNDETERMINED-AFTER-CONFIRMED: exit code is 11 EXACTLY (not 14 -- the precheck's confirmation survives the later undetermined polls)" \
+  "[ \"\$RUN_EXIT\" -eq 11 ]"
+assert_true "AC-UNDETERMINED-AFTER-CONFIRMED: stderr carries the 'MERGEABLE but no check published' sentence" \
+  "printf '%s' \"\$RUN_OUTPUT\" | grep -qF 'MERGEABLE but no check published'"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-UNDETERMINED-RED-CI (mid-poll UNKNOWN + failing rollup still routes to RED, exit 12) — issue #81 ==="
+# verification design AC-UNDETERMINED-RED-CI / feature design third
+# deliberate-decision bullet: an undetermined mid-poll read must still
+# evaluate the rollup for a concluded failure -- withholding ONLY the
+# green/mergeability verdict, never the red-CI verdict. A read of
+# mergeable=UNKNOWN paired with a FAILURE rollup element must exit 12, never
+# sleep to a deadline code (11/13/14) and never silently mask the red build.
+
+POLL_UNKNOWN_FAILURE='{"mergeable":"UNKNOWN","mergeStateStatus":"UNKNOWN","statusCheckRollup":[{"__typename":"CheckRun","status":"COMPLETED","conclusion":"FAILURE"}]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+SEQ_FILE="$(mktemp)"; printf '%s\n' "$POLL_UNKNOWN_FAILURE" > "$SEQ_FILE"
+COUNTER_FILE="$(mktemp)"; echo 0 > "$COUNTER_FILE"
+GH_MOCK_POLL_SEQUENCE_FILE="$SEQ_FILE"
+GH_MOCK_POLL_COUNTER_FILE="$COUNTER_FILE"
+CI_POLL_TIMEOUT_SECS=10 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-UNDETERMINED-RED-CI: exit code is 12 (a concluded failure under an undetermined mergeable read still routes to RED)" \
+  "[ \"\$RUN_EXIT\" -eq 12 ]"
+assert_true "AC-UNDETERMINED-RED-CI: stderr carries the 'red CI (route to RED)' sentence" \
+  "printf '%s' \"\$RUN_OUTPUT\" | grep -qF 'red CI (route to RED)'"
+rm -f "$GH_INVOCATION_LOG" "$SEQ_FILE" "$COUNTER_FILE"
+
+# =============================================================================
 # Results
 # ---------------------------------------------------------------------------
 echo ""
