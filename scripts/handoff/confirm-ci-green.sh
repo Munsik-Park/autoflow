@@ -380,6 +380,6 @@ if [ "$saw_checks" -eq 0 ]; then
   echo "MERGEABLE but no check published within ${CI_POLL_TIMEOUT_SECS}s — suspect webhook / scan fallback (PeriodicFolderTrigger / synchronize re-push); NOT green" >&2
   exit 11
 else
-  echo "checks present but no green verdict after ${CI_POLL_TIMEOUT_SECS}s — either checks still pending (slow CI), or a confirmed-then-undetermined run whose rollup is already all-green but whose mergeability stayed undetermined and never re-settled before the deadline; inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2
+  echo "checks present but no green verdict after ${CI_POLL_TIMEOUT_SECS}s (slow CI, or a confirmed-then-undetermined run whose rollup is green but mergeability never re-settled) — inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2
   exit 13
 fi

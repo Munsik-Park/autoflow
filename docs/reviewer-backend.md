@@ -23,11 +23,10 @@ Contract: reviewer-backend
        - clean state (no confirmed Critical/High/Medium) ⇒ REMOVE
          `blocked-by-review` (gh pr edit → gh issue edit fallback → verify);
        - a confirmed Critical/High/Medium finding while the label is absent
-         ⇒ attach `blocked-by-review` on that same primary/fallback/verify
-         surface (gh pr edit → gh issue edit fallback → verify present);
+         ⇒ attach `blocked-by-review` (gh pr edit → gh issue edit fallback →
+         verify present);
        - any other state ⇒ leave the label unchanged.
-       Removal and attach are mutually exclusive on one review (zero findings
-       versus at least one), so a review never performs both.
+       A review only ever performs one of these three actions.
   Authority: the configured isolated reviewer subprocess is the SOLE clearer of
              `blocked-by-review`. The orchestrator is hook-denied (Decision 9).
   Output   : the posted PR comment + label state. NOT the subprocess stdout.
