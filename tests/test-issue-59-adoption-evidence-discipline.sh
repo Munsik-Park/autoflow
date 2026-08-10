@@ -78,11 +78,11 @@
 #                returns the sentinel.
 #   AC-59-20c  — unconditional, RED discriminator: the real `suite_result_at_ref`
 #                composed with the real `base_measured`, no re-typed copy.
-#   AC-59-21   — branch-scoped: each of the 12 AC-59-11d/12c lanes gets a
+#   AC-59-21   — branch-scoped: each of the 7 AC-59-11d lanes gets a
 #                separate base-measurement precondition assertion, plus the
 #                `base_measured` conjunct leading its own delta condition.
 #   AC-59-22a  — unconditional, RED discriminator, self-scoped structural grep:
-#                12 precondition labels + 12 delta labels exist, each naming
+#                7 precondition labels + 7 delta labels exist, each naming
 #                its suite; no precondition label carries a claim-shaped verb.
 #   AC-59-22b  — unconditional, RED discriminator: every precondition label
 #                interpolates the base failed count ($BF...).
@@ -227,7 +227,7 @@ suite_counts() {
 # isolated worktree on the SAME host/environment this script itself is running in, and
 # returns the same "passed total failed" triplet suite_counts() extracts.
 #
-# Ledger E33 (PR #61, CI run 31088600592): AC-59-11d/12c originally pinned literal
+# Ledger E33 (PR #61, CI run 31088600592): the delta lanes originally pinned literal
 # totals measured on the author's local host. Five lanes FAILed on the GitHub Actions
 # runner because environment-conditional sub-tests in the target suites (798/799/955)
 # don't register there, shifting the real total below the local literal — and three
