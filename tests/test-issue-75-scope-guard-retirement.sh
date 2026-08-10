@@ -335,8 +335,27 @@ if [ -f "$SUITE_955" ]; then
     '! grep -q "test-issue-794-doc-assertions" "$SUITE_955"'
 fi
 if [ -f "$SUITE_59" ]; then
-  assert_true "59: AC-59-12c token no longer occurs anywhere in the file (index row restated, lane removed)" \
-    '! grep -q "AC-59-12c" "$SUITE_59"'
+  # Strengthened (ledger E44): the bare-token grep "AC-59-12c" is an
+  # over-claiming oracle -- the real stale reference survives in the
+  # compound/abbreviated form "AC-59-11d/12c" (:81, :230), which does not
+  # contain the contiguous substring "AC-59-12c" and so evaded the original
+  # pattern. Verified against the real file before writing: both surviving
+  # occurrences match the alternation below; a bare "AC-59-12c" would too.
+  assert_true "59: AC-59-12c is no longer referenced anywhere in the file, bare or in the compound/abbreviated form AC-59-11d/12c (index row restated, lane removed)" \
+    '! grep -qE "AC-59-[0-9a-d]*/12c|AC-59-12c" "$SUITE_59"'
+  # Count consistency (ledger E44): the header AC index (:81, :85) still
+  # claims "12" lanes/labels for the AC-59-21/AC-59-22a families, while the
+  # live oracles at :711/:719 assert 7 (the family shrank when AC-59-12c's
+  # five lanes were removed). Verified single-line contiguous before keying
+  # on either fragment.
+  assert_true "59: AC index no longer claims 'the 12 AC-59-11d/12c lanes' (the live AC-59-21 oracle now covers 7, not 12)" \
+    '! grep -q "12 AC-59-11d/12c" "$SUITE_59"'
+  assert_true "59: AC-59-21 index row survives, restated to the current family size" \
+    'grep -q "AC-59-21" "$SUITE_59"'
+  assert_true "59: AC index no longer claims '12 precondition labels + 12 delta labels' (the live AC-59-22a oracle now asserts 7 of each)" \
+    '! grep -q "12 precondition labels + 12 delta labels" "$SUITE_59"'
+  assert_true "59: AC-59-22a index row survives, restated to the current family size" \
+    'grep -q "AC-59-22a" "$SUITE_59"'
 fi
 if [ -f "$MANUAL_59" ]; then
   assert_true "tests/manual/issue-59-manual-scenarios.md: stale AC-59-12c family/count sentence restated" \
