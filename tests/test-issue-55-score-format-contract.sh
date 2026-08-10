@@ -46,8 +46,6 @@
 #                                  the score_shapes key) does not exist yet —
 #                                  same guard-vs-RED-discriminator split used
 #                                  by tests/test-issue-953-cycle-digest.sh AC4/AC6.
-#   committed-surface-completeness — DELIVER-time guard (not RED-first),
-#                                  checked against the Part 5 9-file allow-list.
 #
 # Deliberately NOT reimplemented here (verification design Part 1 — the cycle
 # suite adds no second implementation):
@@ -67,7 +65,7 @@
 # diagnostic-hint-not-evaluable, ci-self-registration
 # (all sub-arms) and manual-scenario-present all FAIL. Guard arms (digest-
 # agreement, single-source's equality/execution sub-arms, the ci-self-
-# registration companion window, committed-surface-completeness) PASS.
+# registration companion window) PASS.
 # =============================================================================
 
 set -uo pipefail

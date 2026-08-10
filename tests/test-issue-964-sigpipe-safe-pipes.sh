@@ -70,8 +70,10 @@ GUARD_REGEX='grep -[ABC] ?[0-9]+ [^)]*\| grep -q'
 # (feature §4.1 / verification §2 DCR-1, ledger E4, frozen regex). Matches a
 # bare-identifier extractor function (e.g. `claude_issue_mgmt_section`) piped
 # directly into a short-circuiting consumer (`grep -q`/`grep -m`). Kept as a
-# SEPARATE named regex/baseline from GUARD_REGEX (never folded in) so AC2-B's
-# compound inventory (5 files/13 lines) stays untouched (ledger E8).
+# SEPARATE named regex from GUARD_REGEX, never folded in: the two match
+# different producer shapes, so a single merged pattern would report one
+# undifferentiated hit set and AC2-A / AC2-A2 could no longer say WHICH class
+# a hit belongs to (ledger E8).
 EXTRACTOR_GUARD_REGEX='(^|[[:space:]"'"'"'])[a-zA-Z_][a-zA-Z0-9_]* \| grep -[qm]'
 
 PASS=0; FAIL=0; TESTS=0
