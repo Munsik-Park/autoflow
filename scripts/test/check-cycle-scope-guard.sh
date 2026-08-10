@@ -159,7 +159,7 @@ analyze_file() {
           if (s ~ gate_pat) {
             if (!have_gate) { have_gate = 1; gate_depth = depth; gate_kind = "arm" }
             in_comp = 0
-          } else if (s ~ /^(\*|\*\))/ || s ~ /^\*\)/) {
+          } else if (s ~ /^\*/) {
             in_comp = 1; comp_depth = depth; comp_seen = 1
           }
         }
