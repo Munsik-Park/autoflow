@@ -22,8 +22,13 @@ into `tests/fixtures/doc-invariants.json` / `tests/run-doc-invariants.sh`,
 `docs/doc-invariant-registry.md` disposition table). Rows 1–7 are kept below
 as a historical record of the sites reviewed pre-retirement; they are not a
 live checklist — the file/line anchors no longer resolve against the current
-tree. The live scope-A surface is rows 8–10 (3 sites / 3 files), matching the
-AC2-B2 baseline in `tests/test-issue-964-sigpipe-safe-pipes.sh`.
+tree. Row 8 joined them: issue #75 deleted `test-issue-799-inert-cleanup.sh`'s
+off-window filter chain, so that site's producer no longer exists either. The
+live scope-A surface is rows 9–10 (2 sites / 2 files); the inventory
+cross-check that used to pin a baseline file-set and line-count against it was
+retired by #75 in the same pass (its counted arm had become unreachable), so
+the surviving rows are checked against the tree rather than against a pinned
+baseline.
 
 | # | File | Line | Producer fn | assert | grep flags |
 |---|---|---|---|---|---|
@@ -34,21 +39,27 @@ AC2-B2 baseline in `tests/test-issue-964-sigpipe-safe-pipes.sh`.
 | 5 | test-issue-800-doc-assertions.sh (historical — retired by #951) | 169 | `claude_issue_mgmt_section` | true | `-qF` |
 | 6 | test-issue-800-doc-assertions.sh (historical — retired by #951) | 171 | `boundary_backlog_section` | false | `-qF` |
 | 7 | test-issue-800-doc-assertions.sh (historical — retired by #951) | 173 | `boundary_backlog_section` | true | `-qF` |
-| 8 | test-issue-799-inert-cleanup.sh | 467 | `claude_md_offwindow_changes` | false | `-q .` |
+| 8 | test-issue-799-inert-cleanup.sh (historical — producer removed by #75) | 467 | _(removed)_ | false | `-q .` |
 | 9 | test-issue-846-doc-assertions.sh | 240 | `claude_regressions_line` | false | `-qiE` |
 | 10 | test-issue-848-doc-assertions.sh | 335 | `commit_ownership_table` | true | `-qiE` |
 
-**assert_false negation checkpoint** (sites 4, 6, 8, 9): confirm the captured-
+**assert_false negation checkpoint** (live site 9; historical sites 4, 6, 8):
+confirm the captured-
 string pipeline exit code is still what `assert_false` inverts — i.e.
 `printf '%s\n' "$ctx" | grep -q… T` yields the same exit as the pre-fix
 `X | grep -q… T` for identical `T`. The suite-level green (unchanged pass
 count) is the automated backstop; this item is the human diff-level
 confirmation.
 
-**Empty-input nuance (site 8, `799:467 grep -q .`):** confirm that when
-`claude_md_offwindow_changes` produces empty output, `printf '%s\n' ""` emits
-one lone newline, so `grep -q .` (which requires a non-newline character)
-still reports no match — identical to the pre-fix empty-producer direct path.
+**Empty-input nuance (site 8 — retired):** this item checked the `grep -q .`
+empty-producer path of the off-window filter chain in
+`test-issue-799-inert-cleanup.sh`. Issue #75 deleted that chain (a
+hand-maintained inventory of admitted document lines a later cycle had to
+extend — recorded at `docs/doc-invariant-registry.md` §5), so the item has no
+subject and is not part of the live checklist. The general property it
+demonstrated still holds for any surviving site: `printf '%s\n' ""` emits one
+lone newline, and `grep -q .` requires a non-newline character, so an empty
+producer still reports no match.
 
 **Multi-line table producer (site 10, `848:335 commit_ownership_table`):**
 confirm the target row (`CLAUDE.md:363`, the "Submodule pointer bump" row) is

@@ -8,12 +8,11 @@
 #   RED until GREEN), then verify no forbidden pattern occurs.
 # T11-1b: diff scan — no modifications under services/ in this
 #   branch. Always evaluable.
-# T12-1a: any .claude/hooks/check-autoflow-gate.sh change vs the merge-base is
-#   confined to the gate-label removal deny (operator-owned blocked-by-subrepo).
-# T12-1b: CLAUDE.md "Hook gates" sentinel lines unchanged vs the merge-base.
+# T12-1a: the gate-label removal deny covers both blocked-by-* labels
+#   (operator-owned blocked-by-subrepo extension). State assertion only — the
+#   diff-shaped halves of T12-1a/T12-1b were retired by issue #75.
 
 REPO_ROOT="${BATS_TEST_DIRNAME}/../.."
-BASE_REF="origin/main"
 
 # Issue #795 (ADR-0015 D3): .github/workflows/handoff-sequence.yml was
 # physically removed, so it is no longer in the boundary-scan file set.
@@ -99,58 +98,12 @@ require_all_new_files() {
   fi
 }
 
-# T12-1 is fundamentally a negative property — by definition it must hold
-# *throughout* this dev branch. To make it a RED-able phase signal, gate it on
-# the presence of the GREEN-phase production files: until GREEN produces the
-# new files, T12-1 reports RED as "implementation not yet started"; after
-# GREEN, T12-1 enforces that any hook change is confined to the gate-label deny
-# (the operator-owned blocked-by-subrepo extension) and touches nothing else.
-@test "T12-1a: hook change vs origin/main is confined to the gate-label deny" {
+# T12-1a retains only its positive STATE half. The diff-shaped half compared
+# against a fixed origin/main base, so its diff was unconditionally empty on
+# any branch that does not touch the hook — retired by issue #75 along with
+# T12-1b, which had the same shape over CLAUDE.md.
+@test "T12-1a: the gate-label deny covers both blocked-by-* labels" {
   cd "$REPO_ROOT"
   require_all_new_files
-  base="$(git merge-base HEAD "$BASE_REF" 2>/dev/null || git rev-parse "$BASE_REF" 2>/dev/null || true)"
-  if [ -z "$base" ]; then
-    skip "no merge-base with $BASE_REF available"
-  fi
-  # Making blocked-by-subrepo removal operator-owned requires extending the
-  # existing gate-label removal deny (blocked-by-review → blocked-by-(review|
-  # subrepo)). That is the ONLY hook change this branch may carry: every changed
-  # line must belong to the gate-label deny (a blocked-by-* label or the deny's
-  # own comment/message vocabulary). Any other hook edit is a boundary violation.
-  changed="$(git diff "$base"..HEAD -- .claude/hooks/check-autoflow-gate.sh 2>/dev/null \
-    | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' || true)"
-  offending="$(printf '%s\n' "$changed" \
-    | grep -vE 'blocked-by-|gate label|Codex review|operator|self-open|codex exec|does not intercept|AutoFlow owns|review gate|N sub-repos|auto-removes' \
-    || true)"
-  if [ -n "$offending" ]; then
-    echo "hook modified outside the gate-label deny — boundary violation:" >&2
-    printf '%s\n' "$offending" >&2
-    return 1
-  fi
-  # Positively confirm the intended extension landed (deny covers both labels).
-  grep -qE 'blocked-by-\(review\|subrepo\)' "$REPO_ROOT/.claude/hooks/check-autoflow-gate.sh"
-}
-
-@test "T12-1b: CLAUDE.md 'Hook gates' bullet list block is structurally unchanged" {
-  cd "$REPO_ROOT"
-  require_all_new_files
-  base="$(git merge-base HEAD "$BASE_REF" 2>/dev/null || git rev-parse "$BASE_REF" 2>/dev/null || true)"
-  if [ -z "$base" ]; then
-    skip "no merge-base with $BASE_REF available"
-  fi
-  extract_hook_gates() {
-    awk '
-      /^\*\*Hook gates\*\*/ { in_section = 1; print; next }
-      in_section && /^\*\*[A-Z]/ && !/^\*\*Hook gates\*\*/ { in_section = 0 }
-      in_section && /^## / { in_section = 0 }
-      in_section { print }
-    '
-  }
-  before="$(git show "$base":CLAUDE.md 2>/dev/null | extract_hook_gates || true)"
-  after="$(cat "$REPO_ROOT/CLAUDE.md" | extract_hook_gates || true)"
-  if [ "$before" != "$after" ]; then
-    echo "CLAUDE.md Hook gates block changed:" >&2
-    diff <(echo "$before") <(echo "$after") >&2 || true
-    return 1
-  fi
+  grep -qF 'blocked-by-(review|subrepo)' "$REPO_ROOT/.claude/hooks/check-autoflow-gate.sh"
 }

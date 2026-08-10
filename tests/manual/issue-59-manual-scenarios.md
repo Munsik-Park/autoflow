@@ -107,8 +107,8 @@ TMPDIR=/path/to/a/read-only/dir bash tests/test-issue-59-adoption-evidence-disci
 ```
 
 **Procedure:** Run the suite as above on the `dev/*-issue-59*` branch with a
-resolvable `BASE_REF`, and inspect the output of the 12 AC-59-21 / AC-59-11d /
-AC-59-12c lanes.
+resolvable `BASE_REF`, and inspect the output of the 7 AC-59-21 / AC-59-11d
+lanes (issue #75 retired the yml-window delta family with its lane).
 
 **Pass:** each AC-59-21 precondition lane FAILs with its `base measurement of
 <suite> at <ref>` label showing a `-1` triple, its paired delta lane FAILs

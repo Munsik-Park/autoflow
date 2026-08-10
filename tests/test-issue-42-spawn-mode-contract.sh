@@ -59,7 +59,6 @@ COMMON_RULES="$PROJECT_ROOT/docs/teammate-common-rules.md"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 GEN_MANIFEST="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
 GATE_HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
-GATE_SCHEMA="$PROJECT_ROOT/tests/fixtures/gate-schema.json"
 
 PASS=0
 FAIL=0
@@ -124,9 +123,8 @@ assert_true "A42-LITERAL-CONTIGUOUS (a): no origin_issue:42 literal/before/after
   "[ \"$NEWLINE_BAD\" = 0 ]"
 
 # extract_section mirrors tests/run-doc-invariants.sh's own (durable heading,
-# level-aware close). Re-derived rather than sourced (the runner's is a
-# private function, not a library export) — same approach as
-# tests/test-issue-40-doc-assertions.sh.
+# level-aware close). Re-derived rather than sourced: the runner's is a
+# private function, not a library export.
 extract_section() {          # heading_text file
   local heading="$1" file="$2"
   awk -v h="$heading" '

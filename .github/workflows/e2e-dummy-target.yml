@@ -153,6 +153,11 @@ on:
       # zero headroom, so nothing is inserted above an existing entry).
       - 'tests/test-issue-71-digest-removal.sh'
       - 'tests/manual/issue-71-manual-scenarios.md'
+      # #75 cycle surface (cycle-scope-guard retirement + the standing lint).
+      # TAIL here for the same reason the #51/#55/#52 entries above record
+      # (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero headroom,
+      # so nothing is inserted above an existing entry).
+      - 'scripts/test/check-cycle-scope-guard.sh'
   push:
     branches: [main]
     paths:
@@ -261,6 +266,9 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-71-digest-removal.sh'
       - 'tests/manual/issue-71-manual-scenarios.md'
+      # #75 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'scripts/test/check-cycle-scope-guard.sh'
 
 permissions:
   contents: read
@@ -441,6 +449,27 @@ jobs:
       # sibling suites. See scripts/test/check-repo-key.sh.
       - name: Run repo-key derivation guard (#978)
         run: bash scripts/test/check-repo-key.sh
+
+      # Cycle-scope-guard lint (#75): a cycle-scoped path allow-list must be
+      # evaluated only on its own dev/*-issue-<N> branch, so a merged cycle's
+      # guard cannot red an unrelated branch. The check is applied to the
+      # array's evaluation set (dereference, feeding `git diff --name-only`,
+      # `resolve_base_ref`), not to the array data, and its --self-test runs
+      # first so an empty subject set still exercises the detector. CI has no
+      # glob discovery; registered by filename per the sibling suites. See
+      # scripts/test/check-cycle-scope-guard.sh.
+      - name: Run cycle-scope-guard lint (#75)
+        run: bash scripts/test/check-cycle-scope-guard.sh
+
+      # Cycle-scope-guard retirement suite (#75): asserts the post-state of
+      # the §3 deletions (dead assertions, duplicate whole-suite re-runs,
+      # hardcoded sibling totals and unscoped allow-list arrays are gone, each
+      # with a §5 disposition row), the retained-lane survival legs, the
+      # runner's absorbed newline-literal gate, and this cycle's own
+      # branch-scoped allow_list lane. CI has no glob discovery; registered by
+      # filename per the sibling suites.
+      #
+      # The heavy composition legs (the real sibling re-runs) are opt-in: the
 
       # Phase-marker emitter guard (#35): the canary emitter
       # `scripts/canary/emit-phase-marker.sh` appends one phase-transition

@@ -31,7 +31,6 @@
 #                                  the hint text statically, on the diagnostic's
 #                                  own source line, instead of driving an
 #                                  unconstructible input through it.
-#   registry-entries-added       — 4 origin_issue:55 doc-invariant entries.
 #   ci-self-registration         — new suite + manual scenario wired into
 #                                  e2e-dummy-target.yml (both paths: blocks +
 #                                  a run: step), tail-appended per the E6/E7
@@ -45,8 +44,6 @@
 #                                  not RED-first), vacuously satisfied while
 #                                  their precondition (the score_shapes key)
 #                                  does not exist yet.
-#   committed-surface-completeness — DELIVER-time guard (not RED-first),
-#                                  checked against the Part 5 9-file allow-list.
 #
 # Deliberately NOT reimplemented here (verification design Part 1 — the cycle
 # suite adds no second implementation):
@@ -63,10 +60,10 @@
 #
 # RED expectation (pre-implementation, this commit): producer-shape (a/a2/b/c),
 # single-source (has-key arm), diagnostic-hint-malformed,
-# diagnostic-hint-not-evaluable, registry-entries-added, ci-self-registration
+# diagnostic-hint-not-evaluable, ci-self-registration
 # (all sub-arms) and manual-scenario-present all FAIL. Guard arms
 # (single-source's equality/execution sub-arms, the ci-self-
-# registration companion window, committed-surface-completeness) PASS.
+# registration companion window) PASS.
 # =============================================================================
 
 set -uo pipefail
@@ -77,11 +74,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
 CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
 GATE_SCHEMA="$PROJECT_ROOT/tests/fixtures/gate-schema.json"
-DOC_INVARIANTS="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 MANUAL_SCENARIOS="$PROJECT_ROOT/tests/manual/issue-55-manual-scenarios.md"
-BASEREF_LIB="$PROJECT_ROOT/tests/lib/base-ref.sh"
 
 SUITE_PATH="tests/test-issue-55-score-format-contract.sh"
 MANUAL_PATH="tests/manual/issue-55-manual-scenarios.md"
@@ -317,37 +311,6 @@ assert_true "diagnostic-hint-parity: the accepted-shape hint occurs exactly twic
   "[ '$HINT_OCCURRENCES' -eq 2 ]"
 
 # =============================================================================
-# registry-entries-added
-# =============================================================================
-echo ""
-echo "=== registry-entries-added ==="
-
-EXPECTED_IDS="55-score-shape-marker 55-score-shape-fence 55-score-shape-string-rejected 55-score-format-source-link"
-for id in $EXPECTED_IDS; do
-  ENTRY_OK="$(jq -c --arg id "$id" '[.invariants[] | select(.id==$id) | select(.file=="CLAUDE.md") | select(.predicate=="present") | select(.scope=="permanent") | select(.section=="AutoFlow State Tracking (Hook integration)")] | length' "$DOC_INVARIANTS" 2>/dev/null)"
-  [ -z "$ENTRY_OK" ] && ENTRY_OK=0
-  assert_true "registry-entries-added: entry '$id' present, file=CLAUDE.md, predicate=present, scope=permanent, anchored on the AutoFlow State Tracking section (got count: $ENTRY_OK)" \
-    "[ '$ENTRY_OK' -eq 1 ]"
-done
-
-COUNT55="$(jq '[.invariants[] | select(.origin_issue==55)] | length' "$DOC_INVARIANTS" 2>/dev/null)"
-[ -z "$COUNT55" ] && COUNT55=0
-assert_true "registry-entries-added: exactly 4 origin_issue:55 entries exist (got: $COUNT55)" \
-  "[ '$COUNT55' -eq 4 ]"
-
-if [ "$COUNT55" -eq 4 ]; then
-  RUNNER_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
-  RUNNER_EXIT=$?
-  RUNNER_55_FAILS="$(printf '%s\n' "$RUNNER_OUT" | grep -c '^  FAIL: 55-' || true)"
-  RUNNER_978_PASSES="$(printf '%s\n' "$RUNNER_OUT" | grep -c '^  PASS: 978-' || true)"
-  assert_true "registry-entries-added: tests/run-doc-invariants.sh exits 0 (got: $RUNNER_EXIT)" "[ '$RUNNER_EXIT' -eq 0 ]"
-  assert_true "registry-entries-added: no 55-* entry FAILs in the runner (got: $RUNNER_55_FAILS)" "[ '$RUNNER_55_FAILS' -eq 0 ]"
-  assert_true "registry-entries-added: the pre-existing 978-* absent-guard entries on the same section still PASS (got: $RUNNER_978_PASSES)" "[ '$RUNNER_978_PASSES' -gt 0 ]"
-else
-  assert_true "registry-entries-added: run-doc-invariants.sh regression (unmeasurable — entries not yet added above)" "false"
-  assert_true "registry-entries-added: no 55-* FAIL (unmeasurable — entries not yet added above)" "false"
-  assert_true "registry-entries-added: pre-existing 978-* still PASS (unmeasurable — entries not yet added above)" "false"
-fi
 
 # =============================================================================
 # ci-self-registration
@@ -416,122 +379,6 @@ else
   assert_true "manual-scenario-present-b: instruction-is-followed scenario named (unmeasurable — file missing above)" "false"
 fi
 
-# =============================================================================
-# committed-surface-completeness (DELIVER-time guard, verification design
-# Part 5 9-file allow-list) — not a RED-first item.
-# =============================================================================
-echo ""
-echo "=== committed-surface-completeness (guard) ==="
-
-if [ -f "$BASEREF_LIB" ]; then
-  # shellcheck source=/dev/null
-  source "$BASEREF_LIB"
-  ALLOWLIST_55=(
-    "CLAUDE.md"
-    ".claude/hooks/check-autoflow-gate.sh"
-    "plugin/autoflow/hooks/check-autoflow-gate.sh"
-    "tests/fixtures/gate-schema.json"
-    "tests/fixtures/doc-invariants.json"
-    "$SUITE_PATH"
-    "$MANUAL_PATH"
-    ".github/workflows/e2e-dummy-target.yml"
-    "setup/manifest.json"
-    # Ledger E16 — the mechanical scope-guard admissions this repo's
-    # branch-diff guards require of every cycle (precedent: 5b01eaf for #51,
-    # 26ce222 for #67). Each of the six suites below carries an
-    # `allow_list=( ... )` array governing the branch diff, and each is
-    # amended in this cycle's commit to admit the members above; that
-    # amendment is itself part of the diff, so it is admitted here.
-    "tests/test-issue-798-topology-flip.sh"
-    "tests/test-issue-799-inert-cleanup.sh"
-    "tests/test-issue-955-subagent-background-ban.sh"
-    "tests/test-issue-846-doc-assertions.sh"
-    "tests/test-issue-848-doc-assertions.sh"
-    "tests/test-issue-952-wizard-removal.sh"
-    # #52 cycle admission — same mechanical scope-guard admission practice as
-    # the block above (precedent: 5b01eaf for #51, 26ce222 for #67). #52's
-    # own commit touches these four paths (two claim-site doc edits, its
-    # cycle-scoped suite, and its manual scenario), and this array is amended
-    # to admit them so an unrelated cycle's own diff isn't misattributed.
-    "docs/design-rationale.md"
-    "docs/teammate-contracts.md"
-    "tests/manual/issue-52-manual-scenarios.md"
-    "tests/test-issue-52-peer-facilitator-premise.sh"
-    # #69 cycle admission — same mechanical scope-guard admission practice as
-    # the blocks above (ledger E16 class; precedent: the #52 block).
-    ".claude/workflows/architect-deliberation.js"
-    "docs/INDEX.md"
-    "docs/adr/0018-verification-depth-justification.md"
-    "docs/adr/README.md"
-    "docs/autoflow-guide.md"
-    "docs/evaluation-system.md"
-    "docs/maintained-docs.md"
-    "test/workflows/run.mjs"
-    "tests/test-issue-27-composition-oracle.sh"
-    "tests/test-issue-40-doc-assertions.sh"
-    "tests/issue-59-full-sweep-driver.sh"
-    "tests/test-issue-59-adoption-evidence-discipline.sh"
-    "tests/test-issue-62-sequential-rounds.sh"
-    "tests/test-issue-69-verification-depth.sh"
-    # #71 cycle admission — same mechanical scope-guard admission practice as
-    # the blocks above (ledger E16 class). #71 removes the cycle-digest emitter
-    # and the cross-issue recurrence scan; every path its diff touches is
-    # admitted here, including the sibling guards amended for the same reason.
-    ".claude/agents/autoflow-analyzer.md"
-    "docs/cycle-digest.jsonl"
-    "docs/doc-invariant-registry.md"
-    "docs/improvement-backlog.md"
-    "docs/phases/analysis.md"
-    "plugin/autoflow/agents/autoflow-analyzer.md"
-    "scripts/canary/emit-phase-marker.sh"
-    "scripts/handoff/emit-cycle-digest.sh"
-    "scripts/preflight/scan-cross-issue-recurrence.sh"
-    "setup/gen-manifest-hashes.sh"
-    "tests/adr-0016-conformance-check.sh"
-    "tests/fixtures/cycle-digest-954-at-k.jsonl"
-    "tests/fixtures/cycle-digest-954-below-k.jsonl"
-    "tests/fixtures/cycle-digest-954-cross-axis.jsonl"
-    "tests/fixtures/cycle-digest-954-dedup-window.jsonl"
-    "tests/fixtures/cycle-digest-954-dedup.jsonl"
-    "tests/fixtures/cycle-digest-954-dual-axis.jsonl"
-    "tests/fixtures/cycle-digest-954-out-of-window.jsonl"
-    "tests/fixtures/cycle-digest-979-pre-migration-snapshot.jsonl"
-    "tests/fixtures/cycle-digest-schema.json"
-    "tests/manual/issue-7-manual-scenarios.md"
-    "tests/manual/issue-71-manual-scenarios.md"
-    "tests/manual/issue-953-manual-scenarios.md"
-    "tests/manual/issue-954-manual-scenarios.md"
-    "tests/plugin/verify-e2e-dummy-target.sh"
-    "tests/plugin/verify-install-into-target.sh"
-    "tests/test-issue-1-guard-contract.sh"
-    "tests/test-issue-35-phase-marker.sh"
-    "tests/test-issue-40-hook-additive.sh"
-    "tests/test-issue-42-spawn-mode-contract.sh"
-    "tests/test-issue-51-teammate-removal-verdict.sh"
-    "tests/test-issue-6-severity-parse-contract.sh"
-    "tests/test-issue-7-oracle-hardening.sh"
-    "tests/test-issue-71-digest-removal.sh"
-    "tests/test-issue-953-cycle-digest.sh"
-    "tests/test-issue-954-cross-issue-scan.sh"
-    "tests/test-issue-985-doc-assertions.sh"
-  )
-  BASE55="$(resolve_base_ref 2>/dev/null || true)"
-  if [ -n "$BASE55" ]; then
-    OUTSIDE_55=""
-    while IFS= read -r f; do
-      [ -n "$f" ] || continue
-      found=no
-      for a in "${ALLOWLIST_55[@]}"; do [ "$f" = "$a" ] && { found=yes; break; }; done
-      [ "$found" = no ] && OUTSIDE_55="${OUTSIDE_55:+$OUTSIDE_55, }$f"
-    done < <(git -C "$PROJECT_ROOT" diff --name-only "${BASE55}...HEAD" 2>/dev/null)
-    assert_true "committed-surface-completeness: git diff --name-only vs base contains no file outside the cycle allow-list (Part 5's nine members + ledger E16's scope-guard admissions) (outside: ${OUTSIDE_55:-none})" \
-      "[ -z '$OUTSIDE_55' ]"
-  else
-    assert_true "committed-surface-completeness: a comparison base is resolvable (resolve_base_ref, fail-loud per tests/lib/base-ref.sh contract)" "false"
-  fi
-else
-  assert_true "committed-surface-completeness: tests/lib/base-ref.sh exists" "false"
-fi
 
 echo "=============================="
 echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"

@@ -35,18 +35,12 @@
 #                      here is a harness/scope bug, not a #795 gap)
 #   AC-ORPHAN        - no dangling live reference to the removed machine
 #                      outside the allow-list (RED pre-change)
-#   AC-INVENTORY     - GATE:QUALITY FAIL follow-up: docs/host-service-
-#                      decoupling-plan.md §10.2 test-inventory KEEP rows must
-#                      not dangle (named file absent = stale row, no
-#                      supersession annotation recorded); and no tests/ file
-#                      (outside this verification suite's own negated-needle
-#                      reference) may still cite the deleted
+#   AC-DANGLING-REF  - no tests/ file (outside this verification suite's own
+#                      negated-needle reference) may still cite the deleted
 #                      test-issue-495-token-scope suite by name (RED
-#                      pre-change: docs/host-service-decoupling-plan.md:447,
-#                      451, 452 are unannotated KEEP rows naming files this
-#                      cycle deleted, and
-#                      tests/test-issue-788-host-purity-delta.sh:76 still
-#                      cites test-issue-495-token-scope.sh as its helper-
+#                      pre-change: tests/test-issue-788-host-purity-delta.sh:76
+#                      still cited test-issue-495-token-scope.sh as its
+#                      helper-pattern source)
 #                      pattern source).
 #
 # NOT covered here (per verification design, GREEN-phase / out-of-suite):
@@ -314,14 +308,12 @@ orphan_check() {
 ALLOW_HANDOFF_SEQ=(
   "docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
   "docs/git-workflow.md"
-  "docs/host-service-decoupling-plan.md"
   "docs/improvement-backlog.md"
 )
 ALLOW_SUBREPO_MERGED=(
   "docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
   "docs/adr/README.md"
   "docs/git-workflow.md"
-  "docs/host-service-decoupling-plan.md"
   "docs/improvement-backlog.md"
   # #951 capture-before-delete baseline (tests/fixtures/doc-invariants-
   # baseline.txt, ledger E5): a captured VERBATIM stdout snapshot of the
@@ -344,7 +336,6 @@ ALLOW_SUBREPO_MERGED=(
 )
 ALLOW_TOKEN=(
   "docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
-  "docs/host-service-decoupling-plan.md"
 )
 
 orphan_check \
@@ -361,65 +352,7 @@ orphan_check \
 
 # =============================================================================
 echo ""
-echo "=== AC-INVENTORY: host-service-decoupling-plan.md §10.2 test-inventory rows must not dangle ==="
-# GATE:QUALITY FAIL finding (issue #795, GATE:QUALITY cycle 1): AC-ORPHAN's
-# allow-list names docs/host-service-decoupling-plan.md wholesale, which
-# masked row-level staleness WITHIN that same doc — three §10.2 KEEP rows
-# (test-issue-495-token-scope.sh :447, test-handoff-sequence-workflow.bats
-# :451, test-handoff-sequence-verification.bats :452) name files this cycle
-# deletes, with no supersession/retire annotation on the row (asymmetric with
-# §10.1's handoff-sequence.yml row, which DID get a
-# "SUPERSEDED: RETIRED (ADR-0015 D3 / #795)" annotation this cycle). These
-# assertions check the GENERAL property — every unannotated §10.2 KEEP row's
-# path must exist — not just the three named lines, so any future row that
-# goes stale the same way is caught too.
-#
-# RED expectation: FAIL today. The three rows above are unannotated KEEP with
-# an absent file (verified: the files do not exist in the working tree —
-# `ls tests/test-issue-495-token-scope.sh tests/issue-92/test-handoff-
-# sequence-{workflow,verification}.bats` -> "No such file or directory" for
-# all three), and tests/test-issue-788-host-purity-delta.sh:76 still names
-# the deleted suite in its helper-pattern-source comment.
-
-DECOUPLING_PLAN="$PROJECT_ROOT/docs/host-service-decoupling-plan.md"
-
-inventory_keep_check() {
-  local desc="$1"
-  local section missing=()
-  # Isolate the §10.2 table body only (between its heading and the next
-  # prose section) so this check never wanders into §10.1/§10.3's own
-  # (differently-shaped) inventory tables.
-  section="$(awk 'BEGIN{f=0} f && /^주요 발견:/{exit} /^### 10\.2/{f=1} f{print}' "$DECOUPLING_PLAN")"
-  while IFS= read -r line; do
-    [[ "$line" =~ ^\|[[:space:]]*tests/ ]] || continue
-    local path verdict
-    path="$(awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/,"",$2); print $2}' <<< "$line")"
-    verdict="$(awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/,"",$3); print $3}' <<< "$line")"
-    # Only exact-"KEEP" rows are in scope: an annotated/superseded row (e.g.
-    # "~~KEEP~~ -> SUPERSEDED ...") no longer reads as literal "KEEP" and is
-    # correctly out of scope for this dangling-reference guard.
-    [[ "$verdict" == "KEEP" ]] || continue
-    # Skip glob/group rows (e.g. "scripts/test/check-seed-*.sh (11개)") —
-    # this AC checks concrete single-file rows, not pattern summaries.
-    case "$path" in
-      *'*'*|*'{'*|*'('*) continue ;;
-    esac
-    if [[ ! -e "$PROJECT_ROOT/$path" ]]; then
-      missing+=("$path")
-    fi
-  done <<< "$section"
-  TESTS=$((TESTS + 1))
-  if [[ ${#missing[@]} -eq 0 ]]; then
-    echo "  PASS: $desc"
-    PASS=$((PASS + 1))
-  else
-    echo "  FAIL: $desc (dangling KEEP row(s), file absent: ${missing[*]})"
-    FAIL=$((FAIL + 1))
-  fi
-}
-
-inventory_keep_check \
-  "AC-INVENTORY: every unannotated §10.2 KEEP row's tests/ path exists in the working tree"
+echo "=== AC-DANGLING-REF: no tests/ file still cites the deleted test-issue-495-token-scope suite ==="
 
 # Part (b): no file under tests/ still names the deleted suite by its
 # filename stem — comment, path variable, or otherwise. This suite's own
@@ -427,7 +360,7 @@ inventory_keep_check \
 # AC-ORPHAN exclusions above: it names the deleted file only to assert its
 # absence, not as a live reference to a live file).
 assert_false \
-  "AC-INVENTORY: no tests/ file (outside this suite) still references 'test-issue-495-token-scope'" \
+  "AC-DANGLING-REF: no tests/ file (outside this suite) still references 'test-issue-495-token-scope'" \
   "git -C '$PROJECT_ROOT' grep -Fl 'test-issue-495-token-scope' -- 'tests' ':!tests/test-issue-795-handoff-removal.sh' 2>/dev/null | grep -q ."
 
 # =============================================================================
