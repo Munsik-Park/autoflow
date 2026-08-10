@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: tests/manual/ docs/doc-invariant-registry.md
 # =============================================================================
 # Test: tests/manual/ scenario-document retirement — Issue #76 AC-c-1
 # =============================================================================

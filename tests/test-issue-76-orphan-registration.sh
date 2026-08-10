@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: scripts/test/check-suite-ci-coverage.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml
 # =============================================================================
 # Test: orphan-suite registration effectiveness — Issue #76 AC-b-2/AC-b-3,
 #       trigger-window preservation (AC-c-2), dangling-reference sweep
@@ -59,21 +60,38 @@ mapfile -t CI_SUBJECT_SUITES < <(grep -rl '^# ci-subject:' "$PROJECT_ROOT/tests"
 assert_true "AC-b-2 pre: at least one suite declares a # ci-subject: header (none yet — orphan registration not landed)" \
   "[ \${#CI_SUBJECT_SUITES[@]} -gt 0 ]"
 
+# All `paths:` list entries across every workflow, collected once. A GitHub
+# Actions `paths:` entry ending in `/` is a directory prefix — it covers
+# every file under it, not only a byte-identical hit — so coverage is
+# prefix matching, not the literal-substring grep this leg used before
+# RED2 (which false-failed on tests/fixtures/issue-76-anchor-fixture-doc.md
+# against the declared 'tests/fixtures/' directory entry).
+mapfile -t ALL_WF_PATHS < <(grep -hoE "^[[:space:]]*- ['\"][^'\"]+['\"]" "$PROJECT_ROOT"/.github/workflows/*.yml 2>/dev/null | sed -E "s/^[[:space:]]*- ['\"]//; s/['\"]\$//" | sort -u)
+
+path_covered() {
+  local path="$1" entry
+  for entry in "${ALL_WF_PATHS[@]}"; do
+    if [ "$entry" = "$path" ]; then
+      return 0
+    fi
+    case "$entry" in
+      */) [[ "$path" == "$entry"* ]] && return 0 ;;
+    esac
+  done
+  return 1
+}
+
 for suite in "${CI_SUBJECT_SUITES[@]}"; do
   rel="${suite#"$PROJECT_ROOT"/}"
   subjects_line="$(grep -m1 '^# ci-subject:' "$suite")"
   subjects="${subjects_line#\# ci-subject:}"
   all_covered=true
   for path in $subjects "$rel"; do
-    covered=false
-    for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
-      # A path is covered if some paths: block's pattern is a fixed-string
-      # prefix of the path, or the path appears literally.
-      if grep -qF "$path" "$wf" 2>/dev/null; then
-        covered=true
-        break
-      fi
-    done
+    if path_covered "$path"; then
+      covered=true
+    else
+      covered=false
+    fi
     [ "$covered" = true ] || all_covered=false
   done
   assert_true "AC-b-2: $rel — every declared ci-subject path (and the suite itself) is covered by some workflow's paths: block" "$all_covered"

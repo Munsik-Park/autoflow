@@ -9,8 +9,8 @@ driven from `tests/test-issue-76-runner-self-test-contract.sh`.
 | 3 | a table row that appears exactly once — the VALID single-match "line" case |
 
 **Unique Bold Lead**
-This paragraph is the body of the unique bold-lead block. It runs until the
-next terminator — a thematic break, since no `section_end` is set for this
+This paragraph is the body of the unique bold-lead block, and it runs until the next terminator.
+That terminator is a thematic break, since no `section_end` is set for this
 entry and no heading follows before the break.
 
 ---

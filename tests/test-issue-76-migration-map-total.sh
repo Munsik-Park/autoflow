@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: tests/fixtures/issue-76-migration-map.md docs/doc-invariant-registry.md tests/fixtures/doc-invariants.json
 # =============================================================================
 # Test: migration map totality and discharge — Issue #76 AC-a-1
 # =============================================================================
@@ -31,22 +32,31 @@
 # list — see the verification design's "row cardinality is one-to-many"
 # passage. This suite validates against that shape.
 #
-# SCOPE (stated explicitly, not left implicit): this RED pass drives Leg 1 +
-# Leg 2 over the two suites that are migrated-and-deleted WHOLESALE, per
-# .autoflow/issue-76-feature-design.md > "Files to change" —
-# tests/test-issue-843-doc-assertions.sh and
-# tests/test-issue-844-doc-assertions.sh — where "every assertion in the
-# suite" and "every assertion the map must carry" are the same set with no
-# ambiguity. The partially-touched suites (846/848/955/798/799/985/847,
-# adr-0016-conformance-check.sh, test-issue-16, test-issue-795,
-# tests/issue-92/*.bats) mix migrated (doc-STATE) and retained
-# (execution-shaped) assertions per the same file-table row; classifying
-# which occurrence is which is a migration-map authoring decision the map
-# itself must record, not something this checker can infer from source text
-# alone. Extending this suite's SUITES list to those files is carried
-# forward as RED2 follow-up once the map's per-suite disposition is
-# authored; not adding them now is a scoping decision, not an oversight —
-# recorded here so it is checkable rather than silently absent.
+# RED2 (2026-08-11): extracts from the BASE REF, not the working tree — the
+# two wholesale-deleted suites (843/844) are already gone at HEAD once GREEN
+# lands the migration, and every partially-touched suite has its doc-STATE
+# assertions REMOVED by the same migration, so a working-tree read would
+# silently shrink to the retained-only subset. `tests/lib/base-ref.sh`
+# (issue #951 AC4 precedent) resolves the comparison base the same way every
+# other DELTA-shaped suite in this tree does.
+#
+# SUITES now covers every touched suite whose assertions use the
+# assert_true/assert_false shape the extraction rule is defined over — the
+# two wholesale-deleted suites plus the ten partially-touched ones named in
+# .autoflow/issue-76-feature-design.md > "Files to change". `tests/issue-92/
+# *.bats` is deliberately EXCLUDED: its assertions are `@test { ... }` bats
+# blocks, a different syntax the AC-a-1 extraction rule (defined explicitly
+# over the assert_true/assert_false command word) does not range over. Bats
+# migration totality needs its own extractor or a manual-scenario leg; that
+# gap is reported, not silently absorbed into this suite's green/red count.
+#
+# For the ten partially-touched suites, Leg 1 (totality) still requires a
+# map row per EXTRACTED occurrence, migrated or retained — the map's
+# admissible-carrier taxonomy (registry id / §5 disposition row / load-time
+# anchor gate) has no fourth "stays in place, unchanged" kind, so whether a
+# retained execution-shaped assertion needs a new carrier kind or is simply
+# out of AC-a-1's intended scope is a real open question this run surfaces
+# rather than resolves — see the RED2 report to main.
 # =============================================================================
 
 set -uo pipefail
@@ -55,6 +65,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=tests/lib/issue-76-extract-assertions.sh
 source "$SCRIPT_DIR/lib/issue-76-extract-assertions.sh"
+# shellcheck source=tests/lib/base-ref.sh
+source "$SCRIPT_DIR/lib/base-ref.sh"
 
 MAP="$PROJECT_ROOT/tests/fixtures/issue-76-migration-map.md"
 REGISTRY="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
@@ -63,6 +75,16 @@ DISPOSITION_DOC="$PROJECT_ROOT/docs/doc-invariant-registry.md"
 SUITES=(
   "tests/test-issue-843-doc-assertions.sh"
   "tests/test-issue-844-doc-assertions.sh"
+  "tests/test-issue-846-doc-assertions.sh"
+  "tests/test-issue-847-doc-assertions.sh"
+  "tests/test-issue-848-doc-assertions.sh"
+  "tests/test-issue-955-subagent-background-ban.sh"
+  "tests/test-issue-798-topology-flip.sh"
+  "tests/test-issue-799-inert-cleanup.sh"
+  "tests/test-issue-985-doc-assertions.sh"
+  "tests/adr-0016-conformance-check.sh"
+  "tests/test-issue-16-manifest-locale-invariance.sh"
+  "tests/test-issue-795-handoff-removal.sh"
 )
 
 PASS=0; FAIL=0; TESTS=0
@@ -81,6 +103,13 @@ assert_true() {
 
 echo "=== Issue #76 — migration map totality & discharge (AC-a-1) ==="
 
+BASE_REF="$(resolve_base_ref)" || {
+  echo "  BLOCK: no base ref resolvable (tried override/GITHUB_BASE_REF/origin main/local main)"
+  echo "Results: 0/1 passed, 1 failed"
+  exit 1
+}
+echo "  INFO: base ref resolved to $BASE_REF"
+
 assert_true "AC-a-1 pre: migration map exists at the committed path tests/fixtures/issue-76-migration-map.md" \
   "[ -f '$MAP' ]"
 
@@ -90,9 +119,15 @@ if [ ! -f "$MAP" ]; then
   echo "   FAIL rather than skipped, since a missing map discharges nothing)"
 fi
 
+TMPDIR_76="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR_76"' EXIT
+
 for rel in "${SUITES[@]}"; do
-  suite="$PROJECT_ROOT/$rel"
-  [ -f "$suite" ] || { assert_true "AC-a-1: touched suite exists: $rel" "false"; continue; }
+  suite="$TMPDIR_76/$(basename "$rel")"
+  if ! git -C "$PROJECT_ROOT" show "${BASE_REF}:${rel}" > "$suite" 2>/dev/null; then
+    assert_true "AC-a-1: touched suite resolves at base ref $BASE_REF — $rel" "false"
+    continue
+  fi
 
   # Leg 1a — every extracted occurrence has a map row naming it.
   while IFS=$'\t' read -r ln key; do

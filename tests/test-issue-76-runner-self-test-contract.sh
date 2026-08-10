@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: tests/run-doc-invariants.sh tests/fixtures/doc-invariants.json tests/fixtures/issue-76-anchor-fixture-doc.md
 # =============================================================================
 # Test: runner --self-test mode (AC-a-3) and anchor-resolution negative
 #       coverage for the new section_kind values (AC-f) — Issue #76
