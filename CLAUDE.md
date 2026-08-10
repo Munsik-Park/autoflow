@@ -97,7 +97,7 @@ Other phases either have no teammate spawn or are run by the orchestrator: PREFL
 |---|---|---|
 | Evaluation AI (GATE:HYPOTHESIS structure/cause, GATE:PLAN, AUDIT, GATE:QUALITY, VERIFY arbitration) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call, so there is no prior context to retain |
 | DIAGNOSE (intake readiness triage, Phase A, Phase B, Phase 3, review-response loop check) | anonymous direct | single-shot — writes its body to `.autoflow/issue-{N}-*.md` and returns an anchor + one-line summary |
-| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5), cycle digest emitter (6.7), PREFLIGHT cross-issue recurrence scan (1.5) | anonymous direct | single-shot — ingests or serializes and returns; the auto-resolution it feeds is re-entered through the named Test AI / Developer AI rows |
+| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5) | anonymous direct | single-shot — ingests or serializes and returns; the auto-resolution it feeds is re-entered through the named Test AI / Developer AI rows |
 | Test AI (RED, VERIFY self-check, REFINE Green re-confirmation) | named team spawn | re-entered across phases retaining its prior call's context — the #40 cycle ran one Test AI through RED → RED2 → VERIFY |
 | Developer AI (GREEN, VERIFY self-check, REFINE) | named team spawn | re-entered across phases retaining its prior call's context. The VERIFY → REFINE boundary respawn is the sole exception — the model change forces a fresh teammate (see the [MUST] above) |
 

@@ -40,13 +40,11 @@
 #                                  has zero headroom).
 #   manual-scenario-present       — tests/manual/issue-55-manual-scenarios.md
 #                                  exists and carries instruction-is-followed.
-#   digest-agreement / single-source's shape-set equality & execution arms —
+#   single-source's shape-set equality & execution arms —
 #                                  GUARDS (verification-design Discriminators:
 #                                  not RED-first), vacuously satisfied while
-#                                  their precondition (the CLAUDE.md fence /
-#                                  the score_shapes key) does not exist yet —
-#                                  same guard-vs-RED-discriminator split used
-#                                  by tests/test-issue-953-cycle-digest.sh AC4/AC6.
+#                                  their precondition (the score_shapes key)
+#                                  does not exist yet.
 #   committed-surface-completeness — DELIVER-time guard (not RED-first),
 #                                  checked against the Part 5 9-file allow-list.
 #
@@ -55,7 +53,7 @@
 #   no-behavior-change — regression floor: tests/test-gate-hardening.sh,
 #     tests/test-issue-245-schema-validation.sh,
 #     tests/test-issue-223-schema-hook-contract.sh,
-#     tests/test-issue-961-cap6-gate.sh, tests/test-issue-953-cycle-digest.sh,
+#     tests/test-issue-961-cap6-gate.sh,
 #     tests/test-issue-18-fixture-glob-isolation.sh, tests/run-doc-invariants.sh,
 #     tests/test-issue-799-inert-cleanup.sh, tests/test-issue-27-composition-oracle.sh,
 #     tests/test-issue-35-phase-marker.sh, tests/test-issue-62-sequential-rounds.sh
@@ -66,8 +64,8 @@
 # RED expectation (pre-implementation, this commit): producer-shape (a/a2/b/c),
 # single-source (has-key arm), diagnostic-hint-malformed,
 # diagnostic-hint-not-evaluable, registry-entries-added, ci-self-registration
-# (all sub-arms) and manual-scenario-present all FAIL. Guard arms (digest-
-# agreement, single-source's equality/execution sub-arms, the ci-self-
+# (all sub-arms) and manual-scenario-present all FAIL. Guard arms
+# (single-source's equality/execution sub-arms, the ci-self-
 # registration companion window, committed-surface-completeness) PASS.
 # =============================================================================
 
@@ -82,7 +80,6 @@ GATE_SCHEMA="$PROJECT_ROOT/tests/fixtures/gate-schema.json"
 DOC_INVARIANTS="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
 REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-EMIT_SCRIPT="$PROJECT_ROOT/scripts/handoff/emit-cycle-digest.sh"
 MANUAL_SCENARIOS="$PROJECT_ROOT/tests/manual/issue-55-manual-scenarios.md"
 BASEREF_LIB="$PROJECT_ROOT/tests/lib/base-ref.sh"
 
@@ -320,40 +317,6 @@ assert_true "diagnostic-hint-parity: the accepted-shape hint occurs exactly twic
   "[ '$HINT_OCCURRENCES' -eq 2 ]"
 
 # =============================================================================
-# digest-agreement (oracle: canonical-example-through-real-digest) — GUARD,
-# vacuously satisfied while the CLAUDE.md fence is not yet extractable
-# (verification design Discriminators: green today by construction / not a
-# RED-first item; same guard-vs-RED-discriminator split as
-# tests/test-issue-953-cycle-digest.sh AC4/AC6).
-# =============================================================================
-echo ""
-echo "=== digest-agreement (oracle: canonical-example-through-real-digest) ==="
-
-if [ "$FENCE_PARSE_OK" = yes ]; then
-  DTMP="$(mktemp -d -p "$WORKROOT")"
-  mkdir -p "$DTMP/scripts/handoff" "$DTMP/.autoflow"
-  cp "$EMIT_SCRIPT" "$DTMP/scripts/handoff/emit-cycle-digest.sh"
-  chmod +x "$DTMP/scripts/handoff/emit-cycle-digest.sh"
-  jq -n --argjson scores "$FENCE_BODY" \
-    '{issue:"#55", cycle:1, date:"2026-08-09", mode:"new-issue", phases:{gate_plan:{scores:$scores}}}' \
-    > "$DTMP/.autoflow/issue-55.json"
-  : > "$DTMP/.autoflow/ledger.md"
-
-  ( cd "$DTMP" && bash scripts/handoff/emit-cycle-digest.sh \
-      .autoflow/issue-55.json .autoflow/ledger.md "" >/dev/null 2>&1 )
-  DIGEST_EXIT=$?
-
-  EXPECTED="$(printf '%s' "$FENCE_BODY" | jq -c 'def snorm: if type=="number" then . else .score end; { avg: (([to_entries[].value | snorm]) as $v | ($v|add)/($v|length)), items: (to_entries | map({key:.key, value:(.value|snorm)}) | from_entries) }')"
-  ACTUAL="$([ -f "$DTMP/docs/cycle-digest.jsonl" ] && tail -1 "$DTMP/docs/cycle-digest.jsonl" | jq -c '{avg: .gates.gate_plan.avg, items: .gates.gate_plan.items}' 2>/dev/null || echo '')"
-
-  assert_true "digest-agreement: emit-cycle-digest.sh exits 0 on the extracted example" "[ '$DIGEST_EXIT' -eq 0 ]"
-  assert_true "digest-agreement: the emitted record's gates.gate_plan {avg,items} ($ACTUAL) equals the extracted example's own values ($EXPECTED)" \
-    "[ '$ACTUAL' = '$EXPECTED' ]"
-else
-  assert_true "digest-agreement (guard, vacuously satisfied — CLAUDE.md fence not yet extractable)" "true"
-fi
-
-# =============================================================================
 # registry-entries-added
 # =============================================================================
 echo ""
@@ -485,8 +448,6 @@ if [ -f "$BASEREF_LIB" ]; then
     "tests/test-issue-846-doc-assertions.sh"
     "tests/test-issue-848-doc-assertions.sh"
     "tests/test-issue-952-wizard-removal.sh"
-    # HANDOFF step 6.7 cycle-digest co-ride (precedent: 26ce222 for #67).
-    "docs/cycle-digest.jsonl"
     # #52 cycle admission — same mechanical scope-guard admission practice as
     # the block above (precedent: 5b01eaf for #51, 26ce222 for #67). #52's
     # own commit touches these four paths (two claim-site doc edits, its
@@ -508,9 +469,51 @@ if [ -f "$BASEREF_LIB" ]; then
     "test/workflows/run.mjs"
     "tests/test-issue-27-composition-oracle.sh"
     "tests/test-issue-40-doc-assertions.sh"
+    "tests/issue-59-full-sweep-driver.sh"
     "tests/test-issue-59-adoption-evidence-discipline.sh"
     "tests/test-issue-62-sequential-rounds.sh"
     "tests/test-issue-69-verification-depth.sh"
+    # #71 cycle admission — same mechanical scope-guard admission practice as
+    # the blocks above (ledger E16 class). #71 removes the cycle-digest emitter
+    # and the cross-issue recurrence scan; every path its diff touches is
+    # admitted here, including the sibling guards amended for the same reason.
+    ".claude/agents/autoflow-analyzer.md"
+    "docs/cycle-digest.jsonl"
+    "docs/doc-invariant-registry.md"
+    "docs/improvement-backlog.md"
+    "docs/phases/analysis.md"
+    "plugin/autoflow/agents/autoflow-analyzer.md"
+    "scripts/canary/emit-phase-marker.sh"
+    "scripts/handoff/emit-cycle-digest.sh"
+    "scripts/preflight/scan-cross-issue-recurrence.sh"
+    "setup/gen-manifest-hashes.sh"
+    "tests/adr-0016-conformance-check.sh"
+    "tests/fixtures/cycle-digest-954-at-k.jsonl"
+    "tests/fixtures/cycle-digest-954-below-k.jsonl"
+    "tests/fixtures/cycle-digest-954-cross-axis.jsonl"
+    "tests/fixtures/cycle-digest-954-dedup-window.jsonl"
+    "tests/fixtures/cycle-digest-954-dedup.jsonl"
+    "tests/fixtures/cycle-digest-954-dual-axis.jsonl"
+    "tests/fixtures/cycle-digest-954-out-of-window.jsonl"
+    "tests/fixtures/cycle-digest-979-pre-migration-snapshot.jsonl"
+    "tests/fixtures/cycle-digest-schema.json"
+    "tests/manual/issue-7-manual-scenarios.md"
+    "tests/manual/issue-71-manual-scenarios.md"
+    "tests/manual/issue-953-manual-scenarios.md"
+    "tests/manual/issue-954-manual-scenarios.md"
+    "tests/plugin/verify-e2e-dummy-target.sh"
+    "tests/plugin/verify-install-into-target.sh"
+    "tests/test-issue-1-guard-contract.sh"
+    "tests/test-issue-35-phase-marker.sh"
+    "tests/test-issue-40-hook-additive.sh"
+    "tests/test-issue-42-spawn-mode-contract.sh"
+    "tests/test-issue-51-teammate-removal-verdict.sh"
+    "tests/test-issue-6-severity-parse-contract.sh"
+    "tests/test-issue-7-oracle-hardening.sh"
+    "tests/test-issue-71-digest-removal.sh"
+    "tests/test-issue-953-cycle-digest.sh"
+    "tests/test-issue-954-cross-issue-scan.sh"
+    "tests/test-issue-985-doc-assertions.sh"
   )
   BASE55="$(resolve_base_ref 2>/dev/null || true)"
   if [ -n "$BASE55" ]; then

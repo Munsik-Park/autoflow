@@ -55,7 +55,7 @@ orchestrator does not modify sub-repo files — see
 | Issue & PR Title Guide | `docs/title-guide.md` | Naming convention changed (format, type values, or examples revised) | Orchestrator AI / Human |
 | Tool Delivery Contract | `docs/tool-delivery-contract.md` | Delivery-contract rules change (version pin, re-stamp policy, identity separation, manifest), or ADR-0015 is superseded | Orchestrator AI |
 | Reviewer Backend Contract | `docs/reviewer-backend.md` | Reviewer-backend contract changes (backend table, config location, per-backend oracle, isolation basis), or the SETUP-GUIDE "Reviewer backend" prerequisites subsection changes (issue #979) | Orchestrator AI |
-| Improvement Backlog | `docs/improvement-backlog.md` | A backlog item is promoted to an issue, resolved by other work (record the disposition on the item), a new methodology audit adds findings, or the cycle-driven PREFLIGHT cross-issue recurrence scan appends a candidate finding (#954) | Orchestrator AI / Human |
+| Improvement Backlog | `docs/improvement-backlog.md` | A backlog item is promoted to an issue, resolved by other work (record the disposition on the item), or a new methodology audit adds findings | Orchestrator AI / Human |
 | This Document | `docs/maintained-docs.md` | New docs added or removed in host scope | Orchestrator AI |
 
 #### ADRs (`docs/adr/`)
