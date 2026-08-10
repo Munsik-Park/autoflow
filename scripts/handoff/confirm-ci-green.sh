@@ -213,7 +213,7 @@ classify_rollup() {
 # is_not_mergeable <mergeable> <mergeStateStatus> -> rc 0 iff the read CONFIRMS
 # the PR is not mergeable.
 is_not_mergeable() {
-  [ "$1" = "CONFLICTING" ] || [ "$2" = "CONFLICTING" ] || [ "$2" = "DIRTY" ]
+  [ "$1" = "CONFLICTING" ] || [ "$2" = "DIRTY" ]
 }
 
 # is_mergeable_undetermined <mergeable> <mergeStateStatus> -> rc 0 iff the read
