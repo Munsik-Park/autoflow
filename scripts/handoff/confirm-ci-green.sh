@@ -51,7 +51,15 @@
 #   that falls through to the bounded poll, never 10.
 #   11  0 checks         — MERGEABLE but no check ever published within the bound.
 #   12  red build        — a check concluded FAILURE/ERROR/CANCELLED/TIMED_OUT.
-#   13  still pending     — checks present but never all-green at the deadline (slow CI).
+#   13  no green verdict  — checks present but the run never reached the exit-0
+#                          verdict at the deadline. TWO cases land here: checks
+#                          still pending (slow CI), and the confirmed-then-
+#                          undetermined case — mergeability was confirmed once
+#                          (so it is not 14) and the rollup is already
+#                          all-green, but mergeability never re-settled before
+#                          the deadline, and exit 0 is contracted as "green on
+#                          a PR whose mergeable state was confirmed", so the
+#                          undetermined arm withholds it.
 #   14  inconclusive     — could not confirm mergeable within the bound; gh
 #                          transport/auth/parse failure, or a mergeability that
 #                          never settled within the bound, suspected (NOT a
@@ -372,6 +380,6 @@ if [ "$saw_checks" -eq 0 ]; then
   echo "MERGEABLE but no check published within ${CI_POLL_TIMEOUT_SECS}s — suspect webhook / scan fallback (PeriodicFolderTrigger / synchronize re-push); NOT green" >&2
   exit 11
 else
-  echo "checks still pending after ${CI_POLL_TIMEOUT_SECS}s (slow CI) — inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2
+  echo "checks present but no green verdict after ${CI_POLL_TIMEOUT_SECS}s — either checks still pending (slow CI), or a confirmed-then-undetermined run whose rollup is already all-green but whose mergeability stayed undetermined and never re-settled before the deadline; inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2
   exit 13
 fi

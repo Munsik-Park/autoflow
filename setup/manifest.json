@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "32ef6a3e50b3d8a68674afced01a5571144782652f6285bd0f47457b474d7de7"
+      "sha256": "c4af59f0a8f123a2f3b78945956b153a919869278c9869521f59193aba9f9898"
     },
     {
       "source": "docs/security-checklist.md",
@@ -314,7 +314,7 @@
       "dest": "scripts/handoff/confirm-ci-green.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "5c5e354dc27f4986b3087e06582f15ebb5401cd9f7bb333acdc69eb354aaa319"
+      "sha256": "af9ba81baae626b4a4c4cf6b63d0d4aa1fadcbc880d0b63d972cc723b6ec8b9e"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",
