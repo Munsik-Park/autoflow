@@ -660,8 +660,8 @@ DELTA_GE_GUARDED_COUNT="$(grep -E -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" | g
 
 # 12 -> 11 in #64: the 27 lane's total-not-below-base clause was retired with
 # the AC-27-14 fence (the 27 lane keeps only its 0-failed requirement).
-# 11 -> 7 in #75: the AC-59-12c lane, which carried the yml-window delta family,
-# was retired with the sibling-total pins it re-measured in a throwaway worktree.
+# 11 -> 7 in #75: the yml-window delta lane, which re-measured the sibling-total
+# pins in a throwaway worktree, was retired with those pins.
 assert_true "AC-59-19b-total: exactly 7 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
   "[ \"$DELTA_GE_LINE_COUNT\" -eq 7 ]"
 assert_true "AC-59-19b-guarded: all 7 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
