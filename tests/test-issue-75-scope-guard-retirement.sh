@@ -403,6 +403,27 @@ if [ -f "$MANUAL_973" ]; then
     'grep -q "test-issue-846-doc-assertions.sh" "$MANUAL_973" && grep -q "test-issue-848-doc-assertions.sh" "$MANUAL_973"'
 fi
 
+echo "--- GATE:QUALITY final sweep (ledger E42): 62's own runtime banner + postmortem note ---"
+if [ -f "$SUITE_62" ]; then
+  # :233's AC-62-22 section banner still claims this suite is "ALSO one of
+  # the six scope guards below" pending "item 9's admissions" -- all three
+  # referents are gone (the GUARD_SUITES block §3.7a retires, 955's AC-SCOPE
+  # lane this cycle deletes, and the file-header item-9 paragraph). Confirmed
+  # single-line contiguous before keying on it (the earlier wrapped-comment
+  # lesson from the 495-token fix).
+  assert_true "62: AC-62-22 banner no longer claims this suite is 'ALSO one of the six scope guards below' (that lane and 955's AC-SCOPE are both gone)" \
+    '! grep -q "six scope guards below" "$SUITE_62"'
+  assert_true "62: AC-62-22 banner still names the fence and its load-bearing status" \
+    'grep -q "AC-62-22 (fence, load-bearing" "$SUITE_62"'
+  # :557's CI-red postmortem note cites "AC9/AC10 for 798" -- 798's AC10 is
+  # gone this cycle (confirmed above: no SCOPE-CONTAINMENT/allow-list lane
+  # survives in 798), while AC9 itself is untouched (798:30/:56/:67).
+  assert_true "62: postmortem note no longer cites 'AC9/AC10 for 798' (798's AC10 is gone; AC9 survives)" \
+    '! grep -q "AC9/AC10 for 798" "$SUITE_62"'
+  assert_true "62: postmortem note still names AC9 for 798 and AC6-scope for 799 (both live)" \
+    'grep -q "AC9" "$SUITE_62" && grep -q "AC6-scope" "$SUITE_62"'
+fi
+
 if [ -f "$SUITE_69" ]; then
   assert_true "69: test-issue-40-doc-assertions token absent from its allow_list data row (§3.2 deletes that file)" \
     '! grep -q "test-issue-40-doc-assertions" "$SUITE_69"'
