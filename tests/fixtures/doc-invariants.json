@@ -280,6 +280,7 @@
     { "id": "81-AC-REREVIEW-TARGETSET-absent", "origin_issue": 81, "intent": "coherence", "file": "docs/autoflow-guide.md", "section": "HANDOFF — PR Creation + Hand-off", "predicate": "absent", "match": "fixed", "literal": "still carrying", "scope": "permanent" },
     { "id": "81-AC-REREVIEW-TARGETSET-present-labelstate", "origin_issue": 81, "intent": "existence", "file": "docs/autoflow-guide.md", "section": "HANDOFF — PR Creation + Hand-off", "predicate": "present", "match": "fixed", "literal": "independent of the PR's `blocked-by-review` label state", "scope": "permanent" },
     { "id": "81-AC-REREVIEW-TARGETSET-present-deferral", "origin_issue": 81, "intent": "existence", "file": "docs/autoflow-guide.md", "section": "HANDOFF — PR Creation + Hand-off", "predicate": "present", "match": "fixed", "literal": "on that step's target set", "scope": "permanent" },
-    { "id": "81-AC-LIFECYCLE-DOC-reattach", "origin_issue": 81, "intent": "existence", "file": "docs/external-review-sequencing.md", "section": "Label", "predicate": "present", "match": "fixed", "literal": "re-attach", "scope": "permanent" }
+    { "id": "81-AC-LIFECYCLE-DOC-reattach", "origin_issue": 81, "intent": "existence", "file": "docs/external-review-sequencing.md", "section": "Label", "predicate": "present", "match": "fixed", "literal": "re-attach", "scope": "permanent" },
+    { "id": "81-AC-ATTACH-CLAUSE-backstop-guide", "origin_issue": 81, "intent": "existence", "file": "docs/autoflow-guide.md", "section": "HANDOFF — PR Creation + Hand-off", "predicate": "present", "match": "fixed", "literal": "Re-attach it as a backstop", "scope": "permanent" }
   ]
 }
