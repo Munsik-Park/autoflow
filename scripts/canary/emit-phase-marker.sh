@@ -22,9 +22,6 @@
 #     --cycle <C>     cycle number, canonical positive integer
 #     --phase <NAME>  free-form non-empty phase label (e.g. RED, GATE:PLAN)
 #     --event <E>     exactly one of: enter exit
-#
-# Precedent: scripts/handoff/emit-cycle-digest.sh (header, root derivation,
-# jq record build, append-only write, path:line anchor).
 
 set -euo pipefail
 
