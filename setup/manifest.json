@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "362f89c08fecaca86470ce30324544c07dd36d8e2cc0aa10aff691711edb4930"
+      "sha256": "2032ddcc493fb5961b428c3cdcc9f554301dc70290ed633e6f464bb43c7dec1b"
     },
     {
       "source": "docs/design-rationale.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d97b80b9efd23ed905e45c8f4d51a4341391d525c74e337ee0f2371bcb9be4a0"
+      "sha256": "258dda843081a0642eeca3daa5496ac0080c63d251ae87e0fca31313176d6b24"
     },
     {
       "source": "docs/git-workflow.md",
@@ -286,7 +286,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "66749cff5335a4e1354f30a3827142a1d8779fdc14fd97f3af1c9152d132461c"
+      "sha256": "2ad2056f4e33c4f70c323151c3a3783686ee9c36b46f6f6f9b4af845e62485dc"
     },
     {
       "source": "AGENTS.md",
@@ -314,7 +314,7 @@
       "dest": "scripts/handoff/confirm-ci-green.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e0987922ea4cc10772b4f2998a69e9794ea851119c67c942e86d70952a1784e2"
+      "sha256": "1bef6f5b53e1c4845432bbf7676cbc8fd1e083681ce3510427a70689b196e525"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",

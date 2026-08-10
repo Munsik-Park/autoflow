@@ -40,18 +40,21 @@
 #
 # Exit-code contract (feature §4):
 #   0   CI green         — >=1 check present and every element green.
-#   10  not mergeable    — CONFLICTING/DIRTY/!MERGEABLE at precheck OR on a
-#                          mid-poll flip; stderr carries the reserved
+#   10  not mergeable    — a CONFIRMED CONFLICTING/DIRTY value at precheck OR on
+#                          a mid-poll flip; stderr carries the reserved
 #                          [HANDOFF-INTERNAL-RETRY] token. No poll on precheck.
 #                          Only on a JSON-confirmed read; a failed/timed-out/
 #                          empty/non-JSON read — at the precheck OR mid-poll —
 #                          falls through to the bounded poll (or, mid-poll, to a
 #                          retry within the budget), never 10.
+#   Undetermined mergeability: a still-computing UNKNOWN is an uncertain read
+#   that falls through to the bounded poll, never 10.
 #   11  0 checks         — MERGEABLE but no check ever published within the bound.
 #   12  red build        — a check concluded FAILURE/ERROR/CANCELLED/TIMED_OUT.
 #   13  still pending     — checks present but never all-green at the deadline (slow CI).
 #   14  inconclusive     — could not confirm mergeable within the bound; gh
-#                          transport/auth/parse failure suspected (NOT a
+#                          transport/auth/parse failure, or a mergeability that
+#                          never settled within the bound, suspected (NOT a
 #                          conflict); bounded; stderr carries the reserved
 #                          [HANDOFF-INTERNAL-RETRY] token. NOT green.
 #   64  usage / bad arg / bad env int.
@@ -197,9 +200,26 @@ classify_rollup() {
   ' 2>/dev/null
 }
 
-# is_not_mergeable <mergeable> <mergeStateStatus> -> rc 0 iff not mergeable.
+# Mergeability is a TRI-state, not a binary (issue #81): GitHub returns
+# mergeable=UNKNOWN while it is still computing the merge, which is the normal
+# state right after a push. Two predicates, three outcomes — confirmed
+# not-mergeable / confirmed mergeable / undetermined. Order matters: a read is
+# tested for a CONFIRMED conflict first, so mergeable=UNKNOWN paired with
+# mergeStateStatus=DIRTY stays a confirmed conflict and is never demoted to a
+# poll. An unrecognised value falls to undetermined, never to not-mergeable, so
+# a future enum can end on 11/13/14 but never on a false conflict or a false
+# green.
+
+# is_not_mergeable <mergeable> <mergeStateStatus> -> rc 0 iff the read CONFIRMS
+# the PR is not mergeable.
 is_not_mergeable() {
-  [ "$1" != "MERGEABLE" ] || [ "$2" = "CONFLICTING" ] || [ "$2" = "DIRTY" ]
+  [ "$1" = "CONFLICTING" ] || [ "$2" = "CONFLICTING" ] || [ "$2" = "DIRTY" ]
+}
+
+# is_mergeable_undetermined <mergeable> <mergeStateStatus> -> rc 0 iff the read
+# is well-formed but carries no verdict yet (UNKNOWN / unrecognised value).
+is_mergeable_undetermined() {
+  ! is_not_mergeable "$1" "$2" && [ "$1" != "MERGEABLE" ]
 }
 
 # clamp_to_interval <remaining> -> echoes min(CI_POLL_INTERVAL_SECS, remaining),
@@ -257,12 +277,17 @@ else
       # empty: inconclusive, NOT a confirmed conflict; fall through (do NOT set
       # the flag, do NOT classify). A well-formed read never yields an empty
       # mergeable, so empty unambiguously marks a bad read.
+  elif is_not_mergeable "$pre_mergeable" "$pre_state"; then
+    mergeable_confirmed=1
+    echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (gitlink -> Reconcile preflight; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
+    exit 10
+  elif is_mergeable_undetermined "$pre_mergeable" "$pre_state"; then
+    : # still-computing UNKNOWN (or an unrecognised value): an uncertain read,
+      # NOT a confirmed conflict. Fall through to the bounded poll WITHOUT
+      # setting the flag, exactly as the empty-read arm does — a never-settling
+      # UNKNOWN then lands on exit 14 at the deadline rather than a false green.
   else
     mergeable_confirmed=1
-    if is_not_mergeable "$pre_mergeable" "$pre_state"; then
-      echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (gitlink -> Reconcile preflight; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
-      exit 10
-    fi
   fi
 fi
 
@@ -303,9 +328,9 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   # mergeable_confirmed=1 at the precheck) or exit 14 (precheck also degraded,
   # flag still 0) — never 10.
   if [ -z "$m" ]; then sleep_to_deadline; continue; fi
-  # Reached only on a well-formed read (non-empty parsed mergeable) — confirm
-  # the mergeable state was observed this cycle.
-  mergeable_confirmed=1
+  # Well-formed read: confirm the mergeable state unless it carries no verdict.
+  undetermined=0
+  if is_mergeable_undetermined "$m" "$s"; then undetermined=1; else mergeable_confirmed=1; fi
   if is_not_mergeable "$m" "$s"; then
     echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${s:-unknown}) — PR flipped mid-poll; do NOT wait on CI; branch by cause (gitlink -> Reconcile preflight; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
     exit 10
@@ -319,7 +344,12 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
     echo "a check concluded failure/error/cancelled/timed_out — red CI (route to RED)" >&2
     exit 12
   fi
-  if [ "$total" -gt 0 ] && [ "$green" -eq "$total" ]; then
+  # An undetermined read withholds the GREEN verdict only: exit 0 is contracted
+  # as "CI green on a PR whose mergeable state was confirmed". The fail>0 branch
+  # above and the saw_checks accounting below still run — a concluded failure is
+  # true of the read however mergeability resolves, and masking it would sleep a
+  # red build to a deadline code that never routes to RED.
+  if [ "$undetermined" -eq 0 ] && [ "$total" -gt 0 ] && [ "$green" -eq "$total" ]; then
     exit 0
   fi
   if [ "$total" -gt 0 ]; then
@@ -335,7 +365,7 @@ done
 # 3. TIMEOUT — deadline reached without a terminal classification.
 # ---------------------------------------------------------------------------
 if [ "$mergeable_confirmed" -eq 0 ]; then
-  echo "[HANDOFF-INTERNAL-RETRY] could not confirm PR mergeable state within ${CI_POLL_TIMEOUT_SECS}s — gh transport/auth/network failure suspected (not a merge conflict); check gh auth/connectivity and re-run — NOT green" >&2
+  echo "[HANDOFF-INTERNAL-RETRY] could not confirm PR mergeable state within ${CI_POLL_TIMEOUT_SECS}s — gh transport/auth/network failure, or a mergeability still computing (UNKNOWN) at the deadline, suspected (not a merge conflict); check gh auth/connectivity and re-run — NOT green" >&2
   exit 14
 fi
 if [ "$saw_checks" -eq 0 ]; then
