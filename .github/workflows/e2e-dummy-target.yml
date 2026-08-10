@@ -566,5 +566,5 @@ jobs:
       # reason the #51 comment above records. CI has no glob discovery;
       # registered by filename per the sibling suites. See
       # tests/test-issue-71-digest-removal.sh.
-      - name: Run cycle-digest/recurrence-scan removal guard (#71)
+      - name: Run removal-state guard (#71)
         run: bash tests/test-issue-71-digest-removal.sh
