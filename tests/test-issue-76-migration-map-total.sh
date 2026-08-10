@@ -158,12 +158,21 @@ for rel in "${SUITES[@]}"; do
   fi
 
   # Leg 2 — every map row for this suite resolves to an admissible carrier.
+  #
+  # RED2 round 2: parsed with `IFS='|' read` positionally before, which
+  # breaks on a key that embeds literal pipes (e.g. test-issue-955's
+  # "VERIFY existing cause-branch table (RED | GREEN | SEQUENTIAL_FIX |
+  # EVALUATION_AI) retained" — a row with 4 logical columns but 8 raw '|'
+  # separators). The row's outer shape is fixed (4 logical columns), so
+  # this parses from the OUTSIDE IN with awk: suite is field 2, carriers is
+  # the second-to-last field, count is the third-to-last field, and the key
+  # is whatever raw fields sit between them REJOINED with '|' — recovering
+  # any pipes the key itself embeds instead of splitting on them. Fields
+  # are emitted \x01-separated (a byte the row content cannot contain) so
+  # the shell read below never re-triggers the same positional-split bug.
   if [ -f "$MAP" ]; then
-    while IFS='|' read -r _ mrel mkey mcount mcarriers _; do
-      mrel="$(echo "$mrel" | xargs)"
+    while IFS=$'\x01' read -r mrel mkey mcount mcarriers; do
       [ "$mrel" = "$rel" ] || continue
-      mkey="$(echo "$mkey" | xargs)"
-      mcarriers="$(echo "$mcarriers" | xargs)"
       resolved=true
       IFS=';' read -ra groups <<< "$mcarriers"
       for group in "${groups[@]}"; do
@@ -189,7 +198,17 @@ for rel in "${SUITES[@]}"; do
         done
       done
       assert_true "AC-a-1 Leg2: $rel — row \"$mkey\" carriers all resolve" "$resolved"
-    done < "$MAP"
+    done < <(awk -F'|' '
+      NF >= 5 && $2 ~ /^ *tests\// {
+        suite=$2; gsub(/^ +| +$/, "", suite)
+        carriers=$(NF-1); gsub(/^ +| +$/, "", carriers)
+        count=$(NF-2); gsub(/^ +| +$/, "", count)
+        key=""
+        for (i = 3; i <= NF - 3; i++) key = key (i > 3 ? "|" : "") $i
+        gsub(/^ +| +$/, "", key)
+        printf "%s\x01%s\x01%s\x01%s\n", suite, key, count, carriers
+      }
+    ' "$MAP")
   fi
 done
 
