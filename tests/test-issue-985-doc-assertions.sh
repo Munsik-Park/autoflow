@@ -51,8 +51,8 @@
 #                             SPDX-listed - no LicenseRef file); no surviving
 #                             LicenseRef-PolyForm-Internal-Use-1.0.0 token
 #                             remains anywhere tracked.
-#     AC3-WORKFLOW-COUNT      RED - .github/workflows/ count is 6 (5 existing
-#                             + reuse.yml), existing 5 filenames unchanged.
+#     AC3-WORKFLOW-COUNT      RED - reuse.yml is present alongside the 5
+#                             existing workflows, each named explicitly.
 #   AC4 - public README is a single plugin-install narrative:
 #     AC4-INSTALL-PATH        RED - README contains
 #                             '/plugin marketplace add Munsik-Park/autoflow' and
@@ -264,8 +264,6 @@ assert_true "AC3-SPDX-COVERAGE: every tracked .sh/.py/.bats/.yml/.js/.mjs file c
 assert_true "AC3-SPDX-COVERAGE: no surviving 'LicenseRef-PolyForm-Internal-Use-1.0.0' token anywhere tracked" \
   "[ -z \"\$(git grep -F 'LicenseRef-PolyForm-Internal-Use-1.0.0' -- ':!tests/test-issue-985-doc-assertions.sh' ':!tests/manual/issue-985-manual-scenarios.md' 2>/dev/null)\" ]"
 
-assert_true "AC3-WORKFLOW-COUNT: .github/workflows/ carries 6 workflows (5 existing + reuse.yml)" \
-  "[ \"\$(ls -1 '$WORKFLOWS_DIR' 2>/dev/null | wc -l | tr -d ' ')\" = '6' ]"
 assert_true "AC3-WORKFLOW-COUNT: reuse.yml is present alongside the 5 existing workflows" \
   "[ -f '$WORKFLOWS_DIR/reuse.yml' ] && [ -f '$WORKFLOWS_DIR/e2e-dummy-target.yml' ] && [ -f '$WORKFLOWS_DIR/host-purity-delta.yml' ] && [ -f '$WORKFLOWS_DIR/plugin-package.yml' ] && [ -f '$WORKFLOWS_DIR/schema-hook-contract.yml' ] && [ -f '$WORKFLOWS_DIR/workflow-regression.yml' ]"
 

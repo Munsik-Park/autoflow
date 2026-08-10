@@ -163,7 +163,8 @@ workflow is green — either satisfies AC3's `reuse lint PASS` clause).
 
 **Why not automated in RED:** requires a real GitHub Actions run; `bash
 tests/test-issue-985-doc-assertions.sh`'s `AC3-WORKFLOW-COUNT` only checks
-the workflow **file count/names** locally, not that they execute green.
+the workflow **filenames** locally (the count fence was retired by #75), not
+that they execute green.
 
 **Steps:**
 

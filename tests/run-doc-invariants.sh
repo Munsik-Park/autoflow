@@ -111,6 +111,9 @@ jq -e -n 'input | all(.invariants[]; .predicate == "present" or .predicate == "a
   || block "invalid registry: predicate must be one of present|absent|ordered (diff/count/delta predicates are cycle-scoped, not permanent)"
 jq -e -n 'input | all(.invariants[]; .scope == "permanent")' "$REGISTRY" >/dev/null 2>&1 \
   || block "invalid registry: every entry scope must be \"permanent\" (a cycle-scoped guard belongs in its cycle's RED suite, not the registry)"
+jq -e -n 'input | all(.invariants[];
+  ((.literal // "") + (.before // "") + (.after // "")) | contains("\n") | not)' "$REGISTRY" >/dev/null 2>&1 \
+  || block "invalid registry: literal/before/after must not contain an embedded newline (grep -F degrades to an OR of patterns and matches vacuously)"
 
 # Read all entries in ONE jq pass: base64-encoded columns, colon-separated.
 # Colon is outside the base64 alphabet (A-Za-z0-9+/=), and unlike a tab it is

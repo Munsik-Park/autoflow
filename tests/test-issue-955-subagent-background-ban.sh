@@ -68,14 +68,8 @@
 #   CI registration    — RED discriminator: this suite is wired into
 #                        .github/workflows/e2e-dummy-target.yml (both `paths:`
 #                        trigger blocks + a `run:` step), #800/#949 precedent.
-#   AC-SCOPE           — guard: git diff --name-only ⊆ this cycle's allow-list.
 #   AC-PRESERVE        — guard: existing REFINE/VERIFY/Reporting-Format/idle
 #                        content survives (no wholesale deletion).
-#   DC-4               — Green-follow guard: tests/test-issue-794-doc-
-#                        assertions.sh still exits 0 after the CLAUDE.md /
-#                        autoflow-guide.md line-shifting edits land (its four
-#                        first_line_in_range windows re-anchored in the same
-#                        cycle if broken).
 #
 # Cycle 2 (review-response, PR #958 Codex Medium Finding 1 — see
 # .autoflow/issue-955-c2-verification-design.md / -c2-feature-design.md):
@@ -98,9 +92,6 @@
 #   AC-C2-2            — RED discriminator: this suite reads both workflow
 #                        scripts by absolute path (the AC-C2-1 assertions ARE
 #                        this AC).
-#   AC-C2-3            — guard: AC-SCOPE allow-list admits the two workflow
-#                        scripts (co-lands with the edit, else AC-SCOPE FAILs
-#                        once they are touched).
 #   AC-C2-4            — no new assertion; the existing AC4 manifest-dogfood
 #                        block already generalizes (both .js files are
 #                        manifest sources).
@@ -109,20 +100,6 @@
 #                        workflow-regression) must stay green; prompt edits
 #                        are pure appends and must not perturb the pinned
 #                        control-flow / substring assertions.
-#
-# DC-4 KNOWN PRE-EXISTING BASELINE ANOMALY (verified this round, unrelated to
-# #955): tests/test-issue-794-doc-assertions.sh already exits 1 at this
-# cycle's own merge-base with main (`git diff main --stat` is empty on this
-# branch prior to any #955 edit) — 55/57 passed, 2 FAILed
-# ("autoflow-guide.md HANDOFF step 4: host-only lead precedes secondary
-# sub-repo bullet" and "autoflow-guide.md Merge Sequencing: target-centric
-# intro precedes secondary 5-step lead", both inside the exact 526-532 /
-# 573-592 windows #955 will shift). This is a pre-existing baseline defect,
-# NOT caused by #955 and NOT one of #955's RED discriminators — DC-4 is
-# implemented exactly per the verification design's stated oracle (suite exits
-# 0) so it surfaces as an already-FAILing assertion pre-edit, contradicting
-# the verification design's "PASS pre-edit" assumption for this one guard.
-# Reported as a discrepancy in the RED report; not silently weakened.
 #
 # Not in this file (verification design §2, manual residue):
 #   AC5 semantic residue — "literally covers with no interpretation gap" is a
@@ -139,11 +116,7 @@
 #   AC1-a-mirror-equality — vacuous PASS pre-edit (neither clause body exists
 #     yet, so the diff of two empty bodies is empty).
 #   AC4 (manifest dogfood) — vacuous PASS pre-edit (empty diff intersection).
-#   AC-SCOPE               — PASS pre-edit (empty diff ⊆ any allow-list).
 #   AC-PRESERVE             — PASS pre-edit (nothing removed yet).
-#   DC-4                    — see the KNOWN PRE-EXISTING BASELINE ANOMALY note
-#     above: this guard is ALREADY FAIL pre-edit for reasons outside #955's
-#     scope, not because of #955.
 #
 # CYCLE 2 RED expectation (pre-edit, this commit, per
 # .autoflow/issue-955-c2-verification-design.md §4): all cycle-1 assertions
@@ -168,7 +141,6 @@ CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
 GUIDE_MD="$PROJECT_ROOT/docs/autoflow-guide.md"
 MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-TEST_794="$PROJECT_ROOT/tests/test-issue-794-doc-assertions.sh"
 ARCH_WF="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
 VERIFY_WF="$PROJECT_ROOT/.claude/workflows/verify-cause-branch.js"
 RUN_MJS="$PROJECT_ROOT/test/workflows/run.mjs"
@@ -559,358 +531,6 @@ else
   assert_true "G-REG: $RUN_MJS exists" "false"
 fi
 
-# =============================================================================
-echo ""
-echo "=== AC-SCOPE (guard) — diff ⊆ allow-list ==="
-
-if [[ -z "$BASE_REF" ]]; then
-  skip_no_base "AC-SCOPE"
-else
-  allow_list=(
-    # #59 release co-ride (user-directed version bump 0.1.4 -> 0.1.5, f52f720
-    # precedent): plugin/marketplace version files ship on the same PR per
-    # operator instruction.
-    "plugin/autoflow/.claude-plugin/plugin.json"
-    ".claude-plugin/marketplace.json"
-    # #35 cycle files: phase-marker emitter + its suite (this cycle's only two
-    # not-already-listed delivered paths; the six allow-list suites, the
-    # e2e-dummy-target workflow and docs/maintained-docs.md are already members).
-    "scripts/canary/emit-phase-marker.sh"
-    "tests/test-issue-35-phase-marker.sh"
-    # HANDOFF step 6.7 digest co-ride: every terminal cycle appends one record
-    # to the durable corpus on the same PR branch (autoflow-guide.md > HANDOFF 6.7),
-    # so the digest file is a standing expected surface for every cycle diff.
-    "docs/cycle-digest.jsonl"
-    # #973 change surface (SIGPIPE extractor-pipe fix): 10 hazard sites →
-    # Safe-form across 4 suites + the #964 guard extension + the doc convention
-    # + this cycle's mutual scope-guard allow-list admissions (2nd-transition
-    # self/sibling registration) + manifest regen (submodule-common-rules.md source).
-    "tests/test-issue-964-sigpipe-safe-pipes.sh"
-    "tests/manual/issue-973-manual-scenarios.md"
-    "docs/submodule-common-rules.md"
-    "setup/manifest.json"
-    "tests/test-issue-799-inert-cleanup.sh"
-    "tests/test-issue-800-doc-assertions.sh"
-    "tests/test-issue-846-doc-assertions.sh"
-    "tests/test-issue-848-doc-assertions.sh"
-    "tests/test-issue-798-topology-flip.sh"
-    "tests/test-issue-949-manifest-regen-doc.sh"
-    "tests/test-issue-952-wizard-removal.sh"
-    "tests/test-issue-955-subagent-background-ban.sh"
-    "docs/teammate-common-rules.md"
-    "docs/submodule-common-rules.md"
-    "docs/teammate-contracts.md"
-    "CLAUDE.md"
-    "docs/autoflow-guide.md"
-    ".claude/agents/autoflow-analyzer.md"
-    ".claude/agents/autoflow-planner.md"
-    ".claude/agents/autoflow-implementer.md"
-    ".claude/agents/autoflow-tester.md"
-    ".claude/agents/autoflow-evaluator.md"
-    "setup/manifest.json"
-    "tests/test-issue-955-subagent-background-ban.sh"
-    ".github/workflows/e2e-dummy-target.yml"
-    "tests/manual/issue-955-manual-scenarios.md"
-    "tests/test-issue-794-doc-assertions.sh"
-    # Allow-list self-reference: this cycle also re-anchors sibling doc-
-    # assertion suites broken by the same edits (#955 sibling-fix pass).
-    "tests/test-issue-796-doc-assertions.sh"
-    "tests/test-issue-800-doc-assertions.sh"
-    "tests/test-issue-949-manifest-regen-doc.sh"
-    # #955 VALIDATE gap fix: plugin package byte-copies of the same
-    # foreground-only [MUST] bullet, kept in parity with .claude/agents/*.
-    "plugin/autoflow/agents/autoflow-analyzer.md"
-    "plugin/autoflow/agents/autoflow-evaluator.md"
-    "plugin/autoflow/agents/autoflow-implementer.md"
-    "plugin/autoflow/agents/autoflow-planner.md"
-    "plugin/autoflow/agents/autoflow-tester.md"
-    # #955 cycle-2 (review-response, PR #958 Codex Medium Finding 1): the two
-    # Workflow in-script agent prompts gain the foreground-only clause.
-    ".claude/workflows/architect-deliberation.js"
-    ".claude/workflows/verify-cause-branch.js"
-    # #961 (ADR-0016 gate wiring): sibling cycle files — rubric-prose targets,
-    # ADR promotion, and the #961 test suites; #794 window re-anchor already
-    # listed above (3396d7f precedent).
-    "docs/adr/0016-adr-conformance-gate-scoring.md"
-    "docs/adr/README.md"
-    "docs/evaluation-system.md"
-    "tests/adr-0016-conformance-check.sh"
-    "tests/test-issue-961-cap6-gate.sh"
-    # #964 (SIGPIPE-safe assertion pipes): sibling cycle files — the new RED
-    # suite and its CI registration (800/949/955 fix lines land in-place, no
-    # filename change; docs/submodule-common-rules.md already listed above).
-    # 798/799 added on VERIFY re-run once the GREEN diff also landed their
-    # own guard-line transforms.
-    "tests/test-issue-964-sigpipe-safe-pipes.sh"
-    "tests/test-issue-798-topology-flip.sh"
-    "tests/test-issue-799-inert-cleanup.sh"
-    # Reciprocal registration: 16ebab9 added #964 cycle files to 952's own
-    # G1 allow-list, pulling the 952 suite into this cycle's diff.
-    "tests/test-issue-952-wizard-removal.sh"
-    # #846 sibling-fix pass: review-triage hardening RED suite lands on the
-    # same branch (test/CI surface only; no #955 content touched).
-    "tests/test-issue-846-doc-assertions.sh"
-    "tests/manual/issue-846-manual-scenarios.md"
-    # #846 sibling-fix pass, transitive: the other scope-guard tests' own
-    # allow-lists were amended (this same pass) to re-admit the two #846
-    # files above — those edits land in this diff too.
-    "tests/test-issue-798-topology-flip.sh"
-    "tests/test-issue-799-inert-cleanup.sh"
-    "tests/test-issue-952-wizard-removal.sh"
-    # #848 transitive: sibling guard-admission edits (b8b9ad6) land on this branch
-    "tests/test-issue-795-handoff-removal.sh"
-    # #846 GREEN source surface (GATE:PLAN-passed design §2, commit f5d5539):
-    # review-triage hardening edits these docs on the same branch; CLAUDE.md,
-    # docs/autoflow-guide.md and setup/manifest.json already admitted above.
-    ".codex/review.md"
-    "docs/design-rationale.md"
-    # #848 sibling-fix pass: pointer-bump procedure + propagation-batching RED
-    # suite + manual scenarios land on the same branch; its GREEN source docs
-    # git-workflow.md / external-review-sequencing.md are edited on this branch
-    # (autoflow-guide.md / submodule-common-rules.md / CLAUDE.md already above).
-    "tests/test-issue-848-doc-assertions.sh"
-    "tests/manual/issue-848-manual-scenarios.md"
-    "docs/git-workflow.md"
-    "docs/external-review-sequencing.md"
-    # #843 cycle files (concurrent-cycle registration, cc8030d precedent);
-    # setup/manifest.json / docs/evaluation-system.md already listed above.
-    ".claude/hooks/check-autoflow-gate.sh"
-    "plugin/autoflow/hooks/check-autoflow-gate.sh"
-    "docs/phases/analysis.md"
-    "tests/test-issue-223-schema-hook-contract.sh"
-    "tests/test-issue-245-schema-validation.sh"
-    "tests/test-issue-843-doc-assertions.sh"
-    # #843 RED-pass test-contract updates to the sibling guard suites the same
-    # commit touches (test-952 G1 registers the identical full set, 54/54).
-    "tests/plugin/verify-package.sh"
-    "tests/test-issue-788-host-purity-delta.sh"
-    "tests/test-issue-798-topology-flip.sh"
-    "tests/test-issue-799-inert-cleanup.sh"
-    "tests/test-issue-800-doc-assertions.sh"
-    "tests/test-issue-952-wizard-removal.sh"
-    # #844 cycle files (concurrent-cycle registration, cc8030d precedent);
-    # docs/teammate-common-rules.md already listed above.
-    "tests/manual/issue-844-manual-scenarios.md"
-    "tests/test-issue-844-doc-assertions.sh"
-    # #951 (doc-invariant registry): sibling cycle files — the new registry
-    # runner, hermetic base-ref resolver, registry data, lifecycle-rule doc,
-    # RED suite + fixtures, and INDEX/maintained-docs routing land on the
-    # same branch (df4641d/da11389/fa12eb1 precedent). #951 also DELETES
-    # tests/test-issue-794-doc-assertions.sh (already admitted above; see
-    # the DC-4 / AC4-CLOSURE retirement below, docs/doc-invariant-
-    # registry.md disposition table), tests/test-issue-796-doc-assertions.sh
-    # (already admitted above), and tests/test-issue-797-doc-invocation.sh
-    # (800/949 already admitted above).
-    "tests/test-issue-797-doc-invocation.sh"
-    "tests/test-issue-951-registry.sh"
-    # Round-2 fix (VERIFY): omitted from round-1 registration above.
-    "tests/adr-0016-conformance-check.sh"
-    "tests/test-issue-795-handoff-removal.sh"
-    "tests/fixtures/doc-invariants-anchor-fixture.md"
-    "tests/fixtures/doc-invariants-baseline.txt"
-    "tests/fixtures/doc-invariants-dialect-fixture.md"
-    "tests/manual/issue-951-manual-scenarios.md"
-    "tests/run-doc-invariants.sh"
-    "tests/lib/base-ref.sh"
-    "tests/lib/"
-    "tests/fixtures/doc-invariants.json"
-    "docs/doc-invariant-registry.md"
-    # Round-2 fix (VERIFY): GREEN's commit (5fa1c9e) modifies docs/INDEX.md
-    # (adds the doc-invariant-registry.md row) and docs/maintained-docs.md
-    # (registers the same doc) — omitted from round-1 registration above.
-    "docs/INDEX.md"
-    "docs/maintained-docs.md"
-    # #954 cycle files (cross-issue complaint-class recurrence scan RED
-    # suite + fixtures + manual scenarios) and this cycle's own
-    # allow-list-registration churn on the sibling scope-guard suites
-    # (self-referential, #844/#846 precedent).
-    "tests/test-issue-954-cross-issue-scan.sh"
-    "tests/fixtures/cycle-digest-954-below-k.jsonl"
-    "tests/fixtures/cycle-digest-954-at-k.jsonl"
-    "tests/fixtures/cycle-digest-954-dedup.jsonl"
-    "tests/fixtures/cycle-digest-954-out-of-window.jsonl"
-    "tests/fixtures/cycle-digest-954-dual-axis.jsonl"
-    "tests/fixtures/cycle-digest-954-cross-axis.jsonl"
-    "tests/fixtures/cycle-digest-954-dedup-window.jsonl"
-    "tests/manual/issue-954-manual-scenarios.md"
-    # #954 INTEGRATE reconciliation: the 953 suite's AC5-whitelist-analysis
-    # grep is narrowed to the whitelist block (the #954 AC7 non-conflation
-    # paragraph legitimately names cycle-digest), so the 953 suite file
-    # lands in this cycle's diff.
-    "tests/test-issue-953-cycle-digest.sh"
-    # #954 GREEN source surface (GATE:PLAN-passed design §4, commit
-    # b26cda9): PREFLIGHT step-1.5 scan step + tally script + backlog
-    # intake path + maintained-docs trigger + analyzer variant + doc-sync
-    # + manifest regen land on the same branch (#953/#844 precedent).
-    "docs/improvement-backlog.md"
-    "docs/maintained-docs.md"
-    "scripts/preflight/scan-cross-issue-recurrence.sh"
-    # #978 cycle files (concurrent-cycle registration, cc8030d precedent):
-    # archive-semantics GREEN rewrites the cleanup wrapper in place and the
-    # RED pass re-targets the boundary guard + adds the repo-key guard
-    # (CLAUDE.md / docs / setup/manifest.json / doc-invariants.json /
-    # test-issue-844 / e2e workflow already admitted above).
-    "scripts/cleanup/cleanup-issue.sh"
-    "scripts/test/check-cleanup-issue-boundary.sh"
-    "scripts/test/check-repo-key.sh"
-    # #11 cycle files: plugin-namespaced spawn-role fix — dual-pattern hook
-    # arms (both copies already admitted above), P3 doc row, gate-hardening
-    # RED oracles.
-    "docs/gate-matching-standard.md"
-    "tests/test-gate-hardening.sh"
-    # #18 cycle files: fixture-glob isolation fix — locale-invariance
-    # manifest regression update + new glob-isolation RED oracle.
-    "tests/test-issue-16-manifest-locale-invariance.sh"
-    "tests/test-issue-18-fixture-glob-isolation.sh"
-    # #6 cycle file: severity-parse fail-loud + '='-tolerant grammar RED
-    # suite (per-issue test isolation, #18 precedent).
-    "tests/test-issue-6-severity-parse-contract.sh"
-    # #6 GREEN change surface: the emitter whose severity grammar the #6
-    # cycle widens + fail-louds (feature design §4.1).
-    "scripts/handoff/emit-cycle-digest.sh"
-    # #25 cycle files (GATE:PLAN PASS, ledger issue-25 E14): HANDOFF step-5
-    # confirm-ci-green.sh helper + RED suite + mock gh fixture, and the
-    # manifest hash regen this new source row requires (docs/autoflow-
-    # guide.md, docs/external-review-sequencing.md, docs/git-workflow.md,
-    # docs/maintained-docs.md, setup/manifest.json already admitted above).
-    "scripts/handoff/confirm-ci-green.sh"
-    "setup/gen-manifest-hashes.sh"
-    "tests/issue-25/mock-gh/gh"
-    "tests/test-issue-25-confirm-ci-green.sh"
-    # #25 VERIFY re-run: the mock-gh fixture path fix (8912a72) also updates
-    # this suite's own AC-1 assertion count (46→47), so it lands in the diff.
-    "tests/plugin/verify-install-into-target.sh"
-    # #26 cycle files: VERIFY → ARCHITECT design-contradiction route — the
-    # cycle-scoped RED suite + its manual scenarios (feature design §3.2).
-    "tests/test-issue-26-verify-architect-route.sh"
-    "tests/manual/issue-26-manual-scenarios.md"
-    # #40 cycle files (consider-the-opposite pre-scoring): docs/teammate-contracts.md
-    # is already admitted above; the two new cycle-scoped RED suites are not.
-    "tests/test-issue-40-doc-assertions.sh"
-    "tests/test-issue-40-hook-additive.sh"
-    # #42 cycle files (spawn mode by role lifetime): the cycle-scoped RED
-    # suite and its manual-scenario lane. The doc surfaces this cycle edits
-    # (CLAUDE.md, the six docs/, setup/manifest.json,
-    # tests/fixtures/doc-invariants.json, the workflow) are already admitted
-    # above; only these are new.
-    "tests/manual/issue-42-manual-scenarios.md"
-    "tests/test-issue-42-spawn-mode-contract.sh"
-    # #43 cycle files (reporting-channel contract): the cycle-scoped RED
-    # suite and its manual-scenario lane. The doc surfaces this cycle edits
-    # (CLAUDE.md, docs/teammate-contracts.md, setup/manifest.json,
-    # tests/fixtures/doc-invariants.json, the workflow) are already admitted
-    # above; only these are new.
-    "tests/manual/issue-43-manual-scenarios.md"
-    "tests/test-issue-43-report-channel-contract.sh"
-    # #27 cycle files (composition oracle): the cycle-scoped RED suite and
-    # its manual-scenario lane. The doc surfaces this cycle edits
-    # (docs/autoflow-guide.md, docs/teammate-contracts.md,
-    # setup/manifest.json, tests/fixtures/doc-invariants.json, the workflow,
-    # .claude/workflows/architect-deliberation.js) are already admitted
-    # above.
-    "tests/manual/issue-27-manual-scenarios.md"
-    "tests/test-issue-27-composition-oracle.sh"
-    # #7 cycle files: V4 oracle hardening + trap-based temp cleanup RED suite
-    # and its manual-scenario lane, plus the hardened meta-suite itself
-    # (tests/test-issue-1-guard-contract.sh gains a scored emit_own_record
-    # oracle and a WORKROOT + trap ... EXIT cleanup seam).
-    "tests/test-issue-1-guard-contract.sh"
-    "tests/test-issue-7-oracle-hardening.sh"
-    "tests/manual/issue-7-manual-scenarios.md"
-    # #56 cycle files (carry-channel evidence discipline): the cycle-scoped
-    # RED suite and its manual-scenario lane, plus test/workflows/run.mjs
-    # itself (this cycle's six new prompt-construction tests — not
-    # previously admitted by any prior cycle here). .claude/workflows/
-    # architect-deliberation.js, setup/manifest.json,
-    # tests/fixtures/doc-invariants.json and
-    # .github/workflows/e2e-dummy-target.yml are already admitted above.
-    "test/workflows/run.mjs"
-    "tests/manual/issue-56-manual-scenarios.md"
-    "tests/test-issue-56-carry-evidence-discipline.sh"
-    # #59 cycle files
-    "tests/test-issue-59-adoption-evidence-discipline.sh"
-    "tests/manual/issue-59-manual-scenarios.md"
-    "tests/issue-59-full-sweep-driver.sh"
-    # #62 cycle files
-    "tests/test-issue-62-sequential-rounds.sh"
-    "tests/manual/issue-62-manual-scenarios.md"
-    # #64 cycle files (hook collection-scope fix + fence retirements + version 0.1.6)
-    "tests/test-issue-64-collection-scope.sh"
-    # #67 cycle files (ARCHITECT deliberation record redesign — register +
-    # dispositions, version 0.1.7): the new cycle-scoped RED suite.
-    # .claude/workflows/architect-deliberation.js, test/workflows/run.mjs,
-    # docs/teammate-contracts.md, docs/autoflow-guide.md, setup/manifest.json,
-    # plugin/autoflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json,
-    # tests/test-issue-56-carry-evidence-discipline.sh,
-    # tests/test-issue-59-adoption-evidence-discipline.sh,
-    # tests/test-issue-27-composition-oracle.sh and
-    # tests/fixtures/doc-invariants.json are already admitted above.
-    "tests/test-issue-67-deliberation-record.sh"
-    "tests/manual/issue-67-manual-scenarios.md"
-    # #51 cycle files: teammate-removal feasibility verdict (ADR-0017) — the
-    # decision record, the cycle-scoped RED suite + manual-scenario lane, and
-    # this cycle's own defect-fix pass over sibling test/plugin suites
-    # (SIGPIPE-safe pipe audit, GATE:QUALITY E36). docs/adr/README.md,
-    # setup/manifest.json, docs/INDEX.md, docs/maintained-docs.md,
-    # tests/fixtures/doc-invariants.json, docs/doc-invariant-registry.md,
-    # .github/workflows/e2e-dummy-target.yml,
-    # tests/plugin/verify-install-into-target.sh and this cycle's other
-    # sibling suites are already admitted above.
-    "docs/adr/0017-teammate-removal-feasibility.md"
-    "tests/manual/issue-51-manual-scenarios.md"
-    "tests/test-issue-51-teammate-removal-verdict.sh"
-    "tests/plugin/verify-install-skill-scripts.sh"
-    "tests/plugin/verify-e2e-dummy-target.sh"
-    "tests/test-issue-979-bundle-delivery.sh"
-    # #69 cycle files: verification-depth justification ADR + its cycle-scoped RED
-    # suite. docs/autoflow-guide.md, docs/evaluation-system.md,
-    # docs/teammate-contracts.md, .claude/workflows/architect-deliberation.js,
-    # docs/adr/README.md, docs/INDEX.md, docs/maintained-docs.md,
-    # setup/manifest.json, tests/fixtures/doc-invariants.json,
-    # test/workflows/run.mjs, .github/workflows/e2e-dummy-target.yml,
-    # tests/test-issue-27/59/62-*.sh are already admitted above.
-    "docs/adr/0018-verification-depth-justification.md"
-    "tests/test-issue-69-verification-depth.sh"
-    # #55 cycle files (gate-score write contract at the producer site): the
-    # cycle-scoped suite + its manual-scenario lane, and the shape declaration
-    # the CLAUDE.md fence is compared against. CLAUDE.md,
-    # .claude/hooks/check-autoflow-gate.sh,
-    # plugin/autoflow/hooks/check-autoflow-gate.sh,
-    # tests/fixtures/doc-invariants.json, setup/manifest.json and
-    # .github/workflows/e2e-dummy-target.yml are already admitted above.
-    "tests/fixtures/gate-schema.json"
-    "tests/test-issue-55-score-format-contract.sh"
-    "tests/manual/issue-55-manual-scenarios.md"
-    # #52 cycle files (peer-facilitator-premise evidence-anchor correction):
-    # the cycle-scoped suite + its manual-scenario lane. docs/design-rationale.md,
-    # docs/teammate-contracts.md, CLAUDE.md, setup/manifest.json,
-    # tests/fixtures/doc-invariants.json and
-    # .github/workflows/e2e-dummy-target.yml are already admitted above.
-    # Mechanical scope-guard admission per ledger E16/E21 (precedent:
-    # e1612b8 / 56936a0 for #55).
-    "tests/test-issue-52-peer-facilitator-premise.sh"
-    "tests/manual/issue-52-manual-scenarios.md"
-  )
-  disallowed=""
-  while IFS= read -r f; do
-    [[ -z "$f" ]] && continue
-    found=0
-    for allowed in "${allow_list[@]}"; do
-      [[ "$f" == "$allowed" ]] && found=1 && break
-    done
-    if [[ $found -eq 0 ]]; then
-      disallowed="$disallowed$f"$'\n'
-    fi
-  done <<< "$CYCLE_DIFF_FILES"
-
-  echo "  changed files: $(printf '%s' "$CYCLE_DIFF_FILES" | grep -c . || true)"
-  if [[ -n "$disallowed" ]]; then
-    echo "  disallowed:"
-    printf '%s' "$disallowed" | sed 's/^/    /'
-  fi
-  assert_true "AC-SCOPE: git diff --name-only ⊆ allow-list (no disallowed files)" \
-    "[ -z '$disallowed' ]"
-fi
 
 # =============================================================================
 echo ""
@@ -934,31 +554,6 @@ else
     "[ \"${max_removed_run:-0}\" -le 15 ]"
 fi
 
-# =============================================================================
-echo ""
-echo "=== DC-4 (Green-follow guard) — test-issue-794-doc-assertions.sh sibling suite ==="
-# See the KNOWN PRE-EXISTING BASELINE ANOMALY header note: this already FAILs
-# pre-edit for reasons unrelated to #955 (two stale autoflow-guide.md windows,
-# confirmed present at this cycle's own merge-base with main). Implemented
-# exactly per the verification design's stated oracle (suite exit code),
-# not weakened to hide the anomaly.
-#
-# #951 retired-guard disposition applied: "dropped — subject retired."
-# tests/test-issue-794-doc-assertions.sh is DELETED by #951 (its permanent
-# invariants migrated into tests/fixtures/doc-invariants.json, its
-# cycle-scoped diff-delta assertion dropped per the 951 migration map,
-# docs/doc-invariant-registry.md disposition table). DC-4's own subject
-# (the 794 suite) therefore no longer exists to be a Green-follow oracle for
-# — treated as vacuous-informational, matching this file's own AC4-DOGFOOD
-# vacuous-pass convention above, rather than a hard FAIL on a file this
-# cycle intentionally removes.
-if [[ -f "$TEST_794" ]]; then
-  assert_true "DC-4: tests/test-issue-794-doc-assertions.sh exits 0 (line-window siblings re-anchored if broken by this cycle's edits)" \
-    "bash '$TEST_794' >/dev/null 2>&1"
-else
-  echo "  PASS (vacuous): DC-4 — tests/test-issue-794-doc-assertions.sh retired by #951 (dropped disposition, docs/doc-invariant-registry.md); no oracle subject remains"
-  TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
-fi
 
 # =============================================================================
 # Results

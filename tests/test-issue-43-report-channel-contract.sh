@@ -49,7 +49,6 @@ REGISTRY="$SCRIPT_DIR/fixtures/doc-invariants.json"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 GEN_MANIFEST="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
 GATE_HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
-GATE_SCHEMA="$PROJECT_ROOT/tests/fixtures/gate-schema.json"
 
 PASS=0
 FAIL=0

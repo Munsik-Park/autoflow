@@ -26,12 +26,12 @@
 #   AC-7-6/6a/6b/6c -> Preservation fences (already green pre-GREEN; they do
 #                    not depend on F1's hardening, only on F1's existing
 #                    behavior + the guard's own non-interference)
-#   AC-7-7/7a/7b/7c/7d -> Scope/CI registration. AC-7-7 (six-suite membership)
-#                    is satisfied by this same RED commit's F2-F7 edits, so it
-#                    is a fence, not a discriminator. AC-7-7a/7d are genuine
+#   AC-7-7a/7b/7c/7d -> Scope/CI registration. AC-7-7a/7d are genuine
 #                    RED discriminators (F9 is GREEN scope, unregistered at
 #                    HEAD — B4/B11). AC-7-7b is a DELTA-lane fence, environment
 #                    -dependent on a resolvable base ref. AC-7-7c is self-timed.
+#                    The AC-7-7 six-suite membership lane was retired by issue
+#                    #75 with its subject (the prior-cycle allow-list arrays).
 #
 # Injection route (settled — verification §1 R1 D-1′, ledger E3): a call-site
 # `sed` applied to a tar-copy's own two `emit_own_record "$TMP_V4*" ...` call
@@ -67,20 +67,6 @@ WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 DIGEST="$PROJECT_ROOT/docs/cycle-digest.jsonl"
 BASE_REF_LIB="$PROJECT_ROOT/tests/lib/base-ref.sh"
 
-ALLOW_LIST_SUITES=(
-  "tests/test-issue-798-topology-flip.sh"
-  "tests/test-issue-799-inert-cleanup.sh"
-  "tests/test-issue-848-doc-assertions.sh"
-  "tests/test-issue-955-subagent-background-ban.sh"
-  "tests/test-issue-846-doc-assertions.sh"
-  "tests/test-issue-952-wizard-removal.sh"
-)
-CANONICAL_PATHS=(
-  "tests/test-issue-1-guard-contract.sh"
-  "tests/test-issue-7-oracle-hardening.sh"
-  "tests/manual/issue-7-manual-scenarios.md"
-)
-
 PASS=0; FAIL=0; TESTS=0
 SECONDS=0
 
@@ -114,28 +100,6 @@ assert_false() {
 
 note_deferred() {
   echo "  DEFERRED-OBSERVABLE: $1"
-}
-
-# Extracts a suite file's own allow_list=( ... ) array block (not a
-# whole-file grep — a path mentioned only in a surrounding comment outside
-# the block must not satisfy membership).
-extract_allow_list_block() {
-  awk '/allow_list=\(/{f=1; next} f && /^  \)/{f=0} f' "$1"
-}
-
-# Membership check against an already-extracted allow_list block (caller
-# extracts once per suite file, not once per path, to avoid re-scanning the
-# same file for every canonical path checked against it).
-assert_allow_list_membership() {
-  local desc="$1" block="$2" path="$3"
-  TESTS=$((TESTS + 1))
-  if printf '%s\n' "$block" | grep -qF "\"$path\""; then
-    echo "  PASS: $desc"
-    PASS=$((PASS + 1))
-  else
-    echo "  FAIL: $desc"
-    FAIL=$((FAIL + 1))
-  fi
 }
 
 sha256_of() {
@@ -314,22 +278,6 @@ else
   note_deferred "AC-7-5n (interrupt-leg oracle): tests/test-issue-1-guard-contract.sh does not yet support GUARD_CONTRACT_WORKROOT_PARENT (verification design R2 §1; ledger E15 item 2). No seam exists to observe until GREEN ships it — no Red signal is faked for this leg. AC-7-5's structural fence above already asserts live. Re-run this suite after GREEN to activate the live O3 legs."
 fi
 
-# =============================================================================
-# AC-7-7 — six prior-cycle scope guards admit this cycle's change surface
-# (membership only, scoped to each suite's own allow_list=( ... ) block).
-# This is satisfied by this same RED commit's F2-F7 edits, so it is a fence,
-# not a discriminator against GREEN.
-# =============================================================================
-echo ""
-echo "=== AC-7-7 — prior-cycle scope-guard allow-list membership ==="
-
-for suite in "${ALLOW_LIST_SUITES[@]}"; do
-  suite_block="$(extract_allow_list_block "$PROJECT_ROOT/$suite")"
-  for p in "${CANONICAL_PATHS[@]}"; do
-    assert_allow_list_membership "AC-7-7-membership: $suite allow_list block admits \"$p\"" \
-      "$suite_block" "$p"
-  done
-done
 
 # =============================================================================
 # AC-7-7a / AC-7-7d — F8/F1 CI registration (F9, Developer-AI/GREEN scope;

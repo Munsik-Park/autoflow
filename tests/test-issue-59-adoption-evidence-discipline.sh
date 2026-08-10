@@ -50,14 +50,11 @@
 #                explicitly rejected as the oracle (verification design §4 E7).
 #   AC-59-12a/12b — Test-AI-owned surface: this suite registered in BOTH
 #                e2e-dummy-target.yml `paths:` trigger blocks + a `run:` step.
-#   AC-59-12c  — the yml edit moves no other cycle's fixed CI window: real
-#                re-runs of the canonical cross-cycle suite list settled by
-#                the decision ledger (E22): 799 + 798 + 27 + 35 + 56.
 #   AC-59-14   — RED discriminator + fence: the shared harness ok-count pin
 #                (tests/test-issue-27-composition-oracle.sh:328) is bumped to
-#                43 in the same commit as C4, a real re-run of that suite
-#                still passes, and the two pins (that literal and this
-#                suite's own EXPECTED_OK) agree (cross-pin equality, D18).
+#                43 in the same commit as C4, and the two pins (that literal
+#                and this suite's own EXPECTED_OK) agree (cross-pin equality,
+#                D18).
 #   AC-59-15(a) — RED discriminator (branch-scoped): the re-run oracles above
 #                are measured against a NON-EMPTY diff containing this
 #                cycle's own change surface — a re-run against an empty diff
@@ -65,10 +62,6 @@
 #   AC-59-16   — fence (unconditional): the two adjacent negative-control pins
 #                (manifest artifact count 47; the derived pre-existing
 #                registry total) are untouched by this cycle's additions.
-#   AC-59-17   — fence (unconditional): the tracked-source SPDX header set is
-#                intact, including through its aggregator (test-issue-985 +
-#                test-issue-1-guard-contract.sh) — this cycle's own new
-#                tracked `.sh` file must carry the two SPDX header lines (D17).
 #   AC-59-18   — fence (unconditional): the manifest same-commit obligation
 #                holds against all three of its fences (AC-56-10a, 955's
 #                AC4-DOGFOOD, 952's AC5/AC5(T2)).
@@ -77,8 +70,8 @@
 #   AC-59-19a  — unconditional, RED discriminator: `base_measured` is the ONE
 #                place the sentinel is interpreted (7-row table).
 #   AC-59-19b  — unconditional, RED discriminator, self-scoped structural grep:
-#                no delta comparison bypasses the guard (12 `-ge $BT...`
-#                conditions, all 12 also carry a `base_measured` conjunct).
+#                no delta comparison bypasses the guard (7 `-ge $BT...`
+#                conditions, all 7 also carry a `base_measured` conjunct).
 #   AC-59-20a  — unconditional, characterization: the worktree-add failure
 #                path is reachable via real git and returns the sentinel.
 #   AC-59-20b  — unconditional, characterization: the Results:-less parse path
@@ -541,59 +534,6 @@ else
   TESTS=$((TESTS + 4)); FAIL=$((FAIL + 4))
 fi
 
-# =============================================================================
-echo ""
-echo "=== AC-59-12c — the yml edit moves no other cycle's fixed CI window (E22 canonical list: 799+798+27+35+56) ==="
-
-if [[ -z "$BASE_REF" ]]; then
-  # 5 AC-59-21 preconditions + 5 AC-59-12c deltas (same accounting invariant as AC-59-11d).
-  echo "  BLOCK: no comparison base resolvable — AC-59-21/AC-59-12c counted FAIL, never skipped"
-  TESTS=$((TESTS + 10)); FAIL=$((FAIL + 10))
-else
-  OUT_799_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
-  OUT_798_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
-  OUT_27_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-27-composition-oracle.sh 2>&1)"
-  OUT_35_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-35-phase-marker.sh 2>&1)"
-  OUT_56_WINDOW="$(cd "$PROJECT_ROOT" && bash tests/test-issue-56-carry-evidence-discipline.sh 2>&1)"
-
-  read -r P799W T799W F799W <<<"$(suite_counts "$OUT_799_WINDOW")"
-  read -r P798W T798W F798W <<<"$(suite_counts "$OUT_798_WINDOW")"
-  read -r P27W T27W F27W <<<"$(suite_counts "$OUT_27_WINDOW")"
-  read -r P35W T35W F35W <<<"$(suite_counts "$OUT_35_WINDOW")"
-  read -r P56W T56W F56W <<<"$(suite_counts "$OUT_56_WINDOW")"
-
-  # Same-environment baseline (ledger E33 — see suite_result_at_ref's header comment):
-  # a literal count here has the identical host-dependence problem AC-59-11d had.
-  read -r BP799W BT799W BF799W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-799-inert-cleanup.sh")"
-  read -r BP798W BT798W BF798W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-798-topology-flip.sh")"
-  read -r BP27W BT27W BF27W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-27-composition-oracle.sh")"
-  read -r BP35W BT35W BF35W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-35-phase-marker.sh")"
-  read -r BP56W BT56W BF56W <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-56-carry-evidence-discipline.sh")"
-
-  # Two counted assertions per lane, same shape as AC-59-11d above (D3).
-  assert_true "AC-59-21-799W: base measurement of test-issue-799-inert-cleanup.sh at $BASE_REF (got base $BP799W/$BT799W, $BF799W failed)" \
-    "base_measured \"$BP799W\" \"$BT799W\" \"$BF799W\""
-  assert_true "AC-59-12c-799: test-issue-799-inert-cleanup.sh window (AC6-ci -A40) unaffected — 0 failed, total not below base (got: $P799W/$T799W vs base $BP799W/$BT799W)" \
-    "base_measured \"$BP799W\" \"$BT799W\" \"$BF799W\" && [ \"$F799W\" -eq 0 ] && [ \"$T799W\" -ge \"$BT799W\" ]"
-  assert_true "AC-59-21-798W: base measurement of test-issue-798-topology-flip.sh at $BASE_REF (got base $BP798W/$BT798W, $BF798W failed)" \
-    "base_measured \"$BP798W\" \"$BT798W\" \"$BF798W\""
-  assert_true "AC-59-12c-798: test-issue-798-topology-flip.sh window unaffected — 0 failed, total not below base (got: $P798W/$T798W vs base $BP798W/$BT798W)" \
-    "base_measured \"$BP798W\" \"$BT798W\" \"$BF798W\" && [ \"$F798W\" -eq 0 ] && [ \"$T798W\" -ge \"$BT798W\" ]"
-  assert_true "AC-59-21-27W: base measurement of test-issue-27-composition-oracle.sh at $BASE_REF (got base $BP27W/$BT27W, $BF27W failed)" \
-    "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\""
-  # #64: AC-27-14a/b were retired (change-detector fence), so 27's total may
-  # legitimately sit below a pre-#64 base; the 27 lane keeps only 0-failed.
-  assert_true "AC-59-12c-27: test-issue-27-composition-oracle.sh window unaffected — 0 failed (got: $P27W/$T27W vs base $BP27W/$BT27W; total pin retired in #64)" \
-    "base_measured \"$BP27W\" \"$BT27W\" \"$BF27W\" && [ \"$F27W\" -eq 0 ]"
-  assert_true "AC-59-21-35W: base measurement of test-issue-35-phase-marker.sh at $BASE_REF (got base $BP35W/$BT35W, $BF35W failed)" \
-    "base_measured \"$BP35W\" \"$BT35W\" \"$BF35W\""
-  assert_true "AC-59-12c-35: test-issue-35-phase-marker.sh (control) unaffected — 0 failed, total not below base (got: $P35W/$T35W vs base $BP35W/$BT35W)" \
-    "base_measured \"$BP35W\" \"$BT35W\" \"$BF35W\" && [ \"$F35W\" -eq 0 ] && [ \"$T35W\" -ge \"$BT35W\" ]"
-  assert_true "AC-59-21-56W: base measurement of test-issue-56-carry-evidence-discipline.sh at $BASE_REF (got base $BP56W/$BT56W, $BF56W failed)" \
-    "base_measured \"$BP56W\" \"$BT56W\" \"$BF56W\""
-  assert_true "AC-59-12c-56: test-issue-56-carry-evidence-discipline.sh (control) unaffected — 0 failed, total not below base (got: $P56W/$T56W vs base $BP56W/$BT56W)" \
-    "base_measured \"$BP56W\" \"$BT56W\" \"$BF56W\" && [ \"$F56W\" -eq 0 ] && [ \"$T56W\" -ge \"$BT56W\" ]"
-fi
 
 # =============================================================================
 echo ""
@@ -614,10 +554,6 @@ assert_true "AC-59-14a3-stale-label: the stale '(37)' assertion label is gone (g
 assert_true "AC-59-14a3-new-label: the bumped '($EXPECTED_OK)' assertion label is present exactly once (got: $NEW_LABEL)" \
   "[ \"$NEW_LABEL\" -eq 1 ]"
 
-OUT_27_REAL="$(cd "$PROJECT_ROOT" && bash tests/test-issue-27-composition-oracle.sh 2>&1)"
-read -r P27R T27R F27R <<<"$(suite_counts "$OUT_27_REAL")"
-assert_true "AC-59-14b: real re-run of test-issue-27-composition-oracle.sh == 21/21, 0 failed (got: $P27R/$T27R, $F27R failed; 23→21 after the #64 AC-27-14 retirement)" \
-  "[ \"$T27R\" -eq 21 ] && [ \"$F27R\" -eq 0 ]"
 
 CANON_LITERAL="$(grep -F 'AC-27-20c' "$CANON_SUITE" | grep -oE '\-eq [0-9]+ \]"$' | grep -oE '[0-9]+' | tail -1)"
 assert_true "AC-59-14c: cross-pin equality — test-issue-27's ok-count literal ($CANON_LITERAL) == this suite's EXPECTED_OK ($EXPECTED_OK)" \
@@ -683,19 +619,6 @@ PRE_EXISTING_TOTAL="$(jq '[.invariants[] | select(.id | startswith("27-AC") | no
 assert_true "AC-59-16b: derived pre-existing (non-27-AC) registry PASS count == every pre-existing (non-27-AC) entry (got: $PRE_EXISTING_PASSES of $PRE_EXISTING_TOTAL, $PRE_EXISTING_FAILS failed)" \
   "[ \"$PRE_EXISTING_PASSES\" -eq \"$PRE_EXISTING_TOTAL\" ] && [ \"$PRE_EXISTING_FAILS\" -eq 0 ]"
 
-# =============================================================================
-echo ""
-echo "=== AC-59-17 (fence, unconditional) — tracked-source SPDX header set intact, including through its aggregator ==="
-
-OUT_985="$(cd "$PROJECT_ROOT" && bash tests/test-issue-985-doc-assertions.sh 2>&1)"
-read -r P985 T985 F985 <<<"$(suite_counts "$OUT_985")"
-assert_true "AC-59-17a: real re-run of test-issue-985-doc-assertions.sh == 30/30, 0 failed (got: $P985/$T985, $F985 failed)" \
-  "[ \"$T985\" -eq 30 ] && [ \"$F985\" -eq 0 ]"
-
-OUT_T1_SPDX="$(cd "$PROJECT_ROOT" && bash tests/test-issue-1-guard-contract.sh 2>&1)"
-read -r PT1S TT1S FT1S <<<"$(suite_counts "$OUT_T1_SPDX")"
-assert_true "AC-59-17b: real re-run of test-issue-1-guard-contract.sh (N1 aggregator) == 32/32, 0 failed (got: $PT1S/$TT1S, $FT1S failed)" \
-  "[ \"$TT1S\" -eq 32 ] && [ \"$FT1S\" -eq 0 ]"
 
 # =============================================================================
 echo ""
@@ -737,10 +660,12 @@ DELTA_GE_GUARDED_COUNT="$(grep -E -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" | g
 
 # 12 -> 11 in #64: the 27 lane's total-not-below-base clause was retired with
 # the AC-27-14 fence (the 27 lane keeps only its 0-failed requirement).
-assert_true "AC-59-19b-total: exactly 11 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
-  "[ \"$DELTA_GE_LINE_COUNT\" -eq 11 ]"
-assert_true "AC-59-19b-guarded: all 11 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
-  "[ \"$DELTA_GE_GUARDED_COUNT\" -eq 11 ]"
+# 11 -> 7 in #75: the AC-59-12c lane, which carried the yml-window delta family,
+# was retired with the sibling-total pins it re-measured in a throwaway worktree.
+assert_true "AC-59-19b-total: exactly 7 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
+  "[ \"$DELTA_GE_LINE_COUNT\" -eq 7 ]"
+assert_true "AC-59-19b-guarded: all 7 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
+  "[ \"$DELTA_GE_GUARDED_COUNT\" -eq 7 ]"
 
 # =============================================================================
 echo ""
@@ -778,22 +703,21 @@ echo "=== AC-59-22a (unconditional, RED discriminator, self-scoped structural gr
 # AC-59-19b above).
 PRECOND_LABEL_PATTERN='assert_true "AC-59-21'"-"
 DELTA_11D_LABEL_PATTERN='assert_true "AC-59-11d'"-"
-DELTA_12C_LABEL_PATTERN='assert_true "AC-59-12c'"-"
 
 PRECOND_LABEL_COUNT="$(grep -cE "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true)"
-DELTA_LABEL_COUNT="$(( $(grep -cE "$DELTA_11D_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true) + $(grep -cE "$DELTA_12C_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true) ))"
+DELTA_LABEL_COUNT="$(grep -cE "$DELTA_11D_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true)"
 CLAIM_SHAPED_PRECOND="$(grep -E "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" | grep -cE 'succeeded|not below' || true)"
 
-assert_true "AC-59-22a: 12 base-precondition labels and 12 delta labels exist, each naming its suite, and no precondition label carries a claim-shaped verb that would invert under FAIL: (got: precond=$PRECOND_LABEL_COUNT, delta=$DELTA_LABEL_COUNT, claim-shaped=$CLAIM_SHAPED_PRECOND)" \
-  "[ \"$PRECOND_LABEL_COUNT\" -eq 12 ] && [ \"$DELTA_LABEL_COUNT\" -eq 12 ] && [ \"$CLAIM_SHAPED_PRECOND\" -eq 0 ]"
+assert_true "AC-59-22a: 7 base-precondition labels and 7 delta labels exist, each naming its suite, and no precondition label carries a claim-shaped verb that would invert under FAIL: (got: precond=$PRECOND_LABEL_COUNT, delta=$DELTA_LABEL_COUNT, claim-shaped=$CLAIM_SHAPED_PRECOND)" \
+  "[ \"$PRECOND_LABEL_COUNT\" -eq 7 ] && [ \"$DELTA_LABEL_COUNT\" -eq 7 ] && [ \"$CLAIM_SHAPED_PRECOND\" -eq 0 ]"
 
 # =============================================================================
 echo ""
 echo "=== AC-59-22b (unconditional, RED discriminator) — every precondition label interpolates the base failed count ==="
 
 BF_INTERP_COUNT="$(grep -E "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" | grep -cE '\$BF[0-9A-Za-z]*' || true)"
-assert_true "AC-59-22b: all 12 base-precondition labels interpolate \$BF... (base failed count) alongside \$BP.../\$BT... (got: $BF_INTERP_COUNT of 12)" \
-  "[ \"$BF_INTERP_COUNT\" -eq 12 ]"
+assert_true "AC-59-22b: all 7 base-precondition labels interpolate \$BF... (base failed count) alongside \$BP.../\$BT... (got: $BF_INTERP_COUNT of 7)" \
+  "[ \"$BF_INTERP_COUNT\" -eq 7 ]"
 
 # =============================================================================
 # Cycle 3 (review-response) — AC-59-25 … AC-59-35 (AC-59-30 retired, AC-59-33

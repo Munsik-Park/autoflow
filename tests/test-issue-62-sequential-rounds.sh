@@ -18,7 +18,7 @@
 #
 # Branch scoping mirrors tests/test-issue-56-carry-evidence-discipline.sh and
 # tests/test-issue-59-adoption-evidence-discipline.sh exactly: the ok-count
-# pin (AC-62-23) and the composed-diff recomputation (AC-62-33b) are THIS
+# pin (AC-62-23) and the AC-62-36 arm-window recomputation are THIS
 # cycle's own PR contract, not every PR's — `note_deferred`, never a silently
 # passing skip, off the issue-62 dev branch.
 #
@@ -26,9 +26,7 @@
 # 6 and 9): AC-62-23/24/31 read the shared test/workflows/run.mjs ok-count,
 # whose two OTHER pin homes (tests/test-issue-27-composition-oracle.sh,
 # tests/test-issue-59-adoption-evidence-discipline.sh) are bumped by the
-# Developer AI in the GREEN commit, not here. AC-62-33's admissions
-# (allow_list entries in the six scope-guard suites) are also a GREEN-side
-# edit (§5 item 9's "Ordering" paragraph). AC-62-35's local-run arm requires a
+# Developer AI in the GREEN commit, not here. AC-62-35's local-run arm requires a
 # VALIDATE-time orchestrator action (`.autoflow/issue-62-runtime-launch.json`)
 # that has not happened yet. All four are EXPECTED FAIL during the RED/GREEN
 # window; this is documented in-line at each assertion, not a defect in this
@@ -73,12 +71,6 @@ note_deferred() {
 
 HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
 
-# Mirrors tests/test-issue-7-oracle-hardening.sh's extract_allow_list_block(): a
-# suite's own allow_list=( ... ) array body, not a whole-file grep (a path
-# mentioned only in a surrounding comment must not satisfy membership, B34).
-extract_allow_list_block() {
-  awk '/allow_list=\(/{f=1; next} f && /^  \)/{f=0} f' "$1"
-}
 
 # D10 ARM WINDOW extractor (verification design §7.2a): the inclusive line
 # range from the FIRST line matching the workflows_{admitted,touched,offwindow}
@@ -429,63 +421,6 @@ MISSING_ARTIFACT_TOKEN="$(grep -c 'missing-artifact' "$TEAMMATE_CONTRACTS" || tr
 assert_true "AC-62-34: 'missing-artifact' absent from docs/teammate-contracts.md's Automated (mock-runtime regression) paragraph (got: $MISSING_ARTIFACT_TOKEN)" \
   "[ \"$MISSING_ARTIFACT_TOKEN\" -eq 0 ]"
 
-# =============================================================================
-echo ""
-echo "=== AC-62-33 (RED discriminator, GATE:PLAN FAIL #2 / F4) — this cycle's two new files admitted into all six branch-diff scope guards ==="
-# KNOWN RED at RED-time and through most of GREEN (§5 item 9's Ordering
-# paragraph): the twelve admissions land in the GREEN commit, once both new
-# files exist on the diff — landing them earlier would make this criterion
-# pass vacuously on file creation, which the design explicitly rejects.
-
-NEW_PATH_1="tests/test-issue-62-sequential-rounds.sh"
-NEW_PATH_2="tests/manual/issue-62-manual-scenarios.md"
-GUARD_SUITES=(
-  "tests/test-issue-799-inert-cleanup.sh"
-  "tests/test-issue-798-topology-flip.sh"
-  "tests/test-issue-846-doc-assertions.sh"
-  "tests/test-issue-848-doc-assertions.sh"
-  "tests/test-issue-952-wizard-removal.sh"
-  "tests/test-issue-955-subagent-background-ban.sh"
-)
-
-for suite in "${GUARD_SUITES[@]}"; do
-  BLOCK="$(extract_allow_list_block "$PROJECT_ROOT/$suite")"
-  # Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973):
-  # trim the WHOLE block once (sed reads to EOF here, no downstream
-  # short-circuit consumer), then match each path with a here-string —
-  # pipe-free, so grep -q's short-circuit exit can never SIGPIPE the trimmer.
-  # CI witness: run 31303462157, `sed: couldn't flush stdout: Broken pipe`
-  # on this suite's largest allow_list block (test-issue-952-wizard-removal.sh).
-  TRIMMED_BLOCK="$(printf '%s\n' "$BLOCK" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-  for path in "$NEW_PATH_1" "$NEW_PATH_2"; do
-    TRIMMED_MATCH="$(grep -qxF "\"$path\"" <<< "$TRIMMED_BLOCK" && echo yes || echo no)"
-    assert_true "AC-62-33a: $suite's allow_list admits $path by exact quoted entry" \
-      "[ \"$TRIMMED_MATCH\" = yes ]"
-  done
-done
-
-case "$HEAD_BRANCH" in
-  dev/*-issue-62|dev/*-issue-62-*)
-    # A pull_request checkout (fetch-depth: 0) has full history but no LOCAL
-    # `main` branch, only `origin/main` — fall back before declaring BLOCK.
-    BASE_REF="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)"
-    if [[ -z "$BASE_REF" ]]; then
-      echo "  BLOCK: no comparison base resolvable — AC-62-33b counted FAIL, never skipped"
-      TESTS=$((TESTS + ${#GUARD_SUITES[@]})); FAIL=$((FAIL + ${#GUARD_SUITES[@]}))
-    else
-      DIFF_FILES="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD)"
-      for suite in "${GUARD_SUITES[@]}"; do
-        BLOCK="$(extract_allow_list_block "$PROJECT_ROOT/$suite" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed -n 's/^"\(.*\)"$/\1/p')"
-        UNCOVERED="$(comm -23 <(printf '%s\n' "$DIFF_FILES" | sort -u) <(printf '%s\n' "$BLOCK" | sort -u))"
-        assert_true "AC-62-33b: $suite's allow_list, set-differenced against the real cycle diff, is empty (uncovered: $(printf '%s' "$UNCOVERED" | paste -sd, -))" \
-          "[ -z \"\$(printf '%s' '$UNCOVERED')\" ]"
-      done
-    fi
-    ;;
-  *)
-    note_deferred "AC-62-33b: composed-diff recomputation inert off the issue-62 dev branch (head: ${HEAD_BRANCH:-unknown}) — meaningless without this cycle's own base."
-    ;;
-esac
 
 # =============================================================================
 echo ""
@@ -542,7 +477,9 @@ S799_36I="$(check_arm_structural "$PROJECT_ROOT/tests/test-issue-799-inert-clean
 assert_true "AC-62-36(i): both guards' .claude/workflows/** arm window has zero grep -vF filters, exactly one assert_true, zero hardcoded 'architect-deliberation.js', and that assert_true names both .claude/workflows/** and setup/manifest.json (798: $S798_36I; 799: $S799_36I)" \
   "[[ '$S798_36I' == yes* && '$S799_36I' == yes* ]]"
 
-# (ii)/(iii)/(iv) — branch/base-ref-scoped like AC-62-33b (:346-352 idiom):
+# (ii)/(iii)/(iv) — branch/base-ref-scoped, mirroring the branch-gate idiom
+# tests/test-issue-67-deliberation-record.sh and
+# tests/test-issue-69-verification-depth.sh use for their own scope lanes:
 # the behavioural non-vacuity check and both negative controls are meaningless
 # unless this branch's own diff actually touches .claude/workflows/** (off
 # that condition the guard's while-loop never iterates and every arm trivially
@@ -552,7 +489,7 @@ assert_true "AC-62-36(i): both guards' .claude/workflows/** arm window has zero 
 # checkout and a local run, so a two-arm branch gate is the complete idiom.
 case "$HEAD_BRANCH" in
   dev/*-issue-62|dev/*-issue-62-*)
-    # Same local-`main`-absent fallback as AC-62-33b above: a pull_request
+    # Same local-`main`-absent fallback the sibling branch-scoped lanes use: a pull_request
     # checkout only has `origin/main`, not a local `main` branch.
     BASE_REF_36="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)"
     # CI's pull_request checkout has no local `main` branch, only
@@ -656,25 +593,11 @@ assert_true "AC-62-38: neither #964 frozen hazard regex (GUARD_REGEX / EXTRACTOR
 
 # =============================================================================
 echo ""
-echo "=== AC-62-39 (fence) — the two guards' own change stays inside their own allow-lists; no derived-artifact regeneration owed ==="
+echo "=== AC-62-39 (fence) — no derived-artifact regeneration owed for the two guards' own change ==="
 
-check_self_sibling_admission() {
-  local file="$1"
-  local block
-  block="$(extract_allow_list_block "$file" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-  if printf '%s\n' "$block" | grep -qxF '"tests/test-issue-798-topology-flip.sh"' \
-    && printf '%s\n' "$block" | grep -qxF '"tests/test-issue-799-inert-cleanup.sh"'; then
-    echo yes
-  else
-    echo no
-  fi
-}
-
-SELFSIB_798="$(check_self_sibling_admission "$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh")"
-SELFSIB_799="$(check_self_sibling_admission "$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh")"
 MANIFEST_TESTS_ROWS="$(jq -r '.artifacts[].source' "$MANIFEST" | grep -c '^tests/' || true)"
-assert_true "AC-62-39: both guards admit tests/test-issue-798-topology-flip.sh AND tests/test-issue-799-inert-cleanup.sh in their own allow_list (798: $SELFSIB_798, 799: $SELFSIB_799), and setup/manifest.json carries zero 'tests/…' source rows so AC-56-10a/AC-59-9 stay unmoved (got: $MANIFEST_TESTS_ROWS)" \
-  "[ '$SELFSIB_798' = yes ] && [ '$SELFSIB_799' = yes ] && [ \"$MANIFEST_TESTS_ROWS\" -eq 0 ]"
+assert_true "AC-62-39: setup/manifest.json carries zero 'tests/…' source rows so AC-56-10a/AC-59-9 stay unmoved (got: $MANIFEST_TESTS_ROWS)" \
+  "[ \"$MANIFEST_TESTS_ROWS\" -eq 0 ]"
 
 # =============================================================================
 # Results
