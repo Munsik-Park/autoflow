@@ -230,7 +230,7 @@ assert_true "AC-62-21b: setup/manifest.json carries exactly one artifact row for
 
 # =============================================================================
 echo ""
-echo "=== AC-62-22 (fence, load-bearing; mid-window caveat: this suite is ALSO one of the six scope guards below, so it fails its own AC-SCOPE lane until item 9's admissions land in GREEN — see file header) ==="
+echo "=== AC-62-22 (fence, load-bearing; no mid-window caveat since #75 retired the unscoped scope-guard lanes, this suite's among them — the fence is green throughout) ==="
 
 OUT_955="$(cd "$PROJECT_ROOT" && bash tests/test-issue-955-subagent-background-ban.sh 2>&1)"
 EXIT_955=$?
@@ -554,7 +554,7 @@ extract_results_line() {  # "passed total failed", or empty fields if unmeasurab
 # checkout — reproduced here via a `--depth 1 --branch <this-branch>` clone
 # with no local `main`), so BASE_REF in tests/test-issue-798-topology-flip.sh
 # and tests/test-issue-799-inert-cleanup.sh resolves empty and their
-# diff-scope guards (AC9/AC10 for 798; AC6-scope for 799) SKIP instead of
+# diff-scope guards (AC9 for 798; AC6-scope for 799) SKIP instead of
 # running — dropping the totals to 18/26 while FAIL stays 0. A skip is not a
 # failure of the D10 amendment, so the oracle asserts each child suite exits
 # 0 with FAIL == 0 (the "raises no guard's assertion count" fence is served
