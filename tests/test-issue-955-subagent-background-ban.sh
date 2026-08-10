@@ -436,6 +436,15 @@ else
   # docs/adr/README.md markdown-link closure mechanism as #51's 0017 row.
   # AC4-CLOSURE additionally admits this single-row addition with zero
   # removals -- any other added/removed source still FAILs.
+  #
+  # #71 lockstep update: the cycle-digest emitter and the cross-issue
+  # recurrence scan are REMOVED, so this is the first delta shaped as a
+  # removal rather than an addition — the two source rows
+  # scripts/handoff/emit-cycle-digest.sh and
+  # scripts/preflight/scan-cross-issue-recurrence.sh leave the manifest with
+  # zero additions. AC4-CLOSURE additionally admits this exact two-row
+  # removal set with zero additions -- any other added/removed source still
+  # FAILs.
   AC4_CLOSURE_ADDED="$(comm -13 <(printf '%s\n' "$BASE_SOURCES") <(printf '%s\n' "$HEAD_SOURCES"))"
   AC4_CLOSURE_REMOVED="$(comm -23 <(printf '%s\n' "$BASE_SOURCES") <(printf '%s\n' "$HEAD_SOURCES"))"
   AC979_CLOSURE_SET="$(printf '%s\n' \
@@ -445,6 +454,9 @@ else
     'docs/reviewer-backend.md' \
     'scripts/preflight/check-review-backend.sh' \
     'scripts/review/codex-review-pr.sh' | sort -u)"
+  AC71_REMOVED_SET="$(printf '%s\n' \
+    'scripts/handoff/emit-cycle-digest.sh' \
+    'scripts/preflight/scan-cross-issue-recurrence.sh' | sort -u)"
   AC979_C9_CLOSURE_SET="$(printf '%s\n' \
     '.claude/autoflow.local.json' \
     '.codex/review.md' \
@@ -453,8 +465,8 @@ else
     'scripts/preflight/check-review-backend.sh' \
     'scripts/review/codex-review-pr.sh' \
     'scripts/review/lib/claude-isolation.sh' | sort -u)"
-  assert_true "AC4-CLOSURE: manifest source-row set is identical at <base> and HEAD, or the only delta is the #951 docs/doc-invariant-registry.md manifest-closure row (§DR-8, ledger E14), is the #979 reviewer-backend-selection six-row delivery set (ledger E12), is the #979 cycle-9 seven-row delivery set (six-row set plus scripts/review/lib/claude-isolation.sh, ledger E13), is the #25 confirm-ci-green.sh single-row delivery set (ledger issue-25 E14), is the #51 docs/adr/0017-teammate-removal-feasibility.md single-row delivery set (GATE:QUALITY E36), or is the #69 docs/adr/0018-verification-depth-justification.md single-row delivery set" \
-    "[ \"\$HEAD_SOURCES\" = \"\$BASE_SOURCES\" ] || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/doc-invariant-registry.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_C9_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'scripts/handoff/confirm-ci-green.sh' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0017-teammate-removal-feasibility.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0018-verification-depth-justification.md' ]; }"
+  assert_true "AC4-CLOSURE: manifest source-row set is identical at <base> and HEAD, or the only delta is the #951 docs/doc-invariant-registry.md manifest-closure row (§DR-8, ledger E14), is the #979 reviewer-backend-selection six-row delivery set (ledger E12), is the #979 cycle-9 seven-row delivery set (six-row set plus scripts/review/lib/claude-isolation.sh, ledger E13), is the #25 confirm-ci-green.sh single-row delivery set (ledger issue-25 E14), is the #51 docs/adr/0017-teammate-removal-feasibility.md single-row delivery set (GATE:QUALITY E36), is the #69 docs/adr/0018-verification-depth-justification.md single-row delivery set, or is the #71 two-row removal set (emit-cycle-digest.sh + scan-cross-issue-recurrence.sh, zero additions)" \
+    "[ \"\$HEAD_SOURCES\" = \"\$BASE_SOURCES\" ] || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/doc-invariant-registry.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_C9_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'scripts/handoff/confirm-ci-green.sh' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0017-teammate-removal-feasibility.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0018-verification-depth-justification.md' ]; } || { [ -z \"\$AC4_CLOSURE_ADDED\" ] && [ \"\$AC4_CLOSURE_REMOVED\" = \"\$AC71_REMOVED_SET\" ]; }"
 fi
 
 # =============================================================================
