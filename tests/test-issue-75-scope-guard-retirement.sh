@@ -164,6 +164,38 @@ assert_true "docs/doc-invariant-registry.md: 799 'diff must not touch CLAUDE.md'
 assert_true "docs/doc-invariant-registry.md §2 names scripts/test/check-cycle-scope-guard.sh as the check enforcing branch-scoping while a cycle-scoped lane lives" \
   'grep -q "check-cycle-scope-guard.sh" "$DOC_REGISTRY_MD"'
 
+echo "--- §5 'Issue #75' table: one content-specific predicate per disposition row ---"
+assert_true "registry row: the six unscoped path allow-list lanes -> dropped — cycle-local" \
+  'grep -qE "^\| the six unscoped path allow-list lanes.*dropped — cycle-local" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 799 off-window arms -> dropped — cycle-local" \
+  'grep -qE "^\| .799. off-window arms.*dropped — cycle-local" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 7 AC-7-7 / 62 AC-62-33 reader lanes -> dropped — subject retired" \
+  'grep -qE "^\| .7. .AC-7-7. allow-list membership lane.*dropped — subject retired" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 964 AC2-B/AC2-B2/AC1-A/AC1-C -> dropped — subject retired" \
+  'grep -qE "^\| .964. AC2-B / AC2-B2 inventory cross-checks.*dropped — subject retired" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 964 AC4-A / 952 AC5 T2 -> dropped — redundant" \
+  'grep -qE "^\| .964. AC4-A sibling re-run; .952. AC5 T2.*dropped — redundant" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 795 AC-INVENTORY part (a) -> dropped — subject retired" \
+  'grep -qE "^\| .795. AC-INVENTORY part \(a\).*dropped — subject retired" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 955 DC-4 -> dropped — subject retired" \
+  'grep -qE "^\| .955. DC-4 \|.*dropped — subject retired" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 985 AC3-WORKFLOW-COUNT count fence -> dropped — cycle-local" \
+  'grep -qE "^\| .985. .AC3-WORKFLOW-COUNT. count fence.*dropped — cycle-local" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 59 AC-59-14b/17a/17b/12c -> dropped — cycle-local" \
+  'grep -qE "^\| .59. .AC-59-14b. / .AC-59-17a. / .AC-59-17b. / .AC-59-12c.*dropped — cycle-local" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 59 sibling 0-failed narrowing -> dropped — cycle-local, with recorded coverage loss" \
+  'grep -qE "^\| .59. sibling 0-failed narrowing.*dropped — cycle-local, with recorded coverage loss" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 59 retired yml-window control set -> dropped — cycle-local, with recorded coverage loss" \
+  'grep -qE "^\| .59. retired yml-window control set.*dropped — cycle-local, with recorded coverage loss" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 55 registry-entries-added -> dropped — redundant" \
+  'grep -qE "^\| .55. .registry-entries-added.*dropped — redundant" "$DOC_REGISTRY_MD"'
+assert_true "registry row: dead-symbol closure (42/43 GATE_SCHEMA et al.) -> dropped — subject retired" \
+  'grep -qE "^\| .42./.43. .GATE_SCHEMA.*dropped — subject retired" "$DOC_REGISTRY_MD"'
+assert_true "registry row: tests/issue-92 T12-1a/T12-1b/mock-gh dispatch table -> dropped — cycle-local" \
+  'grep -qE "^\| .tests/issue-92/test-boundary-nonviolation.bats. .T12-1a. diff half.*dropped — cycle-local" "$DOC_REGISTRY_MD"'
+assert_true "registry row: 40 tests/test-issue-40-doc-assertions.sh (whole file) -> promoted -> runner Step 0" \
+  'grep -qE "^\| .40. .tests/test-issue-40-doc-assertions\.sh. \(whole file\).*promoted → runner Step 0" "$DOC_REGISTRY_MD"'
+
 # =============================================================================
 echo ""
 echo "=== AC10b — retained-lane survival, sub-leg (i): label existence ==="
@@ -393,6 +425,16 @@ assert_true "tests/test-issue-67-deliberation-record.sh: retained branch-scoped 
   'grep -qE "^[[:space:]]*allow_list=\(" "$SUITE_67"'
 assert_true "tests/test-issue-69-verification-depth.sh: retained branch-scoped array still present" \
   'grep -qE "^[[:space:]]*allow_list\+?=\(" "$SUITE_69"'
+
+echo "--- 799 clause (b): off-window chain identifiers absent by name (the design's named oracle) ---"
+if [ -f "$SUITE_799" ]; then
+  assert_true "799: claude_md_offwindow_changes identifier absent" \
+    '! grep -q "claude_md_offwindow_changes" "$SUITE_799"'
+  assert_true "799: adr_touched_files identifier absent" \
+    '! grep -q "adr_touched_files" "$SUITE_799"'
+  assert_true "799: repo_boundary_offwindow identifier absent" \
+    '! grep -q "repo_boundary_offwindow" "$SUITE_799"'
+fi
 
 # =============================================================================
 echo ""
