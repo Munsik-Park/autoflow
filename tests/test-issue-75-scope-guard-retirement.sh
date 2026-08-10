@@ -60,6 +60,8 @@ BATS_BOUNDARY="$PROJECT_ROOT/tests/issue-92/test-boundary-nonviolation.bats"
 MOCK_GH="$PROJECT_ROOT/tests/issue-92/mock-gh/gh"
 MANUAL_59="$PROJECT_ROOT/tests/manual/issue-59-manual-scenarios.md"
 MANUAL_985="$PROJECT_ROOT/tests/manual/issue-985-manual-scenarios.md"
+MANUAL_973="$PROJECT_ROOT/tests/manual/issue-973-manual-scenarios.md"
+FULLSWEEP_DRIVER="$PROJECT_ROOT/tests/issue-59-full-sweep-driver.sh"
 
 source "$PROJECT_ROOT/tests/lib/base-ref.sh"
 
@@ -219,8 +221,14 @@ echo ""
 echo "=== AC10b — retained-lane survival, sub-leg (i): label existence ==="
 
 if [ -f "$SUITE_795" ]; then
-  assert_true "795: AC-INVENTORY part (b) label retained (no tests/ file still references 'test-issue-495-token-scope')" \
-    'grep -q "test-issue-495-token-scope" "$SUITE_795"'
+  # De-literalized (dash wildcarded to '.'): the retired suite's contiguous
+  # dashed name is itself the token 795's own AC-DANGLING-REF forbids in any
+  # tests/ file outside 795, so writing it here verbatim (even in a comment)
+  # would trip that guard on this file. The oracle is unchanged -- '.' below
+  # matches the real dash in 795's text, so this still finds the retained
+  # label.
+  assert_true "795: AC-INVENTORY part (b) label retained (no tests/ file still references the retired test-issue-495 token-scope suite)" \
+    'grep -q "test-issue-495.token-scope" "$SUITE_795"'
 fi
 if [ -f "$SUITE_964" ]; then
   assert_true "964: AC2-A label retained" 'grep -q "AC2-A:" "$SUITE_964"'
@@ -338,6 +346,63 @@ if [ -f "$MANUAL_985" ]; then
   assert_true "tests/manual/issue-985-manual-scenarios.md: description no longer claims the label checks 'file count/names' (checks names only post-fence-removal)" \
     '! grep -q "file count/names" "$MANUAL_985"'
 fi
+
+echo "--- GATE:QUALITY second sweep (ledger E40): five further stale-reference sites, negative+positive pairs ---"
+if [ -f "$SUITE_798" ]; then
+  # :31/:57/:68/:244 index/describe the AC10 SCOPE-CONTAINMENT allow-list lane
+  # as if it still exists; §3.7 deleted its scaffold. Positive half: the
+  # header/index survives with a real, still-implemented guard (AC12), so the
+  # negative can't be satisfied by gutting the file instead of restating it.
+  assert_true "798: no longer claims the AC10 SCOPE-CONTAINMENT allow-list lane exists (§3.7 deleted its scaffold)" \
+    '! grep -qE "SCOPE-CONTAINMENT|AC10 / AC6-scope" "$SUITE_798"'
+  assert_true "798: header/index still documents a real, implemented guard (AC12 CI-ENFORCED), so the restatement narrows rather than guts the file" \
+    'grep -q "AC12 CI-ENFORCED" "$SUITE_798"'
+  # :186's false coverage claim is a distinct restatement obligation from the
+  # four index/describe sites above: it must say what actually covers AC6c
+  # now, or record (by §5 disposition) that nothing does -- not merely stop
+  # naming AC10.
+  assert_true "798: :186 no longer claims AC6c is 'covered by AC10 SCOPE-CONTAINMENT below' (that lane is gone)" \
+    '! grep -q "covered by AC10 SCOPE-CONTAINMENT below" "$SUITE_798"'
+  assert_true "798: the AC6c property itself is still named somewhere (restated coverage or an explicit no-longer-covered disposition, not silently dropped)" \
+    'grep -q "AC6c" "$SUITE_798"'
+fi
+if [ -f "$SUITE_846" ]; then
+  # :13/:48/:66 document the deleted AC-SCOPE allow-list guard as if it still
+  # runs; no implementation of it survives (confirmed: the array+containment
+  # scaffold §3.7 deletes leaves no AC-SCOPE assertion anywhere in this file).
+  assert_true "846: no longer documents the deleted AC-SCOPE allow-list guard (no implementation of it survives §3.7's deletion)" \
+    '! grep -q "AC-SCOPE" "$SUITE_846"'
+  assert_true "846: header/index still documents a real, implemented guard (AC-CI-REGISTER)" \
+    'grep -q "AC-CI-REGISTER" "$SUITE_846"'
+fi
+if [ -f "$SUITE_848" ]; then
+  # same class as 846, at :97/:121
+  assert_true "848: no longer documents the deleted AC-SCOPE allow-list guard" \
+    '! grep -q "AC-SCOPE" "$SUITE_848"'
+  assert_true "848: header/index still documents a real, implemented guard (AC-CI-REGISTER)" \
+    'grep -q "AC-CI-REGISTER" "$SUITE_848"'
+fi
+if [ -f "$FULLSWEEP_DRIVER" ]; then
+  # :32/:57 define NAMED_SUITES as covering the union
+  # AC-59-11d ∪ AC-59-14 ∪ AC-59-17 ∪ AC-59-18, but AC-59-17 is now zero
+  # occurrences in 59 (its two lanes, AC-59-17a/17b, were removed at
+  # GATE:QUALITY GREEN) -- the union claim is stale on that member.
+  assert_true "issue-59-full-sweep-driver.sh: no longer lists the retired AC-59-17 family in its NAMED_SUITES union comment" \
+    '! grep -q "AC-59-17" "$FULLSWEEP_DRIVER"'
+  assert_true "issue-59-full-sweep-driver.sh: the surviving union members (AC-59-11d, AC-59-14, AC-59-18) are still named, so the restatement narrows rather than drops the whole comment" \
+    'grep -q "AC-59-11d" "$FULLSWEEP_DRIVER" && grep -q "AC-59-18" "$FULLSWEEP_DRIVER"'
+fi
+if [ -f "$MANUAL_973" ]; then
+  # :37/:49 (row 8 + its empty-input-nuance paragraph) cite
+  # claude_md_offwindow_changes at 799:467 as "live scope-A surface" --
+  # §3.7 deletes that identifier from 799 (confirmed absent by this suite's
+  # own AC-SCOPE-LANES 799-clause-b checks above), so row 8 is dead.
+  assert_true "manual/973: no longer cites claude_md_offwindow_changes as live scope-A surface (799 deleted that identifier)" \
+    '! grep -q "claude_md_offwindow_changes" "$MANUAL_973"'
+  assert_true "manual/973: the two surviving live scope-A rows (846/848) are still documented, so the restatement narrows the row set rather than deleting the section" \
+    'grep -q "test-issue-846-doc-assertions.sh" "$MANUAL_973" && grep -q "test-issue-848-doc-assertions.sh" "$MANUAL_973"'
+fi
+
 if [ -f "$SUITE_69" ]; then
   assert_true "69: test-issue-40-doc-assertions token absent from its allow_list data row (§3.2 deletes that file)" \
     '! grep -q "test-issue-40-doc-assertions" "$SUITE_69"'
@@ -675,6 +740,15 @@ allow_list=(
   # first time, per the same stale-cross-reference leg as the pair above.
   "tests/test-issue-67-deliberation-record.sh"
   "tests/test-issue-69-verification-depth.sh"
+  # GATE:QUALITY RED 3 (ledger E40): five further stale-reference restatement
+  # sites this cycle's own deletions leave behind, pre-admitted so GREEN's
+  # edits don't re-trip AC-75-SCOPE. docs/doc-invariant-registry.md and
+  # setup/manifest.json (§5 row + manifest regen) are already admitted above.
+  "tests/test-issue-798-topology-flip.sh"
+  "tests/test-issue-846-doc-assertions.sh"
+  "tests/test-issue-848-doc-assertions.sh"
+  "tests/issue-59-full-sweep-driver.sh"
+  "tests/manual/issue-973-manual-scenarios.md"
   # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer
   # review, so the digest file is a mandated member of every cycle's diff.
   "docs/cycle-digest.jsonl"
