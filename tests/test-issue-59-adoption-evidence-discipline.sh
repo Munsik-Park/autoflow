@@ -66,9 +66,12 @@
 #                (manifest artifact count 47; the derived pre-existing
 #                registry total) are untouched by this cycle's additions.
 #   AC-59-17   — fence (unconditional): the tracked-source SPDX header set is
-#                intact, including through its aggregator (test-issue-985 +
-#                test-issue-1-guard-contract.sh) — this cycle's own new
-#                tracked `.sh` file must carry the two SPDX header lines (D17).
+#                intact, including through its aggregator (test-issue-985;
+#                test-issue-1-guard-contract.sh was its second aggregator
+#                until #71 retired it — AC-59-17b is now a vacuous PASS,
+#                docs/doc-invariant-registry.md's dropped-subject-retired
+#                disposition) — this cycle's own new tracked `.sh` file must
+#                carry the two SPDX header lines (D17).
 #   AC-59-18   — fence (unconditional): the manifest same-commit obligation
 #                holds against all three of its fences (AC-56-10a, 955's
 #                AC4-DOGFOOD, 952's AC5/AC5(T2)).
@@ -438,7 +441,17 @@ case "$HEAD_BRANCH" in
       OUT_848="$(cd "$PROJECT_ROOT" && bash tests/test-issue-848-doc-assertions.sh 2>&1)"
       OUT_952="$(cd "$PROJECT_ROOT" && bash tests/test-issue-952-wizard-removal.sh 2>&1)"
       OUT_955="$(cd "$PROJECT_ROOT" && bash tests/test-issue-955-subagent-background-ban.sh 2>&1)"
-      OUT_T1="$(cd "$PROJECT_ROOT" && bash tests/test-issue-1-guard-contract.sh 2>&1)"
+      # #71 retired tests/test-issue-1-guard-contract.sh (docs/doc-invariant-
+      # registry.md dropped-subject-retired disposition) — mirrors the
+      # unconditional AC-59-17b vacuous-pass convention below rather than
+      # invoking a file this cycle intentionally deleted.
+      T1_SUITE="$PROJECT_ROOT/tests/test-issue-1-guard-contract.sh"
+      T1_RETIRED=0
+      if [[ -f "$T1_SUITE" ]]; then
+        OUT_T1="$(cd "$PROJECT_ROOT" && bash tests/test-issue-1-guard-contract.sh 2>&1)"
+      else
+        T1_RETIRED=1
+      fi
 
       read -r P798 T798 F798 <<<"$(suite_counts "$OUT_798")"
       read -r P799 T799 F799 <<<"$(suite_counts "$OUT_799")"
@@ -446,7 +459,9 @@ case "$HEAD_BRANCH" in
       read -r P848 T848 F848 <<<"$(suite_counts "$OUT_848")"
       read -r P952 T952 F952 <<<"$(suite_counts "$OUT_952")"
       read -r P955 T955 F955 <<<"$(suite_counts "$OUT_955")"
-      read -r PT1 TT1 FT1 <<<"$(suite_counts "$OUT_T1")"
+      if [[ "$T1_RETIRED" -eq 0 ]]; then
+        read -r PT1 TT1 FT1 <<<"$(suite_counts "$OUT_T1")"
+      fi
 
       # Same-environment baseline (ledger E33): re-run each suite a SECOND time, at the
       # comparison base, in THIS SAME job/host — never a literal captured on a different
@@ -460,7 +475,9 @@ case "$HEAD_BRANCH" in
       read -r BP848 BT848 BF848 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-848-doc-assertions.sh")"
       read -r BP952 BT952 BF952 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-952-wizard-removal.sh")"
       read -r BP955 BT955 BF955 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-955-subagent-background-ban.sh")"
-      read -r BPT1 BTT1 BFT1 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-1-guard-contract.sh")"
+      if [[ "$T1_RETIRED" -eq 0 ]]; then
+        read -r BPT1 BTT1 BFT1 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-1-guard-contract.sh")"
+      fi
 
       # Each lane is two counted assertions (D3): a neutral-noun-phrase precondition naming
       # the base measurement, then the delta verdict whose condition LEADS with the same
@@ -489,10 +506,17 @@ case "$HEAD_BRANCH" in
         "base_measured \"$BP955\" \"$BT955\" \"$BF955\""
       assert_true "AC-59-11d-955: test-issue-955-subagent-background-ban.sh — 0 failed at HEAD, total not below base (got: $P955/$T955 vs base $BP955/$BT955)" \
         "base_measured \"$BP955\" \"$BT955\" \"$BF955\" && [ \"$F955\" -eq 0 ] && [ \"$T955\" -ge \"$BT955\" ]"
-      assert_true "AC-59-21-test1: base measurement of test-issue-1-guard-contract.sh at $BASE_REF (got base $BPT1/$BTT1, $BFT1 failed)" \
-        "base_measured \"$BPT1\" \"$BTT1\" \"$BFT1\""
-      assert_true "AC-59-11d-test1: test-issue-1-guard-contract.sh (N1 aggregator) — 0 failed at HEAD, total not below base (got: $PT1/$TT1 vs base $BPT1/$BTT1)" \
-        "base_measured \"$BPT1\" \"$BTT1\" \"$BFT1\" && [ \"$FT1\" -eq 0 ] && [ \"$TT1\" -ge \"$BTT1\" ]"
+      if [[ "$T1_RETIRED" -eq 0 ]]; then
+        assert_true "AC-59-21-test1: base measurement of test-issue-1-guard-contract.sh at $BASE_REF (got base $BPT1/$BTT1, $BFT1 failed)" \
+          "base_measured \"$BPT1\" \"$BTT1\" \"$BFT1\""
+        assert_true "AC-59-11d-test1: test-issue-1-guard-contract.sh (N1 aggregator) — 0 failed at HEAD, total not below base (got: $PT1/$TT1 vs base $BPT1/$BTT1)" \
+          "base_measured \"$BPT1\" \"$BTT1\" \"$BFT1\" && [ \"$FT1\" -eq 0 ] && [ \"$TT1\" -ge \"$BTT1\" ]"
+      else
+        echo "  PASS (vacuous): AC-59-21-test1 — tests/test-issue-1-guard-contract.sh retired by #71 (dropped disposition, docs/doc-invariant-registry.md); no oracle subject remains"
+        TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
+        echo "  PASS (vacuous): AC-59-11d-test1 — tests/test-issue-1-guard-contract.sh retired by #71 (dropped disposition, docs/doc-invariant-registry.md); no oracle subject remains"
+        TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
+      fi
 
       # AC-59-18 reuses the 952/955 real re-runs above rather than invoking them a second
       # time (the manifest same-commit obligation's diff-membership fences live inside those

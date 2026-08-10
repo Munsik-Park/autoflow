@@ -153,6 +153,11 @@ done
 # =============================================================================
 echo ""
 echo "=== digest-only-suites-retired — dedicated digest/scan suites, fixtures and manual docs deleted ==="
+# GATE:QUALITY (cycle 1, attempt 2) finding: tests/manual/issue-7-manual-
+# scenarios.md's subject suite (tests/test-issue-7-oracle-hardening.sh) was
+# deleted by this cycle but its manual-scenario companion was not — the
+# analogous 953/954 pairs were correctly deleted alongside their suites, so
+# #7's manual doc is the same disposition class, just missed the first pass.
 
 for f in \
   "tests/test-issue-953-cycle-digest.sh" \
@@ -162,7 +167,8 @@ for f in \
   "tests/test-issue-7-oracle-hardening.sh" \
   "tests/fixtures/cycle-digest-schema.json" \
   "tests/manual/issue-953-manual-scenarios.md" \
-  "tests/manual/issue-954-manual-scenarios.md"
+  "tests/manual/issue-954-manual-scenarios.md" \
+  "tests/manual/issue-7-manual-scenarios.md"
 do
   assert_true "AC-71-RETIRED: $f is absent" "[ ! -e '$f' ]"
   assert_true "AC-71-RETIRED: $f is untracked" \
@@ -394,11 +400,14 @@ assert_true "AC-71-CITATION: the package-verifier AC5d surviving carrier is stil
 echo ""
 echo "=== ci-registration-removed — no deleted suite remains a CI step, a paths: filter member, or a dangling comment pointer ==="
 
-for suite in "test-issue-1-guard-contract.sh" "test-issue-7-oracle-hardening.sh"; do
+for suite in "test-issue-1-guard-contract.sh" "test-issue-7-oracle-hardening.sh" "issue-7-manual-scenarios.md"; do
   COUNT="$(grep -c -- "$suite" "$CI_WORKFLOW" || true)"
   assert_true "AC-71-CI: $suite has zero occurrences anywhere in e2e-dummy-target.yml (paths/step/comment) — got $COUNT" \
     "[ '$COUNT' -eq 0 ]"
 done
+
+assert_true "AC-71-CI-SELFREG: this suite is registered in e2e-dummy-target.yml (paths: in both pull_request and push blocks, plus a run: step)" \
+  "[ \"\$(grep -c \"'tests/test-issue-71-digest-removal.sh'\" '$CI_WORKFLOW')\" -eq 2 ] && grep -qF 'run: bash tests/test-issue-71-digest-removal.sh' '$CI_WORKFLOW'"
 
 # =============================================================================
 echo ""
@@ -709,6 +718,9 @@ allow_list=(
   "tests/test-issue-7-oracle-hardening.sh"
   "tests/manual/issue-953-manual-scenarios.md"
   "tests/manual/issue-954-manual-scenarios.md"
+  # GATE:QUALITY (cycle 1, attempt 2): #7's manual scenario doc, missed
+  # alongside its suite in the first pass.
+  "tests/manual/issue-7-manual-scenarios.md"
   # New RED artifacts
   "tests/test-issue-71-digest-removal.sh"
   "tests/manual/issue-71-manual-scenarios.md"
