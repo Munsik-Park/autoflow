@@ -745,6 +745,15 @@ else
     # e1612b8 / 56936a0 for #55).
     "tests/test-issue-52-peer-facilitator-premise.sh"
     "tests/manual/issue-52-manual-scenarios.md"
+    # #71 cycle admission — same mechanical scope-guard admission practice as
+    # the blocks above (ledger E16 class). #71 removes the cycle-digest emitter
+    # and the cross-issue recurrence scan; every path its diff touches is
+    # admitted here, including the sibling guards amended for the same reason.
+    "tests/fixtures/cycle-digest-979-pre-migration-snapshot.jsonl"
+    "tests/fixtures/cycle-digest-schema.json"
+    "tests/manual/issue-71-manual-scenarios.md"
+    "tests/manual/issue-953-manual-scenarios.md"
+    "tests/test-issue-71-digest-removal.sh"
   )
   disallowed=""
   while IFS= read -r f; do

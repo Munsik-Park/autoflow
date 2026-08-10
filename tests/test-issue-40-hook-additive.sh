@@ -22,7 +22,7 @@
 # Every fixture below is classified a PRESERVATION GUARD (verification design
 # §6): the hook already tolerates an unknown phase-object sibling key today,
 # so all of H-PASS-EQ/H-FAIL-EQ/H-SEC-EQ/H-SPAWN-EQ/H-EQUIV/H-ABSENT-EQ/
-# H-TOPLEVEL-NEG/H-SCORES-NEG/H-DIGEST/H-BYTES PASS now AND after GREEN. AC3's
+# H-TOPLEVEL-NEG/H-SCORES-NEG/H-BYTES PASS now AND after GREEN. AC3's
 # only RED discriminator (the State File Linkage placement sentence,
 # 40-AC3-placement-rule) lives in the permanent doc-invariant registry, not
 # here — this file has no discriminator by AC3's own no-impact nature.
@@ -33,8 +33,6 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
-EMIT_SCRIPT="$PROJECT_ROOT/scripts/handoff/emit-cycle-digest.sh"
-DIGEST_SCHEMA="$PROJECT_ROOT/tests/fixtures/cycle-digest-schema.json"
 
 PASS=0
 FAIL=0
@@ -206,51 +204,6 @@ if grep -qF 'malformed' <<<"$SCORES_STDERR"; then
   echo "  PASS: H-SCORES-NEG: reason mentions malformed state file"; PASS=$((PASS + 1))
 else
   echo "  FAIL: H-SCORES-NEG: reason does not mention malformed state file ($SCORES_STDERR)"; FAIL=$((FAIL + 1))
-fi
-
-# ---------------------------------------------------------------------------
-# H-DIGEST — phase-level fail_hypothesis is ignored by the cycle-digest
-# emitter; the emitted line still validates against the digest schema.
-# Run in an isolated temp copy of the repo (tests/test-issue-953-cycle-digest.sh
-# precedent) — never against the live, git-tracked docs/cycle-digest.jsonl.
-# ---------------------------------------------------------------------------
-echo ""
-echo "H-DIGEST — phase-level fail_hypothesis is ignored by emit-cycle-digest.sh"
-
-if [ -f "$EMIT_SCRIPT" ] && [ -f "$DIGEST_SCHEMA" ]; then
-  TMP_REPO="$(mktemp -d)"
-  (cd "$PROJECT_ROOT" && tar --exclude='.git' -cf - .) | (cd "$TMP_REPO" && tar -xf -) 2>/dev/null
-  mkdir -p "$TMP_REPO/.autoflow" "$TMP_REPO/docs"
-  : > "$TMP_REPO/docs/cycle-digest.jsonl"
-  cat > "$TMP_REPO/.autoflow/issue-40.json" <<'EOF'
-{ "active": true, "issue": "#40", "title": "fixture", "date": "2026-01-01", "cycle": 1, "mode": "new-issue",
-  "phases": {
-    "gate_hypothesis_cause": {"verdict": "skipped (feat issue)"},
-    "gate_plan": {"scores": {"a": {"score": 8}}, "fail_hypothesis": {"case": "x", "disposition": "none_found", "reflected_in": []}},
-    "audit": {"scores": {"a": {"score": 8}}},
-    "gate_quality": {"scores": {"a": {"score": 8}}}
-  }
-}
-EOF
-  DIGEST_OUT=$( (cd "$TMP_REPO" && bash scripts/handoff/emit-cycle-digest.sh .autoflow/issue-40.json '' '' 2>&1) )
-  DIGEST_EXIT=$?
-  assert_eq "H-DIGEST: emit-cycle-digest.sh exits 0 against a phase-level fail_hypothesis fixture" "$DIGEST_EXIT" "0"
-
-  DIGEST_LINE="$(tail -1 "$TMP_REPO/docs/cycle-digest.jsonl" 2>/dev/null)"
-  if [ -n "$DIGEST_LINE" ] && jq -e --slurpfile schema "$DIGEST_SCHEMA" '
-      ($schema[0].top_level_keys) as $tlk
-      | (keys_unsorted - $tlk | length == 0)
-    ' <<<"$DIGEST_LINE" >/dev/null 2>&1; then
-    echo "  PASS: H-DIGEST: emitted line's top-level keys match the digest schema (no extra key from fail_hypothesis)"
-    PASS=$((PASS + 1))
-  else
-    echo "  FAIL: H-DIGEST: emitted line missing or does not match digest schema top-level keys"
-    FAIL=$((FAIL + 1))
-  fi
-  rm -rf "$TMP_REPO"
-else
-  echo "  FAIL: H-DIGEST: emit-cycle-digest.sh or cycle-digest-schema.json not found"
-  FAIL=$((FAIL + 1))
 fi
 
 # H-BYTES (retired, #64): the "hook byte-unchanged vs base" fence was a #40

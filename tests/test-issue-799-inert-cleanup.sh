@@ -669,6 +669,15 @@ else
     # e1612b8 / 56936a0 for #55).
     "tests/test-issue-52-peer-facilitator-premise.sh"
     "tests/manual/issue-52-manual-scenarios.md"
+    # #71 cycle admission — same mechanical scope-guard admission practice as
+    # the blocks above (ledger E16 class). #71 removes the cycle-digest emitter
+    # and the cross-issue recurrence scan; every path its diff touches is
+    # admitted here, including the sibling guards amended for the same reason.
+    "tests/fixtures/cycle-digest-979-pre-migration-snapshot.jsonl"
+    "tests/fixtures/cycle-digest-schema.json"
+    "tests/manual/issue-71-manual-scenarios.md"
+    "tests/manual/issue-953-manual-scenarios.md"
+    "tests/test-issue-71-digest-removal.sh"
   )
   disallowed=""
   while IFS= read -r f; do
@@ -753,6 +762,13 @@ else
   # enough that a literal filter would pre-authorise any future CLAUDE.md table
   # insertion — one anchored regex admits exactly those and nothing with
   # content. Additive only: no filter above is removed or widened (ledger E21).
+  # #71 (cycle-digest emission + recurrence-scan removal) shortens that same
+  # Spawn-mode row: the edit reaches the chain as the old row on a `-` line
+  # (which no `+`-prefixed filter can match) plus the new shortened row on a
+  # `+` line, so two filters are APPENDED at the end of the chain. The
+  # pre-existing `+`-prefixed filter for the old row is left in place and is
+  # NOT widened to a prefix-agnostic substring — widening would silently
+  # pre-authorise any future edit to that row. Additive only (ledger E21).
   # #55 (gate-score write contract at the producer site) replaces the Score
   # recording sentence in place and appends the marker + `json` fence + its
   # one-line caption: one substring common to BOTH the old and the new
@@ -802,7 +818,9 @@ else
       | grep -vF '+This object is the value of `phases.<gate>.scores`' \
       | grep -vE '^\+```(json)?$' \
       | grep -vE '^\+(\|---\|---\|---\|)?$' \
-      | grep -vF 'so a nested-team facilitator is not executable; and a peer-teammate facilitator'
+      | grep -vF 'so a nested-team facilitator is not executable; and a peer-teammate facilitator' \
+      | grep -vF -- '-| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5), cycle digest emitter (6.7), PREFLIGHT cross-issue recurrence scan (1.5)' \
+      | grep -vF '+| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5) | anonymous direct'
   }
   assert_false "AC6-scope: CLAUDE.md diff confined to the #846 Regressions cap clause (no other CLAUDE.md content change)" \
     "ctx=\$(claude_md_offwindow_changes); printf '%s\n' \"\$ctx\" | grep -q ."

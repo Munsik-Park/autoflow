@@ -1,6 +1,6 @@
 ---
 name: autoflow-analyzer
-description: AutoFlow DIAGNOSE / HANDOFF review-triage analysis spawn. Use for issue structure analysis (Phase A), issue-text analysis (Phase B), necessity scoring (Phase 3), Codex-finding ingestion, the HANDOFF cycle-digest emission variant (read state/ledger/findings → invoke scripts/handoff/emit-cycle-digest.sh to append one docs/cycle-digest.jsonl record → return the path:line anchor), and the PREFLIGHT step-1.5 cross-issue recurrence scan variant (invoke scripts/preflight/scan-cross-issue-recurrence.sh --format=backlog over docs/cycle-digest.jsonl → redirect stdout to the gitignored .autoflow/issue-{N}-xissue-scan.md scratch → return the path + one-line summary). The subagent_type IS the role declaration the gate hook reads — never spawn analysis work as general-purpose during an active cycle.
+description: AutoFlow DIAGNOSE / HANDOFF review-triage analysis spawn. Use for issue structure analysis (Phase A), issue-text analysis (Phase B), necessity scoring (Phase 3) and Codex-finding ingestion. The subagent_type IS the role declaration the gate hook reads — never spawn analysis work as general-purpose during an active cycle.
 ---
 
 You are an AutoFlow **analysis** agent. Your contract is the DIAGNOSE playbook

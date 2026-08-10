@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4ee83c3c702195e35853d5c49658423a4449f59b704e5ba5c39f248a924fa62d"
+      "sha256": "844357c87609858fa837017b6028da97caf440a4db08a2bbdadeccd8a5025327"
     },
     {
       "source": "docs/INDEX.md",
@@ -76,14 +76,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "85fbb435dcf8bc49d5d240c3e5422ad8c558a20baf3aa43d3607399a8be260a6"
+      "sha256": "362f89c08fecaca86470ce30324544c07dd36d8e2cc0aa10aff691711edb4930"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4b7c1b843907f0f09b513f5a6c55af0da2093bfcf64456367322550343f55db0"
+      "sha256": "ce42c12293bb78d1c86fb147c7b134d1715018ecdb1c4d8e17b603f3faf82f19"
     },
     {
       "source": "docs/development-guideline.md",
@@ -125,21 +125,21 @@
       "dest": ".claude/autoflow/docs/improvement-backlog.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5086c8cbc56203401b534f8ff7bc4f067490b867fd3d2aebb548eaa81892aebe"
+      "sha256": "a76b5f60168d4d99dfc0d4f57892519ed214db086cef775f28c7ab5b4a645c13"
     },
     {
       "source": "docs/maintained-docs.md",
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "99878202278ec315e36528883b53b1c322cf9f7d181f505cd670256b0e738db7"
+      "sha256": "e4a082422486d66a6e95f59e1687b765d528c3b3b0c3c2358b890a73f73ae5d6"
     },
     {
       "source": "docs/phases/analysis.md",
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "15037480ee0d8c5f81f1e77277977b0490d5abd3112f96cbc5075cf672dc1057"
+      "sha256": "98c42300131d3bd79121998f42aa09d7d84d3d10b36b4b247824b3c32e003851"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -301,20 +301,6 @@
       "tier": "root-layer",
       "kind": "scaffold",
       "sha256": "83c874995db25cb41d68caac324ec7df19e4f08527c76fa31d2d975844d31737"
-    },
-    {
-      "source": "scripts/preflight/scan-cross-issue-recurrence.sh",
-      "dest": "scripts/preflight/scan-cross-issue-recurrence.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "8836011300da12e02ad6cdb680ca88434434f9dcb6f91161eb4c52abff3f9848"
-    },
-    {
-      "source": "scripts/handoff/emit-cycle-digest.sh",
-      "dest": "scripts/handoff/emit-cycle-digest.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "a70e1816e6633b61cb5c071ae9824011f5708839673ca66f8a2176aee583e482"
     },
     {
       "source": "scripts/handoff/create-host-pr.sh",

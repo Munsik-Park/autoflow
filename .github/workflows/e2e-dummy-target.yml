@@ -108,11 +108,7 @@ on:
       - 'tests/manual/issue-27-manual-scenarios.md'
       # #7 cycle surface. TAIL here, mirroring the #27/#43/#35 entries above
       # for the same reason those comments record (#799's AC6-ci fixed
-      # `grep -A40 '^ *paths:'` window). tests/test-issue-1-guard-contract.sh
-      # is registered alongside the cycle-scoped suite because #7 hardens it
-      # into a scored oracle and it appeared in no paths: filter before now.
-      - 'tests/test-issue-7-oracle-hardening.sh'
-      - 'tests/test-issue-1-guard-contract.sh'
+      # `grep -A40 '^ *paths:'` window).
       - 'tests/manual/issue-7-manual-scenarios.md'
       # #56 cycle surface (carry-channel evidence discipline). TAIL here,
       # mirroring the #7/#27/#43/#35 entries above for the same reason those
@@ -230,8 +226,6 @@ on:
       - 'tests/manual/issue-27-manual-scenarios.md'
       # #7 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
-      - 'tests/test-issue-7-oracle-hardening.sh'
-      - 'tests/test-issue-1-guard-contract.sh'
       - 'tests/manual/issue-7-manual-scenarios.md'
       # #56 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
@@ -466,27 +460,6 @@ jobs:
       # tests/test-issue-27-composition-oracle.sh.
       - name: Run composition-oracle guard (#27)
         run: bash tests/test-issue-27-composition-oracle.sh
-
-      # Cycle-digest guard contract (#1): the meta-suite that invokes #953 and
-      # #985 across every digest lifecycle state. #7 hardened its V4 seeding
-      # helper into a scored oracle (emitter exit status, appended-record
-      # count delta, .date round-trip) and put every temp copy under one
-      # trap-cleaned work root. Registered as its own PERMANENT step so the
-      # hardened oracle keeps firing after the cycle-scoped #7 guard below is
-      # retired at merge. CI has no glob discovery; registered by filename per
-      # the sibling suites. See tests/test-issue-1-guard-contract.sh.
-      - name: Run cycle-digest guard contract (#1)
-        run: bash tests/test-issue-1-guard-contract.sh
-
-      # Oracle-hardening guard (#7, cycle-scoped): the assertions the permanent
-      # suites structurally cannot hold — the ≥32 total/description-presence
-      # conjunction, the fail-loud discrimination legs driven by real invalid
-      # emitter input, the executable-`mktemp -d` site fence, and the
-      # abort-cleanup interrupt legs. CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-7-oracle-hardening.sh.
-      - name: Run oracle-hardening guard (#7)
-        run: bash tests/test-issue-7-oracle-hardening.sh
 
       # Carry-channel evidence discipline guard (#56, cycle-scoped): the
       # count/position-shaped assertions the permanent registry structurally

@@ -666,6 +666,30 @@ else
     # e1612b8 / 56936a0 for #55).
     "tests/test-issue-52-peer-facilitator-premise.sh"
     "tests/manual/issue-52-manual-scenarios.md"
+    # #71 cycle admission — same mechanical scope-guard admission practice as
+    # the blocks above (ledger E16 class). #71 removes the cycle-digest emitter
+    # and the cross-issue recurrence scan; every path its diff touches is
+    # admitted here, including the sibling guards amended for the same reason.
+    ".claude/agents/autoflow-analyzer.md"
+    "docs/improvement-backlog.md"
+    "plugin/autoflow/agents/autoflow-analyzer.md"
+    "scripts/preflight/scan-cross-issue-recurrence.sh"
+    "setup/gen-manifest-hashes.sh"
+    "tests/fixtures/cycle-digest-954-at-k.jsonl"
+    "tests/fixtures/cycle-digest-954-below-k.jsonl"
+    "tests/fixtures/cycle-digest-954-cross-axis.jsonl"
+    "tests/fixtures/cycle-digest-954-dedup-window.jsonl"
+    "tests/fixtures/cycle-digest-954-dedup.jsonl"
+    "tests/fixtures/cycle-digest-954-dual-axis.jsonl"
+    "tests/fixtures/cycle-digest-954-out-of-window.jsonl"
+    "tests/fixtures/cycle-digest-979-pre-migration-snapshot.jsonl"
+    "tests/fixtures/cycle-digest-schema.json"
+    "tests/manual/issue-71-manual-scenarios.md"
+    "tests/manual/issue-953-manual-scenarios.md"
+    "tests/manual/issue-954-manual-scenarios.md"
+    "tests/test-issue-71-digest-removal.sh"
+    "tests/test-issue-954-cross-issue-scan.sh"
+    "tests/test-issue-985-doc-assertions.sh"
   )
   disallowed=""
   while IFS= read -r f; do
