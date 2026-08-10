@@ -62,7 +62,6 @@ NAMED_SUITES=(
   "test-issue-848-doc-assertions.sh"
   "test-issue-952-wizard-removal.sh"
   "test-issue-955-subagent-background-ban.sh"
-  "test-issue-1-guard-contract.sh"
   "test-issue-27-composition-oracle.sh"
   "test-issue-985-doc-assertions.sh"
 )

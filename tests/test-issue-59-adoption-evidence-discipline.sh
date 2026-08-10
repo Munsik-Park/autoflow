@@ -689,13 +689,26 @@ echo "=== AC-59-17 (fence, unconditional) — tracked-source SPDX header set int
 
 OUT_985="$(cd "$PROJECT_ROOT" && bash tests/test-issue-985-doc-assertions.sh 2>&1)"
 read -r P985 T985 F985 <<<"$(suite_counts "$OUT_985")"
-assert_true "AC-59-17a: real re-run of test-issue-985-doc-assertions.sh == 30/30, 0 failed (got: $P985/$T985, $F985 failed)" \
-  "[ \"$T985\" -eq 30 ] && [ \"$F985\" -eq 0 ]"
+# #71 removed AC1-DIGEST-NO-INHERITED-RECORDS (cycle-digest-emitter check),
+# dropping the suite's own count from 30/30 to 29/29.
+assert_true "AC-59-17a: real re-run of test-issue-985-doc-assertions.sh == 29/29, 0 failed (got: $P985/$T985, $F985 failed)" \
+  "[ \"$T985\" -eq 29 ] && [ \"$F985\" -eq 0 ]"
 
-OUT_T1_SPDX="$(cd "$PROJECT_ROOT" && bash tests/test-issue-1-guard-contract.sh 2>&1)"
-read -r PT1S TT1S FT1S <<<"$(suite_counts "$OUT_T1_SPDX")"
-assert_true "AC-59-17b: real re-run of test-issue-1-guard-contract.sh (N1 aggregator) == 32/32, 0 failed (got: $PT1S/$TT1S, $FT1S failed)" \
-  "[ \"$TT1S\" -eq 32 ] && [ \"$FT1S\" -eq 0 ]"
+# #71's own retired-guard disposition (docs/doc-invariant-registry.md) applies
+# here too: tests/test-issue-1-guard-contract.sh is DELETED by this cycle.
+# Vacuous-informational per this repo's own convention (matching DC-4 in
+# tests/test-issue-955-subagent-background-ban.sh) rather than a hard FAIL on
+# a file this cycle intentionally removes.
+TEST_1="$PROJECT_ROOT/tests/test-issue-1-guard-contract.sh"
+if [[ -f "$TEST_1" ]]; then
+  OUT_T1_SPDX="$(cd "$PROJECT_ROOT" && bash "$TEST_1" 2>&1)"
+  read -r PT1S TT1S FT1S <<<"$(suite_counts "$OUT_T1_SPDX")"
+  assert_true "AC-59-17b: real re-run of test-issue-1-guard-contract.sh (N1 aggregator) == 32/32, 0 failed (got: $PT1S/$TT1S, $FT1S failed)" \
+    "[ \"$TT1S\" -eq 32 ] && [ \"$FT1S\" -eq 0 ]"
+else
+  echo "  PASS (vacuous): AC-59-17b — tests/test-issue-1-guard-contract.sh retired by #71 (dropped disposition, docs/doc-invariant-registry.md); no oracle subject remains"
+  TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
+fi
 
 # =============================================================================
 echo ""
