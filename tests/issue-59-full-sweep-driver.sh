@@ -29,7 +29,7 @@
 # Contract: asserts that the set of tests/test-issue-*.sh suites (excluding
 # this cycle's own, self-excluded below) that REGRESS against `main` is a
 # SUBSET of the suites this cycle's acceptance criteria already name
-# (AC-59-11d ∪ AC-59-14 ∪ AC-59-17 ∪ AC-59-18). A regression the cycle's own
+# (AC-59-11d ∪ AC-59-14 ∪ AC-59-18). A regression the cycle's own
 # ACs do not cover means a live guard escaped this cycle's design the same
 # way N1/N2/N3 escaped rounds 1-7.
 #
@@ -54,7 +54,13 @@ SWEEP_MIN_ELAPSED="${SWEEP_MIN_ELAPSED:-600}"
 
 # The suites this cycle's own acceptance criteria already name as expected to
 # regress/change — a hit here is EXPECTED, not a new finding (AC-59-11d ∪
-# AC-59-14 ∪ AC-59-17 ∪ AC-59-18).
+# AC-59-14 ∪ AC-59-18).
+#
+# test-issue-985 and test-issue-1 were named by the SPDX-header sibling-total
+# pins that issue #75 retired. They stay in the set: both are still expected to
+# change with this cycle, and the narrowing of their oracles is recorded at
+# docs/doc-invariant-registry.md §5 (Issue #75 table, the per-subject 0-failed
+# row) rather than turned into an unnamed-regression finding here.
 NAMED_SUITES=(
   "test-issue-798-topology-flip.sh"
   "test-issue-799-inert-cleanup.sh"
@@ -148,7 +154,7 @@ for suite in "$PROJECT_ROOT"/tests/test-issue-*.sh; do
     echo "  REGRESSED (named — expected by this cycle's own ACs)"
     NAMED_REGRESSIONS+=("$base")
   else
-    echo "  REGRESSED (UNNAMED — not covered by AC-59-11d/14/17/18)"
+    echo "  REGRESSED (UNNAMED — not covered by AC-59-11d/14/18)"
     UNNAMED_REGRESSIONS+=("$base")
   fi
 done

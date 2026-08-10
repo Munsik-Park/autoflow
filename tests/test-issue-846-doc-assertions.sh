@@ -9,8 +9,7 @@
 # (.autoflow/issue-846-verification-design.md §4/§5). Docs-only change (no
 # jest, no npm) — mirrors tests/test-codex-review-label-step.sh (grep the
 # real file, not a copy) and tests/test-issue-800-doc-assertions.sh
-# (assert_true/assert_false over grep + git diff, section-scoped extraction,
-# AC-SCOPE allow-list guard).
+# (assert_true/assert_false over grep + git diff, section-scoped extraction).
 #
 # Resolution set {R1, R3, R4} → AC1/AC2/AC3 (verification design §1):
 #
@@ -45,7 +44,6 @@
 #                    contradicting the new window.
 #   AC-PRESERVE    — guard (PASS pre+post): existing label-removal-failure
 #                    clause + hook-deny language survive.
-#   AC-SCOPE       — guard: changed files ⊆ allow-list.
 #   AC-CI-REGISTER — guard: this suite is wired into
 #                    .github/workflows/e2e-dummy-target.yml (both `paths:`
 #                    trigger blocks + a `run:` step), #798/#799/#800
@@ -63,8 +61,7 @@
 # AC1-VERIFY, AC2-GUIDE, AC2-RATIONALE, AC3-DURABLE FAIL (fallback/verify
 # tokens absent from .codex/review.md, window phrase absent from both docs,
 # durable-record clause absent from step 6.5). All guards PASS pre-edit
-# (nothing contradictory exists yet; AC-SCOPE is test-only; AC-PRESERVE
-# targets are untouched).
+# (nothing contradictory exists yet; AC-PRESERVE targets are untouched).
 #
 # Harness convention: set -uo pipefail, assert_true/assert_false, canonical
 # `Results: P/T passed, F failed` line, exit 1 iff F>0.

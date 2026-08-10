@@ -28,7 +28,6 @@
 #        markers preserved
 #   AC7  ADR-HISTORICAL-KEEP (guard) — ADR-0015:148 kept verbatim
 #   AC9  NO-NEW-TIMING (guard)      — no new hook/workflow timing mechanism
-#   AC10 SCOPE-CONTAINMENT (guard) — diff ⊆ the enumerated flip-caused set
 #   AC12 CI-ENFORCED        — the suite + `.gitmodules` are CI-registered
 #   AC15 README-SYNC        — README.md dangling submodule references removed
 #        (GATE:QUALITY E11 remediation, ledger E11): no --recurse-submodules
@@ -54,7 +53,7 @@
 # RED expectation (pre-change): AC1/AC2/AC3/AC5(negative present + positive
 # absent)/AC12 FAIL. AC3 COUNT-ZERO is the non-vacuity keystone — a
 # pre-change PASS on any detach assertion means the test is mis-scoped.
-# AC6/AC7/AC9/AC10 are preservation guards and PASS both pre- and post-change.
+# AC6/AC7/AC9 are preservation guards and PASS both pre- and post-change.
 # =============================================================================
 
 set -uo pipefail
@@ -65,7 +64,7 @@ CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
 ADR_0015="$PROJECT_ROOT/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
 README_MD="$PROJECT_ROOT/README.md"
 
-# Base ref for AC9/AC10 diff-scope guards: merge-base against main, overridable
+# Base ref for the AC9 diff-scope guard: merge-base against main, overridable
 # via env (precedent: #797 ISSUE_797_BASE_REF).
 BASE_REF="${ISSUE_798_BASE_REF:-$(git -C "$PROJECT_ROOT" merge-base HEAD main 2>/dev/null || true)}"
 
@@ -182,9 +181,16 @@ else
   assert_true "AC6b: no diff hunk touches a '*Secondary (multi-repo):*' marker line" \
     "[ -z '$secondary_marker_diff' ]"
 fi
-# AC6c (no sentence outside CLAUDE.md:42 flips a this-project claim) is
-# covered by AC10 SCOPE-CONTAINMENT below — no separate assertion here
-# (verification design §1 AC6 method).
+# AC6c (no sentence outside CLAUDE.md:42 flips a this-project claim) carried no
+# assertion of its own: the verification design's §1 AC6 method leaned on the
+# path-level scope-containment lane that used to sit below. Issue #75 retired
+# that lane — a merged cycle's hand-written path allow-list forces every later
+# cycle to edit it — so AC6c is now UNCOVERED in this file, recorded as such at
+# docs/doc-invariant-registry.md §5 (Issue #75 table, the unscoped path
+# allow-list lanes row). What replaces it is not another in-suite inventory:
+# in-flight change surface is carried by docs/submodule-common-rules.md >
+# Change Surface Rules, and a cycle-scoped lane is now branch-scoped by
+# construction, enforced by scripts/test/check-cycle-scope-guard.sh.
 
 # =============================================================================
 echo ""
@@ -240,10 +246,11 @@ else
   workflows_admitted_ac9="yes"
   while IFS= read -r wf; do
     [[ -z "$wf" ]] && continue
-    # No filename allow-list here, deliberately: WHICH workflow files a cycle may
-    # touch is the path-level allow_list arm's obligation (AC10 / AC6-scope), and
-    # duplicating it inside this arm would re-create the two-oracles-for-one-fact
-    # coupling D10 exists to remove. A workflow path with no manifest artifacts[]
+    # No filename allow-list here, deliberately. Since issue #75 retired this
+    # file's path-level lane, WHICH files a cycle may touch is carried by
+    # docs/submodule-common-rules.md > Change Surface Rules (the trace rule plus
+    # the pre-PR `git diff <base>...HEAD` self-audit), not by an in-suite
+    # inventory a later cycle would have to edit. A workflow path with no manifest artifacts[]
     # row yields an empty man_sha and therefore still fails the equality below, so
     # sprawl into an unpinned workflow file is caught by this arm as well.
     wf_sha="$(shasum -a 256 "$PROJECT_ROOT/$wf" 2>/dev/null | awk '{print $1}')"

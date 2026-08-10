@@ -94,7 +94,6 @@
 #                           (complements AC3, which owns the git-workflow.md
 #                           site of this exact defect).
 #
-#   AC-SCOPE        guard — git diff --name-only ⊆ allow-list.
 #   AC-CI-REGISTER  guard — this suite is wired into
 #                   .github/workflows/e2e-dummy-target.yml (both `paths:`
 #                   trigger blocks + a `run:` step), #798/#799/#800/#846
@@ -118,7 +117,7 @@
 # All guards (AC1-NO-HOSTONLY-BLEED, AC1-XREF-NOCONTRA, AC2-NO-PERPUSH,
 # AC3-PRESERVE-MANUAL, AC3-XDOC-NOCONTRA, AC4-NO-NESTED-PRESUME,
 # AC5-NO-REVIVE) PASS pre-edit (nothing contradictory exists yet).
-# AC-SCOPE PASS (test-only diff). AC-CI-REGISTER PASS once registered.
+# AC-CI-REGISTER PASS once registered.
 #
 # Harness convention: set -uo pipefail, assert_true/assert_false, canonical
 # `Results: P/T passed, F failed` line, exit 1 iff F>0.
