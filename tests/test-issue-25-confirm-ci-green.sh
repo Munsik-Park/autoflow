@@ -1027,6 +1027,167 @@ assert_true "AC-UNKNOWN-DIRTY-ORDER: no statusCheckRollup-bearing (poll) gh call
 rm -f "$GH_INVOCATION_LOG"
 
 # =============================================================================
+echo ""
+echo "=== AC-UNSETTLED-STATE-PRECHECK (MERGEABLE+UNKNOWN precheck falls through to poll; persistent -> exit 14, watchdog never fires) — issue #81 cycle 2 ==="
+# verification design AC-UNSETTLED-STATE-PRECHECK (.autoflow/issue-81-verification-design.md
+# row 1): today is_mergeable_undetermined() reduces to [ "$1" != "MERGEABLE" ],
+# so mergeable=MERGEABLE + mergeStateStatus=UNKNOWN latches mergeable_confirmed=1
+# in the precheck else arm; it must instead fall through to the bounded poll and,
+# if the pair never settles, terminate INSIDE the deadline. Fixture precondition:
+# every poll body carries the SAME pair with an EMPTY statusCheckRollup, keeping
+# the fail>0/exit-12 and total>0/exit-11 arms unreachable so the oracle is exact.
+# Wrapped in the outer run_bounded watchdog (AC-UNKNOWN-BOUNDED convention) since
+# a mis-implemented fix here would be a genuine hang, not a fast exit.
+
+PRECHECK_MERGEABLE_UNKNOWN='{"mergeable":"MERGEABLE","mergeStateStatus":"UNKNOWN"}'
+POLL_MERGEABLE_UNKNOWN_EMPTY='{"mergeable":"MERGEABLE","mergeStateStatus":"UNKNOWN","statusCheckRollup":[]}'
+
+AC_UNSETTLED_PRECHECK_LOG="$(mktemp)"
+GH_INVOCATION_LOG="$(mktemp)"
+run_bounded 10 "$AC_UNSETTLED_PRECHECK_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_UNKNOWN" \
+  GH_MOCK_POLL_BODY="$POLL_MERGEABLE_UNKNOWN_EMPTY" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 42
+
+assert_true "AC-UNSETTLED-STATE-PRECHECK: the outer harness watchdog never had to fire (bounded loop self-terminates within CI_POLL_TIMEOUT_SECS)" \
+  "[ \"\$RB_KILLED\" -eq 0 ]"
+assert_true "AC-UNSETTLED-STATE-PRECHECK: exit code is 14 EXACTLY (precheck fell through to the poll, never latched, never confirmed)" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 14 ]"
+AC_UNSETTLED_PRECHECK_POLLCOUNT="$(grep -cF 'statusCheckRollup' "$GH_INVOCATION_LOG" 2>/dev/null)"
+AC_UNSETTLED_PRECHECK_POLLCOUNT="${AC_UNSETTLED_PRECHECK_POLLCOUNT:-0}"
+assert_true "AC-UNSETTLED-STATE-PRECHECK: at least one statusCheckRollup-bearing (poll) gh call was issued (the poll was entered, not skipped by a false precheck confirmation)" \
+  "[ \"\$AC_UNSETTLED_PRECHECK_POLLCOUNT\" -ge 1 ]"
+rm -f "$AC_UNSETTLED_PRECHECK_LOG" "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-UNSETTLED-STATE-SETTLES-GREEN (mid-poll MERGEABLE+UNKNOWN retried, settles to MERGEABLE/CLEAN -> exit 0) — issue #81 cycle 2 ==="
+# verification design AC-UNSETTLED-STATE-SETTLES-GREEN: an unsettled mid-poll
+# read must be retried, not terminal -- the ordinary "push then settle shortly
+# after" path. The exit code alone would not discriminate today's bug (the
+# precheck already confirms this pair and the first poll body is already
+# all-green, so today's run exits 0 after ONE rollup-bearing call); the oracle
+# therefore also requires >= 2 rollup-bearing calls, proving the unsettled
+# iteration was actually retried rather than the precheck short-circuiting to
+# green on the first poll read.
+
+POLL_MERGEABLE_UNKNOWN_GREEN='{"mergeable":"MERGEABLE","mergeStateStatus":"UNKNOWN","statusCheckRollup":[{"__typename":"CheckRun","status":"COMPLETED","conclusion":"SUCCESS"}]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_UNKNOWN"
+SEQ_FILE="$(mktemp)"; printf '%s\n%s\n' "$POLL_MERGEABLE_UNKNOWN_GREEN" "$POLL_ALL_GREEN_CHECKRUN" > "$SEQ_FILE"
+COUNTER_FILE="$(mktemp)"; echo 0 > "$COUNTER_FILE"
+GH_MOCK_POLL_SEQUENCE_FILE="$SEQ_FILE"
+GH_MOCK_POLL_COUNTER_FILE="$COUNTER_FILE"
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-UNSETTLED-STATE-SETTLES-GREEN: exit code is 0 (the run settled to MERGEABLE/CLEAN and reached the confirmed-green verdict)" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+AC_SETTLES_POLLCOUNT="$(grep -cF 'statusCheckRollup' "$GH_INVOCATION_LOG" 2>/dev/null)"
+AC_SETTLES_POLLCOUNT="${AC_SETTLES_POLLCOUNT:-0}"
+assert_true "AC-UNSETTLED-STATE-SETTLES-GREEN: at least 2 statusCheckRollup-bearing calls (the unsettled iteration was retried, not treated as terminal)" \
+  "[ \"\$AC_SETTLES_POLLCOUNT\" -ge 2 ]"
+rm -f "$GH_INVOCATION_LOG" "$SEQ_FILE" "$COUNTER_FILE"
+
+# =============================================================================
+echo ""
+echo "=== AC-UNSETTLED-STATE-FALSE-GREEN (the reviewer's witness: MERGEABLE+UNKNOWN + an all-green rollup never exits 0) — issue #81 cycle 2 ==="
+# verification design AC-UNSETTLED-STATE-FALSE-GREEN, the defect as it
+# actually harms an operator: today the pair confirms at precheck and the
+# all-green rollup reaches the exit-0 gate on the FIRST poll iteration. 13 is
+# unreachable here (mergeable_confirmed is never latched under the fix, since
+# the pair never settles), so 14 -- not 0, not 13 -- is the contracted code.
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_UNKNOWN"
+GH_MOCK_POLL_BODY="$POLL_MERGEABLE_UNKNOWN_GREEN"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=3 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-UNSETTLED-STATE-FALSE-GREEN: exit code is 14 EXACTLY (an all-green rollup under a persistently unsettled mergeStateStatus is never reported green)" \
+  "[ \"\$RUN_EXIT\" -eq 14 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-UNSETTLED-AFTER-CONFIRMED (confirmed once, then unsettled through the deadline with an already-all-green rollup -> exit 13) — issue #81 cycle 2 ==="
+# verification design AC-UNSETTLED-AFTER-CONFIRMED: precheck confirms
+# MERGEABLE/CLEAN; every poll body then reads MERGEABLE/UNKNOWN with an
+# all-green rollup. Today the mid-poll MERGEABLE/UNKNOWN read classifies as
+# confirmed (is_mergeable_undetermined reduces to $1 != MERGEABLE), so
+# undetermined stays 0 and the all-green rollup exits 0 on the first
+# iteration -- must instead exit 13, and stderr must name the
+# confirmed-then-undetermined/never-re-settled cause (the same case-aware
+# sentence AC-UNDETERMINED-ALLGREEN-13 already binds).
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$POLL_MERGEABLE_UNKNOWN_GREEN"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=3 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-UNSETTLED-AFTER-CONFIRMED: exit code is 13 EXACTLY (confirmed once, then unsettled -- not 0 and not 14)" \
+  "[ \"\$RUN_EXIT\" -eq 13 ]"
+assert_true "AC-UNSETTLED-AFTER-CONFIRMED: stderr names the confirmed-then-undetermined/never-re-settled cause" \
+  "printf '%s' \"\$RUN_OUTPUT\" | grep -qiE 'undetermined|re-settl|never settled'"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-DIRTY-PRIORITY-OVER-STATE (MERGEABLE+DIRTY stays a confirmed conflict, exit 10, no poll) — issue #81 cycle 2 [INVARIANCE GUARD: green before AND after -- do NOT reshape] ==="
+# verification design AC-DIRTY-PRIORITY-OVER-STATE: is_not_mergeable is
+# [ "$1" = "CONFLICTING" ] || [ "$2" = "DIRTY" ], so DIRTY already decides and
+# already exits 10 with no poll, independent of the undetermined predicate's
+# widening. REGRESSION GUARD, not a Red discriminator: must pass at HEAD and
+# must still pass after GREEN widens is_mergeable_undetermined -- do not
+# reshape this lane to make it fail.
+
+PRECHECK_MERGEABLE_DIRTY='{"mergeable":"MERGEABLE","mergeStateStatus":"DIRTY"}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_DIRTY"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+run_confirm --pr 42
+
+assert_true "AC-DIRTY-PRIORITY-OVER-STATE: exit code is 10 (confirmed conflict, invariance guard)" \
+  "[ \"\$RUN_EXIT\" -eq 10 ]"
+AC_DIRTY_POLLCOUNT="$(grep -cF 'statusCheckRollup' "$GH_INVOCATION_LOG" 2>/dev/null)"
+AC_DIRTY_POLLCOUNT="${AC_DIRTY_POLLCOUNT:-0}"
+assert_true "AC-DIRTY-PRIORITY-OVER-STATE: no statusCheckRollup-bearing (poll) gh call was issued (invariance guard)" \
+  "[ \"\$AC_DIRTY_POLLCOUNT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-SETTLED-NONCLEAN-CONFIRMS (a settled non-CLEAN state, e.g. BLOCKED, with an all-green rollup still confirms -> exit 0) — issue #81 cycle 2 [INVARIANCE GUARD: green before AND after -- do NOT reshape] ==="
+# verification design AC-SETTLED-NONCLEAN-CONFIRMS: the anti-over-widening
+# criterion -- only UNKNOWN is unsettled; BLOCKED/BEHIND/UNSTABLE/HAS_HOOKS/
+# DRAFT are settled verdicts and must not be routed to the undetermined arm.
+# REGRESSION GUARD: is_mergeable_undetermined reduces to
+# [ "$1" != "MERGEABLE" ] today, false for this pair, so it already confirms
+# and already exits 0 -- must stay green after the fix widens the predicate to
+# reject ONLY UNKNOWN.
+
+PRECHECK_MERGEABLE_BLOCKED='{"mergeable":"MERGEABLE","mergeStateStatus":"BLOCKED"}'
+POLL_MERGEABLE_BLOCKED_GREEN='{"mergeable":"MERGEABLE","mergeStateStatus":"BLOCKED","statusCheckRollup":[{"__typename":"CheckRun","status":"COMPLETED","conclusion":"SUCCESS"}]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_BLOCKED"
+GH_MOCK_POLL_BODY="$POLL_MERGEABLE_BLOCKED_GREEN"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-SETTLED-NONCLEAN-CONFIRMS: exit code is 0 (a settled non-CLEAN mergeStateStatus still confirms, invariance guard)" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
 # Results
 # ---------------------------------------------------------------------------
 echo ""

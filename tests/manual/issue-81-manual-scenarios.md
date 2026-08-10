@@ -124,10 +124,80 @@ report the clause exists to produce). File it as its own issue.
 
 ---
 
+## M3 — live mergeability field round-trip (`mergeable` / `mergeStateStatus` vocabulary, no regression on a settled read)
+
+**Source AC:** AC-LIVE-FIELD-VOCABULARY (`.autoflow/issue-81-verification-design.md`
+§ "Acceptance criteria → verification type → method", cycle-2 row; § "Composition
+oracle determination" — "Live mergeability round-trip"). Discharges the `mergeable` /
+`mergeStateStatus` element of `T ∩ S` (ledger E53).
+
+**Coverage boundary, stated plainly (verification design § "Testability
+assessment").** A *genuinely transient* live `mergeStateStatus=UNKNOWN` cannot be
+scheduled — it is GitHub-side, short-lived, and not inducible from this repository.
+This scenario verifies the parts of the live contact point that **are** observable
+on demand: field presence, enum vocabulary, and no regression on a settled read. The
+transient unsettled window itself stays an unforced observation, recorded only when
+it happens to be seen live — it is **not** a claim of coverage over that window.
+
+**Read-only in both halves — no PR-selection constraint beyond "open".** Unlike
+M1/M2, this scenario performs no write: `gh pr view` is a read, and
+`scripts/handoff/confirm-ci-green.sh` is itself observe-only by contract (no merge,
+no CI re-trigger, no label write — script header, `docs/autoflow-guide.md` step 5).
+Any open PR may be used; prefer this issue's own PR (currently PR #82, a draft at
+HANDOFF) so the observation is recorded against the surface it governs.
+
+**Steps:**
+
+1. `gh pr view <N> --json mergeable,mergeStateStatus` against the chosen open PR —
+   the exact `--json` selector the script's own precheck call uses
+   (`scripts/handoff/confirm-ci-green.sh:275`).
+2. Confirm both `mergeable` and `mergeStateStatus` are returned **non-empty**.
+3. Confirm the observed `mergeStateStatus` value is drawn from the documented enum
+   (`CLEAN`, `DIRTY`, `UNKNOWN`, `BLOCKED`, `BEHIND`, `UNSTABLE`, `HAS_HOOKS`,
+   `DRAFT` — script header tri-state comment block).
+4. Run `scripts/handoff/confirm-ci-green.sh --pr <N>` against the same PR, with a
+   small `CI_POLL_TIMEOUT_SECS` (e.g. `CI_POLL_TIMEOUT_SECS=30`) so a slow-CI wait
+   does not extend this scenario.
+5. If the read in step 1 was a settled state (any value other than `UNKNOWN`),
+   confirm the script does **not** regress to exit `14` — a settled read must still
+   reach its contracted verdict (`0` on an all-green rollup, or another non-`14`
+   deadline code per the exit-code contract), never the "could not confirm mergeable"
+   code on a PR whose mergeability was, in fact, settled.
+6. If the read in step 1 happens to observe `mergeable=MERGEABLE` +
+   `mergeStateStatus=UNKNOWN` (the unforced transient window — not scheduled, only
+   recorded if seen), note it as a genuine live witness of the pairing this cycle's
+   fix targets, and confirm the script does not exit `0` on that same read.
+
+**Pass condition:** step 2 and step 3 hold for every run; step 5 holds whenever the
+observed state is settled (the expected case, and sufficient for this scenario to
+pass). Step 6 is opportunistic — its absence across a run is not a failure, only a
+missed opportunity to witness the transient pairing live.
+
+**Fail condition / signal to re-open:** either field comes back empty or absent
+under the script's own selector (field/selector drift against the live API — no
+mocked lane can see this, since every mocked lane passes against its own fixtures
+by construction); the observed `mergeStateStatus` value falls outside the documented
+enum (an unrecognised value the fixed predicate misclassifies); or a settled read
+regresses to exit `14` (the over-widening failure mode — the direct falsifier of the
+predicate rejecting more than just `UNKNOWN`). File it as its own issue rather than
+re-litigating this cycle's already-settled design.
+
+**Verified now (recorded observation, not a scheduled run):** a live read of PR #82
+taken during this deliberation returned `mergeable=MERGEABLE`,
+`mergeStateStatus=CLEAN` (feature design § "Design decision", § "Dependencies and
+blast radius"; verification design § "Composition oracle determination" — Live
+mergeability round-trip row) — a settled, non-`UNKNOWN` read, satisfying step 5's
+condition and not step 6's. Re-run this scenario per the Recording convention below
+rather than relying solely on this recorded observation.
+
+---
+
 ## Recording convention
 
 Run M1 and M2 once per GATE:QUALITY pass for #81 (or on any later change to
-the attach path / permission model), and record the outcome (date, PR number
-used, pass/fail per scenario) as a comment on the tracking issue or PR rather
-than editing this file — this file states the reusable procedure, not a
-per-run log.
+the attach path / permission model); run M3 once per GATE:QUALITY pass for
+#81 (or on any later change to the `mergeable`/`mergeStateStatus` classifier
+or its `--json` field selectors). Record the outcome (date, PR number used,
+pass/fail per scenario) as a comment on the tracking issue or PR rather than
+editing this file — this file states the reusable procedure, not a per-run
+log.
