@@ -33,7 +33,6 @@ on:
       - '.gitmodules'
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
-      - 'tests/test-issue-843-doc-assertions.sh'
       - 'docs/phases/analysis.md'
       - 'docs/evaluation-system.md'
       - 'docs/security-checklist.md'
@@ -42,7 +41,6 @@ on:
       - 'tests/test-issue-964-sigpipe-safe-pipes.sh'
       - 'tests/test-issue-846-doc-assertions.sh'
       - 'tests/test-issue-848-doc-assertions.sh'
-      - 'tests/test-issue-844-doc-assertions.sh'
       - 'tests/test-issue-847-doc-assertions.sh'
       - 'tests/run-doc-invariants.sh'
       - 'tests/fixtures/doc-invariants.json'
@@ -173,7 +171,6 @@ on:
       # #26 cycle-scoped RED suite retired at issue #27's VERIFY (PR #33
       # merged; docs/doc-invariant-registry.md §2). The manual-scenario doc
       # is not a cycle-scoped guard and stays registered.
-      - 'tests/test-issue-843-doc-assertions.sh'
       - 'docs/phases/analysis.md'
       - 'docs/evaluation-system.md'
       - 'docs/security-checklist.md'
@@ -182,7 +179,6 @@ on:
       - 'tests/test-issue-964-sigpipe-safe-pipes.sh'
       - 'tests/test-issue-846-doc-assertions.sh'
       - 'tests/test-issue-848-doc-assertions.sh'
-      - 'tests/test-issue-844-doc-assertions.sh'
       - 'tests/test-issue-847-doc-assertions.sh'
       - 'tests/run-doc-invariants.sh'
       - 'tests/fixtures/doc-invariants.json'
@@ -389,28 +385,6 @@ jobs:
       # See tests/test-issue-848-doc-assertions.sh.
       - name: Run pointer-bump procedure guard (#848)
         run: bash tests/test-issue-848-doc-assertions.sh
-      # Structure-gate doc-accuracy guard (#843): docs/phases/analysis.md and
-      # docs/evaluation-system.md must state that the hook does NOT gate
-      # gate_hypothesis_structure (orchestrator-judged) and must agree with
-      # the already-correct tests/fixtures/gate-schema.json /
-      # docs/security-checklist.md surfaces; analysis.md must document the
-      # issue auto-close pre-verification procedure. CI has no glob
-      # discovery; registered by filename per the sibling suites. See
-      # tests/test-issue-843-doc-assertions.sh.
-      - name: Run structure-gate doc-accuracy guard (#843)
-        run: bash tests/test-issue-843-doc-assertions.sh
-      # PREFLIGHT disposition & re-entry matrix guard (#844): the PR-less
-      # active:false(awaiting-user) preserve/do-NOT-delete disposition (and
-      # its CLAUDE.md PR Wait Rule mirror), the requested-issue active:true
-      # Resume procedure (4 ordered steps, textually separate from
-      # review-response entry), the aligned dev/YYYY-MM-DD-issue-N
-      # branch-source convention, the teammate-common-rules.md same-issue
-      # scoped Absolute rule, and the GATE:HYPOTHESIS/AUDIT "Third FAIL →
-      # human" off-by-one correction (diagram mirror unchanged) must stay
-      # asserted. CI has no glob discovery; registered by filename per the
-      # sibling suites. See tests/test-issue-844-doc-assertions.sh.
-      - name: Run PREFLIGHT matrix consistency guard (#844)
-        run: bash tests/test-issue-844-doc-assertions.sh
 
       # INTEGRATE deploy/CI-path conditional verification guard (#847): the
       # new "### Deploy/CI-path conditional verification" INTEGRATE
