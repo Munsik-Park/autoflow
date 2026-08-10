@@ -497,6 +497,7 @@ if [ -f "$BASEREF_LIB" ]; then
     "tests/fixtures/cycle-digest-954-out-of-window.jsonl"
     "tests/fixtures/cycle-digest-979-pre-migration-snapshot.jsonl"
     "tests/fixtures/cycle-digest-schema.json"
+    "tests/manual/issue-7-manual-scenarios.md"
     "tests/manual/issue-71-manual-scenarios.md"
     "tests/manual/issue-953-manual-scenarios.md"
     "tests/manual/issue-954-manual-scenarios.md"
