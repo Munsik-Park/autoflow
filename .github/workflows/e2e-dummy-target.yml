@@ -475,8 +475,18 @@ jobs:
       # runner's absorbed newline-literal gate, and this cycle's own
       # branch-scoped allow_list lane. CI has no glob discovery; registered by
       # filename per the sibling suites.
+      #
+      # The heavy composition legs (the real sibling re-runs) are opt-in: the
+      # suite defaults to fast because 75 -> 62 -> 59 -> full-sweep-driver -> 75
+      # and 69's AC-69-HARNESS-PINS -> 75 are mutually recursive (ledger E35),
+      # and AUTOFLOW_ISSUE75_COMPOSED=1 breaks both at depth 1. CI is where those
+      # legs must actually run, so the flag is set here — step-scoped, never at
+      # job level: a job-level value would leak into every sibling step's
+      # environment and re-enter the recursion the sentinel exists to cut.
       - name: Run cycle-scope-guard retirement suite (#75)
         run: bash tests/test-issue-75-scope-guard-retirement.sh
+        env:
+          AUTOFLOW_ISSUE75_HEAVY: "1"
 
       # Phase-marker emitter guard (#35): the canary emitter
       # `scripts/canary/emit-phase-marker.sh` appends one phase-transition
