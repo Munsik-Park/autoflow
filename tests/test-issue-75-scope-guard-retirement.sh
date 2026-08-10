@@ -158,8 +158,9 @@ fi
 echo "--- §5 disposition rows exist for each removal (state predicate over the registry doc) ---"
 assert_true "docs/doc-invariant-registry.md: §5 disposition table exists (dropped/deferred/migrated tokens present)" \
   'grep -qE "dropped|migrated" "$DOC_REGISTRY_MD"'
+DOC_REGISTRY_799_ROW="$(grep -A1 "diff must not touch .CLAUDE.md." "$DOC_REGISTRY_MD")"
 assert_true "docs/doc-invariant-registry.md: 799 'diff must not touch CLAUDE.md' row disposition is dropped — cycle-local (was deferred)" \
-  'grep -A1 "diff must not touch .CLAUDE.md." "$DOC_REGISTRY_MD" | grep -q "dropped — cycle-local"'
+  'printf "%s" "$DOC_REGISTRY_799_ROW" | grep -q "dropped — cycle-local"'
 assert_true "docs/doc-invariant-registry.md §2 names scripts/test/check-cycle-scope-guard.sh as the check enforcing branch-scoping while a cycle-scoped lane lives" \
   'grep -q "check-cycle-scope-guard.sh" "$DOC_REGISTRY_MD"'
 
