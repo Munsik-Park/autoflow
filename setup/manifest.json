@@ -132,7 +132,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e4a082422486d66a6e95f59e1687b765d528c3b3b0c3c2358b890a73f73ae5d6"
+      "sha256": "7072cd6037aacff85c45884f7644823d53241b7dadef04121e80f3b411b4f782"
     },
     {
       "source": "docs/phases/analysis.md",
