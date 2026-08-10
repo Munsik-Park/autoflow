@@ -81,6 +81,24 @@ note_deferred() {
   echo "  DEFERRED-OBSERVABLE: $1"
 }
 
+SKIP=0
+note_skip() {
+  echo "  SKIP: $1"
+  SKIP=$((SKIP + 1))
+}
+
+# Heavy-mode-gated assertion: runs for real (counted in TESTS/PASS/FAIL) only
+# when HEAVY_MODE=1; otherwise reported as SKIP (uncounted) rather than
+# silently omitted, so a fast pass is never mistaken for full coverage.
+assert_heavy() {
+  local desc="$1" condition="$2"
+  if [ "${HEAVY_MODE:-0}" = "1" ]; then
+    assert_true "$desc" "$condition"
+  else
+    note_skip "$desc (heavy: set AUTOFLOW_ISSUE75_HEAVY=1)"
+  fi
+}
+
 # Portable NUL-byte absence test (verification design, acceptance table row 1):
 # `grep -aP '\x00'` is rejected by the BSD grep this host runs (exit 2,
 # "invalid option -- P"), and a bare `! grep -aP ...` reads that exit 2 as "no
@@ -322,42 +340,59 @@ if [ -f "$MANUAL_985" ]; then
 fi
 
 # =============================================================================
-# Heavy real re-runs are launched here, once, in parallel (background subshells
-# within this single foreground script invocation -- not the harness's
-# run_in_background tool mode): several of them each take minutes (real
-# merge-base / worktree operations), and multiple downstream sections need
-# them. Running them serially would multiply, not add, that cost.
+# Heavy real re-runs are opt-in (AUTOFLOW_ISSUE75_HEAVY=1), run SERIALLY, and
+# carry a recursion sentinel.
+#
+# Recursion sentinel: this suite sits inside two cycles its own heavy legs
+# would otherwise re-enter. (a) #62's real re-run drives #59, which drives
+# tests/issue-59-full-sweep-driver.sh, which runs every tests/test-issue-*.sh
+# in the tree -- this file included -- heavy again. (b) #69's own
+# AC-69-HARNESS-PINS re-executes this suite and expects exit 0. Every heavy
+# leg below is launched with AUTOFLOW_ISSUE75_COMPOSED=1 exported into its
+# environment; at the top of this check, if that var is already set, heavy
+# mode is forced off regardless of AUTOFLOW_ISSUE75_HEAVY. Env inheritance
+# breaks both cycles at depth 1: the inner invocation (whichever suite
+# eventually re-invokes this file) always runs fast mode, never spawns its
+# own heavy legs, and returns promptly.
+#
+# Serial, not parallel: CI runners carry 2 cores, and the #62 chain already
+# fans out real worktree operations internally -- concurrent heavy legs here
+# contend for the same limited cores/I-O rather than shortening wall-clock
+# (VERIFY ledger E35: parallel launch combined with the recursion above drove
+# a measured load average of 447+ and 825 kill-resistant processes).
+if [ "${AUTOFLOW_ISSUE75_COMPOSED:-0}" = "1" ]; then
+  HEAVY_MODE=0
+else
+  HEAVY_MODE="${AUTOFLOW_ISSUE75_HEAVY:-0}"
+fi
+
 HEAVY_DIR="$(mktemp -d)"
 trap 'rm -rf "$FIXTURE_DIR" "$HEAVY_DIR" 2>/dev/null' EXIT
 
-run_bg() {
+run_heavy() {
   local name="$1" suite="$2"; shift 2
-  ( cd "$PROJECT_ROOT" && env "$@" bash "$suite" > "$HEAVY_DIR/$name.out" 2>&1; echo $? > "$HEAVY_DIR/$name.exit" ) &
+  ( cd "$PROJECT_ROOT" && env AUTOFLOW_ISSUE75_COMPOSED=1 "$@" bash "$suite" > "$HEAVY_DIR/$name.out" 2>&1; echo $? > "$HEAVY_DIR/$name.exit" )
 }
 heavy_exit() { cat "$HEAVY_DIR/$1.exit" 2>/dev/null || echo -1; }
 heavy_out() { cat "$HEAVY_DIR/$1.out" 2>/dev/null || echo ""; }
 
-# AUTOFLOW_ISSUE75_SKIP_HEAVY=1 skips this parallel launch (downstream sections
-# fall back to note_deferred with the reason stated). Unset/0 is the full,
-# correct behaviour this design requires and what CI/VERIFY run; the opt-out
-# exists only so a local iteration pass isn't forced to pay ~10+ minutes of
-# real worktree/merge-base cost on every invocation.
-if [ "${AUTOFLOW_ISSUE75_SKIP_HEAVY:-0}" != "1" ]; then
-  [ -f "$SUITE_799" ] && run_bg suite799 "$SUITE_799"
-  [ -f "$SUITE_55" ] && run_bg suite55 "$SUITE_55"
-  [ -f "$SUITE_52" ] && run_bg suite52 "$SUITE_52"
-  [ -f "$SUITE_798" ] && run_bg suite798 "$SUITE_798"
-  [ -f "$PROJECT_ROOT/tests/test-issue-843-doc-assertions.sh" ] && run_bg suite843 "$PROJECT_ROOT/tests/test-issue-843-doc-assertions.sh"
-  [ -f "$PROJECT_ROOT/tests/test-issue-35-phase-marker.sh" ] && run_bg suite35 "$PROJECT_ROOT/tests/test-issue-35-phase-marker.sh"
-  [ -f "$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh" ] && run_bg suite27 "$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"
-  [ -f "$SUITE_67" ] && run_bg suite67_foreign "$SUITE_67" GITHUB_HEAD_REF="dev/2099-01-01-issue-999999"
-  [ -f "$SUITE_69" ] && run_bg suite69_foreign "$SUITE_69" GITHUB_HEAD_REF="dev/2099-01-01-issue-999999"
-  [ -f "$SUITE_7" ] && run_bg suite7 "$SUITE_7"
-  [ -f "$SUITE_62" ] && run_bg suite62 "$SUITE_62"
-  [ -f "$SUITE_69" ] && run_bg suite69_normal "$SUITE_69"
-  wait
+if [ "$HEAVY_MODE" = "1" ]; then
+  [ -f "$SUITE_799" ] && run_heavy suite799 "$SUITE_799"
+  [ -f "$SUITE_55" ] && run_heavy suite55 "$SUITE_55"
+  [ -f "$SUITE_52" ] && run_heavy suite52 "$SUITE_52"
+  [ -f "$SUITE_798" ] && run_heavy suite798 "$SUITE_798"
+  [ -f "$PROJECT_ROOT/tests/test-issue-843-doc-assertions.sh" ] && run_heavy suite843 "$PROJECT_ROOT/tests/test-issue-843-doc-assertions.sh"
+  [ -f "$PROJECT_ROOT/tests/test-issue-35-phase-marker.sh" ] && run_heavy suite35 "$PROJECT_ROOT/tests/test-issue-35-phase-marker.sh"
+  [ -f "$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh" ] && run_heavy suite27 "$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"
+  [ -f "$SUITE_67" ] && run_heavy suite67_foreign "$SUITE_67" GITHUB_HEAD_REF="dev/2099-01-01-issue-999999"
+  [ -f "$SUITE_69" ] && run_heavy suite69_foreign "$SUITE_69" GITHUB_HEAD_REF="dev/2099-01-01-issue-999999"
+  [ -f "$SUITE_7" ] && run_heavy suite7 "$SUITE_7"
+  [ -f "$SUITE_62" ] && run_heavy suite62 "$SUITE_62"
+  [ -f "$SUITE_69" ] && run_heavy suite69_normal "$SUITE_69"
+elif [ "${AUTOFLOW_ISSUE75_COMPOSED:-0}" = "1" ]; then
+  echo "  (composed-run sentinel: AUTOFLOW_ISSUE75_COMPOSED=1 already set — forcing fast mode to break recursion)"
 else
-  echo "  (AUTOFLOW_ISSUE75_SKIP_HEAVY=1 — heavy real re-runs skipped for this pass)"
+  echo "  (fast mode: heavy real re-runs skipped — set AUTOFLOW_ISSUE75_HEAVY=1 to run them)"
 fi
 
 echo ""
@@ -471,23 +506,27 @@ PATHS_HITS_MANUAL="$(grep -c "tests/manual/issue-75-manual-scenarios.md" "$CI_WO
 assert_true "workflow: tests/manual/issue-75-manual-scenarios.md appears in both paths: trigger blocks (count 2, got $PATHS_HITS_MANUAL)" \
   '[ "$PATHS_HITS_MANUAL" -eq 2 ]'
 
-echo "--- fixed-window readers re-run green after the §3.9 registration edit (cached from the parallel launch above) ---"
+echo "--- fixed-window readers re-run green after the §3.9 registration edit (cached from the heavy launch above) ---"
 # Class A: forward '^ *paths:' windows. Only the workflow-window guard's own
 # line matters here; a suite may still be RED for unrelated §3.7/§3.6/§3.9
 # reasons mid-cycle, so this is reported as an observation rather than gated
 # on full-suite exit status.
-for pair in "suite799:$SUITE_799" "suite55:$SUITE_55" "suite52:$SUITE_52" "suite798:$SUITE_798"; do
-  name="${pair%%:*}"; f="${pair#*:}"
-  [ -f "$f" ] || continue
-  echo "  observed: $(basename "$f") exit=$(heavy_exit "$name") (class-A fixed-window reader)"
-done
-# Class B: backward distance budgets (re-run as a check that §3.9's placement
-# rule -- append strictly below the last existing entry -- was followed)
-for pair in "suite843:$PROJECT_ROOT/tests/test-issue-843-doc-assertions.sh" "suite35:$PROJECT_ROOT/tests/test-issue-35-phase-marker.sh" "suite27:$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"; do
-  name="${pair%%:*}"; f="${pair#*:}"
-  [ -f "$f" ] || continue
-  echo "  observed: $(basename "$f") exit=$(heavy_exit "$name") (class-B distance-budget reader)"
-done
+if [ "$HEAVY_MODE" = "1" ]; then
+  for pair in "suite799:$SUITE_799" "suite55:$SUITE_55" "suite52:$SUITE_52" "suite798:$SUITE_798"; do
+    name="${pair%%:*}"; f="${pair#*:}"
+    [ -f "$f" ] || continue
+    echo "  observed: $(basename "$f") exit=$(heavy_exit "$name") (class-A fixed-window reader)"
+  done
+  # Class B: backward distance budgets (re-run as a check that §3.9's placement
+  # rule -- append strictly below the last existing entry -- was followed)
+  for pair in "suite843:$PROJECT_ROOT/tests/test-issue-843-doc-assertions.sh" "suite35:$PROJECT_ROOT/tests/test-issue-35-phase-marker.sh" "suite27:$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"; do
+    name="${pair%%:*}"; f="${pair#*:}"
+    [ -f "$f" ] || continue
+    echo "  observed: $(basename "$f") exit=$(heavy_exit "$name") (class-B distance-budget reader)"
+  done
+else
+  note_skip "fixed-window reader re-runs (class A: 799/55/52/798; class B: 843/35/27) (heavy: set AUTOFLOW_ISSUE75_HEAVY=1)"
+fi
 
 # =============================================================================
 echo ""
@@ -500,12 +539,12 @@ deferred_marker_present() {
 
 if [ -f "$SUITE_67" ]; then
   DEFERRED_67="$(deferred_marker_present suite67_foreign "AC-67-SCOPE")"
-  assert_true "67: off-branch arm (foreign GITHUB_HEAD_REF) emits the note_deferred marker for AC-67-SCOPE, TESTS/PASS/FAIL uncounted" \
+  assert_heavy "67: off-branch arm (foreign GITHUB_HEAD_REF) emits the note_deferred marker for AC-67-SCOPE, TESTS/PASS/FAIL uncounted" \
     '[ "$DEFERRED_67" = "0" ]'
 fi
 if [ -f "$SUITE_69" ]; then
   DEFERRED_69="$(deferred_marker_present suite69_foreign "AC-69-SCOPE")"
-  assert_true "69: off-branch arm (foreign GITHUB_HEAD_REF, on_issue_branch() predicate arm) emits the note_deferred marker for AC-69-SCOPE" \
+  assert_heavy "69: off-branch arm (foreign GITHUB_HEAD_REF, on_issue_branch() predicate arm) emits the note_deferred marker for AC-69-SCOPE" \
     '[ "$DEFERRED_69" = "0" ]'
 fi
 
@@ -546,15 +585,15 @@ echo ""
 echo "=== AC-COMPOSITION — real re-run of #7 / #62 / #69 after their dependent assertions are updated in the same commit ==="
 
 if [ -f "$SUITE_7" ]; then
-  assert_true "tests/test-issue-7-oracle-hardening.sh exits 0 at HEAD (real re-run, no re-implementation of its membership logic)" \
+  assert_heavy "tests/test-issue-7-oracle-hardening.sh exits 0 at HEAD (real re-run, no re-implementation of its membership logic)" \
     '[ "$(heavy_exit suite7)" -eq 0 ]'
 fi
 if [ -f "$SUITE_62" ]; then
-  assert_true "tests/test-issue-62-sequential-rounds.sh exits 0 at HEAD (real re-run)" \
+  assert_heavy "tests/test-issue-62-sequential-rounds.sh exits 0 at HEAD (real re-run)" \
     '[ "$(heavy_exit suite62)" -eq 0 ]'
 fi
 if [ -f "$SUITE_69" ]; then
-  assert_true "tests/test-issue-69-verification-depth.sh exits 0 at HEAD (retained lane is genuinely inert here, real re-run)" \
+  assert_heavy "tests/test-issue-69-verification-depth.sh exits 0 at HEAD (retained lane is genuinely inert here, real re-run)" \
     '[ "$(heavy_exit suite69_normal)" -eq 0 ]'
 fi
 
@@ -633,6 +672,11 @@ esac
 
 # =============================================================================
 echo ""
+if [ "$HEAVY_MODE" = "1" ]; then
+  echo "HEAVY LEGS: RAN"
+else
+  echo "HEAVY LEGS: SKIPPED ($SKIP) — set AUTOFLOW_ISSUE75_HEAVY=1 for full coverage (real cross-suite re-runs, not exercised by this pass)"
+fi
 echo "Summary: $PASS/$TESTS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
 exit $?
