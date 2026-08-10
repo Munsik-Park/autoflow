@@ -243,8 +243,10 @@ echo "=== AC-PRESERVE (guard, PASS pre+post) — existing label-removal-failure 
 
 assert_true "AC-PRESERVE: .codex/review.md still requires reporting failure clearly if label removal fails" \
   "ctx=\$(label_removal_bullet); printf '%s\n' \"\$ctx\" | grep -qF 'If label removal fails, report the failure clearly'"
-assert_true "AC-PRESERVE: docs/autoflow-guide.md/design-rationale.md still state the orchestrator never owns/clears the label" \
-  "grep -qiF 'orchestrator never owns the label' '$DESIGN_RATIONALE'"
+assert_true "AC-PRESERVE: docs/design-rationale.md still states the orchestrator never clears the label (issue #81 / ledger E26 superseded 'never owns' with the directional attach/remove model; E31 repoints this pin at the superseded wording, not a revert)" \
+  "grep -qiF 'The orchestrator never clears the label' '$DESIGN_RATIONALE'"
+assert_true "AC-PRESERVE: docs/design-rationale.md still states removal authority is reviewer-only (the surviving half of the pre-#81 single-authority claim)" \
+  "grep -qiF 'authority remains reviewer-only' '$DESIGN_RATIONALE'"
 
 
 # =============================================================================

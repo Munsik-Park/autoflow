@@ -971,6 +971,62 @@ assert_true "AC-UNDETERMINED-RED-CI: stderr carries the 'red CI (route to RED)' 
 rm -f "$GH_INVOCATION_LOG" "$SEQ_FILE" "$COUNTER_FILE"
 
 # =============================================================================
+echo ""
+echo "=== AC-UNDETERMINED-ALLGREEN-13 (confirmed-then-undetermined, all-green rollup, never re-settles -> exit 13 with a case-aware message) — issue #81 GATE:QUALITY FAIL#2 (ledger E31) ==="
+# GATE:QUALITY FAIL#2 item 2(c): the exit-13 stderr message ("checks still
+# pending ... slow CI") is emitted verbatim for BOTH exit-13 causes today --
+# genuinely slow/incomplete CI, and this scenario: mergeability was CONFIRMED
+# at precheck, every poll then goes UNKNOWN, and the rollup is ALREADY
+# all-green -- the undetermined arm withholds the exit-0 verdict (feature
+# design's third deliberate-decision bullet), so the run correctly lands on
+# 13, but "still pending" misdescribes a rollup that is not pending at all.
+# The exit-code routing itself is a pre-existing regression guard (already
+# correct since the round-1 GREEN fix); the message-accuracy assertion is
+# this lane's RED discriminator for #81 GATE:QUALITY FAIL#2.
+
+POLL_UNKNOWN_ALLGREEN='{"mergeable":"UNKNOWN","mergeStateStatus":"UNKNOWN","statusCheckRollup":[{"__typename":"CheckRun","status":"COMPLETED","conclusion":"SUCCESS"}]}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
+GH_MOCK_POLL_BODY="$POLL_UNKNOWN_ALLGREEN"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+CI_POLL_TIMEOUT_SECS=3 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 42
+
+assert_true "AC-UNDETERMINED-ALLGREEN-13: exit code is 13 (regression guard -- undetermined suppresses the exit-0 verdict, mergeable_confirmed stays sticky from the precheck so it is not 14)" \
+  "[ \"\$RUN_EXIT\" -eq 13 ]"
+assert_true "AC-UNDETERMINED-ALLGREEN-13: stderr names the confirmed-then-undetermined/never-re-settled cause, not only 'still pending', when the rollup is actually all-green" \
+  "printf '%s' \"\$RUN_OUTPUT\" | grep -qiE 'undetermined|re-settl|never settled'"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
+echo ""
+echo "=== AC-UNKNOWN-DIRTY-ORDER (UNKNOWN mergeable + confirmed DIRTY state still exits 10, no poll) — issue #81 GATE:QUALITY FAIL#2 (ledger E31, optional test_coverage item) ==="
+# feature design "A. Interface" first deliberate-decision bullet: not-mergeable
+# is tested BEFORE undetermined, so mergeable=UNKNOWN paired with a CONFIRMED
+# mergeStateStatus=DIRTY read is a confirmed conflict, not a poll candidate --
+# testing undetermined first would demote a real conflict to a poll and delay
+# it, exactly the risk the issue's Risk (1) names. Regression guard, already
+# correct since the round-1 GREEN fix (is_not_mergeable's DIRTY disjunct is
+# unconditional on $1); added per E31's optional non-capping coverage note.
+
+PRECHECK_UNKNOWN_DIRTY='{"mergeable":"UNKNOWN","mergeStateStatus":"DIRTY"}'
+
+GH_INVOCATION_LOG="$(mktemp)"
+GH_MOCK_PRECHECK_BODY="$PRECHECK_UNKNOWN_DIRTY"
+GH_MOCK_POLL_SEQUENCE_FILE=""
+GH_MOCK_POLL_COUNTER_FILE=""
+run_confirm --pr 42
+
+assert_true "AC-UNKNOWN-DIRTY-ORDER: exit code is 10 (a confirmed DIRTY state outranks the UNKNOWN mergeable enum -- order matters)" \
+  "[ \"\$RUN_EXIT\" -eq 10 ]"
+POLL_COUNT_DIRTY_ORDER="$(grep -cF 'statusCheckRollup' "$GH_INVOCATION_LOG" 2>/dev/null)"
+POLL_COUNT_DIRTY_ORDER="${POLL_COUNT_DIRTY_ORDER:-0}"
+assert_true "AC-UNKNOWN-DIRTY-ORDER: no statusCheckRollup-bearing (poll) gh call was issued -- the confirmed conflict is never demoted to a poll" \
+  "[ \"\$POLL_COUNT_DIRTY_ORDER\" -eq 0 ]"
+rm -f "$GH_INVOCATION_LOG"
+
+# =============================================================================
 # Results
 # ---------------------------------------------------------------------------
 echo ""
