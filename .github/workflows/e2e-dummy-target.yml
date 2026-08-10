@@ -88,7 +88,6 @@ on:
       # same commit) — once its own PR merges. The manual-scenario doc below
       # is not a cycle-scoped guard (no DELTA/count predicate; a Tier-2/3
       # scenario record) and stays registered.
-      - 'tests/manual/issue-26-manual-scenarios.md'
       # #35 cycle surface. TAIL here (pull_request), for the reason the #26
       # comment above records: #799's AC6-ci reads this list through a fixed
       # `grep -A40 '^ *paths:'` window, and inserting above
@@ -174,7 +173,6 @@ on:
       # #26 cycle-scoped RED suite retired at issue #27's VERIFY (PR #33
       # merged; docs/doc-invariant-registry.md §2). The manual-scenario doc
       # is not a cycle-scoped guard and stays registered.
-      - 'tests/manual/issue-26-manual-scenarios.md'
       - 'tests/test-issue-843-doc-assertions.sh'
       - 'docs/phases/analysis.md'
       - 'docs/evaluation-system.md'
