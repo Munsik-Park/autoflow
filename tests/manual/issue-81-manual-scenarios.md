@@ -18,19 +18,21 @@ clearer" for this label. That live-runtime observation is this file's M1 and
 M2.
 
 **Ledger constraints this scenario honors** (`.autoflow/issue-81-ledger.md`
-E19, carried constraint 2; verification design § "PR-selection constraint"):
-the round-trip runs **only** against a PR that gates nothing — either a PR
-whose cycle already reached `phase: "awaiting-external-review"` with
-`active:false`, or a scratch draft PR opened for the round-trip and closed
-after it. **Never** a PR belonging to a live cycle: the label is HANDOFF step
-7's termination signal and step 6.5's branch condition, so attaching it to a
-live-cycle PR inverts that cycle's termination signal for the round-trip's
-duration, and permanently if the teardown is interrupted. No automated lane
+E19, carried constraint 2): the round-trip runs **only** against an **inert
+scratch/draft PR** opened for the round-trip and closed after it — never a
+`phase: "awaiting-external-review"` PR, even one belonging to a different,
+already-handed-off issue. That PR is still a **live** merge signal
+(`docs/external-review-sequencing.md:25` — the label is a live, human-honoured
+signal on a PR awaiting external merge), so attaching `blocked-by-review` to
+it inverts that PR's own termination/merge signal for the round-trip's
+duration, and permanently if the teardown is interrupted — the same hazard
+the constraint excludes for a PR belonging to a live cycle. No automated lane
 in this repo stages this — the orchestrator's own Bash cannot perform the
 teardown half at all (`.claude/hooks/check-autoflow-gate.sh:201` denies
 `--remove-label blocked-by-review` unconditionally, independent of cycle
-state), so a probe run from the orchestrator would leave the label attached
-mid-way. Both halves below run inside the reviewer subprocess.
+state or PR), so a probe run from the orchestrator would leave the label
+attached mid-way with no recovery path outside the reviewer subprocess. Both
+halves below run inside the reviewer subprocess.
 
 ---
 
@@ -42,11 +44,12 @@ oracle determination"). Discharges the element `blocked-by-review` of `T ∩ S`
 
 **PR selection (constraint above):** open a scratch draft PR against a
 throwaway branch in the target repo (e.g. a one-line no-op commit on a
-`scratch/issue-81-reattach-probe` branch), or reuse a PR whose
-`.autoflow/issue-{M}.json` already reads `phase: "awaiting-external-review"`
-and `active: false` for a **different, already-handed-off** issue. Do **not**
-select a PR belonging to the cycle currently running #81, and do not select
-any PR whose state file reads `active: true`.
+`scratch/issue-81-reattach-probe` branch) **solely** for this round-trip, and
+close it once teardown (step 4) is confirmed. Do **not** reuse any pre-existing
+PR — not one belonging to the cycle currently running #81, not one whose state
+file reads `active: true`, and not a `phase: "awaiting-external-review"` PR
+either (ledger E19 constraint 2: that PR is still awaiting a live external
+merge decision, so it is not inert).
 
 **Steps:**
 
