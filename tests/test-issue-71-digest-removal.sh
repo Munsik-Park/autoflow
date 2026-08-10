@@ -601,6 +601,13 @@ allow_list=(
   "tests/adr-0016-conformance-check.sh"
   "tests/test-issue-42-spawn-mode-contract.sh"
   "tests/test-issue-799-inert-cleanup.sh"
+  # Sibling branch-unconditional guards amended with this cycle's scope-guard
+  # admissions (feature design §8; ledger E16 class).
+  "tests/test-issue-798-topology-flip.sh"
+  "tests/test-issue-846-doc-assertions.sh"
+  "tests/test-issue-848-doc-assertions.sh"
+  "tests/test-issue-952-wizard-removal.sh"
+  "tests/test-issue-955-subagent-background-ban.sh"
 )
 
 if on_issue_branch; then
