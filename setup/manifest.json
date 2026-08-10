@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "844357c87609858fa837017b6028da97caf440a4db08a2bbdadeccd8a5025327"
+      "sha256": "4845e696f32ee670ccc2a84608c4006a654c5905090d1d55d86836ee953c1c84"
     },
     {
       "source": "docs/INDEX.md",
@@ -76,14 +76,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2032ddcc493fb5961b428c3cdcc9f554301dc70290ed633e6f464bb43c7dec1b"
+      "sha256": "25ded08a98de58b62b4e35524e01ecd703cd48799b7b6491503aae3750e80598"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ce42c12293bb78d1c86fb147c7b134d1715018ecdb1c4d8e17b603f3faf82f19"
+      "sha256": "55de5687a5994d022b2541b52918531d815d155aada4995d13ed2451ca7ffa4d"
     },
     {
       "source": "docs/development-guideline.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "258dda843081a0642eeca3daa5496ac0080c63d251ae87e0fca31313176d6b24"
+      "sha256": "68208c8ac5ad1bf8ea4bad25b809458d20b9aae70b1e922d88ef58b07d5306a8"
     },
     {
       "source": "docs/git-workflow.md",
@@ -286,7 +286,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "2ad2056f4e33c4f70c323151c3a3783686ee9c36b46f6f6f9b4af845e62485dc"
+      "sha256": "9fba52ab5aa93efd9488409d4e196c4fcb691d0d286c7015096983edf4e0ce9a"
     },
     {
       "source": "AGENTS.md",
