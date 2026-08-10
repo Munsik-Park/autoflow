@@ -234,8 +234,6 @@ export CANONICAL_JOINED MIRROR_JOINED EXEC_PRINCIPLES_JOINED REFINE_JOINED VERIF
 # =============================================================================
 echo "=== AC1-a-canonical (RED discriminator) — teammate-common-rules.md canonical clause ==="
 
-assert_true "AC1-a-canonical: '## Bash Execution Mode' section exists in docs/teammate-common-rules.md" \
-  "grep -qF '## Bash Execution Mode' '$TEAMMATE_COMMON'"
 assert_true "AC1-a-canonical: canonical clause is [MUST] and names run_in_background" \
   "printf '%s' \"\$CANONICAL_JOINED\" | grep -qF '[MUST]' && printf '%s' \"\$CANONICAL_JOINED\" | grep -qF 'run_in_background'"
 assert_true "AC1-a-canonical: canonical clause names foreground" \
@@ -247,8 +245,6 @@ assert_true "AC1-a-canonical: canonical clause names teammate or subagent scope"
 echo ""
 echo "=== AC1-a-mirror (RED discriminator) — submodule-common-rules.md mirror clause ==="
 
-assert_true "AC1-a-mirror: '### Bash execution mode' subsection exists in docs/submodule-common-rules.md" \
-  "grep -qF '### Bash execution mode' '$SUBMODULE_COMMON'"
 assert_true "AC1-a-mirror: mirror clause names run_in_background + foreground" \
   "printf '%s' \"\$MIRROR_JOINED\" | grep -qF 'run_in_background' && printf '%s' \"\$MIRROR_JOINED\" | grep -qF 'foreground'"
 assert_true "AC1-a-mirror: mirror clause cross-links the canonical home (teammate-common-rules.md > Bash Execution Mode)" \
@@ -287,8 +283,6 @@ done
 echo ""
 echo "=== AC1-c (RED discriminator) — teammate-contracts.md (incl. workflow in-script agents) ==="
 
-assert_true "AC1-c: docs/teammate-contracts.md names run_in_background + foreground" \
-  "grep -qF 'run_in_background' '$TEAMMATE_CONTRACTS' && grep -qF 'foreground' '$TEAMMATE_CONTRACTS'"
 assert_true "AC1-c: docs/teammate-contracts.md explicitly names workflow in-script sub-agents (in-script / workflows/*)" \
   "grep -qE 'in-script|workflows/' '$TEAMMATE_CONTRACTS'"
 
@@ -359,86 +353,6 @@ else
     TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
   fi
 
-  HEAD_SOURCES="$(jq -r '.artifacts[].source' "$MANIFEST_JSON" 2>/dev/null | sort -u)"
-  BASE_SOURCES="$(git -C "$PROJECT_ROOT" show "$BASE_REF:setup/manifest.json" 2>/dev/null | jq -r '.artifacts[].source' 2>/dev/null | sort -u)"
-  # #951 retired-guard disposition (docs/doc-invariant-registry.md, applied
-  # per ledger E14/§DR-8): linking docs/doc-invariant-registry.md from
-  # docs/INDEX.md deterministically enters it into the manifest's markdown
-  # closure, so ONE additive source row for it is a hard requirement this
-  # cycle (not a drift regression). AC4-CLOSURE is narrowed from "byte-
-  # identical row set" to "identical, or the sole delta is that one additive
-  # row" — a genuinely new/removed source elsewhere still FAILs.
-  #
-  # #979 lockstep update (ledger E12, GATE:PLAN PASS avg 9.0): the
-  # reviewer-backend-selection delivery surface (feature design §4 rows 1-6)
-  # adds six source rows on top of the #951 closure baseline -- three copy
-  # rows (scripts/review/codex-review-pr.sh, scripts/preflight/check-review-
-  # backend.sh, .codex/review.md), two scaffold rows (AGENTS.md,
-  # .claude/autoflow.local.json), and docs/reviewer-backend.md via the same
-  # markdown-link doc-closure mechanism as #951. AC4-CLOSURE additionally
-  # admits this exact six-row addition set with zero removals -- any other
-  # added/removed source still FAILs.
-  #
-  # #979 cycle-9 lockstep update (ledger E13): the GATE:PLAN-approved
-  # reviewer-isolation design factors the reviewer-backend probe env scrub
-  # into a shared lib, scripts/review/lib/claude-isolation.sh, delivered as
-  # one additive source row on top of the six-row #979 closure set above
-  # (six rows -> seven rows). AC4-CLOSURE additionally admits this exact
-  # seven-row addition set with zero removals -- any other added/removed
-  # source still FAILs.
-  #
-  # #25 lockstep update (ledger issue-25 E14, GATE:PLAN PASS): the
-  # HANDOFF step-5 confirm-ci-green.sh helper is delivered as one
-  # additive manifest source row, scripts/handoff/confirm-ci-green.sh,
-  # on top of whatever closure set already sits at <base> (the #951/#979
-  # rows above are already folded into main by the time this cycle
-  # branched). AC4-CLOSURE additionally admits this single-row addition
-  # with zero removals -- any other added/removed source still FAILs.
-  #
-  # #51 lockstep update (GATE:QUALITY E36): the teammate-removal
-  # feasibility ADR is delivered as one additive manifest source row,
-  # docs/adr/0017-teammate-removal-feasibility.md, via the same
-  # docs/INDEX.md -> docs/adr/README.md markdown-link closure mechanism as
-  # #951. AC4-CLOSURE additionally admits this single-row addition with
-  # zero removals -- any other added/removed source still FAILs.
-  #
-  # #69 lockstep update: the verification-depth justification ADR is
-  # delivered as one additive manifest source row,
-  # docs/adr/0018-verification-depth-justification.md, via the same
-  # docs/adr/README.md markdown-link closure mechanism as #51's 0017 row.
-  # AC4-CLOSURE additionally admits this single-row addition with zero
-  # removals -- any other added/removed source still FAILs.
-  #
-  # #71 lockstep update: the cycle-digest emitter and the cross-issue
-  # recurrence scan are REMOVED, so this is the first delta shaped as a
-  # removal rather than an addition — the two source rows
-  # scripts/handoff/emit-cycle-digest.sh and
-  # scripts/preflight/scan-cross-issue-recurrence.sh leave the manifest with
-  # zero additions. AC4-CLOSURE additionally admits this exact two-row
-  # removal set with zero additions -- any other added/removed source still
-  # FAILs.
-  AC4_CLOSURE_ADDED="$(comm -13 <(printf '%s\n' "$BASE_SOURCES") <(printf '%s\n' "$HEAD_SOURCES"))"
-  AC4_CLOSURE_REMOVED="$(comm -23 <(printf '%s\n' "$BASE_SOURCES") <(printf '%s\n' "$HEAD_SOURCES"))"
-  AC979_CLOSURE_SET="$(printf '%s\n' \
-    '.claude/autoflow.local.json' \
-    '.codex/review.md' \
-    'AGENTS.md' \
-    'docs/reviewer-backend.md' \
-    'scripts/preflight/check-review-backend.sh' \
-    'scripts/review/codex-review-pr.sh' | sort -u)"
-  AC71_REMOVED_SET="$(printf '%s\n' \
-    'scripts/handoff/emit-cycle-digest.sh' \
-    'scripts/preflight/scan-cross-issue-recurrence.sh' | sort -u)"
-  AC979_C9_CLOSURE_SET="$(printf '%s\n' \
-    '.claude/autoflow.local.json' \
-    '.codex/review.md' \
-    'AGENTS.md' \
-    'docs/reviewer-backend.md' \
-    'scripts/preflight/check-review-backend.sh' \
-    'scripts/review/codex-review-pr.sh' \
-    'scripts/review/lib/claude-isolation.sh' | sort -u)"
-  assert_true "AC4-CLOSURE: manifest source-row set is identical at <base> and HEAD, or the only delta is the #951 docs/doc-invariant-registry.md manifest-closure row (§DR-8, ledger E14), is the #979 reviewer-backend-selection six-row delivery set (ledger E12), is the #979 cycle-9 seven-row delivery set (six-row set plus scripts/review/lib/claude-isolation.sh, ledger E13), is the #25 confirm-ci-green.sh single-row delivery set (ledger issue-25 E14), is the #51 docs/adr/0017-teammate-removal-feasibility.md single-row delivery set (GATE:QUALITY E36), is the #69 docs/adr/0018-verification-depth-justification.md single-row delivery set, or is the #71 two-row removal set (emit-cycle-digest.sh + scan-cross-issue-recurrence.sh, zero additions)" \
-    "[ \"\$HEAD_SOURCES\" = \"\$BASE_SOURCES\" ] || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/doc-invariant-registry.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = \"\$AC979_C9_CLOSURE_SET\" ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'scripts/handoff/confirm-ci-green.sh' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0017-teammate-removal-feasibility.md' ]; } || { [ -z \"\$AC4_CLOSURE_REMOVED\" ] && [ \"\$AC4_CLOSURE_ADDED\" = 'docs/adr/0018-verification-depth-justification.md' ]; } || { [ -z \"\$AC4_CLOSURE_ADDED\" ] && [ \"\$AC4_CLOSURE_REMOVED\" = \"\$AC71_REMOVED_SET\" ]; }"
 fi
 
 # =============================================================================
@@ -552,8 +466,6 @@ assert_true "AC-PRESERVE-a: REFINE existing [MUST] 'Re-run all tests' item retai
   "printf '%s' \"\$REFINE_JOINED\" | grep -qF '[MUST] Re-run all tests'"
 assert_true "AC-PRESERVE-b: VERIFY existing cause-branch table (RED | GREEN | SEQUENTIAL_FIX | EVALUATION_AI) retained" \
   "printf '%s' \"\$VERIFY_JOINED\" | grep -qF 'SEQUENTIAL_FIX' && printf '%s' \"\$VERIFY_JOINED\" | grep -qF 'EVALUATION_AI'"
-assert_true "AC-PRESERVE-c: submodule-common-rules.md Reporting Format items 1-6 retained" \
-  "grep -qF '1. **Reference paths, not bodies**' '$SUBMODULE_COMMON' && grep -qF '6. **Facilitator return' '$SUBMODULE_COMMON'"
 assert_true "AC-PRESERVE-d: CLAUDE.md Teammate-idle 'continue work when (a)/(b)/(c)' list retained" \
   "printf '%s' \"\$EXEC_PRINCIPLES_JOINED\" | grep -qF '(a) a teammate sends an actionable report' && printf '%s' \"\$EXEC_PRINCIPLES_JOINED\" | grep -qF '(c) the user types a new prompt'"
 

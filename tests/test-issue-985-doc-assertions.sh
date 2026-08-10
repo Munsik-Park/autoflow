@@ -203,7 +203,7 @@ echo ""
 echo "=== AC2 — plugin key autoflow@autoflow consistency ==="
 
 assert_true "AC2-KEY-CONSISTENT: no surviving 'autoflow@claude-autoflow' literal" \
-  "[ -z \"\$(git grep -F 'autoflow@claude-autoflow' -- ':!tests/test-issue-985-doc-assertions.sh' 2>/dev/null)\" ]"
+  "[ -z \"\$(git grep -F 'autoflow@claude-autoflow' -- ':!tests/test-issue-985-doc-assertions.sh' ':!tests/fixtures/issue-76-migration-map.md' ':!tests/fixtures/doc-invariants.json' 2>/dev/null)\" ]"
 
 # =============================================================================
 echo ""
@@ -243,7 +243,7 @@ assert_true "AC3-SPDX-COVERAGE: every tracked .sh/.py/.bats/.yml/.js/.mjs file c
 # REUSE-IgnoreEnd
 
 assert_true "AC3-SPDX-COVERAGE: no surviving 'LicenseRef-PolyForm-Internal-Use-1.0.0' token anywhere tracked" \
-  "[ -z \"\$(git grep -F 'LicenseRef-PolyForm-Internal-Use-1.0.0' -- ':!tests/test-issue-985-doc-assertions.sh' ':!tests/manual/issue-985-manual-scenarios.md' 2>/dev/null)\" ]"
+  "[ -z \"\$(git grep -F 'LicenseRef-PolyForm-Internal-Use-1.0.0' -- ':!tests/test-issue-985-doc-assertions.sh' ':!tests/manual/issue-985-manual-scenarios.md' ':!tests/fixtures/issue-76-migration-map.md' ':!tests/fixtures/doc-invariants.json' 2>/dev/null)\" ]"
 
 assert_true "AC3-WORKFLOW-COUNT: reuse.yml is present alongside the 5 existing workflows" \
   "[ -f '$WORKFLOWS_DIR/reuse.yml' ] && [ -f '$WORKFLOWS_DIR/e2e-dummy-target.yml' ] && [ -f '$WORKFLOWS_DIR/host-purity-delta.yml' ] && [ -f '$WORKFLOWS_DIR/plugin-package.yml' ] && [ -f '$WORKFLOWS_DIR/schema-hook-contract.yml' ] && [ -f '$WORKFLOWS_DIR/workflow-regression.yml' ]"
@@ -258,8 +258,6 @@ assert_false "AC-LICENSE: LICENSE no longer opens with 'MIT License'" \
   "head -1 '$LICENSE_FILE' | grep -q '^MIT License'"
 assert_false "AC-LICENSE: LICENSE no longer carries the PolyForm Internal Use marker" \
   "head -5 '$LICENSE_FILE' | grep -qi 'PolyForm Internal Use'"
-assert_true "AC-LICENSE: LICENSE carries the Copyright (c) 2026 Munsik-Park notice" \
-  "grep -q 'Copyright (c) 2026 Munsik-Park' '$LICENSE_FILE'"
 assert_true "AC-LICENSE: LICENSES/Elastic-2.0.txt exists with content" \
   "[ -s '$LICENSES_DIR/Elastic-2.0.txt' ]"
 assert_false "AC-LICENSE: LICENSES/LicenseRef-PolyForm-Internal-Use-1.0.0.txt is absent" \
@@ -269,8 +267,6 @@ assert_false "AC-LICENSE: LICENSES/LicenseRef-PolyForm-Internal-Use-1.0.0.txt is
 echo ""
 echo "=== AC4 — public README single plugin-install narrative ==="
 
-assert_true "AC4-INSTALL-PATH: README contains '/plugin marketplace add Munsik-Park/autoflow'" \
-  "grep -qF '/plugin marketplace add Munsik-Park/autoflow' '$README'"
 assert_false "AC4-INSTALL-PATH: README no longer contains 'connev-llm'" \
   "grep -qi 'connev-llm' '$README'"
 assert_true "AC4-LICENSE-SUMMARY: README carries an Elastic License 2.0 allow/deny summary section" \

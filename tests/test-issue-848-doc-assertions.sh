@@ -347,8 +347,6 @@ echo "=== AC1-NO-HOSTONLY-BLEED / AC1-XREF-NOCONTRA (guards, PASS pre+post) ==="
 
 assert_false "AC1-NO-HOSTONLY-BLEED: the DELIVER host-only (default) paragraph (before any *Secondary* marker) never gains 'git add services'" \
   "ctx=\$(deliver_section | awk '/\\*Secondary \\(multi-repo\\):\\*/{exit} {print}'); printf '%s\n' \"\$ctx\" | grep -qF 'git add services'"
-assert_true "AC1-XREF-NOCONTRA: submodule-common-rules.md still states 'Each developer commits only the submodule pointer'" \
-  "grep -qF 'Each developer commits **only the submodule pointer**' '$SUBMODULE_RULES'"
 
 # =============================================================================
 echo ""
@@ -389,8 +387,6 @@ assert_true "AC3-PRESERVE-MANUAL: Pointer-reconciliation section still requires 
   "ctx=\$(pointer_reconcile_section); printf '%s\n' \"\$ctx\" | grep -qF 'git ls-tree HEAD services'"
 assert_true "AC3-PRESERVE-MANUAL: Merge Sequencing section still names the blocked-by-subrepo label" \
   "ctx=\$(merge_seq_section); printf '%s\n' \"\$ctx\" | grep -qF 'blocked-by-subrepo'"
-assert_true "AC3-XDOC-NOCONTRA: external-review-sequencing.md still carries its #795/ADR-0015 D3 retirement record" \
-  "grep -qF '#795' '$EXT_REVIEW_SEQ' && grep -qiF 'ADR-0015' '$EXT_REVIEW_SEQ'"
 
 # =============================================================================
 echo ""

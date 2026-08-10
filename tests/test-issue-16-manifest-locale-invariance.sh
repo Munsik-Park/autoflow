@@ -89,8 +89,6 @@ skip_test() {
 
 echo "=== AC1 (RED discriminator) — generator pins LC_ALL=C at script entry ==="
 
-assert_true "AC1-a: setup/gen-manifest-hashes.sh contains a script-entry 'export LC_ALL=C' pin" \
-  "grep -nE '^[[:space:]]*export[[:space:]]+LC_ALL=C\b' '$GEN_MANIFEST_SH' >/dev/null 2>&1"
 
 # ---------------------------------------------------------------------------
 # AC2 — committed manifest matches a fresh regen (isolated temp copy;

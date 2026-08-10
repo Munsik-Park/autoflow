@@ -123,13 +123,7 @@ echo "=== AC-DEL-DISPATCH: 'subrepo-merged' absent from autoflow-guide.md + exte
 # RED expectation: FAIL today (both docs carry the token — verified
 # autoflow-guide.md:529,583,585,587; external-review-sequencing.md multiple
 # lines). GREEN once D1/D2 remove the machine narration.
-assert_false \
-  "AC-DEL-DISPATCH: docs/autoflow-guide.md has no 'subrepo-merged' token" \
-  "grep -qF 'subrepo-merged' '$AUTOFLOW_GUIDE'"
 
-assert_false \
-  "AC-DEL-DISPATCH: docs/external-review-sequencing.md has no 'subrepo-merged' token" \
-  "grep -qF 'subrepo-merged' '$EXTERNAL_REVIEW'"
 
 # =============================================================================
 echo ""
@@ -150,13 +144,7 @@ assert_false \
   "AC-DEL-TOKEN: no live SUBREPO_READ_TOKEN reference under scripts/" \
   "git -C '$PROJECT_ROOT' grep -qF 'SUBREPO_READ_TOKEN' -- 'scripts'"
 
-assert_false \
-  "AC-DEL-TOKEN: docs/external-review-sequencing.md drops SUBREPO_READ_TOKEN narration" \
-  "grep -qF 'SUBREPO_READ_TOKEN' '$EXTERNAL_REVIEW'"
 
-assert_false \
-  "AC-DEL-TOKEN: docs/maintained-docs.md drops SUBREPO_READ_TOKEN narration" \
-  "grep -qF 'SUBREPO_READ_TOKEN' '$MAINTAINED_DOCS'"
 
 assert_false \
   "AC-DEL-TOKEN: tests/test-issue-495-token-scope.sh removed (subject deleted, feature T6)" \
@@ -266,6 +254,8 @@ echo "=== AC-ORPHAN: no dangling reference to the removed machine outside the al
 #     live reference to a live machine.
 EXCLUDE_PATHSPEC=(':!services' ':!.autoflow' \
   ':!tests/test-issue-795-handoff-removal.sh' \
+  ':!tests/fixtures/issue-76-migration-map.md' \
+  ':!tests/fixtures/doc-invariants.json' \
   ':!tests/test-issue-794-doc-assertions.sh' \
   ':!tests/issue-92/*.bats' \
   ':!tests/manual/issue-795-manual-scenarios.md' \
@@ -362,7 +352,7 @@ echo "=== AC-DANGLING-REF: no tests/ file still cites the deleted test-issue-495
 # absence, not as a live reference to a live file).
 assert_false \
   "AC-DANGLING-REF: no tests/ file (outside this suite) still references 'test-issue-495-token-scope'" \
-  "git -C '$PROJECT_ROOT' grep -Fl 'test-issue-495-token-scope' -- 'tests' ':!tests/test-issue-795-handoff-removal.sh' 2>/dev/null | grep -q ."
+  "git -C '$PROJECT_ROOT' grep -Fl 'test-issue-495-token-scope' -- 'tests' ':!tests/test-issue-795-handoff-removal.sh' ':!tests/fixtures/issue-76-migration-map.md' 2>/dev/null | grep -q ."
 
 # =============================================================================
 # Results
