@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: tests/fixtures/ setup/manifest.json
 # =============================================================================
 # Test: fixture/gate-glob isolation — Issue #18 (standing regression guard)
 # =============================================================================

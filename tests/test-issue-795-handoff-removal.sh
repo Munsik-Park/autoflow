@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: docs/git-workflow.md docs/external-review-sequencing.md docs/autoflow-guide.md
 # =============================================================================
 # Test: HANDOFF CI machine removal — Issue #795 (`subrepo-merged` retirement)
 # =============================================================================

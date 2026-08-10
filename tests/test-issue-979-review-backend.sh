@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: scripts/review/codex-review-pr.sh docs/reviewer-backend.md
 # =============================================================================
 # Test: HANDOFF reviewer backend selection — claude branch (AC-1a) + API-key
 #       guard (AC-5) — Issue #979

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: docs/adr/ docs/maintained-docs.md docs/INDEX.md
 # =============================================================================
 # Static conformance check: ADR-0016 (ADR-conformance gate scoring) — Issue #818
 # =============================================================================

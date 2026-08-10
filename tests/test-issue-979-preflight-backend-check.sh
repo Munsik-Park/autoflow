@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: scripts/preflight/check-review-backend.sh
 # =============================================================================
 # Test: PREFLIGHT fail-closed reviewer-backend availability check — Issue #979
 # =============================================================================
