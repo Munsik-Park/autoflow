@@ -252,10 +252,18 @@ echo "=== AC-ORPHAN: no dangling reference to the removed machine outside the al
 #     recorded in git-workflow.md) — the same class as the absence-test
 #     suites and issue-795-manual-scenarios.md already excluded here, not a
 #     live reference to a live machine.
+# Recording artefacts are excluded, not because they are exempt from the
+# boundary, but because naming a retired token is what they are FOR: an
+# `absent` registry entry must carry the literal it forbids, the migration map
+# records assertion descriptions verbatim, and the disposition registry records
+# each retirement by name. A sweep that forbade the token everywhere would make
+# recording a retirement impossible. Same intent as the manual-scenarios
+# carve-out already in this list (issue #76).
 EXCLUDE_PATHSPEC=(':!services' ':!.autoflow' \
   ':!tests/test-issue-795-handoff-removal.sh' \
   ':!tests/fixtures/issue-76-migration-map.md' \
   ':!tests/fixtures/doc-invariants.json' \
+  ':!docs/doc-invariant-registry.md' \
   ':!tests/test-issue-794-doc-assertions.sh' \
   ':!tests/issue-92/*.bats' \
   ':!tests/manual/issue-795-manual-scenarios.md' \
