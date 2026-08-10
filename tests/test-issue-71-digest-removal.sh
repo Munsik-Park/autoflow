@@ -506,11 +506,21 @@ echo "--- re-home: hook malformed-state scan scope (AC4), witness OUTSIDE .autof
 # that is not the retired mechanism: docs/issue-71-scanscope-witness.json,
 # built only inside the temp project this arm constructs (never a real
 # repo path), malformed as JSON, outside .autoflow/.
+#
+# VERIFY step-4 fidelity fix: the active-state fixture MUST be named
+# issue-<digits-only>.json — the hook's own discovery glob
+# (.claude/hooks/check-autoflow-gate.sh:353) is filtered at :361-363 to
+# `issue-*.json` whose stripped stem is all-digits; a name like
+# `issue-71-scanscope.json` fails that filter and is silently skipped
+# BEFORE the active/malformed classification runs, making the "does not
+# block a passing active state" half of this assertion vacuous (verified:
+# it passed identically with no state file present at all). `issue-9971`
+# avoids colliding with any real issue's `.autoflow/issue-<N>.json`.
 AC71_PDIR="$(mktemp -d)"
 trap 'rm -rf "$AC71_PDIR"' EXIT
 mkdir -p "$AC71_PDIR/.autoflow" "$AC71_PDIR/docs"
-cat > "$AC71_PDIR/.autoflow/issue-71-scanscope.json" <<'EOF'
-{ "active": true, "issue": "#71",
+cat > "$AC71_PDIR/.autoflow/issue-9971.json" <<'EOF'
+{ "active": true, "issue": "#9971",
   "phases": {
     "gate_hypothesis_cause": {"verdict": "skipped (feat issue)"},
     "gate_plan":    {"scores": {"a": {"score": 8}, "b": {"score": 8}}},
@@ -538,12 +548,26 @@ assert_true "AC-71-MANIFEST-ROW: setup/manifest.json has no artifacts[] row for 
 assert_true "AC-71-GENMANIFEST: setup/gen-manifest-hashes.sh no longer emits either row" \
   "! grep -qF 'scan-cross-issue-recurrence.sh' '$GEN_MANIFEST' && ! grep -qF 'emit-cycle-digest.sh' '$GEN_MANIFEST'"
 
+# VERIFY step-4 fidelity fix: the real oracle (verification design >
+# Composition oracle determination; tests/test-issue-16-manifest-locale-
+# invariance.sh:101-108, "AC2 ... isolated temp copy; test-953 AC6 tree-copy
+# idiom") runs the regenerator inside a disposable tar-copy of the tree, so
+# setup/gen-manifest-hashes.sh's own SCRIPT_DIR/REPO_ROOT self-resolution
+# (setup/gen-manifest-hashes.sh:27-29) lands on the copy — the live tracked
+# setup/manifest.json is never mutated, not even transiently. Adopted
+# verbatim here instead of the prior backup/regen-in-place/restore approach,
+# which mutated the live tree with no trap-guaranteed restore.
 if [ -x "$GEN_MANIFEST" ] || [ -f "$GEN_MANIFEST" ]; then
-  cp "$MANIFEST" "$MANIFEST.bak-issue71"
-  ( cd "$PROJECT_ROOT" && bash "$GEN_MANIFEST" >/dev/null 2>&1 )
-  assert_true "AC-71-MANIFEST-REGEN: regenerating setup/manifest.json (real script, real tree) produces no diff" \
-    "diff -q '$MANIFEST' '$MANIFEST.bak-issue71' >/dev/null 2>&1"
-  mv "$MANIFEST.bak-issue71" "$MANIFEST"
+  # No `trap ... EXIT` here (would clobber the SCANSCOPE block's EXIT trap
+  # above, since bash traps for the same signal replace rather than stack) —
+  # matches the #16 precedent, which also cleans up with a plain rm -rf
+  # rather than a trap.
+  AC71_MTMP="$(mktemp -d)"
+  (cd "$PROJECT_ROOT" && tar --exclude='.git' -cf - .) | (cd "$AC71_MTMP" && tar -xf -) 2>/dev/null
+  ( cd "$AC71_MTMP" && bash setup/gen-manifest-hashes.sh >/dev/null 2>&1 )
+  assert_true "AC-71-MANIFEST-REGEN: regenerating setup/manifest.json in an isolated tar-copy (real script) produces no diff against the live committed manifest" \
+    "cmp -s '$AC71_MTMP/setup/manifest.json' '$MANIFEST'"
+  rm -rf "$AC71_MTMP"
 else
   echo "  FAIL: AC-71-MANIFEST-REGEN: setup/gen-manifest-hashes.sh not found"
   TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
