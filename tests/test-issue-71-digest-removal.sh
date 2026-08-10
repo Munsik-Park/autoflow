@@ -78,6 +78,15 @@ VERIFY_PACKAGE="$PROJECT_ROOT/tests/plugin/verify-package.sh"
 VERIFY_INSTALL="$PROJECT_ROOT/tests/plugin/verify-install-into-target.sh"
 VERIFY_E2E="$PROJECT_ROOT/tests/plugin/verify-e2e-dummy-target.sh"
 MANIFEST_LOCALE_SUITE="$PROJECT_ROOT/tests/test-issue-16-manifest-locale-invariance.sh"
+PEER_FACILITATOR_SUITE="$PROJECT_ROOT/tests/test-issue-52-peer-facilitator-premise.sh"
+ADOPTION_EVIDENCE_SUITE="$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh"
+SEQUENTIAL_ROUNDS_SUITE="$PROJECT_ROOT/tests/test-issue-62-sequential-rounds.sh"
+DELIBERATION_RECORD_SUITE="$PROJECT_ROOT/tests/test-issue-67-deliberation-record.sh"
+TOPOLOGY_FLIP_SUITE="$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh"
+DOC846_SUITE="$PROJECT_ROOT/tests/test-issue-846-doc-assertions.sh"
+DOC848_SUITE="$PROJECT_ROOT/tests/test-issue-848-doc-assertions.sh"
+WIZARD_REMOVAL_SUITE="$PROJECT_ROOT/tests/test-issue-952-wizard-removal.sh"
+BACKGROUND_BAN_SUITE="$PROJECT_ROOT/tests/test-issue-955-subagent-background-ban.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -102,6 +111,32 @@ assert_false() {
 }
 
 note_deferred() { echo "  DEFERRED-OBSERVABLE: $1"; }
+
+# Real execution of a sibling suite (verification design :118
+# collateral-suite execution sweep, :123 branch-unconditional guard sweep) —
+# never a grep proxy for "did this suite's arm get removed correctly". Some
+# of these suites are genuinely multi-minute (they re-run other heavy
+# suites internally, e.g. #62/#67 re-run #59) — per the documented budget
+# convention (tests/test-issue-59-adoption-evidence-discipline.sh:46-47,
+# "budget >= 600s, never run under a short timeout"), each call below is
+# given a generous per-suite timeout rather than a uniform short one.
+assert_suite_exit0() {
+  local desc="$1" suite_path="$2" budget_secs="$3"
+  TESTS=$((TESTS + 1))
+  local out exit_code
+  out="$(cd "$PROJECT_ROOT" && timeout "$budget_secs" bash "$suite_path" 2>&1)"
+  exit_code=$?
+  local tail_line
+  tail_line="$(printf '%s\n' "$out" | grep -E '^(Results:|RESULT:)' | tail -1)"
+  if [ "$exit_code" -eq 0 ]; then
+    echo "  PASS: $desc ($tail_line)"; PASS=$((PASS + 1))
+  elif [ "$exit_code" -eq 124 ]; then
+    echo "  FAIL: $desc (TIMEOUT after ${budget_secs}s — raise the budget, do not treat as green)"
+    FAIL=$((FAIL + 1))
+  else
+    echo "  FAIL: $desc (exit=$exit_code, $tail_line)"; FAIL=$((FAIL + 1))
+  fi
+}
 
 echo "=== issue #71 — cycle-digest emission + cross-issue recurrence scan removal ==="
 
@@ -572,6 +607,65 @@ else
   echo "  FAIL: AC-71-MANIFEST-REGEN: setup/gen-manifest-hashes.sh not found"
   TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
 fi
+
+# =============================================================================
+echo ""
+echo "=== collateral-suites-green (execution half) — verification design :118 — every surviving suite whose arms bound to the deleted artifacts actually passes when run ==="
+# GATE:QUALITY (cycle 1, attempt 1) finding: this AC has a state half above
+# (AC-71-FIXTURE-FENCE, AC-71-DOC985, AC-71-HDIGEST, AC-71-DIGESTAGREE,
+# AC-71-E2E, AC-71-INSTALL, AC-71-PHASEMARKER — the arm text is gone) but no
+# execution arm — a suite whose deleted-arm text is gone can still fail for
+# an unrelated regression, which only running it catches. Real execution,
+# not a grep proxy.
+
+assert_suite_exit0 "AC-71-COLLATERAL-55: tests/test-issue-55-score-format-contract.sh (digest-agreement arm dropped) exits 0" \
+  "$SCOREFMT_SUITE" 60
+assert_suite_exit0 "AC-71-COLLATERAL-40: tests/test-issue-40-hook-additive.sh (H-DIGEST arm dropped) exits 0" \
+  "$HDIGEST_SUITE" 60
+assert_suite_exit0 "AC-71-COLLATERAL-985: tests/test-issue-985-doc-assertions.sh (AC1-DIGEST-NO-INHERITED-RECORDS arm dropped) exits 0" \
+  "$DOC985_SUITE" 60
+assert_suite_exit0 "AC-71-COLLATERAL-51: tests/test-issue-51-teammate-removal-verdict.sh (schema fence entry dropped) exits 0" \
+  "$FIXTURE_FENCE_SUITE" 90
+assert_suite_exit0 "AC-71-COLLATERAL-35: tests/test-issue-35-phase-marker.sh (AC9-b witness re-pointed) exits 0" \
+  "$PHASE_MARKER_SUITE" 60
+assert_suite_exit0 "AC-71-COLLATERAL-verifyinstall: tests/plugin/verify-install-into-target.sh (installed-file entries dropped) exits 0" \
+  "$VERIFY_INSTALL" 300
+assert_suite_exit0 "AC-71-COLLATERAL-verifye2e: tests/plugin/verify-e2e-dummy-target.sh (E3a-y arm dropped) exits 0" \
+  "$VERIFY_E2E" 300
+
+# =============================================================================
+echo ""
+echo "=== unconditional-guards-green — verification design :123 — every sibling guard not gated on its own HEAD_BRANCH passes on this branch, having actually evaluated its diff ==="
+# Branch-unconditional guard sweep. #799 (dual-pin) and the registry runner
+# are already driven for real above (both required-green oracles); the
+# remaining unconditional set is executed here. GATE:QUALITY's own
+# reproduction found #55 and #52 red (allow-list gaps) and #59 red
+# (stale pins), cascading into #62/#67 — this sweep is what makes those
+# reproducible from inside the suite itself rather than only by the
+# evaluator's own ad hoc re-run.
+
+assert_suite_exit0 "AC-71-UNCOND-55: tests/test-issue-55-score-format-contract.sh (committed-surface-completeness) exits 0" \
+  "$SCOREFMT_SUITE" 60
+assert_suite_exit0 "AC-71-UNCOND-52: tests/test-issue-52-peer-facilitator-premise.sh (committed-surface-completeness) exits 0" \
+  "$PEER_FACILITATOR_SUITE" 60
+assert_suite_exit0 "AC-71-UNCOND-59: tests/test-issue-59-adoption-evidence-discipline.sh exits 0" \
+  "$ADOPTION_EVIDENCE_SUITE" 600
+assert_suite_exit0 "AC-71-UNCOND-62: tests/test-issue-62-sequential-rounds.sh exits 0" \
+  "$SEQUENTIAL_ROUNDS_SUITE" 600
+assert_suite_exit0 "AC-71-UNCOND-67: tests/test-issue-67-deliberation-record.sh exits 0" \
+  "$DELIBERATION_RECORD_SUITE" 300
+assert_suite_exit0 "AC-71-UNCOND-798: tests/test-issue-798-topology-flip.sh (AC10) exits 0" \
+  "$TOPOLOGY_FLIP_SUITE" 60
+assert_suite_exit0 "AC-71-UNCOND-846: tests/test-issue-846-doc-assertions.sh (AC-SCOPE) exits 0" \
+  "$DOC846_SUITE" 60
+assert_suite_exit0 "AC-71-UNCOND-848: tests/test-issue-848-doc-assertions.sh (AC-SCOPE) exits 0" \
+  "$DOC848_SUITE" 60
+assert_suite_exit0 "AC-71-UNCOND-952: tests/test-issue-952-wizard-removal.sh (G1) exits 0" \
+  "$WIZARD_REMOVAL_SUITE" 400
+assert_suite_exit0 "AC-71-UNCOND-955: tests/test-issue-955-subagent-background-ban.sh (AC-SCOPE) exits 0" \
+  "$BACKGROUND_BAN_SUITE" 60
+assert_suite_exit0 "AC-71-UNCOND-42: tests/test-issue-42-spawn-mode-contract.sh (no override, own literal fences) exits 0" \
+  "$FENCE42_SUITE" 60
 
 # =============================================================================
 echo ""
