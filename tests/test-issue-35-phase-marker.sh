@@ -145,8 +145,7 @@ echo "=== AC9 (guard, vacuous at HEAD) — .autoflow/*.jsonl already gitignored 
 
 assert_true "AC9-a: .autoflow/issue-35-phases.jsonl is gitignored (.gitignore:6 .autoflow/*)" \
   "git check-ignore -q .autoflow/issue-35-phases.jsonl"
-assert_false "AC9-b: contrast control — docs/cycle-digest.jsonl is NOT gitignored" \
-  "git check-ignore -q docs/cycle-digest.jsonl"
+assert_false "AC9-b: contrast control — a tracked docs/ file is NOT gitignored" "git check-ignore -q docs/autoflow-guide.md"
 
 # =============================================================================
 echo ""

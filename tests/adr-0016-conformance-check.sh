@@ -262,8 +262,7 @@ assert_true "AC-R3-b: manifest sha256 for docs/INDEX.md matches current source h
 # a permanent invariant, and a cycle-scoped guard left live past its cycle is
 # a defect. The durable property it was reaching for (the committed manifest
 # matches its sources) is carried without any snapshot by the regenerate-and-
-# compare checks: tests/test-issue-16-manifest-locale-invariance.sh AC2,
-# tests/test-issue-953-cycle-digest.sh AC6-regen-idempotence, and
+# compare checks: tests/test-issue-16-manifest-locale-invariance.sh AC2 and
 # tests/plugin/verify-package.sh AC5d. AC-R3-a/b above are unaffected — they
 # are state predicates over two named sources, not a count.
 #

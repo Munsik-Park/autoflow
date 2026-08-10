@@ -400,11 +400,9 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # scaffold rows; on a real repo these paths pre-exist, but the E1a dummy
   # fixture starts empty so install genuinely creates them here).
   # issue #10 widening (verification-design DCR-1 / feature design C4): the
-  # manifest-registration-gap fix registers 4 methodology-step scripts the
-  # stamped docs already instruct a consumer to run. scripts/preflight/scan-
-  # cross-issue-recurrence.sh is already covered by the scripts/preflight/*
-  # arm above; scripts/handoff/emit-cycle-digest.sh, scripts/handoff/create-
-  # host-pr.sh, and scripts/cleanup/cleanup-issue.sh land under
+  # manifest-registration-gap fix registers the methodology-step scripts the
+  # stamped docs already instruct a consumer to run. scripts/handoff/create-
+  # host-pr.sh and scripts/cleanup/cleanup-issue.sh land under
   # scripts/handoff/** and scripts/cleanup/**, neither previously allow-
   # listed, so the case pattern is widened to admit these two new dest
   # classes (same source-path-preserved copy-row shape as scripts/review/*
@@ -529,12 +527,10 @@ fi
 # logic; the Post-Merge Cleanup [MUST] wrapper invokes
 # ./scripts/cleanup/cleanup-issue.sh <N> directly and the allow-list entry
 # Bash(./scripts/cleanup/cleanup-issue.sh:*) presumes a +x delivered file.
-echo "== E3a-x (issue #10): installed exec bit set on the 4 new methodology-step script dests =="
+echo "== E3a-x (issue #10): installed exec bit set on the new methodology-step script dests =="
 if [ "$DRIVE_PASS" -eq 1 ]; then
   NOT_EXEC=""
   for _xdest in \
-    "scripts/preflight/scan-cross-issue-recurrence.sh" \
-    "scripts/handoff/emit-cycle-digest.sh" \
     "scripts/handoff/create-host-pr.sh" \
     "scripts/cleanup/cleanup-issue.sh"
   do
@@ -545,45 +541,12 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
     fi
   done
   if [ -z "$NOT_EXEC" ]; then
-    pass "E3a-x: all 4 new methodology-step script dests are installed with the execute bit set"
+    pass "E3a-x: all new methodology-step script dests are installed with the execute bit set"
   else
     failc "E3a-x" "#10" "dest(s) missing or not executable in installed target:$NOT_EXEC"
   fi
 else
   failc "E3a-x" "#10" "prerequisite install failed"
-fi
-
-# ── E3a-y (issue #10, cycle 2, review-response Finding 1): actually EXECUTE ──
-# the installed emit-cycle-digest.sh against the fresh dummy target with
-# synthesized minimal state, confirming docs/cycle-digest.jsonl creation and
-# the path:line stdout. E3a-x above checks only existence + exec bit, not
-# execution -- reviewer-cited coverage gap. Placed after E1d's POST_LIST
-# capture (:392) so the files this arm creates (docs/cycle-digest.jsonl,
-# .autoflow/*) are not in E1d's newly-created-path scan set (verification
-# design §3 RR2-AC3 ordering note).
-echo "== E3a-y (issue #10 c2): installed emit-cycle-digest.sh executes on a docs-less fresh target =="
-if [ "$DRIVE_PASS" -eq 1 ] && [ -f "$DUMMY/scripts/handoff/emit-cycle-digest.sh" ]; then
-  if [ -e "$DUMMY/docs/cycle-digest.jsonl" ]; then
-    failc "E3a-y" "#10" "precondition violated -- $DUMMY/docs/cycle-digest.jsonl already exists before the run"
-  else
-    mkdir -p "$DUMMY/.autoflow"
-    cat > "$DUMMY/.autoflow/issue-0.json" <<'EOF'
-{ "issue": "#0", "cycle": 1, "date": "2026-07-16", "mode": "new-issue", "phases": {} }
-EOF
-    : > "$DUMMY/.autoflow/ledger.md"
-    E3AY_OUT=$(cd "$DUMMY" && bash scripts/handoff/emit-cycle-digest.sh \
-      .autoflow/issue-0.json .autoflow/ledger.md "" 2>&1)
-    E3AY_CODE=$?
-    if [ "$E3AY_CODE" -eq 0 ] && [ -f "$DUMMY/docs/cycle-digest.jsonl" ] \
-      && [ "$E3AY_OUT" = "docs/cycle-digest.jsonl:1" ] \
-      && jq -e . < "$DUMMY/docs/cycle-digest.jsonl" >/dev/null 2>&1; then
-      pass "E3a-y: installed emit-cycle-digest.sh creates docs/cycle-digest.jsonl on a docs-less target and prints docs/cycle-digest.jsonl:1"
-    else
-      failc "E3a-y" "#10" "exit=$E3AY_CODE stdout='$E3AY_OUT' file-exists=$([ -f "$DUMMY/docs/cycle-digest.jsonl" ] && echo yes || echo no)"
-    fi
-  fi
-else
-  failc "E3a-y" "#10" "prerequisite install failed or emit-cycle-digest.sh not installed"
 fi
 
 DUMMY_DRIFT="$DUMMY/.claude/autoflow/drift-check.sh"

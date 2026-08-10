@@ -39,20 +39,18 @@
 #                                  has zero headroom).
 #   manual-scenario-present       — tests/manual/issue-55-manual-scenarios.md
 #                                  exists and carries instruction-is-followed.
-#   digest-agreement / single-source's shape-set equality & execution arms —
+#   single-source's shape-set equality & execution arms —
 #                                  GUARDS (verification-design Discriminators:
 #                                  not RED-first), vacuously satisfied while
-#                                  their precondition (the CLAUDE.md fence /
-#                                  the score_shapes key) does not exist yet —
-#                                  same guard-vs-RED-discriminator split used
-#                                  by tests/test-issue-953-cycle-digest.sh AC4/AC6.
+#                                  their precondition (the score_shapes key)
+#                                  does not exist yet.
 #
 # Deliberately NOT reimplemented here (verification design Part 1 — the cycle
 # suite adds no second implementation):
 #   no-behavior-change — regression floor: tests/test-gate-hardening.sh,
 #     tests/test-issue-245-schema-validation.sh,
 #     tests/test-issue-223-schema-hook-contract.sh,
-#     tests/test-issue-961-cap6-gate.sh, tests/test-issue-953-cycle-digest.sh,
+#     tests/test-issue-961-cap6-gate.sh,
 #     tests/test-issue-18-fixture-glob-isolation.sh, tests/run-doc-invariants.sh,
 #     tests/test-issue-799-inert-cleanup.sh, tests/test-issue-27-composition-oracle.sh,
 #     tests/test-issue-35-phase-marker.sh, tests/test-issue-62-sequential-rounds.sh
@@ -63,8 +61,8 @@
 # RED expectation (pre-implementation, this commit): producer-shape (a/a2/b/c),
 # single-source (has-key arm), diagnostic-hint-malformed,
 # diagnostic-hint-not-evaluable, ci-self-registration
-# (all sub-arms) and manual-scenario-present all FAIL. Guard arms (digest-
-# agreement, single-source's equality/execution sub-arms, the ci-self-
+# (all sub-arms) and manual-scenario-present all FAIL. Guard arms
+# (single-source's equality/execution sub-arms, the ci-self-
 # registration companion window) PASS.
 # =============================================================================
 
@@ -77,7 +75,6 @@ HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
 CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
 GATE_SCHEMA="$PROJECT_ROOT/tests/fixtures/gate-schema.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-EMIT_SCRIPT="$PROJECT_ROOT/scripts/handoff/emit-cycle-digest.sh"
 MANUAL_SCENARIOS="$PROJECT_ROOT/tests/manual/issue-55-manual-scenarios.md"
 
 SUITE_PATH="tests/test-issue-55-score-format-contract.sh"
@@ -314,39 +311,6 @@ assert_true "diagnostic-hint-parity: the accepted-shape hint occurs exactly twic
   "[ '$HINT_OCCURRENCES' -eq 2 ]"
 
 # =============================================================================
-# digest-agreement (oracle: canonical-example-through-real-digest) — GUARD,
-# vacuously satisfied while the CLAUDE.md fence is not yet extractable
-# (verification design Discriminators: green today by construction / not a
-# RED-first item; same guard-vs-RED-discriminator split as
-# tests/test-issue-953-cycle-digest.sh AC4/AC6).
-# =============================================================================
-echo ""
-echo "=== digest-agreement (oracle: canonical-example-through-real-digest) ==="
-
-if [ "$FENCE_PARSE_OK" = yes ]; then
-  DTMP="$(mktemp -d -p "$WORKROOT")"
-  mkdir -p "$DTMP/scripts/handoff" "$DTMP/.autoflow"
-  cp "$EMIT_SCRIPT" "$DTMP/scripts/handoff/emit-cycle-digest.sh"
-  chmod +x "$DTMP/scripts/handoff/emit-cycle-digest.sh"
-  jq -n --argjson scores "$FENCE_BODY" \
-    '{issue:"#55", cycle:1, date:"2026-08-09", mode:"new-issue", phases:{gate_plan:{scores:$scores}}}' \
-    > "$DTMP/.autoflow/issue-55.json"
-  : > "$DTMP/.autoflow/ledger.md"
-
-  ( cd "$DTMP" && bash scripts/handoff/emit-cycle-digest.sh \
-      .autoflow/issue-55.json .autoflow/ledger.md "" >/dev/null 2>&1 )
-  DIGEST_EXIT=$?
-
-  EXPECTED="$(printf '%s' "$FENCE_BODY" | jq -c 'def snorm: if type=="number" then . else .score end; { avg: (([to_entries[].value | snorm]) as $v | ($v|add)/($v|length)), items: (to_entries | map({key:.key, value:(.value|snorm)}) | from_entries) }')"
-  ACTUAL="$([ -f "$DTMP/docs/cycle-digest.jsonl" ] && tail -1 "$DTMP/docs/cycle-digest.jsonl" | jq -c '{avg: .gates.gate_plan.avg, items: .gates.gate_plan.items}' 2>/dev/null || echo '')"
-
-  assert_true "digest-agreement: emit-cycle-digest.sh exits 0 on the extracted example" "[ '$DIGEST_EXIT' -eq 0 ]"
-  assert_true "digest-agreement: the emitted record's gates.gate_plan {avg,items} ($ACTUAL) equals the extracted example's own values ($EXPECTED)" \
-    "[ '$ACTUAL' = '$EXPECTED' ]"
-else
-  assert_true "digest-agreement (guard, vacuously satisfied — CLAUDE.md fence not yet extractable)" "true"
-fi
-
 
 # =============================================================================
 # ci-self-registration

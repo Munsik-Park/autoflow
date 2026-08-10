@@ -106,14 +106,6 @@ on:
       # TAIL here, mirroring the #43/#35 entries immediately above.
       - 'tests/test-issue-27-composition-oracle.sh'
       - 'tests/manual/issue-27-manual-scenarios.md'
-      # #7 cycle surface. TAIL here, mirroring the #27/#43/#35 entries above
-      # for the same reason those comments record (#799's AC6-ci fixed
-      # `grep -A40 '^ *paths:'` window). tests/test-issue-1-guard-contract.sh
-      # is registered alongside the cycle-scoped suite because #7 hardens it
-      # into a scored oracle and it appeared in no paths: filter before now.
-      - 'tests/test-issue-7-oracle-hardening.sh'
-      - 'tests/test-issue-1-guard-contract.sh'
-      - 'tests/manual/issue-7-manual-scenarios.md'
       # #56 cycle surface (carry-channel evidence discipline). TAIL here,
       # mirroring the #7/#27/#43/#35 entries above for the same reason those
       # comments record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window).
@@ -155,6 +147,12 @@ on:
       # zero headroom, so nothing is inserted above an existing entry).
       - 'tests/test-issue-52-peer-facilitator-premise.sh'
       - 'tests/manual/issue-52-manual-scenarios.md'
+      # #71 cycle surface (cycle-digest emission + cross-issue recurrence
+      # scan removal). TAIL here for the same reason the #51/#55/#52 entries
+      # above record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has
+      # zero headroom, so nothing is inserted above an existing entry).
+      - 'tests/test-issue-71-digest-removal.sh'
+      - 'tests/manual/issue-71-manual-scenarios.md'
       # #75 cycle surface (cycle-scope-guard retirement + the standing lint).
       # TAIL here for the same reason the #51/#55/#52 entries above record
       # (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero headroom,
@@ -235,11 +233,6 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-27-composition-oracle.sh'
       - 'tests/manual/issue-27-manual-scenarios.md'
-      # #7 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-7-oracle-hardening.sh'
-      - 'tests/test-issue-1-guard-contract.sh'
-      - 'tests/manual/issue-7-manual-scenarios.md'
       # #56 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'tests/test-issue-56-carry-evidence-discipline.sh'
@@ -271,6 +264,10 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-52-peer-facilitator-premise.sh'
       - 'tests/manual/issue-52-manual-scenarios.md'
+      # #71 cycle surface. TAIL here (push) as well — mirrors the pull_request
+      # block's own placement immediately above.
+      - 'tests/test-issue-71-digest-removal.sh'
+      - 'tests/manual/issue-71-manual-scenarios.md'
       # #75 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'scripts/test/check-cycle-scope-guard.sh'
@@ -510,27 +507,6 @@ jobs:
       - name: Run composition-oracle guard (#27)
         run: bash tests/test-issue-27-composition-oracle.sh
 
-      # Cycle-digest guard contract (#1): the meta-suite that invokes #953 and
-      # #985 across every digest lifecycle state. #7 hardened its V4 seeding
-      # helper into a scored oracle (emitter exit status, appended-record
-      # count delta, .date round-trip) and put every temp copy under one
-      # trap-cleaned work root. Registered as its own PERMANENT step so the
-      # hardened oracle keeps firing after the cycle-scoped #7 guard below is
-      # retired at merge. CI has no glob discovery; registered by filename per
-      # the sibling suites. See tests/test-issue-1-guard-contract.sh.
-      - name: Run cycle-digest guard contract (#1)
-        run: bash tests/test-issue-1-guard-contract.sh
-
-      # Oracle-hardening guard (#7, cycle-scoped): the assertions the permanent
-      # suites structurally cannot hold — the ≥32 total/description-presence
-      # conjunction, the fail-loud discrimination legs driven by real invalid
-      # emitter input, the executable-`mktemp -d` site fence, and the
-      # abort-cleanup interrupt legs. CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-7-oracle-hardening.sh.
-      - name: Run oracle-hardening guard (#7)
-        run: bash tests/test-issue-7-oracle-hardening.sh
-
       # Carry-channel evidence discipline guard (#56, cycle-scoped): the
       # count/position-shaped assertions the permanent registry structurally
       # cannot hold — the CARRY_NON_EVIDENTIARY / COUNTER_EVIDENCE_RULE
@@ -601,11 +577,13 @@ jobs:
         run: bash tests/test-issue-69-verification-depth.sh
       # #55 gate-score write contract at the producer site. Cycle-scoped: it
       # drives the CLAUDE.md SCORE-SHAPE-EXAMPLE fence through the real hook
-      # and the real digest emitter, and asserts its own CI registration on
-      # this file. Placed at the job TAIL, strictly below the doc-invariant
-      # registry runner step, for the reason the #51 comment above records.
-      # CI has no glob discovery; registered by filename per the sibling
-      # suites. See tests/test-issue-55-score-format-contract.sh.
+      # (the digest-agreement arm that once also drove the real digest
+      # emitter was dropped by #71, which retired the emitter), and asserts
+      # its own CI registration on this file. Placed at the job TAIL,
+      # strictly below the doc-invariant registry runner step, for the
+      # reason the #51 comment above records. CI has no glob discovery;
+      # registered by filename per the sibling suites. See
+      # tests/test-issue-55-score-format-contract.sh.
       - name: Run gate-score write contract (#55)
         run: bash tests/test-issue-55-score-format-contract.sh
 
@@ -620,3 +598,16 @@ jobs:
       # tests/test-issue-52-peer-facilitator-premise.sh.
       - name: Run peer-facilitator premise evidence-anchor guard (#52)
         run: bash tests/test-issue-52-peer-facilitator-premise.sh
+
+      # Cycle-digest emission + cross-issue recurrence scan removal (#71,
+      # cycle-scoped): the removal-state suite for the mechanism deletion
+      # (scripts, data plane, playbook steps, manifest rows, CI steps, the
+      # dedicated digest/scan suites) plus its own real-execution arms
+      # (collateral-suites-green, unconditional-guards-green — several of
+      # them multi-minute, see the suite's own header). Placed at the job
+      # TAIL, strictly below the doc-invariant registry runner step, for the
+      # reason the #51 comment above records. CI has no glob discovery;
+      # registered by filename per the sibling suites. See
+      # tests/test-issue-71-digest-removal.sh.
+      - name: Run removal-state guard (#71)
+        run: bash tests/test-issue-71-digest-removal.sh

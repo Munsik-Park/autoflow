@@ -76,38 +76,10 @@ assert_true() {
 
 echo "=== issue #42 — spawn-mode-by-lifetime contract (cycle-scoped) ==="
 
-# ---------------------------------------------------------------------------
-# AC2-UNTOUCHED — DELTA guard: PREFLIGHT 1.5 / HANDOFF 6.7 descriptions are
-# untouched by this cycle's diff (verification design §2 AC2, fail-loud).
-# ---------------------------------------------------------------------------
-echo ""
-echo "AC2-UNTOUCHED — PREFLIGHT step 1.5 / HANDOFF step 6.7 literals untouched by this cycle's diff"
-
-BASE_REF="$(resolve_base_ref)"
-if [ -z "$BASE_REF" ]; then
-  echo "  FAIL: AC2-UNTOUCHED: resolve_base_ref could not resolve a comparison base (fail-loud, not SKIP)"
-  FAIL=$((FAIL + 1))
-else
-  diff_touches_literal() {   # base file literal -> 0 (touched) / 1 (untouched)
-    git -C "$PROJECT_ROOT" diff "$1" -- "$2" 2>/dev/null \
-      | grep -E '^[+-]' \
-      | grep -qF -- "$3"
-  }
-  if diff_touches_literal "$BASE_REF" "docs/autoflow-guide.md" "Cross-issue recurrence scan (step 1.5)"; then
-    echo "  FAIL: AC2-UNTOUCHED: 'Cross-issue recurrence scan (step 1.5)' touched by this cycle's diff"
-    FAIL=$((FAIL + 1))
-  else
-    echo "  PASS: AC2-UNTOUCHED: 'Cross-issue recurrence scan (step 1.5)' untouched by this cycle's diff"
-    PASS=$((PASS + 1))
-  fi
-  if diff_touches_literal "$BASE_REF" "docs/autoflow-guide.md" "6.7. Cycle digest emission"; then
-    echo "  FAIL: AC2-UNTOUCHED: '6.7. Cycle digest emission' touched by this cycle's diff"
-    FAIL=$((FAIL + 1))
-  else
-    echo "  PASS: AC2-UNTOUCHED: '6.7. Cycle digest emission' untouched by this cycle's diff"
-    PASS=$((PASS + 1))
-  fi
-fi
+# AC2-UNTOUCHED (retired, #71): the two docs/autoflow-guide.md literal fences
+# were a #42 cycle-scope DELTA seal over regions that #71 legitimately deletes;
+# once the guarded region is gone the fence has no surviving subject. Retired
+# on the H-BYTES precedent below.
 
 # H-BYTES (retired, #64): the "hook byte-unchanged vs base" fence was a #42
 # cycle-scope seal; it blocked every legitimate later hook change (change-

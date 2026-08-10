@@ -257,14 +257,14 @@ The following may look like "better approaches" but undermine core principles:
 
 ### Limitations
 
-- **No failure learning loop**: Structured per-cycle evidence is now durably captured at HANDOFF (`docs/cycle-digest.jsonl`, issue #953) and never injected into any gate evaluation; pass/fail pattern analysis over it is still performed by humans externally.
-- **No cross-issue correlation detection (mechanism now shipped; judgment external)**: A bounded, deterministic cross-issue complaint-class recurrence scan is now implemented (issue #954, `scripts/preflight/scan-cross-issue-recurrence.sh`, run at PREFLIGHT step 1.5 over the #953 `docs/cycle-digest.jsonl` corpus): a class recurring across K=3 distinct issues in the last M=20 records emits a **candidate** finding to `docs/improvement-backlog.md`. The mechanism exists; **judgment and promotion of a candidate to an issue stay human-external** and the scan never auto-modifies any rubric/criteria and never feeds a gate/evaluator (Decision 4). Fuzzy/semantic clustering across issues remains out of scope (exact-after-normalization matching only).
+- **No failure learning loop**: No structured per-cycle evidence is captured; pass/fail pattern analysis is performed by humans externally.
+- **No cross-issue correlation detection**: A complaint class recurring across distinct issues is not detected; correlation analysis across issues is human-external. Decision 4 (no auto-modification of rubric/criteria) is unaffected.
 - **No lightweight mode**: Full phase execution even for small changes. Overhead exists.
 
 ### Under Discussion
 
 - Including related issue and commit history lookup at DIAGNOSE entry (factual lookup, not bias injection)
-- Systematizing issue preparation stages through external cross-issue correlation analysis (the #954 recurrence scan supplies factual candidate signals; the systematization judgment on them stays human-external)
+- Systematizing issue preparation stages through external cross-issue correlation analysis
 
 ---
 

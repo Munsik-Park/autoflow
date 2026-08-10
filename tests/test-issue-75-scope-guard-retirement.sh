@@ -474,8 +474,8 @@ if [ -f "$SUITE_55" ]; then
   # both -- the token occurs at exactly these two lines.
   assert_true "55: no longer describes the deleted committed-surface-completeness lane as a live guard (index row + Guard-arms sentence)" \
     '! grep -q "committed-surface-completeness" "$SUITE_55"'
-  assert_true "55: the surviving guard arms (digest-agreement, single-source) stay indexed, so the restatement narrows rather than guts the sentence" \
-    'grep -q "digest-agreement" "$SUITE_55" && grep -q "single-source" "$SUITE_55"'
+  assert_true "55: the surviving guard arm (single-source; digest-agreement retired by #71 with its emitter) stays indexed, so the restatement narrows rather than guts the sentence" \
+    'grep -q "single-source" "$SUITE_55"'
   # Missing implementation-absence assertion (item 4): the lane body /
   # ALLOWLIST_55 itself -- 55's largest removal, and until now the only
   # negative this suite carried for 55 was registry-entries-added. Already

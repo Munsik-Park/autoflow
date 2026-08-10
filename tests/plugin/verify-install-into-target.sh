@@ -720,13 +720,11 @@ else
   failc "AC2e" "setup/manifest.json absent — cannot check sha256 freshness"
 fi
 
-# ── AC-1 (issue #10): exact registration of the 4 methodology-step scripts ────
-echo "== AC-1 (issue #10): 4 methodology-step scripts registered as root-layer/copy =="
+# ── AC-1 (issue #10): exact registration of the methodology-step scripts ─────
+echo "== AC-1 (issue #10): methodology-step scripts registered as root-layer/copy =="
 if [ -f "$MANIFEST" ]; then
   _ac1_bad=""
   for _ac1_src in \
-    "scripts/preflight/scan-cross-issue-recurrence.sh" \
-    "scripts/handoff/emit-cycle-digest.sh" \
     "scripts/handoff/create-host-pr.sh" \
     "scripts/cleanup/cleanup-issue.sh"
   do
