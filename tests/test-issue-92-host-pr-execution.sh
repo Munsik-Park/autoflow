@@ -13,14 +13,21 @@
 # rationale, while deleting them whole would be a bare deletion. Issue #76
 # `bats-split` therefore disposed of them BY ASSERTION SHAPE:
 #
-#   - STATE assertions over document and file content (doc-content,
-#     cross-file-consistency, maintained-docs-registration, PR-template
-#     content) migrated to doc-invariant registry entries under their origin
-#     issue;
-#   - count-shaped and diff-shaped assertions ("a section has at least N
-#     items", "a marker appears exactly once", "new files do not contain X"
-#     against a fixed base) were retired with §5 disposition rows, the
-#     disposition this tree already establishes for that class;
+#   - STATE assertions over document and file content split three ways, each
+#     recorded in docs/doc-invariant-registry.md §6: those with a live carrier
+#     were retired against it (T10-1a/-1b/-1c against the #795 legs; T1-0/T1-3
+#     against this suite); those without one were migrated to doc-invariant
+#     registry entries under `origin_issue: 92` (T12-1a's positive half,
+#     T10-1d, T10-2 — seven entries); and T11-1a-i..iv were DROPPED with the
+#     coverage loss recorded, because an `absent` predicate over an ERE cannot
+#     demonstrate mutation teeth and a fixed-literal rewrite would narrow an
+#     absence guard into one that admits what it forbade;
+#   - count-shaped assertions ("a section has at least N items", "a marker
+#     appears exactly once") were retired with §6 disposition rows, the
+#     disposition this tree already establishes for that class. Note that
+#     T11-1a-i..iv are NOT of this class: they grep current file content, not
+#     a diff against a base, and §6 records them as the STATE assertions they
+#     are;
 #   - the EXECUTION-shaped assertions are ported here. They are the only
 #     content with genuine execution value and no other home: the host-PR
 #     helper's argv and exit-code contract driven through the `mock-gh`

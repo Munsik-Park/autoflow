@@ -4442,6 +4442,83 @@
       "match": "fixed",
       "literal": "/plugin mar",
       "scope": "permanent"
+    },
+    {
+      "id": "92-T12-1a-gate-label-deny",
+      "origin_issue": 92,
+      "intent": "existence",
+      "file": ".claude/hooks/check-autoflow-gate.sh",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "blocked-by-(review|subrepo)",
+      "scope": "permanent"
+    },
+    {
+      "id": "92-T10-1d-helper",
+      "origin_issue": 92,
+      "intent": "coherence",
+      "file": "scripts/handoff/create-host-pr.sh",
+      "section": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "subrepo-merged",
+      "scope": "permanent"
+    },
+    {
+      "id": "92-T10-1d-template",
+      "origin_issue": 92,
+      "intent": "coherence",
+      "file": ".github/pull_request_template.md",
+      "section": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "subrepo-merged",
+      "scope": "permanent"
+    },
+    {
+      "id": "92-T10-1d-maintained-docs",
+      "origin_issue": 92,
+      "intent": "coherence",
+      "file": "docs/maintained-docs.md",
+      "section": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "subrepo-merged",
+      "scope": "permanent"
+    },
+    {
+      "id": "92-T10-2-extrev",
+      "origin_issue": 92,
+      "intent": "existence",
+      "file": "docs/external-review-sequencing.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "blocked-by-subrepo",
+      "scope": "permanent"
+    },
+    {
+      "id": "92-T10-2-helper",
+      "origin_issue": 92,
+      "intent": "existence",
+      "file": "scripts/handoff/create-host-pr.sh",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "blocked-by-subrepo",
+      "scope": "permanent"
+    },
+    {
+      "id": "92-T10-2-template",
+      "origin_issue": 92,
+      "intent": "existence",
+      "file": ".github/pull_request_template.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "blocked-by-subrepo",
+      "scope": "permanent"
     }
   ]
 }
