@@ -505,12 +505,11 @@ if [ -f "$SUITE_67" ]; then
   assert_true "67: AC-59-14b token absent from its 'KNOWN RED mid-cycle' comment (§3.6 removes that lane)" \
     '! grep -q "AC-59-14b" "$SUITE_67"'
 fi
-if [ -f "$SUITE_7" ]; then
-  assert_true "7: DELTA-lane comment no longer claims the six sibling scope-guard suites (798/799/846/848/952/955) already admit docs/cycle-digest.jsonl in their own allow-lists (§3.7 deletes those arrays)" \
-    '! grep -q "admit this path in their own allow-lists" "$SUITE_7"'
-  assert_true "7: DELTA-lane comment still explains the docs/cycle-digest.jsonl / HANDOFF step 6.7 obligation it is restated against, not merely deleted" \
-    'grep -q "docs/cycle-digest.jsonl: HANDOFF step 6.7" "$SUITE_7"'
-fi
+# (7's DELTA-lane restatement pair removed post-merge: #71 retired the whole
+# tests/test-issue-7-oracle-hardening.sh suite together with the digest corpus
+# its comment explained, so both halves lost their subject — and their literal
+# patterns were the only tracked non-historical digest references #71's
+# AC-71-SWEEP still found.)
 
 # =============================================================================
 # Heavy real re-runs are opt-in (AUTOFLOW_ISSUE75_HEAVY=1), run SERIALLY, and
@@ -843,9 +842,9 @@ allow_list=(
   "tests/test-issue-848-doc-assertions.sh"
   "tests/issue-59-full-sweep-driver.sh"
   "tests/manual/issue-973-manual-scenarios.md"
-  # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer
-  # review, so the digest file is a mandated member of every cycle's diff.
-  "docs/cycle-digest.jsonl"
+  # (docs/cycle-digest.jsonl row removed post-merge: #71 retired the digest
+  # corpus and its step-6.7 emission, so the file exists on no branch side
+  # and can never re-enter this cycle's diff.)
   ".autoflow/issue-75-feature-design.md"
   ".autoflow/issue-75-verification-design.md"
   ".autoflow/issue-75-ledger.md"

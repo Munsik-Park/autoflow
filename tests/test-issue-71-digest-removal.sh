@@ -505,12 +505,22 @@ assert_true "AC-71-REGISTRY: 42-AC1-anon-handoff preserves id/file/predicate/sco
 echo ""
 echo "--- pin 2: the #799 off-window chain gains two appended filters; the pre-existing '+'-prefixed old-row filter is untouched ---"
 
-assert_true "AC-71-DUALPIN: the pre-existing '+'-prefixed filter for the OLD (unshortened) row is still present verbatim" \
-  "grep -qF \"grep -vF '+| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5), cycle digest emitter (6.7), PREFLIGHT cross-issue recurrence scan (1.5)'\" '$DUAL_PIN_SUITE'"
-assert_true "AC-71-DUALPIN: a NEW '-'-prefixed filter admits the removed old row" \
-  "grep -qE \"grep -vF -- '-\\\\| HANDOFF review-triage subagent\" '$DUAL_PIN_SUITE'"
-assert_true "AC-71-DUALPIN: a NEW '+'-prefixed filter admits the new shortened row" \
-  "grep -E \"grep -vF '\\\\+\\\\| HANDOFF review-triage subagent \\\\(finding ingestion \\\\+ Low judgment, step 6\\.5\\\\)\" '$DUAL_PIN_SUITE' | grep -vF 'cycle digest'"
+if grep -q "claude_md_offwindow_changes" "$DUAL_PIN_SUITE"; then
+  assert_true "AC-71-DUALPIN: the pre-existing '+'-prefixed filter for the OLD (unshortened) row is still present verbatim" \
+    "grep -qF \"grep -vF '+| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5), cycle digest emitter (6.7), PREFLIGHT cross-issue recurrence scan (1.5)'\" '$DUAL_PIN_SUITE'"
+  assert_true "AC-71-DUALPIN: a NEW '-'-prefixed filter admits the removed old row" \
+    "grep -qE \"grep -vF -- '-\\\\| HANDOFF review-triage subagent\" '$DUAL_PIN_SUITE'"
+  assert_true "AC-71-DUALPIN: a NEW '+'-prefixed filter admits the new shortened row" \
+    "grep -E \"grep -vF '\\\\+\\\\| HANDOFF review-triage subagent \\\\(finding ingestion \\\\+ Low judgment, step 6\\.5\\\\)\" '$DUAL_PIN_SUITE' | grep -vF 'cycle digest'"
+else
+  # #75 retired 799's whole off-window filter chain (claude_md_offwindow_changes
+  # and every CLAUDE.md line filter with it — docs/doc-invariant-registry.md §5,
+  # dropped — cycle-local), so the three filter-line pins above have no subject.
+  # Retired-subject vacuous-pass convention (DC-4 precedent); the real oracle
+  # AC-71-DUALPIN-oracle below still executes 799 against the live diff.
+  echo "  PASS (vacuous): AC-71-DUALPIN — 799's off-window filter chain retired by #75 (§5 dropped — cycle-local); no filter subject remains"
+  TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
+fi
 
 echo ""
 echo "--- both pins driven through the real oracles ---"
