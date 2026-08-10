@@ -155,8 +155,9 @@ echo "=== AC19 (carry-anchor-guards-re-anchored) — no live shell assertion sti
 OUT_56="$(cd "$PROJECT_ROOT" && bash "$SUITE_56" 2>&1)"; EXIT_56=$?
 OUT_59="$(cd "$PROJECT_ROOT" && bash "$SUITE_59" 2>&1)"; EXIT_59=$?
 assert_true "AC-67-ANCHOR-a1: bash tests/test-issue-56-carry-evidence-discipline.sh exits 0" "[ $EXIT_56 -eq 0 ]"
-# KNOWN RED mid-cycle (mirrors the #62 AC-62-24 idiom): #59's own EXPECTED_OK/AC-59-14b
-# checks are UNCONDITIONAL (not branch-scoped) and re-run the real test-issue-27 suite,
+# KNOWN RED mid-cycle (mirrors the #62 AC-62-24 idiom): #59's own self-scoped
+# EXPECTED_OK / AC-59-14a cross-pin checks are UNCONDITIONAL (not branch-scoped)
+# and read the shared harness ok-count out of the real test-issue-27 suite,
 # which in turn re-runs node test/workflows/run.mjs — so this exits non-zero for the
 # whole RED/GREEN window, until GREEN lands the register redesign and the ok-count pin
 # bump (verification design §6 step 3). Not a defect in this suite.

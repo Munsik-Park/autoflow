@@ -330,9 +330,12 @@ source "$BASE_REF_LIB"
 if BASE_REF="$(resolve_base_ref 2>/dev/null)" && [ -n "$BASE_REF" ]; then
   CHANGED="$(git -C "$PROJECT_ROOT" diff --name-only "$BASE_REF"...HEAD 2>/dev/null)"
   # docs/cycle-digest.jsonl: HANDOFF step 6.7 mandates a digest co-ride commit
-  # in the same PR (CLAUDE.md > AutoFlow State Tracking > Companion artifact);
-  # the six sibling scope-guard suites (798, 799, 846, 848, 952, 955) already
-  # admit this path in their own allow-lists.
+  # in the same PR (CLAUDE.md > AutoFlow State Tracking > Companion artifact),
+  # so every cycle's diff carries it. Issue #75 deleted the sibling suites'
+  # own path allow-lists, so the admission is no longer mirrored per suite:
+  # a cycle-scoped lane is now branch-scoped by construction, enforced by
+  # scripts/test/check-cycle-scope-guard.sh, and this fence declares the
+  # surface for itself.
   ALLOW_SURFACE="tests/test-issue-1-guard-contract.sh
 tests/test-issue-798-topology-flip.sh
 tests/test-issue-799-inert-cleanup.sh
