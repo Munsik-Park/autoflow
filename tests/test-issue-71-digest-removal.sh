@@ -262,6 +262,11 @@ EXEMPT_WHOLE_FILES=(
   "tests/test-issue-848-doc-assertions.sh"
   "tests/test-issue-952-wizard-removal.sh"
   "tests/test-issue-955-subagent-background-ban.sh"
+  # feature design §8: #55's committed-surface-completeness is itself a
+  # branch-unconditional guard whose allow_list members are executable-
+  # statement literals — same inert-allow-list-membership exemption ground
+  # as the six suites above, not a comment-shaped hit.
+  "tests/test-issue-55-score-format-contract.sh"
   "tests/test-issue-71-digest-removal.sh"
   "tests/manual/issue-71-manual-scenarios.md"
 )
@@ -299,8 +304,12 @@ while IFS= read -r hit; do
   # the rule is per-hit and file-type-general for .sh/.yml sources).
   case "$hfile" in
     *.sh|*.yml|*.yaml)
-      case "$hline" in
-        [[:space:]]'#'*|'#'*) continue ;;
+      # Strip ALL leading whitespace (not just one char) before testing for
+      # a comment marker — an indented `#` (the common case inside a `for`/
+      # `if` block) must be recognised, not just a column-0 `#`.
+      hline_trimmed="${hline#"${hline%%[![:space:]]*}"}"
+      case "$hline_trimmed" in
+        '#'*) continue ;;
       esac
       ;;
   esac
@@ -453,7 +462,7 @@ assert_true "AC-71-DUALPIN: the pre-existing '+'-prefixed filter for the OLD (un
 assert_true "AC-71-DUALPIN: a NEW '-'-prefixed filter admits the removed old row" \
   "grep -qE \"grep -vF -- '-\\\\| HANDOFF review-triage subagent\" '$DUAL_PIN_SUITE'"
 assert_true "AC-71-DUALPIN: a NEW '+'-prefixed filter admits the new shortened row" \
-  "grep -qE \"grep -vF '\\\\+\\\\| HANDOFF review-triage subagent \\\\(finding ingestion \\\\+ Low judgment, step 6\\.5\\\\)\" '$DUAL_PIN_SUITE' | grep -vF 'cycle digest'"
+  "grep -E \"grep -vF '\\\\+\\\\| HANDOFF review-triage subagent \\\\(finding ingestion \\\\+ Low judgment, step 6\\.5\\\\)\" '$DUAL_PIN_SUITE' | grep -vF 'cycle digest'"
 
 echo ""
 echo "--- both pins driven through the real oracles ---"
