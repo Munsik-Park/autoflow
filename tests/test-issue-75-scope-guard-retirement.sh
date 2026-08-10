@@ -842,6 +842,10 @@ allow_list=(
   "tests/test-issue-848-doc-assertions.sh"
   "tests/issue-59-full-sweep-driver.sh"
   "tests/manual/issue-973-manual-scenarios.md"
+  # Post-merge collateral (de7685a): #71's own suite gained a retired-subject
+  # guard for the DUALPIN pins whose subject (#799's off-window chain) this
+  # cycle deleted — that edit is part of this cycle's diff.
+  "tests/test-issue-71-digest-removal.sh"
   # (docs/cycle-digest.jsonl row removed post-merge: #71 retired the digest
   # corpus and its step-6.7 emission, so the file exists on no branch side
   # and can never re-enter this cycle's diff.)
