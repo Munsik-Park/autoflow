@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/test/check-suite-ci-coverage.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml
+# ci-subject: scripts/test/check-suite-ci-coverage.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml .github/workflows/
 # =============================================================================
 # Test: orphan-suite registration effectiveness — Issue #76 AC-b-2/AC-b-3,
 #       trigger-window preservation (AC-c-2), dangling-reference sweep,
