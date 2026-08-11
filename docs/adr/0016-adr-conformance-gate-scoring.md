@@ -278,3 +278,5 @@ The rubric-prose wiring is deferred to a follow-up implementation issue and is
   gap alone (case collection = 0 incidents); it was promoted to `Accepted` on
   the owner's confirmation (see `## Status` for the approval record), gating
   the follow-up rubric-prose wiring.
+
+<!-- issue-76 M5 runtime-witness probe: temporary line, PR closed without merge after observation -->
