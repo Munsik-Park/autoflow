@@ -118,6 +118,50 @@ issue76_dumb_count_lines() {
   ' "$file"
 }
 
+# excluded_lines <file>
+# Prints "<line_no>\t<reason>" for every dumb_count_lines member that
+# issue76_rule_extract does NOT credit as an occurrence — the individually
+# NAMED reconciliation the verification design's AC-a-1 "Totality
+# quantities" passage requires, in place of a derived arithmetic difference
+# (GATE:QUALITY FAIL #1, ledger E14: `excluded=$((dumb-rule))` then
+# asserting `dumb-excluded==rule` is a tautology true for any integers —
+# it never re-derives WHY a line was excluded from its own content).
+# Reclassifies each candidate line against the two exclusion classes the
+# design names: a definition line (`assert_true() {` — the command word is
+# followed by "(", neither whitespace nor a backslash), or a line the
+# whitespace/backslash test admits but that carries no quoted first
+# argument anywhere the rule looks (same line or the immediate
+# continuation) — "unclassified" for anything else, so a rule change this
+# function's classifier does not track surfaces as a loud reconciliation
+# failure rather than a silent pass.
+issue76_excluded_lines() {
+  local file="$1"
+  awk "$_ISSUE76_AWK_QUOTE_HELPERS"'
+    { lines[NR] = $0 }
+    END {
+      for (ln = 1; ln <= NR; ln++) {
+        line = lines[ln]
+        stripped = line
+        sub(/^[ \t]+/, "", stripped)
+        if (stripped !~ /^assert_(true|false)/) continue
+        kwlen = (stripped ~ /^assert_true/) ? 11 : 12
+        rest = substr(stripped, kwlen + 1)
+        nextc = substr(rest, 1, 1)
+        if (!(is_ws(nextc) || nextc == "\\")) {
+          printf "%d\tdefinition-form (command word followed by \x27(\x27, not whitespace/backslash)\n", ln
+          continue
+        }
+        qpos = index(rest, "\"")
+        if (qpos > 0) continue   # rule credits this line — not excluded
+        nxt = lines[ln + 1]
+        qpos2 = (nxt == "") ? 0 : index(nxt, "\"")
+        if (qpos2 > 0) continue  # rule credits via the continuation line
+        printf "%d\tno quoted first argument found on this line or its continuation\n", ln
+      }
+    }
+  ' "$file"
+}
+
 # conjunct_count <file>
 # Prints the total number of conjuncts (&&/||-separated predicate clauses)
 # across every rule-extracted invocation in <file>. The predicate is the

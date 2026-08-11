@@ -45,6 +45,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 FIXDIR="$PROJECT_ROOT/tests/fixtures"
+REGISTRY="$FIXDIR/doc-invariants.json"
+# shellcheck source=tests/lib/base-ref.sh
+source "$SCRIPT_DIR/lib/base-ref.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -87,7 +90,7 @@ assert_true "AC-f: a multi-match 'line' anchor is REJECTED at load time (ambiguo
   "out=\$(bash '$RUNNER' '$FIXDIR/issue-76-anchor-multi-match-registry.json' 2>&1); ec=\$?; [ \$ec -ne 0 ] && printf '%s' \"\$out\" | grep -qi 'ambiguous'"
 
 assert_true "AC-f: a unique 'line' anchor resolves and its predicate evaluates against exactly that one line" \
-  "bash '$RUNNER' '$FIXDIR/issue-76-anchor-valid-line-registry.json' >/tmp/issue76-valid-line.out 2>&1; grep -qF 'Results: 1/1 passed' /tmp/issue76-valid-line.out"
+  "bash '$RUNNER' '$FIXDIR/issue-76-anchor-valid-line-registry.json' >/tmp/issue76-valid-line.out 2>&1; grep -qF 'Results: 2/2 passed' /tmp/issue76-valid-line.out"
 
 assert_true "AC-f: a 'block' anchor with no section_end terminates at the thematic break, excluding the '---' line, and the body does not leak into the next block" \
   "bash '$RUNNER' '$FIXDIR/issue-76-anchor-block-thematic-break-registry.json' >/tmp/issue76-block-thematic.out 2>&1; grep -qF 'Results: 2/2 passed' /tmp/issue76-block-thematic.out"
@@ -99,9 +102,136 @@ assert_true "AC-f: a 'block' anchor with an explicit section_end terminates ther
 # teeth-mode-anchor-destruction — a mutation that destroys a "line"/"block"
 # entry's own anchor is a non-credit with a diagnostic, never an abort of
 # the whole --self-test run and never a credited FAIL.
+#
+# GATE:QUALITY FAIL #3 (ledger E14): the prior assertion only grepped for
+# the entry id anywhere in the --self-test output, so it passed whether the
+# runner printed `TEETH: <id> …` (credited) or `NO-TEETH: <id> …`
+# (non-credit) — it could never distinguish the two, which is the entire
+# point of this leg. The runner emits the two labels at
+# tests/run-doc-invariants.sh:490 (`NO-TEETH: … unmigratable shape …`, the
+# literal-overlaps-anchor pre-check) and :543/:546 (`TEETH: …` on a FAIL
+# verdict, `NO-TEETH: … has no teeth` otherwise) — ledger E5.1/E5.2.
+# `bash '$RUNNER' --self-test` runs once, over the real registry, in the
+# runner-self-test-contract.sh suite above; --self-test over a small
+# fixture registry additionally exercises each named path hermetically.
 # ---------------------------------------------------------------------------
-assert_true "teeth-mode-anchor-destruction: --self-test over the valid-line fixture does not abort and reports the entry's status explicitly (credited teeth or a named non-credit, never silence)" \
-  "bash '$RUNNER' --self-test '$FIXDIR/issue-76-anchor-valid-line-registry.json' >/tmp/issue76-teeth-line.out 2>&1; grep -qF 'issue-76-fixture-valid-line' /tmp/issue76-teeth-line.out"
+bash "$RUNNER" --self-test "$FIXDIR/issue-76-anchor-valid-line-registry.json" >/tmp/issue76-teeth-line.out 2>&1
+
+assert_true "teeth-mode-anchor-destruction: an ordinary present-literal entry (no anchor overlap) is CREDITED — its mutated copy demonstrates teeth" \
+  "grep -qE '^  TEETH: issue-76-fixture-valid-line ' /tmp/issue76-teeth-line.out"
+
+assert_true "teeth-mode-anchor-destruction: an entry whose literal OVERLAPS its own column-1 anchor prefix is a NAMED non-credit, not silently skipped and not falsely credited" \
+  "grep -qE '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable ' /tmp/issue76-teeth-line.out"
+
+assert_true "teeth-mode-anchor-destruction: the unmigratable-overlap non-credit names its own reason (literal overlaps its own anchor prefix), distinct from an ineffective-mutation or mutator-error non-credit" \
+  "grep -A0 '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable ' /tmp/issue76-teeth-line.out | grep -qi 'overlaps its own column-1 anchor prefix'"
+
+assert_true "teeth-mode-anchor-destruction: the run does not abort on the non-credit entry — the credited entry's own result line is still present in the same run" \
+  "grep -qE '^  TEETH: issue-76-fixture-valid-line ' /tmp/issue76-teeth-line.out && grep -qE '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable ' /tmp/issue76-teeth-line.out"
+
+# ---------------------------------------------------------------------------
+# AC-f body-equality — the migrated 844 "**Resume procedure**" block
+# (GATE:QUALITY FAIL #7, ledger E14: this leg was unimplemented). Compares
+# the resolved registry body against the body the DELETED base-ref suite's
+# own extractor would have produced, byte-equal MODULO a single trailing
+# terminator line (the source `awk` prints the closing `---` before
+# exiting; the migrated "block" extractor excludes it — feature design
+# `anchor-kinds` > "block" terminator precedence).
+#
+# Base-ref materialisation follows the precedent in
+# tests/test-issue-76-migration-map-total.sh: the OLD extractor's own awk
+# (`git show <base>:tests/test-issue-844-doc-assertions.sh` lines ~90-91,
+# reproduced verbatim below) is run over the CURRENT
+# docs/autoflow-guide.md, since the region's doc CONTENT is not itself
+# edited by this migration — only where its test code lives moves. The NEW
+# extractor is the runner's own `extract_block` (tests/run-doc-
+# invariants.sh:158-170), reproduced verbatim here rather than re-invoked
+# (there is no CLI mode that prints one entry's resolved body standalone).
+# ---------------------------------------------------------------------------
+BASE_REF_AC_F="$(resolve_base_ref)" || BASE_REF_AC_F=""
+if [ -n "$BASE_REF_AC_F" ]; then
+  OLD_SUITE_SNAPSHOT="$(git -C "$PROJECT_ROOT" show "${BASE_REF_AC_F}:tests/test-issue-844-doc-assertions.sh" 2>/dev/null || true)"
+  assert_true "AC-f body-equality pre: base-ref snapshot of the deleted 844 suite resolves" \
+    "[ -n '$(printf %s "$OLD_SUITE_SNAPSHOT" | head -c1)' ]"
+
+  GUIDE_MD="$PROJECT_ROOT/docs/autoflow-guide.md"
+  OLD_BODY="$(awk '/\*\*Resume procedure\*\*/{flag=1} flag{print} flag && /^---$/{exit}' "$GUIDE_MD")"
+  NEW_BODY="$(ANCHOR='**Resume procedure**' ENDPAT='' awk '
+    BEGIN { a=ENVIRON["ANCHOR"]; e=ENVIRON["ENDPAT"] }
+    !seen && index($0, a) == 1 { seen=1; print; next }
+    seen && !stop {
+      if (e != "" && index($0, e) == 1) { stop=1; next }
+      if ($0 ~ /^#{1,6} +/)            { stop=1; next }
+      if ($0 ~ /^---[ \t]*$/)          { stop=1; next }
+      print
+    }
+  ' "$GUIDE_MD")"
+  # Modulo a single trailing terminator line: drop OLD_BODY's last line if
+  # (and only if) it is the thematic break the migrated extractor excludes.
+  # (awk, not `sed '$ {...}'` — the GNU block-address form is not portable
+  # to the BSD sed on this platform.)
+  OLD_BODY_MODULO="$(printf '%s\n' "$OLD_BODY" | awk '
+    NR > 1 { print prev }
+    { prev = $0 }
+    END { if (prev !~ /^---[ \t]*$/) print prev }
+  ')"
+
+  assert_true "AC-f body-equality: the migrated 'block' body for 844's Resume-procedure region is byte-equal to the deleted suite's own extractor, modulo the trailing terminator line" \
+    "[ \"\$OLD_BODY_MODULO\" = \"\$NEW_BODY\" ]"
+
+  # Safety companion (feature design `anchor-kinds`): no migrated predicate
+  # for this block may depend on the terminator line's own content — the
+  # modulo comparison above is only safe if nothing asserts on it.
+  assert_true "AC-f body-equality safety: no 844 Resume-procedure registry entry's literal references the terminator line's content ('---')" \
+    "! jq -e '.invariants[] | select(.section == \"**Resume procedure**\") | select((.literal // \"\") | test(\"^---\"))' '$REGISTRY' >/dev/null 2>&1"
+else
+  assert_true "AC-f body-equality: base ref resolvable (skipped leg — no base ref)" "false"
+fi
+
+# ---------------------------------------------------------------------------
+# AC-c-3 clause 2 — every RETAINED scenario document satisfies at least one
+# of the five `manual-doc-closure` dependent kinds (GATE:QUALITY FAIL #7,
+# ledger E14: unimplemented). The five kinds, per the feature design:
+#   1. a registry entry targets it (id path match on the document file);
+#   2. a surviving suite asserts on it (content grep for the basename);
+#   3. a docs/maintained-docs.md row registers it;
+#   4. a prose document (CLAUDE.md, docs/**) cites it as evidence;
+#   5. a RETAINED scenario document cites it.
+# A workflow `paths:` entry is explicitly NOT a dependent (manual-doc-
+# closure), so it is deliberately not checked here.
+# ---------------------------------------------------------------------------
+RETAINED_DOCS=(
+  issue-27 issue-42 issue-51 issue-52 issue-55 issue-56 issue-59 issue-62
+  issue-67 issue-71 issue-795 issue-798 issue-799 issue-800 issue-846
+  issue-847 issue-848 issue-985
+)
+for name in "${RETAINED_DOCS[@]}"; do
+  docfile="tests/manual/${name}-manual-scenarios.md"
+  [ -f "$PROJECT_ROOT/$docfile" ] || continue
+  has_dependent=false
+  # Kind 1: registry entry names the document as its file.
+  if jq -e --arg f "$docfile" '.invariants[] | select(.file == $f)' "$REGISTRY" >/dev/null 2>&1; then
+    has_dependent=true
+  fi
+  # Kind 2: a surviving suite content-references the document's basename.
+  base="${name}-manual-scenarios"
+  if grep -rl -- "$base" "$PROJECT_ROOT/tests" 2>/dev/null | grep -vF "/$docfile" | grep -q .; then
+    has_dependent=true
+  fi
+  # Kind 3: a docs/maintained-docs.md row registers it.
+  if grep -qF "$base" "$PROJECT_ROOT/docs/maintained-docs.md" 2>/dev/null; then
+    has_dependent=true
+  fi
+  # Kind 4: a prose document cites it as evidence.
+  if grep -rlF -- "$base" "$PROJECT_ROOT/CLAUDE.md" "$PROJECT_ROOT/docs" 2>/dev/null | grep -q .; then
+    has_dependent=true
+  fi
+  # Kind 5: a retained sibling scenario document cites it.
+  if grep -rlF -- "$base" "$PROJECT_ROOT/tests/manual" 2>/dev/null | grep -vF "/$docfile" | grep -q .; then
+    has_dependent=true
+  fi
+  assert_true "AC-c-3 clause 2: retained scenario document satisfies >=1 of the five dependent kinds — $name" "$has_dependent"
+done
 
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"

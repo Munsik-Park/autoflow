@@ -53,8 +53,17 @@ for name in "${RETIRED[@]}"; do
     "[ -z '$match' ]"
   assert_true "AC-c-1: retired scenario document has no dangling paths: entry in any workflow — $name" \
     "! grep -rlq \"${name}-manual-scenarios\" '$PROJECT_ROOT/.github/workflows' 2>/dev/null"
-  assert_true "AC-c-1: retired scenario document has a §5 disposition row — $name" \
-    "[ -f '$DISPOSITION_DOC' ] && grep -qi \"$name\" '$DISPOSITION_DOC' 2>/dev/null"
+  # GATE:QUALITY FAIL #5 (ledger E14): a bare `grep -qi "$name"` matches any
+  # incidental mention of the issue number anywhere in the document (a
+  # design-rationale sentence, a cross-reference in an unrelated row) — not
+  # that a §6 disposition ROW actually retires this document. Anchored to
+  # the row's own shape: a `|`-led table row that names both
+  # `tests/manual/` and the backtick-quoted issue token, and carries a bold
+  # disposition label (`**dropped …**` / `**retired …**` / etc.) in the
+  # same row.
+  row_pattern="^\|.*tests/manual/.*\`${name}\`.*\*\*[A-Za-z].*\*\*"
+  assert_true "AC-c-1: retired scenario document has a §6 disposition ROW naming it (not an incidental mention) — $name" \
+    "[ -f '$DISPOSITION_DOC' ] && grep -qE \"$row_pattern\" '$DISPOSITION_DOC' 2>/dev/null"
 done
 
 for name in "${RETAINED[@]}"; do

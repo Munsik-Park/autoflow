@@ -288,7 +288,6 @@ TOKEN_RE='cycle-digest|scan-cross-issue-recurrence|xissue-scan|cross-issue recur
 EXEMPT_WHOLE_FILES=(
   "docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
   "docs/adr/0017-teammate-removal-feasibility.md"
-  "tests/fixtures/doc-invariants-baseline.txt"
   "tests/test-issue-64-collection-scope.sh"
   "tests/test-issue-52-peer-facilitator-premise.sh"
   "tests/test-issue-67-deliberation-record.sh"

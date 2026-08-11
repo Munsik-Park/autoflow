@@ -131,7 +131,16 @@ assert_true "AC-c-2 pre: e2e-dummy-target.yml has a paths: block to window again
 if [ -n "$FIRST_PATHS_LINE" ]; then
   WINDOW="$(sed -n "${FIRST_PATHS_LINE},$((FIRST_PATHS_LINE + 40))p" "$CI_WORKFLOW")"
   # Literals named by the three window-dependent live suites at HEAD.
+  # GATE:QUALITY FAIL #6 (ledger E14): checked only 1 of the 6 literals
+  # test-issue-799-inert-cleanup.sh:336-339 actually requires inside the
+  # window — the other 5 could be silently evicted without this leg ever
+  # noticing. All six now asserted.
   WINDOW_LITERALS=(
+    "README.md"
+    "docs/submodule-common-rules.md"
+    "docs/external-review-sequencing.md"
+    "docs/INDEX.md"
+    "docs/maintained-docs.md"
     "docs/git-workflow.md"
   )
   for lit in "${WINDOW_LITERALS[@]}"; do
@@ -142,28 +151,86 @@ fi
 
 # ---------------------------------------------------------------------------
 # deleted-suite-still-read — dangling-reference sweep over the retirement
-# set. For each suite the feature design deletes outright, no RETAINED
-# suite/script/doc/workflow may content-grep its file text (a comment
-# mention is harmless and excluded from this sweep by construction — grep
-# for the bare filename as a *path token*, which a `bash tests/<name>` or
-# `grep ... tests/<name>` invocation always contains).
-# ---------------------------------------------------------------------------
-DELETED_SUITES=(
+# set (GATE:QUALITY FAIL #2, ledger E14). Now that migration has landed,
+# 843/844/the pre-split 951 suite, and the doc-invariants-baseline.txt
+# fixture, are genuinely gone at HEAD; the sweep is a real assertion, not
+# the `"true"` stub the prior round shipped (whose own justifying comment
+# was already false at HEAD — the suites ARE deleted).
+#
+# Classification rule, stated because "comment-only mentions are harmless"
+# (verification design, deleted-suite-still-read) needs a mechanical
+# separation, not an eyeball one:
+#   1. A hit on a line whose trimmed content starts with '#' is a
+#      COMMENT — exempt. This is where a historical/provenance citation
+#      lives (e.g. tests/test-issue-69-verification-depth.sh's "Moved here
+#      from the permanent registry (GATE:QUALITY attempt-2 finding):
+#      ... tests/test-issue-951-registry.sh, FINDING 3-E" — citing WHERE a
+#      finding originated, not depending on that file existing).
+#   2. A hit inside a file whose OWN declared purpose is a durable record
+#      of what this cycle deleted and why — tests/fixtures/issue-76-
+#      migration-map.md and docs/doc-invariant-registry.md — is exempt at
+#      the FILE level: a "dangling reference" concern does not apply to a
+#      document whose entire job is to name deleted things.
+#   3. Everything else is a LIVE reference and fails the assertion — this
+#      is what would previously have caught a suite's own SUITES[]/
+#      DELETED_SUITES[] data array (a non-comment, non-provenance-file
+#      line) content-referencing a target that no longer resolves.
+DELETED_TARGETS=(
   "test-issue-843-doc-assertions.sh"
   "test-issue-844-doc-assertions.sh"
   "test-issue-951-registry.sh"
+  "doc-invariants-baseline.txt"
 )
-for name in "${DELETED_SUITES[@]}"; do
-  hits="$(grep -rl -- "$name" "$PROJECT_ROOT/tests" "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/.github/workflows" 2>/dev/null | grep -v "/$name\$" | grep -v "test-issue-76-orphan-registration.sh" || true)"
-  # This test currently PASSES trivially (the suite is not deleted yet, so
-  # any hit found now is a PRE-EXISTING reference this migration must
-  # still resolve, e.g. e2e-dummy-target.yml's own run:/paths: entries for
-  # the file, which are expected and are removed in the same commit as the
-  # deletion). Recorded here as INFO rather than asserted, since a
-  # meaningful pass/fail for this leg only exists POST-deletion.
-  echo "  INFO: dangling-reference sweep candidate referrers of $name (pre-deletion, informational): $(printf '%s' "$hits" | tr '\n' ' ')"
+EXEMPT_PROVENANCE_FILES=(
+  "tests/fixtures/issue-76-migration-map.md"
+  "docs/doc-invariant-registry.md"
+  # tests/test-issue-76-migration-map-total.sh's SUITES[] array names
+  # 843/844 as base-ref subjects it materialises via `git show
+  # <base>:<path>` (see its own RED2 header note) — it never reads the
+  # working-tree path, so a deletion cannot turn it red the way the
+  # design's failure mode describes. Same exemption class as the map
+  # document itself.
+  "tests/test-issue-76-migration-map-total.sh"
+  # tests/test-issue-76-runner-self-test-contract.sh's AC-f body-equality
+  # leg materialises tests/test-issue-844-doc-assertions.sh via the same
+  # `git show <base>:<path>` pattern (never the working-tree path) to
+  # re-derive the deleted suite's own Resume-procedure extractor.
+  "tests/test-issue-76-runner-self-test-contract.sh"
+)
+is_exempt_provenance_file() {
+  local rel="$1" f
+  for f in "${EXEMPT_PROVENANCE_FILES[@]}"; do
+    [ "$rel" = "$f" ] && return 0
+  done
+  return 1
+}
+for name in "${DELETED_TARGETS[@]}"; do
+  live_hits=()
+  while IFS= read -r hit; do
+    [ -n "$hit" ] || continue
+    hfile="${hit%%:*}"
+    hrel="${hfile#"$PROJECT_ROOT"/}"
+    [ "$hrel" = "tests/test-issue-76-orphan-registration.sh" ] && continue
+    [ "$hrel" = "$name" ] && continue
+    if is_exempt_provenance_file "$hrel"; then
+      echo "  INFO: $name — exempt (provenance record): $hrel"
+      continue
+    fi
+    hcontent="${hit#*:*:}"
+    trimmed="$(printf '%s' "$hcontent" | sed -e 's/^[[:space:]]*//')"
+    case "$trimmed" in
+      \#*)
+        echo "  INFO: $name — exempt (comment-only): $hit"
+        ;;
+      *)
+        echo "  INFO: $name — LIVE reference: $hit"
+        live_hits+=("$hit")
+        ;;
+    esac
+  done < <(grep -rn -- "$name" "$PROJECT_ROOT/tests" "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/docs" "$PROJECT_ROOT/.github" 2>/dev/null || true)
+  assert_true "deleted-suite-still-read: no live (non-comment, non-provenance-file) reference to deleted target '$name' survives" \
+    "[ ${#live_hits[@]} -eq 0 ]"
 done
-assert_true "deleted-suite-still-read: sweep executes without error over the current tree" "true"
 
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"

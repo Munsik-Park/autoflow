@@ -314,15 +314,6 @@ ALLOW_SUBREPO_MERGED=(
   "docs/adr/README.md"
   "docs/git-workflow.md"
   "docs/improvement-backlog.md"
-  # #951 capture-before-delete baseline (tests/fixtures/doc-invariants-
-  # baseline.txt, ledger E5): a captured VERBATIM stdout snapshot of the
-  # retired tests/test-issue-794-doc-assertions.sh's own assertion
-  # descriptions (e.g. "AC5d-invert: 'subrepo-merged' status-check machine
-  # removed..."), taken before that suite's deletion. Same class as the
-  # already-excluded absence-test suites and issue-795-manual-scenarios.md
-  # above: a describe-absence/historical-record occurrence of the retired
-  # machine's name, not a live reference to a live machine.
-  "tests/fixtures/doc-invariants-baseline.txt"
   # #951 GREEN commit (5fa1c9e): the shipped permanent registry
   # (tests/fixtures/doc-invariants.json) migrates 794's own preservation/
   # coherence entries verbatim, including three literal `"literal":

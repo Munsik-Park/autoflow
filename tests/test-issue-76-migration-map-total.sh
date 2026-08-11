@@ -132,7 +132,6 @@ for rel in "${SUITES[@]}"; do
   # Leg 1a — every extracted occurrence has a map row naming it.
   while IFS=$'\t' read -r ln key; do
     [ -n "$key" ] || continue
-    esc_key="$(printf '%s' "$key" | sed 's/[.[\*^$/]/\\&/g')"
     if [ -f "$MAP" ] && grep -qF "| $rel | $key |" "$MAP" 2>/dev/null; then
       found=true
     else
@@ -144,18 +143,53 @@ for rel in "${SUITES[@]}"; do
   # Leg 1b — totality quantities: invocation count and conjunct count are
   # recomputed here (never hardcoded, per verification-design record
   # discipline) and reported for the reconciliation the design requires.
+  #
+  # GATE:QUALITY FAIL #1 (ledger E14): the prior form defined
+  # `excluded=$((dumb_count - rule_count))` and then asserted
+  # `dumb_count - excluded == rule_count` — an identity true for ANY three
+  # integers satisfying that definition, so it could never fail. The real
+  # reconciliation the design asks for is INDEPENDENT of that arithmetic:
+  # every dumb-count line not credited by the rule extractor is
+  # individually reclassified by its own content (issue76_excluded_lines),
+  # named by line number and reason, and the two totals are cross-checked
+  # against that named set rather than against each other.
   rule_count="$(issue76_rule_extract "$suite" | wc -l | tr -d ' ')"
   dumb_count="$(issue76_dumb_count_lines "$suite" | wc -l | tr -d ' ')"
-  excluded="$((dumb_count - rule_count))"
-  echo "  INFO: $rel — rule invocation count=$rule_count, dumb line count=$dumb_count, excluded=$excluded"
-  assert_true "AC-a-1 Leg1 reconciliation: $rel dumb-count minus rule-excluded lines equals rule count" \
-    "[ $((dumb_count - excluded)) -eq $rule_count ]"
+  mapfile -t excl_pairs < <(issue76_excluded_lines "$suite")
+  excluded_named="${#excl_pairs[@]}"
+  unclassified=0
+  for pair in "${excl_pairs[@]}"; do
+    ln="${pair%%$'\t'*}"; reason="${pair#*$'\t'}"
+    echo "  INFO: $rel:$ln excluded — $reason"
+    case "$reason" in
+      definition-form*|"no quoted first argument"*) ;;
+      *) unclassified=$((unclassified + 1)) ;;
+    esac
+  done
+  echo "  INFO: $rel — rule invocation count=$rule_count, dumb line count=$dumb_count, named exclusions=$excluded_named"
+  assert_true "AC-a-1 Leg1 reconciliation: $rel dumb-count equals rule count PLUS the individually-named exclusions (not a derived difference)" \
+    "[ '$dumb_count' -eq $((rule_count + excluded_named)) ]"
+  assert_true "AC-a-1 Leg1 reconciliation: $rel — every named exclusion falls in an admissible class (definition-form / no-quoted-argument), none unclassified" \
+    "[ '$unclassified' -eq 0 ]"
 
   if [ -f "$MAP" ]; then
     map_rows_for_suite="$(grep -cF "| $rel |" "$MAP" 2>/dev/null || true)"
     assert_true "AC-a-1 Leg1: $rel — map carries no phantom row (row count <= distinct key count)" \
       "[ '$map_rows_for_suite' -le '$rule_count' ]"
   fi
+
+  # Per-key occurrence counts from the extractor, for the Leg 2 multiplicity
+  # assertion below (GATE:QUALITY FAIL #4, ledger E14 / E5.8-E5.9): `mcount`
+  # was parsed out of each row but never compared against anything — a row
+  # claiming the wrong occurrence count (e.g. discharging only the `if` arm
+  # of a two-occurrence key while the count field still reads 1) passed
+  # silently. Declared here as a plain associative array (bash 4+; every
+  # invocation of this suite already runs under bash per its shebang).
+  declare -A key_occurrences=()
+  while IFS=$'\t' read -r _ key; do
+    [ -n "$key" ] || continue
+    key_occurrences["$key"]=$(( ${key_occurrences["$key"]:-0} + 1 ))
+  done < <(issue76_rule_extract "$suite")
 
   # Leg 2 — every map row for this suite resolves to an admissible carrier.
   #
@@ -198,6 +232,10 @@ for rel in "${SUITES[@]}"; do
         done
       done
       assert_true "AC-a-1 Leg2: $rel — row \"$mkey\" carriers all resolve" "$resolved"
+
+      expected_occurrences="${key_occurrences["$mkey"]:-0}"
+      assert_true "AC-a-1 Leg2 multiplicity: $rel — row \"$mkey\" occurrence count ($mcount) equals the extractor's occurrence count for that key ($expected_occurrences)" \
+        "[ '$mcount' -eq '$expected_occurrences' ]"
     done < <(awk -F'|' '
       NF >= 5 && $2 ~ /^ *tests\// {
         suite=$2; gsub(/^ +| +$/, "", suite)
