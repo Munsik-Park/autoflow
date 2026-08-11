@@ -29,18 +29,14 @@
 
 set -uo pipefail
 
-# rule_extract <file>
-# Prints one line per occurrence: "<line_no>\t<verbatim first argument>"
-# in source order. Reads its input from a real file path (caller is
-# responsible for materializing a base-ref snapshot to a temp file first).
-issue76_rule_extract() {
-  local file="$1"
-  awk '
+# Shared awk helpers for the two extractors below (both need the same
+# quoted-token scanner). is_ws: whitespace test. extract_quoted: extracts the
+# first double-quoted token starting at position p (1-based, pointing at the
+# opening quote) in string s; returns the token TEXT (without the surrounding
+# quotes) via global RESULT, and the index just past the closing quote via
+# global RESULT_END (0 if unterminated).
+_ISSUE76_AWK_QUOTE_HELPERS='
     function is_ws(c) { return c == " " || c == "\t" }
-    # Extract the first double-quoted token starting at position p (1-based,
-    # pointing at the opening quote) in string s. Returns the token TEXT
-    # (without the surrounding quotes) via global RESULT, and the index just
-    # past the closing quote via global RESULT_END (0 if unterminated).
     function extract_quoted(s, p,   n, i, c, buf) {
       n = length(s)
       buf = ""
@@ -64,6 +60,15 @@ issue76_rule_extract() {
       RESULT_END = 0
       return
     }
+'
+
+# rule_extract <file>
+# Prints one line per occurrence: "<line_no>\t<verbatim first argument>"
+# in source order. Reads its input from a real file path (caller is
+# responsible for materializing a base-ref snapshot to a temp file first).
+issue76_rule_extract() {
+  local file="$1"
+  awk "$_ISSUE76_AWK_QUOTE_HELPERS"'
     {
       lines[NR] = $0
     }
@@ -122,21 +127,7 @@ issue76_dumb_count_lines() {
 # uses `&&`/`||` only to join grep/test clauses, never inside a literal).
 issue76_conjunct_count() {
   local file="$1"
-  awk '
-    function is_ws(c) { return c == " " || c == "\t" }
-    function extract_quoted(s, p,   n, i, c, buf) {
-      n = length(s)
-      buf = ""
-      i = p + 1
-      while (i <= n) {
-        c = substr(s, i, 1)
-        if (c == "\\" && i < n) { buf = buf substr(s, i, 2); i += 2; continue }
-        if (c == "\"") { RESULT = buf; RESULT_END = i + 1; return }
-        buf = buf c
-        i++
-      }
-      RESULT = buf; RESULT_END = 0
-    }
+  awk "$_ISSUE76_AWK_QUOTE_HELPERS"'
     { lines[NR] = $0 }
     END {
       total = 0
