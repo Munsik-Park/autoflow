@@ -48,7 +48,9 @@
 #                          falls through to the bounded poll (or, mid-poll, to a
 #                          retry within the budget), never 10.
 #   Undetermined mergeability: a still-computing UNKNOWN is an uncertain read
-#   that falls through to the bounded poll, never 10.
+#   that falls through to the bounded poll, never 10. Both fields are read:
+#   an UNKNOWN mergeStateStatus is unsettled and never confirms, even beside
+#   a MERGEABLE value.
 #   11  0 checks         — MERGEABLE but no check ever published within the bound.
 #   12  red build        — a check concluded FAILURE/ERROR/CANCELLED/TIMED_OUT.
 #   13  no green verdict  — checks present but the run never reached the exit-0
@@ -225,9 +227,12 @@ is_not_mergeable() {
 }
 
 # is_mergeable_undetermined <mergeable> <mergeStateStatus> -> rc 0 iff the read
-# is well-formed but carries no verdict yet (UNKNOWN / unrecognised value).
+# is well-formed but carries no verdict yet (UNKNOWN / unrecognised value on
+# either field): the merge state is consulted too, so a MERGEABLE value whose
+# mergeStateStatus is still UNKNOWN withholds confirmation instead of granting
+# it. Every other mergeStateStatus value keeps its present meaning.
 is_mergeable_undetermined() {
-  ! is_not_mergeable "$1" "$2" && [ "$1" != "MERGEABLE" ]
+  ! is_not_mergeable "$1" "$2" && { [ "$1" != "MERGEABLE" ] || [ "$2" = "UNKNOWN" ]; }
 }
 
 # clamp_to_interval <remaining> -> echoes min(CI_POLL_INTERVAL_SECS, remaining),
@@ -290,7 +295,7 @@ else
     echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (gitlink -> Reconcile preflight; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
     exit 10
   elif is_mergeable_undetermined "$pre_mergeable" "$pre_state"; then
-    : # still-computing UNKNOWN (or an unrecognised value): an uncertain read,
+    : # still-computing UNKNOWN on either field (or an unrecognised value): an uncertain read,
       # NOT a confirmed conflict. Fall through to the bounded poll WITHOUT
       # setting the flag, exactly as the empty-read arm does — a never-settling
       # UNKNOWN then lands on exit 14 at the deadline rather than a false green.
@@ -373,7 +378,7 @@ done
 # 3. TIMEOUT — deadline reached without a terminal classification.
 # ---------------------------------------------------------------------------
 if [ "$mergeable_confirmed" -eq 0 ]; then
-  echo "[HANDOFF-INTERNAL-RETRY] could not confirm PR mergeable state within ${CI_POLL_TIMEOUT_SECS}s — gh transport/auth/network failure, or a mergeability still computing (UNKNOWN) at the deadline, suspected (not a merge conflict); check gh auth/connectivity and re-run — NOT green" >&2
+  echo "[HANDOFF-INTERNAL-RETRY] could not confirm PR mergeable state within ${CI_POLL_TIMEOUT_SECS}s — gh transport/auth/network failure, or a merge state that never settled (an UNKNOWN mergeable or mergeStateStatus) at the deadline, suspected (not a merge conflict); check gh auth/connectivity and re-run — NOT green" >&2
   exit 14
 fi
 if [ "$saw_checks" -eq 0 ]; then
