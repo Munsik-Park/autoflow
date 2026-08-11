@@ -72,3 +72,53 @@ automated suite's `grep -qi` check passed).
 **Pass condition**: a human reads `/tmp/issue76-regen-drive1.out` and
 `/tmp/issue76-regen-drive2.out` (or their CI-run equivalents) and confirms
 each names its own lane distinctly from the other.
+
+## M5 — AC-runtime-witness: confined-diff observation (cycle 2, HANDOFF-deferred)
+
+Per `.autoflow/issue-76-verification-design.md` > AC-runtime-witness and the
+feature design's `runtime-witness-construction`, and per GATE:PLAN's carried
+finding 2 (ledger E37): this criterion cannot be discharged inside this
+suite's own CI run — `contract-suites.yml` names itself as an exact `paths:`
+entry in both blocks, so this PR's own diff fires the workflow through an
+entry unrelated to the seven converted directory entries, and no scratch-
+branch push isolates a directory pattern (the `push` block is
+branch-filtered to `main`). The hook gates `git push` / `gh pr create` on
+AUDIT + GATE:QUALITY, so the observing PR this criterion needs cannot be
+opened before HANDOFF. This is not implemented as an automated test; it is
+recorded here as the discharge method, to be executed once, at HANDOFF.
+
+**Construction** (`runtime-witness-construction`):
+
+1. After the cycle-2 fix (the seven `dir/` → `dir/**` conversions and the
+   added `.github/workflows/**` entry) is on the dev branch, open a
+   **separate** pull request whose diff is confined to a single file under
+   `docs/adr/` (a trivial, content-neutral edit — e.g. a comment addition),
+   with its **base set to this cycle's dev branch**
+   (`dev/2026-08-10-issue-76`), not `main`. The base matters: a diff
+   confined to `docs/adr/` does not itself carry the converted
+   `docs/adr/**` entry, so the entry the run is supposed to witness has to
+   come from the branch the observing PR is opened against. Based on `main`
+   the observation would evaluate the unfixed base's `paths:` block, where a
+   green run witnesses nothing and a red run would be misread as the fix
+   failing.
+2. Read the run triggered on that PR's head commit
+   (`gh run list` / `gh pr checks` scoped to the observing PR).
+3. Expected observation: `contract-suites.yml` runs on that PR, attributable
+   solely to the converted `docs/adr/**` entry (every other `docs/` entry in
+   both blocks names a file directly in `docs/`, so none of them can match a
+   file nested under `docs/adr/`).
+
+**Failure disposition** (stated per GATE:PLAN's finding): if the expected
+run is **absent** on the observing PR's head commit, this is read as an
+implementation gap, not a test-design defect — route back to GREEN (the
+`.github/workflows/**`/`dir/**` conversion is incomplete or wrong), not to a
+re-derivation of this manual scenario.
+
+**Observing-PR cleanup owner**: the orchestrator opens the observing PR
+sourcing it as a scratch artifact for this single observation, and closes it
+(without merging) once the run has been read and recorded — it carries no
+product change of its own and is not part of this issue's deliverable.
+
+**Pass condition**: the observing PR's head commit shows `contract-suites`
+green (or at minimum executed) on a diff confined to `docs/adr/`, opened
+against the dev branch carrying the cycle-2 fix.
