@@ -226,13 +226,20 @@ is_not_mergeable() {
   [ "$1" = "CONFLICTING" ] || [ "$2" = "DIRTY" ]
 }
 
+# is_mergeable_confirmed <mergeable> <mergeStateStatus> -> rc 0 iff both fields
+# are settled to a green verdict: mergeable=MERGEABLE and mergeStateStatus is
+# not still UNKNOWN. Private helper for is_mergeable_undetermined below.
+is_mergeable_confirmed() {
+  [ "$1" = "MERGEABLE" ] && [ "$2" != "UNKNOWN" ]
+}
+
 # is_mergeable_undetermined <mergeable> <mergeStateStatus> -> rc 0 iff the read
 # is well-formed but carries no verdict yet (UNKNOWN / unrecognised value on
 # either field): the merge state is consulted too, so a MERGEABLE value whose
 # mergeStateStatus is still UNKNOWN withholds confirmation instead of granting
 # it. Every other mergeStateStatus value keeps its present meaning.
 is_mergeable_undetermined() {
-  ! is_not_mergeable "$1" "$2" && { [ "$1" != "MERGEABLE" ] || [ "$2" = "UNKNOWN" ]; }
+  ! is_not_mergeable "$1" "$2" && ! is_mergeable_confirmed "$1" "$2"
 }
 
 # clamp_to_interval <remaining> -> echoes min(CI_POLL_INTERVAL_SECS, remaining),
