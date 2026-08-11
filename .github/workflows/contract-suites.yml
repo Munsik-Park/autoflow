@@ -181,6 +181,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          # test-issue-76-migration-map-total.sh materializes deleted suites
+          # from the merge-base with main; a shallow checkout resolves no base
+          # ref (BLOCK: "no base ref resolvable", PR #83 first CI run).
+          fetch-depth: 0
 
       - name: test-issue-76-manual-doc-retirement.sh
         run: bash tests/test-issue-76-manual-doc-retirement.sh

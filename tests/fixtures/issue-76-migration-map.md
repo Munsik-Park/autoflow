@@ -2,6 +2,13 @@
 SPDX-FileCopyrightText: 2026 Munsik-Park
 SPDX-License-Identifier: Elastic-2.0
 -->
+<!-- REUSE-IgnoreStart -->
+<!-- This map records deleted assertions' first arguments VERBATIM (the
+     equivalence record). Recorded descriptions may themselves contain the
+     literal "SPDX-License-Identifier:" (the 985 AC3-SPDX legs), which the
+     REUSE scanner would misparse as this file's own license expression —
+     the same recording-artefact collision class as the token-sweep
+     carve-outs (ledger E10). The file's real license is the header above. -->
 # Issue #76 — migration map
 
 The equivalence record for the two suites this cycle migrates and deletes
@@ -419,3 +426,4 @@ retained-only subset and certify a totality it never checked.
 | tests/test-issue-795-handoff-removal.sh | AC-KEEP-LABEL: pointer==TARGET reconcile requirement present in docs/submodule-common-rules.md | 1 | disposition:76-RETAIN-OUT-OF-MIGRATION-SCOPE |
 | tests/test-issue-795-handoff-removal.sh | AC-KEEP-LABEL: git-workflow.md L120-157 (Merge Sequencing + Pointer reconciliation) has no diff hunk vs merge-base ($BASE_REF) | 1 | disposition:76-RETAIN-DELTA |
 | tests/test-issue-795-handoff-removal.sh | AC-DANGLING-REF: no tests/ file (outside this suite) still references 'test-issue-495-token-scope' | 1 | disposition:76-RETAIN-GIT-PLUMBING |
+<!-- REUSE-IgnoreEnd -->
