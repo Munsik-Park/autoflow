@@ -124,7 +124,7 @@ assert_true "teeth-mode-anchor-destruction: an entry whose literal OVERLAPS its 
   "grep -qE '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable ' /tmp/issue76-teeth-line.out"
 
 assert_true "teeth-mode-anchor-destruction: the unmigratable-overlap non-credit names its own reason (literal overlaps its own anchor prefix), distinct from an ineffective-mutation or mutator-error non-credit" \
-  "grep -A0 '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable ' /tmp/issue76-teeth-line.out | grep -qi 'overlaps its own column-1 anchor prefix'"
+  "grep -qi '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable .*overlaps its own column-1 anchor prefix' /tmp/issue76-teeth-line.out"
 
 assert_true "teeth-mode-anchor-destruction: the run does not abort on the non-credit entry — the credited entry's own result line is still present in the same run" \
   "grep -qE '^  TEETH: issue-76-fixture-valid-line ' /tmp/issue76-teeth-line.out && grep -qE '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable ' /tmp/issue76-teeth-line.out"

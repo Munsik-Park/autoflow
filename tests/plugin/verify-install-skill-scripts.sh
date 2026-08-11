@@ -866,7 +866,18 @@ else
 fi
 
 echo "== AD3 (OC-2, gh-absent): gh unavailable -> FORK_EXISTS=unknown, still exit 0 (graceful degradation) =="
-NO_GH_PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v "^$MOCK_GH_DIR\$" | grep -vE '/usr/(local/)?bin$|/opt/homebrew/bin$' | tr '\n' ':')
+NO_GH_PATH=""
+OLD_IFS="$IFS"
+IFS=':'
+for _path_dir in $PATH; do
+  IFS="$OLD_IFS"
+  [ "$_path_dir" = "$MOCK_GH_DIR" ] && continue
+  [ -x "$_path_dir/gh" ] && continue
+  NO_GH_PATH="${NO_GH_PATH:+$NO_GH_PATH:}$_path_dir"
+  IFS=':'
+done
+IFS="$OLD_IFS"
+unset _path_dir OLD_IFS
 if [ -z "$NO_GH_PATH" ]; then NO_GH_PATH="/nonexistent"; fi
 if [ ! -f "$DETECT_SH" ]; then
   DETECT_OUT=""; DETECT_CODE=127
