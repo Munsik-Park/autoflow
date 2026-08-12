@@ -725,26 +725,16 @@ for name in "${RETAINED_DOCS[@]}"; do
   [ -f "$PROJECT_ROOT/$docfile" ] || continue
   has_dependent=false
   # Kind 1: registry entry names the document as its file.
-  if jq -e --arg f "$docfile" '.invariants[] | select(.file == $f)' "$REGISTRY" >/dev/null 2>&1; then
-    has_dependent=true
-  fi
+  jq -e --arg f "$docfile" '.invariants[] | select(.file == $f)' "$REGISTRY" >/dev/null 2>&1 && has_dependent=true
   # Kind 2: a surviving suite content-references the document's basename.
   base="${name}-manual-scenarios"
-  if grep -rl -- "$base" "$PROJECT_ROOT/tests" 2>/dev/null | grep -vF "/$docfile" | grep -q .; then
-    has_dependent=true
-  fi
+  grep -rl -- "$base" "$PROJECT_ROOT/tests" 2>/dev/null | grep -vF "/$docfile" | grep -q . && has_dependent=true
   # Kind 3: a docs/maintained-docs.md row registers it.
-  if grep -qF "$base" "$PROJECT_ROOT/docs/maintained-docs.md" 2>/dev/null; then
-    has_dependent=true
-  fi
+  grep -qF "$base" "$PROJECT_ROOT/docs/maintained-docs.md" 2>/dev/null && has_dependent=true
   # Kind 4: a prose document cites it as evidence.
-  if grep -rlF -- "$base" "$PROJECT_ROOT/CLAUDE.md" "$PROJECT_ROOT/docs" 2>/dev/null | grep -q .; then
-    has_dependent=true
-  fi
+  grep -rlF -- "$base" "$PROJECT_ROOT/CLAUDE.md" "$PROJECT_ROOT/docs" 2>/dev/null | grep -q . && has_dependent=true
   # Kind 5: a retained sibling scenario document cites it.
-  if grep -rlF -- "$base" "$PROJECT_ROOT/tests/manual" 2>/dev/null | grep -vF "/$docfile" | grep -q .; then
-    has_dependent=true
-  fi
+  grep -rlF -- "$base" "$PROJECT_ROOT/tests/manual" 2>/dev/null | grep -vF "/$docfile" | grep -q . && has_dependent=true
   assert_true "AC-c-3 clause 2: retained scenario document satisfies >=1 of the five dependent kinds — $name" "$has_dependent"
 done
 
