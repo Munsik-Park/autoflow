@@ -34,6 +34,19 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# This suite's own repo-relative path — computed, not a literal filename, so
+# the self-exemption below tracks a rename automatically. Used to keep this
+# suite out of its own derived subject set (see derive_subjects): it is
+# registered by a run: step in a push:branches:[main] workflow AND it itself
+# calls `git merge-base` (make_scratch_branch_point_context, below) against
+# the repository under test, so both derivation criteria are structurally
+# always true for it. A child invocation of the parent, capped at the same
+# per-subject budget, cannot finish inside that budget (it has to run its own
+# nested subject sweep first) — the parent would then always record TIMEOUT
+# for itself, at any budget value. Self-identity only: this does not exempt
+# any other subject.
+SELF_REL="tests/$(basename "${BASH_SOURCE[0]}")"
+
 PASS=0; FAIL=0; TESTS=0
 
 assert_true() {
@@ -62,10 +75,17 @@ mkdir -p "$TMP_ROOT"
 # 80.81s] and tests/test-issue-27-composition-oracle.sh [real 41.38s], and its
 # own uninterrupted run measured real 412.74s / exit 1 — a legitimate,
 # non-hung completion, not a hang]. tests/test-issue-69-verification-depth.sh
-# transitively sweeps the same heavy homes via its own EXPECTED_OK/OK_COUNT
-# grep. A 150s budget would misclassify these completing-but-slow subjects as
-# TIMEOUT. 900s keeps more than 2x headroom over the slowest measured run
-# while still bounding a genuinely hung subject.
+# transitively sweeps the same heavy homes via its own pin-consistency sweep
+# (grep across tests/*.sh for a shared literal token — deliberately not
+# spelled out here in that literal's own shape: this file is itself a
+# tests/*.sh suite, and writing the literal here would make this comment a
+# false-positive match of that sweep's own selection grep, pulling this file
+# into a recursive self-clone-and-run — measured: this is what actually made
+# tests/test-issue-69-verification-depth.sh exceed 45 minutes before this
+# comment was reworded). A 150s budget would misclassify these
+# completing-but-slow subjects as TIMEOUT. 900s keeps more than 2x headroom
+# over the slowest measured run while still bounding a genuinely hung
+# subject.
 PER_SUBJECT_BUDGET_SECS="${PUSH_CONTEXT_BUDGET_SECS:-900}"
 
 # ---------------------------------------------------------------------------
@@ -133,6 +153,7 @@ derive_subjects() {
   done | sort -u | while read -r rel; do
     local abs="$PROJECT_ROOT/$rel"
     [ -f "$abs" ] || continue
+    [ "$rel" = "$SELF_REL" ] && continue
     is_exempt_hermetic "$rel" && continue
     # Call-site criterion: a non-comment line invoking resolve_base_ref or
     # `git ... merge-base` (flags between `git` and `merge-base` allowed —
@@ -140,13 +161,14 @@ derive_subjects() {
     # resolver only in a comment (tests/test-issue-42-spawn-mode-contract.sh)
     # does not qualify.
     # Process substitution, not a pipe: under `set -o pipefail` (this script's
-    # own top-of-file setting), `grep A | grep -qE B` exits non-zero whenever
-    # -qE's early exit on its first match SIGPIPEs the upstream grep before it
-    # finishes writing — silently dropping a true subject from derivation
-    # (measured: tests/test-issue-59-adoption-evidence-discipline.sh, a real
-    # resolve_base_ref call site, deterministically vanished from the derived
-    # set under this pattern). `< <(...)` keeps the filter a single simple
-    # command so pipefail has nothing to see.
+    # own top-of-file setting), feeding one filter's output straight into a
+    # second, early-exiting `grep -qE` exits non-zero whenever that early exit
+    # SIGPIPEs the first filter before it finishes writing — silently
+    # dropping a true subject from derivation (measured: tests/test-issue-59-
+    # adoption-evidence-discipline.sh, a real resolve_base_ref call site,
+    # deterministically vanished from the derived set under this pattern).
+    # `< <(...)` keeps the filter a single simple command so pipefail has
+    # nothing to see.
     if grep -qE '\bresolve_base_ref\b|\bgit\b[^#]*\bmerge-base\b' < <(grep -vE '^\s*#' "$abs" 2>/dev/null); then
       printf '%s\n' "$rel"
     fi
