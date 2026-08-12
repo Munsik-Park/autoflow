@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh tests/fixtures/gate-schema.json
 # =============================================================================
 # Test: check-autoflow-gate.sh SCHEMA VALIDATION (issue #245)
 # =============================================================================

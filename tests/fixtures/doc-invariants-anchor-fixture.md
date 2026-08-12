@@ -1,6 +1,6 @@
 # doc-invariant registry — anchor well-formedness fixture (issue #951)
 
-Static fixture consumed by `tests/test-issue-951-registry.sh` (C6 anchor
+Static fixture consumed by `tests/test-run-doc-invariants.sh` (C6 anchor
 well-formedness: a registry entry's `section` must resolve to exactly one
 heading in its `file`). Not a doc-invariant target itself — do not add
 this file to the registry as a real invariant source.

@@ -2,46 +2,59 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # =============================================================================
-# Test: doc-invariant registry + single runner + base-ref resolver — Issue #951
+# Test: doc-invariant registry runner contract — tests/run-doc-invariants.sh
 # =============================================================================
-# RED->GREEN harness per .autoflow/issue-951-verification-design.md (ROUND 1-3,
-# Test AI ACCEPT) and .autoflow/issue-951-feature-design.md, converged decisions
-# in .autoflow/issue-951-ledger.md (E4-E15). assert_true/assert_false pattern
-# per tests/test-issue-794-doc-assertions.sh; hermetic temp-repo pattern for
-# base-ref.sh per tests/test-issue-788-host-purity-delta.sh (DR-1 precedent).
+# ci-subject: tests/run-doc-invariants.sh tests/fixtures/doc-invariants.json tests/lib/base-ref.sh
 #
-# Interface assumption (minimal, non-AC-affecting): tests/run-doc-invariants.sh
-# accepts an OPTIONAL positional arg — an alternate registry JSON path — so
-# this suite can hermetically drive the runner against fixture (bad/mutated)
-# registries without touching the real tests/fixtures/doc-invariants.json.
-# With no arg it MUST default to tests/fixtures/doc-invariants.json (its
-# normal CI invocation, feature §6.1). This mirrors base-ref.sh's own
-# override-first precedence (feature §4.1) and the #788 --base/--head
-# injection seam; it is an implementation-interface detail, not an AC change.
+# The runner's own contract, retained from the retired per-cycle suite
+# `tests/test-issue-951-registry.sh` at issue #76 (`runner-contract-suite`).
+# That suite's legs were not uniform: some asserted the #951 cycle's own
+# completion (the five migrated suites are gone, their CI steps are gone, the
+# registry manifest-closure row exists, no residual per-issue exemption
+# arrays), while the rest are the runner's durable contract. Deleting the file
+# whole would have deleted the only test of the runner in a cycle whose central
+# mechanism is that runner, so the durable legs were renamed to this
+# subject-named suite — the naming this tree already uses for subject-named
+# rather than cycle-named specs (adr-0016-conformance-check.sh,
+# test-gate-hardening.sh) — and the cycle-completion legs were retired with §5
+# disposition rows in docs/doc-invariant-registry.md.
 #
-# Migration set (pinned, ledger/feature §6): 794, 796, 797, 800, 949.
+# What this suite holds:
+#   A  — the registry is declarative data the runner reads via jq, with no
+#        per-issue hand-coded branch.
+#   B  — the positive leg (every entry PASSes against the current tree) and the
+#        negative-teeth leg, the latter now asserting the CONTRACT of
+#        `run-doc-invariants.sh --self-test` rather than reimplementing a
+#        second mutator (issue #76 `teeth-in-runner`), plus that mode's four
+#        non-credit paths driven hermetically: unexpressible shape, ineffective
+#        mutation, mutator error, and anchor destruction.
+#   C  — the guard-lifecycle rule and the scope field: a non-permanent or
+#        diff/count-shaped entry is rejected at load, loudly.
+#   D  — the measured false-positive classes the registry design exists to
+#        prevent: anchor stability under an upstream insertion, no
+#        diff/count/delta predicate, the runner reading no base ref, and
+#        whole-file `absent` non-vacuity.
+#   E  — anchor well-formedness: a dangling or ambiguous anchor is rejected at
+#        load time.
+#   L1 — match:"regex" predicate mode, positive and teeth legs.
+#   L2 — the section_end heading-pair window, including its own dangling and
+#        ambiguous rejections.
+#   L3 — the step-0 well-formedness block() guards, one violating fixture each.
+#   L4 — the missing-target-file path: a FAIL record, not a crash and not a
+#        silent PASS.
+#   F  — the shared base-ref resolver's hermetic self-test. It has no other
+#        home: the library is consumed by cycle-scoped suites, which are
+#        retired at their own merge decision.
 #
-# Coverage map (verification design §1-§4, feature §7):
-#   AC1 - registry declarative + parseable, no per-issue hand-code (A)
-#       - capture-before-delete baseline + positive/negative/coverage-floor
-#         fidelity legs (B), window-equivalence spot-check (ledger E12) (B)
-#   AC2 - lifetime rule doc (C), scope field required (C), runner rejects
-#         non-permanent/diff-predicate entries at load (C)
-#   AC3 - cases 1/2/3/6/7/8 (D), 797 non-vacuity positive control / C5 (D)
-#   AC4 - base-ref.sh hermetic self-test (F), ledger E10 (no live call site
-#         this cycle -> library-level contract only, no caller wrapper test)
-#   AC5 - CI convergence static YAML + discovery self-test (G)
-#   C6  - anchor well-formedness: dangling/ambiguous anchor rejection (E)
-#   Deletion (H), manifest closure / DR-8 (I), DR-6 no exemption arrays (J),
-#   DR-7 self-registration in e2e-dummy-target.yml paths: (K)
+# Interface assumption (minimal, non-AC-affecting): the runner accepts an
+# OPTIONAL positional registry path, so this suite can drive it against fixture
+# (bad / mutated) registries without touching the real registry. With no
+# argument it MUST default to tests/fixtures/doc-invariants.json — its normal
+# CI invocation.
 #
-# RED expectation: registry/runner/lib/doc do not exist yet at HEAD, so every
-# assertion in sections A-B (structural+fidelity), C (mechanism), D (repro
-# cases requiring the runner), E (C6), F (base-ref.sh absent), G/H (CI
-# convergence/deletion), I (manifest closure) FAILs. A handful of
-# preservation-type checks (pre-existing docs present, 794/796/797 already
-# absent as individual CI steps) are expected to PASS now and remain PASS
-# post-GREEN — matching the precedent in tests/test-issue-794-doc-assertions.sh.
+# The anchor-resolution negative coverage for the non-heading `section_kind`
+# values lives in tests/test-issue-76-runner-self-test-contract.sh, which is
+# registered alongside this suite.
 # =============================================================================
 
 set -uo pipefail
@@ -54,21 +67,10 @@ RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 BASEREF_LIB="$PROJECT_ROOT/tests/lib/base-ref.sh"
 LIFECYCLE_DOC="$PROJECT_ROOT/docs/doc-invariant-registry.md"
 WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-BASELINE="$PROJECT_ROOT/tests/fixtures/doc-invariants-baseline.txt"
 ANCHOR_FIXTURE="$PROJECT_ROOT/tests/fixtures/doc-invariants-anchor-fixture.md"
 ANCHOR_FIXTURE_REL="tests/fixtures/doc-invariants-anchor-fixture.md"
 DIALECT_FIXTURE="$PROJECT_ROOT/tests/fixtures/doc-invariants-dialect-fixture.md"
-INDEX_MD="$PROJECT_ROOT/docs/INDEX.md"
-MAINTAINED_DOCS="$PROJECT_ROOT/docs/maintained-docs.md"
-MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
 
-OLD_SUITES=(
-  "$PROJECT_ROOT/tests/test-issue-794-doc-assertions.sh"
-  "$PROJECT_ROOT/tests/test-issue-796-doc-assertions.sh"
-  "$PROJECT_ROOT/tests/test-issue-797-doc-invocation.sh"
-  "$PROJECT_ROOT/tests/test-issue-800-doc-assertions.sh"
-  "$PROJECT_ROOT/tests/test-issue-949-manifest-regen-doc.sh"
-)
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -114,22 +116,12 @@ verdict_for_id() {
   printf '%s\n' "$out" | grep -F "$id" | grep -oE 'PASS|FAIL' | head -1 || echo "MISSING"
 }
 
-TMP_ROOT="$PROJECT_ROOT/tests/fixtures/.tmp-951-$$"
+TMP_ROOT="$PROJECT_ROOT/tests/fixtures/.tmp-run-doc-invariants-$$"
 cleanup() { rm -rf "$TMP_ROOT" 2>/dev/null || true; }
 trap cleanup EXIT
 mkdir -p "$TMP_ROOT"
 
 # =============================================================================
-echo "=== Pre-flight: target files present (pre-existing docs, expected PASS now) ==="
-assert_true "present: CLAUDE.md" "[ -f '$PROJECT_ROOT/CLAUDE.md' ]"
-assert_true "present: docs/INDEX.md" "[ -f '$INDEX_MD' ]"
-assert_true "present: docs/maintained-docs.md" "[ -f '$MAINTAINED_DOCS' ]"
-assert_true "present: setup/manifest.json" "[ -f '$MANIFEST_JSON' ]"
-assert_true "present: .github/workflows/e2e-dummy-target.yml" "[ -f '$WORKFLOW' ]"
-assert_true "capture-before-delete baseline exists (this RED run, E5)" "[ -s '$BASELINE' ]"
-
-# =============================================================================
-echo ""
 echo "=== AC1 (A): registry is declarative data, parseable, no per-issue hand-code ==="
 
 assert_true "registry file exists (tests/fixtures/doc-invariants.json)" "[ -f '$REGISTRY' ]"
@@ -141,8 +133,6 @@ assert_true "every registry entry's predicate is one of present/absent/ordered" 
   "[ -f '$REGISTRY' ] && jq -e 'all(.invariants[]; .predicate == \"present\" or .predicate == \"absent\" or .predicate == \"ordered\")' '$REGISTRY' >/dev/null 2>&1"
 assert_true "registry ids are unique" \
   "[ -f '$REGISTRY' ] && jq -e '([.invariants[].id] | length) == ([.invariants[].id] | unique | length)' '$REGISTRY' >/dev/null 2>&1"
-assert_true "registry volume is on the order of 80-120 entries (feature §6 estimate)" \
-  "[ -f '$REGISTRY' ] && jq -e '(.invariants | length) >= 60' '$REGISTRY' >/dev/null 2>&1"
 
 assert_true "runner script exists (tests/run-doc-invariants.sh)" "[ -f '$RUNNER' ]"
 assert_false "runner does not hardcode registry heading text (data-driven discovery, no per-invariant branch)" \
@@ -154,15 +144,6 @@ assert_false "runner does not hand-code per-issue literal branches (794/796/797/
 
 # =============================================================================
 echo ""
-echo "=== AC1 (B): fidelity — capture-before-delete baseline reproduction (§DR-3/C1, ledger E5) ==="
-
-# Positive leg: every registry entry evaluates PASS against the CURRENT
-# (pre-migration) tree — the permanent invariants already hold today, which
-# is exactly what the captured baseline shows for the migrated suites.
-# Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973,
-# GATE:QUALITY E36/E37): run_runner's buffered output piped directly into a
-# short-circuiting `grep -q` can SIGPIPE the producer under `set -o
-# pipefail`. Captured once, reused for both the presence and absence check.
 AC1_POSITIVE_LEG_OUT=""
 if [ -f "$REGISTRY" ] && [ -f "$RUNNER" ]; then
   AC1_POSITIVE_LEG_OUT="$(run_runner "$REGISTRY")"
@@ -170,174 +151,50 @@ fi
 assert_true "positive leg: every registry entry PASSes against the current tree" \
   "[ -f '$REGISTRY' ] && [ -f '$RUNNER' ] && printf '%s\n' \"\$AC1_POSITIVE_LEG_OUT\" | grep -qE '^Results: ' && ! printf '%s\n' \"\$AC1_POSITIVE_LEG_OUT\" | grep -qE '^  FAIL:'"
 
-# Coverage-floor leg: each migrated suite (794/796/797/800/949) is
-# represented by at least one registry entry via origin_issue provenance —
-# a coverage floor standing in for "every permanent assertion transcribed"
-# (full completeness is the manual migration-map judgement per verification
-# design §1/§3 — see tests/manual/issue-951-manual-scenarios.md).
-for oi in 794 796 797 800 949; do
-  assert_true "coverage floor: registry carries >=1 entry with origin_issue == $oi" \
-    "[ -f '$REGISTRY' ] && jq -e '[.invariants[] | select(.origin_issue == $oi)] | length >= 1' '$REGISTRY' >/dev/null 2>&1"
-done
-
 # Negative-teeth leg (C1, generic/data-driven — no hardcoded per-id fixtures):
 # for every present/absent/ordered entry, a mutated copy of its target file
-# (literal stripped/injected, or the 'before' anchor removed) must flip the
-# verdict to FAIL, proving the migrated check still bites.
+# must flip the verdict to FAIL, proving the migrated check still bites.
 #
-# The removal mutation is MATCH-AWARE: it strips lines with the SAME grep
-# flavor the runner itself uses for that entry (run-doc-invariants.sh:149-156
-# body_has / :158-166 first_line_of — `-F` for match:"fixed", `-E` for
-# match:"regex"). A fixed-string removal applied to a match:"regex" entry
-# strips 0 lines whenever the pattern carries ERE metacharacters (`^`, `\|`,
-# `[^|]*`, `(a|b)`); the "mutated" fixture is then byte-identical to the
-# source, the runner correctly re-reports PASS, and this leg misreads a
-# perfectly intact check as "no teeth". That is the round-1 VERIFY failure —
-# the registry held 85/85 match:"fixed" entries until this cycle added the
-# first match:"regex" ones.
+# The leg itself now lives in the runner, behind `--self-test` (issue #76
+# `teeth-in-runner`): the equivalence question the promotion path had no
+# mechanism for is answered by the same binary that evaluates the registry, so
+# it inherits the runner's CI registration instead of sitting in a suite
+# nothing executes. What this suite asserts is therefore the mode's CONTRACT,
+# not a private reimplementation of it — a second mutator here would be the
+# thing the promotion removed.
 #
-# An INEFFECTIVE mutation is a leg FAILURE, never a skip. If the mutated file
-# comes out byte-identical to the source, or the mutator itself errored (e.g.
-# an invalid ERE), or the entry's shape is one the mutator cannot express
-# (absent + match:"regex" — literal injection cannot synthesise a string in an
-# arbitrary ERE's language), the entry is still counted into `total` and NOT
-# into `ok`, and a diagnostic naming it is printed. No entry is ever dropped
-# from the denominator, so the leg cannot be made vacuous by adding a shape
-# the mutator does not handle.
+# The contract, unchanged in substance from the retired in-suite leg: the
+# mutation is match-aware (a fixed-string removal applied to a match:"regex"
+# entry strips 0 lines whenever the pattern carries ERE metacharacters, and the
+# leg would then misread a perfectly intact check as "no teeth"); and an
+# INEFFECTIVE mutation is a FAILURE, never a skip. A byte-identical mutation, a
+# mutator error, an unexpressible shape (absent + match:"regex" — injection
+# cannot synthesise a string in an arbitrary ERE's language) and, for the
+# non-heading anchor kinds, a mutation that leaves the anchor unresolvable are
+# each counted into the denominator and NOT into the credited set, with a
+# diagnostic naming the entry. No entry is ever dropped from the denominator,
+# so the leg cannot be made vacuous by adding a shape the mutator does not
+# handle.
 
-# mutate_remove <src> <pattern> <match-mode> <dest>
-# Returns 0 on a well-formed mutation (including "every line removed", grep
-# exit 1 — a valid maximal mutation); non-zero only on a real grep error
-# (exit >=2, e.g. an invalid ERE), which the caller reports as no-teeth.
-mutate_remove() {
-  local src="$1" pat="$2" match="$3" dest="$4" rc
-  if [ "$match" = "regex" ]; then
-    grep -vE -- "$pat" "$src" > "$dest" 2>/dev/null; rc=$?
-  else
-    grep -vF -- "$pat" "$src" > "$dest" 2>/dev/null; rc=$?
-  fi
-  [ "$rc" -le 1 ]
-}
-
-# mutation_teeth_check [registry-path]
-# Defaults to the real registry ($REGISTRY, its CI invocation). The optional
-# argument lets the suite drive the leg against a single-entry fixture registry
-# so the leg's OWN failure paths (unsupported shape / byte-identical mutation /
-# mutator error) are exercised hermetically — see the self-tests below.
-mutation_teeth_check() {
+# run_self_test [registry-path] — drives the runner's mutation-teeth mode.
+# Defaults to the real registry (its CI invocation). The optional argument
+# drives the mode against a single-entry fixture registry so its OWN failure
+# paths are exercised hermetically — see the self-tests below.
+run_self_test() {
   local registry="${1:-$REGISTRY}"
   [ -f "$registry" ] && [ -f "$RUNNER" ] || return 1
-  local ids total=0 ok=0 tdir diag=""
-  ids="$(jq -r '.invariants[].id' "$registry" 2>/dev/null)" || return 1
-  [ -n "$ids" ] || return 1
-  tdir="$TMP_ROOT/teeth"
-  mkdir -p "$tdir"
-  local id entry file predicate literal before section match srcfile mutated relmut regfile verdict why
-  while IFS= read -r id; do
-    [ -n "$id" ] || continue
-    entry="$(jq -c --arg id "$id" '.invariants[] | select(.id == $id)' "$registry")"
-    file="$(printf '%s' "$entry" | jq -r '.file')"
-    predicate="$(printf '%s' "$entry" | jq -r '.predicate')"
-    match="$(printf '%s' "$entry" | jq -r '.match // "fixed"')"
-    srcfile="$PROJECT_ROOT/$file"
-    [ -f "$srcfile" ] || continue
-    mutated="$tdir/$(basename "$file").$$.mut"
-    rm -f "$mutated"
-    why=""
-    case "$predicate" in
-      present)
-        literal="$(printf '%s' "$entry" | jq -r '.literal')"
-        mutate_remove "$srcfile" "$literal" "$match" "$mutated" \
-          || why="mutator error (match=$match): pattern is not a usable ${match} pattern"
-        ;;
-      absent)
-        literal="$(printf '%s' "$entry" | jq -r '.literal')"
-        section="$(printf '%s' "$entry" | jq -r '.section // ""')"
-        if [ "$match" = "regex" ]; then
-          # Injection cannot synthesise a witness string for an arbitrary ERE.
-          # Deliberately produce an unmutated copy so the byte-identity check
-          # below FAILS this entry loudly (with the diagnostic) instead of
-          # skipping it — extend the mutator (e.g. an explicit witness field)
-          # if an absent + match:"regex" entry is ever added.
-          cp "$srcfile" "$mutated"
-          why="unsupported shape: absent + match:\"regex\" has no injectable witness"
-        elif [ -n "$section" ]; then
-          # Section-scoped absent entry: an EOF-append lands OUTSIDE a
-          # non-last target section (the runner's extractor closes the body
-          # at the next same-or-higher-level heading / section_end / ---
-          # terminator), so the runner would correctly record PASS and this
-          # leg would misread the intact check as "no teeth". Inject the
-          # literal INSIDE the section instead — immediately after the
-          # section heading line, the earliest line of the extracted body
-          # (in scope for every terminator shape). Heading match mirrors the
-          # runner's extract_section: strip leading #s + trailing whitespace,
-          # exact text equality. The literal is passed via ENVIRON (not
-          # awk -v) so backslashes are not escape-processed.
-          MUT_LIT="$literal" awk -v h="$section" '
-            { print }
-            !done && /^#{1,6} +/ {
-              t=$0; sub(/^#{1,6} +/,"",t); sub(/[ \t]+$/,"",t)
-              if (t==h) { print ENVIRON["MUT_LIT"]; done=1 }
-            }
-          ' "$srcfile" > "$mutated"
-        else
-          # Whole-file entry: any location is in scope — EOF-append suffices.
-          cp "$srcfile" "$mutated"
-          printf '\n%s\n' "$literal" >> "$mutated"
-        fi
-        ;;
-      ordered)
-        before="$(printf '%s' "$entry" | jq -r '.before')"
-        mutate_remove "$srcfile" "$before" "$match" "$mutated" \
-          || why="mutator error (match=$match): 'before' anchor is not a usable ${match} pattern"
-        ;;
-      *) continue ;;
-    esac
-    total=$((total + 1))
-
-    # Effectiveness gate: a mutation that changed nothing — or that never ran
-    # at all because the mutator itself errored — proves nothing. This counts
-    # the entry into `total` WITHOUT counting it into `ok`, so the leg FAILs —
-    # it is a failure path, not a skip.
-    #
-    # `why` is consulted FIRST and UNCONDITIONALLY, not merely as the diagnostic
-    # text of the byte-identity branch. A mutator error (grep exit >=2, e.g. an
-    # invalid ERE) leaves an EMPTY "$mutated" — which is NOT byte-identical to
-    # the source — so a byte-identity-only gate never fires: the runner is then
-    # driven against the empty file, correctly reports FAIL for the entry's
-    # predicate, and the entry is credited with teeth it never demonstrated.
-    # That was VERIFY step-4 FINDING 4-A (.autoflow/issue-26-verify-checks.md
-    # §2.2): the comment above already promised this contract; this condition is
-    # what implements it.
-    if [ -n "$why" ] || [ ! -f "$mutated" ] || cmp -s "$srcfile" "$mutated"; then
-      diag="$diag  - $id [$predicate/$match]: ${why:-ineffective mutation — mutated fixture is byte-identical to $file}
-"
-      continue
-    fi
-
-    relmut="tests/fixtures/.tmp-951-$$/teeth/$(basename "$mutated")"
-    regfile="$tdir/reg-$$.json"
-    jq --arg id "$id" --arg file "$relmut" \
-      '{ "$comment": "teeth-fixture", invariants: [ (.invariants[] | select(.id == $id) | .file = $file) ] }' \
-      "$registry" > "$regfile"
-    verdict="$(verdict_for_id "$regfile" "$id")"
-    if [ "$verdict" = "FAIL" ]; then
-      ok=$((ok + 1))
-    else
-      diag="$diag  - $id [$predicate/$match]: mutated fixture still reports $verdict (expected FAIL) — entry has no teeth
-"
-    fi
-  done <<EOF_IDS
-$ids
-EOF_IDS
-  if [ -n "$diag" ]; then
-    printf 'negative-teeth leg: %s/%s entries bit their mutated fixture; offenders:\n%s' \
-      "$ok" "$total" "$diag" >&2
-  fi
-  [ "$total" -gt 0 ] && [ "$ok" -eq "$total" ]
+  ( cd "$PROJECT_ROOT" && bash "$RUNNER" --self-test "$registry" ) 2>&1
 }
-assert_true "negative-teeth leg: every present/absent/ordered entry FAILs its mutated fixture (data-driven, C1)" \
-  "mutation_teeth_check"
+
+SELFTEST_REAL_OUT="$(run_self_test)"
+SELFTEST_REAL_RC=$?
+
+assert_true "negative-teeth leg: every present/absent/ordered entry FAILs its mutated copy (data-driven, C1, via run-doc-invariants.sh --self-test)" \
+  "[ '$SELFTEST_REAL_RC' -eq 0 ]"
+assert_false "negative-teeth leg: no entry is reported as a non-credit (unexpressible shape / ineffective mutation / mutator error / unresolvable anchor)" \
+  "printf '%s' \"\$SELFTEST_REAL_OUT\" | grep -q 'NO-TEETH'"
+assert_true "negative-teeth leg: the denominator is the whole registry — the reported total equals the registry's entry count" \
+  "[ \"\$(printf '%s' \"\$SELFTEST_REAL_OUT\" | sed -n 's/^Self-test results: [0-9]*\/\([0-9]*\) .*/\1/p')\" = \"\$(jq -r '.invariants | length' '$REGISTRY')\" ]"
 
 # ---------------------------------------------------------------------------
 # Teeth-leg self-tests — issue #26, VERIFY step-3 FINDING 3-E / step-4
@@ -369,7 +226,7 @@ mk_selftest_registry() {     # <out-path> <one-entry-json>
 #     arbitrary ERE, so the mutator refuses the shape by design.
 mk_selftest_registry "$TEETH_SELFTEST_DIR/absent-regex.json" \
   "{\"id\":\"26-selftest-absent-regex\",\"origin_issue\":26,\"intent\":\"existence\",\"file\":\"$ANCHOR_FIXTURE_REL\",\"section\":null,\"predicate\":\"absent\",\"match\":\"regex\",\"literal\":\"selftest-absent-regex-witness-26\",\"scope\":\"permanent\"}"
-SELFTEST_ABSENT_REGEX_OUT="$(mutation_teeth_check "$TEETH_SELFTEST_DIR/absent-regex.json" 2>&1)"
+SELFTEST_ABSENT_REGEX_OUT="$(run_self_test "$TEETH_SELFTEST_DIR/absent-regex.json")"
 SELFTEST_ABSENT_REGEX_RC=$?
 
 assert_true "teeth self-test (a): an absent+match:\"regex\" entry is NOT credited with teeth — leg returns non-zero (FINDING 3-E)" \
@@ -381,7 +238,7 @@ assert_true "teeth self-test (a): the diagnostic names the unsupported shape, no
 #     reproduces the source exactly and the "mutation" proves nothing.
 mk_selftest_registry "$TEETH_SELFTEST_DIR/byte-identical.json" \
   "{\"id\":\"26-selftest-byte-identical\",\"origin_issue\":26,\"intent\":\"existence\",\"file\":\"$ANCHOR_FIXTURE_REL\",\"section\":null,\"predicate\":\"present\",\"match\":\"fixed\",\"literal\":\"selftest-literal-absent-from-the-fixture-26\",\"scope\":\"permanent\"}"
-SELFTEST_BYTE_IDENTICAL_OUT="$(mutation_teeth_check "$TEETH_SELFTEST_DIR/byte-identical.json" 2>&1)"
+SELFTEST_BYTE_IDENTICAL_OUT="$(run_self_test "$TEETH_SELFTEST_DIR/byte-identical.json")"
 SELFTEST_BYTE_IDENTICAL_RC=$?
 
 assert_true "teeth self-test (b): a byte-identical mutation is NOT credited with teeth — leg returns non-zero (round-1 failure class)" \
@@ -394,7 +251,7 @@ assert_true "teeth self-test (b): the diagnostic names the byte-identity hazard"
 #     gate must consult `why`, or this shape is silently credited with teeth.
 mk_selftest_registry "$TEETH_SELFTEST_DIR/mutator-error.json" \
   "{\"id\":\"26-selftest-mutator-error\",\"origin_issue\":26,\"intent\":\"existence\",\"file\":\"$ANCHOR_FIXTURE_REL\",\"section\":null,\"predicate\":\"present\",\"match\":\"regex\",\"literal\":\"[unclosed\",\"scope\":\"permanent\"}"
-SELFTEST_MUTATOR_ERROR_OUT="$(mutation_teeth_check "$TEETH_SELFTEST_DIR/mutator-error.json" 2>&1)"
+SELFTEST_MUTATOR_ERROR_OUT="$(run_self_test "$TEETH_SELFTEST_DIR/mutator-error.json")"
 SELFTEST_MUTATOR_ERROR_RC=$?
 
 assert_true "teeth self-test (c): a mutator error (invalid ERE) is NOT credited with teeth — leg returns non-zero (FINDING 4-A)" \
@@ -402,14 +259,25 @@ assert_true "teeth self-test (c): a mutator error (invalid ERE) is NOT credited 
 assert_true "teeth self-test (c): the diagnostic names the mutator error, as the leg's own comment promises" \
   "printf '%s' \"\$SELFTEST_MUTATOR_ERROR_OUT\" | grep -qF 'mutator error (match=regex)'"
 
-# Window-equivalence spot-check (ledger E12 worked example): the 794 ordering
-# entry over CLAUDE.md's level-3 "### PR Flow" heading is self-contained
-# (body 363-368) and both anchors resolve inside it without widening to
-# section:null.
-assert_true "window-equivalence spot-check: 794-AC1-ordering-target-centric present with file=CLAUDE.md section='PR Flow'" \
-  "[ -f '$REGISTRY' ] && jq -e '.invariants[] | select(.id == \"794-AC1-ordering-target-centric\") | (.file == \"CLAUDE.md\") and (.section == \"PR Flow\") and (.predicate == \"ordered\")' '$REGISTRY' >/dev/null 2>&1"
-assert_true "window-equivalence spot-check: that entry PASSes against real CLAUDE.md (body covers both anchors, ledger E12)" \
-  "[ -f '$REGISTRY' ] && [ -f '$RUNNER' ] && [ \"\$(verdict_for_id '$REGISTRY' 794-AC1-ordering-target-centric)\" = 'PASS' ]"
+# (d) anchor destruction — issue #76 `teeth-mode-anchor-destruction`. A "line"
+#     entry's body IS its anchored line, so a whole-line mutator would delete
+#     the anchor itself and leave it resolving to zero lines — Step 0b's
+#     dangling condition. In-process there is no separate invocation to die at
+#     the load gate, so the non-credit has to be written rather than inherited:
+#     this fixture's literal IS the anchor prefix, which no mutation can remove
+#     without destroying the anchor, and the mode must name that as a
+#     non-credit instead of crediting it or aborting the whole run.
+mk_selftest_registry "$TEETH_SELFTEST_DIR/anchor-destruction.json" \
+  "{\"id\":\"76-selftest-anchor-destruction\",\"origin_issue\":76,\"intent\":\"existence\",\"file\":\"tests/fixtures/issue-76-anchor-fixture-doc.md\",\"section\":\"| 3 |\",\"section_kind\":\"line\",\"predicate\":\"present\",\"match\":\"fixed\",\"literal\":\"| 3 |\",\"scope\":\"permanent\"}"
+SELFTEST_ANCHOR_DESTRUCTION_OUT="$(run_self_test "$TEETH_SELFTEST_DIR/anchor-destruction.json")"
+SELFTEST_ANCHOR_DESTRUCTION_RC=$?
+
+assert_true "teeth self-test (d): an entry whose literal overlaps its own column-1 anchor prefix is NOT credited with teeth — mode returns non-zero (#76 teeth-mode-anchor-destruction)" \
+  "[ '$SELFTEST_ANCHOR_DESTRUCTION_RC' -ne 0 ]"
+assert_true "teeth self-test (d): the run does NOT abort — the entry is named in a diagnostic rather than silently dropped" \
+  "printf '%s' \"\$SELFTEST_ANCHOR_DESTRUCTION_OUT\" | grep -qF '76-selftest-anchor-destruction'"
+assert_false "teeth self-test (d): the unresolvable-anchor path never reaches block()'s abort — no BLOCK line is emitted from mutation evaluation" \
+  "printf '%s' \"\$SELFTEST_ANCHOR_DESTRUCTION_OUT\" | grep -q '^BLOCK:'"
 
 # =============================================================================
 echo ""
@@ -449,7 +317,7 @@ echo ""
 echo "=== AC3 (D): the 4 measured false positives + 3 #955-cycle observations, non-occurrence ==="
 
 # --- Case 1: positional fragility (line window shifted +22 lines) ---
-CASE1_FILE_REL="tests/fixtures/.tmp-951-$$/case1-fixture.md"
+CASE1_FILE_REL="tests/fixtures/.tmp-run-doc-invariants-$$/case1-fixture.md"
 CASE1_FILE_ABS="$PROJECT_ROOT/$CASE1_FILE_REL"
 cat > "$CASE1_FILE_ABS" <<'MD'
 ## Case1 Heading
@@ -497,11 +365,9 @@ cat > "$TMP_ROOT/reg-prohibition.json" <<JSON
 JSON
 assert_true "case 7: runner REJECTS a diff/prohibition-shaped entry (structural barring only, 799 migration deferred)" \
   "[ -f '$RUNNER' ] && ! ( cd '$PROJECT_ROOT' && bash '$RUNNER' '$TMP_ROOT/reg-prohibition.json' >/dev/null 2>&1 )"
-assert_true "case 7: 799's live suite is untouched this cycle (test-issue-799-inert-cleanup.sh still present)" \
-  "[ -f '$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh' ]"
 
 # --- 797-style whole-file absent non-vacuity (C5) ---
-DIALECT_SEEDED_REL="tests/fixtures/.tmp-951-$$/dialect-seeded.md"
+DIALECT_SEEDED_REL="tests/fixtures/.tmp-run-doc-invariants-$$/dialect-seeded.md"
 DIALECT_SEEDED_ABS="$PROJECT_ROOT/$DIALECT_SEEDED_REL"
 cp "$DIALECT_FIXTURE" "$DIALECT_SEEDED_ABS"
 printf '\nwrong-dialect-marker-951\n' >> "$DIALECT_SEEDED_ABS"
@@ -515,10 +381,6 @@ assert_true "C5 non-vacuity: clean tree (literal absent) -> entry PASSes" \
   "[ -f '$RUNNER' ] && [ \"\$(verdict_for_id '$TMP_ROOT/reg-dialect-clean.json' 951-fixture-dialect)\" = 'PASS' ]"
 assert_true "C5 non-vacuity: seeded wrong-dialect literal -> entry FAILs (proves the absent check has teeth)" \
   "[ -f '$RUNNER' ] && [ \"\$(verdict_for_id '$TMP_ROOT/reg-dialect-seeded.json' 951-fixture-dialect)\" = 'FAIL' ]"
-
-# --- Retired-guard dispositions recorded (C3, ledger E13) ---
-assert_true "retired-guard dispositions recorded: feature/docs record disposition for each retired DELTA guard" \
-  "[ -f '$LIFECYCLE_DOC' ] && grep -qi 'dropped\|promot\|deferred' '$LIFECYCLE_DOC'"
 
 # =============================================================================
 echo ""
@@ -560,7 +422,7 @@ assert_true "C6: ambiguous-anchor rejection message names the hazard" \
 echo ""
 echo "=== L1: match:\"regex\" — design-mandated predicate mode (feature design match enum fixed|regex, round-2) ==="
 
-REGEX_FILE_REL="tests/fixtures/.tmp-951-$$/regex-fixture.md"
+REGEX_FILE_REL="tests/fixtures/.tmp-run-doc-invariants-$$/regex-fixture.md"
 REGEX_FILE_ABS="$PROJECT_ROOT/$REGEX_FILE_REL"
 cat > "$REGEX_FILE_ABS" <<'MD'
 ## Regex Heading
@@ -582,7 +444,7 @@ assert_true "L1 teeth leg: match:regex literal no longer matches mutated fixture
 echo ""
 echo "=== L2: section_end heading-pair window — design-mandated (feature §3.2/§3.3, ledger E4, round-2) ==="
 
-SECTIONEND_FILE_REL="tests/fixtures/.tmp-951-$$/section-end-fixture.md"
+SECTIONEND_FILE_REL="tests/fixtures/.tmp-run-doc-invariants-$$/section-end-fixture.md"
 SECTIONEND_FILE_ABS="$PROJECT_ROOT/$SECTIONEND_FILE_REL"
 cat > "$SECTIONEND_FILE_ABS" <<'MD'
 ### Section Start
@@ -774,65 +636,6 @@ assert_true "resolve_base_ref: unresolvable base (no override/env/origin/main) r
   "[ -f '$BASEREF_LIB' ] && ! ( cd '$REPO_D' && env -u GITHUB_BASE_REF bash -c 'source \"$BASEREF_LIB\" && resolve_base_ref' >/dev/null 2>&1 )"
 
 # =============================================================================
-echo ""
-echo "=== AC5 (G): CI convergence — single runner step replaces per-issue steps ==="
-
-assert_true "workflow references the single runner step (bash tests/run-doc-invariants.sh)" \
-  "grep -qF 'run: bash tests/run-doc-invariants.sh' '$WORKFLOW'"
-assert_false "workflow no longer runs the #800 doc-assertions step" \
-  "grep -qF 'run: bash tests/test-issue-800-doc-assertions.sh' '$WORKFLOW'"
-assert_false "workflow no longer runs the #949 manifest-regen-doc step" \
-  "grep -qF 'run: bash tests/test-issue-949-manifest-regen-doc.sh' '$WORKFLOW'"
-assert_false "workflow paths: no longer lists tests/test-issue-800-doc-assertions.sh" \
-  "grep -qF \"'tests/test-issue-800-doc-assertions.sh'\" '$WORKFLOW'"
-assert_false "workflow paths: no longer lists tests/test-issue-949-manifest-regen-doc.sh" \
-  "grep -qF \"'tests/test-issue-949-manifest-regen-doc.sh'\" '$WORKFLOW'"
-assert_true "AC5 case-4a: previously-unregistered 794/796/797 are now reachable through the single runner step" \
-  "[ -f '$REGISTRY' ] && jq -e '[.invariants[] | select(.origin_issue == 794 or .origin_issue == 796 or .origin_issue == 797)] | length >= 3' '$REGISTRY' >/dev/null 2>&1"
-
-# =============================================================================
-echo ""
-echo "=== Deletion (H): the five migrated suites and their two CI steps are gone ==="
-
-for f in "${OLD_SUITES[@]}"; do
-  rel="${f#"$PROJECT_ROOT"/}"
-  assert_true "deleted: $rel" "[ ! -f '$f' ]"
-done
-
-# =============================================================================
-echo ""
-echo "=== Manifest closure (I): docs/doc-invariant-registry.md enters the closure (§DR-8, ledger E14) ==="
-
-assert_true "docs/INDEX.md links docs/doc-invariant-registry.md (enters the markdown-link closure)" \
-  "grep -qF 'doc-invariant-registry.md' '$INDEX_MD'"
-assert_true "docs/maintained-docs.md registers docs/doc-invariant-registry.md" \
-  "grep -qF 'doc-invariant-registry.md' '$MAINTAINED_DOCS'"
-assert_true "setup/manifest.json carries a source+sha256 row for docs/doc-invariant-registry.md" \
-  "jq -e '.artifacts[] | select(.source == \"docs/doc-invariant-registry.md\")' '$MANIFEST_JSON' >/dev/null 2>&1"
-assert_true "manifest sha256 for the new doc equals its current source hash (freshness, AC2e oracle)" \
-  "[ -f '$LIFECYCLE_DOC' ] && manifest_sha=\$(jq -r '.artifacts[] | select(.source == \"docs/doc-invariant-registry.md\") | .sha256' '$MANIFEST_JSON' 2>/dev/null) && actual_sha=\$(shasum -a 256 '$LIFECYCLE_DOC' 2>/dev/null | awk '{print \$1}') && [ -n \"\$manifest_sha\" ] && [ \"\$manifest_sha\" = \"\$actual_sha\" ]"
-
-# =============================================================================
-echo ""
-echo "=== §DR-6 (J): no residual per-issue exemption arrays ==="
-
-assert_false "registry does not carry an exempt_955_patterns-style array" \
-  "[ -f '$REGISTRY' ] && grep -qF 'exempt_955_patterns' '$REGISTRY'"
-assert_false "runner does not carry an exempt_955_patterns-style array" \
-  "[ -f '$RUNNER' ] && grep -qF 'exempt_955_patterns' '$RUNNER'"
-
-# =============================================================================
-echo ""
-echo "=== §DR-7 (K): new infra self-registration in e2e-dummy-target.yml paths: ==="
-
-for artifact in 'tests/run-doc-invariants.sh' 'tests/fixtures/doc-invariants.json' 'tests/lib/base-ref.sh'; do
-  assert_true "workflow paths: registers $artifact (both pull_request + push blocks, >=2 occurrences)" \
-    "[ \"\$(grep -cF \"'$artifact'\" '$WORKFLOW')\" -ge 2 ]"
-done
-
-# =============================================================================
-# Results
-# ---------------------------------------------------------------------------
 echo ""
 echo "=============================="
 echo "Results: $PASS/$TESTS passed, $FAIL failed"

@@ -1,5 +1,6 @@
 scripts/test/check-host-purity-delta.sh
 tests/fixtures/host-purity-tokens.txt
+tests/fixtures/issue-76-migration-map.md
 tests/manual/issue-985-manual-scenarios.md
 tests/test-issue-788-host-purity-delta.sh
 tests/test-issue-985-doc-assertions.sh

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: scripts/preflight/check-review-backend.sh scripts/review/codex-review-pr.sh setup/manifest.json
 # =============================================================================
 # Test: reviewer-backend bundle delivery + install config scaffold — Issue #979
 # =============================================================================

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: scripts/preflight/check-review-backend.sh
 # =============================================================================
 # Test: PREFLIGHT fail-closed reviewer-backend availability check — Issue #979
 # =============================================================================
@@ -124,20 +125,25 @@ if [ -x "$CHECK_SCRIPT" ]; then
   # `--backend` token forever.
   #
   # Harness-owned bounded execution (D-1, MUST): prefer timeout/gtimeout;
-  # else a sleep+kill watchdog fallback. Verified round-1 fact: this host has
-  # neither `timeout` nor `gtimeout` on PATH, so the fallback is the *live*
-  # path here. The oracle keys on a harness-set KILLED flag (0/1) rather than
-  # a hardcoded exit code — a SIGTERM-killed job reports 143, not GNU
-  # timeout's 124, so a raw `-ne 124` check would be a false GREEN on the
-  # fallback path.
+  # else a sleep+kill watchdog fallback. The oracle keys on a harness-set
+  # KILLED flag (0/1) rather than a hardcoded exit code — a SIGTERM-killed job
+  # reports 143, not GNU timeout's 124, so a raw `-ne 124` check would be a
+  # false GREEN on the fallback path.
+  #
+  # The watchdog is selected on the AMBIENT PATH but invoked under the
+  # restricted SYSTEM_PATH above, so it is resolved to its ABSOLUTE path here
+  # (issue #76 `timeout-path-portability`). Selecting by bare name and invoking
+  # under the restricted set makes the invocation "command not found" wherever
+  # the binary lives outside SYSTEM_PATH — the exit-code and message pins then
+  # fail against 127 while the subject script itself is correct.
   NOVAL_LOG="$(mktemp)"
   KILLED=0
   HANG_EXIT=""
   TIMEOUT_BIN=""
   if command -v timeout >/dev/null 2>&1; then
-    TIMEOUT_BIN="timeout"
+    TIMEOUT_BIN="$(command -v timeout)"
   elif command -v gtimeout >/dev/null 2>&1; then
-    TIMEOUT_BIN="gtimeout"
+    TIMEOUT_BIN="$(command -v gtimeout)"
   fi
   if [ -n "$TIMEOUT_BIN" ]; then
     ( PATH="$FAKEBIN_PRESENT:$SYSTEM_PATH" "$TIMEOUT_BIN" 5 "$CHECK_SCRIPT" --backend ) >"$NOVAL_LOG" 2>&1

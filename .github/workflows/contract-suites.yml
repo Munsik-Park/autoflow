@@ -1,0 +1,286 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# .github/workflows/contract-suites.yml — contract suites and standing lints (issue #76)
+#
+# Gives every previously-unregistered suite a real execution path, and registers
+# the three standing lints this cycle promotes.
+#
+# Why a NEW workflow rather than new entries in e2e-dummy-target.yml: that file's
+# first `paths:` block is read by live suites through a FIXED 40-line window, and
+# the window is saturated — the last literal those guards require sits on the
+# window's final line, so any entry inserted above it evicts a literal and turns
+# three unrelated green suites red. Removals from that block are safe (they only
+# pull entries up) and are all this cycle makes there; additions land here. This
+# also follows the one-workflow-per-subject precedent the tree already sets
+# (schema-hook-contract.yml, host-purity-delta.yml).
+#
+# Why GitHub Actions: every step is pure bash + jq with no `bats` and no node/npm
+# — the same zero-infra rationale the three existing workflows state in their own
+# headers. `bats` in particular is unavailable here BY DESIGN, which is why the
+# tests/issue-92 set was split by assertion shape rather than registered.
+#
+# Each suite is its own step so a failure attributes to its own name rather than
+# to a shared shell.
+#
+# Trigger coverage: the `paths:` blocks below carry every path declared by a
+# registered suite's `# ci-subject:` header, plus each suite file itself. That
+# correspondence is what tests/test-issue-76-orphan-registration.sh's
+# registration-effectiveness oracle asserts — a `run:` step alone does not give a
+# suite regression protection if its own subject's edit never fires the workflow.
+#
+# Enforcement level: ADVISORY, as for every other workflow in this repo — this
+# plan provides no branch-protection required-status-checks, so a red run
+# surfaces a signal the external reviewer confirms green before merging.
+
+name: contract-suites
+
+on:
+  pull_request:
+    paths:
+      - '.claude/hooks/check-autoflow-gate.sh'
+      - '.claude/workflows/**'
+      - '.claude/workflows/architect-deliberation.js'
+      - '.github/pull_request_template.md'
+      - '.github/workflows/**'
+      - '.github/workflows/contract-suites.yml'
+      - 'docs/INDEX.md'
+      - 'docs/adr/**'
+      - 'docs/autoflow-guide.md'
+      - 'docs/doc-invariant-registry.md'
+      - 'docs/external-review-sequencing.md'
+      - 'docs/gate-matching-standard.md'
+      - 'docs/git-workflow.md'
+      - 'docs/improvement-backlog.md'
+      - 'docs/maintained-docs.md'
+      - 'docs/reviewer-backend.md'
+      - 'docs/thin-root-layer.md'
+      - 'plugin/autoflow/skills/**'
+      - 'scripts/handoff/confirm-ci-green.sh'
+      - 'scripts/handoff/create-host-pr.sh'
+      - 'scripts/preflight/check-review-backend.sh'
+      - 'scripts/review/codex-review-pr.sh'
+      - 'scripts/review/lib/claude-isolation.sh'
+      - 'scripts/test/check-close-keyword-quoting.sh'
+      - 'scripts/test/check-manifest-regen-clean.sh'
+      - 'scripts/test/check-suite-ci-coverage.sh'
+      - 'scripts/test/check-tests-tree-hygiene.sh'
+      - 'setup/gen-manifest-hashes.sh'
+      - 'setup/manifest.json'
+      - 'setup/thin-root-layer/**'
+      - 'tests/adr-0016-conformance-check.sh'
+      - 'tests/fixtures/**'
+      - 'tests/fixtures/doc-invariants.json'
+      - 'tests/fixtures/gate-schema.json'
+      - 'tests/fixtures/issue-76-migration-map.md'
+      - 'tests/issue-92/mock-gh/**'
+      - 'tests/lib/base-ref.sh'
+      - 'tests/manual/**'
+      - 'tests/plugin/verify-install-into-target.sh'
+      - 'tests/plugin/verify-install-skill-scripts.sh'
+      - 'tests/plugin/verify-thin-root-layer.sh'
+      - 'tests/run-doc-invariants.sh'
+      - 'tests/test-codex-review-label-step.sh'
+      - 'tests/test-gate-hardening.sh'
+      - 'tests/test-issue-16-manifest-locale-invariance.sh'
+      - 'tests/test-issue-18-fixture-glob-isolation.sh'
+      - 'tests/test-issue-245-schema-validation.sh'
+      - 'tests/test-issue-25-confirm-ci-green.sh'
+      - 'tests/test-issue-30-confirm-ci-green.sh'
+      - 'tests/test-issue-40-hook-additive.sh'
+      - 'tests/test-issue-64-collection-scope.sh'
+      - 'tests/test-issue-76-manual-doc-retirement.sh'
+      - 'tests/test-issue-76-migration-map-total.sh'
+      - 'tests/test-issue-76-orphan-registration.sh'
+      - 'tests/test-issue-76-runner-self-test-contract.sh'
+      - 'tests/test-issue-76-standing-lints.sh'
+      - 'tests/test-issue-795-handoff-removal.sh'
+      - 'tests/test-issue-92-host-pr-execution.sh'
+      - 'tests/test-issue-961-cap6-gate.sh'
+      - 'tests/test-issue-979-bundle-delivery.sh'
+      - 'tests/test-issue-979-doc-neutrality.sh'
+      - 'tests/test-issue-979-preflight-backend-check.sh'
+      - 'tests/test-issue-979-probe.sh'
+      - 'tests/test-issue-979-review-backend.sh'
+      - 'tests/test-issue-985-doc-assertions.sh'
+      - 'tests/test-run-doc-invariants.sh'
+  push:
+    branches: [main]
+    paths:
+      - '.claude/hooks/check-autoflow-gate.sh'
+      - '.claude/workflows/**'
+      - '.claude/workflows/architect-deliberation.js'
+      - '.github/pull_request_template.md'
+      - '.github/workflows/**'
+      - '.github/workflows/contract-suites.yml'
+      - 'docs/INDEX.md'
+      - 'docs/adr/**'
+      - 'docs/autoflow-guide.md'
+      - 'docs/doc-invariant-registry.md'
+      - 'docs/external-review-sequencing.md'
+      - 'docs/gate-matching-standard.md'
+      - 'docs/git-workflow.md'
+      - 'docs/improvement-backlog.md'
+      - 'docs/maintained-docs.md'
+      - 'docs/reviewer-backend.md'
+      - 'docs/thin-root-layer.md'
+      - 'plugin/autoflow/skills/**'
+      - 'scripts/handoff/confirm-ci-green.sh'
+      - 'scripts/handoff/create-host-pr.sh'
+      - 'scripts/preflight/check-review-backend.sh'
+      - 'scripts/review/codex-review-pr.sh'
+      - 'scripts/review/lib/claude-isolation.sh'
+      - 'scripts/test/check-close-keyword-quoting.sh'
+      - 'scripts/test/check-manifest-regen-clean.sh'
+      - 'scripts/test/check-suite-ci-coverage.sh'
+      - 'scripts/test/check-tests-tree-hygiene.sh'
+      - 'setup/gen-manifest-hashes.sh'
+      - 'setup/manifest.json'
+      - 'setup/thin-root-layer/**'
+      - 'tests/adr-0016-conformance-check.sh'
+      - 'tests/fixtures/**'
+      - 'tests/fixtures/doc-invariants.json'
+      - 'tests/fixtures/gate-schema.json'
+      - 'tests/fixtures/issue-76-migration-map.md'
+      - 'tests/issue-92/mock-gh/**'
+      - 'tests/lib/base-ref.sh'
+      - 'tests/manual/**'
+      - 'tests/plugin/verify-install-into-target.sh'
+      - 'tests/plugin/verify-install-skill-scripts.sh'
+      - 'tests/plugin/verify-thin-root-layer.sh'
+      - 'tests/run-doc-invariants.sh'
+      - 'tests/test-codex-review-label-step.sh'
+      - 'tests/test-gate-hardening.sh'
+      - 'tests/test-issue-16-manifest-locale-invariance.sh'
+      - 'tests/test-issue-18-fixture-glob-isolation.sh'
+      - 'tests/test-issue-245-schema-validation.sh'
+      - 'tests/test-issue-25-confirm-ci-green.sh'
+      - 'tests/test-issue-30-confirm-ci-green.sh'
+      - 'tests/test-issue-40-hook-additive.sh'
+      - 'tests/test-issue-64-collection-scope.sh'
+      - 'tests/test-issue-76-manual-doc-retirement.sh'
+      - 'tests/test-issue-76-migration-map-total.sh'
+      - 'tests/test-issue-76-orphan-registration.sh'
+      - 'tests/test-issue-76-runner-self-test-contract.sh'
+      - 'tests/test-issue-76-standing-lints.sh'
+      - 'tests/test-issue-795-handoff-removal.sh'
+      - 'tests/test-issue-92-host-pr-execution.sh'
+      - 'tests/test-issue-961-cap6-gate.sh'
+      - 'tests/test-issue-979-bundle-delivery.sh'
+      - 'tests/test-issue-979-doc-neutrality.sh'
+      - 'tests/test-issue-979-preflight-backend-check.sh'
+      - 'tests/test-issue-979-probe.sh'
+      - 'tests/test-issue-979-review-backend.sh'
+      - 'tests/test-issue-985-doc-assertions.sh'
+      - 'tests/test-run-doc-invariants.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  contract-suites:
+    name: contract suites and standing lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          # test-issue-76-migration-map-total.sh materializes deleted suites
+          # from the merge-base with main; a shallow checkout resolves no base
+          # ref (BLOCK: "no base ref resolvable", PR #83 first CI run).
+          fetch-depth: 0
+
+      - name: test-issue-76-manual-doc-retirement.sh
+        run: bash tests/test-issue-76-manual-doc-retirement.sh
+
+      - name: test-issue-76-migration-map-total.sh
+        run: bash tests/test-issue-76-migration-map-total.sh
+
+      - name: test-issue-76-orphan-registration.sh
+        run: bash tests/test-issue-76-orphan-registration.sh
+
+      - name: test-issue-76-runner-self-test-contract.sh
+        run: bash tests/test-issue-76-runner-self-test-contract.sh
+
+      - name: test-issue-76-standing-lints.sh
+        run: bash tests/test-issue-76-standing-lints.sh
+
+      - name: adr-0016-conformance-check.sh
+        run: bash tests/adr-0016-conformance-check.sh
+
+      - name: verify-install-into-target.sh
+        run: bash tests/plugin/verify-install-into-target.sh
+
+      - name: verify-install-skill-scripts.sh
+        run: bash tests/plugin/verify-install-skill-scripts.sh
+
+      - name: verify-thin-root-layer.sh
+        run: bash tests/plugin/verify-thin-root-layer.sh
+
+      - name: test-codex-review-label-step.sh
+        run: bash tests/test-codex-review-label-step.sh
+
+      - name: test-gate-hardening.sh
+        run: bash tests/test-gate-hardening.sh
+
+      - name: test-issue-16-manifest-locale-invariance.sh
+        run: bash tests/test-issue-16-manifest-locale-invariance.sh
+
+      - name: test-issue-18-fixture-glob-isolation.sh
+        run: bash tests/test-issue-18-fixture-glob-isolation.sh
+
+      - name: test-issue-245-schema-validation.sh
+        run: bash tests/test-issue-245-schema-validation.sh
+
+      - name: test-issue-25-confirm-ci-green.sh
+        run: bash tests/test-issue-25-confirm-ci-green.sh
+
+      - name: test-issue-30-confirm-ci-green.sh
+        run: bash tests/test-issue-30-confirm-ci-green.sh
+
+      - name: test-issue-40-hook-additive.sh
+        run: bash tests/test-issue-40-hook-additive.sh
+
+      - name: test-issue-64-collection-scope.sh
+        run: bash tests/test-issue-64-collection-scope.sh
+
+      - name: test-issue-795-handoff-removal.sh
+        run: bash tests/test-issue-795-handoff-removal.sh
+
+      - name: test-issue-92-host-pr-execution.sh
+        run: bash tests/test-issue-92-host-pr-execution.sh
+
+      - name: test-issue-961-cap6-gate.sh
+        run: bash tests/test-issue-961-cap6-gate.sh
+
+      - name: test-issue-979-bundle-delivery.sh
+        run: bash tests/test-issue-979-bundle-delivery.sh
+
+      - name: test-issue-979-doc-neutrality.sh
+        run: bash tests/test-issue-979-doc-neutrality.sh
+
+      - name: test-issue-979-preflight-backend-check.sh
+        run: bash tests/test-issue-979-preflight-backend-check.sh
+
+      - name: test-issue-979-probe.sh
+        run: bash tests/test-issue-979-probe.sh
+
+      - name: test-issue-979-review-backend.sh
+        run: bash tests/test-issue-979-review-backend.sh
+
+      - name: test-issue-985-doc-assertions.sh
+        run: bash tests/test-issue-985-doc-assertions.sh
+
+      - name: test-run-doc-invariants.sh
+        run: bash tests/test-run-doc-invariants.sh
+
+      - name: suite CI-coverage lint
+        run: bash scripts/test/check-suite-ci-coverage.sh
+
+      - name: tests-tree hygiene lint
+        run: bash scripts/test/check-tests-tree-hygiene.sh
+
+      - name: manifest regen-clean lint
+        run: bash scripts/test/check-manifest-regen-clean.sh
+
+      - name: doc-invariant runner self-test (mutation teeth)
+        run: bash tests/run-doc-invariants.sh --self-test

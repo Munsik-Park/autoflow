@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh
 # =============================================================================
 # Test: issue #40 — fail_hypothesis is hook no-impact (AC3)
 # =============================================================================

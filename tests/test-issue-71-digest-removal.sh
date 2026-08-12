@@ -288,7 +288,6 @@ TOKEN_RE='cycle-digest|scan-cross-issue-recurrence|xissue-scan|cross-issue recur
 EXEMPT_WHOLE_FILES=(
   "docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
   "docs/adr/0017-teammate-removal-feasibility.md"
-  "tests/fixtures/doc-invariants-baseline.txt"
   "tests/test-issue-64-collection-scope.sh"
   "tests/test-issue-52-peer-facilitator-premise.sh"
   "tests/test-issue-67-deliberation-record.sh"
@@ -314,6 +313,19 @@ EXEMPT_WHOLE_FILES=(
   # those five rows (re-derived: `git grep` over the union token set returns
   # only :118,119,120,121,123), so a whole-file exemption is safe.
   "docs/doc-invariant-registry.md"
+  # tests/fixtures/issue-76-migration-map.md records each deleted assertion's
+  # FIRST ARGUMENT VERBATIM — that is what makes "no bare deletion" checkable
+  # rather than asserted. Issue #76 deletes this suite's `AC4-CLOSURE` leg,
+  # whose description enumerates its own admission list and so names
+  # emit-cycle-digest.sh / scan-cross-issue-recurrence.sh; the map therefore
+  # carries those tokens as the retirement RECORD, not as a live reference.
+  # A sweep forbidding the token everywhere would make recording a retirement
+  # impossible, which is the opposite of what this leg is for — same ground as
+  # the doc-invariant-registry.md exemption above, and the fourth instance of
+  # the recording-artefact class (ledger E10). Confined to one row
+  # (re-derived: the union token set returns only :232), so a whole-file
+  # exemption is safe.
+  "tests/fixtures/issue-76-migration-map.md"
 )
 
 is_exempt_whole_file() {

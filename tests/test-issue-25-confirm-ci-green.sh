@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: scripts/handoff/confirm-ci-green.sh docs/autoflow-guide.md
 # =============================================================================
 # Test: HANDOFF step-5 CI-green confirm helper — Issue #25
 # =============================================================================
@@ -143,6 +144,18 @@ run_bounded() {
     rm -f "$logfile.watchdog" 2>/dev/null
   fi
 }
+
+# Outer harness-watchdog slack for the run_bounded legs below (AC5,
+# AC-C2-1a, AC-C2-1b, AC-C3-2, AC-C3-6, AC-C3-7). A shared CI runner adds
+# real subprocess-spawn overhead (the gh mock invocation, jq, mktemp) on
+# top of the script's own poll budget that a fixed guess does not reliably
+# cover -- CI round 4 (run 31456233814) flipped one of these assertions on
+# the ubuntu runner while the macOS/BSD run stayed clean at the same fixed
+# bound. Each leg's outer bound is DERIVED from that leg's own
+# CI_POLL_TIMEOUT_SECS + CI_POLL_INTERVAL_SECS plus this single named,
+# overridable constant, rather than a widened ad-hoc sleep scattered per
+# leg.
+HARNESS_OVERHEAD_SLACK_SECS="${HARNESS_OVERHEAD_SLACK_SECS:-8}"
 
 # Fixture bodies (JSON, one line each — feature §3.3 field shapes).
 PRECHECK_MERGEABLE_CLEAN='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN"}'
@@ -309,17 +322,17 @@ GH_MOCK_POLL_SEQUENCE_FILE=""
 GH_MOCK_POLL_COUNTER_FILE=""
 
 # Outer wall-clock guard (verification design AC5 method): ceiling =
-# CI_POLL_TIMEOUT_SECS(2) + CI_POLL_INTERVAL_SECS(1) + slack(2) = 5s. This
-# tripwire must NOT fire once the script self-terminates on its own deadline.
+# CI_POLL_TIMEOUT_SECS(2) + CI_POLL_INTERVAL_SECS(1) + HARNESS_OVERHEAD_SLACK_SECS.
+# This tripwire must NOT fire once the script self-terminates on its own deadline.
 AC5_LOG="$(mktemp)"
-run_bounded 5 "$AC5_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+run_bounded "$((2 + 1 + HARNESS_OVERHEAD_SLACK_SECS))" "$AC5_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
   GH_MOCK_PRECHECK_BODY="$GH_MOCK_PRECHECK_BODY" \
   GH_MOCK_POLL_BODY="$GH_MOCK_POLL_BODY" \
   CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
   bash "$SCRIPT" --pr 42
 
-assert_true "AC5: the outer 5s harness watchdog never had to fire (script self-terminated via its own deadline)" \
+assert_true "AC5: the outer harness watchdog never had to fire (script self-terminated via its own deadline)" \
   "[ \"\$RB_KILLED\" -eq 0 ]"
 assert_true "AC5: exit code is 13 (checks present but never all-green within the bound)" \
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
@@ -459,19 +472,34 @@ echo "=== AC-C2-1a (hung precheck self-bounds, recovers via poll -> exit 0) ==="
 # verification design AC-C2-1a: mock precheck sleeps well past pre_bound
 # (min(CI_POLL_INTERVAL_SECS,remaining)=1 with CI_POLL_INTERVAL_SECS=1); a
 # healthy poll fixture is paired so the fixture hazard (design §1) is
-# honored. Outer ceiling = CI_POLL_TIMEOUT_SECS(2) + interval(1) + slack(2).
+# honored. Outer ceiling = CI_POLL_TIMEOUT_SECS(5) + interval(1) +
+# HARNESS_OVERHEAD_SLACK_SECS.
+#
+# CI round 5 (run 31456977323) root cause: with CI_POLL_TIMEOUT_SECS=2, the
+# script's own deadline is start+2s; the precheck is killed at
+# pre_bound=~1s (confirm-ci-green.sh:238-246, clamp_to_interval(remaining)),
+# so on a loaded runner the ~1s precheck kill plus subprocess/jq overhead
+# alone can consume the whole 2s inner budget with `date +%s` integer-second
+# granularity -- the poll loop body never runs, mergeable is never
+# confirmed, and the script lands on exit 14 instead of the expected exit
+# 0. This is an INNER-budget squeeze, distinct from the outer
+# HARNESS_OVERHEAD_SLACK_SECS watchdog fixed in the prior round.
+# CI_POLL_TIMEOUT_SECS=5 gives deterministic headroom for >=1 poll
+# iteration after the ~1s-bounded precheck even with several seconds of
+# runner overhead; CI_POLL_INTERVAL_SECS stays 1 (assertion semantics --
+# "precheck self-bounds, recovers via poll" -- are unchanged).
 
 C2_1A_LOG="$(mktemp)"
 C2_1A_INV_LOG="$(mktemp)"
-run_bounded 5 "$C2_1A_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+run_bounded "$((5 + 1 + HARNESS_OVERHEAD_SLACK_SECS))" "$C2_1A_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   GH_INVOCATION_LOG="$C2_1A_INV_LOG" \
   GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
   GH_MOCK_PRECHECK_SLEEP=100 \
   GH_MOCK_POLL_BODY="$POLL_ALL_GREEN_CHECKRUN" \
-  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 \
   bash "$SCRIPT" --pr 42
 
-assert_true "AC-C2-1a: the outer 5s harness watchdog never had to fire (precheck self-bounded, not the unbounded raw call)" \
+assert_true "AC-C2-1a: the outer harness watchdog never had to fire (precheck self-bounded, not the unbounded raw call)" \
   "[ \"\$RB_KILLED\" -eq 0 ]"
 assert_true "AC-C2-1a: exit code is 0 (bounded precheck fell through, healthy poll confirmed green)" \
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 0 ]"
@@ -484,10 +512,16 @@ echo "=== AC-C2-1b (precheck+poll never confirm mergeable -> bounded whole-scrip
 # AND poll), so mergeable is never confirmed through the whole budget. The
 # post-loop mergeable_confirmed==0 branch must land on the new distinct code
 # 14, never conflated with the genuine-conflict 10.
+#
+# Round-5 headroom review: unlike AC-C2-1a, no leg here sleeps -- every gh
+# call fails immediately (GH_MOCK_EXIT=1, no GH_MOCK_PRECHECK_SLEEP), so
+# mergeable_confirmed stays 0 whether the poll loop runs zero or several
+# iterations; the CI_POLL_TIMEOUT_SECS(2) inner budget is not knife-edge
+# for THIS assertion's outcome and is left unchanged.
 
 C2_1B_LOG="$(mktemp)"
 C2_1B_INV_LOG="$(mktemp)"
-run_bounded 5 "$C2_1B_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+run_bounded "$((2 + 1 + HARNESS_OVERHEAD_SLACK_SECS))" "$C2_1B_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   GH_INVOCATION_LOG="$C2_1B_INV_LOG" \
   GH_MOCK_EXIT=1 \
   GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
@@ -495,7 +529,7 @@ run_bounded 5 "$C2_1B_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
   bash "$SCRIPT" --pr 42
 
-assert_true "AC-C2-1b: the outer 5s harness watchdog never had to fire (script self-terminated on its own budget)" \
+assert_true "AC-C2-1b: the outer harness watchdog never had to fire (script self-terminated on its own budget)" \
   "[ \"\$RB_KILLED\" -eq 0 ]"
 assert_true "AC-C2-1b: exit code is 14 (never confirmed mergeable through precheck+poll — transport failure, not a conflict)" \
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 14 ]"
@@ -690,6 +724,13 @@ echo "=== AC-C3-2 (persistent malformed mid-poll, healthy precheck -> bounded, n
 # sets mergeable_confirmed=1 at :213, so the post-loop classifier lands on
 # exit 11 (saw_checks==0), not 14. Primary assertion is the robust != 10;
 # secondary is the firm == 11 binding.
+#
+# Round-5 headroom review: the precheck fixture here is healthy
+# (PRECHECK_MERGEABLE_CLEAN, no GH_MOCK_PRECHECK_SLEEP), so it does not
+# consume the pre_bound the way AC-C2-1a's does, and mergeable_confirmed=1
+# is set at the precheck itself -- the exit-11 outcome does not depend on
+# how many malformed-poll iterations the CI_POLL_TIMEOUT_SECS(2) inner
+# budget allows, so this leg is not knife-edge and is left unchanged.
 
 GH_INVOCATION_LOG="$(mktemp)"
 GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
@@ -698,14 +739,14 @@ GH_MOCK_POLL_SEQUENCE_FILE=""
 GH_MOCK_POLL_COUNTER_FILE=""
 
 AC_C3_2_LOG="$(mktemp)"
-run_bounded 5 "$AC_C3_2_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+run_bounded "$((2 + 1 + HARNESS_OVERHEAD_SLACK_SECS))" "$AC_C3_2_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   GH_INVOCATION_LOG="$GH_INVOCATION_LOG" \
   GH_MOCK_PRECHECK_BODY="$GH_MOCK_PRECHECK_BODY" \
   GH_MOCK_POLL_BODY="$GH_MOCK_POLL_BODY" \
   CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
   bash "$SCRIPT" --pr 42
 
-assert_true "AC-C3-2: the outer 5s harness watchdog never had to fire (finite termination of the malformed-continue loop)" \
+assert_true "AC-C3-2: the outer harness watchdog never had to fire (finite termination of the malformed-continue loop)" \
   "[ \"\$RB_KILLED\" -eq 0 ]"
 assert_false "AC-C3-2: a persistently-malformed mid-poll under a healthy precheck does NOT exit 10 (the finding's actual kill)" \
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 10 ]"
@@ -791,12 +832,17 @@ echo "=== AC-C3-6 (dangling --pr last token -> bounded termination + exit 64, no
 # loop (shift 2 at $#=1 fails without consuming any argument under set -uo
 # pipefail, no -e), so this invocation MUST be wrapped in run_bounded — a
 # bare run_confirm would hang the whole suite. GREEN reaches usage; exit 64.
+#
+# Round-5 headroom review: this leg never sets CI_POLL_TIMEOUT_SECS -- it
+# exits via the argv-usage path before any gh call or poll loop, so it
+# carries no inner-budget squeeze risk; only the outer
+# HARNESS_OVERHEAD_SLACK_SECS watchdog applies.
 
 AC_C3_6_LOG="$(mktemp)"
-run_bounded 5 "$AC_C3_6_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+run_bounded "$HARNESS_OVERHEAD_SLACK_SECS" "$AC_C3_6_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   bash "$SCRIPT" --pr
 
-assert_true "AC-C3-6: the outer 5s harness watchdog never had to fire (script self-terminates, no hang)" \
+assert_true "AC-C3-6: the outer harness watchdog never had to fire (script self-terminates, no hang)" \
   "[ \"\$RB_KILLED\" -eq 0 ]"
 assert_true "AC-C3-6: a dangling --pr (no value) terminates finitely with exit 64 via the usage path" \
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 64 ]"
@@ -807,12 +853,16 @@ echo ""
 echo "=== AC-C3-7 (dangling --repo last token -> bounded termination + exit 64) ==="
 # verification design AC-C3-7 / D-C3-2: a value-taking --repo as the
 # dangling last token is a malformed invocation, not a silent REPO="".
+#
+# Round-5 headroom review: same shape as AC-C3-6 -- no CI_POLL_TIMEOUT_SECS,
+# exits via the argv-usage path before any gh call, so no inner-budget
+# squeeze risk.
 
 AC_C3_7_LOG="$(mktemp)"
-run_bounded 5 "$AC_C3_7_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+run_bounded "$HARNESS_OVERHEAD_SLACK_SECS" "$AC_C3_7_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   bash "$SCRIPT" --pr 42 --repo
 
-assert_true "AC-C3-7: the outer 5s harness watchdog never had to fire (script self-terminates, no hang)" \
+assert_true "AC-C3-7: the outer harness watchdog never had to fire (script self-terminates, no hang)" \
   "[ \"\$RB_KILLED\" -eq 0 ]"
 assert_true "AC-C3-7: a dangling --repo (no value) terminates finitely with exit 64 via the usage path" \
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 64 ]"

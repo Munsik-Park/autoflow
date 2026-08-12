@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: docs/git-workflow.md docs/external-review-sequencing.md docs/autoflow-guide.md
 # =============================================================================
 # Test: HANDOFF CI machine removal — Issue #795 (`subrepo-merged` retirement)
 # =============================================================================
@@ -122,13 +123,7 @@ echo "=== AC-DEL-DISPATCH: 'subrepo-merged' absent from autoflow-guide.md + exte
 # RED expectation: FAIL today (both docs carry the token — verified
 # autoflow-guide.md:529,583,585,587; external-review-sequencing.md multiple
 # lines). GREEN once D1/D2 remove the machine narration.
-assert_false \
-  "AC-DEL-DISPATCH: docs/autoflow-guide.md has no 'subrepo-merged' token" \
-  "grep -qF 'subrepo-merged' '$AUTOFLOW_GUIDE'"
 
-assert_false \
-  "AC-DEL-DISPATCH: docs/external-review-sequencing.md has no 'subrepo-merged' token" \
-  "grep -qF 'subrepo-merged' '$EXTERNAL_REVIEW'"
 
 # =============================================================================
 echo ""
@@ -149,13 +144,7 @@ assert_false \
   "AC-DEL-TOKEN: no live SUBREPO_READ_TOKEN reference under scripts/" \
   "git -C '$PROJECT_ROOT' grep -qF 'SUBREPO_READ_TOKEN' -- 'scripts'"
 
-assert_false \
-  "AC-DEL-TOKEN: docs/external-review-sequencing.md drops SUBREPO_READ_TOKEN narration" \
-  "grep -qF 'SUBREPO_READ_TOKEN' '$EXTERNAL_REVIEW'"
 
-assert_false \
-  "AC-DEL-TOKEN: docs/maintained-docs.md drops SUBREPO_READ_TOKEN narration" \
-  "grep -qF 'SUBREPO_READ_TOKEN' '$MAINTAINED_DOCS'"
 
 assert_false \
   "AC-DEL-TOKEN: tests/test-issue-495-token-scope.sh removed (subject deleted, feature T6)" \
@@ -263,8 +252,18 @@ echo "=== AC-ORPHAN: no dangling reference to the removed machine outside the al
 #     recorded in git-workflow.md) — the same class as the absence-test
 #     suites and issue-795-manual-scenarios.md already excluded here, not a
 #     live reference to a live machine.
+# Recording artefacts are excluded, not because they are exempt from the
+# boundary, but because naming a retired token is what they are FOR: an
+# `absent` registry entry must carry the literal it forbids, the migration map
+# records assertion descriptions verbatim, and the disposition registry records
+# each retirement by name. A sweep that forbade the token everywhere would make
+# recording a retirement impossible. Same intent as the manual-scenarios
+# carve-out already in this list (issue #76).
 EXCLUDE_PATHSPEC=(':!services' ':!.autoflow' \
   ':!tests/test-issue-795-handoff-removal.sh' \
+  ':!tests/fixtures/issue-76-migration-map.md' \
+  ':!tests/fixtures/doc-invariants.json' \
+  ':!docs/doc-invariant-registry.md' \
   ':!tests/test-issue-794-doc-assertions.sh' \
   ':!tests/issue-92/*.bats' \
   ':!tests/manual/issue-795-manual-scenarios.md' \
@@ -315,15 +314,6 @@ ALLOW_SUBREPO_MERGED=(
   "docs/adr/README.md"
   "docs/git-workflow.md"
   "docs/improvement-backlog.md"
-  # #951 capture-before-delete baseline (tests/fixtures/doc-invariants-
-  # baseline.txt, ledger E5): a captured VERBATIM stdout snapshot of the
-  # retired tests/test-issue-794-doc-assertions.sh's own assertion
-  # descriptions (e.g. "AC5d-invert: 'subrepo-merged' status-check machine
-  # removed..."), taken before that suite's deletion. Same class as the
-  # already-excluded absence-test suites and issue-795-manual-scenarios.md
-  # above: a describe-absence/historical-record occurrence of the retired
-  # machine's name, not a live reference to a live machine.
-  "tests/fixtures/doc-invariants-baseline.txt"
   # #951 GREEN commit (5fa1c9e): the shipped permanent registry
   # (tests/fixtures/doc-invariants.json) migrates 794's own preservation/
   # coherence entries verbatim, including three literal `"literal":
@@ -361,7 +351,7 @@ echo "=== AC-DANGLING-REF: no tests/ file still cites the deleted test-issue-495
 # absence, not as a live reference to a live file).
 assert_false \
   "AC-DANGLING-REF: no tests/ file (outside this suite) still references 'test-issue-495-token-scope'" \
-  "git -C '$PROJECT_ROOT' grep -Fl 'test-issue-495-token-scope' -- 'tests' ':!tests/test-issue-795-handoff-removal.sh' 2>/dev/null | grep -q ."
+  "git -C '$PROJECT_ROOT' grep -Fl 'test-issue-495-token-scope' -- 'tests' ':!tests/test-issue-795-handoff-removal.sh' ':!tests/fixtures/issue-76-migration-map.md' 2>/dev/null | grep -q ."
 
 # =============================================================================
 # Results
