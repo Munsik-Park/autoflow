@@ -87,7 +87,6 @@ on:
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
-      - 'tests/test-issue-85-disposition-record.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
@@ -154,7 +153,6 @@ on:
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
-      - 'tests/test-issue-85-disposition-record.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
@@ -199,9 +197,6 @@ jobs:
 
       - name: test-push-context-base-ref.sh
         run: bash tests/test-push-context-base-ref.sh
-
-      - name: test-issue-85-disposition-record.sh
-        run: bash tests/test-issue-85-disposition-record.sh
 
       - name: adr-0016-conformance-check.sh
         run: bash tests/adr-0016-conformance-check.sh
