@@ -26,7 +26,7 @@
 #       suites (grep -lE 'bash .*tests/' tests/*.sh), so it cannot share
 #       AC-59-11d's per-lane budget inside the cycle suite.
 #
-# Contract: asserts that the set of tests/test-issue-*.sh suites (excluding
+# Contract: asserts that the set of tests/test-*.sh suites (excluding
 # this cycle's own, self-excluded below) that REGRESS against `main` is a
 # SUBSET of the suites this cycle's acceptance criteria already name
 # (AC-59-11d ∪ AC-59-14 ∪ AC-59-18). A regression the cycle's own
@@ -70,6 +70,15 @@ NAMED_SUITES=(
   "test-issue-955-subagent-background-ban.sh"
   "test-issue-27-composition-oracle.sh"
   "test-issue-985-doc-assertions.sh"
+  # Issue #76's expected churn: suites this cycle edits that are green at the
+  # base and were absent from #59's set. Without the entry, a red here reports
+  # an UNNAMED regression with no way to separate a real escape from this
+  # cycle's own churn — the signal degradation this driver exists to prevent.
+  "test-issue-847-doc-assertions.sh"
+  "test-issue-795-handoff-removal.sh"
+  "test-issue-16-manifest-locale-invariance.sh"
+  "test-issue-979-preflight-backend-check.sh"
+  "test-issue-979-probe.sh"
 )
 
 is_named() {
@@ -102,7 +111,16 @@ echo "Full-tree sweep driver (issue #59, D24) — base: $BASE_REF"
 echo "Self-excluding: tests/test-issue-59-*.sh"
 echo ""
 
-for suite in "$PROJECT_ROOT"/tests/test-issue-*.sh; do
+# Enumeration glob widened from tests/test-issue-*.sh to tests/test-*.sh at
+# issue #76: the runner-contract suite tests/test-run-doc-invariants.sh holds
+# the registry runner's entire contract after the #951 split and would
+# otherwise fall outside the sweep entirely. Widening rather than accepting
+# "coverage comes from its own CI step", because a CI step proves a suite runs,
+# not that it did not regress against the base. This also picks up
+# test-gate-hardening.sh and test-codex-review-label-step.sh. The driver's own
+# filename stays outside the widened glob, so the self-exclusion rationale in
+# the header is unaffected.
+for suite in "$PROJECT_ROOT"/tests/test-*.sh; do
   base="$(basename "$suite")"
   # Self-exclusion (i): this cycle's own suite would be directly self-recursive.
   [[ "$base" == *issue-59-* ]] && continue

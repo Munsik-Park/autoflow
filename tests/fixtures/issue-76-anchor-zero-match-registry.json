@@ -1,0 +1,14 @@
+{
+  "invariants": [
+    {
+      "id": "issue-76-fixture-zero-match",
+      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "section": "| 2 |",
+      "section_kind": "line",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "irrelevant",
+      "scope": "permanent"
+    }
+  ]
+}

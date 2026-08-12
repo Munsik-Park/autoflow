@@ -1,0 +1,24 @@
+{
+  "invariants": [
+    {
+      "id": "issue-76-fixture-block-thematic-break-present",
+      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "section": "**Unique Bold Lead**",
+      "section_kind": "block",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "runs until the next terminator",
+      "scope": "permanent"
+    },
+    {
+      "id": "issue-76-fixture-block-thematic-break-absent",
+      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "section": "**Unique Bold Lead**",
+      "section_kind": "block",
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "Duplicate Bold Lead",
+      "scope": "permanent"
+    }
+  ]
+}

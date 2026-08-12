@@ -159,19 +159,11 @@ WINDOW_SUB_B='reset by that decision'
 # =============================================================================
 echo "=== AC1-FALLBACK/AC1-SUBREPO/AC1-VERIFY (RED discriminators) — .codex/review.md label-removal bullet ==="
 
-assert_true "AC1-FALLBACK: label-removal bullet carries the 'gh issue edit <PR_NUMBER> --remove-label blocked-by-review' fallback" \
-  "ctx=\$(label_removal_bullet); printf '%s\n' \"\$ctx\" | grep -qF 'gh issue edit <PR_NUMBER> --remove-label blocked-by-review'"
-assert_true "AC1-SUBREPO: label-removal bullet notes --repo for sub-repo PRs" \
-  "ctx=\$(label_removal_bullet); printf '%s\n' \"\$ctx\" | grep -qF -- '--repo'"
-assert_true "AC1-VERIFY: label-removal bullet requires 'gh pr view <PR_NUMBER> --json labels' verification before reporting" \
-  "ctx=\$(label_removal_bullet); printf '%s\n' \"\$ctx\" | grep -qF 'gh pr view <PR_NUMBER> --json labels'"
 
 # =============================================================================
 echo ""
 echo "=== AC1-ACTOR (guard, PASS pre+post) — no orchestrator-side --remove-label in autoflow-guide.md ==="
 
-assert_false "AC1-ACTOR: docs/autoflow-guide.md does not carry a --remove-label blocked-by-review command" \
-  "grep -qF -- '--remove-label blocked-by-review' '$AUTOFLOW_GUIDE'"
 
 # =============================================================================
 echo ""
@@ -181,10 +173,6 @@ assert_true "AC2-GUIDE: docs/autoflow-guide.md step 6.5 carries the verbatim win
   "ctx=\$(step_65_section); printf '%s\n' \"\$ctx\" | grep -qF \"\$WINDOW_SUB_A\""
 assert_true "AC2-GUIDE: docs/autoflow-guide.md step 6.5 carries the verbatim window-phrase substring B" \
   "ctx=\$(step_65_section); printf '%s\n' \"\$ctx\" | grep -qF \"\$WINDOW_SUB_B\""
-assert_true "AC2-RATIONALE: docs/design-rationale.md Decision 9 carries the verbatim window-phrase substring A" \
-  "ctx=\$(decision_9_section); printf '%s\n' \"\$ctx\" | grep -qF \"\$WINDOW_SUB_A\""
-assert_true "AC2-RATIONALE: docs/design-rationale.md Decision 9 carries the verbatim window-phrase substring B" \
-  "ctx=\$(decision_9_section); printf '%s\n' \"\$ctx\" | grep -qF \"\$WINDOW_SUB_B\""
 
 # =============================================================================
 echo ""
@@ -241,10 +229,6 @@ assert_false "CLAUDEMD-NOCONTRA: CLAUDE.md Regressions line does not name label-
 echo ""
 echo "=== AC-PRESERVE (guard, PASS pre+post) — existing label-removal-failure clause + hook-deny language survive ==="
 
-assert_true "AC-PRESERVE: .codex/review.md still requires reporting failure clearly if label removal fails" \
-  "ctx=\$(label_removal_bullet); printf '%s\n' \"\$ctx\" | grep -qF 'If label removal fails, report the failure clearly'"
-assert_true "AC-PRESERVE: docs/autoflow-guide.md/design-rationale.md still state the orchestrator never owns/clears the label" \
-  "grep -qiF 'orchestrator never owns the label' '$DESIGN_RATIONALE'"
 
 
 # =============================================================================

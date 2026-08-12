@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: docs/reviewer-backend.md
 # =============================================================================
 # Test: HANDOFF documentation backend-neutral restatement — Issue #979 (AC-8)
 # =============================================================================

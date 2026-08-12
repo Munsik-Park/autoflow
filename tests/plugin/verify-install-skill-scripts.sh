@@ -1,6 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: plugin/autoflow/skills/ setup/manifest.json
 # =============================================================================
 # Test: /autoflow:install skill-shipped scripts (detect.sh, scaffold-identity.sh)
 # Issue #943 — marketplace-cache-based root-layer stamp
@@ -336,6 +337,9 @@ cleanup() {
          "$SLASHBRANCH_TARGET" "$ORACLE_TAMPER_TARGET" "$DEGRADE_TARGET" \
          "$CRASH_CACHE" "$MISSING_ORACLE_CACHE" "$BACKEND_TARGET" "$NOJQ_DIR" \
          "$BACKEND5_TARGET"
+  if [ "${#NO_GH_MIRROR_DIRS[@]}" -gt 0 ]; then
+    rm -rf "${NO_GH_MIRROR_DIRS[@]}"
+  fi
 }
 trap cleanup EXIT INT TERM
 
@@ -865,7 +869,39 @@ else
 fi
 
 echo "== AD3 (OC-2, gh-absent): gh unavailable -> FORK_EXISTS=unknown, still exit 0 (graceful degradation) =="
-NO_GH_PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v "^$MOCK_GH_DIR\$" | grep -vE '/usr/(local/)?bin$|/opt/homebrew/bin$' | tr '\n' ':')
+# A PATH entry that contains gh (e.g. ubuntu's /usr/bin, alongside bash and
+# coreutils) cannot simply be dropped -- on the CI runner that entry also
+# carries the tools the rest of this suite's shell/subshells need, and
+# dropping it turns every invocation into exit 127, not a clean "gh is
+# absent". Instead, mirror-substitute: replace such an entry with a scratch
+# dir populated with symlinks to everything in it EXCEPT gh, so `command -v
+# gh` fails while every other tool in that dir stays resolvable. Entries
+# without gh pass through unchanged. Portable to both the macOS dev shell
+# (gh lives outside the system bin dirs) and the ubuntu CI runner (gh
+# co-resides with core tools).
+NO_GH_PATH=""
+NO_GH_MIRROR_DIRS=()
+OLD_IFS="$IFS"
+IFS=':'
+for _path_dir in $PATH; do
+  IFS="$OLD_IFS"
+  [ "$_path_dir" = "$MOCK_GH_DIR" ] && continue
+  if [ -x "$_path_dir/gh" ]; then
+    _mirror_dir=$(mktemp -d)
+    NO_GH_MIRROR_DIRS+=("$_mirror_dir")
+    for _entry in "$_path_dir"/*; do
+      _base=$(basename "$_entry")
+      [ "$_base" = "gh" ] && continue
+      ln -s "$_entry" "$_mirror_dir/$_base" 2>/dev/null
+    done
+    NO_GH_PATH="${NO_GH_PATH:+$NO_GH_PATH:}$_mirror_dir"
+  else
+    NO_GH_PATH="${NO_GH_PATH:+$NO_GH_PATH:}$_path_dir"
+  fi
+  IFS=':'
+done
+IFS="$OLD_IFS"
+unset _path_dir OLD_IFS _mirror_dir _entry _base
 if [ -z "$NO_GH_PATH" ]; then NO_GH_PATH="/nonexistent"; fi
 if [ ! -f "$DETECT_SH" ]; then
   DETECT_OUT=""; DETECT_CODE=127

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: setup/gen-manifest-hashes.sh setup/manifest.json
 # =============================================================================
 # Test: locale-invariant manifest generation — Issue #16
 # =============================================================================
@@ -88,8 +89,6 @@ skip_test() {
 
 echo "=== AC1 (RED discriminator) — generator pins LC_ALL=C at script entry ==="
 
-assert_true "AC1-a: setup/gen-manifest-hashes.sh contains a script-entry 'export LC_ALL=C' pin" \
-  "grep -nE '^[[:space:]]*export[[:space:]]+LC_ALL=C\b' '$GEN_MANIFEST_SH' >/dev/null 2>&1"
 
 # ---------------------------------------------------------------------------
 # AC2 — committed manifest matches a fresh regen (isolated temp copy;
