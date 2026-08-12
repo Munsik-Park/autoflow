@@ -4893,6 +4893,39 @@
       "match": "fixed",
       "literal": "authority remains reviewer-only",
       "scope": "permanent"
+    },
+    {
+      "id": "85-disposition-gate-quality",
+      "origin_issue": 85,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "Known blind-spot checks (scored within existing items)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "test-asset disposition",
+      "scope": "permanent"
+    },
+    {
+      "id": "85-disposition-naming-red",
+      "origin_issue": 85,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "RED — Test Writing (Test First)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "an issue number belongs in a test file name only when that file is cycle-scoped",
+      "scope": "permanent"
+    },
+    {
+      "id": "85-disposition-timing-registry",
+      "origin_issue": 85,
+      "intent": "existence",
+      "file": "docs/doc-invariant-registry.md",
+      "section": "2. Retirement (deactivation) condition",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "the deletion is executed in the cycle's final commit before the DELIVER push",
+      "scope": "permanent"
     }
   ]
 }
