@@ -19,9 +19,14 @@ Contract: reviewer-backend
        Korean, severity-ranked, verified findings, one high-signal overview.
     3. Post the review as a PR comment (`gh pr comment`) — the comment is the
        artifact, not the subprocess stdout.
-    4. Clean state (no confirmed Critical/High/Medium) ⇒ remove
-       `blocked-by-review` (gh pr edit → gh issue edit fallback → verify).
-       Otherwise leave it.
+    4. The gate-label obligation is DIRECTIONAL (per .codex/review.md):
+       - clean state (no confirmed Critical/High/Medium) ⇒ REMOVE
+         `blocked-by-review` (gh pr edit → gh issue edit fallback → verify);
+       - a confirmed Critical/High/Medium finding while the label is absent
+         ⇒ attach `blocked-by-review` (gh pr edit → gh issue edit fallback →
+         verify present);
+       - any other state ⇒ leave the label unchanged.
+       A review only ever performs one of these three actions.
   Authority: the configured isolated reviewer subprocess is the SOLE clearer of
              `blocked-by-review`. The orchestrator is hook-denied (Decision 9).
   Output   : the posted PR comment + label state. NOT the subprocess stdout.

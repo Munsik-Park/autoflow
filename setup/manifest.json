@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "844357c87609858fa837017b6028da97caf440a4db08a2bbdadeccd8a5025327"
+      "sha256": "4845e696f32ee670ccc2a84608c4006a654c5905090d1d55d86836ee953c1c84"
     },
     {
       "source": "docs/INDEX.md",
@@ -76,14 +76,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "362f89c08fecaca86470ce30324544c07dd36d8e2cc0aa10aff691711edb4930"
+      "sha256": "0abd203af230e0e63712be33836773f92a8a3345907ecdde2efadd0a06d73e0d"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ce42c12293bb78d1c86fb147c7b134d1715018ecdb1c4d8e17b603f3faf82f19"
+      "sha256": "55de5687a5994d022b2541b52918531d815d155aada4995d13ed2451ca7ffa4d"
     },
     {
       "source": "docs/development-guideline.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d97b80b9efd23ed905e45c8f4d51a4341391d525c74e337ee0f2371bcb9be4a0"
+      "sha256": "8797a78f921dafcdd0aabeea716ac6e875c339ac84a039ebc50b25c7e22e5dea"
     },
     {
       "source": "docs/git-workflow.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "32ef6a3e50b3d8a68674afced01a5571144782652f6285bd0f47457b474d7de7"
+      "sha256": "87c9c77c5804eccb04c4ca99b8f3adabc4a729bc8b7b4dd609ba15d6ae55c252"
     },
     {
       "source": "docs/security-checklist.md",
@@ -286,7 +286,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "66749cff5335a4e1354f30a3827142a1d8779fdc14fd97f3af1c9152d132461c"
+      "sha256": "9fba52ab5aa93efd9488409d4e196c4fcb691d0d286c7015096983edf4e0ce9a"
     },
     {
       "source": "AGENTS.md",
@@ -314,7 +314,7 @@
       "dest": "scripts/handoff/confirm-ci-green.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e0987922ea4cc10772b4f2998a69e9794ea851119c67c942e86d70952a1784e2"
+      "sha256": "a89f2c01b6433bb2367fb216b42ab8aa501379a0032413ef7b843e8f7d99ac53"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",
