@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0abd203af230e0e63712be33836773f92a8a3345907ecdde2efadd0a06d73e0d"
+      "sha256": "2a5471971dac8e01755149c742c8d7301d205c10cdb8dd851a05d147c262b105"
     },
     {
       "source": "docs/design-rationale.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "073add257d421c0bf598d2da96e518ecf3fb7d30e595d28d1940dc4e55831023"
+      "sha256": "66de9d6a96ed4961c83ceae2372e915d64310575f12b554f18affc3f85f8b067"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -132,7 +132,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7072cd6037aacff85c45884f7644823d53241b7dadef04121e80f3b411b4f782"
+      "sha256": "89c13489ae824a297177b7d5767ba6619ff7f96fbb3a671f1c025f285f2054ac"
     },
     {
       "source": "docs/phases/analysis.md",

@@ -437,6 +437,8 @@ The Test AI writes test code from the verification design.
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
+**Naming**: an issue number belongs in a test file name only when that file is cycle-scoped — retired in the cycle's final commit per `docs/doc-invariant-registry.md` §2. A standing test is subject-named.
+
 **Completion**: all automated tests Red + manual scenarios written.
 
 ---
@@ -632,6 +634,12 @@ each-item ≥ 7 criterion:
   or renames files, sections, or identifiers, require evidence of a repo-wide
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
   mentions). A dangling reference caps the affected item at 6.
+- **Test quality — test-asset disposition**: for each test file this cycle adds, state its
+  disposition under `docs/doc-invariant-registry.md` §1/§2 — **standing** (subject-named, no issue
+  number, CI registration retained) or **cycle-scoped** (it depends on a base ref or a diff, or it
+  asserts this cycle's own landed state → deleted in the cycle's final commit together with its
+  disposition row and its CI registration). A file with no stated disposition, or a file judged
+  cycle-scoped that remains CI-registered, caps `Test quality` at 6.
 - **Fit — ADR conformance** (proactively-added per `ADR-0016`, not a past Codex catch): on
   the final change set, re-confirm the shipped change conforms to any governing ADR (same
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check). A

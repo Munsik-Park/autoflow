@@ -2,7 +2,7 @@
   "invariants": [
     {
       "id": "issue-76-fixture-multi-match",
-      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "file": "tests/fixtures/anchor-resolution-fixture-doc.md",
       "section": "| 1 |",
       "section_kind": "line",
       "predicate": "present",

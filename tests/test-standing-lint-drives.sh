@@ -62,7 +62,7 @@ if [ -f "$REGEN_LINT" ]; then
   SCRATCH1="$(mktemp -d)"
   git -C "$PROJECT_ROOT" worktree add -q "$SCRATCH1" HEAD >/dev/null 2>&1
   mkdir -p "$SCRATCH1/setup/thin-root-layer"
-  echo "unregistered probe" > "$SCRATCH1/setup/thin-root-layer/issue-76-unregistered-probe.txt"
+  echo "unregistered probe" > "$SCRATCH1/setup/thin-root-layer/standing-lint-unregistered-probe.txt"
   bash "$REGEN_LINT" --root "$SCRATCH1" >/tmp/issue76-regen-drive1.out 2>&1 \
     || bash -c "cd '$SCRATCH1' && bash '$REGEN_LINT'" >/tmp/issue76-regen-drive1.out 2>&1
   drive1_exit=$?
@@ -74,9 +74,9 @@ if [ -f "$REGEN_LINT" ]; then
   git -C "$PROJECT_ROOT" worktree add -q "$SCRATCH2" HEAD >/dev/null 2>&1
   {
     echo ""
-    echo "See [issue-76 probe doc](docs/issue-76-regen-clean-probe.md)"
+    echo "See [standing-lint probe doc](docs/standing-lint-regen-clean-probe.md)"
   } >> "$SCRATCH2/CLAUDE.md"
-  echo "# probe" > "$SCRATCH2/docs/issue-76-regen-clean-probe.md"
+  echo "# probe" > "$SCRATCH2/docs/standing-lint-regen-clean-probe.md"
   bash -c "cd '$SCRATCH2' && bash '$REGEN_LINT'" >/tmp/issue76-regen-drive2.out 2>&1
   drive2_exit=$?
   assert_true "AC-g Drive 2 (fixed-point lane): a document linked into the CLAUDE.md/docs/INDEX.md closure without regeneration drives the lint to FAIL, attributed to its own lane" \
@@ -95,11 +95,11 @@ assert_true "manifest-closure-residual(ii): check-tests-tree-hygiene.sh exits 0 
 if [ -f "$HYGIENE_LINT" ]; then
   SCRATCH3="$(mktemp -d)"
   mkdir -p "$SCRATCH3/tests"
-  printf 'before\000after\n' > "$SCRATCH3/tests/issue-76-planted-nul-fixture.sh"
+  printf 'before\000after\n' > "$SCRATCH3/tests/standing-lint-planted-nul-fixture.sh"
   bash "$HYGIENE_LINT" --root "$SCRATCH3" >/tmp/issue76-hygiene-fixture.out 2>&1
   fixture_exit=$?
   assert_true "manifest-closure-residual(ii) --self-test: a planted-NUL fixture file is detected and drives the lint to non-zero exit" \
-    "[ $fixture_exit -ne 0 ] && grep -qF 'issue-76-planted-nul-fixture.sh' /tmp/issue76-hygiene-fixture.out"
+    "[ $fixture_exit -ne 0 ] && grep -qF 'standing-lint-planted-nul-fixture.sh' /tmp/issue76-hygiene-fixture.out"
   rm -rf "$SCRATCH3"
 fi
 

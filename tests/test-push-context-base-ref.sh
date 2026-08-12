@@ -106,8 +106,8 @@ run_bounded_in() {
 # Grep cannot distinguish "resolves against the repo under test" from
 # "resolves inside a git-init'd fixture dir" — the same class of exemption
 # this tree already uses for suite-internal inventories (EXEMPT_WHOLE_FILES
-# in tests/test-issue-71-digest-removal.sh, EXEMPT_PROVENANCE_FILES in
-# tests/test-issue-76-orphan-registration.sh). Every entry is justified by a
+# in tests/test-issue-71-digest-removal.sh, EXCLUDE_PATHSPEC in
+# tests/test-issue-795-handoff-removal.sh). Every entry is justified by a
 # comment naming the fixture-repo evidence.
 EXEMPT_HERMETIC_DRIVERS=(
   # call sites operate on REPO_A..REPO_D, each git-init'd under this suite's

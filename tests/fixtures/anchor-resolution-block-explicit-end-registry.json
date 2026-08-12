@@ -2,7 +2,7 @@
   "invariants": [
     {
       "id": "issue-76-fixture-block-explicit-end-present",
-      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "file": "tests/fixtures/anchor-resolution-fixture-doc.md",
       "section": "**Block With Explicit End**",
       "section_kind": "block",
       "section_end": "BLOCK_TERMINATOR_MARKER",
@@ -13,7 +13,7 @@
     },
     {
       "id": "issue-76-fixture-block-explicit-end-absent",
-      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "file": "tests/fixtures/anchor-resolution-fixture-doc.md",
       "section": "**Block With Explicit End**",
       "section_kind": "block",
       "section_end": "BLOCK_TERMINATOR_MARKER",
@@ -24,7 +24,7 @@
     },
     {
       "id": "issue-76-fixture-block-explicit-end-terminator-excluded",
-      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "file": "tests/fixtures/anchor-resolution-fixture-doc.md",
       "section": "**Block With Explicit End**",
       "section_kind": "block",
       "section_end": "BLOCK_TERMINATOR_MARKER",

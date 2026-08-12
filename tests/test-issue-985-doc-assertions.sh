@@ -203,7 +203,7 @@ echo ""
 echo "=== AC2 — plugin key autoflow@autoflow consistency ==="
 
 assert_true "AC2-KEY-CONSISTENT: no surviving 'autoflow@claude-autoflow' literal" \
-  "[ -z \"\$(git grep -F 'autoflow@claude-autoflow' -- ':!tests/test-issue-985-doc-assertions.sh' ':!tests/fixtures/issue-76-migration-map.md' ':!tests/fixtures/doc-invariants.json' 2>/dev/null)\" ]"
+  "[ -z \"\$(git grep -F 'autoflow@claude-autoflow' -- ':!tests/test-issue-985-doc-assertions.sh' ':!tests/fixtures/doc-invariants.json' 2>/dev/null)\" ]"
 
 # =============================================================================
 echo ""
@@ -243,7 +243,7 @@ assert_true "AC3-SPDX-COVERAGE: every tracked .sh/.py/.bats/.yml/.js/.mjs file c
 # REUSE-IgnoreEnd
 
 assert_true "AC3-SPDX-COVERAGE: no surviving 'LicenseRef-PolyForm-Internal-Use-1.0.0' token anywhere tracked" \
-  "[ -z \"\$(git grep -F 'LicenseRef-PolyForm-Internal-Use-1.0.0' -- ':!tests/test-issue-985-doc-assertions.sh' ':!tests/manual/issue-985-manual-scenarios.md' ':!tests/fixtures/issue-76-migration-map.md' ':!tests/fixtures/doc-invariants.json' 2>/dev/null)\" ]"
+  "[ -z \"\$(git grep -F 'LicenseRef-PolyForm-Internal-Use-1.0.0' -- ':!tests/test-issue-985-doc-assertions.sh' ':!tests/manual/issue-985-manual-scenarios.md' ':!tests/fixtures/doc-invariants.json' 2>/dev/null)\" ]"
 
 assert_true "AC3-WORKFLOW-COUNT: reuse.yml is present alongside the 5 existing workflows" \
   "[ -f '$WORKFLOWS_DIR/reuse.yml' ] && [ -f '$WORKFLOWS_DIR/e2e-dummy-target.yml' ] && [ -f '$WORKFLOWS_DIR/host-purity-delta.yml' ] && [ -f '$WORKFLOWS_DIR/plugin-package.yml' ] && [ -f '$WORKFLOWS_DIR/schema-hook-contract.yml' ] && [ -f '$WORKFLOWS_DIR/workflow-regression.yml' ]"

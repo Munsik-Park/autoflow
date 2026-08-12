@@ -1,8 +1,8 @@
-# Fixture document for issue #76 anchor-resolution negative coverage
+# Fixture document for anchor-resolution negative coverage
 
 This document is a hermetic fixture — it is never read by `tests/run-doc-invariants.sh`'s
-real registry, only by the fixture registries in `tests/fixtures/issue-76-anchor-*.json`,
-driven from `tests/test-issue-76-runner-self-test-contract.sh`.
+real registry, only by the fixture registries in `tests/fixtures/anchor-resolution-*.json`,
+driven from `tests/test-run-doc-invariants.sh`.
 
 | 1 | a table row that appears twice below, making the "| 1 |" anchor AMBIGUOUS |
 | 1 | the second occurrence of the same leading cell |
