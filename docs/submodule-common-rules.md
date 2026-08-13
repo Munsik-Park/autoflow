@@ -177,7 +177,15 @@ The trace rule rejects scope creep *across* the change surface; this guard rejec
 REFINE applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. The refactor tool's findings are advisory, not licence to expand the change surface.
 
 ### GATE:QUALITY linkage
-GATE:QUALITY's `Minimal implementation` item is scored against this section's trace rule: a diff with hunks that do not trace to an AC fails the item regardless of code quality.
+GATE:QUALITY's `Minimal implementation` item is scored against this section: prefer the smallest sufficient change that resolves the confirmed problem within the diagnosed scope. The diagnosed scope is the cycle's acceptance criteria plus the confirmed cause recorded in DIAGNOSE (`.autoflow/issue-{N}-phase-*.md`) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch.
+
+A high-scoring change:
+- resolves the confirmed cause, not only the reported symptom
+- stays inside the module or component that owns that cause
+- includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit, because the fix is what makes them necessary and they answer "which AC or plan item requires this?"; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this cycle** is the symbol-removal instance of this same test, not its limit
+- leaves behavior, APIs, configuration, and documentation outside the issue untouched
+
+The item fails when a hunk traces to neither an AC nor the confirmed cause — "I noticed it while I was here" cleanup (**Surrounding code**) or depth creep beyond what the AC needs (**Over-engineering guard**) — regardless of code quality. It fails symmetrically when the change is too narrow to resolve the confirmed cause: a change that leaves the confirmed cause in place is not sufficient, and does not score well for being small.
 
 ---
 

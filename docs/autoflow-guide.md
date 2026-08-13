@@ -631,7 +631,9 @@ GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate wo
 Completeness, Quality, Test coverage, Test quality, Security (references AUDIT),
 Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates.
 
-The `Minimal implementation` item is scored against [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules: a diff with hunks that do not trace to an AC fails this item regardless of code quality.
+The `Minimal implementation` item is scored against [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > GATE:QUALITY linkage, which holds the criterion body and the positive criteria the item is scored by.
+Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the diagnosed scope.
+A hunk tracing to neither an AC nor the confirmed cause fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
 
 ### Known blind-spot checks (scored within existing items)
 
