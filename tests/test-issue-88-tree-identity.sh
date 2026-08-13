@@ -59,6 +59,20 @@ skip_no_base() {
 HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
 
 # ---------------------------------------------------------------------------
+# Runs body_fn inside a fresh scratch dir (removed afterward regardless of
+# outcome), shared by the three real-git oracles below so each carries only
+# its own git sequence, not the mktemp/subshell/cleanup wrapper around it.
+# ---------------------------------------------------------------------------
+run_in_scratch_dir() {   # <label> <body_fn>
+  local label="$1" body_fn="$2" dir rc=0
+  dir="$(mktemp -d "${TMPDIR:-/tmp}/issue88-${label}.XXXXXX")" || return 1
+  ( set -e; cd "$dir"; "$body_fn" )
+  rc=$?
+  rm -rf "$dir" 2>/dev/null || true
+  return $rc
+}
+
+# ---------------------------------------------------------------------------
 # Section extractor (## heading -> body up to next ## heading), used for the
 # clause-bound oracles below, mirroring tests/run-doc-invariants.sh's own
 # extract_section but kept local so this suite has no runtime dependency on
@@ -96,35 +110,27 @@ clause_names_mechanism() {
   return 0
 }
 
-mechanism_oracle() {
-  local dir rc=0
-  dir="$(mktemp -d "${TMPDIR:-/tmp}/issue88-mechanism.XXXXXX")" || return 1
-  (
-    set -e
-    cd "$dir"
-    git init -q
-    git config user.email t@example.com
-    git config user.name tester
-    echo one > f.txt
-    git add f.txt
-    git commit -q -m init
-    T0="$(git rev-parse HEAD^{tree})"
-    # uncommitted tracked-file modification: hash unchanged, status dirty
-    echo two >> f.txt
-    T1="$(git rev-parse HEAD^{tree})"
-    S1="$(git status --porcelain)"
-    [ "$T0" = "$T1" ]
-    [ -n "$S1" ]
-    # committed modification: hash changes
-    git add f.txt
-    git commit -q -m change
-    T2="$(git rev-parse HEAD^{tree})"
-    [ "$T0" != "$T2" ]
-  )
-  rc=$?
-  rm -rf "$dir" 2>/dev/null || true
-  return $rc
+mechanism_oracle_body() {
+  git init -q
+  git config user.email t@example.com
+  git config user.name tester
+  echo one > f.txt
+  git add f.txt
+  git commit -q -m init
+  T0="$(git rev-parse HEAD^{tree})"
+  # uncommitted tracked-file modification: hash unchanged, status dirty
+  echo two >> f.txt
+  T1="$(git rev-parse HEAD^{tree})"
+  S1="$(git status --porcelain)"
+  [ "$T0" = "$T1" ]
+  [ -n "$S1" ]
+  # committed modification: hash changes
+  git add f.txt
+  git commit -q -m change
+  T2="$(git rev-parse HEAD^{tree})"
+  [ "$T0" != "$T2" ]
 }
+mechanism_oracle() { run_in_scratch_dir "mechanism" mechanism_oracle_body; }
 
 assert_true "AC:mechanism-holds: shipped clause names the documented command pair AND a real scratch repo demonstrates unchanged-tree / dirty-status / changed-tree over it" \
   "clause_names_mechanism && mechanism_oracle"
@@ -145,35 +151,27 @@ clause_names_capture_point() {
   [ "$CLAUSE_IMMEDIATE" -ge 1 ]
 }
 
-capture_atomicity_oracle() {
-  local dir rc=0
-  dir="$(mktemp -d "${TMPDIR:-/tmp}/issue88-capture.XXXXXX")" || return 1
-  (
-    set -e
-    cd "$dir"
-    git init -q
-    git config user.email t@example.com
-    git config user.name tester
-    echo one > f.txt
-    git add f.txt
-    git commit -q -m init
-    # clean capture point: status empty, tree/head resolvable
-    S_CLEAN="$(git status --porcelain)"
-    [ -z "$S_CLEAN" ]
-    # dirty a tracked file, observe at the (would-be) capture point
-    echo two >> f.txt
-    S_DIRTY="$(git status --porcelain)"
-    [ -n "$S_DIRTY" ]
-    # commit the change, observe again — the two capture-point observations differ
-    git add f.txt
-    git commit -q -m change
-    S_AFTER="$(git status --porcelain)"
-    [ "$S_DIRTY" != "$S_AFTER" ]
-  )
-  rc=$?
-  rm -rf "$dir" 2>/dev/null || true
-  return $rc
+capture_atomicity_oracle_body() {
+  git init -q
+  git config user.email t@example.com
+  git config user.name tester
+  echo one > f.txt
+  git add f.txt
+  git commit -q -m init
+  # clean capture point: status empty, tree/head resolvable
+  S_CLEAN="$(git status --porcelain)"
+  [ -z "$S_CLEAN" ]
+  # dirty a tracked file, observe at the (would-be) capture point
+  echo two >> f.txt
+  S_DIRTY="$(git status --porcelain)"
+  [ -n "$S_DIRTY" ]
+  # commit the change, observe again — the two capture-point observations differ
+  git add f.txt
+  git commit -q -m change
+  S_AFTER="$(git status --porcelain)"
+  [ "$S_DIRTY" != "$S_AFTER" ]
 }
+capture_atomicity_oracle() { run_in_scratch_dir "capture" capture_atomicity_oracle_body; }
 
 assert_true "AC:capture-atomicity: shipped clause fixes status/tree/head to one instant immediately before the run AND a real scratch repo shows the dirty-vs-clean capture-point observations differ" \
   "clause_names_capture_point && capture_atomicity_oracle"
@@ -189,50 +187,42 @@ clause_names_outofscope_fence() {
   [ "$CLAUSE_BASEREF_FENCE" -ge 1 ] && [ "$CLAUSE_REMOTE_FENCE" -ge 1 ]
 }
 
-outcome_stability_oracle() {
-  # Reproduces the live case §2.4 names: `resolve_base_ref`'s fallback is
-  # `git merge-base HEAD origin/main`, so a fetch that advances `origin/main`
-  # along the SAME line of history as HEAD (catching up to a commit HEAD
-  # already descends from) moves the resolved merge-base and therefore the
-  # computed diff, while HEAD's own tree never moves. Building `origin/main`
-  # as a branch that starts strictly behind HEAD and diverges (rather than
-  # advancing past HEAD) was the earlier defect: it made HEAD an ancestor of
-  # the advanced `origin/main`, pinning the merge-base at HEAD itself and the
-  # `...`-diff at empty regardless of the advance — undetectable by
-  # construction, not a demonstration of the clause.
-  local dir rc=0
-  dir="$(mktemp -d "${TMPDIR:-/tmp}/issue88-outcome.XXXXXX")" || return 1
-  (
-    set -e
-    cd "$dir"
-    git init -q -b main
-    git config user.email t@example.com
-    git config user.name tester
-    echo base > base.txt;    git add base.txt;    git commit -q -m base     # C0
-    echo shared > shared.txt; git add shared.txt;  git commit -q -m shared   # C1 (later "caught up to")
-    echo devonly > devonly.txt; git add devonly.txt; git commit -q -m devonly # C2 == HEAD
-    C0="$(git rev-parse HEAD~2)"
-    C1="$(git rev-parse HEAD~1)"
-    git branch origin/main "$C0"          # remote starts well behind HEAD
+# Reproduces the live case §2.4 names: `resolve_base_ref`'s fallback is
+# `git merge-base HEAD origin/main`, so a fetch that advances `origin/main`
+# along the SAME line of history as HEAD (catching up to a commit HEAD
+# already descends from) moves the resolved merge-base and therefore the
+# computed diff, while HEAD's own tree never moves. Building `origin/main`
+# as a branch that starts strictly behind HEAD and diverges (rather than
+# advancing past HEAD) was the earlier defect: it made HEAD an ancestor of
+# the advanced `origin/main`, pinning the merge-base at HEAD itself and the
+# `...`-diff at empty regardless of the advance — undetectable by
+# construction, not a demonstration of the clause.
+outcome_stability_oracle_body() {
+  git init -q -b main
+  git config user.email t@example.com
+  git config user.name tester
+  echo base > base.txt;    git add base.txt;    git commit -q -m base     # C0
+  echo shared > shared.txt; git add shared.txt;  git commit -q -m shared   # C1 (later "caught up to")
+  echo devonly > devonly.txt; git add devonly.txt; git commit -q -m devonly # C2 == HEAD
+  C0="$(git rev-parse HEAD~2)"
+  C1="$(git rev-parse HEAD~1)"
+  git branch origin/main "$C0"          # remote starts well behind HEAD
 
-    T0="$(git rev-parse HEAD^{tree})"
-    BASE0="$(resolve_base_ref)"
-    DIFF0="$(git diff --name-only "$BASE0"...HEAD)"
+  T0="$(git rev-parse HEAD^{tree})"
+  BASE0="$(resolve_base_ref)"
+  DIFF0="$(git diff --name-only "$BASE0"...HEAD)"
 
-    git branch -f origin/main "$C1"       # fetch advances origin/main -> C1 (still an ancestor of HEAD); HEAD/working tree untouched
+  git branch -f origin/main "$C1"       # fetch advances origin/main -> C1 (still an ancestor of HEAD); HEAD/working tree untouched
 
-    T1="$(git rev-parse HEAD^{tree})"
-    BASE1="$(resolve_base_ref)"
-    DIFF1="$(git diff --name-only "$BASE1"...HEAD)"
+  T1="$(git rev-parse HEAD^{tree})"
+  BASE1="$(resolve_base_ref)"
+  DIFF1="$(git diff --name-only "$BASE1"...HEAD)"
 
-    [ "$T0" = "$T1" ]        # tree identity holds across the fetch
-    [ "$BASE0" != "$BASE1" ] # the resolved base moved (C0 -> C1)
-    [ "$DIFF0" != "$DIFF1" ] # ... so the base-relative diff moved too
-  )
-  rc=$?
-  rm -rf "$dir" 2>/dev/null || true
-  return $rc
+  [ "$T0" = "$T1" ]        # tree identity holds across the fetch
+  [ "$BASE0" != "$BASE1" ] # the resolved base moved (C0 -> C1)
+  [ "$DIFF0" != "$DIFF1" ] # ... so the base-relative diff moved too
 }
+outcome_stability_oracle() { run_in_scratch_dir "outcome" outcome_stability_oracle_body; }
 
 assert_true "AC:outcome-stability-fence: shipped clause names base-ref-dependent / out-of-tree state as outside the inheritance guarantee AND a real scratch repo shows tree hash unchanged while a base-relative diff moves" \
   "clause_names_outofscope_fence && outcome_stability_oracle"
