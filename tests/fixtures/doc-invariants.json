@@ -5080,6 +5080,139 @@
       "match": "fixed",
       "literal": "never seeded into a later deliberation",
       "scope": "permanent"
+    },
+    {
+      "id": "89-sufficiency-rule-home",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "GATE:QUALITY linkage",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "smallest sufficient change that resolves the confirmed problem within the diagnosed scope",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-cause-criterion",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "GATE:QUALITY linkage",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "resolves the confirmed cause, not only the reported symptom",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-local-cleanup-credited",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "GATE:QUALITY linkage",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "local cleanup the fix itself requires",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-cleanup-boundary-stated",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "GATE:QUALITY linkage",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "renders unreachable or unused",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-scope-containment",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "GATE:QUALITY linkage",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "stays inside the module or component that owns that cause",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-expansion-refused",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "GATE:QUALITY linkage",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "leaves behavior, APIs, configuration, and documentation outside the issue untouched",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-narrowness-fails",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "GATE:QUALITY linkage",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "does not score well for being small",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-guide-pointer-resolves",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "Scoring (10 items × 10 points)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "Change Surface Rules > GATE:QUALITY linkage",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-guide-rule-mirrored",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "Scoring (10 items × 10 points)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "smallest sufficient change that resolves the confirmed problem within the diagnosed scope",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-guide-undershoot-mirrored",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "Scoring (10 items × 10 points)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "too narrow to resolve the confirmed cause",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-verify-homonym-clean",
+      "origin_issue": 89,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "smallest sufficient change that resolves the confirmed problem within the diagnosed scope",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-verify-check-preserved",
+      "origin_issue": 89,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "diff analysis: are there parts of the impl diff not covered by any test?",
+      "scope": "permanent"
     }
+
   ]
 }
