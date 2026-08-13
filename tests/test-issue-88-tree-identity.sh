@@ -253,23 +253,48 @@ clause_names_nonchaining() {
 }
 
 # select_green_tree_cycle <ledger_file> <cycle> — marker-scoped ("### green-tree | cycle: <C> |"),
-# then positional (last matching heading wins); a heading of any other marker
-# is skipped by the scan, never selected-then-rejected. Prints the entry's
-# "tree" field value, or nothing if no selectable entry exists.
+# then positional (last matching heading wins, valid or not); a heading of
+# any other marker is skipped by the scan, never selected-then-rejected. An
+# entry whose field block is incomplete (missing tree/head/worktree/result/
+# authority) is selected but yields NO printed tree — a mismatch, not a
+# silent fall-back to an earlier good entry (docs/autoflow-guide.md > VERIFY
+# > Green-tree register > Entry grammar, "An entry the marker-scoped scan
+# selects whose field block is incomplete ... is not selected and yields a
+# mismatch"). Prints the selected entry's "tree" field, or nothing on a
+# mismatch (no selectable cycle-matching heading at all, or the last one
+# incomplete).
 select_green_tree_cycle() {
   local ledger="$1" cycle="$2"
   awk -v cyc="$cycle" '
-    BEGIN { sel_tree = "" }
+    function finalize() {
+      if (in_sel) {
+        if (have_tree && have_head && have_worktree && have_result && have_authority) {
+          sel_tree = c_tree; sel_valid = 1
+        } else {
+          sel_valid = 0
+        }
+      }
+    }
+    function reset_candidate() {
+      c_tree=""; have_tree=0; have_head=0; have_worktree=0; have_result=0; have_authority=0
+    }
+    BEGIN { in_sel=0; sel_tree=""; sel_valid=0; reset_candidate() }
     /^### green-tree \| cycle: / {
+      finalize()
       line=$0; sub(/^### green-tree \| cycle: /,"",line)
       split(line, parts, " | ")
       c=parts[1]
       in_sel = (c == cyc)
+      reset_candidate()
       next
     }
-    /^### / { in_sel = 0; next }
-    in_sel && /^- tree: / { t=$0; sub(/^- tree: /,"",t); sel_tree = t }
-    END { print sel_tree }
+    /^### / { finalize(); in_sel=0; next }
+    in_sel && /^- tree: /      { t=$0; sub(/^- tree: /,"",t);      c_tree=t; have_tree=1 }
+    in_sel && /^- head: /      { have_head=1 }
+    in_sel && /^- worktree: /  { have_worktree=1 }
+    in_sel && /^- result: /    { have_result=1 }
+    in_sel && /^- authority: / { have_authority=1 }
+    END { finalize(); if (sel_valid) print sel_tree; else print "" }
   ' "$ledger"
 }
 
@@ -335,8 +360,8 @@ SEL_USE="$(select_green_tree_cycle "$FIX_DIR/use-record.md" 1)"
 assert_true "AC:entry-grammar variant A: current-cycle green-tree entry selected over a later different-cycle heading (clause-bound: guide states marker-scoped-then-positional selection) (got: '$SEL_A')" \
   "clause_names_selection_rule && [ \"$SEL_A\" = \"aaaa1111\" ]"
 
-assert_true "AC:entry-grammar variant B: a malformed current-cycle entry appended last is selected and yields a mismatch (not skipped in favour of the earlier good entry) — the malformed entry has no 'tree' line reachable as the LAST cycle-1 heading, so selection resolves to empty/incomplete rather than 'aaaa1111' (clause-bound) (got: '$SEL_B')" \
-  "clause_names_selection_rule && [ \"$SEL_B\" != \"aaaa1111\" ]"
+assert_true "AC:entry-grammar variant B: a malformed current-cycle entry (missing head/worktree/result/authority) appended last IS the marker-scoped-then-positional selection, and its incompleteness yields a mismatch — NOT a silent fall-back to the earlier good entry, so selection resolves to empty rather than to 'aaaa1111' (clause-bound) (got: '$SEL_B')" \
+  "clause_names_selection_rule && [ -z \"$SEL_B\" ]"
 
 assert_true "AC:use-record non-chaining: a green-tree-use entry appended after the cycle's green-tree entry does not become the selection and does not force a mismatch — the green-tree entry is still selected (clause-bound: guide states the non-chaining rule) (got: '$SEL_USE')" \
   "clause_names_selection_rule && clause_names_nonchaining && [ \"$SEL_USE\" = \"aaaa1111\" ]"
