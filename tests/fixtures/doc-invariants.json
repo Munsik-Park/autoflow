@@ -5666,7 +5666,7 @@
       "predicate": "present",
       "match": "fixed",
       "scope": "permanent",
-      "literal": "capture point"
+      "literal": "at that block's capture point"
     },
     {
       "id": "88-c2-green-allpass-condition",
@@ -5677,7 +5677,7 @@
       "predicate": "present",
       "match": "fixed",
       "scope": "permanent",
-      "literal": "all-PASS"
+      "literal": "all-PASS**, and the run covered the registrable scope below"
     },
     {
       "id": "88-c2-green-use-either-way",
@@ -6021,6 +6021,28 @@
       "match": "fixed",
       "literal": "diff analysis: are there parts of the impl diff not covered by any test?",
       "scope": "permanent"
+    },
+    {
+      "id": "88-c2-green-write-conditions-gate",
+      "origin_issue": 88,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "GREEN — Implementation",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "when and only when all three hold"
+    },
+    {
+      "id": "88-c2-register-suppression-sentence",
+      "origin_issue": 88,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "no entry is written for it"
     }
   ]
 }

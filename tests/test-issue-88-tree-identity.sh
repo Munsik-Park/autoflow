@@ -588,7 +588,7 @@ assert_true "AC:registry-provenance-consistent (guard — this cycle adds no new
   "[ \"$S9_HAS_CITED_QUERY\" = 1 ] && [ \"$S9_HAS_TESTSH_ROW\" = 1 ] && [ \"$S9_HAS_MANUAL_ROW\" = 1 ]"
 
 echo ""
-echo "--- AC:green-exit-write negative half — real suppression oracle: both named states drive a real ledger + the real selection command, not a proxy on git's own status ---"
+echo "--- AC:green-exit-write negative half — real suppression oracle: both named states drive the write DECISION over a real ledger + the real selection command, clause-bound so a deleted shipped rule goes red ---"
 GREEN_CLAUSE_CMD_STATUS="$(printf '%s' "$GREEN_BODY" | grep -oF 'git status --porcelain' | head -1)"
 clause_names_green_capture_point() {
   case "$GREEN_CLAUSE_CMD_STATUS" in
@@ -598,18 +598,70 @@ clause_names_green_capture_point() {
   return 0
 }
 
-# select_green_tree_cycle_pass_only <ledger_file> <cycle> — the predicate's
-# condition 3 ("that entry's `result` is a pass line", docs/autoflow-guide.md
-# Tree-identity predicate), which select_green_tree_cycle does not check (it
-# only implements condition 2's marker-scoped-then-positional selection). A
-# result line is treated as non-pass iff it names a nonzero failure count —
-# the "N failed" convention this repo's own suites emit on their own summary
-# line (this file's own closing "Results: $PASS/$TESTS passed, $FAIL failed",
-# tests/run-doc-invariants.sh's identical shape). Every existing fixture's
-# `result` field is a pass line, so this wrapper is what gives condition 3 its
-# first executable coverage.
+# clause_names_write_decision_rule — extracts the three literals the write
+# DECISION below is a mechanical translation of: the capture-point command
+# (already checked above), GREEN step 5's own three-condition gate ("when and
+# only when all three hold", docs/autoflow-guide.md:485), and the register's
+# suppression sentence ("no entry is written for it", the Green-tree register
+# Capture point paragraph under VERIFY). If any is deleted from the shipped
+# text, this fails closed — which is what makes green_step5_write_decision's
+# fixed behavior (unaffected by doc edits, since it is bash, not a doc reader)
+# a discriminator rather than a standing proxy: the AND-combination with this
+# clause check is what goes red on a deleted rule.
+clause_names_write_decision_rule() {
+  clause_names_green_capture_point || return 1
+  printf '%s' "$GREEN_BODY" | grep -qF 'when and only when all three hold' || return 1
+  printf '%s' "$VERIFY_BODY" | grep -qF 'no entry is written for it' || return 1
+  return 0
+}
+
+# green_step5_write_decision <worktree_status> <all_pass:0|1> -> "write" | "no-write"
+# A direct mechanical translation of GREEN step 5's own write rule (condition
+# 1: capture point clean; condition 2: run all-PASS). Condition 3 (registrable
+# scope) has no repository-side oracle (§6 / ledger E24 — a writer-side
+# [MUST] over an execution fact) and is out of what this decision function
+# drives; it is treated as satisfied here, same as every other real-git case
+# in this suite.
+green_step5_write_decision() {
+  local worktree_status="$1" all_pass="$2"
+  if [ -n "$worktree_status" ]; then
+    printf 'no-write'; return
+  fi
+  if [ "$all_pass" != "1" ]; then
+    printf 'no-write'; return
+  fi
+  printf 'write'
+}
+
+# is_pass_result_line <result_line> -> 0 (pass) / 1 (non-pass). Models the
+# predicate's condition 3 ("that entry's `result` is a pass line") against
+# the shipped result convention — per-suite "N/M passed" segments (the
+# ledger's own recorded entries, e.g. "tests/test-issue-88-tree-identity.sh
+# 42/42 passed; tests/run-doc-invariants.sh 528/528 passed"). Primary signal:
+# every "N/M passed" segment must have N == M. Secondary signal: an explicit
+# nonzero "<N> [word] failed" count (covers summary-line shapes with no N/M
+# fraction, e.g. "Results: 3 tests failed").
+is_pass_result_line() {
+  local line="$1" failed_count seg n m
+  failed_count="$(printf '%s' "$line" | grep -oE '[0-9]+ ([a-zA-Z]+ )?failed' | grep -oE '^[0-9]+' | sort -n | tail -1)"
+  if [ -n "$failed_count" ] && [ "$failed_count" -gt 0 ] 2>/dev/null; then
+    return 1
+  fi
+  while read -r seg; do
+    [ -z "$seg" ] && continue
+    n="${seg%%/*}"
+    m="${seg#*/}"
+    m="${m%% passed}"
+    [ "$n" != "$m" ] && return 1
+  done < <(printf '%s' "$line" | grep -oE '[0-9]+/[0-9]+ passed')
+  return 0
+}
+
+# select_green_tree_cycle_pass_only <ledger_file> <cycle> — select_green_tree_cycle
+# plus condition 3 (is_pass_result_line above), which plain selection does not
+# check (it only implements condition 2's marker-scoped-then-positional rule).
 select_green_tree_cycle_pass_only() {
-  local ledger="$1" cycle="$2" tree result failed_count
+  local ledger="$1" cycle="$2" tree result
   tree="$(select_green_tree_cycle "$ledger" "$cycle")"
   [ -z "$tree" ] && return 0
   result="$(awk -v cyc="$cycle" '
@@ -621,40 +673,61 @@ select_green_tree_cycle_pass_only() {
     in_sel && /^- result: / { r=$0; sub(/^- result: /,"",r); last_result=r }
     END { print last_result }
   ' "$ledger")"
-  # the failure count must sit directly against " failed" (not merely appear
-  # anywhere earlier in the line, e.g. inside an "N/M passed" fraction) —
-  # extracted, not glob-matched, so "42/42 passed, 0 failed" is not
-  # misread as non-pass by the nonzero digits in "42/42"
-  failed_count="$(printf '%s' "$result" | grep -oE '[0-9]+ failed' | grep -oE '^[0-9]+' | tail -1)"
-  if [ -n "$failed_count" ] && [ "$failed_count" -gt 0 ] 2>/dev/null; then
-    return 0   # non-pass line -> reject (print nothing)
-  fi
+  is_pass_result_line "$result" || return 0
   printf '%s' "$tree"
 }
 
-# State (a) — dirty capture point, realized as the design's named form: an
-# UNTRACKED non-ignored path (not a tracked modification). Per the shipped
-# write rule (condition 1: capture point was clean) GREEN step 5 writes
-# nothing when the capture point is dirty, so simulating that decision means
-# the ledger receives no new entry for this run. Asserts the real selection
-# command then finds nothing offerable for the cycle — not a proxy on git's
-# own dirty/clean flag.
-green_dirty_untracked_no_offer_body() {
-  git init -q
-  git config user.email t@example.com
-  git config user.name tester
-  echo one > f.txt
-  git add f.txt
-  git commit -q -m init
-  echo stray > untracked.txt   # untracked, non-ignored: makes the capture point dirty
-  S="$(git status --porcelain)"
-  [ -n "$S" ]
-  # condition 1 fails at the capture point -> GREEN step 5 writes no entry
+# State (a) — the write DECISION, not a pre-emptied ledger: the ledger is
+# populated by APPLYING green_step5_write_decision's verdict (write iff
+# "write"), for both a dirty capture point (untracked non-ignored path — the
+# design's named realization) and a clean one, so the same body carries a
+# negative case and the positive control that proves apply-to-ledger is not
+# trivially a no-op.
+green_write_decision_ledger_body() {
+  # The git repo lives in its own subdirectory so the ledger fixture file
+  # (written into the scratch dir below) never becomes an untracked path
+  # inside the repo itself — that would self-pollute the "clean" branch's
+  # status check with an artifact of the test apparatus, not the state under
+  # test.
+  mkdir repo
+  git -C repo init -q
+  git -C repo config user.email t@example.com
+  git -C repo config user.name tester
+  echo one > repo/f.txt
+  git -C repo add f.txt
+  git -C repo commit -q -m init
+
+  echo stray > repo/untracked.txt   # untracked, non-ignored: makes the capture point dirty
+  S_DIRTY="$(git -C repo status --porcelain)"
+  [ -n "$S_DIRTY" ]
+  DECISION_DIRTY="$(green_step5_write_decision "$S_DIRTY" 1)"
+  [ "$DECISION_DIRTY" = "no-write" ]
   : > ledger.md
-  SEL="$(select_green_tree_cycle ledger.md 1)"
-  [ -z "$SEL" ]
+  [ "$DECISION_DIRTY" = "write" ] && printf 'unreachable\n' >> ledger.md
+  SEL_DIRTY="$(select_green_tree_cycle ledger.md 1)"
+  [ -z "$SEL_DIRTY" ]   # no entry became offerable
+
+  rm repo/untracked.txt
+  S_CLEAN="$(git -C repo status --porcelain)"
+  [ -z "$S_CLEAN" ]
+  DECISION_CLEAN="$(green_step5_write_decision "$S_CLEAN" 1)"
+  [ "$DECISION_CLEAN" = "write" ]
+  T="$(git -C repo rev-parse HEAD^{tree})"
+  : > ledger.md
+  if [ "$DECISION_CLEAN" = "write" ]; then
+    cat >> ledger.md <<LEDGER
+### green-tree | cycle: 1 | runner: GREEN step 5
+- tree: $T
+- head: $(git -C repo rev-parse HEAD)
+- worktree: clean
+- result: 3/3 passed, 0 failed
+- authority: Green-tree register
+LEDGER
+  fi
+  SEL_CLEAN="$(select_green_tree_cycle ledger.md 1)"
+  [ "$SEL_CLEAN" = "$T" ]   # the entry the decision wrote IS offerable
 }
-green_dirty_untracked_no_offer() { run_in_scratch_dir "green-dirty-untracked" green_dirty_untracked_no_offer_body; }
+green_write_decision_ledger() { run_in_scratch_dir "green-write-decision" green_write_decision_ledger_body; }
 
 # State (b) — a current-cycle entry whose `result` is a non-pass line. Plain
 # marker/cycle/positional selection DOES find it (proving the fixture itself
@@ -688,10 +761,10 @@ LEDGER
 }
 green_nonpass_result_rejected() { run_in_scratch_dir "green-nonpass-result" green_nonpass_result_rejected_body; }
 
-assert_true "AC:green-exit-write (negative half), state (a) dirty capture point via an untracked non-ignored path: GREEN's own text names the write condition's capture-point command (clause-bound: guide states it in GREEN step 5) AND a real scratch repo + real ledger + the real select_green_tree_cycle command show no entry becomes offerable when the capture point is dirty" \
-  "clause_names_green_capture_point && green_dirty_untracked_no_offer"
+assert_true "AC:green-exit-write (negative half), state (a): the write DECISION (mechanical translation of GREEN step 5's own three-condition gate, clause-bound — fails if the gate/suppression sentence is deleted from the shipped text) is applied to a real ledger for a dirty capture point (untracked non-ignored path) and a clean one; the real select_green_tree_cycle command finds nothing offerable on the dirty run and finds exactly the written entry on the clean run" \
+  "clause_names_write_decision_rule && green_write_decision_ledger"
 
-assert_true "AC:green-exit-write (negative half), state (b) non-pass \`result\`: a real ledger's current-cycle entry with a failing result line IS found by plain marker/cycle/positional selection but IS refused by the predicate's condition 3 (result must be a pass line) — first executable coverage of condition 3, which every other fixture's pass-line result left untested; a pass-line control confirms the wrapper does not over-reject" \
+assert_true "AC:green-exit-write (negative half), state (b) non-pass \`result\`: a real ledger's current-cycle entry with a failing result line IS found by plain marker/cycle/positional selection but IS refused by the predicate's condition 3 (result must be a pass line, modelled on the shipped per-suite 'N/M passed' convention) — first executable coverage of condition 3, which every other fixture's pass-line result left untested; a pass-line control confirms the wrapper does not over-reject" \
   "green_nonpass_result_rejected"
 
 echo ""
