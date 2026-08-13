@@ -201,6 +201,7 @@ When a teammate reports to the orchestrator (or to another teammate via `SendMes
    - code change → full 40-char commit SHA
    - test pass  → the exact `Tests: N passed, N total` (or equivalent) summary line, with the command that produced it
    - file state → `path:line` plus the verbatim content of that line
+   - inherited Green (the tree-identity predicate matched, so the step did not execute the suite) → the **register-entry citation** in place of a self-produced suite summary: the source `green-tree` entry's heading (cycle and `runner`) plus its `tree`, `head` and `result`. The reported outcome word is `inherited`, never `passed`; a re-typed summary line here is a contract violation. See [`autoflow-guide.md`](autoflow-guide.md) > VERIFY > *Green-tree register*.
 
    Anchors must be deterministically re-derivable by the orchestrator (`git show <SHA>` / re-running the test command / `git show HEAD:<file>`). Reports without an anchor are rejected, not interpreted.
 
