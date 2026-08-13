@@ -62,8 +62,8 @@ HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref 
 
 # ---------------------------------------------------------------------------
 # Runs body_fn inside a fresh scratch dir (removed afterward regardless of
-# outcome), shared by the three real-git oracles below so each carries only
-# its own git sequence, not the mktemp/subshell/cleanup wrapper around it.
+# outcome), shared by the real-git oracles below so each carries only its own
+# git sequence, not the mktemp/subshell/cleanup wrapper around it.
 # ---------------------------------------------------------------------------
 run_in_scratch_dir() {   # <label> <body_fn>
   local label="$1" body_fn="$2" dir rc=0
