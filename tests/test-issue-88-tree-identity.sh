@@ -616,7 +616,7 @@ green_capture_suppression_oracle_body() {
 }
 green_capture_suppression_oracle() { run_in_scratch_dir "green-capture" green_capture_suppression_oracle_body; }
 
-assert_true "AC:green-exit-write (negative half): GREEN's own text names the same capture-point command the write condition is bound to (clause-bound — currently unbound since GREEN carries no capture-point clause) AND a real scratch repo shows the dirty/clean capture-point split the suppression rule reads" \
+assert_true "AC:green-exit-write (negative half): GREEN's own text names the same capture-point command the write condition is bound to (clause-bound: guide states the capture-point command in GREEN step 5) AND a real scratch repo shows the dirty/clean capture-point split the suppression rule reads" \
   "clause_names_green_capture_point && green_capture_suppression_oracle"
 
 echo ""
