@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "403842e5644caae77f16482138f0385444810d15f5ef405d59109cccbd4500ad"
+      "sha256": "980161573a03991544d46b0b38e412bed9164ec06bba1e73b1680f684ddcc41a"
     },
     {
       "source": "docs/design-rationale.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d25dcac89cd85b5bdad700fa86c903597fc7ad00c3e472f8c44717d9705e11e6"
+      "sha256": "473017f2c7e4e5134a231d03602b185ed53534e96d0d853621b7faa220d94057"
     },
     {
       "source": "docs/teammate-common-rules.md",
