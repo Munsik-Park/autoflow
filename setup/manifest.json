@@ -1,5 +1,5 @@
 {
-  "version": "0.1.7",
+  "version": "0.1.8",
   "artifacts": [
     {
       "source": "setup/thin-root-layer/methodology/METHODOLOGY.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d1d8bc7157703452295a6369a431d7d4f0a6a94d11048ee1974d2a1ddd53a4ea"
+      "sha256": "44b5381976ce25449f0155ebff741e27de7e3f0af23c71188f1d3f119e3c0fd2"
     },
     {
       "source": "docs/evaluation-system.md",

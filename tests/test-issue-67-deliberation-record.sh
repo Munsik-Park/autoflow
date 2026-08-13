@@ -41,8 +41,8 @@ REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 source "$PROJECT_ROOT/tests/lib/base-ref.sh"
 
-# EXPECTED version for this cycle (feature design §3: 0.1.6 -> 0.1.7).
-EXPECTED_VERSION="0.1.7"
+# EXPECTED version for this cycle (0.1.7 -> 0.1.8, issue #88 retirement + version bump).
+EXPECTED_VERSION="0.1.8"
 # EXPECTED_OK: measured, not predicted (verification design §4 Element 1) — this literal
 # is a placeholder pin updated by the RED lane in the SAME commit as GREEN's run.mjs change
 # (verification design §6 step 3). It is NOT read as the pass/fail source of truth for
