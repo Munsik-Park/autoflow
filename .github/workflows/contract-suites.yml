@@ -88,7 +88,6 @@ on:
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
-      - 'tests/test-issue-88-tree-identity.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
@@ -155,7 +154,6 @@ on:
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
-      - 'tests/test-issue-88-tree-identity.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
@@ -242,15 +240,6 @@ jobs:
 
       - name: test-issue-795-handoff-removal.sh
         run: bash tests/test-issue-795-handoff-removal.sh
-
-      # Cycle-scoped (issue #88): branch-gated on dev/*-issue-88 per
-      # docs/doc-invariant-registry.md §2/§5; registered here so it has a real
-      # execution path while its cycle is in flight, and is deregistered
-      # (this run: step + both paths: entries above) in the cycle's own
-      # final commit alongside the suite's deletion. See
-      # tests/test-issue-88-tree-identity.sh.
-      - name: test-issue-88-tree-identity.sh
-        run: bash tests/test-issue-88-tree-identity.sh
 
       - name: test-issue-92-host-pr-execution.sh
         run: bash tests/test-issue-92-host-pr-execution.sh

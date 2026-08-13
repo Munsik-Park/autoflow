@@ -304,10 +304,9 @@ step 1, REFINE step 2) with a host-written Green-tree register plus a tree-ident
 predicate. Its permanent residue is a data append to `tests/fixtures/doc-invariants.json`
 (`jq '[.invariants[]|select(.origin_issue==88)]|length' tests/fixtures/doc-invariants.json`
 entries, `origin_issue: 88`, `scope: "permanent"` — standing, not retired with the
-cycle); the two new spec files state their own disposition below, per §1/§2 and the
-§7.1 rule applied to this cycle.
-
-| New spec | Disposition | Basis |
-|---|---|---|
-| `tests/test-issue-88-tree-identity.sh` | **cycle-scoped — retired at the cycle's own merge-decision point (§2)** | its DELTA/agreement/real-git-oracle assertions (`AC:untouched-fences`'s allow-list containment, the cross-file agreement checks, the composition-oracle manifest/ledger checks) are this cycle's own landed-state checks, unrepresentable in the permanent registry per §1. Registered in `.github/workflows/contract-suites.yml` (both `paths:` blocks + its own `run:` step) while the cycle's PR is open; deregistered there in the same final commit that deletes the suite, per the #73 precedent (commit `ff68814`) |
-| `tests/manual/issue-88-manual-scenarios.md` | **cycle-local, retired with its only dependent** | its sole subject, `AC:agent-executable`, is a one-shot manual dry-walk of this cycle's own shipped GREEN step 5 / VERIFY / REFINE text (its steps cover the GREEN-exit → first-VERIFY sequence added in cycle 2 alongside the pre-existing VERIFY/REFINE branches); retired alongside `tests/test-issue-88-tree-identity.sh` once no live dependent (registry entry, surviving suite, `docs/maintained-docs.md` row, or prose citation) remains, per the `tests/manual/` disposition rule in §6 |
+cycle). Its two cycle assets — `tests/test-issue-88-tree-identity.sh` (cycle-scoped)
+and `tests/manual/issue-88-manual-scenarios.md` (cycle-local) — were retired at the
+cycle's merge-decision point per §1/§2 and the §7.1 rule: suite and manual doc deleted,
+the suite's `run:` step and both `paths:` entries removed from
+`.github/workflows/contract-suites.yml`, and their disposition rows removed with them,
+per the #73 precedent (commit `ff68814`).
