@@ -285,3 +285,14 @@ accretion, which is the defect the issue reports.
 | New spec | Disposition | Basis |
 |---|---|---|
 | `tests/test-push-context-base-ref.sh` | **standing** | subject-named, no issue number. It asserts that every base-ref-consuming spec registered by a `push: branches: [main]` workflow exits 0 under the push-trigger resolution — a permanent property of the tree and its CI wiring. It **fixes** the base ref as an input condition rather than depending on a diff, so it is a STATE assertion, not a DELTA one. Its `run:` step and `paths:` entries are permanent |
+
+## 8. Migration provenance — retired-guard dispositions (issue #73)
+
+Issue #73 discharges ADR-0017's preconditions C1–C6 and moves that record's
+`## Status` to `Accepted`. Its permanent residue is a data append to
+`tests/fixtures/doc-invariants.json` (14 entries, `origin_issue: 73`); the one
+new spec file states its own disposition below, per §1/§2 and the §7.1 rule
+applied to this cycle.
+
+| New spec | Disposition | Basis |
+|---|---|---|

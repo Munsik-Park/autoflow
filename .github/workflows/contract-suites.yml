@@ -237,6 +237,7 @@ jobs:
       - name: test-issue-64-collection-scope.sh
         run: bash tests/test-issue-64-collection-scope.sh
 
+
       - name: test-issue-795-handoff-removal.sh
         run: bash tests/test-issue-795-handoff-removal.sh
 

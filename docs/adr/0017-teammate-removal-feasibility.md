@@ -2,7 +2,10 @@
 
 ## Status
 
-Proposed
+Accepted
+
+Owner decision, 2026-08-10 (issue #54 thread). The blocking pilot recorded in the Decision
+section remains outstanding and can still reverse the verdict.
 
 ## Context
 

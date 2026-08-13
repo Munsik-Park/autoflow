@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4845e696f32ee670ccc2a84608c4006a654c5905090d1d55d86836ee953c1c84"
+      "sha256": "45cc859195ab0a62fa7a3b7eb5947b0cef0ffbd3fd95b1478aefa849f847a9af"
     },
     {
       "source": "docs/INDEX.md",
@@ -55,7 +55,7 @@
       "dest": ".claude/autoflow/docs/adr/0017-teammate-removal-feasibility.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4109a545db29afe50181bfaa472fc74baec582d5a719d45ccc6cad3c69a4b230"
+      "sha256": "d11e976c5ab0f9949e54987985caa5578a176f5083f0b934cfa7ad5f197e5ff6"
     },
     {
       "source": "docs/adr/0018-verification-depth-justification.md",
@@ -69,14 +69,14 @@
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d488c7b5df767975ccaf0224d24666e5a4e24cbf0138f335c96b7decf4e06ec6"
+      "sha256": "dafd49fe7d4529b576369c466d250cb888c2e7125b920842fca9cc14aa6b72a3"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2a5471971dac8e01755149c742c8d7301d205c10cdb8dd851a05d147c262b105"
+      "sha256": "5d3dc2123dfc5ac409763f242a06daa43e59146cf3adaad41d922527f442c2fc"
     },
     {
       "source": "docs/design-rationale.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e968e0761025068bd1e48437950468c32b9673fbf2ddd3b4b0c1fa837605b745"
+      "sha256": "6f9d74252254ca88693c4df9dcbb37aa6035d76bafc62a9e5f5dfb68f88b5ccc"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -188,7 +188,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5463dded73b6a4ee2733488e0044c6b1374133c7847524f2a43e8a70be221cf0"
+      "sha256": "79bee123dde103ce05f4055131fd97a244e8ae63710ea128bdfa20db95be2a0a"
     },
     {
       "source": "docs/title-guide.md",

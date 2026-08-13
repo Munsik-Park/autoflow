@@ -4926,6 +4926,160 @@
       "match": "fixed",
       "literal": "the deletion is executed in the cycle's final commit before the DELIVER push",
       "scope": "permanent"
+    },
+    {
+      "id": "73-AC1-tester-step3",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": ".claude/agents/autoflow-tester.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "VERIFY minimal-implementation check",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC1-tester-step4",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": ".claude/agents/autoflow-tester.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "VERIFY mock-boundary fidelity check",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC5-iteration-set",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": ".claude/agents/autoflow-tester.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "re-enumerate the iteration set from the test tree at HEAD",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC3-contract-pointer",
+      "origin_issue": 73,
+      "intent": "coherence",
+      "file": ".claude/agents/autoflow-tester.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "`docs/autoflow-guide.md` > RED and VERIFY",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC2-mock-boundary-contract",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Test AI (testing teammate)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "mock-boundary fidelity check",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC4-testai-direct-spawn",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Test AI (testing teammate)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "the return value is the report",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC4-devai-direct-spawn",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Submodule AI (per sub-repo, Developer AI)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "the return value is the report",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC6-channel-guide",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "`verify-detection` marker",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC6-channel-ledger",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "VERIFY detection record",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC6-actor",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "the orchestrator appends the record",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC6-writepoint",
+      "origin_issue": 73,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "at VERIFY exit",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC6-vocabulary",
+      "origin_issue": 73,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "recorded as `not-run` and **never** as `clean`",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC6-noninterference-handoff",
+      "origin_issue": 73,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "neither increments nor resets",
+      "scope": "permanent"
+    },
+    {
+      "id": "73-AC6-noninterference-architect",
+      "origin_issue": 73,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "never seeded into a later deliberation",
+      "scope": "permanent"
     }
   ]
 }
