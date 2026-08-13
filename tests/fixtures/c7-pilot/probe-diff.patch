@@ -1,0 +1,22 @@
+diff --git a/tests/fixtures/c7-pilot/probe-cli b/tests/fixtures/c7-pilot/probe-cli
+index 0000000..1111111 100755
+--- a/tests/fixtures/c7-pilot/probe-cli
++++ b/tests/fixtures/c7-pilot/probe-cli
+@@ -1,10 +1,18 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+
+ case "${1:-}" in
++  planted)
++    # Planted branch: exercised by probe-suite but never asserted through
++    # probe_assert.
++    echo "PROBE_S3_PLANTED"
++    ;;
+   covered)
+     echo "PROBE_S3_COVERED"
+     ;;
+   *)
+     echo "usage: probe-cli {planted|covered}" >&2
+     exit 2
+     ;;
+ esac
