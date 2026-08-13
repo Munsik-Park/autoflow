@@ -15,6 +15,12 @@
 # moved exactly once, so R43-COUNT reads 15 and the permanent runner
 # (tests/run-doc-invariants.sh) owns every STATE-shaped assertion.
 #
+# Issue #74 (spawn-mode migration, Branch A) retired 3 of the 15: the
+# passages `43-AC2-deny-scope` / `43-AC2-idiom-anon-only` / `43-AC2-recovery-path`
+# pinned no longer exist post-migration (docs/doc-invariant-registry.md §10).
+# R43-COUNT now reads 12; the other 4 origin_issue:43 entries this cycle
+# touches were re-pointed in place, not retired.
+#
 # What remains here permanently — DELTA-shaped /
 # byte-invariance / count / meta guards the permanent registry structurally
 # cannot hold (tests/run-doc-invariants.sh rejects any predicate outside
@@ -27,11 +33,11 @@
 #     two manifest-registered sources this cycle edits (CLAUDE.md,
 #     docs/teammate-contracts.md).
 #   R43-COUNT              — the origin_issue==43 registry entry count is
-#     exactly 15 (count-shaped; the registry cannot hold a count predicate).
+#     exactly 12 (count-shaped; the registry cannot hold a count predicate).
 #   A43-LITERAL-CONTIGUOUS — meta guard over the append: (a) no
 #     origin_issue:43 literal/before/after carries an embedded newline,
 #     (b) each entry re-checks in its OWN predicate's direction with its own
-#     `match` flavor (DIRECTION_BAD == 0), over all 15 promoted entries.
+#     `match` flavor (DIRECTION_BAD == 0), over all 12 surviving entries.
 #   S43-UNTOUCHED          — this cycle's diff touches none of the three
 #     asserted non-edits: docs/teammate-common-rules.md,
 #     .claude/agents/autoflow-*.md, docs/maintained-docs.md.
@@ -122,15 +128,17 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# R43-COUNT — origin_issue==43 entry count equals 15 (D2/§5.0 ratified set).
-# Count-shaped -> cycle-scoped only, never in the permanent registry.
+# R43-COUNT — origin_issue==43 entry count equals 12 (D2/§5.0 ratified set of
+# 15, minus 3 retired by issue #74's spawn-mode migration; see
+# docs/doc-invariant-registry.md §10). Count-shaped -> cycle-scoped only,
+# never in the permanent registry.
 # ---------------------------------------------------------------------------
 echo ""
-echo "R43-COUNT — origin_issue==43 registry entry count is exactly 15"
+echo "R43-COUNT — origin_issue==43 registry entry count is exactly 12"
 
 COUNT43=$(jq -r '[.invariants[] | select(.origin_issue==43)] | length' "$REGISTRY")
-assert_true "R43-COUNT: origin_issue==43 entry count == 15 (currently $COUNT43)" \
-  "[ \"$COUNT43\" -eq 15 ]"
+assert_true "R43-COUNT: origin_issue==43 entry count == 12 (currently $COUNT43)" \
+  "[ \"$COUNT43\" -eq 12 ]"
 
 # ---------------------------------------------------------------------------
 # A43-LITERAL-CONTIGUOUS — meta guard on the registry append itself.

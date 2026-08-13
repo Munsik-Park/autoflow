@@ -7,9 +7,14 @@
 # Verification design: .autoflow/issue-42-verification-design.md §1 (L2 lane),
 # §2 AC1/AC4 [MUST] (RED execution order), §5/§6 (Green judgment conditions).
 #
-# Permanent STATE invariants for AC1/AC2/AC3/AC4/AC6 (28 entries) live in the
+# Permanent STATE invariants for AC1/AC2/AC3/AC4/AC6 (24 entries) live in the
 # registry (tests/fixtures/doc-invariants.json, origin_issue 42) and run via
-# tests/run-doc-invariants.sh — NOT duplicated here.
+# tests/run-doc-invariants.sh — NOT duplicated here. (Issue #74's spawn-mode
+# migration retired 4 of the 28: the passages they pinned — the role-prefix
+# notation, the two-mode decision rule, the "only named spawns" sentence, the
+# VERIFY→REFINE "sole exception" clause — no longer exist post-migration, per
+# docs/doc-invariant-registry.md §10. The remaining 24 were re-pointed in
+# place, not retired.)
 #
 # The 12 discriminators this file carried at RED (9 for AC1, 3 for AC4) were
 # TEMPORARY. Their `section` was a heading GREEN had not created yet
@@ -38,9 +43,9 @@
 #     PREDICATE-APPROPRIATE direction (present/ordered -> found; absent ->
 #     NOT found) with the grep flavor the entry's own `match` field selects.
 #
-# Green expectation (post-promotion): every assertion PASSes. All 28
+# Green expectation (post-promotion): every assertion PASSes. All 24
 # origin_issue:42 entries now resolve in their own predicate's direction, so
-# A42-LITERAL-CONTIGUOUS (b) expects DIRECTION_BAD == 0 over 28 entries — the
+# A42-LITERAL-CONTIGUOUS (b) expects DIRECTION_BAD == 0 over 24 entries — the
 # promotion's own oracle. A non-zero value means a promoted literal does not
 # match its target file, or a preservation guard was broken by this cycle's
 # edits.
@@ -176,7 +181,7 @@ done < <(jq -r '.invariants[] | select(.origin_issue==42) |
    (if .predicate=="ordered" then .before else .literal end),
    (.after // "")] | @tsv' "$REGISTRY")
 
-echo "  (info) A42-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/28 origin_issue:42 entries mismatch their predicate direction post-GREEN (0 expected — all 12 promoted discriminators and all 16 pre-existing entries resolve)"
+echo "  (info) A42-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/24 origin_issue:42 entries mismatch their predicate direction post-GREEN (0 expected — issue #74 retired the other 4 of the original 28, docs/doc-invariant-registry.md §10)"
 assert_true "A42-LITERAL-CONTIGUOUS (b): every origin_issue:42 entry matches its predicate direction (0 expected post-GREEN)" \
   "[ \"$DIRECTION_BAD\" -eq 0 ]"
 

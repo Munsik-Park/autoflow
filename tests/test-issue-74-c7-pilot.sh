@@ -372,8 +372,12 @@ echo "adr-0019-record"
 if [ -f "$ADR_0019" ]; then
   pass "adr-0019-record: docs/adr/0019-c7-pilot-spawn-mode-result.md exists"
   ADR_BODY="$(cat "$ADR_0019")"
+  # ADR heading/value convention (docs/adr/0000-adr-template.md): "## Status"
+  # heading, then the value on its own line below (not inline on the heading
+  # or in "Status: X" prose form) — grep -A2 catches the heading plus the
+  # blank line plus the value line.
   assert "adr-0019-record: Status is Proposed" \
-    $(printf '%s' "$ADR_BODY" | grep -qE 'Status:?\s*`?Proposed`?' && echo 0 || echo 1)
+    $(printf '%s' "$ADR_BODY" | grep -A2 -E '^## Status\b' | grep -qE '^Proposed$' && echo 0 || echo 1)
   assert "adr-0019-record: states the discriminating check" \
     $(printf '%s' "$ADR_BODY" | grep -qi 'discriminating' && echo 0 || echo 1)
   assert "adr-0019-record: states per-arm detection/false-positive rates" \
@@ -544,17 +548,22 @@ run_hook_prefix 2 "a mixed payload (name + subagent_type both present) stays den
 # teamcreate-pruned (Branch A only) — repository-wide token sweep. The
 # permanent registry entry 74-teamcreate-pruned-token-absent covers CLAUDE.md
 # alone; this arm confirms no OTHER tracked reference is a live (prescriptive)
-# reference. docs/adr/0017-teammate-removal-feasibility.md legitimately
-# discusses the token as its own subject (Q4) and is excluded by name, not by
-# pattern, per adr-0017-untouched's own guarantee that file is unedited.
+# reference. docs/adr/0017-teammate-removal-feasibility.md and
+# docs/doc-invariant-registry.md legitimately discuss the token as their own
+# subject (ADR-0017 Q4; the registry's issue-#74 migration-provenance
+# disposition rows) and are excluded by name, not by pattern — the former per
+# adr-0017-untouched's own guarantee that file is unedited, the latter because
+# a disposition row naming a retired literal is exactly what this suite's own
+# retirement rows do (self-reference is unavoidable when documenting a
+# retirement).
 # =============================================================================
 echo "teamcreate-pruned"
 
-TEAMCREATE_HITS="$(git -C "$PROJECT_ROOT" grep -l 'TeamCreate' -- ':!docs/adr/0017-teammate-removal-feasibility.md' ':!tests/test-issue-74-c7-pilot.sh' ':!tests/fixtures/doc-invariants.json' 2>/dev/null || true)"
+TEAMCREATE_HITS="$(git -C "$PROJECT_ROOT" grep -l 'TeamCreate' -- ':!docs/adr/0017-teammate-removal-feasibility.md' ':!docs/doc-invariant-registry.md' ':!tests/test-issue-74-c7-pilot.sh' ':!tests/fixtures/doc-invariants.json' 2>/dev/null || true)"
 if [ -z "$TEAMCREATE_HITS" ]; then
-  pass "teamcreate-pruned: no live tracked reference to TeamCreate outside docs/adr/0017-teammate-removal-feasibility.md"
+  pass "teamcreate-pruned: no live tracked reference to TeamCreate outside the two documents that legitimately discuss it as a retired subject"
 else
-  fail "teamcreate-pruned: live TeamCreate reference(s) remain outside docs/adr/0017-teammate-removal-feasibility.md: $(printf '%s' "$TEAMCREATE_HITS" | tr '\n' ' ')"
+  fail "teamcreate-pruned: live TeamCreate reference(s) remain: $(printf '%s' "$TEAMCREATE_HITS" | tr '\n' ' ')"
 fi
 
 echo "=============================="

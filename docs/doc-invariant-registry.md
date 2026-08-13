@@ -310,3 +310,40 @@ cycle's merge-decision point per §1/§2 and the §7.1 rule: suite and manual do
 the suite's `run:` step and both `paths:` entries removed from
 `.github/workflows/contract-suites.yml`, and their disposition rows removed with them,
 per the #73 precedent (commit `ff68814`).
+
+## 10. Migration provenance — retired-guard dispositions (issue #74)
+
+Issue #74 lands ADR-0019's C7-pilot-confirmed spawn-mode migration (Branch A,
+verdict `EQUAL_OR_BETTER`): every role becomes an anonymous direct spawn and the
+teammate-name-prefix declaration channel is removed from the hook, `CLAUDE.md`,
+and `docs/teammate-contracts.md`. Seven `origin_issue: 42`/`43` registry entries
+named a passage this migration deletes outright rather than reworded; each is
+retired here rather than re-pointed, because re-pointing an `absent`/`present`
+predicate to a passage that no longer exists would assert nothing. The
+remaining seven entries whose anchored passage moved or was reworded without
+losing its assertable content were re-pointed in place (same `id`, updated
+`literal`/`after`) — not listed here, since they carry no disposition (the
+registry's own diff is their record).
+
+| Retired guard | Disposition | Basis |
+|---|---|---|
+| `42-AC1-decl-prefixes-preserved` | **dropped — subject retired** | pinned the role-prefix notation (`` `analysis-` / `plan-` / … ``) in `CLAUDE.md` > Spawn Model — Phase-by-Phase; the prefix declaration channel itself is removed, so no passage states this notation any more |
+| `42-AC1-named-lifetime` | **dropped — subject retired; superseded** | pinned "Test AI and Developer AI are the only named spawns; every other role is anonymous direct." — every role is now anonymous direct, so the special-case sentence has no successor to re-point to. Superseded by `74-no-teammate-spawn-path-sentence-absent`, an `absent` predicate over the same literal |
+| `42-AC1-criterion` | **dropped — subject retired** | pinned the two-mode decision rule ("must the role be re-entered retaining its prior call's context? Yes — named team spawn; no — anonymous direct spawn."); with a single mode there is no decision left to state |
+| `42-AC1-boundary-exception` | **dropped — subject retired** | pinned "The VERIFY → REFINE boundary respawn is the sole exception" — every phase now respawns fresh uniformly, so there is no exception left to except from |
+| `43-AC2-deny-scope` | **dropped — subject retired** | pinned the `[DENY]` clause's `named team spawn` scoping language; the rewritten `[DENY]` clause (`CLAUDE.md` > Execution Principles) denies a mailbox-delivery instruction in any spawn prompt — there is no second channel left to scope the deny against |
+| `43-AC2-idiom-anon-only` | **dropped — subject retired** | pinned "idiom belongs to anonymous direct spawns only" — the two-idiom split (`SendMessage` vs. "final message") the sentence distinguished no longer exists; one idiom, one channel |
+| `43-AC2-recovery-path` | **dropped — subject retired** | pinned "re-requesting the report with `SendMessage`" as a named-spawn recovery path; the rewritten *Non-delivery reading* bullet's recovery path is shell-verification or re-spawn — no mailbox to re-request from |
+
+Re-pointed in place (same `id`s, literal/`after` updated to the post-migration
+text, no disposition row — see `git log -p -- tests/fixtures/doc-invariants.json`
+for the diff): `42-AC1-forward-ref`, `42-AC1-must-marker`, `42-AC1-handoff-scope`,
+`43-AC1-testai-channel`, `43-AC1-devai-channel`, `43-AC2-summary-absent`,
+`43-AC2-idle-order`.
+
+Three new `origin_issue: 74` entries were added rather than re-pointed from an
+existing id, since their subject is new: `74-no-teammate-spawn-path-sentence-absent`
+(the retired `42-AC1-named-lifetime` sentence stays absent), `74-no-teammate-spawn-path-retained-40`
+(the #40 measurement — the evidence the migration rests on — survives the
+rewrite, per ADR-0019's departure requirement), `74-teamcreate-pruned-token-absent`
+(`TeamCreate` no longer named in `CLAUDE.md`).

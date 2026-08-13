@@ -1555,18 +1555,7 @@
       "section": "Spawn Model — Phase-by-Phase",
       "predicate": "present",
       "match": "fixed",
-      "literal": "Which channel each role uses is fixed by *Spawn mode by role lifetime* below.",
-      "scope": "permanent"
-    },
-    {
-      "id": "42-AC1-decl-prefixes-preserved",
-      "origin_issue": 42,
-      "intent": "preservation",
-      "file": "CLAUDE.md",
-      "section": "Spawn Model — Phase-by-Phase",
-      "predicate": "present",
-      "match": "fixed",
-      "literal": "(`analysis-` / `plan-` / `impl-` or `dev-` / `test-` / `eval-`)",
+      "literal": "Every role's spawn mode is fixed by *Spawn mode by role lifetime* below.",
       "scope": "permanent"
     },
     {
@@ -1732,7 +1721,7 @@
       "section": "Spawn mode by role lifetime",
       "predicate": "present",
       "match": "fixed",
-      "literal": "**[MUST]** A role's spawn mode is fixed by its lifetime requirement, not by its phase",
+      "literal": "**[MUST]** Every role is an **anonymous direct spawn**.",
       "scope": "permanent"
     },
     {
@@ -1776,40 +1765,7 @@
       "section": "Spawn mode by role lifetime",
       "predicate": "present",
       "match": "fixed",
-      "literal": "the auto-resolution it feeds is re-entered through the named Test AI / Developer AI rows",
-      "scope": "permanent"
-    },
-    {
-      "id": "42-AC1-named-lifetime",
-      "origin_issue": 42,
-      "intent": "coherence",
-      "file": "CLAUDE.md",
-      "section": "Spawn mode by role lifetime",
-      "predicate": "present",
-      "match": "fixed",
-      "literal": "Test AI and Developer AI are the only named spawns; every other role is anonymous direct.",
-      "scope": "permanent"
-    },
-    {
-      "id": "42-AC1-criterion",
-      "origin_issue": 42,
-      "intent": "coherence",
-      "file": "CLAUDE.md",
-      "section": "Spawn mode by role lifetime",
-      "predicate": "present",
-      "match": "fixed",
-      "literal": "Decision rule: must the role be re-entered retaining its prior call's context? Yes — named team spawn; no — anonymous direct spawn.",
-      "scope": "permanent"
-    },
-    {
-      "id": "42-AC1-boundary-exception",
-      "origin_issue": 42,
-      "intent": "coherence",
-      "file": "CLAUDE.md",
-      "section": "Spawn mode by role lifetime",
-      "predicate": "present",
-      "match": "fixed",
-      "literal": "The VERIFY → REFINE boundary respawn is the sole exception",
+      "literal": "the auto-resolution it feeds re-enters through the Test AI / Developer AI rows",
       "scope": "permanent"
     },
     {
@@ -1864,7 +1820,7 @@
       "section": "Test AI (testing teammate)",
       "predicate": "present",
       "match": "fixed",
-      "literal": "**[MUST]** Reports to the orchestrator via `SendMessage(to: \"team-lead\")`",
+      "literal": "**[MUST]** Reports to the orchestrator through the spawn's **return value**.",
       "scope": "permanent"
     },
     {
@@ -1897,7 +1853,7 @@
       "section": "Submodule AI (per sub-repo, Developer AI)",
       "predicate": "present",
       "match": "fixed",
-      "literal": "**[MUST]** Reports to the orchestrator via `SendMessage(to: \"team-lead\")`",
+      "literal": "**[MUST]** Reports to the orchestrator through the spawn's **return value**.",
       "scope": "permanent"
     },
     {
@@ -1945,28 +1901,6 @@
       "scope": "permanent"
     },
     {
-      "id": "43-AC2-deny-scope",
-      "origin_issue": 43,
-      "intent": "coherence",
-      "file": "CLAUDE.md",
-      "section": "Execution Principles",
-      "predicate": "present",
-      "match": "fixed",
-      "literal": "named team spawn",
-      "scope": "permanent"
-    },
-    {
-      "id": "43-AC2-idiom-anon-only",
-      "origin_issue": 43,
-      "intent": "coherence",
-      "file": "CLAUDE.md",
-      "section": "Execution Principles",
-      "predicate": "present",
-      "match": "fixed",
-      "literal": "idiom belongs to anonymous direct spawns only",
-      "scope": "permanent"
-    },
-    {
       "id": "43-AC2-summary-absent",
       "origin_issue": 43,
       "intent": "existence",
@@ -1974,18 +1908,7 @@
       "section": "Execution Principles",
       "predicate": "present",
       "match": "fixed",
-      "literal": "a notification with no `summary` field reads as **report not sent**",
-      "scope": "permanent"
-    },
-    {
-      "id": "43-AC2-recovery-path",
-      "origin_issue": 43,
-      "intent": "coherence",
-      "file": "CLAUDE.md",
-      "section": "Execution Principles",
-      "predicate": "present",
-      "match": "fixed",
-      "literal": "re-requesting the report with `SendMessage`",
+      "literal": "whose absence meant *report not sent* rather than *still working*",
       "scope": "permanent"
     },
     {
@@ -1997,7 +1920,7 @@
       "predicate": "ordered",
       "match": "fixed",
       "before": "Teammate idle handling",
-      "after": "Named-spawn non-delivery reading",
+      "after": "Non-delivery reading",
       "scope": "permanent"
     },
     {
