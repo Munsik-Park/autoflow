@@ -183,7 +183,7 @@ A high-scoring change:
 - resolves the confirmed cause, not only the reported symptom
 - stays inside the module or component that owns that cause
 - includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit, because the fix is what makes them necessary and they answer "which AC or plan item requires this?"; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this cycle** is the symbol-removal instance of this same test, not its limit
-- leaves behavior, APIs, configuration, and documentation outside the issue untouched
+- leaves every surface outside the issue untouched — behavior, APIs, configuration, and documentation are examples of such a surface, not the boundary
 
 The item fails when a hunk traces to neither an AC nor the confirmed cause — "I noticed it while I was here" cleanup (**Surrounding code**) or depth creep beyond what the AC needs (**Over-engineering guard**) — regardless of code quality. It fails symmetrically when the change is too narrow to resolve the confirmed cause: a change that leaves the confirmed cause in place is not sufficient, and does not score well for being small.
 

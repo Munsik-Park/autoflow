@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "945b4cc3fbc1c8dbf031f2285951d187ef3b264ae57162fb322427a5231da1ef"
+      "sha256": "4c33c809c84d6ffb0448e1a77fd18435f707a4b88b68444029a2091c77711e0e"
     },
     {
       "source": "docs/teammate-common-rules.md",
