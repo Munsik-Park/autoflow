@@ -296,4 +296,3 @@ applied to this cycle.
 
 | New spec | Disposition | Basis |
 |---|---|---|
-| `tests/test-issue-73-adr-status.sh` | **cycle-scoped — own landed state** | it asserts that ADR-0017's `## Status` first non-blank line reads `Accepted`, that no attribution sits inline on that line, and that `docs/adr/README.md` > Current Drafts agrees — this cycle's own landed post-state, the second arm of §1/§2's cycle-scoped criterion. It cannot be promoted to the registry: a permanent `Accepted` literal would freeze the reversal path the ADR itself records (registry entry `51-pilot-reversal`, and the status vocabulary includes `Superseded`). Retired per §2 in this cycle's final commit before the DELIVER push, together with its `run:` step and its two `paths:` entries in `.github/workflows/contract-suites.yml` and this row — the three-part retirement GATE:QUALITY's `test-asset disposition` item requires |
