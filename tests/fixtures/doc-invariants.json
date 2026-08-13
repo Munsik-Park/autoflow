@@ -6043,6 +6043,39 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "no entry is written for it"
+    },
+    {
+      "id": "74-no-teammate-spawn-path-sentence-absent",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "CLAUDE.md",
+      "section": "Spawn mode by role lifetime",
+      "predicate": "absent",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Test AI and Developer AI are the only named spawns"
+    },
+    {
+      "id": "74-no-teammate-spawn-path-retained-40",
+      "origin_issue": 74,
+      "intent": "preservation",
+      "file": "CLAUDE.md",
+      "section": "Execution Principles",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "2 occurrences of the anonymous-direct idiom mis-applied to a mailbox spawn"
+    },
+    {
+      "id": "74-teamcreate-pruned-token-absent",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "CLAUDE.md",
+      "section": "Communication — Agent Teams",
+      "predicate": "absent",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "TeamCreate"
     }
   ]
 }

@@ -7,22 +7,30 @@
 #   (cycle-scoped suite, RED stage 2)
 # =============================================================================
 # Verification design: .autoflow/issue-74-verification-design.md. Acceptance
-# criteria this suite carries (branch-independent — evaluated regardless of
-# which branch the frozen verdict selected): probe-ground-truth,
-# ground-truth-not-handed, arm-payload-parity (automated half),
-# arm-substrate-parity (automated half), one-tree-witness,
-# pilot-record-completeness, verdict-predicate-derivation, predicate-edge-arms,
-# cost-latency-record, adr-0019-record (presence arms), adr-0017-untouched,
-# adr-0003-invariant (cycle-scoped DELTA leg), fixture-inertness.
+# criteria this suite carries: probe-ground-truth, ground-truth-not-handed,
+# arm-payload-parity (automated half), arm-substrate-parity (automated half),
+# one-tree-witness, pilot-record-completeness, verdict-predicate-derivation,
+# predicate-edge-arms, cost-latency-record, adr-0019-record (presence arms),
+# adr-0017-untouched, adr-0003-invariant (cycle-scoped DELTA leg),
+# fixture-inertness — all branch-independent — plus, since the pilot verdict
+# selected Branch A (EQUAL_OR_BETTER, ledger E16/E24-equivalent): the
+# hook-prefix-disposition live-hook oracle and the teamcreate-pruned
+# repository-wide token sweep. `no-teammate-spawn-path`'s two-part guard and
+# `teamcreate-pruned`'s single-file half live as PERMANENT registry entries
+# under origin_issue: 74 in tests/fixtures/doc-invariants.json (STATE
+# predicates, per docs/doc-invariant-registry.md's two-lane rule), not in this
+# suite. `registry-continuity`'s re-pointing of the existing origin_issue 42/43
+# entries is intentionally NOT in this suite's scope — see this cycle's report
+# to the team lead for why.
 #
-# RED expectation (this commit — the fixture and the frozen arm records exist
-# from RED stage 1 / the pilot, but the unconditional GREEN deliverables
-# named in Feature §5 — docs/adr/0019-c7-pilot-spawn-mode-result.md above
-# all else — do not exist yet):
-#   FAIL (discriminators): adr-0019-record (file absent), the
-#     verdict-predicate-derivation leg that compares the recomputed verdict
-#     against ADR-0019's stated verdict, cost-latency-record's ADR-figures
-#     sub-check.
+# RED expectation (this commit — GREEN is landing concurrently; the fixture
+# and frozen arm records exist from RED stage 1 / the pilot; ADR-0019 and the
+# Branch A hook/CLAUDE.md edits may or may not be present at any given run):
+#   FAIL (discriminators, pre-GREEN): adr-0019-record (file absent),
+#     verdict-predicate-derivation's ADR-comparison leg, cost-latency-record's
+#     ADR-figures sub-check, hook-prefix-disposition arms (pre-edit hook still
+#     admits/denies on the old channel), teamcreate-pruned (CLAUDE.md still
+#     names TeamCreate at the time this suite was authored).
 #   PASS (guards, already true from RED stage 1 / the pilot alone):
 #     probe-ground-truth, ground-truth-not-handed, fixture-inertness,
 #     one-tree-witness, pilot-record-completeness, predicate-edge-arms
@@ -425,7 +433,11 @@ fi
 
 # Admissibility half: live-hook oracle. Both arm payloads (Feature §4 *Arm
 # payloads*) resolve to the testing role and are admitted under a passed
-# GATE:PLAN state.
+# GATE:PLAN state. This is a claim about the pilot's OWN admissibility at the
+# time it ran — i.e. against the hook AS IT STOOD AT THE FROZEN tree, not
+# against a possibly-since-migrated working-tree hook (arm-substrate-parity's
+# same frozen-tree discipline applies here for the identical reason: Branch A
+# may have already landed in this working tree by the time this suite runs).
 PASSING74=$(mktemp -d)
 mkdir -p "$PASSING74/.autoflow"
 cat > "$PASSING74/.autoflow/issue-74.json" <<'EOF'
@@ -436,12 +448,30 @@ cat > "$PASSING74/.autoflow/issue-74.json" <<'EOF'
 EOF
 trap 'rm -rf "$PASSING74"' EXIT
 
+FROZEN_HOOK=""
+if [ -f "$ARMS_JSON" ]; then
+  TREE_FOR_HOOK="$(jq -r '.tree // empty' "$ARMS_JSON" 2>/dev/null)"
+  if [ -n "$TREE_FOR_HOOK" ]; then
+    FROZEN_HOOK="$(mktemp)"
+    if git -C "$PROJECT_ROOT" show "${TREE_FOR_HOOK}:.claude/hooks/check-autoflow-gate.sh" > "$FROZEN_HOOK" 2>/dev/null; then
+      chmod +x "$FROZEN_HOOK"
+    else
+      FROZEN_HOOK=""
+    fi
+  fi
+fi
+trap 'rm -rf "$PASSING74"; [ -n "$FROZEN_HOOK" ] && rm -f "$FROZEN_HOOK"' EXIT
+
 agent_json_named() { printf '{"tool_name":"Agent","tool_input":{"team_name":"issue-74-cycle","name":%s,"prompt":"pilot arm","model":"sonnet"}}' "$(printf '%s' "$1" | jq -Rs .)"; }
 agent_json_direct() { printf '{"tool_name":"Agent","tool_input":{"subagent_type":"autoflow-tester","prompt":"pilot arm","model":"sonnet"}}'; }
 
 run_hook_oracle() { # run_hook_oracle <expected_exit> <desc> <json>
   local expected="$1" desc="$2" json="$3" actual
-  actual=$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$PASSING74" bash "$HOOK" >/dev/null 2>&1; echo $?)
+  if [ -z "$FROZEN_HOOK" ]; then
+    fail "arm-payload-parity: $desc — could not extract the frozen-tree hook to evaluate against"
+    return
+  fi
+  actual=$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$PASSING74" bash "$FROZEN_HOOK" >/dev/null 2>&1; echo $?)
   assert "arm-payload-parity: $desc (exit $actual, expected $expected)" \
     $([ "$actual" = "$expected" ] && echo 0 || echo 1)
 }
@@ -485,6 +515,47 @@ else
 fi
 assert "arm-substrate-parity: the manual scenario records the direct arm's subagent_type as autoflow-tester" \
   $(grep -qF '"subagent_type": "autoflow-tester"' "$MANUAL_SCENARIOS" 2>/dev/null && echo 0 || echo 1)
+
+# =============================================================================
+# hook-prefix-disposition (Branch A only) — the role-prefix declaration
+# channel is removed jointly with this slice (ADR-0017 :135-140). Live-hook
+# oracle over the REAL .claude/hooks/check-autoflow-gate.sh.
+# =============================================================================
+echo "hook-prefix-disposition"
+
+run_hook_prefix() { # run_hook_prefix <expected_exit> <desc> <json>
+  local expected="$1" desc="$2" json="$3" actual
+  actual=$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$PASSING74" bash "$HOOK" >/dev/null 2>&1; echo $?)
+  assert "hook-prefix-disposition: $desc (exit $actual, expected $expected)" \
+    $([ "$actual" = "$expected" ] && echo 0 || echo 1)
+}
+agent_json_name_only() { printf '{"tool_name":"Agent","tool_input":{"team_name":"issue-74-cycle","name":"test-hookdisp-r1","prompt":"x","model":"sonnet"}}'; }
+agent_json_subtype_only() { printf '{"tool_name":"Agent","tool_input":{"subagent_type":"autoflow-tester","prompt":"x","model":"sonnet"}}'; }
+agent_json_mixed() { printf '{"tool_name":"Agent","tool_input":{"team_name":"issue-74-cycle","name":"test-hookdisp-r1","subagent_type":"autoflow-tester","prompt":"x","model":"sonnet"}}'; }
+
+run_hook_prefix 2 "team payload carrying only name:'test-…' no longer resolves to a role -> denied as undeclared" \
+  "$(agent_json_name_only)"
+run_hook_prefix 0 "subagent_type:autoflow-tester (no name) remains admitted subject to GATE:PLAN" \
+  "$(agent_json_subtype_only)"
+run_hook_prefix 2 "a mixed payload (name + subagent_type both present) stays denied" \
+  "$(agent_json_mixed)"
+
+# =============================================================================
+# teamcreate-pruned (Branch A only) — repository-wide token sweep. The
+# permanent registry entry 74-teamcreate-pruned-token-absent covers CLAUDE.md
+# alone; this arm confirms no OTHER tracked reference is a live (prescriptive)
+# reference. docs/adr/0017-teammate-removal-feasibility.md legitimately
+# discusses the token as its own subject (Q4) and is excluded by name, not by
+# pattern, per adr-0017-untouched's own guarantee that file is unedited.
+# =============================================================================
+echo "teamcreate-pruned"
+
+TEAMCREATE_HITS="$(git -C "$PROJECT_ROOT" grep -l 'TeamCreate' -- ':!docs/adr/0017-teammate-removal-feasibility.md' ':!tests/test-issue-74-c7-pilot.sh' ':!tests/fixtures/doc-invariants.json' 2>/dev/null || true)"
+if [ -z "$TEAMCREATE_HITS" ]; then
+  pass "teamcreate-pruned: no live tracked reference to TeamCreate outside docs/adr/0017-teammate-removal-feasibility.md"
+else
+  fail "teamcreate-pruned: live TeamCreate reference(s) remain outside docs/adr/0017-teammate-removal-feasibility.md: $(printf '%s' "$TEAMCREATE_HITS" | tr '\n' ' ')"
+fi
 
 echo "=============================="
 echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"
