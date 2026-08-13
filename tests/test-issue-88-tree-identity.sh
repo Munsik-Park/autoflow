@@ -190,6 +190,16 @@ clause_names_outofscope_fence() {
 }
 
 outcome_stability_oracle() {
+  # Reproduces the live case §2.4 names: `resolve_base_ref`'s fallback is
+  # `git merge-base HEAD origin/main`, so a fetch that advances `origin/main`
+  # along the SAME line of history as HEAD (catching up to a commit HEAD
+  # already descends from) moves the resolved merge-base and therefore the
+  # computed diff, while HEAD's own tree never moves. Building `origin/main`
+  # as a branch that starts strictly behind HEAD and diverges (rather than
+  # advancing past HEAD) was the earlier defect: it made HEAD an ancestor of
+  # the advanced `origin/main`, pinning the merge-base at HEAD itself and the
+  # `...`-diff at empty regardless of the advance — undetectable by
+  # construction, not a demonstration of the clause.
   local dir rc=0
   dir="$(mktemp -d "${TMPDIR:-/tmp}/issue88-outcome.XXXXXX")" || return 1
   (
@@ -198,25 +208,26 @@ outcome_stability_oracle() {
     git init -q -b main
     git config user.email t@example.com
     git config user.name tester
-    echo one > f.txt
-    git add f.txt
-    git commit -q -m init
-    git remote add origin .
-    git checkout -q -b origin/main 2>/dev/null || true
-    git checkout -q main
+    echo base > base.txt;    git add base.txt;    git commit -q -m base     # C0
+    echo shared > shared.txt; git add shared.txt;  git commit -q -m shared   # C1 (later "caught up to")
+    echo devonly > devonly.txt; git add devonly.txt; git commit -q -m devonly # C2 == HEAD
+    C0="$(git rev-parse HEAD~2)"
+    C1="$(git rev-parse HEAD~1)"
+    git branch origin/main "$C0"          # remote starts well behind HEAD
+
     T0="$(git rev-parse HEAD^{tree})"
-    BASE0="$(git merge-base HEAD main)"
-    # advance the "base" branch without touching the working tree of HEAD
-    git checkout -q -b origin/main-work origin/main 2>/dev/null
-    echo advance > g.txt
-    git add g.txt
-    git commit -q -m advance
-    git branch -f origin/main HEAD
-    git checkout -q main
+    BASE0="$(resolve_base_ref)"
+    DIFF0="$(git diff --name-only "$BASE0"...HEAD)"
+
+    git branch -f origin/main "$C1"       # fetch advances origin/main -> C1 (still an ancestor of HEAD); HEAD/working tree untouched
+
     T1="$(git rev-parse HEAD^{tree})"
-    DIFF="$(git diff --name-only origin/main...HEAD 2>/dev/null || true)"
-    [ "$T0" = "$T1" ]
-    [ -n "$DIFF" ]
+    BASE1="$(resolve_base_ref)"
+    DIFF1="$(git diff --name-only "$BASE1"...HEAD)"
+
+    [ "$T0" = "$T1" ]        # tree identity holds across the fetch
+    [ "$BASE0" != "$BASE1" ] # the resolved base moved (C0 -> C1)
+    [ "$DIFF0" != "$DIFF1" ] # ... so the base-relative diff moved too
   )
   rc=$?
   rm -rf "$dir" 2>/dev/null || true
