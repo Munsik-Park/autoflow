@@ -5867,6 +5867,17 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "carried for citation, never consulted"
+    },
+    {
+      "id": "88-c2-green-failure-outcome-field",
+      "origin_issue": 88,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "GREEN — Implementation",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "outcome: failed"
     }
   ]
 }

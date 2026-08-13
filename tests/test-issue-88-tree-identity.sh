@@ -724,6 +724,29 @@ green_reentry_oracle() { run_in_scratch_dir "green-reentry" green_reentry_oracle
 assert_true "AC:green-reentry-disposition (guard — same selection/comparison mechanism, driven over the specific re-entry shape §2.5 describes: a prior VERIFY-exit entry either matches an unmoved GREEN re-entry tree or mismatches a moved one)" \
   "green_reentry_oracle"
 
+echo ""
+echo "--- AC:green-exit-failure-disposition (agreement half) — VERIFY step 2's cause-branch routing text is unchanged by this cycle's diff, so a failed GREEN acceptance run is adjudicated by the pre-existing branching, not a new gate (branch-scoped) ---"
+case "$HEAD_BRANCH" in
+  dev/*-issue-88|dev/*-issue-88-*)
+    C2_BASE_REF="$(resolve_base_ref)"
+    if [[ -z "$C2_BASE_REF" ]]; then
+      skip_no_base "AC:green-exit-failure-disposition (agreement half)"
+    else
+      ROUTING_DIFF="$(git -C "$PROJECT_ROOT" diff "$C2_BASE_REF"...HEAD -- docs/autoflow-guide.md 2>/dev/null)"
+      ROUTING_TOUCHED=0
+      for MARKER in 'fix_test + no_problem' 'no_problem + fix_impl' 'fix_test + fix_impl' 'no_problem + no_problem'; do
+        printf '%s\n' "$ROUTING_DIFF" | grep -E '^[+-]' | grep -qF -- "$MARKER" && ROUTING_TOUCHED=1
+      done
+      ROUTING_UNTOUCHED_OK=0; [ "$ROUTING_TOUCHED" = 0 ] && ROUTING_UNTOUCHED_OK=1
+      assert_true "AC:green-exit-failure-disposition (agreement half): none of the four VERIFY step 2 cause-branch routing lines (fix_test+no_problem/no_problem+fix_impl/fix_test+fix_impl/no_problem+no_problem) appear as an added or removed diff line — the design's 'no flow-control transition changes' claim reduced to a checkable fact" \
+        "[ \"$ROUTING_UNTOUCHED_OK\" = \"1\" ]"
+    fi
+    ;;
+  *)
+    note_deferred "AC:green-exit-failure-disposition (agreement half): inert off the issue-88 dev branch"
+    ;;
+esac
+
 # =============================================================================
 echo ""
 echo "=== AC:untouched-fences (guard; branch-scoped per docs/doc-invariant-registry.md §2) — this cycle's diff stays inside the allow-list; HANDOFF/VALIDATE/rubric/tier-split sections show no hunks ==="
