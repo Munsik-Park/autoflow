@@ -302,7 +302,8 @@ applied to this cycle.
 Issue #88 replaces the two guaranteed-redundant unchanged-tree full re-runs (VERIFY
 step 1, REFINE step 2) with a host-written Green-tree register plus a tree-identity
 predicate. Its permanent residue is a data append to `tests/fixtures/doc-invariants.json`
-(49 entries, `origin_issue: 88`, `scope: "permanent"` — standing, not retired with the
+(`jq '[.invariants[]|select(.origin_issue==88)]|length' tests/fixtures/doc-invariants.json`
+entries, `origin_issue: 88`, `scope: "permanent"` — standing, not retired with the
 cycle); the two new spec files state their own disposition below, per §1/§2 and the
 §7.1 rule applied to this cycle.
 

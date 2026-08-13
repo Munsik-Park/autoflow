@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "399330a374cfb8cfcc92331a72a9d13fc9699d664e61795e3e7e54e0a0e38093"
+      "sha256": "96347ae123e23eca1b51ae28be9a0c5d0d50f6eac9f6d662bf827df52f8448a0"
     },
     {
       "source": "docs/evaluation-system.md",

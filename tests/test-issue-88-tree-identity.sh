@@ -372,7 +372,6 @@ echo ""
 echo "=== Cross-file agreement checks (registry entries cannot compare two files) ==="
 # =============================================================================
 
-CLAUDE_LEDGER_BODY="$(extract_h2 "" "$CLAUDE_MD" 2>/dev/null)"  # unused placeholder to keep extractor style consistent
 CLAUDE_HAS_GREEN_TREE="$(grep -cF 'green-tree' "$CLAUDE_MD" || true)"
 CLAUDE_HAS_GREEN_TREE_USE="$(grep -cF 'green-tree-use' "$CLAUDE_MD" || true)"
 
@@ -406,16 +405,41 @@ assert_true "AC:contract-sync (guard, NOT a RED discriminator per the G-REG idio
 echo ""
 echo "=== AC:mismatch-cause-record — the cause literals sit inside the mismatch branch, not the match branch ==="
 # =============================================================================
-# Best-effort structural check: within the VERIFY body, the first occurrence
-# of "Match" (the match-branch marker) must precede the first occurrence of
-# "no-entry" (one of the three mismatch-cause literals) is FALSE — the cause
-# literals belong to the Mismatch branch, so "Mismatch" must precede them.
-MATCH_LINE="$(printf '%s\n' "$VERIFY_BODY" | grep -nF -- '- **Match**' | head -1 | cut -d: -f1)"
+# Best-effort structural check: within the VERIFY body, the Mismatch branch
+# marker must precede the first "no-entry" cause literal — the cause
+# literals belong to the Mismatch branch, not the Match branch.
 MISMATCH_LINE="$(printf '%s\n' "$VERIFY_BODY" | grep -nF -- '- **Mismatch**' | head -1 | cut -d: -f1)"
 NOENTRY_LINE="$(printf '%s\n' "$VERIFY_BODY" | grep -nF 'no-entry' | head -1 | cut -d: -f1)"
 
 assert_true "AC:mismatch-cause-record: the Mismatch branch marker precedes the first 'no-entry' cause literal (the record sits in the mismatch branch, not the match branch)" \
   "[ -n \"\${MISMATCH_LINE:-}\" ] && [ -n \"\${NOENTRY_LINE:-}\" ] && [ \"$MISMATCH_LINE\" -lt \"$NOENTRY_LINE\" ]"
+
+# =============================================================================
+echo ""
+echo "=== AC:fallback-enumerated — neither VERIFY nor REFINE leaves a bare Match branch without its Mismatch fallback ==="
+# =============================================================================
+# Negative half of AC:fallback-enumerated (the positive half — no-entry /
+# dirty-worktree / tree-differs each present — is carried by the registry
+# entries 88-verify-mismatch-*). Every "**Match**" branch marker in a body
+# must be paired with a "**Mismatch**" branch marker in the SAME body, so a
+# future edit cannot silently drop the fallback while leaving the match arm.
+VERIFY_MATCH_COUNT="$(printf '%s' "$VERIFY_BODY" | grep -cF -- '**Match**' || true)"
+VERIFY_MISMATCH_COUNT="$(printf '%s' "$VERIFY_BODY" | grep -cF -- '**Mismatch**' || true)"
+REFINE_MATCH_COUNT="$(printf '%s' "$REFINE_BODY" | grep -cF -- 'Match' || true)"
+REFINE_MISMATCH_COUNT="$(printf '%s' "$REFINE_BODY" | grep -cF -- 'Mismatch' || true)"
+
+# Presence-paired, not count-equal: VERIFY legitimately uses "**Match**"
+# twice (once introducing the predicate's condition list, once as the
+# branch bullet) against one "**Mismatch**" branch bullet — a real,
+# non-defective asymmetry in the shipped prose structure that a strict
+# count-equality check would misclassify as a bare match-branch.
+VERIFY_PAIRED_OK=0; [ "$VERIFY_MATCH_COUNT" -ge 1 ] && [ "$VERIFY_MISMATCH_COUNT" -ge 1 ] && VERIFY_PAIRED_OK=1
+REFINE_PAIRED_OK=0; [ "$REFINE_MATCH_COUNT" -ge 1 ] && [ "$REFINE_MISMATCH_COUNT" -ge 1 ] && REFINE_PAIRED_OK=1
+
+assert_true "AC:fallback-enumerated (negative half): VERIFY carries both a Match and a Mismatch branch marker (Match: $VERIFY_MATCH_COUNT, Mismatch: $VERIFY_MISMATCH_COUNT) — no bare match-branch without its fallback" \
+  "[ \"$VERIFY_PAIRED_OK\" = \"1\" ]"
+assert_true "AC:fallback-enumerated (negative half): REFINE carries both a Match and a Mismatch branch marker (Match: $REFINE_MATCH_COUNT, Mismatch: $REFINE_MISMATCH_COUNT) — no bare match-branch without its fallback" \
+  "[ \"$REFINE_PAIRED_OK\" = \"1\" ]"
 
 # =============================================================================
 echo ""
@@ -442,7 +466,7 @@ echo ""
 echo "=== Composition oracle — setup/manifest.json rows for the four manifest-registered edited docs (guard; live only once the diff actually touches them) ==="
 # =============================================================================
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
-for SRC in "CLAUDE.md" "docs/autoflow-guide.md" "docs/teammate-contracts.md" "docs/submodule-common-rules.md"; do
+for SRC in "CLAUDE.md" "docs/autoflow-guide.md" "docs/teammate-contracts.md" "docs/submodule-common-rules.md" "docs/doc-invariant-registry.md"; do
   ROW_COUNT="$(jq -r --arg s "$SRC" '[.artifacts[] | select(.source==$s)] | length' "$MANIFEST" 2>/dev/null || echo 0)"
   assert_true "composition-oracle (guard): setup/manifest.json carries exactly one artifacts[] row for $SRC" \
     "[ \"$ROW_COUNT\" = \"1\" ]"
@@ -456,13 +480,69 @@ done
 
 # =============================================================================
 echo ""
-echo "=== Composition oracle — the two new ledger markers are outside the ARCHITECT seed rule's authority match AND outside HANDOFF's review-autofix count window ==="
+echo "=== Composition oracle — real scratch ledger: the two new markers are outside the ARCHITECT seed rule's authority match, and green-tree selection is unaffected by the other entry types (verification design row 3 / ledger E12) ==="
 # =============================================================================
-SEED_RULE="$(grep -oF 'ARCHITECT mutual ACCEPT' "$ARCHITECT_WF" | head -1)"
-REVIEW_AUTOFIX_MARKER="$(grep -cF 'review-autofix' "$GUIDE" || true)"
+# Real interface for the seed rule: .claude/workflows/architect-deliberation.js's
+# LEDGER_SEED_RULE instructs a whole-document read for entries "under
+# authority \"ARCHITECT mutual ACCEPT\" or \"ARCHITECT rejected\"" — a
+# field-value scan, not a marker-anchored heading match (unlike the
+# Green-tree register's own marker-scoped selection). select_seed_set_count
+# reproduces that same scan for real over an assembled ledger.
+ARCHITECT_SEED_LITERAL_COUNT="$(grep -cF 'ARCHITECT mutual ACCEPT' "$ARCHITECT_WF" || true)"
 
-assert_true "composition-oracle: the ARCHITECT seed rule's authority match ('ARCHITECT mutual ACCEPT') is present in the workflow, and the ledger row's markers (green-tree / green-tree-use) are distinct from it and from the review-autofix marker — a scratch ledger carrying a seed-set entry, a green-tree entry and a green-tree-use entry selects neither marker via the seed rule (structural: neither marker string equals 'ARCHITECT mutual ACCEPT' or 'ARCHITECT rejected')" \
-  "[ \"$SEED_RULE\" = 'ARCHITECT mutual ACCEPT' ] && [ \"$REVIEW_AUTOFIX_MARKER\" -ge 1 ] && [ 'green-tree' != 'ARCHITECT mutual ACCEPT' ] && [ 'green-tree-use' != 'ARCHITECT mutual ACCEPT' ]"
+select_seed_set_count() {  # <ledger_file> -> count of entries under the seed authority
+  local ledger="$1"
+  grep -cE '^- Authority: (ARCHITECT mutual ACCEPT|ARCHITECT rejected)' "$ledger" || true
+}
+
+make_ledger_composition() {  # <path> — a seed-set entry, verify-detection, review-autofix, green-tree, green-tree-use
+  cat > "$1" <<'LEDGER'
+# Decision Ledger — issue #88 (composition-oracle fixture)
+
+## E1 — Some ARCHITECT decision (cycle 1, ARCHITECT)
+- Decision: fixture decision line.
+- Grounds: fixture grounds.
+- Authority: ARCHITECT mutual ACCEPT. Cycle 1 / ARCHITECT.
+
+## verify-detection | cycle 1 | VERIFY pass 1
+- step-3 minimal-implementation: clean
+- step-4 mock-boundary fidelity: clean
+- iteration set: none
+- grounds: fixture
+- authority: VERIFY step 3/4 record
+
+## review-autofix | cycle 1 | HANDOFF attempt 1
+- finding: fixture Medium finding auto-resolved.
+- authority: review-autofix record
+
+### green-tree | cycle: 1 | runner: VERIFY step 1
+- tree: ffff4444
+- head: 99994444
+- worktree: clean
+- result: Tests: 8 passed, 8 total
+- authority: Green-tree register
+
+### green-tree-use | cycle: 1 | runner: REFINE step 2
+- outcome: inherited
+- mismatch-cause: none
+- source: VERIFY step 1 cycle 1 | tree: ffff4444 | head: 99994444 | result: Tests: 8 passed, 8 total
+- authority: Green-tree register
+LEDGER
+}
+
+make_ledger_composition "$FIX_DIR/composition.md"
+
+SEED_COUNT="$(select_seed_set_count "$FIX_DIR/composition.md")"
+COMPOSITION_GREEN_TREE="$(select_green_tree_cycle "$FIX_DIR/composition.md" 1)"
+
+SEED_COUNT_OK=0;  [ "$SEED_COUNT" = "1" ]                    && SEED_COUNT_OK=1
+GREEN_TREE_OK=0;  [ "$COMPOSITION_GREEN_TREE" = "ffff4444" ]  && GREEN_TREE_OK=1
+
+assert_true "composition-oracle: over a real assembled ledger carrying a seed-set entry, a verify-detection entry, a review-autofix entry and both new markers, the seed rule's authority scan selects exactly the one seed-set entry (count: $SEED_COUNT, expected 1 — green-tree/green-tree-use/verify-detection/review-autofix all carry a different authority value and are excluded)" \
+  "[ \"$ARCHITECT_SEED_LITERAL_COUNT\" -ge 1 ] && [ \"$SEED_COUNT_OK\" = \"1\" ]"
+
+assert_true "composition-oracle: over the SAME mixed ledger, select_green_tree_cycle still selects only the green-tree entry (got: '$COMPOSITION_GREEN_TREE', expected 'ffff4444') — the interspersed seed-set / verify-detection / review-autofix headings (all '## ', not the '### green-tree | cycle: ' marker) do not perturb the marker-scoped scan" \
+  "[ \"$GREEN_TREE_OK\" = \"1\" ]"
 
 # =============================================================================
 echo ""
