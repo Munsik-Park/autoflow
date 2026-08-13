@@ -254,14 +254,12 @@ echo "=== AC-ORPHAN: no dangling reference to the removed machine outside the al
 #     live reference to a live machine.
 # Recording artefacts are excluded, not because they are exempt from the
 # boundary, but because naming a retired token is what they are FOR: an
-# `absent` registry entry must carry the literal it forbids, the migration map
-# records assertion descriptions verbatim, and the disposition registry records
-# each retirement by name. A sweep that forbade the token everywhere would make
-# recording a retirement impossible. Same intent as the manual-scenarios
-# carve-out already in this list (issue #76).
+# `absent` registry entry must carry the literal it forbids, and the
+# disposition registry records each retirement by name. A sweep that forbade
+# the token everywhere would make recording a retirement impossible. Same
+# intent as the manual-scenarios carve-out already in this list.
 EXCLUDE_PATHSPEC=(':!services' ':!.autoflow' \
   ':!tests/test-issue-795-handoff-removal.sh' \
-  ':!tests/fixtures/issue-76-migration-map.md' \
   ':!tests/fixtures/doc-invariants.json' \
   ':!docs/doc-invariant-registry.md' \
   ':!tests/test-issue-794-doc-assertions.sh' \
@@ -351,7 +349,7 @@ echo "=== AC-DANGLING-REF: no tests/ file still cites the deleted test-issue-495
 # absence, not as a live reference to a live file).
 assert_false \
   "AC-DANGLING-REF: no tests/ file (outside this suite) still references 'test-issue-495-token-scope'" \
-  "git -C '$PROJECT_ROOT' grep -Fl 'test-issue-495-token-scope' -- 'tests' ':!tests/test-issue-795-handoff-removal.sh' ':!tests/fixtures/issue-76-migration-map.md' 2>/dev/null | grep -q ."
+  "git -C '$PROJECT_ROOT' grep -Fl 'test-issue-495-token-scope' -- 'tests' ':!tests/test-issue-795-handoff-removal.sh' 2>/dev/null | grep -q ."
 
 # =============================================================================
 # Results

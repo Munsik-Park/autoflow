@@ -2,7 +2,7 @@
   "invariants": [
     {
       "id": "issue-76-fixture-valid-line",
-      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "file": "tests/fixtures/anchor-resolution-fixture-doc.md",
       "section": "| 3 |",
       "section_kind": "line",
       "predicate": "present",
@@ -12,7 +12,7 @@
     },
     {
       "id": "issue-76-fixture-anchor-overlap-unmigratable",
-      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "file": "tests/fixtures/anchor-resolution-fixture-doc.md",
       "section": "| 3 |",
       "section_kind": "line",
       "predicate": "present",

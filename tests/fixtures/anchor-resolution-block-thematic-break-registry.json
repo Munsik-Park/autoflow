@@ -2,7 +2,7 @@
   "invariants": [
     {
       "id": "issue-76-fixture-block-thematic-break-present",
-      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "file": "tests/fixtures/anchor-resolution-fixture-doc.md",
       "section": "**Unique Bold Lead**",
       "section_kind": "block",
       "predicate": "present",
@@ -12,7 +12,7 @@
     },
     {
       "id": "issue-76-fixture-block-thematic-break-absent",
-      "file": "tests/fixtures/issue-76-anchor-fixture-doc.md",
+      "file": "tests/fixtures/anchor-resolution-fixture-doc.md",
       "section": "**Unique Bold Lead**",
       "section_kind": "block",
       "predicate": "absent",

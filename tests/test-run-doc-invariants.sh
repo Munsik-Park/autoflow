@@ -4,7 +4,7 @@
 # =============================================================================
 # Test: doc-invariant registry runner contract — tests/run-doc-invariants.sh
 # =============================================================================
-# ci-subject: tests/run-doc-invariants.sh tests/fixtures/doc-invariants.json tests/lib/base-ref.sh
+# ci-subject: tests/run-doc-invariants.sh tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/fixtures/anchor-resolution-fixture-doc.md
 #
 # The runner's own contract, retained from the retired per-cycle suite
 # `tests/test-issue-951-registry.sh` at issue #76 (`runner-contract-suite`).
@@ -53,8 +53,14 @@
 # CI invocation.
 #
 # The anchor-resolution negative coverage for the non-heading `section_kind`
-# values lives in tests/test-issue-76-runner-self-test-contract.sh, which is
-# registered alongside this suite.
+# values (AC-a-3 / AC-f, issue #76) has been FOLDED IN below — it previously
+# lived in the temporary CI-facing home tests/test-issue-76-runner-self-test-
+# contract.sh, whose own header named this file as the fold-in destination.
+# Its AC-f body-equality leg did not move: that leg materialised a deleted
+# suite from a base-ref snapshot (`git show <base>:<path>`), which is a DELTA
+# assertion and therefore cycle-scoped by construction
+# (docs/doc-invariant-registry.md §1/§2) — retired with a disposition row in
+# that document's §7 rather than carried into a standing suite.
 # =============================================================================
 
 set -uo pipefail
@@ -268,7 +274,7 @@ assert_true "teeth self-test (c): the diagnostic names the mutator error, as the
 #     without destroying the anchor, and the mode must name that as a
 #     non-credit instead of crediting it or aborting the whole run.
 mk_selftest_registry "$TEETH_SELFTEST_DIR/anchor-destruction.json" \
-  "{\"id\":\"76-selftest-anchor-destruction\",\"origin_issue\":76,\"intent\":\"existence\",\"file\":\"tests/fixtures/issue-76-anchor-fixture-doc.md\",\"section\":\"| 3 |\",\"section_kind\":\"line\",\"predicate\":\"present\",\"match\":\"fixed\",\"literal\":\"| 3 |\",\"scope\":\"permanent\"}"
+  "{\"id\":\"76-selftest-anchor-destruction\",\"origin_issue\":76,\"intent\":\"existence\",\"file\":\"tests/fixtures/anchor-resolution-fixture-doc.md\",\"section\":\"| 3 |\",\"section_kind\":\"line\",\"predicate\":\"present\",\"match\":\"fixed\",\"literal\":\"| 3 |\",\"scope\":\"permanent\"}"
 SELFTEST_ANCHOR_DESTRUCTION_OUT="$(run_self_test "$TEETH_SELFTEST_DIR/anchor-destruction.json")"
 SELFTEST_ANCHOR_DESTRUCTION_RC=$?
 
@@ -634,6 +640,103 @@ mk_temp_repo "$REPO_D"
     && git branch -D "$default_branch" >/dev/null 2>&1; true )
 assert_true "resolve_base_ref: unresolvable base (no override/env/origin/main) returns non-zero (loud, not silent)" \
   "[ -f '$BASEREF_LIB' ] && ! ( cd '$REPO_D' && env -u GITHUB_BASE_REF bash -c 'source \"$BASEREF_LIB\" && resolve_base_ref' >/dev/null 2>&1 )"
+
+# =============================================================================
+echo ""
+echo "=== AC-a-3 / AC-f (folded in from the retired issue-76 runner-self-test contract suite) ==="
+
+FIXDIR="$PROJECT_ROOT/tests/fixtures"
+
+# ---------------------------------------------------------------------------
+# AC-a-3 — --self-test mode exists and is exhaustive.
+# ---------------------------------------------------------------------------
+assert_true "AC-a-3: run-doc-invariants.sh --help/usage mentions --self-test" \
+  "grep -qF -- '--self-test' '$RUNNER'"
+
+assert_true "AC-a-3: run-doc-invariants.sh --self-test exits 0 against the real registry (every entry demonstrates teeth)" \
+  "bash '$RUNNER' --self-test >'$TMP_ROOT/selftest.out' 2>&1"
+
+assert_true "AC-a-3: --self-test reports a Results: line distinct from the default-mode PASS/FAIL line format" \
+  "grep -qi 'self-test\|teeth\|mutation' '$TMP_ROOT/selftest.out' 2>/dev/null"
+
+assert_true "AC-a-3: default (no-flag) run-doc-invariants.sh behavior is unchanged (still exits 0/1 on the real registry with no --self-test side effects)" \
+  "bash '$RUNNER' >'$TMP_ROOT/default.out' 2>&1; grep -qF 'Results:' '$TMP_ROOT/default.out'"
+
+# ---------------------------------------------------------------------------
+# AC-f — anchor-resolution negative coverage, hermetic fixtures.
+# ---------------------------------------------------------------------------
+assert_true "AC-f: a zero-match 'line' anchor is REJECTED at load time (dangling anchor, not silently skipped)" \
+  "out=\$(bash '$RUNNER' '$FIXDIR/anchor-resolution-zero-match-registry.json' 2>&1); ec=\$?; [ \$ec -ne 0 ] && printf '%s' \"\$out\" | grep -qi 'dangling'"
+
+assert_true "AC-f: a multi-match 'line' anchor is REJECTED at load time (ambiguous anchor, not first-match silently)" \
+  "out=\$(bash '$RUNNER' '$FIXDIR/anchor-resolution-multi-match-registry.json' 2>&1); ec=\$?; [ \$ec -ne 0 ] && printf '%s' \"\$out\" | grep -qi 'ambiguous'"
+
+assert_true "AC-f: a unique 'line' anchor resolves and its predicate evaluates against exactly that one line" \
+  "bash '$RUNNER' '$FIXDIR/anchor-resolution-valid-line-registry.json' >'$TMP_ROOT/valid-line.out' 2>&1; grep -qF 'Results: 2/2 passed' '$TMP_ROOT/valid-line.out'"
+
+assert_true "AC-f: a 'block' anchor with no section_end terminates at the thematic break, excluding the '---' line, and the body does not leak into the next block" \
+  "bash '$RUNNER' '$FIXDIR/anchor-resolution-block-thematic-break-registry.json' >'$TMP_ROOT/block-thematic.out' 2>&1; grep -qF 'Results: 2/2 passed' '$TMP_ROOT/block-thematic.out'"
+
+assert_true "AC-f: a 'block' anchor with an explicit section_end terminates there (precedence over any later heading/thematic-break), excluding the terminator line itself from the body" \
+  "bash '$RUNNER' '$FIXDIR/anchor-resolution-block-explicit-end-registry.json' >'$TMP_ROOT/block-explicit-end.out' 2>&1; grep -qF 'Results: 3/3 passed' '$TMP_ROOT/block-explicit-end.out'"
+
+# ---------------------------------------------------------------------------
+# teeth-mode-anchor-destruction — a mutation that destroys a "line"/"block"
+# entry's own anchor is a non-credit with a diagnostic, never an abort of the
+# whole --self-test run and never a credited FAIL. The runner emits the two
+# labels at tests/run-doc-invariants.sh:490 (`NO-TEETH: … unmigratable shape
+# …`, the literal-overlaps-anchor pre-check) and :543/:546 (`TEETH: …` on a
+# FAIL verdict, `NO-TEETH: … has no teeth` otherwise). --self-test over a
+# small fixture registry exercises each named path hermetically, beside the
+# whole-registry run above.
+# ---------------------------------------------------------------------------
+bash "$RUNNER" --self-test "$FIXDIR/anchor-resolution-valid-line-registry.json" >"$TMP_ROOT/teeth-line.out" 2>&1
+
+assert_true "teeth-mode-anchor-destruction: an ordinary present-literal entry (no anchor overlap) is CREDITED — its mutated copy demonstrates teeth" \
+  "grep -qE '^  TEETH: issue-76-fixture-valid-line ' '$TMP_ROOT/teeth-line.out'"
+
+assert_true "teeth-mode-anchor-destruction: an entry whose literal OVERLAPS its own column-1 anchor prefix is a NAMED non-credit, not silently skipped and not falsely credited" \
+  "grep -qE '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable ' '$TMP_ROOT/teeth-line.out'"
+
+assert_true "teeth-mode-anchor-destruction: the unmigratable-overlap non-credit names its own reason (literal overlaps its own anchor prefix), distinct from an ineffective-mutation or mutator-error non-credit" \
+  "grep -qi '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable .*overlaps its own column-1 anchor prefix' '$TMP_ROOT/teeth-line.out'"
+
+assert_true "teeth-mode-anchor-destruction: the run does not abort on the non-credit entry — the credited entry's own result line is still present in the same run" \
+  "grep -qE '^  TEETH: issue-76-fixture-valid-line ' '$TMP_ROOT/teeth-line.out' && grep -qE '^  NO-TEETH: issue-76-fixture-anchor-overlap-unmigratable ' '$TMP_ROOT/teeth-line.out'"
+
+# ---------------------------------------------------------------------------
+# AC-c-3 clause 2 — every RETAINED scenario document satisfies at least one of
+# the five `manual-doc-closure` dependent kinds:
+#   1. a registry entry targets it (id path match on the document file);
+#   2. a surviving suite asserts on it (content grep for the basename);
+#   3. a docs/maintained-docs.md row registers it;
+#   4. a prose document (CLAUDE.md, docs/**) cites it as evidence;
+#   5. a RETAINED scenario document cites it.
+# A workflow `paths:` entry is explicitly NOT a dependent (manual-doc-
+# closure), so it is deliberately not checked here.
+# ---------------------------------------------------------------------------
+RETAINED_DOCS=(
+  issue-27 issue-42 issue-51 issue-52 issue-55 issue-56 issue-59 issue-62
+  issue-67 issue-71 issue-795 issue-798 issue-799 issue-800 issue-846
+  issue-847 issue-848 issue-985
+)
+for name in "${RETAINED_DOCS[@]}"; do
+  docfile="tests/manual/${name}-manual-scenarios.md"
+  [ -f "$PROJECT_ROOT/$docfile" ] || continue
+  has_dependent=false
+  # Kind 1: registry entry names the document as its file.
+  jq -e --arg f "$docfile" '.invariants[] | select(.file == $f)' "$REGISTRY" >/dev/null 2>&1 && has_dependent=true
+  # Kind 2: a surviving suite content-references the document's basename.
+  base="${name}-manual-scenarios"
+  grep -rl -- "$base" "$PROJECT_ROOT/tests" 2>/dev/null | grep -vF "/$docfile" | grep -q . && has_dependent=true
+  # Kind 3: a docs/maintained-docs.md row registers it.
+  grep -qF "$base" "$PROJECT_ROOT/docs/maintained-docs.md" 2>/dev/null && has_dependent=true
+  # Kind 4: a prose document cites it as evidence.
+  grep -rlF -- "$base" "$PROJECT_ROOT/CLAUDE.md" "$PROJECT_ROOT/docs" 2>/dev/null | grep -q . && has_dependent=true
+  # Kind 5: a retained sibling scenario document cites it.
+  grep -rlF -- "$base" "$PROJECT_ROOT/tests/manual" 2>/dev/null | grep -vF "/$docfile" | grep -q . && has_dependent=true
+  assert_true "AC-c-3 clause 2: retained scenario document satisfies >=1 of the five dependent kinds — $name" "$has_dependent"
+done
 
 # =============================================================================
 echo ""

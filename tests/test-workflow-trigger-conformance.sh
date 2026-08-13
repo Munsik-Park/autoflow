@@ -3,13 +3,20 @@
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/check-suite-ci-coverage.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml .github/workflows/
 # =============================================================================
-# Test: orphan-suite registration effectiveness — Issue #76 AC-b-2/AC-b-3,
-#       trigger-window preservation (AC-c-2), dangling-reference sweep,
-#       CYCLE 2 (PR #83 Finding 1): Actions-glob dialect matcher
-#       (AC-glob-conformance), hosting-workflow-scoped coverage (AC-b-2
-#       rewrite), paths: entry-shape lint (AC-entry-shape), ci-subject
-#       grammar (AC-subject-grammar).
+# Test: workflow trigger/registration conformance — suite registration
+#       effectiveness (AC-b-2/AC-b-3), Actions-glob dialect matcher
+#       (AC-glob-conformance), paths: entry-shape lint (AC-entry-shape),
+#       ci-subject grammar (AC-subject-grammar), registration-target
+#       existence (AC-step-target-exists).
 # =============================================================================
+# STANDING suite (subject-named, no issue number — docs/autoflow-guide.md >
+# RED > Naming): every leg below asserts a permanent STATE property of the
+# workflow directory and the tests tree. Renamed here from the cycle-named
+# issue-76 orphan-registration suite, with two cycle-scoped legs
+# retired (trigger-window preservation AC-c-2, against the existing carrier
+# tests/test-issue-799-inert-cleanup.sh AC6-ci; the deleted-suite-still-read
+# sweep, whose inventory was issue #76's own deletion set) — dispositions
+# recorded in docs/doc-invariant-registry.md §7.
 # .autoflow/issue-76-verification-design.md (cycle 2 sections):
 #   AC-b-2 — each named orphan suite executes on an edit to its OWN subject:
 #     registration-effectiveness oracle, restated so the verdict is about the
@@ -45,22 +52,19 @@
 #     `scripts/test/check-suite-ci-coverage.sh` over the real tree, exit 0,
 #     plus two named --self-test legs (closure, exclusion) over a hermetic
 #     fixture tree so the live-tree exit 0 is never read as vacuous.
-#   AC-c-2 — the scenario-document retirement move evicts no existing
-#     `paths:` entry from the fixed-window `e2e-dummy-target.yml` reads
-#     (`window-safety`, `yml-window-eviction`).
-#   `deleted-suite-still-read` (verification design depth table) — no
-#     retained suite reads a deletion target's file TEXT (content grep, not a
-#     comment mention).
-#   AC-runtime-witness is HANDOFF-deferred (hook gates push/pr-create on
-#     AUDIT+GATE:QUALITY) and is NOT implemented here — see
-#     tests/manual/issue-76-manual-scenarios.md > M5.
+#   AC-step-target-exists (.autoflow/issue-85-verification-design.md >
+#     Verification depth > Registration-target existence leg) — every
+#     `run: bash <path>` step in every workflow names a file that exists.
+#     scripts/test/check-suite-ci-coverage.sh closes the spec -> step
+#     direction only; nothing closes step -> spec, so a retirement that
+#     removes a file and leaves its step behind would otherwise surface only
+#     as a hosted run's exit 127, after the push.
 # =============================================================================
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 COVERAGE_LINT="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
 
 PASS=0; FAIL=0; TESTS=0
@@ -77,7 +81,7 @@ assert_true() {
   fi
 }
 
-echo "=== Issue #76 — orphan registration, glob dialect, entry-shape, subject-grammar (AC-b-2/AC-b-3/AC-c-2/AC-glob-conformance/AC-entry-shape/AC-subject-grammar) ==="
+echo "=== workflow trigger conformance — registration, glob dialect, entry-shape, subject-grammar, step-target existence (AC-b-2/AC-b-3/AC-glob-conformance/AC-entry-shape/AC-subject-grammar/AC-step-target-exists) ==="
 
 # =============================================================================
 # Shared mechanism — Actions path-filter dialect matcher (oracle-models-actions-glob)
@@ -343,7 +347,7 @@ done
 # the feature design; this assertion is the left-hand side that makes the
 # omission visible until they do.
 assert_true "AC-entry-shape subject-wiring: this suite's own # ci-subject: header declares the directory '.github/workflows/' as its OWN token (entry-shape-leg's tree-wide arm needs its own subject — a substring hit inside another token, e.g. '.github/workflows/e2e-dummy-target.yml', does not count)" \
-  "grep -m1 '^# ci-subject:' '$PROJECT_ROOT/tests/test-issue-76-orphan-registration.sh' | grep -qE '(^|[[:space:]])\\.github/workflows/([[:space:]]|\$)'"
+  "grep -m1 '^# ci-subject:' '$PROJECT_ROOT/tests/test-workflow-trigger-conformance.sh' | grep -qE '(^|[[:space:]])\\.github/workflows/([[:space:]]|\$)'"
 
 # =============================================================================
 # AC-glob-conformance — table-driven conformance rows over the matcher alone,
@@ -586,119 +590,48 @@ assert_true "AC-b-3: --self-test output names the exclusion leg (tests/lib, run-
   "grep -qi 'exclusion' /tmp/issue76-coverage-lint-selftest.out 2>/dev/null"
 
 # ---------------------------------------------------------------------------
-# AC-c-2 — trigger-window preservation over e2e-dummy-target.yml. Recomputes
-# the fixed grep -A40 window below the FIRST paths: key and re-asserts every
-# literal the three window-dependent live suites require, per
-# `contract-suite-workflow`'s measured saturation
-# (tests/test-issue-799-inert-cleanup.sh, tests/test-issue-55-*,
-# tests/test-issue-52-*).
-# ---------------------------------------------------------------------------
-FIRST_PATHS_LINE="$(grep -n '^ *paths:' "$CI_WORKFLOW" | head -1 | cut -d: -f1)"
-assert_true "AC-c-2 pre: e2e-dummy-target.yml has a paths: block to window against" "[ -n '$FIRST_PATHS_LINE' ]"
-
-if [ -n "$FIRST_PATHS_LINE" ]; then
-  WINDOW="$(sed -n "${FIRST_PATHS_LINE},$((FIRST_PATHS_LINE + 40))p" "$CI_WORKFLOW")"
-  # Literals named by the three window-dependent live suites at HEAD.
-  # GATE:QUALITY FAIL #6 (ledger E14): checked only 1 of the 6 literals
-  # test-issue-799-inert-cleanup.sh:336-339 actually requires inside the
-  # window — the other 5 could be silently evicted without this leg ever
-  # noticing. All six now asserted.
-  WINDOW_LITERALS=(
-    "README.md"
-    "docs/submodule-common-rules.md"
-    "docs/external-review-sequencing.md"
-    "docs/INDEX.md"
-    "docs/maintained-docs.md"
-    "docs/git-workflow.md"
-  )
-  for lit in "${WINDOW_LITERALS[@]}"; do
-    assert_true "AC-c-2: window literal survives inside the first paths: block's 40-line window — '$lit'" \
-      "printf '%s\n' \"\$WINDOW\" | grep -qF '$lit'"
-  done
-fi
-
-# ---------------------------------------------------------------------------
-# deleted-suite-still-read — dangling-reference sweep over the retirement
-# set (GATE:QUALITY FAIL #2, ledger E14). Now that migration has landed,
-# 843/844/the pre-split 951 suite, and the doc-invariants-baseline.txt
-# fixture, are genuinely gone at HEAD; the sweep is a real assertion, not
-# the `"true"` stub the prior round shipped (whose own justifying comment
-# was already false at HEAD — the suites ARE deleted).
+# AC-step-target-exists — every `run: bash <path>` step in every workflow
+# names a file that exists in the tree.
 #
-# Classification rule, stated because "comment-only mentions are harmless"
-# (verification design, deleted-suite-still-read) needs a mechanical
-# separation, not an eyeball one:
-#   1. A hit on a line whose trimmed content starts with '#' is a
-#      COMMENT — exempt. This is where a historical/provenance citation
-#      lives (e.g. tests/test-issue-69-verification-depth.sh's "Moved here
-#      from the permanent registry (GATE:QUALITY attempt-2 finding):
-#      ... tests/test-issue-951-registry.sh, FINDING 3-E" — citing WHERE a
-#      finding originated, not depending on that file existing).
-#   2. A hit inside a file whose OWN declared purpose is a durable record
-#      of what this cycle deleted and why — tests/fixtures/issue-76-
-#      migration-map.md and docs/doc-invariant-registry.md — is exempt at
-#      the FILE level: a "dangling reference" concern does not apply to a
-#      document whose entire job is to name deleted things.
-#   3. Everything else is a LIVE reference and fails the assertion — this
-#      is what would previously have caught a suite's own SUITES[]/
-#      DELETED_SUITES[] data array (a non-comment, non-provenance-file
-#      line) content-referencing a target that no longer resolves.
-DELETED_TARGETS=(
-  "test-issue-843-doc-assertions.sh"
-  "test-issue-844-doc-assertions.sh"
-  "test-issue-951-registry.sh"
-  "doc-invariants-baseline.txt"
-)
-EXEMPT_PROVENANCE_FILES=(
-  "tests/fixtures/issue-76-migration-map.md"
-  "docs/doc-invariant-registry.md"
-  # tests/test-issue-76-migration-map-total.sh's SUITES[] array names
-  # 843/844 as base-ref subjects it materialises via `git show
-  # <base>:<path>` (see its own RED2 header note) — it never reads the
-  # working-tree path, so a deletion cannot turn it red the way the
-  # design's failure mode describes. Same exemption class as the map
-  # document itself.
-  "tests/test-issue-76-migration-map-total.sh"
-  # tests/test-issue-76-runner-self-test-contract.sh's AC-f body-equality
-  # leg materialises tests/test-issue-844-doc-assertions.sh via the same
-  # `git show <base>:<path>` pattern (never the working-tree path) to
-  # re-derive the deleted suite's own Resume-procedure extractor.
-  "tests/test-issue-76-runner-self-test-contract.sh"
-)
-is_exempt_provenance_file() {
-  local rel="$1" f
-  for f in "${EXEMPT_PROVENANCE_FILES[@]}"; do
-    [ "$rel" = "$f" ] && return 0
-  done
-  return 1
-}
-for name in "${DELETED_TARGETS[@]}"; do
-  live_hits=()
-  while IFS= read -r hit; do
-    [ -n "$hit" ] || continue
-    hfile="${hit%%:*}"
-    hrel="${hfile#"$PROJECT_ROOT"/}"
-    [ "$hrel" = "tests/test-issue-76-orphan-registration.sh" ] && continue
-    [ "$hrel" = "$name" ] && continue
-    if is_exempt_provenance_file "$hrel"; then
-      echo "  INFO: $name — exempt (provenance record): $hrel"
-      continue
-    fi
-    hcontent="${hit#*:*:}"
-    trimmed="$(printf '%s' "$hcontent" | sed -e 's/^[[:space:]]*//')"
-    case "$trimmed" in
-      \#*)
-        echo "  INFO: $name — exempt (comment-only): $hit"
-        ;;
-      *)
-        echo "  INFO: $name — LIVE reference: $hit"
-        live_hits+=("$hit")
-        ;;
-    esac
-  done < <(grep -rn -- "$name" "$PROJECT_ROOT/tests" "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/docs" "$PROJECT_ROOT/.github" 2>/dev/null || true)
-  assert_true "deleted-suite-still-read: no live (non-comment, non-provenance-file) reference to deleted target '$name' survives" \
-    "[ ${#live_hits[@]} -eq 0 ]"
+# The coverage lint (scripts/test/check-suite-ci-coverage.sh) enumerates the
+# tests/** execution specs and asks whether each is reached, closing the
+# spec -> step direction only. A step naming a deleted file leaves that lint
+# green: the reverse direction has no other checker, and the failure surfaces
+# only as `exit 127` in a hosted run — after the push, past every in-cycle
+# gate. This suite's declared subject is the workflow directory's own
+# registration conformance, so the leg belongs here.
+#
+# The path set is read through the same `bash <path>` invocation rule the
+# hosting-workflow scoping above inherits from the coverage lint, so the two
+# notions of "what a workflow runs" cannot drift.
+# ---------------------------------------------------------------------------
+for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
+  [ -f "$wf" ] || continue
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  while IFS= read -r step_target; do
+    [ -n "$step_target" ] || continue
+    assert_true "AC-step-target-exists: $wrel — run: step target '$step_target' exists in the tree" \
+      "[ -f '$PROJECT_ROOT/$step_target' ]"
+  done < <(grep -ohE 'run: *bash +(tests|scripts)/[A-Za-z0-9/_.-]+\.(sh|bats)' "$wf" 2>/dev/null \
+    | sed -E 's/^run: *bash +//' | sort -u)
 done
+
+# Hermetic leg: every step target in the tree resolves today, so the live
+# loop above passes vacuously — a fixture workflow naming a nonexistent
+# target is what discriminates a real check from a permissive one.
+STEP_TARGET_FIXTURE="$(mktemp)"
+cat > "$STEP_TARGET_FIXTURE" <<'YML'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-step-target-does-not-exist.sh
+YML
+mapfile -t STEP_TARGET_FIXTURE_TARGETS < <(grep -ohE 'run: *bash +(tests|scripts)/[A-Za-z0-9/_.-]+\.(sh|bats)' "$STEP_TARGET_FIXTURE" | sed -E 's/^run: *bash +//' | sort -u)
+assert_true "AC-step-target-exists hermetic: the step-target extraction reads the fixture's single run: step" \
+  "[ \${#STEP_TARGET_FIXTURE_TARGETS[@]} -eq 1 ]"
+assert_true "AC-step-target-exists hermetic: a step naming a nonexistent target is detected (the existence predicate is not vacuous)" \
+  "[ ! -f \"\$PROJECT_ROOT/\${STEP_TARGET_FIXTURE_TARGETS[0]}\" ]"
+rm -f "$STEP_TARGET_FIXTURE"
 
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"

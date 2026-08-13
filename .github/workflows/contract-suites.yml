@@ -24,7 +24,7 @@
 #
 # Trigger coverage: the `paths:` blocks below carry every path declared by a
 # registered suite's `# ci-subject:` header, plus each suite file itself. That
-# correspondence is what tests/test-issue-76-orphan-registration.sh's
+# correspondence is what tests/test-workflow-trigger-conformance.sh's
 # registration-effectiveness oracle asserts — a `run:` step alone does not give a
 # suite regression protection if its own subject's edit never fires the workflow.
 #
@@ -71,7 +71,6 @@ on:
       - 'tests/fixtures/**'
       - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
-      - 'tests/fixtures/issue-76-migration-map.md'
       - 'tests/issue-92/mock-gh/**'
       - 'tests/lib/base-ref.sh'
       - 'tests/manual/**'
@@ -88,11 +87,6 @@ on:
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
-      - 'tests/test-issue-76-manual-doc-retirement.sh'
-      - 'tests/test-issue-76-migration-map-total.sh'
-      - 'tests/test-issue-76-orphan-registration.sh'
-      - 'tests/test-issue-76-runner-self-test-contract.sh'
-      - 'tests/test-issue-76-standing-lints.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
@@ -102,7 +96,10 @@ on:
       - 'tests/test-issue-979-probe.sh'
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-issue-985-doc-assertions.sh'
+      - 'tests/test-push-context-base-ref.sh'
       - 'tests/test-run-doc-invariants.sh'
+      - 'tests/test-standing-lint-drives.sh'
+      - 'tests/test-workflow-trigger-conformance.sh'
   push:
     branches: [main]
     paths:
@@ -140,7 +137,6 @@ on:
       - 'tests/fixtures/**'
       - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
-      - 'tests/fixtures/issue-76-migration-map.md'
       - 'tests/issue-92/mock-gh/**'
       - 'tests/lib/base-ref.sh'
       - 'tests/manual/**'
@@ -157,11 +153,6 @@ on:
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
-      - 'tests/test-issue-76-manual-doc-retirement.sh'
-      - 'tests/test-issue-76-migration-map-total.sh'
-      - 'tests/test-issue-76-orphan-registration.sh'
-      - 'tests/test-issue-76-runner-self-test-contract.sh'
-      - 'tests/test-issue-76-standing-lints.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
@@ -171,7 +162,10 @@ on:
       - 'tests/test-issue-979-probe.sh'
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-issue-985-doc-assertions.sh'
+      - 'tests/test-push-context-base-ref.sh'
       - 'tests/test-run-doc-invariants.sh'
+      - 'tests/test-standing-lint-drives.sh'
+      - 'tests/test-workflow-trigger-conformance.sh'
 
 permissions:
   contents: read
@@ -184,25 +178,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          # test-issue-76-migration-map-total.sh materializes deleted suites
-          # from the merge-base with main; a shallow checkout resolves no base
-          # ref (BLOCK: "no base ref resolvable", PR #83 first CI run).
+          # Full history, so a base-ref-consuming guard in this workflow
+          # cannot skip SILENTLY on a shallow checkout. The remaining consumer
+          # here (tests/test-issue-795-handoff-removal.sh's AC-KEEP-LABEL
+          # merge-base arm) resolves its base as
+          # `git merge-base HEAD main 2>/dev/null || echo ""` and, on an empty
+          # BASE_REF, prints SKIP and increments TESTS while asserting
+          # nothing. Reducing the depth therefore shows up as silent coverage
+          # loss, not as a red run — which is exactly why this line must not
+          # be read as a no-op guard and trimmed.
           fetch-depth: 0
 
-      - name: test-issue-76-manual-doc-retirement.sh
-        run: bash tests/test-issue-76-manual-doc-retirement.sh
+      - name: test-workflow-trigger-conformance.sh
+        run: bash tests/test-workflow-trigger-conformance.sh
 
-      - name: test-issue-76-migration-map-total.sh
-        run: bash tests/test-issue-76-migration-map-total.sh
+      - name: test-standing-lint-drives.sh
+        run: bash tests/test-standing-lint-drives.sh
 
-      - name: test-issue-76-orphan-registration.sh
-        run: bash tests/test-issue-76-orphan-registration.sh
-
-      - name: test-issue-76-runner-self-test-contract.sh
-        run: bash tests/test-issue-76-runner-self-test-contract.sh
-
-      - name: test-issue-76-standing-lints.sh
-        run: bash tests/test-issue-76-standing-lints.sh
+      - name: test-push-context-base-ref.sh
+        run: bash tests/test-push-context-base-ref.sh
 
       - name: adr-0016-conformance-check.sh
         run: bash tests/adr-0016-conformance-check.sh
