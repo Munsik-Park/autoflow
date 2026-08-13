@@ -5623,6 +5623,17 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "register-entry citation"
+    },
+    {
+      "id": "88-verify-predicate-result-pass-line",
+      "origin_issue": 88,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "that entry's `result` is a pass line",
+      "scope": "permanent"
     }
   ]
 }

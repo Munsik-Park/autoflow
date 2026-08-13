@@ -16,8 +16,10 @@
 # green). See docs/doc-invariant-registry.md §1 for the two-lane rule this
 # suite's DELTA/EXEC/JSON-shaped assertions are the cycle-scoped lane of.
 #
-# Retirement: this file is deleted, per its own disposition row, in the final
-# commit before the DELIVER push once this cycle's PR merges (§2).
+# Retirement: this file is deleted, per its own disposition row (§9), in the
+# final commit before the DELIVER push once this cycle's PR merges (§2) —
+# alongside its run:/paths: registration in
+# .github/workflows/contract-suites.yml, per the #73 precedent (ff68814).
 # =============================================================================
 
 set -uo pipefail
@@ -347,14 +349,23 @@ SEL_A="$(select_green_tree_cycle "$FIX_DIR/variant-a.md" 1)"
 SEL_B="$(select_green_tree_cycle "$FIX_DIR/variant-b.md" 1)"
 SEL_USE="$(select_green_tree_cycle "$FIX_DIR/use-record.md" 1)"
 
+# The three flags below are precomputed with a plain `[` test (never eval)
+# so that only a controlled "0"/"1" literal — never the file/awk-derived
+# SEL_* string itself — is interpolated into assert_true's eval'd condition
+# (verification design > Method constraints carried into RED: no eval of
+# file-derived content).
+SEL_A_OK=0;   [ "$SEL_A" = "aaaa1111" ] && SEL_A_OK=1
+SEL_B_OK=0;   [ -z "$SEL_B" ]           && SEL_B_OK=1
+SEL_USE_OK=0; [ "$SEL_USE" = "aaaa1111" ] && SEL_USE_OK=1
+
 assert_true "AC:entry-grammar variant A: current-cycle green-tree entry selected over a later different-cycle heading (clause-bound: guide states marker-scoped-then-positional selection) (got: '$SEL_A')" \
-  "clause_names_selection_rule && [ \"$SEL_A\" = \"aaaa1111\" ]"
+  "clause_names_selection_rule && [ \"$SEL_A_OK\" = \"1\" ]"
 
 assert_true "AC:entry-grammar variant B: a malformed current-cycle entry (missing head/worktree/result/authority) appended last IS the marker-scoped-then-positional selection, and its incompleteness yields a mismatch — NOT a silent fall-back to the earlier good entry, so selection resolves to empty rather than to 'aaaa1111' (clause-bound) (got: '$SEL_B')" \
-  "clause_names_selection_rule && [ -z \"$SEL_B\" ]"
+  "clause_names_selection_rule && [ \"$SEL_B_OK\" = \"1\" ]"
 
 assert_true "AC:use-record non-chaining: a green-tree-use entry appended after the cycle's green-tree entry does not become the selection and does not force a mismatch — the green-tree entry is still selected (clause-bound: guide states the non-chaining rule) (got: '$SEL_USE')" \
-  "clause_names_selection_rule && clause_names_nonchaining && [ \"$SEL_USE\" = \"aaaa1111\" ]"
+  "clause_names_selection_rule && clause_names_nonchaining && [ \"$SEL_USE_OK\" = \"1\" ]"
 
 # =============================================================================
 echo ""
@@ -438,8 +449,9 @@ for SRC in "CLAUDE.md" "docs/autoflow-guide.md" "docs/teammate-contracts.md" "do
 
   MANIFEST_SHA="$(jq -r --arg s "$SRC" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST" 2>/dev/null)"
   CUR_SHA="$(shasum -a 256 "$PROJECT_ROOT/$SRC" | awk '{print $1}')"
+  SHA_OK=0; [ "$MANIFEST_SHA" = "$CUR_SHA" ] && SHA_OK=1
   assert_true "composition-oracle: setup/manifest.json sha256 row for $SRC matches the live source (real set-intersection + shasum recomputation, verification design Composition-oracle determination row 1) (manifest: $MANIFEST_SHA, current: $CUR_SHA)" \
-    "[ \"$MANIFEST_SHA\" = \"$CUR_SHA\" ]"
+    "[ \"$SHA_OK\" = \"1\" ]"
 done
 
 # =============================================================================
@@ -477,8 +489,9 @@ case "$HEAD_BRANCH" in
       )
       DIFF_FILES="$(git -C "$PROJECT_ROOT" diff --name-only "$BASE_REF"...HEAD 2>/dev/null || true)"
       UNCOVERED="$(comm -23 <(printf '%s\n' "$DIFF_FILES" | sort) <(printf '%s\n' "${ALLOW_LIST[@]}" | sort))"
-      assert_true "AC:untouched-fences (guard, currently vacuous — no diff yet on this branch): diff file set ⊆ allow-list (uncovered: $(printf '%s' "$UNCOVERED" | paste -sd, -))" \
-        "[ -z \"\$(printf '%s' '$UNCOVERED')\" ]"
+      UNCOVERED_OK=0; [ -z "$UNCOVERED" ] && UNCOVERED_OK=1
+      assert_true "AC:untouched-fences (guard): diff file set ⊆ allow-list (uncovered: $(printf '%s' "$UNCOVERED" | paste -sd, -))" \
+        "[ \"$UNCOVERED_OK\" = \"1\" ]"
 
       for SECTION_MARK in "## HANDOFF — PR Creation + Hand-off" "## VALIDATE — Verification Done" "## GATE:PLAN — Plan Evaluation" "## GATE:QUALITY — Completion Evaluation"; do
         HUNKS="$(git -C "$PROJECT_ROOT" diff "$BASE_REF"...HEAD -- docs/autoflow-guide.md 2>/dev/null \
