@@ -507,6 +507,29 @@ interface is a masked failure — issue #309 shipped three mock-masked integrati
 through every internal gate; only external review caught them. The check is a sampled
 re-derivation against HEAD, not a re-read of the test's own claims.
 
+**Detection record**: the outcomes of steps 3 and 4 are recorded on the per-issue decision ledger
+`.autoflow/issue-{N}-ledger.md` as a fixed-field entry whose heading carries a `verify-detection` marker,
+the cycle, and the VERIFY pass. The Test AI reports the outcomes; the ledger is host-owned, so
+**the orchestrator appends the record** — written **at VERIFY exit**, on every VERIFY pass that reached
+step 3, before the phase transition is taken (to REFINE on a pass, or to RED / GREEN / SEQUENTIAL_FIX /
+Evaluation-AI arbitration on a branch). Entry fields: `step-3 minimal-implementation` and
+`step-4 mock-boundary fidelity`, each one of `detected` / `clean` / `not-run`; `iteration set` — the
+doubles by name with the real interface each stands for, or `none`; `grounds` — the Test AI report's
+Evidence anchor; `authority` — `VERIFY step 3/4 record`.
+
+- **Vocabulary**: `detected` = the check found an uncovered implementation hunk or a diverging double;
+  `clean` = the check ran and found none; `not-run` = the check did not execute. A check that did not
+  execute is recorded as `not-run` and **never** as `clean` — the same truthfulness rule step 2 applies
+  to a missing self-check.
+- **Non-interference with HANDOFF's auto-resolution cap**: a `verify-detection` entry is a **record, not
+  a decision** — its marker is distinct from `review-autofix`, it is not an auto-resolution attempt, and it
+  neither increments nor resets that cap's count window (step 6.5).
+- **Non-interference with the ARCHITECT ledger seed**: the entry's `authority` is `VERIFY step 3/4 record`,
+  outside the settled-decision set the seed rule selects (`ARCHITECT mutual ACCEPT` / `ARCHITECT rejected`),
+  so a detection record is never seeded into a later deliberation as a settled decision. The ledger's
+  no-re-litigation rule binds decisions, so a later cycle's detection outcome neither supersedes nor is
+  blocked by an earlier one.
+
 **Deadlock resolution**: Evaluation AI judges against the acceptance criteria as the objective baseline — except on a design contradiction, where that oracle is the contradicted artifact and the verdict is ARCHITECT re-deliberation. Its verdict is one of four:
 
 - the test misreads an acceptance criterion → RED;

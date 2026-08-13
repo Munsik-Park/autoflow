@@ -87,6 +87,7 @@ on:
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
+      - 'tests/test-issue-73-adr-status.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
@@ -153,6 +154,7 @@ on:
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
+      - 'tests/test-issue-73-adr-status.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
@@ -236,6 +238,9 @@ jobs:
 
       - name: test-issue-64-collection-scope.sh
         run: bash tests/test-issue-64-collection-scope.sh
+
+      - name: test-issue-73-adr-status.sh
+        run: bash tests/test-issue-73-adr-status.sh
 
       - name: test-issue-795-handoff-removal.sh
         run: bash tests/test-issue-795-handoff-removal.sh
