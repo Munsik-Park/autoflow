@@ -90,6 +90,7 @@ extract_h2() {              # heading_text file
 
 VERIFY_BODY="$(extract_h2 "VERIFY — Test Run + Verification" "$GUIDE")"
 REFINE_BODY="$(extract_h2 "REFINE — Refactor (Green maintained)" "$GUIDE")"
+GREEN_BODY="$(extract_h2 "GREEN — Implementation" "$GUIDE")"
 
 # =============================================================================
 echo "=== AC:mechanism-holds — real-git oracle, clause-bound to the shipped command pair ==="
@@ -543,6 +544,185 @@ assert_true "composition-oracle: over a real assembled ledger carrying a seed-se
 
 assert_true "composition-oracle: over the SAME mixed ledger, select_green_tree_cycle still selects only the green-tree entry (got: '$COMPOSITION_GREEN_TREE', expected 'ffff4444') — the interspersed seed-set / verify-detection / review-autofix headings (all '## ', not the '### green-tree | cycle: ' marker) do not perturb the marker-scoped scan" \
   "[ \"$GREEN_TREE_OK\" = \"1\" ]"
+
+# =============================================================================
+echo ""
+echo "=== Cycle 2 — GREEN step 5 producer site (PR #91 Medium finding) ==="
+# =============================================================================
+# Registry entries (origin_issue 88, ids 88-c2-*) pin the shipped literals at
+# the GREEN section anchor. This block carries what the registry structurally
+# cannot: cross-file/cross-block agreement, a clause-bound real-git negative
+# oracle, and real-ledger cases over the (already runner-indifferent, cycle-1
+# E23) selection mechanism applied to a GREEN-runner entry for the first time.
+
+echo ""
+echo "--- AC:evaluation-points-sync — the predicate's evaluation-point enumeration names GREEN step 5 alongside VERIFY step 1 / REFINE step 2, AND GREEN's own text self-names as GREEN step 5 ---"
+ENUM_LINE="$(printf '%s\n' "$VERIFY_BODY" | grep -F 'Evaluated by the orchestrator at' | head -1)"
+ENUM_HAS_GREEN=0;  printf '%s' "$ENUM_LINE" | grep -qF 'GREEN step 5'  && ENUM_HAS_GREEN=1
+ENUM_HAS_VERIFY=0; printf '%s' "$ENUM_LINE" | grep -qF 'VERIFY step 1' && ENUM_HAS_VERIFY=1
+ENUM_HAS_REFINE=0; printf '%s' "$ENUM_LINE" | grep -qF 'REFINE step 2' && ENUM_HAS_REFINE=1
+GREEN_SELF_NAMES=0; printf '%s' "$GREEN_BODY" | grep -qF 'GREEN step 5' && GREEN_SELF_NAMES=1
+
+assert_true "AC:evaluation-points-sync: the predicate's own evaluation-point sentence (VERIFY body, 'Evaluated by the orchestrator at ...') enumerates GREEN step 5 together with VERIFY step 1 and REFINE step 2, AND the GREEN section independently self-names 'GREEN step 5' — a cross-block agreement a single-file registry entry cannot express (enum-line: '$ENUM_LINE')" \
+  "[ \"$ENUM_HAS_GREEN\" = 1 ] && [ \"$ENUM_HAS_VERIFY\" = 1 ] && [ \"$ENUM_HAS_REFINE\" = 1 ] && [ \"$GREEN_SELF_NAMES\" = 1 ]"
+
+CLAUDE_PHASE_AGNOSTIC=0; grep -qF 'ran or inherited the suite' "$CLAUDE_MD" && CLAUDE_PHASE_AGNOSTIC=1
+assert_true "AC:evaluation-points-sync (guard — CLAUDE.md's phase-exit coverage is already site-agnostic per ledger E32/GATE:PLAN carried risk (3): 'ran or inherited the suite' names no fixed phase pair, so GREEN exit is covered by extension without a text change; this locks that wording against a future accidental restriction to 'VERIFY/REFINE' only)" \
+  "[ \"$CLAUDE_PHASE_AGNOSTIC\" = 1 ]"
+
+echo ""
+echo "--- AC:green-step-numbering-stable — the guide's cross-reference to GREEN's green-blocker step still resolves to the step that carries the green-blocker clause ---"
+XREF_STEP="$(grep -oF -- 'GREEN step 2' "$GUIDE" | head -1 | grep -oE '[0-9]+')"
+GREENBLOCKER_STEP="$(printf '%s\n' "$GREEN_BODY" | grep -B5 -F 'green-blocker.md' | grep -oE '^ *[0-9]+\.' | tail -1 | grep -oE '[0-9]+')"
+assert_true "AC:green-step-numbering-stable (guard — appending step 5 must not renumber steps 1-4; the green-blocker clause stays at its own step and the cross-reference must keep resolving to it) (xref: '${XREF_STEP:-}', actual: '${GREENBLOCKER_STEP:-}')" \
+  "[ -n \"\${XREF_STEP:-}\" ] && [ -n \"\${GREENBLOCKER_STEP:-}\" ] && [ \"$XREF_STEP\" = \"$GREENBLOCKER_STEP\" ]"
+
+echo ""
+echo "--- AC:registry-provenance-consistent — §9's entry-population citation and disposition rows stay true after this cycle's registry append ---"
+REGISTRY_DOC="$PROJECT_ROOT/docs/doc-invariant-registry.md"
+S9_QUERY_COUNT="$(jq '[.invariants[]|select(.origin_issue==88)]|length' "$PROJECT_ROOT/tests/fixtures/doc-invariants.json")"
+S9_HAS_CITED_QUERY=0; grep -qF "jq '[.invariants[]|select(.origin_issue==88)]|length'" "$REGISTRY_DOC" && S9_HAS_CITED_QUERY=1
+S9_HAS_TESTSH_ROW=0; grep -qF 'tests/test-issue-88-tree-identity.sh' "$REGISTRY_DOC" && S9_HAS_TESTSH_ROW=1
+S9_HAS_MANUAL_ROW=0; grep -qF 'tests/manual/issue-88-manual-scenarios.md' "$REGISTRY_DOC" && S9_HAS_MANUAL_ROW=1
+assert_true "AC:registry-provenance-consistent (guard — this cycle adds no new spec asset, only a registry append; §9 cites the population by a jq query rather than a frozen count and both cycle assets keep their disposition rows) (live population: $S9_QUERY_COUNT)" \
+  "[ \"$S9_HAS_CITED_QUERY\" = 1 ] && [ \"$S9_HAS_TESTSH_ROW\" = 1 ] && [ \"$S9_HAS_MANUAL_ROW\" = 1 ]"
+
+echo ""
+echo "--- AC:green-exit-write negative half — clause-bound real-git: no offerable entry over a dirty capture point at the GREEN site ---"
+GREEN_CLAUSE_CMD_STATUS="$(printf '%s' "$GREEN_BODY" | grep -oF 'git status --porcelain' | head -1)"
+clause_names_green_capture_point() {
+  case "$GREEN_CLAUSE_CMD_STATUS" in
+    "git status --porcelain") : ;;
+    *) return 1 ;;
+  esac
+  return 0
+}
+green_capture_suppression_oracle_body() {
+  git init -q
+  git config user.email t@example.com
+  git config user.name tester
+  echo one > f.txt
+  git add f.txt
+  git commit -q -m init
+  # dirty capture point: status non-empty -> no entry offerable (write suppressed)
+  echo two >> f.txt
+  S_DIRTY="$(git status --porcelain)"
+  [ -n "$S_DIRTY" ]
+  # clean capture point after commit: status empty -> the write precondition holds
+  git add f.txt
+  git commit -q -m change
+  S_CLEAN="$(git status --porcelain)"
+  [ -z "$S_CLEAN" ]
+}
+green_capture_suppression_oracle() { run_in_scratch_dir "green-capture" green_capture_suppression_oracle_body; }
+
+assert_true "AC:green-exit-write (negative half): GREEN's own text names the same capture-point command the write condition is bound to (clause-bound — currently unbound since GREEN carries no capture-point clause) AND a real scratch repo shows the dirty/clean capture-point split the suppression rule reads" \
+  "clause_names_green_capture_point && green_capture_suppression_oracle"
+
+echo ""
+echo "--- AC:first-verify-inherits-holds — a real ledger's current-cycle GREEN-runner entry is selectable and tree-bound (real git, mktemp -d scratch repo) ---"
+green_runner_ledger_oracle_body() {
+  git init -q
+  git config user.email t@example.com
+  git config user.name tester
+  echo seed > f.txt
+  git add f.txt
+  git commit -q -m seed
+  T0="$(git rev-parse HEAD^{tree})"
+  cat > ledger.md <<LEDGER
+# Decision Ledger — issue #88 (fixture)
+
+### green-tree | cycle: 1 | runner: GREEN step 5
+- tree: $T0
+- head: $(git rev-parse HEAD)
+- worktree: clean
+- result: Tests: 5 passed, 5 total
+- authority: Green-tree register
+LEDGER
+  SEL0="$(select_green_tree_cycle ledger.md 1)"
+  [ "$SEL0" = "$T0" ]
+  # a tracked change after the capture point moves the tree -> the same entry no longer matches HEAD^{tree}
+  echo two >> f.txt
+  git add f.txt
+  git commit -q -m change
+  T1="$(git rev-parse HEAD^{tree})"
+  [ "$T1" != "$T0" ]
+  SEL1="$(select_green_tree_cycle ledger.md 1)"
+  # selection still returns the recorded (now-stale) tree; it is the caller's job
+  # (predicate condition 2) to compare it against the *current* HEAD^{tree}
+  [ "$SEL1" = "$T0" ]
+  [ "$SEL1" != "$T1" ]
+}
+green_runner_ledger_oracle() { run_in_scratch_dir "green-runner-ledger" green_runner_ledger_oracle_body; }
+
+assert_true "AC:first-verify-inherits-holds (guard — selection is already runner-indifferent per cycle-1 E23; this locks that property specifically for a GREEN-runner entry, the new producer this cycle introduces, so a future regression that special-cases 'runner' cannot silently exclude it): a real assembled ledger's current-cycle 'runner: GREEN step 5' entry is selected by tree on an unmoved tree, and a subsequent commit moves HEAD^{tree} away from the recorded value" \
+  "green_runner_ledger_oracle"
+
+echo ""
+echo "--- AC:runner-vocabulary (ordering variant) — a later GREEN-runner entry outranks an earlier VERIFY-runner entry of the same cycle by position, not by phase name (real ledger) ---"
+mixed_runner_ledger_oracle_body() {
+  cat > ledger.md <<'LEDGER'
+# Decision Ledger — issue #88 (fixture)
+
+### green-tree | cycle: 1 | runner: VERIFY step 1
+- tree: verifytree1111
+- head: verifyhead1111
+- worktree: clean
+- result: Tests: 9 passed, 9 total
+- authority: Green-tree register
+
+### green-tree | cycle: 1 | runner: GREEN step 5
+- tree: greentree2222
+- head: greenhead2222
+- worktree: clean
+- result: Tests: 9 passed, 9 total
+- authority: Green-tree register
+LEDGER
+  SEL="$(select_green_tree_cycle ledger.md 1)"
+  [ "$SEL" = "greentree2222" ]
+}
+mixed_runner_ledger_oracle() { run_in_scratch_dir "mixed-runner-ledger" mixed_runner_ledger_oracle_body; }
+
+assert_true "AC:runner-vocabulary ordering (guard — same runner-indifference property, exercised in the direction the vocabulary sentence protects: an admissible-phase list must not read as a precedence order): a later cycle-1 GREEN-runner entry is selected over an earlier cycle-1 VERIFY-runner entry, by position alone" \
+  "mixed_runner_ledger_oracle"
+
+echo ""
+echo "--- AC:green-reentry-disposition — a VERIFY→GREEN re-entry landing no tracked change matches the prior VERIFY-exit entry; landing a tracked change mismatches (real git + real ledger) ---"
+green_reentry_oracle_body() {
+  git init -q
+  git config user.email t@example.com
+  git config user.name tester
+  echo seed > f.txt
+  git add f.txt
+  git commit -q -m seed
+  T0="$(git rev-parse HEAD^{tree})"
+  cat > ledger.md <<LEDGER
+# Decision Ledger — issue #88 (fixture)
+
+### green-tree | cycle: 1 | runner: VERIFY step 1
+- tree: $T0
+- head: $(git rev-parse HEAD)
+- worktree: clean
+- result: Tests: 5 passed, 5 total
+- authority: Green-tree register
+LEDGER
+  SEL_MATCH="$(select_green_tree_cycle ledger.md 1)"
+  S_CLEAN="$(git status --porcelain)"
+  CUR_TREE="$T0"
+  # re-entry landing no tracked change: worktree clean, HEAD^{tree} unchanged -> match
+  [ -z "$S_CLEAN" ]
+  [ "$SEL_MATCH" = "$CUR_TREE" ]
+  # re-entry landing a tracked change: HEAD^{tree} moves away from the recorded entry -> mismatch (tree-differs)
+  echo two >> f.txt
+  git add f.txt
+  git commit -q -m fix
+  CUR_TREE2="$(git rev-parse HEAD^{tree})"
+  [ "$CUR_TREE2" != "$SEL_MATCH" ]
+}
+green_reentry_oracle() { run_in_scratch_dir "green-reentry" green_reentry_oracle_body; }
+
+assert_true "AC:green-reentry-disposition (guard — same selection/comparison mechanism, driven over the specific re-entry shape §2.5 describes: a prior VERIFY-exit entry either matches an unmoved GREEN re-entry tree or mismatches a moved one)" \
+  "green_reentry_oracle"
 
 # =============================================================================
 echo ""
