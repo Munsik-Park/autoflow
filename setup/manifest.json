@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "45cc859195ab0a62fa7a3b7eb5947b0cef0ffbd3fd95b1478aefa849f847a9af"
+      "sha256": "d2b94851b88d3e9193fd808add7b9144990343334cf588f2deecd47df92b2fa7"
     },
     {
       "source": "docs/INDEX.md",
@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5d3dc2123dfc5ac409763f242a06daa43e59146cf3adaad41d922527f442c2fc"
+      "sha256": "536b88187c431dacfe81c6bffd1bdf44b174a4eb37d88cc0cec109ef63eea2a1"
     },
     {
       "source": "docs/design-rationale.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2bd947fdbe86e575acb15ca0cca60a7d70d60034df1bee2d4984a37f05a13b49"
+      "sha256": "d25dcac89cd85b5bdad700fa86c903597fc7ad00c3e472f8c44717d9705e11e6"
     },
     {
       "source": "docs/teammate-common-rules.md",
@@ -188,7 +188,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "79bee123dde103ce05f4055131fd97a244e8ae63710ea128bdfa20db95be2a0a"
+      "sha256": "2dc377426d01a9b936f87373bfad2015f0501af904b6dccdae63357856a2dbe3"
     },
     {
       "source": "docs/title-guide.md",
