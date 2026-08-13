@@ -42,16 +42,35 @@ ADR_README="$PROJECT_ROOT/docs/adr/README.md"
 
 PASS=0; FAIL=0; TESTS=0
 
-assert_true() {
-  local desc="$1" condition="$2"
+# assert_eq / assert_no_paren compare already-computed values directly via
+# bash's own `[`/`case` builtins — no file-derived value is ever handed to
+# `eval` or otherwise re-parsed as shell (AUDIT finding: a single quote in
+# ADR/README content could break out of an eval'd condition string).
+assert_eq() {                # desc actual expected
+  local desc="$1" actual="$2" expected="$3"
   TESTS=$((TESTS + 1))
-  if (cd "$PROJECT_ROOT" && eval "$condition"); then
+  if [ "$actual" = "$expected" ]; then
     echo "  PASS: $desc"
     PASS=$((PASS + 1))
   else
     echo "  FAIL: $desc"
     FAIL=$((FAIL + 1))
   fi
+}
+
+assert_no_paren() {          # desc value
+  local desc="$1" value="$2"
+  TESTS=$((TESTS + 1))
+  case "$value" in
+    *'('*)
+      echo "  FAIL: $desc"
+      FAIL=$((FAIL + 1))
+      ;;
+    *)
+      echo "  PASS: $desc"
+      PASS=$((PASS + 1))
+      ;;
+  esac
 }
 
 # extract_section mirrors tests/run-doc-invariants.sh's own extractor
@@ -87,8 +106,8 @@ else
 
   echo ""
   echo "--- AC-adr-status-value ---"
-  assert_true "AC-adr-status-value: '## Status' first non-blank line is exactly 'Accepted' (currently '$STATUS_FIRST_LINE')" \
-    "[ '$STATUS_FIRST_LINE' = 'Accepted' ]"
+  assert_eq "AC-adr-status-value: '## Status' first non-blank line is exactly 'Accepted' (currently '$STATUS_FIRST_LINE')" \
+    "$STATUS_FIRST_LINE" "Accepted"
 
   echo ""
   echo "--- AC-adr-status-attribution-line ---"
@@ -96,20 +115,20 @@ else
   # inline with the value — a same-line attribution (e.g. 'Accepted (owner
   # decision, 2026-08-10)') must fail AC-adr-status-value above, which it does
   # since that value would not equal 'Accepted' exactly.
-  assert_true "AC-adr-status-attribution-line: no inline attribution on the value line itself (first non-blank line contains no parenthesis)" \
-    "! printf '%s' '$STATUS_FIRST_LINE' | grep -q '('"
+  assert_no_paren "AC-adr-status-attribution-line: no inline attribution on the value line itself (first non-blank line contains no parenthesis)" \
+    "$STATUS_FIRST_LINE"
 
   echo ""
   echo "--- AC-adr-readme-cell ---"
   README_ROW="$(grep -F '0017-teammate-removal-feasibility.md' "$ADR_README" | head -1)"
   README_STATUS_CELL="$(printf '%s' "$README_ROW" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $3); print $3}')"
-  assert_true "AC-adr-readme-cell: docs/adr/README.md Current Drafts row Status cell reads 'Accepted' (currently '$README_STATUS_CELL')" \
-    "[ '$README_STATUS_CELL' = 'Accepted' ]"
+  assert_eq "AC-adr-readme-cell: docs/adr/README.md Current Drafts row Status cell reads 'Accepted' (currently '$README_STATUS_CELL')" \
+    "$README_STATUS_CELL" "Accepted"
 
   echo ""
   echo "--- AC-adr-agreement ---"
-  assert_true "AC-adr-agreement: ADR '## Status' value and README Status cell agree (ADR='$STATUS_FIRST_LINE', README='$README_STATUS_CELL')" \
-    "[ '$STATUS_FIRST_LINE' = '$README_STATUS_CELL' ]"
+  assert_eq "AC-adr-agreement: ADR '## Status' value and README Status cell agree (ADR='$STATUS_FIRST_LINE', README='$README_STATUS_CELL')" \
+    "$STATUS_FIRST_LINE" "$README_STATUS_CELL"
 fi
 
 echo ""
