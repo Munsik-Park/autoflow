@@ -5213,6 +5213,5 @@
       "literal": "diff analysis: are there parts of the impl diff not covered by any test?",
       "scope": "permanent"
     }
-
   ]
 }
