@@ -420,6 +420,11 @@ for SRC in "CLAUDE.md" "docs/autoflow-guide.md" "docs/teammate-contracts.md" "do
   ROW_COUNT="$(jq -r --arg s "$SRC" '[.artifacts[] | select(.source==$s)] | length' "$MANIFEST" 2>/dev/null || echo 0)"
   assert_true "composition-oracle (guard): setup/manifest.json carries exactly one artifacts[] row for $SRC" \
     "[ \"$ROW_COUNT\" = \"1\" ]"
+
+  MANIFEST_SHA="$(jq -r --arg s "$SRC" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST" 2>/dev/null)"
+  CUR_SHA="$(shasum -a 256 "$PROJECT_ROOT/$SRC" | awk '{print $1}')"
+  assert_true "composition-oracle: setup/manifest.json sha256 row for $SRC matches the live source (real set-intersection + shasum recomputation, verification design Composition-oracle determination row 1) (manifest: $MANIFEST_SHA, current: $CUR_SHA)" \
+    "[ \"$MANIFEST_SHA\" = \"$CUR_SHA\" ]"
 done
 
 # =============================================================================
