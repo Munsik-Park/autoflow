@@ -34,8 +34,8 @@
 #                                     implementation / testing → GATE:PLAN pass,
 #                                     analysis / evaluation / research → pass.
 #   - Agent (undeclared spawn)      → DENIED while a cycle is active (declare the
-#                                     role via subagent_type autoflow-<role> or a
-#                                     team-spawn name prefix — see resolve_spawn_role)
+#                                     role via subagent_type autoflow-<role> —
+#                                     see resolve_spawn_role)
 #   - Bash(git push)                → AUDIT + GATE:QUALITY pass required
 #   - Bash(gh pr create)            → AUDIT + GATE:QUALITY pass required
 
@@ -261,10 +261,14 @@ fi
 # spawns whose prompts mentioned "수정"/"design"/"create" were over-blocked and
 # then re-spawned with sanitized wording (training the orchestrator to phrase
 # around the regex), while a keyword-free implementation prompt slipped past
-# GATE:PLAN entirely. Declaration channels (docs/gate-matching-standard.md P3):
+# GATE:PLAN entirely. Declaration channel (docs/gate-matching-standard.md P3):
 #   - direct spawn: subagent_type = autoflow-<role> (defined in .claude/agents/)
-#   - team spawn:   teammate `name` carries a role prefix (impl-*, test-*, …)
 #   - research:     built-in read-only types Explore / Plan / claude-code-guide
+# `subagent_type` is the SOLE channel. The teammate-name-prefix channel was
+# removed jointly with the spawn-mode migration (ADR-0019, discharging ADR-0017
+# C7/C8; the removal itself is ADR-0017 Q3): with every role spawned anonymously
+# and directly, retaining the prefix branch would leave an unreachable path that
+# still name-prefix-overrode `subagent_type`.
 # Prints: research|analysis|planning|implementation|testing|evaluation, or ""
 # (undeclared). The role→gate mapping below is owned by this hook — a spawn
 # declares WHO it is; it never declares which gate applies to it.
@@ -272,32 +276,24 @@ resolve_spawn_role() {
   local _subtype _name _role=""
   _subtype=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)
   _name=$(echo "$INPUT" | jq -r '.tool_input.name // empty' 2>/dev/null)
-  # Channel priority: a team spawn (teammate `name` present) is declared by the
-  # NAME PREFIX ALONE — subagent_type is not consulted. Otherwise a mixed
-  # payload (subagent_type:"Explore" + name:"impl-…") would resolve to research
-  # and pass an implementation teammate through without GATE:PLAN (PR #506
-  # review, Medium). A team spawn whose name carries no role prefix stays
-  # undeclared → denied during an active cycle, even if subagent_type names a
-  # research or autoflow-* type: a contradictory declaration is blocked, not
-  # arbitrated.
+  # A payload still carrying a teammate `name` is an OBSOLETE declaration on a
+  # retired channel: it stays undeclared → denied, even when subagent_type also
+  # names a valid role. Resolving it by subagent_type would silently admit a
+  # team-spawn attempt as a direct spawn and hide the caller's mistake; the
+  # pre-migration rule that a contradictory pair is blocked rather than
+  # arbitrated is preserved, now with the name side carrying no role at all.
   if [ -n "$_name" ]; then
-    case "$_name" in
-      analysis|analysis-*)      _role="analysis" ;;
-      plan|plan-*)              _role="planning" ;;
-      impl|impl-*|dev|dev-*)    _role="implementation" ;;
-      test|test-*)              _role="testing" ;;
-      eval|eval-*)              _role="evaluation" ;;
-    esac
-  else
-    case "$_subtype" in
-      Explore|Plan|claude-code-guide)              _role="research" ;;
-      autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
-      autoflow-planner|*:autoflow-planner)         _role="planning" ;;
-      autoflow-implementer|*:autoflow-implementer) _role="implementation" ;;
-      autoflow-tester|*:autoflow-tester)           _role="testing" ;;
-      autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
-    esac
+    printf ''
+    return 0
   fi
+  case "$_subtype" in
+    Explore|Plan|claude-code-guide)              _role="research" ;;
+    autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
+    autoflow-planner|*:autoflow-planner)         _role="planning" ;;
+    autoflow-implementer|*:autoflow-implementer) _role="implementation" ;;
+    autoflow-tester|*:autoflow-tester)           _role="testing" ;;
+    autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
+  esac
   printf '%s' "$_role"
 }
 
@@ -572,7 +568,7 @@ if [ "$TOOL_NAME" = "Agent" ]; then
       # prompt text is deliberately not attempted — a silent misclassification
       # (either direction) is worse than this explicit, self-describing stop.
       echo "BLOCKED: Agent spawn without a declared AutoFlow role while a cycle is active." >&2
-      echo "Declare the role structurally — direct spawn: subagent_type autoflow-{analyzer|planner|implementer|tester|evaluator}; team spawn: name prefix {analysis|plan|impl|dev|test|eval}-. Research types (Explore/Plan/claude-code-guide) pass as-is." >&2
+      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|planner|implementer|tester|evaluator}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
       ;;

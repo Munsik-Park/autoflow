@@ -416,9 +416,9 @@ Precedent: the GATE:QUALITY "Known blind-spot checks" below. Authority: [`docs/a
 
 ## DISPATCH — Task Assignment (Developer AI + Test AI)
 
-`TaskCreate` + `SendMessage` to **both teammates**:
+`TaskCreate` for **both roles**, each then carried into its phase by a direct spawn whose prompt states the task:
 
-- **Teammate spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned (no persistent ARCHITECT teammates to shut down). At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
+- **Role spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned. At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — anonymous direct spawns (`subagent_type`), one per phase entry; see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
 - **Developer AI**: feature-design implementation tasks (**starts after RED is complete**).
 - Both receive: acceptance criteria + verification design + affected docs.

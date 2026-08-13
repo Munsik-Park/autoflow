@@ -125,23 +125,25 @@ All exceptions must be:
    └──────────────────────┘  └──────────────────────┘
 ```
 
-### Agent Teams Communication
+### Cross-Scope Communication
 
-Agents use `SendMessage` (Claude Code's built-in agent communication) to coordinate:
+Roles do not message each other. The orchestrator spawns each scope's AI directly, states
+the task in the spawn prompt, and reads the spawn's returned report; anything one scope
+needs from another is carried by the orchestrator into the next spawn's prompt:
 
 ```
-Orchestrator → Submodule AI (repo-backend):
-  "Implement new /users endpoint per issue #42.
-   See requirements in the orchestrator's plan for issue #42."
+Orchestrator spawns Submodule AI (repo-backend):
+  prompt: "Implement new /users endpoint per issue #42.
+           See requirements in the orchestrator's plan for issue #42."
 
-Submodule AI (repo-backend) → Orchestrator:
+Submodule AI (repo-backend) returns:
   "Implementation complete. New endpoint: GET /api/v1/users.
    Response schema documented in docs/api.md"
 
-Orchestrator → Submodule AI (repo-frontend):
-  "New backend endpoint available: GET /api/v1/users.
-   Implement user list page per issue #43.
-   Submodule PR: repo-backend#15"
+Orchestrator spawns Submodule AI (repo-frontend):
+  prompt: "New backend endpoint available: GET /api/v1/users.
+           Implement user list page per issue #43.
+           Submodule PR: repo-backend#15"
 ```
 
 ---

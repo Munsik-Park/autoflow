@@ -96,37 +96,37 @@ Implement → /simplify → tests pass → push branch → SendMessage report
 
 ## Communication — Agent Teams
 
-The orchestrator spawns teammates with `Agent` (`team_name`, `name`). Messages are
-push-delivered.
+The Agent Teams channel is **retired**. The orchestrator spawns each role with `Agent`
+(`subagent_type`, explicit `model`), and the spawn's return value is its report. There
+is no team, no mailbox, and no peer-to-peer messaging between roles.
 
 | Action | Method | Note |
 |--------|--------|------|
-| Receive instruction from orchestrator | automatic (push) | message arrives via Agent Teams |
-| Discuss with another teammate | `SendMessage(to: "name")` | direct, no orchestrator routing |
-| Report to orchestrator | `SendMessage(to: "team-lead")` | completion, escalation |
+| Receive instruction from orchestrator | the spawn prompt | delivered once, at spawn |
+| Report to orchestrator | the spawn's return value | completion, escalation — body to `.autoflow/*`, return an anchor + one-line summary |
 | Mark task done | `TaskUpdate(status: "completed")` | then check `TaskList` |
-| Cross-cutting impact notice | `SendMessage` | to affected teammate, or to lead |
+| Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
+| Discuss with another role | not available | a deliberation is delegated to a facilitator `Workflow` (below), never held between spawns |
 
 **Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the discussion
-does **not** run as Agent-Teams teammates messaging the orchestrator. It runs inside
-an isolated **`Workflow`** (the facilitator): the Developer-AI and Test-AI run as
-in-script workflow sub-agents, their round-by-round exchange stays in workflow
-variables, and only a single structured result returns to the orchestrator. There is
-no `SendMessage(to: facilitator)` and no nested team — those are not supported by the
-Agent Teams runtime. See [`teammate-contracts.md`](teammate-contracts.md) > Facilitator
+runs inside an isolated **`Workflow`** (the facilitator). The Developer-AI and Test-AI
+run as in-script workflow sub-agents, their round-by-round exchange stays in workflow
+variables, and only a single structured result returns to the orchestrator. See
+[`teammate-contracts.md`](teammate-contracts.md) > Facilitator
 and [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) >
 Deliberation Isolation.
 
 ### Result delivery path by spawn mode
 
+Every role is an anonymous direct spawn, so there is exactly one delivery path.
+
 | Spawn mode | Where the final turn text goes | Required delivery action |
 |---|---|---|
-| anonymous direct (`subagent_type`, no `team_name`/`name`) | the spawn's return value (sync) or a task notification (background) | none — the final text is the report; write the body to `.autoflow/*` and return an anchor + one-line summary |
-| named team spawn (`team_name` + role-prefixed `name`) | discarded — never delivered to the lead | **[MUST]** report via `SendMessage(to: "team-lead")`; a report that exists only as the final turn text is lost with no error |
+| anonymous direct (`subagent_type`) — the only mode | the spawn's return value (sync) or a task notification (background) | none — the final text is the report; write the body to `.autoflow/*` and return an anchor + one-line summary |
 
-Observed, not guaranteed: across all 12 subagents of the #40 cycle, delivery matched the `SendMessage` call count 12 out of 12 — every spawn that called it once was received, every spawn that never called it was not, and no transport failure occurred. Three of those losses (`eval-gate-plan-40`, `eval-quality-40`, `test-red-40`) were recovered only by re-requesting the report. This describes current Claude Code Agent Teams behavior, re-derivable through `tests/manual/issue-42-manual-scenarios.md` M1 — treat it as an observation to re-check, not a runtime guarantee.
+**Why the other mode was removed, and the measurement that removed it.** A named team spawn's final turn text was **discarded — never delivered to the lead**, so a report existing only as the final response was lost with no error; that mode required an explicit `SendMessage(to: "team-lead")` instead. Observed, not guaranteed: across all 12 subagents of the #40 cycle, delivery matched the `SendMessage` call count 12 out of 12 — every spawn that called it once was received, every spawn that never called it was not, and no transport failure occurred. Three of those losses (`eval-gate-plan-40`, `eval-quality-40`, `test-red-40`) were recovered only by re-requesting the report. That measurement is the case for the migration and is retained here for that reason; it described Claude Code Agent Teams behavior at the time and was re-derivable through `tests/manual/issue-42-manual-scenarios.md` M1. The remaining open question — whether a direct spawn detects as well on VERIFY steps 3 and 4 — was settled by the ADR-0017 C7 pilot, which returned `EQUAL_OR_BETTER` (`docs/adr/0019-c7-pilot-spawn-mode-result.md`).
 
-Which roles use which mode is fixed by [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
+The single mode applies to every role; the per-role table is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
 
 ---
 

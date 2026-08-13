@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d2b94851b88d3e9193fd808add7b9144990343334cf588f2deecd47df92b2fa7"
+      "sha256": "62d9733a456159b1cc2107128ba73bc480a132d56b47be58e510064dfc45540d"
     },
     {
       "source": "docs/INDEX.md",
@@ -65,18 +65,25 @@
       "sha256": "3295ee838a98f44806a0be469efe721c1328e9385120f731e12b108d2528deb1"
     },
     {
+      "source": "docs/adr/0019-c7-pilot-spawn-mode-result.md",
+      "dest": ".claude/autoflow/docs/adr/0019-c7-pilot-spawn-mode-result.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "3069b316937a6791431ce18801e7b304f7360e89afa6f193926189ddc9b3e1e7"
+    },
+    {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "dafd49fe7d4529b576369c466d250cb888c2e7125b920842fca9cc14aa6b72a3"
+      "sha256": "5fcd859748f950ca62930bdd60bc0d8e04804f89bbbf9450c9a06d7ba17fe742"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "980161573a03991544d46b0b38e412bed9164ec06bba1e73b1680f684ddcc41a"
+      "sha256": "de2433ccccf8f2a97a41a837380171287a5f840e8bb47dedf7467b62618fce8e"
     },
     {
       "source": "docs/design-rationale.md",
@@ -132,7 +139,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "89c13489ae824a297177b7d5767ba6619ff7f96fbb3a671f1c025f285f2054ac"
+      "sha256": "50311fbdca361aac34814907d499be8643e9be548382bd9dc08b44b550857c15"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -153,7 +160,7 @@
       "dest": ".claude/autoflow/docs/repo-boundary-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "90e083ec7cc6f2b43bf4b33f717955855fc5e5097394b421bc0720595d515013"
+      "sha256": "a23ad92dcd36efda403b54c1c4d08e0c3d12ab062efa82d7ee48b6a09a8d59c7"
     },
     {
       "source": "docs/reviewer-backend.md",
@@ -174,21 +181,21 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "473017f2c7e4e5134a231d03602b185ed53534e96d0d853621b7faa220d94057"
+      "sha256": "c043a9f522c59493287310d3007c8baa41a3b4b9465120aec5829b18dc21a919"
     },
     {
       "source": "docs/teammate-common-rules.md",
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "925300cce90848305ac5ad7434c5d73a96a27be705bb517ea62b631fdc37ad08"
+      "sha256": "339e0c608a74ba3ee26a461f0f31af6bedff077f75837314cfec178cdc3a4139"
     },
     {
       "source": "docs/teammate-contracts.md",
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2dc377426d01a9b936f87373bfad2015f0501af904b6dccdae63357856a2dbe3"
+      "sha256": "c9455e09b118ef50efae079b3140784e65ae83403a8632fbb2f4234658875727"
     },
     {
       "source": "docs/title-guide.md",
