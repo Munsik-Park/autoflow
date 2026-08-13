@@ -5144,7 +5144,18 @@
       "section": "GATE:QUALITY linkage",
       "predicate": "present",
       "match": "fixed",
-      "literal": "leaves behavior, APIs, configuration, and documentation outside the issue untouched",
+      "literal": "leaves every surface outside the issue untouched",
+      "scope": "permanent"
+    },
+    {
+      "id": "89-expansion-examples-nonlimiting",
+      "origin_issue": 89,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "GATE:QUALITY linkage",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "leaves every surface outside the issue untouched — behavior, APIs, configuration, and documentation are examples of such a surface, not the boundary",
       "scope": "permanent"
     },
     {
