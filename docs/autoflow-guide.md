@@ -464,7 +464,52 @@ The Developer AI writes the minimum code that passes the tests.
      [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
      Rules > Derived artifacts.
 4. Commit (feat/fix branch).
+5. Orchestrator (not the Developer AI): GREEN step 5 — evaluate the tree-identity
+   predicate at the capture point, run the acceptance run on the mismatch branch,
+   and register the Green. See the step-5 block below.
 ```
+
+**GREEN step 5 — acceptance run and register write.** Step 5 is run by the orchestrator
+rather than by the Developer AI: it is where the orchestrator discharges *Verify teammate claims
+before dispatch* ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles) for the step-4 commit's
+test-summary anchor. It is a producer site of the *Green-tree register* (see VERIFY >
+Green-tree register) and a consumer of it, so it opens by evaluating the *Tree-identity predicate*
+at that block's capture point — `git status --porcelain`, then `git rev-parse HEAD^{tree}` and
+`git rev-parse HEAD`, taken at one instant from the repository root, foreground, immediately
+before the acceptance run starts.
+
+- **Match** → the discharge applies: no acceptance run happens and no `green-tree` entry is
+  written, as on any inherited path. The outcome is reported `inherited` and cited to the source
+  entry.
+- **Mismatch** → the acceptance run happens, and a `green-tree` entry with `runner: GREEN step 5`
+  is written at GREEN exit when and only when all three hold: the capture point was clean, the run
+  was **all-PASS**, and the run covered the registrable scope below.
+
+Either way the step writes one `green-tree-use` entry — the register's "one on every predicate
+evaluation" rule reaching this site by extension.
+
+- **Provenance of the `result` field**: the `result` recorded is the summary line of the run the
+  orchestrator itself executed at this step. The Developer AI's reported summary line is
+  never a source for it — at this site that report is the anchor being discharged, not the content
+  of the record. The register's `Teammates never write it` clause constrains the writer; this
+  sentence constrains the source, and both are needed where the writer is already the orchestrator.
+- **Acceptance-run scope**: the obligatory re-run of the cited command may be narrower than a suite
+  set; a run so bounded discharges the anchor for its own purpose but is **not registrable**,
+  because an offerable Green must not certify less than the consumer that inherits it would have
+  executed. [MUST] To obtain an offerable entry the orchestrator extends the run to the
+  suite set VERIFY step 1 would run at that tree, and the `result` field names every suite the run
+  executed with its summary line. When the orchestrator does not extend, no entry is written and
+  the first VERIFY runs the suite as before.
+- **Failure disposition**: an acceptance run that is not all-PASS writes no `green-tree` entry and
+  writes a `green-tree-use` entry with `outcome: failed`. GREEN does not become a gate: the
+  failure is carried into VERIFY, where step 1's predicate mismatches with `no-entry`, the suite
+  runs, and step 2's cause branching adjudicates it exactly as it does today. No flow-control
+  transition changes.
+- **Re-entry disposition**: a cycle's first GREEN always mismatches with cause `no-entry`, so the
+  run happens there. On a `VERIFY → GREEN` re-entry that lands a tracked change the tree has moved
+  and the step mismatches with `tree-differs`; a re-entry landing none matches and
+  inherits without re-running, writing no new `green-tree` entry — the `green-tree-use` entry
+  records the inheritance so the skipped run is not silent.
 
 ---
 
@@ -595,7 +640,9 @@ than left to the reader. An entry is a heading line followed by one line per fie
   `### <marker> | cycle: ` whose cycle matches — and condition 2 instantiates it with `green-tree` only. An
   entry the marker-scoped scan selects whose field block is incomplete or whose heading is malformed is
   **not selected and yields a mismatch**; that clause applies to the selected marker's own entries, not to
-  entries of other markers.
+  entries of other markers. The `runner` value — `GREEN step 5`, `VERIFY step 1` or `REFINE step 2` — is
+  carried for citation, never consulted by the scan, so a GREEN-runner entry and a VERIFY-runner entry of
+  the same cycle compete on position alone and the admissible-phase vocabulary is not a precedence order.
 
 **What identity certifies**: an identical `tree` certifies an identical tracked-content input. It does not
 certify an identical suite outcome, because an assertion may read state that is not in the tree — a
@@ -608,8 +655,8 @@ inheritance across a boundary at which the base ref may move is out of scope.
 
 ### Tree-identity predicate
 
-Evaluated by the orchestrator at VERIFY step 1 entry and REFINE step 2 entry, foreground, from the
-repository root, at the capture point defined above. **Match** iff all three hold:
+Evaluated by the orchestrator at GREEN step 5 entry, VERIFY step 1 entry and REFINE step 2 entry,
+foreground, from the repository root, at the capture point defined above. **Match** iff all three hold:
 
 1. `git status --porcelain` produces no output (worktree clean);
 2. `git rev-parse HEAD^{tree}` equals the `tree` field of the most recent `green-tree` entry of the current
@@ -625,8 +672,11 @@ repository root, at the capture point defined above. **Match** iff all three hol
   `green-tree` entry at phase exit on an all-PASS outcome over a clean capture point. The three mismatch
   outcomes are: no selectable entry for the cycle (`no-entry`), a dirty worktree (`dirty-worktree`), and a
   differing tree (`tree-differs`).
-- A cycle's first VERIFY has no register entry for its cycle, so the predicate mismatches there and the
-  suite always runs; the short-circuit fires only on a re-entry whose tree matches an already-registered run.
+- A cycle's first VERIFY inherits when GREEN step 5 registered a Green and the tree has not moved since
+  that capture point. When no such entry is selectable — the acceptance run was narrower than the
+  registrable scope, its capture point was dirty, or it was not all-PASS — the predicate mismatches with
+  cause `no-entry` and the suite runs, which is the pre-existing behavior. The three mismatch causes are
+  unchanged; the GREEN-acceptance path adds a producer and a consumer, not a fourth cause.
 
 **Reported vocabulary**: the step's reported outcome is one of `passed` / `inherited` / `failed`, and the
 words are not interchangeable. `passed` = the suite executed at this step and all tests passed. `inherited`
