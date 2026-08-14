@@ -30,7 +30,7 @@ git log --oneline -5        # confirm the recent history
 # After completing the assigned work
 git add <files> && git commit
 git push -u origin <branch-name>
-# The orchestrator opens the PR — report completion via SendMessage.
+# The orchestrator opens the PR — report completion in the spawn's return value.
 ```
 
 **Absolute rules**:
@@ -66,8 +66,9 @@ git status                  # any uncommitted work?
 ```
 
 1. Read the `Next:` line in the most recent commit and continue from there.
-2. Read pending `SendMessage` from the orchestrator (delivered automatically via
-   Agent Teams).
+2. Read the assignment in the spawn prompt — it carries the task and the
+   `.autoflow/*` paths. There is no mailbox to poll: the prompt is delivered
+   once, at spawn.
 
 ---
 
@@ -81,10 +82,11 @@ git status                  # any uncommitted work?
 ## Work Completion Process
 
 ```
-Implement → /simplify → tests pass → push branch → SendMessage report
+Implement → /simplify → tests pass → push branch → return the report
 ```
 
-**Required content of the completion report** (`SendMessage(to: "team-lead")`):
+**Required content of the completion report** (the spawn's return value — write any
+body to `.autoflow/*` and return an anchor plus a one-line summary):
 
 - Files changed.
 - Test results (pass/fail).

@@ -217,22 +217,27 @@ the hook owns the role→gate mapping:
 | Channel | Declaration |
 |---------|-------------|
 | Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
-| Team spawn | teammate `name` prefix: `analysis-`, `plan-`, `impl-` / `dev-`, `test-`, `eval-` |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
+
+`subagent_type` is the **sole** declaration channel. The team-spawn channel — a
+role prefix on the teammate `name` (`analysis-`, `plan-`, `impl-` / `dev-`,
+`test-`, `eval-`) — was removed jointly with the spawn-mode migration
+(ADR-0017 Q3; pilot discharged by ADR-0019), because every role is now an
+anonymous direct spawn and retaining the branch would have left an unreachable
+path that still name-prefix-overrode `subagent_type`.
 
 The `<plugin>:<agent>` prefix is accepted for the `autoflow-*` types only —
 the built-in research types stay bare (no namespace), since Claude Code
 built-ins are never plugin-namespaced and widening them would let a
 `foo:Explore` value bypass an active-cycle gate as research.
 
-**Channel precedence**: a team spawn (teammate `name` present) is declared by
-the name prefix ALONE — `subagent_type` is not consulted. Otherwise a mixed
-payload (`subagent_type:"Explore"` + `name:"impl-…"`) would resolve to
-research and pass an implementation teammate through without GATE:PLAN
-(PR #506 review, Medium). A team spawn whose name carries no role prefix is
-undeclared → denied during an active cycle, even if `subagent_type` names a
-research or `autoflow-*` type: a contradictory declaration is blocked, not
-arbitrated.
+**Obsolete-declaration disposition**: a payload still carrying a teammate `name`
+is undeclared → denied during an active cycle, **even when `subagent_type` names
+a research or `autoflow-*` type**. Resolving such a payload by its
+`subagent_type` would silently admit a team-spawn attempt as a direct spawn and
+hide the caller's mistake on a channel that no longer exists; the older rule that
+a contradictory declaration is blocked rather than arbitrated (PR #506 review,
+Medium) is preserved, now with the `name` side carrying no role at all.
 
 Mapping (hook-owned — a spawn never selects its own gate): `planning` →
 GATE:HYPOTHESIS (skip-verdict bypass for feat issues); `implementation` /
@@ -248,7 +253,7 @@ The trust model matches the score gates: the AI *records* a fact (its
 declared role), the hook *computes* the verdict. A false declaration is an
 explicit, auditable act — unlike keyword omission, it leaves evidence.
 
-The hook classifies the declaration channel only; it does not enforce spawn mode. An `eval-` prefixed team spawn is admitted by the mapping above, while [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime confines the Evaluation AI to an anonymous direct spawn — the two are not in conflict. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): narrowing the hook to the contract would deny a spawn shape that a corrupted-state repair path still needs, so the contract binds the caller and the hook stays permissive.
+The hook classifies the declaration channel only; it does not enforce spawn mode. A payload carrying a teammate `name` — an `eval-` prefixed one included — is no longer admitted by the mapping above: that channel is retired, so the payload is denied as undeclared, and [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime now names the anonymous direct spawn as every role's only mode. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): narrowing the hook to the contract would deny a spawn shape that a corrupted-state repair path still needs, so the contract binds the caller and the hook stays permissive.
 
 ## Verification Requirement
 

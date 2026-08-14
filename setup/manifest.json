@@ -188,7 +188,7 @@
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "339e0c608a74ba3ee26a461f0f31af6bedff077f75837314cfec178cdc3a4139"
+      "sha256": "b8ba22392bda40dc81712874c0c446757e5e28a3c7e6ef06005c1c450ac956a1"
     },
     {
       "source": "docs/teammate-contracts.md",
