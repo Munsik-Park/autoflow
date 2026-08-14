@@ -28,6 +28,8 @@ When an issue arrives, classify cause hypotheses **before** code analysis.
 
 The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** (no reuse).
 
+**No auto issue creation, mechanically.** The "no auto issue creation" above is not an instruction the triage step is trusted to follow: `gh issue create` is denied at the tool boundary, and the only filing path is a draft plus `scripts/issue/create-issue.sh` ([`docs/issue-proposal.md`](../issue-proposal.md)), which re-runs the duplicate search itself and raises an operator prompt. A suggested split written to `.autoflow/issue-{N}-triage.md` therefore stays a suggestion until the user acts on it — the triage step cannot file it, whatever it concludes.
+
 ```
 1. Identify affected sub-repos.
 2. Independent structure analysis (3-Phase).

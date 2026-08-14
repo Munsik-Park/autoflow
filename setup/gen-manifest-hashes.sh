@@ -167,6 +167,12 @@ build_rows() {
            "scripts/handoff/confirm-ci-green.sh" "root-layer" "copy" "file"
   emit_row "scripts/cleanup/cleanup-issue.sh" \
            "scripts/cleanup/cleanup-issue.sh" "root-layer" "copy" "file"
+  # The issue-creation wrapper (issue #96): the hook's `gh issue create` deny
+  # ships with the bundle, so the only filing path must ship with it too — a
+  # target that installs the deny without the wrapper can file no issue at all.
+  # docs/issue-proposal.md enters via the doc-closure BFS above.
+  emit_row "scripts/issue/create-issue.sh" \
+           "scripts/issue/create-issue.sh" "root-layer" "copy" "file"
 
   # Manifest self-entry (copied last; cannot hash itself pre-write).
   emit_row "setup/manifest.json" \

@@ -13,14 +13,14 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d1ba010a7645651679c2529a1a5b4276c26349d18416dc45ff4effe39aae571e"
+      "sha256": "5934caf7330458c39e63951610f6ef786f634a900174ac51383fd392575ce10e"
     },
     {
       "source": "docs/INDEX.md",
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8e2a5e0857999dffd6aa3d14f67281327f851f8504071acc5dba97ddd0eb9c8e"
+      "sha256": "8264055cbf72bd3a83146253d54459c685215c13c86afa4c1ffd822f53d90f30"
     },
     {
       "source": "docs/adr/0000-adr-template.md",
@@ -128,18 +128,25 @@
       "sha256": "a76b5f60168d4d99dfc0d4f57892519ed214db086cef775f28c7ab5b4a645c13"
     },
     {
+      "source": "docs/issue-proposal.md",
+      "dest": ".claude/autoflow/docs/issue-proposal.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "59ef14e086599e7671cf6571f2da34a01e830e72e39d6031e54624489cf97173"
+    },
+    {
       "source": "docs/maintained-docs.md",
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "89c13489ae824a297177b7d5767ba6619ff7f96fbb3a671f1c025f285f2054ac"
+      "sha256": "8653db9517fbe6fa609ceb32a14c6390e0e10546fa64bd6a69465ce3de9c47f5"
     },
     {
       "source": "docs/phases/analysis.md",
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "98c42300131d3bd79121998f42aa09d7d84d3d10b36b4b247824b3c32e003851"
+      "sha256": "a2b3e36ce8f5c2dac41a6eeb80047496ffa368fa0d145357ad256fee0d52f1ef"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -322,6 +329,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "1fe25369be7c480187e136b95d1e7203400e93c0eba75fc0791bb134c688495a"
+    },
+    {
+      "source": "scripts/issue/create-issue.sh",
+      "dest": "scripts/issue/create-issue.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "f9c26b36a7b63743f5946871a2bed7dd94b49c06fc556651b82dff493242e2d8"
     },
     {
       "source": "setup/manifest.json",
