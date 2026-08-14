@@ -18,6 +18,7 @@ path = [
   ".gitignore",
   "LICENSE",
   "tests/issue-92/mock-gh/gh",
+  "tests/fixtures/c7-pilot/probe-diff.patch",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Munsik-Park"
