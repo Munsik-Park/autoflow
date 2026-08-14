@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "66143f289b113edf6b7ab467f17d1441a077b4d94f9b70cec0fb464aa99fc8ff"
+      "sha256": "1c3664c693b45598e66d2663e2b3fb74e05801f3a9f8883ab87bd2275a6468a6"
     },
     {
       "source": "docs/INDEX.md",
@@ -188,7 +188,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "afc49431068f413e82a47e41e56878ec79f371168297800ed1c485f395b572f5"
+      "sha256": "90cdadfb4976464e52a4ee1b4630ba3c7247d6d447bde0957a15eea29e59952a"
     },
     {
       "source": "docs/title-guide.md",
@@ -322,6 +322,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "1fe25369be7c480187e136b95d1e7203400e93c0eba75fc0791bb134c688495a"
+    },
+    {
+      "source": "scripts/ledger/ledger-entry-id.sh",
+      "dest": "scripts/ledger/ledger-entry-id.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "ecc7915bf06479178317334a383c00c7444ae589ca0970676513e2211361990e"
     },
     {
       "source": "setup/manifest.json",

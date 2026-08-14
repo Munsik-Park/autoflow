@@ -93,6 +93,7 @@ The facilitator is realized as a **project workflow** the orchestrator runs with
 - **Drives convergence** under the Discussion Protocol ([`docs/teammate-common-rules.md`](teammate-common-rules.md) > Discussion Protocol) — UNDERSTAND → VERIFY → EVALUATE → RESPOND, devil's advocate on the first exchange, no groundless agreement. **ADR conformance** is a required first-exchange devil's-advocate axis: before mutual ACCEPT the exchange verifies the resolution conforms to any governing ADR; a divergence is a COUNTER, not an ACCEPT (blocking `CONVERGED`, which requires an empty `counters` per the Convergence rule). Non-scored — this is the ARCHITECT deliberation surface, not a gate.
 - **Writes artifacts** to `.autoflow/issue-{N}-*.md` (feature design, verification design). It does not inline artifact bodies in its return.
 - **Appends to the decision ledger** (`.autoflow/issue-{N}-ledger.md`): each settled decision with grounds + authority (append-only).
+- **[MUST]** Every ledger append allocates its entry identifier per [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier* — one `ledger-entry-id.sh next` call in the facilitator's own namespace immediately before that entry's append, then `check` after the appends. That section is the single documentary home of the writer→namespace mapping; this line cites it and does not restate which letter the facilitator holds.
 - **Returns one structured result** to the orchestrator (see Return Contract). It does not forward the discussion.
 
 ### Return Contract

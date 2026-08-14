@@ -164,7 +164,7 @@ This table is the mapping's only documentary home; other documents cite it rathe
 
 - **[MUST]** `bash scripts/ledger/ledger-entry-id.sh next <ledger> <NS>` allocates every identifier, and is called immediately before that entry's own append — one call per entry, never a serial incremented locally across a batch. The script holds no state: it derives the serial from the file on disk at call time, and that is precisely what keeps two writers who cannot see each other's in-flight appends from colliding. A batch that allocates once and counts up locally re-introduces the collision it was meant to prevent.
 - **[MUST]** `bash scripts/ledger/ledger-entry-id.sh check <ledger>` runs after the appends, and every defect it reports is resolved before the writer returns. `check` exits 1 on a duplicated identifier or an unidentified level-2 heading, 2 on a usage error. The gate hook runs the same check as a **non-gating advisory** over changed ledgers: it warns, and never denies a tool call over a ledger defect.
-- **Legacy ambiguity**. Entries written before this protocol may already share an identifier, and repairing them would rewrite an append-only record — so they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended.
+- **Legacy ambiguity**. Entries written before this protocol may already share an identifier, and repairing them would rewrite an append-only record — so they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair.
 
 ### Discussion Protocol
 
@@ -289,7 +289,7 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
 
 **File naming**: `.autoflow/issue-{N}.json`
 
-**Companion artifact**: `.autoflow/issue-{N}-ledger.md` — the append-only decision ledger (see [Deliberation Isolation](#deliberation-isolation-delegated-facilitation) > Decision Ledger). Created at the first settled decision; retained alongside the state file and archived with it (moved to the external store) at prior-cycle cleanup once the PR is merged/closed (see [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > PREFLIGHT). The hook does not read it (it is a methodology artifact, not a gate input).
+**Companion artifact**: `.autoflow/issue-{N}-ledger.md` — the append-only decision ledger (see [Deliberation Isolation](#deliberation-isolation-delegated-facilitation) > Decision Ledger). Created at the first settled decision; retained alongside the state file and archived with it (moved to the external store) at prior-cycle cleanup once the PR is merged/closed (see [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > PREFLIGHT). The hook reads it **advisorily only** — on a ledger whose content changed it runs the identifier check and may emit a warning, and it never denies a tool call on what it finds. The ledger is not a gate input: no gate verdict, retry cap or transition reads it.
 
 **Creation**: at PREFLIGHT completion.
 

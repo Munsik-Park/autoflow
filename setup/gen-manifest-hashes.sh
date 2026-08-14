@@ -167,6 +167,12 @@ build_rows() {
            "scripts/handoff/confirm-ci-green.sh" "root-layer" "copy" "file"
   emit_row "scripts/cleanup/cleanup-issue.sh" \
            "scripts/cleanup/cleanup-issue.sh" "root-layer" "copy" "file"
+  # Ledger entry-ID protocol (issue #97). Same shape as the rows above: the
+  # stamped CLAUDE.md > Decision Ledger [MUST]s instruct a consumer to run it
+  # on every ledger append, so a target that never receives the script cannot
+  # satisfy the rule it is stamped with.
+  emit_row "scripts/ledger/ledger-entry-id.sh" \
+           "scripts/ledger/ledger-entry-id.sh" "root-layer" "copy" "file"
 
   # Manifest self-entry (copied last; cannot hash itself pre-write).
   emit_row "setup/manifest.json" \
