@@ -335,6 +335,7 @@ This object is the value of `phases.<gate>.scores` in `.autoflow/issue-{N}.json`
 - `git push` → AUDIT + GATE:QUALITY pass required.
 - `gh pr create` → AUDIT + GATE:QUALITY pass required.
 - `gh pr merge`, and any push to the default branch (`main`) → **denied while a state file has `active:true`**. AutoFlow never merges; merging is external.
+- `gh issue create` (bare command form, and the same-segment REST `POST …/issues` form) → **denied state-independently**; issue filing goes through `scripts/issue/create-issue.sh`, which requires a reviewed draft and re-runs the duplicate check itself — see [`docs/issue-proposal.md`](docs/issue-proposal.md).
 
 These gates are wired via PreToolUse on both `Bash` (git / gh commands) and `Write|Edit|MultiEdit`.
 
