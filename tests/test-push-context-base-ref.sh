@@ -798,6 +798,123 @@ assert_true "AC-native-coverage-premise-{depth,reach} (real tree): the pinned kn
   "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/test-issue-59-adoption-evidence-discipline\.sh[[:space:]]+PASS'"
 
 echo ""
+echo "=== native-coverage-premise, ANY-registering-workflow semantics (VERIFY step-3 coverage) ==="
+
+# A subject registered by TWO workflows: the alphabetically-first one (so a
+# first-match-only bug would be caught) fails the depth half, the second
+# satisfies both halves. native_coverage_state must report PASS -- coverage
+# is a property of "does SOME registering workflow back this subject",
+# never "does every registration back it" or "does the first one back it".
+NCP_ANY_FX="$TMP_ROOT/ncp-any-fixture"
+git_fixture_new "$NCP_ANY_FX"
+mkdir -p "$NCP_ANY_FX/.github/workflows"
+cat > "$NCP_ANY_FX/.github/workflows/a-shallow.yml" <<'EOF'
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tests/**"
+jobs:
+  x:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - run: bash tests/subj-any.sh
+EOF
+cat > "$NCP_ANY_FX/.github/workflows/b-full.yml" <<'EOF'
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tests/**"
+jobs:
+  x:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tests/subj-any.sh
+EOF
+mk_subj "$NCP_ANY_FX" "subj-any.sh"
+fixture_commit_all "$NCP_ANY_FX" "subj-any.sh registered by two workflows, only one fully covering"
+
+drive_suite_over_root "$NCP_ANY_FX"
+assert_true "AC-native-coverage-premise (ANY registering workflow): a subject registered by two workflows, where only the second covers both halves, still reports PASS -- coverage is ANY, not ALL and not first-match-only" \
+  "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/subj-any\.sh[[:space:]]+PASS'"
+
+echo ""
+echo "=== native-coverage-premise, push-vs-pull_request paths: scoping (VERIFY step-3 coverage) ==="
+
+# The workflow's pull_request: block covers the subject's path; its push:
+# block does not. wf_push_paths must read ONLY the push: block's paths: --
+# if it leaked the pull_request: block's patterns in, this would wrongly
+# report PASS instead of FAIL-REACH (the push-to-main trigger, the one the
+# native backstop actually needs, never fires for this subject's own path).
+NCP_SCOPE_FX="$TMP_ROOT/ncp-scope-fixture"
+git_fixture_new "$NCP_SCOPE_FX"
+mkdir -p "$NCP_SCOPE_FX/.github/workflows"
+cat > "$NCP_SCOPE_FX/.github/workflows/w.yml" <<'EOF'
+on:
+  pull_request:
+    paths:
+      - "tests/**"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+jobs:
+  x:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tests/subj-scoped.sh
+EOF
+mk_subj "$NCP_SCOPE_FX" "subj-scoped.sh"
+fixture_commit_all "$NCP_SCOPE_FX" "pull_request paths cover, push paths do not"
+
+drive_suite_over_root "$NCP_SCOPE_FX"
+assert_true "AC-native-coverage-premise-reach (push-vs-pull_request scoping): a pull_request: paths: block covering the subject must NOT satisfy reach -- only the push: block's own paths: govern the native push-to-main backstop" \
+  "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/subj-scoped\.sh[[:space:]]+FAIL-REACH'"
+
+echo ""
+echo "=== native-coverage-premise, job-scoped checkout depth (VERIFY step-3 coverage) ==="
+
+# Two jobs: "other" checks out full history but never runs the subject; "x"
+# runs the subject but checks out shallow. wf_job_has_depth0 must be scoped
+# to the JOB CONTAINING the subject's run: step -- a sibling job's full
+# checkout says nothing about the job the subject actually executes in.
+NCP_JOB_FX="$TMP_ROOT/ncp-job-fixture"
+git_fixture_new "$NCP_JOB_FX"
+mkdir -p "$NCP_JOB_FX/.github/workflows"
+cat > "$NCP_JOB_FX/.github/workflows/w.yml" <<'EOF'
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**"
+jobs:
+  other:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+  x:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - run: bash tests/subj-jobscope.sh
+EOF
+mk_subj "$NCP_JOB_FX" "subj-jobscope.sh"
+fixture_commit_all "$NCP_JOB_FX" "only the non-registering job has fetch-depth: 0"
+
+drive_suite_over_root "$NCP_JOB_FX"
+assert_true "AC-native-coverage-premise-depth (job scoping): a sibling job's full checkout does not satisfy depth -- only the checkout of the JOB CONTAINING the subject's own run: step counts" \
+  "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/subj-jobscope\.sh[[:space:]]+FAIL-DEPTH'"
+
+echo ""
 echo "=== selection-semantics fixture (§3.3) — AC-selection-rule-* / AC-selection-negative-control / AC-selection-undecidable-nonempty-delta ==="
 
 # One shared fixture tree exercises five ACs from a single delta: the rule
@@ -944,6 +1061,49 @@ assert_true "AC-selection-rule-new-registration: a subject whose run: line appea
   "printf '%s\n' \"\$DRIVE_OUT\" | grep -qF 'SELECTED: tests/subj-new.sh new-registration'"
 assert_true "AC-selection-rule-new-registration (control): the pre-existing, unregistered-at-base subject stays NOT-SELECTED (its own path was never touched)" \
   "printf '%s\n' \"\$DRIVE_OUT\" | grep -qF 'NOT-SELECTED: tests/subj-negative.sh unchanged-source'"
+
+echo ""
+echo "=== undecidable-invocation, decidable-via-literal-assignment negative case (VERIFY step-3 coverage) ==="
+
+# subj-decidable.sh invokes another script through a \$var, but that var is
+# assigned a FIXED, glob-free .sh literal -- undecidable_invocation's
+# assignment-resolution arm must treat this as DECIDABLE (source_references_
+# delta already answers for it), not conservatively select it as
+# undecidable-invocation. The delta below touches an UNRELATED subject only,
+# so none of the other rules can select subj-decidable.sh either -- a
+# mis-classification as undecidable is the only way it could end up SELECTED.
+DECID_FX="$TMP_ROOT/decidable-fixture"
+git_fixture_new "$DECID_FX"
+mkdir -p "$DECID_FX/.github/workflows"
+cat > "$DECID_FX/.github/workflows/w.yml" <<'EOF'
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**"
+jobs:
+  x:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tests/subj-decidable.sh
+      - run: bash tests/subj-other.sh
+EOF
+mk_subj "$DECID_FX" "subj-decidable.sh" '
+SUBJ_TARGET="tests/subj-nonexistent-target.sh"
+bash "$SUBJ_TARGET" 2>/dev/null || true'
+mk_subj "$DECID_FX" "subj-other.sh"
+fixture_commit_all "$DECID_FX" "base"
+DECID_BASE_SHA="$(git -C "$DECID_FX" rev-parse HEAD)"
+git -C "$DECID_FX" update-ref refs/remotes/origin/main "$DECID_BASE_SHA"
+
+echo touched >> "$DECID_FX/tests/subj-other.sh"
+fixture_commit_all "$DECID_FX" "touch the UNRELATED subject only"
+
+drive_suite_over_root "$DECID_FX"
+assert_true "AC-selection-undecidable-nonempty-delta (decidable negative case): a \$var invocation whose target is a fixed, glob-free .sh literal is NOT conservatively selected -- it is NOT-SELECTED reason unchanged-source on a delta that never touches it" \
+  "printf '%s\n' \"\$DRIVE_OUT\" | grep -qF 'NOT-SELECTED: tests/subj-decidable.sh unchanged-source'"
 
 echo ""
 echo "=== undecidable-invocation, empty-delta arm (§3.3) — AC-selection-undecidable-empty-delta ==="
