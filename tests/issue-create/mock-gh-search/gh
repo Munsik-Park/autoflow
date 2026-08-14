@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
 # tests/issue-create/mock-gh-search/gh — corpus-backed, argv-dispatching `gh`
 # shim for tests/test-issue-create-wrapper.sh (scripts/issue/create-issue.sh),
 # standing (issue #96 origin).

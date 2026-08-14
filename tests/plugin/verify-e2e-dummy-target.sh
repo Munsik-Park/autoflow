@@ -32,10 +32,11 @@
 #     E1c   pre-existing CLAUDE.md prose survives + shim fence present
 #     E1d   installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md,
 #           scripts/review/**, scripts/preflight/**, scripts/handoff/**,
-#           scripts/cleanup/**, .codex/**, AGENTS.md
+#           scripts/cleanup/**, scripts/issue/**, .codex/**, AGENTS.md
 #           (#979 reviewer-backend delivery, source-path-preserved dests,
 #           ledger E12; scripts/handoff/**, scripts/cleanup/** widened for
-#           issue #10 manifest-registration-gap fix)
+#           issue #10 manifest-registration-gap fix; scripts/issue/** widened
+#           for the issue #96 AI issue-creation gate wrapper)
 #     E1e   second install run is idempotent (single fence, byte-identical)
 #
 #   W-E2 bundle-in-target host-purity (composition boundary of item 4):
@@ -372,7 +373,7 @@ else
   failc "E1c" "S5/#792" "prerequisite E1b failed or CLAUDE.md absent"
 fi
 
-echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, .codex/**, AGENTS.md =="
+echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, .codex/**, AGENTS.md =="
 if [ "$DRIVE_PASS" -eq 1 ]; then
   if cmp -s "$SNAP_DIR/package.json" "$DUMMY/package.json"; then
     pass "E1d: package.json byte-unchanged"
@@ -407,16 +408,19 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # listed, so the case pattern is widened to admit these two new dest
   # classes (same source-path-preserved copy-row shape as scripts/review/*
   # and scripts/preflight/*).
+  # issue #96 widening (ledger E36 CI red): the AI issue-creation gate ships
+  # scripts/issue/create-issue.sh as a root-layer copy row, so ./scripts/issue/*
+  # is admitted on the same source-path-preserved basis.
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done
   if [ -z "$BAD_NEW" ]; then
-    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, .codex/**, or AGENTS.md"
+    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, .codex/**, or AGENTS.md"
   else
-    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//.codex//AGENTS.md:$BAD_NEW"
+    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//.codex//AGENTS.md:$BAD_NEW"
   fi
 else
   failc "E1d" "S5/#792" "skipped -- prerequisite E1b failed"
