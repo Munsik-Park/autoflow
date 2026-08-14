@@ -173,6 +173,41 @@ The trace rule rejects scope creep *across* the change surface; this guard rejec
   trace rule. CI `AC2e` (`tests/plugin/verify-install-into-target.sh`) fails the
   PR otherwise (#798/#799/#800 precedent).
 
+### Lint chain on the staged surface
+- **[MUST]** When the staged change surface contains at least one file covered by the target repository's lint chain, the committing role runs that chain over the staged files and confirms zero errors attributable to them **before** the commit is made — for every chain the discovery order below converts into a command. Auto-fixable formatting is applied and staged in the same commit: the fix traces to the same edit, so it does not violate the trace rule (identical reasoning to **Derived artifacts**).
+
+**Chain discovery** — deterministic order, first hit wins. Each route must yield a command string the committing role can invoke in the working checkout; a route that names a lint but yields no such command is not a hit, and discovery continues.
+
+1. the target repo's `CLAUDE.md` > Development Commands `Lint` / `Format` entries — the entry *is* the command;
+2. the target repo's pull-request CI lint steps, restricted to steps that carry a `run:` body — the `run:` body is the command, taken verbatim and executed from the repository root.
+
+**Execution trust boundary** — **[MUST]** before running a route-2 command, the committing role confirms the `run:` body is unchanged versus the baseline branch (`main` / the merge-base) for the current branch; a body altered in this branch is not executed — report `not-run` naming the step and the reason `modified-in-branch`, deferring the unreviewed change to code review rather than running it sight-unseen. `modified-in-branch` classifies as `ci-deferred` when a covering pull-request job can be named — the `pull_request` run executes this branch's own workflow body, which is the body under review — and as `unexecuted` when none can (**`not-run` reason classes** below). Route 2 grants execution of the discovered lint/check command exactly as written — a read-only check, not licence to run any other step, argument, or command it happens to name.
+
+**Conversion limit** — a CI lint step whose work is performed by a third-party action reference (`uses:` with no `run:` body) yields no local command and is therefore not convertible. "Not a hit" in **Chain discovery** governs which route supplies the command, not whether the step is reported: discovery moves on to the next route, and the rejected step remains a discovered chain the report must dispose of. A discovered chain the conversion limit rejects imposes no blocking requirement, only a reporting one: when every discovered lint is non-convertible the committing role does not block the commit, it reports `not-run` naming the non-convertible step, so the unexecuted check stays visible instead of silently passing. The commit-time and gate-time obligations are separate, and not blocking the commit is not clearing the gate: the rejection yields the reason class `ci-deferred` where a covering pull-request job can be named and `unexecuted` where none can, and VALIDATE clears only the former (**`not-run` reason classes** below). Making an action-only chain locally executable belongs to the target repository's ops and is outside this rule's authority.
+
+**Scoping** — run the chain restricted to the staged files where the chain supports scoping. Where the chain only runs whole-tree, run it whole-tree and require that no reported error names a staged file; pre-existing errors on untouched files are not this cycle's surface (**Surrounding code**).
+
+**Outcome vocabulary** — the report carries one word per discovered chain, and the word set is total over the reachable states:
+
+- `clean` — the chain ran and reported nothing attributable to the staged files;
+- `fixed-and-staged` — the chain ran and reported fixable findings, and the fixes are in this commit;
+- `detected` — the chain ran and reported findings attributable to the staged files that were not auto-fixed; the commit does not proceed until they are resolved;
+- `not-run` — a covered file was staged and a chain was discovered, but the chain did not execute; the word attaches to the fact of non-execution, regardless of why it did not execute, and the report names the chain, the reason, and exactly one reason class from **`not-run` reason classes** below;
+- `not-applicable` — discovery found no lint chain by either route, or no staged file is covered by any discovered chain.
+
+**`not-run` reason classes** — **[MUST]** every `not-run` line carries exactly one of two classes. The class, not the word, decides whether VALIDATE's lint-chain step clears the chain:
+
+- `ci-deferred` — the chain is not executable at the commit boundary by rule (non-convertible under the **Conversion limit**, or withheld by the **Execution trust boundary** as `modified-in-branch`) **and** a named pull-request CI job runs that same chain over the staged files. VALIDATE clears it as a deferral;
+- `unexecuted` — anything else: convertible but not run, unavailable in the checkout, or no covering pull-request job can be named. VALIDATE does not clear it.
+
+- **[MUST]** Fail-closed default: a chain whose reason class cannot be established is `unexecuted`. The permissive class is the one earned by evidence; the absence of evidence yields the blocking one.
+
+A `ci-deferred` deferral is discharged at HANDOFF step 5, which confirms the PR's check rollup is green — at least one check present and every element green (`scripts/handoff/confirm-ci-green.sh`). That confirmation is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format item 5) are what tie the deferral to a job that actually runs, and VALIDATE re-derives them before clearing.
+
+- **[MUST]** A chain that did not execute is reported `not-run`, never `clean` — a chain the committing role did not run is not evidence that the staged files are clean, and reporting it as such is the exact claim this rule exists to make re-derivable.
+
+**Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format item 5, whose single-anchor requirement it satisfies as a per-chain enumeration (form and cardinality there).
+
 ### REFINE scope
 REFINE applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. The refactor tool's findings are advisory, not licence to expand the change surface.
 
@@ -201,6 +236,7 @@ When a teammate reports to the orchestrator (or to another teammate via `SendMes
    - code change → full 40-char commit SHA
    - test pass  → the exact `Tests: N passed, N total` (or equivalent) summary line, with the command that produced it
    - file state → `path:line` plus the verbatim content of that line
+   - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → one line per chain the discovery order found, the enumeration as a whole standing as this item's one anchor. Each line's form follows its outcome word: `clean` / `fixed-and-staged` / `detected` → the command as invoked plus the result line it produced; `not-run` → the literal `not-run` plus its reason class in parentheses (`ci-deferred` / `unexecuted`, Change Surface Rules > *`not-run` reason classes*) and the unexecuted step's identity (`path:line` of the workflow file and the step name), and a `ci-deferred` line additionally names the covering pull-request job (workflow `path:line` plus job/step name) and the trigger evidence that it runs for this diff — the workflow's `on: pull_request` entry, and either no `paths:` filter or one whose patterns match a staged file; a line missing that evidence is `unexecuted`, not `ci-deferred`; `not-applicable` → that word alone, naming which discovery routes came up empty. A report citing one chain where discovery found several is malformed, not compliant.
    - inherited Green (the tree-identity predicate matched, so the step did not execute the suite) → the **register-entry citation** in place of a self-produced suite summary: the source `green-tree` entry's heading (cycle and `runner`) plus its `tree`, `head` and `result`. The reported outcome word is `inherited`, never `passed`; a re-typed summary line here is a contract violation. See [`autoflow-guide.md`](autoflow-guide.md) > VERIFY > *Green-tree register*.
 
    Anchors must be deterministically re-derivable by the orchestrator (`git show <SHA>` / re-running the test command / `git show HEAD:<file>`). Reports without an anchor are rejected, not interpreted.

@@ -763,9 +763,26 @@ with the Green state from VERIFY.
    (against a target service repo, per tests/manual/issue-847-manual-scenarios.md)
    — re-state the matched paths so a silently-skipped INTEGRATE step is caught
    here, before HANDOFF. (Or diff touched no deploy/CI-path surface.)
+7. Lint-chain check: if the diff touched files the target repo's lint chain
+   covers (Change Surface Rules > Lint chain on the staged surface), confirm the
+   lint chain ran clean on them at commit time — re-derive it from the committing
+   role's per-chain lint-outcome anchor, so a skipped pre-commit lint is caught
+   here, before HANDOFF/CI, not at external review. A discovered chain covering a
+   staged file clears only on a confirmed execution — locally at commit time, or
+   by a named pull-request CI job that HANDOFF's CI-green confirmation requires;
+   a stated reason alone never clears it. The clearing outcomes are `clean`,
+   `fixed-and-staged`, `not-applicable` or `not-run (ci-deferred)` whose
+   covering-job evidence re-derives (Change Surface Rules > `not-run` reason
+   classes), and the deferral is discharged at HANDOFF step 5.
+   `not-run (unexecuted)` does not clear this step: the committing role runs the
+   chain over the staged surface and re-reports the outcome for re-evaluation,
+   or — if the chain is genuinely not executable in this checkout and no covering
+   job can be named — the cycle pauses for the user (`active:false`,
+   `phase:"awaiting-user"`), presented situation-first per host CLAUDE.md >
+   Execution Principles > Human-decision presentation.
 ```
 
-**Verdict**: automated tests all PASS + minimal-implementation PASS + manual scenarios listed + manifest coherence confirmed (or diff touched no manifest source) + deploy/CI-path verification confirmed (or diff touched no deploy/CI-path surface). Manual items marked "delegated to user" do not block VALIDATE.
+**Verdict**: automated tests all PASS + minimal-implementation PASS + manual scenarios listed + manifest coherence confirmed (or diff touched no manifest source) + deploy/CI-path verification confirmed (or diff touched no deploy/CI-path surface) + lint outcome confirmed per discovered chain, with no `unexecuted` chain outstanding (or diff touched no lint-covered file). Manual items marked "delegated to user" do not block VALIDATE.
 
 ---
 
