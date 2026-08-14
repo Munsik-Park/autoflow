@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/adr/0019-c7-pilot-spawn-mode-result.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3069b316937a6791431ce18801e7b304f7360e89afa6f193926189ddc9b3e1e7"
+      "sha256": "27d12399316d25a4443c75fb9f2799ceee97a29c705072183ed918f5e3d9c83f"
     },
     {
       "source": "docs/adr/README.md",
@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c9455e09b118ef50efae079b3140784e65ae83403a8632fbb2f4234658875727"
+      "sha256": "f324292c67145f209208ba3ef4b46c16cd0a5c93ed6ea994372cdf670e765179"
     },
     {
       "source": "docs/title-guide.md",

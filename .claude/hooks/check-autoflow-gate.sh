@@ -237,8 +237,8 @@ $_acc"; fi
 fi
 
 # ── Section 1b: Agent spawn must declare an explicit model (state-independent) ──
-# CLAUDE.md > Spawn Model [MUST]: every Agent spawn (subagent_type or team_name
-# form) declares the `model` parameter explicitly. An omitted model silently
+# CLAUDE.md > Spawn Model [MUST]: every Agent spawn (any subagent_type)
+# declares the `model` parameter explicitly. An omitted model silently
 # inherits the HOST SESSION model, bypassing the per-phase model policy — and
 # bills at whatever tier the host runs (2x the policy model when the host is on
 # a premium tier). Enforced BEFORE the state check so ad-hoc spawns outside an

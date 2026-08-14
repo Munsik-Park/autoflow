@@ -12,9 +12,9 @@ and step-4 detection outcomes are compared against the named-spawn baseline". **
 for cost and latency on the same pilot cycle. Both are answered here, in the migration slice
 ADR-0017 `:188-190` reserved them for.
 
-C7's phrase "the named-spawn baseline" had no referent. The issue's literal target
-`docs/cycle-digest.jsonl` is absent at HEAD, and its last content before removal carried a fixed
-per-cycle schema of gate scores, regression counters, architect rounds, loop-check class and review
+C7's phrase "the named-spawn baseline" had no referent. The issue's literal target — the per-cycle
+digest record `docs/` once carried, retired by issue #71 — is absent at HEAD, and its last content
+before that removal carried a fixed per-cycle schema of gate scores, regression counters, architect rounds, loop-check class and review
 severity — no field recording whether VERIFY step 3 or step 4 *detected* anything. That absence is
 the gap ADR-0017 `:86` (C6) itself records. The baseline was therefore **produced in-cycle rather
 than retrieved**: both arms — named team spawn and anonymous direct spawn — ran over the identical
@@ -165,8 +165,8 @@ proposed supersession, leaving the `Accepted → Superseded` transition to the o
 ## Alternatives Considered
 
 - **Compare against a historical named-spawn baseline.** Rejected: no such record exists. The field
-  C7 needs was never in `docs/cycle-digest.jsonl`, the file is absent at HEAD, and the external
-  archive holds no key for this repository (ADR-0017 `:185`).
+  C7 needs was never in the per-cycle digest record `docs/` once carried — retired by issue #71 and
+  absent at HEAD — and the external archive holds no key for this repository (ADR-0017 `:185`).
 - **Run the pilot on this cycle's real VERIFY input.** Rejected as non-discriminating (above).
 - **Plant the step-4 divergence in two or more contract dimensions.** Rejected: it measures whether
   any check ran rather than whether the enumerated re-derivation ran, and saturates both arms'
