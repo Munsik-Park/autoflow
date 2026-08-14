@@ -195,7 +195,7 @@ The trace rule rejects scope creep *across* the change surface; this guard rejec
 
 - **[MUST]** A chain that did not execute is reported `not-run`, never `clean` — a chain the committing role did not run is not evidence that the staged files are clean, and reporting it as such is the exact claim this rule exists to make re-derivable.
 
-**Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format item 5, whose single-anchor requirement it satisfies as a per-chain enumeration. Form and cardinality: see Reporting Format item 5.
+**Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format item 5, whose single-anchor requirement it satisfies as a per-chain enumeration (form and cardinality there).
 
 ### REFINE scope
 REFINE applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. The refactor tool's findings are advisory, not licence to expand the change surface.
