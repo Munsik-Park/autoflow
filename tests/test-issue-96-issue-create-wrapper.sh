@@ -134,7 +134,19 @@ creation_call_count() {
   ' "$1" 2>/dev/null
 }
 
-# search_call_count_for_term <log-file> <term> — number of "issue list"
+# normalize_gh_log <log-file> — prints the log with the value following each
+# --body-file token masked to a fixed placeholder. The wrapper writes its
+# payload to a FRESH tmp file every invocation (by design — the file need not
+# survive the run, verification design > Testability assessment), so that one
+# line differs run-to-run even when the QUERY sequence a "determinism" /
+# "locale-stable" row is actually about is byte-identical. Comparing raw logs
+# treats that expected, irrelevant instability as a false defect.
+normalize_gh_log() {
+  awk '
+    prev == "--body-file" { print "<tmp-body-file>"; prev=$0; next }
+    { print; prev=$0 }
+  ' "$1"
+}
 # blocks whose --search value equals <term>.
 search_call_count_for_term() {
   awk -v want="$2" '
@@ -164,7 +176,11 @@ assert_true "absent .autoflow: exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
 assert_true "absent .autoflow: creates nothing" "[ \"\$(creation_call_count "$R2/gh.log")\" -eq 0 ]"
 assert_true "absent .autoflow: directory is NOT created as a side effect" "[ ! -d '$R2/.autoflow' ]"
 ABSENT_MSG=$(cat "$R2/err.log" 2>/dev/null)
-assert_true "absent .autoflow: stderr is non-empty" "[ -n '$ABSENT_MSG' ]"
+# The message text is compared via a deferred variable reference (resolved at
+# eval time), not interpolated into the condition string — a "'" in the
+# wrapper's own stderr text would otherwise break the quoting of the eval'd
+# condition itself.
+assert_true "absent .autoflow: stderr is non-empty" "[ -n \"\$ABSENT_MSG\" ]"
 
 echo ""
 echo "=== issue #96 — Wrapper-Rejects-Draft-Outside-Autoflow ==="
@@ -190,7 +206,7 @@ assert_true "outside-repo draft: exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
 assert_true "outside-repo draft: creates nothing" "[ \"\$(creation_call_count "$R3/gh.log")\" -eq 0 ]"
 
 assert_true "the outside-autoflow message differs from the absent-.autoflow message (paired assertion)" \
-  "[ \"$ABSENT_MSG\" != \"$OUTSIDE_FIXTURES_MSG\" ]"
+  "[ \"\$ABSENT_MSG\" != \"\$OUTSIDE_FIXTURES_MSG\" ]"
 
 echo ""
 echo "=== issue #96 — Wrapper-Rejects-Malformed-Draft ==="
@@ -261,8 +277,18 @@ assert_true "two-term title: a --search call for the first term exists" \
   "[ \"\$(search_call_count_for_term "$R5/gh.log" zzqxxvalpha)\" -ge 1 ]"
 assert_true "two-term title: a --search call for the second term exists" \
   "[ \"\$(search_call_count_for_term "$R5/gh.log" zzqxxvbeta)\" -ge 1 ]"
-assert_true "two-term title: no --search call joins both terms in one argument" \
-  "! grep -qF 'zzqxxvalpha zzqxxvbeta' '$R5/gh.log'"
+# Scoped to "issue list" blocks only: the joined string legitimately appears
+# elsewhere in the log as the create call's own --title argv (the draft's
+# whole title, byte-for-byte — Wrapper-Create-Payload-Matches-Draft), which
+# is a different call and not the joined-into-one---search-argument defect
+# this assertion exists to catch.
+assert_true "two-term title: no 'issue list' call joins both terms in one --search argument" \
+  "! awk '
+     /^===CALL===\$/ { if (a0==\"issue\" && a1==\"list\" && joined==1) { print \"joined\"; exit 1 }; a0=\"\"; a1=\"\"; joined=0; c=0; next }
+     { c++; if (c==1) a0=\$0; else if (c==2) a1=\$0;
+       if (\$0 == \"zzqxxvalpha zzqxxvbeta\") joined=1 }
+     END { if (a0==\"issue\" && a1==\"list\" && joined==1) { print \"joined\"; exit 1 } }
+   ' '$R5/gh.log' | grep -q joined"
 # per-term calls precede any create call: the last search call's line number
 # in the log is before the first create call's line number, or there is no
 # create call at all (a clean check with no candidates still creates — this
@@ -342,15 +368,24 @@ D10="$R10/.autoflow/locale-token.md"
 # derives the SAME query (dropping the token either way, since 1 < the
 # non-ASCII floor of 2).
 write_draft "$D10" "[chore] 한 zzqxxvzeta" "path/to/file.sh:10" "zzqxxvzeta" "candidates: none" "body text"
+# A successful run RENAMES its draft away (Wrapper-Rename-Binds-Create), so
+# comparing two runs of "the same draft" needs a FRESH copy per run — reusing
+# one path means the second run's --draft no longer exists after the first
+# run's rename, which is a different fixture defect than locale, not a
+# genuine same-input comparison.
+D10_C="$R10/.autoflow/locale-token-c.md"
+D10_UTF8="$R10/.autoflow/locale-token-utf8.md"
+cp "$D10" "$D10_C"
+cp "$D10" "$D10_UTF8"
 LOGDIR_C=$(mktempd); LOGDIR_UTF8=$(mktempd)
-LC_ALL=C run_wrapper "$R10" "$R10" "$LOGDIR_C" --draft "$D10"
+LC_ALL=C run_wrapper "$R10" "$R10" "$LOGDIR_C" --draft "$D10_C"
 STATUS_C="$WRAPPER_STATUS"
-LC_ALL=C.UTF-8 run_wrapper "$R10" "$R10" "$LOGDIR_UTF8" --draft "$D10"
+LC_ALL=C.UTF-8 run_wrapper "$R10" "$R10" "$LOGDIR_UTF8" --draft "$D10_UTF8"
 STATUS_UTF8="$WRAPPER_STATUS"
 assert_true "locale-stable: the same draft exits the same code under C and UTF-8 locales" \
   "[ \"$STATUS_C\" -eq \"$STATUS_UTF8\" ]"
-assert_true "locale-stable: the recorded argv sequence is byte-identical across locales" \
-  "diff -q '$LOGDIR_C/gh.log' '$LOGDIR_UTF8/gh.log' >/dev/null 2>&1"
+assert_true "locale-stable: the recorded argv sequence is identical across locales (--body-file's own fresh-tmp-path masked)" \
+  "diff -q <(normalize_gh_log '$LOGDIR_C/gh.log') <(normalize_gh_log '$LOGDIR_UTF8/gh.log') >/dev/null 2>&1"
 
 echo ""
 echo "=== issue #96 — Wrapper-Derivation-Not-Tunable ==="
@@ -366,11 +401,18 @@ echo "=== issue #96 — Wrapper-Query-Sequence-Stable-And-Additive ==="
 R12=$(new_repo)
 D12="$R12/.autoflow/stable-run.md"
 write_draft "$D12" "zzqxxvalpha zzqxxvbeta" "path/to/file.sh:10" "zzqxxvalpha" "candidates: none" "body text"
+# Fresh copy per run — a successful run renames its draft away (same reason
+# as the locale-stable fix above), so comparing "two runs of the identical
+# draft" needs two distinct on-disk copies, not one path run twice.
+D12A="$R12/.autoflow/stable-run-a.md"
+D12B="$R12/.autoflow/stable-run-b.md"
+cp "$D12" "$D12A"
+cp "$D12" "$D12B"
 LOG12A=$(mktempd); LOG12B=$(mktempd)
-run_wrapper "$R12" "$R12" "$LOG12A" --draft "$D12"
-run_wrapper "$R12" "$R12" "$LOG12B" --draft "$D12"
-assert_true "determinism: two runs of the identical draft produce byte-identical argv sequences" \
-  "diff -q '$LOG12A/gh.log' '$LOG12B/gh.log' >/dev/null 2>&1"
+run_wrapper "$R12" "$R12" "$LOG12A" --draft "$D12A"
+run_wrapper "$R12" "$R12" "$LOG12B" --draft "$D12B"
+assert_true "determinism: two runs of the identical draft produce the identical argv sequence (--body-file's own fresh-tmp-path masked)" \
+  "diff -q <(normalize_gh_log '$LOG12A/gh.log') <(normalize_gh_log '$LOG12B/gh.log') >/dev/null 2>&1"
 
 D12W="$R12/.autoflow/wider-run.md"
 write_draft "$D12W" "zzqxxvalpha zzqxxvbeta" "path/to/file.sh:10" "zzqxxvalpha zzqxxvbeta zzqxxvextra" "candidates: none" "body text"
@@ -398,7 +440,13 @@ mkdir -p "$R14/sub"
 D14="$R14/.autoflow/issue-proposal-demo.md"
 BODY_TEXT="This is the proposed issue body.
 It has more than one line."
-write_draft "$D14" "The exact title line" "path/to/file.sh:10" "zzqxxvrename" "candidates: none" "$BODY_TEXT"
+# Title deliberately uses the zzqxxv* non-colliding idiom (as D5/D6B/D12 do):
+# this row is about payload/rename binding, not retrieval, so the title must
+# derive terms that retrieve nothing from the corpus — a real-word title
+# (e.g. "The exact title line") derives "line", which the corpus's own
+# issue #8 ("...one-liner...") is recalled on under --state all, turning this
+# into an unwanted strict-disposition refusal instead of a create.
+write_draft "$D14" "zzqxxvrenametitle zzqxxvpayloadtitle" "path/to/file.sh:10" "zzqxxvrename" "candidates: none" "$BODY_TEXT"
 cp "$D14" "$R14/.autoflow/issue-proposal-demo.md.orig"
 
 BODY_CAPTURE=$(mktempd)/captured-body.md
@@ -412,7 +460,7 @@ assert_true "successful create: renamed to issue-555-proposal.md at the top leve
 assert_true "successful create: renamed content is byte-identical to the original draft" \
   "diff -q '$R14/.autoflow/issue-555-proposal.md' '$R14/.autoflow/issue-proposal-demo.md.orig' >/dev/null 2>&1"
 assert_true "payload: --title carries the draft's ## Title line byte-for-byte" \
-  "grep -A1 -- '--title' '$R14/gh.log' | grep -qFx 'The exact title line'"
+  "grep -A1 -- '--title' '$R14/gh.log' | grep -qFx 'zzqxxvrenametitle zzqxxvpayloadtitle'"
 assert_true "payload: the body-file bytes equal the draft's ## Body section verbatim" \
   "diff -q '$BODY_CAPTURE' <(printf '%s\n' \"$BODY_TEXT\") >/dev/null 2>&1"
 assert_true "payload: the body-file carries no Grounds/Duplicate-check text" \
