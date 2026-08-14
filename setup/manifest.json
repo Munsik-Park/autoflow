@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4003215dc158e22385b17613a901d4233f9cc6b93d8df143f95f43078827c13b"
+      "sha256": "e6c877f4cdf2fa7f846482f60168c151aeea6b1f8bf1c8218c4cbc0bf4054a6d"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -132,7 +132,7 @@
       "dest": ".claude/autoflow/docs/issue-proposal.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7a3390f99ec7884de037b51314d77bad966d2cafc0e314decfc0e3621592b8b7"
+      "sha256": "8d10f044f03d808a44ea41c452e0351297737ba38617b21757b32055bd5acf29"
     },
     {
       "source": "docs/maintained-docs.md",

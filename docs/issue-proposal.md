@@ -156,7 +156,10 @@ accepts, with layer three as the catch:
 - On a large tracker a common derived term can return a full page and trip the
   truncation refusal, leaving the agent unable to file until a human intervenes.
   Deliberate: the escape is the operator's, not the agent's.
-- Creation through a non-`gh` client (a raw `curl` with a token) is not matched,
-  and quoted or command-substituted evasion of the deny is stripped by the hook's
-  scan exactly as it is for every other Section 1 deny. The threat model is the
-  routine self-authorized filing, not a determined evasion.
+- The REST-form deny matches any same-segment `POST` paired with a
+  `repos/…/issues` path regardless of client, so the plain `curl -X POST
+  https://api.github.com/repos/<o>/<r>/issues` form is denied too. What is not
+  matched is a determined evasion — an obfuscated URL, a client invoked through
+  a wrapper script, or quoted/command-substituted forms that the hook's scan
+  strips exactly as it does for every other Section 1 deny. The threat model is
+  the routine self-authorized filing, not a determined evasion.
