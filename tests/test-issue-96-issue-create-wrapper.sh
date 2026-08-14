@@ -166,6 +166,35 @@ run_wrapper "$R1" "$R1" "$R1"
 assert_true "no --draft argument exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
 assert_true "no --draft argument creates nothing" "[ \"\$(creation_call_count "$R1/gh.log")\" -eq 0 ]"
 
+D1B="$R1/.autoflow/valid.md"
+write_draft "$D1B" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+run_wrapper "$R1" "$R1" "$R1" --draft "$D1B" --repo
+assert_true "--repo with no following value exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
+assert_true "--repo with no following value creates nothing" "[ \"\$(creation_call_count "$R1/gh.log")\" -eq 0 ]"
+
+echo ""
+echo "=== issue #96 — Wrapper preconditions: not a git repository, missing/symlinked draft (VERIFY minimal-implementation follow-up) ==="
+NOTGIT=$(mktempd)   # a plain directory, never `git init`
+mkdir -p "$NOTGIT/.autoflow"
+D_NOTGIT="$NOTGIT/.autoflow/draft.md"
+write_draft "$D_NOTGIT" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+run_wrapper "$NOTGIT" "$NOTGIT" "$NOTGIT" --draft "$D_NOTGIT"
+assert_true "outside any git repository: exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
+assert_true "outside any git repository: creates nothing" "[ \"\$(creation_call_count "$NOTGIT/gh.log")\" -eq 0 ]"
+
+R1C=$(new_repo)
+run_wrapper "$R1C" "$R1C" "$R1C" --draft "$R1C/.autoflow/does-not-exist.md"
+assert_true "a --draft path that does not exist exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
+assert_true "a --draft path that does not exist creates nothing" "[ \"\$(creation_call_count "$R1C/gh.log")\" -eq 0 ]"
+
+D_LINK_TARGET="$R1C/target-outside.md"
+write_draft "$D_LINK_TARGET" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+D_LINK="$R1C/.autoflow/symlink-draft.md"
+ln -s "$D_LINK_TARGET" "$D_LINK"
+run_wrapper "$R1C" "$R1C" "$R1C" --draft "$D_LINK"
+assert_true "a symlinked draft is refused, not resolved: exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
+assert_true "a symlinked draft: creates nothing" "[ \"\$(creation_call_count "$R1C/gh.log")\" -eq 0 ]"
+
 echo ""
 echo "=== issue #96 — Wrapper-Rejects-Absent-Autoflow-Dir ==="
 R2=$(mktempd); git -C "$R2" init -q   # deliberately NO mkdir .autoflow
@@ -227,6 +256,22 @@ run_wrapper "$R4" "$R4" "$R4" --draft "$D_NOTITLE"
 assert_true "missing ## Title: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
 assert_true "missing ## Title: creates nothing" "[ \"\$(creation_call_count "$R4/gh.log")\" -eq 0 ]"
 
+D_NOGROUNDS="$R4/.autoflow/no-grounds.md"
+cat > "$D_NOGROUNDS" <<'EOF'
+## Title
+some title words here
+
+## Duplicate check
+searched: zzqxxvterm
+candidates: none
+
+## Body
+body text
+EOF
+run_wrapper "$R4" "$R4" "$R4" --draft "$D_NOGROUNDS"
+assert_true "missing ## Grounds section entirely: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
+assert_true "missing ## Grounds section entirely: creates nothing" "[ \"\$(creation_call_count "$R4/gh.log")\" -eq 0 ]"
+
 D_NOANCHOR="$R4/.autoflow/no-anchor.md"
 write_draft "$D_NOANCHOR" "some title words here" "no anchor in this sentence at all" "zzqxxvterm" "candidates: none" "body text"
 run_wrapper "$R4" "$R4" "$R4" --draft "$D_NOANCHOR"
@@ -266,6 +311,42 @@ EOF
 run_wrapper "$R4" "$R4" "$R4" --draft "$D_NOBODY"
 assert_true "missing ## Body: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
 assert_true "missing ## Body: creates nothing" "[ \"\$(creation_call_count "$R4/gh.log")\" -eq 0 ]"
+
+D_EMPTYTITLE="$R4/.autoflow/empty-title.md"
+cat > "$D_EMPTYTITLE" <<'EOF'
+## Title
+
+## Grounds
+path/to/file.sh:10
+
+## Duplicate check
+searched: zzqxxvterm
+candidates: none
+
+## Body
+body text
+EOF
+run_wrapper "$R4" "$R4" "$R4" --draft "$D_EMPTYTITLE"
+assert_true "## Title present but empty: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
+assert_true "## Title present but empty: creates nothing" "[ \"\$(creation_call_count "$R4/gh.log")\" -eq 0 ]"
+
+D_EMPTYBODY="$R4/.autoflow/empty-body.md"
+cat > "$D_EMPTYBODY" <<'EOF'
+## Title
+some title words here
+
+## Grounds
+path/to/file.sh:10
+
+## Duplicate check
+searched: zzqxxvterm
+candidates: none
+
+## Body
+EOF
+run_wrapper "$R4" "$R4" "$R4" --draft "$D_EMPTYBODY"
+assert_true "## Body present but empty: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
+assert_true "## Body present but empty: creates nothing" "[ \"\$(creation_call_count "$R4/gh.log")\" -eq 0 ]"
 
 echo ""
 echo "=== issue #96 — Wrapper-Reruns-Dupcheck (one query per term, unioned — not a joined string) ==="
@@ -499,6 +580,30 @@ assert_true "unparsable URL: exits non-zero" "[ \"$WRAPPER_STATUS\" -ne 0 ]"
 assert_true "unparsable URL: the draft is left in place (no guessed rename)" "[ -f '$D14E' ]"
 assert_true "unparsable URL: no new numbered proposal file was created" \
   "[ -z \"\$(find '$R14/.autoflow' -maxdepth 1 -name 'issue-*-proposal.md' -newer '$D14E' 2>/dev/null)\" ]"
+
+echo ""
+echo "=== issue #96 — the duplicate query itself failing (VERIFY minimal-implementation follow-up) ==="
+R15=$(new_repo)
+D15="$R15/.autoflow/list-fail.md"
+write_draft "$D15" "[chore] zzqxxvlistfailterm" "path/to/file.sh:10" "zzqxxvlistfailterm" "candidates: none" "body text"
+GH_LIST_FAIL_TERMS="zzqxxvlistfailterm" run_wrapper "$R15" "$R15" "$R15" --draft "$D15"
+assert_true "a failed 'gh issue list' query refuses rather than treating it as zero candidates: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
+assert_true "a failed query names the term it was querying" "grep -qF 'zzqxxvlistfailterm' '$R15/err.log' 2>/dev/null"
+assert_true "a failed query: creates nothing" "[ \"\$(creation_call_count "$R15/gh.log")\" -eq 0 ]"
+assert_true "a failed query: the draft is left in place" "[ -f '$D15' ]"
+
+echo ""
+echo "=== issue #96 — the post-create rename failing (VERIFY minimal-implementation follow-up) ==="
+R16=$(new_repo)
+D16="$R16/.autoflow/rename-fail.md"
+write_draft "$D16" "zzqxxvrenamefailalpha zzqxxvrenamefailbeta" "path/to/file.sh:10" "zzqxxvrenamefailalpha" "candidates: none" "body text"
+chmod 555 "$R16/.autoflow"   # the wrapper's own creation succeeds; only the rename's mv is denied
+GH_CREATE_URL="https://github.com/example/repo/issues/888" run_wrapper "$R16" "$R16" "$R16" --draft "$D16"
+RENAME_FAIL_STATUS="$WRAPPER_STATUS"
+chmod 755 "$R16/.autoflow"   # restore before this script's own cleanup trap removes the tree
+assert_true "a create that succeeds but cannot rename its draft: exits non-zero (never silently reports success)" "[ \"$RENAME_FAIL_STATUS\" -ne 0 ]"
+assert_true "a create that succeeds but cannot rename: a creation call WAS issued (this is a post-create failure, not a refusal)" "[ \"\$(creation_call_count "$R16/gh.log")\" -eq 1 ]"
+assert_true "a create that succeeds but cannot rename: the original draft is still readable (rename did not silently drop content)" "[ -f '$D16' ]"
 
 echo ""
 echo "=============================="

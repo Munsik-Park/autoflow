@@ -6373,6 +6373,17 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "docs/issue-proposal.md"
+    },
+    {
+      "id": "96-issue-create-index-routing-row",
+      "origin_issue": 96,
+      "intent": "existence",
+      "file": "docs/INDEX.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "docs/issue-proposal.md"
     }
   ]
 }

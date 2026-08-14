@@ -32,6 +32,12 @@
 #     carrying --body-file <f>, the shim copies <f>'s CONTENT into this path
 #     at invocation time, since the wrapper's own tmp file need not survive
 #     the run (Wrapper-Create-Payload-Matches-Draft).
+#   GH_LIST_FAIL_TERMS     (optional) — comma-separated term list. A
+#     `--search <term>` naming one of these terms exits non-zero and prints
+#     nothing, so a caller can drive the "the duplicate query itself failed"
+#     refusal path independent of any other term's result (VERIFY
+#     minimal-implementation follow-up — the wrapper's own `gh issue list`
+#     failure branch had no fixture).
 set -euo pipefail
 
 if [ -z "${GH_INVOCATION_LOG:-}" ]; then
@@ -54,6 +60,16 @@ if [ "$sub1" = "issue" ] && [ "$sub2" = "list" ]; then
     if [ "$prev" = "--search" ]; then term="$a"; fi
     prev="$a"
   done
+
+  if [ -n "${GH_LIST_FAIL_TERMS:-}" ]; then
+    IFS=',' read -r -a _fail_terms <<< "$GH_LIST_FAIL_TERMS"
+    for t in "${_fail_terms[@]}"; do
+      if [ "$t" = "$term" ]; then
+        echo "mock-gh-search: simulated 'gh issue list --search $term' failure" >&2
+        exit 1
+      fi
+    done
+  fi
 
   is_full_page=0
   if [ -n "${GH_FULL_PAGE_TERMS:-}" ]; then
