@@ -1666,7 +1666,7 @@
       "section": "Rule P3 — Declared-Role Spawn Classification",
       "predicate": "present",
       "match": "fixed",
-      "literal": "| Team spawn | teammate `name` prefix: `analysis-`, `plan-`, `impl-` / `dev-`, `test-`, `eval-` |",
+      "literal": "an `eval-` prefixed one included — is no longer admitted by the mapping above: that channel is retired, so the payload is denied as undeclared",
       "scope": "permanent"
     },
     {
@@ -5999,6 +5999,116 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "TeamCreate"
+    },
+    {
+      "id": "74-h8-reg-readme",
+      "origin_issue": 74,
+      "intent": "existence",
+      "file": "docs/adr/README.md",
+      "section": "Current Drafts",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "0019-c7-pilot-spawn-mode-result.md"
+    },
+    {
+      "id": "74-h9-maintained-docs-trigger",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/maintained-docs.md",
+      "section": "ADRs (`docs/adr/`)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "The C7 pilot verdict, its probe design or rates, the C8 figures, or the three disclosed departures change"
+    },
+    {
+      "id": "74-h10-taskcreate-both-roles",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "DISPATCH — Task Assignment (Developer AI + Test AI)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "TaskCreate` for **both roles**"
+    },
+    {
+      "id": "74-h10-anon-direct-per-phase",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "DISPATCH — Task Assignment (Developer AI + Test AI)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "anonymous direct spawns (`subagent_type`), one per phase entry"
+    },
+    {
+      "id": "74-h11-cross-scope-no-message",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/repo-boundary-rules.md",
+      "section": "Cross-Scope Communication",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Roles do not message each other."
+    },
+    {
+      "id": "74-h12-spawn-prompt-instructions",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "AutoFlow State Ownership",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "they receive instructions in the spawn prompt the orchestrator issues"
+    },
+    {
+      "id": "74-h16-cross-scope-bullet",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "CLAUDE.md",
+      "section": "Cross-Project Boundary Rules",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Cross-service changes are coordinated by the orchestrator, which spawns each scope's role directly and reconciles their returned reports."
+    },
+    {
+      "id": "74-h16-comm-no-team",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "CLAUDE.md",
+      "section": "Communication — Agent Teams",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "There is no team to create, no mailbox, and no persistent teammate."
+    },
+    {
+      "id": "74-h16-cost-control-no-occupancy",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "CLAUDE.md",
+      "section": "Cost Control",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Each spawn is anonymous and direct, so there is no session occupancy to manage"
+    },
+    {
+      "id": "74-h16-dispatch-flow-line",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "CLAUDE.md",
+      "section": "Development Lifecycle — AutoFlow",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "TaskCreate, then a direct Test AI / Developer AI spawn per phase entry"
     }
   ]
 }

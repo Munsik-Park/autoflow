@@ -548,6 +548,13 @@ run_hook_prefix 0 "subagent_type:autoflow-tester (no name) remains admitted subj
 run_hook_prefix 2 "a mixed payload (name + subagent_type both present) stays denied" \
   "$(agent_json_mixed)"
 
+# H4 (VERIFY step-3 coverage) — the deny-message text itself names the
+# retired channel and the drop-them remediation; the exit-code-only arms
+# above cannot distinguish this from a generic undeclared-spawn denial.
+HOOK_DENY_STDERR="$(printf '%s' "$(agent_json_mixed)" | CLAUDE_PROJECT_DIR="$PASSING74" bash "$HOOK" 2>&1 >/dev/null)"
+assert "hook-prefix-disposition: deny message names the retired team-spawn channel and the drop-them remediation (H4)" \
+  $(printf '%s' "$HOOK_DENY_STDERR" | grep -qF 'the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type' && echo 0 || echo 1)
+
 # =============================================================================
 # teamcreate-pruned (Branch A only) — repository-wide token sweep. The
 # permanent registry entry 74-teamcreate-pruned-token-absent covers CLAUDE.md
@@ -568,6 +575,37 @@ if [ -z "$TEAMCREATE_HITS" ]; then
   pass "teamcreate-pruned: no live tracked reference to TeamCreate outside the two documents that legitimately discuss it as a retired subject"
 else
   fail "teamcreate-pruned: live TeamCreate reference(s) remain: $(printf '%s' "$TEAMCREATE_HITS" | tr '\n' ' ')"
+fi
+
+# =============================================================================
+# sendmessage-pruned (Branch A only) — repository-wide token sweep mirroring
+# teamcreate-pruned, scoped to documentation (tests/** and .autoflow/** are
+# the verification apparatus and ledger/manual-scenario evidence, outside
+# this sweep's scope by design — a test file legitimately asserts ABOUT
+# SendMessage without prescribing its use, and a manual-scenario document is
+# a historical record, not a live instruction). Within docs+CLAUDE.md,
+# excludes the sites verified to be legitimately descriptive (a retained
+# measurement or rationale, not an instruction to a current role):
+# docs/teammate-common-rules.md L129 (the #40 delivery-loss measurement the
+# migration rests on), CLAUDE.md L122/L139 (states the channel is "no longer
+# used", and explains a runtime injection behavior as design rationale for
+# Deliberation Isolation — neither instructs a role to call it),
+# docs/adr/0017-*.md (own-subject discussion) and
+# docs/doc-invariant-registry.md (disposition-row self-reference, same
+# rationale as teamcreate-pruned). docs/submodule-common-rules.md is
+# DELIBERATELY NOT excluded: its Reporting Format section (`or to another
+# teammate via SendMessage`) still names a teammate-to-teammate mailbox path
+# that CLAUDE.md > Communication — Agent Teams now states does not exist
+# ("There is no team to create, no mailbox, and no persistent teammate") —
+# an uncovered residual in the same class as F1, for Developer AI to fix.
+# =============================================================================
+echo "sendmessage-pruned"
+
+SENDMESSAGE_HITS="$(git -C "$PROJECT_ROOT" grep -l 'SendMessage' -- ':!tests/**' ':!.autoflow/**' ':!docs/adr/0017-teammate-removal-feasibility.md' ':!docs/doc-invariant-registry.md' ':!docs/teammate-common-rules.md' ':!CLAUDE.md' 2>/dev/null || true)"
+if [ -z "$SENDMESSAGE_HITS" ]; then
+  pass "sendmessage-pruned: no live tracked reference to SendMessage outside the documents verified to legitimately discuss it"
+else
+  fail "sendmessage-pruned: live SendMessage reference(s) remain outside the verified-legitimate set: $(printf '%s' "$SENDMESSAGE_HITS" | tr '\n' ' ')"
 fi
 
 echo "=============================="
