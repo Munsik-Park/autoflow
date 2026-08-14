@@ -6340,6 +6340,94 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "VALIDATE → user"
+    },
+    {
+      "id": "97-AC-rule-text-grammar-heading",
+      "origin_issue": 97,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "## <ID> — <title> (cycle <C>, <PHASE>)"
+    },
+    {
+      "id": "97-AC-rule-text-marker-heading-form",
+      "origin_issue": 97,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]"
+    },
+    {
+      "id": "97-AC-rule-text-namespace-row-orchestrator",
+      "origin_issue": 97,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "regex",
+      "literal": "\\|\\s*Orchestrator\\s*\\|\\s*`O`\\s*\\|",
+      "scope": "permanent"
+    },
+    {
+      "id": "97-AC-rule-text-namespace-row-facilitator",
+      "origin_issue": 97,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "regex",
+      "literal": "\\|\\s*Facilitator delegate\\s*\\|\\s*`F`\\s*\\|",
+      "scope": "permanent"
+    },
+    {
+      "id": "97-AC-rule-text-must-allocate-via-next",
+      "origin_issue": 97,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "regex",
+      "literal": "\\*\\*\\[MUST\\]\\*\\*[^\\n]*ledger-entry-id\\.sh next",
+      "scope": "permanent"
+    },
+    {
+      "id": "97-AC-rule-text-must-run-check-after-append",
+      "origin_issue": 97,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "regex",
+      "literal": "\\*\\*\\[MUST\\]\\*\\*[^\\n]*ledger-entry-id\\.sh check",
+      "scope": "permanent"
+    },
+    {
+      "id": "97-AC-legacy-ambiguity-rule",
+      "origin_issue": 97,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "An ambiguous citation is not resolved — it is re-derived."
+    },
+    {
+      "id": "97-AC-legacy-ambiguity-rule-unrecorded-disposition",
+      "origin_issue": 97,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "predicate": "present",
+      "match": "regex",
+      "literal": "treats? the cited decision as \\*\\*unrecorded\\*\\*",
+      "scope": "permanent"
     }
   ]
 }

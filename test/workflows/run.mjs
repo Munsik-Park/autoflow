@@ -1453,5 +1453,54 @@ await test('source-parity: tier-2 anchor + tier-3 uniqueness guard identical acr
   }
 })
 
+// ---- AC-facilitator-prompt (issue #97) -----------------------------------
+// Neither facilitator script can call scripts/ledger/ledger-entry-id.js
+// itself (the Workflow runtime injects only args/phase/parallel/agent/console
+// -- no fs, no exec). The wiring is therefore in the prompt text delivered to
+// the ledger sub-agent: it must carry both the `next` allocation literal and
+// the post-append `check` literal (feature design > facilitator-prompt-wiring).
+// This verifies prompt DELIVERY only, not sub-agent compliance -- see
+// verification design > Verification depth determination.
+
+await test('AC-facilitator-prompt: ARCHITECT CONVERGED ledger prompt carries the next-allocation and check instructions', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
+  }
+  const { result, calls } = await runArch({ issue: '97' }, responder)
+  assert.equal(result.verdict, 'CONVERGED')
+  const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
+  assert.match(ledgerPrompt, /ledger-entry-id\.sh next[^\n]*F\b/, 'CONVERGED ledger prompt must instruct allocating each ID via next ... F')
+  assert.match(ledgerPrompt, /ledger-entry-id\.sh check/, 'CONVERGED ledger prompt must instruct running check after the appends')
+})
+
+await test('AC-facilitator-prompt: ARCHITECT ESCALATE ledger prompt carries the next-allocation and check instructions', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: [] } // never grounds -> never converges
+  }
+  const { result, calls } = await runArch({ issue: '97' }, responder)
+  assert.equal(result.verdict, 'ESCALATE')
+  const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
+  assert.match(ledgerPrompt, /ledger-entry-id\.sh next[^\n]*F\b/, 'ESCALATE ledger prompt must instruct allocating each ID via next ... F')
+  assert.match(ledgerPrompt, /ledger-entry-id\.sh check/, 'ESCALATE ledger prompt must instruct running check after the appends')
+})
+
+await test('AC-facilitator-prompt: VERIFY cause-branch ledger prompt carries the next-allocation and check instructions', async () => {
+  const responder = (label) => {
+    if (label === 'test-self-check') return { verdict: 'fix_test', reason: 'x' }
+    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
+    return 'ledger ok'
+  }
+  const { calls } = await runVerify({ issue: '97', failLog: '/tmp/f.log' }, responder)
+  const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
+  assert.match(ledgerPrompt, /ledger-entry-id\.sh next[^\n]*F\b/, 'VERIFY ledger prompt must instruct allocating each ID via next ... F')
+  assert.match(ledgerPrompt, /ledger-entry-id\.sh check/, 'VERIFY ledger prompt must instruct running check after the appends')
+})
+
 console.log(failures ? `\n${failures} test(s) FAILED` : '\nall workflow regression tests passed')
 process.exit(failures ? 1 : 0)
