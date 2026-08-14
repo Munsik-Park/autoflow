@@ -5,7 +5,7 @@ moment of filing. `gh issue create` is denied at the tool boundary
 (`.claude/hooks/check-autoflow-gate.sh` > Section 1); the only filing path is:
 
 ```bash
-scripts/issue/create-issue.sh --draft .autoflow/<name>.md
+scripts/issue/create-issue.sh --draft <path> [--repo <owner/name>] [--dry-run]
 ```
 
 ## Why the draft is mandatory
@@ -13,32 +13,37 @@ scripts/issue/create-issue.sh --draft .autoflow/<name>.md
 The obligation to check for duplicates before filing used to be prose. An agent
 could state that it had searched, and file regardless — the statement and the
 act had no mechanical relation, so an incomplete check and a thorough one
-produced the same output. The wrapper removes the gap: it derives the search
-terms from the draft's **own title** and runs the search itself. A draft cannot
-narrow its own check, because the `searched:` line it records is unioned onto
-the derived terms and never subtracted from them.
+produced the same output. The wrapper removes the gap: it derives search terms
+from the draft's **own title**, runs the query itself, and then compares what
+that query returned against the candidates the draft dispositioned. It never
+judges whether a disposition is *correct* — that judgment is the operator's, at
+layer three. It refuses when the draft disposes of nothing the wrapper found.
 
-Three layers guard the path, and each one covers what the others cannot:
+Three layers guard the path, and each covers what the others cannot:
 
 | Layer | Mechanism | What it stops |
 |-------|-----------|---------------|
 | 1 | hook deny on `gh issue create` and its REST form | filing that bypasses the wrapper entirely |
-| 2 | `scripts/issue/create-issue.sh` re-runs the search | filing on an asserted-but-unperformed check |
+| 2 | `scripts/issue/create-issue.sh` re-runs the query and compares dispositions | filing on an asserted-but-unperformed check |
 | 3 | the operator permission prompt on the wrapper | filing without a human in the loop |
 
-Layer three works by **omission**: the wrapper is deliberately absent from every
-shipped allow-list, so invoking it raises an approval prompt. Adding a broad
-`Bash(scripts/*)` or `Bash(scripts/issue/*)` entry to `.claude/settings.json` or
-`.claude/settings.local.json` silently disables it — the wrapper still runs, but
-nobody is asked. Keep the wrapper off the allow-list.
+Layer three works by **omission**. The recommended allow-list entry for a script
+of this shape would be `"Bash(scripts/issue/create-issue.sh:*)"` — and it is
+deliberately **not** shipped in any allow list, so invoking the wrapper raises an
+approval prompt. Adding that entry, or a broad `Bash(scripts/*)` /
+`Bash(scripts/issue/*)`, to `.claude/settings.json` or
+`.claude/settings.local.json` silently disables layer three: the wrapper still
+runs, but nobody is asked. Keep the wrapper off every allow list.
 
 ## Draft grammar
 
-Write the draft to the **top level** of `.autoflow/`. A subdirectory is outside
-the cycle archive's `maxdepth 1` sweep, so a draft parked there would not be
-collected with the rest of the issue's files; the wrapper refuses one.
+Write the draft **directly inside** `.autoflow/`, at its top level. That is the
+directory the cleanup archive matcher searches at `maxdepth 1`; a draft under
+`.autoflow/fixtures/` would be archived into a different slot, and one deeper
+still into none, so the wrapper refuses both.
 
-Sections are `## `-headed and may appear in **any order**:
+Four required level-2 sections, in **any order** — each runs from its own
+heading to the next level-2 heading or to end of file:
 
 ```markdown
 ## Title
@@ -56,38 +61,67 @@ The issue body, verbatim. Everything here — and nothing from the other
 sections — becomes the created issue's body.
 ```
 
-| Section | Required content |
-|---------|------------------|
-| `## Title` | one non-empty line; a leading `[tag]` is classification, not subject matter, and is excluded from the search terms |
-| `## Grounds` | at least one verifiable anchor — a `path:line`, a commit SHA, or a URL |
-| `## Duplicate check` | a `searched:` line naming the terms you searched; add candidates you found, or `candidates: none` |
-| `## Body` | non-empty; this is the only section that reaches GitHub |
+| Section | Content | Wrapper's check |
+|---------|---------|-----------------|
+| `## Title` | one line — the issue title | non-empty single line |
+| `## Grounds` | why the issue is warranted | at least one anchor: a `path:line`, a commit SHA, or a URL |
+| `## Duplicate check` | a `searched:` line listing the query terms, then either `candidates: none` or one `#<number> — <disposition>` row per candidate | the `searched:` line is present and non-empty; its tokens feed the term derivation; the candidate rows are the set the disposition invariant compares against |
+| `## Body` | the text from its heading to the next level-2 heading | non-empty; becomes the issue body |
+
+The grammar is deliberately thin. It exists so the wrapper can perform a
+mechanical comparison — not to make the draft a form an agent fills in to earn a
+pass.
+
+## The two names of the artifact
+
+| Stage | Path | Swept by the cleanup archive matcher? |
+|-------|------|---------------------------------------|
+| Before creation (draft) | `.autoflow/issue-proposal-<slug>.md` | **no** — deliberate |
+| After creation | `.autoflow/issue-<N>-proposal.md` | **yes**, with issue `<N>`'s cycle |
+
+A draft has no issue number, so no name available to it can be swept by a matcher
+keyed on digits — an unfiled draft therefore outlives any other issue's cleanup,
+which is correct, because it belongs to no cycle and only its author can abandon
+it. Once the issue exists the artifact does belong to a cycle, and the wrapper's
+rename puts it in the `issue-<N>-*` companion form the matcher sweeps.
 
 ## What the wrapper does
 
-1. Refuses unless the draft sits at the top level of the repository's `.autoflow/`.
-2. Refuses a draft missing any required section, or a `## Grounds` section with
-   no anchor.
-3. Derives search terms from the title: a leading `[tag]` is stripped, the rest
-   is split on whitespace, and each token must clear a length floor — 4
-   codepoints for an all-ASCII token, 2 for one carrying non-ASCII. Shorter
-   tokens match most of the tracker and would make every draft collide. If
-   nothing survives, the check would be vacuous and the wrapper refuses.
-4. Unions in the terms from the `searched:` line, then runs **one query per
-   term**. A single joined query is an AND across the terms and recalls only a
-   near-identical title; the union across per-term queries is what recalls a
-   paraphrase.
-5. Refuses if any query recalls an open issue, naming it, or if any query comes
-   back on a saturated page — a full page means the answer was cut off, so
-   "no duplicate here" is a claim about the page, not about the tracker.
-6. On success, renames the draft to `.autoflow/issue-<N>-proposal.md`, binding
-   the record to the number GitHub actually assigned. A rename to a guessed
-   number is never performed: if the number cannot be read back, the draft is
-   left where it is.
-
-The search is scoped to **open** issues. A closed issue is a decision already
-taken, so it is not live work a new filing would duplicate; re-filing against a
-closed decision is a judgment the author makes, with grounds.
+1. Refuses unless the draft is a regular file directly inside the repository's
+   `.autoflow/`. The directory being **absent** is diagnosed separately from a
+   misplaced draft, with a different message: a target that has never run
+   PREFLIGHT would otherwise be told only that its draft is elsewhere, and could
+   not tell that *nothing* is elsewhere. The wrapper does not create the
+   directory. A draft that is itself a symlink is refused rather than resolved —
+   renaming a link would move the link and leave the content outside every
+   cycle's archival set.
+2. Refuses a draft missing any required element, naming **every** missing one so
+   the caller can repair it without guessing.
+3. Derives title terms by a rule with no implementation freedom: strip a leading
+   `[tag]`; lowercase the ASCII range only; split on whitespace and ASCII
+   punctuation, with bytes outside ASCII never acting as separators, so a
+   non-ASCII run survives as one token; keep a token of `[a-z0-9]` at ≥ 4
+   codepoints and a token carrying non-ASCII at ≥ 2; deduplicate keeping first
+   appearance; keep the first 8. Codepoints are counted **locale-free** —
+   `wc -m` disagrees with itself across locales and would derive a different
+   query on a different machine.
+4. Appends the `searched:` line's tokens under the same lowercase/separator rule,
+   with no floor and no cap. Recorded terms are strictly **additive**: they can
+   only lengthen the query, so a narrow recorded search can never shrink the
+   wrapper's own.
+5. Refuses if the title derives **no** term. With it empty the query would
+   collapse to the draft's own recorded terms and the wrapper would be re-running
+   the agent's search while calling it independent verification.
+6. Runs **one query per term**, `--state all`, `--limit 100`. A single joined
+   query ANDs its terms inside one argument and collapses to near-zero results,
+   under-blocking by construction. If any one term returns a full page, that
+   term's candidate set is provably incomplete → refuse, naming the term.
+7. Refuses if any returned issue number is not already dispositioned in the
+   draft, listing the undispositioned numbers.
+8. On success — and only then — renames the draft to
+   `.autoflow/issue-<N>-proposal.md`, with `<N>` parsed from the URL `gh`
+   returned. A URL with no parsable trailing number is a failed bind: the draft
+   stays put rather than being renamed to a guess.
 
 `--dry-run` runs every check and creates nothing, leaving the draft in place.
 
@@ -96,12 +130,33 @@ closed decision is a judgment the author makes, with grounds.
 | Code | Meaning |
 |------|---------|
 | `0` | created, or `--dry-run` passed every check |
-| `64` | usage or precondition — bad arguments, no `.autoflow/`, draft outside its top level |
-| `65` | draft data — malformed draft, underivable title, duplicate recalled, saturated page |
-| `70` | the issue was created but its number could not be read back |
+| `64` | usage, or the draft is not directly inside the derived `.autoflow` (including that directory being absent) |
+| `65` | refusal — missing section, no grounding anchor, no derivable term, an undispositioned candidate, or a query at its page limit |
+| `70` | the issue was created but its number could not be bound |
 | other | `gh`'s own exit, propagated |
 
-The derivation takes **no options**. A flag that could cap or widen the term set
-would let the caller satisfy the duplicate check by shrinking it, which is the
-failure this wrapper exists to remove; an unrecognised argument is a usage
-error.
+The floors, the cap, the tag strip and their order are **fixed constants in the
+script, not flags**. An agent-tunable derivation is an agent-authored query,
+which is the one thing layer two must not accept; an unrecognised argument is a
+usage error.
+
+## Accepted limits
+
+These are stated rather than argued away — each is an under-block the design
+accepts, with layer three as the catch:
+
+- The term cap drops terms on ordinary titles, so a duplicate reachable only
+  through a dropped term is never surfaced, and the wrapper reports a clean
+  check. Raising the cap trades this for truncation refusals on the tracker's
+  commonest terms.
+- A term is queried in the surface form the title wrote, so a duplicate phrased
+  with a different inflection of the same word falls outside the candidate set.
+  Querying stems would require script-specific morphology — exactly the judgment
+  layer two exists to avoid.
+- On a large tracker a common derived term can return a full page and trip the
+  truncation refusal, leaving the agent unable to file until a human intervenes.
+  Deliberate: the escape is the operator's, not the agent's.
+- Creation through a non-`gh` client (a raw `curl` with a token) is not matched,
+  and quoted or command-substituted evasion of the deny is stripped by the hook's
+  scan exactly as it is for every other Section 1 deny. The threat model is the
+  routine self-authorized filing, not a determined evasion.

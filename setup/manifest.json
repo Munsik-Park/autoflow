@@ -132,14 +132,14 @@
       "dest": ".claude/autoflow/docs/issue-proposal.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "59ef14e086599e7671cf6571f2da34a01e830e72e39d6031e54624489cf97173"
+      "sha256": "7a3390f99ec7884de037b51314d77bad966d2cafc0e314decfc0e3621592b8b7"
     },
     {
       "source": "docs/maintained-docs.md",
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8653db9517fbe6fa609ceb32a14c6390e0e10546fa64bd6a69465ce3de9c47f5"
+      "sha256": "1a46038dbff81be728607aef1591af43510cf7f546a1910e8971e6fffd06956d"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -335,7 +335,7 @@
       "dest": "scripts/issue/create-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "f9c26b36a7b63743f5946871a2bed7dd94b49c06fc556651b82dff493242e2d8"
+      "sha256": "d438743ea9b214b027aab7ef37e0ded866c873d7ac27adf5821ba29ed3f2aad9"
     },
     {
       "source": "setup/manifest.json",
