@@ -586,20 +586,35 @@ fi
 # a historical record, not a live instruction). Within docs+CLAUDE.md,
 # excludes the sites verified to be legitimately descriptive (a retained
 # measurement or rationale, not an instruction to a current role):
-# docs/teammate-common-rules.md L129 (the #40 delivery-loss measurement the
-# migration rests on), CLAUDE.md L122/L139 (states the channel is "no longer
-# used", and explains a runtime injection behavior as design rationale for
-# Deliberation Isolation — neither instructs a role to call it),
-# docs/adr/0017-*.md (own-subject discussion) and
-# docs/doc-invariant-registry.md (disposition-row self-reference, same
-# rationale as teamcreate-pruned). docs/submodule-common-rules.md is
-# DELIBERATELY NOT excluded: its Reporting Format section (`or to another
-# teammate via SendMessage`) still names a teammate-to-teammate mailbox path
-# that CLAUDE.md > Communication — Agent Teams now states does not exist
-# ("There is no team to create, no mailbox, and no persistent teammate") —
-# an uncovered residual in the same class as F1, for Developer AI to fix.
+# CLAUDE.md L122/L139 (states the channel is "no longer used", and explains a
+# runtime injection behavior as design rationale for Deliberation Isolation —
+# neither instructs a role to call it), docs/adr/0017-*.md (own-subject
+# discussion) and docs/doc-invariant-registry.md (disposition-row
+# self-reference, same rationale as teamcreate-pruned).
+#
+# docs/teammate-common-rules.md is NOT whole-file excluded (a file-level
+# exclusion would leave future drift in that file invisible) — it is
+# LINE-LEVEL swept: every `SendMessage`-carrying line in the file must be the
+# retained #40 delivery-loss measurement (L129), identified by its own
+# distinctive substring, not by line number (line numbers drift). Any other
+# `SendMessage`-carrying line in that file is a residual.
+#
+# docs/submodule-common-rules.md is DELIBERATELY NOT excluded at all: its
+# Reporting Format section (`or to another teammate via SendMessage`) named a
+# teammate-to-teammate mailbox path that CLAUDE.md > Communication — Agent
+# Teams now states does not exist ("There is no team to create, no mailbox,
+# and no persistent teammate") — the residual this sweep already caught once
+# (fixed at 99e22a9); leaving the file swept catches any regression.
 # =============================================================================
 echo "sendmessage-pruned"
+
+TCR_FILE="$PROJECT_ROOT/docs/teammate-common-rules.md"
+TCR_RESIDUAL_LINES=""
+if [ -f "$TCR_FILE" ]; then
+  TCR_RESIDUAL_LINES="$(grep -F 'SendMessage' "$TCR_FILE" | grep -vF 'That measurement is the case for the migration and is retained here for that reason' || true)"
+fi
+assert "sendmessage-pruned: docs/teammate-common-rules.md carries no SendMessage line other than the retained #40 evidence (L129)" \
+  $([ -z "$TCR_RESIDUAL_LINES" ] && echo 0 || echo 1)
 
 SENDMESSAGE_HITS="$(git -C "$PROJECT_ROOT" grep -l 'SendMessage' -- ':!tests/**' ':!.autoflow/**' ':!docs/adr/0017-teammate-removal-feasibility.md' ':!docs/doc-invariant-registry.md' ':!docs/teammate-common-rules.md' ':!CLAUDE.md' 2>/dev/null || true)"
 if [ -z "$SENDMESSAGE_HITS" ]; then

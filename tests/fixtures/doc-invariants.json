@@ -6109,6 +6109,84 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "TaskCreate, then a direct Test AI / Developer AI spawn per phase entry"
+    },
+    {
+      "id": "74-p1-sole-channel-sentence",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/gate-matching-standard.md",
+      "section": "Rule P3 — Declared-Role Spawn Classification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "`subagent_type` is the **sole** declaration channel."
+    },
+    {
+      "id": "74-p1-obsolete-declaration-heading",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/gate-matching-standard.md",
+      "section": "Rule P3 — Declared-Role Spawn Classification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "**Obsolete-declaration disposition**"
+    },
+    {
+      "id": "74-p3-pr-completion-return-value",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/teammate-common-rules.md",
+      "section": "# The orchestrator opens the PR",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "report completion in the spawn's return value.",
+      "section_kind": "line"
+    },
+    {
+      "id": "74-p4-no-mailbox-to-poll",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/teammate-common-rules.md",
+      "section": "Session Protocol",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "There is no mailbox to poll: the prompt is delivered"
+    },
+    {
+      "id": "74-p5-push-branch-return-report",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/teammate-common-rules.md",
+      "section": "Work Completion Process",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "push branch → return the report"
+    },
+    {
+      "id": "74-p6-required-content-return-value",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/teammate-common-rules.md",
+      "section": "Work Completion Process",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "**Required content of the completion report** (the spawn's return value"
+    },
+    {
+      "id": "74-p7-reporting-format-return-value",
+      "origin_issue": 74,
+      "intent": "coherence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Reporting Format",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "the report is the spawn's return value, with any body written to `.autoflow/*` and an anchor plus a one-line summary returned"
     }
   ]
 }
