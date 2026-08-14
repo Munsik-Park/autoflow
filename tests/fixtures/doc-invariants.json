@@ -6219,6 +6219,127 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "lint outcome confirmed"
+    },
+    {
+      "id": "93c2-validate-conflation-absent",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VALIDATE — Verification Done",
+      "predicate": "absent",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "clears this step on its stated reason"
+    },
+    {
+      "id": "93c2-validate-clears-confirmed-execution",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VALIDATE — Verification Done",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "clears only on a confirmed execution"
+    },
+    {
+      "id": "93c2-validate-clearing-set",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VALIDATE — Verification Done",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "`not-applicable` or `not-run (ci-deferred)`"
+    },
+    {
+      "id": "93c2-validate-non-clearing-branch",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VALIDATE — Verification Done",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "does not clear this step"
+    },
+    {
+      "id": "93c2-change-surface-reason-classes",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Change Surface Rules",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "ci-deferred"
+    },
+    {
+      "id": "93c2-change-surface-fail-closed-default",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Change Surface Rules",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "reason class cannot be established"
+    },
+    {
+      "id": "93c2-change-surface-not-run-unqualified",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Change Surface Rules",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "regardless of why it did not execute"
+    },
+    {
+      "id": "93c2-change-surface-conversion-limit-coheres",
+      "origin_issue": 93,
+      "intent": "coherence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Change Surface Rules",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "not blocking the commit is not clearing the gate"
+    },
+    {
+      "id": "93c2-report-format-ci-deferred-evidence",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Reporting Format",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "covering pull-request job"
+    },
+    {
+      "id": "93c2-validate-verdict-clause-matches",
+      "origin_issue": 93,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VALIDATE — Verification Done",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "no `unexecuted` chain outstanding"
+    },
+    {
+      "id": "93c2-claude-router-row",
+      "origin_issue": 93,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Flow Control",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "VALIDATE → user"
     }
   ]
 }

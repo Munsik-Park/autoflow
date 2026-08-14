@@ -1,10 +1,14 @@
 # Issue #93 — Manual/Environment-Dependent Verification Scenarios
 
-This carrier holds the one criterion the verification design assigns to a manual
-scenario (`.autoflow/issue-93-verification-design.md`, acceptance-criterion row
-`lint-chain-followable`). Every other automated criterion in that design is
-discharged by `tests/fixtures/doc-invariants.json` (`origin_issue: 93` entries) or
-by the pre-existing standing lints `scripts/test/check-manifest-regen-clean.sh` and
+This carrier holds the manual-scenario criteria the verification design assigns
+across both cycles. Cycle 1 (`.autoflow/issue-93-verification-design.md`
+archived revision, acceptance-criterion row `lint-chain-followable`) is the first
+section below. Cycle 2's review-response revision adds the second section,
+acceptance-criterion row `both-branches-walkable`, verifying the `not-run`
+reason-class split introduced to close the VALIDATE pass-through. Every other
+automated criterion in either cycle's design is discharged by
+`tests/fixtures/doc-invariants.json` (`origin_issue: 93` entries) or by the
+pre-existing standing lints `scripts/test/check-manifest-regen-clean.sh` and
 `tests/run-doc-invariants.sh --self-test`.
 
 ---
@@ -94,6 +98,110 @@ Record, in the cycle report:
 - The outcome word observed for each of the five chains on the violating surface and
   again on the clean surface.
 - Confirmation that no fixture repository or external tool was needed.
+
+**Pass condition:** both expected-outcome conditions hold and the pass-condition
+record above is complete.
+
+---
+
+## AC both-branches-walkable — one staged file produces both `not-run` reason-class dispositions at VALIDATE step 7 (Tier 2, runnable here, cycle 2)
+
+**Why not automated:** the doc-invariant registry holds only permanent STATE
+predicates (`docs/doc-invariant-registry.md` > *Two lanes, one test each*); it
+cannot execute VALIDATE's classification or the operator's resolution path. This
+scenario walks the reason-class split — `ci-deferred` (clears, evidenced by a
+named covering pull-request job) versus `unexecuted` (does not clear) — against a
+real staged file in this checkout, then discharges the refusal so both the
+refusal and the resolution are demonstrated.
+
+### Fixed inputs
+
+**Single staging set**: `tests/plugin/manual-scenarios-792.md` alone. This file
+is covered by two discovered chains that classify oppositely:
+
+- **REUSE chain** — `.github/workflows/reuse.yml:25-26`, a pinned `uses:` step
+  with no `run:` body (Conversion limit, non-convertible). `REUSE.toml`'s
+  `**/*.md` bulk annotation covers the staged file. The workflow's
+  `on: pull_request` (`.github/workflows/reuse.yml:12-15`) carries no `paths:`
+  filter, so a covering pull-request job exists for every diff, this one
+  included → expected disposition `not-run (ci-deferred)`, **clears**.
+- **doc-invariant runner chain** — route 2, `run: bash tests/run-doc-invariants.sh`
+  at `.github/workflows/e2e-dummy-target.yml:309`. The staged file is covered:
+  `tests/fixtures/doc-invariants.json` carries entries whose `file` is
+  `tests/plugin/manual-scenarios-792.md` (e.g. `797-AC1a-792-bash-dialect`). No
+  covering pull-request job can be named for this diff: matching the staged path
+  against every `paths:` pattern in every workflow file (exact and glob) selects
+  it nowhere — the `tests/plugin/` entries present in `contract-suites.yml` and
+  `e2e-dummy-target.yml` each name a specific `.sh` file, never this `.md` file,
+  and no `paths:` list carries `tests/plugin/**` unfiltered → expected
+  disposition `not-run (unexecuted)`, **does not clear**.
+
+**Working-tree-only staging**: `tests/plugin/manual-scenarios-792.md` already
+hosts landed registry entries, so `git add` of the file unmodified stages
+nothing. The walk therefore appends a throwaway line to the file in the working
+tree to produce a real diff, and reverts it (`git restore --staged --worktree
+tests/plugin/manual-scenarios-792.md`) before this cycle's own commit — the
+appended line must leave every existing registry-anchored literal on its own
+line intact, and the committed tree must never carry the throwaway edit.
+
+### Procedure
+
+1. Confirm the working tree is clean, then append one throwaway line (e.g. a
+   trailing comment line) to `tests/plugin/manual-scenarios-792.md` without
+   altering any existing line, and `git add` it so it is staged.
+2. Re-derive the REUSE chain's disposition: read
+   `.github/workflows/reuse.yml:12-15` and confirm `on: pull_request` carries no
+   `paths:` filter; read `REUSE.toml`'s `**/*.md` bulk annotation and confirm it
+   covers the staged file; read `.github/workflows/reuse.yml:25-26` and confirm
+   the step is a pinned `uses:` action with no `run:` body. Record disposition
+   `not-run (ci-deferred)`, naming the covering job (`.github/workflows/reuse.yml`
+   `REUSE compliance` / `REUSE Compliance Check`) and its trigger evidence
+   (unfiltered `on: pull_request`).
+3. Re-derive the doc-invariant runner chain's disposition: confirm
+   `.github/workflows/e2e-dummy-target.yml:309` runs
+   `bash tests/run-doc-invariants.sh` on `pull_request`; confirm the staged file
+   is covered by reading its `file` occurrences in
+   `tests/fixtures/doc-invariants.json`; collect every `paths:` pattern across
+   every `.github/workflows/*.yml` file and confirm none — exact string or glob —
+   matches `tests/plugin/manual-scenarios-792.md`. Record disposition
+   `not-run (unexecuted)` — no covering pull-request job can be named, so under
+   the fail-closed default the chain does not clear.
+4. Take resolution path 1 for the non-clearing chain (feature design > *When the
+   step does not clear*): run `bash tests/run-doc-invariants.sh` over the staged
+   surface, confirm it exits 0 and reports no attributable finding, and
+   re-report the chain's outcome as `clean`. Confirm VALIDATE step 7 now
+   re-evaluates and clears (`clean` plus the REUSE chain's `not-run
+   (ci-deferred)` both sit inside the clearing set).
+5. Revert the throwaway edit: `git restore --staged --worktree
+   tests/plugin/manual-scenarios-792.md`. Confirm `git status` shows the file
+   unmodified and no trace of the throwaway line remains staged or on disk.
+
+### Expected outcome — both conditions must hold
+
+1. **The two chains classify oppositely from one staged file** — REUSE resolves
+   `not-run (ci-deferred)` with re-derivable covering-job and trigger evidence;
+   the doc-invariant runner resolves `not-run (unexecuted)` with no covering job
+   nameable, matching the feature design's *Realizing the `unexecuted` walk*
+   determination re-derived independently here rather than trusted from the
+   design text.
+2. **The refusal is not terminal** — resolution path 1 discharges the
+   `unexecuted` chain inside this same walk: running the chain locally and
+   re-reporting `clean` lets VALIDATE clear. The user-pause exit (resolution
+   path 2) is not claimed by this scenario — every chain discovered here is
+   either executable or covered, so that exit has no walkable subject in this
+   checkout.
+
+### Pass condition record
+
+Record, in the cycle report:
+
+- Each chain's disposition (`not-run (ci-deferred)` / `not-run (unexecuted)`)
+  with the `path:line` evidence it was read from.
+- Confirmation that resolution path 1 discharged the non-clearing chain and
+  VALIDATE re-evaluated to clear.
+- Confirmation that the throwaway staging edit was reverted before this cycle's
+  own commit, leaving `tests/plugin/manual-scenarios-792.md` byte-identical to
+  its pre-walk state.
 
 **Pass condition:** both expected-outcome conditions hold and the pass-condition
 record above is complete.
