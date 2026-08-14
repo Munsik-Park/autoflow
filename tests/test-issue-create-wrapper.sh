@@ -548,7 +548,7 @@ assert_true "successful create: renamed to issue-555-proposal.md at the top leve
 assert_true "successful create: renamed content is byte-identical to the original draft" \
   "diff -q '$R14/.autoflow/issue-555-proposal.md' '$R14/.autoflow/issue-proposal-demo.md.orig' >/dev/null 2>&1"
 assert_true "payload: --title carries the draft's ## Title line byte-for-byte" \
-  "grep -A1 -- '--title' '$R14/gh.log' | grep -qFx 'zzqxxvrenametitle zzqxxvpayloadtitle'"
+  "ctx=\$(grep -A1 -- '--title' '$R14/gh.log'); printf '%s\n' \"\$ctx\" | grep -qFx 'zzqxxvrenametitle zzqxxvpayloadtitle'"
 assert_true "payload: the body-file bytes equal the draft's ## Body section verbatim" \
   "diff -q '$BODY_CAPTURE' <(printf '%s\n' \"$BODY_TEXT\") >/dev/null 2>&1"
 assert_true "payload: the body-file carries no Grounds/Duplicate-check text" \
