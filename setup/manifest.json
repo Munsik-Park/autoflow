@@ -335,7 +335,7 @@
       "dest": "scripts/issue/create-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "d438743ea9b214b027aab7ef37e0ded866c873d7ac27adf5821ba29ed3f2aad9"
+      "sha256": "5136de3ef1317bf49eab3a09ca9d33dc24d243c35ebd0ac7dec529af45d8cdc6"
     },
     {
       "source": "setup/manifest.json",

@@ -252,6 +252,18 @@ codepoint_len() {
 
 has_non_ascii() { LC_ALL=C printf '%s' "$1" | LC_ALL=C grep -q '[^ -~]'; }
 
+# contains_line — true if $2 appears as a whole line within the
+# newline-terminated list in $1. Shared by the two term-dedup loops below
+# (title-derived terms, then recorded terms), which otherwise repeat the same
+# containment check verbatim.
+contains_line() {
+  case "
+$1" in *"
+$2
+"*) return 0 ;; esac
+  return 1
+}
+
 # A leading bracket tag is a structural type marker, not content: the commonest
 # tag word matches over half this tracker, so admitting it would spend a term
 # slot on the least discriminating token available.
@@ -269,10 +281,7 @@ while IFS= read -r tok; do
   else
     [ "$len" -ge "$ASCII_FLOOR" ] || continue
   fi
-  case "
-$TITLE_TERMS" in *"
-$tok
-"*) continue ;; esac
+  contains_line "$TITLE_TERMS" "$tok" && continue
   TITLE_TERMS="$TITLE_TERMS$tok
 "
   kept=$((kept + 1))
@@ -296,10 +305,7 @@ fi
 TERMS="$TITLE_TERMS"
 while IFS= read -r tok; do
   [ -n "$tok" ] || continue
-  case "
-$TERMS" in *"
-$tok
-"*) continue ;; esac
+  contains_line "$TERMS" "$tok" && continue
   TERMS="$TERMS$tok
 "
 done <<EOF
