@@ -284,7 +284,7 @@ accretion, which is the defect the issue reports.
 
 | New spec | Disposition | Basis |
 |---|---|---|
-| `tests/test-push-context-base-ref.sh` | **standing** | subject-named, no issue number. It asserts that every base-ref-consuming spec registered by a `push: branches: [main]` workflow exits 0 under the push-trigger resolution — a permanent property of the tree and its CI wiring. It **fixes** the base ref as an input condition rather than depending on a diff, so it is a STATE assertion, not a DELTA one. Its `run:` step and `paths:` entries are permanent |
+| `tests/test-push-context-base-ref.sh` | **standing** | subject-named, no issue number. It asserts that every base-ref-consuming spec registered by a `push: branches: [main]` workflow exits 0 under the push-trigger resolution — a permanent property of the tree and its CI wiring. It **fixes** the base ref as an input condition rather than depending on a diff, so it is a STATE assertion, not a DELTA one. Since issue #99 the asserted **property** stays STATE while the per-run **evidence budget** is delta-scoped: the subject set is still re-derived every run, but only the subset this run's change surface could have altered is executed, and every unselected subject's native push-topology backstop is asserted per subject (`NATIVE-COVERAGE:` lines). An unresolvable comparison base is a terminal BLOCK, never an empty selection. Its `run:` step and `paths:` entries are permanent |
 
 ## 8. Migration provenance — retired-guard dispositions (issue #73)
 

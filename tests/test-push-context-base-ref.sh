@@ -231,6 +231,283 @@ if [ -z "${1:-}" ]; then
     "grep -qxF 'tests/test-issue-59-adoption-evidence-discipline.sh' < <(printf '%s\n' \"\${SUBJECTS[@]}\")"
 fi
 
+ROOT_OVERRIDE="${1:-}"
+BASE_REF_LIB_ABS="$SCRIPT_DIR/lib/base-ref.sh"
+
+# ---------------------------------------------------------------------------
+# Native-coverage premise (§3.2) — the reduction below relies on every
+# UNSELECTED subject still being executed natively, in the push topology, by
+# its own workflow step on the push-to-main event. That premise has two
+# independent halves and neither implies the other, so both are ASSERTED per
+# derived subject, against whichever workflow registers it — the registering
+# set is re-derived here from the derived subjects, never enumerated:
+#   depth — the job carrying the subject's run: step checks out with
+#           fetch-depth: 0, so origin/main exists and the native resolution
+#           reaches precedence step 3 (tests/lib/base-ref.sh:41-44);
+#   reach — that workflow's PUSH paths: block covers the subject's own path,
+#           so a push landing a change to the subject actually fires the step.
+# Either half failing is a loud FAIL, never a skip: a subject with no native
+# backstop and no selection is a subject nothing sweeps at all.
+# ---------------------------------------------------------------------------
+
+# wf_push_paths <workflow> — the `push:` trigger's paths: patterns, one per
+# line. Scoped to the push block alone: the pull_request block's paths: are a
+# different trigger and say nothing about the push-to-main backstop.
+wf_push_paths() {
+  awk '
+    /^[^ ]/                               { inpush=0; inp=0 }
+    /^  [^ ]/ && !/^  push:[[:space:]]*$/ { inpush=0; inp=0 }
+    /^  push:[[:space:]]*$/               { inpush=1; inp=0; next }
+    inpush==0                             { next }
+    /^    paths:[[:space:]]*$/            { inp=1; next }
+    inp==0                                { next }
+    /^      #/                            { next }
+    /^[[:space:]]*$/                      { next }
+    /^      - / { l=$0; sub(/^      - /,"",l); gsub(/^[\047"]|[\047"]$/,"",l); print l; next }
+    { inp=0 }
+  ' "$1"
+}
+
+# path_pattern_covers <paths-entry> <rel> — a workflow paths: glob covers a
+# repo-relative path. `**` and `*` both collapse to the shell's `*`, which in
+# a [[ ]] pattern spans `/` — the same reach the Actions matcher gives them
+# for these entry shapes.
+path_pattern_covers() {
+  local pat="${1//\*\*/\*}" rel="$2"
+  [[ "$rel" == $pat ]]
+}
+
+# wf_registers_subject <workflow> <rel> — the workflow carries a `run: bash
+# <rel>` step. Same extraction derive_subjects uses, so registration is read
+# one way only.
+wf_registers_subject() {
+  local wf="$1" rel="$2" line
+  while IFS= read -r line; do
+    [ "$line" = "$rel" ] && return 0
+  done < <(grep -oE 'run: *bash +tests/[A-Za-z0-9/_.-]+\.sh' "$wf" 2>/dev/null | sed -E 's/^run: *bash +//')
+  return 1
+}
+
+# wf_job_has_depth0 <workflow> <rel> — 0 when the JOB CONTAINING that
+# subject's run: step checks out with fetch-depth: 0. Job-scoped, not
+# file-scoped: a second job with a full checkout says nothing about the job
+# the subject actually runs in.
+wf_job_has_depth0() {
+  awk -v rel="$2" '
+    /^jobs:[[:space:]]*$/     { injobs=1; next }
+    injobs==0                 { next }
+    /^  [A-Za-z0-9_-]+:/      { blk++ }
+    {
+      l=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", l)
+      sub(/^[[:space:]]+/, "", l)
+      gsub(/[[:space:]]+/, " ", l)
+      sub(/[[:space:]]+$/, "", l)
+      if (l ~ /^fetch-depth: 0$/) depth[blk]=1
+      if (l == "run: bash " rel)  runs[blk]=1
+    }
+    END { for (b in runs) if (depth[b]) found=1; exit(found ? 0 : 1) }
+  ' "$1"
+}
+
+# native_coverage_state <rel> -> PASS | FAIL-DEPTH | FAIL-REACH
+# PASS when SOME registering workflow satisfies both halves — one workflow
+# that both fires and carries full history is a native backstop, whatever a
+# duplicate registration elsewhere looks like. FAIL-DEPTH is reported when a
+# registration reaches the subject but runs shallow (a run that resolves the
+# wrong precedence branch); FAIL-REACH when no registration fires at all.
+native_coverage_state() {
+  local rel="$1" wf state="FAIL-REACH" dep rch p
+  for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
+    [ -f "$wf" ] || continue
+    grep -qE 'branches: *\[ *main *\]' "$wf" 2>/dev/null || continue
+    wf_registers_subject "$wf" "$rel" || continue
+    dep=0; rch=0
+    wf_job_has_depth0 "$wf" "$rel" && dep=1
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      if path_pattern_covers "$p" "$rel"; then rch=1; break; fi
+    done < <(wf_push_paths "$wf")
+    if [ "$dep" = 1 ] && [ "$rch" = 1 ]; then echo "PASS"; return 0; fi
+    [ "$rch" = 1 ] && state="FAIL-DEPTH"
+  done
+  echo "$state"
+}
+
+echo ""
+echo "=== native-coverage premise (push-to-main backstop: checkout depth AND push paths: reach, per derived subject) ==="
+
+if [ "${#SUBJECTS[@]}" -gt 0 ]; then
+  for rel in "${SUBJECTS[@]}"; do
+    nc_state="$(native_coverage_state "$rel")"
+    echo "NATIVE-COVERAGE: $rel $nc_state"
+    assert_true "native-coverage premise: $rel ($nc_state) — an unselected subject's only backstop is its own native push-topology run, which needs fetch-depth: 0 AND a push paths: block covering it" \
+      "[ '$nc_state' = 'PASS' ]"
+  done
+fi
+
+# ---------------------------------------------------------------------------
+# Comparison base and delta (§3.3).
+#
+# Resolved in the LIVE tree under test — the root override's tree when one is
+# given — and deliberately NOT inside the push-context scratch clone below:
+# that clone forces origin/main to HEAD, so a base resolved there would make
+# the delta empty by construction and every run would read as "push topology".
+#
+# An unresolvable base is TERMINAL, not an empty selection. An empty delta is
+# load-bearing evidence here (it means the push topology, where the subjects
+# cover themselves natively); an unresolvable base produces a syntactically
+# identical empty delta for an entirely different reason, and letting it flow
+# through would leave this suite green having swept nothing. That is the
+# silent non-execution tests/lib/base-ref.sh:23-26 forbids.
+# ---------------------------------------------------------------------------
+
+if [ -n "$ROOT_OVERRIDE" ]; then
+  # An override root is a DIFFERENT repository: the ambient GITHUB_BASE_REF
+  # describes the outer CI event and must not leak into it.
+  DELTA_BASE="$(cd "$PROJECT_ROOT" && env -u GITHUB_BASE_REF bash -c "source '$BASE_REF_LIB_ABS'; resolve_base_ref" 2>/dev/null)"
+  BASE_EXIT=$?
+else
+  DELTA_BASE="$(cd "$PROJECT_ROOT" && bash -c "source '$BASE_REF_LIB_ABS'; resolve_base_ref" 2>/dev/null)"
+  BASE_EXIT=$?
+fi
+
+if [ "$BASE_EXIT" -ne 0 ] || [ -z "$DELTA_BASE" ]; then
+  echo ""
+  echo "BLOCK: no comparison base is resolvable (tests/lib/base-ref.sh precedence exhausted) — the delta-scoped selection cannot tell 'nothing changed' from 'no base', so this run fails loud instead of sweeping nothing"
+  FAIL=$((FAIL + 1)); TESTS=$((TESTS + 1))
+  echo ""
+  echo "Results: $PASS/$TESTS passed, $FAIL failed"
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Selection (§3.3) — which derived subjects THIS run must execute.
+#
+# A derived subject is selected when, and only when, this run's own change
+# surface could have altered its push-context behaviour. Rule order is fixed,
+# so the reported reason is a function of the selection state rather than of
+# evaluation order:
+#   own-path             — the subject's own path is in the delta
+#   definition-site      — tests/lib/base-ref.sh is in the delta (every
+#                          consumer's resolution changes)
+#   transitive-literal   — a delta path occurs as a literal on a NON-COMMENT
+#                          line of the subject's source (the same ^\s*#
+#                          stripping derive_subjects applies before its own
+#                          call-site criterion: a sibling suite named only in
+#                          prose cannot make this subject depend on it)
+#   new-registration     — the subject's run: line is among a changed
+#                          workflow's ADDED lines
+#   undecidable-invocation — the subject reaches other suites by a constructed
+#                          or enumerated target, so transitive-literal
+#                          provably cannot answer for it; conservatively
+#                          selected, but only while the delta is non-empty
+#                          (an empty change surface has nothing to reach)
+# Everything else is reported NOT-SELECTED with empty-delta (checked first, so
+# the line stays a function of state) or unchanged-source.
+# ---------------------------------------------------------------------------
+
+# in_delta <path> <delta...> — fixed-string identity, never a regex over an
+# unescaped path.
+in_delta() {
+  local needle="$1" x
+  shift
+  for x in "$@"; do
+    [ "$x" = "$needle" ] && return 0
+  done
+  return 1
+}
+
+# source_references_delta <abs source> <delta...> — a delta path occurs as a
+# literal on a non-comment line of the source. grep -F: a path is data here,
+# not a pattern.
+source_references_delta() {
+  local src="$1" body p
+  shift
+  [ -f "$src" ] || return 1
+  body="$(grep -vE '^[[:space:]]*#' "$src" 2>/dev/null || true)"
+  for p in "$@"; do
+    [ -n "$p" ] || continue
+    grep -qF -- "$p" <<<"$body" && return 0
+  done
+  return 1
+}
+
+# undecidable_invocation <abs source> — the source runs another script through
+# an expansion (`bash "$suite"`, the shape at
+# tests/issue-59-full-sweep-driver.sh:124-129) whose target cannot be tied
+# back to a literal .sh path anywhere in the same source. A target assigned
+# from a glob or an enumeration is undecidable; one assigned a fixed literal
+# path is not, because source_references_delta above already answers for it.
+undecidable_invocation() {
+  local src="$1" body line var named
+  [ -f "$src" ] || return 1
+  body="$(grep -vE '^[[:space:]]*#' "$src" 2>/dev/null || true)"
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    named=0
+    while IFS= read -r var; do
+      [ -n "$var" ] || continue
+      named=1
+      grep -qE "(^|[[:space:]])($var=|for[[:space:]]+$var[[:space:]]+in[[:space:]])[^*?[:space:]]*[A-Za-z0-9_/.-]+\.sh" <<<"$body" \
+        || return 0
+    done < <(grep -oE '(bash|sh)[[:space:]]+["'\'']?\$\{?[A-Za-z_][A-Za-z0-9_]*' <<<"$line" \
+             | grep -oE '[A-Za-z_][A-Za-z0-9_]*$')
+    # An expansion that is not a plain name at all (`bash "$@"`, an array
+    # element) names no variable to resolve — undecidable by the same rule.
+    [ "$named" -eq 0 ] && return 0
+  done < <(grep -E '(^|[^[:alnum:]_])(bash|sh)[[:space:]]+["'\'']?\$' <<<"$body")
+  return 1
+}
+
+# select_subjects <root> <base> — one report line per DERIVED subject:
+# `SELECTED: <path> <reason>` or `NOT-SELECTED: <path> <reason>`, each reason
+# drawn from its own closed vocabulary. Quantified over the derived set, so a
+# self-exempt or hermetic-driver path (dropped inside derive_subjects) appears
+# on neither line.
+select_subjects() {
+  local root="$1" base="$2" rel reason added_wf delta_empty=1
+  local -a delta=()
+  mapfile -t delta < <(git -C "$root" diff --name-only "$base"...HEAD 2>/dev/null)
+  [ "${#delta[@]}" -gt 0 ] && delta_empty=0
+  added_wf="$(git -C "$root" diff --unified=0 "$base"...HEAD -- .github/workflows 2>/dev/null | grep '^+' || true)"
+
+  for rel in "${SUBJECTS[@]}"; do
+    reason=""
+    if in_delta "$rel" "${delta[@]}"; then
+      reason="own-path"
+    elif in_delta "tests/lib/base-ref.sh" "${delta[@]}"; then
+      reason="definition-site"
+    elif source_references_delta "$root/$rel" "${delta[@]}"; then
+      reason="transitive-literal"
+    elif grep -qF -- "run: bash $rel" <<<"$added_wf"; then
+      reason="new-registration"
+    elif [ "$delta_empty" -eq 0 ] && undecidable_invocation "$root/$rel"; then
+      reason="undecidable-invocation"
+    fi
+    if [ -n "$reason" ]; then
+      printf 'SELECTED: %s %s\n' "$rel" "$reason"
+    elif [ "$delta_empty" -eq 1 ]; then
+      printf 'NOT-SELECTED: %s %s\n' "$rel" "empty-delta"
+    else
+      printf 'NOT-SELECTED: %s %s\n' "$rel" "unchanged-source"
+    fi
+  done
+}
+
+echo ""
+echo "=== delta-scoped selection (base $DELTA_BASE) ==="
+
+SELECTED=()
+if [ "${#SUBJECTS[@]}" -gt 0 ]; then
+  mapfile -t SELECTION_LINES < <(select_subjects "$PROJECT_ROOT" "$DELTA_BASE")
+  for sel_line in "${SELECTION_LINES[@]}"; do
+    printf '%s\n' "$sel_line"
+    read -r sel_tag sel_path _sel_reason <<<"$sel_line"
+    [ "$sel_tag" = "SELECTED:" ] && SELECTED+=("$sel_path")
+  done
+fi
+
 # ---------------------------------------------------------------------------
 # Scratch contexts — isolated clones (never mutate this repo's own refs).
 # push-context: origin/main and local main both == HEAD (reproduces the
@@ -323,16 +600,23 @@ assert_true "judgment contract: UNATTRIBUTABLE count alone (0,0) never contribut
 echo ""
 echo "=== subject execution (push-context reproduction, attribution on FAIL) ==="
 
+# Scoped to the SELECTED subset, by the unchanged machinery: the push-context
+# scratch clone, run_bounded_in with the per-subject budget, the failure-only
+# branch-point attribution re-run, compute_verdict and exit_code_for_counts.
+# Fidelity for the changed surface is identical to the whole-subject sweep
+# this supersedes; what is given up is re-proving, on every run, a property of
+# source that did not change — and that property is backstopped natively, as
+# the premise assertion above requires.
 PASS_N=0; FAILPC_N=0; UNATTR_N=0; TIMEOUT_N=0
 BP_SCRATCH=""
 
-if [ "${#SUBJECTS[@]}" -gt 0 ]; then
+if [ "${#SELECTED[@]}" -gt 0 ]; then
   PUSH_SCRATCH="$TMP_ROOT/push-ctx"
   if ! make_scratch_push_context "$PUSH_SCRATCH"; then
     echo "BLOCK: could not create the push-context scratch clone"
     FAIL=$((FAIL + 1)); TESTS=$((TESTS + 1))
   else
-    for rel in "${SUBJECTS[@]}"; do
+    for rel in "${SELECTED[@]}"; do
       safe_name="$(printf '%s' "$rel" | tr '/' '_')"
       logf="$TMP_ROOT/log-${safe_name}.push.log"
       run_bounded_in "$PER_SUBJECT_BUDGET_SECS" "$PUSH_SCRATCH" "$logf" bash "$rel"
@@ -367,7 +651,7 @@ if [ "${#SUBJECTS[@]}" -gt 0 ]; then
 fi
 
 echo ""
-echo "PUSH-CONTEXT-SUMMARY: total=${#SUBJECTS[@]} pass=$PASS_N fail_push_context=$FAILPC_N unattributable=$UNATTR_N timeout=$TIMEOUT_N"
+echo "PUSH-CONTEXT-SUMMARY: derived=${#SUBJECTS[@]} selected=${#SELECTED[@]} pass=$PASS_N fail_push_context=$FAILPC_N unattributable=$UNATTR_N timeout=$TIMEOUT_N"
 
 # =============================================================================
 # NEW (Issue #99): delta-scoped selection — resolver-topology, native-coverage
