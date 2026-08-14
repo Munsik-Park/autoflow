@@ -374,10 +374,14 @@ if [ -f "$ADR_0019" ]; then
   ADR_BODY="$(cat "$ADR_0019")"
   # ADR heading/value convention (docs/adr/0000-adr-template.md): "## Status"
   # heading, then the value on its own line below (not inline on the heading
-  # or in "Status: X" prose form) — grep -A2 catches the heading plus the
-  # blank line plus the value line.
+  # or in "Status: X" prose form). Capture the context first (docs/submodule-common-rules.md
+  # > Testing Standards > SIGPIPE-safe assertion pipes): piping a streaming
+  # context producer (grep -A) directly into a short-circuiting consumer
+  # (grep -q) risks SIGPIPE under pipefail, banned repo-wide by
+  # tests/test-issue-964-sigpipe-safe-pipes.sh AC2-A.
+  STATUS_CTX="$(printf '%s' "$ADR_BODY" | grep -A2 -E '^## Status\b')"
   assert "adr-0019-record: Status is Proposed" \
-    $(printf '%s' "$ADR_BODY" | grep -A2 -E '^## Status\b' | grep -qE '^Proposed$' && echo 0 || echo 1)
+    $(printf '%s\n' "$STATUS_CTX" | grep -qE '^Proposed$' && echo 0 || echo 1)
   assert "adr-0019-record: states the discriminating check" \
     $(printf '%s' "$ADR_BODY" | grep -qi 'discriminating' && echo 0 || echo 1)
   assert "adr-0019-record: states per-arm detection/false-positive rates" \
