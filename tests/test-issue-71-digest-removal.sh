@@ -217,8 +217,13 @@ assert_true "AC-71-CLAUDEMD: Spawn mode table no longer names 'PREFLIGHT cross-i
   "! grep -qF 'PREFLIGHT cross-issue recurrence scan (1.5)' '$CLAUDE_MD'"
 assert_true "AC-71-CLAUDEMD: the surviving review-triage subagent clause is unchanged" \
   "grep -qF 'HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5)' '$CLAUDE_MD'"
-assert_true "AC-71-CLAUDEMD: the row's third-cell clause (registry literal 42-AC1-handoff-scope) is unchanged" \
-  "grep -qF 'the auto-resolution it feeds is re-entered through the named Test AI / Developer AI rows' '$CLAUDE_MD'"
+HANDOFF_SCOPE_LITERAL="$(jq -r '.invariants[]? // .[] | select(.id=="42-AC1-handoff-scope") | .literal' "$REGISTRY" 2>/dev/null)"
+if [ -z "$HANDOFF_SCOPE_LITERAL" ]; then
+  # fallback for a registry shaped as a bare top-level array
+  HANDOFF_SCOPE_LITERAL="$(jq -r '.[] | select(.id=="42-AC1-handoff-scope") | .literal' "$REGISTRY" 2>/dev/null)"
+fi
+assert_true "AC-71-CLAUDEMD: the row's third-cell clause (registry literal 42-AC1-handoff-scope) matches the currently registered literal, not a frozen pre-migration string" \
+  "[ -n \"$HANDOFF_SCOPE_LITERAL\" ] && grep -qF \"$HANDOFF_SCOPE_LITERAL\" '$CLAUDE_MD'"
 
 # =============================================================================
 echo ""

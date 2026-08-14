@@ -346,4 +346,29 @@ existing id, since their subject is new: `74-no-teammate-spawn-path-sentence-abs
 (the retired `42-AC1-named-lifetime` sentence stays absent), `74-no-teammate-spawn-path-retained-40`
 (the #40 measurement — the evidence the migration rests on — survives the
 rewrite, per ADR-0019's departure requirement), `74-teamcreate-pruned-token-absent`
-(`TeamCreate` no longer named in `CLAUDE.md`).
+(`TeamCreate` no longer named in `CLAUDE.md`). Further `origin_issue: 74`
+entries were added in the same cycle's later commits for the review-triage/
+gate-hardening passages this migration also touches
+(`jq '[.invariants[]|select(.origin_issue==74)]|length' tests/fixtures/doc-invariants.json`
+entries total, `scope: "permanent"` — standing, not retired with the cycle,
+per the same residue rule §9 states for its own origin-issue family).
+
+### 10.1 This cycle's own new spec files (the rule applied to itself)
+
+The same §7.1 judgement is applied to the two spec files this cycle **adds**,
+in the same commit series.
+
+| New spec | Disposition | Basis |
+|---|---|---|
+| `tests/test-issue-74-c7-pilot.sh` | **cycle-scoped — retired at the cycle's own merge-decision point (§2)** | its own header names it "(cycle-scoped removal-state suite)"-shaped: a C7-pilot fixture/ground-truth/arms-verdict re-derivation over this cycle's own landed pilot record (`tests/fixtures/c7-pilot-arms.json`, ADR-0019's frozen union), unrepresentable in the permanent registry per §1. Registered in `.github/workflows/contract-suites.yml` (both `paths:` blocks + its own `run:` step) while the cycle's PR is open; deregistered there in the same final commit that deletes the suite, per the #73/#88 precedent (commits `ff68814`, `d691f1e`) |
+| `tests/manual/issue-74-manual-scenarios.md` | **cycle-local, retired with its only dependent** | its own header names its subjects as the criteria `.autoflow/issue-74-verification-design.md` marks not automatable — the verbatim tool payloads issued to each pilot arm, the duty block handed to each arm, and the provenance link between each scratch per-spawn record and its frozen-union row — a one-shot manual dry-walk of this cycle's own pilot execution. Retired alongside `tests/test-issue-74-c7-pilot.sh` once no live dependent (registry entry, surviving suite, `docs/maintained-docs.md` row, or prose citation) remains, per the `tests/manual/` disposition rule in §6 |
+
+The standing fixtures `tests/fixtures/c7-pilot/`, `tests/fixtures/c7-pilot-ground-truth.md`,
+and `tests/fixtures/c7-pilot-arms.json` fall outside this table: §7.1 tabulates
+new **spec** files (scripted suites and manual scenario docs), not the data
+fixtures a spec consumes, so no row is required for them. They are not
+cycle-local scratch either — `docs/adr/0019-c7-pilot-spawn-mode-result.md`
+(lines 35, 37, 74, 184) cites them as its own permanent evidence trail ("let a
+later reader recompute the verdict rather than trust this [ADR's] restatement"),
+so they remain after `tests/test-issue-74-c7-pilot.sh` retires, independent of
+that suite's cycle-scoped lifetime.
