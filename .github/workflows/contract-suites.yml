@@ -43,6 +43,7 @@ on:
       - '.github/pull_request_template.md'
       - '.github/workflows/**'
       - '.github/workflows/contract-suites.yml'
+      - 'CLAUDE.md'
       - 'docs/INDEX.md'
       - 'docs/adr/**'
       - 'docs/autoflow-guide.md'
@@ -53,10 +54,12 @@ on:
       - 'docs/improvement-backlog.md'
       - 'docs/maintained-docs.md'
       - 'docs/reviewer-backend.md'
+      - 'docs/teammate-contracts.md'
       - 'docs/thin-root-layer.md'
       - 'plugin/autoflow/skills/**'
       - 'scripts/handoff/confirm-ci-green.sh'
       - 'scripts/handoff/create-host-pr.sh'
+      - 'scripts/ledger/ledger-entry-id.sh'
       - 'scripts/preflight/check-review-backend.sh'
       - 'scripts/review/codex-review-pr.sh'
       - 'scripts/review/lib/claude-isolation.sh'
@@ -90,12 +93,14 @@ on:
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
+      - 'tests/test-issue-97-ledger-id-registration.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
       - 'tests/test-issue-979-doc-neutrality.sh'
       - 'tests/test-issue-979-preflight-backend-check.sh'
       - 'tests/test-issue-979-probe.sh'
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-issue-985-doc-assertions.sh'
+      - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-push-context-base-ref.sh'
       - 'tests/test-run-doc-invariants.sh'
       - 'tests/test-standing-lint-drives.sh'
@@ -109,6 +114,7 @@ on:
       - '.github/pull_request_template.md'
       - '.github/workflows/**'
       - '.github/workflows/contract-suites.yml'
+      - 'CLAUDE.md'
       - 'docs/INDEX.md'
       - 'docs/adr/**'
       - 'docs/autoflow-guide.md'
@@ -119,10 +125,12 @@ on:
       - 'docs/improvement-backlog.md'
       - 'docs/maintained-docs.md'
       - 'docs/reviewer-backend.md'
+      - 'docs/teammate-contracts.md'
       - 'docs/thin-root-layer.md'
       - 'plugin/autoflow/skills/**'
       - 'scripts/handoff/confirm-ci-green.sh'
       - 'scripts/handoff/create-host-pr.sh'
+      - 'scripts/ledger/ledger-entry-id.sh'
       - 'scripts/preflight/check-review-backend.sh'
       - 'scripts/review/codex-review-pr.sh'
       - 'scripts/review/lib/claude-isolation.sh'
@@ -156,12 +164,14 @@ on:
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
+      - 'tests/test-issue-97-ledger-id-registration.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
       - 'tests/test-issue-979-doc-neutrality.sh'
       - 'tests/test-issue-979-preflight-backend-check.sh'
       - 'tests/test-issue-979-probe.sh'
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-issue-985-doc-assertions.sh'
+      - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-push-context-base-ref.sh'
       - 'tests/test-run-doc-invariants.sh'
       - 'tests/test-standing-lint-drives.sh'
@@ -215,6 +225,12 @@ jobs:
 
       - name: test-gate-hardening.sh
         run: bash tests/test-gate-hardening.sh
+
+      - name: test-ledger-entry-id.sh
+        run: bash tests/test-ledger-entry-id.sh
+
+      - name: test-issue-97-ledger-id-registration.sh
+        run: bash tests/test-issue-97-ledger-id-registration.sh
 
       - name: test-issue-16-manifest-locale-invariance.sh
         run: bash tests/test-issue-16-manifest-locale-invariance.sh
