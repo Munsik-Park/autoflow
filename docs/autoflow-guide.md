@@ -763,9 +763,15 @@ with the Green state from VERIFY.
    (against a target service repo, per tests/manual/issue-847-manual-scenarios.md)
    — re-state the matched paths so a silently-skipped INTEGRATE step is caught
    here, before HANDOFF. (Or diff touched no deploy/CI-path surface.)
+7. Lint-chain check: if the diff touched files the target repo's lint chain
+   covers (Change Surface Rules > Lint chain on the staged surface), confirm the
+   lint chain ran clean on them at commit time — re-derive it from the committing
+   role's per-chain lint-outcome anchor, so a skipped pre-commit lint is caught
+   here, before HANDOFF/CI, not at external review. A chain reported `not-run` or
+   `not-applicable` clears this step on its stated reason, not as a clean run.
 ```
 
-**Verdict**: automated tests all PASS + minimal-implementation PASS + manual scenarios listed + manifest coherence confirmed (or diff touched no manifest source) + deploy/CI-path verification confirmed (or diff touched no deploy/CI-path surface). Manual items marked "delegated to user" do not block VALIDATE.
+**Verdict**: automated tests all PASS + minimal-implementation PASS + manual scenarios listed + manifest coherence confirmed (or diff touched no manifest source) + deploy/CI-path verification confirmed (or diff touched no deploy/CI-path surface) + lint outcome confirmed per discovered chain (or diff touched no lint-covered file). Manual items marked "delegated to user" do not block VALIDATE.
 
 ---
 

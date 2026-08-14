@@ -173,6 +173,30 @@ The trace rule rejects scope creep *across* the change surface; this guard rejec
   trace rule. CI `AC2e` (`tests/plugin/verify-install-into-target.sh`) fails the
   PR otherwise (#798/#799/#800 precedent).
 
+### Lint chain on the staged surface
+- **[MUST]** When the staged change surface contains at least one file covered by the target repository's lint chain, the committing role runs that chain over the staged files and confirms zero errors attributable to them **before** the commit is made — for every chain the discovery order below converts into a command. Auto-fixable formatting is applied and staged in the same commit: the fix traces to the same edit, so it does not violate the trace rule (identical reasoning to **Derived artifacts**).
+
+**Chain discovery** — deterministic order, first hit wins. Each route must yield a command string the committing role can invoke in the working checkout; a route that names a lint but yields no such command is not a hit, and discovery continues.
+
+1. the target repo's `CLAUDE.md` > Development Commands `Lint` / `Format` entries — the entry *is* the command;
+2. the target repo's pull-request CI lint steps, restricted to steps that carry a `run:` body — the `run:` body is the command, taken verbatim and executed from the repository root.
+
+**Conversion limit** — a CI lint step whose work is performed by a third-party action reference (`uses:` with no `run:` body) yields no local command and is therefore not convertible. A discovered chain the conversion limit rejects imposes no blocking requirement, only a reporting one: when every discovered lint is non-convertible the committing role does not block the commit, it reports `not-run` naming the non-convertible step, so the unexecuted check stays visible instead of silently passing. Making an action-only chain locally executable belongs to the target repository's ops and is outside this rule's authority.
+
+**Scoping** — run the chain restricted to the staged files where the chain supports scoping. Where the chain only runs whole-tree, run it whole-tree and require that no reported error names a staged file; pre-existing errors on untouched files are not this cycle's surface (**Surrounding code**).
+
+**Outcome vocabulary** — the report carries one word per discovered chain, and the word set is total over the reachable states:
+
+- `clean` — the chain ran and reported nothing attributable to the staged files;
+- `fixed-and-staged` — the chain ran and reported fixable findings, and the fixes are in this commit;
+- `detected` — the chain ran and reported findings attributable to the staged files that were not auto-fixed; the commit does not proceed until they are resolved;
+- `not-run` — a covered file was staged and a chain was discovered, but the chain did not execute (non-convertible under the conversion limit, or unavailable in the checkout); the report names the chain and the reason;
+- `not-applicable` — discovery found no lint chain by either route, or no staged file is covered by any discovered chain.
+
+- **[MUST]** A chain that did not execute is reported `not-run`, never `clean` — a chain the committing role did not run is not evidence that the staged files are clean, and reporting it as such is the exact claim this rule exists to make re-derivable.
+
+**Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format item 5, whose single-anchor requirement it satisfies as a per-chain enumeration. Form and cardinality: see Reporting Format item 5.
+
 ### REFINE scope
 REFINE applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. The refactor tool's findings are advisory, not licence to expand the change surface.
 
@@ -201,6 +225,7 @@ When a teammate reports to the orchestrator (or to another teammate via `SendMes
    - code change → full 40-char commit SHA
    - test pass  → the exact `Tests: N passed, N total` (or equivalent) summary line, with the command that produced it
    - file state → `path:line` plus the verbatim content of that line
+   - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → one line per chain the discovery order found, the enumeration as a whole standing as this item's one anchor. Each line's form follows its outcome word: `clean` / `fixed-and-staged` / `detected` → the command as invoked plus the result line it produced; `not-run` → the literal `not-run` plus the unexecuted step's identity (`path:line` of the workflow file and the step name); `not-applicable` → that word alone, naming which discovery routes came up empty. A report citing one chain where discovery found several is malformed, not compliant.
    - inherited Green (the tree-identity predicate matched, so the step did not execute the suite) → the **register-entry citation** in place of a self-produced suite summary: the source `green-tree` entry's heading (cycle and `runner`) plus its `tree`, `head` and `result`. The reported outcome word is `inherited`, never `passed`; a re-typed summary line here is a contract violation. See [`autoflow-guide.md`](autoflow-guide.md) > VERIFY > *Green-tree register*.
 
    Anchors must be deterministically re-derivable by the orchestrator (`git show <SHA>` / re-running the test command / `git show HEAD:<file>`). Reports without an anchor are rejected, not interpreted.

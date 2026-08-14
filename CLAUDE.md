@@ -379,6 +379,7 @@ Co-Authored-By: Claude <model> <noreply@anthropic.com>
 - No direct commits to main — always branch + PR.
 - No `feat`/`fix` commit while tests fail → use `wip`.
 - `git status` before every commit.
+- **[MUST]** Before committing, the committing role — every role that commits, the orchestrator included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. Elaboration (chain discovery, conversion limit, scoping, outcome vocabulary, evidence anchor): [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
 
 ### Commit Ownership
 
