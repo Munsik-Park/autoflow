@@ -6353,6 +6353,17 @@
       "literal": "docs/issue-proposal.md"
     },
     {
+      "id": "96-issue-create-must-behavioral-tie",
+      "origin_issue": 96,
+      "intent": "coherence",
+      "file": "CLAUDE.md",
+      "section": "Execution Principles",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "is denied at the tool boundary"
+    },
+    {
       "id": "96-issue-create-triage-crossref",
       "origin_issue": 96,
       "intent": "existence",

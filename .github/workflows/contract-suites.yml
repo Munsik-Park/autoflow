@@ -76,7 +76,7 @@ on:
       - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
       - 'tests/issue-92/mock-gh/**'
-      - 'tests/issue-96/**'
+      - 'tests/issue-create/**'
       - 'tests/lib/base-ref.sh'
       - 'tests/manual/**'
       - 'tests/plugin/verify-install-into-target.sh'
@@ -94,8 +94,8 @@ on:
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
-      - 'tests/test-issue-96-issue-create-gate.sh'
-      - 'tests/test-issue-96-issue-create-wrapper.sh'
+      - 'tests/test-issue-create-gate.sh'
+      - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
       - 'tests/test-issue-979-doc-neutrality.sh'
@@ -149,7 +149,7 @@ on:
       - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
       - 'tests/issue-92/mock-gh/**'
-      - 'tests/issue-96/**'
+      - 'tests/issue-create/**'
       - 'tests/lib/base-ref.sh'
       - 'tests/manual/**'
       - 'tests/plugin/verify-install-into-target.sh'
@@ -167,8 +167,8 @@ on:
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
-      - 'tests/test-issue-96-issue-create-gate.sh'
-      - 'tests/test-issue-96-issue-create-wrapper.sh'
+      - 'tests/test-issue-create-gate.sh'
+      - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
       - 'tests/test-issue-979-doc-neutrality.sh'
@@ -276,11 +276,11 @@ jobs:
       - name: test-issue-979-review-backend.sh
         run: bash tests/test-issue-979-review-backend.sh
 
-      - name: test-issue-96-issue-create-gate.sh
-        run: bash tests/test-issue-96-issue-create-gate.sh
+      - name: test-issue-create-gate.sh
+        run: bash tests/test-issue-create-gate.sh
 
-      - name: test-issue-96-issue-create-wrapper.sh
-        run: bash tests/test-issue-96-issue-create-wrapper.sh
+      - name: test-issue-create-wrapper.sh
+        run: bash tests/test-issue-create-wrapper.sh
 
       - name: test-issue-985-doc-assertions.sh
         run: bash tests/test-issue-985-doc-assertions.sh

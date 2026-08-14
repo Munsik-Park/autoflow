@@ -27,7 +27,7 @@ repository observes or records that decision. The file that determines it,
 `T ∩ S` computation reaches (verification design > Composition oracle). What
 automation *can* and does verify — that the wrapper's own invocation string
 carries no hook-denied token and is not score-gated — is `Wrapper-Not-Self-Blocked`
-in `tests/test-issue-96-issue-create-gate.sh`. Whether a live session's
+in `tests/test-issue-create-gate.sh`. Whether a live session's
 permission layer actually pauses for approval is not.
 
 **Steps (operator, in a live Claude Code session on this repository):**

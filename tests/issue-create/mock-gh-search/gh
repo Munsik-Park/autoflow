@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# tests/issue-96/mock-gh-search/gh — corpus-backed, argv-dispatching `gh` shim
-# for the issue #96 wrapper spec (scripts/issue/create-issue.sh).
+# tests/issue-create/mock-gh-search/gh — corpus-backed, argv-dispatching `gh`
+# shim for tests/test-issue-create-wrapper.sh (scripts/issue/create-issue.sh),
+# standing (issue #96 origin).
 #
 # Unlike tests/issue-92/mock-gh (a pure argv sink), this shim ANSWERS
 # `gh issue list --search <term>` from a seeded corpus so the wrapper's own

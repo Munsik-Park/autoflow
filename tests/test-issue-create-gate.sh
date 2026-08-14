@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/hooks/check-autoflow-gate.sh plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh setup/manifest.json scripts/issue/create-issue.sh docs/issue-proposal.md
 # =============================================================================
-# Test: issue #96 — the hook-side and cross-mechanism half of the AI-initiated
-#       issue-creation gate (.autoflow/issue-96-verification-design.md)
+# Test: the hook-side and cross-mechanism half of the AI-initiated
+#       issue-creation gate — STANDING (issue #96 origin; see
+#       .autoflow/issue-96-verification-design.md and
+#       docs/doc-invariant-registry.md §10)
 # =============================================================================
 # Covers, per the verification design's acceptance-criteria table:
 #   Hook-Denies-Bare-Create, Hook-Denies-REST-Form, Hook-Deny-Is-State-Independent,
@@ -16,7 +18,7 @@
 # Split rationale (verification design > New spec files): this file drives the
 # hook and cleanup-issue.sh over an UNMODIFIED PATH so no `gh` shim can mask a
 # hook decision; the wrapper-behavior cases live in the shimmed sibling file
-# tests/test-issue-96-issue-create-wrapper.sh.
+# tests/test-issue-create-wrapper.sh.
 # =============================================================================
 
 set -uo pipefail
@@ -51,17 +53,6 @@ assert_true() {
   else
     echo "  FAIL: $desc"
     FAIL=$((FAIL + 1))
-  fi
-}
-
-assert_false() {
-  local desc="$1" condition="$2"
-  if eval "$condition"; then
-    echo "  FAIL: $desc (forbidden condition held)"
-    FAIL=$((FAIL + 1))
-  else
-    echo "  PASS: $desc"
-    PASS=$((PASS + 1))
   fi
 }
 
