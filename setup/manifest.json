@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "62d9733a456159b1cc2107128ba73bc480a132d56b47be58e510064dfc45540d"
+      "sha256": "8183f75c3950c043019c06baa6163fe15c75159263c73f1d33046a75cf2fa496"
     },
     {
       "source": "docs/INDEX.md",
