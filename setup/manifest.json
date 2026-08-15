@@ -132,7 +132,7 @@
       "dest": ".claude/autoflow/docs/issue-proposal.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8d10f044f03d808a44ea41c452e0351297737ba38617b21757b32055bd5acf29"
+      "sha256": "226c64f36bd1f0b0f5730d39d3bfcd7db7e1b1cd2997abd967efb40d99d1cc09"
     },
     {
       "source": "docs/maintained-docs.md",

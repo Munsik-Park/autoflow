@@ -239,12 +239,16 @@ $_acc"; fi
   #       Requiring the path to end there keeps `…/issues/12/comments --method
   #       POST` (commenting on an existing issue) out of the deny, which
   #       creates nothing.
+  #       A path component ends at a query delimiter `?`, a fragment delimiter
+  #       `#`, whitespace, or the segment end — all four are terminators here.
+  #       `/` is deliberately excluded: it continues the path into the
+  #       sub-resource forms this deny exists to leave alone.
   _issue_create_deny=0
   while IFS= read -r _ic_seg; do
     if printf '%s' "$_ic_seg" | grep -qE "^[[:space:]]*gh[[:space:]]+issue[[:space:]]+create\b"; then
       _issue_create_deny=1; break
     fi
-    if printf '%s' "$_ic_seg" | grep -qE "repos/[^[:space:]]+/issues([[:space:]]|$)" \
+    if printf '%s' "$_ic_seg" | grep -qE "repos/[^[:space:]]+/issues([?#[:space:]]|$)" \
        && printf '%s' "$_ic_seg" | grep -qE "(-X[[:space:]]*|--method[[:space:]=]+)POST\b"; then
       _issue_create_deny=1; break
     fi

@@ -158,8 +158,17 @@ accepts, with layer three as the catch:
   Deliberate: the escape is the operator's, not the agent's.
 - The REST-form deny matches any same-segment `POST` paired with a
   `repos/…/issues` path regardless of client, so the plain `curl -X POST
-  https://api.github.com/repos/<o>/<r>/issues` form is denied too. What is not
-  matched is a determined evasion — an obfuscated URL, a client invoked through
-  a wrapper script, or quoted/command-substituted forms that the hook's scan
-  strips exactly as it does for every other Section 1 deny. The threat model is
-  the routine self-authorized filing, not a determined evasion.
+  https://api.github.com/repos/<o>/<r>/issues` form is denied too. The path is
+  required to end at the issues collection, and it is taken to end at exactly
+  two suffix delimiters — a query `?` and a fragment `#` — so
+  `repos/<o>/<r>/issues?per_page=1` and `repos/<o>/<r>/issues#note` are denied
+  as well, while `…/issues/12/comments` stays unmatched. No other delimiter is
+  claimed: the trailing-slash form `…/issues/ --method POST` is **not** matched,
+  because admitting `/` would pull every sub-resource path into the deny.
+  What is not matched beyond that is a determined evasion — an obfuscated URL,
+  a client invoked through a wrapper script, a quoted form (the hook's scan
+  strips quoted substrings exactly as it does for every other Section 1 deny),
+  or a command-substituted form (which the scan does *not* strip — it goes
+  unmatched because the substitution's closing delimiter leaves a character
+  after `issues` that is not a terminator). The threat model is the routine
+  self-authorized filing, not a determined evasion.
