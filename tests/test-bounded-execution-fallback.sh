@@ -19,9 +19,16 @@
 # scripts/preflight/check-review-backend.sh (--probe) and
 # scripts/handoff/confirm-ci-green.sh — through their real bound seams
 # (PROBE_TIMEOUT_SECS / CI_POLL_TIMEOUT_SECS+CI_POLL_INTERVAL_SECS), each
-# under a PATH sanitized to /usr/bin:/bin:/usr/sbin:/sbin so `command -v
-# timeout`/`gtimeout` fails inside the product code and its real fallback
-# branch runs. The three byte-identical `run_bounded` suite copies and
+# under a PATH composed by this suite's single seam (compose_path) from an
+# inclusion-built scratch directory holding exactly the allowlisted
+# externals the driven surface needs — never a slice of real system bin
+# directories — so `command -v timeout`/`gtimeout` fails inside the product
+# code on every platform this suite runs on, Linux CI included, and its real
+# fallback branch runs. The fail-fast precondition guard right after setup
+# asserts this at runtime rather than merely claiming it (review-response
+# cycle 2: the prior exclusion-based slice still resolved Ubuntu's own
+# `/usr/bin/timeout`, so CI never entered the fallback branch it claimed to
+# cover). The three byte-identical `run_bounded` suite copies and
 # `run_bounded_in` are NOT separately driven for these mechanism legs — their
 # fallback body is reachable only by running their whole host suite (which
 # re-invokes other full suites transitively) or is not independently
@@ -33,13 +40,37 @@
 # (check-review-backend.sh, confirm-ci-green.sh); the `.watchdog`-suffix
 # convention's cleanup rests on the same canonical-tier predicate.
 #
-# GATE:PLAN carried findings honored throughout (ledger O2):
+# GATE:PLAN carried findings honored throughout (ledger O2, cycle 1):
 #   (1) every subject launched under this suite's own drives gets stdin from
 #       /dev/null, so a job-control SIGTTIN cannot stop it invisibly.
 #   (2) AC-pipe-release legs use a deliberately long bound (>=6s) so bash
 #       SECONDS' 1s granularity discriminates a released pipe from a held one.
-#   (3) sanitized-PATH legs keep /bin (date lives there on this platform,
-#       confirm-ci-green.sh:278 `sleep_to_deadline` calls it) on PATH.
+#   (3) `date` is superseded by the cycle-2 allowlist entry below (it was
+#       previously kept on PATH by retaining /bin wholesale; the inclusion
+#       build symlinks it in by name instead — confirm-ci-green.sh:278
+#       `sleep_to_deadline` still needs it, unchanged).
+#
+# GATE:PLAN carried findings honored throughout (ledger O8, cycle 2):
+#   (1) the composition seam (compose_path) takes only the front component —
+#       no tail-flavour parameter. AC-path-seam-single is scoped to the
+#       compositions a subject is actually launched with; the two drive
+#       helpers' unreached ambient-PATH `else` arm (ledger F19/O8) keeps
+#       assembling its own value and is not routed through the seam.
+#   (2) the existing confirm-ci-green.sh marker-cleanup legs stay
+#       synchronous — no background-and-poll rewrite. The confirm subject's
+#       AC-fallback-witness leg is a separate, new leg instead.
+#   (3) scripts/test/check-watchdog-detachment.sh excludes this whole file
+#       from its SUBJECT SET by a file-scoped `grep -vF` filter
+#       (scripts/test/check-watchdog-detachment.sh:83-96) — this is not the
+#       ENUMERATED-EXEMPTION tier (that tier is for known-exempt PRODUCT
+#       sites). Noted once here rather than repeated at each new
+#       backgrounded sleep this cycle adds (the witness legs below).
+#   (4) AC-fallback-precondition and AC-fallback-witness are Red-unobservable
+#       on a host that already resolves neither `timeout` nor `gtimeout`
+#       under the prior slice (e.g. this suite's own macOS development
+#       host — §0 of the verification design) — Red for both exists only on
+#       the Linux CI runner, where the prior slice kept `/usr/bin/timeout`
+#       reachable.
 #
 # SUITE-INVOKES-SUITE PROHIBITION (ledger O4). This suite contains no
 # `bash tests/test-*.sh` of any form. Two categories that previously appeared
@@ -80,7 +111,33 @@ MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
 WATCHDOG_LINT="$PROJECT_ROOT/scripts/test/check-watchdog-detachment.sh"
 CI_COVERAGE_LINT="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
 
-SYSTEM_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+# ---------------------------------------------------------------------------
+# Inclusion-based sanitized PATH tail (feature design §2 "Inclusion-based
+# sanitized PATH"). A scratch directory holding one symlink per allowlisted
+# external — never a slice of real system bin directories, which cannot
+# express "everything except timeout" when timeout shares a directory with
+# commands the subject needs (Ubuntu's own /usr/bin/timeout, the review-
+# response cycle-2 finding). Renamed from the old SYSTEM_PATH: the name now
+# denotes the property the value carries, not a directory slice.
+# ---------------------------------------------------------------------------
+NEITHER_TIMEOUT_TAIL="$(mktemp -d)"
+ALLOWLIST_CMDS="bash env dirname mktemp rm rmdir sleep date jq cat sed tail tr wc"
+for _cmd in $ALLOWLIST_CMDS; do
+  _real="$(command -v "$_cmd" 2>/dev/null || true)"
+  if [ -z "$_real" ]; then
+    echo "FATAL: allowlist command not resolvable on this host: $_cmd" >&2
+    exit 2
+  fi
+  ln -s "$_real" "$NEITHER_TIMEOUT_TAIL/$_cmd"
+done
+
+# compose_path <front-component> — the suite's single subject-PATH builder
+# (feature design §2 "One named composition seam"). Every actually-launched
+# leg obtains its subject PATH here; the two drive helpers' unreached
+# ambient-tailed `else` arm is not routed through it (ledger O8 (1)).
+compose_path() {
+  printf '%s:%s' "$1" "$NEITHER_TIMEOUT_TAIL"
+}
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -104,6 +161,44 @@ assert_false() {
     FAIL=$((FAIL + 1))
   else
     echo "  PASS: $desc"
+    PASS=$((PASS + 1))
+  fi
+}
+
+# assert_no_resolution_failure <desc> <captured-stream-text> — AC-toolchain-
+# sufficient: a leg's outcome assertion alone cannot distinguish "the subject
+# did its work" from "the subject crashed early on a missing command", since
+# both can leave a clean TMPDIR and a fast exit. Reads the leg's own captured
+# stdout+stderr for that failure shape.
+assert_no_resolution_failure() {
+  local desc="$1" stream="$2"
+  TESTS=$((TESTS + 1))
+  if printf '%s' "$stream" | grep -qiE 'command not found|no such file or directory'; then
+    echo "  FAIL: $desc"
+    FAIL=$((FAIL + 1))
+  else
+    echo "  PASS: $desc"
+    PASS=$((PASS + 1))
+  fi
+}
+
+# assert_fallback_precondition <label> <composed-path-value> — AC-fallback-
+# precondition, fail-fast (feature design §2). Resolved in a real child shell
+# under the exact exported value, once per distinct composed flavour, before
+# any behavioural leg runs: a runner-image change or an allowlist edit that
+# re-adds a real directory must abort the suite loudly rather than let the
+# legs silently drive the wrong branch.
+assert_fallback_precondition() {
+  local label="$1" pathval="$2"
+  TESTS=$((TESTS + 1))
+  if PATH="$pathval" bash -c 'command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1'; then
+    echo "  FAIL: AC-fallback-precondition ($label): bound tool resolves under PATH=$pathval"
+    FAIL=$((FAIL + 1))
+    echo "ABORT: fallback precondition violated for $label — PATH=$pathval" >&2
+    rm -rf "$FAKEBIN" "$NEITHER_TIMEOUT_TAIL" 2>/dev/null
+    exit 1
+  else
+    echo "  PASS: AC-fallback-precondition ($label): neither timeout nor gtimeout resolves"
     PASS=$((PASS + 1))
   fi
 }
@@ -178,7 +273,7 @@ harness_run() {
 run_probe() {
   local bound="$1" mode="$2" hang="$3" child="$4" sanitized="$5"
   local pathval
-  if [ "$sanitized" = "1" ]; then pathval="$FAKEBIN:$SYSTEM_PATH"; else pathval="$FAKEBIN:$PATH"; fi
+  if [ "$sanitized" = "1" ]; then pathval="$(compose_path "$FAKEBIN")"; else pathval="$FAKEBIN:$PATH"; fi
   local errfile outfile
   errfile="$(mktemp)"; outfile="$(mktemp)"
   SECONDS=0
@@ -203,7 +298,7 @@ run_probe() {
 run_probe_piped() {
   local bound="$1" mode="$2" sanitized="$3"
   local pathval
-  if [ "$sanitized" = "1" ]; then pathval="$FAKEBIN:$SYSTEM_PATH"; else pathval="$FAKEBIN:$PATH"; fi
+  if [ "$sanitized" = "1" ]; then pathval="$(compose_path "$FAKEBIN")"; else pathval="$FAKEBIN:$PATH"; fi
   local errfile outfile
   errfile="$(mktemp)"; outfile="$(mktemp)"
   SECONDS=0
@@ -233,6 +328,26 @@ pgid_of() {
 }
 
 echo "=== Issue #100 bounded-execution fallback watchdog (standing) ==="
+
+# =============================================================================
+echo ""
+echo "=== AC-path-seam-single (static): no subject PATH assembled outside compose_path ==="
+# Every composition of $FAKEBIN or $MOCK_GH_DIR against a PATH-shaped tail
+# must go through compose_path(); its own definition uses "$1", not either
+# literal name, so it never matches this pattern itself. The sole permitted
+# exception is the two drive helpers' unreached ambient-tailed `else` arm
+# (ledger O8 (1)) — not scoped by this criterion because no caller reaches
+# it (feature design §2 "One named composition seam").
+DIRECT_COMPOSITIONS="$(grep -nE '(FAKEBIN|MOCK_GH_DIR)"?:\$(PATH|NEITHER_TIMEOUT_TAIL)' "$SCRIPT_DIR/test-bounded-execution-fallback.sh" \
+  | grep -v 'else pathval="\$FAKEBIN:\$PATH"; fi')"
+assert_true "AC-path-seam-single: every actually-launched leg's subject PATH comes from compose_path (only the unreached ambient else arm is exempt)" \
+  "[ -z \"$DIRECT_COMPOSITIONS\" ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-fallback-precondition (fail-fast, before any behavioural leg) ==="
+assert_fallback_precondition "probe (fakebin flavor)" "$(compose_path "$FAKEBIN")"
+assert_fallback_precondition "confirm (mock-gh flavor)" "$(compose_path "$MOCK_GH_DIR")"
 
 # =============================================================================
 echo ""
@@ -272,8 +387,9 @@ echo "=== AC-no-self-kill (RED discriminator) ==="
 CALLER_PGID="$(pgid_of $$)"
 sleep 90 &
 SENTINEL_PID=$!
-( PATH="$FAKEBIN:$SYSTEM_PATH" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=79 PROBE_TIMEOUT_SECS=59 \
-    "$CHECK_SCRIPT" --backend claude --probe </dev/null >/dev/null 2>&1 ) &
+NOKILL_OUT="$(mktemp)"; NOKILL_ERR="$(mktemp)"
+( PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=79 PROBE_TIMEOUT_SECS=59 \
+    "$CHECK_SCRIPT" --backend claude --probe </dev/null >"$NOKILL_OUT" 2>"$NOKILL_ERR" ) &
 PROBE_BG_PID=$!
 # Outer safety-kill sleep uses a duration DISTINCT from FAKE_HANG_SECS (79) —
 # find_pid_by_cmd matches by the literal duration in the ps args column, so a
@@ -297,8 +413,39 @@ assert_true "AC-no-self-kill: the hung subject's process group differs from the 
   "[ -n \"$SUB_PGID\" ] && [ \"$SUB_PGID\" != \"$CALLER_PGID\" ]"
 assert_true "AC-no-self-kill: a sentinel background job in the caller's own group survives the hang termination" \
   "kill -0 $SENTINEL_PID 2>/dev/null"
+assert_no_resolution_failure "AC-toolchain-sufficient (no-self-kill leg): captured streams carry no command-resolution failure" \
+  "$(cat "$NOKILL_OUT" "$NOKILL_ERR" 2>/dev/null)"
 kill "$SENTINEL_PID" 2>/dev/null
 wait "$SENTINEL_PID" 2>/dev/null
+rm -f "$NOKILL_OUT" "$NOKILL_ERR"
+
+# =============================================================================
+echo ""
+echo "=== AC-fallback-witness (probe): backgrounded subject is its own process-group leader ==="
+# Fresh, unique hang/bound/outer tokens (97/101/131) so find_pid_by_cmd's
+# end-anchored match cannot collide with another leg's driving command line
+# (verification design §5). This subshell + its outer safety-kill sleep are
+# a new backgrounded-sleep site in this file — see the ledger O8 (3) note at
+# the top of this file for why no per-site EXEMPT_SITES entry is needed.
+( PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=97 PROBE_TIMEOUT_SECS=101 \
+    "$CHECK_SCRIPT" --backend claude --probe </dev/null >/dev/null 2>&1 ) &
+WITNESS_BG_PID=$!
+( sleep 131; kill -9 "$WITNESS_BG_PID" 2>/dev/null ) &
+WITNESS_WPID=$!
+WITNESS_PID=""
+for _ in $(seq 1 40); do
+  WITNESS_PID="$(find_pid_by_cmd 'sleep 97$')"
+  [ -n "$WITNESS_PID" ] && break
+  sleep 0.25
+done
+WITNESS_PGID=""
+[ -n "$WITNESS_PID" ] && WITNESS_PGID="$(pgid_of "$WITNESS_PID")"
+assert_true "AC-fallback-witness (probe): the exec'd hang subject is a process-group leader (pgid == pid) — positive evidence the sleep+kill fallback ran, not the bound tool" \
+  "[ -n \"$WITNESS_PID\" ] && [ -n \"$WITNESS_PGID\" ] && [ \"$WITNESS_PGID\" = \"$WITNESS_PID\" ]"
+[ -n "$WITNESS_PID" ] && kill -TERM -"$WITNESS_PID" 2>/dev/null
+wait "$WITNESS_BG_PID" 2>/dev/null
+kill "$WITNESS_WPID" 2>/dev/null
+wait "$WITNESS_WPID" 2>/dev/null
 
 # =============================================================================
 echo ""
@@ -312,19 +459,23 @@ find_pid_by_cmd 'sleep 240$' | xargs -I{} kill -9 {} 2>/dev/null || true
 # =============================================================================
 echo ""
 echo "=== AC-marker-cleanup (fence: passes at HEAD; two mktemp-convention sites) ==="
-LEG_TMPDIR1="$(mktemp -d)"
-TMPDIR="$LEG_TMPDIR1" harness_run 61 -- env PATH="$FAKEBIN:$SYSTEM_PATH" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=55 PROBE_TIMEOUT_SECS=41 \
-  "$CHECK_SCRIPT" --backend claude --probe </dev/null >/dev/null 2>&1
+LEG_TMPDIR1="$(mktemp -d)"; LEG_OUT1="$(mktemp)"; LEG_ERR1="$(mktemp)"
+TMPDIR="$LEG_TMPDIR1" harness_run 61 -- env PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=55 PROBE_TIMEOUT_SECS=41 \
+  "$CHECK_SCRIPT" --backend claude --probe </dev/null >"$LEG_OUT1" 2>"$LEG_ERR1"
 assert_true "AC-marker-cleanup (check-review-backend.sh, fired branch): no leftover mktemp marker in TMPDIR" \
   "[ -z \"\$(ls -A \"$LEG_TMPDIR1\" 2>/dev/null)\" ]"
-rm -rf "$LEG_TMPDIR1"
+assert_no_resolution_failure "AC-toolchain-sufficient (marker-cleanup fired leg): captured streams carry no command-resolution failure" \
+  "$(cat "$LEG_OUT1" "$LEG_ERR1" 2>/dev/null)"
+rm -rf "$LEG_TMPDIR1"; rm -f "$LEG_OUT1" "$LEG_ERR1"
 
-LEG_TMPDIR2="$(mktemp -d)"
-TMPDIR="$LEG_TMPDIR2" harness_run 63 -- env PATH="$FAKEBIN:$SYSTEM_PATH" FAKE_BACKEND_AUTH=ok PROBE_TIMEOUT_SECS=43 \
-  "$CHECK_SCRIPT" --backend claude --probe </dev/null >/dev/null 2>&1
+LEG_TMPDIR2="$(mktemp -d)"; LEG_OUT2="$(mktemp)"; LEG_ERR2="$(mktemp)"
+TMPDIR="$LEG_TMPDIR2" harness_run 63 -- env PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=ok PROBE_TIMEOUT_SECS=43 \
+  "$CHECK_SCRIPT" --backend claude --probe </dev/null >"$LEG_OUT2" 2>"$LEG_ERR2"
 assert_true "AC-marker-cleanup (check-review-backend.sh, not-fired branch): no leftover mktemp marker in TMPDIR" \
   "[ -z \"\$(ls -A \"$LEG_TMPDIR2\" 2>/dev/null)\" ]"
-rm -rf "$LEG_TMPDIR2"
+assert_no_resolution_failure "AC-toolchain-sufficient (marker-cleanup not-fired leg): captured streams carry no command-resolution failure" \
+  "$(cat "$LEG_OUT2" "$LEG_ERR2" 2>/dev/null)"
+rm -rf "$LEG_TMPDIR2"; rm -f "$LEG_OUT2" "$LEG_ERR2"
 
 # =============================================================================
 echo ""
@@ -341,21 +492,61 @@ echo ""
 echo "=== AC-marker-cleanup second site: confirm-ci-green.sh ==="
 GREEN_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[{"__typename":"CheckRun","name":"x","workflowName":"CI","status":"COMPLETED","conclusion":"SUCCESS"}]}'
 
-CONFIRM_TMPDIR1="$(mktemp -d)"
-TMPDIR="$CONFIRM_TMPDIR1" harness_run 110 -- env PATH="$MOCK_GH_DIR:$SYSTEM_PATH" \
+CONFIRM_TMPDIR1="$(mktemp -d)"; CONFIRM_OUT1="$(mktemp)"; CONFIRM_ERR1="$(mktemp)"
+TMPDIR="$CONFIRM_TMPDIR1" harness_run 110 -- env PATH="$(compose_path "$MOCK_GH_DIR")" \
   GH_MOCK_PRECHECK_BODY="$GREEN_BODY" GH_MOCK_POLL_BODY="$GREEN_BODY" GH_MOCK_PRECHECK_SLEEP=90 \
-  CI_POLL_TIMEOUT_SECS=83 CI_POLL_INTERVAL_SECS=83 "$CONFIRM_SCRIPT" --pr 1 </dev/null >/dev/null 2>&1
+  CI_POLL_TIMEOUT_SECS=83 CI_POLL_INTERVAL_SECS=83 "$CONFIRM_SCRIPT" --pr 1 </dev/null >"$CONFIRM_OUT1" 2>"$CONFIRM_ERR1"
 assert_true "AC-marker-cleanup (confirm-ci-green.sh, fired branch): no leftover mktemp marker in TMPDIR" \
   "[ -z \"\$(ls -A \"$CONFIRM_TMPDIR1\" 2>/dev/null)\" ]"
-rm -rf "$CONFIRM_TMPDIR1"
+assert_no_resolution_failure "AC-toolchain-sufficient (confirm marker-cleanup fired leg): captured streams carry no command-resolution failure" \
+  "$(cat "$CONFIRM_OUT1" "$CONFIRM_ERR1" 2>/dev/null)"
+rm -rf "$CONFIRM_TMPDIR1"; rm -f "$CONFIRM_OUT1" "$CONFIRM_ERR1"
 
-CONFIRM_TMPDIR2="$(mktemp -d)"
-TMPDIR="$CONFIRM_TMPDIR2" harness_run 25 -- env PATH="$MOCK_GH_DIR:$SYSTEM_PATH" \
+CONFIRM_TMPDIR2="$(mktemp -d)"; CONFIRM_OUT2="$(mktemp)"; CONFIRM_ERR2="$(mktemp)"
+TMPDIR="$CONFIRM_TMPDIR2" harness_run 25 -- env PATH="$(compose_path "$MOCK_GH_DIR")" \
   GH_MOCK_PRECHECK_BODY="$GREEN_BODY" GH_MOCK_POLL_BODY="$GREEN_BODY" \
-  CI_POLL_TIMEOUT_SECS=9 CI_POLL_INTERVAL_SECS=9 "$CONFIRM_SCRIPT" --pr 1 </dev/null >/dev/null 2>&1
+  CI_POLL_TIMEOUT_SECS=9 CI_POLL_INTERVAL_SECS=9 "$CONFIRM_SCRIPT" --pr 1 </dev/null >"$CONFIRM_OUT2" 2>"$CONFIRM_ERR2"
 assert_true "AC-marker-cleanup (confirm-ci-green.sh, not-fired branch): no leftover mktemp marker in TMPDIR" \
   "[ -z \"\$(ls -A \"$CONFIRM_TMPDIR2\" 2>/dev/null)\" ]"
-rm -rf "$CONFIRM_TMPDIR2"
+assert_no_resolution_failure "AC-toolchain-sufficient (confirm marker-cleanup not-fired leg): captured streams carry no command-resolution failure" \
+  "$(cat "$CONFIRM_OUT2" "$CONFIRM_ERR2" 2>/dev/null)"
+rm -rf "$CONFIRM_TMPDIR2"; rm -f "$CONFIRM_OUT2" "$CONFIRM_ERR2"
+
+# =============================================================================
+echo ""
+echo "=== AC-fallback-witness (confirm): mock gh subject is its own process-group leader ==="
+# Kept as a NEW leg rather than folded into the marker-cleanup legs above
+# (ledger O8 (2): those stay synchronous, no background-and-poll rewrite).
+# Another new backgrounded-sleep site — same file-scoped exemption noted at
+# the top of this file (ledger O8 (3)) and at the probe witness leg above.
+# GH_MOCK_PRECHECK_SLEEP (99) is kept above the precheck's own gh_bounded
+# sub-bound (clamp_to_interval(CI_POLL_TIMEOUT_SECS)=88 here), so the mock is
+# still hung when the poll loop below locates it (verification design §5).
+CONFIRM_WITNESS_TMPDIR="$(mktemp -d)"
+TMPDIR="$CONFIRM_WITNESS_TMPDIR" env PATH="$(compose_path "$MOCK_GH_DIR")" \
+  GH_MOCK_PRECHECK_BODY="$GREEN_BODY" GH_MOCK_POLL_BODY="$GREEN_BODY" GH_MOCK_PRECHECK_SLEEP=99 \
+  CI_POLL_TIMEOUT_SECS=88 CI_POLL_INTERVAL_SECS=88 "$CONFIRM_SCRIPT" --pr 1 </dev/null >/dev/null 2>&1 &
+CONFIRM_WITNESS_PID=$!
+( sleep 115; kill -9 "$CONFIRM_WITNESS_PID" 2>/dev/null ) &
+CONFIRM_WITNESS_WPID=$!
+CONFIRM_MOCK_PID=""
+for _ in $(seq 1 40); do
+  # End-anchored on the precheck call's own argv suffix, never on its inner
+  # `sleep` child — the mock survives its own hang as the group leader
+  # (verification design §0, feature design §2 "Direct branch witness").
+  CONFIRM_MOCK_PID="$(find_pid_by_cmd 'mergeable,mergeStateStatus$')"
+  [ -n "$CONFIRM_MOCK_PID" ] && break
+  sleep 0.25
+done
+CONFIRM_MOCK_PGID=""
+[ -n "$CONFIRM_MOCK_PID" ] && CONFIRM_MOCK_PGID="$(pgid_of "$CONFIRM_MOCK_PID")"
+assert_true "AC-fallback-witness (confirm): the surviving mock gh precheck call is a process-group leader (pgid == pid), located by its end-anchored --json mergeable,mergeStateStatus argv, not its inner sleep child" \
+  "[ -n \"$CONFIRM_MOCK_PID\" ] && [ -n \"$CONFIRM_MOCK_PGID\" ] && [ \"$CONFIRM_MOCK_PGID\" = \"$CONFIRM_MOCK_PID\" ]"
+[ -n "$CONFIRM_MOCK_PID" ] && kill -TERM -"$CONFIRM_MOCK_PID" 2>/dev/null
+wait "$CONFIRM_WITNESS_PID" 2>/dev/null
+kill "$CONFIRM_WITNESS_WPID" 2>/dev/null
+wait "$CONFIRM_WITNESS_WPID" 2>/dev/null
+rm -rf "$CONFIRM_WITNESS_TMPDIR"
 
 # =============================================================================
 echo ""
@@ -388,6 +579,6 @@ fi
 
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
-rm -rf "$FAKEBIN" 2>/dev/null
+rm -rf "$FAKEBIN" "$NEITHER_TIMEOUT_TAIL" 2>/dev/null
 [[ $FAIL -gt 0 ]] && exit 1
 exit 0
