@@ -190,7 +190,7 @@ B4_SHA="315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
 # Bumped 80 -> 82 by issue #69 (verification-depth justification): two run.mjs tests
 # added (AC-69-prompt-delivery, AC-69-accept-gating). Bumped in the SAME commit as the
 # RED-lane run.mjs addition (not GREEN) per issue #69's verification design.
-EXPECTED_OK=82
+EXPECTED_OK=85
 
 PASS=0; FAIL=0; TESTS=0
 
