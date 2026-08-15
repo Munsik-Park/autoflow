@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6b83db90411163fe8e5439eb2b3bb07ad060005fcfe7e5e5b1ddd5f8a8c86039"
+      "sha256": "596e1dcb01bae9278947071fcb3787e830569505772ca844785815b3757d9793"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "45e00357d310793c9be5ddef92dc10eb323d560580e89608eeda0990479d151e"
+      "sha256": "b7f3d96657a5653d11863f44fb7a79485e79d29092879b0d0e014a2a47613cd7"
     },
     {
       "source": "docs/phases/analysis.md",
