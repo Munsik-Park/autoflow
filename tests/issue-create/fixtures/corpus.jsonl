@@ -1,0 +1,50 @@
+{"number": 100, "title": "[fix] run_bounded sleep+kill fallback의 파이프 점유 — timeout 부재 환경에서 종료 후 최대 예산치(900s)까지 reader 블록 (6개 파일 파급, 로컬 전용)", "state": "OPEN"}
+{"number": 99, "title": "[design] test-push-context-base-ref.sh 오라클 재설계 — 소비 스위트 통째 재실행(CI 스텝 14m48s, 잡의 64%)을 resolver 표적 검증으로 대체 (#85 AC-main-green supersede)", "state": "OPEN"}
+{"number": 97, "title": "[fix] 결정 원장 엔트리 ID 유일성 붕괴 — 61개 사이클 원장 중 15개에서 중복 ID 실측, 감지 기전 부재로 무보고 잠복", "state": "OPEN"}
+{"number": 96, "title": "[feat] 이슈 생성 사전 게이트 부재 — 검토 의무가 프로즈뿐이라 불완전 검토·self-authorization 파일링이 통과 (조건부 훅 + 검증 래퍼 + permission-ask 3계층 제안)", "state": "OPEN"}
+{"number": 95, "title": "[chore] CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS 핀 계열 정리 — 스폰 모드 이관(#74) 후속", "state": "OPEN"}
+{"number": 93, "title": "[design] 커밋 절차에 변경 파일 lint 확인 부재 — 미포맷 커밋이 모든 내부 게이트를 통과해 CI·리뷰에서야 검출 (소비 저장소 실측)", "state": "CLOSED"}
+{"number": 89, "title": "Refine minimal_implementation scoring toward smallest sufficient change", "state": "CLOSED"}
+{"number": 88, "title": "[tech-debt] 무변경 전체 재실행 2곳(VERIFY step 1 · REFINE step 2)을 트리 동일성 검사로 대체", "state": "CLOSED"}
+{"number": 85, "title": "[tech-debt] tests/ 정리 ③ — cycle-scoped 테스트의 머지 시점 처분: #76 자기 스위트 은퇴 + 처분 게이트 편입 (§2 자기 적용)", "state": "CLOSED"}
+{"number": 81, "title": "[fix] 리뷰·CI 상태 전이 Low 보완 — mergeable=UNKNOWN 전파 지연 미대기(exit 10 과잉 분류) · 재리뷰 Medium 발견 시 blocked-by-review 재부착 부재", "state": "CLOSED"}
+{"number": 77, "title": "[fix · ] #69 사이클 테스트 오라클 강도 결함 — AC-69-CI-push awk 윈도우 미종결 + change-surface 선언 불일치", "state": "CLOSED"}
+{"number": 76, "title": "[tech-debt] tests/ 정리 ② — 영구 단언 레지스트리 이관, 유효 고아 스위트 CI 등록 (§3 이행)", "state": "CLOSED"}
+{"number": 75, "title": "[tech-debt] tests/ 정리 ① — 죽은 단언·중복 재실행 제거, cycle-scoped allowlist 철거 (§2 이행)", "state": "CLOSED"}
+{"number": 74, "title": "[feat] 팀메이트 제거 실행 — C7 파일럿 사이클 + 스폰 모드 전환", "state": "OPEN"}
+{"number": 73, "title": "[chore] 팀메이트 제거 준비 — ADR-0017 C1~C6 일괄 이행 + Status Accepted 전환", "state": "CLOSED"}
+{"number": 71, "title": "[chore] cycle digest 방출 과정 제거 — 프로젝트 커밋 불필요, 아카이브가 로그 수집을 담당", "state": "CLOSED"}
+{"number": 69, "title": "[design] 검증 설계에 위험 대비 검증 밀도 합의 항목 부재 — 개방형 AC에서 검증 깊이가 무제약 재량으로 상한까지 확장", "state": "CLOSED"}
+{"number": 67, "title": "[fix] ARCHITECT 숙의 기록 구조 재설계 — 기각·합의 쟁점 대장 이월, 쟁점당 5줄 제한, 증거 비전사 (문서 비대·재론 반복 해소)", "state": "CLOSED"}
+{"number": 64, "title": "[fix] 게이트 훅의 상태 파일 수집이 .autoflow/*.json 전체를 대상 — 비상태 JSON(launch record)이 사이클 종료 시 malformed fail-closed 차단 유발", "state": "CLOSED"}
+{"number": 62, "title": "[fix] ARCHITECT 심의의 병렬 라운드 구조 — 지적·응답의 한 라운드 지연과 인용 번지수 밀림으로 결렬 반복; test→dev 순차 전환 + 이월물 안건 축소", "state": "CLOSED"}
+{"number": 59, "title": "[fix] 게이트 평가문·원장 인용이 재심의 Draft 입력에 무규율 유입 — 미도출 서술의 근거 채택(adoption) 오염; #56 규율의 전달 지점·행동 방향 확장", "state": "CLOSED"}
+{"number": 56, "title": "[fix] deliberation 이월 counter 텍스트가 재검증 없이 주입 — stale 근거 논증(유령 결함 제기)으로 라운드 낭비; 증거 규율 프롬프트 선주입 제안", "state": "CLOSED"}
+{"number": 55, "title": "[fix] 게이트 scores 쓰기 계약이 쓰는 채널에 비노출 — 산문 지시(score + reason format)가 문자열 기록을 유도해 훅 malformed fail-closed", "state": "CLOSED"}
+{"number": 54, "title": "[tracking] 스폰 구조와 배포 계약의 미해결 위임 사항 — #51 · #52 · #53 일괄 검토", "state": "OPEN"}
+{"number": 53, "title": "[tech-debt] ADR-0015 S4b 위임 결정의 추적 상실 + 배포 문서의 옛 트래커 이슈 참조 잔존", "state": "OPEN"}
+{"number": 52, "title": "[design] 동료 팀메이트 진행자의 격리 성립 여부 검증 — Decision 8 기각 근거의 미검증 전제", "state": "CLOSED"}
+{"number": 51, "title": "[design] 팀메이트 전면 제거 가능성 판정 — Test AI·Developer AI를 익명 direct spawn으로 대체할 수 있는가", "state": "CLOSED"}
+{"number": 46, "title": "[fix] test-issue-952 AC1의 bare timeout 의존 — macOS(coreutils 부재)에서 위양성 FAIL", "state": "CLOSED"}
+{"number": 43, "title": "[feat] 잔존 mailbox 역할의 보고 채널 계약 — SendMessage-전달 [MUST], 에이전트 정의 보고 조항, 미전송 판독 수칙", "state": "CLOSED"}
+{"number": 42, "title": "[feat] 역할별 spawn 모드 재분류 — 단발-반환 역할의 무명 direct spawn 전환, mailbox 모드는 수명-지속 역할로 한정", "state": "CLOSED"}
+{"number": 40, "title": "[feat] 게이트 평가 AI에 consider-the-opposite 절차 추가 — 채점 전 FAIL 가설 수립·반박 시도 의무화", "state": "CLOSED"}
+{"number": 35, "title": "Add phase-marker emission to enable orchestrator context measurement", "state": "CLOSED"}
+{"number": 30, "title": "[fix] confirm-ci-green.sh — concurrency 취소 시 동명 CANCELLED/SUCCESS check-run 미dedup으로 green PR에 false red(exit 12)", "state": "CLOSED"}
+{"number": 27, "title": "[feat] 검증 설계에 확정 결정과의 합성 검증(mock 금지 오라클) 요구 추가", "state": "CLOSED"}
+{"number": 26, "title": "[fix] VERIFY 회귀 표에 설계-모순 원인의 행선지 부재 — VERIFY→ARCHITECT 명문화", "state": "CLOSED"}
+{"number": 25, "title": "[fix] HANDOFF CI-green 확인이 프로즈 전용 · gitlink 케이스에만 강제되어 CONFLICTING PR에서 무한 대기", "state": "CLOSED"}
+{"number": 22, "title": "[fix] create-host-pr.sh — HOST-CLOSE-LINE 마커 미치환 body를 검증 없이 PR로 게시 (auto-close silent 불발)", "state": "CLOSED"}
+{"number": 18, "title": "[fix] locale-invariance 테스트 AC5 fixture가 gate 훅 상태 글롭과 충돌 — score-gated 명령 fail-closed 오차단", "state": "CLOSED"}
+{"number": 16, "title": "[fix] gen-manifest-hashes.sh 정렬의 locale 의존 — 환경별 manifest 행 순서 비결정성 (LC_ALL=C pin)", "state": "CLOSED"}
+{"number": 14, "title": "[fix] deliberation 워크플로 args 계약이 스킬 채널에 비노출 — 자유 텍스트 args 호출이 args.issue required로 즉사", "state": "CLOSED"}
+{"number": 13, "title": "[fix] gate 훅 매칭 결함 2건 이월(#3) — label-gate AND-over-buffer 세그먼트 미적용 · git -c 옵션 개재 push 우회", "state": "CLOSED"}
+{"number": 11, "title": "[fix] check-autoflow-gate.sh — 플러그인 채널에서 subagent_type 역할 선언이 상호 배타적으로 차단 (훅은 무접두사 autoflow-*만 매칭, 런타임 타입명은 autoflow:autoflow-*)", "state": "CLOSED"}
+{"number": 10, "title": "[fix] 0.1.0 manifest가 방법론 문서가 요구하는 스크립트 4종을 배포에서 누락 — scan-cross-issue-recurrence · emit-cycle-digest · create-host-pr · cleanup-issue", "state": "CLOSED"}
+{"number": 8, "title": "docs: replace README lifecycle Mermaid one-liner with design-philosophy SVG diagram", "state": "CLOSED"}
+{"number": 7, "title": "[test] test-issue-1-guard-contract.sh 견고성 강화 — V4 oracle의 emitter 실패 구분 불가 + temp 정리 trap-EXIT 부재", "state": "CLOSED"}
+{"number": 6, "title": "[fix] emit-cycle-digest.sh severity 파싱 계약 미문서화 — ingestion 표기 불일치 시 silent fail-open(None)", "state": "CLOSED"}
+{"number": 4, "title": "[fix] check-autoflow-gate.sh — default-branch push 차단이 복합 명령에서 오탐 (push 패턴과 main 패턴이 서로 다른 서브 명령에 매칭)", "state": "CLOSED"}
+{"number": 3, "title": "[fix] install/gate 스크립트 매칭 결함 2건 — detect.sh SSH host alias ORG/REPO 파생 실패 · gate 훅 복합 명령 push 오탐", "state": "CLOSED"}
+{"number": 2, "title": "[feat] 단일 clone 다중 세션 AutoFlow — 이슈별 worktree 격리 (훅 상태 해석 stdin-cwd 전환 · 보관-우선 cleanup · PR Wait Rule 개정)", "state": "OPEN"}
+{"number": 1, "title": "[fix] cycle-digest guard contract conflict — 985 AC1 (empty) vs 953 AC2/AC7 (non-stub record)", "state": "CLOSED"}

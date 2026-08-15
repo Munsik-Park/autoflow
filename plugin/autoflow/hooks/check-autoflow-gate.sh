@@ -21,6 +21,11 @@
 # Gate points:
 #   - Bash(gh pr merge)             → DENIED unconditionally (AutoFlow never merges)
 #   - Bash(git push <default br>)   → DENIED unconditionally (push dev branch + PR only)
+#   - Bash(gh issue create)         → DENIED unconditionally; also the REST form
+#                                     (POST to the issues collection). Filing goes
+#                                     through scripts/issue/create-issue.sh, which
+#                                     re-runs the duplicate search from a draft
+#                                     (docs/issue-proposal.md)
 #   - Bash(remove blocked-by-review label) → DENIED unconditionally; matches the
 #                                     label name across gh pr edit / gh issue edit
 #                                     --remove-label and gh api DELETE .../labels/…
@@ -211,6 +216,47 @@ $_acc"; fi
   if [ "$_label_deny" = 1 ]; then
     echo "BLOCKED: AutoFlow does not clear the 'blocked-by-review' / 'blocked-by-subrepo' gate labels." >&2
     echo "blocked-by-review is the Codex reviewer's step (.codex/review.md); blocked-by-subrepo is the operator's step at merge — AutoFlow owns neither." >&2
+    exit 2
+  fi
+
+  # AI-initiated issue creation is denied at the tool boundary (issue #96). The
+  # obligation to review before filing was prose only, so an agent could assert
+  # it had checked for duplicates and file anyway — the assertion and the act
+  # had no mechanical relation. Filing now goes through
+  # scripts/issue/create-issue.sh, which derives the issue from a draft in
+  # .autoflow/ and RE-RUNS the duplicate search itself. That wrapper carries no
+  # `gh issue create` token in its own invocation string, so this deny does not
+  # block it; the operator's permission prompt on the wrapper is layer three.
+  # State-independent (P2), like every Section-1 deny: no cycle need be active
+  # for the review obligation to hold.
+  #
+  # Two surfaces, both segment-scoped so an adjacent sub-command cannot be
+  # mistaken for this one:
+  #   (A) the `gh issue create` subcommand, anchored at a segment start so
+  #       `gh issue list --search create` (the read-only lookup an agent runs
+  #       BEFORE filing, which must stay available) is untouched;
+  #   (B) the REST form — a POST whose path ENDS at the issues collection.
+  #       Requiring the path to end there keeps `…/issues/12/comments --method
+  #       POST` (commenting on an existing issue) out of the deny, which
+  #       creates nothing.
+  #       A path component ends at a query delimiter `?`, a fragment delimiter
+  #       `#`, whitespace, or the segment end — all four are terminators here.
+  #       `/` is deliberately excluded: it continues the path into the
+  #       sub-resource forms this deny exists to leave alone.
+  _issue_create_deny=0
+  while IFS= read -r _ic_seg; do
+    if printf '%s' "$_ic_seg" | grep -qE "^[[:space:]]*gh[[:space:]]+issue[[:space:]]+create\b"; then
+      _issue_create_deny=1; break
+    fi
+    if printf '%s' "$_ic_seg" | grep -qE "repos/[^[:space:]]+/issues([?#[:space:]]|$)" \
+       && printf '%s' "$_ic_seg" | grep -qE "(-X[[:space:]]*|--method[[:space:]=]+)POST\b"; then
+      _issue_create_deny=1; break
+    fi
+  done <<< "$_SEGMENTS"
+  if [ "$_issue_create_deny" = 1 ]; then
+    echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied (docs/issue-proposal.md)." >&2
+    echo "Write a draft to .autoflow/<name>.md per docs/issue-proposal.md, then run: scripts/issue/create-issue.sh --draft .autoflow/<name>.md" >&2
+    echo "The wrapper re-runs the duplicate search from the draft's own title, so the check cannot be satisfied by asserting it was done." >&2
     exit 2
   fi
 
