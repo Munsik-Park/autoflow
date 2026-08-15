@@ -80,8 +80,8 @@ cmd_next() {
   # other's timing.
   max=$(awk -v ns="$ns" '
     match($0 " ", "^## " ns "[0-9]+ ") {
-      id = substr($0, 4); sub(/ .*$/, "", id)
-      n = substr(id, 2) + 0
+      id = substr($0, 4, RLENGTH - 4)
+      n = substr(id, length(ns) + 1) + 0
       if (n > m) m = n
     }
     END { print m + 0 }
