@@ -705,8 +705,15 @@ git_fixture_new() {  # git_fixture_new <dir>
 }
 
 fixture_commit_all() {  # fixture_commit_all <dir> <message>
+  # A swallowed commit failure (e.g. a runner with no global git identity,
+  # user.useConfigOnly=true, and a clone that was never given a local
+  # identity) silently produces an empty delta downstream -- exactly the
+  # vacuity class this suite polices elsewhere. Fail loud instead.
   git -C "$1" add -A >/dev/null 2>&1
-  git -C "$1" commit -q -m "$2" >/dev/null 2>&1
+  if ! git -C "$1" commit -q -m "$2" >/dev/null 2>&1; then
+    echo "fixture_commit_all: commit FAILED in $1 (\"$2\") -- harness error, not a test result" >&2
+    return 1
+  fi
 }
 
 # Every fixture subject below needs to independently satisfy derive_subjects'
@@ -1200,6 +1207,13 @@ echo "=== benefit-binding on the real tree (§3.3) — AC-benefit-empty-delta-re
 
 REALCLONE="$TMP_ROOT/real-benefit-clone"
 if git clone -q "$PROJECT_ROOT" "$REALCLONE" >/dev/null 2>&1; then
+  # This clone commits (below, the proper-subset probe) unlike the sibling
+  # scratch clones above -- give it a local identity, mirroring
+  # git_fixture_new's :703-704, so the probe commit lands on a runner with no
+  # global git identity (e.g. user.useConfigOnly=true) instead of silently
+  # failing into an empty delta.
+  git -C "$REALCLONE" config user.email "test@example.invalid"
+  git -C "$REALCLONE" config user.name "test"
   REAL_HEAD="$(git -C "$PROJECT_ROOT" rev-parse HEAD)"
   git -C "$REALCLONE" checkout -q "$REAL_HEAD" >/dev/null 2>&1 || true
 
@@ -1223,7 +1237,11 @@ if git clone -q "$PROJECT_ROOT" "$REALCLONE" >/dev/null 2>&1; then
   for subj in "${SUBJECTS[@]}"; do
     git -C "$REALCLONE" update-ref refs/remotes/origin/main "$REAL_HEAD"
     echo "# issue-99 proper-subset probe" >> "$REALCLONE/$subj"
-    fixture_commit_all "$REALCLONE" "touch $subj"
+    if ! fixture_commit_all "$REALCLONE" "touch $subj"; then
+      echo "  (proper-subset probe HARNESS ERROR for $subj: commit into REALCLONE failed -- not an empty-delta result)" >&2
+      PROPER_SUBSET_OK=0
+      break
+    fi
     drive_suite_over_root "$REALCLONE"
     SEL_COUNT="$(printf '%s\n' "$DRIVE_OUT" | grep -cE '^SELECTED:' || true)"
     if [ "$SEL_COUNT" -lt 1 ] || [ "$SEL_COUNT" -ge "$DERIVED_COUNT" ]; then
