@@ -413,7 +413,13 @@ ledger_advisory_check() {
     [ -n "$_hash" ] || continue
     _prev=""
     if [ -f "$_cache" ]; then
-      _prev=$(awk -v p="$_ledger" '$2 == p { h = $1 } END { print h }' "$_cache" 2>/dev/null)
+      # A row is `<64-hex sha256><2 spaces><path>`. The path may contain
+      # spaces, so both fields are read by fixed offset rather than by
+      # whitespace field splitting (which would never match such a path and
+      # would re-warn on every call for an unchanged ledger).
+      _prev=$(awk -v p="$_ledger" \
+        'substr($0, 67) == p { h = substr($0, 1, 64) } END { print h }' \
+        "$_cache" 2>/dev/null)
     fi
     [ "$_prev" = "$_hash" ] && continue
 
@@ -426,7 +432,10 @@ ledger_advisory_check() {
       echo "  Allocate identifiers with scripts/ledger/ledger-entry-id.sh next (CLAUDE.md > Decision Ledger)." >&2
     fi
 
-    { [ -f "$_cache" ] && grep -vF "  $_ledger" "$_cache"
+    # Drop this ledger's prior row by the same fixed-offset path comparison
+    # (a substring match would mis-handle paths containing spaces), then
+    # append the fresh one.
+    { [ -f "$_cache" ] && awk -v p="$_ledger" 'substr($0, 67) != p' "$_cache"
       printf '%s  %s\n' "$_hash" "$_ledger"
     } > "$_cache.tmp" 2>/dev/null && mv -f "$_cache.tmp" "$_cache" 2>/dev/null
   done
