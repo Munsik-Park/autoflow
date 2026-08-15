@@ -188,7 +188,9 @@ echo "=== CLASS A: Static assertions ==="
 #       (undeclared Agent spawn during an active cycle, replacing prompt-keyword
 #       classification) → 10 with the multi-active deny (issue #843: fail
 #       closed for score-gated commands/spawns when ≥2 state files read
-#       active:true — feature-design F2 Change 2). Naive grep -c 'exit 2' is
+#       active:true — feature-design F2 Change 2) → 11 with the issue #96
+#       AI issue-creation deny (bare `gh issue create` + same-segment REST
+#       POST …/issues form, Section 1 state-independent). Naive grep -c 'exit 2' is
 #       higher (it
 #       includes comment-prose mentions); the ANCHORED pattern
 #       ^[[:space:]]*exit 2[[:space:]]*$ counts real statements only.
@@ -202,8 +204,8 @@ assert_eq "A8a: exactly ONE AUTOFLOW-SCHEMA-VALIDATION label in hook (consolidat
   # ^^^ FAILS on unmodified hook (count=0) — RED-confirming
 
 EXIT2_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$HOOK" 2>/dev/null || true)
-assert_eq "A8b: anchored 'exit 2' statement count == 10 (9 prior baseline + issue #843 multi-active deny)" \
-  "$EXIT2_COUNT" "10"
+assert_eq "A8b: anchored 'exit 2' statement count == 11 (10 prior baseline + issue #96 issue-creation deny)" \
+  "$EXIT2_COUNT" "11"
   # See the drift history in the A8 comment block above; bump this count (and
   # the history) whenever a deny site is intentionally added or removed.
 

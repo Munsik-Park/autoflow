@@ -313,6 +313,14 @@ EXEMPT_WHOLE_FILES=(
   # those five rows (re-derived: `git grep` over the union token set returns
   # only :118,119,120,121,123), so a whole-file exemption is safe.
   "docs/doc-invariant-registry.md"
+  # tests/issue-create/fixtures/corpus.jsonl is a frozen snapshot of 50 real
+  # tracker titles (issue #96's duplicate-query retrieval corpus, captured via
+  # `gh issue list --state all` at RED time). Three CLOSED historical titles
+  # (#1, #6, #10) name the removed mechanism because those issues were about
+  # it — the rows are recorded tracker history feeding a retrieval index, not
+  # a live reference to the mechanism. Same frozen-snapshot exemption ground
+  # the header comment names.
+  "tests/issue-create/fixtures/corpus.jsonl"
 )
 
 is_exempt_whole_file() {

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# tests/issue-create/mock-gh-search/gh — corpus-backed, argv-dispatching `gh`
+# shim for tests/test-issue-create-wrapper.sh (scripts/issue/create-issue.sh),
+# standing (issue #96 origin).
+#
+# Unlike tests/issue-92/mock-gh (a pure argv sink), this shim ANSWERS
+# `gh issue list --search <term>` from a seeded corpus so the wrapper's own
+# retrieval behavior is exercised, not just its argv shape — per
+# .autoflow/issue-96-verification-design.md > Testability assessment
+# ("corpus-backed and argv-dispatching, not canned").
+#
+# Contract:
+#   GH_INVOCATION_LOG      (required) — every invocation's full argv is
+#     appended, one call per block, each block opening with the literal line
+#     `===CALL===` so a consumer can split the log into per-invocation argv
+#     sequences and assert call ORDER (Wrapper-Reruns-Dupcheck,
+#     Wrapper-Query-Sequence-Stable-And-Additive, …).
+#   GH_SEARCH_CORPUS       (optional) — path to a file of one JSON object per
+#     line: {"number":N,"title":"...","state":"OPEN"|"CLOSED"}. `issue list
+#     --search <term>` answers with the corpus rows whose title CONTAINS
+#     <term> as a fixed substring (this is the stand-in for GitHub's index —
+#     verification design > Testability assessment). Unset/absent → `[]`.
+#   GH_FULL_PAGE_TERMS     (optional) — comma-separated term list. A
+#     `--search <term>` naming one of these terms returns exactly 100
+#     synthetic rows regardless of the corpus, so a caller can drive the
+#     per-term truncation refusal (Wrapper-Query-Not-Truncated) independent
+#     of any other term's page size.
+#   GH_CREATE_EXIT         (optional) — when set and non-zero, `issue create`
+#     exits with this code and prints nothing (propagate-non-zero fixture).
+#   GH_CREATE_URL          (optional) — the URL `issue create` prints on
+#     success. Default: https://github.com/example/repo/issues/999
+#   GH_CREATE_BODY_CAPTURE (optional) — path. On a successful `issue create`
+#     carrying --body-file <f>, the shim copies <f>'s CONTENT into this path
+#     at invocation time, since the wrapper's own tmp file need not survive
+#     the run (Wrapper-Create-Payload-Matches-Draft).
+#   GH_LIST_FAIL_TERMS     (optional) — comma-separated term list. A
+#     `--search <term>` naming one of these terms exits non-zero and prints
+#     nothing, so a caller can drive the "the duplicate query itself failed"
+#     refusal path independent of any other term's result (VERIFY
+#     minimal-implementation follow-up — the wrapper's own `gh issue list`
+#     failure branch had no fixture).
+set -euo pipefail
+
+if [ -z "${GH_INVOCATION_LOG:-}" ]; then
+  echo "mock-gh-search: GH_INVOCATION_LOG not set" >&2
+  exit 78
+fi
+
+{
+  echo "===CALL==="
+  printf '%s\n' "$@"
+} >> "$GH_INVOCATION_LOG"
+
+# ---- dispatch --------------------------------------------------------------
+sub1="${1:-}"; sub2="${2:-}"
+
+if [ "$sub1" = "issue" ] && [ "$sub2" = "list" ]; then
+  term=""
+  prev=""
+  for a in "$@"; do
+    if [ "$prev" = "--search" ]; then term="$a"; fi
+    prev="$a"
+  done
+
+  if [ -n "${GH_LIST_FAIL_TERMS:-}" ]; then
+    IFS=',' read -r -a _fail_terms <<< "$GH_LIST_FAIL_TERMS"
+    for t in "${_fail_terms[@]}"; do
+      if [ "$t" = "$term" ]; then
+        echo "mock-gh-search: simulated 'gh issue list --search $term' failure" >&2
+        exit 1
+      fi
+    done
+  fi
+
+  is_full_page=0
+  if [ -n "${GH_FULL_PAGE_TERMS:-}" ]; then
+    IFS=',' read -r -a _terms <<< "$GH_FULL_PAGE_TERMS"
+    for t in "${_terms[@]}"; do
+      [ "$t" = "$term" ] && is_full_page=1
+    done
+  fi
+
+  if [ "$is_full_page" = 1 ]; then
+    i=1
+    rows="[]"
+    while [ "$i" -le 100 ]; do
+      rows=$(printf '%s' "$rows" | jq --argjson n "$((900000 + i))" --arg t "synthetic full page row $i for term $term" \
+        '. + [{"number":$n,"title":$t,"state":"OPEN"}]')
+      i=$((i + 1))
+    done
+    printf '%s\n' "$rows"
+    exit 0
+  fi
+
+  if [ -n "${GH_SEARCH_CORPUS:-}" ] && [ -f "$GH_SEARCH_CORPUS" ]; then
+    out="[]"
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      title=$(printf '%s' "$line" | jq -r '.title')
+      if printf '%s' "$title" | grep -qF -- "$term"; then
+        out=$(printf '%s' "$out" | jq --argjson row "$line" '. + [$row]')
+      fi
+    done < "$GH_SEARCH_CORPUS"
+    printf '%s\n' "$out"
+    exit 0
+  fi
+
+  echo "[]"
+  exit 0
+fi
+
+if [ "$sub1" = "issue" ] && [ "$sub2" = "create" ]; then
+  if [ -n "${GH_CREATE_EXIT:-}" ] && [ "${GH_CREATE_EXIT}" != "0" ]; then
+    exit "$GH_CREATE_EXIT"
+  fi
+
+  bodyfile=""
+  prev=""
+  for a in "$@"; do
+    if [ "$prev" = "--body-file" ]; then bodyfile="$a"; fi
+    prev="$a"
+  done
+  if [ -n "${GH_CREATE_BODY_CAPTURE:-}" ] && [ -n "$bodyfile" ] && [ -f "$bodyfile" ]; then
+    cp "$bodyfile" "$GH_CREATE_BODY_CAPTURE"
+  fi
+
+  echo "${GH_CREATE_URL:-https://github.com/example/repo/issues/999}"
+  exit 0
+fi
+
+echo "mock-gh-search: unhandled invocation: $*" >&2
+exit 1

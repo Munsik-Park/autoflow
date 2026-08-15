@@ -52,13 +52,17 @@ on:
       - 'docs/gate-matching-standard.md'
       - 'docs/git-workflow.md'
       - 'docs/improvement-backlog.md'
+      - 'docs/issue-proposal.md'
       - 'docs/maintained-docs.md'
       - 'docs/reviewer-backend.md'
       - 'docs/teammate-contracts.md'
       - 'docs/thin-root-layer.md'
+      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
       - 'plugin/autoflow/skills/**'
+      - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/handoff/confirm-ci-green.sh'
       - 'scripts/handoff/create-host-pr.sh'
+      - 'scripts/issue/create-issue.sh'
       - 'scripts/ledger/ledger-entry-id.sh'
       - 'scripts/preflight/check-review-backend.sh'
       - 'scripts/review/codex-review-pr.sh'
@@ -75,6 +79,7 @@ on:
       - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
       - 'tests/issue-92/mock-gh/**'
+      - 'tests/issue-create/**'
       - 'tests/lib/base-ref.sh'
       - 'tests/manual/**'
       - 'tests/plugin/verify-install-into-target.sh'
@@ -92,6 +97,8 @@ on:
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
+      - 'tests/test-issue-create-gate.sh'
+      - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
       - 'tests/test-issue-97-ledger-id-registration.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
@@ -123,13 +130,17 @@ on:
       - 'docs/gate-matching-standard.md'
       - 'docs/git-workflow.md'
       - 'docs/improvement-backlog.md'
+      - 'docs/issue-proposal.md'
       - 'docs/maintained-docs.md'
       - 'docs/reviewer-backend.md'
       - 'docs/teammate-contracts.md'
       - 'docs/thin-root-layer.md'
+      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
       - 'plugin/autoflow/skills/**'
+      - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/handoff/confirm-ci-green.sh'
       - 'scripts/handoff/create-host-pr.sh'
+      - 'scripts/issue/create-issue.sh'
       - 'scripts/ledger/ledger-entry-id.sh'
       - 'scripts/preflight/check-review-backend.sh'
       - 'scripts/review/codex-review-pr.sh'
@@ -146,6 +157,7 @@ on:
       - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
       - 'tests/issue-92/mock-gh/**'
+      - 'tests/issue-create/**'
       - 'tests/lib/base-ref.sh'
       - 'tests/manual/**'
       - 'tests/plugin/verify-install-into-target.sh'
@@ -163,6 +175,8 @@ on:
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
+      - 'tests/test-issue-create-gate.sh'
+      - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
       - 'tests/test-issue-97-ledger-id-registration.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
@@ -277,6 +291,12 @@ jobs:
 
       - name: test-issue-979-review-backend.sh
         run: bash tests/test-issue-979-review-backend.sh
+
+      - name: test-issue-create-gate.sh
+        run: bash tests/test-issue-create-gate.sh
+
+      - name: test-issue-create-wrapper.sh
+        run: bash tests/test-issue-create-wrapper.sh
 
       - name: test-issue-985-doc-assertions.sh
         run: bash tests/test-issue-985-doc-assertions.sh

@@ -13,14 +13,14 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1c3664c693b45598e66d2663e2b3fb74e05801f3a9f8883ab87bd2275a6468a6"
+      "sha256": "6f723dc508e72e973c6053a7b38adfed67f4861e3db6f5ad5758ffa98eee493d"
     },
     {
       "source": "docs/INDEX.md",
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8e2a5e0857999dffd6aa3d14f67281327f851f8504071acc5dba97ddd0eb9c8e"
+      "sha256": "8264055cbf72bd3a83146253d54459c685215c13c86afa4c1ffd822f53d90f30"
     },
     {
       "source": "docs/adr/0000-adr-template.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "44b5381976ce25449f0155ebff741e27de7e3f0af23c71188f1d3f119e3c0fd2"
+      "sha256": "6b83db90411163fe8e5439eb2b3bb07ad060005fcfe7e5e5b1ddd5f8a8c86039"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -128,18 +128,25 @@
       "sha256": "a76b5f60168d4d99dfc0d4f57892519ed214db086cef775f28c7ab5b4a645c13"
     },
     {
+      "source": "docs/issue-proposal.md",
+      "dest": ".claude/autoflow/docs/issue-proposal.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "226c64f36bd1f0b0f5730d39d3bfcd7db7e1b1cd2997abd967efb40d99d1cc09"
+    },
+    {
       "source": "docs/maintained-docs.md",
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "89c13489ae824a297177b7d5767ba6619ff7f96fbb3a671f1c025f285f2054ac"
+      "sha256": "45e00357d310793c9be5ddef92dc10eb323d560580e89608eeda0990479d151e"
     },
     {
       "source": "docs/phases/analysis.md",
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "98c42300131d3bd79121998f42aa09d7d84d3d10b36b4b247824b3c32e003851"
+      "sha256": "a2b3e36ce8f5c2dac41a6eeb80047496ffa368fa0d145357ad256fee0d52f1ef"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -329,6 +336,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "70ef41f7c8d413bd6465bf1ec2e5a1b97028651621fdb71b4ce06953bbdd39fc"
+    },
+    {
+      "source": "scripts/issue/create-issue.sh",
+      "dest": "scripts/issue/create-issue.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "5136de3ef1317bf49eab3a09ca9d33dc24d243c35ebd0ac7dec529af45d8cdc6"
     },
     {
       "source": "setup/manifest.json",

@@ -6428,6 +6428,61 @@
       "match": "regex",
       "literal": "treats? the cited decision as \\*\\*unrecorded\\*\\*",
       "scope": "permanent"
+    },
+    {
+      "id": "96-issue-create-must-claude-md",
+      "origin_issue": 96,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Execution Principles",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "docs/issue-proposal.md"
+    },
+    {
+      "id": "96-issue-create-must-behavioral-tie",
+      "origin_issue": 96,
+      "intent": "coherence",
+      "file": "CLAUDE.md",
+      "section": "Execution Principles",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "is denied at the tool boundary"
+    },
+    {
+      "id": "96-issue-create-triage-crossref",
+      "origin_issue": 96,
+      "intent": "existence",
+      "file": "docs/phases/analysis.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "docs/issue-proposal.md"
+    },
+    {
+      "id": "96-issue-create-registry-row",
+      "origin_issue": 96,
+      "intent": "existence",
+      "file": "docs/maintained-docs.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "docs/issue-proposal.md"
+    },
+    {
+      "id": "96-issue-create-index-routing-row",
+      "origin_issue": 96,
+      "intent": "existence",
+      "file": "docs/INDEX.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "docs/issue-proposal.md"
     }
   ]
 }

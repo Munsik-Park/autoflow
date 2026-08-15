@@ -284,7 +284,7 @@ accretion, which is the defect the issue reports.
 
 | New spec | Disposition | Basis |
 |---|---|---|
-| `tests/test-push-context-base-ref.sh` | **standing** | subject-named, no issue number. It asserts that every base-ref-consuming spec registered by a `push: branches: [main]` workflow exits 0 under the push-trigger resolution — a permanent property of the tree and its CI wiring. It **fixes** the base ref as an input condition rather than depending on a diff, so it is a STATE assertion, not a DELTA one. Its `run:` step and `paths:` entries are permanent |
+| `tests/test-push-context-base-ref.sh` | **standing** | subject-named, no issue number. It asserts that every base-ref-consuming spec registered by a `push: branches: [main]` workflow exits 0 under the push-trigger resolution — a permanent property of the tree and its CI wiring. It **fixes** the base ref as an input condition rather than depending on a diff, so it is a STATE assertion, not a DELTA one. Since issue #99 the asserted **property** stays STATE while the per-run **evidence budget** is delta-scoped: the subject set is still re-derived every run, but only the subset this run's change surface could have altered is executed, and every unselected subject's native push-topology backstop is asserted per subject (`NATIVE-COVERAGE:` lines). An unresolvable comparison base is a terminal BLOCK, never an empty selection. Its `run:` step and `paths:` entries are permanent |
 
 ## 8. Migration provenance — retired-guard dispositions (issue #73)
 
@@ -310,3 +310,26 @@ cycle's merge-decision point per §1/§2 and the §7.1 rule: suite and manual do
 the suite's `run:` step and both `paths:` entries removed from
 `.github/workflows/contract-suites.yml`, and their disposition rows removed with them,
 per the #73 precedent (commit `ff68814`).
+
+## 10. Migration provenance — retired-guard dispositions (issue #96)
+
+Issue #96 adds the three-layer AI-initiated issue-creation gate: an unconditional
+hook deny on `gh issue create` (and its same-segment REST form), a wrapper
+(`scripts/issue/create-issue.sh`) that re-runs the duplicate-issue query itself
+from a draft's own title rather than trusting the drafting agent's self-report,
+and an operator permission layer this repository documents but cannot ship. Its
+permanent residue is a data append to `tests/fixtures/doc-invariants.json`
+(`jq '[.invariants[]|select(.origin_issue==96)]|length' tests/fixtures/doc-invariants.json`
+→ 5 entries, `origin_issue: 96`, `scope: "permanent"`). Its new spec files, their
+fixture tree, and its one manual-scenario document state their own disposition
+below, per §1/§2 and the §7.1 rule applied to this cycle — caught by GATE:QUALITY
+attempt 1 (avg 8.0, `test_quality` capped at 6): both suites shipped RED
+issue-numbered despite being standing, permanently-CI-registered state
+assertions, with no disposition stated anywhere.
+
+| New asset | Disposition | Basis |
+|---|---|---|
+| `tests/test-issue-create-gate.sh` (renamed from `tests/test-issue-96-issue-create-gate.sh`) | **standing** | subject-named, no issue number, per the RED naming rule (`docs/autoflow-guide.md` > RED > Naming). It asserts permanent properties of the tree — the hook's `gh issue create` / REST-form deny, its segment-scoped co-occurrence with the pre-existing denies, and the two composition oracles (`.autoflow/` filename-namespace coexistence with `scripts/cleanup/cleanup-issue.sh`, and the hook's scan-path composition) — none of which depends on this cycle's own diff. It is a STATE assertion, not a DELTA one. Its `run:` step, both `paths:` entries, its `# ci-subject:` header, and its own self-path literals are permanent. Its retained internal fixture content that happens to read `issue-96`/`issue-97` (the namespace-coexistence oracle's seeded example state files) is not a path reference — it is the same class of self-referential example content the §7/§8 precedents (`tests/test-workflow-trigger-conformance.sh`, `tests/test-standing-lint-drives.sh`) already carry post-rename |
+| `tests/test-issue-create-wrapper.sh` (renamed from `tests/test-issue-96-issue-create-wrapper.sh`) | **standing** | same basis — it asserts the permanent behavior contract of `scripts/issue/create-issue.sh` (argument/precondition validation, the draft grammar, the term-derivation and duplicate-query invariants, creation and rename binding) under the corpus-backed `gh` PATH shim, none of it tied to this cycle's diff |
+| `tests/issue-create/mock-gh-search/gh`, `tests/issue-create/fixtures/corpus.jsonl` (renamed from `tests/issue-96/mock-gh-search/gh`, `tests/issue-96/fixtures/corpus.jsonl`) | **standing — fixtures of the row above** | the shim and its seeded corpus are permanent test doubles the wrapper suite depends on; renamed alongside it in the same commit so no dangling reference is left, the same treatment the `tests/fixtures/anchor-resolution-*` row in §7 gives its own renamed fixture pair |
+| `tests/manual/issue-96-manual-scenarios.md` | **cycle-local (manual-scenario lane) — stays issue-named** | discharges the one non-automatable acceptance criterion (`Permission-Ask-Prompts` — the operator's harness permission prompt, decided before any in-repo process runs and therefore not observable in-repo). This is a **different lane** from the two suites above: per the live precedent this repository already carries (`tests/manual/issue-42-manual-scenarios.md`, `tests/manual/issue-52-manual-scenarios.md`, `tests/manual/issue-847-manual-scenarios.md`), a manual-scenario document is not renamed to its subject — it stays issue-named and is retired only when, per §6's `tests/manual/` disposition, no live dependent remains (no registry entry targets it, no surviving suite asserts on it, no `docs/maintained-docs.md` row registers it, no prose document cites it). Not retired at this commit: the manual doc remains the live operator record for `Permission-Ask-Prompts` (it cites the gate suite as its verification counterpart; the `docs/maintained-docs.md` row registers it) |

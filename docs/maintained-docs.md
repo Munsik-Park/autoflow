@@ -105,6 +105,12 @@ orchestrator does not modify sub-repo files — see
 | CI-Green Confirm Script | `scripts/handoff/confirm-ci-green.sh` (+ `tests/test-issue-25-confirm-ci-green.sh`, `tests/test-issue-30-confirm-ci-green.sh`) | The mergeable-precheck / early-block / finite-poll / exit-code contract (`0`/`10`/`11`/`12`/`13`/`14`/`64`), the `CI_POLL_TIMEOUT_SECS`/`CI_POLL_INTERVAL_SECS` tunables, or the rollup latest-per-identity dedup classification (issue #30) change (issue #25) | Orchestrator AI |
 | Phase-Marker Emitter Script | `scripts/canary/emit-phase-marker.sh` (+ `tests/test-issue-35-phase-marker.sh`) | The four-flag CLI (`--issue`/`--cycle`/`--phase`/`--event`), the `.autoflow/issue-{N}-phases.jsonl` record schema (`issue`/`cycle`/`phase`/`event`/`ts`/`schema_version`), the single-`ts`-producer contract, or the stdout `path:line` anchor contract changes (issue #35) | Orchestrator AI |
 
+#### Issue creation
+
+| Artifact | Path | Update When | Maintainer |
+|----------|------|-------------|------------|
+| Issue Proposal Contract | `docs/issue-proposal.md` + `scripts/issue/create-issue.sh` (+ `tests/test-issue-create-gate.sh`, `tests/test-issue-create-wrapper.sh`) | The draft grammar (`## Title` / `## Grounds` / `## Duplicate check` / `## Body`), the `.autoflow/` top-level containment rule, the term-derivation rule (leading-tag strip, ASCII-range lowercase, ASCII-punctuation separators with non-ASCII bytes never separating, the two locale-free codepoint floors 4/2, dedup, the 8-term cap) and its fixed-constant status, the `--state all` per-term query and the `--limit 100` truncation refusal, the candidate-disposition invariant, the exit-code contract (`0`/`64`/`65`/`70`), the `issue-<N>-proposal.md` rename, or the hook's `gh issue create` deny changes (issue #96) | Orchestrator AI |
+
 ### Sub-repo (`services/librechat`)
 
 > **N/A under zero-submodule topology (see #798).** The `services` submodule was
