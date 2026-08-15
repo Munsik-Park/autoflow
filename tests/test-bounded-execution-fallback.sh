@@ -56,9 +56,6 @@ WATCHDOG_LINT="$PROJECT_ROOT/scripts/test/check-watchdog-detachment.sh"
 MANIFEST_LINT="$PROJECT_ROOT/scripts/test/check-manifest-regen-clean.sh"
 CI_COVERAGE_LINT="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
 TRIGGER_CONFORMANCE="$PROJECT_ROOT/tests/test-workflow-trigger-conformance.sh"
-CONTRACT_25="$PROJECT_ROOT/tests/test-issue-25-confirm-ci-green.sh"
-CONTRACT_30="$PROJECT_ROOT/tests/test-issue-30-confirm-ci-green.sh"
-CONTRACT_979="$PROJECT_ROOT/tests/test-issue-979-probe.sh"
 
 SYSTEM_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -342,7 +339,7 @@ fi
 
 # =============================================================================
 echo ""
-echo "=== AC-marker-cleanup / AC-contract-preserved second site: confirm-ci-green.sh ==="
+echo "=== AC-marker-cleanup second site: confirm-ci-green.sh ==="
 GREEN_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[{"__typename":"CheckRun","name":"x","workflowName":"CI","status":"COMPLETED","conclusion":"SUCCESS"}]}'
 
 CONFIRM_TMPDIR1="$(mktemp -d)"
@@ -362,21 +359,16 @@ assert_true "AC-marker-cleanup (confirm-ci-green.sh, not-fired branch): no lefto
 rm -rf "$CONFIRM_TMPDIR2"
 
 # =============================================================================
-echo ""
-echo "=== AC-contract-preserved (fence: re-run existing contract suites unchanged) ==="
-if [ -f "$CONTRACT_25" ]; then
-  harness_run 600 -- bash "$CONTRACT_25" >/dev/null 2>&1
-  assert_true "AC-contract-preserved: tests/test-issue-25-confirm-ci-green.sh still exits 0" "[ $? -eq 0 ]"
-fi
-if [ -f "$CONTRACT_30" ]; then
-  harness_run 600 -- bash "$CONTRACT_30" >/dev/null 2>&1
-  assert_true "AC-contract-preserved: tests/test-issue-30-confirm-ci-green.sh still exits 0" "[ $? -eq 0 ]"
-fi
-if [ -f "$CONTRACT_979" ]; then
-  harness_run 600 -- bash "$CONTRACT_979" >/dev/null 2>&1
-  assert_true "AC-contract-preserved: tests/test-issue-979-probe.sh still exits 0" "[ $? -eq 0 ]"
-fi
-
+# AC-contract-preserved is NOT re-run here (ledger O3): regression
+# confirmation ("prior suites still pass") belongs to exactly one place — the
+# CI sibling steps that already run tests/test-issue-25/30-confirm-ci-green.sh
+# and tests/test-issue-979-probe.sh once each per CI pass
+# (.github/workflows/contract-suites.yml). Embedding full re-runs here
+# multiplied test-issue-25's execution count (test-issue-30 alone re-invokes
+# it four times internally) without adding coverage this host lacks: both CI
+# and every host this suite runs on carry `timeout`/`gtimeout`, so the
+# re-run suites never exercise the patched fallback branch anyway (measured
+# at GREEN, commit b79d855).
 # =============================================================================
 echo ""
 echo "=== AC-sweep-scope (RED discriminator — no sweep exists today) ==="
@@ -386,7 +378,14 @@ echo "=== AC-sweep-scope (RED discriminator — no sweep exists today) ==="
 # git repo with tests/fixtures/ pre-seeded before the run: a dead-PID
 # same-prefix tree (must be removed once a sweep lands), a live-PID
 # same-prefix tree (must survive), and the OTHER producer's prefix
-# (must survive — the destroying direction the risk line names).
+# (must survive — the destroying direction the risk line names). The sweep
+# fires at suite startup, before the suite creates its own TMP_ROOT, so this
+# arm needs only that startup window — mirrors arm2's checkpoint-stop below
+# rather than letting the whole suite run to completion: launched under
+# `set -m` (its own process-group leader), stopped with a group-scoped TERM
+# guarded by a pgid-inequality assertion against this leg shell (ledger
+# F5/F14) the instant its own TMP_ROOT checkpoint appears, so its EXIT trap
+# still runs and no new residue is left by the stop itself.
 FX_ROOT="$(mktemp -d)"
 mkdir -p "$FX_ROOT/tests/fixtures" "$FX_ROOT/.github/workflows"
 ( cd "$FX_ROOT" && git init -q && git commit --allow-empty -q -m init ) 2>/dev/null
@@ -403,8 +402,28 @@ mkdir -p "$DEAD_TREE" "$LIVE_TREE" "$FOREIGN_TREE"
 : > "$LIVE_TREE/residue.txt"
 : > "$FOREIGN_TREE/residue.txt"
 
-harness_run 180 -- bash "$PUSH_CONTEXT_SUITE" "$FX_ROOT" >/dev/null 2>&1 || true
+LEG_PGID="$(pgid_of $$)"
+ARM1_HOLDER="$(mktemp)"
+( set -m; bash "$PUSH_CONTEXT_SUITE" "$FX_ROOT" >/dev/null 2>&1 & echo $! >"$ARM1_HOLDER" )
+ARM1_SUITE_PID="$(cat "$ARM1_HOLDER" 2>/dev/null)"
+ARM1_CHECKPOINT="$FX_ROOT/tests/fixtures/.tmp-push-context-base-ref-$ARM1_SUITE_PID"
+for _ in $(seq 1 80); do
+  [ -d "$ARM1_CHECKPOINT" ] && break
+  sleep 0.25
+done
+ARM1_PGID=""
+[ -n "$ARM1_SUITE_PID" ] && ARM1_PGID="$(pgid_of "$ARM1_SUITE_PID")"
+if [ -n "$ARM1_PGID" ] && [ "$ARM1_PGID" != "$LEG_PGID" ]; then
+  kill -TERM -"$ARM1_PGID" 2>/dev/null || kill "$ARM1_SUITE_PID" 2>/dev/null
+else
+  kill "$ARM1_SUITE_PID" 2>/dev/null
+fi
+wait "$ARM1_SUITE_PID" 2>/dev/null
+sleep 0.5
+rm -f "$ARM1_HOLDER"
 
+assert_true "AC-sweep-scope arm1: the launched push-context suite was its own process-group leader before the stop (guard precondition, ledger F5/F14)" \
+  "[ -n \"$ARM1_PGID\" ] && [ \"$ARM1_PGID\" != \"$LEG_PGID\" ]"
 assert_false "AC-sweep-scope arm1: a same-prefix DEAD-PID tree does not survive once a sweep exists (RED: no sweep today)" \
   "[ -d \"$DEAD_TREE\" ]"
 assert_true "AC-sweep-scope arm1: the same-prefix LIVE-PID tree is never removed" \
@@ -414,7 +433,7 @@ assert_true "AC-sweep-scope arm1: the OTHER producer's prefix tree is never remo
 
 kill "$ARM1_LIVE_PID" 2>/dev/null
 wait "$ARM1_LIVE_PID" 2>/dev/null
-rm -rf "$FX_ROOT"
+rm -rf "$FX_ROOT" "$ARM1_CHECKPOINT" 2>/dev/null
 
 # Arm 2 — tests/test-run-doc-invariants.sh, no root override (§0), so its
 # sweep is only drivable against the real tests/fixtures/ tree. Pre-seed
