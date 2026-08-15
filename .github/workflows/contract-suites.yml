@@ -71,6 +71,7 @@ on:
       - 'scripts/test/check-manifest-regen-clean.sh'
       - 'scripts/test/check-suite-ci-coverage.sh'
       - 'scripts/test/check-tests-tree-hygiene.sh'
+      - 'scripts/test/check-watchdog-detachment.sh'
       - 'setup/gen-manifest-hashes.sh'
       - 'setup/manifest.json'
       - 'setup/thin-root-layer/**'
@@ -86,6 +87,7 @@ on:
       - 'tests/plugin/verify-install-skill-scripts.sh'
       - 'tests/plugin/verify-thin-root-layer.sh'
       - 'tests/run-doc-invariants.sh'
+      - 'tests/test-bounded-execution-fallback.sh'
       - 'tests/test-codex-review-label-step.sh'
       - 'tests/test-gate-hardening.sh'
       - 'tests/test-issue-16-manifest-locale-invariance.sh'
@@ -97,6 +99,7 @@ on:
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
+      - 'tests/test-issue-952-wizard-removal.sh'
       - 'tests/test-issue-create-gate.sh'
       - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
@@ -148,6 +151,7 @@ on:
       - 'scripts/test/check-manifest-regen-clean.sh'
       - 'scripts/test/check-suite-ci-coverage.sh'
       - 'scripts/test/check-tests-tree-hygiene.sh'
+      - 'scripts/test/check-watchdog-detachment.sh'
       - 'setup/gen-manifest-hashes.sh'
       - 'setup/manifest.json'
       - 'setup/thin-root-layer/**'
@@ -163,6 +167,7 @@ on:
       - 'tests/plugin/verify-install-skill-scripts.sh'
       - 'tests/plugin/verify-thin-root-layer.sh'
       - 'tests/run-doc-invariants.sh'
+      - 'tests/test-bounded-execution-fallback.sh'
       - 'tests/test-codex-review-label-step.sh'
       - 'tests/test-gate-hardening.sh'
       - 'tests/test-issue-16-manifest-locale-invariance.sh'
@@ -174,6 +179,7 @@ on:
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
+      - 'tests/test-issue-952-wizard-removal.sh'
       - 'tests/test-issue-create-gate.sh'
       - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
@@ -219,6 +225,9 @@ jobs:
 
       - name: test-push-context-base-ref.sh
         run: bash tests/test-push-context-base-ref.sh
+
+      - name: test-bounded-execution-fallback.sh
+        run: bash tests/test-bounded-execution-fallback.sh
 
       - name: adr-0016-conformance-check.sh
         run: bash tests/adr-0016-conformance-check.sh
@@ -304,6 +313,9 @@ jobs:
 
       - name: tests-tree hygiene lint
         run: bash scripts/test/check-tests-tree-hygiene.sh
+
+      - name: watchdog detachment lint
+        run: bash scripts/test/check-watchdog-detachment.sh
 
       - name: manifest regen-clean lint
         run: bash scripts/test/check-manifest-regen-clean.sh

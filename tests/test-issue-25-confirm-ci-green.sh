@@ -129,19 +129,27 @@ run_bounded() {
     RB_EXIT=$?
     [ "$RB_EXIT" -eq 124 ] && RB_KILLED=1
   else
-    ( "$@" ) >"$logfile" 2>&1 &
+    local marker="$logfile.watchdog"
+    set -m
+    ( "$@" ) >"$logfile" 2>&1 </dev/null &
     local pid=$!
-    ( sleep "$bound"; if kill -0 "$pid" 2>/dev/null; then kill "$pid" 2>/dev/null; echo killed > "$logfile.watchdog"; fi ) &
+    ( sleep "$bound"
+      if kill -0 "$pid" 2>/dev/null; then
+        echo killed > "$marker"
+        kill -TERM -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
+      fi
+    ) >/dev/null 2>&1 &
     local watchdog_pid=$!
+    set +m
     wait "$pid" 2>/dev/null
     RB_EXIT=$?
-    if [ -s "$logfile.watchdog" ]; then
+    if [ -s "$marker" ]; then
       RB_KILLED=1
     else
-      kill "$watchdog_pid" 2>/dev/null
+      kill -TERM -"$watchdog_pid" 2>/dev/null || kill "$watchdog_pid" 2>/dev/null
     fi
     wait "$watchdog_pid" 2>/dev/null
-    rm -f "$logfile.watchdog" 2>/dev/null
+    rm -f "$marker" 2>/dev/null
   fi
 }
 

@@ -121,13 +121,15 @@ if [ -n "$NOARG_TBIN" ]; then
   (cd "$NOARG_TMP" && "$NOARG_TBIN" 5 bash "$INIT_SH" </dev/null) >"$NOARG_LOG" 2>&1
   NOARG_EXIT=$?
 else
-  (cd "$NOARG_TMP" && bash "$INIT_SH" </dev/null) >"$NOARG_LOG" 2>&1 &
+  set -m
+  (cd "$NOARG_TMP" && bash "$INIT_SH" </dev/null) >"$NOARG_LOG" 2>&1 </dev/null &
   NOARG_PID=$!
-  ( sleep 5; kill "$NOARG_PID" 2>/dev/null ) &
+  ( sleep 5; kill -TERM -"$NOARG_PID" 2>/dev/null || kill "$NOARG_PID" 2>/dev/null ) >/dev/null 2>&1 &
   NOARG_WPID=$!
+  set +m
   wait "$NOARG_PID" 2>/dev/null
   NOARG_EXIT=$?
-  kill "$NOARG_WPID" 2>/dev/null
+  kill -TERM -"$NOARG_WPID" 2>/dev/null || kill "$NOARG_WPID" 2>/dev/null
   wait "$NOARG_WPID" 2>/dev/null
 fi
 NOARG_OUT="$(cat "$NOARG_LOG")"
