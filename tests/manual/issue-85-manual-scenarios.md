@@ -15,9 +15,15 @@ and AutoFlow does not merge (`CLAUDE.md` > Development Lifecycle).
 "the push-trigger context on `main` is green, with a post-merge reproduction condition."
 
 **Why not automated:** `tests/test-push-context-base-ref.sh` reproduces the push-trigger base-ref
-resolution (`merge-base HEAD origin/main == HEAD`) in an isolated scratch clone and requires every
-derived subject to exit 0 there. That proves the resolution mechanism this cycle fixes is correct
-in isolation. It cannot observe the actual hosted `contract-suites` / `e2e-dummy-target` workflow
+resolution (`merge-base HEAD origin/main == HEAD`) in an isolated scratch clone and requires the
+subjects it executes there to exit 0. Since issue #99 that execution is **delta-scoped**: the
+subject set is still derived every run, but only the subset this run's own change surface could
+have altered is executed in the scratch clone (reported on the run's `SELECTED:` /
+`NOT-SELECTED:` lines), while every unselected subject's backstop is its own native run in the
+push topology — asserted, per subject, by the `NATIVE-COVERAGE:` premise lines. That proves the
+resolution mechanism this cycle fixes is correct in isolation, and it makes the hosted push-to-main
+run below the *primary* evidence for the unselected remainder rather than a corroboration of it.
+It cannot observe the actual hosted `contract-suites` / `e2e-dummy-target` workflow
 runs that GitHub Actions fires on a real push to `main`, because that trigger does not exist before
 the external merge, and AutoFlow's own authority ends at an open PR (`CLAUDE.md` > Development
 Lifecycle) — it never merges.
