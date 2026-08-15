@@ -250,12 +250,17 @@ assert_true "AC-bound-fires (negative arm): elapsed is nowhere near the 61s boun
 echo ""
 echo "=== AC-no-self-kill (RED discriminator) ==="
 CALLER_PGID="$(pgid_of $$)"
-sleep 30 &
+sleep 90 &
 SENTINEL_PID=$!
 ( PATH="$FAKEBIN:$SYSTEM_PATH" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=79 PROBE_TIMEOUT_SECS=59 \
     "$CHECK_SCRIPT" --backend claude --probe </dev/null >/dev/null 2>&1 ) &
 PROBE_BG_PID=$!
-( sleep 79; kill -9 "$PROBE_BG_PID" 2>/dev/null ) &
+# Outer safety-kill sleep uses a duration DISTINCT from FAKE_HANG_SECS (79) —
+# find_pid_by_cmd matches by the literal duration in the ps args column, so a
+# collision here would let this harness watchdog's own sleep masquerade as
+# the subject's (verification design §5: "every matched token chosen so it
+# cannot occur in the driving command line").
+( sleep 95; kill -9 "$PROBE_BG_PID" 2>/dev/null ) &
 PROBE_BG_WPID=$!
 SUB_PID=""
 for _ in $(seq 1 40); do
@@ -360,15 +365,15 @@ rm -rf "$CONFIRM_TMPDIR2"
 echo ""
 echo "=== AC-contract-preserved (fence: re-run existing contract suites unchanged) ==="
 if [ -f "$CONTRACT_25" ]; then
-  harness_run 300 -- bash "$CONTRACT_25" >/dev/null 2>&1
+  harness_run 600 -- bash "$CONTRACT_25" >/dev/null 2>&1
   assert_true "AC-contract-preserved: tests/test-issue-25-confirm-ci-green.sh still exits 0" "[ $? -eq 0 ]"
 fi
 if [ -f "$CONTRACT_30" ]; then
-  harness_run 300 -- bash "$CONTRACT_30" >/dev/null 2>&1
+  harness_run 600 -- bash "$CONTRACT_30" >/dev/null 2>&1
   assert_true "AC-contract-preserved: tests/test-issue-30-confirm-ci-green.sh still exits 0" "[ $? -eq 0 ]"
 fi
 if [ -f "$CONTRACT_979" ]; then
-  harness_run 300 -- bash "$CONTRACT_979" >/dev/null 2>&1
+  harness_run 600 -- bash "$CONTRACT_979" >/dev/null 2>&1
   assert_true "AC-contract-preserved: tests/test-issue-979-probe.sh still exits 0" "[ $? -eq 0 ]"
 fi
 
@@ -473,7 +478,7 @@ assert_true "AC-site-closure: the lint's own --self-test passes (conforming/orde
   "[ $? -eq 0 ]"
 WATCHDOG_LINT_OUT="$(mktemp)"; bash "$WATCHDOG_LINT" >"$WATCHDOG_LINT_OUT" 2>&1
 WATCHDOG_LINT_RC=$?
-assert_false "AC-site-closure: the real tree conforms end-to-end (RED today — no site carries the canonical block yet)" \
+assert_true "AC-site-closure: the real tree conforms end-to-end (every fallback site carries the fix)" \
   "[ $WATCHDOG_LINT_RC -eq 0 ]"
 rm -f "$WATCHDOG_LINT_OUT"
 

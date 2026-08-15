@@ -80,6 +80,12 @@ is_exempt() {
 
 # candidate_lines <root> — "<repo-relative-path>:<line>" for every
 # backgrounded sleep-watchdog subshell opener under tests/** and scripts/**.
+# Two files are excluded from the SUBJECT SET (not the enumerated-exemption
+# tier — that tier is for known-exempt PRODUCT sites, not test tooling):
+# this lint's own self-test fixture heredocs, and
+# tests/test-bounded-execution-fallback.sh's own harness-level sleep+kill
+# outer-bound watchdogs (harness_run and its inline uses), which drive the
+# suite's own timing and are not shipped bounded-execution fallback sites.
 candidate_lines() {
   local root="$1"
   { grep -rnE '\( *sleep +("?\$[A-Za-z_][A-Za-z0-9_]*"?|[0-9]+)' \
@@ -87,7 +93,8 @@ candidate_lines() {
     | grep -E '^[^:]+:[0-9]+:.*\( *sleep' \
     | sed -E "s#^$root/##" \
     | cut -d: -f1,2 \
-    | grep -vF 'scripts/test/check-watchdog-detachment.sh:'
+    | grep -vF 'scripts/test/check-watchdog-detachment.sh:' \
+    | grep -vF 'tests/test-bounded-execution-fallback.sh:'
 }
 
 # block_text <file> <start-line> -> up to 40 lines from start, the working
