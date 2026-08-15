@@ -18,7 +18,7 @@
 #
 # Usage:
 #   ledger-entry-id.sh next  <ledger-path> <namespace>   -> prints <NS><serial>
-#   ledger-entry-id.sh check <ledger-path>...            -> reports defects
+#   ledger-entry-id.sh check <ledger-path>               -> reports defects
 #
 # Namespaces (CLAUDE.md > Decision Ledger — the single documentary home of the
 # writer -> namespace mapping): `O` = orchestrator, `F` = facilitator delegate.
@@ -39,7 +39,7 @@ usage() {
   cat >&2 <<'EOF'
 Usage:
   ledger-entry-id.sh next  <ledger-path> <namespace>
-  ledger-entry-id.sh check <ledger-path>...
+  ledger-entry-id.sh check <ledger-path>
 
 Namespaces issuable by `next`: O (orchestrator), F (facilitator delegate).
 E is legacy — readable by `check`, never issued.
@@ -125,25 +125,23 @@ check_one() {
   ' "$1"
 }
 
-# check <ledger-path>...
+# check <ledger-path>
 cmd_check() {
-  local file rc=0
-  if [ "$#" -eq 0 ]; then
+  local file="${1:-}"
+  # Exactly one ledger, by design. Every caller — the hook's advisory step and
+  # the facilitator prompts — passes a single path, and an aggregate scan would
+  # blur which ledger a defect line belongs to, since the line names a number
+  # inside a file it does not identify. A second argument is therefore a usage
+  # error with the same disposition as none at all, not a wider scan.
+  if [ "$#" -ne 1 ] || [ -z "$file" ]; then
     usage
     return 2
   fi
-  for file in "$@"; do
-    if [ ! -f "$file" ]; then
-      echo "ledger-entry-id: no such ledger: $file" >&2
-      return 2
-    fi
-  done
-  # Every file is reported before the aggregate verdict returns — a defect in
-  # the first ledger must not hide a defect in the second.
-  for file in "$@"; do
-    check_one "$file" >&2 || rc=1
-  done
-  return $rc
+  if [ ! -f "$file" ]; then
+    echo "ledger-entry-id: no such ledger: $file" >&2
+    return 2
+  fi
+  check_one "$file" >&2
 }
 
 main() {

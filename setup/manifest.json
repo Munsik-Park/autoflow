@@ -328,7 +328,7 @@
       "dest": "scripts/ledger/ledger-entry-id.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ecc7915bf06479178317334a383c00c7444ae589ca0970676513e2211361990e"
+      "sha256": "e58ecd13a27ccaf3d1b3ccb5dc2735f743dcce24a8b8b769e3c21e209ffcf853"
     },
     {
       "source": "setup/manifest.json",
