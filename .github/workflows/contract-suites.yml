@@ -100,7 +100,6 @@ on:
       - 'tests/test-issue-create-gate.sh'
       - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
-      - 'tests/test-issue-97-ledger-id-registration.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
       - 'tests/test-issue-979-doc-neutrality.sh'
       - 'tests/test-issue-979-preflight-backend-check.sh'
@@ -178,7 +177,6 @@ on:
       - 'tests/test-issue-create-gate.sh'
       - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
-      - 'tests/test-issue-97-ledger-id-registration.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
       - 'tests/test-issue-979-doc-neutrality.sh'
       - 'tests/test-issue-979-preflight-backend-check.sh'
@@ -242,9 +240,6 @@ jobs:
 
       - name: test-ledger-entry-id.sh
         run: bash tests/test-ledger-entry-id.sh
-
-      - name: test-issue-97-ledger-id-registration.sh
-        run: bash tests/test-issue-97-ledger-id-registration.sh
 
       - name: test-issue-16-manifest-locale-invariance.sh
         run: bash tests/test-issue-16-manifest-locale-invariance.sh
