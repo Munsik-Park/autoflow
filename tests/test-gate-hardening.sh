@@ -634,6 +634,22 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+echo "Issue #97 — AC-hook-advisory-check: content-hash cache suppresses a REPEAT warning on an unchanged ledger"
+# Same fixture dir as the assertion above, called a SECOND time with the
+# ledger file byte-identical to the first call — the step's content-hash
+# cache (feature design > standing-advisory-check > Cache location) must
+# recognize "unchanged since last observed" and stay silent, so a defective
+# ledger does not repeat the same warning on every tool call of a session.
+run_hook_out 0 "second call, SAME unchanged defective ledger -> allowed" \
+  "$LEDGER_CHANGED_DEFECT" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  FAIL: second call on an unchanged ledger repeated the warning (cache did not suppress it) -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: second call on an unchanged ledger is silent (cache-hit suppression)"
+  PASS=$((PASS + 1))
+fi
+
 run_hook_out 0 "changed CLEAN ledger -> allowed and silent (no false-positive warning)" \
   "$LEDGER_CHANGED_CLEAN" "$(bash_json 'git status')"
 if [ -z "$HOOK_ERR" ] || ! printf '%s' "$HOOK_ERR" | grep -qiE 'duplicate-id|unidentified-entry'; then

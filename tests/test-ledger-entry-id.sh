@@ -306,6 +306,34 @@ assert_true "AC-check-unidentified: reports unidentified-entry for the bare pros
 
 # ---------------------------------------------------------------------------
 echo ""
+echo "=== unidentified-entry sanitize/truncate bound (VERIFY step-3 leg) ==="
+# check_one's sanitize() strips control characters and truncates the echoed
+# heading to 117 chars + "..." once the raw line exceeds 120 -- load-bearing
+# because the hook's advisory step (Section 1c) surfaces this same text in a
+# stderr warning line, so an unbounded/control-char-carrying echo would leak
+# into that warning verbatim.
+SANITIZE_LEDGER="$TMP_ROOT/sanitize-ledger.md"
+HEADING_LINE="## Unidentified heading$(printf '\x01')with an embedded control character and a very long trailing description that pushes this single heading line comfortably past the one hundred twenty character truncation bound enforced by the ledger sanitize helper for check"
+{
+  printf '%s\n' "# Decision Ledger — issue #9"
+  printf '\n'
+  printf '%s\n' "$HEADING_LINE"
+  printf '\n'
+  printf '%s\n' "- Decision: x"
+  printf '%s\n' "- Grounds: y"
+  printf '%s\n' "- Authority: z"
+  printf '%s\n' "- Cycle/Phase: cycle 1, GATE:PLAN"
+} > "$SANITIZE_LEDGER"
+run_check "$SANITIZE_LEDGER"
+assert_true "sanitize: exits 1 on the unidentified over-long/control-char heading" \
+  '[ "$CHECK_EXIT" = "1" ]'
+assert_true "sanitize: unidentified-entry text is truncated to exactly 117 chars + '...' (line 3)" \
+  'printf "%s" "$CHECK_ERR" | grep -qE "^unidentified-entry: line 3: .{117}\.\.\.$"'
+assert_true "sanitize: no raw control byte survives in check'\''s stderr output" \
+  '[ -z "$(printf "%s" "$CHECK_ERR" | LC_ALL=C tr -d "[:print:]\n")" ]'
+
+# ---------------------------------------------------------------------------
+echo ""
 echo "=== AC-check-clean ==="
 
 CLEAN_LEDGER="$TMP_ROOT/clean-ledger.md"
@@ -393,6 +421,22 @@ assert_true "AC-check-usage: no path argument exits 2" \
   '[ "$CHECK_EXIT" = "2" ]'
 run_check "$TMP_ROOT/does-not-exist-ledger.md"
 assert_true "AC-check-usage: nonexistent path exits 2 (distinct from the exit-1 defect outcome)" \
+  '[ "$CHECK_EXIT" = "2" ]'
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== check <ledger-path> is single-argument (VERIFY step-3 leg; EXPECTED RED until Developer AI removes the variadic loop) ==="
+# Feature design's own Command interface ("check <ledger-path> -> ... ; 0 | 1 | 2",
+# singular) and detection-script ("Scope is one ledger file passed by path") both
+# scope `check` to exactly ONE ledger; no caller (the hook's advisory step, the
+# facilitator prompts) ever passes more than one. A second path is therefore a
+# usage error (exit 2), the same disposition as no path at all -- NOT an
+# aggregate multi-file scan. VERIFY step 3 (issue #97) found the shipped script
+# accepts `check <path>...` variadically with no test and no AC behind it; this
+# leg is the removal-tracking test, routed by the team lead as "remove, not
+# keep" -- it is expected to stay Red until that removal lands.
+run_check "$CLEAN_LEDGER" "$FILE_LEDGER"
+assert_true "check: a SECOND ledger-path argument is a usage error (exit 2), matching the documented single-argument interface" \
   '[ "$CHECK_EXIT" = "2" ]'
 
 # ---------------------------------------------------------------------------
