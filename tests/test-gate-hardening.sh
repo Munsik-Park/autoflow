@@ -650,6 +650,47 @@ else
   PASS=$((PASS + 1))
 fi
 
+echo "Issue #97 — AC-hook-advisory-check: content-hash cache suppresses a REPEAT warning under a WHITESPACE project path"
+# Same shape as the cache-hit suppression case above, but the fixture project
+# dir itself contains a space (e.g. an "af space" subdir under mktemp -d).
+# Reviewer finding (PR #104, Low): the cache row lookup uses awk's default
+# whitespace field splitting ($2 == p), so a stored path containing a space
+# never matches on the second call -- the cache never hits, and an unchanged
+# defective ledger re-warns on every call instead of being suppressed.
+LEDGER_WS_PARENT=$(mktemp -d)
+LEDGER_WS_DEFECT="$LEDGER_WS_PARENT/af space"
+mkdir -p "$LEDGER_WS_DEFECT/.autoflow"
+cat > "$LEDGER_WS_DEFECT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — first decision (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — collided identifier, different title (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+
+run_hook_out 0 "whitespace-path fixture, first call, defective ledger -> allowed" \
+  "$LEDGER_WS_DEFECT" "$(bash_json 'git status')"
+
+run_hook_out 0 "whitespace-path fixture, second call, SAME unchanged defective ledger -> allowed" \
+  "$LEDGER_WS_DEFECT" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  FAIL: second call on an unchanged ledger under a whitespace project path repeated the warning (cache did not suppress it) -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: second call on an unchanged ledger under a whitespace project path is silent (cache-hit suppression)"
+  PASS=$((PASS + 1))
+fi
+
 run_hook_out 0 "changed CLEAN ledger -> allowed and silent (no false-positive warning)" \
   "$LEDGER_CHANGED_CLEAN" "$(bash_json 'git status')"
 if [ -z "$HOOK_ERR" ] || ! printf '%s' "$HOOK_ERR" | grep -qiE 'duplicate-id|unidentified-entry'; then
