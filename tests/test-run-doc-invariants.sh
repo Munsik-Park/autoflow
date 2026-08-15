@@ -125,6 +125,26 @@ verdict_for_id() {
 TMP_ROOT="$PROJECT_ROOT/tests/fixtures/.tmp-run-doc-invariants-$$"
 cleanup() { rm -rf "$TMP_ROOT" 2>/dev/null || true; }
 trap cleanup EXIT
+
+# Sweep this suite's own signal-aborted scratch residue before creating this
+# run's tree (issue #100). Scoped to THIS suite's prefix, never a bare
+# `.tmp-*` wildcard: tests/test-push-context-base-ref.sh owns a sibling prefix
+# in the same directory and the two run concurrently in one checkout. Prefix
+# scoping alone still leaves a concurrent instance of THIS suite exposed, so a
+# candidate is deleted only when its PID suffix is definitively absent — the
+# EXIT trap above means live-owner trees are never residue.
+sweep_stale_scratch() {
+  local prefix="$PROJECT_ROOT/tests/fixtures/.tmp-run-doc-invariants-" cand suffix
+  for cand in "$prefix"*; do
+    [ -d "$cand" ] || continue
+    suffix="${cand##*-}"
+    case "$suffix" in ''|*[!0-9]*) continue ;; esac
+    kill -0 "$suffix" 2>/dev/null && continue
+    rm -rf "$cand" 2>/dev/null || true
+  done
+}
+sweep_stale_scratch
+
 mkdir -p "$TMP_ROOT"
 
 # =============================================================================

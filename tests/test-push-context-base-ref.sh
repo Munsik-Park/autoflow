@@ -101,6 +101,26 @@ echo "=== Issue #99 push-context base-ref oracle — delta-scoped selection (sta
 TMP_ROOT="$PROJECT_ROOT/tests/fixtures/.tmp-push-context-base-ref-$$"
 cleanup() { rm -rf "$TMP_ROOT" 2>/dev/null || true; }
 trap cleanup EXIT
+
+# Sweep this suite's own signal-aborted scratch residue before creating this
+# run's tree (issue #100). Scoped to THIS suite's prefix, never a bare
+# `.tmp-*` wildcard: tests/test-run-doc-invariants.sh owns a sibling prefix in
+# the same directory and the two run concurrently in one checkout. Prefix
+# scoping alone still leaves a concurrent instance of THIS suite exposed, so a
+# candidate is deleted only when its PID suffix is definitively absent — the
+# EXIT trap above means live-owner trees are never residue.
+sweep_stale_scratch() {
+  local prefix="$PROJECT_ROOT/tests/fixtures/.tmp-push-context-base-ref-" cand suffix
+  for cand in "$prefix"*; do
+    [ -d "$cand" ] || continue
+    suffix="${cand##*-}"
+    case "$suffix" in ''|*[!0-9]*) continue ;; esac
+    kill -0 "$suffix" 2>/dev/null && continue
+    rm -rf "$cand" 2>/dev/null || true
+  done
+}
+sweep_stale_scratch
+
 mkdir -p "$TMP_ROOT"
 
 # Default budget derived from a real measurement, not a guess: several subjects
@@ -143,12 +163,27 @@ run_bounded_in() {
     RB_EXIT=$?
     [ "$RB_EXIT" -eq 124 ] && RB_KILLED=1
   else
-    ( cd "$dir" && env -u GITHUB_BASE_REF "$@" ) >"$logfile" 2>&1 &
+    local marker="$logfile.watchdog"
+    set -m
+    ( cd "$dir" && env -u GITHUB_BASE_REF "$@" ) >"$logfile" 2>&1 </dev/null &
     local pid=$!
-    ( sleep "$bound"; if kill -0 "$pid" 2>/dev/null; then kill "$pid" 2>/dev/null; echo killed > "$logfile.watchdog"; fi ) &
+    ( sleep "$bound"
+      if kill -0 "$pid" 2>/dev/null; then
+        echo killed > "$marker"
+        kill -TERM -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
+      fi
+    ) >/dev/null 2>&1 &
+    local watchdog_pid=$!
+    set +m
     wait "$pid" 2>/dev/null
     RB_EXIT=$?
-    if [ -s "$logfile.watchdog" ]; then RB_KILLED=1; fi
+    if [ -s "$marker" ]; then
+      RB_KILLED=1
+    else
+      kill -TERM -"$watchdog_pid" 2>/dev/null || kill "$watchdog_pid" 2>/dev/null
+    fi
+    wait "$watchdog_pid" 2>/dev/null
+    rm -f "$marker" 2>/dev/null
   fi
 }
 
