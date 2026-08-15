@@ -145,7 +145,7 @@ run_hook 0 "Rest-Allow-Trailing-Slash-Pinned: the trailing-slash collection POST
 # implementation note 4). Bidirectional by construction: an extra doc-claimed
 # delimiter the hook does not enforce, or a hook delimiter the doc omits,
 # either one fails the row.
-HOOK_TERM_BRACKET=$(grep -oE 'issues\(\[[^]]*\]\|\$\)' "$HOOK" | head -1 | grep -oE '\[[^]]*\]' | head -1)
+HOOK_TERM_BRACKET=$(grep -oE 'issues\(\[.*\]\|\$\)' "$HOOK" | head -1 | grep -oE '\[.*\]' | head -1)
 HOOK_DELIMS=$(printf '%s' "$HOOK_TERM_BRACKET" | sed 's/\[:space:\]//g' | tr -d '[]' | fold -w1 | sort -u | tr -d '\n')
 DOC_PARA=$(awk '/The REST-form deny/{flag=1} flag{print} flag && /^$/{exit}' "$DOC")
 DOC_DELIMS=$(printf '%s' "$DOC_PARA" | grep -oE '`[?#]`' | tr -d '`' | fold -w1 | sort -u | tr -d '\n')
