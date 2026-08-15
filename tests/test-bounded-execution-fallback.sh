@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/preflight/check-review-backend.sh scripts/handoff/confirm-ci-green.sh tests/test-push-context-base-ref.sh tests/test-run-doc-invariants.sh tests/test-issue-952-wizard-removal.sh scripts/test/check-watchdog-detachment.sh
+# ci-subject: scripts/preflight/check-review-backend.sh scripts/handoff/confirm-ci-green.sh scripts/test/check-watchdog-detachment.sh
 # =============================================================================
 # Test: bounded-execution fallback watchdog — pipe-hold, orphan sleep, group
 #       kill, fixture residue, copy lineage. Issue #100 (standing; the
@@ -40,6 +40,27 @@
 #       SECONDS' 1s granularity discriminates a released pipe from a held one.
 #   (3) sanitized-PATH legs keep /bin (date lives there on this platform,
 #       confirm-ci-green.sh:278 `sleep_to_deadline` calls it) on PATH.
+#
+# SUITE-INVOKES-SUITE PROHIBITION (ledger O4). This suite contains no
+# `bash tests/test-*.sh` of any form. Two categories that previously appeared
+# here are removed for this reason, not merely deferred to a later cleanup:
+#   - AC-contract-preserved (full re-runs of the sibling contract suites) —
+#     removed at ledger O3 already; regression confirmation is the CI sibling
+#     step's job, run exactly once per suite per CI pass.
+#   - AC-sweep-scope (arm1/arm2, each launching a sibling suite to drive its
+#     embedded fixture-residue sweep) — the swept function is private to its
+#     host suite (not sourceable without executing that suite's whole body,
+#     which is the same prohibition under a different name), so it cannot be
+#     asserted without sibling execution. Dropped rather than reimplemented
+#     as a duplicated local copy of the swept logic — issue #103 owns the
+#     test-architecture re-review this belongs to.
+# Also dropped for this reason: AC-coreutils-present-unchanged,
+# AC-manifest-regen and AC-ci-registration (the latter itself invoked
+# tests/test-workflow-trigger-conformance.sh) — none of them assert this
+# cycle's own fallback-shape fix; they are broader fences the minimality
+# directive routes to #103 rather than keeping here. What remains is exactly
+# the fallback-behavior legs against the two shipped scripts and the
+# site-closure lint over the 7 patched sites.
 # =============================================================================
 
 set -uo pipefail
@@ -50,12 +71,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CHECK_SCRIPT="$PROJECT_ROOT/scripts/preflight/check-review-backend.sh"
 CONFIRM_SCRIPT="$PROJECT_ROOT/scripts/handoff/confirm-ci-green.sh"
 MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
-PUSH_CONTEXT_SUITE="$PROJECT_ROOT/tests/test-push-context-base-ref.sh"
-DOC_INVARIANTS_SUITE="$PROJECT_ROOT/tests/test-run-doc-invariants.sh"
 WATCHDOG_LINT="$PROJECT_ROOT/scripts/test/check-watchdog-detachment.sh"
-MANIFEST_LINT="$PROJECT_ROOT/scripts/test/check-manifest-regen-clean.sh"
-CI_COVERAGE_LINT="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
-TRIGGER_CONFORMANCE="$PROJECT_ROOT/tests/test-workflow-trigger-conformance.sh"
 
 SYSTEM_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -315,30 +331,6 @@ assert_true "AC-no-job-notice (early-exit leg): captured stderr carries no job-c
 
 # =============================================================================
 echo ""
-echo "=== AC-coreutils-present-unchanged (fence: passes at HEAD) ==="
-if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; then
-  ( PATH="$FAKEBIN:$PATH" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=99 PROBE_TIMEOUT_SECS=79 \
-      "$CHECK_SCRIPT" --backend claude --probe </dev/null >/dev/null 2>&1 ) &
-  BG2=$!
-  ( sleep 99; kill -9 "$BG2" 2>/dev/null ) &
-  BG2_WPID=$!
-  TBIN_PID=""
-  for _ in $(seq 1 40); do
-    TBIN_PID="$(find_pid_by_cmd '(timeout|gtimeout) 79')"
-    [ -n "$TBIN_PID" ] && break
-    sleep 0.25
-  done
-  wait "$BG2" 2>/dev/null
-  kill "$BG2_WPID" 2>/dev/null
-  wait "$BG2_WPID" 2>/dev/null
-  assert_true "AC-coreutils-present-unchanged: with timeout/gtimeout on PATH, the preferred branch is taken (a timeout process, not a bare watchdog sleep, bounds the hang)" \
-    "[ -n \"$TBIN_PID\" ]"
-else
-  echo "  SKIP: AC-coreutils-present-unchanged — neither timeout nor gtimeout present on this host's unsanitized PATH"
-fi
-
-# =============================================================================
-echo ""
 echo "=== AC-marker-cleanup second site: confirm-ci-green.sh ==="
 GREEN_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[{"__typename":"CheckRun","name":"x","workflowName":"CI","status":"COMPLETED","conclusion":"SUCCESS"}]}'
 
@@ -359,135 +351,6 @@ assert_true "AC-marker-cleanup (confirm-ci-green.sh, not-fired branch): no lefto
 rm -rf "$CONFIRM_TMPDIR2"
 
 # =============================================================================
-# AC-contract-preserved is NOT re-run here (ledger O3): regression
-# confirmation ("prior suites still pass") belongs to exactly one place — the
-# CI sibling steps that already run tests/test-issue-25/30-confirm-ci-green.sh
-# and tests/test-issue-979-probe.sh once each per CI pass
-# (.github/workflows/contract-suites.yml). Embedding full re-runs here
-# multiplied test-issue-25's execution count (test-issue-30 alone re-invokes
-# it four times internally) without adding coverage this host lacks: both CI
-# and every host this suite runs on carry `timeout`/`gtimeout`, so the
-# re-run suites never exercise the patched fallback branch anyway (measured
-# at GREEN, commit b79d855).
-# =============================================================================
-echo ""
-echo "=== AC-sweep-scope (RED discriminator — no sweep exists today) ==="
-
-# Arm 1 — tests/test-push-context-base-ref.sh, driven through its own
-# positional <root> override (ledger F6). Fixture root: minimal but valid
-# git repo with tests/fixtures/ pre-seeded before the run: a dead-PID
-# same-prefix tree (must be removed once a sweep lands), a live-PID
-# same-prefix tree (must survive), and the OTHER producer's prefix
-# (must survive — the destroying direction the risk line names). The sweep
-# fires at suite startup, before the suite creates its own TMP_ROOT, so this
-# arm needs only that startup window — mirrors arm2's checkpoint-stop below
-# rather than letting the whole suite run to completion: launched under
-# `set -m` (its own process-group leader), stopped with a group-scoped TERM
-# guarded by a pgid-inequality assertion against this leg shell (ledger
-# F5/F14) the instant its own TMP_ROOT checkpoint appears, so its EXIT trap
-# still runs and no new residue is left by the stop itself.
-FX_ROOT="$(mktemp -d)"
-mkdir -p "$FX_ROOT/tests/fixtures" "$FX_ROOT/.github/workflows"
-( cd "$FX_ROOT" && git init -q && git commit --allow-empty -q -m init ) 2>/dev/null
-
-DEAD_PID=99999
-sleep 30 &
-ARM1_LIVE_PID=$!
-
-DEAD_TREE="$FX_ROOT/tests/fixtures/.tmp-push-context-base-ref-$DEAD_PID"
-LIVE_TREE="$FX_ROOT/tests/fixtures/.tmp-push-context-base-ref-$ARM1_LIVE_PID"
-FOREIGN_TREE="$FX_ROOT/tests/fixtures/.tmp-run-doc-invariants-$DEAD_PID"
-mkdir -p "$DEAD_TREE" "$LIVE_TREE" "$FOREIGN_TREE"
-: > "$DEAD_TREE/residue.txt"
-: > "$LIVE_TREE/residue.txt"
-: > "$FOREIGN_TREE/residue.txt"
-
-LEG_PGID="$(pgid_of $$)"
-ARM1_HOLDER="$(mktemp)"
-( set -m; bash "$PUSH_CONTEXT_SUITE" "$FX_ROOT" >/dev/null 2>&1 & echo $! >"$ARM1_HOLDER" )
-ARM1_SUITE_PID="$(cat "$ARM1_HOLDER" 2>/dev/null)"
-ARM1_CHECKPOINT="$FX_ROOT/tests/fixtures/.tmp-push-context-base-ref-$ARM1_SUITE_PID"
-for _ in $(seq 1 80); do
-  [ -d "$ARM1_CHECKPOINT" ] && break
-  sleep 0.25
-done
-ARM1_PGID=""
-[ -n "$ARM1_SUITE_PID" ] && ARM1_PGID="$(pgid_of "$ARM1_SUITE_PID")"
-if [ -n "$ARM1_PGID" ] && [ "$ARM1_PGID" != "$LEG_PGID" ]; then
-  kill -TERM -"$ARM1_PGID" 2>/dev/null || kill "$ARM1_SUITE_PID" 2>/dev/null
-else
-  kill "$ARM1_SUITE_PID" 2>/dev/null
-fi
-wait "$ARM1_SUITE_PID" 2>/dev/null
-sleep 0.5
-rm -f "$ARM1_HOLDER"
-
-assert_true "AC-sweep-scope arm1: the launched push-context suite was its own process-group leader before the stop (guard precondition, ledger F5/F14)" \
-  "[ -n \"$ARM1_PGID\" ] && [ \"$ARM1_PGID\" != \"$LEG_PGID\" ]"
-assert_false "AC-sweep-scope arm1: a same-prefix DEAD-PID tree does not survive once a sweep exists (RED: no sweep today)" \
-  "[ -d \"$DEAD_TREE\" ]"
-assert_true "AC-sweep-scope arm1: the same-prefix LIVE-PID tree is never removed" \
-  "[ -d \"$LIVE_TREE\" ]"
-assert_true "AC-sweep-scope arm1: the OTHER producer's prefix tree is never removed" \
-  "[ -d \"$FOREIGN_TREE\" ]"
-
-kill "$ARM1_LIVE_PID" 2>/dev/null
-wait "$ARM1_LIVE_PID" 2>/dev/null
-rm -rf "$FX_ROOT" "$ARM1_CHECKPOINT" 2>/dev/null
-
-# Arm 2 — tests/test-run-doc-invariants.sh, no root override (§0), so its
-# sweep is only drivable against the real tests/fixtures/ tree. Pre-seed
-# residue there, launch the real suite under set -m (so it is its own
-# process-group leader), poll for its TMP_ROOT startup checkpoint, then
-# stop it with a group-scoped TERM guarded by a pgid-inequality assertion
-# against this leg shell (ledger F5/F14) so its own EXIT trap still runs and
-# no new residue is left by the stop itself.
-DEAD_PID2=99998
-sleep 30 &
-ARM2_LIVE_PID=$!
-
-DEAD_TREE2="$PROJECT_ROOT/tests/fixtures/.tmp-run-doc-invariants-$DEAD_PID2"
-LIVE_TREE2="$PROJECT_ROOT/tests/fixtures/.tmp-run-doc-invariants-$ARM2_LIVE_PID"
-FOREIGN_TREE2="$PROJECT_ROOT/tests/fixtures/.tmp-push-context-base-ref-$DEAD_PID2"
-mkdir -p "$DEAD_TREE2" "$LIVE_TREE2" "$FOREIGN_TREE2"
-: > "$DEAD_TREE2/residue.txt"
-: > "$LIVE_TREE2/residue.txt"
-: > "$FOREIGN_TREE2/residue.txt"
-
-LEG_PGID="$(pgid_of $$)"
-ARM2_HOLDER="$(mktemp)"
-( set -m; bash "$DOC_INVARIANTS_SUITE" >/dev/null 2>&1 & echo $! >"$ARM2_HOLDER" )
-ARM2_PID="$(cat "$ARM2_HOLDER" 2>/dev/null)"
-CHECKPOINT="$PROJECT_ROOT/tests/fixtures/.tmp-run-doc-invariants-$ARM2_PID"
-for _ in $(seq 1 80); do
-  [ -d "$CHECKPOINT" ] && break
-  sleep 0.25
-done
-ARM2_PGID=""
-[ -n "$ARM2_PID" ] && ARM2_PGID="$(pgid_of "$ARM2_PID")"
-if [ -n "$ARM2_PGID" ] && [ "$ARM2_PGID" != "$LEG_PGID" ]; then
-  kill -TERM -"$ARM2_PGID" 2>/dev/null || kill "$ARM2_PID" 2>/dev/null
-else
-  kill "$ARM2_PID" 2>/dev/null
-fi
-wait "$ARM2_PID" 2>/dev/null
-sleep 0.5
-rm -f "$ARM2_HOLDER"
-
-assert_true "AC-sweep-scope arm2: the launched doc-invariants suite was its own process-group leader before the stop (guard precondition, ledger F5/F14)" \
-  "[ -n \"$ARM2_PGID\" ] && [ \"$ARM2_PGID\" != \"$LEG_PGID\" ]"
-assert_false "AC-sweep-scope arm2: a same-prefix DEAD-PID tree does not survive once a sweep exists (RED: no sweep today)" \
-  "[ -d \"$DEAD_TREE2\" ]"
-assert_true "AC-sweep-scope arm2: the same-prefix LIVE-PID tree is never removed" \
-  "[ -d \"$LIVE_TREE2\" ]"
-assert_true "AC-sweep-scope arm2: the OTHER producer's prefix tree is never removed" \
-  "[ -d \"$FOREIGN_TREE2\" ]"
-
-kill "$ARM2_LIVE_PID" 2>/dev/null
-wait "$ARM2_LIVE_PID" 2>/dev/null
-rm -rf "$DEAD_TREE2" "$LIVE_TREE2" "$FOREIGN_TREE2" "$CHECKPOINT" 2>/dev/null
-
-# =============================================================================
 echo ""
 echo "=== AC-site-closure (RED discriminator) ==="
 assert_true "AC-site-closure: scripts/test/check-watchdog-detachment.sh exists" \
@@ -500,22 +363,6 @@ WATCHDOG_LINT_RC=$?
 assert_true "AC-site-closure: the real tree conforms end-to-end (every fallback site carries the fix)" \
   "[ $WATCHDOG_LINT_RC -eq 0 ]"
 rm -f "$WATCHDOG_LINT_OUT"
-
-# =============================================================================
-echo ""
-echo "=== AC-manifest-regen / AC-ci-registration (fences once this commit's own registration lands) ==="
-if [ -f "$MANIFEST_LINT" ]; then
-  bash "$MANIFEST_LINT" >/dev/null 2>&1
-  assert_true "AC-manifest-regen: scripts/test/check-manifest-regen-clean.sh is green" "[ $? -eq 0 ]"
-fi
-if [ -f "$CI_COVERAGE_LINT" ]; then
-  bash "$CI_COVERAGE_LINT" >/dev/null 2>&1
-  assert_true "AC-ci-registration: scripts/test/check-suite-ci-coverage.sh is green (this suite and the new lint are wired)" "[ $? -eq 0 ]"
-fi
-if [ -f "$TRIGGER_CONFORMANCE" ]; then
-  bash "$TRIGGER_CONFORMANCE" >/dev/null 2>&1
-  assert_true "AC-ci-registration: tests/test-workflow-trigger-conformance.sh is green (paths: entries cover the new files)" "[ $? -eq 0 ]"
-fi
 
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
