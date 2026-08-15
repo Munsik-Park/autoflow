@@ -27,6 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
 CLEANUP="$PROJECT_ROOT/scripts/cleanup/cleanup-issue.sh"
+DOC="$PROJECT_ROOT/docs/issue-proposal.md"
 
 PASS=0
 FAIL=0
@@ -101,6 +102,57 @@ run_hook 0 "Hook-Denies-REST-Form: the two patterns split across DIFFERENT segme
   "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues --method GET ; gh api repos/o/r/other --method POST')"
 
 echo ""
+echo "=== issue #96 cycle 2 — REST-form deny terminator completeness (query/fragment delimiters) ==="
+# .autoflow/issue-96-verification-design.md cycle-2 acceptance table. The
+# terminator class at .claude/hooks/check-autoflow-gate.sh:247 is
+# "([[:space:]]|\$)" at HEAD — these deny-direction rows are RED-confirming
+# (the hook currently ALLOWS all four forms below) until GREEN widens it to
+# "([?#[:space:]]|\$)".
+run_hook 2 "Rest-Deny-Query-Suffix: gh api collection POST with a query-string suffix is denied" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues?per_page=1 --method POST -f title=x')"
+run_hook 2 "Rest-Deny-Query-Suffix-Curl: curl POST collection URL with a query-string suffix is denied" \
+  "$NOSTATE" "$(bash_json 'curl -X POST https://api.github.com/repos/o/r/issues?foo=bar -d {}')"
+run_hook 2 "Rest-Deny-Fragment-Suffix: curl POST collection URL with a fragment suffix is denied (fragment is client-stripped and reaches the collection — .autoflow/issue-96-verification-design.md:36-40)" \
+  "$NOSTATE" "$(bash_json 'curl -X POST https://api.github.com/repos/o/r/issues#frag -d {}')"
+run_hook 2 "Rest-Deny-Method-Before-Path: --method POST preceding a query-suffixed path carrying '&' still denies" \
+  "$NOSTATE" "$(bash_json 'gh api --method POST repos/o/r/issues?a=1&b=2 -f title=x')"
+
+# Over-block guards: these must stay ALLOWED under the widened class — baseline
+# green today and required to remain green after the fix (verification design
+# §A6 / Rest-Allow-* rows).
+run_hook 0 "Rest-Allow-Subresource-Suffix: sub-resource comment POST with a query-string suffix stays allowed" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/1/comments?per_page=1 --method POST -f body=x')"
+run_hook 0 "Rest-Allow-Subresource-Suffix: sub-resource comment POST with no suffix stays allowed" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/1/comments --method POST -f body=x')"
+run_hook 0 "Rest-Allow-Subresource-Fragment: sub-resource comment POST with a fragment suffix stays allowed (guard specific to the newly-admitted '#' delimiter)" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/1/comments#frag --method POST -f body=x')"
+run_hook 0 "Rest-Allow-Read-Method-Suffix: query-suffixed collection read (non-POST) stays allowed" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues?state=open --method GET')"
+
+# Pinned residual (ledger E46 GATE:PLAN implementation notes 1/2; design §A7 /
+# §A9): the trailing-slash collection form is a DECLARED residual this cycle,
+# not fixed — '/' cannot enter the terminator class without pulling every
+# sub-resource path into the deny. Pinned as ALLOWED so any future change to
+# this behavior (fix or regression) is measured, not silent.
+run_hook 0 "Rest-Allow-Trailing-Slash-Pinned: the trailing-slash collection POST is pinned ALLOWED this cycle (declared residual, not fixed)" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues/ --method POST -f title=x')"
+
+# Docs-Deny-Surface-Matches — artifact-identity row, not behavioral (per
+# verification design's acceptance table). Mechanically derives the enforced
+# terminator delimiter set from the hook's own bracket expression and compares
+# it against the delimiter characters the doc paragraph names literally in
+# backticks, rather than a fuzzy prose-presence check (GATE:PLAN cycle-2
+# implementation note 4). Bidirectional by construction: an extra doc-claimed
+# delimiter the hook does not enforce, or a hook delimiter the doc omits,
+# either one fails the row.
+HOOK_TERM_BRACKET=$(grep -oE 'issues\(\[[^]]*\]\|\$\)' "$HOOK" | head -1 | grep -oE '\[[^]]*\]' | head -1)
+HOOK_DELIMS=$(printf '%s' "$HOOK_TERM_BRACKET" | sed 's/\[:space:\]//g' | tr -d '[]' | fold -w1 | sort -u | tr -d '\n')
+DOC_PARA=$(awk '/The REST-form deny/{flag=1} flag{print} flag && /^$/{exit}' "$DOC")
+DOC_DELIMS=$(printf '%s' "$DOC_PARA" | grep -oE '`[?#]`' | tr -d '`' | fold -w1 | sort -u | tr -d '\n')
+assert_true "Docs-Deny-Surface-Matches: doc-claimed delimiter set == hook-enforced delimiter set (hook='$HOOK_DELIMS' doc='$DOC_DELIMS')" \
+  "[ '$HOOK_DELIMS' = '$DOC_DELIMS' ]"
+
+echo ""
 echo "=== issue #96 — Hook-Deny-Is-State-Independent ==="
 run_hook 2 "state-independent: no .autoflow directory" \
   "$NOSTATE" "$(bash_json 'gh issue create --title "x" --body "y"')"
@@ -149,6 +201,17 @@ run_hook 2 "scan-path: new deny in one segment + existing default-branch push de
   "$NOSTATE" "$(bash_json 'gh issue create --title "x" --body "y" ; git push origin main')"
 run_hook 0 "scan-path: adjacent segments carrying near-miss tokens for BOTH denies are not cross-contaminated (list, not create; feature branch, not default)" \
   "$NOSTATE" "$(bash_json 'gh issue list --search create ; git push origin feature-branch')"
+
+# Cycle-2 composition extension (ledger E50; verification design > Composition
+# oracle determination): the query-suffixed REST create sits in its OWN
+# segment alongside a non-default-branch push (which must not itself deny),
+# so the overall deny is attributable to the widened terminator deciding its
+# own segment, not to the other segment's unrelated deny. RED-confirming:
+# neither segment denies at HEAD (the REST-query form is still allowed and
+# the push targets a non-default branch), so this exits 0 today and must flip
+# to 2 once the terminator class widens.
+run_hook 2 "scan-path: query-suffixed REST create in one segment + a non-default-branch push in another — the REST segment denies on its own" \
+  "$NOSTATE" "$(bash_json 'gh api repos/o/r/issues?x=1 --method POST -f title=x ; git push origin feature-branch')"
 
 echo ""
 echo "=== issue #96 — Namespace-Coexistence (composition oracle: T ∩ S = .autoflow/ filename namespace) ==="
