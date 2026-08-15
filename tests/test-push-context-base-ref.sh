@@ -316,18 +316,46 @@ wf_job_has_depth0() {
 # duplicate registration elsewhere looks like. FAIL-DEPTH is reported when a
 # registration reaches the subject but runs shallow (a run that resolves the
 # wrong precedence branch); FAIL-REACH when no registration fires at all.
+#
+# The caller below evaluates this once per derived subject; a workflow's
+# main-push gate and its push paths: block are properties of the WORKFLOW,
+# not of the subject, so they are memoized per workflow path across those
+# calls instead of being re-parsed for every subject.
+declare -A _WF_IS_MAIN_PUSH=()
+declare -A _WF_PUSH_PATHS=()
+
+wf_is_main_push() {  # cached: workflow carries push: branches: [main]
+  local wf="$1"
+  if [ -z "${_WF_IS_MAIN_PUSH[$wf]+x}" ]; then
+    if grep -qE 'branches: *\[ *main *\]' "$wf" 2>/dev/null; then
+      _WF_IS_MAIN_PUSH[$wf]=1
+    else
+      _WF_IS_MAIN_PUSH[$wf]=0
+    fi
+  fi
+  [ "${_WF_IS_MAIN_PUSH[$wf]}" = 1 ]
+}
+
+wf_push_paths_cached() {  # cached: same output as wf_push_paths <wf>
+  local wf="$1"
+  if [ -z "${_WF_PUSH_PATHS[$wf]+x}" ]; then
+    _WF_PUSH_PATHS[$wf]="$(wf_push_paths "$wf")"
+  fi
+  printf '%s\n' "${_WF_PUSH_PATHS[$wf]}"
+}
+
 native_coverage_state() {
   local rel="$1" wf state="FAIL-REACH" dep rch p
   for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
     [ -f "$wf" ] || continue
-    grep -qE 'branches: *\[ *main *\]' "$wf" 2>/dev/null || continue
+    wf_is_main_push "$wf" || continue
     wf_registers_subject "$wf" "$rel" || continue
     dep=0; rch=0
     wf_job_has_depth0 "$wf" "$rel" && dep=1
     while IFS= read -r p; do
       [ -n "$p" ] || continue
       if path_pattern_covers "$p" "$rel"; then rch=1; break; fi
-    done < <(wf_push_paths "$wf")
+    done < <(wf_push_paths_cached "$wf")
     if [ "$dep" = 1 ] && [ "$rch" = 1 ]; then echo "PASS"; return 0; fi
     [ "$rch" = 1 ] && state="FAIL-DEPTH"
   done
@@ -1286,7 +1314,6 @@ echo "=== report-surface (§5) — AC-audit-line-completeness / AC-selection-rea
 # PAIRING and the reason vocabulary, rather than membership alone.
 drive_suite_over_root "$RULE_FX"
 
-DERIVED_LINE="$(printf '%s\n' "$DRIVE_OUT" | grep -E '^Subject set \(' | head -1)"
 SELECTED_PATHS="$(printf '%s\n' "$DRIVE_OUT" | grep -E '^SELECTED:' | awk '{print $2}' | sort -u)"
 NOTSEL_PATHS="$(printf '%s\n' "$DRIVE_OUT" | grep -E '^NOT-SELECTED:' | awk '{print $2}' | sort -u)"
 PUSHCTX_PATHS="$(printf '%s\n' "$DRIVE_OUT" | grep -E '^PUSH-CONTEXT:' | awk '{print $2}' | sort -u)"
