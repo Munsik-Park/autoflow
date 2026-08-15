@@ -54,13 +54,19 @@
 #     asserted without sibling execution. Dropped rather than reimplemented
 #     as a duplicated local copy of the swept logic — issue #103 owns the
 #     test-architecture re-review this belongs to.
-# Also dropped for this reason: AC-coreutils-present-unchanged,
-# AC-manifest-regen and AC-ci-registration (the latter itself invoked
-# tests/test-workflow-trigger-conformance.sh) — none of them assert this
-# cycle's own fallback-shape fix; they are broader fences the minimality
-# directive routes to #103 rather than keeping here. What remains is exactly
-# the fallback-behavior legs against the two shipped scripts and the
-# site-closure lint over the 7 patched sites.
+# Also dropped for this reason: AC-coreutils-present-unchanged and
+# AC-manifest-regen — neither asserts this cycle's own fallback-shape fix or
+# registration; both are broader fences the minimality directive routes to
+# #103 rather than keeping here. AC-ci-registration's suite-invoking half
+# (tests/test-workflow-trigger-conformance.sh) is dropped for the same
+# suite-invokes-suite reason; its static half (scripts/test/check-suite-ci-
+# coverage.sh, which scans files and workflow `run:` steps but never invokes
+# a tests/test-*.sh suite) is kept below as "this cycle's own static
+# registration checks" — it directly asserts that THIS suite's own CI wiring
+# (added to contract-suites.yml this cycle) is live. What remains is exactly
+# the fallback-behavior legs against the two shipped scripts, the
+# site-closure lint over the 7 patched sites, and that one static
+# registration check.
 # =============================================================================
 
 set -uo pipefail
@@ -72,6 +78,7 @@ CHECK_SCRIPT="$PROJECT_ROOT/scripts/preflight/check-review-backend.sh"
 CONFIRM_SCRIPT="$PROJECT_ROOT/scripts/handoff/confirm-ci-green.sh"
 MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
 WATCHDOG_LINT="$PROJECT_ROOT/scripts/test/check-watchdog-detachment.sh"
+CI_COVERAGE_LINT="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
 
 SYSTEM_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -363,6 +370,21 @@ WATCHDOG_LINT_RC=$?
 assert_true "AC-site-closure: the real tree conforms end-to-end (every fallback site carries the fix)" \
   "[ $WATCHDOG_LINT_RC -eq 0 ]"
 rm -f "$WATCHDOG_LINT_OUT"
+
+# =============================================================================
+echo ""
+echo "=== This cycle's own CI registration (static, no suite execution) ==="
+# scripts/test/check-suite-ci-coverage.sh scans tests/**/*.sh and workflow
+# `run:` steps and reports; it never invokes a tests/test-*.sh suite as a
+# subprocess, so this is not a sibling-suite call under the O4/O5
+# prohibition. It directly asserts this cycle's own change: that THIS suite
+# (added to .github/workflows/contract-suites.yml in this cycle) has an
+# execution path.
+if [ -f "$CI_COVERAGE_LINT" ]; then
+  bash "$CI_COVERAGE_LINT" >/dev/null 2>&1
+  assert_true "This suite has a CI execution path (scripts/test/check-suite-ci-coverage.sh is green)" \
+    "[ $? -eq 0 ]"
+fi
 
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
