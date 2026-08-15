@@ -315,13 +315,17 @@ echo "=== AC-27-20 (composition oracle for S8, fence, PASS pre+post) — workflo
 # (AC-69-prompt-delivery, AC-69-accept-gating — the Test-AI Draft/round-prompt delivery
 # assertions), net measured 80 -> 82. Bumped in the SAME commit as the RED-lane run.mjs
 # addition (not GREEN) per issue #69's verification design "harness ok-count pin" note.
+# B14 update (issue #97): #97 added three run.mjs AC-facilitator-prompt tests, net
+# measured 82 -> 85. Bumped per this suite's own precedent above, in the same commit as
+# the dual-home (D18) EXPECTED_OK bump in tests/test-issue-59-adoption-evidence-discipline.sh
+# (that suite's AC-59-14c asserts the two homes agree).
 HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
 HARNESS_EXIT=$?
 OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -c '^\s*ok' || true)"
 assert_true "AC-27-20a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
 assert_true "AC-27-20b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-assert_true "AC-27-20c: harness ok-line count == B14 (82) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 82 ]"
+assert_true "AC-27-20c: harness ok-line count == B14 (85) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 85 ]"
 assert_true "AC-27-20d: node --check .claude/workflows/architect-deliberation.js exits 0 (cheaper subset)" \
   "node --check '$WORKFLOW_JS'"
 

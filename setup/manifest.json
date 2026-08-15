@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "512a1d5045ea27e856007554faa2c6e40b56eb33477d91828b46adbd3e12e65f"
+      "sha256": "6f723dc508e72e973c6053a7b38adfed67f4861e3db6f5ad5758ffa98eee493d"
     },
     {
       "source": "docs/INDEX.md",
@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "47fbd54011e683e64888361c504b4297ba3f8e37018a477259b83081a62ed925"
+      "sha256": "7426c33249e50a2531ef1cd7e58c10d533c1ccf69c95d4ffe2c52d11e4c5c8ba"
     },
     {
       "source": "docs/design-rationale.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6b83db90411163fe8e5439eb2b3bb07ad060005fcfe7e5e5b1ddd5f8a8c86039"
+      "sha256": "596e1dcb01bae9278947071fcb3787e830569505772ca844785815b3757d9793"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "45e00357d310793c9be5ddef92dc10eb323d560580e89608eeda0990479d151e"
+      "sha256": "b7f3d96657a5653d11863f44fb7a79485e79d29092879b0d0e014a2a47613cd7"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "afc49431068f413e82a47e41e56878ec79f371168297800ed1c485f395b572f5"
+      "sha256": "90cdadfb4976464e52a4ee1b4630ba3c7247d6d447bde0957a15eea29e59952a"
     },
     {
       "source": "docs/title-guide.md",
@@ -216,14 +216,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "9318d4ae15f1221b14a4b26af5887bc29d764d08edb7f371c08357bf062f4f71"
+      "sha256": "a1acdfad477c5b37431df4098cbee54473091a790428faa44c3e051c76f38e9a"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
+      "sha256": "72a7be6309fe7e74ec48c99df27478a6f94de1f6db5741972e14728b18927322"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -329,6 +329,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "1fe25369be7c480187e136b95d1e7203400e93c0eba75fc0791bb134c688495a"
+    },
+    {
+      "source": "scripts/ledger/ledger-entry-id.sh",
+      "dest": "scripts/ledger/ledger-entry-id.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "70ef41f7c8d413bd6465bf1ec2e5a1b97028651621fdb71b4ce06953bbdd39fc"
     },
     {
       "source": "scripts/issue/create-issue.sh",

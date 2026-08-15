@@ -39,6 +39,23 @@ run_hook() {
   fi
 }
 
+# run_hook_out <expected_exit> <desc> <project_dir> <json> -- like run_hook but
+# CAPTURES stderr for content assertions (issue #97 AC-hook-advisory-check:
+# the standing ledger check emits a WARNING line the base run_hook discards).
+# Sets HOOK_ERR as a side channel for a follow-up grep assertion.
+run_hook_out() {
+  local expected="$1" desc="$2" pdir="$3" json="$4" actual
+  HOOK_ERR=$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$pdir" bash "$HOOK" 2>&1 >/dev/null)
+  actual=$?
+  if [[ "$actual" == "$expected" ]]; then
+    echo "  PASS: $desc (exit $actual)"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: $desc (expected exit $expected, got $actual)"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 bash_json() { printf '{"tool_name":"Bash","tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)"; }
 # agent_json carries an explicit model (default "sonnet") so the existing
 # state-gate cases keep testing what they tested before the Section-1b
@@ -546,6 +563,232 @@ else
   echo "  FAIL: hook re-reads \$STATE_FILE from disk ${REREAD}x — reintroduces the multi-read TOCTOU; pipe STATE_JSON instead"
   FAIL=$((FAIL + 1))
 fi
+
+echo "Issue #97 — AC-hook-advisory-check: standing ledger check is non-gating (warn, never deny)"
+# Feature design > standing-advisory-check: a non-gating step reads every live
+# .autoflow/issue-*-ledger.md whose content differs from what it last
+# observed, runs `scripts/ledger/ledger-entry-id.sh check` over it, and emits
+# the defect lines as a WARNING -- it never converts a ledger defect into a
+# denied tool call. Each fixture below is a FRESH project dir (its own mktemp)
+# so no cross-test content-hash cache state leaks between assertions.
+LEDGER_CHANGED_DEFECT=$(mktemp -d)   # fresh dir, ledger carries a duplicate O1
+mkdir -p "$LEDGER_CHANGED_DEFECT/.autoflow"
+cat > "$LEDGER_CHANGED_DEFECT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — first decision (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — collided identifier, different title (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+
+LEDGER_CHANGED_CLEAN=$(mktemp -d)    # fresh dir, ledger has no defects
+mkdir -p "$LEDGER_CHANGED_CLEAN/.autoflow"
+cat > "$LEDGER_CHANGED_CLEAN/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — first decision (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+EOF
+
+LEDGER_NO_SCRIPT=$(mktemp -d)        # fresh dir, defective ledger, but this
+mkdir -p "$LEDGER_NO_SCRIPT/.autoflow"   # fixture's own scripts/ledger/ is absent
+cat > "$LEDGER_NO_SCRIPT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — dup (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — dup again (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+
+run_hook_out 0 "changed ledger with a duplicate id -> tool call still ALLOWED (advisory, never denies)" \
+  "$LEDGER_CHANGED_DEFECT" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  PASS: warning stderr names the colliding identifier (O1)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: warning stderr does not name the colliding identifier (O1) -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "Issue #97 — AC-hook-advisory-check: content-hash cache suppresses a REPEAT warning on an unchanged ledger"
+# Same fixture dir as the assertion above, called a SECOND time with the
+# ledger file byte-identical to the first call — the step's content-hash
+# cache (feature design > standing-advisory-check > Cache location) must
+# recognize "unchanged since last observed" and stay silent, so a defective
+# ledger does not repeat the same warning on every tool call of a session.
+run_hook_out 0 "second call, SAME unchanged defective ledger -> allowed" \
+  "$LEDGER_CHANGED_DEFECT" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  FAIL: second call on an unchanged ledger repeated the warning (cache did not suppress it) -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: second call on an unchanged ledger is silent (cache-hit suppression)"
+  PASS=$((PASS + 1))
+fi
+
+echo "Issue #97 — AC-hook-advisory-check: content-hash cache suppresses a REPEAT warning under a WHITESPACE project path"
+# Same shape as the cache-hit suppression case above, but the fixture project
+# dir itself contains a space (e.g. an "af space" subdir under mktemp -d).
+# Reviewer finding (PR #104, Low): the cache row lookup uses awk's default
+# whitespace field splitting ($2 == p), so a stored path containing a space
+# never matches on the second call -- the cache never hits, and an unchanged
+# defective ledger re-warns on every call instead of being suppressed.
+LEDGER_WS_PARENT=$(mktemp -d)
+LEDGER_WS_DEFECT="$LEDGER_WS_PARENT/af space"
+mkdir -p "$LEDGER_WS_DEFECT/.autoflow"
+cat > "$LEDGER_WS_DEFECT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — first decision (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — collided identifier, different title (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+
+run_hook_out 0 "whitespace-path fixture, first call, defective ledger -> allowed" \
+  "$LEDGER_WS_DEFECT" "$(bash_json 'git status')"
+
+run_hook_out 0 "whitespace-path fixture, second call, SAME unchanged defective ledger -> allowed" \
+  "$LEDGER_WS_DEFECT" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  FAIL: second call on an unchanged ledger under a whitespace project path repeated the warning (cache did not suppress it) -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: second call on an unchanged ledger under a whitespace project path is silent (cache-hit suppression)"
+  PASS=$((PASS + 1))
+fi
+
+run_hook_out 0 "changed CLEAN ledger -> allowed and silent (no false-positive warning)" \
+  "$LEDGER_CHANGED_CLEAN" "$(bash_json 'git status')"
+if [ -z "$HOOK_ERR" ] || ! printf '%s' "$HOOK_ERR" | grep -qiE 'duplicate-id|unidentified-entry'; then
+  echo "  PASS: no defect line for a clean ledger"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: clean ledger produced a defect line -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "Issue #97 — AC-hook-advisory-check: absent-script tolerance (silent no-op)"
+run_hook 0 "defective ledger + missing scripts/ledger/ledger-entry-id.sh helper -> allowed, no crash" \
+  "$LEDGER_NO_SCRIPT" "$(bash_json 'git status')"
+
+echo "Issue #97 — AC-hook-advisory-check: a gated command denied on its OWN gate is denied for its own reason, never for a ledger defect"
+ACTIVE_LEDGER_DEFECT=$(mktemp -d)
+mkdir -p "$ACTIVE_LEDGER_DEFECT/.autoflow"
+cat > "$ACTIVE_LEDGER_DEFECT/.autoflow/issue-9.json" <<'EOF'
+{ "active": true, "issue": "#9",
+  "phases": { "audit": {"scores":{}}, "gate_quality": {"scores":{}} } }
+EOF
+cat > "$ACTIVE_LEDGER_DEFECT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — dup (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — dup again (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+run_hook_out 2 "empty-scores active state + git push -> still denied for the score-gate reason (2)" \
+  "$ACTIVE_LEDGER_DEFECT" "$(bash_json 'git push -u origin dev/x')"
+if printf '%s' "$HOOK_ERR" | grep -qiE 'BLOCKED'; then
+  echo "  PASS: denial reason is the score gate's own BLOCKED message, not a ledger-only rejection"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: expected the score gate's own BLOCKED reason in stderr -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "Issue #97 — AC-hook-advisory-check: reachability clause -- the step still fires on all three exit-0-before-end paths"
+# The placement [MUST] (feature design > standing-advisory-check) requires the
+# step to sit BEFORE Section 2's activity check, so it must still run (and
+# still warn on a defective ledger) under every condition the script exits 0
+# early: no state file, state present but active != true, and a research/
+# analysis/evaluation Agent spawn. A step placed AFTER any one of these would
+# pass the two cases above and silently never run for this traffic.
+LEDGER_NOSTATE=$(mktemp -d)
+mkdir -p "$LEDGER_NOSTATE/.autoflow"
+cp "$LEDGER_CHANGED_DEFECT/.autoflow/issue-9-ledger.md" "$LEDGER_NOSTATE/.autoflow/issue-9-ledger.md"
+run_hook_out 0 "reachability: NO state file + Bash call + defective ledger -> still warns" \
+  "$LEDGER_NOSTATE" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  PASS: defect line present with no state file"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no defect line with no state file -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+LEDGER_INACTIVE=$(mktemp -d)
+mkdir -p "$LEDGER_INACTIVE/.autoflow"
+cp "$LEDGER_CHANGED_DEFECT/.autoflow/issue-9-ledger.md" "$LEDGER_INACTIVE/.autoflow/issue-9-ledger.md"
+cat > "$LEDGER_INACTIVE/.autoflow/issue-9.json" <<'EOF'
+{ "active": false, "issue": "#9", "phases": {} }
+EOF
+run_hook_out 0 "reachability: state present but active:false + defective ledger -> still warns" \
+  "$LEDGER_INACTIVE" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  PASS: defect line present with active:false state"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no defect line with active:false state -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+LEDGER_RESEARCH=$(mktemp -d)
+mkdir -p "$LEDGER_RESEARCH/.autoflow"
+cp "$LEDGER_CHANGED_DEFECT/.autoflow/issue-9-ledger.md" "$LEDGER_RESEARCH/.autoflow/issue-9-ledger.md"
+run_hook_out 0 "reachability: research/analysis/evaluation Agent spawn + defective ledger -> still warns" \
+  "$LEDGER_RESEARCH" "$(agent_json 'Explore' 'search the repository')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  PASS: defect line present on a research-role Agent spawn"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no defect line on a research-role Agent spawn -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+rm -rf "$LEDGER_CHANGED_DEFECT" "$LEDGER_CHANGED_CLEAN" "$LEDGER_NO_SCRIPT" "$ACTIVE_LEDGER_DEFECT" "$LEDGER_NOSTATE" "$LEDGER_INACTIVE" "$LEDGER_RESEARCH"
 
 echo "=============================="
 echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"

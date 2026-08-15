@@ -152,6 +152,20 @@ A per-issue append-only record, `.autoflow/issue-{N}-ledger.md`, fixes settled d
 - **[MUST]** The ledger is append-only: entries are never edited or deleted. A superseding decision adds a new entry that cites the new fact and references the entry it supersedes.
 - The ledger is outside every teammate's scope — it is host-owned, written only by the orchestrator and its facilitator delegate: the facilitator appends entries during deliberation; the orchestrator appends each gate's verdict after the gate, records a loop-check observation (complaint class, witness, prior-change shape, cycle) on **every** review-response DIAGNOSE entry to seed the next cycle's baseline, appends the VERIFY detection record (the steps 3/4 outcomes, `verify-detection`-marked — a record, not a decision; see [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > VERIFY > *Detection record*) at VERIFY exit, appends the Green-tree register's `green-tree` entry (the offerable Green) and its `green-tree-use` entry (what the step's predicate evaluation did) at the exit of the phase whose step ran or inherited the suite — both records, not decisions; see [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > VERIFY > *Green-tree register* — and — when a match pauses for the user — appends the user's re-entry decision as a separate entry after they answer.
 
+**Entry identifier**. A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its HANDOFF marker in the same grammar: `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` — the marker stays at the end of the heading, so the cap's count predicate ([`docs/autoflow-guide.md`](docs/autoflow-guide.md) > HANDOFF step 6.5) is unaffected by the identifier prefix. Record entries (`green-tree`, `green-tree-use`, `verify-detection`) are level-3 headings and carry no identifier.
+
+| Writer | Namespace |
+|---|---|
+| Orchestrator | `O` |
+| Facilitator delegate | `F` |
+| Pre-protocol legacy entries (readable, never issued) | `E` |
+
+This table is the mapping's only documentary home; other documents cite it rather than restate it.
+
+- **[MUST]** `bash scripts/ledger/ledger-entry-id.sh next <ledger> <NS>` allocates every identifier, and is called immediately before that entry's own append — one call per entry, never a serial incremented locally across a batch. The script holds no state: it derives the serial from the file on disk at call time, and that is precisely what keeps two writers who cannot see each other's in-flight appends from colliding. A batch that allocates once and counts up locally re-introduces the collision it was meant to prevent.
+- **[MUST]** `bash scripts/ledger/ledger-entry-id.sh check <ledger>` runs after the appends, and every defect it reports is resolved before the writer returns. `check` exits 1 on a duplicated identifier or an unidentified level-2 heading, 2 on a usage error. The gate hook runs the same check as a **non-gating advisory** over changed ledgers: it warns, and never denies a tool call over a ledger defect.
+- **Legacy ambiguity**. Entries written before this protocol may already share an identifier, and repairing them would rewrite an append-only record — so they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair.
+
 ### Discussion Protocol
 
 → Single source of truth: [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md) > Discussion Protocol
@@ -276,7 +290,7 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
 
 **File naming**: `.autoflow/issue-{N}.json`
 
-**Companion artifact**: `.autoflow/issue-{N}-ledger.md` — the append-only decision ledger (see [Deliberation Isolation](#deliberation-isolation-delegated-facilitation) > Decision Ledger). Created at the first settled decision; retained alongside the state file and archived with it (moved to the external store) at prior-cycle cleanup once the PR is merged/closed (see [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > PREFLIGHT). The hook does not read it (it is a methodology artifact, not a gate input).
+**Companion artifact**: `.autoflow/issue-{N}-ledger.md` — the append-only decision ledger (see [Deliberation Isolation](#deliberation-isolation-delegated-facilitation) > Decision Ledger). Created at the first settled decision; retained alongside the state file and archived with it (moved to the external store) at prior-cycle cleanup once the PR is merged/closed (see [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > PREFLIGHT). The hook reads it **advisorily only** — on a ledger whose content changed it runs the identifier check and may emit a warning, and it never denies a tool call on what it finds. The ledger is not a gate input: no gate verdict, retry cap or transition reads it.
 
 **Creation**: at PREFLIGHT completion.
 

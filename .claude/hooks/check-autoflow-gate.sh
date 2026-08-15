@@ -367,6 +367,82 @@ is_score_gated_surface() {
   fi
 }
 
+# ── Section 1c: standing decision-ledger identifier advisory (NON-GATING) ──
+# CLAUDE.md > Decision Ledger requires each settled-decision entry to carry a
+# uniquely allocated identifier. This step surfaces a violation early; it does
+# NOT enforce one. It never exits and never denies: a ledger defect is a
+# methodology defect, not a reason to block a tool call, and the ledger is not
+# a gate input. The only observable effect is a warning line on stderr.
+#
+# Placement is load-bearing (CLAUDE.md > Deliberation Isolation > Decision
+# Ledger). The step sits AFTER Section 1b's unconditional denies and BEFORE
+# Section 2's activity check, so it still runs on every path the script exits 0
+# early — no state file, `active != true`, and a research/analysis/evaluation
+# spawn. Placed after any one of those, it would silently never run for that
+# traffic.
+#
+# Fail-open by construction: the whole step runs under `|| true`, which also
+# suspends `set -e` for its body, so a missing helper, a missing hashing tool,
+# an unreadable ledger or an unwritable cache degrades to "no advice" rather
+# than to a broken hook.
+ledger_advisory_check() {
+  local _helper="" _cand _hookdir _cache _ledger _hash _prev _out
+  _hookdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  # The helper is resolved relative to this script, not to the project dir, so
+  # both installed copies find it: .claude/hooks/ and plugin/autoflow/hooks/
+  # sit two and three levels below the repo root respectively. Keeping both
+  # candidates here is what lets this file stay byte-identical to its mirror.
+  for _cand in \
+    "$_hookdir/../../scripts/ledger/ledger-entry-id.sh" \
+    "$_hookdir/../../../scripts/ledger/ledger-entry-id.sh" \
+    "${CLAUDE_PROJECT_DIR:-.}/scripts/ledger/ledger-entry-id.sh"; do
+    if [ -f "$_cand" ]; then _helper="$_cand"; break; fi
+  done
+  [ -n "$_helper" ] || return 0
+  command -v shasum >/dev/null 2>&1 || return 0
+
+  # Content-hash cache: re-check a ledger only when its bytes changed since the
+  # last observation, so an unchanged defective ledger does not repeat the same
+  # warning on every tool call of a session. Keyed by path, scoped to this
+  # project's .autoflow (gitignored scratch), and named outside the issue-*
+  # glob so state-file discovery never picks it up.
+  _cache="$AUTOFLOW_DIR/.ledger-check-cache"
+  for _ledger in "$AUTOFLOW_DIR"/issue-*-ledger.md; do
+    [ -f "$_ledger" ] || continue
+    _hash=$(shasum -a 256 "$_ledger" 2>/dev/null | cut -d' ' -f1)
+    [ -n "$_hash" ] || continue
+    _prev=""
+    if [ -f "$_cache" ]; then
+      # A row is `<64-hex sha256><2 spaces><path>`. The path may contain
+      # spaces, so both fields are read by fixed offset rather than by
+      # whitespace field splitting (which would never match such a path and
+      # would re-warn on every call for an unchanged ledger).
+      _prev=$(awk -v p="$_ledger" \
+        'substr($0, 67) == p { h = substr($0, 1, 64) } END { print h }' \
+        "$_cache" 2>/dev/null)
+    fi
+    [ "$_prev" = "$_hash" ] && continue
+
+    _out=$(bash "$_helper" check "$_ledger" 2>&1 >/dev/null)
+    if [ -n "$_out" ]; then
+      echo "WARNING: decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):" >&2
+      # Bounded: the helper already sanitises and truncates each heading it
+      # echoes; this caps how many defect lines one warning can emit.
+      printf '%s\n' "$_out" | head -20 >&2
+      echo "  Allocate identifiers with scripts/ledger/ledger-entry-id.sh next (CLAUDE.md > Decision Ledger)." >&2
+    fi
+
+    # Drop this ledger's prior row by the same fixed-offset path comparison
+    # (a substring match would mis-handle paths containing spaces), then
+    # append the fresh one.
+    { [ -f "$_cache" ] && awk -v p="$_ledger" 'substr($0, 67) != p' "$_cache"
+      printf '%s  %s\n' "$_hash" "$_ledger"
+    } > "$_cache.tmp" 2>/dev/null && mv -f "$_cache.tmp" "$_cache" 2>/dev/null
+  done
+  return 0
+}
+ledger_advisory_check || true
+
 # ── Section 2: Activity check — locate the active issue state file ──
 # No state file means AutoFlow has not started — let the call through
 # (pre-PREFLIGHT). The Section 1 denies above already ran unconditionally.

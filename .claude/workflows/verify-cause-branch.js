@@ -104,7 +104,7 @@ else if (t === 'fix_test' && i === 'fix_impl') next = 'SEQUENTIAL_FIX' // fix te
 else next = 'EVALUATION_AI' // both "no_problem" -> deadlock: Evaluation AI arbitrates
 
 await agent(
-  `Append (do NOT rewrite or delete) to ${ledger} one VERIFY cause-branch entry: decision "next_action=${next}"; grounds (test self-check=${t}, impl self-check=${i}; failure log ${failLog}); authority "VERIFY self-check"; cycle/phase "VERIFY". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+  `Append (do NOT rewrite or delete) to ${ledger} one VERIFY cause-branch entry: decision "next_action=${next}"; grounds (test self-check=${t}, impl self-check=${i}; failure log ${failLog}); authority "VERIFY self-check"; cycle/phase "VERIFY". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Head the entry \`## <ID> — <title> (cycle <C>, VERIFY)\`, allocating <ID> by running \`bash scripts/ledger/ledger-entry-id.sh next ${ledger} F\` immediately before the append — \`F\` is the facilitator delegate's namespace (CLAUDE.md > Decision Ledger). After the append, run \`bash scripts/ledger/ledger-entry-id.sh check ${ledger}\` and fix every defect it reports before returning. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
   { label: 'ledger', phase: 'Self-check', model: 'opus' },
 )
 
