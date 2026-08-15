@@ -1470,7 +1470,7 @@ await test('AC-facilitator-prompt: ARCHITECT CONVERGED ledger prompt carries the
     if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
     return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
   }
-  const { result, calls } = await runArch({ issue: '97' }, responder)
+  const { result, calls } = await runArch({ issue: '99900097' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
   const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
   assert.match(ledgerPrompt, /ledger-entry-id\.sh next[^\n]*F\b/, 'CONVERGED ledger prompt must instruct allocating each ID via next ... F')
@@ -1483,7 +1483,7 @@ await test('AC-facilitator-prompt: ARCHITECT ESCALATE ledger prompt carries the 
     if (label === 'ledger') return 'ledger ok'
     return { response: 'ACCEPT', counters: [], accept_grounds: [] } // never grounds -> never converges
   }
-  const { result, calls } = await runArch({ issue: '97' }, responder)
+  const { result, calls } = await runArch({ issue: '99900097' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
   const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
   assert.match(ledgerPrompt, /ledger-entry-id\.sh next[^\n]*F\b/, 'ESCALATE ledger prompt must instruct allocating each ID via next ... F')
@@ -1496,7 +1496,7 @@ await test('AC-facilitator-prompt: VERIFY cause-branch ledger prompt carries the
     if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
     return 'ledger ok'
   }
-  const { calls } = await runVerify({ issue: '97', failLog: '/tmp/f.log' }, responder)
+  const { calls } = await runVerify({ issue: '99900097', failLog: '/tmp/f.log' }, responder)
   const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
   assert.match(ledgerPrompt, /ledger-entry-id\.sh next[^\n]*F\b/, 'VERIFY ledger prompt must instruct allocating each ID via next ... F')
   assert.match(ledgerPrompt, /ledger-entry-id\.sh check/, 'VERIFY ledger prompt must instruct running check after the appends')
