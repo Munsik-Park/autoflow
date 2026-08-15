@@ -49,7 +49,13 @@ AUTOFLOW_GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
 LAUNCH_RECORD="$PROJECT_ROOT/.autoflow/issue-62-runtime-launch.json"
 
 # B11: verify-cause-branch.js sha256 must stay unchanged (out of this cycle's scope).
-B11_SHA="315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
+# B11 update (issue #97): #97 added the ledger entry-ID allocation prompt to
+# verify-cause-branch.js's cause-branch script (the same file this pin covers),
+# so this cycle's own change legitimately moves the sha256 rather than
+# violating the negative-control fence. Bumped in the same commit as the
+# underlying change per this suite's own precedent (d333532 #69, e96d4bd #75,
+# 7dc3927 #67).
+B11_SHA="72a7be6309fe7e74ec48c99df27478a6f94de1f6db5741972e14728b18927322"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -354,7 +360,7 @@ assert_true "AC-62-30c: every 'draft artifact missing' occurrence in run.mjs sit
 
 # =============================================================================
 echo ""
-echo "=== AC-62-31 (RED discriminator) — the two unconditional ok-count pin homes bumped to 82 in the same commit ==="
+echo "=== AC-62-31 (RED discriminator) — the two unconditional ok-count pin homes bumped to 85 in the same commit ==="
 # KNOWN RED mid-cycle: per the task instructions and §5 items 6/9's ordering,
 # these two files are edited by the Developer AI in the GREEN commit, not by
 # this suite's own author. Asserted here anyway (unconditional, per the
@@ -363,28 +369,33 @@ echo "=== AC-62-31 (RED discriminator) — the two unconditional ok-count pin ho
 # AC:accept-gating, two new test/workflows/run.mjs assertions landed in the
 # SAME commit as the RED lane, per issue #69's verification design §
 # "harness ok-count pin" — pin bumps land with the harness additions, not
-# GREEN, for this cycle): the stale-value guards below now point one
-# generation back (80, the value immediately preceding this bump), mirroring
-# #67's own generation-advance idiom above.
+# GREEN, for this cycle).
+# B14 update (issue #97): #97 added three run.mjs AC-facilitator-prompt tests,
+# net measured 82 -> 85, landed in the same commit as the dual-home bump in
+# tests/test-issue-27-composition-oracle.sh and
+# tests/test-issue-59-adoption-evidence-discipline.sh (commit 138c2ae). The
+# stale-value guards below now point one generation back (82, the value
+# immediately preceding this bump), mirroring #69's own generation-advance
+# idiom above.
 
 CANON_27="$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"
 CANON_59="$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh"
 
-NEW_27_EQ="$(grep -c -- '-eq 82 \]"' "$CANON_27" || true)"
-NEW_27_LABEL="$(grep -cF 'AC-27-20c: harness ok-line count == B14 (82)' "$CANON_27" || true)"
-STALE_27_EQ="$(grep -c -- '-eq 80 \]"' "$CANON_27" || true)"
-assert_true "AC-62-31a: test-issue-27's assertion pins -eq 82 exactly once (got: $NEW_27_EQ)" \
+NEW_27_EQ="$(grep -c -- '-eq 85 \]"' "$CANON_27" || true)"
+NEW_27_LABEL="$(grep -cF 'AC-27-20c: harness ok-line count == B14 (85)' "$CANON_27" || true)"
+STALE_27_EQ="$(grep -c -- '-eq 82 \]"' "$CANON_27" || true)"
+assert_true "AC-62-31a: test-issue-27's assertion pins -eq 85 exactly once (got: $NEW_27_EQ)" \
   "[ \"$NEW_27_EQ\" -eq 1 ]"
-assert_true "AC-62-31a-label: the bumped '(82)' assertion label is present exactly once (got: $NEW_27_LABEL)" \
+assert_true "AC-62-31a-label: the bumped '(85)' assertion label is present exactly once (got: $NEW_27_LABEL)" \
   "[ \"$NEW_27_LABEL\" -eq 1 ]"
-assert_true "AC-62-31a-stale: no -eq 80 ok-count literal survives in test-issue-27 (got: $STALE_27_EQ)" \
+assert_true "AC-62-31a-stale: no -eq 82 ok-count literal survives in test-issue-27 (got: $STALE_27_EQ)" \
   "[ \"$STALE_27_EQ\" -eq 0 ]"
 
-NEW_59_EXPECTED="$(grep -cF 'EXPECTED_OK=82' "$CANON_59" || true)"
-STALE_59_EXPECTED="$(grep -cF 'EXPECTED_OK=80' "$CANON_59" || true)"
-assert_true "AC-62-31b: test-issue-59's EXPECTED_OK=82 appears exactly once (got: $NEW_59_EXPECTED)" \
+NEW_59_EXPECTED="$(grep -cF 'EXPECTED_OK=85' "$CANON_59" || true)"
+STALE_59_EXPECTED="$(grep -cF 'EXPECTED_OK=82' "$CANON_59" || true)"
+assert_true "AC-62-31b: test-issue-59's EXPECTED_OK=85 appears exactly once (got: $NEW_59_EXPECTED)" \
   "[ \"$NEW_59_EXPECTED\" -eq 1 ]"
-assert_true "AC-62-31c: no stale EXPECTED_OK=80 survives in test-issue-59 (got: $STALE_59_EXPECTED)" \
+assert_true "AC-62-31c: no stale EXPECTED_OK=82 survives in test-issue-59 (got: $STALE_59_EXPECTED)" \
   "[ \"$STALE_59_EXPECTED\" -eq 0 ]"
 
 OUT_59="$(cd "$PROJECT_ROOT" && bash "$CANON_59" 2>&1)"
