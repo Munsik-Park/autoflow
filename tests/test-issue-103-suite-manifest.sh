@@ -300,19 +300,32 @@ YML
 
   # -- Governed-set boundary, positive fixture: a governed step outside the
   #    test-* filename shape must be REQUIRED to carry the guard shape.
+  # SIGPIPE-safe: capture the streaming grep -A/-B context producer first,
+  # then match the captured string with grep -q — piping a streaming
+  # producer directly into a short-circuiting -q consumer under pipefail can
+  # promote a producer SIGPIPE (exit 141) into a false pipeline failure
+  # (docs/submodule-common-rules.md > Testing Standards item 6).
+  CTX_INSTALL="$(grep -A3 'run: bash tests/plugin/verify-install-into-target.sh' "$PROJECT_ROOT/.github/workflows/contract-suites.yml")"
+  INSTALL_HAS_ID=1; printf '%s\n' "$CTX_INSTALL" | grep -q 'id:' && INSTALL_HAS_ID=0
   assert_true "AC-ci-guard-shape governed-set boundary (positive, real tree): tests/plugin/verify-install-into-target.sh's step carries the guard shape or check-suite-manifest.sh reds the real tree" \
-    "grep -A3 'run: bash tests/plugin/verify-install-into-target.sh' '$PROJECT_ROOT/.github/workflows/contract-suites.yml' | grep -q 'id:' || ! bash '$LINT' >/dev/null 2>&1"
+    "[ $INSTALL_HAS_ID -eq 0 ] || ! bash '$LINT' >/dev/null 2>&1"
 
   # -- GATE:PLAN F2: the governed-set quantifier reaches three non-umbrella
   #    workflows hosting a governed step. Pinned down here as a real-tree
   #    requirement — check-suite-manifest.sh must not be scoped to the two
   #    umbrella workflows only.
+  CTX_HOST_PURITY="$(grep -B3 'run: bash tests/test-issue-788-host-purity-delta.sh' "$PROJECT_ROOT/.github/workflows/host-purity-delta.yml")"
+  HOST_PURITY_HAS_ID=1; printf '%s\n' "$CTX_HOST_PURITY" | grep -q 'id:' && HOST_PURITY_HAS_ID=0
   assert_true "GATE:PLAN F2: .github/workflows/host-purity-delta.yml's governed step (tests/test-issue-788-host-purity-delta.sh) carries id/if/timeout-minutes, or check-suite-manifest.sh reds the real tree over it" \
-    "grep -B3 'run: bash tests/test-issue-788-host-purity-delta.sh' '$PROJECT_ROOT/.github/workflows/host-purity-delta.yml' | grep -q 'id:' || ! bash '$LINT' >/dev/null 2>&1"
+    "[ $HOST_PURITY_HAS_ID -eq 0 ] || ! bash '$LINT' >/dev/null 2>&1"
+  CTX_PLUGIN_PACKAGE="$(grep -B3 'run: bash tests/plugin/verify-package.sh' "$PROJECT_ROOT/.github/workflows/plugin-package.yml")"
+  PLUGIN_PACKAGE_HAS_ID=1; printf '%s\n' "$CTX_PLUGIN_PACKAGE" | grep -q 'id:' && PLUGIN_PACKAGE_HAS_ID=0
   assert_true "GATE:PLAN F2: .github/workflows/plugin-package.yml's governed step (tests/plugin/verify-package.sh) carries id/if/timeout-minutes, or check-suite-manifest.sh reds the real tree over it" \
-    "grep -B3 'run: bash tests/plugin/verify-package.sh' '$PROJECT_ROOT/.github/workflows/plugin-package.yml' | grep -q 'id:' || ! bash '$LINT' >/dev/null 2>&1"
+    "[ $PLUGIN_PACKAGE_HAS_ID -eq 0 ] || ! bash '$LINT' >/dev/null 2>&1"
+  CTX_SCHEMA_HOOK="$(grep -B3 'run: bash tests/test-issue-223-schema-hook-contract.sh' "$PROJECT_ROOT/.github/workflows/schema-hook-contract.yml")"
+  SCHEMA_HOOK_HAS_ID=1; printf '%s\n' "$CTX_SCHEMA_HOOK" | grep -q 'id:' && SCHEMA_HOOK_HAS_ID=0
   assert_true "GATE:PLAN F2: .github/workflows/schema-hook-contract.yml's governed step (tests/test-issue-223-schema-hook-contract.sh) carries id/if/timeout-minutes, or check-suite-manifest.sh reds the real tree over it" \
-    "grep -B3 'run: bash tests/test-issue-223-schema-hook-contract.sh' '$PROJECT_ROOT/.github/workflows/schema-hook-contract.yml' | grep -q 'id:' || ! bash '$LINT' >/dev/null 2>&1"
+    "[ $SCHEMA_HOOK_HAS_ID -eq 0 ] || ! bash '$LINT' >/dev/null 2>&1"
 
   # ---------------------------------------------------------------------
   # AC-step-timeout-agreement — timeout-minutes == ceil(budget-secs/60)

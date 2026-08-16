@@ -457,11 +457,91 @@ else
   assert_eq "AC10a: check-autoflow-gate.sh untouched vs origin/main, OR changed with its plugin/autoflow/hooks mirror byte-identical (#843 parity-carried drift protection)" \
     "yes" "$hook_change_admitted"
 
-  # #985 AC3-SPDX-COVERAGE: every tracked .yml gains a 2-line inline SPDX
-  # header. This admits an SPDX-header-only diff on the two CI runner YAMLs
-  # (added lines matching only the SPDX header patterns, no deletions and no
-  # other additions) — mirroring AC10a's #843 parity-carry exception. Any
-  # other change to these files stays caught.
+  # unrecognized_added_lines_in_diff <diff-text>
+  # Prints one line per ADDED ('+') line the admission predicate below does
+  # NOT recognize. Classifies every added line against the union of:
+  #   - blank / comment-only lines
+  #   - the two #985 AC3-SPDX-COVERAGE header lines
+  #   - #103's governance-only shape: a whole new "- id: select" step block
+  #     or a whole new "- name: reconcile selection against step outcomes"
+  #     step block (admitted by YAML block scope — any added line indented
+  #     deeper than the block's own opener, until the next step marker),
+  #     plus the three single-line guard-shape insertions into an EXISTING
+  #     suite step ("id: s-<name>", "if: contains(format(...", "if:
+  #     always()", "timeout-minutes: <N>"), plus an appended paths: glob
+  #     list item.
+  # Block scope is tracked over BOTH added and context lines (not only '+'
+  # lines), because the existing step markers a governance insertion nests
+  # under ("- name: Run ...") are themselves context lines in a purely
+  # additive diff and must still close a prior block.
+  unrecognized_added_lines_in_diff() {
+    printf '%s\n' "$1" | grep -vE '^(diff --git|index |--- |\+\+\+ |@@ )' | awk '
+      function indent_of(s,   i,n,c) {
+        n = 0
+        for (i = 1; i <= length(s); i++) {
+          c = substr(s, i, 1)
+          if (c == " ") n++; else break
+        }
+        return n
+      }
+      {
+        marker = substr($0, 1, 1)
+        rest = substr($0, 2)
+        ind = indent_of(rest)
+        content = rest
+        sub(/^[ \t]*/, "", content)
+
+        opener = (content == "- id: select" || content == "- name: reconcile selection against step outcomes")
+        other_step_marker = (content ~ /^- (id|name):/) && !opener
+
+        if (opener) { deep_block = 1; deep_indent = ind }
+        else if (other_step_marker) { deep_block = 0 }
+        else if (deep_block && ind <= deep_indent) { deep_block = 0 }
+
+        if (marker != "+") next
+
+        if (content == "") next
+        if (content ~ /^#[[:space:]]*SPDX-FileCopyrightText:/) next
+        if (content ~ /^#[[:space:]]*SPDX-License-Identifier:/) next
+        if (content ~ /^#/) next
+        if (opener) next
+        if (deep_block && ind > deep_indent) next
+        if (content ~ /^id: s-[A-Za-z0-9_-]+$/) next
+        if (content ~ /^if: contains\(format\(/) next
+        if (content ~ /^if: always\(\)$/) next
+        if (content ~ /^timeout-minutes: [0-9]+$/) next
+        if (content ~ /^- \x27[^\x27]*\x27$/) next
+        print $0
+      }
+    '
+  }
+
+  # Negative arm (falsifiability): the classifier above must still flag a
+  # non-governance edit — a bogus added line that is none of blank, comment,
+  # SPDX header, an admitted step block, or a guard-shape single-line
+  # insertion. Run BEFORE using the classifier for real, so a vacuously
+  # permissive predicate is caught here rather than silently passing AC10b.
+  NEGATIVE_ARM_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,3 +1,4 @@
+       - name: Run schema↔hook contract test
++        env:
++          UNRELATED_SECRET: injected
+         run: bash tests/test-issue-223-schema-hook-contract.sh'
+  NEGATIVE_ARM_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$NEGATIVE_ARM_DIFF" | grep -c .)"
+  assert_true "AC10b negative arm: a non-governance addition (an unrelated 'env:' key) is NOT admitted by the governance-only classifier (got $NEGATIVE_ARM_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$NEGATIVE_ARM_UNRECOGNIZED\" -gt 0 ]"
+
+  # #985 AC3-SPDX-COVERAGE (every tracked .yml gains a 2-line inline SPDX
+  # header) and #103's governance-only edit (select step / per-suite id+if+
+  # timeout-minutes guard / reconciliation step, on suite steps only — see
+  # .autoflow/issue-103-gate-plan.md F2 and
+  # scripts/test/suite-manifest.sh:315) are both admitted on the two CI
+  # runner YAMLs, by the same no-deletions / all-added-lines-recognized
+  # shape as AC10a's #843 parity-carry exception. Any other change to these
+  # files stays caught.
   wf_diff="$(git -C "$PROJECT_ROOT" diff "$base_ref"..HEAD -- \
     .github/workflows/workflow-regression.yml .github/workflows/schema-hook-contract.yml 2>/dev/null)"
   wf_untouched="no"; [[ -z "$wf_diff" ]] && wf_untouched="yes"
@@ -470,14 +550,12 @@ else
     wf_change_admitted="yes"
   else
     wf_deleted_lines="$(printf '%s\n' "$wf_diff" | grep -c '^-[^-]')"
-    wf_added_other="$(printf '%s\n' "$wf_diff" | grep '^+[^+]' \
-      | grep -vE '^\+# SPDX-FileCopyrightText:|^\+# SPDX-License-Identifier:' \
-      | wc -l | tr -d ' ')"
+    wf_added_other="$(unrecognized_added_lines_in_diff "$wf_diff" | grep -c . || true)"
     if [[ "$wf_deleted_lines" -eq 0 && "$wf_added_other" -eq 0 ]]; then
       wf_change_admitted="yes"
     fi
   fi
-  assert_eq "AC10b: existing CI runner YAMLs untouched vs origin/main, OR changed with an SPDX-header-only diff (#985 AC3-SPDX-COVERAGE inline header)" \
+  assert_eq "AC10b: existing CI runner YAMLs untouched vs origin/main, OR changed with an SPDX-header-only diff (#985 AC3-SPDX-COVERAGE) and/or a governance-only diff (#103 select/guard-shape/reconciliation on suite steps)" \
     "yes" "$wf_change_admitted"
 fi
 
