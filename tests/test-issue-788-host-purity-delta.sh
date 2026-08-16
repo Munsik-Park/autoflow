@@ -513,7 +513,7 @@ else
 
         if (content == "") next
         if (content ~ /^#[[:space:]]*SPDX-FileCopyrightText:/) next
-        if (content ~ /^#[[:space:]]*SPDX-License-Identifier:/) next
+        if (content ~ /^#[[:space:]]*SPDX-License[-]Identifier:/) next
         if (content ~ /^#/) next
         if (opener) next
         if (deep_block && ind > deep_indent) next
