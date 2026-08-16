@@ -268,11 +268,17 @@ jobs:
       - id: select
         name: select suites for this change
         run: |
+          rc=0
           bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
-            2> "$RUNNER_TEMP/selection-report.txt" \
-            | paste -sd' ' - > "$RUNNER_TEMP/selected.txt"
-          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
+            > "$RUNNER_TEMP/selected-raw.txt" \
+            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
           cat "$RUNNER_TEMP/selection-report.txt"
+          if [ "$rc" -ne 0 ]; then
+            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
+            exit "$rc"
+          fi
+          paste -sd' ' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
+          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
 
       - name: test-workflow-trigger-conformance.sh
         id: s-test-workflow-trigger-conformance

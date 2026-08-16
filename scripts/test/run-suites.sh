@@ -14,7 +14,7 @@
 # pass however it entered the set.
 #
 # BUDGET is enforced on two clocks. The suite header's `budget-secs` is a
-# CI-clock number; locally, `timeout` is armed around each suite at the
+# CI-clock number; locally, a wall-clock bound is armed around each suite at the
 # EFFECTIVE LOCAL CEILING — budget-secs x SUITE_LOCAL_SLOWDOWN_FACTOR — sized
 # as a hang detector rather than a seconds-level cost gate. An overrun is a
 # distinct TIMEOUT result that fails the run: investigate the suite, do not
@@ -91,6 +91,65 @@ if [ -z "$SELECTED" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# run_suite_bounded <bound-secs> <root> <suite-path> — run one suite under a
+# wall-clock bound, on hosts that have GNU `timeout`, hosts that have Homebrew's
+# `gtimeout`, and hosts that have neither (macOS's default userland). Sets
+# SUITE_RC to the suite's own exit status and SUITE_TIMED_OUT to 1 iff the bound
+# fired; returns 0 always. Globals rather than a captured substitution because a
+# $(...) subshell cannot set them — the same reason the repo's two other
+# bounded-execution helpers (scripts/handoff/confirm-ci-green.sh > gh_bounded,
+# scripts/preflight/check-review-backend.sh > probe_run_bounded) use globals.
+#
+# The overrun is carried by SUITE_TIMED_OUT rather than by exit status 124:
+# under the watchdog the killed suite is reaped as a signalled process, so 124
+# never appears on that path and keying the classification on it would report a
+# genuine overrun as an ordinary FAIL.
+run_suite_bounded() {
+  local bound="$1" root="$2" suite="$3"
+  SUITE_TIMED_OUT=0
+  local tbin=""
+  if command -v timeout >/dev/null 2>&1; then
+    tbin="timeout"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    tbin="gtimeout"
+  fi
+  if [ -n "$tbin" ]; then
+    (cd "$root" && "$tbin" "$bound" bash "$suite" >/dev/null 2>&1)
+    SUITE_RC=$?
+    [ "$SUITE_RC" -eq 124 ] && SUITE_TIMED_OUT=1
+    return 0
+  fi
+
+  # No bound tool resolves: detached sleep+kill watchdog, in the canonical block
+  # shape scripts/test/check-watchdog-detachment.sh holds every such site to.
+  # `</dev/null` is required here and only here: `set -m` puts the background
+  # suite in its own process group, so a suite reading stdin would be stopped by
+  # SIGTTIN with no visible cause.
+  local marker; marker="$(mktemp)"
+  set -m
+  (cd "$root" && bash "$suite") >/dev/null 2>&1 </dev/null &
+  local pid=$!
+  ( sleep "$bound"
+    if kill -0 "$pid" 2>/dev/null; then
+      echo fired > "$marker"
+      kill -TERM -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
+    fi
+  ) >/dev/null 2>&1 &
+  local wpid=$!
+  set +m
+  wait "$pid" 2>/dev/null
+  SUITE_RC=$?
+  if [ -s "$marker" ]; then
+    SUITE_TIMED_OUT=1
+  else
+    kill -TERM -"$wpid" 2>/dev/null || kill "$wpid" 2>/dev/null
+  fi
+  wait "$wpid" 2>/dev/null
+  rm -f "$marker" 2>/dev/null
+  return 0
+}
+
+# ---------------------------------------------------------------------------
 TOTAL=0; PASSED=0; FAILED=0; TIMEDOUT=0
 RC=0
 
@@ -109,11 +168,11 @@ while IFS= read -r suite; do
   allowance="$(suite_local_allowance_secs "$budget")"
 
   started="$(date +%s)"
-  (cd "$ROOT" && timeout "$allowance" bash "$suite" >/dev/null 2>&1)
-  status=$?
+  run_suite_bounded "$allowance" "$ROOT" "$suite"
+  status="$SUITE_RC"
   elapsed=$(( $(date +%s) - started ))
 
-  if [ "$status" -eq 124 ]; then
+  if [ "$SUITE_TIMED_OUT" -eq 1 ]; then
     # Both quantities are named, so the record explains itself: a reader can see
     # which number was spent and which number it was derived from.
     printf 'TIMEOUT %s %ss (declared budget-secs: %s, effective local ceiling: %ss = %s x %s)\n' \
