@@ -469,11 +469,15 @@ else
   #     plus the three single-line guard-shape insertions into an EXISTING
   #     suite step ("id: s-<name>", "if: contains(format(...", "if:
   #     always()", "timeout-minutes: <N>"), plus an appended paths: glob
-  #     list item.
-  # Block scope is tracked over BOTH added and context lines (not only '+'
-  # lines), because the existing step markers a governance insertion nests
-  # under ("- name: Run ...") are themselves context lines in a purely
-  # additive diff and must still close a prior block.
+  #     list item -- ONLY inside a "paths:" block's own YAML scope (GATE:
+  #     QUALITY quality-deduction finding: an earlier form admitted any
+  #     `- '...'` line file-wide, broader than the stated paths-append
+  #     scope of feature design §2.2).
+  # Block scope (both the step-opener block and the paths: block) is tracked
+  # over BOTH added and context lines (not only '+' lines), because the
+  # existing markers a governance insertion nests under ("- name: Run ...",
+  # "paths:") are themselves context lines in a purely additive diff and
+  # must still close a prior block.
   unrecognized_added_lines_in_diff() {
     printf '%s\n' "$1" | grep -vE '^(diff --git|index |--- |\+\+\+ |@@ )' | awk '
       function indent_of(s,   i,n,c) {
@@ -498,6 +502,13 @@ else
         else if (other_step_marker) { deep_block = 0 }
         else if (deep_block && ind <= deep_indent) { deep_block = 0 }
 
+        # paths: block scope, tracked the same way -- a "paths:" key line
+        # opens it at its own indent; any subsequent line (context or
+        # added) closes it once the indent returns to <= the opening indent,
+        # UNLESS that line is itself a fresh "paths:" opener.
+        if (content == "paths:") { in_paths = 1; paths_indent = ind }
+        else if (in_paths && ind <= paths_indent) { in_paths = 0 }
+
         if (marker != "+") next
 
         if (content == "") next
@@ -510,7 +521,7 @@ else
         if (content ~ /^if: contains\(format\(/) next
         if (content ~ /^if: always\(\)$/) next
         if (content ~ /^timeout-minutes: [0-9]+$/) next
-        if (content ~ /^- \x27[^\x27]*\x27$/) next
+        if (in_paths && ind > paths_indent && content ~ /^- \x27[^\x27]*\x27$/) next
         print $0
       }
     '
@@ -537,6 +548,37 @@ index 0000000..1111111 100644
   NEGATIVE_ARM_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$NEGATIVE_ARM_DIFF" | grep -c .)"
   assert_true "AC10b negative arm: a non-governance addition (an unrelated 'env:' key) is NOT admitted by the governance-only classifier (got $NEGATIVE_ARM_UNRECOGNIZED unrecognized line(s))" \
     "[ \"$NEGATIVE_ARM_UNRECOGNIZED\" -gt 0 ]"
+
+  # GATE:QUALITY quality-deduction finding: the classifier's paths: glob-item
+  # admission (`^- '...'$`) must be scoped to a paths: block's own YAML
+  # context, not admitted file-wide. Negative arm: the same quoted-string
+  # shape appears as a list item OUTSIDE any paths: block (a `steps:` list
+  # entry, not a trigger glob) and must stay unrecognized.
+  PATHS_SCOPE_NEGATIVE_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,2 +1,3 @@
+     steps:
++      - '"'"'not-a-paths-glob-injected-here'"'"''
+  PATHS_SCOPE_NEGATIVE_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$PATHS_SCOPE_NEGATIVE_DIFF" | grep -c .)"
+  assert_true "AC10b classifier breadth negative arm: a quoted-string list item OUTSIDE any paths: block (under steps:, not a trigger glob) is NOT admitted (got $PATHS_SCOPE_NEGATIVE_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$PATHS_SCOPE_NEGATIVE_UNRECOGNIZED\" -gt 0 ]"
+
+  # Positive counterpart: the SAME quoted-string list-item shape, appended
+  # INSIDE a paths: block, IS admitted -- confirms the tightened classifier
+  # did not lose the legitimate append it exists to allow.
+  PATHS_SCOPE_POSITIVE_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,3 +1,4 @@
+     paths:
+      - '"'"'tests/existing-glob.sh'"'"'
++      - '"'"'tests/newly-appended-glob.sh'"'"''
+  PATHS_SCOPE_POSITIVE_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$PATHS_SCOPE_POSITIVE_DIFF" | grep -c .)"
+  assert_true "AC10b classifier breadth positive arm: a quoted-string list item appended INSIDE a paths: block is still admitted (got $PATHS_SCOPE_POSITIVE_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$PATHS_SCOPE_POSITIVE_UNRECOGNIZED\" -eq 0 ]"
 
   # #985 AC3-SPDX-COVERAGE (every tracked .yml gains a 2-line inline SPDX
   # header) and #103's governance-only edit (select step / per-suite id+if+

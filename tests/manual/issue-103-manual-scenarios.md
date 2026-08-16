@@ -21,10 +21,14 @@ alone cannot measure.
 1. On the same host, with no other CPU-heavy process running (check
    `.claude/hooks` / `local-suite-contention` guidance — the tree's own memory
    records checkout contention as a confound), record the wall-clock of a
-   full-tree run **before** this cycle's change:
-   `git stash; time bash tests/issue-59-full-sweep-driver.sh; git stash pop`
-   (or checkout the merge-base commit and run whatever full-sweep mechanism
-   existed there).
+   full-tree run **before** this cycle's change. `git stash` does not apply
+   here — `tests/issue-59-full-sweep-driver.sh` is a committed deletion on
+   this branch, not an uncommitted change, so stashing restores nothing.
+   Instead, in a separate worktree or checkout of the merge-base commit
+   (`git merge-base HEAD origin/main`), run whatever full-sweep mechanism
+   existed there — at the branch point that is
+   `time bash tests/issue-59-full-sweep-driver.sh`, the suite this cycle's
+   own `scripts/test/run-suites.sh --all` (step 2) supersedes.
 2. Record the wall-clock of the post-change full-tree run:
    `time bash scripts/test/run-suites.sh --all`.
 3. Record the wall-clock of a **narrow-delta** run — a change touching one

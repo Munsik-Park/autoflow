@@ -121,35 +121,62 @@ exits zero.
 
 ---
 
-## M5 — Genuine host-level worktree failure against the full-sweep driver (Tier 3, environment-dependent, cycle 3)
+## M5 — Genuine host-level failure under a read-only TMPDIR (Tier 3, environment-dependent, cycle 3)
 
-**Source AC:** AC-59-34 — a *genuine* host-level worktree failure (read-only
-`TMPDIR`, disk full, stale worktree lock) driving `tests/issue-59-full-sweep-driver.sh`
-as a real program also produces the per-suite `INCONCLUSIVE` line and a non-zero
-exit — never `ALREADY RED`, never `PASS`. This mirrors M4 above for the sibling
-suite, applied to the driver: AC-59-25/26 already drive the *same branch*
-through the real binary (an unresolvable ref), only the *cause* differs here,
-and a fake `git` standing in for the real host failure is rejected for a
-`T ∩ S` contact point for the same composition-oracle reason M4 cites
-(`.autoflow/issue-59-verification-design.md` cycle-3 §1, DCR-C3-6, inheriting
-DCR-C2-5).
+**Retirement note (issue #103):** `tests/issue-59-full-sweep-driver.sh` is
+deleted (feature design §2.3 — superseded by `scripts/test/run-suites.sh
+--all`, which unlike the driver has a real CI execution path). The driver's
+own worktree-creation mechanism (`mktemp -d
+"${TMPDIR:-/tmp}/autoflow-sweep-wt.XXXXXX"`, the subject of the original
+`AC-59-34` INCONCLUSIVE classification below) does not exist in the new
+runner — `scripts/test/run-suites.sh` creates no worktree at all
+(`.autoflow/issue-103-budget-green-blocker.md` §4, "sandbox containment
+structurally, since the runner creates no worktree at all"), so a read-only
+`TMPDIR` cannot fail *it* the way it failed the driver. The scenario is
+re-pointed below to what the new runner *does* do under the same host
+condition — every suite that itself calls `mktemp` under the process
+environment's `TMPDIR` fails individually — rather than left claiming an
+`INCONCLUSIVE` classification no live mechanism produces.
 
-**Setup:** Point `TMPDIR` at a read-only directory before invoking the driver,
-so its `mktemp -d "${TMPDIR:-/tmp}/autoflow-sweep-wt.XXXXXX"` cannot write:
+**Source AC:** AC-59-34 (historical) — a *genuine* host-level worktree
+failure (read-only `TMPDIR`, disk full, stale worktree lock) driving the
+now-deleted driver as a real program produced a per-suite `INCONCLUSIVE`
+line and a non-zero exit, never `ALREADY RED`, never `PASS`. Superseded by
+the retirement note above; recorded for provenance, not as a live pass
+condition.
+
+**Setup:** Point `TMPDIR` at a read-only directory before invoking the
+runner, so any suite that itself calls `mktemp` under that environment
+cannot write:
 
 ```
-TMPDIR=/path/to/a/read-only/dir bash tests/issue-59-full-sweep-driver.sh
+TMPDIR=/path/to/a/read-only/dir bash scripts/test/run-suites.sh --all
 ```
 
-**Procedure:** Run the driver as above on the `dev/*-issue-59*` branch with a
-resolvable `BASE_REF` (or the default resolution), and inspect the per-suite
-lines and the run-level exit code.
+**Procedure:** Run the runner as above on the `dev/*-issue-59*` branch (or
+any branch), and inspect the per-suite `PASS`/`FAIL`/`TIMEOUT` lines and the
+run-level exit code.
 
-**Pass:** each suite whose base cannot be measured prints the per-suite
+**Pass:** every suite that calls `mktemp` internally reports `FAIL <suite>
+<elapsed>s (exit <status>)` — a non-zero exit attributable to its own
+`mktemp` failure, not a silent `PASS`; the run-level summary line reports a
+non-zero failed count and `run-suites` exits non-zero. There is no
+`INCONCLUSIVE` classification in the new runner — a host-level failure and a
+genuine assertion failure both surface as `FAIL`, distinguishable only by
+reading the suite's own output, which is why this scenario stays manual
+rather than becoming a gate.
+
+<!-- The paragraph below is retained verbatim for provenance; it describes
+     the deleted driver's behaviour and is not the pass condition above. -->
+
+**Historical pass condition (driver, retired):** each suite whose base
+cannot be measured prints the per-suite
 `INCONCLUSIVE:` line naming that suite, no line reads `ALREADY RED`, the
 summary reports a non-zero inconclusive count, and the driver exits non-zero.
 No literal is pinned beyond the suite name and the words `INCONCLUSIVE` /
-`ALREADY RED`.
+`ALREADY RED`. (Historical — the driver that produced this vocabulary is
+deleted; the live pass condition is the one stated above, under **Pass**.)
 
-**Fail:** any `ALREADY RED … base exit` line, any inconclusive suite counted
-into `Clean/already-red`, or an exit of `0`.
+**Fail (live, new runner):** any suite affected by the read-only `TMPDIR`
+reports `PASS` instead of `FAIL`, or `run-suites` exits `0` despite a
+non-zero failed count.

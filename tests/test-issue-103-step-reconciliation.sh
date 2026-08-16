@@ -68,6 +68,63 @@ JSON
   bash "$RECONCILE" --selected "$SELECTED_FILE" --steps "$STEPS_FILE" >/tmp/issue103-reconcile-agree.out 2>&1
   assert_true "a selected suite that ran successfully reconciles as agreement (exit 0)" "[ $? -eq 0 ]"
 
+  # ---------------------------------------------------------------------
+  # GATE:QUALITY F1 (mock-boundary fidelity, ledger O7): the arms above build
+  # a SELECTED report matching exactly the outcome map's own suites -- a
+  # shape strictly more favourable than production, where select-suites.sh's
+  # SELECTED report is TREE-WIDE (63 suites) but toJSON(steps) is JOB-LOCAL
+  # (only that one workflow's steps). Every umbrella/single-suite workflow
+  # invokes the reconciler this way, with no --governed narrowing, so a
+  # suite hosted in a DIFFERENT workflow resolves to outcome=absent and reds
+  # every job on every run. Re-based fixture: a SELECTED set LARGER than the
+  # job's own step map, with three named suites --
+  #   (a) hosted in ANOTHER workflow (present in SELECTED, absent from this
+  #       job's outcome map) -- must NOT red this job;
+  #   (b) hosted HERE, selected, outcome=skipped -- must red;
+  #   (c) hosted HERE, unselected, outcome=success (ran anyway) -- must red.
+  # ---------------------------------------------------------------------
+  cat > "$SELECTED_FILE" <<'SEL'
+SELECTED: tests/test-fixture-here-a.sh
+SELECTED: tests/test-fixture-elsewhere.sh
+SELECTED: tests/test-fixture-here-skip.sh
+NOT-SELECTED: tests/test-fixture-here-ran.sh no delta match
+SEL
+  # The job-local outcome map: only the suites THIS job's steps actually
+  # host. tests/test-fixture-elsewhere.sh is hosted in a different workflow
+  # and is therefore correctly absent here -- that absence is legitimate,
+  # not a missing-id defect.
+  cat > "$STEPS_FILE" <<'JSON'
+{
+  "s-test-fixture-here-a": {"outcome": "success"},
+  "s-test-fixture-here-skip": {"outcome": "skipped"},
+  "s-test-fixture-here-ran": {"outcome": "success"}
+}
+JSON
+
+  # F1 itself: the CURRENT real-workflow invocation shape (tree-wide
+  # SELECTED report, job-local outcome map, NO --governed narrowing) must
+  # NOT red on a cross-workflow suite. This is what the five real workflows
+  # do today, and it currently REDS every run (GATE:QUALITY F1) -- expected
+  # RED here until the workflow wiring adds per-job --governed narrowing.
+  bash "$RECONCILE" --selected "$SELECTED_FILE" --steps "$STEPS_FILE" >/tmp/issue103-reconcile-f1-unwired.out 2>&1
+  f1_unwired_exit=$?
+  assert_true "GATE:QUALITY F1: the real (unwired) invocation shape -- a tree-wide SELECTED report against a job-local outcome map, no --governed -- must not red on a suite hosted in another workflow (tests/test-fixture-elsewhere.sh); currently REDS on every job (this is F1, expected Red until the workflow wiring is fixed)" \
+    "[ $f1_unwired_exit -eq 0 ] && ! grep -qF 'test-fixture-elsewhere.sh' /tmp/issue103-reconcile-f1-unwired.out"
+
+  # The fix shape: the SAME fixture, narrowed to this job's own governed set
+  # via --governed (what the workflow wiring fix will pass per hosted
+  # suite). Proves the reconciler script itself is not at fault -- the
+  # mechanism already supports the correct fix -- and pins the exact
+  # invocation shape GREEN must wire into all five workflows.
+  bash "$RECONCILE" --selected "$SELECTED_FILE" --steps "$STEPS_FILE" \
+    --governed tests/test-fixture-here-a.sh \
+    --governed tests/test-fixture-here-skip.sh \
+    --governed tests/test-fixture-here-ran.sh \
+    >/tmp/issue103-reconcile-f1-wired.out 2>&1
+  f1_wired_exit=$?
+  assert_true "GATE:QUALITY F1 fix shape: with --governed narrowed to this job's own hosted suites, arm (a) (cross-workflow suite) does NOT red, arm (b) (hosted here, selected, skipped) DOES red, and arm (c) (hosted here, unselected but ran) DOES red -- all in the same run" \
+    "[ $f1_wired_exit -ne 0 ] && ! grep -qF 'test-fixture-elsewhere.sh' /tmp/issue103-reconcile-f1-wired.out && grep -qF 'test-fixture-here-skip.sh' /tmp/issue103-reconcile-f1-wired.out && grep -qF 'test-fixture-here-ran.sh' /tmp/issue103-reconcile-f1-wired.out && ! grep -qF 'test-fixture-here-a.sh' /tmp/issue103-reconcile-f1-wired.out"
+
   # -- Governed-set boundary: ungoverned steps in the outcome map reconcile
   #    as 0, not as 'ran while unselected'.
   printf 'SELECTED: tests/test-fixture-a.sh\n' > "$SELECTED_FILE"
