@@ -20,11 +20,32 @@
 # report actually recorded. The standing-lint steps and the registry-runner step
 # run unconditionally and appear in `steps` with outcome `success` while sitting
 # in no SELECTED:/NOT-SELECTED: record; reconciling them would red every correct
-# run. `--governed` narrows the set further when a caller needs to.
+# run. `--governed` narrows the set explicitly when a caller needs to.
+#
+# JOB-LOCAL NARROWING — the two inputs are not the same width. The selection
+# report is TREE-WIDE (select-suites.sh enumerates every governed suite in the
+# repository), while `toJSON(steps)` is JOB-LOCAL (only the steps of the job
+# that produced it). The 63 governed suites are hosted across five workflows, so
+# a suite this job does not host is legitimately absent from this job's outcome
+# map — reconciling it as a missing step reds every job of every workflow on
+# every run, which is the state issue #103's GATE:QUALITY caught (F1).
+#
+# So when no `--governed` is given, the governed set is derived from the outcome
+# map itself: a report entry is reconciled when the job's step context carries
+# its `id`. That is the only job-local signal the script is handed, and it is
+# per-job by construction rather than by a hand-maintained list that would drift
+# from the steps above it in the same file.
 #
 # Silence is not agreement: a governed suite absent from the outcome map
 # entirely — the missing-`id` case, invisible to `toJSON(steps)` — is a
-# mismatch, not a pass.
+# mismatch, not a pass. Under the derivation above that class is unobservable
+# for a single suite (an id-less step and a step hosted elsewhere are the same
+# absence), with two things holding it: (a) when the outcome map resolves NO
+# entry of the report there is no job-local view to narrow to, so the whole
+# report is reconciled and the absence still reds; (b) the per-step form of the
+# class is enforced statically — check-suite-manifest.sh requires an `id:` on
+# every governed step and fails the build without one. An explicit `--governed`
+# set restores the runtime detection for a caller that can name its own suites.
 #
 # STEP ID CONVENTION — a governed step's `id` is `s-<basename without
 # extension>`, which is how an outcome key resolves back to a suite path.
@@ -76,6 +97,25 @@ reconcile() {
     return 1
   fi
 
+  # hosted_here <suite path> — the job's step context carries this suite's id.
+  hosted_here() {
+    printf '%s' "$steps_body" | jq -e --arg k "$(step_id_of "$1")" 'has($k)' >/dev/null 2>&1
+  }
+
+  # Without an explicit `--governed` set, narrow to the suites this job hosts.
+  # The fallback: a report none of whose entries the outcome map carries is not
+  # a narrowed view of it, so reconcile the whole report (see JOB-LOCAL
+  # NARROWING in the header).
+  local narrow=0
+  if [ $# -eq 0 ]; then
+    while IFS= read -r line; do
+      case "$line" in 'SELECTED: '*) path="${line#SELECTED: }" ;; 'NOT-SELECTED: '*) path="${line#NOT-SELECTED: }" ;; *) continue ;; esac
+      path="${path%% *}"
+      [ -n "$path" ] || continue
+      if hosted_here "$path"; then narrow=1; break; fi
+    done <<< "$sel_body"
+  fi
+
   while IFS= read -r line; do
     case "$line" in
       'SELECTED: '*)     state=selected;   path="${line#SELECTED: }" ;;
@@ -85,11 +125,14 @@ reconcile() {
     path="${path%% *}"
     [ -n "$path" ] || continue
 
-    # `--governed`, when given, is the authoritative set.
+    # `--governed`, when given, is the authoritative set; otherwise the job's
+    # own step context is.
     if [ $# -gt 0 ]; then
       local g found=0
       for g in "$@"; do [ "$g" = "$path" ] && found=1; done
       [ "$found" -eq 1 ] || continue
+    elif [ "$narrow" -eq 1 ]; then
+      hosted_here "$path" || continue
     fi
 
     id="$(step_id_of "$path")"
