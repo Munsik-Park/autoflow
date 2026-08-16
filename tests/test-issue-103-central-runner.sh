@@ -182,6 +182,57 @@ SH
   assert_true "AC-runtime-ceiling-enforced: a stub under budget exits 0 (the ceiling gates, it does not falsely trip)" \
     "[ $underbudget_exit -eq 0 ]"
   rm -rf "$STUB6"
+
+  # ---------------------------------------------------------------------
+  # VERIFY step 3 (minimal-implementation check) additions — four real
+  # implementation code paths the arms above never exercised:
+  #   (1) select-suites.sh's OWN --self-test (its FULL-SET/REPORT/BLOCK/
+  #       MATCHER legs) was never invoked by this suite — only its
+  #       behaviour was re-tested externally through the fixture drives
+  #       above.
+  #   (2) run-suites.sh's DEFAULT (non---all) mode, which internally calls
+  #       select-suites.sh (the "Local consumption" path feature design
+  #       §2.2 names as the runner's second consumer of the one selection
+  #       definition site) — every prior arm used --all, which bypasses
+  #       that call entirely.
+  #   (3) run-suites.sh --list.
+  #   (4) run-suites.sh's SELECT_RC!=0 propagation when the internal
+  #       select-suites.sh call BLOCKs.
+  # ---------------------------------------------------------------------
+  assert_true "select-suites.sh --self-test exits 0 (its own FULL-SET/REPORT/BLOCK/MATCHER legs)" \
+    "bash '$SELECT' --self-test >/tmp/issue103-select-selftest.out 2>&1"
+
+  STUB7="$(mktemp -d)"
+  build_stub_root "$STUB7"
+  git -C "$STUB7" init -q >/dev/null 2>&1
+  git -C "$STUB7" add -A >/dev/null 2>&1
+  git -C "$STUB7" -c user.email=a@b.c -c user.name=a commit -q -m init >/dev/null 2>&1
+  bash "$RUNNER" --root "$STUB7" --event push >/tmp/issue103-runner-default-mode.out 2>&1
+  default_mode_exit=$?
+  WITNESS7_A="$(grep -c 'test-fixture-103-stub-a.sh' "$STUB7/witness.log" 2>/dev/null || echo 0)"
+  WITNESS7_B="$(grep -c 'test-fixture-103-stub-b.sh' "$STUB7/witness.log" 2>/dev/null || echo 0)"
+  assert_true "run-suites.sh default (non---all) mode chains to select-suites.sh internally and runs the resolved full set exactly once each (a: $WITNESS7_A, b: $WITNESS7_B)" \
+    "[ $default_mode_exit -eq 0 ] && [ \"$WITNESS7_A\" -eq 1 ] && [ \"$WITNESS7_B\" -eq 1 ]"
+
+  bash "$RUNNER" --root "$STUB7" --event push --list >/tmp/issue103-runner-list.out 2>&1
+  list_exit=$?
+  WITNESS7_A_AFTER_LIST="$(grep -c 'test-fixture-103-stub-a.sh' "$STUB7/witness.log" 2>/dev/null || echo 0)"
+  assert_true "run-suites.sh --list prints the selected set and exits 0 WITHOUT executing any suite (witness unchanged: $WITNESS7_A_AFTER_LIST)" \
+    "[ $list_exit -eq 0 ] && grep -qF 'test-fixture-103-stub-a.sh' /tmp/issue103-runner-list.out && [ \"$WITNESS7_A_AFTER_LIST\" -eq 1 ]"
+  rm -rf "$STUB7"
+
+  STUB8="$(mktemp -d)"
+  build_stub_root "$STUB8"
+  git -C "$STUB8" init -q >/dev/null 2>&1
+  git -C "$STUB8" add -A >/dev/null 2>&1
+  git -C "$STUB8" -c user.email=a@b.c -c user.name=a commit -q -m init >/dev/null 2>&1
+  git -C "$STUB8" branch -m __no-base-here__ >/dev/null 2>&1
+  ( cd "$STUB8" && unset GITHUB_BASE_REF; bash "$RUNNER" --root "$STUB8" --event pull_request >/tmp/issue103-runner-select-fail.out 2>&1 )
+  select_fail_exit=$?
+  WITNESS8="$(wc -l < "$STUB8/witness.log" 2>/dev/null | tr -d ' ')"; WITNESS8="${WITNESS8:-0}"
+  assert_true "run-suites.sh propagates a non-zero SELECT_RC from an internally-BLOCKed select-suites.sh call (exit $select_fail_exit) and executes no suite (witness lines: $WITNESS8)" \
+    "[ $select_fail_exit -ne 0 ] && grep -qi 'selection failed' /tmp/issue103-runner-select-fail.out && [ \"$WITNESS8\" -eq 0 ]"
+  rm -rf "$STUB8"
 fi
 
 echo ""

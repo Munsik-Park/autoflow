@@ -521,15 +521,19 @@ else
   # SPDX header, an admitted step block, or a guard-shape single-line
   # insertion. Run BEFORE using the classifier for real, so a vacuously
   # permissive predicate is caught here rather than silently passing AC10b.
+  # (the trailing context line intentionally names no real suite path — a
+  # literal "bash tests/<name>.sh" string spanning this fixture would itself
+  # match check-suite-leaf.sh's command-position shape, since that lint reads
+  # line by line and this fixture's quoting is not the same-line quoted-string
+  # form its "ignored" row covers)
   NEGATIVE_ARM_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
 index 0000000..1111111 100644
 --- a/.github/workflows/fixture.yml
 +++ b/.github/workflows/fixture.yml
-@@ -1,3 +1,4 @@
+@@ -1,2 +1,3 @@
        - name: Run schema↔hook contract test
 +        env:
-+          UNRELATED_SECRET: injected
-         run: bash tests/test-issue-223-schema-hook-contract.sh'
++          UNRELATED_SECRET: injected'
   NEGATIVE_ARM_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$NEGATIVE_ARM_DIFF" | grep -c .)"
   assert_true "AC10b negative arm: a non-governance addition (an unrelated 'env:' key) is NOT admitted by the governance-only classifier (got $NEGATIVE_ARM_UNRECOGNIZED unrecognized line(s))" \
     "[ \"$NEGATIVE_ARM_UNRECOGNIZED\" -gt 0 ]"
