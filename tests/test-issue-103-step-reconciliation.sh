@@ -23,6 +23,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RECONCILE="$PROJECT_ROOT/scripts/test/check-step-reconciliation.sh"
+SELECT="$PROJECT_ROOT/scripts/test/select-suites.sh"
 
 PASS=0; FAIL=0; TESTS=0
 assert_true() {
@@ -175,6 +176,64 @@ JSON
   assert_true "a governed selected suite absent from the outcome map entirely (missing-id case) drives the reconciler to non-zero exit" "[ $? -ne 0 ]"
 
   rm -f "$SELECTED_FILE" "$STEPS_FILE"
+
+  # =========================================================================
+  # Issue #103 cycle 2 (review-response) -- AC-reconcile-quiet-under-a-fail-
+  # closed-select. .autoflow/issue-103-verification-design.md (cycle 2) §1.
+  # A fail-closed select must not turn the reconcile step red for a SECOND,
+  # unrelated reason -- the run's single reported cause stays the select
+  # step. Driven with the REAL select-suites.sh on a genuinely unresolvable
+  # base (not a hand-written BLOCK: line -- verification design §3, "Neither
+  # a hand-written BLOCK: line nor a synthesised outcome vocabulary is
+  # admitted, because both would encode the assumption the arm exists to
+  # test"), fed to the real check-step-reconciliation.sh alongside a steps
+  # map in the production job-local shape where every governed step is
+  # skipped.
+  # =========================================================================
+  if [ -f "$SELECT" ]; then
+    RECONQ_DIR="$(mktemp -d)"
+    mkdir -p "$RECONQ_DIR/tests"
+    cat > "$RECONQ_DIR/tests/test-fixture-reconq-a.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: docs/reconq-subject-a.md
+# lane: standing
+# budget-secs: 30
+true
+SH
+    git -C "$RECONQ_DIR" init -q >/dev/null 2>&1
+    git -C "$RECONQ_DIR" add -A >/dev/null 2>&1
+    git -C "$RECONQ_DIR" -c user.email=a@b.c -c user.name=a commit -q -m init >/dev/null 2>&1
+    # Rename off the default branch -- git init's default-branch config
+    # otherwise names this checkout's own branch "main", which is a
+    # resolvable base and defeats the fixture's premise (same convention as
+    # tests/test-issue-103-central-runner.sh's own BLOCK fixture).
+    git -C "$RECONQ_DIR" branch -m __no-base-here__ >/dev/null 2>&1
+
+    RECONQ_REPORT="$(mktemp)"
+    ( cd "$RECONQ_DIR" && unset GITHUB_BASE_REF; bash "$SELECT" --root "$RECONQ_DIR" --event pull_request >/dev/null 2>"$RECONQ_REPORT" )
+    reconq_select_rc=$?
+    assert_true "AC-reconcile-quiet-under-a-fail-closed-select: the real select-suites.sh on a genuinely unresolvable base BLOCKs (non-zero exit) and its stderr report carries a BLOCK: line and no SELECTED:/NOT-SELECTED: record" \
+      "[ $reconq_select_rc -ne 0 ] && grep -qi 'block' '$RECONQ_REPORT' && ! grep -qE '^(SELECTED|NOT-SELECTED): ' '$RECONQ_REPORT'"
+
+    # Production job-local shape: as if the capture-then-check fix had
+    # exited the select step non-zero, so every guarded step's
+    # contains(...) expression evaluated false and the step is skipped.
+    cat > "$STEPS_FILE" <<'JSON'
+{
+  "select": {"outcome": "failure"},
+  "s-test-fixture-reconq-a": {"outcome": "skipped"}
+}
+JSON
+    bash "$RECONCILE" --selected "$RECONQ_REPORT" --steps "$STEPS_FILE" >/tmp/issue103-reconcile-fail-closed.out 2>&1
+    reconq_reconcile_rc=$?
+    assert_true "AC-reconcile-quiet-under-a-fail-closed-select: check-step-reconciliation.sh fed the real BLOCK-only report and a job-local steps map with every governed step skipped exits 0 with no MISMATCH line -- the reconcile step must not red for a second, unrelated reason" \
+      "[ $reconq_reconcile_rc -eq 0 ] && ! grep -q 'MISMATCH' /tmp/issue103-reconcile-fail-closed.out"
+
+    rm -rf "$RECONQ_DIR"
+    rm -f "$RECONQ_REPORT"
+  else
+    assert_true "AC-reconcile-quiet-under-a-fail-closed-select: scripts/test/select-suites.sh exists (required to drive this arm against the real selector)" "false"
+  fi
 fi
 
 echo ""

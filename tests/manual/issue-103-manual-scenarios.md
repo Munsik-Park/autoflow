@@ -92,3 +92,61 @@ on alone.
 
 **Pass condition**: `run-suites: <N> passed, 0 failed, 0 timed out, of <N>
 executed`, on both an uncontended and a contended run.
+
+## M4 — AC-real-pr-run-selects-rather-than-blocks (cycle 2, review-response)
+
+**Companion**: `.autoflow/issue-103-verification-design.md` (cycle 2) §1. Covers
+the two review findings' composition contact point — the shipped `select`
+step text running under the real GitHub Actions shell and step-outcome
+semantics — which no local replay can substitute for, since the environment
+(base-ref resolution under the runner's actual fetched history) is the
+subject.
+
+**Why manual**: base-ref resolution depends on the history the runner
+fetched under a specific event payload; no local layer can distinguish
+"fail-closed and correct" from "fail-closed and now red on every PR", which
+is the precise regression `capture-then-check` could introduce if
+`fetch-depth-full-history` did not actually fix `schema-hook-contract.yml`'s
+base resolution. The run log is the only witness.
+
+**Stated expectation**: `resolve_base_ref` resolves `origin/$GITHUB_BASE_REF`
+— the first non-override branch of its precedence chain
+(`tests/lib/base-ref.sh:30-49`) — because `fetch-depth: 0` makes
+`actions/checkout` fetch `+refs/heads/*:refs/remotes/origin/*`, so that
+remote-tracking ref exists. Naming the expected branch is what turns the
+witness into a comparison rather than "the log looks fine": resolution via a
+later fallback in the chain would still produce a green run while leaving
+the checkout change unproven.
+
+**Procedure — first witness (success path)**:
+
+1. On this PR's own `schema-hook-contract` Actions run (post-GREEN, after
+   `fetch-depth-full-history` and `capture-then-check` land), open the
+   `select suites for this change` step's log.
+2. Confirm the step's report shows `SELECTED:` / `NOT-SELECTED:` lines, never
+   a `BLOCK:` line, and that resolution reached `origin/$GITHUB_BASE_REF` as
+   stated above (not a later fallback branch — check the report or add a
+   temporary echo of the resolved ref if the log does not already show it).
+3. Confirm the guarded `s-test-issue-223-schema-hook-contract` step's outcome
+   is `success` (executed, not skipped).
+
+**Procedure — second witness (fail-closed path in the real runner)**:
+
+1. On a scratch branch off this PR, temporarily force `select-suites.sh` to
+   exit non-zero (e.g. an early `exit 1` after a stderr `BLOCK:` line, or a
+   forced-unresolvable base) and push a commit that triggers
+   `schema-hook-contract.yml`.
+2. Confirm the Actions run marks the `select` step `failure`, the job red,
+   and the `BLOCK:` text present in the step's own log — not masked into a
+   green run with an empty selection.
+3. Revert the scratch forcing before merging; this witness is one-time, not a
+   standing check (verification design §1 names the residual: after this
+   cycle, the only standing assertion over the shipped step's *composed*
+   behaviour is the local `bash -e` replay plus the text predicate in
+   `tests/test-workflow-trigger-conformance.sh` — this manual witness is not
+   re-run on every future change).
+
+**Pass condition**: both witnesses observed on the real GitHub Actions
+runner — the success-path run selects and executes the guarded suite via
+`origin/$GITHUB_BASE_REF`, and the forced-BLOCK run reds the job with the
+`BLOCK:` text visible in the step log.

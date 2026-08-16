@@ -645,6 +645,271 @@ assert_true "AC-step-target-exists hermetic: a step naming a nonexistent target 
   "[ ! -f \"\$PROJECT_ROOT/\${STEP_TARGET_FIXTURE_TARGETS[0]}\" ]"
 rm -f "$STEP_TARGET_FIXTURE"
 
+# =============================================================================
+# Issue #103 cycle 2 (review-response) -- select-step-fail-open.
+# .autoflow/issue-103-verification-design.md (cycle 2) §1:
+#   AC-select-step-fails-closed-on-block, AC-select-step-passes-through-on-
+#   success, AC-select-step-shape-holds-for-every-selector-consuming-
+#   workflow, AC-select-checkout-history-sufficient (shape half).
+# =============================================================================
+
+# --- extract_select_run_block <workflow-file> -------------------------------
+# awk over the workflow text (verification design §1 "Extraction mechanism,
+# named rather than assumed"): locate the `- id: select` list item, take its
+# `run: |` scalar, emit the lines with the block indent stripped. Not
+# yq/python3 -- no suite or script in this tree parses workflow YAML with
+# either.
+extract_select_run_block() {
+  awk '
+    state == 0 && /^[[:space:]]*- id: select[[:space:]]*$/ { state = 1; next }
+    state == 1 && /run:[[:space:]]*\|/ {
+      line = $0
+      sub(/[^ ].*$/, "", line)
+      runindent = length(line)
+      blockindent = runindent + 2
+      state = 2
+      next
+    }
+    state == 2 {
+      if ($0 == "") { print ""; next }
+      line = $0
+      sub(/[^ ].*$/, "", line)
+      ind = length(line)
+      if (ind < blockindent) { exit }
+      print substr($0, blockindent + 1)
+    }
+  ' "$1"
+}
+
+# --- select_run_block_sentinel_ok <block-text> ------------------------------
+# Guards the extraction (verification design §1): the extracted text must
+# contain both the select-suites.sh invocation and the $GITHUB_OUTPUT append
+# line, or a silently-truncated extraction would make the replay below
+# vacuous -- a short block can exit non-zero for the wrong reason and still
+# satisfy the negative arm.
+select_run_block_sentinel_ok() {
+  printf '%s\n' "$1" | grep -qF 'select-suites.sh' \
+    && printf '%s\n' "$1" | grep -qF 'GITHUB_OUTPUT'
+}
+
+# --- run_select_replay <block-text> <selector-mode: block|pass|pass-empty> --
+# Replay the extracted block VERBATIM under `bash -e` -- the verified default
+# for a `run:` step with no `shell:` key (verification design §0; replaying
+# under `bash -eo pipefail` would pass without any fix and is the one
+# substitution that would make this arm vacuous). A stub select-suites.sh is
+# placed at the relative path the block invokes. Sets REPLAY_RC and
+# REPLAY_OUTPUT (the $GITHUB_OUTPUT file's content).
+run_select_replay() {
+  local block="$1" mode="$2" root script rtemp gout
+  root="$(mktemp -d)"
+  mkdir -p "$root/scripts/test"
+  case "$mode" in
+    block)
+      cat > "$root/scripts/test/select-suites.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "BLOCK: stub selector -- forced non-zero for the negative replay" >&2
+exit 1
+STUB
+      ;;
+    pass)
+      cat > "$root/scripts/test/select-suites.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "tests/fixture-a.sh"
+echo "tests/fixture-b.sh"
+exit 0
+STUB
+      ;;
+    pass-empty)
+      cat > "$root/scripts/test/select-suites.sh" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+      ;;
+  esac
+  chmod +x "$root/scripts/test/select-suites.sh"
+
+  rtemp="$(mktemp -d)"; gout="$(mktemp)"; script="$(mktemp)"
+  printf '%s\n' "$block" > "$script"
+  ( cd "$root" && GITHUB_EVENT_NAME=pull_request RUNNER_TEMP="$rtemp" GITHUB_OUTPUT="$gout" bash -e "$script" ) \
+    >/tmp/issue103-select-replay-stdout.out 2>/tmp/issue103-select-replay-stderr.out
+  REPLAY_RC=$?
+  REPLAY_OUTPUT="$(cat "$gout" 2>/dev/null)"
+  rm -rf "$root" "$rtemp" "$gout" "$script"
+}
+
+mapfile -t SELECTOR_CONSUMING_WORKFLOWS < <(grep -l 'select-suites\.sh' "$PROJECT_ROOT"/.github/workflows/*.yml 2>/dev/null | sort)
+
+assert_true "cycle-2 pre: the derived selector-consuming workflow set (grep -l select-suites.sh over .github/workflows/*.yml) is non-empty" \
+  "[ \${#SELECTOR_CONSUMING_WORKFLOWS[@]} -gt 0 ]"
+
+for wf in "${SELECTOR_CONSUMING_WORKFLOWS[@]}"; do
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  BLOCK_TEXT="$(extract_select_run_block "$wf")"
+
+  sentinel_ok=true
+  select_run_block_sentinel_ok "$BLOCK_TEXT" || sentinel_ok=false
+  assert_true "cycle-2 extractor sentinel: $wrel -- the extracted select-step run: block carries both the select-suites.sh invocation and the \$GITHUB_OUTPUT append" "$sentinel_ok"
+
+  # --- AC-select-step-fails-closed-on-block (negative) ----------------------
+  run_select_replay "$BLOCK_TEXT" block
+  neg_rc_ok=true; [ "$REPLAY_RC" -ne 0 ] || neg_rc_ok=false
+  assert_true "AC-select-step-fails-closed-on-block: $wrel -- replaying the shipped select-step text under bash -e with a selector that BLOCKs (exit 1) exits the step non-zero" "$neg_rc_ok"
+  neg_output_ok=true
+  printf '%s' "$REPLAY_OUTPUT" | grep -q '^suites=' && neg_output_ok=false
+  assert_true "AC-select-step-fails-closed-on-block: $wrel -- on the BLOCK replay, \$GITHUB_OUTPUT carries no suites= line (a fix that fails the step but still appends an empty output leaves the same empty value visible to any if: always() consumer)" "$neg_output_ok"
+
+  # --- AC-select-step-passes-through-on-success (positive control) ----------
+  run_select_replay "$BLOCK_TEXT" pass
+  pos_rc_ok=true; [ "$REPLAY_RC" -eq 0 ] || pos_rc_ok=false
+  assert_true "AC-select-step-passes-through-on-success: $wrel -- replaying the shipped select-step text with a selector that exits 0 and prints two suite paths exits the step 0 (positive control: what makes the fail-closed arm above discriminating rather than merely satisfiable by an always-failing step)" "$pos_rc_ok"
+  pos_output_ok=true
+  printf '%s' "$REPLAY_OUTPUT" | grep -qF 'suites=tests/fixture-a.sh tests/fixture-b.sh' || pos_output_ok=false
+  assert_true "AC-select-step-passes-through-on-success: $wrel -- \$GITHUB_OUTPUT carries suites=<space-joined stub output>" "$pos_output_ok"
+
+  # -- rc-0 empty-selection case: an ordinary change touching no governed
+  #    subject must not be conflated with the BLOCK path.
+  run_select_replay "$BLOCK_TEXT" pass-empty
+  empty_rc_ok=true; [ "$REPLAY_RC" -eq 0 ] || empty_rc_ok=false
+  assert_true "AC-select-step-passes-through-on-success (rc-0 empty-selection case): $wrel -- a selector that exits 0 with EMPTY stdout (a change touching no governed subject is legitimate, not a BLOCK) still exits the step 0" "$empty_rc_ok"
+  empty_output_ok=true
+  printf '%s' "$REPLAY_OUTPUT" | grep -qE '^suites=[[:space:]]*$' || empty_output_ok=false
+  assert_true "AC-select-step-passes-through-on-success (rc-0 empty-selection case): $wrel -- \$GITHUB_OUTPUT carries an empty suites= line, not the BLOCK path's absent line" "$empty_output_ok"
+done
+
+# =============================================================================
+# AC-select-step-shape-holds-for-every-selector-consuming-workflow --
+# derived-set static predicate over PLACEMENT SEMANTICS (feature design §2
+# capture-then-check), never a literal line:
+#   (a) the select-suites.sh invocation's status is captured -- its command
+#       is not the left-hand side of a pipe;
+#   (b) the rc check precedes the $GITHUB_OUTPUT append;
+#   (c) the checkout carries fetch-depth: 0 (AC-select-checkout-history-
+#       sufficient, shape half).
+# Each clause owes its own non-conforming fixture (verification design §1):
+# for (a) the piped block as it ships today (a real historical input, driven
+# by the real-tree loop below); for (b) and (c), hermetic fixtures, since no
+# real workflow in this tree exercises an ordering or shape this cycle does
+# not also fix.
+# =============================================================================
+
+# join_backslash_continuations -- reads block text on stdin, emits one
+# logical statement per output line, backslash-continuations joined.
+join_backslash_continuations() {
+  awk '
+    {
+      line = $0
+      if (buf != "") { line = buf " " line; buf = "" }
+      if (line ~ /\\[[:space:]]*$/) {
+        sub(/\\[[:space:]]*$/, "", line)
+        buf = line
+        next
+      }
+      print line
+    }
+    END { if (buf != "") print buf }
+  '
+}
+
+# select_step_captures_status <block-text> -- clause (a): the logical
+# statement invoking select-suites.sh carries no lone pipe (a `|` that is not
+# part of `||`).
+select_step_captures_status() {
+  local block="$1" stmt
+  stmt="$(printf '%s\n' "$block" | join_backslash_continuations | grep 'select-suites\.sh' | head -1)"
+  [ -n "$stmt" ] || return 1
+  printf '%s' "$stmt" | grep -Eq '(^|[^|])\|([^|]|$)' && return 1
+  return 0
+}
+
+# select_step_rc_precedes_output <block-text> -- clause (b): a statement
+# testing $rc against 0 (`-ne 0` / `!= 0`) appears strictly before the
+# statement that appends to $GITHUB_OUTPUT.
+select_step_rc_precedes_output() {
+  local block="$1" stmts rc_line out_line
+  stmts="$(printf '%s\n' "$block" | join_backslash_continuations)"
+  rc_line="$(printf '%s\n' "$stmts" | grep -nE '\$rc.*(-ne 0|!= *0)|(-ne 0|!= *0).*\$rc' | head -1 | cut -d: -f1)"
+  out_line="$(printf '%s\n' "$stmts" | grep -n 'GITHUB_OUTPUT' | head -1 | cut -d: -f1)"
+  [ -n "$rc_line" ] && [ -n "$out_line" ] || return 1
+  [ "$rc_line" -lt "$out_line" ]
+}
+
+# checkout_has_full_history <workflow-file> -- clause (c): the checkout
+# step's OWN with: block (the lines immediately following its uses:
+# actions/checkout@ line, up to the next list item or a small cap) carries
+# fetch-depth: 0 -- never a tree-wide search, which would credit a
+# fetch-depth: 0 belonging to a different step.
+checkout_has_full_history() {
+  awk '
+    /actions\/checkout@/ { found = 1; c = 0; next }
+    found {
+      c++
+      if ($0 ~ /fetch-depth: *0/) { print "yes"; exit }
+      if ($0 ~ /^[[:space:]]*-[[:space:]]/) { exit }
+      if (c > 10) exit
+    }
+  ' "$1" | grep -q yes
+}
+
+for wf in "${SELECTOR_CONSUMING_WORKFLOWS[@]}"; do
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  BLOCK_TEXT="$(extract_select_run_block "$wf")"
+
+  clause_a_ok=true
+  select_step_captures_status "$BLOCK_TEXT" || clause_a_ok=false
+  assert_true "AC-select-step-shape-holds: $wrel -- clause (a) placement: the select-suites.sh invocation's status is captured (its command is not the left-hand side of a pipe)" "$clause_a_ok"
+
+  clause_b_ok=true
+  select_step_rc_precedes_output "$BLOCK_TEXT" || clause_b_ok=false
+  assert_true "AC-select-step-shape-holds: $wrel -- clause (b) placement: the rc check precedes the \$GITHUB_OUTPUT append" "$clause_b_ok"
+
+  clause_c_ok=true
+  checkout_has_full_history "$wf" || clause_c_ok=false
+  assert_true "AC-select-step-shape-holds: $wrel -- clause (c): the checkout carries fetch-depth: 0 (AC-select-checkout-history-sufficient, shape half)" "$clause_c_ok"
+done
+
+# --- clause self-test fixtures: discriminate a working predicate from a
+# vacuous one with a KNOWN-conforming and a KNOWN-non-conforming input per
+# clause, independent of the real tree's own (currently drifting) state.
+CLAUSE_A_BAD=$'bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \\\n  2> "$RUNNER_TEMP/selection-report.txt" \\\n  | paste -sd\' \' - > "$RUNNER_TEMP/selected.txt"\nprintf \'suites=%s\\n\' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"'
+clause_a_bad_ok=true
+select_step_captures_status "$CLAUSE_A_BAD" && clause_a_bad_ok=false
+assert_true "AC-select-step-shape-holds clause (a) self-test: a piped block (the shipped defect this cycle fixes -- a real historical failing input) is detected as NOT capturing the selector's status" "$clause_a_bad_ok"
+
+CLAUSE_A_GOOD=$'rc=0\nbash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \\\n  > "$RUNNER_TEMP/selected-raw.txt" \\\n  2> "$RUNNER_TEMP/selection-report.txt" || rc=$?\nif [ "$rc" -ne 0 ]; then exit "$rc"; fi\nprintf \'suites=%s\\n\' "$(cat "$RUNNER_TEMP/selected-raw.txt")" >> "$GITHUB_OUTPUT"'
+clause_a_good_ok=true
+select_step_captures_status "$CLAUSE_A_GOOD" || clause_a_good_ok=false
+assert_true "AC-select-step-shape-holds clause (a) self-test: a capture-then-check block (|| rc=\$?, no pipe) is detected as conforming" "$clause_a_good_ok"
+
+CLAUSE_B_BAD=$'rc=0\nbash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" > "$RUNNER_TEMP/selected-raw.txt" 2> "$RUNNER_TEMP/selection-report.txt" || rc=$?\nprintf \'suites=%s\\n\' "$(cat "$RUNNER_TEMP/selected-raw.txt")" >> "$GITHUB_OUTPUT"\nif [ "$rc" -ne 0 ]; then exit "$rc"; fi'
+clause_b_bad_ok=true
+select_step_rc_precedes_output "$CLAUSE_B_BAD" && clause_b_bad_ok=false
+assert_true "AC-select-step-shape-holds clause (b) self-test: an rc check placed AFTER the \$GITHUB_OUTPUT append (present, but too late) is detected as non-conforming" "$clause_b_bad_ok"
+clause_b_good_ok=true
+select_step_rc_precedes_output "$CLAUSE_A_GOOD" || clause_b_good_ok=false
+assert_true "AC-select-step-shape-holds clause (b) self-test: an rc check placed BEFORE the \$GITHUB_OUTPUT append is detected as conforming" "$clause_b_good_ok"
+
+CLAUSE_C_BAD_FILE="$(mktemp)"
+cat > "$CLAUSE_C_BAD_FILE" <<'YML'
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - id: select
+YML
+clause_c_bad_ok=true
+checkout_has_full_history "$CLAUSE_C_BAD_FILE" && clause_c_bad_ok=false
+assert_true "AC-select-step-shape-holds clause (c) self-test: a checkout with no with: fetch-depth: 0 block is detected as non-conforming" "$clause_c_bad_ok"
+rm -f "$CLAUSE_C_BAD_FILE"
+
+CLAUSE_C_GOOD_FILE="$(mktemp)"
+cat > "$CLAUSE_C_GOOD_FILE" <<'YML'
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+      - id: select
+YML
+clause_c_good_ok=true
+checkout_has_full_history "$CLAUSE_C_GOOD_FILE" || clause_c_good_ok=false
+assert_true "AC-select-step-shape-holds clause (c) self-test: a checkout carrying fetch-depth: 0 is detected as conforming" "$clause_c_good_ok"
+rm -f "$CLAUSE_C_GOOD_FILE"
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1

@@ -404,6 +404,128 @@ SH
     "grep -qi 'investigate the suite' '$DOC_RULES' && grep -qi 'do not bump' '$DOC_RULES'"
   assert_true "docs/submodule-common-rules.md > Testing Standards no longer carries the pre-revision 'raise a budget deliberately... rather than treating a TIMEOUT as green' advice" \
     "! grep -qi 'raise a budget deliberately' '$DOC_RULES'"
+
+  # =========================================================================
+  # Issue #103 cycle 2 (review-response) -- runner-timeout-dependency.
+  # .autoflow/issue-103-verification-design.md (cycle 2) §1:
+  #   AC-runner-bounds-without-gnu-timeout, AC-runner-ceiling-survives-the-
+  #   fallback. Inclusion-built sanitized PATH -- a scratch directory holding
+  #   one symlink per allowlisted external, never a slice of real system bin
+  #   directories (reused as a TECHNIQUE from tests/test-bounded-execution-
+  #   fallback.sh, not copied as a value: that suite provisions for a probe
+  #   CLI, this arm's subject is the runner and its enumerator, so the
+  #   allowlist differs and is derived here per the verification design's own
+  #   provisioning list).
+  # =========================================================================
+  RUNNER_SANITIZED_TAIL="$(mktemp -d)"
+  RUNNER_ALLOWLIST="awk bash cat date dirname find git grep mkdir mktemp rm sed sort tr sleep"
+  for _cmd in $RUNNER_ALLOWLIST; do
+    _real="$(command -v "$_cmd" 2>/dev/null || true)"
+    if [ -z "$_real" ]; then
+      echo "FATAL: allowlist command not resolvable on this host: $_cmd" >&2
+      exit 2
+    fi
+    ln -s "$_real" "$RUNNER_SANITIZED_TAIL/$_cmd"
+  done
+
+  # Fail-fast precondition (verification design §1, §3 "PATH, as composed for
+  # a bounded-execution subject"): resolved in a real child shell under the
+  # exact exported value, before any behavioural leg runs. neither timeout
+  # nor gtimeout may resolve; sleep MUST resolve -- a missing sleep would read
+  # as "every suite TIMEOUTs", not as a fallback defect, so both polarities
+  # are asserted and either violation aborts the suite rather than let a
+  # later leg silently drive the wrong branch.
+  runner_path_precondition_ok=true
+  if env -i PATH="$RUNNER_SANITIZED_TAIL" bash -c 'command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1'; then
+    runner_path_precondition_ok=false
+  fi
+  if ! env -i PATH="$RUNNER_SANITIZED_TAIL" bash -c 'command -v sleep >/dev/null 2>&1'; then
+    runner_path_precondition_ok=false
+  fi
+  assert_true "AC-runner-bounds precondition (fail-fast, before any behavioural leg): under the sanitized PATH, neither timeout nor gtimeout resolves, and sleep does" \
+    "$runner_path_precondition_ok"
+  if [ "$runner_path_precondition_ok" != "true" ]; then
+    echo "ABORT: sanitized-PATH precondition violated -- aborting the runner-timeout-dependency arms rather than drive the wrong branch" >&2
+    rm -rf "$RUNNER_SANITIZED_TAIL" 2>/dev/null
+  else
+
+  # -- AC-runner-bounds-without-gnu-timeout: on a host where neither timeout
+  #    nor gtimeout resolves, a normally-exiting suite is reported PASS, not
+  #    FAIL (exit 127).
+  STUB_NOBIN_A="$(mktemp -d)"
+  mkdir -p "$STUB_NOBIN_A/tests"
+  cat > "$STUB_NOBIN_A/tests/test-fixture-103-nobin-a.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-nobin-a-subject.txt
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+  chmod +x "$STUB_NOBIN_A/tests/test-fixture-103-nobin-a.sh"
+  env -i PATH="$RUNNER_SANITIZED_TAIL" HOME="$HOME" bash "$RUNNER" --root "$STUB_NOBIN_A" --all >/tmp/issue103-runner-nobin.out 2>&1
+  nobin_exit=$?
+  assert_true "AC-runner-bounds-without-gnu-timeout: on a PATH where neither timeout nor gtimeout resolves, a normally-exiting suite is reported PASS, not FAIL (exit 127)" \
+    "[ $nobin_exit -eq 0 ] && grep -qE '^PASS ' /tmp/issue103-runner-nobin.out && ! grep -qi 'exit 127' /tmp/issue103-runner-nobin.out"
+
+  # -- Control leg (verification design §1, "Two entries carry the arm's
+  #    whole provisioning risk"): the SAME sanitized tail, PLUS a real
+  #    timeout symlink restored, must still report PASS for the same stub --
+  #    otherwise a fallback failure above cannot be told apart from an
+  #    under-provisioned PATH. A control-leg failure names the PATH as the
+  #    problem, not the fallback, and aborts rather than record a fallback
+  #    failure.
+  RUNNER_CONTROL_TAIL="$(mktemp -d)"
+  for _cmd in $RUNNER_ALLOWLIST; do
+    ln -s "$(command -v "$_cmd")" "$RUNNER_CONTROL_TAIL/$_cmd"
+  done
+  _real_bound_tool="$(command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null || true)"
+  if [ -z "$_real_bound_tool" ]; then
+    echo "  SKIP: AC-runner-bounds control leg -- this host resolves neither timeout nor gtimeout natively, so a restored-timeout tail cannot be composed" >&2
+  else
+    ln -s "$_real_bound_tool" "$RUNNER_CONTROL_TAIL/timeout"
+    STUB_CONTROL="$(mktemp -d)"
+    mkdir -p "$STUB_CONTROL/tests"
+    cat > "$STUB_CONTROL/tests/test-fixture-103-control-a.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-control-a-subject.txt
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+    chmod +x "$STUB_CONTROL/tests/test-fixture-103-control-a.sh"
+    env -i PATH="$RUNNER_CONTROL_TAIL" HOME="$HOME" bash "$RUNNER" --root "$STUB_CONTROL" --all >/tmp/issue103-runner-control.out 2>&1
+    control_exit=$?
+    assert_true "AC-runner-bounds control leg: the same sanitized tail with a real timeout symlink restored still reports PASS for the same stub (a control-leg failure means the PATH is under-provisioned, not that the fallback is wrong)" \
+      "[ $control_exit -eq 0 ] && grep -qE '^PASS ' /tmp/issue103-runner-control.out"
+    rm -rf "$STUB_CONTROL"
+  fi
+  rm -rf "$RUNNER_CONTROL_TAIL"
+  rm -rf "$STUB_NOBIN_A"
+
+  # -- AC-runner-ceiling-survives-the-fallback: under the same sanitized
+  #    PATH, a stub that overruns its declared budget must still be reported
+  #    TIMEOUT, with the runner's overall exit non-zero. This is the arm that
+  #    stops "delete the bound" (the fallback branch simply running the suite
+  #    unwrapped) from passing the arm above.
+  STUB_NOBIN_CEIL="$(mktemp -d)"
+  mkdir -p "$STUB_NOBIN_CEIL/tests"
+  cat > "$STUB_NOBIN_CEIL/tests/test-fixture-103-nobin-ceiling.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-nobin-ceiling-subject.txt
+# lane: standing
+# budget-secs: 1
+sleep 9
+exit 0
+SH
+  chmod +x "$STUB_NOBIN_CEIL/tests/test-fixture-103-nobin-ceiling.sh"
+  env -i PATH="$RUNNER_SANITIZED_TAIL" HOME="$HOME" bash "$RUNNER" --root "$STUB_NOBIN_CEIL" --all >/tmp/issue103-runner-nobin-ceiling.out 2>&1
+  ceiling_exit=$?
+  assert_true "AC-runner-ceiling-survives-the-fallback: under the sanitized PATH, a stub sleeping past its effective local ceiling (9s > 1 x 8) is still reported TIMEOUT (not FAIL, not silently un-bounded), with the runner's overall exit non-zero" \
+    "[ $ceiling_exit -ne 0 ] && grep -qi 'TIMEOUT' /tmp/issue103-runner-nobin-ceiling.out"
+  rm -rf "$STUB_NOBIN_CEIL"
+
+  rm -rf "$RUNNER_SANITIZED_TAIL"
+  fi
 fi
 
 echo ""

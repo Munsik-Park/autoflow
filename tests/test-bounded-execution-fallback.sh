@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/preflight/check-review-backend.sh scripts/handoff/confirm-ci-green.sh scripts/test/check-watchdog-detachment.sh
+# ci-subject: scripts/preflight/check-review-backend.sh scripts/handoff/confirm-ci-green.sh scripts/test/check-watchdog-detachment.sh scripts/test/run-suites.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -100,6 +100,17 @@
 # the fallback-behavior legs against the two shipped scripts, the
 # site-closure lint over the 7 patched sites, and that one static
 # registration check.
+#
+# Issue #103 cycle 2 (review-response) -- AC-fallback-site-enrolled-in-site-
+# closure. Once scripts/test/run-suites.sh carries its own sleep+kill
+# fallback it becomes a member of the watchdog site set, and the existing
+# AC-site-closure canonical-block predicate below (the real-tree run of
+# scripts/test/check-watchdog-detachment.sh) already governs it -- no new
+# assertion is written, which would add a layer without adding a subject.
+# What this cycle adds is the SELECTION half: scripts/test/run-suites.sh
+# joins this suite's own # ci-subject: header above, so an edit to the
+# runner alone selects this suite -- without that, the enrollment breaks in
+# a run where this suite is the only one that would catch a violation.
 # =============================================================================
 
 set -uo pipefail
