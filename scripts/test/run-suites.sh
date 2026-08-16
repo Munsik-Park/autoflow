@@ -13,10 +13,13 @@
 # DE-DUPLICATION is by resolved path, so a suite cannot execute twice in one
 # pass however it entered the set.
 #
-# BUDGET is enforced with `timeout <budget-secs>` around each suite, and an
-# overrun is a distinct TIMEOUT result that fails the run. Raise the budget
-# deliberately in the suite's own header; do not treat a TIMEOUT as green.
-# The CI path enforces the same declaration coarsely through each step's
+# BUDGET is enforced on two clocks. The suite header's `budget-secs` is a
+# CI-clock number; locally, `timeout` is armed around each suite at the
+# EFFECTIVE LOCAL CEILING — budget-secs x SUITE_LOCAL_SLOWDOWN_FACTOR — sized
+# as a hang detector rather than a seconds-level cost gate. An overrun is a
+# distinct TIMEOUT result that fails the run: investigate the suite, do not
+# bump budget-secs — a local overrun is no evidence about the CI-clock number.
+# The CI path enforces the header declaration coarsely through each step's
 # `timeout-minutes: ceil(budget-secs / 60)`, whose agreement with the header is
 # asserted by scripts/test/check-suite-manifest.sh.
 #
