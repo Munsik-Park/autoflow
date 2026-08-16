@@ -131,12 +131,9 @@ orchestrator does not modify sub-repo files — see
 host registry에 인덱스 형태로 등록한다. orchestrator AI가 이 carve-out
 문서의 유지보수를 책임진다.
 
-| Document | Path | Update When | Maintainer |
-|----------|------|-------------|------------|
-| File visibility (`tenantId` × `visibility`) | `services/librechat/docs/file-visibility.md` | The three-axis ACL evaluation order, the `evaluateFileVisibilityAccess` source of truth, or the legacy lazy-coercion contract changes (issue #116) | Orchestrator AI |
-| Ownership and isolation (`tenantId` × accounting owner) | `services/librechat/docs/ownership-and-isolation.md` | The `tenantId` / `Balance.user` / `OrganizationBalance.organizationId` concept definitions, the #101 ARCHITECT Q3 cardinality (1:N tenant:org, N:M user:org-within-tenant, 1:1 org:orgBalance), the Q4 schema decision (separate `OrganizationBalance` collection, not polymorphic Balance), or the `allocation_transfer` transaction extension fields change (issues #71, #101, #162) | Orchestrator AI |
-| Model resolution (new-conversation model precedence) | `services/librechat/docs/model-resolution.md` | The new-conversation model precedence rows (esp. `preferences.defaultModel` via `preferredModelForNewConvo` / `buildDefaultConvo.preferredModel`), the Extended-Thinking-is-orthogonal rule, or the title-generation `titleModel` decision (issue #532) | Orchestrator AI |
-| Date-range boundary semantics (org endpoints) | `services/librechat/docs/org-date-range-boundaries.md` | The Family 1 (`$lt` exclusive) / Family 2 (`$lte` inclusive) endpoint classification, the client-seam end-bound normalization contract (canonical `toExclusiveEndBound` import from `~/utils/orgDateRange`), or a new date-only consumer surface changes (issue #868) | Orchestrator AI |
+The four carve-out rows this index held were removed in #103 — after the #798
+detach the paths they listed no longer exist on disk — and the Git history
+remains the record of what was tracked.
 
 ---
 
