@@ -100,14 +100,21 @@ while IFS= read -r suite; do
   case "$budget" in
     ''|*[!0-9]*) budget="$SUITE_BUDGET_CEILING_SECS" ;;
   esac
+  # The declared budget is a CI-clock number; what a local run may spend is that
+  # number times the cross-clock ratio. Spending the declared budget directly
+  # here is the unit error this separation corrects.
+  allowance="$(suite_local_allowance_secs "$budget")"
 
   started="$(date +%s)"
-  (cd "$ROOT" && timeout "$budget" bash "$suite" >/dev/null 2>&1)
+  (cd "$ROOT" && timeout "$allowance" bash "$suite" >/dev/null 2>&1)
   status=$?
   elapsed=$(( $(date +%s) - started ))
 
   if [ "$status" -eq 124 ]; then
-    printf 'TIMEOUT %s %ss (declared budget-secs: %s)\n' "$suite" "$elapsed" "$budget"
+    # Both quantities are named, so the record explains itself: a reader can see
+    # which number was spent and which number it was derived from.
+    printf 'TIMEOUT %s %ss (declared budget-secs: %s, effective local ceiling: %ss = %s x %s)\n' \
+      "$suite" "$elapsed" "$budget" "$allowance" "$budget" "$SUITE_LOCAL_SLOWDOWN_FACTOR"
     TIMEDOUT=$((TIMEDOUT + 1)); RC=1
   elif [ "$status" -eq 0 ]; then
     printf 'PASS %s %ss\n' "$suite" "$elapsed"
@@ -121,8 +128,10 @@ done <<< "$SELECTED"
 echo ""
 echo "run-suites: $PASSED passed, $FAILED failed, $TIMEDOUT timed out, of $TOTAL executed"
 if [ "$TIMEDOUT" -gt 0 ]; then
-  echo "  A TIMEOUT is an overrun of the suite's own declared budget-secs. Raise the budget"
-  echo "  deliberately in the suite's header — and follow it in the workflow's"
-  echo "  timeout-minutes — rather than treating the run as green."
+  echo "  A TIMEOUT is an overrun of the EFFECTIVE LOCAL CEILING (declared budget-secs x"
+  echo "  SUITE_LOCAL_SLOWDOWN_FACTOR), which is sized as a hang detector rather than a"
+  echo "  seconds-level cost gate. Investigate the suite: at this size an overrun is a hang"
+  echo "  or an order-of-magnitude regression, not a tight budget. Do NOT bump the header —"
+  echo "  budget-secs is a CI-clock number, and a local overrun is no evidence about it."
 fi
 exit $RC

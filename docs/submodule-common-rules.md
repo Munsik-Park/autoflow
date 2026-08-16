@@ -264,7 +264,15 @@ Every sub-repo must maintain:
 - `bash scripts/test/run-suites.sh --all` — the whole enumerated tree.
 - `bash scripts/test/run-suites.sh --list` — the selected set without running it.
 
-The runner de-duplicates by resolved path, so a suite cannot execute twice in one pass; wraps each suite in `timeout <budget-secs>` from its own header and reports an overrun as a distinct `TIMEOUT`; and prints one result line with elapsed time per suite, so cost drift is visible long before it reds. **Raise a budget deliberately in the suite's header — and follow it in that step's `timeout-minutes` — rather than treating a `TIMEOUT` as green.**
+The runner de-duplicates by resolved path, so a suite cannot execute twice in one pass; wraps each suite in `timeout <effective local ceiling>` and reports an overrun as a distinct `TIMEOUT`; and prints one result line with elapsed time per suite, so cost drift is visible long before it reds.
+
+**The two clocks are not the same clock.** `budget-secs` is a **CI-clock** quantity — derived from the suite's own CI step duration, bounded by `SUITE_BUDGET_CEILING_SECS`, and spent by CI through that step's `timeout-minutes`. A local run spends a **local allowance** derived from it by one tree-wide ratio:
+
+    effective local ceiling = budget-secs × SUITE_LOCAL_SLOWDOWN_FACTOR
+
+Both constants live in `scripts/test/suite-manifest.sh`, and the factor is deliberately not environment-settable. The separation is measured, not stylistic: the same suite runs 89 s in CI against 594 s locally, so spending a CI-derived number on the local clock is a unit error, and deriving the budget *more* accurately makes the local failure worse rather than better.
+
+**A local `TIMEOUT` is not a budget signal.** At this size the local gate is a hang detector, not a seconds-level cost gate, so an overrun is a hang or an order-of-magnitude regression. **Investigate the suite — do not bump `budget-secs`**, which carries a CI number that a local overrun is no evidence about. Cost is governed where the numbers are derived: on the CI clock, by `timeout-minutes`.
 
 A suite executes its subject, not another suite (`scripts/test/check-suite-leaf.sh`). Confirming that a sibling has not regressed is its own CI step's job.
 

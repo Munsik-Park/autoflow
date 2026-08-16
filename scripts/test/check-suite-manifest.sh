@@ -246,11 +246,55 @@ check_pin() {
   done < <(grep -rlE '^[[:space:]]*HARNESS_OK_COUNT=[0-9]+' "$root/tests" "$root/scripts" 2>/dev/null || true)
 }
 
+# ---------------------------------------------------------------------------
+# CONSTANTS group — the two budget constants are single-homed and in-bounds.
+#
+# The values are read out of the ROOT's own library file rather than from the
+# constants this lint sourced: the subject is the tree being checked, and a
+# fixture root supplies its own edited copy. Reading the in-process value would
+# make every bounds arm assert against this repository's constant no matter
+# which tree was passed.
+#
+# Skipped entirely when the root carries no library, so a fixture root planted
+# only with suites or workflows keeps its own verdict.
+# ---------------------------------------------------------------------------
+check_constants() {
+  local root="$1" home='scripts/test/suite-manifest.sh' spec name rest min why value f rel
+  [ -f "$root/$home" ] || return 0
+
+  # name:minimum:meaning-of-the-floor
+  for spec in \
+    "SUITE_BUDGET_HEADROOM_PERCENT:100:a sub-100 multiplier derives a budget tighter than the measurement it is headroom over — a guessed-tight budget wearing the derivation's name" \
+    "SUITE_LOCAL_SLOWDOWN_FACTOR:1:one is the multiplier's identity, at which the local allowance is exactly the declared CI budget; below it the allowance is tighter than a number already measured on the faster clock"
+  do
+    name="${spec%%:*}"; rest="${spec#*:}"; min="${rest%%:*}"; why="${rest#*:}"
+
+    value="$(grep -m1 -E "^${name}=" "$root/$home" 2>/dev/null | sed -E "s/^${name}=//; s/[[:space:]]+#.*$//; s/[[:space:]]+$//")"
+    if [ -z "$value" ]; then
+      violation "$home: no '$name=' assignment — the constant's single authoring home is this file"
+    elif ! printf '%s' "$value" | grep -qE '^[0-9]+$'; then
+      violation "$home: '$name=$value' is not an integer"
+    elif [ "$value" -lt "$min" ]; then
+      violation "$home: '$name=$value' is below its floor of $min — $why"
+    fi
+
+    # Single authoring home. Only a column-1 assignment counts: a suite that
+    # greps for the constant, or writes it into a fixture, is not a home.
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      rel="${f#"$root"/}"
+      [ "$rel" = "$home" ] && continue
+      violation "$rel: assigns $name=, which belongs only in $home — a second home makes the constant settable from somewhere the derivation note does not reach"
+    done < <(grep -rlE "^${name}=" "$root/scripts" "$root/tests" 2>/dev/null || true)
+  done
+}
+
 check_tree() {
   VIOLATIONS=0
   check_headers "$1"
   check_workflows "$1"
   check_pin "$1"
+  check_constants "$1"
   [ "$VIOLATIONS" -eq 0 ]
 }
 

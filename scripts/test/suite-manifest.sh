@@ -27,15 +27,87 @@
 #   # cycle-arm: #<issue-number>        (required iff a path allow-list array)
 #   # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
 #
-# `budget-secs` is derived from the suite's own CI step duration, never from
-# local wall-clock. A suite with no CI-measured duration yet declares
+# `budget-secs` is a CI-CLOCK quantity: derived from the suite's own CI step
+# duration, bounded by the ceiling, and spent by CI. Local wall-clock is
+# inadmissible as its source. A suite with no CI-measured duration declares
 # SUITE_BUDGET_CEILING_SECS verbatim — so a guessed budget is not a
 # representable state.
+#
+# THE TWO CLOCKS ARE NOT THE SAME CLOCK. An earlier form of this design let one
+# declared number be derived on the CI clock and spent on the local clock, which
+# is unsatisfiable here: measured cross-clock, `test-push-context-base-ref.sh`
+# runs 89 s in CI against 594 s locally (≈ 6.7×). That is a unit error, not a
+# magnitude error, so no single number escapes it. Local enforcement therefore
+# spends a LOCAL ALLOWANCE derived from the declared budget by one tree-wide
+# ratio (SUITE_LOCAL_SLOWDOWN_FACTOR), never the CI number directly.
 # =============================================================================
 
-# The declared-budget ceiling. Raising it is a visible one-line edit here, which
-# is what stops a suite buying unbounded runtime by inflating its own header.
+# The declared-budget ceiling, on the CI clock. Derived rather than chosen: the
+# maximum measured CI step duration across the umbrella workflows at the run of
+# record is 394 s, and ceil(394 × SUITE_BUDGET_HEADROOM_PERCENT / 100) = 591 s,
+# rounded to the constant below. Re-check it by re-querying the Actions jobs API
+# for each successful step's `completed_at − started_at`, not by inheriting this
+# number.
+#
+# Changing it is NOT a one-line edit in effect: check-suite-manifest.sh asserts
+# each governed step's `timeout-minutes` EQUALS ceil(budget-secs / 60) by strict
+# equality, and every real suite declares the ceiling symbol — so a ceiling
+# change moves every governed step's CI allowance together. That is what makes
+# it a tree-wide bound rather than a knob.
 SUITE_BUDGET_CEILING_SECS=600
+
+# Headroom over a measurement, as a percentage, for the integer declaration form:
+#
+#     budget-secs = ceil(measured CI step duration × SUITE_BUDGET_HEADROOM_PERCENT / 100)
+#
+# Admissible shape: an integer >= 100. The lower bound is not stylistic — a
+# sub-100 multiplier derives a budget TIGHTER than the measurement it is headroom
+# over, which is a guessed-tight budget wearing the derivation's name, reached
+# through the rule rather than around it.
+#
+# The value is not a fresh judgement: it is the margin the ceiling already
+# embodies (600 over the 394 s maximum measured step is ≈ 1.52×), so the
+# per-suite rule and the tree-wide ceiling are set by one factor rather than two
+# independently chosen ones.
+SUITE_BUDGET_HEADROOM_PERCENT=150
+
+# The cross-clock ratio local enforcement spends:
+#
+#     local allowance = budget-secs × SUITE_LOCAL_SLOWDOWN_FACTOR
+#
+# This is a RATIO BETWEEN TWO CLOCKS, not a duration and not a per-suite
+# estimate, which is what keeps it clear of the inadmissible-local-wall-clock
+# rule. Its derivation set is narrow and stated: UNCONTENDED per-suite
+# cross-clock measurements only. That set holds one member today —
+# `test-push-context-base-ref.sh` at 89 s CI vs 594 s local, ≈ 6.7×, whose
+# ceiling is 7 — and the value is set one integer above it. That extra integer is
+# a decision, not an arithmetic step: it is the only margin a one-member
+# derivation set can carry.
+#
+# The contended row on record (`test-issue-69`, 394 s CI vs 1298 s local, ≈ 3.3×)
+# is context for the unit error, NOT a derivation input: it yields the LOWER
+# ratio, so contention is not the property that orders this set, and a maximum
+# across both would drag the factor down toward a condition the local gate must
+# survive rather than be sized by.
+#
+# Admissible shape: an integer >= 1. One is the multiplier's identity, at which
+# the local allowance is exactly the declared CI budget — the pre-change
+# behaviour this constant exists to undo — so any value below it would derive a
+# local allowance tighter than a number already measured on the FASTER clock,
+# inverting the unit error rather than correcting it. The bound is also what
+# keeps this from reading as a disable switch in the other direction: at every
+# admissible value it is a multiplier over the declared budget, never an
+# unconditional widening.
+#
+# It is deliberately NOT environment-settable. A `${SUITE_LOCAL_SLOWDOWN_FACTOR:-8}`
+# form would still pass the single-authoring-home lint while making a resource
+# control settable by any caller; a plain assignment is what makes the declared
+# value the effective one.
+#
+# Residual: a maximum over a one-member set is a floor with no distribution
+# behind it. The case that remains is a host slower than the measured ratio, and
+# its outcome is a re-run, not a header edit.
+SUITE_LOCAL_SLOWDOWN_FACTOR=8
 
 # ---------------------------------------------------------------------------
 # suite_is_excluded <repo-relative path>
@@ -164,7 +236,22 @@ suite_budget_secs() {
 # ---------------------------------------------------------------------------
 # suite_budget_minutes <secs> — ceil(secs / 60), the Actions step-level ceiling
 # the workflow must declare for a suite carrying this budget.
+#
+# CI-clock only: the local slowdown factor deliberately does NOT reach this
+# derivation. Letting it through would let a local-execution constant buy CI
+# runtime, which is the one thing the two-clock separation must not do.
 # ---------------------------------------------------------------------------
 suite_budget_minutes() {
   printf '%s\n' "$(( ( $1 + 59 ) / 60 ))"
+}
+
+# ---------------------------------------------------------------------------
+# suite_local_allowance_secs <budget-secs> — the effective local ceiling,
+# budget-secs × SUITE_LOCAL_SLOWDOWN_FACTOR. This is what a local run spends;
+# the declared budget is what CI spends. They are quantities on different
+# clocks, and the whole point of this function is that the caller cannot
+# accidentally use one for the other.
+# ---------------------------------------------------------------------------
+suite_local_allowance_secs() {
+  printf '%s\n' "$(( $1 * SUITE_LOCAL_SLOWDOWN_FACTOR ))"
 }
