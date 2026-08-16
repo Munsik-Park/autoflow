@@ -438,6 +438,112 @@ SH
   rm -rf "$BD_DIR"
 
   # ---------------------------------------------------------------------
+  # AC-headroom-constant-single-homed — SUITE_BUDGET_HEADROOM_PERCENT is a
+  # single named constant, integer >= 100, authored only in
+  # scripts/test/suite-manifest.sh (revised feature/verification design,
+  # budget re-deliberation).
+  # ---------------------------------------------------------------------
+  assert_true "AC-headroom-constant-single-homed: SUITE_BUDGET_HEADROOM_PERCENT=150 is authored in scripts/test/suite-manifest.sh" \
+    "grep -qE '^SUITE_BUDGET_HEADROOM_PERCENT=150([[:space:]]|$)' '$LIBRARY'"
+
+  HOMED_DIR="$(mktemp -d)"; mkdir -p "$HOMED_DIR/scripts/test" "$HOMED_DIR/tests"
+  cp "$LIBRARY" "$HOMED_DIR/scripts/test/suite-manifest.sh"
+  echo 'SUITE_BUDGET_HEADROOM_PERCENT=200' > "$HOMED_DIR/scripts/test/rogue-headroom.sh"
+  bash "$LINT" --root "$HOMED_DIR" >/tmp/issue103-manifest-headroom-second-home.out 2>&1
+  assert_true "AC-headroom-constant-single-homed: a second file assigning SUITE_BUDGET_HEADROOM_PERCENT= (outside scripts/test/suite-manifest.sh) FAILs" \
+    "[ $? -ne 0 ] && grep -qF 'rogue-headroom.sh' /tmp/issue103-manifest-headroom-second-home.out"
+  rm -f "$HOMED_DIR/scripts/test/rogue-headroom.sh"
+
+  sed -i.bak -E 's/^SUITE_BUDGET_HEADROOM_PERCENT=.*/SUITE_BUDGET_HEADROOM_PERCENT=99/' "$HOMED_DIR/scripts/test/suite-manifest.sh" 2>/dev/null
+  bash "$LINT" --root "$HOMED_DIR" >/tmp/issue103-manifest-headroom-below100.out 2>&1
+  assert_true "AC-headroom-constant-single-homed: a value below 100 FAILs (a sub-100 multiplier derives a budget tighter than the measurement it is headroom over)" \
+    "[ $? -ne 0 ]"
+
+  sed -i.bak -E 's/^SUITE_BUDGET_HEADROOM_PERCENT=.*/SUITE_BUDGET_HEADROOM_PERCENT=notanumber/' "$HOMED_DIR/scripts/test/suite-manifest.sh" 2>/dev/null
+  bash "$LINT" --root "$HOMED_DIR" >/tmp/issue103-manifest-headroom-noninteger.out 2>&1
+  assert_true "AC-headroom-constant-single-homed: a non-integer value FAILs" \
+    "[ $? -ne 0 ]"
+  rm -rf "$HOMED_DIR"
+
+  # ---------------------------------------------------------------------
+  # AC-local-factor-derivation-recorded — automated half. SUITE_LOCAL_SLOWDOWN_FACTOR
+  # is authored in exactly one file (scripts/test/suite-manifest.sh, beside
+  # SUITE_BUDGET_CEILING_SECS), integer >= 1 (its identity value). Carrier
+  # lint named explicitly per GATE:PLAN-2 F7 (mirrors AC-headroom-constant-
+  # single-homed's row): check-suite-manifest.sh.
+  # ---------------------------------------------------------------------
+  assert_true "AC-local-factor-derivation-recorded automated half: SUITE_LOCAL_SLOWDOWN_FACTOR=8 is authored in scripts/test/suite-manifest.sh (single home, mirrors the PIN-group shape check-suite-manifest.sh already implements)" \
+    "grep -qE '^SUITE_LOCAL_SLOWDOWN_FACTOR=8([[:space:]]|$)' '$LIBRARY'"
+
+  FACTOR_DIR="$(mktemp -d)"; mkdir -p "$FACTOR_DIR/scripts/test" "$FACTOR_DIR/tests"
+  cp "$LIBRARY" "$FACTOR_DIR/scripts/test/suite-manifest.sh"
+  echo 'SUITE_LOCAL_SLOWDOWN_FACTOR=3' > "$FACTOR_DIR/scripts/test/rogue-factor.sh"
+  bash "$LINT" --root "$FACTOR_DIR" >/tmp/issue103-manifest-factor-second-home.out 2>&1
+  assert_true "AC-local-factor-derivation-recorded: a second file assigning SUITE_LOCAL_SLOWDOWN_FACTOR= (outside scripts/test/suite-manifest.sh) FAILs, carried by check-suite-manifest.sh" \
+    "[ $? -ne 0 ] && grep -qF 'rogue-factor.sh' /tmp/issue103-manifest-factor-second-home.out"
+  rm -f "$FACTOR_DIR/scripts/test/rogue-factor.sh"
+
+  sed -i.bak -E 's/^SUITE_LOCAL_SLOWDOWN_FACTOR=.*/SUITE_LOCAL_SLOWDOWN_FACTOR=0/' "$FACTOR_DIR/scripts/test/suite-manifest.sh" 2>/dev/null
+  bash "$LINT" --root "$FACTOR_DIR" >/tmp/issue103-manifest-factor-below-identity.out 2>&1
+  assert_true "AC-local-factor-derivation-recorded: a value below its identity (1) FAILs — a sub-identity multiplier derives a local allowance tighter than a number already measured on the faster clock" \
+    "[ $? -ne 0 ]"
+
+  sed -i.bak -E 's/^SUITE_LOCAL_SLOWDOWN_FACTOR=.*/SUITE_LOCAL_SLOWDOWN_FACTOR=notanumber/' "$FACTOR_DIR/scripts/test/suite-manifest.sh" 2>/dev/null
+  bash "$LINT" --root "$FACTOR_DIR" >/tmp/issue103-manifest-factor-noninteger.out 2>&1
+  assert_true "AC-local-factor-derivation-recorded: a non-integer value FAILs" \
+    "[ $? -ne 0 ]"
+  rm -rf "$FACTOR_DIR"
+
+  # ---------------------------------------------------------------------
+  # AC-local-factor-does-not-reach-ci — falsifiability arm (GATE:PLAN-2 F1:
+  # "currently passes vacuously — give it a falsifiability arm"). The
+  # agreement check-suite-manifest.sh already implements
+  # (scripts/test/check-suite-manifest.sh:227-228) computes 'want' from the
+  # header's declared budget-secs ALONE (never multiplied by the local
+  # factor); this arm constructs the exact bad case the AC exists to
+  # exclude — a timeout-minutes inflated by the local factor — and requires
+  # it to FAIL, not merely observes that the current (factor-blind)
+  # agreement holds.
+  # ---------------------------------------------------------------------
+  LEAK_DIR="$(mktemp -d)"; mkdir -p "$LEAK_DIR/tests" "$LEAK_DIR/.github/workflows"
+  cat > "$LEAK_DIR/tests/test-fixture-103-leak.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 60
+true
+SH
+  # ceil(60 x 8 / 60) = 8 minutes -- the factor LEAKED into the CI timeout,
+  # which is exactly the unbounded-CI-runtime purchase this AC exists to
+  # prevent (correct agreement is ceil(60 / 60) = 1 minute).
+  cat > "$LEAK_DIR/.github/workflows/fixture-leak.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - id: s-test-fixture-103-leak
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fixture-103-leak.sh ')
+        timeout-minutes: 8
+        run: bash tests/test-fixture-103-leak.sh
+YML
+  bash "$LINT" --root "$LEAK_DIR" >/tmp/issue103-manifest-factor-leak.out 2>&1
+  assert_true "AC-local-factor-does-not-reach-ci falsifiability arm: a governed step's timeout-minutes inflated by the local factor (ceil(60x8/60)=8, instead of the correct ceil(60/60)=1) FAILs — the local factor never buys CI runtime" \
+    "[ $? -ne 0 ]"
+
+  cat > "$LEAK_DIR/.github/workflows/fixture-leak.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - id: s-test-fixture-103-leak
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fixture-103-leak.sh ')
+        timeout-minutes: 1
+        run: bash tests/test-fixture-103-leak.sh
+YML
+  bash "$LINT" --root "$LEAK_DIR" >/tmp/issue103-manifest-factor-noleak.out 2>&1
+  assert_true "AC-local-factor-does-not-reach-ci: the correct CI-only agreement (ceil(60/60)=1, no factor applied) PASSes" \
+    "[ $? -eq 0 ]"
+  rm -rf "$LEAK_DIR"
+
+  # ---------------------------------------------------------------------
   # AC-pin-single-home
   # ---------------------------------------------------------------------
   assert_true "AC-pin-single-home: tests/lib/harness-pins.sh (single committed pin constant) exists" \

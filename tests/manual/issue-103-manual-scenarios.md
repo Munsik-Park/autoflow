@@ -61,3 +61,30 @@ headroom factor over the measured figure.
 **Pass condition**: every numeric `budget-secs` in the tree traces to a
 recorded CI measurement; no numeric budget is present without a derivation
 note.
+
+## M3 — AC-real-sweep-clears-the-straddling-suite: the real local sweep clears
+
+**Why environment-dependent, not fully automated**: the contradiction this
+criterion resolves (`.autoflow/issue-103-budget-green-blocker.md`) was only
+ever observable against a real suite's real wall-clock — no fixture carries
+a real ten-minute suite. The margin criterion (the effective local ceiling,
+`SUITE_BUDGET_CEILING_SECS × SUITE_LOCAL_SLOWDOWN_FACTOR`, must exceed this
+repository's worst recorded local suite runtime) is checked arithmetically
+by `tests/test-issue-103-central-runner.sh`; this scenario is the real-sweep
+witness the margin criterion exists to back up structurally rather than rest
+on alone.
+
+**Procedure**:
+
+1. On the post-change tree, run `bash scripts/test/run-suites.sh --all` on
+   the same host used for M1, both uncontended and under the contention
+   conditions M1 records.
+2. Confirm the run reports **no** `TIMEOUT` record, and specifically none
+   for `tests/test-push-context-base-ref.sh` (the suite whose 594–601s local
+   wall-clock straddled the pre-revision ceiling — arbitration
+   `.autoflow/issue-103-verify-arbitration.md` M1–M3).
+3. Record the wall-clock and any `TIMEOUT` output verbatim in the cycle's
+   VALIDATE notes.
+
+**Pass condition**: `run-suites: <N> passed, 0 failed, 0 timed out, of <N>
+executed`, on both an uncontended and a contended run.

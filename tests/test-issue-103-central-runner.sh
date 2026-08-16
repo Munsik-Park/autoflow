@@ -148,8 +148,17 @@ if [ -f "$RUNNER" ] && [ -f "$SELECT" ]; then
   rm -rf "$STUB4"
 
   # ---------------------------------------------------------------------
-  # AC-runtime-ceiling-enforced
+  # AC-runtime-ceiling-enforced (RE-BASED onto the EFFECTIVE local ceiling —
+  # budget-secs of the fixture, TIMES scripts/test/suite-manifest.sh's
+  # SUITE_LOCAL_SLOWDOWN_FACTOR (design value 8; feature design §2.5 "The
+  # separation") — never the raw declared budget-secs directly. A stub whose
+  # sleep sits between the declared budget and the effective ceiling is now
+  # arm (a) of AC-local-enforcement-decoupled below, not this AC's subject:
+  # written against the raw declared budget this arm would silently start
+  # testing the multiplication instead of the gate (GATE:PLAN-2 F8).
   # ---------------------------------------------------------------------
+  EFFECTIVE_CEILING_1S=8   # 1 (declared) x 8 (SUITE_LOCAL_SLOWDOWN_FACTOR, design value)
+
   STUB5="$(mktemp -d)"
   mkdir -p "$STUB5/tests"
   cat > "$STUB5/tests/test-fixture-103-slow.sh" <<'SH'
@@ -157,14 +166,14 @@ if [ -f "$RUNNER" ] && [ -f "$SELECT" ]; then
 # ci-subject: tests/fixture-slow.txt
 # lane: standing
 # budget-secs: 1
-sleep 5
+sleep 9
 exit 0
 SH
   chmod +x "$STUB5/tests/test-fixture-103-slow.sh"
   bash "$RUNNER" --root "$STUB5" --all >/tmp/issue103-runner-timeout.out 2>&1
   timeout_exit=$?
-  assert_true "AC-runtime-ceiling-enforced: a stub sleeping past its declared budget-secs drives run-suites.sh to non-zero exit with a TIMEOUT record" \
-    "[ $timeout_exit -ne 0 ] && grep -qi 'TIMEOUT' /tmp/issue103-runner-timeout.out"
+  assert_true "AC-runtime-ceiling-enforced (re-based): a stub sleeping past its EFFECTIVE local ceiling ($EFFECTIVE_CEILING_1S s = declared budget-secs 1 x the local slowdown factor) drives run-suites.sh to non-zero exit with a TIMEOUT record naming both the declared budget and the effective ceiling" \
+    "[ $timeout_exit -ne 0 ] && grep -qi 'TIMEOUT' /tmp/issue103-runner-timeout.out && grep -q 'declared budget-secs: 1' /tmp/issue103-runner-timeout.out && grep -qi 'effective' /tmp/issue103-runner-timeout.out"
   rm -rf "$STUB5"
 
   STUB6="$(mktemp -d)"
@@ -179,9 +188,143 @@ SH
   chmod +x "$STUB6/tests/test-fixture-103-fast.sh"
   bash "$RUNNER" --root "$STUB6" --all >/tmp/issue103-runner-underbudget.out 2>&1
   underbudget_exit=$?
-  assert_true "AC-runtime-ceiling-enforced: a stub under budget exits 0 (the ceiling gates, it does not falsely trip)" \
+  assert_true "AC-runtime-ceiling-enforced: a stub comfortably under both its declared budget and its effective ceiling exits 0 (the ceiling gates, it does not falsely trip)" \
     "[ $underbudget_exit -eq 0 ]"
   rm -rf "$STUB6"
+
+  # ---------------------------------------------------------------------
+  # AC-local-enforcement-decoupled — local enforcement spends
+  # budget-secs x SUITE_LOCAL_SLOWDOWN_FACTOR ("the effective local
+  # ceiling"), never the raw CI-clock budget-secs directly.
+  #
+  # Injection mechanism for arm (c) (GATE:PLAN-2 F4): a plain environment
+  # override (SUITE_LOCAL_SLOWDOWN_FACTOR=<n> in the caller's environment)
+  # is deliberately NOT used to drive the identity-value arm — it would
+  # convert a hard-coded resource control into an environment-settable one
+  # while still passing check-suite-manifest.sh's single-authoring-home
+  # lint (the assignment site itself is unchanged; only its effective value
+  # would move). Route (a) instead: copy scripts/test/ into a scratch
+  # directory, edit the COPIED suite-manifest.sh's assignment line in
+  # place, and drive the COPIED run-suites.sh (which sources its library
+  # from its own SCRIPT_DIR, so the edited copy — not the real constant —
+  # is what it reads) against the real --root fixture tree.
+  # ---------------------------------------------------------------------
+  make_scratch_runner_with_factor() { # <factor-value> -> prints the scratch scripts/test dir path
+    local factor="$1" dir
+    dir="$(mktemp -d)"
+    cp -r "$PROJECT_ROOT/scripts/test" "$dir/scripts-test"
+    sed -i.bak -E "s/^SUITE_LOCAL_SLOWDOWN_FACTOR=.*/SUITE_LOCAL_SLOWDOWN_FACTOR=$factor  # test-override: identity value, scratch copy only/" \
+      "$dir/scripts-test/suite-manifest.sh" 2>/dev/null
+    rm -f "$dir/scripts-test/suite-manifest.sh.bak"
+    printf '%s\n' "$dir/scripts-test"
+  }
+
+  # -- Arm (a): a stub sleeping BETWEEN its declared budget (1s) and its
+  #    effective ceiling (8s) exits 0 -- this is the arm that reds if the
+  #    factor is declared but never applied (the pre-change behaviour,
+  #    which every other arm reads as correct).
+  ARM_A_DIR="$(mktemp -d)"
+  mkdir -p "$ARM_A_DIR/tests"
+  cat > "$ARM_A_DIR/tests/test-fixture-103-decoupled-a.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-decoupled-a.txt
+# lane: standing
+# budget-secs: 1
+sleep 5
+exit 0
+SH
+  chmod +x "$ARM_A_DIR/tests/test-fixture-103-decoupled-a.sh"
+  bash "$RUNNER" --root "$ARM_A_DIR" --all >/tmp/issue103-decoupled-a.out 2>&1
+  arm_a_exit=$?
+  assert_true "AC-local-enforcement-decoupled arm (a): a stub sleeping 5s -- past its declared budget-secs (1) but under its effective ceiling ($EFFECTIVE_CEILING_1S) -- exits 0 (proves the local gate spends the effective ceiling, not the raw declared budget)" \
+    "[ $arm_a_exit -eq 0 ]"
+  rm -rf "$ARM_A_DIR"
+
+  # -- Arm (b): a stub sleeping past the effective ceiling -> non-zero with a
+  #    TIMEOUT record naming declared budget AND effective ceiling
+  #    separately (same fixture shape as the re-based AC-runtime-ceiling-
+  #    enforced stub above; the record-shape assertion lives there, not
+  #    duplicated here).
+  ARM_B_DIR="$(mktemp -d)"
+  mkdir -p "$ARM_B_DIR/tests"
+  cat > "$ARM_B_DIR/tests/test-fixture-103-decoupled-b.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-decoupled-b.txt
+# lane: standing
+# budget-secs: 1
+sleep 9
+exit 0
+SH
+  chmod +x "$ARM_B_DIR/tests/test-fixture-103-decoupled-b.sh"
+  bash "$RUNNER" --root "$ARM_B_DIR" --all >/tmp/issue103-decoupled-b.out 2>&1
+  arm_b_exit=$?
+  assert_true "AC-local-enforcement-decoupled arm (b): a stub sleeping 9s -- past the effective ceiling ($EFFECTIVE_CEILING_1S) -- drives a non-zero exit with a TIMEOUT record naming the declared budget AND the effective ceiling separately, so the record explains itself" \
+    "[ $arm_b_exit -ne 0 ] && grep -qi 'TIMEOUT' /tmp/issue103-decoupled-b.out && grep -q 'declared budget-secs: 1' /tmp/issue103-decoupled-b.out && grep -qi 'effective' /tmp/issue103-decoupled-b.out"
+  rm -rf "$ARM_B_DIR"
+
+  # -- Arm (c): with the factor forced to its identity value (1) via the
+  #    scratch-copy mechanism, behaviour is byte-identical to a raw
+  #    declared-budget timeout -- a stub sleeping past the DECLARED budget
+  #    (not the arm-(a)/(b) effective ceiling) times out, proving the factor
+  #    is a multiplier over the declared budget rather than an unconditional
+  #    widening (feature design §2.5 "any value below [identity] would
+  #    derive a local allowance tighter than a number already measured").
+  SCRATCH_IDENTITY_SCRIPTS="$(make_scratch_runner_with_factor 1)"
+  ARM_C_DIR="$(mktemp -d)"
+  mkdir -p "$ARM_C_DIR/tests"
+  cat > "$ARM_C_DIR/tests/test-fixture-103-decoupled-c.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-decoupled-c.txt
+# lane: standing
+# budget-secs: 1
+sleep 3
+exit 0
+SH
+  chmod +x "$ARM_C_DIR/tests/test-fixture-103-decoupled-c.sh"
+  bash "$SCRATCH_IDENTITY_SCRIPTS/run-suites.sh" --root "$ARM_C_DIR" --all >/tmp/issue103-decoupled-c.out 2>&1
+  arm_c_exit=$?
+  assert_true "AC-local-enforcement-decoupled arm (c): with the factor at its identity value (1, scratch-copy injection), a stub sleeping 3s -- past the declared budget (1) -- times out exactly as raw declared-budget enforcement would, proving the factor is a real multiplier and not a hidden bypass" \
+    "[ $arm_c_exit -ne 0 ] && grep -qi 'TIMEOUT' /tmp/issue103-decoupled-c.out"
+  rm -rf "$ARM_C_DIR" "$(dirname "$SCRATCH_IDENTITY_SCRIPTS")"
+
+  # -- Anti-vacuity / F4 hole check: the mechanism chosen for arm (c) is a
+  #    scratch-copy edit, NOT an environment override -- assert the REAL
+  #    (unmodified) run-suites.sh ignores a SUITE_LOCAL_SLOWDOWN_FACTOR
+  #    environment variable entirely, so the factor cannot be widened (or
+  #    disabled) by an env-settable value that would still pass the
+  #    single-authoring-home lint. Re-uses arm (a)'s fixture: if the real
+  #    runner honoured the env var, forcing it to 1 here would make a 5s
+  #    sleep exceed a now-identity 1s effective ceiling and time out.
+  ENV_HOLE_DIR="$(mktemp -d)"
+  mkdir -p "$ENV_HOLE_DIR/tests"
+  cat > "$ENV_HOLE_DIR/tests/test-fixture-103-env-hole.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-env-hole.txt
+# lane: standing
+# budget-secs: 1
+sleep 5
+exit 0
+SH
+  chmod +x "$ENV_HOLE_DIR/tests/test-fixture-103-env-hole.sh"
+  SUITE_LOCAL_SLOWDOWN_FACTOR=1 bash "$RUNNER" --root "$ENV_HOLE_DIR" --all >/tmp/issue103-env-hole.out 2>&1
+  env_hole_exit=$?
+  assert_true "GATE:PLAN-2 F4: the real run-suites.sh does not read a SUITE_LOCAL_SLOWDOWN_FACTOR environment variable -- setting one in the caller's environment has no effect (the arm-(a) stub still exits 0, not a forced identity-value timeout)" \
+    "[ $env_hole_exit -eq 0 ]"
+  rm -rf "$ENV_HOLE_DIR"
+
+  # ---------------------------------------------------------------------
+  # AC-real-sweep-clears-the-straddling-suite -- automated arithmetic half
+  # (environment-dependent overall; the sweep itself is the manual/
+  # environment-dependent witness, tests/manual/issue-103-manual-
+  # scenarios.md M1). The margin criterion: the effective local ceiling for
+  # a ceiling-symbol suite must exceed this repository's worst recorded
+  # local suite runtime (test-issue-69 at 21m38s = 1298s under contention,
+  # .autoflow/issue-103-phase-b.md:6).
+  # ---------------------------------------------------------------------
+  WORST_RECORDED_LOCAL_SECS=1298
+  EFFECTIVE_CEILING_SYMBOL=$((600 * 8))  # SUITE_BUDGET_CEILING_SECS x SUITE_LOCAL_SLOWDOWN_FACTOR
+  assert_true "AC-real-sweep-clears-the-straddling-suite margin criterion (arithmetic half): the effective local ceiling for a ceiling-symbol suite (600 x 8 = $EFFECTIVE_CEILING_SYMBOL s) exceeds the worst recorded local suite runtime ($WORST_RECORDED_LOCAL_SECS s, test-issue-69 under contention)" \
+    "[ $EFFECTIVE_CEILING_SYMBOL -gt $WORST_RECORDED_LOCAL_SECS ]"
 
   # ---------------------------------------------------------------------
   # VERIFY step 3 (minimal-implementation check) additions — four real
