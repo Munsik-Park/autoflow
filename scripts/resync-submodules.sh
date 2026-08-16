@@ -65,7 +65,14 @@ is_removable_residue() {
   for root in "${roots[@]}"; do
     pruneargs+=( -path "$root" -prune -o )
   done
-  stray="$(find "$p" "${pruneargs[@]}" -type f -print 2>/dev/null | head -n 1)"
+  # `find … -print -quit`, NOT `find … -print | head -n 1`: under `set -o pipefail`
+  # head's early exit delivers SIGPIPE to find, the pipeline's status becomes 141,
+  # and `set -e` aborts this function — so a tree that merely HAS stray files is
+  # reported as a resync failure rather than as the stray-file case below.
+  # Measured on GNU find (the Linux runner): 100/100 aborts over a non-trivial
+  # tree; BSD find on macOS does not reproduce it, which is why it stayed unseen
+  # locally. `-quit` is find's own first-hit stop, so no pipe exists to break.
+  stray="$(find "$p" "${pruneargs[@]}" -type f -print -quit 2>/dev/null)"
   if [ -n "$stray" ]; then
     echo "    ↳ git checkout 밖의 파일 존재(예: $stray)" >&2
     return 1

@@ -173,11 +173,26 @@ suite_header_block() {
 # trailing whitespace stripped) and returns 0, or returns 1 when absent.
 # Only column-1 `# <field>:` comment lines are read, so a field name appearing
 # inside a body string is never mistaken for a declaration.
+#
+# CAPTURE-THEN-MATCH, not `suite_header_block | grep -m1`. Under `set -o pipefail`
+# the early-exiting consumer delivers SIGPIPE to the awk producer the moment it
+# has its one match, and the pipeline's status becomes 141 — so a header that IS
+# present reports as absent. Whether the producer has written its remaining lines
+# before the consumer exits is a scheduling race, which is why the failure was
+# nondeterministic and awk-implementation-dependent (gawk on the CI runner, not
+# mawk or macOS awk). The prefix match below is exact: no field name in the
+# grammar contains a glob or regex metacharacter.
 # ---------------------------------------------------------------------------
 suite_header_field() {
-  local file="$1" field="$2" line
+  local file="$1" field="$2" block line found=''
   [ -f "$file" ] || return 1
-  line="$(suite_header_block "$file" | grep -m1 "^# ${field}:")" || return 1
+  block="$(suite_header_block "$file")" || return 1
+  while IFS= read -r line; do
+    case "$line" in
+      "# ${field}:"*) found="$line"; break ;;
+    esac
+  done <<<"$block"
+  line="$found"
   [ -n "$line" ] || return 1
   line="${line#\# ${field}:}"
   line="${line#"${line%%[![:space:]]*}"}"
