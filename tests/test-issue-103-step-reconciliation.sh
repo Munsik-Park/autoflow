@@ -74,25 +74,67 @@ JSON
   # shape strictly more favourable than production, where select-suites.sh's
   # SELECTED report is TREE-WIDE (63 suites) but toJSON(steps) is JOB-LOCAL
   # (only that one workflow's steps). Every umbrella/single-suite workflow
-  # invokes the reconciler this way, with no --governed narrowing, so a
-  # suite hosted in a DIFFERENT workflow resolves to outcome=absent and reds
-  # every job on every run. Re-based fixture: a SELECTED set LARGER than the
-  # job's own step map, with three named suites --
-  #   (a) hosted in ANOTHER workflow (present in SELECTED, absent from this
-  #       job's outcome map) -- must NOT red this job;
-  #   (b) hosted HERE, selected, outcome=skipped -- must red;
-  #   (c) hosted HERE, unselected, outcome=success (ran anyway) -- must red.
+  # invokes the reconciler this way, so a suite hosted in a DIFFERENT
+  # workflow resolves to outcome=absent unless the reconciled set is
+  # narrowed to this job's own hosts, and every job reds on every run
+  # without that narrowing.
+  #
+  # SPLIT FIXTURE (issue-103-f1-green-blocker.md): a single shared fixture
+  # driven once with no flag (expect rc==0) and once with --governed naming
+  # its own three keys (expect rc!=0) is mutually unsatisfiable -- set
+  # equality between the derived governed set and the explicit one forces
+  # identical verdicts, so no correct derivation can pass BOTH the no-flag
+  # arm's rc==0 and the --governed arm's rc!=0 on the same map. The escape
+  # that would separate them ("when the report holds both a resolved and an
+  # unresolved entry, reconcile nothing") makes the reconciler inert on
+  # every real run (contract-suites hosts 39 of 63 selected suites,
+  # e2e-dummy-target 22 of 63) and is rejected on that ground.
+  #
+  # Chosen repair: option (b), split into two independently-falsifiable
+  # fixtures, each isolating one property --
+  #   arm (a) — no-flag, cross-workflow-only: a SELECTED set naming one
+  #     suite hosted here (success) and one hosted ELSEWHERE (absent from
+  #     this job's map) -- the derivation-based narrowing must resolve
+  #     cleanly (rc==0), and must not report the elsewhere suite. This is
+  #     F1 itself, isolated from any genuine mismatch.
+  #   arm (b)/(c) — explicit --governed, job-local mismatches: unchanged
+  #     three-suite fixture, still proving skip/ran detection survives
+  #     narrowing.
+  # A genuine no-flag mismatch (a real job-local suite skipped, no flag) is
+  # independently covered by the "a selected suite marked skipped" arm
+  # above (:47-53) -- so splitting out the mismatch cases here loses no
+  # falsifiability at the no-flag level; each arm keeps exactly one crisp,
+  # independently-breakable claim.
   # ---------------------------------------------------------------------
+
+  # -- Arm (a), F1 itself: no --governed flag (the real, unwired invocation
+  #    shape every workflow uses today) -- a suite hosted in ANOTHER
+  #    workflow must not red this job.
+  cat > "$SELECTED_FILE" <<'SEL'
+SELECTED: tests/test-fixture-here-a.sh
+SELECTED: tests/test-fixture-elsewhere.sh
+SEL
+  cat > "$STEPS_FILE" <<'JSON'
+{"s-test-fixture-here-a": {"outcome": "success"}}
+JSON
+  bash "$RECONCILE" --selected "$SELECTED_FILE" --steps "$STEPS_FILE" >/tmp/issue103-reconcile-f1-unwired.out 2>&1
+  f1_unwired_exit=$?
+  assert_true "GATE:QUALITY F1: the real (unwired) invocation shape -- a tree-wide SELECTED report against a job-local outcome map, no --governed -- must not red on a suite hosted in another workflow (tests/test-fixture-elsewhere.sh); this suite's own outcome (success) still reconciles" \
+    "[ $f1_unwired_exit -eq 0 ] && ! grep -qF 'test-fixture-elsewhere.sh' /tmp/issue103-reconcile-f1-unwired.out"
+
+  # -- Arms (b)/(c), the fix shape: a fixture with a genuine cross-workflow
+  #    suite PLUS two genuine job-local mismatches, narrowed via --governed
+  #    to exactly this job's own hosted suites (what the workflow wiring
+  #    passes per hosted suite). Proves the reconciler script is not at
+  #    fault -- narrowing to the real governed set both admits the
+  #    cross-workflow suite AND still catches a real skip/ran mismatch in
+  #    the same run.
   cat > "$SELECTED_FILE" <<'SEL'
 SELECTED: tests/test-fixture-here-a.sh
 SELECTED: tests/test-fixture-elsewhere.sh
 SELECTED: tests/test-fixture-here-skip.sh
 NOT-SELECTED: tests/test-fixture-here-ran.sh no delta match
 SEL
-  # The job-local outcome map: only the suites THIS job's steps actually
-  # host. tests/test-fixture-elsewhere.sh is hosted in a different workflow
-  # and is therefore correctly absent here -- that absence is legitimate,
-  # not a missing-id defect.
   cat > "$STEPS_FILE" <<'JSON'
 {
   "s-test-fixture-here-a": {"outcome": "success"},
@@ -100,22 +142,6 @@ SEL
   "s-test-fixture-here-ran": {"outcome": "success"}
 }
 JSON
-
-  # F1 itself: the CURRENT real-workflow invocation shape (tree-wide
-  # SELECTED report, job-local outcome map, NO --governed narrowing) must
-  # NOT red on a cross-workflow suite. This is what the five real workflows
-  # do today, and it currently REDS every run (GATE:QUALITY F1) -- expected
-  # RED here until the workflow wiring adds per-job --governed narrowing.
-  bash "$RECONCILE" --selected "$SELECTED_FILE" --steps "$STEPS_FILE" >/tmp/issue103-reconcile-f1-unwired.out 2>&1
-  f1_unwired_exit=$?
-  assert_true "GATE:QUALITY F1: the real (unwired) invocation shape -- a tree-wide SELECTED report against a job-local outcome map, no --governed -- must not red on a suite hosted in another workflow (tests/test-fixture-elsewhere.sh); currently REDS on every job (this is F1, expected Red until the workflow wiring is fixed)" \
-    "[ $f1_unwired_exit -eq 0 ] && ! grep -qF 'test-fixture-elsewhere.sh' /tmp/issue103-reconcile-f1-unwired.out"
-
-  # The fix shape: the SAME fixture, narrowed to this job's own governed set
-  # via --governed (what the workflow wiring fix will pass per hosted
-  # suite). Proves the reconciler script itself is not at fault -- the
-  # mechanism already supports the correct fix -- and pins the exact
-  # invocation shape GREEN must wire into all five workflows.
   bash "$RECONCILE" --selected "$SELECTED_FILE" --steps "$STEPS_FILE" \
     --governed tests/test-fixture-here-a.sh \
     --governed tests/test-fixture-here-skip.sh \
