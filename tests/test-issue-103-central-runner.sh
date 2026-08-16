@@ -174,6 +174,18 @@ SH
   timeout_exit=$?
   assert_true "AC-runtime-ceiling-enforced (re-based): a stub sleeping past its EFFECTIVE local ceiling ($EFFECTIVE_CEILING_1S s = declared budget-secs 1 x the local slowdown factor) drives run-suites.sh to non-zero exit with a TIMEOUT record naming both the declared budget and the effective ceiling" \
     "[ $timeout_exit -ne 0 ] && grep -qi 'TIMEOUT' /tmp/issue103-runner-timeout.out && grep -q 'declared budget-secs: 1' /tmp/issue103-runner-timeout.out && grep -qi 'effective' /tmp/issue103-runner-timeout.out"
+
+  # VERIFY steps 3/4 delta pass (75ddbb1 -> de78d29): the guidance printed on
+  # any TIMEOUT was corrected by the same commit and is otherwise untested --
+  # the OLD text ("raise the budget deliberately... rather than treating the
+  # run as green") is now actively wrong advice under the two-clock contract
+  # (a local overrun of the effective ceiling is no evidence about the
+  # CI-clock budget-secs header), and a regression that silently restored it
+  # would tell a developer to edit the wrong number.
+  assert_true "run-suites.sh's TIMEOUT guidance is corrected for the two-clock contract: it tells the reader to investigate a hang, not to bump the header" \
+    "grep -qi 'do not bump the header' /tmp/issue103-runner-timeout.out && grep -qi 'investigate' /tmp/issue103-runner-timeout.out"
+  assert_true "run-suites.sh's TIMEOUT guidance no longer carries the pre-revision 'raise the budget deliberately' advice (wrong under the two-clock contract -- a local overrun is no evidence about the CI-clock budget-secs header)" \
+    "! grep -qi 'raise the budget deliberately' /tmp/issue103-runner-timeout.out"
   rm -rf "$STUB5"
 
   STUB6="$(mktemp -d)"
@@ -376,6 +388,22 @@ SH
   assert_true "run-suites.sh propagates a non-zero SELECT_RC from an internally-BLOCKed select-suites.sh call (exit $select_fail_exit) and executes no suite (witness lines: $WITNESS8)" \
     "[ $select_fail_exit -ne 0 ] && grep -qi 'selection failed' /tmp/issue103-runner-select-fail.out && [ \"$WITNESS8\" -eq 0 ]"
   rm -rf "$STUB8"
+
+  # VERIFY steps 3/4 delta pass (75ddbb1 -> de78d29): docs/submodule-common-
+  # rules.md > Testing Standards carried the same pre-revision "raise a
+  # budget deliberately... rather than treating a TIMEOUT as green" advice
+  # the script guidance above corrected -- ONLY check-manifest-regen-clean.sh
+  # guards this doc, and only for hash freshness (any edit without a
+  # regenerated hash reds), which is silent about whether the CONTENT is
+  # still correct. A regression that reverted to the old text while
+  # regenerating the hash would pass that lint cleanly.
+  DOC_RULES="$PROJECT_ROOT/docs/submodule-common-rules.md"
+  assert_true "docs/submodule-common-rules.md > Testing Standards states the two-clock separation (budget-secs is CI-clock, local enforcement spends an effective ceiling derived by SUITE_LOCAL_SLOWDOWN_FACTOR)" \
+    "grep -qF 'effective local ceiling = budget-secs' '$DOC_RULES' && grep -qF 'SUITE_LOCAL_SLOWDOWN_FACTOR' '$DOC_RULES'"
+  assert_true "docs/submodule-common-rules.md > Testing Standards tells the reader to investigate a local TIMEOUT, not bump budget-secs" \
+    "grep -qi 'investigate the suite' '$DOC_RULES' && grep -qi 'do not bump' '$DOC_RULES'"
+  assert_true "docs/submodule-common-rules.md > Testing Standards no longer carries the pre-revision 'raise a budget deliberately... rather than treating a TIMEOUT as green' advice" \
+    "! grep -qi 'raise a budget deliberately' '$DOC_RULES'"
 fi
 
 echo ""
