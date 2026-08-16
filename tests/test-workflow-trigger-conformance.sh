@@ -589,8 +589,15 @@ rm -f "$BLOCK_PARSE_FIXTURE"
 assert_true "AC-b-3: scripts/test/check-suite-ci-coverage.sh exists" \
   "[ -x '$COVERAGE_LINT' ] || [ -f '$COVERAGE_LINT' ]"
 
+bash "$COVERAGE_LINT" >/tmp/issue76-coverage-lint.out 2>&1
+COVERAGE_LINT_RC=$?
+if [ "$COVERAGE_LINT_RC" -ne 0 ]; then
+  echo "  ---- check-suite-ci-coverage.sh real-tree output (rc=$COVERAGE_LINT_RC) ----"
+  cat /tmp/issue76-coverage-lint.out
+  echo "  ---- end output ----"
+fi
 assert_true "AC-b-3: check-suite-ci-coverage.sh exits 0 over the real tree" \
-  "bash '$COVERAGE_LINT' >/tmp/issue76-coverage-lint.out 2>&1"
+  "[ $COVERAGE_LINT_RC -eq 0 ]"
 
 assert_true "AC-b-3: check-suite-ci-coverage.sh --self-test exits 0 (closure + exclusion legs both pass)" \
   "bash '$COVERAGE_LINT' --self-test >/tmp/issue76-coverage-lint-selftest.out 2>&1"

@@ -43,8 +43,15 @@ if [ -f "$LINT" ]; then
   assert_true "check-suite-manifest.sh --self-test exits 0" \
     "bash '$LINT' --self-test >/tmp/issue103-manifest-selftest.out 2>&1"
 
+  bash "$LINT" >/tmp/issue103-manifest-real.out 2>&1
+  MANIFEST_REAL_RC=$?
+  if [ "$MANIFEST_REAL_RC" -ne 0 ]; then
+    echo "  ---- check-suite-manifest.sh real-tree output (rc=$MANIFEST_REAL_RC) ----"
+    cat /tmp/issue103-manifest-real.out
+    echo "  ---- end output ----"
+  fi
   assert_true "check-suite-manifest.sh exits 0 on the post-change real tree" \
-    "bash '$LINT' >/tmp/issue103-manifest-real.out 2>&1"
+    "[ $MANIFEST_REAL_RC -eq 0 ]"
 
   # ---------------------------------------------------------------------
   # AC-lane-declaration — header presence / grammar / lane<->retire-with
@@ -305,10 +312,15 @@ YML
   # producer directly into a short-circuiting -q consumer under pipefail can
   # promote a producer SIGPIPE (exit 141) into a false pipeline failure
   # (docs/submodule-common-rules.md > Testing Standards item 6).
+  # The three OR-fallback legs below reuse $MANIFEST_REAL_RC from the
+  # real-tree run above rather than re-invoking the lint: it is the SAME
+  # lint over the SAME real tree, so a fresh invocation would be redundant,
+  # and reusing it means a fallback-branch failure surfaces through the
+  # already-dumped output above instead of a second swallowed capture.
   CTX_INSTALL="$(grep -A3 'run: bash tests/plugin/verify-install-into-target.sh' "$PROJECT_ROOT/.github/workflows/contract-suites.yml")"
   INSTALL_HAS_ID=1; printf '%s\n' "$CTX_INSTALL" | grep -q 'id:' && INSTALL_HAS_ID=0
   assert_true "AC-ci-guard-shape governed-set boundary (positive, real tree): tests/plugin/verify-install-into-target.sh's step carries the guard shape or check-suite-manifest.sh reds the real tree" \
-    "[ $INSTALL_HAS_ID -eq 0 ] || ! bash '$LINT' >/dev/null 2>&1"
+    "[ $INSTALL_HAS_ID -eq 0 ] || [ $MANIFEST_REAL_RC -ne 0 ]"
 
   # -- GATE:PLAN F2: the governed-set quantifier reaches three non-umbrella
   #    workflows hosting a governed step. Pinned down here as a real-tree
@@ -317,15 +329,15 @@ YML
   CTX_HOST_PURITY="$(grep -B3 'run: bash tests/test-issue-788-host-purity-delta.sh' "$PROJECT_ROOT/.github/workflows/host-purity-delta.yml")"
   HOST_PURITY_HAS_ID=1; printf '%s\n' "$CTX_HOST_PURITY" | grep -q 'id:' && HOST_PURITY_HAS_ID=0
   assert_true "GATE:PLAN F2: .github/workflows/host-purity-delta.yml's governed step (tests/test-issue-788-host-purity-delta.sh) carries id/if/timeout-minutes, or check-suite-manifest.sh reds the real tree over it" \
-    "[ $HOST_PURITY_HAS_ID -eq 0 ] || ! bash '$LINT' >/dev/null 2>&1"
+    "[ $HOST_PURITY_HAS_ID -eq 0 ] || [ $MANIFEST_REAL_RC -ne 0 ]"
   CTX_PLUGIN_PACKAGE="$(grep -B3 'run: bash tests/plugin/verify-package.sh' "$PROJECT_ROOT/.github/workflows/plugin-package.yml")"
   PLUGIN_PACKAGE_HAS_ID=1; printf '%s\n' "$CTX_PLUGIN_PACKAGE" | grep -q 'id:' && PLUGIN_PACKAGE_HAS_ID=0
   assert_true "GATE:PLAN F2: .github/workflows/plugin-package.yml's governed step (tests/plugin/verify-package.sh) carries id/if/timeout-minutes, or check-suite-manifest.sh reds the real tree over it" \
-    "[ $PLUGIN_PACKAGE_HAS_ID -eq 0 ] || ! bash '$LINT' >/dev/null 2>&1"
+    "[ $PLUGIN_PACKAGE_HAS_ID -eq 0 ] || [ $MANIFEST_REAL_RC -ne 0 ]"
   CTX_SCHEMA_HOOK="$(grep -B3 'run: bash tests/test-issue-223-schema-hook-contract.sh' "$PROJECT_ROOT/.github/workflows/schema-hook-contract.yml")"
   SCHEMA_HOOK_HAS_ID=1; printf '%s\n' "$CTX_SCHEMA_HOOK" | grep -q 'id:' && SCHEMA_HOOK_HAS_ID=0
   assert_true "GATE:PLAN F2: .github/workflows/schema-hook-contract.yml's governed step (tests/test-issue-223-schema-hook-contract.sh) carries id/if/timeout-minutes, or check-suite-manifest.sh reds the real tree over it" \
-    "[ $SCHEMA_HOOK_HAS_ID -eq 0 ] || ! bash '$LINT' >/dev/null 2>&1"
+    "[ $SCHEMA_HOOK_HAS_ID -eq 0 ] || [ $MANIFEST_REAL_RC -ne 0 ]"
 
   # ---------------------------------------------------------------------
   # AC-step-timeout-agreement — timeout-minutes == ceil(budget-secs/60)

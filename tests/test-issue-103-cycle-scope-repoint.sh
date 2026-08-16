@@ -48,6 +48,11 @@ if [ -f "$LINT" ]; then
 
   REAL_OUT="$(bash "$LINT" 2>&1)"
   REAL_EXIT=$?
+  if [ "$REAL_EXIT" -ne 0 ]; then
+    echo "  ---- check-cycle-scope-guard.sh real-tree output (rc=$REAL_EXIT) ----"
+    printf '%s\n' "$REAL_OUT"
+    echo "  ---- end output ----"
+  fi
   assert_true "check-cycle-scope-guard.sh exits 0 on the real tree, post-re-point" "[ $REAL_EXIT -eq 0 ]"
 
   assert_true "AC-cycle-scoped-branch-inertness verdict-preservation: the real tree still reports exactly 3 allow-list-bearing suites after the re-point" \

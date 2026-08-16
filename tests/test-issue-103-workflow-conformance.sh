@@ -39,8 +39,19 @@ echo "=== Issue #103 — workflow-trigger conformance re-point, paths: window su
 # AC-header-parse-single-definition-site
 # ---------------------------------------------------------------------
 assert_true "AC-header-parse-single-definition-site: scripts/test/suite-manifest.sh exists" "[ -f '$LIBRARY' ]"
+bash "$CONFORMANCE" >/tmp/issue103-conformance-real.out 2>&1
+CONFORMANCE_REAL_RC=$?
+if [ "$CONFORMANCE_REAL_RC" -ne 0 ]; then
+  # test-workflow-trigger-conformance.sh's own PASS-line volume runs into the
+  # thousands, so a full cat here would bury the violation in noise rather
+  # than surface it — grep to the FAIL lines (the actual violation content)
+  # plus the trailing Results summary line.
+  echo "  ---- test-workflow-trigger-conformance.sh real-tree output (rc=$CONFORMANCE_REAL_RC), FAIL lines + summary ----"
+  grep -E '^  FAIL:|^Results:' /tmp/issue103-conformance-real.out
+  echo "  ---- end output (full capture: /tmp/issue103-conformance-real.out) ----"
+fi
 assert_true "AC-header-parse-single-definition-site: test-workflow-trigger-conformance.sh exits 0 against the real tree, header parse re-pointed" \
-  "bash '$CONFORMANCE' >/tmp/issue103-conformance-real.out 2>&1"
+  "[ $CONFORMANCE_REAL_RC -eq 0 ]"
 assert_true "AC-header-parse-single-definition-site: test-workflow-trigger-conformance.sh sources scripts/test/suite-manifest.sh rather than re-parsing the header inline" \
   "grep -q 'suite-manifest.sh' '$CONFORMANCE'"
 assert_true "AC-header-parse-single-definition-site: no independent inline '# ci-subject:' parse (grep/awk over the raw header comment) survives in the conformance suite" \
@@ -68,15 +79,30 @@ assert_true "AC-ci-subject-coverage-preserved: every executable spec under tests
 # post-change tree.
 # ---------------------------------------------------------------------
 for f in tests/test-issue-52-peer-facilitator-premise.sh tests/test-issue-55-score-format-contract.sh tests/test-issue-799-inert-cleanup.sh; do
+  WGOUT="/tmp/issue103-window-guard-$(basename "$f").out"
+  bash "$PROJECT_ROOT/$f" >"$WGOUT" 2>&1
+  WGRC=$?
+  if [ "$WGRC" -ne 0 ]; then
+    echo "  ---- $f real-tree output (rc=$WGRC) ----"
+    cat "$WGOUT"
+    echo "  ---- end output ----"
+  fi
   assert_true "AC-paths-window-guards-survive: bash $f exits 0 on the post-change tree ($f's fixed grep -A40 'paths:' window is not evicted by the header/paths: appends)" \
-    "bash '$PROJECT_ROOT/$f' >/tmp/issue103-window-guard-$(basename "$f").out 2>&1"
+    "[ $WGRC -eq 0 ]"
 done
 
 # ---------------------------------------------------------------------
 # AC-derived-doc-surfaces-consistent
 # ---------------------------------------------------------------------
+bash "$REGEN_CLEAN" >/tmp/issue103-regen-clean.out 2>&1
+REGEN_CLEAN_RC=$?
+if [ "$REGEN_CLEAN_RC" -ne 0 ]; then
+  echo "  ---- check-manifest-regen-clean.sh real-tree output (rc=$REGEN_CLEAN_RC) ----"
+  cat /tmp/issue103-regen-clean.out
+  echo "  ---- end output ----"
+fi
 assert_true "AC-derived-doc-surfaces-consistent: check-manifest-regen-clean.sh exits 0 on the post-change tree (setup/manifest.json regenerated alongside the four edited registered docs)" \
-  "bash '$REGEN_CLEAN' >/tmp/issue103-regen-clean.out 2>&1"
+  "[ $REGEN_CLEAN_RC -eq 0 ]"
 # Scoped to this cycle's own change surface: check-maintained-docs-sync.sh's
 # dangling-path guard already reds at HEAD on four pre-existing
 # services/librechat/docs/* rows outside this cycle (verified: bash

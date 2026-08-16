@@ -571,6 +571,11 @@ assert_true "AC-site-closure: the lint's own --self-test passes (conforming/orde
   "[ $? -eq 0 ]"
 WATCHDOG_LINT_OUT="$(mktemp)"; bash "$WATCHDOG_LINT" >"$WATCHDOG_LINT_OUT" 2>&1
 WATCHDOG_LINT_RC=$?
+if [ "$WATCHDOG_LINT_RC" -ne 0 ]; then
+  echo "  ---- check-watchdog-detachment.sh real-tree output (rc=$WATCHDOG_LINT_RC) ----"
+  cat "$WATCHDOG_LINT_OUT"
+  echo "  ---- end output ----"
+fi
 assert_true "AC-site-closure: the real tree conforms end-to-end (every fallback site carries the fix)" \
   "[ $WATCHDOG_LINT_RC -eq 0 ]"
 rm -f "$WATCHDOG_LINT_OUT"

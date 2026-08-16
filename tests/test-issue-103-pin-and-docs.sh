@@ -115,8 +115,15 @@ assert_true "AC-pin-dependents-disposed: test-issue-62's own branch-scoped-inert
 # ---------------------------------------------------------------------
 # AC-doc-contracts-registered
 # ---------------------------------------------------------------------
+bash "$PROJECT_ROOT/tests/run-doc-invariants.sh" >/tmp/issue103-doc-invariants.out 2>&1
+DOC_INVARIANTS_RC=$?
+if [ "$DOC_INVARIANTS_RC" -ne 0 ]; then
+  echo "  ---- run-doc-invariants.sh real-tree output (rc=$DOC_INVARIANTS_RC) ----"
+  cat /tmp/issue103-doc-invariants.out
+  echo "  ---- end output ----"
+fi
 assert_true "AC-doc-contracts-registered: tests/run-doc-invariants.sh exits 0 on the real tree, including this cycle's two new entries" \
-  "bash '$PROJECT_ROOT/tests/run-doc-invariants.sh' >/tmp/issue103-doc-invariants.out 2>&1"
+  "[ $DOC_INVARIANTS_RC -eq 0 ]"
 assert_true "AC-doc-contracts-registered: tests/run-doc-invariants.sh --self-test exits 0 (mutation-teeth mode covers the two new entries)" \
   "bash '$PROJECT_ROOT/tests/run-doc-invariants.sh' --self-test >/tmp/issue103-doc-invariants-selftest.out 2>&1"
 

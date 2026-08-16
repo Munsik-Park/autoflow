@@ -46,8 +46,15 @@ if [ -f "$LINT" ]; then
   assert_true "check-suite-leaf.sh --self-test exits 0 (built-in fixtures for every denied/ignored shape row)" \
     "bash '$LINT' --self-test >/tmp/issue103-leaf-selftest.out 2>&1"
 
+  bash "$LINT" >/tmp/issue103-leaf-real.out 2>&1
+  LEAF_REAL_RC=$?
+  if [ "$LEAF_REAL_RC" -ne 0 ]; then
+    echo "  ---- check-suite-leaf.sh real-tree output (rc=$LEAF_REAL_RC) ----"
+    cat /tmp/issue103-leaf-real.out
+    echo "  ---- end output ----"
+  fi
   assert_true "check-suite-leaf.sh exits 0 on the post-change real tree (no sibling-suite invocation survives)" \
-    "bash '$LINT' >/tmp/issue103-leaf-real.out 2>&1"
+    "[ $LEAF_REAL_RC -eq 0 ]"
 
   # -- Denied-shape fixture: a command-position literal invocation ----------
   DENY_DIR="$(mktemp -d)"

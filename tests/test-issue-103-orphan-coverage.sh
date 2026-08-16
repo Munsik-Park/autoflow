@@ -43,8 +43,15 @@ echo "=== Issue #103 — AC-no-orphan-after-removal: check-suite-ci-coverage.sh 
 assert_true "check-suite-ci-coverage.sh --self-test exits 0" \
   "bash '$LINT' --self-test >/tmp/issue103-coverage-selftest.out 2>&1"
 
+bash "$LINT" >/tmp/issue103-coverage-real.out 2>&1
+COVERAGE_REAL_RC=$?
+if [ "$COVERAGE_REAL_RC" -ne 0 ]; then
+  echo "  ---- check-suite-ci-coverage.sh real-tree output (rc=$COVERAGE_REAL_RC) ----"
+  cat /tmp/issue103-coverage-real.out
+  echo "  ---- end output ----"
+fi
 assert_true "check-suite-ci-coverage.sh exits 0 on the post-change real tree (no orphan introduced by the sibling-invocation removals or the driver deletion)" \
-  "bash '$LINT' >/tmp/issue103-coverage-real.out 2>&1"
+  "[ $COVERAGE_REAL_RC -eq 0 ]"
 
 assert_true "issue-59-full-sweep-driver.sh is deleted (§2.3, superseded by run-suites.sh --all)" \
   "[ ! -f '$PROJECT_ROOT/tests/issue-59-full-sweep-driver.sh' ]"
