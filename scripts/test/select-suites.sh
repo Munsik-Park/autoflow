@@ -156,9 +156,6 @@ select_over() {
           if [ "$path" = "$tok" ] || glob_matches "$tok" "$path"; then
             matched="ci-subject token $tok matches $path"; break
           fi
-          case "$tok" in
-            */) case "$path" in "$tok"*) matched="ci-subject directory token $tok covers $path"; break ;; esac ;;
-          esac
         done <<< "$delta"
         [ -n "$matched" ] && break
       done

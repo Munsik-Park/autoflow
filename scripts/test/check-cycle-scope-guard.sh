@@ -451,8 +451,7 @@ main() {
   fi
 
   if [ "$LIST_SUBJECTS" -eq 1 ]; then
-    check_tree "$root" >/dev/null 2>&1 || true
-    LIST_SUBJECTS=1 check_tree "$root"
+    check_tree "$root"
     exit 0
   fi
 

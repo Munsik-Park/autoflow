@@ -289,7 +289,6 @@ check_tree() {
     subjects=$((subjects + 1))
     out="$(analyze_file "$root/$f")"
     if [ -n "$out" ]; then
-      printf '%s\n' "$out" | sed "s|^$root/||; s|^|  |; s|^  |  $f |" >/dev/null
       printf '%s\n' "$out" | sed "s|^${root}/||"
       violations=$((violations + $(printf '%s\n' "$out" | grep -c .)))
     fi
