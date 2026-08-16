@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/check-suite-manifest.sh scripts/test/suite-manifest.sh tests/lib/harness-pins.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: suite header manifest lint — Issue #103
 #   AC-lane-declaration, AC-cycle-scoped-couplings, AC-ci-guard-shape,

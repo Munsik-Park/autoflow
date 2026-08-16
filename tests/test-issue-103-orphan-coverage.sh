@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/check-suite-ci-coverage.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: no suite orphaned by the sibling-invocation removals; the coverage
 #       lint's reachability clause is narrowed to a direct run: step and its

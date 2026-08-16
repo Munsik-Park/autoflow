@@ -5,6 +5,8 @@
 # Test: doc-invariant registry runner contract — tests/run-doc-invariants.sh
 # =============================================================================
 # ci-subject: tests/run-doc-invariants.sh tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/fixtures/anchor-resolution-fixture-doc.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 #
 # The runner's own contract, retained from the retired per-cycle suite
 # `tests/test-issue-951-registry.sh` at issue #76 (`runner-contract-suite`).

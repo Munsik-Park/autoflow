@@ -256,6 +256,18 @@ Every sub-repo must maintain:
 5. **Cost-aware execution**: invoke jest with `--silent --reporters=summary` when running for a teammate report (verbose output is for local debugging only). Coverage reports use the summary reporter; per-file HTML reports stay on disk and are referenced by path, not pasted.
 6. **SIGPIPE-safe assertion pipes**: under `set -o pipefail`, do not pipe a *streaming/context* producer (`grep -A/-B/-C`, and awk/section-extractor functions whose buffered output is still flushing when the consumer exits, and other producers that keep writing past the match) directly into a *short-circuiting* consumer (`grep -q`, `grep -m`, `head`) when the pipeline's exit status is the assertion verdict. The consumer's early exit can send the producer `SIGPIPE` (exit 141), which `pipefail` promotes to a pipeline failure — flipping a logically-passing assertion to a flaky FAIL (`grep: write error: Broken pipe`). Capture the producer first, then match the captured string — `ctx=$(<producer>); printf '%s\n' "$ctx" | grep -q <pattern>` — or drop `-q` so the consumer reads to EOF. When the assertion chains `grep` checks with `&&`, capture once and reuse `$ctx` across every branch — do not re-split the capture per branch (a bare `;` drops the `&&` ordering and silently weakens the assertion). (issues #964, #973)
 
+### Running the bash suite tree
+
+**[MUST]** Bash suites under `tests/**` are run through `scripts/test/run-suites.sh`, not by ad-hoc enumeration. Selection has one owner — `scripts/test/select-suites.sh` — and both CI and the local runner consume it, so what a phase run executes and what CI executes are decided by the same predicate rather than by two lists that drift.
+
+- `bash scripts/test/run-suites.sh` — the suites this change requires, selected from each suite's own `# ci-subject:` header against the resolved delta. A `push` event, or an empty delta from a resolved base, selects the full set; an unresolvable base is a visible `BLOCK` and a non-zero exit, never a silent empty selection.
+- `bash scripts/test/run-suites.sh --all` — the whole enumerated tree.
+- `bash scripts/test/run-suites.sh --list` — the selected set without running it.
+
+The runner de-duplicates by resolved path, so a suite cannot execute twice in one pass; wraps each suite in `timeout <budget-secs>` from its own header and reports an overrun as a distinct `TIMEOUT`; and prints one result line with elapsed time per suite, so cost drift is visible long before it reds. **Raise a budget deliberately in the suite's header — and follow it in that step's `timeout-minutes` — rather than treating a `TIMEOUT` as green.**
+
+A suite executes its subject, not another suite (`scripts/test/check-suite-leaf.sh`). Confirming that a sibling has not regressed is its own CI step's job.
+
 ### Bash execution mode
 
 > Canonical: docs/teammate-common-rules.md > Bash Execution Mode.

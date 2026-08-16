@@ -5,8 +5,23 @@
 # check-cycle-scope-guard.sh — standing lint: a cycle-scoped path allow-list
 # must be branch-scoped by construction.
 # =============================================================================
-# Subject: every tests/test-issue-*.sh declaring a path allow-list array
-# (`allow_list=(` / `ALLOWLIST_<name>=(`).
+# Subject: every enumerated spec under tests/** declaring a path allow-list
+# array (`allow_list=(` / `ALLOWLIST_<name>=(`).
+#
+# Issue #103 moved BOTH of this lint's bindings, and moving only one would have
+# left the rename claim false:
+#
+#   SUBJECT BINDING — off the `tests/test-issue-*.sh` filename glob onto
+#   suite_enumerate + the allow-list-array test. Under the glob, a suite renamed
+#   off the convention left the subject set ENTIRELY rather than losing only its
+#   number, so the set was never total.
+#
+#   ISSUE-NUMBER SOURCE — off the basename `sed` derivation onto the header's
+#   `# cycle-arm:` value. An array-bearing subject with no derivable cycle-arm is
+#   THIS lint's own named violation, not a silent skip — which is what keeps this
+#   lint and check-suite-manifest.sh independent of each other's run order.
+#
+# The dominance rule itself is unchanged, and stays this lint's alone.
 #
 # The check is applied to the array's EVALUATION set, not to the array data:
 # every dereference of the array, every `git diff --name-only` feeding it, and
@@ -30,7 +45,7 @@
 # vacuous PASS, which is the class this lint exists to keep out of the tree.
 #
 # Usage:
-#   bash scripts/test/check-cycle-scope-guard.sh [--self-test]
+#   bash scripts/test/check-cycle-scope-guard.sh [--self-test] [--root <dir>] [--list-subjects]
 #
 # The default run performs the self-test first, so a run whose subject set is
 # empty still exercises the detector.
@@ -40,6 +55,9 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# shellcheck source=scripts/test/suite-manifest.sh
+. "$SCRIPT_DIR/suite-manifest.sh"
 
 # ---------------------------------------------------------------------------
 # analyze_file <path> <issue-number>
@@ -193,20 +211,31 @@ analyze_file() {
 # check_tree <root> — returns 0 when every subject file conforms.
 # ---------------------------------------------------------------------------
 check_tree() {
-  local root="$1" violations=0 subjects=0 f base issue out
-  for f in "$root"/tests/test-issue-*.sh; do
+  local root="$1" violations=0 subjects=0 rel f arm issue out
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    f="$root/$rel"
     [ -f "$f" ] || continue
-    base="$(basename "$f")"
-    issue="$(printf '%s' "$base" | sed -n 's/^test-issue-\([0-9][0-9]*\)-.*$/\1/p')"
-    [ -n "$issue" ] || continue
-    grep -qE '^[[:space:]]*(allow_list|ALLOWLIST_[0-9A-Za-z_]+)=\(' "$f" || continue
+    suite_declares_allow_list "$f" || continue
     subjects=$((subjects + 1))
+    if [ "${LIST_SUBJECTS:-0}" -eq 1 ]; then echo "$rel"; continue; fi
+
+    # The issue number comes from the header, never from the filename — a
+    # subject whose name says nothing is still governed.
+    arm="$(suite_header_field "$f" cycle-arm || true)"
+    issue="${arm#\#}"
+    if [ -z "$issue" ] || ! printf '%s' "$issue" | grep -qE '^[0-9]+$'; then
+      printf '%s:0: declares a path allow-list array but no derivable '"'"'# cycle-arm: #<issue>'"'"' — the branch gate has no issue to match against\n' "$rel"
+      violations=$((violations + 1))
+      continue
+    fi
+
     out="$(analyze_file "$f" "$issue")"
     if [ -n "$out" ]; then
-      printf '%s\n' "$out"
+      printf '%s\n' "$out" | sed "s|^$root/||"
       violations=$((violations + $(printf '%s\n' "$out" | grep -c .)))
     fi
-  done
+  done < <(suite_enumerate "$root")
   LAST_SUBJECT_COUNT="$subjects"
   LAST_VIOLATION_COUNT="$violations"
   [ "$violations" -eq 0 ]
@@ -215,17 +244,22 @@ check_tree() {
 # ---------------------------------------------------------------------------
 # Self-test — one fixture per named false-negative / false-positive class.
 # ---------------------------------------------------------------------------
-FIXTURE_HEAD='#!/usr/bin/env bash
-set -uo pipefail
+write_fixture() { # <dir> <basename> <cycle-arm issue> <body>
+  { printf '#!/usr/bin/env bash\n'
+    printf '# ci-subject: docs/fixture.md\n# lane: standing\n'
+    [ -n "$3" ] && printf '# cycle-arm: #%s\n' "$3"
+    printf '# budget-secs: 30\n'
+    printf '%s' "$FIXTURE_BODY_HEAD"
+    printf '%s\n' "$4"
+  } > "$1/$2"
+}
+
+FIXTURE_BODY_HEAD='set -uo pipefail
 PROJECT_ROOT=.
 note_deferred() { echo "  DEFERRED-OBSERVABLE: $1"; }
 assert_true() { TESTS=$((TESTS + 1)); }
 HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null)}"
 '
-
-write_fixture() { # <dir> <basename> <body>
-  printf '%s%s\n' "$FIXTURE_HEAD" "$3" > "$1/$2"
-}
 
 self_test() {
   local dir rc=0 fails=0
@@ -233,9 +267,13 @@ self_test() {
   mkdir -p "$dir/tests"
   trap 'rm -rf "$dir"' RETURN
 
+  # The fixture's issue number is read from its `# cycle-arm:` header, which is
+  # the binding under test — deriving it from the basename here would leave the
+  # self-test asserting the behaviour the re-point replaced.
   expect() { # <label> <fixture-basename> <expected: ok|violation>
-    local label="$1" file="$2" want="$3" out
-    out="$(analyze_file "$dir/tests/$file" "$(printf '%s' "$file" | sed -n 's/^test-issue-\([0-9][0-9]*\)-.*$/\1/p')")"
+    local label="$1" file="$2" want="$3" out arm
+    arm="$(suite_header_field "$dir/tests/$file" cycle-arm || true)"
+    out="$(analyze_file "$dir/tests/$file" "${arm#\#}")"
     if [ "$want" = ok ] && [ -n "$out" ]; then
       echo "  SELF-TEST FAIL: $label — expected conforming, got:"; printf '%s\n' "$out" | sed 's/^/    /'
       fails=$((fails + 1))
@@ -248,7 +286,7 @@ self_test() {
   }
 
   # (1) conforming, plain case gate, array assigned ABOVE the gate (the 67 shape)
-  write_fixture "$dir/tests" test-issue-1001-conforming-case.sh '
+  write_fixture "$dir/tests" test-issue-1001-conforming-case.sh 1001 '
 allow_list=(
   "a.txt"
 )
@@ -268,7 +306,7 @@ esac
 
   # (2) conforming, predicate-function gate; base-ref resolved under a DIFFERENT
   #     application of the same predicate (the 69 shape)
-  write_fixture "$dir/tests" test-issue-1002-conforming-pred.sh '
+  write_fixture "$dir/tests" test-issue-1002-conforming-pred.sh 1002 '
 on_issue_branch() {
   case "$HEAD_BRANCH" in
     dev/*-issue-1002|dev/*-issue-1002-*) return 0 ;;
@@ -294,7 +332,7 @@ fi
   expect "conforming: predicate-function gate, base ref under a different application (69 shape)" test-issue-1002-conforming-pred.sh ok
 
   # (3) violating, no gate at all
-  write_fixture "$dir/tests" test-issue-1003-no-gate.sh '
+  write_fixture "$dir/tests" test-issue-1003-no-gate.sh 1003 '
 allow_list=(
   "a.txt"
 )
@@ -306,7 +344,7 @@ assert_true "scope" "[ -z \"$UNCOVERED\" ]"
   expect "violating: no branch gate at all" test-issue-1003-no-gate.sh violation
 
   # (4) violating, array assigned INSIDE the gate but dereferenced outside it
-  write_fixture "$dir/tests" test-issue-1004-deref-outside.sh '
+  write_fixture "$dir/tests" test-issue-1004-deref-outside.sh 1004 '
 case "$HEAD_BRANCH" in
   dev/*-issue-1004|dev/*-issue-1004-*)
     allow_list=(
@@ -324,7 +362,7 @@ assert_true "scope" "[ -z \"$UNCOVERED\" ]"
   expect "violating: assignment gated, evaluation outside the gate" test-issue-1004-deref-outside.sh violation
 
   # (5) violating, gate present but dominating a DIFFERENT lane (the 52 shape)
-  write_fixture "$dir/tests" test-issue-1005-other-lane.sh '
+  write_fixture "$dir/tests" test-issue-1005-other-lane.sh 1005 '
 case "$HEAD_BRANCH" in
   dev/*-issue-1005|dev/*-issue-1005-*)
     assert_true "some other lane" "true"
@@ -344,7 +382,7 @@ assert_true "scope" "[ -z \"$UNCOVERED\" ]"
 
   # (6) violating, resolve_base_ref outside every own-issue gate while the array
   #     lane itself is gated
-  write_fixture "$dir/tests" test-issue-1006-ungated-baseref.sh '
+  write_fixture "$dir/tests" test-issue-1006-ungated-baseref.sh 1006 '
 allow_list=(
   "a.txt"
 )
@@ -364,7 +402,7 @@ esac
 
   # (7) violating, gate dominates the dereference but the off-branch arm credits
   #     TESTS/PASS instead of emitting an uncounted marker
-  write_fixture "$dir/tests" test-issue-1007-counted-offarm.sh '
+  write_fixture "$dir/tests" test-issue-1007-counted-offarm.sh 1007 '
 allow_list=(
   "a.txt"
 )
@@ -394,21 +432,41 @@ esac
 
 # ---------------------------------------------------------------------------
 main() {
-  if [ "${1:-}" = "--self-test" ]; then
+  local mode="default" root=""
+  LIST_SUBJECTS=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --self-test)     mode="self-test" ;;
+      --root)          root="${2:-}"; shift ;;
+      --list-subjects) LIST_SUBJECTS=1 ;;
+      *)               echo "check-cycle-scope-guard: unknown argument: $1" >&2; exit 2 ;;
+    esac
+    shift
+  done
+  root="${root:-$PROJECT_ROOT}"
+
+  if [ "$mode" = "self-test" ]; then
     self_test
     exit $?
   fi
 
+  if [ "$LIST_SUBJECTS" -eq 1 ]; then
+    check_tree "$root" >/dev/null 2>&1 || true
+    LIST_SUBJECTS=1 check_tree "$root"
+    exit 0
+  fi
+
   # The default run performs the self-test first, so a run whose subject set is
   # empty still exercises the detector.
-  if ! self_test; then
+  if ! self_test >/dev/null 2>&1; then
+    self_test
     echo "check-cycle-scope-guard: detector self-test failed — real-tree result not reported"
     exit 1
   fi
 
   LAST_SUBJECT_COUNT=0
   LAST_VIOLATION_COUNT=0
-  if check_tree "$PROJECT_ROOT"; then
+  if check_tree "$root"; then
     echo "check-cycle-scope-guard: OK — $LAST_SUBJECT_COUNT allow-list-bearing suite(s), every evaluation branch-scoped to its own cycle"
     exit 0
   fi

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/agents/autoflow-tester.md .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml docs/INDEX.md docs/adr/0000-adr-template.md docs/adr/0017-teammate-removal-feasibility.md docs/adr/README.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/maintained-docs.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/fixtures/gate-schema.json tests/lib/base-ref.sh tests/manual/issue-51-manual-scenarios.md tests/run-doc-invariants.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #51 — teammate-removal feasibility verdict (ADR-0017)
 # (cycle-scoped suite, frozen filename — ledger E5)

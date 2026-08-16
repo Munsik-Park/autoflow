@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/review/codex-review-pr.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: codex-review wrapper prompt permits/requires the blocked-by-review
 #       label-clear step (issue: clean-review label policy vs. wrapper prompt)

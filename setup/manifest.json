@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7426c33249e50a2531ef1cd7e58c10d533c1ccf69c95d4ffe2c52d11e4c5c8ba"
+      "sha256": "1404bb35e5cb175dc6c4acd6844f478d492e91e4a465c059a8a7e87085d80ac8"
     },
     {
       "source": "docs/design-rationale.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "596e1dcb01bae9278947071fcb3787e830569505772ca844785815b3757d9793"
+      "sha256": "b834b897b7126b9004d72f023de66545beffc840cc25f1283a612ec88f4f71f3"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b7f3d96657a5653d11863f44fb7a79485e79d29092879b0d0e014a2a47613cd7"
+      "sha256": "c54a998ee9f5194c7309c68889cddc4b0069c067c8c57d4a052bc0084f10f22a"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -181,7 +181,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "983696cfbe756c8095ec453b7493f0fa5b672cc07dd1407612668342854c30cb"
+      "sha256": "7c15e26f26f22c3ee2773aabb469b07b3f1d4cefd8d0dd41b94276231a10b866"
     },
     {
       "source": "docs/teammate-common-rules.md",

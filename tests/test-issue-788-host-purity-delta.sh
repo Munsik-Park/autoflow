@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh .github/workflows/host-purity-delta.yml CLAUDE.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/test/check-host-purity-delta.sh tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: diff-scoped host-purity DELTA guard — Issue #788
 # =============================================================================

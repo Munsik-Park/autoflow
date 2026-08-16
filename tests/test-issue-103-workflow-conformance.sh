@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: tests/test-workflow-trigger-conformance.sh scripts/test/check-manifest-regen-clean.sh scripts/test/check-maintained-docs-sync.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: header-parse re-pointed to a single definition site, ci-subject
 #       coverage preserved under universalisation, the fixed paths: window

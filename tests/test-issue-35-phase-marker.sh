@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .github/workflows/e2e-dummy-target.yml docs/autoflow-guide.md scripts/canary/emit-phase-marker.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: phase-marker emitter — Issue #35
 # =============================================================================

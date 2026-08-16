@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/hooks/check-autoflow-gate.sh plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh setup/manifest.json scripts/issue/create-issue.sh docs/issue-proposal.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: the hook-side and cross-mechanism half of the AI-initiated
 #       issue-creation gate — STANDING (issue #96 origin; see

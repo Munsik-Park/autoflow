@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/check-suite-ci-coverage.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml .github/workflows/
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: workflow trigger/registration conformance — suite registration
 #       effectiveness (AC-b-2/AC-b-3), Actions-glob dialect matcher
@@ -309,15 +311,26 @@ reaching_workflows() {
 # `# ci-subject:` header in the tree at test time — the oracle logic, not a
 # hardcoded name list.
 # =============================================================================
-mapfile -t CI_SUBJECT_SUITES < <(grep -rl '^# ci-subject:' "$PROJECT_ROOT/tests" 2>/dev/null | sort)
+# Issue #103: the header grammar has ONE parser. This suite consumes
+# scripts/test/suite-manifest.sh's `suite_enumerate` / `suite_header_field`
+# rather than re-parsing `# ci-subject:` inline — the inline form read a
+# heredoc-emitted fixture line as a suite's own declaration, and a second parser
+# is the drift class this cycle exists to remove.
+# shellcheck source=scripts/test/suite-manifest.sh
+source "$PROJECT_ROOT/scripts/test/suite-manifest.sh"
+
+mapfile -t CI_SUBJECT_SUITES < <(
+  while IFS= read -r rel; do
+    suite_header_field "$PROJECT_ROOT/$rel" ci-subject >/dev/null && echo "$PROJECT_ROOT/$rel"
+  done < <(suite_enumerate "$PROJECT_ROOT") | sort
+)
 
 assert_true "AC-b-2 pre: at least one suite declares a # ci-subject: header" \
   "[ \${#CI_SUBJECT_SUITES[@]} -gt 0 ]"
 
 for suite in "${CI_SUBJECT_SUITES[@]}"; do
   rel="${suite#"$PROJECT_ROOT"/}"
-  subjects_line="$(grep -m1 '^# ci-subject:' "$suite")"
-  subjects="${subjects_line#\# ci-subject:}"
+  subjects="$(suite_header_field "$suite" ci-subject)"
 
   mapfile -t hosts < <(reaching_workflows "$rel")
   if [ ${#hosts[@]} -eq 0 ]; then
@@ -499,8 +512,7 @@ is_subject_grammar_valid() {
 
 for suite in "${CI_SUBJECT_SUITES[@]}"; do
   rel="${suite#"$PROJECT_ROOT"/}"
-  subjects_line="$(grep -m1 '^# ci-subject:' "$suite")"
-  subjects="${subjects_line#\# ci-subject:}"
+  subjects="$(suite_header_field "$suite" ci-subject)"
   for token in $subjects; do
     sg=true
     is_subject_grammar_valid "$token" || sg=false

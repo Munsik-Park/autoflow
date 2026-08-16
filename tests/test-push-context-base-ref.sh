@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: push-trigger base-ref resolution, delta-scoped subject execution —
 # Issue #99 (standing; supersedes the Issue #85 whole-subject-sweep oracle)

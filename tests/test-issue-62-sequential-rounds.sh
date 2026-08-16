@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml docs/autoflow-guide.md docs/doc-invariant-registry.md docs/teammate-contracts.md setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/harness-pins.sh tests/run-doc-invariants.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: ARCHITECT sequential rounds + citation partitioning — Issue #62 (cycle-scoped)
 # (the original carry-compaction mechanism this header once described —
@@ -234,14 +237,13 @@ done
 assert_true "AC-62-21b: setup/manifest.json carries exactly one artifact row for each of this suite's three pinned sources (drift-immune: named-source state predicate, not a global count)" \
   "[ '$AC_62_21B_BAD' -eq 0 ]"
 
-# =============================================================================
-echo ""
-echo "=== AC-62-22 (fence, load-bearing; no mid-window caveat since #75 retired the unscoped scope-guard lanes, this suite's among them — the fence is green throughout) ==="
 
-OUT_955="$(cd "$PROJECT_ROOT" && bash tests/test-issue-955-subagent-background-ban.sh 2>&1)"
-EXIT_955=$?
-assert_true "AC-62-22: tests/test-issue-955-subagent-background-ban.sh exits 0 (agent( count still 5, foreground clause pins unaffected)" \
-  "[ $EXIT_955 -eq 0 ]"
+# =============================================================================
+# AC-62-22 is retired by issue #103's leaf rule.
+# =============================================================================
+# It re-ran tests/test-issue-955-subagent-background-ban.sh as a fence. That
+# suite carries its own `run:` step, so the fence is executed once per pass
+# either way.
 
 # =============================================================================
 echo ""
@@ -268,15 +270,15 @@ case "$HEAD_BRANCH" in
     ;;
 esac
 
-# =============================================================================
-echo ""
-echo "=== AC-62-24 (fence, load-bearing; KNOWN RED mid-cycle — the two foreign ok-count pin homes are bumped by the Developer AI in the SAME commit as the run.mjs change, not here) ==="
 
-for SUITE in "tests/test-issue-56-carry-evidence-discipline.sh" "tests/test-issue-59-adoption-evidence-discipline.sh" "tests/test-issue-27-composition-oracle.sh"; do
-  OUT="$(cd "$PROJECT_ROOT" && bash "$SUITE" 2>&1)"
-  EX=$?
-  assert_true "AC-62-24: bash $SUITE exits 0" "[ $EX -eq 0 ]"
-done
+# =============================================================================
+# AC-62-24 is retired by issue #103's leaf rule.
+# =============================================================================
+# The fence re-ran three sibling suites (56, 59, 27) to confirm the ok-count pin
+# had been bumped in every home. Single-sourcing the pin into
+# tests/lib/harness-pins.sh leaves one home, so there is no cross-home bump left
+# to fence — and each of the three carries its own `run:` step, so an unrelated
+# regression in any of them reds CI under its own name.
 
 # =============================================================================
 echo ""
@@ -358,50 +360,21 @@ NEGATED_MATCH_COUNT="$(grep -c '!String(result.escalation' "$RUN_MJS" || true)"
 assert_true "AC-62-30c: every 'draft artifact missing' occurrence in run.mjs sits inside a negated assertion (positive: $POSITIVE_MATCH_COUNT, negated-assertion sites: $NEGATED_MATCH_COUNT)" \
   "[ \"$POSITIVE_MATCH_COUNT\" -eq \"$NEGATED_MATCH_COUNT\" ]"
 
+
 # =============================================================================
-echo ""
-echo "=== AC-62-31 (RED discriminator) — the two unconditional ok-count pin homes bumped to 85 in the same commit ==="
-# KNOWN RED mid-cycle: per the task instructions and §5 items 6/9's ordering,
-# these two files are edited by the Developer AI in the GREEN commit, not by
-# this suite's own author. Asserted here anyway (unconditional, per the
-# verification design) so the discriminator is live from RED through GREEN.
-# Bumped 80 -> 82 by issue #69 (verification-depth AC:prompt-delivery /
-# AC:accept-gating, two new test/workflows/run.mjs assertions landed in the
-# SAME commit as the RED lane, per issue #69's verification design §
-# "harness ok-count pin" — pin bumps land with the harness additions, not
-# GREEN, for this cycle).
-# B14 update (issue #97): #97 added three run.mjs AC-facilitator-prompt tests,
-# net measured 82 -> 85, landed in the same commit as the dual-home bump in
-# tests/test-issue-27-composition-oracle.sh and
-# tests/test-issue-59-adoption-evidence-discipline.sh (commit 138c2ae). The
-# stale-value guards below now point one generation back (82, the value
-# immediately preceding this bump), mirroring #69's own generation-advance
-# idiom above.
-
-CANON_27="$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"
-CANON_59="$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh"
-
-NEW_27_EQ="$(grep -c -- '-eq 85 \]"' "$CANON_27" || true)"
-NEW_27_LABEL="$(grep -cF 'AC-27-20c: harness ok-line count == B14 (85)' "$CANON_27" || true)"
-STALE_27_EQ="$(grep -c -- '-eq 82 \]"' "$CANON_27" || true)"
-assert_true "AC-62-31a: test-issue-27's assertion pins -eq 85 exactly once (got: $NEW_27_EQ)" \
-  "[ \"$NEW_27_EQ\" -eq 1 ]"
-assert_true "AC-62-31a-label: the bumped '(85)' assertion label is present exactly once (got: $NEW_27_LABEL)" \
-  "[ \"$NEW_27_LABEL\" -eq 1 ]"
-assert_true "AC-62-31a-stale: no -eq 82 ok-count literal survives in test-issue-27 (got: $STALE_27_EQ)" \
-  "[ \"$STALE_27_EQ\" -eq 0 ]"
-
-NEW_59_EXPECTED="$(grep -cF 'EXPECTED_OK=85' "$CANON_59" || true)"
-STALE_59_EXPECTED="$(grep -cF 'EXPECTED_OK=82' "$CANON_59" || true)"
-assert_true "AC-62-31b: test-issue-59's EXPECTED_OK=85 appears exactly once (got: $NEW_59_EXPECTED)" \
-  "[ \"$NEW_59_EXPECTED\" -eq 1 ]"
-assert_true "AC-62-31c: no stale EXPECTED_OK=82 survives in test-issue-59 (got: $STALE_59_EXPECTED)" \
-  "[ \"$STALE_59_EXPECTED\" -eq 0 ]"
-
-OUT_59="$(cd "$PROJECT_ROOT" && bash "$CANON_59" 2>&1)"
-EXIT_59=$?
-assert_true "AC-62-31d: bash tests/test-issue-59-adoption-evidence-discipline.sh exits 0 (runs the bumped cross-pin block)" \
-  "[ $EXIT_59 -eq 0 ]"
+# AC-62-31 (a / a-label / a-stale / b / c / d) is retired by issue #103.
+# =============================================================================
+# The block asserted this cycle's BUMP DISCIPLINE — that the harness change
+# bumped both foreign ok-count pin homes in the same commit, and that no stale
+# literal from the preceding generation survived. Single-sourcing the pin into
+# tests/lib/harness-pins.sh leaves no foreign home and no synchronised bump, so
+# the subject is gone; a staleness assertion over a literal that no longer
+# exists anywhere is vacuously true, which is the vacuous-PASS class this tree
+# removes rather than keeps. AC-62-31d's sibling invocation is separately
+# disposed by the leaf rule.
+#
+# The surviving property — one authoring home — is carried by
+# scripts/test/check-suite-manifest.sh's single-authorship arm.
 
 # =============================================================================
 echo ""
@@ -514,14 +487,15 @@ case "$HEAD_BRANCH" in
       (cd "$PROJECT_ROOT" && git branch main origin/main) || true
     fi
     if [[ -z "$BASE_REF_36" ]]; then
-      echo "  BLOCK: no comparison base resolvable — AC-62-36(ii)/(iii)/(iv) counted FAIL, never skipped"
-      TESTS=$((TESTS + 3)); FAIL=$((FAIL + 3))
+      echo "  BLOCK: no comparison base resolvable — AC-62-36(iii)/(iv) counted FAIL, never skipped"
+      TESTS=$((TESTS + 2)); FAIL=$((FAIL + 2))
     else
-      WORKFLOWS_DIFF_36="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF_36"...HEAD -- .claude/workflows 2>/dev/null || true)"
-      OUT_798_36="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"; EXIT_798_36=$?
-      OUT_799_36="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"; EXIT_799_36=$?
-      assert_true "AC-62-36(ii): with the branch diff non-empty for .claude/workflows/** (got: $(printf '%s' "$WORKFLOWS_DIFF_36" | paste -sd, -)), both bash tests/test-issue-798-topology-flip.sh and bash tests/test-issue-799-inert-cleanup.sh exit 0 (798 exit=$EXIT_798_36, 799 exit=$EXIT_799_36)" \
-        "[ -n \"$WORKFLOWS_DIFF_36\" ] && [ $EXIT_798_36 -eq 0 ] && [ $EXIT_799_36 -eq 0 ]"
+      # AC-62-36(ii) is retired by issue #103's leaf rule: it re-ran
+      # tests/test-issue-798-topology-flip.sh and
+      # tests/test-issue-799-inert-cleanup.sh, each of which carries its own
+      # `run:` step. The negative controls (iii) and (iv) below are what give
+      # this lane its teeth, and they drive the real guard file against a real
+      # tampered on-disk state rather than re-running a green sibling.
 
       # (iii) hermetic negative control (C3, E10/O9 non-mock): tamper the REAL
       # guard's on-disk manifest sha256 row in a real detached worktree, then
@@ -549,41 +523,13 @@ case "$HEAD_BRANCH" in
     ;;
 esac
 
+
 # =============================================================================
-echo ""
-echo "=== AC-62-37 (RED discriminator, fence) — the D10 amendment raises no guard's assertion count and reds no downstream re-runner ==="
-
-extract_results_line() {  # "passed total failed", or empty fields if unmeasurable
-  printf '%s' "$1" | grep -oE 'Results: [0-9]+/[0-9]+ passed, [0-9]+ failed' | tail -1 \
-    | sed -E 's/Results: ([0-9]+)\/([0-9]+) passed, ([0-9]+) failed/\1 \2 \3/'
-}
-
-# NOTE (fix for CI red, gh run 31180623765): the prior oracle pinned absolute
-# totals (798 total >= 20, 799 total >= 31) measured on a host where
-# `git merge-base HEAD main` resolves. In the GitHub Actions pull_request
-# environment, `main` is not a locally resolvable ref (shallow, single-ref
-# checkout — reproduced here via a `--depth 1 --branch <this-branch>` clone
-# with no local `main`), so BASE_REF in tests/test-issue-798-topology-flip.sh
-# and tests/test-issue-799-inert-cleanup.sh resolves empty and their
-# diff-scope guards (AC9 for 798; AC6-scope for 799) SKIP instead of
-# running — dropping the totals to 18/26 while FAIL stays 0. A skip is not a
-# failure of the D10 amendment, so the oracle asserts each child suite exits
-# 0 with FAIL == 0 (the "raises no guard's assertion count" fence is served
-# by 0-failed, not by a total floor) — a form that cannot diverge between
-# local and CI since it does not depend on whether BASE_REF resolves.
-OUT_798_37="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
-EXIT_798_37=$?
-read -r _P798_37 T798_37 F798_37 <<<"$(extract_results_line "$OUT_798_37")"
-OUT_799_37="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
-EXIT_799_37=$?
-read -r _P799_37 T799_37 F799_37 <<<"$(extract_results_line "$OUT_799_37")"
-cd "$PROJECT_ROOT" && bash tests/test-issue-59-adoption-evidence-discipline.sh >/dev/null 2>&1
-EXIT_59_37=$?
-cd "$PROJECT_ROOT" && bash tests/test-issue-964-sigpipe-safe-pipes.sh >/dev/null 2>&1
-EXIT_964_37=$?
-
-assert_true "AC-62-37: tests/test-issue-798-topology-flip.sh exits 0 with 0 failed (got exit=$EXIT_798_37, ${T798_37:-0}/${F798_37:-?} failed), tests/test-issue-799-inert-cleanup.sh exits 0 with 0 failed (got exit=$EXIT_799_37, ${T799_37:-0}/${F799_37:-?} failed), tests/test-issue-59-adoption-evidence-discipline.sh exits 0 (got $EXIT_59_37), tests/test-issue-964-sigpipe-safe-pipes.sh exits 0 (got $EXIT_964_37)" \
-  "[ $EXIT_798_37 -eq 0 ] && [ \"${F798_37:-1}\" -eq 0 ] && [ $EXIT_799_37 -eq 0 ] && [ \"${F799_37:-1}\" -eq 0 ] && [ $EXIT_59_37 -eq 0 ] && [ $EXIT_964_37 -eq 0 ]"
+# AC-62-37 is retired by issue #103's leaf rule.
+# =============================================================================
+# It re-ran four sibling suites (798, 799, 59, 964) to confirm the D10 amendment
+# had regressed none of them. Each carries its own `run:` step, so a regression
+# in any of them reds CI under its own name, once per pass rather than twice.
 
 # =============================================================================
 echo ""

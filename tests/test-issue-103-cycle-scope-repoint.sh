@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/check-cycle-scope-guard.sh scripts/test/suite-manifest.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: cycle-scope guard re-point — subject binding off the filename glob
 #       onto suite_enumerate + allow-list-array test, issue-number source off

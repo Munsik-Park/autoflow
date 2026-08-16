@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: setup/manifest.json setup/thin-root-layer/ .claude/workflows/
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: install-into-TARGET acceptance suite — Issue #792 [#785-S5]
 # =============================================================================

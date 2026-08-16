@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/check-manifest-regen-clean.sh scripts/test/check-tests-tree-hygiene.sh setup/gen-manifest-hashes.sh setup/thin-root-layer/
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: standing lints — manifest regen-clean (AC-e/AC-g), tests-tree hygiene
 #       (manifest-closure-residual (ii)) — Issue #76

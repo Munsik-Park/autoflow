@@ -348,3 +348,47 @@ below, per §1/§2 and the §7.1 rule applied to this cycle.
 | Retired asset | Disposition | Basis |
 |---|---|---|
 | `tests/test-issue-97-ledger-id-registration.sh` | **retired — cycle-scoped (own landed state), coverage promoted rather than dropped** | its `AC-suite-registered` assertion — that `tests/test-ledger-entry-id.sh` appears in both `contract-suites.yml` `paths:` blocks and carries a `run:` step — named a fact about *this cycle's own diff*, not a forever-condition: once that registration lands, re-asserting it by literal string match is the exact `76-RETAIN-CI-REGISTRATION` shape §6 already resolves for a suite whose *own* wiring is checked. The retired assertion's subject disappears with the suite that named it (same disposition class as the `843 AC-CI-a/b/c` row in §6), and the **general property it instanced — every suite under `tests/**` has a real, effective CI execution path — is not dropped**: it is carried permanently, and more strongly, by the two standing mechanisms already registered before this cycle: `scripts/test/check-suite-ci-coverage.sh` (makes an unregistered suite an unrepresentable orphan rather than merely absent) and `tests/test-workflow-trigger-conformance.sh`'s `# ci-subject:` registration-effectiveness oracle (asserts `tests/test-ledger-entry-id.sh`'s own `# ci-subject:` paths — `scripts/ledger/ledger-entry-id.sh CLAUDE.md docs/teammate-contracts.md` — appear in the triggering `paths:` blocks, which the retired suite's literal-match form did not check at all). Retired per §2's execution point: its `run:` step and both `paths:` entries removed from `.github/workflows/contract-suites.yml` in the same commit as the suite's deletion, per the #73/#88 precedent |
+
+---
+
+## 12. The two-lane rule, extended to bash suites (issue #103)
+
+§1 governs *document* assertions. Issue #103 extends the same lane distinction to the
+executable specs under `tests/**`, because the property it was protecting — an assertion that
+belongs to one cycle must not outlive it, and one that asserts permanent state must not be
+retired with a merge — is the same property in both places. What was missing for suites was not
+the rule but a **declaration**: the lane lived in a filename convention that nothing enforced.
+
+Each suite now carries a header block whose grammar has one definition site,
+`scripts/test/suite-manifest.sh`, and one enforcer, `scripts/test/check-suite-manifest.sh`. The
+grammar and each field's meaning are documented at `docs/autoflow-guide.md` > RED > *Header
+contract*; the lane semantics are §1's, unchanged:
+
+- `lane: standing` — asserts permanent state, lives forever. §1's STATE lane.
+- `lane: cycle-scoped` — asserts its own cycle's landed diff, inert off its own dev branch, and
+  retired at the merge its `retire-with` names. §2's retirement condition, now with a
+  machine-readable subject for the first time.
+
+**Why the coupling is one-directional.** `lane: cycle-scoped` requires a path allow-list array,
+which is what keeps the declaration inside `scripts/test/check-cycle-scope-guard.sh`'s subject
+set. The converse is deliberately **not** asserted: a *standing* suite may carry a cycle-scoped
+**arm** — a change-surface allow-list guarding its own PR — inside a body of otherwise permanent
+assertions. This tree's three such suites (`tests/test-issue-67-deliberation-record.sh`,
+`tests/test-issue-69-verification-depth.sh`, `tests/test-issue-71-digest-removal.sh`) are
+standing, and an `array ⇒ cycle-scoped` rule would mark all three for immediate retirement at an
+already-merged issue. The separate `cycle-arm` field is what keeps such an arm governed.
+
+**Backlog, declared rather than retired.** Most suites in the tree carry an issue number while
+asserting permanent state, which `docs/autoflow-guide.md` > RED already prohibits. This cycle
+makes that backlog *enumerable* — every suite now declares its lane, so the mismatch between a
+`lane: standing` declaration and an issue-numbered filename is a list a later cycle can work
+through mechanically. It does not execute the renames.
+
+### 12.1 Retired-guard dispositions
+
+| Retired asset | Disposition | Basis |
+|---|---|---|
+| `tests/issue-59-full-sweep-driver.sh` (and its named exclusion in `scripts/test/check-suite-ci-coverage.sh`) | **deleted — superseded, properties re-homed** | its function was to enumerate every suite and execute the tree under an honest wall-clock budget. That is `bash scripts/test/run-suites.sh --all`, which unlike the driver has a real execution path (the driver was the tree's only spec with no `run:` step, carried by a named exclusion). The three properties its call sites asserted are re-homed, not dropped: unresolvable-base behaviour onto `scripts/test/select-suites.sh`'s fail-loud `BLOCK` contract and its `--self-test` BLOCK leg; budget honesty onto `run-suites.sh`'s per-suite `timeout <budget-secs>` and `TIMEOUT` record, driven by an over-budget/under-budget stub pair; sandbox containment structurally, since the runner creates no worktree at all |
+| Sibling-suite invocations in `tests/test-issue-{59,62,67,69,71}-*.sh` (AC-59-11d/21/18, AC-59-19b, AC-59-22a/b, AC-59-25…35b, AC-62-22, AC-62-24, AC-62-31, AC-62-36(ii), AC-62-37, AC-67-DOCINV, AC-67-ANCHOR-a1/a2, AC-71-COLLATERAL-\*, AC-71-UNCOND-\*) | **retired — duplicate execution of an already-covered surface** | each callee carries its own `run:` step, so a regression in it reds CI under its own name, once per pass rather than twice — and attributing a failure to the right suite is precisely what per-step registration buys. The general property is now enforced rather than remembered: `scripts/test/check-suite-leaf.sh` denies the shapes, over a closed table whose residual it states, and `scripts/test/check-suite-ci-coverage.sh` proves no callee lost its only execution path when the calls went away |
+| The shared harness ok-count pin's foreign homes and their text-form dependents (`tests/test-issue-27-composition-oracle.sh`'s literal, `tests/test-issue-59-adoption-evidence-discipline.sh`'s `EXPECTED_OK`, AC-59-14\*, AC-62-31\*, AC-67-OKCOUNT, AC-69-HARNESS-PINS\*) | **retired — subject removed by single-sourcing** | every one of them asserted a **bump discipline**: that a harness change updated both foreign literal homes in the same commit, and that no stale generation survived. With the literal single-sourced into `tests/lib/harness-pins.sh` there are no foreign homes and no synchronised bump, so the subject is gone; the staleness half would be vacuously true over a literal that no longer exists anywhere, which is the vacuous-PASS class §1 removes rather than keeps. What survives moves: *one authoring home* to `check-suite-manifest.sh`'s single-authorship arm, and *the pin still detects* to `tests/test-issue-27-composition-oracle.sh` comparing the sourced constant against the live `node test/workflows/run.mjs` measurement — the pin stays a **committed literal**, never a generated value, because a regenerated value agrees with itself and detects nothing |
+| `scripts/test/check-suite-ci-coverage.sh`'s transitive-closure reachability clause | **narrowed — protected nothing, and the leaf rule makes it unsatisfiable** | the clause admitted a suite reachable only as a subprocess of a reachable suite. Checked at the branch point, every enumerated spec but the deleted driver already carried its own `run:` step, and the suite the lint's own header named as the closure instance (`tests/test-issue-40-hook-additive.sh`) has had a direct step since `contract-suites.yml` registered it — so the clause protected nothing while advertising a protection a later cycle would re-derive. With the leaf rule a closure edge is itself a violation, so it is not a route a conforming tree can offer. The stale header paragraph is corrected in the same change |

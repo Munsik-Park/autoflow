@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: tests/lib/harness-pins.sh tests/run-doc-invariants.sh tests/fixtures/doc-invariants.json
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: pin drift detection, pin text-form dependent disposal, this cycle's
 #       own doc-STATE registry entries, and the removal-side no-regression

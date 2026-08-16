@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/hooks/check-autoflow-gate.sh .claude/workflows/architect-deliberation.js
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: AC-961-3 — cap-6 -> FAIL execution guard (issue #961, feature-AC6)
 # =============================================================================

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/agents/autoflow-analyzer.md .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md docs/adr/0017-teammate-removal-feasibility.md docs/autoflow-guide.md docs/design-rationale.md docs/doc-invariant-registry.md docs/improvement-backlog.md docs/maintained-docs.md docs/phases/analysis.md plugin/autoflow/agents/autoflow-analyzer.md scripts/canary/emit-phase-marker.sh scripts/test/run-suites.sh setup/gen-manifest-hashes.sh setup/manifest.json tests/adr-0016-conformance-check.sh tests/fixtures/doc-invariants.json tests/issue-create/fixtures/corpus.jsonl tests/lib/base-ref.sh tests/manual/issue-71-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh tests/run-doc-invariants.sh
+# lane: standing
+# cycle-arm: #71
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: cycle-digest emission + cross-issue recurrence scan removal — Issue #71
 # (cycle-scoped removal-state suite)
@@ -108,31 +112,14 @@ assert_false() {
 
 note_deferred() { echo "  DEFERRED-OBSERVABLE: $1"; }
 
-# Real execution of a sibling suite (verification design :118
-# collateral-suite execution sweep, :123 branch-unconditional guard sweep) —
-# never a grep proxy for "did this suite's arm get removed correctly". Some
-# of these suites are genuinely multi-minute (they re-run other heavy
-# suites internally, e.g. #62/#67 re-run #59) — per the documented budget
-# convention (tests/test-issue-59-adoption-evidence-discipline.sh:46-47,
-# "budget >= 600s, never run under a short timeout"), each call below is
-# given a generous per-suite timeout rather than a uniform short one.
-assert_suite_exit0() {
-  local desc="$1" suite_path="$2" budget_secs="$3"
-  TESTS=$((TESTS + 1))
-  local out exit_code
-  out="$(cd "$PROJECT_ROOT" && timeout "$budget_secs" bash "$suite_path" 2>&1)"
-  exit_code=$?
-  local tail_line
-  tail_line="$(printf '%s\n' "$out" | grep -E '^(Results:|RESULT:)' | tail -1)"
-  if [ "$exit_code" -eq 0 ]; then
-    echo "  PASS: $desc ($tail_line)"; PASS=$((PASS + 1))
-  elif [ "$exit_code" -eq 124 ]; then
-    echo "  FAIL: $desc (TIMEOUT after ${budget_secs}s — raise the budget, do not treat as green)"
-    FAIL=$((FAIL + 1))
-  else
-    echo "  FAIL: $desc (exit=$exit_code, $tail_line)"; FAIL=$((FAIL + 1))
-  fi
-}
+
+# The assert_suite_exit0 helper is removed with its call sites (issue #103): it
+# existed only to run a sibling suite under a per-call timeout. The
+# budget-under-timeout convention it carried is not lost — it is now a declared
+# `# budget-secs:` header on every suite, enforced locally by
+# scripts/test/run-suites.sh and on the CI path by each step's
+# `timeout-minutes`, with the agreement between the two asserted by
+# scripts/test/check-suite-manifest.sh.
 
 echo "=== issue #71 — cycle-digest emission + cross-issue recurrence scan removal ==="
 
@@ -648,59 +635,28 @@ echo "=== collateral-suites-green (execution half) — verification design :118 
 # an unrelated regression, which only running it catches. Real execution,
 # not a grep proxy.
 
-assert_suite_exit0 "AC-71-COLLATERAL-55: tests/test-issue-55-score-format-contract.sh (digest-agreement arm dropped) exits 0" \
-  "$SCOREFMT_SUITE" 300
-assert_suite_exit0 "AC-71-COLLATERAL-40: tests/test-issue-40-hook-additive.sh (H-DIGEST arm dropped) exits 0" \
-  "$HDIGEST_SUITE" 300
-assert_suite_exit0 "AC-71-COLLATERAL-985: tests/test-issue-985-doc-assertions.sh (AC1-DIGEST-NO-INHERITED-RECORDS arm dropped) exits 0" \
-  "$DOC985_SUITE" 300
-assert_suite_exit0 "AC-71-COLLATERAL-51: tests/test-issue-51-teammate-removal-verdict.sh (schema fence entry dropped) exits 0" \
-  "$FIXTURE_FENCE_SUITE" 300
-assert_suite_exit0 "AC-71-COLLATERAL-35: tests/test-issue-35-phase-marker.sh (AC9-b witness re-pointed) exits 0" \
-  "$PHASE_MARKER_SUITE" 300
-assert_suite_exit0 "AC-71-COLLATERAL-verifyinstall: tests/plugin/verify-install-into-target.sh (installed-file entries dropped) exits 0" \
-  "$VERIFY_INSTALL" 900
-assert_suite_exit0 "AC-71-COLLATERAL-verifye2e: tests/plugin/verify-e2e-dummy-target.sh (E3a-y arm dropped) exits 0" \
-  "$VERIFY_E2E" 900
+# The AC-71-COLLATERAL-* execution arms are retired by issue #103's leaf rule,
+# on the same ground: each of the seven callees carries its own `run:` step, so
+# an unrelated regression in one of them is caught once per pass, under its own
+# name. The STATE half of this AC — AC-71-FIXTURE-FENCE, AC-71-DOC985,
+# AC-71-HDIGEST, AC-71-DIGESTAGREE, AC-71-E2E, AC-71-INSTALL,
+# AC-71-PHASEMARKER — is unaffected and stays above: that the deleted arm text
+# is gone is a property of the files' text, and needs no execution.
+
 
 # =============================================================================
-echo ""
-echo "=== unconditional-guards-green — verification design :123 — every sibling guard not gated on its own HEAD_BRANCH passes on this branch, having actually evaluated its diff ==="
-# Branch-unconditional guard sweep. #799 (dual-pin) and the registry runner
-# are already driven for real above (both required-green oracles); the
-# remaining unconditional set is executed here. GATE:QUALITY's own
-# reproduction found #55 and #52 red (allow-list gaps) — this sweep is what
-# makes those reproducible from inside the suite itself rather than only by
-# the evaluator's own ad hoc re-run.
+# unconditional-guards-green (AC-71-UNCOND-*) is retired by issue #103's leaf
+# rule.
+# =============================================================================
+# The sweep re-ran seven sibling guards to confirm none of them had regressed.
+# Each carries its own `run:` step, so a regression in any of them reds CI under
+# its own name — once per pass rather than twice — and attributing the failure
+# to the right suite is exactly what the per-step registration buys.
 #
-# VERIFY re-entry restructure: #62 and #67 arms REMOVED. Both re-run #59
-# internally (2-level nesting — #62 was measured at 40+ minutes / 6
-# concurrent processes across the two arms together), and both suites are
-# CI-registered steps run directly in CI, so nothing is lost from the guard
-# sweep by dropping them here.
-#
-# Operator decision (ledger: "Operator decision — removal-target suites
-# excluded from local verification"): #59 and #952 arms REMOVED too — both
-# suites are #75 dismantle targets, so CI's direct steps remain their sole
-# executor rather than this cycle-scoped suite re-driving them locally. The
-# last full run before this removal (110/112) had exactly these two as its
-# only FAILs — #59 a load-flake (68/69, one worktree-hygiene assertion
-# under load) and #952 a budget timeout (400s) — neither a #71 regression.
-
-assert_suite_exit0 "AC-71-UNCOND-55: tests/test-issue-55-score-format-contract.sh (committed-surface-completeness) exits 0" \
-  "$SCOREFMT_SUITE" 300
-assert_suite_exit0 "AC-71-UNCOND-52: tests/test-issue-52-peer-facilitator-premise.sh (committed-surface-completeness) exits 0" \
-  "$PEER_FACILITATOR_SUITE" 300
-assert_suite_exit0 "AC-71-UNCOND-798: tests/test-issue-798-topology-flip.sh (AC10) exits 0" \
-  "$TOPOLOGY_FLIP_SUITE" 300
-assert_suite_exit0 "AC-71-UNCOND-846: tests/test-issue-846-doc-assertions.sh (AC-SCOPE) exits 0" \
-  "$DOC846_SUITE" 300
-assert_suite_exit0 "AC-71-UNCOND-848: tests/test-issue-848-doc-assertions.sh (AC-SCOPE) exits 0" \
-  "$DOC848_SUITE" 300
-assert_suite_exit0 "AC-71-UNCOND-955: tests/test-issue-955-subagent-background-ban.sh (AC-SCOPE) exits 0" \
-  "$BACKGROUND_BAN_SUITE" 300
-assert_suite_exit0 "AC-71-UNCOND-42: tests/test-issue-42-spawn-mode-contract.sh (no override, own literal fences) exits 0" \
-  "$FENCE42_SUITE" 300
+# This lane was already being narrowed for the same reason: the #62/#67 arms
+# were removed for 2-level nesting cost, and the #59/#952 arms by operator
+# decision, each time on the ground that CI's direct step is the real executor.
+# The leaf rule finishes that narrowing rather than starting it.
 
 # =============================================================================
 echo ""

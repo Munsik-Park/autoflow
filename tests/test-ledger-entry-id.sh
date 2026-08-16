@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/ledger/ledger-entry-id.sh CLAUDE.md docs/teammate-contracts.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: decision-ledger entry-ID uniqueness — allocation (`next`) + detection
 #       (`check`) script behavior (Issue #97)

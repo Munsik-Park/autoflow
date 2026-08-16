@@ -6,6 +6,8 @@
 #       execution-shaped half of the retired tests/issue-92/*.bats set
 # =============================================================================
 # ci-subject: scripts/handoff/create-host-pr.sh scripts/test/check-close-keyword-quoting.sh .github/pull_request_template.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 #
 # Nothing executed tests/issue-92/*.bats, and nothing could: all three existing
 # workflows state a zero-infra rationale that excludes `bats` explicitly, so

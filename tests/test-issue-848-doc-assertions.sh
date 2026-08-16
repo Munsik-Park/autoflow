@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/external-review-sequencing.md docs/git-workflow.md docs/submodule-common-rules.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: pointer-bump procedure + nested-fix propagation batching
 #       (subrepo-gate ADR follow-up) — Issue #848 ([fix · #842-S6])

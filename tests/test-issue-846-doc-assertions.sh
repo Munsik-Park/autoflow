@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .codex/review.md .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/design-rationale.md tests/manual/issue-846-manual-scenarios.md tests/test-codex-review-label-step.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: review-triage hardening — label-clear fallback + 7-attempt cap reset
 #       semantics + durable record — Issue #846 ([fix · #842-S4])

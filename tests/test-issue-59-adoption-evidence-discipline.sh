@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md scripts/test/check-suite-ci-coverage.sh scripts/test/run-suites.sh scripts/test/select-suites.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/lib/harness-pins.sh tests/manual/issue-59-manual-scenarios.md tests/run-doc-invariants.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: Adoption-side evidence discipline — Issue #59 (cycle-scoped)
 # =============================================================================
@@ -181,16 +184,14 @@ REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 # of this cycle's scope).
 B4_SHA="315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
 
-# EXPECTED_OK (D18/§5.3): one pin with two homes — this literal and
-# tests/test-issue-27-composition-oracle.sh:328. A design-fixed literal integer, never a
-# derived `37 + N` (AC-59-14(c) enforces the cross-pin equality below).
-# Bumped 58 -> 80 by issue #67 (ARCHITECT deliberation record redesign): two run.mjs
-# tests retired (AC-62-12, AC-62-28i), the register/disposition lane-A discriminators
-# added. Bumped in the same commit as GREEN's architect-deliberation.js change.
-# Bumped 80 -> 82 by issue #69 (verification-depth justification): two run.mjs tests
-# added (AC-69-prompt-delivery, AC-69-accept-gating). Bumped in the SAME commit as the
-# RED-lane run.mjs addition (not GREEN) per issue #69's verification design.
-EXPECTED_OK=85
+# EXPECTED_OK: issue #103 single-sourced the pin. It had two authored homes — this
+# literal and tests/test-issue-27-composition-oracle.sh's — plus a cross-pin
+# agreement check whose entire subject was keeping them synchronised. The literal
+# now lives once, in tests/lib/harness-pins.sh, and both consumers read it, so a
+# harness change is one deliberate edit rather than a synchronised bump.
+# shellcheck source=tests/lib/harness-pins.sh
+source "$PROJECT_ROOT/tests/lib/harness-pins.sh"
+EXPECTED_OK="$HARNESS_OK_COUNT"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -411,117 +412,19 @@ assert_true "AC-59-11c-runner: tests/run-doc-invariants.sh exits 0" "[ $REGISTRY
 assert_true "AC-59-11c-count: 56-AC*/27-AC* entries scoped to architect-deliberation.js == 12 (got: $LEGACY_COUNT)" \
   "[ \"$LEGACY_COUNT\" -eq 12 ]"
 
+
 # =============================================================================
-echo ""
-echo "=== AC-59-11d (fence, branch-scoped, multi-minute — budget >= 600s, never run under a short timeout) ==="
-echo "=== every unconditional cross-cycle change-surface guard re-run against the real diff, at its main-measured count ==="
-
-case "$HEAD_BRANCH" in
-  dev/*-issue-59|dev/*-issue-59-*)
-    if [[ -z "$BASE_REF" ]]; then
-      # 7 AC-59-21 preconditions + 7 AC-59-11d deltas + 2 AC-59-18 — the fallback must cost
-      # exactly what the lane would otherwise contribute, or the suite total would depend on
-      # whether the base resolved.
-      echo "  BLOCK: no comparison base resolvable — AC-59-21/AC-59-11d/AC-59-18 counted FAIL, never skipped"
-      TESTS=$((TESTS + 16)); FAIL=$((FAIL + 16))
-    else
-      OUT_798="$(cd "$PROJECT_ROOT" && bash tests/test-issue-798-topology-flip.sh 2>&1)"
-      OUT_799="$(cd "$PROJECT_ROOT" && bash tests/test-issue-799-inert-cleanup.sh 2>&1)"
-      OUT_846="$(cd "$PROJECT_ROOT" && bash tests/test-issue-846-doc-assertions.sh 2>&1)"
-      OUT_848="$(cd "$PROJECT_ROOT" && bash tests/test-issue-848-doc-assertions.sh 2>&1)"
-      OUT_952="$(cd "$PROJECT_ROOT" && bash tests/test-issue-952-wizard-removal.sh 2>&1)"
-      OUT_955="$(cd "$PROJECT_ROOT" && bash tests/test-issue-955-subagent-background-ban.sh 2>&1)"
-      # #71 retired tests/test-issue-1-guard-contract.sh (docs/doc-invariant-
-      # registry.md dropped-subject-retired disposition) — mirrors the
-      # retired-subject vacuous-pass convention (DC-4 precedent in
-      # tests/test-issue-955-subagent-background-ban.sh, pre-#75) rather than
-      # invoking a file that cycle intentionally deleted.
-      T1_SUITE="$PROJECT_ROOT/tests/test-issue-1-guard-contract.sh"
-      T1_RETIRED=0
-      if [[ -f "$T1_SUITE" ]]; then
-        OUT_T1="$(cd "$PROJECT_ROOT" && bash tests/test-issue-1-guard-contract.sh 2>&1)"
-      else
-        T1_RETIRED=1
-      fi
-
-      read -r P798 T798 F798 <<<"$(suite_counts "$OUT_798")"
-      read -r P799 T799 F799 <<<"$(suite_counts "$OUT_799")"
-      read -r P846 T846 F846 <<<"$(suite_counts "$OUT_846")"
-      read -r P848 T848 F848 <<<"$(suite_counts "$OUT_848")"
-      read -r P952 T952 F952 <<<"$(suite_counts "$OUT_952")"
-      read -r P955 T955 F955 <<<"$(suite_counts "$OUT_955")"
-      if [[ "$T1_RETIRED" -eq 0 ]]; then
-        read -r PT1 TT1 FT1 <<<"$(suite_counts "$OUT_T1")"
-      fi
-
-      # Same-environment baseline (ledger E33): re-run each suite a SECOND time, at the
-      # comparison base, in THIS SAME job/host — never a literal captured on a different
-      # machine. An environment-conditional lane (e.g. a sub-test that doesn't register
-      # on this specific runner) shifts BOTH the base and head totals identically, so the
-      # delta below stays valid across hosts where a fixed literal is not (that is exactly
-      # what broke on the GitHub Actions runner).
-      read -r BP798 BT798 BF798 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-798-topology-flip.sh")"
-      read -r BP799 BT799 BF799 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-799-inert-cleanup.sh")"
-      read -r BP846 BT846 BF846 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-846-doc-assertions.sh")"
-      read -r BP848 BT848 BF848 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-848-doc-assertions.sh")"
-      read -r BP952 BT952 BF952 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-952-wizard-removal.sh")"
-      read -r BP955 BT955 BF955 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-955-subagent-background-ban.sh")"
-      if [[ "$T1_RETIRED" -eq 0 ]]; then
-        read -r BPT1 BTT1 BFT1 <<<"$(suite_result_at_ref "$BASE_REF" "test-issue-1-guard-contract.sh")"
-      fi
-
-      # Each lane is two counted assertions (D3): a neutral-noun-phrase precondition naming
-      # the base measurement, then the delta verdict whose condition LEADS with the same
-      # guard — so an unmeasured base fails both lines instead of printing a green delta.
-      assert_true "AC-59-21-798: base measurement of test-issue-798-topology-flip.sh at $BASE_REF (got base $BP798/$BT798, $BF798 failed)" \
-        "base_measured \"$BP798\" \"$BT798\" \"$BF798\""
-      assert_true "AC-59-11d-798: test-issue-798-topology-flip.sh — 0 failed at HEAD, total not below base (got: $P798/$T798 vs base $BP798/$BT798)" \
-        "base_measured \"$BP798\" \"$BT798\" \"$BF798\" && [ \"$F798\" -eq 0 ] && [ \"$T798\" -ge \"$BT798\" ]"
-      assert_true "AC-59-21-799: base measurement of test-issue-799-inert-cleanup.sh at $BASE_REF (got base $BP799/$BT799, $BF799 failed)" \
-        "base_measured \"$BP799\" \"$BT799\" \"$BF799\""
-      assert_true "AC-59-11d-799: test-issue-799-inert-cleanup.sh — 0 failed at HEAD, total not below base (got: $P799/$T799 vs base $BP799/$BT799)" \
-        "base_measured \"$BP799\" \"$BT799\" \"$BF799\" && [ \"$F799\" -eq 0 ] && [ \"$T799\" -ge \"$BT799\" ]"
-      assert_true "AC-59-21-846: base measurement of test-issue-846-doc-assertions.sh at $BASE_REF (got base $BP846/$BT846, $BF846 failed)" \
-        "base_measured \"$BP846\" \"$BT846\" \"$BF846\""
-      assert_true "AC-59-11d-846: test-issue-846-doc-assertions.sh — 0 failed at HEAD, total not below base (got: $P846/$T846 vs base $BP846/$BT846)" \
-        "base_measured \"$BP846\" \"$BT846\" \"$BF846\" && [ \"$F846\" -eq 0 ] && [ \"$T846\" -ge \"$BT846\" ]"
-      assert_true "AC-59-21-848: base measurement of test-issue-848-doc-assertions.sh at $BASE_REF (got base $BP848/$BT848, $BF848 failed)" \
-        "base_measured \"$BP848\" \"$BT848\" \"$BF848\""
-      assert_true "AC-59-11d-848: test-issue-848-doc-assertions.sh — 0 failed at HEAD, total not below base (got: $P848/$T848 vs base $BP848/$BT848)" \
-        "base_measured \"$BP848\" \"$BT848\" \"$BF848\" && [ \"$F848\" -eq 0 ] && [ \"$T848\" -ge \"$BT848\" ]"
-      assert_true "AC-59-21-952: base measurement of test-issue-952-wizard-removal.sh at $BASE_REF (got base $BP952/$BT952, $BF952 failed)" \
-        "base_measured \"$BP952\" \"$BT952\" \"$BF952\""
-      assert_true "AC-59-11d-952: test-issue-952-wizard-removal.sh — 0 failed at HEAD, total not below base (got: $P952/$T952 vs base $BP952/$BT952)" \
-        "base_measured \"$BP952\" \"$BT952\" \"$BF952\" && [ \"$F952\" -eq 0 ] && [ \"$T952\" -ge \"$BT952\" ]"
-      assert_true "AC-59-21-955: base measurement of test-issue-955-subagent-background-ban.sh at $BASE_REF (got base $BP955/$BT955, $BF955 failed)" \
-        "base_measured \"$BP955\" \"$BT955\" \"$BF955\""
-      assert_true "AC-59-11d-955: test-issue-955-subagent-background-ban.sh — 0 failed at HEAD, total not below base (got: $P955/$T955 vs base $BP955/$BT955)" \
-        "base_measured \"$BP955\" \"$BT955\" \"$BF955\" && [ \"$F955\" -eq 0 ] && [ \"$T955\" -ge \"$BT955\" ]"
-      if [[ "$T1_RETIRED" -eq 0 ]]; then
-        assert_true "AC-59-21-test1: base measurement of test-issue-1-guard-contract.sh at $BASE_REF (got base $BPT1/$BTT1, $BFT1 failed)" \
-          "base_measured \"$BPT1\" \"$BTT1\" \"$BFT1\""
-        assert_true "AC-59-11d-test1: test-issue-1-guard-contract.sh (N1 aggregator) — 0 failed at HEAD, total not below base (got: $PT1/$TT1 vs base $BPT1/$BTT1)" \
-          "base_measured \"$BPT1\" \"$BTT1\" \"$BFT1\" && [ \"$FT1\" -eq 0 ] && [ \"$TT1\" -ge \"$BTT1\" ]"
-      else
-        echo "  PASS (vacuous): AC-59-21-test1 — tests/test-issue-1-guard-contract.sh retired by #71 (dropped disposition, docs/doc-invariant-registry.md); no oracle subject remains"
-        TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
-        echo "  PASS (vacuous): AC-59-11d-test1 — tests/test-issue-1-guard-contract.sh retired by #71 (dropped disposition, docs/doc-invariant-registry.md); no oracle subject remains"
-        TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
-      fi
-
-      # AC-59-18 reuses the 952/955 real re-runs above rather than invoking them a second
-      # time (the manifest same-commit obligation's diff-membership fences live inside those
-      # same suites — verification design §4 E9).
-      assert_true "AC-59-18-955: 955 AC4-DOGFOOD (manifest-in-diff fence) does not regress the suite's own pass count" \
-        "[ \"$F955\" -eq 0 ]"
-      assert_true "AC-59-18-952: 952 AC5/AC5(T2) (manifest-in-diff + tests/plugin/ delegation) does not regress the suite's own pass count" \
-        "[ \"$F952\" -eq 0 ]"
-    fi
-    ;;
-  *)
-    note_deferred "AC-59-11d/AC-59-18: cross-cycle change-surface re-run set inert off the issue-59 dev branch (head: ${HEAD_BRANCH:-unknown}) — a lane that cannot fail off-branch must not count as passing."
-    ;;
-esac
+# AC-59-11d / AC-59-21 / AC-59-18 are retired by issue #103's leaf rule.
+# =============================================================================
+# The lane re-ran six sibling suites at HEAD and again at the comparison base to
+# compare their totals. Each of those six carries its own `run:` step, so the
+# HEAD half was duplicate execution of an already-covered surface, and with it
+# the base half loses the delta it was the other side of.
+#
+# The property the lane protected — a cross-cycle guard must not lose assertions
+# — is carried structurally instead: scripts/test/check-suite-ci-coverage.sh
+# proves every suite still has an execution path, and each suite's own CI step
+# reports its own failure under its own name.
 
 # =============================================================================
 echo ""
@@ -557,30 +460,21 @@ else
 fi
 
 
+
 # =============================================================================
-echo ""
-echo "=== AC-59-14 (RED discriminator + fence) — shared harness ok-count pin bumped in the same commit ==="
-
-CANON_SUITE="$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"
-NEW_COUNT_LINE="$(grep -c "\-eq $EXPECTED_OK \]\"" "$CANON_SUITE" || true)"
-STALE_ASSERT_LINE="$(grep -c "assert_true.*-eq 37" "$CANON_SUITE" || true)"
-STALE_LABEL="$(grep -cF "AC-27-20c: harness ok-line count == B14 (37)" "$CANON_SUITE" || true)"
-NEW_LABEL="$(grep -cF "AC-27-20c: harness ok-line count == B14 ($EXPECTED_OK)" "$CANON_SUITE" || true)"
-
-assert_true "AC-59-14a1: test-issue-27's assertion line pins -eq $EXPECTED_OK exactly once (got: $NEW_COUNT_LINE)" \
-  "[ \"$NEW_COUNT_LINE\" -eq 1 ]"
-assert_true "AC-59-14a2: no assert_true line still pins the stale -eq 37 (got: $STALE_ASSERT_LINE)" \
-  "[ \"$STALE_ASSERT_LINE\" -eq 0 ]"
-assert_true "AC-59-14a3-stale-label: the stale '(37)' assertion label is gone (got: $STALE_LABEL)" \
-  "[ \"$STALE_LABEL\" -eq 0 ]"
-assert_true "AC-59-14a3-new-label: the bumped '($EXPECTED_OK)' assertion label is present exactly once (got: $NEW_LABEL)" \
-  "[ \"$NEW_LABEL\" -eq 1 ]"
-
-
-CANON_LITERAL="$(grep -F 'AC-27-20c' "$CANON_SUITE" | grep -oE '\-eq [0-9]+ \]"$' | grep -oE '[0-9]+' | tail -1)"
-assert_true "AC-59-14c: cross-pin equality — test-issue-27's ok-count literal ($CANON_LITERAL) == this suite's EXPECTED_OK ($EXPECTED_OK)" \
-  "[ \"$CANON_LITERAL\" = \"$EXPECTED_OK\" ]"
-
+# AC-59-14 (a1 / a2 / a3-stale-label / a3-new-label / c) is retired by issue #103.
+# =============================================================================
+# The block asserted one cycle's BUMP DISCIPLINE: that a harness change bumped
+# both foreign pin homes in the same commit, and that no stale literal survived.
+# Single-sourcing the pin into tests/lib/harness-pins.sh leaves no foreign home
+# and no synchronised bump, so the subject of the assertion no longer exists;
+# the staleness half would be vacuously true over a literal that is gone, which
+# is the vacuous-PASS class this tree removes rather than keeps.
+#
+# What survives moves: ONE AUTHORING HOME is asserted by
+# scripts/test/check-suite-manifest.sh's single-authorship arm, and THE PIN
+# STILL DETECTS by tests/test-issue-27-composition-oracle.sh comparing the
+# sourced constant against the live `node test/workflows/run.mjs` measurement.
 # =============================================================================
 echo ""
 echo "=== AC-59-15(a) (RED discriminator, branch-scoped) — non-vacuity: the diff is non-empty and contains the change surface ==="
@@ -667,27 +561,16 @@ assert_true "AC-59-19a-6: base_measured accepts a real CI shape with p<t, an env
 assert_true "AC-59-19a-7: base_measured accepts a positive control (5 5 0)" \
   "base_measured \"5\" \"5\" \"0\""
 
+
 # =============================================================================
-echo ""
-echo "=== AC-59-19b (unconditional, RED discriminator, self-scoped structural grep) — no delta comparison bypasses the guard ==="
-
-# The pattern literal is split across quote boundaries so this definition line cannot itself
-# satisfy the pattern it defines (self-scoping, matching the file's existing structural
-# assertions' convention). Quote-agnostic (M12): the 12 conditions live inside assert_true's
-# quoted argument, so their source has a backslash-escaped quote (\"$BT...\"), but the pattern
-# also accepts a bare quote.
-DELTA_GE_PATTERN='-ge'" +"'\\?"\$BT'
-DELTA_GE_LINE_COUNT="$(grep -cE -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" || true)"
-DELTA_GE_GUARDED_COUNT="$(grep -E -- "$DELTA_GE_PATTERN" "${BASH_SOURCE[0]}" | grep -c 'base_measured' || true)"
-
-# 12 -> 11 in #64: the 27 lane's total-not-below-base clause was retired with
-# the AC-27-14 fence (the 27 lane keeps only its 0-failed requirement).
-# 11 -> 7 in #75: the yml-window delta lane, which re-measured the sibling-total
-# pins in a throwaway worktree, was retired with those pins.
-assert_true "AC-59-19b-total: exactly 7 delta conditions compare -ge against a base total field (got: $DELTA_GE_LINE_COUNT)" \
-  "[ \"$DELTA_GE_LINE_COUNT\" -eq 7 ]"
-assert_true "AC-59-19b-guarded: all 7 of those conditions also carry a base_measured conjunct on the same line — zero bypass the guard (got: $DELTA_GE_GUARDED_COUNT of $DELTA_GE_LINE_COUNT)" \
-  "[ \"$DELTA_GE_GUARDED_COUNT\" -eq 7 ]"
+# AC-59-19b (-total and -guarded) are retired by issue #103, with the lane they measured.
+# =============================================================================
+# Each was a SELF-SCOPED STRUCTURAL GREP over this file's own AC-59-11d /
+# AC-59-21 delta block — counting its seven `-ge` comparisons, its seven
+# precondition labels, and their interpolations. The leaf rule removed that
+# block (each of the six re-run siblings carries its own `run:` step), so these
+# assert a shape over source that is gone: they would count zero and red, or be
+# rewritten to expect zero and assert nothing.
 
 # =============================================================================
 echo ""
@@ -717,302 +600,36 @@ read -r P20C2 T20C2 F20C2 <<<"$(suite_counts 'Results: 15/18 passed, 0 failed')"
 assert_true "AC-59-20c-accept: base_measured accepts the real suite_counts output for a measured base (got: $P20C2 $T20C2 $F20C2)" \
   "base_measured \"$P20C2\" \"$T20C2\" \"$F20C2\""
 
-# =============================================================================
-echo ""
-echo "=== AC-59-22a (unconditional, RED discriminator, self-scoped structural grep) — precondition/delta labels are separately attributable ==="
-
-# Split literals so this definition cannot match itself (same self-scoping convention as
-# AC-59-19b above).
-PRECOND_LABEL_PATTERN='assert_true "AC-59-21'"-"
-DELTA_11D_LABEL_PATTERN='assert_true "AC-59-11d'"-"
-
-PRECOND_LABEL_COUNT="$(grep -cE "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true)"
-DELTA_LABEL_COUNT="$(grep -cE "$DELTA_11D_LABEL_PATTERN" "${BASH_SOURCE[0]}" || true)"
-CLAIM_SHAPED_PRECOND="$(grep -E "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" | grep -cE 'succeeded|not below' || true)"
-
-assert_true "AC-59-22a: 7 base-precondition labels and 7 delta labels exist, each naming its suite, and no precondition label carries a claim-shaped verb that would invert under FAIL: (got: precond=$PRECOND_LABEL_COUNT, delta=$DELTA_LABEL_COUNT, claim-shaped=$CLAIM_SHAPED_PRECOND)" \
-  "[ \"$PRECOND_LABEL_COUNT\" -eq 7 ] && [ \"$DELTA_LABEL_COUNT\" -eq 7 ] && [ \"$CLAIM_SHAPED_PRECOND\" -eq 0 ]"
 
 # =============================================================================
-echo ""
-echo "=== AC-59-22b (unconditional, RED discriminator) — every precondition label interpolates the base failed count ==="
-
-BF_INTERP_COUNT="$(grep -E "$PRECOND_LABEL_PATTERN" "${BASH_SOURCE[0]}" | grep -cE '\$BF[0-9A-Za-z]*' || true)"
-assert_true "AC-59-22b: all 7 base-precondition labels interpolate \$BF... (base failed count) alongside \$BP.../\$BT... (got: $BF_INTERP_COUNT of 7)" \
-  "[ \"$BF_INTERP_COUNT\" -eq 7 ]"
+# AC-59-22a and AC-59-22b are retired by issue #103, with the lane they measured.
+# =============================================================================
+# Each was a SELF-SCOPED STRUCTURAL GREP over this file's own AC-59-11d /
+# AC-59-21 delta block — counting its seven `-ge` comparisons, its seven
+# precondition labels, and their interpolations. The leaf rule removed that
+# block (each of the six re-run siblings carries its own `run:` step), so these
+# assert a shape over source that is gone: they would count zero and red, or be
+# rewritten to expect zero and assert nothing.
 
 # =============================================================================
-# Cycle 3 (review-response) — AC-59-25 … AC-59-35 (AC-59-30 retired, AC-59-33
-# is a regression-fence procedure, not a lane; see header comment).
+# Cycle 3's AC-59-25 … AC-59-35b lanes are retired by issue #103.
 # =============================================================================
-# Route (iv) (verification design cycle-3 §1): every lane below copies the
-# REAL tests/issue-59-full-sweep-driver.sh byte-for-byte into a throwaway
-# `git init` fixture repo and runs it AS A PROGRAM — never a re-typed copy of
-# its logic. `require_copy_fidelity` asserts the copy immediately before each
-# run (AC-59-35b(i)).
+# Every one of them copied tests/issue-59-full-sweep-driver.sh into a throwaway
+# fixture repo and ran it as a program. That driver is deleted: its function —
+# enumerate every suite and execute the tree under an honest wall-clock budget —
+# is `bash scripts/test/run-suites.sh --all`, which unlike the driver has a real
+# execution path.
 #
-# GATE:PLAN carry-note (ledger E48): every condition below uses bash-native
-# `[[ ... ]]` string matching (the `has`/`has_not` helpers) instead of
-# `identifier | grep -q` / `| grep -m` — a captured string has no concurrent
-# producer process, so the SIGPIPE race tests/test-issue-964-sigpipe-safe-pipes.sh
-# guards against cannot occur here, and this suite's own additions cannot
-# widen that guard's zero-remaining hazard-shape count (AC-59-33 extension).
-
-DRIVER_SRC="$PROJECT_ROOT/tests/issue-59-full-sweep-driver.sh"
-
-has() { [[ "$1" == *"$2"* ]]; }
-
-mk_fixture_repo() {
-  local fx
-  fx="$(mktemp -d)"
-  git -C "$fx" init -q >/dev/null 2>&1
-  git -C "$fx" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init >/dev/null 2>&1
-  printf '%s' "$fx"
-}
-
-# commit_fixture_suite <fx> <suite-basename> <exit-code> <commit-message>
-commit_fixture_suite() {
-  local fx="$1" name="$2" code="$3" msg="$4"
-  mkdir -p "$fx/tests"
-  printf '#!/usr/bin/env bash\nexit %s\n' "$code" >"$fx/tests/$name"
-  chmod +x "$fx/tests/$name"
-  git -C "$fx" add "tests/$name" >/dev/null 2>&1
-  git -C "$fx" -c user.email=t@t -c user.name=t commit -q -m "$msg" >/dev/null 2>&1
-}
-
-install_driver_copy() {
-  local fx="$1"
-  mkdir -p "$fx/tests"
-  cp "$DRIVER_SRC" "$fx/tests/issue-59-full-sweep-driver.sh"
-}
-
-COPY_FIDELITY_CHECKS=0
-COPY_FIDELITY_FAILS=0
-require_copy_fidelity() {
-  local fx="$1"
-  COPY_FIDELITY_CHECKS=$((COPY_FIDELITY_CHECKS + 1))
-  cmp -s "$DRIVER_SRC" "$fx/tests/issue-59-full-sweep-driver.sh" || COPY_FIDELITY_FAILS=$((COPY_FIDELITY_FAILS + 1))
-}
-
-# NAMED_SUITES parsed from the LIVE driver source (never a pinned literal
-# copy — the array is cycle-scoped by its own comment) so rows (c)/(d) below
-# track the live array (verification design cycle-3 §1, AC-59-27 note).
-mapfile -t NAMED_SUITES_LIVE < <(awk '/^NAMED_SUITES=\(/,/^\)/' "$DRIVER_SRC" | grep -oE '"[^"]+"' | tr -d '"')
-NAMED0="${NAMED_SUITES_LIVE[0]:-}"
-UNNAMED_PROBE_IN_NAMED=0
-for _n in "${NAMED_SUITES_LIVE[@]}"; do [[ "$_n" == "test-issue-777-fixture.sh" ]] && UNNAMED_PROBE_IN_NAMED=1; done
-
-# =============================================================================
-echo ""
-echo "=== AC-59-25 (cycle 3, RED discriminator) — unmeasured base is never reported as ALREADY RED ==="
-
-FX25="$(mk_fixture_repo)"
-commit_fixture_suite "$FX25" test-issue-777-fixture.sh 0 base
-commit_fixture_suite "$FX25" test-issue-777-fixture.sh 1 head
-install_driver_copy "$FX25"
-require_copy_fidelity "$FX25"
-OUT25="$(cd "$FX25" && bash tests/issue-59-full-sweep-driver.sh 'refs/heads/__autoflow-issue59-c3-nonexistent__' 2>&1)"
-rm -rf "$FX25"
-
-assert_true "AC-59-25: an unresolvable base ref is reported as per-suite INCONCLUSIVE (naming the suite + the real git worktree add exit status), never a fabricated ALREADY RED, and buckets 0 clean/already-red + 1 inconclusive" \
-  "has \"\$OUT25\" 'INCONCLUSIVE: base worktree setup failed' && has \"\$OUT25\" 'test-issue-777-fixture.sh' && has \"\$OUT25\" 'git worktree add exit' && ! has \"\$OUT25\" 'ALREADY RED on' && has \"\$OUT25\" 'Clean/already-red: 0' && has \"\$OUT25\" 'Inconclusive (base never measured): 1'"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-26 (cycle 3, RED discriminator) — suite absent at a resolvable base gets an honest label, never ALREADY RED ==="
-
-FX26="$(mk_fixture_repo)"
-BASE26_SHA="$(git -C "$FX26" rev-parse HEAD)"
-commit_fixture_suite "$FX26" test-issue-777-fixture.sh 1 head-adds-new-red-suite
-install_driver_copy "$FX26"
-require_copy_fidelity "$FX26"
-OUT26="$(cd "$FX26" && bash tests/issue-59-full-sweep-driver.sh "$BASE26_SHA" 2>&1)"
-rm -rf "$FX26"
-
-assert_true "AC-59-26: a suite absent at a resolvable base is labelled NEW AT HEAD, never ALREADY RED, and is not counted inconclusive (nothing failed — the base measurement never runs)" \
-  "has \"\$OUT26\" 'NEW AT HEAD:' && has \"\$OUT26\" 'test-issue-777-fixture.sh' && ! has \"\$OUT26\" 'ALREADY RED on' && has \"\$OUT26\" 'Inconclusive (base never measured): 0'"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-27 (cycle 3, characterization, four shapes) — every pre-existing verdict survives byte-identical ==="
-
-FX27A="$(mk_fixture_repo)"
-commit_fixture_suite "$FX27A" test-issue-777-fixture.sh 0 base
-commit_fixture_suite "$FX27A" test-issue-777-fixture.sh 0 head-still-green
-install_driver_copy "$FX27A"
-require_copy_fidelity "$FX27A"
-OUT27A="$(cd "$FX27A" && bash tests/issue-59-full-sweep-driver.sh 'refs/heads/__autoflow-issue59-c3-nonexistent2__' 2>&1)"
-rm -rf "$FX27A"
-assert_true "AC-59-27a: a green-at-HEAD suite stays clean even when its base is unmeasurable — an unresolvable base must not manufacture an inconclusive" \
-  "has \"\$OUT27A\" 'clean (exit 0)' && has \"\$OUT27A\" 'Clean/already-red: 1' && has \"\$OUT27A\" 'Inconclusive (base never measured): 0'"
-
-FX27B="$(mk_fixture_repo)"
-commit_fixture_suite "$FX27B" test-issue-777-fixture.sh 1 base-red
-BASE27B_SHA="$(git -C "$FX27B" rev-parse HEAD)"
-commit_fixture_suite "$FX27B" test-issue-777-fixture.sh 1 head-still-red
-install_driver_copy "$FX27B"
-require_copy_fidelity "$FX27B"
-OUT27B="$(cd "$FX27B" && bash tests/issue-59-full-sweep-driver.sh "$BASE27B_SHA" 2>&1)"
-rm -rf "$FX27B"
-assert_true "AC-59-27b: a genuinely measured red base is still classified ALREADY RED — the guard does not over-flag a real measured-red base as inconclusive" \
-  "has \"\$OUT27B\" 'ALREADY RED on' && has \"\$OUT27B\" 'Inconclusive (base never measured): 0'"
-
-FX27C="$(mk_fixture_repo)"
-commit_fixture_suite "$FX27C" "$NAMED0" 0 base-green
-BASE27C_SHA="$(git -C "$FX27C" rev-parse HEAD)"
-commit_fixture_suite "$FX27C" "$NAMED0" 1 head-red
-install_driver_copy "$FX27C"
-require_copy_fidelity "$FX27C"
-OUT27C="$(cd "$FX27C" && bash tests/issue-59-full-sweep-driver.sh "$BASE27C_SHA" 2>&1)"
-rm -rf "$FX27C"
-assert_true "AC-59-27c: a named regression ($NAMED0, element 0 of the live NAMED_SUITES array) is bucketed REGRESSED (named), never unnamed" \
-  "[ -n \"$NAMED0\" ] && has \"\$OUT27C\" 'REGRESSED (named'"
-
-FX27D="$(mk_fixture_repo)"
-commit_fixture_suite "$FX27D" test-issue-777-fixture.sh 0 base-green
-BASE27D_SHA="$(git -C "$FX27D" rev-parse HEAD)"
-commit_fixture_suite "$FX27D" test-issue-777-fixture.sh 1 head-red
-install_driver_copy "$FX27D"
-require_copy_fidelity "$FX27D"
-OUT27D="$(cd "$FX27D" && bash tests/issue-59-full-sweep-driver.sh "$BASE27D_SHA" 2>&1)"
-rm -rf "$FX27D"
-assert_true "AC-59-27d: an unnamed regression (test-issue-777-fixture.sh, confirmed absent from the live NAMED_SUITES array: in_named=$UNNAMED_PROBE_IN_NAMED) is bucketed REGRESSED (UNNAMED and drives Unnamed regressions (NEW finding): 1" \
-  "[ \"$UNNAMED_PROBE_IN_NAMED\" -eq 0 ] && has \"\$OUT27D\" 'REGRESSED (UNNAMED' && has \"\$OUT27D\" 'Unnamed regressions (NEW finding): 1'"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-28 (cycle 3, RED discriminator, self-scoped structural grep) — base-exit is never fabricated, ALREADY RED has one home ==="
-
-# Split literals so these definitions cannot match themselves (same self-scoping
-# convention as AC-59-19b/22a above); scanned over the DRIVER, not this file.
-BASE_EXIT_CMP_PATTERN='base_exit'" "'-ne'
-BASE_EXIT_CMP_COUNT="$(grep -cE -- "$BASE_EXIT_CMP_PATTERN" "$DRIVER_SRC" || true)"
-BASE_EXIT_GUARDED_COUNT="$(grep -E -- "$BASE_EXIT_CMP_PATTERN" "$DRIVER_SRC" | grep -c 'base_measured' || true)"
-BASE_EXIT_SEED_LITERAL_COUNT="$(grep -cE 'base_exit=[0-9]{1,3}$' "$DRIVER_SRC" || true)"
-ALREADY_RED_VERDICT_PATTERN='ALREADY'" "'RED on'
-ALREADY_RED_VERDICT_COUNT="$(grep -cE -- "$ALREADY_RED_VERDICT_PATTERN" "$DRIVER_SRC" || true)"
-INCONCLUSIVE_PER_SUITE_COUNT="$(grep -cE 'INCONCLUSIVE: base worktree setup failed' "$DRIVER_SRC" || true)"
-INCONCLUSIVE_NO_BASE_COUNT="$(grep -cE 'INCONCLUSIVE: no comparison base resolvable' "$DRIVER_SRC" || true)"
-INCONCLUSIVE_ELAPSED_COUNT="$(grep -cE 'INCONCLUSIVE: elapsed' "$DRIVER_SRC" || true)"
-
-assert_true "AC-59-28: base-exit comparisons are all measured-guarded (guarded=$BASE_EXIT_GUARDED_COUNT of $BASE_EXIT_CMP_COUNT), the seed is never a literal 0-255 exit status (got $BASE_EXIT_SEED_LITERAL_COUNT), the ALREADY RED verdict form has exactly one home (got $ALREADY_RED_VERDICT_COUNT), and the per-suite INCONCLUSIVE label is distinct from both script-level INCONCLUSIVE exits (per-suite=$INCONCLUSIVE_PER_SUITE_COUNT, no-base=$INCONCLUSIVE_NO_BASE_COUNT, elapsed=$INCONCLUSIVE_ELAPSED_COUNT)" \
-  "[ \"$BASE_EXIT_CMP_COUNT\" -ge 1 ] && [ \"$BASE_EXIT_GUARDED_COUNT\" -eq \"$BASE_EXIT_CMP_COUNT\" ] && [ \"$BASE_EXIT_SEED_LITERAL_COUNT\" -eq 0 ] && [ \"$ALREADY_RED_VERDICT_COUNT\" -eq 1 ] && [ \"$INCONCLUSIVE_PER_SUITE_COUNT\" -ge 1 ] && [ \"$INCONCLUSIVE_NO_BASE_COUNT\" -eq 1 ] && [ \"$INCONCLUSIVE_ELAPSED_COUNT\" -eq 1 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-29 (cycle 3, RED discriminator) — run-level exit code: never PASS(0) while unmeasured; FAIL(1) outranks INCONCLUSIVE(2); default budget stays 600s ==="
-
-# Shape 1 (clean): PINNED TO A RESOLVABLE BASE SHA (GATE:PLAN carry-note,
-# ledger E48) — a genuinely successful `git worktree add` + base run, not the
-# unresolvable-ref shortcut AC-59-27a already covers.
-FX29C="$(mk_fixture_repo)"
-commit_fixture_suite "$FX29C" test-issue-777-fixture.sh 0 base-green
-BASE29C_SHA="$(git -C "$FX29C" rev-parse HEAD)"
-commit_fixture_suite "$FX29C" test-issue-777-fixture.sh 0 head-still-green
-install_driver_copy "$FX29C"
-require_copy_fidelity "$FX29C"
-(cd "$FX29C" && SWEEP_MIN_ELAPSED=0 bash tests/issue-59-full-sweep-driver.sh "$BASE29C_SHA" >/dev/null 2>&1)
-RC29C=$?
-rm -rf "$FX29C"
-
-# Shape 2 (inconclusive-only, AC-59-25's shape).
-FX29I="$(mk_fixture_repo)"
-commit_fixture_suite "$FX29I" test-issue-777-fixture.sh 0 base
-commit_fixture_suite "$FX29I" test-issue-777-fixture.sh 1 head
-install_driver_copy "$FX29I"
-require_copy_fidelity "$FX29I"
-(cd "$FX29I" && SWEEP_MIN_ELAPSED=0 bash tests/issue-59-full-sweep-driver.sh 'refs/heads/__autoflow-issue59-c3-nonexistent3__' >/dev/null 2>&1)
-RC29I=$?
-rm -rf "$FX29I"
-
-# Shape 3 (unnamed-regression-only, AC-59-27d's shape).
-FX29U="$(mk_fixture_repo)"
-commit_fixture_suite "$FX29U" test-issue-777-fixture.sh 0 base-green
-BASE29U_SHA="$(git -C "$FX29U" rev-parse HEAD)"
-commit_fixture_suite "$FX29U" test-issue-777-fixture.sh 1 head-red
-install_driver_copy "$FX29U"
-require_copy_fidelity "$FX29U"
-(cd "$FX29U" && SWEEP_MIN_ELAPSED=0 bash tests/issue-59-full-sweep-driver.sh "$BASE29U_SHA" >/dev/null 2>&1)
-RC29U=$?
-rm -rf "$FX29U"
-
-# Shape 5 (default-preservation): the clean shape re-run WITHOUT
-# SWEEP_MIN_ELAPSED — pins that the unexported default stays 600s.
-FX29D="$(mk_fixture_repo)"
-commit_fixture_suite "$FX29D" test-issue-777-fixture.sh 0 base-green
-BASE29D_SHA="$(git -C "$FX29D" rev-parse HEAD)"
-commit_fixture_suite "$FX29D" test-issue-777-fixture.sh 0 head-still-green
-install_driver_copy "$FX29D"
-require_copy_fidelity "$FX29D"
-(cd "$FX29D" && bash tests/issue-59-full-sweep-driver.sh "$BASE29D_SHA" >/dev/null 2>&1)
-RC29D=$?
-rm -rf "$FX29D"
-
-assert_true "AC-59-29 (behavioural): real driver exit code — clean+resolvable-base -> 0 (got $RC29C), inconclusive-only -> 2 (got $RC29I), unnamed-regression-only -> 1 (got $RC29U), clean without the SWEEP_MIN_ELAPSED override still -> 2 under the unchanged 600s default (got $RC29D)" \
-  "[ \"$RC29C\" -eq 0 ] && [ \"$RC29I\" -eq 2 ] && [ \"$RC29U\" -eq 1 ] && [ \"$RC29D\" -eq 2 ]"
-
-FAIL_GATE_LINE="$(grep -nF 'FAIL: unnamed regression(s) found' "$DRIVER_SRC" | head -1 | cut -d: -f1)"
-INCONCLUSIVE_BUCKET_GATE_LINE="$(grep -nF 'suite(s) never measured' "$DRIVER_SRC" | head -1 | cut -d: -f1)"
-SUMMARY_BLOCK_LINE="$(grep -nF 'Clean/already-red:' "$DRIVER_SRC" | head -1 | cut -d: -f1)"
-assert_true "AC-59-29 (P): the FAIL(unnamed-regression) exit gate's anchor precedes the run-level INCONCLUSIVE-bucket exit gate's anchor, both after the summary block (FAIL=${FAIL_GATE_LINE:-absent}, INCONCLUSIVE-bucket=${INCONCLUSIVE_BUCKET_GATE_LINE:-absent}, summary=${SUMMARY_BLOCK_LINE:-absent})" \
-  "[ -n \"$FAIL_GATE_LINE\" ] && [ -n \"$INCONCLUSIVE_BUCKET_GATE_LINE\" ] && [ -n \"$SUMMARY_BLOCK_LINE\" ] && [ \"$SUMMARY_BLOCK_LINE\" -lt \"$FAIL_GATE_LINE\" ] && [ \"$FAIL_GATE_LINE\" -lt \"$INCONCLUSIVE_BUCKET_GATE_LINE\" ]"
-
-BUDGET_DEFAULT_PATTERN='SWEEP_MIN_ELAPSED:-'"6"'00'
-BUDGET_DEFAULT_COUNT="$(grep -cE -- "$BUDGET_DEFAULT_PATTERN" "$DRIVER_SRC" || true)"
-assert_true "AC-59-29 (D): the sweep budget's :--defaulted assignment exists with default operand exactly 600 (got $BUDGET_DEFAULT_COUNT)" \
-  "[ \"$BUDGET_DEFAULT_COUNT\" -eq 1 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-31 (cycle 3, characterization) — standalone execution against the LIVE tree is preserved ==="
-
-OUT31="$(cd "$PROJECT_ROOT" && timeout 10 bash tests/issue-59-full-sweep-driver.sh '__autoflow-issue59-c3-nonexistent4__' 2>&1 | head -3)"
-BASH_N_31=0
-bash -n "$DRIVER_SRC" && BASH_N_31=1
-WT_COUNT_31_AFTER="$(git -C "$PROJECT_ROOT" worktree list | wc -l | tr -d ' ')"
-assert_true "AC-59-31: standalone execution against the live tree still prints its banner + self-exclusion notice before entering the suite loop, bash -n stays clean (got $BASH_N_31), and no worktree residue is left (worktree-count-after=$WT_COUNT_31_AFTER)" \
-  "has \"\$OUT31\" 'Full-tree sweep driver (issue #59, D24) — base: __autoflow-issue59-c3-nonexistent4__' && has \"\$OUT31\" 'Self-excluding:' && [ \"$BASH_N_31\" -eq 1 ] && [ \"$WT_COUNT_31_AFTER\" -eq 1 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-32 (cycle 3, RED discriminator) — no temp-directory leak on the failure path ==="
-
-SANDBOX32="$(mktemp -d)"
-FX32="$(mk_fixture_repo)"
-commit_fixture_suite "$FX32" test-issue-777-fixture.sh 0 base
-commit_fixture_suite "$FX32" test-issue-777-fixture.sh 1 head
-install_driver_copy "$FX32"
-require_copy_fidelity "$FX32"
-(cd "$FX32" && TMPDIR="$SANDBOX32" bash tests/issue-59-full-sweep-driver.sh 'refs/heads/__autoflow-issue59-c3-nonexistent5__' >/dev/null 2>&1)
-LEAK_COUNT_32="$(ls -Ad "$SANDBOX32"/autoflow-sweep-wt.* 2>/dev/null | wc -l | tr -d ' ')"
-rm -rf "$FX32" "$SANDBOX32"
-assert_true "AC-59-32: the failed-add path leaves zero autoflow-sweep-wt.* directories under the TMPDIR-honouring sandbox (got $LEAK_COUNT_32) — sound only once the driver allocates via mktemp -d \"\${TMPDIR:-/tmp}/autoflow-sweep-wt.XXXXXX\"; pre-fix, bare mktemp -d does not honour TMPDIR on this host, so this count is a CHARACTERIZATION pre-fix, not a discriminator (recorded in the RED report)" \
-  "[ \"$LEAK_COUNT_32\" -eq 0 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-35 (cycle 3, characterization) — the LIVE repository's worktree channel is driven for real, and left unchanged ==="
-
-WT_COUNT_35_BEFORE="$(git -C "$PROJECT_ROOT" worktree list | wc -l | tr -d ' ')"
-WT35="$(mktemp -d)"
-git -C "$PROJECT_ROOT" worktree add -q --detach "$WT35" 'refs/heads/__autoflow-issue59-c3-nonexistent6__' >/dev/null 2>&1
-RC35=$?
-rm -rf "$WT35"
-WT_COUNT_35_AFTER="$(git -C "$PROJECT_ROOT" worktree list | wc -l | tr -d ' ')"
-assert_true "AC-59-35: a single failed live git worktree add against THIS repository returns a non-zero status (got $RC35) and leaves the live worktree registry unchanged (before=$WT_COUNT_35_BEFORE, after=$WT_COUNT_35_AFTER)" \
-  "[ \"$RC35\" -ne 0 ] && [ \"$WT_COUNT_35_BEFORE\" -eq \"$WT_COUNT_35_AFTER\" ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-35b (cycle 3, fixture-hygiene fences) — every harness-F lane exercised the real driver, nothing outside the fixtures was mutated ==="
-
-WT_COUNT_35B_AFTER="$(git -C "$PROJECT_ROOT" worktree list | wc -l | tr -d ' ')"
-STATUS_35B_AFTER="$(git -C "$PROJECT_ROOT" status --short)"
-assert_true "AC-59-35b(i): copy fidelity held immediately before every one of this cycle's harness-F fixture runs (checks=$COPY_FIDELITY_CHECKS, fails=$COPY_FIDELITY_FAILS)" \
-  "[ \"$COPY_FIDELITY_CHECKS\" -eq 11 ] && [ \"$COPY_FIDELITY_FAILS\" -eq 0 ]"
-assert_true "AC-59-35b(ii): after every cycle-3 fixture lane the live repo still has exactly one worktree entry and an empty status (worktree-count=$WT_COUNT_35B_AFTER)" \
-  "[ \"$WT_COUNT_35B_AFTER\" -eq 1 ] && [ -z \"$STATUS_35B_AFTER\" ]"
-
+# The three properties these lanes asserted are re-homed, not dropped:
+#   - unresolvable-base behaviour -> scripts/test/select-suites.sh's fail-loud
+#     BLOCK contract, driven by its own --self-test BLOCK leg and by
+#     tests/test-issue-103-central-runner.sh
+#   - budget honesty -> run-suites.sh's per-suite `timeout <budget-secs>` and
+#     TIMEOUT record, driven by the over-budget / under-budget stub pair in the
+#     same suite
+#   - sandbox containment -> the runner executes each suite in a subshell rooted
+#     at --root and creates no worktree at all, so the class the containment
+#     fences guarded is not representable rather than re-asserted
 # =============================================================================
 # Results
 # ---------------------------------------------------------------------------

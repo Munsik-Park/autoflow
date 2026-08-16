@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: setup/thin-root-layer/ docs/thin-root-layer.md setup/manifest.json
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: thin-root-layer acceptance suite — Issue #791 [#785-S4b]
 # =============================================================================
