@@ -82,8 +82,10 @@ jobs:
       # needs no second source of truth.
       - name: reconcile selection against step outcomes
         if: always()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
         run: |
-          printf '%s' '${{ toJSON(steps) }}' > "$RUNNER_TEMP/steps.json"
+          printf '%s' "$STEPS_JSON" > "$RUNNER_TEMP/steps.json"
           bash scripts/test/check-step-reconciliation.sh \
             --selected "$RUNNER_TEMP/selection-report.txt" \
             --steps "$RUNNER_TEMP/steps.json"
