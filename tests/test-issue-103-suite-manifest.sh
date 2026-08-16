@@ -98,7 +98,11 @@ SH
 # ci-subject: tests/fixture.sh
 # lane: cycle-scoped
 # retire-with: #103
+# cycle-arm: #103
 # budget-secs: 30
+allow_list=(
+  "tests/fixture.sh"
+)
 true
 SH
   bash "$LINT" --root "$HDR_DIR" >/tmp/issue103-manifest-valid.out 2>&1

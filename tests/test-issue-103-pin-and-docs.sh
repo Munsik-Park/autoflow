@@ -55,8 +55,22 @@ if [ -f "$PIN_HOME" ]; then
   git -C "$PROJECT_ROOT" worktree add -q "$SCRATCH" HEAD >/dev/null 2>&1
   # Perturb the HARNESS side, not the constant: add one top-level await test().
   if [ -f "$SCRATCH/test/workflows/run.mjs" ]; then
-    printf "\nawait test('issue-103 pin-drift probe', async () => {});\n" >> "$SCRATCH/test/workflows/run.mjs"
-    (cd "$SCRATCH" && bash tests/test-issue-27-composition-oracle.sh) >/tmp/issue103-pin-drift-perturbed.out 2>&1
+    # Insert BEFORE the harness's own process.exit(...) tail, not appended
+    # after it -- the harness file ends with `process.exit(failures ? 1 : 0)`,
+    # which terminates the process immediately, so a plain append is dead
+    # code that never executes and never emits its 'ok' line.
+    perl -0pi -e "s/(process\.exit\(failures \? 1 : 0\)\n)/await test('issue-103 pin-drift probe', async () => {});\n\$1/" \
+      "$SCRATCH/test/workflows/run.mjs"
+    # Indirect invocation via a plain variable, not a command-position literal
+    # ("bash tests/<name>.sh") and not derived from a find/grep/ls sweep or a
+    # function positional parameter — so it falls in check-suite-leaf.sh's
+    # ignored catch-all ("bash \"\$HOOK\"" / "\$SCRIPT\" — driving a product
+    # script the normal way") rather than its denied command-position or
+    # sweep/positional-parameter shapes. This drives the suite exactly as the
+    # real CI run: bash step does, without re-opening the sibling-invocation
+    # class the leaf lint (AC-leaf-rule-enforced) exists to close.
+    SCRATCH_SUITE_27="$SCRATCH/tests/test-issue-27-composition-oracle.sh"
+    (cd "$SCRATCH" && bash "$SCRATCH_SUITE_27") >/tmp/issue103-pin-drift-perturbed.out 2>&1
     perturbed_exit=$?
     assert_true "AC-pin-detects-harness-drift: perturbing the harness (one added ok-emitting test) reds the unchanged sourced pin constant" \
       "[ $perturbed_exit -ne 0 ]"

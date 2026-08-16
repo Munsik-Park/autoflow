@@ -132,7 +132,16 @@ if [ -f "$RUNNER" ] && [ -f "$SELECT" ]; then
   git -C "$STUB4" init -q 2>/dev/null || true
   git -C "$STUB4" add -A >/dev/null 2>&1 || true
   git -C "$STUB4" -c user.email=a@b.c -c user.name=a commit -q -m init >/dev/null 2>&1 || true
-  ( cd "$STUB4" && unset GITHUB_BASE_REF; bash "$SELECT" --event pull_request >/tmp/issue103-select-unresolvable.out 2>&1 )
+  # Rename off the default branch so resolve_base_ref's origin/main / main
+  # legs genuinely have nothing to resolve (git init's default-branch config
+  # otherwise names this checkout's own branch "main", which is a resolvable
+  # base and defeats the fixture's premise).
+  git -C "$STUB4" branch -m __no-base-here__ >/dev/null 2>&1 || true
+  # --root is explicit: select-suites.sh's default root is derived from its
+  # own script location, not the caller's cwd (same convention as every other
+  # scripts/test/check-*.sh lint), so a bare cd into the stub without --root
+  # silently re-targets the real repo root instead of the fixture.
+  ( cd "$STUB4" && unset GITHUB_BASE_REF; bash "$SELECT" --root "$STUB4" --event pull_request >/tmp/issue103-select-unresolvable.out 2>&1 )
   unresolvable_exit=$?
   assert_true "AC-selection-fails-loud-on-unresolvable-base: an unresolvable base is a visible BLOCK and non-zero exit, never a silent empty selection" \
     "[ $unresolvable_exit -ne 0 ] && grep -qi 'block' /tmp/issue103-select-unresolvable.out"

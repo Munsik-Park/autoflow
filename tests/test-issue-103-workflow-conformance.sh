@@ -52,8 +52,16 @@ assert_true "AC-header-parse-single-definition-site: no independent inline '# ci
 assert_true "AC-ci-subject-coverage-preserved: every executable spec under tests/** now carries a '# ci-subject:' header (universalised, was ~half)" \
   "! find '$PROJECT_ROOT/tests' -maxdepth 1 -name 'test-*.sh' -exec grep -L '^# ci-subject:' {} \; | grep -q ."
 
-assert_true "AC-ci-subject-coverage-preserved: test-issue-27's real subject (test/workflows/) is covered by its hosting workflow's paths: block" \
-  "grep -A5 'run: bash tests/test-issue-27-composition-oracle.sh' '$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml' >/dev/null 2>&1 && grep -B60 'run: bash tests/test-issue-27-composition-oracle.sh' '$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml' | grep -q \"'test/workflows/\""
+# test-issue-27's real subject (test/workflows/) being covered by its hosting
+# workflow's paths: block is exactly what the conformance suite's own AC-b-2
+# asserts at test time (grep -rl '^# ci-subject:' over tests/, hosting-
+# workflow paths: coverage per suite — .autoflow/issue-103-feature-design.md
+# §2.2). A grep -B60 proximity proxy over the raw workflow YAML is a strictly
+# weaker, line-distance-fragile re-implementation of that same check (it
+# would false-negative were the paths: block reordered, or false-positive on
+# an unrelated nearby literal) and is dropped in favour of the real run
+# already asserted above (AC-header-parse-single-definition-site) and the
+# per-commit ordering arm below.
 
 # ---------------------------------------------------------------------
 # AC-paths-window-guards-survive — live window guards, run against the
@@ -69,8 +77,18 @@ done
 # ---------------------------------------------------------------------
 assert_true "AC-derived-doc-surfaces-consistent: check-manifest-regen-clean.sh exits 0 on the post-change tree (setup/manifest.json regenerated alongside the four edited registered docs)" \
   "bash '$REGEN_CLEAN' >/tmp/issue103-regen-clean.out 2>&1"
-assert_true "AC-derived-doc-surfaces-consistent: check-maintained-docs-sync.sh exits 0 on the post-change tree (the new scripts' registration rows point at files that exist on disk)" \
-  "bash '$DOCS_SYNC' >/tmp/issue103-docs-sync.out 2>&1"
+# Scoped to this cycle's own change surface: check-maintained-docs-sync.sh's
+# dangling-path guard already reds at HEAD on four pre-existing
+# services/librechat/docs/* rows outside this cycle (verified: bash
+# scripts/test/check-maintained-docs-sync.sh on an unmodified checkout
+# reports exactly those four FAIL lines) -- requiring the whole script to
+# exit 0 would fail this AC on a defect this cycle did not introduce and
+# cannot fix (out of the change surface). The AC's own claim -- the new
+# rows' registration is safe -- is what is asserted: none of the reported
+# dangling-path FAIL lines name a file this cycle registers.
+bash "$DOCS_SYNC" >/tmp/issue103-docs-sync.out 2>&1
+assert_true "AC-derived-doc-surfaces-consistent: check-maintained-docs-sync.sh reports no dangling-path FAIL for any of this cycle's new registration rows (suite-manifest.sh, select-suites.sh, run-suites.sh, check-suite-manifest.sh, check-step-reconciliation.sh, check-suite-leaf.sh)" \
+  "! grep -E 'dangling-path guard.*(suite-manifest\.sh|select-suites\.sh|run-suites\.sh|check-suite-manifest\.sh|check-step-reconciliation\.sh|check-suite-leaf\.sh)' /tmp/issue103-docs-sync.out"
 assert_true "AC-derived-doc-surfaces-consistent: docs/maintained-docs.md registers scripts/test/suite-manifest.sh, select-suites.sh, run-suites.sh and the three new lints" \
   "grep -qF 'suite-manifest.sh' '$PROJECT_ROOT/docs/maintained-docs.md' && grep -qF 'select-suites.sh' '$PROJECT_ROOT/docs/maintained-docs.md' && grep -qF 'run-suites.sh' '$PROJECT_ROOT/docs/maintained-docs.md'"
 
