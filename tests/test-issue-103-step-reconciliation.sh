@@ -178,17 +178,30 @@ JSON
   rm -f "$SELECTED_FILE" "$STEPS_FILE"
 
   # =========================================================================
-  # Issue #103 cycle 2 (review-response) -- AC-reconcile-quiet-under-a-fail-
-  # closed-select. .autoflow/issue-103-verification-design.md (cycle 2) §1.
-  # A fail-closed select must not turn the reconcile step red for a SECOND,
-  # unrelated reason -- the run's single reported cause stays the select
-  # step. Driven with the REAL select-suites.sh on a genuinely unresolvable
-  # base (not a hand-written BLOCK: line -- verification design §3, "Neither
-  # a hand-written BLOCK: line nor a synthesised outcome vocabulary is
-  # admitted, because both would encode the assumption the arm exists to
-  # test"), fed to the real check-step-reconciliation.sh alongside a steps
-  # map in the production job-local shape where every governed step is
-  # skipped.
+  # Issue #103 cycle 2 arm, REVISED in cycle 3 -- the cycle-3
+  # reconciler-fail-closed contract (.autoflow/issue-103-verification-
+  # design.md, AC-reconciler-fails-closed-on-zero-evidence, case 2 "the
+  # report carries a BLOCK line") supersedes this arm's original cycle-2
+  # exit-0-on-BLOCK expectation: a BLOCK-bearing report is no longer
+  # "nothing to reconcile, so agree" but a precondition failure in its own
+  # right, distinct from a MISMATCH. Left as written, this arm would assert
+  # the reconciler silently reports OK over a report it never actually
+  # judged -- exactly the property this cycle closes (see the design's
+  # opening: "a verification oracle reports clean over an input it never
+  # actually validated").
+  #
+  # Original purpose preserved: the select-side half below is unchanged --
+  # the REAL select-suites.sh on a genuinely unresolvable base still BLOCKs
+  # on its own (not a hand-written BLOCK: line -- verification design §3,
+  # "Neither a hand-written BLOCK: line nor a synthesised outcome vocabulary
+  # is admitted, because both would encode the assumption the arm exists to
+  # test"). What changes is the reconcile-side half: it is no longer
+  # "reconcile stays quiet"; it is the composition-level (real selector
+  # output, not an authored BLOCK:-only file) instance of
+  # AC-reconciler-fails-closed-on-zero-evidence's BLOCK case -- the same
+  # "surface the boundary rather than silently pass over it" family as
+  # AC-reconciler-surfaces-entries-it-cannot-judge, driven end-to-end here
+  # instead of against a synthetic report.
   # =========================================================================
   if [ -f "$SELECT" ]; then
     RECONQ_DIR="$(mktemp -d)"
@@ -212,7 +225,7 @@ SH
     RECONQ_REPORT="$(mktemp)"
     ( cd "$RECONQ_DIR" && unset GITHUB_BASE_REF; bash "$SELECT" --root "$RECONQ_DIR" --event pull_request >/dev/null 2>"$RECONQ_REPORT" )
     reconq_select_rc=$?
-    assert_true "AC-reconcile-quiet-under-a-fail-closed-select: the real select-suites.sh on a genuinely unresolvable base BLOCKs (non-zero exit) and its stderr report carries a BLOCK: line and no SELECTED:/NOT-SELECTED: record" \
+    assert_true "AC-reconciler-fails-closed-on-zero-evidence composition pre: the real select-suites.sh on a genuinely unresolvable base BLOCKs (non-zero exit) and its stderr report carries a BLOCK: line and no SELECTED:/NOT-SELECTED: record" \
       "[ $reconq_select_rc -ne 0 ] && grep -qi 'block' '$RECONQ_REPORT' && ! grep -qE '^(SELECTED|NOT-SELECTED): ' '$RECONQ_REPORT'"
 
     # Production job-local shape: as if the capture-then-check fix had
@@ -226,13 +239,13 @@ SH
 JSON
     bash "$RECONCILE" --selected "$RECONQ_REPORT" --steps "$STEPS_FILE" >/tmp/issue103-reconcile-fail-closed.out 2>&1
     reconq_reconcile_rc=$?
-    assert_true "AC-reconcile-quiet-under-a-fail-closed-select: check-step-reconciliation.sh fed the real BLOCK-only report and a job-local steps map with every governed step skipped exits 0 with no MISMATCH line -- the reconcile step must not red for a second, unrelated reason" \
-      "[ $reconq_reconcile_rc -eq 0 ] && ! grep -q 'MISMATCH' /tmp/issue103-reconcile-fail-closed.out"
+    assert_true "AC-reconciler-fails-closed-on-zero-evidence composition arm: check-step-reconciliation.sh fed the REAL BLOCK-only select-suites.sh report exits non-zero (the BLOCK precondition, not agreement) with no MISMATCH line -- the run's reported cause is the BLOCK, not a fabricated disagreement" \
+      "[ $reconq_reconcile_rc -ne 0 ] && ! grep -q 'MISMATCH' /tmp/issue103-reconcile-fail-closed.out && grep -qi 'block' /tmp/issue103-reconcile-fail-closed.out"
 
     rm -rf "$RECONQ_DIR"
     rm -f "$RECONQ_REPORT"
   else
-    assert_true "AC-reconcile-quiet-under-a-fail-closed-select: scripts/test/select-suites.sh exists (required to drive this arm against the real selector)" "false"
+    assert_true "AC-reconciler-fails-closed-on-zero-evidence composition pre: scripts/test/select-suites.sh exists (required to drive this arm against the real selector)" "false"
   fi
 
   # =========================================================================
