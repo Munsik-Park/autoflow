@@ -106,9 +106,10 @@ manually rather than with a substitute.
 TMPDIR=/path/to/a/read-only/dir bash tests/test-issue-59-adoption-evidence-discipline.sh
 ```
 
-**Procedure:** Run the suite as above on the `dev/*-issue-59*` branch with a
-resolvable `BASE_REF`, and inspect the output of the 7 AC-59-21 / AC-59-11d
-lanes (issue #75 retired the yml-window delta family with its lane).
+**Procedure:** Run the suite as above and inspect the output of the 7 AC-59-21 /
+AC-59-11d lanes (issue #75 retired the yml-window delta family with its lane;
+issue #107 retired the suite's remaining `dev/*-issue-59` branch gates and the
+`BASE_REF` resolution they read, so no branch or base precondition applies).
 
 **Pass:** each AC-59-21 precondition lane FAILs with its `base measurement of
 <suite> at <ref>` label showing a `-1` triple, its paired delta lane FAILs
@@ -153,8 +154,7 @@ cannot write:
 TMPDIR=/path/to/a/read-only/dir bash scripts/test/run-suites.sh --all
 ```
 
-**Procedure:** Run the runner as above on the `dev/*-issue-59*` branch (or
-any branch), and inspect the per-suite `PASS`/`FAIL`/`TIMEOUT` lines and the
+**Procedure:** Run the runner as above on any branch, and inspect the per-suite `PASS`/`FAIL`/`TIMEOUT` lines and the
 run-level exit code.
 
 **Pass:** every suite that calls `mktemp` internally reports `FAIL <suite>

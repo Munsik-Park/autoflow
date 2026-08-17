@@ -259,13 +259,20 @@ assert_true "subject-set derivation finds at least one push-context base-ref con
 # silently dropped while others still pass — exactly what the pipefail/SIGPIPE
 # defect above did to this file's `derive_subjects` (deterministically
 # measured this cycle). Pin a known real resolve_base_ref call site (a
-# push:branches:[main] workflow registers it, and it calls the resolver
-# against the repo under test at tests/test-issue-59-adoption-evidence-discipline.sh:76)
-# so a reintroduction of that class of bug fails loud instead of just shrinking
-# the printed count. Real-tree only — an override root has its own subjects.
+# push:branches:[main] workflow registers it, it is not in
+# EXEMPT_HERMETIC_DRIVERS, and it calls the resolver against the repo under
+# test at tests/test-issue-27-composition-oracle.sh:245) so a reintroduction of
+# that class of bug fails loud instead of just shrinking the printed count.
+# Real-tree only — an override root has its own subjects.
+#
+# Repointed in #107 (was tests/test-issue-59-adoption-evidence-discipline.sh).
+# The guard's value is the pin, not any particular subject: #107 retired 59's
+# dormant dev/*-issue-59 arms, which held that file's only resolver call, so
+# the former subject left the derived set legitimately. The 798 suite (:72) is
+# the alternate if 27 ever loses the call.
 if [ -z "${1:-}" ]; then
-  assert_true "subject-set derivation includes a known real call site (tests/test-issue-59-adoption-evidence-discipline.sh) — regression guard against silent under-derivation" \
-    "grep -qxF 'tests/test-issue-59-adoption-evidence-discipline.sh' < <(printf '%s\n' \"\${SUBJECTS[@]}\")"
+  assert_true "subject-set derivation includes a known real call site (tests/test-issue-27-composition-oracle.sh) — regression guard against silent under-derivation" \
+    "grep -qxF 'tests/test-issue-27-composition-oracle.sh' < <(printf '%s\n' \"\${SUBJECTS[@]}\")"
 fi
 
 ROOT_OVERRIDE="${1:-}"
@@ -865,9 +872,15 @@ assert_true "AC-native-coverage-premise-reach: a registering workflow whose push
 # derived subject (re-derived in the verification design's own premise
 # section) — this is a re-verification of an already-settled premise, not new
 # behavior, so a PASS here is expected and is not a RED-confirmation defect.
+#
+# Repointed in #107 alongside the under-derivation pin above, and for the same
+# reason: this arm names the same literal subject, which left the derived set
+# when that cycle retired 59's dormant dev/*-issue-59 arms and the resolver
+# call they held. The two pins are one decision — a subject that is no longer
+# derived cannot report a NATIVE-COVERAGE state at all — so they move together.
 drive_suite_over_root "$PROJECT_ROOT"
 assert_true "AC-native-coverage-premise-{depth,reach} (real tree): the pinned known call site reports NATIVE-COVERAGE PASS" \
-  "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/test-issue-59-adoption-evidence-discipline\.sh[[:space:]]+PASS'"
+  "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/test-issue-27-composition-oracle\.sh[[:space:]]+PASS'"
 
 echo ""
 echo "=== native-coverage-premise, ANY-registering-workflow semantics (VERIFY step-3 coverage) ==="

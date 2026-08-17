@@ -26,9 +26,11 @@ project policy," a confirmation only the owner can make.
 
 - `AC1(c)` admits all four `docs/adr/README.md` status values (`Proposed` /
   `Accepted` / `Deprecated` / `Superseded`) — accepting the ADR does not violate it.
-- `AC1(d)` reads only *this PR's own diff* of the `## Status` value and is inert off
-  this cycle's dev branch (`dev/*-issue-51*`) — an owner acceptance performed after
-  this PR merges is a later PR's diff, not this one's, so `AC1(d)` cannot observe it.
+- `AC1(d)`, which read only *this PR's own diff* of the `## Status` value, was
+  retired in #107 — it was a dormant `dev/*-issue-51` branch gate over an
+  already-merged cycle (`docs/doc-invariant-registry.md` §12.1). Its concern is
+  moot for the same reason it was inert: an owner acceptance performed after this
+  PR merged is a later PR's diff, not this one's.
 - `AC7` and registry entry `51-reg-readme` grep the ADR's **filename** in
   `docs/adr/README.md` > Current Drafts, not the row's Status cell — the Status cell
   the owner's acceptance rewrites is untouched by that assertion.

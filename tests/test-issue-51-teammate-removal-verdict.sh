@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/agents/autoflow-tester.md .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml docs/INDEX.md docs/adr/0000-adr-template.md docs/adr/0017-teammate-removal-feasibility.md docs/adr/README.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/maintained-docs.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/fixtures/gate-schema.json tests/lib/base-ref.sh tests/manual/issue-51-manual-scenarios.md tests/run-doc-invariants.sh
+# ci-subject: .claude/agents/autoflow-tester.md .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml docs/INDEX.md docs/adr/0000-adr-template.md docs/adr/0017-teammate-removal-feasibility.md docs/adr/README.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/maintained-docs.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/fixtures/gate-schema.json tests/manual/issue-51-manual-scenarios.md tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -27,38 +27,35 @@
 # predicate, and workflow-file / manifest-file assertions are outside the
 # registry's ADR/README scope):
 #
-#   AC1(d)   — base-relative Status-value fence (lane A-delta, branch-scoped)
-#   AC6(b)/(c) — migration-slice DELTA + byte-invariance fence (lane A-delta)
 #   AC8/O1   — manifest composition oracle (real setup/gen-manifest-hashes.sh)
 #   AC9/O2   — registry composition oracle (real tests/run-doc-invariants.sh)
 #   AC12     — CI wiring (run: step + paths: entries + ordering arm)
 #   R51-COUNT / meta guard — origin_issue==51 registry entry count (12) and
 #              literal-contiguity/direction-of-predicate meta check
 #
-# Lane A-delta members are enforced only on this cycle's own dev branch
-# (dev/*-issue-51 / dev/*-issue-51-*); off that branch they print
-# DEFERRED-OBSERVABLE and assert nothing (verification design §0, adopted
-# verbatim in shape from ea68a4c / tests/test-issue-7-oracle-hardening.sh).
-# On-branch with an unresolvable base ref -> FAIL loud, never a silent SKIP
-# (tests/lib/base-ref.sh contract).
+# This file once carried a "lane A-delta" tier — AC1(d) and AC6(b)/(c) —
+# enforced only on issue #51's own dev branch and printing
+# DEFERRED-OBSERVABLE everywhere else. Both members asserted properties of
+# issue #51's landed diff against its base, so once that PR merged they were
+# inert on every branch the tree will ever see again. #107 retired the tier;
+# every assertion below is unconditional. See
+# docs/doc-invariant-registry.md §12 (normative status of the array-less
+# dev/*-issue-<N> gate) and §12.1 (this file's disposition rows).
 #
 # RED expectation (this commit — docs/adr/0017-*.md does not exist yet):
-#   FAIL (discriminators): AC1(a)(b)(c)(d), AC2, AC3, AC4, AC5, AC7, AC10,
+#   FAIL (discriminators): AC1(a)(b)(c), AC2, AC3, AC4, AC5, AC7, AC10,
 #     AC14, AC15, AC16, AC12 (no run: step / paths: entries yet), O1(b)
 #     (no manifest row named for the ADR), O2(b) (origin_issue==51 count is
 #     0, not 12).
 #   PASS (guards, must stay green throughout): AC6(a) is a discriminator (no
-#     ADR to carry the deferral statement) until GREEN; AC6(b)/(c) PASS from
-#     the outset (the fence must never be tripped); O1(a) regen-clean, true
-#     before and after; O2(a) exit 0 + 0 failed, true before and after.
+#     ADR to carry the deferral statement) until GREEN; O1(a) regen-clean,
+#     true before and after; O2(a) exit 0 + 0 failed, true before and after.
 # =============================================================================
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-# shellcheck source=tests/lib/base-ref.sh
-. "$SCRIPT_DIR/lib/base-ref.sh"
 
 ADR_REL="docs/adr/0017-teammate-removal-feasibility.md"
 ADR="$PROJECT_ROOT/$ADR_REL"
@@ -103,10 +100,6 @@ assert_false() {
     echo "  PASS: $desc"
     PASS=$((PASS + 1))
   fi
-}
-
-note_deferred() {
-  echo "  DEFERRED-OBSERVABLE: $1"
 }
 
 # extract_section mirrors tests/run-doc-invariants.sh's own extractor
@@ -156,22 +149,11 @@ body_has() {                 # body literal match
   fi
 }
 
-# Branch-scope test for lane A-delta members (adopted verbatim in shape from
-# ea68a4c / tests/test-issue-7-oracle-hardening.sh AC-7-7b).
-on_issue_51_branch() {
-  local head_branch="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
-  case "$head_branch" in
-    dev/*-issue-51|dev/*-issue-51-*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
 echo "=== issue #51 — teammate-removal feasibility verdict (ADR-0017) ==="
 
 # ---------------------------------------------------------------------------
 # AC1 — ADR exists, carries the 7-heading skeleton subset, the verdict
-# sentence, a conformant Status value, and (lane A-delta) the base-relative
-# Status literal.
+# sentence, and a conformant Status value.
 # ---------------------------------------------------------------------------
 echo ""
 echo "=== AC1 — decision record skeleton, verdict, Status conformance ==="
@@ -190,34 +172,6 @@ STATUS_BODY="$(extract_section "Status" "$ADR")"
 STATUS_VALUE="$(printf '%s\n' "$STATUS_BODY" | grep -vE '^[[:space:]]*$' | head -1 | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
 assert_true "AC1(c): the ## Status value is one of Proposed|Accepted|Deprecated|Superseded (currently '$STATUS_VALUE')" \
   "printf '%s' '$STATUS_VALUE' | grep -qE '^(Proposed|Accepted|Deprecated|Superseded)$'"
-
-echo ""
-echo "--- AC1(d) [lane A-delta, branch-scoped] base-relative Status literal ---"
-if on_issue_51_branch; then
-  BASE_REF="$(resolve_base_ref)"
-  if [ -z "$BASE_REF" ]; then
-    echo "  FAIL: AC1(d): resolve_base_ref could not resolve a comparison base on the issue-51 branch (fail-loud, not SKIP)"
-    FAIL=$((FAIL + 1)); TESTS=$((TESTS + 1))
-  else
-    if ! git -C "$PROJECT_ROOT" show "$BASE_REF:$ADR_REL" >/dev/null 2>&1; then
-      # This PR ADDS the ADR — it must ship Proposed (AC13/M1 delegates the
-      # Proposed -> Accepted transition to the owner; AutoFlow may not
-      # pre-decide it).
-      assert_true "AC1(d)-added: ADR is added by this PR and ships '## Status' = Proposed" \
-        "printf '%s' '$STATUS_VALUE' | grep -qx 'Proposed'"
-    else
-      # ADR already existed at base — this PR's diff must not move the
-      # Status value (owner-performed transitions outside this PR are not
-      # this fence's concern; base-relative, not a live-file literal).
-      BASE_STATUS_BODY="$(git -C "$PROJECT_ROOT" show "$BASE_REF:$ADR_REL" 2>/dev/null | extract_section "Status" /dev/stdin 2>/dev/null)"
-      BASE_STATUS_VALUE="$(printf '%s\n' "$BASE_STATUS_BODY" | grep -vE '^[[:space:]]*$' | head -1 | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-      assert_true "AC1(d)-unchanged: this PR's diff does not change '## Status' (base='$BASE_STATUS_VALUE', head='$STATUS_VALUE')" \
-        "[ '$BASE_STATUS_VALUE' = '$STATUS_VALUE' ]"
-    fi
-  fi
-else
-  note_deferred "AC1(d): lane A-delta member inert off the issue-51 dev branch."
-fi
 
 # ---------------------------------------------------------------------------
 # AC2 — Q1-Q6 dedicated sub-sections, each answer carrying >=1 grounds anchor.
@@ -283,8 +237,9 @@ assert_true "AC5-ordering: the first condition token (C1) precedes the pilot con
 
 # ---------------------------------------------------------------------------
 # AC6 — no contract/hook/agent-definition/workflow/governing-doc file is
-# modified this cycle. (a) deferral statement (lane A, permanent).
-# (b)/(c) lane A-delta, branch-scoped.
+# modified this cycle. (a) deferral statement (lane A, permanent). The
+# base-relative DELTA/byte-invariance fence that once accompanied it was
+# retired in #107 (docs/doc-invariant-registry.md §12.1).
 # ---------------------------------------------------------------------------
 echo ""
 echo "=== AC6 — migration-slice files untouched this cycle ==="
@@ -292,47 +247,6 @@ echo "=== AC6 — migration-slice files untouched this cycle ==="
 FULL_ADR="$(cat "$ADR" 2>/dev/null)"
 assert_true "AC6(a): the record states this cycle defers the migration-slice files (hook/contract/workflow untouched)" \
   "body_has \"\$FULL_ADR\" '(defer|not (this cycle|part of this cycle|modif)).{0,80}(hook|contract|workflow|agent-definition|governing)' regex"
-
-echo ""
-echo "--- AC6(b)/(c) [lane A-delta, branch-scoped] DELTA + byte-invariance fence ---"
-FENCE_FILES=(
-  ".claude/hooks/check-autoflow-gate.sh"
-  "tests/fixtures/gate-schema.json"
-  "CLAUDE.md"
-  "docs/teammate-contracts.md"
-  "docs/teammate-common-rules.md"
-  "docs/autoflow-guide.md"
-)
-if on_issue_51_branch; then
-  BASE_REF6="$(resolve_base_ref)"
-  if [ -z "$BASE_REF6" ]; then
-    echo "  FAIL: AC6(b)/(c): resolve_base_ref could not resolve a comparison base on the issue-51 branch (fail-loud, not SKIP)"
-    FAIL=$((FAIL + 2)); TESTS=$((TESTS + 2))
-  else
-    CHANGED_51="$(git -C "$PROJECT_ROOT" diff --name-only "$BASE_REF6"...HEAD 2>/dev/null)"
-    DELTA_BAD=0
-    for f in "${FENCE_FILES[@]}"; do
-      if printf '%s\n' "$CHANGED_51" | grep -qxF "$f"; then
-        DELTA_BAD=$((DELTA_BAD + 1))
-        echo "  (info) AC6(b): diff touches fenced file '$f'"
-      fi
-    done
-    if printf '%s\n' "$CHANGED_51" | grep -qE '^\.claude/agents/autoflow-.*\.md$'; then
-      DELTA_BAD=$((DELTA_BAD + 1))
-      echo "  (info) AC6(b): diff touches a fenced .claude/agents/autoflow-*.md file"
-    fi
-    if printf '%s\n' "$CHANGED_51" | grep -qE '^\.claude/workflows/.*\.js$'; then
-      DELTA_BAD=$((DELTA_BAD + 1))
-      echo "  (info) AC6(b): diff touches a fenced .claude/workflows/*.js file"
-    fi
-    assert_true "AC6(b): diff vs base contains none of the fenced migration-slice files" \
-      "[ '$DELTA_BAD' -eq 0 ]"
-    assert_true "AC6(c): the gate hook and gate-schema.json are byte-unchanged vs base" \
-      "git -C '$PROJECT_ROOT' diff --quiet '$BASE_REF6' -- '$GATE_HOOK' '$GATE_SCHEMA'"
-  fi
-else
-  note_deferred "AC6(b)/(c): lane A-delta members inert off the issue-51 dev branch."
-fi
 
 # ---------------------------------------------------------------------------
 # AC7 — registration completeness: the ADR is registered in all three of
