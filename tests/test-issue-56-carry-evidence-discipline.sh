@@ -38,7 +38,9 @@
 #
 #   AC-56-10 — fence at RED / hard gate mid-GREEN: `setup/manifest.json`'s row
 #             for `architect-deliberation.js` hash-matches the live source
-#             (gate); both files land within the cycle range (advisory).
+#             (AC-56-10a, gate). AC-56-10b's cycle-range co-occurrence
+#             advisory branch read `$BASE_REF`, whose only writer was
+#             AC-56-9's own arm; #107 retired both together (registry §12.1).
 #   AC-56-11 — Test-AI-owned surface: this suite is registered in
 #             .github/workflows/e2e-dummy-target.yml (both `paths:` blocks +
 #             a `run:` step) — expected PASS by end of RED.
@@ -97,22 +99,12 @@ assert_true "AC-56-4a-interp: \${COUNTER_EVIDENCE_RULE} interpolated exactly twi
 
 # =============================================================================
 echo ""
-echo "=== AC-56-10 — derived artifact: manifest row hash-matches the live source (gate) + cycle-range co-occurrence (advisory) ==="
+echo "=== AC-56-10 — derived artifact: manifest row hash-matches the live source (gate) ==="
 
 MANIFEST_SHA="$(jq -r '.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js") | .sha256' "$MANIFEST")"
 CUR_ARCH_SHA="$(shasum -a 256 "$WORKFLOW_JS" | awk '{print $1}')"
 assert_true "AC-56-10a (gate): setup/manifest.json row sha256 == current architect-deliberation.js sha256 (manifest: $MANIFEST_SHA, current: $CUR_ARCH_SHA)" \
   "[ \"$MANIFEST_SHA\" = \"$CUR_ARCH_SHA\" ]"
-
-if [[ -n "${BASE_REF:-}" ]]; then
-  RANGE_FILES="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD)"
-  BOTH_IN_RANGE=true
-  printf '%s\n' "$RANGE_FILES" | grep -qx '\.claude/workflows/architect-deliberation\.js' || BOTH_IN_RANGE=false
-  printf '%s\n' "$RANGE_FILES" | grep -qx 'setup/manifest\.json' || BOTH_IN_RANGE=false
-  echo "  ADVISORY: AC-56-10b co-occurrence over the cycle range: both paths present == $BOTH_IN_RANGE (non-blocking, hash equality above is the gate)"
-else
-  echo "  ADVISORY: AC-56-10b co-occurrence unmeasurable (no base ref) — non-blocking, hash equality above is the gate"
-fi
 
 # =============================================================================
 echo ""
