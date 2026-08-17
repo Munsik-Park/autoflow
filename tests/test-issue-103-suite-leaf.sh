@@ -414,6 +414,59 @@ SH
   assert_true "the leaf lint's header names D5 among its denied rows (residual paragraph updated for this cycle)" \
     "[[ \"\$LEAF_HEADER_TEXT\" == *'D5'* ]]"
 
+  # ===========================================================================
+  # sh-interpreter class widening (dev-c3fix-103, 7dc61cd; ledger O24
+  # GATE:QUALITY #1). The invocation grammar's interpreter word set is closed
+  # at {bash, sh} in scripts/test/invocation-scan.sh (invscan_interp_alt),
+  # replacing the bash-only keying that let five live sh-form sibling
+  # re-runs sit under a clean report. Three arms, as specified.
+  # ===========================================================================
+
+  # -- (a) header arm: the RESIDUAL paragraph names the closed {bash, sh} set
+  #    AND at least one excluded interpreter (zsh), so the header cannot drift
+  #    back to describing a bash-only grammar without reding this arm.
+  assert_true "the leaf lint's header names the closed {bash, sh} interpreter set" \
+    "[[ \"\$LEAF_HEADER_TEXT\" == *'{bash, sh}'* ]]"
+  assert_true "the leaf lint's header names at least one excluded interpreter (zsh) in its INTERPRETER residual" \
+    "[[ \"\$LEAF_HEADER_TEXT\" == *'zsh'* ]]"
+
+  # -- (b) behavioural arm: sh "$CALLEE" where CALLEE is a literal enumerated-
+  #    suite path assigned to a variable -- the D5 shape, spelled with the sh
+  #    interpreter word instead of bash -- must be denied exactly as the bash
+  #    form is.
+  SH_INTERP_DENIED="$(mktemp -d)"
+  mkdir -p "$SH_INTERP_DENIED/tests"
+  echo 'true' > "$SH_INTERP_DENIED/tests/test-fixture-leaf-sh-interp-callee.sh"
+  cat > "$SH_INTERP_DENIED/tests/test-fixture-leaf-sh-interp.sh" <<'SH'
+#!/usr/bin/env bash
+CALLEE="$PROJECT_ROOT/tests/test-fixture-leaf-sh-interp-callee.sh"
+sh "$CALLEE"
+SH
+  bash "$LINT" --root "$SH_INTERP_DENIED" >/tmp/issue103-leaf-sh-interp-denied.out 2>&1
+  sh_interp_denied_exit=$?
+  assert_true "sh-interpreter D5: sh \"\$v\" where v is a variable carrying a literal enumerated-suite path is denied, exactly as the bash form is" \
+    "[ $sh_interp_denied_exit -ne 0 ] && grep -qF 'test-fixture-leaf-sh-interp.sh' /tmp/issue103-leaf-sh-interp-denied.out && grep -qF 'D5' /tmp/issue103-leaf-sh-interp-denied.out"
+  rm -rf "$SH_INTERP_DENIED"
+
+  # -- (c) negative arm: I5 word-boundary control -- a word that merely ENDS
+  #    in an interpreter's letters (a $PRODUCT invocation with a --all flag)
+  #    plus an unrelated quoted *.sh string, is NOT an interpreter word. Must
+  #    stay undetected.
+  I5_WORD_BOUNDARY="$(mktemp -d)"
+  mkdir -p "$I5_WORD_BOUNDARY/tests"
+  echo 'true' > "$I5_WORD_BOUNDARY/tests/test-fixture-leaf-i5-callee.sh"
+  cat > "$I5_WORD_BOUNDARY/tests/test-fixture-leaf-i5.sh" <<'SH'
+#!/usr/bin/env bash
+PRODUCT="$PROJECT_ROOT/scripts/test/run-suites.sh"
+"$PRODUCT" --all
+echo "finish tests/test-fixture-leaf-i5-callee.sh"
+SH
+  bash "$LINT" --root "$I5_WORD_BOUNDARY" >/tmp/issue103-leaf-i5.out 2>&1
+  i5_exit=$?
+  assert_true "I5 word-boundary control: a word merely ENDING in an interpreter's letters (\"\$PRODUCT\" --all) plus an unrelated quoted *.sh string stays undetected" \
+    "[ $i5_exit -eq 0 ]"
+  rm -rf "$I5_WORD_BOUNDARY"
+
   # -- Subject-set arm: fixture root with a filename outside test-*.sh ------
   SUBJECT_DIR="$(mktemp -d)"
   mkdir -p "$SUBJECT_DIR/tests/plugin" "$SUBJECT_DIR/.github/workflows"

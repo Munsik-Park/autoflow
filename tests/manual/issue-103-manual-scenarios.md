@@ -150,3 +150,70 @@ the checkout change unproven.
 runner — the success-path run selects and executes the guarded suite via
 `origin/$GITHUB_BASE_REF`, and the forced-BLOCK run reds the job with the
 `BLOCK:` text visible in the step log.
+
+## M7 — AC-a-skipped-governed-step-keeps-its-key: does a skipped step's id
+survive in `toJSON(steps)`?
+
+**Companion**: `.autoflow/issue-103-verification-design.md` §1
+`AC-a-skipped-governed-step-keeps-its-key` (environment-dependent, deferred).
+
+**Why manual, and not fully automated**: `scripts/test/check-step-
+reconciliation.sh`'s job-local narrowing (`hosted_here()`,
+`check-step-reconciliation.sh:102`) assumes a governed step's `id:` remains a
+key in the job's `toJSON(steps)` context object even when that step's `if:`
+guard evaluates false and the step is skipped — a property of the GitHub
+Actions runner this repository has never observed, because every PR delta on
+this branch so far selected every governed suite in its job, so no guarded
+step has actually skipped. No local fixture can establish what the real
+runner puts in that context object; a fixture asserting the assumed shape
+would confirm the assumption rather than test it, which is why this stays a
+post-merge observation rather than a fixture.
+
+**Stakes, stated in advance so the witness is a comparison, not an eyeball**:
+if the key is dropped when a step skips, `hosted_here()` reads that suite as
+"this job's step context does not carry it" and narrowing folds it into the
+`OUT-OF-JOB:` path — or, if narrowing itself never engaged because no *other*
+governed suite in the job's own report was hosted here, the report falls
+through to the un-narrowed whole-report comparison, which then reads the
+skipped step's `outcome` as `absent` and reports a false `MISMATCH:
+… selected=yes outcome=absent`. Either way the observable signature is a
+newly-red reconcile step on a run that selected fewer than the job's full
+governed set — not a silent pass.
+
+**Procedure**:
+
+1. On the first post-merge run (any workflow with a `select` + guarded
+   suite steps + `reconcile` step — `contract-suites.yml`,
+   `e2e-dummy-target.yml`, `host-purity-delta.yml`, `plugin-package.yml`, or
+   `schema-hook-contract.yml`) whose delta is narrow enough that
+   `select-suites.sh` does **not** select every governed suite in that job —
+   i.e. at least one governed step's `if:` guard evaluates false and the
+   step is genuinely skipped — open the `reconcile selection against step
+   outcomes` step's log.
+2. Record: the run URL, the workflow/job name, the skipped step's `id:`
+   value, and whether the reconcile step's output names that id at all (an
+   `OUT-OF-JOB:` line, a `MISMATCH:` line, or neither).
+3. Compare against the two expected resolution branches, named here in
+   advance:
+   - **Key present** (the skip retains its `toJSON(steps)` entry with
+     `outcome: "skipped"`) → `hosted_here()` returns true for it, the
+     narrowing derivation in `check-step-reconciliation.sh` holds exactly as
+     written, and the reconcile step exits 0 with no line naming that
+     suite's id — the ordinary, silent case the design assumes.
+   - **Key absent** (a skip drops the entry from `toJSON(steps)` entirely) →
+     the narrowing derivation degrades: either the suite is misread as
+     out-of-job when it is not, or (if narrowing did not engage) the
+     un-narrowed comparison reads `outcome=absent` and reds with a false
+     `MISMATCH:` line. This run's reconcile step goes broadly red, which is
+     the observable signature named above — file a follow-up issue against
+     the premise at `check-step-reconciliation.sh:102` if this branch is
+     observed.
+4. Record the run URL, the branch observed, and the raw step-outcome JSON
+   (or the relevant excerpt) in the cycle's VALIDATE notes or the follow-up
+   issue.
+
+**Pass condition**: the key-present branch is observed and recorded with its
+run URL — the narrowing derivation's premise holds as written. Observing the
+key-absent branch is not a scenario failure; it is the signal that routes to
+the follow-up issue named in step 3, and this scenario's job is done once
+either branch has a witness.
