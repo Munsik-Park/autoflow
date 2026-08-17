@@ -1092,6 +1092,14 @@ assert_true "AC-subject-coverage-is-judged-over-registering-hosts pre: scripts/t
 
 # --- real tree: same-shaped loop as AC-b-2, but hosting is DIRECT
 #     registration and the pool is over that (possibly smaller) host set.
+# Also accumulates the union of every real workflow this loop finds
+# registering at least one governed suite, for the tests/lib/** real-tree
+# completeness check below (VERIFY steps 3+4, cycle 3 delta pass,
+# .autoflow/issue-103-verify-steps34.md finding #2): the shared-library arm
+# above proves the DETECTOR works over synthetic fixtures, but nothing
+# previously checked, against the real tree, that every registering workflow
+# actually carries the tests/lib/** entry it now needs.
+declare -A ALL_REGISTERING_WORKFLOWS=()
 for suite in "${CI_SUBJECT_SUITES[@]}"; do
   rel="${suite#"$PROJECT_ROOT"/}"
   subjects="$(suite_header_field "$suite" ci-subject)"
@@ -1106,6 +1114,7 @@ for suite in "${CI_SUBJECT_SUITES[@]}"; do
     assert_true "AC-subject-coverage-is-judged-over-registering-hosts: $rel — has at least one directly-registering workflow" "false"
     continue
   fi
+  for h in "${reg_hosts[@]}"; do ALL_REGISTERING_WORKFLOWS["$h"]=1; done
   mapfile -t reg_patterns < <(for h in "${reg_hosts[@]}"; do extract_paths_entries "$h"; done | sort -u)
 
   all_covered=true
@@ -1119,6 +1128,25 @@ for suite in "${CI_SUBJECT_SUITES[@]}"; do
   done
   assert_true "AC-subject-coverage-is-judged-over-registering-hosts: $rel — every declared ci-subject path (and the suite itself) is covered by the POOLED paths: entries of its DIRECTLY-registering workflow(s)" "$all_covered"
 done
+
+# --- shared-library arm, REAL TREE: every real workflow this loop found
+#     registering at least one governed suite must itself declare a
+#     tests/lib/** (or bare **) directory entry in its pooled paths:. The
+#     LIB1/LIB2 synthetic fixtures below prove the detector works; this proves
+#     the real tree actually satisfies what it detects — a regression that
+#     landed the array-based admission correctly while silently omitting
+#     tests/lib/** from one real workflow would pass every other arm here.
+if [ ${#ALL_REGISTERING_WORKFLOWS[@]} -eq 0 ]; then
+  assert_true "AC-subject-coverage-is-judged-over-registering-hosts real-tree shared-library completeness: at least one directly-registering workflow was found to check" "false"
+else
+  for h in "${!ALL_REGISTERING_WORKFLOWS[@]}"; do
+    h_rel="${h#"$PROJECT_ROOT"/}"
+    mapfile -t h_patterns < <(extract_paths_entries "$h")
+    h_lib_found=false
+    for p in "${h_patterns[@]}"; do entry_is_testslib_directory_entry "$p" && h_lib_found=true; done
+    assert_true "AC-subject-coverage-is-judged-over-registering-hosts real-tree shared-library completeness: $h_rel (a directly-registering host) declares a tests/lib/** directory entry" "$h_lib_found"
+  done
+fi
 
 # --- synthetic pair 1 (existential PASS): one directly-registering host
 #     covers the subject, another registers it without covering; pooling the

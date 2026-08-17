@@ -359,6 +359,46 @@ SH
     "[ $d5_nf_operand_exit -eq 0 ]"
   rm -rf "$D5_NF_OPERAND"
 
+  # -- D5, DIRECT-ARGUMENT form: bash "$DIR/<suite>.sh" with NO intermediate
+  #    variable -- a second, independent code path from the variable-mediated
+  #    D5 check above (scripts/test/check-suite-leaf.sh's own report loop:
+  #    `match(rest, /^\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?\//)`), untested until
+  #    now (VERIFY steps 3+4, cycle 3 delta pass, .autoflow/issue-103-verify-
+  #    steps34.md finding #1). Same antecedent shape as the variable-mediated
+  #    row -- an enumerated-suite basename under a directory expansion -- just
+  #    with the literal appearing directly in the bash argument instead of
+  #    behind an assignment.
+  D5_DIRECT_DENIED="$(mktemp -d)"
+  mkdir -p "$D5_DIRECT_DENIED/tests"
+  echo 'true' > "$D5_DIRECT_DENIED/tests/test-fixture-leaf-d5-direct-callee.sh"
+  cat > "$D5_DIRECT_DENIED/tests/test-fixture-leaf-d5-direct.sh" <<'SH'
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$SCRIPT_DIR/test-fixture-leaf-d5-direct-callee.sh"
+SH
+  bash "$LINT" --root "$D5_DIRECT_DENIED" >/tmp/issue103-leaf-d5-direct-denied.out 2>&1
+  d5_direct_denied_exit=$?
+  assert_true "D5 direct-argument form: bash \"\$DIR/<enumerated-suite>.sh\" with NO intermediate variable is denied" \
+    "[ $d5_direct_denied_exit -ne 0 ] && grep -qF 'test-fixture-leaf-d5-direct.sh' /tmp/issue103-leaf-d5-direct-denied.out"
+  rm -rf "$D5_DIRECT_DENIED"
+
+  # Non-firing counterpart: the SAME shape, but the basename under the
+  # directory expansion is a NON-suite path (a product script) -- the
+  # antecedent keys on the enumerated subject set, not on the directory-
+  # expansion shape alone.
+  D5_DIRECT_NONFIRING="$(mktemp -d)"
+  mkdir -p "$D5_DIRECT_NONFIRING/tests"
+  cat > "$D5_DIRECT_NONFIRING/tests/test-fixture-leaf-d5-direct-nonfiring.sh" <<'SH'
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$SCRIPT_DIR/not-an-enumerated-suite.sh"
+SH
+  bash "$LINT" --root "$D5_DIRECT_NONFIRING" >/tmp/issue103-leaf-d5-direct-nonfiring.out 2>&1
+  d5_direct_nonfiring_exit=$?
+  assert_true "D5 direct-argument form, non-firing: bash \"\$DIR/<non-suite>.sh\" with no intermediate variable stays undetected -- the antecedent keys on the enumerated subject set, not on the directory-expansion shape alone" \
+    "[ $d5_direct_nonfiring_exit -eq 0 ]"
+  rm -rf "$D5_DIRECT_NONFIRING"
+
   # ===========================================================================
   # Issue #103 cycle 3 — AC-the-residual-paragraph-describes-the-implemented-rows
   # .autoflow/issue-103-verification-design.md:

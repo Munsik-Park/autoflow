@@ -371,8 +371,20 @@ JSON
   bash "$RECONCILE" --selected "$GOV_SELECTED_FILE" --steps "$GOV_STEPS_FILE" \
     --governed tests/test-fixture-gov-a.sh \
     >/tmp/issue103-gov-match.out 2>&1
+  gov_match_rc=$?
   assert_true "AC-a-governed-set-with-no-matching-record-errors: the same well-formed report with a --governed set that matches passes (exit zero)" \
-    "[ $? -eq 0 ]"
+    "[ $gov_match_rc -eq 0 ]"
+
+  # -- Success-line string pin (VERIFY steps 3+4, cycle 3 delta pass,
+  #    .autoflow/issue-103-verify-steps34.md, "noted" item): the reconciler's
+  #    success line now states WHAT WAS COMPARED (a record count and an
+  #    out-of-job count) rather than asserting agreement in the abstract. That
+  #    line is executed on every passing run in this suite but was not
+  #    string-pinned anywhere, so a silent revert to the pre-cycle-3 wording
+  #    ("OK — the run's selection and its step outcomes agree") would pass
+  #    every other arm here unnoticed.
+  assert_true "the CLI success line states what was compared -- a reconciled-record count and an out-of-job count -- not agreement in the abstract" \
+    "grep -qE 'OK — [0-9]+ record\(s\) reconciled.*out-of-job' /tmp/issue103-gov-match.out"
 
   rm -f "$GOV_SELECTED_FILE" "$GOV_STEPS_FILE"
 fi
