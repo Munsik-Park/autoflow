@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh docs/maintained-docs.md docs/teammate-common-rules.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/run-doc-invariants.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #43 — reporting-channel contract for the residual mailbox roles
 # (cycle-scoped L2 suite)

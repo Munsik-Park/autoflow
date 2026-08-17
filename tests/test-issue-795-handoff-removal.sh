@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: docs/git-workflow.md docs/external-review-sequencing.md docs/autoflow-guide.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: HANDOFF CI machine removal — Issue #795 (`subrepo-merged` retirement)
 # =============================================================================

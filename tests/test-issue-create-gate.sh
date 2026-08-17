@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/hooks/check-autoflow-gate.sh plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh setup/manifest.json scripts/issue/create-issue.sh docs/issue-proposal.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: the hook-side and cross-mechanism half of the AI-initiated
 #       issue-creation gate — STANDING (issue #96 origin; see
@@ -178,13 +180,10 @@ run_hook 0 "boundary: the 'gh issue edit' subcommand is not denied" \
 
 echo ""
 echo "=== issue #96 — Hook-Deny-Coexistence ==="
-if bash "$SCRIPT_DIR/test-gate-hardening.sh" >/dev/null 2>&1; then
-  echo "  PASS: existing tests/test-gate-hardening.sh suite is unaffected by the new deny"
-  PASS=$((PASS + 1))
-else
-  echo "  FAIL: tests/test-gate-hardening.sh regressed after the new deny was added"
-  FAIL=$((FAIL + 1))
-fi
+# The whole-suite re-run of tests/test-gate-hardening.sh is retired (issue
+# #103): that suite carries its own registered `run:` step in
+# contract-suites.yml, so a regression in it reds CI under its own name once
+# rather than twice. Disposition row: docs/doc-invariant-registry.md §12.1.
 run_hook 0 "coexistence: an unrelated label edit (status:in-progress) is still allowed" \
   "$NOSTATE" "$(bash_json 'gh issue edit 1 --remove-label status:in-progress')"
 run_hook 2 "coexistence: gate-label removal deny still fires standing alone" \

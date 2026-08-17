@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/lib/harness-pins.sh tests/manual/issue-27-manual-scenarios.md tests/run-doc-invariants.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: Composition oracle — verification-design shared-state requirement,
 # Issue #27 (cycle-scoped)
@@ -319,13 +322,23 @@ echo "=== AC-27-20 (composition oracle for S8, fence, PASS pre+post) — workflo
 # measured 82 -> 85. Bumped per this suite's own precedent above, in the same commit as
 # the dual-home (D18) EXPECTED_OK bump in tests/test-issue-59-adoption-evidence-discipline.sh
 # (that suite's AC-59-14c asserts the two homes agree).
+# Issue #103 single-sourced the pin: the literal moved to
+# tests/lib/harness-pins.sh and this suite sources it. The comparison itself is
+# unchanged and stays here — this suite is the sole carrier of "the committed pin
+# still agrees with the live harness measurement", which is the only thing that
+# gives the pin teeth. A regenerated value would agree with itself and detect
+# nothing, so the constant remains a committed literal in its one home.
+# shellcheck source=tests/lib/harness-pins.sh
+source "$PROJECT_ROOT/tests/lib/harness-pins.sh"
+
 HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
 HARNESS_EXIT=$?
 OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -c '^\s*ok' || true)"
 assert_true "AC-27-20a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
 assert_true "AC-27-20b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-assert_true "AC-27-20c: harness ok-line count == B14 (85) (got: $OK_COUNT)" "[ \"$OK_COUNT\" -eq 85 ]"
+assert_true "AC-27-20c: harness ok-line count == the committed pin HARNESS_OK_COUNT ($HARNESS_OK_COUNT) (got: $OK_COUNT)" \
+  "[ \"$OK_COUNT\" -eq \"$HARNESS_OK_COUNT\" ]"
 assert_true "AC-27-20d: node --check .claude/workflows/architect-deliberation.js exits 0 (cheaper subset)" \
   "node --check '$WORKFLOW_JS'"
 

@@ -10,22 +10,42 @@
 # CLASS unrepresentable rather than the instances empty.
 #
 # SUBJECT SET — enumerate, then subtract. The set is EVERYTHING under tests/**
-# that is an executable spec (`*.sh` plus `*.bats`), minus the named exclusions
-# below. The direction matters: an admitting glob (`tests/test-*.sh`,
-# `tests/adr-*.sh`, …) leaves every other filename shape silently outside the
-# lint, which is the orphan class this exists to remove. `*.bats` stays IN, so
-# that after this cycle's tests/issue-92 deletion a newly added `.bats` file is
-# flagged rather than ignored — `bats` is unavailable in CI by design, so such
-# a file has no execution path and must be disposed of, not merged.
+# that is an executable spec (`*.sh` plus `*.bats`), minus the named exclusions.
+# The direction matters: an admitting glob (`tests/test-*.sh`, `tests/adr-*.sh`,
+# …) leaves every other filename shape silently outside the lint, which is the
+# orphan class this exists to remove. `*.bats` stays IN, so a newly added
+# `.bats` file is flagged rather than ignored — `bats` is unavailable in CI by
+# design, so such a file has no execution path and must be disposed of, not
+# merged.
+#
+# Both the direction and the exclusion set now live in
+# scripts/test/suite-manifest.sh, which this lint sources. A second copy here
+# would be two definitions of one subject, and would let a file be
+# header-required by check-suite-manifest.sh and orphan-required by this lint.
 #
 # There is NO exemption list for unreachable suites: an allow-list here would be
 # the hand-maintained inventory `docs/doc-invariant-registry.md` §1-2 retires.
 # An unreachable suite is either wired or deleted with a disposition row.
 #
-# REACHABLE — a `run:` step in any workflow invokes it, or a reachable suite
-# invokes it as a subprocess (transitive closure over `bash <path>`), which is
-# the mechanism that makes tests/test-issue-40-hook-additive.sh reachable
-# through tests/test-issue-71-digest-removal.sh.
+# REACHABLE — a `run:` step in any workflow invokes it. DIRECT ONLY: the former
+# transitive-closure clause (a reachable suite invoking it as a subprocess) is
+# removed by issue #103. It protected nothing: every enumerated spec but the
+# now-deleted full-sweep driver already carried its own `run:` step, and the one
+# suite the old header advertised as the closure's sole beneficiary had in fact
+# held a direct step of its own since contract-suites.yml registered it. That
+# name is deliberately not repeated here — a stale rationale naming a live file
+# is how a later cycle re-derives a protection that does not exist. The leaf rule
+# (scripts/test/check-suite-leaf.sh) additionally makes a sibling invocation a
+# violation, so a closure edge is not a reachability route a conforming tree can
+# offer.
+#
+# WHAT COUNTS AS AN INVOCATION is not decided here. scripts/test/invocation-scan.sh
+# owns that relation and this lint consumes it, as does
+# tests/test-workflow-trigger-conformance.sh and the manifest lint's step reader.
+# The line-based rule this file used to carry read a `bash` token wherever it
+# appeared — inside a quoted grep pattern naming a `run:` line included — and
+# missed a block-scalar `run:` body entirely, so the two lints disagreed on the
+# same file while each stayed consistent with itself.
 #
 # Usage:
 #   bash scripts/test/check-suite-ci-coverage.sh [--self-test] [--root <dir>]
@@ -44,6 +64,11 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# shellcheck source=scripts/test/suite-manifest.sh
+. "$SCRIPT_DIR/suite-manifest.sh"
+# shellcheck source=scripts/test/invocation-scan.sh
+. "$DEFAULT_ROOT/scripts/test/invocation-scan.sh"
+
 MODE="default"
 ROOT=""
 while [ $# -gt 0 ]; do
@@ -56,74 +81,24 @@ while [ $# -gt 0 ]; do
 done
 ROOT="${ROOT:-$DEFAULT_ROOT}"
 
-# ---------------------------------------------------------------------------
-# is_excluded <repo-relative path>
-# Each exclusion carries its reason here, in the lint, rather than being
-# inherited from a naming glob — so the intent survives a rename.
-# ---------------------------------------------------------------------------
-is_excluded() {
-  case "$1" in
-    # Sourced libraries, not standalone specs: they have no independent exit
-    # status to register.
-    tests/lib/*.sh) return 0 ;;
-    # The registry runner, not a spec. It is CI-registered anyway, so this
-    # changes no verdict today; it is stated so the set is a decision rather
-    # than a coincidence.
-    tests/run-doc-invariants.sh) return 0 ;;
-    # A VERIFY-time driver, deliberately not CI-registered: its own header
-    # records that its filename deliberately does not match the suite glob and
-    # gives the two measured reasons.
-    tests/issue-59-full-sweep-driver.sh) return 0 ;;
-  esac
-  return 1
-}
+# The subject set and its exclusions are the library's, not this lint's.
+is_excluded()  { suite_is_excluded "$1"; }
+subject_set()  { suite_enumerate "$1"; }
 
-# subject_set <root> — every executable spec under tests/**, minus exclusions.
-subject_set() {
-  local root="$1" f rel
-  [ -d "$root/tests" ] || return 0
-  while IFS= read -r f; do
-    rel="${f#"$root"/}"
-    is_excluded "$rel" || echo "$rel"
-  done < <(find "$root/tests" -type f \( -name '*.sh' -o -name '*.bats' \) | sort)
-}
-
-# invoked_paths <file> — repo-relative spec paths this file invokes as a
-# subprocess. Only lines carrying the `bash` command word are read, so a
-# workflow's `paths:` trigger entry naming a suite is never mistaken for an
-# execution path — a trigger fires the workflow, it does not run the file.
-invoked_paths() {
-  local file="$1"
-  [ -f "$file" ] || return 0
-  grep -h 'bash' "$file" 2>/dev/null \
-    | grep -ohE '(tests|scripts)/[A-Za-z0-9_./-]+\.(sh|bats)' \
-    | sort -u
-}
-
-# reachable_set <root> — the transitive closure described above.
+# reachable_set <root> — every spec a workflow `run:` step invokes directly.
+# The invocation relation itself is scripts/test/invocation-scan.sh's, not this
+# lint's: a private copy here and a second one in the conformance suite were two
+# definitions of one subject, and they disagreed by construction on a
+# block-scalar `run:` and on a quoted grep pattern naming a `run:` line.
 reachable_set() {
-  local root="$1" frontier next seen wf f
-  seen="$(mktemp)"; frontier="$(mktemp)"; next="$(mktemp)"
-  : > "$frontier"
+  local root="$1" wf out
+  out="$(mktemp)"
   for wf in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
     [ -f "$wf" ] || continue
-    invoked_paths "$wf" >> "$frontier"
+    invscan_workflow_invocations "$wf" >> "$out"
   done
-  sort -u "$frontier" -o "$frontier"
-  cat "$frontier" > "$seen"
-  while [ -s "$frontier" ]; do
-    : > "$next"
-    while IFS= read -r f; do
-      [ -n "$f" ] || continue
-      invoked_paths "$root/$f" >> "$next"
-    done < "$frontier"
-    sort -u "$next" -o "$next"
-    comm -23 "$next" <(sort -u "$seen") > "$frontier"
-    cat "$frontier" >> "$seen"
-    sort -u "$seen" -o "$seen"
-  done
-  sort -u "$seen"
-  rm -f "$seen" "$frontier" "$next"
+  sort -u "$out"
+  rm -f "$out"
 }
 
 # unreachable_set <root> — subject set minus reachable set.
@@ -152,10 +127,12 @@ jobs:
       - run: bash tests/fixture-entry.sh
 YML
 
-  # Reachable directly (a run: step names it) and, transitively, the suite it
-  # drives as a subprocess.
-  echo 'bash "$PROJECT_ROOT/tests/fixture-transitive.sh"' > "$dir/tests/fixture-entry.sh"
-  echo 'echo transitive'                                  > "$dir/tests/fixture-transitive.sh"
+  # Reachable: a run: step names it.
+  echo 'echo entry'                                       > "$dir/tests/fixture-entry.sh"
+  # Reachable ONLY through a sibling invocation. Since issue #103 narrowed
+  # reachability to a direct run: step, this is an ORPHAN — the leg that pins
+  # the narrowing, since under the former closure clause it was reported clean.
+  echo 'echo sibling-only'                                > "$dir/tests/fixture-sibling-only.sh"
 
   # Unreachable, and named ONLY by the workflow's paths: trigger — a trigger
   # fires the workflow, it does not execute the file.
@@ -166,11 +143,10 @@ YML
   # Unreachable .bats: bats is unavailable in CI, so it has no execution path.
   echo '@test "x" { true; }'                              > "$dir/tests/fixture-orphan.bats"
 
-  # Each of the three named exclusions, all unreachable: the subtraction must
-  # drop them, and only them.
+  # Each named exclusion, all unreachable: the subtraction must drop them, and
+  # only them.
   echo 'true'                                             > "$dir/tests/lib/fixture-helper.sh"
   echo 'true'                                             > "$dir/tests/run-doc-invariants.sh"
-  echo 'true'                                             > "$dir/tests/issue-59-full-sweep-driver.sh"
 }
 
 self_test() {
@@ -179,14 +155,15 @@ self_test() {
   build_fixture_tree "$dir"
   out="$(unreachable_set "$dir")"
 
-  # --- CLOSURE leg -------------------------------------------------------
-  # The lint finds an unreachable suite it looks at, and does NOT report a
-  # suite made reachable only through a transitive `bash <path>` edge.
-  expected="$(printf 'tests/fixture-orphan.bats\ntests/fixture-orphan.sh\ntests/plugin/verify-fixture-orphan.sh\n')"
+  # --- DIRECT-REACHABILITY leg -------------------------------------------
+  # Every known-unreachable fixture suite is reported, INCLUDING the one a
+  # sibling invokes: since issue #103 reachability is a direct run: step, and a
+  # sibling edge is itself a leaf-rule violation rather than a route.
+  expected="$(printf 'tests/fixture-orphan.bats\ntests/fixture-orphan.sh\ntests/fixture-sibling-only.sh\ntests/plugin/verify-fixture-orphan.sh\n')"
   if [ "$(printf '%s\n' "$out" | sort)" = "$(printf '%s\n' "$expected" | sort)" ]; then
-    echo "check-suite-ci-coverage: --self-test CLOSURE leg OK — the known-unreachable fixture suites are reported and the transitively-invoked one is not"
+    echo "check-suite-ci-coverage: --self-test DIRECT-REACHABILITY leg OK — every known-unreachable fixture suite is reported, the sibling-only one included: a transitive-closure edge is no longer a reachability route"
   else
-    echo "check-suite-ci-coverage: --self-test CLOSURE leg FAILED"
+    echo "check-suite-ci-coverage: --self-test DIRECT-REACHABILITY leg FAILED — a transitive-closure edge must not count as a reachability route"
     echo "  expected unreachable: $(printf '%s' "$expected" | tr '\n' ' ')"
     echo "  reported unreachable: $(printf '%s' "$out" | tr '\n' ' ')"
     rc=1
@@ -197,7 +174,7 @@ self_test() {
   # is asserted NOT excluded. Without this leg the criterion is satisfiable by
   # broadening the exclusions until the subject set is empty.
   local p
-  for p in tests/lib/fixture-helper.sh tests/run-doc-invariants.sh tests/issue-59-full-sweep-driver.sh; do
+  for p in tests/lib/fixture-helper.sh tests/run-doc-invariants.sh; do
     if printf '%s\n' "$out" | grep -qxF "$p"; then
       echo "check-suite-ci-coverage: --self-test EXCLUSION leg FAILED — $p should be excluded from the subject set but was reported"
       rc=1
@@ -208,10 +185,10 @@ self_test() {
     fi
   done
   if is_excluded tests/plugin/verify-fixture-orphan.sh; then
-    echo "check-suite-ci-coverage: --self-test EXCLUSION leg FAILED — a path outside the three named exclusions is being excluded (over-broad subtraction)"
+    echo "check-suite-ci-coverage: --self-test EXCLUSION leg FAILED — a path outside the named exclusions is being excluded (over-broad subtraction)"
     rc=1
   fi
-  [ "$rc" -eq 0 ] && echo "check-suite-ci-coverage: --self-test EXCLUSION leg OK — the three named exclusions are subtracted and nothing outside them is"
+  [ "$rc" -eq 0 ] && echo "check-suite-ci-coverage: --self-test EXCLUSION leg OK — the named exclusions are subtracted and nothing outside them is"
 
   rm -rf "$dir"
   return $rc
@@ -237,5 +214,6 @@ fi
 
 echo "check-suite-ci-coverage: suite(s) with zero execution paths:"
 printf '%s\n' "$UNREACHABLE" | sed 's/^/  /'
-echo "Each is either wired into a workflow's run: steps (or invoked by a suite that is), or deleted with a §5 disposition row in docs/doc-invariant-registry.md. There is no exemption list."
+echo "Each is either wired into a workflow's run: steps, or deleted with a §5 disposition row in docs/doc-invariant-registry.md. There is no exemption list."
+echo "A sibling invocation is not an execution path: scripts/test/check-suite-leaf.sh denies it."
 exit 1

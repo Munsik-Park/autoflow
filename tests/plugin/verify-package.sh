@@ -1,6 +1,9 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude-plugin/marketplace.json .claude/hooks/check-autoflow-gate.sh .claude/hooks/check-read-dedup.sh README.md plugin/autoflow/hooks/check-autoflow-gate.sh plugin/autoflow/skills/epic-dash/SKILL.md plugin/autoflow/skills/install/SKILL.md setup/SETUP-GUIDE.md setup/manifest.json setup/thin-root-layer/settings-pin.json
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: plugin packaging acceptance suite — Issue #790 [#785-S4a]
 # =============================================================================

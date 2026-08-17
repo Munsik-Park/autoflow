@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude-plugin/marketplace.json .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml .github/workflows/workflow-regression.yml CLAUDE.md docs/autoflow-guide.md docs/design-rationale.md docs/submodule-common-rules.md docs/teammate-contracts.md plugin/autoflow/.claude-plugin/plugin.json setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/lib/harness-pins.sh tests/manual/issue-62-manual-scenarios.md tests/manual/issue-67-manual-scenarios.md tests/run-doc-invariants.sh
+# lane: standing
+# cycle-arm: #67
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: ARCHITECT deliberation record redesign — Issue #67 (cycle-scoped)
 # =============================================================================
@@ -12,11 +16,10 @@
 # doc-invariant registry fence, the version/manifest bump, CI registration, the
 # carry-anchor re-anchoring (three halves), and the branch-scoped change-surface guard.
 #
-# Known-RED mid-cycle (verification design §6 step 3, mirroring the #62 idiom): the
-# shared harness ok-count has two OTHER pin homes — tests/test-issue-27-composition-oracle.sh
-# and tests/test-issue-59-adoption-evidence-discipline.sh — bumped by the Developer AI in
-# the SAME commit as the run.mjs change, not here. Until GREEN lands, this suite's own
-# ok-count assertion (AC-67-OKCOUNT) is expected FAIL, documented in-line, not a defect.
+# The mid-cycle known-RED note this header used to carry described a synchronised
+# bump across two foreign harness ok-count pin homes. Issue #103 single-sourced
+# that pin into tests/lib/harness-pins.sh, so there are no foreign homes and no
+# such window; the lane is disposed in place below.
 # =============================================================================
 
 set -uo pipefail
@@ -36,18 +39,12 @@ PLUGIN_JSON="$PROJECT_ROOT/plugin/autoflow/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$PROJECT_ROOT/.claude-plugin/marketplace.json"
 SUITE_56="$PROJECT_ROOT/tests/test-issue-56-carry-evidence-discipline.sh"
 SUITE_59="$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh"
-SUITE_27="$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"
 REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 source "$PROJECT_ROOT/tests/lib/base-ref.sh"
 
 # EXPECTED version for this cycle (0.1.7 -> 0.1.8, issue #88 retirement + version bump).
 EXPECTED_VERSION="0.1.8"
-# EXPECTED_OK: measured, not predicted (verification design §4 Element 1) — this literal
-# is a placeholder pin updated by the RED lane in the SAME commit as GREEN's run.mjs change
-# (verification design §6 step 3). It is NOT read as the pass/fail source of truth for
-# AC-67-OKCOUNT below; that assertion measures the real harness and cross-checks the two
-# OTHER live homes directly, so a stale value here cannot silently mask a real drift.
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -80,14 +77,15 @@ assert_true "AC-67-HARNESS-a: node test/workflows/run.mjs exits 0 (KNOWN RED mid
 assert_true "AC-67-HARNESS-b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
 
-# =============================================================================
-echo ""
-echo "=== Element 1 (composition oracle, non-mock, unconditional) — shared harness ok-count pin agrees across all three homes (ok-count-pins-agree) ==="
-
-CANON_LITERAL_27="$(grep -F 'AC-27-20c' "$SUITE_27" | grep -oE '\-eq [0-9]+ \]"$' | grep -oE '[0-9]+' | tail -1)"
-EXPECTED_OK_59="$(grep -oE '^EXPECTED_OK=[0-9]+' "$SUITE_59" | grep -oE '[0-9]+' | tail -1)"
-assert_true "AC-67-OKCOUNT: real harness ok-line count ($OK_COUNT) == test-issue-27's pin ($CANON_LITERAL_27) == test-issue-59's EXPECTED_OK ($EXPECTED_OK_59) (KNOWN RED mid-cycle — both foreign homes are bumped by GREEN's commit, verification design §6 step 3)" \
-  "[ \"$OK_COUNT\" = \"$CANON_LITERAL_27\" ] && [ \"$OK_COUNT\" = \"$EXPECTED_OK_59\" ]"
+# The ok-count-pins-agree lane is retired by issue #103. It read the shared
+# harness ok-count out of two FOREIGN homes by their literal text and asserted
+# the three agreed. Single-sourcing the pin into
+# tests/lib/harness-pins.sh leaves one home, so there is nothing to agree: an
+# equality check between two reads of one constant is unfalsifiable. The
+# property that survives — one authoring home — is carried by
+# scripts/test/check-suite-manifest.sh's single-authorship arm, and the pin's
+# teeth by tests/test-issue-27-composition-oracle.sh, which compares the sourced
+# constant against the live `node test/workflows/run.mjs` measurement.
 
 # =============================================================================
 echo ""
@@ -143,25 +141,24 @@ done
 echo ""
 echo "=== AC13 (doc-invariants-preserved) — the permanent registry rows scoped to the edited ARCHITECT section still hold ==="
 
-DOC_INV_OUT="$(cd "$PROJECT_ROOT" && bash tests/run-doc-invariants.sh 2>&1)"
-DOC_INV_EXIT=$?
-assert_true "AC-67-DOCINV: tests/run-doc-invariants.sh exits 0 (949-AC3-arch-prereg / 949-AC3-arch-derived-member / 949-preserve-arch-fdd unaffected)" \
-  "[ $DOC_INV_EXIT -eq 0 ]"
+# AC-67-DOCINV is retired by issue #103's leaf rule: the registry runner carries
+# its own `run:` steps in both plain and --self-test modes, so re-running it here
+# was duplicate execution of an already-covered surface.
+#
+# The registry rows this AC named (949-AC3-arch-prereg, 949-AC3-arch-derived-member,
+# 949-preserve-arch-fdd) are asserted where they live — in
+# tests/fixtures/doc-invariants.json, executed by those steps.
 
 # =============================================================================
 echo ""
 echo "=== AC19 (carry-anchor-guards-re-anchored) — no live shell assertion still greps the retired openCounters carry anchor ==="
 
-OUT_56="$(cd "$PROJECT_ROOT" && bash "$SUITE_56" 2>&1)"; EXIT_56=$?
-OUT_59="$(cd "$PROJECT_ROOT" && bash "$SUITE_59" 2>&1)"; EXIT_59=$?
-assert_true "AC-67-ANCHOR-a1: bash tests/test-issue-56-carry-evidence-discipline.sh exits 0" "[ $EXIT_56 -eq 0 ]"
-# KNOWN RED mid-cycle (mirrors the #62 AC-62-24 idiom): #59's own self-scoped
-# EXPECTED_OK / AC-59-14a cross-pin checks are UNCONDITIONAL (not branch-scoped)
-# and read the shared harness ok-count out of the real test-issue-27 suite,
-# which in turn re-runs node test/workflows/run.mjs — so this exits non-zero for the
-# whole RED/GREEN window, until GREEN lands the register redesign and the ok-count pin
-# bump (verification design §6 step 3). Not a defect in this suite.
-assert_true "AC-67-ANCHOR-a2: bash tests/test-issue-59-adoption-evidence-discipline.sh exits 0 (KNOWN RED mid-cycle — cascades from the harness ok-count/exit-0 pin, bumped only at GREEN)" "[ $EXIT_59 -eq 0 ]"
+# AC-67-ANCHOR-a1 / -a2 are retired by issue #103's leaf rule. Both re-ran a
+# sibling suite to confirm it had not regressed; each sibling carries its own
+# `run:` step, so the confirmation happens once per pass either way. The
+# re-anchoring property itself is unaffected — AC-67-ANCHOR-b/-c1/-c2/-c3 below
+# read the two files' TEXT, which is what "re-anchored" actually means, and
+# needs no execution.
 
 # Assembled from parts, not written as one contiguous literal: this suite's OWN source
 # must not accidentally match its own sweep pattern (a literal grep argument would sit in

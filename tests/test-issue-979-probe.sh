@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/preflight/check-review-backend.sh scripts/review/lib/claude-isolation.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: reviewer --probe surface — Issue #979 (cycle 9, review-response)
 # =============================================================================
@@ -269,15 +271,11 @@ if [ -x "$CHECK_SCRIPT" ]; then
   assert_true "C9-AC-5 (R3 load-bearing guard): the default (no --probe) path never invoked the claude stub's round-trip body (capture empty — presence-only never execs the CLI)" \
     "[ ! -s '$CAPTURE_CLAUDE' ]"
 
-  echo ""
-  echo "=== C9-AC-5 (regression pin) — the full existing presence-only suite stays green ==="
-  PREFLIGHT_SUITE="$PROJECT_ROOT/tests/test-issue-979-preflight-backend-check.sh"
-  PREFLIGHT_SUITE_LOG="$(mktemp)"
-  bash "$PREFLIGHT_SUITE" >"$PREFLIGHT_SUITE_LOG" 2>&1
-  PREFLIGHT_SUITE_EXIT=$?
-  assert_true "C9-AC-5 (regression pin): tests/test-issue-979-preflight-backend-check.sh (presence-only baseline) is unaffected and stays green" \
-    "[ '$PREFLIGHT_SUITE_EXIT' -eq 0 ]"
-  rm -f "$PREFLIGHT_SUITE_LOG" 2>/dev/null
+  # C9-AC-5's whole-suite regression pin over
+  # tests/test-issue-979-preflight-backend-check.sh is retired (issue #103):
+  # that suite carries its own registered `run:` step, so a regression in it
+  # reds CI under its own name. Disposition row:
+  # docs/doc-invariant-registry.md §12.1.
 
   echo ""
   echo "=== C9-AC-7 (claude probe reuses the isolation triple + OAuth carve-out, DCR-4) ==="
@@ -340,13 +338,10 @@ rm -f "$CAPTURE_CLAUDE" "$CAPTURE_CODEX" 2>/dev/null
 echo ""
 echo "=== C9-AC-6 (HANDOFF step-6 runtime surfacing unchanged — behavior-preservation, DCR-6) ==="
 
-REVIEW_BACKEND_SUITE="$PROJECT_ROOT/tests/test-issue-979-review-backend.sh"
-REVIEW_BACKEND_SUITE_LOG="$(mktemp)"
-bash "$REVIEW_BACKEND_SUITE" >"$REVIEW_BACKEND_SUITE_LOG" 2>&1
-REVIEW_BACKEND_SUITE_EXIT=$?
-assert_true "C9-AC-6 (behavior-preservation regression guard): tests/test-issue-979-review-backend.sh (asserts the claude branch's observed isolation env/argv, not merely run/exit) stays green after the §3.2 extract" \
-  "[ '$REVIEW_BACKEND_SUITE_EXIT' -eq 0 ]"
-rm -f "$REVIEW_BACKEND_SUITE_LOG" 2>/dev/null
+# C9-AC-6's whole-suite regression guard over
+# tests/test-issue-979-review-backend.sh is retired (issue #103): that suite
+# carries its own registered `run:` step. Disposition row:
+# docs/doc-invariant-registry.md §12.1.
 
 assert_true "C9-AC-6 (doc-invariant): docs/reviewer-backend.md's start-confirmation / step-6 section still states auth failure surfaces at HANDOFF step 6" \
   "[ -f '$REVIEWER_BACKEND_MD' ] && grep -qi 'step 6' '$REVIEWER_BACKEND_MD' && grep -qi 'surfaces' '$REVIEWER_BACKEND_MD'"

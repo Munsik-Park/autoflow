@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: plugin/autoflow/skills/ setup/manifest.json
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: /autoflow:install skill-shipped scripts (detect.sh, scaffold-identity.sh)
 # Issue #943 — marketplace-cache-based root-layer stamp

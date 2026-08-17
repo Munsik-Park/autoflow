@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/handoff/confirm-ci-green.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: HANDOFF step-5 CI-green confirm helper — dedup false-red fix, Issue #30
 # =============================================================================
@@ -30,8 +32,9 @@
 #   same-context StatusContext dedup) FAILs at RED alongside the
 #   behavior-changing set.
 #
-# GREEN expectation: all of AC-30-1..-11 PASS; the issue-25 suite (AC-30-10)
-# stays green.
+# GREEN expectation: all of AC-30-1..-11 PASS. (AC-30-10's whole-suite fence
+# over tests/test-issue-25-confirm-ci-green.sh was retired by issue #103 — that
+# suite carries its own registered CI step.)
 #
 # Self-guard (SIGPIPE-safe pipes, docs/submodule-common-rules.md > Testing
 # Standards item 6): every assertion captures its producer into a variable
@@ -45,7 +48,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCRIPT="$PROJECT_ROOT/scripts/handoff/confirm-ci-green.sh"
 MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
-ISSUE25_SUITE="$PROJECT_ROOT/tests/test-issue-25-confirm-ci-green.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -66,22 +68,6 @@ assert_false() {
     echo "  FAIL: $desc (forbidden condition held)"; FAIL=$((FAIL + 1))
   else
     echo "  PASS: $desc"; PASS=$((PASS + 1))
-  fi
-}
-
-# Passthrough for the issue-25 sub-suite legs below: a non-zero exit only
-# ever surfaced as this script's own generic "exits 0" / "reports 0 failed"
-# assertion text -- the inner suite's actual FAIL: lines and Results: line
-# were captured into a variable and never echoed, so a CI failure here gave
-# no diagnosable detail (round-4 finding: 93/94 on the ubuntu runner,
-# invisible in the CI log). Prints the captured output's FAIL/Results lines
-# to stdout whenever the sub-suite did not exit 0.
-print_issue25_diagnostics() {
-  local output="$1" rc="$2"
-  if [ "$rc" -ne 0 ]; then
-    echo "  --- issue-25 sub-suite exited $rc; passing through its FAIL/Results lines ---"
-    printf '%s\n' "$output" | grep -E '^  FAIL:|^Results: '
-    echo "  --- end issue-25 sub-suite diagnostics ---"
   fi
 }
 
@@ -401,19 +387,11 @@ assert_true "AC-30-9: dedup resolves to the later pending entry -> exit 13 at de
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
 rm -f "$GH_INVOCATION_LOG" "$AC9_LOG"
 
-# =============================================================================
-echo ""
-echo "=== AC-30-10 (full existing issue-25 suite still green — regression fence for the whole script) ==="
-
-ISSUE25_OUTPUT="$(bash "$ISSUE25_SUITE" 2>&1)"
-ISSUE25_RC=$?
-print_issue25_diagnostics "$ISSUE25_OUTPUT" "$ISSUE25_RC"
-assert_true "AC-30-10: tests/test-issue-25-confirm-ci-green.sh exits 0" \
-  "[ \"\$ISSUE25_RC\" -eq 0 ]"
-ISSUE25_RESULTS_LINE="$(printf '%s\n' "$ISSUE25_OUTPUT" | grep -E '^Results: ' | tail -n 1)"
-assert_true "AC-30-10: issue-25 suite reports 0 failed" \
-  "printf '%s' \"\$ISSUE25_RESULTS_LINE\" | grep -qE '0 failed'"
-echo "  (issue-25 suite: $ISSUE25_RESULTS_LINE)"
+# AC-30-10's whole-suite fence over tests/test-issue-25-confirm-ci-green.sh is
+# retired (issue #103): that suite carries its own registered `run:` step, so a
+# regression in it reds CI under its own name once rather than twice, and
+# attributing a failure to the right suite is what per-step registration buys.
+# Disposition row: docs/doc-invariant-registry.md §12.1.
 
 # =============================================================================
 echo ""
@@ -655,17 +633,8 @@ assert_true "AC-30-20: all-terminal tie order B still exits 12" "[ \"\$AC20_EXIT
 
 # =============================================================================
 echo ""
-echo "=== AC-30-21 (full existing issue-30 + issue-25 suites still green) ==="
+echo "=== AC-30-21 (full existing issue-30 suite still green) ==="
 
-ISSUE25_OUTPUT_21="$(bash "$ISSUE25_SUITE" 2>&1)"
-ISSUE25_RC_21=$?
-print_issue25_diagnostics "$ISSUE25_OUTPUT_21" "$ISSUE25_RC_21"
-assert_true "AC-30-21: tests/test-issue-25-confirm-ci-green.sh exits 0" \
-  "[ \"\$ISSUE25_RC_21\" -eq 0 ]"
-ISSUE25_RESULTS_LINE_21="$(printf '%s\n' "$ISSUE25_OUTPUT_21" | grep -E '^Results: ' | tail -n 1)"
-assert_true "AC-30-21: issue-25 suite reports 0 failed" \
-  "printf '%s' \"\$ISSUE25_RESULTS_LINE_21\" | grep -qE '0 failed'"
-echo "  (issue-25 suite: $ISSUE25_RESULTS_LINE_21)"
 echo "  (issue-30 whole-suite fence: this script's own Results footer below covers AC-30-1..-23)"
 
 # =============================================================================
@@ -922,17 +891,8 @@ assert_true "AC-30-29: classify_rollup's jq program emits no stderr on the mixed
 
 # =============================================================================
 echo ""
-echo "=== AC-30-30 (full existing issue-30 + issue-25 suites still green) ==="
+echo "=== AC-30-30 (full existing issue-30 suite still green) ==="
 
-ISSUE25_OUTPUT_30="$(bash "$ISSUE25_SUITE" 2>&1)"
-ISSUE25_RC_30=$?
-print_issue25_diagnostics "$ISSUE25_OUTPUT_30" "$ISSUE25_RC_30"
-assert_true "AC-30-30: tests/test-issue-25-confirm-ci-green.sh exits 0" \
-  "[ \"\$ISSUE25_RC_30\" -eq 0 ]"
-ISSUE25_RESULTS_LINE_30="$(printf '%s\n' "$ISSUE25_OUTPUT_30" | grep -E '^Results: ' | tail -n 1)"
-assert_true "AC-30-30: issue-25 suite reports 0 failed" \
-  "printf '%s' \"\$ISSUE25_RESULTS_LINE_30\" | grep -qE '0 failed'"
-echo "  (issue-25 suite: $ISSUE25_RESULTS_LINE_30)"
 echo "  (issue-30 whole-suite fence: this script's own Results footer below covers AC-30-1..-29)"
 
 # =============================================================================
@@ -1219,17 +1179,8 @@ done
 
 # =============================================================================
 echo ""
-echo "=== AC-30-38 (full existing issue-30 + issue-25 suites still green) ==="
+echo "=== AC-30-38 (full existing issue-30 suite still green) ==="
 
-ISSUE25_OUTPUT_38="$(bash "$ISSUE25_SUITE" 2>&1)"
-ISSUE25_RC_38=$?
-print_issue25_diagnostics "$ISSUE25_OUTPUT_38" "$ISSUE25_RC_38"
-assert_true "AC-30-38: tests/test-issue-25-confirm-ci-green.sh exits 0" \
-  "[ \"\$ISSUE25_RC_38\" -eq 0 ]"
-ISSUE25_RESULTS_LINE_38="$(printf '%s\n' "$ISSUE25_OUTPUT_38" | grep -E '^Results: ' | tail -n 1)"
-assert_true "AC-30-38: issue-25 suite reports 0 failed" \
-  "printf '%s' \"\$ISSUE25_RESULTS_LINE_38\" | grep -qE '0 failed'"
-echo "  (issue-25 suite: $ISSUE25_RESULTS_LINE_38)"
 echo "  (issue-30 whole-suite fence: this script's own Results footer below covers AC-30-1..-37, -39 and -40)"
 
 # =============================================================================

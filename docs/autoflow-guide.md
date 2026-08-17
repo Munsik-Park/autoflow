@@ -437,9 +437,27 @@ The Test AI writes test code from the verification design.
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
-**Naming**: an issue number belongs in a test file name only when that file is cycle-scoped — retired in the cycle's final commit per `docs/doc-invariant-registry.md` §2. A standing test is subject-named.
+**Header contract**: every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
 
-**Completion**: all automated tests Red + manual scenarios written.
+  ```
+  # ci-subject: <path-or-glob> [<path-or-glob> ...]
+  # lane: standing | cycle-scoped
+  # retire-with: #<issue-number>      (required iff lane: cycle-scoped)
+  # cycle-arm: #<issue-number>        (required iff a path allow-list array)
+  # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
+  ```
+
+- `ci-subject` — the trigger surface. It is no longer only a coverage declaration: `scripts/test/select-suites.sh` consumes it to decide which suites a change requires, so an under-declared surface is a coverage hole, not a cosmetic gap.
+- `lane` — `standing` asserts permanent state and lives forever; `cycle-scoped` asserts its own cycle's landed diff and is inert off its own dev branch. This is the two-lane rule of `docs/doc-invariant-registry.md` extended from doc checks to suites, and it is what makes the naming rule below machine-readable rather than remembered.
+- `retire-with` — names the issue whose merge retires a cycle-scoped suite.
+- `cycle-arm` — names the cycle whose landed diff a change-surface allow-list array asserts, and is the sole issue-number source of `scripts/test/check-cycle-scope-guard.sh`'s branch-gate match. It is separate from `retire-with` because a **standing** suite may carry a cycle-scoped arm; collapsing the two would mark live standing suites for retirement.
+- `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim, so a guessed budget is not a representable state. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
+
+**Naming**: an issue number belongs in a test file name only when that file is cycle-scoped — retired in the cycle's final commit per `docs/doc-invariant-registry.md` §2. A standing test is subject-named. The `lane` field above is the declaration; the filename is a convention that follows it.
+
+**Leaf rule**: a suite executes its subject, not another suite. A sibling's regression is caught by that sibling's own CI step, under its own name; re-running it here is duplicate execution. Enforced by `scripts/test/check-suite-leaf.sh`.
+
+**Completion**: all automated tests Red + every new spec conforming to the header contract above + manual scenarios written.
 
 ---
 

@@ -6483,6 +6483,28 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "docs/issue-proposal.md"
+    },
+    {
+      "id": "103-AC-doc-contracts-red-header-contract",
+      "origin_issue": 103,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "RED — Test Writing (Test First)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "header contract"
+    },
+    {
+      "id": "103-AC-doc-contracts-testing-standards-runner",
+      "origin_issue": 103,
+      "intent": "coherence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Testing Standards",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "run-suites.sh"
     }
   ]
 }

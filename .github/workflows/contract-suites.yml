@@ -81,7 +81,7 @@ on:
       - 'tests/fixtures/gate-schema.json'
       - 'tests/issue-92/mock-gh/**'
       - 'tests/issue-create/**'
-      - 'tests/lib/base-ref.sh'
+      - 'tests/lib/**'
       - 'tests/manual/**'
       - 'tests/plugin/verify-install-into-target.sh'
       - 'tests/plugin/verify-install-skill-scripts.sh'
@@ -114,6 +114,27 @@ on:
       - 'tests/test-run-doc-invariants.sh'
       - 'tests/test-standing-lint-drives.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
+      - 'scripts/test/check-cycle-scope-guard.sh'
+      - 'scripts/test/check-maintained-docs-sync.sh'
+      - 'scripts/test/check-step-reconciliation.sh'
+      - 'scripts/test/check-suite-leaf.sh'
+      - 'scripts/test/check-suite-manifest.sh'
+      - 'scripts/test/run-suites.sh'
+      - 'scripts/test/invocation-scan.sh'
+      - 'scripts/test/select-suites.sh'
+      - 'scripts/test/suite-manifest.sh'
+      - 'tests/manual/issue-103-manual-scenarios.md'
+      - 'tests/test-issue-103-central-runner.sh'
+      - 'tests/test-issue-103-cycle-scope-repoint.sh'
+      - 'tests/test-issue-103-orphan-coverage.sh'
+      - 'tests/test-issue-103-pin-and-docs.sh'
+      - 'tests/test-issue-103-step-reconciliation.sh'
+      - 'tests/test-issue-103-suite-leaf.sh'
+      - 'tests/test-issue-103-suite-manifest.sh'
+      - 'tests/test-issue-103-workflow-conformance.sh'
+      - 'README.md'
+      - 'setup/SETUP-GUIDE.md'
+      - 'test/workflows/run.mjs'
   push:
     branches: [main]
     paths:
@@ -161,7 +182,7 @@ on:
       - 'tests/fixtures/gate-schema.json'
       - 'tests/issue-92/mock-gh/**'
       - 'tests/issue-create/**'
-      - 'tests/lib/base-ref.sh'
+      - 'tests/lib/**'
       - 'tests/manual/**'
       - 'tests/plugin/verify-install-into-target.sh'
       - 'tests/plugin/verify-install-skill-scripts.sh'
@@ -194,6 +215,27 @@ on:
       - 'tests/test-run-doc-invariants.sh'
       - 'tests/test-standing-lint-drives.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
+      - 'scripts/test/check-cycle-scope-guard.sh'
+      - 'scripts/test/check-maintained-docs-sync.sh'
+      - 'scripts/test/check-step-reconciliation.sh'
+      - 'scripts/test/check-suite-leaf.sh'
+      - 'scripts/test/check-suite-manifest.sh'
+      - 'scripts/test/run-suites.sh'
+      - 'scripts/test/invocation-scan.sh'
+      - 'scripts/test/select-suites.sh'
+      - 'scripts/test/suite-manifest.sh'
+      - 'tests/manual/issue-103-manual-scenarios.md'
+      - 'tests/test-issue-103-central-runner.sh'
+      - 'tests/test-issue-103-cycle-scope-repoint.sh'
+      - 'tests/test-issue-103-orphan-coverage.sh'
+      - 'tests/test-issue-103-pin-and-docs.sh'
+      - 'tests/test-issue-103-step-reconciliation.sh'
+      - 'tests/test-issue-103-suite-leaf.sh'
+      - 'tests/test-issue-103-suite-manifest.sh'
+      - 'tests/test-issue-103-workflow-conformance.sh'
+      - 'README.md'
+      - 'setup/SETUP-GUIDE.md'
+      - 'test/workflows/run.mjs'
 
 permissions:
   contents: read
@@ -217,96 +259,259 @@ jobs:
           # be read as a no-op guard and trimmed.
           fetch-depth: 0
 
+      # Selection (issue #103): scripts/test/select-suites.sh is the SOLE owner of
+      # "which suites does this change require". Each governed suite step below
+      # guards on this step's output; nothing here reimplements the predicate.
+      # Under a push event, or an empty delta from a resolved base, it selects
+      # the full set — the push delta is empty by construction, so a purely
+      # delta-driven selector would silently lose all coverage.
+      - id: select
+        name: select suites for this change
+        run: |
+          rc=0
+          bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
+            > "$RUNNER_TEMP/selected-raw.txt" \
+            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
+          cat "$RUNNER_TEMP/selection-report.txt"
+          if [ "$rc" -ne 0 ]; then
+            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
+            exit "$rc"
+          fi
+          paste -sd' ' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
+          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
+
       - name: test-workflow-trigger-conformance.sh
+        id: s-test-workflow-trigger-conformance
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-workflow-trigger-conformance.sh ')
+        timeout-minutes: 10
         run: bash tests/test-workflow-trigger-conformance.sh
 
       - name: test-standing-lint-drives.sh
+        id: s-test-standing-lint-drives
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-standing-lint-drives.sh ')
+        timeout-minutes: 10
         run: bash tests/test-standing-lint-drives.sh
 
       - name: test-push-context-base-ref.sh
+        id: s-test-push-context-base-ref
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-push-context-base-ref.sh ')
+        timeout-minutes: 10
         run: bash tests/test-push-context-base-ref.sh
 
       - name: test-bounded-execution-fallback.sh
+        id: s-test-bounded-execution-fallback
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-bounded-execution-fallback.sh ')
+        timeout-minutes: 10
         run: bash tests/test-bounded-execution-fallback.sh
 
       - name: adr-0016-conformance-check.sh
+        id: s-adr-0016-conformance-check
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/adr-0016-conformance-check.sh ')
+        timeout-minutes: 10
         run: bash tests/adr-0016-conformance-check.sh
 
       - name: verify-install-into-target.sh
+        id: s-verify-install-into-target
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/plugin/verify-install-into-target.sh ')
+        timeout-minutes: 10
         run: bash tests/plugin/verify-install-into-target.sh
 
       - name: verify-install-skill-scripts.sh
+        id: s-verify-install-skill-scripts
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/plugin/verify-install-skill-scripts.sh ')
+        timeout-minutes: 10
         run: bash tests/plugin/verify-install-skill-scripts.sh
 
       - name: verify-thin-root-layer.sh
+        id: s-verify-thin-root-layer
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/plugin/verify-thin-root-layer.sh ')
+        timeout-minutes: 10
         run: bash tests/plugin/verify-thin-root-layer.sh
 
       - name: test-codex-review-label-step.sh
+        id: s-test-codex-review-label-step
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-codex-review-label-step.sh ')
+        timeout-minutes: 10
         run: bash tests/test-codex-review-label-step.sh
 
       - name: test-gate-hardening.sh
+        id: s-test-gate-hardening
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-gate-hardening.sh ')
+        timeout-minutes: 10
         run: bash tests/test-gate-hardening.sh
 
       - name: test-ledger-entry-id.sh
+        id: s-test-ledger-entry-id
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-ledger-entry-id.sh ')
+        timeout-minutes: 10
         run: bash tests/test-ledger-entry-id.sh
 
       - name: test-issue-16-manifest-locale-invariance.sh
+        id: s-test-issue-16-manifest-locale-invariance
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-16-manifest-locale-invariance.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-16-manifest-locale-invariance.sh
 
       - name: test-issue-18-fixture-glob-isolation.sh
+        id: s-test-issue-18-fixture-glob-isolation
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-18-fixture-glob-isolation.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-18-fixture-glob-isolation.sh
 
       - name: test-issue-245-schema-validation.sh
+        id: s-test-issue-245-schema-validation
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-245-schema-validation.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-245-schema-validation.sh
 
       - name: test-issue-25-confirm-ci-green.sh
+        id: s-test-issue-25-confirm-ci-green
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-25-confirm-ci-green.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-25-confirm-ci-green.sh
 
       - name: test-issue-30-confirm-ci-green.sh
+        id: s-test-issue-30-confirm-ci-green
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-30-confirm-ci-green.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-30-confirm-ci-green.sh
 
       - name: test-issue-40-hook-additive.sh
+        id: s-test-issue-40-hook-additive
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-40-hook-additive.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-40-hook-additive.sh
 
       - name: test-issue-64-collection-scope.sh
+        id: s-test-issue-64-collection-scope
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-64-collection-scope.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-64-collection-scope.sh
 
 
       - name: test-issue-795-handoff-removal.sh
+        id: s-test-issue-795-handoff-removal
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-795-handoff-removal.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-795-handoff-removal.sh
 
       - name: test-issue-92-host-pr-execution.sh
+        id: s-test-issue-92-host-pr-execution
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-92-host-pr-execution.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-92-host-pr-execution.sh
 
       - name: test-issue-961-cap6-gate.sh
+        id: s-test-issue-961-cap6-gate
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-961-cap6-gate.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-961-cap6-gate.sh
 
       - name: test-issue-979-bundle-delivery.sh
+        id: s-test-issue-979-bundle-delivery
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-979-bundle-delivery.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-979-bundle-delivery.sh
 
       - name: test-issue-979-doc-neutrality.sh
+        id: s-test-issue-979-doc-neutrality
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-979-doc-neutrality.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-979-doc-neutrality.sh
 
       - name: test-issue-979-preflight-backend-check.sh
+        id: s-test-issue-979-preflight-backend-check
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-979-preflight-backend-check.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-979-preflight-backend-check.sh
 
       - name: test-issue-979-probe.sh
+        id: s-test-issue-979-probe
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-979-probe.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-979-probe.sh
 
       - name: test-issue-979-review-backend.sh
+        id: s-test-issue-979-review-backend
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-979-review-backend.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-979-review-backend.sh
 
       - name: test-issue-create-gate.sh
+        id: s-test-issue-create-gate
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-create-gate.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-create-gate.sh
 
       - name: test-issue-create-wrapper.sh
+        id: s-test-issue-create-wrapper
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-create-wrapper.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-create-wrapper.sh
 
       - name: test-issue-985-doc-assertions.sh
+        id: s-test-issue-985-doc-assertions
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-985-doc-assertions.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-985-doc-assertions.sh
 
       - name: test-run-doc-invariants.sh
+        id: s-test-run-doc-invariants
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-run-doc-invariants.sh ')
+        timeout-minutes: 10
         run: bash tests/test-run-doc-invariants.sh
+
+      # Issue #103 cycle suites — the suite-governance mechanisms this cycle
+      # lands (header manifest, leaf rule, central runner, step
+      # reconciliation, cycle-scope re-point, orphan coverage, pin
+      # single-sourcing, trigger conformance).
+      - name: test-issue-103-suite-manifest.sh
+        id: s-test-issue-103-suite-manifest
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-suite-manifest.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-103-suite-manifest.sh
+
+      - name: test-issue-103-suite-leaf.sh
+        id: s-test-issue-103-suite-leaf
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-suite-leaf.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-103-suite-leaf.sh
+
+      - name: test-issue-103-central-runner.sh
+        id: s-test-issue-103-central-runner
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-central-runner.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-103-central-runner.sh
+
+      - name: test-issue-103-step-reconciliation.sh
+        id: s-test-issue-103-step-reconciliation
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-step-reconciliation.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-103-step-reconciliation.sh
+
+      - name: test-issue-103-cycle-scope-repoint.sh
+        id: s-test-issue-103-cycle-scope-repoint
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-cycle-scope-repoint.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-103-cycle-scope-repoint.sh
+
+      - name: test-issue-103-orphan-coverage.sh
+        id: s-test-issue-103-orphan-coverage
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-orphan-coverage.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-103-orphan-coverage.sh
+
+      - name: test-issue-103-pin-and-docs.sh
+        id: s-test-issue-103-pin-and-docs
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-pin-and-docs.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-103-pin-and-docs.sh
+
+      - name: test-issue-103-workflow-conformance.sh
+        id: s-test-issue-103-workflow-conformance
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-workflow-conformance.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-103-workflow-conformance.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh
@@ -317,8 +522,39 @@ jobs:
       - name: watchdog detachment lint
         run: bash scripts/test/check-watchdog-detachment.sh
 
+      - name: suite manifest lint
+        run: bash scripts/test/check-suite-manifest.sh
+
+      - name: suite leaf-rule lint
+        run: bash scripts/test/check-suite-leaf.sh
+
+      - name: step-reconciliation self-test
+        run: bash scripts/test/check-step-reconciliation.sh --self-test
+
+      - name: selection self-test
+        run: bash scripts/test/select-suites.sh --self-test
+
+      - name: maintained-docs sync lint
+        run: bash scripts/test/check-maintained-docs-sync.sh
+
       - name: manifest regen-clean lint
         run: bash scripts/test/check-manifest-regen-clean.sh
 
       - name: doc-invariant runner self-test (mutation teeth)
         run: bash tests/run-doc-invariants.sh --self-test
+
+      # Reconciliation (issue #103): a step whose `if:` evaluates false is
+      # SKIPPED and the job still concludes successfully — so a green run is
+      # exactly what a wrongly-false guard produces, and enforcement here is
+      # advisory with no required status check behind it. This step compares the
+      # run's own selection report against the run's own step outcomes, so it
+      # needs no second source of truth.
+      - name: reconcile selection against step outcomes
+        if: always()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          printf '%s' "$STEPS_JSON" > "$RUNNER_TEMP/steps.json"
+          bash scripts/test/check-step-reconciliation.sh \
+            --selected "$RUNNER_TEMP/selection-report.txt" \
+            --steps "$RUNNER_TEMP/steps.json"

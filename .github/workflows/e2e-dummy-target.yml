@@ -44,7 +44,7 @@ on:
       - 'tests/test-issue-847-doc-assertions.sh'
       - 'tests/run-doc-invariants.sh'
       - 'tests/fixtures/doc-invariants.json'
-      - 'tests/lib/base-ref.sh'
+      - 'tests/lib/**'
       - 'docs/repo-boundary-rules.md'
       - 'docs/doc-invariant-registry.md'
       - 'scripts/resync-submodules.sh'
@@ -155,6 +155,34 @@ on:
       # (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero headroom,
       # so nothing is inserted above an existing entry).
       - 'scripts/test/check-cycle-scope-guard.sh'
+      - '.claude-plugin/marketplace.json'
+      - '.claude/hooks/check-autoflow-gate.sh'
+      - '.claude/workflows/architect-deliberation.js'
+      - '.claude/workflows/verify-cause-branch.js'
+      - '.github/workflows/workflow-regression.yml'
+      - 'docs/adr/0000-adr-template.md'
+      - 'docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md'
+      - 'docs/adr/0017-teammate-removal-feasibility.md'
+      - 'docs/adr/README.md'
+      - 'docs/gate-matching-standard.md'
+      - 'docs/improvement-backlog.md'
+      - 'plugin/autoflow/.claude-plugin/plugin.json'
+      - 'plugin/autoflow/agents/autoflow-analyzer.md'
+      - 'scripts/issue/create-issue.sh'
+      - 'scripts/ledger/ledger-entry-id.sh'
+      - 'scripts/test/check-suite-ci-coverage.sh'
+      - 'scripts/test/check-suite-leaf.sh'
+      - 'scripts/test/run-suites.sh'
+      - 'scripts/test/select-suites.sh'
+      - 'test/workflows/run.mjs'
+      - 'tests/adr-0016-conformance-check.sh'
+      - 'tests/issue-create/fixtures/corpus.jsonl'
+      - 'tests/manual/issue-798-manual-scenarios.md'
+      - 'tests/manual/issue-799-manual-scenarios.md'
+      - 'tests/manual/issue-846-manual-scenarios.md'
+      - 'tests/plugin/manual-scenarios-797.md'
+      - 'tests/test-codex-review-label-step.sh'
+      - 'tests/test-gate-hardening.sh'
   push:
     branches: [main]
     paths:
@@ -182,7 +210,7 @@ on:
       - 'tests/test-issue-847-doc-assertions.sh'
       - 'tests/run-doc-invariants.sh'
       - 'tests/fixtures/doc-invariants.json'
-      - 'tests/lib/base-ref.sh'
+      - 'tests/lib/**'
       - 'docs/repo-boundary-rules.md'
       - 'docs/doc-invariant-registry.md'
       - 'scripts/resync-submodules.sh'
@@ -263,6 +291,34 @@ on:
       # #75 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'scripts/test/check-cycle-scope-guard.sh'
+      - '.claude-plugin/marketplace.json'
+      - '.claude/hooks/check-autoflow-gate.sh'
+      - '.claude/workflows/architect-deliberation.js'
+      - '.claude/workflows/verify-cause-branch.js'
+      - '.github/workflows/workflow-regression.yml'
+      - 'docs/adr/0000-adr-template.md'
+      - 'docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md'
+      - 'docs/adr/0017-teammate-removal-feasibility.md'
+      - 'docs/adr/README.md'
+      - 'docs/gate-matching-standard.md'
+      - 'docs/improvement-backlog.md'
+      - 'plugin/autoflow/.claude-plugin/plugin.json'
+      - 'plugin/autoflow/agents/autoflow-analyzer.md'
+      - 'scripts/issue/create-issue.sh'
+      - 'scripts/ledger/ledger-entry-id.sh'
+      - 'scripts/test/check-suite-ci-coverage.sh'
+      - 'scripts/test/check-suite-leaf.sh'
+      - 'scripts/test/run-suites.sh'
+      - 'scripts/test/select-suites.sh'
+      - 'test/workflows/run.mjs'
+      - 'tests/adr-0016-conformance-check.sh'
+      - 'tests/issue-create/fixtures/corpus.jsonl'
+      - 'tests/manual/issue-798-manual-scenarios.md'
+      - 'tests/manual/issue-799-manual-scenarios.md'
+      - 'tests/manual/issue-846-manual-scenarios.md'
+      - 'tests/plugin/manual-scenarios-797.md'
+      - 'tests/test-codex-review-label-step.sh'
+      - 'tests/test-gate-hardening.sh'
 
 permissions:
   contents: read
@@ -277,7 +333,31 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Selection (issue #103): scripts/test/select-suites.sh is the SOLE owner of
+      # "which suites does this change require". Each governed suite step below
+      # guards on this step's output; nothing here reimplements the predicate.
+      # Under a push event, or an empty delta from a resolved base, it selects
+      # the full set — the push delta is empty by construction, so a purely
+      # delta-driven selector would silently lose all coverage.
+      - id: select
+        name: select suites for this change
+        run: |
+          rc=0
+          bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
+            > "$RUNNER_TEMP/selected-raw.txt" \
+            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
+          cat "$RUNNER_TEMP/selection-report.txt"
+          if [ "$rc" -ne 0 ]; then
+            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
+            exit "$rc"
+          fi
+          paste -sd' ' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
+          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
+
       - name: Run throwaway dummy-target E2E acceptance suite
+        id: s-verify-e2e-dummy-target
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/plugin/verify-e2e-dummy-target.sh ')
+        timeout-minutes: 10
         run: bash tests/plugin/verify-e2e-dummy-target.sh
 
       # Topology-flip absence guard (S11a #798): claude-autoflow is the first
@@ -285,6 +365,9 @@ jobs:
       # state must stay asserted in CI (CI has no glob discovery; registered by
       # filename per the sibling suites). See tests/test-issue-798-topology-flip.sh.
       - name: Run topology-flip detach guard (#798)
+        id: s-test-issue-798-topology-flip
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-798-topology-flip.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-798-topology-flip.sh
 
       # Inert/delete cleanup guard (S11b #799): the post-#798 doc surface
@@ -294,6 +377,9 @@ jobs:
       # filename per the sibling suites. See
       # tests/test-issue-799-inert-cleanup.sh.
       - name: Run inert-cleanup guard (#799)
+        id: s-test-issue-799-inert-cleanup
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-799-inert-cleanup.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-799-inert-cleanup.sh
 
       # Doc-invariant registry runner (#951): the single runner that replaces
@@ -318,6 +404,9 @@ jobs:
       # filename per the sibling suites. See
       # tests/test-issue-42-spawn-mode-contract.sh.
       - name: Run spawn-mode contract guard (#42)
+        id: s-test-issue-42-spawn-mode-contract
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-42-spawn-mode-contract.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-42-spawn-mode-contract.sh
 
       # Reporting-channel contract guard (#43, cycle-scoped): the DELTA-shaped
@@ -330,6 +419,9 @@ jobs:
       # registered by filename per the sibling suites. See
       # tests/test-issue-43-report-channel-contract.sh.
       - name: Run report-channel contract guard (#43)
+        id: s-test-issue-43-report-channel-contract
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-43-report-channel-contract.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-43-report-channel-contract.sh
 
       # init.sh legacy wizard removal + Language Rule user-scope reversion
@@ -341,6 +433,9 @@ jobs:
       # filename per the sibling suites. See
       # tests/test-issue-952-wizard-removal.sh.
       - name: Run wizard-removal guard (#952)
+        id: s-test-issue-952-wizard-removal
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-952-wizard-removal.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-952-wizard-removal.sh
 
       # Subagent run_in_background prohibition guard (#955): the canonical
@@ -353,6 +448,9 @@ jobs:
       # CI has no glob discovery; registered by filename per the sibling
       # suites. See tests/test-issue-955-subagent-background-ban.sh.
       - name: Run subagent background-ban guard (#955)
+        id: s-test-issue-955-subagent-background-ban
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-955-subagent-background-ban.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-955-subagent-background-ban.sh
 
       # SIGPIPE-safe assertion pipes guard (#964): the repo-wide zero-remaining
@@ -363,6 +461,9 @@ jobs:
       # filename per the sibling suites. See
       # tests/test-issue-964-sigpipe-safe-pipes.sh.
       - name: Run SIGPIPE-safe assertion pipes guard (#964)
+        id: s-test-issue-964-sigpipe-safe-pipes
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-964-sigpipe-safe-pipes.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-964-sigpipe-safe-pipes.sh
       # Review-triage hardening guard (#846): the .codex/review.md
       # label-clear fallback + gh pr view --json labels verification, the
@@ -373,6 +474,9 @@ jobs:
       # filename per the sibling suites. See
       # tests/test-issue-846-doc-assertions.sh.
       - name: Run review-triage hardening guard (#846)
+        id: s-test-issue-846-doc-assertions
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-846-doc-assertions.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-846-doc-assertions.sh
 
       # Pointer-bump procedure + propagation-batching guard (#848): the
@@ -384,6 +488,9 @@ jobs:
       # discovery; registered by filename per the sibling suites.
       # See tests/test-issue-848-doc-assertions.sh.
       - name: Run pointer-bump procedure guard (#848)
+        id: s-test-issue-848-doc-assertions
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-848-doc-assertions.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-848-doc-assertions.sh
 
       # INTEGRATE deploy/CI-path conditional verification guard (#847): the
@@ -396,6 +503,9 @@ jobs:
       # by filename per the sibling suites. See
       # tests/test-issue-847-doc-assertions.sh.
       - name: Run deploy/CI-path conditional verification guard (#847)
+        id: s-test-issue-847-doc-assertions
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-847-doc-assertions.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-847-doc-assertions.sh
 
       # Cleanup archive-semantics guard (#978): scripts/cleanup/cleanup-issue.sh
@@ -451,6 +561,9 @@ jobs:
       # registered by filename per the sibling suites.
       # See tests/test-issue-35-phase-marker.sh.
       - name: Run phase-marker emitter guard (#35)
+        id: s-test-issue-35-phase-marker
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-35-phase-marker.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-35-phase-marker.sh
 
       # Composition-oracle guard (#27, cycle-scoped): the count/diff-shaped
@@ -463,6 +576,9 @@ jobs:
       # per the sibling suites. See
       # tests/test-issue-27-composition-oracle.sh.
       - name: Run composition-oracle guard (#27)
+        id: s-test-issue-27-composition-oracle
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-27-composition-oracle.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-27-composition-oracle.sh
 
       # Carry-channel evidence discipline guard (#56, cycle-scoped): the
@@ -474,6 +590,9 @@ jobs:
       # the sibling suites. See
       # tests/test-issue-56-carry-evidence-discipline.sh.
       - name: Run carry-channel evidence discipline guard (#56)
+        id: s-test-issue-56-carry-evidence-discipline
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-56-carry-evidence-discipline.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-56-carry-evidence-discipline.sh
 
       # Adoption-side evidence discipline guard (#59, cycle-scoped): the
@@ -486,6 +605,9 @@ jobs:
       # by filename per the sibling suites. See
       # tests/test-issue-59-adoption-evidence-discipline.sh.
       - name: Run adoption-evidence discipline guard (#59)
+        id: s-test-issue-59-adoption-evidence-discipline
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-59-adoption-evidence-discipline.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-59-adoption-evidence-discipline.sh
 
       # Sequential-round / carry-compaction / citation-partitioning guard
@@ -498,6 +620,9 @@ jobs:
       # filename per the sibling suites. See
       # tests/test-issue-62-sequential-rounds.sh.
       - name: Run sequential-round deliberation guard (#62)
+        id: s-test-issue-62-sequential-rounds
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-62-sequential-rounds.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-62-sequential-rounds.sh
 
       # ARCHITECT deliberation record redesign guard (#67, cycle-scoped): the
@@ -508,6 +633,9 @@ jobs:
       # registered by filename per the sibling suites. See
       # tests/test-issue-67-deliberation-record.sh.
       - name: Run deliberation record redesign guard (#67)
+        id: s-test-issue-67-deliberation-record
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-67-deliberation-record.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-67-deliberation-record.sh
       # Teammate-removal feasibility verdict (#51, cycle-scoped): the
       # assertions the permanent registry structurally cannot hold — the
@@ -522,6 +650,9 @@ jobs:
       # discovery; registered by filename per the sibling suites. See
       # tests/test-issue-51-teammate-removal-verdict.sh.
       - name: Run teammate-removal feasibility verdict (#51)
+        id: s-test-issue-51-teammate-removal-verdict
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-51-teammate-removal-verdict.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-51-teammate-removal-verdict.sh
 
       # Verification-depth justification at ARCHITECT / GATE:PLAN (#69,
@@ -532,6 +663,9 @@ jobs:
       # guard. CI has no glob discovery; registered by filename per the
       # sibling suites. See tests/test-issue-69-verification-depth.sh.
       - name: Run verification-depth justification guard (#69)
+        id: s-test-issue-69-verification-depth
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-69-verification-depth.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-69-verification-depth.sh
       # #55 gate-score write contract at the producer site. Cycle-scoped: it
       # drives the CLAUDE.md SCORE-SHAPE-EXAMPLE fence through the real hook
@@ -543,6 +677,9 @@ jobs:
       # registered by filename per the sibling suites. See
       # tests/test-issue-55-score-format-contract.sh.
       - name: Run gate-score write contract (#55)
+        id: s-test-issue-55-score-format-contract
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-55-score-format-contract.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-55-score-format-contract.sh
 
       # #52 peer-teammate-facilitator premise, evidence-anchor correction.
@@ -555,6 +692,9 @@ jobs:
       # glob discovery; registered by filename per the sibling suites. See
       # tests/test-issue-52-peer-facilitator-premise.sh.
       - name: Run peer-facilitator premise evidence-anchor guard (#52)
+        id: s-test-issue-52-peer-facilitator-premise
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-52-peer-facilitator-premise.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-52-peer-facilitator-premise.sh
 
       # Cycle-digest emission + cross-issue recurrence scan removal (#71,
@@ -568,4 +708,23 @@ jobs:
       # registered by filename per the sibling suites. See
       # tests/test-issue-71-digest-removal.sh.
       - name: Run removal-state guard (#71)
+        id: s-test-issue-71-digest-removal
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-71-digest-removal.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-71-digest-removal.sh
+
+      # Reconciliation (issue #103): a step whose `if:` evaluates false is
+      # SKIPPED and the job still concludes successfully — so a green run is
+      # exactly what a wrongly-false guard produces, and enforcement here is
+      # advisory with no required status check behind it. This step compares the
+      # run's own selection report against the run's own step outcomes, so it
+      # needs no second source of truth.
+      - name: reconcile selection against step outcomes
+        if: always()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          printf '%s' "$STEPS_JSON" > "$RUNNER_TEMP/steps.json"
+          bash scripts/test/check-step-reconciliation.sh \
+            --selected "$RUNNER_TEMP/selection-report.txt" \
+            --steps "$RUNNER_TEMP/steps.json"

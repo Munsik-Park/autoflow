@@ -1,6 +1,9 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: docs/autoflow-guide.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh scripts/handoff/create-host-pr.sh scripts/issue/create-issue.sh scripts/ledger/ledger-entry-id.sh setup/init.sh setup/manifest.json tests/fixtures/e2e-bundle-purity-baseline.txt tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt tests/plugin/manual-scenarios-797.md tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: throwaway dummy-target E2E acceptance suite — Issue #797 [#785-S10]
 # =============================================================================
@@ -14,8 +17,10 @@
 # This suite COMPOSES, it does not duplicate: install/manifest/drift/
 # host-purity unit-level assertions stay owned by
 # tests/plugin/verify-install-into-target.sh and
-# tests/test-issue-788-host-purity-delta.sh (delegated below as whole-suite
-# regressions). This suite's own new assertions are the composition-only
+# tests/test-issue-788-host-purity-delta.sh, each of which CI runs under its own
+# registered step (the whole-suite re-runs this file once carried are retired --
+# issue #103; docs/doc-invariant-registry.md 12.1). This suite's own new
+# assertions are the composition-only
 # surface — the realistic fixture, non-destructive install into pre-existing
 # content, installed-fs manifest/drift parity, and the gate-hook scores-branch
 # + host-script HANDOFF runtime arms (the plugin-delivered hook RESOLUTION path
@@ -105,8 +110,10 @@
 #           failing AC id and its owning-stage tag (self-tested)
 #
 #   W-R regression (baseline unaffected by this branch):
-#     E-Ra  tests/plugin/verify-install-into-target.sh whole-suite exits 0
-#     E-Rb  tests/plugin/verify-package.sh whole-suite exits 0
+#     E-Ra  tests/plugin/verify-install-into-target.sh is present (the
+#           whole-suite re-run is retired -- contract-suites.yml:317 runs it)
+#     E-Rb  tests/plugin/verify-package.sh is present (the whole-suite re-run
+#           is retired -- plugin-package.yml:93 runs it)
 #
 #   NOT automated (E/M types — see tests/plugin/manual-scenarios-797.md):
 #     E-M1  a live AutoFlow LLM cycle reasoning-driven inside the dummy target
@@ -493,17 +500,14 @@ else
   failc "E2b" "S2/#788" "host-purity-paths.txt missing at $HOST_PURITY_PATHS"
 fi
 
-echo "== E-Rc: tests/test-issue-788-host-purity-delta.sh whole-suite regression =="
+echo "== E-Rc: tests/test-issue-788-host-purity-delta.sh is present =="
+# The whole-suite re-run is retired (issue #103): that suite carries its own
+# registered `run:` step in host-purity-delta.yml, so a regression in it reds CI
+# under its own name once rather than twice. The presence half stays — this file
+# asserts its own classification against that suite's config scope above.
+# Disposition row: docs/doc-invariant-registry.md §12.1.
 if [ -f "$HOST_PURITY_SUITE" ]; then
-  HP_OUT=$(bash "$HOST_PURITY_SUITE" 2>&1)
-  HP_CODE=$?
-  HP_RESULT=$(printf '%s\n' "$HP_OUT" | grep -E '^(RESULT|Results):' | tail -1)
-  if [ "$HP_CODE" -eq 0 ]; then
-    pass "E-Rc: host-purity DELTA-guard suite exits 0 (#788 regression intact) -- $HP_RESULT"
-  else
-    printf '%s\n' "$HP_OUT" | grep '^FAIL:' | head -10
-    failc "E-Rc" "S2/#788" "host-purity DELTA-guard suite exited $HP_CODE -- $HP_RESULT"
-  fi
+  pass "E-Rc: host-purity DELTA-guard suite is present at $HOST_PURITY_SUITE"
 else
   failc "E-Rc" "S2/#788" "tests/test-issue-788-host-purity-delta.sh missing at $HOST_PURITY_SUITE"
 fi
@@ -871,32 +875,22 @@ fi
 # W-R — regression (baseline unaffected)
 # ══════════════════════════════════════════════════════════════════════════════
 
-echo "== E-Ra: verify-install-into-target.sh whole-suite regression =="
+echo "== E-Ra: verify-install-into-target.sh is present =="
+# The whole-suite re-run is retired (issue #103 cycle 3): that suite carries its
+# own registered `run:` step at contract-suites.yml:317, so a regression in it
+# reds CI under its own name once rather than twice. The presence half stays --
+# this file composes against that suite's install output in the stages above.
+# Disposition row: docs/doc-invariant-registry.md 12.1.
 if [ -f "$VERIFY_INSTALL" ]; then
-  VI_OUT=$(sh "$VERIFY_INSTALL" 2>&1)
-  VI_CODE=$?
-  VI_RESULT=$(printf '%s\n' "$VI_OUT" | grep '^RESULT:' | head -1)
-  if [ "$VI_CODE" -eq 0 ]; then
-    pass "E-Ra: verify-install-into-target.sh exits 0 (#792 regression intact) -- $VI_RESULT"
-  else
-    printf '%s\n' "$VI_OUT" | grep '^FAIL:' | head -10
-    failc "E-Ra" "S5/#792" "verify-install-into-target.sh exited $VI_CODE -- $VI_RESULT"
-  fi
+  pass "E-Ra: install acceptance suite is present at $VERIFY_INSTALL"
 else
   failc "E-Ra" "S5/#792" "tests/plugin/verify-install-into-target.sh missing at $VERIFY_INSTALL"
 fi
 
-echo "== E-Rb: verify-package.sh whole-suite regression =="
+echo "== E-Rb: verify-package.sh is present =="
+# Same disposition as E-Ra; the callee's registered step is plugin-package.yml:93.
 if [ -f "$VERIFY_PACKAGE" ]; then
-  VP_OUT=$(sh "$VERIFY_PACKAGE" 2>&1)
-  VP_CODE=$?
-  VP_RESULT=$(printf '%s\n' "$VP_OUT" | grep '^RESULT:' | head -1)
-  if [ "$VP_CODE" -eq 0 ]; then
-    pass "E-Rb: verify-package.sh exits 0 (#790 regression intact) -- $VP_RESULT"
-  else
-    printf '%s\n' "$VP_OUT" | grep '^FAIL:' | head -10
-    failc "E-Rb" "S5/#792" "verify-package.sh exited $VP_CODE -- $VP_RESULT"
-  fi
+  pass "E-Rb: packaging acceptance suite is present at $VERIFY_PACKAGE"
 else
   failc "E-Rb" "S5/#792" "tests/plugin/verify-package.sh missing at $VERIFY_PACKAGE"
 fi

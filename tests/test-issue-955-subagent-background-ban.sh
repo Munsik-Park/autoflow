@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md setup/manifest.json test/workflows/run.mjs
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: subagent run_in_background prohibition doc-assertion guard — Issue #955
 # =============================================================================

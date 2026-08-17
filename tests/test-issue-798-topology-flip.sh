@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh CLAUDE.md README.md docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md docs/doc-invariant-registry.md docs/submodule-common-rules.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/test/check-cycle-scope-guard.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/manual/issue-798-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: submodule-detach topology-flip RED/GREEN harness — Issue #798
 # ([#785-S11a] 토폴로지 플립)

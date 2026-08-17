@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/INDEX.md docs/adr/README.md docs/autoflow-guide.md docs/evaluation-system.md docs/maintained-docs.md docs/teammate-contracts.md scripts/test/check-suite-leaf.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/lib/harness-pins.sh tests/run-doc-invariants.sh
+# lane: standing
+# cycle-arm: #69
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: Verification-depth justification at ARCHITECT / GATE:PLAN — Issue #69 (cycle-scoped)
 # =============================================================================
@@ -261,35 +265,25 @@ assert_true "AC-69-HARNESS-a: node test/workflows/run.mjs exits 0 (KNOWN RED mid
 assert_true "AC-69-HARNESS-b: harness reports 'all workflow regression tests passed'" \
   "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
 
+
 # =============================================================================
-echo ""
-echo "=== AC:harness-pins-agree (O:harness) — the shared harness ok-count pin's home set is DERIVED by sweeping tests/ for the pin idiom, and every live home agrees ==="
-
-# Narrow, specific sweep keywords (not a generic '-eq [0-9]+' scan, which would false-
-# positive on unrelated numeric assertions elsewhere in the suite): every existing pin
-# home names the harness explicitly via EXPECTED_OK / OK_COUNT / "ok-line count".
-SELF_BASENAME="$(basename "${BASH_SOURCE[0]}")"
-SWEPT_HOMES="$(grep -lE 'EXPECTED_OK|ok-line count|OK_COUNT' "$PROJECT_ROOT"/tests/*.sh 2>/dev/null | xargs -n1 basename | grep -vF "$SELF_BASENAME" | sort)"
-echo "  swept homes: $(printf '%s' "$SWEPT_HOMES" | paste -sd, -)"
-
-CANON_LITERAL_27="$(grep -F 'AC-27-20c' "$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh" | grep -oE '\-eq [0-9]+ \]"$' | grep -oE '[0-9]+' | tail -1)"
-EXPECTED_OK_59="$(grep -oE '^EXPECTED_OK=[0-9]+' "$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh" | grep -oE '[0-9]+' | tail -1)"
-assert_true "AC-69-HARNESS-PINS-count: real harness ok-line count ($OK_COUNT) == test-issue-27's pin ($CANON_LITERAL_27) == test-issue-59's EXPECTED_OK ($EXPECTED_OK_59) (KNOWN RED mid-cycle — GREEN's prompt wiring has not landed yet)" \
-  "[ \"$OK_COUNT\" = \"$CANON_LITERAL_27\" ] && [ \"$OK_COUNT\" = \"$EXPECTED_OK_59\" ]"
-
-# Execute every swept home for real (composition oracle: no fixture stands in). A
-# branch-scoped-inert home (e.g. tests/test-issue-56-carry-evidence-discipline.sh) stays
-# inert by its OWN internal `case "$HEAD_BRANCH"` guard when run off its own dev branch —
-# no special-casing needed here, matching the verification design's "the sweep's outcome
-# is admitted to the surface whatever it returns" instruction.
-for home in $SWEPT_HOMES; do
-  homepath="$PROJECT_ROOT/tests/$home"
-  [ -f "$homepath" ] || continue
-  OUT="$(cd "$PROJECT_ROOT" && bash "$homepath" 2>&1)"
-  EXIT=$?
-  assert_true "AC-69-HARNESS-PINS: bash tests/$home exits 0 (swept pin home, KNOWN RED mid-cycle for the live homes until GREEN lands)" \
-    "[ $EXIT -eq 0 ]"
-done
+# AC:harness-pins-agree (AC-69-HARNESS-PINS-count / AC-69-HARNESS-PINS) is
+# retired by issue #103.
+# =============================================================================
+# The lane swept tests/ for the pin idiom, asserted every discovered home agreed
+# with the live measurement, and then EXECUTED each swept home. Both halves are
+# gone with their subject:
+#
+#   - agreement — the pin now has one home, tests/lib/harness-pins.sh, which
+#     both consumers source. An equality check between two reads of one constant
+#     is unfalsifiable, so there is nothing left to agree.
+#   - the execution sweep — a suite executing its siblings is what
+#     scripts/test/check-suite-leaf.sh now denies; each swept home carries its
+#     own `run:` step.
+#
+# The pin's teeth are unaffected and live where they always did:
+# tests/test-issue-27-composition-oracle.sh compares the sourced constant
+# against the live `node test/workflows/run.mjs` measurement.
 
 # =============================================================================
 echo ""

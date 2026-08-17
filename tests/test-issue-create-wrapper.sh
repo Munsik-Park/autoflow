@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/issue/create-issue.sh docs/issue-proposal.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: wrapper behavior (scripts/issue/create-issue.sh) under a corpus-backed,
 #       argv-dispatching `gh` PATH shim — STANDING (issue #96 origin;

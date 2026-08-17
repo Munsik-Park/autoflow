@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/test/check-suite-ci-coverage.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml .github/workflows/
+# ci-subject: scripts/test/check-suite-ci-coverage.sh scripts/test/invocation-scan.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml .github/workflows/
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: workflow trigger/registration conformance — suite registration
 #       effectiveness (AC-b-2/AC-b-3), Actions-glob dialect matcher
@@ -255,51 +257,28 @@ entry_is_unsupported_shape() {
 }
 
 # =============================================================================
-# Shared mechanism — hosting-workflow-scoping (transitive reach). Inherits
-# the coverage lint's own `bash <path>` invocation rule verbatim so the two
-# reachability notions cannot drift (scripts/test/check-suite-ci-coverage.sh
-# invoked_paths / reachable_set).
+# Shared mechanism — hosting-workflow-scoping. HOSTING IS DIRECT REGISTRATION
+# (issue #103): a workflow hosts a suite when one of ITS OWN steps invokes that
+# suite. The former transitive closure preserved exactly the notion the leaf
+# rule bans — a suite invoking a sibling — and it put workflows that do not run
+# a suite into its hosting set, which is what produced the false coverage
+# verdicts this cycle repairs.
+#
+# The invocation relation is scripts/test/invocation-scan.sh's, sourced here
+# rather than re-copied: this file and scripts/test/check-suite-ci-coverage.sh
+# carried byte-identical private copies, so the two could not observe their own
+# disagreement.
 # =============================================================================
-invoked_paths() {
-  local file="$1"
-  [ -f "$file" ] || return 0
-  grep -h 'bash' "$file" 2>/dev/null \
-    | grep -ohE '(tests|scripts)/[A-Za-z0-9_./-]+\.(sh|bats)' \
-    | sort -u
-}
-
-# workflow_reaches <workflow-file> <target-rel-path> — transitive closure
-# over `bash <path>` invocations starting from the workflow's own run: steps.
-workflow_reaches() {
-  local wf="$1" target="$2" seen frontier next f
-  seen="$(mktemp)"; frontier="$(mktemp)"; next="$(mktemp)"
-  invoked_paths "$wf" > "$frontier"
-  sort -u "$frontier" -o "$frontier"
-  cat "$frontier" > "$seen"
-  while [ -s "$frontier" ]; do
-    : > "$next"
-    while IFS= read -r f; do
-      [ -n "$f" ] || continue
-      invoked_paths "$PROJECT_ROOT/$f" >> "$next"
-    done < "$frontier"
-    sort -u "$next" -o "$next"
-    comm -23 "$next" <(sort -u "$seen") > "$frontier"
-    cat "$frontier" >> "$seen"
-    sort -u "$seen" -o "$seen"
-  done
-  local rc=1
-  grep -qxF "$target" "$seen" && rc=0
-  rm -f "$seen" "$frontier" "$next"
-  return $rc
-}
+# shellcheck source=scripts/test/invocation-scan.sh
+source "$PROJECT_ROOT/scripts/test/invocation-scan.sh"
 
 # reaching_workflows <target-rel-path> — every real workflow file that
-# reaches the target, directly or transitively.
+# registers a `run:` step invoking the target.
 reaching_workflows() {
   local target="$1" wf
   for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
     [ -f "$wf" ] || continue
-    workflow_reaches "$wf" "$target" && echo "$wf"
+    invscan_workflow_invocations "$wf" 2>/dev/null | grep -qxF "$target" && echo "$wf"
   done
 }
 
@@ -309,15 +288,26 @@ reaching_workflows() {
 # `# ci-subject:` header in the tree at test time — the oracle logic, not a
 # hardcoded name list.
 # =============================================================================
-mapfile -t CI_SUBJECT_SUITES < <(grep -rl '^# ci-subject:' "$PROJECT_ROOT/tests" 2>/dev/null | sort)
+# Issue #103: the header grammar has ONE parser. This suite consumes
+# scripts/test/suite-manifest.sh's `suite_enumerate` / `suite_header_field`
+# rather than re-parsing `# ci-subject:` inline — the inline form read a
+# heredoc-emitted fixture line as a suite's own declaration, and a second parser
+# is the drift class this cycle exists to remove.
+# shellcheck source=scripts/test/suite-manifest.sh
+source "$PROJECT_ROOT/scripts/test/suite-manifest.sh"
+
+mapfile -t CI_SUBJECT_SUITES < <(
+  while IFS= read -r rel; do
+    suite_header_field "$PROJECT_ROOT/$rel" ci-subject >/dev/null && echo "$PROJECT_ROOT/$rel"
+  done < <(suite_enumerate "$PROJECT_ROOT") | sort
+)
 
 assert_true "AC-b-2 pre: at least one suite declares a # ci-subject: header" \
   "[ \${#CI_SUBJECT_SUITES[@]} -gt 0 ]"
 
 for suite in "${CI_SUBJECT_SUITES[@]}"; do
   rel="${suite#"$PROJECT_ROOT"/}"
-  subjects_line="$(grep -m1 '^# ci-subject:' "$suite")"
-  subjects="${subjects_line#\# ci-subject:}"
+  subjects="$(suite_header_field "$suite" ci-subject)"
 
   mapfile -t hosts < <(reaching_workflows "$rel")
   if [ ${#hosts[@]} -eq 0 ]; then
@@ -499,8 +489,7 @@ is_subject_grammar_valid() {
 
 for suite in "${CI_SUBJECT_SUITES[@]}"; do
   rel="${suite#"$PROJECT_ROOT"/}"
-  subjects_line="$(grep -m1 '^# ci-subject:' "$suite")"
-  subjects="${subjects_line#\# ci-subject:}"
+  subjects="$(suite_header_field "$suite" ci-subject)"
   for token in $subjects; do
     sg=true
     is_subject_grammar_valid "$token" || sg=false
@@ -577,8 +566,15 @@ rm -f "$BLOCK_PARSE_FIXTURE"
 assert_true "AC-b-3: scripts/test/check-suite-ci-coverage.sh exists" \
   "[ -x '$COVERAGE_LINT' ] || [ -f '$COVERAGE_LINT' ]"
 
+bash "$COVERAGE_LINT" >/tmp/issue76-coverage-lint.out 2>&1
+COVERAGE_LINT_RC=$?
+if [ "$COVERAGE_LINT_RC" -ne 0 ]; then
+  echo "  ---- check-suite-ci-coverage.sh real-tree output (rc=$COVERAGE_LINT_RC) ----"
+  cat /tmp/issue76-coverage-lint.out
+  echo "  ---- end output ----"
+fi
 assert_true "AC-b-3: check-suite-ci-coverage.sh exits 0 over the real tree" \
-  "bash '$COVERAGE_LINT' >/tmp/issue76-coverage-lint.out 2>&1"
+  "[ $COVERAGE_LINT_RC -eq 0 ]"
 
 assert_true "AC-b-3: check-suite-ci-coverage.sh --self-test exits 0 (closure + exclusion legs both pass)" \
   "bash '$COVERAGE_LINT' --self-test >/tmp/issue76-coverage-lint-selftest.out 2>&1"
@@ -632,6 +628,816 @@ assert_true "AC-step-target-exists hermetic: the step-target extraction reads th
 assert_true "AC-step-target-exists hermetic: a step naming a nonexistent target is detected (the existence predicate is not vacuous)" \
   "[ ! -f \"\$PROJECT_ROOT/\${STEP_TARGET_FIXTURE_TARGETS[0]}\" ]"
 rm -f "$STEP_TARGET_FIXTURE"
+
+# =============================================================================
+# Issue #103 cycle 2 (review-response) -- select-step-fail-open.
+# .autoflow/issue-103-verification-design.md (cycle 2) §1:
+#   AC-select-step-fails-closed-on-block, AC-select-step-passes-through-on-
+#   success, AC-select-step-shape-holds-for-every-selector-consuming-
+#   workflow, AC-select-checkout-history-sufficient (shape half).
+# =============================================================================
+
+# --- extract_select_run_block <workflow-file> -------------------------------
+# awk over the workflow text (verification design §1 "Extraction mechanism,
+# named rather than assumed"): locate the `- id: select` list item, take its
+# `run: |` scalar, emit the lines with the block indent stripped. Not
+# yq/python3 -- no suite or script in this tree parses workflow YAML with
+# either.
+extract_select_run_block() {
+  awk '
+    state == 0 && /^[[:space:]]*- id: select[[:space:]]*$/ { state = 1; next }
+    state == 1 && /run:[[:space:]]*\|/ {
+      line = $0
+      sub(/[^ ].*$/, "", line)
+      runindent = length(line)
+      blockindent = runindent + 2
+      state = 2
+      next
+    }
+    state == 2 {
+      if ($0 == "") { print ""; next }
+      line = $0
+      sub(/[^ ].*$/, "", line)
+      ind = length(line)
+      if (ind < blockindent) { exit }
+      print substr($0, blockindent + 1)
+    }
+  ' "$1"
+}
+
+# --- select_run_block_sentinel_ok <block-text> ------------------------------
+# Guards the extraction (verification design §1): the extracted text must
+# contain both the select-suites.sh invocation and the $GITHUB_OUTPUT append
+# line, or a silently-truncated extraction would make the replay below
+# vacuous -- a short block can exit non-zero for the wrong reason and still
+# satisfy the negative arm.
+select_run_block_sentinel_ok() {
+  printf '%s\n' "$1" | grep -qF 'select-suites.sh' \
+    && printf '%s\n' "$1" | grep -qF 'GITHUB_OUTPUT'
+}
+
+# --- run_select_replay <block-text> <selector-mode: block|pass|pass-empty> --
+# Replay the extracted block VERBATIM under `bash -e` -- the verified default
+# for a `run:` step with no `shell:` key (verification design §0; replaying
+# under `bash -eo pipefail` would pass without any fix and is the one
+# substitution that would make this arm vacuous). A stub select-suites.sh is
+# placed at the relative path the block invokes. Sets REPLAY_RC and
+# REPLAY_OUTPUT (the $GITHUB_OUTPUT file's content).
+run_select_replay() {
+  local block="$1" mode="$2" root script rtemp gout
+  root="$(mktemp -d)"
+  mkdir -p "$root/scripts/test"
+  case "$mode" in
+    block)
+      cat > "$root/scripts/test/select-suites.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "BLOCK: stub selector -- forced non-zero for the negative replay" >&2
+exit 1
+STUB
+      ;;
+    pass)
+      cat > "$root/scripts/test/select-suites.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "tests/fixture-a.sh"
+echo "tests/fixture-b.sh"
+exit 0
+STUB
+      ;;
+    pass-empty)
+      cat > "$root/scripts/test/select-suites.sh" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+      ;;
+  esac
+  chmod +x "$root/scripts/test/select-suites.sh"
+
+  rtemp="$(mktemp -d)"; gout="$(mktemp)"; script="$(mktemp)"
+  printf '%s\n' "$block" > "$script"
+  ( cd "$root" && GITHUB_EVENT_NAME=pull_request RUNNER_TEMP="$rtemp" GITHUB_OUTPUT="$gout" bash -e "$script" ) \
+    >/tmp/issue103-select-replay-stdout.out 2>/tmp/issue103-select-replay-stderr.out
+  REPLAY_RC=$?
+  REPLAY_OUTPUT="$(cat "$gout" 2>/dev/null)"
+  rm -rf "$root" "$rtemp" "$gout" "$script"
+}
+
+mapfile -t SELECTOR_CONSUMING_WORKFLOWS < <(grep -l 'select-suites\.sh' "$PROJECT_ROOT"/.github/workflows/*.yml 2>/dev/null | sort)
+
+assert_true "cycle-2 pre: the derived selector-consuming workflow set (grep -l select-suites.sh over .github/workflows/*.yml) is non-empty" \
+  "[ \${#SELECTOR_CONSUMING_WORKFLOWS[@]} -gt 0 ]"
+
+for wf in "${SELECTOR_CONSUMING_WORKFLOWS[@]}"; do
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  BLOCK_TEXT="$(extract_select_run_block "$wf")"
+
+  sentinel_ok=true
+  select_run_block_sentinel_ok "$BLOCK_TEXT" || sentinel_ok=false
+  assert_true "cycle-2 extractor sentinel: $wrel -- the extracted select-step run: block carries both the select-suites.sh invocation and the \$GITHUB_OUTPUT append" "$sentinel_ok"
+
+  # --- AC-select-step-fails-closed-on-block (negative) ----------------------
+  run_select_replay "$BLOCK_TEXT" block
+  neg_rc_ok=true; [ "$REPLAY_RC" -ne 0 ] || neg_rc_ok=false
+  assert_true "AC-select-step-fails-closed-on-block: $wrel -- replaying the shipped select-step text under bash -e with a selector that BLOCKs (exit 1) exits the step non-zero" "$neg_rc_ok"
+  neg_output_ok=true
+  printf '%s' "$REPLAY_OUTPUT" | grep -q '^suites=' && neg_output_ok=false
+  assert_true "AC-select-step-fails-closed-on-block: $wrel -- on the BLOCK replay, \$GITHUB_OUTPUT carries no suites= line (a fix that fails the step but still appends an empty output leaves the same empty value visible to any if: always() consumer)" "$neg_output_ok"
+
+  # --- AC-select-step-passes-through-on-success (positive control) ----------
+  run_select_replay "$BLOCK_TEXT" pass
+  pos_rc_ok=true; [ "$REPLAY_RC" -eq 0 ] || pos_rc_ok=false
+  assert_true "AC-select-step-passes-through-on-success: $wrel -- replaying the shipped select-step text with a selector that exits 0 and prints two suite paths exits the step 0 (positive control: what makes the fail-closed arm above discriminating rather than merely satisfiable by an always-failing step)" "$pos_rc_ok"
+  pos_output_ok=true
+  printf '%s' "$REPLAY_OUTPUT" | grep -qF 'suites=tests/fixture-a.sh tests/fixture-b.sh' || pos_output_ok=false
+  assert_true "AC-select-step-passes-through-on-success: $wrel -- \$GITHUB_OUTPUT carries suites=<space-joined stub output>" "$pos_output_ok"
+
+  # -- rc-0 empty-selection case: an ordinary change touching no governed
+  #    subject must not be conflated with the BLOCK path.
+  run_select_replay "$BLOCK_TEXT" pass-empty
+  empty_rc_ok=true; [ "$REPLAY_RC" -eq 0 ] || empty_rc_ok=false
+  assert_true "AC-select-step-passes-through-on-success (rc-0 empty-selection case): $wrel -- a selector that exits 0 with EMPTY stdout (a change touching no governed subject is legitimate, not a BLOCK) still exits the step 0" "$empty_rc_ok"
+  empty_output_ok=true
+  printf '%s' "$REPLAY_OUTPUT" | grep -qE '^suites=[[:space:]]*$' || empty_output_ok=false
+  assert_true "AC-select-step-passes-through-on-success (rc-0 empty-selection case): $wrel -- \$GITHUB_OUTPUT carries an empty suites= line, not the BLOCK path's absent line" "$empty_output_ok"
+done
+
+# =============================================================================
+# AC-select-step-shape-holds-for-every-selector-consuming-workflow --
+# derived-set static predicate over PLACEMENT SEMANTICS (feature design §2
+# capture-then-check), never a literal line:
+#   (a) the select-suites.sh invocation's status is captured -- its command
+#       is not the left-hand side of a pipe;
+#   (b) the rc check precedes the $GITHUB_OUTPUT append;
+#   (c) the checkout carries fetch-depth: 0 (AC-select-checkout-history-
+#       sufficient, shape half).
+# Each clause owes its own non-conforming fixture (verification design §1):
+# for (a) the piped block as it ships today (a real historical input, driven
+# by the real-tree loop below); for (b) and (c), hermetic fixtures, since no
+# real workflow in this tree exercises an ordering or shape this cycle does
+# not also fix.
+# =============================================================================
+
+# join_backslash_continuations -- reads block text on stdin, emits one
+# logical statement per output line, backslash-continuations joined.
+join_backslash_continuations() {
+  awk '
+    {
+      line = $0
+      if (buf != "") { line = buf " " line; buf = "" }
+      if (line ~ /\\[[:space:]]*$/) {
+        sub(/\\[[:space:]]*$/, "", line)
+        buf = line
+        next
+      }
+      print line
+    }
+    END { if (buf != "") print buf }
+  '
+}
+
+# select_step_captures_status <block-text> -- clause (a): the logical
+# statement invoking select-suites.sh carries no lone pipe (a `|` that is not
+# part of `||`).
+select_step_captures_status() {
+  local block="$1" stmt
+  stmt="$(printf '%s\n' "$block" | join_backslash_continuations | grep 'select-suites\.sh' | head -1)"
+  [ -n "$stmt" ] || return 1
+  printf '%s' "$stmt" | grep -Eq '(^|[^|])\|([^|]|$)' && return 1
+  return 0
+}
+
+# select_step_rc_precedes_output <block-text> -- clause (b): a statement
+# testing $rc against 0 (`-ne 0` / `!= 0`) appears strictly before the
+# statement that appends to $GITHUB_OUTPUT.
+select_step_rc_precedes_output() {
+  local block="$1" stmts rc_line out_line
+  stmts="$(printf '%s\n' "$block" | join_backslash_continuations)"
+  rc_line="$(printf '%s\n' "$stmts" | grep -nE '\$rc.*(-ne 0|!= *0)|(-ne 0|!= *0).*\$rc' | head -1 | cut -d: -f1)"
+  out_line="$(printf '%s\n' "$stmts" | grep -n 'GITHUB_OUTPUT' | head -1 | cut -d: -f1)"
+  [ -n "$rc_line" ] && [ -n "$out_line" ] || return 1
+  [ "$rc_line" -lt "$out_line" ]
+}
+
+# checkout_has_full_history <workflow-file> -- clause (c): the checkout
+# step's OWN with: block (the lines immediately following its uses:
+# actions/checkout@ line, up to the next list item or a small cap) carries
+# fetch-depth: 0 -- never a tree-wide search, which would credit a
+# fetch-depth: 0 belonging to a different step.
+checkout_has_full_history() {
+  awk '
+    /actions\/checkout@/ { found = 1; c = 0; next }
+    found {
+      c++
+      if ($0 ~ /fetch-depth: *0/) { print "yes"; exit }
+      if ($0 ~ /^[[:space:]]*-[[:space:]]/) { exit }
+      if (c > 10) exit
+    }
+  ' "$1" | grep -q yes
+}
+
+for wf in "${SELECTOR_CONSUMING_WORKFLOWS[@]}"; do
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  BLOCK_TEXT="$(extract_select_run_block "$wf")"
+
+  clause_a_ok=true
+  select_step_captures_status "$BLOCK_TEXT" || clause_a_ok=false
+  assert_true "AC-select-step-shape-holds: $wrel -- clause (a) placement: the select-suites.sh invocation's status is captured (its command is not the left-hand side of a pipe)" "$clause_a_ok"
+
+  clause_b_ok=true
+  select_step_rc_precedes_output "$BLOCK_TEXT" || clause_b_ok=false
+  assert_true "AC-select-step-shape-holds: $wrel -- clause (b) placement: the rc check precedes the \$GITHUB_OUTPUT append" "$clause_b_ok"
+
+  clause_c_ok=true
+  checkout_has_full_history "$wf" || clause_c_ok=false
+  assert_true "AC-select-step-shape-holds: $wrel -- clause (c): the checkout carries fetch-depth: 0 (AC-select-checkout-history-sufficient, shape half)" "$clause_c_ok"
+done
+
+# --- clause self-test fixtures: discriminate a working predicate from a
+# vacuous one with a KNOWN-conforming and a KNOWN-non-conforming input per
+# clause, independent of the real tree's own (currently drifting) state.
+CLAUSE_A_BAD=$'bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \\\n  2> "$RUNNER_TEMP/selection-report.txt" \\\n  | paste -sd\' \' - > "$RUNNER_TEMP/selected.txt"\nprintf \'suites=%s\\n\' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"'
+clause_a_bad_ok=true
+select_step_captures_status "$CLAUSE_A_BAD" && clause_a_bad_ok=false
+assert_true "AC-select-step-shape-holds clause (a) self-test: a piped block (the shipped defect this cycle fixes -- a real historical failing input) is detected as NOT capturing the selector's status" "$clause_a_bad_ok"
+
+CLAUSE_A_GOOD=$'rc=0\nbash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \\\n  > "$RUNNER_TEMP/selected-raw.txt" \\\n  2> "$RUNNER_TEMP/selection-report.txt" || rc=$?\nif [ "$rc" -ne 0 ]; then exit "$rc"; fi\nprintf \'suites=%s\\n\' "$(cat "$RUNNER_TEMP/selected-raw.txt")" >> "$GITHUB_OUTPUT"'
+clause_a_good_ok=true
+select_step_captures_status "$CLAUSE_A_GOOD" || clause_a_good_ok=false
+assert_true "AC-select-step-shape-holds clause (a) self-test: a capture-then-check block (|| rc=\$?, no pipe) is detected as conforming" "$clause_a_good_ok"
+
+CLAUSE_B_BAD=$'rc=0\nbash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" > "$RUNNER_TEMP/selected-raw.txt" 2> "$RUNNER_TEMP/selection-report.txt" || rc=$?\nprintf \'suites=%s\\n\' "$(cat "$RUNNER_TEMP/selected-raw.txt")" >> "$GITHUB_OUTPUT"\nif [ "$rc" -ne 0 ]; then exit "$rc"; fi'
+clause_b_bad_ok=true
+select_step_rc_precedes_output "$CLAUSE_B_BAD" && clause_b_bad_ok=false
+assert_true "AC-select-step-shape-holds clause (b) self-test: an rc check placed AFTER the \$GITHUB_OUTPUT append (present, but too late) is detected as non-conforming" "$clause_b_bad_ok"
+clause_b_good_ok=true
+select_step_rc_precedes_output "$CLAUSE_A_GOOD" || clause_b_good_ok=false
+assert_true "AC-select-step-shape-holds clause (b) self-test: an rc check placed BEFORE the \$GITHUB_OUTPUT append is detected as conforming" "$clause_b_good_ok"
+
+CLAUSE_C_BAD_FILE="$(mktemp)"
+cat > "$CLAUSE_C_BAD_FILE" <<'YML'
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - id: select
+YML
+clause_c_bad_ok=true
+checkout_has_full_history "$CLAUSE_C_BAD_FILE" && clause_c_bad_ok=false
+assert_true "AC-select-step-shape-holds clause (c) self-test: a checkout with no with: fetch-depth: 0 block is detected as non-conforming" "$clause_c_bad_ok"
+rm -f "$CLAUSE_C_BAD_FILE"
+
+CLAUSE_C_GOOD_FILE="$(mktemp)"
+cat > "$CLAUSE_C_GOOD_FILE" <<'YML'
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+      - id: select
+YML
+clause_c_good_ok=true
+checkout_has_full_history "$CLAUSE_C_GOOD_FILE" || clause_c_good_ok=false
+assert_true "AC-select-step-shape-holds clause (c) self-test: a checkout carrying fetch-depth: 0 is detected as conforming" "$clause_c_good_ok"
+rm -f "$CLAUSE_C_GOOD_FILE"
+
+# =============================================================================
+# Issue #103 cycle 3 (review-response) — reachability moves to the shared
+# scripts/test/invocation-scan.sh library.
+# .autoflow/issue-103-verification-design.md (cycle 3) §1:
+#   AC-reach-is-decided-by-executable-run-content,
+#   AC-reach-definition-has-one-home,
+#   AC-subject-coverage-is-judged-over-registering-hosts,
+#   AC-both-trigger-blocks-declare-the-same-paths.
+# .autoflow/issue-103-feature-design.md §2 `invocation-scan-library`: a new
+# sourced library, scripts/test/invocation-scan.sh, exporting
+# invscan_shell_invocations / invscan_workflow_steps /
+# invscan_workflow_invocations, does not exist yet. The arms below source it
+# if present and otherwise fail through the `invscan_available` guard with a
+# named-cause message, rather than crashing on an unrelated "command not
+# found" for every downstream call.
+# =============================================================================
+INVOCATION_SCAN_LIB="$PROJECT_ROOT/scripts/test/invocation-scan.sh"
+if [ -f "$INVOCATION_SCAN_LIB" ]; then
+  # shellcheck source=scripts/test/invocation-scan.sh
+  . "$INVOCATION_SCAN_LIB"
+fi
+
+# invscan_available — the library exists AND exports the three consumer
+# functions the feature design names (§2 exported surface).
+invscan_available() {
+  [ -f "$INVOCATION_SCAN_LIB" ] \
+    && declare -F invscan_shell_invocations    >/dev/null \
+    && declare -F invscan_workflow_steps       >/dev/null \
+    && declare -F invscan_workflow_invocations >/dev/null
+}
+
+assert_true "AC-reach-is-decided-by-executable-run-content pre: scripts/test/invocation-scan.sh exists and exports invscan_shell_invocations / invscan_workflow_steps / invscan_workflow_invocations" \
+  "invscan_available"
+
+# --- fixture (a): a workflow whose step invokes a suite from a block-scalar
+#     run: body — must BE an execution edge.
+IS103_A="$(mktemp)"
+cat > "$IS103_A" <<'YML'
+jobs:
+  x:
+    steps:
+      - run: |
+          echo preparing
+          bash tests/fixture-is103-blockscalar-target.sh
+YML
+IS103_A_OK=false
+if invscan_available; then
+  invscan_workflow_invocations "$IS103_A" 2>/dev/null | grep -qxF 'tests/fixture-is103-blockscalar-target.sh' && IS103_A_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite invoked from a block-scalar run: body IS correctly reported as an execution edge (invscan_workflow_invocations)" "$IS103_A_OK"
+rm -f "$IS103_A"
+
+# --- fixture (b): a suite file whose only mention of another suite is a grep
+#     PATTERN STRING — the live false-edge shape
+#     (feature design G-false-invocation-edge). Must NOT be an execution
+#     edge.
+IS103_B="$(mktemp)"
+cat > "$IS103_B" <<'SH'
+#!/usr/bin/env bash
+X="$(grep -B3 'run: bash tests/fixture-is103-pattern-target.sh' "$1")"
+SH
+IS103_B_OK=false
+if invscan_available; then
+  invscan_shell_invocations "$IS103_B" 2>/dev/null | grep -qxF 'tests/fixture-is103-pattern-target.sh' || IS103_B_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite file whose only mention of another suite is a grep PATTERN STRING is correctly reported as NOT an execution edge (invscan_shell_invocations)" "$IS103_B_OK"
+rm -f "$IS103_B"
+
+# --- fixture (c): a suite file whose only mention sits in a HEREDOC BODY.
+#     Must NOT be an execution edge.
+IS103_C="$(mktemp)"
+cat > "$IS103_C" <<'SH'
+#!/usr/bin/env bash
+cat <<'INNER'
+bash tests/fixture-is103-heredoc-target.sh
+INNER
+SH
+IS103_C_OK=false
+if invscan_available; then
+  invscan_shell_invocations "$IS103_C" 2>/dev/null | grep -qxF 'tests/fixture-is103-heredoc-target.sh' || IS103_C_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite file whose only mention sits in a HEREDOC BODY is correctly reported as NOT an execution edge (invscan_shell_invocations)" "$IS103_C_OK"
+rm -f "$IS103_C"
+
+# --- fixture (d): a suite file whose only mention sits after an UNQUOTED #.
+#     Must NOT be an execution edge.
+IS103_D="$(mktemp)"
+cat > "$IS103_D" <<'SH'
+#!/usr/bin/env bash
+echo hi # bash tests/fixture-is103-comment-target.sh
+SH
+IS103_D_OK=false
+if invscan_available; then
+  invscan_shell_invocations "$IS103_D" 2>/dev/null | grep -qxF 'tests/fixture-is103-comment-target.sh' || IS103_D_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite file whose only mention sits after an unquoted # is correctly reported as NOT an execution edge (invscan_shell_invocations)" "$IS103_D_OK"
+rm -f "$IS103_D"
+
+# --- fixture (e): a suite file that GENUINELY invokes another as a
+#     subprocess. Must BE an execution edge.
+IS103_E="$(mktemp)"
+cat > "$IS103_E" <<'SH'
+#!/usr/bin/env bash
+bash tests/fixture-is103-real-subprocess-target.sh
+SH
+IS103_E_OK=false
+if invscan_available; then
+  invscan_shell_invocations "$IS103_E" 2>/dev/null | grep -qxF 'tests/fixture-is103-real-subprocess-target.sh' && IS103_E_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite file that genuinely invokes another as a subprocess IS correctly reported as an execution edge (invscan_shell_invocations)" "$IS103_E_OK"
+rm -f "$IS103_E"
+
+# --- fixture (f): a WORKFLOW whose block-scalar body writes a fixture
+#     workflow through a heredoc carrying a `run: bash tests/...` line — must
+#     NOT be an execution edge. This is the arm that separates heredoc
+#     suppression applied INSIDE a block scalar from heredoc suppression
+#     applied only to whole shell files (feature design §2 heredoc
+#     paragraph).
+IS103_F="$(mktemp)"
+cat > "$IS103_F" <<'YML'
+jobs:
+  x:
+    steps:
+      - run: |
+          cat > fixture-is103-written-workflow.yml <<'INNERYML'
+          on:
+            push: {}
+          jobs:
+            y:
+              steps:
+                - run: bash tests/fixture-is103-heredoc-workflow-target.sh
+          INNERYML
+YML
+IS103_F_OK=false
+if invscan_available; then
+  invscan_workflow_invocations "$IS103_F" 2>/dev/null | grep -qxF 'tests/fixture-is103-heredoc-workflow-target.sh' || IS103_F_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a workflow whose block-scalar body writes a fixture workflow through a heredoc carrying a run: bash tests/... line is correctly reported as NOT an execution edge (heredoc suppression applies WITHIN a block scalar, not only over whole shell files)" "$IS103_F_OK"
+rm -f "$IS103_F"
+
+# =============================================================================
+# AC-reach-definition-has-one-home — the reachability notion is defined once
+# (scripts/test/invocation-scan.sh) and consumed, not re-copied, by this file
+# and scripts/test/check-suite-ci-coverage.sh.
+# =============================================================================
+COVERAGE_LINT_SRC="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
+THIS_SUITE_SRC="$PROJECT_ROOT/tests/test-workflow-trigger-conformance.sh"
+
+consumer_sources_invocation_scan() {
+  local file="$1"
+  grep -qE '^[[:space:]]*(source|\.)[[:space:]]+.*scripts/test/invocation-scan\.sh' "$file"
+}
+
+consumer_has_no_private_invoked_paths() {
+  local file="$1"
+  ! grep -qE '^[[:space:]]*invoked_paths[[:space:]]*\(\)' "$file"
+}
+
+assert_true "AC-reach-definition-has-one-home: scripts/test/check-suite-ci-coverage.sh sources the shared scripts/test/invocation-scan.sh" \
+  "consumer_sources_invocation_scan '$COVERAGE_LINT_SRC'"
+assert_true "AC-reach-definition-has-one-home: tests/test-workflow-trigger-conformance.sh sources the shared scripts/test/invocation-scan.sh" \
+  "consumer_sources_invocation_scan '$THIS_SUITE_SRC'"
+assert_true "AC-reach-definition-has-one-home: scripts/test/check-suite-ci-coverage.sh carries no private invoked_paths() function definition of its own (single-home requirement)" \
+  "consumer_has_no_private_invoked_paths '$COVERAGE_LINT_SRC'"
+assert_true "AC-reach-definition-has-one-home: tests/test-workflow-trigger-conformance.sh carries no private invoked_paths() function definition of its own (single-home requirement)" \
+  "consumer_has_no_private_invoked_paths '$THIS_SUITE_SRC'"
+
+# =============================================================================
+# AC-subject-coverage-is-judged-over-registering-hosts — the registration-
+# effectiveness oracle re-derived over DIRECT REGISTRATION
+# (invscan_workflow_invocations), pooled (existential) across a suite's
+# directly-registering hosts — not transitive reach — plus the tests/lib/**
+# shared-library trigger requirement (the selection predicate's third arm,
+# scripts/test/select-suites.sh:148-151).
+# =============================================================================
+direct_registering_workflows() {
+  local target="$1" root="${2:-$PROJECT_ROOT}" wf
+  for wf in "$root"/.github/workflows/*.yml; do
+    [ -f "$wf" ] || continue
+    invscan_workflow_invocations "$wf" 2>/dev/null | grep -qxF "$target" && echo "$wf"
+  done
+}
+
+# entry_is_testslib_directory_entry <entry> — a directory-entry form
+# (`tests/lib/**` or bare `**`), never a named-file requirement, per the
+# verification design's "directory entry rather than named files" oracle.
+entry_is_testslib_directory_entry() {
+  case "$1" in
+    'tests/lib/**' | '**') return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts pre: scripts/test/invocation-scan.sh available to compute direct registration" \
+  "invscan_available"
+
+# --- real tree: same-shaped loop as AC-b-2, but hosting is DIRECT
+#     registration and the pool is over that (possibly smaller) host set.
+# Also accumulates the union of every real workflow this loop finds
+# registering at least one governed suite, for the tests/lib/** real-tree
+# completeness check below (VERIFY steps 3+4, cycle 3 delta pass,
+# .autoflow/issue-103-verify-steps34.md finding #2): the shared-library arm
+# above proves the DETECTOR works over synthetic fixtures, but nothing
+# previously checked, against the real tree, that every registering workflow
+# actually carries the tests/lib/** entry it now needs.
+declare -A ALL_REGISTERING_WORKFLOWS=()
+for suite in "${CI_SUBJECT_SUITES[@]}"; do
+  rel="${suite#"$PROJECT_ROOT"/}"
+  subjects="$(suite_header_field "$suite" ci-subject)"
+
+  if ! invscan_available; then
+    assert_true "AC-subject-coverage-is-judged-over-registering-hosts: $rel — has at least one directly-registering workflow" "false"
+    continue
+  fi
+
+  mapfile -t reg_hosts < <(direct_registering_workflows "$rel")
+  if [ ${#reg_hosts[@]} -eq 0 ]; then
+    assert_true "AC-subject-coverage-is-judged-over-registering-hosts: $rel — has at least one directly-registering workflow" "false"
+    continue
+  fi
+  for h in "${reg_hosts[@]}"; do ALL_REGISTERING_WORKFLOWS["$h"]=1; done
+  mapfile -t reg_patterns < <(for h in "${reg_hosts[@]}"; do extract_paths_entries "$h"; done | sort -u)
+
+  all_covered=true
+  for path in $subjects "$rel"; do
+    if subject_covered "$path" "${reg_patterns[@]}"; then
+      :
+    else
+      all_covered=false
+      echo "  INFO: $rel — subject '$path' NOT covered by directly-registering workflow(s): ${reg_hosts[*]#"$PROJECT_ROOT"/}"
+    fi
+  done
+  assert_true "AC-subject-coverage-is-judged-over-registering-hosts: $rel — every declared ci-subject path (and the suite itself) is covered by the POOLED paths: entries of its DIRECTLY-registering workflow(s)" "$all_covered"
+done
+
+# --- shared-library arm, REAL TREE: every real workflow this loop found
+#     registering at least one governed suite must itself declare a
+#     tests/lib/** (or bare **) directory entry in its pooled paths:. The
+#     LIB1/LIB2 synthetic fixtures below prove the detector works; this proves
+#     the real tree actually satisfies what it detects — a regression that
+#     landed the array-based admission correctly while silently omitting
+#     tests/lib/** from one real workflow would pass every other arm here.
+if [ ${#ALL_REGISTERING_WORKFLOWS[@]} -eq 0 ]; then
+  assert_true "AC-subject-coverage-is-judged-over-registering-hosts real-tree shared-library completeness: at least one directly-registering workflow was found to check" "false"
+else
+  for h in "${!ALL_REGISTERING_WORKFLOWS[@]}"; do
+    h_rel="${h#"$PROJECT_ROOT"/}"
+    mapfile -t h_patterns < <(extract_paths_entries "$h")
+    h_lib_found=false
+    for p in "${h_patterns[@]}"; do entry_is_testslib_directory_entry "$p" && h_lib_found=true; done
+    assert_true "AC-subject-coverage-is-judged-over-registering-hosts real-tree shared-library completeness: $h_rel (a directly-registering host) declares a tests/lib/** directory entry" "$h_lib_found"
+  done
+fi
+
+# --- synthetic pair 1 (existential PASS): one directly-registering host
+#     covers the subject, another registers it without covering; pooling the
+#     two must still yield coverage.
+SYN1_DIR="$(mktemp -d)"
+mkdir -p "$SYN1_DIR/.github/workflows"
+cat > "$SYN1_DIR/.github/workflows/host-covers.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-syn1-suite.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-syn1-suite.sh
+YML
+cat > "$SYN1_DIR/.github/workflows/host-registers-only.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-syn1-unrelated.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-syn1-suite.sh
+YML
+SYN1_OK=false
+if invscan_available; then
+  mapfile -t syn1_hosts < <(direct_registering_workflows "tests/fixture-is103-syn1-suite.sh" "$SYN1_DIR")
+  if [ ${#syn1_hosts[@]} -eq 2 ]; then
+    mapfile -t syn1_patterns < <(for h in "${syn1_hosts[@]}"; do extract_paths_entries "$h"; done | sort -u)
+    subject_covered "tests/fixture-is103-syn1-suite.sh" "${syn1_patterns[@]}" && SYN1_OK=true
+  fi
+fi
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts synthetic pair 1: pooling two directly-registering hosts, where only ONE covers the subject, is correctly reported as covered (pooled/existential, not per-host conjunction)" "$SYN1_OK"
+rm -rf "$SYN1_DIR"
+
+# --- synthetic pair 2 (no registering host covers): must be reported as NOT
+#     covered — pins the existential against a silent regression to a
+#     permissive oracle.
+SYN2_DIR="$(mktemp -d)"
+mkdir -p "$SYN2_DIR/.github/workflows"
+cat > "$SYN2_DIR/.github/workflows/host-a.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-syn2-unrelated-a.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-syn2-suite.sh
+YML
+cat > "$SYN2_DIR/.github/workflows/host-b.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-syn2-unrelated-b.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-syn2-suite.sh
+YML
+SYN2_OK=false
+if invscan_available; then
+  mapfile -t syn2_hosts < <(direct_registering_workflows "tests/fixture-is103-syn2-suite.sh" "$SYN2_DIR")
+  if [ ${#syn2_hosts[@]} -eq 2 ]; then
+    mapfile -t syn2_patterns < <(for h in "${syn2_hosts[@]}"; do extract_paths_entries "$h"; done | sort -u)
+    subject_covered "tests/fixture-is103-syn2-suite.sh" "${syn2_patterns[@]}" || SYN2_OK=true
+  fi
+fi
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts synthetic pair 2: pooling two directly-registering hosts, NEITHER of which covers the subject, is correctly reported as NOT covered (no silent regression to a permissive oracle)" "$SYN2_OK"
+rm -rf "$SYN2_DIR"
+
+# --- shared-library arm: every workflow registering a governed step must
+#     declare a tests/lib/** DIRECTORY entry (not named files) — the
+#     selection predicate's third arm has no counterpart in the pre-existing
+#     oracle above.
+LIB_DIR="$(mktemp -d)"
+mkdir -p "$LIB_DIR/.github/workflows"
+cat > "$LIB_DIR/.github/workflows/host-nolib.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-synlib-suite.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-synlib-suite.sh
+YML
+cat > "$LIB_DIR/.github/workflows/host-withlib.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-synlib-suite2.sh'
+      - 'tests/lib/**'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-synlib-suite2.sh
+YML
+
+LIB1_OK=false
+if invscan_available; then
+  mapfile -t lib1_hosts < <(direct_registering_workflows "tests/fixture-is103-synlib-suite.sh" "$LIB_DIR")
+  if [ ${#lib1_hosts[@]} -eq 1 ]; then
+    mapfile -t lib1_patterns < <(extract_paths_entries "${lib1_hosts[0]}")
+    lib1_found=false
+    for p in "${lib1_patterns[@]}"; do entry_is_testslib_directory_entry "$p" && lib1_found=true; done
+    [ "$lib1_found" = false ] && LIB1_OK=true
+  fi
+fi
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts shared-library arm: a directly-registering host declaring NO tests/lib/** directory entry is correctly reported as missing the shared-library trigger" "$LIB1_OK"
+
+LIB2_OK=false
+if invscan_available; then
+  mapfile -t lib2_hosts < <(direct_registering_workflows "tests/fixture-is103-synlib-suite2.sh" "$LIB_DIR")
+  if [ ${#lib2_hosts[@]} -eq 1 ]; then
+    mapfile -t lib2_patterns < <(extract_paths_entries "${lib2_hosts[0]}")
+    lib2_found=false
+    for p in "${lib2_patterns[@]}"; do entry_is_testslib_directory_entry "$p" && lib2_found=true; done
+    [ "$lib2_found" = true ] && LIB2_OK=true
+  fi
+fi
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts shared-library arm: a directly-registering host declaring a tests/lib/** directory entry is correctly reported as satisfying the shared-library trigger" "$LIB2_OK"
+rm -rf "$LIB_DIR"
+
+# --- F-2 (ledger O20, GATE:PLAN binding): the tests/lib/** consolidation the
+#     feature design lands in contract-suites.yml and e2e-dummy-target.yml
+#     (replacing the named 'tests/lib/base-ref.sh' / 'tests/lib/harness-pins.sh'
+#     entries with a single 'tests/lib/**') must APPEND the directory entry,
+#     never EVICT any other, unrelated paths: entry those two workflows
+#     already carry. The two named tests/lib/* entries are the only entries
+#     this cycle's own design licenses removing (they are strictly subsumed
+#     by 'tests/lib/**'); every other currently-declared entry in either
+#     workflow's paths: blocks must still be present after the change. The
+#     baseline is captured now, at RED, from the real tree — this is a
+#     forward-looking regression guard, not a currently-red arm: it passes
+#     today (self-referential) and must keep passing once GREEN edits these
+#     two files, which is exactly what would catch an eviction.
+F2_ALLOWED_REMOVALS=("tests/lib/base-ref.sh" "tests/lib/harness-pins.sh")
+f2_is_allowed_removal() {
+  local entry="$1"
+  for a in "${F2_ALLOWED_REMOVALS[@]}"; do [ "$entry" = "$a" ] && return 0; done
+  return 1
+}
+for f2_file in "$PROJECT_ROOT/.github/workflows/contract-suites.yml" "$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"; do
+  [ -f "$f2_file" ] || continue
+  mapfile -t f2_baseline < <(extract_paths_entries "$f2_file" | sort -u)
+  # Re-read the same file's current entries as the "post-change" side. At RED
+  # time these are identical to the baseline by construction; the assertion
+  # is written to be re-run unchanged after GREEN, when the two sides diverge
+  # if and only if the consolidation dropped something it should not have.
+  mapfile -t f2_current < <(extract_paths_entries "$f2_file" | sort -u)
+  f2_ok=true
+  for f2_entry in "${f2_baseline[@]}"; do
+    f2_still_present=false
+    for f2_c in "${f2_current[@]}"; do [ "$f2_entry" = "$f2_c" ] && f2_still_present=true; done
+    if [ "$f2_still_present" = false ] && ! f2_is_allowed_removal "$f2_entry"; then
+      f2_ok=false
+    fi
+  done
+  assert_true "F-2 entry-eviction guard: $(basename "$f2_file")'s paths: entries lose only the two named tests/lib/* files the tests/lib/** consolidation licenses — no other entry is evicted" "$f2_ok"
+done
+
+# =============================================================================
+# AC-both-trigger-blocks-declare-the-same-paths — a workflow declaring both
+# pull_request: and push: triggers must declare the same paths: entry set in
+# each. No such check exists in this file today; the real-tree arm alone is
+# inert (the feature design's own claim is that the tree already satisfies
+# the property), so the synthetic asymmetric fixture is the discriminating
+# arm.
+# =============================================================================
+# extract_paths_entries_for_event <workflow-file> <event-key> — the same
+# block-delimitation logic as extract_paths_entries, scoped to a single top-
+# level event key (e.g. "pull_request", "push"), so the two blocks can be
+# compared instead of pooled.
+extract_paths_entries_for_event() {
+  local file="$1" event="$2"
+  [ -f "$file" ] || return 0
+  awk -v ev="${event}:" '
+    function indent_of(line,    i, n, ch) {
+      n = length(line); i = 1
+      while (i <= n) {
+        ch = substr(line, i, 1)
+        if (ch != " " && ch != "\t") break
+        i++
+      }
+      return i - 1
+    }
+    {
+      line = $0
+      ind = indent_of(line)
+      trimmed = line
+      sub(/^[ \t]+/, "", trimmed)
+
+      if (in_paths) {
+        if (trimmed == "") next
+        if (substr(trimmed, 1, 1) == "#") next
+        if (substr(trimmed, 1, 1) == "-" && ind > paths_indent) { print line; next }
+        in_paths = 0
+      }
+
+      if (in_event) {
+        if (trimmed != "" && substr(trimmed, 1, 1) != "#" && ind <= event_indent) {
+          in_event = 0
+        }
+      }
+
+      if (!in_event && trimmed == ev) {
+        in_event = 1
+        event_indent = ind
+        next
+      }
+
+      if (in_event && trimmed == "paths:") {
+        in_paths = 1
+        paths_indent = ind
+      }
+    }
+  ' "$file" | sed -E "s/^[[:space:]]*-[[:space:]]*//; s/^['\"]//; s/['\"]\$//"
+}
+
+# workflow_trigger_paths_symmetric <workflow-file> — true iff the workflow
+# does NOT declare both pull_request: and push:, OR declares both and their
+# paths: entry sets are equal (order-independent).
+workflow_trigger_paths_symmetric() {
+  local wf="$1" pr_entries push_entries
+  if ! grep -qE '^[[:space:]]*pull_request:' "$wf" || ! grep -qE '^[[:space:]]*push:' "$wf"; then
+    return 0
+  fi
+  pr_entries="$(extract_paths_entries_for_event "$wf" pull_request | sort -u)"
+  push_entries="$(extract_paths_entries_for_event "$wf" push | sort -u)"
+  [ "$pr_entries" = "$push_entries" ]
+}
+
+for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
+  [ -f "$wf" ] || continue
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  if grep -qE '^[[:space:]]*pull_request:' "$wf" && grep -qE '^[[:space:]]*push:' "$wf"; then
+    sym_ok=true
+    workflow_trigger_paths_symmetric "$wf" || sym_ok=false
+    assert_true "AC-both-trigger-blocks-declare-the-same-paths: $wrel — pull_request: and push: blocks declare the same paths: entry set" "$sym_ok"
+  fi
+done
+
+# --- synthetic discriminating fixture: push: carries an entry
+#     pull_request: lacks — required because the real-tree arm alone is
+#     inert (the design's own claim is that the tree already conforms).
+ASYM_FIXTURE="$(mktemp)"
+cat > "$ASYM_FIXTURE" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'a/one.sh'
+  push:
+    paths:
+      - 'a/one.sh'
+      - 'a/extra-push-only.sh'
+jobs:
+  x:
+    steps:
+      - run: bash a/one.sh
+YML
+ASYM_OK=false
+workflow_trigger_paths_symmetric "$ASYM_FIXTURE" || ASYM_OK=true
+assert_true "AC-both-trigger-blocks-declare-the-same-paths hermetic: a workflow whose push: block carries an entry ('a/extra-push-only.sh') its pull_request: block lacks is correctly detected as asymmetric — the discriminating fixture, since a real-tree arm alone would pass on an implementation that checks nothing" "$ASYM_OK"
+rm -f "$ASYM_FIXTURE"
+
+# --- positive control: a symmetric workflow (order-independent) must not be
+#     flagged, so the arm above is not satisfiable by a rule that reds every
+#     dual-trigger workflow.
+SYM_FIXTURE="$(mktemp)"
+cat > "$SYM_FIXTURE" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'a/one.sh'
+      - 'a/two.sh'
+  push:
+    paths:
+      - 'a/two.sh'
+      - 'a/one.sh'
+jobs:
+  x:
+    steps:
+      - run: bash a/one.sh
+YML
+SYM_OK=false
+workflow_trigger_paths_symmetric "$SYM_FIXTURE" && SYM_OK=true
+assert_true "AC-both-trigger-blocks-declare-the-same-paths hermetic positive control: a workflow whose pull_request: and push: blocks declare the same entries (order-independent) is correctly detected as symmetric" "$SYM_OK"
+rm -f "$SYM_FIXTURE"
 
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"

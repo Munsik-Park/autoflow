@@ -41,6 +41,9 @@ on:
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
       - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'CLAUDE.md'
+      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
+      - 'tests/lib/**'
   push:
     branches: [main]
     # Scanner include surface — mirror of the pull_request block above. Kept in
@@ -61,6 +64,9 @@ on:
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
       - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'CLAUDE.md'
+      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
+      - 'tests/lib/**'
 
 permissions:
   contents: read
@@ -75,5 +81,45 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Selection (issue #103): scripts/test/select-suites.sh is the SOLE owner of
+      # "which suites does this change require". Each governed suite step below
+      # guards on this step's output; nothing here reimplements the predicate.
+      # Under a push event, or an empty delta from a resolved base, it selects
+      # the full set — the push delta is empty by construction, so a purely
+      # delta-driven selector would silently lose all coverage.
+      - id: select
+        name: select suites for this change
+        run: |
+          rc=0
+          bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
+            > "$RUNNER_TEMP/selected-raw.txt" \
+            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
+          cat "$RUNNER_TEMP/selection-report.txt"
+          if [ "$rc" -ne 0 ]; then
+            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
+            exit "$rc"
+          fi
+          paste -sd' ' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
+          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
+
       - name: Run host-purity DELTA acceptance suite
+        id: s-test-issue-788-host-purity-delta
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-788-host-purity-delta.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-788-host-purity-delta.sh
+
+      # Reconciliation (issue #103): a step whose `if:` evaluates false is
+      # SKIPPED and the job still concludes successfully — so a green run is
+      # exactly what a wrongly-false guard produces, and enforcement here is
+      # advisory with no required status check behind it. This step compares the
+      # run's own selection report against the run's own step outcomes, so it
+      # needs no second source of truth.
+      - name: reconcile selection against step outcomes
+        if: always()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          printf '%s' "$STEPS_JSON" > "$RUNNER_TEMP/steps.json"
+          bash scripts/test/check-step-reconciliation.sh \
+            --selected "$RUNNER_TEMP/selection-report.txt" \
+            --steps "$RUNNER_TEMP/steps.json"

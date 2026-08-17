@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .github/workflows/e2e-dummy-target.yml docs/design-rationale.md docs/git-workflow.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/manual/issue-52-manual-scenarios.md tests/run-doc-invariants.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #52 — peer-teammate-facilitator premise, evidence-anchor
 # correction (cycle-scoped suite)

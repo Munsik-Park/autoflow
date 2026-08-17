@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh docs/gate-matching-standard.md tests/fixtures/autoflow-state-canonical.json tests/fixtures/gate-schema.json tests/test-gate-hardening.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: check-autoflow-gate.sh CONTRACT (issue #223)
 # =============================================================================
