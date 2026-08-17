@@ -35,8 +35,9 @@ paragraph.
 1. Read `docs/doc-invariant-registry.md` §12 (between the `## 12.` heading and the `### 12.1`
    heading) as landed by this cycle.
 2. Take the auditor's question literally: given a suite discovered tomorrow that (a) contains a
-   `case`-branch label or `[[ … == … ]]` pattern matching `dev/*-issue-<N>` on a non-comment,
-   non-heredoc line, and (b) declares no `# cycle-arm: #<N>` header field — does §12's text tell
+   `case`-branch label or `[[ … == … ]]` / `[[ … = … ]]` pattern (both string-equality forms;
+   `!=` excluded) matching `dev/*-issue-<N>` on a non-comment, non-heredoc line, and (b) declares
+   no `# cycle-arm: #<N>` header field — does §12's text tell
    the auditor, without consulting this issue's ledger or PR, which of the two dispositions
    applies (retire it, or ungate it and add `# cycle-arm:`)?
 3. Confirm the text states the **rule over the shape**, not a list of this cycle's six files

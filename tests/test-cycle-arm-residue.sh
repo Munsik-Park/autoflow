@@ -43,9 +43,11 @@ echo "=== Issue #107 — cycle-arm residue (array-less dev/*-issue-<N> gate clas
 # Class predicate — root-parameterised, no re-invocable script body.
 #
 # A LIVE GATE (feature design §3.8) is a line that is (1) a case-branch label
-# or a `[[ ... == ... ]]` pattern whose pattern is `dev/*-issue-<N>`, (2) not a
-# comment line, and (3) not inside a heredoc body — text a suite *writes out*
-# as a fixture is fixture data, not a gate the suite evaluates. Heredoc-body
+# or a `[[ ... == ... ]]` / `[[ ... = ... ]]` pattern (both string-equality
+# forms are live; `!=` is excluded) whose pattern is `dev/*-issue-<N>`, (2)
+# not a comment line, and (3) not inside a heredoc body — text a suite
+# *writes out* as a fixture is fixture data, not a gate the suite evaluates.
+# Heredoc-body
 # tracking reuses invscan_heredoc_tag (scripts/test/invocation-scan.sh), the
 # same definition the leaf lint already relies on, rather than re-deriving
 # quote-handling here.
@@ -199,6 +201,25 @@ SH
 COMMENT_RESULT="$(cycle_arm_residue_violations "$NEG_DIR")"
 assert_true "new-suite-non-vacuous: a gate-glob mention inside a comment line is not flagged" \
   "! printf '%s\\n' \"\$COMMENT_RESULT\" | grep -qE '557'"
+
+# GATE:QUALITY FAIL #2: the bracket-pattern arm's original `==` form had no
+# fixture of its own (only the single-= variant added below did) — add one so
+# the class predicate's most common live shape is itself under a negative
+# control, not just its extension.
+cat > "$NEG_DIR/tests/test-fixture-107-double-eq.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+b="${HEAD_BRANCH:-}"
+if [[ $b == dev/*-issue-560* ]]; then
+  echo "gated"
+fi
+SH
+DOUBLE_EQ_RESULT="$(cycle_arm_residue_violations "$NEG_DIR")"
+assert_true "new-suite-non-vacuous: a [[ \$b == dev/*-issue-560* ]] double-== bracket gate with no cycle-arm header is caught" \
+  "printf '%s\\n' \"\$DOUBLE_EQ_RESULT\" | grep -qE '^tests/test-fixture-107-double-eq\\.sh 560\$'"
+rm -f "$NEG_DIR/tests/test-fixture-107-double-eq.sh"
 
 # GATE:QUALITY FAIL #1, finding 2: a [[ ]] bracket-pattern gate written with a
 # single `=` (POSIX-shape string equality, just as live as `==`) evaded the
