@@ -1124,7 +1124,8 @@ done
 #     covers the subject, another registers it without covering; pooling the
 #     two must still yield coverage.
 SYN1_DIR="$(mktemp -d)"
-cat > "$SYN1_DIR/host-covers.yml" <<'YML'
+mkdir -p "$SYN1_DIR/.github/workflows"
+cat > "$SYN1_DIR/.github/workflows/host-covers.yml" <<'YML'
 on:
   pull_request:
     paths:
@@ -1134,7 +1135,7 @@ jobs:
     steps:
       - run: bash tests/fixture-is103-syn1-suite.sh
 YML
-cat > "$SYN1_DIR/host-registers-only.yml" <<'YML'
+cat > "$SYN1_DIR/.github/workflows/host-registers-only.yml" <<'YML'
 on:
   pull_request:
     paths:
@@ -1159,7 +1160,8 @@ rm -rf "$SYN1_DIR"
 #     covered — pins the existential against a silent regression to a
 #     permissive oracle.
 SYN2_DIR="$(mktemp -d)"
-cat > "$SYN2_DIR/host-a.yml" <<'YML'
+mkdir -p "$SYN2_DIR/.github/workflows"
+cat > "$SYN2_DIR/.github/workflows/host-a.yml" <<'YML'
 on:
   pull_request:
     paths:
@@ -1169,7 +1171,7 @@ jobs:
     steps:
       - run: bash tests/fixture-is103-syn2-suite.sh
 YML
-cat > "$SYN2_DIR/host-b.yml" <<'YML'
+cat > "$SYN2_DIR/.github/workflows/host-b.yml" <<'YML'
 on:
   pull_request:
     paths:
@@ -1195,7 +1197,8 @@ rm -rf "$SYN2_DIR"
 #     selection predicate's third arm has no counterpart in the pre-existing
 #     oracle above.
 LIB_DIR="$(mktemp -d)"
-cat > "$LIB_DIR/host-nolib.yml" <<'YML'
+mkdir -p "$LIB_DIR/.github/workflows"
+cat > "$LIB_DIR/.github/workflows/host-nolib.yml" <<'YML'
 on:
   pull_request:
     paths:
@@ -1205,7 +1208,7 @@ jobs:
     steps:
       - run: bash tests/fixture-is103-synlib-suite.sh
 YML
-cat > "$LIB_DIR/host-withlib.yml" <<'YML'
+cat > "$LIB_DIR/.github/workflows/host-withlib.yml" <<'YML'
 on:
   pull_request:
     paths:

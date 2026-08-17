@@ -120,8 +120,16 @@ SEL
 JSON
   bash "$RECONCILE" --selected "$SELECTED_FILE" --steps "$STEPS_FILE" >/tmp/issue103-reconcile-f1-unwired.out 2>&1
   f1_unwired_exit=$?
+  # NOTE (ledger O21, GREEN blocker B-1): the second conjunct originally
+  # asserted the elsewhere-hosted entry does not appear in the output at
+  # all. That is now stale against this file's own cycle-3 contract,
+  # AC-reconciler-surfaces-entries-it-cannot-judge (:180-186 below): an
+  # out-of-job entry is reported on an OUT-OF-JOB: line, not dropped
+  # silently. The correct property is narrower -- the entry appears ONLY as
+  # that report line, never as a MISMATCH -- which is what distinguishes
+  # "surfaced, not judged" from "judged and disagreed".
   assert_true "GATE:QUALITY F1: the real (unwired) invocation shape -- a tree-wide SELECTED report against a job-local outcome map, no --governed -- must not red on a suite hosted in another workflow (tests/test-fixture-elsewhere.sh); this suite's own outcome (success) still reconciles" \
-    "[ $f1_unwired_exit -eq 0 ] && ! grep -qF 'test-fixture-elsewhere.sh' /tmp/issue103-reconcile-f1-unwired.out"
+    "[ $f1_unwired_exit -eq 0 ] && grep -qF 'OUT-OF-JOB: tests/test-fixture-elsewhere.sh' /tmp/issue103-reconcile-f1-unwired.out && ! grep -qE '^MISMATCH:.*test-fixture-elsewhere\.sh' /tmp/issue103-reconcile-f1-unwired.out"
 
   # -- Arms (b)/(c), the fix shape: a fixture with a genuine cross-workflow
   #    suite PLUS two genuine job-local mismatches, narrowed via --governed
