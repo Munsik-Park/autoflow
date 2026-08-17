@@ -82,9 +82,11 @@ against the pre-edit form of the document.
 **Source AC:** none directly — a parse/runtime-error fence for the template-literal
 edit itself, distinct from the behavioral claim M1/M2 carry.
 
-**Why not automated in this file:** `node --check` (part of AC-56-8's harness load
-in `test/workflows/run.mjs`) covers the parse; only a real Workflow invocation
-covers the runtime.
+**Why not automated in this file:** `node --check` (AC-27-20d in
+`tests/test-issue-27-composition-oracle.sh`, the standing home for this harness
+measurement per `docs/doc-invariant-registry.md` §12.1 — AC-56-8's own
+branch-scoped copy was retired in #107) covers the parse; only a real Workflow
+invocation covers the runtime.
 
 **Steps:**
 

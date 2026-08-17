@@ -78,7 +78,13 @@ cycle_arm_residue_live_gate_numbers() {
           rest = substr(m, RSTART + RLENGTH)
           num = tok; sub(/^dev\/\*-issue-/, "", num)
           is_case_label = (rest ~ /^(-\*)?([[:space:]]*\|[[:space:]]*dev\/\*-issue-[0-9]+-\*)?[[:space:]]*\)/)
-          is_bracket_pattern = ($0 ~ /\[\[[^]]*==[[:space:]]*"?dev\/\*-issue-/)
+          # `=` and `==` are both valid [[ ]] string-equality operators; a
+          # single-= gate ([[ $b = dev/*-issue-42* ]]) is just as live as a
+          # double-= one (GATE:QUALITY FAIL #1, finding 2). Requiring
+          # whitespace immediately before the operator matches both while
+          # excluding `!=` (whose char immediately before `=` is `!`, not
+          # whitespace).
+          is_bracket_pattern = ($0 ~ /\[\[[^]]*[[:space:]]=[=]?[[:space:]]*"?dev\/\*-issue-/)
           if (is_case_label || is_bracket_pattern) print num
           m = rest
         }
@@ -193,6 +199,41 @@ SH
 COMMENT_RESULT="$(cycle_arm_residue_violations "$NEG_DIR")"
 assert_true "new-suite-non-vacuous: a gate-glob mention inside a comment line is not flagged" \
   "! printf '%s\\n' \"\$COMMENT_RESULT\" | grep -qE '557'"
+
+# GATE:QUALITY FAIL #1, finding 2: a [[ ]] bracket-pattern gate written with a
+# single `=` (POSIX-shape string equality, just as live as `==`) evaded the
+# prior is_bracket_pattern regex, which required `==` literally.
+cat > "$NEG_DIR/tests/test-fixture-107-single-eq.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+b="${HEAD_BRANCH:-}"
+if [[ $b = dev/*-issue-558* ]]; then
+  echo "gated"
+fi
+SH
+SINGLE_EQ_RESULT="$(cycle_arm_residue_violations "$NEG_DIR")"
+assert_true "new-suite-non-vacuous: a [[ \$b = dev/*-issue-558* ]] single-= bracket gate with no cycle-arm header is caught" \
+  "printf '%s\\n' \"\$SINGLE_EQ_RESULT\" | grep -qE '^tests/test-fixture-107-single-eq\\.sh 558\$'"
+rm -f "$NEG_DIR/tests/test-fixture-107-single-eq.sh"
+
+# Negative control for the fix above: [[ $b != dev/*-issue-559* ]] is a
+# NEGATED comparison, not a gate on the pattern — the char immediately before
+# `=` is `!`, not whitespace, so it must stay excluded.
+cat > "$NEG_DIR/tests/test-fixture-107-not-eq.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+b="${HEAD_BRANCH:-}"
+if [[ $b != dev/*-issue-559* ]]; then
+  echo "not gated"
+fi
+SH
+NOT_EQ_RESULT="$(cycle_arm_residue_violations "$NEG_DIR")"
+assert_true "new-suite-non-vacuous: a [[ \$b != dev/*-issue-559* ]] negated comparison is not flagged (the single-= fix must not swallow !=)" \
+  "! printf '%s\\n' \"\$NOT_EQ_RESULT\" | grep -qE '559'"
 
 rm -rf "$NEG_DIR"
 
@@ -312,8 +353,28 @@ assert_true "pin-home-sourcing-preserved: tests/test-issue-103-suite-manifest.sh
   '! grep -qF -- "$OLD_59_SOURCING_ROW" "$SIBLING_103_MANIFEST"'
 assert_true "pin-home-sourcing-preserved: tests/test-issue-103-suite-manifest.sh's surviving test-issue-27 sourcing row no longer uses the untightened bare-substring predicate" \
   '! grep -qF -- "$OLD_27_SOURCING_ROW" "$SIBLING_103_MANIFEST"'
-assert_true "pin-home-sourcing-preserved: tests/test-issue-103-suite-manifest.sh still asserts a non-comment source/. line for tests/lib/harness-pins.sh against test-issue-27 (the tightened predicate has teeth on the real file, not just on prose)" \
-  "grep -vE '^[[:space:]]*#' '$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh' | grep -qE '(^|[[:space:]])\\.[[:space:]]|source[[:space:]]' "
+# GATE:QUALITY FAIL #1, finding 1: the prior predicate below (`(^|[[:space:]])\.[[:space:]]|source[[:space:]]`)
+# never mentioned harness-pins.sh, so it stayed green on ANY non-comment
+# source/. line in the file — including the unrelated
+# `. "$BASEREF_LIB"` (tests/test-issue-27-composition-oracle.sh:106) or a jq
+# `.source ==` line — even after a harness-pins.sh sourcing removal. Tightened
+# to require the matched line both has the source/. shape AND names
+# harness-pins.sh.
+TEST27_SUITE="$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh"
+HARNESS_PINS_SOURCE_PREDICATE='((^|[[:space:]])\.[[:space:]]|source[[:space:]]).*harness-pins\.sh'
+assert_true "pin-home-sourcing-preserved: tests/test-issue-103-suite-manifest.sh still asserts a non-comment source/. line that both sources AND names tests/lib/harness-pins.sh against test-issue-27 (the tightened predicate has teeth on the real file, not just on prose)" \
+  "grep -vE '^[[:space:]]*#' '$TEST27_SUITE' | grep -qE '$HARNESS_PINS_SOURCE_PREDICATE'"
+
+# Teeth check (scratch, sed/grep-filtered COPY only — nothing is committed):
+# the tightened predicate above must FLIP RED when the real harness-pins.sh
+# sourcing line is removed from test-issue-27, or it is satisfied by
+# something else in the file (exactly the GATE:QUALITY #1 finding). This
+# demonstrates the predicate has teeth rather than merely asserting it does.
+TEETH_COPY="$(mktemp)"
+grep -vF 'source "$PROJECT_ROOT/tests/lib/harness-pins.sh"' "$TEST27_SUITE" > "$TEETH_COPY"
+assert_true "pin-home-sourcing-preserved teeth-check: the tightened predicate reds against a scratch copy of test-issue-27 with its harness-pins.sh sourcing line removed (proves it is not satisfied by an unrelated source/. line, e.g. tests/lib/base-ref.sh's BASEREF_LIB sourcing)" \
+  "! (grep -vE '^[[:space:]]*#' '$TEETH_COPY' | grep -qE '$HARNESS_PINS_SOURCE_PREDICATE')"
+rm -f "$TEETH_COPY"
 
 # §3.10c — the 62/56 positive-presence rows are flipped, not left green on a
 # claim this cycle retires.

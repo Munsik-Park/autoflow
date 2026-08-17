@@ -301,9 +301,11 @@ echo "=== AC-27-20 (composition oracle for S8, fence, PASS pre+post) — workflo
 # still functions as a standing shared-harness regression lock across every cycle, not a
 # single cycle's own baseline. A plain literal bump will need repeating by each future
 # cycle that adds run.mjs tests; that recurring cost is accepted as the trade-off for
-# keeping the check live (a structural fix — e.g. retiring this duplicate check in favor of
-# #56's own branch-scoped AC-56-8 fence — is a candidate follow-up, out of this cycle's
-# scope).
+# keeping the check live. The structural alternative floated here — deferring to #56's
+# own branch-scoped AC-56-8 fence instead — went the other way in #107: AC-56-8 was
+# itself a dormant dev/*-issue-56 gate over an already-merged cycle, duplicating this
+# suite's unconditional measurement, and was retired (`docs/doc-invariant-registry.md`
+# §12.1). This suite is the standing home for the harness ok-count measurement.
 # B14 update (issue #59, D11/D18): #59 added six run.mjs tests for the adoption-side
 # evidence discipline (37 -> 43). Same reasoning as above — the literal is bumped in the
 # same commit as the run.mjs addition, keeping the plain-literal unconditional form. The
