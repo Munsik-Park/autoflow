@@ -528,6 +528,128 @@ SH
   fi
 fi
 
+# =============================================================================
+# Issue #103 cycle 3 (review-response) -- selector token expansion and silent
+# missing-header path.
+# .autoflow/issue-103-verification-design.md §1:
+#   AC-ci-subject-tokens-are-matched-as-patterns-not-expanded,
+#   AC-an-unreadable-header-blocks-rather-than-narrows.
+# =============================================================================
+if [ -f "$SELECT" ]; then
+
+  # ---------------------------------------------------------------------
+  # AC-ci-subject-tokens-are-matched-as-patterns-not-expanded — a `ci-subject`
+  # glob token is matched as written; the process's working directory must
+  # not change which suites a given delta selects. select-suites.sh:153's
+  # unquoted `for tok in $(suite_header_field ...)` undergoes pathname
+  # expansion against the CALLER's cwd, so a same-named decoy path sitting in
+  # the invoking working directory silently swaps the literal glob token for
+  # a real filename. Driving the SAME fixture root from two different
+  # working directories -- one holding the decoy, one not -- is the only way
+  # to discriminate this: a single-run arm cannot see the difference.
+  # ---------------------------------------------------------------------
+  GLOB_FIXTURE_ROOT="$(mktemp -d)"
+  mkdir -p "$GLOB_FIXTURE_ROOT/tests"
+  cat > "$GLOB_FIXTURE_ROOT/tests/test-fixture-103-globcheck.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: fixture-glob-dir/*
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+  chmod +x "$GLOB_FIXTURE_ROOT/tests/test-fixture-103-globcheck.sh"
+  git -C "$GLOB_FIXTURE_ROOT" init -q >/dev/null 2>&1
+  git -C "$GLOB_FIXTURE_ROOT" add -A >/dev/null 2>&1
+  git -C "$GLOB_FIXTURE_ROOT" -c user.email=a@b.c -c user.name=a commit -q -m init >/dev/null 2>&1
+  GLOB_BASE_SHA="$(git -C "$GLOB_FIXTURE_ROOT" rev-parse HEAD 2>/dev/null)"
+  mkdir -p "$GLOB_FIXTURE_ROOT/fixture-glob-dir"
+  : > "$GLOB_FIXTURE_ROOT/fixture-glob-dir/target.txt"
+  git -C "$GLOB_FIXTURE_ROOT" add -A >/dev/null 2>&1
+  git -C "$GLOB_FIXTURE_ROOT" -c user.email=a@b.c -c user.name=a commit -q -m "add target" >/dev/null 2>&1
+
+  # Working directory WITHOUT a decoy -- the glob token has nothing to
+  # pathname-expand against in this cwd, so it stays literal even under the
+  # buggy unquoted split.
+  GLOB_CWD_NO_DECOY="$(mktemp -d)"
+
+  # Working directory WITH a same-named decoy -- a real "fixture-glob-dir/*"
+  # match sitting in the invoking cwd, which the buggy unquoted expansion
+  # would substitute in place of the literal token.
+  GLOB_CWD_WITH_DECOY="$(mktemp -d)"
+  mkdir -p "$GLOB_CWD_WITH_DECOY/fixture-glob-dir"
+  : > "$GLOB_CWD_WITH_DECOY/fixture-glob-dir/decoy-entry"
+
+  ( cd "$GLOB_CWD_NO_DECOY" && bash "$SELECT" --root "$GLOB_FIXTURE_ROOT" --base "$GLOB_BASE_SHA" --event pull_request ) \
+    >/tmp/issue103-glob-no-decoy.out 2>/tmp/issue103-glob-no-decoy-report.out
+  ( cd "$GLOB_CWD_WITH_DECOY" && bash "$SELECT" --root "$GLOB_FIXTURE_ROOT" --base "$GLOB_BASE_SHA" --event pull_request ) \
+    >/tmp/issue103-glob-with-decoy.out 2>/tmp/issue103-glob-with-decoy-report.out
+
+  assert_true "AC-ci-subject-tokens-are-matched-as-patterns-not-expanded: select-suites.sh's stdout selection is identical whether invoked from a plain cwd or from a cwd holding a same-named decoy for the ci-subject glob token" \
+    "diff -q /tmp/issue103-glob-no-decoy.out /tmp/issue103-glob-with-decoy.out >/dev/null 2>&1"
+  assert_true "AC-ci-subject-tokens-are-matched-as-patterns-not-expanded: select-suites.sh's per-subject report is identical across the two invoking working directories (the glob token is matched as written, not pathname-expanded against the caller's cwd)" \
+    "diff -q /tmp/issue103-glob-no-decoy-report.out /tmp/issue103-glob-with-decoy-report.out >/dev/null 2>&1"
+
+  rm -rf "$GLOB_FIXTURE_ROOT" "$GLOB_CWD_NO_DECOY" "$GLOB_CWD_WITH_DECOY"
+
+  # ---------------------------------------------------------------------
+  # AC-an-unreadable-header-blocks-rather-than-narrows — a suite whose
+  # ci-subject header is absent or malformed (empty after trimming) must
+  # produce a visible BLOCK and a non-zero exit, naming the offending file
+  # -- never the ordinary NOT-SELECTED no-match path. A conforming header
+  # keeps ordinary behaviour. `--event push` is deliberate: it drives the
+  # full-set path, where the CURRENT tree never consults the header at all
+  # (silent), so this arm isolates the missing pre-selection validation
+  # rather than any delta-matching behaviour already covered above.
+  # ---------------------------------------------------------------------
+  NOHDR_ROOT="$(mktemp -d)"
+  mkdir -p "$NOHDR_ROOT/tests"
+  cat > "$NOHDR_ROOT/tests/test-fixture-103-no-header.sh" <<'SH'
+#!/usr/bin/env bash
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+  chmod +x "$NOHDR_ROOT/tests/test-fixture-103-no-header.sh"
+  bash "$SELECT" --root "$NOHDR_ROOT" --event push >/tmp/issue103-nohdr.out 2>/tmp/issue103-nohdr-report.out
+  nohdr_exit=$?
+  assert_true "AC-an-unreadable-header-blocks-rather-than-narrows: a suite with no ci-subject header at all produces a non-zero exit and a BLOCK: line naming the offending file, not an ordinary NOT-SELECTED" \
+    "[ $nohdr_exit -ne 0 ] && grep -q 'BLOCK:' /tmp/issue103-nohdr-report.out && grep -qF 'test-fixture-103-no-header.sh' /tmp/issue103-nohdr-report.out && ! grep -qF 'NOT-SELECTED: tests/test-fixture-103-no-header.sh' /tmp/issue103-nohdr-report.out"
+  rm -rf "$NOHDR_ROOT"
+
+  EMPTYHDR_ROOT="$(mktemp -d)"
+  mkdir -p "$EMPTYHDR_ROOT/tests"
+  cat > "$EMPTYHDR_ROOT/tests/test-fixture-103-empty-header.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject:
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+  chmod +x "$EMPTYHDR_ROOT/tests/test-fixture-103-empty-header.sh"
+  bash "$SELECT" --root "$EMPTYHDR_ROOT" --event push >/tmp/issue103-emptyhdr.out 2>/tmp/issue103-emptyhdr-report.out
+  emptyhdr_exit=$?
+  assert_true "AC-an-unreadable-header-blocks-rather-than-narrows: a suite whose ci-subject field is empty after trimming produces a non-zero exit and a BLOCK: line naming the offending file, not an ordinary NOT-SELECTED" \
+    "[ $emptyhdr_exit -ne 0 ] && grep -q 'BLOCK:' /tmp/issue103-emptyhdr-report.out && grep -qF 'test-fixture-103-empty-header.sh' /tmp/issue103-emptyhdr-report.out && ! grep -qF 'NOT-SELECTED: tests/test-fixture-103-empty-header.sh' /tmp/issue103-emptyhdr-report.out"
+  rm -rf "$EMPTYHDR_ROOT"
+
+  CONFORMING_ROOT="$(mktemp -d)"
+  mkdir -p "$CONFORMING_ROOT/tests"
+  cat > "$CONFORMING_ROOT/tests/test-fixture-103-conforming-header.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-ok-subject.txt
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+  chmod +x "$CONFORMING_ROOT/tests/test-fixture-103-conforming-header.sh"
+  bash "$SELECT" --root "$CONFORMING_ROOT" --event push >/tmp/issue103-conforming.out 2>/tmp/issue103-conforming-report.out
+  conforming_exit=$?
+  assert_true "AC-an-unreadable-header-blocks-rather-than-narrows: a suite with a conforming ci-subject header keeps ordinary behaviour (exit 0, SELECTED, no BLOCK)" \
+    "[ $conforming_exit -eq 0 ] && grep -qF 'SELECTED: tests/test-fixture-103-conforming-header.sh' /tmp/issue103-conforming-report.out && ! grep -q 'BLOCK:' /tmp/issue103-conforming-report.out"
+  rm -rf "$CONFORMING_ROOT"
+
+fi
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1

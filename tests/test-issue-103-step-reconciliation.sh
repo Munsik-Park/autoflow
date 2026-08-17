@@ -234,6 +234,126 @@ JSON
   else
     assert_true "AC-reconcile-quiet-under-a-fail-closed-select: scripts/test/select-suites.sh exists (required to drive this arm against the real selector)" "false"
   fi
+
+  # =========================================================================
+  # Issue #103 cycle 3 (review-response) -- AC-reconciler-fails-closed-on-
+  # zero-evidence. .autoflow/issue-103-verification-design.md (cycle 3) §1.
+  # The reconciler must not treat "nothing to reconcile" as agreement: an
+  # absent report path, an empty report, a BLOCK:-only report, and an
+  # unparseable-text report -- each fed against a valid step map -- must all
+  # exit non-zero with a message that is NOT a MISMATCH line (the mismatch
+  # vocabulary is reserved for a genuine disagreement between the two
+  # records) and that names the specific missing-evidence class. A negative
+  # control closes the criterion: a well-formed report with records and no
+  # disagreement still exits zero -- without it the criterion would be
+  # satisfiable by a script that always fails.
+  # =========================================================================
+  ZE_STEPS_FILE="$(mktemp)"
+  cat > "$ZE_STEPS_FILE" <<'JSON'
+{"s-test-fixture-ze-a": {"outcome": "success"}}
+JSON
+
+  # -- Absent path -------------------------------------------------------
+  ZE_ABSENT_FILE="$(mktemp -u)"
+  bash "$RECONCILE" --selected "$ZE_ABSENT_FILE" --steps "$ZE_STEPS_FILE" >/tmp/issue103-ze-absent.out 2>&1
+  ze_absent_rc=$?
+  assert_true "AC-reconciler-fails-closed-on-zero-evidence: an absent --selected path exits non-zero with a message naming the path, distinct from a MISMATCH line" \
+    "[ $ze_absent_rc -ne 0 ] && ! grep -q 'MISMATCH' /tmp/issue103-ze-absent.out && grep -qF \"$ZE_ABSENT_FILE\" /tmp/issue103-ze-absent.out"
+
+  # -- Empty file ----------------------------------------------------------
+  ZE_EMPTY_FILE="$(mktemp)"
+  : > "$ZE_EMPTY_FILE"
+  bash "$RECONCILE" --selected "$ZE_EMPTY_FILE" --steps "$ZE_STEPS_FILE" >/tmp/issue103-ze-empty.out 2>&1
+  ze_empty_rc=$?
+  assert_true "AC-reconciler-fails-closed-on-zero-evidence: an empty --selected report exits non-zero with a message naming the absence of records, distinct from a MISMATCH line" \
+    "[ $ze_empty_rc -ne 0 ] && ! grep -q 'MISMATCH' /tmp/issue103-ze-empty.out && grep -qiE 'empty|no record|no selected|nothing to reconcile' /tmp/issue103-ze-empty.out"
+
+  # -- BLOCK:-only file ------------------------------------------------------
+  ZE_BLOCK_FILE="$(mktemp)"
+  printf 'BLOCK: unresolvable base -- see select-suites.sh\n' > "$ZE_BLOCK_FILE"
+  bash "$RECONCILE" --selected "$ZE_BLOCK_FILE" --steps "$ZE_STEPS_FILE" >/tmp/issue103-ze-block.out 2>&1
+  ze_block_rc=$?
+  assert_true "AC-reconciler-fails-closed-on-zero-evidence: a BLOCK:-only --selected report exits non-zero with a message naming the BLOCK, distinct from a MISMATCH line" \
+    "[ $ze_block_rc -ne 0 ] && ! grep -q 'MISMATCH' /tmp/issue103-ze-block.out && grep -qi 'block' /tmp/issue103-ze-block.out"
+
+  # -- Unparseable-text file -------------------------------------------------
+  ZE_GARBLED_FILE="$(mktemp)"
+  printf 'this is not a selection report, it has no SELECTED/NOT-SELECTED/BLOCK line\n' > "$ZE_GARBLED_FILE"
+  bash "$RECONCILE" --selected "$ZE_GARBLED_FILE" --steps "$ZE_STEPS_FILE" >/tmp/issue103-ze-garbled.out 2>&1
+  ze_garbled_rc=$?
+  assert_true "AC-reconciler-fails-closed-on-zero-evidence: an unparseable-text --selected report exits non-zero with a message naming the absence of records, distinct from a MISMATCH line" \
+    "[ $ze_garbled_rc -ne 0 ] && ! grep -q 'MISMATCH' /tmp/issue103-ze-garbled.out && grep -qiE 'empty|no record|no selected|nothing to reconcile|unparseable|no valid' /tmp/issue103-ze-garbled.out"
+
+  # -- Negative control: a well-formed report with records and no
+  #    disagreement still exits zero.
+  ZE_OK_FILE="$(mktemp)"
+  printf 'SELECTED: tests/test-fixture-ze-a.sh\n' > "$ZE_OK_FILE"
+  bash "$RECONCILE" --selected "$ZE_OK_FILE" --steps "$ZE_STEPS_FILE" >/tmp/issue103-ze-ok.out 2>&1
+  assert_true "AC-reconciler-fails-closed-on-zero-evidence: a well-formed report with records and no disagreement still exits zero" \
+    "[ $? -eq 0 ]"
+
+  rm -f "$ZE_STEPS_FILE" "$ZE_EMPTY_FILE" "$ZE_BLOCK_FILE" "$ZE_GARBLED_FILE" "$ZE_OK_FILE"
+
+  # =========================================================================
+  # Issue #103 cycle 3 (review-response) -- AC-reconciler-surfaces-entries-
+  # it-cannot-judge. .autoflow/issue-103-verification-design.md (cycle 3) §1.
+  # A selected entry the job's own step context does not carry (out-of-job,
+  # per JOB-LOCAL NARROWING) is reported on the run's output under an
+  # OUT-OF-JOB: line naming the entry and its selected state, rather than
+  # silently dropped by job-local narrowing -- AND the exit code is
+  # unchanged by that line alone: a report whose only unjudgeable feature is
+  # an out-of-job entry still exits zero.
+  # =========================================================================
+  OOJ_SELECTED_FILE="$(mktemp)"; OOJ_STEPS_FILE="$(mktemp)"
+  cat > "$OOJ_SELECTED_FILE" <<'SEL'
+SELECTED: tests/test-fixture-ooj-here.sh
+SELECTED: tests/test-fixture-ooj-elsewhere.sh
+SEL
+  cat > "$OOJ_STEPS_FILE" <<'JSON'
+{"s-test-fixture-ooj-here": {"outcome": "success"}}
+JSON
+  bash "$RECONCILE" --selected "$OOJ_SELECTED_FILE" --steps "$OOJ_STEPS_FILE" >/tmp/issue103-ooj.out 2>&1
+  ooj_rc=$?
+  assert_true "AC-reconciler-surfaces-entries-it-cannot-judge: an entry hosted in another job (out of this job's step context) is reported under an OUT-OF-JOB: line naming the entry and its selected state, and the exit code is unchanged by that line alone (no genuine mismatch here)" \
+    "[ $ooj_rc -eq 0 ] && grep -qE 'OUT-OF-JOB:.*test-fixture-ooj-elsewhere\.sh.*(selected=yes|yes)' /tmp/issue103-ooj.out"
+
+  rm -f "$OOJ_SELECTED_FILE" "$OOJ_STEPS_FILE"
+
+  # =========================================================================
+  # Issue #103 cycle 3 (review-response) -- AC-a-governed-set-with-no-
+  # matching-record-errors. .autoflow/issue-103-verification-design.md
+  # (cycle 3) §1. When --governed names a suite set and no report record
+  # matches any named path, the reconciler exits non-zero naming the
+  # mismatch between the caller's set and the report, rather than
+  # reconciling the empty intersection as agreement. Distinct from
+  # AC-reconciler-fails-closed-on-zero-evidence: there the report itself
+  # parses to nothing; here it is fully valid and it is the intersection
+  # with --governed that is empty.
+  # =========================================================================
+  GOV_SELECTED_FILE="$(mktemp)"; GOV_STEPS_FILE="$(mktemp)"
+  printf 'SELECTED: tests/test-fixture-gov-a.sh\n' > "$GOV_SELECTED_FILE"
+  cat > "$GOV_STEPS_FILE" <<'JSON'
+{"s-test-fixture-gov-a": {"outcome": "success"}}
+JSON
+
+  # -- --governed names only paths absent from the report -> non-zero, with
+  #    a message distinct from both the zero-evidence message and a
+  #    MISMATCH line.
+  bash "$RECONCILE" --selected "$GOV_SELECTED_FILE" --steps "$GOV_STEPS_FILE" \
+    --governed tests/test-fixture-gov-nonexistent.sh \
+    >/tmp/issue103-gov-nomatch.out 2>&1
+  gov_nomatch_rc=$?
+  assert_true "AC-a-governed-set-with-no-matching-record-errors: a --governed set matching no record in a well-formed report exits non-zero, naming the caller/report mismatch, not a MISMATCH line and not the zero-evidence message" \
+    "[ $gov_nomatch_rc -ne 0 ] && ! grep -q 'MISMATCH' /tmp/issue103-gov-nomatch.out && grep -qi 'governed' /tmp/issue103-gov-nomatch.out"
+
+  # -- Same report, --governed matches -> passes.
+  bash "$RECONCILE" --selected "$GOV_SELECTED_FILE" --steps "$GOV_STEPS_FILE" \
+    --governed tests/test-fixture-gov-a.sh \
+    >/tmp/issue103-gov-match.out 2>&1
+  assert_true "AC-a-governed-set-with-no-matching-record-errors: the same well-formed report with a --governed set that matches passes (exit zero)" \
+    "[ $? -eq 0 ]"
+
+  rm -f "$GOV_SELECTED_FILE" "$GOV_STEPS_FILE"
 fi
 
 echo ""

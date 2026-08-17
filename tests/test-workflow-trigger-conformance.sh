@@ -917,6 +917,482 @@ checkout_has_full_history "$CLAUSE_C_GOOD_FILE" || clause_c_good_ok=false
 assert_true "AC-select-step-shape-holds clause (c) self-test: a checkout carrying fetch-depth: 0 is detected as conforming" "$clause_c_good_ok"
 rm -f "$CLAUSE_C_GOOD_FILE"
 
+# =============================================================================
+# Issue #103 cycle 3 (review-response) — reachability moves to the shared
+# scripts/test/invocation-scan.sh library.
+# .autoflow/issue-103-verification-design.md (cycle 3) §1:
+#   AC-reach-is-decided-by-executable-run-content,
+#   AC-reach-definition-has-one-home,
+#   AC-subject-coverage-is-judged-over-registering-hosts,
+#   AC-both-trigger-blocks-declare-the-same-paths.
+# .autoflow/issue-103-feature-design.md §2 `invocation-scan-library`: a new
+# sourced library, scripts/test/invocation-scan.sh, exporting
+# invscan_shell_invocations / invscan_workflow_steps /
+# invscan_workflow_invocations, does not exist yet. The arms below source it
+# if present and otherwise fail through the `invscan_available` guard with a
+# named-cause message, rather than crashing on an unrelated "command not
+# found" for every downstream call.
+# =============================================================================
+INVOCATION_SCAN_LIB="$PROJECT_ROOT/scripts/test/invocation-scan.sh"
+if [ -f "$INVOCATION_SCAN_LIB" ]; then
+  # shellcheck source=scripts/test/invocation-scan.sh
+  . "$INVOCATION_SCAN_LIB"
+fi
+
+# invscan_available — the library exists AND exports the three consumer
+# functions the feature design names (§2 exported surface).
+invscan_available() {
+  [ -f "$INVOCATION_SCAN_LIB" ] \
+    && declare -F invscan_shell_invocations    >/dev/null \
+    && declare -F invscan_workflow_steps       >/dev/null \
+    && declare -F invscan_workflow_invocations >/dev/null
+}
+
+assert_true "AC-reach-is-decided-by-executable-run-content pre: scripts/test/invocation-scan.sh exists and exports invscan_shell_invocations / invscan_workflow_steps / invscan_workflow_invocations" \
+  "invscan_available"
+
+# --- fixture (a): a workflow whose step invokes a suite from a block-scalar
+#     run: body — must BE an execution edge.
+IS103_A="$(mktemp)"
+cat > "$IS103_A" <<'YML'
+jobs:
+  x:
+    steps:
+      - run: |
+          echo preparing
+          bash tests/fixture-is103-blockscalar-target.sh
+YML
+IS103_A_OK=false
+if invscan_available; then
+  invscan_workflow_invocations "$IS103_A" 2>/dev/null | grep -qxF 'tests/fixture-is103-blockscalar-target.sh' && IS103_A_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite invoked from a block-scalar run: body IS correctly reported as an execution edge (invscan_workflow_invocations)" "$IS103_A_OK"
+rm -f "$IS103_A"
+
+# --- fixture (b): a suite file whose only mention of another suite is a grep
+#     PATTERN STRING — the live false-edge shape
+#     (feature design G-false-invocation-edge). Must NOT be an execution
+#     edge.
+IS103_B="$(mktemp)"
+cat > "$IS103_B" <<'SH'
+#!/usr/bin/env bash
+X="$(grep -B3 'run: bash tests/fixture-is103-pattern-target.sh' "$1")"
+SH
+IS103_B_OK=false
+if invscan_available; then
+  invscan_shell_invocations "$IS103_B" 2>/dev/null | grep -qxF 'tests/fixture-is103-pattern-target.sh' || IS103_B_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite file whose only mention of another suite is a grep PATTERN STRING is correctly reported as NOT an execution edge (invscan_shell_invocations)" "$IS103_B_OK"
+rm -f "$IS103_B"
+
+# --- fixture (c): a suite file whose only mention sits in a HEREDOC BODY.
+#     Must NOT be an execution edge.
+IS103_C="$(mktemp)"
+cat > "$IS103_C" <<'SH'
+#!/usr/bin/env bash
+cat <<'INNER'
+bash tests/fixture-is103-heredoc-target.sh
+INNER
+SH
+IS103_C_OK=false
+if invscan_available; then
+  invscan_shell_invocations "$IS103_C" 2>/dev/null | grep -qxF 'tests/fixture-is103-heredoc-target.sh' || IS103_C_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite file whose only mention sits in a HEREDOC BODY is correctly reported as NOT an execution edge (invscan_shell_invocations)" "$IS103_C_OK"
+rm -f "$IS103_C"
+
+# --- fixture (d): a suite file whose only mention sits after an UNQUOTED #.
+#     Must NOT be an execution edge.
+IS103_D="$(mktemp)"
+cat > "$IS103_D" <<'SH'
+#!/usr/bin/env bash
+echo hi # bash tests/fixture-is103-comment-target.sh
+SH
+IS103_D_OK=false
+if invscan_available; then
+  invscan_shell_invocations "$IS103_D" 2>/dev/null | grep -qxF 'tests/fixture-is103-comment-target.sh' || IS103_D_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite file whose only mention sits after an unquoted # is correctly reported as NOT an execution edge (invscan_shell_invocations)" "$IS103_D_OK"
+rm -f "$IS103_D"
+
+# --- fixture (e): a suite file that GENUINELY invokes another as a
+#     subprocess. Must BE an execution edge.
+IS103_E="$(mktemp)"
+cat > "$IS103_E" <<'SH'
+#!/usr/bin/env bash
+bash tests/fixture-is103-real-subprocess-target.sh
+SH
+IS103_E_OK=false
+if invscan_available; then
+  invscan_shell_invocations "$IS103_E" 2>/dev/null | grep -qxF 'tests/fixture-is103-real-subprocess-target.sh' && IS103_E_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a suite file that genuinely invokes another as a subprocess IS correctly reported as an execution edge (invscan_shell_invocations)" "$IS103_E_OK"
+rm -f "$IS103_E"
+
+# --- fixture (f): a WORKFLOW whose block-scalar body writes a fixture
+#     workflow through a heredoc carrying a `run: bash tests/...` line — must
+#     NOT be an execution edge. This is the arm that separates heredoc
+#     suppression applied INSIDE a block scalar from heredoc suppression
+#     applied only to whole shell files (feature design §2 heredoc
+#     paragraph).
+IS103_F="$(mktemp)"
+cat > "$IS103_F" <<'YML'
+jobs:
+  x:
+    steps:
+      - run: |
+          cat > fixture-is103-written-workflow.yml <<'INNERYML'
+          on:
+            push: {}
+          jobs:
+            y:
+              steps:
+                - run: bash tests/fixture-is103-heredoc-workflow-target.sh
+          INNERYML
+YML
+IS103_F_OK=false
+if invscan_available; then
+  invscan_workflow_invocations "$IS103_F" 2>/dev/null | grep -qxF 'tests/fixture-is103-heredoc-workflow-target.sh' || IS103_F_OK=true
+fi
+assert_true "AC-reach-is-decided-by-executable-run-content: a workflow whose block-scalar body writes a fixture workflow through a heredoc carrying a run: bash tests/... line is correctly reported as NOT an execution edge (heredoc suppression applies WITHIN a block scalar, not only over whole shell files)" "$IS103_F_OK"
+rm -f "$IS103_F"
+
+# =============================================================================
+# AC-reach-definition-has-one-home — the reachability notion is defined once
+# (scripts/test/invocation-scan.sh) and consumed, not re-copied, by this file
+# and scripts/test/check-suite-ci-coverage.sh.
+# =============================================================================
+COVERAGE_LINT_SRC="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
+THIS_SUITE_SRC="$PROJECT_ROOT/tests/test-workflow-trigger-conformance.sh"
+
+consumer_sources_invocation_scan() {
+  local file="$1"
+  grep -qE '^[[:space:]]*(source|\.)[[:space:]]+.*scripts/test/invocation-scan\.sh' "$file"
+}
+
+consumer_has_no_private_invoked_paths() {
+  local file="$1"
+  ! grep -qE '^[[:space:]]*invoked_paths[[:space:]]*\(\)' "$file"
+}
+
+assert_true "AC-reach-definition-has-one-home: scripts/test/check-suite-ci-coverage.sh sources the shared scripts/test/invocation-scan.sh" \
+  "consumer_sources_invocation_scan '$COVERAGE_LINT_SRC'"
+assert_true "AC-reach-definition-has-one-home: tests/test-workflow-trigger-conformance.sh sources the shared scripts/test/invocation-scan.sh" \
+  "consumer_sources_invocation_scan '$THIS_SUITE_SRC'"
+assert_true "AC-reach-definition-has-one-home: scripts/test/check-suite-ci-coverage.sh carries no private invoked_paths() function definition of its own (single-home requirement)" \
+  "consumer_has_no_private_invoked_paths '$COVERAGE_LINT_SRC'"
+assert_true "AC-reach-definition-has-one-home: tests/test-workflow-trigger-conformance.sh carries no private invoked_paths() function definition of its own (single-home requirement)" \
+  "consumer_has_no_private_invoked_paths '$THIS_SUITE_SRC'"
+
+# =============================================================================
+# AC-subject-coverage-is-judged-over-registering-hosts — the registration-
+# effectiveness oracle re-derived over DIRECT REGISTRATION
+# (invscan_workflow_invocations), pooled (existential) across a suite's
+# directly-registering hosts — not transitive reach — plus the tests/lib/**
+# shared-library trigger requirement (the selection predicate's third arm,
+# scripts/test/select-suites.sh:148-151).
+# =============================================================================
+direct_registering_workflows() {
+  local target="$1" root="${2:-$PROJECT_ROOT}" wf
+  for wf in "$root"/.github/workflows/*.yml; do
+    [ -f "$wf" ] || continue
+    invscan_workflow_invocations "$wf" 2>/dev/null | grep -qxF "$target" && echo "$wf"
+  done
+}
+
+# entry_is_testslib_directory_entry <entry> — a directory-entry form
+# (`tests/lib/**` or bare `**`), never a named-file requirement, per the
+# verification design's "directory entry rather than named files" oracle.
+entry_is_testslib_directory_entry() {
+  case "$1" in
+    'tests/lib/**' | '**') return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts pre: scripts/test/invocation-scan.sh available to compute direct registration" \
+  "invscan_available"
+
+# --- real tree: same-shaped loop as AC-b-2, but hosting is DIRECT
+#     registration and the pool is over that (possibly smaller) host set.
+for suite in "${CI_SUBJECT_SUITES[@]}"; do
+  rel="${suite#"$PROJECT_ROOT"/}"
+  subjects="$(suite_header_field "$suite" ci-subject)"
+
+  if ! invscan_available; then
+    assert_true "AC-subject-coverage-is-judged-over-registering-hosts: $rel — has at least one directly-registering workflow" "false"
+    continue
+  fi
+
+  mapfile -t reg_hosts < <(direct_registering_workflows "$rel")
+  if [ ${#reg_hosts[@]} -eq 0 ]; then
+    assert_true "AC-subject-coverage-is-judged-over-registering-hosts: $rel — has at least one directly-registering workflow" "false"
+    continue
+  fi
+  mapfile -t reg_patterns < <(for h in "${reg_hosts[@]}"; do extract_paths_entries "$h"; done | sort -u)
+
+  all_covered=true
+  for path in $subjects "$rel"; do
+    if subject_covered "$path" "${reg_patterns[@]}"; then
+      :
+    else
+      all_covered=false
+      echo "  INFO: $rel — subject '$path' NOT covered by directly-registering workflow(s): ${reg_hosts[*]#"$PROJECT_ROOT"/}"
+    fi
+  done
+  assert_true "AC-subject-coverage-is-judged-over-registering-hosts: $rel — every declared ci-subject path (and the suite itself) is covered by the POOLED paths: entries of its DIRECTLY-registering workflow(s)" "$all_covered"
+done
+
+# --- synthetic pair 1 (existential PASS): one directly-registering host
+#     covers the subject, another registers it without covering; pooling the
+#     two must still yield coverage.
+SYN1_DIR="$(mktemp -d)"
+cat > "$SYN1_DIR/host-covers.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-syn1-suite.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-syn1-suite.sh
+YML
+cat > "$SYN1_DIR/host-registers-only.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-syn1-unrelated.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-syn1-suite.sh
+YML
+SYN1_OK=false
+if invscan_available; then
+  mapfile -t syn1_hosts < <(direct_registering_workflows "tests/fixture-is103-syn1-suite.sh" "$SYN1_DIR")
+  if [ ${#syn1_hosts[@]} -eq 2 ]; then
+    mapfile -t syn1_patterns < <(for h in "${syn1_hosts[@]}"; do extract_paths_entries "$h"; done | sort -u)
+    subject_covered "tests/fixture-is103-syn1-suite.sh" "${syn1_patterns[@]}" && SYN1_OK=true
+  fi
+fi
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts synthetic pair 1: pooling two directly-registering hosts, where only ONE covers the subject, is correctly reported as covered (pooled/existential, not per-host conjunction)" "$SYN1_OK"
+rm -rf "$SYN1_DIR"
+
+# --- synthetic pair 2 (no registering host covers): must be reported as NOT
+#     covered — pins the existential against a silent regression to a
+#     permissive oracle.
+SYN2_DIR="$(mktemp -d)"
+cat > "$SYN2_DIR/host-a.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-syn2-unrelated-a.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-syn2-suite.sh
+YML
+cat > "$SYN2_DIR/host-b.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-syn2-unrelated-b.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-syn2-suite.sh
+YML
+SYN2_OK=false
+if invscan_available; then
+  mapfile -t syn2_hosts < <(direct_registering_workflows "tests/fixture-is103-syn2-suite.sh" "$SYN2_DIR")
+  if [ ${#syn2_hosts[@]} -eq 2 ]; then
+    mapfile -t syn2_patterns < <(for h in "${syn2_hosts[@]}"; do extract_paths_entries "$h"; done | sort -u)
+    subject_covered "tests/fixture-is103-syn2-suite.sh" "${syn2_patterns[@]}" || SYN2_OK=true
+  fi
+fi
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts synthetic pair 2: pooling two directly-registering hosts, NEITHER of which covers the subject, is correctly reported as NOT covered (no silent regression to a permissive oracle)" "$SYN2_OK"
+rm -rf "$SYN2_DIR"
+
+# --- shared-library arm: every workflow registering a governed step must
+#     declare a tests/lib/** DIRECTORY entry (not named files) — the
+#     selection predicate's third arm has no counterpart in the pre-existing
+#     oracle above.
+LIB_DIR="$(mktemp -d)"
+cat > "$LIB_DIR/host-nolib.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-synlib-suite.sh'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-synlib-suite.sh
+YML
+cat > "$LIB_DIR/host-withlib.yml" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-is103-synlib-suite2.sh'
+      - 'tests/lib/**'
+jobs:
+  x:
+    steps:
+      - run: bash tests/fixture-is103-synlib-suite2.sh
+YML
+
+LIB1_OK=false
+if invscan_available; then
+  mapfile -t lib1_hosts < <(direct_registering_workflows "tests/fixture-is103-synlib-suite.sh" "$LIB_DIR")
+  if [ ${#lib1_hosts[@]} -eq 1 ]; then
+    mapfile -t lib1_patterns < <(extract_paths_entries "${lib1_hosts[0]}")
+    lib1_found=false
+    for p in "${lib1_patterns[@]}"; do entry_is_testslib_directory_entry "$p" && lib1_found=true; done
+    [ "$lib1_found" = false ] && LIB1_OK=true
+  fi
+fi
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts shared-library arm: a directly-registering host declaring NO tests/lib/** directory entry is correctly reported as missing the shared-library trigger" "$LIB1_OK"
+
+LIB2_OK=false
+if invscan_available; then
+  mapfile -t lib2_hosts < <(direct_registering_workflows "tests/fixture-is103-synlib-suite2.sh" "$LIB_DIR")
+  if [ ${#lib2_hosts[@]} -eq 1 ]; then
+    mapfile -t lib2_patterns < <(extract_paths_entries "${lib2_hosts[0]}")
+    lib2_found=false
+    for p in "${lib2_patterns[@]}"; do entry_is_testslib_directory_entry "$p" && lib2_found=true; done
+    [ "$lib2_found" = true ] && LIB2_OK=true
+  fi
+fi
+assert_true "AC-subject-coverage-is-judged-over-registering-hosts shared-library arm: a directly-registering host declaring a tests/lib/** directory entry is correctly reported as satisfying the shared-library trigger" "$LIB2_OK"
+rm -rf "$LIB_DIR"
+
+# =============================================================================
+# AC-both-trigger-blocks-declare-the-same-paths — a workflow declaring both
+# pull_request: and push: triggers must declare the same paths: entry set in
+# each. No such check exists in this file today; the real-tree arm alone is
+# inert (the feature design's own claim is that the tree already satisfies
+# the property), so the synthetic asymmetric fixture is the discriminating
+# arm.
+# =============================================================================
+# extract_paths_entries_for_event <workflow-file> <event-key> — the same
+# block-delimitation logic as extract_paths_entries, scoped to a single top-
+# level event key (e.g. "pull_request", "push"), so the two blocks can be
+# compared instead of pooled.
+extract_paths_entries_for_event() {
+  local file="$1" event="$2"
+  [ -f "$file" ] || return 0
+  awk -v ev="${event}:" '
+    function indent_of(line,    i, n, ch) {
+      n = length(line); i = 1
+      while (i <= n) {
+        ch = substr(line, i, 1)
+        if (ch != " " && ch != "\t") break
+        i++
+      }
+      return i - 1
+    }
+    {
+      line = $0
+      ind = indent_of(line)
+      trimmed = line
+      sub(/^[ \t]+/, "", trimmed)
+
+      if (in_paths) {
+        if (trimmed == "") next
+        if (substr(trimmed, 1, 1) == "#") next
+        if (substr(trimmed, 1, 1) == "-" && ind > paths_indent) { print line; next }
+        in_paths = 0
+      }
+
+      if (in_event) {
+        if (trimmed != "" && substr(trimmed, 1, 1) != "#" && ind <= event_indent) {
+          in_event = 0
+        }
+      }
+
+      if (!in_event && trimmed == ev) {
+        in_event = 1
+        event_indent = ind
+        next
+      }
+
+      if (in_event && trimmed == "paths:") {
+        in_paths = 1
+        paths_indent = ind
+      }
+    }
+  ' "$file" | sed -E "s/^[[:space:]]*-[[:space:]]*//; s/^['\"]//; s/['\"]\$//"
+}
+
+# workflow_trigger_paths_symmetric <workflow-file> — true iff the workflow
+# does NOT declare both pull_request: and push:, OR declares both and their
+# paths: entry sets are equal (order-independent).
+workflow_trigger_paths_symmetric() {
+  local wf="$1" pr_entries push_entries
+  if ! grep -qE '^[[:space:]]*pull_request:' "$wf" || ! grep -qE '^[[:space:]]*push:' "$wf"; then
+    return 0
+  fi
+  pr_entries="$(extract_paths_entries_for_event "$wf" pull_request | sort -u)"
+  push_entries="$(extract_paths_entries_for_event "$wf" push | sort -u)"
+  [ "$pr_entries" = "$push_entries" ]
+}
+
+for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
+  [ -f "$wf" ] || continue
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  if grep -qE '^[[:space:]]*pull_request:' "$wf" && grep -qE '^[[:space:]]*push:' "$wf"; then
+    sym_ok=true
+    workflow_trigger_paths_symmetric "$wf" || sym_ok=false
+    assert_true "AC-both-trigger-blocks-declare-the-same-paths: $wrel — pull_request: and push: blocks declare the same paths: entry set" "$sym_ok"
+  fi
+done
+
+# --- synthetic discriminating fixture: push: carries an entry
+#     pull_request: lacks — required because the real-tree arm alone is
+#     inert (the design's own claim is that the tree already conforms).
+ASYM_FIXTURE="$(mktemp)"
+cat > "$ASYM_FIXTURE" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'a/one.sh'
+  push:
+    paths:
+      - 'a/one.sh'
+      - 'a/extra-push-only.sh'
+jobs:
+  x:
+    steps:
+      - run: bash a/one.sh
+YML
+ASYM_OK=false
+workflow_trigger_paths_symmetric "$ASYM_FIXTURE" || ASYM_OK=true
+assert_true "AC-both-trigger-blocks-declare-the-same-paths hermetic: a workflow whose push: block carries an entry ('a/extra-push-only.sh') its pull_request: block lacks is correctly detected as asymmetric — the discriminating fixture, since a real-tree arm alone would pass on an implementation that checks nothing" "$ASYM_OK"
+rm -f "$ASYM_FIXTURE"
+
+# --- positive control: a symmetric workflow (order-independent) must not be
+#     flagged, so the arm above is not satisfiable by a rule that reds every
+#     dual-trigger workflow.
+SYM_FIXTURE="$(mktemp)"
+cat > "$SYM_FIXTURE" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'a/one.sh'
+      - 'a/two.sh'
+  push:
+    paths:
+      - 'a/two.sh'
+      - 'a/one.sh'
+jobs:
+  x:
+    steps:
+      - run: bash a/one.sh
+YML
+SYM_OK=false
+workflow_trigger_paths_symmetric "$SYM_FIXTURE" && SYM_OK=true
+assert_true "AC-both-trigger-blocks-declare-the-same-paths hermetic positive control: a workflow whose pull_request: and push: blocks declare the same entries (order-independent) is correctly detected as symmetric" "$SYM_OK"
+rm -f "$SYM_FIXTURE"
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1

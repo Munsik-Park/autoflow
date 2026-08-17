@@ -20,8 +20,10 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LINT="$PROJECT_ROOT/scripts/test/check-suite-manifest.sh"
+COVERAGE_LINT="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
 LIBRARY="$PROJECT_ROOT/scripts/test/suite-manifest.sh"
 PIN_HOME="$PROJECT_ROOT/tests/lib/harness-pins.sh"
+INVSCAN_LIB="$PROJECT_ROOT/scripts/test/invocation-scan.sh"
 
 PASS=0; FAIL=0; TESTS=0
 assert_true() {
@@ -570,6 +572,200 @@ YML
     "grep -q 'harness-pins.sh' '$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh'"
   assert_true "AC-pin-single-home: check-suite-manifest.sh asserts single authorship of the pin literal (its own self-test exercises a duplicated-home fixture)" \
     "grep -qi 'harness-pins\|pin' '$LINT'"
+
+  # ---------------------------------------------------------------------
+  # AC-block-form-run-steps-are-governed-records — cycle 3
+  # A governed suite invoked from a `run: |` block scalar is a governed step
+  # record: it must carry id:/if:/timeout-minutes: exactly as a single-line
+  # `run:` step does.
+  # ---------------------------------------------------------------------
+  BLK_DIR="$(mktemp -d)"; mkdir -p "$BLK_DIR/tests" "$BLK_DIR/.github/workflows"
+  cat > "$BLK_DIR/tests/test-fixture-103-block-form.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+true
+SH
+
+  cat > "$BLK_DIR/.github/workflows/fixture-block.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - name: block-scalar-no-guard
+        run: |
+          bash tests/test-fixture-103-block-form.sh
+YML
+  bash "$LINT" --root "$BLK_DIR" >/tmp/issue103-manifest-block-noguard.out 2>&1
+  assert_true "AC-block-form-run-steps-are-governed-records: a governed suite invoked from a 'run: |' block scalar with no id/if/timeout-minutes FAILs, exactly as the single-line form does" \
+    "[ $? -ne 0 ]"
+
+  cat > "$BLK_DIR/.github/workflows/fixture-block.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - id: s-test-fixture-103-block-form
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fixture-103-block-form.sh ')
+        timeout-minutes: 1
+        run: |
+          bash tests/test-fixture-103-block-form.sh
+YML
+  bash "$LINT" --root "$BLK_DIR" >/tmp/issue103-manifest-block-guard.out 2>&1
+  assert_true "AC-block-form-run-steps-are-governed-records: the same suite invoked from a 'run: |' block scalar carrying the full id/if/timeout-minutes shape PASSes" \
+    "[ $? -eq 0 ]"
+  rm -rf "$BLK_DIR"
+
+  # ---------------------------------------------------------------------
+  # AC-no-currently-governed-step-loses-its-record — cycle 3
+  # Over the real .github/workflows/ tree, every governed suite that has a
+  # registering `run:` step yields a step record naming it, from the shared
+  # step reader (scripts/test/invocation-scan.sh) — so a parser replacement
+  # cannot silently shrink the governed set. The subject list is derived from
+  # the real tree by a plain literal-text search (independent of the reader
+  # under test), never hand-carried.
+  # ---------------------------------------------------------------------
+  assert_true "AC-no-currently-governed-step-loses-its-record: scripts/test/invocation-scan.sh (the shared step reader both lints must use) exists" \
+    "[ -f '$INVSCAN_LIB' ]"
+
+  if [ -f "$INVSCAN_LIB" ]; then
+    # shellcheck source=scripts/test/invocation-scan.sh
+    . "$INVSCAN_LIB"
+
+    FLOOR_REGISTERED="$(mktemp)"
+    for wf in "$PROJECT_ROOT"/.github/workflows/*.yml "$PROJECT_ROOT"/.github/workflows/*.yaml; do
+      [ -f "$wf" ] || continue
+      grep -ohE 'run:[[:space:]]*bash[[:space:]]+tests/[A-Za-z0-9_./-]+\.(sh|bats)' "$wf" 2>/dev/null \
+        | sed -E 's#^run:[[:space:]]*bash[[:space:]]+##'
+    done | sort -u > "$FLOOR_REGISTERED"
+
+    FLOOR_SUBJECTS="$(suite_enumerate "$PROJECT_ROOT" | sort -u)"
+    FLOOR_GOVERNED_REGISTERED="$(comm -12 <(printf '%s\n' "$FLOOR_SUBJECTS") "$FLOOR_REGISTERED")"
+
+    FLOOR_RUNPATHS="$(mktemp)"
+    for wf in "$PROJECT_ROOT"/.github/workflows/*.yml "$PROJECT_ROOT"/.github/workflows/*.yaml; do
+      [ -f "$wf" ] || continue
+      invscan_workflow_invocations "$wf" 2>/dev/null >> "$FLOOR_RUNPATHS"
+    done
+    sort -u -o "$FLOOR_RUNPATHS" "$FLOOR_RUNPATHS"
+
+    while IFS= read -r floor_suite; do
+      [ -n "$floor_suite" ] || continue
+      assert_true "AC-no-currently-governed-step-loses-its-record: $floor_suite (a real, literal-text-registered governed suite) has a step record naming it from invscan_workflow_invocations" \
+        "grep -qxF '$floor_suite' '$FLOOR_RUNPATHS'"
+    done <<< "$FLOOR_GOVERNED_REGISTERED"
+
+    rm -f "$FLOOR_REGISTERED" "$FLOOR_RUNPATHS"
+  else
+    echo "  SKIP: AC-no-currently-governed-step-loses-its-record per-suite floor arms — scripts/test/invocation-scan.sh absent"
+  fi
+
+  # ---------------------------------------------------------------------
+  # AC-a-step-invoking-two-governed-suites-is-rejected — cycle 3
+  # A single `run:` step whose body invokes more than one governed suite is a
+  # violation (per-suite if:/timeout-minutes: cannot be expressed for it). A
+  # step invoking one governed suite plus any number of ungoverned scripts/…
+  # paths must PASS — the live select/reconcile steps take exactly this shape.
+  # ---------------------------------------------------------------------
+  MULTI_DIR="$(mktemp -d)"; mkdir -p "$MULTI_DIR/.github/workflows"
+
+  cat > "$MULTI_DIR/.github/workflows/fixture-multi.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - id: s-multi
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/fixture-multi-a.sh ')
+        timeout-minutes: 1
+        run: |
+          bash tests/fixture-multi-a.sh
+          bash tests/fixture-multi-b.sh
+YML
+  bash "$LINT" --root "$MULTI_DIR" >/tmp/issue103-manifest-multi-two-governed.out 2>&1
+  assert_true "AC-a-step-invoking-two-governed-suites-is-rejected: a block-scalar step invoking TWO governed suites FAILs, naming both" \
+    "[ $? -ne 0 ]"
+
+  cat > "$MULTI_DIR/.github/workflows/fixture-multi.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - id: s-select
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/fixture-multi-a.sh ')
+        timeout-minutes: 1
+        run: |
+          bash scripts/test/check-suite-ci-coverage.sh
+          bash tests/fixture-multi-a.sh
+YML
+  bash "$LINT" --root "$MULTI_DIR" >/tmp/issue103-manifest-multi-one-governed.out 2>&1
+  assert_true "AC-a-step-invoking-two-governed-suites-is-rejected: a block-scalar step invoking one governed suite plus one ungoverned scripts/… path PASSes (the live select/reconcile shape)" \
+    "[ $? -eq 0 ]"
+  rm -rf "$MULTI_DIR"
+
+  # ---------------------------------------------------------------------
+  # AC-the-two-lints-agree-on-what-an-invocation-is — cycle 3
+  # Over one shared fixture root, check-suite-manifest.sh and
+  # check-suite-ci-coverage.sh must reach the SAME verdict about whether the
+  # block-scalar step's invocation is a registration. Driven directly: a
+  # step with NO guard invoking a suite that is registered NOWHERE else —
+  # manifest's verdict is "registered" iff it FAILs (missing id/if/timeout on
+  # a step it recognises as governed); coverage's verdict is "registered" iff
+  # it PASSes (the suite is reachable, not an orphan). Today the two lints use
+  # independent private logic and disagree by construction on this shape:
+  # manifest's single-line-only reader misses the block scalar (registered =
+  # false) while coverage's whole-file grep still finds the token
+  # (registered = true).
+  # ---------------------------------------------------------------------
+  CROSS_DIR="$(mktemp -d)"; mkdir -p "$CROSS_DIR/tests" "$CROSS_DIR/.github/workflows"
+  cat > "$CROSS_DIR/tests/test-fixture-103-cross-lint.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+true
+SH
+  cat > "$CROSS_DIR/.github/workflows/fixture-cross.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - name: block-scalar-no-guard
+        run: |
+          bash tests/test-fixture-103-cross-lint.sh
+YML
+
+  bash "$LINT" --root "$CROSS_DIR" >/tmp/issue103-manifest-crosslint.out 2>&1
+  MANIFEST_CROSS_RC=$?
+  bash "$COVERAGE_LINT" --root "$CROSS_DIR" >/tmp/issue103-coverage-crosslint.out 2>&1
+  COVERAGE_CROSS_RC=$?
+
+  MANIFEST_CROSS_REGISTERED=false
+  [ "$MANIFEST_CROSS_RC" -ne 0 ] && MANIFEST_CROSS_REGISTERED=true
+  COVERAGE_CROSS_REGISTERED=false
+  [ "$COVERAGE_CROSS_RC" -eq 0 ] && COVERAGE_CROSS_REGISTERED=true
+
+  assert_true "AC-the-two-lints-agree-on-what-an-invocation-is: check-suite-manifest.sh (registered=$MANIFEST_CROSS_REGISTERED, via missing-guard) and check-suite-ci-coverage.sh (registered=$COVERAGE_CROSS_REGISTERED, via reachability) agree on whether the block-scalar step's invocation counts as a registration" \
+    "[ '$MANIFEST_CROSS_REGISTERED' = '$COVERAGE_CROSS_REGISTERED' ]"
+  rm -rf "$CROSS_DIR"
+
+  # ---------------------------------------------------------------------
+  # GATE:PLAN-binding finding, ledger O20/F-1 — scripts/test/invocation-scan.sh's
+  # own CI enrollment: (a) this suite's own ci-subject header includes it
+  # (feature design §2 trigger-surface-completeness, "Header-side enrollment"),
+  # and (b) contract-suites.yml — the sole real-tree host of this suite —
+  # declares a paths: entry covering it. contract-suites.yml carries no
+  # scripts/** directory glob (unlike host-purity-delta.yml), so the design's
+  # "already covered by scripts/**" claim does not hold for this suite's own
+  # host and an explicit paths: entry is required.
+  # ---------------------------------------------------------------------
+  assert_true "F-1: scripts/test/invocation-scan.sh (the shared invocation-scan library) exists" \
+    "[ -f '$INVSCAN_LIB' ]"
+
+  if [ -f "$INVSCAN_LIB" ]; then
+    assert_true "F-1 header-side enrollment: this suite's own ci-subject header declares scripts/test/invocation-scan.sh" \
+      "grep -qE '^# ci-subject:.*scripts/test/invocation-scan\.sh' '$PROJECT_ROOT/tests/test-issue-103-suite-manifest.sh'"
+
+    assert_true "F-1 workflow-side enrollment: contract-suites.yml declares a paths: entry covering scripts/test/invocation-scan.sh" \
+      "grep -qF \"'scripts/test/invocation-scan.sh'\" '$PROJECT_ROOT/.github/workflows/contract-suites.yml'"
+  else
+    echo "  SKIP: F-1 header-side/workflow-side enrollment arms — scripts/test/invocation-scan.sh absent"
+  fi
 fi
 
 echo ""
