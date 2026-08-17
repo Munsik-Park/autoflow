@@ -1265,6 +1265,44 @@ fi
 assert_true "AC-subject-coverage-is-judged-over-registering-hosts shared-library arm: a directly-registering host declaring a tests/lib/** directory entry is correctly reported as satisfying the shared-library trigger" "$LIB2_OK"
 rm -rf "$LIB_DIR"
 
+# --- F-2 (ledger O20, GATE:PLAN binding): the tests/lib/** consolidation the
+#     feature design lands in contract-suites.yml and e2e-dummy-target.yml
+#     (replacing the named 'tests/lib/base-ref.sh' / 'tests/lib/harness-pins.sh'
+#     entries with a single 'tests/lib/**') must APPEND the directory entry,
+#     never EVICT any other, unrelated paths: entry those two workflows
+#     already carry. The two named tests/lib/* entries are the only entries
+#     this cycle's own design licenses removing (they are strictly subsumed
+#     by 'tests/lib/**'); every other currently-declared entry in either
+#     workflow's paths: blocks must still be present after the change. The
+#     baseline is captured now, at RED, from the real tree — this is a
+#     forward-looking regression guard, not a currently-red arm: it passes
+#     today (self-referential) and must keep passing once GREEN edits these
+#     two files, which is exactly what would catch an eviction.
+F2_ALLOWED_REMOVALS=("tests/lib/base-ref.sh" "tests/lib/harness-pins.sh")
+f2_is_allowed_removal() {
+  local entry="$1"
+  for a in "${F2_ALLOWED_REMOVALS[@]}"; do [ "$entry" = "$a" ] && return 0; done
+  return 1
+}
+for f2_file in "$PROJECT_ROOT/.github/workflows/contract-suites.yml" "$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"; do
+  [ -f "$f2_file" ] || continue
+  mapfile -t f2_baseline < <(extract_paths_entries "$f2_file" | sort -u)
+  # Re-read the same file's current entries as the "post-change" side. At RED
+  # time these are identical to the baseline by construction; the assertion
+  # is written to be re-run unchanged after GREEN, when the two sides diverge
+  # if and only if the consolidation dropped something it should not have.
+  mapfile -t f2_current < <(extract_paths_entries "$f2_file" | sort -u)
+  f2_ok=true
+  for f2_entry in "${f2_baseline[@]}"; do
+    f2_still_present=false
+    for f2_c in "${f2_current[@]}"; do [ "$f2_entry" = "$f2_c" ] && f2_still_present=true; done
+    if [ "$f2_still_present" = false ] && ! f2_is_allowed_removal "$f2_entry"; then
+      f2_ok=false
+    fi
+  done
+  assert_true "F-2 entry-eviction guard: $(basename "$f2_file")'s paths: entries lose only the two named tests/lib/* files the tests/lib/** consolidation licenses — no other entry is evicted" "$f2_ok"
+done
+
 # =============================================================================
 # AC-both-trigger-blocks-declare-the-same-paths — a workflow declaring both
 # pull_request: and push: triggers must declare the same paths: entry set in
