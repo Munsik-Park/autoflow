@@ -27,23 +27,43 @@
 #         literal `tests/…` argument in that position
 #     D4  `bash "tests/$v"` in command position where v is a LOOP VARIABLE over
 #         a literal list containing a tests/ name
+#     D5  `bash "$v"` in command position, where v is assigned ANYWHERE in the
+#         same file from a value whose literal text names an ENUMERATED suite —
+#         as a repo-relative path (`v="$PROJECT_ROOT/tests/<suite>.sh"`) or as
+#         an enumerated basename under a directory expansion
+#         (`v="$SCRIPT_DIR/<suite>.sh"`). Decidable, not heuristic, on two
+#         counts: the assignment's value is read as literal text, and the name
+#         is checked against `suite_enumerate`'s set, so "looks like a suite
+#         name" never enters the judgement.
 #
 #   IGNORED
 #     I1  the same token inside a single- or double-quoted string, a heredoc
 #         body, or after `#` — assertion labels and YAML fixture bodies, of
 #         which this tree carries many, and which a naive non-comment grep
-#         flags every one of
+#         flags every one of. What decides is where the `bash` TOKEN sits, not
+#         how its argument is quoted: `bash "tests/x.sh"` is D1 (the token is in
+#         command position, the argument merely quoted), while
+#         `grep -B3 'run: bash tests/x.sh'` is I1 (the token itself is inside a
+#         quoted span, in no command position at all).
 #     I2  `bash "$HOOK"` / `bash "$SCRIPT"` — any indirect invocation not
 #         matching a denied row. Driving a PRODUCT script is the normal way a
 #         suite drives its subject, and the bulk of what this tree does.
+#     I3  an enumerated-suite path assigned to a variable that is only READ —
+#         a `grep` file operand, say — and never invoked. D5's antecedent is a
+#         CONJUNCTION (the assignment AND a command-position `bash "$v"`), and
+#         this half of it is a permanent, deliberate shape in this tree.
 #
-# RESIDUAL, stated rather than implied: an indirect invocation outside those
-# rows — a path assembled through printf, read from a file, or passed across two
-# levels of function call — is not detected. This lint raises the cost of
-# re-introducing sibling execution; it does not make the class unrepresentable.
-# That is acceptable because the residue it guards was enumerated site by site
-# and emptied first: the job is preventing re-introduction, not discovering an
-# unknown population.
+# RESIDUAL, stated rather than implied and narrowed to what the rows above
+# leave. Quoting no longer hides an argument, and a variable naming an
+# enumerated suite no longer hides one either, so what remains undetected is an
+# argument whose LITERAL TEXT never appears in the file: a path assembled
+# through printf or string concatenation, read from a file at run time, or
+# passed across two levels of function call. Also outside every row by
+# construction: an invocation of a path the enumeration does not carry (D5 keys
+# on the enumerated set, which is what keeps `tests/run-doc-invariants.sh` and
+# `tests/lib/*` — excluded subjects — from reading as siblings). This lint
+# raises the cost of re-introducing sibling execution; it does not make the
+# class unrepresentable.
 #
 # Usage:
 #   bash scripts/test/check-suite-leaf.sh [--self-test] [--root <dir>] [--list-subjects]
@@ -61,6 +81,8 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
+# shellcheck source=scripts/test/invocation-scan.sh
+. "$SCRIPT_DIR/invocation-scan.sh"
 
 MODE="default"
 ROOT=""
@@ -77,63 +99,31 @@ done
 ROOT="${ROOT:-$DEFAULT_ROOT}"
 
 # ---------------------------------------------------------------------------
-# analyze_file <path> — one `path:line: <shape>: <reason>` record per denied
-# occurrence. Exit status is always 0; the caller counts records.
+# analyze_file <path> <subjects-file> — one `path:line: <shape>: <reason>`
+# record per denied occurrence. Exit status is always 0; the caller counts
+# records.
 #
-# The awk program masks I1 before matching anything: comments, quoted-string
-# bodies and heredoc bodies are blanked, so the denied rows are evaluated
-# against code positions only.
+# The two views come from scripts/test/invocation-scan.sh, composed into this
+# program rather than re-implemented: the command view locates the
+# command-position `bash` word and carries the D2/D3/D4 antecedent scans, and
+# the argument view — identical in length, so one offset indexes both — is what
+# the argument is READ from, which is why a quoted literal is now legible.
+#
+# <subjects-file> holds the enumerated subject set of the tree being checked,
+# one repo-relative path per line. D5 keys on it, so "looks like a suite name"
+# never enters the judgement.
 # ---------------------------------------------------------------------------
 analyze_file() {
-  awk -v FILEPATH="$1" '
-    { lines[NR] = $0 }
-
-    # mask(l) — reduce a line to its COMMAND positions. Blanked: a trailing
-    # comment, a single-quoted span (pure text), and the literal text of a
-    # double-quoted span. Preserved: anything inside a $( … ) command
-    # substitution, and a $var / ${var} expansion inside double quotes — both
-    # are code, and blanking them is what would make the denied rows blind to
-    # every `bash "$v"` shape they exist to catch.
-    function mask(l,   out, i, c, nx, n, q, depth, stack) {
-      out = ""; q = ""; depth = 0; n = length(l)
-      for (i = 1; i <= n; i++) {
-        c = substr(l, i, 1); nx = substr(l, i + 1, 1)
-
-        # `$(` opens a fresh quoting context: the substitution body is code
-        # again, even when the substitution itself sits inside double quotes.
-        # Without the stack, a quoted grep PATTERN inside a substitution —
-        # `X="$(grep -cF "run: bash tests/foo.sh" "$F")"` — reads as a command
-        # position, and every registration assertion in this tree false-fires.
-        if (c == "$" && nx == "(" && q != "\x27") {
-          stack[depth] = q; depth++; q = ""; out = out "  "; i++; continue
-        }
-        if (c == ")" && depth > 0 && q == "") {
-          depth--; q = stack[depth]; out = out " "; continue
-        }
-
-        if (q == "\x27") { if (c == "\x27") { q = ""; continue } out = out " "; continue }
-        if (q == "\"") {
-          if (c == "\"") { q = ""; continue }
-          if (c == "$") {
-            # a $var / ${var} expansion inside double quotes is code, and
-            # blanking it is what would blind every `bash "$v"` denied row
-            out = out c
-            for (i = i + 1; i <= n; i++) {
-              c = substr(l, i, 1)
-              if (c ~ /[A-Za-z0-9_{}]/) { out = out c } else { i--; break }
-            }
-            continue
-          }
-          out = out " "
-          continue
-        }
-        if (c == "#") break
-        if (c == "\x27") { q = "\x27"; continue }
-        if (c == "\"")   { q = "\"";   continue }
-        out = out c
+  awk -v FILEPATH="$1" -v SUBJECTS="$2" "$INVSCAN_AWK_LIB"'
+    BEGIN {
+      while ((getline s < SUBJECTS) > 0) {
+        if (s == "") continue
+        subj[s] = 1
+        b = s; sub(/^.*\//, "", b); subjbase[b] = 1
       }
-      return out
+      close(SUBJECTS)
     }
+    { lines[NR] = $0 }
 
     END {
       n = NR
@@ -157,8 +147,11 @@ analyze_file() {
         }
       }
 
-      # ---- masked code view -------------------------------------------
-      for (i = 1; i <= n; i++) code[i] = heredoc[i] ? "" : mask(lines[i])
+      # ---- the two views ----------------------------------------------
+      for (i = 1; i <= n; i++) {
+        code[i]    = heredoc[i] ? "" : invscan_command_view(lines[i])
+        argview[i] = heredoc[i] ? "" : invscan_argument_view(lines[i])
+      }
 
       # ---- D2 antecedent: variables assigned from a find/grep/ls over tests/
       for (i = 1; i <= n; i++) {
@@ -219,15 +212,15 @@ analyze_file() {
           c = code[i]
           if (!started) { started = 1; depth = 1; continue }
           if (c ~ /^\}/) break
-          if (match(c, /^[[:space:]]*(local[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=[\"]?\$[0-9]/)) {
+          # A quote delimiter is one BLANK in the length-preserving view, not a
+          # dropped character, so the `="$1"` shape reads `= $1` here.
+          if (match(c, /^[[:space:]]*(local[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=[[:space:]]?\$[0-9]/)) {
             v = c; sub(/^[[:space:]]*(local[[:space:]]+)?/, "", v); sub(/=.*$/, "", v)
             positional[v] = 1
           }
-          if (match(c, /^[[:space:]]*local[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=?[[:space:]]*[A-Za-z0-9_[:space:]]*$/) &&
-              c ~ /\$[0-9]/) { }
           # `local a="$1" b="$2"` — bind every name assigned from a positional
           m = c
-          while (match(m, /[A-Za-z_][A-Za-z0-9_]*=\"?\$[0-9]/)) {
+          while (match(m, /[A-Za-z_][A-Za-z0-9_]*=[[:space:]]?\$[0-9]/)) {
             v = substr(m, RSTART, RLENGTH); sub(/=.*$/, "", v)
             positional[v] = 1
             m = substr(m, RSTART + RLENGTH)
@@ -236,22 +229,82 @@ analyze_file() {
         }
       }
 
-      # ---- report ------------------------------------------------------
-      # The argument is parsed positionally rather than matched by one large
-      # regex: locate the `bash` command word, step over its option words, then
-      # read the first argument token. That keeps each denied row a statement
-      # about the ARGUMENT, and keeps the rows independent of one another.
+      # ---- D5 antecedent: variables assigned, ANYWHERE in the same file, a
+      #      value whose literal text names an ENUMERATED suite — either as a
+      #      repo-relative path (`VAR="$PROJECT_ROOT/tests/<suite>.sh"`) or as
+      #      an enumerated basename under a directory expansion
+      #      (`VAR="$SCRIPT_DIR/<suite>.sh"`). The literal is read from the
+      #      ARGUMENT view, since the shape is a quoted literal, and the name is
+      #      checked against the enumeration rather than against a suite-looking
+      #      pattern — which is what makes the row decidable rather than a
+      #      heuristic.
+      # ---- I4 antecedent: SCRATCH ROOTS. A variable this file assigns from
+      #      `mktemp` or `git worktree add` names a copy of the tree at another
+      #      on-disk state, and a suite under it is not the registered sibling —
+      #      it is a negative control whose own CI step, running the unperturbed
+      #      tree, cannot stand in for it.
       for (i = 1; i <= n; i++) {
         c = code[i]
-        if (!match(c, /(^|[[:space:]();&|])bash[[:space:]]+/)) continue
-        rest = substr(c, RSTART + RLENGTH)
-        while (match(rest, /^-[A-Za-z]+[[:space:]]+/)) rest = substr(rest, RLENGTH + 1)
+        if (!match(c, /^[[:space:]]*(local[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=/)) continue
+        if (c !~ /mktemp|worktree[[:space:]]+add/) continue
+        v = substr(c, RSTART, RLENGTH)
+        sub(/^[[:space:]]*(local[[:space:]]+)?/, "", v); sub(/=$/, "", v)
+        scratch[v] = 1
+      }
+
+      for (i = 1; i <= n; i++) {
+        a = argview[i]
+        if (!match(a, /^[[:space:]]*(local[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=/)) continue
+        v = substr(a, RSTART, RLENGTH)
+        val = substr(a, RSTART + RLENGTH)
+        sub(/^[[:space:]]*(local[[:space:]]+)?/, "", v); sub(/=$/, "", v)
+        root = val; sub(/^[[:space:]]+/, "", root)
+        if (match(root, /^\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?\//)) {
+          root = substr(root, RSTART, RLENGTH)
+          gsub(/[\$\{\}\/]/, "", root)
+          if (root in scratch) continue
+        }
+        if (match(val, /tests\/[A-Za-z0-9_.\/-]+\.(sh|bats)/)) {
+          if (substr(val, RSTART, RLENGTH) in subj) named[v] = 1
+        } else if (match(val, /\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?\/[A-Za-z0-9_.-]+\.(sh|bats)/)) {
+          tok = substr(val, RSTART, RLENGTH); sub(/^.*\//, "", tok)
+          if (tok in subjbase) named[v] = 1
+        }
+      }
+
+      # ---- report ------------------------------------------------------
+      # The argument is parsed positionally rather than matched by one large
+      # regex: locate the `bash` command word in the COMMAND view, step over its
+      # option words and any `--` separator, then read the first argument token
+      # from the ARGUMENT view at the same offset. That keeps each denied row a
+      # statement about the ARGUMENT, keeps the rows independent of one another,
+      # and is what makes a quoted literal legible without making a quoted grep
+      # pattern a command position.
+      for (i = 1; i <= n; i++) {
+        c = code[i]
+        if (!match(c, /(^|[[:space:]();&|])bash[[:space:]]/)) continue
+        rest = substr(argview[i], RSTART + RLENGTH)
+        while (match(rest, /^[[:space:]]*(--|-[A-Za-z]+)([[:space:]]|$)/)) rest = substr(rest, RLENGTH + 1)
         sub(/^[[:space:]]+/, "", rest)
 
         # D1 — a literal tests/ path
-        if (rest ~ /^(\.\.\/)*tests\/[A-Za-z0-9_.-]+\.(sh|bats)/) {
+        if (rest ~ /^(\.\.\/|\.\/)*tests\/[A-Za-z0-9_.-]+\.(sh|bats)/) {
           printf "%s:%d: D1: command-position literal invocation of a sibling suite\n", FILEPATH, i
           continue
+        }
+
+        # D5, direct form — `bash "$DIR/<suite>.sh"`: the argument itself
+        # carries the literal, with no intermediate variable to assign it to.
+        if (match(rest, /^\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?\//)) {
+          root = substr(rest, RSTART, RLENGTH); gsub(/[\$\{\}\/]/, "", root)
+          tok = rest; sub(/[[:space:]].*$/, "", tok)
+          base = tok; sub(/^.*\//, "", base)
+          if (!(root in scratch) &&
+              ((match(tok, /tests\/[A-Za-z0-9_.\/-]+\.(sh|bats)$/) && (substr(tok, RSTART, RLENGTH) in subj)) ||
+               (base in subjbase))) {
+            printf "%s:%d: D5: command-position invocation of an enumerated suite under a directory expansion\n", FILEPATH, i
+            continue
+          }
         }
 
         # otherwise the argument must be an expansion, optionally tests/-prefixed
@@ -275,6 +328,10 @@ analyze_file() {
           printf "%s:%d: D3: invocation of positional parameter $%s, which a call site passes a literal tests/ path\n", FILEPATH, i, v
           continue
         }
+        if ((v in named) && !prefixed) {
+          printf "%s:%d: D5: invocation of $%s, a variable this file assigns a literal enumerated-suite path\n", FILEPATH, i, v
+          continue
+        }
       }
     }
   ' "$1"
@@ -282,17 +339,20 @@ analyze_file() {
 
 # ---------------------------------------------------------------------------
 check_tree() {
-  local root="$1" violations=0 subjects=0 f out
+  local root="$1" violations=0 subjects=0 f out subjfile
+  subjfile="$(mktemp)"
+  suite_enumerate "$root" > "$subjfile"
   while IFS= read -r f; do
     [ -n "$f" ] || continue
     [ -f "$root/$f" ] || continue
     subjects=$((subjects + 1))
-    out="$(analyze_file "$root/$f")"
+    out="$(analyze_file "$root/$f" "$subjfile")"
     if [ -n "$out" ]; then
       printf '%s\n' "$out" | sed "s|^${root}/||"
       violations=$((violations + $(printf '%s\n' "$out" | grep -c .)))
     fi
-  done < <(suite_enumerate "$root")
+  done < "$subjfile"
+  rm -f "$subjfile"
   LAST_SUBJECT_COUNT="$subjects"
   LAST_VIOLATION_COUNT="$violations"
   [ "$violations" -eq 0 ]
@@ -309,8 +369,13 @@ self_test() {
   mkdir -p "$dir/tests"
 
   expect() { # <label> <basename> <denied|ignored>
-    local label="$1" file="$2" want="$3" out
-    out="$(analyze_file "$dir/tests/$file")"
+    local label="$1" file="$2" want="$3" out subjfile
+    # Re-enumerated per arm: the D5 fixtures plant their callee alongside the
+    # caller, and the row keys on the enumeration rather than on a name shape.
+    subjfile="$(mktemp)"
+    suite_enumerate "$dir" > "$subjfile"
+    out="$(analyze_file "$dir/tests/$file" "$subjfile")"
+    rm -f "$subjfile"
     if [ "$want" = denied ] && [ -z "$out" ]; then
       echo "  SELF-TEST FAIL: $label — expected a denied record, got none"; fails=$((fails + 1))
     elif [ "$want" = ignored ] && [ -n "$out" ]; then
@@ -358,6 +423,49 @@ for suite in tests/test-issue-996-callee.sh tests/test-issue-995-callee.sh; do
 done
 SH
   expect "D4: loop variable over a literal list holding a suite name" test-fixture-d4.sh denied
+
+  # --- D1 admitted forms: quoted, ./-prefixed, and `--`-separated ----------
+  # Each was undetected before this cycle: the masker erased a quoted literal
+  # entirely, the option-stepping regex did not consume a `--`, and the literal
+  # row admitted a `../` prefix but not a `./` one.
+  echo 'true' > "$dir/tests/test-fixture-d1-callee.sh"
+  cat > "$dir/tests/test-fixture-d1-quoted.sh" <<'SH'
+#!/usr/bin/env bash
+bash "tests/test-fixture-d1-callee.sh"
+bash 'tests/test-fixture-d1-callee.sh'
+SH
+  expect "D1: a double- or single-quoted literal argument" test-fixture-d1-quoted.sh denied
+
+  cat > "$dir/tests/test-fixture-d1-dotslash.sh" <<'SH'
+#!/usr/bin/env bash
+bash ./tests/test-fixture-d1-callee.sh
+SH
+  expect "D1: a ./-prefixed literal argument" test-fixture-d1-dotslash.sh denied
+
+  cat > "$dir/tests/test-fixture-d1-dashdash.sh" <<'SH'
+#!/usr/bin/env bash
+bash -- tests/test-fixture-d1-callee.sh
+SH
+  expect "D1: a literal argument behind a -- separator" test-fixture-d1-dashdash.sh denied
+
+  # --- D5: a variable this file assigns a literal enumerated-suite path ----
+  cat > "$dir/tests/test-fixture-d5.sh" <<'SH'
+#!/usr/bin/env bash
+CALLEE="$PROJECT_ROOT/tests/test-fixture-d1-callee.sh"
+bash "$CALLEE"
+SH
+  expect "D5: a named variable carrying a literal enumerated-suite path" test-fixture-d5.sh denied
+
+  # --- I3: D5's antecedent is a CONJUNCTION -------------------------------
+  # The assignment alone is not the violation. This shape is permanent and
+  # deliberate in the tree — a suite path held as a `grep` file operand — so a
+  # row keyed on the assignment would red a conforming file.
+  cat > "$dir/tests/test-fixture-i3.sh" <<'SH'
+#!/usr/bin/env bash
+CALLEE="$PROJECT_ROOT/tests/test-fixture-d1-callee.sh"
+grep -q 'EXPECTED_OK=' "$CALLEE"
+SH
+  expect "I3: an enumerated-suite path assigned but only READ, never invoked, is not a violation" test-fixture-i3.sh ignored
 
   # --- I1a: quoted assertion label ----------------------------------------
   cat > "$dir/tests/test-fixture-i1a.sh" <<'SH'
@@ -412,10 +520,10 @@ SH
 
   rm -rf "$dir"
   if [ "$fails" -ne 0 ]; then
-    echo "check-suite-leaf: --self-test FAILED ($fails of 9 fixture classes misclassified)"
+    echo "check-suite-leaf: --self-test FAILED ($fails of 14 fixture classes misclassified)"
     rc=1
   else
-    echo "check-suite-leaf: --self-test OK (9/9 fixture classes classified correctly)"
+    echo "check-suite-leaf: --self-test OK (14/14 fixture classes classified correctly)"
   fi
   return $rc
 }

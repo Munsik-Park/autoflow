@@ -496,17 +496,14 @@ else
   failc "E2b" "S2/#788" "host-purity-paths.txt missing at $HOST_PURITY_PATHS"
 fi
 
-echo "== E-Rc: tests/test-issue-788-host-purity-delta.sh whole-suite regression =="
+echo "== E-Rc: tests/test-issue-788-host-purity-delta.sh is present =="
+# The whole-suite re-run is retired (issue #103): that suite carries its own
+# registered `run:` step in host-purity-delta.yml, so a regression in it reds CI
+# under its own name once rather than twice. The presence half stays — this file
+# asserts its own classification against that suite's config scope above.
+# Disposition row: docs/doc-invariant-registry.md §12.1.
 if [ -f "$HOST_PURITY_SUITE" ]; then
-  HP_OUT=$(bash "$HOST_PURITY_SUITE" 2>&1)
-  HP_CODE=$?
-  HP_RESULT=$(printf '%s\n' "$HP_OUT" | grep -E '^(RESULT|Results):' | tail -1)
-  if [ "$HP_CODE" -eq 0 ]; then
-    pass "E-Rc: host-purity DELTA-guard suite exits 0 (#788 regression intact) -- $HP_RESULT"
-  else
-    printf '%s\n' "$HP_OUT" | grep '^FAIL:' | head -10
-    failc "E-Rc" "S2/#788" "host-purity DELTA-guard suite exited $HP_CODE -- $HP_RESULT"
-  fi
+  pass "E-Rc: host-purity DELTA-guard suite is present at $HOST_PURITY_SUITE"
 else
   failc "E-Rc" "S2/#788" "tests/test-issue-788-host-purity-delta.sh missing at $HOST_PURITY_SUITE"
 fi

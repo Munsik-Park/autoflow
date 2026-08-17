@@ -160,24 +160,19 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# AC4 — existing order-insensitive guards remain green (regression
-# confirmation only; re-runs the standing adr-0016 suite unmodified as a
-# subprocess and checks ITS OWN summary, per feature design §7 / verif.
-# design §1 AC4 — this file adds no new .source-keyed assertions).
+# AC4 — retired (issue #103). It re-ran the standing adr-0016 suite as a
+# subprocess and asserted ITS OWN summary; that suite carries its own
+# registered `run:` step, so a regression in it reds CI under its own name
+# once rather than twice. The existence half survives below, since this file
+# does read the suite's own text. Disposition row:
+# docs/doc-invariant-registry.md §12.1.
 # ---------------------------------------------------------------------------
 
 echo ""
-echo "=== AC4 (regression confirmation, zero new code) — existing order-insensitive guards stay green ==="
+echo "=== AC4 (regression confirmation) — the standing adr-0016 suite is present ==="
 
-if [ -x "$ADR_0016_TEST" ] || [ -f "$ADR_0016_TEST" ]; then
-  AC4_OUT="$(bash "$ADR_0016_TEST" 2>&1)"
-  AC4_EXIT=$?
-  echo "$AC4_OUT" | tail -3 | sed 's/^/  [adr-0016] /'
-  assert_true "AC4-adr0016-suite-exit0: tests/adr-0016-conformance-check.sh (AC-R3 sha256/count guards, order-insensitive by construction) exits 0 unmodified" \
-    "[ '$AC4_EXIT' -eq 0 ]"
-else
-  assert_true "AC4-adr0016-suite-exists: tests/adr-0016-conformance-check.sh exists" "false"
-fi
+assert_true "AC4-adr0016-suite-exists: tests/adr-0016-conformance-check.sh exists" \
+  "[ -f '$ADR_0016_TEST' ]"
 
 # ---------------------------------------------------------------------------
 # AC-C2-1 — no unconditional HEAD-restore of the tracked manifest remains

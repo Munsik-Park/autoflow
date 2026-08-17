@@ -64,6 +64,8 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
+# shellcheck source=scripts/test/invocation-scan.sh
+. "$SCRIPT_DIR/invocation-scan.sh"
 
 MODE="default"
 ROOT=""
@@ -146,52 +148,45 @@ check_headers() {
 # ---------------------------------------------------------------------------
 # WORKFLOW group
 #
-# steps_of <workflow file> prints one `<startline>|<run-path>|<id>|<if>|<timeout>`
-# record per step, so the conformance rules below read a step as a whole rather
-# than line by line.
+# The step record — `<startline>|<runpaths>|<id>|<if>|<timeout>` — is read by
+# scripts/test/invocation-scan.sh's `invscan_workflow_steps`, not by a private
+# parser here. The private one matched a `run:` scalar on the step's own line
+# only, so a `run: |` block whose body invoked a governed suite produced no
+# record and was required to carry neither `id:`, `if:` nor `timeout-minutes:` —
+# a bypass route the coverage lint's own rule counted as a registration.
+#
+# A step's `runpaths` is a SET, because a block-scalar body can invoke several
+# paths. A step invoking more than one GOVERNED suite is rejected below: a
+# per-suite `if:` guard and a per-suite `timeout-minutes:` cannot be expressed
+# for it. The count is over the governed paths alone — the live `select` and
+# `reconcile` steps are block scalars invoking several ungoverned `scripts/…`
+# paths, and a rejection written over the raw invocation count would red them
+# the moment this reader makes them visible.
 # ---------------------------------------------------------------------------
-steps_of() {
-  awk '
-    function flush() {
-      if (start > 0 && runpath != "")
-        printf "%d|%s|%s|%s|%s\n", start, runpath, sid, ifval, tmo
-      start = 0; runpath = ""; sid = ""; ifval = ""; tmo = ""
-    }
-    {
-      line = $0
-      if (match(line, /^[[:space:]]*- /)) {
-        flush()
-        start = NR
-        line = substr(line, RLENGTH + 1)
-        indent = RLENGTH
-      } else if (start == 0) {
-        next
-      } else {
-        sub(/^[[:space:]]+/, "", line)
-      }
-      if (match(line, /^run:[[:space:]]*/)) {
-        rest = substr(line, RLENGTH + 1)
-        if (match(rest, /bash[[:space:]]+[A-Za-z0-9_.\/-]+\.(sh|bats)/)) {
-          tok = substr(rest, RSTART, RLENGTH)
-          sub(/^bash[[:space:]]+/, "", tok)
-          runpath = tok
-        }
-      }
-      else if (match(line, /^id:[[:space:]]*/))             { sid = substr(line, RLENGTH + 1) }
-      else if (match(line, /^if:[[:space:]]*/))             { ifval = substr(line, RLENGTH + 1) }
-      else if (match(line, /^timeout-minutes:[[:space:]]*/)) { tmo = substr(line, RLENGTH + 1) }
-    }
-    END { flush() }
-  ' "$1"
-}
-
 check_workflows() {
-  local root="$1" wf rel rec start runpath sid ifval tmo budget want
+  local root="$1" wf rel start runpaths sid ifval tmo budget want
+  local runpath p governed governed_count
   for wf in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
     [ -f "$wf" ] || continue
     rel="${wf#"$root"/}"
-    while IFS='|' read -r start runpath sid ifval tmo; do
-      [ -n "$runpath" ] || continue
+    while IFS='|' read -r start runpaths sid ifval tmo; do
+      [ -n "$runpaths" ] || continue
+
+      governed=""
+      governed_count=0
+      for p in $runpaths; do
+        if suite_path_is_governed "$p"; then
+          governed="${governed:+$governed }$p"
+          governed_count=$((governed_count + 1))
+        fi
+      done
+
+      if [ "$governed_count" -gt 1 ]; then
+        violation "$rel:$start: one step invokes $governed_count governed suites ($governed) — a per-suite 'if:' guard and a per-suite 'timeout-minutes:' cannot be expressed for a step that runs more than one"
+        continue
+      fi
+
+      runpath="${governed:-${runpaths%% *}}"
 
       if ! suite_path_is_governed "$runpath"; then
         # Ungoverned: a standing lint or the registry runner. It runs
@@ -227,7 +222,7 @@ check_workflows() {
         want="$(suite_budget_minutes "$budget")"
         [ "$tmo" = "$want" ] || violation "$rel:$start: step running $runpath declares 'timeout-minutes: $tmo' but its header's budget-secs ($budget) is ceil()-equal to $want minutes"
       fi
-    done < <(steps_of "$wf")
+    done < <(invscan_workflow_steps "$wf")
   done
 }
 
@@ -449,6 +444,63 @@ jobs:
 YML
   expect "WORKFLOW governed-set boundary: a governed step outside the test-*.sh shape is still required to carry the guard shape -> violation" violation
 
+  # --- WORKFLOW block-scalar run: ----------------------------------------
+  # A governed suite invoked from a `run: |` body is a governed step record,
+  # exactly as the single-line form is. Both arms are required: the negative
+  # alone is satisfied by a reader that reds every block scalar.
+  reset
+  cat > "$dir/.github/workflows/fx.yml" <<'YML'
+jobs:
+  j:
+    steps:
+      - name: block-no-guard
+        run: |
+          bash tests/test-fx-guard.sh
+YML
+  expect "WORKFLOW block scalar: a governed suite invoked from a 'run: |' body with no id/if/timeout-minutes -> violation" violation
+
+  reset
+  cat > "$dir/.github/workflows/fx.yml" <<'YML'
+jobs:
+  j:
+    steps:
+      - id: s-test-fx-guard
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fx-guard.sh ')
+        timeout-minutes: 1
+        run: |
+          bash tests/test-fx-guard.sh
+YML
+  expect "WORKFLOW block scalar: the same suite invoked from a 'run: |' body carrying the full guard shape -> conform" conform
+
+  # --- WORKFLOW multi-suite step -----------------------------------------
+  reset
+  cat > "$dir/.github/workflows/fx.yml" <<'YML'
+jobs:
+  j:
+    steps:
+      - id: s-multi
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fx-a.sh ')
+        timeout-minutes: 1
+        run: |
+          bash tests/test-fx-a.sh
+          bash tests/test-fx-b.sh
+YML
+  expect "WORKFLOW multi-suite: one step invoking TWO governed suites -> violation" violation
+
+  reset
+  cat > "$dir/.github/workflows/fx.yml" <<'YML'
+jobs:
+  j:
+    steps:
+      - id: s-one-governed
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fx-a.sh ')
+        timeout-minutes: 1
+        run: |
+          bash scripts/test/check-suite-ci-coverage.sh
+          bash tests/test-fx-a.sh
+YML
+  expect "WORKFLOW multi-suite: one governed suite alongside an ungoverned scripts/… path (the live select/reconcile shape) -> conform" conform
+
   # --- WORKFLOW timeout agreement ----------------------------------------
   reset
   spec tests/test-fx-timeout.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 90' <<< 'true'
@@ -496,10 +548,10 @@ YML
 
   rm -rf "$dir"
   if [ "$fails" -ne 0 ]; then
-    echo "check-suite-manifest: --self-test FAILED ($fails of 21 fixture classes misclassified)"
+    echo "check-suite-manifest: --self-test FAILED ($fails of 25 fixture classes misclassified)"
     rc=1
   else
-    echo "check-suite-manifest: --self-test OK (21/21 fixture classes classified correctly)"
+    echo "check-suite-manifest: --self-test OK (25/25 fixture classes classified correctly)"
   fi
   return $rc
 }

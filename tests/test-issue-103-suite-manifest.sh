@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/test/check-suite-manifest.sh scripts/test/suite-manifest.sh tests/lib/harness-pins.sh
+# ci-subject: scripts/test/check-suite-ci-coverage.sh scripts/test/check-suite-manifest.sh scripts/test/invocation-scan.sh scripts/test/suite-manifest.sh tests/lib/harness-pins.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================

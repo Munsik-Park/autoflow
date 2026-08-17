@@ -39,7 +39,10 @@
 #
 # stdout: one selected repo-relative suite path per line.
 # stderr: the per-subject SELECTED: / NOT-SELECTED: report.
-# Exit:   0 normal, 1 BLOCK (unresolvable base, malformed header), 2 usage.
+# Exit:   0 normal, 1 BLOCK (unresolvable base, or an absent / empty
+#         `ci-subject` header on an enumerated suite — validated ahead of the
+#         selection loop, so a BLOCK never leaves a partial report behind),
+#         2 usage.
 # =============================================================================
 
 set -uo pipefail
@@ -112,6 +115,22 @@ resolve_delta() {
 select_over() {
   local root="$1" event="$2" base="$3"
   local delta="" full_set=0 lib_touched=0 suite tok path matched reason
+  local hdr toks
+
+  # HEADER VALIDATION, ahead of the selection loop. The docstring has always
+  # stated a malformed header as a BLOCK; the detection did not exist, so a
+  # suite with no `ci-subject:` line simply matched no token and reported
+  # NOT-SELECTED with the ordinary no-match reason. Validating before anything
+  # is selected is deliberate: a BLOCK discovered mid-report would leave a
+  # partial report behind, which the reconciler now reads as evidence.
+  while IFS= read -r suite; do
+    [ -n "$suite" ] || continue
+    if ! hdr="$(suite_header_field "$root/$suite" ci-subject)" || [ -z "$hdr" ]; then
+      echo "BLOCK: select-suites — $suite declares no usable '# ci-subject:' header; refusing to select against an unreadable trigger surface" >&2
+      echo "  A suite whose declared subject cannot be read is not correctly narrowed to nothing — it is unjudgeable." >&2
+      return 1
+    fi
+  done < <(suite_enumerate "$root")
 
   if [ "$event" = "push" ]; then
     full_set=1
@@ -150,7 +169,13 @@ select_over() {
       matched="a shared library under tests/lib/** is in the delta"
     fi
     if [ -z "$matched" ]; then
-      for tok in $(suite_header_field "$root/$suite" ci-subject || true); do
+      # `read -r -a` performs the IFS word split the loop wants and NO pathname
+      # expansion. An unquoted `$( … )` split also glob-expands, so a wildcard
+      # token was replaced by whatever the PROCESS'S WORKING DIRECTORY happened
+      # to contain and never reached glob_matches as a pattern — selection
+      # depended on where the selector was invoked from.
+      read -r -a toks <<< "$(suite_header_field "$root/$suite" ci-subject || true)"
+      for tok in ${toks[@]+"${toks[@]}"}; do
         while IFS= read -r path; do
           [ -n "$path" ] || continue
           if [ "$path" = "$tok" ] || glob_matches "$tok" "$path"; then

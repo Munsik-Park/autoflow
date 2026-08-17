@@ -39,19 +39,12 @@ echo "=== Issue #103 — workflow-trigger conformance re-point, paths: window su
 # AC-header-parse-single-definition-site
 # ---------------------------------------------------------------------
 assert_true "AC-header-parse-single-definition-site: scripts/test/suite-manifest.sh exists" "[ -f '$LIBRARY' ]"
-bash "$CONFORMANCE" >/tmp/issue103-conformance-real.out 2>&1
-CONFORMANCE_REAL_RC=$?
-if [ "$CONFORMANCE_REAL_RC" -ne 0 ]; then
-  # test-workflow-trigger-conformance.sh's own PASS-line volume runs into the
-  # thousands, so a full cat here would bury the violation in noise rather
-  # than surface it — grep to the FAIL lines (the actual violation content)
-  # plus the trailing Results summary line.
-  echo "  ---- test-workflow-trigger-conformance.sh real-tree output (rc=$CONFORMANCE_REAL_RC), FAIL lines + summary ----"
-  grep -E '^  FAIL:|^Results:' /tmp/issue103-conformance-real.out
-  echo "  ---- end output (full capture: /tmp/issue103-conformance-real.out) ----"
-fi
-assert_true "AC-header-parse-single-definition-site: test-workflow-trigger-conformance.sh exits 0 against the real tree, header parse re-pointed" \
-  "[ $CONFORMANCE_REAL_RC -eq 0 ]"
+# The whole-suite re-run of tests/test-workflow-trigger-conformance.sh is
+# retired (issue #103): that suite carries its own registered `run:` step in
+# contract-suites.yml, so its real-tree verdict reds CI under its own name once
+# rather than twice. What this file asserts about it is textual — the header
+# parse is re-pointed at the shared library — and that half survives below.
+# Disposition row: docs/doc-invariant-registry.md §12.1.
 assert_true "AC-header-parse-single-definition-site: test-workflow-trigger-conformance.sh sources scripts/test/suite-manifest.sh rather than re-parsing the header inline" \
   "grep -q 'suite-manifest.sh' '$CONFORMANCE'"
 assert_true "AC-header-parse-single-definition-site: no independent inline '# ci-subject:' parse (grep/awk over the raw header comment) survives in the conformance suite" \

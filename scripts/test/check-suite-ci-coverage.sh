@@ -39,6 +39,14 @@
 # violation, so a closure edge is not a reachability route a conforming tree can
 # offer.
 #
+# WHAT COUNTS AS AN INVOCATION is not decided here. scripts/test/invocation-scan.sh
+# owns that relation and this lint consumes it, as does
+# tests/test-workflow-trigger-conformance.sh and the manifest lint's step reader.
+# The line-based rule this file used to carry read a `bash` token wherever it
+# appeared — inside a quoted grep pattern naming a `run:` line included — and
+# missed a block-scalar `run:` body entirely, so the two lints disagreed on the
+# same file while each stayed consistent with itself.
+#
 # Usage:
 #   bash scripts/test/check-suite-ci-coverage.sh [--self-test] [--root <dir>]
 #
@@ -58,6 +66,8 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
+# shellcheck source=scripts/test/invocation-scan.sh
+. "$DEFAULT_ROOT/scripts/test/invocation-scan.sh"
 
 MODE="default"
 ROOT=""
@@ -75,25 +85,17 @@ ROOT="${ROOT:-$DEFAULT_ROOT}"
 is_excluded()  { suite_is_excluded "$1"; }
 subject_set()  { suite_enumerate "$1"; }
 
-# invoked_paths <file> — repo-relative spec paths this file invokes as a
-# subprocess. Only lines carrying the `bash` command word are read, so a
-# workflow's `paths:` trigger entry naming a suite is never mistaken for an
-# execution path — a trigger fires the workflow, it does not run the file.
-invoked_paths() {
-  local file="$1"
-  [ -f "$file" ] || return 0
-  grep -h 'bash' "$file" 2>/dev/null \
-    | grep -ohE '(tests|scripts)/[A-Za-z0-9_./-]+\.(sh|bats)' \
-    | sort -u
-}
-
 # reachable_set <root> — every spec a workflow `run:` step invokes directly.
+# The invocation relation itself is scripts/test/invocation-scan.sh's, not this
+# lint's: a private copy here and a second one in the conformance suite were two
+# definitions of one subject, and they disagreed by construction on a
+# block-scalar `run:` and on a quoted grep pattern naming a `run:` line.
 reachable_set() {
   local root="$1" wf out
   out="$(mktemp)"
   for wf in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
     [ -f "$wf" ] || continue
-    invoked_paths "$wf" >> "$out"
+    invscan_workflow_invocations "$wf" >> "$out"
   done
   sort -u "$out"
   rm -f "$out"

@@ -82,11 +82,11 @@ VERIFY_PACKAGE="$PROJECT_ROOT/tests/plugin/verify-package.sh"
 VERIFY_INSTALL="$PROJECT_ROOT/tests/plugin/verify-install-into-target.sh"
 VERIFY_E2E="$PROJECT_ROOT/tests/plugin/verify-e2e-dummy-target.sh"
 MANIFEST_LOCALE_SUITE="$PROJECT_ROOT/tests/test-issue-16-manifest-locale-invariance.sh"
-PEER_FACILITATOR_SUITE="$PROJECT_ROOT/tests/test-issue-52-peer-facilitator-premise.sh"
-TOPOLOGY_FLIP_SUITE="$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh"
-DOC846_SUITE="$PROJECT_ROOT/tests/test-issue-846-doc-assertions.sh"
-DOC848_SUITE="$PROJECT_ROOT/tests/test-issue-848-doc-assertions.sh"
-BACKGROUND_BAN_SUITE="$PROJECT_ROOT/tests/test-issue-955-subagent-background-ban.sh"
+# Five further names here (peer-facilitator, topology-flip, doc-846, doc-848,
+# background-ban) had no reader at all and were deleted with the sibling-re-run
+# disposal (issue #103) — symbol closure, the same direction
+# docs/doc-invariant-registry.md §12.1 already applies. The names ABOVE stay:
+# each is a live `grep` file operand of an assertion this cycle does not touch.
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -527,10 +527,13 @@ assert_true "AC-71-REGISTRY-oracle: tests/run-doc-invariants.sh exits 0 (KNOWN R
 assert_true "AC-71-REGISTRY-oracle-no-regression: no non-42-AC1-anon-handoff registry entry regresses (foreign FAILs: $NON_71_FAIL)" \
   "[ '$NON_71_FAIL' -eq 0 ]"
 
-DUALPIN_OUT="$(cd "$PROJECT_ROOT" && bash "$DUAL_PIN_SUITE" 2>&1)"
-DUALPIN_EXIT=$?
-assert_true "AC-71-DUALPIN-oracle: tests/test-issue-799-inert-cleanup.sh exits 0 against this branch's real diff (KNOWN RED mid-cycle until GREEN appends both filters)" \
-  "[ $DUALPIN_EXIT -eq 0 ]"
+# AC-71-DUALPIN-oracle's execution of tests/test-issue-799-inert-cleanup.sh is
+# retired (issue #103): that suite carries its own registered `run:` step in
+# e2e-dummy-target.yml, so a regression in it reds CI under its own name. The
+# `$DUAL_PIN_SUITE` ASSIGNMENT stays — its name is a live `grep` file operand of
+# the AC-71-DUALPIN filter-text assertions above, and deleting the block would
+# remove the operands of live assertions. The two are different disposals with
+# different scopes. Disposition row: docs/doc-invariant-registry.md §12.1.
 
 # =============================================================================
 echo ""

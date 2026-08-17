@@ -41,6 +41,9 @@ on:
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
       - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'CLAUDE.md'
+      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
+      - 'tests/lib/**'
   push:
     branches: [main]
     # Scanner include surface — mirror of the pull_request block above. Kept in
@@ -61,6 +64,9 @@ on:
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
       - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'CLAUDE.md'
+      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
+      - 'tests/lib/**'
 
 permissions:
   contents: read

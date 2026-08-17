@@ -32,6 +32,9 @@ on:
       - 'tests/test-issue-223-schema-hook-contract.sh'
       - 'CLAUDE.md'
       - '.github/workflows/schema-hook-contract.yml'
+      - 'docs/gate-matching-standard.md'
+      - 'tests/test-gate-hardening.sh'
+      - 'tests/lib/**'
   push:
     branches: [main]
     paths:
@@ -41,6 +44,9 @@ on:
       - 'tests/test-issue-223-schema-hook-contract.sh'
       - 'CLAUDE.md'
       - '.github/workflows/schema-hook-contract.yml'
+      - 'docs/gate-matching-standard.md'
+      - 'tests/test-gate-hardening.sh'
+      - 'tests/lib/**'
 
 permissions:
   contents: read

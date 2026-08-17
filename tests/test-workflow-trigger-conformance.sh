@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/test/check-suite-ci-coverage.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml .github/workflows/
+# ci-subject: scripts/test/check-suite-ci-coverage.sh scripts/test/invocation-scan.sh .github/workflows/e2e-dummy-target.yml .github/workflows/contract-suites.yml .github/workflows/
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -257,51 +257,28 @@ entry_is_unsupported_shape() {
 }
 
 # =============================================================================
-# Shared mechanism — hosting-workflow-scoping (transitive reach). Inherits
-# the coverage lint's own `bash <path>` invocation rule verbatim so the two
-# reachability notions cannot drift (scripts/test/check-suite-ci-coverage.sh
-# invoked_paths / reachable_set).
+# Shared mechanism — hosting-workflow-scoping. HOSTING IS DIRECT REGISTRATION
+# (issue #103): a workflow hosts a suite when one of ITS OWN steps invokes that
+# suite. The former transitive closure preserved exactly the notion the leaf
+# rule bans — a suite invoking a sibling — and it put workflows that do not run
+# a suite into its hosting set, which is what produced the false coverage
+# verdicts this cycle repairs.
+#
+# The invocation relation is scripts/test/invocation-scan.sh's, sourced here
+# rather than re-copied: this file and scripts/test/check-suite-ci-coverage.sh
+# carried byte-identical private copies, so the two could not observe their own
+# disagreement.
 # =============================================================================
-invoked_paths() {
-  local file="$1"
-  [ -f "$file" ] || return 0
-  grep -h 'bash' "$file" 2>/dev/null \
-    | grep -ohE '(tests|scripts)/[A-Za-z0-9_./-]+\.(sh|bats)' \
-    | sort -u
-}
-
-# workflow_reaches <workflow-file> <target-rel-path> — transitive closure
-# over `bash <path>` invocations starting from the workflow's own run: steps.
-workflow_reaches() {
-  local wf="$1" target="$2" seen frontier next f
-  seen="$(mktemp)"; frontier="$(mktemp)"; next="$(mktemp)"
-  invoked_paths "$wf" > "$frontier"
-  sort -u "$frontier" -o "$frontier"
-  cat "$frontier" > "$seen"
-  while [ -s "$frontier" ]; do
-    : > "$next"
-    while IFS= read -r f; do
-      [ -n "$f" ] || continue
-      invoked_paths "$PROJECT_ROOT/$f" >> "$next"
-    done < "$frontier"
-    sort -u "$next" -o "$next"
-    comm -23 "$next" <(sort -u "$seen") > "$frontier"
-    cat "$frontier" >> "$seen"
-    sort -u "$seen" -o "$seen"
-  done
-  local rc=1
-  grep -qxF "$target" "$seen" && rc=0
-  rm -f "$seen" "$frontier" "$next"
-  return $rc
-}
+# shellcheck source=scripts/test/invocation-scan.sh
+source "$PROJECT_ROOT/scripts/test/invocation-scan.sh"
 
 # reaching_workflows <target-rel-path> — every real workflow file that
-# reaches the target, directly or transitively.
+# registers a `run:` step invoking the target.
 reaching_workflows() {
   local target="$1" wf
   for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
     [ -f "$wf" ] || continue
-    workflow_reaches "$wf" "$target" && echo "$wf"
+    invscan_workflow_invocations "$wf" 2>/dev/null | grep -qxF "$target" && echo "$wf"
   done
 }
 

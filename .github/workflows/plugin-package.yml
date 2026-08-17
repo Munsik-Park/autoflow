@@ -31,6 +31,11 @@ on:
       - '.claude/skills/**'
       - 'tests/plugin/verify-package.sh'
       - '.github/workflows/plugin-package.yml'
+      - 'README.md'
+      - 'setup/SETUP-GUIDE.md'
+      - 'setup/manifest.json'
+      - 'setup/thin-root-layer/settings-pin.json'
+      - 'tests/lib/**'
   push:
     branches: [main]
     paths:
@@ -41,6 +46,11 @@ on:
       - '.claude/skills/**'
       - 'tests/plugin/verify-package.sh'
       - '.github/workflows/plugin-package.yml'
+      - 'README.md'
+      - 'setup/SETUP-GUIDE.md'
+      - 'setup/manifest.json'
+      - 'setup/thin-root-layer/settings-pin.json'
+      - 'tests/lib/**'
 
 permissions:
   contents: read

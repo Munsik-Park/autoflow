@@ -54,8 +54,23 @@
 #   bash scripts/test/check-step-reconciliation.sh \
 #        [--selected <file|->] [--steps <file|->] [--governed <path>]... [--self-test]
 #
+# EVIDENCE IS A PRECONDITION, NOT AN OUTCOME. Zero evidence is not agreement:
+# an unreadable report, a report carrying the selector's own `BLOCK:` line, a
+# report parsing to no record, and a `--governed` set intersecting the report in
+# nothing each fail before the comparison, with a message of their own. Each is
+# a state the old absorption (`cat … 2>/dev/null` plus a loop that never ran)
+# reported as `OK — the run's selection and its step outcomes agree`.
+#
+# BOUNDARY ACCOUNTING — under job-local narrowing a record hosted by another
+# workflow is reported `OUT-OF-JOB: <path> selected=<yes|no>` rather than
+# dropped in silence. This is deliberately NOT a failure: a job-local input
+# cannot decide a cross-job fact, and inventing a cross-job source of truth
+# would re-introduce the hand-maintained list this header rejects. The boundary
+# itself is guaranteed statically, by the registration and coverage lints.
+#
 # One `MISMATCH: <path> selected=… outcome=…` line per disagreement.
-# Exit 0 on agreement, 1 on any mismatch, 2 usage.
+# Exit 0 on agreement, 1 on any mismatch or on a failed evidence precondition,
+# 2 usage.
 # =============================================================================
 
 set -uo pipefail
@@ -87,14 +102,57 @@ step_id_of() {
 reconcile() {
   local sel="$1" steps="$2"; shift 2
   local mismatches=0 line path state id outcome
+  RECONCILED_COUNT=0
+  OUT_OF_JOB_COUNT=0
 
   local sel_body steps_body
-  if [ "$sel" = "-" ]; then sel_body="$(cat)"; else sel_body="$(cat "$sel" 2>/dev/null)"; fi
+  # An unreadable report is the ABSENCE of evidence, not agreement. The former
+  # `cat … 2>/dev/null` absorbed the read failure into an empty body, and the
+  # comparison below then found no records and returned success — so a run whose
+  # select step never produced a report reported OK.
+  if [ "$sel" = "-" ]; then
+    sel_body="$(cat)"
+  elif [ ! -r "$sel" ]; then
+    echo "check-step-reconciliation: the selection report is unreadable: $sel" >&2
+    echo "  There is nothing to reconcile against, which is not the same as agreement." >&2
+    return 3
+  else
+    sel_body="$(cat "$sel")"
+  fi
   if [ "$steps" = "-" ]; then steps_body="$(cat)"; else steps_body="$(cat "$steps" 2>/dev/null)"; fi
 
   if ! printf '%s' "$steps_body" | jq -e . >/dev/null 2>&1; then
     echo "check-step-reconciliation: the step-outcome input is not valid JSON" >&2
     return 1
+  fi
+
+  # The selector's own fail-loud output: a BLOCK means there is no selection to
+  # reconcile. Reporting agreement over it states a comparison that never ran.
+  if printf '%s\n' "$sel_body" | grep -q '^BLOCK:'; then
+    echo "check-step-reconciliation: the selection report carries a BLOCK line — the selector refused to emit a selection, so there is no selection to reconcile" >&2
+    printf '%s\n' "$sel_body" | grep '^BLOCK:' | sed 's/^/  /' >&2
+    return 3
+  fi
+
+  # Zero records parsed. The script's contract is a comparison between two
+  # records; it cannot be satisfied by one of them being empty.
+  if ! printf '%s\n' "$sel_body" | grep -qE '^(SELECTED|NOT-SELECTED): '; then
+    echo "check-step-reconciliation: the selection report parses to no SELECTED:/NOT-SELECTED: record — an empty report is the absence of evidence, not agreement" >&2
+    return 3
+  fi
+
+  # `--governed` is the caller's own set. An empty intersection with the report
+  # is a caller error, distinct from an empty report: the report parses fully
+  # here, and it is the intersection that is empty.
+  if [ $# -gt 0 ]; then
+    local gp gfound=0
+    for gp in "$@"; do
+      printf '%s\n' "$sel_body" | grep -qE "^(SELECTED|NOT-SELECTED): ${gp}( |\$)" && gfound=1
+    done
+    if [ "$gfound" -eq 0 ]; then
+      echo "check-step-reconciliation: the --governed set ($*) names no path the selection report records — the caller's set and the report do not overlap, so no comparison is possible" >&2
+      return 3
+    fi
   fi
 
   # hosted_here <suite path> — the job's step context carries this suite's id.
@@ -132,9 +190,19 @@ reconcile() {
       for g in "$@"; do [ "$g" = "$path" ] && found=1; done
       [ "$found" -eq 1 ] || continue
     elif [ "$narrow" -eq 1 ]; then
-      hosted_here "$path" || continue
+      # A record this job's step context does not carry is dropped — but the
+      # drop is stated rather than silent. A single job cannot decide whether
+      # the suite ran somewhere else, so this is not a failure; what the line
+      # buys is that the boundary is visible in the log, where a false green
+      # would otherwise be indistinguishable from a narrow, correct run.
+      if ! hosted_here "$path"; then
+        echo "OUT-OF-JOB: $path selected=$([ "$state" = selected ] && echo yes || echo no) (hosted by another workflow — this job's step context cannot judge it)"
+        OUT_OF_JOB_COUNT=$((OUT_OF_JOB_COUNT + 1))
+        continue
+      fi
     fi
 
+    RECONCILED_COUNT=$((RECONCILED_COUNT + 1))
     id="$(step_id_of "$path")"
     outcome="$(printf '%s' "$steps_body" | jq -r --arg k "$id" '.[$k].outcome // "absent"')"
 
@@ -215,12 +283,53 @@ self_test() {
 JSON
   expect "ungoverned steps present in the outcome map -> agreement" agree
 
+  # --- EVIDENCE PRECONDITION: zero evidence is not agreement ---------------
+  # Each arm asserts the non-zero exit AND a message of its own: a mismatch also
+  # exits non-zero, so an arm reading only the code cannot tell "there was
+  # nothing to reconcile" from "the two records disagreed".
+  expect_precondition() { # <label> <selected-file> <pattern> [<governed path>...]
+    local label="$1" selfile="$2" pattern="$3"; shift 3
+    local out
+    out="$(reconcile "$selfile" "$steps" "$@" 2>&1)"
+    if [ $? -eq 3 ] && printf '%s\n' "$out" | grep -qiE "$pattern" \
+       && ! printf '%s\n' "$out" | grep -q 'MISMATCH'; then
+      echo "  SELF-TEST PASS: $label"
+    else
+      echo "  SELF-TEST FAIL: $label — expected a precondition failure naming its cause, got: $out"
+      fails=$((fails + 1))
+    fi
+  }
+
+  printf '{"s-test-fixture-recon": {"outcome": "success"}}\n' > "$steps"
+  expect_precondition "an unreadable selection report -> precondition failure" "$dir/absent-report" 'unreadable'
+  : > "$sel"
+  expect_precondition "an empty selection report -> precondition failure" "$sel" 'no SELECTED'
+  printf 'this is not a selection report\n' > "$sel"
+  expect_precondition "an unparseable selection report -> precondition failure" "$sel" 'no SELECTED'
+  printf 'BLOCK: no base ref resolvable\n' > "$sel"
+  expect_precondition "a BLOCK-bearing selection report -> precondition failure" "$sel" 'BLOCK'
+
+  printf 'SELECTED: tests/test-fixture-recon.sh\n' > "$sel"
+  expect_precondition "a --governed set intersecting the report in nothing -> precondition failure" "$sel" 'governed' tests/test-fixture-absent-from-report.sh
+
+  # --- BOUNDARY ACCOUNTING: an out-of-job record is reported, not dropped ---
+  printf 'SELECTED: tests/test-fixture-recon.sh\nSELECTED: tests/test-fixture-elsewhere.sh\n' > "$sel"
+  printf '{"s-test-fixture-recon": {"outcome": "success"}}\n' > "$steps"
+  local ooj_out
+  ooj_out="$(reconcile "$sel" "$steps" 2>&1)"
+  if [ $? -eq 0 ] && printf '%s\n' "$ooj_out" | grep -q '^OUT-OF-JOB: tests/test-fixture-elsewhere.sh selected=yes'; then
+    echo "  SELF-TEST PASS: an out-of-job record is reported under its own label and does not change the exit code"
+  else
+    echo "  SELF-TEST FAIL: an out-of-job record is reported under its own label and does not change the exit code — got: $ooj_out"
+    fails=$((fails + 1))
+  fi
+
   rm -rf "$dir"
   if [ "$fails" -ne 0 ]; then
-    echo "check-step-reconciliation: --self-test FAILED ($fails of 6 fixture classes misclassified)"
+    echo "check-step-reconciliation: --self-test FAILED ($fails of 12 fixture classes misclassified)"
     rc=1
   else
-    echo "check-step-reconciliation: --self-test OK (6/6 fixture classes classified correctly)"
+    echo "check-step-reconciliation: --self-test OK (12/12 fixture classes classified correctly)"
   fi
   return $rc
 }
@@ -235,9 +344,20 @@ if [ -z "$SELECTED_FILE" ] || [ -z "$STEPS_FILE" ]; then
   exit 2
 fi
 
-if reconcile "$SELECTED_FILE" "$STEPS_FILE" "${GOVERNED_ARGS[@]+"${GOVERNED_ARGS[@]}"}"; then
-  echo "check-step-reconciliation: OK — the run's selection and its step outcomes agree"
+RECONCILED_COUNT=0
+OUT_OF_JOB_COUNT=0
+reconcile "$SELECTED_FILE" "$STEPS_FILE" "${GOVERNED_ARGS[@]+"${GOVERNED_ARGS[@]}"}"
+RC=$?
+if [ "$RC" -eq 0 ]; then
+  # The success line states WHAT WAS COMPARED rather than asserting agreement in
+  # the abstract, so a reader can tell a real comparison from a vacuous one
+  # without reading the exit code alone.
+  echo "check-step-reconciliation: OK — $RECONCILED_COUNT record(s) reconciled against this job's step outcomes, $OUT_OF_JOB_COUNT out-of-job entr(y|ies) reported"
   exit 0
+fi
+if [ "$RC" -eq 3 ]; then
+  echo "check-step-reconciliation: the evidence precondition failed — no comparison ran (see the message above)"
+  exit 1
 fi
 echo "check-step-reconciliation: the run's selection and its own step outcomes disagree"
 echo "  A selected suite that CI skipped is a wrongly-false if: guard, not a green run."
