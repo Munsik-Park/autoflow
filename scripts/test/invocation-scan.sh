@@ -10,12 +10,24 @@
 # file sits beside scripts/test/suite-manifest.sh for the same reason that one
 # does — a second copy of one subject is two definitions).
 #
-# THE ADMISSION RULE: the `bash` token's own POSITION decides admission; the
-# argument's quoting does not. A `bash` word is an invocation only when it
-# stands in command position — at the start of a simple command, or after `;`,
-# `&&`, `||`, `|`, `(`, `$(`, or an assignment's `$(`. Its first non-option
-# argument is then read WITH QUOTING REMOVED, so a literal argument is legible
-# whether or not it was quoted.
+# THE ADMISSION RULE: the interpreter token's own POSITION decides admission;
+# the argument's quoting does not. An interpreter word is an invocation only
+# when it stands in command position — at the start of a simple command, or
+# after `;`, `&&`, `||`, `|`, `(`, `$(`, or an assignment's `$(`. Its first
+# non-option argument is then read WITH QUOTING REMOVED, so a literal argument
+# is legible whether or not it was quoted.
+#
+# THE INTERPRETER WORD SET IS CLOSED, and `invscan_interp_alt` is its single
+# definition site: exactly `{bash, sh}`. Both spawn a shell that executes the
+# argument as a script, which is the whole of what "this file invokes that one"
+# means here, and this tree writes suite invocations both ways (`bash tests/…`
+# in workflow `run:` steps, `sh "$SUITE"` in the POSIX-sh plugin suites). A
+# word-set keyed on `bash` alone made every `sh`-form invocation invisible to
+# BOTH views at once — the leaf lint reported a tree clean over five live
+# whole-suite re-runs, and the coverage lint's reachability relation was missing
+# the corresponding edges. Outside the set by construction, and stated in each
+# consumer's residual: other interpreters (`zsh`, `dash`, `ksh`), `env sh`,
+# `exec sh`, and an interpreter reached through a variable (`"$SHELL" x.sh`).
 #
 # That single rule discharges two requirements at once: `bash "tests/x.sh"` is
 # admitted (the `bash` word is unquoted, the argument is dequoted), while
@@ -30,10 +42,10 @@
 #   command view   quoted spans blanked; `$var` / `${var}` inside double quotes
 #                  preserved; `$( … )` bodies re-entered as code; text after an
 #                  unquoted `#` blanked. Used to LOCATE the command-position
-#                  `bash` word.
+#                  interpreter word.
 #   argument view  identical, except that the CONTENTS of quoted spans are
 #                  preserved and only the delimiters are blanked. Used to READ
-#                  the argument once the `bash` word's offset is known.
+#                  the argument once the interpreter word's offset is known.
 #
 # Every removed character is replaced by a space, so an offset found in the
 # command view indexes the same character in the argument view; no second parse
@@ -48,7 +60,7 @@
 # body — so a step that writes a fixture workflow through a heredoc does not
 # register the fixture's `run:` line as an invocation.
 #
-# Exported surface:
+# Exported surface (awk half: invscan_interp_alt / invscan_interp_len as well):
 #   invscan_command_view <line>
 #   invscan_argument_view <line>
 #   invscan_shell_invocations <file>
@@ -110,6 +122,24 @@ function invscan_view(l, keep_quoted,   out, i, c, nx, n, q, depth, stack, ch) {
 function invscan_command_view(l)  { return invscan_view(l, 0) }
 function invscan_argument_view(l) { return invscan_view(l, 1) }
 
+# invscan_interp_alt() — the closed interpreter-word set as a regex alternation,
+# for composition with each consumer own leading-context class. This is the
+# single definition site of the set; a consumer that spells `bash` into its own
+# pattern re-opens the split that made sh-form invocations invisible.
+function invscan_interp_alt() { return "(bash|sh)" }
+
+# invscan_interp_len(seg) — the length of the interpreter word inside a segment
+# matched by an invscan interpreter pattern, where the word is the last word of
+# the segment before any trailing delimiter. The word is READ OUT of the segment
+# rather than inferred from an ordered alternation, so `sh` being a suffix of
+# `bash` cannot mis-locate the argument offset, and adding a member to the set
+# leaves this function untouched.
+function invscan_interp_len(seg) {
+  sub(/[[:space:]]+$/, "", seg)
+  sub(/^.*[^A-Za-z0-9_]/, "", seg)
+  return length(seg)
+}
+
 # invscan_first_arg(s) — the first non-option argument of a command whose word
 # list begins at s (an ARGUMENT-VIEW slice), reduced to a repo-relative spec
 # path, or "" when the argument is not one. An optional `./` prefix is accepted,
@@ -128,18 +158,20 @@ function invscan_first_arg(s,   tok) {
 
 # invscan_line_paths(text) — newline-terminated repo-relative paths the single
 # line of shell text invokes in command position.
-function invscan_line_paths(text,   cv, av, res, n, i, s, seg, off, tok) {
+function invscan_line_paths(text,   cv, av, res, n, i, s, seg, off, tok, wl, trail) {
   cv = invscan_command_view(text)
   av = invscan_argument_view(text)
   res = ""; n = length(cv); i = 1
   while (i <= n) {
     s = substr(cv, i)
-    if (!match(s, /(^|[;&|(){}])[[:space:]]*bash([[:space:]]|$)/)) break
+    if (!match(s, "(^|[;&|(){}])[[:space:]]*" invscan_interp_alt() "([[:space:]]|$)")) break
     seg = substr(s, RSTART, RLENGTH)
-    off = i + RSTART - 1 + index(seg, "bash") - 1
-    tok = invscan_first_arg(substr(av, off + 4))
+    wl = invscan_interp_len(seg)
+    trail = (seg ~ /[[:space:]]$/) ? 1 : 0
+    off = i + RSTART - 1 + length(seg) - trail - wl
+    tok = invscan_first_arg(substr(av, off + wl))
     if (tok != "") res = res tok "\n"
-    i = off + 4
+    i = off + wl
   }
   return res
 }

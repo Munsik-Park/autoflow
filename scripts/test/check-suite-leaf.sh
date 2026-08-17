@@ -14,7 +14,16 @@
 # tracing in bash is not decidable in general, so this lint is not written as
 # "traces to an enumeration". It is a finite list of syntactic shapes, each
 # derived from a real occurrence in this tree, and anything outside the list is
-# undetected BY CONSTRUCTION:
+# undetected BY CONSTRUCTION.
+#
+# Each denied row is written below with `bash` as its interpreter word, but the
+# word is not what the row is about. The admitted set is the CLOSED interpreter
+# class `{bash, sh}` defined once in scripts/test/invocation-scan.sh
+# (`invscan_interp_alt`), and every row reads `sh` exactly as it reads `bash` —
+# a shell spawned on the argument is the invocation, whichever of the two names
+# it. Keying the rows on `bash` alone is precisely what let five live
+# whole-suite re-runs in this tree's POSIX-sh plugin suites sit under a clean
+# report; the residual below now names the interpreters that remain outside.
 #
 #   DENIED
 #     D1  `bash tests/<name>.sh` in command position — the token begins a simple
@@ -52,18 +61,37 @@
 #         a `grep` file operand, say — and never invoked. D5's antecedent is a
 #         CONJUNCTION (the assignment AND a command-position `bash "$v"`), and
 #         this half of it is a permanent, deliberate shape in this tree.
+#     I5  a word that merely ENDS in an interpreter's letters — `run-suites.sh`,
+#         `finish` — is not an interpreter word. `sh` is a suffix of `bash` and
+#         of every `*.sh` path in the tree, so the match is anchored at a word
+#         boundary, and this row is the negative control for that anchoring.
 #
 # RESIDUAL, stated rather than implied and narrowed to what the rows above
-# leave. Quoting no longer hides an argument, and a variable naming an
-# enumerated suite no longer hides one either, so what remains undetected is an
-# argument whose LITERAL TEXT never appears in the file: a path assembled
-# through printf or string concatenation, read from a file at run time, or
-# passed across two levels of function call. Also outside every row by
-# construction: an invocation of a path the enumeration does not carry (D5 keys
-# on the enumerated set, which is what keeps `tests/run-doc-invariants.sh` and
-# `tests/lib/*` — excluded subjects — from reading as siblings). This lint
-# raises the cost of re-introducing sibling execution; it does not make the
-# class unrepresentable.
+# leave. It has three parts.
+#
+#   The ARGUMENT. Quoting no longer hides one, and a variable naming an
+#   enumerated suite no longer hides one either, so what remains undetected is
+#   an argument whose LITERAL TEXT never appears in the file: a path assembled
+#   through printf or string concatenation, read from a file at run time, or
+#   passed across two levels of function call.
+#
+#   The INTERPRETER. The word set is closed at `{bash, sh}`, so a suite driven
+#   through any other spelling is undetected: another interpreter (`zsh`,
+#   `dash`, `ksh`), an interpreter behind a wrapper word (`env sh …`,
+#   `exec sh …`, `timeout 60 bash …`), an interpreter reached through an
+#   expansion (`"$SHELL" tests/x.sh`), and direct execution with no interpreter
+#   word at all (`./tests/x.sh`, or a `$SUITE` made executable and called
+#   bare). The two admitted members are the two this tree writes; widening the
+#   set is a one-line edit at `invscan_interp_alt`, and each new member needs
+#   its own self-test arm.
+#
+#   The SUBJECT. Outside every row by construction: an invocation of a path the
+#   enumeration does not carry (D5 keys on the enumerated set, which is what
+#   keeps `tests/run-doc-invariants.sh` and `tests/lib/*` — excluded subjects —
+#   from reading as siblings).
+#
+# This lint raises the cost of re-introducing sibling execution; it does not
+# make the class unrepresentable.
 #
 # Usage:
 #   bash scripts/test/check-suite-leaf.sh [--self-test] [--root <dir>] [--list-subjects]
@@ -105,7 +133,7 @@ ROOT="${ROOT:-$DEFAULT_ROOT}"
 #
 # The two views come from scripts/test/invocation-scan.sh, composed into this
 # program rather than re-implemented: the command view locates the
-# command-position `bash` word and carries the D2/D3/D4 antecedent scans, and
+# command-position interpreter word and carries the D2/D3/D4 antecedent scans, and
 # the argument view — identical in length, so one offset indexes both — is what
 # the argument is READ from, which is why a quoted literal is now legible.
 #
@@ -270,7 +298,7 @@ analyze_file() {
 
       # ---- report ------------------------------------------------------
       # The argument is parsed positionally rather than matched by one large
-      # regex: locate the `bash` command word in the COMMAND view, step over its
+      # regex: locate the interpreter command word in the COMMAND view, step over its
       # option words and any `--` separator, then read the first argument token
       # from the ARGUMENT view at the same offset. That keeps each denied row a
       # statement about the ARGUMENT, keeps the rows independent of one another,
@@ -278,7 +306,7 @@ analyze_file() {
       # pattern a command position.
       for (i = 1; i <= n; i++) {
         c = code[i]
-        if (!match(c, /(^|[[:space:]();&|])bash[[:space:]]/)) continue
+        if (!match(c, "(^|[[:space:]();&|])" invscan_interp_alt() "[[:space:]]")) continue
         rest = substr(argview[i], RSTART + RLENGTH)
         while (match(rest, /^[[:space:]]*(--|-[A-Za-z]+)([[:space:]]|$)/)) rest = substr(rest, RLENGTH + 1)
         sub(/^[[:space:]]+/, "", rest)
@@ -444,6 +472,37 @@ bash -- tests/test-fixture-d1-callee.sh
 SH
   expect "D1: a literal argument behind a -- separator" test-fixture-d1-dashdash.sh denied
 
+  # --- D1/D5 under the second interpreter word ----------------------------
+  # The word set is {bash, sh}, and `sh` was the half that was missing: five
+  # live whole-suite re-runs in the POSIX-sh plugin suites sat outside a
+  # bash-keyed grammar while the lint reported the tree clean. Both a literal
+  # and a variable-mediated argument are exercised, since the word is located
+  # independently of which denied row then reads the argument.
+  cat > "$dir/tests/test-fixture-sh-interp.sh" <<'SH'
+#!/usr/bin/env bash
+sh tests/test-fixture-d1-callee.sh
+SH
+  expect "D1: a literal argument under the sh interpreter word" test-fixture-sh-interp.sh denied
+
+  cat > "$dir/tests/test-fixture-sh-interp-var.sh" <<'SH'
+#!/usr/bin/env bash
+CALLEE="$PROJECT_ROOT/tests/test-fixture-d1-callee.sh"
+OUT=$(sh "$CALLEE" 2>&1)
+SH
+  expect "D5: a named variable invoked under the sh interpreter word inside a substitution" test-fixture-sh-interp-var.sh denied
+
+  # --- I5: a word merely ENDING in the interpreter's letters ---------------
+  # `sh` is a suffix of both `bash` and of every `*.sh` path, so a widened word
+  # set is only sound if the match is anchored at a word boundary. This arm is
+  # the negative control for that anchoring.
+  cat > "$dir/tests/test-fixture-i5.sh" <<'SH'
+#!/usr/bin/env bash
+PRODUCT="$PROJECT_ROOT/scripts/test/run-suites.sh"
+"$PRODUCT" --all
+echo "finish tests/test-fixture-d1-callee.sh"
+SH
+  expect "I5: a word merely ending in the interpreter's letters is not an interpreter word" test-fixture-i5.sh ignored
+
   # --- D5: a variable this file assigns a literal enumerated-suite path ----
   cat > "$dir/tests/test-fixture-d5.sh" <<'SH'
 #!/usr/bin/env bash
@@ -516,10 +575,10 @@ SH
 
   rm -rf "$dir"
   if [ "$fails" -ne 0 ]; then
-    echo "check-suite-leaf: --self-test FAILED ($fails of 14 fixture classes misclassified)"
+    echo "check-suite-leaf: --self-test FAILED ($fails of 17 fixture classes misclassified)"
     rc=1
   else
-    echo "check-suite-leaf: --self-test OK (14/14 fixture classes classified correctly)"
+    echo "check-suite-leaf: --self-test OK (17/17 fixture classes classified correctly)"
   fi
   return $rc
 }

@@ -20,7 +20,8 @@
 #   AC3a/AC3b  CLAUDE_CODE_* env contract enumeration + census-subset keystone
 #   AC4a/AC4b  settings-pin artifact + marketplace no-skew + README-fence parity
 #   AC-Rg      docs/maintained-docs.md single-row registration
-#   AC5a       whole verify-package.sh re-run (regression integrity)
+#   AC5a       verify-package.sh is present (the whole-suite re-run is
+#              retired -- plugin-package.yml:93 runs it)
 #   AC5c       AC6d non-vacuity guard: static exactness + synthetic-pin arm
 #
 # Issue #963 additions (.autoflow/issue-963-verification-design.md §1
@@ -39,10 +40,13 @@
 # RED framing (verification design §3/§8-C1):
 #   AC1a/AC1b/AC2a/AC2b/AC3a/AC3b/AC4a/AC4b/AC-Rg fail concretely today (no
 #   setup/thin-root-layer/, no docs/thin-root-layer.md exist — Phase 3
-#   verified). AC5a is expected to PASS today (no settings-pin.json committed
-#   yet, so #790's AC6d has nothing to trip on) — it flips green->RED only
-#   once GREEN commits the pin without also landing the §3.5 AC6d edit; it is
-#   a driver *for that reconciliation work*, not a passive guard (design §8-C1).
+#   verified). AC5a is a presence assertion and passes throughout. The design
+#   §8-C1 driver it once carried — verify-package.sh's AC6d flipping green->RED
+#   once GREEN commits the pin without the §3.5 edit — is now carried where that
+#   AC lives, by verify-package.sh's own registered CI step (plugin-package.yml:93);
+#   the whole-suite re-run here is retired (issue #103,
+#   docs/doc-invariant-registry.md 12.1). AC5c(b) below keeps this file's static
+#   half of the same reconciliation.
 #   AC5c(b)-ii (exact sanctioned exclusion token present) FAILs today (the
 #   §3.5 edit has not landed); AC5c(a) (synthetic stray-pin arm) and AC5c(b)-i
 #   (loop-not-removed) are regression guards that hold both before and after
@@ -306,17 +310,17 @@ else
   failc "AC-Rg" "docs/maintained-docs.md missing at $MAINTAINED_DOCS"
 fi
 
-# ── AC5a: whole verify-package.sh re-run (regression integrity) ────────────
-echo "== AC5a: whole verify-package.sh re-run (#790 regression integrity) =="
+# ── AC5a: verify-package.sh is present ─────────────────────────────────────
+echo "== AC5a: verify-package.sh is present (#790 regression carrier) =="
+# The whole-suite re-run is retired (issue #103 cycle 3): that suite carries its
+# own registered `run:` step at plugin-package.yml:93, which is where the #790
+# regression reds — under its own name, once rather than twice. The design §8-C1
+# expectation this arm carried is a statement about verify-package.sh's OWN
+# AC6d, and it is that suite's step that will red when the settings-pin lands
+# without the §3.5 edit; AC5c(b) below keeps this file's static half of it.
+# Disposition row: docs/doc-invariant-registry.md 12.1.
 if [ -f "$VERIFY_PACKAGE_SH" ]; then
-  VP_OUT=$(sh "$VERIFY_PACKAGE_SH" 2>&1)
-  VP_CODE=$?
-  if [ "$VP_CODE" -eq 0 ]; then
-    pass "AC5a: verify-package.sh whole-suite exit 0 (regression intact — expected today per design §8-C1: no settings-pin.json is committed yet, so AC6d has nothing to trip; this AC is expected to flip to RED once the pin is committed WITHOUT the §3.5 AC6d edit)"
-  else
-    VP_LAST_LINE=$(printf '%s\n' "$VP_OUT" | grep -m1 '^RESULT:')
-    failc "AC5a" "verify-package.sh exited $VP_CODE (non-zero) -- $VP_LAST_LINE"
-  fi
+  pass "AC5a: packaging acceptance suite is present at $VERIFY_PACKAGE_SH"
 else
   failc "AC5a" "tests/plugin/verify-package.sh missing at $VERIFY_PACKAGE_SH"
 fi

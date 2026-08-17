@@ -49,8 +49,10 @@
 #     AC4b        guide copy-list/checklist names thin-root artifacts
 #
 #   Regression:
-#     AC-Ra       verify-package.sh whole-suite exits 0
-#     AC-Rb       verify-thin-root-layer.sh whole-suite exits 0
+#     AC-Ra       verify-package.sh is present (the whole-suite re-run is
+#                 retired -- plugin-package.yml:93 runs it)
+#     AC-Rb       verify-thin-root-layer.sh is present (the whole-suite re-run
+#                 is retired -- contract-suites.yml:329 runs it)
 #
 #   NOT automated (E/M types — see tests/plugin/manual-scenarios-792.md):
 #     AC1h        live @import resolution in a real Claude Code session
@@ -1047,30 +1049,22 @@ fi
 # Regression — AC-Ra/AC-Rb
 # ══════════════════════════════════════════════════════════════════════════════
 
-echo "== AC-Ra: verify-package.sh whole-suite regression =="
+echo "== AC-Ra: verify-package.sh is present =="
+# The whole-suite re-run is retired (issue #103 cycle 3): that suite carries its
+# own registered `run:` step at plugin-package.yml:93, so a regression in it reds
+# CI under its own name once rather than twice.
+# Disposition row: docs/doc-invariant-registry.md 12.1.
 if [ -f "$VERIFY_PACKAGE" ]; then
-  VP_OUT=$(sh "$VERIFY_PACKAGE" 2>&1)
-  VP_CODE=$?
-  VP_RESULT=$(printf '%s\n' "$VP_OUT" | grep '^RESULT:' | head -1)
-  if [ "$VP_CODE" -eq 0 ]; then
-    pass "AC-Ra: verify-package.sh exits 0 (#790 regression intact) — $VP_RESULT"
-  else
-    failc "AC-Ra" "verify-package.sh exited $VP_CODE (#790 regression broken) — $VP_RESULT"
-  fi
+  pass "AC-Ra: packaging acceptance suite is present at $VERIFY_PACKAGE"
 else
   failc "AC-Ra" "tests/plugin/verify-package.sh missing at $VERIFY_PACKAGE"
 fi
 
-echo "== AC-Rb: verify-thin-root-layer.sh whole-suite regression =="
+echo "== AC-Rb: verify-thin-root-layer.sh is present =="
+# Same disposition as AC-Ra; the callee's registered step is
+# contract-suites.yml:329.
 if [ -f "$VERIFY_THIN_ROOT" ]; then
-  VT_OUT=$(sh "$VERIFY_THIN_ROOT" 2>&1)
-  VT_CODE=$?
-  VT_RESULT=$(printf '%s\n' "$VT_OUT" | grep '^RESULT:' | head -1)
-  if [ "$VT_CODE" -eq 0 ]; then
-    pass "AC-Rb: verify-thin-root-layer.sh exits 0 (#791 regression intact) — $VT_RESULT"
-  else
-    failc "AC-Rb" "verify-thin-root-layer.sh exited $VT_CODE (#791 regression broken) — $VT_RESULT"
-  fi
+  pass "AC-Rb: thin-root-layer acceptance suite is present at $VERIFY_THIN_ROOT"
 else
   failc "AC-Rb" "tests/plugin/verify-thin-root-layer.sh missing at $VERIFY_THIN_ROOT"
 fi
