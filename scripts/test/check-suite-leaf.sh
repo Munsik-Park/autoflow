@@ -139,12 +139,8 @@ analyze_file() {
           if (s == here_tag) { in_here = 0; here_tag = "" }
           continue
         }
-        if (match(l, /<<-?[[:space:]]*[\x27"]?[A-Za-z_][A-Za-z0-9_]*[\x27"]?/)) {
-          tag = substr(l, RSTART, RLENGTH)
-          sub(/^<<-?[[:space:]]*/, "", tag)
-          gsub(/[\x27"]/, "", tag)
-          if (tag != "") { in_here = 1; here_tag = tag }
-        }
+        tag = invscan_heredoc_tag(l)
+        if (tag != "") { in_here = 1; here_tag = tag }
       }
 
       # ---- the two views ----------------------------------------------

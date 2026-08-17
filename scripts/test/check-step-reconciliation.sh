@@ -344,8 +344,6 @@ if [ -z "$SELECTED_FILE" ] || [ -z "$STEPS_FILE" ]; then
   exit 2
 fi
 
-RECONCILED_COUNT=0
-OUT_OF_JOB_COUNT=0
 reconcile "$SELECTED_FILE" "$STEPS_FILE" "${GOVERNED_ARGS[@]+"${GOVERNED_ARGS[@]}"}"
 RC=$?
 if [ "$RC" -eq 0 ]; then

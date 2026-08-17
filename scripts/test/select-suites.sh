@@ -116,6 +116,16 @@ select_over() {
   local root="$1" event="$2" base="$3"
   local delta="" full_set=0 lib_touched=0 suite tok path matched reason
   local hdr toks
+  local -a suites=()
+  local -A ci_subject_hdr=()
+
+  # Enumerated once and reused by both the validation and selection loops below
+  # — the header validated per suite here is cached too, so together this
+  # replaces two `suite_enumerate` tree walks and a second per-suite
+  # `suite_header_field` read with one of each.
+  while IFS= read -r suite; do
+    [ -n "$suite" ] && suites+=("$suite")
+  done < <(suite_enumerate "$root")
 
   # HEADER VALIDATION, ahead of the selection loop. The docstring has always
   # stated a malformed header as a BLOCK; the detection did not exist, so a
@@ -123,14 +133,16 @@ select_over() {
   # NOT-SELECTED with the ordinary no-match reason. Validating before anything
   # is selected is deliberate: a BLOCK discovered mid-report would leave a
   # partial report behind, which the reconciler now reads as evidence.
-  while IFS= read -r suite; do
-    [ -n "$suite" ] || continue
+  # The validated header is cached per suite so the selection loop below reuses
+  # it instead of re-reading and re-parsing each suite file a second time.
+  for suite in ${suites[@]+"${suites[@]}"}; do
     if ! hdr="$(suite_header_field "$root/$suite" ci-subject)" || [ -z "$hdr" ]; then
       echo "BLOCK: select-suites — $suite declares no usable '# ci-subject:' header; refusing to select against an unreadable trigger surface" >&2
       echo "  A suite whose declared subject cannot be read is not correctly narrowed to nothing — it is unjudgeable." >&2
       return 1
     fi
-  done < <(suite_enumerate "$root")
+    ci_subject_hdr["$suite"]="$hdr"
+  done
 
   if [ "$event" = "push" ]; then
     full_set=1
@@ -153,8 +165,7 @@ select_over() {
     done <<< "$delta"
   fi
 
-  while IFS= read -r suite; do
-    [ -n "$suite" ] || continue
+  for suite in ${suites[@]+"${suites[@]}"}; do
     if [ "$full_set" -eq 1 ]; then
       printf 'SELECTED: %s\n' "$suite" >&2
       printf '%s\n' "$suite"
@@ -174,7 +185,7 @@ select_over() {
       # token was replaced by whatever the PROCESS'S WORKING DIRECTORY happened
       # to contain and never reached glob_matches as a pattern — selection
       # depended on where the selector was invoked from.
-      read -r -a toks <<< "$(suite_header_field "$root/$suite" ci-subject || true)"
+      read -r -a toks <<< "${ci_subject_hdr[$suite]:-}"
       for tok in ${toks[@]+"${toks[@]}"}; do
         while IFS= read -r path; do
           [ -n "$path" ] || continue
@@ -191,7 +202,7 @@ select_over() {
     else
       printf 'NOT-SELECTED: %s no delta path matches its own path or any ci-subject token\n' "$suite" >&2
     fi
-  done < <(suite_enumerate "$root")
+  done
   return 0
 }
 
