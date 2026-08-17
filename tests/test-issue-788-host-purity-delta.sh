@@ -721,7 +721,19 @@ index 0000000..1111111 100644
   # runner YAMLs, by the same no-deletions / all-added-lines-recognized
   # shape as AC10a's #843 parity-carry exception. Any other change to these
   # files stays caught.
-  wf_diff="$(git -C "$PROJECT_ROOT" diff "$base_ref"..HEAD -- \
+  # --unified=100000: the block-scope tracker in
+  # unrecognized_added_lines_in_diff() (paths:, the checkout step's with:,
+  # the select step's body) opens each block off an OPENER LINE it must see
+  # in the diff STREAM, context or added. Git's default 3-line context can
+  # leave that opener out of the hunk entirely when the insertion sits far
+  # from it (e.g. a new paths: glob appended after many pre-existing
+  # entries) -- the block never opens and a legitimately-shaped addition
+  # reads as unrecognized. Full-file context makes every opener visible
+  # regardless of list length; it changes nothing the classifier admits,
+  # only whether the lines it already knows how to admit are present to
+  # check (cycle-3 fact: AC10b reds on schema-hook-contract.yml's paths:
+  # append at b1513c0 without this).
+  wf_diff="$(git -C "$PROJECT_ROOT" diff --unified=100000 "$base_ref"..HEAD -- \
     .github/workflows/workflow-regression.yml .github/workflows/schema-hook-contract.yml 2>/dev/null)"
   wf_untouched="no"; [[ -z "$wf_diff" ]] && wf_untouched="yes"
   wf_change_admitted="no"
