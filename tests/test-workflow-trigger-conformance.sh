@@ -1662,7 +1662,9 @@ for wf in "${RECONCILER_CONSUMING_WORKFLOWS[@]}"; do
   argv_has_selected=true; printf '%s\n' "$REPLAY_ARGV" | grep -qF -- '--selected' || argv_has_selected=false
   argv_has_steps=true; printf '%s\n' "$REPLAY_ARGV" | grep -qF -- '--steps' || argv_has_steps=false
   argv_has_jobstatus=true
-  printf '%s\n' "$REPLAY_ARGV" | grep -A1 -- '--job-status' | tail -1 | grep -qE '.' || argv_has_jobstatus=false
+  jobstatus_ctx="$(printf '%s\n' "$REPLAY_ARGV" | grep -A1 -- '--job-status')"
+  jobstatus_val="$(printf '%s\n' "$jobstatus_ctx" | tail -1)"
+  [ -n "$jobstatus_val" ] || argv_has_jobstatus=false
   assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --selected with a non-empty value" "$argv_has_selected"
   assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --steps with a non-empty value" "$argv_has_steps"
   assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --job-status (the env:-delivered JOB_STATUS, not an inline expression that would abort the bash -e replay before invocation)" \
