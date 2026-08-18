@@ -67,24 +67,13 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # shellcheck source=scripts/test/invocation-scan.sh
 . "$SCRIPT_DIR/invocation-scan.sh"
 
-# require_value <flag> <remaining argc> <next argument> — a flag that takes a
-# value requires one. A lost --root value would otherwise resolve to the real
-# tree through the default below, and the lint would report a green about a
-# subject the caller never named.
-require_value() {
-  if [ "$2" -lt 2 ] || [ -z "$3" ]; then
-    echo "check-suite-manifest: $1 requires a non-empty value" >&2
-    return 1
-  fi
-}
-
 MODE="default"
 ROOT=""
 LIST=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --self-test)     MODE="self-test" ;;
-    --root)          require_value "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
+    --root)          require_value check-suite-manifest "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
     --list-subjects) LIST=1 ;;
     *)               echo "check-suite-manifest: unknown argument: $1" >&2; exit 2 ;;
   esac

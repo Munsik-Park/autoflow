@@ -94,17 +94,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
 
-# require_value <flag> <remaining argc> <next argument> — a flag that takes a
-# value requires one. Absorbing a missing value into an empty string is how a
-# lost argument resolves to a default and reports a result about a subject the
-# caller never named.
-require_value() {
-  if [ "$2" -lt 2 ] || [ -z "$3" ]; then
-    echo "check-step-reconciliation: $1 requires a non-empty value" >&2
-    return 1
-  fi
-}
-
 MODE="default"
 SELECTED_FILE=""
 STEPS_FILE=""
@@ -113,10 +102,10 @@ GOVERNED_ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --self-test)  MODE="self-test" ;;
-    --selected)   require_value "$1" $# "${2:-}" || exit 2; SELECTED_FILE="$2"; shift ;;
-    --steps)      require_value "$1" $# "${2:-}" || exit 2; STEPS_FILE="$2"; shift ;;
-    --governed)   require_value "$1" $# "${2:-}" || exit 2; GOVERNED_ARGS+=("$2"); shift ;;
-    --job-status) require_value "$1" $# "${2:-}" || exit 2; JOB_STATUS="$2"; shift ;;
+    --selected)   require_value check-step-reconciliation "$1" $# "${2:-}" || exit 2; SELECTED_FILE="$2"; shift ;;
+    --steps)      require_value check-step-reconciliation "$1" $# "${2:-}" || exit 2; STEPS_FILE="$2"; shift ;;
+    --governed)   require_value check-step-reconciliation "$1" $# "${2:-}" || exit 2; GOVERNED_ARGS+=("$2"); shift ;;
+    --job-status) require_value check-step-reconciliation "$1" $# "${2:-}" || exit 2; JOB_STATUS="$2"; shift ;;
     *)            echo "check-step-reconciliation: unknown argument: $1" >&2; exit 2 ;;
   esac
   shift

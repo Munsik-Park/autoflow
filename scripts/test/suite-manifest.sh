@@ -158,6 +158,20 @@ suite_step_id() {
 }
 
 # ---------------------------------------------------------------------------
+# require_value <prog> <flag> <remaining argc> <next argument> — a flag that
+# takes a value requires one. Absorbing a missing value into an empty string
+# is how a lost argument resolves to a default and reports a result about a
+# subject the caller never named. Shared by every CLI parser that sources this
+# file, so the check is authored in one place rather than once per script.
+# ---------------------------------------------------------------------------
+require_value() {
+  if [ "$3" -lt 2 ] || [ -z "$4" ]; then
+    echo "$1: $2 requires a non-empty value" >&2
+    return 1
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # suite_enumerate <root> — repo-relative paths of every executable spec under
 # tests/**, sorted, minus the exclusions above.
 # ---------------------------------------------------------------------------

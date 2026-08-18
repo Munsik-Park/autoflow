@@ -40,17 +40,6 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
 
-# require_value <flag> <remaining argc> <next argument> — a flag that takes a
-# value requires one. A lost --root value would otherwise resolve to the real
-# tree through the default below, and the run would be about a subject the
-# caller never named. Omitting a flag entirely keeps its documented default.
-require_value() {
-  if [ "$2" -lt 2 ] || [ -z "$3" ]; then
-    echo "run-suites: $1 requires a non-empty value" >&2
-    return 1
-  fi
-}
-
 ROOT=""
 BASE=""
 EVENT="${GITHUB_EVENT_NAME:-pull_request}"
@@ -58,9 +47,9 @@ ALL=0
 LIST=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --root)  require_value "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
-    --base)  require_value "$1" $# "${2:-}" || exit 2; BASE="$2"; shift ;;
-    --event) require_value "$1" $# "${2:-}" || exit 2; EVENT="$2"; shift ;;
+    --root)  require_value run-suites "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
+    --base)  require_value run-suites "$1" $# "${2:-}" || exit 2; BASE="$2"; shift ;;
+    --event) require_value run-suites "$1" $# "${2:-}" || exit 2; EVENT="$2"; shift ;;
     --all)   ALL=1 ;;
     --list)  LIST=1 ;;
     *)       echo "run-suites: unknown argument: $1" >&2; exit 2 ;;
