@@ -650,6 +650,192 @@ SH
 
 fi
 
+# =============================================================================
+# Issue #108 -- failing-suite output preservation, valued-flag hardening on
+# select-suites.sh and run-suites.sh.
+# .autoflow/issue-108-verification-design.md:
+#   AC-failing-suite-output-survives, AC-valued-flags-fail-closed.
+# =============================================================================
+if [ -f "$RUNNER" ] && [ -f "$SELECT" ]; then
+
+  # ---------------------------------------------------------------------
+  # AC-failing-suite-output-survives -- run-suites.sh surfaces the
+  # captured stdout AND stderr of every suite it reports FAIL or TIMEOUT,
+  # and surfaces nothing extra for a suite it reports PASS. Each stub
+  # emits a bracketing sentinel pair (a distinct first-emitted and
+  # last-emitted sentinel) on stdout and again on stderr, separated by
+  # enough filler lines that a truncated capture (a head/tail window)
+  # drops one of them.
+  # ---------------------------------------------------------------------
+  emit_bracket_filler() { # writes 40 filler lines to the given fd via caller redirection
+    local i
+    for i in $(seq 1 40); do printf 'filler-line-%02d\n' "$i"; done
+  }
+
+  OUT_DIR="$(mktemp -d)"
+  mkdir -p "$OUT_DIR/tests"
+
+  cat > "$OUT_DIR/tests/test-fixture-108-out-pass.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-out-pass.txt
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+
+  cat > "$OUT_DIR/tests/test-fixture-108-out-fail.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-out-fail.txt
+# lane: standing
+# budget-secs: 5
+echo "OUT-SENTINEL-FAIL-START"
+for i in $(seq 1 40); do echo "filler-out-$i"; done
+echo "OUT-SENTINEL-FAIL-END"
+echo "ERR-SENTINEL-FAIL-START" >&2
+for i in $(seq 1 40); do echo "filler-err-$i" >&2; done
+echo "ERR-SENTINEL-FAIL-END" >&2
+exit 1
+SH
+
+  cat > "$OUT_DIR/tests/test-fixture-108-out-timeout.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-out-timeout.txt
+# lane: standing
+# budget-secs: 1
+# Both sentinels are emitted BEFORE the sleep that trips the bound -- a
+# timeout-killed process is killed mid-run, so a trailing sentinel would
+# never be written.
+echo "OUT-SENTINEL-TIMEOUT-START"
+for i in $(seq 1 40); do echo "filler-out-$i"; done
+echo "OUT-SENTINEL-TIMEOUT-END"
+echo "ERR-SENTINEL-TIMEOUT-START" >&2
+for i in $(seq 1 40); do echo "filler-err-$i" >&2; done
+echo "ERR-SENTINEL-TIMEOUT-END" >&2
+sleep 9
+exit 0
+SH
+  chmod +x "$OUT_DIR/tests/test-fixture-108-out-pass.sh" "$OUT_DIR/tests/test-fixture-108-out-fail.sh" "$OUT_DIR/tests/test-fixture-108-out-timeout.sh"
+
+  bash "$RUNNER" --root "$OUT_DIR" --all >/tmp/issue108-runner-output.out 2>&1
+  assert_true "AC-failing-suite-output-survives PASS leg: a suite reported PASS prints no extra output (no sentinel of a passing stub leaks into the run)" \
+    "! grep -q 'SENTINEL' /tmp/issue108-runner-output.out"
+  assert_true "AC-failing-suite-output-survives FAIL leg: a suite reported FAIL surfaces BOTH its stdout sentinels (start and end) -- a head/tail-truncated capture would drop one" \
+    "grep -qF 'OUT-SENTINEL-FAIL-START' /tmp/issue108-runner-output.out && grep -qF 'OUT-SENTINEL-FAIL-END' /tmp/issue108-runner-output.out"
+  assert_true "AC-failing-suite-output-survives FAIL leg: a suite reported FAIL surfaces BOTH its stderr sentinels (start and end)" \
+    "grep -qF 'ERR-SENTINEL-FAIL-START' /tmp/issue108-runner-output.out && grep -qF 'ERR-SENTINEL-FAIL-END' /tmp/issue108-runner-output.out"
+  assert_true "AC-failing-suite-output-survives TIMEOUT leg: a suite reported TIMEOUT surfaces BOTH its stdout sentinels, emitted before the bound fired" \
+    "grep -qF 'OUT-SENTINEL-TIMEOUT-START' /tmp/issue108-runner-output.out && grep -qF 'OUT-SENTINEL-TIMEOUT-END' /tmp/issue108-runner-output.out"
+  assert_true "AC-failing-suite-output-survives TIMEOUT leg: a suite reported TIMEOUT surfaces BOTH its stderr sentinels" \
+    "grep -qF 'ERR-SENTINEL-TIMEOUT-START' /tmp/issue108-runner-output.out && grep -qF 'ERR-SENTINEL-TIMEOUT-END' /tmp/issue108-runner-output.out"
+  rm -rf "$OUT_DIR"
+
+  # -- Watchdog-fallback leg: the same FAIL/TIMEOUT capture obligation
+  #    survives on a PATH where neither timeout nor gtimeout resolves
+  #    (the sleep-and-kill watchdog path), driven on the sanitized-PATH
+  #    technique this file already uses below for AC-runner-bounds-
+  #    without-gnu-timeout.
+  OUT_WD_TAIL="$(mktemp -d)"
+  OUT_WD_ALLOWLIST="awk bash cat date dirname find git grep mkdir mktemp rm sed sort tr sleep seq"
+  out_wd_ok=true
+  for _cmd in $OUT_WD_ALLOWLIST; do
+    _real="$(command -v "$_cmd" 2>/dev/null || true)"
+    [ -n "$_real" ] || { out_wd_ok=false; break; }
+    ln -s "$_real" "$OUT_WD_TAIL/$_cmd"
+  done
+  if [ "$out_wd_ok" = true ] && env -i PATH="$OUT_WD_TAIL" bash -c 'command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1'; then
+    out_wd_ok=false
+  fi
+  if [ "$out_wd_ok" = true ]; then
+    OUT_WD_DIR="$(mktemp -d)"; mkdir -p "$OUT_WD_DIR/tests"
+    cat > "$OUT_WD_DIR/tests/test-fixture-108-out-wd-timeout.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-out-wd-timeout.txt
+# lane: standing
+# budget-secs: 1
+echo "OUT-SENTINEL-WDTIMEOUT-START"
+for i in $(seq 1 40); do echo "filler-out-$i"; done
+echo "OUT-SENTINEL-WDTIMEOUT-END"
+sleep 9
+exit 0
+SH
+    chmod +x "$OUT_WD_DIR/tests/test-fixture-108-out-wd-timeout.sh"
+    env -i PATH="$OUT_WD_TAIL" HOME="$HOME" bash "$RUNNER" --root "$OUT_WD_DIR" --all >/tmp/issue108-runner-output-wd.out 2>&1
+    assert_true "AC-failing-suite-output-survives, watchdog fallback path: under a sanitized PATH where neither timeout nor gtimeout resolves, a TIMEOUT-classified suite still surfaces both its sentinels" \
+      "grep -qF 'OUT-SENTINEL-WDTIMEOUT-START' /tmp/issue108-runner-output-wd.out && grep -qF 'OUT-SENTINEL-WDTIMEOUT-END' /tmp/issue108-runner-output-wd.out"
+    rm -rf "$OUT_WD_DIR"
+  else
+    echo "  SKIP: AC-failing-suite-output-survives watchdog-fallback leg -- sanitized-PATH precondition not met on this host" >&2
+  fi
+  rm -rf "$OUT_WD_TAIL"
+
+  # ---------------------------------------------------------------------
+  # AC-valued-flags-fail-closed -- --root / --base / --event on BOTH
+  # select-suites.sh and run-suites.sh. A present-but-valueless form is a
+  # usage error naming the flag, exit 2; omitted keeps the documented
+  # default (the shape the five workflow call sites depend on).
+  #
+  # Bounding note: on TODAY'S (pre-hardening) script, an empty/absent
+  # --root value falls through SILENTLY to the real repository root (the
+  # exact footgun this AC exists to close) -- driving run-suites.sh that
+  # way without --list would execute the tree's full suite sweep (tens of
+  # minutes, docs/submodule-common-rules.md > Testing Standards). Every
+  # run-suites.sh invocation below therefore carries --list, which exits
+  # after selection without executing any suite; this changes nothing
+  # about the flag-parsing behaviour under test, which must reject a
+  # valueless flag before selection is even attempted. The --base/--event
+  # legs additionally pin an explicit, tiny --root fixture so the arm under
+  # test (--base or --event) does not also exercise a real-repo delta.
+  # ---------------------------------------------------------------------
+  VF_TINY_ROOT="$(mktemp -d)"; mkdir -p "$VF_TINY_ROOT/tests"
+  cat > "$VF_TINY_ROOT/tests/test-fixture-108-vf-tiny.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-vf-tiny.txt
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+  chmod +x "$VF_TINY_ROOT/tests/test-fixture-108-vf-tiny.sh"
+
+  for VF_SCRIPT_VAR in SELECT RUNNER; do
+    VF_SCRIPT="${!VF_SCRIPT_VAR}"
+    VF_LABEL="$([ "$VF_SCRIPT_VAR" = SELECT ] && echo 'select-suites.sh' || echo 'run-suites.sh')"
+    VF_LIST_ARG=(); [ "$VF_SCRIPT_VAR" = RUNNER ] && VF_LIST_ARG=(--list)
+
+    bash "$VF_SCRIPT" --root "" "${VF_LIST_ARG[@]}" >/tmp/issue108-vf-"$VF_LABEL"-root-empty.out 2>&1
+    assert_true "AC-valued-flags-fail-closed: $VF_LABEL --root given an empty value is a usage error (exit 2) naming --root" \
+      "[ $? -eq 2 ] && grep -qi -- '--root' /tmp/issue108-vf-\"$VF_LABEL\"-root-empty.out"
+
+    bash "$VF_SCRIPT" --root >/tmp/issue108-vf-"$VF_LABEL"-root-last.out 2>&1
+    assert_true "AC-valued-flags-fail-closed: $VF_LABEL --root as the final argument (no value) is a usage error (exit 2) naming --root" \
+      "[ $? -eq 2 ] && grep -qi -- '--root' /tmp/issue108-vf-\"$VF_LABEL\"-root-last.out"
+
+    bash "$VF_SCRIPT" --root "$VF_TINY_ROOT" --base "" "${VF_LIST_ARG[@]}" >/tmp/issue108-vf-"$VF_LABEL"-base-empty.out 2>&1
+    assert_true "AC-valued-flags-fail-closed: $VF_LABEL --base given an empty value is a usage error (exit 2) naming --base" \
+      "[ $? -eq 2 ] && grep -qi -- '--base' /tmp/issue108-vf-\"$VF_LABEL\"-base-empty.out"
+
+    bash "$VF_SCRIPT" --root "$VF_TINY_ROOT" --base >/tmp/issue108-vf-"$VF_LABEL"-base-last.out 2>&1
+    assert_true "AC-valued-flags-fail-closed: $VF_LABEL --base as the final argument (no value) is a usage error (exit 2) naming --base" \
+      "[ $? -eq 2 ] && grep -qi -- '--base' /tmp/issue108-vf-\"$VF_LABEL\"-base-last.out"
+
+    bash "$VF_SCRIPT" --root "$VF_TINY_ROOT" --event "" "${VF_LIST_ARG[@]}" >/tmp/issue108-vf-"$VF_LABEL"-event-empty.out 2>&1
+    assert_true "AC-valued-flags-fail-closed: $VF_LABEL --event given an empty value is a usage error (exit 2) naming --event" \
+      "[ $? -eq 2 ] && grep -qi -- '--event' /tmp/issue108-vf-\"$VF_LABEL\"-event-empty.out"
+
+    bash "$VF_SCRIPT" --root "$VF_TINY_ROOT" --event >/tmp/issue108-vf-"$VF_LABEL"-event-last.out 2>&1
+    assert_true "AC-valued-flags-fail-closed: $VF_LABEL --event as the final argument (no value) is a usage error (exit 2) naming --event" \
+      "[ $? -eq 2 ] && grep -qi -- '--event' /tmp/issue108-vf-\"$VF_LABEL\"-event-last.out"
+  done
+  rm -rf "$VF_TINY_ROOT"
+
+  # Omitted-flag arm: with none of the valued flags given, the script keeps
+  # its documented default and runs normally against the real tree (push
+  # event selects the full set, so this is a cheap zero-arg smoke check --
+  # select-suites.sh never executes a suite, so this is bounded regardless).
+  bash "$SELECT" --event push >/tmp/issue108-vf-select-omitted.out 2>&1
+  assert_true "AC-valued-flags-fail-closed: select-suites.sh with every valued flag omitted keeps its documented default (real tree, push event, exit 0)" \
+    "[ $? -eq 0 ]"
+fi
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1

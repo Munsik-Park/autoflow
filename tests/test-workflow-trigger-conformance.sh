@@ -1439,6 +1439,225 @@ workflow_trigger_paths_symmetric "$SYM_FIXTURE" && SYM_OK=true
 assert_true "AC-both-trigger-blocks-declare-the-same-paths hermetic positive control: a workflow whose pull_request: and push: blocks declare the same entries (order-independent) is correctly detected as symmetric" "$SYM_OK"
 rm -f "$SYM_FIXTURE"
 
+# =============================================================================
+# Issue #108 -- select/reconcile block mutual identity + execution, infra
+# step time bounds, --job-status wiring.
+# .autoflow/issue-108-verification-design.md:
+#   AC-blocks-stay-mutually-identical, AC-infra-steps-are-time-bounded,
+#   AC-job-status-is-wired-into-the-blocks, AC-reconcile-block-text-executes.
+# =============================================================================
+
+# --- extract_step_mapping <workflow-file> <opener-line-regex> ---------------
+# The whole step list item: from the opener line through the line before the
+# next line whose indent is at or shallower than the opener's own `- `
+# indent. Every key of the step is inside the extracted region -- what makes
+# a `timeout-minutes:` addition, or an env: key, a compared byte.
+extract_step_mapping() {
+  awk -v openre="$2" '
+    state == 0 {
+      if ($0 ~ openre) {
+        state = 1
+        line = $0; sub(/[^ ].*$/, "", line); openindent = length(line)
+        print $0
+        next
+      }
+      next
+    }
+    state == 1 {
+      if ($0 ~ /^[[:space:]]*$/) { print $0; next }
+      line = $0; sub(/[^ ].*$/, "", line); ind = length(line)
+      if (ind <= openindent) exit
+      print $0
+    }
+  ' "$1"
+}
+
+SELECT_MAPPING_OPENER='^[[:space:]]*- id: select[[:space:]]*$'
+RECONCILE_MAPPING_OPENER='^[[:space:]]*- name: reconcile selection against step outcomes[[:space:]]*$'
+
+mapfile -t RECONCILER_CONSUMING_WORKFLOWS < <(grep -l 'check-step-reconciliation\.sh' "$PROJECT_ROOT"/.github/workflows/*.yml 2>/dev/null | sort)
+
+assert_true "AC-blocks-stay-mutually-identical pre: the derived reconciler-consuming workflow set (grep -l check-step-reconciliation.sh over .github/workflows/*.yml) is non-empty" \
+  "[ \${#RECONCILER_CONSUMING_WORKFLOWS[@]} -gt 0 ]"
+
+# The two derived sets are asserted EQUAL, not merely non-empty -- a
+# workflow that consumes the selector but silently lost its reconcile step
+# would leave its own selection ungraded, and non-emptiness alone cannot
+# see that.
+select_set_sorted="$(printf '%s\n' "${SELECTOR_CONSUMING_WORKFLOWS[@]}" | sort)"
+reconcile_set_sorted="$(printf '%s\n' "${RECONCILER_CONSUMING_WORKFLOWS[@]}" | sort)"
+assert_true "AC-blocks-stay-mutually-identical: the selector-consuming and reconciler-consuming workflow sets are equal (no consumer drops one half of the select/reconcile pair)" \
+  "[ \"\$select_set_sorted\" = \"\$reconcile_set_sorted\" ]"
+
+# -- select mapping: mutual byte-identity across every selector-consuming
+#    workflow, with a sentinel precondition against vacuous (empty/
+#    truncated) extraction.
+SELECT_MAPPING_FIRST=""
+select_mapping_identical=true
+select_mapping_sentinel_ok=true
+for wf in "${SELECTOR_CONSUMING_WORKFLOWS[@]}"; do
+  mapping="$(extract_step_mapping "$wf" "$SELECT_MAPPING_OPENER")"
+  printf '%s' "$mapping" | grep -qF 'select-suites.sh' || select_mapping_sentinel_ok=false
+  if [ -z "$SELECT_MAPPING_FIRST" ]; then
+    SELECT_MAPPING_FIRST="$mapping"
+  elif [ "$mapping" != "$SELECT_MAPPING_FIRST" ]; then
+    select_mapping_identical=false
+  fi
+done
+assert_true "AC-blocks-stay-mutually-identical: the select step mapping extraction is non-vacuous across every selector-consuming workflow (each extracted region contains the select-suites.sh invocation)" \
+  "$select_mapping_sentinel_ok"
+assert_true "AC-blocks-stay-mutually-identical: the select step's WHOLE mapping (every key, including timeout-minutes:) is byte-identical across every selector-consuming workflow" \
+  "$select_mapping_identical"
+
+# -- reconcile mapping: same shape.
+RECONCILE_MAPPING_FIRST=""
+reconcile_mapping_identical=true
+reconcile_mapping_sentinel_ok=true
+for wf in "${RECONCILER_CONSUMING_WORKFLOWS[@]}"; do
+  mapping="$(extract_step_mapping "$wf" "$RECONCILE_MAPPING_OPENER")"
+  printf '%s' "$mapping" | grep -qF 'check-step-reconciliation.sh' || reconcile_mapping_sentinel_ok=false
+  if [ -z "$RECONCILE_MAPPING_FIRST" ]; then
+    RECONCILE_MAPPING_FIRST="$mapping"
+  elif [ "$mapping" != "$RECONCILE_MAPPING_FIRST" ]; then
+    reconcile_mapping_identical=false
+  fi
+done
+assert_true "AC-blocks-stay-mutually-identical: the reconcile step mapping extraction is non-vacuous across every reconciler-consuming workflow (each extracted region contains the check-step-reconciliation.sh invocation)" \
+  "$reconcile_mapping_sentinel_ok"
+assert_true "AC-blocks-stay-mutually-identical: the reconcile step's WHOLE mapping (every key, including the env: block and timeout-minutes:) is byte-identical across every reconciler-consuming workflow" \
+  "$reconcile_mapping_identical"
+
+# ---------------------------------------------------------------------------
+# AC-infra-steps-are-time-bounded -- the select and reconcile steps in every
+# calling workflow declare timeout-minutes:. Keyed on the step's INVOKED
+# SCRIPT PATH (via invscan_workflow_steps), not on the step's name, so a
+# rename does not blind this arm; carried independently of the identity arm
+# above so a five-way OMISSION of the bound (identical everywhere, hence
+# invisible to a mutual-identity comparison) still reds.
+# ---------------------------------------------------------------------------
+for wf in "${SELECTOR_CONSUMING_WORKFLOWS[@]}"; do
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  select_tmo=""
+  while IFS='|' read -r start runpaths sid ifval tmo; do
+    case " $runpaths " in *' scripts/test/select-suites.sh '*) select_tmo="$tmo" ;; esac
+  done < <(invscan_workflow_steps "$wf")
+  assert_true "AC-infra-steps-are-time-bounded: $wrel -- the step invoking scripts/test/select-suites.sh declares timeout-minutes:" \
+    "[ -n \"$select_tmo\" ]"
+done
+for wf in "${RECONCILER_CONSUMING_WORKFLOWS[@]}"; do
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  reconcile_tmo=""
+  while IFS='|' read -r start runpaths sid ifval tmo; do
+    case " $runpaths " in *' scripts/test/check-step-reconciliation.sh '*) reconcile_tmo="$tmo" ;; esac
+  done < <(invscan_workflow_steps "$wf")
+  assert_true "AC-infra-steps-are-time-bounded: $wrel -- the step invoking scripts/test/check-step-reconciliation.sh declares timeout-minutes:" \
+    "[ -n \"$reconcile_tmo\" ]"
+done
+
+# ---------------------------------------------------------------------------
+# AC-job-status-is-wired-into-the-blocks -- every shipped reconcile block
+# passes the runner's job status to the reconciler through the step's env:
+# mapping (a ${{ … }} expression inline in the body is not bash syntax and
+# would abort AC-reconcile-block-text-executes' verbatim replay).
+# ---------------------------------------------------------------------------
+for wf in "${RECONCILER_CONSUMING_WORKFLOWS[@]}"; do
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  mapping="$(extract_step_mapping "$wf" "$RECONCILE_MAPPING_OPENER")"
+  env_wired_ok=true
+  printf '%s' "$mapping" | grep -qE 'JOB_STATUS:[[:space:]]*\$\{\{[[:space:]]*job\.status[[:space:]]*\}\}' || env_wired_ok=false
+  assert_true "AC-job-status-is-wired-into-the-blocks: $wrel -- the reconcile step's env: mapping carries JOB_STATUS sourced from the job.status context" \
+    "$env_wired_ok"
+  body_wired_ok=true
+  printf '%s' "$mapping" | grep -qE -- '--job-status[[:space:]]+"\$JOB_STATUS"' || body_wired_ok=false
+  assert_true "AC-job-status-is-wired-into-the-blocks: $wrel -- the reconcile step's run: body passes --job-status \"\$JOB_STATUS\" to check-step-reconciliation.sh (the env:-delivered value, not an inline \${{ … }} expression)" \
+    "$body_wired_ok"
+done
+
+# ---------------------------------------------------------------------------
+# AC-reconcile-block-text-executes -- the reconcile step's shipped run: body,
+# taken verbatim from each derived consumer, runs the reconciler with the
+# arguments it declares and fails the step when the reconciler exits
+# non-zero. Same shape as the select block's existing verbatim bash -e
+# replay (extract_select_run_block / run_select_replay above): a stub
+# check-step-reconciliation.sh records its argv; STEPS_JSON and JOB_STATUS
+# are exported as ordinary environment variables, exactly as the step's
+# own env: mapping delivers them.
+# ---------------------------------------------------------------------------
+extract_reconcile_run_block() {
+  awk '
+    state == 0 && /^[[:space:]]*- name: reconcile selection against step outcomes[[:space:]]*$/ { state = 1; next }
+    state == 1 && /run:[[:space:]]*\|/ {
+      line = $0
+      sub(/[^ ].*$/, "", line)
+      runindent = length(line)
+      blockindent = runindent + 2
+      state = 2
+      next
+    }
+    state == 2 {
+      if ($0 == "") { print ""; next }
+      line = $0
+      sub(/[^ ].*$/, "", line)
+      ind = length(line)
+      if (ind < blockindent) { exit }
+      print substr($0, blockindent + 1)
+    }
+  ' "$1"
+}
+
+# run_reconcile_replay <block-text> <stub-exit-code> -- replays the block
+# verbatim under bash -e with a stub check-step-reconciliation.sh at the
+# relative path the block invokes; the stub records its own argv and exits
+# with the given code. Sets REPLAY_RC and REPLAY_ARGV.
+run_reconcile_replay() {
+  local block="$1" stub_rc="$2" root rtemp script argvfile
+  root="$(mktemp -d)"
+  mkdir -p "$root/scripts/test"
+  argvfile="$(mktemp)"
+  cat > "$root/scripts/test/check-step-reconciliation.sh" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$@" > "$argvfile"
+exit $stub_rc
+STUB
+  chmod +x "$root/scripts/test/check-step-reconciliation.sh"
+
+  rtemp="$(mktemp -d)"; script="$(mktemp)"
+  printf '%s\n' "$block" > "$script"
+  ( cd "$root" && STEPS_JSON='{"s-fixture":{"outcome":"success"}}' JOB_STATUS='failure' RUNNER_TEMP="$rtemp" bash -e "$script" ) \
+    >/tmp/issue108-reconcile-replay-stdout.out 2>/tmp/issue108-reconcile-replay-stderr.out
+  REPLAY_RC=$?
+  REPLAY_ARGV="$(cat "$argvfile" 2>/dev/null)"
+  rm -rf "$root" "$rtemp" "$script" "$argvfile"
+}
+
+for wf in "${RECONCILER_CONSUMING_WORKFLOWS[@]}"; do
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  RECONCILE_BLOCK_TEXT="$(extract_reconcile_run_block "$wf")"
+
+  reconcile_sentinel_ok=true
+  printf '%s' "$RECONCILE_BLOCK_TEXT" | grep -qF 'check-step-reconciliation.sh' || reconcile_sentinel_ok=false
+  assert_true "AC-reconcile-block-text-executes sentinel: $wrel -- the extracted reconcile run: block invokes check-step-reconciliation.sh" \
+    "$reconcile_sentinel_ok"
+
+  run_reconcile_replay "$RECONCILE_BLOCK_TEXT" 0
+  pos_replay_rc_ok=true; [ "$REPLAY_RC" -eq 0 ] || pos_replay_rc_ok=false
+  assert_true "AC-reconcile-block-text-executes positive control: $wrel -- replaying the shipped reconcile-step text verbatim under bash -e, with a stub reconciler exiting 0, exits the step 0" \
+    "$pos_replay_rc_ok"
+  argv_has_selected=true; printf '%s\n' "$REPLAY_ARGV" | grep -qF -- '--selected' || argv_has_selected=false
+  argv_has_steps=true; printf '%s\n' "$REPLAY_ARGV" | grep -qF -- '--steps' || argv_has_steps=false
+  argv_has_jobstatus=true
+  printf '%s\n' "$REPLAY_ARGV" | grep -A1 -- '--job-status' | tail -1 | grep -qE '.' || argv_has_jobstatus=false
+  assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --selected with a non-empty value" "$argv_has_selected"
+  assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --steps with a non-empty value" "$argv_has_steps"
+  assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --job-status (the env:-delivered JOB_STATUS, not an inline expression that would abort the bash -e replay before invocation)" \
+    "$argv_has_jobstatus"
+
+  run_reconcile_replay "$RECONCILE_BLOCK_TEXT" 1
+  neg_replay_rc_ok=true; [ "$REPLAY_RC" -ne 0 ] || neg_replay_rc_ok=false
+  assert_true "AC-reconcile-block-text-executes negative control: $wrel -- a stub reconciler exiting non-zero propagates out of the shipped reconcile-step body (bash -e fails the step)" \
+    "$neg_replay_rc_ok"
+done
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1
