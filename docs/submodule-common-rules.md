@@ -264,7 +264,7 @@ Every sub-repo must maintain:
 - `bash scripts/test/run-suites.sh --all` — the whole enumerated tree.
 - `bash scripts/test/run-suites.sh --list` — the selected set without running it.
 
-The runner de-duplicates by resolved path, so a suite cannot execute twice in one pass; arms a wall-clock bound of `<effective local ceiling>` around each suite — via `timeout`, `gtimeout`, or a detached sleep-and-kill watchdog when neither binary exists on the host — and reports an overrun as a distinct `TIMEOUT`; and prints one result line with elapsed time per suite, so cost drift is visible long before it reds.
+The runner de-duplicates by resolved path, so a suite cannot execute twice in one pass; arms a wall-clock bound of `<effective local ceiling>` around each suite — via `timeout`, `gtimeout`, or a detached sleep-and-kill watchdog when neither binary exists on the host — and reports an overrun as a distinct `TIMEOUT`; and prints one result line with elapsed time per suite, so cost drift is visible long before it reds. Each suite's output is captured while it runs: a `PASS` discards the capture, while a `FAIL` or `TIMEOUT` replays it in full between framing lines directly under that suite's result line — the runner is the only driver for the tree, so a failure is diagnosable from the run that produced it without re-running the suite by hand (issue #108).
 
 **The two clocks are not the same clock.** `budget-secs` is a **CI-clock** quantity — derived from the suite's own CI step duration, bounded by `SUITE_BUDGET_CEILING_SECS`, and spent by CI through that step's `timeout-minutes`. A local run spends a **local allowance** derived from it by one tree-wide ratio:
 
