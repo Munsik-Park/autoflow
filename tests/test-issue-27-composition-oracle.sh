@@ -4,6 +4,7 @@
 # ci-subject: .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/lib/harness-pins.sh tests/manual/issue-27-manual-scenarios.md tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: Composition oracle — verification-design shared-state requirement,
 # Issue #27 (cycle-scoped)

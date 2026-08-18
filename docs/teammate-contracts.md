@@ -29,6 +29,45 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - **[MUST]** Assign scores only after the FAIL hypothesis has been formed, searched, and dispositioned. Scoring never precedes the search.
 - **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less teammate report (`CLAUDE.md` > Execution Principles > *Verify teammate claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
 
+### Execution discipline (scope, sampling, time)
+
+This subsection **constrains** the pre-scoring FAIL hypothesis above; it does not replace it. The
+evaluator still forms the hypothesis first, still re-derives anchors, still records the search in
+`fail_hypothesis`. Governing record:
+[`docs/adr/0019-scope-fit-verification-policy.md`](adr/0019-scope-fit-verification-policy.md).
+
+- **[MUST] Host-record citation-inheritance.** Where the anchor being re-derived is a **suite
+  verdict**, resolve it against the host's own record before executing anything: run
+  `bash scripts/test/suite-coverage.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C> --candidates all`
+  and read the per-suite records. A suite reported `INHERIT` is **cited, not re-executed**. A suite
+  reported `RUN`, or a record the evaluator's own capture point contradicts, is executed. This
+  mirrors the discharge the orchestrator already holds ([`CLAUDE.md`](../CLAUDE.md) > Execution
+  Principles > *Verify teammate claims before dispatch*) and closes the asymmetry that no equivalent
+  rule reached the evaluator. The check is **performed** — a command with an output — never
+  asserted, so "I inherited" is itself an anchor a reader re-derives. The citation lands in
+  `inherited_verdicts`, a key of the [Evaluation Output Format](evaluation-system.md), always
+  present and `[]` when the evaluator executed everything.
+- **[MUST] Sampling default.** A blind-spot search over a **repeated surface** takes a
+  representative sample per rubric item by default (one or two instances), and states the sample
+  basis in `fail_hypothesis`. Exhaustive enumeration is entered only when a sampled instance yields
+  a FAIL case that survives refutation — escalate on a hit, rather than enumerate by default.
+  Coverage of *finding types* is unaffected: the finding-coverage rule above still forbids dropping
+  a found issue.
+- **[MUST] Time cap.** An evaluation declares a **wall-clock cap** and reports against it. The cap
+  is **30 minutes** unless the spawning orchestrator declares a different value in the spawn prompt,
+  in which case the declared value governs and is reported. On reaching the cap the evaluator stops
+  searching, scores what it searched, and records every unsearched item as `not-searched` in
+  `fail_hypothesis` — **never as clean**. This is the same truthfulness rule the phase records apply
+  with `not-run` ≠ `clean` and `inherited` ≠ `passed`. A cap reached with unsearched items is a
+  signal to the orchestrator that the rubric item's evidence is thin, not a pass.
+
+  *Basis for 30 minutes*: measured on the #108 cycle and recorded in issue #112's body — an
+  undisciplined first evaluation ran 81 minutes; after citation-inheritance and sampling were
+  instructed, the same evaluations completed in 4 and 31 minutes with detection power retained (the
+  second found a real defect). The cap bounds the disciplined range that was observed to work rather
+  than the runaway that motivated it, so it constrains the failure mode without cutting into
+  evaluations that already terminate.
+
 ---
 
 ## Test AI (testing teammate)

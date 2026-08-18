@@ -26,6 +26,17 @@
 #   # retire-with: #<issue-number>      (required iff lane: cycle-scoped)
 #   # cycle-arm: #<issue-number>        (required iff a path allow-list array)
 #   # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
+#   # out-of-tree-inputs: yes | no    (optional; absent = no)
+#
+# `out-of-tree-inputs: yes` declares that the suite's answer can move while the
+# tracked tree does not — a base-ref-dependent assertion is the shipped case, and
+# `resolve_base_ref`'s fallback is `git merge-base HEAD origin/main`, so a fetch
+# that advances origin/main changes the answer with the tree untouched. Such a
+# suite is excluded from verdict inheritance entirely and executes
+# unconditionally (docs/adr/0019-scope-fit-verification-policy.md, decision 2).
+# The field is declared HERE because this file is the field vocabulary's single
+# definition site: a field a script reads but no grammar declares is the
+# second-definition-site failure this file exists to prevent.
 #
 # `budget-secs` is a CI-CLOCK quantity: derived from the suite's own CI step
 # duration, bounded by the ceiling, and spent by CI. Local wall-clock is
@@ -226,6 +237,37 @@ suite_header_field() {
   line="${line#"${line%%[![:space:]]*}"}"
   line="${line%"${line##*[![:space:]]}"}"
   printf '%s\n' "$line"
+}
+
+# ---------------------------------------------------------------------------
+# suite_reads_out_of_tree_state <path> — true when the file's body carries a
+# base-ref call site: a NON-COMMENT line invoking resolve_base_ref, or `git …
+# merge-base` (flags between `git` and `merge-base` allowed, e.g.
+# `git -C "$root" merge-base HEAD main`).
+#
+# THE SINGLE DEFINITION SITE of that criterion. It shipped inline inside an
+# executed suite's derive_subjects(), which no lint can source, so a consuming
+# lint could only re-type the expression — and a re-typed copy answers
+# identically on the day it is written and drifts silently afterwards. Both
+# consumers now call this: tests/test-push-context-base-ref.sh's subject
+# derivation, and check-suite-manifest.sh's out-of-tree declaration arm. What
+# does NOT move here is either consumer's DOMAIN — one asks a
+# registration-scoped question, the other asks it over suite_enumerate; they
+# differ in domain, not in predicate.
+#
+# The comment filter's output reaches grep through a PROCESS SUBSTITUTION, not a
+# pipe. Under `set -o pipefail` the early-exiting `grep -q` delivers SIGPIPE to
+# the first filter before it finishes writing, and the pipeline's status becomes
+# 141 — silently dropping a true match. That defect was measured: a real
+# resolve_base_ref call site deterministically vanished from the derived set.
+# `< <(...)` keeps the filter a single simple command, so pipefail sees nothing.
+#
+# Naming the resolver only in a comment does not qualify — that is what the
+# non-comment restriction buys, and it is why the filter is part of the
+# predicate rather than the caller's business.
+# ---------------------------------------------------------------------------
+suite_reads_out_of_tree_state() {
+  grep -qE '\bresolve_base_ref\b|\bgit\b[^#]*\bmerge-base\b' < <(grep -vE '^\s*#' "$1" 2>/dev/null)
 }
 
 # ---------------------------------------------------------------------------

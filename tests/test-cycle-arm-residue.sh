@@ -4,6 +4,7 @@
 # ci-subject: tests/test-issue-43-report-channel-contract.sh tests/test-issue-51-teammate-removal-verdict.sh tests/test-issue-52-peer-facilitator-premise.sh tests/test-issue-56-carry-evidence-discipline.sh tests/test-issue-59-adoption-evidence-discipline.sh tests/test-issue-62-sequential-rounds.sh docs/doc-invariant-registry.md
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: no
 # =============================================================================
 # Test: cycle-arm residue — Issue #107
 #   .autoflow/issue-107-verification-design.md, .autoflow/issue-107-feature-design.md

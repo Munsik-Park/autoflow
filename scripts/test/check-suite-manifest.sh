@@ -88,7 +88,7 @@ violation() { printf '  %s\n' "$1"; VIOLATIONS=$((VIOLATIONS + 1)); }
 # HEADER group
 # ---------------------------------------------------------------------------
 check_headers() {
-  local root="$1" f lane retire arm budget resolved has_array
+  local root="$1" f lane retire arm budget resolved has_array oot
   while IFS= read -r f; do
     [ -n "$f" ] || continue
     [ -f "$root/$f" ] || continue
@@ -129,6 +129,29 @@ check_headers() {
         violation "$f: '$v' is not a '#<issue-number>' value"
       fi
     done
+
+    # OUT-OF-TREE declaration. A suite whose body carries a base-ref call site
+    # can answer differently while the tracked tree is unchanged, so per-suite
+    # verdict inheritance must be told about it explicitly
+    # (docs/adr/0019-scope-fit-verification-policy.md, decision 2). The
+    # obligation is PRESENCE of the field, `yes` or `no` — absence is the only
+    # violation. Set equality was rejected: a suite declaring an explicit `no`
+    # would violate it, and it would force this lint to decide hermeticity,
+    # which a grep cannot. Presence fails closed on the case that matters — a
+    # new out-of-tree reader landing silently — and an explicit `no` is the
+    # escape, declared where the suite's other properties are declared rather
+    # than in a second list to keep in sync.
+    #
+    # The criterion is `suite_reads_out_of_tree_state` from the sourced
+    # library, its single definition site. Re-typing the expression here would
+    # be the second copy this lint's own second-home rule rejects.
+    oot="$(suite_header_field "$root/$f" out-of-tree-inputs || true)"
+    if suite_reads_out_of_tree_state "$root/$f" && [ -z "$oot" ]; then
+      violation "$f: reads out-of-tree state (a base-ref call site) but declares no '# out-of-tree-inputs:' — verdict inheritance keyed on declared reach cannot see a dependency that is not declared"
+    fi
+    if [ -n "$oot" ] && [ "$oot" != yes ] && [ "$oot" != no ]; then
+      violation "$f: '# out-of-tree-inputs: $oot' is not one of yes | no"
+    fi
 
     if ! budget="$(suite_header_field "$root/$f" budget-secs)"; then
       violation "$f: no '# budget-secs:' header — an undeclared cost is an unbounded one"
@@ -422,6 +445,32 @@ self_test() {
 )'
   expect "COUPLING (c): cycle-scoped + array + agreeing arm/retirement -> conform" conform
 
+  # --- OUT-OF-TREE declaration -------------------------------------------
+  # The arm is presence-only, so both arms are needed: a matching body with no
+  # field is the violation, and the SAME body declaring `no` conforms. A leg
+  # asserting only the first would pass equally under a lint that demanded
+  # `yes`, which is the rule this arm deliberately does not implement.
+  reset
+  spec tests/test-fx-oot-undeclared.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' <<< 'git merge-base HEAD main'
+  expect "OUT-OF-TREE: a base-ref call site with no out-of-tree-inputs field -> violation" violation
+
+  reset
+  spec tests/test-fx-oot-no.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' '# out-of-tree-inputs: no' <<< 'git merge-base HEAD main'
+  expect "OUT-OF-TREE: the same body declaring an explicit no -> conform (presence is the obligation, not hermeticity)" conform
+
+  reset
+  spec tests/test-fx-oot-yes.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' '# out-of-tree-inputs: yes' <<< 'resolve_base_ref ""'
+  expect "OUT-OF-TREE: a resolve_base_ref call site declaring yes -> conform" conform
+
+  reset
+  spec tests/test-fx-oot-badvalue.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' '# out-of-tree-inputs: maybe' <<< 'git merge-base HEAD main'
+  expect "OUT-OF-TREE: a value outside yes | no -> violation" violation
+
+  reset
+  spec tests/test-fx-oot-commentonly.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' <<< '# names resolve_base_ref only in a comment
+true'
+  expect "OUT-OF-TREE: naming the resolver only in a comment does not create the obligation -> conform" conform
+
   # --- BUDGET bounds ------------------------------------------------------
   reset
   spec tests/test-fx-budget-nonint.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: notanumber' <<< 'true'
@@ -627,10 +676,10 @@ YML
 
   rm -rf "$dir"
   if [ "$fails" -ne 0 ]; then
-    echo "check-suite-manifest: --self-test FAILED ($fails of 33 fixture classes misclassified)"
+    echo "check-suite-manifest: --self-test FAILED ($fails of 38 fixture classes misclassified)"
     rc=1
   else
-    echo "check-suite-manifest: --self-test OK (33/33 fixture classes classified correctly)"
+    echo "check-suite-manifest: --self-test OK (38/38 fixture classes classified correctly)"
   fi
   return $rc
 }

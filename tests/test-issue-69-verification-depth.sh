@@ -5,6 +5,7 @@
 # lane: standing
 # cycle-arm: #69
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: Verification-depth justification at ARCHITECT / GATE:PLAN — Issue #69 (cycle-scoped)
 # =============================================================================

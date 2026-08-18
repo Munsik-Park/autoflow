@@ -5,6 +5,7 @@
 # lane: standing
 # cycle-arm: #67
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: ARCHITECT deliberation record redesign — Issue #67 (cycle-scoped)
 # =============================================================================
