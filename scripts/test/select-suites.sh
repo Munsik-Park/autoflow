@@ -60,9 +60,9 @@ EVENT="${GITHUB_EVENT_NAME:-pull_request}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --self-test) MODE="self-test" ;;
-    --root)      ROOT="${2:-}"; shift ;;
-    --base)      BASE="${2:-}"; shift ;;
-    --event)     EVENT="${2:-}"; shift ;;
+    --root)      require_value select-suites "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
+    --base)      require_value select-suites "$1" $# "${2:-}" || exit 2; BASE="$2"; shift ;;
+    --event)     require_value select-suites "$1" $# "${2:-}" || exit 2; EVENT="$2"; shift ;;
     *)           echo "select-suites: unknown argument: $1" >&2; exit 2 ;;
   esac
   shift

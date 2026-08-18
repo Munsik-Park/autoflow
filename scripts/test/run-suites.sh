@@ -47,9 +47,9 @@ ALL=0
 LIST=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --root)  ROOT="${2:-}"; shift ;;
-    --base)  BASE="${2:-}"; shift ;;
-    --event) EVENT="${2:-}"; shift ;;
+    --root)  require_value run-suites "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
+    --base)  require_value run-suites "$1" $# "${2:-}" || exit 2; BASE="$2"; shift ;;
+    --event) require_value run-suites "$1" $# "${2:-}" || exit 2; EVENT="$2"; shift ;;
     --all)   ALL=1 ;;
     --list)  LIST=1 ;;
     *)       echo "run-suites: unknown argument: $1" >&2; exit 2 ;;
@@ -91,8 +91,8 @@ if [ -z "$SELECTED" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# run_suite_bounded <bound-secs> <root> <suite-path> — run one suite under a
-# wall-clock bound, on hosts that have GNU `timeout`, hosts that have Homebrew's
+# run_suite_bounded <bound-secs> <root> <suite-path> <capture-file> — run one
+# suite under a wall-clock bound, on hosts that have GNU `timeout`, hosts that have Homebrew's
 # `gtimeout`, and hosts that have neither (macOS's default userland). Sets
 # SUITE_RC to the suite's own exit status and SUITE_TIMED_OUT to 1 iff the bound
 # fired; returns 0 always. Globals rather than a captured substitution because a
@@ -105,7 +105,7 @@ fi
 # never appears on that path and keying the classification on it would report a
 # genuine overrun as an ordinary FAIL.
 run_suite_bounded() {
-  local bound="$1" root="$2" suite="$3"
+  local bound="$1" root="$2" suite="$3" cap="$4"
   SUITE_TIMED_OUT=0
   local tbin=""
   if command -v timeout >/dev/null 2>&1; then
@@ -114,7 +114,7 @@ run_suite_bounded() {
     tbin="gtimeout"
   fi
   if [ -n "$tbin" ]; then
-    (cd "$root" && "$tbin" "$bound" bash "$suite" >/dev/null 2>&1)
+    (cd "$root" && "$tbin" "$bound" bash "$suite" >"$cap" 2>&1)
     SUITE_RC=$?
     [ "$SUITE_RC" -eq 124 ] && SUITE_TIMED_OUT=1
     return 0
@@ -127,7 +127,7 @@ run_suite_bounded() {
   # SIGTTIN with no visible cause.
   local marker; marker="$(mktemp)"
   set -m
-  (cd "$root" && bash "$suite") >/dev/null 2>&1 </dev/null &
+  (cd "$root" && bash "$suite") >"$cap" 2>&1 </dev/null &
   local pid=$!
   ( sleep "$bound"
     if kill -0 "$pid" 2>/dev/null; then
@@ -150,6 +150,17 @@ run_suite_bounded() {
 }
 
 # ---------------------------------------------------------------------------
+# emit_capture <classification> <suite> <capture-file> — the failing suite's own
+# stdout and stderr, in full and framed. Not a tail: the audience is a person at
+# a terminal diagnosing the run that just failed, and a truncated record
+# reproduces in miniature the loss this exists to remove.
+emit_capture() {
+  printf -- '--- %s output: %s ---\n' "$1" "$2"
+  cat "$3"
+  printf -- '--- end %s output: %s ---\n' "$1" "$2"
+}
+
+# ---------------------------------------------------------------------------
 TOTAL=0; PASSED=0; FAILED=0; TIMEDOUT=0
 RC=0
 
@@ -167,8 +178,13 @@ while IFS= read -r suite; do
   # here is the unit error this separation corrects.
   allowance="$(suite_local_allowance_secs "$budget")"
 
+  # Captured per suite, shown only on a failure. This is the sole driver for the
+  # bash suite tree, so a discarded stream leaves a FAIL line as the whole
+  # diagnostic record; on PASS nothing is printed, which keeps an all-green
+  # run's output shape unchanged.
+  capture="$(mktemp)"
   started="$(date +%s)"
-  run_suite_bounded "$allowance" "$ROOT" "$suite"
+  run_suite_bounded "$allowance" "$ROOT" "$suite" "$capture"
   status="$SUITE_RC"
   elapsed=$(( $(date +%s) - started ))
 
@@ -178,13 +194,16 @@ while IFS= read -r suite; do
     printf 'TIMEOUT %s %ss (declared budget-secs: %s, effective local ceiling: %ss = %s x %s)\n' \
       "$suite" "$elapsed" "$budget" "$allowance" "$budget" "$SUITE_LOCAL_SLOWDOWN_FACTOR"
     TIMEDOUT=$((TIMEDOUT + 1)); RC=1
+    emit_capture TIMEOUT "$suite" "$capture"
   elif [ "$status" -eq 0 ]; then
     printf 'PASS %s %ss\n' "$suite" "$elapsed"
     PASSED=$((PASSED + 1))
   else
     printf 'FAIL %s %ss (exit %s)\n' "$suite" "$elapsed" "$status"
     FAILED=$((FAILED + 1)); RC=1
+    emit_capture FAIL "$suite" "$capture"
   fi
+  rm -f "$capture"
 done <<< "$SELECTED"
 
 echo ""

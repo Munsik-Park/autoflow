@@ -389,6 +389,209 @@ JSON
   rm -f "$GOV_SELECTED_FILE" "$GOV_STEPS_FILE"
 fi
 
+# =============================================================================
+# Issue #108 -- cascade-skip classification, --job-status, cascade counting,
+# valued-flag fail-closed hardening, self-test summary agreement.
+# .autoflow/issue-108-verification-design.md:
+#   AC-cascade-skip-is-its-own-grade, AC-job-status-arm-classifies-
+#   independently, AC-cascade-count-is-reported,
+#   AC-cascade-count-is-reported-on-both-exit-paths,
+#   AC-valued-flags-fail-closed, AC-selftest-summary-agrees-with-fixture-set.
+# =============================================================================
+if [ -f "$RECONCILE" ]; then
+
+  # ---------------------------------------------------------------------
+  # AC-cascade-skip-is-its-own-grade -- CLI-level arm. Self-test fixture
+  # classes for this AC live inside check-step-reconciliation.sh's own
+  # --self-test (implementation surface, out of Test AI scope); this arm
+  # drives the real script over its process boundary instead.
+  # ---------------------------------------------------------------------
+  CASC_SELECTED_FILE="$(mktemp)"; CASC_STEPS_FILE="$(mktemp)"
+  printf 'SELECTED: tests/test-fixture-casc-a.sh\n' > "$CASC_SELECTED_FILE"
+  cat > "$CASC_STEPS_FILE" <<'JSON'
+{
+  "s-upstream-fail": {"outcome": "failure"},
+  "s-test-fixture-casc-a": {"outcome": "skipped"}
+}
+JSON
+  bash "$RECONCILE" --selected "$CASC_SELECTED_FILE" --steps "$CASC_STEPS_FILE" >/tmp/issue108-cascade-basic.out 2>&1
+  casc_basic_rc=$?
+  assert_true "AC-cascade-skip-is-its-own-grade: a selected suite skipped downstream of a failing step (arm B, outcome map) is graded CASCADE-SKIP, not MISMATCH, and does not by itself drive a non-zero exit" \
+    "[ $casc_basic_rc -eq 0 ] && grep -qE '^CASCADE-SKIP: tests/test-fixture-casc-a\.sh selected=yes outcome=skipped' /tmp/issue108-cascade-basic.out && ! grep -q 'MISMATCH' /tmp/issue108-cascade-basic.out"
+
+  # Negative control: the SAME map shape with no failure/cancelled value
+  # anywhere and no --job-status -- the wrongly-false guard still reds
+  # (AC-wrongly-false-guard-still-reds, re-run against the extended
+  # classifier; the pre-existing arm at this file's own :50-54 already
+  # covers this shape unchanged, so this control is a same-fixture
+  # confirmation, not a new claim).
+  cat > "$CASC_STEPS_FILE" <<'JSON'
+{"s-test-fixture-casc-a": {"outcome": "skipped"}}
+JSON
+  bash "$RECONCILE" --selected "$CASC_SELECTED_FILE" --steps "$CASC_STEPS_FILE" >/tmp/issue108-cascade-negctrl.out 2>&1
+  assert_true "AC-cascade-skip-is-its-own-grade negative control: with no failure/cancelled anywhere in the map and no --job-status, the same selected+skipped shape still grades MISMATCH, not CASCADE-SKIP" \
+    "[ $? -ne 0 ] && grep -qE '^MISMATCH: tests/test-fixture-casc-a\.sh selected=yes outcome=skipped' /tmp/issue108-cascade-negctrl.out && ! grep -q 'CASCADE-SKIP' /tmp/issue108-cascade-negctrl.out"
+  rm -f "$CASC_SELECTED_FILE" "$CASC_STEPS_FILE"
+
+  # ---------------------------------------------------------------------
+  # AC-job-status-arm-classifies-independently -- arm A is reachable only
+  # through the CLI (self_test calls reconcile() directly, bypassing the
+  # flag loop), so every leg here is a real invocation of the script.
+  # ---------------------------------------------------------------------
+  JS_SELECTED_FILE="$(mktemp)"; JS_STEPS_FILE="$(mktemp)"
+  printf 'SELECTED: tests/test-fixture-js-a.sh\n' > "$JS_SELECTED_FILE"
+  # No failure/cancelled anywhere in the map -- arm B is silent. This is
+  # precisely the id-less standing-lint shape (a failing step with no id:
+  # contributes nothing to toJSON(steps)), which arm B cannot see.
+  cat > "$JS_STEPS_FILE" <<'JSON'
+{"s-test-fixture-js-a": {"outcome": "skipped"}}
+JSON
+
+  bash "$RECONCILE" --selected "$JS_SELECTED_FILE" --steps "$JS_STEPS_FILE" --job-status failure >/tmp/issue108-jobstatus-failure.out 2>&1
+  assert_true "AC-job-status-arm-classifies-independently: --job-status failure alone (no failure/cancelled in the map) puts a selected/skipped suite in the cascade grade" \
+    "[ $? -eq 0 ] && grep -q 'CASCADE-SKIP' /tmp/issue108-jobstatus-failure.out && ! grep -q 'MISMATCH' /tmp/issue108-jobstatus-failure.out"
+
+  bash "$RECONCILE" --selected "$JS_SELECTED_FILE" --steps "$JS_STEPS_FILE" --job-status cancelled >/tmp/issue108-jobstatus-cancelled.out 2>&1
+  assert_true "AC-job-status-arm-classifies-independently: --job-status cancelled alone puts a selected/skipped suite in the cascade grade" \
+    "[ $? -eq 0 ] && grep -q 'CASCADE-SKIP' /tmp/issue108-jobstatus-cancelled.out && ! grep -q 'MISMATCH' /tmp/issue108-jobstatus-cancelled.out"
+
+  bash "$RECONCILE" --selected "$JS_SELECTED_FILE" --steps "$JS_STEPS_FILE" --job-status success >/tmp/issue108-jobstatus-success.out 2>&1
+  assert_true "AC-job-status-arm-classifies-independently: --job-status success leaves a selected/skipped suite a MISMATCH" \
+    "[ $? -ne 0 ] && grep -q 'MISMATCH' /tmp/issue108-jobstatus-success.out && ! grep -q 'CASCADE-SKIP' /tmp/issue108-jobstatus-success.out"
+
+  bash "$RECONCILE" --selected "$JS_SELECTED_FILE" --steps "$JS_STEPS_FILE" >/tmp/issue108-jobstatus-omitted.out 2>&1
+  assert_true "AC-job-status-arm-classifies-independently: an omitted --job-status flag leaves a selected/skipped suite a MISMATCH (arm B alone decides)" \
+    "[ $? -ne 0 ] && grep -q 'MISMATCH' /tmp/issue108-jobstatus-omitted.out && ! grep -q 'CASCADE-SKIP' /tmp/issue108-jobstatus-omitted.out"
+
+  bash "$RECONCILE" --selected "$JS_SELECTED_FILE" --steps "$JS_STEPS_FILE" --job-status queued >/tmp/issue108-jobstatus-unrecognized.out 2>&1
+  assert_true "AC-job-status-arm-classifies-independently: an unrecognised --job-status value narrows the cascade class rather than widening it -- a selected/skipped suite stays a MISMATCH" \
+    "[ $? -ne 0 ] && grep -q 'MISMATCH' /tmp/issue108-jobstatus-unrecognized.out && ! grep -q 'CASCADE-SKIP' /tmp/issue108-jobstatus-unrecognized.out"
+  rm -f "$JS_SELECTED_FILE" "$JS_STEPS_FILE"
+
+  # ---------------------------------------------------------------------
+  # AC-cascade-count-is-reported -- the zero-exit summary line's cascade
+  # clause agrees with the number of CASCADE-SKIP: lines actually emitted.
+  # ---------------------------------------------------------------------
+  CC_SELECTED_FILE="$(mktemp)"; CC_STEPS_FILE="$(mktemp)"
+  cat > "$CC_SELECTED_FILE" <<'SEL'
+SELECTED: tests/test-fixture-cc-a.sh
+SELECTED: tests/test-fixture-cc-b.sh
+SEL
+  cat > "$CC_STEPS_FILE" <<'JSON'
+{
+  "s-upstream-fail": {"outcome": "failure"},
+  "s-test-fixture-cc-a": {"outcome": "skipped"},
+  "s-test-fixture-cc-b": {"outcome": "skipped"}
+}
+JSON
+  bash "$RECONCILE" --selected "$CC_SELECTED_FILE" --steps "$CC_STEPS_FILE" >/tmp/issue108-cascadecount-clean.out 2>&1
+  cc_clean_rc=$?
+  cc_clean_lines="$(grep -cE '^CASCADE-SKIP:' /tmp/issue108-cascadecount-clean.out)"
+  cc_clean_reported="$(grep -oE '[0-9]+ cascade[^,]*' /tmp/issue108-cascadecount-clean.out | grep -oE '^[0-9]+' | head -1)"
+  assert_true "AC-cascade-count-is-reported: on a zero-exit cascading run with no other disagreement, the summary's cascade clause integer ($cc_clean_reported) equals the number of CASCADE-SKIP lines emitted ($cc_clean_lines)" \
+    "[ $cc_clean_rc -eq 0 ] && [ -n \"$cc_clean_reported\" ] && [ \"$cc_clean_reported\" -eq \"$cc_clean_lines\" ] && [ \"$cc_clean_lines\" -eq 2 ]"
+
+  # No-cascade fixture -- the clause reports zero, not an absent clause.
+  NC_SELECTED_FILE="$(mktemp)"; NC_STEPS_FILE="$(mktemp)"
+  printf 'SELECTED: tests/test-fixture-nc-a.sh\n' > "$NC_SELECTED_FILE"
+  printf '{"s-test-fixture-nc-a": {"outcome": "success"}}\n' > "$NC_STEPS_FILE"
+  bash "$RECONCILE" --selected "$NC_SELECTED_FILE" --steps "$NC_STEPS_FILE" >/tmp/issue108-cascadecount-zero.out 2>&1
+  nc_rc=$?
+  nc_reported="$(grep -oE '[0-9]+ cascade[^,]*' /tmp/issue108-cascadecount-zero.out | grep -oE '^[0-9]+' | head -1)"
+  assert_true "AC-cascade-count-is-reported: a no-cascade run's summary still carries the cascade clause, reporting 0" \
+    "[ $nc_rc -eq 0 ] && [ \"$nc_reported\" = \"0\" ]"
+  rm -f "$CC_SELECTED_FILE" "$CC_STEPS_FILE" "$NC_SELECTED_FILE" "$NC_STEPS_FILE"
+
+  # ---------------------------------------------------------------------
+  # AC-cascade-count-is-reported-on-both-exit-paths -- the mixed CI shape:
+  # a run that both cascades AND carries a genuine mismatch (a selected
+  # suite absent from the outcome map). Exits non-zero on the mismatch, and
+  # the disagreement path must still print the cascade clause, agreeing
+  # with the CASCADE-SKIP lines it emitted.
+  # ---------------------------------------------------------------------
+  MX_SELECTED_FILE="$(mktemp)"; MX_STEPS_FILE="$(mktemp)"
+  cat > "$MX_SELECTED_FILE" <<'SEL'
+SELECTED: tests/test-fixture-mx-cascaded.sh
+SELECTED: tests/test-fixture-mx-absent.sh
+SEL
+  # test-fixture-mx-absent's id IS present (so job-local narrowing counts
+  # it hosted here, not OUT-OF-JOB) but carries no .outcome field -- the
+  # genuine "absent" MISMATCH shape, distinct from a suite this job's step
+  # context never mentions at all.
+  cat > "$MX_STEPS_FILE" <<'JSON'
+{
+  "s-upstream-fail": {"outcome": "failure"},
+  "s-test-fixture-mx-cascaded": {"outcome": "skipped"},
+  "s-test-fixture-mx-absent": {}
+}
+JSON
+  bash "$RECONCILE" --selected "$MX_SELECTED_FILE" --steps "$MX_STEPS_FILE" >/tmp/issue108-cascademixed.out 2>&1
+  mx_rc=$?
+  mx_lines="$(grep -cE '^CASCADE-SKIP:' /tmp/issue108-cascademixed.out)"
+  mx_reported="$(grep -oE '[0-9]+ cascade[^,]*' /tmp/issue108-cascademixed.out | grep -oE '^[0-9]+' | head -1)"
+  assert_true "AC-cascade-count-is-reported-on-both-exit-paths: a run that cascades AND carries a genuine mismatch (a selected, absent suite) exits non-zero, still grades the cascaded suite CASCADE-SKIP (not MISMATCH), still grades the absent suite MISMATCH, and the disagreement path's cascade clause ($mx_reported) agrees with the CASCADE-SKIP lines emitted ($mx_lines)" \
+    "[ $mx_rc -ne 0 ] && grep -qE '^CASCADE-SKIP: tests/test-fixture-mx-cascaded\.sh' /tmp/issue108-cascademixed.out && grep -qE '^MISMATCH: tests/test-fixture-mx-absent\.sh' /tmp/issue108-cascademixed.out && [ -n \"$mx_reported\" ] && [ \"$mx_reported\" -eq \"$mx_lines\" ] && [ \"$mx_lines\" -eq 1 ]"
+
+  # Companion arm: the precondition path (BLOCK / zero-evidence) is
+  # unchanged -- no record was graded there, so no cascade clause is owed.
+  MX_BLOCK_FILE="$(mktemp)"
+  printf 'BLOCK: unresolvable base\n' > "$MX_BLOCK_FILE"
+  bash "$RECONCILE" --selected "$MX_BLOCK_FILE" --steps "$MX_STEPS_FILE" >/tmp/issue108-cascade-precondition.out 2>&1
+  assert_true "AC-cascade-count-is-reported-on-both-exit-paths companion: the precondition path (a BLOCK-bearing report) prints no cascade clause -- no record was graded, so a printed count would be a zero that means 'not measured'" \
+    "[ $? -ne 0 ] && ! grep -qi 'cascade' /tmp/issue108-cascade-precondition.out"
+  rm -f "$MX_SELECTED_FILE" "$MX_STEPS_FILE" "$MX_BLOCK_FILE"
+
+  # ---------------------------------------------------------------------
+  # AC-valued-flags-fail-closed -- --selected / --steps / --governed on
+  # check-step-reconciliation.sh. A present-but-valueless form (empty
+  # string, or the flag as the final argument) is a usage error naming the
+  # flag, exit 2; the flag omitted entirely is unaffected.
+  # ---------------------------------------------------------------------
+  VF_STEPS_FILE="$(mktemp)"
+  printf '{"s-test-fixture-vf-a": {"outcome": "success"}}\n' > "$VF_STEPS_FILE"
+  VF_SELECTED_FILE="$(mktemp)"
+  printf 'SELECTED: tests/test-fixture-vf-a.sh\n' > "$VF_SELECTED_FILE"
+
+  bash "$RECONCILE" --selected "" --steps "$VF_STEPS_FILE" >/tmp/issue108-vf-selected-empty.out 2>&1
+  vf_selected_empty_rc=$?
+  assert_true "AC-valued-flags-fail-closed: check-step-reconciliation.sh --selected given an empty value is a usage error (exit 2) naming --selected" \
+    "[ $vf_selected_empty_rc -eq 2 ] && grep -qi -- '--selected' /tmp/issue108-vf-selected-empty.out"
+
+  bash "$RECONCILE" --steps "$VF_STEPS_FILE" --selected >/tmp/issue108-vf-selected-last.out 2>&1
+  assert_true "AC-valued-flags-fail-closed: check-step-reconciliation.sh --selected as the final argument (no value) is a usage error (exit 2) naming --selected" \
+    "[ $? -eq 2 ] && grep -qi -- '--selected' /tmp/issue108-vf-selected-last.out"
+
+  bash "$RECONCILE" --selected "$VF_SELECTED_FILE" --steps "" >/tmp/issue108-vf-steps-empty.out 2>&1
+  assert_true "AC-valued-flags-fail-closed: check-step-reconciliation.sh --steps given an empty value is a usage error (exit 2) naming --steps" \
+    "[ $? -eq 2 ] && grep -qi -- '--steps' /tmp/issue108-vf-steps-empty.out"
+
+  bash "$RECONCILE" --selected "$VF_SELECTED_FILE" --steps "$VF_STEPS_FILE" --governed "" >/tmp/issue108-vf-governed-empty.out 2>&1
+  assert_true "AC-valued-flags-fail-closed: check-step-reconciliation.sh --governed given an empty value is a usage error (exit 2) naming --governed" \
+    "[ $? -eq 2 ] && grep -qi -- '--governed' /tmp/issue108-vf-governed-empty.out"
+
+  bash "$RECONCILE" --selected "$VF_SELECTED_FILE" --steps "$VF_STEPS_FILE" --governed >/tmp/issue108-vf-governed-last.out 2>&1
+  assert_true "AC-valued-flags-fail-closed: check-step-reconciliation.sh --governed as the final argument (no value) is a usage error (exit 2) naming --governed" \
+    "[ $? -eq 2 ] && grep -qi -- '--governed' /tmp/issue108-vf-governed-last.out"
+
+  bash "$RECONCILE" --selected "$VF_SELECTED_FILE" --steps "$VF_STEPS_FILE" >/tmp/issue108-vf-default.out 2>&1
+  assert_true "AC-valued-flags-fail-closed: with every valued flag given a real value, the script still runs normally (the hardening rejects only present-but-valueless forms)" \
+    "[ $? -eq 0 ]"
+  rm -f "$VF_STEPS_FILE" "$VF_SELECTED_FILE"
+
+  # ---------------------------------------------------------------------
+  # AC-selftest-summary-agrees-with-fixture-set -- the reconciler's own
+  # --self-test summary integer equals the number of per-class result
+  # lines it actually emitted. May already hold on today's script (the
+  # design records the reconciler's pair as already agreeing); the
+  # criterion is the relation, not a change in outcome.
+  # ---------------------------------------------------------------------
+  bash "$RECONCILE" --self-test >/tmp/issue108-reconcile-selftest.out 2>&1
+  st_emitted="$(grep -cE '^[[:space:]]+SELF-TEST (PASS|FAIL):' /tmp/issue108-reconcile-selftest.out)"
+  st_reported="$(grep -oE '[0-9]+ of [0-9]+ fixture classes|[0-9]+/[0-9]+ fixture classes' /tmp/issue108-reconcile-selftest.out | grep -oE '[0-9]+' | tail -1)"
+  assert_true "AC-selftest-summary-agrees-with-fixture-set: check-step-reconciliation.sh --self-test's emitted per-class line count ($st_emitted) equals the integer in its own summary line ($st_reported)" \
+    "[ -n \"$st_reported\" ] && [ \"$st_emitted\" -eq \"$st_reported\" ]"
+fi
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1

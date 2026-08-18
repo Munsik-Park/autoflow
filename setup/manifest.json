@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3460d1661188a54361051b0586f6ebef23c3aa8783b7f318fca0729a440e139f"
+      "sha256": "d5fcae5f3969d55d458cc03230a1f395cf7022a2d0f6912526c27323a32790f5"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -181,7 +181,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7c8bae39fd8de0121bc8ad5a94da976cf488153a4df58e289f33830d91c1d414"
+      "sha256": "325871566e554377efa1ec871811bf55627605c395f779e4ecaeeb8cab33f326"
     },
     {
       "source": "docs/teammate-common-rules.md",

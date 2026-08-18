@@ -73,7 +73,7 @@ LIST=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --self-test)     MODE="self-test" ;;
-    --root)          ROOT="${2:-}"; shift ;;
+    --root)          require_value check-suite-manifest "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
     --list-subjects) LIST=1 ;;
     *)               echo "check-suite-manifest: unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -201,7 +201,12 @@ check_workflows() {
         continue
       fi
 
-      [ -n "$sid" ] || violation "$rel:$start: governed step running $runpath declares no 'id:' — a step without one is absent from the Actions steps context, so check-step-reconciliation.sh cannot see whether it ran"
+      if [ -z "$sid" ]; then
+        violation "$rel:$start: governed step running $runpath declares no 'id:' — a step without one is absent from the Actions steps context, so check-step-reconciliation.sh cannot see whether it ran"
+      else
+        want="$(suite_step_id "$runpath")"
+        [ "$sid" = "$want" ] || violation "$rel:$start: governed step running $runpath declares 'id: $sid' but the convention requires 'id: $want' — the outcome key is the only link back to the suite path, so a deviating id makes the step read as absent"
+      fi
 
       if [ -z "$ifval" ]; then
         violation "$rel:$start: governed step running $runpath declares no 'if:' guard — selection is what decides whether it runs"
@@ -284,12 +289,58 @@ check_constants() {
   done
 }
 
+# ---------------------------------------------------------------------------
+# STEP-ID group — the enumerated governed set maps one-to-one onto step ids.
+# Two suites sharing a basename collapse onto a single outcome key, and the
+# reconciliation's report-to-outcome-map link then judges one of them by the
+# other's result. The domain is the enumerated set rather than a raw tests/**
+# scan: an excluded path never reaches an outcome key, so its basename is free.
+# ---------------------------------------------------------------------------
+check_step_ids() {
+  local root="$1" f id prev
+  local -A owner=()
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    id="$(suite_step_id "$f")"
+    prev="${owner[$id]:-}"
+    if [ -n "$prev" ]; then
+      violation "$f: shares the step id '$id' with $prev — two governed suites on one outcome key leave the reconciliation unable to say which of them ran"
+    else
+      owner["$id"]="$f"
+    fi
+  done < <(suite_enumerate "$root")
+}
+
+# ---------------------------------------------------------------------------
+# STEP-ID DERIVATION group — the id derivation is authored in exactly one file.
+#
+# Stated as a second-home rule rather than as value agreement, for the reason
+# check_pin above is: a verbatim second copy agrees on every value it produces,
+# which is precisely the state single-sourcing exists to prevent. Both limbs of
+# the expression are line-anchored, which is what separates the one derivation
+# from the many literal `s-…` id strings the tree's fixtures legitimately carry
+# — none of those follows `s-` with a format placeholder or a parameter
+# expansion — and what keeps the rule from matching this file's own source.
+# ---------------------------------------------------------------------------
+check_step_id_home() {
+  local root="$1" home='scripts/test/suite-manifest.sh' f rel
+  [ -f "$root/$home" ] || return 0
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    rel="${f#"$root"/}"
+    [ "$rel" = "$home" ] && continue
+    violation "$rel: authors the step-id derivation, which belongs only in $home — a private copy is value-equal on the day it is written and is what drifts the outcome-key link apart"
+  done < <(grep -rlE '^[[:space:]]*suite_step_id[[:space:]]*\(\)|^[[:space:]]*(printf|echo)[^#]*s-(%s|\$\{)' "$root/scripts" "$root/tests" 2>/dev/null || true)
+}
+
 check_tree() {
   VIOLATIONS=0
   check_headers "$1"
   check_workflows "$1"
   check_pin "$1"
   check_constants "$1"
+  check_step_ids "$1"
+  check_step_id_home "$1"
   [ "$VIOLATIONS" -eq 0 ]
 }
 
@@ -492,7 +543,7 @@ YML
 jobs:
   j:
     steps:
-      - id: s-one-governed
+      - id: s-test-fx-a
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fx-a.sh ')
         timeout-minutes: 1
         run: |
@@ -532,6 +583,34 @@ YML
   spec tests/test-fx-pin-second-home.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' <<< 'HARNESS_OK_COUNT=85'
   expect "PIN: a second authoring home -> violation" violation
 
+  # --- STEP-ID collision --------------------------------------------------
+  reset
+  spec tests/test-fx-collide.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' <<< 'true'
+  spec tests/sub/test-fx-collide.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' <<< 'true'
+  expect "STEP-ID: two governed suites sharing a basename -> violation" violation
+
+  reset
+  spec tests/test-fx-nocollide-a.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' <<< 'true'
+  spec tests/sub/test-fx-nocollide-b.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' <<< 'true'
+  expect "STEP-ID: two governed suites with distinct basenames -> conform" conform
+
+  # --- STEP-ID single authorship ------------------------------------------
+  # The rule's own grading lives here rather than in a suite-side grep: a grep
+  # over the tree stays green even if the rule were never reached from
+  # check_tree, which is a lint nothing runs.
+  # The fixture library is COPIED rather than written inline: a verbatim copy of
+  # the derivation in this file would itself be a second home, and the rule
+  # would correctly flag its own source.
+  reset
+  mkdir -p "$dir/scripts/test"
+  cp "$SCRIPT_DIR/suite-manifest.sh" "$dir/scripts/test/suite-manifest.sh"
+  expect "STEP-ID HOME: the derivation authored only in the library -> conform" conform
+
+  # The planted copy carries the derivation and nothing else the other rules
+  # own, so the violation it raises is this rule's and not the CONSTANTS rule's.
+  grep -v '^SUITE_' "$SCRIPT_DIR/suite-manifest.sh" > "$dir/scripts/test/check-fx-second-home.sh"
+  expect "STEP-ID HOME: a verbatim second copy of the derivation -> violation" violation
+
   # --- SUBJECT-SET leg ----------------------------------------------------
   reset
   spec tests/test-fx-subject-a.sh '# ci-subject: docs/a.md' '# lane: standing' '# budget-secs: 30' <<< 'true'
@@ -548,10 +627,10 @@ YML
 
   rm -rf "$dir"
   if [ "$fails" -ne 0 ]; then
-    echo "check-suite-manifest: --self-test FAILED ($fails of 25 fixture classes misclassified)"
+    echo "check-suite-manifest: --self-test FAILED ($fails of 33 fixture classes misclassified)"
     rc=1
   else
-    echo "check-suite-manifest: --self-test OK (25/25 fixture classes classified correctly)"
+    echo "check-suite-manifest: --self-test OK (33/33 fixture classes classified correctly)"
   fi
   return $rc
 }

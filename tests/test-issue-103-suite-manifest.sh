@@ -693,7 +693,7 @@ YML
 jobs:
   fixture:
     steps:
-      - id: s-select
+      - id: s-fixture-multi-a
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/fixture-multi-a.sh ')
         timeout-minutes: 1
         run: |
@@ -772,6 +772,171 @@ YML
   else
     echo "  SKIP: F-1 header-side/workflow-side enrollment arms — scripts/test/invocation-scan.sh absent"
   fi
+
+  # =========================================================================
+  # Issue #108 -- step-id convention enforcement, valued-flag hardening,
+  # self-test summary agreement.
+  # .autoflow/issue-108-verification-design.md:
+  #   AC-step-id-value-conforms, AC-one-derivation-of-the-step-id (arms b/c
+  #   -- arm (a), the lint's own self-test fixture class, is implementation
+  #   surface and lands with GREEN), AC-governed-suite-basename-is-unique,
+  #   AC-valued-flags-fail-closed (--root only), AC-selftest-summary-agrees-
+  #   with-fixture-set.
+  # =========================================================================
+  RECONCILE108="$PROJECT_ROOT/scripts/test/check-step-reconciliation.sh"
+
+  # ---------------------------------------------------------------------
+  # AC-step-id-value-conforms -- a governed step's declared id: must equal
+  # s-<basename-without-extension> of the suite it runs.
+  # ---------------------------------------------------------------------
+  IDVAL_DIR="$(mktemp -d)"; mkdir -p "$IDVAL_DIR/tests" "$IDVAL_DIR/.github/workflows"
+  cat > "$IDVAL_DIR/tests/test-fixture-108-idval-a.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+true
+SH
+  cat > "$IDVAL_DIR/.github/workflows/fixture-idval.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - id: s-not-the-conforming-id
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fixture-108-idval-a.sh ')
+        timeout-minutes: 1
+        run: bash tests/test-fixture-108-idval-a.sh
+YML
+  bash "$LINT" --root "$IDVAL_DIR" >/tmp/issue108-idval-nonconform.out 2>&1
+  assert_true "AC-step-id-value-conforms: a governed step's id: present but NOT equal to s-<basename> (s-not-the-conforming-id vs s-test-fixture-108-idval-a) is a violation naming the declared and required values" \
+    "[ $? -ne 0 ] && grep -qF 's-not-the-conforming-id' /tmp/issue108-idval-nonconform.out && grep -qF 's-test-fixture-108-idval-a' /tmp/issue108-idval-nonconform.out"
+
+  cat > "$IDVAL_DIR/.github/workflows/fixture-idval.yml" <<'YML'
+jobs:
+  fixture:
+    steps:
+      - id: s-test-fixture-108-idval-a
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-fixture-108-idval-a.sh ')
+        timeout-minutes: 1
+        run: bash tests/test-fixture-108-idval-a.sh
+YML
+  bash "$LINT" --root "$IDVAL_DIR" >/tmp/issue108-idval-conform.out 2>&1
+  assert_true "AC-step-id-value-conforms: a governed step's id: equal to s-<basename> conforms (no violation)" \
+    "[ $? -eq 0 ]"
+  rm -rf "$IDVAL_DIR"
+
+  # ---------------------------------------------------------------------
+  # AC-one-derivation-of-the-step-id -- arm (b): a single definition site
+  # under scripts/ and tests/ composes a step id from a basename. Detection
+  # follows the design's own literal, line-anchored regex (§4), which is
+  # what excludes the standing `s-…` fixture literals both host suites
+  # already carry.
+  # ---------------------------------------------------------------------
+  ONEHOME_PATTERN='^[[:space:]]*suite_step_id[[:space:]]*\(\)|^[[:space:]]*(printf|echo)[^#]*s-(%s|\$\{)'
+  ONEHOME_HITS="$(grep -rlE "$ONEHOME_PATTERN" "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" 2>/dev/null | sed "s#^$PROJECT_ROOT/##" | sort -u)"
+  ONEHOME_COUNT="$(printf '%s\n' "$ONEHOME_HITS" | grep -c .)"
+  assert_true "AC-one-derivation-of-the-step-id arm (b): exactly one file under scripts/ or tests/ composes the step id from a basename (found: $ONEHOME_COUNT — $(printf '%s' "$ONEHOME_HITS" | tr '\n' ' '))" \
+    "[ \"$ONEHOME_COUNT\" -eq 1 ]"
+  assert_true "AC-one-derivation-of-the-step-id arm (b): the one definition site is scripts/test/suite-manifest.sh (post-consolidation home), not check-step-reconciliation.sh" \
+    "printf '%s\n' \"$ONEHOME_HITS\" | grep -qxF 'scripts/test/suite-manifest.sh'"
+  assert_true "AC-one-derivation-of-the-step-id arm (b) does-not-fire polarity: the detection expression excludes the standing 's-…' id-string fixture literals already carried by check-step-reconciliation.sh and its host suite (neither limb matches an 's-' not followed by a format placeholder or a parameter expansion)" \
+    "! printf '%s\n' \"$ONEHOME_HITS\" | grep -qxF 'tests/test-issue-103-step-reconciliation.sh'"
+
+  # -- arm (c): both consumers (the lint and the reconciler) reach the same
+  #    id for a governed suite path. Driven black-box against the real
+  #    check-step-reconciliation.sh: a SELECTED report naming the suite,
+  #    reconciled against an outcome map keyed by suite_step_id's own
+  #    output, must agree (exit 0) -- a disagreeing derivation leaves the
+  #    entry outcome=absent and reds.
+  #    Guarded on suite_step_id existing (post-consolidation): calling an
+  #    undefined function is itself the RED signal pre-consolidation.
+  if [ -f "$LIBRARY" ]; then
+    # shellcheck source=scripts/test/suite-manifest.sh
+    . "$LIBRARY"
+    if declare -F suite_step_id >/dev/null 2>&1; then
+      for gpath in tests/test-issue-103-step-reconciliation.sh tests/test-issue-103-suite-manifest.sh tests/test-issue-103-central-runner.sh; do
+        oh_derived="$(suite_step_id "$gpath")"
+        OH_SEL="$(mktemp)"; OH_STEPS="$(mktemp)"
+        printf 'SELECTED: %s\n' "$gpath" > "$OH_SEL"
+        printf '{"%s": {"outcome": "success"}}\n' "$oh_derived" > "$OH_STEPS"
+        bash "$RECONCILE108" --selected "$OH_SEL" --steps "$OH_STEPS" >/tmp/issue108-onehome-c-"$(basename "$gpath")".out 2>&1
+        assert_true "AC-one-derivation-of-the-step-id arm (c): suite_step_id('$gpath') = '$oh_derived' agrees with what the real check-step-reconciliation.sh resolves for the same path (reconciles as agreement)" \
+          "[ $? -eq 0 ]"
+        rm -f "$OH_SEL" "$OH_STEPS"
+      done
+    else
+      assert_true "AC-one-derivation-of-the-step-id arm (c): scripts/test/suite-manifest.sh exports suite_step_id (consolidation not yet landed)" "false"
+    fi
+  else
+    assert_true "AC-one-derivation-of-the-step-id arm (c): scripts/test/suite-manifest.sh exists" "false"
+  fi
+
+  # ---------------------------------------------------------------------
+  # AC-governed-suite-basename-is-unique -- a collision within the
+  # ENUMERATED GOVERNED SET is a violation naming both paths; a collision
+  # involving an excluded path is not.
+  # ---------------------------------------------------------------------
+  COLL_DIR="$(mktemp -d)"; mkdir -p "$COLL_DIR/tests/sub"
+  cat > "$COLL_DIR/tests/test-fixture-108-collide.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+true
+SH
+  cat > "$COLL_DIR/tests/sub/test-fixture-108-collide.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+true
+SH
+  bash "$LINT" --root "$COLL_DIR" >/tmp/issue108-collide-governed.out 2>&1
+  assert_true "AC-governed-suite-basename-is-unique: two governed suites sharing a basename (tests/test-fixture-108-collide.sh, tests/sub/test-fixture-108-collide.sh) is a violation naming both paths" \
+    "[ $? -ne 0 ] && grep -qF 'tests/test-fixture-108-collide.sh' /tmp/issue108-collide-governed.out && grep -qF 'tests/sub/test-fixture-108-collide.sh' /tmp/issue108-collide-governed.out"
+  rm -rf "$COLL_DIR"
+
+  EXCL_DIR="$(mktemp -d)"; mkdir -p "$EXCL_DIR/tests/lib"
+  cat > "$EXCL_DIR/tests/test-fixture-108-collide-excl.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: tests/fixture.sh
+# lane: standing
+# budget-secs: 30
+true
+SH
+  cat > "$EXCL_DIR/tests/lib/test-fixture-108-collide-excl.sh" <<'SH'
+#!/usr/bin/env bash
+some fixture body, not a spec
+SH
+  bash "$LINT" --root "$EXCL_DIR" >/tmp/issue108-collide-excluded.out 2>&1
+  assert_true "AC-governed-suite-basename-is-unique: a same-basename pair where one member is EXCLUDED (tests/lib/**, a sourced library) is not a collision -- excluded paths never reach an outcome key" \
+    "[ $? -eq 0 ]"
+  rm -rf "$EXCL_DIR"
+
+  # ---------------------------------------------------------------------
+  # AC-valued-flags-fail-closed -- --root on check-suite-manifest.sh
+  # (its only valued flag: it has neither --base nor --event).
+  # ---------------------------------------------------------------------
+  bash "$LINT" --root "" >/tmp/issue108-manifest-vf-root-empty.out 2>&1
+  assert_true "AC-valued-flags-fail-closed: check-suite-manifest.sh --root given an empty value is a usage error (exit 2) naming --root, not a silent fall-through to the real tree" \
+    "[ $? -eq 2 ] && grep -qi -- '--root' /tmp/issue108-manifest-vf-root-empty.out"
+
+  bash "$LINT" --root >/tmp/issue108-manifest-vf-root-last.out 2>&1
+  assert_true "AC-valued-flags-fail-closed: check-suite-manifest.sh --root as the final argument (no value) is a usage error (exit 2) naming --root" \
+    "[ $? -eq 2 ] && grep -qi -- '--root' /tmp/issue108-manifest-vf-root-last.out"
+
+  # ---------------------------------------------------------------------
+  # AC-selftest-summary-agrees-with-fixture-set -- the manifest lint's own
+  # --self-test summary integer equals the number of per-class result
+  # lines it actually emitted. The design records this pair as ALREADY
+  # DISAGREEING on today's tree (the printed literal is lower than the
+  # emitted line count), so this arm is expected to red on arrival
+  # independent of any cascade/id-value work above.
+  # ---------------------------------------------------------------------
+  bash "$LINT" --self-test >/tmp/issue108-manifest-selftest.out 2>&1
+  mst_emitted="$(grep -cE '^[[:space:]]+SELF-TEST (PASS|FAIL):' /tmp/issue108-manifest-selftest.out)"
+  mst_reported="$(grep -oE '[0-9]+ of [0-9]+ fixture classes|[0-9]+/[0-9]+ fixture classes' /tmp/issue108-manifest-selftest.out | grep -oE '[0-9]+' | tail -1)"
+  assert_true "AC-selftest-summary-agrees-with-fixture-set: check-suite-manifest.sh --self-test's emitted per-class line count ($mst_emitted) equals the integer in its own summary line ($mst_reported)" \
+    "[ -n \"$mst_reported\" ] && [ \"$mst_emitted\" -eq \"$mst_reported\" ]"
 fi
 
 echo ""
