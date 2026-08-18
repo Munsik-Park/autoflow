@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml docs/autoflow-guide.md docs/doc-invariant-registry.md docs/teammate-contracts.md setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/harness-pins.sh tests/run-doc-invariants.sh
+# ci-subject: .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml docs/autoflow-guide.md docs/doc-invariant-registry.md docs/teammate-contracts.md setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -19,21 +19,17 @@
 # / manifest / CI-registration) criteria that a mock-runtime test cannot
 # express: AC-62-5, 18, 20-26, 29-35.
 #
-# Branch scoping mirrors tests/test-issue-56-carry-evidence-discipline.sh and
-# tests/test-issue-59-adoption-evidence-discipline.sh exactly: the ok-count
-# pin (AC-62-23) and the AC-62-36 arm-window recomputation are THIS
-# cycle's own PR contract, not every PR's — `note_deferred`, never a silently
-# passing skip, off the issue-62 dev branch.
-#
-# Known-RED-mid-cycle (per the verification design's own sequencing, §5 items
-# 6 and 9): AC-62-23/24/31 read the shared test/workflows/run.mjs ok-count,
-# whose two OTHER pin homes (tests/test-issue-27-composition-oracle.sh,
-# tests/test-issue-59-adoption-evidence-discipline.sh) are bumped by the
-# Developer AI in the GREEN commit, not here. AC-62-35's local-run arm requires a
-# VALIDATE-time orchestrator action (`.autoflow/issue-62-runtime-launch.json`)
-# that has not happened yet. All four are EXPECTED FAIL during the RED/GREEN
-# window; this is documented in-line at each assertion, not a defect in this
-# suite.
+# Retired (#107): this suite once carried a branch-scoped tier gated on
+# dev/*-issue-62 — AC-62-23 (the harness ok-count pin, whose literal 58 had
+# gone stale against the single-sourced tests/lib/harness-pins.sh and whose
+# measurement runs unconditionally in
+# tests/test-issue-27-composition-oracle.sh), AC-62-35 (a
+# `.autoflow/issue-62-runtime-launch.json` record, gitignored and so a
+# VALIDATE-time obligation of that cycle alone), and the gate around
+# AC-62-36(iii)/(iv). The first two were deleted; the AC-62-36 controls were
+# UNGATED — (iv) was already branch-independent, and (iii) became so once its
+# mutator was made hermetic (see stale_workflow_manifest_row below). See
+# docs/doc-invariant-registry.md §12 and §12.1.
 # =============================================================================
 
 set -uo pipefail
@@ -49,7 +45,6 @@ REGISTRY="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
 REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 TEAMMATE_CONTRACTS="$PROJECT_ROOT/docs/teammate-contracts.md"
 AUTOFLOW_GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
-LAUNCH_RECORD="$PROJECT_ROOT/.autoflow/issue-62-runtime-launch.json"
 
 # B11: verify-cause-branch.js sha256 must stay unchanged (out of this cycle's scope).
 # B11 update (issue #97): #97 added the ledger entry-ID allocation prompt to
@@ -73,12 +68,6 @@ assert_true() {
     FAIL=$((FAIL + 1))
   fi
 }
-
-note_deferred() {
-  echo "  DEFERRED-OBSERVABLE: $1"
-}
-
-HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
 
 
 # D10 ARM WINDOW extractor (verification design §7.2a): the inclusive line
@@ -125,15 +114,30 @@ guard_result_at_ref_mutated() {
   printf '%s' "$out"
 }
 
-# AC-62-36(iii) mutator: tamper the workflow file's setup/manifest.json sha256
-# row to a value that cannot match the live (untouched-by-this-mutator) file —
-# C2/C3's "real guard, real tampered manifest" shape, not a re-implemented copy.
-tamper_workflow_manifest_sha() {
+# AC-62-36(iii) mutator: commit a content edit to the workflow file inside the
+# worktree and leave its setup/manifest.json row untouched — the stale-row
+# condition (wf_sha != man_sha) the guard's arm claims to detect, produced by
+# the mutator itself rather than borrowed from the host branch's diff.
+#
+# The committed edit is what makes this control HERMETIC (#107). The guard's
+# .claude/workflows/** arm iterates over the worktree's own BASE_REF...HEAD
+# diff and passes when that diff touches no such path, so a mutator that only
+# rewrites an uncommitted setup/manifest.json — the earlier sha-tamper shape —
+# produced a FAIL only when the HOST branch happened to commit a
+# .claude/workflows/** change. The branch gate around this arm was supplying
+# that premise; committing the workflow-file edit here supplies it locally and
+# is simultaneously the stale row being asserted.
+#
+# The commit identity is process-local via `git -c` for the reason
+# delete_workflow_and_manifest_row documents below.
+stale_workflow_manifest_row() {
   local wt="$1"
-  local manifest="$wt/setup/manifest.json"
-  [[ -f "$manifest" ]] || return 1
-  jq '(.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js") | .sha256) = "0000000000000000000000000000000000000000000000000000000000000000"' \
-    "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+  local wf_path=".claude/workflows/architect-deliberation.js"
+  [[ -f "$wt/$wf_path" && -f "$wt/setup/manifest.json" ]] || return 1
+  printf '\n// AC-62-36(iii) fixture: content edit, manifest row left stale\n' >> "$wt/$wf_path"
+  git -C "$wt" add -- "$wf_path" >/dev/null 2>&1
+  git -c user.email="test-issue-62@example.com" -c user.name="test-issue-62" \
+    -C "$wt" commit -q -m "AC-62-36(iii) fixture: edit workflow file, leave manifest row stale" >/dev/null 2>&1
 }
 
 # AC-62-36(iv) mutator: delete the workflow file AND its manifest row inside
@@ -244,32 +248,6 @@ assert_true "AC-62-21b: setup/manifest.json carries exactly one artifact row for
 # It re-ran tests/test-issue-955-subagent-background-ban.sh as a fence. That
 # suite carries its own `run:` step, so the fence is executed once per pass
 # either way.
-
-# =============================================================================
-echo ""
-echo "=== AC-62-23 (RED discriminator + fence, branch-scoped) — shared harness ok-count pin ==="
-
-case "$HEAD_BRANCH" in
-  dev/*-issue-62|dev/*-issue-62-*)
-    # EXPECTED_OK pinning rule (verification design §5 item 5): literal 58 = 43
-    # (baseline, B7) + 0 (the in-place AC-62-7/8 rewrite, B20) + 15 (§5 item 2's
-    # enumerated cases). Fixed here as a literal, never a derived expression.
-    EXPECTED_OK=58
-
-    HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
-    HARNESS_EXIT=$?
-    OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -cE '^[[:space:]]*ok\b' || true)"
-    assert_true "AC-62-23a: node test/workflows/run.mjs exits 0 (KNOWN RED mid-cycle until GREEN lands the sequential-round implementation)" "[ $HARNESS_EXIT -eq 0 ]"
-    assert_true "AC-62-23b: harness reports 'all workflow regression tests passed'" \
-      "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-    assert_true "AC-62-23c: harness ok-line count == EXPECTED_OK ($EXPECTED_OK) (got: $OK_COUNT)" \
-      "[ \"$OK_COUNT\" -eq $EXPECTED_OK ]"
-    ;;
-  *)
-    note_deferred "AC-62-23: EXPECTED_OK=58 regression pin inert off the issue-62 dev branch (head: ${HEAD_BRANCH:-unknown}) — this cycle's own ok-count contract, not every branch's."
-    ;;
-esac
-
 
 # =============================================================================
 # AC-62-24 is retired by issue #103's leaf rule.
@@ -408,33 +386,6 @@ assert_true "AC-62-34: 'missing-artifact' absent from docs/teammate-contracts.md
 
 # =============================================================================
 echo ""
-echo "=== AC-62-35 (RED discriminator, O8) — the post-GREEN script is admitted by the hosted Workflow runtime at launch ==="
-
-case "$HEAD_BRANCH" in
-  dev/*-issue-62|dev/*-issue-62-*)
-    if [[ -n "${GITHUB_HEAD_REF:-}" ]]; then
-      note_deferred "AC-62-35: PR CI arm — .autoflow/* is gitignored (B31) so the launch record is by construction absent from this checkout; the record is a local VALIDATE-time-only obligation (B35)."
-    else
-      if [[ ! -f "$LAUNCH_RECORD" ]]; then
-        assert_true "AC-62-35: local-run arm — .autoflow/issue-62-runtime-launch.json must exist (VALIDATE-time obligation, not yet produced)" "false"
-      else
-        RECORDED_SHA="$(jq -r '.script_sha256' "$LAUNCH_RECORD" 2>/dev/null || true)"
-        CUR_SHA="$(shasum -a 256 "$WORKFLOW_JS" | awk '{print $1}')"
-        RECORDED_ERROR="$(jq -r '.error // empty' "$LAUNCH_RECORD" 2>/dev/null || true)"
-        assert_true "AC-62-35a: recorded script_sha256 == current architect-deliberation.js sha256 (recorded: $RECORDED_SHA, current: $CUR_SHA)" \
-          "[ \"$RECORDED_SHA\" = \"$CUR_SHA\" ]"
-        assert_true "AC-62-35b: recorded error does not match 'is not available in workflow scripts'" \
-          "! printf '%s' \"$RECORDED_ERROR\" | grep -q 'is not available in workflow scripts'"
-      fi
-    fi
-    ;;
-  *)
-    note_deferred "AC-62-35: launch-record gate inert off the issue-62 dev branch (head: ${HEAD_BRANCH:-unknown})."
-    ;;
-esac
-
-# =============================================================================
-echo ""
 echo "=== AC-62-36 (RED discriminator, D10) — both scope guards' .claude/workflows/** arm is the manifest-pin oracle, not a substring window ==="
 
 # (i) structural — arm-window-scoped (verification design §7.2a), never a
@@ -461,67 +412,53 @@ S799_36I="$(check_arm_structural "$PROJECT_ROOT/tests/test-issue-799-inert-clean
 assert_true "AC-62-36(i): both guards' .claude/workflows/** arm window has zero grep -vF filters, exactly one assert_true, zero hardcoded 'architect-deliberation.js', and that assert_true names both .claude/workflows/** and setup/manifest.json (798: $S798_36I; 799: $S799_36I)" \
   "[[ '$S798_36I' == yes* && '$S799_36I' == yes* ]]"
 
-# (ii)/(iii)/(iv) — branch/base-ref-scoped, mirroring the branch-gate idiom
-# tests/test-issue-67-deliberation-record.sh and
-# tests/test-issue-69-verification-depth.sh use for their own scope lanes:
-# the behavioural non-vacuity check and both negative controls are meaningless
-# unless this branch's own diff actually touches .claude/workflows/** (off
-# that condition the guard's while-loop never iterates and every arm trivially
-# "admits", proving nothing about D10's predicate). No further GITHUB_HEAD_REF
-# split is owed here (unlike AC-62-35): a detached `git worktree add` and
-# `git merge-base HEAD main` resolve identically under CI's fetch-depth:0
-# checkout and a local run, so a two-arm branch gate is the complete idiom.
-case "$HEAD_BRANCH" in
-  dev/*-issue-62|dev/*-issue-62-*)
-    # Same local-`main`-absent fallback the sibling branch-scoped lanes use: a pull_request
-    # checkout only has `origin/main`, not a local `main` branch.
-    BASE_REF_36="$(cd "$PROJECT_ROOT" && git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)"
-    # CI's pull_request checkout has no local `main` branch, only
-    # `origin/main` — but the child guards (798/799) resolve their own base
-    # via a bare `git merge-base HEAD main` internally, so their
-    # .claude/workflows/** arm SKIPs without a local `main` ref, and the
-    # tamper/deletion controls below never produce an arm-FAIL. Create the
-    # ref (no checkout) so the child guards — and worktrees, which share
-    # refs — can resolve it; no-op locally where `main` already exists.
-    if [[ -z "$(cd "$PROJECT_ROOT" && git branch --list main)" ]] && (cd "$PROJECT_ROOT" && git rev-parse --verify origin/main >/dev/null 2>&1); then
-      (cd "$PROJECT_ROOT" && git branch main origin/main) || true
-    fi
-    if [[ -z "$BASE_REF_36" ]]; then
-      echo "  BLOCK: no comparison base resolvable — AC-62-36(iii)/(iv) counted FAIL, never skipped"
-      TESTS=$((TESTS + 2)); FAIL=$((FAIL + 2))
-    else
-      # AC-62-36(ii) is retired by issue #103's leaf rule: it re-ran
-      # tests/test-issue-798-topology-flip.sh and
-      # tests/test-issue-799-inert-cleanup.sh, each of which carries its own
-      # `run:` step. The negative controls (iii) and (iv) below are what give
-      # this lane its teeth, and they drive the real guard file against a real
-      # tampered on-disk state rather than re-running a green sibling.
+# (iii)/(iv) — unconditional negative controls (#107). Both were once gated on
+# a dev/*-issue-62 branch on the ground that the guard's .claude/workflows/**
+# arm iterates over the branch's own diff, so the controls were meaningless
+# unless that diff touched such a path. That ground held for exactly one of
+# them: (iv)'s mutator commits its deletion inside the worktree and therefore
+# supplies its own diff, while (iii)'s sha-rewrite was uncommitted and
+# contributed nothing to a three-dot diff — the branch gate was supplying its
+# premise. (iii)'s mutator is now the hermetic stale-row form above, which
+# commits the workflow-file edit it asserts is stale, so both controls carry
+# their own premise and neither depends on the host branch.
+#
+# CI's pull_request checkout has no local `main` branch, only `origin/main` —
+# but the child guards (798/799) resolve their own base via a bare
+# `git merge-base HEAD main` internally, so their .claude/workflows/** arm
+# SKIPs without a local `main` ref and neither control below can produce an
+# arm-FAIL. Create the ref (no checkout) so the child guards — and worktrees,
+# which share refs — can resolve it; no-op locally where `main` already exists.
+if [[ -z "$(cd "$PROJECT_ROOT" && git branch --list main)" ]] && (cd "$PROJECT_ROOT" && git rev-parse --verify origin/main >/dev/null 2>&1); then
+  (cd "$PROJECT_ROOT" && git branch main origin/main) || true
+fi
 
-      # (iii) hermetic negative control (C3, E10/O9 non-mock): tamper the REAL
-      # guard's on-disk manifest sha256 row in a real detached worktree, then
-      # run the REAL guard file — never a re-implemented copy of its logic.
-      OUT_798_TAMPER="$(guard_result_at_ref_mutated HEAD test-issue-798-topology-flip.sh tamper_workflow_manifest_sha)"
-      OUT_799_TAMPER="$(guard_result_at_ref_mutated HEAD test-issue-799-inert-cleanup.sh tamper_workflow_manifest_sha)"
-      M798="$(printf '%s\n' "$OUT_798_TAMPER" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
-      M799="$(printf '%s\n' "$OUT_799_TAMPER" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
-      assert_true "AC-62-36(iii): a stale .claude/workflows/** manifest sha256 row, tampered in a real detached worktree at HEAD, makes the REAL guard file report FAIL specifically on its .claude/workflows/** arm — not merely its unrelated .claude/hooks/** arm (798: $M798, 799: $M799)" \
-        "[ '$M798' = yes ] && [ '$M799' = yes ]"
+# AC-62-36(ii) is retired by issue #103's leaf rule: it re-ran
+# tests/test-issue-798-topology-flip.sh and
+# tests/test-issue-799-inert-cleanup.sh, each of which carries its own
+# `run:` step. The negative controls (iii) and (iv) below are what give
+# this lane its teeth, and they drive the real guard file against a real
+# mutated on-disk state rather than re-running a green sibling.
 
-      # (iv) deletion control (C2): both the workflow file AND its manifest
-      # row are removed in the worktree, closing the empty-vs-empty vacuity
-      # ("" == "" silently admits) a naive equality would fall into.
-      OUT_798_DEL="$(guard_result_at_ref_mutated HEAD test-issue-798-topology-flip.sh delete_workflow_and_manifest_row)"
-      OUT_799_DEL="$(guard_result_at_ref_mutated HEAD test-issue-799-inert-cleanup.sh delete_workflow_and_manifest_row)"
-      D798="$(printf '%s\n' "$OUT_798_DEL" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
-      D799="$(printf '%s\n' "$OUT_799_DEL" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
-      assert_true "AC-62-36(iv): deleting the workflow file AND its manifest row in a real detached worktree does not silently admit (empty-vs-empty vacuity, C2) — the REAL guard reports FAIL on its .claude/workflows/** arm (798: $D798, 799: $D799)" \
-        "[ '$D798' = yes ] && [ '$D799' = yes ]"
-    fi
-    ;;
-  *)
-    note_deferred "AC-62-36(ii)/(iii)/(iv): behavioural + negative-control lanes inert off the issue-62 dev branch (head: ${HEAD_BRANCH:-unknown}) — meaningless without this cycle's own non-empty .claude/workflows/** diff."
-    ;;
-esac
+# (iii) hermetic negative control (C3, E10/O9 non-mock): commit a workflow-file
+# edit in a real detached worktree while leaving its manifest row untouched,
+# then run the REAL guard file — never a re-implemented copy of its logic.
+OUT_798_STALE="$(guard_result_at_ref_mutated HEAD test-issue-798-topology-flip.sh stale_workflow_manifest_row)"
+OUT_799_STALE="$(guard_result_at_ref_mutated HEAD test-issue-799-inert-cleanup.sh stale_workflow_manifest_row)"
+M798="$(printf '%s\n' "$OUT_798_STALE" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
+M799="$(printf '%s\n' "$OUT_799_STALE" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
+assert_true "AC-62-36(iii): a .claude/workflows/** file edited and committed in a real detached worktree at HEAD, with its setup/manifest.json row left stale, makes the REAL guard file report FAIL specifically on its .claude/workflows/** arm — not merely its unrelated .claude/hooks/** arm (798: $M798, 799: $M799)" \
+  "[ '$M798' = yes ] && [ '$M799' = yes ]"
+
+# (iv) deletion control (C2): both the workflow file AND its manifest
+# row are removed in the worktree, closing the empty-vs-empty vacuity
+# ("" == "" silently admits) a naive equality would fall into.
+OUT_798_DEL="$(guard_result_at_ref_mutated HEAD test-issue-798-topology-flip.sh delete_workflow_and_manifest_row)"
+OUT_799_DEL="$(guard_result_at_ref_mutated HEAD test-issue-799-inert-cleanup.sh delete_workflow_and_manifest_row)"
+D798="$(printf '%s\n' "$OUT_798_DEL" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
+D799="$(printf '%s\n' "$OUT_799_DEL" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
+assert_true "AC-62-36(iv): deleting the workflow file AND its manifest row in a real detached worktree does not silently admit (empty-vs-empty vacuity, C2) — the REAL guard reports FAIL on its .claude/workflows/** arm (798: $D798, 799: $D799)" \
+  "[ '$D798' = yes ] && [ '$D799' = yes ]"
 
 
 # =============================================================================

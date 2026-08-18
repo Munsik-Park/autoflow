@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/e2e-dummy-target.yml docs/design-rationale.md docs/git-workflow.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/manual/issue-52-manual-scenarios.md tests/run-doc-invariants.sh
+# ci-subject: .github/workflows/e2e-dummy-target.yml docs/design-rationale.md docs/git-workflow.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/manual/issue-52-manual-scenarios.md tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -27,9 +27,12 @@
 #                          record section only, carries a non-empty value
 #                          (content never asserted — outcome-neutral), per
 #                          GATE:PLAN carry-forward (ledger E18 item 2)
-#   scope-fence-held(b)  — no path under .claude/workflows/ appears in this
-#                          cycle's own branch diff (diff-shaped, branch-scoped
-#                          via tests/lib/base-ref.sh)
+#   (retired #107) scope-fence-held(b) — a dev/*-issue-52 branch gate over
+#                          issue #52's own cycle diff. Off that branch it
+#                          credited a PASS for a diff it never measured, the
+#                          vacuous-PASS shape check-cycle-scope-guard.sh
+#                          exists to keep out; see
+#                          docs/doc-invariant-registry.md §12.1.
 #   ci-wired             — both new files registered as paths: entries in the
 #                          pull_request AND push blocks, plus a run: step
 #   manifest-freshness   — composition oracle: real setup/gen-manifest-hashes.sh,
@@ -51,8 +54,7 @@
 #     + heading skeleton + field-completeness (the file is authored in full
 #     at RED, per Test AI scope, with every field carrying a non-empty
 #     placeholder value; only the VALUE's content changes at GREEN, which
-#     this oracle never asserts), scope-fence-held(b) workflow no-touch
-#     fence, manifest-freshness (both sub-checks — a fence, true before and
+#     this oracle never asserts), manifest-freshness (both sub-checks — a fence, true before and
 #     after GREEN), registry-runner-green's id-set-scoped sub-check (no
 #     entry OUTSIDE 52-* fails, true from the outset).
 # =============================================================================
@@ -61,8 +63,6 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-# shellcheck source=tests/lib/base-ref.sh
-. "$SCRIPT_DIR/lib/base-ref.sh"
 
 MANUAL_REL="tests/manual/issue-52-manual-scenarios.md"
 MANUAL="$PROJECT_ROOT/$MANUAL_REL"
@@ -177,38 +177,6 @@ if [ -f "$MANUAL" ]; then
 else
   echo "  BLOCK: remaining record-file-shape arms unmeasurable ($MANUAL_REL missing) — counted FAIL, never skipped"
   TESTS=$((TESTS + 12)); FAIL=$((FAIL + 12))
-fi
-
-# =============================================================================
-# scope-fence-held(b) — no path under .claude/workflows/ appears in this
-# cycle's own branch diff (diff-shaped, branch-scoped; the registry's
-# permanent present-entry on the fence literal covers the STATE half).
-# =============================================================================
-echo ""
-echo "=== scope-fence-held(b) — .claude/workflows/ no-touch fence (branch-scoped) ==="
-
-BASE52="$(resolve_base_ref 2>/dev/null || true)"
-# Branch-scoped fence: it asserts a property of #52's OWN cycle diff. On any
-# other issue's dev branch the branch diff legitimately may touch
-# .claude/workflows/ (first witness: #69's prompt wiring), so the count is
-# taken only on a dev/*-issue-52 branch — same branch-scoping idiom as the
-# #69 suite's on_issue_branch() guards (precedent for the guard-shape fix:
-# the #69-cycle test-issue-40 line-touch -> value-comparison repair).
-HEAD_BRANCH_52="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "${GITHUB_HEAD_REF:-}")"
-if [ -n "$BASE52" ]; then
-  case "$HEAD_BRANCH_52" in
-    dev/*-issue-52|dev/*-issue-52-*)
-      WORKFLOW_TOUCHED="$(git -C "$PROJECT_ROOT" diff --name-only "${BASE52}...HEAD" 2>/dev/null | grep -c '^\.claude/workflows/' || true)"
-      ;;
-    *)
-      WORKFLOW_TOUCHED=0  # deferred: not #52's cycle branch — fence measures #52's own diff only
-      ;;
-  esac
-  [ -z "$WORKFLOW_TOUCHED" ] && WORKFLOW_TOUCHED=0
-  assert_true "scope-fence-held-b: git diff vs base touches no path under .claude/workflows/ (got: $WORKFLOW_TOUCHED)" \
-    "[ '$WORKFLOW_TOUCHED' -eq 0 ]"
-else
-  assert_true "scope-fence-held-b: a comparison base is resolvable (resolve_base_ref, fail-loud per tests/lib/base-ref.sh contract)" "false"
 fi
 
 # =============================================================================

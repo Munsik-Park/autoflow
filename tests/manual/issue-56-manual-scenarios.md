@@ -16,8 +16,12 @@ here.
 issue's behavioral claim (Phase 3: the cost of a stale counter in a live ARCHITECT
 round). This contact point is not a triggered composition contact point
 (verification design §4: the intersecting elements are the file and the manifest
-row, both of which have non-mock oracles — see `tests/test-issue-56-carry-evidence-discipline.sh`
-AC-56-9/10), so a manual scenario with a stated reason is acceptable here per
+row, both of which have non-mock oracles — see AC-56-10a
+(`tests/test-issue-56-carry-evidence-discipline.sh:104`), which covers both
+intersecting elements on its own via the manifest-row-vs-live-file sha256 gate;
+AC-56-9, which once carried this same coverage as a `dev/*-issue-56`
+branch-scoped fence, was retired in #107 — see the earlier fix at this file's
+M3 above), so a manual scenario with a stated reason is acceptable here per
 `docs/autoflow-guide.md` > ARCHITECT > Testability-driven design.
 
 ---
@@ -82,9 +86,11 @@ against the pre-edit form of the document.
 **Source AC:** none directly — a parse/runtime-error fence for the template-literal
 edit itself, distinct from the behavioral claim M1/M2 carry.
 
-**Why not automated in this file:** `node --check` (part of AC-56-8's harness load
-in `test/workflows/run.mjs`) covers the parse; only a real Workflow invocation
-covers the runtime.
+**Why not automated in this file:** `node --check` (AC-27-20d in
+`tests/test-issue-27-composition-oracle.sh`, the standing home for this harness
+measurement per `docs/doc-invariant-registry.md` §12.1 — AC-56-8's own
+branch-scoped copy was retired in #107) covers the parse; only a real Workflow
+invocation covers the runtime.
 
 **Steps:**
 

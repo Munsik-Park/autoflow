@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/run-doc-invariants.sh
+# ci-subject: .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -27,28 +27,20 @@
 #   AC-56-4a — RED discriminator: the citation rule is declared ONCE
 #             (`const COUNTER_EVIDENCE_RULE`) and interpolated at both round
 #             prompt sites (D2 structural symmetry).
-#   AC-56-8  — fence (PASS pre+post): the workflow-regression harness
-#             (`node test/workflows/run.mjs`) still exits 0, still prints
-#             `all workflow regression tests passed`, and its `ok`-line count
-#             equals the literal `EXPECTED_OK` pinned below (verification
-#             design §6 pinning rule, ledger L10) — never a derived `31 + N`,
-#             which would absorb a silent test loss.
-#   AC-56-9  — fence (PASS pre+post): change-surface bound to this cycle's
-#             `.claude/` subset (`.claude/workflows/architect-deliberation.js`
-#             only); `verify-cause-branch.js` sha256 unchanged (B4).
 #
-# Branch scoping (GATE:QUALITY FAIL #2, ledger L15): AC-56-8's EXPECTED_OK pin
-# and AC-56-9's diff-subset/B4-sha pins are the issue-56 PR's OWN contract, not
-# every PR's — this workflow triggers on every PR/push matching its broad
-# `paths:` filter (e2e-dummy-target.yml), so an unconditional pin reds an
-# unrelated PR or a post-merge main push (reproduced: empty diff subset after
-# merge, and a foreign-branch run.mjs still at the pre-#56 ok-count). Scoped to
-# the issue-56 dev branch, mirroring commit ea68a4c
-# (tests/test-issue-7-oracle-hardening.sh AC-7-7b) exactly: `note_deferred`,
-# never a silently-passing skip, when off-branch.
+# Retired (#107): AC-56-8 (the workflow-regression ok-count pin) and AC-56-9
+# (the cycle change-surface / B4-sha fence). Both were gated on a
+# dev/*-issue-56 branch, so both went inert the moment issue #56's PR merged.
+# AC-56-8's pinned literal was also stale against the single-sourced
+# tests/lib/harness-pins.sh, and the same measurement runs unconditionally in
+# tests/test-issue-27-composition-oracle.sh. See
+# docs/doc-invariant-registry.md §12 and §12.1.
+#
 #   AC-56-10 — fence at RED / hard gate mid-GREEN: `setup/manifest.json`'s row
 #             for `architect-deliberation.js` hash-matches the live source
-#             (gate); both files land within the cycle range (advisory).
+#             (AC-56-10a, gate). AC-56-10b's cycle-range co-occurrence
+#             advisory branch read `$BASE_REF`, whose only writer was
+#             AC-56-9's own arm; #107 retired both together (registry §12.1).
 #   AC-56-11 — Test-AI-owned surface: this suite is registered in
 #             .github/workflows/e2e-dummy-target.yml (both `paths:` blocks +
 #             a `run:` step) — expected PASS by end of RED.
@@ -59,14 +51,8 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORKFLOW_JS="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
-VERIFY_JS="$PROJECT_ROOT/.claude/workflows/verify-cause-branch.js"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-BASEREF_LIB="$PROJECT_ROOT/tests/lib/base-ref.sh"
-
-# B4 (verification design §0): verify-cause-branch.js sha256 must stay unchanged (D5 — out of
-# this cycle's scope).
-B4_SHA="315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -81,19 +67,6 @@ assert_true() {
     FAIL=$((FAIL + 1))
   fi
 }
-
-# Deferred-observable marker (mirrors tests/test-issue-7-oracle-hardening.sh:115,
-# commit ea68a4c): does NOT increment TESTS/PASS/FAIL — a branch-scoped lane that
-# is inert off its own branch is neither proven nor faked, so it must not count as
-# a passing (or failing) test.
-note_deferred() {
-  echo "  DEFERRED-OBSERVABLE: $1"
-}
-
-# Cycle-scoped subset/pin lanes (AC-56-8, AC-56-9) are this cycle's own PR
-# contract — scope them to the issue-56 dev branch (GITHUB_HEAD_REF in PR CI,
-# the checked-out branch locally), exactly as commit ea68a4c scopes AC-7-7b.
-HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
 
 # =============================================================================
 echo "=== AC-56-2a (RED discriminator) — constant placement: carry ternary vs. round-prompt sites ==="
@@ -126,81 +99,12 @@ assert_true "AC-56-4a-interp: \${COUNTER_EVIDENCE_RULE} interpolated exactly twi
 
 # =============================================================================
 echo ""
-echo "=== AC-56-8 (regression fence, PASS pre+post) — workflow-regression harness ==="
-
-case "$HEAD_BRANCH" in
-  dev/*-issue-56|dev/*-issue-56-*)
-    # EXPECTED_OK pinning rule (verification design §6, ledger L10): a literal integer,
-    # never a derived expression — an open `31 + N` would absorb an accidental test loss,
-    # which is the failure this fence exists to catch. Measured at RED close: B1 (31) +
-    # six new run.mjs tests (AC-56-1b/2b/3b/4b/5/14b) = 37.
-    EXPECTED_OK=37
-
-    HARNESS_OUT="$(cd "$PROJECT_ROOT" && node test/workflows/run.mjs 2>&1)"
-    HARNESS_EXIT=$?
-    OK_COUNT="$(printf '%s\n' "$HARNESS_OUT" | grep -cE '^[[:space:]]*ok\b' || true)"
-    assert_true "AC-56-8a: node test/workflows/run.mjs exits 0" "[ $HARNESS_EXIT -eq 0 ]"
-    assert_true "AC-56-8b: harness reports 'all workflow regression tests passed'" \
-      "printf '%s\n' \"\$HARNESS_OUT\" | grep -qF 'all workflow regression tests passed'"
-    assert_true "AC-56-8c: harness ok-line count == EXPECTED_OK ($EXPECTED_OK) (got: $OK_COUNT)" \
-      "[ \"$OK_COUNT\" -eq $EXPECTED_OK ]"
-    ;;
-  *)
-    note_deferred "AC-56-8: EXPECTED_OK=37 regression pin inert off the issue-56 dev branch (head: ${HEAD_BRANCH:-unknown}) — the ok-count baseline (B1 31 + 6 new run.mjs tests) is this cycle's own contract, not every branch's."
-    ;;
-esac
-
-# =============================================================================
-echo ""
-echo "=== AC-56-9 (fence, PASS pre+post) — change-surface bound to architect-deliberation.js alone ==="
-
-case "$HEAD_BRANCH" in
-  dev/*-issue-56|dev/*-issue-56-*)
-    if [[ ! -f "$BASEREF_LIB" ]]; then
-      echo "  BLOCK: tests/lib/base-ref.sh missing — AC-56-9a is base-dependent and cannot be evaluated"
-      TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-    else
-      # shellcheck source=/dev/null
-      . "$BASEREF_LIB"
-      BASE_REF="$(cd "$PROJECT_ROOT" && resolve_base_ref "${ISSUE_56_BASE_REF:-}" || true)"
-      if [[ -z "$BASE_REF" ]]; then
-        echo "  BLOCK: no comparison base resolvable — AC-56-9a counted FAIL, never skipped"
-        TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-      else
-        CLAUDE_DIFF_SUBSET="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD | grep '^\.claude/' || true)"
-        EXPECTED_SUBSET=".claude/workflows/architect-deliberation.js"
-        assert_true "AC-56-9a: cycle diff's .claude/ subset == '$EXPECTED_SUBSET' (got: '$(printf '%s' "$CLAUDE_DIFF_SUBSET" | paste -sd, -)')" \
-          "[ \"\$(printf '%s' '$CLAUDE_DIFF_SUBSET')\" = \"$EXPECTED_SUBSET\" ]"
-      fi
-    fi
-
-    CUR_VERIFY_SHA="$(shasum -a 256 "$VERIFY_JS" | awk '{print $1}')"
-    assert_true "AC-56-9b: verify-cause-branch.js sha256 unchanged (B4 $B4_SHA) (got: $CUR_VERIFY_SHA)" \
-      "[ \"$CUR_VERIFY_SHA\" = \"$B4_SHA\" ]"
-    ;;
-  *)
-    note_deferred "AC-56-9a/9b: cycle-scoped change-surface fence inert off the issue-56 dev branch (head: ${HEAD_BRANCH:-unknown}) — the .claude/ diff-subset bound and the B4 sha pin are this cycle's own PR contract, not every PR's (reproduced: empty diff subset after merge; a foreign PR touching .claude/hooks/check-autoflow-gate.sh)."
-    ;;
-esac
-
-# =============================================================================
-echo ""
-echo "=== AC-56-10 — derived artifact: manifest row hash-matches the live source (gate) + cycle-range co-occurrence (advisory) ==="
+echo "=== AC-56-10 — derived artifact: manifest row hash-matches the live source (gate) ==="
 
 MANIFEST_SHA="$(jq -r '.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js") | .sha256' "$MANIFEST")"
 CUR_ARCH_SHA="$(shasum -a 256 "$WORKFLOW_JS" | awk '{print $1}')"
 assert_true "AC-56-10a (gate): setup/manifest.json row sha256 == current architect-deliberation.js sha256 (manifest: $MANIFEST_SHA, current: $CUR_ARCH_SHA)" \
   "[ \"$MANIFEST_SHA\" = \"$CUR_ARCH_SHA\" ]"
-
-if [[ -n "${BASE_REF:-}" ]]; then
-  RANGE_FILES="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD)"
-  BOTH_IN_RANGE=true
-  printf '%s\n' "$RANGE_FILES" | grep -qx '\.claude/workflows/architect-deliberation\.js' || BOTH_IN_RANGE=false
-  printf '%s\n' "$RANGE_FILES" | grep -qx 'setup/manifest\.json' || BOTH_IN_RANGE=false
-  echo "  ADVISORY: AC-56-10b co-occurrence over the cycle range: both paths present == $BOTH_IN_RANGE (non-blocking, hash equality above is the gate)"
-else
-  echo "  ADVISORY: AC-56-10b co-occurrence unmeasurable (no base ref) — non-blocking, hash equality above is the gate"
-fi
 
 # =============================================================================
 echo ""

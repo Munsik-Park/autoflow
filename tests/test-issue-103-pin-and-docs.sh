@@ -104,13 +104,21 @@ assert_true "AC-pin-dependents-disposed: test-issue-69's cross-pin agreement che
 assert_true "GATE:PLAN F1: test-issue-67's AC-67-OKCOUNT (reads both foreign pin literals by text: AC-27-20c grep and EXPECTED_OK= grep) is disposed after single-sourcing — the same ground as the 69 row" \
   "! grep -qF 'AC-67-OKCOUNT' '$SUITE_67' && ! grep -qE \"grep -F 'AC-27-20c'\" '$SUITE_67' && ! grep -qE 'grep -oE .\\^EXPECTED_OK=' '$SUITE_67'"
 
-# -- Branch-scoped-inert homes are untouched: they pin their own cycle's
-#    measurement on their own dev branch and are not text-form dependents of
-#    the removed literal.
-assert_true "AC-pin-dependents-disposed: test-issue-56's own gated pin literal is untouched" \
-  "[ -f '$SUITE_56' ]"
-assert_true "AC-pin-dependents-disposed: test-issue-62's own branch-scoped-inert EXPECTED_OK=58 pin (inside its case \"\$HEAD_BRANCH\" gate) remains present" \
-  "grep -qF 'EXPECTED_OK=58' '$SUITE_62'"
+# -- The two branch-scoped-inert homes are GONE (#107). When #103 single-sourced
+#    the pin it left these two foreign homes standing on the ground that each
+#    pinned its own cycle's measurement on its own dev branch. #107 retired
+#    that ground: both arms were dormant dev/*-issue-<N> gates over
+#    already-merged cycles, and deleting them took every EXPECTED_OK= literal
+#    in each file with it (docs/doc-invariant-registry.md §12.1). Both rows are
+#    flipped to the same successor form — the file authors no ok-count literal
+#    at all — which strengthens #103's single-authorship invariant rather than
+#    dropping it. The 56 row additionally replaces a `[ -f "$SUITE_56" ]`
+#    file-existence tautology, which reported green on a claim it never
+#    evaluated.
+assert_true "AC-pin-dependents-disposed: test-issue-56 authors no EXPECTED_OK= literal at all (its gated foreign home was retired in #107)" \
+  "! grep -qE 'EXPECTED_OK=' '$SUITE_56'"
+assert_true "AC-pin-dependents-disposed: test-issue-62 authors no EXPECTED_OK= literal at all (its gated foreign home, EXPECTED_OK=58, was retired in #107)" \
+  "! grep -qE 'EXPECTED_OK=' '$SUITE_62'"
 
 # ---------------------------------------------------------------------
 # AC-doc-contracts-registered

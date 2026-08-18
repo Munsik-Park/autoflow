@@ -119,6 +119,11 @@ on:
       # above record.
       - 'tests/test-issue-62-sequential-rounds.sh'
       - 'tests/manual/issue-62-manual-scenarios.md'
+      # #107 standing surface (cycle-arm residue class guard). Subject-named,
+      # not cycle-scoped: its class assertion is a permanent property of the
+      # tree. Every path in its own `# ci-subject:` header already appears in
+      # this block, so only its own path is added here.
+      - 'tests/test-cycle-arm-residue.sh'
       # #67 cycle surface (ARCHITECT deliberation record redesign — register +
       # dispositions). TAIL here for the same reason the #56/#59/#62 comments above
       # record.
@@ -265,6 +270,9 @@ on:
       # block's own placement immediately above.
       - 'tests/test-issue-62-sequential-rounds.sh'
       - 'tests/manual/issue-62-manual-scenarios.md'
+      # #107 standing surface. TAIL here (push) as well — mirrors the
+      # pull_request block's own placement immediately above.
+      - 'tests/test-cycle-arm-residue.sh'
       # #67 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'tests/test-issue-67-deliberation-record.sh'
@@ -624,6 +632,19 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-62-sequential-rounds.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-62-sequential-rounds.sh
+
+      # Cycle-arm residue class guard (#107, standing): every suite under
+      # tests/** carrying a live `dev/*-issue-<N>` gate declares a matching
+      # `# cycle-arm:`. The array-less shape is outside
+      # check-cycle-scope-guard.sh's subject set by construction, so this is
+      # the layer that holds it. CI has no glob discovery; registered by
+      # filename per the sibling suites. timeout-minutes is
+      # ceil(budget-secs / 60) over the declared SUITE_BUDGET_CEILING_SECS.
+      - name: Run cycle-arm residue class guard (#107)
+        id: s-test-cycle-arm-residue
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-cycle-arm-residue.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-cycle-arm-residue.sh
 
       # ARCHITECT deliberation record redesign guard (#67, cycle-scoped): the
       # two composition oracles (shared harness ok-count, manifest sha256 +

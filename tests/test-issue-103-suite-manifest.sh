@@ -566,10 +566,16 @@ YML
     "! grep -q -- '-eq 85 \]\"' '$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh'"
   assert_true "AC-pin-single-home: the pin literal (EXPECTED_OK=85) is authored only in tests/lib/harness-pins.sh, not in test-issue-59" \
     "! grep -qF 'EXPECTED_OK=85' '$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh'"
-  assert_true "AC-pin-single-home: test-issue-27 sources tests/lib/harness-pins.sh" \
-    "grep -q 'harness-pins.sh' '$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh'"
-  assert_true "AC-pin-single-home: test-issue-59 sources tests/lib/harness-pins.sh" \
-    "grep -q 'harness-pins.sh' '$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh'"
+  # Tightened in #107 from a bare path grep to a non-comment source/. line —
+  # the same predicate check-suite-manifest.sh's header-matches-content rule
+  # uses. A bare grep is satisfied by a `# ci-subject:` token or any comment
+  # mention, so it reported green on a sourcing that had been removed. The
+  # companion row over test-issue-59 was RETIRED in the same change: #107
+  # deleted that suite's only reader of the pin, so the row's subject no
+  # longer exists. #103's settled property — the literal is authored in
+  # exactly one home — is carried entirely by the two negative rows above.
+  assert_true "AC-pin-single-home: test-issue-27 sources tests/lib/harness-pins.sh on a non-comment source/. line (textual mention is not a sourcing)" \
+    "grep -vE '^[[:space:]]*#' '$PROJECT_ROOT/tests/test-issue-27-composition-oracle.sh' | grep -qE '(^|[[:space:]])(source|\\.)[[:space:]]+[^[:space:]]*harness-pins\\.sh'"
   assert_true "AC-pin-single-home: check-suite-manifest.sh asserts single authorship of the pin literal (its own self-test exercises a duplicated-home fixture)" \
     "grep -qi 'harness-pins\|pin' '$LINT'"
 

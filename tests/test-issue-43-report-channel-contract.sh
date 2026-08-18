@@ -35,9 +35,10 @@
 #     origin_issue:43 literal/before/after carries an embedded newline,
 #     (b) each entry re-checks in its OWN predicate's direction with its own
 #     `match` flavor (DIRECTION_BAD == 0), over all 15 promoted entries.
-#   S43-UNTOUCHED          — this cycle's diff touches none of the three
-#     asserted non-edits: docs/teammate-common-rules.md,
-#     .claude/agents/autoflow-*.md, docs/maintained-docs.md.
+#
+# Retired (#107): the cycle-diff non-edit fence, a dormant dev/*-issue-43
+# branch gate over issue #43's own already-merged PR — see
+# docs/doc-invariant-registry.md §12.1.
 #
 # Expected verdict post-GREEN: 0 FAIL.
 # =============================================================================
@@ -46,7 +47,6 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-. "$SCRIPT_DIR/lib/base-ref.sh"
 
 REGISTRY="$SCRIPT_DIR/fixtures/doc-invariants.json"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
@@ -100,9 +100,9 @@ echo "=== issue #43 — report-channel contract (cycle-scoped) ==="
 
 # H43-BYTES (retired, #64): the "hook byte-unchanged vs base" fence was a #43
 # cycle-scope seal; it blocked every legitimate later hook change (change-
-# detector anti-pattern) and was removed in the #64 hook-fix PR. BASE_REF is
-# still resolved here because later sections consume it.
-BASE_REF="$(resolve_base_ref)"
+# detector anti-pattern) and was removed in the #64 hook-fix PR. The BASE_REF
+# resolution it left behind outlived its last reader when the cycle-diff
+# non-edit fence was retired (#107), and went with it.
 
 # ---------------------------------------------------------------------------
 # M43-REGEN-CLEAN — manifest stays regen-clean for the two manifest-registered
@@ -180,46 +180,6 @@ done < <(jq -r '.invariants[] | select(.origin_issue==43) |
 echo "  (info) A43-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/$COUNT43 origin_issue:43 entries mismatch their predicate direction (0 expected)"
 assert_true "A43-LITERAL-CONTIGUOUS (b): every origin_issue:43 entry matches its predicate direction" \
   "[ \"$DIRECTION_BAD\" -eq 0 ]"
-
-# ---------------------------------------------------------------------------
-# S43-UNTOUCHED — this cycle's diff touches none of the three asserted
-# non-edits (feature design §2 Not changed; verification design D6).
-# ---------------------------------------------------------------------------
-echo ""
-echo "S43-UNTOUCHED — this cycle's diff does not touch the three asserted non-edit surfaces"
-
-# Provenance: was unconditional (ran on every PR); narrowed here to
-# branch-scoped (ea68a4c idiom, GATE:QUALITY E36) — this is issue #43's own
-# cycle-PR non-edit promise, not a durable state property — one of its three
-# surfaces, docs/maintained-docs.md, is a file OTHER cycles legitimately edit
-# (e.g. issue #51 registers a new ADR row there), so an unconditional
-# cross-cycle assertion reds an unrelated PR the moment it touches that file.
-# Enforced on dev/*-issue-43* (this cycle's own PR, where the promise has a
-# subject); DEFERRED-OBSERVABLE elsewhere, matching
-# tests/test-issue-7-oracle-hardening.sh's AC-7-7b lane A-delta shape.
-HEAD_BRANCH_43="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
-case "$HEAD_BRANCH_43" in
-  dev/*-issue-43|dev/*-issue-43-*)
-    if [ -z "$BASE_REF" ]; then
-      echo "  FAIL: S43-UNTOUCHED: resolve_base_ref could not resolve a comparison base (fail-loud, not SKIP)"
-      FAIL=$((FAIL + 1))
-    else
-      CHANGED_FILES="$(git -C "$PROJECT_ROOT" diff "$BASE_REF"...HEAD --name-only 2>/dev/null)"
-      UNTOUCHED_BAD=0
-      for pattern in 'docs/teammate-common-rules.md' '.claude/agents/autoflow-.*\.md' 'docs/maintained-docs.md'; do
-        if printf '%s\n' "$CHANGED_FILES" | grep -qE -- "^${pattern}$"; then
-          UNTOUCHED_BAD=$((UNTOUCHED_BAD + 1))
-          echo "  (info) S43-UNTOUCHED: diff touches a file matching '$pattern'"
-        fi
-      done
-      assert_true "S43-UNTOUCHED: diff contains none of the three asserted non-edit surfaces" \
-        "[ \"$UNTOUCHED_BAD\" -eq 0 ]"
-    fi
-    ;;
-  *)
-    echo "  DEFERRED-OBSERVABLE: S43-UNTOUCHED: cycle-scoped lane inert off the issue-43 dev branch (head: ${HEAD_BRANCH_43:-unknown})"
-    ;;
-esac
 
 echo ""
 echo "=============================="
