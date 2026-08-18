@@ -50,9 +50,23 @@
 # STEP ID CONVENTION — a governed step's `id` is `s-<basename without
 # extension>`, which is how an outcome key resolves back to a suite path.
 #
+# CASCADE SKIPS — GitHub puts an implicit `success() &&` on every step, so once
+# one step fails each later governed step is SKIPPED without its guard ever
+# being evaluated. Grading those as wrongly-false guards produces one wrong
+# diagnosis per remaining suite on top of one real failure. A selected suite
+# whose outcome is `skipped` is therefore reported `CASCADE-SKIP` rather than
+# `MISMATCH` when the run is already failing, on either of two independent
+# signals: the job status handed in by `--job-status`, or a `failure` /
+# `cancelled` value anywhere in the outcome map. Neither subsumes the other —
+# the standing-lint steps carry no `id:` and so contribute nothing to
+# `toJSON(steps)`, which is invisible to the map arm, while a local run or a
+# fixture has no job status to hand in. The class does not change the exit
+# status: it is only ever reached on a run that is already red.
+#
 # Usage:
 #   bash scripts/test/check-step-reconciliation.sh \
-#        [--selected <file|->] [--steps <file|->] [--governed <path>]... [--self-test]
+#        [--selected <file|->] [--steps <file|->] [--governed <path>]... \
+#        [--job-status <success|failure|cancelled>] [--self-test]
 #
 # EVIDENCE IS A PRECONDITION, NOT AN OUTCOME. Zero evidence is not agreement:
 # an unreadable report, a report carrying the selector's own `BLOCK:` line, a
@@ -75,26 +89,38 @@
 
 set -uo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=scripts/test/suite-manifest.sh
+. "$SCRIPT_DIR/suite-manifest.sh"
+
+# require_value <flag> <remaining argc> <next argument> — a flag that takes a
+# value requires one. Absorbing a missing value into an empty string is how a
+# lost argument resolves to a default and reports a result about a subject the
+# caller never named.
+require_value() {
+  if [ "$2" -lt 2 ] || [ -z "$3" ]; then
+    echo "check-step-reconciliation: $1 requires a non-empty value" >&2
+    return 1
+  fi
+}
+
 MODE="default"
 SELECTED_FILE=""
 STEPS_FILE=""
+JOB_STATUS=""
 GOVERNED_ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --self-test) MODE="self-test" ;;
-    --selected)  SELECTED_FILE="${2:-}"; shift ;;
-    --steps)     STEPS_FILE="${2:-}"; shift ;;
-    --governed)  GOVERNED_ARGS+=("${2:-}"); shift ;;
-    *)           echo "check-step-reconciliation: unknown argument: $1" >&2; exit 2 ;;
+    --self-test)  MODE="self-test" ;;
+    --selected)   require_value "$1" $# "${2:-}" || exit 2; SELECTED_FILE="$2"; shift ;;
+    --steps)      require_value "$1" $# "${2:-}" || exit 2; STEPS_FILE="$2"; shift ;;
+    --governed)   require_value "$1" $# "${2:-}" || exit 2; GOVERNED_ARGS+=("$2"); shift ;;
+    --job-status) require_value "$1" $# "${2:-}" || exit 2; JOB_STATUS="$2"; shift ;;
+    *)            echo "check-step-reconciliation: unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
 done
-
-# step_id_of <repo-relative suite path> — the `id` a governed step carries.
-step_id_of() {
-  local base="${1##*/}"
-  printf 's-%s\n' "${base%.*}"
-}
 
 # ---------------------------------------------------------------------------
 # reconcile <selected-file> <steps-file> [<governed path>...]
@@ -104,6 +130,7 @@ reconcile() {
   local mismatches=0 line path state id outcome
   RECONCILED_COUNT=0
   OUT_OF_JOB_COUNT=0
+  CASCADE_SKIP_COUNT=0
 
   local sel_body steps_body
   # An unreadable report is the ABSENCE of evidence, not agreement. The former
@@ -157,8 +184,23 @@ reconcile() {
 
   # hosted_here <suite path> — the job's step context carries this suite's id.
   hosted_here() {
-    printf '%s' "$steps_body" | jq -e --arg k "$(step_id_of "$1")" 'has($k)' >/dev/null 2>&1
+    printf '%s' "$steps_body" | jq -e --arg k "$(suite_step_id "$1")" 'has($k)' >/dev/null 2>&1
   }
+
+  # Is this run already failing? Evaluated once, before anything is graded.
+  # Arm A is the job status the caller handed in; it is authoritative when
+  # present, and an unrecognised value is read as "not failing" so an unparsed
+  # status narrows the cascade class rather than widening it. Arm B reads the
+  # outcome map, which keeps the script self-sufficient where no status is
+  # available (a local run, a fixture).
+  local cascade=0
+  case "$JOB_STATUS" in
+    failure|cancelled) cascade=1 ;;
+  esac
+  if [ "$cascade" -eq 0 ] && printf '%s' "$steps_body" \
+     | jq -e 'any(.[]?; .outcome? == "failure" or .outcome? == "cancelled")' >/dev/null 2>&1; then
+    cascade=1
+  fi
 
   # Without an explicit `--governed` set, narrow to the suites this job hosts.
   # The fallback: a report none of whose entries the outcome map carries is not
@@ -203,15 +245,20 @@ reconcile() {
     fi
 
     RECONCILED_COUNT=$((RECONCILED_COUNT + 1))
-    id="$(step_id_of "$path")"
+    id="$(suite_step_id "$path")"
     outcome="$(printf '%s' "$steps_body" | jq -r --arg k "$id" '.[$k].outcome // "absent"')"
 
     if [ "$state" = selected ]; then
       case "$outcome" in
         success|failure) ;;
         skipped)
-          echo "MISMATCH: $path selected=yes outcome=skipped (a selected suite was skipped — the guard evaluated false)"
-          mismatches=$((mismatches + 1)) ;;
+          if [ "$cascade" -eq 1 ]; then
+            echo "CASCADE-SKIP: $path selected=yes outcome=skipped (a preceding step failed — this run cannot observe the guard's own evaluation)"
+            CASCADE_SKIP_COUNT=$((CASCADE_SKIP_COUNT + 1))
+          else
+            echo "MISMATCH: $path selected=yes outcome=skipped (a selected suite was skipped — the guard evaluated false)"
+            mismatches=$((mismatches + 1))
+          fi ;;
         absent)
           echo "MISMATCH: $path selected=yes outcome=absent (no step outcome — the step carries no id, so it is invisible to toJSON(steps))"
           mismatches=$((mismatches + 1)) ;;
@@ -283,6 +330,31 @@ self_test() {
 JSON
   expect "ungoverned steps present in the outcome map -> agreement" agree
 
+  # --- CASCADE SKIPS: a downstream skip after a failure is not a false guard --
+  # The outcome-map arm only; the job-status arm is reachable solely through the
+  # CLI flag loop, which self_test bypasses by calling reconcile directly.
+  printf 'SELECTED: tests/test-fixture-recon.sh\n' > "$sel"
+  cat > "$steps" <<'JSON'
+{
+  "s-upstream": {"outcome": "failure"},
+  "s-test-fixture-recon": {"outcome": "skipped"}
+}
+JSON
+  local casc_out
+  casc_out="$(reconcile "$sel" "$steps" 2>&1)"
+  if [ $? -eq 0 ] && printf '%s\n' "$casc_out" | grep -q '^CASCADE-SKIP: tests/test-fixture-recon.sh selected=yes outcome=skipped' \
+     && ! printf '%s\n' "$casc_out" | grep -q 'MISMATCH'; then
+    echo "  SELF-TEST PASS: a selected suite skipped downstream of a failing step is graded CASCADE-SKIP and does not change the exit code"
+  else
+    echo "  SELF-TEST FAIL: a selected suite skipped downstream of a failing step is graded CASCADE-SKIP and does not change the exit code — got: $casc_out"
+    fails=$((fails + 1))
+  fi
+
+  # Under a cascade every other branch is unchanged: a failing run says nothing
+  # about a step that carries no id at all, which is a static defect.
+  printf '{"s-upstream": {"outcome": "failure"}}\n' > "$steps"
+  expect "a cascading run carrying a selected suite absent from the outcome map -> mismatch" mismatch
+
   # --- EVIDENCE PRECONDITION: zero evidence is not agreement ---------------
   # Each arm asserts the non-zero exit AND a message of its own: a mismatch also
   # exits non-zero, so an arm reading only the code cannot tell "there was
@@ -326,10 +398,10 @@ JSON
 
   rm -rf "$dir"
   if [ "$fails" -ne 0 ]; then
-    echo "check-step-reconciliation: --self-test FAILED ($fails of 12 fixture classes misclassified)"
+    echo "check-step-reconciliation: --self-test FAILED ($fails of 14 fixture classes misclassified)"
     rc=1
   else
-    echo "check-step-reconciliation: --self-test OK (12/12 fixture classes classified correctly)"
+    echo "check-step-reconciliation: --self-test OK (14/14 fixture classes classified correctly)"
   fi
   return $rc
 }
@@ -350,7 +422,7 @@ if [ "$RC" -eq 0 ]; then
   # The success line states WHAT WAS COMPARED rather than asserting agreement in
   # the abstract, so a reader can tell a real comparison from a vacuous one
   # without reading the exit code alone.
-  echo "check-step-reconciliation: OK — $RECONCILED_COUNT record(s) reconciled against this job's step outcomes, $OUT_OF_JOB_COUNT out-of-job entr(y|ies) reported"
+  echo "check-step-reconciliation: OK — $RECONCILED_COUNT record(s) reconciled against this job's step outcomes, $OUT_OF_JOB_COUNT out-of-job entr(y|ies) reported, $CASCADE_SKIP_COUNT cascade skip(s) reported"
   exit 0
 fi
 if [ "$RC" -eq 3 ]; then
@@ -359,4 +431,8 @@ if [ "$RC" -eq 3 ]; then
 fi
 echo "check-step-reconciliation: the run's selection and its own step outcomes disagree"
 echo "  A selected suite that CI skipped is a wrongly-false if: guard, not a green run."
+# The aggregate is owed on every path the reconciliation loop ran, not only on
+# the agreeing one: the realistic CI shape is a real failure cascading a roster
+# that also carries a genuine disagreement, which exits here.
+echo "  $CASCADE_SKIP_COUNT cascade skip(s) reported — a suite skipped downstream of a failing step is graded separately, since this run cannot observe its guard."
 exit 1

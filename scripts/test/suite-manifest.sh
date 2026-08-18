@@ -144,6 +144,20 @@ suite_path_is_governed() {
 }
 
 # ---------------------------------------------------------------------------
+# suite_step_id <repo-relative suite path> — the `id` a governed step carries,
+# `s-<basename without extension>`. This is the ONLY link between a selection
+# report path and an Actions outcome-map key, so it has one authoring home: the
+# reconciler resolves a key back to a suite through it, and the manifest lint
+# requires the declared value to equal it. A second copy would be value-equal
+# on the day it is written and is what check-suite-manifest.sh's second-home
+# rule rejects.
+# ---------------------------------------------------------------------------
+suite_step_id() {
+  local base="${1##*/}"
+  printf 's-%s\n' "${base%.*}"
+}
+
+# ---------------------------------------------------------------------------
 # suite_enumerate <root> — repo-relative paths of every executable spec under
 # tests/**, sorted, minus the exclusions above.
 # ---------------------------------------------------------------------------

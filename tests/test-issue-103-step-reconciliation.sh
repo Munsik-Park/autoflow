@@ -513,10 +513,15 @@ JSON
 SELECTED: tests/test-fixture-mx-cascaded.sh
 SELECTED: tests/test-fixture-mx-absent.sh
 SEL
+  # test-fixture-mx-absent's id IS present (so job-local narrowing counts
+  # it hosted here, not OUT-OF-JOB) but carries no .outcome field -- the
+  # genuine "absent" MISMATCH shape, distinct from a suite this job's step
+  # context never mentions at all.
   cat > "$MX_STEPS_FILE" <<'JSON'
 {
   "s-upstream-fail": {"outcome": "failure"},
-  "s-test-fixture-mx-cascaded": {"outcome": "skipped"}
+  "s-test-fixture-mx-cascaded": {"outcome": "skipped"},
+  "s-test-fixture-mx-absent": {}
 }
 JSON
   bash "$RECONCILE" --selected "$MX_SELECTED_FILE" --steps "$MX_STEPS_FILE" >/tmp/issue108-cascademixed.out 2>&1

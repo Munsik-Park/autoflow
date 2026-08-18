@@ -693,7 +693,7 @@ YML
 jobs:
   fixture:
     steps:
-      - id: s-select
+      - id: s-fixture-multi-a
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/fixture-multi-a.sh ')
         timeout-minutes: 1
         run: |

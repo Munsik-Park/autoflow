@@ -1538,19 +1538,35 @@ assert_true "AC-blocks-stay-mutually-identical: the reconcile step's WHOLE mappi
 for wf in "${SELECTOR_CONSUMING_WORKFLOWS[@]}"; do
   wrel="${wf#"$PROJECT_ROOT"/}"
   select_tmo=""
+  # Each of these workflows also carries an UNGOVERNED "selection self-test"
+  # standing-lint step (run: bash scripts/test/select-suites.sh --self-test)
+  # -- same invoked path, but with neither id: nor if:, unlike the real
+  # governed select step (id: select). Only a record carrying one of those
+  # two markers is the governed record; the bare self-test record must not
+  # overwrite it when it happens to sort later in the file.
   while IFS='|' read -r start runpaths sid ifval tmo; do
-    case " $runpaths " in *' scripts/test/select-suites.sh '*) select_tmo="$tmo" ;; esac
+    case " $runpaths " in
+      *' scripts/test/select-suites.sh '*)
+        if [ -n "$sid" ] || [ -n "$ifval" ]; then select_tmo="$tmo"; fi ;;
+    esac
   done < <(invscan_workflow_steps "$wf")
-  assert_true "AC-infra-steps-are-time-bounded: $wrel -- the step invoking scripts/test/select-suites.sh declares timeout-minutes:" \
+  assert_true "AC-infra-steps-are-time-bounded: $wrel -- the GOVERNED step invoking scripts/test/select-suites.sh (id: select) declares timeout-minutes: (an ungoverned 'selection self-test' step invoking the same path, with neither id: nor if:, is excluded)" \
     "[ -n \"$select_tmo\" ]"
 done
 for wf in "${RECONCILER_CONSUMING_WORKFLOWS[@]}"; do
   wrel="${wf#"$PROJECT_ROOT"/}"
   reconcile_tmo=""
+  # Same disambiguation for the reconcile step's own "step-reconciliation
+  # self-test" sibling (run: bash scripts/test/check-step-reconciliation.sh
+  # --self-test, no id:, no if:) against the real reconcile step (if:
+  # always(), no id: of its own -- the if: is what marks it governed here).
   while IFS='|' read -r start runpaths sid ifval tmo; do
-    case " $runpaths " in *' scripts/test/check-step-reconciliation.sh '*) reconcile_tmo="$tmo" ;; esac
+    case " $runpaths " in
+      *' scripts/test/check-step-reconciliation.sh '*)
+        if [ -n "$sid" ] || [ -n "$ifval" ]; then reconcile_tmo="$tmo"; fi ;;
+    esac
   done < <(invscan_workflow_steps "$wf")
-  assert_true "AC-infra-steps-are-time-bounded: $wrel -- the step invoking scripts/test/check-step-reconciliation.sh declares timeout-minutes:" \
+  assert_true "AC-infra-steps-are-time-bounded: $wrel -- the GOVERNED reconcile step (if: always()) invoking scripts/test/check-step-reconciliation.sh declares timeout-minutes: (an ungoverned 'step-reconciliation self-test' step invoking the same path, with neither id: nor if:, is excluded)" \
     "[ -n \"$reconcile_tmo\" ]"
 done
 
