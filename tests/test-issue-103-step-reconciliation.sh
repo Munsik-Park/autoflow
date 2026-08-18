@@ -496,9 +496,10 @@ JSON
   printf 'SELECTED: tests/test-fixture-nc-a.sh\n' > "$NC_SELECTED_FILE"
   printf '{"s-test-fixture-nc-a": {"outcome": "success"}}\n' > "$NC_STEPS_FILE"
   bash "$RECONCILE" --selected "$NC_SELECTED_FILE" --steps "$NC_STEPS_FILE" >/tmp/issue108-cascadecount-zero.out 2>&1
+  nc_rc=$?
   nc_reported="$(grep -oE '[0-9]+ cascade[^,]*' /tmp/issue108-cascadecount-zero.out | grep -oE '^[0-9]+' | head -1)"
   assert_true "AC-cascade-count-is-reported: a no-cascade run's summary still carries the cascade clause, reporting 0" \
-    "[ $? -eq 0 ] && [ \"$nc_reported\" = \"0\" ]"
+    "[ $nc_rc -eq 0 ] && [ \"$nc_reported\" = \"0\" ]"
   rm -f "$CC_SELECTED_FILE" "$CC_STEPS_FILE" "$NC_SELECTED_FILE" "$NC_STEPS_FILE"
 
   # ---------------------------------------------------------------------

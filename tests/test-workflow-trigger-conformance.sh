@@ -1646,6 +1646,27 @@ STUB
   rm -rf "$root" "$rtemp" "$script" "$argvfile"
 }
 
+# argv_next_value <newline-separated argv> <flag> -- the token immediately
+# following the given flag, or empty when the flag is absent OR is the last
+# token (no following value to read). No grep -A/context-producer pipe: the
+# argv is split into an array and indexed directly, which is what makes the
+# flag-is-the-final-argv-element case (grep -A1 | tail -1 would otherwise
+# return the flag's own line) resolve to empty rather than the flag itself.
+argv_next_value() {
+  local argv="$1" flag="$2" i next_i
+  local -a lines
+  mapfile -t lines <<< "$argv"
+  for i in "${!lines[@]}"; do
+    if [ "${lines[$i]}" = "$flag" ]; then
+      next_i=$((i + 1))
+      if [ "$next_i" -lt "${#lines[@]}" ]; then
+        printf '%s' "${lines[$next_i]}"
+      fi
+      return 0
+    fi
+  done
+}
+
 for wf in "${RECONCILER_CONSUMING_WORKFLOWS[@]}"; do
   wrel="${wf#"$PROJECT_ROOT"/}"
   RECONCILE_BLOCK_TEXT="$(extract_reconcile_run_block "$wf")"
@@ -1659,12 +1680,12 @@ for wf in "${RECONCILER_CONSUMING_WORKFLOWS[@]}"; do
   pos_replay_rc_ok=true; [ "$REPLAY_RC" -eq 0 ] || pos_replay_rc_ok=false
   assert_true "AC-reconcile-block-text-executes positive control: $wrel -- replaying the shipped reconcile-step text verbatim under bash -e, with a stub reconciler exiting 0, exits the step 0" \
     "$pos_replay_rc_ok"
-  argv_has_selected=true; printf '%s\n' "$REPLAY_ARGV" | grep -qF -- '--selected' || argv_has_selected=false
-  argv_has_steps=true; printf '%s\n' "$REPLAY_ARGV" | grep -qF -- '--steps' || argv_has_steps=false
-  argv_has_jobstatus=true
-  jobstatus_ctx="$(printf '%s\n' "$REPLAY_ARGV" | grep -A1 -- '--job-status')"
-  jobstatus_val="$(printf '%s\n' "$jobstatus_ctx" | tail -1)"
-  [ -n "$jobstatus_val" ] || argv_has_jobstatus=false
+  selected_val="$(argv_next_value "$REPLAY_ARGV" --selected)"
+  steps_val="$(argv_next_value "$REPLAY_ARGV" --steps)"
+  jobstatus_val="$(argv_next_value "$REPLAY_ARGV" --job-status)"
+  argv_has_selected=true; [ -n "$selected_val" ] || argv_has_selected=false
+  argv_has_steps=true; [ -n "$steps_val" ] || argv_has_steps=false
+  argv_has_jobstatus=true; [ -n "$jobstatus_val" ] || argv_has_jobstatus=false
   assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --selected with a non-empty value" "$argv_has_selected"
   assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --steps with a non-empty value" "$argv_has_steps"
   assert_true "AC-reconcile-block-text-executes: $wrel -- the stub received --job-status (the env:-delivered JOB_STATUS, not an inline expression that would abort the bash -e replay before invocation)" \
