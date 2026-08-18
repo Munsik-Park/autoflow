@@ -183,6 +183,18 @@ require_value() {
 }
 
 # ---------------------------------------------------------------------------
+# trim_ws <value> — <value> with leading and trailing whitespace stripped,
+# printed on stdout. Shared by every parser that sources this file so the
+# strip idiom has one definition site rather than one copy per caller.
+# ---------------------------------------------------------------------------
+trim_ws() {
+  local v="$1"
+  v="${v#"${v%%[![:space:]]*}"}"
+  v="${v%"${v##*[![:space:]]}"}"
+  printf '%s' "$v"
+}
+
+# ---------------------------------------------------------------------------
 # suite_enumerate <root> — repo-relative paths of every executable spec under
 # tests/**, sorted, minus the exclusions above.
 # ---------------------------------------------------------------------------

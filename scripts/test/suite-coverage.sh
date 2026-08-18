@@ -198,7 +198,7 @@ resolve_over() {
           heading="$line"
           val="${line#'### green-tree | cycle: '}"
           val="${val%%' |'*}"
-          val="${val#"${val%%[![:space:]]*}"}"; val="${val%"${val##*[![:space:]]}"}"
+          val="$(trim_ws "$val")"
           if [ "$val" = "$cycle" ]; then
             in_entry=1; e_heading="$heading"
             e_tree=""; e_head=""; e_wt=""; e_suites=""; e_result=""; e_auth=""

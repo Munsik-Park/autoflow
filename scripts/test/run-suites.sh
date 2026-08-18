@@ -105,8 +105,7 @@ if [ -n "$PLAN_FILE" ]; then
   PLAN=""
   while IFS= read -r line || [ -n "$line" ]; do
     line="${line%$'\r'}"
-    line="${line#"${line%%[![:space:]]*}"}"
-    line="${line%"${line##*[![:space:]]}"}"
+    line="$(trim_ws "$line")"
     [ -n "$line" ] || continue
     if ! printf '%s\n' "$ENUMERATED" | grep -qxF -- "$line"; then
       echo "run-suites: --selected plan line is not an enumerated suite: $line" >&2
