@@ -6681,6 +6681,105 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "0019-scope-fit-verification-policy"
+    },
+    {
+      "id": "112-adr-0019-status",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/0019-scope-fit-verification-policy.md",
+      "section": "Status",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Proposed"
+    },
+    {
+      "id": "112-adr-0019-decision-sentence",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/0019-scope-fit-verification-policy.md",
+      "section": "Decision",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Selection-based intermediate verification."
+    },
+    {
+      "id": "112-claude-regressions-validate-clause",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Flow Control",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "VALIDATE step-1 whole-tree sweep FAIL → RED"
+    },
+    {
+      "id": "112-green-idiom-exit-status-guard",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "GREEN — Implementation",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "|| {"
+    },
+    {
+      "id": "112-submodule-rules-idiom-guard-must",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Running the bash suite tree",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Keep the `|| { … }` between the two commands"
+    },
+    {
+      "id": "112-submodule-rules-reporting-per-suite",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Reporting Format",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "per inherited suite"
+    },
+    {
+      "id": "112-submodule-rules-reporting-mixed-outcome",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Reporting Format",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "`mixed` when some suites inherited and the rest executed and passed"
+    },
+    {
+      "id": "112-maintained-docs-scope-fit-row",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/maintained-docs.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Scope-Fit Verdict Inheritance"
+    },
+    {
+      "id": "112-maintained-docs-selection-row-selected-flag",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/maintained-docs.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "runner's explicit-plan flag `--selected <path>`"
     }
   ]
 }

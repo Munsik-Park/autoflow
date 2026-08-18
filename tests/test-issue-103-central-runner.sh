@@ -868,6 +868,11 @@ if [ -f "$RUNNER" ]; then
   SEL_FX="$(mktemp -d)"
   build_stub_root "$SEL_FX"
 
+  bash "$RUNNER" --root "$SEL_FX" --selected "$SEL_FX/does-not-exist-plan.txt" >/tmp/issue112-selected-missing-file.out 2>&1
+  SEL_MISSING_RC=$?
+  assert_true "AC-runner-refuses-unplaceable-line: run-suites.sh --selected pointing at a nonexistent plan file is a usage error (exit 2), never treated as an empty plan" \
+    "[ $SEL_MISSING_RC -eq 2 ] && [ ! -s \"$SEL_FX/witness.log\" ]"
+
   # A valid, in-domain plan line plus a non-member line.
   SEL_PLAN="$SEL_FX/plan.txt"
   {
