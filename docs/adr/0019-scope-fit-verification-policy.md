@@ -37,11 +37,15 @@ detecting under-declaration is not solved here.
 2. **Suite-grained verdict inheritance.** The green-tree register keys inheritance **per suite** on
    that suite's own declared `ci-subject` reach, not on a whole-tree hash. The shipped whole-tree
    predicate survives verbatim as the fast path, so the new predicate's answer is never below
-   today's floor except where this ADR deliberately tightens it: a suite declaring
-   `# out-of-tree-inputs: yes` is excluded from inheritance entirely and executes unconditionally.
-   That declaration is a property of the suite, declared where the suite's other properties are
-   declared, and its presence on every suite the shipped base-ref call-site criterion matches is
-   held true by a lint arm rather than by a hand-kept list.
+   today's floor except where this ADR deliberately tightens it. Two tightenings are deliberate.
+   First, a suite declaring `# out-of-tree-inputs: yes` is excluded from inheritance entirely and
+   executes unconditionally. That declaration is a property of the suite, declared where the suite's
+   other properties are declared, and its presence on every suite the shipped base-ref call-site
+   criterion matches is held true by a lint arm rather than by a hand-kept list. Second, **head resolvability**
+   is a condition of the fast path selecting an entry at all: an entry whose `head` names no commit
+   in the repository is not selectable, because a match cites that head as the anchor a reader
+   re-derives. Both tightenings are monotone toward execution — each can only move a
+   suite from inheritance to running — so the floor argument above holds unchanged.
 
 3. **Evaluator execution discipline.** A gate evaluator resolves a suite-verdict anchor against the
    host's own record before executing anything, and cites what it inherited in a declared field of

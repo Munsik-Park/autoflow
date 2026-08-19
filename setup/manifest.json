@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/adr/0019-scope-fit-verification-policy.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7183e3352c3cc38ca4b068c86c98b203c9ac687808d6ac3aa91fad2171daf572"
+      "sha256": "29136691694e518095e2b3b9524c2e95e08bbeca80187afbd0ace964720f76c5"
     },
     {
       "source": "docs/adr/README.md",
@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bfae153c187071a258c5f5b58e23e1b7b7eec562f250b828796195a28088b064"
+      "sha256": "7a773fdc67216f2c5398b1f06fb29cbd084fd66f40ccdf947a4d42c36b508a3b"
     },
     {
       "source": "docs/design-rationale.md",

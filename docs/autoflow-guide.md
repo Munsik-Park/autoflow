@@ -720,6 +720,14 @@ foreground, from the repository root, at the capture point defined above. **Matc
   clean capture point, its `suites` field naming what ran. The fast path's own three mismatch outcomes
   are: no selectable entry for the cycle (`no-entry`), a dirty worktree (`dirty-worktree`), and a
   differing tree (`tree-differs`).
+- **Head resolvability is part of being selectable.** An entry whose `head` field **does not resolve to a commit**
+  in this repository is not selectable, exactly as an entry with an incomplete field block is not — condition 2's
+  ordering rule declines it and the predicate mismatches with the existing cause `no-entry`. The fast path does
+  **not** fall back to an earlier entry with the same `tree`: the declined entry stays visible to the
+  *Suite-coverage predicate* below, whose fold validates every head it lifts and executes the suites that entry
+  covers with the per-suite reason `unresolvable-head`. The requirement follows from what a match records — the
+  cited `head` is the anchor a reader re-derives, and a head naming no object cannot be re-derived — so declining
+  it moves a suite only from inheritance toward execution, never the reverse.
 - A cycle's first VERIFY inherits when GREEN step 5 registered a Green and the tree has not moved since
   that capture point. When no such entry is selectable — the acceptance run was narrower than the
   registrable scope, its capture point was dirty, or it was not all-PASS — the predicate mismatches with

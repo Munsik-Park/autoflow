@@ -276,13 +276,27 @@ resolve_over() {
     done
   done
 
-  # --- Whole-tree fast path: the shipped three conditions, verbatim -------
-  # This is why the change cannot regress the whole-tree predicate's behaviour:
-  # the new predicate's fast path IS the old predicate.
+  # --- Head resolvability, one definition site ----------------------------
+  # Both the fast path and the fold cite an entry's head as the anchor a reader
+  # re-derives, so both admit an entry on the same question: does the head name
+  # a commit in the repository rooted at $root? Resolving in a subshell from
+  # $root is the contract, not an incidental: the caller's cwd is not
+  # necessarily the repository under test.
+  head_resolves() { # <head hash> -> exit 0 when it names a commit
+    (cd "$root" && git rev-parse --verify -q "$1^{commit}" >/dev/null 2>&1)
+  }
+
+  # --- Whole-tree fast path: the shipped three conditions, plus the head ---
+  # resolvability this ADR deliberately tightens them with. The fast path is
+  # otherwise the old predicate verbatim, and the added conjunct can only move a
+  # suite from INHERIT to RUN — an unresolvable head makes the entry not
+  # selectable, so fast_idx stays -1 and every candidate falls through to the
+  # fold, which validates each head it lifts.
   local fast_idx=-1
   if [ -z "$dirty" ] && [ "$n_entries" -gt 0 ]; then
     local last=$(( n_entries - 1 ))
-    if [ "${entry_trees[$last]}" = "$tree" ] && entry_result_is_pass "${entry_results[$last]}"; then
+    if [ "${entry_trees[$last]}" = "$tree" ] && entry_result_is_pass "${entry_results[$last]}" \
+       && head_resolves "${entry_heads[$last]}"; then
       fast_idx=$last
     fi
   fi
@@ -345,7 +359,7 @@ resolve_over() {
       continue
     fi
     local h="${entry_heads[$idx]}"
-    if ! (cd "$root" && git rev-parse --verify -q "$h^{commit}" >/dev/null 2>&1); then
+    if ! head_resolves "$h"; then
       decision["$suite"]=RUN; record["$suite"]="unresolvable-head"; continue
     fi
     ans="$(reach_answer "$h" "$suite")"
