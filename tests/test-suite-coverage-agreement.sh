@@ -284,6 +284,275 @@ assert_true "step-text-agreement: docs/autoflow-guide.md cites 'scripts/test/sui
 assert_true "step-text-agreement: docs/autoflow-guide.md cites the '--selected' flag, and scripts/test/run-suites.sh actually accepts it" \
   "grep -qF -- '--selected' '$AUTOFLOW_GUIDE' && grep -qE -- '--selected\\)' '$RUNNER'"
 
+# =============================================================================
+# Leg 6 — reason-vocabulary drift agreement (issue #112 cycle 4 review
+# finding): the run-reason vocabulary gets exactly one normative home, a
+# delimited `reason-tokens: begin/end` declaration block in the resolver's
+# header comment; every other passage carrying these tokens is derived and is
+# held to that declaration mechanically.
+# .autoflow/issue-112-verification-design.md > "Acceptance criteria ->
+# verification (cycle 4)" and > "Extraction oracle";
+# .autoflow/issue-112-feature-design.md > "5. Regression surface".
+#
+# Extraction oracle (settled in the verification design, re-stated here as
+# the leg's own contract, not re-derived by the implementation):
+#   - resolver-side domain: non-comment lines only;
+#   - resolver literals: the quoted value of every `record["$suite"]=...`
+#     assignment whose right-hand side carries NO parameter expansion (the
+#     two interpolated `source: ... | head: ... | result: ...` citations are
+#     excluded by that same rule, not by a skip-list), plus the literal
+#     reason word inside the body of the block_fallback() function (found by
+#     that function's own opening/closing braces, never by matching the
+#     printf text anywhere in the file — the self-test's own
+#     `block-fallback` grep patterns are executable code the non-comment
+#     rule cannot exclude);
+#   - declared tokens: one word per line strictly between the header's
+#     `# reason-tokens: begin` / `# reason-tokens: end` markers;
+#   - guide narrative tokens: an ANCHORED occurrence only — a backticked
+#     `[a-z][a-z-]*` span immediately preceded by the word `reason` or
+#     `cause` — read over the WHITESPACE-NORMALIZED bound of the guide's
+#     *Suite-coverage predicate* section (its heading to the
+#     `**Reported vocabulary**` paragraph, exclusive), never per source line
+#     (the shipped guide already splits one anchor across a line break);
+#   - the single named exemption on the narrative side is `no-entry` (the
+#     resolver emits it, but the guide narrates it a section earlier as a
+#     fast-path outcome, not in this section).
+# =============================================================================
+
+RESOLVER_RECORD_RE='record\["\$suite"\]="[^"]*"'
+
+extract_resolver_emitted() { # -> declared-shape reason literals, sorted unique
+  {
+    grep -vE '^[[:space:]]*#' "$RESOLVER" \
+      | grep -oE "$RESOLVER_RECORD_RE" \
+      | sed -E 's/^.*\]="//; s/"$//' \
+      | grep -vF '$'
+    awk '
+      /block_fallback\(\)[[:space:]]*\{/ { flag=1; next }
+      flag { print }
+      flag && /^[[:space:]]*\}[[:space:]]*$/ { exit }
+    ' "$RESOLVER" | grep -oE 'block-fallback'
+  } | sort -u
+}
+
+extract_declared_tokens() { # -> tokens between the header's begin/end markers
+  awk '
+    /^#[[:space:]]*reason-tokens:[[:space:]]*begin[[:space:]]*$/ { flag=1; next }
+    /^#[[:space:]]*reason-tokens:[[:space:]]*end[[:space:]]*$/ { flag=0 }
+    flag { print }
+  ' "$RESOLVER" \
+    | sed -E 's/^#[[:space:]]*//' \
+    | grep -vE '^[[:space:]]*$' \
+    | sort -u
+}
+
+extract_predicate_section_bound() { # -> raw lines of the resolution-order bound
+  awk '
+    /^### Suite-coverage predicate[[:space:]]*$/ { flag=1; next }
+    /^\*\*Reported vocabulary\*\*/ { if (flag) exit }
+    flag { print }
+  ' "$AUTOFLOW_GUIDE"
+}
+
+extract_mismatch_paragraph() { # -> raw lines of the Mismatch-cause record paragraph
+  awk '
+    /^\*\*Mismatch-cause record\*\*:/ { flag=1 }
+    flag { print }
+    /^\*\*Where both records land\*\*:/ { if (flag) exit }
+  ' "$AUTOFLOW_GUIDE"
+}
+
+RT_EMITTED="$(extract_resolver_emitted)"
+RT_DECLARED="$(extract_declared_tokens)"
+RT_MISSING_FROM_DECLARED="$(comm -23 <(printf '%s\n' "$RT_EMITTED") <(printf '%s\n' "$RT_DECLARED"))"
+RT_PHANTOM_DECLARED="$(comm -13 <(printf '%s\n' "$RT_EMITTED") <(printf '%s\n' "$RT_DECLARED"))"
+
+assert_true "reason-vocabulary: emitted ⊆ declared — every static reason literal the resolver body writes (record[\"\$suite\"]=... assignments with no parameter expansion, plus the block_fallback() printf literal) appears in the header's reason-tokens declaration block (missing: $(printf '%s' "$RT_MISSING_FROM_DECLARED" | tr '\n' ' '))" \
+  "[ -z \"\$RT_MISSING_FROM_DECLARED\" ]"
+
+assert_true "reason-vocabulary: declared ⊆ emitted — no reason-tokens entry is declared that no site in the resolver body actually writes (phantom: $(printf '%s' "$RT_PHANTOM_DECLARED" | tr '\n' ' '))" \
+  "[ -z \"\$RT_PHANTOM_DECLARED\" ]"
+
+# --- Narrative <-> declaration (both directions, no-entry exempt) ----------
+
+NARR_BOUND_NORM="$(extract_predicate_section_bound | tr '\n' ' ' | tr -s '[:space:]' ' ')"
+NARR_TOKENS="$(printf '%s' "$NARR_BOUND_NORM" | grep -oE '(reason|cause)[[:space:]]+`[a-z][a-z-]*`' | grep -oE '`[a-z][a-z-]*`' | tr -d '`' | sort -u)"
+NARR_EXEMPT='no-entry'
+NARR_DECLARED_MINUS_EXEMPT="$(printf '%s\n' "$RT_DECLARED" | grep -vxF "$NARR_EXEMPT")"
+NARR_MISSING="$(comm -23 <(printf '%s\n' "$NARR_DECLARED_MINUS_EXEMPT") <(printf '%s\n' "$NARR_TOKENS"))"
+NARR_PHANTOM="$(comm -23 <(printf '%s\n' "$NARR_TOKENS") <(printf '%s\n' "$RT_DECLARED"))"
+
+assert_true "reason-vocabulary: declared ⊆ narrated (except the fast-path exemption 'no-entry') — every declared resolver token is an ANCHORED occurrence ('reason \`<token>\`' / 'cause \`<token>\`') inside the whitespace-normalized *Suite-coverage predicate* resolution-order bound (missing: $(printf '%s' "$NARR_MISSING" | tr '\n' ' '))" \
+  "[ -z \"\$NARR_MISSING\" ]"
+
+assert_true "reason-vocabulary: narrated ⊆ declared — every anchored reason token the predicate narrative names is a declared resolver token, not a phantom (phantom: $(printf '%s' "$NARR_PHANTOM" | tr '\n' ' '))" \
+  "[ -z \"\$NARR_PHANTOM\" ]"
+
+# --- By-reference link intact: the run-reasons field note names the resolver
+# as the vocabulary's owner, so the deferral cannot be silently severed and
+# replaced by a restated list. ------------------------------------------
+
+VERIFY_BODY_NORM="$(awk '/^## VERIFY/{flag=1} flag{print} /^## REFINE/{if(flag) exit}' "$AUTOFLOW_GUIDE" | tr '\n' ' ' | tr -s '[:space:]' ' ')"
+
+assert_true "reason-vocabulary: by-reference link intact — the guide's \`run-reasons\` field note names scripts/test/suite-coverage.sh as the vocabulary's owner (VERIFY section body scanned: ${#VERIFY_BODY_NORM} chars)" \
+  "printf '%s' \"\$VERIFY_BODY_NORM\" | grep -qE '\`run-reasons\`[^.]{0,255}scripts/test/suite-coverage\\.sh'"
+
+# --- Layers stay separate: no resolver-only reason token leaks onto the
+# step-level mismatch-cause enum, except the two conditions genuinely
+# observed at both layers (no-entry, dirty-worktree). --------------------
+
+MC_LINE="$(grep -oE '^- mismatch-cause: .*' "$AUTOFLOW_GUIDE" | head -1 | sed 's/^- mismatch-cause: //')"
+MC_TOKENS="$(printf '%s' "$MC_LINE" | tr '|' '\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | sort -u)"
+MC_TOKENS_NO_NONE="$(printf '%s\n' "$MC_TOKENS" | grep -vxF 'none' | sort -u)"
+
+LAYER_INTERSECT="$(comm -12 <(printf '%s\n' "$RT_EMITTED") <(printf '%s\n' "$MC_TOKENS"))"
+LAYER_ALLOWED="$(printf 'dirty-worktree\nno-entry\n' | sort)"
+LAYER_DISALLOWED="$(comm -23 <(printf '%s\n' "$LAYER_INTERSECT") <(printf '%s\n' "$LAYER_ALLOWED"))"
+
+assert_true "reason-vocabulary: layers stay separate — no resolver-emitted reason token appears on the guide's mismatch-cause enum line except the two whitelisted-by-name conditions observed at both layers (no-entry, dirty-worktree) (disallowed overlap: $(printf '%s' "$LAYER_DISALLOWED" | tr '\n' ' '))" \
+  "[ -z \"\$LAYER_DISALLOWED\" ]"
+
+# --- Step-layer texts agree: the precedence sentence, the paragraph <->
+# grammar-line equivalence (excluding 'none', which is a value on the match
+# path rather than a fired condition), and REFINE step 2 as a SUBSET (not
+# equality) of the narrowed token set. ------------------------------------
+
+assert_true "reason-vocabulary: mismatch-cause precedence is stated in the Mismatch-cause record paragraph — 'selection-block' outranks every fast-path cause" \
+  "grep -qF 'outranks every fast-path cause' '$AUTOFLOW_GUIDE'"
+
+MCP_TEXT="$(extract_mismatch_paragraph)"
+MCP_TOKENS="$(printf '%s' "$MCP_TEXT" | grep -oE '`[a-z][a-z-]*`' | tr -d '`' | sort -u)"
+MCP_MISSING="$(comm -23 <(printf '%s\n' "$MC_TOKENS_NO_NONE") <(printf '%s\n' "$MCP_TOKENS"))"
+MCP_EXTRA="$(comm -13 <(printf '%s\n' "$MC_TOKENS_NO_NONE") <(printf '%s\n' "$MCP_TOKENS"))"
+
+assert_true "reason-vocabulary: the Mismatch-cause record paragraph names every step-level cause the mismatch-cause grammar line admits, excluding 'none' (missing: $(printf '%s' "$MCP_MISSING" | tr '\n' ' '))" \
+  "[ -z \"\$MCP_MISSING\" ]"
+
+assert_true "reason-vocabulary: the Mismatch-cause record paragraph names no cause the mismatch-cause grammar line does not admit (extra: $(printf '%s' "$MCP_EXTRA" | tr '\n' ' '))" \
+  "[ -z \"\$MCP_EXTRA\" ]"
+
+REFINE_MATCH="$(grep -oE 'Mismatch \(`[a-z][a-z-]*` */ *`[a-z][a-z-]*` */ *`[a-z][a-z-]*`' "$AUTOFLOW_GUIDE" | head -1)"
+REFINE_TOKENS="$(printf '%s' "$REFINE_MATCH" | grep -oE '`[a-z][a-z-]*`' | tr -d '`' | sort -u)"
+REFINE_NOT_SUBSET="$(comm -23 <(printf '%s\n' "$REFINE_TOKENS") <(printf '%s\n' "$MC_TOKENS_NO_NONE"))"
+
+assert_true "reason-vocabulary: REFINE step 2's mismatch enumeration (no-entry / dirty-worktree / tree-differs) stays a SUBSET of the narrowed mismatch-cause token set, not an equality (found: $(printf '%s' "$REFINE_TOKENS" | tr '\n' ' '); not-subset: $(printf '%s' "$REFINE_NOT_SUBSET" | tr '\n' ' '))" \
+  "[ -n \"\$REFINE_TOKENS\" ] && [ -z \"\$REFINE_NOT_SUBSET\" ]"
+
+# =============================================================================
+# Leg 7 — run-reasons field value has a decidable parse: a value built from
+# one record of every declared token, plus a citation record mapped to the
+# fixed class token `covered-by-source`, splits on ';' and then whitespace
+# and recovers the exact (suite, token) pairs.
+# Guarded: the resolver's reason-tokens declaration does not exist yet at RED
+# time, so this leg reports a named FAIL rather than parsing an empty set.
+# =============================================================================
+
+if [ -z "$RT_DECLARED" ]; then
+  assert_true "run-reasons-parse: the resolver's header declares its reason-tokens block (required to build a representative run-reasons value)" "false"
+else
+  RR_SUITES=(); RR_TOKENS=()
+  rr_idx=0
+  while IFS= read -r rr_tok; do
+    [ -z "$rr_tok" ] && continue
+    rr_idx=$((rr_idx + 1))
+    RR_SUITES+=("suite$rr_idx.sh")
+    RR_TOKENS+=("$rr_tok")
+  done <<< "$RT_DECLARED"
+  rr_idx=$((rr_idx + 1))
+  RR_SUITES+=("suite$rr_idx.sh")
+  RR_TOKENS+=("covered-by-source")
+
+  RR_VALUE=""
+  for rr_j in "${!RR_SUITES[@]}"; do
+    [ -n "$RR_VALUE" ] && RR_VALUE="$RR_VALUE; "
+    RR_VALUE="$RR_VALUE${RR_SUITES[$rr_j]} ${RR_TOKENS[$rr_j]}"
+  done
+
+  RR_RECOVERED_OK=1
+  IFS=';' read -ra RR_RECORDS <<< "$RR_VALUE"
+  if [ "${#RR_RECORDS[@]}" -ne "${#RR_SUITES[@]}" ]; then
+    RR_RECOVERED_OK=0
+  else
+    for rr_j in "${!RR_RECORDS[@]}"; do
+      rr_rec="$(printf '%s' "${RR_RECORDS[$rr_j]}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+      rr_s="${rr_rec%% *}"; rr_t="${rr_rec#* }"
+      { [ "$rr_s" = "${RR_SUITES[$rr_j]}" ] && [ "$rr_t" = "${RR_TOKENS[$rr_j]}" ]; } || RR_RECOVERED_OK=0
+    done
+  fi
+
+  assert_true "run-reasons-parse: a run-reasons value built from one record of every declared token plus a covered-by-source citation ('$RR_VALUE') splits on ';' then whitespace and recovers the exact (suite, token) pairs" \
+    "[ $RR_RECOVERED_OK -eq 1 ]"
+fi
+
+# =============================================================================
+# Leg 8 — runtime: the strings the resolver prints at run time are declared
+# strings, and this gives `no-coverage` its first positive firing anywhere in
+# the tree (the resolver's own --self-test names it only in a comment).
+# Fixture: one committed entry covers suite B with a well-formed but
+# unresolvable head (git object does not exist) and does not name suite A —
+# suite A has no covering entry although n_entries > 0 (no-coverage), suite B
+# has a covering entry whose head does not resolve (unresolvable-head).
+# Guarded: the resolver does not exist yet at RED time.
+# =============================================================================
+
+if [ ! -f "$RESOLVER" ]; then
+  assert_true "reason-vocabulary-runtime: scripts/test/suite-coverage.sh exists (cannot exercise no-coverage / unresolvable-head without it)" "false"
+else
+  FXRT="$(mktemp -d)"
+  mkdir -p "$FXRT/tests" "$FXRT/.autoflow"
+  cat > "$FXRT/tests/test-fixture-112-rr-a.sh" <<SH
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-112-rr-a-subject.txt
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+  cat > "$FXRT/tests/test-fixture-112-rr-b.sh" <<SH
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-112-rr-b-subject.txt
+# lane: standing
+# budget-secs: 5
+exit 0
+SH
+  chmod +x "$FXRT/tests/test-fixture-112-rr-a.sh" "$FXRT/tests/test-fixture-112-rr-b.sh"
+  printf '.autoflow/\n' > "$FXRT/.gitignore"
+  (cd "$FXRT" && git init -q && git add -A \
+    && git -c user.email=t@example.com -c user.name=t commit -q -m init)
+
+  LEDGER_RT="$FXRT/.autoflow/issue-9999-ledger.md"
+  cat > "$LEDGER_RT" <<'LG'
+### green-tree | cycle: 1
+- tree: 1111111111111111111111111111111111111111
+- head: 2222222222222222222222222222222222222222
+- worktree: clean
+- suites: tests/test-fixture-112-rr-b.sh
+- result: 2 passed, 0 failed
+- authority: Green-tree register
+LG
+
+  RT_ERR="$(mktemp)"
+  bash "$RESOLVER" --ledger "$LEDGER_RT" --cycle 1 --root "$FXRT" --candidates all >/dev/null 2>"$RT_ERR"
+
+  RT_REASON_A="$(grep -E '^RUN: tests/test-fixture-112-rr-a\.sh ' "$RT_ERR" | sed -E 's/^RUN: [^ ]+ //')"
+  RT_REASON_B="$(grep -E '^RUN: tests/test-fixture-112-rr-b\.sh ' "$RT_ERR" | sed -E 's/^RUN: [^ ]+ //')"
+
+  RT_A_DECLARED_OK=0; RT_B_DECLARED_OK=0
+  printf '%s\n' "$RT_DECLARED" | grep -qxF "$RT_REASON_A" && RT_A_DECLARED_OK=1
+  printf '%s\n' "$RT_DECLARED" | grep -qxF "$RT_REASON_B" && RT_B_DECLARED_OK=1
+
+  assert_true "reason-vocabulary-runtime: the real resolver fires 'no-coverage' for a candidate no covering entry names, over a ledger with n_entries > 0 (observed: '$RT_REASON_A')" \
+    "[ \"\$RT_REASON_A\" = no-coverage ]"
+
+  assert_true "reason-vocabulary-runtime: the real resolver fires 'unresolvable-head' for a covering entry whose head is hash-shaped but not a resolvable commit (observed: '$RT_REASON_B')" \
+    "[ \"\$RT_REASON_B\" = unresolvable-head ]"
+
+  assert_true "reason-vocabulary-runtime: both observed runtime reasons are members of the header's declared reason-tokens, not a hand-written expectation (no-coverage declared: $RT_A_DECLARED_OK, unresolvable-head declared: $RT_B_DECLARED_OK)" \
+    "[ \"\$RT_A_DECLARED_OK\" -eq 1 ] && [ \"\$RT_B_DECLARED_OK\" -eq 1 ]"
+
+  rm -f "$RT_ERR"
+  rm -rf "$FXRT"
+fi
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1

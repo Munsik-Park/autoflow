@@ -5233,7 +5233,7 @@
       "predicate": "present",
       "match": "fixed",
       "scope": "permanent",
-      "literal": "- mismatch-cause: no-entry | dirty-worktree | tree-differs | head-not-ancestor | reach-changed | out-of-tree-inputs | selection-block | none"
+      "literal": "- mismatch-cause: no-entry | dirty-worktree | tree-differs | selection-block | none"
     },
     {
       "id": "88-verify-field-source",
@@ -6538,6 +6538,28 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "- ran-suites: <path> [...] | none"
+    },
+    {
+      "id": "112-green-tree-use-run-reasons",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "- run-reasons: <suite> <token> [; <suite> <token> ...] | none"
+    },
+    {
+      "id": "112-maintained-docs-scope-fit-run-reasons",
+      "origin_issue": 112,
+      "intent": "coherence",
+      "file": "docs/maintained-docs.md",
+      "section": "Methodology CI (`.claude/workflows/` deliberation scripts)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "the declared per-suite reason vocabulary"
     },
     {
       "id": "112-verify-step1-selection",
