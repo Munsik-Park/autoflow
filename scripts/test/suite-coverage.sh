@@ -420,12 +420,18 @@ fx_commit() { # <dir> <path> <message>
   git -C "$1" -c user.email=a@b.c -c user.name=a commit -q -m "$3" >/dev/null 2>&1
 }
 
-fx_entry() { # <ledger> <cycle> <tree> <head> <suites> [result]
+fx_entry() { # <ledger> <cycle> <tree> <head> <suites> [result] [worktree]
+  # worktree defaults to clean (the only value the shipped writer produces).
+  # The sentinel `omit` suppresses the line entirely, for the absent-field
+  # disposition no value parameter can express (issue #112 cycle 3).
+  local wt="${7:-clean}"
   {
     printf '### green-tree | cycle: %s | runner: VERIFY step 1\n' "$2"
     printf -- '- tree: %s\n' "$3"
     printf -- '- head: %s\n' "$4"
-    printf -- '- worktree: clean\n'
+    if [ "$wt" != omit ]; then
+      printf -- '- worktree: %s\n' "$wt"
+    fi
     printf -- '- suites: %s\n' "$5"
     printf -- '- result: %s\n' "${6:-run-suites: 3 passed, 0 failed, 0 timed out, of 3 executed}"
     printf -- '- authority: Green-tree register\n'
@@ -719,6 +725,80 @@ SH
     st_ok "BLOCK leg (candidate-set selection)" "a selector BLOCK in the candidate call still yields the whole enumerated set"
   else
     st_fail "BLOCK leg (candidate-set selection)" "expected 4 block-fallback records and a non-zero exit, got rc=$ST_RC: $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- MALFORMED-WORKTREE leg (a): a dirty-tagged entry BLOCKs rather than
+  # being selected, and folds nothing in. The BLOCK observable triple mirrors
+  # the shipped BLOCK leg (malformed entry) above; the fourth assertion is
+  # this leg's own — a BLOCK short-circuits before the per-suite fold ever
+  # runs, so no INHERIT record can cite the blocked entry (issue #112 cycle 3).
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_entry "$ledger" 1 "$tree" "$head" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh" \
+    "run-suites: 3 passed, 0 failed, 0 timed out, of 3 executed" dirty
+  st_run "$d" "$ledger" 1 all
+  if [ "$ST_RC" -ne 0 ] && [ "$(printf '%s\n' "$ST_PLAN" | grep -c .)" -eq 3 ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE '^RUN: .* block-fallback$')" -eq 3 ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE '^INHERIT: ')" -eq 0 ]; then
+    st_ok "MALFORMED-WORKTREE leg (dirty blocks)" "a worktree: dirty entry BLOCKs the whole enumerated set and folds nothing in"
+  else
+    st_fail "MALFORMED-WORKTREE leg (dirty blocks)" "expected 3 block-fallback records, zero INHERIT records, and a non-zero exit, got rc=$ST_RC: $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- MALFORMED-WORKTREE leg (b): clean control. The identical fixture and
+  # entry, differing only in that one value, must still inherit — without this
+  # control a dirty half broken for an unrelated reason goes green for the
+  # wrong reason.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_entry "$ledger" 1 "$tree" "$head" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh" \
+    "run-suites: 3 passed, 0 failed, 0 timed out, of 3 executed" clean
+  st_run "$d" "$ledger" 1 all
+  if [ "$ST_RC" -eq 0 ] && [ -z "$ST_PLAN" ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE '^INHERIT: ')" -eq 3 ] \
+     && st_reason 'tests/test-fx-cov-a\.sh' | grep -qF '### green-tree | cycle: 1'; then
+    st_ok "MALFORMED-WORKTREE leg (clean control)" "the identical entry with worktree: clean still inherits every suite, citing the entry as source"
+  else
+    st_fail "MALFORMED-WORKTREE leg (clean control)" "expected an empty plan and 3 INHERIT records citing the entry, got rc=$ST_RC: $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- MALFORMED-WORKTREE leg (c): an unrecognised value still BLOCKs — the
+  # regression observer proving the edit narrowed the accepted set rather than
+  # collapsing the whole condition it lives in.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_entry "$ledger" 1 "$tree" "$head" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh" \
+    "run-suites: 3 passed, 0 failed, 0 timed out, of 3 executed" murky
+  st_run "$d" "$ledger" 1 all
+  if [ "$ST_RC" -ne 0 ] && [ "$(printf '%s\n' "$ST_PLAN" | grep -c .)" -eq 3 ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE '^RUN: .* block-fallback$')" -eq 3 ]; then
+    st_ok "MALFORMED-WORKTREE leg (unrecognised value)" "a worktree value that is neither clean nor dirty still BLOCKs"
+  else
+    st_fail "MALFORMED-WORKTREE leg (unrecognised value)" "expected 3 block-fallback records and a non-zero exit, got rc=$ST_RC: $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- MALFORMED-WORKTREE leg (d): the absent-field disposition is unchanged
+  # — no `worktree` line at all is still the silent mismatch (no-entry), never
+  # the BLOCK this cycle adds for a present-but-unreadable value.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_entry "$ledger" 1 "$tree" "$head" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh" \
+    "run-suites: 3 passed, 0 failed, 0 timed out, of 3 executed" omit
+  st_run "$d" "$ledger" 1 all
+  if [ "$ST_RC" -eq 0 ] && [ "$(printf '%s\n' "$ST_PLAN" | grep -c .)" -eq 3 ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE '^RUN: ')" -eq 3 ] \
+     && st_reason 'tests/test-fx-cov-a\.sh' | grep -qF 'no-entry'; then
+    st_ok "MALFORMED-WORKTREE leg (absent field)" "an entry with no worktree line at all stays silently non-selected, cause no-entry"
+  else
+    st_fail "MALFORMED-WORKTREE leg (absent field)" "expected 3 RUN records with cause no-entry, got rc=$ST_RC: $ST_REC"
   fi
   rm -rf "$d"
 
