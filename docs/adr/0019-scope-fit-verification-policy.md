@@ -96,7 +96,7 @@ per-suite record.
 - A suite declaring `# out-of-tree-inputs: yes` executes unconditionally, which is **narrower** than
   the shipped whole-tree key would have allowed. This is deliberate and is the one direction in
   which this decision does not widen.
-- What CI executes is unchanged. `scripts/test/select-suites.sh` is not modified.
+- What CI executes is unchanged. `scripts/test/select-suites.sh` gains an opt-in `--include-worktree` flag that no CI call passes.
 
 ## Related Issues / PRs
 

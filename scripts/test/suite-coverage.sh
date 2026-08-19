@@ -146,13 +146,18 @@ resolve_over() {
   # --- Candidate set ------------------------------------------------------
   # Under `all` this needs no selection call, which is what lets the BLOCK
   # fallback survive a selector that cannot compute.
+  # `--include-worktree` is passed HERE and only here: the capture point
+  # verifies the working tree, so the change this cycle is answering for is
+  # committed AND uncommitted, and a committed-only candidate set would inherit
+  # a suite whose subject is dirty. The reach test below asks a historical
+  # question and deliberately does not pass it.
   local sel_err sel_out sel_rc
   if [ "$mode" = all ]; then
     is_candidate=()
     for suite in ${enumerated[@]+"${enumerated[@]}"}; do is_candidate["$suite"]=1; done
   else
     sel_err="$(mktemp)"
-    sel_out="$(bash "$SCRIPT_DIR/select-suites.sh" --root "$root" --event pull_request 2>"$sel_err")"
+    sel_out="$(bash "$SCRIPT_DIR/select-suites.sh" --root "$root" --event pull_request --include-worktree 2>"$sel_err")"
     sel_rc=$?
     if [ "$sel_rc" -ne 0 ]; then
       cat "$sel_err" >&2; rm -f "$sel_err"
@@ -289,6 +294,9 @@ resolve_over() {
     fi
     # Step 8 — a suite the cycle's own delta does not reach. A positive
     # statement that the resolver considered it and declined it, not a silence.
+    # The candidate set is selected with `--include-worktree`, so "this cycle's
+    # delta" here is the committed one unioned with the uncommitted worktree —
+    # a suite whose subject is dirty is a candidate and falls through to Step 3.
     if [ -z "${is_candidate[$suite]:-}" ]; then
       decision["$suite"]=INHERIT; record["$suite"]="not-in-cycle-delta"; continue
     fi

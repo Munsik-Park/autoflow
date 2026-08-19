@@ -33,9 +33,21 @@
 # contract: an unresolvable base is a visible BLOCK and a non-zero exit, never a
 # silent empty selection.
 #
+# WORKTREE INCLUSION is opt-in through `--include-worktree`, off by default.
+# With it on, the resolved delta is the UNION of the committed delta with the
+# uncommitted one — `git diff --name-only HEAD` (tracked, staged and unstaged)
+# plus `git ls-files --others --exclude-standard` (untracked, ignore rules
+# honoured). The flag can only widen: the full-set rule keeps keying on the
+# committed delta, so an empty committed delta still selects the full set; an
+# unresolvable base is still a BLOCK, since the union applies only to a delta
+# that resolved; and under a push event no delta is resolved at all, so the flag
+# is inert there. Callers verifying a working tree (the interim capture point in
+# scripts/test/suite-coverage.sh) pass it; CI, whose checkout is clean, does not.
+#
 # Usage:
 #   bash scripts/test/select-suites.sh [--root <dir>] [--base <ref>]
-#                                      [--event pull_request|push] [--self-test]
+#                                      [--event pull_request|push]
+#                                      [--include-worktree] [--self-test]
 #
 # stdout: one selected repo-relative suite path per line.
 # stderr: the per-subject SELECTED: / NOT-SELECTED: report.
@@ -57,9 +69,11 @@ MODE="default"
 ROOT=""
 BASE=""
 EVENT="${GITHUB_EVENT_NAME:-pull_request}"
+INCLUDE_WORKTREE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --self-test) MODE="self-test" ;;
+    --include-worktree) INCLUDE_WORKTREE=1 ;;
     --root)      require_value select-suites "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
     --base)      require_value select-suites "$1" $# "${2:-}" || exit 2; BASE="$2"; shift ;;
     --event)     require_value select-suites "$1" $# "${2:-}" || exit 2; EVENT="$2"; shift ;;
@@ -91,11 +105,14 @@ glob_matches() {
 }
 
 # ---------------------------------------------------------------------------
-# resolve_delta <root> <base> — repo-relative changed paths, one per line.
-# Prints nothing and returns 1 when no base is resolvable (fail-loud).
+# resolve_delta <root> <base> <include-worktree> — repo-relative changed paths,
+# one per line. Prints nothing and returns 1 when no base is resolvable
+# (fail-loud) — base resolution comes first, so the uncommitted delta is never
+# consulted as a substitute base. With <include-worktree> on, the committed
+# delta is unioned with the uncommitted one; the union only adds paths.
 # ---------------------------------------------------------------------------
 resolve_delta() {
-  local root="$1" base="$2" resolved
+  local root="$1" base="$2" include_worktree="${3:-0}" resolved
   # shellcheck source=tests/lib/base-ref.sh
   if [ -f "$root/tests/lib/base-ref.sh" ]; then
     . "$root/tests/lib/base-ref.sh"
@@ -106,14 +123,27 @@ resolve_delta() {
   fi
   resolved="$(cd "$root" && resolve_base_ref "$base" 2>/dev/null)" || return 1
   [ -n "$resolved" ] || return 1
-  (cd "$root" && git diff --name-only "$resolved"...HEAD 2>/dev/null)
+  local committed
+  committed="$(cd "$root" && git diff --name-only "$resolved"...HEAD 2>/dev/null)"
+  # An empty committed delta stays empty: the full-set rule in select_over keys
+  # on it, and widening it here would turn "the full set runs" into a narrowed
+  # selection — the one direction this flag must never take.
+  if [ "$include_worktree" != 1 ] || [ -z "$committed" ]; then
+    printf '%s\n' "$committed"
+    return 0
+  fi
+  { printf '%s\n' "$committed"
+    cd "$root" || return 1
+    git diff --name-only HEAD 2>/dev/null
+    git ls-files --others --exclude-standard 2>/dev/null
+  } | grep -v '^$' | sort -u
 }
 
 # ---------------------------------------------------------------------------
-# select_over <root> <event> <base>
+# select_over <root> <event> <base> <include-worktree>
 # ---------------------------------------------------------------------------
 select_over() {
-  local root="$1" event="$2" base="$3"
+  local root="$1" event="$2" base="$3" include_worktree="${4:-0}"
   local delta="" full_set=0 lib_touched=0 suite tok path matched reason
   local hdr toks
   local -a suites=()
@@ -148,7 +178,7 @@ select_over() {
     full_set=1
     reason="push event — the full set runs (the push delta is empty by construction)"
   else
-    if ! delta="$(resolve_delta "$root" "$base")"; then
+    if ! delta="$(resolve_delta "$root" "$base" "$include_worktree")"; then
       echo "BLOCK: select-suites — no base ref resolvable; refusing to emit an empty selection" >&2
       echo "  A base-dependent selection whose base does not resolve must fail loud, never narrow to nothing." >&2
       return 1
@@ -448,5 +478,5 @@ if [ "$MODE" = "self-test" ]; then
   exit $?
 fi
 
-select_over "$ROOT" "$EVENT" "$BASE"
+select_over "$ROOT" "$EVENT" "$BASE" "$INCLUDE_WORKTREE"
 exit $?
