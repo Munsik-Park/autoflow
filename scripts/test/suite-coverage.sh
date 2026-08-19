@@ -177,6 +177,9 @@ resolve_over() {
   # MALFORMED — a required field carrying an empty or structurally invalid
   # value — is a BLOCK: unlike an absent field, it is a positive statement the
   # resolver cannot read, and guessing at it is how inheritance widens silently.
+  # Per field: tree and head must be hash-shaped, and worktree admits the single
+  # value `clean` — the writer suppresses the entry entirely at a dirty capture
+  # point, so any other value is a ledger no writer produces.
   if [ -n "$ledger" ] && [ -f "$ledger" ]; then
     local in_entry=0 e_tree="" e_head="" e_wt="" e_suites="" e_result="" e_auth="" e_heading=""
     flush_entry() {
@@ -187,7 +190,7 @@ resolve_over() {
       [ -n "$e_tree" ] && [ -n "$e_head" ] && [ -n "$e_wt" ] && [ -n "$e_suites" ] \
         && [ -n "$e_result" ] && [ -n "$e_auth" ] || return 0
       if ! hash_shaped "$e_tree" || ! hash_shaped "$e_head" \
-         || { [ "$e_wt" != clean ] && [ "$e_wt" != dirty ]; }; then
+         || [ "$e_wt" != clean ]; then
         MALFORMED_ENTRY="$e_heading"
         return 0
       fi
