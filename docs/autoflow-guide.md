@@ -756,13 +756,13 @@ Its resolution order, at the same capture point:
    different question there, and the resolver refuses to reason rather than answer narrowly);
    otherwise the selector's answer against `--base h` decides — selected → execute, reason
    `reach-changed`; not selected → inherit, citing the covering entry.
-6. **Uncovered candidates** execute (`no-coverage`); **non-candidates** are recorded inherited with
+6. **Uncovered candidates** execute, reason `no-coverage`; **non-candidates** are recorded inherited with
    reason `not-in-cycle-delta` and carry no source entry — a positive statement that the resolver
    considered the suite and declined it, not a silence.
 
 The resolver emits one record per **enumerated** suite in every mode, so `inherited-suites` and
 `ran-suites` below partition the enumerated set exactly. A BLOCK never emits a partial plan: the
-whole enumerated set becomes the plan, every record reads `block-fallback`, and the exit is non-zero
+whole enumerated set becomes the plan, every record carries reason `block-fallback`, and the exit is non-zero
 — a failure to reason about inheritance degrades to executing, never to skipping.
 
 **Reported vocabulary**: the step's reported outcome is one of `passed` / `inherited` / `mixed` / `failed`, and the
@@ -773,10 +773,18 @@ as `inherited` and **never** as `passed` — the same truthfulness rule the *Det
 with `not-run` ≠ `clean`. `inherited` is nowhere defined as a synonym or subtype of `passed`, and a report on
 an inherited path that states a suite summary line as its own is a contract violation.
 
-**Mismatch-cause record**: on the mismatch path the step records which condition fired — the fast path's
-own `no-entry` / `dirty-worktree` / `tree-differs`, or one of the suite-coverage causes
-`head-not-ancestor` / `reach-changed` / `out-of-tree-inputs` / `selection-block` — alongside the run's own outcome, so the re-aimed REFINE
-`[MUST]` leaves a trace on both branches rather than only on the match path.
+**Mismatch-cause record**: on the mismatch path the step records which condition fired, alongside the run's
+own outcome, so the re-aimed REFINE `[MUST]` leaves a trace on both branches rather than only on the match
+path. The field is **step-level and closed**: the fast path's own three outcomes — `no-entry`,
+`dirty-worktree`, `tree-differs` — plus `selection-block`, recorded when the resolver exits non-zero, and
+the value none, which is what the match path records because no condition fired there at all. That is why
+none is a member of the grammar without being a cause: it is the field's value in the absence of one. The
+resolver's per-suite reasons are a **different** vocabulary at a different layer and are never recorded
+here; they land in the run-reasons field below. Because the field is scalar and the step reaches the
+resolver only after a fast-path mismatch, a BLOCK evaluation has two fired conditions and one value must
+win: `selection-block` outranks every fast-path cause, and among the fast-path causes themselves only one
+can hold, since they are the three disjoint outcomes of a single predicate evaluation. The field is
+therefore single-valued by rule, not by luck.
 
 **Where both records land**: the inheritance line and the mismatch-cause record are one durable record of
 the step's predicate evaluation, written by the orchestrator at the same phase exit as the register write,
@@ -785,9 +793,10 @@ on the same ledger, under its own marker `green-tree-use` and following the same
 ```
 ### green-tree-use | cycle: <C> | runner: <PHASE> step <S>
 - outcome: passed | inherited | mixed | failed
-- mismatch-cause: no-entry | dirty-worktree | tree-differs | head-not-ancestor | reach-changed | out-of-tree-inputs | selection-block | none
+- mismatch-cause: no-entry | dirty-worktree | tree-differs | selection-block | none
 - inherited-suites: <path> [...] | none
 - ran-suites: <path> [...] | none
+- run-reasons: <suite> <token> [; <suite> <token> ...] | none
 - source: <source entry heading> | tree: <hash> | head: <hash> | result: <summary line>
 - authority: Green-tree register
 ```
@@ -796,6 +805,18 @@ on the same ledger, under its own marker `green-tree-use` and following the same
   the step acted on it: `ran-suites` is exactly the plan the step executed, and the two together are
   `suite_enumerate`. A wrong fold therefore leaves a re-derivable trace rather than a silent
   narrowing.
+- `run-reasons` names, per enumerated suite, the reason it landed in its partition; the token vocabulary
+  is owned by the declaration block in `scripts/test/suite-coverage.sh` (between its `reason-tokens`
+  markers) and is never restated here, so the entry grammar cannot drift from the vocabulary the
+  resolver emits. `none` when the step never called the resolver. A suite whose resolver record is the
+  interpolated `source: … | head: … | result: …` citation is recorded with the fixed token
+  `covered-by-source` — the reason *class* (this suite inherited because a covering entry passed the
+  reach test), not the citation text, which carries both a ` | ` and free text and would leave the
+  field with no decidable record boundary. Records are written **grouped by token**, in the order the
+  resolver declares them, so a run in which forty suites share one reason reads as forty adjacent
+  pairs rather than an interleaved list. The grouping is an ordering convention only: the `<suite>
+  <token>` pair form is what the grammar fixes, because splitting on `;` and then on whitespace must
+  recover the (suite, token) pairs directly, with no regrouping step for a reader to get wrong.
 - `mixed` is the new and now-ordinary outcome — some suites inherited, the rest executed and passed.
   The truthfulness rule extends to it unchanged: a suite that did not execute is never reported inside
   a `passed` claim, and `failed` still wins over both whenever any executed suite did not pass.

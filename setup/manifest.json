@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6aa14de4618fe74dd6e3563aa78b39b6cb0326f4166652e5b14bd3f382393bbe"
+      "sha256": "bfae153c187071a258c5f5b58e23e1b7b7eec562f250b828796195a28088b064"
     },
     {
       "source": "docs/design-rationale.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9ab2ffe86051e444806b244f20a716f5e71ddccd9e6da126732a97d64937030e"
+      "sha256": "046ad517638defa2c22db337a8f075430757b83d9d78865f7c29f4703230d1a6"
     },
     {
       "source": "docs/phases/analysis.md",

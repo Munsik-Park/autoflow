@@ -38,6 +38,30 @@
 #           INHERIT: <suite> source: <heading> | head: <hash> | result: <line>
 #           INHERIT: <suite> not-in-cycle-delta
 #
+# Reasons: the block below is the ONE normative home of the per-suite reason
+#         vocabulary. Every other passage that carries these tokens — this
+#         script's own record sites, the guide's resolution-order narrative, a
+#         green-tree-use entry's `run-reasons` field — is derived from it and is
+#         held to it by tests/test-suite-coverage-agreement.sh. Adding a reason
+#         means adding it here first; a token declared here and written nowhere
+#         in the body fails the same leg.
+#
+#   reason-tokens: begin
+#     out-of-tree-inputs
+#     dirty-worktree
+#     no-entry
+#     no-coverage
+#     unresolvable-head
+#     head-not-ancestor
+#     reach-changed
+#     not-in-cycle-delta
+#     block-fallback
+#   reason-tokens: end
+#   reason-record-shape: source: <heading> | head: <hash> | result: <line>
+#     — an interpolated citation, NOT a token; it names the covering entry a
+#       suite inherited from, and is recorded on a green-tree-use entry as the
+#       fixed token `covered-by-source` rather than verbatim.
+#
 # Exit:   0 normal, 1 BLOCK, 2 usage.
 #
 # A BLOCK NEVER EMITS A PARTIAL PLAN. stdout becomes the whole ENUMERATED set
