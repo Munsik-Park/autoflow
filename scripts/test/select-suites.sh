@@ -444,7 +444,7 @@ SH
   # --- BLOCK (dirty) leg: an unresolvable base is still a BLOCK with
   # --include-worktree on and the worktree dirty; no selection is emitted
   # from worktree state alone as a substitute base.
-  local bdd bd_dir bd_out bd_rc
+  local bdd bd_out bd_rc
   bdd="$(mktemp -d)"
   mkdir -p "$bdd/tests"
   cat > "$bdd/tests/test-fixture-select-block-dirty.sh" <<'SH'
