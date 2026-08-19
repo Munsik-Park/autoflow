@@ -458,6 +458,65 @@ self_test() {
   fi
   rm -rf "$d"
 
+  # --- DIRTY-CANDIDATE leg: a suite whose subject is modified only in the
+  # worktree, untouched by the committed cycle delta, must RUN with reason
+  # dirty-worktree — never INHERIT not-in-cycle-delta (issue #112 cycle 2
+  # review finding: the candidate set was committed-history-only, so Step 8
+  # inherited a suite Step 3 never got to see). The suite neither delta
+  # touches is the discriminator against the rejected branch-reorder fix: it
+  # must still read not-in-cycle-delta, in the same run.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  fx_commit "$d" docs/subject-a.md "committed touch a"
+  printf '%s\n' "uncommitted $(date +%s%N)" >> "$d/docs/subject-c.md"
+  st_run "$d" "$ledger" 1 selection
+  if st_reason 'tests/test-fx-cov-c\.sh' | grep -qE '^RUN: .* dirty-worktree'; then
+    st_ok "DIRTY-CANDIDATE leg" "an uncommitted-only subject edit is planned for execution, reason dirty-worktree"
+  else
+    st_fail "DIRTY-CANDIDATE leg" "expected test-fx-cov-c.sh RUN dirty-worktree, got: $ST_REC"
+  fi
+  if st_reason 'tests/test-fx-cov-b\.sh' | grep -qF 'not-in-cycle-delta'; then
+    st_ok "DIRTY-CANDIDATE leg (branch-reorder discriminator)" "the suite neither delta touches still inherits not-in-cycle-delta, distinguishing the accepted fix from a dirty-branch reorder"
+  else
+    st_fail "DIRTY-CANDIDATE leg (branch-reorder discriminator)" "expected test-fx-cov-b.sh INHERIT not-in-cycle-delta, got: $ST_REC"
+  fi
+  if [ "$(printf '%s\n' "$ST_REC" | grep -cE '^(RUN|INHERIT): ')" -eq 3 ] \
+     && [ "$(printf '%s\n' "$ST_PLAN" | grep -c .)" = "$(printf '%s\n' "$ST_REC" | grep -cE '^RUN: ')" ]; then
+    st_ok "DIRTY-CANDIDATE leg (partition)" "the total-partition contract holds under a dirty tree: every enumerated suite carries exactly one record and the plan is exactly the RUN-recorded set"
+  else
+    st_fail "DIRTY-CANDIDATE leg (partition)" "expected 3 records and plan == RUN-recorded set, got plan: $(printf '%s' "$ST_PLAN" | tr '\n' ' ') rec: $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- DIRTY-CANDIDATE clean-tree control: with the uncommitted edit
+  # reverted, the same suite is INHERIT not-in-cycle-delta and the plan stays
+  # narrowed — without this control the leg above would pass equally under a
+  # resolver that runs everything.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  fx_commit "$d" docs/subject-a.md "committed touch a"
+  st_run "$d" "$ledger" 1 selection
+  if [ "$ST_PLAN" = "tests/test-fx-cov-a.sh" ] \
+     && st_reason 'tests/test-fx-cov-c\.sh' | grep -qF 'not-in-cycle-delta'; then
+    st_ok "DIRTY-CANDIDATE clean-tree control" "with no uncommitted edit, the plan stays narrowed to the committed delta"
+  else
+    st_fail "DIRTY-CANDIDATE clean-tree control" "expected only test-fx-cov-a.sh planned and c INHERIT not-in-cycle-delta, got: $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- PARTITION-ALL-DIRTY leg: --candidates all makes no selection call, so
+  # the cycle-2 candidate-set amendment reaches nothing on that path — the
+  # dirty-all record set is identical to the shipped pre-amendment dirty-all
+  # behaviour (every enumerated suite RUN dirty-worktree, unconditionally).
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  printf '%s\n' "uncommitted $(date +%s%N)" >> "$d/docs/subject-c.md"
+  st_run "$d" "$ledger" 1 all
+  if [ "$(printf '%s\n' "$ST_REC" | grep -cE '^RUN: .* dirty-worktree$')" -eq 3 ] \
+     && [ "$(printf '%s\n' "$ST_PLAN" | grep -c .)" -eq 3 ]; then
+    st_ok "PARTITION-ALL-DIRTY leg" "under --candidates all a dirty worktree still plans every enumerated suite via the unmodified dirty branch"
+  else
+    st_fail "PARTITION-ALL-DIRTY leg" "expected 3 RUN dirty-worktree records, got: $ST_REC"
+  fi
+  rm -rf "$d"
+
   # --- PARTITION leg under --candidates all, with no ledger: every suite is
   # a candidate, none is covered, so the plan is the whole enumerated set and
   # the cause is no-entry rather than no-coverage.

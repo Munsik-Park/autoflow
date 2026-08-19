@@ -207,6 +207,46 @@ select_over() {
 }
 
 # ---------------------------------------------------------------------------
+# wt_fixture <dir> — a committed git repo (main + work branch, resolvable
+# base) with three suites and an ignored path — the shared idiom for the
+# cycle-2 WORKTREE-UNION / FULL-SET(dirty) / PUSH-INERT(dirty) legs (issue
+# #112 review finding: the resolver's candidate set is committed-only).
+# ---------------------------------------------------------------------------
+wt_fixture() {
+  local d="$1"
+  mkdir -p "$d/tests" "$d/docs" "$d/ignored"
+  cat > "$d/tests/test-fixture-select-wt-x.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: docs/subject-x.md
+# lane: standing
+# budget-secs: 30
+true
+SH
+  cat > "$d/tests/test-fixture-select-wt-y.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: docs/subject-y.md
+# lane: standing
+# budget-secs: 30
+true
+SH
+  cat > "$d/tests/test-fixture-select-wt-z.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: ignored/subject-z.md
+# lane: standing
+# budget-secs: 30
+true
+SH
+  printf 'x\n' > "$d/docs/subject-x.md"
+  printf 'x\n' > "$d/docs/subject-y.md"
+  printf 'ignored/\n' > "$d/.gitignore"
+  printf 'x\n' > "$d/ignored/subject-z.md"
+  git -C "$d" init -q -b main >/dev/null 2>&1
+  git -C "$d" add -A >/dev/null 2>&1
+  git -C "$d" -c user.email=a@b.c -c user.name=a commit -q -m init >/dev/null 2>&1
+  git -C "$d" checkout -q -b work >/dev/null 2>&1
+}
+
+# ---------------------------------------------------------------------------
 # Self-test — hermetic fixture root whose answer is known by construction.
 # A clean real tree cannot discriminate a working selector from an inert one.
 # ---------------------------------------------------------------------------
@@ -294,6 +334,110 @@ SH
     fi
   done
   [ "$rc" -eq 0 ] && echo "select-suites: --self-test MATCHER leg OK — the Actions dialect matches and rejects as specified"
+
+  # --- WORKTREE-UNION leg: with --include-worktree on, the selection is the
+  # union of the committed delta with the uncommitted delta (tracked
+  # modification + untracked-not-ignored addition); default off selects the
+  # committed delta alone; an untracked file under an ignored path never
+  # enters either delta (issue #112 cycle 2, --include-worktree amendment).
+  local wtd wt_unflagged wt_flagged
+  wtd="$(mktemp -d)"; wt_fixture "$wtd"
+  printf '%s\n' "changed $(date +%s%N)" >> "$wtd/docs/subject-x.md"
+  git -C "$wtd" add -A >/dev/null 2>&1
+  git -C "$wtd" -c user.email=a@b.c -c user.name=a commit -q -m "committed touch x" >/dev/null 2>&1
+  printf '%s\n' "uncommitted $(date +%s%N)" >> "$wtd/docs/subject-y.md"
+  printf 'x\n' > "$wtd/docs/subject-w.md"
+  cat > "$wtd/tests/test-fixture-select-wt-w.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: docs/subject-w.md
+# lane: standing
+# budget-secs: 30
+true
+SH
+  wt_unflagged="$(select_over "$wtd" pull_request "" 2>/dev/null | sort -u)"
+  wt_flagged="$(select_over "$wtd" pull_request "" 1 2>/dev/null | sort -u)"
+  if [ "$wt_unflagged" = "tests/test-fixture-select-wt-x.sh" ]; then
+    echo "select-suites: --self-test WORKTREE-UNION leg (opt-in default) OK — no flag selects only the committed delta"
+  else
+    echo "select-suites: --self-test WORKTREE-UNION leg (opt-in default) FAILED — expected only the x suite, got: $(printf '%s' "$wt_unflagged" | tr '\n' ' ')"
+    rc=1
+  fi
+  if printf '%s\n' "$wt_flagged" | grep -qF 'tests/test-fixture-select-wt-x.sh' \
+     && printf '%s\n' "$wt_flagged" | grep -qF 'tests/test-fixture-select-wt-y.sh' \
+     && printf '%s\n' "$wt_flagged" | grep -qF 'tests/test-fixture-select-wt-w.sh' \
+     && ! printf '%s\n' "$wt_flagged" | grep -qF 'tests/test-fixture-select-wt-z.sh'; then
+    echo "select-suites: --self-test WORKTREE-UNION leg (union + ignore rules) OK — --include-worktree adds the uncommitted tracked edit and the untracked-not-ignored file, never the ignored one"
+  else
+    echo "select-suites: --self-test WORKTREE-UNION leg (union + ignore rules) FAILED — expected x, y, w and not z, got: $(printf '%s' "$wt_flagged" | tr '\n' ' ')"
+    rc=1
+  fi
+  if [ -n "$wt_flagged" ] && [ "$wt_flagged" != "$wt_unflagged" ] \
+     && [ -z "$(comm -23 <(printf '%s\n' "$wt_unflagged") <(printf '%s\n' "$wt_flagged"))" ]; then
+    echo "select-suites: --self-test WORKTREE-UNION leg (never narrows) OK — the flagged selection is a strict superset of the unflagged one"
+  else
+    echo "select-suites: --self-test WORKTREE-UNION leg (never narrows) FAILED — flagged is not a strict superset of unflagged: unflagged=$(printf '%s' "$wt_unflagged" | tr '\n' ' ') flagged=$(printf '%s' "$wt_flagged" | tr '\n' ' ')"
+    rc=1
+  fi
+  rm -rf "$wtd"
+
+  # --- FULL-SET (dirty) leg: an empty committed delta still selects the full
+  # set, with the shipped reason wording, even with the worktree dirty — the
+  # union never turns an empty committed delta into a narrowed selection.
+  local fsd fs_out
+  fsd="$(mktemp -d)"; wt_fixture "$fsd"
+  printf '%s\n' "uncommitted $(date +%s%N)" >> "$fsd/docs/subject-y.md"
+  fs_out="$(select_over "$fsd" pull_request "" 1 2>/dev/null | sort -u)"
+  if [ "$(printf '%s\n' "$fs_out" | grep -c .)" -eq 3 ]; then
+    echo "select-suites: --self-test FULL-SET (dirty) leg OK — an empty committed delta still selects the full set, even with --include-worktree and a dirty worktree — the union never turns an empty committed delta non-empty"
+  else
+    echo "select-suites: --self-test FULL-SET (dirty) leg FAILED — expected all 3 fixture subjects, got: $(printf '%s' "$fs_out" | tr '\n' ' ')"
+    rc=1
+  fi
+  rm -rf "$fsd"
+
+  # --- PUSH-INERT (dirty) leg: --include-worktree changes nothing under a
+  # push event — the full set is chosen before any delta (committed or
+  # uncommitted) is ever resolved.
+  local pid pi_off pi_on
+  pid="$(mktemp -d)"; wt_fixture "$pid"
+  printf '%s\n' "uncommitted $(date +%s%N)" >> "$pid/docs/subject-y.md"
+  pi_off="$(select_over "$pid" push "" 0 2>&1)"
+  pi_on="$(select_over "$pid" push "" 1 2>&1)"
+  if [ "$pi_off" = "$pi_on" ]; then
+    echo "select-suites: --self-test PUSH-INERT (dirty) leg OK — --include-worktree is inert under a push event"
+  else
+    echo "select-suites: --self-test PUSH-INERT (dirty) leg FAILED — expected identical output with the flag on and off, got off=[$pi_off] on=[$pi_on]"
+    rc=1
+  fi
+  rm -rf "$pid"
+
+  # --- BLOCK (dirty) leg: an unresolvable base is still a BLOCK with
+  # --include-worktree on and the worktree dirty; no selection is emitted
+  # from worktree state alone as a substitute base.
+  local bdd bd_dir bd_out bd_rc
+  bdd="$(mktemp -d)"
+  mkdir -p "$bdd/tests"
+  cat > "$bdd/tests/test-fixture-select-block-dirty.sh" <<'SH'
+#!/usr/bin/env bash
+# ci-subject: docs/subject-block-dirty.md
+# lane: standing
+# budget-secs: 30
+true
+SH
+  git -C "$bdd" init -q >/dev/null 2>&1
+  git -C "$bdd" add -A >/dev/null 2>&1
+  git -C "$bdd" -c user.email=a@b.c -c user.name=a commit -q -m init >/dev/null 2>&1
+  git -C "$bdd" branch -m __no-base-here-dirty__ >/dev/null 2>&1
+  printf '%s\n' "uncommitted $(date +%s%N)" >> "$bdd/tests/test-fixture-select-block-dirty.sh"
+  bd_out="$(GITHUB_BASE_REF='' select_over "$bdd" pull_request "" 1 2>&1 >/dev/null)"
+  bd_rc=$?
+  if [ "$bd_rc" -ne 0 ] && printf '%s' "$bd_out" | grep -qi 'BLOCK'; then
+    echo "select-suites: --self-test BLOCK (dirty) leg OK — an unresolvable base is a BLOCK with --include-worktree on and the worktree dirty; the uncommitted delta is never consulted as a substitute base"
+  else
+    echo "select-suites: --self-test BLOCK (dirty) leg FAILED — expected a BLOCK and non-zero exit, got rc=$bd_rc: $bd_out"
+    rc=1
+  fi
+  rm -rf "$bdd"
 
   rm -rf "$dir"
   return $rc

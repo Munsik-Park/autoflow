@@ -203,6 +203,76 @@ SH
 fi
 
 # =============================================================================
+# Leg 4b — dirty composition (issue #112 cycle 2, review finding): the
+# resolver's candidate set widens to the uncommitted delta at an interim
+# capture point (--candidates selection), so a suite touched only in the
+# worktree is both in the plan the resolver emits and in the set the real
+# runner executes for it. One committed-delta suite and one uncommitted-delta
+# suite in the same fixture — the composition assertion (executed == plan)
+# holds either way, so the discriminating half is that the plan itself must
+# NAME the uncommitted-delta suite.
+# Guarded: the resolver does not exist yet at RED time.
+# =============================================================================
+
+if [ ! -f "$RESOLVER" ]; then
+  assert_true "dirty-composition: scripts/test/suite-coverage.sh exists (cannot exercise the dirty candidate set without it)" "false"
+else
+  FXD="$(mktemp -d)"
+  mkdir -p "$FXD/tests" "$FXD/.autoflow"
+  WITNESS_D="$FXD/witness.log"
+  : > "$WITNESS_D"
+  cat > "$FXD/tests/test-fixture-112-agree-dirty-a.sh" <<SH
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-112-agree-dirty-a-subject.txt
+# lane: standing
+# budget-secs: 5
+echo "\$0" >> "$WITNESS_D"
+exit 0
+SH
+  cat > "$FXD/tests/test-fixture-112-agree-dirty-b.sh" <<SH
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-112-agree-dirty-b-subject.txt
+# lane: standing
+# budget-secs: 5
+echo "\$0" >> "$WITNESS_D"
+exit 0
+SH
+  chmod +x "$FXD/tests/test-fixture-112-agree-dirty-a.sh" "$FXD/tests/test-fixture-112-agree-dirty-b.sh"
+  printf 'x\n' > "$FXD/tests/fixture-112-agree-dirty-a-subject.txt"
+  printf 'x\n' > "$FXD/tests/fixture-112-agree-dirty-b-subject.txt"
+  printf '.autoflow/\n' > "$FXD/.gitignore"
+  (cd "$FXD" && git init -q -b main && git add -A \
+    && git -c user.email=t@example.com -c user.name=t commit -q -m init)
+  (cd "$FXD" && git checkout -q -b work)
+  # committed delta: touch subject a; uncommitted (unstaged) delta: touch
+  # subject b — the shape the review's finding names.
+  printf 'changed\n' >> "$FXD/tests/fixture-112-agree-dirty-a-subject.txt"
+  (cd "$FXD" && git add -A && git -c user.email=t@example.com -c user.name=t commit -q -m "touch a")
+  printf 'uncommitted\n' >> "$FXD/tests/fixture-112-agree-dirty-b-subject.txt"
+
+  LEDGER_D="$FXD/.autoflow/issue-9999-ledger.md"
+  : > "$LEDGER_D"
+  PLAN_FILE_D="$FXD/run-set.txt"
+  bash "$RESOLVER" --ledger "$LEDGER_D" --cycle 1 --root "$FXD" --candidates selection \
+    > "$PLAN_FILE_D" 2>/tmp/issue112-agree-dirty-resolver.err
+  RESOLVER_RC_D=$?
+
+  if [ "$RESOLVER_RC_D" -ne 0 ] && [ "$RESOLVER_RC_D" -ne 1 ]; then
+    assert_true "dirty-composition: resolver runs to a defined exit (0 normal / 1 BLOCK) over the dirty fixture root" "false"
+  else
+    PLAN_SET_D="$(sort -u "$PLAN_FILE_D" 2>/dev/null)"
+    assert_true "dirty-composition: the resolved plan names the suite whose subject is modified only in the worktree, not only the committed one (plan: $(printf '%s' "$PLAN_SET_D" | tr '\n' ' '))" \
+      "printf '%s\\n' \"\$PLAN_SET_D\" | grep -qF 'tests/test-fixture-112-agree-dirty-a.sh' && printf '%s\\n' \"\$PLAN_SET_D\" | grep -qF 'tests/test-fixture-112-agree-dirty-b.sh'"
+
+    bash "$RUNNER" --root "$FXD" --selected "$PLAN_FILE_D" > /tmp/issue112-agree-dirty-runner.out 2>&1
+    EXECUTED_SET_D="$(sort "$WITNESS_D" 2>/dev/null | sed "s#^$FXD/##" | sort -u)"
+    assert_true "dirty-composition: the resolver's dirty-tree plan, fed to the real run-suites.sh --selected, executes exactly the planned set (executed: $(printf '%s' "$EXECUTED_SET_D" | tr '\n' ' ') | plan: $(printf '%s' "$PLAN_SET_D" | tr '\n' ' '))" \
+      "[ \"\$EXECUTED_SET_D\" = \"\$PLAN_SET_D\" ] || [ -z \"\$PLAN_SET_D\" -a -z \"\$EXECUTED_SET_D\" ]"
+  fi
+  rm -rf "$FXD"
+fi
+
+# =============================================================================
 # Leg 5 — step text and record grammar agree: the flags/commands the
 # playbook cites for the resolver idiom (GREEN step 5, VERIFY step 1) exist
 # in the shipped scripts' real usage surface.

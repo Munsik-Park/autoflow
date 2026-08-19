@@ -6705,6 +6705,17 @@
       "literal": "Selection-based intermediate verification."
     },
     {
+      "id": "112-c2-adr-0019-tradeoffs-selector-edit",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/0019-scope-fit-verification-policy.md",
+      "section": "Neutral / Trade-Offs",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "What CI executes is unchanged. `scripts/test/select-suites.sh` gains an opt-in `--include-worktree` flag that no CI call passes."
+    },
+    {
       "id": "112-claude-regressions-validate-clause",
       "origin_issue": 112,
       "intent": "existence",
