@@ -33,6 +33,7 @@ Start from [0000-adr-template.md](0000-adr-template.md).
 | [0016-adr-conformance-gate-scoring.md](0016-adr-conformance-gate-scoring.md) | Accepted | ADR-conformance scoring at ARCHITECT/GATE:PLAN/GATE:QUALITY. |
 | [0017-teammate-removal-feasibility.md](0017-teammate-removal-feasibility.md) | Accepted | Test AI / Developer AI as anonymous direct spawns: conditional go, with ordered preconditions and a blocking pilot. |
 | [0018-verification-depth-justification.md](0018-verification-depth-justification.md) | Proposed | Verification depth governed by a per-layer unique-failure-mode justification, not a quantity cap; GATE:PLAN `Scope` widened to the verification design. |
+| [0019-scope-fit-verification-policy.md](0019-scope-fit-verification-policy.md) | Proposed | Interim verification runs the selection-derived set with suite-grained inheritance; the whole tree executes once per cycle at VALIDATE as the coverage floor; evaluator citation-inheritance, sampling default and wall-clock cap. |
 
 **Numbering gap.** ADR numbers 0002, 0004–0014 are intentionally absent here:
 they were migrated to `services/librechat-deploy` during the 2026-06-27

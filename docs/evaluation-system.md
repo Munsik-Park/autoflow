@@ -87,6 +87,9 @@ emerge, humans adjust the criteria.
     "disposition": "refuted | survived | none_found",
     "reflected_in": ["rubric item name"]
   },
+  "inherited_verdicts": [
+    { "suite": "tests/<path>.sh", "source": "<green-tree entry heading>", "head": "<hash>", "result": "<summary line>" }
+  ],
   "scores": { "item": { "score": 8, "reason": "evidence" } },
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
@@ -108,6 +111,22 @@ the search precedes scoring.
 | `case` | string, non-empty | always | The strongest FAIL argument found. With `disposition: "none_found"` it states **what was searched** (which items, which anchors re-derived), so the record is evidence of the search rather than a blank. |
 | `disposition` | enum `refuted` \| `survived` \| `none_found` | always | Outcome of the refutation attempt. |
 | `reflected_in` | array of rubric item names | always present (`[]` when `disposition != "survived"`) | Which scored item(s) recorded the surviving case — the join between the narrative record and the numeric `scores`. "Recorded" does not imply "scored down": an item listed here may still score ≥ 7. |
+
+`inherited_verdicts` carries the citation for every suite verdict the evaluator took from the host's
+own record instead of re-executing, per [`teammate-contracts.md`](teammate-contracts.md) >
+Evaluation AI > *Host-record citation-inheritance*. It is the evaluator's report artifact, not the
+gate state file.
+
+| Key | Type | Required | Meaning |
+|-----|------|----------|---------|
+| `inherited_verdicts` | array of objects | **always present** (`[]` when the evaluator executed everything) | The same always-present discipline `reflected_in` carries: its absence is a defect, not a silence. Each member is `{ "suite", "source", "head", "result" }` — the repo-relative suite path, the `green-tree` entry heading it was cited from, that entry's `head` hash, and its `result` summary line. A prose citation is not sufficient: "I inherited" is itself an anchor a reader re-derives. |
+
+**[DENY]** `inherited_verdicts` is never written to `.autoflow/issue-{N}.json`. That file's
+`top_level_keys` are closed-world (`tests/fixtures/gate-schema.json`), so an additive top-level key
+is MALFORMED and fails `git push` / `gh pr create` closed for the whole cycle — the identical
+footgun this document already records for `fail_hypothesis`. Should a state-resident copy ever be
+wanted, the only admissible placement is a sibling of `evaluator` and `scores` **inside** the phase
+object; the report is the durable record and no such copy is asked for.
 
 ---
 

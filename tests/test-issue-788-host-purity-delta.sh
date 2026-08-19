@@ -4,6 +4,7 @@
 # ci-subject: .claude/hooks/check-autoflow-gate.sh .github/workflows/host-purity-delta.yml CLAUDE.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/test/check-host-purity-delta.sh tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: diff-scoped host-purity DELTA guard — Issue #788
 # =============================================================================

@@ -4,6 +4,7 @@
 # ci-subject: docs/git-workflow.md docs/external-review-sequencing.md docs/autoflow-guide.md
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: HANDOFF CI machine removal — Issue #795 (`subrepo-merged` retirement)
 # =============================================================================

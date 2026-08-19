@@ -5222,7 +5222,7 @@
       "predicate": "present",
       "match": "fixed",
       "scope": "permanent",
-      "literal": "- outcome: passed | inherited | failed"
+      "literal": "- outcome: passed | inherited | mixed | failed"
     },
     {
       "id": "88-verify-field-mismatch-cause",
@@ -5233,7 +5233,7 @@
       "predicate": "present",
       "match": "fixed",
       "scope": "permanent",
-      "literal": "- mismatch-cause: no-entry | dirty-worktree | tree-differs | none"
+      "literal": "- mismatch-cause: no-entry | dirty-worktree | tree-differs | selection-block | none"
     },
     {
       "id": "88-verify-field-source",
@@ -5744,7 +5744,7 @@
       "predicate": "present",
       "match": "fixed",
       "scope": "permanent",
-      "literal": "not registrable"
+      "literal": "record what you ran"
     },
     {
       "id": "88-c2-green-failure-no-write",
@@ -6505,6 +6505,336 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "run-suites.sh"
+    },
+    {
+      "id": "112-green-tree-suites-field",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "- suites: <repo-relative path> [<repo-relative path> ...]"
+    },
+    {
+      "id": "112-green-tree-use-inherited-suites",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "- inherited-suites: <path> [...] | none"
+    },
+    {
+      "id": "112-green-tree-use-ran-suites",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "- ran-suites: <path> [...] | none"
+    },
+    {
+      "id": "112-green-tree-use-run-reasons",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "- run-reasons: <suite> <token> [; <suite> <token> ...] | none"
+    },
+    {
+      "id": "112-maintained-docs-scope-fit-run-reasons",
+      "origin_issue": 112,
+      "intent": "coherence",
+      "file": "docs/maintained-docs.md",
+      "section": "Methodology CI (`.claude/workflows/` deliberation scripts)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "the declared per-suite reason vocabulary"
+    },
+    {
+      "id": "112-verify-step1-selection",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "execute the resolved run set"
+    },
+    {
+      "id": "112-refine-step2-selection",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "REFINE — Refactor (Green maintained)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "execute the resolved run set"
+    },
+    {
+      "id": "112-green-step5-resolver-idiom",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "GREEN — Implementation",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "run-suites.sh --selected"
+    },
+    {
+      "id": "112-validate-step1-all-unconditional",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VALIDATE — Verification Done",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "run-suites.sh --all"
+    },
+    {
+      "id": "112-validate-step1-no-resolver",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VALIDATE — Verification Done",
+      "predicate": "absent",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "suite-coverage.sh"
+    },
+    {
+      "id": "112-claude-validate-to-red-row",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Flow Control",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "VALIDATE → RED"
+    },
+    {
+      "id": "112-evaluator-citation-inheritance-must",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Evaluation AI (subagent)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Host-record citation-inheritance"
+    },
+    {
+      "id": "112-evaluator-sampling-default",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Evaluation AI (subagent)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "representative sample"
+    },
+    {
+      "id": "112-evaluator-time-cap",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Evaluation AI (subagent)",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "wall-clock cap"
+    },
+    {
+      "id": "112-evaluation-system-inherited-verdicts-key",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/evaluation-system.md",
+      "section": "Evaluation Output Format",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "inherited_verdicts"
+    },
+    {
+      "id": "112-adr-readme-row",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/README.md",
+      "section": "Current Drafts",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "0019-scope-fit-verification-policy"
+    },
+    {
+      "id": "112-maintained-docs-adr-row",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/maintained-docs.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "0019-scope-fit-verification-policy.md"
+    },
+    {
+      "id": "112-index-adr-routing-row",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/INDEX.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "0019-scope-fit-verification-policy"
+    },
+    {
+      "id": "112-adr-0019-status",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/0019-scope-fit-verification-policy.md",
+      "section": "Status",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Proposed"
+    },
+    {
+      "id": "112-adr-0019-decision-sentence",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/0019-scope-fit-verification-policy.md",
+      "section": "Decision",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Selection-based intermediate verification."
+    },
+    {
+      "id": "112-c2-adr-0019-tradeoffs-selector-edit",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/0019-scope-fit-verification-policy.md",
+      "section": "Neutral / Trade-Offs",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "What CI executes is unchanged. `scripts/test/select-suites.sh` gains an opt-in `--include-worktree` flag that no CI call passes."
+    },
+    {
+      "id": "112-c5-adr-0019-head-resolvability-tightening",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/0019-scope-fit-verification-policy.md",
+      "section": "Decision",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "head resolvability"
+    },
+    {
+      "id": "112-c5-guide-tree-identity-head-resolvable",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "Tree-identity predicate",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "does not resolve to a commit"
+    },
+    {
+      "id": "112-claude-regressions-validate-clause",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Flow Control",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "VALIDATE step-1 whole-tree sweep FAIL → RED"
+    },
+    {
+      "id": "112-green-idiom-exit-status-guard",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "GREEN — Implementation",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "|| {"
+    },
+    {
+      "id": "112-submodule-rules-idiom-guard-must",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Running the bash suite tree",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Keep the `|| { … }` between the two commands"
+    },
+    {
+      "id": "112-submodule-rules-reporting-per-suite",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Reporting Format",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "per inherited suite"
+    },
+    {
+      "id": "112-submodule-rules-reporting-mixed-outcome",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/submodule-common-rules.md",
+      "section": "Reporting Format",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "`mixed` when some suites inherited and the rest executed and passed"
+    },
+    {
+      "id": "112-maintained-docs-scope-fit-row",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/maintained-docs.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "Scope-Fit Verdict Inheritance"
+    },
+    {
+      "id": "112-maintained-docs-selection-row-selected-flag",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/maintained-docs.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "runner's explicit-plan flag `--selected <path>`"
     }
   ]
 }

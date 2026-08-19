@@ -23,9 +23,32 @@
 # `timeout-minutes: ceil(budget-secs / 60)`, whose agreement with the header is
 # asserted by scripts/test/check-suite-manifest.sh.
 #
+# EXPLICIT RUN SET: `--selected <path>` reads the set to execute from a file, one
+# repo-relative path per line. This does not give the runner a predicate of its
+# own — the plan is produced by scripts/test/suite-coverage.sh, which itself
+# consumes select-suites.sh. A PATH ONLY, deliberately no `-`/stdin form: the one
+# composition a stdin form would enable is
+# `suite-coverage.sh | run-suites.sh --selected -`, in which the resolver's exit
+# status is invisible to the composing shell (this script's own `pipefail` is an
+# option of THIS process, not of the shell that composed the two), so a BLOCK
+# would be recorded as a clean pass.
+#
+# Two fail-closed validations, both usage exit 2 with nothing executed:
+#   - `--all` together with `--selected`: the two name incompatible sources and
+#     the parser has no precedence between them, so a silent winner would let a
+#     caller who asked for a whole-tree sweep record a floor it never executed.
+#   - a plan line outside `suite_enumerate`: a typo, a stale plan naming a
+#     retired suite, or a path outside the spec tree. Executing it would run
+#     arbitrary script text under the budget arming; skipping it silently
+#     shrinks the plan. Validation is whole-plan and precedes execution, so a
+#     rejected plan leaves no half-executed record — which is also what gives
+#     `0 suite(s) selected` its meaning back: after validation it can only mean
+#     everything inherited, never that nothing in the plan was recognised.
+#
 # Usage:
 #   bash scripts/test/run-suites.sh [--root <dir>] [--base <ref>]
 #                                   [--event pull_request|push] [--all] [--list]
+#                                   [--selected <path>]
 #
 # One `PASS|FAIL|TIMEOUT <path> <elapsed>s` line per executed suite, then a
 # summary. Exit 0 when every executed suite passed, 1 on any failure or
@@ -45,24 +68,55 @@ BASE=""
 EVENT="${GITHUB_EVENT_NAME:-pull_request}"
 ALL=0
 LIST=0
+PLAN_FILE=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --root)  require_value run-suites "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
-    --base)  require_value run-suites "$1" $# "${2:-}" || exit 2; BASE="$2"; shift ;;
-    --event) require_value run-suites "$1" $# "${2:-}" || exit 2; EVENT="$2"; shift ;;
-    --all)   ALL=1 ;;
-    --list)  LIST=1 ;;
-    *)       echo "run-suites: unknown argument: $1" >&2; exit 2 ;;
+    --root)     require_value run-suites "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
+    --base)     require_value run-suites "$1" $# "${2:-}" || exit 2; BASE="$2"; shift ;;
+    --event)    require_value run-suites "$1" $# "${2:-}" || exit 2; EVENT="$2"; shift ;;
+    --selected) require_value run-suites "$1" $# "${2:-}" || exit 2; PLAN_FILE="$2"; shift ;;
+    --all)      ALL=1 ;;
+    --list)     LIST=1 ;;
+    *)          echo "run-suites: unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
 done
 ROOT="${ROOT:-$DEFAULT_ROOT}"
 
+# Checked after parsing, not by parser order: whichever branch were written
+# first would otherwise win silently.
+if [ "$ALL" -eq 1 ] && [ -n "$PLAN_FILE" ]; then
+  echo "run-suites: --all and --selected are mutually exclusive — they name incompatible sources for the run set; pass exactly one" >&2
+  exit 2
+fi
+
 # ---------------------------------------------------------------------------
-# The set to run: the whole enumerated tree under --all, otherwise whatever the
-# single selection definition site returns.
+# The set to run: the explicit plan under --selected, the whole enumerated tree
+# under --all, otherwise whatever the single selection definition site returns.
 # ---------------------------------------------------------------------------
-if [ "$ALL" -eq 1 ]; then
+if [ -n "$PLAN_FILE" ]; then
+  if [ ! -f "$PLAN_FILE" ]; then
+    echo "run-suites: --selected $PLAN_FILE: no such file — an unreadable plan is not an empty plan" >&2
+    exit 2
+  fi
+  # Membership is decided by the enumerator this script already uses on the
+  # --all path, not by a second notion of "is a suite".
+  ENUMERATED="$(suite_enumerate "$ROOT")"
+  PLAN=""
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    line="$(trim_ws "$line")"
+    [ -n "$line" ] || continue
+    if ! printf '%s\n' "$ENUMERATED" | grep -qxF -- "$line"; then
+      echo "run-suites: --selected plan line is not an enumerated suite: $line" >&2
+      echo "  A plan naming a path outside suite_enumerate is a typo, a stale plan, or a path outside the spec tree. Whole-plan validation precedes execution, so nothing ran." >&2
+      exit 2
+    fi
+    PLAN="$PLAN$line"$'\n'
+  done < "$PLAN_FILE"
+  SELECTED="$(printf '%s' "$PLAN")"
+  SELECT_RC=0
+elif [ "$ALL" -eq 1 ]; then
   SELECTED="$(suite_enumerate "$ROOT")"
   SELECT_RC=0
 else

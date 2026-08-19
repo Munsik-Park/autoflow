@@ -5,6 +5,7 @@
 # lane: standing
 # cycle-arm: #71
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: cycle-digest emission + cross-issue recurrence scan removal — Issue #71
 # (cycle-scoped removal-state suite)

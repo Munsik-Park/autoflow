@@ -4,6 +4,7 @@
 # ci-subject: .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml README.md docs/INDEX.md docs/autoflow-guide.md docs/external-review-sequencing.md docs/git-workflow.md docs/maintained-docs.md docs/submodule-common-rules.md plugin/autoflow/hooks/check-autoflow-gate.sh setup/SETUP-GUIDE.md setup/manifest.json tests/fixtures/doc-invariants.json tests/manual/issue-799-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: inert/delete cleanup RED/GREEN harness — Issue #799
 # ([#785-S11b] 비활성화된 multi-repo 기계 일괄 정리)

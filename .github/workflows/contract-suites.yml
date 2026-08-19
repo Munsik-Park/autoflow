@@ -122,6 +122,7 @@ on:
       - 'scripts/test/run-suites.sh'
       - 'scripts/test/invocation-scan.sh'
       - 'scripts/test/select-suites.sh'
+      - 'scripts/test/suite-coverage.sh'
       - 'scripts/test/suite-manifest.sh'
       - 'tests/manual/issue-103-manual-scenarios.md'
       - 'tests/test-issue-103-central-runner.sh'
@@ -132,6 +133,8 @@ on:
       - 'tests/test-issue-103-suite-leaf.sh'
       - 'tests/test-issue-103-suite-manifest.sh'
       - 'tests/test-issue-103-workflow-conformance.sh'
+      - 'tests/test-suite-coverage-agreement.sh'
+      - 'docs/evaluation-system.md'
       - 'README.md'
       - 'setup/SETUP-GUIDE.md'
       - 'test/workflows/run.mjs'
@@ -223,6 +226,7 @@ on:
       - 'scripts/test/run-suites.sh'
       - 'scripts/test/invocation-scan.sh'
       - 'scripts/test/select-suites.sh'
+      - 'scripts/test/suite-coverage.sh'
       - 'scripts/test/suite-manifest.sh'
       - 'tests/manual/issue-103-manual-scenarios.md'
       - 'tests/test-issue-103-central-runner.sh'
@@ -233,6 +237,8 @@ on:
       - 'tests/test-issue-103-suite-leaf.sh'
       - 'tests/test-issue-103-suite-manifest.sh'
       - 'tests/test-issue-103-workflow-conformance.sh'
+      - 'tests/test-suite-coverage-agreement.sh'
+      - 'docs/evaluation-system.md'
       - 'README.md'
       - 'setup/SETUP-GUIDE.md'
       - 'test/workflows/run.mjs'
@@ -478,6 +484,12 @@ jobs:
         timeout-minutes: 10
         run: bash tests/test-issue-103-suite-leaf.sh
 
+      - name: test-suite-coverage-agreement.sh
+        id: s-test-suite-coverage-agreement
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-suite-coverage-agreement.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-suite-coverage-agreement.sh
+
       - name: test-issue-103-central-runner.sh
         id: s-test-issue-103-central-runner
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-central-runner.sh ')
@@ -534,6 +546,9 @@ jobs:
 
       - name: selection self-test
         run: bash scripts/test/select-suites.sh --self-test
+
+      - name: suite-coverage self-test
+        run: bash scripts/test/suite-coverage.sh --self-test
 
       - name: maintained-docs sync lint
         run: bash scripts/test/check-maintained-docs-sync.sh

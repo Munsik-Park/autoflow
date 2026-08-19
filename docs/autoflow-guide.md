@@ -511,13 +511,27 @@ evaluation" rule reaching this site by extension.
   never a source for it — at this site that report is the anchor being discharged, not the content
   of the record. The register's `Teammates never write it` clause constrains the writer; this
   sentence constrains the source, and both are needed where the writer is already the orchestrator.
-- **Acceptance-run scope**: the obligatory re-run of the cited command may be narrower than a suite
-  set; a run so bounded discharges the anchor for its own purpose but is **not registrable**,
-  because an offerable Green must not certify less than the consumer that inherits it would have
-  executed. [MUST] To obtain an offerable entry the orchestrator extends the run to the
-  suite set VERIFY step 1 would run at that tree, and the `result` field names every suite the run
-  executed with its summary line. When the orchestrator does not extend, no entry is written and
-  the first VERIFY runs the suite as before.
+- **Acceptance-run scope — record what you ran**: an entry is registrable when its `suites` field
+  names exactly the suites the run executed and passed over a clean capture point. The invariant
+  this replaces ("an offerable Green must not certify less than the consumer that inherits it would
+  have executed") is preserved **per suite** rather than per set, which is the stronger reading: a
+  later consumer inherits only the suites the source entry names, and everything else it needs is
+  resolved afresh. The scope is still stated **by reference**, not re-derived here: it is the
+  suite set VERIFY step 1 would run at that tree — the same resolver, at the same capture point.
+  [MUST] To obtain an offerable entry the orchestrator resolves that set and executes it:
+
+  ```
+  bash scripts/test/suite-coverage.sh --ledger .autoflow/issue-<N>-ledger.md --cycle <C> \
+    > .autoflow/issue-<N>-run-set.txt || { echo "suite-coverage BLOCK — running the enumerated set" >&2; }
+  bash scripts/test/run-suites.sh --selected .autoflow/issue-<N>-run-set.txt
+  ```
+
+  [MUST] The `|| { … }` between the two commands is load-bearing, not stylistic. The resolver's
+  non-zero exit is otherwise invisible to the second command, and an empty or truncated plan reaches
+  `run-suites: 0 suite(s) selected` and exit `0` — so an unread BLOCK would present as a clean pass,
+  the exact inverse of *degrades to executing, never to skipping*. With the check, the step records
+  `mismatch-cause: selection-block` instead of a silent `passed`. A step whose text omits the status
+  check is a defect.
 - **Failure disposition**: an acceptance run that is not all-PASS writes no `green-tree` entry and
   writes a `green-tree-use` entry with `outcome: failed`. GREEN does not become a gate: the
   failure is carried into VERIFY, where step 1's predicate mismatches with `no-entry`, the suite
@@ -536,9 +550,12 @@ evaluation" rule reaching this site by extension.
 Run the tests; on failure, branch by cause.
 
 ```
-1. [MUST] Evaluate the tree-identity predicate (see Green-tree register below), then run all tests unless it matches.
-   Match    → do not run the suite; inherit the cited Green and report `inherited`.
-   Mismatch → run all tests (current behavior, unchanged).
+1. [MUST] Evaluate the tree-identity predicate, then the suite-coverage predicate it is the fast path of
+   (both under Green-tree register below), then execute the resolved run set.
+   Whole-tree match → nothing executes; inherit the cited Green and report `inherited`.
+   Otherwise        → execute the resolved run set (the resolver's plan, via the idiom in GREEN step 5);
+                      report `passed` when the plan was non-empty and every executed suite passed,
+                      `mixed` when some suites inherited and the rest executed and passed.
 2. Branch on result:
    All PASS → step 3.
    Some FAIL → cause branching (run under delegated facilitation — the `verify-cause-branch` workflow returns a single
@@ -639,9 +656,17 @@ than left to the reader. An entry is a heading line followed by one line per fie
 - tree: <hash>
 - head: <hash>
 - worktree: clean
+- suites: <repo-relative path> [<repo-relative path> ...]
 - result: <summary line>
 - authority: Green-tree register
 ```
+
+- **`suites` is a mandatory field of the grammar, and there is no legacy-entry clause.** It names exactly the suites the run
+  executed and passed — the machine-readable form of what the `result` prose used to carry. An entry
+  written under the prior grammar is *incomplete* by the selection rule below, so no fast path and no
+  coverage fold can fire on it: the predicate mismatches with cause `no-entry` and the suite set
+  executes. That is the fail-safe direction, and it costs at most one extra run, because the ledger is
+  per-issue and the fold is cycle-scoped.
 
 - **Marker**: the heading begins `### green-tree | cycle: ` — the literal that distinguishes it from
   `verify-detection`, `review-autofix` and settled-decision entries. A settled-decision entry is a **level-2**
@@ -690,17 +715,65 @@ foreground, from the repository root, at the capture point defined above. **Matc
   rather than re-typing the summary as its own — the cited entry is the anchor a reader re-derives, and an anchor-less inheritance is rejected
   rather than interpreted. No new `green-tree` entry is written on an inherited path; the source entry
   remains the single record of that run.
-- **Mismatch** — any outcome other than a match → current behavior verbatim: full suite run, then a fresh
-  `green-tree` entry at phase exit on an all-PASS outcome over a clean capture point. The three mismatch
-  outcomes are: no selectable entry for the cycle (`no-entry`), a dirty worktree (`dirty-worktree`), and a
+- **Mismatch** — any outcome other than a match → the *Suite-coverage predicate* below decides the run
+  set per suite, and a fresh `green-tree` entry is written at phase exit on an all-PASS outcome over a
+  clean capture point, its `suites` field naming what ran. The fast path's own three mismatch outcomes
+  are: no selectable entry for the cycle (`no-entry`), a dirty worktree (`dirty-worktree`), and a
   differing tree (`tree-differs`).
+- **Head resolvability is part of being selectable.** An entry whose `head` field **does not resolve to a commit**
+  in this repository is not selectable, exactly as an entry with an incomplete field block is not — condition 2's
+  ordering rule declines it and the predicate mismatches with the existing cause `no-entry`. The fast path does
+  **not** fall back to an earlier entry with the same `tree`: the declined entry stays visible to the
+  *Suite-coverage predicate* below, whose fold validates every head it lifts and executes the suites that entry
+  covers with the per-suite reason `unresolvable-head`. The requirement follows from what a match records — the
+  cited `head` is the anchor a reader re-derives, and a head naming no object cannot be re-derived — so declining
+  it moves a suite only from inheritance toward execution, never the reverse.
 - A cycle's first VERIFY inherits when GREEN step 5 registered a Green and the tree has not moved since
   that capture point. When no such entry is selectable — the acceptance run was narrower than the
   registrable scope, its capture point was dirty, or it was not all-PASS — the predicate mismatches with
   cause `no-entry` and the suite runs, which is the pre-existing behavior. The three mismatch causes are
   unchanged; the GREEN-acceptance path adds a producer and a consumer, not a fourth cause.
 
-**Reported vocabulary**: the step's reported outcome is one of `passed` / `inherited` / `failed`, and the
+### Suite-coverage predicate
+
+The three conditions above are the **whole-tree fast path**; they are not the whole predicate. When
+they do not all hold, the partition between what executes and what is inherited is decided **per
+suite**, by `scripts/test/suite-coverage.sh` — a script, not prose. The resolver owns no selection
+predicate of its own: it invokes `scripts/test/select-suites.sh` for every reach question, so the
+inheritance boundary is the selection boundary by construction. Governing record:
+[`docs/adr/0019-scope-fit-verification-policy.md`](adr/0019-scope-fit-verification-policy.md).
+
+Its resolution order, at the same capture point:
+
+1. **Declared out-of-tree inputs** — any enumerated suite whose header carries
+   `# out-of-tree-inputs: yes` is executed, reason `out-of-tree-inputs`, before any other test and
+   regardless of the reach answer. Such a suite's answer can move while the tree does not (a base ref
+   resolved through `resolve_base_ref` follows `origin/main`), and per-suite keying would otherwise
+   let it inherit across exactly that advance. Declaration beats derivation.
+2. **Dirty worktree** — every candidate executes, reason `dirty-worktree`. Unchanged.
+3. **Whole-tree fast path** — the three conditions above; every suite the selected entry's `suites`
+   field names is inherited.
+4. **Coverage fold** — the cycle's `green-tree` entries are scanned in file order into a map
+   `suite → head at which it last passed`, a later entry superseding an earlier one only for the
+   suites it names. Without the fold a narrow run would erase the coverage a wide run established.
+   Every head lifted out of the ledger is validated as a resolvable commit before it is used as a
+   ref; a head that does not resolve is the named cause `unresolvable-head` and its suites execute.
+5. **Reach test**, per distinct covering head `h`: `h` equal to the captured head → inherit (an empty
+   delta is defined as *select everything*, which is the inverse of the answer wanted here); `h` not
+   an ancestor of HEAD → execute, reason `head-not-ancestor` (three-dot delta semantics answer a
+   different question there, and the resolver refuses to reason rather than answer narrowly);
+   otherwise the selector's answer against `--base h` decides — selected → execute, reason
+   `reach-changed`; not selected → inherit, citing the covering entry.
+6. **Uncovered candidates** execute, reason `no-coverage`; **non-candidates** are recorded inherited with
+   reason `not-in-cycle-delta` and carry no source entry — a positive statement that the resolver
+   considered the suite and declined it, not a silence.
+
+The resolver emits one record per **enumerated** suite in every mode, so `inherited-suites` and
+`ran-suites` below partition the enumerated set exactly. A BLOCK never emits a partial plan: the
+whole enumerated set becomes the plan, every record carries reason `block-fallback`, and the exit is non-zero
+— a failure to reason about inheritance degrades to executing, never to skipping.
+
+**Reported vocabulary**: the step's reported outcome is one of `passed` / `inherited` / `mixed` / `failed`, and the
 words are not interchangeable. `passed` = the suite executed at this step and all tests passed. `inherited`
 = the suite did **not** execute at this step; the predicate matched and the Green comes from the cited
 entry. `failed` = the suite executed and did not all pass. A step that did not execute the suite is reported
@@ -708,9 +781,18 @@ as `inherited` and **never** as `passed` — the same truthfulness rule the *Det
 with `not-run` ≠ `clean`. `inherited` is nowhere defined as a synonym or subtype of `passed`, and a report on
 an inherited path that states a suite summary line as its own is a contract violation.
 
-**Mismatch-cause record**: on the mismatch path the step records which of the three conditions fired —
-`no-entry` / `dirty-worktree` / `tree-differs` — alongside the run's own outcome, so the re-aimed REFINE
-`[MUST]` leaves a trace on both branches rather than only on the match path.
+**Mismatch-cause record**: on the mismatch path the step records which condition fired, alongside the run's
+own outcome, so the re-aimed REFINE `[MUST]` leaves a trace on both branches rather than only on the match
+path. The field is **step-level and closed**: the fast path's own three outcomes — `no-entry`,
+`dirty-worktree`, `tree-differs` — plus `selection-block`, recorded when the resolver exits non-zero, and
+the value none, which is what the match path records because no condition fired there at all. That is why
+none is a member of the grammar without being a cause: it is the field's value in the absence of one. The
+resolver's per-suite reasons are a **different** vocabulary at a different layer and are never recorded
+here; they land in the run-reasons field below. Because the field is scalar and the step reaches the
+resolver only after a fast-path mismatch, a BLOCK evaluation has two fired conditions and one value must
+win: `selection-block` outranks every fast-path cause, and among the fast-path causes themselves only one
+can hold, since they are the three disjoint outcomes of a single predicate evaluation. The field is
+therefore single-valued by rule, not by luck.
 
 **Where both records land**: the inheritance line and the mismatch-cause record are one durable record of
 the step's predicate evaluation, written by the orchestrator at the same phase exit as the register write,
@@ -718,11 +800,34 @@ on the same ledger, under its own marker `green-tree-use` and following the same
 
 ```
 ### green-tree-use | cycle: <C> | runner: <PHASE> step <S>
-- outcome: passed | inherited | failed
-- mismatch-cause: no-entry | dirty-worktree | tree-differs | none
+- outcome: passed | inherited | mixed | failed
+- mismatch-cause: no-entry | dirty-worktree | tree-differs | selection-block | none
+- inherited-suites: <path> [...] | none
+- ran-suites: <path> [...] | none
+- run-reasons: <suite> <token> [; <suite> <token> ...] | none
 - source: <source entry heading> | tree: <hash> | head: <hash> | result: <summary line>
 - authority: Green-tree register
 ```
+
+- `inherited-suites` and `ran-suites` are the resolver's partition of the enumerated set, recorded as
+  the step acted on it: `ran-suites` is exactly the plan the step executed, and the two together are
+  `suite_enumerate`. A wrong fold therefore leaves a re-derivable trace rather than a silent
+  narrowing.
+- `run-reasons` names, per enumerated suite, the reason it landed in its partition; the token vocabulary
+  is owned by the declaration block in `scripts/test/suite-coverage.sh` (between its `reason-tokens`
+  markers) and is never restated here, so the entry grammar cannot drift from the vocabulary the
+  resolver emits. `none` when the step never called the resolver. A suite whose resolver record is the
+  interpolated `source: … | head: … | result: …` citation is recorded with the fixed token
+  `covered-by-source` — the reason *class* (this suite inherited because a covering entry passed the
+  reach test), not the citation text, which carries both a ` | ` and free text and would leave the
+  field with no decidable record boundary. Records are written **grouped by token**, in the order the
+  resolver declares them, so a run in which forty suites share one reason reads as forty adjacent
+  pairs rather than an interleaved list. The grouping is an ordering convention only: the `<suite>
+  <token>` pair form is what the grammar fixes, because splitting on `;` and then on whitespace must
+  recover the (suite, token) pairs directly, with no regrouping step for a reader to get wrong.
+- `mixed` is the new and now-ordinary outcome — some suites inherited, the rest executed and passed.
+  The truthfulness rule extends to it unchanged: a suite that did not execute is never reported inside
+  a `passed` claim, and `failed` still wins over both whenever any executed suite did not pass.
 
 - One is written on every predicate evaluation — including the dirty-capture run, whose cause record would
   otherwise be lost to the entry suppression above. `source` is present exactly when `outcome` is
@@ -747,7 +852,7 @@ on the same ledger, under its own marker `green-tree-use` and following the same
    - Three parallel agents (reuse / quality / efficiency).
    - Apply suggested fixes (no behavior change — tests must pass without modification).
    - If /simplify finds nothing, proceed to step 2 (do NOT skip).
-2. [MUST] Re-run all tests → confirm Green, except on an inherited Green.
+2. [MUST] Re-run all tests the change requires — execute the resolved run set → confirm Green, except on an inherited Green.
    - [MUST] Evaluate the tree-identity predicate (VERIFY > Green-tree register) at this step's entry and
      record the outcome. The obligation is the evaluation, not the run, so the step cannot silently drop it;
      evaluate it even when step 1 made no changes, because a "/simplify changed nothing" claim is
@@ -755,7 +860,7 @@ on the same ledger, under its own marker `green-tree-use` and following the same
      `green-tree` entry of the current cycle, over an empty `git status --porcelain` — and not by the claim.
    - Match → do not re-run; inherit that Green, report `inherited`, and cite the source entry.
    - Mismatch (`no-entry` / `dirty-worktree` / `tree-differs` — a /simplify edit is still uncommitted at this
-     point, so it shows dirty) → re-run all tests → confirm Green.
+     point, so it shows dirty) → execute the resolved run set (the idiom in GREEN step 5) → confirm Green.
    - On FAIL → revert /simplify changes → Developer AI fixes (max 2×).
 3. Commit (refactor type; skip if step 1 made no changes).
 ```
@@ -771,7 +876,17 @@ with the Green state from VERIFY.
 ## VALIDATE — Verification Done
 
 ```
-1. Automated tests: all PASS confirmed (achieved in VERIFY).
+1. Automated tests: all PASS confirmed — and confirmed HERE, not inherited from VERIFY.
+   [MUST] Whole-tree sweep, the coverage floor: `bash scripts/test/run-suites.sh --all`,
+   unconditionally, evaluating no inheritance predicate, and register the resulting Green with
+   `suites` naming the enumerated set. This is the one position in a cycle at which the whole
+   enumerated tree executes. It does not inherit and has no exception: were the sweep allowed to
+   subtract inherited suites, a cycle could reach hand-off with every verdict tracing back through
+   inheritance to a first run that was itself selection-scoped. Inheritance rests on `ci-subject`
+   declaration quality, and this unconditional sweep is what bounds an under-declared header's
+   damage to a single cycle rather than letting it reach the reviewer.
+   On failure → RED (matching INTEGRATE FAIL → RED); the existing GREEN ↔ VERIFY round-trip rules
+   apply and no new cap is introduced.
 2. Minimal-implementation check: PASS confirmed (achieved in VERIFY step 3).
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
 4. Maintained-docs check: confirm impacted docs are updated.

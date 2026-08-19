@@ -854,6 +854,56 @@ SH
     "[ $? -eq 0 ]"
 fi
 
+# =============================================================================
+# Issue #112 additions — run-suites.sh --selected <path>:
+#   AC-runner-refuses-unplaceable-line — a plan line outside suite_enumerate
+#     is a usage failure naming the offending line, never a suite that
+#     silently does not run.
+#   AC-all-and-selected-exclusive — --all and --selected together is usage
+#     exit 2, no suite executed, never a silent precedence between them.
+# .autoflow/issue-112-verification-design.md > "the runner refuses a plan
+# line it cannot place", "--all and --selected cannot both be honoured".
+# =============================================================================
+if [ -f "$RUNNER" ]; then
+  SEL_FX="$(mktemp -d)"
+  build_stub_root "$SEL_FX"
+
+  bash "$RUNNER" --root "$SEL_FX" --selected "$SEL_FX/does-not-exist-plan.txt" >/tmp/issue112-selected-missing-file.out 2>&1
+  SEL_MISSING_RC=$?
+  assert_true "AC-runner-refuses-unplaceable-line: run-suites.sh --selected pointing at a nonexistent plan file is a usage error (exit 2), never treated as an empty plan" \
+    "[ $SEL_MISSING_RC -eq 2 ] && [ ! -s \"$SEL_FX/witness.log\" ]"
+
+  # A valid, in-domain plan line plus a non-member line.
+  SEL_PLAN="$SEL_FX/plan.txt"
+  {
+    echo "tests/test-fixture-103-stub-a.sh"
+    echo "tests/does-not-exist-in-suite-enumerate.sh"
+  } > "$SEL_PLAN"
+
+  bash "$RUNNER" --root "$SEL_FX" --selected "$SEL_PLAN" >/tmp/issue112-selected-nonmember.out 2>&1
+  SEL_RC=$?
+  assert_true "AC-runner-refuses-unplaceable-line: run-suites.sh --selected with a plan line outside suite_enumerate exits 2 and names the offending line, executing nothing" \
+    "[ $SEL_RC -eq 2 ] && grep -qF 'tests/does-not-exist-in-suite-enumerate.sh' /tmp/issue112-selected-nonmember.out && [ ! -s \"$SEL_FX/witness.log\" ]"
+
+  # A wholly valid plan should be honoured (positive control for the flag's
+  # existence, once implemented — currently fails because --selected is not
+  # yet a recognised flag).
+  : > "$SEL_FX/witness.log"
+  SEL_PLAN_VALID="$SEL_FX/plan-valid.txt"
+  echo "tests/test-fixture-103-stub-a.sh" > "$SEL_PLAN_VALID"
+  bash "$RUNNER" --root "$SEL_FX" --selected "$SEL_PLAN_VALID" >/tmp/issue112-selected-valid.out 2>&1
+  SEL_VALID_RC=$?
+  assert_true "AC-runner-honours-selected-plan: run-suites.sh --selected with a wholly valid plan executes exactly the planned suite and exits 0" \
+    "[ $SEL_VALID_RC -eq 0 ] && grep -qF 'test-fixture-103-stub-a.sh' \"$SEL_FX/witness.log\" && ! grep -qF 'test-fixture-103-stub-b.sh' \"$SEL_FX/witness.log\""
+
+  bash "$RUNNER" --root "$SEL_FX" --all --selected "$SEL_PLAN_VALID" >/tmp/issue112-all-and-selected.out 2>&1
+  ALLSEL_RC=$?
+  assert_true "AC-all-and-selected-exclusive: run-suites.sh --all together with --selected is usage exit 2, reporting the mutual-exclusion cause rather than an unrecognised-flag error" \
+    "[ $ALLSEL_RC -eq 2 ] && ! grep -qF 'unknown argument' /tmp/issue112-all-and-selected.out && grep -qiE -- '--all.*--selected|--selected.*--all' /tmp/issue112-all-and-selected.out"
+
+  rm -rf "$SEL_FX"
+fi
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1

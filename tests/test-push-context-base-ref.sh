@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml
+# ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml scripts/test/suite-manifest.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: push-trigger base-ref resolution, delta-scoped subject execution —
 # Issue #99 (standing; supersedes the Issue #85 whole-subject-sweep oracle)
@@ -63,6 +64,12 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SELF_ABS="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
+
+# The call-site criterion derive_subjects() applies lives in the manifest
+# library, its single definition site. Sourced from the REAL script location,
+# never the overridden root, for the same reason SELF_ABS is fixed above.
+# shellcheck source=scripts/test/suite-manifest.sh
+. "$SCRIPT_DIR/../scripts/test/suite-manifest.sh"
 
 # Root-override: see header. Applied AFTER SELF_ABS/SCRIPT_DIR are fixed (the
 # recursion target and the self-exemption basename below must always resolve
@@ -229,21 +236,14 @@ derive_subjects() {
     [ -f "$abs" ] || continue
     [ "$rel" = "$SELF_REL" ] && continue
     is_exempt_hermetic "$rel" && continue
-    # Call-site criterion: a non-comment line invoking resolve_base_ref or
-    # `git ... merge-base` (flags between `git` and `merge-base` allowed —
-    # e.g. `git -C "$PROJECT_ROOT" merge-base HEAD main`). Naming the
-    # resolver only in a comment (tests/test-issue-42-spawn-mode-contract.sh)
-    # does not qualify.
-    # Process substitution, not a pipe: under `set -o pipefail` (this script's
-    # own top-of-file setting), feeding one filter's output straight into a
-    # second, early-exiting `grep -qE` exits non-zero whenever that early exit
-    # SIGPIPEs the first filter before it finishes writing — silently
-    # dropping a true subject from derivation (measured: tests/test-issue-59-
-    # adoption-evidence-discipline.sh, a real resolve_base_ref call site,
-    # deterministically vanished from the derived set under this pattern).
-    # `< <(...)` keeps the filter a single simple command so pipefail has
-    # nothing to see.
-    if grep -qE '\bresolve_base_ref\b|\bgit\b[^#]*\bmerge-base\b' < <(grep -vE '^\s*#' "$abs" 2>/dev/null); then
+    # Call-site criterion: `suite_reads_out_of_tree_state` from the sourced
+    # library, which is its single definition site. The predicate itself — the
+    # non-comment restriction and the process-substitution form that keeps
+    # pipefail from silently dropping a true subject — is documented there.
+    # What stays here is this suite's own DOMAIN (workflow-registered subjects
+    # minus EXEMPT_HERMETIC_DRIVERS), which is a different question from the
+    # header lint's and does not move with the predicate.
+    if suite_reads_out_of_tree_state "$abs"; then
       printf '%s\n' "$rel"
     fi
   done
