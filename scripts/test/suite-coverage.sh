@@ -829,6 +829,41 @@ SH
   fi
   rm -rf "$d"
 
+  # --- FAST-PATH-UNRESOLVABLE-HEAD leg (issue #112 cycle 5 review finding):
+  # the whole-tree fast path selects an entry on tree equality and a passing
+  # result alone, with no check that its `head` resolves — unlike the fold,
+  # which validates the same field before use. An entry whose tree matches the
+  # capture but whose head names no object must fall through to execution,
+  # never cite the unresolvable head as an inheritance anchor. Run under
+  # --candidates selection, in the same fixture, so the same run also proves
+  # the non-candidate boundary (Step 8) is unaffected: it fires ahead of the
+  # fast path regardless of the entry's head validity.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  fx_commit "$d" docs/subject-a.md "committed touch a"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"
+  fx_entry "$ledger" 1 "$tree" "cafebabecafebabecafebabecafebabecafebabe" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh"
+  st_run "$d" "$ledger" 1 selection
+  if ! printf '%s\n' "$ST_REC" | grep -q 'head: cafebabecafebabecafebabecafebabecafebabe'; then
+    st_ok "FAST-PATH-UNRESOLVABLE-HEAD leg (no citation)" "no record cites the unresolvable head as an inheritance anchor"
+  else
+    st_fail "FAST-PATH-UNRESOLVABLE-HEAD leg (no citation)" "expected no record to cite the bogus head, got: $ST_REC"
+  fi
+  if [ "$ST_RC" -eq 0 ] && st_reason 'tests/test-fx-cov-a\.sh' | grep -qE '^RUN: .* unresolvable-head'; then
+    st_ok "FAST-PATH-UNRESOLVABLE-HEAD leg (executes)" "a matching-tree entry with an unresolvable head falls through to execution at exit 0, not a BLOCK"
+  else
+    st_fail "FAST-PATH-UNRESOLVABLE-HEAD leg (executes)" "expected test-fx-cov-a.sh RUN unresolvable-head at rc 0, got rc=$ST_RC: $ST_REC"
+  fi
+  if st_reason 'tests/test-fx-cov-b\.sh' | grep -qF 'not-in-cycle-delta' \
+     && ! st_reason 'tests/test-fx-cov-b\.sh' | grep -q 'head:' \
+     && st_reason 'tests/test-fx-cov-c\.sh' | grep -qF 'not-in-cycle-delta' \
+     && ! st_reason 'tests/test-fx-cov-c\.sh' | grep -q 'head:'; then
+    st_ok "FAST-PATH-UNRESOLVABLE-HEAD leg (non-candidate boundary)" "suites outside the cycle delta still inherit not-in-cycle-delta, citing no head, unaffected by the invalid head elsewhere in the entry"
+  else
+    st_fail "FAST-PATH-UNRESOLVABLE-HEAD leg (non-candidate boundary)" "expected b and c INHERIT not-in-cycle-delta with no head citation, got: $ST_REC"
+  fi
+  rm -rf "$d"
+
   return $SELFTEST_RC
 }
 

@@ -6738,6 +6738,28 @@
       "literal": "What CI executes is unchanged. `scripts/test/select-suites.sh` gains an opt-in `--include-worktree` flag that no CI call passes."
     },
     {
+      "id": "112-c5-adr-0019-head-resolvability-tightening",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/adr/0019-scope-fit-verification-policy.md",
+      "section": "Decision",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "head resolvability"
+    },
+    {
+      "id": "112-c5-guide-tree-identity-head-resolvable",
+      "origin_issue": 112,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "Tree-identity predicate",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "does not resolve to a commit"
+    },
+    {
       "id": "112-claude-regressions-validate-clause",
       "origin_issue": 112,
       "intent": "existence",
