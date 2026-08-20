@@ -34,6 +34,15 @@
 # AC-suite-step-governed-shape, AC-trigger-correspondence-holds) are existing
 # scripts this cycle does not modify and are not re-asserted here.
 #
+# Scope addendum (issue #116) — verification design
+# .autoflow/issue-116-verification-design.md, "Acceptance criteria ->
+# verification type -> method": Group E adds the sub-id-granular
+# header-narrowing oracles over tests/test-issue-799-inert-cleanup.sh's
+# comment header — the curated stale-spelling and live-id lists, the
+# compound/family-glob spelling arms, the issue-#116 carrier trail and its
+# CARRIER_IDS closure, the registry §13.2 narrowing-claim composition, and
+# this suite's own scope currency.
+#
 # Group A reconciliation (GATE:PLAN ledger O2 item 1): AC-stale-record-retired
 # and AC-retirement-basis-recorded were mutually unsatisfiable as originally
 # authored -- see .autoflow/issue-109-verification-design.md's Group A row for
@@ -278,6 +287,7 @@ SUITE_ADR0016_CONTENT="$(cat "$SUITE_ADR0016")"
 SUITE_798_HEADER="$(suite_header "$SUITE_798")"
 SUITE_799_HEADER="$(suite_header "$SUITE_799")"
 SUITE_ADR0016_HEADER="$(suite_header "$SUITE_ADR0016")"
+SUITE_SELF_HEADER="$(suite_header "$PROJECT_ROOT/tests/test-issue-109-doc-assertions.sh")"
 
 for id in "${GROUP_D_798[@]}"; do
   assert_true "AC-assertless-header-removed: tests/test-issue-798-topology-flip.sh no longer echoes the assert-less '=== $id ' section header" \
@@ -334,6 +344,7 @@ CARRIER_IDS=(
   "799-AC5D-index-neg" "799-AC5D-index-pos" "799-AC5D-maint-header" "799-AC5D-maint-qualifier"
   "799-AC5G-neg-s11a" "799-AC5G-guard-active-na"
   "799-AC5H-degenerate"
+  "799-AC2-neg-template-era"
   "adr0016-AC4-a-diagnose-heading" "adr0016-AC5-a-casecollection-heading" "adr0016-AC6-a-followup-heading"
   "adr0016-AC961-5-a-owner-approval" "adr0016-AC961-5-b-readme-accepted"
   "adr0016-AC961-7-a-range" "adr0016-AC961-7-b-date" "adr0016-AC961-7-b-repo" "adr0016-AC961-7-c-registry"
@@ -378,6 +389,119 @@ assert_true "AC-live-assertion-set-preserved: every baseline assertion-descripti
   "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/issue-109-assertion-baseline-799.txt' '$SUITE_799' 'tests/test-issue-799-inert-cleanup.sh'"
 assert_true "AC-live-assertion-set-preserved: every baseline assertion-description literal still greps in tests/adr-0016-conformance-check.sh" \
   "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/issue-109-assertion-baseline-adr0016.txt' '$SUITE_ADR0016' 'tests/adr-0016-conformance-check.sh'"
+
+# =============================================================================
+echo ""
+echo "=== Group E — issue #116: sub-id-granular header narrowing (799) ==="
+
+# stale-spelling-list (.autoflow/issue-116-verification-design.md
+# "stale-spelling-list" table). Each id's pre-change bounded count in the 799
+# header is non-zero (verified there); AC-stale-subid-absent requires bounded
+# count 0 once D-narrow lands. AC3D-section-neg is excluded -- its only bare
+# occurrence is inside the compound spelling covered by
+# AC-compound-spelling-absent instead.
+STALE_799_IDS=(
+  "AC1-neg" "AC1-pos" "AC2-neg" "AC3D-checklist-neg" "AC5D-index-neg"
+  "AC5D-maint-neg" "AC5G-neg" "AC5G-guard" "AC5H-degenerate" "AC5H-nosubmod"
+)
+for id in "${STALE_799_IDS[@]}"; do
+  assert_true "AC-stale-subid-absent: tests/test-issue-799-inert-cleanup.sh's header carries no bounded occurrence of '$id'" \
+    "[ \"\$(bounded_id_count '$id' \"\$SUITE_799_HEADER\")\" -eq 0 ]"
+done
+
+# Compound / family-glob narration forms -- gone even though their expanded
+# ids are invisible to the bounded-token check above. The AC1-neg/pos form is
+# a deliberately redundant fixed-string arm (both components are already
+# bounded-token covered above); the other two pin ids that count 0 as bare
+# bounded tokens (AC3D-section-neg, and each of AC5D/AC5G/AC5H as a family).
+COMPOUND_799_SPELLINGS=(
+  "AC3D-checklist-neg/section-neg"
+  "AC1-neg/pos"
+  "AC5D/G/H-*"
+)
+for spelling in "${COMPOUND_799_SPELLINGS[@]}"; do
+  assert_true "AC-compound-spelling-absent: tests/test-issue-799-inert-cleanup.sh's header no longer spells '$spelling'" \
+    "! printf '%s\n' \"\$SUITE_799_HEADER\" | grep -qF -- '$spelling'"
+done
+
+# AC-live-id-preserved (guard, PASS pre- and post-change) -- every id the 799
+# body actually executes stays named in its header.
+LIVE_799_BARE_IDS=(
+  "AC2-tree" "AC3-guide" "AC3-guard" "AC3-nores" "AC4-guard" "AC6-scope" "AC6-ci"
+)
+for id in "${LIVE_799_BARE_IDS[@]}"; do
+  assert_true "AC-live-id-preserved: tests/test-issue-799-inert-cleanup.sh's header still names live id '$id'" \
+    "[ \"\$(bounded_id_count '$id' \"\$SUITE_799_HEADER\")\" -ge 1 ]"
+done
+assert_true "AC-live-id-preserved: tests/test-issue-799-inert-cleanup.sh's header still carries the compound spelling 'AC3-guide/common/ext'" \
+  "printf '%s\n' \"\$SUITE_799_HEADER\" | grep -qF -- 'AC3-guide/common/ext'"
+
+# AC-carrier-trail-preserved -- preservation arm (guard, PASS pre- and
+# post-change: the existing 13 §13.2-assigned carrier ids stay cited) and
+# new-carrier arm (REDs today: the issue-#116 carrier row does not exist yet).
+TRAIL_799_CARRIER_IDS=(
+  "799-AC1-neg-wizard" "799-AC1-pos-marketplace" "799-AC1-pos-target"
+  "799-AC3D-checklist-neg" "799-AC3D-checklist-pos" "799-AC3D-section-neg"
+  "799-AC5D-index-neg" "799-AC5D-index-pos" "799-AC5D-maint-header" "799-AC5D-maint-qualifier"
+  "799-AC5G-neg-s11a" "799-AC5G-guard-active-na"
+  "799-AC5H-degenerate"
+)
+for cid in "${TRAIL_799_CARRIER_IDS[@]}"; do
+  assert_true "AC-carrier-trail-preserved: tests/test-issue-799-inert-cleanup.sh's header still cites carrier '$cid'" \
+    "printf '%s\n' \"\$SUITE_799_HEADER\" | grep -qF -- '$cid'"
+done
+assert_true "AC-carrier-trail-preserved: tests/test-issue-799-inert-cleanup.sh's header cites the issue-#116 carrier '799-AC2-neg-template-era'" \
+  "printf '%s\n' \"\$SUITE_799_HEADER\" | grep -qF -- '799-AC2-neg-template-era'"
+
+# AC-carrier-guard-covers-new-row -- membership arm (REDs today: the id is
+# not yet a CARRIER_IDS member) and closure arm (guard, vacuously PASS today
+# -- every 799-AC* id the header cites is already a CARRIER_IDS member).
+assert_true "AC-carrier-guard-covers-new-row: 799-AC2-neg-template-era is a member of CARRIER_IDS" \
+  "printf '%s\n' \"\${CARRIER_IDS[@]}\" | grep -qxF -- '799-AC2-neg-template-era'"
+
+CITED_799AC_IDS="$(printf '%s\n' "$SUITE_799_HEADER" | grep -oE '799-AC[A-Za-z0-9_-]*' | sort -u)"
+UNGUARDED_799AC=""
+while IFS= read -r cid; do
+  [ -z "$cid" ] && continue
+  printf '%s\n' "${CARRIER_IDS[@]}" | grep -qxF -- "$cid" || UNGUARDED_799AC="$UNGUARDED_799AC $cid"
+done <<< "$CITED_799AC_IDS"
+assert_true "AC-carrier-guard-covers-new-row: every 799-AC* id cited in tests/test-issue-799-inert-cleanup.sh's header is a CARRIER_IDS member" \
+  "[ -z '$UNGUARDED_799AC' ]"
+
+# AC-registry-claim-true (composed, bounded to the 799 suite -- ledger O2) --
+# the registry §13.2 narrowing sentence, whitespace-normalized (the sentence
+# wraps across two lines in the doc), matches the registry body AND every
+# stale/compound spelling above is gone from the 799 header.
+REG13_2_BODY="$(extract_section "13.2 Assert-less acceptance-criterion section headers" "$REGISTRY_MD")"
+NORMALIZED_REG13_2="$(printf '%s\n' "$REG13_2_BODY" | tr '\n' ' ' | tr -s ' ')"
+check_ac116_registry_claim_true() {
+  printf '%s' "$NORMALIZED_REG13_2" | grep -qF "narrowed to what the body executes, with the migrated ids annotated by their carrier" || return 1
+  local id spelling
+  for id in "${STALE_799_IDS[@]}"; do
+    [ "$(bounded_id_count "$id" "$SUITE_799_HEADER")" -eq 0 ] || return 1
+  done
+  for spelling in "${COMPOUND_799_SPELLINGS[@]}"; do
+    printf '%s\n' "$SUITE_799_HEADER" | grep -qF -- "$spelling" && return 1
+  done
+  return 0
+}
+assert_true "AC-registry-claim-true: docs/doc-invariant-registry.md's §13.2 narrowing claim holds of the 799 suite (normalized text match + stale/compound absence)" \
+  "check_ac116_registry_claim_true"
+
+# AC-host-suite-header-current -- this suite's own header names the
+# issue-#116 addition it is being asked to police, so it does not itself
+# acquire the drift it checks for.
+assert_true "AC-host-suite-header-current: tests/test-issue-109-doc-assertions.sh's own header names the issue-#116 scope addendum" \
+  "printf '%s\n' \"\$SUITE_SELF_HEADER\" | grep -qF -- 'Scope addendum (issue #116)'"
+
+# Reuse-typed legs (verification design .autoflow/issue-116-verification-design.md):
+#   AC-registry-pin-consistent    -> bash scripts/test/check-manifest-regen-clean.sh
+#   AC-suite-machine-fields-intact -> bash scripts/test/select-suites.sh +
+#                                      bash scripts/test/check-suite-manifest.sh
+#   AC-suites-still-green          -> run tests/test-issue-799-inert-cleanup.sh
+#                                      and this suite end to end
+# No new assertion is written for these three; they are existing scripts run
+# separately (see the RED report).
 
 # =============================================================================
 # Results
