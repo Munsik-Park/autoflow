@@ -629,6 +629,201 @@ assert_true "AC-step-target-exists hermetic: a step naming a nonexistent target 
   "[ ! -f \"\$PROJECT_ROOT/\${STEP_TARGET_FIXTURE_TARGETS[0]}\" ]"
 rm -f "$STEP_TARGET_FIXTURE"
 
+# ---------------------------------------------------------------------------
+# AC-no-stale-trigger-path (issue #119) — no `paths:` entry in any workflow
+# names a tests/** or scripts/** file that is no longer in the tree.
+#
+# This is the reverse of AC-step-target-exists above, and of AC-b-2's
+# suite -> `paths:` coverage direction. A literal entry with no file behind it
+# is the residue a suite deletion leaves: it triggers nothing, it reds nothing,
+# and no runtime layer can observe it, so its only possible carrier is a static
+# arm. AC-step-target-exists does not reach it (its subject is `run:` targets,
+# not trigger entries) and AC-entry-shape does not (its subject is entry FORM).
+#
+# Scoped to LITERAL entries only. A glob entry names a set, not a file, and an
+# empty set is a legitimate state, so requiring existence of a glob would red
+# on a correct tree. `entry_is_unsupported_shape` above already classifies
+# `!`/`?`/`[`/`]` metacharacter shapes, so this reuses it rather than
+# restating that case arm — only the bare-`*` check is added here.
+# ---------------------------------------------------------------------------
+entry_is_literal_source_path() {   # <paths-entry>
+  case "$1" in
+    *'*'*) return 1 ;;
+  esac
+  entry_is_unsupported_shape "$1" && return 1
+  case "$1" in
+    tests/*|scripts/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# One assertion per workflow, naming every stale entry it holds — not one per
+# entry. The per-entry form emitted ~200 PASS lines for a property whose only
+# interesting state is "which entries are stale", and this cycle's subject is
+# the weight of the suite set.
+for wf in "$PROJECT_ROOT"/.github/workflows/*.yml; do
+  [ -f "$wf" ] || continue
+  wrel="${wf#"$PROJECT_ROOT"/}"
+  STALE_ENTRIES=""
+  while IFS= read -r entry; do
+    [ -n "$entry" ] || continue
+    entry_is_literal_source_path "$entry" || continue
+    [ -e "$PROJECT_ROOT/$entry" ] || STALE_ENTRIES="$STALE_ENTRIES $entry"
+  done < <(extract_paths_entries "$wf")
+  assert_true "AC-no-stale-trigger-path: $wrel — every literal tests/** or scripts/** paths: entry names a file that is in the tree (stale:${STALE_ENTRIES:- none})" \
+    "[ -z '$STALE_ENTRIES' ]"
+done
+
+# Hermetic leg: on a reconciled tree the loop above passes, so fixture text is
+# what discriminates a real existence check from a permissive one — the same
+# non-vacuity argument AC-step-target-exists makes for its own direction.
+STALE_PATH_FIXTURE="$(mktemp)"
+cat > "$STALE_PATH_FIXTURE" <<'YML'
+on:
+  pull_request:
+    paths:
+      - 'tests/fixture-119-retired-suite-does-not-exist.sh'
+      - 'tests/**'
+      - 'docs/some-doc.md'
+YML
+mapfile -t STALE_PATH_ENTRIES < <(extract_paths_entries "$STALE_PATH_FIXTURE")
+STALE_LITERALS=()
+for entry in "${STALE_PATH_ENTRIES[@]}"; do
+  entry_is_literal_source_path "$entry" && STALE_LITERALS+=("$entry")
+done
+assert_true "AC-no-stale-trigger-path hermetic: the literal-entry filter selects exactly the deleted-suite entry — the 'tests/**' glob and the docs/ path are correctly not subjected to an existence predicate" \
+  "[ \${#STALE_LITERALS[@]} -eq 1 ] && [ \"\${STALE_LITERALS[0]}\" = 'tests/fixture-119-retired-suite-does-not-exist.sh' ]"
+assert_true "AC-no-stale-trigger-path hermetic: a literal entry naming a file that is not in the tree is detected (the existence predicate is not vacuous)" \
+  "[ ! -e \"\$PROJECT_ROOT/\${STALE_LITERALS[0]}\" ]"
+rm -f "$STALE_PATH_FIXTURE"
+
+# ---------------------------------------------------------------------------
+# AC-subsumption-per-assertion (issue #119) — the coverage lint's OWN
+# `--self-test` must own the orphan-reporting EXIT STATUS, not only the
+# unreachable-set comparison.
+#
+# tests/test-issue-103-orphan-coverage.sh drives the lint against a fixture
+# root and asserts BOTH that the orphan is reported AND that the lint exits
+# non-zero. Its first half is owned by the lint's own DIRECT-REACHABILITY leg
+# (scripts/test/check-suite-ci-coverage.sh, self_test()); its second half is
+# not — self_test() compares the unreachable SET and returns, and the
+# top-level orphan-reporting exit path is never reached in `--self-test` mode.
+# Retiring that suite without re-homing this half deletes the invariant.
+#
+# The arm is a mutation drive, not a text pin on the lint's output: a scratch
+# copy whose orphan-reporting `exit 1` is turned into `exit 0` must red the
+# lint's own `--self-test`. That holds wherever the re-homed leg is placed, so
+# the arm does not prescribe an implementation shape — and per the GATE:PLAN
+# carried finding, the leg cannot be a `bash "$0" --root` drive placed INSIDE
+# self_test() (default mode is gated on `if ! self_test`, so that recurses).
+# ---------------------------------------------------------------------------
+# The lint sources its siblings relative to its own directory, so the scratch
+# copy is a copy of scripts/test/ under a scratch root — of the WORKING tree,
+# not of `git worktree add HEAD`, so the arm reads the change under test rather
+# than the last commit. `--self-test` builds its own fixture root, so no tests/
+# tree is needed under the scratch root.
+COVERAGE_EXITPATH_DIR="$(mktemp -d)"
+mkdir -p "$COVERAGE_EXITPATH_DIR/scripts/test"
+cp "$PROJECT_ROOT"/scripts/test/*.sh "$COVERAGE_EXITPATH_DIR/scripts/test/"
+COVERAGE_EXITPATH_LINT="$COVERAGE_EXITPATH_DIR/scripts/test/check-suite-ci-coverage.sh"
+
+# Direction control FIRST, on the unmutated scratch copy: the A/B pair differs
+# in exactly the mutation, so a red on the mutant cannot be an artefact of
+# running out of the scratch root.
+bash "$COVERAGE_EXITPATH_LINT" --self-test >/tmp/issue119-coverage-exitpath-control.out 2>&1
+COVERAGE_EXITPATH_CONTROL_RC=$?
+assert_true "AC-subsumption-per-assertion (coverage-lint exit path, direction control): the unmutated scratch copy's --self-test exits 0 — the new leg reds a defanged exit path, not every run" \
+  "[ $COVERAGE_EXITPATH_CONTROL_RC -eq 0 ]"
+
+# Mutate ONLY the final statement — the orphan-reporting exit at end of file.
+# Every other `exit 1` in the lint (usage, self-test gate) is left intact, so a
+# red here can only come from the orphan-reporting path.
+perl -0pi -e 's/\nexit 1\n\z/\nexit 0\n/' "$COVERAGE_EXITPATH_LINT"
+COVERAGE_EXITPATH_MUTATED=true
+cmp -s "$COVERAGE_LINT" "$COVERAGE_EXITPATH_LINT" && COVERAGE_EXITPATH_MUTATED=false
+assert_true "AC-subsumption-per-assertion (coverage-lint exit path): the scratch copy's orphan-reporting exit statement was actually changed — the mutation is not byte-identical" \
+  "$COVERAGE_EXITPATH_MUTATED"
+
+bash "$COVERAGE_EXITPATH_LINT" --self-test >/tmp/issue119-coverage-exitpath-mutated.out 2>&1
+COVERAGE_EXITPATH_MUTANT_RC=$?
+assert_true "AC-subsumption-per-assertion (coverage-lint exit path): --self-test reds a copy whose orphan-reporting exit is defanged to 0 — the self-test owns the exit STATUS, not only the unreachable set" \
+  "[ $COVERAGE_EXITPATH_MUTANT_RC -ne 0 ]"
+rm -rf "$COVERAGE_EXITPATH_DIR"
+
+# ---------------------------------------------------------------------------
+# AC-selection-cosubsumption (issue #119) — for every deleted in-suite
+# re-invocation, the CI step said to own the invariant must EXECUTE under every
+# delta that executes the host suite. "A step exists" is not that property.
+#
+# Two conditions, and both are needed:
+#   (1) SELECTION. A per-suite step is guarded by
+#       `if: contains(… steps.select.outputs.suites …)`, so it runs only when
+#       select-suites.sh selects it. Selection keys on `# ci-subject:`
+#       (ADR-0019 Decision 1), so the owner co-selects with the host exactly
+#       when the host's subject token set is inside the owner's. A push selects
+#       the full set and hides the gap; a pull request does not.
+#   (2) TRIGGER. The owner's workflow only runs at all when the delta is inside
+#       its own `paths:` set. Both contract-suites.yml and e2e-dummy-target.yml
+#       are path-filtered on pull_request AND push, so a cross-workflow owner
+#       whose workflow is not triggered by the host's subject is not an owner —
+#       "unconditional" means unconditional WITHIN a triggered run (GATE:PLAN
+#       carried finding 2, ledger O3).
+#
+# Placement: the verification design named the central-runner suite, on the
+# ground that the arm drives select-suites.sh over synthetic deltas. Re-derived
+# here: condition (1) is a containment over two `# ci-subject:` headers read
+# through the same matcher select-suites.sh uses, and condition (2) is a
+# containment over a workflow's `paths:` set. Both matchers — matcher_check /
+# subject_covered — live in this file and nowhere else (tests/lib/ holds only
+# base-ref.sh and harness-pins.sh), and this suite's declared subject is the
+# workflow directory. Re-homing the arm to the central-runner suite would mean
+# copying the Actions-glob matcher to a second site, which is the duplication
+# the shared-library arm below exists to prevent.
+# ---------------------------------------------------------------------------
+# host-suite | owner-suite | owner-workflow — the deletions of issue #119 whose
+# basis is "a separate CI step already runs it".
+COSUBSUMPTION_PAIRS=(
+  "tests/test-issue-103-pin-and-docs.sh|tests/test-issue-27-composition-oracle.sh|.github/workflows/e2e-dummy-target.yml"
+)
+
+for pair in "${COSUBSUMPTION_PAIRS[@]}"; do
+  IFS='|' read -r cos_host cos_owner cos_wf <<< "$pair"
+
+  cos_host_tokens="$(suite_header_field "$PROJECT_ROOT/$cos_host" ci-subject 2>/dev/null || true)"
+  cos_owner_tokens="$(suite_header_field "$PROJECT_ROOT/$cos_owner" ci-subject 2>/dev/null || true)"
+  assert_true "AC-selection-cosubsumption: both $cos_host and $cos_owner declare a ci-subject set to compare" \
+    "[ -n \"$cos_host_tokens\" ] && [ -n \"$cos_owner_tokens\" ]"
+  [ -n "$cos_host_tokens" ] && [ -n "$cos_owner_tokens" ] || continue
+
+  # shellcheck disable=SC2206
+  cos_owner_arr=($cos_owner_tokens)
+  mapfile -t cos_wf_paths < <(extract_paths_entries "$PROJECT_ROOT/$cos_wf")
+
+  cos_unselected=""
+  cos_untriggered=""
+  for tok in $cos_host_tokens; do
+    subject_covered "$tok" "${cos_owner_arr[@]}" || cos_unselected="$cos_unselected $tok"
+    subject_covered "$tok" "${cos_wf_paths[@]}"  || cos_untriggered="$cos_untriggered $tok"
+  done
+
+  assert_true "AC-selection-cosubsumption (selection): every ci-subject token of $cos_host is inside $cos_owner's own ci-subject set, so no pull-request delta selects the host without also selecting the owner (uncovered:${cos_unselected:- none})" \
+    "[ -z '$cos_unselected' ]"
+  assert_true "AC-selection-cosubsumption (trigger): every ci-subject token of $cos_host is inside $cos_wf's paths: set, so the owner's workflow is triggered by the same deltas — an owner in an untriggered workflow is not an owner (uncovered:${cos_untriggered:- none})" \
+    "[ -z '$cos_untriggered' ]"
+done
+
+# Non-vacuity: the containment predicate must be able to REPORT a gap, or the
+# loop above is a pass regardless of what the headers say.
+COSUB_FIXTURE_PATTERNS=('tests/lib/**' 'docs/x.md')
+COSUB_NEG=true
+subject_covered "scripts/test/select-suites.sh" "${COSUB_FIXTURE_PATTERNS[@]}" && COSUB_NEG=false
+assert_true "AC-selection-cosubsumption hermetic: a subject token outside the owner's declared set is reported uncovered (the containment predicate is not vacuous)" \
+  "$COSUB_NEG"
+COSUB_POS=true
+subject_covered "tests/lib/harness-pins.sh" "${COSUB_FIXTURE_PATTERNS[@]}" || COSUB_POS=false
+assert_true "AC-selection-cosubsumption hermetic: a subject token a '**' glob covers is reported covered (the containment predicate is not universally false)" \
+  "$COSUB_POS"
+
 # =============================================================================
 # Issue #103 cycle 2 (review-response) -- select-step-fail-open.
 # .autoflow/issue-103-verification-design.md (cycle 2) §1:

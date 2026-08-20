@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/preflight/check-review-backend.sh scripts/handoff/confirm-ci-green.sh scripts/test/check-watchdog-detachment.sh scripts/test/run-suites.sh
 # lane: standing
-# budget-secs: SUITE_BUDGET_CEILING_SECS
+# budget-secs: 123
 # =============================================================================
 # Test: bounded-execution fallback watchdog — pipe-hold, orphan sleep, group
 #       kill, fixture residue, copy lineage. Issue #100 (standing; the
@@ -74,6 +74,26 @@
 #       the Linux CI runner, where the prior slice kept `/usr/bin/timeout`
 #       reachable.
 #
+# BOUND-REDUCTION NOTE (issue #119). The six drives whose bound genuinely
+# fires are this suite's wall clock, and their bounds are minimized to
+# 9/15/11/8/13/17 under two floors re-derived from this file:
+#   - GRANULARITY FLOOR (>= 8) — see the "bound reduction (static)" section
+#     below (search `Issue #119 bound reduction`), which derives and asserts
+#     this floor; not restated here.
+#   - DISCOVERY FLOOR. AC-no-self-kill is the one drive that LOCATES its
+#     subject by polling, so its bound is also its subject's liveness budget:
+#     bound >= 2x the poll budget (iterations x step). Both sides move — the
+#     poll is 24 iterations at 0.25s (6s) against a bound of 15.
+# The pipe-release bound (run_probe_piped) is NOT in the reduction set: its
+# leg discriminates a released pipe from a held one by elapsed time and keeps
+# the >= 6s constraint recorded at ledger O2 (2) above.
+# AC-no-self-kill is a FENCE, not a fire discriminator (ledger F1): it asserts
+# what was NOT killed (the subject's pgid differs from the caller's; a
+# sentinel in the caller's group survives), so no fire reading is added to it
+# and its vacuity protection is the discovery floor instead.
+# Hang, child, sentinel and outer-cap literals keep their values across the
+# reduction, so no grepped find_pid_by_cmd token moves.
+
 # SUITE-INVOKES-SUITE PROHIBITION (ledger O4). This suite contains no
 # `bash tests/test-*.sh` of any form. Two categories that previously appeared
 # here are removed for this reason, not merely deferred to a later cleanup:
@@ -358,6 +378,176 @@ assert_true "AC-path-seam-single: every actually-launched leg's subject PATH com
 
 # =============================================================================
 echo ""
+echo "=== Issue #119 bound reduction (static): the six real-wait bounds ==="
+# Six drives in this file genuinely wait for their bound to fire; every other
+# leg's subject exits at once and costs nothing. Those six ARE this suite's
+# wall clock, and issue #119 reduces them. Two floors bound the reduction, both
+# re-derived from this file rather than asserted:
+#
+#   * GRANULARITY FLOOR — >= 8. The paired negative arms below assert
+#     `PROBE_ELAPSED -lt 5`, fixing a 5-second early-exit ceiling, and bash
+#     SECONDS has one-second granularity. At or below 5 no timing oracle here
+#     can separate "the watchdog fired at the bound" from "the subject exited
+#     at once", and the absence-shaped arms (no surviving child, empty TMPDIR)
+#     go vacuous rather than red when the bound fires before the subject has
+#     finished starting. 8 leaves three seconds of clearance and leaves the
+#     ceiling itself untouched.
+#   * REDUCTION CEILING — <= 20. The settled assignment (ledger F8: 9/15/11/
+#     8/13/17) tops out at 17; the ceiling carries the same three seconds of
+#     clearance above it that the floor carries below the early-exit ceiling.
+#     It is a band, not a pin: §2.7 of the feature design declines to pin an
+#     arithmetic figure, and a per-drive band admits any assignment that
+#     actually reduces the wait.
+#
+# Each drive is located by its own HANG token, not by its bound — the hang,
+# child, sentinel and outer-cap literals keep their values across this change
+# (feature design §2.4), so anchoring on them survives the reduction the arm
+# exists to check.
+BOUND_SRC="$SCRIPT_DIR/test-bounded-execution-fallback.sh"
+declare -a REDUCED_BOUND_NAMES=() REDUCED_BOUND_VALUES=()
+add_reduced_bound() {          # <drive-name> <extracted-value>
+  REDUCED_BOUND_NAMES+=("$1")
+  REDUCED_BOUND_VALUES+=("$2")
+}
+add_reduced_bound "AC-bound-fires (hang 65)" \
+  "$(grep -oE '^run_probe [0-9]+ hang 65' "$BOUND_SRC" | head -1 | awk '{print $2}')"
+add_reduced_bound "AC-no-self-kill (hang 79)" \
+  "$(grep -oE 'FAKE_HANG_SECS=79 PROBE_TIMEOUT_SECS=[0-9]+' "$BOUND_SRC" | head -1 | sed -E 's/.*PROBE_TIMEOUT_SECS=//')"
+add_reduced_bound "AC-child-reaped (forkhang 85)" \
+  "$(grep -oE '^run_probe [0-9]+ forkhang 85' "$BOUND_SRC" | head -1 | awk '{print $2}')"
+add_reduced_bound "AC-marker-cleanup probe fired (hang 55)" \
+  "$(grep -oE 'FAKE_HANG_SECS=55 PROBE_TIMEOUT_SECS=[0-9]+' "$BOUND_SRC" | head -1 | sed -E 's/.*PROBE_TIMEOUT_SECS=//')"
+add_reduced_bound "AC-no-job-notice hang leg (hang 91)" \
+  "$(grep -oE '^run_probe [0-9]+ hang 91' "$BOUND_SRC" | head -1 | awk '{print $2}')"
+add_reduced_bound "AC-marker-cleanup confirm fired (precheck sleep 90)" \
+  "$(grep -A2 'GH_MOCK_PRECHECK_SLEEP=90' "$BOUND_SRC" | grep -oE 'CI_POLL_TIMEOUT_SECS=[0-9]+' | head -1 | sed -E 's/.*=//')"
+
+REDUCED_BOUND_LIST=""
+for i in "${!REDUCED_BOUND_NAMES[@]}"; do
+  bname="${REDUCED_BOUND_NAMES[$i]}"; bval="${REDUCED_BOUND_VALUES[$i]}"
+  assert_true "AC-119-bound-located: the '$bname' drive's bound literal is still locatable by its unchanged hang token (found: '${bval:-none}')" \
+    "[ -n \"$bval\" ]"
+  [ -n "$bval" ] || continue
+  REDUCED_BOUND_LIST="$REDUCED_BOUND_LIST $bval"
+  assert_true "AC-119-bound-reduced: '$bname' bound $bval is inside the reduction band [8,20] — above the granularity floor the 5s early-exit ceiling fixes, and actually reduced" \
+    "[ $bval -ge 8 ] && [ $bval -le 20 ]"
+done
+REDUCED_BOUND_UNIQUE="$(printf '%s\n' $REDUCED_BOUND_LIST | sort -u | wc -l | tr -d ' ')"
+REDUCED_BOUND_COUNT="$(printf '%s\n' $REDUCED_BOUND_LIST | wc -l | tr -d ' ')"
+assert_true "AC-119-bound-reduced: the six reduced bounds are pairwise distinct ($REDUCED_BOUND_COUNT drives,$REDUCED_BOUND_LIST) — a shared bound would make two legs' derived outer caps and watchdog sleeps indistinguishable to find_pid_by_cmd" \
+  "[ '$REDUCED_BOUND_UNIQUE' = '$REDUCED_BOUND_COUNT' ] && [ '$REDUCED_BOUND_COUNT' = '6' ]"
+
+# The one elapsed-window assertion in this file is the timing oracle of the
+# AC-bound-fires drive, so its two edges move WITH that drive's bound. The
+# coupling is asserted rather than remembered: lower edge above the 5s
+# early-exit ceiling and below the bound (a fast kill passes, an instant exit
+# does not); upper edge below bound + 20, so a harness_run outer-cap fire —
+# which returns the kill status, not the product's own timeout status — still
+# fails the arm instead of passing inside a widened window.
+BOUND_FIRES_BOUND="${REDUCED_BOUND_VALUES[0]}"
+ELAPSED_LOW="$(grep -oE 'PROBE_ELAPSED -ge [0-9]+' "$BOUND_SRC" | head -1 | awk '{print $3}')"
+ELAPSED_HIGH="$(grep -oE 'PROBE_ELAPSED -le [0-9]+' "$BOUND_SRC" | head -1 | awk '{print $3}')"
+assert_true "AC-119-elapsed-window-tracks-bound: the AC-bound-fires elapsed window [${ELAPSED_LOW:-?},${ELAPSED_HIGH:-?}] sits above the 5s early-exit ceiling, below its own bound ${BOUND_FIRES_BOUND:-?}, and below bound+20 — it moves with the bound instead of being left behind" \
+  "[ -n \"$ELAPSED_LOW\" ] && [ -n \"$ELAPSED_HIGH\" ] && [ $ELAPSED_LOW -gt 5 ] && [ $ELAPSED_LOW -le $BOUND_FIRES_BOUND ] && [ $ELAPSED_HIGH -lt $((BOUND_FIRES_BOUND + 20)) ]"
+
+# AC-pipe-release-bound-untouched — explicitly OUTSIDE the reduction set. The
+# pipe-release leg discriminates a released pipe from a held one by elapsed
+# time, so its bound has to stay far enough above the 5s ceiling for bash
+# SECONDS to separate the two (the >= 6s constraint recorded in this file's
+# own GATE:PLAN finding block).
+PIPE_RELEASE_BOUND="$(grep -oE '^run_probe_piped [0-9]+' "$BOUND_SRC" | head -1 | awk '{print $2}')"
+assert_true "AC-pipe-release-bound-untouched: the pipe-release bound (${PIPE_RELEASE_BOUND:-none}) stays >= 6 — it is not in the reduction set, and shrinking it would collapse the elapsed discrimination it exists for" \
+  "[ -n \"$PIPE_RELEASE_BOUND\" ] && [ $PIPE_RELEASE_BOUND -ge 6 ]"
+
+# AC-119-discovery-floor. AC-no-self-kill is the one drive that LOCATES its
+# subject by polling, so its bound is also its subject's liveness budget: the
+# subject must still be alive when the poll finds it. Each poll iteration costs
+# a full `ps -eo pid,args` sweep, so the budget is iterations x step. Rule:
+# bound >= 2x the poll budget. The failure mode of an undersized budget is
+# loud, not silent — discovery failure leaves SUB_PGID empty and the pgid arm
+# reds — but nothing stops a later edit from re-creating the condition, which
+# is what this static arm holds.
+POLL_ITERS="$(grep -oE 'for _ in \$\(seq 1 [0-9]+\); do' "$BOUND_SRC" | head -1 | grep -oE '[0-9]+\)' | tr -d ')')"
+POLL_STEP_CENTIS=25   # the polls below step at 0.25s; expressed in centiseconds so the comparison stays integer
+NO_SELF_KILL_BOUND="${REDUCED_BOUND_VALUES[1]}"
+assert_true "AC-119-discovery-floor: the AC-no-self-kill poll budget (${POLL_ITERS:-?} iterations x 0.25s) is at most half its bound (${NO_SELF_KILL_BOUND:-?}s) — the subject outlives the sweep that has to locate it" \
+  "[ -n \"$POLL_ITERS\" ] && [ -n \"$NO_SELF_KILL_BOUND\" ] && [ $((POLL_ITERS * POLL_STEP_CENTIS * 2)) -le $((NO_SELF_KILL_BOUND * 100)) ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-token-collision-free (static): grepped tokens, per banner-delimited leg ==="
+# find_pid_by_cmd matches a caller-supplied, end-anchored duration pattern
+# against the whole `ps` args column, so it cannot tell the subject's `sleep N`
+# from any other `sleep N` alive at that instant. A collision does not red the
+# leg — it makes the leg green against the WRONG process, which is why no
+# behavioural arm above can catch it and why this one is static.
+#
+# Scoped to the GREPPED tokens, per leg. Two broader forms are wrong on the
+# unmodified tree and are rejected for that reason, not omitted:
+#   * file-wide distinctness reds on the pipe-release leg's `sleep 53` sentinel
+#     against the confirm leg's GH_MOCK_PRECHECK_SLEEP — legitimate, since the
+#     sentinel is killed long before the confirm leg starts;
+#   * per-leg distinctness over ALL literals reds on the confirm leg's
+#     deliberately equal CI_POLL_TIMEOUT_SECS / CI_POLL_INTERVAL_SECS pair —
+#     confirm-ci-green.sh clamps the precheck bound to the interval, so
+#     equality is what keeps the poll from gaining an iteration.
+# The legs run sequentially, so "alive at the same instant" is the leg's own
+# launched set. Legs are delimited by this file's own column-0 `echo "=== … ==="`
+# banners; a `(static)` banner marks a block that launches nothing.
+#
+# Coverage half: every find_pid_by_cmd call site in the file falls inside some
+# block, so no pattern escapes the check.
+COLLISION_BLOCK_BANNERS="$(grep -nE '^echo "=== ' "$BOUND_SRC" | cut -d: -f1)"
+COLLISION_GREPPED_TOTAL=0
+COLLISION_CHECKED_TOTAL=0
+COLLISION_VIOLATIONS=""
+prev_line=""
+for line in $COLLISION_BLOCK_BANNERS "$(wc -l < "$BOUND_SRC")"; do
+  if [ -n "$prev_line" ]; then
+    block="$(sed -n "${prev_line},$((line - 1))p" "$BOUND_SRC")"
+    banner="$(printf '%s' "$block" | head -1 | sed -E 's/^echo "=== //; s/ ?===".*$//; s/[^A-Za-z0-9 :()/-]//g')"
+    case "$banner" in *'(static)'*) prev_line="$line"; continue ;; esac
+
+    # Grepped tokens: the durations actually used as `ps` patterns.
+    grepped="$(printf '%s\n' "$block" | grep -oE "find_pid_by_cmd '[a-z]* ?[0-9]+\\\$'" | grep -oE '[0-9]+' | sort -u)"
+    [ -n "$grepped" ] || { prev_line="$line"; continue; }
+
+    # Launched literals: every duration this block starts a process with.
+    launched="$(
+      printf '%s\n' "$block" | grep -oE '(FAKE_HANG_SECS|PROBE_TIMEOUT_SECS|CI_POLL_TIMEOUT_SECS|CI_POLL_INTERVAL_SECS|GH_MOCK_PRECHECK_SLEEP|FAKE_CHILD_TOKEN)=[0-9]+' | sed -E 's/.*=//'
+      # Bare `sleep N` only at a COMMAND position — a `sleep N` inside a
+      # find_pid_by_cmd pattern or an assertion description is a reference to a
+      # launch, not a launch, and counting it would make every token collide
+      # with its own matcher.
+      printf '%s\n' "$block" | grep -oE '(^|\(|;|&&)[[:space:]]*sleep [0-9]+' | grep -oE '[0-9]+'
+      printf '%s\n' "$block" | grep -oE '^harness_run [0-9]+' | awk '{print $2}'
+      # run_probe/run_probe_piped: bound, hang, child token, and the derived
+      # outer cap harness_run backgrounds as `sleep bound+20` (run_probe:293).
+      printf '%s\n' "$block" | grep -oE '^run_probe(_piped)? [0-9]+( [a-z]+( [0-9]+)?( [0-9]+)?)?' \
+        | awk '{ print $2; print $2 + 20; if ($4 ~ /^[0-9]+$/) print $4; if ($5 ~ /^[0-9]+$/) print $5 }'
+    )"
+
+    for tok in $grepped; do
+      COLLISION_GREPPED_TOTAL=$((COLLISION_GREPPED_TOTAL + 1))
+      hits="$(printf '%s\n' $launched | grep -cxF "$tok" || true)"
+      if [ "$hits" != "1" ]; then
+        COLLISION_VIOLATIONS="$COLLISION_VIOLATIONS [${banner} / token $tok matches $hits launched literals]"
+        echo "  ---- collision: leg '$banner' greps 'sleep $tok', which matches $hits literal(s) that leg launches ----"
+      fi
+      COLLISION_CHECKED_TOTAL=$((COLLISION_CHECKED_TOTAL + 1))
+    done
+  fi
+  prev_line="$line"
+done
+
+assert_true "AC-token-collision-free: every grepped duration token matches exactly one literal its own leg launches — the one the assertion means (checked $COLLISION_CHECKED_TOTAL token(s)); violations:${COLLISION_VIOLATIONS:- none}" \
+  "[ -z \"$COLLISION_VIOLATIONS\" ]"
+COLLISION_CALLSITES="$(grep -cE "find_pid_by_cmd '[a-z]* ?[0-9]+\\\$'" "$BOUND_SRC" | tr -d ' ')"
+assert_true "AC-token-collision-free (coverage half): every duration-pattern find_pid_by_cmd call site in the file falls inside a checked leg ($COLLISION_GREPPED_TOTAL distinct token(s) over $COLLISION_CALLSITES call site(s)) — no pattern escapes the check" \
+  "[ $COLLISION_GREPPED_TOTAL -gt 0 ] && [ $COLLISION_CALLSITES -ge $COLLISION_GREPPED_TOTAL ]"
+
+# =============================================================================
+echo ""
 echo "=== AC-fallback-precondition (fail-fast, before any behavioural leg) ==="
 assert_fallback_precondition "probe (fakebin flavor)" "$(compose_path "$FAKEBIN")"
 assert_fallback_precondition "confirm (mock-gh flavor)" "$(compose_path "$MOCK_GH_DIR")"
@@ -379,9 +569,9 @@ rm -f "$PROBE_OUTFILE"
 # =============================================================================
 echo ""
 echo "=== AC-bound-fires / AC-fired-flag-truthful (fences: pass at HEAD) ==="
-run_probe 47 hang 65 "" 1
-assert_true "AC-bound-fires: a genuinely hung subject is terminated near its 47s bound, not left running" \
-  "[ $PROBE_ELAPSED -ge 45 ] && [ $PROBE_ELAPSED -le 58 ]"
+run_probe 9 hang 65 "" 1
+assert_true "AC-bound-fires: a genuinely hung subject is terminated near its 9s bound, not left running" \
+  "[ $PROBE_ELAPSED -ge 8 ] && [ $PROBE_ELAPSED -le 20 ]"
 assert_true "AC-fired-flag-truthful: the killed subject's fired flag reads fired (probe exit 3, PROBE_TIMED_OUT)" \
   "[ $PROBE_RC -eq 3 ]"
 sleep 0.6
@@ -401,7 +591,7 @@ CALLER_PGID="$(pgid_of $$)"
 sleep 90 &
 SENTINEL_PID=$!
 NOKILL_OUT="$(mktemp)"; NOKILL_ERR="$(mktemp)"
-( PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=79 PROBE_TIMEOUT_SECS=59 \
+( PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=79 PROBE_TIMEOUT_SECS=15 \
     "$CHECK_SCRIPT" --backend claude --probe </dev/null >"$NOKILL_OUT" 2>"$NOKILL_ERR" ) &
 PROBE_BG_PID=$!
 # Outer safety-kill sleep uses a duration DISTINCT from FAKE_HANG_SECS (79) —
@@ -412,7 +602,7 @@ PROBE_BG_PID=$!
 ( sleep 95; kill -9 "$PROBE_BG_PID" 2>/dev/null ) &
 PROBE_BG_WPID=$!
 SUB_PID=""
-for _ in $(seq 1 40); do
+for _ in $(seq 1 24); do
   SUB_PID="$(find_pid_by_cmd 'sleep 79$')"
   [ -n "$SUB_PID" ] && break
   sleep 0.25
@@ -463,7 +653,16 @@ wait "$WITNESS_WPID" 2>/dev/null
 # =============================================================================
 echo ""
 echo "=== AC-child-reaped (RED discriminator) ==="
-run_probe 67 forkhang 85 240 1
+run_probe 11 forkhang 85 240 1
+# Fire oracle (issue #119). The child-absence assertion below is
+# absence-shaped: a subject that never hung, and a watchdog that never fired,
+# satisfy it too. At the unreduced bound that weakness was masked by the size
+# of the hang literal; at a reduced bound it is not. The product's own fired
+# contract is read instead — check-review-backend.sh exits 3 on a fired probe
+# bound (PROBE_TIMED_OUT) — so the leg discriminates "the watchdog fired and
+# reaped the child" from "there was never anything to reap".
+assert_true "AC-child-reaped (fire oracle): the forking subject was actually terminated by its own bound (probe exit 3), not left to exit on its own" \
+  "[ $PROBE_RC -eq 3 ]"
 sleep 0.8
 assert_false "AC-child-reaped: no surviving child ('sleep 240') of the hung, forking subject after the fire + settle" \
   "[ -n \"\$(find_pid_by_cmd 'sleep 240$')\" ]"
@@ -473,8 +672,18 @@ find_pid_by_cmd 'sleep 240$' | xargs -I{} kill -9 {} 2>/dev/null || true
 echo ""
 echo "=== AC-marker-cleanup (fence: passes at HEAD; two mktemp-convention sites) ==="
 LEG_TMPDIR1="$(mktemp -d)"; LEG_OUT1="$(mktemp)"; LEG_ERR1="$(mktemp)"
-TMPDIR="$LEG_TMPDIR1" harness_run 61 -- env PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=55 PROBE_TIMEOUT_SECS=41 \
+TMPDIR="$LEG_TMPDIR1" harness_run 61 -- env PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=55 PROBE_TIMEOUT_SECS=8 \
   "$CHECK_SCRIPT" --backend claude --probe </dev/null >"$LEG_OUT1" 2>"$LEG_ERR1"
+MARKER_FIRED_RC=$?
+# Fire oracle (issue #119). harness_run returns the wrapped command's own exit
+# status, and this leg discarded it: an empty TMPDIR is equally true of a
+# subject that exited at once, so the leg's name ("fired branch") was carried
+# by the hang literal rather than by any assertion. 3 is
+# check-review-backend.sh's own fired-bound status, and it is distinct from the
+# 137 harness_run returns when ITS outer cap fires — so an outer-cap kill,
+# which would also leave TMPDIR empty, reds this arm instead of passing.
+assert_true "AC-marker-cleanup (check-review-backend.sh, fired branch — fire oracle): the leg really took the fired branch (probe exit 3, not an early exit and not a harness outer-cap kill)" \
+  "[ $MARKER_FIRED_RC -eq 3 ]"
 assert_true "AC-marker-cleanup (check-review-backend.sh, fired branch): no leftover mktemp marker in TMPDIR" \
   "[ -z \"\$(ls -A \"$LEG_TMPDIR1\" 2>/dev/null)\" ]"
 assert_no_resolution_failure "AC-toolchain-sufficient (marker-cleanup fired leg): captured streams carry no command-resolution failure" \
@@ -493,7 +702,13 @@ rm -rf "$LEG_TMPDIR2"; rm -f "$LEG_OUT2" "$LEG_ERR2"
 # =============================================================================
 echo ""
 echo "=== AC-no-job-notice (fence: passes at HEAD) ==="
-run_probe 71 hang 91 "" 1
+run_probe 13 hang 91 "" 1
+# Fire oracle (issue #119). "stderr carries no Terminated|Killed|Stopped line"
+# is a fence: it is satisfied by a subject that was never killed at all. The
+# fence stays as the fence it is, and the fired reading is added beside it, so
+# the leg cannot go green by never firing.
+assert_true "AC-no-job-notice (hang leg — fire oracle): the hung subject was terminated by its own bound (probe exit 3), so the silent-stderr fence is over a real kill" \
+  "[ $PROBE_RC -eq 3 ]"
 assert_true "AC-no-job-notice (hang leg): captured stderr carries no job-control termination line" \
   "! printf '%s' \"\$PROBE_STDERR\" | grep -qE 'Terminated|Killed|Stopped'"
 run_probe 73 ok 0 "" 1
@@ -508,7 +723,15 @@ GREEN_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRoll
 CONFIRM_TMPDIR1="$(mktemp -d)"; CONFIRM_OUT1="$(mktemp)"; CONFIRM_ERR1="$(mktemp)"
 TMPDIR="$CONFIRM_TMPDIR1" harness_run 110 -- env PATH="$(compose_path "$MOCK_GH_DIR")" \
   GH_MOCK_PRECHECK_BODY="$GREEN_BODY" GH_MOCK_POLL_BODY="$GREEN_BODY" GH_MOCK_PRECHECK_SLEEP=90 \
-  CI_POLL_TIMEOUT_SECS=83 CI_POLL_INTERVAL_SECS=83 "$CONFIRM_SCRIPT" --pr 1 </dev/null >"$CONFIRM_OUT1" 2>"$CONFIRM_ERR1"
+  CI_POLL_TIMEOUT_SECS=17 CI_POLL_INTERVAL_SECS=17 "$CONFIRM_SCRIPT" --pr 1 </dev/null >"$CONFIRM_OUT1" 2>"$CONFIRM_ERR1"
+CONFIRM_FIRED_RC=$?
+# Fire oracle (issue #119), confirm-ci-green.sh's own contract: exit 14 when
+# the poll deadline is reached without a confirmed mergeable state. The mock's
+# precheck sleep outlasts CI_POLL_TIMEOUT_SECS, so 14 is the fired
+# classification for this leg — and, as on the probe side, it is distinct from
+# harness_run's 137 outer-cap kill, which would leave the same empty TMPDIR.
+assert_true "AC-marker-cleanup (confirm-ci-green.sh, fired branch — fire oracle): the leg really reached the poll deadline (confirm exit 14, not a confirmed-green early return and not a harness outer-cap kill)" \
+  "[ $CONFIRM_FIRED_RC -eq 14 ]"
 assert_true "AC-marker-cleanup (confirm-ci-green.sh, fired branch): no leftover mktemp marker in TMPDIR" \
   "[ -z \"\$(ls -A \"$CONFIRM_TMPDIR1\" 2>/dev/null)\" ]"
 assert_no_resolution_failure "AC-toolchain-sufficient (confirm marker-cleanup fired leg): captured streams carry no command-resolution failure" \

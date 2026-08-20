@@ -215,15 +215,17 @@ run_self_test() {
   ( cd "$PROJECT_ROOT" && bash "$RUNNER" --self-test "$registry" ) 2>&1
 }
 
-SELFTEST_REAL_OUT="$(run_self_test)"
-SELFTEST_REAL_RC=$?
-
-assert_true "negative-teeth leg: every present/absent/ordered entry FAILs its mutated copy (data-driven, C1, via run-doc-invariants.sh --self-test)" \
-  "[ '$SELFTEST_REAL_RC' -eq 0 ]"
-assert_false "negative-teeth leg: no entry is reported as a non-credit (unexpressible shape / ineffective mutation / mutator error / unresolvable anchor)" \
-  "printf '%s' \"\$SELFTEST_REAL_OUT\" | grep -q 'NO-TEETH'"
-assert_true "negative-teeth leg: the denominator is the whole registry — the reported total equals the registry's entry count" \
-  "[ \"\$(printf '%s' \"\$SELFTEST_REAL_OUT\" | sed -n 's/^Self-test results: [0-9]*\/\([0-9]*\) .*/\1/p')\" = \"\$(jq -r '.invariants | length' '$REGISTRY')\" ]"
+# ISSUE #119. The REAL-registry --self-test run that stood here is removed:
+# .github/workflows/contract-suites.yml runs `bash tests/run-doc-invariants.sh
+# --self-test` from a step with no `if:` guard, so it is unconditional within
+# any triggered run of that workflow, and the deleted assertions were the same
+# execution a second time. The one property that step's exit status did NOT own
+# — that the reported denominator is the whole registry, not the subset the
+# mode happened to reach — is not dropped: it moved INTO the runner's own
+# self-test exit predicate (tests/run-doc-invariants.sh, "Denominator coverage
+# gate"), where the real registry drives it. Its Red state is driven
+# hermetically at (e) below. docs/doc-invariant-registry.md §14 carries the
+# disposition rows.
 
 # ---------------------------------------------------------------------------
 # Teeth-leg self-tests — issue #26, VERIFY step-3 FINDING 3-E / step-4
@@ -307,6 +309,62 @@ assert_true "teeth self-test (d): the run does NOT abort — the entry is named 
   "printf '%s' \"\$SELFTEST_ANCHOR_DESTRUCTION_OUT\" | grep -qF '76-selftest-anchor-destruction'"
 assert_false "teeth self-test (d): the unresolvable-anchor path never reaches block()'s abort — no BLOCK line is emitted from mutation evaluation" \
   "printf '%s' \"\$SELFTEST_ANCHOR_DESTRUCTION_OUT\" | grep -q '^BLOCK:'"
+
+# ---------------------------------------------------------------------------
+# (e) AC-denominator-vacuity-preserved — issue #119.
+#
+# The runner's self-test exit predicate compares ST_OK against ST_TOTAL alone
+# (tests/run-doc-invariants.sh, "Self-test results" block). Three paths
+# `continue` BEFORE ST_TOTAL is incremented — an empty resolved anchor, a
+# `file` that is not in the tree, and an unrecognised predicate — so an entry
+# the mode never reached moves neither counter and the mode reports full credit
+# over a shrunken population. The invariant that closes it is a comparison of
+# the reported denominator against `jq '.invariants | length'` on the registry
+# the mode was handed.
+#
+# This suite is the runner's own contract owner (`# ci-subject:` above), so the
+# guard is driven here rather than asserted about. Both fixtures are hermetic
+# and differ in exactly one field — the third entry's `file`:
+#   * denominator-coverage-registry.json          third entry names a file that
+#                                                 is NOT in the tree -> the
+#                                                 missing-file `continue` fires,
+#                                                 the reported total is 2 while
+#                                                 the array holds 3, and the
+#                                                 mode MUST exit non-zero.
+#   * denominator-coverage-complete-registry.json every entry's file is in the
+#                                                 tree -> total == length and
+#                                                 the mode MUST exit 0. This is
+#                                                 the direction control: without
+#                                                 it the guard is satisfiable by
+#                                                 failing unconditionally.
+# A single-entry fixture cannot carry this: it is authored to take none of the
+# three skip paths, so its total always equals its length and it is green in
+# exactly the world the guard exists to red.
+# ---------------------------------------------------------------------------
+DENOM_SHORT_REGISTRY="$PROJECT_ROOT/tests/fixtures/denominator-coverage-registry.json"
+DENOM_FULL_REGISTRY="$PROJECT_ROOT/tests/fixtures/denominator-coverage-complete-registry.json"
+
+assert_true "AC-denominator-vacuity-preserved: the short-denominator driver fixture is present and holds more entries than the mode can reach" \
+  "[ -f '$DENOM_SHORT_REGISTRY' ] && [ \"\$(jq -r '.invariants | length' '$DENOM_SHORT_REGISTRY')\" -eq 3 ]"
+
+SELFTEST_DENOM_SHORT_OUT="$(run_self_test "$DENOM_SHORT_REGISTRY")"
+SELFTEST_DENOM_SHORT_RC=$?
+SELFTEST_DENOM_SHORT_TOTAL="$(printf '%s' "$SELFTEST_DENOM_SHORT_OUT" | sed -n 's/^Self-test results: [0-9]*\/\([0-9]*\) .*/\1/p')"
+
+assert_true "AC-denominator-vacuity-preserved: the missing-file entry is skipped before the counter, so the reported denominator (${SELFTEST_DENOM_SHORT_TOTAL:-none}) is short of the registry's 3 entries — this is the condition the guard must catch, not a fixture defect" \
+  "[ \"\$SELFTEST_DENOM_SHORT_TOTAL\" = '2' ]"
+assert_true "AC-denominator-vacuity-preserved: --self-test exits NON-ZERO when its reported denominator is short of the registry's entry count (full credit over a shrunken population is not a pass)" \
+  "[ '$SELFTEST_DENOM_SHORT_RC' -ne 0 ]"
+assert_true "AC-denominator-vacuity-preserved: the diagnostic names BOTH numbers — the reported denominator and the registry's entry count — so the shortfall is readable without re-running" \
+  "printf '%s' \"\$SELFTEST_DENOM_SHORT_OUT\" | grep -qE '(^|[^0-9])2([^0-9].*[^0-9]|[^0-9])3([^0-9]|$)'"
+
+SELFTEST_DENOM_FULL_OUT="$(run_self_test "$DENOM_FULL_REGISTRY")"
+SELFTEST_DENOM_FULL_RC=$?
+
+assert_true "AC-denominator-vacuity-preserved (direction control): a registry whose every entry is reachable still exits 0 — the guard fails a shortfall, not every run" \
+  "[ '$SELFTEST_DENOM_FULL_RC' -eq 0 ]"
+assert_true "AC-denominator-vacuity-preserved (direction control): the control fixture's reported denominator equals its own entry count" \
+  "[ \"\$(printf '%s' \"\$SELFTEST_DENOM_FULL_OUT\" | sed -n 's/^Self-test results: [0-9]*\/\([0-9]*\) .*/\1/p')\" = \"\$(jq -r '.invariants | length' '$DENOM_FULL_REGISTRY')\" ]"
 
 # =============================================================================
 echo ""
@@ -676,14 +734,20 @@ FIXDIR="$PROJECT_ROOT/tests/fixtures"
 assert_true "AC-a-3: run-doc-invariants.sh --help/usage mentions --self-test" \
   "grep -qF -- '--self-test' '$RUNNER'"
 
-assert_true "AC-a-3: run-doc-invariants.sh --self-test exits 0 against the real registry (every entry demonstrates teeth)" \
-  "bash '$RUNNER' --self-test >'$TMP_ROOT/selftest.out' 2>&1"
+# ISSUE #119. The real-registry exit-status halves of these two assertions are
+# removed — the unconditional contract-suites.yml step (`--self-test`) and the
+# e2e-dummy-target.yml step (default mode) each drive the real registry once,
+# and re-running it here was the same execution a second time. What is NOT
+# owned by an exit status is the OUTPUT SHAPE these arms actually assert, so
+# both are retargeted at a hermetic fixture registry, which exercises the same
+# two code paths at negligible cost.
+AC_A3_FIXTURE_REGISTRY="$FIXDIR/denominator-coverage-complete-registry.json"
 
 assert_true "AC-a-3: --self-test reports a Results: line distinct from the default-mode PASS/FAIL line format" \
-  "grep -qi 'self-test\|teeth\|mutation' '$TMP_ROOT/selftest.out' 2>/dev/null"
+  "bash '$RUNNER' --self-test '$AC_A3_FIXTURE_REGISTRY' >'$TMP_ROOT/selftest.out' 2>&1; grep -qi 'self-test\|teeth\|mutation' '$TMP_ROOT/selftest.out' 2>/dev/null"
 
-assert_true "AC-a-3: default (no-flag) run-doc-invariants.sh behavior is unchanged (still exits 0/1 on the real registry with no --self-test side effects)" \
-  "bash '$RUNNER' >'$TMP_ROOT/default.out' 2>&1; grep -qF 'Results:' '$TMP_ROOT/default.out'"
+assert_true "AC-a-3: default (no-flag) run-doc-invariants.sh behavior is unchanged (still prints a Results: line and exits 0 on an all-passing registry)" \
+  "bash '$RUNNER' '$AC_A3_FIXTURE_REGISTRY' >'$TMP_ROOT/default.out' 2>&1 && grep -qF 'Results:' '$TMP_ROOT/default.out'"
 
 # ---------------------------------------------------------------------------
 # AC-f — anchor-resolution negative coverage, hermetic fixtures.

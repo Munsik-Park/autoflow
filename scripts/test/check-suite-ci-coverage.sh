@@ -194,9 +194,46 @@ self_test() {
   return $rc
 }
 
+# ---------------------------------------------------------------------------
+# EXIT-STATUS leg (issue #119) — the self-test owns the orphan-reporting exit
+# STATUS, not only the unreachable SET.
+#
+# self_test() compares the unreachable set and returns; the top-level
+# orphan-reporting exit path below is never reached in --self-test mode, so a
+# defanged `exit 1` there is invisible to it. The leg re-invokes this script in
+# DEFAULT mode against a fixture root holding a known orphan and requires a
+# non-zero status with the orphan named.
+#
+# Placement is load-bearing: default mode is gated on `if ! self_test` below, so
+# a re-invocation placed INSIDE self_test() would recurse unboundedly (and
+# self_test removes its fixture before returning). The leg therefore runs from
+# the --self-test branch, outside self_test(), and the child runs in default
+# mode where no such re-invocation exists.
+# ---------------------------------------------------------------------------
+exit_status_leg() {
+  local dir out rc leg_rc=0
+  dir="$(mktemp -d)"
+  build_fixture_tree "$dir"
+  out="$(bash "$0" --root "$dir" 2>&1)"
+  rc=$?
+  if [ "$rc" -eq 0 ]; then
+    echo "check-suite-ci-coverage: --self-test EXIT-STATUS leg FAILED — a fixture root holding a known orphan was reported with exit 0; the orphan-reporting exit path does not fail the run"
+    leg_rc=1
+  fi
+  if ! printf '%s\n' "$out" | grep -qF 'tests/fixture-orphan.sh'; then
+    echo "check-suite-ci-coverage: --self-test EXIT-STATUS leg FAILED — the orphan was not named in the default-mode report"
+    leg_rc=1
+  fi
+  [ "$leg_rc" -eq 0 ] && echo "check-suite-ci-coverage: --self-test EXIT-STATUS leg OK — a root holding a known orphan exits non-zero with the orphan named"
+  rm -rf "$dir"
+  return $leg_rc
+}
+
 if [ "$MODE" = "self-test" ]; then
-  self_test
-  exit $?
+  ST_RC=0
+  self_test || ST_RC=1
+  exit_status_leg || ST_RC=1
+  exit $ST_RC
 fi
 
 if ! self_test; then
