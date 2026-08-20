@@ -287,6 +287,7 @@ SUITE_ADR0016_CONTENT="$(cat "$SUITE_ADR0016")"
 SUITE_798_HEADER="$(suite_header "$SUITE_798")"
 SUITE_799_HEADER="$(suite_header "$SUITE_799")"
 SUITE_ADR0016_HEADER="$(suite_header "$SUITE_ADR0016")"
+SUITE_SELF_HEADER="$(suite_header "$PROJECT_ROOT/tests/test-issue-109-doc-assertions.sh")"
 
 for id in "${GROUP_D_798[@]}"; do
   assert_true "AC-assertless-header-removed: tests/test-issue-798-topology-flip.sh no longer echoes the assert-less '=== $id ' section header" \
@@ -491,7 +492,7 @@ assert_true "AC-registry-claim-true: docs/doc-invariant-registry.md's §13.2 nar
 # issue-#116 addition it is being asked to police, so it does not itself
 # acquire the drift it checks for.
 assert_true "AC-host-suite-header-current: tests/test-issue-109-doc-assertions.sh's own header names the issue-#116 scope addendum" \
-  "printf '%s\n' \"\$(suite_header '$PROJECT_ROOT/tests/test-issue-109-doc-assertions.sh')\" | grep -qF -- 'Scope addendum (issue #116)'"
+  "printf '%s\n' \"\$SUITE_SELF_HEADER\" | grep -qF -- 'Scope addendum (issue #116)'"
 
 # Reuse-typed legs (verification design .autoflow/issue-116-verification-design.md):
 #   AC-registry-pin-consistent    -> bash scripts/test/check-manifest-regen-clean.sh
