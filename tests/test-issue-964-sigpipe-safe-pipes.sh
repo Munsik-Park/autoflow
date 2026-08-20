@@ -60,11 +60,15 @@
 # flaky test, the opposite of this issue's intent.
 #
 # Self-guard (dogfood): this suite's own assertions use plain `grep -nE`/
-# `awk`/`grep -rnE` (no `-A/-B/-C` context flag piped into `grep -q`) — it
-# does not introduce a new instance of the defect class it tests for. The
-# only occurrence of the literal hazard SHAPE in this file is inside
-# mktemp-generated fixture content (never a committed tests/*.sh line) —
-# matching verification design §1a's "Self-match footgun" guidance.
+# `awk`/`grep -rnE`, and its doc assertions feed the captured section to the
+# consumer by here-string — no `-A/-B/-C` context flag, no bare-identifier
+# extractor function, and no captured-string producer piped into a
+# short-circuiting `grep -q`/`grep -m` (issue #114, the third shape AC5-A
+# scans for, which reads this file too). It does not introduce a new instance
+# of any defect class it tests for. The only occurrence of a literal hazard
+# SHAPE in this file is inside mktemp-generated fixture content (never a
+# committed tests/*.sh line) — matching verification design §1a's
+# "Self-match footgun" guidance.
 # =============================================================================
 
 set -uo pipefail
@@ -166,13 +170,13 @@ TESTING_STANDARDS_JOINED="$(printf '%s' "$TESTING_STANDARDS_BODY" | tr '\n' ' ')
 export TESTING_STANDARDS_JOINED
 
 assert_true "AC3-A: Testing Standards section names 'pipefail'" \
-  "printf '%s' \"\$TESTING_STANDARDS_JOINED\" | grep -qF 'pipefail'"
+  "grep -qF 'pipefail' <<<\"\$TESTING_STANDARDS_JOINED\""
 assert_true "AC3-A: Testing Standards section names 'SIGPIPE'" \
-  "printf '%s' \"\$TESTING_STANDARDS_JOINED\" | grep -qF 'SIGPIPE'"
+  "grep -qF 'SIGPIPE' <<<\"\$TESTING_STANDARDS_JOINED\""
 assert_true "AC3-A: Testing Standards section documents the capture-then-grep guidance (a capture assignment token or a \$(...) command-substitution form)" \
-  "printf '%s' \"\$TESTING_STANDARDS_JOINED\" | grep -qE 'capture|\\\$\\('"
+  "grep -qE 'capture|\\\$\\(' <<<\"\$TESTING_STANDARDS_JOINED\""
 assert_true "AC3 (issue #973): Testing Standards section names the extractor-function producer case" \
-  "printf '%s' \"\$TESTING_STANDARDS_JOINED\" | grep -qF 'extractor'"
+  "grep -qF 'extractor' <<<\"\$TESTING_STANDARDS_JOINED\""
 
 
 # =============================================================================

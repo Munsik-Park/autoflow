@@ -149,7 +149,7 @@ else
 fi
 
 TESTS=$((TESTS + 1))
-if printf '%s' "$NOARG_OUT" | grep -qE 'target|Usage|usage'; then
+if grep -qE 'target|Usage|usage' <<<"$NOARG_OUT"; then
   echo "  PASS: AC1: no-arg run prints a --target/usage requirement token"
   PASS=$((PASS + 1))
 else
@@ -158,7 +158,7 @@ else
 fi
 
 TESTS=$((TESTS + 1))
-if printf '%s' "$NOARG_OUT" | grep -qE 'Project name|Setup Wizard|Proceed with setup'; then
+if grep -qE 'Project name|Setup Wizard|Proceed with setup' <<<"$NOARG_OUT"; then
   echo "  FAIL: AC1: no-arg run does not emit the wizard prompt banner (forbidden condition held)"
   FAIL=$((FAIL + 1))
 else
@@ -313,7 +313,7 @@ else
 
   if [[ -n "$touched_sources" ]]; then
     assert_true "AC5: manifest.json is itself in the diff (regen ran, #949 [MUST]) — touched sources: $(printf '%s' "$touched_sources" | tr '\n' ' ')" \
-      "printf '%s\n' \"\$cycle_diff_files\" | grep -qx 'setup/manifest.json'"
+      "grep -qx 'setup/manifest.json' <<<\"\$cycle_diff_files\""
   else
     echo "  PASS: AC5 manifest oracle vacuously true (no manifest-listed source touched yet pre-GREEN)"
     PASS=$((PASS + 1)); TESTS=$((TESTS + 1))
@@ -351,27 +351,30 @@ echo "=== G5 CI registration ==="
 
 assert_true "G5: tests/test-issue-952-wizard-removal.sh referenced in e2e-dummy-target.yml run: step" \
   "grep -qF 'test-issue-952-wizard-removal.sh' '$CI_WORKFLOW'"
-# SIGPIPE-safe capture-then-match (docs/submodule-common-rules.md > Testing Standards item
-# 6, issues #964/#973): the prior direct `awk ... | grep -qF ...` piped a context-producing
-# awk into a short-circuiting grep -qF under this script's own `set -uo pipefail` — when the
-# match sits near the START of a long awk output (the push: block spans to EOF), grep exits
-# before awk finishes writing, and the resulting SIGPIPE (awk exit 141) flips a logically-
-# passing assertion to a flaky/deterministic FAIL (reproduced: consistently 141 for the push
-# half here, GATE:QUALITY FAIL #4 investigation, unrelated to #56's own diff content).
+# SIGPIPE-safe capture-then-here-string (docs/submodule-common-rules.md > Testing Standards
+# item 6, issues #964/#973/#114). Two producers had to go, not one. The capture
+# (`ctx=$(awk ...)`) removes the STREAMING producer: the prior direct `awk ...` feeding a
+# short-circuiting grep under this script's own `set -uo pipefail` left awk still writing when
+# grep exited on a match near the START of a long output (the push: block spans to EOF), and
+# the resulting SIGPIPE (awk exit 141) flipped a logically-passing assertion to a
+# flaky/deterministic FAIL. The capture alone does NOT remove the pipe (issue #114): a
+# `printf` of the captured string is itself a producer writing into a pipe whose reader may
+# exit first, and above the pipe's capacity it fails uniformly. The consumer therefore takes
+# the captured string by here-string (`<<<`), which leaves the producer with no outstanding
+# write when the consumer exits.
 pr_paths_ctx="$(awk '/^on:/{f=1} f && /pull_request:/{p=1} p && /^  push:/{exit} p' "$CI_WORKFLOW")"
 assert_true "G5: e2e-dummy-target.yml pull_request paths: trigger lists this suite" \
-  "printf '%s\n' \"\$pr_paths_ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+  "grep -qF 'test-issue-952-wizard-removal.sh' <<<\"\$pr_paths_ctx\""
 push_paths_ctx="$(awk '/^  push:/{f=1} f' "$CI_WORKFLOW")"
 assert_true "G5: e2e-dummy-target.yml push paths: trigger lists this suite" \
-  "printf '%s\n' \"\$push_paths_ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
-# Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973):
-# awk's buffered output piped directly into a short-circuiting `grep -q`
-# consumer can SIGPIPE the producer under `set -o pipefail`. Capture each
-# block once, then match the captured string.
+  "grep -qF 'test-issue-952-wizard-removal.sh' <<<\"\$push_paths_ctx\""
+# Same idiom, inline-capture variants (issues #964/#973/#114): capture each block once to
+# remove the streaming awk producer, then feed the captured string to the short-circuiting
+# consumer by here-string so no pipe remains between them.
 assert_true "G5: e2e-dummy-target.yml pull_request paths: trigger lists this suite" \
-  "ctx=\$(awk '/^on:/{f=1} f && /pull_request:/{p=1} p && /^  push:/{exit} p' '$CI_WORKFLOW'); printf '%s\n' \"\$ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+  "ctx=\$(awk '/^on:/{f=1} f && /pull_request:/{p=1} p && /^  push:/{exit} p' '$CI_WORKFLOW'); grep -qF 'test-issue-952-wizard-removal.sh' <<<\"\$ctx\""
 assert_true "G5: e2e-dummy-target.yml push paths: trigger lists this suite" \
-  "ctx=\$(awk '/^  push:/{f=1} f' '$CI_WORKFLOW'); printf '%s\n' \"\$ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+  "ctx=\$(awk '/^  push:/{f=1} f' '$CI_WORKFLOW'); grep -qF 'test-issue-952-wizard-removal.sh' <<<\"\$ctx\""
 
 # =============================================================================
 # Results
