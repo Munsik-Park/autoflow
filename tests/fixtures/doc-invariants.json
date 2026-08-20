@@ -6835,6 +6835,28 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "runner's explicit-plan flag `--selected <path>`"
+    },
+    {
+      "id": "109-AC-stale-probe-recommendation-absent",
+      "origin_issue": 109,
+      "intent": "coherence",
+      "file": "tests/manual/issue-100-manual-scenarios.md",
+      "section": "M1 — `AC-real-world-latency`: the reported symptom is gone on a real coreutils-less machine",
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "tests/test-issue-979-probe.sh",
+      "scope": "permanent"
+    },
+    {
+      "id": "109-AC-manual-status-preserved",
+      "origin_issue": 109,
+      "intent": "preservation",
+      "file": "tests/manual/issue-100-manual-scenarios.md",
+      "section": "M1 — `AC-real-world-latency`: the reported symptom is gone on a real coreutils-less machine",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "Status: delegated to user",
+      "scope": "permanent"
     }
   ]
 }

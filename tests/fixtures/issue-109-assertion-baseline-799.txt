@@ -1,0 +1,11 @@
+AC2-tree: README structure tree lists docs/adr/, docs/phases/, .claude/agents/, .claude/workflows/, .github/workflows/, scripts/, tests/, plugin/, setup/manifest.json
+$label: present-tense self-claim co-occurs with a #798/detach reference
+$label: present-tense self-claim literal absent (no qualifier needed)
+AC3-guard: no diff hunk over docs/ README.md touches a 'Secondary (multi-repo):' marker line
+AC3-nores: no NEW doc line (changed surface) points at services/librechat as a live tracked path
+AC4-guard: no broken repo-relative link in INDEX.md / maintained-docs.md
+AC6-scope: diff does not touch .claude/hooks/**, OR only check-autoflow-gate.sh with its plugin mirror byte-identical (#843 parity-carried exception)
+AC6-scope: diff touches no .claude/workflows/** path, OR every touched .claude/workflows/** path has a setup/manifest.json sha256 row matching its current content (#62 D10 — supersedes the #985/#27/#56/#59 substring window)
+AC6-ci: e2e-dummy-target.yml references tests/test-issue-799-inert-cleanup.sh
+AC6-ci: e2e-dummy-target.yml paths: trigger lists README.md
+AC6-ci: e2e-dummy-target.yml paths: trigger lists the edited docs/*.md files
