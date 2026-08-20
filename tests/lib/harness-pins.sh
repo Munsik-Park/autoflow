@@ -23,8 +23,14 @@
 # that moved it — the precedent tests/test-issue-27-composition-oracle.sh's
 # header records for every prior bump.
 #
-# Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97).
+# Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123).
+# The #123 bump is the RED-commit target value (12 new cap-round-closing cases:
+# AC1, AC2, AC3 x3, AC4, AC5, AC6, AC10, AC11, AC12, AC13), not the RED-commit
+# measured value -- 8 of the 12 are discriminating and FAIL until the closing
+# half-round lands, so the composition oracle (tests/test-issue-27-composition-
+# oracle.sh) intentionally reds against this pin until GREEN, per
+# .autoflow/issue-123-verification-design.md > Composition oracle.
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=85
+HARNESS_OK_COUNT=97

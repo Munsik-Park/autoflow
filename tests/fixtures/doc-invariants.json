@@ -6890,6 +6890,39 @@
       "match": "fixed",
       "literal": "5304785157",
       "scope": "permanent"
+    },
+    {
+      "id": "123-AC7-contracts-closing-half-round",
+      "origin_issue": 123,
+      "intent": "existence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Termination (explicit caps — Decision 7)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "closing half-round",
+      "scope": "permanent"
+    },
+    {
+      "id": "123-AC7-guide-closing-half-round",
+      "origin_issue": 123,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "ARCHITECT — Plan Synthesis (Developer AI + Test AI)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "closing half-round",
+      "scope": "permanent"
+    },
+    {
+      "id": "123-AC7-claude-md-closing-half-round",
+      "origin_issue": 123,
+      "intent": "existence",
+      "file": "CLAUDE.md",
+      "section": "Deliberation Isolation (delegated facilitation)",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "closing half-round",
+      "scope": "permanent"
     }
   ]
 }
