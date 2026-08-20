@@ -21,24 +21,33 @@
 # (AC1-neg/pos, AC2-*, AC3-*, AC5D/G/H-*, AC6-*), bound to feature AC1-AC12
 # by the §6 crosswalk table. One id set binds RED/GREEN.
 #
-# Scope (verification design §2 Tier-1):
-#   AC1-neg/pos   README-CONSUMED-PRESENT   (feat AC1, D1)
-#   AC2-neg/pos   README-LEGACY-ANNOTATION-ABSENT (feat AC2, D2)
+# Scope (verification design §2 Tier-1) — narrowed to what this body executes:
 #   AC2-tree      structure-tree spot subset (feat AC2, D2)
-#   AC3D-*        README-CHECKLIST-CURRENT  (feat AC3, D3)
 #   AC3-guide/common/ext  SUBMODULE-SELFREF-ABSENT + DETACH-REF-PRESENT
 #                 (feat AC4/AC5, D4)
 #   AC3-guard     SECONDARY-PRESERVED (guard, feat AC8)
 #   AC3-nores     no doc points at the residual untracked services/ working copy
-#   AC5D-index-*  INDEX-INERT-ROUTE-ABSENT (feat AC6, D5)
-#   AC5D-maint-neg  maintained-docs neutralize-in-place (feat AC6, D5)
 #   AC4-guard     no broken host-scoped link introduced (preservation)
-#   AC5G-neg/guard  GITWORKFLOW-DEFERRAL-CLEARED (feat AC7, D6)
-#   AC5H-degenerate DEGENERATE-PROSE-PRESERVED (guard, feat AC9)
-#   AC5H-nosubmod   NO-SUBMODULE-REINTRO (guard, feat AC11)
 #   AC6-scope     path-parity scope arms: .claude/hooks/** parity and the
 #                 #62 D10 .claude/workflows/** manifest-sha accumulator (feat AC10)
 #   AC6-ci        CI-ENFORCED (feat AC12, D7)
+#
+# Migrated out of this file, assertion carried elsewhere (issue #109, registry
+# §13.2 — the assert-less section headers were removed). Carriers are
+# `tests/fixtures/doc-invariants.json` ids unless noted:
+#   README-CONSUMED-PRESENT   → 799-AC1-neg-wizard, 799-AC1-pos-marketplace,
+#                               799-AC1-pos-target
+#   README-CHECKLIST-CURRENT  → 799-AC3D-checklist-neg, 799-AC3D-checklist-pos,
+#                               799-AC3D-section-neg
+#   INDEX-INERT-ROUTE-ABSENT / maintained-docs neutralize-in-place
+#                             → 799-AC5D-index-neg, 799-AC5D-index-pos,
+#                               799-AC5D-maint-header, 799-AC5D-maint-qualifier
+#   GITWORKFLOW-DEFERRAL-CLEARED → 799-AC5G-neg-s11a, 799-AC5G-guard-active-na
+#   DEGENERATE-PROSE-PRESERVED   → 799-AC5H-degenerate
+#   NO-SUBMODULE-REINTRO      → no registry entry; carried by
+#                               tests/test-issue-798-topology-flip.sh's four
+#                               live AC2a/AC2b/AC3a/AC3b git-plumbing
+#                               assertions, which are strictly stronger
 #
 # Not in this file (verification design §2 Tier-2/Tier-3, reuse):
 #   AC1-src   README Quick Start <-> setup/SETUP-GUIDE.md step agreement
@@ -106,26 +115,12 @@ assert_false() {
 }
 
 # =============================================================================
-echo "=== AC1 README-CONSUMED-PRESENT (feat AC1, D1) ==="
-
-# [Non-vacuity, verification §4 keystone] README has no --target occurrence
-# today — this must FAIL pre-edit or the test is mis-scoped.
-
-# =============================================================================
-echo ""
 echo "=== AC2 README-LEGACY-ANNOTATION-ABSENT (feat AC2, D2) ==="
 
 # AC2-tree: spot subset of currently-shipped top-level entries the structure
 # tree omits pre-edit (verification §1 Group B AC2-tree automated arm).
 assert_true "AC2-tree: README structure tree lists docs/adr/, docs/phases/, .claude/agents/, .claude/workflows/, .github/workflows/, scripts/, tests/, plugin/, setup/manifest.json" \
   "grep -qF 'docs/adr/' '$README_MD' && grep -qF 'docs/phases/' '$README_MD' && grep -qF '.claude/agents/' '$README_MD' && grep -qF '.claude/workflows/' '$README_MD' && grep -qF '.github/workflows/' '$README_MD' && grep -qF 'scripts/' '$README_MD' && grep -qF 'tests/' '$README_MD' && grep -qF 'plugin/' '$README_MD' && grep -qF 'setup/manifest.json' '$README_MD'"
-
-# =============================================================================
-echo ""
-echo "=== AC3 README-CHECKLIST-CURRENT (feat AC3, D3) ==="
-# Paired negative + positive oracles per verification DCR-3 (P2 non-vacuity):
-# a negative-only oracle could pass by deleting the checklist wholesale.
-
 
 # =============================================================================
 echo ""
@@ -204,18 +199,6 @@ fi
 
 # =============================================================================
 echo ""
-echo "=== AC6 INDEX-INERT-ROUTE-ABSENT (feat AC6, D5) ==="
-
-# AC5D-index-pos: absence guard — INDEX.md carries no services/librechat
-# route at all post-neutralization (full coherence review of the replacement
-# routing is Tier-2, verification §1 Group D).
-
-# AC5D-maint-neg: finalized R2 (ledger E5) — neutralize-in-place, header
-# retained, qualifier added. Discriminator verified ABSENT pre-edit.
-# Paired non-vacuity: header retained (neutralize-in-place, not delete).
-
-# =============================================================================
-echo ""
 echo "=== AC4-guard NO-BROKEN-LINK-INTRODUCED (preservation) ==="
 # Phase A §3: zero broken links today; expected GREEN both pre- and
 # post-change (verification §1 Group D AC4-guard).
@@ -247,21 +230,6 @@ if [[ -n "$ac4_broken" ]]; then
 fi
 assert_true "AC4-guard: no broken repo-relative link in INDEX.md / maintained-docs.md" \
   "[ -z '$ac4_broken' ]"
-
-# =============================================================================
-echo ""
-echo "=== AC7 GITWORKFLOW-DEFERRAL-CLEARED (feat AC7, D6) ==="
-
-
-# =============================================================================
-echo ""
-echo "=== AC9 DEGENERATE-PROSE-PRESERVED (guard, feat AC9) ==="
-
-
-# =============================================================================
-echo ""
-echo "=== AC11 NO-SUBMODULE-REINTRO (guard, feat AC11) ==="
-
 
 # =============================================================================
 echo ""

@@ -42,21 +42,37 @@ is expected — it is confirmation, not new coverage.
    `timeout` nor `gtimeout` resolves on `PATH` (`command -v timeout` and
    `command -v gtimeout` both fail; do **not** sanitize `PATH` by hand for
    this step — the point is a machine that lacks the binaries for real).
-2. Pick one real suite that itself calls a bounded-execution fallback site —
-   `tests/test-issue-979-probe.sh` is a convenient choice, since its own
-   `--probe` legs drive `scripts/preflight/check-review-backend.sh` through a
-   short `PROBE_TIMEOUT_SECS` bound with a subject that exits well before it.
+2. Pick a bounded-execution call site that satisfies **both** selection
+   conditions below — the conditions come first, so this step does not rot
+   again the next time an individual call site gains reaping:
+   1. the call site carried **no watchdog-reaping logic at the pre-fix
+      commit**, so the pre-fix run really contains the defect; and
+   2. the bounded call is **invoked immediately before driver exit**, so the
+      watchdog's residual sleep is what holds the pipe open — nothing later in
+      the driver masks it.
+
+   `run_bounded_in` in `tests/test-push-context-base-ref.sh` satisfies both and
+   is the subject the recorded measurement used
+   (https://github.com/Munsik-Park/autoflow/issues/100#issuecomment-5304785157
+   §2/§3, comment `5304785157`). That measurement is also why the earlier
+   recommendation is gone: the previously named probe suite's pre-fix
+   `run_bounded` **already reaped** the watchdog, so it exhibits a zero-second
+   gap before *and* after the fix and an operator reads "fix confirmed" from a
+   run that never contained the defect — a false-negative pass condition.
 3. **Before the fix** (checkout the commit immediately prior to this cycle's
-   GREEN implementation, `b79d855`'s parent): run the suite piped to `tail`,
-   e.g. `bash tests/test-issue-979-probe.sh | tail -n 5`, and record wall-clock
-   time from invocation to the shell prompt returning (`time bash
-   tests/test-issue-979-probe.sh | tail -n 5`). Expect the prompt to return
-   noticeably later than the suite's own last printed assertion line — the
-   watchdog's inherited, unredirected pipe copy holding `tail` open past
-   subject completion.
+   GREEN implementation, `b79d855`'s parent — the same commit the recorded
+   measurement cites): extract that commit's `run_bounded_in` body into a
+   throwaway driver whose last action is the bounded call, run it piped to
+   `tail`, and record wall-clock time from invocation to the shell prompt
+   returning (`time bash <driver> | tail -n 5`). Extract rather than
+   re-author, so the "before" leg measures the shipped pre-fix code. Expect
+   the prompt to return noticeably later than the driver's own last printed
+   line — the watchdog's inherited, unredirected pipe copy holding `tail` open
+   past subject completion.
 4. **After the fix** (the current tree, this cycle's implementation applied):
-   repeat the identical command. Expect the prompt to return at essentially
-   the same moment the suite's own last assertion line prints — no
+   repeat the identical command against the current tree's `run_bounded_in`,
+   with the driver otherwise unchanged. Expect the prompt to return at
+   essentially the same moment the driver's own last line prints — no
    perceptible extra wait.
 5. Record both wall-clock timings (or at minimum, whether a perceptible delay
    was observed in each case) in the PR or issue thread as this scenario's

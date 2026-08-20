@@ -18,7 +18,7 @@
 #
 # RED expectation (cycle 1 commit): the ADR file
 # docs/adr/0016-adr-conformance-gate-scoring.md does not exist yet (GREEN has
-# not authored it). Every AC1-AC6 heading-presence and in-block check that
+# not authored it). Every AC1/AC2/AC3 heading-presence and in-block check that
 # depends on the ADR file FAILs. The independent source-anchor checks (hook
 # script fact re-derivation, docs/phases/analysis.md DENY line, README status
 # values) are pre-existing invariants and PASS before and after GREEN — they
@@ -39,13 +39,27 @@
 # already-Accepted ADR-0016 decision into the operative rubric/contract docs
 # (autoflow-guide.md GATE:PLAN/GATE:QUALITY/ARCHITECT, evaluation-system.md,
 # teammate-contracts.md) and promotes ADR-0016 Status Proposed -> Accepted.
-# AC-961-1/-2/-5/-7 below (added this commit), per
+# AC-961-1/-2 below (added this commit), per
 # .autoflow/issue-961-verification-design.md §4. RED expectation (this
-# commit): AC-961-1, AC-961-2, AC-961-5, AC-961-7 all FAIL now (the prose
-# inserts and the Status/README flips have not landed); the existing AC1-b
-# assertion above was flipped in this same commit to expect 'Accepted' and
-# also FAILs now (the ADR file still states 'Proposed'). AC1-guard
-# (README Status Values legend) is untouched and stays green throughout.
+# commit): AC-961-1 and AC-961-2 FAIL now (the prose inserts have not
+# landed); the existing AC1-b assertion above was flipped in this same commit
+# to expect 'Accepted' and also FAILs now (the ADR file still states
+# 'Proposed'). AC1-guard (README Status Values legend) is untouched and stays
+# green throughout.
+#
+# Migrated out of this file, assertion carried elsewhere (issue #109, registry
+# §13.2 — the assert-less section headers were removed; carriers are
+# `tests/fixtures/doc-invariants.json` ids):
+#   DIAGNOSE non-contradiction   → adr0016-AC4-a-diagnose-heading
+#   case-collection result       → adr0016-AC5-a-casecollection-heading
+#   follow-up scope separated    → adr0016-AC6-a-followup-heading
+#   Status flip + owner approval → adr0016-AC961-5-a-owner-approval,
+#                                  adr0016-AC961-5-b-readme-accepted
+#   docs/adr/README.md numbering-gap note
+#                                → adr0016-AC961-7-a-range,
+#                                  adr0016-AC961-7-b-date,
+#                                  adr0016-AC961-7-b-repo,
+#                                  adr0016-AC961-7-c-registry
 # =============================================================================
 
 set -uo pipefail
@@ -155,24 +169,6 @@ assert_false "AC3-guard-c: Threshold block does not describe N+1-item averaging 
 
 # Independent fact re-derivation against the hook script (invariant; should
 # PASS before and after GREEN — this cycle adds no hook code).
-
-# =============================================================================
-echo ""
-echo "=== AC4 — DIAGNOSE non-contradiction ==="
-
-
-# Source-anchor integrity (content-anchored, line-number-independent):
-# invariant, should PASS before and after GREEN.
-
-# =============================================================================
-echo ""
-echo "=== AC5 — case-collection result recorded ==="
-
-
-# =============================================================================
-echo ""
-echo "=== AC6 — follow-up implementation scope separated ==="
-
 
 # =============================================================================
 # Cycle 2 (review-response) — registration-completeness fix
@@ -297,20 +293,6 @@ assert_false "AC-961-2-f: GATE:QUALITY blind-spot intro no longer hard-counts 'T
   "printf '%s\n' \"\$KNOWN_BLINDSPOT_CTX\" | grep -qF 'Three defect patterns'"
 assert_true "AC-961-2-g: GATE:QUALITY blind-spot section carries a distinct-provenance marker for the proactive ADR-0016 check (not a Codex catch)" \
   "printf '%s\n' \"\$KNOWN_BLINDSPOT_CTX\" | grep -qiE 'proactively-added|ADR-0016'"
-
-# =============================================================================
-echo ""
-echo "=== AC-961-5 — ADR-0016 Status Proposed->Accepted + owner-approval evidence + README row (feature AC7+AC10) ==="
-
-# NOTE: the AC1-b assertion above (this file, AC1 block) was flipped in this
-# same commit to expect 'Accepted' instead of 'Proposed' — that is the
-# load-bearing AC10 catch (feature §7). It is not repeated here; only the
-# distinct owner-approval evidence line and the README row flip are new.
-
-# =============================================================================
-echo ""
-echo "=== AC-961-7 — docs/adr/README.md numbering-gap note (feature AC8) ==="
-
 
 # =============================================================================
 # Results
