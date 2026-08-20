@@ -316,7 +316,7 @@ jobs:
       - name: test-bounded-execution-fallback.sh
         id: s-test-bounded-execution-fallback
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-bounded-execution-fallback.sh ')
-        timeout-minutes: 10
+        timeout-minutes: 3
         run: bash tests/test-bounded-execution-fallback.sh
 
       - name: adr-0016-conformance-check.sh
