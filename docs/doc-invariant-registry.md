@@ -436,3 +436,101 @@ through mechanically. It does not execute the renames.
 | `tests/test-issue-103-pin-and-docs.sh`'s two "branch-scoped-inert homes are untouched" rows | **flipped — presence pin's ground retired** | one shared preamble governed both rows on the ground that each foreign home pins its own cycle's measurement on its own dev branch. This cycle retires that ground. The `62` row asserted `EXPECTED_OK=58` is **present** — the only one of this cycle's three cross-file couplings in the positive direction, so a deletion, not an omission, reds it. The `56` row claimed its companion literal was untouched while its predicate was the file-existence tautology `[ -f "$SUITE_56" ]`, reporting green on a claim it never evaluated — the same semantically-false-PASS class as the row above, one row away in the same file. Both are flipped to the identical successor form, *the file authors no `EXPECTED_OK=` literal at all*, which strengthens #103's single-authorship invariant rather than dropping it, and the `56` row's tautological predicate is replaced by one that evaluates its own claim |
 | `tests/test-push-context-base-ref.sh`'s two literal pins on `tests/test-issue-59-adoption-evidence-discipline.sh` (the under-derivation pin and the real-tree `NATIVE-COVERAGE` corroboration arm) | **repointed — pinned subject retired, property preserved** | that suite pins one literal suite name into its derived subject set so a silent under-derivation fails loud instead of merely shrinking the printed set, and separately asserts that same subject reports `NATIVE-COVERAGE PASS`. Both name one subject and move together: a suite that is no longer derived cannot report a coverage state at all, so repointing only the first leaves the second asserting a state its subject can never produce. `59` was chosen because it was a real non-comment resolver call site; this cycle removed its last one, so the subject left the derived set legitimately and the pin would have redded a standing suite under an unrelated name. The guard's value is the pin, not any particular subject, so it is repointed rather than deleted. The successor is chosen by the property the pin needs — registered by a `push: branches: [main]` workflow, not in `EXEMPT_HERMETIC_DRIVERS`, and carrying a non-comment resolver call against the repo under test — which `tests/test-issue-27-composition-oracle.sh` satisfies and this cycle does not touch; `tests/test-issue-798-topology-flip.sh` is the alternate if `27` ever loses the call |
 | `tests/test-issue-62-sequential-rounds.sh:96-115` (`guard_result_at_ref_mutated`) and `tests/test-issue-103-pin-and-docs.sh`'s AC-pin-detects-harness-drift drive | **kept — intentional leaf exemption, negative control** | neither re-runs a registered sibling. Each drives a suite at ANOTHER ON-DISK STATE — a detached worktree at a historical ref, and a scratch worktree whose harness is deliberately perturbed — and the callee's own CI step, running the unperturbed tree, cannot stand in for it. The admission is a consequence of rows the lint itself evaluates, not a machine-readable exemption input: the #62 call site's argument is a function positional under a `tests/` prefix, which D5's antecedent (an assignment carrying a literal enumerated-suite path) does not have, and the pin-drift site's path is rooted at a scratch variable this file assigns from `mktemp`, which is row I3/I4's antecedent. This row records the GROUND for keeping them, not the mechanism that admits them |
+
+## 13. Migration provenance — retired-guard dispositions (issue #109)
+
+Issue #109 is auxiliary-asset hygiene for `tests/`: it closes the drift between what a
+scenario document or a suite's section header *declares* and what the tree actually
+carries. Two populations are dispositioned below — the zero-inbound scenario documents
+under `tests/manual/`, and the assert-less acceptance-criterion section headers left
+behind by the #76 migration. The closing rule §5, §6 and §7 share applies here too:
+nothing in a retired column is a bare deletion.
+
+### 13.1 `tests/manual/` scenario documents — the zero-inbound population
+
+All six documents below are **indistinguishable under the inbound-reference
+predicate**: a tree-wide `grep -rIl` for each basename (self, `.git` and `.autoflow`
+excluded) returns nothing for every one of them. Retirement therefore rests on a second
+predicate — **whether the prescribed procedure is still replayable at an arbitrary
+head**. The retained side is recorded here as explicitly as the retired side, so the
+next tree audit re-reads a basis instead of re-opening the question.
+
+Disposal path is **deletion, recorded** — §6's `tests/manual/` row already fixes that
+for a scenario document, on the ground that an out-of-repo archive duplicates git
+history while making the material unreachable to a reviewer. `$AUTOFLOW_ARCHIVE_ROOT`
+is not a candidate: `scripts/cleanup/cleanup-issue.sh` is its only writer and its
+subject is `.autoflow/issue-{N}*`.
+
+Each retired row records the five-kind closure result as an authored finding for that
+file — no registry entry targets it, no surviving suite asserts on it, no
+`docs/maintained-docs.md` row registers it, no prose document cites it, and no retained
+scenario document cites it. That criterion is stated here in its own right and is **not**
+delegated to `tests/test-run-doc-invariants.sh`'s `AC-c-3` clause 2, whose
+`RETAINED_DOCS` array names none of these six and therefore evaluates nothing about
+them.
+
+| Document | Disposition | Basis |
+|---|---|---|
+| `tests/manual/issue-81-manual-scenarios.md` | **retired — procedure no longer replayable** | its M1/M2/M3 procedures act on "the chosen open PR" of that cycle; that PR is no longer open, so the stimulus cannot be re-created at any later head. Five-kind closure holds: no registry entry targets it, no surviving suite asserts on it, no `docs/maintained-docs.md` row registers it, no prose document cites it, no retained scenario document cites it |
+| `tests/manual/issue-85-manual-scenarios.md` | **retired — one-shot observation window closed** | M1 instructs the operator to locate the push-triggered workflow runs produced by that cycle's own merge commit — a post-merge window that closed with the merge. Five-kind closure holds, as above |
+| `tests/manual/issue-99-manual-scenarios.md` | **retired — one-shot observation window closed** | M1 likewise pins the `contract-suites.yml` run produced by that cycle's merge commit. Five-kind closure holds, as above |
+| `tests/manual/issue-89-manual-scenarios.md` | **retained — replayable at any head** | its dry-run fixes its own inputs and pass condition inside the document, so the rubric dry-run replays at an arbitrary head; its oracle is an LLM evaluator's judgment, which no repository test observes |
+| `tests/manual/issue-93-manual-scenarios.md` | **retained — replayable at any head** | its two criteria are walks of the lint-chain rule *in the current checkout*; cycle 2's section is the live record for the `not-run` reason-class split |
+| `tests/manual/issue-100-manual-scenarios.md` | **retained — live delegated record, vehicle repaired** | M1 is explicitly `Status: delegated to user` and still unmet. This cycle repairs its reproduction vehicle rather than retiring it: Step 2's `tests/test-issue-979-probe.sh` recommendation is a false-negative pass condition (that suite's pre-fix `run_bounded` already reaped the watchdog), replaced by a condition-first step naming `tests/test-push-context-base-ref.sh`'s `run_bounded_in`. The corrected literals are pinned by the `109-AC-repro-site-*` / `109-AC-measurement-anchor-cited` registry entries |
+
+### 13.2 Assert-less acceptance-criterion section headers
+
+These blocks are residue of the #76 migration, which moved each suite's doc-STATE
+assertions into registry entries and left the printing header behind. A block that
+prints `=== AC5 … ===` and asserts nothing tells a reader the criterion is checked
+here when it is checked elsewhere. Keeping the `echo` and adding a comment underneath
+preserves exactly that false signal, so the `echo` line and its orphaned comment body
+go, and each suite's own Scope / RED-expectation header list is narrowed to what the
+body executes, with the migrated ids annotated by their carrier.
+
+**Carrier notation is fixed for every row below.** The carrier column is the leg that
+separates this cleanup from silent coverage loss, so it must be machine-resolvable and
+prose is not. Every row states its carrier in exactly one of two forms: (1) a registry
+`id` that appears in `jq -r '.invariants[].id' tests/fixtures/doc-invariants.json`, or
+(2) a repository-relative path **plus** the assertion-description literal, verbatim,
+that greps in that file.
+
+| Suite | Header removed | Carrier |
+|---|---|---|
+| `tests/test-issue-798-topology-flip.sh` | AC5 DOC-CLAUDE-CLASS | `798-AC5-positive-singlerepo`, `798-AC5-negative-multirepo-gone` |
+| `tests/test-issue-798-topology-flip.sh` | AC15 README-SYNC | `798-AC15a-no-recurse`, `798-AC15b-no-submodule-tree`, `798-AC15c-degenerate-prose` |
+| `tests/test-issue-799-inert-cleanup.sh` | AC1 README-CONSUMED-PRESENT | `799-AC1-neg-wizard`, `799-AC1-pos-marketplace`, `799-AC1-pos-target` |
+| `tests/test-issue-799-inert-cleanup.sh` | AC3 README-CHECKLIST-CURRENT | `799-AC3D-checklist-neg`, `799-AC3D-checklist-pos`, `799-AC3D-section-neg` |
+| `tests/test-issue-799-inert-cleanup.sh` | AC6 INDEX-INERT-ROUTE-ABSENT | `799-AC5D-index-neg`, `799-AC5D-index-pos`, `799-AC5D-maint-header`, `799-AC5D-maint-qualifier` |
+| `tests/test-issue-799-inert-cleanup.sh` | AC7 GITWORKFLOW-DEFERRAL-CLEARED | `799-AC5G-neg-s11a`, `799-AC5G-guard-active-na` |
+| `tests/test-issue-799-inert-cleanup.sh` | AC9 DEGENERATE-PROSE-PRESERVED | `799-AC5H-degenerate` |
+| `tests/test-issue-799-inert-cleanup.sh` | AC11 NO-SUBMODULE-REINTRO | **form 2** — `tests/test-issue-798-topology-flip.sh`, literals `AC2a: git ls-tree HEAD -- services is empty`, `AC2b: git ls-files -s -- services has no 160000 mode row`, `AC3a: git submodule status is empty`, `AC3b: HEAD .gitmodules path-entry count == 0` |
+| `tests/adr-0016-conformance-check.sh` | AC4 DIAGNOSE non-contradiction | `adr0016-AC4-a-diagnose-heading` |
+| `tests/adr-0016-conformance-check.sh` | AC5 case-collection result | `adr0016-AC5-a-casecollection-heading` |
+| `tests/adr-0016-conformance-check.sh` | AC6 follow-up scope separated | `adr0016-AC6-a-followup-heading` |
+| `tests/adr-0016-conformance-check.sh` | AC-961-5 Status + owner approval | `adr0016-AC961-5-a-owner-approval`, `adr0016-AC961-5-b-readme-accepted` |
+| `tests/adr-0016-conformance-check.sh` | AC-961-7 numbering-gap note | `adr0016-AC961-7-a-range`, `adr0016-AC961-7-b-date`, `adr0016-AC961-7-b-repo`, `adr0016-AC961-7-c-registry` |
+
+**The one header without a registry carrier.** `799` AC11 (NO-SUBMODULE-REINTRO) has no
+`origin_issue: 799` registry entry, so its row takes form 2. The property is not
+dropped: the four `798` literals it names are strictly stronger than "no
+reintroduction", live, and CI-registered — the same disposition class §6 already used
+when it retired the bats `T11-1b` guard against those same four assertions.
+
+**Scope discipline.** Only the enumerated headers were touched. Guard sections that
+carry assertions keep both their header and their body. No `assert_true`/`assert_false`
+call, no results footer, and no `PASS`/`TESTS` counter arithmetic changed in any of the
+three suites; `tests/fixtures/issue-109-assertion-baseline-{798,799,adr0016}.txt` pins
+that as a set-inclusion invariant.
+
+### 13.3 Script↔manual cross-references (no retirement)
+
+`tests/plugin/verify-package.sh` and `tests/plugin/verify-install-skill-scripts.sh`
+gained the missing script→doc half of the cross-reference with
+`tests/plugin/manual-scenarios.md` / `tests/plugin/manual-scenarios-943.md`, in the
+**comment form** `tests/plugin/verify-install-into-target.sh` already uses — not the
+`# ci-subject:` token form. The token form is barred here by §12's backing rule (a
+declared token must correspond to a non-comment body reference) together with
+`tests/test-workflow-trigger-conformance.sh` `AC-b-2`, which would drag
+`.github/workflows/plugin-package.yml`'s trigger semantics into this cycle's change
+surface. Nothing is retired by this item.

@@ -1,0 +1,31 @@
+AC1-a: ADR file exists at docs/adr/0016-adr-conformance-gate-scoring.md
+AC2-e: Placement block names the Feasibility cap target in-block
+AC2-f: Placement block names the Scope cap target in-block
+AC2-h: Item form block states 'caps the named item at 6'
+AC2-i: Item form block states 'not a new scored item'
+AC2-k: N/A convention block states the Conforms outcome (no cap)
+AC2-l: N/A convention block states the Diverges/undocumented outcome (cap 6)
+AC2-m: N/A convention block states N/A is the default for a change touching no ADR-decision surface
+AC3-b: Threshold block asserts no new scores key
+AC3-c: Threshold block asserts no hook edit
+AC3-d: Threshold block asserts no threshold recompute
+AC3-guard-a: Threshold block does not claim a hook edit is required
+AC3-guard-b: Threshold block does not claim a threshold recompute is required
+AC3-guard-c: Threshold block does not describe N+1-item averaging as the chosen form's behavior
+AC-R1-a: a 0016 row exists inside the ADRs table block of maintained-docs.md
+AC-R1-b: the matched line is a real 4-column table row (leading + internal pipes)
+AC-R2-b: that row does not use a markdown-link form to the ADR (backtick inline-code form required, not '](adr/0016...)')
+AC-R3-a: manifest sha256 for docs/maintained-docs.md matches current source hash
+AC-R3-b: manifest sha256 for docs/INDEX.md matches current source hash
+AC-961-1-b: ADR-conformance check subsection (GATE:PLAN) names both Feasibility and Scope
+AC-961-1-c: ADR-conformance check subsection carries T-CAP verbatim ('caps the named item at 6'), window-scoped
+AC-961-1-d: ADR-conformance check subsection carries T-TRIG-1 verbatim ('divergence from a governing ADR')
+AC-961-1-e: ADR-conformance check subsection carries T-TRIG-2 verbatim ('architecture-impacting change with no governing ADR/owner decision')
+AC-961-1-f: ADR-conformance check subsection carries T-NA verbatim ('N/A by default')
+AC-961-1-g: GATE:QUALITY blind-spot list carries item-specific 'caps Fit at 6'
+AC-961-1-h: ARCHITECT Agreement criteria carries T-NONSCORED verbatim ('a divergence is a COUNTER, not an ACCEPT')
+AC-961-2-c: teammate-contracts.md Facilitator Responsibilities names ADR conformance as a first-exchange axis
+AC-961-2-d: cross-doc cap-surface co-occurrence — evaluation-system.md GATE:PLAN row names Feasibility, Scope, and the cap value 6
+AC-961-2-e: cross-doc cap-surface co-occurrence — evaluation-system.md GATE:QUALITY row names Fit and the cap value 6
+AC-961-2-f: GATE:QUALITY blind-spot intro no longer hard-counts 'Three defect patterns'
+AC-961-2-g: GATE:QUALITY blind-spot section carries a distinct-provenance marker for the proactive ADR-0016 check (not a Codex catch)

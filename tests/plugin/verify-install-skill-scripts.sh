@@ -22,6 +22,17 @@
 # NON-conflation), git-state derivation (incl. graceful omission), topology
 # judgment, the fork-URL gate (mocked `gh`), and the identity-scaffold draft.
 #
+# NOT automated (E types — see tests/plugin/manual-scenarios-943.md), the
+# unautomatable-criteria complement of this suite, by that document's own
+# scenario-heading identifiers:
+#   AC2c  full skill orchestration (detect -> report -> confirm -> stamp ->
+#         auto-drift) in a live Claude Code session
+#   AC3c  re-stamp proposal + result on an installed+drifted fixture
+#   AC4b  declined confirmation -> zero writes (the load-bearing opt-in check)
+#   AD3   multi-repo fork-URL confirmation (behavioral, the single 1x confirm)
+#   M-3-style residual — ${CLAUDE_PLUGIN_ROOT} inline substitution inside the
+#         install skill body
+#
 # Acceptance criteria (.autoflow/issue-943-verification-design.md §1/§2, §5
 # RED plan item 2):
 #   AC2b   detect.sh absence arm: INSTALL_STATE=absent, DRIFT_STATE=na,

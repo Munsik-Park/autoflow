@@ -32,6 +32,27 @@
 #       the ${CLAUDE_PLUGIN_ROOT}-first, .claude-fallback loop and no longer
 #       carries the bare host-only assignment as its sole locator
 #
+#   NOT automated (E types — see tests/plugin/manual-scenarios.md), the
+#   unautomatable-criteria complement of this suite, by that document's own
+#   scenario-heading identifiers:
+#     M-1   manifest loads in a real Claude Code session
+#     M-2   marketplace add + install
+#     M-3   hooks fire via the plugin channel
+#     M-4   ${CLAUDE_PROJECT_DIR} parity (mandatory)
+#     M-5   self-dogfooding preserved
+#     M-R1  packaged skill resolves scripts on a plugin-only install (mandatory)
+#     M-R2  skill namespace observed empirically (informational)
+#     M-6   skill namespace doc-sweep note
+#   This suite additionally owns the STATIC SKILL.md structural guards recorded
+#   in tests/plugin/manual-scenarios-943.md, whose own live-orchestration items
+#   stay unautomated there:
+#     AC2c  full skill orchestration (detect -> report -> confirm -> stamp)
+#     AC3c  re-stamp proposal + result on an installed+drifted fixture
+#     AC4b  declined confirmation -> zero writes
+#     AD3   multi-repo fork-URL confirmation (behavioral)
+#     M-3-style residual — ${CLAUDE_PLUGIN_ROOT} inline substitution in the
+#           install skill body
+#
 # DCR-4 non-vacuity correction (grounded against the live spec, fetched
 # 2026-07-06, https://code.claude.com/docs/en/plugins-reference > "Plugin
 # manifest schema" > Required fields): "If you include a manifest, `name` is

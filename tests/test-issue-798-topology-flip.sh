@@ -27,16 +27,20 @@
 #   AC1  GITMODULES-CLEAR   — .gitmodules absent from HEAD (D-1 = delete)
 #   AC2  GITLINK-CLEAR      — no 160000 gitlink at `services` in HEAD/index
 #   AC3  COUNT-ZERO         — non-vacuity keystone: submodule count == 0
-#   AC5  DOC-CLAUDE-CLASS   — CLAUDE.md:42 self-classification flipped
 #   AC6  DOC-SECONDARY-COHERENCE (guard) — dual-mode definitions + Secondary
 #        markers preserved
 #   AC7  ADR-HISTORICAL-KEEP (guard) — ADR-0015:148 kept verbatim
 #   AC9  NO-NEW-TIMING (guard)      — no new hook/workflow timing mechanism
 #   AC12 CI-ENFORCED        — the suite + `.gitmodules` are CI-registered
-#   AC15 README-SYNC        — README.md dangling submodule references removed
-#        (GATE:QUALITY E11 remediation, ledger E11): no --recurse-submodules
-#        clone instruction, no structure-tree `(git submodule)` entry; the
-#        generic framework dual-mode prose (line 76) is a preserved guard.
+#
+# Migrated out of this file, assertion carried elsewhere (issue #109, registry
+# §13.2 — the assert-less section headers were removed; the carriers below are
+# `tests/fixtures/doc-invariants.json` ids):
+#   DOC-CLAUDE-CLASS (CLAUDE.md self-classification flip)
+#        → 798-AC5-positive-singlerepo, 798-AC5-negative-multirepo-gone
+#   README-SYNC (dangling submodule references removed, degenerate prose kept)
+#        → 798-AC15a-no-recurse, 798-AC15b-no-submodule-tree,
+#          798-AC15c-degenerate-prose
 #
 # Not in this file (verification design §2/§5):
 #   AC4  local .git/config + .git/modules residue        → tests/manual/issue-798-manual-scenarios.md
@@ -54,8 +58,8 @@
 #        references `services`); stays GREEN unconditionally via
 #        tests/plugin/verify-e2e-dummy-target.sh E2a arm, no new assertion.
 #
-# RED expectation (pre-change): AC1/AC2/AC3/AC5(negative present + positive
-# absent)/AC12 FAIL. AC3 COUNT-ZERO is the non-vacuity keystone — a
+# RED expectation (pre-change): AC1/AC2/AC3/AC12 FAIL.
+# AC3 COUNT-ZERO is the non-vacuity keystone — a
 # pre-change PASS on any detach assertion means the test is mis-scoped.
 # AC6/AC7/AC9 are preservation guards and PASS both pre- and post-change.
 # =============================================================================
@@ -135,16 +139,6 @@ assert_true "AC3a: git submodule status is empty" \
   "[ -z \"\$(git submodule status 2>/dev/null)\" ]"
 assert_true "AC3b: HEAD .gitmodules path-entry count == 0" \
   "[ \"\$(git show HEAD:.gitmodules 2>/dev/null | grep -cE '^\\[submodule' || true)\" -eq 0 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC5 DOC-CLAUDE-CLASS — CLAUDE.md project self-classification flipped ==="
-
-# [MUST — non-vacuity, DQ-8/E5] The positive oracle uses the '→' arrow literal,
-# unique to the flipped :42 line — CLAUDE.md:37's dual-mode *definition*
-# ("single-repo = the host repository contains **zero submodules**") uses '='
-# not '→', so a bare token grep would be vacuously GREEN pre-change. This
-# literal only appears once the project self-classification sentence flips.
 
 # =============================================================================
 echo ""
@@ -284,21 +278,6 @@ else
   echo "  SKIP: AC12b (no CI home found yet)"
   TESTS=$((TESTS + 1))
 fi
-
-# =============================================================================
-echo ""
-echo "=== AC15 README-SYNC — README.md dangling submodule references removed ==="
-# GATE:QUALITY E11 remediation (ledger E11): README.md:85-87 (Quick Start clone
-# --recurse-submodules instruction) and README.md:127-128 (structure tree
-# services/librechat submodule entry) are stale inbound references to the
-# detached `services` submodule. Fixed-string oracles chosen to avoid
-# false-positiving on the generic framework prose at README.md:76
-# ("Multi-Sub-Repo Support ... single-repo is the degenerate case") or on doc
-# filenames like docs/submodule-common-rules.md.
-
-# AC15c (guard): the generic framework dual-mode prose must survive the sync —
-# a README fix that overshoots into gutting reusability content is itself a
-# regression (mirrors the AC6 preservation-guard pattern).
 
 # =============================================================================
 # Results
