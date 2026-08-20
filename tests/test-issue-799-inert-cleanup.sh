@@ -17,9 +17,9 @@
 #
 # Canonical AC numbering (ledger E4 / feature §4.7 R2 / verification §6 C1):
 # feature AC1-AC12 (D-ID-keyed) are the top-level names; the assert labels
-# below use the verification design's Group A-H sub-oracle ids
-# (AC1-neg/pos, AC2-*, AC3-*, AC5D/G/H-*, AC6-*), bound to feature AC1-AC12
-# by the §6 crosswalk table. One id set binds RED/GREEN.
+# below use the verification design's Group A-H sub-oracle ids, each of which
+# suffixes a top-level number with a hyphenated sub-oracle name, bound to
+# feature AC1-AC12 by the §6 crosswalk table. One id set binds RED/GREEN.
 #
 # Scope (verification design §2 Tier-1) — narrowed to what this body executes:
 #   AC2-tree      structure-tree spot subset (feat AC2, D2)
@@ -49,6 +49,10 @@
 #                               live AC2a/AC2b/AC3a/AC3b git-plumbing
 #                               assertions, which are strictly stronger
 #
+# Narrowed out of this file by issue #116 (a RED-expectation-only id, assigned
+# no registry §13.2 row). Carrier is a `tests/fixtures/doc-invariants.json` id:
+#   TEMPLATE-ERA-ABSENT       → 799-AC2-neg-template-era
+#
 # Not in this file (verification design §2 Tier-2/Tier-3, reuse):
 #   AC1-src   README Quick Start <-> setup/SETUP-GUIDE.md step agreement
 #             -> tests/manual/issue-799-manual-scenarios.md
@@ -58,14 +62,16 @@
 #             (init.sh --target E2E) — reuse, no new harness
 #
 # RED expectation (pre-change, verification §4 / feature §4.7 non-vacuity
-# keystone): AC1-neg (wizard narrative present), AC1-pos (--target /
-# /plugin absent), AC2-neg (template-era x2 present), AC3-guide/common/ext
-# (self-claim present, no #798 qualifier), AC3D-checklist-neg/section-neg
-# (legacy strings present), AC5D-index-neg (services/librechat/docs/
-# present), AC5D-maint-neg (N/A qualifier absent), AC5G-neg (deferred to
-# S11a present) all FAIL. AC3-guard/AC4-guard/AC5H-degenerate/AC5H-nosubmod/
-# AC5G-guard are preservation guards and PASS both pre- and post-change.
-# AC6-scope/AC6-ci become GREEN only once the suite + CI wiring land.
+# keystone) — stated for the ids this body executes, and only for those:
+#   AC2-tree              FAILs pre-change (the structure tree omits
+#                         currently-shipped top-level entries)
+#   AC3-guide/common/ext  FAILs pre-change (self-claim present, no #798
+#                         qualifier)
+#   AC3-guard, AC4-guard  preservation guards — PASS pre- and post-change
+#   AC3-nores             changed-surface guard — PASSes pre- and post-change
+#   AC6-scope, AC6-ci     become GREEN only once the suite + CI wiring land
+# Ids narrowed out of this file keep their expectation with their carrier
+# (see the disposition blocks above); none is restated here.
 # =============================================================================
 
 set -uo pipefail

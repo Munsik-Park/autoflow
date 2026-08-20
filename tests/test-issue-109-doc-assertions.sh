@@ -34,6 +34,15 @@
 # AC-suite-step-governed-shape, AC-trigger-correspondence-holds) are existing
 # scripts this cycle does not modify and are not re-asserted here.
 #
+# Scope addendum (issue #116) — verification design
+# .autoflow/issue-116-verification-design.md, "Acceptance criteria ->
+# verification type -> method": Group E adds the sub-id-granular
+# header-narrowing oracles over tests/test-issue-799-inert-cleanup.sh's
+# comment header — the curated stale-spelling and live-id lists, the
+# compound/family-glob spelling arms, the issue-#116 carrier trail and its
+# CARRIER_IDS closure, the registry §13.2 narrowing-claim composition, and
+# this suite's own scope currency.
+#
 # Group A reconciliation (GATE:PLAN ledger O2 item 1): AC-stale-record-retired
 # and AC-retirement-basis-recorded were mutually unsatisfiable as originally
 # authored -- see .autoflow/issue-109-verification-design.md's Group A row for
@@ -334,6 +343,7 @@ CARRIER_IDS=(
   "799-AC5D-index-neg" "799-AC5D-index-pos" "799-AC5D-maint-header" "799-AC5D-maint-qualifier"
   "799-AC5G-neg-s11a" "799-AC5G-guard-active-na"
   "799-AC5H-degenerate"
+  "799-AC2-neg-template-era"
   "adr0016-AC4-a-diagnose-heading" "adr0016-AC5-a-casecollection-heading" "adr0016-AC6-a-followup-heading"
   "adr0016-AC961-5-a-owner-approval" "adr0016-AC961-5-b-readme-accepted"
   "adr0016-AC961-7-a-range" "adr0016-AC961-7-b-date" "adr0016-AC961-7-b-repo" "adr0016-AC961-7-c-registry"
