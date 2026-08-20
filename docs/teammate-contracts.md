@@ -181,7 +181,7 @@ The workflow's only output to the orchestrator is one structured result, **speci
 
 ### Termination (explicit caps — Decision 7)
 
-- **ARCHITECT**: a *round* = one Developer-AI ↔ Test-AI exchange cycle. Max **6 rounds**; on no mutual ACCEPT at round 6, the workflow returns `verdict: "ESCALATE"`. (Encoded as `MAX_ROUNDS = 6` in the script.)
+- **ARCHITECT**: a *round* = one Developer-AI ↔ Test-AI exchange cycle. Max **6 rounds**. Because a round runs Test-AI-then-Developer-AI, round 6 would otherwise end on a Developer-AI revision no Test-AI turn has evaluated: when that revision is a grounded ACCEPT, a **closing half-round** runs — one Test-AI-only evaluation of it. It is the second half of the sixth exchange, not a seventh round, so it adds no Developer-AI turn and does not increment the returned `rounds`; the round definition above is unchanged. Its verdict decides the run: a grounded ACCEPT returns `verdict: "CONVERGED"`, a COUNTER/PARTIAL returns `verdict: "ESCALATE"` with the round-exhaustion reason, and a null closing return is a MISSING judgment carrying its own distinct `escalation` reason. On no mutual ACCEPT at round 6, the workflow returns `verdict: "ESCALATE"`. (Encoded as `MAX_ROUNDS = 6` in the script.)
 - **VERIFY**: a single self-check round (each side answers once → deterministic `next_action`); there is no internal loop. Repeated VERIFY entries are bounded by the existing GREEN↔VERIFY round-trip cap (max 3) in [`CLAUDE.md`](../CLAUDE.md) > Flow Control.
 - **[MUST]** No round-by-round messages, no duplicate dual reports, no artifact bodies in the return — paths + verdict/next-action + one line only (mirrors [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Reporting Format).
 
