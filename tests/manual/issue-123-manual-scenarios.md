@@ -7,9 +7,11 @@ hosted Workflow runtime is not launchable from this repository's test tree —
 "They do NOT exercise a live Claude Code Workflow runtime"), and the script
 cannot observe its own environment (no filesystem, `import(` rejected at
 parse time). Every other AC1-AC13 criterion is covered by `test/workflows/run.mjs`
-("ARCHITECT: cap-round closing half-round" cases), the
-`tests/fixtures/doc-invariants.json` registry entries (`123-AC7-*`), or
-`tests/test-issue-123-closing-half-round.sh`.
+("ARCHITECT: cap-round closing half-round" cases) and the
+`tests/fixtures/doc-invariants.json` registry entries (`123-AC7-*`, and — since
+GATE:QUALITY promoted them from the now-retired cycle-scoped
+`tests/test-issue-123-closing-half-round.sh`, docs/doc-invariant-registry.md
+§14 — `123-AC5-closing-reason-*` / `123-AC6-closing-label-*`).
 
 ---
 

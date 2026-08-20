@@ -534,3 +534,32 @@ declared token must correspond to a non-comment body reference) together with
 `tests/test-workflow-trigger-conformance.sh` `AC-b-2`, which would drag
 `.github/workflows/plugin-package.yml`'s trigger semantics into this cycle's change
 surface. Nothing is retired by this item.
+
+---
+
+## 14. Migration provenance — retired-guard dispositions (issue #123)
+
+Issue #123 adds the ARCHITECT cap-round closing half-round. Its RED phase authored a
+cycle-scoped suite, `tests/test-issue-123-closing-half-round.sh` (`retire-with: #123`),
+carrying four assertions. GATE:QUALITY (avg 8.7) bound the §2 execution point to this
+cycle's own final pre-DELIVER commit: the suite is retired here, following §6's rule
+that nothing in a retired column is a bare deletion.
+
+| Retired guard | Disposition | Basis |
+|---|---|---|
+| `AC-123-drift-closing-label` — `CLOSING_CALL_LABEL` identical between `.claude/workflows/architect-deliberation.js` and `test/workflows/run.mjs` | **promoted → registry entries `123-AC6-closing-label-prod` / `123-AC6-closing-label-harness`** | the DELTA (an equality between two files) is unfixable by an allow-list, so §3 rewrites it as two positive STATE predicates instead: each file's declaration line, `const CLOSING_CALL_LABEL = 'test-closing'`, is individually pinned `present`, `scope: "permanent"`. The pair still catches drift — a change to either file's line reds that entry alone — without the registry needing a cross-file equality predicate it structurally cannot express (§1: one entry evaluates one file's region) |
+| `AC-123-drift-closing-missing-reason` — `REASON_CLOSING_AGENT_MISSING` identical between the two files | **promoted → registry entries `123-AC5-closing-reason-prod` / `123-AC5-closing-reason-harness`** | identical reasoning to the row above, over the declaration line `const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'` |
+| `AC-123-pin-sanity` — `tests/lib/harness-pins.sh` declares a positive-integer `HARNESS_OK_COUNT` | **dropped — subject retired against an existing carrier** | the actual pin-vs-measurement comparison this fence was a sanity check *for* already lives in the standing `tests/test-issue-27-composition-oracle.sh` (`AC-27-20c`), which runs unconditionally and re-executes on every harness/pin edit (`# ci-subject:` includes `test/workflows/run.mjs` and, via `tests/lib/**`, `tests/lib/harness-pins.sh`). This suite's own leg added no coverage the composition oracle did not already have; retiring it removes a redundant execution path rather than a property |
+| `cycle-scope-respected` (`AC-123-SCOPE`) — this cycle's own branch diff stays within its declared `allow_list` | **dropped — cycle-local** | a branch-scoped change-surface fence over `dev/*-issue-123`'s own diff, per §1-2's DELTA/cycle-scoped classification; it is inert off that branch by construction and has no state to promote. Retired with the suite that carried it, per §2 |
+
+**CI de-registration.** `.github/workflows/contract-suites.yml` drops the suite's `run:`
+step (id `s-test-issue-123-closing-half-round`) and its two `paths:` entries
+(`pull_request` and `push` blocks). `tests/manual/issue-123-manual-scenarios.md` is
+**retained** — AC9 stays environment-dependent (the hosted Workflow runtime is not
+launchable from this repository's test tree) and its scenario is still `Status:
+delegated to user`; its cross-reference to the retired suite is corrected to name the
+two promoted registry-entry id prefixes instead.
+
+`tests/test-issue-103-cycle-scope-repoint.sh`'s allow-list-bearing suite count tripwire
+returns to **3** with this retirement (it read 4 for the span between this cycle's RED
+commit and this one).

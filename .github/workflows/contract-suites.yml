@@ -144,7 +144,6 @@ on:
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
       - 'tests/test-issue-109-doc-assertions.sh'
-      - 'tests/test-issue-123-closing-half-round.sh'
   push:
     branches: [main]
     paths:
@@ -255,7 +254,6 @@ on:
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
       - 'tests/test-issue-109-doc-assertions.sh'
-      - 'tests/test-issue-123-closing-half-round.sh'
 
 permissions:
   contents: read
@@ -475,12 +473,6 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-109-doc-assertions.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-109-doc-assertions.sh
-
-      - name: test-issue-123-closing-half-round.sh
-        id: s-test-issue-123-closing-half-round
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-123-closing-half-round.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-123-closing-half-round.sh
 
       - name: test-issue-985-doc-assertions.sh
         id: s-test-issue-985-doc-assertions

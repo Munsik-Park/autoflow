@@ -6923,6 +6923,50 @@
       "match": "fixed",
       "literal": "closing half-round",
       "scope": "permanent"
+    },
+    {
+      "id": "123-AC6-closing-label-prod",
+      "origin_issue": 123,
+      "intent": "coherence",
+      "file": ".claude/workflows/architect-deliberation.js",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "const CLOSING_CALL_LABEL = 'test-closing'",
+      "scope": "permanent"
+    },
+    {
+      "id": "123-AC6-closing-label-harness",
+      "origin_issue": 123,
+      "intent": "coherence",
+      "file": "test/workflows/run.mjs",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "const CLOSING_CALL_LABEL = 'test-closing'",
+      "scope": "permanent"
+    },
+    {
+      "id": "123-AC5-closing-reason-prod",
+      "origin_issue": 123,
+      "intent": "coherence",
+      "file": ".claude/workflows/architect-deliberation.js",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'",
+      "scope": "permanent"
+    },
+    {
+      "id": "123-AC5-closing-reason-harness",
+      "origin_issue": 123,
+      "intent": "coherence",
+      "file": "test/workflows/run.mjs",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'",
+      "scope": "permanent"
     }
   ]
 }
