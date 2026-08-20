@@ -246,7 +246,10 @@ Both perspectives participate, but the discussion runs inside an isolated
 teammates messaging the orchestrator: the Developer-AI and Test-AI run as in-script
 sub-agents, their cross-talk stays in workflow variables, and only a single verdict
 (`CONVERGED` + artifact paths, or `ESCALATE` at the 6-round cap) returns to the
-orchestrator. The facilitator also appends the settled decisions to the decision
+orchestrator. At the cap, when the Developer AI's final revision answers with a grounded
+ACCEPT, a **closing half-round** — one Test-AI-only evaluation of that revision — decides
+between the two; it is the second half of the sixth exchange rather than a seventh round, so
+one round is still one exchange and the returned round count is unchanged. The facilitator also appends the settled decisions to the decision
 ledger. Rationale: [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation)
 > Deliberation Isolation; contract: [`teammate-contracts.md`](teammate-contracts.md)
 > Facilitator. The orchestrator invokes the facilitation workflow, then **verifies** the
@@ -379,6 +382,9 @@ ADR — the first, non-gated approach check (GATE:PLAN is the gated one);
 a divergence is a COUNTER, not an ACCEPT. No score.
 The facilitator records the converged decisions in the ledger and returns
 `CONVERGED` + artifact paths; non-convergence within the round cap returns `ESCALATE`.
+At the round cap the Test AI's final ACCEPT is the closing half-round's — the Developer AI's
+cap-round revision is otherwise never evaluated, since one round = one exchange and the
+Developer AI answers second.
 
 ---
 

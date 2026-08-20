@@ -19,12 +19,23 @@
 #   AC-59-7    — RED discriminator: `const ADOPTION_EVIDENCE_RULE` declared
 #                exactly once.
 #   AC-59-8a   — RED discriminator: `${ADOPTION_EVIDENCE_RULE}` interpolated
-#                exactly four times.
-#   AC-59-8b   — the four sites are exactly dev-draft/test-draft/dev-r/test-r,
-#                never the `const carry = register.size` ternary line
+#                exactly five times (re-anchored, issue #123: the cap-round
+#                closing half-round reuses the constant as its fifth site).
+#   AC-59-8b   — the original four sites are exactly
+#                dev-draft/test-draft/dev-r/test-r, never the
+#                `const renderCarry = () => register.size` ternary line
 #                (re-anchored by issue #67, which retargets the carry from
-#                `openCounters` to the issue register).
-#   AC-59-8c   — #56's own constant counts are byte-immutable (D4).
+#                `openCounters` to the issue register, and again by issue
+#                #123's `renderCarry()` extraction). The fifth (closing) site
+#                added by issue #123 is asserted by AC-59-8a's total count
+#                alone — it does not share any of the four fixed prompt
+#                prefixes below, so it is not double-counted here.
+#   AC-59-8c   — #56's own constant counts stay byte-immutable EXCEPT
+#                `${COUNTER_EVIDENCE_RULE}`, which issue #123 moves from 2 to
+#                3 for the identical reason (the closing half-round reuses it
+#                too) — re-anchored alongside AC-56-2a-rule-count /
+#                AC-56-4a-interp in tests/test-issue-56-carry-evidence-discipline.sh
+#                rather than left as a stale D4 premise.
 #   AC-59-8d   — round-prompt insertion ORDER: `${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}`
 #                immediately followed by `${carry}` at the tail, unbroken until issue #67
 #                inserted `${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}` between
@@ -251,8 +262,8 @@ echo ""
 echo "=== AC-59-8a (RED discriminator) — interpolated exactly four times ==="
 
 INTERP_COUNT="$(grep -c '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" || true)"
-assert_true "AC-59-8a: \${ADOPTION_EVIDENCE_RULE} interpolates exactly 4 times (got: $INTERP_COUNT)" \
-  "[ \"$INTERP_COUNT\" -eq 4 ]"
+assert_true "AC-59-8a: \${ADOPTION_EVIDENCE_RULE} interpolates exactly 5 times (re-anchored, issue #123 adds the closing half-round site) (got: $INTERP_COUNT)" \
+  "[ \"$INTERP_COUNT\" -eq 5 ]"
 
 # =============================================================================
 echo ""
@@ -262,7 +273,7 @@ DEV_DRAFT_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'Yo
 TEST_DRAFT_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Test AI in AutoFlow ARCHITECT' || true)"
 DEV_ROUND_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Developer AI\. Round' || true)"
 TEST_ROUND_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'You are the Test AI\. Round' || true)"
-CARRY_TERNARY_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const carry = register.size' || true)"
+CARRY_TERNARY_SITE="$(grep '\${ADOPTION_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const renderCarry = () => register.size' || true)"
 
 assert_true "AC-59-8b-dev-draft: exactly one interpolation line matches the dev-draft prompt prefix (got: $DEV_DRAFT_SITE)" \
   "[ \"$DEV_DRAFT_SITE\" -eq 1 ]"
@@ -272,7 +283,7 @@ assert_true "AC-59-8b-dev-round: exactly one interpolation line matches the dev-
   "[ \"$DEV_ROUND_SITE\" -eq 1 ]"
 assert_true "AC-59-8b-test-round: exactly one interpolation line matches the test-round prompt prefix (got: $TEST_ROUND_SITE)" \
   "[ \"$TEST_ROUND_SITE\" -eq 1 ]"
-assert_true "AC-59-8b-unconditional: zero interpolation occurrences sit on the carry ternary line (re-anchored, issue #67 AC19) (got: $CARRY_TERNARY_SITE)" \
+assert_true "AC-59-8b-unconditional: zero interpolation occurrences sit on the carry ternary line (re-anchored, issue #67 AC19 then issue #123 extraction) (got: $CARRY_TERNARY_SITE)" \
   "[ \"$CARRY_TERNARY_SITE\" -eq 0 ]"
 
 # =============================================================================
@@ -285,8 +296,8 @@ RULE56_DECL_COUNT="$(grep -c 'const COUNTER_EVIDENCE_RULE' "$WORKFLOW_JS" || tru
 
 assert_true "AC-59-8c-carry: \${CARRY_NON_EVIDENTIARY} still interpolates exactly once (got: $CARRY56_COUNT)" \
   "[ \"$CARRY56_COUNT\" -eq 1 ]"
-assert_true "AC-59-8c-rule-interp: \${COUNTER_EVIDENCE_RULE} still interpolates exactly twice (got: $RULE56_INTERP_COUNT)" \
-  "[ \"$RULE56_INTERP_COUNT\" -eq 2 ]"
+assert_true "AC-59-8c-rule-interp: \${COUNTER_EVIDENCE_RULE} interpolates exactly three times (re-anchored, issue #123 adds the closing half-round site — no longer byte-immutable, see header note) (got: $RULE56_INTERP_COUNT)" \
+  "[ \"$RULE56_INTERP_COUNT\" -eq 3 ]"
 assert_true "AC-59-8c-rule-decl: 'const COUNTER_EVIDENCE_RULE' still declared exactly once (got: $RULE56_DECL_COUNT)" \
   "[ \"$RULE56_DECL_COUNT\" -eq 1 ]"
 

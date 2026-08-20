@@ -22,6 +22,13 @@ const MAX_ROUNDS = 6 // Decision 7: explicit cap; a round = one Developer-AI <->
 // to prose rewording. Ported from verify-cause-branch.js's `missing`-sentinel discipline.
 const REASON_DRAFT_AGENT_MISSING = 'draft agent missing'
 const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_MISSING} for N consecutive round(s)`
+// The cap-round closing half-round's own sentinels (issue #123), in the same declare-once
+// discipline. The reason is assigned BARE — no interpolation, no suffix — so an assertion can
+// pin it by equality; it is a MISSING-judgment cause and must not be laundered into the generic
+// round-exhaustion text. The label is distinct from every `<side>-r<N>` round label (no digit run
+// after `-r`), so a consumer partitioning calls by the round-label shape keeps counting rounds.
+const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'
+const CLOSING_CALL_LABEL = 'test-closing'
 // Evidence discipline for the carry channel (issue #56). Declared once and interpolated into
 // BOTH round prompts so the dev and test channels cannot drift apart. The framing is emitted
 // only alongside the carried register; the counter rule governs every round, including round 1.
@@ -262,6 +269,11 @@ const accepted = (v) => !!(
   Array.isArray(v.counters) && v.counters.length === 0 &&
   Array.isArray(v.accept_grounds) && v.accept_grounds.length > 0
 )
+// The register carry, rendered from the register's CURRENT state. Declared once and used by both
+// the round prompts and the closing half-round, so the closing turn evaluates under byte-identical
+// framing to the rounds it concludes (issue #123); it renders no differently than the inline form
+// it replaces.
+const renderCarry = () => register.size ? `${CARRY_NON_EVIDENTIARY} Issue register — address every entry whose status is open before ACCEPT, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${renderRegister(register)}` : ''
 let consecutiveNull = 0
 const MAX_CONSECUTIVE_NULL = 2 // two consecutive both-null rounds => persistent infra failure, not a design split
 while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
@@ -269,7 +281,7 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   // Thread the whole register into this round so fresh sub-agents see every issue raised so far
   // with its conclusion and status. Rendering is done HERE, by the script, rather than delegated
   // each round to a context-less fresh agent.
-  const carry = register.size ? `${CARRY_NON_EVIDENTIARY} Issue register — address every entry whose status is open before ACCEPT, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${renderRegister(register)}` : ''
+  const carry = renderCarry()
   // Sequential, test first (issue #62). The verification design challenges the feature design,
   // so test-then-dev makes each round a complete challenge-and-response and closes the window
   // in which a citation is written against a snapshot the counterpart is concurrently editing.
@@ -313,6 +325,44 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   applyDispositions(test && test.dispositions, 'test')
   applyDispositions(dev && dev.dispositions, 'dev')
   console.log(`round ${round}: dev=${dev ? dev.response : 'missing'}(${(dev && dev.counters && dev.counters.length) || 0}) test=${test ? test.response : 'missing'}(${(test && test.counters && test.counters.length) || 0})`)
+}
+
+// Cap-round closing half-round (issue #123). The loop runs test-then-dev and computes `converged`
+// inside the same iteration, so at the cap it exits on a Developer-AI revision no Test-AI turn has
+// evaluated: a cap-round resolution could never be recognised as convergence, and the ESCALATE
+// grounds carried the Test AI's pre-revision counters. One Test-AI-only evaluation of that final
+// revision closes the gap. It is the second half of the sixth exchange, not a seventh: no Dev turn
+// is added and `round` is not incremented, so the returned `rounds` stays at the cap.
+// The predicate reads `lastDev` only — a null cap-round Test verdict is exactly the case that most
+// needs the closing turn, so it must not suppress it. An early-escalate reason (missing draft /
+// consecutive null) is an infrastructure cause and is never routed into a design outcome.
+if (!earlyEscalateReason && !converged && round === MAX_ROUNDS && accepted(lastDev)) {
+  // Rendered HERE, after the cap round's own raise/applyDispositions, so the closing turn sees the
+  // counters that round raised — the very concerns it exists to re-evaluate. The in-loop value is
+  // computed at the top of a round, before its register mutations, and is not reusable for this.
+  const closingCarry = renderCarry()
+  // Mirror of the in-round `peer` clause: the counterpart's live verdict handed over as current.
+  const closingPeer = ` The Developer AI has already completed round ${round} against the documents in their current state and returned a grounded ACCEPT on these verified dimensions — they are current, not carried: ${JSON.stringify((lastDev && lastDev.accept_grounds) || [])}.`
+  const closing = await Promise.resolve()
+    .then(() => agent(
+      `You are the Test AI. This is the CLOSING evaluation of the Developer AI's final revision at the round cap (round ${round} of ${MAX_ROUNDS}): there is no further Developer-AI turn, and this verdict alone decides CONVERGED versus ESCALATE. Read the current ${feature} and ${verif}.${closingPeer} Apply the Discussion Protocol. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${closingCarry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      { schema: VERDICT, label: CLOSING_CALL_LABEL, phase: 'Converge', model: 'opus' },
+    ))
+    .catch(() => null)
+  if (!closing) {
+    // A missing closing judgment is an infrastructure failure, not a design disagreement.
+    earlyEscalateReason = REASON_CLOSING_AGENT_MISSING
+  } else {
+    // Assign BEFORE the Ledger phase computes `acceptGrounds` from `lastTest`, so a CONVERGED run's
+    // Test-side grounds are the closing verdict's, not the cap round's superseded ones.
+    lastTest = closing
+    converged = accepted(closing)
+    // In-loop order (verdict, raise, dispose) applied to the test side alone: the raiser-only close
+    // rule is why the missing turn had to be a Test-AI turn rather than an extra Developer-AI one.
+    raise(closing.counters, 'test')
+    applyDispositions(closing.dispositions, 'test')
+    console.log(`closing half-round: test=${closing.response}(${(closing.counters && closing.counters.length) || 0})`)
+  }
 }
 
 phase('Ledger')

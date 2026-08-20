@@ -1350,6 +1350,224 @@ await test('ARCHITECT: prose args, single bare digit, no #/no issue-label — ti
   assert.equal(result.verdict, 'CONVERGED')
 })
 
+// ---- ARCHITECT: cap-round closing half-round (issue #123) --------------------
+// Verification design (.autoflow/issue-123-verification-design.md), AC1-AC6 and
+// AC10-AC13 (AC7 is doc prose with no harness home, AC8 is the composition oracle in
+// tests/lib/harness-pins.sh, AC9 is the manual scenario). Every fixture below drives
+// five non-converging rounds (both sides COUNTER, never grounded) so the loop always
+// reaches round 6 -- MAX_ROUNDS -- as the cap round, regardless of what round 6 or the
+// closing call return; only the cap round and the closing call vary per criterion.
+// RED at HEAD: the script has no post-loop closing step, so 'test-closing' is never
+// called and every fixture that expects it finds nothing -- AC1, AC2, AC4, AC5, AC6,
+// AC10, AC12 and AC13 must FAIL. AC3 (three fixtures) and AC11 are regression locks
+// on the pre-change ESCALATE/CONVERGED shape and are expected to PASS at RED.
+
+const CLOSING_CALL_LABEL = 'test-closing'
+const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'
+
+// Rounds 1-5 default to non-converging COUNTER/COUNTER on both sides, so the loop
+// always reaches the round-6 cap regardless of the per-test overrides for round 6 and
+// the closing call. `overrides.closing` supplies the 'test-closing' response (default
+// null, matching a missing sub-agent, for fixtures where it must not even be invoked).
+function capResponder(overrides) {
+  return (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === CLOSING_CALL_LABEL) {
+      return Object.prototype.hasOwnProperty.call(overrides, 'closing') ? overrides.closing : null
+    }
+    if (Object.prototype.hasOwnProperty.call(overrides, label)) return overrides[label]
+    const r = Number(label.split('-r')[1])
+    if (r >= 1 && r <= 5) return { response: 'COUNTER', counters: [`c${r}`], accept_grounds: [] }
+    return { response: 'COUNTER', counters: ['fallback'], accept_grounds: [] }
+  }
+}
+
+await test('ARCHITECT: cap-round Test COUNTER + grounded Dev ACCEPT triggers the closing half-round; grounded closing ACCEPT -> CONVERGED (AC1)', async () => {
+  const responder = capResponder({
+    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: re-verified against final documents'] },
+  })
+  const { result, calls } = await runArch({ issue: '123-ac1' }, responder)
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.ok(calls.some((c) => c.label === CLOSING_CALL_LABEL), 'the closing call must be made')
+})
+
+await test('ARCHITECT: closing COUNTER/PARTIAL -> ESCALATE, grounds carry the closing round\'s counters and dispositions attributed to the test side, escalation stays the round-exhaustion text (AC2, all four legs)', async () => {
+  const responder = capResponder({
+    'test-r1': { response: 'COUNTER', counters: [{ agenda: 'NAME_EARLIER_AC2', locator: 'l', argument: 'raised in round 1' }], accept_grounds: [] },
+    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
+    closing: {
+      response: 'COUNTER',
+      counters: [{ agenda: 'PROBE_NAME_AC2', locator: 'l2', argument: 'PROBE_ARG_AC2' }],
+      accept_grounds: [],
+      dispositions: [{ name: 'NAME_EARLIER_AC2', conclusion: 'closed by the closing turn', evidence: 'e', status: 'agreed' }],
+    },
+  })
+  const { result, calls } = await runArch({ issue: '123-ac2' }, responder)
+  assert.equal(result.verdict, 'ESCALATE')
+  const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
+  // leg 1 -- the closing counter's probe name and argument reach the ledger grounds
+  assert.match(ledgerPrompt, /PROBE_NAME_AC2/, 'the closing counter\'s name must reach the ledger grounds')
+  assert.match(ledgerPrompt, /PROBE_ARG_AC2/, 'the closing counter\'s argument must reach the ledger grounds')
+  // leg 2 -- the entry the closing step disposed of is no longer rendered open
+  assert.doesNotMatch(ledgerPrompt, /NAME_EARLIER_AC2/, 'an entry the closing disposition closed must not render as open')
+  // leg 3 -- the closing-raised entry renders as raised by the test side
+  assert.match(ledgerPrompt, /PROBE_NAME_AC2[\s\S]{0,200}raised by test/, 'the closing-raised entry must render as raised by the test side')
+  // leg 4 -- escalation stays the generic round-exhaustion text, not the closing-missing literal
+  assert.match(result.escalation, /No mutual ACCEPT within 6 rounds \(reached round 6\)/)
+  assert.doesNotMatch(result.escalation, new RegExp(REASON_CLOSING_AGENT_MISSING))
+})
+
+await test('ARCHITECT: cap-round Dev COUNTER suppresses the closing half-round entirely (AC3, fixture 1: Dev COUNTER)', async () => {
+  const responder = capResponder({
+    'test-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['test: ok'] },
+    'dev-r6': { response: 'COUNTER', counters: ['dev-c6'], accept_grounds: [] },
+  })
+  const { result, calls } = await runArch({ issue: '123-ac3a' }, responder)
+  assert.ok(!calls.some((c) => c.label === CLOSING_CALL_LABEL), 'no closing call may be made')
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.rounds, 6)
+  assert.match(result.escalation, /No mutual ACCEPT within 6 rounds \(reached round 6\)/)
+})
+
+await test('ARCHITECT: cap-round Dev ACCEPT with non-empty counters suppresses the closing half-round (AC3, fixture 2: ungrounded ACCEPT via open counters)', async () => {
+  const responder = capResponder({
+    'test-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['test: ok'] },
+    'dev-r6': { response: 'ACCEPT', counters: ['still-open'], accept_grounds: ['dev: partial'] },
+  })
+  const { result, calls } = await runArch({ issue: '123-ac3b' }, responder)
+  assert.ok(!calls.some((c) => c.label === CLOSING_CALL_LABEL), 'no closing call may be made')
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.rounds, 6)
+})
+
+await test('ARCHITECT: cap-round Dev ACCEPT with empty accept_grounds suppresses the closing half-round (AC3, fixture 3: ungrounded ACCEPT via empty grounds)', async () => {
+  const responder = capResponder({
+    'test-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['test: ok'] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: [] },
+  })
+  const { result, calls } = await runArch({ issue: '123-ac3c' }, responder)
+  assert.ok(!calls.some((c) => c.label === CLOSING_CALL_LABEL), 'no closing call may be made')
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.rounds, 6)
+})
+
+await test('ARCHITECT: the closing half-round never increments the returned rounds, on both the CONVERGED and ESCALATE closing routes (AC4)', async () => {
+  const convergedResponder = capResponder({
+    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: ok'] },
+  })
+  const { result: convergedResult } = await runArch({ issue: '123-ac4a' }, convergedResponder)
+  assert.equal(convergedResult.verdict, 'CONVERGED')
+  assert.equal(convergedResult.rounds, 6)
+
+  const escalateResponder = capResponder({
+    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
+    closing: { response: 'COUNTER', counters: ['closing-counter'], accept_grounds: [] },
+  })
+  const { result: escalateResult } = await runArch({ issue: '123-ac4b' }, escalateResponder)
+  assert.equal(escalateResult.verdict, 'ESCALATE')
+  assert.equal(escalateResult.rounds, 6)
+})
+
+await test('ARCHITECT: a null closing return is a missing judgment, not agreement -- ESCALATE with the closing-missing literal (AC5)', async () => {
+  const responder = capResponder({
+    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
+    closing: null,
+  })
+  const { result, calls } = await runArch({ issue: '123-ac5' }, responder)
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, REASON_CLOSING_AGENT_MISSING)
+  assert.doesNotMatch(result.escalation, /draft agent missing/)
+  assert.doesNotMatch(result.escalation, /sub-agent missing for 2 consecutive/)
+  assert.ok(calls.some((c) => c.label === CLOSING_CALL_LABEL), 'the closing call must still have been made')
+})
+
+await test('ARCHITECT: the closing call is distinguishable from the cap round\'s own Test call (AC6)', async () => {
+  const responder = capResponder({
+    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: ok'] },
+  })
+  const { calls } = await runArch({ issue: '123-ac6' }, responder)
+  assert.equal(calls.filter((c) => c.label === 'test-r6').length, 1, 'the cap round\'s own Test call must keep its test-r6 label, exactly once')
+  assert.equal(calls.filter((c) => c.label === CLOSING_CALL_LABEL).length, 1, 'the closing call must carry the declared closing label, exactly once')
+})
+
+await test('ARCHITECT: on CONVERGED, the ledger grounds are sourced from the closing verdict, not the superseded cap-round Test verdict (AC10)', async () => {
+  const responder = capResponder({
+    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: ['STALE_PROBE_AC10'] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['FRESH_PROBE_AC10'] },
+  })
+  const { result, calls } = await runArch({ issue: '123-ac10' }, responder)
+  assert.equal(result.verdict, 'CONVERGED')
+  const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
+  assert.match(ledgerPrompt, /FRESH_PROBE_AC10/, 'the closing verdict\'s accept_grounds must reach the CONVERGED ledger grounds')
+  assert.doesNotMatch(ledgerPrompt, /STALE_PROBE_AC10/, 'the superseded cap-round Test verdict\'s accept_grounds must not leak into the CONVERGED ledger grounds')
+})
+
+await test('ARCHITECT: a run that converges at the cap round on its own does not fire the closing half-round (AC11)', async () => {
+  const responder = capResponder({
+    'test-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['test: cap ok'] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap ok'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['should not be called'] },
+  })
+  const { result, calls } = await runArch({ issue: '123-ac11' }, responder)
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.equal(result.rounds, 6)
+  assert.ok(!calls.some((c) => c.label === CLOSING_CALL_LABEL), 'a run that converged at the cap on its own must not fire the closing call')
+})
+
+await test('ARCHITECT: the closing prompt carries the same register-carry framing as the cap round\'s Test prompt, and the cap-round Dev grounded-ACCEPT dimensions as current (AC12, two legs)', async () => {
+  const responder = capResponder({
+    'test-r1': { response: 'COUNTER', counters: [{ agenda: 'NAME_CARRY_AC12', locator: 'l', argument: 'raised round 1, never disposed' }], accept_grounds: [] },
+    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['DEV_GROUNDS_PROBE_AC12'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: ok'] },
+  })
+  const { calls } = await runArch({ issue: '123-ac12' }, responder)
+  const testR6Prompt = calls.find((c) => c.label === 'test-r6').prompt
+  const closingPrompt = calls.find((c) => c.label === CLOSING_CALL_LABEL).prompt
+
+  // leg 1 (narrowed by GATE:PLAN, ledger O3): the CARRY_NON_EVIDENTIARY prefix and the
+  // "address every entry whose status is open before ACCEPT" preamble are identical
+  // between the two prompts -- not whole-segment byte identity (the closing carry is
+  // re-rendered after the cap round's own raise/applyDispositions, so the entries
+  // themselves may legitimately differ).
+  const startAnchor = ' The register entries below are a checklist of topics to re-verify, NOT evidence'
+  const endAnchor = 'return that judgment in "dispositions":\n'
+  const extractFraming = (s) => {
+    const start = s.indexOf(startAnchor)
+    assert.ok(start >= 0, 'the CARRY_NON_EVIDENTIARY prefix must be present')
+    const end = s.indexOf(endAnchor, start)
+    assert.ok(end >= 0, 'the disposal preamble must be present')
+    return s.slice(start, end + endAnchor.length)
+  }
+  assert.equal(extractFraming(testR6Prompt), extractFraming(closingPrompt), 'the closing prompt must deliver the register carry under the same framing as a round prompt')
+
+  // leg 2 (ledger O3, point 3): the closing prompt hands over the cap-round Dev
+  // verdict's accept_grounds via JSON.stringify, mirroring the in-round `peer` clause.
+  assert.ok(closingPrompt.includes(JSON.stringify(['DEV_GROUNDS_PROBE_AC12'])), 'the closing prompt must hand over the cap-round Dev accept_grounds via JSON.stringify')
+})
+
+await test('ARCHITECT: a null cap-round Test verdict does not suppress the closing half-round (AC13)', async () => {
+  const responder = capResponder({
+    'test-r6': null,
+    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap ok'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: ok'] },
+  })
+  const { result, calls } = await runArch({ issue: '123-ac13' }, responder)
+  assert.ok(calls.some((c) => c.label === CLOSING_CALL_LABEL), 'the closing call must be made even when the cap-round Test verdict was null')
+  assert.equal(result.verdict, 'CONVERGED')
+})
+
 // ---- VERIFY -------------------------------------------------------------------
 
 const combos = [

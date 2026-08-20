@@ -129,7 +129,7 @@
 # both ledger-branch anchors), FAILs pre-edit — 0 matches for
 # run_in_background/foreground/Bash Execution Mode in either workflow script.
 # AC-C2-2 (suite reads both paths) PASSes as soon as this commit lands (files
-# exist). AC-C2-1 tripwire (5/3 agent( sites) and G-REG
+# exist). AC-C2-1 tripwire (6/3 agent( sites, re-anchored issue #123) and G-REG
 # (test/workflows/run.mjs exits 0) are guards that already PASS pre-edit and
 # must stay green post-edit.
 # =============================================================================
@@ -433,8 +433,8 @@ assert_true "AC-C2-1: architect ledger non-converged branch (line carrying 'ARCH
 # agent( call site forces a re-derivation of the prompt-string count above.
 ARCH_SITE_COUNT="$(grep -cF 'agent(' "$ARCH_WF" || true)"
 VERIFY_SITE_COUNT="$(grep -cF 'agent(' "$VERIFY_WF" || true)"
-assert_true "AC-C2-1 tripwire: architect-deliberation.js has exactly 5 agent( call sites" \
-  "[ \"$ARCH_SITE_COUNT\" -eq 5 ]"
+assert_true "AC-C2-1 tripwire: architect-deliberation.js has exactly 6 agent( call sites (re-anchored, issue #123 adds the cap-round closing half-round's own agent( call)" \
+  "[ \"$ARCH_SITE_COUNT\" -eq 6 ]"
 assert_true "AC-C2-1 tripwire: verify-cause-branch.js has exactly 3 agent( call sites" \
   "[ \"$VERIFY_SITE_COUNT\" -eq 3 ]"
 
