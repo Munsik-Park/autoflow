@@ -77,13 +77,9 @@
 # BOUND-REDUCTION NOTE (issue #119). The six drives whose bound genuinely
 # fires are this suite's wall clock, and their bounds are minimized to
 # 9/15/11/8/13/17 under two floors re-derived from this file:
-#   - GRANULARITY FLOOR (>= 8). The paired negative arms below assert
-#     `PROBE_ELAPSED -lt 5`, fixing a 5-second early-exit ceiling; bash
-#     SECONDS has one-second granularity, so a bound at or below 5 is a value
-#     at which no timing oracle here can separate "the watchdog fired at the
-#     bound" from "the subject exited at once", and the absence-shaped arms
-#     go vacuous rather than red. 8 leaves three seconds of clearance and
-#     leaves the ceiling itself untouched.
+#   - GRANULARITY FLOOR (>= 8) — see the "bound reduction (static)" section
+#     below (search `Issue #119 bound reduction`), which derives and asserts
+#     this floor; not restated here.
 #   - DISCOVERY FLOOR. AC-no-self-kill is the one drive that LOCATES its
 #     subject by polling, so its bound is also its subject's liveness budget:
 #     bound >= 2x the poll budget (iterations x step). Both sides move — the

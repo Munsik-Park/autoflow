@@ -642,13 +642,16 @@ rm -f "$STEP_TARGET_FIXTURE"
 #
 # Scoped to LITERAL entries only. A glob entry names a set, not a file, and an
 # empty set is a legitimate state, so requiring existence of a glob would red
-# on a correct tree. `entry_is_unsupported_shape`/`*` detection above already
-# fixes which forms carry metacharacters; here the same distinction selects
-# the entries an existence predicate is meaningful for.
+# on a correct tree. `entry_is_unsupported_shape` above already classifies
+# `!`/`?`/`[`/`]` metacharacter shapes, so this reuses it rather than
+# restating that case arm — only the bare-`*` check is added here.
 # ---------------------------------------------------------------------------
 entry_is_literal_source_path() {   # <paths-entry>
   case "$1" in
-    *'*'*|*'?'*|*'['*|*']'*|'!'*) return 1 ;;
+    *'*'*) return 1 ;;
+  esac
+  entry_is_unsupported_shape "$1" && return 1
+  case "$1" in
     tests/*|scripts/*) return 0 ;;
     *) return 1 ;;
   esac
