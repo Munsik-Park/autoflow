@@ -34,6 +34,17 @@
 #             used, since the dev-shell wrapper cannot reproduce the race
 #             (verification design AC4-B) — a wrapper-only green is
 #             regression evidence, NOT fix-effect evidence.
+#   AC5-A   — RED discriminator (issue #114): a third named, self-inclusive
+#             structural guard — zero lines in the converted file set
+#             (tests/test-issue-952-wizard-removal.sh, this suite) match a
+#             printf-captured producer piped directly into a short-circuiting
+#             `grep -q`/`grep -m` consumer (.autoflow/issue-114-verification-
+#             design.md > AC-no-shortcircuit-pipe-in-converted-suite).
+#   AC6-A/B — RED discriminator (issue #114, doc-assertion): Testing Standards
+#             names the pipe-free here-string consumer form (`<<<`, presence)
+#             and no longer prescribes the piped `"$ctx" | grep -q` form
+#             (absence) — (.autoflow/issue-114-verification-design.md >
+#             AC-canonical-idiom-is-pipe-free).
 #
 # Retired by issue #75 (cycle-scope-guard retirement, .autoflow/issue-75-
 # feature-design.md §3.3): the inventory cross-check lanes that pinned a
@@ -49,11 +60,15 @@
 # flaky test, the opposite of this issue's intent.
 #
 # Self-guard (dogfood): this suite's own assertions use plain `grep -nE`/
-# `awk`/`grep -rnE` (no `-A/-B/-C` context flag piped into `grep -q`) — it
-# does not introduce a new instance of the defect class it tests for. The
-# only occurrence of the literal hazard SHAPE in this file is inside
-# mktemp-generated fixture content (never a committed tests/*.sh line) —
-# matching verification design §1a's "Self-match footgun" guidance.
+# `awk`/`grep -rnE`, and its doc assertions feed the captured section to the
+# consumer by here-string — no `-A/-B/-C` context flag, no bare-identifier
+# extractor function, and no captured-string producer piped into a
+# short-circuiting `grep -q`/`grep -m` (issue #114, the third shape AC5-A
+# scans for, which reads this file too). It does not introduce a new instance
+# of any defect class it tests for. The only occurrence of a literal hazard
+# SHAPE in this file is inside mktemp-generated fixture content (never a
+# committed tests/*.sh line) — matching verification design §1a's
+# "Self-match footgun" guidance.
 # =============================================================================
 
 set -uo pipefail
@@ -155,13 +170,66 @@ TESTING_STANDARDS_JOINED="$(printf '%s' "$TESTING_STANDARDS_BODY" | tr '\n' ' ')
 export TESTING_STANDARDS_JOINED
 
 assert_true "AC3-A: Testing Standards section names 'pipefail'" \
-  "printf '%s' \"\$TESTING_STANDARDS_JOINED\" | grep -qF 'pipefail'"
+  "grep -qF 'pipefail' <<<\"\$TESTING_STANDARDS_JOINED\""
 assert_true "AC3-A: Testing Standards section names 'SIGPIPE'" \
-  "printf '%s' \"\$TESTING_STANDARDS_JOINED\" | grep -qF 'SIGPIPE'"
+  "grep -qF 'SIGPIPE' <<<\"\$TESTING_STANDARDS_JOINED\""
 assert_true "AC3-A: Testing Standards section documents the capture-then-grep guidance (a capture assignment token or a \$(...) command-substitution form)" \
-  "printf '%s' \"\$TESTING_STANDARDS_JOINED\" | grep -qE 'capture|\\\$\\('"
+  "grep -qE 'capture|\\\$\\(' <<<\"\$TESTING_STANDARDS_JOINED\""
 assert_true "AC3 (issue #973): Testing Standards section names the extractor-function producer case" \
-  "printf '%s' \"\$TESTING_STANDARDS_JOINED\" | grep -qF 'extractor'"
+  "grep -qF 'extractor' <<<\"\$TESTING_STANDARDS_JOINED\""
+
+
+# =============================================================================
+echo ""
+echo "=== AC5-A (RED discriminator, issue #114) — no short-circuit pipe in the converted file set ==="
+# Verification design .autoflow/issue-114-verification-design.md >
+# AC-no-shortcircuit-pipe-in-converted-suite. Capturing the producer first
+# (`ctx=$(<producer>)`) removes a *streaming* producer, but `printf` of the
+# captured string is itself a producer: piped directly into a
+# short-circuiting `grep -q`/`grep -m` consumer, its remaining write() can
+# still be stranded when the consumer exits early under `pipefail` (issue
+# #114). Kept as a separate named regex from GUARD_REGEX/EXTRACTOR_GUARD_REGEX
+# for the same attribution reason recorded above — a merged pattern could no
+# longer say which class a hit belongs to.
+#
+# Path set: this cycle's converted files only (verification design
+# DCR-guard-scope-must-be-bounded) — tests/test-issue-952-wizard-removal.sh
+# and this suite's own file. Self-inclusive: the scan reads this file too, so
+# the regex-definition line below is its own self-clearance check — if it
+# matched its own pattern this assertion would fail on landing.
+
+SHORTCIRCUIT_PIPE_REGEX='printf [^|]*\| *grep -[qm]'
+CONVERTED_952="$PROJECT_ROOT/tests/test-issue-952-wizard-removal.sh"
+SELF_FILE="$SCRIPT_DIR/test-issue-964-sigpipe-safe-pipes.sh"
+
+SHORTCIRCUIT_MATCHES="$(grep -rnE "$SHORTCIRCUIT_PIPE_REGEX" "$CONVERTED_952" "$SELF_FILE" 2>/dev/null || true)"
+if [[ -n "$SHORTCIRCUIT_MATCHES" ]]; then
+  SHORTCIRCUIT_MATCH_COUNT="$(printf '%s\n' "$SHORTCIRCUIT_MATCHES" | grep -c .)"
+else
+  SHORTCIRCUIT_MATCH_COUNT=0
+fi
+echo "  short-circuit-pipe hazard lines found: $SHORTCIRCUIT_MATCH_COUNT"
+[[ "$SHORTCIRCUIT_MATCH_COUNT" -gt 0 ]] && printf '%s\n' "$SHORTCIRCUIT_MATCHES" | sed 's/^/    /'
+
+assert_true "AC5-A (issue #114): zero lines in the converted file set (test-issue-952-wizard-removal.sh, this suite) match a printf-captured producer piped directly into grep -q/-m" \
+  "[ $SHORTCIRCUIT_MATCH_COUNT -eq 0 ]"
+
+
+# =============================================================================
+echo ""
+echo "=== AC6 (RED discriminator, doc-assertion, issue #114) — canonical idiom is pipe-free ==="
+# Verification design AC-canonical-idiom-is-pipe-free. Two legs, not one: a
+# presence assertion is RED at HEAD because its token is absent, an absence
+# assertion because its token is present — one shape cannot carry both. Both
+# legs ride the existing extract_section '^## Testing Standards' extraction
+# ($TESTING_STANDARDS_JOINED, above) and are written in the here-string
+# consumer form this cycle converts the neighbouring AC3-A legs into, so
+# neither re-seeds the shape AC5-A scans for.
+
+assert_true "AC6-A (issue #114, presence half): Testing Standards section names the pipe-free here-string consumer form ('<<<')" \
+  "grep -qF '<<<' <<<\"\$TESTING_STANDARDS_JOINED\""
+assert_true "AC6-B (issue #114, absence half): Testing Standards section no longer prescribes the captured-string-piped-into-grep-q form (literal '\"\$ctx\" | grep -q')" \
+  "! grep -qF '\"\$ctx\" | grep -q' <<<\"\$TESTING_STANDARDS_JOINED\""
 
 
 # =============================================================================
