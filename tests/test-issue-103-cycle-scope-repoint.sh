@@ -55,8 +55,8 @@ if [ -f "$LINT" ]; then
   fi
   assert_true "check-cycle-scope-guard.sh exits 0 on the real tree, post-re-point" "[ $REAL_EXIT -eq 0 ]"
 
-  assert_true "AC-cycle-scoped-branch-inertness verdict-preservation: the real tree still reports exactly 3 allow-list-bearing suites after the re-point" \
-    "printf '%s\n' \"$REAL_OUT\" | grep -q '3 allow-list-bearing suite'"
+  assert_true "AC-cycle-scoped-branch-inertness verdict-preservation: the real tree still reports exactly 4 allow-list-bearing suites after the re-point (re-anchored, issue #123 adds tests/test-issue-123-closing-half-round.sh)" \
+    "printf '%s\n' \"$REAL_OUT\" | grep -q '4 allow-list-bearing suite'"
 
   # ---------------------------------------------------------------------
   # AC-cycle-scope-guard-repoint: self-test fixtures keyed on header, not

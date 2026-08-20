@@ -135,6 +135,13 @@ allow_list=(
   "tests/test-issue-123-closing-half-round.sh"
   "tests/manual/issue-123-manual-scenarios.md"
   ".github/workflows/contract-suites.yml"
+  # VERIFY step 1 SEQUENTIAL_FIX (this cycle's own re-anchoring commit): standing
+  # tripwires whose fixed counts/literals moved with the closing half-round.
+  "tests/test-issue-103-cycle-scope-repoint.sh"
+  "tests/test-issue-56-carry-evidence-discipline.sh"
+  "tests/test-issue-59-adoption-evidence-discipline.sh"
+  "tests/test-issue-67-deliberation-record.sh"
+  "tests/test-issue-955-subagent-background-ban.sh"
 )
 
 if on_issue_branch; then

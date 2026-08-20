@@ -18,12 +18,16 @@
 #
 #   AC-56-2a — RED discriminator: placement of the two hoisted constants.
 #             `${CARRY_NON_EVIDENTIARY}` interpolates exactly once, on the
-#             `const carry = register.size` ternary line (re-anchored by issue #67,
-#             which retargets the carry from `openCounters` to the issue register —
-#             the surviving intent is unchanged: the carry-assembly line is not a
-#             prompt-rule interpolation site);
-#             `${COUNTER_EVIDENCE_RULE}` interpolates exactly twice, on the
-#             dev-r/test-r prompt lines, never inside the ternary.
+#             `const renderCarry = () => register.size` ternary line (re-anchored by
+#             issue #67, which retargets the carry from `openCounters` to the issue
+#             register, and again by issue #123, which extracts the inline
+#             `const carry = register.size` ternary into the `renderCarry()`
+#             function shared by the round prompts and the cap-round closing
+#             half-round — the surviving intent is unchanged: the carry-assembly
+#             line is not a prompt-rule interpolation site);
+#             `${COUNTER_EVIDENCE_RULE}` interpolates exactly three times (issue
+#             #123 adds the closing half-round as a third site, alongside the
+#             dev-r/test-r prompt lines), never inside the ternary.
 #   AC-56-4a — RED discriminator: the citation rule is declared ONCE
 #             (`const COUNTER_EVIDENCE_RULE`) and interpolated at both round
 #             prompt sites (D2 structural symmetry).
@@ -76,26 +80,26 @@ assert_true "AC-56-2a-carry-count: \${CARRY_NON_EVIDENTIARY} interpolates exactl
   "[ \"$CARRY_COUNT\" -eq 1 ]"
 
 CARRY_LINE="$(grep -n '\${CARRY_NON_EVIDENTIARY}' "$WORKFLOW_JS" | head -1)"
-assert_true "AC-56-2a-carry-site: the interpolation site is the 'const carry = register.size' ternary line (re-anchored, issue #67 AC19)" \
-  "printf '%s' '$CARRY_LINE' | grep -q 'const carry = register.size'"
+assert_true "AC-56-2a-carry-site: the interpolation site is the 'const renderCarry = () => register.size' ternary line (re-anchored, issue #67 AC19 then issue #123 extraction)" \
+  "printf '%s' '$CARRY_LINE' | grep -q 'const renderCarry = () => register.size'"
 
 RULE_COUNT="$(grep -c '\${COUNTER_EVIDENCE_RULE}' "$WORKFLOW_JS" || true)"
-assert_true "AC-56-2a-rule-count: \${COUNTER_EVIDENCE_RULE} interpolates exactly twice (got: $RULE_COUNT)" \
-  "[ \"$RULE_COUNT\" -eq 2 ]"
+assert_true "AC-56-2a-rule-count: \${COUNTER_EVIDENCE_RULE} interpolates exactly three times (re-anchored, issue #123 adds the closing half-round site) (got: $RULE_COUNT)" \
+  "[ \"$RULE_COUNT\" -eq 3 ]"
 
-RULE_NOT_IN_TERNARY="$(grep -n '\${COUNTER_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const carry = register.size' || true)"
-assert_true "AC-56-2a-rule-site: no \${COUNTER_EVIDENCE_RULE} occurrence sits on the carry ternary line (re-anchored, issue #67 AC19) (got: $RULE_NOT_IN_TERNARY)" \
+RULE_NOT_IN_TERNARY="$(grep -n '\${COUNTER_EVIDENCE_RULE}' "$WORKFLOW_JS" | grep -c 'const renderCarry = () => register.size' || true)"
+assert_true "AC-56-2a-rule-site: no \${COUNTER_EVIDENCE_RULE} occurrence sits on the carry ternary line (re-anchored, issue #67 AC19 then issue #123 extraction) (got: $RULE_NOT_IN_TERNARY)" \
   "[ \"$RULE_NOT_IN_TERNARY\" -eq 0 ]"
 
 # =============================================================================
 echo ""
-echo "=== AC-56-4a (RED discriminator) — citation rule declared once, interpolated at both round sites ==="
+echo "=== AC-56-4a (RED discriminator) — citation rule declared once, interpolated at every round/closing site ==="
 
 DECL_COUNT="$(grep -c 'const COUNTER_EVIDENCE_RULE' "$WORKFLOW_JS" || true)"
 assert_true "AC-56-4a-decl: 'const COUNTER_EVIDENCE_RULE' declared exactly once (got: $DECL_COUNT)" \
   "[ \"$DECL_COUNT\" -eq 1 ]"
-assert_true "AC-56-4a-interp: \${COUNTER_EVIDENCE_RULE} interpolated exactly twice (got: $RULE_COUNT)" \
-  "[ \"$RULE_COUNT\" -eq 2 ]"
+assert_true "AC-56-4a-interp: \${COUNTER_EVIDENCE_RULE} interpolated exactly three times (re-anchored, issue #123 adds the closing half-round site) (got: $RULE_COUNT)" \
+  "[ \"$RULE_COUNT\" -eq 3 ]"
 
 # =============================================================================
 echo ""

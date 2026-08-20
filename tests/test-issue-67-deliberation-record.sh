@@ -171,10 +171,14 @@ RETIRED_SWEEP="$(grep -rln -- "$RETIRED_PATTERN" "$PROJECT_ROOT/tests" | grep -v
 assert_true "AC-67-ANCHOR-b: no OTHER tests/ file still greps/comments the retired carry-anchor literal (found: $(printf '%s' "$RETIRED_SWEEP" | paste -sd, -))" \
   "[ -z \"\$(printf '%s' '$RETIRED_SWEEP')\" ]"
 
-NEW_ANCHOR_PROD_COUNT="$(grep -c 'const carry = register.size' "$WORKFLOW_JS" || true)"
-NEW_ANCHOR_56_COUNT="$(grep -c 'const carry = register.size' "$SUITE_56" || true)"
-NEW_ANCHOR_59_COUNT="$(grep -c 'const carry = register.size' "$SUITE_59" || true)"
-assert_true "AC-67-ANCHOR-c1: the fixed replacement literal 'const carry = register.size' appears exactly once in architect-deliberation.js (got: $NEW_ANCHOR_PROD_COUNT)" \
+# Re-anchored a second time by issue #123: the extracted-renderer refactor moved the
+# ternary off the bare `const carry = register.size` assignment (now only a call site,
+# `const carry = renderCarry()`) onto the function's own declaration line. The single
+# home of the literal all three files must agree on is now the declaration itself.
+NEW_ANCHOR_PROD_COUNT="$(grep -c 'const renderCarry = () => register.size' "$WORKFLOW_JS" || true)"
+NEW_ANCHOR_56_COUNT="$(grep -c 'const renderCarry = () => register.size' "$SUITE_56" || true)"
+NEW_ANCHOR_59_COUNT="$(grep -c 'const renderCarry = () => register.size' "$SUITE_59" || true)"
+assert_true "AC-67-ANCHOR-c1: the fixed replacement literal 'const renderCarry = () => register.size' appears exactly once in architect-deliberation.js (re-anchored, issue #123) (got: $NEW_ANCHOR_PROD_COUNT)" \
   "[ \"$NEW_ANCHOR_PROD_COUNT\" -eq 1 ]"
 assert_true "AC-67-ANCHOR-c2: tests/test-issue-56-carry-evidence-discipline.sh's re-anchored sites grep the new literal (got: $NEW_ANCHOR_56_COUNT occurrence(s), need >= 2)" \
   "[ \"$NEW_ANCHOR_56_COUNT\" -ge 2 ]"
