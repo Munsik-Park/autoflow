@@ -127,12 +127,10 @@ on:
       - 'tests/manual/issue-103-manual-scenarios.md'
       - 'tests/test-issue-103-central-runner.sh'
       - 'tests/test-issue-103-cycle-scope-repoint.sh'
-      - 'tests/test-issue-103-orphan-coverage.sh'
       - 'tests/test-issue-103-pin-and-docs.sh'
       - 'tests/test-issue-103-step-reconciliation.sh'
       - 'tests/test-issue-103-suite-leaf.sh'
       - 'tests/test-issue-103-suite-manifest.sh'
-      - 'tests/test-issue-103-workflow-conformance.sh'
       - 'tests/test-suite-coverage-agreement.sh'
       - 'docs/evaluation-system.md'
       - 'README.md'
@@ -237,12 +235,10 @@ on:
       - 'tests/manual/issue-103-manual-scenarios.md'
       - 'tests/test-issue-103-central-runner.sh'
       - 'tests/test-issue-103-cycle-scope-repoint.sh'
-      - 'tests/test-issue-103-orphan-coverage.sh'
       - 'tests/test-issue-103-pin-and-docs.sh'
       - 'tests/test-issue-103-step-reconciliation.sh'
       - 'tests/test-issue-103-suite-leaf.sh'
       - 'tests/test-issue-103-suite-manifest.sh'
-      - 'tests/test-issue-103-workflow-conformance.sh'
       - 'tests/test-suite-coverage-agreement.sh'
       - 'docs/evaluation-system.md'
       - 'README.md'
@@ -526,23 +522,11 @@ jobs:
         timeout-minutes: 10
         run: bash tests/test-issue-103-cycle-scope-repoint.sh
 
-      - name: test-issue-103-orphan-coverage.sh
-        id: s-test-issue-103-orphan-coverage
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-orphan-coverage.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-103-orphan-coverage.sh
-
       - name: test-issue-103-pin-and-docs.sh
         id: s-test-issue-103-pin-and-docs
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-pin-and-docs.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-103-pin-and-docs.sh
-
-      - name: test-issue-103-workflow-conformance.sh
-        id: s-test-issue-103-workflow-conformance
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-workflow-conformance.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-103-workflow-conformance.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh

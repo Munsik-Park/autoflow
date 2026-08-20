@@ -180,8 +180,8 @@ echo "=== CLASS A: Static assertions ==="
 #   (a) Exactly ONE occurrence of the AUTOFLOW-SCHEMA-VALIDATION label.
 #       The validation lives in ONE place, not N per-site copies.
 #       On the unmodified hook this is 0 → FAIL (RED-confirming).
-#   (b) Anchored `exit 2` statement count == 8. Drift history of this frozen
-#       baseline: 6 at the #245 GREEN (which reused the MALFORMED_STATE block,
+#   (b) Anchored `exit 2` statement count >= 11 — a FLOOR, not an exact pin
+#       (issue #119). Ratchet record of the baseline: 6 at the #245 GREEN (which reused the MALFORMED_STATE block,
 #       adding zero new sites) → 7 when the blocked-by-review label deny was
 #       added WITHOUT bumping this baseline (latent drift: the assertion was
 #       failing on main, masked because this suite is not run as a PR gate) →
@@ -192,7 +192,11 @@ echo "=== CLASS A: Static assertions ==="
 #       closed for score-gated commands/spawns when ≥2 state files read
 #       active:true — feature-design F2 Change 2) → 11 with the issue #96
 #       AI issue-creation deny (bare `gh issue create` + same-segment REST
-#       POST …/issues form, Section 1 state-independent). Naive grep -c 'exit 2' is
+#       POST …/issues form, Section 1 state-independent) — the floor's current
+#       value. A deny ADDITION no longer reds this arm and needs no edit here;
+#       a deny REMOVAL still does, which is the regression class the arm exists
+#       for (a consolidation that silently drops a deny). The floor is raised
+#       deliberately, never lowered. Naive grep -c 'exit 2' is
 #       higher (it
 #       includes comment-prose mentions); the ANCHORED pattern
 #       ^[[:space:]]*exit 2[[:space:]]*$ counts real statements only.
@@ -206,10 +210,12 @@ assert_eq "A8a: exactly ONE AUTOFLOW-SCHEMA-VALIDATION label in hook (consolidat
   # ^^^ FAILS on unmodified hook (count=0) — RED-confirming
 
 EXIT2_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$HOOK" 2>/dev/null || true)
-assert_eq "A8b: anchored 'exit 2' statement count == 11 (10 prior baseline + issue #96 issue-creation deny)" \
-  "$EXIT2_COUNT" "11"
-  # See the drift history in the A8 comment block above; bump this count (and
-  # the history) whenever a deny site is intentionally added or removed.
+assert_static "A8b: anchored 'exit 2' statement count >= 11 — the deny-site floor (found: $EXIT2_COUNT)" \
+  bash -c "[[ $EXIT2_COUNT -ge 11 ]]"
+  # See the ratchet record in the A8 comment block above. The floor is a
+  # RATCHET: raise it deliberately when a deny addition is meant to become
+  # permanent; never lower it. A8d/A8e below drive both directions against a
+  # perturbed hook copy, so the relaxation is a floor rather than a deletion.
 
 # Confirm the naive count is NOT used (this is a documentation assertion only —
 # if naive==8 and anchored==6, the discrepancy confirms 2 comment-prose mentions exist).
@@ -416,10 +422,11 @@ POS_INACTIVE_DIR=$(stage_fixture '{"active":false,"issue":"#245","phases":{}}')
 run_hook 0 "B-POS2: active:false → no gating (exit 0)" \
   "$POS_INACTIVE_DIR" "$(bash_json 'git push origin dev/245')"
 
-# Positive: bare-number score form PASSES (confirmed by existing B5; re-assert here)
-POS_BARENUM_DIR=$(stage_fixture '{"active":true,"issue":"#245","phases":{"audit":{"scores":{"a":8,"b":8}},"gate_quality":{"scores":{"a":8,"b":8}}}}')
-run_hook 0 "B-POS3: bare-number score form (not {score:N}) → passes validator (DCR-3)" \
-  "$POS_BARENUM_DIR" "$(bash_json 'git push origin dev/245')"
+# B-POS3 (bare-number score form → git push passes) is retired (issue #119):
+# owned by tests/test-issue-223-schema-hook-contract.sh:428, whose subject is
+# exactly that. Both suites' subject is this same hook file, so any delta that
+# selects one selects the other (.github/workflows/schema-hook-contract.yml:91-94).
+# This file's B5.1/B5.2/B5.3 are negative cases and never covered it.
 
 # Positive: valid nested fix_regression cycle → PASS (proves no over-block)
 POS_NESTED_DIR=$(stage_fixture '{"active":true,"issue":"#245","phases":{"audit":{"scores":{"a":{"score":8}}},"gate_quality":{"scores":{"a":{"score":8}}}},"fix_regression":{"phases":{"audit":{"scores":{"a":{"score":8}}},"gate_quality":{"scores":{"a":{"score":8}}}}}}')

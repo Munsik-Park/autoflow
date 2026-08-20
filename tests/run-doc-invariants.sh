@@ -550,5 +550,25 @@ done <<< "$ROWS"
 echo ""
 echo "Self-test results: $ST_OK/$ST_TOTAL entries demonstrated mutation teeth"
 
+# Denominator coverage gate (issue #119). ST_OK == ST_TOTAL is credit over the
+# population the loop actually REACHED, not over the registry. Three paths
+# `continue` before ST_TOTAL is incremented — an empty resolved id, a `file`
+# that is not in the tree, and an unrecognised predicate — so an entry whose
+# file was renamed or deleted moves neither counter and this mode would report
+# full credit over a shrunken population. The registry's own entry count is the
+# denominator the credit must be over, and a shortfall fails loud with both
+# numbers named.
+ST_REGISTRY_LEN="$(jq -r '.invariants | length' "$REGISTRY" 2>/dev/null)"
+case "$ST_REGISTRY_LEN" in
+  ''|*[!0-9]*)
+    echo "DENOMINATOR-UNREADABLE: could not read .invariants length from $REGISTRY"
+    exit 1
+    ;;
+esac
+if [ "$ST_TOTAL" -ne "$ST_REGISTRY_LEN" ]; then
+  echo "DENOMINATOR-SHORT: the self-test evaluated $ST_TOTAL of the registry's $ST_REGISTRY_LEN entries — $((ST_REGISTRY_LEN - ST_TOTAL)) entry/entries were skipped before the counter (missing file, empty id, or unrecognised predicate), so full credit here would be credit over a shrunken population"
+  exit 1
+fi
+
 [ "$ST_TOTAL" -gt 0 ] && [ "$ST_OK" -eq "$ST_TOTAL" ] || exit 1
 exit 0

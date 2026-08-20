@@ -74,6 +74,30 @@
 #       the Linux CI runner, where the prior slice kept `/usr/bin/timeout`
 #       reachable.
 #
+# BOUND-REDUCTION NOTE (issue #119). The six drives whose bound genuinely
+# fires are this suite's wall clock, and their bounds are minimized to
+# 9/15/11/8/13/17 under two floors re-derived from this file:
+#   - GRANULARITY FLOOR (>= 8). The paired negative arms below assert
+#     `PROBE_ELAPSED -lt 5`, fixing a 5-second early-exit ceiling; bash
+#     SECONDS has one-second granularity, so a bound at or below 5 is a value
+#     at which no timing oracle here can separate "the watchdog fired at the
+#     bound" from "the subject exited at once", and the absence-shaped arms
+#     go vacuous rather than red. 8 leaves three seconds of clearance and
+#     leaves the ceiling itself untouched.
+#   - DISCOVERY FLOOR. AC-no-self-kill is the one drive that LOCATES its
+#     subject by polling, so its bound is also its subject's liveness budget:
+#     bound >= 2x the poll budget (iterations x step). Both sides move — the
+#     poll is 24 iterations at 0.25s (6s) against a bound of 15.
+# The pipe-release bound (run_probe_piped) is NOT in the reduction set: its
+# leg discriminates a released pipe from a held one by elapsed time and keeps
+# the >= 6s constraint recorded at ledger O2 (2) above.
+# AC-no-self-kill is a FENCE, not a fire discriminator (ledger F1): it asserts
+# what was NOT killed (the subject's pgid differs from the caller's; a
+# sentinel in the caller's group survives), so no fire reading is added to it
+# and its vacuity protection is the discovery floor instead.
+# Hang, child, sentinel and outer-cap literals keep their values across the
+# reduction, so no grepped find_pid_by_cmd token moves.
+
 # SUITE-INVOKES-SUITE PROHIBITION (ledger O4). This suite contains no
 # `bash tests/test-*.sh` of any form. Two categories that previously appeared
 # here are removed for this reason, not merely deferred to a later cleanup:
@@ -549,9 +573,9 @@ rm -f "$PROBE_OUTFILE"
 # =============================================================================
 echo ""
 echo "=== AC-bound-fires / AC-fired-flag-truthful (fences: pass at HEAD) ==="
-run_probe 47 hang 65 "" 1
-assert_true "AC-bound-fires: a genuinely hung subject is terminated near its 47s bound, not left running" \
-  "[ $PROBE_ELAPSED -ge 45 ] && [ $PROBE_ELAPSED -le 58 ]"
+run_probe 9 hang 65 "" 1
+assert_true "AC-bound-fires: a genuinely hung subject is terminated near its 9s bound, not left running" \
+  "[ $PROBE_ELAPSED -ge 8 ] && [ $PROBE_ELAPSED -le 20 ]"
 assert_true "AC-fired-flag-truthful: the killed subject's fired flag reads fired (probe exit 3, PROBE_TIMED_OUT)" \
   "[ $PROBE_RC -eq 3 ]"
 sleep 0.6
@@ -571,7 +595,7 @@ CALLER_PGID="$(pgid_of $$)"
 sleep 90 &
 SENTINEL_PID=$!
 NOKILL_OUT="$(mktemp)"; NOKILL_ERR="$(mktemp)"
-( PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=79 PROBE_TIMEOUT_SECS=59 \
+( PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=79 PROBE_TIMEOUT_SECS=15 \
     "$CHECK_SCRIPT" --backend claude --probe </dev/null >"$NOKILL_OUT" 2>"$NOKILL_ERR" ) &
 PROBE_BG_PID=$!
 # Outer safety-kill sleep uses a duration DISTINCT from FAKE_HANG_SECS (79) —
@@ -582,7 +606,7 @@ PROBE_BG_PID=$!
 ( sleep 95; kill -9 "$PROBE_BG_PID" 2>/dev/null ) &
 PROBE_BG_WPID=$!
 SUB_PID=""
-for _ in $(seq 1 40); do
+for _ in $(seq 1 24); do
   SUB_PID="$(find_pid_by_cmd 'sleep 79$')"
   [ -n "$SUB_PID" ] && break
   sleep 0.25
@@ -633,7 +657,7 @@ wait "$WITNESS_WPID" 2>/dev/null
 # =============================================================================
 echo ""
 echo "=== AC-child-reaped (RED discriminator) ==="
-run_probe 67 forkhang 85 240 1
+run_probe 11 forkhang 85 240 1
 # Fire oracle (issue #119). The child-absence assertion below is
 # absence-shaped: a subject that never hung, and a watchdog that never fired,
 # satisfy it too. At the unreduced bound that weakness was masked by the size
@@ -652,7 +676,7 @@ find_pid_by_cmd 'sleep 240$' | xargs -I{} kill -9 {} 2>/dev/null || true
 echo ""
 echo "=== AC-marker-cleanup (fence: passes at HEAD; two mktemp-convention sites) ==="
 LEG_TMPDIR1="$(mktemp -d)"; LEG_OUT1="$(mktemp)"; LEG_ERR1="$(mktemp)"
-TMPDIR="$LEG_TMPDIR1" harness_run 61 -- env PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=55 PROBE_TIMEOUT_SECS=41 \
+TMPDIR="$LEG_TMPDIR1" harness_run 61 -- env PATH="$(compose_path "$FAKEBIN")" FAKE_BACKEND_AUTH=hang FAKE_HANG_SECS=55 PROBE_TIMEOUT_SECS=8 \
   "$CHECK_SCRIPT" --backend claude --probe </dev/null >"$LEG_OUT1" 2>"$LEG_ERR1"
 MARKER_FIRED_RC=$?
 # Fire oracle (issue #119). harness_run returns the wrapped command's own exit
@@ -682,7 +706,7 @@ rm -rf "$LEG_TMPDIR2"; rm -f "$LEG_OUT2" "$LEG_ERR2"
 # =============================================================================
 echo ""
 echo "=== AC-no-job-notice (fence: passes at HEAD) ==="
-run_probe 71 hang 91 "" 1
+run_probe 13 hang 91 "" 1
 # Fire oracle (issue #119). "stderr carries no Terminated|Killed|Stopped line"
 # is a fence: it is satisfied by a subject that was never killed at all. The
 # fence stays as the fence it is, and the fired reading is added beside it, so
@@ -703,7 +727,7 @@ GREEN_BODY='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRoll
 CONFIRM_TMPDIR1="$(mktemp -d)"; CONFIRM_OUT1="$(mktemp)"; CONFIRM_ERR1="$(mktemp)"
 TMPDIR="$CONFIRM_TMPDIR1" harness_run 110 -- env PATH="$(compose_path "$MOCK_GH_DIR")" \
   GH_MOCK_PRECHECK_BODY="$GREEN_BODY" GH_MOCK_POLL_BODY="$GREEN_BODY" GH_MOCK_PRECHECK_SLEEP=90 \
-  CI_POLL_TIMEOUT_SECS=83 CI_POLL_INTERVAL_SECS=83 "$CONFIRM_SCRIPT" --pr 1 </dev/null >"$CONFIRM_OUT1" 2>"$CONFIRM_ERR1"
+  CI_POLL_TIMEOUT_SECS=17 CI_POLL_INTERVAL_SECS=17 "$CONFIRM_SCRIPT" --pr 1 </dev/null >"$CONFIRM_OUT1" 2>"$CONFIRM_ERR1"
 CONFIRM_FIRED_RC=$?
 # Fire oracle (issue #119), confirm-ci-green.sh's own contract: exit 14 when
 # the poll deadline is reached without a confirmed mergeable state. The mock's

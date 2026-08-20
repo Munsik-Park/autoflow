@@ -215,15 +215,17 @@ run_self_test() {
   ( cd "$PROJECT_ROOT" && bash "$RUNNER" --self-test "$registry" ) 2>&1
 }
 
-SELFTEST_REAL_OUT="$(run_self_test)"
-SELFTEST_REAL_RC=$?
-
-assert_true "negative-teeth leg: every present/absent/ordered entry FAILs its mutated copy (data-driven, C1, via run-doc-invariants.sh --self-test)" \
-  "[ '$SELFTEST_REAL_RC' -eq 0 ]"
-assert_false "negative-teeth leg: no entry is reported as a non-credit (unexpressible shape / ineffective mutation / mutator error / unresolvable anchor)" \
-  "printf '%s' \"\$SELFTEST_REAL_OUT\" | grep -q 'NO-TEETH'"
-assert_true "negative-teeth leg: the denominator is the whole registry — the reported total equals the registry's entry count" \
-  "[ \"\$(printf '%s' \"\$SELFTEST_REAL_OUT\" | sed -n 's/^Self-test results: [0-9]*\/\([0-9]*\) .*/\1/p')\" = \"\$(jq -r '.invariants | length' '$REGISTRY')\" ]"
+# ISSUE #119. The REAL-registry --self-test run that stood here is removed:
+# .github/workflows/contract-suites.yml runs `bash tests/run-doc-invariants.sh
+# --self-test` from a step with no `if:` guard, so it is unconditional within
+# any triggered run of that workflow, and the deleted assertions were the same
+# execution a second time. The one property that step's exit status did NOT own
+# — that the reported denominator is the whole registry, not the subset the
+# mode happened to reach — is not dropped: it moved INTO the runner's own
+# self-test exit predicate (tests/run-doc-invariants.sh, "Denominator coverage
+# gate"), where the real registry drives it. Its Red state is driven
+# hermetically at (e) below. docs/doc-invariant-registry.md §14 carries the
+# disposition rows.
 
 # ---------------------------------------------------------------------------
 # Teeth-leg self-tests — issue #26, VERIFY step-3 FINDING 3-E / step-4
@@ -732,14 +734,20 @@ FIXDIR="$PROJECT_ROOT/tests/fixtures"
 assert_true "AC-a-3: run-doc-invariants.sh --help/usage mentions --self-test" \
   "grep -qF -- '--self-test' '$RUNNER'"
 
-assert_true "AC-a-3: run-doc-invariants.sh --self-test exits 0 against the real registry (every entry demonstrates teeth)" \
-  "bash '$RUNNER' --self-test >'$TMP_ROOT/selftest.out' 2>&1"
+# ISSUE #119. The real-registry exit-status halves of these two assertions are
+# removed — the unconditional contract-suites.yml step (`--self-test`) and the
+# e2e-dummy-target.yml step (default mode) each drive the real registry once,
+# and re-running it here was the same execution a second time. What is NOT
+# owned by an exit status is the OUTPUT SHAPE these arms actually assert, so
+# both are retargeted at a hermetic fixture registry, which exercises the same
+# two code paths at negligible cost.
+AC_A3_FIXTURE_REGISTRY="$FIXDIR/denominator-coverage-complete-registry.json"
 
 assert_true "AC-a-3: --self-test reports a Results: line distinct from the default-mode PASS/FAIL line format" \
-  "grep -qi 'self-test\|teeth\|mutation' '$TMP_ROOT/selftest.out' 2>/dev/null"
+  "bash '$RUNNER' --self-test '$AC_A3_FIXTURE_REGISTRY' >'$TMP_ROOT/selftest.out' 2>&1; grep -qi 'self-test\|teeth\|mutation' '$TMP_ROOT/selftest.out' 2>/dev/null"
 
-assert_true "AC-a-3: default (no-flag) run-doc-invariants.sh behavior is unchanged (still exits 0/1 on the real registry with no --self-test side effects)" \
-  "bash '$RUNNER' >'$TMP_ROOT/default.out' 2>&1; grep -qF 'Results:' '$TMP_ROOT/default.out'"
+assert_true "AC-a-3: default (no-flag) run-doc-invariants.sh behavior is unchanged (still prints a Results: line and exits 0 on an all-passing registry)" \
+  "bash '$RUNNER' '$AC_A3_FIXTURE_REGISTRY' >'$TMP_ROOT/default.out' 2>&1 && grep -qF 'Results:' '$TMP_ROOT/default.out'"
 
 # ---------------------------------------------------------------------------
 # AC-f — anchor-resolution negative coverage, hermetic fixtures.
