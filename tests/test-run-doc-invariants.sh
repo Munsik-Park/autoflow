@@ -308,6 +308,62 @@ assert_true "teeth self-test (d): the run does NOT abort — the entry is named 
 assert_false "teeth self-test (d): the unresolvable-anchor path never reaches block()'s abort — no BLOCK line is emitted from mutation evaluation" \
   "printf '%s' \"\$SELFTEST_ANCHOR_DESTRUCTION_OUT\" | grep -q '^BLOCK:'"
 
+# ---------------------------------------------------------------------------
+# (e) AC-denominator-vacuity-preserved — issue #119.
+#
+# The runner's self-test exit predicate compares ST_OK against ST_TOTAL alone
+# (tests/run-doc-invariants.sh, "Self-test results" block). Three paths
+# `continue` BEFORE ST_TOTAL is incremented — an empty resolved anchor, a
+# `file` that is not in the tree, and an unrecognised predicate — so an entry
+# the mode never reached moves neither counter and the mode reports full credit
+# over a shrunken population. The invariant that closes it is a comparison of
+# the reported denominator against `jq '.invariants | length'` on the registry
+# the mode was handed.
+#
+# This suite is the runner's own contract owner (`# ci-subject:` above), so the
+# guard is driven here rather than asserted about. Both fixtures are hermetic
+# and differ in exactly one field — the third entry's `file`:
+#   * denominator-coverage-registry.json          third entry names a file that
+#                                                 is NOT in the tree -> the
+#                                                 missing-file `continue` fires,
+#                                                 the reported total is 2 while
+#                                                 the array holds 3, and the
+#                                                 mode MUST exit non-zero.
+#   * denominator-coverage-complete-registry.json every entry's file is in the
+#                                                 tree -> total == length and
+#                                                 the mode MUST exit 0. This is
+#                                                 the direction control: without
+#                                                 it the guard is satisfiable by
+#                                                 failing unconditionally.
+# A single-entry fixture cannot carry this: it is authored to take none of the
+# three skip paths, so its total always equals its length and it is green in
+# exactly the world the guard exists to red.
+# ---------------------------------------------------------------------------
+DENOM_SHORT_REGISTRY="$PROJECT_ROOT/tests/fixtures/denominator-coverage-registry.json"
+DENOM_FULL_REGISTRY="$PROJECT_ROOT/tests/fixtures/denominator-coverage-complete-registry.json"
+
+assert_true "AC-denominator-vacuity-preserved: the short-denominator driver fixture is present and holds more entries than the mode can reach" \
+  "[ -f '$DENOM_SHORT_REGISTRY' ] && [ \"\$(jq -r '.invariants | length' '$DENOM_SHORT_REGISTRY')\" -eq 3 ]"
+
+SELFTEST_DENOM_SHORT_OUT="$(run_self_test "$DENOM_SHORT_REGISTRY")"
+SELFTEST_DENOM_SHORT_RC=$?
+SELFTEST_DENOM_SHORT_TOTAL="$(printf '%s' "$SELFTEST_DENOM_SHORT_OUT" | sed -n 's/^Self-test results: [0-9]*\/\([0-9]*\) .*/\1/p')"
+
+assert_true "AC-denominator-vacuity-preserved: the missing-file entry is skipped before the counter, so the reported denominator (${SELFTEST_DENOM_SHORT_TOTAL:-none}) is short of the registry's 3 entries — this is the condition the guard must catch, not a fixture defect" \
+  "[ \"\$SELFTEST_DENOM_SHORT_TOTAL\" = '2' ]"
+assert_true "AC-denominator-vacuity-preserved: --self-test exits NON-ZERO when its reported denominator is short of the registry's entry count (full credit over a shrunken population is not a pass)" \
+  "[ '$SELFTEST_DENOM_SHORT_RC' -ne 0 ]"
+assert_true "AC-denominator-vacuity-preserved: the diagnostic names BOTH numbers — the reported denominator and the registry's entry count — so the shortfall is readable without re-running" \
+  "printf '%s' \"\$SELFTEST_DENOM_SHORT_OUT\" | grep -qE '(^|[^0-9])2([^0-9].*[^0-9]|[^0-9])3([^0-9]|$)'"
+
+SELFTEST_DENOM_FULL_OUT="$(run_self_test "$DENOM_FULL_REGISTRY")"
+SELFTEST_DENOM_FULL_RC=$?
+
+assert_true "AC-denominator-vacuity-preserved (direction control): a registry whose every entry is reachable still exits 0 — the guard fails a shortfall, not every run" \
+  "[ '$SELFTEST_DENOM_FULL_RC' -eq 0 ]"
+assert_true "AC-denominator-vacuity-preserved (direction control): the control fixture's reported denominator equals its own entry count" \
+  "[ \"\$(printf '%s' \"\$SELFTEST_DENOM_FULL_OUT\" | sed -n 's/^Self-test results: [0-9]*\/\([0-9]*\) .*/\1/p')\" = \"\$(jq -r '.invariants | length' '$DENOM_FULL_REGISTRY')\" ]"
+
 # =============================================================================
 echo ""
 echo "=== AC2 (C): guard-lifecycle rule (retirement + promotion) + scope enforcement ==="
