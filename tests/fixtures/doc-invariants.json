@@ -6967,6 +6967,126 @@
       "match": "fixed",
       "literal": "const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'",
       "scope": "permanent"
+    },
+    {
+      "id": "119-disposition-section-exists",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "docs/doc-invariant-registry.md",
+      "section": null,
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "## 14. Migration provenance — retired-guard dispositions (issue #119)",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-disposition-orphan-coverage-suite",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "docs/doc-invariant-registry.md",
+      "section": null,
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "tests/test-issue-103-orphan-coverage.sh",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-disposition-owner-strength-class",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "docs/doc-invariant-registry.md",
+      "section": null,
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "unconditional-step",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-absent-pin-and-docs-oracle-baseline",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "tests/test-issue-103-pin-and-docs.sh",
+      "section": null,
+      "section_end": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "bash '$SUITE_27' >/tmp/issue103-pin-drift-baseline.out 2>&1",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-absent-pin-and-docs-oracle-noregression",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "tests/test-issue-103-pin-and-docs.sh",
+      "section": null,
+      "section_end": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "bash '$SUITE_27' >/tmp/issue103-noregression-27.out 2>&1",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-absent-pin-and-docs-real-registry-run",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "tests/test-issue-103-pin-and-docs.sh",
+      "section": null,
+      "section_end": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "bash \"$PROJECT_ROOT/tests/run-doc-invariants.sh\" >/tmp/issue103-doc-invariants.out 2>&1",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-retained-pin-and-docs-perturbed-oracle",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "tests/test-issue-103-pin-and-docs.sh",
+      "section": null,
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "(cd \"$SCRATCH\" && bash \"$SCRATCH_SUITE_27\")",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-absent-runner-suite-real-selftest",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "tests/test-run-doc-invariants.sh",
+      "section": null,
+      "section_end": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "SELFTEST_REAL_OUT=\"$(run_self_test)\"",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-absent-runner-suite-real-default-run",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "tests/test-run-doc-invariants.sh",
+      "section": null,
+      "section_end": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "bash '$RUNNER' >'$TMP_ROOT/default.out' 2>&1",
+      "scope": "permanent"
+    },
+    {
+      "id": "119-absent-runner-suite-ac-a3-real-selftest",
+      "origin_issue": 119,
+      "intent": "existence",
+      "file": "tests/test-run-doc-invariants.sh",
+      "section": null,
+      "section_end": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "bash '$RUNNER' --self-test >'$TMP_ROOT/selftest.out' 2>&1",
+      "scope": "permanent"
     }
   ]
 }

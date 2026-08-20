@@ -180,8 +180,8 @@ echo "=== CLASS A: Static assertions ==="
 #   (a) Exactly ONE occurrence of the AUTOFLOW-SCHEMA-VALIDATION label.
 #       The validation lives in ONE place, not N per-site copies.
 #       On the unmodified hook this is 0 → FAIL (RED-confirming).
-#   (b) Anchored `exit 2` statement count == 8. Drift history of this frozen
-#       baseline: 6 at the #245 GREEN (which reused the MALFORMED_STATE block,
+#   (b) Anchored `exit 2` statement count >= 11 — a FLOOR, not an exact pin
+#       (issue #119). Ratchet record of the baseline: 6 at the #245 GREEN (which reused the MALFORMED_STATE block,
 #       adding zero new sites) → 7 when the blocked-by-review label deny was
 #       added WITHOUT bumping this baseline (latent drift: the assertion was
 #       failing on main, masked because this suite is not run as a PR gate) →
@@ -192,7 +192,11 @@ echo "=== CLASS A: Static assertions ==="
 #       closed for score-gated commands/spawns when ≥2 state files read
 #       active:true — feature-design F2 Change 2) → 11 with the issue #96
 #       AI issue-creation deny (bare `gh issue create` + same-segment REST
-#       POST …/issues form, Section 1 state-independent). Naive grep -c 'exit 2' is
+#       POST …/issues form, Section 1 state-independent) — the floor's current
+#       value. A deny ADDITION no longer reds this arm and needs no edit here;
+#       a deny REMOVAL still does, which is the regression class the arm exists
+#       for (a consolidation that silently drops a deny). The floor is raised
+#       deliberately, never lowered. Naive grep -c 'exit 2' is
 #       higher (it
 #       includes comment-prose mentions); the ANCHORED pattern
 #       ^[[:space:]]*exit 2[[:space:]]*$ counts real statements only.
@@ -206,16 +210,104 @@ assert_eq "A8a: exactly ONE AUTOFLOW-SCHEMA-VALIDATION label in hook (consolidat
   # ^^^ FAILS on unmodified hook (count=0) — RED-confirming
 
 EXIT2_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$HOOK" 2>/dev/null || true)
-assert_eq "A8b: anchored 'exit 2' statement count == 11 (10 prior baseline + issue #96 issue-creation deny)" \
-  "$EXIT2_COUNT" "11"
-  # See the drift history in the A8 comment block above; bump this count (and
-  # the history) whenever a deny site is intentionally added or removed.
+assert_static "A8b: anchored 'exit 2' statement count >= 11 — the deny-site floor (found: $EXIT2_COUNT)" \
+  bash -c "[[ $EXIT2_COUNT -ge 11 ]]"
+  # See the ratchet record in the A8 comment block above. The floor is a
+  # RATCHET: raise it deliberately when a deny addition is meant to become
+  # permanent; never lower it. A8d/A8e below drive both directions against a
+  # perturbed hook copy, so the relaxation is a floor rather than a deletion.
 
 # Confirm the naive count is NOT used (this is a documentation assertion only —
 # if naive==8 and anchored==6, the discrepancy confirms 2 comment-prose mentions exist).
 NAIVE_COUNT=$(grep -cE 'exit 2' "$HOOK" 2>/dev/null || true)
 assert_static "A8c: naive 'exit 2' count >= anchored count (confirms comment prose not counted by anchored pattern)" \
   bash -c "[[ $NAIVE_COUNT -ge $EXIT2_COUNT ]]"
+
+# ---
+# A8d/A8e — AC-deny-addition-green (issue #119): the deny-site assertion must
+# tolerate a legitimate ADDITION while still failing a REMOVAL.
+#
+# A8b pins the anchored count to an exact value, so a later commit that adds a
+# hook deny site reds this suite and has to edit it — a maintenance tax on
+# every deny addition, and the brittleness class issue #119 relaxes. Relaxing
+# it to a floor is only a relaxation, not a deletion of the check, if the
+# removal direction still reds. Neither direction is observable from the real
+# hook alone, so both are driven against a perturbed copy.
+#
+# The scratch tree is `git worktree add HEAD` with the WORKING-tree copies of
+# this suite and its two declared subjects overlaid on top, so the drive reads
+# the change under test rather than the last commit. The same shape is already
+# used for harness perturbation at tests/test-issue-103-pin-and-docs.sh:53-81.
+# AUTOFLOW_119_HOOK_PERTURBATION guards the recursion: the scratch copy of this
+# suite runs every other leg and skips this block.
+# ---
+if [ "${AUTOFLOW_119_HOOK_PERTURBATION:-}" != "1" ]; then
+  echo ""
+  echo "A8d/A8e — deny-site perturbation (AC-deny-addition-green, issue #119)"
+
+  DENY_SCRATCH="$(mktemp -d)"
+  if git -C "$PROJECT_ROOT" worktree add -q "$DENY_SCRATCH" HEAD >/dev/null 2>&1; then
+    # Overlay the working tree's own copies of this suite and its subjects.
+    cp "$HOOK"                "$DENY_SCRATCH/.claude/hooks/check-autoflow-gate.sh"
+    cp "$SCHEMA"              "$DENY_SCRATCH/tests/fixtures/gate-schema.json"
+    cp "${BASH_SOURCE[0]}"    "$DENY_SCRATCH/tests/test-issue-245-schema-validation.sh"
+
+    DENY_SCRATCH_HOOK="$DENY_SCRATCH/.claude/hooks/check-autoflow-gate.sh"
+    DENY_SCRATCH_SUITE="$DENY_SCRATCH/tests/test-issue-245-schema-validation.sh"
+    DENY_BASE_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$DENY_SCRATCH_HOOK" 2>/dev/null || true)
+
+    # --- A8d: ADD one deny site -------------------------------------------
+    # The added site is a defined-but-uncalled guard inserted ahead of the
+    # hook's first `set` line, so the hook's runtime behaviour is byte-for-byte
+    # the same and every behavioural leg of the scratch run stays green. What
+    # changes is exactly the quantity A8b reads: the anchored statement count.
+    perl -0pi -e 's/\n(set [^\n]*\n)/\n_autoflow_119_added_deny_site() {\n  exit 2\n}\n\n$1/' "$DENY_SCRATCH_HOOK"
+    DENY_ADDED_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$DENY_SCRATCH_HOOK" 2>/dev/null || true)
+    assert_static "A8d precondition: the scratch hook gained exactly one anchored 'exit 2' statement ($DENY_BASE_COUNT -> $DENY_ADDED_COUNT)" \
+      bash -c "[[ $DENY_ADDED_COUNT -eq $((DENY_BASE_COUNT + 1)) ]]"
+
+    DENY_ADD_OUT="$(mktemp)"
+    ( cd "$DENY_SCRATCH" && AUTOFLOW_119_HOOK_PERTURBATION=1 bash "$DENY_SCRATCH_SUITE" ) >"$DENY_ADD_OUT" 2>&1
+    DENY_ADD_RC=$?
+    if [ "$DENY_ADD_RC" -ne 0 ]; then
+      echo "  ---- scratch run FAIL lines (deny added, rc=$DENY_ADD_RC) ----"
+      grep -E '^  FAIL' "$DENY_ADD_OUT" | head -5
+      echo "  ---- end ----"
+    fi
+    assert_static "A8d: a commit that ADDS a hook deny site leaves this suite green without editing it (scratch run rc=$DENY_ADD_RC)" \
+      bash -c "[[ $DENY_ADD_RC -eq 0 ]]"
+    rm -f "$DENY_ADD_OUT"
+
+    # --- A8e: REMOVE one deny site ----------------------------------------
+    # The converse arm. Without it the relaxation above is satisfiable by
+    # deleting the deny-site check outright: a floor that never reds is not a
+    # floor. The removal is asserted to red THIS assertion by name, not merely
+    # to red the suite — removing a real deny changes hook behaviour, so a bare
+    # non-zero exit would not distinguish A8's teeth from the collateral.
+    cp "$HOOK" "$DENY_SCRATCH_HOOK"
+    awk 'BEGIN{n=0} {lines[NR]=$0} END{
+           for(i=NR;i>=1;i--){ if(lines[i] ~ /^[[:space:]]*exit 2[[:space:]]*$/ && n==0){ n=i; break } }
+           for(i=1;i<=NR;i++){ if(i!=n) print lines[i] }
+         }' "$HOOK" > "$DENY_SCRATCH_HOOK.tmp" && mv "$DENY_SCRATCH_HOOK.tmp" "$DENY_SCRATCH_HOOK"
+    DENY_REMOVED_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$DENY_SCRATCH_HOOK" 2>/dev/null || true)
+    assert_static "A8e precondition: the scratch hook lost exactly one anchored 'exit 2' statement ($DENY_BASE_COUNT -> $DENY_REMOVED_COUNT)" \
+      bash -c "[[ $DENY_REMOVED_COUNT -eq $((DENY_BASE_COUNT - 1)) ]]"
+
+    DENY_DEL_OUT="$(mktemp)"
+    ( cd "$DENY_SCRATCH" && AUTOFLOW_119_HOOK_PERTURBATION=1 bash "$DENY_SCRATCH_SUITE" ) >"$DENY_DEL_OUT" 2>&1
+    DENY_DEL_RC=$?
+    DENY_DEL_A8B_FAILED=1
+    grep -qE '^  FAIL: A8b' "$DENY_DEL_OUT" || DENY_DEL_A8B_FAILED=0
+    assert_static "A8e: REMOVING a hook deny site still reds the deny-site assertion by name (A8b FAIL present: $DENY_DEL_A8B_FAILED, scratch run rc=$DENY_DEL_RC) — the relaxation is a floor, not a deletion" \
+      bash -c "[[ $DENY_DEL_A8B_FAILED -eq 1 ]] && [[ $DENY_DEL_RC -ne 0 ]]"
+    rm -f "$DENY_DEL_OUT"
+
+    git -C "$PROJECT_ROOT" worktree remove -f "$DENY_SCRATCH" >/dev/null 2>&1 || rm -rf "$DENY_SCRATCH"
+  else
+    assert_static "A8d/A8e: a scratch worktree is available to perturb the hook copy in" bash -c "false"
+    rm -rf "$DENY_SCRATCH"
+  fi
+fi
 
 # ---
 # A7 — Gated-key literal parity (AC-S/DCR-6 Option 2 + parity for gated-key literal)
@@ -330,10 +422,11 @@ POS_INACTIVE_DIR=$(stage_fixture '{"active":false,"issue":"#245","phases":{}}')
 run_hook 0 "B-POS2: active:false → no gating (exit 0)" \
   "$POS_INACTIVE_DIR" "$(bash_json 'git push origin dev/245')"
 
-# Positive: bare-number score form PASSES (confirmed by existing B5; re-assert here)
-POS_BARENUM_DIR=$(stage_fixture '{"active":true,"issue":"#245","phases":{"audit":{"scores":{"a":8,"b":8}},"gate_quality":{"scores":{"a":8,"b":8}}}}')
-run_hook 0 "B-POS3: bare-number score form (not {score:N}) → passes validator (DCR-3)" \
-  "$POS_BARENUM_DIR" "$(bash_json 'git push origin dev/245')"
+# B-POS3 (bare-number score form → git push passes) is retired (issue #119):
+# owned by tests/test-issue-223-schema-hook-contract.sh:428, whose subject is
+# exactly that. Both suites' subject is this same hook file, so any delta that
+# selects one selects the other (.github/workflows/schema-hook-contract.yml:91-94).
+# This file's B5.1/B5.2/B5.3 are negative cases and never covered it.
 
 # Positive: valid nested fix_regression cycle → PASS (proves no over-block)
 POS_NESTED_DIR=$(stage_fixture '{"active":true,"issue":"#245","phases":{"audit":{"scores":{"a":{"score":8}}},"gate_quality":{"scores":{"a":{"score":8}}}},"fix_regression":{"phases":{"audit":{"scores":{"a":{"score":8}}},"gate_quality":{"scores":{"a":{"score":8}}}}}}')

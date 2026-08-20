@@ -11,7 +11,7 @@ parse time). Every other AC1-AC13 criterion is covered by `test/workflows/run.mj
 `tests/fixtures/doc-invariants.json` registry entries (`123-AC7-*`, and — since
 GATE:QUALITY promoted them from the now-retired cycle-scoped
 `tests/test-issue-123-closing-half-round.sh`, docs/doc-invariant-registry.md
-§14 — `123-AC5-closing-reason-*` / `123-AC6-closing-label-*`).
+§15 — `123-AC5-closing-reason-*` / `123-AC6-closing-label-*`).
 
 ---
 

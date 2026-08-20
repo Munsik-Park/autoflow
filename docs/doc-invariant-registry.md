@@ -537,7 +537,67 @@ surface. Nothing is retired by this item.
 
 ---
 
-## 14. Migration provenance — retired-guard dispositions (issue #123)
+## 14. Migration provenance — retired-guard dispositions (issue #119)
+
+Issue #119 reduces the `contract-suites` full run by removing verification
+redundancy and over-long real waits. Every removal below is a **subsumption**
+claim — "another check already owns this invariant" — and §5/§6/§7's closing
+rule applies unchanged: nothing in the retired column is a bare deletion.
+
+**Owner strength classes**, used as vocabulary by every row:
+
+| Class | Meaning |
+|---|---|
+| `unconditional-step` | the owner is a workflow step with no `if:` guard, so it runs on every triggered run of its workflow |
+| `selection-gated-step` | the owner is a per-suite step behind `if: contains(… steps.select.outputs.suites …)`; admissible only where the deleting suite is itself selection-gated **and** the owner's selection trigger covers the deleted assertion's subject |
+| `in-suite-arm` | the owner is a surviving arm in the same file |
+| `re-homed` | the invariant is moved to a new, cheaper carrier written in this cycle |
+| retired | the assertion was a one-shot pin on a past deletion; no future tree state re-introduces its subject without a separate intentional edit |
+
+**`unconditional-step` is scoped WITHIN a triggered run, not per push.**
+`.github/workflows/contract-suites.yml` is `paths:`-filtered on both
+`pull_request` (`:19-`) and `push` (`:127-`), and
+`.github/workflows/e2e-dummy-target.yml` likewise (`:29-31`). A step with no
+`if:` is therefore unconditional only once its own workflow has been triggered.
+Every cross-workflow row below names the owner workflow's `paths:` entry that
+admits the deleted invariant's subject path; an owner claim resting only on the
+absence of an `if:` guard is not admissible here.
+
+### 14.1 Dispositions
+
+| Asset | Disposition | Basis |
+|---|---|---|
+| `tests/test-issue-103-pin-and-docs.sh` — the UNPERTURBED composition-oracle re-invocation (`AC-pin-detects-harness-drift` baseline) | **retired — `selection-gated-step`** | owner: `.github/workflows/e2e-dummy-target.yml:588-591`, the `tests/test-issue-27-composition-oracle.sh` step, admitted by that workflow's own `paths:` entry `tests/test-issue-27-composition-oracle.sh` (`:104` pull_request, `:259` push). The deleting suite is itself selection-gated, and its `# ci-subject:` set (`tests/lib/harness-pins.sh`, `tests/run-doc-invariants.sh`, `tests/fixtures/doc-invariants.json`) is a subset of the owner suite's, so no pull-request delta selects the host without also selecting the owner. The **perturbed** run at the same arm is RETAINED: it is the operative half, and no other carrier perturbs the harness |
+| `tests/test-issue-103-pin-and-docs.sh` — `AC-no-regression-on-removed-assertions (c)`'s composition-oracle re-run | **retired — `selection-gated-step`**; the `[ -f "$PIN_HOME" ]` half stays as an `in-suite-arm` | same owner and same `paths:` entry as the row above |
+| `tests/test-issue-103-pin-and-docs.sh` — the real-tree `tests/run-doc-invariants.sh` run and its assertion (`AC-doc-contracts-registered`) | **retired — `unconditional-step`** | owner: `.github/workflows/e2e-dummy-target.yml:404` (`run: bash tests/run-doc-invariants.sh`, no `if:`), admitted by that workflow's `paths:` entry `tests/run-doc-invariants.sh` (`:45` pull_request, `:216` push) — the deleted assertion's subject path exactly |
+| `tests/test-issue-103-pin-and-docs.sh` — the `run-doc-invariants.sh --self-test` run (`AC-doc-contracts-registered`) | **retired — `unconditional-step`** | owner: `.github/workflows/contract-suites.yml:562` (`run: bash tests/run-doc-invariants.sh --self-test`, no `if:`), admitted by that workflow's `paths:` entry `tests/run-doc-invariants.sh` (`:89` pull_request, `:197` push) |
+| `tests/test-issue-103-pin-and-docs.sh` — the `AC-pin-dependents-disposed` text-pin group (the #62/#59/#69/#67/#56 removal pins and GATE:PLAN F1's row) | **retired** | each asserted that a past deletion had already landed. No future tree state re-introduces those literals without a separate, intentional edit, which the pin single-home invariant (`tests/test-issue-103-suite-manifest.sh` PIN group) and the retained harness-perturbation drift arm already govern |
+| `tests/test-run-doc-invariants.sh` — the real-registry `--self-test` run and its exit-status / NO-TEETH assertions | **retired — `unconditional-step`** | owner: `.github/workflows/contract-suites.yml:562`, admitted by `paths:` entry `tests/run-doc-invariants.sh` (`:89` / `:197`). The runner credits only teeth-demonstrating entries and exits non-zero unless credited equals total, so the step's own exit status carries both halves |
+| `tests/test-run-doc-invariants.sh` — the real-registry `--self-test` **denominator** assertion (reported total equals `.invariants \| length`) | **`re-homed` → `tests/run-doc-invariants.sh` itself** | the step's exit status did NOT own this: the self-test gates `ST_TOTAL > 0` and `ST_OK == ST_TOTAL`, never `ST_TOTAL == registry length`, and three paths `continue` before the counter (empty resolved id, `file` not in the tree, unrecognised predicate), so a mode that silently iterated a subset still exited 0. The guard now lives in the runner's own self-test exit predicate ("Denominator coverage gate"), where the real registry drives it through the unconditional step above. A hermetic fixture is NOT the carrier — a fixture is authored to take none of the three skip paths — it is only the guard's Red-state driver (`tests/fixtures/denominator-coverage-registry.json`, with `…-complete-registry.json` as the direction control) |
+| `tests/test-run-doc-invariants.sh` — `AC-a-3`'s real-registry `--self-test` and default-mode runs | **retired — `unconditional-step`**; the output-shape halves are retargeted at a hermetic fixture registry (`in-suite-arm`) | owners: `.github/workflows/contract-suites.yml:562` (`--self-test`) and `.github/workflows/e2e-dummy-target.yml:404` (default mode), admitted by the `tests/run-doc-invariants.sh` `paths:` entries named above. What those arms actually assert is output SHAPE, which no exit status owns, so it stays — driven against `tests/fixtures/denominator-coverage-complete-registry.json` at negligible cost |
+| `tests/test-issue-245-schema-validation.sh` — `A8b`'s exact `== 11` deny-site pin | **relaxed to a floor (`>= 11`), not retired — `in-suite-arm`** | the removal direction is what the pin exists for (a consolidation that silently drops a deny) and the floor keeps it; the addition direction is released so a later deny-adding commit needs no edit here. The relaxation is kept from being a deletion by the paired `A8d`/`A8e` perturbation drives added in the same file, which add and remove a deny site in a scratch worktree copy of the real hook and require green and red respectively. The floor is a RATCHET: raised deliberately, never lowered |
+| `tests/test-issue-245-schema-validation.sh` — `B-POS3` (bare-number score form → `git push` passes) | **retired — `selection-gated-step`** | owner: `tests/test-issue-223-schema-hook-contract.sh:428-429` (`B5: git push passes w/ bare-number scores`), run by `.github/workflows/schema-hook-contract.yml:90-94`, admitted by that workflow's `paths:` entries `.claude/hooks/check-autoflow-gate.sh` and `tests/fixtures/gate-schema.json` (`:29-30` pull_request, and the mirrored push block) — both suites' subject is the same hook file, so any delta selecting one selects the other. This file's `B5.1`/`B5.2`/`B5.3` are negative cases and never covered the bare-number positive; `B-POS4` and `B-POS5` are retained |
+| `tests/test-issue-103-orphan-coverage.sh` | **retired — whole suite** | per-assertion: the lint `--self-test` exit-0 arm and the real-tree arm are owned by `.github/workflows/contract-suites.yml:532` (`run: bash scripts/test/check-suite-ci-coverage.sh`, no `if:`), which self-tests before reporting, admitted by that workflow's `paths:` entry `scripts/test/check-suite-ci-coverage.sh` (`:72` pull_request, `:180` push) — `unconditional-step`. The de-linked-callee fixture drive's REPORTED half is owned by the lint's own DIRECT-REACHABILITY leg. The superseded-driver absence pin and the two header-prose pins are retired one-shots. The one non-subsumed half — that the lint EXITS non-zero when an orphan exists — is `re-homed` into the lint's own `--self-test` as the EXIT-STATUS leg (see 14.2) |
+| `tests/test-issue-103-workflow-conformance.sh` | **retired — whole suite** | per-assertion: the `# ci-subject:` coverage sweep is owned by `scripts/test/check-suite-manifest.sh` `check_headers`, whose enumeration is a strict superset of the retired sweep's depth-1 `test-*.sh` glob, run at `.github/workflows/contract-suites.yml:541` with no `if:`, admitted by `paths:` entry `scripts/test/check-suite-manifest.sh` (`:121` / `:229`) — `unconditional-step`. The manifest regen-clean and maintained-docs-sync arms are owned by `:559` and `:556` of the same workflow, admitted by `paths:` entries `scripts/test/check-manifest-regen-clean.sh` (`:71` / `:179`) and `scripts/test/check-maintained-docs-sync.sh` (`:118` / `:226`) — `unconditional-step`. The three-sibling `paths:`-window sweep is owned by each sibling's own window guard and its own registered step — `selection-gated-step` per suite. The header-parse existence assertion is owned by every consumer that calls `suite_header_field` and fails loudly without it (`scripts/test/select-suites.sh`, `check-cycle-scope-guard.sh`, `suite-coverage.sh`), all reached from unconditional lint steps; its two text pins and the registration-row pin are retired one-shots |
+| `.github/workflows/contract-suites.yml` — the two retired suites' steps and their four `paths:` entries | **removed with their suites** | leaving either behind is the dangling reference `scripts/test/check-suite-ci-coverage.sh` and `tests/test-workflow-trigger-conformance.sh` exist to report, so the removal is verified by those lints rather than by a new assertion. `tests/test-workflow-trigger-conformance.sh`'s `AC-no-stale-trigger-path` arm, added this cycle, closes the reverse direction: a literal `paths:` entry with no file behind it |
+| `tests/test-bounded-execution-fallback.sh` — the six real-wait bounds (47/59/67/41/71/83 → 9/15/11/8/13/17) | **reduced, not retired — `in-suite-arm`** | the bounds are the suite's wall clock. Two floors re-derived from the file bound the reduction: a granularity floor of `>= 8` over the suite's own 5-second early-exit ceiling (`PROBE_ELAPSED -lt 5`), and, for the one drive that locates its subject by polling, a discovery floor of `bound >= 2 x the poll budget` (the poll is shortened from 40 to 24 iterations at 0.25s). Three of the six asserted only absence-shaped facts, which a subject that never hung also satisfies, so each reduced drive is given a fire signal reading the product's own exit contract (`scripts/preflight/check-review-backend.sh` exit 3; `scripts/handoff/confirm-ci-green.sh` exit 14) before its bound is shrunk. The pipe-release bound is explicitly outside the reduction set and keeps its `>= 6` constraint |
+
+### 14.2 The two `re-homed` invariants and their new carriers
+
+Both are product-side self-test hardenings, not new suites — each gives a
+re-homed invariant a carrier inside an already-`unconditional-step`.
+
+| Invariant | New carrier | Red-state driver |
+|---|---|---|
+| the doc-invariant self-test's reported denominator is the registry's own entry count | `tests/run-doc-invariants.sh` — "Denominator coverage gate" in the self-test exit predicate, comparing `ST_TOTAL` against `jq '.invariants \| length'` and failing loud with both numbers named | `tests/fixtures/denominator-coverage-registry.json` (third entry names a file not in the tree); `…-complete-registry.json` is the direction control |
+| the suite-coverage lint EXITS non-zero when an orphan exists, not only reports the unreachable set | `scripts/test/check-suite-ci-coverage.sh` — the EXIT-STATUS leg of its own `--self-test`, which re-invokes the lint in DEFAULT mode against a fixture root holding a known orphan | a copy whose terminal orphan-reporting `exit 1` is defanged to `exit 0`, driven from `tests/test-workflow-trigger-conformance.sh` |
+
+The EXIT-STATUS leg runs from the `--self-test` branch, **outside** `self_test()`:
+default mode is gated on `if ! self_test`, so a re-invocation placed inside
+`self_test()` would recurse unboundedly, and `self_test` removes its fixture
+before returning.
+
+## 15. Migration provenance — retired-guard dispositions (issue #123)
 
 Issue #123 adds the ARCHITECT cap-round closing half-round. Its RED phase authored a
 cycle-scoped suite, `tests/test-issue-123-closing-half-round.sh` (`retire-with: #123`),
