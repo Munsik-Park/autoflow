@@ -146,7 +146,7 @@ on:
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
       - 'tests/test-issue-121-declaration-release.sh'
       - 'tests/test-issue-120-arm-reconciliation.sh'
-      # #120 arm-and-deletion reconciliation (issue #120) reads these five
+      # #120 arm-and-deletion reconciliation (issue #120) reads these four
       # touched-suite files for its diff-driven reconciliation leg.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
       - 'tests/test-issue-71-digest-removal.sh'
@@ -270,7 +270,7 @@ on:
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
       - 'tests/test-issue-121-declaration-release.sh'
       - 'tests/test-issue-120-arm-reconciliation.sh'
-      # #120 arm-and-deletion reconciliation (issue #120) reads these five
+      # #120 arm-and-deletion reconciliation (issue #120) reads these four
       # touched-suite files for its diff-driven reconciliation leg.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
       - 'tests/test-issue-71-digest-removal.sh'

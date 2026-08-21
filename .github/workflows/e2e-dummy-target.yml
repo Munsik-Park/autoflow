@@ -123,7 +123,7 @@ on:
       # tree. Every path in its own `# ci-subject:` header already appears in
       # this block, so only its own path is added here.
       - 'tests/test-cycle-arm-residue.sh'
-      # #120 disposition-residue extension (issue #120) added four ci-subject
+      # #120 disposition-residue extension (issue #120) added six ci-subject
       # paths not previously in this block.
       - '.github/workflows/contract-suites.yml'
       - 'scripts/test/check-suite-manifest.sh'

@@ -13,9 +13,9 @@
 # tests/test-issue-798-topology-flip.sh / tests/test-issue-799-inert-cleanup.sh.
 #
 # LEAF RULE: this suite reads the CONTENT of tests/test-issue-798-topology-flip.sh
-# and tests/test-issue-799-inert-cleanup.sh via grep/awk only. It never executes any of them as a subprocess — a sibling's own
-# regression is caught by that sibling's own CI step (docs/autoflow-guide.md > RED
-# > Leaf rule).
+# and tests/test-issue-799-inert-cleanup.sh via grep/awk only. It never executes
+# any of them as a subprocess — a sibling's own regression is caught by that
+# sibling's own CI step (docs/autoflow-guide.md > RED > Leaf rule).
 #
 # lane: standing — every leg below asserts a permanent state of the tree (files
 # absent, files present, literals present in named suites/registry sections,
