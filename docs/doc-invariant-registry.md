@@ -1241,3 +1241,29 @@ claim false by design. The arm is re-pointed at `tests/lib/fixture-helper.sh`, a
 subject that is outside every denied row, so it keeps pinning exactly the property it was
 written for. Its suite is likewise outside this cycle's declared change surface; the
 deviation is recorded in `.autoflow/issue-122-green-blocker.md`.
+
+### 19.4 Confirm-CI-green harness — extraction, not retirement
+
+The one item of this cycle where a shared helper is the right answer. Two live suites drove
+the same product script through the same mock, and neither is redundant with the other or
+with any standing lint, so there is nothing to name as a carrier — the duplication is real
+and the fix is a single source.
+
+New file: `tests/lib/confirm-ci-green-harness.sh` — sourced, never executed, following the
+two existing `tests/lib/` members. It exports `run_bounded`, `run_confirm` and the
+`PRECHECK_MERGEABLE_CLEAN` fixture constant; `tests/test-issue-25-confirm-ci-green.sh` and
+`tests/test-issue-30-confirm-ci-green.sh` source it and lost their local copies, and both
+`# ci-subject:` headers gained the library path so a change to the harness selects both.
+
+| Property | How it is held after the move |
+|---|---|
+| the `sleep`+`kill` fallback's canonical statement order | `scripts/test/check-watchdog-detachment.sh` scans `tests/` recursively, so the extracted site entered its CANONICAL tier the moment it landed. The block was moved **verbatim** — no reflow, no reordering, no re-indentation — and the lint is clean against the real tree |
+| the two suites' assertion behaviour | label-set comparison against the pre-extraction revision, taken at verification time from a `git worktree` of the parent commit and never committed as a fixture. Identical sets both ways: 117/117 and 106/106. A committed baseline would mint exactly the fossil signature § 18 defines |
+| `run_confirm`'s forwarded environment | the **union** of the two former copies. An unset member forwards as the empty string, as it did before, so neither caller gains a variable it sets |
+
+**Deliberately not unified**, each recorded in the file's own header with its ground, per the
+`tests/lib/base-ref.sh` precedent: `assert_true`/`assert_false` and the PASS/FAIL/TESTS
+counters; `run_bounded_in` in `tests/test-push-context-base-ref.sh`; `harness_run` in
+`tests/test-bounded-execution-fallback.sh` — which `check-watchdog-detachment.sh` names as an
+explicit subject-set exclusion, so extracting it would move a deliberately excluded site into
+the scanned tier and invert that lint's judgement.
