@@ -1767,8 +1767,10 @@ await test('ARCHITECT: a resume run issues its terminal persistence call on both
   // The generic round-exhaustion text names the RESUMED run's own ceiling (lastRound 3 -> roundCeiling
   // 4), never the cold-path constant 6 -- verification design's cold-path bit-identity criterion is
   // what makes this a discriminator: a resume-unaware implementation would render "within 6 rounds".
-  assert.match(rEsc.escalation, /No mutual ACCEPT within 4 rounds \(reached round 4\)/, 'the resume-path escalation text must name the run\'s own ceiling (4), not the constant 6')
-  assert.doesNotMatch(rEsc.escalation, /within 6 rounds/)
+  // Exact equality, not a substring match: this run has no earlyEscalateReason, so escalationReason
+  // IS this whole string verbatim (architect-deliberation.js:571-572) -- an exact match catches an
+  // implementation that gets the figure right but wraps or prefixes the text differently.
+  assert.equal(rEsc.escalation, 'No mutual ACCEPT within 4 rounds (reached round 4)', 'the resume-path escalation text must name the run\'s own ceiling (4), not the constant 6')
 })
 
 await test('ARCHITECT: the return contract reports resumed/register/registerWritten truthfully, including a failed write (AC127-9, return-contract-fields)', async () => {
