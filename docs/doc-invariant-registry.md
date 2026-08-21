@@ -1355,8 +1355,11 @@ moving filenames splits the sites into four classes, and only class (a) is a rep
 A blanket "repoint every occurrence" pass is a design violation, not design conformance:
 applied to (c) it converts a live absence assertion into one that holds vacuously.
 
-**Not moved this cycle, with the ground.** The other directional baselines in
-`tests/fixtures/` — `expected-connev-residual.txt`, `e2e-bundle-purity-baseline.txt`,
+**Not moved this cycle, with the ground.** (The residual baseline is named descriptively
+rather than by filename: `tests/test-issue-985-doc-assertions.sh`'s `AC1-SWEEP` arm pins the
+exact set of tracked files carrying the retired host token, and spelling the filename here
+would add this document to that set.) The other directional baselines in
+`tests/fixtures/` — the host-token residual baseline, `e2e-bundle-purity-baseline.txt` and
 `host-purity-{paths,tokens}.txt` — are genuine ratchets and belong under the directory by
 § 18's construction. They stay where they are for now because their executable readers
 include `scripts/test/check-host-purity-delta.sh`, `tests/plugin/verify-e2e-dummy-target.sh`,
