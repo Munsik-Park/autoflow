@@ -453,6 +453,11 @@ allow_list=(
   # uses, which forced these two out-of-original-surface edits.
   "tests/test-issue-51-teammate-removal-verdict.sh"
   "tests/test-issue-103-suite-leaf.sh"
+  # B3-2 reshape (RED2b): the fossil count-pin arm re-derives its expected
+  # value at evaluation time instead of pinning a checked-in literal — see
+  # docs/doc-invariant-registry.md §19.9 (routed) and
+  # .autoflow/issue-122-red2-report.md.
+  "tests/test-issue-103-cycle-scope-repoint.sh"
   # Lints
   "scripts/test/check-suite-leaf.sh"
   "scripts/test/check-suite-manifest.sh"
