@@ -30,7 +30,10 @@
 # registry's ADR/README scope):
 #
 #   AC8/O1   — manifest composition oracle (real setup/gen-manifest-hashes.sh)
-#   AC9/O2   — registry composition oracle (real tests/run-doc-invariants.sh)
+#   AC9/O2   — registry-data state predicates (count, shape, contiguity,
+#              direction) read from tests/fixtures/doc-invariants.json with jq.
+#              The runner-execution half retired in #122 — carrier: the bare
+#              runner step in .github/workflows/contract-suites.yml
 #   AC12     — CI wiring (run: step + paths: entries + ordering arm)
 #   R51-COUNT / meta guard — origin_issue==51 registry entry count (12) and
 #              literal-contiguity/direction-of-predicate meta check
@@ -159,20 +162,21 @@ fi
 rm -rf "$O1_TMP"
 
 # ---------------------------------------------------------------------------
-# AC9 / O2 — doc-invariant registry composition oracle: the REAL
-# tests/run-doc-invariants.sh, no registry argument, against the real
-# registry and the real edited documents. No global total.
+# AC9 / O2 — registry-data state predicates over the real
+# tests/fixtures/doc-invariants.json. No global total, and no re-execution of
+# the runner (retired in #122 — see § 19.2).
 # ---------------------------------------------------------------------------
 echo ""
-echo "=== AC9 / O2 — doc-invariant registry composition oracle (real producer) ==="
+echo "=== AC9 / O2 — registry-data state predicates (real registry file) ==="
 
-O2_OUT="$(bash "$RUNNER" 2>&1)"
-O2_RC=$?
-export O2_OUT
-
-assert_true "O2(a)-exit0: the real registry runner exits 0" "[ '$O2_RC' -eq 0 ]"
-assert_true "O2(a)-0failed: the real registry runner's Results line reports 0 failed" \
-  "printf '%s' \"\$O2_OUT\" | grep -qE '^Results:.*, 0 failed$'"
+# O2(a)-exit0 / O2(a)-0failed retired (issue #122): both ran the whole registry
+# runner from inside this suite. The property they asserted — the registry's
+# permanent invariants hold in the CURRENT tree — is carried by the bare,
+# if:-less `run: bash tests/run-doc-invariants.sh` step in
+# .github/workflows/contract-suites.yml, and re-running it here is the
+# whole-subject re-execution scripts/test/check-suite-leaf.sh's D6 row now
+# denies. See docs/doc-invariant-registry.md § 19.2. The registry-DATA
+# predicates below are state predicates over the file and stay.
 
 O2_COUNT51="$(jq -r '[.invariants[] | select(.origin_issue==51)] | length' "$REGISTRY")"
 assert_true "O2(b)-issue-scoped-count: origin_issue==51 registry entry count is exactly 12 (currently $O2_COUNT51)" \

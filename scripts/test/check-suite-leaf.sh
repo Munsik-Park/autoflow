@@ -44,6 +44,22 @@
 #         counts: the assignment's value is read as literal text, and the name
 #         is checked against `suite_enumerate`'s set, so "looks like a suite
 #         name" never enters the judgement.
+#     D6  `bash "$v"` in command position with NO argument, where v is
+#         assigned in the same file a value whose literal text names a DENIED
+#         NON-SUITE TARGET — the set held in `denied_nonsuite_targets`, whose
+#         one member is `tests/run-doc-invariants.sh`. D5 cannot reach it: D5
+#         keys on `suite_enumerate`'s set, and the runner is a declared
+#         exclusion from that set, so a suite re-running the whole doc-invariant
+#         registry read as an ordinary product-script drive (I2). A BARE run is
+#         whole-registry re-execution of a leg that already carries its own
+#         unguarded workflow steps; an invocation carrying ANY argument (a
+#         fixture registry path, `--self-test`, a root override) is driving the
+#         runner as a SUBJECT against a fixture, which is what the runner's own
+#         contract suite legitimately does, and stays admitted. A trailing
+#         redirection or command-substitution terminator is not an argument.
+#         The literal form (`bash tests/run-doc-invariants.sh`) needs no row of
+#         its own: D1 already denies every command-position literal `tests/`
+#         path, enumerated or not.
 #
 #   IGNORED
 #     I1  the same token inside a single- or double-quoted string, a heredoc
@@ -87,8 +103,10 @@
 #
 #   The SUBJECT. Outside every row by construction: an invocation of a path the
 #   enumeration does not carry (D5 keys on the enumerated set, which is what
-#   keeps `tests/run-doc-invariants.sh` and `tests/lib/*` — excluded subjects —
-#   from reading as siblings).
+#   keeps `tests/lib/*` — an excluded subject — from reading as a sibling).
+#   `tests/run-doc-invariants.sh` was in that residual until issue #122 named it
+#   in `denied_nonsuite_targets` (D6). Admitting a further non-suite target is
+#   one line there plus its own self-test arms; nothing else generalises to it.
 #
 # This lint raises the cost of re-introducing sibling execution; it does not
 # make the class unrepresentable.
@@ -111,6 +129,19 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 . "$SCRIPT_DIR/suite-manifest.sh"
 # shellcheck source=scripts/test/invocation-scan.sh
 . "$SCRIPT_DIR/invocation-scan.sh"
+
+# ---------------------------------------------------------------------------
+# denied_nonsuite_targets — repo-relative paths that are NOT in
+# `suite_enumerate`'s set (so D1-D5 cannot reach them through a variable) but
+# whose BARE invocation from a suite is whole-subject re-execution all the same.
+# One member today: the doc-invariant registry runner, whose current-tree
+# conformance and mutation-teeth legs both carry their own unguarded steps in
+# .github/workflows/contract-suites.yml (issue #122). Adding a member is one
+# line here plus its own self-test arms, per the header's convention.
+# ---------------------------------------------------------------------------
+denied_nonsuite_targets() {
+  printf '%s\n' 'tests/run-doc-invariants.sh'
+}
 
 MODE="default"
 ROOT=""
@@ -142,7 +173,7 @@ ROOT="${ROOT:-$DEFAULT_ROOT}"
 # never enters the judgement.
 # ---------------------------------------------------------------------------
 analyze_file() {
-  awk -v FILEPATH="$1" -v SUBJECTS="$2" "$INVSCAN_AWK_LIB"'
+  awk -v FILEPATH="$1" -v SUBJECTS="$2" -v NONSUITE="$(denied_nonsuite_targets | tr '\n' ' ')" "$INVSCAN_AWK_LIB"'
     BEGIN {
       while ((getline s < SUBJECTS) > 0) {
         if (s == "") continue
@@ -150,6 +181,12 @@ analyze_file() {
         b = s; sub(/^.*\//, "", b); subjbase[b] = 1
       }
       close(SUBJECTS)
+      nn = split(NONSUITE, nsarr, /[[:space:]]+/)
+      for (k = 1; k <= nn; k++) {
+        if (nsarr[k] == "") continue
+        nonsuite[nsarr[k]] = 1
+        b = nsarr[k]; sub(/^.*\//, "", b); nonsuitebase[b] = 1
+      }
     }
     { lines[NR] = $0 }
 
@@ -289,10 +326,13 @@ analyze_file() {
           if (root in scratch) continue
         }
         if (match(val, /tests\/[A-Za-z0-9_.\/-]+\.(sh|bats)/)) {
-          if (substr(val, RSTART, RLENGTH) in subj) named[v] = 1
+          lit = substr(val, RSTART, RLENGTH)
+          if (lit in subj) named[v] = 1
+          if (lit in nonsuite) named_nonsuite[v] = 1
         } else if (match(val, /\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?\/[A-Za-z0-9_.-]+\.(sh|bats)/)) {
           tok = substr(val, RSTART, RLENGTH); sub(/^.*\//, "", tok)
           if (tok in subjbase) named[v] = 1
+          if (tok in nonsuitebase) named_nonsuite[v] = 1
         }
       }
 
@@ -355,6 +395,17 @@ analyze_file() {
         if ((v in named) && !prefixed) {
           printf "%s:%d: D5: invocation of $%s, a variable this file assigns a literal enumerated-suite path\n", FILEPATH, i, v
           continue
+        }
+        # D6 — a BARE invocation of a denied non-suite target. What follows the
+        # argument decides: a further word is an argument (the runner driven as
+        # a subject against a fixture, admitted); a redirection or a command-
+        # substitution terminator is not.
+        if ((v in named_nonsuite) && !prefixed) {
+          after = rest; sub(/^[^[:space:]]+/, "", after); sub(/^[[:space:]]+/, "", after)
+          if (after == "" || after ~ /^([0-9]*[<>]|[)|;&#])/) {
+            printf "%s:%d: D6: bare invocation of $%s, a variable this file assigns a denied non-suite target (whole-subject re-execution)\n", FILEPATH, i, v
+            continue
+          }
         }
       }
     }
@@ -560,6 +611,32 @@ bash "$SCRIPT" --self-test
 SH
   expect "I2: an indirect product-script drive is the normal shape and is not flagged" test-fixture-i2.sh ignored
 
+  # --- D6: bare invocation of a denied non-suite target (issue #122) -------
+  # The callee is planted so the fixture tree is realistic; the row keys on the
+  # denied_nonsuite_targets set, not on the file being present.
+  echo 'true' > "$dir/tests/run-doc-invariants.sh"
+  cat > "$dir/tests/test-fixture-d6.sh" <<'SH'
+#!/usr/bin/env bash
+REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
+OUT="$(cd "$PROJECT_ROOT" && bash "$REGISTRY_RUNNER" 2>&1)"
+SH
+  expect "D6: a bare invocation of the registry runner through a variable is denied" test-fixture-d6.sh denied
+
+  # --- D6 non-firing: an ARGUMENT means the runner is the subject ----------
+  cat > "$dir/tests/test-fixture-d6-nf-selftest.sh" <<'SH'
+#!/usr/bin/env bash
+RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
+OUT="$(bash "$RUNNER" --self-test 2>&1)"
+SH
+  expect "D6 non-firing: an invocation carrying --self-test drives the runner as a subject and stays admitted" test-fixture-d6-nf-selftest.sh ignored
+
+  cat > "$dir/tests/test-fixture-d6-nf-fixture.sh" <<'SH'
+#!/usr/bin/env bash
+RUNNER="$SCRIPT_DIR/run-doc-invariants.sh"
+OUT="$(bash "$RUNNER" "$FIXTURE_REGISTRY" 2>&1)"
+SH
+  expect "D6 non-firing: an invocation carrying a fixture registry path drives the runner as a subject and stays admitted" test-fixture-d6-nf-fixture.sh ignored
+
   # --- SUBJECT-SET leg: the enumeration is not vacuous --------------------
   mkdir -p "$dir/tests/plugin"
   echo 'true' > "$dir/tests/plugin/verify-fixture-subject.sh"
@@ -575,10 +652,10 @@ SH
 
   rm -rf "$dir"
   if [ "$fails" -ne 0 ]; then
-    echo "check-suite-leaf: --self-test FAILED ($fails of 17 fixture classes misclassified)"
+    echo "check-suite-leaf: --self-test FAILED ($fails of 20 fixture classes misclassified)"
     rc=1
   else
-    echo "check-suite-leaf: --self-test OK (17/17 fixture classes classified correctly)"
+    echo "check-suite-leaf: --self-test OK (20/20 fixture classes classified correctly)"
   fi
   return $rc
 }

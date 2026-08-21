@@ -1201,11 +1201,43 @@ suites that drive the runner **as their subject against a fixture** — `--self-
 fixture registry path, a `--root` override — which is what `tests/test-run-doc-invariants.sh`
 legitimately does.
 
-**Not removed, and why — `tests/test-issue-51-teammate-removal-verdict.sh` `O2(a)`.** That
-suite carries the same shape (`bash "$RUNNER"`, no argument, feeding `O2(a)-exit0` and
-`O2(a)-0failed`), and the same carrier now holds it. It is nonetheless **left in place this
-cycle**: the file is outside this cycle's declared change surface
-(`tests/test-issue-122-retirement-attribution.sh`'s `allow_list`, and § 5 of the
-verification design), and §17.1 records those two arms as retained under
-`76-RETAIN-CI-REGISTRATION`. Removing it is a follow-on disposition, recorded here rather
-than taken silently.
+| `O2(a)-exit0`, `O2(a)-0failed` (with `O2_OUT`, `O2_RC`, `RUNNER` and the header enumeration entry) | `tests/test-issue-51-teammate-removal-verdict.sh` | bare runner step |
+
+`tests/test-issue-51-teammate-removal-verdict.sh` is **not** in this cycle's declared
+change surface (the `allow_list` in `tests/test-issue-122-retirement-attribution.sh`, and
+§ 5 of the verification design), and §17.1 records those two arms as retained under
+`76-RETAIN-CI-REGISTRATION`. It is edited here regardless, because the leaf-rule widening
+of § 19.3 makes its bare invocation a **denied** shape: leaving it would land a gating
+standing lint red on the tree it is being added to. The surface deviation is recorded in
+`.autoflow/issue-122-green-blocker.md`. The suite's registry-**data** predicates (`O2(b)`,
+`O2(d)` and the direction/contiguity meta guards) read the registry file with `jq` and are
+untouched.
+
+### 19.3 Leaf-rule widening — the registry runner as a denied invocation target
+
+`scripts/test/check-suite-leaf.sh` is the standing mechanism for the re-execution class, and
+its header stated the exact reason it did not reach the arms of § 19.2: its variable-form
+denied rows key on `suite_enumerate`'s set, and `tests/run-doc-invariants.sh` is a declared
+exclusion from that set, so a suite re-running the whole registry read as an ordinary
+product-script drive (row I2).
+
+One named set is widened. `denied_nonsuite_targets` — a new, single-definition-site list
+inside the lint — holds paths outside the enumeration whose **bare** invocation from a suite
+is whole-subject re-execution anyway; its one member is the registry runner. Row **D6**
+denies it, and three self-test fixtures ship with it per the header's own convention: a
+positive (bare invocation through a variable → denied) and two negatives (`--self-test`, and
+a fixture registry path → admitted). The denial is narrowed to a bare run because an
+invocation carrying **any** argument is driving the runner as a *subject* against a fixture,
+which is what `tests/test-run-doc-invariants.sh` legitimately does. A trailing redirection or
+command-substitution terminator is not an argument.
+
+The literal form needs no new row: row D1 already denies every command-position literal
+`tests/` path, enumerated or not.
+
+**Consequential edit, recorded rather than absorbed.** `tests/test-issue-103-suite-leaf.sh`
+carried an arm pinning the *old* boundary — "a variable holding an excluded path
+(`tests/run-doc-invariants.sh`), invoked via `bash \"$v\"`, stays undetected". D6 makes that
+claim false by design. The arm is re-pointed at `tests/lib/fixture-helper.sh`, an excluded
+subject that is outside every denied row, so it keeps pinning exactly the property it was
+written for. Its suite is likewise outside this cycle's declared change surface; the
+deviation is recorded in `.autoflow/issue-122-green-blocker.md`.
