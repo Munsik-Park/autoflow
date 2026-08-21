@@ -38,7 +38,6 @@ PLUGIN_JSON="$PROJECT_ROOT/plugin/autoflow/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$PROJECT_ROOT/.claude-plugin/marketplace.json"
 SUITE_56="$PROJECT_ROOT/tests/test-issue-56-carry-evidence-discipline.sh"
 SUITE_59="$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 # EXPECTED version for this cycle (0.1.7 -> 0.1.8, issue #88 retirement + version bump).
 EXPECTED_VERSION="0.1.8"

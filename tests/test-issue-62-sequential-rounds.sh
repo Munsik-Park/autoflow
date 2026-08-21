@@ -50,7 +50,6 @@ RUN_MJS="$PROJECT_ROOT/test/workflows/run.mjs"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 # B11: verify-cause-branch.js sha256 must stay unchanged (out of this cycle's scope).
 # B11 update (issue #97): #97 added the ledger entry-ID allocation prompt to
@@ -123,16 +122,10 @@ assert_true "AC-62-5b: the single parallel( site is the Draft-round 'const [devD
 # =============================================================================
 echo ""
 echo "=== AC-62-18 (fence, load-bearing) — permanent registry rows survive, none deleted ==="
-
-REGISTRY_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
-# Scoped like AC-59-16b: this cycle's OWN new rows (62-AC*) are expected to
-# stay RED until GREEN lands the mechanism they pin — that is a separate,
-# already-covered discriminator (the registry rows above / this suite's own
-# AC-62-15/16/28 counterparts). AC-62-18 is about every OTHER (pre-existing)
-# permanent invariant not regressing.
-PRE_EXISTING_FAILS="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL: ' | awk '{print $2}' | grep -cv '^62-AC' || true)"
-assert_true "AC-62-18a: every pre-existing (non-62-AC) registry row still passes (got: $PRE_EXISTING_FAILS failed)" \
-  "[ \"$PRE_EXISTING_FAILS\" -eq 0 ]"
+# The re-run half (AC-62-18a: no pre-existing registry row FAILs) retired in
+# issue #122 — carried by the bare `run: bash tests/run-doc-invariants.sh` step
+# in contract-suites.yml. What survives is a state predicate over the registry
+# FILE, which re-executes nothing.
 
 CUR_ROW_COUNT="$(jq '.invariants | length' "$REGISTRY")"
 COMMITTED_ROW_COUNT="$(cd "$PROJECT_ROOT" && git show HEAD:tests/fixtures/doc-invariants.json 2>/dev/null | jq '.invariants | length' 2>/dev/null || echo 0)"

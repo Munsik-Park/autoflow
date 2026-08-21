@@ -1164,3 +1164,48 @@ edited:
 |---|---|
 | `tests/test-issue-62-sequential-rounds.sh` `AC-62-39` | the arm survives (it pins that the manifest carries zero `tests/…` source rows); only its **label** cited the two retired fences as the reason. Relabelled in this cycle to state the property directly — "editing a test file owes no manifest regeneration" — so the arm no longer depends on identifiers the tree has retired |
 | `tests/manual/issue-56-manual-scenarios.md` M1's coverage-boundary paragraph | left as written. It is a closed cycle's manual-scenario record of why that contact point needed no automated oracle *at that time*; rewriting it would revise a historical record, the same objection §17.2 states for §13's carrier rows. The citation resolves through this table |
+
+### 19.2 Registry-runner re-runs — the suite-side invocations
+
+Two properties were tangled in these arms, and only one of them was ever carried.
+
+- *No entry was silently skipped* — **already carried** before this cycle.
+  `bash tests/run-doc-invariants.sh --self-test` runs as an unguarded step in
+  `contract-suites.yml`, and its denominator gate fails loud, naming both numbers, when it
+  evaluated fewer entries than the registry holds. That is exactly what the count-scoped
+  arms were written for.
+- *The invariants hold right now* — **not carried** before this cycle. `--self-test`
+  evaluates every predicate against a **mutated copy** of the entry's target file and
+  requires FAIL; it certifies teeth, never current-tree conformance. This cycle adds the
+  named carrier: a bare, `if:`-less `run: bash tests/run-doc-invariants.sh` step in
+  `contract-suites.yml`, whose hosting `paths:` block is now a superset of the registry's
+  target-file set — enforced against future registry appends by the
+  `AC-registry-carrier-paths-coverage` leg in `tests/test-workflow-trigger-conformance.sh`.
+
+Carrier column below names whichever of the two holds the removed arm's property.
+
+| Removed arm | Suite | Carrier |
+|---|---|---|
+| `AC-27-22a`, `AC-27-22b` (with `REGISTRY_OUT`, `PRE_EXISTING_FAILS`, `PRE_EXISTING_PASSES`, `PRE_EXISTING_TOTAL` and `REGISTRY_RUNNER`) | `tests/test-issue-27-composition-oracle.sh` | bare runner step (conformance) + `--self-test` denominator gate (no-silent-skip) |
+| `AC-59-16b` (with the same variable set and `REGISTRY_RUNNER`) | `tests/test-issue-59-adoption-evidence-discipline.sh` | same |
+| `AC-59-11c-runner` (removed with the `AC-59-11c` block in § 19.4) | `tests/test-issue-59-adoption-evidence-discipline.sh` | bare runner step |
+| `AC-62-18a` (with `REGISTRY_OUT`, `PRE_EXISTING_FAILS` and `REGISTRY_RUNNER`) | `tests/test-issue-62-sequential-rounds.sh` | bare runner step. `AC-62-18b` **stays** — a state predicate over the registry *file* (row count non-decreasing against `git show HEAD:`), which re-executes nothing |
+| `AC-69-REGISTRY-exit`, `AC-69-REGISTRY-no-regression` (with `REGISTRY_OUT`, `REGISTRY_EXIT`, `NON_69_FAIL` and `REGISTRY_RUNNER`) | `tests/test-issue-69-verification-depth.sh` | same |
+| `AC-71-REGISTRY-oracle`, `AC-71-REGISTRY-oracle-no-regression` (with `REGISTRY_OUT`, `REGISTRY_EXIT`, `NON_71_FAIL` and `REGISTRY_RUNNER`) | `tests/test-issue-71-digest-removal.sh` | same |
+| `registry-runner-green-a/b/c` (with `RUNNER_OUT`, `RUNNER_RC`, `FOREIGN_FAILS`, `RUNNER` and the header enumeration entry) | `tests/test-issue-52-peer-facilitator-premise.sh` | same |
+| the dead `REGISTRY_RUNNER` assignment — assigned, never invoked | `tests/test-issue-67-deliberation-record.sh` | nothing to carry; it asserted nothing |
+
+**Retained, not removed.** Every arm that reads the registry *file* with `jq` without
+running the runner stays: those are state predicates over data, not re-execution. So do the
+suites that drive the runner **as their subject against a fixture** — `--self-test`, a
+fixture registry path, a `--root` override — which is what `tests/test-run-doc-invariants.sh`
+legitimately does.
+
+**Not removed, and why — `tests/test-issue-51-teammate-removal-verdict.sh` `O2(a)`.** That
+suite carries the same shape (`bash "$RUNNER"`, no argument, feeding `O2(a)-exit0` and
+`O2(a)-0failed`), and the same carrier now holds it. It is nonetheless **left in place this
+cycle**: the file is outside this cycle's declared change surface
+(`tests/test-issue-122-retirement-attribution.sh`'s `allow_list`, and § 5 of the
+verification design), and §17.1 records those two arms as retained under
+`76-RETAIN-CI-REGISTRATION`. Removing it is a follow-on disposition, recorded here rather
+than taken silently.

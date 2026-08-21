@@ -168,7 +168,6 @@ WORKFLOW_JS="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -385,13 +384,6 @@ echo "  (info) AC-59-16a: setup/manifest.json artifact count is currently $ARTIF
 AC_59_16A_ROW_COUNT="$(jq -r '[.artifacts[] | select(.source == ".claude/workflows/architect-deliberation.js")] | length' "$MANIFEST")"
 assert_true "AC-59-16a: setup/manifest.json carries exactly one artifact row for architect-deliberation.js (got: $AC_59_16A_ROW_COUNT) (drift-immune: named-source state predicate, not a global count)" \
   "[ \"$AC_59_16A_ROW_COUNT\" -eq 1 ]"
-
-REGISTRY_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
-PRE_EXISTING_FAILS="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"
-PRE_EXISTING_PASSES="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  PASS: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"
-PRE_EXISTING_TOTAL="$(jq '[.invariants[] | select(.id | startswith("27-AC") | not)] | length' "$REGISTRY")"
-assert_true "AC-59-16b: derived pre-existing (non-27-AC) registry PASS count == every pre-existing (non-27-AC) entry (got: $PRE_EXISTING_PASSES of $PRE_EXISTING_TOTAL, $PRE_EXISTING_FAILS failed)" \
-  "[ \"$PRE_EXISTING_PASSES\" -eq \"$PRE_EXISTING_TOTAL\" ] && [ \"$PRE_EXISTING_FAILS\" -eq 0 ]"
 
 
 # =============================================================================

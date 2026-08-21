@@ -41,7 +41,6 @@ MAINTAINED_DOCS="$PROJECT_ROOT/docs/maintained-docs.md"
 INDEX_MD="$PROJECT_ROOT/docs/INDEX.md"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -145,18 +144,6 @@ VERIFICATION_DEPTH_SECTION="$(awk '/^#### Verification depth/{f=1} f&&/^#### Com
 CAP_PATTERN='\b(at most|no more than|maximum of|up to) (one|two|three|four|five|six|seven|eight|nine|ten|[0-9]+) (layers?|files?|lines?)\b'
 assert_true "AC-69-NO-QUANTITY-CAP: the Verification depth section introduces no digit- or word-form layer/file/line cap" \
   '! printf "%s" "$VERIFICATION_DEPTH_SECTION" | grep -qE "$CAP_PATTERN"'
-
-# =============================================================================
-echo ""
-echo "=== AC:registry-no-regression (O:registry) — the doc-invariant registry runner passes with the new #69 entries added and no pre-existing entry regressing ==="
-
-REGISTRY_OUT="$(cd "$PROJECT_ROOT" && bash "$REGISTRY_RUNNER" 2>&1)"
-REGISTRY_EXIT=$?
-NON_69_FAIL="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL:' | grep -vc '^  FAIL: 69-' || true)"
-assert_true "AC-69-REGISTRY-exit: tests/run-doc-invariants.sh exits 0 (KNOWN RED mid-cycle — the new 69-AC-* entries FAIL until GREEN authors the shipped clause text)" \
-  "[ $REGISTRY_EXIT -eq 0 ]"
-assert_true "AC-69-REGISTRY-no-regression: no PRE-EXISTING (non-69-*) registry entry regresses (got: $NON_69_FAIL foreign FAIL(s))" \
-  "[ \"$NON_69_FAIL\" -eq 0 ]"
 
 # =============================================================================
 echo ""

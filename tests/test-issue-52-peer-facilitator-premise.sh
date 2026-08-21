@@ -35,9 +35,6 @@
 #                          docs/doc-invariant-registry.md §12.1.
 #   ci-wired             — both new files registered as paths: entries in the
 #                          pull_request AND push blocks, plus a run: step
-#   registry-runner-green — composition oracle: real tests/run-doc-invariants.sh,
-#                          id-set-scoped fence (no entry outside 52-* FAILs) +
-#                          overall exit 0 required only on the post-edit tree
 #
 # RED expectation (this commit — the three claim-site docs are unedited, the
 # manual-scenario Observation-record fields carry unfilled placeholder VALUES,
@@ -61,7 +58,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MANUAL_REL="tests/manual/issue-52-manual-scenarios.md"
 MANUAL="$PROJECT_ROOT/$MANUAL_REL"
 SUITE_REL="tests/test-issue-52-peer-facilitator-premise.sh"
-RUNNER="$SCRIPT_DIR/run-doc-invariants.sh"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 
 
@@ -206,25 +202,6 @@ else
   echo "  BLOCK: remaining ci-wired arms unmeasurable (workflow file missing) — counted FAIL, never skipped"
   TESTS=$((TESTS + 5)); FAIL=$((FAIL + 5))
 fi
-
-# =============================================================================
-# registry-runner-green — composition oracle (verification design §5,
-# registry-runner-clean; id-set-scoped fence, overall exit 0 post-edit only).
-# =============================================================================
-echo ""
-echo "=== registry-runner-green (composition oracle: real tests/run-doc-invariants.sh) ==="
-
-RUNNER_OUT="$(bash "$RUNNER" 2>&1)"
-RUNNER_RC=$?
-FOREIGN_FAILS="$(printf '%s\n' "$RUNNER_OUT" | grep '^  FAIL: ' | grep -vc '^  FAIL: 52-' || true)"
-[ -z "$FOREIGN_FAILS" ] && FOREIGN_FAILS=0
-
-assert_true "registry-runner-green-a: no registry entry OUTSIDE this cycle's 52-* id set FAILs (fence — true from the outset) (got: $FOREIGN_FAILS)" \
-  "[ '$FOREIGN_FAILS' -eq 0 ]"
-assert_true "registry-runner-green-b: the runner reaches its results line rather than aborting on a dangling/ambiguous-anchor BLOCK" \
-  "printf '%s\n' \"\$RUNNER_OUT\" | grep -qE '^Results:'"
-assert_true "registry-runner-green-c: the real registry runner exits 0 (discriminator — required only on the post-edit tree)" \
-  "[ '$RUNNER_RC' -eq 0 ]"
 
 
 echo "=============================="

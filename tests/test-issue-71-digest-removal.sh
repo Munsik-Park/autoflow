@@ -67,7 +67,6 @@ MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 GEN_MANIFEST="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
 ANALYZER_HOST="$PROJECT_ROOT/.claude/agents/autoflow-analyzer.md"
 ANALYZER_PLUGIN="$PROJECT_ROOT/plugin/autoflow/agents/autoflow-analyzer.md"
@@ -502,13 +501,6 @@ fi
 echo ""
 echo "--- both pins driven through the real oracles ---"
 
-REGISTRY_OUT="$(cd "$PROJECT_ROOT" && bash "$REGISTRY_RUNNER" 2>&1)"
-REGISTRY_EXIT=$?
-NON_71_FAIL="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL:' | grep -v '42-AC1-anon-handoff' | wc -l | tr -d ' ')"
-assert_true "AC-71-REGISTRY-oracle: tests/run-doc-invariants.sh exits 0 (KNOWN RED mid-cycle until GREEN narrows the literal)" \
-  "[ $REGISTRY_EXIT -eq 0 ]"
-assert_true "AC-71-REGISTRY-oracle-no-regression: no non-42-AC1-anon-handoff registry entry regresses (foreign FAILs: $NON_71_FAIL)" \
-  "[ '$NON_71_FAIL' -eq 0 ]"
 
 # AC-71-DUALPIN-oracle's execution of tests/test-issue-799-inert-cleanup.sh is
 # retired (issue #103): that suite carries its own registered `run:` step in
