@@ -599,7 +599,15 @@ const ENTRY_ID_RULE = ` Head each appended entry \`## <ID> — <title> (cycle <C
 const ledgerPrompt = converged
   ? `Append (do NOT rewrite or delete) to ${ledger} the settled ARCHITECT decisions. For each agreed design decision, append one entry: the decision (one line); its grounds (cite the verified dimensions ${JSON.stringify(acceptGrounds)} and the artifact path:line in ${feature} or ${verif}); authority "ARCHITECT mutual ACCEPT"; cycle/phase "ARCHITECT".${rejectedClause} If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only — never edit existing entries.${ENTRY_ID_RULE} Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
   : `Append (do NOT rewrite or delete) to ${ledger} EXACTLY ONE outcome entry — do NOT record any design decision as settled: decision "ARCHITECT did not converge — ${escalationReason}"; grounds — ${escalateGrounds}; authority "ARCHITECT non-convergence"; cycle/phase "ARCHITECT". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only.${ENTRY_ID_RULE} Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
-await agent(ledgerPrompt, { label: 'ledger', phase: 'Ledger', model: 'opus' })
+// Terminal post-verdict call (issue #127): the verdict is already settled before this runs, so a
+// failed ledger append degrades to a null acknowledgement instead of propagating and destroying a
+// result the deliberation already earned. This call is also the EARLIER of the two terminal calls,
+// so a propagated rejection here would additionally prevent the Register phase below from ever
+// writing. The full `Promise.resolve().then(...)` form — not a bare `.catch` on the call — is what
+// also converts a SYNCHRONOUS throw at the runtime boundary into the rejection `.catch` absorbs.
+await Promise.resolve()
+  .then(() => agent(ledgerPrompt, { label: 'ledger', phase: 'Ledger', model: 'opus' }))
+  .catch(() => null)
 
 // Terminal Register phase (issue #127): persist the register so a later resume can re-enter from
 // it instead of cold-restarting. It runs on BOTH verdicts, and writing on the CONVERGED branch is
@@ -627,12 +635,16 @@ if (registerHeld) {
     // verdict as current, and a verdict from a prior invocation is not.
     lastResponses: { dev: lastDev, test: lastTest },
   }, null, 2)
-  const registerAck = await agent(
-    `You are a transcription channel, not an author. Write the text between the two fence markers below to ${registerPath}, byte for byte: no reformatting, no re-indentation, no added or dropped fields, no summarizing, no commentary in the file. Create the file if it does not exist and overwrite it if it does. Write exactly the bytes between the fences and nothing else, and do not write the fence markers themselves. Then return a one-line confirmation.\n${REGISTER_FENCE_START}\n${registerPayload}\n${REGISTER_FENCE_END}\nRun every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-    { label: 'register-write', phase: 'Register', model: 'sonnet' },
-  )
-  // A failed write does not alter the already-decided verdict — the consequence lands on the NEXT
-  // resume, which then fails loudly at its own load guard rather than proceeding on stale state.
+  const registerAck = await Promise.resolve()
+    .then(() => agent(
+      `You are a transcription channel, not an author. Write the text between the two fence markers below to ${registerPath}, byte for byte: no reformatting, no re-indentation, no added or dropped fields, no summarizing, no commentary in the file. Create the file if it does not exist and overwrite it if it does. Write exactly the bytes between the fences and nothing else, and do not write the fence markers themselves. Then return a one-line confirmation.\n${REGISTER_FENCE_START}\n${registerPayload}\n${REGISTER_FENCE_END}\nRun every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      { label: 'register-write', phase: 'Register', model: 'sonnet' },
+    ))
+    .catch(() => null)
+  // A failed write does not alter the already-decided verdict: it is absorbed to a null
+  // acknowledgement and reported as `registerWritten: false`. The consequence lands on the NEXT
+  // resume, which re-enters from the last successfully persisted state — the register an earlier
+  // run left behind when one exists, and a cold restart when none does.
   registerWritten = !!registerAck
 }
 
