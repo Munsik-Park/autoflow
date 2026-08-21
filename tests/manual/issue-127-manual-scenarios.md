@@ -65,3 +65,66 @@ still runs despite `resume: true`.
 **Status:** delegated to user (operator-run; requires a live Claude Code
 session with Dynamic workflows enabled and a real prior ESCALATE + register
 artifact — not executable from this repository's automated test tree).
+
+---
+
+## M2 — runtime-reject-capability (Tier 3, environment-dependent)
+
+**Source AC:** the `runtime-reject-capability` row
+(`.autoflow/issue-127-verification-design.md:51`, "Whether the hosted
+Workflow runtime's injected `agent()` ever rejects or throws") — the cycle-2
+row for the terminal post-verdict call rejection-absorption fix. Named again
+under Verification depth determination's *Live runtime* layer
+(`.autoflow/issue-127-verification-design.md:158`, "Whether the hosted
+injection ever produces the failure the guard absorbs. Delegated, with its
+reason stated in its criterion row; no automated layer can reach it").
+
+**Why this is not automatable from this repository:** `test/workflows/run.mjs`
+supplies its own mock `agent`, so the harness can only demonstrate that the
+script *absorbs* an injected rejection or synchronous throw — it can never
+demonstrate that the real hosted runtime's `agent()` injection actually
+produces one. This is a system-boundary property of the Workflow runtime,
+not a property of `architect-deliberation.js`, and the repository has no
+handle on that runtime to observe it. Per the source row, this gates
+nothing: the absorption guard is owed by the return contract's own sentence
+(`docs/teammate-contracts.md` > Facilitator > Return Contract) regardless of
+whether the runtime ever exercises it, so a negative observation here would
+not retire the fix.
+
+**Operator procedure:** On a session satisfying the Workflow prerequisites
+(`docs/teammate-contracts.md` > Facilitator > Realization > Invocation /
+version / config — Claude Code v2.1.154+, Dynamic workflows enabled), run a
+live ARCHITECT deliberation to a decided verdict and arrange for its
+register-write sub-agent call to fail — e.g. point `registerPath` at an
+unwritable location (a read-only directory, or a path under a directory that
+does not exist and cannot be created) so the sub-agent's write attempt fails
+and its `agent()` call rejects or throws back into the workflow. Let the
+workflow run to completion and record:
+
+1. whether `Workflow({ name: "architect-deliberation", args: { issue: "<N>" } })`
+   still **resolves** (does not reject the whole workflow invocation);
+2. the returned `verdict` — must equal the value the deliberation rounds
+   already decided (`CONVERGED` or `ESCALATE`), unaltered by the failed
+   write;
+3. the returned `registerWritten` field — must be `false`;
+4. the append-only ledger at the run's `ledger` path — must carry the normal
+   settled-decision or non-convergence entry for this run, i.e. the terminal
+   Ledger phase's own call was unaffected by the register-write failure
+   (a distinct call, upstream of Register).
+
+**Pass:** the workflow resolves with the already-decided `verdict` intact,
+`registerWritten: false`, and the ledger entry present and normal — i.e. the
+real hosted runtime's rejection/throw (whatever form it actually takes) is
+absorbed by the deferred wrap the same way the harness's mock rejection and
+mock synchronous throw are absorbed in `test/workflows/run.mjs`
+(`write-reject-absorbed`, `write-sync-throw-absorbed`).
+
+**Fail:** the workflow invocation itself rejects, the returned `verdict`
+differs from the one the rounds decided, or the ledger entry is missing or
+malformed — any of which would mean the real runtime's failure mode reaches
+this script in a shape the deferred-wrap guard does not actually absorb.
+
+**Status:** delegated to user (operator-run; requires a live Claude Code
+session with Dynamic workflows enabled and a way to force a real
+register-write sub-agent failure — not executable from this repository's
+automated test tree; per the source row, gates nothing in this cycle).
