@@ -625,9 +625,9 @@ SUITE_51_120_TEMP_SENTENCE="$(grep -B3 -F 'TEMPORARY discriminators here' "$SUIT
 SUITE_51_120_PERM_BLOCK="$(doc_section_body "$SUITE_51_120" 'PERMANENTLY in this file' '^# This file once carried')"
 
 assert_true "120 #51-AC12-struck: the TEMPORARY-discriminator sentence (if any remains) no longer names AC12 as a bounded token" \
-  "! printf '%s\n' \"\$SUITE_51_120_TEMP_SENTENCE\" | grep -qE '(^|[^0-9A-Za-z-])AC12([^0-9A-Za-z-]|\$)'"
+  "! grep -qE '(^|[^0-9A-Za-z-])AC12([^0-9A-Za-z-]|\$)' <<<\"\$SUITE_51_120_TEMP_SENTENCE\""
 assert_true "120 #51-AC12-retained-permanent (guard, PASS pre+post): the PERMANENT list still names AC12 as CI wiring" \
-  "printf '%s\n' \"\$SUITE_51_120_PERM_BLOCK\" | grep -qE 'AC12.*CI wiring|CI wiring.*AC12'"
+  "grep -qE 'AC12.*CI wiring|CI wiring.*AC12' <<<\"\$SUITE_51_120_PERM_BLOCK\""
 
 # ---------------------------------------------------------------------------
 # provenance section — docs/doc-invariant-registry.md carries a #120 section
@@ -636,20 +636,20 @@ assert_true "120 #51-AC12-retained-permanent (guard, PASS pre+post): the PERMANE
 # disposition-class separability) follow.
 # ---------------------------------------------------------------------------
 DOC_REGISTRY_120="$PROJECT_ROOT/docs/doc-invariant-registry.md"
-SEC_120_BODY="$(doc_section_body "$DOC_REGISTRY_120" '^## [0-9]+\. .*\(issue #120\)' '^## [0-9]+\.')"
+SEC_120_BODY="$(doc_section_body "$DOC_REGISTRY_120" '^## [0-9]+\\. .*\\(issue #120\\)' '^## [0-9]+\\.')"
 
 assert_true "120 provenance-section-exists: docs/doc-invariant-registry.md carries a migration-provenance section for issue #120" \
   "[ -n \"\$SEC_120_BODY\" ]"
 
 REGISTRY_IDS_120="$(jq -r '.invariants[].id' "$PROJECT_ROOT/tests/fixtures/doc-invariants.json" 2>/dev/null || true)"
-CITED_120_CARRIER_IDS="$(printf '%s' "$SEC_120_BODY" | grep -oE '\`120-[A-Za-z0-9._-]+\`' | tr -d '\`' | sort -u || true)"
+CITED_120_CARRIER_IDS="$(printf '%s' "$SEC_120_BODY" | grep -oE '`120-[A-Za-z0-9._-]+`' | tr -d '`' | sort -u || true)"
 
 assert_true "120 provenance-conformance (non-vacuous): the #120 section cites at least one backtick-quoted 120-* carrier id (this cycle's migrated arms have carriers)" \
   "[ -n \"\$CITED_120_CARRIER_IDS\" ]"
 
 UNRESOLVED_120_IDS=""
 for id in $CITED_120_CARRIER_IDS; do
-  if ! printf '%s\n' "$REGISTRY_IDS_120" | grep -qxF "$id"; then
+  if ! grep -qxF "$id" <<<"$REGISTRY_IDS_120"; then
     UNRESOLVED_120_IDS="$UNRESOLVED_120_IDS $id"
   fi
 done

@@ -368,17 +368,17 @@ arm_extract_removed_keys_selftest() {
 SELFTEST_KEYS="$(arm_extract_removed_keys_selftest "$SELFTEST_DIR/fixture.sh" "$SELFTEST_BASE")"
 
 assert_true "extractor-self-test: statically written AC-71-CITATION arms get occurrence ordinals #1/#2/#3" \
-  "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-71-CITATION\`#1' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-71-CITATION\`#2' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-71-CITATION\`#3'"
+  "grep -qF 'fixture.sh \`AC-71-CITATION\`#1' <<<\"\$SELFTEST_KEYS\" && grep -qF 'fixture.sh \`AC-71-CITATION\`#2' <<<\"\$SELFTEST_KEYS\" && grep -qF 'fixture.sh \`AC-71-CITATION\`#3' <<<\"\$SELFTEST_KEYS\""
 assert_true "extractor-self-test: loop-generated arm carries the array-identity source token" \
-  "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-assertless-header-removed(GROUP_D_ADR0016:AC5)\`'"
+  "grep -qF 'fixture.sh \`AC-assertless-header-removed(GROUP_D_ADR0016:AC5)\`' <<<\"\$SELFTEST_KEYS\""
 assert_true "extractor-self-test: two assert_* templates in one loop body under one <AC-id> get template ordinals #1/#2, per element" \
-  "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC2(inline(Q1,Q2,Q3):Q2)\`#1' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC2(inline(Q1,Q2,Q3):Q2)\`#2'"
+  "grep -qF 'fixture.sh \`AC2(inline(Q1,Q2,Q3):Q2)\`#1' <<<\"\$SELFTEST_KEYS\" && grep -qF 'fixture.sh \`AC2(inline(Q1,Q2,Q3):Q2)\`#2' <<<\"\$SELFTEST_KEYS\""
 assert_true "extractor-self-test: an inline-literal-list loop carries the inline(...) source token" \
-  "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-header-scope-list-consistent(inline(AC-961-5,AC-961-7):AC-961-7)\`'"
+  "grep -qF 'fixture.sh \`AC-header-scope-list-consistent(inline(AC-961-5,AC-961-7):AC-961-7)\`' <<<\"\$SELFTEST_KEYS\""
 assert_true "extractor-self-test: a backslash-continued multi-line for-header (tests/test-issue-51-teammate-removal-verdict.sh:35-36's real shape) still yields one key per element, including the element spelled on the continuation line" \
-  "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-CONT(inline(A1,A2,A3):A1)\`' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-CONT(inline(A1,A2,A3):A3)\`'"
+  "grep -qF 'fixture.sh \`AC-CONT(inline(A1,A2,A3):A1)\`' <<<\"\$SELFTEST_KEYS\" && grep -qF 'fixture.sh \`AC-CONT(inline(A1,A2,A3):A3)\`' <<<\"\$SELFTEST_KEYS\""
 assert_true "extractor-self-test: a multi-line array with more than one quoted element on a single body line (tests/test-issue-51-teammate-removal-verdict.sh's HEADINGS_17 real shape) yields one key per element, not one garbled key per line" \
-  "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M1)\`' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M2)\`' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M4)\`' && ! printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'M1\" \"M2'"
+  "grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M1)\`' <<<\"\$SELFTEST_KEYS\" && grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M2)\`' <<<\"\$SELFTEST_KEYS\" && grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M4)\`' <<<\"\$SELFTEST_KEYS\" && ! grep -qF 'M1\" \"M2' <<<\"\$SELFTEST_KEYS\""
 assert_true "extractor-self-test (non-vacuous count): the planted removal yields at least 21 distinct keys (3 static + 3 loop-A + 6 loop-B + 2 loop-C + 3 loop-D continuation + 4 loop-E multi-line-array)" \
   "[ \"\$(printf '%s\n' \"\$SELFTEST_KEYS\" | grep -c '.')\" -ge 21 ]"
 
@@ -429,9 +429,9 @@ if on_issue_branch; then
         # §5), OR its <AC-id> resolves as a registry entry id whose
         # origin_issue is 120 (migrated shape).
         id_only="$(printf '%s' "$key_line" | sed -E 's/^[^`]*`([^`]*)`.*/\1/')"
-        if printf '%s\n' "$SEC_120_RECON_BODY" | grep -qF -- "$key_line"; then
+        if grep -qF -- "$key_line" <<<"$SEC_120_RECON_BODY"; then
           :
-        elif printf '%s\n' "$REGISTRY_IDS_RECON" | grep -qxF "120-${id_only}"; then
+        elif grep -qxF "120-${id_only}" <<<"$REGISTRY_IDS_RECON"; then
           :
         else
           RECON_MISSING="${RECON_MISSING}${key_line}\n"
