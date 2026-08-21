@@ -1405,6 +1405,81 @@ SH
   fi
   rm -rf "$d" "$st_ar"
 
+  # --- FOLD-PRECEDENCE leg (VERIFY step 3, U1): the coverage fold reads the
+  # SHARED entries first and the ledger's second, so a local entry of the
+  # current cycle supersedes a foreign certificate for the suites it names.
+  # The cycle's own run is the more specific statement about this cycle's
+  # tree, and the cache carries no authority to override it.
+  #
+  # Both entries key a tree that is NOT the captured one, so neither the local
+  # fast path nor the shared tree match fires and the decision comes from the
+  # fold alone; both heads ARE the captured head, so the reach test answers
+  # `inherit` without a selector call and the citation is the only thing that
+  # varies. The discriminator against "shared entries are simply ignored" is
+  # the second assertion: a suite ONLY the shared entry names must still
+  # inherit, citing it, in the same run.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  st_ar="$(mktemp -d)"; store="$(fx_store_init "$st_ar" "$d")"
+  head="$(git -C "$d" rev-parse HEAD)"
+  fx_shared_entry "$store" 601 1 "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef" "$head" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh"
+  fx_entry "$ledger" 1 "beefdeadbeefdeadbeefdeadbeefdeadbeefdead" "$head" \
+    "tests/test-fx-cov-a.sh"
+  st_run_shared "$st_ar" "$d" "$ledger" 1 all
+  # The shared-contributes conjunct belongs INSIDE this assertion, not only in
+  # the one below it: "cites the ledger, not the shared entry" is satisfied
+  # trivially by a resolver that never reads the shared store at all, which is
+  # exactly the pre-change state. Precedence is only meaningful where both
+  # sources are live.
+  if st_reason 'tests/test-fx-cov-a\.sh' | grep -qF '### green-tree | cycle: 1' \
+     && ! st_reason 'tests/test-fx-cov-a\.sh' | grep -qF 'green-tree-shared' \
+     && st_reason 'tests/test-fx-cov-b\.sh' | grep -qF '### green-tree-shared | issue: #601'; then
+    st_ok "FOLD-PRECEDENCE leg (U1, local supersedes shared)" "a suite named by both a ledger entry and a shared entry inherits citing the LEDGER entry — the cycle's own run outranks a foreign certificate"
+  else
+    st_fail "FOLD-PRECEDENCE leg (U1, local supersedes shared)" "expected test-fx-cov-a.sh to cite the ledger entry, got: $ST_REC"
+  fi
+  if st_reason 'tests/test-fx-cov-b\.sh' | grep -qF '### green-tree-shared | issue: #601'; then
+    st_ok "FOLD-PRECEDENCE leg (U1, shared still contributes)" "a suite only the shared entry names still inherits from it in the same run — the precedence is an ordering, not a suppression"
+  else
+    st_fail "FOLD-PRECEDENCE leg (U1, shared still contributes)" "expected test-fx-cov-b.sh to cite the shared entry, got: $ST_REC"
+  fi
+  rm -rf "$d" "$st_ar"
+
+  # --- HASH-LESS-SUITE leg (VERIFY step 3, U3, resolver end): a suite whose
+  # `ci-subject` header cannot be read has NO computable input hash, so the
+  # step-8 short-circuit cannot fire on it however the covering entry's token
+  # is written — the caller resolves such a suite by the paths below it, never
+  # by a certificate it cannot re-derive. `suite_input_hash` returns non-zero
+  # there, mirroring select-suites.sh's own disposition: a suite whose declared
+  # subject cannot be read is unjudgeable, not narrowed to nothing.
+  #
+  # The three header-carrying suites in the same run are the control: their
+  # hashes DO compute and match, so they read `via: input-hash` while the
+  # header-less one does not. Every entry head is the captured head, so no
+  # selector call is made and the header-less suite cannot reach the selector
+  # BLOCK its missing header would otherwise cause — the leg observes the
+  # short-circuit, not the selector.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  cat > "$d/tests/test-fx-cov-nosubject.sh" <<'SH'
+#!/usr/bin/env bash
+# lane: standing
+# budget-secs: 5
+true
+SH
+  git -C "$d" add -A >/dev/null 2>&1
+  git -C "$d" -c user.email=a@b.c -c user.name=a commit -q -m nosubject >/dev/null 2>&1
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_entry "$ledger" 1 "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef" "$head" \
+    "$(fx_tokens "$d" "$tree" tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh) tests/test-fx-cov-nosubject.sh@ffffffffffff"
+  st_run "$d" "$ledger" 1 all
+  if [ "$(st_via 'tests/test-fx-cov-a\.sh')" = input-hash ] \
+     && [ "$(st_via 'tests/test-fx-cov-nosubject\.sh')" != input-hash ]; then
+    st_ok "HASH-LESS-SUITE leg (U3, resolver end)" "a suite with no readable ci-subject never takes the input-hash short-circuit, even against a token claiming a hash, while its header-carrying siblings do"
+  else
+    st_fail "HASH-LESS-SUITE leg (U3, resolver end)" "expected a via: input-hash and nosubject NOT via: input-hash, got a='$(st_via 'tests/test-fx-cov-a\.sh')' nosubject='$(st_via 'tests/test-fx-cov-nosubject\.sh')': $ST_REC"
+  fi
+  rm -rf "$d"
+
   return $SELFTEST_RC
 }
 

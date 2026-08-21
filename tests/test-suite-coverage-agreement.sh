@@ -77,6 +77,12 @@ echo "=== Issue #112 — suite-coverage agreement ==="
 # (doubled backslashes collapsed to single) before matching, because the
 # permitted quoted-string exception is itself written with doubled
 # backslashes and a raw-literal comparison would not see it.
+#
+# The walk skips DOT-PREFIXED directories for the same reason the
+# definition-site scans below do: a sibling suite's fixture scratch under
+# tests/fixtures/.tmp-<name>-<pid>/ holds copies of real scripts while it runs,
+# and counting those copies as occurrences turns this leg red over a directory
+# that is not part of the tree under review.
 # =============================================================================
 
 PATTERN_LITERAL='\bresolve_base_ref\b|\bgit\b[^#]*\bmerge-base\b'
@@ -89,7 +95,7 @@ while IFS= read -r -d '' f; do
   rel="${f#"$PROJECT_ROOT"/}"
   [ "$rel" = "$SELF_REL" ] && continue
   predicate_matches_file "$f" && matched_files="$matched_files$rel"$'\n'
-done < <(find "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" -name '*.sh' -print0 2>/dev/null)
+done < <(find "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" -name '*.sh' -not -path '*/.*' -print0 2>/dev/null)
 
 single_def_site_ok=1
 while IFS= read -r rel; do
@@ -621,7 +627,21 @@ fi
 # them, over an exact token, a directory token and a `**` token.
 # -----------------------------------------------------------------------------
 
-GLOB_DEF_FILES="$(grep -rlE '^[[:space:]]*glob_matches\(\)' "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" 2>/dev/null | sed "s#^$PROJECT_ROOT/##" | sort)"
+# Definition-site scans skip DOT-PREFIXED directories. A suite that builds a
+# fixture repository under tests/fixtures/.tmp-<name>-<pid>/ copies real
+# scripts into it for the duration of its run, and an unfiltered `grep -r`
+# reads those copies as second definition sites — so a concurrent sibling
+# suite, or a run interrupted before its scratch was removed, turns a
+# single-site assertion red for a reason that has nothing to do with the tree
+# under review. Observed against tests/fixtures/.tmp-push-context-base-ref-*.
+def_sites() { # <ERE for the definition line> -> repo-relative paths, sorted
+  grep -rlE "$1" "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" 2>/dev/null \
+    | sed "s#^$PROJECT_ROOT/##" \
+    | grep -v '/\.' \
+    | sort
+}
+
+GLOB_DEF_FILES="$(def_sites '^[[:space:]]*glob_matches\(\)')"
 
 assert_true "glob-single-site: glob_matches() is defined exactly once in the tree, in scripts/test/suite-manifest.sh (definition sites: $(printf '%s' "$GLOB_DEF_FILES" | tr '\n' ' '))" \
   "[ \"\$GLOB_DEF_FILES\" = 'scripts/test/suite-manifest.sh' ]"
@@ -713,8 +733,8 @@ assert_true "citation-basis: declared ⊆ emitted — no basis is declared that 
 # site at all; a fixture leg scoped to one script cannot observe that.
 # -----------------------------------------------------------------------------
 
-KEY_DEF_FILES="$(grep -rlE '^[[:space:]]*derive_repo_key\(\)' "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" 2>/dev/null | sed "s#^$PROJECT_ROOT/##" | sort)"
-PHYS_DEF_FILES="$(grep -rlE '^[[:space:]]*physical_path\(\)' "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" 2>/dev/null | sed "s#^$PROJECT_ROOT/##" | sort)"
+KEY_DEF_FILES="$(def_sites '^[[:space:]]*derive_repo_key\(\)')"
+PHYS_DEF_FILES="$(def_sites '^[[:space:]]*physical_path\(\)')"
 
 assert_true "single-site: derive_repo_key() is defined exactly once, in scripts/cleanup/cleanup-issue.sh, and the store library reaches it by invoking that script rather than re-typing it (definition sites: $(printf '%s' "$KEY_DEF_FILES" | tr '\n' ' '))" \
   "[ \"\$KEY_DEF_FILES\" = 'scripts/cleanup/cleanup-issue.sh' ] && [ -f '$STORE_LIB' ] && grep -qF 'cleanup-issue.sh' '$STORE_LIB' && ! grep -qE '^[[:space:]]*derive_repo_key\\(\\)' '$STORE_LIB'"

@@ -170,7 +170,7 @@ RESULT_LINE='run-suites: 3 passed, 0 failed, 0 timed out, of 3 executed'
 ALL_SUITES='tests/test-fx-gtr-a.sh tests/test-fx-gtr-b.sh tests/test-fx-gtr-c.sh'
 
 self_test() {
-  local d ar store ledger tree head n i
+  local d ar store ledger tree head n i store_before
 
   # =======================================================================
   # --append — a minted certificate describes the tree that actually ran
@@ -462,6 +462,121 @@ self_test() {
     st_ok "PRUNE leg (default retention)" "--prune with no --keep retains 200 entries, the most recent, and drops the overflow"
   else
     st_fail "PRUNE leg (default retention)" "expected 200 entries retained by default, got rc=$GTR_RC count=$n"
+  fi
+  rm -rf "$d" "$ar"
+
+  # =======================================================================
+  # VERIFY step 3 findings U2 and U4 — branches no leg drove
+  # =======================================================================
+
+  # --- COVER-CONTRIBUTOR leg (U2): under --cover-enumerated the entries
+  # PRINTED are those contributing at least one ENUMERATED suite to the union,
+  # not every qualifying entry. A certificate naming only suites that no
+  # longer exist — a retired suite, or one renamed by a later cycle — still
+  # qualifies on tree, result and head, but accounts for nothing the reader is
+  # being told about; printing it would put a heading in the `source:` field
+  # that explains none of the coverage claimed. The entry that DOES cover is
+  # the control: the union still succeeds, so this leg is about the filter and
+  # not about the coverage test.
+  d="$(mktemp -d)"; gtr_fixture_repo "$d"; ar="$(mktemp -d)"
+  store="$(gtr_store_init "$ar" "$d")"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  gtr_shared_entry "$store" 801 1 "$tree" "$head" "$ALL_SUITES"
+  gtr_shared_entry "$store" 802 1 "$tree" "$head" "tests/test-fx-gtr-retired.sh"
+  gtr_run "$ar" --match --root "$d" --cover-enumerated
+  if [ "$GTR_RC" -eq 0 ] \
+     && [ "$(printf '%s\n' "$GTR_OUT" | grep -c .)" -eq 1 ] \
+     && printf '%s\n' "$GTR_OUT" | grep -qF '#801' \
+     && ! printf '%s\n' "$GTR_OUT" | grep -qF '#802'; then
+    st_ok "COVER-CONTRIBUTOR leg (U2)" "a qualifying entry naming only a non-enumerated suite contributes nothing to the union and is not printed, while the covering entry is"
+  else
+    st_fail "COVER-CONTRIBUTOR leg (U2)" "expected exit 0 printing #801 alone, got rc=$GTR_RC out='$(printf '%s' "$GTR_OUT" | tr '\n' ' ')'"
+  fi
+  # Plain --match is unfiltered: it answers "which entries qualify", a
+  # different question from "which entries account for the enumerated set", so
+  # both entries appear there. Without this half the leg above would pass
+  # equally under an implementation that dropped #802 at the qualification
+  # stage — which would be the wrong reason for the right output.
+  gtr_run "$ar" --match --root "$d"
+  if [ "$GTR_RC" -eq 0 ] \
+     && printf '%s\n' "$GTR_OUT" | grep -qF '#801' \
+     && printf '%s\n' "$GTR_OUT" | grep -qF '#802'; then
+    st_ok "COVER-CONTRIBUTOR leg (U2, qualification is unfiltered)" "the same entry still QUALIFIES under plain --match — the filter is applied by --cover-enumerated, not at qualification"
+  else
+    st_fail "COVER-CONTRIBUTOR leg (U2, qualification is unfiltered)" "expected both headings under plain --match, got rc=$GTR_RC out='$(printf '%s' "$GTR_OUT" | tr '\n' ' ')'"
+  fi
+  rm -rf "$d" "$ar"
+
+  # --- APPEND-SHARED-FAILURE leg (U4): the mirror of APPEND-ATOMIC. There the
+  # LEDGER write fails and the shared store must be untouched; here the ledger
+  # write succeeds and the SHARED write cannot complete. This is the ordering
+  # in which the two stores can end up disagreeing, so what the writer owes is
+  # stated rather than assumed: a non-zero exit, a failure message naming the
+  # store that could not be written, the shared store byte-identical, and the
+  # ledger entry WHOLE — the per-file atomicity guarantee holds on the store
+  # that did get written, so no later cycle reads a half-entry.
+  #
+  # The failure is injected deterministically, by making the store directory
+  # unwritable, rather than by timing.
+  d="$(mktemp -d)"; gtr_fixture_repo "$d"; ar="$(mktemp -d)"
+  store="$(gtr_store_init "$ar" "$d")"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  gtr_shared_entry "$store" 900 1 "1111111111111111111111111111111111111111" \
+    "2222222222222222222222222222222222222222" "tests/test-fx-gtr-a.sh"
+  store_before="$(cat "$store")"
+  chmod a-w "$(dirname "$store")"
+  gtr_run "$ar" --append --root "$d" --ledger "$ledger" --issue 130 --cycle 1 \
+    --runner "VERIFY step 1" --tree "$tree" --head "$head" \
+    --result "$RESULT_LINE" --suites "$ALL_SUITES"
+  chmod u+w "$(dirname "$store")"
+  if [ "$GTR_RC" -ne 0 ] \
+     && printf '%s\n' "$GTR_ERR" | grep -qF 'shared' \
+     && [ "$(cat "$store")" = "$store_before" ] \
+     && gtr_wellformed "$store" '### green-tree-shared | ' \
+     && gtr_wellformed "$ledger" '### green-tree | cycle: '; then
+    st_ok "APPEND-SHARED-FAILURE leg (U4)" "a shared-store write that cannot complete exits non-zero naming that store, leaves it byte-identical, and leaves the ledger entry whole rather than half-written"
+  else
+    st_fail "APPEND-SHARED-FAILURE leg (U4)" "expected a non-zero exit naming the shared store, an unchanged shared store and a whole ledger entry, got rc=$GTR_RC err='$GTR_ERR'"
+  fi
+  rm -rf "$d" "$ar"
+
+  # --- HASH-LESS-SUITE leg (U3, writer end): the discriminating half. A suite
+  # whose `ci-subject` header cannot be read has no computable input hash, and
+  # the writer records it as a BARE token rather than refusing the whole
+  # append or inventing a hash for it. That is what makes the token grammar
+  # additive: the bare form is a first-class member, produced by the shipped
+  # writer and not merely tolerated from older entries. Its hashed siblings in
+  # the same entry are the control — a writer that silently dropped hashing
+  # altogether would satisfy the bare half alone.
+  d="$(mktemp -d)"; gtr_fixture_repo "$d"; ar="$(mktemp -d)"
+  store="$(gtr_store_init "$ar" "$d")"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  cat > "$d/tests/test-fx-gtr-nosubject.sh" <<'SH'
+#!/usr/bin/env bash
+# lane: standing
+# budget-secs: 5
+true
+SH
+  git -C "$d" add -A >/dev/null 2>&1
+  git -C "$d" -c user.email=a@b.c -c user.name=a commit -q -m nosubject >/dev/null 2>&1
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  gtr_run "$ar" --append --root "$d" --ledger "$ledger" --issue 130 --cycle 1 \
+    --runner "VERIFY step 1" --tree "$tree" --head "$head" \
+    --result "$RESULT_LINE" --suites "$ALL_SUITES tests/test-fx-gtr-nosubject.sh"
+  sh_suites="$(gtr_field "$store" '### green-tree-shared | issue: #130' suites)"
+  if [ "$GTR_RC" -eq 0 ] \
+     && printf '%s\n' "$sh_suites" | tr ' ' '\n' | grep -qx 'tests/test-fx-gtr-nosubject.sh' \
+     && [ "$(printf '%s\n' "$sh_suites" | tr ' ' '\n' | grep -c '@')" -eq 3 ]; then
+    st_ok "HASH-LESS-SUITE leg (U3, writer end)" "a suite with no readable ci-subject is written as a BARE token while its header-carrying siblings carry @<input-hash>"
+  else
+    st_fail "HASH-LESS-SUITE leg (U3, writer end)" "expected one bare token and three hashed ones, got rc=$GTR_RC suites='$sh_suites'"
+  fi
+  # Non-emptiness first: two absent fields compare equal, so an unimplemented
+  # or refusing writer would satisfy a bare equality check.
+  if [ -n "$sh_suites" ] \
+     && [ "$sh_suites" = "$(gtr_field "$ledger" '### green-tree | cycle: 1' suites)" ]; then
+    st_ok "HASH-LESS-SUITE leg (U3, both stores agree)" "the mixed bare/hashed token list is identical in both stores — the hash-less case does not split the two writes"
+  else
+    st_fail "HASH-LESS-SUITE leg (U3, both stores agree)" "expected identical suites fields, got shared='$sh_suites' ledger='$(gtr_field "$ledger" '### green-tree | cycle: 1' suites)'"
   fi
   rm -rf "$d" "$ar"
 
