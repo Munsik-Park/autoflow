@@ -625,6 +625,13 @@ capture() {
   CAP_HEAD="$(cd "$1" && git rev-parse HEAD 2>/dev/null)"
 }
 
+# capture_tree <root> — fills CAP_TREE alone. do_match's match-point compares
+# only the tree, so it uses this instead of capture(): the full capture's
+# CAP_DIRTY/CAP_HEAD would be computed and discarded on every match call.
+capture_tree() {
+  CAP_TREE="$(cd "$1" && git rev-parse "HEAD^{tree}" 2>/dev/null)"
+}
+
 head_resolves_at() { # <root> <head hash>
   (cd "$1" && git rev-parse --verify -q "$2^{commit}" >/dev/null 2>&1)
 }
@@ -729,7 +736,7 @@ do_match() {
   local store kind heading e_tree e_head e_suites e_result tok path
   resolve_store "$ROOT" || exit $?
   store="$STORE"
-  capture "$ROOT"
+  capture_tree "$ROOT"
   [ -n "$CAP_TREE" ] || return 1
 
   local -a q_headings=() q_suites=()
@@ -751,13 +758,22 @@ do_match() {
     return 0
   fi
 
+  # Each entry's tokens are parsed to paths ONCE here, into entry_paths[i], and
+  # reused below for the contributed check — avoiding a second
+  # green_tree_suite_token_path subshell per token.
   local -A covered=()
-  local i
+  local -a entry_paths=()
+  local i paths
   for (( i = 0; i < n; i++ )); do
+    paths=""
     for tok in ${q_suites[$i]}; do
       path="$(green_tree_suite_token_path "$tok")"
-      [ -n "$path" ] && covered["$path"]=1
+      if [ -n "$path" ]; then
+        covered["$path"]=1
+        paths="$paths${paths:+ }$path"
+      fi
     done
+    entry_paths[i]="$paths"
   done
 
   local -a enumerated=()
@@ -774,8 +790,7 @@ do_match() {
   local contributed
   for (( i = 0; i < n; i++ )); do
     contributed=0
-    for tok in ${q_suites[$i]}; do
-      path="$(green_tree_suite_token_path "$tok")"
+    for path in ${entry_paths[$i]}; do
       if [ -n "${is_enumerated[$path]:-}" ]; then contributed=1; break; fi
     done
     [ "$contributed" -eq 1 ] && printf '%s\n' "${q_headings[$i]}"
