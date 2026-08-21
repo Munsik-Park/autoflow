@@ -379,11 +379,11 @@ else
 fi
 
 # =============================================================================
-# dangling-citation-struck (AC-71-CITATION) — retired with its subject by
-# issue #120: all three arms read tests/adr-0016-conformance-check.sh, which
-# that cycle deletes. Two were positive greps that red on a missing file and
-# the third a negation that would go vacuously green, so the banner, the
-# arms and the $ADR0016_SUITE variable leave together. Disposition rows:
+# dangling-citation-struck — retired with its subject by issue #120: all
+# three arms read the ADR-0016 conformance suite, which that cycle deletes.
+# Two were positive greps that red on a missing file and the third a negation
+# that would go vacuously green, so the banner, the arms and their suite-path
+# variable leave together. Disposition rows:
 # docs/doc-invariant-registry.md §17.
 
 # =============================================================================
