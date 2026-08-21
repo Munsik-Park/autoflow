@@ -955,6 +955,23 @@ but not `GROUP_D_ADR0016`, so this removal does not red it.
 that suite's arms went, which remains true after the file is gone, and `AC-carrier-recorded`
 reads the registry text, not the tree. Those rows now cite a deleted suite, recorded here.
 
+**Amended by issue #122 — a second, weaker trigger.** § 17.2's trigger above is *subject
+deletion*. Issue #122 adds one more: a keystone half whose **comparison basis is
+re-declared** — moved under the ratchet fixtures directory with a direction sidecar (§ 18)
+— while its subject stays live. That move is permitted under the same joint-disposition
+discipline the paragraph above states, and is recorded with a provenance row naming the old
+path, the new path and the declared direction (§ 19.5). It does **not** widen § 17.2 to
+permit a keystone half's removal without a subject deletion.
+
+The two retained halves (798, 799) were re-derived under § 18's discriminant and the
+conclusion is unchanged — **both stay**. They compare a checked-in literal set against a
+live suite's text by set inclusion, which declares a direction (`grow-only`) but, until
+#122, declared no target; that is the fossil signature. Re-declaration supplies the missing
+half rather than removing the halves: placed under the ratchet directory with `grow-only`
+declared, they satisfy § 18 instead of violating it. Removal would additionally drop the
+only mechanism preventing silent assertion loss in two live suites, and #122's carrier
+analysis finds no standing lint holding that property.
+
 ### 17.3 Files deleted, and the pins firewalled with them
 
 Deleted: `tests/adr-0016-conformance-check.sh`,
@@ -1044,3 +1061,50 @@ assertion in the standing lane. It is deleted at the merge that closes #120, per
 AutoFlow holds no merge authority, so the obligation is recorded here and executed by the
 merging party. `tests/test-cycle-arm-residue.sh`'s `#120 dispositions` section is standing
 and does not retire.
+
+## 18. Snapshot attribution — ratchet against fossil (issue #122)
+
+A checked-in comparison basis — a baseline file, an inline count, a pinned literal — is
+either a **ratchet** or a **fossil**, and which it is decides the lane it may live in. The
+discriminant is *not* directionality. This tree carries directional bases on both sides: a
+set-inclusion pin over two sibling suites' assertion literals permits growth and forbids
+loss, and is nonetheless a snapshot of those suites' own text taken at one past moment,
+while the residual and purity baselines in the same fixtures directory are directional and
+genuinely ratchets.
+
+What separates them is whether a direction was **declared with a target**.
+
+- A **ratchet** has an externally motivated goal the set is expected to move toward — a
+  residual expected to shrink toward empty. Legitimate change moves it one way only and
+  never needs a bump against the direction. A ratchet may live in a `lane: standing` suite.
+- A **fossil** has no target: legitimate change moves it either way, and the bump is
+  self-approved by the same commit that caused it. A fossil belongs to a `lane:
+  cycle-scoped` suite carrying `retire-with:`, or it is removed with a provenance row.
+
+**The declaration is placement plus a sidecar, never an inventory.** A fixture under
+`tests/fixtures/ratchet/` declares itself a ratchet by being there, and carries a sibling
+`<name>.direction` file whose sole content is `shrink-only` or `grow-only`. Membership of
+the directory is the declaration — the same construction the manifest lint's
+bundle-registration leg uses, and chosen for the same reason this layer states repeatedly: a
+checker that must re-declare its intended set reintroduces the widening inventory this layer
+exists to retire. `scripts/test/check-suite-manifest.sh` gates it: every file under the
+ratchet directory has its sidecar, with a recognised value.
+
+**Counts derived at evaluation time.** An inline integer compared against a derived
+population size — a `jq … | length` or a `grep -c` result — in a `lane: standing` suite is a
+fossil in the same sense. Zero and one are excluded by construction: those are absence and
+uniqueness predicates about a *named* thing, not population sizes, and they do not drift when
+the population does. `check-suite-manifest.sh` reports this shape **advisorily**: it names
+the sites and never moves its exit code. The ground for advisory-rather-than-gating is
+measured, not cautious — running the detector over the tree at #122 flags occurrence-count
+pins over a workflow script's prompt constants whose disposition is a genuine judgement call
+and not #122's subject. Promotion to gating is a follow-on once that exemption set is
+measured against a clean tree.
+
+**Scope boundary.** The detector's subject is a count *derived at evaluation time*. A
+deliberate committed literal with a single authoring home and a header stating why a
+regenerated value would detect nothing — `tests/lib/harness-pins.sh`'s `HARNESS_OK_COUNT` —
+is explicitly outside it, and this rule text must not be read as retiring it.
+
+`docs/autoflow-guide.md` > RED references this section from its admission questions rather
+than restating it.
