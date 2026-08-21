@@ -146,6 +146,7 @@ on:
       - 'docs/repo-boundary-rules.md'
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
       - 'tests/test-issue-121-declaration-release.sh'
+      - 'tests/test-issue-120-arm-reconciliation.sh'
       - 'tests/test-issue-27-composition-oracle.sh'
       - 'tests/test-issue-62-sequential-rounds.sh'
       - 'tests/test-issue-67-deliberation-record.sh'
@@ -264,6 +265,7 @@ on:
       - 'docs/repo-boundary-rules.md'
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
       - 'tests/test-issue-121-declaration-release.sh'
+      - 'tests/test-issue-120-arm-reconciliation.sh'
       - 'tests/test-issue-27-composition-oracle.sh'
       - 'tests/test-issue-62-sequential-rounds.sh'
       - 'tests/test-issue-67-deliberation-record.sh'
@@ -495,6 +497,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-121-declaration-release.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-121-declaration-release.sh
+
+      - name: test-issue-120-arm-reconciliation.sh
+        id: s-test-issue-120-arm-reconciliation
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-120-arm-reconciliation.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-120-arm-reconciliation.sh
 
       - name: test-issue-985-doc-assertions.sh
         id: s-test-issue-985-doc-assertions
