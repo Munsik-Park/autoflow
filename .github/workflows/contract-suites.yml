@@ -90,6 +90,7 @@ on:
       - 'tests/test-codex-review-label-step.sh'
       - 'tests/test-gate-hardening.sh'
       - 'tests/test-issue-16-manifest-locale-invariance.sh'
+      - 'tests/test-issue-122-retirement-attribution.sh'
       - 'tests/test-issue-18-fixture-glob-isolation.sh'
       - 'tests/test-issue-245-schema-validation.sh'
       - 'tests/test-issue-25-confirm-ci-green.sh'
@@ -146,6 +147,10 @@ on:
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
       - 'tests/test-issue-121-declaration-release.sh'
       - 'tests/test-issue-120-arm-reconciliation.sh'
+      - 'tests/test-issue-43-report-channel-contract.sh'
+      - 'tests/test-issue-52-peer-facilitator-premise.sh'
+      - 'tests/test-issue-56-carry-evidence-discipline.sh'
+      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
       # #120 arm-and-deletion reconciliation (issue #120) reads these four
       # touched-suite files for its diff-driven reconciliation leg.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
@@ -214,6 +219,7 @@ on:
       - 'tests/test-codex-review-label-step.sh'
       - 'tests/test-gate-hardening.sh'
       - 'tests/test-issue-16-manifest-locale-invariance.sh'
+      - 'tests/test-issue-122-retirement-attribution.sh'
       - 'tests/test-issue-18-fixture-glob-isolation.sh'
       - 'tests/test-issue-245-schema-validation.sh'
       - 'tests/test-issue-25-confirm-ci-green.sh'
@@ -270,6 +276,10 @@ on:
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
       - 'tests/test-issue-121-declaration-release.sh'
       - 'tests/test-issue-120-arm-reconciliation.sh'
+      - 'tests/test-issue-43-report-channel-contract.sh'
+      - 'tests/test-issue-52-peer-facilitator-premise.sh'
+      - 'tests/test-issue-56-carry-evidence-discipline.sh'
+      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
       # #120 arm-and-deletion reconciliation (issue #120) reads these four
       # touched-suite files for its diff-driven reconciliation leg.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
@@ -507,6 +517,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-120-arm-reconciliation.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-120-arm-reconciliation.sh
+
+      - name: test-issue-122-retirement-attribution.sh
+        id: s-test-issue-122-retirement-attribution
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-122-retirement-attribution.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-122-retirement-attribution.sh
 
       - name: test-issue-985-doc-assertions.sh
         id: s-test-issue-985-doc-assertions

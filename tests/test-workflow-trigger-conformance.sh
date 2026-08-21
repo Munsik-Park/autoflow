@@ -330,6 +330,41 @@ for suite in "${CI_SUBJECT_SUITES[@]}"; do
   assert_true "AC-b-2: $rel — every declared ci-subject path (and the suite itself) is covered by its HOSTING workflow's paths: block, under the Actions-glob dialect matcher" "$all_covered"
 done
 
+# =============================================================================
+# AC-registry-carrier-paths-coverage (issue #122) — recurrence-prevention leg
+# for the doc-invariant registry's current-tree-conformance carrier. That
+# carrier is a BARE workflow step (`run: bash tests/run-doc-invariants.sh`,
+# no args), never a suite, so it is not reached by the CI_SUBJECT_SUITES loop
+# above — this is a second, distinct coverage question over the SAME matcher
+# and hosting-workflow relation this suite already owns: every target file a
+# doc-invariants.json registry entry names, plus the registry file and the
+# runner itself, must be covered by the paths: block of the workflow that
+# hosts the bare runner step. Without this leg a future registry append can
+# silently reopen the coverage hole issue #122's re-derivation found (feature
+# design > Registry-runner re-run retirement > "Unconditionality is bounded").
+# =============================================================================
+REGISTRY_JSON="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
+mapfile -t BARE_RUNNER_HOSTS < <(reaching_workflows "tests/run-doc-invariants.sh")
+if [ ${#BARE_RUNNER_HOSTS[@]} -eq 0 ]; then
+  assert_true "AC-registry-carrier-paths-coverage: at least one workflow hosts a run: step invoking tests/run-doc-invariants.sh" "false"
+else
+  mapfile -t registry_patterns < <(
+    for h in "${BARE_RUNNER_HOSTS[@]}"; do extract_paths_entries "$h"; done | sort -u
+  )
+  mapfile -t registry_target_files < <(jq -r '.invariants[].file' "$REGISTRY_JSON" | sort -u)
+  registry_missing=0
+  for f in "${registry_target_files[@]}" "tests/fixtures/doc-invariants.json" "tests/run-doc-invariants.sh"; do
+    if subject_covered "$f" "${registry_patterns[@]}"; then
+      :
+    else
+      registry_missing=$((registry_missing + 1))
+      echo "  INFO: registry target '$f' NOT covered by the runner's hosting workflow(s): ${BARE_RUNNER_HOSTS[*]#"$PROJECT_ROOT"/}"
+    fi
+  done
+  assert_true "AC-registry-carrier-paths-coverage: every doc-invariants.json registry entry's target file, plus the registry file and the runner, is covered by the bare-runner-hosting workflow's paths: block (missing: $registry_missing/$(( ${#registry_target_files[@]} + 2 )))" \
+    "[ $registry_missing -eq 0 ]"
+fi
+
 # entry-shape-leg > Subject wiring: this suite's own subject grows to include
 # the whole workflow directory (`.github/workflows/`), and the covering entry
 # that makes it honest (`orphan-registration-self-entry`) is a workflow-side
