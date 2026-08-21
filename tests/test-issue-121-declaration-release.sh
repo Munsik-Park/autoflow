@@ -17,7 +17,8 @@
 #
 #   L1  declaration-state              (+ delta-scanner-untouched, opposite direction)
 #   L2  declaration-reason-token       (real scripts/test/suite-coverage.sh)
-#   L3  ci-subject-accuracy            (token/reference predicate over executable bodies)
+#   L3  ci-subject-accuracy            (enumerated-instance predicates + the regression-scoped
+#                                      set-difference property arm, branch-gated)
 #   L4  symbol-closure                 (both directions, per symbol)
 #   L5  id-inventory-closure           (banner axis, header axis, cross-file axis)
 #   L6  converted-arm-consumer-closure (pin membership re-derived + comment-borne alternate)
@@ -86,7 +87,33 @@
 # SELECTED on such a delta whether or not it declares the token. The leg would
 # be green on the defective tree and green on the correct one — vacuous in both
 # directions. A12 states the property over tokens and reads, not over the
-# selector, so L3 holds it with method (b) alone.
+# selector, so L3 holds it with method (b) — the token/reference predicate over
+# executable bodies — plus the set-difference property arm added at RED
+# re-entry 1 (below).
+#
+# RED RE-ENTRY 1 (after VERIFY steps 3/4, `fix_test` on two legs).
+#
+#   L3 — the enumerated-instance arms alone were green over a tree that stranded
+#   thirteen further tokens across six files, nine of which lost a genuine
+#   content read. A12 states a PROPERTY over every edited file and an
+#   enumeration is not a property, so L3 now carries the regression-scoped
+#   witness: per edited file, `Z(HEAD) \ Z(BASE_REF)` must be empty, where Z(t)
+#   is the declared-token set with no non-comment occurrence at tree state t.
+#   The absolute form is refused for the reason already recorded above — it is
+#   false at HEAD for twenty pre-existing tokens — and the set difference
+#   cancels every one of them without a hand-maintained inventory. Retained
+#   tokens are admitted only through a §16 marker of fixed grammar whose named
+#   intermediary the spec resolves against the tree; a free-form allow is
+#   refused, because an exception the spec cannot check is an exemption.
+#
+#   L7 — the disposition-vocabulary arm keyed on bold markers and matched §5's
+#   labels by equality under a character class that excluded a space. Both are
+#   replaced: dispositions are read from §16's disposition COLUMN (so unbolding
+#   a label no longer exempts it from the check), and §5's vocabulary is matched
+#   by KIND with a prefix — `dropped — <reason>` against §5's enumerable set,
+#   `promoted → <target>` on the arrow form, whose target §3's rewrite exit
+#   makes per-cycle. Hermetic teeth arms drive the predicate in both directions,
+#   since on a conforming §16 a PASS would otherwise be unfalsifiable.
 # =============================================================================
 
 set -uo pipefail
@@ -156,6 +183,62 @@ hdr_block() { awk '/^set -uo pipefail/{exit} {print}' "$1"; }
 # on a `#` line and is required to CONFORM, so the sibling out-of-tree field
 # already reads a comment mention as a non-reference.
 exec_body() { grep -vE '^[[:space:]]*#' "$1"; }
+
+# The cycle's own branch gate, declared here rather than beside the scope arm
+# because TWO regions need it: that arm, and L3's regression-scoped
+# over-selection witness below. Every `resolve_base_ref` call, every
+# `git diff --name-only` and every dereference of `allow_list` in this file is
+# dominated by it, with `note_deferred` on the complementary arm — the
+# dominance `scripts/test/check-cycle-scope-guard.sh` decides.
+HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
+on_issue_branch() {
+  case "$HEAD_BRANCH" in
+    dev/*-issue-121|dev/*-issue-121-*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Z(t) — the declared `# ci-subject:` tokens of one file that have NO
+# non-comment occurrence in that file's body at tree state t. Reads a file on
+# disk, so the caller supplies either the working file or a blob extracted from
+# the base ref. Glob tokens are not resolved here and need not be: the tree
+# admits none (`tests/test-workflow-trigger-conformance.sh`'s AC-subject-grammar
+# requires every token to be a file path or a trailing-slash directory, never a
+# glob), so the selector's own `glob_matches` reaches nothing and literal
+# occurrence is the whole of the question. A trailing-slash directory token is
+# read literally, exactly as the selector reads it.
+zero_occurrence_tokens() {    # <body-file>
+  local body="$1" t
+  for t in $(sed -n 's/^# ci-subject: //p' "$body"); do
+    grep -vE '^[[:space:]]*#' "$body" | gq -F "$t" || printf '%s\n' "$t"
+  done
+}
+
+# Does registry §16 record this (suite, token) pair as a RETAINED token, and is
+# the retention's shape true of the tree? The marker grammar is fixed and
+# narrow — a free-form allow is refused, because an exception the spec cannot
+# check is an exemption:
+#
+#   retained-ci-subject-token: <suite> <token> via <intermediary>
+#
+# The exception is admitted only when §16 carries that marker AND the named
+# intermediary exists AND the suite's own executable body references it. What
+# stays prose in §16 is the semantic claim — that the intermediary reads the
+# token — because general reachability across a shell invocation is not
+# decidable here; what the spec checks is that a real, executed intermediary is
+# named, which is what an unchecked prose exemption would not give.
+exception_admits() {          # <suite> <token> <§16 marker block>
+  local suite="$1" tok="$2" exc="$3"
+  local k s t v inter
+  while read -r k s t v inter; do
+    [ "$k" = "retained-ci-subject-token:" ] || continue
+    [ "$s" = "$suite" ] && [ "$t" = "$tok" ] && [ "$v" = "via" ] || continue
+    [ -f "$PROJECT_ROOT/$inter" ] || return 1
+    exec_body "$PROJECT_ROOT/$suite" | gq -F "$inter" || return 1
+    return 0
+  done <<< "$exc"
+  return 1
+}
 
 # Bare-token occurrence count of an id inside a text blob (the bounded form
 # tests/test-issue-109-doc-assertions.sh uses for its header arms).
@@ -388,6 +471,63 @@ for tok in setup/manifest.json .claude/workflows/architect-deliberation.js .clau
     "suite_header_field '$PROJECT_ROOT/tests/test-issue-62-sequential-rounds.sh' ci-subject | tr ' ' '\n' | gq -xF '$tok' && exec_body '$PROJECT_ROOT/tests/test-issue-62-sequential-rounds.sh' | gq -F '$tok'"
 done
 
+# --- the regression-scoped OVER-SELECTION witness ---------------------------
+# The three arms above test the ONE instance the verification design
+# enumerated (`tests/lib/base-ref.sh` leaving suites 67, 69 and 27). A12 states
+# a PROPERTY over every edited file, and the enumeration is not the property:
+# measured at VERIFY, this cycle stranded thirteen further tokens across six
+# files, nine of which lost a genuine content read — the `cmp -s` on both hook
+# paths in 798/799, the `jq` over `setup/manifest.json` in 798/952/955, the
+# `git show "$BASE_REF:CLAUDE.md"` in 69, the `ADR_0015` assignment in 798 —
+# and every arm above stayed green over them. This arm is the property.
+#
+# WHY A SET DIFFERENCE. The absolute form ("every declared token has a
+# non-comment occurrence") is false at HEAD for twenty tokens this cycle
+# neither creates nor repairs, so it would red on a tree in which every edit of
+# this cycle is correct, and the repair it demanded would be an unrelated
+# pre-existing trigger-surface gap. Differencing the zero-occurrence SET
+# between the base ref and HEAD cancels every pre-existing gap by construction,
+# with no hand-maintained inventory to keep — which is the shape §1-2 of the
+# registry retires.
+#
+# WHY IT IS BRANCH-GATED. The predicate needs two tree states, so it is a DELTA
+# and belongs to a cycle-scoped suite that retires with its cycle — which is
+# what this file is (`lane: cycle-scoped`, `retire-with: #121`). The gate is
+# the same `dev/*-issue-121` one the scope arm uses; off-branch it reaches
+# `note_deferred` and credits no counter.
+#
+# A file ABSENT at the base ref is skipped: it is new, so it has no prior read
+# that could have left with an arm, and the regression scope does not reach it.
+if on_issue_branch; then
+  L3_BASE="$(resolve_base_ref)" || true
+  if [ -n "${L3_BASE:-}" ]; then
+    L3_EXC="$(awk '/^## 16\./{f=1} f{print} f&&/^## 17\./{exit}' "$REGISTRY_MD" \
+              | grep -oE 'retained-ci-subject-token: [^ `]+ [^ `]+ via [^ `]+' || true)"
+    L3_STRANDED=""
+    while IFS= read -r l3rel; do
+      [ -n "$l3rel" ] || continue
+      [ -f "$PROJECT_ROOT/$l3rel" ] || continue
+      git -C "$PROJECT_ROOT" cat-file -e "$L3_BASE:$l3rel" 2>/dev/null || continue
+      L3_BASE_BODY="$(mktemp)"
+      git -C "$PROJECT_ROOT" show "$L3_BASE:$l3rel" > "$L3_BASE_BODY" 2>/dev/null
+      L3_NEW="$(comm -13 <(zero_occurrence_tokens "$L3_BASE_BODY" | sort -u) \
+                         <(zero_occurrence_tokens "$PROJECT_ROOT/$l3rel" | sort -u))"
+      rm -f "$L3_BASE_BODY"
+      for l3tok in $L3_NEW; do
+        exception_admits "$l3rel" "$l3tok" "$L3_EXC" && continue
+        L3_STRANDED="$L3_STRANDED$l3rel:$l3tok "
+      done
+    done <<< "$(cd "$PROJECT_ROOT" && git diff --name-only "$L3_BASE"...HEAD -- 'tests/*.sh')"
+    assert_true "L3 over-selection (property, regression-scoped): no file this cycle edits gained a declared ci-subject token with no non-comment occurrence in its body — Z(HEAD) \\ Z(BASE) is empty per file, modulo the retained-token exceptions §16 records (stranded: ${L3_STRANDED:-none})" \
+      '[ -z "$L3_STRANDED" ]'
+  else
+    echo "  BLOCK: no comparison base resolvable — L3's over-selection property counted FAIL, never skipped"
+    TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
+  fi
+else
+  note_deferred "L3 over-selection (property): two-tree predicate, inert off the issue-121 dev branch (head: ${HEAD_BRANCH:-unknown}) — this cycle's own trigger-surface contract, not every branch's."
+fi
+
 # =============================================================================
 echo ""
 echo "=== L4 symbol-closure — no edited file keeps a definition or assignment whose only reader was a deleted arm, and none loses a symbol a surviving arm calls ==="
@@ -563,18 +703,73 @@ assert_true "L7 §16 exists: docs/doc-invariant-registry.md carries a new '## 16
 
 # The disposition vocabulary is DERIVED from §5's own column, so a label coined
 # by GREEN is refused rather than silently admitted.
-VOCAB="$(awk '/^## 5\./{f=1} f{print} f&&/^## 6\./{exit}' "$REGISTRY_MD" \
-  | grep -oE '\*\*(dropped — [a-z-]+(, with recorded coverage loss)?|promoted → [^*|]+)\*\*' | sed 's/\*\*//g' | sort -u)"
-assert_true "L7 vocabulary non-vacuity: §5's disposition column yields a non-empty label set to check §16's rows against" \
-  "[ -n \"\$VOCAB\" ]"
+# §5's disposition VOCABULARY, as two KINDS rather than one flat literal set.
+# The earlier flat form was wrong twice over and both errors are recorded here
+# rather than repaired silently. (a) Its `dropped` class was `[a-z-]+`, which
+# excludes a space, so `dropped — subject retired` — a label §5 itself uses —
+# could never be admitted. (b) More fundamentally, exact matching cannot work
+# for `promoted → <target>` at all: §5's only instances name specific targets
+# (`runner CI-wiring`, `runner Step 0`), the target is a per-cycle parameter of
+# §3's rewrite exit, and §15 (#123) already writes `promoted → registry
+# entries …`, which the arm would have rejected. What §5 fixes is the KIND;
+# only the `dropped —` kind has an enumerable tail.
+VOCAB_DROPPED="$(awk '/^## 5\./{f=1} f{print} f&&/^## 6\./{exit}' "$REGISTRY_MD" \
+  | grep -oE 'dropped — [a-zé -]+(, with recorded coverage loss)?' | sed 's/[[:space:]]*$//' | sort -u)"
+assert_true "L7 vocabulary non-vacuity: §5's disposition column yields a non-empty 'dropped — <reason>' label set to check §16's rows against" \
+  "[ -n \"\$VOCAB_DROPPED\" ]"
 
 for arm in "AC6b" "AC7b" "AC9" "AC3-guard" "AC3-nores" "AC6-scope" "AC5" "AC4-DOGFOOD" "AC-PRESERVE-deletion-audit" "AC-27-9-diff" "AC-62-36"; do
   assert_true "L7 provenance row: §16 carries a row naming the deleted arm '$arm'" \
     "printf '%s\n' \"\$SEC16\" | gq -F -- '$arm'"
 done
 
-assert_true "L7 disposition vocabulary: every disposition §16 states is drawn verbatim from §5's existing set — this cycle coins no new label" \
-  "[ -n \"\$SEC16\" ] && [ -z \"\$(printf '%s\n' \"\$SEC16\" | grep -oE '\*\*(dropped — [a-zé -]+(, with recorded coverage loss)?|promoted → [^*|]+)\*\*' | sed 's/\*\*//g' | sort -u | grep -vxF \"\$VOCAB\")\" ]"
+# §16's dispositions are read from the DISPOSITION COLUMN of its table rows,
+# not from bold markers. Keying on `**…**` made the check evadable by simply
+# unbolding a label — the arm then passes by exempting the rows it exists to
+# check — and it is the styling, not the disposition, that the registry leaves
+# free. Bold markers are stripped, not required.
+SEC16_DISPOSITIONS="$(printf '%s\n' "$SEC16" \
+  | awk -F'|' '/^\|/ && NF >= 4 { print $3 }' \
+  | sed 's/\*\*//g; s/`//g; s/^[[:space:]]*//; s/[[:space:]]*$//' \
+  | grep -vE '^(Disposition|-+)?$' | sort -u)"
+
+# A disposition conforms when it BEGINS with one of §5's `dropped — <reason>`
+# labels, or with the `promoted → ` arrow form. Prefix, not equality: a row may
+# qualify its label in place (`… (§5's label, applied to a consumer's arms)`,
+# `promoted → registry entries …, then deleted`) without coining one.
+l7_disposition_conforms() {   # <disposition text>
+  local d="$1" v
+  case "$d" in 'promoted → '*) return 0 ;; esac
+  while IFS= read -r v; do
+    [ -n "$v" ] || continue
+    case "$d" in "$v"*) return 0 ;; esac
+  done <<< "$VOCAB_DROPPED"
+  return 1
+}
+
+L7_COINED=""
+while IFS= read -r l7d; do
+  [ -n "$l7d" ] || continue
+  l7_disposition_conforms "$l7d" || L7_COINED="${L7_COINED}[$l7d] "
+done <<< "$SEC16_DISPOSITIONS"
+
+assert_true "L7 disposition vocabulary non-vacuity: §16's disposition column parsed to at least one label (a parse that returned nothing would let the arm below pass over the empty set)" \
+  "[ -n \"\$SEC16_DISPOSITIONS\" ]"
+assert_true "L7 disposition vocabulary (guard, PASS pre+post — it reads the disposition COLUMN, so GREEN's re-bolding of §16's labels does not move it): every disposition §16 states is one of §5's two kinds — a 'dropped — <reason>' label §5 already carries, or the 'promoted → <target>' arrow form whose target §3's rewrite exit makes per-cycle. This cycle coins no new label (coined: ${L7_COINED:-none})" \
+  '[ -z "$L7_COINED" ]'
+
+# Teeth for the arm above. On a tree whose §16 is already conforming, a PASS is
+# unfalsifiable, so the predicate is driven against labels §5 does not carry —
+# a coined `dropped` reason, and a kind outside §5's two — and must refuse each.
+# Without this the vocabulary arm could be a tautology and read as a guard.
+assert_true "L7 disposition vocabulary teeth: a coined 'dropped — <reason>' §5 does not carry is REFUSED" \
+  "! l7_disposition_conforms 'dropped — invented for this cycle'"
+assert_true "L7 disposition vocabulary teeth: a disposition kind outside §5's two ('retired — …') is REFUSED" \
+  "! l7_disposition_conforms 'retired — subject removed this cycle'"
+assert_true "L7 disposition vocabulary teeth: §5's own 'dropped — subject retired', qualified in place, is ADMITTED — the character class that excluded a space is the defect this replaces" \
+  "l7_disposition_conforms \"dropped — subject retired (§5's label, applied to a consumer's arms)\""
+assert_true "L7 disposition vocabulary teeth: a 'promoted → <target>' whose target §5 never names is ADMITTED — §3's rewrite exit makes the target per-cycle, and §15 already writes one" \
+  "l7_disposition_conforms 'promoted → registry entries \`121-secondary-marker-*\`, then deleted'"
 
 assert_true "L7 residue in words: §16 states the recorded residue for the '.claude/hooks/**' row (a cycle adding a THIRD file under .claude/hooks/ fails the deleted arms and is outside the carrier's fixed pair)" \
   "printf '%s\n' \"\$SEC16\" | gq -iE 'residue' && printf '%s\n' \"\$SEC16\" | gq -F '.claude/hooks/'"
@@ -693,14 +888,6 @@ echo "=== cycle-scope-respected — this cycle's own branch diff stays within it
 # an array, and every `comm -23` in that script sits inside its self-test's
 # fixture heredocs, never in its own decision path). So a missing member is
 # reported only by the whole-tree sweep taken on this cycle's own dev branch.
-
-HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
-on_issue_branch() {
-  case "$HEAD_BRANCH" in
-    dev/*-issue-121|dev/*-issue-121-*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
 
 allow_list=(
   # Converted suites (Lane A + Lane B)

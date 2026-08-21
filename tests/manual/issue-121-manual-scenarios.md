@@ -139,4 +139,10 @@ suites 67/69/27 not to be SELECTED. The selector short-circuits on `tests/lib/**
 `ci-subject` token loop at `:217-227`, so every enumerated suite is SELECTED on such a delta
 whether or not it declares the token — the leg would be green on the defective tree and
 green on the correct one. A12 states the property over tokens and reads rather than over the
-selector, and leg L3's token/reference predicate holds it.
+selector, and leg L3 holds it with the token/reference predicate over executable bodies
+plus, since RED re-entry 1, a regression-scoped set-difference arm: per edited file, the set
+of declared tokens with no non-comment occurrence must not grow between the cycle's base ref
+and HEAD. That arm is branch-gated behind `dev/*-issue-121` (it needs two tree states, so it
+is a DELTA and belongs to a suite that retires with its cycle) and admits a retained token
+only through a fixed-grammar marker in registry §16 whose named intermediary it resolves
+against the tree.
