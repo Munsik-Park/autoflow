@@ -70,7 +70,7 @@ assert_true() {
 # extract_section mirrors tests/run-doc-invariants.sh's own (durable heading,
 # level-aware close, bare-`---` thematic-break terminator). Re-derived rather
 # than sourced (the runner's is a private function, not a library export) —
-# same approach formerly shared with tests/test-issue-42-spawn-mode-contract.sh (retired in #120; see docs/doc-invariant-registry.md §17).
+# same approach as tests/test-issue-42-spawn-mode-contract.sh (retired in #120; see docs/doc-invariant-registry.md §17).
 extract_section() {          # heading_text file
   local heading="$1" file="$2"
   awk -v h="$heading" '
