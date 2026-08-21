@@ -601,24 +601,15 @@ rm -f "$BLOCK_PARSE_FIXTURE"
 assert_true "AC-b-3: scripts/test/check-suite-ci-coverage.sh exists" \
   "[ -x '$COVERAGE_LINT' ] || [ -f '$COVERAGE_LINT' ]"
 
-bash "$COVERAGE_LINT" >/tmp/issue76-coverage-lint.out 2>&1
-COVERAGE_LINT_RC=$?
-if [ "$COVERAGE_LINT_RC" -ne 0 ]; then
-  echo "  ---- check-suite-ci-coverage.sh real-tree output (rc=$COVERAGE_LINT_RC) ----"
-  cat /tmp/issue76-coverage-lint.out
-  echo "  ---- end output ----"
-fi
-assert_true "AC-b-3: check-suite-ci-coverage.sh exits 0 over the real tree" \
-  "[ $COVERAGE_LINT_RC -eq 0 ]"
-
-assert_true "AC-b-3: check-suite-ci-coverage.sh --self-test exits 0 (closure + exclusion legs both pass)" \
-  "bash '$COVERAGE_LINT' --self-test >/tmp/issue76-coverage-lint-selftest.out 2>&1"
-
-assert_true "AC-b-3: --self-test output names the closure leg (a known-unreachable fixture suite is caught)" \
-  "grep -qi 'closure' /tmp/issue76-coverage-lint-selftest.out 2>/dev/null"
-
-assert_true "AC-b-3: --self-test output names the exclusion leg (tests/lib, run-doc-invariants.sh, issue-59 driver asserted excluded; an outside path asserted NOT excluded)" \
-  "grep -qi 'exclusion' /tmp/issue76-coverage-lint-selftest.out 2>/dev/null"
+# AC-b-3's four execution arms retired (issue #122): the default real-tree run
+# and the three --self-test arms below re-executed a standing lint that already
+# carries its OWN unguarded step in .github/workflows/contract-suites.yml
+# ("suite CI-coverage lint", `run: bash scripts/test/check-suite-ci-coverage.sh`,
+# no `if:`), and that lint's default mode runs its self-test FIRST and fails on
+# it — so both the real-tree verdict and the self-test legs are executed once per
+# CI pass either way. The existence arm above stays: it is the antecedent, and a
+# `run:` step naming a deleted file is AC-step-target-exists's subject below, not
+# this lint's. See docs/doc-invariant-registry.md § 19.8.
 
 # ---------------------------------------------------------------------------
 # AC-step-target-exists — every `run: bash <path>` step in every workflow

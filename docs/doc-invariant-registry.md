@@ -1419,3 +1419,50 @@ home — the shape this lint's own rules reject. The seam makes the declaration 
 than merely unenforceable: with the fetcher outside it, the lint body reads no out-of-tree
 state at all, so there is nothing left to declare. The lint's header records the seam as a
 contract sentence instead.
+
+### 19.8 Self-test re-invocation retired; self-registration arms **retained**, with the measured ground
+
+**Retired — lint re-invocation.** `tests/test-workflow-trigger-conformance.sh`'s four
+`AC-b-3` execution arms ran `scripts/test/check-suite-ci-coverage.sh` once in default mode and
+three times in `--self-test` mode. That lint carries its own unguarded step in
+`.github/workflows/contract-suites.yml` (`suite CI-coverage lint`, no `if:`), and its default
+mode runs its self-test **first** and fails on it — so both the real-tree verdict and the
+self-test legs execute once per CI pass either way. Re-invocation is execution of an
+already-executed leg.
+
+| Removed arm | Carrier |
+|---|---|
+| `AC-b-3: check-suite-ci-coverage.sh exits 0 over the real tree` (with `COVERAGE_LINT_RC` and the failure-echo block) | the unguarded `suite CI-coverage lint` step |
+| `AC-b-3: … --self-test exits 0`, `… names the closure leg`, `… names the exclusion leg` | the same step — default mode gates on the self-test before reporting |
+
+The existence arm stays: it is the antecedent, and a `run:` step naming a deleted file is
+`AC-step-target-exists`'s subject in the same suite, not this lint's.
+
+**Not retired, and the ground is measured rather than assumed.** The design's fourth item
+also proposed retiring the **self-registration** arms — `AC-56-11a-pr/-push/-b`,
+`AC-CI-a/b/c/d` (#27), `AC-67-CI-pr/push/run`, `ci-wired-a1..a4/-b` (#52), `AC-59-12a-*` —
+against two named carriers: `scripts/test/check-suite-ci-coverage.sh` for reachability and
+`tests/test-workflow-trigger-conformance.sh` for registration effectiveness. Driving the
+second carrier before removing anything shows it does **not** hold the property those arms
+assert.
+
+The conformance suite decides coverage over the **union of every `paths:` block in a
+workflow**, by its own stated contract:
+`tests/test-workflow-trigger-conformance.sh:184-186` — "coverage is decided over the union
+across all this workflow's `paths:` blocks, not per-event". The self-registration arms assert
+something strictly stronger: that the literal appears in the `pull_request` block **and** in
+the `push` block, each checked separately. A workflow that lists a suite under
+`pull_request.paths` only satisfies the union predicate and fails the per-event ones.
+
+So the arms are **retained**, and the removal is not taken. This is the dominant-risk
+direction for a retirement cycle — treating a partial carrier as a full one leaves the
+invariant silently uncarried — and the check that caught it was executing the carrier, not
+reading its header. Retiring them needs a per-event coverage leg in the conformance suite
+first; that is a follow-on with its own acceptance criterion, recorded here rather than
+assumed away.
+
+`tests/test-bounded-execution-fallback.sh:792` carries the same `--self-test` re-invocation
+shape against `scripts/test/check-watchdog-detachment.sh`, whose default mode likewise
+self-tests first. It is left in place this cycle only because its suite is outside the
+declared change surface; the disposition is recorded here so the next cycle inherits it
+rather than re-deriving it.
