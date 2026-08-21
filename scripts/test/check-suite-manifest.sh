@@ -39,7 +39,7 @@
 # unconditionally and are UNGOVERNED — they carry no budget header to agree with,
 # and demanding one of a script that has none is how this arm would red a correct
 # workflow. The boundary is by shape, not by filename: `tests/plugin/verify-*.sh`
-# and `tests/adr-0016-conformance-check.sh` are governed too.
+# and `tests/test-gate-hardening.sh` are governed too.
 #
 # WHY THE SENTINEL FORM IS MECHANICAL, NOT STYLISTIC: one suite path is a prefix
 # of another's, so a bare `contains(steps.select.outputs.suites, 'tests/x.sh')`

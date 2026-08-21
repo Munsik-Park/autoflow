@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml docs/autoflow-guide.md docs/doc-invariant-registry.md docs/teammate-contracts.md setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/run-doc-invariants.sh
+# ci-subject: .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -51,8 +51,6 @@ MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
 REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
-TEAMMATE_CONTRACTS="$PROJECT_ROOT/docs/teammate-contracts.md"
-AUTOFLOW_GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
 
 # B11: verify-cause-branch.js sha256 must stay unchanged (out of this cycle's scope).
 # B11 update (issue #97): #97 added the ledger entry-ID allocation prompt to
@@ -205,24 +203,16 @@ assert_true "AC-62-21b: setup/manifest.json carries exactly one artifact row for
 # regression in any of them reds CI under its own name.
 
 # =============================================================================
-echo ""
-echo "=== AC-62-25 (RED discriminator) — Facilitator > ARCHITECT prose describes the sequential round + citation partitioning ==="
-# No exact literal is pinned by either design document for this prose (unlike
-# AC-62-32(b)'s quoted §D7 sentence); the two substrings below are this Test
-# AI's own oracle, chosen to mirror language already used verbatim elsewhere
-# in this cycle's own documents (AC-62-1's criterion text; this verification
-# design's own opening line "citation mode partitioned by target mutability").
-# Scoped to the ARCHITECT block of the Facilitator section (bounded by the
-# VERIFY block header) so the existing unrelated "SEQUENTIAL_FIX" token in the
-# VERIFY block cannot satisfy this vacuously.
-
-ARCH_BLOCK="$(awk '/^\*\*ARCHITECT\*\*/{f=1} f{print} /^\*\*VERIFY\*\*/{if(f){exit}}' "$TEAMMATE_CONTRACTS")"
-ARCH_HAS_SEQUENTIAL="$(printf '%s' "$ARCH_BLOCK" | grep -qi 'sequential' && echo yes || echo no)"
-ARCH_HAS_CITATION_MODE="$(printf '%s' "$ARCH_BLOCK" | grep -qi 'citation mode' && echo yes || echo no)"
-assert_true "AC-62-25a: the ARCHITECT contract block describes the sequential test-before-dev round (got: $ARCH_HAS_SEQUENTIAL)" \
-  "[ \"$ARCH_HAS_SEQUENTIAL\" = yes ]"
-assert_true "AC-62-25b: the ARCHITECT contract block describes the mutability-partitioned citation mode (got: $ARCH_HAS_CITATION_MODE)" \
-  "[ \"$ARCH_HAS_CITATION_MODE\" = yes ]"
+# AC-62-25a / AC-62-25b are migrated to the registry by issue #120.
+# =============================================================================
+# Both read the Facilitator > ARCHITECT block of docs/teammate-contracts.md,
+# whose `**ARCHITECT**` opening and `**VERIFY**` terminator are column-1 fixed
+# prefixes — the registry's `section_kind: "block"` anchor form. Migrated as
+# `120-62-contracts-architect-sequential` and
+# `120-62-contracts-architect-citation-mode` under the case-explicit-rewrite
+# rule (both arms matched case-insensitively; the entries spell the case the
+# document actually uses). Disposition recorded: docs/doc-invariant-registry.md
+# §17.
 
 # =============================================================================
 echo ""
@@ -301,34 +291,20 @@ assert_true "AC-62-30c: every 'draft artifact missing' occurrence in run.mjs sit
 # scripts/test/check-suite-manifest.sh's single-authorship arm.
 
 # =============================================================================
-echo ""
-echo "=== AC-62-32 (RED discriminator) — D7's retraction reaches all documentary homes (4 parts) ==="
-
-CONTRACTS_MISSING_REASON="$(grep -c 'draft artifact missing' "$TEAMMATE_CONTRACTS" || true)"
-assert_true "AC-62-32a: 'draft artifact missing' absent from docs/teammate-contracts.md (got: $CONTRACTS_MISSING_REASON)" \
-  "[ \"$CONTRACTS_MISSING_REASON\" -eq 0 ]"
-
-CONTRACTS_ANTECEDENT="$(grep -c 'does not write its design artifact' "$TEAMMATE_CONTRACTS" || true)"
-assert_true "AC-62-32a2: the antecedent clause 'does not write its design artifact' absent from docs/teammate-contracts.md (got: $CONTRACTS_ANTECEDENT)" \
-  "[ \"$CONTRACTS_ANTECEDENT\" -eq 0 ]"
-
-ARCHITECT_SECTION="$(awk '/^## ARCHITECT/{f=1;next} f && /^## [^A]/{exit} f{print}' "$AUTOFLOW_GUIDE")"
-RELOCATION_LITERAL_COUNT="$(printf '%s\n' "$ARCHITECT_SECTION" | grep -cF 'confirm both design artifacts exist and are non-empty before GATE:PLAN' || true)"
-assert_true "AC-62-32b: docs/autoflow-guide.md > ARCHITECT states the both-artifacts-exist-and-non-empty precondition (got: $RELOCATION_LITERAL_COUNT)" \
-  "[ \"$RELOCATION_LITERAL_COUNT\" -eq 1 ]"
-
-CONTRACTS_FS_SMOKE="$(grep -c "import('node:fs')" "$TEAMMATE_CONTRACTS" || true)"
-assert_true "AC-62-32c: the 'fs availability' smoke item's import('node:fs') reference absent from docs/teammate-contracts.md (got: $CONTRACTS_FS_SMOKE)" \
-  "[ \"$CONTRACTS_FS_SMOKE\" -eq 0 ]"
-
+# AC-62-32 (a / a2 / b / c) and AC-62-34 are migrated to the registry by #120.
 # =============================================================================
-echo ""
-echo "=== AC-62-34 (RED discriminator) — the harness-capability sentence's fifth E8 home ==="
-
-MISSING_ARTIFACT_TOKEN="$(grep -c 'missing-artifact' "$TEAMMATE_CONTRACTS" || true)"
-assert_true "AC-62-34: 'missing-artifact' absent from docs/teammate-contracts.md's Automated (mock-runtime regression) paragraph (got: $MISSING_ARTIFACT_TOKEN)" \
-  "[ \"$MISSING_ARTIFACT_TOKEN\" -eq 0 ]"
-
+# Four of the five were `grep -c <literal> <file> -eq 0` over a whole file —
+# `absent` + `match: "fixed"` in registry form, the shape the self-test's
+# injection mutator credits. AC-62-32(b) split: its positive half (the
+# ARCHITECT section states the both-artifacts-exist-and-non-empty
+# precondition) migrated; its "exactly once" count fence dropped, since a
+# count-shaped predicate can never be a permanent registry entry
+# (docs/doc-invariant-registry.md §1-2, the §6 `844 AC4-h` precedent).
+# Carriers: `120-62-contracts-no-draft-artifact-missing`,
+# `120-62-contracts-no-antecedent-clause`,
+# `120-62-guide-architect-artifacts-precondition`,
+# `120-62-contracts-no-fs-smoke`, `120-62-contracts-no-missing-artifact`.
+# Disposition recorded: docs/doc-invariant-registry.md §17.
 
 # =============================================================================
 # AC-62-37 is retired by issue #103's leaf rule.

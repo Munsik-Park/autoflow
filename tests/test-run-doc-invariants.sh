@@ -18,8 +18,8 @@
 # whole would have deleted the only test of the runner in a cycle whose central
 # mechanism is that runner, so the durable legs were renamed to this
 # subject-named suite — the naming this tree already uses for subject-named
-# rather than cycle-named specs (adr-0016-conformance-check.sh,
-# test-gate-hardening.sh) — and the cycle-completion legs were retired with §5
+# rather than cycle-named specs (test-gate-hardening.sh,
+# test-workflow-trigger-conformance.sh) — and the cycle-completion legs were retired with §5
 # disposition rows in docs/doc-invariant-registry.md.
 #
 # What this suite holds:

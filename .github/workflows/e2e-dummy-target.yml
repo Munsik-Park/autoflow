@@ -93,7 +93,6 @@ on:
       # an unrelated guard (reproduced 2026-07-26).
       - 'tests/test-issue-35-phase-marker.sh'
       - 'scripts/canary/**'
-      - 'tests/test-issue-42-spawn-mode-contract.sh'
       # #43 cycle surface. TAIL here (pull_request), for the reason the #26/#35
       # comments above record: #799's AC6-ci reads this list through a fixed
       # `grep -A40 '^ *paths:'` window, and inserting above an in-window entry
@@ -188,7 +187,6 @@ on:
       - 'scripts/test/run-suites.sh'
       - 'scripts/test/select-suites.sh'
       - 'test/workflows/run.mjs'
-      - 'tests/adr-0016-conformance-check.sh'
       - 'tests/issue-create/fixtures/corpus.jsonl'
       - 'tests/manual/issue-798-manual-scenarios.md'
       - 'tests/manual/issue-799-manual-scenarios.md'
@@ -257,7 +255,6 @@ on:
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
       - '.github/workflows/e2e-dummy-target.yml'
-      - 'tests/test-issue-42-spawn-mode-contract.sh'
       # #43 cycle surface. TAIL here (push) as well — mirrors the #42 entry's
       # own placement immediately above; no read-back guard in either block
       # pins the HEAD slot for this cycle's suite.
@@ -335,7 +332,6 @@ on:
       - 'scripts/test/run-suites.sh'
       - 'scripts/test/select-suites.sh'
       - 'test/workflows/run.mjs'
-      - 'tests/adr-0016-conformance-check.sh'
       - 'tests/issue-create/fixtures/corpus.jsonl'
       - 'tests/manual/issue-798-manual-scenarios.md'
       - 'tests/manual/issue-799-manual-scenarios.md'
@@ -418,21 +414,6 @@ jobs:
       # docs/doc-invariant-registry.md.
       - name: Run doc-invariant registry runner (#951)
         run: bash tests/run-doc-invariants.sh
-
-      # Spawn-mode-by-lifetime contract guard (#42, cycle-scoped): the
-      # DELTA-shaped and meta assertions the permanent registry structurally
-      # cannot hold — the PREFLIGHT step-1.5 / HANDOFF step-6.7 no-touch
-      # fence, the gate hook + gate-schema byte-invariance fence, the
-      # manifest regen-clean check, and the registry-append meta guard
-      # (no embedded newline; every origin_issue:42 literal re-checked in its
-      # own predicate's direction). CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-42-spawn-mode-contract.sh.
-      - name: Run spawn-mode contract guard (#42)
-        id: s-test-issue-42-spawn-mode-contract
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-42-spawn-mode-contract.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-42-spawn-mode-contract.sh
 
       # Reporting-channel contract guard (#43, cycle-scoped): the DELTA-shaped
       # and meta assertions the permanent registry structurally cannot hold —

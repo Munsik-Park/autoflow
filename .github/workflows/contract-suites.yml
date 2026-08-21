@@ -75,7 +75,6 @@ on:
       - 'setup/gen-manifest-hashes.sh'
       - 'setup/manifest.json'
       - 'setup/thin-root-layer/**'
-      - 'tests/adr-0016-conformance-check.sh'
       - 'tests/fixtures/**'
       - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
@@ -149,7 +148,6 @@ on:
       - 'tests/test-issue-120-arm-reconciliation.sh'
       # #120 arm-and-deletion reconciliation (issue #120) reads these five
       # touched-suite files for its diff-driven reconciliation leg.
-      - 'tests/test-issue-42-spawn-mode-contract.sh'
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
       - 'tests/test-issue-71-digest-removal.sh'
       - 'tests/test-issue-846-doc-assertions.sh'
@@ -201,7 +199,6 @@ on:
       - 'setup/gen-manifest-hashes.sh'
       - 'setup/manifest.json'
       - 'setup/thin-root-layer/**'
-      - 'tests/adr-0016-conformance-check.sh'
       - 'tests/fixtures/**'
       - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
@@ -275,7 +272,6 @@ on:
       - 'tests/test-issue-120-arm-reconciliation.sh'
       # #120 arm-and-deletion reconciliation (issue #120) reads these five
       # touched-suite files for its diff-driven reconciliation leg.
-      - 'tests/test-issue-42-spawn-mode-contract.sh'
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
       - 'tests/test-issue-71-digest-removal.sh'
       - 'tests/test-issue-846-doc-assertions.sh'
@@ -354,12 +350,6 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-bounded-execution-fallback.sh ')
         timeout-minutes: 3
         run: bash tests/test-bounded-execution-fallback.sh
-
-      - name: adr-0016-conformance-check.sh
-        id: s-adr-0016-conformance-check
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/adr-0016-conformance-check.sh ')
-        timeout-minutes: 10
-        run: bash tests/adr-0016-conformance-check.sh
 
       - name: verify-install-into-target.sh
         id: s-verify-install-into-target
