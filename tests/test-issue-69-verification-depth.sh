@@ -148,40 +148,6 @@ assert_true "AC-69-NO-QUANTITY-CAP: the Verification depth section introduces no
 
 # =============================================================================
 echo ""
-echo "=== AC:manifest-fresh (O:manifest) — every manifest copy-row's recorded hash equals its source's live hash, for every source this cycle edits ==="
-
-MANIFEST_SOURCES=(
-  "docs/autoflow-guide.md"
-  "docs/evaluation-system.md"
-  "docs/teammate-contracts.md"
-  "docs/adr/README.md"
-  "docs/maintained-docs.md"
-  "docs/INDEX.md"
-)
-# One jq pass over the manifest (source -> sha256 map) instead of one jq invocation per
-# source — same result, fewer process spawns against the same static file.
-declare -A MANIFEST_SHA_BY_SRC
-while IFS=$'\t' read -r src sha; do
-  MANIFEST_SHA_BY_SRC["$src"]="$sha"
-done < <(jq -r '.artifacts[] | "\(.source)\t\(.sha256)"' "$MANIFEST")
-
-for SRC in "${MANIFEST_SOURCES[@]}"; do
-  MANIFEST_SHA="${MANIFEST_SHA_BY_SRC[$SRC]:-}"
-  CUR_SHA="$(shasum -a 256 "$PROJECT_ROOT/$SRC" | awk '{print $1}')"
-  assert_true "AC-69-MANIFEST: setup/manifest.json row for $SRC sha256 matches the live source" \
-    "[ \"$MANIFEST_SHA\" = \"$CUR_SHA\" ]"
-done
-if [ -n "$NEW_ADR_PATH" ]; then
-  ADR_MANIFEST_SHA="${MANIFEST_SHA_BY_SRC[docs/adr/$NEW_ADR_BASENAME]:-}"
-  ADR_CUR_SHA="$(shasum -a 256 "$NEW_ADR_PATH" | awk '{print $1}')"
-  assert_true "AC-69-MANIFEST-adr: setup/manifest.json row for docs/adr/$NEW_ADR_BASENAME sha256 matches the live source" \
-    "[ \"$ADR_MANIFEST_SHA\" = \"$ADR_CUR_SHA\" ]"
-else
-  note_deferred "AC-69-MANIFEST-adr: no verification-depth ADR file found yet — manifest row check deferred until GREEN adds it."
-fi
-
-# =============================================================================
-echo ""
 echo "=== AC:registry-no-regression (O:registry) — the doc-invariant registry runner passes with the new #69 entries added and no pre-existing entry regressing ==="
 
 REGISTRY_OUT="$(cd "$PROJECT_ROOT" && bash "$REGISTRY_RUNNER" 2>&1)"

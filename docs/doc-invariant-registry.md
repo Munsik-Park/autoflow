@@ -1108,3 +1108,59 @@ is explicitly outside it, and this rule text must not be read as retiring it.
 
 `docs/autoflow-guide.md` > RED references this section from its admission questions rather
 than restating it.
+
+## 19. Migration provenance — retired-guard dispositions (issue #122)
+
+One row per assertion this cycle removes, naming the carrier that holds the property
+afterward. Where nothing holds it, the row says so rather than leaving the reader to infer
+it. The convention is one new numbered section per cycle — the issue text calls this "§13
+provenance", but §13 is issue #109's section and the registry is append-structured by
+section for the same reason the decision ledger is append-only.
+
+The unregistered-source residue ("the manifest carries exactly one artifacts row for this
+source") is **not** a new row here. It is a row-existence predicate, not a hash pin, and the
+regen fixed point holds over it vacuously; the registry already records it as
+retired-not-machine-checkable and this cycle inherits that record rather than reopening it.
+
+### 19.1 Manifest fences — the committed-manifest sha256 comparisons
+
+Carrier for every row below: `scripts/test/check-manifest-regen-clean.sh`, registered in
+`.github/workflows/contract-suites.yml` as the `manifest regen-clean lint` step with **no
+`if:` guard**. It regenerates the manifest in a scratch copy and requires byte-identity with
+the committed file, so each named row a fence pinned is a strict sub-case of its fixed point,
+and it never writes to the tree it checks.
+
+| Removed arm | Suite | Shape | Carrier |
+|---|---|---|---|
+| `AC-56-10a` (and its header enumeration entry) | `tests/test-issue-56-carry-evidence-discipline.sh` | named-row fence over `architect-deliberation.js` | `check-manifest-regen-clean.sh` fixed point |
+| `AC-59-9` (and its header enumeration entry) | `tests/test-issue-59-adoption-evidence-discipline.sh` | named-row fence over the same source | `check-manifest-regen-clean.sh` fixed point |
+| `AC-62-20` | `tests/test-issue-62-sequential-rounds.sh` | named-row fence, looped over that cycle's edited-source list | `check-manifest-regen-clean.sh` fixed point |
+| `AC-67-MANIFEST` | `tests/test-issue-67-deliberation-record.sh` | named-row fence, looped | `check-manifest-regen-clean.sh` fixed point |
+| `AC-69-MANIFEST`, `AC-69-MANIFEST-adr` | `tests/test-issue-69-verification-depth.sh` | two named-row fences in one suite; the `-adr` half carried a `note_deferred` branch, removed with it | `check-manifest-regen-clean.sh` fixed point |
+| `AC-27-21b` | `tests/test-issue-27-composition-oracle.sh` | **all-row** fence — every `kind=="copy"` row against its current source | `check-manifest-regen-clean.sh` fixed point. An all-row fence is the fixed point's own predicate written out by hand, so it is subsumed more strictly than a named-row one, not less |
+| `AC2e` | `tests/test-issue-979-bundle-delivery.sh` | all-row fence restricted to that cycle's new copy rows | `check-manifest-regen-clean.sh` fixed point |
+| `manifest-freshness-a`, `manifest-freshness-b` (with the `mktemp` backup, `restore_manifest`, the `EXIT` trap, and the `MANIFEST` / `GEN_MANIFEST` / `EDITED_SOURCES` variables they alone defined) | `tests/test-issue-52-peer-facilitator-premise.sh` | the in-tree **regenerating** arm — ran the real generator against the live checkout, diffed against a backup, restored on trap | `check-manifest-regen-clean.sh` fixed point, which takes a `--root` scratch tree and therefore never mutates the checkout it verifies. This arm's own hazard — an interrupt between the generator call and `restore_manifest` leaving `setup/manifest.json` rewritten in the working tree — leaves with it |
+
+**Retained, with the ground for each.** Every other live sha256 comparison in the tests tree,
+and why the fixed point does not reach it:
+
+| Site | Ground for retention |
+|---|---|
+| `tests/test-issue-51-teammate-removal-verdict.sh` `O1(c)-hash-coherence` | reads a manifest inside a **temp tree** it constructed, not the committed one. A fixed point over the committed manifest says nothing about a scratch manifest |
+| `tests/test-issue-62-sequential-rounds.sh` `AC-62-21a` | pins one file's sha256 against a **checked-in literal**. Not a manifest-row comparison at all; see § 19.6 for its disposition under § 18 |
+| `tests/test-issue-64-collection-scope.sh` `script_sha256` | a string inside a JSON fixture payload. Not a comparison |
+| `AC-27-21a`, `AC-59-16a`, `AC-62-21b` — named-source **row-existence** predicates | not hash pins. An unregistered source has no row in either the committed or the regenerated manifest, so the fixed point holds over it vacuously |
+
+§17.1 records `AC-62-20` and `AC-62-21a` as retained under a `76-RETAIN-COUNT` / sha256-pin
+ground. That row is about **registry-expressibility** — whether the doc-invariant runner can
+hold the predicate — and is silent on whether a standing lint holds it. Retiring `AC-62-20`
+here is decided on the second question and does not reopen the first.
+
+**Citations of the retired identifiers, left in place.** Two sites named `AC-56-10a` /
+`AC-59-9` in prose rather than asserting them, and are dispositioned here rather than
+edited:
+
+| Site | Disposition |
+|---|---|
+| `tests/test-issue-62-sequential-rounds.sh` `AC-62-39` | the arm survives (it pins that the manifest carries zero `tests/…` source rows); only its **label** cited the two retired fences as the reason. Relabelled in this cycle to state the property directly — "editing a test file owes no manifest regeneration" — so the arm no longer depends on identifiers the tree has retired |
+| `tests/manual/issue-56-manual-scenarios.md` M1's coverage-boundary paragraph | left as written. It is a closed cycle's manual-scenario record of why that contact point needed no automated oracle *at that time*; rewriting it would revise a historical record, the same objection §17.2 states for §13's carrier rows. The citation resolves through this table |

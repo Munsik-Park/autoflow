@@ -141,17 +141,6 @@ assert_true "AC-62-18b: registry row count is non-decreasing vs. the last commit
 
 # =============================================================================
 echo ""
-echo "=== AC-62-20 (fence — will FAIL mid-GREEN until manifest is regenerated, gate at GREEN close) — manifest hash freshness (widened to 3 sources) ==="
-
-for SRC in ".claude/workflows/architect-deliberation.js" "docs/teammate-contracts.md" "docs/autoflow-guide.md"; do
-  MANIFEST_SHA="$(jq -r --arg s "$SRC" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST")"
-  CUR_SHA="$(shasum -a 256 "$PROJECT_ROOT/$SRC" | awk '{print $1}')"
-  assert_true "AC-62-20 ($SRC): manifest row sha256 == live file sha256 (manifest: $MANIFEST_SHA, current: $CUR_SHA)" \
-    "[ \"$MANIFEST_SHA\" = \"$CUR_SHA\" ]"
-done
-
-# =============================================================================
-echo ""
 echo "=== AC-62-21 (fence) — negative-control pins: verify-cause-branch.js sha + manifest artifact count ==="
 
 CUR_VERIFY_SHA="$(shasum -a 256 "$VERIFY_JS" | awk '{print $1}')"
@@ -164,8 +153,7 @@ assert_true "AC-62-21a: verify-cause-branch.js sha256 unchanged (B11 $B11_SHA) (
 # docs/doc-invariant-registry.md:114 (test-issue-27-composition-oracle.sh
 # AC-27-21a, reddened by issue #51's ADR-0017 manifest row, 47 -> 48).
 # Converted to the drift-immune shape used there: a state predicate over the
-# three named sources this suite actually pins manifest-hash freshness for
-# just above (AC-62-20's loop), not a global count.
+# three named sources this suite names below, not a global count.
 MANIFEST_ARTIFACT_COUNT="$(jq '.artifacts | length' "$MANIFEST")"
 echo "  (info) AC-62-21b: setup/manifest.json artifact count is currently $MANIFEST_ARTIFACT_COUNT (informational — not asserted; see conversion note above)"
 
@@ -335,7 +323,7 @@ echo ""
 echo "=== AC-62-39 (fence) — no derived-artifact regeneration owed for the two guards' own change ==="
 
 MANIFEST_TESTS_ROWS="$(jq -r '.artifacts[].source' "$MANIFEST" | grep -c '^tests/' || true)"
-assert_true "AC-62-39: setup/manifest.json carries zero 'tests/…' source rows so AC-56-10a/AC-59-9 stay unmoved (got: $MANIFEST_TESTS_ROWS)" \
+assert_true "AC-62-39: setup/manifest.json carries zero 'tests/…' source rows, so editing a test file owes no manifest regeneration (got: $MANIFEST_TESTS_ROWS)" \
   "[ \"$MANIFEST_TESTS_ROWS\" -eq 0 ]"
 
 # =============================================================================

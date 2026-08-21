@@ -345,22 +345,6 @@ done
 assert_true "AC-27-21a: setup/manifest.json carries exactly one artifact row for each of this cycle's three registered sources (drift-immune: named-source state predicate, not a global count)" \
   "[ '$AC_27_21A_BAD' -eq 0 ]"
 
-STALE=""
-while IFS=$'\t' read -r src rec_hash; do
-  [ -z "$src" ] && continue
-  # setup/manifest.json's own self-entry carries a null sha256 (the manifest
-  # cannot record its own post-regeneration hash in advance) — not a
-  # freshness check target, per setup/gen-manifest-hashes.sh.
-  [ "$src" = "setup/manifest.json" ] && continue
-  cur_hash="$(shasum -a 256 "$PROJECT_ROOT/$src" 2>/dev/null | awk '{print $1}')"
-  if [ "$cur_hash" != "$rec_hash" ]; then
-    STALE="$STALE $src"
-  fi
-done < <(jq -r '.artifacts[] | select(.kind=="copy") | [.source, .sha256] | @tsv' "$MANIFEST")
-
-assert_true "AC-27-21b: every copy-kind artifact's recorded sha256 matches its current source (stale:${STALE:- none})" \
-  "[ -z \"$STALE\" ]"
-
 # =============================================================================
 echo ""
 echo "=== AC-27-22 (composition oracle for S4, fence, PASS pre+post) — pre-existing registry invariants stay PASS ==="

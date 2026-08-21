@@ -35,11 +35,6 @@
 #                          docs/doc-invariant-registry.md §12.1.
 #   ci-wired             — both new files registered as paths: entries in the
 #                          pull_request AND push blocks, plus a run: step
-#   manifest-freshness   — composition oracle: real setup/gen-manifest-hashes.sh,
-#                          non-destructive protocol (capture -> trap-restore-on-
-#                          any-exit -> run -> compare -> restore), scoped to
-#                          this cycle's three edited sources' sha256 rows plus
-#                          a membership-unchanged assertion
 #   registry-runner-green — composition oracle: real tests/run-doc-invariants.sh,
 #                          id-set-scoped fence (no entry outside 52-* FAILs) +
 #                          overall exit 0 required only on the post-edit tree
@@ -54,8 +49,7 @@
 #     + heading skeleton + field-completeness (the file is authored in full
 #     at RED, per Test AI scope, with every field carrying a non-empty
 #     placeholder value; only the VALUE's content changes at GREEN, which
-#     this oracle never asserts), manifest-freshness (both sub-checks — a fence, true before and
-#     after GREEN), registry-runner-green's id-set-scoped sub-check (no
+#     this oracle never asserts), registry-runner-green's id-set-scoped sub-check (no
 #     entry OUTSIDE 52-* fails, true from the outset).
 # =============================================================================
 
@@ -68,11 +62,8 @@ MANUAL_REL="tests/manual/issue-52-manual-scenarios.md"
 MANUAL="$PROJECT_ROOT/$MANUAL_REL"
 SUITE_REL="tests/test-issue-52-peer-facilitator-premise.sh"
 RUNNER="$SCRIPT_DIR/run-doc-invariants.sh"
-MANIFEST="$PROJECT_ROOT/setup/manifest.json"
-GEN_MANIFEST="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 
-EDITED_SOURCES=("CLAUDE.md" "docs/design-rationale.md" "docs/teammate-contracts.md")
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -214,50 +205,6 @@ else
   assert_true "ci-wired: $CI_WORKFLOW exists" "false"
   echo "  BLOCK: remaining ci-wired arms unmeasurable (workflow file missing) — counted FAIL, never skipped"
   TESTS=$((TESTS + 5)); FAIL=$((FAIL + 5))
-fi
-
-# =============================================================================
-# manifest-freshness — composition oracle (verification design §5,
-# manifest-regen-clean; non-destructive protocol, ledger E15).
-# =============================================================================
-echo ""
-echo "=== manifest-freshness (composition oracle: real setup/gen-manifest-hashes.sh) ==="
-
-if [ -f "$GEN_MANIFEST" ] && [ -f "$MANIFEST" ]; then
-  MANIFEST_BACKUP="$(mktemp)"
-  cp "$MANIFEST" "$MANIFEST_BACKUP"
-  restore_manifest() { cp "$MANIFEST_BACKUP" "$MANIFEST"; rm -f "$MANIFEST_BACKUP"; }
-  trap restore_manifest EXIT
-
-  PRE_SOURCES_JSON="$(jq -c '[.artifacts[].source] | sort' "$MANIFEST" 2>/dev/null)"
-
-  ( cd "$PROJECT_ROOT" && bash "$GEN_MANIFEST" >/dev/null 2>&1 )
-  GEN_RC=$?
-
-  ROWS_UNCHANGED=yes
-  if [ "$GEN_RC" -eq 0 ]; then
-    for src in "${EDITED_SOURCES[@]}"; do
-      PRE_SHA="$(jq -r --arg s "$src" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST_BACKUP" 2>/dev/null)"
-      POST_SHA="$(jq -r --arg s "$src" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST" 2>/dev/null)"
-      [ "$PRE_SHA" = "$POST_SHA" ] || ROWS_UNCHANGED=no
-    done
-  else
-    ROWS_UNCHANGED=no
-  fi
-
-  POST_SOURCES_JSON="$(jq -c '[.artifacts[].source] | sort' "$MANIFEST" 2>/dev/null)"
-  MEMBERSHIP_UNCHANGED=no
-  [ "$PRE_SOURCES_JSON" = "$POST_SOURCES_JSON" ] && MEMBERSHIP_UNCHANGED=yes
-
-  assert_true "manifest-freshness-a: real generator regen leaves this cycle's edited-source rows byte-identical (fence — true before and after GREEN)" \
-    "[ '$ROWS_UNCHANGED' = yes ]"
-  assert_true "manifest-freshness-b: regen does not change manifest artifacts[] membership (source set unchanged; guards the backticked-pointer-only rule)" \
-    "[ '$MEMBERSHIP_UNCHANGED' = yes ]"
-
-  restore_manifest
-  trap - EXIT
-else
-  assert_true "manifest-freshness: setup/gen-manifest-hashes.sh and setup/manifest.json both exist" "false"
 fi
 
 # =============================================================================
