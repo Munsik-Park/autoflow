@@ -1373,3 +1373,49 @@ cycle's § 19.1 / § 19.2 removals above that range move the definition, so the 
 re-anchored to `:90-109` in the same commit — the re-anchoring discipline § 16 established
 for a consumer of a deleted arm, and the property `tests/test-cycle-arm-residue.sh`'s
 `kept-row-anchor-resolves` arm executes.
+
+### 19.7 Retirement-due advisory, and the injection boundary
+
+The issue asks for two lint changes: a merged cycle's residual branch-gate arm made a **hard
+FAIL** in `scripts/test/check-cycle-scope-guard.sh`, and an advisory `retire-with` issue-state
+check in the manifest lint. This cycle merges them into **one advisory leg in
+`scripts/test/check-suite-manifest.sh`** and declines the hard FAIL. The deviation is recorded
+in § 19.5; the grounds are:
+
+- *Not a hard FAIL.* § 2 of this document states that a live cycle-scoped lane is
+  branch-scoped by construction — its evaluation is dominated by a gate naming its own issue,
+  whose other arm credits no counters — so a forgotten deletion is inert on every foreign
+  branch, "harmless rather than red-making". The cost is maintenance, not incorrectness.
+- *Not in the cycle-scope guard.* That lint is gating and hermetic: it ships fixture classes,
+  takes a scratch root, and runs its self-test before its real-tree pass. Whether an issue is
+  merged is not derivable from the tree. A network dependency inside a gating hermetic lint
+  makes a CI outage or an unauthenticated runner into a red build.
+- *Where it goes.* `check-suite-manifest.sh` already reads `lane`, `retire-with` and
+  `cycle-arm` and enforces their couplings; the retirement-due question belongs with that
+  data.
+
+**The injection boundary, and its two halves.**
+
+| Half | Where | Invoked by |
+|---|---|---|
+| pure classifier — takes an issue-state record (`#<issue> <open\|closed\|unknown>` lines) whose path arrives in `AUTOFLOW_ISSUE_STATE_FILE`, and emits the advisory and degraded lines from it alone. No network access of any kind | `scripts/test/check-suite-manifest.sh`, `check_retirement_due` | the lint's own `check_tree`, on every run |
+| thin fetch adapter — resolves each `retire-with:` issue through `gh` and writes the record | **`scripts/test/fetch-issue-state.sh`** | an **operator**, or a workflow step that chooses to. **Never** the lint: it holds no reference to this path in any executable position, and a self-test arm asserts that statically |
+
+Without this seam the only way to drive the advisory and degraded acceptance criteria would
+be a live network call from a gating lint. With it, both are driven hermetically by handing
+the classifier a real record file. The adapter's own degraded behaviour is explicit too: with
+no usable `gh` it writes every issue as `unknown` rather than omitting the line, because an
+omitted record and an `unknown` record are not the same thing to the classifier.
+
+**Degraded mode is loud, not silent.** With no record available the leg prints an
+unavailability line **naming** the suites it could not decide. A silent skip here would be
+the vacuous-pass class this layer rejects; an advisory leg that says "I could not check these"
+is not vacuous.
+
+**On the `# out-of-tree-inputs:` header field — declined, with its ground.** The field's
+grammar is *suite-scoped*: the enumerator that feeds every header check walks `tests/` only,
+so writing it into a `scripts/test/` lint header would be a second, unenforced registration
+home — the shape this lint's own rules reject. The seam makes the declaration moot rather
+than merely unenforceable: with the fetcher outside it, the lint body reads no out-of-tree
+state at all, so there is nothing left to declare. The lint's header records the seam as a
+contract sentence instead.
