@@ -1996,6 +1996,148 @@ await test('ARCHITECT: the script still names no .autoflow/issue-{N}.json state-
   assert.doesNotMatch(src, /issue-\$\{issue\}\.json|issue-\d+\.json/, 'the workflow must not name the ARCHITECT re-entry counter state file')
 })
 
+// ---- ARCHITECT: terminal post-verdict call rejection absorption (issue #127, cycle 2) ---
+// Verification design (.autoflow/issue-127-verification-design.md, cycle 2 section). RED at
+// HEAD: both the `ledger` call (architect-deliberation.js:602) and the `register-write` call
+// (:632) are bare `await agent(...)` with no absorption wrapper, so a rejecting/throwing
+// sub-agent call propagates OUT of `architect-deliberation` -- every case below asserts a
+// RESOLVED result and therefore fails at HEAD for that reason.
+//
+// A rejection needs no harness plumbing change (verification design > Testability assessment):
+// the shared `resumeResponder` factory returns each override's value directly, so composing it
+// behind a one-label interceptor that throws for the intercepted label is sufficient -- the
+// `async` `makeAgent` shim converts the throw into the rejection under test. The interceptor
+// delegates to the base responder FIRST before throwing so structural state the base responder
+// tracks (`seenLedger`) still advances -- required so a `ledger`-rejection case's subsequent
+// register-write call is still classified past the ledger, not before it (RED hazard recorded
+// in .autoflow/issue-127-c2-gate-plan.md item 2).
+function interceptLabelReject(overrides, label, makeError) {
+  const base = resumeResponder(overrides)
+  return (l, p) => {
+    if (l === label) {
+      base(l, p) // delegate first -- advances seenLedger / round bookkeeping normally
+      throw makeError()
+    }
+    return base(l, p)
+  }
+}
+
+await test('ARCHITECT: a rejecting register-write sub-agent leaves the already-decided verdict intact and reports a failed write (AC-C2-127-1, write-reject-absorbed)', async () => {
+  const responder = interceptLabelReject({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'WRA', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+  }, 'register-write', () => new Error('register-write rejected'))
+  const { result } = await runArch({ issue: 'c2-127-1', resume: true }, responder)
+  assert.equal(result.verdict, 'CONVERGED', 'a rejecting register-write must not alter the already-decided verdict')
+  assert.equal(result.registerWritten, false)
+})
+
+// Direct invocation, bypassing runArch()/makeAgent(): a plain (non-`async`) agent that throws
+// SYNCHRONOUSLY at the register-write site. The harness's own agent shim is `async`
+// (test/workflows/run.mjs makeAgent), which converts any synchronous throw into a rejection and
+// so cannot exercise the distinction under test -- only a direct call with a non-async agent
+// keeps the throw synchronous (verification design > `write-sync-throw-absorbed`, Invocation
+// path clause). Owns its own artifact setup/unlink -- the same carve-out AC127-13/14 already
+// take, for the same reason: neither the runner's fixture write nor its `finally` teardown apply
+// to a call that bypasses the runner.
+await test('ARCHITECT: a SYNCHRONOUS throw at the register-write call is absorbed the same as a rejection -- discriminates the wide guard form from a bare `.catch()` (write-sync-throw-absorbed, AC-C2-127-2)', async () => {
+  const issue = 'c2-127-2-sync'
+  const { register } = artifactPaths(issue)
+  writeDraftArtifacts(issue)
+  try { unlinkSync(register) } catch (_) { /* none yet */ }
+  const syncThrowAgent = (prompt, opts = {}) => {
+    const label = (opts && opts.label) || ''
+    if (label === 'register-write') throw new Error('sync register-write throw') // NOT a promise rejection
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    const r = Number(label.split('-r')[1])
+    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
+    if (label.startsWith('test-r') || label.startsWith('dev-r')) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return null
+  }
+  const result = await arch({ issue }, phase, parallel, syncThrowAgent, mockConsole)
+  removeDraftArtifacts(issue)
+  assert.equal(result.verdict, 'CONVERGED', 'a synchronous throw at register-write must not alter the already-decided verdict')
+  assert.equal(result.registerWritten, false)
+})
+
+await test('ARCHITECT: a rejecting ledger sub-agent leaves the already-decided verdict intact, and the terminal register write still runs and succeeds (AC-C2-127-4, ledger-reject-absorbed)', async () => {
+  const responder = interceptLabelReject({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'LRA', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+  }, 'ledger', () => new Error('ledger rejected'))
+  const { result } = await runArch({ issue: 'c2-127-4', resume: true }, responder)
+  assert.equal(result.verdict, 'CONVERGED', 'a rejecting ledger call must not alter the already-decided verdict')
+  assert.equal(result.registerWritten, true, 'the terminal register write must still be issued and acknowledged after an absorbed ledger rejection -- this is what separates "absorbed" from "swallowed the rest of the run"')
+})
+
+// Real-filesystem composition oracle (verification design > `stale-register-untouched`), driven
+// directly against `arch()` three times over one real register file -- the same carve-out
+// AC127-13/14 take, for the same reason: the runner's teardown would delete the file between
+// invocations. Uses real labels directly ('register-load' / 'ledger' / 'register-write') rather
+// than the resumeResponder factory, since this case's whole point is reading/writing that exact
+// real file across three separate runs.
+await test('ARCHITECT: a failed register write on resume leaves a previously persisted register byte-unchanged, and a later resume re-enters from that persisted round rather than a fresh one (stale-register-untouched, AC-C2-127-2)', async () => {
+  const issue = 'c2-127-stale'
+  const { register } = artifactPaths(issue)
+  try { unlinkSync(register) } catch (_) { /* none yet */ }
+  writeDraftArtifacts(issue)
+
+  // Step 1 -- a real cold run that never converges (ACCEPT with no grounds, every round) persists
+  // a real ESCALATE register with one open entry raised at round 1, so it is resume-eligible (a
+  // CONVERGED register would be refused by the already-converged guard).
+  const coldResponder = (label, prompt) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'register-write') {
+      const start = prompt.indexOf(REGISTER_FENCE_START)
+      const end = prompt.indexOf(REGISTER_FENCE_END)
+      assert.ok(start >= 0 && end > start, 'the register-write prompt must carry the declared fence literals around the payload')
+      writeFileSync(register, prompt.slice(start + REGISTER_FENCE_START.length, end))
+      return { written: true }
+    }
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: ['STALE_CONCERN'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: [] } // never converges (no grounds)
+  }
+  const coldResult = await arch({ issue }, phase, parallel, makeAgent(coldResponder, []), mockConsole)
+  assert.equal(coldResult.verdict, 'ESCALATE')
+  assert.equal(coldResult.registerWritten, true)
+  const before = readFileSync(register, 'utf8')
+  const beforeRound = JSON.parse(before).lastRound
+
+  // Step 2 -- a resume run against that same real file whose register-write call REJECTS.
+  const rejectingResumeAgent = (label) => {
+    if (label === 'register-load') {
+      const onDiskNow = JSON.parse(readFileSync(register, 'utf8'))
+      return { found: true, artifacts_present: true, lastRound: onDiskNow.lastRound, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
+    }
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'register-write') throw new Error('register-write rejected')
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] } // resume lifts first-exchange -> converges immediately
+  }
+  const rejectResult = await arch({ issue, resume: true }, phase, parallel, makeAgent(rejectingResumeAgent, []), mockConsole)
+  assert.equal(rejectResult.registerWritten, false, 'the rejecting write must be reported as failed')
+  const after = readFileSync(register, 'utf8')
+  assert.equal(after, before, 'a failed register write must leave the previously persisted register byte-unchanged')
+
+  // Step 3 -- a further resume whose load responder reads that same real (unchanged) file back
+  // must re-enter at the persisted round, not a fresh one.
+  const finalLoadAgent = (label) => {
+    if (label === 'register-load') {
+      const onDiskNow = JSON.parse(readFileSync(register, 'utf8'))
+      return { found: true, artifacts_present: true, lastRound: onDiskNow.lastRound, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
+    }
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'register-write') return { written: true }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const finalResult = await arch({ issue, resume: true }, phase, parallel, makeAgent(finalLoadAgent, []), mockConsole)
+  removeDraftArtifacts(issue)
+  assert.equal(finalResult.rounds, beforeRound + 1, 'the further resume must re-enter from the persisted round, not a fresh cold round')
+})
+
 // ---- VERIFY -------------------------------------------------------------------
 
 const combos = [

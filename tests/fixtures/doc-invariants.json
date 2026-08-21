@@ -7135,6 +7135,41 @@
       "match": "fixed",
       "literal": "registerWritten",
       "scope": "permanent"
+    },
+    {
+      "id": "127-AC-C2-contracts-facilitator-registerwrite-corrected",
+      "origin_issue": 127,
+      "intent": "coherence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Facilitator (deliberation sub-context)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "re-enters from the last successfully persisted state",
+      "scope": "permanent"
+    },
+    {
+      "id": "127-AC-C2-contracts-facilitator-ledger-residual",
+      "origin_issue": 127,
+      "intent": "coherence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Facilitator (deliberation sub-context)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "a failed ledger append is absorbed and reported nowhere in the return",
+      "scope": "permanent"
+    },
+    {
+      "id": "127-AC-C2-source-comment-corrected-absent",
+      "origin_issue": 127,
+      "intent": "coherence",
+      "file": ".claude/workflows/architect-deliberation.js",
+      "section": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "fails loudly at its own load guard rather than proceeding on stale state",
+      "scope": "permanent"
     }
   ]
 }
