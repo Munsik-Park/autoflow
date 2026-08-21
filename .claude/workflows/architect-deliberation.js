@@ -644,7 +644,9 @@ if (registerHeld) {
   // A failed write does not alter the already-decided verdict: it is absorbed to a null
   // acknowledgement and reported as `registerWritten: false`. The consequence lands on the NEXT
   // resume, which re-enters from the last successfully persisted state — the register an earlier
-  // run left behind when one exists, and a cold restart when none does.
+  // run left behind when one exists; when none exists the resume load guard escalates with
+  // REASON_RESUME_REGISTER_ABSENT (zero rounds run), so the operator sees the gap rather than a
+  // silent cold restart.
   registerWritten = !!registerAck
 }
 
