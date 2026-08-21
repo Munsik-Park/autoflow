@@ -124,6 +124,14 @@ on:
       # tree. Every path in its own `# ci-subject:` header already appears in
       # this block, so only its own path is added here.
       - 'tests/test-cycle-arm-residue.sh'
+      # #120 disposition-residue extension (issue #120) added four ci-subject
+      # paths not previously in this block.
+      - '.github/workflows/contract-suites.yml'
+      - 'scripts/test/check-suite-manifest.sh'
+      - 'tests/manual/issue-42-manual-scenarios.md'
+      - 'tests/test-issue-109-doc-assertions.sh'
+      - 'tests/test-issue-16-manifest-locale-invariance.sh'
+      - 'tests/test-run-doc-invariants.sh'
       # #67 cycle surface (ARCHITECT deliberation record redesign — register +
       # dispositions). TAIL here for the same reason the #56/#59/#62 comments above
       # record.
@@ -273,6 +281,14 @@ on:
       # #107 standing surface. TAIL here (push) as well — mirrors the
       # pull_request block's own placement immediately above.
       - 'tests/test-cycle-arm-residue.sh'
+      # #120 disposition-residue extension. TAIL here (push) as well —
+      # mirrors the pull_request block's own placement immediately above.
+      - '.github/workflows/contract-suites.yml'
+      - 'scripts/test/check-suite-manifest.sh'
+      - 'tests/manual/issue-42-manual-scenarios.md'
+      - 'tests/test-issue-109-doc-assertions.sh'
+      - 'tests/test-issue-16-manifest-locale-invariance.sh'
+      - 'tests/test-run-doc-invariants.sh'
       # #67 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'tests/test-issue-67-deliberation-record.sh'
