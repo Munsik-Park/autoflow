@@ -160,15 +160,6 @@ WINDOW_SUB_A='review-autofix`-marked ledger entries since the last user re-entry
 WINDOW_SUB_B='reset by that decision'
 
 # =============================================================================
-echo "=== AC1-FALLBACK/AC1-SUBREPO/AC1-VERIFY (RED discriminators) — .codex/review.md label-removal bullet ==="
-
-
-# =============================================================================
-echo ""
-echo "=== AC1-ACTOR (guard, PASS pre+post) — no orchestrator-side --remove-label in autoflow-guide.md ==="
-
-
-# =============================================================================
 echo ""
 echo "=== AC2-GUIDE/AC2-RATIONALE (RED discriminators) — verbatim canonical window phrase, dual-file AND ==="
 
@@ -227,12 +218,6 @@ echo "=== CLAUDEMD-NOCONTRA (guard) — CLAUDE.md cap wording not contradicting 
 
 assert_false "CLAUDEMD-NOCONTRA: CLAUDE.md Regressions line does not name label-clear as a reset trigger" \
   "ctx=\$(claude_regressions_line); printf '%s\n' \"\$ctx\" | grep -qiE 'label.?clear[^.]*reset|reset[^.]*label.?clear'"
-
-# =============================================================================
-echo ""
-echo "=== AC-PRESERVE (guard, PASS pre+post) — existing label-removal-failure clause + hook-deny language survive ==="
-
-
 
 # =============================================================================
 echo ""

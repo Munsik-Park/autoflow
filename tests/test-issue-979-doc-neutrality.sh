@@ -144,11 +144,17 @@ export HANDOFF_WIDE_JOINED
 assert_true "autoflow-guide.md widened HANDOFF window (616-654) does NOT contain any capital-'Codex <word>' live-path phrase (complete class, not a hand-enumerated stem list — RED today at 618/631/633/636/637/638/642/645/651)" \
   "! printf '%s' \"\$HANDOFF_WIDE_JOINED\" | grep -q 'Codex [A-Za-z]'"
 
-assert_true "autoflow-guide.md widened HANDOFF window has landed neutral vocabulary ('configured-reviewer'/'reviewer review'/'reviewer comment'/'reviewer re-review'/'reviewer session'), proving text was replaced, not merely deleted" \
-  "printf '%s' \"\$HANDOFF_WIDE_JOINED\" | grep -qiE 'configured.reviewer|reviewer (review|comment|re-review|session)'"
-
-assert_true "autoflow-guide.md widened HANDOFF window still permits lowercase 'codex' as the named default backend (no over-neutralization)" \
-  "printf '%s' \"\$HANDOFF_WIDE_JOINED\" | grep -qi 'codex'"
+# The widened-HANDOFF-window neutral-vocabulary and lowercase-`codex` arms are
+# migrated to the registry by issue #120. Their region — `## HANDOFF —`
+# through `**[MUST]** AutoFlow runs neither` — resolves as a column-1 fixed
+# prefix pair, i.e. the registry's `section_kind: "block"` anchor plus
+# `section_end`. Carriers `120-979-guide-handoff-neutral-vocab` (present +
+# regex) and `120-979-guide-handoff-codex-default` (present + fixed, the
+# case-explicit rewrite of the original case-insensitive match). The
+# complete-class `Codex [A-Za-z]` arm above stays: an `absent` + ERE has no
+# injectable witness, so the registry's self-test can never credit it
+# (76-RETAIN-ABSENT-REGEX). Disposition recorded:
+# docs/doc-invariant-registry.md §17.
 
 echo ""
 echo "=== cycle 2: CLAUDE.md HANDOFF descriptions (9/12/82/205/283/311) ==="

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: tests/test-issue-43-report-channel-contract.sh tests/test-issue-51-teammate-removal-verdict.sh tests/test-issue-52-peer-facilitator-premise.sh tests/test-issue-56-carry-evidence-discipline.sh tests/test-issue-59-adoption-evidence-discipline.sh tests/test-issue-62-sequential-rounds.sh docs/doc-invariant-registry.md
+# ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md scripts/test/check-suite-manifest.sh tests/fixtures/doc-invariants.json tests/manual/issue-42-manual-scenarios.md tests/run-doc-invariants.sh tests/test-issue-109-doc-assertions.sh tests/test-issue-16-manifest-locale-invariance.sh tests/test-issue-43-report-channel-contract.sh tests/test-issue-51-teammate-removal-verdict.sh tests/test-issue-52-peer-facilitator-premise.sh tests/test-issue-56-carry-evidence-discipline.sh tests/test-issue-59-adoption-evidence-discipline.sh tests/test-issue-62-sequential-rounds.sh tests/test-issue-71-digest-removal.sh tests/test-run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # out-of-tree-inputs: no
@@ -514,6 +514,156 @@ if [ -n "$KEPT_ANCHOR" ]; then
   assert_true "kept-row-anchor-resolves: the cited range $KEPT_ANCHOR contains the guard_result_at_ref_mutated() definition line on the real file" \
     "sed -n \"${ANCHOR_START},${ANCHOR_END}p\" '$SUITE_62' | grep -qE 'guard_result_at_ref_mutated\\(\\)[[:space:]]*\\{'"
 fi
+
+# =============================================================================
+# This cycle's own dispositions — issue #120 (state direction: what the
+# registry provenance section and the deletion/keystone set claim must
+# actually hold in the tree at HEAD). The converse (delta) direction — an arm
+# or file that left the tree with no provenance row and no registry entry —
+# is the cycle-scoped tests/test-issue-120-arm-reconciliation.sh; that layer
+# reads the base-ref diff and cannot live in this standing suite (verification
+# design .autoflow/issue-120-verification-design.md > Verification layers).
+# =============================================================================
+echo ""
+echo "=== Issue #120 — disposition residue (deletion set, keystone retirement, firewall pins, #51 note, provenance section) ==="
+
+SUITE_ADR0016_PATH="$PROJECT_ROOT/tests/adr-0016-conformance-check.sh"
+SUITE_42_PATH="$PROJECT_ROOT/tests/test-issue-42-spawn-mode-contract.sh"
+SUITE_109="$PROJECT_ROOT/tests/test-issue-109-doc-assertions.sh"
+SUITE_16="$PROJECT_ROOT/tests/test-issue-16-manifest-locale-invariance.sh"
+SUITE_71="$PROJECT_ROOT/tests/test-issue-71-digest-removal.sh"
+SUITE_51_120="$PROJECT_ROOT/tests/test-issue-51-teammate-removal-verdict.sh"
+FIXTURE_ADR0016_BASELINE="$PROJECT_ROOT/tests/fixtures/issue-109-assertion-baseline-adr0016.txt"
+MANUAL_42="$PROJECT_ROOT/tests/manual/issue-42-manual-scenarios.md"
+WORKFLOW_CONTRACT="$PROJECT_ROOT/.github/workflows/contract-suites.yml"
+WORKFLOW_E2E="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
+
+# ---------------------------------------------------------------------------
+# arm-removed (file level) — the two full-file deletions (feature design §2).
+# ---------------------------------------------------------------------------
+assert_true "120 arm-removed: tests/adr-0016-conformance-check.sh is deleted (every arm migrated, retired against a carrier, or dropped with recorded coverage loss)" \
+  "[ ! -f '$SUITE_ADR0016_PATH' ]"
+assert_true "120 arm-removed: tests/test-issue-42-spawn-mode-contract.sh is deleted (every arm migrated or retired against a carrier)" \
+  "[ ! -f '$SUITE_42_PATH' ]"
+
+# ---------------------------------------------------------------------------
+# keystone-remnant-gone — feature design §3: the adr-0016 half of the #109
+# keystone is retired in the same change that deletes its subject, so nothing
+# reads a file that no longer exists (which would otherwise pass vacuously on
+# empty $(cat ...) content).
+# ---------------------------------------------------------------------------
+assert_true "120 keystone-remnant-gone: tests/fixtures/issue-109-assertion-baseline-adr0016.txt is deleted" \
+  "[ ! -f '$FIXTURE_ADR0016_BASELINE' ]"
+assert_true "120 keystone-remnant-gone: test-issue-109's SUITE_ADR0016/_CONTENT/_HEADER variables are gone" \
+  "! grep -qE '^SUITE_ADR0016(_CONTENT|_HEADER)?=' '$SUITE_109'"
+assert_true "120 keystone-remnant-gone: test-issue-109's GROUP_D_ADR0016 array is gone" \
+  "! grep -qE '^GROUP_D_ADR0016=' '$SUITE_109'"
+assert_true "120 keystone-remnant-gone: test-issue-109's loop over GROUP_D_ADR0016 is gone" \
+  "! grep -qF 'for id in \"\${GROUP_D_ADR0016[@]}\"' '$SUITE_109'"
+assert_true "120 keystone-remnant-gone: test-issue-109's AC1-AC6 blanket-claim arm for adr-0016 is gone" \
+  "! grep -qF 'no longer claims blanket AC1-AC6 coverage' '$SUITE_109'"
+assert_true "120 keystone-remnant-gone: test-issue-109's AC-961-5/AC-961-7 inline-list loop for adr-0016 is gone" \
+  "! grep -qE 'for id in \"AC-961-5\" \"AC-961-7\"' '$SUITE_109'"
+assert_true "120 keystone-remnant-gone: test-issue-109's AC-carrier-recorded path loop no longer iterates tests/adr-0016-conformance-check.sh" \
+  "ctx=\$(grep -A6 -F 'for path in \"tests/test-issue-798-topology-flip.sh\"' '$SUITE_109'); ! grep -qF 'tests/adr-0016-conformance-check.sh' <<<\"\$ctx\""
+assert_true "120 keystone-remnant-gone: test-issue-109's ci-subject header no longer declares tests/adr-0016-conformance-check.sh" \
+  "! grep -qE '^# ci-subject:.*tests/adr-0016-conformance-check\\.sh' '$SUITE_109'"
+assert_true "120 keystone-remnant-gone: test-issue-109 carries no remaining mention of adr-0016-conformance-check.sh (comment or code — catch-all)" \
+  "! grep -qF 'adr-0016-conformance-check.sh' '$SUITE_109'"
+assert_true "120 keystone-remnant-gone (guard, PASS pre+post): §13's carrier rows naming tests/adr-0016-conformance-check.sh still exist in the registry (feature design §3 — the rows record where the arms went and stay true after the file is gone)" \
+  "grep -qF 'tests/adr-0016-conformance-check.sh' '$PROJECT_ROOT/docs/doc-invariant-registry.md'"
+
+# ---------------------------------------------------------------------------
+# firewall-pin-gone — feature design §4: the two executable inbound pins on a
+# deleted file, plus their comment-only siblings.
+# ---------------------------------------------------------------------------
+assert_true "120 firewall-pin-gone: test-issue-16's ADR_0016_TEST variable and AC4-adr0016-suite-exists arm are gone" \
+  "! grep -qE 'ADR_0016_TEST=|AC4-adr0016-suite-exists' '$SUITE_16'"
+assert_true "120 firewall-pin-gone: test-issue-16 carries no remaining mention of adr-0016-conformance-check.sh (comment-only citations included)" \
+  "! grep -qF 'adr-0016-conformance-check.sh' '$SUITE_16'"
+
+assert_true "120 firewall-pin-gone: test-issue-71's AC-71-CITATION banner/arms and ADR0016_SUITE variable are gone" \
+  "! grep -qE 'AC-71-CITATION|ADR0016_SUITE=' '$SUITE_71'"
+assert_true "120 firewall-pin-gone: test-issue-71's ci-subject header no longer declares tests/adr-0016-conformance-check.sh" \
+  "! grep -qE '^# ci-subject:.*tests/adr-0016-conformance-check\\.sh' '$SUITE_71'"
+assert_true "120 firewall-pin-gone: test-issue-71's allow_list array no longer names tests/adr-0016-conformance-check.sh" \
+  "ctx=\$(grep -A200 '^allow_list=' '$SUITE_71'); ! grep -qF 'tests/adr-0016-conformance-check.sh' <<<\"\$ctx\""
+
+SUITE_43_120="$PROJECT_ROOT/tests/test-issue-43-report-channel-contract.sh"
+# feature design §4's cited :73 comment names the OTHER deletion target
+# (tests/test-issue-42-spawn-mode-contract.sh — "same approach as
+# tests/test-issue-42-spawn-mode-contract.sh."), not adr-0016-conformance-
+# check.sh; the earlier form of this arm checked the wrong filename and
+# read as satisfied on an untouched line. Check both deleted suites. A line
+# mentioning either is a violation UNLESS it also carries a tombstone
+# marker ("formerly …" / "… retired in #120") — a retrospective citation of
+# a deleted file's own history is not a stale present-tense reference to it.
+FORTYTHREE_STALE_LINES_120="$(grep -nE 'tests/adr-0016-conformance-check\.sh|tests/test-issue-42-spawn-mode-contract\.sh' "$SUITE_43_120" 2>/dev/null || true)"
+FORTYTHREE_NONTOMBSTONE_120="$(printf '%s\n' "$FORTYTHREE_STALE_LINES_120" | grep -vE 'retired in #120|[Ff]ormerly' || true)"
+assert_true "120 stale-citation-gone: tests/test-issue-43-report-channel-contract.sh carries no present-tense citation of either deleted suite (adr-0016-conformance-check.sh or test-issue-42-spawn-mode-contract.sh) — a tombstone phrasing ('formerly …', '… retired in #120') is allowed (non-tombstone hits: $(printf '%s' "$FORTYTHREE_NONTOMBSTONE_120" | paste -sd';' -))" \
+  "[ -z \"\$FORTYTHREE_NONTOMBSTONE_120\" ]"
+assert_true "120 stale-citation-gone: tests/test-run-doc-invariants.sh no longer mentions adr-0016-conformance-check.sh (comment-only citation)" \
+  "! grep -qF 'adr-0016-conformance-check.sh' '$PROJECT_ROOT/tests/test-run-doc-invariants.sh'"
+assert_true "120 stale-citation-gone: scripts/test/check-suite-manifest.sh no longer mentions adr-0016-conformance-check.sh (comment-only citation)" \
+  "! grep -qF 'adr-0016-conformance-check.sh' '$PROJECT_ROOT/scripts/test/check-suite-manifest.sh'"
+assert_true "120 stale-citation-gone: tests/manual/issue-42-manual-scenarios.md's header no longer cites tests/test-issue-42-spawn-mode-contract.sh (feature design §4)" \
+  "! grep -qF 'tests/test-issue-42-spawn-mode-contract.sh' '$MANUAL_42'"
+assert_true "120 stale-citation-gone (guard, PASS pre+post): tests/manual/issue-42-manual-scenarios.md still cites its registry-entry reference '42-AC*' — the document is retained, not retired" \
+  "grep -qF '42-AC*' '$MANUAL_42'"
+
+assert_true "120 firewall-workflow: .github/workflows/contract-suites.yml carries no paths:/run: entry for tests/adr-0016-conformance-check.sh" \
+  "! grep -qF 'tests/adr-0016-conformance-check.sh' '$WORKFLOW_CONTRACT'"
+assert_true "120 firewall-workflow: .github/workflows/e2e-dummy-target.yml carries no paths:/run: entry for tests/adr-0016-conformance-check.sh or tests/test-issue-42-spawn-mode-contract.sh" \
+  "! grep -qE 'tests/adr-0016-conformance-check\\.sh|tests/test-issue-42-spawn-mode-contract\\.sh' '$WORKFLOW_E2E'"
+
+# ---------------------------------------------------------------------------
+# #51 note — feature design §6: the TEMPORARY sentence no longer names AC12,
+# the PERMANENT list still does (CI wiring, not registry-expressible), and
+# the two are not left in mutual contradiction.
+# ---------------------------------------------------------------------------
+SUITE_51_120_TEMP_SENTENCE="$(grep -B3 -F 'TEMPORARY discriminators here' "$SUITE_51_120" 2>/dev/null || true)"
+SUITE_51_120_PERM_BLOCK="$(doc_section_body "$SUITE_51_120" 'PERMANENTLY in this file' '^# This file once carried')"
+
+assert_true "120 #51-AC12-struck: the TEMPORARY-discriminator sentence (if any remains) no longer names AC12 as a bounded token" \
+  "! grep -qE '(^|[^0-9A-Za-z-])AC12([^0-9A-Za-z-]|\$)' <<<\"\$SUITE_51_120_TEMP_SENTENCE\""
+assert_true "120 #51-AC12-retained-permanent (guard, PASS pre+post): the PERMANENT list still names AC12 as CI wiring" \
+  "grep -qE 'AC12.*CI wiring|CI wiring.*AC12' <<<\"\$SUITE_51_120_PERM_BLOCK\""
+
+# ---------------------------------------------------------------------------
+# provenance section — docs/doc-invariant-registry.md carries a #120 section
+# following the §5/§16 shape (one table, one row per disposition, three
+# columns: arm / disposition / basis). Row-content checks (F3's row-form-by-
+# disposition-class separability) follow.
+# ---------------------------------------------------------------------------
+DOC_REGISTRY_120="$PROJECT_ROOT/docs/doc-invariant-registry.md"
+SEC_120_BODY="$(doc_section_body "$DOC_REGISTRY_120" '^## [0-9]+\\. .*\\(issue #120\\)' '^## [0-9]+\\.')"
+
+assert_true "120 provenance-section-exists: docs/doc-invariant-registry.md carries a migration-provenance section for issue #120" \
+  "[ -n \"\$SEC_120_BODY\" ]"
+
+REGISTRY_IDS_120="$(jq -r '.invariants[].id' "$PROJECT_ROOT/tests/fixtures/doc-invariants.json" 2>/dev/null || true)"
+CITED_120_CARRIER_IDS="$(printf '%s' "$SEC_120_BODY" | grep -oE '`120-[A-Za-z0-9._-]+`' | tr -d '`' | sort -u || true)"
+
+assert_true "120 provenance-conformance (non-vacuous): the #120 section cites at least one backtick-quoted 120-* carrier id (this cycle's migrated arms have carriers)" \
+  "[ -n \"\$CITED_120_CARRIER_IDS\" ]"
+
+UNRESOLVED_120_IDS=""
+for id in $CITED_120_CARRIER_IDS; do
+  if ! grep -qxF "$id" <<<"$REGISTRY_IDS_120"; then
+    UNRESOLVED_120_IDS="$UNRESOLVED_120_IDS $id"
+  fi
+done
+assert_true "120 provenance-conformance: every backtick-quoted 120-* carrier id cited in the #120 section resolves against tests/fixtures/doc-invariants.json's live id set (unresolved:${UNRESOLVED_120_IDS:- none})" \
+  "[ -z \"\$UNRESOLVED_120_IDS\" ]"
+
+DROPPED_ROWS_WITH_CARRIER_120="$(awk -F'|' '
+  NF >= 4 {
+    disp = $3; basis = $4
+    if (disp ~ /dropped/ && basis ~ /`120-[A-Za-z0-9._-]+`/) print
+  }
+' <<<"$SEC_120_BODY")"
+assert_true "120 provenance-class (guard, PASS pre+post): no dropped-class row in the #120 section cites a carrier id (a dropped row states lost coverage, never a carrier)" \
+  "[ -z \"\$DROPPED_ROWS_WITH_CARRIER_120\" ]"
 
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"

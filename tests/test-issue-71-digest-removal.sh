@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/agents/autoflow-analyzer.md .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md docs/adr/0017-teammate-removal-feasibility.md docs/autoflow-guide.md docs/design-rationale.md docs/doc-invariant-registry.md docs/improvement-backlog.md docs/maintained-docs.md docs/phases/analysis.md plugin/autoflow/agents/autoflow-analyzer.md scripts/canary/emit-phase-marker.sh scripts/test/run-suites.sh setup/gen-manifest-hashes.sh setup/manifest.json tests/adr-0016-conformance-check.sh tests/fixtures/doc-invariants.json tests/issue-create/fixtures/corpus.jsonl tests/lib/base-ref.sh tests/manual/issue-71-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh tests/run-doc-invariants.sh
+# ci-subject: .claude/agents/autoflow-analyzer.md .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md docs/adr/0017-teammate-removal-feasibility.md docs/autoflow-guide.md docs/design-rationale.md docs/doc-invariant-registry.md docs/improvement-backlog.md docs/maintained-docs.md docs/phases/analysis.md plugin/autoflow/agents/autoflow-analyzer.md scripts/canary/emit-phase-marker.sh scripts/test/run-suites.sh setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/issue-create/fixtures/corpus.jsonl tests/lib/base-ref.sh tests/manual/issue-71-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh tests/run-doc-invariants.sh
 # lane: standing
 # cycle-arm: #71
 # budget-secs: SUITE_BUDGET_CEILING_SECS
@@ -72,9 +72,7 @@ HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
 ANALYZER_HOST="$PROJECT_ROOT/.claude/agents/autoflow-analyzer.md"
 ANALYZER_PLUGIN="$PROJECT_ROOT/plugin/autoflow/agents/autoflow-analyzer.md"
 DUAL_PIN_SUITE="$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh"
-FENCE42_SUITE="$PROJECT_ROOT/tests/test-issue-42-spawn-mode-contract.sh"
 PHASE_MARKER_SUITE="$PROJECT_ROOT/tests/test-issue-35-phase-marker.sh"
-ADR0016_SUITE="$PROJECT_ROOT/tests/adr-0016-conformance-check.sh"
 FIXTURE_FENCE_SUITE="$PROJECT_ROOT/tests/test-issue-51-teammate-removal-verdict.sh"
 DOC985_SUITE="$PROJECT_ROOT/tests/test-issue-985-doc-assertions.sh"
 HDIGEST_SUITE="$PROJECT_ROOT/tests/test-issue-40-hook-additive.sh"
@@ -381,15 +379,12 @@ else
 fi
 
 # =============================================================================
-echo ""
-echo "=== dangling-citation-struck — adr-0016-conformance-check.sh drops the #953-suite citation, keeps both surviving carriers ==="
-
-assert_true "AC-71-CITATION: #953 dangling citation is struck from adr-0016-conformance-check.sh" \
-  "! grep -qF 'test-issue-953-cycle-digest.sh AC6-regen-idempotence' '$ADR0016_SUITE'"
-assert_true "AC-71-CITATION: the #16 AC2 surviving carrier is still named" \
-  "grep -qF 'test-issue-16-manifest-locale-invariance.sh AC2' '$ADR0016_SUITE'"
-assert_true "AC-71-CITATION: the package-verifier AC5d surviving carrier is still named" \
-  "grep -qF 'verify-package.sh AC5d' '$ADR0016_SUITE'"
+# dangling-citation-struck — retired with its subject by issue #120: all
+# three arms read the ADR-0016 conformance suite, which that cycle deletes.
+# Two were positive greps that red on a missing file and the third a negation
+# that would go vacuously green, so the banner, the arms and their suite-path
+# variable leave together. Disposition rows:
+# docs/doc-invariant-registry.md §17.
 
 # =============================================================================
 echo ""
@@ -459,25 +454,12 @@ else
 fi
 
 # =============================================================================
-echo ""
-echo "=== fence-42-retired — AC2-UNTOUCHED's two literal fences, the diff_touches_literal helper and its base-resolution branch are deleted; the rest of #42 is intact ==="
-
-assert_true "AC-71-FENCE42: the step-1.5 literal fence argument is gone" \
-  "! grep -qF \"'Cross-issue recurrence scan (step 1.5)'\" '$FENCE42_SUITE'"
-assert_true "AC-71-FENCE42: the step-6.7 literal fence argument is gone" \
-  "! grep -qF \"'6.7. Cycle digest emission'\" '$FENCE42_SUITE'"
-assert_true "AC-71-FENCE42: the diff_touches_literal helper is gone" \
-  "! grep -qF 'diff_touches_literal' '$FENCE42_SUITE'"
-assert_true "AC-71-FENCE42: the empty-base fail-loud assertion line is gone" \
-  "! grep -qF 'could not resolve a comparison base' '$FENCE42_SUITE'"
-assert_true "AC-71-FENCE42: M42-REGEN-CLEAN survives" \
-  "grep -qF 'M42-REGEN-CLEAN' '$FENCE42_SUITE'"
-assert_true "AC-71-FENCE42: A42-LITERAL-CONTIGUOUS survives" \
-  "grep -qF 'A42-LITERAL-CONTIGUOUS' '$FENCE42_SUITE'"
-assert_true "AC-71-FENCE42: the H-BYTES retirement-precedent comment survives" \
-  "grep -qF 'H-BYTES (retired, #64)' '$FENCE42_SUITE'"
-assert_true "AC-71-FENCE42: the CI step 'Run spawn-mode contract guard (#42)' stays registered" \
-  "grep -qF 'Run spawn-mode contract guard (#42)' '$CI_WORKFLOW'"
+# fence-42-retired (AC-71-FENCE42) — retired with its subject by issue #120:
+# every arm read tests/test-issue-42-spawn-mode-contract.sh (four negations
+# that would go vacuously green on a deleted file, three positive greps and
+# one workflow-step pin that would red), and that cycle deletes both the
+# suite and its CI step. The banner, the arms and the $FENCE42_SUITE variable
+# leave together. Disposition rows: docs/doc-invariant-registry.md §17.
 
 # =============================================================================
 echo ""
@@ -723,8 +705,6 @@ allow_list=(
   "tests/plugin/verify-e2e-dummy-target.sh"
   "tests/plugin/verify-install-into-target.sh"
   "tests/test-issue-35-phase-marker.sh"
-  "tests/adr-0016-conformance-check.sh"
-  "tests/test-issue-42-spawn-mode-contract.sh"
   "tests/test-issue-799-inert-cleanup.sh"
   # Sibling branch-unconditional guards amended with this cycle's scope-guard
   # admissions (feature design §8; ledger E16 class).

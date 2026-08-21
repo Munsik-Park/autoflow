@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: docs/doc-invariant-registry.md tests/adr-0016-conformance-check.sh tests/fixtures/doc-invariants.json tests/manual/ tests/plugin/manual-scenarios-943.md tests/plugin/manual-scenarios.md tests/plugin/verify-install-skill-scripts.sh tests/plugin/verify-package.sh tests/test-issue-798-topology-flip.sh tests/test-issue-799-inert-cleanup.sh
+# ci-subject: docs/doc-invariant-registry.md tests/fixtures/doc-invariants.json tests/manual/ tests/plugin/manual-scenarios-943.md tests/plugin/manual-scenarios.md tests/plugin/verify-install-skill-scripts.sh tests/plugin/verify-package.sh tests/test-issue-798-topology-flip.sh tests/test-issue-799-inert-cleanup.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -12,11 +12,10 @@
 # no npm) — assert_true/assert_false over shell predicates, mirrors
 # tests/test-issue-798-topology-flip.sh / tests/test-issue-799-inert-cleanup.sh.
 #
-# LEAF RULE: this suite reads the CONTENT of tests/test-issue-798-topology-flip.sh,
-# tests/test-issue-799-inert-cleanup.sh and tests/adr-0016-conformance-check.sh via
-# grep/awk only. It never executes any of them as a subprocess — a sibling's own
-# regression is caught by that sibling's own CI step (docs/autoflow-guide.md > RED
-# > Leaf rule).
+# LEAF RULE: this suite reads the CONTENT of tests/test-issue-798-topology-flip.sh
+# and tests/test-issue-799-inert-cleanup.sh via grep/awk only. It never executes
+# any of them as a subprocess — a sibling's own regression is caught by that
+# sibling's own CI step (docs/autoflow-guide.md > RED > Leaf rule).
 #
 # lane: standing — every leg below asserts a permanent state of the tree (files
 # absent, files present, literals present in named suites/registry sections,
@@ -60,11 +59,11 @@
 #   - AC-crossref-target-resolves / AC-crossref-stays-in-comment-form: guards,
 #     PASS now (vacuously — no reference exists yet to be dangling or
 #     mis-formed) and stay PASS after a conforming GREEN.
-#   - AC-assertless-header-removed: FAILs for every one of the 13 enumerated
-#     headers (798 AC5/AC15; 799 AC1/AC3/AC6/AC7/AC9/AC11; adr-0016 AC4/AC5/
-#     AC6/AC-961-5/AC-961-7) -- every `echo "=== <id> "` line is present today.
-#   - AC-header-scope-list-consistent: FAILs for the same 13 (their Scope/RED-
-#     expectation header rows still name the id today).
+#   - AC-assertless-header-removed: FAILs for every one of the enumerated
+#     headers (798 AC5/AC15; 799 AC1/AC3/AC6/AC7/AC9/AC11) -- every
+#     `echo "=== <id> "` line is present today.
+#   - AC-header-scope-list-consistent: FAILs for the same set (their Scope/
+#     RED-expectation header rows still name the id today).
 #   - AC-carrier-recorded: FAILs for all three suite paths (no ##13 section
 #     yet to carry them).
 #   - AC-carrier-resolves: guard, re-verifies the design's own Evidence claim
@@ -73,7 +72,7 @@
 #     carrier is what this guards against).
 #   - AC-live-assertion-set-preserved: guard (non-vacuity keystone), PASSes
 #     now against the checked-in baseline snapshot
-#     (tests/fixtures/issue-109-assertion-baseline-{798,799,adr0016}.txt) and
+#     (tests/fixtures/issue-109-assertion-baseline-{798,799}.txt) and
 #     is expected to keep passing -- it REDs only if a later edit deletes one
 #     of today's assertions.
 # =============================================================================
@@ -87,7 +86,6 @@ REGISTRY_MD="$PROJECT_ROOT/docs/doc-invariant-registry.md"
 DOC_INVARIANTS_JSON="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
 SUITE_798="$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh"
 SUITE_799="$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh"
-SUITE_ADR0016="$PROJECT_ROOT/tests/adr-0016-conformance-check.sh"
 VERIFY_PACKAGE="$PROJECT_ROOT/tests/plugin/verify-package.sh"
 VERIFY_INSTALL_SKILL="$PROJECT_ROOT/tests/plugin/verify-install-skill-scripts.sh"
 
@@ -279,14 +277,11 @@ echo "=== Group D — assert-less acceptance-criterion section headers ==="
 # ledger O1 item 2 / this design's Group D target list.
 GROUP_D_798=("AC5" "AC6" "AC7" "AC9" "AC15")
 GROUP_D_799=("AC1" "AC3" "AC6" "AC7" "AC8" "AC9" "AC10" "AC11")
-GROUP_D_ADR0016=("AC4" "AC5" "AC6" "AC-961-5" "AC-961-7")
 
 SUITE_798_CONTENT="$(cat "$SUITE_798")"
 SUITE_799_CONTENT="$(cat "$SUITE_799")"
-SUITE_ADR0016_CONTENT="$(cat "$SUITE_ADR0016")"
 SUITE_798_HEADER="$(suite_header "$SUITE_798")"
 SUITE_799_HEADER="$(suite_header "$SUITE_799")"
-SUITE_ADR0016_HEADER="$(suite_header "$SUITE_ADR0016")"
 SUITE_SELF_HEADER="$(suite_header "$PROJECT_ROOT/tests/test-issue-109-doc-assertions.sh")"
 
 for id in "${GROUP_D_798[@]}"; do
@@ -303,29 +298,7 @@ for id in "${GROUP_D_799[@]}"; do
     "[ \"\$(bounded_id_count '$id' \"\$SUITE_799_HEADER\")\" -eq 0 ]"
 done
 
-for id in "${GROUP_D_ADR0016[@]}"; do
-  assert_true "AC-assertless-header-removed: tests/adr-0016-conformance-check.sh no longer echoes the assert-less '=== $id ' section header" \
-    "! printf '%s\n' \"\$SUITE_ADR0016_CONTENT\" | grep -qF -- '=== $id '"
-done
-
-# AC-header-scope-list-consistent for adr-0016: AC4, AC5 and AC6 are never
-# listed individually in this file's header — they are covered only by the
-# summary sentence "Every AC1-AC6 heading-presence and in-block check that
-# not authored it" (tests/adr-0016-conformance-check.sh header). The bounded-
-# token id check (bounded_id_count) deliberately excludes a hyphen-adjacent
-# match (needed to exclude AC6-scope/AC6-ci-style compound siblings
-# elsewhere), which also excludes "AC6" inside the range token "AC1-AC6" —
-# so a per-id check would be vacuously already-true for all three and would
-# not RED. The real drift this AC targets here is the range claim itself,
-# which overstates coverage once AC4/AC5/AC6 are removed; checked directly.
-assert_true "AC-header-scope-list-consistent: tests/adr-0016-conformance-check.sh's header no longer claims blanket AC1-AC6 coverage (AC4/AC5/AC6 narrowed out)" \
-  "! printf '%s\n' \"\$SUITE_ADR0016_HEADER\" | grep -qF -- 'AC1-AC6'"
-for id in "AC-961-5" "AC-961-7"; do
-  assert_true "AC-header-scope-list-consistent: tests/adr-0016-conformance-check.sh's header Scope/RED-expectation block no longer lists $id" \
-    "[ \"\$(bounded_id_count '$id' \"\$SUITE_ADR0016_HEADER\")\" -eq 0 ]"
-done
-
-for path in "tests/test-issue-798-topology-flip.sh" "tests/test-issue-799-inert-cleanup.sh" "tests/adr-0016-conformance-check.sh"; do
+for path in "tests/test-issue-798-topology-flip.sh" "tests/test-issue-799-inert-cleanup.sh"; do
   assert_true "AC-carrier-recorded: docs/doc-invariant-registry.md §13 names $path" \
     "printf '%s\n' \"\$REG13_BODY\" | grep -qF -- '$path'"
 done
@@ -345,9 +318,6 @@ CARRIER_IDS=(
   "799-AC5G-neg-s11a" "799-AC5G-guard-active-na"
   "799-AC5H-degenerate"
   "799-AC2-neg-template-era"
-  "adr0016-AC4-a-diagnose-heading" "adr0016-AC5-a-casecollection-heading" "adr0016-AC6-a-followup-heading"
-  "adr0016-AC961-5-a-owner-approval" "adr0016-AC961-5-b-readme-accepted"
-  "adr0016-AC961-7-a-range" "adr0016-AC961-7-b-date" "adr0016-AC961-7-b-repo" "adr0016-AC961-7-c-registry"
 )
 REGISTRY_ID_SET="$(jq -r '.invariants[].id' "$DOC_INVARIANTS_JSON" 2>/dev/null)"
 for cid in "${CARRIER_IDS[@]}"; do
@@ -387,8 +357,6 @@ assert_true "AC-live-assertion-set-preserved: every baseline assertion-descripti
   "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/issue-109-assertion-baseline-798.txt' '$SUITE_798' 'tests/test-issue-798-topology-flip.sh'"
 assert_true "AC-live-assertion-set-preserved: every baseline assertion-description literal still greps in tests/test-issue-799-inert-cleanup.sh" \
   "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/issue-109-assertion-baseline-799.txt' '$SUITE_799' 'tests/test-issue-799-inert-cleanup.sh'"
-assert_true "AC-live-assertion-set-preserved: every baseline assertion-description literal still greps in tests/adr-0016-conformance-check.sh" \
-  "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/issue-109-assertion-baseline-adr0016.txt' '$SUITE_ADR0016' 'tests/adr-0016-conformance-check.sh'"
 
 # =============================================================================
 echo ""

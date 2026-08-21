@@ -312,8 +312,10 @@ live_exit79_no_retire() {
 # =============================================================================
 echo "=== AC1-DELIVER-* (RED discriminators) — DELIVER *Secondary* marker block ==="
 
-assert_true "AC1-DELIVER-MARKER: DELIVER section carries a '*Secondary (multi-repo):*' marker bullet (promoted from the fenced 1.-3. list)" \
-  "ctx=\$(deliver_section); printf '%s\n' \"\$ctx\" | grep -qF '*Secondary (multi-repo):*'"
+# AC1-DELIVER-MARKER is migrated to the registry by issue #120: it read
+# deliver_section(), a plain `## DELIVER` heading anchor, so it is a
+# `present` + `fixed` entry — `120-848-guide-deliver-secondary-marker`.
+# Disposition recorded: docs/doc-invariant-registry.md §17.
 assert_true "AC1-DELIVER-ACTOR: the DELIVER *Secondary* marker block names the pointer-bump actor as orchestrator" \
   "ctx=\$(deliver_secondary_block); printf '%s\n' \"\$ctx\" | grep -qiF 'orchestrator'"
 assert_true "AC1-DELIVER-GITLINK: the DELIVER *Secondary* marker block names the services gitlink/pointer target" \
@@ -379,8 +381,10 @@ assert_false "AC3-NO-LIVE-WORKFLOW: Merge Sequencing section does not describe h
   "live_machine_verify_no_retire \"\$(merge_seq_section)\""
 assert_false "AC3-EXIT79-CTX: Pointer-reconciliation section does not attribute Exit 79/subrepo-merged assertion 3 without a retirement token" \
   "live_exit79_no_retire \"\$(pointer_reconcile_section)\""
-assert_true "AC3-RETIRE-ALIGNED: git-workflow.md carries a #795/ADR-0015 retirement anchor" \
-  "grep -qiE '#795|ADR-0015' '$GIT_WORKFLOW'"
+# AC3-RETIRE-ALIGNED is migrated to the registry by issue #120: a whole-file
+# `present` + regex over docs/git-workflow.md, case-explicitly rewritten to
+# the spelling the document uses — `120-848-gitworkflow-retirement-anchor`.
+# Disposition recorded: docs/doc-invariant-registry.md §17.
 
 # =============================================================================
 echo ""
@@ -388,8 +392,12 @@ echo "=== AC3-PRESERVE-MANUAL / AC3-XDOC-NOCONTRA (guards, PASS pre+post) ==="
 
 assert_true "AC3-PRESERVE-MANUAL: Pointer-reconciliation section still requires the git ls-tree HEAD services manual check" \
   "ctx=\$(pointer_reconcile_section); printf '%s\n' \"\$ctx\" | grep -qF 'git ls-tree HEAD services'"
-assert_true "AC3-PRESERVE-MANUAL: Merge Sequencing section still names the blocked-by-subrepo label" \
-  "ctx=\$(merge_seq_section); printf '%s\n' \"\$ctx\" | grep -qF 'blocked-by-subrepo'"
+# AC3-PRESERVE-MANUAL's Merge Sequencing leg is migrated to the registry by
+# issue #120: merge_seq_section() is a plain `### Merge Sequencing (external
+# review)` heading anchor — `120-848-gitworkflow-mergeseq-blocked-label`.
+# Its pointer-reconciliation sibling above stays: that region is a
+# heading-to-heading window this suite joins, not a registry anchor.
+# Disposition recorded: docs/doc-invariant-registry.md §17.
 
 # =============================================================================
 echo ""
@@ -415,8 +423,10 @@ assert_false "AC4-NO-NESTED-PRESUME: HANDOFF step 6.5 block does not depend on n
 echo ""
 echo "=== AC5-ADR-CITED (RED discriminator) / AC5-NO-REVIVE (guard, PASS pre+post) ==="
 
-assert_true "AC5-ADR-CITED: git-workflow.md cites ADR-0015" \
-  "grep -qiF 'ADR-0015' '$GIT_WORKFLOW'"
+# AC5-ADR-CITED is migrated to the registry by issue #120: a whole-file
+# `present` + fixed over docs/git-workflow.md —
+# `120-848-gitworkflow-adr0015-cited`. Disposition recorded:
+# docs/doc-invariant-registry.md §17.
 assert_false "AC5-NO-REVIVE: HANDOFF section of autoflow-guide.md does not reintroduce subrepo-merged as a live machine status check" \
   "live_machine_verify_no_retire \"\$(handoff_procedure_block)\""
 

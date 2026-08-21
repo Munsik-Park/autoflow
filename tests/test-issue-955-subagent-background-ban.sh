@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md test/workflows/run.mjs
+# ci-subject: .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md test/workflows/run.mjs
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -146,13 +146,6 @@ ARCH_WF="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
 VERIFY_WF="$PROJECT_ROOT/.claude/workflows/verify-cause-branch.js"
 RUN_MJS="$PROJECT_ROOT/test/workflows/run.mjs"
 
-AGENT_FILES=(
-  "$PROJECT_ROOT/.claude/agents/autoflow-analyzer.md"
-  "$PROJECT_ROOT/.claude/agents/autoflow-planner.md"
-  "$PROJECT_ROOT/.claude/agents/autoflow-implementer.md"
-  "$PROJECT_ROOT/.claude/agents/autoflow-tester.md"
-  "$PROJECT_ROOT/.claude/agents/autoflow-evaluator.md"
-)
 PASS=0; FAIL=0; TESTS=0
 
 # ---------------------------------------------------------------------------
@@ -255,21 +248,15 @@ else
 fi
 
 # =============================================================================
-echo ""
-echo "=== AC1-b (RED discriminator) — five autoflow-*.md role contracts ==="
-
-for f in "${AGENT_FILES[@]}"; do
-  rel="${f#"$PROJECT_ROOT"/}"
-  assert_true "AC1-b: $rel Hard-rules bullet names run_in_background + foreground" \
-    "grep -qF 'run_in_background' '$f' && grep -qF 'foreground' '$f'"
-done
-
+# AC1-b and AC1-c are migrated to the registry by issue #120.
 # =============================================================================
-echo ""
-echo "=== AC1-c (RED discriminator) — teammate-contracts.md (incl. workflow in-script agents) ==="
-
-assert_true "AC1-c: docs/teammate-contracts.md explicitly names workflow in-script sub-agents (in-script / workflows/*)" \
-  "grep -qE 'in-script|workflows/' '$TEAMMATE_CONTRACTS'"
+# AC1-b was a per-file conjunction over the five .claude/agents/autoflow-*.md
+# role contracts; a registry entry holds one file and one predicate, so it
+# decomposes into a `present` + `fixed` pair per file — ten entries,
+# `120-955-agent-<role>-runinbackground` / `-foreground`. AC1-c was a
+# whole-file `present` + regex over docs/teammate-contracts.md, carried by
+# `120-955-contracts-inscript-agents`. Disposition recorded:
+# docs/doc-invariant-registry.md §17.
 
 # =============================================================================
 echo ""

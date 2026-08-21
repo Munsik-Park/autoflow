@@ -436,7 +436,7 @@ through mechanically. It does not execute the renames.
 | `tests/test-issue-103-suite-manifest.sh`'s "test-issue-59 sources tests/lib/harness-pins.sh" row | **retired — subject removed this cycle** | its subject is the sourcing deleted above. Left standing it would have reported **green while its subject was gone**, because its predicate was a bare whole-file `grep` that `59`'s `ci-subject` token and comment mentions satisfy on their own. #103's settled property — the literal has exactly one authoring home — is carried entirely by the two negative rows beside it, which are true and untouched. In the same edit the surviving positive row for `tests/test-issue-27-composition-oracle.sh` is tightened from that bare grep to a **non-comment `source`/`.` line** predicate, so the one remaining sourcing claim is semantic rather than textual — the weakness is fixed at the row that keeps its subject, not papered over at the row that loses it |
 | `tests/test-issue-103-pin-and-docs.sh`'s two "branch-scoped-inert homes are untouched" rows | **flipped — presence pin's ground retired** | one shared preamble governed both rows on the ground that each foreign home pins its own cycle's measurement on its own dev branch. This cycle retires that ground. The `62` row asserted `EXPECTED_OK=58` is **present** — the only one of this cycle's three cross-file couplings in the positive direction, so a deletion, not an omission, reds it. The `56` row claimed its companion literal was untouched while its predicate was the file-existence tautology `[ -f "$SUITE_56" ]`, reporting green on a claim it never evaluated — the same semantically-false-PASS class as the row above, one row away in the same file. Both are flipped to the identical successor form, *the file authors no `EXPECTED_OK=` literal at all*, which strengthens #103's single-authorship invariant rather than dropping it, and the `56` row's tautological predicate is replaced by one that evaluates its own claim |
 | `tests/test-push-context-base-ref.sh`'s two literal pins on `tests/test-issue-59-adoption-evidence-discipline.sh` (the under-derivation pin and the real-tree `NATIVE-COVERAGE` corroboration arm) | **repointed — pinned subject retired, property preserved** | that suite pins one literal suite name into its derived subject set so a silent under-derivation fails loud instead of merely shrinking the printed set, and separately asserts that same subject reports `NATIVE-COVERAGE PASS`. Both name one subject and move together: a suite that is no longer derived cannot report a coverage state at all, so repointing only the first leaves the second asserting a state its subject can never produce. `59` was chosen because it was a real non-comment resolver call site; this cycle removed its last one, so the subject left the derived set legitimately and the pin would have redded a standing suite under an unrelated name. The guard's value is the pin, not any particular subject, so it is repointed rather than deleted. The successor is chosen by the property the pin needs — registered by a `push: branches: [main]` workflow, not in `EXEMPT_HERMETIC_DRIVERS`, and carrying a non-comment resolver call against the repo under test — which `tests/test-issue-27-composition-oracle.sh` satisfies and this cycle does not touch; `tests/test-issue-798-topology-flip.sh` is the alternate if `27` ever loses the call |
-| `tests/test-issue-62-sequential-rounds.sh:93-112` (`guard_result_at_ref_mutated`) and `tests/test-issue-103-pin-and-docs.sh`'s AC-pin-detects-harness-drift drive | **kept — intentional leaf exemption, negative control** | neither re-runs a registered sibling. Each drives a suite at ANOTHER ON-DISK STATE — a detached worktree at a historical ref, and a scratch worktree whose harness is deliberately perturbed — and the callee's own CI step, running the unperturbed tree, cannot stand in for it. The admission is a consequence of rows the lint itself evaluates, not a machine-readable exemption input: the #62 call site's argument is a function positional under a `tests/` prefix, which D5's antecedent (an assignment carrying a literal enumerated-suite path) does not have, and the pin-drift site's path is rooted at a scratch variable this file assigns from `mktemp`, which is row I3/I4's antecedent. This row records the GROUND for keeping them, not the mechanism that admits them |
+| `tests/test-issue-62-sequential-rounds.sh:91-110` (`guard_result_at_ref_mutated`) and `tests/test-issue-103-pin-and-docs.sh`'s AC-pin-detects-harness-drift drive | **kept — intentional leaf exemption, negative control** | neither re-runs a registered sibling. Each drives a suite at ANOTHER ON-DISK STATE — a detached worktree at a historical ref, and a scratch worktree whose harness is deliberately perturbed — and the callee's own CI step, running the unperturbed tree, cannot stand in for it. The admission is a consequence of rows the lint itself evaluates, not a machine-readable exemption input: the #62 call site's argument is a function positional under a `tests/` prefix, which D5's antecedent (an assignment carrying a literal enumerated-suite path) does not have, and the pin-drift site's path is rooted at a scratch variable this file assigns from `mktemp`, which is row I3/I4's antecedent. This row records the GROUND for keeping them, not the mechanism that admits them |
 
 ## 13. Migration provenance — retired-guard dispositions (issue #109)
 
@@ -731,3 +731,316 @@ rule the `AC-62-36` row applies to §12.1.
 `retire-with: #121`) is registered in `.github/workflows/contract-suites.yml` with its
 own guarded, budgeted step and full `paths:` coverage for its subject set. It retires at
 the merge its `retire-with` names, per §2.
+
+## 17. Migration provenance — retired-guard dispositions (issue #120)
+
+Second pass of the doc-pin migration. The unit of decision is the **assertion arm**,
+never the file: every arm of every touched suite leaves this cycle carrying exactly one
+disposition, and a suite is deleted only when none of its arms is `retained in place`.
+Applying that test narrowed the issue body's five-suite candidate list to two deletions —
+`tests/adr-0016-conformance-check.sh` and `tests/test-issue-42-spawn-mode-contract.sh` —
+with `846`, `848` and `979` joining `847`, `955` and `62` as partial migrations. The
+narrowing is derived from the arms, not asserted.
+
+Fifty-five entries are appended to `tests/fixtures/doc-invariants.json`. All 713 registry
+entries evaluate green and all 713 are credited under `--self-test`; a non-credit is fatal
+to the whole run (`tests/run-doc-invariants.sh:570`), not merely uncredited, so "credited"
+is the only admissible outcome for a new entry.
+
+**Registry id namespace.** New entries take `120-<slug>`, the tree's existing
+`<origin_issue>-<slug>` convention, and each carries `origin_issue: 120`. Uniqueness is
+enforced registry-wide by the runner's load-time gate
+(`tests/run-doc-invariants.sh:209-210`), which BLOCKs on a duplicated id, so the namespace
+claim is machine-checked rather than asserted. The nine `adr0016-*` ids issue #109
+promoted are **not** renamed: they keep the origin they were authored under, they are not
+in the `120-` namespace, and this cycle's removal of their carrier-list membership from
+`tests/test-issue-109-doc-assertions.sh` does not touch the entries themselves.
+
+**Arm identifier form.** The Retired-guard column is `<suite-basename> `<AC-id>``,
+optionally carrying the four discriminators feature design §5 fixes — an occurrence
+ordinal `#<n>` where the removal set holds more than one statically written arm under one
+`<AC-id>`, an iteration source `(<array-or-inline>:<element>)` for a loop-generated arm, a
+template ordinal for two `assert_*` templates in one loop body, and the **removed** diff
+side for a partially edited inline list. The basename is written unbacktick'd so the whole
+token is the contiguous join key `tests/test-issue-120-arm-reconciliation.sh` extracts from
+the base-ref diff.
+
+**Row form by disposition class.** A `retired against a carrier` row cites its carrier — a
+registry entry id or a named live mechanism. A `dropped` row (either dropped class) cites
+**no** carrier id; its basis states the coverage that is lost and what still holds
+independently. The two classes are separable by reading one row, which is what lets the
+provenance-class arm in `tests/test-cycle-arm-residue.sh` reject a dropped row wearing a
+borrowed carrier id.
+
+| Retired guard | Disposition | Basis |
+|---|---|---|
+| adr-0016-conformance-check.sh `AC1-a` | **retired against a carrier** | the file-existence check. Every `120-adr0016-*` entry whose `file` is the ADR records FAIL rather than skipping when the target file is missing (`tests/run-doc-invariants.sh:336`), so the ADR's existence is asserted by ten entries instead of one arm |
+| adr-0016-conformance-check.sh `AC2-e` | **migrated** | → `120-adr0016-placement-feasibility`. case-explicit-rewrite of `grep -qi 'Feasibility'`; `### Placement` is a unique heading anchor |
+| adr-0016-conformance-check.sh `AC2-f` | **migrated** | → `120-adr0016-placement-scope`. case-explicit-rewrite of `grep -qi 'Scope'`, same anchor |
+| adr-0016-conformance-check.sh `AC2-h` | **migrated** | → `120-adr0016-itemform-cap`. the arm's ERE `cap.*(named item|at 6)` narrowed to the clause the document actually carries — a narrowing, never a widening |
+| adr-0016-conformance-check.sh `AC2-i` | **migrated** | → `120-adr0016-itemform-not-new-item`. case-explicit-rewrite; `### Item form` anchor |
+| adr-0016-conformance-check.sh `AC2-k` | **migrated** | → `120-adr0016-na-conforms`. case-explicit-rewrite of `grep -qi 'Conform'` to the spelling `Conforms` |
+| adr-0016-conformance-check.sh `AC2-l` | **migrated** | → `120-adr0016-na-diverges`. the ERE `diverge|undocumented` narrowed to the document's own `Diverges / undocumented` outcome label |
+| adr-0016-conformance-check.sh `AC2-m` | **migrated** | → `120-adr0016-na-default`. the bare `default` narrowed to `N/A is the default` |
+| adr-0016-conformance-check.sh `AC3-b` | **migrated** | → `120-adr0016-threshold-no-new-key`. `#### Threshold & hook cascade` anchor; ERE narrowed to the bullet's own bold clause |
+| adr-0016-conformance-check.sh `AC3-c` | **migrated** | → `120-adr0016-threshold-no-hook-edit`. same anchor; `no hook (edit|change)` narrowed to `No hook edit` |
+| adr-0016-conformance-check.sh `AC3-d` | **migrated** | → `120-adr0016-threshold-no-recompute`. same anchor; `no threshold (recompute|recalculat)` narrowed to `No threshold recompute` |
+| adr-0016-conformance-check.sh `AC-R1-a` | **migrated** | → `120-adr0016-maintaineddocs-row`. `#### ADRs (`docs/adr/`)` is a unique heading anchor in `docs/maintained-docs.md` |
+| adr-0016-conformance-check.sh `AC-R1-b` | **migrated** | → `120-adr0016-maintaineddocs-row-form`. the four-column row-shape ERE kept verbatim as `match: "regex"`; a `present` + regex entry is credited teeth normally |
+| adr-0016-conformance-check.sh `AC-R2-b` | **migrated** | → `120-adr0016-index-no-relative-adrlink` and `120-adr0016-index-no-docs-adrlink`. `absent-enumeration`: the arm's forbidden language is the finite union of the two fixed literals `](adr/0016` and `](docs/adr/0016`, so it decomposes into two whole-file `absent` + `match: "fixed"` entries, the one `absent` shape the injection mutator credits. The widening from the arm's row scope to whole-file is admissible because `docs/INDEX.md` carries no other `adr/0016` occurrence than the backtick inline-code form (checked) |
+| adr-0016-conformance-check.sh `AC-R3-a` | **retired against a carrier** | `tests/test-issue-16-manifest-locale-invariance.sh` `AC2` regenerates the whole manifest into an isolated copy of the real tree and compares byte-for-byte, which subsumes a per-source sha256 equality for these two documents. The carrier is the one this suite's own retired `AC-R3-c` comment already named |
+| adr-0016-conformance-check.sh `AC-R3-b` | **retired against a carrier** | `tests/test-issue-16-manifest-locale-invariance.sh` `AC2` regenerates the whole manifest into an isolated copy of the real tree and compares byte-for-byte, which subsumes a per-source sha256 equality for these two documents. The carrier is the one this suite's own retired `AC-R3-c` comment already named |
+| adr-0016-conformance-check.sh `AC3-guard-a` | **dropped — coverage loss, recorded** | an `absent` + ERE over unbounded prose (`requires? (a )?hook (edit|change|modification)`). Two shapes block it at once: the registry's self-test can never credit an `absent` + `match: "regex"` entry (no injectable witness, `tests/run-doc-invariants.sh:507`), and the forbidden language is not a finite union of fixed literals, so `absent-enumeration` does not reach it. **What is lost**: nothing now fails if the Threshold block is later rewritten to claim a hook edit *is* required. **What still holds**: the positive counterpart is asserted directly — the Threshold block must state `No hook edit` |
+| adr-0016-conformance-check.sh `AC3-guard-b` | **dropped — coverage loss, recorded** | same two blocking shapes, over `(requires?|needs?) .*threshold (recompute|recalculat)`. **What is lost**: a later rewrite claiming a threshold recompute is required goes unguarded. **What still holds**: the positive counterpart requiring `No threshold recompute` in that block |
+| adr-0016-conformance-check.sh `AC3-guard-c` | **dropped — coverage loss, recorded** | same two blocking shapes, over `n\+1|averag(e|ing) over.*(additional|new) item`. **What is lost**: the block could be rewritten to describe N+1-item averaging as the chosen form's behaviour without reddening anything. **What still holds**: the positive counterpart requiring `No new `scores` key` in that block. This is the trade the deletion of this suite buys, recorded rather than absorbed |
+| adr-0016-conformance-check.sh `AC-961-1-b` | **migrated** | → `120-adr0016-guide-adrcheck-feasibility` and `120-adr0016-guide-adrcheck-scope`. a conjunction over one region decomposes into one entry per conjunct. The region is expressed as `section_kind: "block"` anchored on the column-1 prefix `### ADR-conformance check`, not as a heading anchor: the literals `Feasibility` and `Scope` also occur in that heading's own text, and a heading-kind entry is mutated by whole-file line deletion, which would destroy the anchor and non-credit the entry (`tests/run-doc-invariants.sh:497`, `:530-532`). The block anchor routes the mutation through the body-scoped remover instead |
+| adr-0016-conformance-check.sh `AC-961-1-c` | **migrated** | → `120-adr0016-guide-adrcheck-tcap`. same block anchor; T-CAP kept verbatim |
+| adr-0016-conformance-check.sh `AC-961-1-d` | **migrated** | → `120-adr0016-guide-adrcheck-ttrig1`. same block anchor; T-TRIG-1 kept verbatim |
+| adr-0016-conformance-check.sh `AC-961-1-e` | **migrated** | → `120-adr0016-guide-adrcheck-ttrig2`. same block anchor; T-TRIG-2 kept verbatim |
+| adr-0016-conformance-check.sh `AC-961-1-f` | **migrated** | → `120-adr0016-guide-adrcheck-tna`. same block anchor; T-NA kept verbatim |
+| adr-0016-conformance-check.sh `AC-961-1-g` | **migrated** | → `120-adr0016-guide-blindspot-capsfit`. `### Known blind-spot checks` block anchor; the item-specific token kept verbatim |
+| adr-0016-conformance-check.sh `AC-961-1-h` | **migrated** | → `120-adr0016-guide-architect-nonscored`. `Agreement criteria` resolves as a unique heading anchor and the literal is not a substring of it, so the heading kind is safe here |
+| adr-0016-conformance-check.sh `AC-961-2-c` | **migrated** | → `120-adr0016-contracts-facilitator-adrconformance`. `Responsibilities` is a unique heading anchor in `docs/teammate-contracts.md`; `grep -qi 'ADR conformance'` case-explicitly rewritten to the document's own spelling |
+| adr-0016-conformance-check.sh `AC-961-2-d` | **migrated** | → `120-adr0016-eval-gateplan-feasibility`, `120-adr0016-eval-gateplan-scope` and `120-adr0016-eval-gateplan-cap`. the arm read one table row, which is a column-1 fixed prefix — `section_kind: "line"`, body = the anchored line alone. Its three-way conjunction decomposes into three entries, and the bare cap value `6` is strengthened to the cap clause the row actually carries |
+| adr-0016-conformance-check.sh `AC-961-2-e` | **migrated** | → `120-adr0016-eval-gatequality-fit` and `120-adr0016-eval-gatequality-cap`. same `line` anchor form on the GATE:QUALITY row; two-way conjunction, cap value strengthened to `caps Fit at 6` |
+| adr-0016-conformance-check.sh `AC-961-2-f` | **migrated** | → `120-adr0016-guide-blindspot-no-threecount`. an `absent` + **fixed** arm inside a resolvable region, so the body-scoped injection mutator credits it |
+| adr-0016-conformance-check.sh `AC-961-2-g` | **migrated** | → `120-adr0016-guide-blindspot-provenance`. a `present` + regex arm; `present` + regex is credited normally, and the case-insensitive match is written case-explicitly |
+| test-issue-42-spawn-mode-contract.sh `M42-REGEN-CLEAN`#1 | **migrated** | → `120-42-manifest-gate-matching-not-source`. The arm counted `docs/gate-matching-standard.md` occurrences in the manifest's source list and required zero; as a whole-file `absent` + fixed entry over `setup/manifest.json` on the row's own `"source"` spelling, the count fence becomes a state predicate the injection mutator credits. Occurrence ordinal `#1` per the arm-key rule: this suite's removal set holds two statically written arms under this `<AC-id>` |
+| test-issue-42-spawn-mode-contract.sh `M42-REGEN-CLEAN`#2 | **retired against a carrier** | the regenerate-and-compare leg. `tests/test-issue-16-manifest-locale-invariance.sh` `AC2` runs the real generator against an isolated copy of the real tree and compares byte-for-byte, which is the same obligation without this suite's in-place backup/restore dance |
+| test-issue-42-spawn-mode-contract.sh `A42-LITERAL-CONTIGUOUS (a)` | **retired against a carrier** | the runner's own load-time gate rejects an embedded newline in `literal`/`before`/`after` with a registry-wide BLOCK (`tests/run-doc-invariants.sh:210-212`), enforcing the property over every entry rather than over one `origin_issue` |
+| test-issue-42-spawn-mode-contract.sh `A42-LITERAL-CONTIGUOUS (b)` | **retired against a carrier** | the runner's default mode evaluates every entry in its own predicate's direction and exits non-zero on any FAIL; it is CI-registered and unconditional, so a per-`origin_issue` re-implementation of it is a second copy of the same oracle |
+| test-issue-848-doc-assertions.sh `AC1-DELIVER-MARKER` | **migrated** | → `120-848-guide-deliver-secondary-marker`. `deliver_section()` is a plain `## DELIVER` heading-to-heading window, i.e. a registry heading anchor |
+| test-issue-848-doc-assertions.sh `AC3-PRESERVE-MANUAL` | **migrated** | → `120-848-gitworkflow-mergeseq-blocked-label`. Only the Merge Sequencing leg migrates; `merge_seq_section()` is a plain `### Merge Sequencing (external review)` heading anchor. Its `pointer_reconcile_section()` sibling under the same `<AC-id>` is **retained in place** and is not part of the removal set, so the key carries no occurrence ordinal |
+| test-issue-848-doc-assertions.sh `AC3-RETIRE-ALIGNED` | **migrated** | → `120-848-gitworkflow-retirement-anchor`. A whole-file `present` + regex over `docs/git-workflow.md`; no region is involved |
+| test-issue-848-doc-assertions.sh `AC5-ADR-CITED` | **migrated** | → `120-848-gitworkflow-adr0015-cited`. A whole-file `present` + fixed, case-explicitly rewritten from `grep -qiF` |
+| test-issue-979-doc-neutrality.sh `autoflow-guide.md widened HANDOFF window has landed neutral vocabulary ('configured-reviewer'/'reviewer review'/'reviewer comment'/'reviewer re-review'/'reviewer session'), proving text was replaced, not merely deleted` | **migrated** | → `120-979-guide-handoff-neutral-vocab`. The widened window resolves as a column-1 anchor pair — `section_kind: "block"` on `## HANDOFF —` with `section_end` on `**[MUST]** AutoFlow runs neither` — which is the region question feature design §8 left to be settled here. The entry's body ends one line earlier than the arm's window (the terminator is excluded), a narrowing |
+| test-issue-979-doc-neutrality.sh `autoflow-guide.md widened HANDOFF window still permits lowercase 'codex' as the named default backend (no over-neutralization)` | **migrated** | → `120-979-guide-handoff-codex-default`. Same block anchor; `grep -qi 'codex'` case-explicitly rewritten to the lowercase spelling the document uses for the backend name |
+| test-issue-955-subagent-background-ban.sh `AC1-b(AGENT_FILES:$PROJECT_ROOT/.claude/agents/autoflow-analyzer.md)` | **migrated** | → `120-955-agent-analyzer-runinbackground` and `120-955-agent-analyzer-foreground`. A registry entry holds one `file` and one predicate, so the arm's per-file conjunction decomposes into a `present` + fixed pair. Loop-generated arm: the key carries the array identity `AGENT_FILES` and the element as the base ref spells it |
+| test-issue-955-subagent-background-ban.sh `AC1-b(AGENT_FILES:$PROJECT_ROOT/.claude/agents/autoflow-planner.md)` | **migrated** | → `120-955-agent-planner-runinbackground` and `120-955-agent-planner-foreground`. A registry entry holds one `file` and one predicate, so the arm's per-file conjunction decomposes into a `present` + fixed pair. Loop-generated arm: the key carries the array identity `AGENT_FILES` and the element as the base ref spells it |
+| test-issue-955-subagent-background-ban.sh `AC1-b(AGENT_FILES:$PROJECT_ROOT/.claude/agents/autoflow-implementer.md)` | **migrated** | → `120-955-agent-implementer-runinbackground` and `120-955-agent-implementer-foreground`. A registry entry holds one `file` and one predicate, so the arm's per-file conjunction decomposes into a `present` + fixed pair. Loop-generated arm: the key carries the array identity `AGENT_FILES` and the element as the base ref spells it |
+| test-issue-955-subagent-background-ban.sh `AC1-b(AGENT_FILES:$PROJECT_ROOT/.claude/agents/autoflow-tester.md)` | **migrated** | → `120-955-agent-tester-runinbackground` and `120-955-agent-tester-foreground`. A registry entry holds one `file` and one predicate, so the arm's per-file conjunction decomposes into a `present` + fixed pair. Loop-generated arm: the key carries the array identity `AGENT_FILES` and the element as the base ref spells it |
+| test-issue-955-subagent-background-ban.sh `AC1-b(AGENT_FILES:$PROJECT_ROOT/.claude/agents/autoflow-evaluator.md)` | **migrated** | → `120-955-agent-evaluator-runinbackground` and `120-955-agent-evaluator-foreground`. A registry entry holds one `file` and one predicate, so the arm's per-file conjunction decomposes into a `present` + fixed pair. Loop-generated arm: the key carries the array identity `AGENT_FILES` and the element as the base ref spells it |
+| test-issue-955-subagent-background-ban.sh `AC1-c` | **migrated** | → `120-955-contracts-inscript-agents`. A whole-file `present` + regex over `docs/teammate-contracts.md`, kept verbatim |
+| test-issue-62-sequential-rounds.sh `AC-62-25a` | **migrated** | → `120-62-contracts-architect-sequential`. The ARCHITECT contract block opens on the column-1 line `**ARCHITECT**` and closes on `**VERIFY**`, so it resolves as a `block` anchor with `section_end` — the region question feature design §8 left open. `grep -qi 'sequential'` case-explicitly rewritten to the lowercase spelling |
+| test-issue-62-sequential-rounds.sh `AC-62-25b` | **migrated** | → `120-62-contracts-architect-citation-mode`. Same block anchor; `grep -qi 'citation mode'` case-explicitly rewritten to `Citation mode`, the capitalisation the document uses |
+| test-issue-62-sequential-rounds.sh `AC-62-32a` | **migrated** | → `120-62-contracts-no-draft-artifact-missing`. `grep -c … -eq 0` over a whole file is `absent` + fixed in registry form |
+| test-issue-62-sequential-rounds.sh `AC-62-32a2` | **migrated** | → `120-62-contracts-no-antecedent-clause`. Same shape |
+| test-issue-62-sequential-rounds.sh `AC-62-32b` | **migrated** | → `120-62-guide-architect-artifacts-precondition`. **Split arm**: the positive half (the ARCHITECT section states the precondition) migrates as a `present` + fixed entry on the `ARCHITECT — Plan Synthesis (Developer AI + Test AI)` heading anchor; the `-eq 1` **exactly-once** half is dropped, because a count-shaped predicate can never be a permanent registry entry (§1-2) — the `844 AC4-h` precedent in §6. What is lost is the guard against a *second* copy of that sentence appearing; what still holds is that at least one copy must |
+| test-issue-62-sequential-rounds.sh `AC-62-32c` | **migrated** | → `120-62-contracts-no-fs-smoke`. Same whole-file `absent` + fixed shape as its `AC-62-32a`/`a2` siblings in the same four-part block. **Divergence from the design's §2 enumeration**, recorded rather than taken silently: feature design §2 lists `AC-62-32a`, `AC-62-32a2` and `AC-62-34` as the migrating members and does not name `AC-62-32c`, while §1's expressibility rule — the rule §2 applies — reaches it identically. Migrating three of four identical-shape arms in one block and leaving the fourth is the arbitrary choice, so the rule was applied rather than the enumeration |
+| test-issue-62-sequential-rounds.sh `AC-62-34` | **migrated** | → `120-62-contracts-no-missing-artifact`. Same whole-file `absent` + fixed shape |
+| test-issue-109-doc-assertions.sh `AC-assertless-header-removed(GROUP_D_ADR0016:AC4)` | **dropped — subject retired** | its subject is a section header inside `tests/adr-0016-conformance-check.sh`, which this cycle deletes. The arm is a negation over `$(cat …)` content, so leaving it would report PASS about a file it never read — a vacuous green, which is why §3 retires the array, the loop, the content variables and the fixture as one disposition rather than the fixture alone |
+| test-issue-109-doc-assertions.sh `AC-assertless-header-removed(GROUP_D_ADR0016:AC5)` | **dropped — subject retired** | its subject is a section header inside `tests/adr-0016-conformance-check.sh`, which this cycle deletes. The arm is a negation over `$(cat …)` content, so leaving it would report PASS about a file it never read — a vacuous green, which is why §3 retires the array, the loop, the content variables and the fixture as one disposition rather than the fixture alone |
+| test-issue-109-doc-assertions.sh `AC-assertless-header-removed(GROUP_D_ADR0016:AC6)` | **dropped — subject retired** | its subject is a section header inside `tests/adr-0016-conformance-check.sh`, which this cycle deletes. The arm is a negation over `$(cat …)` content, so leaving it would report PASS about a file it never read — a vacuous green, which is why §3 retires the array, the loop, the content variables and the fixture as one disposition rather than the fixture alone |
+| test-issue-109-doc-assertions.sh `AC-assertless-header-removed(GROUP_D_ADR0016:AC-961-5)` | **dropped — subject retired** | its subject is a section header inside `tests/adr-0016-conformance-check.sh`, which this cycle deletes. The arm is a negation over `$(cat …)` content, so leaving it would report PASS about a file it never read — a vacuous green, which is why §3 retires the array, the loop, the content variables and the fixture as one disposition rather than the fixture alone |
+| test-issue-109-doc-assertions.sh `AC-assertless-header-removed(GROUP_D_ADR0016:AC-961-7)` | **dropped — subject retired** | its subject is a section header inside `tests/adr-0016-conformance-check.sh`, which this cycle deletes. The arm is a negation over `$(cat …)` content, so leaving it would report PASS about a file it never read — a vacuous green, which is why §3 retires the array, the loop, the content variables and the fixture as one disposition rather than the fixture alone |
+| test-issue-109-doc-assertions.sh `AC-header-scope-list-consistent(inline(AC-961-5,AC-961-7):AC-961-5)` | **dropped — subject retired** | same subject — the deleted suite's own header block. Loop-generated arm over an inline literal list, so the key carries the `inline(...)` source token |
+| test-issue-109-doc-assertions.sh `AC-header-scope-list-consistent(inline(AC-961-5,AC-961-7):AC-961-7)` | **dropped — subject retired** | same subject — the deleted suite's own header block. Loop-generated arm over an inline literal list, so the key carries the `inline(...)` source token |
+| test-issue-109-doc-assertions.sh `AC-header-scope-list-consistent` | **dropped — subject retired** | the statically written blanket-claim arm (`AC1-AC6` coverage narrowed out of the deleted suite's header). Its subject is that header. No occurrence ordinal: it is the only statically written arm under this `<AC-id>` in the removal set |
+| test-issue-109-doc-assertions.sh `AC-live-assertion-set-preserved(inline(tests/test-issue-798-topology-flip.sh,tests/test-issue-799-inert-cleanup.sh,tests/adr-0016-conformance-check.sh):tests/test-issue-798-topology-flip.sh)` | **partially edited list — see basis** | The `AC-carrier-recorded` path loop and the keystone arm block both narrow from three elements to two. The reconciliation extractor reads the **removed** side of a partially edited inline list, so all three elements yield a key even though only the adr-0016 element departs; this row exists for each so the join is total. For this element: **retained** — the 798 baseline fixture and its arm are untouched |
+| test-issue-109-doc-assertions.sh `AC-live-assertion-set-preserved(inline(tests/test-issue-798-topology-flip.sh,tests/test-issue-799-inert-cleanup.sh,tests/adr-0016-conformance-check.sh):tests/test-issue-799-inert-cleanup.sh)` | **partially edited list — see basis** | The `AC-carrier-recorded` path loop and the keystone arm block both narrow from three elements to two. The reconciliation extractor reads the **removed** side of a partially edited inline list, so all three elements yield a key even though only the adr-0016 element departs; this row exists for each so the join is total. For this element: **retained** — the 799 baseline fixture and its arm are untouched |
+| test-issue-109-doc-assertions.sh `AC-live-assertion-set-preserved(inline(tests/test-issue-798-topology-flip.sh,tests/test-issue-799-inert-cleanup.sh,tests/adr-0016-conformance-check.sh):tests/adr-0016-conformance-check.sh)` | **partially edited list — see basis** | The `AC-carrier-recorded` path loop and the keystone arm block both narrow from three elements to two. The reconciliation extractor reads the **removed** side of a partially edited inline list, so all three elements yield a key even though only the adr-0016 element departs; this row exists for each so the join is total. For this element: **retired** — the adr-0016 baseline fixture `tests/fixtures/issue-109-assertion-baseline-adr0016.txt` is deleted with its suite |
+| test-issue-16-manifest-locale-invariance.sh `AC4-adr0016-suite-exists` | **dropped — subject retired** | a bare `[ -f … ]` on `tests/adr-0016-conformance-check.sh`. It reds the moment that file is deleted, so the arm and its `ADR_0016_TEST` variable leave with the deletion. This is one of the two **executable** inbound pins feature design §4 names; the other is `#71`'s below |
+| test-issue-71-digest-removal.sh `AC-71-CITATION`#1 | **dropped — subject retired** | its subject is the deleted `tests/adr-0016-conformance-check.sh`: the negation `#953 dangling citation is struck` — it would go vacuously green on a deleted file. Occurrence ordinal `#1` per the arm-key rule — three statically written arms share this `<AC-id>` in the removal set. The banner, the three arms, the `$ADR0016_SUITE` variable, the `# ci-subject:` token and the allow-list row leave together |
+| test-issue-71-digest-removal.sh `AC-71-CITATION`#2 | **dropped — subject retired** | its subject is the deleted `tests/adr-0016-conformance-check.sh`: the positive grep for the surviving `#16 AC2` carrier — it reds on a deleted file. Occurrence ordinal `#2` per the arm-key rule — three statically written arms share this `<AC-id>` in the removal set. The banner, the three arms, the `$ADR0016_SUITE` variable, the `# ci-subject:` token and the allow-list row leave together |
+| test-issue-71-digest-removal.sh `AC-71-CITATION`#3 | **dropped — subject retired** | its subject is the deleted `tests/adr-0016-conformance-check.sh`: the positive grep for the surviving `verify-package.sh AC5d` carrier — it reds on a deleted file. Occurrence ordinal `#3` per the arm-key rule — three statically written arms share this `<AC-id>` in the removal set. The banner, the three arms, the `$ADR0016_SUITE` variable, the `# ci-subject:` token and the allow-list row leave together |
+| test-issue-71-digest-removal.sh `AC-71-FENCE42`#1 | **dropped — subject retired** | its subject is the deleted `tests/test-issue-42-spawn-mode-contract.sh` — the step-1.5 literal fence argument is gone (negation — vacuously green on a deleted file). **Found at GREEN, not enumerated by feature design §4**: §4 named this suite's `AC-71-CITATION` pin on the adr-0016 suite but not this eight-arm pin on the 42 suite, which §4's own rule (*every inbound reference to a deleted suite is resolved in the same change*) reaches identically. Occurrence ordinals `#1`-`#8` over the removal set |
+| test-issue-71-digest-removal.sh `AC-71-FENCE42`#2 | **dropped — subject retired** | its subject is the deleted `tests/test-issue-42-spawn-mode-contract.sh` — the step-6.7 literal fence argument is gone (negation — vacuously green). **Found at GREEN, not enumerated by feature design §4**: §4 named this suite's `AC-71-CITATION` pin on the adr-0016 suite but not this eight-arm pin on the 42 suite, which §4's own rule (*every inbound reference to a deleted suite is resolved in the same change*) reaches identically. Occurrence ordinals `#1`-`#8` over the removal set |
+| test-issue-71-digest-removal.sh `AC-71-FENCE42`#3 | **dropped — subject retired** | its subject is the deleted `tests/test-issue-42-spawn-mode-contract.sh` — the `diff_touches_literal` helper is gone (negation — vacuously green). **Found at GREEN, not enumerated by feature design §4**: §4 named this suite's `AC-71-CITATION` pin on the adr-0016 suite but not this eight-arm pin on the 42 suite, which §4's own rule (*every inbound reference to a deleted suite is resolved in the same change*) reaches identically. Occurrence ordinals `#1`-`#8` over the removal set |
+| test-issue-71-digest-removal.sh `AC-71-FENCE42`#4 | **dropped — subject retired** | its subject is the deleted `tests/test-issue-42-spawn-mode-contract.sh` — the empty-base fail-loud assertion line is gone (negation — vacuously green). **Found at GREEN, not enumerated by feature design §4**: §4 named this suite's `AC-71-CITATION` pin on the adr-0016 suite but not this eight-arm pin on the 42 suite, which §4's own rule (*every inbound reference to a deleted suite is resolved in the same change*) reaches identically. Occurrence ordinals `#1`-`#8` over the removal set |
+| test-issue-71-digest-removal.sh `AC-71-FENCE42`#5 | **dropped — subject retired** | its subject is the deleted `tests/test-issue-42-spawn-mode-contract.sh` — `M42-REGEN-CLEAN` survives (positive grep — reds on a deleted file). **Found at GREEN, not enumerated by feature design §4**: §4 named this suite's `AC-71-CITATION` pin on the adr-0016 suite but not this eight-arm pin on the 42 suite, which §4's own rule (*every inbound reference to a deleted suite is resolved in the same change*) reaches identically. Occurrence ordinals `#1`-`#8` over the removal set |
+| test-issue-71-digest-removal.sh `AC-71-FENCE42`#6 | **dropped — subject retired** | its subject is the deleted `tests/test-issue-42-spawn-mode-contract.sh` — `A42-LITERAL-CONTIGUOUS` survives (positive grep — reds). **Found at GREEN, not enumerated by feature design §4**: §4 named this suite's `AC-71-CITATION` pin on the adr-0016 suite but not this eight-arm pin on the 42 suite, which §4's own rule (*every inbound reference to a deleted suite is resolved in the same change*) reaches identically. Occurrence ordinals `#1`-`#8` over the removal set |
+| test-issue-71-digest-removal.sh `AC-71-FENCE42`#7 | **dropped — subject retired** | its subject is the deleted `tests/test-issue-42-spawn-mode-contract.sh` — the `H-BYTES (retired, #64)` comment survives (positive grep — reds). **Found at GREEN, not enumerated by feature design §4**: §4 named this suite's `AC-71-CITATION` pin on the adr-0016 suite but not this eight-arm pin on the 42 suite, which §4's own rule (*every inbound reference to a deleted suite is resolved in the same change*) reaches identically. Occurrence ordinals `#1`-`#8` over the removal set |
+| test-issue-71-digest-removal.sh `AC-71-FENCE42`#8 | **dropped — subject retired** | its subject is the deleted `tests/test-issue-42-spawn-mode-contract.sh` — the CI step `Run spawn-mode contract guard (#42)` stays registered (workflow pin — reds once §4 removes that step). **Found at GREEN, not enumerated by feature design §4**: §4 named this suite's `AC-71-CITATION` pin on the adr-0016 suite but not this eight-arm pin on the 42 suite, which §4's own rule (*every inbound reference to a deleted suite is resolved in the same change*) reaches identically. Occurrence ordinals `#1`-`#8` over the removal set |
+| test-issue-51-teammate-removal-verdict.sh `AC1(b)` | **retired against a carrier** | `51-verdict` carries the ratified verdict sentence on the same `Decision` anchor |
+| test-issue-51-teammate-removal-verdict.sh `AC4-iteration-set` | **retired against a carrier** | `51-condition-iteration-set` carries the step-4 iteration-set obligation |
+| test-issue-51-teammate-removal-verdict.sh `AC5-ordering-constraint` | **retired against a carrier** | `51-ordering-constraint` carries the ordering-constraint sentence |
+| test-issue-51-teammate-removal-verdict.sh `AC5-pilot-token` | **retired against a carrier** | `51-pilot-reversal` names the pilot inside the same `Decision` anchor |
+| test-issue-51-teammate-removal-verdict.sh `AC5-reversal` | **retired against a carrier** | `51-pilot-reversal` carries the reversal clause |
+| test-issue-51-teammate-removal-verdict.sh `AC5-condition-tokens` | **retired against a carrier** | `51-condition-order` is an `ordered` entry over `| C1 |` and `| C7 |`, which cannot hold unless both tokens are present |
+| test-issue-51-teammate-removal-verdict.sh `AC5-ordering` | **retired against a carrier** | `51-condition-order` is that ordering, as a permanent entry |
+| test-issue-51-teammate-removal-verdict.sh `AC7-readme` | **retired against a carrier** | `51-reg-readme` pins the ADR filename inside `Current Drafts` |
+| test-issue-51-teammate-removal-verdict.sh `AC10(a)` | **retired against a carrier** | `51-q6-unmeasured` carries the explicit not-measured statement on the `Q6` anchor |
+| test-issue-51-teammate-removal-verdict.sh `AC15` | **retired against a carrier** | `51-condition-contract-pointer` carries the agent-definition contract-pointer condition |
+| test-issue-51-teammate-removal-verdict.sh `AC1(a)(inline(Status,Context,Decision,Alternatives Considered,Consequences,Related Issues / PRs,Notes):Status)` | **dropped — count fence** | a `count_heading '<element>' … -eq 1` check over the ADR's seven-heading skeleton subset. A count-shaped predicate is a cycle-scoped guard by §1-2 and can never be a permanent entry. **What is lost**: a duplicated `##` heading in ADR-0017 is no longer caught. **What still holds**: the six `Decision`-anchored entries and the four `Q3`-`Q6` entries all resolve through the runner's own load-time gate, which BLOCKs the whole run on an ambiguous anchor — so a duplicated *anchored* heading still reds, and only an unanchored duplicate goes unguarded. Loop-generated arm keyed per element, the source token read from the removed side of the `for` header |
+| test-issue-51-teammate-removal-verdict.sh `AC1(a)(inline(Status,Context,Decision,Alternatives Considered,Consequences,Related Issues / PRs,Notes):Context)` | **dropped — count fence** | as the `AC1(a)` … `Status` row above — one key per element of the same removed loop |
+| test-issue-51-teammate-removal-verdict.sh `AC1(a)(inline(Status,Context,Decision,Alternatives Considered,Consequences,Related Issues / PRs,Notes):Decision)` | **dropped — count fence** | as the `AC1(a)` … `Status` row above — one key per element of the same removed loop |
+| test-issue-51-teammate-removal-verdict.sh `AC1(a)(inline(Status,Context,Decision,Alternatives Considered,Consequences,Related Issues / PRs,Notes):Alternatives Considered)` | **dropped — count fence** | as the `AC1(a)` … `Status` row above — one key per element of the same removed loop |
+| test-issue-51-teammate-removal-verdict.sh `AC1(a)(inline(Status,Context,Decision,Alternatives Considered,Consequences,Related Issues / PRs,Notes):Consequences)` | **dropped — count fence** | as the `AC1(a)` … `Status` row above — one key per element of the same removed loop |
+| test-issue-51-teammate-removal-verdict.sh `AC1(a)(inline(Status,Context,Decision,Alternatives Considered,Consequences,Related Issues / PRs,Notes):Related Issues / PRs)` | **dropped — count fence** | as the `AC1(a)` … `Status` row above — one key per element of the same removed loop |
+| test-issue-51-teammate-removal-verdict.sh `AC1(a)(inline(Status,Context,Decision,Alternatives Considered,Consequences,Related Issues / PRs,Notes):Notes)` | **dropped — count fence** | as the `AC1(a)` … `Status` row above — one key per element of the same removed loop |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q1)`#1 | **dropped — count fence** | the heading-count leg — `count_heading '<element>' … -eq 1` over the `### Q<n>` sub-section. A count fence, disposed exactly as `AC1(a)` above. Template ordinal `#1`: the removed loop body holds two `assert_*` templates under one `<AC-id>`, so the key is per element × template. **What is lost / still holds**: as the `AC1(a)` rows |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q2)`#1 | **dropped — count fence** | as the `AC2(…:Q1)`#1 row above — the heading-count template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q3)`#1 | **dropped — count fence** | as the `AC2(…:Q1)`#1 row above — the heading-count template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q4)`#1 | **dropped — count fence** | as the `AC2(…:Q1)`#1 row above — the heading-count template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q5)`#1 | **dropped — count fence** | as the `AC2(…:Q1)`#1 row above — the heading-count template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q6)`#1 | **dropped — count fence** | as the `AC2(…:Q1)`#1 row above — the heading-count template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q1)`#2 | **dropped — coverage loss, recorded** | the grounds-anchor leg — each answer must carry at least one path / `path:line` / `#issue` / SHA anchor. This is a *schema* over the sub-section body, not a literal: a registry entry pins a literal in a resolved body and cannot state "some token matching this shape occurs" as a permanent invariant without an `absent`-side witness the self-test can inject. Template ordinal `#2`. **What is lost**: an ungrounded answer added to this sub-section no longer reds. **What still holds**: the promoted origin_issue:51 content entry for this sub-section, where one exists — `Q1` and `Q2` have none |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q2)`#2 | **dropped — coverage loss, recorded** | as the `AC2(…:Q1)`#2 row above — the grounds-anchor template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q3)`#2 | **dropped — coverage loss, recorded** | as the `AC2(…:Q1)`#2 row above — the grounds-anchor template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q4)`#2 | **dropped — coverage loss, recorded** | as the `AC2(…:Q1)`#2 row above — the grounds-anchor template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q5)`#2 | **dropped — coverage loss, recorded** | as the `AC2(…:Q1)`#2 row above — the grounds-anchor template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC2(inline(Q1,Q2,Q3,Q4,Q5,Q6):Q6)`#2 | **dropped — coverage loss, recorded** | as the `AC2(…:Q1)`#2 row above — the grounds-anchor template, one key per element |
+| test-issue-51-teammate-removal-verdict.sh `AC1(c)` | **dropped — coverage loss, recorded** | the Status value was read as *the first non-blank line of the `Status` section*, then matched against an enumeration. A registry entry evaluates a literal over a resolved body, not a derived first line, so neither the derivation nor the enumeration is expressible. **What is lost**: a malformed Status value in ADR-0017 no longer reds. **What still holds**: nothing in the registry — this is a real loss, listed for the editorial review |
+| test-issue-51-teammate-removal-verdict.sh `AC3-ground1` | **dropped — coverage loss, recorded** | an ERE (`non-discriminat`) over the `Alternatives Considered` body. **What is lost**: the first of the rejection's three grounds is no longer pinned. **What still holds**: the rejection itself is asserted by the promoted origin_issue:51 entry on that section |
+| test-issue-51-teammate-removal-verdict.sh `AC3-ground2` | **dropped — coverage loss, recorded** | an ERE over the same body for the two-renamed-keys ground. **What is lost / still holds**: as the row above |
+| test-issue-51-teammate-removal-verdict.sh `AC3-ground3` | **dropped — coverage loss, recorded** | an ERE over the same body for the zero-contribution ground. **What is lost / still holds**: as the two rows above |
+| test-issue-51-teammate-removal-verdict.sh `AC4-source` | **dropped — coverage loss, recorded** | an ERE pinning that `Q1` cites `docs/autoflow-guide.md` as its structural-fact source. **What is lost**: the citation may be dropped from Q1 without reddening. **What still holds**: `Q1`'s answer content is not among the twelve promoted entries either, so nothing carries this |
+| test-issue-51-teammate-removal-verdict.sh `AC6(a)` | **dropped — coverage loss, recorded** | a wide two-part ERE over the whole ADR for the migration-slice deferral statement. **What is lost**: the deferral statement may be removed without reddening. **What still holds**: nothing — the twelve promoted entries do not include it |
+| test-issue-51-teammate-removal-verdict.sh `AC7-maintained-docs` | **dropped — coverage loss, recorded** | the ADR-0017 filename inside `docs/maintained-docs.md`. **What is lost**: the registration row may be deleted without reddening. **What still holds**: the README registration, through the promoted `Current Drafts` entry |
+| test-issue-51-teammate-removal-verdict.sh `AC7-index` | **dropped — coverage loss, recorded** | the ADR-0017 filename inside `docs/INDEX.md`. **What is lost / still holds**: as the row above |
+| test-issue-51-teammate-removal-verdict.sh `AC10(b)` | **dropped — coverage loss, recorded** | an `absent` + ERE (`[0-9]+ *(tokens?|ms|sec…|%|USD|\$)`) over a `Q6` body with issue references stripped — two blockers at once: the derived body is not a resolvable region, and an `absent` + regex entry has no injectable witness. **What is lost**: a numeric measurement claim added to Q6 no longer reds. **What still holds**: the positive `not measured` statement, through the promoted `Q6` entry |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Status)` | **dropped — count fence** | a `count_heading '<element>' … -eq 1` check over the full seventeen-heading skeleton. Count fence, disposed as `AC1(a)` above; this loop covers the wider heading set. Loop-generated arm keyed per element, the source token being the array identity `HEADINGS_17` as the base ref spells it. **What is lost / still holds**: as the `AC1(a)` rows |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Context)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Case collection)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Decision)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Q1)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Q2)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Q3)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Q4)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Q5)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Q6)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Alternatives Considered)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Consequences)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Positive)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Negative)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Neutral / Trade-Offs)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Related Issues / PRs)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC14(HEADINGS_17:Notes)` | **dropped — count fence** | as the `AC14(HEADINGS_17:Status)` row above — one key per element of the same removed array |
+| test-issue-51-teammate-removal-verdict.sh `AC16` | **dropped — count fence** | `grep -c '^---$' -eq 0` over the ADR. A count fence in form, and in substance a guard that the `Decision` block is not truncated by a thematic break. **What is lost**: a thematic break added to ADR-0017 would silently shorten the body six promoted entries evaluate against. **What still holds**: those six entries fail directly if the truncation moves their literal out of the resolved body — the guard is later and less specific, not absent |
+
+
+### 17.1 Arms retained in place
+
+These arms are not registry-expressible and their suites survive, so they stay where they
+are with the §6.1 label that says why. Listed so that every arm of every touched suite
+carries exactly one disposition.
+
+| Retained arm | Label | Ground |
+|---|---|---|
+| `test-issue-846-doc-assertions.sh` `AC2-GUIDE` (×2), `AC3-DURABLE` (×3) | `76-RETAIN-REGION-INEXPRESSIBLE` | they read a step-6.5 window whose extractor terminates at the closing code fence. `section_end` resolves to exactly one line file-wide and a fence recurs throughout `docs/autoflow-guide.md`, so the region is not expressible; without the terminator the body runs past the fence and the discriminator goes vacuously true |
+| `test-issue-846-doc-assertions.sh` `AC2-NOCONTRA` (×2), `CLAUDEMD-NOCONTRA` | `76-RETAIN-ABSENT-REGEX` | negated conjunctions and `absent` + ERE guards; an `absent` + regex entry has no injectable witness and is non-credited by name |
+| `test-issue-846-doc-assertions.sh` `AC2-NOLABELCLEAR` (×2) | `76-RETAIN-ABSENT-REGEX` | as above |
+| `test-issue-846-doc-assertions.sh` `AC3-GITHUBSIDE` | `76-RETAIN-REGION-INEXPRESSIBLE` | a `grep -A3` proximity sub-context, not a resolvable anchor |
+| `test-issue-846-doc-assertions.sh` `AC-CI-a`, `AC-CI-b`, `AC-CI-c` · `test-issue-848-doc-assertions.sh` `AC-CI-a`, `AC-CI-b`, `AC-CI-c` · `test-issue-955-subagent-background-ban.sh` `CI-a`, `CI-b`, `CI-c` | `76-RETAIN-CI-REGISTRATION` | workflow-file assertions are outside the registry's document scope |
+| test-issue-848-doc-assertions.sh `AC1-DELIVER-ACTOR`, `AC1-DELIVER-GITLINK`, `AC1-DELIVER-FORWARDREF`, `AC1-NO-HOSTONLY-BLEED`, `AC1-HANDOFF-STEP` (×2), `AC2-MUST` (×2), `AC2-SOLE-DEFENSE` (×2), `AC2-NO-PERPUSH`, `AC4-DEFER`, `AC4-EXCEPTION` (×2), `AC4-NO-NESTED-PRESUME`, `AC5-NO-REVIVE`, `AC3-NO-LIVE-WORKFLOW`, `AC3-EXIT79-CTX`, `AC3-PRESERVE-MANUAL` (pointer-reconciliation leg), `AC1-OWNERSHIP-ROW`, `AC1-XREF`, `AC4-EXTREVSEQ` | `76-RETAIN-REGION-INEXPRESSIBLE` | each pipes one extracted window into a second one — a multi-anchor join with no single resolvable anchor — or reads a numbered-item marker window whose terminator is not unique file-wide |
+| test-issue-979-doc-neutrality.sh `autoflow-guide.md widened HANDOFF window … does NOT contain any capital-'Codex <word>' live-path phrase` · `design-rationale.md Decision 9 Problem/Decision body does not match …` · `CLAUDE.md contains no live-path 'Codex review' phrase` | `76-RETAIN-ABSENT-REGEX` | complete-class absence guards whose language is not a finite union of fixed literals, so `absent-enumeration` does not reach them and the mutation oracle rejects the shape outright |
+| `test-issue-979-doc-neutrality.sh` step-6 window arms (×5) and the `design-rationale.md Decision 9` title/footnote arms (×3) | `76-RETAIN-REGION-INEXPRESSIBLE` | the step-6 window is anchored on an indented line, which the registry's column-1 anchor rule cannot resolve; the Decision-9 title arm is a piped grep pair |
+| test-issue-955-subagent-background-ban.sh `AC1-a-canonical` (×3), `AC1-a-mirror` (×2), `AC1-a-mirror-equality`, `AC1-d` (×3), `AC1-counterpart` (×3), `AC2` (×3), `AC3` (×2), `AC5-a` (×2), `AC5-b`, `AC5-c`, `AC-C2-1` (×9), `AC-C2-2` (×2), `G-REG`, `AC-PRESERVE-a`, `AC-PRESERVE-b`, `AC-PRESERVE-d` | `76-RETAIN-REGION-INEXPRESSIBLE` / `76-RETAIN-COUNT` | joined-window bodies, `grep -A3` proximity contexts, non-comment-line counts and an executable `node` oracle |
+| test-issue-62-sequential-rounds.sh `AC-62-5a`, `AC-62-5b`, `AC-62-18a`, `AC-62-18b`, `AC-62-20`, `AC-62-21a`, `AC-62-21b`, `AC-62-26a-pr`, `AC-62-26a-push`, `AC-62-26b`, `AC-62-29a`, `AC-62-29b`, `AC-62-30a`, `AC-62-30b`, `AC-62-30c`, `AC-62-38`, `AC-62-39` | `76-RETAIN-COUNT` / `76-RETAIN-CI-REGISTRATION` / `76-RETAIN-GIT-PLUMBING` | occurrence counts, sha256 pins, `node --check` execution and workflow-file assertions |
+| test-issue-51-teammate-removal-verdict.sh `O1(a)`, `O1(b)`, `O1(c)`, `O2(a)` (×2), `O2(b)`, `O2(d)` (×2), `O2(e)`, `AC12-run-step`, `AC12-pr-paths-suite`, `AC12-push-paths-suite`, `AC12-pr-paths-manual`, `AC12-push-paths-manual`, `AC12(c)-ordering` | `76-RETAIN-CI-REGISTRATION` / `76-RETAIN-COUNT` | the note's own PERMANENT list: the two real-producer composition oracles, the `origin_issue==51` count and meta guards, and the CI wiring. Every arm the TEMPORARY sentence's id families do not reach is retained, `O1`/`O2` and the `AC12-*` wiring arms among them |
+| `test-issue-109-doc-assertions.sh` — every arm outside the Group D adr-0016 half | — | untouched. The 798 and 799 halves of the keystone, and the contract itself, are not amended |
+| `test-issue-847-doc-assertions.sh` — every arm | — | untouched, as the issue body states: line-joined windows, `TRIGGER_REGEX` execution oracles and CI wiring |
+
+### 17.2 Keystone joint retirement (`tests/test-issue-109-doc-assertions.sh`)
+
+The `#109` keystone binds the adr-0016 suite by name as set inclusion over a checked-in
+snapshot, which blocks the deletion rather than protecting the migration. Option (b) from
+the issue thread is taken: the adr-0016 half is retired in the same change that deletes its
+subject. Removed together, as one disposition — the fixture
+`tests/fixtures/issue-109-assertion-baseline-adr0016.txt`; `SUITE_ADR0016`,
+`SUITE_ADR0016_CONTENT` and `SUITE_ADR0016_HEADER`; `GROUP_D_ADR0016` and the loop it
+drives; the `AC1-AC6` blanket-claim arm; the `AC-961-5`/`AC-961-7` inline-list loop; the
+adr-0016 element of the `AC-carrier-recorded` path loop; the nine `adr0016-*` entries of
+`CARRIER_IDS`; the Group D keystone arm and its fixture call; the
+`tests/adr-0016-conformance-check.sh` token in the `# ci-subject:` header and every
+comment naming it.
+
+Why the whole set and not the fixture alone: `SUITE_ADR0016_CONTENT` is `$(cat …)` over a
+path that would not exist, so the negative arms it feeds go **vacuously green** rather than
+red — an assertion reporting PASS about a file it never read.
+`tests/test-issue-121-declaration-release.sh` pins `GROUP_D_798` and `GROUP_D_799` by name
+but not `GROUP_D_ADR0016`, so this removal does not red it.
+
+§13's carrier rows naming `tests/adr-0016-conformance-check.sh` **stay**. They record where
+that suite's arms went, which remains true after the file is gone, and `AC-carrier-recorded`
+reads the registry text, not the tree. Those rows now cite a deleted suite, recorded here.
+
+### 17.3 Files deleted, and the pins firewalled with them
+
+Deleted: `tests/adr-0016-conformance-check.sh`,
+`tests/test-issue-42-spawn-mode-contract.sh`,
+`tests/fixtures/issue-109-assertion-baseline-adr0016.txt`.
+
+Every inbound reference resolved in the same change: both **executable** pins §4 named
+(`tests/test-issue-16-manifest-locale-invariance.sh`'s `AC4-adr0016-suite-exists` with its
+`ADR_0016_TEST` variable; `tests/test-issue-71-digest-removal.sh`'s `AC-71-CITATION` banner,
+arms, `$ADR0016_SUITE` variable, `# ci-subject:` token and allow-list rows); the `paths:`
+entries and `run:` steps in `.github/workflows/contract-suites.yml` and
+`.github/workflows/e2e-dummy-target.yml`; and the comment-only citations in
+`tests/test-run-doc-invariants.sh`, `scripts/test/check-suite-manifest.sh`,
+`tests/test-issue-43-report-channel-contract.sh` and the header of
+`tests/manual/issue-42-manual-scenarios.md`.
+
+**A third executable pin family, found at GREEN.** Feature design §4's enumeration is not
+complete: `tests/test-issue-71-digest-removal.sh` also carried `AC-71-FENCE42`, eight arms
+plus a `$FENCE42_SUITE` variable pinned on `tests/test-issue-42-spawn-mode-contract.sh` —
+four negations that would have gone vacuously green, three positive greps that would have
+red, and one pin on the workflow step this cycle deletes. §4's own rule (*every inbound
+reference to a deleted suite is resolved in the same change*) reaches them, so they are
+retired with their subject; the enumeration is corrected here rather than in §4.
+
+`tests/manual/issue-42-manual-scenarios.md` is **retained** and is not a §13.1 retirement
+candidate: §13.1's population is the six documents it tables, this file is not among them,
+and its closure fails at the fourth kind — two prose documents cite it as the
+re-derivation vehicle for a live rule (`CLAUDE.md` *Named-spawn non-delivery reading* and
+`docs/teammate-common-rules.md`), and §13.2's `issue-96` row cites it as live precedent.
+Its inbound citations are to the *observation*, not to the suite. One line changes: the
+header citation drops the deleted suite and keeps the `42-AC*` registry-entry reference — a
+stale-citation repair inside a retained file.
+
+**Consumer re-anchor.** §12.1's kept row for `guard_result_at_ref_mutated` cited
+`tests/test-issue-62-sequential-rounds.sh:93-112`; this cycle's removals above that range
+move the definition, so the row is re-anchored to `:91-110` in the same commit — the
+re-anchoring discipline §16 established for a consumer of a deleted arm.
+
+### 17.4 Divergence notes
+
+**`AC-CI-REGISTER` reclassification (846 / 848).** The issue body scoped these arms as
+*retire against generalised carriers* — `scripts/test/check-suite-ci-coverage.sh`,
+`check-suite-manifest.sh` and `tests/test-workflow-trigger-conformance.sh`, which already
+assert CI registration tree-wide. This cycle instead labels them
+`76-RETAIN-CI-REGISTRATION` and leaves them in place. The ground for the divergence: the
+generalised lints assert that *some* execution path exists for a suite and that every
+governed step is guarded and budgeted; the per-suite arms assert that **this** suite's
+reference appears in a `paths:` trigger block **and** in a `run:` step of **that named
+workflow file**. Neither is a superset of the other, and retiring an arm against a carrier
+that does not state the same proposition is the *lost coverage recorded as moved coverage*
+class the residue layer exists to catch. Recorded as a divergence rather than taken
+silently, per the GATE:PLAN finding that raised it.
+
+**`AC-62-32c`** — migrated although feature design §2's enumeration does not name it; the
+ground is in its own row above.
+
+**Assert-less section headers in `tests/test-issue-846-doc-assertions.sh`.** Three
+`echo "=== <id> …"` banners at that file's `AC1-FALLBACK/AC1-SUBREPO/AC1-VERIFY`,
+`AC1-ACTOR` and `AC-PRESERVE` positions announced acceptance criteria the file carries no
+arm for — the §13.2 class. Issue #109 removed the same class from three other suites; here
+the removal was to have ridden the file deletion that §2 cancelled, so it is taken directly:
+the three banners are deleted as dead code. No arm, and therefore no coverage, moves.
+
+**The `#51` deletion's recorded loss.** The note in
+`tests/test-issue-51-teammate-removal-verdict.sh` self-declares `AC1`-`AC7`, `AC10`,
+`AC12`, `AC14`-`AC16` as TEMPORARY discriminators due for deletion once their content
+reached the registry, while its own PERMANENT list names `AC12 — CI wiring`. The
+**PERMANENT list governs** — a workflow-file assertion has no registry home to migrate to —
+so `AC12` is struck from the TEMPORARY sentence in the same edit that deletes the arms that
+sentence names, leaving the two lists disjoint and the deletion criterion with one reading.
+Ten of the deleted arms retire against a promoted `51-*` carrier; **thirteen do not** — and
+because three of those thirteen are loop-generated, they occupy forty-six of the fifty-six
+per-element keys the reconciliation layer joins on. Their rows above state each loss
+individually. That is a larger recorded loss than the
+adr-0016 trade, it was not part of the trade GATE:PLAN reviewed, and it is flagged here for
+the arm-representability editorial review (`tests/manual/issue-120-manual-scenarios.md` M1)
+rather than absorbed.
+
+### 17.5 This cycle's own retirement
+
+`tests/test-issue-120-arm-reconciliation.sh` carries `lane: cycle-scoped`,
+`retire-with: #120` and `cycle-arm: #120` per the header grammar at
+`scripts/test/suite-manifest.sh:24-31`, with a path allow-list over this cycle's change
+surface and a `dev/*-issue-120` gate dominating every dereference. It is the only
+diff-shaped assertion this cycle adds, and the two-lane rule forbids a diff-shaped
+assertion in the standing lane. It is deleted at the merge that closes #120, per §2 —
+AutoFlow holds no merge authority, so the obligation is recorded here and executed by the
+merging party. `tests/test-cycle-arm-residue.sh`'s `#120 dispositions` section is standing
+and does not retire.

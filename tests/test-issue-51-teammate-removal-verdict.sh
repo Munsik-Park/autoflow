@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/agents/autoflow-tester.md .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml docs/INDEX.md docs/adr/0000-adr-template.md docs/adr/0017-teammate-removal-feasibility.md docs/adr/README.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/maintained-docs.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/fixtures/gate-schema.json tests/manual/issue-51-manual-scenarios.md tests/run-doc-invariants.sh
+# ci-subject: .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml docs/adr/0000-adr-template.md docs/adr/0017-teammate-removal-feasibility.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/fixtures/gate-schema.json tests/manual/issue-51-manual-scenarios.md tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -16,12 +16,14 @@
 #
 # Deliverable class: this cycle ships a DECISION DOCUMENT
 # (docs/adr/0017-teammate-removal-feasibility.md), not runtime code. AC1-AC7,
-# AC10, AC12, AC14-AC16 are TEMPORARY discriminators here: once GREEN creates
+# AC10, AC14-AC16 are TEMPORARY discriminators here: once GREEN creates
 # the ADR and promotes the matching content to the twelve permanent registry
 # entries (origin_issue: 51), the duplicated content-presence checks in this
-# file become redundant with the registry runner and are expected to be
-# deleted in a later cleanup pass (the #43 precedent -
-# tests/test-issue-43-report-channel-contract.sh's header). What remains
+# file became redundant with the registry runner and were deleted by issue
+# #120's cleanup pass (the #43 precedent -
+# tests/test-issue-43-report-channel-contract.sh's header); their content is
+# carried by those twelve entries, and the per-arm dispositions are recorded
+# in docs/doc-invariant-registry.md §17. What remains
 # PERMANENTLY in this file (content the registry structurally cannot hold —
 # docs/doc-invariant-registry.md rejects any diff/count/delta-shaped
 # predicate, and workflow-file / manifest-file assertions are outside the
@@ -58,12 +60,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ADR_REL="docs/adr/0017-teammate-removal-feasibility.md"
-ADR="$PROJECT_ROOT/$ADR_REL"
 TEMPLATE="$PROJECT_ROOT/docs/adr/0000-adr-template.md"
-ADR_README="$PROJECT_ROOT/docs/adr/README.md"
-MAINTAINED_DOCS="$PROJECT_ROOT/docs/maintained-docs.md"
-INDEX_MD="$PROJECT_ROOT/docs/INDEX.md"
-AGENT_TESTER="$PROJECT_ROOT/.claude/agents/autoflow-tester.md"
 WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY="$SCRIPT_DIR/fixtures/doc-invariants.json"
 RUNNER="$SCRIPT_DIR/run-doc-invariants.sh"
@@ -122,24 +119,6 @@ extract_section() {          # heading_text file [section_end]
   ' "$file" 2>/dev/null
 }
 
-# count_heading mirrors the runner's exact stripped-text equality anchor.
-# Prints 0 (never empty) when the target file does not yet exist, so callers
-# can compare it as an integer without a missing-file special case.
-count_heading() {            # anchor file
-  local anchor="$1" file="$2"
-  if [ ! -f "$file" ]; then
-    echo 0
-    return
-  fi
-  awk -v h="$anchor" '
-    /^#{1,6} +/ {
-      t=$0; sub(/^#{1,6} +/,"",t); sub(/[ \t]+$/,"",t)
-      if (t==h) c++
-    }
-    END { print c+0 }
-  ' "$file" 2>/dev/null
-}
-
 body_has() {                 # body literal match
   local body="$1" literal="$2" match="${3:-fixed}"
   if [ "$match" = "regex" ]; then
@@ -150,117 +129,6 @@ body_has() {                 # body literal match
 }
 
 echo "=== issue #51 — teammate-removal feasibility verdict (ADR-0017) ==="
-
-# ---------------------------------------------------------------------------
-# AC1 — ADR exists, carries the 7-heading skeleton subset, the verdict
-# sentence, and a conformant Status value.
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC1 — decision record skeleton, verdict, Status conformance ==="
-
-for h in "Status" "Context" "Decision" "Alternatives Considered" "Consequences" \
-         "Related Issues / PRs" "Notes"; do
-  n="$(count_heading "$h" "$ADR")"
-  assert_true "AC1(a): '## $h' heading occurs exactly once (currently $n)" "[ '$n' -eq 1 ]"
-done
-
-DECISION_BODY="$(extract_section "Decision" "$ADR")"
-assert_true "AC1(b): the ratified verdict sentence appears in the ## Decision block" \
-  "body_has \"\$DECISION_BODY\" 'Migration is possible, conditionally.'"
-
-STATUS_BODY="$(extract_section "Status" "$ADR")"
-STATUS_VALUE="$(printf '%s\n' "$STATUS_BODY" | grep -vE '^[[:space:]]*$' | head -1 | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-assert_true "AC1(c): the ## Status value is one of Proposed|Accepted|Deprecated|Superseded (currently '$STATUS_VALUE')" \
-  "printf '%s' '$STATUS_VALUE' | grep -qE '^(Proposed|Accepted|Deprecated|Superseded)$'"
-
-# ---------------------------------------------------------------------------
-# AC2 — Q1-Q6 dedicated sub-sections, each answer carrying >=1 grounds anchor.
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC2 — Q1-Q6 sub-sections, each grounded by >=1 anchor ==="
-
-GROUNDS_RE='([A-Za-z0-9_./-]+\.(md|sh|js|json)(:[0-9]+)?|#[0-9]+|[0-9a-f]{7,40})'
-for q in Q1 Q2 Q3 Q4 Q5 Q6; do
-  n="$(count_heading "$q" "$ADR")"
-  assert_true "AC2: '### $q' heading occurs exactly once (currently $n)" "[ '$n' -eq 1 ]"
-  qbody="$(extract_section "$q" "$ADR")"
-  assert_true "AC2: ### $q answer carries >=1 grounds anchor (path, path:line, #issue, or SHA)" \
-    "body_has \"\$qbody\" '$GROUNDS_RE' regex"
-done
-
-# ---------------------------------------------------------------------------
-# AC3 — the rejection of the archive-incidence corpus audit is on the record,
-# with its three grounds, inside ## Alternatives Considered.
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC3 — corpus-audit rejection recorded with its three grounds ==="
-
-ALT_BODY="$(extract_section "Alternatives Considered" "$ADR")"
-assert_true "AC3-ground1: rejection states the anchor predicate fires on every audited document (non-discriminating)" \
-  "body_has \"\$ALT_BODY\" 'non-discriminat' regex"
-assert_true "AC3-ground2: rejection states the corpus is one project under two renamed keys" \
-  "body_has \"\$ALT_BODY\" 'one project under (two )?renamed keys|two renamed keys' regex"
-assert_true "AC3-ground3: rejection states this repository contributes zero documents to the corpus" \
-  "body_has \"\$ALT_BODY\" '(this repository|this repo).{0,30}(zero|0)( documents| contribut)' regex"
-
-# ---------------------------------------------------------------------------
-# AC4 — Q1's answer rests on the in-repo ARCHITECT > Output artifacts spec
-# fact, stating that VERIFY step 4's iteration set is not a required element
-# of any artifact.
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC4 — Q1 grounded in docs/autoflow-guide.md ARCHITECT Output artifacts ==="
-
-Q1_BODY="$(extract_section "Q1" "$ADR")"
-assert_true "AC4-source: Q1 cites docs/autoflow-guide.md as its structural-fact source" \
-  "body_has \"\$Q1_BODY\" 'docs/autoflow-guide\.md' regex"
-assert_true "AC4-iteration-set: Q1 states step 4's iteration set is not a required element of any artifact" \
-  "body_has \"\$Q1_BODY\" 'iteration set' fixed && body_has \"\$Q1_BODY\" 'not.{0,20}required element' regex"
-
-# ---------------------------------------------------------------------------
-# AC5 — ordered migration-conditions list, an ordering-constraint statement,
-# the pilot as an outstanding precondition, and the pilot-can-reverse clause.
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC5 — ordered migration conditions, ordering constraint, pilot, reversal ==="
-
-assert_true "AC5-ordering-constraint: ## Decision states an ordering constraint" \
-  "body_has \"\$DECISION_BODY\" 'ordering constraint' fixed"
-assert_true "AC5-pilot-token: ## Decision names the pilot as an outstanding precondition" \
-  "body_has \"\$DECISION_BODY\" 'pilot' fixed"
-assert_true "AC5-reversal: ## Decision states the pilot can reverse the verdict" \
-  "body_has \"\$DECISION_BODY\" 'reverse the verdict|can reverse' regex"
-assert_true "AC5-condition-tokens: ## Decision enumerates conditions C1 through C7" \
-  "body_has \"\$DECISION_BODY\" 'C1' fixed && body_has \"\$DECISION_BODY\" 'C7' fixed"
-assert_true "AC5-ordering: the first condition token (C1) precedes the pilot condition token (C7) in ## Decision" \
-  "awk '/C1/{if (!c1) c1=NR} /C7/{if (!c7) c7=NR} END{exit !(c1 && c7 && c1<c7)}' <<<\"\$DECISION_BODY\""
-
-# ---------------------------------------------------------------------------
-# AC6 — no contract/hook/agent-definition/workflow/governing-doc file is
-# modified this cycle. (a) deferral statement (lane A, permanent). The
-# base-relative DELTA/byte-invariance fence that once accompanied it was
-# retired in #107 (docs/doc-invariant-registry.md §12.1).
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC6 — migration-slice files untouched this cycle ==="
-
-FULL_ADR="$(cat "$ADR" 2>/dev/null)"
-assert_true "AC6(a): the record states this cycle defers the migration-slice files (hook/contract/workflow untouched)" \
-  "body_has \"\$FULL_ADR\" '(defer|not (this cycle|part of this cycle|modif)).{0,80}(hook|contract|workflow|agent-definition|governing)' regex"
-
-# ---------------------------------------------------------------------------
-# AC7 — registration completeness: the ADR is registered in all three of
-# docs/adr/README.md, docs/maintained-docs.md, docs/INDEX.md (filename only).
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC7 — registration completeness (3/3, filename-anchored) ==="
-
-assert_true "AC7-readme: docs/adr/README.md > Current Drafts names 0017-teammate-removal-feasibility.md" \
-  "grep -qF '0017-teammate-removal-feasibility.md' '$ADR_README'"
-assert_true "AC7-maintained-docs: docs/maintained-docs.md > ADRs names 0017-teammate-removal-feasibility.md" \
-  "grep -qF '0017-teammate-removal-feasibility.md' '$MAINTAINED_DOCS'"
-assert_true "AC7-index: docs/INDEX.md > Quick Routing names 0017-teammate-removal-feasibility.md" \
-  "grep -qF '0017-teammate-removal-feasibility.md' '$INDEX_MD'"
 
 # ---------------------------------------------------------------------------
 # AC8 / O1 — manifest composition oracle: the REAL setup/gen-manifest-hashes.sh
@@ -356,21 +224,6 @@ assert_true "O2(e)-direction-aware: every origin_issue:51 entry matches its own 
   "[ '$O2_DIRECTION_BAD' -eq 0 ]"
 
 # ---------------------------------------------------------------------------
-# AC10 — Q6 (cost/latency) answered without overclaiming: explicit
-# not-measured statement, and no numeric measurement-shaped token.
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC10 — Q6 answered without overclaiming ==="
-
-Q6_BODY="$(extract_section "Q6" "$ADR")"
-assert_true "AC10(a): ### Q6 contains an explicit not-measured statement" \
-  "body_has \"\$Q6_BODY\" 'not measured|unmeasured|no.{0,10}measurement|not.{0,15}measur' regex"
-
-Q6_NO_ISSUE_REFS="$(sed -E 's/#[0-9]+//g' <<<"$Q6_BODY")"
-assert_false "AC10(b): ### Q6 (issue references excluded) contains no numeral+unit measurement-shaped token" \
-  "body_has \"\$Q6_NO_ISSUE_REFS\" '[0-9]+(\.[0-9]+)? *(tokens?|ms|sec(onds?)?|%|USD|\\\$)' regex"
-
-# ---------------------------------------------------------------------------
 # AC12 — CI enforcement: the fixed-literal run: step, both paths: blocks
 # (suite + manual-scenarios file), and the ordering arm (below the runner
 # step's name-located line).
@@ -410,47 +263,6 @@ RUNNER_LINE="$(grep -n "name: Run doc-invariant registry runner (#951)" "$WORKFL
 SUITE_LINE="$(grep -nE "run: bash tests/test-issue-51-teammate-removal-verdict\\.sh" "$WORKFLOW" | head -1 | cut -d: -f1)"
 assert_true "AC12(c)-ordering: the new run: step's line is below the doc-invariant registry runner step's line (runner=$RUNNER_LINE, this cycle=${SUITE_LINE:-absent})" \
   "[ -n '$RUNNER_LINE' ] && [ -n '${SUITE_LINE:-}' ] && [ '${SUITE_LINE:-0}' -gt '$RUNNER_LINE' ]"
-
-# ---------------------------------------------------------------------------
-# AC14 — the exact 17-heading skeleton, each exactly once.
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC14 — 17-heading skeleton, each exactly once ==="
-
-HEADINGS_17=(
-  "Status" "Context" "Case collection" "Decision" "Q1" "Q2" "Q3" "Q4" "Q5" "Q6"
-  "Alternatives Considered" "Consequences" "Positive" "Negative" "Neutral / Trade-Offs"
-  "Related Issues / PRs" "Notes"
-)
-for h in "${HEADINGS_17[@]}"; do
-  n="$(count_heading "$h" "$ADR")"
-  assert_true "AC14: heading '$h' occurs exactly once (currently $n)" "[ '$n' -eq 1 ]"
-done
-
-# ---------------------------------------------------------------------------
-# AC15 — migration conditions include the agent-definition contract pointer
-# (autoflow-tester.md must point at docs/autoflow-guide.md > VERIFY, not
-# only > RED).
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC15 — agent-definition contract pointer condition ==="
-
-assert_true "AC15: ## Decision names the .claude/agents/autoflow-tester.md VERIFY-pointer condition" \
-  "body_has \"\$DECISION_BODY\" '\.claude/agents/autoflow-tester\.md' regex && body_has \"\$DECISION_BODY\" 'VERIFY' fixed"
-
-VERIFY_POINTER_COUNT="$(grep -c 'VERIFY' "$AGENT_TESTER" 2>/dev/null || true)"
-echo "  (info) .claude/agents/autoflow-tester.md currently carries $VERIFY_POINTER_COUNT VERIFY reference(s) (0 at HEAD is the defect AC15's condition names — not this cycle's implementation scope)"
-
-# ---------------------------------------------------------------------------
-# AC16 — the ADR body contains no thematic-break line (would truncate the
-# Decision block that six of twelve registry entries evaluate against).
-# ---------------------------------------------------------------------------
-echo ""
-echo "=== AC16 — no thematic-break line in the ADR body ==="
-
-THEMATIC_BREAKS="$(grep -cE '^---[ \t]*$' "$ADR" 2>/dev/null || true)"
-assert_true "AC16: docs/adr/0017-teammate-removal-feasibility.md contains no '^---$' thematic-break line (currently ${THEMATIC_BREAKS:-0})" \
-  "[ \"\${THEMATIC_BREAKS:-0}\" -eq 0 ]"
 
 # ---------------------------------------------------------------------------
 # Results
