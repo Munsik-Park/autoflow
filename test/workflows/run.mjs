@@ -1735,7 +1735,10 @@ await test('ARCHITECT: a resume from lastRound 0 can converge at round 1 -- the 
   const { result, calls } = await runArch({ issue: '127-7', resume: true }, resumeResponder({
     load: { found: true, artifacts_present: true, lastRound: 0, verdict: 'ESCALATE', entries: [{ name: 'ZR', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
     'test-r1': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r1': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    // cycle-3 amendment (issue #127, resume-scoped open-entry precondition): the raiser ('dev')
+    // must dispose of its own carried entry in this round, or the new guard denies convergence --
+    // this case's own assertions (CONVERGED at round 1, first-exchange rule lifted) are unchanged.
+    'dev-r1': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'ZR', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   }))
   assert.equal(result.verdict, 'CONVERGED')
   assert.equal(result.rounds, 1)
@@ -1749,7 +1752,10 @@ await test('ARCHITECT: a resume run issues its terminal persistence call on both
   const convergedResp = resumeResponder({
     load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'CV', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
     'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    // cycle-3 amendment (issue #127): the raiser ('dev') disposes of the carried entry so this
+    // shape still converges under the resume-scoped open-entry precondition; this case's own
+    // assertion (a persistence call follows 'ledger' on CONVERGED) is unchanged.
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'CV', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   })
   const { result: rConv, calls: cConv } = await runArch({ issue: '127-8a', resume: true }, convergedResp)
   assert.equal(rConv.verdict, 'CONVERGED')
@@ -1782,7 +1788,10 @@ await test('ARCHITECT: the return contract reports resumed/register/registerWrit
   const { result: resumeNullWrite } = await runArch({ issue: '127-9b', resume: true }, resumeResponder({
     load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'RW', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
     'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    // cycle-3 amendment (issue #127): dispose of the carried entry from its raiser ('dev') so this
+    // shape still converges under the resume-scoped open-entry precondition -- unrelated to what
+    // this case actually pins (a failed write must not alter the already-decided verdict).
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'RW', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
     write: null,
   }))
   assert.equal(resumeNullWrite.resumed, true)
@@ -1794,8 +1803,13 @@ await test('ARCHITECT: a resumed closing prompt names its own round ceiling, nev
   const responder = resumeResponder({
     load: { found: true, artifacts_present: true, lastRound: 6, verdict: 'ESCALATE', entries: [{ name: 'CAP', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
     'test-r7': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r7': { response: 'ACCEPT', counters: [], accept_grounds: ['d: cap ok'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: cap ok'] },
+    // cycle-3 amendment (issue #127): CAP is raised by 'dev' and must be disposed on dev-r7;
+    // cap-c is raised by 'test' (via its round-7 counter) and can only be disposed by the closing
+    // turn -- the raiser-only close rule (below) means neither can close the other's entry. Both
+    // dispositions are owed for this shape to still converge under the resume-scoped precondition;
+    // this case's own assertion (the closing prompt names its own ceiling) is unchanged.
+    'dev-r7': { response: 'ACCEPT', counters: [], accept_grounds: ['d: cap ok'], dispositions: [{ name: 'CAP', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: cap ok'], dispositions: [{ name: 'cap-c', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   })
   const { result, calls } = await runArch({ issue: '127-10', resume: true }, responder)
   assert.equal(result.verdict, 'CONVERGED')
@@ -1943,7 +1957,11 @@ await test('ARCHITECT: an out-of-enum status/raisedBy rehydrates to the declared
     if (label === 'ledger') { seenLedger = true; return 'ledger ok' }
     if (label === CLOSING_CALL_LABEL) return null
     if (label === 'test-r4') return { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'BAD_RAISER', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
-    if (label === 'dev-r4') return { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] }
+    // cycle-3 amendment (issue #127): BAD_STATUS rehydrates raisedBy 'dev' (as written), so it can
+    // only be closed by a dev-side disposition -- owed so this shape still converges under the
+    // resume-scoped open-entry precondition. This case's own assertions (fallback rehydration,
+    // the coerced BAD_RAISER raiser closing it) are unchanged.
+    if (label === 'dev-r4') return { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'BAD_STATUS', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
     if (!seenLedger) {
       return {
         found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE',
@@ -2026,7 +2044,10 @@ await test('ARCHITECT: a rejecting register-write sub-agent leaves the already-d
   const responder = interceptLabelReject({
     load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'WRA', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
     'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    // cycle-3 amendment (issue #127): dispose of the carried entry from its raiser ('dev') so this
+    // shape still converges under the resume-scoped open-entry precondition -- unrelated to what
+    // this case pins (a rejecting register-write must not alter the already-decided verdict).
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'WRA', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   }, 'register-write', () => new Error('register-write rejected'))
   const { result } = await runArch({ issue: 'c2-127-1', resume: true }, responder)
   assert.equal(result.verdict, 'CONVERGED', 'a rejecting register-write must not alter the already-decided verdict')
@@ -2066,7 +2087,10 @@ await test('ARCHITECT: a rejecting ledger sub-agent leaves the already-decided v
   const responder = interceptLabelReject({
     load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'LRA', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
     'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    // cycle-3 amendment (issue #127): dispose of the carried entry from its raiser ('dev') so this
+    // shape still converges under the resume-scoped open-entry precondition -- unrelated to what
+    // this case pins (a rejecting ledger call must not alter the already-decided verdict).
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'LRA', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   }, 'ledger', () => new Error('ledger rejected'))
   const { result } = await runArch({ issue: 'c2-127-4', resume: true }, responder)
   assert.equal(result.verdict, 'CONVERGED', 'a rejecting ledger call must not alter the already-decided verdict')
@@ -2115,7 +2139,12 @@ await test('ARCHITECT: a failed register write on resume leaves a previously per
     }
     if (label === 'ledger') return 'ledger ok'
     if (label === 'register-write') throw new Error('register-write rejected')
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] } // resume lifts first-exchange -> converges immediately
+    // Cycle-3 correction (issue #127): resume lifts first-exchange, but under the resume-scoped
+    // open-entry precondition an ACCEPT that disposes nothing leaves STALE_CONCERN open, so this
+    // run now ESCALATEs rather than converging immediately. The assertions below read
+    // `registerWritten`, on-disk byte equality and `rounds` only -- never `verdict` -- so the case
+    // stays green either way; this comment is corrected so it no longer describes a false outcome.
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
   }
   const rejectResult = await arch({ issue, resume: true }, phase, parallel, makeAgent(rejectingResumeAgent, []), mockConsole)
   assert.equal(rejectResult.registerWritten, false, 'the rejecting write must be reported as failed')
@@ -2136,6 +2165,177 @@ await test('ARCHITECT: a failed register write on resume leaves a previously per
   const finalResult = await arch({ issue, resume: true }, phase, parallel, makeAgent(finalLoadAgent, []), mockConsole)
   removeDraftArtifacts(issue)
   assert.equal(finalResult.rounds, beforeRound + 1, 'the further resume must re-enter from the persisted round, not a fresh cold round')
+})
+
+// ---- ARCHITECT: resume-scoped open-entry precondition on CONVERGED (issue #127, cycle 3) -----
+// Verification design (.autoflow/issue-127-verification-design.md, cycle-3 section) + feature
+// design (.autoflow/issue-127-feature-design.md, cycle-3 section). At HEAD, `converged` is
+// assigned at architect-deliberation.js:516 from `accepted(dev) && accepted(test)` alone; the
+// register is never consulted, so a resume round can return and persist CONVERGED while a carried
+// entry is still `open`. GREEN owes a resume-scoped precondition, evaluated AFTER each guard
+// site's own `raise`/`applyDispositions`, at both the in-loop site and the cap-round closing
+// half-round, that denies convergence while any entry is open and reports a new declared bare
+// sentinel -- OPEN_ENTRY_SENTINEL below -- as the `escalation`, ordered after
+// REASON_CLOSING_AGENT_MISSING (earlyEscalateReason) and before the generic round-exhaustion text.
+// GREEN must adopt this literal byte-exact; the cases below pin it by equality, not substring.
+const OPEN_ENTRY_SENTINEL = 'resume register still open at convergence'
+
+await test('ARCHITECT: a resume round with a carried open entry and mutual grounded ACCEPT does not converge (AC-C3-1, open-entry-blocks-converge)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'OEB', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
+  })
+  const { result } = await runArch({ issue: 'c3-1', resume: true }, responder)
+  assert.notEqual(result.verdict, 'CONVERGED', 'a resume round pair returning grounded ACCEPT must not converge while a carried entry is still open')
+})
+
+await test('ARCHITECT: a resume round whose carried entry is disposed by its own raiser in that round still converges -- the predicate reads the register AFTER dispositions (AC-C3-2, disposed-entry-permits-converge)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'DEP', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'DEP', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
+  })
+  const { result } = await runArch({ issue: 'c3-2', resume: true }, responder)
+  assert.equal(result.verdict, 'CONVERGED', 'the round that resolves its own carried objection must still be the round that converges')
+})
+
+await test('ARCHITECT: a disposition returned by the side that did not raise the carried entry leaves it open, so convergence stays blocked (peer-disposition-does-not-unblock)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'PDN', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'PDN', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
+  })
+  const { result } = await runArch({ issue: 'c3-3-peer', resume: true }, responder)
+  assert.notEqual(result.verdict, 'CONVERGED', 'a peer disposition (from the side that did not raise the entry) must not close it -- the raiser-only close rule leaves it open, and convergence stays blocked')
+})
+
+await test('ARCHITECT: the escalation on a denied resume run whose closing turn also ACCEPTs without disposing is the declared sentinel, not the round-exhaustion text (AC-C3-4, sentinel-on-the-denied-run)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'SOD', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
+  })
+  const { result } = await runArch({ issue: 'c3-4', resume: true }, responder)
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, OPEN_ENTRY_SENTINEL, 'the run whose terminal turn is the one the precondition denied must report the declared sentinel, not the generic text')
+  assert.notEqual(result.escalation, 'No mutual ACCEPT within 4 rounds (reached round 4)')
+})
+
+await test('ARCHITECT: a denied resume run whose closing turn COUNTERs reports the round-exhaustion text, not the sentinel -- the terminal turn decides the reason (AC-C3-9, terminal-turn-decides-the-reason)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'TTD', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    closing: { response: 'COUNTER', counters: ['still concerned'], accept_grounds: [] },
+  })
+  const { result } = await runArch({ issue: 'c3-9', resume: true }, responder)
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'No mutual ACCEPT within 4 rounds (reached round 4)', 'a superseding closing COUNTER means mutual ACCEPT never occurred on this run -- the in-loop denial flag must be re-decided, not OR-latched into the sentinel')
+  assert.notEqual(result.escalation, OPEN_ENTRY_SENTINEL)
+})
+
+await test('ARCHITECT: a denied resume run whose closing agent is absent reports the closing-agent-missing literal, not the sentinel -- infrastructure outranks the design outcome (AC-C3-10, infrastructure-outranks-the-sentinel)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'IOS', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    // closing left at the resumeResponder factory default: null -- no plumbing added.
+  })
+  const { result } = await runArch({ issue: 'c3-10', resume: true }, responder)
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'closing agent missing', 'a missing closing agent is an infrastructure cause and must outrank the design-outcome sentinel')
+  assert.notEqual(result.escalation, OPEN_ENTRY_SENTINEL)
+})
+
+await test('ARCHITECT: the cap-round closing half-round denies convergence when its own ACCEPT leaves the carried entry open -- the closing half-round carries the same precondition as the loop (AC-C3-3, closing-half-round-honors-precondition)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'CHR', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'COUNTER', counters: ['chr-c'], accept_grounds: [] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
+  })
+  const { result } = await runArch({ issue: 'c3-3-closing', resume: true }, responder)
+  assert.equal(result.verdict, 'ESCALATE', 'a closing ACCEPT that leaves the carried entry open must not converge')
+})
+
+await test('ARCHITECT: a concern raised during the resume round, by the test side, is still closable within that run by the closing turn (AC-C3-3, resume-amendment-closable-by-closing-turn)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'RAC', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'test' }] },
+    'test-r4': { response: 'COUNTER', counters: ['rac-c'], accept_grounds: [] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    closing: {
+      response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'],
+      dispositions: [
+        { name: 'RAC', conclusion: 'closed', evidence: 'e', status: 'agreed' },
+        { name: 'rac-c', conclusion: 'closed', evidence: 'e', status: 'agreed' },
+      ],
+    },
+  })
+  const { result } = await runArch({ issue: 'c3-3-amend', resume: true }, responder)
+  assert.equal(result.verdict, 'CONVERGED', 'the closing turn is the only disposal opportunity a resume round has for a test-raised concern -- both entries raised by the test side must be closable there')
+})
+
+// Real-filesystem composition oracle (verification design > `open-entry-survives-into-persisted-
+// register`), driven directly against `arch()` twice over one real register file -- the same
+// carve-out AC127-13/14 and `stale-register-untouched` take, for the same reason: the runner's
+// `finally` teardown unlinks the register between invocations.
+await test('ARCHITECT: a denied resume run persists ESCALATE with the entry still open, and the next resume is admitted to a round rather than refused (AC-C3-5, open-entry-survives-into-persisted-register)', async () => {
+  const issue = 'c3-5-persist'
+  const { register } = artifactPaths(issue)
+  try { unlinkSync(register) } catch (_) { /* none yet */ }
+  writeDraftArtifacts(issue)
+
+  writeFileSync(register, JSON.stringify({
+    lastRound: 3, verdict: 'ESCALATE', escalation: 'seed',
+    entries: [{ name: 'PERSIST', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }],
+    lastResponses: {},
+  }))
+
+  const runOneAgent = (label, prompt) => {
+    if (label === 'register-load') {
+      const onDisk = JSON.parse(readFileSync(register, 'utf8'))
+      return { found: true, artifacts_present: true, lastRound: onDisk.lastRound, verdict: onDisk.verdict, entries: onDisk.entries }
+    }
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'register-write') {
+      const start = prompt.indexOf(REGISTER_FENCE_START)
+      const end = prompt.indexOf(REGISTER_FENCE_END)
+      assert.ok(start >= 0 && end > start, 'the register-write prompt must carry the declared fence literals around the payload')
+      writeFileSync(register, prompt.slice(start + REGISTER_FENCE_START.length, end))
+      return { written: true }
+    }
+    // round pair and closing turn all ACCEPT without disposing PERSIST -- the denied shape.
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const runOne = await arch({ issue, resume: true }, phase, parallel, makeAgent(runOneAgent, []), mockConsole)
+  assert.equal(runOne.verdict, 'ESCALATE', 'a resume round that ACCEPTs without disposing a carried open entry must not converge')
+  assert.equal(runOne.registerWritten, true)
+
+  const onDiskAfterOne = JSON.parse(readFileSync(register, 'utf8'))
+  assert.equal(onDiskAfterOne.verdict, 'ESCALATE', 'the persisted register must carry ESCALATE, not CONVERGED')
+  const persisted = onDiskAfterOne.entries.find((e) => e.name === 'PERSIST')
+  assert.ok(persisted, 'PERSIST must survive into the persisted register')
+  assert.equal(persisted.status, 'open', 'the entry must still be open on disk')
+
+  const runTwoAgent = (label) => {
+    if (label === 'register-load') {
+      const d = JSON.parse(readFileSync(register, 'utf8'))
+      return { found: true, artifacts_present: true, lastRound: d.lastRound, verdict: d.verdict, entries: d.entries }
+    }
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'register-write') return { written: true }
+    return { response: 'COUNTER', counters: ['still working'], accept_grounds: [] }
+  }
+  const runTwo = await arch({ issue, resume: true }, phase, parallel, makeAgent(runTwoAgent, []), mockConsole)
+  removeDraftArtifacts(issue)
+  try { unlinkSync(register) } catch (_) { /* already removed above */ }
+  assert.notEqual(runTwo.escalation, 'resume register already converged', 'the second invocation must not be refused by the already-converged guard')
+  assert.notEqual(runTwo.escalation, 'resume register has no open entry', 'the second invocation must not be refused by the no-open-entry guard')
+  assert.equal(runTwo.rounds, runOne.rounds + 1, 'the second invocation must be admitted to a further round, not refused before Converge')
 })
 
 // ---- VERIFY -------------------------------------------------------------------

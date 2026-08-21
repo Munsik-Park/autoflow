@@ -7161,6 +7161,42 @@
       "scope": "permanent"
     },
     {
+      "id": "127-AC-C3-contracts-facilitator-convergence-open-entry-precondition",
+      "origin_issue": 127,
+      "intent": "coherence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Facilitator (deliberation sub-context)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "no register entry is left `open`",
+      "scope": "permanent"
+    },
+    {
+      "id": "127-AC-C3-contracts-facilitator-sentinel-documented",
+      "origin_issue": 127,
+      "intent": "coherence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Facilitator (deliberation sub-context)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "resume register still open at convergence",
+      "scope": "permanent"
+    },
+    {
+      "id": "127-AC-C3-guide-architect-resume-procedure-corrected",
+      "origin_issue": 127,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "ARCHITECT — Plan Synthesis (Developer AI + Test AI)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "no register entry is left `open`",
+      "scope": "permanent"
+    },
+    {
       "id": "127-AC-C2-source-comment-corrected-absent",
       "origin_issue": 127,
       "intent": "coherence",

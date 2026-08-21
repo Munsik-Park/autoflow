@@ -24,8 +24,8 @@
 # header records for every prior bump.
 #
 # Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123)
-# -> 122 (#127) -> 126 (#127 cycle 2).
-# The #123, #127 and #127-cycle-2 bumps are all the RED-commit TARGET value, not the
+# -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3).
+# The #123, #127 and #127-cycle-2/3 bumps are all the RED-commit TARGET value, not the
 # RED-commit MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating),
 # #127 adds 25 resume cases (23 discriminating, 2 deliberate regression locks documented
 # inline in test/workflows/run.mjs -- see "AC127-15" and "AC127-18" -- that pass
@@ -33,12 +33,24 @@
 # state-file path at all). #127 cycle 2 adds 4 new discriminating cases (terminal
 # post-verdict call rejection absorption: write-reject-absorbed, write-sync-throw-
 # absorbed, ledger-reject-absorbed, stale-register-untouched) -- all 4 propagate at
-# HEAD (bare `await agent(...)`, no absorption wrapper) and are the RED failures this
-# commit records. Measured at RED: 122 ok (the full pre-existing set, unchanged) + 4
-# FAIL. Target after GREEN: 126. The composition oracle
-# (tests/test-issue-27-composition-oracle.sh) intentionally reds against this pin
-# until GREEN, per .autoflow/issue-127-verification-design.md > Composition oracle.
+# HEAD (bare `await agent(...)`, no absorption wrapper) and were the RED failures that
+# commit recorded (122 ok + 4 FAIL -> 126). #127 cycle 3 adds 9 new discriminating
+# cases for the resume-scoped open-entry precondition on CONVERGED (open-entry-blocks-
+# converge, disposed-entry-permits-converge, peer-disposition-does-not-unblock,
+# sentinel-on-the-denied-run, terminal-turn-decides-the-reason, infrastructure-outranks-
+# the-sentinel, closing-half-round-honors-precondition, resume-amendment-closable-by-
+# closing-turn, open-entry-survives-into-persisted-register) and amends 7 existing
+# resume cases' responder fixtures (adding a disposition, no assertion changed) so they
+# keep passing once the precondition ships -- resume-lifts-first-exchange,
+# resume-persists-both-verdicts, return-contract-fields, closing-prompt-coherent-cap,
+# rehydration-fallback, write-reject-absorbed, ledger-reject-absorbed. The 7 amended
+# cases pass at HEAD both before and after their fixture amendment (the AS-IS script
+# never reads register status), so RED measures 126 ok (all pre-existing cases,
+# including the 7 amended ones) + 9 FAIL (the new cases). Target after GREEN: 135. The
+# composition oracle (tests/test-issue-27-composition-oracle.sh) intentionally reds
+# against this pin until GREEN, per
+# .autoflow/issue-127-verification-design.md > Composition oracle.
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=126
+HARNESS_OK_COUNT=135
