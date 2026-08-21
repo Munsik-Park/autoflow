@@ -393,6 +393,17 @@ allow_list=(
   "tests/test-cycle-arm-residue.sh"
   "tests/test-issue-120-arm-reconciliation.sh"
   "tests/manual/issue-120-manual-scenarios.md"
+  # RED re-entry 2: aligning the residue/reconciliation suites' headers with
+  # their hosting workflows' paths: blocks touched this file (§4's own
+  # regression-scope discipline).
+  "tests/test-issue-103-cycle-scope-repoint.sh"
+  # §4's comment-only inbound-pin resolution targets (stale-citation repair,
+  # not guaranteed to land if already clean at GREEN time — see this suite's
+  # own tests/test-cycle-arm-residue.sh "already satisfied at HEAD" finding
+  # for tests/test-issue-43-report-channel-contract.sh).
+  "tests/test-run-doc-invariants.sh"
+  "scripts/test/check-suite-manifest.sh"
+  "tests/test-issue-43-report-channel-contract.sh"
 )
 
 if on_issue_branch; then
