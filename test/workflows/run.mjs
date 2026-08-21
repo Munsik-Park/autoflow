@@ -20,7 +20,7 @@
 // non-workflow global — only that it does not reference an undefined one. The scripts
 // use solely the injected globals; a stricter `vm`-sandbox check is a possible follow-up.
 import assert from 'node:assert/strict'
-import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
+import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -51,7 +51,7 @@ function makeAgent(responder, calls) {
 // Fixture support for AC2 (issue #845): the real fs.existsSync check the
 // implementation is expected to add runs against real on-disk artifacts, so
 // the harness must write/remove the two draft artifacts around each ARCHITECT
-// run. `extractIssue` mirrors architect-deliberation.js:31-44's string-arg
+// run. `extractArgv` mirrors architect-deliberation.js's string-arg
 // normalization so the fixture targets the same issue id the script resolves
 // (needed for the JSON-string-args test which drives issue '7').
 // DCR-1 (issue #14, c2): mirror the SAME catch-path three-tier prose-salvage rule
@@ -60,7 +60,13 @@ function makeAgent(responder, calls) {
 // ambiguous -> {} -> the loud-fail guard fires) so a prose-args fixture lands at the
 // id the script itself resolves. This is the single source of the resolution rule at
 // test time.
-function extractIssue(args) {
+// Widened (issue #127): renamed from `extractIssue` and returns the whole normalized
+// argv object `{ issue, resume }` instead of the bare issue string -- per feature design
+// > API interface > Argument surface, *The rename carries a specified data flow*. The
+// catch path additionally salvages a standalone `resume` word token (the resume-token
+// parity surface with architect-deliberation.js is two copies, this mirror and the
+// script itself -- verified by the source-parity test below).
+function extractArgv(args) {
   const argv = typeof args === 'string'
     ? (() => {
         try { return JSON.parse(args) }
@@ -72,17 +78,22 @@ function extractIssue(args) {
             : labeled ? labeled[1]
             : (all && all.length === 1) ? all[0]
             : null
-          return issue ? { issue } : {}
+          const resumeToken = /\bresume\b/i.test(args)
+          const salvaged = {}
+          if (issue) salvaged.issue = issue
+          if (resumeToken) salvaged.resume = true
+          return salvaged
         }
       })()
     : (args || {})
-  return argv.issue
+  return { issue: argv.issue, resume: argv.resume }
 }
 
 function artifactPaths(issue) {
   return {
     feature: join(root, `.autoflow/issue-${issue}-feature-design.md`),
     verif: join(root, `.autoflow/issue-${issue}-verification-design.md`),
+    register: join(root, `.autoflow/issue-${issue}-architect-register.json`),
   }
 }
 
@@ -92,16 +103,20 @@ function writeDraftArtifacts(issue, omit) {
   if (omit !== 'verif') writeFileSync(verif, '# verification design fixture\n')
 }
 
+// Extended (issue #127) to also unlink the register artifact -- unconditionally, since
+// either a resume case (which seeds the file itself) or a write-eligible cold case (whose
+// persistence responder creates it) can leave one behind; the wrapper needs no knowledge
+// of the resolved `resume` value (feature design > API interface, *The rename's data flow*).
 function removeDraftArtifacts(issue) {
-  const { feature, verif } = artifactPaths(issue)
-  for (const p of [feature, verif]) {
-    try { unlinkSync(p) } catch (_) { /* not written for this run (omit case) */ }
+  const { feature, verif, register } = artifactPaths(issue)
+  for (const p of [feature, verif, register]) {
+    try { unlinkSync(p) } catch (_) { /* not written for this run (omit case, or never created) */ }
   }
 }
 
 const runArch = (args, responder, opts = {}) => {
   const calls = []
-  const issue = extractIssue(args)
+  const { issue } = extractArgv(args)
   writeDraftArtifacts(issue, opts.omitArtifact)
   return arch(args, phase, parallel, makeAgent(responder, calls), mockConsole)
     .then((result) => ({ result, calls }))
@@ -1568,6 +1583,412 @@ await test('ARCHITECT: a null cap-round Test verdict does not suppress the closi
   assert.equal(result.verdict, 'CONVERGED')
 })
 
+// ---- ARCHITECT: resume an ESCALATEd deliberation from its register (issue #127) ---
+// Verification design (.autoflow/issue-127-verification-design.md). RED at HEAD: the
+// script has no `resume` handling at all, so a `resume: true`/`"true"` arg is silently
+// ignored and every case below falls through to the ordinary cold path (Draft runs,
+// round numbering starts at 1) -- the assertions below are discriminating against that
+// fallthrough. Two cases are deliberate REGRESSION LOCKS and pass vacuously at RED
+// because the property they pin already holds on a script that touches no filesystem
+// at all (see their inline notes), in the same spirit as the pre-existing
+// "single transient one-side-null" case above.
+//
+// Neither the register-load nor the register-write agent() call's label is fixed by
+// the feature design, so every case identifies them STRUCTURALLY instead of assuming a
+// literal: on a resume run Draft never executes (Control flow > Entry), so the FIRST
+// agent() call is the register load; Control flow > Register write states the write is
+// a terminal phase run "after the Ledger phase, on both verdicts", so the first call
+// observed strictly after the 'ledger' call is the register write.
+//
+// Two RED-time design decisions this suite fixes because the documents left the exact
+// literal open (recorded in the RED report as a design-change addendum the Developer AI
+// must adopt verbatim): the on-disk register payload's fence markers
+// (REGISTER_FENCE_START/END) and the settled-block heading is NOT fixed here -- it is
+// read back from whatever `SETTLED_BLOCK_RULE` the implementation declares, per the
+// agenda-partition case below.
+
+const REGISTER_FENCE_START = '===AUTOFLOW-REGISTER-JSON-START==='
+const REGISTER_FENCE_END = '===AUTOFLOW-REGISTER-JSON-END==='
+
+// Generic resume-path responder. `overrides.load` controls the register-load call's
+// return (default: a passing register at lastRound 3 with one open entry); `overrides
+// [label]` controls an individual round call; `overrides.roundDefault` controls every
+// round call without its own override (default: grounded ACCEPT); `overrides.closing`
+// controls the cap-round closing call; `overrides.write` controls the register-write
+// call (default: a truthy ack).
+function resumeResponder(overrides = {}) {
+  let seenLedger = false
+  return (label) => {
+    if (label.endsWith('-draft')) return Object.prototype.hasOwnProperty.call(overrides, 'draft') ? overrides.draft : 'drafted'
+    if (label === 'ledger') {
+      seenLedger = true
+      return Object.prototype.hasOwnProperty.call(overrides, 'ledger') ? overrides.ledger : 'ledger ok'
+    }
+    if (label === CLOSING_CALL_LABEL) {
+      return Object.prototype.hasOwnProperty.call(overrides, 'closing') ? overrides.closing : null
+    }
+    if (label.startsWith('test-r') || label.startsWith('dev-r')) {
+      if (Object.prototype.hasOwnProperty.call(overrides, label)) return overrides[label]
+      return overrides.roundDefault !== undefined ? overrides.roundDefault : { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    }
+    // Unclassified: register-load (before 'ledger') or register-write (after it).
+    if (!seenLedger) {
+      return Object.prototype.hasOwnProperty.call(overrides, 'load') ? overrides.load : {
+        found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE',
+        entries: [{ name: 'DEFAULT_OPEN', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }],
+      }
+    }
+    return Object.prototype.hasOwnProperty.call(overrides, 'write') ? overrides.write : { written: true }
+  }
+}
+
+await test('ARCHITECT: resume spawns no Draft agent (AC127-1, resume-no-draft)', async () => {
+  const { calls } = await runArch({ issue: '127-1', resume: true }, resumeResponder())
+  assert.ok(!calls.some((c) => c.label.endsWith('-draft')), 'a resume run must not spawn a Draft agent')
+})
+
+await test('ARCHITECT: resume admission -- true and "true" both take the resume path, absent/false/"false" take the cold path (AC127-2a, admission-forms)', async () => {
+  for (const v of [true, 'true']) {
+    const { calls } = await runArch({ issue: '127-2a', resume: v }, resumeResponder())
+    assert.ok(!calls.some((c) => c.label.endsWith('-draft')), `resume: ${JSON.stringify(v)} must skip Draft`)
+  }
+  for (const v of [undefined, false, 'false']) {
+    const args = v === undefined ? { issue: '127-2a' } : { issue: '127-2a', resume: v }
+    const { calls } = await runArch(args, resumeResponder())
+    assert.ok(calls.some((c) => c.label.endsWith('-draft')), `resume: ${JSON.stringify(v)} must take the cold path`)
+  }
+})
+
+await test('ARCHITECT: a malformed resume value throws at the boundary, extending the single existing args.issue throw site (AC127-2b, admission-malformed)', async () => {
+  await assert.rejects(
+    () => runArch({ issue: '127-2b', resume: 'yes' }, resumeResponder()),
+    /resume/i,
+  )
+  const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
+  const normalizationBlock = src.slice(0, src.indexOf("phase('Draft')"))
+  assert.equal((normalizationBlock.match(/throw new Error/g) || []).length, 1, 'the resume admission rule must extend the single existing throw site, not add a second one')
+})
+
+await test('ARCHITECT: prose args carrying a standalone "resume" token plus a salvageable issue land on the resume path (AC127-2c, prose-resume-token)', async () => {
+  const { calls } = await runArch('please resume issue #12700', resumeResponder())
+  assert.ok(!calls.some((c) => c.label.endsWith('-draft')), 'a prose resume token must route to the resume path')
+})
+
+await test('meta: architect-deliberation.js description names the resume key and phases list the Resume/Register stages (AC127-3, meta-widened-args)', async () => {
+  const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
+  const descLine = (src.match(/description:[^\n]*\n?/) || [''])[0]
+  assert.match(descLine, /resume/i, 'meta.description must name the resume key on its own line')
+  assert.match(src, /title:\s*'Resume'/, 'meta.phases must carry a Resume stage')
+  assert.match(src, /title:\s*'Register'/, 'meta.phases must carry a Register stage')
+})
+
+await test('ARCHITECT: a resume round prompt partitions the register -- the agenda is open-only, closed entries appear only under the declared settled-block heading (AC127-4, agenda-partition)', async () => {
+  const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
+  const m = src.match(/const SETTLED_BLOCK_RULE\s*=\s*(['"`])((?:\\.|(?!\1)[\s\S])*)\1/)
+  assert.ok(m, 'SETTLED_BLOCK_RULE must be declared as a single, once-declared literal')
+  const settledBlockRule = m[2].replace(/\\n/g, '\n').replace(/\\'/g, "'").replace(/\\"/g, '"')
+  const responder = resumeResponder({
+    load: {
+      found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE',
+      entries: [
+        { name: 'OPEN_TOK_127', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' },
+        { name: 'AGREED_TOK_127', conclusion: '', evidence: 'e', status: 'agreed', raisedBy: 'dev' },
+        { name: 'REJECTED_TOK_127', conclusion: '', evidence: 'e', status: 'rejected', raisedBy: 'test' },
+      ],
+    },
+  })
+  const { calls } = await runArch({ issue: '127-4', resume: true }, responder)
+  for (const label of ['test-r4', 'dev-r4']) {
+    const p = calls.find((c) => c.label === label).prompt
+    const settledIdx = p.indexOf(settledBlockRule)
+    assert.ok(settledIdx >= 0, `${label} must carry the declared settled-block heading`)
+    const agendaPart = p.slice(0, settledIdx)
+    const settledPart = p.slice(settledIdx)
+    assert.match(agendaPart, /OPEN_TOK_127/, `${label} agenda must carry the open entry`)
+    assert.doesNotMatch(agendaPart, /AGREED_TOK_127/, `${label} agenda must not carry the agreed entry`)
+    assert.doesNotMatch(agendaPart, /REJECTED_TOK_127/, `${label} agenda must not carry the rejected entry`)
+    assert.match(settledPart, /AGREED_TOK_127/, `${label} settled block must carry the agreed entry`)
+    assert.match(settledPart, /REJECTED_TOK_127/, `${label} settled block must carry the rejected entry`)
+  }
+})
+
+await test('ARCHITECT: a resume run executes exactly one exchange and returns (AC127-5, resume-one-exchange)', async () => {
+  const { result, calls } = await runArch({ issue: '127-5', resume: true }, resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'ONE_EX', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+  }))
+  assert.equal(calls.filter((c) => c.label === 'test-r4').length, 1)
+  assert.equal(calls.filter((c) => c.label === 'dev-r4').length, 1)
+  assert.ok(!calls.some((c) => /-r5\b/.test(c.label)), 'a resume run must not execute a second round')
+  assert.equal(result.rounds, 4)
+})
+
+await test('ARCHITECT: round numbering continues from the register\'s lastRound, never from an argument (AC127-6, resume-round-source)', async () => {
+  const { result, calls } = await runArch({ issue: '127-6', resume: true }, resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 5, verdict: 'ESCALATE', entries: [{ name: 'RN', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+  }))
+  assert.ok(calls.some((c) => c.label === 'test-r6'))
+  assert.ok(calls.some((c) => c.label === 'dev-r6'))
+  assert.equal(result.rounds, 6)
+})
+
+await test('ARCHITECT: a resume from lastRound 0 can converge at round 1 -- the mandatory first-exchange rule is lifted on resume (AC127-7, resume-lifts-first-exchange)', async () => {
+  const { result, calls } = await runArch({ issue: '127-7', resume: true }, resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 0, verdict: 'ESCALATE', entries: [{ name: 'ZR', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r1': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r1': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+  }))
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.equal(result.rounds, 1)
+  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  assert.doesNotMatch(testR1, /do NOT ACCEPT on round 1/)
+  assert.doesNotMatch(devR1, /do NOT ACCEPT on round 1/)
+})
+
+await test('ARCHITECT: a resume run issues its terminal persistence call on both the CONVERGED and ESCALATE route (AC127-8, resume-persists-both-verdicts)', async () => {
+  const convergedResp = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'CV', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+  })
+  const { result: rConv, calls: cConv } = await runArch({ issue: '127-8a', resume: true }, convergedResp)
+  assert.equal(rConv.verdict, 'CONVERGED')
+  const ledgerIdxConv = cConv.findIndex((c) => c.label === 'ledger')
+  assert.ok(ledgerIdxConv >= 0 && cConv.length > ledgerIdxConv + 1, 'a persistence call must follow the ledger call on CONVERGED')
+
+  const escalateResp = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'ES', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    roundDefault: { response: 'COUNTER', counters: ['still open'], accept_grounds: [] },
+  })
+  const { result: rEsc, calls: cEsc } = await runArch({ issue: '127-8b', resume: true }, escalateResp)
+  assert.equal(rEsc.verdict, 'ESCALATE')
+  const ledgerIdxEsc = cEsc.findIndex((c) => c.label === 'ledger')
+  assert.ok(ledgerIdxEsc >= 0 && cEsc.length > ledgerIdxEsc + 1, 'a persistence call must follow the ledger call on ESCALATE')
+})
+
+await test('ARCHITECT: the return contract reports resumed/register/registerWritten truthfully, including a failed write (AC127-9, return-contract-fields)', async () => {
+  const { result: coldResult } = await runArch({ issue: '127-9a' }, resumeResponder())
+  assert.equal(coldResult.resumed, false)
+  assert.equal(coldResult.registerWritten, true)
+  assert.equal(coldResult.register, `.autoflow/issue-127-9a-architect-register.json`)
+
+  const { result: resumeNullWrite } = await runArch({ issue: '127-9b', resume: true }, resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'RW', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    write: null,
+  }))
+  assert.equal(resumeNullWrite.resumed, true)
+  assert.equal(resumeNullWrite.registerWritten, false)
+  assert.equal(resumeNullWrite.verdict, 'CONVERGED', 'a failed write must not alter the already-decided verdict')
+})
+
+await test('ARCHITECT: a resumed closing prompt names its own round ceiling, never a cap below the round number (AC127-10, closing-prompt-coherent-cap)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 6, verdict: 'ESCALATE', entries: [{ name: 'CAP', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r7': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r7': { response: 'ACCEPT', counters: [], accept_grounds: ['d: cap ok'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: cap ok'] },
+  })
+  const { result, calls } = await runArch({ issue: '127-10', resume: true }, responder)
+  assert.equal(result.verdict, 'CONVERGED')
+  const closingPrompt = calls.find((c) => c.label === CLOSING_CALL_LABEL).prompt
+  assert.match(closingPrompt, /round 7 of 7/, 'the closing prompt must name the resumed run\'s own ceiling, not the constant 6')
+  assert.doesNotMatch(closingPrompt, /round 7 of 6/)
+})
+
+await test('ARCHITECT: a both-null resume round escalates as an infrastructure cause naming exactly 1 consecutive round (AC127-11, resume-both-null-infra)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'BN', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r4': null,
+    'dev-r4': null,
+  })
+  const { result } = await runArch({ issue: '127-11', resume: true }, responder)
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'sub-agent missing for 1 consecutive round(s)')
+})
+
+const resumeGuardCases = [
+  { name: 'load agent returned null', overrides: { load: null }, sentinel: 'resume register load agent missing' },
+  { name: '`found` false', overrides: { load: { found: false, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [] } }, sentinel: 'resume register absent' },
+  { name: 'no open entry', overrides: { load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'X', conclusion: '', evidence: 'e', status: 'agreed', raisedBy: 'dev' }] } }, sentinel: 'resume register has no open entry' },
+  { name: '`verdict` is CONVERGED', overrides: { load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'CONVERGED', entries: [{ name: 'X', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] } }, sentinel: 'resume register already converged' },
+]
+for (let i = 0; i < resumeGuardCases.length; i++) {
+  const g = resumeGuardCases[i]
+  await test(`ARCHITECT: resume guard "${g.name}" resolves to its own declared sentinel (AC127-12, resume-guard-sentinels)`, async () => {
+    const { result, calls } = await runArch({ issue: `127-12-${i}`, resume: true }, resumeResponder(g.overrides))
+    assert.equal(result.verdict, 'ESCALATE')
+    assert.equal(result.escalation, g.sentinel)
+    assert.ok(!calls.some((c) => c.label.startsWith('test-r') || c.label.startsWith('dev-r')), 'a guard failure must escalate before any round is entered')
+  })
+}
+
+// The artifacts_present guard is deliberately NOT driven by a fabricated flag above
+// (verification design > Composition-oracle determination, third row): it is the
+// composition contact point that must be reached from a REAL missing design document.
+await test('ARCHITECT: the artifacts_present guard fires from a real missing design document, not a fabricated flag (AC127-12b, artifacts-present-real-fs, composition oracle)', async () => {
+  const issue = '127-12b'
+  const { feature, verif } = artifactPaths(issue)
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return null
+    if (label === 'ledger') return 'ledger ok'
+    return {
+      found: true,
+      artifacts_present: existsSync(feature) && existsSync(verif),
+      lastRound: 3, verdict: 'ESCALATE', entries: [],
+    }
+  }
+  const { result } = await runArch({ issue, resume: true }, responder, { omitArtifact: 'verif' })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'resume design artifact missing')
+})
+
+// Driven directly against `arch()` (two invocations sharing one real register file)
+// rather than through `runArch()`: the wrapper's teardown would delete the register
+// between the two invocations, which is exactly the state this test needs to survive.
+await test('ARCHITECT: register round-trip -- a cold CONVERGED run persists verdict:"CONVERGED" into a real on-disk register, which a later resume reads back and refuses under the already-converged guard (AC127-13, composition oracle: register entry-shape/status round-trip + verdict persistence)', async () => {
+  const issue = '127-13'
+  const { register } = artifactPaths(issue)
+  try { unlinkSync(register) } catch (_) { /* none yet */ }
+  writeDraftArtifacts(issue)
+  const coldResponder = (label, prompt) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: 'ROUNDTRIP_CONCERN', locator: 'l', argument: 'a' }], accept_grounds: [] }
+    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
+    if (label.startsWith('test-r') || label.startsWith('dev-r')) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    // Unclassified => the terminal register-write call: extract the fenced payload and
+    // write it for real -- the writing half of the round-trip oracle.
+    const start = prompt.indexOf(REGISTER_FENCE_START)
+    const end = prompt.indexOf(REGISTER_FENCE_END)
+    assert.ok(start >= 0 && end > start, 'the register-write prompt must carry the declared fence literals around the payload')
+    writeFileSync(register, prompt.slice(start + REGISTER_FENCE_START.length, end))
+    return { written: true }
+  }
+  const coldResult = await arch({ issue }, phase, parallel, makeAgent(coldResponder, []), mockConsole)
+  assert.equal(coldResult.verdict, 'CONVERGED')
+  assert.equal(coldResult.registerWritten, true)
+  const onDisk = JSON.parse(readFileSync(register, 'utf8'))
+  assert.equal(onDisk.verdict, 'CONVERGED', 'the persisted register must carry the converging run\'s own verdict')
+
+  // The resume run's load responder reads that same real file back -- the reading half
+  // of the round trip -- and must refuse under the already-converged guard.
+  const resumeLoadResponder = (label) => {
+    if (label.endsWith('-draft')) return null
+    if (label === 'ledger') return 'ledger ok'
+    const onDiskNow = JSON.parse(readFileSync(register, 'utf8'))
+    return { found: true, artifacts_present: true, lastRound: onDiskNow.lastRound, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
+  }
+  const resumeResult = await arch({ issue, resume: true }, phase, parallel, makeAgent(resumeLoadResponder, []), mockConsole)
+  removeDraftArtifacts(issue)
+  assert.equal(resumeResult.verdict, 'ESCALATE')
+  assert.equal(resumeResult.escalation, 'resume register already converged')
+})
+
+// Driven directly against `arch()` rather than through `runArch()`: the wrapper's own
+// teardown unconditionally unlinks the register path (fixture hygiene, above), which
+// would delete this test's fixture before the post-run byte-identity check can read it.
+await test('ARCHITECT: a guard-failed resume leaves a real register file byte-identical and issues no persistence call (AC127-14, guard-failed-byte-identical)', async () => {
+  const issue = '127-14'
+  const { register } = artifactPaths(issue)
+  writeDraftArtifacts(issue)
+  writeFileSync(register, '{"untouched":true}\n')
+  const before = readFileSync(register, 'utf8')
+  const calls = []
+  await arch({ issue, resume: true }, phase, parallel, makeAgent(resumeResponder({ load: null }), calls), mockConsole)
+  const after = readFileSync(register, 'utf8')
+  removeDraftArtifacts(issue)
+  assert.equal(after, before, 'a guard-failed resume must not touch the register file')
+  assert.ok(!calls.some((c) => /-r\d/.test(c.label)), 'no round call may be made')
+})
+
+// Regression lock, vacuous PASS expected at RED (documented, not an oracle mistake): the
+// AS-IS script touches no filesystem at all -- a cold null-draft run makes zero agent()
+// calls beyond the drafts and the ledger, so a pre-seeded file is trivially untouched
+// today. The case exists to catch a FUTURE regression once the write mechanism lands,
+// mirroring the "single transient one-side-null" lock above (verification design >
+// *An early-escalating run never overwrites a register it did not read*).
+await test('ARCHITECT: a cold run that early-escalates on a null draft never overwrites an existing register file (AC127-15, cold-null-draft-byte-identical)', async () => {
+  const issue = '127-15'
+  const { register } = artifactPaths(issue)
+  writeDraftArtifacts(issue)
+  writeFileSync(register, '{"untouched":true}\n')
+  const before = readFileSync(register, 'utf8')
+  const responder = (label) => {
+    if (label === 'dev-draft') return null
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+  }
+  const result = await arch({ issue }, phase, parallel, makeAgent(responder, []), mockConsole)
+  const after = readFileSync(register, 'utf8')
+  removeDraftArtifacts(issue)
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(after, before, 'an early-escalating cold run must not overwrite an existing register file')
+})
+
+await test('ARCHITECT: an out-of-enum status/raisedBy rehydrates to the declared fallback, and the coerced raiser can then close it (AC127-16, rehydration-fallback)', async () => {
+  let seenLedger = false
+  let writePrompt = null
+  const responder = (label, prompt) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') { seenLedger = true; return 'ledger ok' }
+    if (label === CLOSING_CALL_LABEL) return null
+    if (label === 'test-r4') return { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'BAD_RAISER', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
+    if (label === 'dev-r4') return { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] }
+    if (!seenLedger) {
+      return {
+        found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE',
+        entries: [
+          { name: 'BAD_STATUS', conclusion: '', evidence: 'e', status: 'weird', raisedBy: 'dev' },
+          { name: 'BAD_RAISER', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'nobody' },
+        ],
+      }
+    }
+    writePrompt = prompt
+    return { written: true }
+  }
+  const { result, calls } = await runArch({ issue: '127-16', resume: true }, responder)
+  const testR4 = calls.find((c) => c.label === 'test-r4').prompt
+  assert.match(testR4, /BAD_STATUS[\s\S]{0,80}status: open/, 'an out-of-enum status must rehydrate as open')
+  assert.match(testR4, /BAD_RAISER[\s\S]{0,80}raised by test/, 'an out-of-enum raisedBy must rehydrate as test')
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.ok(writePrompt, 'the register write call must have been made')
+  const start = writePrompt.indexOf(REGISTER_FENCE_START)
+  const end = writePrompt.indexOf(REGISTER_FENCE_END)
+  assert.ok(start >= 0 && end > start, 'the write prompt must carry the declared fence markers')
+  const written = JSON.parse(writePrompt.slice(start + REGISTER_FENCE_START.length, end))
+  const badRaiser = written.entries.find((e) => e.name === 'BAD_RAISER')
+  assert.ok(badRaiser, 'BAD_RAISER must survive into the persisted register')
+  assert.equal(badRaiser.status, 'agreed', 'the coerced raiser ("test") must be the one able to close it')
+})
+
+await test('ARCHITECT: LEDGER_SEED_RULE reaches the resume round prompt and the resume closing prompt (AC127-17, resume-carries-ledger-seed)', async () => {
+  const responder = resumeResponder({
+    load: { found: true, artifacts_present: true, lastRound: 6, verdict: 'ESCALATE', entries: [{ name: 'LS', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-r7': { response: 'COUNTER', counters: ['ls-c'], accept_grounds: [] },
+    'dev-r7': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
+  })
+  const { calls } = await runArch({ issue: '127-17', resume: true }, responder)
+  const testR7 = calls.find((c) => c.label === 'test-r7').prompt
+  const devR7 = calls.find((c) => c.label === 'dev-r7').prompt
+  const closingPrompt = calls.find((c) => c.label === CLOSING_CALL_LABEL).prompt
+  for (const [label, p] of [['test-r7', testR7], ['dev-r7', devR7], [CLOSING_CALL_LABEL, closingPrompt]]) {
+    assert.match(p, /is a settled registered issue/, `${label} must carry the ledger-seed instruction on a resume run`)
+  }
+})
+
+// Regression lock, vacuous PASS expected at RED: the AS-IS script already names no
+// `.autoflow/issue-{N}.json` state-file path (verification design > *Resume does not
+// increment the ARCHITECT re-entry counter*, re-derived by grep this cycle). The
+// assertion locks the property rather than driving new behavior.
+await test('ARCHITECT: the script still names no .autoflow/issue-{N}.json state-file path (AC127-18, resume-no-state-file-touch)', async () => {
+  const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
+  assert.doesNotMatch(src, /issue-\$\{issue\}\.json|issue-\d+\.json/, 'the workflow must not name the ARCHITECT re-entry counter state file')
+})
+
 // ---- VERIFY -------------------------------------------------------------------
 
 const combos = [
@@ -1656,7 +2077,7 @@ await test('meta: verify-cause-branch.js description states the args contract (i
 // ---- source-parity drift guard (issue #14, c2, DCR-4 ADOPTED) -----------------
 // Weak drift-guard, not a behavioral test (verification design c2 §2 case 13): the
 // three-tier salvage is hand-duplicated across architect-deliberation.js,
-// verify-cause-branch.js, and this harness's extractIssue() mirror above. Assert
+// verify-cause-branch.js, and this harness's extractArgv() mirror above. Assert
 // the tier-2 anchor literal and the tier-3 uniqueness-guard literal appear in all
 // three copies verbatim. Guard literal reconciled to the feature-design §3
 // reference implementation's exact form (`all && all.length === 1`), per
@@ -1665,9 +2086,20 @@ await test('source-parity: tier-2 anchor + tier-3 uniqueness guard identical acr
   const archSrc = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
   const verifySrc = readFileSync(join(root, '.claude/workflows/verify-cause-branch.js'), 'utf8')
   const harnessSrc = readFileSync(join(root, 'test/workflows/run.mjs'), 'utf8')
-  for (const [label, src] of [['architect-deliberation.js', archSrc], ['verify-cause-branch.js', verifySrc], ['run.mjs extractIssue()', harnessSrc]]) {
+  for (const [label, src] of [['architect-deliberation.js', archSrc], ['verify-cause-branch.js', verifySrc], ['run.mjs extractArgv()', harnessSrc]]) {
     assert.ok(src.includes('\\bissue\\s+#?(\\d+)\\b'), `${label} missing tier-2 anchor literal`)
     assert.ok(src.includes('all && all.length === 1'), `${label} missing tier-3 uniqueness guard literal`)
+  }
+})
+
+// Separate assertion, not an added literal inside the three-way loop above (feature design
+// > API interface > Argument surface, *The resume token's parity surface is two copies, not
+// three*): verify-cause-branch.js has no resume concept and is outside this change's surface.
+await test('source-parity: the resume-token literal (\\bresume\\b) is identical between architect-deliberation.js and the harness mirror (AC127-2c, resume-token-parity)', async () => {
+  const archSrc = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
+  const harnessSrc = readFileSync(join(root, 'test/workflows/run.mjs'), 'utf8')
+  for (const [label, src] of [['architect-deliberation.js', archSrc], ['run.mjs extractArgv()', harnessSrc]]) {
+    assert.ok(src.includes('\\bresume\\b'), `${label} missing the resume-token literal`)
   }
 })
 

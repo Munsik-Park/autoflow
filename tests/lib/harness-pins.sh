@@ -23,14 +23,17 @@
 # that moved it — the precedent tests/test-issue-27-composition-oracle.sh's
 # header records for every prior bump.
 #
-# Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123).
-# The #123 bump is the RED-commit target value (12 new cap-round-closing cases:
-# AC1, AC2, AC3 x3, AC4, AC5, AC6, AC10, AC11, AC12, AC13), not the RED-commit
-# measured value -- 8 of the 12 are discriminating and FAIL until the closing
-# half-round lands, so the composition oracle (tests/test-issue-27-composition-
-# oracle.sh) intentionally reds against this pin until GREEN, per
-# .autoflow/issue-123-verification-design.md > Composition oracle.
+# Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123)
+# -> 122 (#127).
+# The #123 and #127 bumps are both the RED-commit TARGET value, not the RED-commit
+# MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating), #127 adds
+# 25 resume cases (23 discriminating, 2 deliberate regression locks documented inline
+# in test/workflows/run.mjs -- see "AC127-15" and "AC127-18" -- that pass vacuously at
+# RED because the AS-IS script touches no filesystem and names no state-file path at
+# all). Measured at RED: 99 ok (97 + the 2 vacuous locks). The composition oracle
+# (tests/test-issue-27-composition-oracle.sh) intentionally reds against this pin
+# until GREEN, per .autoflow/issue-127-verification-design.md > Composition oracle.
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=97
+HARNESS_OK_COUNT=122
