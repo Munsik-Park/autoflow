@@ -1764,6 +1764,11 @@ await test('ARCHITECT: a resume run issues its terminal persistence call on both
   assert.equal(rEsc.verdict, 'ESCALATE')
   const ledgerIdxEsc = cEsc.findIndex((c) => c.label === 'ledger')
   assert.ok(ledgerIdxEsc >= 0 && cEsc.length > ledgerIdxEsc + 1, 'a persistence call must follow the ledger call on ESCALATE')
+  // The generic round-exhaustion text names the RESUMED run's own ceiling (lastRound 3 -> roundCeiling
+  // 4), never the cold-path constant 6 -- verification design's cold-path bit-identity criterion is
+  // what makes this a discriminator: a resume-unaware implementation would render "within 6 rounds".
+  assert.match(rEsc.escalation, /No mutual ACCEPT within 4 rounds \(reached round 4\)/, 'the resume-path escalation text must name the run\'s own ceiling (4), not the constant 6')
+  assert.doesNotMatch(rEsc.escalation, /within 6 rounds/)
 })
 
 await test('ARCHITECT: the return contract reports resumed/register/registerWritten truthfully, including a failed write (AC127-9, return-contract-fields)', async () => {
