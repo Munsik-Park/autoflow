@@ -386,6 +386,19 @@ At the round cap the Test AI's final ACCEPT is the closing half-round's — the 
 cap-round revision is otherwise never evaluated, since one round = one exchange and the
 Developer AI answers second.
 
+### Resume — re-entering an ESCALATEd deliberation (operator-facing)
+
+An `ESCALATE` return hands the decision to the operator. Re-invoking the workflow bare would cold-restart it — Draft re-authors both design documents from scratch, round numbering restarts at 1, and the first exchange is again forbidden from converging. `resume` is the alternative: it re-enters the deliberation at the state the prior run left in its register.
+
+**Procedure**:
+
+1. **Read the register** — `.autoflow/issue-{N}-architect-register.json`. Its `entries` show every concern the prior run raised with its `conclusion`, `evidence` and `status`; `escalation` states why the run stopped. Its `lastResponses` field records each side's final verdict object — before deciding whether to spend a resume round, open it and read which side stopped short and on what verdict, since after an `ESCALATE` the ledger holds one outcome entry and no per-side record. No control-flow path reads that field; the operator is its reader.
+2. **Decide.** A resume is worth one round when the open entries look closable by one further exchange. When they do not — the split is a design disagreement needing a redefinition, or the run escalated for an infrastructure cause — resume is not the instrument, and the workflow refuses several of those shapes on its own (see the guard sentinels in [`teammate-contracts.md`](teammate-contracts.md) > Facilitator).
+3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The run continues from the register's `lastRound`, admits **exactly one** further round (`cap + 1`), and that round may end in `CONVERGED` through the closing half-round when the Developer AI answers with a grounded ACCEPT.
+4. **Route the return** exactly as a cold run's: `CONVERGED` → GATE:PLAN (after the artifact-existence check above), `ESCALATE` → back to the operator, who may resume again.
+
+**Cap and counter accounting** — a resume is an operator decision that raises the **round** cap by one (6 → 7 → 8 → …) and is unbounded in how many times it may be taken; it does **not** consume the ARCHITECT re-entry budget of 3 per cycle. The re-entry counter tracks whole re-deliberations triggered by GATE:PLAN FAIL or a VERIFY design contradiction; a resume is a continuation of the deliberation already counted, not a new one. The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so this accounting is the orchestrator's, and the return's `resumed` field is what lets it tell the two entries apart.
+
 ---
 
 ## GATE:PLAN — Plan Evaluation

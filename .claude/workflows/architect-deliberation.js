@@ -8,11 +8,13 @@
 // Requires Claude Code v2.1.154+ (Workflow runtime).
 export const meta = {
   name: 'architect-deliberation',
-  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict. Invoke with args {issue: "N"} (issue number required).',
+  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict. Invoke with args {issue: "N"} (issue number required), or {issue: "N", resume: "true"} to resume an ESCALATEd deliberation from its persisted register — skipping Draft and running one further round.',
   phases: [
-    { title: 'Draft', detail: 'dev drafts feature design, test drafts verification design (independent)' },
+    { title: 'Draft', detail: 'dev drafts feature design, test drafts verification design (independent) — cold runs only' },
+    { title: 'Resume', detail: 'load the persisted issue register and re-enter Converge at the prior run\'s round — resume runs only' },
     { title: 'Converge', detail: 'cross-review rounds under the Discussion Protocol until mutual ACCEPT or the round cap' },
     { title: 'Ledger', detail: 'append the settled decisions (append-only)' },
+    { title: 'Register', detail: 'persist the issue register so a later resume can re-enter from it' },
   ],
 }
 
@@ -29,6 +31,37 @@ const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_
 // after `-r`), so a consumer partitioning calls by the round-label shape keeps counting rounds.
 const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'
 const CLOSING_CALL_LABEL = 'test-closing'
+// Resume-path guard sentinels (issue #127), same declare-once discipline. Each is assigned BARE —
+// no interpolation, no suffix — so an assertion pins it by equality and a load failure is never
+// laundered into the generic round-exhaustion text. One literal per declared guard condition.
+const REASON_RESUME_LOAD_AGENT_MISSING = 'resume register load agent missing'
+const REASON_RESUME_REGISTER_ABSENT = 'resume register absent'
+const REASON_RESUME_ARTIFACT_MISSING = 'resume design artifact missing'
+const REASON_RESUME_NO_OPEN_ENTRY = 'resume register has no open entry'
+const REASON_RESUME_ALREADY_CONVERGED = 'resume register already converged'
+// Fence sentinels for the persisted register payload (issue #127). The register-write prompt wraps
+// the serialized JSON in these two literals and instructs the sub-agent to write exactly the bytes
+// between them, so the payload's extent is read by equality on a declared literal rather than
+// recovered by a heuristic scan of prose. FENCE COLLISION: a register entry value that itself
+// contains one of these sentinels would make the FIRST occurrence of the end fence land inside the
+// payload, truncating it. The behavior is bounded rather than escaped: every entry field passes
+// through `flatten` (whitespace-collapsed, trimmed) but is otherwise carried verbatim, so a colliding
+// value is written as-is and the extractor takes the first end fence — i.e. the write is truncated
+// and the next resume fails loudly at its own `found`/parse guard rather than silently loading a
+// partial register. The sentinels are deliberately shaped (`===AUTOFLOW-…===`) so no design prose
+// produces them incidentally; a real collision is treated as a defect to fix, not a case to escape.
+const REGISTER_FENCE_START = '===AUTOFLOW-REGISTER-JSON-START==='
+const REGISTER_FENCE_END = '===AUTOFLOW-REGISTER-JSON-END==='
+// The mandatory devil's-advocate sentence (issue #127): extracted from both round prompts into one
+// declared constant so the resume path can lift it. A resume round continues a deliberation that
+// already had its first exchange, so manufacturing a further review surface there is exactly the
+// cold-restart cost this path exists to remove. Renders on the cold path, absent on a resume run.
+const FIRST_EXCHANGE_RULE = ' Round 1 is a mandatory devil\'s-advocate review: do NOT ACCEPT on round 1.'
+// Agenda partition on a resume round (issue #127). The open entries are the round's agenda; the
+// settled ones are carried under this heading as a record, NOT as work. Declared once — the
+// acceptance criterion "loads only prior open items into the round prompt" is assertable as an
+// equality against this constant rather than against matchable prose.
+const SETTLED_BLOCK_RULE = ' Settled record from the prior run — the entries below were disposed of before this resume and are NOT the agenda for this round; do not reopen one without a fact verified now that was unavailable when the entry was written:\n'
 // Evidence discipline for the carry channel (issue #56). Declared once and interpolated into
 // BOTH round prompts so the dev and test channels cannot drift apart. The framing is emitted
 // only alongside the carried register; the counter rule governs every round, including round 1.
@@ -66,16 +99,39 @@ const argv = typeof args === 'string'
           : labeled ? labeled[1]
           : (all && all.length === 1) ? all[0]
           : null
-        return issue ? { issue } : {}
+        // Resume salvage (issue #127): a standalone `resume` word token in the operator's free
+        // text routes to the resume path. Without it the skill channel would silently deliver the
+        // cold restart this path exists to remove. Parity surface is two copies — this script and
+        // the harness mirror; verify-cause-branch.js has no resume concept.
+        const resumeToken = /\bresume\b/i.test(args)
+        const salvaged = {}
+        if (issue) salvaged.issue = issue
+        if (resumeToken) salvaged.resume = true
+        return salvaged
       }
     })()
   : (args || {})
-// System boundary: reject a missing required arg loudly rather than proceeding with a placeholder path.
-if (!argv.issue) throw new Error('architect-deliberation: args.issue is required')
+// Resume admission is strict (issue #127): `true`/`"true"` take the resume path, absent/`false`/
+// `"false"` the cold one, anything else is a boundary failure. A silently ignored malformed value
+// would degrade into exactly the cold restart this path removes, so it fails loud.
+const resumeArg = argv.resume
+const resume = resumeArg === true || resumeArg === 'true'
+const resumeMalformed = !resume && !(resumeArg === undefined || resumeArg === null || resumeArg === false || resumeArg === 'false')
+// System boundary: reject a missing or malformed required arg loudly rather than proceeding with a
+// placeholder path. Kept as the SINGLE throw site — the resume rule extends this guard, it does not
+// add a second one.
+if (!argv.issue || resumeMalformed) {
+  throw new Error(!argv.issue
+    ? 'architect-deliberation: args.issue is required'
+    : `architect-deliberation: args.resume must be true, "true", false, "false" or absent (got ${JSON.stringify(resumeArg)})`)
+}
 const issue = argv.issue
 const feature = `.autoflow/issue-${issue}-feature-design.md`
 const verif = `.autoflow/issue-${issue}-verification-design.md`
 const ledger = `.autoflow/issue-${issue}-ledger.md`
+// The durable issue register (issue #127): written by every run that ever held a faithful register,
+// read only by a resume run. It is what makes re-entry cost one round instead of a cold restart.
+const registerPath = `.autoflow/issue-${issue}-architect-register.json`
 // Register mechanics (issue #67). Round prompts only: the Draft calls pass no `schema`, so a
 // Draft agent has no `dispositions` channel and round 1's register is empty. Declared once and
 // interpolated byte-identically into both round prompts. It states disposal in its own words —
@@ -182,8 +238,76 @@ const VERDICT = {
   required: ['response', 'counters', 'accept_grounds', 'dispositions'],
 }
 
-phase('Draft')
-console.log(`ARCHITECT facilitation for issue #${issue} (cap ${MAX_ROUNDS} rounds)`)
+// Register load schema (issue #127). Closed, in the same discipline as COUNTER/DISPOSITION/VERDICT:
+// the load call is a pure transcription channel, so what comes back is structured, not prose. The
+// persisted `escalation` and `lastResponses` fields are deliberately OUTSIDE this schema — no
+// control-flow decision reads them; their consumer is the operator, per the resume procedure in
+// docs/autoflow-guide.md > ARCHITECT.
+const REGISTER_ENTRY = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    name: { type: 'string' },
+    conclusion: { type: 'string' },
+    evidence: { type: 'string' },
+    status: { type: 'string', enum: ['open', 'agreed', 'rejected'] },
+    raisedBy: { type: 'string', enum: ['dev', 'test'] },
+  },
+  required: ['name', 'conclusion', 'evidence', 'status', 'raisedBy'],
+}
+const REGISTER_FILE = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    // The artifact exists and parsed.
+    found: { type: 'boolean' },
+    // Both design documents exist and are non-empty. Checked HERE because resume skips Draft, and
+    // this sub-agent is already reading the filesystem the script cannot reach.
+    artifacts_present: { type: 'boolean' },
+    lastRound: { type: 'number' },
+    // Carried so the resume guards can refuse a resume of a run that already converged — the
+    // `no open entry` guard cannot make that refusal (a CONVERGED run may still hold open entries).
+    verdict: { type: 'string', enum: ['CONVERGED', 'ESCALATE'] },
+    entries: { type: 'array', items: REGISTER_ENTRY },
+  },
+  required: ['found', 'artifacts_present', 'lastRound', 'verdict', 'entries'],
+}
+
+// A null draft return is a skipped/errored sub-agent — the ARCHITECT analogue of VERIFY's
+// `test ? test.verdict : 'missing'`. Record it as a distinct early-ESCALATE reason and skip
+// Converge entirely, so the terminal `escalation` string stays truthful about the cause.
+// A resume guard failure uses the same variable, so Converge is skipped through one path.
+let earlyEscalateReason = null
+let loaded = null
+// The issue register (issue #67): an insertion-ordered map keyed by the normalized concern name,
+// holding EVERY entry raised in the run — open, agreed and rejected alike. Unlike the retired
+// `openCounters`, it is never reassigned, so a disposed entry stays visible and the
+// no-re-litigation rule has something to point at. On a resume run it is rehydrated from the
+// persisted register before Converge (issue #127) rather than starting empty.
+const register = new Map()
+// Rehydration is defensive (issue #127): a loaded entry passes back through the same flatten +
+// never-empty defaulting a raised counter does, so the four-labelled-lines-plus-terminator render
+// invariant holds whatever the load agent returned. An out-of-enum `status` coerces to `open` (the
+// conservative direction — it keeps the concern on the agenda); an out-of-enum `raisedBy` coerces
+// to `test`, because applyDispositions lets only the raiser close an entry and an unrecognized
+// value would make the entry permanently uncloseable, forcing a guaranteed ESCALATE. `test` is the
+// side the resumed round starts on and the side the closing half-round belongs to.
+const rehydrate = (e) => {
+  const src = e && typeof e === 'object'
+    ? { agenda: e.name, locator: e.evidence, argument: e.conclusion }
+    : e
+  const raisedBy = e && (e.raisedBy === 'dev' || e.raisedBy === 'test') ? e.raisedBy : 'test'
+  if (e && typeof e === 'object' && e.raisedBy !== raisedBy) {
+    console.log(`register entry "${e.name}" rehydrated with raisedBy coerced to ${raisedBy} (was "${e.raisedBy}")`)
+  }
+  const entry = toEntry(src, raisedBy)
+  entry.status = e && (e.status === 'agreed' || e.status === 'rejected') ? e.status : 'open'
+  return entry
+}
+
+if (!resume) {
+  phase('Draft')
+  console.log(`ARCHITECT facilitation for issue #${issue} (cap ${MAX_ROUNDS} rounds)`)
 
 // Independent first drafts — the two perspectives do not see each other's draft yet.
 const [devDraft, testDraft] = await parallel([
@@ -197,27 +321,74 @@ const [devDraft, testDraft] = await parallel([
   ),
 ])
 
-// A null draft return is a skipped/errored sub-agent — the ARCHITECT analogue of VERIFY's
-// `test ? test.verdict : 'missing'`. Record it as a distinct early-ESCALATE reason and skip
-// Converge entirely, so the terminal `escalation` string stays truthful about the cause.
-let earlyEscalateReason = null
-if (!devDraft) earlyEscalateReason = `${REASON_DRAFT_AGENT_MISSING} (dev-draft returned null)`
-else if (!testDraft) earlyEscalateReason = `${REASON_DRAFT_AGENT_MISSING} (test-draft returned null)`
+  if (!devDraft) earlyEscalateReason = `${REASON_DRAFT_AGENT_MISSING} (dev-draft returned null)`
+  else if (!testDraft) earlyEscalateReason = `${REASON_DRAFT_AGENT_MISSING} (test-draft returned null)`
 
-// Artifact existence is NOT checked here. The Workflow runtime rejects `import(` at
+// Artifact existence is NOT checked here on the cold path. The Workflow runtime rejects `import(` at
 // parse time (`SyntaxError: import() is not available in workflow scripts`) and injects
 // no filesystem access, so a script-side check makes this file unlaunchable rather than
 // degrading. The check lives with the orchestrator, which has a shell: see
 // docs/autoflow-guide.md > ARCHITECT. Do not re-add `import(` to this file — issue #62.
+} else {
+  // Resume (issue #127): no Draft sub-agent is spawned and no document is re-authored. The register
+  // load is a pure transcription channel — the script has no filesystem, so the sub-agent reads the
+  // artifact and returns it under the closed REGISTER_FILE schema.
+  phase('Resume')
+  console.log(`ARCHITECT resume for issue #${issue} — loading ${registerPath}`)
+  loaded = await Promise.resolve()
+    .then(() => agent(
+      `You are a transcription channel, not a reviewer. Read ${registerPath} and return its contents under the given schema, verbatim — do not summarize, reword, add, drop or re-order anything. Set "found" true only when the file exists AND parses as JSON; when it does not, set "found" false and return the other fields as empty defaults. Set "artifacts_present" true only when BOTH ${feature} and ${verif} exist and are non-empty. Copy "lastRound", "verdict" and every element of "entries" (name, conclusion, evidence, status, raisedBy) exactly as the file states them. Exercise no judgment about the design itself. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      { schema: REGISTER_FILE, label: 'register-load', phase: 'Resume', model: 'sonnet' },
+    ))
+    .catch(() => null)
+  // Resume guards, in declared order. Each resolves to its OWN bare sentinel so a load failure is
+  // attributable and is never laundered into the generic round-exhaustion text. A guard failure is
+  // also write-ineligible: the run never held a faithful register, so it must not overwrite one.
+  if (!loaded) earlyEscalateReason = REASON_RESUME_LOAD_AGENT_MISSING
+  else if (!loaded.found) earlyEscalateReason = REASON_RESUME_REGISTER_ABSENT
+  else if (!loaded.artifacts_present) earlyEscalateReason = REASON_RESUME_ARTIFACT_MISSING
+  if (!earlyEscalateReason) {
+    for (const e of Array.isArray(loaded.entries) ? loaded.entries : []) {
+      const entry = rehydrate(e)
+      register.set(normalizeKey(entry.name), entry)
+    }
+    // A prior run that escalated with no open entry escalated for an infrastructure cause, and
+    // resume is not the instrument for that — a deliberate refusal, not a degenerate empty round.
+    if (![...register.values()].some((e) => e.status === 'open')) earlyEscalateReason = REASON_RESUME_NO_OPEN_ENTRY
+    // The refusal the row above cannot make: a run converges on mutual grounded ACCEPT regardless
+    // of whether every entry was disposed of, so a CONVERGED run can persist open entries. Resuming
+    // there would reopen a design the ledger already records under "ARCHITECT mutual ACCEPT".
+    else if (loaded.verdict === 'CONVERGED') earlyEscalateReason = REASON_RESUME_ALREADY_CONVERGED
+  }
+}
+
+// Register write eligibility (issue #127), evaluated HERE because it is a property of the RUN, not
+// a branch of the resume path: a run writes the register only if it ever held a faithful copy of
+// it. Both ineligible shapes are exactly the pre-Converge early escalations — a resume that failed
+// a load guard (it could not read the file it would overwrite) and a cold run that early-escalates
+// on a null draft (its register is empty and `round` stays 0, so a terminal write would destroy an
+// existing register with `{lastRound: 0, entries: []}`). The second is reachable by the operator's
+// most natural action after an ESCALATE, a plain re-invocation, which is why the predicate is
+// stated over run shapes rather than over `resume`.
+const registerHeld = !earlyEscalateReason
 
 phase('Converge')
-let round = 0
+// Round bounds (issue #127). A cold run starts at 0 and is bounded by MAX_ROUNDS, byte-identically
+// to before. A resume run continues the PERSISTED round number — never a number taken from an
+// argument — and admits exactly one further round: the operator-decided single-round extension.
+// The loop still terminates on its own bound (Decision 7), not on a count of resumes taken.
+const startRound = resume && loaded ? (Number(loaded.lastRound) || 0) : 0
+let round = startRound
+const roundCeiling = resume ? startRound + 1 : MAX_ROUNDS
+// The mandatory first-exchange rule and the cross-session ledger seed are the two run-level
+// switches the resume path flips. Neither adds a round-family prompt literal: there is no separate
+// "resume round prompt" — the resume path re-enters the same loop and the same closing block.
+const firstExchange = resume ? '' : FIRST_EXCHANGE_RULE
+// Draft prompts carry LEDGER_SEED_RULE on the cold path; resume skips Draft outright, so without
+// this the cross-session half of the no-re-litigation rule would be silently dropped. Renders the
+// empty string on the cold path, leaving those prompts byte-identical.
+const resumeSeed = resume ? LEDGER_SEED_RULE : ''
 let converged = false
-// The issue register (issue #67): an insertion-ordered map keyed by the normalized concern name,
-// holding EVERY entry raised in the run — open, agreed and rejected alike. Unlike the retired
-// `openCounters`, it is never reassigned, so a disposed entry stays visible and the
-// no-re-litigation rule has something to point at.
-const register = new Map()
 // Raise path: upsert as `open`. A re-raise updates the existing entry in place; `raisedBy` and
 // the display `name` are fixed at first creation, so a carried name token is stable across rounds.
 const raise = (items, side) => {
@@ -273,10 +444,22 @@ const accepted = (v) => !!(
 // the round prompts and the closing half-round, so the closing turn evaluates under byte-identical
 // framing to the rounds it concludes (issue #123); it renders no differently than the inline form
 // it replaces.
-const renderCarry = () => register.size ? `${CARRY_NON_EVIDENTIARY} Issue register — address every entry whose status is open before ACCEPT, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${renderRegister(register)}` : ''
+// Agenda partition (issue #127) is a property of the RUN, not of the call — both call sites want
+// the same partition on a resume — so it is read from the enclosing `resume` flag rather than from
+// a parameter. `renderCarry` therefore keeps its zero-arity declaration line unchanged: that exact
+// line is a cross-file anchor, and parameterizing it would red three standing suites at once.
+// Cold: every entry, as today. Resume: the open entries as the agenda, then the settled ones under
+// SETTLED_BLOCK_RULE as a record — never deleted, since after an ESCALATE the ledger holds no
+// record of what the prior run rejected.
+const renderSettled = () => {
+  if (!resume) return ''
+  const settled = renderRegister(register, (e) => e.status !== 'open')
+  return settled ? `${SETTLED_BLOCK_RULE}${settled}` : ''
+}
+const renderCarry = () => register.size ? `${CARRY_NON_EVIDENTIARY} Issue register — address every entry whose status is open before ACCEPT, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${renderRegister(register, resume ? (e) => e.status === 'open' : null)}${renderSettled()}` : ''
 let consecutiveNull = 0
 const MAX_CONSECUTIVE_NULL = 2 // two consecutive both-null rounds => persistent infra failure, not a design split
-while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
+while (!earlyEscalateReason && round < roundCeiling && !converged) {
   round++
   // Thread the whole register into this round so fresh sub-agents see every issue raised so far
   // with its conclusion and status. Rendering is done HERE, by the script, rather than delegated
@@ -289,7 +472,7 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   // path below consumes a null, which a bare `await` would replace with a propagated rejection.
   const test = await Promise.resolve()
     .then(() => agent(
-      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol. Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange} If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: `test-r${round}`, phase: 'Converge', model: 'opus' },
     ))
     .catch(() => null)
@@ -299,7 +482,7 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
     : ''
   const dev = await Promise.resolve()
     .then(() => agent(
-      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}.${peer} Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND). Round 1 is a mandatory devil's-advocate review: do NOT ACCEPT on round 1. If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}.${peer} Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: `dev-r${round}`, phase: 'Converge', model: 'opus' },
     ))
     .catch(() => null)
@@ -312,13 +495,25 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
   // live side's counters doing real work, so it is NOT aborted (accepted(null) already blocks it).
   const roundMissing = !dev && !test
   consecutiveNull = roundMissing ? consecutiveNull + 1 : 0
-  if (consecutiveNull >= MAX_CONSECUTIVE_NULL) {
+  // Bound-aware second disjunct (issue #127): a resume run admits exactly one round, so
+  // MAX_CONSECUTIVE_NULL is unreachable there and a both-null resume round would otherwise fall
+  // through to the generic "No mutual ACCEPT" text — laundering an infrastructure cause into a
+  // design outcome, and spending the operator's decided extra round to say the wrong thing. The
+  // rule is stated on the BOUND: a both-null round is a MISSING judgment as soon as no further
+  // round can retry it. `consecutiveNull` is per-invocation and is not a register field, so the
+  // rendered figure is 1 on the resume path and 2 at the cold threshold — the discriminating half.
+  // Scoped to `resume` deliberately: extending it to the cold cap round would alter the escalation
+  // text of a run that never asked for it, against this change's cold-path bit-identity criterion.
+  if (consecutiveNull >= MAX_CONSECUTIVE_NULL || (resume && roundMissing && round === roundCeiling)) {
     earlyEscalateReason = `${REASON_SUBAGENT_MISSING} for ${consecutiveNull} consecutive round(s)`
     break
   }
   // No agreement on the first exchange (round > 1), and both sides must give a grounded ACCEPT
-  // with no open counters (a raised concern is never dropped).
-  converged = round > 1 && accepted(dev) && accepted(test)
+  // with no open counters (a raised concern is never dropped). A resume round continues a
+  // deliberation whose first exchange already happened, so the guard is lifted there (issue #127):
+  // without the disjunct, a resume of a run that escalated before completing any round would land
+  // at round 1 and be silently forbidden from converging.
+  converged = (resume || round > 1) && accepted(dev) && accepted(test)
   // Register update, in the design's stated order: raise first (both sides), then dispose.
   raise(test && test.counters, 'test')
   raise(dev && dev.counters, 'dev')
@@ -336,7 +531,11 @@ while (!earlyEscalateReason && round < MAX_ROUNDS && !converged) {
 // The predicate reads `lastDev` only — a null cap-round Test verdict is exactly the case that most
 // needs the closing turn, so it must not suppress it. An early-escalate reason (missing draft /
 // consecutive null) is an infrastructure cause and is never routed into a design outcome.
-if (!earlyEscalateReason && !converged && round === MAX_ROUNDS && accepted(lastDev)) {
+// The predicate reads the run's own ceiling (issue #127): on the cold path `roundCeiling` IS
+// MAX_ROUNDS, so this is the same expression; on a resume run it gives the single admitted round
+// its closing Test-AI evaluation, which is what lets "exactly one round" end in CONVERGED rather
+// than being structurally forced to ESCALATE.
+if (!earlyEscalateReason && !converged && round === roundCeiling && accepted(lastDev)) {
   // Rendered HERE, after the cap round's own raise/applyDispositions, so the closing turn sees the
   // counters that round raised — the very concerns it exists to re-evaluate. The in-loop value is
   // computed at the top of a round, before its register mutations, and is not reusable for this.
@@ -345,7 +544,7 @@ if (!earlyEscalateReason && !converged && round === MAX_ROUNDS && accepted(lastD
   const closingPeer = ` The Developer AI has already completed round ${round} against the documents in their current state and returned a grounded ACCEPT on these verified dimensions — they are current, not carried: ${JSON.stringify((lastDev && lastDev.accept_grounds) || [])}.`
   const closing = await Promise.resolve()
     .then(() => agent(
-      `You are the Test AI. This is the CLOSING evaluation of the Developer AI's final revision at the round cap (round ${round} of ${MAX_ROUNDS}): there is no further Developer-AI turn, and this verdict alone decides CONVERGED versus ESCALATE. Read the current ${feature} and ${verif}.${closingPeer} Apply the Discussion Protocol. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${closingCarry} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Test AI. This is the CLOSING evaluation of the Developer AI's final revision at the round cap (round ${round} of ${roundCeiling}): there is no further Developer-AI turn, and this verdict alone decides CONVERGED versus ESCALATE. Read the current ${feature} and ${verif}.${closingPeer} Apply the Discussion Protocol. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${closingCarry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: CLOSING_CALL_LABEL, phase: 'Converge', model: 'opus' },
     ))
     .catch(() => null)
@@ -370,7 +569,7 @@ const verdict = converged ? 'CONVERGED' : 'ESCALATE'
 // Cause-specific escalation reason: an early-exit reason (missing draft / artifact / consecutive
 // null) survives verbatim; otherwise the generic round-exhaustion text.
 const escalationReason = earlyEscalateReason
-  || `No mutual ACCEPT within ${MAX_ROUNDS} rounds (reached round ${round})`
+  || `No mutual ACCEPT within ${roundCeiling} rounds (reached round ${round})`
 // Only a CONVERGED run records settled decisions under "ARCHITECT mutual ACCEPT".
 // A non-convergence run records a single outcome entry under a DISTINCT authority so
 // the append-only ledger is never polluted with un-agreed content (which would later
@@ -402,14 +601,54 @@ const ledgerPrompt = converged
   : `Append (do NOT rewrite or delete) to ${ledger} EXACTLY ONE outcome entry — do NOT record any design decision as settled: decision "ARCHITECT did not converge — ${escalationReason}"; grounds — ${escalateGrounds}; authority "ARCHITECT non-convergence"; cycle/phase "ARCHITECT". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only.${ENTRY_ID_RULE} Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
 await agent(ledgerPrompt, { label: 'ledger', phase: 'Ledger', model: 'opus' })
 
+// Terminal Register phase (issue #127): persist the register so a later resume can re-enter from
+// it instead of cold-restarting. It runs on BOTH verdicts, and writing on the CONVERGED branch is
+// load-bearing rather than incidental — the `already converged` resume guard reads this file's own
+// `verdict`, so skipping the write here would leave the file saying ESCALATE and let a later
+// resume reopen a design the ledger already records under "ARCHITECT mutual ACCEPT".
+// The script has no filesystem, so the write is a transcription channel too: the exact bytes are
+// built here and the sub-agent is told to write them verbatim between the declared fences.
+phase('Register')
+let registerWritten = false
+if (registerHeld) {
+  const registerPayload = JSON.stringify({
+    issue,
+    lastRound: round,
+    verdict,
+    // Persisted for the operator's diagnosis; deliberately outside the closed load schema.
+    escalation: converged ? null : escalationReason,
+    // Every status, not only the open ones: after an ESCALATE the ledger carries no record of what
+    // the prior run rejected (`rejectedClause` is interpolated on the CONVERGED branch alone), so
+    // open-only persistence would let a resumed sub-agent re-raise a rejected concern with nothing
+    // anywhere to point at.
+    entries: [...register.values()],
+    // Read by the operator, not by any control-flow path: which side stopped short, and on what
+    // verdict. Not injected into the resume round prompt — the in-round `peer` clause frames a
+    // verdict as current, and a verdict from a prior invocation is not.
+    lastResponses: { dev: lastDev, test: lastTest },
+  }, null, 2)
+  const registerAck = await agent(
+    `You are a transcription channel, not an author. Write the text between the two fence markers below to ${registerPath}, byte for byte: no reformatting, no re-indentation, no added or dropped fields, no summarizing, no commentary in the file. Create the file if it does not exist and overwrite it if it does. Write exactly the bytes between the fences and nothing else, and do not write the fence markers themselves. Then return a one-line confirmation.\n${REGISTER_FENCE_START}\n${registerPayload}\n${REGISTER_FENCE_END}\nRun every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    { label: 'register-write', phase: 'Register', model: 'sonnet' },
+  )
+  // A failed write does not alter the already-decided verdict — the consequence lands on the NEXT
+  // resume, which then fails loudly at its own load guard rather than proceeding on stale state.
+  registerWritten = !!registerAck
+}
+
 return {
   phase: 'architect',
   verdict,
   artifacts: [feature, verif],
   ledger,
+  // Absolute, not per-invocation: a resume of a run that reached the cap returns the next number,
+  // so "how long has this deliberation gone on" stays a single monotone count.
   rounds: round,
   summary: converged
     ? `ARCHITECT converged in ${round} round(s)`
     : `ARCHITECT did not converge — escalate (${escalationReason})`,
   escalation: converged ? null : escalationReason,
+  resumed: resume,
+  register: registerPath,
+  registerWritten,
 }
