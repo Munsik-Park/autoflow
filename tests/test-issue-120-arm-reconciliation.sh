@@ -102,12 +102,37 @@ on_issue_branch() {
 # AGENT_FILES) comes back unexpanded, matching what the removed source line
 # actually spells rather than this process's own runtime value.
 parse_quoted_elements() {
-  local text="$1" safe="${1//\$/@@DOLLAR@@}"
-  local -a toks=()
-  eval "toks=($safe)" 2>/dev/null || toks=()
+  # Non-executing tokenizer: `[[ =~ ]]` regex peeling, never `eval`, so an
+  # element that happens to contain shell metacharacters (a backtick
+  # command substitution, `$(...)`, `$PROJECT_ROOT`, …) is treated as inert
+  # text and never runs. AUDIT finding S-1: the prior `eval`-based version
+  # neutralised `$` but not backticks, and `a \`id -u\` b` executed.
+  local rest="$1"
+  local -a out=()
+  while [ -n "$rest" ]; do
+    if [[ "$rest" =~ ^[[:space:]]+(.*)$ ]]; then
+      rest="${BASH_REMATCH[1]}"
+      continue
+    fi
+    [ -z "$rest" ] && break
+    if [[ "$rest" =~ ^\"([^\"]*)\"(.*)$ ]]; then
+      out+=("${BASH_REMATCH[1]}")
+      rest="${BASH_REMATCH[2]}"
+    elif [[ "$rest" =~ ^\'([^\']*)\'(.*)$ ]]; then
+      out+=("${BASH_REMATCH[1]}")
+      rest="${BASH_REMATCH[2]}"
+    elif [[ "$rest" =~ ^([^[:space:]]+)(.*)$ ]]; then
+      # Unquoted token — not expected in this codebase's array literals,
+      # but consumed rather than looped on forever if it occurs.
+      out+=("${BASH_REMATCH[1]}")
+      rest="${BASH_REMATCH[2]}"
+    else
+      break
+    fi
+  done
   local t
-  for t in "${toks[@]}"; do
-    printf '%s\n' "${t//@@DOLLAR@@/\$}"
+  for t in "${out[@]}"; do
+    printf '%s\n' "$t"
   done
 }
 
@@ -478,10 +503,11 @@ allow_list=(
   # their hosting workflows' paths: blocks touched this file (§4's own
   # regression-scope discipline).
   "tests/test-issue-103-cycle-scope-repoint.sh"
-  # §4's comment-only inbound-pin resolution targets (stale-citation repair,
-  # not guaranteed to land if already clean at GREEN time — see this suite's
-  # own tests/test-cycle-arm-residue.sh "already satisfied at HEAD" finding
-  # for tests/test-issue-43-report-channel-contract.sh).
+  # §4's comment-only inbound-pin resolution targets (stale-citation
+  # repair). RED re-entry 4 corrected the tests/test-cycle-arm-residue.sh
+  # arm for tests/test-issue-43-report-channel-contract.sh: its :73 comment
+  # cites tests/test-issue-42-spawn-mode-contract.sh (not adr-0016), and is
+  # not yet repaired — GREEN edits this file too.
   "tests/test-run-doc-invariants.sh"
   "scripts/test/check-suite-manifest.sh"
   "tests/test-issue-43-report-channel-contract.sh"

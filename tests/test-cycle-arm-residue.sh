@@ -589,8 +589,19 @@ assert_true "120 firewall-pin-gone: test-issue-71's ci-subject header no longer 
 assert_true "120 firewall-pin-gone: test-issue-71's allow_list array no longer names tests/adr-0016-conformance-check.sh" \
   "ctx=\$(grep -A200 '^allow_list=' '$SUITE_71'); ! grep -qF 'tests/adr-0016-conformance-check.sh' <<<\"\$ctx\""
 
-assert_true "120 stale-citation-gone (guard, PASS pre+post — already satisfied at HEAD: feature design §4's cited :73 comment predates #121's own cleanup and is no longer present in this tree): tests/test-issue-43-report-channel-contract.sh carries no mention of adr-0016-conformance-check.sh" \
-  "! grep -qF 'adr-0016-conformance-check.sh' '$PROJECT_ROOT/tests/test-issue-43-report-channel-contract.sh'"
+SUITE_43_120="$PROJECT_ROOT/tests/test-issue-43-report-channel-contract.sh"
+# feature design §4's cited :73 comment names the OTHER deletion target
+# (tests/test-issue-42-spawn-mode-contract.sh — "same approach as
+# tests/test-issue-42-spawn-mode-contract.sh."), not adr-0016-conformance-
+# check.sh; the earlier form of this arm checked the wrong filename and
+# read as satisfied on an untouched line. Check both deleted suites. A line
+# mentioning either is a violation UNLESS it also carries a tombstone
+# marker ("formerly …" / "… retired in #120") — a retrospective citation of
+# a deleted file's own history is not a stale present-tense reference to it.
+FORTYTHREE_STALE_LINES_120="$(grep -nE 'tests/adr-0016-conformance-check\.sh|tests/test-issue-42-spawn-mode-contract\.sh' "$SUITE_43_120" 2>/dev/null || true)"
+FORTYTHREE_NONTOMBSTONE_120="$(printf '%s\n' "$FORTYTHREE_STALE_LINES_120" | grep -vE 'retired in #120|[Ff]ormerly' || true)"
+assert_true "120 stale-citation-gone: tests/test-issue-43-report-channel-contract.sh carries no present-tense citation of either deleted suite (adr-0016-conformance-check.sh or test-issue-42-spawn-mode-contract.sh) — a tombstone phrasing ('formerly …', '… retired in #120') is allowed (non-tombstone hits: $(printf '%s' "$FORTYTHREE_NONTOMBSTONE_120" | paste -sd';' -))" \
+  "[ -z \"\$FORTYTHREE_NONTOMBSTONE_120\" ]"
 assert_true "120 stale-citation-gone: tests/test-run-doc-invariants.sh no longer mentions adr-0016-conformance-check.sh (comment-only citation)" \
   "! grep -qF 'adr-0016-conformance-check.sh' '$PROJECT_ROOT/tests/test-run-doc-invariants.sh'"
 assert_true "120 stale-citation-gone: scripts/test/check-suite-manifest.sh no longer mentions adr-0016-conformance-check.sh (comment-only citation)" \
