@@ -25,11 +25,19 @@
 # measurement runs unconditionally in
 # tests/test-issue-27-composition-oracle.sh), AC-62-35 (a
 # `.autoflow/issue-62-runtime-launch.json` record, gitignored and so a
-# VALIDATE-time obligation of that cycle alone), and the gate around
-# AC-62-36(iii)/(iv). The first two were deleted; the AC-62-36 controls were
-# UNGATED — (iv) was already branch-independent, and (iii) became so once its
-# mutator was made hermetic (see stale_workflow_manifest_row below). See
-# docs/doc-invariant-registry.md §12 and §12.1.
+# VALIDATE-time obligation of that cycle alone), and the gate around the D10
+# arm-shape controls. The first two were deleted; the controls were UNGATED.
+# See docs/doc-invariant-registry.md §12 and §12.1.
+#
+# AC-62-36 — retired in #121, with its three controls, because its SUBJECT was.
+# That subject was the `.claude/workflows/**` arm that both scope guards
+# carried, and #121 retired that arm from both files as an un-gated DELTA over
+# a merged cycle's own diff. A shape guard over an arm that no longer exists is
+# vacuous, not lost; what survives is the content predicate in
+# scripts/test/check-manifest-regen-clean.sh's FIXED POINT leg. The two mutators
+# and the arm-window extractor left with the arms; the worktree driver stays,
+# because another suite asserts its retention by name. §16 supersedes §12.1's
+# two AC-62-36 disposition rows.
 # =============================================================================
 
 set -uo pipefail
@@ -69,30 +77,19 @@ assert_true() {
   fi
 }
 
-
-# D10 ARM WINDOW extractor (verification design §7.2a): the inclusive line
-# range from the FIRST line matching the workflows_{admitted,touched,offwindow}
-# accumulator seed to the FIRST SUBSEQUENT assert_true "AC(9|6-scope): line.
-# Resolves both pre-D10 (798:249-266, 799:841-868 today) and post-D10 (the
-# manifest-pin replacement block) — if either anchor is absent the extraction
-# is empty, which the structural counts below turn into a FAIL, never a
-# vacuous pass.
-extract_arm_window() {
-  awk '
-    !started && /^[[:space:]]*workflows_(admitted|touched|offwindow)_ac[0-9]/ { started=1 }
-    started { print }
-    started && /^[[:space:]]*assert_true "AC(9|6-scope):/ { exit }
-  ' "$1"
-}
-
 # Mirrors tests/test-issue-59-adoption-evidence-discipline.sh:232-249's
 # suite_result_at_ref() shape (E33 lesson: real re-run in an isolated detached
 # worktree, never a re-implemented copy of the guard's own logic — C3). This
 # variant additionally accepts a mutator callback applied to the worktree
-# BEFORE the guard runs, so AC-62-36(iii)/(iv)'s negative controls drive the
-# REAL guard file against a REAL tampered/deleted on-disk state (O9, non-mock).
+# BEFORE the guard runs, so a negative control can drive the REAL guard file
+# against a REAL tampered/deleted on-disk state (O9, non-mock).
 # Always cleans up via `git worktree remove --force`, even on a guard failure,
 # so a failed lane cannot leak a worktree into `git worktree list`.
+#
+# RETAINED against the orphan rule (#121): this cycle deleted every call site,
+# but tests/test-cycle-arm-residue.sh asserts this definition's retention BY
+# NAME against docs/doc-invariant-registry.md §12.1's kept row, so it is a
+# symbol another file requires rather than an orphan.
 guard_result_at_ref_mutated() {
   local ref="$1" suite_name="$2" mutator="$3"
   local wt out
@@ -112,57 +109,6 @@ guard_result_at_ref_mutated() {
   fi
   git -C "$PROJECT_ROOT" worktree remove --force "$wt" >/dev/null 2>&1
   printf '%s' "$out"
-}
-
-# AC-62-36(iii) mutator: commit a content edit to the workflow file inside the
-# worktree and leave its setup/manifest.json row untouched — the stale-row
-# condition (wf_sha != man_sha) the guard's arm claims to detect, produced by
-# the mutator itself rather than borrowed from the host branch's diff.
-#
-# The committed edit is what makes this control HERMETIC (#107). The guard's
-# .claude/workflows/** arm iterates over the worktree's own BASE_REF...HEAD
-# diff and passes when that diff touches no such path, so a mutator that only
-# rewrites an uncommitted setup/manifest.json — the earlier sha-tamper shape —
-# produced a FAIL only when the HOST branch happened to commit a
-# .claude/workflows/** change. The branch gate around this arm was supplying
-# that premise; committing the workflow-file edit here supplies it locally and
-# is simultaneously the stale row being asserted.
-#
-# The commit identity is process-local via `git -c` for the reason
-# delete_workflow_and_manifest_row documents below.
-stale_workflow_manifest_row() {
-  local wt="$1"
-  local wf_path=".claude/workflows/architect-deliberation.js"
-  [[ -f "$wt/$wf_path" && -f "$wt/setup/manifest.json" ]] || return 1
-  printf '\n// AC-62-36(iii) fixture: content edit, manifest row left stale\n' >> "$wt/$wf_path"
-  git -C "$wt" add -- "$wf_path" >/dev/null 2>&1
-  git -c user.email="test-issue-62@example.com" -c user.name="test-issue-62" \
-    -C "$wt" commit -q -m "AC-62-36(iii) fixture: edit workflow file, leave manifest row stale" >/dev/null 2>&1
-}
-
-# AC-62-36(iv) mutator: delete the workflow file AND its manifest row inside
-# the worktree, then commit — the empty-vs-empty vacuity class (C2) the D10
-# predicate must not silently admit. The commit's identity is scoped to THIS
-# invocation only via `git -c user.email=... -c user.name=...` (GATE:QUALITY
-# fix, regression 1/3): `git -C "$wt" config user.email/user.name` writes to
-# the SHARED .git/config of a linked worktree (extensions.worktreeConfig is
-# unset in this repo), which would permanently rewrite the host repository's
-# identity — not scoped to the worktree the way it would be in a standalone
-# git-init'd fixture repo (tests/test-issue-979-review-backend.sh:73 is safe
-# for exactly that reason: that fixture is its own repo, not a linked
-# worktree of the host). `-c` config overrides are process-local and never
-# touch any on-disk config file.
-delete_workflow_and_manifest_row() {
-  local wt="$1"
-  local wf_path=".claude/workflows/architect-deliberation.js"
-  local manifest="$wt/setup/manifest.json"
-  [[ -f "$wt/$wf_path" && -f "$manifest" ]] || return 1
-  jq 'del(.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js"))' \
-    "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
-  git -C "$wt" rm -q -- "$wf_path" >/dev/null 2>&1
-  git -C "$wt" add -A -- "$manifest" >/dev/null 2>&1
-  git -c user.email="test-issue-62@example.com" -c user.name="test-issue-62" \
-    -C "$wt" commit -q -m "AC-62-36(iv) fixture: delete workflow file + manifest row" >/dev/null 2>&1
 }
 
 # =============================================================================
@@ -382,83 +328,6 @@ echo "=== AC-62-34 (RED discriminator) — the harness-capability sentence's fif
 MISSING_ARTIFACT_TOKEN="$(grep -c 'missing-artifact' "$TEAMMATE_CONTRACTS" || true)"
 assert_true "AC-62-34: 'missing-artifact' absent from docs/teammate-contracts.md's Automated (mock-runtime regression) paragraph (got: $MISSING_ARTIFACT_TOKEN)" \
   "[ \"$MISSING_ARTIFACT_TOKEN\" -eq 0 ]"
-
-
-# =============================================================================
-echo ""
-echo "=== AC-62-36 (RED discriminator, D10) — both scope guards' .claude/workflows/** arm is the manifest-pin oracle, not a substring window ==="
-
-# (i) structural — arm-window-scoped (verification design §7.2a), never a
-# whole-file count: a whole-file grep would still see 798's/799's unrelated
-# grep -vF arms (.claude/hooks/**, docs/adr/**, …) after a correct D10 edit.
-check_arm_structural() {
-  local file="$1"
-  local window vf_count assert_count hardcode_count has_workflows has_manifest
-  window="$(extract_arm_window "$file" | grep -v '^[[:space:]]*#')"
-  vf_count="$(printf '%s\n' "$window" | grep -c 'grep -vF' || true)"
-  assert_count="$(printf '%s\n' "$window" | grep -cE '^[[:space:]]*assert_true "AC(9|6-scope):' || true)"
-  hardcode_count="$(printf '%s\n' "$window" | grep -c 'architect-deliberation\.js' || true)"
-  if printf '%s\n' "$window" | grep -qF '.claude/workflows'; then has_workflows=yes; else has_workflows=no; fi
-  if printf '%s\n' "$window" | grep -qF 'setup/manifest.json'; then has_manifest=yes; else has_manifest=no; fi
-  if [[ "$vf_count" -eq 0 && "$assert_count" -eq 1 && "$hardcode_count" -eq 0 && "$has_workflows" = yes && "$has_manifest" = yes ]]; then
-    echo "yes(grep-vF=$vf_count,assert=$assert_count,hardcode=$hardcode_count,workflows-named=$has_workflows,manifest-named=$has_manifest)"
-  else
-    echo "no(grep-vF=$vf_count,assert=$assert_count,hardcode=$hardcode_count,workflows-named=$has_workflows,manifest-named=$has_manifest)"
-  fi
-}
-
-S798_36I="$(check_arm_structural "$PROJECT_ROOT/tests/test-issue-798-topology-flip.sh")"
-S799_36I="$(check_arm_structural "$PROJECT_ROOT/tests/test-issue-799-inert-cleanup.sh")"
-assert_true "AC-62-36(i): both guards' .claude/workflows/** arm window has zero grep -vF filters, exactly one assert_true, zero hardcoded 'architect-deliberation.js', and that assert_true names both .claude/workflows/** and setup/manifest.json (798: $S798_36I; 799: $S799_36I)" \
-  "[[ '$S798_36I' == yes* && '$S799_36I' == yes* ]]"
-
-# (iii)/(iv) — unconditional negative controls (#107). Both were once gated on
-# a dev/*-issue-62 branch on the ground that the guard's .claude/workflows/**
-# arm iterates over the branch's own diff, so the controls were meaningless
-# unless that diff touched such a path. That ground held for exactly one of
-# them: (iv)'s mutator commits its deletion inside the worktree and therefore
-# supplies its own diff, while (iii)'s sha-rewrite was uncommitted and
-# contributed nothing to a three-dot diff — the branch gate was supplying its
-# premise. (iii)'s mutator is now the hermetic stale-row form above, which
-# commits the workflow-file edit it asserts is stale, so both controls carry
-# their own premise and neither depends on the host branch.
-#
-# CI's pull_request checkout has no local `main` branch, only `origin/main` —
-# but the child guards (798/799) resolve their own base via a bare
-# `git merge-base HEAD main` internally, so their .claude/workflows/** arm
-# SKIPs without a local `main` ref and neither control below can produce an
-# arm-FAIL. Create the ref (no checkout) so the child guards — and worktrees,
-# which share refs — can resolve it; no-op locally where `main` already exists.
-if [[ -z "$(cd "$PROJECT_ROOT" && git branch --list main)" ]] && (cd "$PROJECT_ROOT" && git rev-parse --verify origin/main >/dev/null 2>&1); then
-  (cd "$PROJECT_ROOT" && git branch main origin/main) || true
-fi
-
-# AC-62-36(ii) is retired by issue #103's leaf rule: it re-ran
-# tests/test-issue-798-topology-flip.sh and
-# tests/test-issue-799-inert-cleanup.sh, each of which carries its own
-# `run:` step. The negative controls (iii) and (iv) below are what give
-# this lane its teeth, and they drive the real guard file against a real
-# mutated on-disk state rather than re-running a green sibling.
-
-# (iii) hermetic negative control (C3, E10/O9 non-mock): commit a workflow-file
-# edit in a real detached worktree while leaving its manifest row untouched,
-# then run the REAL guard file — never a re-implemented copy of its logic.
-OUT_798_STALE="$(guard_result_at_ref_mutated HEAD test-issue-798-topology-flip.sh stale_workflow_manifest_row)"
-OUT_799_STALE="$(guard_result_at_ref_mutated HEAD test-issue-799-inert-cleanup.sh stale_workflow_manifest_row)"
-M798="$(printf '%s\n' "$OUT_798_STALE" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
-M799="$(printf '%s\n' "$OUT_799_STALE" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
-assert_true "AC-62-36(iii): a .claude/workflows/** file edited and committed in a real detached worktree at HEAD, with its setup/manifest.json row left stale, makes the REAL guard file report FAIL specifically on its .claude/workflows/** arm — not merely its unrelated .claude/hooks/** arm (798: $M798, 799: $M799)" \
-  "[ '$M798' = yes ] && [ '$M799' = yes ]"
-
-# (iv) deletion control (C2): both the workflow file AND its manifest
-# row are removed in the worktree, closing the empty-vs-empty vacuity
-# ("" == "" silently admits) a naive equality would fall into.
-OUT_798_DEL="$(guard_result_at_ref_mutated HEAD test-issue-798-topology-flip.sh delete_workflow_and_manifest_row)"
-OUT_799_DEL="$(guard_result_at_ref_mutated HEAD test-issue-799-inert-cleanup.sh delete_workflow_and_manifest_row)"
-D798="$(printf '%s\n' "$OUT_798_DEL" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
-D799="$(printf '%s\n' "$OUT_799_DEL" | grep -qE 'FAIL:.*\.claude/workflows' && echo yes || echo no)"
-assert_true "AC-62-36(iv): deleting the workflow file AND its manifest row in a real detached worktree does not silently admit (empty-vs-empty vacuity, C2) — the REAL guard reports FAIL on its .claude/workflows/** arm (798: $D798, 799: $D799)" \
-  "[ '$D798' = yes ] && [ '$D799' = yes ]"
 
 
 # =============================================================================

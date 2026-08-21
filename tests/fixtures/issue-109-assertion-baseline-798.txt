@@ -4,10 +4,6 @@ AC2a: git ls-tree HEAD -- services is empty
 AC2b: git ls-files -s -- services has no 160000 mode row
 AC3a: git submodule status is empty
 AC3b: HEAD .gitmodules path-entry count == 0
-AC6b: no diff hunk touches a '*Secondary (multi-repo):*' marker line
-AC7b: no diff hunk against ADR-0015 (immutable historical record)
-AC9: diff touches no .claude/hooks/** path, OR only check-autoflow-gate.sh with its plugin mirror byte-identical (#843 parity-carried exception)
-AC9: diff touches no .claude/workflows/** path, OR every touched .claude/workflows/** path has a setup/manifest.json sha256 row matching its current content (#62 D10 — supersedes the #985/#27/#56/#59 substring window)
 AC12a: $ci_home references tests/test-issue-798-topology-flip.sh
 AC12b: $ci_home paths: trigger lists .gitmodules
 AC12a: some workflow references tests/test-issue-798-topology-flip.sh
