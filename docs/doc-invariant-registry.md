@@ -1143,6 +1143,10 @@ and it never writes to the tree it checks.
 | `AC2e` | `tests/test-issue-979-bundle-delivery.sh` | all-row fence restricted to that cycle's new copy rows | `check-manifest-regen-clean.sh` fixed point |
 | `manifest-freshness-a`, `manifest-freshness-b` (with the `mktemp` backup, `restore_manifest`, the `EXIT` trap, and the `MANIFEST` / `GEN_MANIFEST` / `EDITED_SOURCES` variables they alone defined) | `tests/test-issue-52-peer-facilitator-premise.sh` | the in-tree **regenerating** arm — ran the real generator against the live checkout, diffed against a backup, restored on trap | `check-manifest-regen-clean.sh` fixed point, which takes a `--root` scratch tree and therefore never mutates the checkout it verifies. This arm's own hazard — an interrupt between the generator call and `restore_manifest` leaving `setup/manifest.json` rewritten in the working tree — leaves with it |
 
+One instance of that last class survives this cycle by orchestrator decision —
+`M43-REGEN-CLEAN` at `tests/test-issue-43-report-channel-contract.sh:116-121`. It is recorded
+with its ground among the stated gaps in § 19.5, not disposed here.
+
 **Retained, with the ground for each.** Every other live sha256 comparison in the tests tree,
 and why the fixed point does not reach it:
 
@@ -1304,6 +1308,20 @@ than silently dropped.
   signature in a shape the detector, scoped to counts derived at evaluation time, does not
   reach. **Left in place this cycle**, recorded here as a known gap in the detector's
   coverage rather than resolved by widening the detector mid-cycle.
+- **The surviving in-tree regenerating arm.** `M43-REGEN-CLEAN`,
+  `tests/test-issue-43-report-channel-contract.sh:116-121`, carries the same shape § 19.1
+  disposed from `tests/test-issue-52-peer-facilitator-premise.sh`: it copies the committed
+  `setup/manifest.json` aside, runs the real generator **against the live checkout**, diffs,
+  and moves the backup back. It is the last instance of that class in the tree, and it is
+  subsumed by the same fixed point — `scripts/test/check-manifest-regen-clean.sh`, which
+  takes a `--root` scratch tree and never writes to the tree it verifies. **Not disposed this
+  cycle**, by orchestrator decision: the fence set ARCHITECT settled is enumerated by arm
+  identifier (this cycle's disposal table in § 19.1), GATE:PLAN scored Scope on that
+  enumeration, and no RED arm pins this one — so widening the set mid-cycle would put a
+  removal outside the reviewed surface. Recorded here with its `path:line` so the follow-up is
+  findable rather than re-derived. Note it lacks `manifest-freshness`'s `EXIT` trap: an
+  interrupt between the generator call and the `mv` leaves the working tree's manifest
+  rewritten, so the follow-up is a real cleanup, not bookkeeping.
 
 **Deviation from the issue's stated acceptance criterion, recorded.** The issue asks for a
 merged cycle's residual branch-gate arm to be a **hard FAIL** in
@@ -1469,3 +1487,39 @@ shape against `scripts/test/check-watchdog-detachment.sh`, whose default mode li
 self-tests first. It is left in place this cycle only because its suite is outside the
 declared change surface; the disposition is recorded here so the next cycle inherits it
 rather than re-deriving it.
+
+### 19.9 Count-pin reshape — `tests/test-issue-103-cycle-scope-repoint.sh` (issue #122, RED2)
+
+**What was there.** `AC-cycle-scoped-branch-inertness verdict-preservation` pinned an inline
+literal against `check-cycle-scope-guard.sh`'s reported count of allow-list-bearing suites —
+a `lane: standing` suite comparing a derived population size to a checked-in integer, exactly
+the § 18 fossil shape.
+
+The literal had already been re-baselined **twice, in both directions**, which is the
+signature § 18 names ("legitimate change moves it either way, and the bump is self-approved
+by the same commit that caused it"). Re-derived from the tree rather than carried from the
+drafting note:
+
+| Commit | Literal | What moved it |
+|---|---|---|
+| `82b545b^` | `3` | — |
+| `82b545b` (#121) | `2` | #121 retired suites 67 and 69's arrays with their branch-gated arms (§ 16) |
+| `591dada` (#120) | `3` | #120 added its own cycle-scoped allow-list suite |
+| `9c25022` (#122 RED2) | **removed** | reshaped, below |
+
+A third bump was due this cycle: #122 adds a fourth allow-list-bearing suite,
+`tests/test-issue-122-retirement-attribution.sh`.
+
+**Disposition — reshaped, not disposed and not bumped.** Bumping would leave the same fossil
+in place, due for a fourth re-baseline at the next cycle that adds or removes a cycle-scoped
+allow-list suite. The arm is not disposed either — its regression-protection intent (the #103
+subject-binding re-point must not silently change which suites the lint counts) is still real
+and still needs a carrier. The reshape removes the checked-in literal itself: the expected
+count is now re-derived at evaluation time from the same library predicate the lint calls
+(`suite_enumerate` + `suite_declares_allow_list`, `scripts/test/suite-manifest.sh:297`, which
+`check-cycle-scope-guard.sh:219` invokes), and the arm asserts agreement between the lint's
+own report and that independent re-derivation. Nothing is checked in any more, so there is
+nothing left for `AC-fossil-detector-advisory` to flag and nothing left to re-baseline on
+ordinary cycle churn.
+
+**Carrier.** The reshaped arm itself, in `tests/test-issue-103-cycle-scope-repoint.sh`.
