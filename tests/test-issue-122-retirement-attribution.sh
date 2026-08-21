@@ -77,6 +77,20 @@ SUITE_51="$PROJECT_ROOT/tests/test-issue-51-teammate-removal-verdict.sh"
 SUITE_64="$PROJECT_ROOT/tests/test-issue-64-collection-scope.sh"
 SUITE_109="$PROJECT_ROOT/tests/test-issue-109-doc-assertions.sh"
 
+# Hoisted ahead of every use (RED2 / B3-1): check-cycle-scope-guard.sh denies
+# any `git diff --name-only` feeding a path allow-list unless it is dominated
+# by this cycle's own dev/*-issue-122 branch gate — including a diff used only
+# as a negative control, not just the allow_list arm itself. Defined once,
+# here, so both the negative control below and the change-surface guard arm
+# near the end of this file share one gate.
+HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
+on_issue_branch() {
+  case "$HEAD_BRANCH" in
+    dev/*-issue-122|dev/*-issue-122-*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 PASS=0; FAIL=0; TESTS=0
 
 assert_true() {
@@ -299,9 +313,29 @@ assert_true "AC-fossil-disposed: AC-59-11c-count (file-scoped legacy-entry count
 # Negative control (feature design > Instances the issue lists that are not
 # disposed): the harness ok-count committed literal is a deliberate pin, out
 # of scope, and must be UNCHANGED by this cycle's diff.
+#
+# RED2 / B3-1: the diff half is gated under on_issue_branch —
+# check-cycle-scope-guard.sh denies any `git diff --name-only` feeding a
+# path allow-list decision unless it is dominated by this cycle's own
+# dev/*-issue-122 branch predicate, and this negative control's diff is
+# exactly that shape even though it is not the allow_list arm itself. The
+# presence half is unconditional (it asserts a state, not a diff).
 HARNESS_OK_COUNT_LINE="$(grep -n '^HARNESS_OK_COUNT=' "$HARNESS_PINS" || true)"
-assert_true "AC-fossil-disposed (negative control): tests/lib/harness-pins.sh HARNESS_OK_COUNT declaration is present and untouched by this cycle's diff" \
-  "[ -n \"$HARNESS_OK_COUNT_LINE\" ] && ! git diff --name-only \"\$(git -C '$PROJECT_ROOT' merge-base HEAD origin/main 2>/dev/null || echo HEAD)\"...HEAD -- '$HARNESS_PINS' 2>/dev/null | grep -q ."
+assert_true "AC-fossil-disposed (negative control): tests/lib/harness-pins.sh HARNESS_OK_COUNT declaration is present" \
+  "[ -n \"$HARNESS_OK_COUNT_LINE\" ]"
+if on_issue_branch; then
+  NCTRL_BASE_REF="$(resolve_base_ref)" || true
+  if [ -n "${NCTRL_BASE_REF:-}" ]; then
+    HARNESS_PINS_DIFF="$(cd "$PROJECT_ROOT" && git diff --name-only "$NCTRL_BASE_REF"...HEAD -- "$HARNESS_PINS")"
+    assert_true "AC-fossil-disposed (negative control): tests/lib/harness-pins.sh is untouched by this cycle's diff (diff: ${HARNESS_PINS_DIFF:-none})" \
+      '[ -z "$HARNESS_PINS_DIFF" ]'
+  else
+    echo "  BLOCK: no comparison base resolvable — negative-control diff counted FAIL, never skipped"
+    TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
+  fi
+else
+  note_deferred "AC-fossil-disposed (negative control) diff half: inert off the issue-122 dev branch (head: ${HEAD_BRANCH:-unknown})."
+fi
 
 # =============================================================================
 echo ""
@@ -367,13 +401,8 @@ rm -rf "$REGEN_SCRATCH"
 echo ""
 echo "=== cycle-scope-respected — this cycle's own branch diff stays within its declared allow_list ==="
 # =============================================================================
-HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
-on_issue_branch() {
-  case "$HEAD_BRANCH" in
-    dev/*-issue-122|dev/*-issue-122-*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
+# HEAD_BRANCH / on_issue_branch are defined once, near the top of this file
+# (RED2 / B3-1), so the negative control above shares the same gate.
 
 # Full anticipated cycle footprint (RED + GREEN), per feature design > Files
 # changed and verification design §5 (Committed-surface allow-list) — not RED's
@@ -407,6 +436,23 @@ allow_list=(
   "tests/test-issue-30-confirm-ci-green.sh"
   # Keystone / ratchet-move precondition
   "tests/test-issue-109-doc-assertions.sh"
+  # Ratchet directory members — moved assertion-set baselines + grow-only
+  # sidecars (feature design > Files changed, "tests/fixtures/ ratchet
+  # directory + sidecars"; green report §19.6)
+  "tests/fixtures/ratchet/issue-109-assertion-baseline-798.txt"
+  "tests/fixtures/ratchet/issue-109-assertion-baseline-798.direction.txt"
+  "tests/fixtures/ratchet/issue-109-assertion-baseline-799.txt"
+  "tests/fixtures/ratchet/issue-109-assertion-baseline-799.direction.txt"
+  # Retirement-due fetch adapter — mandated outside the lint by design
+  # (feature design > Retirement-due advisory > Injection boundary — adopted;
+  # green report §19.7)
+  "scripts/test/fetch-issue-state.sh"
+  # B1 consequences of the leaf-rule widening (green blocker B1; green report
+  # §19.2/§19.3): the literal invocation form is already denied by row D1, so
+  # a widening with any teeth must reach the variable form every real site
+  # uses, which forced these two out-of-original-surface edits.
+  "tests/test-issue-51-teammate-removal-verdict.sh"
+  "tests/test-issue-103-suite-leaf.sh"
   # Lints
   "scripts/test/check-suite-leaf.sh"
   "scripts/test/check-suite-manifest.sh"
