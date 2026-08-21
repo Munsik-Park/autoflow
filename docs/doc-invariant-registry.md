@@ -967,7 +967,8 @@ Every inbound reference resolved in the same change: both **executable** pins §
 arms, `$ADR0016_SUITE` variable, `# ci-subject:` token and allow-list rows); the `paths:`
 entries and `run:` steps in `.github/workflows/contract-suites.yml` and
 `.github/workflows/e2e-dummy-target.yml`; and the comment-only citations in
-`tests/test-run-doc-invariants.sh`, `scripts/test/check-suite-manifest.sh` and the header of
+`tests/test-run-doc-invariants.sh`, `scripts/test/check-suite-manifest.sh`,
+`tests/test-issue-43-report-channel-contract.sh` and the header of
 `tests/manual/issue-42-manual-scenarios.md`.
 
 **A third executable pin family, found at GREEN.** Feature design §4's enumeration is not
