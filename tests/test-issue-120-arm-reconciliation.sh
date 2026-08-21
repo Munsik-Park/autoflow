@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md tests/adr-0016-conformance-check.sh tests/fixtures/doc-invariants.json tests/fixtures/issue-109-assertion-baseline-adr0016.txt tests/manual/issue-120-manual-scenarios.md tests/test-issue-109-doc-assertions.sh tests/test-issue-120-arm-reconciliation.sh tests/test-issue-16-manifest-locale-invariance.sh tests/test-issue-42-spawn-mode-contract.sh tests/test-issue-51-teammate-removal-verdict.sh tests/test-issue-62-sequential-rounds.sh tests/test-issue-71-digest-removal.sh tests/test-issue-846-doc-assertions.sh tests/test-issue-848-doc-assertions.sh tests/test-issue-955-subagent-background-ban.sh tests/test-issue-979-doc-neutrality.sh
+# ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md tests/fixtures/doc-invariants.json tests/manual/issue-120-manual-scenarios.md tests/test-issue-109-doc-assertions.sh tests/test-issue-120-arm-reconciliation.sh tests/test-issue-16-manifest-locale-invariance.sh tests/test-issue-51-teammate-removal-verdict.sh tests/test-issue-62-sequential-rounds.sh tests/test-issue-71-digest-removal.sh tests/test-issue-846-doc-assertions.sh tests/test-issue-848-doc-assertions.sh tests/test-issue-955-subagent-background-ban.sh tests/test-issue-979-doc-neutrality.sh
 # lane: cycle-scoped
 # retire-with: #120
 # cycle-arm: #120

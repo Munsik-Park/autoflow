@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md scripts/test/check-suite-manifest.sh tests/adr-0016-conformance-check.sh tests/fixtures/doc-invariants.json tests/fixtures/issue-109-assertion-baseline-adr0016.txt tests/manual/issue-42-manual-scenarios.md tests/run-doc-invariants.sh tests/test-issue-109-doc-assertions.sh tests/test-issue-16-manifest-locale-invariance.sh tests/test-issue-42-spawn-mode-contract.sh tests/test-issue-43-report-channel-contract.sh tests/test-issue-51-teammate-removal-verdict.sh tests/test-issue-52-peer-facilitator-premise.sh tests/test-issue-56-carry-evidence-discipline.sh tests/test-issue-59-adoption-evidence-discipline.sh tests/test-issue-62-sequential-rounds.sh tests/test-issue-71-digest-removal.sh tests/test-run-doc-invariants.sh
+# ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml docs/doc-invariant-registry.md scripts/test/check-suite-manifest.sh tests/fixtures/doc-invariants.json tests/manual/issue-42-manual-scenarios.md tests/run-doc-invariants.sh tests/test-issue-109-doc-assertions.sh tests/test-issue-16-manifest-locale-invariance.sh tests/test-issue-43-report-channel-contract.sh tests/test-issue-51-teammate-removal-verdict.sh tests/test-issue-52-peer-facilitator-premise.sh tests/test-issue-56-carry-evidence-discipline.sh tests/test-issue-59-adoption-evidence-discipline.sh tests/test-issue-62-sequential-rounds.sh tests/test-issue-71-digest-removal.sh tests/test-run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # out-of-tree-inputs: no
