@@ -357,8 +357,13 @@ done
 ARCH_CLAUSE_COUNT="$(grep -vE '^[[:space:]]*(//|\*)' "$ARCH_WF" | grep -cF 'run_in_background' || true)"
 VERIFY_CLAUSE_COUNT="$(grep -vE '^[[:space:]]*(//|\*)' "$VERIFY_WF" | grep -cF 'run_in_background' || true)"
 echo "  non-comment clause count: architect=$ARCH_CLAUSE_COUNT verify=$VERIFY_CLAUSE_COUNT"
-assert_true "AC-C2-1: architect-deliberation.js clause on >= 6 non-comment (prompt-literal) lines" \
-  "[ \"$ARCH_CLAUSE_COUNT\" -ge 6 ]"
+# Re-anchored (issue #127): the floor is arithmetic on the MEASURED post-change line
+# count, not on the agent( site tally below -- the two are not equal (8 sites, 9 clause
+# lines: the ledger prompt's two-branch ternary carries the clause on each branch's own
+# line). A floor derived from the site count (8) would be satisfied by the 7 pre-#127
+# lines plus one new prompt, absorbing a second clause-less prompt unnoticed.
+assert_true "AC-C2-1: architect-deliberation.js clause on >= 9 non-comment (prompt-literal) lines (re-anchored, issue #127 adds two agent() prompts, each carrying its own clause line)" \
+  "[ \"$ARCH_CLAUSE_COUNT\" -ge 9 ]"
 assert_true "AC-C2-1: verify-cause-branch.js clause on >= 3 non-comment (prompt-literal) lines" \
   "[ \"$VERIFY_CLAUSE_COUNT\" -ge 3 ]"
 
@@ -376,8 +381,8 @@ assert_true "AC-C2-1: architect ledger non-converged branch (line carrying 'ARCH
 # agent( call site forces a re-derivation of the prompt-string count above.
 ARCH_SITE_COUNT="$(grep -cF 'agent(' "$ARCH_WF" || true)"
 VERIFY_SITE_COUNT="$(grep -cF 'agent(' "$VERIFY_WF" || true)"
-assert_true "AC-C2-1 tripwire: architect-deliberation.js has exactly 6 agent( call sites (re-anchored, issue #123 adds the cap-round closing half-round's own agent( call)" \
-  "[ \"$ARCH_SITE_COUNT\" -eq 6 ]"
+assert_true "AC-C2-1 tripwire: architect-deliberation.js has exactly 8 agent( call sites (re-anchored, issue #127 adds the resume register-load call and the terminal register-write call)" \
+  "[ \"$ARCH_SITE_COUNT\" -eq 8 ]"
 assert_true "AC-C2-1 tripwire: verify-cause-branch.js has exactly 3 agent( call sites" \
   "[ \"$VERIFY_SITE_COUNT\" -eq 3 ]"
 

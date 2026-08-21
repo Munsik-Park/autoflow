@@ -149,6 +149,12 @@ For comparison: review gate structures where two models find problems in each ot
 
 When introducing any new loop structure to this system, it must have an explicit termination condition. A loop without a termination condition is not permitted. This is not a guideline — it is a hard constraint.
 
+**Termination under an ARCHITECT resume** (issue #127)
+
+The ARCHITECT facilitation workflow accepts a `resume` argument that re-enters an `ESCALATE`d deliberation from its persisted register instead of cold-restarting it. This raises the round cap by one per resume (6 → 7 → 8 → …) and is unbounded in how many times an operator may take it, which reads at first like the loop-without-a-termination-condition this decision forbids. It is not, and the distinction is the one this decision actually turns on: **the loop's bound is in code, and every invocation carries one.** A resume run computes `roundCeiling = lastRound + 1` and admits exactly one round; the loop then exits on its own bound. There is no path on which a single invocation runs unbounded, and no counter is carried in the register that a later run could inflate.
+
+What is unbounded is the number of *operator decisions* to spend one more round — and an operator decision is precisely the human escalation point this decision requires a loop to terminate at. The termination condition is satisfied by the bound, not by a count of how many times a human chose to continue past it; requiring the latter would mean a human who has read the register and judged one further exchange worthwhile is refused by a machine cap. The pathological case this decision guards against — a loop that never hands control to a human — is the opposite shape: here control returns to the human on **every** round.
+
 ---
 
 ### Decision 8: Deliberation Runs in an Isolated Sub-Context (Delegated Facilitation)

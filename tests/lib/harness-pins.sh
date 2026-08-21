@@ -23,14 +23,44 @@
 # that moved it — the precedent tests/test-issue-27-composition-oracle.sh's
 # header records for every prior bump.
 #
-# Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123).
-# The #123 bump is the RED-commit target value (12 new cap-round-closing cases:
-# AC1, AC2, AC3 x3, AC4, AC5, AC6, AC10, AC11, AC12, AC13), not the RED-commit
-# measured value -- 8 of the 12 are discriminating and FAIL until the closing
-# half-round lands, so the composition oracle (tests/test-issue-27-composition-
-# oracle.sh) intentionally reds against this pin until GREEN, per
-# .autoflow/issue-123-verification-design.md > Composition oracle.
+# Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123)
+# -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3).
+# The #123, #127 and #127-cycle-2/3 bumps are all the RED-commit TARGET value, not the
+# RED-commit MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating),
+# #127 adds 25 resume cases (23 discriminating, 2 deliberate regression locks documented
+# inline in test/workflows/run.mjs -- see "AC127-15" and "AC127-18" -- that pass
+# vacuously at RED because the AS-IS script touches no filesystem and names no
+# state-file path at all). #127 cycle 2 adds 4 new discriminating cases (terminal
+# post-verdict call rejection absorption: write-reject-absorbed, write-sync-throw-
+# absorbed, ledger-reject-absorbed, stale-register-untouched) -- all 4 propagate at
+# HEAD (bare `await agent(...)`, no absorption wrapper) and were the RED failures that
+# commit recorded (122 ok + 4 FAIL -> 126). #127 cycle 3 adds 9 new cases for the
+# resume-scoped open-entry precondition on CONVERGED, of which 7 are DISCRIMINATING at
+# RED (they FAIL against the AS-IS script, which converges unconditionally on mutual
+# grounded ACCEPT and cannot yet produce ESCALATE/the sentinel/the persisted-open-entry
+# state) -- open-entry-blocks-converge, peer-disposition-does-not-unblock,
+# sentinel-on-the-denied-run, terminal-turn-decides-the-reason, infrastructure-outranks-
+# the-sentinel, closing-half-round-honors-precondition, open-entry-survives-into-
+# persisted-register -- and 2 are ADMISSION rows that already PASS at RED because their
+# shape already converges under the AS-IS script -- disposed-entry-permits-converge,
+# resume-amendment-closable-by-closing-turn -- per the verification design, these two
+# discriminate only a WRONG fix once GREEN ships one (a guard ordered before the
+# round's own dispositions, or a closing turn excluded from disposal), not the absence
+# of any guard, so a vacuous PASS at RED is the correct and expected reading for them,
+# not a coverage gap. Cycle 3 also amends 7 existing resume cases' responder fixtures
+# (adding a disposition, no assertion changed) so they keep passing once the
+# precondition ships -- resume-lifts-first-exchange, resume-persists-both-verdicts,
+# return-contract-fields, closing-prompt-coherent-cap, rehydration-fallback,
+# write-reject-absorbed, ledger-reject-absorbed. The 7 amended cases pass at HEAD both
+# before and after their fixture amendment (the AS-IS script never reads register
+# status), so they contribute no FAIL at RED. RED (d84881b) MEASURES 128 ok (126
+# pre-existing cases, including the 7 amended ones, plus the 2 new admission-pass
+# cases) + 7 FAIL (the 7 new discriminating cases) -- see
+# .autoflow/issue-127-c3-red-report.md. Target after GREEN (all 135 pass): 135. The
+# composition oracle (tests/test-issue-27-composition-oracle.sh) intentionally reds
+# against this pin until GREEN, per
+# .autoflow/issue-127-verification-design.md > Composition oracle.
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=97
+HARNESS_OK_COUNT=135
