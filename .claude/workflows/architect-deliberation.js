@@ -364,7 +364,7 @@ const [devDraft, testDraft] = await parallel([
     }
     // A prior run that escalated with no open entry escalated for an infrastructure cause, and
     // resume is not the instrument for that — a deliberate refusal, not a degenerate empty round.
-    if (![...register.values()].some((e) => e.status === 'open')) earlyEscalateReason = REASON_RESUME_NO_OPEN_ENTRY
+    if (!hasOpenEntry()) earlyEscalateReason = REASON_RESUME_NO_OPEN_ENTRY
     // The refusal the row above cannot make: a run converges on mutual grounded ACCEPT regardless
     // of whether every entry was disposed of, so a CONVERGED run can persist open entries. Resuming
     // there would reopen a design the ledger already records under "ARCHITECT mutual ACCEPT".
