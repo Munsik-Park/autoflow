@@ -2260,6 +2260,7 @@ await test('ARCHITECT: the cap-round closing half-round denies convergence when 
   })
   const { result } = await runArch({ issue: 'c3-3-closing', resume: true }, responder)
   assert.equal(result.verdict, 'ESCALATE', 'a closing ACCEPT that leaves the carried entry open must not converge')
+  assert.equal(result.escalation, OPEN_ENTRY_SENTINEL, 'the closing half-round must report the same declared sentinel as the in-loop guard, not the generic round-exhaustion text')
 })
 
 await test('ARCHITECT: a concern raised during the resume round, by the test side, is still closable within that run by the closing turn (AC-C3-3, resume-amendment-closable-by-closing-turn)', async () => {

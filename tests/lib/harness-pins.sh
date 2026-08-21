@@ -34,19 +34,29 @@
 # post-verdict call rejection absorption: write-reject-absorbed, write-sync-throw-
 # absorbed, ledger-reject-absorbed, stale-register-untouched) -- all 4 propagate at
 # HEAD (bare `await agent(...)`, no absorption wrapper) and were the RED failures that
-# commit recorded (122 ok + 4 FAIL -> 126). #127 cycle 3 adds 9 new discriminating
-# cases for the resume-scoped open-entry precondition on CONVERGED (open-entry-blocks-
-# converge, disposed-entry-permits-converge, peer-disposition-does-not-unblock,
+# commit recorded (122 ok + 4 FAIL -> 126). #127 cycle 3 adds 9 new cases for the
+# resume-scoped open-entry precondition on CONVERGED, of which 7 are DISCRIMINATING at
+# RED (they FAIL against the AS-IS script, which converges unconditionally on mutual
+# grounded ACCEPT and cannot yet produce ESCALATE/the sentinel/the persisted-open-entry
+# state) -- open-entry-blocks-converge, peer-disposition-does-not-unblock,
 # sentinel-on-the-denied-run, terminal-turn-decides-the-reason, infrastructure-outranks-
-# the-sentinel, closing-half-round-honors-precondition, resume-amendment-closable-by-
-# closing-turn, open-entry-survives-into-persisted-register) and amends 7 existing
-# resume cases' responder fixtures (adding a disposition, no assertion changed) so they
-# keep passing once the precondition ships -- resume-lifts-first-exchange,
-# resume-persists-both-verdicts, return-contract-fields, closing-prompt-coherent-cap,
-# rehydration-fallback, write-reject-absorbed, ledger-reject-absorbed. The 7 amended
-# cases pass at HEAD both before and after their fixture amendment (the AS-IS script
-# never reads register status), so RED measures 126 ok (all pre-existing cases,
-# including the 7 amended ones) + 9 FAIL (the new cases). Target after GREEN: 135. The
+# the-sentinel, closing-half-round-honors-precondition, open-entry-survives-into-
+# persisted-register -- and 2 are ADMISSION rows that already PASS at RED because their
+# shape already converges under the AS-IS script -- disposed-entry-permits-converge,
+# resume-amendment-closable-by-closing-turn -- per the verification design, these two
+# discriminate only a WRONG fix once GREEN ships one (a guard ordered before the
+# round's own dispositions, or a closing turn excluded from disposal), not the absence
+# of any guard, so a vacuous PASS at RED is the correct and expected reading for them,
+# not a coverage gap. Cycle 3 also amends 7 existing resume cases' responder fixtures
+# (adding a disposition, no assertion changed) so they keep passing once the
+# precondition ships -- resume-lifts-first-exchange, resume-persists-both-verdicts,
+# return-contract-fields, closing-prompt-coherent-cap, rehydration-fallback,
+# write-reject-absorbed, ledger-reject-absorbed. The 7 amended cases pass at HEAD both
+# before and after their fixture amendment (the AS-IS script never reads register
+# status), so they contribute no FAIL at RED. RED (d84881b) MEASURES 128 ok (126
+# pre-existing cases, including the 7 amended ones, plus the 2 new admission-pass
+# cases) + 7 FAIL (the 7 new discriminating cases) -- see
+# .autoflow/issue-127-c3-red-report.md. Target after GREEN (all 135 pass): 135. The
 # composition oracle (tests/test-issue-27-composition-oracle.sh) intentionally reds
 # against this pin until GREEN, per
 # .autoflow/issue-127-verification-design.md > Composition oracle.
