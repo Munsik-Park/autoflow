@@ -55,8 +55,8 @@ if [ -f "$LINT" ]; then
   fi
   assert_true "check-cycle-scope-guard.sh exits 0 on the real tree, post-re-point" "[ $REAL_EXIT -eq 0 ]"
 
-  assert_true "AC-cycle-scoped-branch-inertness verdict-preservation: the real tree still reports exactly 3 allow-list-bearing suites after the re-point (re-anchored, issue #123's cycle-scoped tests/test-issue-123-closing-half-round.sh is retired at GATE:QUALITY per docs/doc-invariant-registry.md §14)" \
-    "printf '%s\n' \"$REAL_OUT\" | grep -q '3 allow-list-bearing suite'"
+  assert_true "AC-cycle-scoped-branch-inertness verdict-preservation: the real tree still reports exactly 2 allow-list-bearing suites after the re-point (re-anchored, issue #121 retired suites 67 and 69's arrays with their branch-gated arms per docs/doc-invariant-registry.md §16; the remaining pair is tests/test-issue-71-digest-removal.sh plus this cycle's own cycle-scoped tests/test-issue-121-declaration-release.sh, which retires with #121)" \
+    "printf '%s\n' \"$REAL_OUT\" | grep -q '2 allow-list-bearing suite'"
 
   # ---------------------------------------------------------------------
   # AC-cycle-scope-guard-repoint: self-test fixtures keyed on header, not
@@ -153,10 +153,12 @@ SH
     "grep -qF 'test-fixture-103-noarm.sh' /tmp/issue103-cyclescope-noarm.out && grep -qi 'cycle-arm' /tmp/issue103-cyclescope-noarm.out"
   rm -rf "$NOARM_DIR"
 
-  # -- Migration invariant: each of the three real subjects is verdict-
-  #    preserving under the new binding (their cycle-arm equals their own
-  #    filename issue number, so re-pointing changes no real-tree verdict).
-  for f in tests/test-issue-67-deliberation-record.sh tests/test-issue-69-verification-depth.sh tests/test-issue-71-digest-removal.sh; do
+  # -- Migration invariant: the surviving real subject is verdict-preserving
+  #    under the new binding (its cycle-arm equals its own filename issue
+  #    number, so re-pointing changes no real-tree verdict). Suites 67 and 69
+  #    left this set in issue #121, which deleted their branch-gated arms and
+  #    the allow-list arrays with them (docs/doc-invariant-registry.md §16).
+  for f in tests/test-issue-71-digest-removal.sh; do
     num="$(printf '%s' "$f" | sed -n 's/^tests\/test-issue-\([0-9][0-9]*\)-.*$/\1/p')"
     assert_true "migration invariant: $f's cycle-arm (#$num) equals its own filename issue number, so the re-point is verdict-preserving" \
       "grep -qE \"^# cycle-arm: #$num\\\$\" '$PROJECT_ROOT/$f'"

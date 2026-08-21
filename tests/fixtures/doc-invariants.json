@@ -7170,6 +7170,237 @@
       "match": "fixed",
       "literal": "fails loudly at its own load guard rather than proceeding on stale state",
       "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-claude-boundary-read",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "CLAUDE.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* when the host contains submodules, all AIs additionally have read access",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-claude-target-scope",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "CLAUDE.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* when the host contains submodules, that target scope is the sub-repo's directory.",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-claude-pr-flow",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "CLAUDE.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* **Feature (sub-repo change included)**",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-claude-auto-close",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "CLAUDE.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* when the host contains a submodule, the cycle splits into two PRs",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-guide-deliver",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* In a multi-repo deployment (one or more submodules), DELIVER fans out",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-guide-subrepo-changes",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* Sub-repo changes present:",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-guide-draft-pr",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* AutoFlow opens the host PR as a draft",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-external-review-sequencing",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/external-review-sequencing.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):*",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-git-workflow",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/git-workflow.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):*",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-boundary-owning-scope",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/repo-boundary-rules.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* the owning scope is a sub-repo directory",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-boundary-sequencing",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/repo-boundary-rules.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* cross-repo sequencing (sub-repo → pointer bump → host)",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-contracts-submodule-ai",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/teammate-contracts.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* when the host contains submodules",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-secondary-marker-contracts-fork-push",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/teammate-contracts.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "*Secondary (multi-repo):* when the target is a sub-repo, the push goes to the AI's fork branch",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-verify-step4-l1",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "4. Mock-boundary fidelity check (Test AI):",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-verify-step4-l2",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "every test double (mock / stub / fake) standing in for a real interface",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-verify-step4-l3",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "re-derive the real interface at HEAD",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-verify-step4-l4",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "confirm the double matches",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-verify-step4-l5",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "file:line in the report.",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-verify-step4-l6",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "All doubles match → PASS",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-verify-step4-l7",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "A double diverges → masked failure, not a Green",
+      "scope": "permanent"
+    },
+    {
+      "id": "121-verify-step4-l8",
+      "origin_issue": 121,
+      "intent": "preservation",
+      "file": "docs/autoflow-guide.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "(a test built on a wrong double → RED; the impl wrong against the real interface → GREEN)",
+      "scope": "permanent"
     }
   ]
 }

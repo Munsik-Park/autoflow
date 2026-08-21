@@ -257,22 +257,31 @@ assert_true "subject-set derivation finds at least one push-context base-ref con
 
 # Regression guard: "at least one" alone does not catch a real subject being
 # silently dropped while others still pass — exactly what the pipefail/SIGPIPE
-# defect above did to this file's `derive_subjects` (deterministically
-# measured this cycle). Pin a known real resolve_base_ref call site (a
-# push:branches:[main] workflow registers it, it is not in
-# EXEMPT_HERMETIC_DRIVERS, and it calls the resolver against the repo under
-# test at tests/test-issue-27-composition-oracle.sh:245) so a reintroduction of
-# that class of bug fails loud instead of just shrinking the printed count.
+# defect above did to this file's `derive_subjects`. Pin a known real
+# out-of-tree call site (a push:branches:[main] workflow registers it, it is
+# not in EXEMPT_HERMETIC_DRIVERS, and it resolves a base ref against the repo
+# under test) so a reintroduction of that class of bug fails loud instead of
+# just shrinking the printed count.
 # Real-tree only — an override root has its own subjects.
 #
-# Repointed in #107 (was tests/test-issue-59-adoption-evidence-discipline.sh).
-# The guard's value is the pin, not any particular subject: #107 retired 59's
-# dormant dev/*-issue-59 arms, which held that file's only resolver call, so
-# the former subject left the derived set legitimately. The 798 suite (:72) is
-# the alternate if 27 ever loses the call.
+# SELECTION RULE (established #121, after this pin decayed twice for the same
+# reason): pin a subject whose base-ref call CANNOT LEAVE WITH A CYCLE. A
+# conforming subject declares `# lane: standing`, declares no `cycle-arm`
+# field, and holds its base-ref call at top level, dominated by no
+# `dev/*-issue-<N>` branch gate. Repoint by that rule, never by convenience.
+#
+# Pin history. #107 repointed off tests/test-issue-59-adoption-evidence-discipline.sh,
+# whose only resolver call sat in dormant dev/*-issue-59 arms that cycle retired.
+# #121 repointed off tests/test-issue-27-composition-oracle.sh for the identical
+# reason — its resolver call sat in the AC-27-9 diff fence, a merged cycle's own
+# DELTA, which #121 rewrote as permanent registry entries. The 798 suite recorded
+# here as the former alternate could never have served: it holds no resolver or
+# merge-base call at all. tests/test-issue-788-host-purity-delta.sh is the alternate
+# now: it satisfies the same three checks (lane: standing, no cycle-arm, an
+# un-gated top-level merge-base assignment) and is a member of the derived set.
 if [ -z "${1:-}" ]; then
-  assert_true "subject-set derivation includes a known real call site (tests/test-issue-27-composition-oracle.sh) — regression guard against silent under-derivation" \
-    "grep -qxF 'tests/test-issue-27-composition-oracle.sh' < <(printf '%s\n' \"\${SUBJECTS[@]}\")"
+  assert_true "subject-set derivation includes a known real call site (tests/plugin/verify-package.sh) — regression guard against silent under-derivation" \
+    "grep -qxF 'tests/plugin/verify-package.sh' < <(printf '%s\n' \"\${SUBJECTS[@]}\")"
 fi
 
 ROOT_OVERRIDE="${1:-}"
@@ -873,14 +882,20 @@ assert_true "AC-native-coverage-premise-reach: a registering workflow whose push
 # section) — this is a re-verification of an already-settled premise, not new
 # behavior, so a PASS here is expected and is not a RED-confirmation defect.
 #
-# Repointed in #107 alongside the under-derivation pin above, and for the same
-# reason: this arm names the same literal subject, which left the derived set
-# when that cycle retired 59's dormant dev/*-issue-59 arms and the resolver
-# call they held. The two pins are one decision — a subject that is no longer
-# derived cannot report a NATIVE-COVERAGE state at all — so they move together.
+# Repointed in #107 and again in #121 alongside the under-derivation pin above,
+# and both times for the same reason: this arm names the same literal subject,
+# which left the derived set when a cycle retired the branch-gated arms holding
+# its only base-ref call. The two pins are one decision — a subject that is no
+# longer derived cannot report a NATIVE-COVERAGE state at all — so they move
+# together, and they move by the selection rule recorded above (lane: standing,
+# no cycle-arm, an un-gated top-level base-ref call). Both halves were checked
+# against the registering workflow for tests/plugin/verify-package.sh rather
+# than assumed: the job carrying its run: step checks out at fetch-depth: 0,
+# and that workflow's push: paths block lists the suite's own path. The
+# alternate is tests/test-issue-788-host-purity-delta.sh.
 drive_suite_over_root "$PROJECT_ROOT"
 assert_true "AC-native-coverage-premise-{depth,reach} (real tree): the pinned known call site reports NATIVE-COVERAGE PASS" \
-  "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/test-issue-27-composition-oracle\.sh[[:space:]]+PASS'"
+  "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/plugin/verify-package\.sh[[:space:]]+PASS'"
 
 echo ""
 echo "=== native-coverage-premise, ANY-registering-workflow semantics (VERIFY step-3 coverage) ==="

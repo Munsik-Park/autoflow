@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/improvement-backlog.md docs/maintained-docs.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh setup/manifest.json
+# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/improvement-backlog.md docs/maintained-docs.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
-# out-of-tree-inputs: yes
 # =============================================================================
 # Test: init.sh legacy wizard removal + Language Rule user-scope reversion —
 # Issue #952
@@ -26,7 +25,6 @@
 #          history-prose token flip (DCR-2)
 #   AC4  — submodule-common-rules.md code-fence examples use non-substituted
 #          notation, scope-gated (DCR-3)
-#   AC5  — manifest sha256 coherence oracle (#949 pattern)
 #   G6   — doc reference-integrity on tests/test-sed-inplace.sh removal
 #          (GATE:QUALITY doc_updates cap finding, cycle 2): decoupling-plan
 #          row no longer a bare KEEP + retains a RETIRED marker (row
@@ -38,8 +36,11 @@
 #          preservation (Traps A/B, DCR-3)
 #   G5   — CI registration (this file wired into e2e-dummy-target.yml)
 #
-# Base ref for scope/diff oracles, overridable via env (precedent:
-# #797/#798/#799/#949): default = the dev-branch merge-base with main.
+# Retired in issue #121: the diff-scoped manifest-regen oracle this file used to
+# carry. It was an un-gated DELTA over a merged cycle's own diff, and the
+# same-commit-regen obligation it asserted is carried in whole-tree state form by
+# scripts/test/check-manifest-regen-clean.sh's FIXED POINT leg, which needs no
+# diff. Disposition: docs/doc-invariant-registry.md §16.
 #
 # RED expectation (pre-edit, this commit): AC1 (usage-token + prompt-banner
 # absence), AC2 (all == 0 static removal predicates, \bsed\b == 0 guard),
@@ -51,8 +52,6 @@
 # here would be a regression signal in the harness itself, not a valid RED):
 #   AC2 non-vacuity keystone (install_into_target/manifest.json intact) —
 #     PASS pre+post, nothing has touched install_into_target.
-#   AC5 manifest oracle — vacuously PASS pre-edit (no manifest source
-#     touched yet in the diff); becomes load-bearing post-GREEN.
 #   G4 preservation guards (README:12 bullet, 4 mermaid GATE nodes) — PASS
 #     pre+post, must NOT be flagged by the table-exclusive removal regex.
 # =============================================================================
@@ -66,12 +65,9 @@ CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
 SUBMODULE_COMMON="$PROJECT_ROOT/docs/submodule-common-rules.md"
 README_MD="$PROJECT_ROOT/README.md"
 SETUP_GUIDE="$PROJECT_ROOT/setup/SETUP-GUIDE.md"
-MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 DECOUPLING_PLAN="$PROJECT_ROOT/docs/host-service-decoupling-plan.md"
 IMPROVEMENT_BACKLOG="$PROJECT_ROOT/docs/improvement-backlog.md"
-
-BASE_REF="${ISSUE_952_BASE_REF:-$(git -C "$PROJECT_ROOT" merge-base HEAD main 2>/dev/null || true)}"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -298,28 +294,6 @@ assert_true "G4 guard (Trap A): mermaid '{{AUDIT}}' node survives" \
   "[ \"\$(grep -c 'AUDIT}}' '$README_MD')\" -ge 1 ]"
 assert_true "G4 guard (Trap A): mermaid '{{GATE:QUALITY}}' node survives" \
   "[ \"\$(grep -c 'GATE:QUALITY}}' '$README_MD')\" -ge 1 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC5 manifest sha256 coherence oracle (#949 pattern) ==="
-
-if [[ -z "$BASE_REF" ]]; then
-  echo "  SKIP: AC5 manifest oracle (no base ref available)"
-  TESTS=$((TESTS + 1))
-else
-  cycle_diff_files="$(git -C "$PROJECT_ROOT" diff --name-only "$BASE_REF"...HEAD 2>/dev/null || true)"
-  manifest_sources="$(jq -r '.artifacts[].source' "$MANIFEST_JSON" 2>/dev/null | sort)"
-  touched_sources="$(comm -12 <(printf '%s\n' "$cycle_diff_files" | sort) <(printf '%s\n' "$manifest_sources") | grep -v '^setup/manifest.json$' || true)"
-
-  if [[ -n "$touched_sources" ]]; then
-    assert_true "AC5: manifest.json is itself in the diff (regen ran, #949 [MUST]) — touched sources: $(printf '%s' "$touched_sources" | tr '\n' ' ')" \
-      "grep -qx 'setup/manifest.json' <<<\"\$cycle_diff_files\""
-  else
-    echo "  PASS: AC5 manifest oracle vacuously true (no manifest-listed source touched yet pre-GREEN)"
-    PASS=$((PASS + 1)); TESTS=$((TESTS + 1))
-  fi
-fi
-
 
 # =============================================================================
 echo ""

@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/INDEX.md docs/adr/README.md docs/autoflow-guide.md docs/evaluation-system.md docs/maintained-docs.md docs/teammate-contracts.md scripts/test/check-suite-leaf.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/lib/harness-pins.sh tests/run-doc-invariants.sh
+# ci-subject: .github/workflows/e2e-dummy-target.yml docs/INDEX.md docs/adr/README.md docs/autoflow-guide.md docs/evaluation-system.md docs/maintained-docs.md docs/teammate-contracts.md scripts/test/check-suite-leaf.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/harness-pins.sh tests/run-doc-invariants.sh
 # lane: standing
-# cycle-arm: #69
 # budget-secs: SUITE_BUDGET_CEILING_SECS
-# out-of-tree-inputs: yes
 # =============================================================================
 # Test: Verification-depth justification at ARCHITECT / GATE:PLAN — Issue #69 (cycle-scoped)
 # =============================================================================
@@ -38,15 +36,12 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 AUTOFLOW_GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
 EVAL_SYSTEM="$PROJECT_ROOT/docs/evaluation-system.md"
 TEAMMATE_CONTRACTS="$PROJECT_ROOT/docs/teammate-contracts.md"
-CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
 ADR_README="$PROJECT_ROOT/docs/adr/README.md"
 MAINTAINED_DOCS="$PROJECT_ROOT/docs/maintained-docs.md"
 INDEX_MD="$PROJECT_ROOT/docs/INDEX.md"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
-
-source "$PROJECT_ROOT/tests/lib/base-ref.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -64,18 +59,6 @@ assert_true() {
 
 note_deferred() {
   echo "  DEFERRED-OBSERVABLE: $1"
-}
-
-HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
-
-# Shared guard for the three branch-scoped checks below (AC:rubric-unchanged,
-# AC:oracle-clause-untouched, change-surface-bounded): each is this cycle's own PR
-# contract and stays inert off the issue-69 dev branch.
-on_issue_branch() {
-  case "$HEAD_BRANCH" in
-    dev/*-issue-69|dev/*-issue-69-*) return 0 ;;
-    *) return 1 ;;
-  esac
 }
 
 # =============================================================================
@@ -165,51 +148,6 @@ assert_true "AC-69-NO-QUANTITY-CAP: the Verification depth section introduces no
 
 # =============================================================================
 echo ""
-echo "=== AC:rubric-unchanged — the GATE:PLAN rubric row set, PASS thresholds, and Regressions max-N multiset are unchanged from the base ref ==="
-
-if on_issue_branch; then
-  BASE_REF="$(resolve_base_ref)" || {
-    echo "  BLOCK: no comparison base resolvable — AC-69-RUBRIC counted FAIL, never skipped"
-    TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-    BASE_REF=""
-  }
-  if [[ -n "$BASE_REF" ]]; then
-    ROWS_HEAD="$(awk '/^### Scoring \(5 items × 10 points\)/{f=1;c++} c==1&&f{print} /^### ADR-conformance check/{if(c==1)f=0}' "$AUTOFLOW_GUIDE" | grep -oE '^\| (Feasibility|Dependencies|Scope|Security|Test plan) ' | sort -u)"
-    ROWS_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | awk '/^### Scoring \(5 items × 10 points\)/{f=1;c++} c==1&&f{print} /^### ADR-conformance check/{if(c==1)f=0}' | grep -oE '^\| (Feasibility|Dependencies|Scope|Security|Test plan) ' | sort -u)"
-    assert_true "AC-69-RUBRIC-rows: GATE:PLAN's 5 rubric row names are unchanged from $BASE_REF" \
-      '[ "$ROWS_HEAD" = "$ROWS_BASE" ]'
-    THRESH_HEAD="$(grep -c 'avg ≥ 7.5, each ≥ 7' "$AUTOFLOW_GUIDE" || true)"
-    THRESH_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | grep -c 'avg ≥ 7.5, each ≥ 7' || true)"
-    assert_true "AC-69-RUBRIC-thresholds: PASS threshold phrasing count is unchanged (head: $THRESH_HEAD, base: $THRESH_BASE)" \
-      "[ \"$THRESH_HEAD\" = \"$THRESH_BASE\" ]"
-    REGR_HEAD="$(grep -oE 'GATE:PLAN FAIL → ARCHITECT \(max [0-9]+×[^)]*\)' "$CLAUDE_MD" || true)"
-    REGR_BASE="$(git show "$BASE_REF:CLAUDE.md" | grep -oE 'GATE:PLAN FAIL → ARCHITECT \(max [0-9]+×[^)]*\)' || true)"
-    assert_true "AC-69-RUBRIC-regressions: GATE:PLAN's Regressions max-N clause is unchanged from $BASE_REF" \
-      '[ "$REGR_HEAD" = "$REGR_BASE" ]'
-  fi
-else
-  note_deferred "AC-69-RUBRIC: change-surface-relative guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown})."
-fi
-
-# =============================================================================
-echo ""
-echo "=== AC:oracle-clause-untouched — the composition-oracle clause's text is byte-identical to the base ref ==="
-
-if on_issue_branch; then
-  if [[ -n "${BASE_REF:-}" ]]; then
-    ORACLE_HEAD="$(awk '/^#### Composition oracle/{f=1} f&&/^### Testability-driven design/{f=0} f' "$AUTOFLOW_GUIDE")"
-    ORACLE_BASE="$(git show "$BASE_REF:docs/autoflow-guide.md" | awk '/^#### Composition oracle/{f=1} f&&/^### Testability-driven design/{f=0} f')"
-    # Referenced by NAME (see the AC-69-SCOPE-SYMMETRY comment above) — the clause text
-    # carries parentheses/backticks that eval would otherwise re-parse as shell syntax.
-    assert_true "AC-69-ORACLE-UNTOUCHED: composition-oracle clause text is byte-identical to $BASE_REF" \
-      '[ "$ORACLE_HEAD" = "$ORACLE_BASE" ]'
-  fi
-else
-  note_deferred "AC-69-ORACLE-UNTOUCHED: change-surface-relative guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown})."
-fi
-
-# =============================================================================
-echo ""
 echo "=== AC:manifest-fresh (O:manifest) — every manifest copy-row's recorded hash equals its source's live hash, for every source this cycle edits ==="
 
 MANIFEST_SOURCES=(
@@ -285,64 +223,6 @@ assert_true "AC-69-HARNESS-b: harness reports 'all workflow regression tests pas
 # The pin's teeth are unaffected and live where they always did:
 # tests/test-issue-27-composition-oracle.sh compares the sourced constant
 # against the live `node test/workflows/run.mjs` measurement.
-
-# =============================================================================
-echo ""
-echo "=== change-surface-bounded (branch-scoped) — the cycle's diff stays within the declared allow_list ==="
-
-allow_list=(
-  "docs/autoflow-guide.md"
-  "docs/evaluation-system.md"
-  "docs/teammate-contracts.md"
-  ".claude/workflows/architect-deliberation.js"
-  "docs/adr/README.md"
-  "docs/maintained-docs.md"
-  "docs/INDEX.md"
-  "setup/manifest.json"
-  "test/workflows/run.mjs"
-  "tests/test-issue-69-verification-depth.sh"
-  "tests/fixtures/doc-invariants.json"
-  "tests/test-issue-27-composition-oracle.sh"
-  "tests/test-issue-59-adoption-evidence-discipline.sh"
-  "tests/test-issue-62-sequential-rounds.sh"
-  # VERIFY cause-branch fix (RED-side): the 0018 ADR + this suite's own path also cross
-  # these five sibling change-surface/manifest-closure guards' own allow_lists (#67
-  # precedent — a cycle-scoped suite admits its own sibling-registration edits).
-  "tests/test-issue-798-topology-flip.sh"
-  "tests/test-issue-799-inert-cleanup.sh"
-  "tests/test-issue-955-subagent-background-ban.sh"
-  "tests/test-issue-846-doc-assertions.sh"
-  "tests/test-issue-848-doc-assertions.sh"
-  ".github/workflows/e2e-dummy-target.yml"
-  "tests/test-issue-952-wizard-removal.sh"
-  # post-merge collateral registrations (origin/main #52/#55 co-landing):
-  # their scope guards required the same mechanical admission of this cycle's
-  # paths, and those edits join this cycle's diff — self-registered here.
-  "tests/test-issue-52-peer-facilitator-premise.sh"
-  "tests/test-issue-55-score-format-contract.sh"
-  # HANDOFF step 6.7 appends the cycle digest to the dev branch after reviewer review.
-  "docs/cycle-digest.jsonl"
-  # .autoflow/* rows removed (GATE:QUALITY dock, Quality item): .autoflow/ is
-  # gitignored, so no path under it can ever appear in `git diff --name-only`
-  # — those three rows could never fire.
-)
-
-# The new ADR file's exact path is derived, not enumerable in advance (it does not exist
-# at RED time) — a glob member added to the allow_list set below when present.
-if [ -n "$NEW_ADR_PATH" ]; then
-  allow_list+=("docs/adr/$NEW_ADR_BASENAME")
-fi
-
-if on_issue_branch; then
-  if [[ -n "${BASE_REF:-}" ]]; then
-    DIFF_FILES="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD)"
-    UNCOVERED="$(comm -23 <(printf '%s\n' "$DIFF_FILES" | sort -u) <(printf '%s\n' "${allow_list[@]}" | sort -u))"
-    assert_true "AC-69-SCOPE: cycle diff, set-differenced against the declared allow_list, is empty (uncovered: $(printf '%s' "$UNCOVERED" | paste -sd, -))" \
-      '[ -z "$UNCOVERED" ]'
-  fi
-else
-  note_deferred "AC-69-SCOPE: change-surface guard inert off the issue-69 dev branch (head: ${HEAD_BRANCH:-unknown}) — this cycle's own PR contract, not every branch's."
-fi
 
 # =============================================================================
 echo ""

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/hooks/check-autoflow-gate.sh CLAUDE.md README.md docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md docs/doc-invariant-registry.md docs/submodule-common-rules.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/test/check-cycle-scope-guard.sh setup/manifest.json tests/fixtures/doc-invariants.json tests/manual/issue-798-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh
+# ci-subject: CLAUDE.md README.md docs/doc-invariant-registry.md docs/submodule-common-rules.md scripts/test/check-cycle-scope-guard.sh tests/fixtures/doc-invariants.json tests/manual/issue-798-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
-# out-of-tree-inputs: yes
 # =============================================================================
 # Test: submodule-detach topology-flip RED/GREEN harness — Issue #798
 # ([#785-S11a] 토폴로지 플립)
@@ -27,10 +26,6 @@
 #   AC1  GITMODULES-CLEAR   — .gitmodules absent from HEAD (D-1 = delete)
 #   AC2  GITLINK-CLEAR      — no 160000 gitlink at `services` in HEAD/index
 #   AC3  COUNT-ZERO         — non-vacuity keystone: submodule count == 0
-#   AC6  DOC-SECONDARY-COHERENCE (guard) — dual-mode definitions + Secondary
-#        markers preserved
-#   AC7  ADR-HISTORICAL-KEEP (guard) — ADR-0015:148 kept verbatim
-#   AC9  NO-NEW-TIMING (guard)      — no new hook/workflow timing mechanism
 #   AC12 CI-ENFORCED        — the suite + `.gitmodules` are CI-registered
 #
 # Migrated out of this file, assertion carried elsewhere (issue #109, registry
@@ -61,7 +56,11 @@
 # RED expectation (pre-change): AC1/AC2/AC3/AC12 FAIL.
 # AC3 COUNT-ZERO is the non-vacuity keystone — a
 # pre-change PASS on any detach assertion means the test is mis-scoped.
-# AC6/AC7/AC9 are preservation guards and PASS both pre- and post-change.
+# The branch-relative preservation guards this file used to carry (the Secondary-marker
+# diff fence, the ADR-0015 no-hunk fence and the two no-new-timing scope fences) were
+# retired in issue #121: each was an un-gated DELTA over a merged cycle's own diff, so on
+# any later branch it silently re-aimed at that branch. Their dispositions and the carriers
+# that took over are docs/doc-invariant-registry.md §16.
 # =============================================================================
 
 set -uo pipefail
@@ -69,12 +68,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
-ADR_0015="$PROJECT_ROOT/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
 README_MD="$PROJECT_ROOT/README.md"
-
-# Base ref for the AC9 diff-scope guard: merge-base against main, overridable
-# via env (precedent: #797 ISSUE_797_BASE_REF).
-BASE_REF="${ISSUE_798_BASE_REF:-$(git -C "$PROJECT_ROOT" merge-base HEAD main 2>/dev/null || true)}"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -139,122 +133,6 @@ assert_true "AC3a: git submodule status is empty" \
   "[ -z \"\$(git submodule status 2>/dev/null)\" ]"
 assert_true "AC3b: HEAD .gitmodules path-entry count == 0" \
   "[ \"\$(git show HEAD:.gitmodules 2>/dev/null | grep -cE '^\\[submodule' || true)\" -eq 0 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC6 DOC-SECONDARY-COHERENCE (guard) — dual-mode + Secondary markers preserved ==="
-# [Harness fix — GATE:PLAN finding, ledger E10] The verification design's
-# guard (a) literals ('single-repo = the host' / 'multi-repo =') were authored
-# without CLAUDE.md's actual bold markers around the term itself
-# ("**single-repo** = the host", not "single-repo = the host" — the '**'
-# interrupts the naive substring). Corrected here to the literal marker-aware
-# strings so the guard is GREEN pre-change as the design intends, rather than
-# a false pre-change RED from a harness typo.
-
-
-# AC6b: every *Secondary (multi-repo):* marker across docs/ (+ CLAUDE.md)
-# unchanged — no diff hunk touches a line carrying the marker.
-if [[ -z "$BASE_REF" ]]; then
-  echo "  SKIP: AC6b (no base ref available)"
-  TESTS=$((TESTS + 1))
-else
-  # #848 admission (same remedy class as the sibling allow-list re-admissions
-  # above, deebfc3 precedent): #848's GATE:PLAN-passed design (ledger E11/E12)
-  # promotes the DELIVER multi-repo fenced list to a purely ADDITIVE
-  # '*Secondary (multi-repo):*' marker line (convention parity with HANDOFF
-  # step 4 / CLAUDE.md). The #798 concern is unchanged for every other
-  # marker: no pre-existing marker line may be removed or altered — only the
-  # one approved #848 added line is filtered out of the diff scan.
-  secondary_marker_diff="$(git diff "$BASE_REF"...HEAD -- docs/ CLAUDE.md 2>/dev/null \
-    | grep -E '^[+-].*Secondary \(multi-repo\):' \
-    | grep -vF '+*Secondary (multi-repo):* In a multi-repo deployment (one or more submodules), DELIVER fans out' || true)"
-  assert_true "AC6b: no diff hunk touches a '*Secondary (multi-repo):*' marker line" \
-    "[ -z '$secondary_marker_diff' ]"
-fi
-# AC6c (no sentence outside CLAUDE.md:42 flips a this-project claim) carried no
-# assertion of its own: the verification design's §1 AC6 method leaned on the
-# path-level scope-containment lane that used to sit below. Issue #75 retired
-# that lane — a merged cycle's hand-written path allow-list forces every later
-# cycle to edit it — so AC6c is now UNCOVERED in this file, recorded as such at
-# docs/doc-invariant-registry.md §5 (Issue #75 table, the unscoped path
-# allow-list lanes row). What replaces it is not another in-suite inventory:
-# in-flight change surface is carried by docs/submodule-common-rules.md >
-# Change Surface Rules, and a cycle-scoped lane is now branch-scoped by
-# construction, enforced by scripts/test/check-cycle-scope-guard.sh.
-
-# =============================================================================
-echo ""
-echo "=== AC7 ADR-HISTORICAL-KEEP (guard) — ADR-0015:148 kept verbatim ==="
-
-if [[ -n "$BASE_REF" ]]; then
-  adr_diff="$(git diff "$BASE_REF"...HEAD -- "$ADR_0015" 2>/dev/null || true)"
-  assert_true "AC7b: no diff hunk against ADR-0015 (immutable historical record)" \
-    "[ -z '$adr_diff' ]"
-fi
-
-# =============================================================================
-echo ""
-echo "=== AC9 NO-NEW-TIMING (guard) — no new hook/workflow timing mechanism ==="
-
-if [[ -z "$BASE_REF" ]]; then
-  echo "  SKIP: AC9 (no base ref available)"
-  TESTS=$((TESTS + 1))
-else
-  diff_files_ac9="$(git diff --name-only "$BASE_REF"...HEAD 2>/dev/null || true)"
-  # #843 parity-carried exception: the topology-flip work itself must not add
-  # a new hook, but an in-flight #843 engine-hook change (the FIRST intentional
-  # edit to check-autoflow-gate.sh since #790 packaging) is admitted when it
-  # lands together with a byte-identical plugin/autoflow/hooks mirror — the
-  # same shape as verify-package.sh AC5 parity / test-788 AC10a. A hook diff
-  # that is NOT the #843 gate-script change (or lacks mirror parity) still
-  # fails this guard.
-  hooks_touched_ac9="no"
-  printf '%s\n' "$diff_files_ac9" | grep -q '^\.claude/hooks/' && hooks_touched_ac9="yes"
-  hooks_admitted_ac9="no"
-  if [[ "$hooks_touched_ac9" == "no" ]]; then
-    hooks_admitted_ac9="yes"
-  elif [[ "$diff_files_ac9" == *".claude/hooks/check-autoflow-gate.sh"* ]] \
-    && cmp -s "$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh" \
-              "$PROJECT_ROOT/plugin/autoflow/hooks/check-autoflow-gate.sh" 2>/dev/null; then
-    hooks_admitted_ac9="yes"
-  fi
-  assert_true "AC9: diff touches no .claude/hooks/** path, OR only check-autoflow-gate.sh with its plugin mirror byte-identical (#843 parity-carried exception)" \
-    "[ '$hooks_admitted_ac9' = 'yes' ]"
-  # #62 window replacement (feature design D10, supersedes the #985/#27/#56/#59
-  # substring chain): the per-cycle grep -vF allow window does not scale — that
-  # cycle's edit leaves 99 surviving lines, 27 of them <=25-char generic
-  # fragments, and admitting those as literals would make the arm match any
-  # future edit under the path. The scope obligation this lane actually owes is
-  # "no cycle sprawls into a workflow file it did not declare", which is a
-  # file-set property, not a line property. Within-file content protection is
-  # NOT dropped — it is carried, permanently and independently of diff size, by
-  # tests/fixtures/doc-invariants.json's scope:"permanent" rows on the workflow
-  # scripts and by the manifest sha256 pin regenerated in the same commit
-  # (AC-56-10a, AC-59-9).
-  workflows_admitted_ac9="yes"
-  while IFS= read -r wf; do
-    [[ -z "$wf" ]] && continue
-    # No filename allow-list here, deliberately. Since issue #75 retired this
-    # file's path-level lane, WHICH files a cycle may touch is carried by
-    # docs/submodule-common-rules.md > Change Surface Rules (the trace rule plus
-    # the pre-PR `git diff <base>...HEAD` self-audit), not by an in-suite
-    # inventory a later cycle would have to edit. A workflow path with no manifest artifacts[]
-    # row yields an empty man_sha and therefore still fails the equality below, so
-    # sprawl into an unpinned workflow file is caught by this arm as well.
-    wf_sha="$(shasum -a 256 "$PROJECT_ROOT/$wf" 2>/dev/null | awk '{print $1}')"
-    man_sha="$(jq -r --arg s "$wf" '.artifacts[] | select(.source==$s) | .sha256' "$PROJECT_ROOT/setup/manifest.json")"
-    # Both -n guards are load-bearing: -n "$wf_sha" is "still exists in the
-    # worktree" (a DELETED path is listed by git diff --name-only, shasum emits
-    # nothing); -n "$man_sha" is "carries a setup/manifest.json artifacts[] row"
-    # (jq -r on an absent row emits nothing). Without the first, a cycle that
-    # deletes a workflow script together with its manifest row compares "" to ""
-    # and is silently ADMITTED.
-    [[ -n "$wf_sha" && -n "$man_sha" && "$wf_sha" == "$man_sha" ]] || workflows_admitted_ac9="no"
-  done < <(git diff --name-only "$BASE_REF"...HEAD -- .claude/workflows 2>/dev/null || true)
-  assert_true "AC9: diff touches no .claude/workflows/** path, OR every touched .claude/workflows/** path has a setup/manifest.json sha256 row matching its current content (#62 D10 — supersedes the #985/#27/#56/#59 substring window)" \
-    "[ '$workflows_admitted_ac9' = 'yes' ]"
-fi
-
 
 # =============================================================================
 echo ""
