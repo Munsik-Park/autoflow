@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/test/suite-coverage.sh scripts/test/run-suites.sh scripts/test/suite-manifest.sh scripts/test/check-suite-manifest.sh tests/test-push-context-base-ref.sh docs/autoflow-guide.md docs/evaluation-system.md docs/adr/0019-scope-fit-verification-policy.md tests/fixtures/gate-schema.json .github/workflows/contract-suites.yml
+# ci-subject: scripts/test/suite-coverage.sh scripts/test/run-suites.sh scripts/test/suite-manifest.sh scripts/test/check-suite-manifest.sh scripts/test/select-suites.sh scripts/test/green-tree-store.sh scripts/test/green-tree-register.sh scripts/cleanup/cleanup-issue.sh tests/test-push-context-base-ref.sh docs/autoflow-guide.md docs/evaluation-system.md docs/adr/0019-scope-fit-verification-policy.md tests/fixtures/gate-schema.json .github/workflows/contract-suites.yml
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -551,6 +551,377 @@ LG
 
   rm -f "$RT_ERR"
   rm -rf "$FXRT"
+fi
+
+
+# =============================================================================
+# Issue #130 — cross-artifact agreement for the repo-scoped shared store and
+# the per-suite input-hash key. Every leg below names a drift no fixture leg
+# can see: a fixture leg is scoped to one script and structurally cannot
+# observe what a SECOND file defines, or fails to reach.
+# =============================================================================
+
+STORE_LIB="$PROJECT_ROOT/scripts/test/green-tree-store.sh"
+REGISTER="$PROJECT_ROOT/scripts/test/green-tree-register.sh"
+SELECTOR="$PROJECT_ROOT/scripts/test/select-suites.sh"
+CLEANUP="$PROJECT_ROOT/scripts/cleanup/cleanup-issue.sh"
+ADR_0019="$PROJECT_ROOT/docs/adr/0019-scope-fit-verification-policy.md"
+
+echo ""
+echo "=== Issue #130 — shared store and input-hash key agreement ==="
+
+# -----------------------------------------------------------------------------
+# Leg 9 — repository-key agreement, AND the CWD at which the key is taken.
+#
+# The store path is $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md,
+# and <repo-key> is derived by the shipped `cleanup-issue.sh --print-repo-key`
+# rather than re-typed. That subcommand resolves its root with a bare
+# `git rev-parse --show-toplevel` and no `-C`, so it answers for the repository
+# containing the CURRENT WORKING DIRECTORY: the CWD is a term of the call, not
+# an incidental. Unpinned, a resolver given a fixture `--root` writes and reads
+# a fixture store under THIS repository's key, and the symptom — a permanent
+# cold start — is indistinguishable from correct fail-safe behaviour. The leg
+# therefore invokes `--store-path` from a DIFFERENT directory than `--root`,
+# which is the only shape in which the two answers can part.
+# -----------------------------------------------------------------------------
+
+if [ ! -f "$REGISTER" ]; then
+  assert_true "repo-key-agreement: scripts/test/green-tree-register.sh exists (the store path cannot be resolved without it)" "false"
+else
+  FXK="$(mktemp -d)"
+  ARK="$(mktemp -d)"
+  mkdir -p "$FXK/tests"
+  printf 'x\n' > "$FXK/tests/keep.txt"
+  (cd "$FXK" && git init -q -b main && git add -A \
+    && git -c user.email=t@example.com -c user.name=t commit -q -m init)
+
+  FX_KEY="$(cd "$FXK" && bash "$CLEANUP" --print-repo-key 2>/dev/null)"
+  SELF_KEY="$(cd "$PROJECT_ROOT" && bash "$CLEANUP" --print-repo-key 2>/dev/null)"
+  EXPECTED_STORE="$ARK/$FX_KEY/green-trees/register.md"
+  ACTUAL_STORE="$(cd "$PROJECT_ROOT" && AUTOFLOW_ARCHIVE_ROOT="$ARK" bash "$REGISTER" --store-path --root "$FXK" 2>/dev/null)"
+
+  assert_true "repo-key-agreement: --store-path prints \$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md, the key taken by the shipped cleanup-issue.sh --print-repo-key (expected: '$EXPECTED_STORE', got: '$ACTUAL_STORE')" \
+    "[ -n \"\$FX_KEY\" ] && [ \"\$ACTUAL_STORE\" = \"\$EXPECTED_STORE\" ]"
+
+  assert_true "repo-key-agreement: the key is taken at the resolver's --root, not at the caller's CWD — invoked from this repository, --store-path still answers for the fixture repository (fixture key: '$FX_KEY', this repository's key: '$SELF_KEY')" \
+    "[ -n \"\$FX_KEY\" ] && [ \"\$FX_KEY\" != \"\$SELF_KEY\" ] && printf '%s' \"\$ACTUAL_STORE\" | grep -qF \"/\$FX_KEY/\" && ! printf '%s' \"\$ACTUAL_STORE\" | grep -qF \"/\$SELF_KEY/\""
+
+  rm -rf "$FXK" "$ARK"
+fi
+
+# -----------------------------------------------------------------------------
+# Leg 10 — the glob expansion has ONE definition site, REACHED by every caller.
+#
+# The design collapses the two implementations to one, so a sampled-agreement
+# assertion over answers now passes trivially and catches nothing. The
+# reachable failure mode is a CALLER THAT STOPS REACHING THE SITE — a dropped
+# source line, or a re-typed local copy shadowing it — which an
+# answer-agreement leg cannot see. This leg asserts the definition count and
+# then drives each caller's OWN source lines and calls the function through
+# them, over an exact token, a directory token and a `**` token.
+# -----------------------------------------------------------------------------
+
+GLOB_DEF_FILES="$(grep -rlE '^[[:space:]]*glob_matches\(\)' "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" 2>/dev/null | sed "s#^$PROJECT_ROOT/##" | sort)"
+
+assert_true "glob-single-site: glob_matches() is defined exactly once in the tree, in scripts/test/suite-manifest.sh (definition sites: $(printf '%s' "$GLOB_DEF_FILES" | tr '\n' ' '))" \
+  "[ \"\$GLOB_DEF_FILES\" = 'scripts/test/suite-manifest.sh' ]"
+
+# glob_reaches <caller abs path> — source the caller's own `. "$SCRIPT_DIR/…"`
+# lines, then call glob_matches through whatever they brought in. Nothing is
+# re-typed here: the dialect's answers are the shipped function's answers.
+glob_reaches() {
+  local caller="$1"
+  (
+    SCRIPT_DIR="$(cd "$(dirname "$caller")" && pwd)"
+    while IFS= read -r srcline; do
+      eval "$srcline" >/dev/null 2>&1 || true
+    done < <(grep -E '^[[:space:]]*\.[[:space:]]+"\$SCRIPT_DIR/[^"]+"[[:space:]]*$' "$caller")
+    command -v glob_matches >/dev/null 2>&1 || exit 1
+    glob_matches 'docs/subject-a.md' 'docs/subject-a.md' || exit 1
+    glob_matches 'docs/subject-a.md' 'docs/subject-b.md' && exit 1
+    glob_matches 'docs/' 'docs/nested/x.md' || exit 1
+    glob_matches 'docs/glob/**' 'docs/glob/deep/g.md' || exit 1
+    glob_matches 'docs/glob/**' 'docs/other.md' && exit 1
+    exit 0
+  )
+}
+
+for GLOB_CALLER in "$SELECTOR" "$RESOLVER" "$REGISTER"; do
+  GLOB_CALLER_REL="${GLOB_CALLER#"$PROJECT_ROOT"/}"
+  assert_true "glob-single-site: $GLOB_CALLER_REL reaches glob_matches through the file it sources, and the dialect answers correctly through it (exact / directory / ** tokens)" \
+    "[ -f '$GLOB_CALLER' ] && glob_reaches '$GLOB_CALLER'"
+done
+
+# -----------------------------------------------------------------------------
+# Leg 11 — the citation basis is declared in ONE place, BOTH ways.
+#
+# `via: <basis>` is the only textual difference between the two runs of the
+# suite-grained-invalidation control pair, so a basis emitted that no
+# declaration names — or declared that no site writes — leaves that control
+# group unreadable while both runs still pass. The mirrored pair the reason
+# vocabulary has (emitted ⊆ declared, declared ⊆ emitted) is therefore owed
+# here as two legs of its own; a `citation-basis` block acquires none of it by
+# sitting next to `reason-tokens`.
+# -----------------------------------------------------------------------------
+
+extract_declared_bases() {
+  awk '
+    /^#[[:space:]]*citation-basis:[[:space:]]*begin[[:space:]]*$/ { flag=1; next }
+    /^#[[:space:]]*citation-basis:[[:space:]]*end[[:space:]]*$/ { flag=0 }
+    flag { print }
+  ' "$RESOLVER" \
+    | sed -E 's/^#[[:space:]]*//' \
+    | grep -vE '^[[:space:]]*$' \
+    | sort -u
+}
+
+# Extraction oracle, stated here as the leg's own contract rather than
+# re-derived by the implementation: the emitted domain is the quoted value of
+# every `record["$suite"]=...` assignment on a NON-COMMENT line — the same
+# record-site restriction the reason vocabulary uses. It must NOT be a
+# whole-file `via:` grep: this script's own --self-test carries `via: <basis>`
+# inside executable grep patterns, which the non-comment rule cannot exclude
+# and which would make every basis look emitted whatever the body writes.
+extract_emitted_bases() {
+  grep -vE '^[[:space:]]*#' "$RESOLVER" \
+    | grep -oE "$RESOLVER_RECORD_RE" \
+    | grep -oE 'via: [a-z][a-z-]*' \
+    | sed -E 's/^via: //' \
+    | sort -u
+}
+
+CB_DECLARED="$(extract_declared_bases)"
+CB_EMITTED="$(extract_emitted_bases)"
+CB_MISSING="$(comm -23 <(printf '%s\n' "$CB_EMITTED") <(printf '%s\n' "$CB_DECLARED"))"
+CB_PHANTOM="$(comm -13 <(printf '%s\n' "$CB_EMITTED") <(printf '%s\n' "$CB_DECLARED"))"
+
+assert_true "citation-basis: the resolver header carries a citation-basis: begin/end declaration block, beside reason-tokens, naming the bases the records carry (declared: $(printf '%s' "$CB_DECLARED" | tr '\n' ' '))" \
+  "[ -n \"\$CB_DECLARED\" ]"
+
+assert_true "citation-basis: emitted ⊆ declared — every via: basis the resolver body writes appears in the declaration block (missing: $(printf '%s' "$CB_MISSING" | tr '\n' ' '))" \
+  "[ -n \"\$CB_DECLARED\" ] && [ -n \"\$CB_EMITTED\" ] && [ -z \"\$CB_MISSING\" ]"
+
+assert_true "citation-basis: declared ⊆ emitted — no basis is declared that no site in the resolver body actually writes (phantom: $(printf '%s' "$CB_PHANTOM" | tr '\n' ' '))" \
+  "[ -n \"\$CB_DECLARED\" ] && [ -n \"\$CB_EMITTED\" ] && [ -z \"\$CB_PHANTOM\" ]"
+
+# -----------------------------------------------------------------------------
+# Leg 12 — the repository key and the in-repo refusal are CALLED, never
+# re-typed. The guard has exactly one subject ($AUTOFLOW_ARCHIVE_ROOT) and the
+# store lives beneath that same value, so there is nothing for two
+# implementations to agree about — a second copy could only disagree. What is
+# reachable is the store library re-typing either one, or ceasing to call the
+# site at all; a fixture leg scoped to one script cannot observe that.
+# -----------------------------------------------------------------------------
+
+KEY_DEF_FILES="$(grep -rlE '^[[:space:]]*derive_repo_key\(\)' "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" 2>/dev/null | sed "s#^$PROJECT_ROOT/##" | sort)"
+PHYS_DEF_FILES="$(grep -rlE '^[[:space:]]*physical_path\(\)' "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/tests" 2>/dev/null | sed "s#^$PROJECT_ROOT/##" | sort)"
+
+assert_true "single-site: derive_repo_key() is defined exactly once, in scripts/cleanup/cleanup-issue.sh, and the store library reaches it by invoking that script rather than re-typing it (definition sites: $(printf '%s' "$KEY_DEF_FILES" | tr '\n' ' '))" \
+  "[ \"\$KEY_DEF_FILES\" = 'scripts/cleanup/cleanup-issue.sh' ] && [ -f '$STORE_LIB' ] && grep -qF 'cleanup-issue.sh' '$STORE_LIB' && ! grep -qE '^[[:space:]]*derive_repo_key\\(\\)' '$STORE_LIB'"
+
+assert_true "single-site: physical_path() — the in-repo refusal's path canonicalization — is defined exactly once, in scripts/cleanup/cleanup-issue.sh, and the store library reaches the refusal by invoking that script rather than re-typing it (definition sites: $(printf '%s' "$PHYS_DEF_FILES" | tr '\n' ' '))" \
+  "[ \"\$PHYS_DEF_FILES\" = 'scripts/cleanup/cleanup-issue.sh' ] && [ -f '$STORE_LIB' ] && grep -qF 'cleanup-issue.sh' '$STORE_LIB' && ! grep -qE '^[[:space:]]*physical_path\\(\\)' '$STORE_LIB'"
+
+# -----------------------------------------------------------------------------
+# Leg 13 — the writer's self-test is registered as a standing, unguarded CI
+# step. It is the only layer that runs the write side at all, so an unwired or
+# conditionally-guarded step silences the whole "a minted certificate
+# describes the tree that actually ran" criterion.
+# -----------------------------------------------------------------------------
+
+register_selftest_step_unguarded() {
+  awk '
+    /^[[:space:]]*- name:/ {
+      if (matched && found == "") found = blk
+      blk = $0; matched = 0; next
+    }
+    { blk = blk "\n" $0 }
+    /green-tree-register\.sh --self-test/ { matched = 1 }
+    END {
+      if (matched && found == "") found = blk
+      if (found != "" && found !~ /if:/) print "UNGUARDED"
+    }
+  ' "$CONTRACT_WORKFLOW" 2>/dev/null | grep -qF 'UNGUARDED'
+}
+
+assert_true "the-writers-oracle-is-wired: contract-suites.yml registers a 'run: bash scripts/test/green-tree-register.sh --self-test' step" \
+  "grep -qE 'run: *bash +scripts/test/green-tree-register\\.sh +--self-test' '$CONTRACT_WORKFLOW'"
+
+assert_true "the-writers-oracle-is-wired: the green-tree-register.sh --self-test step carries no if: guard" \
+  "grep -qE 'run: *bash +scripts/test/green-tree-register\\.sh +--self-test' '$CONTRACT_WORKFLOW' && register_selftest_step_unguarded"
+
+assert_true "the-writers-oracle-is-wired: contract-suites.yml's path filters name the two new scripts, so a change to either selects the workflow that runs their oracles" \
+  "grep -qF 'scripts/test/green-tree-store.sh' '$CONTRACT_WORKFLOW' && grep -qF 'scripts/test/green-tree-register.sh' '$CONTRACT_WORKFLOW'"
+
+# -----------------------------------------------------------------------------
+# Leg 14 — the governing record states the key the script computes. ADR-0019
+# is already a declared ci-subject of this suite, so an ADR that still states
+# the superseded key while the script computes the new one is a DETECTED
+# disagreement rather than a silent drift. Decision 2 is the passage at issue:
+# it fixes both the register's scope and its inheritance key.
+# -----------------------------------------------------------------------------
+
+assert_true "adr-agreement: ADR-0019 records the per-suite INPUT-HASH key the resolver now computes, not only the reach test it refines" \
+  "grep -qiE 'input[- ]hash' '$ADR_0019'"
+
+assert_true "adr-agreement: ADR-0019 records that the register is repo-scoped — a certificate readable by a later issue — not scoped to the minting issue's own ledger" \
+  "grep -qiE 'shared (store|register)|repo-scoped|cross-issue' '$ADR_0019'"
+
+# -----------------------------------------------------------------------------
+# Leg 15 — composition, extended: the ENTRY carries `<path>@<input-hash>`
+# tokens while the PLAN carries bare repo-relative paths. The plan is consumed
+# directly as a path list by run-suites.sh --selected, so a token echoed in
+# place of its path hands the runner a file that does not exist — silent in
+# the resolver, and surfacing only one layer downstream. The covering entry
+# names two of three suites, so the leg needs the parsed lookup to work (an
+# unparsed token covers nothing and the plan widens to all three).
+# -----------------------------------------------------------------------------
+
+if [ ! -f "$RESOLVER" ] || [ ! -f "$STORE_LIB" ]; then
+  assert_true "hashed-token-composition: the resolver and the store library exist (the hashed-token plan cannot be exercised without them)" "false"
+else
+  FXH="$(mktemp -d)"
+  mkdir -p "$FXH/tests" "$FXH/.autoflow"
+  WITNESS_H="$FXH/witness.log"
+  : > "$WITNESS_H"
+  for hn in a b c; do
+    cat > "$FXH/tests/test-fixture-130-hash-$hn.sh" <<SH
+#!/usr/bin/env bash
+# ci-subject: tests/fixture-130-hash-$hn-subject.txt
+# lane: standing
+# budget-secs: 5
+echo "\$0" >> "$WITNESS_H"
+exit 0
+SH
+    chmod +x "$FXH/tests/test-fixture-130-hash-$hn.sh"
+    printf 'x\n' > "$FXH/tests/fixture-130-hash-$hn-subject.txt"
+  done
+  printf '.autoflow/\n' > "$FXH/.gitignore"
+  (cd "$FXH" && git init -q -b main && git add -A \
+    && git -c user.email=t@example.com -c user.name=t commit -q -m init)
+
+  FXH_TREE="$(git -C "$FXH" rev-parse 'HEAD^{tree}')"
+  FXH_HEAD="$(git -C "$FXH" rev-parse HEAD)"
+  # The tokens are minted by the SHIPPED single site, never re-typed here.
+  FXH_TOKENS=""
+  for hn in a b; do
+    FXH_HASH="$(
+      SCRIPT_DIR="$PROJECT_ROOT/scripts/test"
+      # shellcheck source=/dev/null
+      . "$PROJECT_ROOT/scripts/test/suite-manifest.sh" 2>/dev/null
+      # shellcheck source=/dev/null
+      . "$STORE_LIB" 2>/dev/null
+      command -v suite_input_hash >/dev/null 2>&1 \
+        && suite_input_hash "$FXH" "$FXH_TREE" "tests/test-fixture-130-hash-$hn.sh"
+    )"
+    FXH_TOKENS="$FXH_TOKENS${FXH_TOKENS:+ }tests/test-fixture-130-hash-$hn.sh@$FXH_HASH"
+  done
+
+  LEDGER_H="$FXH/.autoflow/issue-9999-ledger.md"
+  {
+    printf '### green-tree | cycle: 1 | runner: VERIFY step 1\n'
+    printf -- '- tree: %s\n' "$FXH_TREE"
+    printf -- '- head: %s\n' "$FXH_HEAD"
+    printf -- '- worktree: clean\n'
+    printf -- '- suites: %s\n' "$FXH_TOKENS"
+    printf -- '- result: run-suites: 2 passed, 0 failed, 0 timed out, of 2 executed\n'
+    printf -- '- authority: Green-tree register\n\n'
+  } > "$LEDGER_H"
+
+  PLAN_FILE_H="$FXH/run-set.txt"
+  ARH="$(mktemp -d)"
+  AUTOFLOW_ARCHIVE_ROOT="$ARH" bash "$RESOLVER" --ledger "$LEDGER_H" --cycle 1 --root "$FXH" \
+    --candidates all > "$PLAN_FILE_H" 2>/dev/null
+  PLAN_SET_H="$(sort -u "$PLAN_FILE_H" 2>/dev/null)"
+
+  assert_true "hashed-token-composition: the entry's @<input-hash> tokens are parsed, so the plan narrows to the one uncovered suite and carries BARE repo-relative paths (tokens: '$FXH_TOKENS' | plan: $(printf '%s' "$PLAN_SET_H" | tr '\n' ' '))" \
+    "[ \"\$PLAN_SET_H\" = 'tests/test-fixture-130-hash-c.sh' ] && ! printf '%s\\n' \"\$PLAN_SET_H\" | grep -q '@'"
+
+  bash "$RUNNER" --root "$FXH" --selected "$PLAN_FILE_H" > /tmp/issue130-hash-runner.out 2>&1
+  EXECUTED_SET_H="$(sort "$WITNESS_H" 2>/dev/null | sed "s#^$FXH/##" | sort -u)"
+
+  assert_true "hashed-token-composition: that plan, fed to the real run-suites.sh --selected, executes exactly the planned set (executed: $(printf '%s' "$EXECUTED_SET_H" | tr '\n' ' ') | plan: $(printf '%s' "$PLAN_SET_H" | tr '\n' ' '))" \
+    "[ \"\$EXECUTED_SET_H\" = \"\$PLAN_SET_H\" ]"
+
+  rm -rf "$FXH" "$ARH"
+fi
+
+# -----------------------------------------------------------------------------
+# Leg 16 — cross-issue cold start, on THIS repository. The hermetic half lives
+# in the resolver's own self-test; this half is what makes the criterion's
+# "real output" wording true — the shipped resolver, this repository's own
+# root, the real repository key, and a store seeded at the captured clean tree
+# by a hypothetical prior issue.
+#
+# DECIDABILITY: resolution order step 3 routes a dirty worktree to RUN before
+# any store read, so the empty-plan assertion is false on any checkout with
+# uncommitted changes. The disposition is an EXPLICIT REPORTED SKIP naming the
+# dirty worktree — a silent skip would make the leg green wherever a human
+# runs it and executed only where nobody watches. Step 3 is not relaxed to
+# rescue the leg.
+#
+# The expected plan is NOT empty: a suite declaring `out-of-tree-inputs: yes`
+# executes unconditionally, ahead of every store read. The leg therefore
+# derives its expectation from the shipped declaration rather than asserting a
+# literal emptiness the floor forbids.
+# -----------------------------------------------------------------------------
+
+REAL_DIRTY="$(cd "$PROJECT_ROOT" && git status --porcelain 2>/dev/null)"
+if [ -n "$REAL_DIRTY" ]; then
+  echo "  SKIP: cross-issue-cold-start (real repository) — the worktree is dirty, and resolution order step 3 routes a dirty worktree to RUN before any store read, so the assertion is not decidable here"
+elif [ ! -f "$STORE_LIB" ]; then
+  assert_true "cross-issue-cold-start: scripts/test/green-tree-store.sh exists (the shared store cannot be read without it)" "false"
+else
+  ARR="$(mktemp -d)"
+  REAL_KEY="$(cd "$PROJECT_ROOT" && bash "$CLEANUP" --print-repo-key 2>/dev/null)"
+  REAL_STORE="$ARR/$REAL_KEY/green-trees/register.md"
+  mkdir -p "$(dirname "$REAL_STORE")"
+  REAL_TREE="$(git -C "$PROJECT_ROOT" rev-parse 'HEAD^{tree}')"
+  REAL_HEAD="$(git -C "$PROJECT_ROOT" rev-parse HEAD)"
+
+  REAL_ENUM="$(
+    # shellcheck source=/dev/null
+    . "$MANIFEST_LIB" 2>/dev/null
+    suite_enumerate "$PROJECT_ROOT"
+  )"
+  REAL_OOT="$(
+    # shellcheck source=/dev/null
+    . "$MANIFEST_LIB" 2>/dev/null
+    while IFS= read -r s; do
+      [ -n "$s" ] || continue
+      [ "$(suite_header_field "$PROJECT_ROOT/$s" out-of-tree-inputs 2>/dev/null || true)" = yes ] && printf '%s\n' "$s"
+    done <<< "$REAL_ENUM"
+  )"
+  REAL_OOT="$(printf '%s\n' "$REAL_OOT" | grep -c . || true)"
+
+  {
+    printf '### green-tree-shared | issue: #129 | cycle: 1 | runner: VERIFY step 1\n'
+    printf -- '- tree: %s\n' "$REAL_TREE"
+    printf -- '- head: %s\n' "$REAL_HEAD"
+    printf -- '- worktree: clean\n'
+    printf -- '- suites: %s\n' "$(printf '%s\n' "$REAL_ENUM" | tr '\n' ' ' | sed 's/ *$//')"
+    printf -- '- result: run-suites: %s passed, 0 failed, 0 timed out, of %s executed\n' \
+      "$(printf '%s\n' "$REAL_ENUM" | grep -c .)" "$(printf '%s\n' "$REAL_ENUM" | grep -c .)"
+    printf -- '- authority: Green-tree register (shared store)\n\n'
+  } > "$REAL_STORE"
+
+  REAL_LEDGER="$(mktemp)"
+  : > "$REAL_LEDGER"
+  REAL_ERR="$(mktemp)"
+  REAL_PLAN="$(AUTOFLOW_ARCHIVE_ROOT="$ARR" bash "$RESOLVER" --root "$PROJECT_ROOT" \
+    --ledger "$REAL_LEDGER" --cycle 1 --candidates all 2>"$REAL_ERR")"
+  REAL_PLAN_N="$(printf '%s\n' "$REAL_PLAN" | grep -c . || true)"
+  REAL_INHERIT_N="$(grep -cE 'via: shared-tree( |$)' "$REAL_ERR" || true)"
+  REAL_ENUM_N="$(printf '%s\n' "$REAL_ENUM" | grep -c .)"
+
+  assert_true "cross-issue-cold-start: on a clean checkout of THIS repository, a shared entry a prior issue could have written — read through an EMPTY per-issue ledger — leaves nothing to run but the suites that declare out-of-tree inputs (planned: $REAL_PLAN_N, declared out-of-tree: $REAL_OOT, enumerated: $REAL_ENUM_N)" \
+    "[ \"\$REAL_PLAN_N\" -eq \"\$REAL_OOT\" ]"
+
+  assert_true "cross-issue-cold-start: every suite not planned is recorded INHERIT citing the shared entry, so the empty run set is attributable to the shared arm rather than to a resolver that produced nothing (via: shared-tree records: $REAL_INHERIT_N of $REAL_ENUM_N enumerated)" \
+    "[ \"\$REAL_INHERIT_N\" -eq \$(( REAL_ENUM_N - REAL_OOT )) ]"
+
+  rm -f "$REAL_LEDGER" "$REAL_ERR"
+  rm -rf "$ARR"
 fi
 
 echo ""

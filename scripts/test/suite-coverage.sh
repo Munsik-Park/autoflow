@@ -491,8 +491,115 @@ st_run() {
 
 st_reason() { printf '%s\n' "$ST_REC" | grep -E "^(RUN|INHERIT): $1 " | head -1; }
 
+# ---------------------------------------------------------------------------
+# Issue #130 fixture builders — the repo-scoped shared store and the per-suite
+# input-hash key. Every helper below drives a SHIPPED derivation rather than
+# re-typing one: the repository key comes from `cleanup-issue.sh
+# --print-repo-key` taken with its CWD at the fixture root (the CWD is a term
+# of that call, not an incidental — a key taken elsewhere answers for THIS
+# repository and the resulting permanent cold start is indistinguishable from
+# correct fail-safe behaviour), and the input hash comes from the shipped
+# `suite_input_hash`, never from a second implementation here.
+# ---------------------------------------------------------------------------
+CLEANUP_WRAPPER="$SCRIPT_DIR/../cleanup/cleanup-issue.sh"
+
+fx_repo_key() { # <dir> -> the shipped repository key for the fixture at <dir>
+  (cd "$1" && bash "$CLEANUP_WRAPPER" --print-repo-key 2>/dev/null)
+}
+
+fx_store_path() { # <archive-root> <dir> -> the shared register path
+  printf '%s/%s/green-trees/register.md' "$1" "$(fx_repo_key "$2")"
+}
+
+fx_store_init() { # <archive-root> <dir> -> creates and echoes an empty store
+  local p; p="$(fx_store_path "$1" "$2")"
+  mkdir -p "$(dirname "$p")"
+  : > "$p"
+  printf '%s' "$p"
+}
+
+# fx_shared_entry <store> <issue> <cycle> <tree> <head> <suites> [result] [worktree]
+# The shared grammar of the feature design: marker `### green-tree-shared | `,
+# deliberately NOT the ledger marker, and `authority: Green-tree register
+# (shared store)`.
+fx_shared_entry() {
+  local wt="${8:-clean}"
+  {
+    printf '### green-tree-shared | issue: #%s | cycle: %s | runner: VERIFY step 1\n' "$2" "$3"
+    printf -- '- tree: %s\n' "$4"
+    printf -- '- head: %s\n' "$5"
+    if [ "$wt" != omit ]; then
+      printf -- '- worktree: %s\n' "$wt"
+    fi
+    printf -- '- suites: %s\n' "$6"
+    printf -- '- result: %s\n' "${7:-run-suites: 3 passed, 0 failed, 0 timed out, of 3 executed}"
+    printf -- '- authority: Green-tree register (shared store)\n'
+    printf '\n'
+  } >> "$1"
+}
+
+# fx_input_hash <root> <tree> <suite> — the SHIPPED single site, sourced from
+# whichever library owns it. Never re-typed here: a second implementation of
+# the closure would agree on the day it was written and drift afterwards, and
+# the leg would then be testing itself.
+fx_input_hash() {
+  (
+    # shellcheck source=/dev/null
+    . "$SCRIPT_DIR/suite-manifest.sh" 2>/dev/null
+    if [ -f "$SCRIPT_DIR/green-tree-store.sh" ]; then
+      # shellcheck source=/dev/null
+      . "$SCRIPT_DIR/green-tree-store.sh" 2>/dev/null
+    fi
+    command -v suite_input_hash >/dev/null 2>&1 || exit 1
+    suite_input_hash "$1" "$2" "$3"
+  )
+}
+
+# fx_tokens <root> <tree> <suite> [<suite> ...] -> "<path>@<hash> ..."
+fx_tokens() {
+  local root="$1" tree="$2" s out=""
+  shift 2
+  for s in "$@"; do
+    out="$out${out:+ }$s@$(fx_input_hash "$root" "$tree" "$s")"
+  done
+  printf '%s' "$out"
+}
+
+# st_run_shared <archive-root> <dir> <ledger> <cycle> <mode> — st_run with the
+# store root redirected to a scratch directory. Reading or writing the live
+# store is not hermetic (a genuine prior-cycle entry could make an inherit leg
+# pass for a reason the leg did not create) and mutates production inheritance
+# state, so every leg owns its own root.
+st_run_shared() {
+  local err; err="$(mktemp)"
+  ST_PLAN="$(AUTOFLOW_ARCHIVE_ROOT="$1" bash "$SCRIPT_DIR/suite-coverage.sh" \
+    --root "$2" --ledger "$3" --cycle "$4" --candidates "$5" 2>"$err")"
+  ST_RC=$?
+  ST_REC="$(cat "$err")"
+  rm -f "$err"
+}
+
+# st_via <suite-regex> -> the citation basis the record carries, or empty
+st_via() { st_reason "$1" | grep -oE 'via: [a-z][a-z-]*' | sed 's/^via: //'; }
+
+# st_has_via <basis> -> true when ANY record carries that basis
+st_has_via() { printf '%s\n' "$ST_REC" | grep -qE "via: $1( |\$)"; }
+
 self_test() {
   local d ledger tree head
+
+  # Hermetic store root for the WHOLE self-test (issue #130). The shared store
+  # resolves under $AUTOFLOW_ARCHIVE_ROOT, which defaults into the operator's
+  # real home directory (scripts/cleanup/cleanup-issue.sh), so a leg that did
+  # not redirect it could inherit from a genuine prior-cycle certificate — an
+  # inherit leg passing for a reason the leg did not create — and could mutate
+  # production inheritance state. Every leg below therefore runs under a
+  # scratch root: the legs that seed a store name their own, and the ones that
+  # do not are covered by this default so their `no-entry` expectations stay
+  # decidable. This is a design property, not a fake: the real store library
+  # reads a real file at a real path.
+  local st_default_archive; st_default_archive="$(mktemp -d)"
+  export AUTOFLOW_ARCHIVE_ROOT="$st_default_archive"
 
   # --- SELECTION-SCOPED leg: a commit touching one subject narrows the plan
   # to the suites whose ci-subject closure reaches it, and every OTHER
@@ -877,6 +984,278 @@ SH
     st_fail "FAST-PATH-UNRESOLVABLE-HEAD leg (non-candidate boundary)" "expected b and c INHERIT not-in-cycle-delta with no head citation, got: $ST_REC"
   fi
   rm -rf "$d"
+
+  # =========================================================================
+  # Issue #130 — the repo-scoped shared store and the per-suite input-hash key
+  # =========================================================================
+  local st_ar store shared_head shared_tree old_head old_tree
+
+  # --- SHARED-COLD-START leg (acceptance criterion 1, hermetic half): a fresh
+  # issue on an unchanged tree, with an entry present ONLY in the shared store
+  # and an EMPTY per-issue ledger, plans nothing. This is the cross-issue cold
+  # start the change removes: today the resolver's only entry source is the
+  # issue's own ledger, so an empty ledger is a permanent cold start whatever
+  # a prior issue certified. The `via: shared-tree` assertion is what makes the
+  # inheritance attributable to the shared arm rather than to any local path.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  st_ar="$(mktemp -d)"; store="$(fx_store_init "$st_ar" "$d")"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_shared_entry "$store" 101 1 "$tree" "$head" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh"
+  st_run_shared "$st_ar" "$d" "$ledger" 1 all
+  if [ "$ST_RC" -eq 0 ] && [ -z "$ST_PLAN" ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE '^INHERIT: ')" -eq 3 ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE 'via: shared-tree( |$)')" -eq 3 ]; then
+    st_ok "SHARED-COLD-START leg" "an entry in the shared store alone, with an empty per-issue ledger, yields an empty run set with every suite recorded INHERIT via: shared-tree"
+  else
+    st_fail "SHARED-COLD-START leg" "expected an empty plan and 3 INHERIT records citing via: shared-tree, got rc=$ST_RC plan='$(printf '%s' "$ST_PLAN" | tr '\n' ' ')': $ST_REC"
+  fi
+  if st_reason 'tests/test-fx-cov-a\.sh' | grep -qF '### green-tree-shared | issue: #101'; then
+    st_ok "SHARED-COLD-START leg (citation)" "the inherited record cites the shared entry's own heading, so the certificate a reader re-derives names the issue that minted it"
+  else
+    st_fail "SHARED-COLD-START leg (citation)" "expected the record to cite the shared entry heading, got: $ST_REC"
+  fi
+  rm -rf "$d" "$st_ar"
+
+  # --- SUITE-GRAINED-INVALIDATION leg, hashed arm (acceptance criterion 2):
+  # one subject moved, so exactly the suite whose input closure contains it is
+  # invalidated. The other two carry an input hash that still matches at the
+  # captured tree and take the step-8 short-circuit, recorded via: input-hash.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  old_head="$(git -C "$d" rev-parse HEAD)"; old_tree="$(git -C "$d" rev-parse "HEAD^{tree}")"
+  fx_commit "$d" docs/subject-a.md "move subject a"
+  fx_entry "$ledger" 1 "$old_tree" "$old_head" \
+    "$(fx_tokens "$d" "$old_tree" tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh)"
+  st_run "$d" "$ledger" 1 all
+  if [ "$ST_PLAN" = "tests/test-fx-cov-a.sh" ] \
+     && st_reason 'tests/test-fx-cov-a\.sh' | grep -qE '^RUN: .* reach-changed' \
+     && [ "$(st_via 'tests/test-fx-cov-b\.sh')" = input-hash ] \
+     && [ "$(st_via 'tests/test-fx-cov-c\.sh')" = input-hash ]; then
+    st_ok "SUITE-GRAINED leg (hashed arm)" "the suite whose ci-subject target moved runs as reach-changed while the same-input suites inherit via: input-hash"
+  else
+    st_fail "SUITE-GRAINED leg (hashed arm)" "expected only test-fx-cov-a.sh planned (reach-changed) with b and c inheriting via: input-hash, got plan='$(printf '%s' "$ST_PLAN" | tr '\n' ' ')': $ST_REC"
+  fi
+  # The plan is a path list run-suites.sh --selected consumes directly, so the
+  # `@<input-hash>` suffix must live in the ENTRY and never reach stdout — a
+  # decorated plan hands the runner a file that does not exist, a failure that
+  # is silent here and only surfaces one layer downstream.
+  if [ "$ST_PLAN" = "tests/test-fx-cov-a.sh" ] && ! printf '%s\n' "$ST_PLAN" | grep -q '@'; then
+    st_ok "PLAN-UNDECORATED leg" "the narrowed plan carries bare repo-relative paths while the covering entry carries @<input-hash> tokens"
+  else
+    st_fail "PLAN-UNDECORATED leg" "expected the narrowed plan to be the bare path tests/test-fx-cov-a.sh, got: $(printf '%s' "$ST_PLAN" | tr '\n' ' ')"
+  fi
+  rm -rf "$d"
+
+  # --- SUITE-GRAINED-INVALIDATION leg, bare-token control: the SAME fixture
+  # state and the same covering entry, its tokens written in the shipped bare
+  # form. A bare token still folds, but carries no input-hash certificate, so
+  # the step-8 short-circuit cannot fire on it and every inheritance here is
+  # the shipped reach answer. Without this half the hashed arm above passes
+  # equally under a resolver that inherits everything it does not run.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  old_head="$(git -C "$d" rev-parse HEAD)"; old_tree="$(git -C "$d" rev-parse "HEAD^{tree}")"
+  fx_commit "$d" docs/subject-a.md "move subject a"
+  fx_entry "$ledger" 1 "$old_tree" "$old_head" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh"
+  st_run "$d" "$ledger" 1 all
+  if [ "$ST_PLAN" = "tests/test-fx-cov-a.sh" ] \
+     && ! st_has_via 'input-hash' \
+     && [ "$(st_via 'tests/test-fx-cov-b\.sh')" = reach ] \
+     && [ "$(st_via 'tests/test-fx-cov-c\.sh')" = reach ]; then
+    st_ok "SUITE-GRAINED leg (bare-token control)" "a bare token never carries an input-hash certificate: the same state inherits by the reach answer, recorded via: reach"
+  else
+    st_fail "SUITE-GRAINED leg (bare-token control)" "expected no via: input-hash record and b/c inheriting via: reach, got plan='$(printf '%s' "$ST_PLAN" | tr '\n' ' ')': $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- SUITE-GRAINED-INVALIDATION leg, whole-tree-key control: the shipped
+  # key, evaluated at the tree it certifies. This is the control group the
+  # criterion names — under a whole-tree key inheritance is all-or-nothing,
+  # recorded via: tree, and it is the only basis the shipped resolver can
+  # report. Read against the hashed arm above, the pair records exactly what
+  # the change buys: a basis that survives a tree the whole-tree key discards.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_entry "$ledger" 1 "$tree" "$head" \
+    "tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh"
+  st_run "$d" "$ledger" 1 all
+  if [ -z "$ST_PLAN" ] && [ "$(printf '%s\n' "$ST_REC" | grep -cE 'via: tree( |$)')" -eq 3 ]; then
+    st_ok "SUITE-GRAINED leg (whole-tree-key control)" "the shipped whole-tree key inherits every covered suite at the tree it certifies, recorded via: tree"
+  else
+    st_fail "SUITE-GRAINED leg (whole-tree-key control)" "expected an empty plan and 3 records citing via: tree, got plan='$(printf '%s' "$ST_PLAN" | tr '\n' ' ')': $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- HASHED-TOKEN-FAST-PATH leg (bare-token disposition, second half): the
+  # whole-tree fast path must still find a suite whose token carries an `@`
+  # suffix. The shipped membership test is a substring match on a space-padded
+  # field, and `" $suite "` cannot appear in a field whose tokens carry a
+  # suffix — so the parsed lookup is a correctness requirement of the token
+  # change, not a cleanup. A fixture set whose entries all stay bare exercises
+  # neither half.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_entry "$ledger" 1 "$tree" "$head" \
+    "$(fx_tokens "$d" "$tree" tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh)"
+  st_run "$d" "$ledger" 1 all
+  if [ "$ST_RC" -eq 0 ] && [ -z "$ST_PLAN" ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE '^INHERIT: ')" -eq 3 ]; then
+    st_ok "HASHED-TOKEN-FAST-PATH leg" "an entry whose tokens carry @<input-hash> is still found by the whole-tree fast path — the membership test is a parsed lookup, not a padded substring match"
+  else
+    st_fail "HASHED-TOKEN-FAST-PATH leg" "expected an empty plan and 3 INHERIT records, got rc=$ST_RC plan='$(printf '%s' "$ST_PLAN" | tr '\n' ' ')': $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- LIB-CLOSURE leg (DISPATCH directive D1): the only difference between
+  # the covering tree and the captured tree is a file under tests/lib/. The
+  # selection predicate selects EVERY suite when a shared library moves, so an
+  # input closure omitting tests/lib/** would be narrower than the selection
+  # boundary and the "inheritance boundary IS the selection boundary" contract
+  # would become false rather than tightened. No suite may take the step-8
+  # short-circuit here, however its own ci-subject closure looks.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  old_head="$(git -C "$d" rev-parse HEAD)"; old_tree="$(git -C "$d" rev-parse "HEAD^{tree}")"
+  fx_commit "$d" tests/lib/harness.sh "move the shared library"
+  fx_entry "$ledger" 1 "$old_tree" "$old_head" \
+    "$(fx_tokens "$d" "$old_tree" tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh)"
+  st_run "$d" "$ledger" 1 all
+  if ! st_has_via 'input-hash' \
+     && [ "$(printf '%s\n' "$ST_PLAN" | grep -c .)" -eq 3 ] \
+     && [ "$(printf '%s\n' "$ST_REC" | grep -cE '^RUN: .* reach-changed$')" -eq 3 ]; then
+    st_ok "LIB-CLOSURE leg (D1)" "a tests/lib/ move invalidates every suite's input hash, so no suite short-circuits and all three execute as reach-changed"
+  else
+    st_fail "LIB-CLOSURE leg (D1)" "expected no via: input-hash record and 3 RUN reach-changed, got plan='$(printf '%s' "$ST_PLAN" | tr '\n' ' ')': $ST_REC"
+  fi
+  rm -rf "$d"
+
+  # --- DECLARATION-BEATS-SHARED leg (acceptance criterion 3a): the declared
+  # out-of-tree reader is tested FIRST, before any store read and any key
+  # comparison, so it beats BOTH new paths exactly as it beats the shipped
+  # fast path today. The entry here is in the shared store, at the captured
+  # tree, and names the declaring suite with a matching input hash — every new
+  # admission path is armed, and the declaration must still win.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  awk '{print} /^# budget-secs:/ && !done {print "# out-of-tree-inputs: yes"; done=1}' \
+    "$d/tests/test-fx-cov-c.sh" > "$d/tests/test-fx-cov-c.sh.new" \
+    && mv "$d/tests/test-fx-cov-c.sh.new" "$d/tests/test-fx-cov-c.sh"
+  git -C "$d" add -A >/dev/null 2>&1
+  git -C "$d" -c user.email=a@b.c -c user.name=a commit -q -m declare >/dev/null 2>&1
+  st_ar="$(mktemp -d)"; store="$(fx_store_init "$st_ar" "$d")"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_shared_entry "$store" 102 1 "$tree" "$head" \
+    "$(fx_tokens "$d" "$tree" tests/test-fx-cov-a.sh tests/test-fx-cov-b.sh tests/test-fx-cov-c.sh)"
+  st_run_shared "$st_ar" "$d" "$ledger" 1 all
+  if [ "$ST_PLAN" = "tests/test-fx-cov-c.sh" ] \
+     && st_reason 'tests/test-fx-cov-c\.sh' | grep -qF 'out-of-tree-inputs'; then
+    st_ok "DECLARATION-BEATS-SHARED leg" "a declared out-of-tree reader executes even when the shared store holds a tree-matching entry naming it with a matching input hash"
+  else
+    st_fail "DECLARATION-BEATS-SHARED leg" "expected only test-fx-cov-c.sh planned with reason out-of-tree-inputs, got plan='$(printf '%s' "$ST_PLAN" | tr '\n' ' ')': $ST_REC"
+  fi
+  rm -rf "$d" "$st_ar"
+
+  # --- SHARED-UNRESOLVABLE-HEAD leg (acceptance criterion 4, shared arm): the
+  # new read path must apply the head_resolves conjunct its ledger sibling
+  # applies. A shared entry whose head names no commit is a named cause and
+  # its suites execute; nothing may cite the unresolvable head as an anchor,
+  # because the cited head is what a reader re-derives.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  st_ar="$(mktemp -d)"; store="$(fx_store_init "$st_ar" "$d")"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"
+  fx_shared_entry "$store" 103 1 "$tree" "cafebabecafebabecafebabecafebabecafebabe" \
+    "tests/test-fx-cov-a.sh"
+  st_run_shared "$st_ar" "$d" "$ledger" 1 all
+  if [ "$ST_RC" -eq 0 ] \
+     && st_reason 'tests/test-fx-cov-a\.sh' | grep -qE '^RUN: .* unresolvable-head' \
+     && ! printf '%s\n' "$ST_REC" | grep -q 'cafebabecafebabecafebabecafebabecafebabe'; then
+    st_ok "SHARED-UNRESOLVABLE-HEAD leg (shared arm)" "a shared entry whose head names no commit executes its suites with the named cause and is cited by nothing"
+  else
+    st_fail "SHARED-UNRESOLVABLE-HEAD leg (shared arm)" "expected test-fx-cov-a.sh RUN unresolvable-head at rc 0 with no citation of the bogus head, got rc=$ST_RC: $ST_REC"
+  fi
+  rm -rf "$d" "$st_ar"
+
+  # --- SHARED-UNRESOLVABLE-HEAD leg (ahead of the short-circuit): the same
+  # failure with the input-hash path ALSO armed — the entry carries a hash
+  # that matches at the captured tree. The head check is deliberately kept
+  # ahead of the short-circuit, so the answer must still be unresolvable-head;
+  # an implementation that short-circuits first inherits from a certificate no
+  # reader can re-derive.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  st_ar="$(mktemp -d)"; store="$(fx_store_init "$st_ar" "$d")"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"
+  fx_shared_entry "$store" 104 1 "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef" \
+    "cafebabecafebabecafebabecafebabecafebabe" \
+    "$(fx_tokens "$d" "$tree" tests/test-fx-cov-a.sh)"
+  st_run_shared "$st_ar" "$d" "$ledger" 1 all
+  if [ "$ST_RC" -eq 0 ] \
+     && st_reason 'tests/test-fx-cov-a\.sh' | grep -qE '^RUN: .* unresolvable-head'; then
+    st_ok "SHARED-UNRESOLVABLE-HEAD leg (ahead of the short-circuit)" "a matching input hash does not admit an entry whose head names no commit — the head check stays ahead of the short-circuit"
+  else
+    st_fail "SHARED-UNRESOLVABLE-HEAD leg (ahead of the short-circuit)" "expected test-fx-cov-a.sh RUN unresolvable-head at rc 0, got rc=$ST_RC: $ST_REC"
+  fi
+  rm -rf "$d" "$st_ar"
+
+  # --- SHARED-UNION legs (acceptance criterion 5): the shared arm is a UNION
+  # over every matching entry, not the last-entry rule the local fast path
+  # uses. Tree equality is exact content identity, so recency carries no
+  # information across issues and "last" is not even well-defined there.
+  # Certificates are minted per phase-step run naming only the suites that
+  # ran, so joint coverage by several entries is the ordinary cross-issue
+  # case. Each inheriting suite must cite ITS OWN contributing entry — a
+  # last-entry implementation passes the disjoint half by accident and fails
+  # the citation assertion.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  st_ar="$(mktemp -d)"; store="$(fx_store_init "$st_ar" "$d")"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_shared_entry "$store" 201 1 "$tree" "$head" "tests/test-fx-cov-a.sh"
+  fx_shared_entry "$store" 202 1 "$tree" "$head" "tests/test-fx-cov-b.sh"
+  fx_shared_entry "$store" 203 1 "$tree" "$head" "tests/test-fx-cov-c.sh" \
+    "run-suites: 2 passed, 1 failed, 0 timed out, of 3 executed"
+  st_run_shared "$st_ar" "$d" "$ledger" 1 all
+  if st_reason 'tests/test-fx-cov-a\.sh' | grep -qF '### green-tree-shared | issue: #201' \
+     && st_reason 'tests/test-fx-cov-b\.sh' | grep -qF '### green-tree-shared | issue: #202'; then
+    st_ok "SHARED-UNION leg (disjoint entries)" "two shared entries at one tree naming disjoint suites both contribute, each inherited suite citing its own entry"
+  else
+    st_fail "SHARED-UNION leg (disjoint entries)" "expected a to cite issue #201 and b to cite issue #202, got: $ST_REC"
+  fi
+  if [ "$ST_PLAN" = "tests/test-fx-cov-c.sh" ] \
+     && st_reason 'tests/test-fx-cov-c\.sh' | grep -qE '^RUN: .* no-coverage'; then
+    st_ok "SHARED-UNION leg (non-pass entry)" "a shared entry at the captured tree whose result is not a pass contributes nothing: the suites only it names execute, cause no-coverage"
+  else
+    st_fail "SHARED-UNION leg (non-pass entry)" "expected only test-fx-cov-c.sh planned with cause no-coverage, got plan='$(printf '%s' "$ST_PLAN" | tr '\n' ' ')': $ST_REC"
+  fi
+  rm -rf "$d" "$st_ar"
+
+  # --- SHARED-MALFORMED leg (DISPATCH directive D5): a malformed SHARED entry
+  # is skipped with one warning, never trusted and never a BLOCK. The
+  # dispositions differ by store on purpose: the per-issue ledger is written
+  # by this cycle and a malformed entry there is a positive statement this
+  # cycle cannot read, so it BLOCKs; the shared store is written by other
+  # issues and may outlive the grammar that wrote it, so one unreadable
+  # certificate degrades to executing that certificate's suites rather than
+  # halting every later issue. The well-formed sibling in the same store is
+  # the discriminator: a resolver that BLOCKs, or that abandons the file at
+  # the first bad entry, loses it.
+  d="$(mktemp -d)"; fixture_repo "$d"; ledger="$d/.autoflow/l.md"; : > "$ledger"
+  st_ar="$(mktemp -d)"; store="$(fx_store_init "$st_ar" "$d")"
+  tree="$(git -C "$d" rev-parse "HEAD^{tree}")"; head="$(git -C "$d" rev-parse HEAD)"
+  fx_shared_entry "$store" 301 1 "not-a-tree-hash" "$head" "tests/test-fx-cov-a.sh"
+  fx_shared_entry "$store" 302 1 "$tree" "$head" "tests/test-fx-cov-b.sh"
+  st_run_shared "$st_ar" "$d" "$ledger" 1 all
+  if [ "$ST_RC" -eq 0 ] \
+     && ! printf '%s\n' "$ST_REC" | grep -q '^BLOCK: ' \
+     && st_reason 'tests/test-fx-cov-b\.sh' | grep -q '^INHERIT: ' \
+     && st_reason 'tests/test-fx-cov-a\.sh' | grep -q '^RUN: '; then
+    st_ok "SHARED-MALFORMED leg (D5, not a BLOCK)" "a malformed shared entry is never trusted and never BLOCKs; the well-formed sibling in the same store still contributes"
+  else
+    st_fail "SHARED-MALFORMED leg (D5, not a BLOCK)" "expected rc 0, no BLOCK, b inheriting and a running, got rc=$ST_RC: $ST_REC"
+  fi
+  if [ "$(printf '%s\n' "$ST_REC" | grep -cvE '^(RUN|INHERIT): ')" -eq 1 ] \
+     && printf '%s\n' "$ST_REC" | grep -vE '^(RUN|INHERIT): ' | grep -qF '#301'; then
+    st_ok "SHARED-MALFORMED leg (D5, one warning)" "exactly one non-record line is emitted, and it names the malformed entry so the operator can find it"
+  else
+    st_fail "SHARED-MALFORMED leg (D5, one warning)" "expected exactly one non-record stderr line naming the malformed entry, got: $(printf '%s\n' "$ST_REC" | grep -vE '^(RUN|INHERIT): ' | tr '\n' ' ')"
+  fi
+  rm -rf "$d" "$st_ar"
 
   return $SELFTEST_RC
 }
