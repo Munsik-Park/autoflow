@@ -116,7 +116,7 @@ const argv = typeof args === 'string'
 // would degrade into exactly the cold restart this path removes, so it fails loud.
 const resumeArg = argv.resume
 const resume = resumeArg === true || resumeArg === 'true'
-const resumeMalformed = !resume && !(resumeArg === undefined || resumeArg === null || resumeArg === false || resumeArg === 'false')
+const resumeMalformed = ![true, 'true', false, 'false', undefined, null].includes(resumeArg)
 // System boundary: reject a missing or malformed required arg loudly rather than proceeding with a
 // placeholder path. Kept as the SINGLE throw site — the resume rule extends this guard, it does not
 // add a second one.
