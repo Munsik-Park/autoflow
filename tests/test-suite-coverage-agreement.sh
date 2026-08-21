@@ -781,8 +781,19 @@ if [ ! -f "$RESOLVER" ] || [ ! -f "$STORE_LIB" ]; then
   assert_true "hashed-token-composition: the resolver and the store library exist (the hashed-token plan cannot be exercised without them)" "false"
 else
   FXH="$(mktemp -d)"
+  # SCRATCH LIVES OUTSIDE THE FIXTURE REPOSITORY. Every artefact this leg
+  # produces during the run — the witness log and the plan file — is written
+  # to a sibling directory, never under $FXH. A plan file inside the fixture
+  # is not a tidiness question: the shell creates and truncates a redirect's
+  # target BEFORE the command runs, so `> "$FXH/run-set.txt"` leaves an
+  # untracked file in the worktree at the instant the resolver takes its
+  # capture point. Resolution order step 3 then routes every candidate to RUN
+  # with reason `dirty-worktree`, before any store read — and the leg reads
+  # as "the hashed tokens were not parsed" when nothing about token parsing
+  # was exercised at all. (Observed at VERIFY round-trip 1 on tree 7b0f4abe.)
+  FXH_SCRATCH="$(mktemp -d)"
   mkdir -p "$FXH/tests" "$FXH/.autoflow"
-  WITNESS_H="$FXH/witness.log"
+  WITNESS_H="$FXH_SCRATCH/witness.log"
   : > "$WITNESS_H"
   for hn in a b c; do
     cat > "$FXH/tests/test-fixture-130-hash-$hn.sh" <<SH
@@ -828,7 +839,7 @@ SH
     printf -- '- authority: Green-tree register\n\n'
   } > "$LEDGER_H"
 
-  PLAN_FILE_H="$FXH/run-set.txt"
+  PLAN_FILE_H="$FXH_SCRATCH/run-set.txt"
   ARH="$(mktemp -d)"
   AUTOFLOW_ARCHIVE_ROOT="$ARH" bash "$RESOLVER" --ledger "$LEDGER_H" --cycle 1 --root "$FXH" \
     --candidates all > "$PLAN_FILE_H" 2>/dev/null
@@ -843,7 +854,7 @@ SH
   assert_true "hashed-token-composition: that plan, fed to the real run-suites.sh --selected, executes exactly the planned set (executed: $(printf '%s' "$EXECUTED_SET_H" | tr '\n' ' ') | plan: $(printf '%s' "$PLAN_SET_H" | tr '\n' ' '))" \
     "[ \"\$EXECUTED_SET_H\" = \"\$PLAN_SET_H\" ]"
 
-  rm -rf "$FXH" "$ARH"
+  rm -rf "$FXH" "$FXH_SCRATCH" "$ARH"
 fi
 
 # -----------------------------------------------------------------------------
