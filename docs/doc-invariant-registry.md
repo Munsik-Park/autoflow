@@ -373,10 +373,11 @@ contract*; the lane semantics are §1's, unchanged:
 which is what keeps the declaration inside `scripts/test/check-cycle-scope-guard.sh`'s subject
 set. The converse is deliberately **not** asserted: a *standing* suite may carry a cycle-scoped
 **arm** — a change-surface allow-list guarding its own PR — inside a body of otherwise permanent
-assertions. This tree's three such suites (`tests/test-issue-67-deliberation-record.sh`,
-`tests/test-issue-69-verification-depth.sh`, `tests/test-issue-71-digest-removal.sh`) are
-standing, and an `array ⇒ cycle-scoped` rule would mark all three for immediate retirement at an
-already-merged issue. The separate `cycle-arm` field is what keeps such an arm governed.
+assertions. This tree's one such suite (`tests/test-issue-71-digest-removal.sh`) is standing, and an
+`array ⇒ cycle-scoped` rule would mark it for immediate retirement at an already-merged issue.
+Two further suites stood here until issue #121, whose branch-gated arms were inert on every
+branch that still exists once their cycles merged; the arms, their arrays and their `cycle-arm`
+fields left together. §16 names both files and carries the dispositions. The separate `cycle-arm` field is what keeps such an arm governed.
 
 **The array-less shape is non-conforming** (issue #107). A `dev/*-issue-<N>` branch gate carried
 by a suite that declares neither `cycle-arm` nor a path allow-list array is outside
@@ -435,7 +436,7 @@ through mechanically. It does not execute the renames.
 | `tests/test-issue-103-suite-manifest.sh`'s "test-issue-59 sources tests/lib/harness-pins.sh" row | **retired — subject removed this cycle** | its subject is the sourcing deleted above. Left standing it would have reported **green while its subject was gone**, because its predicate was a bare whole-file `grep` that `59`'s `ci-subject` token and comment mentions satisfy on their own. #103's settled property — the literal has exactly one authoring home — is carried entirely by the two negative rows beside it, which are true and untouched. In the same edit the surviving positive row for `tests/test-issue-27-composition-oracle.sh` is tightened from that bare grep to a **non-comment `source`/`.` line** predicate, so the one remaining sourcing claim is semantic rather than textual — the weakness is fixed at the row that keeps its subject, not papered over at the row that loses it |
 | `tests/test-issue-103-pin-and-docs.sh`'s two "branch-scoped-inert homes are untouched" rows | **flipped — presence pin's ground retired** | one shared preamble governed both rows on the ground that each foreign home pins its own cycle's measurement on its own dev branch. This cycle retires that ground. The `62` row asserted `EXPECTED_OK=58` is **present** — the only one of this cycle's three cross-file couplings in the positive direction, so a deletion, not an omission, reds it. The `56` row claimed its companion literal was untouched while its predicate was the file-existence tautology `[ -f "$SUITE_56" ]`, reporting green on a claim it never evaluated — the same semantically-false-PASS class as the row above, one row away in the same file. Both are flipped to the identical successor form, *the file authors no `EXPECTED_OK=` literal at all*, which strengthens #103's single-authorship invariant rather than dropping it, and the `56` row's tautological predicate is replaced by one that evaluates its own claim |
 | `tests/test-push-context-base-ref.sh`'s two literal pins on `tests/test-issue-59-adoption-evidence-discipline.sh` (the under-derivation pin and the real-tree `NATIVE-COVERAGE` corroboration arm) | **repointed — pinned subject retired, property preserved** | that suite pins one literal suite name into its derived subject set so a silent under-derivation fails loud instead of merely shrinking the printed set, and separately asserts that same subject reports `NATIVE-COVERAGE PASS`. Both name one subject and move together: a suite that is no longer derived cannot report a coverage state at all, so repointing only the first leaves the second asserting a state its subject can never produce. `59` was chosen because it was a real non-comment resolver call site; this cycle removed its last one, so the subject left the derived set legitimately and the pin would have redded a standing suite under an unrelated name. The guard's value is the pin, not any particular subject, so it is repointed rather than deleted. The successor is chosen by the property the pin needs — registered by a `push: branches: [main]` workflow, not in `EXEMPT_HERMETIC_DRIVERS`, and carrying a non-comment resolver call against the repo under test — which `tests/test-issue-27-composition-oracle.sh` satisfies and this cycle does not touch; `tests/test-issue-798-topology-flip.sh` is the alternate if `27` ever loses the call |
-| `tests/test-issue-62-sequential-rounds.sh:96-115` (`guard_result_at_ref_mutated`) and `tests/test-issue-103-pin-and-docs.sh`'s AC-pin-detects-harness-drift drive | **kept — intentional leaf exemption, negative control** | neither re-runs a registered sibling. Each drives a suite at ANOTHER ON-DISK STATE — a detached worktree at a historical ref, and a scratch worktree whose harness is deliberately perturbed — and the callee's own CI step, running the unperturbed tree, cannot stand in for it. The admission is a consequence of rows the lint itself evaluates, not a machine-readable exemption input: the #62 call site's argument is a function positional under a `tests/` prefix, which D5's antecedent (an assignment carrying a literal enumerated-suite path) does not have, and the pin-drift site's path is rooted at a scratch variable this file assigns from `mktemp`, which is row I3/I4's antecedent. This row records the GROUND for keeping them, not the mechanism that admits them |
+| `tests/test-issue-62-sequential-rounds.sh:93-112` (`guard_result_at_ref_mutated`) and `tests/test-issue-103-pin-and-docs.sh`'s AC-pin-detects-harness-drift drive | **kept — intentional leaf exemption, negative control** | neither re-runs a registered sibling. Each drives a suite at ANOTHER ON-DISK STATE — a detached worktree at a historical ref, and a scratch worktree whose harness is deliberately perturbed — and the callee's own CI step, running the unperturbed tree, cannot stand in for it. The admission is a consequence of rows the lint itself evaluates, not a machine-readable exemption input: the #62 call site's argument is a function positional under a `tests/` prefix, which D5's antecedent (an assignment carrying a literal enumerated-suite path) does not have, and the pin-drift site's path is rooted at a scratch variable this file assigns from `mktemp`, which is row I3/I4's antecedent. This row records the GROUND for keeping them, not the mechanism that admits them |
 
 ## 13. Migration provenance — retired-guard dispositions (issue #109)
 
@@ -623,3 +624,110 @@ two promoted registry-entry id prefixes instead.
 `tests/test-issue-103-cycle-scope-repoint.sh`'s allow-list-bearing suite count tripwire
 returns to **3** with this retirement (it read 4 for the span between this cycle's RED
 commit and this one).
+
+---
+
+## 16. Migration provenance — retired-guard dispositions (issue #121)
+
+Issue #121 releases seven suites from `# out-of-tree-inputs: yes` by removing the
+base-ref call sites their headers followed. The header is not the lever — the body
+is (`scripts/test/suite-manifest.sh` `suite_reads_out_of_tree_state`), so each
+declaration leaves only once its file's last base-ref arm does. Two shapes are
+retired here, and they take different exits under §2/§3:
+
+- **Lane A — branch-gated arms** (`tests/test-issue-67-deliberation-record.sh`,
+  `tests/test-issue-69-verification-depth.sh`). Every arm sat behind that cycle's own
+  `dev/*-issue-<N>` gate, and both cycles are merged, so each is inert by construction
+  on every branch that exists now. §3 offers nothing to promote: a change-surface fence
+  over one branch's own diff has no state form. The `allow_list` arrays and the
+  `cycle-arm` header fields go with them (`check-suite-manifest.sh` makes `cycle-arm`
+  without an array a violation), which is what removes both files from
+  `scripts/test/check-cycle-scope-guard.sh`'s subject set and reduces §12's coupling
+  passage to `tests/test-issue-71-digest-removal.sh` alone.
+- **Lane B — un-gated DELTA fences**, dispositioned per arm below.
+
+Nothing in the retired column is a bare deletion (§6 rule).
+
+| Retired guard | Disposition | Basis |
+|---|---|---|
+| 67 `change-surface-bounded` / 69 `change-surface-bounded`, `AC:rubric-unchanged`, `AC:oracle-clause-untouched` (Lane A) | **dropped — cycle-local** | branch-gated on `dev/*-issue-67` / `dev/*-issue-69`, both merged, so inert on every branch that exists now; a fence over one branch's own diff has no state form. The disposition §15's `cycle-scope-respected` row already records. Symbol closure went with them: 67's `note_deferred()` (sole call site was the deleted off-branch arm), both files' `HEAD_BRANCH` assignment, 69's `on_issue_branch()` and its `CLAUDE_MD` constant. 69's `note_deferred()` is retained — the `AC:manifest-fresh` deferral arm still calls it |
+| 798 `AC9: diff touches no .claude/hooks/** path, OR only check-autoflow-gate.sh…` · 799 `AC6-scope: diff does not touch .claude/hooks/**, OR only check-autoflow-gate.sh…` | **dropped — cycle-local, with recorded coverage loss** | Carried half: an edit to either file the AC5 parity block of `tests/plugin/verify-package.sh` compares (`hooks/check-autoflow-gate.sh`, `hooks/check-read-dedup.sh`) is caught there by byte equality, which is stricter than the deleted arms' admission test. Its execution home is `.github/workflows/plugin-package.yml`, which triggers on `pull_request` and `push: main` **under a `paths:` filter** that includes `.claude/hooks/**` — path-conditional, and reached on exactly the edits it covers; no unconditionality is claimed. **Recorded residue**: a cycle that adds a **third** file under `.claude/hooks/` fails the deleted arms and is outside AC5, which compares a fixed pair of basenames plus the agents directory. A cycle that edits a `.claude/hooks/**` file other than `check-autoflow-gate.sh` while updating its plugin mirror in the same diff is likewise admitted by the carrier and was rejected by the arms. The whole-tree STATE form of that residue would be "`.claude/hooks/` contains exactly this set" — a hand-maintained inventory, the shape §1-2 retires by construction — so it is not promoted |
+| 798 `AC9: diff touches no .claude/workflows/** path, OR every touched .claude/workflows/** path has a setup/manifest.json sha256 row matching its current content…` · 799 `AC6-scope: diff touches no .claude/workflows/** path, OR every touched…` | **dropped — cycle-local, with recorded coverage loss** | Carried half (content drift): `scripts/test/check-manifest-regen-clean.sh`'s FIXED POINT leg fails on any *registered* source whose content changed while its recorded hash did not — a whole-tree STATE predicate over the registered set, and itself the §3 promotion of the retired `955 AC4-CLOSURE` DELTA. It runs unconditionally as its own step. **Recorded residue, first part (missing row)**: the arms also failed an **unregistered** workflow path — an absent `artifacts[]` row yields an empty hash and breaks their equality. FIXED POINT cannot see that case, because `setup/gen-manifest-hashes.sh` emits workflow rows from a fixed pair of `emit_row` calls, so a newly added `.claude/workflows/*.js` is in neither the committed nor the regenerated manifest and the fixed point holds. That regen lint's own header records the generalisation as deliberately refused for `.claude/workflows/**` (it would need an exclusion list, reintroducing the retired shape) and routes the general root-layer registration gap to *retired as not machine-checkable*, §5; this row inherits that decision rather than contradicting it. **Recorded residue, second part (the shape guard)**: `tests/test-issue-62-sequential-rounds.sh`'s `AC-62-36` was a differential owner of the same invariant, asserting the *shape* of the arm rather than its content. It retires with its subject in the row below, so after this cycle no executable asserts the manifest-pin shape — only FIXED POINT's content predicate remains |
+| 62 `AC-62-36` (i)/(iii)/(iv) — the arm-shape structural check and its two worktree-driven negative controls | **dropped — subject retired** | its subject is the `.claude/workflows/**` arm the row above deletes from both files. (i) drives `extract_arm_window()`, an awk opening on a `workflows_(admitted\|touched\|offwindow)_ac<N>` assignment and closing on the arm's own `assert_true`; both anchors sat inside the deleted region, so the window returns empty. (iii)/(iv) ran the real converted guard at `HEAD` in a detached worktree and required `FAIL:` on its `.claude/workflows` arm; with the arm gone it cannot. Repointing needs another file carrying the same arm shape and this cycle deletes both instances of it, so no subject remains; keeping the arms alive to preserve a guard over their shape inverts the issue. Symbol closure: `extract_arm_window()`, `check_arm_structural()` and the mutators `stale_workflow_manifest_row` / `delete_workflow_and_manifest_row` go with the arms. **`guard_result_at_ref_mutated()` is retained** against the orphan direction — `tests/test-cycle-arm-residue.sh` asserts its retention by name against §12.1's kept row, so it is a symbol another file requires rather than an orphan; §12.1's row is re-anchored to its post-change line range in this same commit. **This row supersedes, by name, §12.1's two dispositions `AC-62-36(iv)` (*ungated — permanent property, gate was the defect*) and `AC-62-36(iii)` (*ungated — premise made hermetic, gate was supplying it*)**: both state a permanent property over an executable that no longer exists, and a §16 row that merely sits beside them leaves the registry asserting a permanence it no longer has. §12's separate prose citation of "issue #107's AC-62-36(iii)" is **not** amended — it records what #107 decided, which stays true after the subject is retired |
+| 952 `AC5: manifest.json is itself in the diff (regen ran, #949 [MUST])…` · 955 `AC4-DOGFOOD: diff-∩-sources non-empty ⇒ setup/manifest.json is itself in the diff` | **dropped — redundant** | the manifest FIXED POINT leg of `scripts/test/check-manifest-regen-clean.sh` is the same-commit-regen obligation in whole-tree state form and needs no diff. Both arms are registered-source-only by construction, so FIXED POINT's coverage is a superset. Driven as a fault rather than assumed: a registered source edited without regeneration reds FIXED POINT. Symbol closure: 952's `MANIFEST_JSON`, 955's `skip_no_base()` and `CYCLE_DIFF_FILES` |
+| 798 `AC7b: no diff hunk against ADR-0015 (immutable historical record)` | **dropped — redundant** | manifest FIXED POINT (ADR-0015 is a registered source, confirmed in `setup/manifest.json`) plus the permanent registry entry `798-AC7a-adr0015-sentence` |
+| 955 `AC-PRESERVE-deletion-audit: no contiguous run >15 deleted lines across the five edited docs` | **dropped — cycle-local** | a bounded-deletion-run heuristic over one cycle's own edit surface. Nothing at HEAD is the invariant and the predicate is unstatable without two trees, so §3's rewrite exit is closed. The content it stood in for is carried positively by `AC-PRESERVE-a/b/d` in the same file, which are STATE predicates and stay |
+| 798 `AC6b: no diff hunk touches a '*Secondary (multi-repo)' marker line` · 799 `AC3-guard: no diff hunk over docs/ README.md touches a 'Secondary (multi-repo)' marker line` | **promoted → registry entries `121-secondary-marker-*`, then deleted** (§3's rewrite exit) | **Granularity: one entry per marker LINE**, not per file — the marker occurs on several lines within single files, and a file-scoped `present` entry still passes after one of them is deleted, which is exactly the loss the DELTA caught. Thirteen entries cover the two arms' scope (`docs/`, `CLAUDE.md`, `README.md`): four in `CLAUDE.md`, three in `docs/autoflow-guide.md`, two each in `docs/repo-boundary-rules.md` and `docs/teammate-contracts.md`, one each in `docs/git-workflow.md` and `docs/external-review-sequencing.md`. Each is `predicate: "present"`, `match: "fixed"`, `scope: "permanent"`, `origin_issue: 121`, file-scoped with **no `section`** — the shape that routes the runner's witness to `mutate_remove_lines` and is credited teeth. The marker lines in `agents/autoflow-implementer.md` (host and plugin copies) were in neither arm's scope and are correctly not promoted, as is `docs/autoflow-guide.md`'s `*Secondary (multi-repo), review-response mode*:` line, which the arms' grep excluded. **Literal rule — discriminating clause, not the full line**: the marker prefix plus the shortest clause distinguishing that line from the other marker lines in its own file, with volatile identifier tokens (org/repo pairs, issue numbers, link targets) excluded. Full-line keying is refused on evidence inside the deleted arm itself: 799's `AC3-guard` carried `grep -vF` filters whose only purpose was to admit an identifier-only rewrite of `docs/git-workflow.md`'s marker line, so a permanent full-line entry would red on exactly that legitimate edit and the remedy would be to edit the entry — the hand-maintained widening §1-2 retires. **Recorded residue**, two parts, both deliberate **narrowings** of the DELTA: a marker line added *after* the promotion is governed by the DELTA form and is not governed by the STATE form; and an edit confined to the unpinned remainder of a governed line is admitted by the STATE form where the DELTA form caught it |
+| 799 `AC3-nores: no NEW doc line (changed surface) points at <sub-repo path> as a live tracked path` — the arm's own path token is elided here, since `tests/fixtures/e2e-bundle-purity-baseline.txt` forbids it in a bundled doc; the verbatim spelling is the one `tests/fixtures/host-purity-tokens.txt` lists | **dropped — cycle-local** | no admissible STATE form exists, re-derived three ways: an entry's `file` is a single path, so a tree-wide `docs/` scope is not expressible in one entry; the literal occurs many times at HEAD under `docs/` as live sub-repo prose, which the arm tolerated only because it was scoped to new `+` lines, so an `absent` + `fixed` entry on it reds at HEAD; and the qualified form needs `match: "regex"`, which the runner's self-test rejects by name as having no injectable witness. The arm's own comment already recorded it as changed-surface-only and deliberately non-recursive — §3's "dropped when it was only ever cycle-local" exit. **No registry entry is owed or added** |
+| 27 `AC-27-9-diff: VERIFY step-4 block content byte-identical between $BASE_REF and HEAD…` | **promoted → registry entries `121-verify-step4-l1`…`l8`, then deleted** (§3's rewrite exit) | the guarded region is `docs/autoflow-guide.md`'s VERIFY step-4 block (the `extract_step4_block` region, opening at `4. Mock-boundary fidelity check (Test AI):`). Its sibling `AC-27-9-literal` greps only the block's opening literal, so it is not the equivalent predicate and stays. **One entry per LINE of the block**, not per sentence: the block's one prose sentence wraps across consecutive source lines, and a sentence-shaped literal would carry an embedded newline, which the runner's schema check refuses with a registry-wide `block` — under which the teeth obligation is unsatisfiable in that shape. Same entry shape and same discriminating-clause rule as the marker rows, with leading indentation and the box-drawing glyphs excluded; uniqueness in the file is the floor a clause must clear, not a licence to key long. One discriminator does separate this block from the marker lines and is recorded rather than spent on longer literals: the block sits inside a fenced code region, so its line breaks are literal content and no markdown formatter rewraps it. That bounds the fragility without removing the **narrowing**, so the clause rule applies here too. The existing `27-AC8-verify-step4-xref` entry is section-scoped to `Output artifacts` and pins the cross-reference occurrence of the header literal, not the block; it is left untouched. **Recorded residue**: the DELTA was one cycle's fence and the STATE form is permanent, so a later deliberate wording change to a governed line is remedied by a registry edit under §3's ordinary disposition procedure rather than silently. Symbol closure: 27's `extract_step4_block()` and `BASEREF_LIB` go with the arm; `count_heading()` stays, called by a surviving arm |
+
+**Consumers of a deleted arm.** Three files execute against an arm this cycle deletes
+and are edited with it rather than left red: `tests/test-issue-103-cycle-scope-repoint.sh`
+and `tests/test-issue-103-suite-manifest.sh` (their real-tree loops over the
+array-bearing standing triple reduce to the surviving subject, and the first file's
+allow-list-bearing suite count tripwire re-anchors from 3 to **2** — this cycle's own
+cycle-scoped suite plus `tests/test-issue-71-digest-removal.sh`), and
+`tests/test-push-context-base-ref.sh`, whose two pins on
+`tests/test-issue-27-composition-oracle.sh` are **repointed to
+`tests/plugin/verify-package.sh`**. That pin has now decayed twice for the same reason,
+which fixes the selection rule recorded in its own comment: **pin a subject whose
+base-ref call cannot leave with a cycle** — `lane: standing`, no `cycle-arm`, and a
+base-ref call dominated by no branch gate. The recorded alternate is
+`tests/test-issue-788-host-purity-delta.sh`, which satisfies the same three checks and
+is a member of the derived set; that file keeps its own declaration and is otherwise
+unmodified, since a diff-scoped scanner is the essential case the field exists for.
+
+**Header id inventories.** Each converted suite's leading comment block and its
+`echo "=== <id> …"` banners are edited on **two independent axes** — the arm's id and
+the banner's id, which are not the same id. In `tests/test-issue-799-inert-cleanup.sh`
+they diverge: the emptied arms sit under banners named `AC8` and `AC10`, ids no deleted
+arm carries. `tests/test-issue-109-doc-assertions.sh` follows on both axes; the arm ids
+leave its live-id array for a new single-consumer `RETIRED_121_799_IDS` array rather
+than `STALE_799_IDS`, which a second assertion re-uses as the witness set for §13.2's
+issue-#116 narrowing claim and which would make that provenance false.
+
+**Trigger-surface re-derivation.** `# ci-subject:` token lists are re-derived against
+what each file still reads, as a **property** over every file this cycle edits rather than
+as the one instance the feature design enumerated. `tests/lib/base-ref.sh` leaves suites
+67, 69 and 27, whose every executable read of it sat inside a deleted region. Twelve
+further tokens leave with the arms that held their last read, each a genuine content read
+rather than a mention: the `cmp -s` over both hook paths in 798 and 799, the `jq` over
+`setup/manifest.json` in 798, 952 and 955, the `ADR_0015` assignment in 798, the
+`git show "$BASE_REF:CLAUDE.md"` in 69, and 67's three `allow_list` members. The
+regression scope is a set difference between the base ref and HEAD, so the twenty
+pre-existing token/read gaps this cycle neither creates nor repairs are cancelled by
+construction rather than by a hand-maintained inventory.
+
+**One token is RETAINED against that re-derivation**, and the exception is machine-checked
+rather than asserted. `tests/test-issue-69-verification-depth.sh` keeps
+`tests/fixtures/doc-invariants.json` even though its body carries no literal occurrence:
+that suite **executes** the registry runner (`bash "$REGISTRY_RUNNER"`, its
+`AC:registry-no-regression` region), and the runner defaults its registry argument to that
+fixture, so an edit to the fixture changes the suite's verdict and the token is describing
+a real trigger. The read is transitive, not absent. The marker below is the grammar
+`tests/test-issue-121-declaration-release.sh` resolves against the tree — it admits the
+exception only when the named intermediary exists **and** the suite's own executable body
+references it, so an exception the spec cannot check is refused as an exemption:
+
+```
+retained-ci-subject-token: tests/test-issue-69-verification-depth.sh tests/fixtures/doc-invariants.json via tests/run-doc-invariants.sh
+```
+
+`tests/test-issue-67-deliberation-record.sh` is the asymmetric case and takes **no** such
+marker: it only *assigns* `REGISTRY_RUNNER` and never executes it — issue #103's leaf rule
+retired the arm that did — so its `tests/fixtures/doc-invariants.json` token names a file
+no execution path of that suite reads, and the token is dropped.
+
+**Supersedes §15's closing sentence.** §15 (`:624-626`) records
+`tests/test-issue-103-cycle-scope-repoint.sh`'s allow-list-bearing suite-count tripwire as
+returning to **3** at issue #123's retirement. From this cycle the figure is **2** —
+Lane A removed suites 67 and 69 from that set, and this cycle's own cycle-scoped
+`tests/test-issue-121-declaration-release.sh` joins `tests/test-issue-71-digest-removal.sh`
+until it retires with `retire-with: #121`. §15 is left unedited: it records what #123
+decided, which was true when written; this clause carries the supersession, per the same
+rule the `AC-62-36` row applies to §12.1.
+
+**CI registration.** `tests/test-issue-121-declaration-release.sh` (`lane: cycle-scoped`,
+`retire-with: #121`) is registered in `.github/workflows/contract-suites.yml` with its
+own guarded, budgeted step and full `paths:` coverage for its subject set. It retires at
+the merge its `retire-with` names, per §2.

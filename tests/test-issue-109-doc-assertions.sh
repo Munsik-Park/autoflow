@@ -277,8 +277,8 @@ echo "=== Group D — assert-less acceptance-criterion section headers ==="
 
 # (suite_var|echo_prefix|target_id) triples — the 13 headers verified at
 # ledger O1 item 2 / this design's Group D target list.
-GROUP_D_798=("AC5" "AC15")
-GROUP_D_799=("AC1" "AC3" "AC6" "AC7" "AC9" "AC11")
+GROUP_D_798=("AC5" "AC6" "AC7" "AC9" "AC15")
+GROUP_D_799=("AC1" "AC3" "AC6" "AC7" "AC8" "AC9" "AC10" "AC11")
 GROUP_D_ADR0016=("AC4" "AC5" "AC6" "AC-961-5" "AC-961-7")
 
 SUITE_798_CONTENT="$(cat "$SUITE_798")"
@@ -427,7 +427,7 @@ done
 # AC-live-id-preserved (guard, PASS pre- and post-change) -- every id the 799
 # body actually executes stays named in its header.
 LIVE_799_BARE_IDS=(
-  "AC2-tree" "AC3-guide" "AC3-guard" "AC3-nores" "AC4-guard" "AC6-scope" "AC6-ci"
+  "AC2-tree" "AC3-guide" "AC4-guard" "AC6-ci"
 )
 for id in "${LIVE_799_BARE_IDS[@]}"; do
   assert_true "AC-live-id-preserved: tests/test-issue-799-inert-cleanup.sh's header still names live id '$id'" \
@@ -435,6 +435,23 @@ for id in "${LIVE_799_BARE_IDS[@]}"; do
 done
 assert_true "AC-live-id-preserved: tests/test-issue-799-inert-cleanup.sh's header still carries the compound spelling 'AC3-guide/common/ext'" \
   "printf '%s\n' \"\$SUITE_799_HEADER\" | grep -qF -- 'AC3-guide/common/ext'"
+
+# AC-retired-121-id-absent -- the ids whose every arm left the 799 body when
+# issue #121 retired that suite's two branch-relative preservation fences and
+# its two path-parity scope fences. They are pinned here rather than appended
+# to STALE_799_IDS: that array is consumed a SECOND time, by the §13.2
+# issue-#116 registry-claim composite, as that claim's operative witness set,
+# and its own comment derives its membership from the #116 stale-spelling
+# table. Appending a #121 id there would condition a §13.2 claim on ids §13.2
+# does not govern. This array has exactly one consumer, the loop below, and its
+# assertion states only the property that loop executes.
+RETIRED_121_799_IDS=(
+  "AC3-guard" "AC3-nores" "AC6-scope"
+)
+for id in "${RETIRED_121_799_IDS[@]}"; do
+  assert_true "AC-retired-121-id-absent: tests/test-issue-799-inert-cleanup.sh's header carries no bounded occurrence of '$id', whose every arm was retired in issue #121" \
+    "[ \"\$(bounded_id_count '$id' \"\$SUITE_799_HEADER\")\" -eq 0 ]"
+done
 
 # AC-carrier-trail-preserved -- preservation arm (guard, PASS pre- and
 # post-change: the existing 13 §13.2-assigned carrier ids stay cited) and

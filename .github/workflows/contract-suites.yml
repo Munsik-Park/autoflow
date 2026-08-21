@@ -142,6 +142,16 @@ on:
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
       - 'tests/test-issue-109-doc-assertions.sh'
+      - '.claude/hooks/check-read-dedup.sh'
+      - 'docs/repo-boundary-rules.md'
+      - 'plugin/autoflow/hooks/check-read-dedup.sh'
+      - 'tests/test-issue-121-declaration-release.sh'
+      - 'tests/test-issue-27-composition-oracle.sh'
+      - 'tests/test-issue-62-sequential-rounds.sh'
+      - 'tests/test-issue-67-deliberation-record.sh'
+      - 'tests/test-issue-69-verification-depth.sh'
+      - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'tests/test-issue-955-subagent-background-ban.sh'
   push:
     branches: [main]
     paths:
@@ -250,6 +260,16 @@ on:
       - 'tests/test-issue-798-topology-flip.sh'
       - 'tests/test-issue-799-inert-cleanup.sh'
       - 'tests/test-issue-109-doc-assertions.sh'
+      - '.claude/hooks/check-read-dedup.sh'
+      - 'docs/repo-boundary-rules.md'
+      - 'plugin/autoflow/hooks/check-read-dedup.sh'
+      - 'tests/test-issue-121-declaration-release.sh'
+      - 'tests/test-issue-27-composition-oracle.sh'
+      - 'tests/test-issue-62-sequential-rounds.sh'
+      - 'tests/test-issue-67-deliberation-record.sh'
+      - 'tests/test-issue-69-verification-depth.sh'
+      - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'tests/test-issue-955-subagent-background-ban.sh'
 
 permissions:
   contents: read
@@ -469,6 +489,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-109-doc-assertions.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-109-doc-assertions.sh
+
+      - name: test-issue-121-declaration-release.sh
+        id: s-test-issue-121-declaration-release
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-121-declaration-release.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-121-declaration-release.sh
 
       - name: test-issue-985-doc-assertions.sh
         id: s-test-issue-985-doc-assertions

@@ -241,9 +241,11 @@ SH
     "[ $? -eq 0 ]"
   rm -rf "$CPL_DIR"
 
-  # -- Real-tree arm: the three array-bearing suites carry cycle-arm at their
-  #    own filename number, stay lane: standing.
-  for f in tests/test-issue-67-deliberation-record.sh tests/test-issue-69-verification-depth.sh tests/test-issue-71-digest-removal.sh; do
+  # -- Real-tree arm: the surviving array-bearing standing suite carries
+  #    cycle-arm at its own filename number, stays lane: standing. Suites 67
+  #    and 69 left this set in issue #121, which deleted their branch-gated
+  #    arms and the allow-list arrays with them (docs/doc-invariant-registry.md §16).
+  for f in tests/test-issue-71-digest-removal.sh; do
     num="$(printf '%s' "$f" | sed -n 's/^tests\/test-issue-\([0-9][0-9]*\)-.*$/\1/p')"
     assert_true "AC-cycle-scoped-couplings real-tree: $f declares 'lane: standing' and 'cycle-arm: #$num'" \
       "grep -qE '^# lane: standing' '$PROJECT_ROOT/$f' && grep -qE \"^# cycle-arm: #$num\\\$\" '$PROJECT_ROOT/$f'"

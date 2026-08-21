@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md setup/manifest.json test/workflows/run.mjs
+# ci-subject: .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/submodule-common-rules.md docs/teammate-common-rules.md docs/teammate-contracts.md test/workflows/run.mjs
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
-# out-of-tree-inputs: yes
 # =============================================================================
 # Test: subagent run_in_background prohibition doc-assertion guard — Issue #955
 # =============================================================================
@@ -59,12 +58,11 @@
 #   AC3                — RED discriminator: docs/autoflow-guide.md REFINE AND
 #                        VERIFY sections both carry a short-verification
 #                        direct-/foreground-execution note.
-#   AC4                — Green-state guard (949 precedent): the five manifest
-#                        source files this cycle touches (teammate-common-
-#                        rules.md, submodule-common-rules.md,
-#                        teammate-contracts.md, CLAUDE.md, autoflow-guide.md)
-#                        trigger a same-commit setup/manifest.json regen.
-#                        Vacuously true pre-GREEN (empty diff intersection).
+#   (retired #121)     — the diff-scoped manifest same-commit-regen guard and the
+#                        bounded-deletion-run preservation audit this file used to
+#                        carry were un-gated DELTAs over a merged cycle's own diff.
+#                        Their dispositions and carriers are
+#                        docs/doc-invariant-registry.md §16.
 #   AC5-a/b/c          — RED discriminators: the canonical clause literally
 #                        covers the reproducer — both entry paths (direct-spawn
 #                        + in-script) named, the actor's OWN verification run
@@ -96,9 +94,10 @@
 #   AC-C2-2            — RED discriminator: this suite reads both workflow
 #                        scripts by absolute path (the AC-C2-1 assertions ARE
 #                        this AC).
-#   AC-C2-4            — no new assertion; the existing AC4 manifest-dogfood
-#                        block already generalizes (both .js files are
-#                        manifest sources).
+#   AC-C2-4            — no new assertion; the same-commit-regen obligation it
+#                        relies on is carried in whole-tree state form by
+#                        scripts/test/check-manifest-regen-clean.sh's FIXED POINT
+#                        leg (both .js files are manifest sources).
 #   G-REG              — Green-follow guard (NOT a RED discriminator):
 #                        node test/workflows/run.mjs (CI job
 #                        workflow-regression) must stay green; prompt edits
@@ -119,7 +118,6 @@
 # JUSTIFIED PRE-EDIT PASSES (guards, NOT RED discriminators):
 #   AC1-a-mirror-equality — vacuous PASS pre-edit (neither clause body exists
 #     yet, so the diff of two empty bodies is empty).
-#   AC4 (manifest dogfood) — vacuous PASS pre-edit (empty diff intersection).
 #   AC-PRESERVE             — PASS pre-edit (nothing removed yet).
 #
 # CYCLE 2 RED expectation (pre-edit, this commit, per
@@ -143,7 +141,6 @@ SUBMODULE_COMMON="$PROJECT_ROOT/docs/submodule-common-rules.md"
 TEAMMATE_CONTRACTS="$PROJECT_ROOT/docs/teammate-contracts.md"
 CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
 GUIDE_MD="$PROJECT_ROOT/docs/autoflow-guide.md"
-MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 ARCH_WF="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
 VERIFY_WF="$PROJECT_ROOT/.claude/workflows/verify-cause-branch.js"
@@ -156,16 +153,6 @@ AGENT_FILES=(
   "$PROJECT_ROOT/.claude/agents/autoflow-tester.md"
   "$PROJECT_ROOT/.claude/agents/autoflow-evaluator.md"
 )
-
-# Base ref for scope-containment / mechanical-predicate diff guards
-# (precedent: #797/#798/#799/#800/#949).
-BASE_REF="${ISSUE_955_BASE_REF:-$(git -C "$PROJECT_ROOT" merge-base HEAD main 2>/dev/null || true)}"
-
-CYCLE_DIFF_FILES=""
-if [[ -n "$BASE_REF" ]]; then
-  CYCLE_DIFF_FILES="$(git -C "$PROJECT_ROOT" diff --name-only "$BASE_REF"...HEAD 2>/dev/null || true)"
-fi
-
 PASS=0; FAIL=0; TESTS=0
 
 # ---------------------------------------------------------------------------
@@ -194,12 +181,6 @@ assert_false() {
     echo "  PASS: $desc"
     PASS=$((PASS + 1))
   fi
-}
-
-skip_no_base() {
-  local label="$1" count="${2:-1}"
-  echo "  SKIP: $label (no base ref available)"
-  TESTS=$((TESTS + count))
 }
 
 # ---------------------------------------------------------------------------
@@ -336,31 +317,6 @@ assert_true "AC3: VERIFY section carries a foreground/direct-execution token" \
 
 # =============================================================================
 echo ""
-echo "=== AC4 (Green-state guard, conditional — NOT a RED discriminator) — manifest same-commit regen ==="
-# 949 precedent: comm -12 <(cycle diff) <(manifest sources, self-excluded) is
-# non-empty once any manifest-source doc is touched ⇒ setup/manifest.json
-# MUST also be in the diff.
-
-if [[ -z "$BASE_REF" ]]; then
-  skip_no_base "AC4"
-else
-  AC4_INTERSECTION="$(comm -12 \
-    <(git -C "$PROJECT_ROOT" diff --name-only "$BASE_REF"...HEAD 2>/dev/null | sort -u) \
-    <(jq -r '.artifacts[].source' "$MANIFEST_JSON" 2>/dev/null | grep -vx 'setup/manifest.json' | sort -u) \
-  )"
-  echo "  intersection: $(printf '%s' "$AC4_INTERSECTION" | tr '\n' ' ')"
-  if [[ -n "$AC4_INTERSECTION" ]]; then
-    assert_true "AC4-DOGFOOD: diff-∩-sources non-empty ⇒ setup/manifest.json is itself in the diff" \
-      "printf '%s\n' \"\$CYCLE_DIFF_FILES\" | grep -qxF 'setup/manifest.json'"
-  else
-    echo "  PASS (vacuous): AC4-DOGFOOD — diff-∩-sources is empty pre-GREEN, consequent not evaluated"
-    TESTS=$((TESTS + 1)); PASS=$((PASS + 1))
-  fi
-
-fi
-
-# =============================================================================
-echo ""
 echo "=== AC5-a/b/c (RED discriminators) — canonical clause literally covers the reproducer ==="
 
 assert_true "AC5-a: canonical clause names BOTH direct-spawn (autoflow-*) AND in-script workflow agents" \
@@ -472,15 +428,6 @@ assert_true "AC-PRESERVE-b: VERIFY existing cause-branch table (RED | GREEN | SE
   "printf '%s' \"\$VERIFY_JOINED\" | grep -qF 'SEQUENTIAL_FIX' && printf '%s' \"\$VERIFY_JOINED\" | grep -qF 'EVALUATION_AI'"
 assert_true "AC-PRESERVE-d: CLAUDE.md Teammate-idle 'continue work when (a)/(b)/(c)' list retained" \
   "printf '%s' \"\$EXEC_PRINCIPLES_JOINED\" | grep -qF '(a) a teammate sends an actionable report' && printf '%s' \"\$EXEC_PRINCIPLES_JOINED\" | grep -qF '(c) the user types a new prompt'"
-
-if [[ -z "$BASE_REF" ]]; then
-  skip_no_base "AC-PRESERVE-deletion-audit"
-else
-  max_removed_run="$(git -C "$PROJECT_ROOT" diff "$BASE_REF"...HEAD -- "$TEAMMATE_COMMON" "$SUBMODULE_COMMON" "$TEAMMATE_CONTRACTS" "$CLAUDE_MD" "$GUIDE_MD" 2>/dev/null \
-    | awk '/^-[^-]/{c++; if (c>m) m=c; next} {c=0} END{print m+0}')"
-  assert_true "AC-PRESERVE-deletion-audit: no contiguous run >15 deleted lines across the five edited docs" \
-    "[ \"${max_removed_run:-0}\" -le 15 ]"
-fi
 
 
 # =============================================================================

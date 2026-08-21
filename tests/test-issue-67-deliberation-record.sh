@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude-plugin/marketplace.json .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml .github/workflows/workflow-regression.yml CLAUDE.md docs/autoflow-guide.md docs/design-rationale.md docs/submodule-common-rules.md docs/teammate-contracts.md plugin/autoflow/.claude-plugin/plugin.json setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/lib/harness-pins.sh tests/manual/issue-62-manual-scenarios.md tests/manual/issue-67-manual-scenarios.md tests/run-doc-invariants.sh
+# ci-subject: .claude-plugin/marketplace.json .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml .github/workflows/workflow-regression.yml CLAUDE.md docs/autoflow-guide.md docs/design-rationale.md docs/submodule-common-rules.md docs/teammate-contracts.md plugin/autoflow/.claude-plugin/plugin.json setup/manifest.json test/workflows/run.mjs tests/lib/harness-pins.sh tests/run-doc-invariants.sh
 # lane: standing
-# cycle-arm: #67
 # budget-secs: SUITE_BUDGET_CEILING_SECS
-# out-of-tree-inputs: yes
 # =============================================================================
 # Test: ARCHITECT deliberation record redesign — Issue #67 (cycle-scoped)
 # =============================================================================
@@ -42,8 +40,6 @@ SUITE_56="$PROJECT_ROOT/tests/test-issue-56-carry-evidence-discipline.sh"
 SUITE_59="$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh"
 REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
-source "$PROJECT_ROOT/tests/lib/base-ref.sh"
-
 # EXPECTED version for this cycle (0.1.7 -> 0.1.8, issue #88 retirement + version bump).
 EXPECTED_VERSION="0.1.8"
 
@@ -60,12 +56,6 @@ assert_true() {
     FAIL=$((FAIL + 1))
   fi
 }
-
-note_deferred() {
-  echo "  DEFERRED-OBSERVABLE: $1"
-}
-
-HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
 
 # =============================================================================
 echo "=== AC-67-HARNESS (fence) — the mock-runtime harness exits 0 and reports its pass line (harness-green) ==="
@@ -139,9 +129,11 @@ for FILE in "$TEAMMATE_CONTRACTS" "$AUTOFLOW_GUIDE" "$CLAUDE_MD" "$DESIGN_RATION
 done
 
 # =============================================================================
-echo ""
-echo "=== AC13 (doc-invariants-preserved) — the permanent registry rows scoped to the edited ARCHITECT section still hold ==="
-
+# AC13 (doc-invariants-preserved) — the permanent registry rows scoped to the
+# edited ARCHITECT section still hold. The section banner is removed with the
+# assertion it announced (issue #121): a section banner retaining no assertion
+# advertises a region nothing executes.
+#
 # AC-67-DOCINV is retired by issue #103's leaf rule: the registry runner carries
 # its own `run:` steps in both plain and --self-test modes, so re-running it here
 # was duplicate execution of an already-covered surface.
@@ -204,60 +196,6 @@ assert_true "AC-67-CI-run: e2e-dummy-target.yml has a run: step invoking this su
   "[ \"$RUN_STEP_COUNT\" -eq 1 ]"
 assert_true "AC-67-CI-workflowregression: workflow-regression.yml still triggers on .claude/workflows/** and test/workflows/**" \
   "grep -qF '.claude/workflows/**' '$WORKFLOW_REGRESSION_CI' && grep -qF 'test/workflows/**' '$WORKFLOW_REGRESSION_CI'"
-
-# =============================================================================
-echo ""
-echo "=== change-surface-bounded (branch-scoped) — the cycle's diff stays within the declared surface ==="
-
-allow_list=(
-  ".claude/workflows/architect-deliberation.js"
-  "docs/teammate-contracts.md"
-  "docs/autoflow-guide.md"
-  "plugin/autoflow/.claude-plugin/plugin.json"
-  ".claude-plugin/marketplace.json"
-  "setup/manifest.json"
-  "test/workflows/run.mjs"
-  "tests/test-issue-67-deliberation-record.sh"
-  "tests/test-issue-56-carry-evidence-discipline.sh"
-  "tests/test-issue-59-adoption-evidence-discipline.sh"
-  "tests/test-issue-27-composition-oracle.sh"
-  "tests/fixtures/doc-invariants.json"
-  "tests/test-issue-955-subagent-background-ban.sh"
-  "tests/test-issue-798-topology-flip.sh"
-  "tests/test-issue-799-inert-cleanup.sh"
-  "tests/test-issue-846-doc-assertions.sh"
-  "tests/test-issue-952-wizard-removal.sh"
-  "tests/test-issue-848-doc-assertions.sh"
-  "tests/test-issue-62-sequential-rounds.sh"
-  "tests/manual/issue-62-manual-scenarios.md"
-  "tests/manual/issue-67-manual-scenarios.md"
-  ".github/workflows/e2e-dummy-target.yml"
-  # HANDOFF step 6.7 appends the cycle digest to the dev branch (PR co-ride) after
-  # the reviewer review, so the digest file is a mandated member of every cycle's diff.
-  "docs/cycle-digest.jsonl"
-  ".autoflow/issue-67-feature-design.md"
-  ".autoflow/issue-67-verification-design.md"
-  ".autoflow/issue-67-ledger.md"
-)
-
-case "$HEAD_BRANCH" in
-  dev/*-issue-67|dev/*-issue-67-*)
-    BASE_REF="$(resolve_base_ref)" || {
-      echo "  BLOCK: no comparison base resolvable — AC-67-SCOPE counted FAIL, never skipped"
-      TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-      BASE_REF=""
-    }
-    if [[ -n "$BASE_REF" ]]; then
-      DIFF_FILES="$(cd "$PROJECT_ROOT" && git diff --name-only "$BASE_REF"...HEAD)"
-      UNCOVERED="$(comm -23 <(printf '%s\n' "$DIFF_FILES" | sort -u) <(printf '%s\n' "${allow_list[@]}" | sort -u))"
-      assert_true "AC-67-SCOPE: cycle diff, set-differenced against the declared allow_list, is empty (uncovered: $(printf '%s' "$UNCOVERED" | paste -sd, -))" \
-        "[ -z \"\$(printf '%s' '$UNCOVERED')\" ]"
-    fi
-    ;;
-  *)
-    note_deferred "AC-67-SCOPE: change-surface guard inert off the issue-67 dev branch (head: ${HEAD_BRANCH:-unknown}) — this cycle's own PR contract, not every branch's."
-    ;;
-esac
 
 # =============================================================================
 echo ""

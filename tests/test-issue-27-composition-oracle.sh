@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/base-ref.sh tests/lib/harness-pins.sh tests/manual/issue-27-manual-scenarios.md tests/run-doc-invariants.sh
+# ci-subject: .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/autoflow-guide.md docs/doc-invariant-registry.md docs/teammate-contracts.md setup/gen-manifest-hashes.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/harness-pins.sh tests/manual/issue-27-manual-scenarios.md tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
-# out-of-tree-inputs: yes
 # =============================================================================
 # Test: Composition oracle — verification-design shared-state requirement,
 # Issue #27 (cycle-scoped)
@@ -61,8 +60,13 @@
 #                     zero-token count) is what fails.
 #   AC-27-9           — preservation fence (PASS pre+post, NOT a RED
 #                     discriminator): VERIFY step 4 (mock-boundary fidelity
-#                     check) is untouched — neither its literal text nor any
-#                     diff hunk touches it.
+#                     check) is untouched — its literal text is still present.
+#                     The diff half retired in issue #121: it was an un-gated
+#                     DELTA over a merged cycle's own diff, rewritten as
+#                     per-line permanent entries in
+#                     tests/fixtures/doc-invariants.json
+#                     (121-verify-step4-l1..l8); see
+#                     docs/doc-invariant-registry.md §16.
 #   AC-27-13          — over-build fence (PASS pre+post): with F4 withdrawn,
 #                     no GATE:PLAN rubric changes ship at all — row count
 #                     stays 5 (B3), thresholds and the Regressions-line
@@ -133,7 +137,6 @@ WORKFLOW_JS="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
-BASEREF_LIB="$PROJECT_ROOT/tests/lib/base-ref.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -180,19 +183,6 @@ extract_section() {          # heading_text file
   ' "$file"
 }
 
-# Extracts the VERIFY step-4 (Mock-boundary fidelity check) block's own body
-# — from its own line through (excluding) the closing code-fence line. Scoped
-# to exactly that block, unlike a whole-file diff, so an unrelated line
-# elsewhere in the file that happens to contain the same cross-reference
-# literal (AC-27-8's complementarity paragraph, which the composition-oracle
-# rule is required to carry per feature design §2.4/DR-3) cannot false-
-# positive this preservation fence. Fixed by VERIFY (issue #27 cause-branch:
-# the prior whole-file-diff form flagged AC-27-8's own cross-reference line
-# as a step-4 mutation).
-extract_step4_block() {      # file
-  awk '/^4\. Mock-boundary fidelity check \(Test AI\):/{f=1} f{ if ($0 ~ /^```/) exit; print }' "$1"
-}
-
 count_heading() {            # anchor file
   local anchor="$1" file="$2"
   awk -v h="$anchor" '
@@ -236,29 +226,6 @@ echo "=== AC-27-9 (preservation fence, PASS pre+post) — VERIFY step 4 untouche
 
 assert_true "AC-27-9-literal: VERIFY step-4 block still present verbatim" \
   "grep -qF 'Mock-boundary fidelity check (Test AI)' '$GUIDE'"
-
-if [[ ! -f "$BASEREF_LIB" ]]; then
-  echo "  BLOCK: tests/lib/base-ref.sh missing — AC-27-9's diff half is base-dependent and cannot be evaluated"
-  TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-else
-  # shellcheck source=/dev/null
-  . "$BASEREF_LIB"
-  BASE_REF="$(cd "$PROJECT_ROOT" && resolve_base_ref "${ISSUE_27_BASE_REF:-}" || true)"
-  if [[ -z "$BASE_REF" ]]; then
-    echo "  BLOCK: no comparison base resolvable (override / GITHUB_BASE_REF / origin/main / main all unavailable) — AC-27-9's diff half counted FAIL, never skipped"
-    TESTS=$((TESTS + 1)); FAIL=$((FAIL + 1))
-  else
-    HEAD_STEP4="$(extract_step4_block "$GUIDE")"
-    BASE_STEP4="$(cd "$PROJECT_ROOT" && git show "$BASE_REF:docs/autoflow-guide.md" 2>/dev/null | awk '/^4\. Mock-boundary fidelity check \(Test AI\):/{f=1} f{ if ($0 ~ /^```/) exit; print }')"
-    if [ -n "$HEAD_STEP4" ] && [ "$HEAD_STEP4" = "$BASE_STEP4" ]; then
-      STEP4_UNCHANGED=true
-    else
-      STEP4_UNCHANGED=false
-    fi
-    assert_true "AC-27-9-diff: VERIFY step-4 block content byte-identical between $BASE_REF and HEAD (scoped to the block itself, not the whole-file diff)" \
-      "[ \"$STEP4_UNCHANGED\" = true ]"
-  fi
-fi
 
 # =============================================================================
 echo ""
