@@ -195,6 +195,35 @@ trim_ws() {
 }
 
 # ---------------------------------------------------------------------------
+# glob_matches <actions-dialect pattern> <path>
+# The Actions `paths:` dialect, matched the way the conformance suite already
+# implements it: `**` crosses `/`, a single `*` does not, and a token with no
+# wildcard is an exact path or a directory prefix when it ends in `/`.
+#
+# THIS FILE IS THE MATCHER'S HOME because it is where the grammar the matcher
+# interprets is declared: a `# ci-subject:` token IS an Actions `paths:` token,
+# so the dialect belongs beside the header grammar rather than inside one of its
+# consumers. Both callers already source this file, so the single definition
+# site is reachable without a new source edge in either direction — and a single
+# site is what makes "one implementation" executable rather than an agreement
+# obligation between two copies over an unbounded input space.
+# ---------------------------------------------------------------------------
+glob_matches() {
+  local pattern="$1" path="$2" rx
+  case "$pattern" in
+    */) case "$path" in "$pattern"*) return 0 ;; esac; return 1 ;;
+  esac
+  case "$pattern" in
+    *'*'*) ;;
+    *) [ "$pattern" = "$path" ] && return 0; return 1 ;;
+  esac
+  # Translate the dialect into an ERE: `**` -> `.*`, `*` -> `[^/]*`.
+  rx="$(printf '%s' "$pattern" \
+    | sed -e 's/[.[\()+^$|]/\\&/g' -e 's/\*\*/\x01/g' -e 's/\*/[^\/]*/g' -e 's/\x01/.*/g')"
+  printf '%s' "$path" | grep -qE "^${rx}$"
+}
+
+# ---------------------------------------------------------------------------
 # suite_enumerate <root> — repo-relative paths of every executable spec under
 # tests/**, sorted, minus the exclusions above.
 # ---------------------------------------------------------------------------

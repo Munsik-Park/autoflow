@@ -35,7 +35,7 @@
 #         `inherited-suites` / `ran-suites` fields decidable.
 #
 #           RUN: <suite> <reason>
-#           INHERIT: <suite> source: <heading> | head: <hash> | result: <line>
+#           INHERIT: <suite> source: <heading> | head: <hash> | result: <line> | via: <basis>
 #           INHERIT: <suite> not-in-cycle-delta
 #
 # Reasons: the block below is the ONE normative home of the per-suite reason
@@ -57,10 +57,40 @@
 #     not-in-cycle-delta
 #     block-fallback
 #   reason-tokens: end
-#   reason-record-shape: source: <heading> | head: <hash> | result: <line>
+#   reason-record-shape: source: <heading> | head: <hash> | result: <line> | via: <basis>
 #     — an interpolated citation, NOT a token; it names the covering entry a
 #       suite inherited from, and is recorded on a green-tree-use entry as the
 #       fixed token `covered-by-source` rather than verbatim.
+#
+# Citation basis: the block below is the ONE normative home of the `via:`
+#         vocabulary — WHICH admission path produced a citation. It is declared
+#         beside the reason tokens and held to the body by the same mirrored
+#         pair of agreement legs (emitted subset-of declared, declared subset-of
+#         emitted); adjacency to `reason-tokens` confers none of that on its own.
+#         It exists because the two runs of the suite-grained-invalidation
+#         control pair are textually identical in stderr EXCEPT for `via:`, so a
+#         basis emitted that no declaration names leaves that control group
+#         unreadable while both runs still pass.
+#
+#   citation-basis: begin
+#     tree
+#     shared-tree
+#     input-hash
+#     reach
+#   citation-basis: end
+#
+#     tree        — the local whole-tree fast path: the last ledger entry of the
+#                   cycle certifies the captured tree itself.
+#     shared-tree — a repo-scoped SHARED entry at the captured tree, minted by
+#                   some other issue. The cross-issue cold start this removes.
+#     input-hash  — the covering entry's per-suite input hash equals this suite's
+#                   input hash at the captured tree, so no delta restricted to
+#                   the suite's input closure can be non-empty.
+#     reach       — the shipped reach test against the covering head answered
+#                   "not selected".
+#
+# A `green-tree-use` entry records every basis as the single fixed token
+# `covered-by-source`: the ledger's vocabulary does not grow with this one.
 #
 # Exit:   0 normal, 1 BLOCK, 2 usage.
 #
@@ -85,6 +115,8 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
+# shellcheck source=scripts/test/green-tree-store.sh
+. "$SCRIPT_DIR/green-tree-store.sh"
 
 MODE="default"
 ROOT=""
@@ -104,19 +136,10 @@ while [ $# -gt 0 ]; do
 done
 ROOT="${ROOT:-$DEFAULT_ROOT}"
 
-# ---------------------------------------------------------------------------
-# entry_result_is_pass <result line> — a `result` field states a pass.
-# Conservative by construction: a line naming a non-zero failed or timed-out
-# count is not a pass, and a line that names no passing outcome at all is not a
-# pass either. An unrecognised line therefore falls to "not a pass", which
-# degrades to executing.
-# ---------------------------------------------------------------------------
-entry_result_is_pass() {
-  local line="$1"
-  printf '%s' "$line" | grep -qE '[1-9][0-9]* (failed|timed out)' && return 1
-  printf '%s' "$line" | grep -qiE '\bpass(ed)?\b' || return 1
-  return 0
-}
+# `entry_result_is_pass` — "this `result` field states a pass" — is NOT defined
+# here. It lives in scripts/test/green-tree-store.sh, sourced above: the ledger
+# and the shared store admit an entry on the same question, so the admission
+# test has one definition site rather than one copy per store.
 
 # ---------------------------------------------------------------------------
 # hash_shaped <value> — a ledger value admissible as a git rev.
@@ -261,18 +284,81 @@ resolve_over() {
     fi
   fi
 
+  local n_ledger=${#entry_headings[@]}
+
+  # --- Shared store: the repo-scoped cache OTHER issues minted -------------
+  # The per-issue ledger is the only local source; without this read an issue's
+  # empty ledger is a permanent cold start whatever a prior issue certified at
+  # this very tree. Shared entries are appended to the SAME arrays as the ledger
+  # entries, so every consumer below sees one entry space, with `shared_idx`
+  # recording which of them came from the cache.
+  #
+  # A malformed entry here is SKIPPED WITH ONE WARNING, never a BLOCK — the
+  # opposite of the ledger's disposition, deliberately. A malformed LOCAL entry
+  # is a positive statement THIS cycle cannot read, and guessing at it widens
+  # inheritance; skipping a foreign cache entry narrows, so BLOCKing every later
+  # issue over another issue's file would fail in the wrong direction. An
+  # unreadable store (absent, or refused for resolving inside the repo tree) is
+  # likewise no entries, which resolves to executing.
+  local shared_store="" scan_kind scan_heading scan_tree scan_head scan_suites scan_result
+  local -a shared_idx=()
+  shared_store="$(green_tree_store_path "$root" 2>/dev/null)" || shared_store=""
+  if [ -n "$shared_store" ] && [ -f "$shared_store" ]; then
+    while IFS=$'\t' read -r scan_kind scan_heading scan_tree scan_head scan_suites scan_result; do
+      if [ "$scan_kind" != OK ]; then
+        echo "suite-coverage: skipping a malformed shared-store entry — $scan_heading" >&2
+        continue
+      fi
+      entry_headings+=("$scan_heading"); entry_trees+=("$scan_tree"); entry_heads+=("$scan_head")
+      entry_results+=("$scan_result"); entry_suites+=("$scan_suites")
+      shared_idx+=($(( ${#entry_headings[@]} - 1 )))
+    done < <(green_tree_shared_scan "$shared_store")
+  fi
+
   local n_entries=${#entry_headings[@]}
+
+  # --- Token parse: `<path>[@<input-hash>]`, split at the LAST `@` ---------
+  # A token with no `@` is the shipped bare-path form: it still folds and still
+  # satisfies the fast path's membership test, but it carries NO certificate, so
+  # the input-hash short-circuit cannot fire on it and every entry already
+  # written answers exactly as today. `entry_paths[i]` is the entry's bare-path
+  # projection — the form every membership test and the plan itself use, since a
+  # token echoed into the plan would hand run-suites.sh a file that does not
+  # exist.
+  local i j tok tok_path plist
+  local -a entry_paths=()
+  local -A entry_suite_hash=()
+  for (( i = 0; i < n_entries; i++ )); do
+    plist=""
+    for tok in ${entry_suites[$i]}; do
+      tok_path="$(green_tree_suite_token_path "$tok")"
+      [ -n "$tok_path" ] || continue
+      plist="$plist${plist:+ }$tok_path"
+      entry_suite_hash["$i|$tok_path"]="$(green_tree_suite_token_hash "$tok")"
+    done
+    entry_paths+=("$plist")
+  done
 
   # --- Fold: suite -> the entry index at which it last passed --------------
   # File order, later supersedes earlier. Without this fold a narrow run would
   # ERASE the coverage an earlier wide run established, and the register would
   # be no more useful than the whole-tree key it replaces.
+  #
+  # The SHARED entries are folded FIRST and the ledger's second, so a local
+  # entry of the current cycle supersedes a foreign certificate for the suites
+  # it names. The cycle's own run is the more specific statement about this
+  # cycle's tree, and the cache carries no authority to override it.
   local -A cover_idx=()
-  local i tok
-  for (( i = 0; i < n_entries; i++ )); do
+  for j in ${shared_idx[@]+"${shared_idx[@]}"}; do
+    entry_result_is_pass "${entry_results[$j]}" || continue
+    for tok_path in ${entry_paths[$j]}; do
+      cover_idx["$tok_path"]=$j
+    done
+  done
+  for (( i = 0; i < n_ledger; i++ )); do
     entry_result_is_pass "${entry_results[$i]}" || continue
-    for tok in ${entry_suites[$i]}; do
-      cover_idx["$tok"]=$i
+    for tok_path in ${entry_paths[$i]}; do
+      cover_idx["$tok_path"]=$i
     done
   done
 
@@ -293,12 +379,37 @@ resolve_over() {
   # selectable, so fast_idx stays -1 and every candidate falls through to the
   # fold, which validates each head it lifts.
   local fast_idx=-1
-  if [ -z "$dirty" ] && [ "$n_entries" -gt 0 ]; then
-    local last=$(( n_entries - 1 ))
+  if [ -z "$dirty" ] && [ "$n_ledger" -gt 0 ]; then
+    local last=$(( n_ledger - 1 ))
     if [ "${entry_trees[$last]}" = "$tree" ] && entry_result_is_pass "${entry_results[$last]}" \
        && head_resolves "${entry_heads[$last]}"; then
       fast_idx=$last
     fi
+  fi
+
+  # --- Shared tree match: the cross-issue arm of the fast path -------------
+  # Unlike the local fast path this is a UNION over every matching shared entry,
+  # not a last-entry rule. Tree equality is exact content identity, so recency
+  # carries no information here and "last" is not even well-defined across
+  # issues; and certificates are minted per phase-step run naming only the
+  # suites that ran, so joint coverage by several entries is the ORDINARY
+  # cross-issue case rather than a corner.
+  #
+  # `head_resolves` is a conjunct here for the same reason it is one on the
+  # local fast path: a match CITES that head as the anchor a reader re-derives.
+  # An entry declined here stays visible to the fold below, which validates
+  # every head it lifts and executes that entry's suites with the named cause
+  # `unresolvable-head` — so the decline moves a suite toward execution only.
+  local -A shared_tree_cover=()
+  if [ -z "$dirty" ]; then
+    for j in ${shared_idx[@]+"${shared_idx[@]}"}; do
+      [ "${entry_trees[$j]}" = "$tree" ] || continue
+      entry_result_is_pass "${entry_results[$j]}" || continue
+      head_resolves "${entry_heads[$j]}" || continue
+      for tok_path in ${entry_paths[$j]}; do
+        shared_tree_cover["$tok_path"]=$j
+      done
+    done
   fi
 
   # --- Reach test, memoised per distinct covering head --------------------
@@ -324,7 +435,7 @@ resolve_over() {
     esac
   }
 
-  local oot idx ans
+  local oot idx ans ih cur_ih
   for suite in ${enumerated[@]+"${enumerated[@]}"}; do
     # Step 2 — a DECLARED out-of-tree reader executes before any other test and
     # regardless of the reach answer. It is a property of the suite, so the
@@ -345,13 +456,26 @@ resolve_over() {
     if [ -n "$dirty" ]; then
       decision["$suite"]=RUN; record["$suite"]="dirty-worktree"; continue
     fi
-    # Step 4 — whole-tree fast path.
-    if [ "$fast_idx" -ge 0 ] && [[ " ${entry_suites[$fast_idx]} " == *" $suite "* ]]; then
+    # Step 4 — whole-tree fast path. The membership test is a PARSED lookup over
+    # the entry's bare-path projection, not a substring match on a space-padded
+    # field: `" $suite "` cannot appear in a field whose tokens carry an `@`
+    # suffix, so this is a correctness requirement of the token grammar rather
+    # than a cleanup.
+    if [ "$fast_idx" -ge 0 ] && [ -n "${entry_suite_hash[$fast_idx|$suite]+set}" ]; then
       decision["$suite"]=INHERIT
-      record["$suite"]="source: ${entry_headings[$fast_idx]} | head: ${entry_heads[$fast_idx]} | result: ${entry_results[$fast_idx]}"
+      record["$suite"]="source: ${entry_headings[$fast_idx]} | head: ${entry_heads[$fast_idx]} | result: ${entry_results[$fast_idx]} | via: tree"
       continue
     fi
-    # Steps 5-7 — fold, head validation, reach test.
+    # Step 5 — shared tree match. A certificate minted by another issue at this
+    # exact tree. It comes after the local fast path and before the fold, and it
+    # is the path that removes the cross-issue cold start.
+    idx="${shared_tree_cover[$suite]:-}"
+    if [ -n "$idx" ]; then
+      decision["$suite"]=INHERIT
+      record["$suite"]="source: ${entry_headings[$idx]} | head: ${entry_heads[$idx]} | result: ${entry_results[$idx]} | via: shared-tree"
+      continue
+    fi
+    # Steps 6-9 — fold, head validation, input-hash short-circuit, reach test.
     idx="${cover_idx[$suite]:-}"
     if [ -z "$idx" ]; then
       decision["$suite"]=RUN
@@ -361,6 +485,30 @@ resolve_over() {
     local h="${entry_heads[$idx]}"
     if ! head_resolves "$h"; then
       decision["$suite"]=RUN; record["$suite"]="unresolvable-head"; continue
+    fi
+    # Step 8 — input-hash short-circuit, deliberately kept BEHIND the head
+    # check. The comparison itself needs no resolvable head, so admitting one
+    # here would raise the hit rate — and would produce an inheritance whose
+    # cited anchor no reader can re-derive, which is precisely the tightening
+    # ADR-0019 decision 2 introduced.
+    #
+    # Why it is sound rather than a widening loophole: the input closure is
+    # DEFINITIONALLY the path set the selection predicate reads, so if every
+    # closure member's blob is identical at the covering tree and at the
+    # captured tree, no delta restricted to that closure can be non-empty and
+    # the selector cannot select the suite. It is strictly MORE defined than the
+    # reach test in the two places that test degenerates — an empty delta, which
+    # the selector defines as "select everything", and a non-ancestor head,
+    # where three-dot semantics answer a different question — because it uses
+    # neither a delta nor ancestry, only content at two trees.
+    ih="${entry_suite_hash[$idx|$suite]:-}"
+    if [ -n "$ih" ]; then
+      cur_ih="$(suite_input_hash "$root" "$tree" "$suite" 2>/dev/null || true)"
+      if [ -n "$cur_ih" ] && [ "$cur_ih" = "$ih" ]; then
+        decision["$suite"]=INHERIT
+        record["$suite"]="source: ${entry_headings[$idx]} | head: $h | result: ${entry_results[$idx]} | via: input-hash"
+        continue
+      fi
     fi
     ans="$(reach_answer "$h" "$suite")"
     case "$ans" in
@@ -381,7 +529,7 @@ resolve_over() {
         ;;
       *)
         decision["$suite"]=INHERIT
-        record["$suite"]="source: ${entry_headings[$idx]} | head: $h | result: ${entry_results[$idx]}"
+        record["$suite"]="source: ${entry_headings[$idx]} | head: $h | result: ${entry_results[$idx]} | via: reach"
         ;;
     esac
   done

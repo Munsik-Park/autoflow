@@ -77,6 +77,13 @@ on:
       - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
+      # #130: this workflow is the SOLE runner of
+      # check-cleanup-issue-boundary.sh, and that suite is the only layer that
+      # drives the in-repo refusal on the store library's call path. A change to
+      # either new script that did not select this workflow would leave that
+      # call path unexercised in CI.
+      - 'scripts/test/green-tree-store.sh'
+      - 'scripts/test/green-tree-register.sh'
       - '.github/workflows/e2e-dummy-target.yml'
       # #26 cycle-scoped RED suite (tests/test-issue-26-verify-architect-route.sh)
       # retired at issue #27's VERIFY (GATE:QUALITY Impact-scope regression):
@@ -254,6 +261,13 @@ on:
       - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
+      # #130: this workflow is the SOLE runner of
+      # check-cleanup-issue-boundary.sh, and that suite is the only layer that
+      # drives the in-repo refusal on the store library's call path. A change to
+      # either new script that did not select this workflow would leave that
+      # call path unexercised in CI.
+      - 'scripts/test/green-tree-store.sh'
+      - 'scripts/test/green-tree-register.sh'
       - '.github/workflows/e2e-dummy-target.yml'
       # #43 cycle surface. TAIL here (push) as well — mirrors the #42 entry's
       # own placement immediately above; no read-back guard in either block

@@ -47,6 +47,37 @@ detecting under-declaration is not solved here.
    re-derives. Both tightenings are monotone toward execution — each can only move a
    suite from inheritance to running — so the floor argument above holds unchanged.
 
+   *Amended for issue #130 — the key's content form, and the register's scope.* Two things decision 2
+   left implicit are now fixed, and both were needed for the same reason: a suite whose inputs did not
+   move was still re-running whenever anything else did.
+
+   - **The key's content form is a per-suite input hash.** A suite's *input closure* is exactly the
+     path set the selection predicate reads — the suite's own path, every tracked path matching a
+     token of its `# ci-subject:` header, and every tracked path under `tests/lib/**` — and the key is
+     a hash over `(blob sha, path)` for every closure member at the certifying tree, carried on the
+     entry as `<repo-relative path>@<input-hash>` tokens. When a covering entry's hash for a suite
+     equals that suite's hash at the captured tree, the suite inherits without a reach test. The
+     `tests/lib/**` member is load-bearing: the selector selects **every** suite when a shared library
+     moves, so a key omitting it would be narrower than the selection boundary and the
+     "the inheritance boundary IS the selection boundary" contract would become false rather than
+     tightened. The bare-path token form keeps shipping and simply carries no certificate.
+   - **The register is repo-scoped, not scoped to the minting issue's ledger.** Certificates are
+     written to both the issue's own decision ledger and a **shared store** outside the repository
+     tree, at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md`, so a later issue reads a
+     certificate an earlier one minted at the same tree — the cross-issue cold start that made every
+     new issue re-run the tree from scratch. The shared store is a **cache, not a ledger**: it carries
+     no authority, it may be pruned, and a malformed entry in it is skipped with one warning rather
+     than treated as a BLOCK, because skipping a foreign certificate narrows inheritance while
+     guessing at a malformed local one widens it.
+
+   Neither addition weakens the two tightenings. Both stay ahead of the new paths: the out-of-tree
+   declaration is tested before any store read or key comparison, and head resolvability is tested
+   before the input-hash comparison — so an inheritance is never admitted on an anchor a reader
+   cannot re-derive. The monotone argument is preserved in the form it was made: the two tightenings
+   move suites only toward execution, and the two additions move suites toward inheritance **only on
+   a content certificate** — an exact tree identity, or an exact identity of the suite's own input
+   closure.
+
 3. **Evaluator execution discipline.** A gate evaluator resolves a suite-verdict anchor against the
    host's own record before executing anything, and cites what it inherited in a declared field of
    its own report (`inherited_verdicts` in `docs/evaluation-system.md` > *Evaluation Output
@@ -91,9 +122,12 @@ per-suite record.
   under-declaration is **out of scope** here; the unconditional VALIDATE sweep bounds the damage an
   under-declared header can do to a single cycle rather than letting it reach the reviewer, but it
   is a containment measure, not a detector.
-- The mechanism is stateful reasoning over an append-only ledger, which is new machinery on the
-  verification path. It is realized as a script with a hermetic self-test rather than as playbook
-  prose for exactly that reason.
+- The mechanism is stateful reasoning over an append-only ledger **and a repo-scoped cache**, which is
+  new machinery on the verification path. It is realized as a script with a hermetic self-test rather
+  than as playbook prose for exactly that reason. The cache half carries **no authority**: losing it,
+  pruning it, or skipping an unreadable entry can only remove certificates, and a missing certificate
+  resolves to executing the suite. It is never a gate input — no gate verdict, retry cap or phase
+  transition reads it.
 
 ### Neutral / Trade-Offs
 
