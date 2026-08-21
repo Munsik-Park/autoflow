@@ -72,7 +72,7 @@
 #     carrier is what this guards against).
 #   - AC-live-assertion-set-preserved: guard (non-vacuity keystone), PASSes
 #     now against the checked-in baseline snapshot
-#     (tests/fixtures/issue-109-assertion-baseline-{798,799}.txt) and
+#     (tests/fixtures/ratchet/issue-109-assertion-baseline-{798,799}.txt) and
 #     is expected to keep passing -- it REDs only if a later edit deletes one
 #     of today's assertions.
 # =============================================================================
@@ -343,6 +343,16 @@ done
 # assertions; it must never remove one of these.
 check_assertion_set_preserved() {   # baseline_file suite_file suite_label
   local baseline="$1" suite="$2" label="$3" missing=0 line
+  # Absence guard (issue #122, F5). Without it a missing baseline is a VACUOUS
+  # PASS, not a failure: `done < "$baseline"` fails its input redirection, the
+  # loop body never runs, `missing` stays 0 and the final predicate is true. A
+  # fixture move that misses one consumer would therefore disarm this keystone
+  # silently rather than redding it — the precise failure mode this cycle
+  # exists to retire. Fail loud, naming the path.
+  if [ ! -f "$baseline" ]; then
+    echo "    BLOCK in $label: baseline file not found: $baseline" >&2
+    return 1
+  fi
   while IFS= read -r line; do
     [ -z "$line" ] && continue
     if ! grep -qF -- "$line" "$suite"; then
@@ -354,9 +364,9 @@ check_assertion_set_preserved() {   # baseline_file suite_file suite_label
 }
 
 assert_true "AC-live-assertion-set-preserved: every baseline assertion-description literal still greps in tests/test-issue-798-topology-flip.sh" \
-  "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/issue-109-assertion-baseline-798.txt' '$SUITE_798' 'tests/test-issue-798-topology-flip.sh'"
+  "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/ratchet/issue-109-assertion-baseline-798.txt' '$SUITE_798' 'tests/test-issue-798-topology-flip.sh'"
 assert_true "AC-live-assertion-set-preserved: every baseline assertion-description literal still greps in tests/test-issue-799-inert-cleanup.sh" \
-  "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/issue-109-assertion-baseline-799.txt' '$SUITE_799' 'tests/test-issue-799-inert-cleanup.sh'"
+  "check_assertion_set_preserved '$PROJECT_ROOT/tests/fixtures/ratchet/issue-109-assertion-baseline-799.txt' '$SUITE_799' 'tests/test-issue-799-inert-cleanup.sh'"
 
 # =============================================================================
 echo ""
