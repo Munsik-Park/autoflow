@@ -15,8 +15,9 @@
 # GREEN STATE (this commit): the 10 temporary discriminators are DELETED. All
 # 15 ratified entries (verification design §5.0) now live in
 # tests/fixtures/doc-invariants.json under origin_issue: 43 — each literal
-# moved exactly once, so R43-COUNT reads 15 and the permanent runner
-# (tests/run-doc-invariants.sh) owns every STATE-shaped assertion.
+# moved exactly once, and the permanent runner (tests/run-doc-invariants.sh)
+# owns every STATE-shaped assertion. The count pin that once read 15 here was
+# disposed in issue #122 as a fossil — see docs/doc-invariant-registry.md § 19.5.
 #
 # What remains here permanently — DELTA-shaped /
 # byte-invariance / count / meta guards the permanent registry structurally
@@ -29,8 +30,6 @@
 #   M43-REGEN-CLEAN        — setup/manifest.json stays regen-clean for the
 #     two manifest-registered sources this cycle edits (CLAUDE.md,
 #     docs/teammate-contracts.md).
-#   R43-COUNT              — the origin_issue==43 registry entry count is
-#     exactly 15 (count-shaped; the registry cannot hold a count predicate).
 #   A43-LITERAL-CONTIGUOUS — meta guard over the append: (a) no
 #     origin_issue:43 literal/before/after carries an embedded newline,
 #     (b) each entry re-checks in its OWN predicate's direction with its own
@@ -125,17 +124,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# R43-COUNT — origin_issue==43 entry count equals 15 (D2/§5.0 ratified set).
-# Count-shaped -> cycle-scoped only, never in the permanent registry.
-# ---------------------------------------------------------------------------
-echo ""
-echo "R43-COUNT — origin_issue==43 registry entry count is exactly 15"
-
-COUNT43=$(jq -r '[.invariants[] | select(.origin_issue==43)] | length' "$REGISTRY")
-assert_true "R43-COUNT: origin_issue==43 entry count == 15 (currently $COUNT43)" \
-  "[ \"$COUNT43\" -eq 15 ]"
-
-# ---------------------------------------------------------------------------
 # A43-LITERAL-CONTIGUOUS — meta guard on the registry append itself.
 # (a) no embedded newline. (b) predicate-direction-aware re-check, grep
 # flavor per entry `match`, over the 15 promoted entries.
@@ -177,7 +165,10 @@ done < <(jq -r '.invariants[] | select(.origin_issue==43) |
    (if .predicate=="ordered" then .before else .literal end),
    (.after // "")] | @tsv' "$REGISTRY")
 
-echo "  (info) A43-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/$COUNT43 origin_issue:43 entries mismatch their predicate direction (0 expected)"
+# Denominator for the report line only — derived at evaluation time and never
+# compared against an inline literal (docs/doc-invariant-registry.md § 18).
+ENTRIES43=$(jq -r '[.invariants[] | select(.origin_issue==43)] | length' "$REGISTRY")
+echo "  (info) A43-LITERAL-CONTIGUOUS (b): $DIRECTION_BAD/$ENTRIES43 origin_issue:43 entries mismatch their predicate direction (0 expected)"
 assert_true "A43-LITERAL-CONTIGUOUS (b): every origin_issue:43 entry matches its predicate direction" \
   "[ \"$DIRECTION_BAD\" -eq 0 ]"
 

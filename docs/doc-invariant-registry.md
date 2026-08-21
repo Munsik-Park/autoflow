@@ -1267,3 +1267,48 @@ counters; `run_bounded_in` in `tests/test-push-context-base-ref.sh`; `harness_ru
 `tests/test-bounded-execution-fallback.sh` — which `check-watchdog-detachment.sh` names as an
 explicit subject-set exclusion, so extracting it would move a deliberately excluded site into
 the scanned tier and invert that lint's judgement.
+
+### 19.5 Fossil count pins — disposed, retained, and the detector's stated gaps
+
+**Disposed this cycle** — the two the re-derivation confirms, and only those.
+
+| Removed pin | Suite | Ground under § 18 |
+|---|---|---|
+| `R43-COUNT` (with `COUNT43` and both header enumeration entries) | `tests/test-issue-43-report-channel-contract.sh` | a `jq … \| length` over `origin_issue==43` compared against the inline literal `15`, in a suite whose header declares `lane: standing`, while the pin's **own adjacent comment** declares count-shaped assertions "cycle-scoped only, never in the permanent registry". It contradicts its own stated rule. The `A43-LITERAL-CONTIGUOUS (b)` report line that read the same variable now derives its denominator at evaluation time and compares it with nothing |
+| `AC-59-11c-count` (removed with the `AC-59-11c` block, see § 19.2) | `tests/test-issue-59-adoption-evidence-discipline.sh` | a file-scoped legacy-entry count (`56-AC*`/`27-AC*` entries on one source) compared against the inline literal `12`, in a `lane: standing` suite, with no declared target. The issue comment anchors this pin at a line holding unrelated prose about prompt-constant ordering; the anchor is corrected here rather than carried |
+
+**Named in the issue, not disposed** — each with its ground. These sites must be **unchanged**
+in this cycle's diff, and are:
+
+| Site | Ground |
+|---|---|
+| the composition-oracle manifest fence (`AC-27-21a`) | already converted to the drift-immune named-source row-existence shape, as its own inline comment records |
+| `tests/lib/harness-pins.sh` `HARNESS_OK_COUNT` | a **deliberate committed literal** with a single authoring home, whose header states why a regenerated value would detect nothing and records how to bump it. Out of § 18's scope by construction: the detector's subject is a count derived at *evaluation* time, which this explicitly is not |
+| the sibling-suite assertion-set baselines | **re-declared, not deleted** — see § 19.6 |
+
+**Stated detector coverage gaps.** Naming a gap is the alternative to widening the
+discriminant mid-cycle; both open questions the deliberation left are recorded here rather
+than silently dropped.
+
+- **Prompt-constant occurrence counts.** The detector reaches occurrence-count pins over a
+  workflow script's prompt constants (`grep -c '${CONSTANT}' … -eq N`). Whether those are
+  fossils owed disposal, or load-bearing pins on a named interpolation site that § 18's
+  zero-and-one exclusion should be widened to cover, is a genuine judgement call and not this
+  issue's subject. **Not disposed this cycle**, and the population they represent is exactly
+  why the fossil-containment leg ships advisory rather than gating: promotion to gating
+  requires measuring this exemption set against a clean tree first.
+- **Literal-hash pins.** `tests/test-issue-62-sequential-rounds.sh` `AC-62-21a` compares one
+  file's sha256 against a checked-in literal with no declared target — § 18's fossil
+  signature in a shape the detector, scoped to counts derived at evaluation time, does not
+  reach. **Left in place this cycle**, recorded here as a known gap in the detector's
+  coverage rather than resolved by widening the detector mid-cycle.
+
+**Deviation from the issue's stated acceptance criterion, recorded.** The issue asks for a
+merged cycle's residual branch-gate arm to be a **hard FAIL** in
+`scripts/test/check-cycle-scope-guard.sh`. This cycle ships an **advisory** leg in
+`scripts/test/check-suite-manifest.sh` instead (§ 19.7), on two grounds stated there: § 2 of
+this document records that a live cycle-scoped lane is branch-scoped by construction, so a
+forgotten deletion is inert on every foreign branch — the cost is maintenance, not
+incorrectness — and deciding whether an issue is merged needs a network call, which inside a
+gating hermetic lint turns a CI outage or an unauthenticated runner into a red build. The
+divergence from the issue text is deliberate and is recorded here rather than absorbed.
