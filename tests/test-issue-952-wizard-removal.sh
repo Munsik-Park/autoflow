@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/improvement-backlog.md docs/maintained-docs.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh setup/manifest.json
+# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/improvement-backlog.md docs/maintained-docs.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================

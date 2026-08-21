@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude-plugin/marketplace.json .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml .github/workflows/workflow-regression.yml CLAUDE.md docs/autoflow-guide.md docs/design-rationale.md docs/submodule-common-rules.md docs/teammate-contracts.md plugin/autoflow/.claude-plugin/plugin.json setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/harness-pins.sh tests/manual/issue-62-manual-scenarios.md tests/manual/issue-67-manual-scenarios.md tests/run-doc-invariants.sh
+# ci-subject: .claude-plugin/marketplace.json .claude/workflows/architect-deliberation.js .github/workflows/e2e-dummy-target.yml .github/workflows/workflow-regression.yml CLAUDE.md docs/autoflow-guide.md docs/design-rationale.md docs/submodule-common-rules.md docs/teammate-contracts.md plugin/autoflow/.claude-plugin/plugin.json setup/manifest.json test/workflows/run.mjs tests/lib/harness-pins.sh tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================

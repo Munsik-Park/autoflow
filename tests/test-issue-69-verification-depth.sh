@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/INDEX.md docs/adr/README.md docs/autoflow-guide.md docs/evaluation-system.md docs/maintained-docs.md docs/teammate-contracts.md scripts/test/check-suite-leaf.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/harness-pins.sh tests/run-doc-invariants.sh
+# ci-subject: .github/workflows/e2e-dummy-target.yml docs/INDEX.md docs/adr/README.md docs/autoflow-guide.md docs/evaluation-system.md docs/maintained-docs.md docs/teammate-contracts.md scripts/test/check-suite-leaf.sh setup/manifest.json test/workflows/run.mjs tests/fixtures/doc-invariants.json tests/lib/harness-pins.sh tests/run-doc-invariants.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================

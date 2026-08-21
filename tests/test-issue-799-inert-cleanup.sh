@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml README.md docs/INDEX.md docs/autoflow-guide.md docs/external-review-sequencing.md docs/git-workflow.md docs/maintained-docs.md docs/submodule-common-rules.md plugin/autoflow/hooks/check-autoflow-gate.sh setup/SETUP-GUIDE.md setup/manifest.json tests/fixtures/doc-invariants.json tests/manual/issue-799-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh
+# ci-subject: .github/workflows/e2e-dummy-target.yml README.md docs/INDEX.md docs/autoflow-guide.md docs/external-review-sequencing.md docs/git-workflow.md docs/maintained-docs.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/manifest.json tests/fixtures/doc-invariants.json tests/manual/issue-799-manual-scenarios.md tests/plugin/verify-e2e-dummy-target.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
