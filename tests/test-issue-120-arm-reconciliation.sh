@@ -94,6 +94,23 @@ on_issue_branch() {
 #     `#<t>` template ordinal when the removed loop body holds more than one
 #     assert_* template under one <AC-id>. <source> is the dereferenced array
 #     variable name, or `inline(<comma-joined elements>)` for a literal list.
+# parse_quoted_elements <text> — prints one bash array-literal element of
+# <text> per line. Uses `eval` for correct token/quote splitting (spaces,
+# `/`, embedded quotes all handled the way bash itself would split them),
+# but neutralises `$` first so a base-ref element spelled literally as
+# "$PROJECT_ROOT/…" (e.g. tests/test-issue-955-subagent-background-ban.sh's
+# AGENT_FILES) comes back unexpanded, matching what the removed source line
+# actually spells rather than this process's own runtime value.
+parse_quoted_elements() {
+  local text="$1" safe="${1//\$/@@DOLLAR@@}"
+  local -a toks=()
+  eval "toks=($safe)" 2>/dev/null || toks=()
+  local t
+  for t in "${toks[@]}"; do
+    printf '%s\n' "${t//@@DOLLAR@@/\$}"
+  done
+}
+
 arm_extract_removed_keys() {
   local abs_file="$1" base="$2"
   local rel="${abs_file#"$PROJECT_ROOT"/}"
@@ -123,30 +140,68 @@ arm_extract_removed_keys() {
     if [[ "$trimmed" =~ ^([A-Za-z_][A-Za-z0-9_]*)=\((.*)\)[[:space:]]*$ ]]; then
       local arr_name="${BASH_REMATCH[1]}" arr_body="${BASH_REMATCH[2]}"
       local -a elems=()
-      eval "elems=($arr_body)" 2>/dev/null || elems=()
+      mapfile -t elems < <(parse_quoted_elements "$arr_body")
       arm_array["$arr_name"]="$(IFS=,; echo "${elems[*]}")"
       i=$((i + 1))
       continue
     fi
 
-    # Array declaration, multi-line: NAME=( \n "a" \n "b" \n )
+    # Array declaration, multi-line: NAME=(
+    #   "a" "b" "c"
+    #   "d" "e"
+    # )
+    # Each body line can hold ONE OR MORE quoted elements (space-separated
+    # bash array-literal syntax, which may itself contain spaces or `/`
+    # inside the quotes) — not one element per line. Each line is parsed as
+    # its own array-literal fragment via `eval`, the same mechanism the
+    # single-line form above uses, rather than a per-line quote-stripping
+    # `sed` that only handles exactly one token per line.
     if [[ "$trimmed" =~ ^([A-Za-z_][A-Za-z0-9_]*)=\($ ]]; then
       local arr_name="${BASH_REMATCH[1]}"
       local -a elems=()
       local j=$((i + 1))
-      while [ "$j" -lt "$n" ] && [[ "${removed[$j]}" != ")" ]] && [[ "${removed[$j]}" != *")" ]]; do
-        local el; el="$(printf '%s' "${removed[$j]}" | sed -E 's/^[[:space:]]*"?//; s/"?[[:space:]]*$//')"
-        [ -n "$el" ] && elems+=("$el")
+      while [ "$j" -lt "$n" ]; do
+        local raw="${removed[$j]}"
+        local raw_trimmed="${raw#"${raw%%[![:space:]]*}"}"
+        if [ "$raw_trimmed" = ")" ]; then
+          j=$((j + 1))
+          break
+        fi
+        local line_body="$raw_trimmed" terminal=0
+        if [[ "$line_body" == *")" ]]; then
+          line_body="${line_body%)}"
+          terminal=1
+        fi
+        local -a line_elems=()
+        mapfile -t line_elems < <(parse_quoted_elements "$line_body")
+        elems+=("${line_elems[@]}")
         j=$((j + 1))
+        [ "$terminal" -eq 1 ] && break
       done
       arm_array["$arr_name"]="$(IFS=,; echo "${elems[*]}")"
-      i=$((j + 1))
+      i=$j
       continue
     fi
 
     # for VAR in ...
     if [[ "$trimmed" =~ ^for[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+in[[:space:]]+(.*)$ ]]; then
       local rhs="${BASH_REMATCH[1]}"
+      # Backslash-continued for-header: the statement's element list can span
+      # more than one physical (removed) line, e.g.
+      #   for h in "Status" "Context" ... "Consequences" \
+      #            "Related Issues / PRs" "Notes"; do
+      # A dangling trailing backslash is the sole continuation signal here
+      # (`assert_true "desc" \` lines share the same marker but never match
+      # this branch, since they don't start with `for `). Join every
+      # continuation line into rhs and advance i past them, so the body scan
+      # below starts after the whole header, not mid-header.
+      while [[ "$rhs" =~ \\[[:space:]]*$ ]] && [ $((i + 1)) -lt "$n" ]; do
+        rhs="${rhs%\\}"
+        i=$((i + 1))
+        local cont="${removed[$i]}"
+        local cont_trimmed="${cont#"${cont%%[![:space:]]*}"}"
+        rhs="${rhs% } ${cont_trimmed}"
+      done
       rhs="$(printf '%s' "$rhs" | sed -E 's/;?[[:space:]]*do[[:space:]]*$//')"
       local source_token elems_csv
       if [[ "$rhs" =~ \"\$\{([A-Za-z_][A-Za-z0-9_]*)\[@\]\}\" ]]; then
@@ -154,14 +209,25 @@ arm_extract_removed_keys() {
         source_token="$arr_name"
         elems_csv="${arm_array[$arr_name]:-}"
         if [ -z "$elems_csv" ]; then
-          elems_csv="$(git -C "$PROJECT_ROOT" show "$base:$rel" 2>/dev/null \
-            | sed -n "/^${arr_name}=($/,/^)\$/p" \
-            | sed -E '1d;$d;s/^[[:space:]]*"?//; s/"?[[:space:]]*$//' \
-            | paste -sd, -)"
+          # The array itself wasn't removed (only the loop dereferencing it
+          # was) — read its declaration from the base ref directly. Same
+          # one-or-more-elements-per-line parsing as the removed-declaration
+          # path above: strip the wrapper lines, then run each body line
+          # through parse_quoted_elements rather than assuming one element
+          # per line.
+          local -a base_elems=()
+          local body_line
+          while IFS= read -r body_line; do
+            local -a le=()
+            mapfile -t le < <(parse_quoted_elements "$body_line")
+            base_elems+=("${le[@]}")
+          done < <(git -C "$PROJECT_ROOT" show "$base:$rel" 2>/dev/null \
+            | sed -n "/^${arr_name}=($/,/^)\$/p" | sed '1d;$d')
+          elems_csv="$(IFS=,; echo "${base_elems[*]}")"
         fi
       else
         local -a toks=()
-        eval "toks=($rhs)" 2>/dev/null || toks=()
+        mapfile -t toks < <(parse_quoted_elements "$rhs")
         elems_csv="$(IFS=,; echo "${toks[*]}")"
         source_token="inline(${elems_csv})"
       fi
@@ -241,6 +307,17 @@ done
 for id in "AC-961-5" "AC-961-7"; do
   assert_true "AC-header-scope-list-consistent: $id" "true"
 done
+for x in "A1" "A2" \
+         "A3"; do
+  assert_true "AC-CONT: $x" "true"
+done
+MULTI_LINE_ARR=(
+  "M1" "M2" "M3"
+  "M4"
+)
+for m in "${MULTI_LINE_ARR[@]}"; do
+  assert_true "AC-MULTILINE: $m" "true"
+done
 SH
 git -C "$SELFTEST_DIR" add fixture.sh
 git -C "$SELFTEST_DIR" commit -q -m base
@@ -273,8 +350,12 @@ assert_true "extractor-self-test: two assert_* templates in one loop body under 
   "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC2(inline(Q1,Q2,Q3):Q2)\`#1' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC2(inline(Q1,Q2,Q3):Q2)\`#2'"
 assert_true "extractor-self-test: an inline-literal-list loop carries the inline(...) source token" \
   "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-header-scope-list-consistent(inline(AC-961-5,AC-961-7):AC-961-7)\`'"
-assert_true "extractor-self-test (non-vacuous count): the planted removal yields at least 12 distinct keys (3 static + 3 loop-A + 6 loop-B + 2 loop-C)" \
-  "[ \"\$(printf '%s\n' \"\$SELFTEST_KEYS\" | grep -c '.')\" -ge 12 ]"
+assert_true "extractor-self-test: a backslash-continued multi-line for-header (tests/test-issue-51-teammate-removal-verdict.sh:35-36's real shape) still yields one key per element, including the element spelled on the continuation line" \
+  "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-CONT(inline(A1,A2,A3):A1)\`' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-CONT(inline(A1,A2,A3):A3)\`'"
+assert_true "extractor-self-test: a multi-line array with more than one quoted element on a single body line (tests/test-issue-51-teammate-removal-verdict.sh's HEADINGS_17 real shape) yields one key per element, not one garbled key per line" \
+  "printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M1)\`' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M2)\`' && printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'fixture.sh \`AC-MULTILINE(MULTI_LINE_ARR:M4)\`' && ! printf '%s\n' \"\$SELFTEST_KEYS\" | grep -qF 'M1\" \"M2'"
+assert_true "extractor-self-test (non-vacuous count): the planted removal yields at least 21 distinct keys (3 static + 3 loop-A + 6 loop-B + 2 loop-C + 3 loop-D continuation + 4 loop-E multi-line-array)" \
+  "[ \"\$(printf '%s\n' \"\$SELFTEST_KEYS\" | grep -c '.')\" -ge 21 ]"
 
 rm -rf "$SELFTEST_DIR"
 
