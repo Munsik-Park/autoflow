@@ -39,6 +39,11 @@ const REASON_RESUME_REGISTER_ABSENT = 'resume register absent'
 const REASON_RESUME_ARTIFACT_MISSING = 'resume design artifact missing'
 const REASON_RESUME_NO_OPEN_ENTRY = 'resume register has no open entry'
 const REASON_RESUME_ALREADY_CONVERGED = 'resume register already converged'
+// The resume-scoped open-entry precondition on CONVERGED (issue #127, cycle 3). Same declare-once,
+// assigned-BARE discipline: this is a design outcome with its own cause — a resume run whose agenda
+// entries were never disposed of — and laundering it into the generic round-exhaustion text would
+// hide from the operator which concern blocked the run.
+const REASON_RESUME_OPEN_ENTRY_AT_CONVERGENCE = 'resume register still open at convergence'
 // Fence sentinels for the persisted register payload (issue #127). The register-write prompt wraps
 // the serialized JSON in these two literals and instructs the sub-agent to write exactly the bytes
 // between them, so the payload's extent is read by equality on a declared literal rather than
@@ -285,6 +290,11 @@ let loaded = null
 // no-re-litigation rule has something to point at. On a resume run it is rehydrated from the
 // persisted register before Converge (issue #127) rather than starting empty.
 const register = new Map()
+// Zero-argument open-entry predicate over the register's CURRENT state (issue #127, cycle 3),
+// declared with the register and read by the two convergence guard sites below. Zero-arity for the
+// same reason `renderCarry` is: the register is a run-level structure, so both sites want the same
+// question asked of the same map, not a parameterized view of it.
+const hasOpenEntry = () => [...register.values()].some((e) => e.status === 'open')
 // Rehydration is defensive (issue #127): a loaded entry passes back through the same flatten +
 // never-empty defaulting a raised counter does, so the four-labelled-lines-plus-terminator render
 // invariant holds whatever the load agent returned. An out-of-enum `status` coerces to `open` (the
@@ -389,6 +399,12 @@ const firstExchange = resume ? '' : FIRST_EXCHANGE_RULE
 // empty string on the cold path, leaving those prompts byte-identical.
 const resumeSeed = resume ? LEDGER_SEED_RULE : ''
 let converged = false
+// This run's LAST convergence-guard decision (issue #127, cycle 3), not a latch. It is ASSIGNED at
+// every guard site, whether or not that site denied, because the terminal turn decides the reason:
+// an in-loop denial always summons the closing half-round, and if that turn COUNTERs then mutual
+// ACCEPT never happened on this run and the generic round-exhaustion text is the true one. The
+// `converged` conjunct is what makes the assignment at a non-denying site write `false`.
+let openEntryDenied = false
 // Raise path: upsert as `open`. A re-raise updates the existing entry in place; `raisedBy` and
 // the display `name` are fixed at first creation, so a carried name token is stable across rounds.
 const raise = (items, side) => {
@@ -519,6 +535,13 @@ while (!earlyEscalateReason && round < roundCeiling && !converged) {
   raise(dev && dev.counters, 'dev')
   applyDispositions(test && test.dispositions, 'test')
   applyDispositions(dev && dev.dispositions, 'dev')
+  // Guard site A (issue #127, cycle 3) — resume-scoped open-entry precondition, evaluated HERE
+  // because it must read the register AFTER this round's own raise/dispose: the round that resolves
+  // its own carried objection is exactly the round that should converge. `converged` itself is
+  // cleared, not merely flagged — the Ledger phase computes the verdict from `converged` alone and
+  // consults `escalationReason` only on the ESCALATE branch, so a flag-only guard is a no-op.
+  openEntryDenied = resume && converged && hasOpenEntry()
+  if (openEntryDenied) converged = false
   console.log(`round ${round}: dev=${dev ? dev.response : 'missing'}(${(dev && dev.counters && dev.counters.length) || 0}) test=${test ? test.response : 'missing'}(${(test && test.counters && test.counters.length) || 0})`)
 }
 
@@ -560,6 +583,11 @@ if (!earlyEscalateReason && !converged && round === roundCeiling && accepted(las
     // rule is why the missing turn had to be a Test-AI turn rather than an extra Developer-AI one.
     raise(closing.counters, 'test')
     applyDispositions(closing.dispositions, 'test')
+    // Guard site B (issue #127, cycle 3) — the same precondition on the closing half-round, which
+    // on a resume run IS the path to CONVERGED. Assigned again, superseding site A's decision for
+    // the same reason `lastTest = closing` supersedes the cap round's verdict.
+    openEntryDenied = resume && converged && hasOpenEntry()
+    if (openEntryDenied) converged = false
     console.log(`closing half-round: test=${closing.response}(${(closing.counters && closing.counters.length) || 0})`)
   }
 }
@@ -567,8 +595,12 @@ if (!earlyEscalateReason && !converged && round === roundCeiling && accepted(las
 phase('Ledger')
 const verdict = converged ? 'CONVERGED' : 'ESCALATE'
 // Cause-specific escalation reason: an early-exit reason (missing draft / artifact / consecutive
-// null) survives verbatim; otherwise the generic round-exhaustion text.
+// null) survives verbatim; then the resume open-entry sentinel (issue #127, cycle 3) — ordered
+// AFTER `earlyEscalateReason` because an infrastructure cause still outranks a design outcome, and
+// BEFORE the generic text because the register, not round exhaustion, is what blocked this run;
+// otherwise the generic round-exhaustion text.
 const escalationReason = earlyEscalateReason
+  || (openEntryDenied ? REASON_RESUME_OPEN_ENTRY_AT_CONVERGENCE : null)
   || `No mutual ACCEPT within ${roundCeiling} rounds (reached round ${round})`
 // Only a CONVERGED run records settled decisions under "ARCHITECT mutual ACCEPT".
 // A non-convergence run records a single outcome entry under a DISTINCT authority so

@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b4c7c12f8c6ec56a1cbc6201b0819abee33070a729dd18be8c70018a3c4b982a"
+      "sha256": "fadfe5ed940e6adde071678bb96a8cbdd80e987ad424209822273581947a45f6"
     },
     {
       "source": "docs/design-rationale.md",
@@ -202,7 +202,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7c24a69b0c2640fc283b5ec51bd9ca8c4061417fdda2a2e142fc3361a2f70caf"
+      "sha256": "47705345c0e552a253c8a209d2f11b06eb81f1c37a5a3dc1e6d1748dba35c944"
     },
     {
       "source": "docs/title-guide.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "3e0eaadcf7dee0d5e85d62551db020ac4081178db6e4a32e5c3051bbd414fb5b"
+      "sha256": "d41b58f334b04a957150e57e85be63417231aa9fd83742fc11ba2d0ad7a2875d"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
