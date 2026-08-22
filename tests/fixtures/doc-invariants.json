@@ -8075,6 +8075,30 @@
       "match": "fixed",
       "literal": "codex",
       "scope": "permanent"
+    },
+    {
+      "id": "122-red-admission-question",
+      "origin_issue": 122,
+      "intent": "verification",
+      "file": "docs/autoflow-guide.md",
+      "section": "RED — Test Writing (Test First)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "Can the new check be expressed as a doc-invariant registry entry?",
+      "scope": "permanent"
+    },
+    {
+      "id": "122-keystone-amendment-delta",
+      "origin_issue": 122,
+      "intent": "verification",
+      "file": "docs/doc-invariant-registry.md",
+      "section": "17.2 Keystone joint retirement (`tests/test-issue-109-doc-assertions.sh`)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "re-declared",
+      "scope": "permanent"
     }
   ]
 }

@@ -38,7 +38,6 @@ PLUGIN_JSON="$PROJECT_ROOT/plugin/autoflow/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$PROJECT_ROOT/.claude-plugin/marketplace.json"
 SUITE_56="$PROJECT_ROOT/tests/test-issue-56-carry-evidence-discipline.sh"
 SUITE_59="$PROJECT_ROOT/tests/test-issue-59-adoption-evidence-discipline.sh"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 # EXPECTED version for this cycle (0.1.7 -> 0.1.8, issue #88 retirement + version bump).
 EXPECTED_VERSION="0.1.8"
@@ -81,13 +80,6 @@ assert_true "AC-67-HARNESS-b: harness reports 'all workflow regression tests pas
 # =============================================================================
 echo ""
 echo "=== Element 2 (composition oracle, non-mock, unconditional) — setup/manifest.json artifact rows hash-match live sources; version agrees everywhere (manifest-regen, version-bump / AC14) ==="
-
-for SRC in ".claude/workflows/architect-deliberation.js" "docs/teammate-contracts.md" "docs/autoflow-guide.md"; do
-  MANIFEST_SHA="$(jq -r --arg s "$SRC" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST")"
-  CUR_SHA="$(shasum -a 256 "$PROJECT_ROOT/$SRC" | awk '{print $1}')"
-  assert_true "AC-67-MANIFEST: setup/manifest.json row for $SRC sha256 matches the live source (manifest: $MANIFEST_SHA, current: $CUR_SHA)" \
-    "[ \"$MANIFEST_SHA\" = \"$CUR_SHA\" ]"
-done
 
 PLUGIN_VERSION="$(jq -r '.version' "$PLUGIN_JSON" 2>/dev/null || true)"
 MARKETPLACE_VERSION="$(jq -r '.plugins[] | select(.name=="autoflow") | .version' "$MARKETPLACE_JSON" 2>/dev/null || true)"

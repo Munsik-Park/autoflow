@@ -90,6 +90,7 @@ on:
       - 'tests/test-codex-review-label-step.sh'
       - 'tests/test-gate-hardening.sh'
       - 'tests/test-issue-16-manifest-locale-invariance.sh'
+      - 'tests/test-issue-122-retirement-attribution.sh'
       - 'tests/test-issue-18-fixture-glob-isolation.sh'
       - 'tests/test-issue-245-schema-validation.sh'
       - 'tests/test-issue-25-confirm-ci-green.sh'
@@ -148,6 +149,10 @@ on:
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
       - 'tests/test-issue-121-declaration-release.sh'
       - 'tests/test-issue-120-arm-reconciliation.sh'
+      - 'tests/test-issue-43-report-channel-contract.sh'
+      - 'tests/test-issue-52-peer-facilitator-premise.sh'
+      - 'tests/test-issue-56-carry-evidence-discipline.sh'
+      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
       # #120 arm-and-deletion reconciliation (issue #120) reads these four
       # touched-suite files for its diff-driven reconciliation leg.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
@@ -160,6 +165,14 @@ on:
       - 'tests/test-issue-69-verification-depth.sh'
       - 'tests/test-issue-788-host-purity-delta.sh'
       - 'tests/test-issue-955-subagent-background-ban.sh'
+      # doc-invariant registry target files not otherwise named above. The
+      # bare runner step below asserts the registry's permanent invariants hold
+      # in the CURRENT tree, so every file a registry entry names is an input
+      # this workflow's trigger must cover — enforced by
+      # tests/test-workflow-trigger-conformance.sh's
+      # AC-registry-carrier-paths-coverage leg (issue #122).
+      - 'LICENSE'
+      - 'tests/plugin/manual-scenarios-792.md'
   push:
     branches: [main]
     paths:
@@ -216,6 +229,7 @@ on:
       - 'tests/test-codex-review-label-step.sh'
       - 'tests/test-gate-hardening.sh'
       - 'tests/test-issue-16-manifest-locale-invariance.sh'
+      - 'tests/test-issue-122-retirement-attribution.sh'
       - 'tests/test-issue-18-fixture-glob-isolation.sh'
       - 'tests/test-issue-245-schema-validation.sh'
       - 'tests/test-issue-25-confirm-ci-green.sh'
@@ -274,6 +288,10 @@ on:
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
       - 'tests/test-issue-121-declaration-release.sh'
       - 'tests/test-issue-120-arm-reconciliation.sh'
+      - 'tests/test-issue-43-report-channel-contract.sh'
+      - 'tests/test-issue-52-peer-facilitator-premise.sh'
+      - 'tests/test-issue-56-carry-evidence-discipline.sh'
+      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
       # #120 arm-and-deletion reconciliation (issue #120) reads these four
       # touched-suite files for its diff-driven reconciliation leg.
       - 'tests/test-issue-51-teammate-removal-verdict.sh'
@@ -286,6 +304,14 @@ on:
       - 'tests/test-issue-69-verification-depth.sh'
       - 'tests/test-issue-788-host-purity-delta.sh'
       - 'tests/test-issue-955-subagent-background-ban.sh'
+      # doc-invariant registry target files not otherwise named above. The
+      # bare runner step below asserts the registry's permanent invariants hold
+      # in the CURRENT tree, so every file a registry entry names is an input
+      # this workflow's trigger must cover — enforced by
+      # tests/test-workflow-trigger-conformance.sh's
+      # AC-registry-carrier-paths-coverage leg (issue #122).
+      - 'LICENSE'
+      - 'tests/plugin/manual-scenarios-792.md'
 
 permissions:
   contents: read
@@ -512,6 +538,12 @@ jobs:
         timeout-minutes: 10
         run: bash tests/test-issue-120-arm-reconciliation.sh
 
+      - name: test-issue-122-retirement-attribution.sh
+        id: s-test-issue-122-retirement-attribution
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-122-retirement-attribution.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-122-retirement-attribution.sh
+
       - name: test-issue-985-doc-assertions.sh
         id: s-test-issue-985-doc-assertions
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-985-doc-assertions.sh ')
@@ -610,6 +642,16 @@ jobs:
 
       - name: doc-invariant runner self-test (mutation teeth)
         run: bash tests/run-doc-invariants.sh --self-test
+
+      # Current-tree conformance, distinct from the self-test above: --self-test
+      # evaluates every predicate against a MUTATED COPY of the entry's target
+      # file and requires FAIL, so it certifies the registry's teeth and never
+      # that its invariants hold right now. This bare step is the named carrier
+      # for that second property (issue #122, §19.2). No `if:` — the property
+      # depends on the registry, the runner and every file a registry entry
+      # names, all of which the `paths:` blocks above cover.
+      - name: doc-invariant runner (current-tree conformance)
+        run: bash tests/run-doc-invariants.sh
 
       # Reconciliation (issue #103): a step whose `if:` evaluates false is
       # SKIPPED and the job still concludes successfully — so a green run is

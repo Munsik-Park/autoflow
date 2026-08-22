@@ -40,11 +40,6 @@
 # tests/test-issue-27-composition-oracle.sh. See
 # docs/doc-invariant-registry.md §12 and §12.1.
 #
-#   AC-56-10 — fence at RED / hard gate mid-GREEN: `setup/manifest.json`'s row
-#             for `architect-deliberation.js` hash-matches the live source
-#             (AC-56-10a, gate). AC-56-10b's cycle-range co-occurrence
-#             advisory branch read `$BASE_REF`, whose only writer was
-#             AC-56-9's own arm; #107 retired both together (registry §12.1).
 #   AC-56-11 — Test-AI-owned surface: this suite is registered in
 #             .github/workflows/e2e-dummy-target.yml (both `paths:` blocks +
 #             a `run:` step) — expected PASS by end of RED.
@@ -55,7 +50,6 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORKFLOW_JS="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
-MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 
 PASS=0; FAIL=0; TESTS=0
@@ -100,15 +94,6 @@ assert_true "AC-56-4a-decl: 'const COUNTER_EVIDENCE_RULE' declared exactly once 
   "[ \"$DECL_COUNT\" -eq 1 ]"
 assert_true "AC-56-4a-interp: \${COUNTER_EVIDENCE_RULE} interpolated exactly three times (re-anchored, issue #123 adds the closing half-round site) (got: $RULE_COUNT)" \
   "[ \"$RULE_COUNT\" -eq 3 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-56-10 — derived artifact: manifest row hash-matches the live source (gate) ==="
-
-MANIFEST_SHA="$(jq -r '.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js") | .sha256' "$MANIFEST")"
-CUR_ARCH_SHA="$(shasum -a 256 "$WORKFLOW_JS" | awk '{print $1}')"
-assert_true "AC-56-10a (gate): setup/manifest.json row sha256 == current architect-deliberation.js sha256 (manifest: $MANIFEST_SHA, current: $CUR_ARCH_SHA)" \
-  "[ \"$MANIFEST_SHA\" = \"$CUR_ARCH_SHA\" ]"
 
 # =============================================================================
 echo ""

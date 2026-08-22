@@ -476,6 +476,13 @@ The Test AI writes test code from the verification design.
 
 **Leaf rule**: a suite executes its subject, not another suite. A sibling's regression is caught by that sibling's own CI step, under its own name; re-running it here is duplicate execution. Enforced by `scripts/test/check-suite-leaf.sh`.
 
+**Admission**: before creating a suite file at all, answer these four questions. They are the leaf rule and the two-lane rule applied *before* the file exists rather than after, and each one that answers "yes" removes a file this tree would otherwise have to maintain and retire.
+
+- Can the new check be expressed as a doc-invariant registry entry? If so it is a data append to `tests/fixtures/doc-invariants.json`, not a new suite.
+- Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
+- Is the check delivery-pinned to this cycle's landed diff? Then `lane: cycle-scoped` with `retire-with:` is the default, not an exception.
+- Does the check compare against a checked-in basis? Then the ratchet-or-fossil rule decides its lane — see `docs/doc-invariant-registry.md` § 18.
+
 **Completion**: all automated tests Red + every new spec conforming to the header contract above + manual scenarios written.
 
 ---

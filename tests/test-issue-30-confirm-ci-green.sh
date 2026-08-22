@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/handoff/confirm-ci-green.sh
+# ci-subject: scripts/handoff/confirm-ci-green.sh tests/lib/confirm-ci-green-harness.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -49,6 +49,10 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCRIPT="$PROJECT_ROOT/scripts/handoff/confirm-ci-green.sh"
 MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
 
+# Shared harness: run_bounded, run_confirm, PRECHECK_MERGEABLE_CLEAN (issue #122).
+# Sourced after SCRIPT and MOCK_GH_DIR, which run_confirm reads.
+. "$PROJECT_ROOT/tests/lib/confirm-ci-green-harness.sh"
+
 PASS=0; FAIL=0; TESTS=0
 
 assert_true() {
@@ -71,70 +75,6 @@ assert_false() {
   fi
 }
 
-# Bounded execution helper (per tests/test-issue-25-confirm-ci-green.sh
-# run_bounded): prefer timeout/gtimeout; else a sleep+kill fallback. Sets
-# RB_EXIT and RB_KILLED (1 iff the watchdog fired).
-run_bounded() {
-  local bound="$1" logfile="$2"; shift 2
-  RB_KILLED=0
-  local timeout_bin=""
-  if command -v timeout >/dev/null 2>&1; then
-    timeout_bin="timeout"
-  elif command -v gtimeout >/dev/null 2>&1; then
-    timeout_bin="gtimeout"
-  fi
-  if [ -n "$timeout_bin" ]; then
-    ( "$timeout_bin" "$bound" "$@" ) >"$logfile" 2>&1
-    RB_EXIT=$?
-    [ "$RB_EXIT" -eq 124 ] && RB_KILLED=1
-  else
-    local marker="$logfile.watchdog"
-    set -m
-    ( "$@" ) >"$logfile" 2>&1 </dev/null &
-    local pid=$!
-    ( sleep "$bound"
-      if kill -0 "$pid" 2>/dev/null; then
-        echo killed > "$marker"
-        kill -TERM -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
-      fi
-    ) >/dev/null 2>&1 &
-    local watchdog_pid=$!
-    set +m
-    wait "$pid" 2>/dev/null
-    RB_EXIT=$?
-    if [ -s "$marker" ]; then
-      RB_KILLED=1
-    else
-      kill -TERM -"$watchdog_pid" 2>/dev/null || kill "$watchdog_pid" 2>/dev/null
-    fi
-    wait "$watchdog_pid" 2>/dev/null
-    rm -f "$marker" 2>/dev/null
-  fi
-}
-
-PRECHECK_MERGEABLE_CLEAN='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN"}'
-
-# run_confirm — invoke the script under test with the mock-gh PATH prepended,
-# capturing stdout/stderr/exit into globals. $1.. are the script's own argv.
-run_confirm() {
-  local out
-  out="$(mktemp)"
-  ( PATH="$MOCK_GH_DIR:$PATH" \
-    GH_INVOCATION_LOG="${GH_INVOCATION_LOG:-}" \
-    GH_MOCK_EXIT="${GH_MOCK_EXIT:-}" \
-    GH_MOCK_PRECHECK_BODY="${GH_MOCK_PRECHECK_BODY:-}" \
-    GH_MOCK_PRECHECK_EXIT="${GH_MOCK_PRECHECK_EXIT:-}" \
-    GH_MOCK_PRECHECK_SLEEP="${GH_MOCK_PRECHECK_SLEEP:-}" \
-    GH_MOCK_POLL_BODY="${GH_MOCK_POLL_BODY:-}" \
-    GH_MOCK_POLL_SEQUENCE_FILE="${GH_MOCK_POLL_SEQUENCE_FILE:-}" \
-    GH_MOCK_POLL_COUNTER_FILE="${GH_MOCK_POLL_COUNTER_FILE:-}" \
-    CI_POLL_TIMEOUT_SECS="${CI_POLL_TIMEOUT_SECS:-}" \
-    CI_POLL_INTERVAL_SECS="${CI_POLL_INTERVAL_SECS:-}" \
-    bash "$SCRIPT" "$@" ) >"$out" 2>&1
-  RUN_EXIT=$?
-  RUN_OUTPUT="$(cat "$out")"
-  rm -f "$out"
-}
 
 echo "=============================================="
 echo "confirm-ci-green.sh dedup fix (HANDOFF step-5, issue #30)"

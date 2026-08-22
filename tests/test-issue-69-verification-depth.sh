@@ -41,7 +41,6 @@ MAINTAINED_DOCS="$PROJECT_ROOT/docs/maintained-docs.md"
 INDEX_MD="$PROJECT_ROOT/docs/INDEX.md"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -145,52 +144,6 @@ VERIFICATION_DEPTH_SECTION="$(awk '/^#### Verification depth/{f=1} f&&/^#### Com
 CAP_PATTERN='\b(at most|no more than|maximum of|up to) (one|two|three|four|five|six|seven|eight|nine|ten|[0-9]+) (layers?|files?|lines?)\b'
 assert_true "AC-69-NO-QUANTITY-CAP: the Verification depth section introduces no digit- or word-form layer/file/line cap" \
   '! printf "%s" "$VERIFICATION_DEPTH_SECTION" | grep -qE "$CAP_PATTERN"'
-
-# =============================================================================
-echo ""
-echo "=== AC:manifest-fresh (O:manifest) — every manifest copy-row's recorded hash equals its source's live hash, for every source this cycle edits ==="
-
-MANIFEST_SOURCES=(
-  "docs/autoflow-guide.md"
-  "docs/evaluation-system.md"
-  "docs/teammate-contracts.md"
-  "docs/adr/README.md"
-  "docs/maintained-docs.md"
-  "docs/INDEX.md"
-)
-# One jq pass over the manifest (source -> sha256 map) instead of one jq invocation per
-# source — same result, fewer process spawns against the same static file.
-declare -A MANIFEST_SHA_BY_SRC
-while IFS=$'\t' read -r src sha; do
-  MANIFEST_SHA_BY_SRC["$src"]="$sha"
-done < <(jq -r '.artifacts[] | "\(.source)\t\(.sha256)"' "$MANIFEST")
-
-for SRC in "${MANIFEST_SOURCES[@]}"; do
-  MANIFEST_SHA="${MANIFEST_SHA_BY_SRC[$SRC]:-}"
-  CUR_SHA="$(shasum -a 256 "$PROJECT_ROOT/$SRC" | awk '{print $1}')"
-  assert_true "AC-69-MANIFEST: setup/manifest.json row for $SRC sha256 matches the live source" \
-    "[ \"$MANIFEST_SHA\" = \"$CUR_SHA\" ]"
-done
-if [ -n "$NEW_ADR_PATH" ]; then
-  ADR_MANIFEST_SHA="${MANIFEST_SHA_BY_SRC[docs/adr/$NEW_ADR_BASENAME]:-}"
-  ADR_CUR_SHA="$(shasum -a 256 "$NEW_ADR_PATH" | awk '{print $1}')"
-  assert_true "AC-69-MANIFEST-adr: setup/manifest.json row for docs/adr/$NEW_ADR_BASENAME sha256 matches the live source" \
-    "[ \"$ADR_MANIFEST_SHA\" = \"$ADR_CUR_SHA\" ]"
-else
-  note_deferred "AC-69-MANIFEST-adr: no verification-depth ADR file found yet — manifest row check deferred until GREEN adds it."
-fi
-
-# =============================================================================
-echo ""
-echo "=== AC:registry-no-regression (O:registry) — the doc-invariant registry runner passes with the new #69 entries added and no pre-existing entry regressing ==="
-
-REGISTRY_OUT="$(cd "$PROJECT_ROOT" && bash "$REGISTRY_RUNNER" 2>&1)"
-REGISTRY_EXIT=$?
-NON_69_FAIL="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL:' | grep -vc '^  FAIL: 69-' || true)"
-assert_true "AC-69-REGISTRY-exit: tests/run-doc-invariants.sh exits 0 (KNOWN RED mid-cycle — the new 69-AC-* entries FAIL until GREEN authors the shipped clause text)" \
-  "[ $REGISTRY_EXIT -eq 0 ]"
-assert_true "AC-69-REGISTRY-no-regression: no PRE-EXISTING (non-69-*) registry entry regresses (got: $NON_69_FAIL foreign FAIL(s))" \
-  "[ \"$NON_69_FAIL\" -eq 0 ]"
 
 # =============================================================================
 echo ""

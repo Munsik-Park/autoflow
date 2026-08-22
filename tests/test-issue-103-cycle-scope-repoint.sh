@@ -26,6 +26,8 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LINT="$PROJECT_ROOT/scripts/test/check-cycle-scope-guard.sh"
+# shellcheck source=scripts/test/suite-manifest.sh
+. "$PROJECT_ROOT/scripts/test/suite-manifest.sh"
 
 PASS=0; FAIL=0; TESTS=0
 assert_true() {
@@ -55,8 +57,32 @@ if [ -f "$LINT" ]; then
   fi
   assert_true "check-cycle-scope-guard.sh exits 0 on the real tree, post-re-point" "[ $REAL_EXIT -eq 0 ]"
 
-  assert_true "AC-cycle-scoped-branch-inertness verdict-preservation: the real tree still reports exactly 3 allow-list-bearing suites after the re-point (re-anchored, issue #121 retired suites 67 and 69's arrays with their branch-gated arms per docs/doc-invariant-registry.md §16; the trio is tests/test-issue-71-digest-removal.sh, tests/test-issue-121-declaration-release.sh, plus this cycle's own cycle-scoped tests/test-issue-120-arm-reconciliation.sh, which retires with #120)" \
-    "printf '%s\n' \"$REAL_OUT\" | grep -q '3 allow-list-bearing suite'"
+  # RED2 (issue #122): this arm pinned an inline literal (3) against a
+  # derived population size — exactly the fossil shape
+  # docs/doc-invariant-registry.md §18 names ("An inline integer compared
+  # against a derived population size ... in a lane: standing suite is a
+  # fossil"). The literal already needed one manual re-baseline (issue #121
+  # retired two prior contributors, dropping it from 5 to 3) and would need a
+  # second one for this cycle (issue #122 adds a fourth allow-list-bearing
+  # suite) — the self-approved-bump-by-the-same-commit-that-caused-it pattern
+  # §18 exists to end. Reshaped rather than bumped: the expected count is now
+  # RE-DERIVED AT EVALUATION TIME from the same library predicate the lint
+  # itself calls (suite_enumerate + suite_declares_allow_list,
+  # scripts/test/suite-manifest.sh) rather than a checked-in number, so the
+  # arm verifies agreement between the lint's report and an independent
+  # re-derivation instead of tracking a historical snapshot. This is not a
+  # widened detector scope — §18 excludes zero/one comparisons "about a named
+  # thing", and this arm was never one of those; it removes the checked-in
+  # literal itself, so there is nothing left for the detector to flag and
+  # nothing left to re-baseline on the next cycle that adds or removes a
+  # cycle-scoped allow-list suite. See docs/doc-invariant-registry.md §19.9.
+  EXPECTED_ALLOWLIST_COUNT=0
+  while IFS= read -r rel; do
+    suite_declares_allow_list "$PROJECT_ROOT/$rel" && EXPECTED_ALLOWLIST_COUNT=$((EXPECTED_ALLOWLIST_COUNT + 1))
+  done < <(suite_enumerate "$PROJECT_ROOT")
+  ACTUAL_ALLOWLIST_COUNT="$(printf '%s\n' "$REAL_OUT" | grep -oE '[0-9]+ allow-list-bearing' | grep -oE '^[0-9]+' || true)"
+  assert_true "AC-cycle-scoped-branch-inertness verdict-preservation: check-cycle-scope-guard.sh's reported allow-list-bearing suite count agrees with an independently re-derived count from suite_enumerate + suite_declares_allow_list, computed at evaluation time (lint reported: ${ACTUAL_ALLOWLIST_COUNT:-none}, re-derived: $EXPECTED_ALLOWLIST_COUNT)" \
+    "[ \"\$ACTUAL_ALLOWLIST_COUNT\" = \"$EXPECTED_ALLOWLIST_COUNT\" ]"
 
   # ---------------------------------------------------------------------
   # AC-cycle-scope-guard-repoint: self-test fixtures keyed on header, not

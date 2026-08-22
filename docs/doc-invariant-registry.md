@@ -436,7 +436,7 @@ through mechanically. It does not execute the renames.
 | `tests/test-issue-103-suite-manifest.sh`'s "test-issue-59 sources tests/lib/harness-pins.sh" row | **retired — subject removed this cycle** | its subject is the sourcing deleted above. Left standing it would have reported **green while its subject was gone**, because its predicate was a bare whole-file `grep` that `59`'s `ci-subject` token and comment mentions satisfy on their own. #103's settled property — the literal has exactly one authoring home — is carried entirely by the two negative rows beside it, which are true and untouched. In the same edit the surviving positive row for `tests/test-issue-27-composition-oracle.sh` is tightened from that bare grep to a **non-comment `source`/`.` line** predicate, so the one remaining sourcing claim is semantic rather than textual — the weakness is fixed at the row that keeps its subject, not papered over at the row that loses it |
 | `tests/test-issue-103-pin-and-docs.sh`'s two "branch-scoped-inert homes are untouched" rows | **flipped — presence pin's ground retired** | one shared preamble governed both rows on the ground that each foreign home pins its own cycle's measurement on its own dev branch. This cycle retires that ground. The `62` row asserted `EXPECTED_OK=58` is **present** — the only one of this cycle's three cross-file couplings in the positive direction, so a deletion, not an omission, reds it. The `56` row claimed its companion literal was untouched while its predicate was the file-existence tautology `[ -f "$SUITE_56" ]`, reporting green on a claim it never evaluated — the same semantically-false-PASS class as the row above, one row away in the same file. Both are flipped to the identical successor form, *the file authors no `EXPECTED_OK=` literal at all*, which strengthens #103's single-authorship invariant rather than dropping it, and the `56` row's tautological predicate is replaced by one that evaluates its own claim |
 | `tests/test-push-context-base-ref.sh`'s two literal pins on `tests/test-issue-59-adoption-evidence-discipline.sh` (the under-derivation pin and the real-tree `NATIVE-COVERAGE` corroboration arm) | **repointed — pinned subject retired, property preserved** | that suite pins one literal suite name into its derived subject set so a silent under-derivation fails loud instead of merely shrinking the printed set, and separately asserts that same subject reports `NATIVE-COVERAGE PASS`. Both name one subject and move together: a suite that is no longer derived cannot report a coverage state at all, so repointing only the first leaves the second asserting a state its subject can never produce. `59` was chosen because it was a real non-comment resolver call site; this cycle removed its last one, so the subject left the derived set legitimately and the pin would have redded a standing suite under an unrelated name. The guard's value is the pin, not any particular subject, so it is repointed rather than deleted. The successor is chosen by the property the pin needs — registered by a `push: branches: [main]` workflow, not in `EXEMPT_HERMETIC_DRIVERS`, and carrying a non-comment resolver call against the repo under test — which `tests/test-issue-27-composition-oracle.sh` satisfies and this cycle does not touch; `tests/test-issue-798-topology-flip.sh` is the alternate if `27` ever loses the call |
-| `tests/test-issue-62-sequential-rounds.sh:91-110` (`guard_result_at_ref_mutated`) and `tests/test-issue-103-pin-and-docs.sh`'s AC-pin-detects-harness-drift drive | **kept — intentional leaf exemption, negative control** | neither re-runs a registered sibling. Each drives a suite at ANOTHER ON-DISK STATE — a detached worktree at a historical ref, and a scratch worktree whose harness is deliberately perturbed — and the callee's own CI step, running the unperturbed tree, cannot stand in for it. The admission is a consequence of rows the lint itself evaluates, not a machine-readable exemption input: the #62 call site's argument is a function positional under a `tests/` prefix, which D5's antecedent (an assignment carrying a literal enumerated-suite path) does not have, and the pin-drift site's path is rooted at a scratch variable this file assigns from `mktemp`, which is row I3/I4's antecedent. This row records the GROUND for keeping them, not the mechanism that admits them |
+| `tests/test-issue-62-sequential-rounds.sh:90-109` (`guard_result_at_ref_mutated`) and `tests/test-issue-103-pin-and-docs.sh`'s AC-pin-detects-harness-drift drive | **kept — intentional leaf exemption, negative control** | neither re-runs a registered sibling. Each drives a suite at ANOTHER ON-DISK STATE — a detached worktree at a historical ref, and a scratch worktree whose harness is deliberately perturbed — and the callee's own CI step, running the unperturbed tree, cannot stand in for it. The admission is a consequence of rows the lint itself evaluates, not a machine-readable exemption input: the #62 call site's argument is a function positional under a `tests/` prefix, which D5's antecedent (an assignment carrying a literal enumerated-suite path) does not have, and the pin-drift site's path is rooted at a scratch variable this file assigns from `mktemp`, which is row I3/I4's antecedent. This row records the GROUND for keeping them, not the mechanism that admits them |
 
 ## 13. Migration provenance — retired-guard dispositions (issue #109)
 
@@ -955,6 +955,23 @@ but not `GROUP_D_ADR0016`, so this removal does not red it.
 that suite's arms went, which remains true after the file is gone, and `AC-carrier-recorded`
 reads the registry text, not the tree. Those rows now cite a deleted suite, recorded here.
 
+**Amended by issue #122 — a second, weaker trigger.** § 17.2's trigger above is *subject
+deletion*. Issue #122 adds one more: a keystone half whose **comparison basis is
+re-declared** — moved under the ratchet fixtures directory with a direction sidecar (§ 18)
+— while its subject stays live. That move is permitted under the same joint-disposition
+discipline the paragraph above states, and is recorded with a provenance row naming the old
+path, the new path and the declared direction (§ 19.5). It does **not** widen § 17.2 to
+permit a keystone half's removal without a subject deletion.
+
+The two retained halves (798, 799) were re-derived under § 18's discriminant and the
+conclusion is unchanged — **both stay**. They compare a checked-in literal set against a
+live suite's text by set inclusion, which declares a direction (`grow-only`) but, until
+#122, declared no target; that is the fossil signature. Re-declaration supplies the missing
+half rather than removing the halves: placed under the ratchet directory with `grow-only`
+declared, they satisfy § 18 instead of violating it. Removal would additionally drop the
+only mechanism preventing silent assertion loss in two live suites, and #122's carrier
+analysis finds no standing lint holding that property.
+
 ### 17.3 Files deleted, and the pins firewalled with them
 
 Deleted: `tests/adr-0016-conformance-check.sh`,
@@ -1044,3 +1061,465 @@ assertion in the standing lane. It is deleted at the merge that closes #120, per
 AutoFlow holds no merge authority, so the obligation is recorded here and executed by the
 merging party. `tests/test-cycle-arm-residue.sh`'s `#120 dispositions` section is standing
 and does not retire.
+
+## 18. Snapshot attribution — ratchet against fossil (issue #122)
+
+A checked-in comparison basis — a baseline file, an inline count, a pinned literal — is
+either a **ratchet** or a **fossil**, and which it is decides the lane it may live in. The
+discriminant is *not* directionality. This tree carries directional bases on both sides: a
+set-inclusion pin over two sibling suites' assertion literals permits growth and forbids
+loss, and is nonetheless a snapshot of those suites' own text taken at one past moment,
+while the residual and purity baselines in the same fixtures directory are directional and
+genuinely ratchets.
+
+What separates them is whether a direction was **declared with a target**.
+
+- A **ratchet** has an externally motivated goal the set is expected to move toward — a
+  residual expected to shrink toward empty. Legitimate change moves it one way only and
+  never needs a bump against the direction. A ratchet may live in a `lane: standing` suite.
+- A **fossil** has no target: legitimate change moves it either way, and the bump is
+  self-approved by the same commit that caused it. A fossil belongs to a `lane:
+  cycle-scoped` suite carrying `retire-with:`, or it is removed with a provenance row.
+
+**The declaration is placement plus a sidecar, never an inventory.** A fixture under
+`tests/fixtures/ratchet/` declares itself a ratchet by being there, and carries a sibling
+`<name>.direction.txt` file whose sole content is `shrink-only` or `grow-only` (the
+`.txt` tail keeps the sidecar inside `REUSE.toml`'s bulk annotation, so declaring a ratchet
+never also requires a licensing-metadata edit). Membership of
+the directory is the declaration — the same construction the manifest lint's
+bundle-registration leg uses, and chosen for the same reason this layer states repeatedly: a
+checker that must re-declare its intended set reintroduces the widening inventory this layer
+exists to retire. `scripts/test/check-suite-manifest.sh` gates it: every file under the
+ratchet directory has its sidecar, with a recognised value.
+
+**Counts derived at evaluation time.** An inline integer compared against a derived
+population size — a `jq … | length` or a `grep -c` result — in a `lane: standing` suite is a
+fossil in the same sense. Zero and one are excluded by construction: those are absence and
+uniqueness predicates about a *named* thing, not population sizes, and they do not drift when
+the population does. `check-suite-manifest.sh` reports this shape **advisorily**: it names
+the sites and never moves its exit code. The ground for advisory-rather-than-gating is
+measured, not cautious — running the detector over the tree at #122 flags occurrence-count
+pins over a workflow script's prompt constants whose disposition is a genuine judgement call
+and not #122's subject. Promotion to gating is a follow-on once that exemption set is
+measured against a clean tree.
+
+**Scope boundary.** The detector's subject is a count *derived at evaluation time*. A
+deliberate committed literal with a single authoring home and a header stating why a
+regenerated value would detect nothing — `tests/lib/harness-pins.sh`'s `HARNESS_OK_COUNT` —
+is explicitly outside it, and this rule text must not be read as retiring it.
+
+`docs/autoflow-guide.md` > RED references this section from its admission questions rather
+than restating it.
+
+## 19. Migration provenance — retired-guard dispositions (issue #122)
+
+One row per assertion this cycle removes, naming the carrier that holds the property
+afterward. Where nothing holds it, the row says so rather than leaving the reader to infer
+it. The convention is one new numbered section per cycle — the issue text calls this "§13
+provenance", but §13 is issue #109's section and the registry is append-structured by
+section for the same reason the decision ledger is append-only.
+
+The unregistered-source residue ("the manifest carries exactly one artifacts row for this
+source") is **not** a new row here. It is a row-existence predicate, not a hash pin, and the
+regen fixed point holds over it vacuously; the registry already records it as
+retired-not-machine-checkable and this cycle inherits that record rather than reopening it.
+
+### 19.1 Manifest fences — the committed-manifest sha256 comparisons
+
+Carrier for every row below: `scripts/test/check-manifest-regen-clean.sh`, registered in
+`.github/workflows/contract-suites.yml` as the `manifest regen-clean lint` step with **no
+`if:` guard**. It regenerates the manifest in a scratch copy and requires byte-identity with
+the committed file, so each named row a fence pinned is a strict sub-case of its fixed point,
+and it never writes to the tree it checks.
+
+| Removed arm | Suite | Shape | Carrier |
+|---|---|---|---|
+| `AC-56-10a` (and its header enumeration entry) | `tests/test-issue-56-carry-evidence-discipline.sh` | named-row fence over `architect-deliberation.js` | `check-manifest-regen-clean.sh` fixed point |
+| `AC-59-9` (and its header enumeration entry) | `tests/test-issue-59-adoption-evidence-discipline.sh` | named-row fence over the same source | `check-manifest-regen-clean.sh` fixed point |
+| `AC-62-20` | `tests/test-issue-62-sequential-rounds.sh` | named-row fence, looped over that cycle's edited-source list | `check-manifest-regen-clean.sh` fixed point |
+| `AC-67-MANIFEST` | `tests/test-issue-67-deliberation-record.sh` | named-row fence, looped | `check-manifest-regen-clean.sh` fixed point |
+| `AC-69-MANIFEST`, `AC-69-MANIFEST-adr` | `tests/test-issue-69-verification-depth.sh` | two named-row fences in one suite; the `-adr` half carried a `note_deferred` branch, removed with it | `check-manifest-regen-clean.sh` fixed point |
+| `AC-27-21b` | `tests/test-issue-27-composition-oracle.sh` | **all-row** fence — every `kind=="copy"` row against its current source | `check-manifest-regen-clean.sh` fixed point. An all-row fence is the fixed point's own predicate written out by hand, so it is subsumed more strictly than a named-row one, not less |
+| `AC2e` | `tests/test-issue-979-bundle-delivery.sh` | all-row fence restricted to that cycle's new copy rows | `check-manifest-regen-clean.sh` fixed point |
+| `manifest-freshness-a`, `manifest-freshness-b` (with the `mktemp` backup, `restore_manifest`, the `EXIT` trap, and the `MANIFEST` / `GEN_MANIFEST` / `EDITED_SOURCES` variables they alone defined) | `tests/test-issue-52-peer-facilitator-premise.sh` | the in-tree **regenerating** arm — ran the real generator against the live checkout, diffed against a backup, restored on trap | `check-manifest-regen-clean.sh` fixed point, which takes a `--root` scratch tree and therefore never mutates the checkout it verifies. This arm's own hazard — an interrupt between the generator call and `restore_manifest` leaving `setup/manifest.json` rewritten in the working tree — leaves with it |
+
+One instance of that last class survives this cycle by orchestrator decision —
+`M43-REGEN-CLEAN` at `tests/test-issue-43-report-channel-contract.sh:116-121`. It is recorded
+with its ground among the stated gaps in § 19.5, not disposed here.
+
+**Retained, with the ground for each.** Every other live sha256 comparison in the tests tree,
+and why the fixed point does not reach it:
+
+| Site | Ground for retention |
+|---|---|
+| `tests/test-issue-51-teammate-removal-verdict.sh` `O1(c)-hash-coherence` | reads a manifest inside a **temp tree** it constructed, not the committed one. A fixed point over the committed manifest says nothing about a scratch manifest |
+| `tests/test-issue-62-sequential-rounds.sh` `AC-62-21a` | pins one file's sha256 against a **checked-in literal**. Not a manifest-row comparison at all; see § 19.6 for its disposition under § 18 |
+| `tests/test-issue-64-collection-scope.sh` `script_sha256` | a string inside a JSON fixture payload. Not a comparison |
+| `AC-27-21a`, `AC-59-16a`, `AC-62-21b` — named-source **row-existence** predicates | not hash pins. An unregistered source has no row in either the committed or the regenerated manifest, so the fixed point holds over it vacuously |
+
+§17.1 records `AC-62-20` and `AC-62-21a` as retained under a `76-RETAIN-COUNT` / sha256-pin
+ground. That row is about **registry-expressibility** — whether the doc-invariant runner can
+hold the predicate — and is silent on whether a standing lint holds it. Retiring `AC-62-20`
+here is decided on the second question and does not reopen the first.
+
+**Citations of the retired identifiers, left in place.** Two sites named `AC-56-10a` /
+`AC-59-9` in prose rather than asserting them, and are dispositioned here rather than
+edited:
+
+| Site | Disposition |
+|---|---|
+| `tests/test-issue-62-sequential-rounds.sh` `AC-62-39` | the arm survives (it pins that the manifest carries zero `tests/…` source rows); only its **label** cited the two retired fences as the reason. Relabelled in this cycle to state the property directly — "editing a test file owes no manifest regeneration" — so the arm no longer depends on identifiers the tree has retired |
+| `tests/manual/issue-56-manual-scenarios.md` M1's coverage-boundary paragraph | left as written. It is a closed cycle's manual-scenario record of why that contact point needed no automated oracle *at that time*; rewriting it would revise a historical record, the same objection §17.2 states for §13's carrier rows. The citation resolves through this table |
+
+### 19.2 Registry-runner re-runs — the suite-side invocations
+
+Two properties were tangled in these arms, and only one of them was ever carried.
+
+- *No entry was silently skipped* — **already carried** before this cycle.
+  `bash tests/run-doc-invariants.sh --self-test` runs as an unguarded step in
+  `contract-suites.yml`, and its denominator gate fails loud, naming both numbers, when it
+  evaluated fewer entries than the registry holds. That is exactly what the count-scoped
+  arms were written for.
+- *The invariants hold right now* — **not carried** before this cycle. `--self-test`
+  evaluates every predicate against a **mutated copy** of the entry's target file and
+  requires FAIL; it certifies teeth, never current-tree conformance. This cycle adds the
+  named carrier: a bare, `if:`-less `run: bash tests/run-doc-invariants.sh` step in
+  `contract-suites.yml`, whose hosting `paths:` block is now a superset of the registry's
+  target-file set — enforced against future registry appends by the
+  `AC-registry-carrier-paths-coverage` leg in `tests/test-workflow-trigger-conformance.sh`.
+
+Carrier column below names whichever of the two holds the removed arm's property.
+
+| Removed arm | Suite | Carrier |
+|---|---|---|
+| `AC-27-22a`, `AC-27-22b` (with `REGISTRY_OUT`, `PRE_EXISTING_FAILS`, `PRE_EXISTING_PASSES`, `PRE_EXISTING_TOTAL` and `REGISTRY_RUNNER`) | `tests/test-issue-27-composition-oracle.sh` | bare runner step (conformance) + `--self-test` denominator gate (no-silent-skip) |
+| `AC-59-16b` (with the same variable set and `REGISTRY_RUNNER`) | `tests/test-issue-59-adoption-evidence-discipline.sh` | same |
+| `AC-59-11c-runner` (removed with the `AC-59-11c` block in § 19.4) | `tests/test-issue-59-adoption-evidence-discipline.sh` | bare runner step |
+| `AC-62-18a` (with `REGISTRY_OUT`, `PRE_EXISTING_FAILS` and `REGISTRY_RUNNER`) | `tests/test-issue-62-sequential-rounds.sh` | bare runner step. `AC-62-18b` **stays** — a state predicate over the registry *file* (row count non-decreasing against `git show HEAD:`), which re-executes nothing |
+| `AC-69-REGISTRY-exit`, `AC-69-REGISTRY-no-regression` (with `REGISTRY_OUT`, `REGISTRY_EXIT`, `NON_69_FAIL` and `REGISTRY_RUNNER`) | `tests/test-issue-69-verification-depth.sh` | same |
+| `AC-71-REGISTRY-oracle`, `AC-71-REGISTRY-oracle-no-regression` (with `REGISTRY_OUT`, `REGISTRY_EXIT`, `NON_71_FAIL` and `REGISTRY_RUNNER`) | `tests/test-issue-71-digest-removal.sh` | same |
+| `registry-runner-green-a/b/c` (with `RUNNER_OUT`, `RUNNER_RC`, `FOREIGN_FAILS`, `RUNNER` and the header enumeration entry) | `tests/test-issue-52-peer-facilitator-premise.sh` | same |
+| the dead `REGISTRY_RUNNER` assignment — assigned, never invoked | `tests/test-issue-67-deliberation-record.sh` | nothing to carry; it asserted nothing |
+
+**Retained, not removed.** Every arm that reads the registry *file* with `jq` without
+running the runner stays: those are state predicates over data, not re-execution. So do the
+suites that drive the runner **as their subject against a fixture** — `--self-test`, a
+fixture registry path, a `--root` override — which is what `tests/test-run-doc-invariants.sh`
+legitimately does.
+
+| `O2(a)-exit0`, `O2(a)-0failed` (with `O2_OUT`, `O2_RC`, `RUNNER` and the header enumeration entry) | `tests/test-issue-51-teammate-removal-verdict.sh` | bare runner step |
+
+`tests/test-issue-51-teammate-removal-verdict.sh` is **not** in this cycle's declared
+change surface (the `allow_list` in `tests/test-issue-122-retirement-attribution.sh`, and
+§ 5 of the verification design), and §17.1 records those two arms as retained under
+`76-RETAIN-CI-REGISTRATION`. It is edited here regardless, because the leaf-rule widening
+of § 19.3 makes its bare invocation a **denied** shape: leaving it would land a gating
+standing lint red on the tree it is being added to. The surface deviation is recorded in
+`.autoflow/issue-122-green-blocker.md`. The suite's registry-**data** predicates (`O2(b)`,
+`O2(d)` and the direction/contiguity meta guards) read the registry file with `jq` and are
+untouched.
+
+### 19.3 Leaf-rule widening — the registry runner as a denied invocation target
+
+`scripts/test/check-suite-leaf.sh` is the standing mechanism for the re-execution class, and
+its header stated the exact reason it did not reach the arms of § 19.2: its variable-form
+denied rows key on `suite_enumerate`'s set, and `tests/run-doc-invariants.sh` is a declared
+exclusion from that set, so a suite re-running the whole registry read as an ordinary
+product-script drive (row I2).
+
+One named set is widened. `denied_nonsuite_targets` — a new, single-definition-site list
+inside the lint — holds paths outside the enumeration whose **bare** invocation from a suite
+is whole-subject re-execution anyway; its one member is the registry runner. Row **D6**
+denies it, and three self-test fixtures ship with it per the header's own convention: a
+positive (bare invocation through a variable → denied) and two negatives (`--self-test`, and
+a fixture registry path → admitted). The denial is narrowed to a bare run because an
+invocation carrying **any** argument is driving the runner as a *subject* against a fixture,
+which is what `tests/test-run-doc-invariants.sh` legitimately does. A trailing redirection or
+command-substitution terminator is not an argument.
+
+The literal form needs no new row: row D1 already denies every command-position literal
+`tests/` path, enumerated or not.
+
+**Consequential edit, recorded rather than absorbed.** `tests/test-issue-103-suite-leaf.sh`
+carried an arm pinning the *old* boundary — "a variable holding an excluded path
+(`tests/run-doc-invariants.sh`), invoked via `bash \"$v\"`, stays undetected". D6 makes that
+claim false by design. The arm is re-pointed at `tests/lib/fixture-helper.sh`, an excluded
+subject that is outside every denied row, so it keeps pinning exactly the property it was
+written for. Its suite is likewise outside this cycle's declared change surface; the
+deviation is recorded in `.autoflow/issue-122-green-blocker.md`.
+
+### 19.4 Confirm-CI-green harness — extraction, not retirement
+
+The one item of this cycle where a shared helper is the right answer. Two live suites drove
+the same product script through the same mock, and neither is redundant with the other or
+with any standing lint, so there is nothing to name as a carrier — the duplication is real
+and the fix is a single source.
+
+New file: `tests/lib/confirm-ci-green-harness.sh` — sourced, never executed, following the
+two existing `tests/lib/` members. It exports `run_bounded`, `run_confirm` and the
+`PRECHECK_MERGEABLE_CLEAN` fixture constant; `tests/test-issue-25-confirm-ci-green.sh` and
+`tests/test-issue-30-confirm-ci-green.sh` source it and lost their local copies, and both
+`# ci-subject:` headers gained the library path so a change to the harness selects both.
+
+| Property | How it is held after the move |
+|---|---|
+| the `sleep`+`kill` fallback's canonical statement order | `scripts/test/check-watchdog-detachment.sh` scans `tests/` recursively, so the extracted site entered its CANONICAL tier the moment it landed. The block was moved **verbatim** — no reflow, no reordering, no re-indentation — and the lint is clean against the real tree |
+| the two suites' assertion behaviour | label-set comparison against the pre-extraction revision, taken at verification time from a `git worktree` of the parent commit and never committed as a fixture. Identical sets both ways: 117/117 and 106/106. A committed baseline would mint exactly the fossil signature § 18 defines |
+| `run_confirm`'s forwarded environment | the **union** of the two former copies. An unset member forwards as the empty string, as it did before, so neither caller gains a variable it sets |
+
+**Deliberately not unified**, each recorded in the file's own header with its ground, per the
+`tests/lib/base-ref.sh` precedent: `assert_true`/`assert_false` and the PASS/FAIL/TESTS
+counters; `run_bounded_in` in `tests/test-push-context-base-ref.sh`; `harness_run` in
+`tests/test-bounded-execution-fallback.sh` — which `check-watchdog-detachment.sh` names as an
+explicit subject-set exclusion, so extracting it would move a deliberately excluded site into
+the scanned tier and invert that lint's judgement.
+
+### 19.5 Fossil count pins — disposed, retained, and the detector's stated gaps
+
+**Disposed this cycle** — the two the re-derivation confirms, and only those.
+
+| Removed pin | Suite | Ground under § 18 |
+|---|---|---|
+| `R43-COUNT` (with `COUNT43` and both header enumeration entries) | `tests/test-issue-43-report-channel-contract.sh` | a `jq … \| length` over `origin_issue==43` compared against the inline literal `15`, in a suite whose header declares `lane: standing`, while the pin's **own adjacent comment** declares count-shaped assertions "cycle-scoped only, never in the permanent registry". It contradicts its own stated rule. The `A43-LITERAL-CONTIGUOUS (b)` report line that read the same variable now derives its denominator at evaluation time and compares it with nothing |
+| `AC-59-11c-count` (removed with the `AC-59-11c` block, see § 19.2) | `tests/test-issue-59-adoption-evidence-discipline.sh` | a file-scoped legacy-entry count (`56-AC*`/`27-AC*` entries on one source) compared against the inline literal `12`, in a `lane: standing` suite, with no declared target. The issue comment anchors this pin at a line holding unrelated prose about prompt-constant ordering; the anchor is corrected here rather than carried |
+
+**Named in the issue, not disposed** — each with its ground. These sites must be **unchanged**
+in this cycle's diff, and are:
+
+| Site | Ground |
+|---|---|
+| the composition-oracle manifest fence (`AC-27-21a`) | already converted to the drift-immune named-source row-existence shape, as its own inline comment records |
+| `tests/lib/harness-pins.sh` `HARNESS_OK_COUNT` | a **deliberate committed literal** with a single authoring home, whose header states why a regenerated value would detect nothing and records how to bump it. Out of § 18's scope by construction: the detector's subject is a count derived at *evaluation* time, which this explicitly is not |
+| the sibling-suite assertion-set baselines | **re-declared, not deleted** — see § 19.6 |
+
+**Stated detector coverage gaps.** Naming a gap is the alternative to widening the
+discriminant mid-cycle; both open questions the deliberation left are recorded here rather
+than silently dropped.
+
+- **Prompt-constant occurrence counts.** The detector reaches occurrence-count pins over a
+  workflow script's prompt constants (`grep -c '${CONSTANT}' … -eq N`). Whether those are
+  fossils owed disposal, or load-bearing pins on a named interpolation site that § 18's
+  zero-and-one exclusion should be widened to cover, is a genuine judgement call and not this
+  issue's subject. **Not disposed this cycle**, and the population they represent is exactly
+  why the fossil-containment leg ships advisory rather than gating: promotion to gating
+  requires measuring this exemption set against a clean tree first.
+- **Literal-hash pins.** `tests/test-issue-62-sequential-rounds.sh` `AC-62-21a` compares one
+  file's sha256 against a checked-in literal with no declared target — § 18's fossil
+  signature in a shape the detector, scoped to counts derived at evaluation time, does not
+  reach. **Left in place this cycle**, recorded here as a known gap in the detector's
+  coverage rather than resolved by widening the detector mid-cycle.
+- **The surviving in-tree regenerating arm.** `M43-REGEN-CLEAN`,
+  `tests/test-issue-43-report-channel-contract.sh:116-121`, carries the same shape § 19.1
+  disposed from `tests/test-issue-52-peer-facilitator-premise.sh`: it copies the committed
+  `setup/manifest.json` aside, runs the real generator **against the live checkout**, diffs,
+  and moves the backup back. It is the last instance of that class in the tree, and it is
+  subsumed by the same fixed point — `scripts/test/check-manifest-regen-clean.sh`, which
+  takes a `--root` scratch tree and never writes to the tree it verifies. **Not disposed this
+  cycle**, by orchestrator decision: the fence set ARCHITECT settled is enumerated by arm
+  identifier (this cycle's disposal table in § 19.1), GATE:PLAN scored Scope on that
+  enumeration, and no RED arm pins this one — so widening the set mid-cycle would put a
+  removal outside the reviewed surface. Recorded here with its `path:line` so the follow-up is
+  findable rather than re-derived. Note it lacks `manifest-freshness`'s `EXIT` trap: an
+  interrupt between the generator call and the `mv` leaves the working tree's manifest
+  rewritten, so the follow-up is a real cleanup, not bookkeeping.
+
+**Deviation from the issue's stated acceptance criterion, recorded.** The issue asks for a
+merged cycle's residual branch-gate arm to be a **hard FAIL** in
+`scripts/test/check-cycle-scope-guard.sh`. This cycle ships an **advisory** leg in
+`scripts/test/check-suite-manifest.sh` instead (§ 19.7), on two grounds stated there: § 2 of
+this document records that a live cycle-scoped lane is branch-scoped by construction, so a
+forgotten deletion is inert on every foreign branch — the cost is maintenance, not
+incorrectness — and deciding whether an issue is merged needs a network call, which inside a
+gating hermetic lint turns a CI outage or an unauthenticated runner into a red build. The
+divergence from the issue text is deliberate and is recorded here rather than absorbed.
+
+### 19.6 Ratchet-directory move — the assertion-set baselines re-declared
+
+`tests/fixtures/issue-109-assertion-baseline-{798,799}.txt` are the borderline case § 18's
+discriminant was written to resolve. Under the rule they were fossils: set inclusion over a
+checked-in literal set declares a direction but, until this cycle, no target, and a
+legitimate rewording of an assertion label required a self-approved same-commit re-baseline.
+They are **re-declared, not deleted** — disposal would remove the only mechanism preventing
+silent assertion loss in two live suites, and this cycle's carrier analysis finds no
+standing lint holding that property. The manual-rebaseline cost is accepted and recorded
+here.
+
+| Old path | New path | Declared direction |
+|---|---|---|
+| `tests/fixtures/issue-109-assertion-baseline-798.txt` | `tests/fixtures/ratchet/issue-109-assertion-baseline-798.txt` | `grow-only` (`…-798.direction.txt`) |
+| `tests/fixtures/issue-109-assertion-baseline-799.txt` | `tests/fixtures/ratchet/issue-109-assertion-baseline-799.txt` | `grow-only` (`…-799.direction.txt`) |
+
+**The absence guard landed first, as a precondition rather than a follow-up.**
+`check_assertion_set_preserved` read its baseline by input redirection on a `while` loop and
+returned the "nothing missing" predicate; when the redirection target does not exist the loop
+body never runs, the counter stays at its initial value and the function returns **success**.
+A move that missed one consumer would therefore not red the keystone — it would turn it
+silently green, the exact failure mode this cycle exists to retire. So the ordering was: (1)
+the function gains an explicit existence check that fails, naming the missing path; (2) that
+guard is exercised by driving the real function with a nonexistent path and requiring
+failure; (3) only then do the fixtures move. Taken in the other order, step 3's own
+verification is vacuous.
+
+**Consumers, repointed by nature — not by filename match.** A whole-tree search for the
+moving filenames splits the sites into four classes, and only class (a) is a repoint target.
+
+| Class | Site | Disposition |
+|---|---|---|
+| (a) executable reader — the path is passed to the baseline-consuming function and dereferenced at run time | `tests/test-issue-109-doc-assertions.sh` (the two keystone arms and the header comment naming them) | **repointed** |
+| (b) closed-cycle change-surface declaration | `tests/test-issue-121-declaration-release.sh` — the two paths sit in that cycle's `allow_list`, dereferenced only under its `dev/*-issue-121` branch predicate | **untouched.** On this cycle's branch the arm is never evaluated, so the move cannot red it; editing the literals would rewrite a closed cycle's historical diff declaration |
+| (c) names a *different* file | `tests/test-issue-120-arm-reconciliation.sh` and `tests/test-cycle-arm-residue.sh` — both name the already-deleted `…-adr0016` baseline; the latter is `lane: standing` and asserts it **stays absent** | **untouched.** Repointing would leave a live absence assertion passing on the absence of something else — the vacuous-green shape this cycle exists to retire |
+| (d) registry prose | this document's § 13 scope-discipline paragraph and the § 17.2 / § 17.3 keystone text | **left as written.** Those sections are an append-structured historical record; the path change is carried by the table above, the same convention § 17.2 itself follows |
+
+A blanket "repoint every occurrence" pass is a design violation, not design conformance:
+applied to (c) it converts a live absence assertion into one that holds vacuously.
+
+**Not moved this cycle, with the ground.** (The residual baseline is named descriptively
+rather than by filename: `tests/test-issue-985-doc-assertions.sh`'s `AC1-SWEEP` arm pins the
+exact set of tracked files carrying the retired host token, and spelling the filename here
+would add this document to that set.) The other directional baselines in
+`tests/fixtures/` — the host-token residual baseline, `e2e-bundle-purity-baseline.txt` and
+`host-purity-{paths,tokens}.txt` — are genuine ratchets and belong under the directory by
+§ 18's construction. They stay where they are for now because their executable readers
+include `scripts/test/check-host-purity-delta.sh`, `tests/plugin/verify-e2e-dummy-target.sh`,
+`tests/test-issue-788-host-purity-delta.sh` and **`.github/workflows/host-purity-delta.yml`**
+— and that workflow is outside this cycle's declared change surface, which admits only
+`.github/workflows/contract-suites.yml`. Moving them is a follow-on whose surface must be
+declared up front, recorded here rather than taken as a side effect. The gating declaration
+leg is unaffected: it ranges over whatever is under the directory, so it stays honest as
+members arrive.
+
+**Consumer re-anchor (issue #62 suite).** § 12.1's kept row for
+`guard_result_at_ref_mutated` cited `tests/test-issue-62-sequential-rounds.sh:91-110`; this
+cycle's § 19.1 / § 19.2 removals above that range move the definition, so the row is
+re-anchored to `:90-109` in the same commit — the re-anchoring discipline § 16 established
+for a consumer of a deleted arm, and the property `tests/test-cycle-arm-residue.sh`'s
+`kept-row-anchor-resolves` arm executes.
+
+### 19.7 Retirement-due advisory, and the injection boundary
+
+The issue asks for two lint changes: a merged cycle's residual branch-gate arm made a **hard
+FAIL** in `scripts/test/check-cycle-scope-guard.sh`, and an advisory `retire-with` issue-state
+check in the manifest lint. This cycle merges them into **one advisory leg in
+`scripts/test/check-suite-manifest.sh`** and declines the hard FAIL. The deviation is recorded
+in § 19.5; the grounds are:
+
+- *Not a hard FAIL.* § 2 of this document states that a live cycle-scoped lane is
+  branch-scoped by construction — its evaluation is dominated by a gate naming its own issue,
+  whose other arm credits no counters — so a forgotten deletion is inert on every foreign
+  branch, "harmless rather than red-making". The cost is maintenance, not incorrectness.
+- *Not in the cycle-scope guard.* That lint is gating and hermetic: it ships fixture classes,
+  takes a scratch root, and runs its self-test before its real-tree pass. Whether an issue is
+  merged is not derivable from the tree. A network dependency inside a gating hermetic lint
+  makes a CI outage or an unauthenticated runner into a red build.
+- *Where it goes.* `check-suite-manifest.sh` already reads `lane`, `retire-with` and
+  `cycle-arm` and enforces their couplings; the retirement-due question belongs with that
+  data.
+
+**The injection boundary, and its two halves.**
+
+| Half | Where | Invoked by |
+|---|---|---|
+| pure classifier — takes an issue-state record (`#<issue> <open\|closed\|unknown>` lines) whose path arrives in `AUTOFLOW_ISSUE_STATE_FILE`, and emits the advisory and degraded lines from it alone. No network access of any kind | `scripts/test/check-suite-manifest.sh`, `check_retirement_due` | the lint's own `check_tree`, on every run |
+| thin fetch adapter — resolves each `retire-with:` issue through `gh` and writes the record | **`scripts/test/fetch-issue-state.sh`** | an **operator**, or a workflow step that chooses to. **Never** the lint: it holds no reference to this path in any executable position, and a self-test arm asserts that statically |
+
+Without this seam the only way to drive the advisory and degraded acceptance criteria would
+be a live network call from a gating lint. With it, both are driven hermetically by handing
+the classifier a real record file. The adapter's own degraded behaviour is explicit too: with
+no usable `gh` it writes every issue as `unknown` rather than omitting the line, because an
+omitted record and an `unknown` record are not the same thing to the classifier.
+
+**Degraded mode is loud, not silent.** With no record available the leg prints an
+unavailability line **naming** the suites it could not decide. A silent skip here would be
+the vacuous-pass class this layer rejects; an advisory leg that says "I could not check these"
+is not vacuous.
+
+**On the `# out-of-tree-inputs:` header field — declined, with its ground.** The field's
+grammar is *suite-scoped*: the enumerator that feeds every header check walks `tests/` only,
+so writing it into a `scripts/test/` lint header would be a second, unenforced registration
+home — the shape this lint's own rules reject. The seam makes the declaration moot rather
+than merely unenforceable: with the fetcher outside it, the lint body reads no out-of-tree
+state at all, so there is nothing left to declare. The lint's header records the seam as a
+contract sentence instead.
+
+### 19.8 Self-test re-invocation retired; self-registration arms **retained**, with the measured ground
+
+**Retired — lint re-invocation.** `tests/test-workflow-trigger-conformance.sh`'s four
+`AC-b-3` execution arms ran `scripts/test/check-suite-ci-coverage.sh` once in default mode and
+three times in `--self-test` mode. That lint carries its own unguarded step in
+`.github/workflows/contract-suites.yml` (`suite CI-coverage lint`, no `if:`), and its default
+mode runs its self-test **first** and fails on it — so both the real-tree verdict and the
+self-test legs execute once per CI pass either way. Re-invocation is execution of an
+already-executed leg.
+
+| Removed arm | Carrier |
+|---|---|
+| `AC-b-3: check-suite-ci-coverage.sh exits 0 over the real tree` (with `COVERAGE_LINT_RC` and the failure-echo block) | the unguarded `suite CI-coverage lint` step |
+| `AC-b-3: … --self-test exits 0`, `… names the closure leg`, `… names the exclusion leg` | the same step — default mode gates on the self-test before reporting |
+
+The existence arm stays: it is the antecedent, and a `run:` step naming a deleted file is
+`AC-step-target-exists`'s subject in the same suite, not this lint's.
+
+**Not retired, and the ground is measured rather than assumed.** The design's fourth item
+also proposed retiring the **self-registration** arms — `AC-56-11a-pr/-push/-b`,
+`AC-CI-a/b/c/d` (#27), `AC-67-CI-pr/push/run`, `ci-wired-a1..a4/-b` (#52), `AC-59-12a-*` —
+against two named carriers: `scripts/test/check-suite-ci-coverage.sh` for reachability and
+`tests/test-workflow-trigger-conformance.sh` for registration effectiveness. Driving the
+second carrier before removing anything shows it does **not** hold the property those arms
+assert.
+
+The conformance suite decides coverage over the **union of every `paths:` block in a
+workflow**, by its own stated contract:
+`tests/test-workflow-trigger-conformance.sh:184-186` — "coverage is decided over the union
+across all this workflow's `paths:` blocks, not per-event". The self-registration arms assert
+something strictly stronger: that the literal appears in the `pull_request` block **and** in
+the `push` block, each checked separately. A workflow that lists a suite under
+`pull_request.paths` only satisfies the union predicate and fails the per-event ones.
+
+So the arms are **retained**, and the removal is not taken. This is the dominant-risk
+direction for a retirement cycle — treating a partial carrier as a full one leaves the
+invariant silently uncarried — and the check that caught it was executing the carrier, not
+reading its header. Retiring them needs a per-event coverage leg in the conformance suite
+first; that is a follow-on with its own acceptance criterion, recorded here rather than
+assumed away.
+
+`tests/test-bounded-execution-fallback.sh:792` carries the same `--self-test` re-invocation
+shape against `scripts/test/check-watchdog-detachment.sh`, whose default mode likewise
+self-tests first. It is left in place this cycle only because its suite is outside the
+declared change surface; the disposition is recorded here so the next cycle inherits it
+rather than re-deriving it.
+
+### 19.9 Count-pin reshape — `tests/test-issue-103-cycle-scope-repoint.sh` (issue #122, RED2)
+
+**What was there.** `AC-cycle-scoped-branch-inertness verdict-preservation` pinned an inline
+literal against `check-cycle-scope-guard.sh`'s reported count of allow-list-bearing suites —
+a `lane: standing` suite comparing a derived population size to a checked-in integer, exactly
+the § 18 fossil shape.
+
+The literal had already been re-baselined **twice, in both directions**, which is the
+signature § 18 names ("legitimate change moves it either way, and the bump is self-approved
+by the same commit that caused it"). Re-derived from the tree rather than carried from the
+drafting note:
+
+| Commit | Literal | What moved it |
+|---|---|---|
+| `82b545b^` | `3` | — |
+| `82b545b` (#121) | `2` | #121 retired suites 67 and 69's arrays with their branch-gated arms (§ 16) |
+| `591dada` (#120) | `3` | #120 added its own cycle-scoped allow-list suite |
+| `9c25022` (#122 RED2) | **removed** | reshaped, below |
+
+A third bump was due this cycle: #122 adds a fourth allow-list-bearing suite,
+`tests/test-issue-122-retirement-attribution.sh`.
+
+**Disposition — reshaped, not disposed and not bumped.** Bumping would leave the same fossil
+in place, due for a fourth re-baseline at the next cycle that adds or removes a cycle-scoped
+allow-list suite. The arm is not disposed either — its regression-protection intent (the #103
+subject-binding re-point must not silently change which suites the lint counts) is still real
+and still needs a carrier. The reshape removes the checked-in literal itself: the expected
+count is now re-derived at evaluation time from the same library predicate the lint calls
+(`suite_enumerate` + `suite_declares_allow_list`, `scripts/test/suite-manifest.sh:297`, which
+`check-cycle-scope-guard.sh:219` invokes), and the arm asserts agreement between the lint's
+own report and that independent re-derivation. Nothing is checked in any more, so there is
+nothing left for `AC-fossil-detector-advisory` to flag and nothing left to re-baseline on
+ordinary cycle churn.
+
+**Carrier.** The reshaped arm itself, in `tests/test-issue-103-cycle-scope-repoint.sh`.

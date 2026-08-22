@@ -44,10 +44,6 @@
 #                intent — COUNTER_EVIDENCE_RULE before ADOPTION_EVIDENCE_RULE, both before
 #                the carry-bearing tail — still holds; only the two new record-rule
 #                constants now sit between ADOPTION_EVIDENCE_RULE and carry.
-#   AC-59-9    — fence (PASS pre+post): setup/manifest.json row sha256 ==
-#                live architect-deliberation.js sha256 (derived artifact).
-#   AC-59-11c  — fence (unconditional): no `56-AC*`/`27-AC*` registry entry on
-#                this file was edited or dropped (file-scoped count == 12).
 #   AC-59-11d  — fence (branch-scoped, multi-minute — do not run under a short
 #                timeout): every unconditional cross-cycle change-surface guard
 #                this cycle's own diff can trip still passes at its
@@ -172,7 +168,6 @@ WORKFLOW_JS="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -310,27 +305,6 @@ assert_true "AC-59-8d: the contiguous sequence \${COUNTER_EVIDENCE_RULE}\${ADOPT
   "[ \"$ORDER_COUNT\" -eq 2 ]"
 
 # =============================================================================
-echo ""
-echo "=== AC-59-9 (fence, PASS pre+post) — derived artifact: manifest row hash-matches the live source ==="
-
-MANIFEST_SHA="$(jq -r '.artifacts[] | select(.source==".claude/workflows/architect-deliberation.js") | .sha256' "$MANIFEST")"
-CUR_ARCH_SHA="$(shasum -a 256 "$WORKFLOW_JS" | awk '{print $1}')"
-assert_true "AC-59-9: setup/manifest.json row sha256 == current architect-deliberation.js sha256 (manifest: $MANIFEST_SHA, current: $CUR_ARCH_SHA)" \
-  "[ \"$MANIFEST_SHA\" = \"$CUR_ARCH_SHA\" ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-59-11c (fence, unconditional) — no 56-AC*/27-AC* registry entry on this file was edited or dropped ==="
-
-REGISTRY_EXIT_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
-REGISTRY_EXIT=$?
-LEGACY_COUNT="$(jq '[.invariants[] | select(.file==".claude/workflows/architect-deliberation.js" and (.origin_issue==56 or .origin_issue==27))] | length' "$REGISTRY")"
-assert_true "AC-59-11c-runner: tests/run-doc-invariants.sh exits 0" "[ $REGISTRY_EXIT -eq 0 ]"
-assert_true "AC-59-11c-count: 56-AC*/27-AC* entries scoped to architect-deliberation.js == 12 (got: $LEGACY_COUNT)" \
-  "[ \"$LEGACY_COUNT\" -eq 12 ]"
-
-
-# =============================================================================
 # AC-59-11d / AC-59-21 / AC-59-18 are retired by issue #103's leaf rule.
 # =============================================================================
 # The lane re-ran six sibling suites at HEAD and again at the comparison base to
@@ -402,21 +376,14 @@ echo "=== AC-59-16 (fence, unconditional) — negative-control pins are untouche
 # docs/doc-invariant-registry.md:114 (test-issue-27-composition-oracle.sh
 # AC-27-21a, reddened by issue #51's ADR-0017 manifest row, 47 -> 48).
 # Converted to the drift-immune shape used there: a state predicate over the
-# single named source this suite's own AC-59-9 pins manifest-hash freshness
-# for (architect-deliberation.js), not a global count.
+# single named source whose manifest row this suite pins for existence
+# (architect-deliberation.js), not a global count.
 ARTIFACT_COUNT="$(jq '.artifacts | length' "$MANIFEST")"
 echo "  (info) AC-59-16a: setup/manifest.json artifact count is currently $ARTIFACT_COUNT (informational — not asserted; see conversion note above)"
 
 AC_59_16A_ROW_COUNT="$(jq -r '[.artifacts[] | select(.source == ".claude/workflows/architect-deliberation.js")] | length' "$MANIFEST")"
 assert_true "AC-59-16a: setup/manifest.json carries exactly one artifact row for architect-deliberation.js (got: $AC_59_16A_ROW_COUNT) (drift-immune: named-source state predicate, not a global count)" \
   "[ \"$AC_59_16A_ROW_COUNT\" -eq 1 ]"
-
-REGISTRY_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
-PRE_EXISTING_FAILS="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"
-PRE_EXISTING_PASSES="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  PASS: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"
-PRE_EXISTING_TOTAL="$(jq '[.invariants[] | select(.id | startswith("27-AC") | not)] | length' "$REGISTRY")"
-assert_true "AC-59-16b: derived pre-existing (non-27-AC) registry PASS count == every pre-existing (non-27-AC) entry (got: $PRE_EXISTING_PASSES of $PRE_EXISTING_TOTAL, $PRE_EXISTING_FAILS failed)" \
-  "[ \"$PRE_EXISTING_PASSES\" -eq \"$PRE_EXISTING_TOTAL\" ] && [ \"$PRE_EXISTING_FAILS\" -eq 0 ]"
 
 
 # =============================================================================

@@ -136,7 +136,6 @@ CONTRACTS="$PROJECT_ROOT/docs/teammate-contracts.md"
 WORKFLOW_JS="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -344,43 +343,6 @@ for src in "${AC_27_21A_NAMED_SOURCES[@]}"; do
 done
 assert_true "AC-27-21a: setup/manifest.json carries exactly one artifact row for each of this cycle's three registered sources (drift-immune: named-source state predicate, not a global count)" \
   "[ '$AC_27_21A_BAD' -eq 0 ]"
-
-STALE=""
-while IFS=$'\t' read -r src rec_hash; do
-  [ -z "$src" ] && continue
-  # setup/manifest.json's own self-entry carries a null sha256 (the manifest
-  # cannot record its own post-regeneration hash in advance) — not a
-  # freshness check target, per setup/gen-manifest-hashes.sh.
-  [ "$src" = "setup/manifest.json" ] && continue
-  cur_hash="$(shasum -a 256 "$PROJECT_ROOT/$src" 2>/dev/null | awk '{print $1}')"
-  if [ "$cur_hash" != "$rec_hash" ]; then
-    STALE="$STALE $src"
-  fi
-done < <(jq -r '.artifacts[] | select(.kind=="copy") | [.source, .sha256] | @tsv' "$MANIFEST")
-
-assert_true "AC-27-21b: every copy-kind artifact's recorded sha256 matches its current source (stale:${STALE:- none})" \
-  "[ -z \"$STALE\" ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-27-22 (composition oracle for S4, fence, PASS pre+post) — pre-existing registry invariants stay PASS ==="
-# B2 (184) was the pre-existing count measured at this cycle's HEAD (verification
-# design §0.4). It is no longer the live baseline: issue #27's own VERIFY
-# (GATE:QUALITY Impact-scope regression) retired the stale #26 cycle-scoped
-# guard's dangling registry entry (26-AC15a), which is an orthogonal,
-# legitimately-landed change on this same branch, not a regression. Deriving
-# the expected pre-existing count from the registry itself (total minus this
-# cycle's own 27-AC* entries) keeps this fence meaningful against future
-# unrelated registry churn instead of re-hardcoding a new magic number.
-
-REGISTRY_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
-PRE_EXISTING_FAILS="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"
-PRE_EXISTING_PASSES="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  PASS: ' | awk '{print $2}' | grep -cv '^27-AC' || true)"
-PRE_EXISTING_TOTAL="$(jq '[.invariants[] | select(.id | startswith("27-AC") | not)] | length' "$PROJECT_ROOT/tests/fixtures/doc-invariants.json")"
-assert_true "AC-27-22a: no pre-existing (non-27-AC) registry entry FAILs (got: $PRE_EXISTING_FAILS)" \
-  "[ \"$PRE_EXISTING_FAILS\" -eq 0 ]"
-assert_true "AC-27-22b: pre-existing (non-27-AC) registry PASS count == every pre-existing (non-27-AC) entry (got: $PRE_EXISTING_PASSES of $PRE_EXISTING_TOTAL)" \
-  "[ \"$PRE_EXISTING_PASSES\" -eq \"$PRE_EXISTING_TOTAL\" ]"
 
 # =============================================================================
 echo ""

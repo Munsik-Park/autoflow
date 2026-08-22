@@ -329,17 +329,23 @@ SH
   rm -rf "$D5_NF_PRODUCT"
 
   # -- Non-firing D5 arm: variable holds an excluded path ---------------------
+  # Re-pointed in issue #122: the excluded path used here is a tests/lib member.
+  # tests/run-doc-invariants.sh was this arm's original subject, but #122
+  # admitted it to the lint's denied_nonsuite_targets set (row D6), so a BARE
+  # invocation of it is denied by design and can no longer stand for "an
+  # excluded subject stays undetected". tests/lib/* remains outside every denied
+  # row, which is the property this arm was written to pin.
   D5_NF_EXCLUDED="$(mktemp -d)"
-  mkdir -p "$D5_NF_EXCLUDED/tests"
-  echo 'true' > "$D5_NF_EXCLUDED/tests/run-doc-invariants.sh"
+  mkdir -p "$D5_NF_EXCLUDED/tests/lib"
+  echo 'true' > "$D5_NF_EXCLUDED/tests/lib/fixture-helper.sh"
   cat > "$D5_NF_EXCLUDED/tests/test-fixture-leaf-d5-nf-excluded.sh" <<'SH'
 #!/usr/bin/env bash
-V="tests/run-doc-invariants.sh"
+V="tests/lib/fixture-helper.sh"
 bash "$V"
 SH
   bash "$LINT" --root "$D5_NF_EXCLUDED" >/tmp/issue103-leaf-d5-nf-excluded.out 2>&1
   d5_nf_excluded_exit=$?
-  assert_true "D5 non-firing: a variable holding an excluded path (tests/run-doc-invariants.sh), invoked via bash \"\$v\", stays undetected" \
+  assert_true "D5 non-firing: a variable holding an excluded path (tests/lib/fixture-helper.sh), invoked via bash \"\$v\", stays undetected" \
     "[ $d5_nf_excluded_exit -eq 0 ]"
   rm -rf "$D5_NF_EXCLUDED"
 

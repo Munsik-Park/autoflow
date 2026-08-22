@@ -50,7 +50,6 @@ RUN_MJS="$PROJECT_ROOT/test/workflows/run.mjs"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 REGISTRY="$PROJECT_ROOT/tests/fixtures/doc-invariants.json"
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
 
 # B11: verify-cause-branch.js sha256 must stay unchanged (out of this cycle's scope).
 # B11 update (issue #97): #97 added the ledger entry-ID allocation prompt to
@@ -123,32 +122,15 @@ assert_true "AC-62-5b: the single parallel( site is the Draft-round 'const [devD
 # =============================================================================
 echo ""
 echo "=== AC-62-18 (fence, load-bearing) — permanent registry rows survive, none deleted ==="
-
-REGISTRY_OUT="$(bash "$REGISTRY_RUNNER" 2>&1)"
-# Scoped like AC-59-16b: this cycle's OWN new rows (62-AC*) are expected to
-# stay RED until GREEN lands the mechanism they pin — that is a separate,
-# already-covered discriminator (the registry rows above / this suite's own
-# AC-62-15/16/28 counterparts). AC-62-18 is about every OTHER (pre-existing)
-# permanent invariant not regressing.
-PRE_EXISTING_FAILS="$(printf '%s\n' "$REGISTRY_OUT" | grep '^  FAIL: ' | awk '{print $2}' | grep -cv '^62-AC' || true)"
-assert_true "AC-62-18a: every pre-existing (non-62-AC) registry row still passes (got: $PRE_EXISTING_FAILS failed)" \
-  "[ \"$PRE_EXISTING_FAILS\" -eq 0 ]"
+# The re-run half (AC-62-18a: no pre-existing registry row FAILs) retired in
+# issue #122 — carried by the bare `run: bash tests/run-doc-invariants.sh` step
+# in contract-suites.yml. What survives is a state predicate over the registry
+# FILE, which re-executes nothing.
 
 CUR_ROW_COUNT="$(jq '.invariants | length' "$REGISTRY")"
 COMMITTED_ROW_COUNT="$(cd "$PROJECT_ROOT" && git show HEAD:tests/fixtures/doc-invariants.json 2>/dev/null | jq '.invariants | length' 2>/dev/null || echo 0)"
 assert_true "AC-62-18b: registry row count is non-decreasing vs. the last commit (committed: $COMMITTED_ROW_COUNT, working: $CUR_ROW_COUNT)" \
   "[ \"$CUR_ROW_COUNT\" -ge \"$COMMITTED_ROW_COUNT\" ]"
-
-# =============================================================================
-echo ""
-echo "=== AC-62-20 (fence — will FAIL mid-GREEN until manifest is regenerated, gate at GREEN close) — manifest hash freshness (widened to 3 sources) ==="
-
-for SRC in ".claude/workflows/architect-deliberation.js" "docs/teammate-contracts.md" "docs/autoflow-guide.md"; do
-  MANIFEST_SHA="$(jq -r --arg s "$SRC" '.artifacts[] | select(.source==$s) | .sha256' "$MANIFEST")"
-  CUR_SHA="$(shasum -a 256 "$PROJECT_ROOT/$SRC" | awk '{print $1}')"
-  assert_true "AC-62-20 ($SRC): manifest row sha256 == live file sha256 (manifest: $MANIFEST_SHA, current: $CUR_SHA)" \
-    "[ \"$MANIFEST_SHA\" = \"$CUR_SHA\" ]"
-done
 
 # =============================================================================
 echo ""
@@ -164,8 +146,7 @@ assert_true "AC-62-21a: verify-cause-branch.js sha256 unchanged (B11 $B11_SHA) (
 # docs/doc-invariant-registry.md:114 (test-issue-27-composition-oracle.sh
 # AC-27-21a, reddened by issue #51's ADR-0017 manifest row, 47 -> 48).
 # Converted to the drift-immune shape used there: a state predicate over the
-# three named sources this suite actually pins manifest-hash freshness for
-# just above (AC-62-20's loop), not a global count.
+# three named sources this suite names below, not a global count.
 MANIFEST_ARTIFACT_COUNT="$(jq '.artifacts | length' "$MANIFEST")"
 echo "  (info) AC-62-21b: setup/manifest.json artifact count is currently $MANIFEST_ARTIFACT_COUNT (informational — not asserted; see conversion note above)"
 
@@ -335,7 +316,7 @@ echo ""
 echo "=== AC-62-39 (fence) — no derived-artifact regeneration owed for the two guards' own change ==="
 
 MANIFEST_TESTS_ROWS="$(jq -r '.artifacts[].source' "$MANIFEST" | grep -c '^tests/' || true)"
-assert_true "AC-62-39: setup/manifest.json carries zero 'tests/…' source rows so AC-56-10a/AC-59-9 stay unmoved (got: $MANIFEST_TESTS_ROWS)" \
+assert_true "AC-62-39: setup/manifest.json carries zero 'tests/…' source rows, so editing a test file owes no manifest regeneration (got: $MANIFEST_TESTS_ROWS)" \
   "[ \"$MANIFEST_TESTS_ROWS\" -eq 0 ]"
 
 # =============================================================================

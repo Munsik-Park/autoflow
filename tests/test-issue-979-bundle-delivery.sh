@@ -62,20 +62,6 @@ assert_true "AC-3a/AC-4: manifest ships .claude/autoflow.local.json as a scaffol
   "jq -e '.artifacts[] | select(.source == \".claude/autoflow.local.json\" and .kind == \"scaffold\")' '$MANIFEST' >/dev/null 2>&1"
 
 echo ""
-echo "=== AC2e hash freshness (each new copy row's sha256 == current shasum of source) ==="
-
-for src in scripts/review/codex-review-pr.sh scripts/preflight/check-review-backend.sh .codex/review.md; do
-  if [ -f "$PROJECT_ROOT/$src" ]; then
-    MANIFEST_HASH="$(jq -r --arg s "$src" '.artifacts[] | select(.source == $s) | .sha256 // empty' "$MANIFEST" 2>/dev/null)"
-    ACTUAL_HASH="$(shasum -a 256 "$PROJECT_ROOT/$src" 2>/dev/null | awk '{print $1}')"
-    assert_true "AC2e: manifest sha256 for $src matches current shasum" \
-      "[ -n \"\$MANIFEST_HASH\" ] && [ \"\$MANIFEST_HASH\" = \"\$ACTUAL_HASH\" ]"
-  else
-    assert_true "AC2e: source $src exists" "false"
-  fi
-done
-
-echo ""
 echo "=== fresh mktemp install materializes all five artifacts + never-overwrite scaffold arm ==="
 
 TARGET="$(mktemp -d)"
