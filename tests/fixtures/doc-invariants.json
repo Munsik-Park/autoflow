@@ -8334,6 +8334,18 @@
       "match": "fixed",
       "literal": "acceptance-criterion list",
       "scope": "permanent"
+    },
+    {
+      "id": "138-guide-architect-ac-change-repause-on-resume",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "docs/autoflow-guide.md",
+      "section": "ARCHITECT — Plan Synthesis (Developer AI + Test AI)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "every resume re-runs Reconcile",
+      "scope": "permanent"
     }
   ]
 }
