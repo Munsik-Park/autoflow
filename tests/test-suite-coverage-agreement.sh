@@ -955,6 +955,132 @@ else
   rm -rf "$ARR"
 fi
 
+# =============================================================================
+# Leg 17 — the archive-root half of the printed store path is anchored on the
+# guard's --root, not the consuming process's cwd (issue #130 cycle 2, review
+# finding). Fixture shape: .autoflow/issue-130-verification-design.md >
+# "Fixture shape shared by the three new legs" — containment (fixture repo,
+# archive root, ledger and every driving cwd share one mktemp -d scratch) and
+# discrimination (the driving cwd, SCR/a/cwd, is NOT a sibling of SCR/repo, so
+# a relative `../ark` names a different directory depending on the anchor).
+# =============================================================================
+echo ""
+
+SCR17="$(mktemp -d)"
+mkdir -p "$SCR17/repo" "$SCR17/ark" "$SCR17/a/cwd" "$SCR17/a/ark"
+printf 'x\n' > "$SCR17/repo/keep.txt"
+(cd "$SCR17/repo" && git init -q -b main && git add -A \
+  && git -c user.email=t@example.com -c user.name=t commit -q -m init) >/dev/null
+
+if [ ! -f "$REGISTER" ] || [ ! -f "$CLEANUP" ]; then
+  assert_true "anchored-prefix: scripts/test/green-tree-register.sh and scripts/cleanup/cleanup-issue.sh exist (the anchoring leg cannot be driven without them)" "false"
+else
+  A17_KEY="$(cd "$SCR17/repo" && bash "$CLEANUP" --print-repo-key 2>/dev/null)"
+  A17_OUT="$(cd "$SCR17/a/cwd" && AUTOFLOW_ARCHIVE_ROOT=../ark bash "$REGISTER" --store-path --root "$SCR17/repo" 2>/dev/null)"
+  A17_SUFFIX="/$A17_KEY/green-trees/register.md"
+  case "$A17_OUT" in
+    *"$A17_SUFFIX") A17_PREFIX="${A17_OUT%$A17_SUFFIX}" ;;
+    *) A17_PREFIX="" ;;
+  esac
+  A17_RIGHT="$(cd "$SCR17/ark" && pwd -P)"
+  A17_WRONG="$(cd "$SCR17/a/ark" && pwd -P)"
+  A17_RESOLVED=""
+  [ -n "$A17_PREFIX" ] && A17_RESOLVED="$(cd "$A17_PREFIX" 2>/dev/null && pwd -P)"
+
+  assert_true "AC-anchored-prefix: a relative \$AUTOFLOW_ARCHIVE_ROOT is resolved against --root, not the caller's cwd — --store-path invoked from a cwd that differs from --root, with 'ark' reachable both ways (key='$A17_KEY', printed='$A17_OUT', resolved-prefix='$A17_RESOLVED', expected(--root anchor)='$A17_RIGHT', caller-cwd-interpretation='$A17_WRONG')" \
+    "[ -n \"\$A17_KEY\" ] && [ -n \"\$A17_RESOLVED\" ] && [ \"\$A17_RESOLVED\" = \"\$A17_RIGHT\" ] && [ \"\$A17_RESOLVED\" != \"\$A17_WRONG\" ]"
+
+  assert_true "AC-absolute-answer: the printed store path begins with '/', openable from any cwd (printed='$A17_OUT')" \
+    "case \"\$A17_OUT\" in /*) true ;; *) false ;; esac"
+fi
+rm -rf "$SCR17"
+
+# =============================================================================
+# Leg 18 — round trip: a write (--append) from one cwd and a read (--match)
+# from a different cwd, both driven by the same relative $AUTOFLOW_ARCHIVE_ROOT
+# and the same --root, must agree on where the bytes live
+# (.autoflow/issue-130-verification-design.md > "write and read agree across
+# cwds"). This is the layer no printed-value assertion reaches: the writer and
+# the resolver each open the store in their OWN process, so only observing the
+# actual landing site — and both repositories' own porcelain — catches a
+# consumer that addresses a location the printed value does not name.
+# =============================================================================
+echo ""
+
+SCR18="$(mktemp -d)"
+mkdir -p "$SCR18/repo" "$SCR18/ark" "$SCR18/a/cwd" "$SCR18/b/cwd"
+printf 'x\n' > "$SCR18/repo/keep.txt"
+(cd "$SCR18/repo" && git init -q -b main && git add -A \
+  && git -c user.email=t@example.com -c user.name=t commit -q -m init) >/dev/null
+
+if [ ! -f "$REGISTER" ] || [ ! -f "$CLEANUP" ]; then
+  assert_true "round-trip: scripts/test/green-tree-register.sh and scripts/cleanup/cleanup-issue.sh exist (the round-trip leg cannot be driven without them)" "false"
+else
+  R18_TREE="$(git -C "$SCR18/repo" rev-parse 'HEAD^{tree}')"
+  R18_HEAD="$(git -C "$SCR18/repo" rev-parse HEAD)"
+  R18_KEY="$(cd "$SCR18/repo" && bash "$CLEANUP" --print-repo-key 2>/dev/null)"
+  R18_EXPECTED_STORE="$SCR18/ark/$R18_KEY/green-trees/register.md"
+  R18_PORC_SELF_BEFORE="$(cd "$PROJECT_ROOT" && git status --porcelain)"
+  R18_PORC_FX_BEFORE="$(cd "$SCR18/repo" && git status --porcelain)"
+
+  (cd "$SCR18/a/cwd" \
+    && AUTOFLOW_ARCHIVE_ROOT=../ark bash "$REGISTER" \
+      --append --root "$SCR18/repo" --ledger "$SCR18/ledger.md" --issue 130 --cycle 2 \
+      --runner "RED leg-18" --tree "$R18_TREE" --head "$R18_HEAD" \
+      --result "run-suites: 1 passed, 0 failed, 0 timed out, of 1 executed" \
+      --suites "keep.txt") >/dev/null 2>&1
+
+  R18_MATCH_OUT="$(cd "$SCR18/b/cwd" && AUTOFLOW_ARCHIVE_ROOT=../ark bash "$REGISTER" --match --root "$SCR18/repo" 2>/dev/null)"
+  R18_MATCH_RC=$?
+
+  R18_PORC_SELF_AFTER="$(cd "$PROJECT_ROOT" && git status --porcelain)"
+  R18_PORC_FX_AFTER="$(cd "$SCR18/repo" && git status --porcelain)"
+  R18_REGISTER_COUNT="$(find "$SCR18" -name register.md 2>/dev/null | grep -c .)"
+
+  assert_true "the-write-and-read-agree-across-cwds: --match (cwd b) exits 0 and prints the shared entry's heading written by --append (cwd a) — same relative \$AUTOFLOW_ARCHIVE_ROOT, different cwds (match rc=$R18_MATCH_RC, output: '$R18_MATCH_OUT')" \
+    "[ \"\$R18_MATCH_RC\" -eq 0 ] && printf '%s' \"\$R18_MATCH_OUT\" | grep -qF 'issue: #130 | cycle: 2 | runner: RED leg-18'"
+
+  assert_true "AC-single-anchor: the register file lands at exactly one path under scratch — \$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md resolved at --root, and at no other location a wrongly-anchored write could reach (found under scratch: $R18_REGISTER_COUNT, expected path exists: $([ -f "$R18_EXPECTED_STORE" ] && echo yes || echo no))" \
+    "[ \"\$R18_REGISTER_COUNT\" -eq 1 ] && [ -f \"\$R18_EXPECTED_STORE\" ]"
+
+  assert_true "round-trip: neither this repository's nor the fixture repository's porcelain moved across the write+read — a guard-bypassed write would make the store tracked content and a dirty-worktree contributor at a capture point" \
+    "[ \"\$R18_PORC_SELF_BEFORE\" = \"\$R18_PORC_SELF_AFTER\" ] && [ \"\$R18_PORC_FX_BEFORE\" = \"\$R18_PORC_FX_AFTER\" ]"
+fi
+rm -rf "$SCR18"
+
+# =============================================================================
+# Leg 19 — resolution does not require the archive root to exist on disk, and
+# does not create it (.autoflow/issue-130-verification-design.md >
+# "resolution does not require the root to exist"). Every other leg in this
+# file builds its archive root with `mktemp -d`, so the root is already
+# present in all of them; this is the only leg to drive the first-call-in-a-
+# fresh-environment shape, and the only one to assert the absence
+# post-condition — a print-and-exit-0 assertion alone cannot see a resolver
+# that materializes the root on the way to answering.
+# =============================================================================
+echo ""
+
+SCR19="$(mktemp -d)"
+mkdir -p "$SCR19/repo"
+printf 'x\n' > "$SCR19/repo/keep.txt"
+(cd "$SCR19/repo" && git init -q -b main && git add -A \
+  && git -c user.email=t@example.com -c user.name=t commit -q -m init) >/dev/null
+
+if [ ! -f "$REGISTER" ]; then
+  assert_true "non-existent-root: scripts/test/green-tree-register.sh exists (the non-existent-root leg cannot be driven without it)" "false"
+else
+  N19_ABSENT="$SCR19/absent/ark"
+  N19_OUT="$(AUTOFLOW_ARCHIVE_ROOT="$N19_ABSENT" bash "$REGISTER" --store-path --root "$SCR19/repo" 2>/dev/null)"
+  N19_RC=$?
+
+  assert_true "AC-nonexistent-root: an \$AUTOFLOW_ARCHIVE_ROOT that does not exist on disk still resolves — an absolute path is printed and the exit is 0, the shape of the first call in a fresh environment where the default \$HOME/.autoflow is absent (rc=$N19_RC, printed='$N19_OUT')" \
+    "[ \"\$N19_RC\" -eq 0 ] && case \"\$N19_OUT\" in /*) true ;; *) false ;; esac"
+
+  assert_true "AC-nonexistent-root (purity post-condition): resolving the path does not materialize it — \$SCR19/absent stays absent after the query, so a resolver that mkdir's its way to an answer would be caught here even though it would satisfy the print-and-exit-0 half above" \
+    "[ ! -e \"\$SCR19/absent\" ]"
+fi
+rm -rf "$SCR19"
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1
