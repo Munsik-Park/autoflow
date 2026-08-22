@@ -128,8 +128,7 @@ VIOLATIONS=0
 violation() { printf '  %s\n' "$1"; VIOLATIONS=$((VIOLATIONS + 1)); }
 # advisory() reports and NEVER touches VIOLATIONS — the exit code is the whole
 # difference between an advisory leg and a gate, so it is expressed once, here.
-ADVISORIES=0
-advisory() { printf '  ADVISORY: %s\n' "$1"; ADVISORIES=$((ADVISORIES + 1)); }
+advisory() { printf '  ADVISORY: %s\n' "$1"; }
 
 # ---------------------------------------------------------------------------
 # HEADER group
@@ -543,7 +542,6 @@ check_retirement_due() {
 
 check_tree() {
   VIOLATIONS=0
-  ADVISORIES=0
   check_headers "$1"
   check_workflows "$1"
   check_pin "$1"
