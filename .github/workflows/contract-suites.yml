@@ -119,6 +119,8 @@ on:
       - 'scripts/test/check-step-reconciliation.sh'
       - 'scripts/test/check-suite-leaf.sh'
       - 'scripts/test/check-suite-manifest.sh'
+      - 'scripts/test/green-tree-register.sh'
+      - 'scripts/test/green-tree-store.sh'
       - 'scripts/test/run-suites.sh'
       - 'scripts/test/invocation-scan.sh'
       - 'scripts/test/select-suites.sh'
@@ -256,6 +258,8 @@ on:
       - 'scripts/test/check-step-reconciliation.sh'
       - 'scripts/test/check-suite-leaf.sh'
       - 'scripts/test/check-suite-manifest.sh'
+      - 'scripts/test/green-tree-register.sh'
+      - 'scripts/test/green-tree-store.sh'
       - 'scripts/test/run-suites.sh'
       - 'scripts/test/invocation-scan.sh'
       - 'scripts/test/select-suites.sh'
@@ -621,6 +625,14 @@ jobs:
 
       - name: suite-coverage self-test
         run: bash scripts/test/suite-coverage.sh --self-test
+
+      # The ONLY layer that runs the Green-tree register's write side at all
+      # (issue #130). The resolver's self-test fabricates its entries and never
+      # invokes the writer, so an unwired or conditionally-guarded step here
+      # silences the whole "a minted certificate describes the tree that
+      # actually ran" criterion. Standing and unguarded, deliberately.
+      - name: green-tree-register self-test
+        run: bash scripts/test/green-tree-register.sh --self-test
 
       - name: maintained-docs sync lint
         run: bash scripts/test/check-maintained-docs-sync.sh

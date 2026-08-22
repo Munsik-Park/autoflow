@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2f35203a82cbe1580edcfa49cb4d147988c9ccf50225f981cffaa7edc059a734"
+      "sha256": "e71127071b74f4b89a2f769380ede95d433f53a28945940194e57ca106ea0e29"
     },
     {
       "source": "docs/INDEX.md",
@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/adr/0019-scope-fit-verification-policy.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "29136691694e518095e2b3b9524c2e95e08bbeca80187afbd0ace964720f76c5"
+      "sha256": "387de9f88cc94908823ded6d7008fe2a0d3b47b4062e4aa51f5f74c2776359a0"
     },
     {
       "source": "docs/adr/README.md",
@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "429eb9b2a53d63f4c8de8e82199211faa68f58cef9ce16204e696336cc67597c"
+      "sha256": "0df1b44df25c81d96e6126e44c68e9589bf8acb9b655281b24e302f7e49485f1"
     },
     {
       "source": "docs/design-rationale.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "45a4dd86c972a170037bb5971989e5006929cb2653d54f395b3cf2dea2478225"
+      "sha256": "626f1fade0901d75d14b983e2120049b63c0c5469323516da0958437829c2fe1"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -335,7 +335,7 @@
       "dest": "scripts/cleanup/cleanup-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "1fe25369be7c480187e136b95d1e7203400e93c0eba75fc0791bb134c688495a"
+      "sha256": "3bbba744a0982d9f73ed8d4903b4742105342f335e4899f45e3f52c905db49fb"
     },
     {
       "source": "scripts/ledger/ledger-entry-id.sh",

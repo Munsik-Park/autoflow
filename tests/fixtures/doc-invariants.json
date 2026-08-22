@@ -5244,7 +5244,7 @@
       "predicate": "present",
       "match": "fixed",
       "scope": "permanent",
-      "literal": "- source: <source entry heading>"
+      "literal": "- source: <source entry heading> [; <source entry heading> ...] | tree: <hash> | head: <hash> [; <hash> ...] | result: <summary line> [; <summary line> ...]"
     },
     {
       "id": "88-verify-writer-clause",
@@ -6516,6 +6516,17 @@
       "match": "fixed",
       "scope": "permanent",
       "literal": "- suites: <repo-relative path> [<repo-relative path> ...]"
+    },
+    {
+      "id": "130-green-tree-suites-field-hashed",
+      "origin_issue": 130,
+      "intent": "existence",
+      "file": "docs/autoflow-guide.md",
+      "section": "VERIFY — Test Run + Verification",
+      "predicate": "present",
+      "match": "fixed",
+      "scope": "permanent",
+      "literal": "- suites: <repo-relative path>@<input-hash> [<repo-relative path>@<input-hash> ...]"
     },
     {
       "id": "112-green-tree-use-inherited-suites",
