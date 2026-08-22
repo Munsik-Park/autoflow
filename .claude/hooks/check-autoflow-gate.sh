@@ -80,6 +80,240 @@ SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 # is_score_gated_surface (called on the Agent path too) — reference a set value.
 GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
 
+# ── _fold_continuations (issue #134 c2) ────────────────────────────────────
+# Backslash-newline line-continuation fold, defined at GLOBAL SCOPE beside
+# CMD_BOUNDARY / GIT_PUSH (and for the same reason: every consumer references
+# ONE definition). Two consumers today — the _JOINED segment fold below and the
+# backgrounded-suite-run deny's BG_SCAN pipeline.
+#
+# CONTRACT. Input: text on stdin. Output on stdout: the same text with each bare
+# trailing `\` and the newline after it replaced by a single space (chaining
+# permitted); every other newline preserved as a real command separator; a
+# trailing `\` on the final line keeps its content with the `\` removed; a
+# trailing CR stripped from each physical line before the continuation test.
+# The output carries NO trailing newline (`printf '%s'`), so a caller using the
+# sentinel idiom below reproduces the pre-extraction in-shell result BYTE FOR
+# BYTE. TOTAL: content is never discarded, on any input shape or platform.
+#
+# IMPLEMENTATION (issue #13 AUDIT cycle 3, user-approved): the fold is a pure
+# POSIX-shell while-read loop, NOT `sed`. Rationale: BSD and GNU `sed` diverge
+# on `N` at the LAST line of the buffer when it ends in a trailing `\` (a
+# continuation with no following line to append) — BSD `N` at EOF has no next
+# line and DISCARDS the pattern space, so _JOINED went EMPTY and the whole
+# segment-based deny failed OPEN. The cycle-2 `$s/\\$//` pre-strip covered only
+# a trailing `\` already present on the LAST physical line; it did NOT cover the
+# case where a mid-fold join RE-CREATED a trailing `\` on the new last line
+# INSIDE the `N`/`ta` loop, re-triggering the same BSD N-at-EOF discard one
+# iteration later on 2+-hop composite input (AC-2t). Rather than patch the sed
+# program again, this removes the divergent primitive entirely. The loop reads
+# physical lines in order; when a line ends in a bare trailing `\` it strips
+# that `\` and joins the next line with a single space (chaining permitted); a
+# final line whose `\` has no following line to append keeps its content with
+# the `\` removed; a bare newline is preserved as a real separator. It is a
+# TOTAL function — input/content is never discarded on any platform or input
+# shape, so the BSD/GNU sed N-at-EOF divergence cannot participate.
+#
+# The loop reads its input from STDIN, so every caller drives it with the same
+# `<<<` here-string / pipe idiom and no caller's variables are touched: the
+# loop's own variables are function-local. It deliberately does NOT wrap the
+# `case` in `$( … )` command substitution: macOS /bin/bash 3.2.57 mis-parses a
+# `case` pattern's `)` inside `$( )` as the substitution's closing paren.
+# Primitives used: `read` / `case` / `printf`-free string append / `${v%\\}`
+# parameter expansion — POSIX sh; no external tool is invoked.
+#
+# Moving the loop into a function does NOT re-introduce the /bin/bash 3.2.57
+# `case`-inside-`$( )` hazard noted above: the `case` is parsed once here, at
+# function-definition time and at global scope, and no call site contains any
+# `case` text of its own.
+_fold_continuations() {
+  local _fc_joined='' _fc_acc='' _fc_cont=0 _fc_first=1 _fc_line
+  while IFS= read -r _fc_line || [ -n "$_fc_line" ]; do
+    # CR normalization (issue #13 AUDIT cycle 4, user-approved): strip a trailing
+    # CR from each physical line before the continuation check. `read` splits on
+    # LF only, so a CRLF-style continuation (`\`+CR+LF) leaves the CR on the line
+    # and `_fc_acc` ends in CR, not the literal `\` the `*\\)` case matches — the
+    # fold misses and the composite command passes through unmerged (same bypass
+    # class as AC-2t, via a CRLF line ending). By real shell semantics `\`+CR+LF
+    # is NOT a line continuation (only `\`+LF is); this normalization is a
+    # DELIBERATE over-block so the gate is never weaker on CRLF input than on LF.
+    _fc_line="${_fc_line%$'\r'}"
+    if [ "$_fc_cont" = 1 ]; then
+      _fc_acc="$_fc_acc $_fc_line"     # join continuation with a single space
+    else
+      _fc_acc="$_fc_line"
+    fi
+    case "$_fc_acc" in
+      *\\)
+        _fc_acc="${_fc_acc%\\}"     # strip the bare trailing backslash; keep assembling
+        _fc_cont=1
+        ;;
+      *)
+        _fc_cont=0               # completed logical line — append, newline-separated
+        if [ "$_fc_first" = 1 ]; then _fc_joined="$_fc_acc"; _fc_first=0
+        else _fc_joined="$_fc_joined
+$_fc_acc"; fi
+        ;;
+    esac
+  done
+  # Continuation `\` on the final line with no following line to append: content
+  # is preserved (the backslash was already stripped), nothing is discarded.
+  if [ "$_fc_cont" = 1 ]; then
+    if [ "$_fc_first" = 1 ]; then _fc_joined="$_fc_acc"; else _fc_joined="$_fc_joined
+$_fc_acc"; fi
+  fi
+  printf '%s' "$_fc_joined"
+}
+
+# ── _strip_heredoc_bodies (issue #134 c2) ──────────────────────────────────
+# Heredoc-body remover, defined at GLOBAL SCOPE. Used by the backgrounded
+# suite-run deny's BG_SCAN pipeline only; SCAN / _JOINED / _SEGMENTS do not
+# read it.
+#
+# WHY IT DELETES-AND-CONTINUES RATHER THAN STOPPING. The earlier `${COMMAND%%<<*}`
+# truncation stopped at the FIRST heredoc introducer, so every later logical line
+# left the deny's buffer: a heredoc that writes a file followed by
+# `bash …/run-suites.sh --all &` — or any earlier `grep -q x <<< "$V"` followed by
+# the same invocation — admitted a genuinely backgrounded whole-tree run. That is
+# the UNDER-inclusive direction, the harmful one for this gate. This function
+# removes bodies and keeps reading to the end of the input instead.
+#
+# CONTRACT. Input: the folded text on stdin. Output on stdout, no trailing
+# newline:
+#   - each heredoc introducer token (`<<WORD`, `<<-WORD`, `<<"WORD"`, `<<'WORD'`)
+#     is deleted FROM ITS OWN LINE and the remainder of that line — including a
+#     trailing `&` — is kept;
+#   - the body lines through the matching terminator are removed, and processing
+#     continues: no line after a heredoc is lost;
+#   - `<<<` is NOT an introducer (a here-string has no body), so the scan steps
+#     over it and keeps looking on the same line;
+#   - the terminator is a body line equal to the delimiter word exactly; under
+#     `<<-`, leading tabs and spaces are stripped before the comparison, and the
+#     delimiter's surrounding quotes are removed before matching.
+#
+# [MUST] TOTALITY ON AN UNTERMINATED HEREDOC. Body lines are BUFFERED, not
+# discarded, until the terminator is seen; if the input ends with the body still
+# open, the buffer is emitted. This is what makes a MISREAD introducer harmless:
+# the strip runs while the buffer is still quoted (stage order — see the BG_SCAN
+# call site), so a literal `<<` inside a quoted argument reads as an introducer.
+# Under the stopping shape that misreading dropped every later line; under this
+# clause it costs only the delimiter-shaped word on that one line, and the
+# following real command line is buffered, never terminated, and emitted.
+#
+# Pure POSIX shell (`read` / `case` / parameter expansion), NOT `sed`, for the
+# reason recorded on _fold_continuations above: matching a heredoc body needs a
+# delimiter carried across lines, which in `sed` means `N`/hold space — the exact
+# primitive class this file removed after the BSD/GNU divergence. Net effect on
+# BG_SCAN: one `sed` stage is REMOVED and none added.
+#
+# Accepted residuals, all OVER-inclusive (content retained, so the deny can only
+# fire more, never less): multiple introducers on one line (`cat <<A <<B`) — only
+# the first is stripped; an unterminated heredoc keeps its body; a body line
+# ending in a bare `\` is folded into the following line before the strip sees it,
+# so such a body merges with its terminator and stays in the buffer.
+_strip_heredoc_bodies() {
+  local _shb_all='' _shb_first=1 _shb_buf='' _shb_bufn=0
+  local _shb_in=0 _shb_delim='' _shb_dash=0
+  local _shb_line _shb_rest _shb_keep _shb_before _shb_after _shb_orig
+  local _shb_tok _shb_t _shb_c _shb_cmp
+  while IFS= read -r _shb_line || [ -n "$_shb_line" ]; do
+    if [ "$_shb_in" = 1 ]; then
+      _shb_cmp="$_shb_line"
+      if [ "$_shb_dash" = 1 ]; then
+        while :; do
+          case "$_shb_cmp" in
+            ' '*|$'\t'*) _shb_cmp="${_shb_cmp#?}" ;;
+            *) break ;;
+          esac
+        done
+      fi
+      if [ "$_shb_cmp" = "$_shb_delim" ]; then
+        _shb_in=0; _shb_buf=''; _shb_bufn=0    # terminator: body dropped, keep reading
+      elif [ "$_shb_bufn" = 0 ]; then
+        _shb_buf="$_shb_line"; _shb_bufn=1     # buffered, not discarded (totality)
+      else
+        _shb_buf="$_shb_buf
+$_shb_line"
+      fi
+      continue
+    fi
+    _shb_rest="$_shb_line"
+    _shb_keep=''
+    while :; do
+      case "$_shb_rest" in
+        *'<<'*) : ;;
+        *) _shb_keep="$_shb_keep$_shb_rest"; break ;;
+      esac
+      _shb_before="${_shb_rest%%<<*}"
+      _shb_orig="${_shb_rest#*<<}"
+      case "$_shb_orig" in
+        '<'*)
+          # `<<<` — a here-string, not an introducer: step over it, keep looking.
+          _shb_keep="$_shb_keep$_shb_before<<<"
+          _shb_rest="${_shb_orig#?}"
+          continue
+          ;;
+      esac
+      _shb_tok="$_shb_orig"
+      _shb_dash=0
+      case "$_shb_tok" in -*) _shb_dash=1; _shb_tok="${_shb_tok#-}" ;; esac
+      while :; do
+        case "$_shb_tok" in
+          ' '*|$'\t'*) _shb_tok="${_shb_tok#?}" ;;
+          *) break ;;
+        esac
+      done
+      _shb_delim=''; _shb_after=''
+      case "$_shb_tok" in
+        '"'*)
+          _shb_t="${_shb_tok#\"}"
+          case "$_shb_t" in
+            *'"'*) _shb_delim="${_shb_t%%\"*}"; _shb_after="${_shb_t#*\"}" ;;
+          esac
+          ;;
+        "'"*)
+          _shb_t="${_shb_tok#\'}"
+          case "$_shb_t" in
+            *"'"*) _shb_delim="${_shb_t%%\'*}"; _shb_after="${_shb_t#*\'}" ;;
+          esac
+          ;;
+        *)
+          _shb_after="$_shb_tok"
+          while [ -n "$_shb_after" ]; do
+            _shb_c="${_shb_after:0:1}"
+            case "$_shb_c" in
+              ' '|$'\t'|';'|'&'|'|'|'<'|'>'|'('|')') break ;;
+            esac
+            _shb_delim="$_shb_delim$_shb_c"
+            _shb_after="${_shb_after#?}"
+          done
+          ;;
+      esac
+      if [ -z "$_shb_delim" ]; then
+        # No delimiter word (`<<` at end of line, before a metachar, or an
+        # unclosed quote): no body can be matched, so keep the text as ordinary
+        # content — the over-inclusive direction — and keep looking on this line.
+        _shb_keep="$_shb_keep$_shb_before<<"
+        _shb_rest="$_shb_orig"
+        continue
+      fi
+      # Real introducer: drop the token, keep the rest of the line, open the body.
+      _shb_keep="$_shb_keep$_shb_before$_shb_after"
+      _shb_in=1; _shb_buf=''; _shb_bufn=0
+      break
+    done
+    if [ "$_shb_first" = 1 ]; then _shb_all="$_shb_keep"; _shb_first=0
+    else _shb_all="$_shb_all
+$_shb_keep"; fi
+  done
+  # Unterminated heredoc at end of input: emit the buffer (totality clause).
+  if [ "$_shb_in" = 1 ] && [ "$_shb_bufn" = 1 ]; then
+    if [ "$_shb_first" = 1 ]; then _shb_all="$_shb_buf"
+    else _shb_all="$_shb_all
+$_shb_buf"; fi
+  fi
+  printf '%s' "$_shb_all"
+}
+
 # ── Section 1: Unconditional blocks (state-independent — P2) ──
 # AutoFlow never merges and never pushes to the default branch through the
 # agent's tools. Enforced regardless of any .autoflow state so that a
@@ -96,70 +330,13 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # AND fail OPEN in a security gate (issue #13 AUDIT regression). A bare newline
   # (a physical line NOT ending in `\`) is a real command separator and is
   # deliberately left intact (over-block guard).
-  #
-  # IMPLEMENTATION (issue #13 AUDIT cycle 3, user-approved): the fold is a pure
-  # POSIX-shell while-read loop, NOT `sed`. Rationale: BSD and GNU `sed` diverge
-  # on `N` at the LAST line of the buffer when it ends in a trailing `\` (a
-  # continuation with no following line to append) — BSD `N` at EOF has no next
-  # line and DISCARDS the pattern space, so _JOINED went EMPTY and the whole
-  # segment-based deny failed OPEN. The cycle-2 `$s/\\$//` pre-strip covered only
-  # a trailing `\` already present on the LAST physical line; it did NOT cover the
-  # case where a mid-fold join RE-CREATED a trailing `\` on the new last line
-  # INSIDE the `N`/`ta` loop, re-triggering the same BSD N-at-EOF discard one
-  # iteration later on 2+-hop composite input (AC-2t). Rather than patch the sed
-  # program again, this removes the divergent primitive entirely. The loop reads
-  # physical lines in order; when a line ends in a bare trailing `\` it strips
-  # that `\` and joins the next line with a single space (chaining permitted); a
-  # final line whose `\` has no following line to append keeps its content with
-  # the `\` removed; a bare newline is preserved as a real separator. It is a
-  # TOTAL function — input/content is never discarded on any platform or input
-  # shape, so the BSD/GNU sed N-at-EOF divergence cannot participate.
-  #
-  # The loop is driven by a `<<<` here-string (as the label/default-branch denies
-  # below already are) rather than a `printf … |` pipe, so it runs in THIS shell
-  # and its assignments to _JOINED persist. It deliberately does NOT wrap the
-  # `case` in `$( … )` command substitution: macOS /bin/bash 3.2.57 mis-parses a
-  # `case` pattern's `)` inside `$( )` as the substitution's closing paren.
-  # Primitives used: `read` / `case` / `printf`-free string append / `${v%\\}`
-  # parameter expansion — POSIX sh; no external tool is invoked.
-  _JOINED=''
-  _acc=''       # current logical line being assembled
-  _cont=0       # 1 while the previous physical line ended in a continuation `\`
-  _first=1      # 1 until the first completed logical line is appended
-  while IFS= read -r _line || [ -n "$_line" ]; do
-    # CR normalization (issue #13 AUDIT cycle 4, user-approved): strip a trailing
-    # CR from each physical line before the continuation check. `read` splits on
-    # LF only, so a CRLF-style continuation (`\`+CR+LF) leaves the CR on the line
-    # and `_acc` ends in CR, not the literal `\` the `*\\)` case matches — the
-    # fold misses and the composite command passes through unmerged (same bypass
-    # class as AC-2t, via a CRLF line ending). By real shell semantics `\`+CR+LF
-    # is NOT a line continuation (only `\`+LF is); this normalization is a
-    # DELIBERATE over-block so the gate is never weaker on CRLF input than on LF.
-    _line="${_line%$'\r'}"
-    if [ "$_cont" = 1 ]; then
-      _acc="$_acc $_line"     # join continuation with a single space
-    else
-      _acc="$_line"
-    fi
-    case "$_acc" in
-      *\\)
-        _acc="${_acc%\\}"     # strip the bare trailing backslash; keep assembling
-        _cont=1
-        ;;
-      *)
-        _cont=0               # completed logical line — append, newline-separated
-        if [ "$_first" = 1 ]; then _JOINED="$_acc"; _first=0
-        else _JOINED="$_JOINED
-$_acc"; fi
-        ;;
-    esac
-  done <<< "$SCAN"
-  # Continuation `\` on the final line with no following line to append: content
-  # is preserved (the backslash was already stripped), nothing is discarded.
-  if [ "$_cont" = 1 ]; then
-    if [ "$_first" = 1 ]; then _JOINED="$_acc"; else _JOINED="$_JOINED
-$_acc"; fi
-  fi
+  # The fold itself is _fold_continuations (global scope, above); this call site
+  # keeps the C4 guard below. SENTINEL IDIOM: command substitution strips trailing
+  # newlines, and the fold's output legitimately ends in one when the last logical
+  # line is empty — a shape the in-shell loop preserved. Appending `X` inside the
+  # substitution and removing it after keeps _JOINED BYTE-IDENTICAL to what the
+  # inlined loop produced, so _SEGMENTS and every gate reading it are unmoved.
+  _JOINED=$(_fold_continuations <<< "$SCAN"; printf X); _JOINED="${_JOINED%X}"
   # NOTE (C4): fail-closed assertion (defense-in-depth). The while-read fold above
   # is a total function, so a non-empty SCAN always yields a non-empty _JOINED and
   # this guard is not reachable in normal operation. It is retained deliberately:
@@ -206,8 +383,34 @@ $_acc"; fi
   # docs/gate-matching-standard.md > "Backgrounded-invocation refinement —
   # BG_SCAN / BG_PREFIX / BG_TAIL (applied)"; this deny's OWN scan buffer — SCAN
   # and _SEGMENTS are untouched.
-  BG_SCAN=$(printf '%s' "${COMMAND%%<<*}" \
+  # BG_SCAN — an ordered THREE-STAGE pipeline over COMMAND (issue #134 c2), with a
+  # fail-closed guard. Stage order is load-bearing and each boundary is argued:
+  #   1. _fold_continuations — a `\`<newline> continuation is ONE logical shell
+  #      command, but `grep -qE` is line-oriented, so `… run-suites.sh --all \`⏎`&`
+  #      put the invocation token and its terminating `&` on two physical lines and
+  #      no surface matched. Folding FIRST also makes an introducer sitting on a
+  #      continued line (`… --all \`⏎`<<EOF &`) visible to stage 2, and restores
+  #      quote parity for stage 3 on a quoted span split across a continuation.
+  #   2. _strip_heredoc_bodies — remove heredoc BODIES, keep every later line
+  #      (see the function's own WHY block). Runs BEFORE unquoting because a body
+  #      is arbitrary text and routinely carries an unbalanced apostrophe (`it's`),
+  #      which would corrupt stage 3's quote pairing for every real command line
+  #      after it. The reverse order buys nothing symmetric: unquoting KEEPS the
+  #      contents of a separator-free quoted span, so `git commit -m "a << b"`
+  #      still presents a bare `<<` to the strip. That misread is not avoided by
+  #      reordering — it is made harmless by the strip's totality clause.
+  #   3. the unquoting sed — unchanged from cycle 1.
+  BG_SCAN=$(_fold_continuations <<< "$COMMAND" \
+    | _strip_heredoc_bodies \
     | sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g")
+  # NOTE (bg-fail-closed): the same invariant as C4 above, stated here rather than
+  # left to inference. In a security gate an empty buffer fails OPEN, and this
+  # cycle grows BG_SCAN from one parameter expansion plus one sed into a
+  # two-function, one-sed substitution read by ALL THREE deny surfaces — so the
+  # surface on which an empty result could arise widens rather than narrows. The
+  # fallback is the RAW COMMAND, not a partially-built buffer: it is the only text
+  # guaranteed to be real content.
+  [ -n "$COMMAND" ] && [ -z "$BG_SCAN" ] && BG_SCAN=$COMMAND
   BG_WRAPPER='(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|nohup|setsid|env|time|command)[[:space:]]+)*'
   BG_INTERP='((sh|bash|zsh|dash|ksh)([[:space:]]+-[^[:space:]]+)*[[:space:]]+)?'
   RUN_SUITES_TAIL="${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
