@@ -144,6 +144,7 @@ await test('ARCHITECT: converges at round 2 with a grounded ACCEPT, ledger = mut
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
     return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
@@ -158,6 +159,7 @@ await test('ARCHITECT: first-exchange ACCEPT cannot converge (round 1 blocked)',
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] } // ACCEPT every round
   }
   const { result } = await runArch({ issue: '1' }, responder)
@@ -260,6 +262,7 @@ await test('ARCHITECT: single transient one-side-null still converges (regressio
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1 && label.startsWith('dev-')) return null
     return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
@@ -277,6 +280,7 @@ await test('ARCHITECT: draft non-null with a withheld artifact no longer early-E
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
   }
   const { result, calls } = await runArch({ issue: '845-4' }, responder, { omitArtifact: 'verif' })
@@ -365,6 +369,7 @@ await test('ARCHITECT: test-side null in a round still lets dev run that round (
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1 && label.startsWith('test-')) return null
     return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
@@ -764,6 +769,7 @@ await test('ARCHITECT: dispositions schema — VERDICT.required, additionalPrope
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [], dispositions: [] }
     return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
@@ -776,6 +782,7 @@ await test('ARCHITECT: a disposition naming an entry no one raised is ignored �
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_REAL_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
     if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
@@ -866,6 +873,7 @@ await test('ARCHITECT: both sides ACCEPT with empty counters while an entry is s
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_SILENT_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
     if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
@@ -899,6 +907,7 @@ await test('ARCHITECT: CONVERGED ledger names authority "ARCHITECT rejected" and
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_REJ_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
     if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
@@ -1297,6 +1306,7 @@ await test('ARCHITECT: prose args, hashed number (reported shape) resolves and c
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
     return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
@@ -1358,6 +1368,7 @@ await test('ARCHITECT: prose args, >=2 bare digit runs, no #/no issue-label — 
 await test('ARCHITECT: prose args, single bare digit, no #/no issue-label — tier-3 unique-adopt success (c2, NEW)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft') || label === 'ledger') return 'ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch('build 42', responder)
@@ -1388,6 +1399,12 @@ function capResponder(overrides) {
   return (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    // Fixture-amendment class recorded for #127 cycle 3 (tests/lib/harness-pins.sh), amended
+    // this cycle for #138: a converging run now runs Reconcile before Ledger, which calls a
+    // sub-agent labelled 'ac-diff'. The shape below is the one the 'ac-diff-plumbing' leg
+    // proves yields CONVERGED with no findings -- it does not weaken any #138 fail-closed leg,
+    // which stubs its OWN 'ac-diff' response and is unaffected by this default.
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     if (label === CLOSING_CALL_LABEL) {
       return Object.prototype.hasOwnProperty.call(overrides, 'closing') ? overrides.closing : null
     }
@@ -1630,6 +1647,16 @@ function resumeResponder(overrides = {}) {
     if (label.startsWith('test-r') || label.startsWith('dev-r')) {
       if (Object.prototype.hasOwnProperty.call(overrides, label)) return overrides[label]
       return overrides.roundDefault !== undefined ? overrides.roundDefault : { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    }
+    // Fixture-amendment class recorded for #127 cycle 3, amended this cycle for #138: a
+    // converging run now runs Reconcile before Ledger, calling a sub-agent labelled
+    // 'ac-diff'. Handled explicitly (not left to the register-load/-write fallback below,
+    // which would misclassify it since 'ac-diff' precedes 'ledger' the same as register-load
+    // does) -- the shape is the one the 'ac-diff-plumbing' leg proves yields CONVERGED.
+    if (label === 'ac-diff') {
+      return Object.prototype.hasOwnProperty.call(overrides, 'acDiff')
+        ? overrides.acDiff
+        : { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     }
     // Unclassified: register-load (before 'ledger') or register-write (after it).
     if (!seenLedger) {
@@ -1876,6 +1903,7 @@ await test('ARCHITECT: register round-trip -- a cold CONVERGED run persists verd
   const coldResponder = (label, prompt) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: 'ROUNDTRIP_CONCERN', locator: 'l', argument: 'a' }], accept_grounds: [] }
     if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
     if (label.startsWith('test-r') || label.startsWith('dev-r')) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
@@ -1962,6 +1990,7 @@ await test('ARCHITECT: an out-of-enum status/raisedBy rehydrates to the declared
     // resume-scoped open-entry precondition. This case's own assertions (fallback rehydration,
     // the coerced BAD_RAISER raiser closing it) are unchanged.
     if (label === 'dev-r4') return { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'BAD_STATUS', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     if (!seenLedger) {
       return {
         found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE',
@@ -2072,6 +2101,7 @@ await test('ARCHITECT: a SYNCHRONOUS throw at the register-write call is absorbe
     if (label === 'register-write') throw new Error('sync register-write throw') // NOT a promise rejection
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
     if (label.startsWith('test-r') || label.startsWith('dev-r')) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
@@ -2466,6 +2496,7 @@ await test('AC-facilitator-prompt: ARCHITECT CONVERGED ledger prompt carries the
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
     const r = Number(label.split('-r')[1])
     if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
     return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
