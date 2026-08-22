@@ -144,14 +144,6 @@ physical_path() {
 # $ARCHIVE_ROOT as a side effect, which the archival path then uses as the
 # destination prefix — the guarded value and the used value are the same
 # variable by construction, not by agreement.
-#
-# It sets a third side-effect variable, $ARCHIVE_ROOT_ABS: the ABSOLUTE,
-# SYMLINK-PRESERVING form of the accepted root, which `--check-archive-root`
-# prints. Symlink-preserving rather than physical is deliberate — the guard
-# JUDGES the physical resolution, but the answer it hands out preserves the
-# operator's own spelling, so an absolute $AUTOFLOW_ARCHIVE_ROOT comes back
-# byte-identical to what was passed in. The two are different questions and
-# both are needed.
 gate_archive_root() {
   ARCHIVE_ROOT="${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}"
   ROOT_PHYS="$(cd -P "$1" && pwd)"
@@ -165,16 +157,27 @@ gate_archive_root() {
       exit 65
       ;;
   esac
-  ARCHIVE_ROOT_ABS="$(absolute_path "$ARCHIVE_ROOT")"
 }
 
 # Introspection subcommands — hoisted ABOVE the existence gate and the digits
 # loop (a leading `--` is never mistaken for an issue number). Both resolve
 # their root from the CWD; see the ARCHIVE-ROOT GATE / REPO-KEY notes above.
+#
+# `--check-archive-root` prints the ABSOLUTE, SYMLINK-PRESERVING form of the
+# accepted root (computed here, not as a gate_archive_root side effect — the
+# archival path never reads it, so computing it unconditionally on every gate
+# call would be wasted work on the common path). Symlink-preserving rather
+# than physical is deliberate — the guard JUDGES the physical resolution, but
+# the answer it hands out preserves the operator's own spelling, so an
+# absolute $AUTOFLOW_ARCHIVE_ROOT comes back byte-identical to what was passed
+# in. The trailing slash is stripped here, at the guard's own boundary, so
+# every consumer of this stdout gets a normalized value — not only the one
+# consumer that happens to strip it again downstream.
 if [ "${1:-}" = "--check-archive-root" ]; then
   ROOT="$(git rev-parse --show-toplevel)"
   gate_archive_root "$ROOT"
-  printf '%s\n' "$ARCHIVE_ROOT_ABS"
+  ARCHIVE_ROOT_ABS="$(absolute_path "$ARCHIVE_ROOT")"
+  printf '%s\n' "${ARCHIVE_ROOT_ABS%/}"
   exit 0
 fi
 
