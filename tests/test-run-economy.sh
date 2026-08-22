@@ -53,17 +53,26 @@ assert_false() {  # assert_false <desc> <cmd...>
 # code block of docs/autoflow-guide.md, joining wrapped continuation lines
 # into one buffer per step (captured into a variable, never piped
 # grep-into-grep — docs/submodule-common-rules.md > SIGPIPE-safe rule).
-# Output: one line per step, "<blockno>|<stepnum>|<joined body>".
+# Each step also carries the nearest preceding "## " section heading, so a
+# consumer can select "the step-2 row of the GREEN block" by SECTION NAME
+# rather than by a positional block index — RED2 fix (ledger F36): a
+# block-index selection picks the FIRST fenced step numbered 2 anywhere in
+# the file (RED's block), not GREEN's, because both phases number a step 2.
+# Output: one line per step, "<section>|<stepnum>|<joined body>".
 extract_fenced_steps() {
   awk '
+    /^## / {
+      sec = $0; sub(/^## /, "", sec); sub(/[ \t]+$/, "", sec)
+      next
+    }
     /^```/ {
       infence = !infence
-      if (infence) { blockno++; instep = 0; next }
-      else { if (instep) { print blockno "|" stepnum "|" buf }; instep = 0; next }
+      if (infence) { instep = 0; next }
+      else { if (instep) { print sec "|" stepnum "|" buf }; instep = 0; next }
     }
     infence {
       if ($0 ~ /^[0-9]+\. /) {
-        if (instep) { print blockno "|" stepnum "|" buf }
+        if (instep) { print sec "|" stepnum "|" buf }
         stepnum = $0; sub(/\..*/, "", stepnum)
         buf = $0
         instep = 1
@@ -138,8 +147,11 @@ assert_true "the section names commit / staging / file edit as forms of the proh
   bash -c "printf '%s' \"\$1\" | grep -qiE 'commit'" _ "$TEAMMATE_QUIESCE_SECTION"
 
 echo "dev-sweep-prohibited-text — the whole-tree-selection prohibition names BOTH reaching routes (--all AND the bare invocation) on every surface"
-# GREEN step 2's [MUST] bullet list -- block/step already extracted above.
-GREEN_STEP2=$(printf '%s\n' "$STEPS" | awk -F'|' '$2==2 {print; exit}')
+# GREEN step 2's [MUST] bullet list -- selected by SECTION NAME (the step
+# already carries its owning "## " heading from extract_fenced_steps), not by
+# a positional block index: RED's own fenced block also numbers a step 2, so
+# a block-index selection would silently grab the wrong phase's step.
+GREEN_STEP2=$(printf '%s\n' "$STEPS" | awk -F'|' '$1=="GREEN — Implementation" && $2==2 {print; exit}')
 DISPATCH_DEV_LINE=$(grep -E '^\-[[:space:]]*\*\*Developer AI\*\*:' "$GUIDE" || true)
 
 check_both_routes() {  # check_both_routes <desc> <text>
