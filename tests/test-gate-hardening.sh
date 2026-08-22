@@ -953,20 +953,37 @@ echo "Issue #134 c2 — joined-parity: _fold_continuations output is byte-exact 
 # append/strip idiom (feature design > joined-parity's own call-site pattern)
 # is reused here so a genuine trailing blank logical line is not silently
 # stripped by command substitution before the comparison runs.
+#
+# RED2 (issue #134 c2, VERIFY cause branch, ledger O18): stdin was originally
+# fed to `source` through a PIPE (`printf … | … source "$HOOK"`) -- `source`
+# was the pipeline's LAST command, but the pipeline as a whole still ran in a
+# separate subshell from `_fold_continuations`' later call site (measured
+# under bash 5.3.9 and /bin/bash 3.2.57: `_fold_continuations` was undefined
+# after the pipe form, defined after a plain `<<<` redirection). Fixed by
+# feeding stdin via a HEREDOC/HERESTRING REDIRECTION on the `source` command
+# itself, which attaches no extra subshell, keeping the isolated-subshell /
+# shadowed-`exit` protections unchanged. `hook` is parameterized (default
+# $HOOK) so the same probe can Red-confirm against a hook copy that lacks the
+# function (see the Red-confirmation measurement below / the c2 RED2 report).
 _probe_fold() {
-  local probe="$1" out
+  local probe="$1" hook="${2:-$HOOK}" out
   out=$(
     exit() { return 0; }
-    printf '{"tool_name":"Noop","tool_input":{}}' \
-      | CLAUDE_PROJECT_DIR="$NOSTATE" source "$HOOK" >/dev/null 2>&1
+    CLAUDE_PROJECT_DIR="$NOSTATE" source "$hook" <<< '{"tool_name":"Noop","tool_input":{}}' >/dev/null 2>&1
     _fold_continuations <<< "$probe"
     printf X
   )
   printf '%s' "${out%X}"
 }
 _assert_fold() {
+  # The sentinel append/strip idiom is reapplied HERE too: $(_probe_fold ...)
+  # is itself a command substitution and strips a trailing newline from
+  # _probe_fold's own output, which would silently re-drop the very
+  # trailing-blank-logical-line case this leg exists to catch (RED2, same
+  # root cause as the sourcing fix above -- an outer capture undoing an
+  # inner one).
   local desc="$1" probe="$2" expected="$3" got
-  got=$(_probe_fold "$probe")
+  got=$(_probe_fold "$probe"; printf X); got="${got%X}"
   if [[ "$got" == "$expected" ]]; then
     echo "  PASS: $desc"
     PASS=$((PASS + 1))
