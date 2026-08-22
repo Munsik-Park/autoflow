@@ -83,26 +83,11 @@ while [ $# -gt 0 ]; do
 done
 ROOT="${ROOT:-$DEFAULT_ROOT}"
 
-# ---------------------------------------------------------------------------
-# glob_matches <actions-dialect pattern> <path>
-# The Actions `paths:` dialect, matched the way the conformance suite already
-# implements it: `**` crosses `/`, a single `*` does not, and a token with no
-# wildcard is an exact path or a directory prefix when it ends in `/`.
-# ---------------------------------------------------------------------------
-glob_matches() {
-  local pattern="$1" path="$2" rx
-  case "$pattern" in
-    */) case "$path" in "$pattern"*) return 0 ;; esac; return 1 ;;
-  esac
-  case "$pattern" in
-    *'*'*) ;;
-    *) [ "$pattern" = "$path" ] && return 0; return 1 ;;
-  esac
-  # Translate the dialect into an ERE: `**` -> `.*`, `*` -> `[^/]*`.
-  rx="$(printf '%s' "$pattern" \
-    | sed -e 's/[.[\()+^$|]/\\&/g' -e 's/\*\*/\x01/g' -e 's/\*/[^\/]*/g' -e 's/\x01/.*/g')"
-  printf '%s' "$path" | grep -qE "^${rx}$"
-}
+# `glob_matches` — the Actions `paths:` dialect — is NOT defined here. It lives
+# in scripts/test/suite-manifest.sh, sourced above: the dialect is how a
+# `# ci-subject:` token is interpreted, and that grammar's definition site is
+# that file. The two call sites below reach it unchanged through the source line
+# this script already carries.
 
 # ---------------------------------------------------------------------------
 # resolve_delta <root> <base> <include-worktree> — repo-relative changed paths,

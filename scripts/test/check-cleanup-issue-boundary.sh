@@ -368,6 +368,90 @@ fi
 
 # ---------------------------------------------------------------------------
 echo ""
+echo "=== #130: the store library reaches the SAME refusal, through the same guard ==="
+# ---------------------------------------------------------------------------
+# Issue #130 adds a second consumer of $AUTOFLOW_ARCHIVE_ROOT: the Green-tree
+# register's shared store, which lives at
+# $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/. The store root and the
+# archive root are not two roots to keep in agreement — they are ONE root with
+# two consumers — so "two guards diverging" is not a reachable mode and is not
+# asserted. The two reachable ones are:
+#
+#   (a) the store library not calling the guard AT ALL — driven here by
+#       resolving the store path against an in-tree root and requiring exit 65
+#       with nothing written; and
+#   (b) the guard's behaviour CHANGING as this design hoists physical_path()
+#       and the comparison above the .autoflow/ existence gate into one
+#       function — held by the plain, relative and symlink legs above
+#       continuing to answer unchanged.
+#
+# Only this suite executes cleanup-issue.sh at all, so no other layer sees
+# either. The three shapes below are the same three the archival caller is
+# driven against, because a guard that answers differently on the second
+# caller is the failure this pairing exists to detect.
+REGISTER_SH="$ROOT/scripts/test/green-tree-register.sh"
+
+if [ ! -f "$REGISTER_SH" ]; then
+  assert_true "AC-130-a: scripts/test/green-tree-register.sh exists (the store-root caller cannot be driven without it)" "false"
+  echo "  SKIP: AC-130-b/c/d (writer script missing)"
+  TESTS=$((TESTS + 3))
+else
+  PORCELAIN_STORE_BEFORE="$(cd "$ROOT" && git status --porcelain)"
+
+  STORE_ABS_OUT="$(AUTOFLOW_ARCHIVE_ROOT="$INSIDE_ROOT" bash "$REGISTER_SH" --store-path --root "$ROOT" 2>/dev/null)"
+  STORE_ABS_RC=$?
+  STORE_REL_OUT="$(cd "$ROOT" && AUTOFLOW_ARCHIVE_ROOT="$INSIDE_REL" bash "$REGISTER_SH" --store-path --root "$ROOT" 2>/dev/null)"
+  STORE_REL_RC=$?
+  mkdir -p "$EVIL_TARGET"
+  [ -L "$EVIL_LINK" ] || ln -s "$EVIL_TARGET" "$EVIL_LINK"
+  STORE_SYM_OUT="$(AUTOFLOW_ARCHIVE_ROOT="$EVIL_LINK" bash "$REGISTER_SH" --store-path --root "$ROOT" 2>/dev/null)"
+  STORE_SYM_RC=$?
+
+  # Positive control: an archive root OUTSIDE the tree resolves normally. It is
+  # what makes the three refusals above a REFUSAL rather than a writer that
+  # never answers — a store library that resolves nothing at all satisfies
+  # "nothing was written" trivially.
+  OUTSIDE_ARCHIVE="$(mktemp -d)"
+  STORE_OK_OUT="$(AUTOFLOW_ARCHIVE_ROOT="$OUTSIDE_ARCHIVE" bash "$REGISTER_SH" --store-path --root "$ROOT" 2>/dev/null)"
+  STORE_OK_RC=$?
+
+  PORCELAIN_STORE_AFTER="$(cd "$ROOT" && git status --porcelain)"
+
+  assert_eq "AC-130-a: store root resolving inside the repo tree (absolute) → exit 65, the archive path's own refusal code" \
+    "65" "$STORE_ABS_RC"
+  assert_eq "AC-130-b: store root resolving inside the repo tree (relative, normalized against \$PWD) → exit 65" \
+    "65" "$STORE_REL_RC"
+  assert_eq "AC-130-c: store root that is an outside-tree SYMLINK resolving inside the tree → exit 65 (the guard judges the physical resolution, not the textual prefix)" \
+    "65" "$STORE_SYM_RC"
+  assert_true "AC-130-d: an outside-tree archive root resolves to a store path under it (rc=$STORE_OK_RC, '$STORE_OK_OUT'), while none of the three in-tree roots wrote a store, printed a path, or moved git status --porcelain" \
+    "[ \"\$STORE_OK_RC\" -eq 0 ] && printf '%s' \"\$STORE_OK_OUT\" | grep -qF \"\$OUTSIDE_ARCHIVE/\" && [ -z \"\$(find '$INSIDE_ROOT' '$ROOT/.autoflow/rel-guard-archive-test' '$EVIL_TARGET' -type d -name 'green-trees' 2>/dev/null)\" ] && [ \"\$PORCELAIN_STORE_BEFORE\" = \"\$PORCELAIN_STORE_AFTER\" ] && [ -z \"\$STORE_ABS_OUT\$STORE_REL_OUT\$STORE_SYM_OUT\" ]"
+  rm -rf "$OUTSIDE_ARCHIVE"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== AC-CI-STORE (D2) — the two new scripts join this suite's runner ==="
+# ---------------------------------------------------------------------------
+# e2e-dummy-target.yml is the SOLE runner of check-cleanup-issue-boundary.sh,
+# and this suite is now the only layer that drives the guard on the store
+# library's call path. A change to either new script that does not select this
+# workflow leaves that call path unexercised in CI.
+CI_WORKFLOW_D2="$ROOT/.github/workflows/e2e-dummy-target.yml"
+if [ -f "$CI_WORKFLOW_D2" ]; then
+  assert_true "AC-CI-STORE-a: e2e-dummy-target.yml's path filters name scripts/test/green-tree-store.sh" \
+    "grep -q 'scripts/test/green-tree-store.sh' '$CI_WORKFLOW_D2'"
+  assert_true "AC-CI-STORE-b: e2e-dummy-target.yml's path filters name scripts/test/green-tree-register.sh" \
+    "grep -q 'scripts/test/green-tree-register.sh' '$CI_WORKFLOW_D2'"
+  assert_true "AC-CI-STORE-c: both names appear in a 'paths:' trigger block, not only in a run: step" \
+    "[ \"\$(grep -c 'scripts/test/green-tree-store.sh' '$CI_WORKFLOW_D2')\" -ge 2 ] && [ \"\$(grep -c 'scripts/test/green-tree-register.sh' '$CI_WORKFLOW_D2')\" -ge 2 ]"
+else
+  assert_true "AC-CI-STORE-a: $CI_WORKFLOW_D2 exists" "false"
+  echo "  SKIP: AC-CI-STORE-b/c (workflow file missing)"
+  TESTS=$((TESTS + 2))
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
 echo "=============================="
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 echo "=============================="

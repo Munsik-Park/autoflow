@@ -551,6 +551,10 @@ evaluation" rule reaching this site by extension.
   the exact inverse of *degrades to executing, never to skipping*. With the check, the step records
   `mismatch-cause: selection-block` instead of a silent `passed`. A step whose text omits the status
   check is a defect.
+- **Writing the entry**: the register write is not hand-authored. `scripts/test/green-tree-register.sh
+  --append` writes the ledger entry and the shared-store entry from one call, re-takes the capture point
+  and refuses on a dirty worktree or a moved tree/head, and mints each named suite's `@<input-hash>`
+  token at the verified tree — see VERIFY > Green-tree register > *The writer*.
 - **Failure disposition**: an acceptance run that is not all-PASS writes no `green-tree` entry and
   writes a `green-tree-use` entry with `outcome: failed`. GREEN does not become a gate: the
   failure is carried into VERIFY, where step 1's predicate mismatches with `no-entry`, the suite
@@ -687,6 +691,70 @@ than left to the reader. An entry is a heading line followed by one line per fie
   executes. That is the fail-safe direction, and it costs at most one extra run, because the ledger is
   per-issue and the fold is cycle-scoped.
 
+- **A `suites` token carries the suite's input hash.** Each token is `<path>[@<input-hash>]`, split at
+  the **last** `@`, so the field's written form is
+
+  ```
+  - suites: <repo-relative path>@<input-hash> [<repo-relative path>@<input-hash> ...]
+  ```
+
+  A token with **no** `@` is the shipped bare-path form. It still folds and still satisfies the fast
+  path's membership test, but it carries no certificate, so the input-hash short-circuit in the
+  *Suite-coverage predicate* below cannot fire on it — every entry written before this grammar
+  therefore answers exactly as it did, and the extension is additive at the token level rather than a
+  migration. The hash is the suite's **input closure** at the entry's `tree`: the suite's own path,
+  every tracked path matching a token of its `# ci-subject:` header, and every tracked path under
+  `tests/lib/**`, hashed as one `(blob sha, path)` manifest. `tests/lib/**` is part of the closure
+  because the selector selects **every** suite when a shared library moves; a key omitting it would be
+  narrower than the selection boundary rather than a refinement of it. The token form never reaches a
+  plan: `scripts/test/suite-coverage.sh` prints bare repo-relative paths on stdout, because
+  `run-suites.sh --selected` consumes that stdout as a path list.
+
+- **The register spans two stores: the per-issue ledger and a repo-scoped shared store.** The same
+  certificate is written to both, by one writer, so the two cannot drift. The shared store lives
+  **outside the repository tree** at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md` —
+  never tracked content, never a dirty-worktree contributor at a capture point, never review surface —
+  and its entries carry their own marker and authority:
+
+  ```
+  ### green-tree-shared | issue: #<N> | cycle: <C> | runner: <PHASE> step <S>
+  - tree: <hash>
+  - head: <hash>
+  - worktree: clean
+  - suites: <repo-relative path>@<input-hash> [<repo-relative path>@<input-hash> ...]
+  - result: <summary line>
+  - authority: Green-tree register (shared store)
+  ```
+
+  The marker is deliberately **not** `### green-tree | cycle: `: the ledger scanner's marker literal
+  stays untouched, and `cycle` numbering is per-issue, so a shared file carrying the ledger marker
+  would collide two issues' cycle 1 entries under one selection rule. Carrying `issue:` in the heading
+  makes each certificate's provenance readable without opening another file.
+
+  **The shared store is a cache, not a ledger**, and the difference decides three dispositions. It
+  carries no authority; it may be **pruned** (the writer retains the 200 most recent entries by
+  default); and a **malformed entry in it is skipped with one warning, never a BLOCK** — the opposite
+  of the ledger's disposition, deliberately. A malformed *local* entry is a positive statement this
+  cycle cannot read, and guessing at it widens inheritance; skipping a foreign certificate narrows, so
+  halting every later issue over another issue's file would fail in the wrong direction. Losing the
+  store entirely costs re-runs and nothing else.
+
+- **The writer is `scripts/test/green-tree-register.sh`**, and both stores are written by one
+  invocation of it:
+
+  ```
+  bash scripts/test/green-tree-register.sh --append --root . --ledger .autoflow/issue-<N>-ledger.md \
+    --issue <N> --cycle <C> --runner "<PHASE> step <S>" --tree <hash> --head <hash> \
+    --result "<summary line>" --suites "<path> [<path> ...]"
+  ```
+
+  It **re-takes the capture point at write time** and refuses — writing to neither store — when the
+  worktree is dirty or when the observed `tree`/`head` differ from the ones the caller recorded before
+  the run. That turns the suppression rule above into a mechanical refusal and closes the window
+  between the run and the write. It computes each named suite's input hash at the verified tree, so
+  the caller passes bare paths and the tokens are minted, never hand-written. `--match [--cover-enumerated]`
+  is the query side, and is what condition 2's shared arm below is answered from.
+
 - **Marker**: the heading begins `### green-tree | cycle: ` — the literal that distinguishes it from
   `verify-detection`, `review-autofix` and settled-decision entries. A settled-decision entry is a **level-2**
   heading carrying an allocated identifier — `## <ID> — <title> (cycle <C>, <PHASE>)`, and for a
@@ -726,7 +794,8 @@ foreground, from the repository root, at the capture point defined above. **Matc
 
 1. `git status --porcelain` produces no output (worktree clean);
 2. `git rev-parse HEAD^{tree}` equals the `tree` field of the most recent `green-tree` entry of the current
-   cycle, selected by the ordering rule above;
+   cycle, selected by the ordering rule above, **or** `green-tree-register.sh --match --cover-enumerated`
+   selects a non-empty set of shared entries (the *shared arm*);
 3. that entry's `result` is a pass line.
 
 - **Match** → the step does not run the suite. It records an inheritance line
@@ -739,6 +808,18 @@ foreground, from the repository root, at the capture point defined above. **Matc
   clean capture point, its `suites` field naming what ran. The fast path's own three mismatch outcomes
   are: no selectable entry for the cycle (`no-entry`), a dirty worktree (`dirty-worktree`), and a
   differing tree (`tree-differs`).
+- **The shared arm.** A shared entry **qualifies** when its `tree` equals the captured tree, its
+  `result` is a pass, and its `head` resolves. `--cover-enumerated` applies the coverage test to the
+  **union** of the qualifying entries' `suites` fields — not to any one of them. The union is not a
+  convenience: certificates are minted per phase-step run naming the suites *that* run executed, so two
+  issues at one tree ordinarily leave two entries naming different subsets, and joint coverage is the
+  ordinary cross-issue case. It is also the rule the *Suite-coverage predicate* below applies, and the
+  two must agree — under a single-covering-entry rule the resolver would plan nothing while this
+  predicate reported a mismatch, which is `outcome: inherited` with a non-`none` cause, forbidden by the
+  biconditional below. On a match the `source:` field cites **every** heading the query printed, and
+  `mismatch-cause` stays `none`. Qualifying entries at the captured tree that do **not** jointly cover
+  the enumerated set are a mismatch with cause `no-entry` — the existing cause for "no selectable entry
+  covers what this step must certify"; the three mismatch causes are unchanged.
 - **Head resolvability is part of being selectable.** An entry whose `head` field **does not resolve to a commit**
   in this repository is not selectable, exactly as an entry with an incomplete field block is not — condition 2's
   ordering rule declines it and the predicate mismatches with the existing cause `no-entry`. The fast path does
@@ -770,22 +851,49 @@ Its resolution order, at the same capture point:
    resolved through `resolve_base_ref` follows `origin/main`), and per-suite keying would otherwise
    let it inherit across exactly that advance. Declaration beats derivation.
 2. **Dirty worktree** — every candidate executes, reason `dirty-worktree`. Unchanged.
-3. **Whole-tree fast path** — the three conditions above; every suite the selected entry's `suites`
-   field names is inherited.
-4. **Coverage fold** — the cycle's `green-tree` entries are scanned in file order into a map
-   `suite → head at which it last passed`, a later entry superseding an earlier one only for the
-   suites it names. Without the fold a narrow run would erase the coverage a wide run established.
-   Every head lifted out of the ledger is validated as a resolvable commit before it is used as a
-   ref; a head that does not resolve is the named cause `unresolvable-head` and its suites execute.
-5. **Reach test**, per distinct covering head `h`: `h` equal to the captured head → inherit (an empty
+3. **Whole-tree fast path** — the three conditions above, over the cycle's own ledger; every suite the
+   selected entry's `suites` field names is inherited, cited `via: tree`.
+4. **Shared tree match** — any *shared* entry whose `tree` equals the captured tree, whose `result` is a
+   pass and whose `head` resolves contributes the suites it names, cited `via: shared-tree`. Unlike
+   step 3 this is a **union** over every matching entry, not a last-entry rule: tree equality is exact
+   content identity, so recency carries no information across issues and "last" is not even well
+   defined there. This is the step that removes the cross-issue cold start — an issue whose own ledger
+   is empty still inherits what another issue certified at this very tree.
+5. **Coverage fold** — the shared entries and then the cycle's `green-tree` entries are scanned in file
+   order into a map `suite → head at which it last passed`, a later entry superseding an earlier one
+   only for the suites it names, so a local entry of the current cycle supersedes a shared certificate
+   for the suites it names. Without the fold a narrow run would erase the coverage a wide run
+   established. Every head lifted out of either store is validated as a resolvable commit before it is
+   used as a ref; a head that does not resolve is the named cause `unresolvable-head` and its suites
+   execute. An entry the shared arm declined for an unresolvable head is still visible here, so it is
+   declined by name rather than silently dropped.
+6. **Input-hash short-circuit** — the covering entry carries an `@<input-hash>` token for this suite and
+   it equals the suite's input hash at the captured tree → inherit, cited `via: input-hash`. It is kept
+   deliberately **behind** the head validation above: the comparison itself needs no resolvable head, so
+   admitting one here would inherit on an anchor no reader can re-derive. It is sound rather than a
+   widening loophole because the input closure is *definitionally* the path set the selection predicate
+   reads — if every closure member's blob is identical at both trees, no delta restricted to that
+   closure can be non-empty and the selector cannot select the suite. It is strictly *more* defined than
+   the reach test in the two places that test degenerates: an empty delta, which the selector defines as
+   *select everything*, and a non-ancestor head, where three-dot semantics answer a different question.
+   It uses neither a delta nor ancestry, so neither degeneracy reaches it. A bare (hash-less) token
+   never short-circuits.
+7. **Reach test**, per distinct covering head `h`: `h` equal to the captured head → inherit (an empty
    delta is defined as *select everything*, which is the inverse of the answer wanted here); `h` not
    an ancestor of HEAD → execute, reason `head-not-ancestor` (three-dot delta semantics answer a
    different question there, and the resolver refuses to reason rather than answer narrowly);
    otherwise the selector's answer against `--base h` decides — selected → execute, reason
-   `reach-changed`; not selected → inherit, citing the covering entry.
-6. **Uncovered candidates** execute, reason `no-coverage`; **non-candidates** are recorded inherited with
+   `reach-changed`; not selected → inherit, citing the covering entry `via: reach`.
+8. **Uncovered candidates** execute, reason `no-coverage`; **non-candidates** are recorded inherited with
    reason `not-in-cycle-delta` and carry no source entry — a positive statement that the resolver
    considered the suite and declined it, not a silence.
+
+Neither addition introduces a run reason: both produce INHERIT, so the reason vocabulary is unchanged.
+Each citation record instead carries a trailing **`via: <basis>`** naming which admission path produced
+it — `tree`, `shared-tree`, `input-hash` or `reach` — declared in the `citation-basis` block of
+`scripts/test/suite-coverage.sh` beside its `reason-tokens` block, and never restated here. In a
+`green-tree-use` entry every basis still maps to the single fixed token `covered-by-source`: the
+ledger's vocabulary does not grow with it.
 
 The resolver emits one record per **enumerated** suite in every mode, so `inherited-suites` and
 `ran-suites` below partition the enumerated set exactly. A BLOCK never emits a partial plan: the
@@ -824,7 +932,7 @@ on the same ledger, under its own marker `green-tree-use` and following the same
 - inherited-suites: <path> [...] | none
 - ran-suites: <path> [...] | none
 - run-reasons: <suite> <token> [; <suite> <token> ...] | none
-- source: <source entry heading> | tree: <hash> | head: <hash> | result: <summary line>
+- source: <source entry heading> [; <source entry heading> ...] | tree: <hash> | head: <hash> [; <hash> ...] | result: <summary line> [; <summary line> ...]
 - authority: Green-tree register
 ```
 
@@ -844,6 +952,14 @@ on the same ledger, under its own marker `green-tree-use` and following the same
   pairs rather than an interleaved list. The grouping is an ordering convention only: the `<suite>
   <token>` pair form is what the grammar fixes, because splitting on `;` and then on whitespace must
   recover the (suite, token) pairs directly, with no regrouping step for a reader to get wrong.
+- `source`, `head` and `result` are **`;`-separated parallel lists**, in one order, because the shared
+  arm can match more than one entry. `;` is the separator because a heading already contains ` | `, so
+  `|` cannot separate a list of them, and `;` appears in no heading component — it is also the separator
+  `run-reasons` already uses. Citing one of several contributing entries would put a heading in the
+  record that does not account for the suites the others covered, which is the un-re-derivable citation
+  this field exists to prevent; every cited head must be re-derivable on its own. The single-entry form
+  is unchanged, and `tree` stays scalar: every contributing entry carries the same `tree` by the
+  qualification rule.
 - `mixed` is the new and now-ordinary outcome — some suites inherited, the rest executed and passed.
   The truthfulness rule extends to it unchanged: a suite that did not execute is never reported inside
   a `passed` claim, and `failed` still wins over both whenever any executed suite did not pass.
