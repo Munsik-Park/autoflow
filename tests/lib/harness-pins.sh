@@ -25,7 +25,8 @@
 #
 # Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123)
 # -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3) -> 150 (#138) -> 156
-# (#138, VERIFY-step-3 legs).
+# (#138, VERIFY-step-3 legs) -> 157 (#138, RED3 -- O5(c) empty-ac_rows fail-closed
+# leg; TARGET value, RED3 itself MEASURES 156 ok + 1 FAIL).
 # The #123, #127 and #127-cycle-2/3 bumps are all the RED-commit TARGET value, not the
 # RED-commit MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating),
 # #127 adds 25 resume cases (23 discriminating, 2 deliberate regression locks documented
@@ -91,4 +92,4 @@
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=156
+HARNESS_OK_COUNT=157
