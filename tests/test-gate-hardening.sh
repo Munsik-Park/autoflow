@@ -59,6 +59,9 @@ run_hook_out() {
 }
 
 bash_json() { printf '{"tool_name":"Bash","tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)"; }
+# bash_bg_json — issue #134 background-deny payload surface: carries the
+# PreToolUse run_in_background field alongside the command string.
+bash_bg_json() { printf '{"tool_name":"Bash","tool_input":{"command":%s,"run_in_background":%s}}' "$(printf '%s' "$1" | jq -Rs .)" "$2"; }
 # agent_json carries an explicit model (default "sonnet") so the existing
 # state-gate cases keep testing what they tested before the Section-1b
 # model-declaration deny was added; the no-model form below exercises that deny.
@@ -791,6 +794,83 @@ else
 fi
 
 rm -rf "$LEDGER_CHANGED_DEFECT" "$LEDGER_CHANGED_CLEAN" "$LEDGER_NO_SCRIPT" "$ACTIVE_LEDGER_DEFECT" "$LEDGER_NOSTATE" "$LEDGER_INACTIVE" "$LEDGER_RESEARCH"
+
+echo "Issue #134 — background-deny-fires: a backgrounded run-suites.sh invocation is refused at the tool boundary"
+# feature design > background-deny: three surfaces (payload, prefix nohup/setsid,
+# trailing-&) composed on the deny-local BG_SCAN buffer. All state-independent —
+# run under $NOSTATE throughout (deny fires with no cycle in flight).
+run_hook 2 "payload surface: run_in_background=true + run-suites.sh in command" \
+  "$NOSTATE" "$(bash_bg_json 'bash scripts/test/run-suites.sh --all' 'true')"
+run_hook 2 "prefix surface isolated: nohup, no trailing & (BG_TAIL alone would admit)" \
+  "$NOSTATE" "$(bash_json 'nohup bash scripts/test/run-suites.sh --all')"
+run_hook 2 "prefix surface, quoted path, isolated: nohup + quoted invocation, no trailing &" \
+  "$NOSTATE" "$(bash_json 'nohup bash "$ROOT/scripts/test/run-suites.sh" --all')"
+run_hook 2 "prefix surface, setsid counterpart" \
+  "$NOSTATE" "$(bash_json 'setsid bash scripts/test/run-suites.sh --all')"
+run_hook 2 "wrapper group isolated: env FOO=1 ... &  (no nohup/setsid to catch it)" \
+  "$NOSTATE" "$(bash_json 'env FOO=1 bash scripts/test/run-suites.sh --all &')"
+run_hook 2 "wrapper group isolated: time ... &" \
+  "$NOSTATE" "$(bash_json 'time bash scripts/test/run-suites.sh --all &')"
+run_hook 2 "argument-less trailing &: bash .../run-suites.sh& (no char for a mandatory-run class to consume)" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh&')"
+run_hook 2 "quoting pair: fully double-quoted invocation path, trailing &" \
+  "$NOSTATE" "$(bash_json 'bash "$ROOT/scripts/test/run-suites.sh" --all &')"
+run_hook 2 "quoting pair: fully single-quoted absolute invocation path, trailing &" \
+  "$NOSTATE" "$(bash_json "bash '/abs/scripts/test/run-suites.sh' --all &")"
+run_hook 2 "quoting pair: nohup composition of the quoted-path form" \
+  "$NOSTATE" "$(bash_json 'nohup bash "$ROOT/scripts/test/run-suites.sh" --all &')"
+run_hook 2 "ordering leg: quoted-path run backgrounded, followed by an unrelated quoted arg carrying ';'" \
+  "$NOSTATE" "$(bash_json 'bash "$ROOT/scripts/test/run-suites.sh" --all & echo "a; b"')"
+run_hook 2 "no-state-file direction pinned: deny fires with NO state file present" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all &')"
+
+echo "Issue #134 — background-deny-discriminates: backgrounding vs. shell tokens that merely resemble it; invocation vs. mention"
+run_hook 0 "separator discrimination: cd x && run-suites.sh --all (foreground AND-list)" \
+  "$NOSTATE" "$(bash_json 'cd x && bash scripts/test/run-suites.sh --all')"
+run_hook 2 "separator discrimination: same command, trailing & backgrounds the whole AND-list" \
+  "$NOSTATE" "$(bash_json 'cd x && bash scripts/test/run-suites.sh --all &')"
+run_hook 0 "separator discrimination: leading & ends a PRIOR job, this invocation is foreground" \
+  "$NOSTATE" "$(bash_json 'a & bash scripts/test/run-suites.sh --all')"
+run_hook 2 "compound backgrounding: pipeline backgrounded as a whole (| tee log &)" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all | tee log &')"
+run_hook 2 "compound backgrounding: AND-list backgrounded as a whole (&& echo done &)" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all && echo done &')"
+run_hook 0 "compound backgrounding: ';' list backgrounds only its LAST command" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all; echo done &')"
+run_hook 2 "compound backgrounding: file-descriptor redirect then trailing &" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all > log 2>&1 &')"
+run_hook 0 "command-position discrimination: backgrounded grep merely MENTIONING the path" \
+  "$NOSTATE" "$(bash_json 'grep run-suites.sh notes.txt &')"
+run_hook 0 "command-position discrimination: backgrounded git add merely naming the path" \
+  "$NOSTATE" "$(bash_json 'git add scripts/test/run-suites.sh && echo ok &')"
+run_hook 2 "command-position discrimination: the real backgrounded invocation still denies" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all &')"
+
+echo "Issue #134 — background-deny-does-not-over-block: no legitimate invocation is refused"
+run_hook 0 "foreground --all admitted" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all')"
+run_hook 0 "foreground --selected admitted" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --selected .autoflow/issue-134-run-set.txt')"
+run_hook 0 "redirection form containing & but not backgrounding: &> log" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all &> log')"
+run_hook 0 "redirection form containing & but not backgrounding: > log 2>&1" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all > log 2>&1')"
+run_hook 0 "unrelated command with the background field set is not this deny's concern" \
+  "$NOSTATE" "$(bash_bg_json 'git status' 'true')"
+run_hook 0 "path-token boundary: bash x/my-run-suites.sh --all & (different script, path group must require the trailing /)" \
+  "$NOSTATE" "$(bash_json 'bash x/my-run-suites.sh --all &')"
+run_hook 0 "quoted-mention admit: gh pr create body describing the deny (BG_TAIL anchor)" \
+  "$NOSTATE" "$(bash_json 'gh pr create --body "run bash scripts/test/run-suites.sh --all" &')"
+run_hook 0 "quoted-mention admit: git commit -m describing the deny (BG_TAIL anchor)" \
+  "$NOSTATE" "$(bash_json 'git commit -m "ran bash scripts/test/run-suites.sh --all in bg" &')"
+run_hook 0 "quoted-body-own-separator triple: prose body's own ';' does not manufacture a boundary (BG_TAIL arm)" \
+  "$NOSTATE" "$(bash_json 'git commit -m "deny: run it; bash scripts/test/run-suites.sh --all & is refused"')"
+run_hook 0 "quoted-body-own-separator triple: prose body's own '&&' does not manufacture a boundary (BG_TAIL arm)" \
+  "$NOSTATE" "$(bash_json 'gh pr comment 1 --body "e.g. cd x && bash scripts/test/run-suites.sh --all & now denies"')"
+run_hook 0 "quoted-body-own-separator triple: prose body's own ';' does not manufacture a boundary (BG_PREFIX arm)" \
+  "$NOSTATE" "$(bash_json 'gh pr create --body "the deny fires; nohup bash scripts/test/run-suites.sh --all is refused"')"
+run_hook 0 "no-state-file direction pinned: admits stay admitted with NO state file present" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all')"
 
 echo "=============================="
 echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"
