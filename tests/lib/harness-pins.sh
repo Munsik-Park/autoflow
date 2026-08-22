@@ -24,7 +24,8 @@
 # header records for every prior bump.
 #
 # Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123)
-# -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3) -> 150 (#138).
+# -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3) -> 150 (#138) -> 156
+# (#138, VERIFY-step-3 legs).
 # The #123, #127 and #127-cycle-2/3 bumps are all the RED-commit TARGET value, not the
 # RED-commit MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating),
 # #127 adds 25 resume cases (23 discriminating, 2 deliberate regression locks documented
@@ -75,7 +76,19 @@
 # -- the shape the #138 ac-diff-plumbing leg proves yields CONVERGED with no
 # findings. No #138 fail-closed leg was touched. `node test/workflows/run.mjs`
 # now measures all 150 ok, matching the pin below.
+# NOTE (VERIFY step 3, #138): the orchestrator's minimal-implementation check
+# (.autoflow/issue-138-verify-report.md, tree d5600bd) found 8 implementation
+# hunks in architect-deliberation.js uncovered by any #138 leg. Hunks 1
+# (meta.phases metadata) and 8 (acChangeGrounds's structurally-unreachable
+# no-open-entries fallback) are accepted exceptions. Hunks 2-7 (AC_ROW/
+# AC_SUBSTITUTION/AC_DIFF schema shape, the per-finding ac-authority:<ac id>
+# minted name, the AC_CHANGE result.summary text, resuming from a persisted
+# AC_CHANGE register, acDiffWellFormed's non-null-malformed-payload guard,
+# mintAcEntry's upsert branch) each get a new leg here, all PASSING
+# immediately against the existing GREEN implementation (the "add a test"
+# branch of the check, not a defect). `node test/workflows/run.mjs` now
+# measures all 156 ok, matching the pin below.
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=150
+HARNESS_OK_COUNT=156

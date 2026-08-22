@@ -2801,5 +2801,148 @@ await test('ARCHITECT: LEDGER_SEED_RULE seeds "operator decision" as settled aut
   assert.doesNotMatch(devDraft, /ARCHITECT ac-change/, 'the Draft prompt\'s seeded-authority set must NOT contain "ARCHITECT ac-change"')
 })
 
+// ---- ARCHITECT: AC-authority reconciliation (issue #138), VERIFY-step-3 uncovered-hunk legs ----
+// Added post-GREEN per the orchestrator's VERIFY step 3 disposition (.autoflow/issue-138-verify-
+// report.md, hunks 2-7): uncovered code -> add a test. These legs are expected to PASS immediately
+// against the existing GREEN implementation -- that is not a defect, it is the "add a test" branch
+// of the minimal-implementation check, not the "remove the code" branch.
+
+await test('ARCHITECT: AC_ROW/AC_SUBSTITUTION/AC_DIFF schema constants -- additionalProperties, required fields, and the closed disposition enum (VERIFY-hunk-2, ac-diff-schema-shape)', async () => {
+  const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
+
+  const acRowMatch = src.match(/const AC_ROW = \{[\s\S]*?\n\}/)
+  assert.ok(acRowMatch, 'AC_ROW constant must exist')
+  const acRowSeg = acRowMatch[0]
+  assert.match(acRowSeg, /additionalProperties:\s*false/, 'AC_ROW must keep additionalProperties: false')
+  for (const field of ['ac', 'carried', 'disposition', 'method_executable', 'locator', 'proposed']) {
+    assert.match(acRowSeg, new RegExp(`required:\\s*\\[[^\\]]*['"]${field}['"]`), `AC_ROW.required must name ${field}`)
+  }
+  assert.match(acRowSeg, /enum:\s*\[\s*['"]verified['"]\s*,\s*['"]declined['"]\s*,\s*['"]deferred['"]\s*,\s*['"]absent['"]\s*\]/, 'AC_ROW.disposition enum must be exactly [verified, declined, deferred, absent]')
+
+  const acSubMatch = src.match(/const AC_SUBSTITUTION = \{[\s\S]*?\n\}/)
+  assert.ok(acSubMatch, 'AC_SUBSTITUTION constant must exist')
+  const acSubSeg = acSubMatch[0]
+  assert.match(acSubSeg, /additionalProperties:\s*false/, 'AC_SUBSTITUTION must keep additionalProperties: false')
+  for (const field of ['ac', 'locator', 'proposed']) {
+    assert.match(acSubSeg, new RegExp(`required:\\s*\\[[^\\]]*['"]${field}['"]`), `AC_SUBSTITUTION.required must name ${field}`)
+  }
+
+  const acDiffMatch = src.match(/const AC_DIFF = \{[\s\S]*?\n\}/)
+  assert.ok(acDiffMatch, 'AC_DIFF constant must exist')
+  const acDiffSeg = acDiffMatch[0]
+  assert.match(acDiffSeg, /additionalProperties:\s*false/, 'AC_DIFF must keep additionalProperties: false')
+  for (const field of ['ac_source_present', 'ac_rows', 'ledger_ac_decisions', 'substituted']) {
+    assert.match(acDiffSeg, new RegExp(`required:\\s*\\[[^\\]]*['"]${field}['"]`), `AC_DIFF.required must name ${field}`)
+  }
+  assert.match(acDiffSeg, /ac_rows:\s*\{\s*type:\s*['"]array['"],\s*items:\s*AC_ROW\s*\}/, 'AC_DIFF.ac_rows must be an array of AC_ROW')
+  assert.match(acDiffSeg, /substituted:\s*\{\s*type:\s*['"]array['"],\s*items:\s*AC_SUBSTITUTION\s*\}/, 'AC_DIFF.substituted must be an array of AC_SUBSTITUTION')
+
+  // Behavioral half, in the same discipline as the VERDICT/DISPOSITION precedent (run.mjs:748):
+  // a run whose ac-diff stub matches this schema shape still converges without a schema error.
+  const acDiff = { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+  const { result } = await runArch({ issue: '138-ac-schema-shape' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'CONVERGED')
+})
+
+await test('ARCHITECT: an unauthorized finding mints a register entry named ac-authority:<ac id> (VERIFY-hunk-3, ac-authority-prefix-per-finding)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ ac: 'AC7', carried: false, disposition: 'absent', method_executable: false, locator: '—', proposed: 'x' }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { calls } = await runArch({ issue: '138-ac-prefix' }, convergingWithAcDiff(acDiff))
+  const payload = registerPayload(calls)
+  const minted = payload.entries.find((e) => e.name === 'ac-authority:AC7')
+  assert.ok(minted, 'the per-finding entry must be named exactly "ac-authority:<ac id>"')
+  assert.equal(minted.status, 'open')
+  assert.equal(minted.raisedBy, 'test')
+})
+
+await test('ARCHITECT: result.summary states the AC_CHANGE pause and carries acReason (VERIFY-hunk-4, ac-change-summary-text)', async () => {
+  const acDiff = { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+  const { result } = await runArch({ issue: '138-ac-summary' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.match(result.summary, /ARCHITECT paused on an acceptance-criterion change/, 'summary must state the AC_CHANGE pause')
+  assert.match(result.summary, /operator decision required/, 'summary must state that an operator decision is required')
+  assert.ok(result.summary.includes(result.acReason), 'summary must carry the run\'s own acReason sentinel')
+})
+
+await test('ARCHITECT: a resumed run whose persisted register carries verdict AC_CHANGE is not latched by the already-converged guard, and Reconcile re-runs (VERIFY-hunk-5, ac-change-register-resumable)', async () => {
+  // The `already converged` guard is keyed to `loaded.verdict === 'CONVERGED'` alone (:475) -- a
+  // persisted AC_CHANGE register must NOT trip it. The resumed round's own ac-diff this time
+  // authorizes the finding (ledger_ac_decisions carries AC9), so the run converges.
+  const responder = resumeResponder({
+    load: {
+      found: true, artifacts_present: true, lastRound: 4, verdict: 'AC_CHANGE',
+      entries: [{ name: 'ac-authority:AC9', conclusion: 'dropped: x', evidence: 'e', status: 'open', raisedBy: 'test' }],
+    },
+    // The carried entry's raiser is 'test' (mintAcEntry always mints raisedBy: 'test'), so only a
+    // test-side disposition can close it (raiser-only close rule) and let this round converge.
+    'test-r5': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'ac-authority:AC9', conclusion: 'authorized by operator', evidence: 'ledger', status: 'agreed' }] },
+    'dev-r5': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    acDiff: {
+      ac_source_present: true,
+      ac_rows: [{ ac: 'AC9', carried: false, disposition: 'absent', method_executable: false, locator: '—', proposed: 'x' }],
+      ledger_ac_decisions: ['AC9'], // now authorized -- the operator's [ac-decision] entry
+      substituted: [],
+    },
+  })
+  const { result, calls } = await runArch({ issue: '138-ac-resume-latch', resume: true }, responder)
+  assert.notEqual(result.verdict, 'ESCALATE', 'a persisted AC_CHANGE register must not trip the CONVERGED-only already-converged guard')
+  assert.ok(!/resume register already converged/.test(String(result.escalation ?? '')), 'the already-converged sentinel must not fire on a persisted AC_CHANGE verdict')
+  assert.ok(calls.some((c) => c.label === 'ac-diff'), 'Reconcile must re-run on the resumed round')
+  assert.equal(result.verdict, 'CONVERGED', 'the now-authorized finding must let the resumed run converge')
+})
+
+await test('ARCHITECT: a non-null but malformed ac-diff payload (wrong types / non-array fields) is treated the same as a missing return -- fail-closed (VERIFY-hunk-6, ac-diff-malformed-non-null)', async () => {
+  const cases = [
+    ['138-ac-malformed-1', { ac_source_present: 'yes', ac_rows: [], ledger_ac_decisions: [], substituted: [] }], // wrong type
+    ['138-ac-malformed-2', { ac_source_present: true, ac_rows: 'not-an-array', ledger_ac_decisions: [], substituted: [] }],
+    ['138-ac-malformed-3', { ac_source_present: true, ac_rows: [], ledger_ac_decisions: 'not-an-array', substituted: [] }],
+    ['138-ac-malformed-4', { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: 'not-an-array' }],
+  ]
+  for (const [issueId, acDiff] of cases) {
+    const { result } = await runArch({ issue: issueId }, convergingWithAcDiff(acDiff))
+    assert.equal(result.verdict, 'AC_CHANGE', `${issueId}: a malformed non-null payload must resolve AC_CHANGE, not CONVERGED`)
+    assert.equal(result.acReason, 'ac reconciliation unavailable', `${issueId}: malformed payload must carry the same sentinel as a missing return`)
+    assert.deepEqual(result.acChange, [], `${issueId}: a malformed payload produces no findings`)
+  }
+})
+
+await test('ARCHITECT: mintAcEntry updates an already-open ac-authority entry in place -- no duplicate, status reset to open (VERIFY-hunk-7, mint-upsert-branch)', async () => {
+  // A resumed run whose register already carries an OPEN ac-authority:AC3 entry (the resume's own
+  // carried agenda, per Register minting > 'The minted entries also give the resume round its
+  // agenda') -- Reconcile re-mints the SAME finding this round (still unauthorized) and must UPDATE
+  // the existing entry (conclusion/evidence refreshed, status set open) rather than append a
+  // duplicate -- the register is a Map keyed by normalized name (toEntry/normalizeKey), so a second
+  // register.set on the same key overwrites, but mintAcEntry's own `if (prior)` branch additionally
+  // preserves the update-in-place discipline the raise() path already uses.
+  const responder = resumeResponder({
+    load: {
+      found: true, artifacts_present: true, lastRound: 4, verdict: 'AC_CHANGE',
+      entries: [{ name: 'ac-authority:AC3', conclusion: 'stale conclusion', evidence: 'stale-evidence', status: 'open', raisedBy: 'test' }],
+    },
+    // Disposed this round (test-side, the raiser) so the resume converges and Reconcile actually
+    // runs -- Reconcile then re-mints the SAME name, which is the upsert branch under test.
+    'test-r5': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'ac-authority:AC3', conclusion: 'believed resolved', evidence: 'e', status: 'agreed' }] },
+    'dev-r5': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    acDiff: {
+      ac_source_present: true,
+      ac_rows: [{ ac: 'AC3', carried: false, disposition: 'absent', method_executable: false, locator: 'fresh-locator', proposed: 'still not carried' }],
+      ledger_ac_decisions: [], // still unauthorized -- the same finding recurs this round
+      substituted: [],
+    },
+  })
+  const { result, calls } = await runArch({ issue: '138-ac-mint-upsert', resume: true }, responder)
+  assert.equal(result.verdict, 'AC_CHANGE')
+  const payload = registerPayload(calls)
+  const matches = payload.entries.filter((e) => e.name === 'ac-authority:AC3')
+  assert.equal(matches.length, 1, 'the recurring finding must update the existing entry, never duplicate it')
+  assert.equal(matches[0].status, 'open')
+  assert.notEqual(matches[0].conclusion, 'stale conclusion', 'the conclusion must be refreshed by this round\'s mint, not the stale carried one')
+  assert.notEqual(matches[0].evidence, 'stale-evidence', 'the evidence must be refreshed by this round\'s mint, not the stale carried one')
+})
+
 console.log(failures ? `\n${failures} test(s) FAILED` : '\nall workflow regression tests passed')
 process.exit(failures ? 1 : 0)
