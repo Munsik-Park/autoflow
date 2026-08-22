@@ -503,15 +503,30 @@ assert_true "AC-fetch-issue-state-dedup: two suites sharing one retire-with issu
   "[ \"$FIS_DEDUP_CALLS\" -eq 1 ] && [ \"$FIS_DEDUP_LINES\" -eq 1 ]"
 
 # --- gh absent: every issue is written 'unknown', exit 0, never a network call
+# Inclusion-based scratch PATH (not exclusion-based): symlinking each real
+# binary the adapter + suite-manifest.sh actually call, minus gh, rather than
+# dropping whole real-PATH directories — on a host where gh coexists with
+# core utilities in one directory (apt-installed gh under /usr/bin on
+# Ubuntu), dropping that directory wholesale breaks mkdir/find/sort/awk/grep
+# too and misreports the branch as a false 127, not a genuine gh-absent
+# result.
 fis_reset_tree
 fis_plant_suite "test-fx-noghs.sh" "#904"
-FIS_NOGH_PATH="$(printf '%s' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gh" ] && continue; printf '%s\n' "$d"; done | paste -sd: -)"
+FIS_NOGH_BIN="$(mktemp -d)"
+for b in mkdir find sort awk grep cat rm dirname basename; do
+  bp="$(command -v "$b" 2>/dev/null)"
+  [ -n "$bp" ] && ln -s "$bp" "$FIS_NOGH_BIN/$b"
+done
 FIS_NOGH_OUT="$FIS_SCRATCH/.autoflow/nogh-out.txt"
-( cd "$FIS_SCRATCH" && PATH="$FIS_NOGH_PATH" bash "$FIS_ADAPTER_COPY" --out "$FIS_NOGH_OUT" ) \
+# bash itself is invoked by its own absolute path (never looked up via the
+# restricted PATH) — only the SCRIPT's internal command lookups (mkdir, find,
+# sort, awk, grep, cat, rm, and `command -v gh`) are confined to FIS_NOGH_BIN.
+( cd "$FIS_SCRATCH" && PATH="$FIS_NOGH_BIN" "$(command -v bash)" "$FIS_ADAPTER_COPY" --out "$FIS_NOGH_OUT" ) \
   > /tmp/issue122-fis-nogh.log 2>&1
 FIS_NOGH_RC=$?
 assert_true "AC-fetch-issue-state-gh-absent: with no resolvable gh, the issue is written 'unknown' and the adapter exits 0 (rc=$FIS_NOGH_RC)" \
   "[ $FIS_NOGH_RC -eq 0 ] && grep -qxF '#904 unknown' '$FIS_NOGH_OUT'"
+rm -rf "$FIS_NOGH_BIN"
 
 # --- OPEN / CLOSED mapping (real gh emits uppercase via --jq '.state') -------
 fis_reset_tree
