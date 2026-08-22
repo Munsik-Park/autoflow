@@ -20,7 +20,7 @@
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b94b2900aa8b71a4561fd604845ac56ae05d4320c773b18e65640b8b0eecf722"
+      "sha256": "7c6852d7d178f956dd870649369bf5385657cb6a225bf13feb7f32300db691b4"
     },
     {
       "source": "docs/adr/0000-adr-template.md",
