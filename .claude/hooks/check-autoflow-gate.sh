@@ -200,55 +200,28 @@ $_acc"; fi
   # wrapper word outside the group below, a shell variable holding the path, and
   # the `{ …; } &` brace-group form (out of P1's threat model, as above).
   #
-  # BG_SCAN — this deny's OWN scan buffer; SCAN and _SEGMENTS are untouched.
-  # The shared SCAN deletes quoted substrings, so `bash "$ROOT/…/run-suites.sh" &`
-  # reduces to `bash  &` and the commonest invocation spelling would be erased
-  # before any matcher saw it. Here a quoted span free of command separators is
-  # UNQUOTED (quotes dropped, content kept) so the path token still occupies a
-  # command position, while a span whose own text carries `;` `&` or `|` is
-  # DELETED whole exactly as SCAN deletes it — otherwise a prose --body/-m
-  # describing this deny would supply the very boundary CMD_BOUNDARY anchors on.
-  # The four alternatives are ORDERED so each consumes a COMPLETE span (safe form
-  # first at a span's opening quote, deleting form second): two independent
-  # substitutions lose quote parity across two spans and admit
-  # `bash "…/run-suites.sh" --all & echo "a; b"`. The replacement is a
-  # back-reference, never a newline, so the C2 NOTE's constraint is not touched;
-  # a non-participating group expands empty on BSD and GNU sed alike.
+  # BG_SCAN / RUN_SUITES / BG_PREFIX / BG_TAIL — rationale (the unquote-vs-delete
+  # split, the ordered-alternative argument, the token-interposition shape shared
+  # with GIT_PUSH, and the BG_TAIL window rule) is documented once, in full, at
+  # docs/gate-matching-standard.md > "Backgrounded-invocation refinement —
+  # BG_SCAN / BG_PREFIX / BG_TAIL (applied)"; this deny's OWN scan buffer — SCAN
+  # and _SEGMENTS are untouched.
   BG_SCAN=$(printf '%s' "${COMMAND%%<<*}" \
     | sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g")
-  # Every invocation form the repository writes passes the script as an ARGUMENT
-  # to an interpreter (`bash scripts/test/run-suites.sh --all`), so a bare
-  # CMD_BOUNDARY + command-word test would match none of them. RUN_SUITES keeps
-  # the boundary and tolerates the tokens that legitimately sit between it and the
-  # path — the same token-interposition shape GIT_PUSH applies to git's global
-  # options (docs/gate-matching-standard.md > P1).
   BG_WRAPPER='(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|nohup|setsid|env|time|command)[[:space:]]+)*'
   BG_INTERP='((sh|bash|zsh|dash|ksh)([[:space:]]+-[^[:space:]]+)*[[:space:]]+)?'
-  RUN_SUITES="${CMD_BOUNDARY}${BG_WRAPPER}${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
-  # BG_PREFIX — RUN_SUITES with the wrapper word made MANDATORY; BG_WRAPPER
+  RUN_SUITES_TAIL="${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
+  RUN_SUITES="${CMD_BOUNDARY}${BG_WRAPPER}${RUN_SUITES_TAIL}"
+  # BG_PREFIX — RUN_SUITES_TAIL with the wrapper word made MANDATORY; BG_WRAPPER
   # appears on both sides of it so `env FOO=1 nohup bash …` and `nohup setsid
-  # bash …` match too. A single composed pattern, not a co-occurrence, so P1's
-  # segment-scoping MUST does not reach it (and it needs no segmentation, which
-  # is built from the erased SCAN and could not see a quoted path anyway).
-  BG_PREFIX="${CMD_BOUNDARY}${BG_WRAPPER}(nohup|setsid)[[:space:]]+${BG_WRAPPER}${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
-  # BG_TAIL — also ONE composed pattern. The run of characters between the
-  # invocation and the `&` is constrained by the pattern itself: it closes on `;`
-  # (a new command starts there, so `… --all; echo done &` backgrounds only the
-  # echo) and stays open across `&&` and `|` (a pipeline or AND-list carrying the
-  # invocation is backgrounded AS A WHOLE by a trailing `&`). The `&` must not be
-  # preceded by `&` `;` `<` `>` (so `&&` and `2>&1` are not backgrounding) nor
-  # followed by `&` or `>` (so `&&` and `&> log` are not). The intervening run is
-  # OPTIONAL so the argument-less `bash …/run-suites.sh&` is caught. No `\n`
-  # appears in any bracket expression (not portable BSD/GNU; grep is
-  # line-oriented, so no match crosses a newline in any case).
+  # bash …` match too.
+  BG_PREFIX="${CMD_BOUNDARY}${BG_WRAPPER}(nohup|setsid)[[:space:]]+${BG_WRAPPER}${RUN_SUITES_TAIL}"
   BG_TAIL="${RUN_SUITES}"'([^;]*[^&;<>])?&([^&>]|$)'
   RUN_IN_BACKGROUND=$(echo "$INPUT" | jq -r '.tool_input.run_in_background // empty' 2>/dev/null)
   _bg_deny=0
   if [ "$RUN_IN_BACKGROUND" = "true" ] && printf '%s' "$BG_SCAN" | grep -qE "$RUN_SUITES"; then
     _bg_deny=1
-  elif printf '%s' "$BG_SCAN" | grep -qE "$BG_PREFIX"; then
-    _bg_deny=1
-  elif printf '%s' "$BG_SCAN" | grep -qE "$BG_TAIL"; then
+  elif printf '%s' "$BG_SCAN" | grep -qE "$BG_PREFIX|$BG_TAIL"; then
     _bg_deny=1
   fi
   if [ "$_bg_deny" = 1 ]; then
