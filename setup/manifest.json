@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a3fadee0837829f51f7640558ca48b0456dcda66f0e68e667355e6a3ad2f4230"
+      "sha256": "5db4f6af549c209754ffc480cc20fdee6a4d84e574cea4e9bf399dd48865b6c3"
     },
     {
       "source": "docs/INDEX.md",
@@ -72,18 +72,25 @@
       "sha256": "387de9f88cc94908823ded6d7008fe2a0d3b47b4062e4aa51f5f74c2776359a0"
     },
     {
+      "source": "docs/adr/0020-acceptance-criterion-authority.md",
+      "dest": ".claude/autoflow/docs/adr/0020-acceptance-criterion-authority.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "71ab7f29fef0edc43a0ff4a69434b53de4aaaf50dec06f572c6980adc25b5daf"
+    },
+    {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e12d37c78549128679fc173bb787a2d7b01bc865aba04a47bb21c5fb24b4ffdc"
+      "sha256": "9910107784665b88c9e9a43101da19d6eb338e2b7b85e333219c86f01e6419c1"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "41f4b184b7eec7a1954cf91321942c0e857ba5948a9c7b646d47431f81662537"
+      "sha256": "48f691ce3c3d4a4e49bd336550691a36fa6f2184a356d88ed3c3a1872b559033"
     },
     {
       "source": "docs/design-rationale.md",
@@ -146,14 +153,14 @@
       "dest": ".claude/autoflow/docs/maintained-docs.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "626f1fade0901d75d14b983e2120049b63c0c5469323516da0958437829c2fe1"
+      "sha256": "8d4a824d7486668129d075f1e716981ce49312836fe49ffb2360a622419283d6"
     },
     {
       "source": "docs/phases/analysis.md",
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a2b3e36ce8f5c2dac41a6eeb80047496ffa368fa0d145357ad256fee0d52f1ef"
+      "sha256": "5e04419906f83cc18e0992dd6a08d0ffb7445bb9d06af1663a534a27c5f25018"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -202,7 +209,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "47705345c0e552a253c8a209d2f11b06eb81f1c37a5a3dc1e6d1748dba35c944"
+      "sha256": "60e93f3bb453d393d40b1000e9fe400e619eb080e333b92fbd86c75ffaee5847"
     },
     {
       "source": "docs/title-guide.md",
@@ -223,7 +230,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e6f0430a34dd0d96ca315542535e5629839823731ed006ccd051844671f72737"
+      "sha256": "cbe730290259e901f43245ceeb1a86ed69f09db4b05d9e56a3e4fc1c20727c28"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",

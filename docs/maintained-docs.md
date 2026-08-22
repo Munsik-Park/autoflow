@@ -69,6 +69,7 @@ orchestrator does not modify sub-repo files — see
 | Teammate-Removal Feasibility ADR | `docs/adr/0017-teammate-removal-feasibility.md` | The teammate-removal verdict or its migration conditions C1–C8 change, or the pilot (C7) reverses the verdict | Orchestrator AI / Human |
 | Verification-Depth Justification ADR | `docs/adr/0018-verification-depth-justification.md` | The verification-depth obligation, its justification form, or the GATE:PLAN `Scope` widening changes | Orchestrator AI / Human |
 | Scope-Fit Verification Policy ADR | `docs/adr/0019-scope-fit-verification-policy.md` | The interim-run scope, the suite-grained inheritance key — including its content form (the per-suite input hash over the suite's input closure) and the register's scope (the repo-scoped shared store beside the per-issue ledger) — the VALIDATE coverage floor, or the evaluator execution discipline changes | Orchestrator AI / Human |
+| Acceptance-Criterion Authority ADR | `docs/adr/0020-acceptance-criterion-authority.md` | The operator-authority rule for acceptance-criterion changes, the ARCHITECT `AC_CHANGE` halt and its fail-closed sentinels, the `[ac-decision]` ledger grammar or its `operator decision` authority value, the `Issue AC` join key, or either gate backstop (GATE:PLAN `Scope`, GATE:QUALITY `Completeness`) changes | Orchestrator AI / Human |
 
 > Service-specific documents (deployment runbooks, scripts, clients, infra, review baseline, epic breakdowns, and service ADRs 0002/0004–0014) have moved to `services/librechat-deploy`.
 

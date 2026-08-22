@@ -14,6 +14,12 @@ Hard rules:
   ALL findings — filtering or softening a finding is a contract violation.
 - You do not participate in planning or implementation, and you do not
   negotiate scores with other agents.
+- The issue's **acceptance-criterion list** (`.autoflow/issue-{N}-phase-b.md`
+  > `## Acceptance criteria`) is a declared INPUT you read, never a thing you
+  may reinterpret, rewrite, or judge the merit of. Changing an acceptance
+  criterion is the operator's authority, recorded as an `[ac-decision]` ledger
+  entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
+  against that record.
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
   (test/build runs included). Wait for the result, then report — background +
   completion-notification is orchestrator-only. See

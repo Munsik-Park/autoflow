@@ -56,7 +56,20 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
        1. List the concrete cases mentioned in the issue.
        2. Identify the higher-level problem type these cases share.
        3. Propose resolution approaches (what mechanism is needed).
-     - Output: cases + problem types + resolution approaches.
+     - Output: cases + problem types + resolution approaches, plus a required
+       `## Acceptance criteria` section — a table with the fixed columns
+       `AC id | criterion | source`, where `AC id` is a short readable name unique within the
+       issue, `criterion` restates the issue's criterion faithfully, and `source` locates it in the
+       issue body artifact. **[MUST]** This section is the issue's single machine-addressable
+       acceptance-criterion list: ARCHITECT's Reconcile check and both gate backstops join on
+       `AC id`, so an absent or unparseable table is itself a finding downstream
+       (`docs/autoflow-guide.md` > ARCHITECT > *Acceptance-criterion change*, > GATE:PLAN >
+       *AC-authority check*). It is authored **once per issue**, in the `mode = new-issue` cycle.
+     - **[MUST]** A review-response cycle's Phase B targets the reviewer comment, not the issue
+       body, so it **carries the existing table forward unchanged** rather than re-deriving it — a
+       reviewer comment never edits the acceptance-criterion list; only an operator decision does,
+       recorded as an `[ac-decision]` ledger entry (`CLAUDE.md` > Decision Ledger). Regenerating
+       the artifact without the table silently empties the join key.
      - [MUST] Do NOT use code search/read tools.
 
    Phase 3: AI-A evaluates the necessity of AI-B's resolution approaches against the actual structure (reuse-neutral — not a structural-fit judgment).

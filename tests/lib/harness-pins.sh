@@ -24,7 +24,7 @@
 # header records for every prior bump.
 #
 # Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123)
-# -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3).
+# -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3) -> 150 (#138).
 # The #123, #127 and #127-cycle-2/3 bumps are all the RED-commit TARGET value, not the
 # RED-commit MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating),
 # #127 adds 25 resume cases (23 discriminating, 2 deliberate regression locks documented
@@ -60,7 +60,19 @@
 # composition oracle (tests/test-issue-27-composition-oracle.sh) intentionally reds
 # against this pin until GREEN, per
 # .autoflow/issue-127-verification-design.md > Composition oracle.
+# #138 adds 15 AC-authority reconciliation cases (Reconcile phase / AC_CHANGE
+# verdict / fail-closed sentinels / register minting / ledger branch), all 15
+# DISCRIMINATING at RED -- the AS-IS script has no Reconcile phase and calls no
+# 'ac-diff' sub-agent, so RED (d474cd7) MEASURES 135 ok + 15 FAIL. 150 is therefore
+# the GREEN TARGET value, in the #123/#127 discipline. NOTE (GREEN, #138): the pin
+# is the target for an ALL-GREEN harness. 28 pre-existing converging cases whose
+# responders do not answer the new 'ac-diff' label fall into the DELIBERATELY
+# fail-closed AC_CHANGE path and FAIL until their responder fixtures are amended --
+# the same fixture-amendment class #127 cycle 3 recorded above for its 7 amended
+# resume cases. The amendment is test-side and is reported to the team lead rather
+# than made here; until it lands, `node test/workflows/run.mjs` measures 122 ok and
+# tests/test-issue-27-composition-oracle.sh reds against this pin.
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=135
+HARNESS_OK_COUNT=150

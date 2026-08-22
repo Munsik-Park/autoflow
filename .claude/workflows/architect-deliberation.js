@@ -13,6 +13,7 @@ export const meta = {
     { title: 'Draft', detail: 'dev drafts feature design, test drafts verification design (independent) — cold runs only' },
     { title: 'Resume', detail: 'load the persisted issue register and re-enter Converge at the prior run\'s round — resume runs only' },
     { title: 'Converge', detail: 'cross-review rounds under the Discussion Protocol until mutual ACCEPT or the round cap' },
+    { title: 'Reconcile', detail: 'on a converged run, compare the issue acceptance-criterion list against the converged verification design — converged runs only' },
     { title: 'Ledger', detail: 'append the settled decisions (append-only)' },
     { title: 'Register', detail: 'persist the issue register so a later resume can re-enter from it' },
   ],
@@ -44,6 +45,22 @@ const REASON_RESUME_ALREADY_CONVERGED = 'resume register already converged'
 // entries were never disposed of — and laundering it into the generic round-exhaustion text would
 // hide from the operator which concern blocked the run.
 const REASON_RESUME_OPEN_ENTRY_AT_CONVERGENCE = 'resume register still open at convergence'
+// Acceptance-criterion authority sentinels (issue #138), same declare-once, assigned-BARE
+// discipline. They are carried on their OWN field, `acReason`, not inside `escalation`: an
+// AC_CHANGE run converged, so `escalation` stays null by its existing definition and the two
+// fail-closed causes would otherwise be indistinguishable from each other and from an
+// unauthorized-finding pause. Fail-closed is deliberate and asymmetric with the terminal Ledger
+// and Register calls: Reconcile runs BEFORE the verdict and stands in front of a human authority
+// boundary, so a null return, a malformed payload or a missing AC table resolves to AC_CHANGE
+// rather than degrading to CONVERGED — degrading would silently reproduce the #134 incident.
+const REASON_AC_RECONCILIATION_UNAVAILABLE = 'ac reconciliation unavailable'
+const REASON_AC_LIST_ABSENT = 'ac list absent'
+const REASON_AC_UNAUTHORIZED_CHANGE = 'unauthorized acceptance-criterion change'
+// Minted register-entry names for the two fail-closed paths (issue #138). Declared once so the
+// resume agenda an operator re-enters on is named by a literal, not by assembled prose.
+const AC_ENTRY_RECONCILIATION_UNAVAILABLE = 'ac-authority:reconciliation-unavailable'
+const AC_ENTRY_AC_LIST_ABSENT = 'ac-authority:ac-list-absent'
+const AC_ENTRY_PREFIX = 'ac-authority:'
 // Fence sentinels for the persisted register payload (issue #127). The register-write prompt wraps
 // the serialized JSON in these two literals and instructs the sub-agent to write exactly the bytes
 // between them, so the payload's extent is read by equality on a declared literal rather than
@@ -134,6 +151,11 @@ const issue = argv.issue
 const feature = `.autoflow/issue-${issue}-feature-design.md`
 const verif = `.autoflow/issue-${issue}-verification-design.md`
 const ledger = `.autoflow/issue-${issue}-ledger.md`
+// The issue's acceptance-criterion list (issue #138). It is a SECTION of the existing DIAGNOSE
+// Phase B artifact, not a new artifact: both archived cycles already write one there, and a new
+// file would add a surface, a lifecycle and an archive rule for addressability a heading already
+// gives. Read only by the Reconcile channel — this script has no filesystem.
+const phaseB = `.autoflow/issue-${issue}-phase-b.md`
 // The durable issue register (issue #127): written by every run that ever held a faithful register,
 // read only by a resume run. It is what makes re-entry cost one round instead of a cold restart.
 const registerPath = `.autoflow/issue-${issue}-architect-register.json`
@@ -146,7 +168,18 @@ const REGISTER_RULE = ' The issue register carried below is this deliberation\'s
 // Ledger seeding (issue #67). Draft prompts only: the register is empty at Draft time, but the
 // prior deliberation's ledger is the cross-session half of the no-re-litigation rule, and only a
 // Draft agent (which has filesystem access; this script does not) can read it.
-const LEDGER_SEED_RULE = ` Read ${ledger} first if it exists: every entry there under authority "ARCHITECT mutual ACCEPT" or "ARCHITECT rejected" is a settled registered issue — treat it as closed and do not re-litigate it unless you can cite a fact verified now, in that source's own reference mode, that was unavailable when the entry was written.`
+// The authority set gains "operator decision" (issue #138): an operator's acceptance-criterion
+// ruling is settled by the one authority this deliberation cannot outvote, so a resumed round must
+// treat it as closed rather than re-arguing it. "ARCHITECT ac-change" is deliberately NOT in the
+// set — that entry records content still awaiting the operator's decision, and seeding un-agreed
+// content as settled is precisely what the no-re-litigation rule would then lock in.
+const LEDGER_SEED_RULE = ` Read ${ledger} first if it exists: every entry there under authority "ARCHITECT mutual ACCEPT", "ARCHITECT rejected" or "operator decision" is a settled registered issue — treat it as closed and do not re-litigate it unless you can cite a fact verified now, in that source's own reference mode, that was unavailable when the entry was written.`
+// The join key the Reconcile phase reads (issue #138). Declared once and interpolated into every
+// Test-AI prompt that authors or revises the verification design — the Draft turn, every round
+// turn, and the cap-round closing turn — because the column must exist before anything joins on
+// it, and the composition-oracle / verification-depth obligations reached the authoring agent
+// through these same prompt literals.
+const ISSUE_AC_COLUMN_RULE = ` The acceptance-criteria table in ${verif} carries a leading "Issue AC" column: each row's value is either an AC id copied from the "## Acceptance criteria" table in ${phaseB}, or "—" for a criterion this verification design added on its own. Every AC id in that table gets a row, and a criterion you decline, defer or weaken keeps its row and states that disposition — never drop the row. A design-added criterion ("—") is never a finding.`
 // Record discipline (issue #67). All four prompts: the Draft agents author the documents this
 // rule governs, and the round agents edit them in place.
 const RECORD_DISCIPLINE_RULE = ' Record discipline: the design documents carry only the current design and its conclusions — no round history; measurement logs, command output and code text are never copied into them, so state evidence as one line of what was checked and how, and re-verify it next round with tooling. Name issues with short readable names instead of serial numbers, and write no totals or counts into the documents.'
@@ -272,11 +305,82 @@ const REGISTER_FILE = {
     lastRound: { type: 'number' },
     // Carried so the resume guards can refuse a resume of a run that already converged — the
     // `no open entry` guard cannot make that refusal (a CONVERGED run may still hold open entries).
-    verdict: { type: 'string', enum: ['CONVERGED', 'ESCALATE'] },
+    // Widened for AC_CHANGE (issue #138) so a persisted AC_CHANGE register LOADS instead of
+    // failing its own schema. The `already converged` guard stays keyed to CONVERGED alone, which
+    // is what keeps an AC_CHANGE register resumable — the operator's whole re-entry path.
+    verdict: { type: 'string', enum: ['CONVERGED', 'AC_CHANGE', 'ESCALATE'] },
     entries: { type: 'array', items: REGISTER_ENTRY },
   },
   required: ['found', 'artifacts_present', 'lastRound', 'verdict', 'entries'],
 }
+
+// Reconcile channel schema (issue #138). Closed, in the same discipline as the schemas above. The
+// channel has TWO declared halves and only the second is a reading: `ac_rows` and
+// `ledger_ac_decisions` are TRANSCRIPTION (cell values copied out, uninterpreted), and the script
+// derives `kind` and `authorized` from them in its own code. That split is what makes the
+// join-decidable kinds assertable against a fixture with no model in the assertion path, and it
+// keeps the channel a comparison channel rather than a reviewer: judging whether an
+// acceptance-criterion change was JUSTIFIED is the faculty the #134 incident showed to be
+// capturable by a well-written rationale, and it belongs to the operator.
+const AC_ROW = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    // AC id, copied from the Phase B table.
+    ac: { type: 'string' },
+    // Some verification-design row's `Issue AC` cell equals this id.
+    carried: { type: 'boolean' },
+    // The carrying row's stated disposition mapped to this closed set; 'absent' iff !carried.
+    disposition: { type: 'string', enum: ['verified', 'declined', 'deferred', 'absent'] },
+    // The carrying row's Method cell names a file path, a command, or a manual-scenario file.
+    method_executable: { type: 'boolean' },
+    // The carrying row's name, or '—'.
+    locator: { type: 'string' },
+    // The row's disposition wording, copied verbatim.
+    proposed: { type: 'string' },
+  },
+  required: ['ac', 'carried', 'disposition', 'method_executable', 'locator', 'proposed'],
+}
+const AC_SUBSTITUTION = {
+  type: 'object',
+  additionalProperties: false,
+  properties: { ac: { type: 'string' }, locator: { type: 'string' }, proposed: { type: 'string' } },
+  required: ['ac', 'locator', 'proposed'],
+}
+const AC_DIFF = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    // The Phase B `## Acceptance criteria` section exists and parses as a table.
+    ac_source_present: { type: 'boolean' },
+    ac_rows: { type: 'array', items: AC_ROW },
+    // Transcription, second list: one entry per level-2 ledger heading ending in the
+    // `[ac-decision]` marker, carrying that entry's `- AC:` value. Nothing else.
+    ledger_ac_decisions: { type: 'array', items: { type: 'string' } },
+    // The one reading the channel is asked for, and the design's stated residual
+    // false-positive surface.
+    substituted: { type: 'array', items: AC_SUBSTITUTION },
+  },
+  required: ['ac_source_present', 'ac_rows', 'ledger_ac_decisions', 'substituted'],
+}
+// The kind table, in the script, first match wins — one finding per row at most. `weakened` is
+// bounded to the DECIDABLE form (no executable method named): "asserts a strictly weaker property"
+// is a depth judgment about verification strength, which is both the faculty the channel is
+// forbidden to exercise and an unbounded false-positive source; real-but-executable weakening
+// stays with GATE:PLAN's depth items, which already score it.
+const acKindOf = (row) => {
+  if (!row.carried) return 'dropped'
+  if (row.disposition === 'declined') return 'not-carried'
+  if (row.disposition === 'deferred') return 'deferred'
+  if (!row.method_executable) return 'weakened'
+  return null
+}
+// Payload well-formedness. A schema is advisory to this script (it is opaque here, exactly as
+// `applyDispositions` is the runtime guard behind DISPOSITION's enum), so a malformed return is
+// treated as the channel not having delivered — fail-closed, not fail-open.
+const acDiffWellFormed = (d) => !!d && typeof d === 'object' &&
+  typeof d.ac_source_present === 'boolean' &&
+  Array.isArray(d.ac_rows) && Array.isArray(d.ledger_ac_decisions) && Array.isArray(d.substituted)
 
 // A null draft return is a skipped/errored sub-agent — the ARCHITECT analogue of VERIFY's
 // `test ? test.verdict : 'missing'`. Record it as a distinct early-ESCALATE reason and skip
@@ -326,7 +430,7 @@ const [devDraft, testDraft] = await parallel([
     { label: 'dev-draft', phase: 'Draft', model: 'opus' },
   ),
   () => agent(
-    `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / manual / environment-dependent) -> method; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration); and the Verification depth determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth (a risk line naming who is harmed if this change is wrong, plus one line per verification layer and per new spec file naming the failure mode no other layer catches — a justification form, not a quantity cap) — and WRITE it to ${verif}. Return a one-line summary only.${ADOPTION_EVIDENCE_RULE}${LEDGER_SEED_RULE}${RECORD_DISCIPLINE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / manual / environment-dependent) -> method; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration); and the Verification depth determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth (a risk line naming who is harmed if this change is wrong, plus one line per verification layer and per new spec file naming the failure mode no other layer catches — a justification form, not a quantity cap) — and WRITE it to ${verif}. Return a one-line summary only.${ISSUE_AC_COLUMN_RULE}${ADOPTION_EVIDENCE_RULE}${LEDGER_SEED_RULE}${RECORD_DISCIPLINE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
     { label: 'test-draft', phase: 'Draft', model: 'opus' },
   ),
 ])
@@ -488,7 +592,7 @@ while (!earlyEscalateReason && round < roundCeiling && !converged) {
   // path below consumes a null, which a bare `await` would replace with a propagated rejection.
   const test = await Promise.resolve()
     .then(() => agent(
-      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange} If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange} If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds".${ISSUE_AC_COLUMN_RULE} Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: `test-r${round}`, phase: 'Converge', model: 'opus' },
     ))
     .catch(() => null)
@@ -567,7 +671,7 @@ if (!earlyEscalateReason && !converged && round === roundCeiling && accepted(las
   const closingPeer = ` The Developer AI has already completed round ${round} against the documents in their current state and returned a grounded ACCEPT on these verified dimensions — they are current, not carried: ${JSON.stringify((lastDev && lastDev.accept_grounds) || [])}.`
   const closing = await Promise.resolve()
     .then(() => agent(
-      `You are the Test AI. This is the CLOSING evaluation of the Developer AI's final revision at the round cap (round ${round} of ${roundCeiling}): there is no further Developer-AI turn, and this verdict alone decides CONVERGED versus ESCALATE. Read the current ${feature} and ${verif}.${closingPeer} Apply the Discussion Protocol. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${closingCarry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are the Test AI. This is the CLOSING evaluation of the Developer AI's final revision at the round cap (round ${round} of ${roundCeiling}): there is no further Developer-AI turn, and this verdict alone decides CONVERGED versus ESCALATE. Read the current ${feature} and ${verif}.${closingPeer} Apply the Discussion Protocol. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds".${ISSUE_AC_COLUMN_RULE} Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${closingCarry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: VERDICT, label: CLOSING_CALL_LABEL, phase: 'Converge', model: 'opus' },
     ))
     .catch(() => null)
@@ -592,8 +696,90 @@ if (!earlyEscalateReason && !converged && round === roundCeiling && accepted(las
   }
 }
 
+// Reconcile (issue #138) — the acceptance-criterion authority checkpoint, placed between Converge
+// and Ledger. It runs ONLY when `converged` is true: a run already returning to the operator gains
+// nothing from the check, and verdict precedence is ESCALATE before AC_CHANGE before CONVERGED —
+// an infrastructure or non-convergence cause still outranks a design outcome, the same ordering
+// `escalationReason` already uses. Minting happens here, before the Register phase serializes
+// `entries`, so an AC_CHANGE register always carries an open entry and the operator's re-entry is
+// not refused by the resume path's `no open entry` guard.
+phase('Reconcile')
+let acReason = null
+let acChange = []
+// The artifact whose unreadability caused the pause, used as the ledger grounds' fallback evidence.
+let acEvidence = ''
+if (converged) {
+  const acDiff = await Promise.resolve()
+    .then(() => agent(
+      `You are a comparison channel, not a reviewer. Read three artifacts and return what they state under the given schema. (1) ${phaseB} — its "## Acceptance criteria" table. Set "ac_source_present" true only when that section exists AND parses as a table; when it does not, set it false and return the other fields as empty arrays. (2) ${verif} — its acceptance-criteria table, whose leading "Issue AC" column carries an AC id or "—". (3) ${ledger} — the issue decision ledger. Return "ac_rows" as ONE ROW PER AC ID in the ${phaseB} table, IN THAT TABLE'S ORDER, omitting none: "ac" is the AC id copied verbatim; "carried" is true when some ${verif} row's "Issue AC" cell equals that id; "disposition" is that carrying row's stated disposition mapped to exactly one of verified / declined / deferred / absent, and is "absent" if and only if "carried" is false; "method_executable" is true when the carrying row's Method cell names a file path, a command, or a manual-scenario file, and false when that cell is empty or "—"; "locator" is the carrying row's name, or "—"; "proposed" is that row's disposition wording copied verbatim. Return "ledger_ac_decisions" by pure grammar match, not by judgment: for each level-2 heading in ${ledger} whose text ends with the marker [ac-decision], copy the value of that entry's "- AC:" line. Copy nothing else into that list — not a paraphrase of a criterion, not a prose mention of an AC id, and not a "- AC:" line under any other marker or under no marker. Return "substituted" for each ${verif} row whose criterion asserts a DIFFERENT property than the ${phaseB} criterion of the same id. Exercise no judgment about whether any difference was justified, and do not decide whether an entry's disposition was appropriate — report presence and kind only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      { schema: AC_DIFF, label: 'ac-diff', phase: 'Reconcile', model: 'sonnet' },
+    ))
+    .catch(() => null)
+  // Minting (issue #138): every AC_CHANGE path mints at least one OPEN entry, so the resume the
+  // operator takes after ruling on the change is admissible. `raisedBy: 'test'` follows the
+  // rehydrate coercion's own stated reason — only the raiser may close an entry, and `test` is the
+  // side a resumed round starts on and the side the closing half-round belongs to.
+  const mintAcEntry = (name, conclusion, evidence) => {
+    const entry = toEntry({ agenda: name, argument: conclusion, locator: evidence }, 'test')
+    const prior = register.get(normalizeKey(entry.name))
+    if (prior) {
+      prior.conclusion = entry.conclusion
+      prior.evidence = entry.evidence
+      prior.status = 'open'
+    } else {
+      register.set(normalizeKey(entry.name), entry)
+    }
+  }
+  if (!acDiffWellFormed(acDiff)) {
+    // Null return or malformed payload. Fail-closed: the check could not run, so it did not pass.
+    acReason = REASON_AC_RECONCILIATION_UNAVAILABLE
+    acEvidence = `${phaseB}, ${verif}, ${ledger}`
+    mintAcEntry(AC_ENTRY_RECONCILIATION_UNAVAILABLE, acReason, acEvidence)
+  } else if (!acDiff.ac_source_present) {
+    acReason = REASON_AC_LIST_ABSENT
+    acEvidence = phaseB
+    mintAcEntry(AC_ENTRY_AC_LIST_ABSENT, acReason, acEvidence)
+  } else {
+    // The join, in the script. `findings` is script-local; the run observes it through `acChange`,
+    // which on an input whose ledger authorizes nothing IS the whole list.
+    const findings = []
+    for (const row of acDiff.ac_rows) {
+      if (!row || typeof row !== 'object') continue
+      const kind = acKindOf(row)
+      if (!kind) continue
+      findings.push({
+        ac: flatten(row.ac),
+        kind,
+        locator: flatten(row.locator) || LOCATOR_UNSPECIFIED,
+        proposed: flatten(row.proposed),
+      })
+    }
+    for (const sub of acDiff.substituted) {
+      if (!sub || typeof sub !== 'object') continue
+      findings.push({
+        ac: flatten(sub.ac),
+        kind: 'substituted',
+        locator: flatten(sub.locator) || LOCATOR_UNSPECIFIED,
+        proposed: flatten(sub.proposed),
+      })
+    }
+    // Authority, in the script: exact-after-trim over the transcribed id list. Never a substring
+    // and never a prefix — `AC10` must not be authorized by an entry naming `AC1`.
+    const decisions = acDiff.ledger_ac_decisions.filter((d) => typeof d === 'string')
+    const unauthorized = findings.filter((f) => !decisions.some((d) => d.trim() === f.ac.trim()))
+    if (unauthorized.length) {
+      acReason = REASON_AC_UNAUTHORIZED_CHANGE
+      acEvidence = verif
+      acChange = unauthorized
+      for (const f of unauthorized) {
+        mintAcEntry(`${AC_ENTRY_PREFIX}${f.ac}`, `${f.kind}: ${f.proposed}`, f.locator)
+      }
+    }
+  }
+}
+
 phase('Ledger')
-const verdict = converged ? 'CONVERGED' : 'ESCALATE'
+const verdict = !converged ? 'ESCALATE' : acReason ? 'AC_CHANGE' : 'CONVERGED'
 // Cause-specific escalation reason: an early-exit reason (missing draft / artifact / consecutive
 // null) survives verbatim; then the resume open-entry sentinel (issue #127, cycle 3) — ordered
 // AFTER `earlyEscalateReason` because an infrastructure cause still outranks a design outcome, and
@@ -622,13 +808,32 @@ const rejectedClause = rejectedEntries
 const escalateGrounds = openEntries
   ? `the open register entries below:\n${openEntries}`
   : `the register held no open entry, so the grounds are the escalation reason alone: ${escalationReason}`
+// AC_CHANGE grounds (issue #138), built in the shape the non-convergence branch already uses for
+// the same asymmetry. Rendering the unauthorized findings alone would leave the grounds EMPTY on
+// exactly the two paths where the operator knows least — `acCheckFailed` and `!ac_source_present`
+// carry `acChange: []` by construction — so the clause OPENS with the run's sentinel and continues
+// with the rendered open register entries (the minted ones exist by construction here, since
+// Reconcile mints before the Register phase serializes), falling back to the sentinel plus the
+// artifact the check could not read. The invariant: this clause never renders empty and always
+// names the run's `acReason` sentinel.
+const acChangeGrounds = openEntries
+  ? `${acReason}; the open register entries below:\n${openEntries}`
+  : `${acReason}, over ${acEvidence}`
 // Entry-identifier protocol (CLAUDE.md > Decision Ledger). This workflow cannot allocate the
 // identifier itself — the Workflow runtime injects only args/phase/parallel/agent/console, with no
 // fs and no exec — so the allocation is instructed in the prompt the ledger sub-agent executes.
 // `F` is the facilitator delegate's namespace; per-entry allocation immediately before each append
 // is what makes it collision-free against the orchestrator writing `O` entries concurrently.
 const ENTRY_ID_RULE = ` Head each appended entry \`## <ID> — <title> (cycle <C>, ARCHITECT)\`, allocating <ID> by running \`bash scripts/ledger/ledger-entry-id.sh next ${ledger} F\` immediately before that entry's own append — one call per entry, never a serial incremented locally across the batch. After the appends, run \`bash scripts/ledger/ledger-entry-id.sh check ${ledger}\` and fix every defect it reports before returning.`
-const ledgerPrompt = converged
+// Three-way (issue #138). The AC_CHANGE branch records NO settled decision, for the reason the
+// non-convergence branch already states — an append-only ledger must never carry un-agreed content
+// that the no-re-litigation rule would then lock in. Here the content is worse than un-agreed: it
+// is exactly what awaits the operator's decision. Its authority literal `ARCHITECT ac-change` sits
+// outside LEDGER_SEED_RULE's settled-authority set, so it is never seeded into a later
+// deliberation as settled.
+const ledgerPrompt = verdict === 'AC_CHANGE'
+  ? `Append (do NOT rewrite or delete) to ${ledger} EXACTLY ONE outcome entry — do NOT record any design decision as settled: decision "ARCHITECT paused on an acceptance-criterion change — ${acReason}"; grounds — ${acChangeGrounds}; authority "ARCHITECT ac-change"; cycle/phase "ARCHITECT". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only.${ENTRY_ID_RULE} Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
+  : converged
   ? `Append (do NOT rewrite or delete) to ${ledger} the settled ARCHITECT decisions. For each agreed design decision, append one entry: the decision (one line); its grounds (cite the verified dimensions ${JSON.stringify(acceptGrounds)} and the artifact path:line in ${feature} or ${verif}); authority "ARCHITECT mutual ACCEPT"; cycle/phase "ARCHITECT".${rejectedClause} If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only — never edit existing entries.${ENTRY_ID_RULE} Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
   : `Append (do NOT rewrite or delete) to ${ledger} EXACTLY ONE outcome entry — do NOT record any design decision as settled: decision "ARCHITECT did not converge — ${escalationReason}"; grounds — ${escalateGrounds}; authority "ARCHITECT non-convergence"; cycle/phase "ARCHITECT". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only.${ENTRY_ID_RULE} Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`
 // Terminal post-verdict call (issue #127): the verdict is already settled before this runs, so a
@@ -657,6 +862,9 @@ if (registerHeld) {
     verdict,
     // Persisted for the operator's diagnosis; deliberately outside the closed load schema.
     escalation: converged ? null : escalationReason,
+    // The AC pause's own carrier (issue #138), beside `escalation` rather than inside it, so a
+    // resume reports the same cause the pause did and the two fail-closed causes stay distinct.
+    acReason,
     // Every status, not only the open ones: after an ESCALATE the ledger carries no record of what
     // the prior run rejected (`rejectedClause` is interpolated on the CONVERGED branch alone), so
     // open-only persistence would let a resumed sub-agent re-raise a rejected concern with nothing
@@ -690,11 +898,20 @@ return {
   // Absolute, not per-invocation: a resume of a run that reached the cap returns the next number,
   // so "how long has this deliberation gone on" stays a single monotone count.
   rounds: round,
-  summary: converged
+  summary: verdict === 'AC_CHANGE'
+    ? `ARCHITECT paused on an acceptance-criterion change in ${round} round(s) — operator decision required (${acReason})`
+    : converged
     ? `ARCHITECT converged in ${round} round(s)`
     : `ARCHITECT did not converge — escalate (${escalationReason})`,
   escalation: converged ? null : escalationReason,
   resumed: resume,
   register: registerPath,
   registerWritten,
+  // Acceptance-criterion authority (issue #138). `acReason` carries the sentinel on AC_CHANGE and
+  // is null on every other verdict; `acChange` is [] on every verdict other than AC_CHANGE and
+  // carries the unauthorized findings — each with the kind the SCRIPT derived — on it. `escalation`
+  // stays null on AC_CHANGE (the run is not escalating for a deliberation cause), which is why the
+  // sentinel needs a field of its own.
+  acReason,
+  acChange,
 }
