@@ -361,6 +361,7 @@ This object is the value of `phases.<gate>.scores` in `.autoflow/issue-{N}.json`
 - `gh pr create` → AUDIT + GATE:QUALITY pass required.
 - `gh pr merge`, and any push to the default branch (`main`) → **denied while a state file has `active:true`**. AutoFlow never merges; merging is external.
 - `gh issue create` (bare command form, and the same-segment REST `POST …/issues` form) → **denied state-independently**; issue filing goes through `scripts/issue/create-issue.sh`, which requires a reviewed draft and re-runs the duplicate check itself — see [`docs/issue-proposal.md`](docs/issue-proposal.md).
+- A **backgrounded** run of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` on the invocation — → **denied state-independently**, for every actor including the orchestrator; suite runs execute in the foreground so their result is keyed to the capture-point tree (see [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > VERIFY > Green-tree register; matching rule: `docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 
 These gates are wired via PreToolUse on both `Bash` (git / gh commands) and `Write|Edit|MultiEdit`.
 
