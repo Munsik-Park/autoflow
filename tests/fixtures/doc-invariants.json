@@ -8194,6 +8194,146 @@
       "match": "regex",
       "literal": "--all",
       "scope": "permanent"
+    },
+    {
+      "id": "138-claude-flowcontrol-ac-change",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "CLAUDE.md",
+      "section": "Flow Control",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "ARCHITECT (AC_CHANGE) → user",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-claude-regressions-ac-pause-no-budget",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "CLAUDE.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "an AC pause and its resume consume no ARCHITECT re-entry budget",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-claude-ledger-ac-decision-marker",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "[ac-decision]",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-claude-ledger-operator-decision-authority",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "CLAUDE.md",
+      "section": "Decision Ledger",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "operator decision",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-contracts-return-ac-change",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Return Contract",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "AC_CHANGE",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-contracts-eval-prompt-rules-ac-input",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Evaluation AI Prompt Rules",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "acceptance-criterion list",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-guide-architect-issue-ac-column",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "docs/autoflow-guide.md",
+      "section": "ARCHITECT — Plan Synthesis (Developer AI + Test AI)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "Issue AC",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-guide-gateplan-ac-authority-check",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "docs/autoflow-guide.md",
+      "section": "GATE:PLAN — Plan Evaluation",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "AC-authority check",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-guide-gatequality-ac-authority-check",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "docs/autoflow-guide.md",
+      "section": "GATE:QUALITY — Completion Evaluation",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "AC-authority check",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-analysis-phaseb-ac-table",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "docs/phases/analysis.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "## Acceptance criteria",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-analysis-phaseb-carry-forward",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": "docs/phases/analysis.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "carries the existing table forward unchanged",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-evaluator-agent-ac-input",
+      "origin_issue": 138,
+      "intent": "presence",
+      "file": ".claude/agents/autoflow-evaluator.md",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "acceptance-criterion list",
+      "scope": "permanent"
     }
   ]
 }
