@@ -720,15 +720,7 @@ if (converged) {
   // rehydrate coercion's own stated reason — only the raiser may close an entry, and `test` is the
   // side a resumed round starts on and the side the closing half-round belongs to.
   const mintAcEntry = (name, conclusion, evidence) => {
-    const entry = toEntry({ agenda: name, argument: conclusion, locator: evidence }, 'test')
-    const prior = register.get(normalizeKey(entry.name))
-    if (prior) {
-      prior.conclusion = entry.conclusion
-      prior.evidence = entry.evidence
-      prior.status = 'open'
-    } else {
-      register.set(normalizeKey(entry.name), entry)
-    }
+    raise([{ agenda: name, argument: conclusion, locator: evidence }], 'test')
   }
   if (!acDiffWellFormed(acDiff)) {
     // Null return or malformed payload. Fail-closed: the check could not run, so it did not pass.
