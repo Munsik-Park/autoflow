@@ -76,6 +76,7 @@ SUITE_979="$PROJECT_ROOT/tests/test-issue-979-bundle-delivery.sh"
 SUITE_51="$PROJECT_ROOT/tests/test-issue-51-teammate-removal-verdict.sh"
 SUITE_64="$PROJECT_ROOT/tests/test-issue-64-collection-scope.sh"
 SUITE_109="$PROJECT_ROOT/tests/test-issue-109-doc-assertions.sh"
+FETCH_ADAPTER="$PROJECT_ROOT/scripts/test/fetch-issue-state.sh"
 
 # Hoisted ahead of every use (RED2 / B3-1): check-cycle-scope-guard.sh denies
 # any `git diff --name-only` feeding a path allow-list unless it is dominated
@@ -210,6 +211,11 @@ check_registry_invoke_absent "$SUITE_59" 'tests/test-issue-59-adoption-evidence-
 check_registry_invoke_absent "$SUITE_62" 'tests/test-issue-62-sequential-rounds.sh'
 check_registry_invoke_absent "$SUITE_69" 'tests/test-issue-69-verification-depth.sh'
 check_registry_invoke_absent "$SUITE_71" 'tests/test-issue-71-digest-removal.sh'
+# RED3 (VERIFY step-3 finding): these two carry the same disposal shape
+# (bash "$RUNNER" .../ bash "$REGISTRY_RUNNER" ...) but were missing from the
+# RED-phase enumeration — .autoflow/issue-122-verify-report.md step-3 finding 1.
+check_registry_invoke_absent "$SUITE_51" 'tests/test-issue-51-teammate-removal-verdict.sh'
+check_registry_invoke_absent "$SUITE_52" 'tests/test-issue-52-peer-facilitator-premise.sh'
 
 assert_true "AC-registry-rerun-removed: the dead REGISTRY_RUNNER assignment is removed from tests/test-issue-67-deliberation-record.sh" \
   "! grep -q 'REGISTRY_RUNNER=' '$SUITE_67'"
@@ -396,6 +402,132 @@ else
   note_deferred "AC-manifest-regen-same-commit: setup/gen-manifest-hashes.sh not found in the archived tree — deferred."
 fi
 rm -rf "$REGEN_SCRATCH"
+
+# =============================================================================
+echo ""
+echo "=== 1.9 scripts/test/fetch-issue-state.sh — hermetic deterministic-branch coverage ==="
+# =============================================================================
+# RED3 (VERIFY step-3 finding 2): the fetch adapter's own logic (argument
+# parsing, dedup, the gh-absent branch, the OPEN/CLOSED mapping) had zero
+# automated coverage — only the real-network degrade path is manual (M1,
+# tests/manual/issue-122-manual-scenarios.md), correctly, since that is the
+# one piece the injection boundary cannot make hermetic. Everything else is a
+# deterministic branch drivable with a fake `gh` on PATH, the same shape as
+# tests/issue-92/mock-gh/gh — generated inline (mktemp scratch), not committed,
+# so no new tests/** path needs lint registration.
+#
+# Leaf rule: scripts/test/fetch-issue-state.sh is not an enumerated suite
+# (suite_enumerate walks tests/** only), so driving it directly here is an
+# ordinary product-script invocation (I2), not a sibling-suite execution.
+
+# fetch-issue-state.sh derives its own ROOT from its OWN location
+# ($SCRIPT_DIR/../..), never from an env var or argument — so a scratch-tree
+# drive must run a COPY of the real, unmodified script from inside the
+# scratch tree (same real code, different location), not the real file in
+# place. This is the same real-tree-copy idiom AC-fence-carrier-red and
+# AC-reachability-carrier-red already use in this suite.
+FIS_SCRATCH="$(mktemp -d)"
+mkdir -p "$FIS_SCRATCH/tests" "$FIS_SCRATCH/.autoflow" "$FIS_SCRATCH/scripts/test"
+cp "$FETCH_ADAPTER" "$FIS_SCRATCH/scripts/test/fetch-issue-state.sh"
+cp "$PROJECT_ROOT/scripts/test/suite-manifest.sh" "$FIS_SCRATCH/scripts/test/suite-manifest.sh"
+FIS_ADAPTER_COPY="$FIS_SCRATCH/scripts/test/fetch-issue-state.sh"
+FIS_MOCK_DIR="$(mktemp -d)"
+cat > "$FIS_MOCK_DIR/gh" <<'GHMOCK'
+#!/usr/bin/env bash
+# Fake gh for scripts/test/fetch-issue-state.sh hermetic arms (issue #122).
+# Contract: `gh issue view <n> [--repo <owner/name>] --json state --jq '.state'`.
+if [ -n "${GH_MOCK_INVOCATION_LOG:-}" ]; then
+  printf '%s\n' "$*" >> "$GH_MOCK_INVOCATION_LOG"
+fi
+case " $* " in
+  *" issue view "*)
+    printf '%s\n' "${GH_MOCK_ISSUE_STATE:-OPEN}"
+    exit 0
+    ;;
+esac
+exit 1
+GHMOCK
+chmod +x "$FIS_MOCK_DIR/gh"
+
+fis_reset_tree() {
+  rm -rf "$FIS_SCRATCH/tests"; mkdir -p "$FIS_SCRATCH/tests" "$FIS_SCRATCH/.autoflow"
+}
+fis_plant_suite() {  # <basename> <retire-with-issue, e.g. "#999">
+  cat > "$FIS_SCRATCH/tests/$1" <<EOF
+#!/usr/bin/env bash
+# ci-subject: docs/a.md
+# lane: cycle-scoped
+# retire-with: $2
+# cycle-arm: $2
+# budget-secs: 30
+allow_list=( "docs/a.md" )
+EOF
+}
+
+# --- --out flag: writes to the given path -----------------------------------
+fis_reset_tree
+fis_plant_suite "test-fx-out.sh" "#901"
+FIS_OUT_FILE="$FIS_SCRATCH/.autoflow/custom-out.txt"
+FIS_OUT_LOG="$(mktemp)"
+( cd "$FIS_SCRATCH" && PATH="$FIS_MOCK_DIR:$PATH" GH_MOCK_ISSUE_STATE=OPEN GH_MOCK_INVOCATION_LOG="$FIS_OUT_LOG" \
+    bash "$FIS_ADAPTER_COPY" --out "$FIS_OUT_FILE" ) \
+  > /tmp/issue122-fis-out.log 2>&1
+FIS_OUT_RC=$?
+assert_true "AC-fetch-issue-state-out-flag: --out <path> writes the record to that path (rc=$FIS_OUT_RC)" \
+  "[ $FIS_OUT_RC -eq 0 ] && [ -f '$FIS_OUT_FILE' ] && grep -qxF '#901 open' '$FIS_OUT_FILE'"
+
+# --- --repo flag: propagated verbatim to gh issue view -----------------------
+fis_reset_tree
+fis_plant_suite "test-fx-repo.sh" "#902"
+FIS_REPO_LOG="$(mktemp)"
+( cd "$FIS_SCRATCH" && PATH="$FIS_MOCK_DIR:$PATH" GH_MOCK_ISSUE_STATE=OPEN GH_MOCK_INVOCATION_LOG="$FIS_REPO_LOG" \
+    bash "$FIS_ADAPTER_COPY" --out "$FIS_SCRATCH/.autoflow/repo-out.txt" --repo Munsik-Park/autoflow ) \
+  > /tmp/issue122-fis-repo.log 2>&1
+assert_true "AC-fetch-issue-state-repo-flag: --repo <owner/name> is passed through to the gh invocation verbatim" \
+  "grep -qF -- '--repo Munsik-Park/autoflow' '$FIS_REPO_LOG'"
+
+# --- dedup: two suites sharing one retire-with issue -> exactly one gh call --
+fis_reset_tree
+fis_plant_suite "test-fx-dedup-a.sh" "#903"
+fis_plant_suite "test-fx-dedup-b.sh" "#903"
+FIS_DEDUP_LOG="$(mktemp)"
+FIS_DEDUP_OUT="$FIS_SCRATCH/.autoflow/dedup-out.txt"
+( cd "$FIS_SCRATCH" && PATH="$FIS_MOCK_DIR:$PATH" GH_MOCK_ISSUE_STATE=CLOSED GH_MOCK_INVOCATION_LOG="$FIS_DEDUP_LOG" \
+    bash "$FIS_ADAPTER_COPY" --out "$FIS_DEDUP_OUT" ) \
+  > /tmp/issue122-fis-dedup.log 2>&1
+FIS_DEDUP_CALLS="$(command grep -c '^issue view 903' "$FIS_DEDUP_LOG" 2>/dev/null || true)"
+[ -z "$FIS_DEDUP_CALLS" ] && FIS_DEDUP_CALLS=0
+FIS_DEDUP_LINES="$(command grep -c '^#903 ' "$FIS_DEDUP_OUT" 2>/dev/null || true)"
+[ -z "$FIS_DEDUP_LINES" ] && FIS_DEDUP_LINES=0
+assert_true "AC-fetch-issue-state-dedup: two suites sharing one retire-with issue produce exactly one gh call and one output line (calls=$FIS_DEDUP_CALLS, lines=$FIS_DEDUP_LINES)" \
+  "[ \"$FIS_DEDUP_CALLS\" -eq 1 ] && [ \"$FIS_DEDUP_LINES\" -eq 1 ]"
+
+# --- gh absent: every issue is written 'unknown', exit 0, never a network call
+fis_reset_tree
+fis_plant_suite "test-fx-noghs.sh" "#904"
+FIS_NOGH_PATH="$(printf '%s' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gh" ] && continue; printf '%s\n' "$d"; done | paste -sd: -)"
+FIS_NOGH_OUT="$FIS_SCRATCH/.autoflow/nogh-out.txt"
+( cd "$FIS_SCRATCH" && PATH="$FIS_NOGH_PATH" bash "$FIS_ADAPTER_COPY" --out "$FIS_NOGH_OUT" ) \
+  > /tmp/issue122-fis-nogh.log 2>&1
+FIS_NOGH_RC=$?
+assert_true "AC-fetch-issue-state-gh-absent: with no resolvable gh, the issue is written 'unknown' and the adapter exits 0 (rc=$FIS_NOGH_RC)" \
+  "[ $FIS_NOGH_RC -eq 0 ] && grep -qxF '#904 unknown' '$FIS_NOGH_OUT'"
+
+# --- OPEN / CLOSED mapping (real gh emits uppercase via --jq '.state') -------
+fis_reset_tree
+fis_plant_suite "test-fx-open.sh" "#905"
+FIS_OPEN_OUT="$FIS_SCRATCH/.autoflow/open-out.txt"
+( cd "$FIS_SCRATCH" && PATH="$FIS_MOCK_DIR:$PATH" GH_MOCK_ISSUE_STATE=OPEN \
+    bash "$FIS_ADAPTER_COPY" --out "$FIS_OPEN_OUT" ) > /tmp/issue122-fis-open.log 2>&1
+fis_reset_tree
+fis_plant_suite "test-fx-closed.sh" "#906"
+FIS_CLOSED_OUT="$FIS_SCRATCH/.autoflow/closed-out.txt"
+( cd "$FIS_SCRATCH" && PATH="$FIS_MOCK_DIR:$PATH" GH_MOCK_ISSUE_STATE=CLOSED \
+    bash "$FIS_ADAPTER_COPY" --out "$FIS_CLOSED_OUT" ) > /tmp/issue122-fis-closed.log 2>&1
+assert_true "AC-fetch-issue-state-mapping: gh's uppercase OPEN/CLOSED map to lowercase open/closed" \
+  "grep -qxF '#905 open' '$FIS_OPEN_OUT' && grep -qxF '#906 closed' '$FIS_CLOSED_OUT'"
+
+rm -rf "$FIS_SCRATCH" "$FIS_MOCK_DIR"
 
 # =============================================================================
 echo ""
