@@ -1081,6 +1081,44 @@ else
 fi
 rm -rf "$SCR19"
 
+# =============================================================================
+# Leg 20 — an operator-supplied trailing slash on $AUTOFLOW_ARCHIVE_ROOT does
+# not compose a doubled slash before <repo-key> (issue #130 cycle 2, VERIFY
+# step 3 — .autoflow/issue-130-c2-verify-report.md: the "${prefix%/}" trim in
+# scripts/test/green-tree-store.sh:113 had no leg driving a trailing-slash
+# input). The composed path must also still resolve to the guarded directory,
+# trailing slash notwithstanding.
+# =============================================================================
+echo ""
+
+SCR20="$(mktemp -d)"
+mkdir -p "$SCR20/repo" "$SCR20/ark"
+printf 'x\n' > "$SCR20/repo/keep.txt"
+(cd "$SCR20/repo" && git init -q -b main && git add -A \
+  && git -c user.email=t@example.com -c user.name=t commit -q -m init) >/dev/null
+
+if [ ! -f "$REGISTER" ]; then
+  assert_true "trailing-slash: scripts/test/green-tree-register.sh exists (the trailing-slash leg cannot be driven without it)" "false"
+else
+  T20_OUT="$(AUTOFLOW_ARCHIVE_ROOT="$SCR20/ark/" bash "$REGISTER" --store-path --root "$SCR20/repo" 2>/dev/null)"
+  T20_RIGHT="$(cd "$SCR20/ark" && pwd -P)"
+  T20_RESOLVED=""
+  case "$T20_OUT" in
+    *green-trees/register.md)
+      T20_PREFIX="${T20_OUT%/green-trees/register.md}"
+      T20_PREFIX="${T20_PREFIX%/*}"
+      T20_RESOLVED="$(cd "$T20_PREFIX" 2>/dev/null && pwd -P)"
+      ;;
+  esac
+
+  assert_true "trailing-slash-no-double: an operator-supplied trailing slash on \$AUTOFLOW_ARCHIVE_ROOT does not compose a doubled slash before <repo-key> (printed='$T20_OUT')" \
+    "case \"\$T20_OUT\" in *//*) false ;; *) true ;; esac"
+
+  assert_true "trailing-slash-still-anchored: the printed path, trailing slash notwithstanding, still resolves to the accepted archive root (resolved='$T20_RESOLVED', expected='$T20_RIGHT')" \
+    "[ -n \"\$T20_RESOLVED\" ] && [ \"\$T20_RESOLVED\" = \"\$T20_RIGHT\" ]"
+fi
+rm -rf "$SCR20"
+
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1
