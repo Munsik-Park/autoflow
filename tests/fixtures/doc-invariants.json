@@ -8148,6 +8148,43 @@
       "scope": "permanent"
     },
     {
+      "id": "134-c2-p1-fold-function",
+      "origin_issue": 134,
+      "intent": "preservation",
+      "file": "docs/gate-matching-standard.md",
+      "section": "Rule P1 — Boundary-Anchored Command Matching",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "_fold_continuations",
+      "scope": "permanent"
+    },
+    {
+      "id": "134-c2-p1-strip-function",
+      "origin_issue": 134,
+      "intent": "preservation",
+      "file": "docs/gate-matching-standard.md",
+      "section": "Rule P1 — Boundary-Anchored Command Matching",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "_strip_heredoc_bodies",
+      "scope": "permanent"
+    },
+    {
+      "id": "134-c2-p1-stage-order",
+      "origin_issue": 134,
+      "intent": "ordering",
+      "file": "docs/gate-matching-standard.md",
+      "section": "Rule P1 — Boundary-Anchored Command Matching",
+      "section_end": null,
+      "predicate": "ordered",
+      "match": "fixed",
+      "before": "_fold_continuations",
+      "after": "_strip_heredoc_bodies",
+      "scope": "permanent"
+    },
+    {
       "id": "134-rules-survive-dev-sweep-implementer",
       "origin_issue": 134,
       "intent": "preservation",

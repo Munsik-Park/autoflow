@@ -138,3 +138,49 @@ the 60-minute ceiling, but every cycle re-measures its own sweep.
   (`parallel-defer`, feature design > *parallel-defer*) before the next cycle.
 - **(c)** does not complete in one foreground call → **FAIL** — the
   disposition is a whole re-run, never a splice.
+
+---
+
+## M5 — multiline-payload-reaches-the-runtime: the real Bash payload delivers a multi-line `command` in the byte shape the fold reads
+
+**AC**: `multiline-payload-reaches-the-runtime` — the real Claude Code Bash
+`PreToolUse` payload delivers a multi-line `command` in the byte shape
+`_fold_continuations` / `_strip_heredoc_bodies` read (cycle 2, PR #137
+finding F1).
+
+**Why manual (composition-oracle)**: no repository artifact establishes that a
+real `PreToolUse` `Bash` payload's `command` field ever carries an embedded
+newline in the shape a backslash-newline continuation or a heredoc produces —
+that token appears in this repository only in prose and in
+`tests/test-gate-hardening.sh`'s synthetic `bash_json` fixtures (which encode
+an embedded newline via `jq -Rs`, proving the harness's own JSON construction,
+not the runtime's). A synthetic payload proves the hook's logic is correct
+when a multi-line `command` is present; it cannot prove the real harness ever
+sends one.
+
+**Procedure** (operator-run, two real Bash tool calls):
+
+1. Issue one real Bash tool call whose `command` is a continuation-split,
+   denied invocation — e.g. a command literally shaped
+   `bash scripts/test/run-suites.sh --all \` followed by a newline and `&`.
+   Observe the refusal and record which surface produced it (`BG_TAIL` /
+   `BG_PREFIX` / the payload `run_in_background` surface).
+2. Issue a second real Bash tool call whose `command` is a continuation-split
+   **foreground** `--selected` run of a single suite — no trailing `&`.
+   Observe that it is admitted and actually executes.
+
+**Outcome → verdict** (fixed in advance so the observation cannot discharge
+itself):
+
+- **(a)** call 1 is refused and call 2 is admitted and runs → **PASS**: the
+  runtime delivers a multi-line `command` byte-for-byte in the shape the fold
+  reads, in both the deny and the admit direction.
+- **(b)** call 1 is refused but call 2 is ALSO refused (over-block) → **FAIL,
+  routed back to ARCHITECT**: the fold or strip is joining or stripping more
+  than the design specifies, and no repository-side leg can detect that this
+  is happening against a REAL multi-line payload rather than a synthetic one.
+- **(c)** call 1 is admitted (the deny does not fire) → **FAIL, routed back to
+  ARCHITECT**: either the runtime never delivered the embedded newline in the
+  shape the synthetic legs assume, or the hook logic that passes every
+  synthetic leg does not hold against the real payload — either way the
+  enforcement claim this cycle rests on is false.

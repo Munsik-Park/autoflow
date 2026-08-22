@@ -872,6 +872,117 @@ run_hook 0 "quoted-body-own-separator triple: prose body's own ';' does not manu
 run_hook 0 "no-state-file direction pinned: admits stay admitted with NO state file present" \
   "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all')"
 
+echo "Issue #134 c2 — background-deny-fires: continuation fold / heredoc strip / post-heredoc tail (AC1, AC2, AC5, stage order, carried findings F1-F3)"
+# feature design (cycle 2) > shared-fold / heredoc-strip / bg-pipeline. Buffer
+# widens from a shell PHYSICAL line to a shell LOGICAL line (backslash-newline
+# continuations folded) and heredoc bodies are deleted-and-continued instead of
+# truncating the whole buffer at the first `<<`. All state-independent -- run
+# under $NOSTATE throughout, as the cycle-1 legs above do.
+run_hook 2 "AC1 continuation-fold: one-hop backslash-newline before &" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all \\\n&')"
+run_hook 2 "AC1 continuation-fold: multi-hop continuation splits interpreter, path and &" \
+  "$NOSTATE" "$(bash_json $'bash \\\nscripts/test/run-suites.sh \\\n--all \\\n&')"
+run_hook 2 "AC1 continuation-fold: CRLF spelling of the one-hop form" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all \\\r\n&')"
+run_hook 2 "AC1 continuation-fold: prefix surface -- nohup split from the invocation by a continuation" \
+  "$NOSTATE" "$(bash_json $'nohup \\\nbash scripts/test/run-suites.sh --all')"
+# carried finding F3: the discriminating payload-surface shape is
+# run_in_background:true + an invocation placed AFTER a terminated heredoc --
+# HEAD admits it (the cycle-1 `${COMMAND%%<<*}` truncation removes everything
+# from the heredoc introducer onward, including the invocation). A
+# continuation-split invocation with no `&` is NOT used here: grep -qE matches
+# per PHYSICAL line, so the split invocation's own line already starts with
+# the path token and RUN_SUITES already matches it at HEAD -- that shape does
+# not discriminate cycle-1 from cycle-2 behavior.
+run_hook 2 "payload surface (F3): run_in_background=true + invocation after a terminated heredoc" \
+  "$NOSTATE" "$(bash_bg_json $'cat <<EOF > doc.md\ntext\nEOF\nbash scripts/test/run-suites.sh --all' 'true')"
+run_hook 2 "AC2 heredoc-introducer: bare <<EOF & (introducer deleted, & retained)" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all <<EOF &\nbody\nEOF')"
+run_hook 2 "AC2 heredoc-introducer: tab-stripping <<-EOF &" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all <<-EOF &\n\tbody\nEOF')"
+run_hook 2 "AC2 heredoc-introducer: quoted-delimiter <<\"EOF\" &" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all <<"EOF" &\nbody\nEOF')"
+run_hook 2 "stage-order-pinned: continuation precedes the heredoc introducer (fold before strip)" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all \\\n<<EOF &\nbody\nEOF')"
+run_hook 2 "AC5 post-heredoc tail: bare heredoc block, invocation backgrounded on a LATER line" \
+  "$NOSTATE" "$(bash_json $'cat <<EOF > doc.md\ntext\nEOF\nbash scripts/test/run-suites.sh --all &')"
+run_hook 2 "AC5 post-heredoc tail: <<-EOF spelling, invocation backgrounded on a LATER line" \
+  "$NOSTATE" "$(bash_json $'cat <<-EOF > doc.md\n\ttext\nEOF\nbash scripts/test/run-suites.sh --all &')"
+run_hook 2 "AC5 post-heredoc tail: quoted-delimiter <<\"EOF\" spelling, invocation backgrounded on a LATER line" \
+  "$NOSTATE" "$(bash_json $'cat <<"EOF" > doc.md\ntext\nEOF\nbash scripts/test/run-suites.sh --all &')"
+run_hook 2 "AC5 post-here-string tail: an earlier here-string command, invocation backgrounded on a LATER line" \
+  "$NOSTATE" "$(bash_json $'grep -q x <<< \"\$V\"\nbash scripts/test/run-suites.sh --all &')"
+# misread-introducer-is-bounded -- deny half: a quoted `<<` mention on an
+# earlier logical line opens a heredoc that never terminates; totality buffers
+# (never discards) the body, so the following REAL invocation line survives
+# and this denies. The admit half sits in -does-not-over-block below.
+run_hook 2 "misread-introducer-is-bounded (deny half): a quoted << mention on an earlier line does not drop the following real invocation" \
+  "$NOSTATE" "$(bash_json $'git commit -m \"note << here\"\nbash scripts/test/run-suites.sh --all &')"
+
+echo "Issue #134 c2 — background-deny-discriminates: multi-line admits stay admitted (AC3)"
+run_hook 0 "AC3 discrimination: bare newline separates a foreground invocation from a LATER backgrounded command" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all\necho done &')"
+run_hook 0 "AC3 discrimination: a backgrounded unrelated command stands BEFORE the foreground invocation" \
+  "$NOSTATE" "$(bash_json $'echo start &\nbash scripts/test/run-suites.sh --all')"
+run_hook 0 "AC3 discrimination: a continuation that ends without & stays admitted" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --selected \\\n.autoflow/issue-134-run-set.txt')"
+
+echo "Issue #134 c2 — background-deny-does-not-over-block: heredoc-body mentions, continuation-spanning quotes, degenerate input (AC3, totality)"
+run_hook 0 "AC3 quoted-body-still-admits: heredoc body merely WRITES the denied command text" \
+  "$NOSTATE" "$(bash_json $'cat <<EOF > doc.md\nbash scripts/test/run-suites.sh --all &\nEOF')"
+# the fold must run BEFORE the unquoting stage: if unquoting ran first, the
+# quote parity across the continuation would already be broken by the time the
+# fold joined the two physical lines, and this leg denies instead of admits.
+run_hook 0 "AC3 quoted-body-still-admits: git commit -m quoted message spans a continuation and ends in &" \
+  "$NOSTATE" "$(bash_json $'git commit -m \"deny fires when \\\nbash scripts/test/run-suites.sh --all &\"')"
+run_hook 0 "misread-introducer-is-bounded (admit half): single-line quoted << mention of the denied command" \
+  "$NOSTATE" "$(bash_json 'git commit -m "note << bash scripts/test/run-suites.sh --all &"')"
+run_hook 0 "degenerate-input-totality: empty command" \
+  "$NOSTATE" "$(bash_json '')"
+run_hook 0 "degenerate-input-totality: command is a single bare newline" \
+  "$NOSTATE" "$(bash_json $'\n')"
+
+echo "Issue #134 c2 — joined-parity: _fold_continuations output is byte-exact against the documented fold contract (carried finding F1)"
+# carried finding F1: a leg that MEASURES _JOINED byte-parity directly, not
+# only "siblings stay green". _fold_continuations is sourced from the hook at
+# GLOBAL SCOPE (feature design > shared-fold) in an isolated subshell: TOOL_NAME
+# is set to a value matching neither "Bash" nor "Agent" so no side-effecting
+# block runs, and `exit` is shadowed so the hook's own unconditional trailing
+# `exit 0` (check-autoflow-gate.sh, last line) returns control to this probe
+# instead of terminating it before the function call. The sentinel
+# append/strip idiom (feature design > joined-parity's own call-site pattern)
+# is reused here so a genuine trailing blank logical line is not silently
+# stripped by command substitution before the comparison runs.
+_probe_fold() {
+  local probe="$1" out
+  out=$(
+    exit() { return 0; }
+    printf '{"tool_name":"Noop","tool_input":{}}' \
+      | CLAUDE_PROJECT_DIR="$NOSTATE" source "$HOOK" >/dev/null 2>&1
+    _fold_continuations <<< "$probe"
+    printf X
+  )
+  printf '%s' "${out%X}"
+}
+_assert_fold() {
+  local desc="$1" probe="$2" expected="$3" got
+  got=$(_probe_fold "$probe")
+  if [[ "$got" == "$expected" ]]; then
+    echo "  PASS: $desc"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: $desc (expected $(printf '%q' "$expected"), got $(printf '%q' "$got"))"
+    FAIL=$((FAIL + 1))
+  fi
+}
+_assert_fold "empty input folds to empty" "" ""
+_assert_fold "bare newline folds to a single newline" $'\n' $'\n'
+_assert_fold "single-hop continuation joins with one space, backslash removed" $'a\\\nb' 'a b'
+_assert_fold "multi-hop continuation joins every hop" $'a\\\nb\\\nc' 'a b c'
+_assert_fold "continuation at EOF keeps content, backslash removed, no join" $'a\\' 'a'
+_assert_fold "CRLF continuation is stripped before the continuation test, then joined" $'a\\\r\nb' 'a b'
+_assert_fold "a genuine trailing blank logical line is preserved, not silently dropped" $'a\n' $'a\n'
+
 echo "=============================="
 echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"
 echo "=============================="
