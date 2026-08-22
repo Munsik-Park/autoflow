@@ -210,6 +210,20 @@ $_fc_acc"; fi
 # the first is stripped; an unterminated heredoc keeps its body; a body line
 # ending in a bare `\` is folded into the following line before the strip sees it,
 # so such a body merges with its terminator and stays in the buffer.
+#
+# _shb_ltrim: shared leading-space/tab stripper, used both on a candidate
+# terminator line (under `<<-`) and on a parsed delimiter token — the same
+# trim rule applied at two points in the scan below.
+_shb_ltrim() {
+  local _v="$1"
+  while :; do
+    case "$_v" in
+      ' '*|$'\t'*) _v="${_v#?}" ;;
+      *) break ;;
+    esac
+  done
+  printf '%s' "$_v"
+}
 _strip_heredoc_bodies() {
   local _shb_all='' _shb_first=1 _shb_buf='' _shb_bufn=0
   local _shb_in=0 _shb_delim='' _shb_dash=0
@@ -219,12 +233,7 @@ _strip_heredoc_bodies() {
     if [ "$_shb_in" = 1 ]; then
       _shb_cmp="$_shb_line"
       if [ "$_shb_dash" = 1 ]; then
-        while :; do
-          case "$_shb_cmp" in
-            ' '*|$'\t'*) _shb_cmp="${_shb_cmp#?}" ;;
-            *) break ;;
-          esac
-        done
+        _shb_cmp=$(_shb_ltrim "$_shb_cmp")
       fi
       if [ "$_shb_cmp" = "$_shb_delim" ]; then
         _shb_in=0; _shb_buf=''; _shb_bufn=0    # terminator: body dropped, keep reading
@@ -256,12 +265,7 @@ $_shb_line"
       _shb_tok="$_shb_orig"
       _shb_dash=0
       case "$_shb_tok" in -*) _shb_dash=1; _shb_tok="${_shb_tok#-}" ;; esac
-      while :; do
-        case "$_shb_tok" in
-          ' '*|$'\t'*) _shb_tok="${_shb_tok#?}" ;;
-          *) break ;;
-        esac
-      done
+      _shb_tok=$(_shb_ltrim "$_shb_tok")
       _shb_delim=''; _shb_after=''
       case "$_shb_tok" in
         '"'*)
