@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/adr/0019-scope-fit-verification-policy.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c291682488abdc1a8a6f110671d0491ca8d8cd1c7272ef9ff4a7b95c894d4866"
+      "sha256": "387de9f88cc94908823ded6d7008fe2a0d3b47b4062e4aa51f5f74c2776359a0"
     },
     {
       "source": "docs/adr/README.md",
@@ -335,7 +335,7 @@
       "dest": "scripts/cleanup/cleanup-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "4f4eca192fc05e23f0126971e4720c7974895757f13d9ea7e6df1bf0d331b789"
+      "sha256": "2c4994eef1955a8352e8ae34a2e743ecfae96d0ac6d8189a3c9f4819591fd42e"
     },
     {
       "source": "scripts/ledger/ledger-entry-id.sh",

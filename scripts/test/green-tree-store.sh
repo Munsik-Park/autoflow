@@ -36,6 +36,14 @@
 # root are ONE value with two consumers, so there is nothing for two
 # implementations to agree about — a second copy could only disagree.
 #
+# The archive-root half is TAKEN FROM that guard rather than re-expanded beside
+# it: `--check-archive-root` prints the absolute root it accepted, and the
+# composition below uses that printed value. Re-expanding
+# `${AUTOFLOW_ARCHIVE_ROOT}` here would resolve a relative value against
+# WHICHEVER process interpolated it, while the guard validated it against
+# `<root>` — one value with two anchors, agreeing only when `<root>` happens to
+# be the caller's cwd (issue #130 cycle 2, review finding).
+#
 # THE CWD IS A TERM OF BOTH CALLS. `cleanup-issue.sh` resolves its root with a
 # bare `git rev-parse --show-toplevel` and no `-C`, so it answers for the
 # repository containing the CURRENT WORKING DIRECTORY. Every invocation below
@@ -87,15 +95,24 @@ fi
 # store root resolves inside the repository tree (the shipped guard's own code,
 # because it is literally the shipped guard); returns 1 when the repository key
 # cannot be derived.
+#
+# THE PRINTED PATH IS ABSOLUTE AND OPENABLE FROM ANY CWD, and its archive-root
+# half is the root the guard accepted FOR <root> — so it is not re-interpretable
+# by whichever process opens it next. It is absolute, NOT normalized: a relative
+# $AUTOFLOW_ARCHIVE_ROOT yields literal `..` segments (`<root>/../ark/…`), which
+# open correctly but do not compare byte-wise against the same directory spelled
+# another way. Consumers that must decide whether two such paths name one
+# directory compare them by OS resolution (`cd -P` + `pwd`), never by bytes.
 # ---------------------------------------------------------------------------
 green_tree_store_path() {
-  local root="$1" key rc
-  ( cd "$root" 2>/dev/null && bash "$GREEN_TREE_CLEANUP_WRAPPER" --check-archive-root ) >/dev/null 2>&1
+  local root="$1" key prefix rc
+  prefix="$( cd "$root" 2>/dev/null && bash "$GREEN_TREE_CLEANUP_WRAPPER" --check-archive-root 2>/dev/null )"
   rc=$?
   [ "$rc" -eq 0 ] || return "$rc"
   key="$( cd "$root" 2>/dev/null && bash "$GREEN_TREE_CLEANUP_WRAPPER" --print-repo-key 2>/dev/null )"
   [ -n "$key" ] || return 1
-  printf '%s/%s/green-trees/register.md' "${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}" "$key"
+  # An operator-supplied trailing slash would otherwise compose `<root>//<key>`.
+  printf '%s/%s/green-trees/register.md' "${prefix%/}" "$key"
 }
 
 # ---------------------------------------------------------------------------

@@ -63,8 +63,11 @@ detecting under-declaration is not solved here.
      tightened. The bare-path token form keeps shipping and simply carries no certificate.
    - **The register is repo-scoped, not scoped to the minting issue's ledger.** Certificates are
      written to both the issue's own decision ledger and a **shared store** outside the repository
-     tree, at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md`, so a later issue reads a
-     certificate an earlier one minted at the same tree — the cross-issue cold start that made every
+     tree, at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md` — a location resolved
+     **absolutely**, its archive-root half anchored at the `--root` the archive-root guard was
+     invoked for rather than at whichever process later interpolates the variable, so a relative
+     `$AUTOFLOW_ARCHIVE_ROOT` names one directory for the writer and the reader alike — so a later
+     issue reads a certificate an earlier one minted at the same tree — the cross-issue cold start that made every
      new issue re-run the tree from scratch. The shared store is a **cache, not a ledger**: it carries
      no authority, it may be pruned, and a malformed entry in it is skipped with one warning rather
      than treated as a BLOCK, because skipping a foreign certificate narrows inheritance while

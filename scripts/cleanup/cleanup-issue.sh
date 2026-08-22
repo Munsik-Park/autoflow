@@ -47,13 +47,21 @@
 # nothing for two implementations to agree about, and a second copy could only
 # disagree.
 #
+# ON ACCEPTANCE THE GATE PRINTS THE ACCEPTED ARCHIVE ROOT on stdout: the
+# absolute, symlink-preserving form of the value it just validated, anchored on
+# the same $PWD its own resolution is anchored on. The guard is then the single
+# site that answers "which directory is the archive root", so a relative value
+# has no second anchor to be re-resolved against in whichever process consumes
+# it. On refusal it prints nothing and exits 65 before any print, so the
+# refusal path's stdout stays empty.
+#
 # Allow-list (so it never prompts even when rm is denied):
 #   "Bash(./scripts/cleanup/cleanup-issue.sh:*)"   (or the no-`./` form you invoke)
 #
 # Usage:
 #   scripts/cleanup/cleanup-issue.sh <issue-number> [<issue-number> ...]
 #   scripts/cleanup/cleanup-issue.sh --print-repo-key [<url>|--no-origin]
-#   scripts/cleanup/cleanup-issue.sh --check-archive-root
+#   scripts/cleanup/cleanup-issue.sh --check-archive-root   (prints the accepted absolute archive root)
 set -euo pipefail
 
 # derive_repo_key <url> <root> — PURE normalization of an origin URL to a
@@ -89,17 +97,30 @@ derive_repo_key() {
   fi
 }
 
+# absolute_path <path> — absolutize against $PWD WITHOUT touching symlinks or
+# `..`: a path already beginning with `/` is returned verbatim, anything else is
+# prefixed with `$PWD/`. Pure string work — it never stats, resolves or creates
+# anything, so it answers for a root that does not exist on disk.
+#
+# It is the case block `physical_path` used to open with, lifted to its own
+# definition so the guard's two derived forms — the physical one it JUDGES and
+# the symlink-preserving one it ANSWERS with — share one definition of what a
+# relative archive root is relative to. Two derivations, one anchor.
+absolute_path() {
+  case "$1" in
+    /*) printf '%s' "$1" ;;
+    *)  printf '%s' "$PWD/$1" ;;
+  esac
+}
+
 # physical_path <path> — canonicalize to the PHYSICAL absolute path, resolving
 # symlinks portably (POSIX `cd -P` + `pwd`; macOS has no `realpath -m`
-# guarantee). A relative path is absolutized against $PWD first (ledger E12);
-# a not-yet-existing tail is re-appended after resolving the nearest existing
-# directory ancestor, so a fresh archive root canonicalizes too.
+# guarantee). A relative path is absolutized against $PWD first (ledger E12,
+# now via `absolute_path`); a not-yet-existing tail is re-appended after
+# resolving the nearest existing directory ancestor, so a fresh archive root
+# canonicalizes too.
 physical_path() {
-  p="$1"; tail=""
-  case "$p" in
-    /*) : ;;
-    *)  p="$PWD/$p" ;;
-  esac
+  p="$(absolute_path "$1")"; tail=""
   while [ ! -d "$p" ] && [ "$p" != "/" ]; do
     tail="/${p##*/}$tail"
     p="${p%/*}"
@@ -123,6 +144,14 @@ physical_path() {
 # $ARCHIVE_ROOT as a side effect, which the archival path then uses as the
 # destination prefix — the guarded value and the used value are the same
 # variable by construction, not by agreement.
+#
+# It sets a third side-effect variable, $ARCHIVE_ROOT_ABS: the ABSOLUTE,
+# SYMLINK-PRESERVING form of the accepted root, which `--check-archive-root`
+# prints. Symlink-preserving rather than physical is deliberate — the guard
+# JUDGES the physical resolution, but the answer it hands out preserves the
+# operator's own spelling, so an absolute $AUTOFLOW_ARCHIVE_ROOT comes back
+# byte-identical to what was passed in. The two are different questions and
+# both are needed.
 gate_archive_root() {
   ARCHIVE_ROOT="${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}"
   ROOT_PHYS="$(cd -P "$1" && pwd)"
@@ -136,6 +165,7 @@ gate_archive_root() {
       exit 65
       ;;
   esac
+  ARCHIVE_ROOT_ABS="$(absolute_path "$ARCHIVE_ROOT")"
 }
 
 # Introspection subcommands — hoisted ABOVE the existence gate and the digits
@@ -144,6 +174,7 @@ gate_archive_root() {
 if [ "${1:-}" = "--check-archive-root" ]; then
   ROOT="$(git rev-parse --show-toplevel)"
   gate_archive_root "$ROOT"
+  printf '%s\n' "$ARCHIVE_ROOT_ABS"
   exit 0
 fi
 
