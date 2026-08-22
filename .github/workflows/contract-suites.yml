@@ -37,6 +37,7 @@ name: contract-suites
 on:
   pull_request:
     paths:
+      - '.claude/agents/autoflow-implementer.md'
       - '.claude/hooks/check-autoflow-gate.sh'
       - '.claude/workflows/**'
       - '.claude/workflows/architect-deliberation.js'
@@ -56,7 +57,9 @@ on:
       - 'docs/maintained-docs.md'
       - 'docs/reviewer-backend.md'
       - 'docs/teammate-contracts.md'
+      - 'docs/teammate-common-rules.md'
       - 'docs/thin-root-layer.md'
+      - 'plugin/autoflow/agents/autoflow-implementer.md'
       - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
       - 'plugin/autoflow/skills/**'
       - 'scripts/cleanup/cleanup-issue.sh'
@@ -112,6 +115,7 @@ on:
       - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-push-context-base-ref.sh'
       - 'tests/test-run-doc-invariants.sh'
+      - 'tests/test-run-economy.sh'
       - 'tests/test-standing-lint-drives.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
       - 'scripts/test/check-cycle-scope-guard.sh'
@@ -176,6 +180,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.claude/agents/autoflow-implementer.md'
       - '.claude/hooks/check-autoflow-gate.sh'
       - '.claude/workflows/**'
       - '.claude/workflows/architect-deliberation.js'
@@ -195,7 +200,9 @@ on:
       - 'docs/maintained-docs.md'
       - 'docs/reviewer-backend.md'
       - 'docs/teammate-contracts.md'
+      - 'docs/teammate-common-rules.md'
       - 'docs/thin-root-layer.md'
+      - 'plugin/autoflow/agents/autoflow-implementer.md'
       - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
       - 'plugin/autoflow/skills/**'
       - 'scripts/cleanup/cleanup-issue.sh'
@@ -251,6 +258,7 @@ on:
       - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-push-context-base-ref.sh'
       - 'tests/test-run-doc-invariants.sh'
+      - 'tests/test-run-economy.sh'
       - 'tests/test-standing-lint-drives.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
       - 'scripts/test/check-cycle-scope-guard.sh'
@@ -410,6 +418,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-gate-hardening.sh ')
         timeout-minutes: 10
         run: bash tests/test-gate-hardening.sh
+
+      - name: test-run-economy.sh
+        id: s-test-run-economy
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-run-economy.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-run-economy.sh
 
       - name: test-ledger-entry-id.sh
         id: s-test-ledger-entry-id

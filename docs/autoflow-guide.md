@@ -439,7 +439,7 @@ Precedent: the GATE:QUALITY "Known blind-spot checks" below. Authority: [`docs/a
 
 - **Teammate spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned (no persistent ARCHITECT teammates to shut down). At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
-- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**).
+- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt carries the whole-tree-run prohibition (GREEN step 2): the Developer AI runs only its resolved run set or the specific suites its change requires, and never a whole-tree run of the suite runner — neither the `--all` flag nor the bare invocation, which selects the full set on an empty delta or a `push` event.
 - Both receive: acceptance criteria + verification design + affected docs.
 
 ---
@@ -497,6 +497,7 @@ The Developer AI writes the minimum code that passes the tests.
    - [MUST] Do NOT implement behavior not covered by tests.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
+   - [MUST] Never start a **whole-tree run** of the suite runner. The prohibition is keyed on the run, not on a flag: both the `--all` flag and the **bare invocation** reach the whole tree, the bare form whenever its resolved delta is empty or the event is a `push` (see [`submodule-common-rules.md`](submodule-common-rules.md) > Testing Standards). The whole-tree sweep has exactly one invoker and one position — the orchestrator, at VALIDATE step 1. Execute only your resolved run set, or the specific suites your change requires; the acceptance run that produces evidence is GREEN step 5's, which you do not run.
    - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
 3. Before committing, if this change touched a manifest-registered source, run
    the manifest regen and stage the result in the same commit.
@@ -508,7 +509,8 @@ The Developer AI writes the minimum code that passes the tests.
      [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
      Rules > Derived artifacts.
 4. Commit (feat/fix branch).
-5. Orchestrator (not the Developer AI): GREEN step 5 — evaluate the tree-identity
+5. Orchestrator (not the Developer AI): GREEN step 5 — quiesce the tree per the
+   capture point's own obligation (Green-tree register > Capture point), evaluate the tree-identity
    predicate at the capture point, run the acceptance run on the mismatch branch,
    and register the Green. See the step-5 block below.
 ```
@@ -580,7 +582,8 @@ evaluation" rule reaching this site by extension.
 Run the tests; on failure, branch by cause.
 
 ```
-1. [MUST] Evaluate the tree-identity predicate, then the suite-coverage predicate it is the fast path of
+1. [MUST] Quiesce the tree before the capture point — the capture point's own obligation
+   (Green-tree register > Capture point). Then evaluate the tree-identity predicate, then the suite-coverage predicate it is the fast path of
    (both under Green-tree register below), then execute the resolved run set.
    Whole-tree match → nothing executes; inherit the cited Green and report `inherited`.
    Otherwise        → execute the resolved run set (the resolver's plan, via the idiom in GREEN step 5);
@@ -673,6 +676,17 @@ keyed to identical observations. A non-empty `git status --porcelain` at the cap
 entry entirely — the run still happens, but no entry is written for it. An entry carries the capture-point
 values, never values re-taken at phase exit, so a tree change occurring after the capture point leaves the
 entry keyed to the tree the suite actually executed over.
+
+**Tree quiescence is a property of the capture point.** From the instant the capture point is taken
+until the run it opened has finished, no tracked-tree write occurs. The orchestrator obtains that
+condition by sending `HOLD` to every live teammate **before** taking the capture point, and issues no
+tree-work instruction again until the run ends; the resuming instruction travels bundled with `GO` in one message.
+Sending a re-entry instruction and a `HOLD` as two messages, in that order, is **denied**: the
+teammate's write lands in the window between them, the tree moves under the run, and the entry the
+run would have earned is refused — the elapsed time buys nothing. Because the rule is scoped to the
+capture point rather than to a list of steps, it reaches every site that takes one, present and
+future, by construction. The teammate side of the obligation is
+[`teammate-common-rules.md`](teammate-common-rules.md) > Tree Quiesce (HOLD/GO).
 
 **Writer**: the orchestrator, at the exit of the phase whose step executed the run, and only on an all-PASS
 outcome over a clean capture point. Teammates never write it — that write authority is the provenance
@@ -995,6 +1009,8 @@ on the same ledger, under its own marker `green-tree-use` and following the same
    - Apply suggested fixes (no behavior change — tests must pass without modification).
    - If /simplify finds nothing, proceed to step 2 (do NOT skip).
 2. [MUST] Re-run all tests the change requires — execute the resolved run set → confirm Green, except on an inherited Green.
+   - [MUST] Quiesce the tree before this step's capture point — the capture point's own obligation
+     (VERIFY > Green-tree register > Capture point).
    - [MUST] Evaluate the tree-identity predicate (VERIFY > Green-tree register) at this step's entry and
      record the outcome. The obligation is the evaluation, not the run, so the step cannot silently drop it;
      evaluate it even when step 1 made no changes, because a "/simplify changed nothing" claim is
@@ -1021,7 +1037,9 @@ with the Green state from VERIFY.
 1. Automated tests: all PASS confirmed — and confirmed HERE, not inherited from VERIFY.
    [MUST] Whole-tree sweep, the coverage floor: `bash scripts/test/run-suites.sh --all`,
    unconditionally, evaluating no inheritance predicate, and register the resulting Green with
-   `suites` naming the enumerated set. This is the one position in a cycle at which the whole
+   `suites` naming the enumerated set. [MUST] Quiesce the tree before the sweep's capture point —
+   the capture point's own obligation (VERIFY > Green-tree register > Capture point). This is the
+   one position at which a whole-tree run is invoked, and the orchestrator is its only invoker. This is the one position in a cycle at which the whole
    enumerated tree executes. It does not inherit and has no exception: were the sweep allowed to
    subtract inherited suites, a cycle could reach hand-off with every verdict tracing back through
    inheritance to a first run that was itself selection-scoped. Inheritance rests on `ci-subject`

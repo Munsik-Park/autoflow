@@ -75,6 +75,25 @@ git status                  # any uncommitted work?
 
 - **[MUST]** A spawned teammate runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, planner, implementer, tester, evaluator) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
 - **Why (lifecycle contract):** the harness's background-task contract — *re-invoke the owning agent when the task completes* — holds only for an agent that has a future turn. A spawned subagent terminates with its final response, so any still-pending background process is **reaped at teardown**: its output is lost and no completion notification is ever delivered, stalling the orchestrator on a report that never arrives (issue #952 — 71-minute orchestrator deadlock, 2026-07-07). A background CPU-heavy process can also starve the agent's own foreground verification and distort the pass/fail verdict (issue #287). The background + completion-notification pattern is therefore **orchestrator-only** (the main loop is the sole actor with future turns).
+- **Enforced at the tool boundary for suite runs (issue #134):** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run, whose result must stay keyed to the capture-point tree (`docs/autoflow-guide.md` > VERIFY > Green-tree register; `docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
+
+---
+
+## Tree Quiesce (HOLD/GO)
+
+- **[MUST]** On receiving `HOLD` from the orchestrator, perform **no tracked-tree write** until `GO`
+  arrives — no commit, no `git add`/staging, no file edit under your target scope, no branch or index
+  operation. Report readiness and wait.
+- Reads and analysis remain permitted: they cannot move the tree.
+- **Why:** the orchestrator takes a *capture point* (`git status --porcelain`, `git rev-parse
+  HEAD^{tree}`, `git rev-parse HEAD`) immediately before starting a suite run, and the run's result is
+  evidence only for the tree observed at that instant
+  (`docs/autoflow-guide.md` > VERIFY > Green-tree register > *Capture point*). A tracked-tree write
+  landing while that run is in flight moves the tree under it, the register refuses the entry, and the
+  whole run is wasted.
+- `GO` arrives **bundled with the resuming instruction in the same message**; a `HOLD` is never sent
+  after a re-entry instruction as a second message. So there is no window in which you hold an
+  instruction to write and no `HOLD` yet: if you have work and no `GO`, you are held.
 
 ---
 
