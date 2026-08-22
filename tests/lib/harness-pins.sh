@@ -64,14 +64,17 @@
 # verdict / fail-closed sentinels / register minting / ledger branch), all 15
 # DISCRIMINATING at RED -- the AS-IS script has no Reconcile phase and calls no
 # 'ac-diff' sub-agent, so RED (d474cd7) MEASURES 135 ok + 15 FAIL. 150 is therefore
-# the GREEN TARGET value, in the #123/#127 discipline. NOTE (GREEN, #138): the pin
-# is the target for an ALL-GREEN harness. 28 pre-existing converging cases whose
-# responders do not answer the new 'ac-diff' label fall into the DELIBERATELY
-# fail-closed AC_CHANGE path and FAIL until their responder fixtures are amended --
-# the same fixture-amendment class #127 cycle 3 recorded above for its 7 amended
-# resume cases. The amendment is test-side and is reported to the team lead rather
-# than made here; until it lands, `node test/workflows/run.mjs` measures 122 ok and
-# tests/test-issue-27-composition-oracle.sh reds against this pin.
+# the GREEN TARGET value, in the #123/#127 discipline. NOTE (GREEN, #138): GREEN
+# (b1fcf63) measured 122 ok + 28 FAIL -- 28 pre-existing converging cases whose
+# responders did not answer the new 'ac-diff' label fell into the DELIBERATELY
+# fail-closed AC_CHANGE path, the same fixture-amendment class #127 cycle 3
+# recorded above for its 7 amended resume cases. RESOLVED (RED2b, 525c3f3): the
+# 28 responders (via the shared capResponder/resumeResponder factories plus 14
+# inline responders) now answer 'ac-diff' with
+# { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+# -- the shape the #138 ac-diff-plumbing leg proves yields CONVERGED with no
+# findings. No #138 fail-closed leg was touched. `node test/workflows/run.mjs`
+# now measures all 150 ok, matching the pin below.
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
