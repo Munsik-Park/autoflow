@@ -20,6 +20,7 @@
 #
 # Gate points:
 #   - Bash(gh pr merge)             → DENIED unconditionally (AutoFlow never merges)
+#   - Bash(backgrounded run-suites.sh) → DENIED unconditionally (foreground only)
 #   - Bash(git push <default br>)   → DENIED unconditionally (push dev branch + PR only)
 #   - Bash(gh issue create)         → DENIED unconditionally; also the REST form
 #                                     (POST to the issues collection). Filing goes
@@ -178,6 +179,81 @@ $_acc"; fi
   if printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+merge\b"; then
     echo "BLOCKED: AutoFlow does not merge — 'gh pr merge' is denied (CLAUDE.md > HANDOFF)." >&2
     echo "Merging, issue close, and deployment are owned by an external review process." >&2
+    exit 2
+  fi
+
+  # ── Backgrounded suite-run deny (issue #134; state-independent — P2) ──
+  # docs/autoflow-guide.md > VERIFY > Green-tree register: a suite run's result is
+  # evidence only if the tree stood still under it, and a backgrounded run outlives
+  # the turn that started it. The foreground obligation was prose only
+  # (docs/teammate-common-rules.md > Bash Execution Mode); it moves to the tool
+  # boundary here. Three surfaces, all reading BG_SCAN (below):
+  #   (a) payload   — .tool_input.run_in_background is true AND the command carries
+  #                   a run-suites.sh invocation token;
+  #   (b) prefix    — BG_PREFIX: a mandatory nohup/setsid wrapper word at the
+  #                   command position of the invocation;
+  #   (c) trailing& — BG_TAIL: the command containing the invocation is terminated
+  #                   by a backgrounding `&` (one `&`, not `&&`, not `&>`, not `2>&1`).
+  # Residual over-block, accepted: a PreToolUse hook has no actor or phase
+  # knowledge, so the operator's own backgrounded sweep is refused too — the remedy
+  # is to run the same command in the foreground. Residual escapes, accepted: a
+  # wrapper word outside the group below, a shell variable holding the path, and
+  # the `{ …; } &` brace-group form (out of P1's threat model, as above).
+  #
+  # BG_SCAN — this deny's OWN scan buffer; SCAN and _SEGMENTS are untouched.
+  # The shared SCAN deletes quoted substrings, so `bash "$ROOT/…/run-suites.sh" &`
+  # reduces to `bash  &` and the commonest invocation spelling would be erased
+  # before any matcher saw it. Here a quoted span free of command separators is
+  # UNQUOTED (quotes dropped, content kept) so the path token still occupies a
+  # command position, while a span whose own text carries `;` `&` or `|` is
+  # DELETED whole exactly as SCAN deletes it — otherwise a prose --body/-m
+  # describing this deny would supply the very boundary CMD_BOUNDARY anchors on.
+  # The four alternatives are ORDERED so each consumes a COMPLETE span (safe form
+  # first at a span's opening quote, deleting form second): two independent
+  # substitutions lose quote parity across two spans and admit
+  # `bash "…/run-suites.sh" --all & echo "a; b"`. The replacement is a
+  # back-reference, never a newline, so the C2 NOTE's constraint is not touched;
+  # a non-participating group expands empty on BSD and GNU sed alike.
+  BG_SCAN=$(printf '%s' "${COMMAND%%<<*}" \
+    | sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g")
+  # Every invocation form the repository writes passes the script as an ARGUMENT
+  # to an interpreter (`bash scripts/test/run-suites.sh --all`), so a bare
+  # CMD_BOUNDARY + command-word test would match none of them. RUN_SUITES keeps
+  # the boundary and tolerates the tokens that legitimately sit between it and the
+  # path — the same token-interposition shape GIT_PUSH applies to git's global
+  # options (docs/gate-matching-standard.md > P1).
+  BG_WRAPPER='(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|nohup|setsid|env|time|command)[[:space:]]+)*'
+  BG_INTERP='((sh|bash|zsh|dash|ksh)([[:space:]]+-[^[:space:]]+)*[[:space:]]+)?'
+  RUN_SUITES="${CMD_BOUNDARY}${BG_WRAPPER}${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
+  # BG_PREFIX — RUN_SUITES with the wrapper word made MANDATORY; BG_WRAPPER
+  # appears on both sides of it so `env FOO=1 nohup bash …` and `nohup setsid
+  # bash …` match too. A single composed pattern, not a co-occurrence, so P1's
+  # segment-scoping MUST does not reach it (and it needs no segmentation, which
+  # is built from the erased SCAN and could not see a quoted path anyway).
+  BG_PREFIX="${CMD_BOUNDARY}${BG_WRAPPER}(nohup|setsid)[[:space:]]+${BG_WRAPPER}${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
+  # BG_TAIL — also ONE composed pattern. The run of characters between the
+  # invocation and the `&` is constrained by the pattern itself: it closes on `;`
+  # (a new command starts there, so `… --all; echo done &` backgrounds only the
+  # echo) and stays open across `&&` and `|` (a pipeline or AND-list carrying the
+  # invocation is backgrounded AS A WHOLE by a trailing `&`). The `&` must not be
+  # preceded by `&` `;` `<` `>` (so `&&` and `2>&1` are not backgrounding) nor
+  # followed by `&` or `>` (so `&&` and `&> log` are not). The intervening run is
+  # OPTIONAL so the argument-less `bash …/run-suites.sh&` is caught. No `\n`
+  # appears in any bracket expression (not portable BSD/GNU; grep is
+  # line-oriented, so no match crosses a newline in any case).
+  BG_TAIL="${RUN_SUITES}"'([^;]*[^&;<>])?&([^&>]|$)'
+  RUN_IN_BACKGROUND=$(echo "$INPUT" | jq -r '.tool_input.run_in_background // empty' 2>/dev/null)
+  _bg_deny=0
+  if [ "$RUN_IN_BACKGROUND" = "true" ] && printf '%s' "$BG_SCAN" | grep -qE "$RUN_SUITES"; then
+    _bg_deny=1
+  elif printf '%s' "$BG_SCAN" | grep -qE "$BG_PREFIX"; then
+    _bg_deny=1
+  elif printf '%s' "$BG_SCAN" | grep -qE "$BG_TAIL"; then
+    _bg_deny=1
+  fi
+  if [ "$_bg_deny" = 1 ]; then
+    echo "BLOCKED: a backgrounded run of scripts/test/run-suites.sh is denied — run it in the foreground (docs/teammate-common-rules.md > Bash Execution Mode; docs/autoflow-guide.md > VERIFY > Green-tree register)." >&2
+    echo "A backgrounded suite run outlives the turn that started it, so its result cannot be keyed to the capture-point tree and starves the foreground verification it is meant to certify." >&2
     exit 2
   fi
 

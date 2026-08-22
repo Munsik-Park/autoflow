@@ -78,6 +78,24 @@ git status                  # any uncommitted work?
 
 ---
 
+## Tree Quiesce (HOLD/GO)
+
+- **[MUST]** On receiving `HOLD` from the orchestrator, perform **no tracked-tree write** until `GO`
+  arrives — no commit, no `git add`/staging, no file edit under your target scope, no branch or index
+  operation. Report readiness and wait.
+- Reads and analysis remain permitted: they cannot move the tree.
+- **Why:** the orchestrator takes a *capture point* (`git status --porcelain`, `git rev-parse
+  HEAD^{tree}`, `git rev-parse HEAD`) immediately before starting a suite run, and the run's result is
+  evidence only for the tree observed at that instant
+  (`docs/autoflow-guide.md` > VERIFY > Green-tree register > *Capture point*). A tracked-tree write
+  landing while that run is in flight moves the tree under it, the register refuses the entry, and the
+  whole run is wasted.
+- `GO` arrives **bundled with the resuming instruction in the same message**; a `HOLD` is never sent
+  after a re-entry instruction as a second message. So there is no window in which you hold an
+  instruction to write and no `HOLD` yet: if you have work and no `GO`, you are held.
+
+---
+
 ## Work Completion Process
 
 ```
