@@ -209,6 +209,18 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 
 **Route.** Recorded here rather than as a new ADR, per [`development-guideline.md`](development-guideline.md) > ADR Policy, which accepts "an ADR **or** a documented owner decision". The owner's own artifact makes that call: issue #40's *ADR 후보 대조* section defers the ADR-necessity judgment to DIAGNOSE intake triage and asks only that the relationship to ADR-0016 be recorded, while AC5 asks for the decision to land in this document. The relationship is the one ADR-0016 already set — extend an existing evaluation procedure rather than add a rubric item.
 
+### Decision 11: A Late-Gate FAIL Re-enters at the Phase Its Cause Names
+
+**Problem.** GATE:QUALITY, VALIDATE step 1 and INTEGRATE each failed to a single destination — RED — regardless of why they failed. The evaluator already produces per-item scores and reasons; the routing discarded that information, and every FAIL re-ran test writing, implementation, verification, refactor, the whole-tree sweep, the security audit and a full ten-item re-score.
+
+**Evidence.** **#138 cycle 1** — GATE:QUALITY failed three times (ledger O5, O7, O9), each time on the single item `Doc updates` with the other nine items passing; each FAIL re-ran the full tail of the cycle (about 5.7 h, five whole-tree runs, three `opus` Developer AI spawns, three full ten-item re-scores) to change two to four lines of documentation per attempt. In the same session, VERIFY's cause-branched path returned a `fix_test` verdict to RED alone and was Green again in 35 minutes — the cost difference between a routed and an unrouted failure, measured in one session.
+
+**Decision.** The evaluator tags each failed item with a `remedy_class` (`doc` / `test` / `impl` / `design`, or `operator` when it cannot say), and the orchestrator re-enters at the nearest phase that can make that kind of change — a doc commit, RED, GREEN, or ARCHITECT; mixed classes go to the farthest point ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > FAIL routing; `scripts/gate/remedy-route.sh`). Re-entry re-scores only the failed items and any inherited item the re-entry diff touched. The `doc` route, which skips RED / GREEN / VERIFY, carries a class-level remedy obligation: the fix anchors on a repo-wide sweep record the hook checks before the doc commit, because #138's second and third FAILs were residual sites of a kind the first remedies had already fixed elsewhere. VALIDATE and INTEGRATE failures branch the same way (`test` / `impl`; INTEGRATE is fixed `impl`).
+
+**What it does not do.** Caps and escalation timing are unchanged — `max 3×`, escalation on the fourth FAIL; the cap counts FAILs, not the distance travelled. The classification is the evaluator's, never the implementing role's (the VERIFY arbitration principle), and an item it cannot classify pauses for the operator rather than being routed with its neighbours. The cycle's one whole-tree run (VALIDATE step 1) is not re-run on a `doc` re-entry: per-phase runs are selection-scoped by rule, and the whole-tree run is once per PR.
+
+**Route.** This is the methodology's second deliberate divergence from upstream (`CLAUDE.md` > What This Repo Is), taken as an **operator decision** — the issue (#140) was filed by the operator and the change was executed as operator work outside an AutoFlow cycle. Recorded here rather than as a new ADR, per [`development-guideline.md`](development-guideline.md) > ADR Policy.
+
 ---
 
 ## Generalization Rationale

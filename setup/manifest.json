@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fb5fc377ec0f6531e96fd16ef7d66350c09aa819ffd8799ccb99c7baae10332f"
+      "sha256": "0ad45a8dd762e44946117d7b2e24eaa129fde438a6fdffab0ab8be57f15c7fc0"
     },
     {
       "source": "docs/INDEX.md",
@@ -90,14 +90,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bac4f826fd5b00d6c233500dd38b0de3e1ab4de9765543c228b76b74409bdce5"
+      "sha256": "732a9f6ca76697c01d470279caae76d86b165ff5c021729c4a12a12f6e7237b4"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "146b7696f69d8da13e217e316231e59ef8dc8ea7e3957fc72251049e6f2dca5e"
+      "sha256": "cd8cab2bb422f28a521ef3d6e9c152176c72113412e254bb2f66fbd7eada3355"
     },
     {
       "source": "docs/development-guideline.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4a76dd746d7c87b78a9b59b3873abea4b43af1ceeaa621d0b592128294d15b9d"
+      "sha256": "0ba8e8bf52ef4e2ecb65e99ddf193d469e8567dbe76d7e41580808e76db8be17"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b9ea162e26330b7f516ba8daf0d2187086d239106d77f6aa072b2961dc67b774"
+      "sha256": "812123d5ce79587bf6efc37cbd7ee726a5a9f44fb8f01b2e7bf01614cfc64233"
     },
     {
       "source": "docs/title-guide.md",

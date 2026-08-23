@@ -66,7 +66,7 @@ be diluted by averaging.
 | Hypothesis evaluation (GATE:HYPOTHESIS — cause form, bug/incident only) | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× → DIAGNOSE |
 | Plan evaluation (GATE:PLAN) | Feasibility, Dependencies, Scope, Security, Test plan (5) — Feasibility/Scope absorb the structural-fit & over-engineering concern the DIAGNOSE structure gate deliberately does not score — over-engineering is scored symmetrically across the plan and its verification design, so an unjustified verification layer fails Scope — and carry the embedded ADR-conformance check (divergence from a governing ADR, or an architecture-impacting change with no governing ADR/owner decision, caps the named item at 6; N/A by default) and the embedded AC-authority check (a verification-design difference against the issue's acceptance-criteria table that no `[ac-decision]` ledger entry covers caps Scope at 6) | max 3× → ARCHITECT |
 | Security audit (AUDIT) | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
-| Quality evaluation (GATE:QUALITY) | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) — Fit also carries the embedded ADR-conformance regression re-confirmation (caps Fit at 6; same trigger as GATE:PLAN), and Completeness carries the embedded AC-authority check for post-ARCHITECT drift (a carried verification-design row for which no test assertion or implementation site can be named, and which no `[ac-decision]` ledger entry covers, caps Completeness at 6) | max 3× → RED |
+| Quality evaluation (GATE:QUALITY) | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) — Fit also carries the embedded ADR-conformance regression re-confirmation (caps Fit at 6; same trigger as GATE:PLAN), and Completeness carries the embedded AC-authority check for post-ARCHITECT drift (a carried verification-design row for which no test assertion or implementation site can be named, and which no `[ac-decision]` ledger entry covers, caps Completeness at 6) | max 3× → re-entry by `remedy_class` (doc commit / RED / GREEN / ARCHITECT; `operator` → pause) |
 | Doc evaluation | Accuracy, Completeness, Clarity, Format compliance (4) | one revision |
 
 The category sets and weights should be customised per project. They reflect
@@ -91,6 +91,8 @@ emerge, humans adjust the criteria.
     { "suite": "tests/<path>.sh", "source": "<green-tree entry heading>", "head": "<hash>", "result": "<summary line>" }
   ],
   "scores": { "item": { "score": 8, "reason": "evidence" } },
+  "remedy_class": { "<failed item>": "doc | test | impl | design | operator" },
+  "rescore": { "source": "<prior report path>", "rescored": ["item"], "inherited": ["item"] },
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
   "recommendations": ["items 5-6"]
@@ -111,6 +113,16 @@ the search precedes scoring.
 | `case` | string, non-empty | always | The strongest FAIL argument found. With `disposition: "none_found"` it states **what was searched** (which items, which anchors re-derived), so the record is evidence of the search rather than a blank. |
 | `disposition` | enum `refuted` \| `survived` \| `none_found` | always | Outcome of the refutation attempt. |
 | `reflected_in` | array of rubric item names | always present (`[]` when `disposition != "survived"`) | Which scored item(s) recorded the surviving case — the join between the narrative record and the numeric `scores`. "Recorded" does not imply "scored down": an item listed here may still score ≥ 7. |
+
+`remedy_class` (GATE:QUALITY only) maps **each failed item** (score < 7) to the kind of change that
+clears it; the orchestrator routes the FAIL's re-entry from it ([`autoflow-guide.md`](autoflow-guide.md)
+> GATE:QUALITY > FAIL routing). It is report material the orchestrator acts on; the hook does not
+read it from the report (it reads the routed class the orchestrator records in state).
+
+| Key | Type | Required | Meaning |
+|-----|------|----------|---------|
+| `remedy_class` | object, one entry per failed item | **on every FAIL** (`{}` on a PASS) | Value enum `doc` \| `test` \| `impl` \| `design` \| `operator`. A failed item with no entry is a contract violation — reject + re-spawn, as for a missing `fail_hypothesis`. `operator` means "not classifiable with confidence" and pauses the cycle for the operator. |
+| `rescore` | object | **on a re-entry evaluation** (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items plus any inherited item whose anchor files the re-entry diff touched); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. |
 
 `inherited_verdicts` carries the citation for every suite verdict the evaluator took from the host's
 own record instead of re-executing, per [`teammate-contracts.md`](teammate-contracts.md) >

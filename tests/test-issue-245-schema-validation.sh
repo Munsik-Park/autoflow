@@ -180,7 +180,7 @@ echo "=== CLASS A: Static assertions ==="
 #   (a) Exactly ONE occurrence of the AUTOFLOW-SCHEMA-VALIDATION label.
 #       The validation lives in ONE place, not N per-site copies.
 #       On the unmodified hook this is 0 → FAIL (RED-confirming).
-#   (b) Anchored `exit 2` statement count >= 12 — a FLOOR, not an exact pin
+#   (b) Anchored `exit 2` statement count >= 14 — a FLOOR, not an exact pin
 #       (issue #119). Ratchet record of the baseline: 6 at the #245 GREEN (which reused the MALFORMED_STATE block,
 #       adding zero new sites) → 7 when the blocked-by-review label deny was
 #       added WITHOUT bumping this baseline (latent drift: the assertion was
@@ -195,8 +195,10 @@ echo "=== CLASS A: Static assertions ==="
 #       POST …/issues form, Section 1 state-independent) → 12 with the issue
 #       #134 background-deny (a backgrounded run-suites.sh invocation refused
 #       at the tool boundary: payload surface, BG_PREFIX nohup/setsid prefix,
-#       BG_TAIL trailing-&, Section 1 state-independent) — the floor's current
-#       value. A deny ADDITION no longer reds this arm and needs no edit here;
+#       BG_TAIL trailing-&, Section 1 state-independent) → 14 with the issue
+#       #140 Gate 5 (`git commit` under a GATE:QUALITY remedy_class=doc
+#       re-entry: corrupt-state read fails closed + missing/incomplete sweep
+#       record denied) — the floor's current value. A deny ADDITION no longer reds this arm and needs no edit here;
 #       a deny REMOVAL still does, which is the regression class the arm exists
 #       for (a consolidation that silently drops a deny). The floor is raised
 #       deliberately, never lowered. Naive grep -c 'exit 2' is
@@ -213,8 +215,8 @@ assert_eq "A8a: exactly ONE AUTOFLOW-SCHEMA-VALIDATION label in hook (consolidat
   # ^^^ FAILS on unmodified hook (count=0) — RED-confirming
 
 EXIT2_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$HOOK" 2>/dev/null || true)
-assert_static "A8b: anchored 'exit 2' statement count >= 12 — the deny-site floor (found: $EXIT2_COUNT)" \
-  bash -c "[[ $EXIT2_COUNT -ge 12 ]]"
+assert_static "A8b: anchored 'exit 2' statement count >= 14 — the deny-site floor (found: $EXIT2_COUNT)" \
+  bash -c "[[ $EXIT2_COUNT -ge 14 ]]"
   # See the ratchet record in the A8 comment block above. The floor is a
   # RATCHET: raise it deliberately when a deny addition is meant to become
   # permanent; never lower it. A8d/A8e below drive both directions against a

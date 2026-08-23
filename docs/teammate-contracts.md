@@ -29,6 +29,27 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - **[MUST]** Assign scores only after the FAIL hypothesis has been formed, searched, and dispositioned. Scoring never precedes the search.
 - **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less teammate report (`CLAUDE.md` > Execution Principles > *Verify teammate claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
 
+### Remedy class (GATE:QUALITY FAIL routing)
+
+Binds the GATE:QUALITY form only. The orchestrator routes a FAIL's re-entry from this field
+([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > FAIL routing); the evaluator is the
+classifying authority and the implementing roles do not re-classify.
+
+- **[MUST]** On a FAIL, tag every item scored below 7 with a `remedy_class` — `doc` (documentation /
+  comment text, no behavior change), `test` (test assets), `impl` (implementation), `design` (the
+  converged design itself) — starting from the default per item (`scripts/gate/remedy-route.sh
+  default-class <item>`) and overriding it with a stated reason when the default misreads the
+  defect (a `Doc updates` cap caused by a prompt string or a hook message is `impl`).
+- **[MUST]** Write `operator` when the class cannot be stated with confidence. Do not guess: an
+  `operator` entry pauses the cycle for the operator's decision, which is cheaper than a wrong route.
+- **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: the
+  orchestrator rejects it and re-spawns a fresh Evaluation AI, with the same cap (max 2) and the same
+  escalation as an empty `fail_hypothesis`.
+- **[MUST]** On a re-entry evaluation, score afresh only the items listed in `rescore.rescored` — the
+  previously failed items plus any inherited item whose anchor files the re-entry diff touched — and
+  copy the rest from the cited prior report (`rescore.source`). The fresh-spawn rule is unchanged;
+  the input is narrowed, not the independence.
+
 ### Execution discipline (scope, sampling, time)
 
 This subsection **constrains** the pre-scoring FAIL hypothesis above; it does not replace it. The

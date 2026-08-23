@@ -107,7 +107,7 @@ flowchart TD
     AUD -->|FAIL ×3| HUMAN
     AUD -->|PASS| QUAL
     QUAL -->|PASS| DEL
-    QUAL -->|FAIL ≤3×| RED
+    QUAL -->|FAIL ≤3× · re-entry by remedy_class<br/>doc commit / RED / GREEN / ARCHITECT| RED
     QUAL -->|FAIL ×4| HUMAN
     DEL --> INT
     INT -->|FAIL| RED
@@ -152,13 +152,13 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
                                                     AUDIT  ◄── retry ≤2×
                                                        │
                                                        ▼
-                                                GATE:QUALITY ◄── retry ≤3× → RED
+                                                GATE:QUALITY ◄── retry ≤3× → by remedy_class (doc commit / RED / GREEN / ARCHITECT)
                                                        │
                                                        ▼
                                                     DELIVER
                                                        │
                                                        ▼
-                                                   INTEGRATE → [FAIL] → RED
+                                                   INTEGRATE → [FAIL] → GREEN (impl)
                                                        │
                                                        ▼
                                                    HANDOFF ◄── retry ≤2×
@@ -1146,8 +1146,13 @@ with the Green state from VERIFY.
    inheritance to a first run that was itself selection-scoped. Inheritance rests on `ci-subject`
    declaration quality, and this unconditional sweep is what bounds an under-declared header's
    damage to a single cycle rather than letting it reach the reviewer.
-   On failure → RED (matching INTEGRATE FAIL → RED); the existing GREEN ↔ VERIFY round-trip rules
-   apply and no new cap is introduced.
+   On failure → cause-branched by the **first failing assertion's suite**: read that suite's
+   `# ci-subject:` header; a subject set naming only test assets (`tests/**`) classifies `test` →
+   RED, any other subject classifies `impl` → GREEN → VERIFY step 1 → REFINE → VALIDATE
+   (`scripts/gate/remedy-route.sh route <class>`). The header names what the suite covers, not
+   why it failed — when the subject set is mixed or the orchestrator cannot tell whether the suite
+   or its subject is wrong, classify `impl` (the farther point). The existing GREEN ↔ VERIFY
+   round-trip rules apply and no new cap is introduced.
 2. Minimal-implementation check: PASS confirmed (achieved in VERIFY step 3).
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
 4. Maintained-docs check: confirm impacted docs are updated.
@@ -1280,7 +1285,68 @@ each-item ≥ 7 criterion:
   half, this binds cycles whose DIAGNOSE authored an AC table under the clause.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → block) → DELIVER.
-- **FAIL** → RED (max 3×).
+- **FAIL** → routed by `remedy_class` (below; max 3× — the cap counts FAILs, not the distance re-entered).
+
+### FAIL routing (`remedy_class`)
+
+A FAIL does not route to RED by default. The evaluator tags **every failed item** (score < 7) with a
+`remedy_class` — the kind of change that clears it — and the orchestrator re-enters the cycle at the
+nearest phase that can make that change. The evaluator is the classifying authority (the same
+principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-classify.
+
+| `remedy_class` | Meaning | Re-entry |
+|---|---|---|
+| `doc` | the item clears by editing documentation / comments with no behavior change | orchestrator doc commit → selected suites → GATE:QUALITY re-score |
+| `test` | the item clears by changing test assets | RED (current path) |
+| `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
+| `design` | the item clears only by revisiting the converged design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
+| `operator` | the evaluator cannot classify with confidence | report situation-first, `active:false`, `phase:"awaiting-user"`; the operator's answer fixes the class |
+
+- **Default class per item** — the evaluator's starting point, overridable with a stated reason:
+  `Doc updates` → `doc`; `Test coverage`, `Test quality` → `test`; `Fit` → `design`; every other
+  item → `impl` (`scripts/gate/remedy-route.sh default-class <item>`). A `Doc updates` cap caused
+  by text that executes — a prompt string inside a workflow script, a hook message — is `impl`, not
+  `doc`. When the evaluator is not confident, it writes `operator` rather than guessing: an
+  unclassifiable item is never carried along a route chosen for its neighbours.
+- **Mixed classes go to the farthest point**: `design` > `impl` > `test` > `doc`; `operator` anywhere
+  pauses. `scripts/gate/remedy-route.sh route <class>...` is the single owner of this rule; the
+  orchestrator records the routed class as `phases.gate_quality.remedy_class` in the state file
+  ([`CLAUDE.md`](../CLAUDE.md) > AutoFlow State Tracking > Remedy class recording).
+- **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: reject
+  it and re-spawn a fresh Evaluation AI, exactly as for a missing `fail_hypothesis`
+  ([`teammate-contracts.md`](teammate-contracts.md) > Evaluation AI > Remedy class).
+- **Caps are unchanged**: `max 3×` and the escalation on the 4th FAIL stand. What changes is the
+  distance a re-entry travels, not the number of re-entries permitted.
+
+#### `doc` re-entry — class-level remedy
+
+The `doc` route skips RED / GREEN / VERIFY, so its remedy must be **class-level, not site-level**: the
+#138 cycle fixed the evaluator's listed sites twice and was failed twice more on residual sites of
+the same kind. The fix anchors on a **repo-wide sweep for the pattern the evaluator named**, not on
+the list of sites it happened to find.
+
+1. Write `.autoflow/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
+   command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
+   remedy fixes every hit (or records why a hit is legitimately exempt).
+2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../CLAUDE.md) > Team Structure /
+   Commit Ownership). **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
+   record exists with both sections non-empty** — it checks the record file, never the wording of an
+   instruction. On a second `doc` FAIL of the same class, the response is a wider sweep predicate,
+   not a standing doc-phrase suite (none are kept after #141).
+3. Run the suites the selection rule picks for the doc diff (`scripts/test/select-suites.sh`); no
+   whole-tree run — the cycle's one whole-tree sweep is VALIDATE step 1, already executed.
+4. Re-score (below).
+
+### Re-entry re-score
+
+After any class's re-entry, GATE:QUALITY runs again as a **fresh spawn with a narrowed input**: it
+re-scores the items that failed plus every previously-passing item whose anchor files the re-entry
+diff touched; the remaining items inherit their prior score by citation. The report states the
+re-scored item list and the inheritance source (the prior report's path) in its `rescore` field
+([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The state file still
+receives all ten scores — the hook computes avg / min over the full set — inherited ones copied
+verbatim from the cited report. An inherited item whose anchor file appears in the re-entry diff
+and is missing from the re-scored list is a report defect: reject and re-spawn.
 
 ---
 
@@ -1311,7 +1377,7 @@ In a multi-repo deployment (one or more submodules), INTEGRATE builds the system
 4. Cross-cutting concerns (auth, network ingress, etc.) verified.
 ```
 
-**Failure**: INTEGRATE FAIL → RED (existing GREEN↔VERIFY round-trip rules apply).
+**Failure**: INTEGRATE FAIL → GREEN — fixed `impl` class (an integration or bundle failure is by nature an implementation-side remedy) → VERIFY step 1 → REFINE → VALIDATE; existing GREEN↔VERIFY round-trip rules apply.
 
 ### Deploy/CI-path conditional verification
 
@@ -1343,7 +1409,7 @@ Non-empty ⇒ the verification bundle below is a **mandatory PASS/FAIL gate** fo
 
 The bundle commands exercise a *target service repo's* surfaces; their live effectiveness against a real target repo is walked in `tests/manual/issue-847-manual-scenarios.md` (this single-repo framework repo owns none of these surfaces, so its own cycles hit the defined no-op).
 
-**Failure**: a bundle item that fails is an **INTEGRATE FAIL → RED** (existing GREEN↔VERIFY round-trip rules apply; no new regression cap is introduced).
+**Failure**: a bundle item that fails is an **INTEGRATE FAIL → GREEN** (`impl` class; existing GREEN↔VERIFY round-trip rules apply; no new regression cap is introduced).
 
 ---
 
