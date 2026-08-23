@@ -209,7 +209,7 @@ assert "fixture-inertness: every executable fixture file is extensionless" \
 
 # The real coverage lint does not enumerate anything under the fixture tree
 # (real execution, no double).
-LINT_OUT="$(bash "$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh" 2>&1)"
+LINT_OUT="$(cd "$PROJECT_ROOT" && bash scripts/test/check-suite-ci-coverage.sh 2>&1)"
 LINT_EXIT=$?
 assert "fixture-inertness: scripts/test/check-suite-ci-coverage.sh exits 0 over the real tree" \
   $([ "$LINT_EXIT" -eq 0 ] && echo 0 || echo 1)
@@ -493,7 +493,7 @@ FROZEN_HOOK=""
 if [ -f "$ARMS_JSON" ]; then
   TREE_FOR_HOOK="$(jq -r '.tree // empty' "$ARMS_JSON" 2>/dev/null)"
   if [ -n "$TREE_FOR_HOOK" ]; then
-    FROZEN_HOOK="$(mktemp)"
+    FROZEN_HOOK="$PASSING74/frozen-check-autoflow-gate.sh"
     if git -C "$PROJECT_ROOT" show "${TREE_FOR_HOOK}:.claude/hooks/check-autoflow-gate.sh" > "$FROZEN_HOOK" 2>/dev/null; then
       chmod +x "$FROZEN_HOOK"
     else
