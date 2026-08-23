@@ -36,7 +36,21 @@
 # guard reads AC_ROW.properties.disposition.enum and fails closed for lack of
 # the guard itself. `node test/workflows/run.mjs` measures 156 ok + 8 FAIL
 # against the as-is script; 164 is the GREEN target once the row/substitution
-# guard ships.
+# guard ships (GREEN c2, bf5de75, measured 164 ok, matching the pin) -> 169
+# (#138 cycle 2, RED2 c2 -- VERIFY step-3 uncovered-clause legs per
+# .autoflow/issue-138-c2-verify-report.md). Five new legs
+# (row-ac-whitespace-only, row-nonstring-locator, row-nonstring-proposed,
+# substitution-ac-whitespace-only, substitution-nonstring-proposed) close a
+# verification-design coverage gap against clauses the GREEN c2 implementation
+# already carries as explicit design obligations (ac non-empty-after-trim,
+# locator/proposed as string, on both AC_ROW and AC_SUBSTITUTION) -- these are
+# the "add a test" branch of the minimal-implementation check, not a defect,
+# so all five PASS immediately against the unchanged GREEN c2 implementation.
+# `node test/workflows/run.mjs` measures 169 ok against the current tree,
+# matching the pin below. (A sixth finding, the redundant
+# `typeof row.disposition === 'string'` clause at architect-deliberation.js:392,
+# is a Developer AI removal and carries no new leg here -- see the verify
+# report.)
 # The #123, #127 and #127-cycle-2/3 bumps are all the RED-commit TARGET value, not the
 # RED-commit MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating),
 # #127 adds 25 resume cases (23 discriminating, 2 deliberate regression locks documented
@@ -102,4 +116,4 @@
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=164
+HARNESS_OK_COUNT=169

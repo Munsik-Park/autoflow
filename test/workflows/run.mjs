@@ -3099,5 +3099,86 @@ await test('ARCHITECT: disposition "absent" with carried: true fails closed to A
   // direction the codex finding's class covers.
 })
 
+// ---- ARCHITECT: VERIFY step-3 uncovered-clause legs (issue #138 cycle 2, RED2 c2) -------------
+// Added post-GREEN per the orchestrator's VERIFY step 3 disposition
+// (.autoflow/issue-138-c2-verify-report.md): four sub-clauses of acRowWellFormed /
+// acSubstitutionWellFormed were uncovered by any cycle-2 leg even though they are explicit clauses
+// of the feature design's row/substitution predicate table (ac non-empty-after-trim; locator /
+// proposed as string) -- a verification-design coverage gap against an accepted design, not
+// implementation overreach. These legs are expected to PASS immediately against the existing GREEN
+// implementation -- that is the "add a test" branch of the check, not a defect. (The fifth finding,
+// the redundant `typeof row.disposition === 'string'` clause at :392, is a Developer AI removal, not
+// a test gap here.)
+
+await test('ARCHITECT: a row whose ac is present but empty/whitespace-only fails closed to AC_CHANGE with the reconciliation sentinel (VERIFY-step-3, row-ac-whitespace-only)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ ac: '   ', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'x' }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { result, calls } = await runArch({ issue: '138-c2-row-ac-whitespace' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a whitespace-only ac is not a valid identity key and must fail closed, not just an absent ac')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
+await test('ARCHITECT: a row whose locator is a non-string fails closed to AC_CHANGE with the reconciliation sentinel (VERIFY-step-3, row-nonstring-locator)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 123, proposed: 'x' }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { result, calls } = await runArch({ issue: '138-c2-row-nonstring-locator' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a non-string locator must be caught by the fail-closed guard')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
+await test('ARCHITECT: a row whose proposed is a non-string fails closed to AC_CHANGE with the reconciliation sentinel (VERIFY-step-3, row-nonstring-proposed)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 123 }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { result, calls } = await runArch({ issue: '138-c2-row-nonstring-proposed' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a non-string proposed must be caught by the fail-closed guard')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
+await test('ARCHITECT: a substituted[] item whose ac is present but empty/whitespace-only fails closed to AC_CHANGE with the reconciliation sentinel (VERIFY-step-3, substitution-ac-whitespace-only)', async () => {
+  // Dispatch-pairing discipline carried from RED c2: a clean, non-empty ac_rows row accompanies the
+  // malformed substituted[] item so the run does not take the "ac list absent" branch instead of the
+  // guard under test (same clean-row shape as substitution-item-fails-closed, run.mjs).
+  const cleanRow = { ac: 'AC2', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }
+  const acDiff = { ac_source_present: true, ac_rows: [cleanRow], ledger_ac_decisions: [], substituted: [{ ac: ' ', locator: 'x', proposed: 'x' }] }
+  const { result, calls } = await runArch({ issue: '138-c2-sub-ac-whitespace' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a whitespace-only substitution ac is not a valid identity key and must fail closed')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
+await test('ARCHITECT: a substituted[] item whose proposed is a non-string fails closed to AC_CHANGE with the reconciliation sentinel (VERIFY-step-3, substitution-nonstring-proposed)', async () => {
+  const cleanRow = { ac: 'AC2', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }
+  const acDiff = { ac_source_present: true, ac_rows: [cleanRow], ledger_ac_decisions: [], substituted: [{ ac: 'AC1', locator: 'x', proposed: 123 }] }
+  const { result, calls } = await runArch({ issue: '138-c2-sub-nonstring-proposed' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a non-string substitution proposed must be caught by the fail-closed guard')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
 console.log(failures ? `\n${failures} test(s) FAILED` : '\nall workflow regression tests passed')
 process.exit(failures ? 1 : 0)
