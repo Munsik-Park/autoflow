@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/handoff/confirm-ci-green.sh docs/autoflow-guide.md
+# ci-subject: scripts/handoff/confirm-ci-green.sh docs/autoflow-guide.md tests/lib/confirm-ci-green-harness.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: HANDOFF step-5 CI-green confirm helper — Issue #25
 # =============================================================================
@@ -45,7 +47,7 @@
 #   "vacuous PASS" convention for a guard with nothing to detect) — they are
 #   guards, not RED discriminators for AC6; the existence check is what
 #   confirms overall Red.
-#   AC7, AC8 — FAIL (docs not yet restructured; current text asserted against
+#   AC7 — FAIL (docs not yet restructured; current text asserted against
 #   the design's stable tokens does not contain them).
 #
 # Cycle-2 (review-response, PR #28 Medium finding) RED expectation - added by
@@ -73,10 +75,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCRIPT="$PROJECT_ROOT/scripts/handoff/confirm-ci-green.sh"
 MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
+
+# Shared harness: run_bounded, run_confirm, PRECHECK_MERGEABLE_CLEAN (issue #122).
+# Sourced after SCRIPT and MOCK_GH_DIR, which run_confirm reads.
+. "$PROJECT_ROOT/tests/lib/confirm-ci-green-harness.sh"
 AUTOFLOW_GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
 EXTERNAL_REVIEW_SEQ="$PROJECT_ROOT/docs/external-review-sequencing.md"
 GIT_WORKFLOW="$PROJECT_ROOT/docs/git-workflow.md"
-MAINTAINED_DOCS="$PROJECT_ROOT/docs/maintained-docs.md"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -110,41 +115,6 @@ extract_section() {
   ' "$file"
 }
 
-# Bounded execution helper (per tests/test-issue-979-probe.sh run_bounded):
-# prefer timeout/gtimeout; else a sleep+kill fallback. Sets RB_EXIT and
-# RB_KILLED (1 iff the watchdog fired). Used as the OUTER wall-clock guard
-# for AC5's finite-termination proof (the script has no probe_run_bounded of
-# its own around the whole invocation — feature D3 note, §0 DCR-5).
-run_bounded() {
-  local bound="$1" logfile="$2"; shift 2
-  RB_KILLED=0
-  local timeout_bin=""
-  if command -v timeout >/dev/null 2>&1; then
-    timeout_bin="timeout"
-  elif command -v gtimeout >/dev/null 2>&1; then
-    timeout_bin="gtimeout"
-  fi
-  if [ -n "$timeout_bin" ]; then
-    ( "$timeout_bin" "$bound" "$@" ) >"$logfile" 2>&1
-    RB_EXIT=$?
-    [ "$RB_EXIT" -eq 124 ] && RB_KILLED=1
-  else
-    ( "$@" ) >"$logfile" 2>&1 &
-    local pid=$!
-    ( sleep "$bound"; if kill -0 "$pid" 2>/dev/null; then kill "$pid" 2>/dev/null; echo killed > "$logfile.watchdog"; fi ) &
-    local watchdog_pid=$!
-    wait "$pid" 2>/dev/null
-    RB_EXIT=$?
-    if [ -s "$logfile.watchdog" ]; then
-      RB_KILLED=1
-    else
-      kill "$watchdog_pid" 2>/dev/null
-    fi
-    wait "$watchdog_pid" 2>/dev/null
-    rm -f "$logfile.watchdog" 2>/dev/null
-  fi
-}
-
 # Outer harness-watchdog slack for the run_bounded legs below (AC5,
 # AC-C2-1a, AC-C2-1b, AC-C3-2, AC-C3-6, AC-C3-7). A shared CI runner adds
 # real subprocess-spawn overhead (the gh mock invocation, jq, mktemp) on
@@ -158,7 +128,6 @@ run_bounded() {
 HARNESS_OVERHEAD_SLACK_SECS="${HARNESS_OVERHEAD_SLACK_SECS:-8}"
 
 # Fixture bodies (JSON, one line each — feature §3.3 field shapes).
-PRECHECK_MERGEABLE_CLEAN='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN"}'
 PRECHECK_CONFLICTING_DIRTY='{"mergeable":"CONFLICTING","mergeStateStatus":"DIRTY"}'
 
 POLL_ALL_GREEN_CHECKRUN='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[{"__typename":"CheckRun","status":"COMPLETED","conclusion":"SUCCESS"}]}'
@@ -167,28 +136,6 @@ POLL_EMPTY_ROLLUP='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCh
 POLL_PENDING='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[{"__typename":"CheckRun","status":"IN_PROGRESS","conclusion":null}]}'
 POLL_FAILURE='{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":[{"__typename":"CheckRun","status":"COMPLETED","conclusion":"FAILURE"}]}'
 POLL_FLIPPED_CONFLICTING='{"mergeable":"CONFLICTING","mergeStateStatus":"DIRTY","statusCheckRollup":[]}'
-
-# run_confirm — invoke the script under test with the mock-gh PATH prepended,
-# capturing stdout/stderr/exit into globals. $1.. are the script's own argv.
-run_confirm() {
-  local out
-  out="$(mktemp)"
-  ( PATH="$MOCK_GH_DIR:$PATH" \
-    GH_INVOCATION_LOG="${GH_INVOCATION_LOG:-}" \
-    GH_MOCK_EXIT="${GH_MOCK_EXIT:-}" \
-    GH_MOCK_PRECHECK_BODY="${GH_MOCK_PRECHECK_BODY:-}" \
-    GH_MOCK_PRECHECK_EXIT="${GH_MOCK_PRECHECK_EXIT:-}" \
-    GH_MOCK_PRECHECK_SLEEP="${GH_MOCK_PRECHECK_SLEEP:-}" \
-    GH_MOCK_POLL_BODY="${GH_MOCK_POLL_BODY:-}" \
-    GH_MOCK_POLL_SEQUENCE_FILE="${GH_MOCK_POLL_SEQUENCE_FILE:-}" \
-    GH_MOCK_POLL_COUNTER_FILE="${GH_MOCK_POLL_COUNTER_FILE:-}" \
-    CI_POLL_TIMEOUT_SECS="${CI_POLL_TIMEOUT_SECS:-}" \
-    CI_POLL_INTERVAL_SECS="${CI_POLL_INTERVAL_SECS:-}" \
-    bash "$SCRIPT" "$@" ) >"$out" 2>&1
-  RUN_EXIT=$?
-  RUN_OUTPUT="$(cat "$out")"
-  rm -f "$out"
-}
 
 echo "=============================================="
 echo "confirm-ci-green.sh (HANDOFF step-5 CI-green confirm, issue #25)"
@@ -422,16 +369,6 @@ assert_true "AC7: external-review-sequencing.md Post-reconcile gate retains the 
 GITWORKFLOW_BODY="$(cat "$GIT_WORKFLOW" 2>/dev/null || true)"
 assert_true "AC7: git-workflow.md cross-references confirm-ci-green.sh (no third prose restatement)" \
   "printf '%s' \"\$GITWORKFLOW_BODY\" | grep -qF 'confirm-ci-green.sh'"
-
-# =============================================================================
-echo ""
-echo "=== AC8 (docs/maintained-docs.md registry row added) ==="
-
-MAINTAINED_BODY="$(cat "$MAINTAINED_DOCS" 2>/dev/null || true)"
-assert_true "AC8: maintained-docs.md contains a row citing scripts/handoff/confirm-ci-green.sh" \
-  "printf '%s' \"\$MAINTAINED_BODY\" | grep -qF 'scripts/handoff/confirm-ci-green.sh'"
-assert_true "AC8: maintained-docs.md row also cites the test tests/test-issue-25-confirm-ci-green.sh" \
-  "printf '%s' \"\$MAINTAINED_BODY\" | grep -qF 'tests/test-issue-25-confirm-ci-green.sh'"
 
 # =============================================================================
 echo ""

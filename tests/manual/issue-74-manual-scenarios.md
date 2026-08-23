@@ -151,7 +151,7 @@ orchestrator assertion. No automated check can bind the two once the scratch
 records are archived at the next PREFLIGHT; this line is the recorded human
 procedure per Feature §4.
 
-## 7. Required departures (carried into ADR-0019, not asserted away here)
+## 7. Required departures (carried into ADR-0021, not asserted away here)
 
 1. **C7's literal form.** This pilot substitutes a seeded fixture probe for
    "one migrated cycle" (C7's literal wording) — a real cycle diff with no

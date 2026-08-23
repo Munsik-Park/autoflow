@@ -2,6 +2,11 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: tests/fixtures/ docs/adr/ .claude/hooks/check-autoflow-gate.sh
+# lane: cycle-scoped
+# retire-with: #74
+# cycle-arm: #74
+# out-of-tree-inputs: yes
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #74 — C7 pilot fixture ground truth + verdict predicate
 #   (cycle-scoped suite, RED stage 2)
@@ -24,7 +29,7 @@
 # to the team lead for why.
 #
 # RED expectation (this commit — GREEN is landing concurrently; the fixture
-# and frozen arm records exist from RED stage 1 / the pilot; ADR-0019 and the
+# and frozen arm records exist from RED stage 1 / the pilot; ADR-0021 and the
 # Branch A hook/CLAUDE.md edits may or may not be present at any given run):
 #   FAIL (discriminators, pre-GREEN): adr-0019-record (file absent),
 #     verdict-predicate-derivation's ADR-comparison leg, cost-latency-record's
@@ -34,7 +39,7 @@
 #   PASS (guards, already true from RED stage 1 / the pilot alone):
 #     probe-ground-truth, ground-truth-not-handed, fixture-inertness,
 #     one-tree-witness, pilot-record-completeness, predicate-edge-arms
-#     (pure evaluator logic, no dependency on ADR-0019),
+#     (pure evaluator logic, no dependency on ADR-0021),
 #     cost-latency-record's frozen-record sub-check, adr-0017-untouched,
 #     adr-0003-invariant, arm-payload-parity, arm-substrate-parity.
 # =============================================================================
@@ -46,11 +51,39 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=tests/lib/base-ref.sh
 . "$SCRIPT_DIR/lib/base-ref.sh"
 
+# Cycle #74 change-surface allow-list (cycle-arm: #74) — the paths this cycle's
+# PR is allowed to touch vs main; the manifest lint binds the cycle-scoped lane
+# to this declared evaluation set.
+# shellcheck disable=SC2034
+allow_list=(
+  ".claude/hooks/check-autoflow-gate.sh"
+  ".github/workflows/contract-suites.yml"
+  "CLAUDE.md"
+  "REUSE.toml"
+  "docs/adr/0021-c7-pilot-spawn-mode-result.md"
+  "docs/adr/README.md"
+  "docs/autoflow-guide.md"
+  "docs/gate-matching-standard.md"
+  "docs/repo-boundary-rules.md"
+  "docs/submodule-common-rules.md"
+  "docs/teammate-common-rules.md"
+  "docs/teammate-contracts.md"
+  "plugin/autoflow/hooks/check-autoflow-gate.sh"
+  "setup/manifest.json"
+  "tests/fixtures/c7-pilot-arms.json"
+  "tests/fixtures/c7-pilot-ground-truth.md"
+  "tests/fixtures/c7-pilot/"
+  "tests/manual/issue-74-manual-scenarios.md"
+  "tests/test-gate-hardening.sh"
+  "tests/test-issue-223-schema-hook-contract.sh"
+  "tests/test-issue-74-c7-pilot.sh"
+)
+
 FIXTURE_DIR="$PROJECT_ROOT/tests/fixtures/c7-pilot"
 GROUND_TRUTH="$PROJECT_ROOT/tests/fixtures/c7-pilot-ground-truth.md"
 ARMS_JSON="$PROJECT_ROOT/tests/fixtures/c7-pilot-arms.json"
 MANUAL_SCENARIOS="$PROJECT_ROOT/tests/manual/issue-74-manual-scenarios.md"
-ADR_0019="$PROJECT_ROOT/docs/adr/0019-c7-pilot-spawn-mode-result.md"
+ADR_0019="$PROJECT_ROOT/docs/adr/0021-c7-pilot-spawn-mode-result.md"
 HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
 
 PASS=0
@@ -253,9 +286,9 @@ if [ -f "$ARMS_JSON" ]; then
     $([ "$MISSING_C8" = "0" ] && echo 0 || echo 1)
 fi
 if [ -f "$ADR_0019" ] && grep -qi 'latency' "$ADR_0019" && grep -qi 'turn' "$ADR_0019"; then
-  pass "cost-latency-record: ADR-0019 states the C8 latency/turn figures"
+  pass "cost-latency-record: ADR-0021 states the C8 latency/turn figures"
 else
-  fail "cost-latency-record: ADR-0019 does not (yet) state the C8 figures"
+  fail "cost-latency-record: ADR-0021 does not (yet) state the C8 figures"
 fi
 
 # =============================================================================
@@ -295,9 +328,9 @@ if [ -f "$ARMS_JSON" ]; then
   RECOMPUTED_VERDICT=$(jq -r "$VERDICT_JQ | .verdict" "$ARMS_JSON" 2>/dev/null)
   echo "  (info) recomputed verdict from frozen records: ${RECOMPUTED_VERDICT:-<jq error>}"
   if [ -f "$ADR_0019" ] && [ -n "${RECOMPUTED_VERDICT:-}" ] && grep -q "$RECOMPUTED_VERDICT" "$ADR_0019"; then
-    pass "verdict-predicate-derivation: ADR-0019 states the same verdict the suite recomputes ($RECOMPUTED_VERDICT)"
+    pass "verdict-predicate-derivation: ADR-0021 states the same verdict the suite recomputes ($RECOMPUTED_VERDICT)"
   else
-    fail "verdict-predicate-derivation: ADR-0019 does not (yet) state the recomputed verdict ($RECOMPUTED_VERDICT)"
+    fail "verdict-predicate-derivation: ADR-0021 does not (yet) state the recomputed verdict ($RECOMPUTED_VERDICT)"
   fi
 else
   fail "verdict-predicate-derivation: no frozen records to recompute from"
@@ -305,7 +338,7 @@ fi
 
 # =============================================================================
 # predicate-edge-arms — the evaluator on synthetic branches, independent of
-# the real pilot data (pure logic; no dependency on GREEN's ADR-0019).
+# the real pilot data (pure logic; no dependency on GREEN's ADR-0021).
 # =============================================================================
 echo "predicate-edge-arms"
 
@@ -370,7 +403,7 @@ assert "predicate-edge-arms (f): cross-step split (better step3, worse step4) ->
 echo "adr-0019-record"
 
 if [ -f "$ADR_0019" ]; then
-  pass "adr-0019-record: docs/adr/0019-c7-pilot-spawn-mode-result.md exists"
+  pass "adr-0019-record: docs/adr/0021-c7-pilot-spawn-mode-result.md exists"
   ADR_BODY="$(cat "$ADR_0019")"
   # ADR heading/value convention (docs/adr/0000-adr-template.md): "## Status"
   # heading, then the value on its own line below (not inline on the heading
@@ -395,7 +428,7 @@ if [ -f "$ADR_0019" ]; then
   assert "adr-0019-record departure 3/3: states the residual channel-intrinsic prompt-position asymmetry" \
     $(printf '%s' "$ADR_BODY" | grep -qi 'prompt.position\|position asymmetry\|channel.intrinsic' && echo 0 || echo 1)
 else
-  fail "adr-0019-record: docs/adr/0019-c7-pilot-spawn-mode-result.md does not exist"
+  fail "adr-0019-record: docs/adr/0021-c7-pilot-spawn-mode-result.md does not exist"
 fi
 
 # =============================================================================

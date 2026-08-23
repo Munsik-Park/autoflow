@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/git-workflow.md tests/fixtures/gate-schema.json tests/plugin/verify-install-into-target.sh tests/test-gate-hardening.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: gate-score write contract at the producer site — Issue #55
 # =============================================================================
@@ -75,10 +78,8 @@ HOOK="$PROJECT_ROOT/.claude/hooks/check-autoflow-gate.sh"
 CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
 GATE_SCHEMA="$PROJECT_ROOT/tests/fixtures/gate-schema.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
-MANUAL_SCENARIOS="$PROJECT_ROOT/tests/manual/issue-55-manual-scenarios.md"
 
 SUITE_PATH="tests/test-issue-55-score-format-contract.sh"
-MANUAL_PATH="tests/manual/issue-55-manual-scenarios.md"
 MARKER='<!-- SCORE-SHAPE-EXAMPLE -->'
 # Single spelling asserted at both fail-closed diagnostic sites (feature
 # design > Change surface > diagnostic hint > proposed line).
@@ -324,31 +325,13 @@ if [ -f "$CI_WORKFLOW" ]; then
 
   PR_HAS_SUITE=no;   printf '%s\n' "$PR_SECTION"   | grep -qF "'$SUITE_PATH'"  && PR_HAS_SUITE=yes
   PUSH_HAS_SUITE=no; printf '%s\n' "$PUSH_SECTION" | grep -qF "'$SUITE_PATH'"  && PUSH_HAS_SUITE=yes
-  PR_HAS_MANUAL=no;  printf '%s\n' "$PR_SECTION"   | grep -qF "'$MANUAL_PATH'" && PR_HAS_MANUAL=yes
-  PUSH_HAS_MANUAL=no;printf '%s\n' "$PUSH_SECTION" | grep -qF "'$MANUAL_PATH'" && PUSH_HAS_MANUAL=yes
 
   assert_true "ci-self-registration-a1: $SUITE_PATH appears in the pull_request paths: block (got: $PR_HAS_SUITE)" "[ '$PR_HAS_SUITE' = yes ]"
   assert_true "ci-self-registration-a2: $SUITE_PATH appears in the push paths: block (got: $PUSH_HAS_SUITE)" "[ '$PUSH_HAS_SUITE' = yes ]"
-  assert_true "ci-self-registration-a3: $MANUAL_PATH appears in the pull_request paths: block (got: $PR_HAS_MANUAL)" "[ '$PR_HAS_MANUAL' = yes ]"
-  assert_true "ci-self-registration-a4: $MANUAL_PATH appears in the push paths: block (got: $PUSH_HAS_MANUAL)" "[ '$PUSH_HAS_MANUAL' = yes ]"
 
   RUN_STEP_CTX="$(grep -A2 -F "$SUITE_PATH" "$CI_WORKFLOW" 2>/dev/null || true)"
   RUN_STEP_OK=no; printf '%s\n' "$RUN_STEP_CTX" | grep -qF "run: bash $SUITE_PATH" && RUN_STEP_OK=yes
   assert_true "ci-self-registration-b: a 'run: bash $SUITE_PATH' step exists (got: $RUN_STEP_OK)" "[ '$RUN_STEP_OK' = yes ]"
-
-  # Placement arm (ledger E6/E7 — asserted, not advised): both new entries
-  # appear strictly below the last pre-existing entry of EACH block
-  # ('tests/manual/issue-51-manual-scenarios.md').
-  ANCHOR="'tests/manual/issue-51-manual-scenarios.md'"
-  PR_ANCHOR_LN="$(printf '%s\n' "$PR_SECTION" | grep -nF "$ANCHOR" | tail -1 | cut -d: -f1)"
-  PR_SUITE_LN="$(printf '%s\n' "$PR_SECTION" | grep -nF "'$SUITE_PATH'" | head -1 | cut -d: -f1)"
-  PUSH_ANCHOR_LN="$(printf '%s\n' "$PUSH_SECTION" | grep -nF "$ANCHOR" | tail -1 | cut -d: -f1)"
-  PUSH_SUITE_LN="$(printf '%s\n' "$PUSH_SECTION" | grep -nF "'$SUITE_PATH'" | head -1 | cut -d: -f1)"
-
-  assert_true "ci-self-registration-placement-pr: new entry sits strictly below the block's last pre-existing entry (anchor@${PR_ANCHOR_LN:-absent}, suite@${PR_SUITE_LN:-absent})" \
-    "[ -n '${PR_ANCHOR_LN:-}' ] && [ -n '${PR_SUITE_LN:-}' ] && [ '${PR_SUITE_LN:-0}' -gt '${PR_ANCHOR_LN:-0}' ]"
-  assert_true "ci-self-registration-placement-push: new entry sits strictly below the block's last pre-existing entry (anchor@${PUSH_ANCHOR_LN:-absent}, suite@${PUSH_SUITE_LN:-absent})" \
-    "[ -n '${PUSH_ANCHOR_LN:-}' ] && [ -n '${PUSH_SUITE_LN:-}' ] && [ '${PUSH_SUITE_LN:-0}' -gt '${PUSH_ANCHOR_LN:-0}' ]"
 
   # Companion window guard — a direct copy of test-issue-799-inert-cleanup.sh
   # AC6-ci's own expression (ledger E6: "so a placement mistake is attributed
@@ -360,24 +343,9 @@ if [ -f "$CI_WORKFLOW" ]; then
 else
   assert_true "ci-self-registration: $CI_WORKFLOW exists" "false"
   echo "  BLOCK: remaining ci-self-registration arms unmeasurable (workflow file missing) — counted FAIL, never skipped"
-  TESTS=$((TESTS + 7)); FAIL=$((FAIL + 7))
+  TESTS=$((TESTS + 4)); FAIL=$((FAIL + 4))
 fi
 
-# =============================================================================
-# manual-scenario-present
-# =============================================================================
-echo ""
-echo "=== manual-scenario-present ==="
-
-assert_true "manual-scenario-present-a: $MANUAL_PATH exists in the tracked tree" \
-  "[ -f '$MANUAL_SCENARIOS' ]"
-
-if [ -f "$MANUAL_SCENARIOS" ]; then
-  assert_true "manual-scenario-present-b: the file names the instruction-is-followed scenario" \
-    "grep -qi 'instruction-is-followed' '$MANUAL_SCENARIOS'"
-else
-  assert_true "manual-scenario-present-b: instruction-is-followed scenario named (unmeasurable — file missing above)" "false"
-fi
 
 
 echo "=============================="

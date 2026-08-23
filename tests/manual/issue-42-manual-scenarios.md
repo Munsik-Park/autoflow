@@ -1,7 +1,7 @@
 # Issue #42 — Manual/Environment-Dependent Verification Scenarios (Tier-2/Tier-3)
 
 This acceptance criterion is **not** covered by `tests/fixtures/doc-invariants.json`
-(registry entries `42-AC*`), `tests/test-issue-42-spawn-mode-contract.sh`, or
+(registry entries `42-AC*`) or
 `tests/test-issue-223-schema-hook-contract.sh` (`H42-BEHAVIOR-EQ`) — it is a claim
 about live Claude Code Agent Teams runtime behavior, not about document text or
 hook logic, and is not reproducible in CI (verification design

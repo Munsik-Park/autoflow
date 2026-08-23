@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude/hooks/check-autoflow-gate.sh docs/gate-matching-standard.md tests/fixtures/autoflow-state-canonical.json tests/fixtures/gate-schema.json tests/test-gate-hardening.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: check-autoflow-gate.sh CONTRACT (issue #223)
 # =============================================================================
@@ -707,7 +710,7 @@ run_hook_stderr 2 "multiple active" \
 # ---------------------------------------------------------------------------
 # H42-BEHAVIOR-EQ — issue #42 AC5 permanent behavioral oracle.
 # ---------------------------------------------------------------------------
-# POST-MIGRATION (issue #74 / ADR-0019): CLAUDE.md > Spawn mode by role
+# POST-MIGRATION (issue #74 / ADR-0021): CLAUDE.md > Spawn mode by role
 # lifetime now binds EVERY role to the single anonymous-direct channel, and
 # the hook's teammate-name-prefix declaration channel was retired jointly
 # (`resolve_spawn_role()`: any payload carrying `.tool_input.name` resolves

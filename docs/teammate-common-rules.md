@@ -76,6 +76,26 @@ git status                  # any uncommitted work?
 
 - **[MUST]** A spawned teammate runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, planner, implementer, tester, evaluator) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
 - **Why (lifecycle contract):** the harness's background-task contract — *re-invoke the owning agent when the task completes* — holds only for an agent that has a future turn. A spawned subagent terminates with its final response, so any still-pending background process is **reaped at teardown**: its output is lost and no completion notification is ever delivered, stalling the orchestrator on a report that never arrives (issue #952 — 71-minute orchestrator deadlock, 2026-07-07). A background CPU-heavy process can also starve the agent's own foreground verification and distort the pass/fail verdict (issue #287). The background + completion-notification pattern is therefore **orchestrator-only** (the main loop is the sole actor with future turns).
+- **Enforced at the tool boundary for suite runs (issue #134):** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run, whose result must stay keyed to the capture-point tree (`docs/autoflow-guide.md` > VERIFY > Green-tree register; `docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
+
+---
+
+## Tree Quiesce (spawn-boundary form)
+
+- **[MUST]** A spawned agent performs tracked-tree writes only inside its own spawn's lifetime, on
+  the assignment its spawn prompt carries — there is no message channel through which new tree work
+  can arrive mid-flight, and none through which a freeze could be delivered.
+- **Why:** the orchestrator takes a *capture point* (`git status --porcelain`, `git rev-parse
+  HEAD^{tree}`, `git rev-parse HEAD`) immediately before starting a suite run, and the run's result is
+  evidence only for the tree observed at that instant
+  (`docs/autoflow-guide.md` > VERIFY > Green-tree register > *Capture point*). A tracked-tree write
+  landing while that run is in flight moves the tree under it, the register refuses the entry, and the
+  whole run is wasted.
+- The quiesce obligation therefore sits with the **orchestrator's spawn schedule**, not with a
+  message protocol: no tree-writing spawn is issued between a capture point and the end of the run it
+  opened, and a capture point is taken only while no tree-writing spawn is in flight. (The HOLD/GO
+  message protocol this section previously specified belonged to the retired named-teammate mode —
+  see `CLAUDE.md` > Communication.)
 
 ---
 
@@ -110,6 +130,13 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 | Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
 | Discuss with another role | not available | a deliberation is delegated to a facilitator `Workflow` (below), never held between spawns |
 
+**Message economy** (issue #136, discharged structurally by the spawn-mode migration). The #136
+measurement priced every named-teammate message as a context re-write. With every role an anonymous
+direct spawn there is no message channel left to economize: the assignment travels once in the spawn
+prompt, the report travels once in the return value, and no ACK, HOLD/GO, or idle-notification turn
+exists. The measurement itself is retained at `docs/adr/0017-teammate-removal-feasibility.md` >
+Notes > C8.
+
 **Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the discussion
 runs inside an isolated **`Workflow`** (the facilitator). The Developer-AI and Test-AI
 run as in-script workflow sub-agents, their round-by-round exchange stays in workflow
@@ -126,7 +153,7 @@ Every role is an anonymous direct spawn, so there is exactly one delivery path.
 |---|---|---|
 | anonymous direct (`subagent_type`) — the only mode | the spawn's return value (sync) or a task notification (background) | none — the final text is the report; write the body to `.autoflow/*` and return an anchor + one-line summary |
 
-**Why the other mode was removed, and the measurement that removed it.** A named team spawn's final turn text was **discarded — never delivered to the lead**, so a report existing only as the final response was lost with no error; that mode required an explicit `SendMessage(to: "team-lead")` instead. Observed, not guaranteed: across all 12 subagents of the #40 cycle, delivery matched the `SendMessage` call count 12 out of 12 — every spawn that called it once was received, every spawn that never called it was not, and no transport failure occurred. Three of those losses (`eval-gate-plan-40`, `eval-quality-40`, `test-red-40`) were recovered only by re-requesting the report. That measurement is the case for the migration and is retained here for that reason; it described Claude Code Agent Teams behavior at the time and was re-derivable through `tests/manual/issue-42-manual-scenarios.md` M1. The remaining open question — whether a direct spawn detects as well on VERIFY steps 3 and 4 — was settled by the ADR-0017 C7 pilot, which returned `EQUAL_OR_BETTER` (`docs/adr/0019-c7-pilot-spawn-mode-result.md`).
+**Why the other mode was removed, and the measurement that removed it.** A named team spawn's final turn text was **discarded — never delivered to the lead**, so a report existing only as the final response was lost with no error; that mode required an explicit `SendMessage(to: "team-lead")` instead. Observed, not guaranteed: across all 12 subagents of the #40 cycle, delivery matched the `SendMessage` call count 12 out of 12 — every spawn that called it once was received, every spawn that never called it was not, and no transport failure occurred. Three of those losses (`eval-gate-plan-40`, `eval-quality-40`, `test-red-40`) were recovered only by re-requesting the report. That measurement is the case for the migration and is retained here for that reason; it described Claude Code Agent Teams behavior at the time and was re-derivable through `tests/manual/issue-42-manual-scenarios.md` M1. The remaining open question — whether a direct spawn detects as well on VERIFY steps 3 and 4 — was settled by the ADR-0017 C7 pilot, which returned `EQUAL_OR_BETTER` (`docs/adr/0021-c7-pilot-spawn-mode-result.md`).
 
 The single mode applies to every role; the per-role table is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
 

@@ -149,6 +149,12 @@ For comparison: review gate structures where two models find problems in each ot
 
 When introducing any new loop structure to this system, it must have an explicit termination condition. A loop without a termination condition is not permitted. This is not a guideline — it is a hard constraint.
 
+**Termination under an ARCHITECT resume** (issue #127)
+
+The ARCHITECT facilitation workflow accepts a `resume` argument that re-enters an `ESCALATE`d deliberation from its persisted register instead of cold-restarting it. This raises the round cap by one per resume (6 → 7 → 8 → …) and is unbounded in how many times an operator may take it, which reads at first like the loop-without-a-termination-condition this decision forbids. It is not, and the distinction is the one this decision actually turns on: **the loop's bound is in code, and every invocation carries one.** A resume run computes `roundCeiling = lastRound + 1` and admits exactly one round; the loop then exits on its own bound. There is no path on which a single invocation runs unbounded, and no counter is carried in the register that a later run could inflate.
+
+What is unbounded is the number of *operator decisions* to spend one more round — and an operator decision is precisely the human escalation point this decision requires a loop to terminate at. The termination condition is satisfied by the bound, not by a count of how many times a human chose to continue past it; requiring the latter would mean a human who has read the register and judged one further exchange worthwhile is refused by a machine cap. The pathological case this decision guards against — a loop that never hands control to a human — is the opposite shape: here control returns to the human on **every** round.
+
 ---
 
 ### Decision 8: Deliberation Runs in an Isolated Sub-Context (Delegated Facilitation)
@@ -202,6 +208,30 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 **What it does not do.** It is not a stricter gate. Rubric item counts, PASS thresholds (each ≥ 7, avg ≥ 7.5, security ≤ 3) and regression caps are unchanged, and a refuted FAIL case never moves a score — the obligation is to search, not to deduct. If gate FAIL rates rise materially after adoption, that is observable through the same evidence anchor the Spawn-Model revert rule uses (gate verdicts persist in the PR/issue thread).
 
 **Route.** Recorded here rather than as a new ADR, per [`development-guideline.md`](development-guideline.md) > ADR Policy, which accepts "an ADR **or** a documented owner decision". The owner's own artifact makes that call: issue #40's *ADR 후보 대조* section defers the ADR-necessity judgment to DIAGNOSE intake triage and asks only that the relationship to ADR-0016 be recorded, while AC5 asks for the decision to land in this document. The relationship is the one ADR-0016 already set — extend an existing evaluation procedure rather than add a rubric item.
+
+### Decision 11: A Late-Gate FAIL Re-enters at the Phase Its Cause Names
+
+**Problem.** GATE:QUALITY, VALIDATE step 1 and INTEGRATE each failed to a single destination — RED — regardless of why they failed. The evaluator already produces per-item scores and reasons; the routing discarded that information, and every FAIL re-ran test writing, implementation, verification, refactor, the whole-tree sweep, the security audit and a full ten-item re-score.
+
+**Evidence.** **#138 cycle 1** — GATE:QUALITY failed three times (ledger O5, O7, O9), each time on the single item `Doc updates` with the other nine items passing; each FAIL re-ran the full tail of the cycle (about 5.7 h, five whole-tree runs, three `opus` Developer AI spawns, three full ten-item re-scores) to change two to four lines of documentation per attempt. In the same session, VERIFY's cause-branched path returned a `fix_test` verdict to RED alone and was Green again in 35 minutes — the cost difference between a routed and an unrouted failure, measured in one session.
+
+**Decision.** The evaluator tags each failed item with a `remedy_class` (`doc` / `test` / `impl` / `design`, or `operator` when it cannot say), and the orchestrator re-enters at the nearest phase that can make that kind of change — a doc commit, RED, GREEN, or ARCHITECT; mixed classes go to the farthest point ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > FAIL routing; `scripts/gate/remedy-route.sh`). Re-entry re-scores only the failed items and any inherited item the re-entry diff touched. The `doc` route, which skips RED / GREEN / VERIFY, carries a class-level remedy obligation: the fix anchors on a repo-wide sweep record the hook checks before the doc commit, because #138's second and third FAILs were residual sites of a kind the first remedies had already fixed elsewhere. VALIDATE and INTEGRATE failures branch the same way (`test` / `impl`; INTEGRATE is fixed `impl`).
+
+**What it does not do.** Caps and escalation timing are unchanged — `max 3×`, escalation on the fourth FAIL; the cap counts FAILs, not the distance travelled. The classification is the evaluator's, never the implementing role's (the VERIFY arbitration principle), and an item it cannot classify pauses for the operator rather than being routed with its neighbours. The cycle's one whole-tree run (VALIDATE step 1) is not re-run on a `doc` re-entry: per-phase runs are selection-scoped by rule, and the whole-tree run is once per PR.
+
+**Route.** This is the methodology's second deliberate divergence from upstream (`CLAUDE.md` > What This Repo Is), taken as an **operator decision** — the issue (#140) was filed by the operator and the change was executed as operator work outside an AutoFlow cycle. Recorded here rather than as a new ADR, per [`development-guideline.md`](development-guideline.md) > ADR Policy.
+
+### Decision 12: A Review-Response Cycle Whose Scope Is Mechanically Bounded Re-derives Less, Verifies the Same
+
+**Problem.** A reviewer's Medium finding on an open PR re-opens the cycle, and that cycle re-ran everything a new issue runs: a structure analysis of a codebase that had not changed, a full design deliberation over a one-function fix, a security audit that re-confirmed the previous cycle's conclusions. And the one signal that would have caught the finding before hand-off — a /simplify suggestion REFINE had rejected as behavior-changing — sat in a report no phase read.
+
+**Evidence.** **#130 cycle 2** — 12 lines of shell changed, 13 minutes spent writing the test and the fix, 1 h 58 min and about $59 for the cycle; 89% procedure. The cycle-2 structure analysis was longer than cycle 1's (450 vs 271 lines) over an unchanged structure; the deliberation produced 14 new ledger entries for a one-function change. In cycle 1, REFINE's `Rejected / deferred` list contained the exact proposal the reviewer later filed ("expose the resolved `ARCHIVE_ROOT`"), correctly refused as behavior-changing — and nothing downstream read that list.
+
+**Decision.** Four changes. (1) REFINE writes a report with a mandatory *out-of-scope observations — guard / boundary logic touched* section, and GATE:QUALITY's fresh evaluator dispositions every entry as scoring input (`refine_observations`). (2) HANDOFF triage appends a `scope-bounded` judgment to the findings file — a set relation computed by `scripts/review/scope-bounded.sh` (every Medium+ finding names a file; those files ⊆ the PR's diff file set), re-checked after GREEN (a fix that adds a file leaves the bounded path). (3) On the bounded path the previous cycle's artifacts are preserved and Phase A is reused, ARCHITECT runs Draft + a 2-round ceiling (`args.bounded`), and AUDIT re-scores the prior Low list on the change surface. (4) GATE:PLAN, RED, GREEN, VERIFY, REFINE, the whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged.
+
+**What this does to the "no size judgment" rule.** The rule above (*All phases are performed regardless of change size*) was written against a specific actor: the implementing AI judging its own change small and skipping verification. That actor no longer makes the call — the judgment here is a set relation over files, computed by a script — the finding file set written down, the PR diff file set re-derived from its anchor (`gh pr diff <N> --name-only`) — so a reader re-computes it; the implementing role never sees or sets it. And the verification the rule protected is not what the bounded path removes: it removes *re-derivation* (a structure description of an unchanged tree, a six-round deliberation over a single function, an audit re-confirming itself), while every independent check — the gates, the whole-tree sweep, CI, and the external reviewer's re-review — runs unchanged. Two of those (CI and the external reviewer) did not exist when the rule was written; they are the backstop that makes the policy change safe to take.
+
+**Route.** Operator decision, recorded here per [`development-guideline.md`](development-guideline.md) > ADR Policy; the issue (#135) was operator-filed and the change operator-executed. The *No lightweight mode* limitation below is narrowed accordingly: there is no lightweight mode for a new issue; a review-response cycle has a bounded path selected by a mechanical rule.
 
 ---
 
@@ -259,7 +289,7 @@ The following may look like "better approaches" but undermine core principles:
 
 - **No failure learning loop**: No structured per-cycle evidence is captured; pass/fail pattern analysis is performed by humans externally.
 - **No cross-issue correlation detection**: A complaint class recurring across distinct issues is not detected; correlation analysis across issues is human-external. Decision 4 (no auto-modification of rubric/criteria) is unaffected.
-- **No lightweight mode**: Full phase execution even for small changes. Overhead exists.
+- **No lightweight mode for a new issue**: full phase execution regardless of change size. A review-response cycle has a bounded path, selected by a mechanical set relation rather than a size judgment (Decision 12); the overhead of re-derivation remains for new issues.
 
 ### Under Discussion
 

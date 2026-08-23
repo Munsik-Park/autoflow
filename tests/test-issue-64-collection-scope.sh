@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/hooks/check-autoflow-gate.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # Test: check-autoflow-gate.sh STATE-FILE COLLECTION SCOPE (issue #64)
 #
 # The hook's state-file discovery previously read EVERY .autoflow/*.json as a

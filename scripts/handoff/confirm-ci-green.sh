@@ -134,16 +134,23 @@ gh_bounded() {
     return 0
   fi
   local marker; marker="$(mktemp)"
-  "$@" >"$outfile" 2>/dev/null &
+  set -m
+  "$@" >"$outfile" 2>/dev/null </dev/null &
   local pid=$!
-  ( sleep "$bound"; if kill -0 "$pid" 2>/dev/null; then kill "$pid" 2>/dev/null; echo fired >"$marker"; fi ) &
+  ( sleep "$bound"
+    if kill -0 "$pid" 2>/dev/null; then
+      echo fired >"$marker"
+      kill -TERM -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
+    fi
+  ) >/dev/null 2>&1 &
   local wpid=$!
+  set +m
   wait "$pid" 2>/dev/null
   GH_RC=$?
   if [ -s "$marker" ]; then
     GH_TIMED_OUT=1
   else
-    kill "$wpid" 2>/dev/null
+    kill -TERM -"$wpid" 2>/dev/null || kill "$wpid" 2>/dev/null
   fi
   wait "$wpid" 2>/dev/null
   rm -f "$marker" 2>/dev/null

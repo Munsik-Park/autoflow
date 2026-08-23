@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/hooks/check-autoflow-gate.sh docs/gate-matching-standard.md
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: check-autoflow-gate.sh P1 (boundary matching) + P2 (unconditional deny)
 # =============================================================================
@@ -39,7 +41,27 @@ run_hook() {
   fi
 }
 
+# run_hook_out <expected_exit> <desc> <project_dir> <json> -- like run_hook but
+# CAPTURES stderr for content assertions (issue #97 AC-hook-advisory-check:
+# the standing ledger check emits a WARNING line the base run_hook discards).
+# Sets HOOK_ERR as a side channel for a follow-up grep assertion.
+run_hook_out() {
+  local expected="$1" desc="$2" pdir="$3" json="$4" actual
+  HOOK_ERR=$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$pdir" bash "$HOOK" 2>&1 >/dev/null)
+  actual=$?
+  if [[ "$actual" == "$expected" ]]; then
+    echo "  PASS: $desc (exit $actual)"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: $desc (expected exit $expected, got $actual)"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 bash_json() { printf '{"tool_name":"Bash","tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)"; }
+# bash_bg_json — issue #134 background-deny payload surface: carries the
+# PreToolUse run_in_background field alongside the command string.
+bash_bg_json() { printf '{"tool_name":"Bash","tool_input":{"command":%s,"run_in_background":%s}}' "$(printf '%s' "$1" | jq -Rs .)" "$2"; }
 # agent_json carries an explicit model (default "sonnet") so the existing
 # state-gate cases keep testing what they tested before the Section-1b
 # model-declaration deny was added; the no-model form below exercises that deny.
@@ -447,7 +469,7 @@ run_hook 0 "declared implementer w/ passing gate_plan → allowed" \
   "$PASSING" "$(agent_json 'autoflow-implementer' 'make the failing tests pass')"
 run_hook 0 "declared planner w/ hypothesis verdict skipped (feat) → allowed" \
   "$PASSING" "$(agent_json 'autoflow-planner' 'synthesize the plan')"
-# Team-spawn form (POST-MIGRATION, issue #74 / ADR-0019): the teammate
+# Team-spawn form (POST-MIGRATION, issue #74 / ADR-0021): the teammate
 # name-prefix channel is retired. ANY payload still carrying `.tool_input.name`
 # resolves to "" (undeclared) and is denied, regardless of the prefix's
 # apparent validity and regardless of any subagent_type riding along —
@@ -553,6 +575,437 @@ else
   echo "  FAIL: hook re-reads \$STATE_FILE from disk ${REREAD}x — reintroduces the multi-read TOCTOU; pipe STATE_JSON instead"
   FAIL=$((FAIL + 1))
 fi
+
+echo "Issue #97 — AC-hook-advisory-check: standing ledger check is non-gating (warn, never deny)"
+# Feature design > standing-advisory-check: a non-gating step reads every live
+# .autoflow/issue-*-ledger.md whose content differs from what it last
+# observed, runs `scripts/ledger/ledger-entry-id.sh check` over it, and emits
+# the defect lines as a WARNING -- it never converts a ledger defect into a
+# denied tool call. Each fixture below is a FRESH project dir (its own mktemp)
+# so no cross-test content-hash cache state leaks between assertions.
+LEDGER_CHANGED_DEFECT=$(mktemp -d)   # fresh dir, ledger carries a duplicate O1
+mkdir -p "$LEDGER_CHANGED_DEFECT/.autoflow"
+cat > "$LEDGER_CHANGED_DEFECT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — first decision (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — collided identifier, different title (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+
+LEDGER_CHANGED_CLEAN=$(mktemp -d)    # fresh dir, ledger has no defects
+mkdir -p "$LEDGER_CHANGED_CLEAN/.autoflow"
+cat > "$LEDGER_CHANGED_CLEAN/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — first decision (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+EOF
+
+LEDGER_NO_SCRIPT=$(mktemp -d)        # fresh dir, defective ledger, but this
+mkdir -p "$LEDGER_NO_SCRIPT/.autoflow"   # fixture's own scripts/ledger/ is absent
+cat > "$LEDGER_NO_SCRIPT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — dup (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — dup again (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+
+run_hook_out 0 "changed ledger with a duplicate id -> tool call still ALLOWED (advisory, never denies)" \
+  "$LEDGER_CHANGED_DEFECT" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  PASS: warning stderr names the colliding identifier (O1)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: warning stderr does not name the colliding identifier (O1) -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "Issue #97 — AC-hook-advisory-check: content-hash cache suppresses a REPEAT warning on an unchanged ledger"
+# Same fixture dir as the assertion above, called a SECOND time with the
+# ledger file byte-identical to the first call — the step's content-hash
+# cache (feature design > standing-advisory-check > Cache location) must
+# recognize "unchanged since last observed" and stay silent, so a defective
+# ledger does not repeat the same warning on every tool call of a session.
+run_hook_out 0 "second call, SAME unchanged defective ledger -> allowed" \
+  "$LEDGER_CHANGED_DEFECT" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  FAIL: second call on an unchanged ledger repeated the warning (cache did not suppress it) -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: second call on an unchanged ledger is silent (cache-hit suppression)"
+  PASS=$((PASS + 1))
+fi
+
+echo "Issue #97 — AC-hook-advisory-check: content-hash cache suppresses a REPEAT warning under a WHITESPACE project path"
+# Same shape as the cache-hit suppression case above, but the fixture project
+# dir itself contains a space (e.g. an "af space" subdir under mktemp -d).
+# Reviewer finding (PR #104, Low): the cache row lookup uses awk's default
+# whitespace field splitting ($2 == p), so a stored path containing a space
+# never matches on the second call -- the cache never hits, and an unchanged
+# defective ledger re-warns on every call instead of being suppressed.
+LEDGER_WS_PARENT=$(mktemp -d)
+LEDGER_WS_DEFECT="$LEDGER_WS_PARENT/af space"
+mkdir -p "$LEDGER_WS_DEFECT/.autoflow"
+cat > "$LEDGER_WS_DEFECT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — first decision (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — collided identifier, different title (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+
+run_hook_out 0 "whitespace-path fixture, first call, defective ledger -> allowed" \
+  "$LEDGER_WS_DEFECT" "$(bash_json 'git status')"
+
+run_hook_out 0 "whitespace-path fixture, second call, SAME unchanged defective ledger -> allowed" \
+  "$LEDGER_WS_DEFECT" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  FAIL: second call on an unchanged ledger under a whitespace project path repeated the warning (cache did not suppress it) -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: second call on an unchanged ledger under a whitespace project path is silent (cache-hit suppression)"
+  PASS=$((PASS + 1))
+fi
+
+run_hook_out 0 "changed CLEAN ledger -> allowed and silent (no false-positive warning)" \
+  "$LEDGER_CHANGED_CLEAN" "$(bash_json 'git status')"
+if [ -z "$HOOK_ERR" ] || ! printf '%s' "$HOOK_ERR" | grep -qiE 'duplicate-id|unidentified-entry'; then
+  echo "  PASS: no defect line for a clean ledger"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: clean ledger produced a defect line -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "Issue #97 — AC-hook-advisory-check: absent-script tolerance (silent no-op)"
+run_hook 0 "defective ledger + missing scripts/ledger/ledger-entry-id.sh helper -> allowed, no crash" \
+  "$LEDGER_NO_SCRIPT" "$(bash_json 'git status')"
+
+echo "Issue #97 — AC-hook-advisory-check: a gated command denied on its OWN gate is denied for its own reason, never for a ledger defect"
+ACTIVE_LEDGER_DEFECT=$(mktemp -d)
+mkdir -p "$ACTIVE_LEDGER_DEFECT/.autoflow"
+cat > "$ACTIVE_LEDGER_DEFECT/.autoflow/issue-9.json" <<'EOF'
+{ "active": true, "issue": "#9",
+  "phases": { "audit": {"scores":{}}, "gate_quality": {"scores":{}} } }
+EOF
+cat > "$ACTIVE_LEDGER_DEFECT/.autoflow/issue-9-ledger.md" <<'EOF'
+# Decision Ledger — issue #9
+
+## O1 — dup (cycle 1, GATE:PLAN)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, GATE:PLAN
+
+## O1 — dup again (cycle 1, VERIFY)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, VERIFY
+EOF
+run_hook_out 2 "empty-scores active state + git push -> still denied for the score-gate reason (2)" \
+  "$ACTIVE_LEDGER_DEFECT" "$(bash_json 'git push -u origin dev/x')"
+if printf '%s' "$HOOK_ERR" | grep -qiE 'BLOCKED'; then
+  echo "  PASS: denial reason is the score gate's own BLOCKED message, not a ledger-only rejection"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: expected the score gate's own BLOCKED reason in stderr -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "Issue #97 — AC-hook-advisory-check: reachability clause -- the step still fires on all three exit-0-before-end paths"
+# The placement [MUST] (feature design > standing-advisory-check) requires the
+# step to sit BEFORE Section 2's activity check, so it must still run (and
+# still warn on a defective ledger) under every condition the script exits 0
+# early: no state file, state present but active != true, and a research/
+# analysis/evaluation Agent spawn. A step placed AFTER any one of these would
+# pass the two cases above and silently never run for this traffic.
+LEDGER_NOSTATE=$(mktemp -d)
+mkdir -p "$LEDGER_NOSTATE/.autoflow"
+cp "$LEDGER_CHANGED_DEFECT/.autoflow/issue-9-ledger.md" "$LEDGER_NOSTATE/.autoflow/issue-9-ledger.md"
+run_hook_out 0 "reachability: NO state file + Bash call + defective ledger -> still warns" \
+  "$LEDGER_NOSTATE" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  PASS: defect line present with no state file"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no defect line with no state file -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+LEDGER_INACTIVE=$(mktemp -d)
+mkdir -p "$LEDGER_INACTIVE/.autoflow"
+cp "$LEDGER_CHANGED_DEFECT/.autoflow/issue-9-ledger.md" "$LEDGER_INACTIVE/.autoflow/issue-9-ledger.md"
+cat > "$LEDGER_INACTIVE/.autoflow/issue-9.json" <<'EOF'
+{ "active": false, "issue": "#9", "phases": {} }
+EOF
+run_hook_out 0 "reachability: state present but active:false + defective ledger -> still warns" \
+  "$LEDGER_INACTIVE" "$(bash_json 'git status')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  PASS: defect line present with active:false state"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no defect line with active:false state -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+LEDGER_RESEARCH=$(mktemp -d)
+mkdir -p "$LEDGER_RESEARCH/.autoflow"
+cp "$LEDGER_CHANGED_DEFECT/.autoflow/issue-9-ledger.md" "$LEDGER_RESEARCH/.autoflow/issue-9-ledger.md"
+run_hook_out 0 "reachability: research/analysis/evaluation Agent spawn + defective ledger -> still warns" \
+  "$LEDGER_RESEARCH" "$(agent_json 'Explore' 'search the repository')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'O1'; then
+  echo "  PASS: defect line present on a research-role Agent spawn"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no defect line on a research-role Agent spawn -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+rm -rf "$LEDGER_CHANGED_DEFECT" "$LEDGER_CHANGED_CLEAN" "$LEDGER_NO_SCRIPT" "$ACTIVE_LEDGER_DEFECT" "$LEDGER_NOSTATE" "$LEDGER_INACTIVE" "$LEDGER_RESEARCH"
+
+echo "Issue #134 — background-deny-fires: a backgrounded run-suites.sh invocation is refused at the tool boundary"
+# feature design > background-deny: three surfaces (payload, prefix nohup/setsid,
+# trailing-&) composed on the deny-local BG_SCAN buffer. All state-independent —
+# run under $NOSTATE throughout (deny fires with no cycle in flight).
+run_hook 2 "payload surface: run_in_background=true + run-suites.sh in command" \
+  "$NOSTATE" "$(bash_bg_json 'bash scripts/test/run-suites.sh --all' 'true')"
+run_hook 2 "prefix surface isolated: nohup, no trailing & (BG_TAIL alone would admit)" \
+  "$NOSTATE" "$(bash_json 'nohup bash scripts/test/run-suites.sh --all')"
+run_hook 2 "prefix surface, quoted path, isolated: nohup + quoted invocation, no trailing &" \
+  "$NOSTATE" "$(bash_json 'nohup bash "$ROOT/scripts/test/run-suites.sh" --all')"
+run_hook 2 "prefix surface, setsid counterpart" \
+  "$NOSTATE" "$(bash_json 'setsid bash scripts/test/run-suites.sh --all')"
+run_hook 2 "wrapper group isolated: env FOO=1 ... &  (no nohup/setsid to catch it)" \
+  "$NOSTATE" "$(bash_json 'env FOO=1 bash scripts/test/run-suites.sh --all &')"
+run_hook 2 "wrapper group isolated: time ... &" \
+  "$NOSTATE" "$(bash_json 'time bash scripts/test/run-suites.sh --all &')"
+run_hook 2 "argument-less trailing &: bash .../run-suites.sh& (no char for a mandatory-run class to consume)" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh&')"
+run_hook 2 "quoting pair: fully double-quoted invocation path, trailing &" \
+  "$NOSTATE" "$(bash_json 'bash "$ROOT/scripts/test/run-suites.sh" --all &')"
+run_hook 2 "quoting pair: fully single-quoted absolute invocation path, trailing &" \
+  "$NOSTATE" "$(bash_json "bash '/abs/scripts/test/run-suites.sh' --all &")"
+run_hook 2 "quoting pair: nohup composition of the quoted-path form" \
+  "$NOSTATE" "$(bash_json 'nohup bash "$ROOT/scripts/test/run-suites.sh" --all &')"
+run_hook 2 "ordering leg: quoted-path run backgrounded, followed by an unrelated quoted arg carrying ';'" \
+  "$NOSTATE" "$(bash_json 'bash "$ROOT/scripts/test/run-suites.sh" --all & echo "a; b"')"
+run_hook 2 "no-state-file direction pinned: deny fires with NO state file present" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all &')"
+
+echo "Issue #134 — background-deny-discriminates: backgrounding vs. shell tokens that merely resemble it; invocation vs. mention"
+run_hook 0 "separator discrimination: cd x && run-suites.sh --all (foreground AND-list)" \
+  "$NOSTATE" "$(bash_json 'cd x && bash scripts/test/run-suites.sh --all')"
+run_hook 2 "separator discrimination: same command, trailing & backgrounds the whole AND-list" \
+  "$NOSTATE" "$(bash_json 'cd x && bash scripts/test/run-suites.sh --all &')"
+run_hook 0 "separator discrimination: leading & ends a PRIOR job, this invocation is foreground" \
+  "$NOSTATE" "$(bash_json 'a & bash scripts/test/run-suites.sh --all')"
+run_hook 2 "compound backgrounding: pipeline backgrounded as a whole (| tee log &)" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all | tee log &')"
+run_hook 2 "compound backgrounding: AND-list backgrounded as a whole (&& echo done &)" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all && echo done &')"
+run_hook 0 "compound backgrounding: ';' list backgrounds only its LAST command" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all; echo done &')"
+run_hook 2 "compound backgrounding: file-descriptor redirect then trailing &" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all > log 2>&1 &')"
+run_hook 0 "command-position discrimination: backgrounded grep merely MENTIONING the path" \
+  "$NOSTATE" "$(bash_json 'grep run-suites.sh notes.txt &')"
+run_hook 0 "command-position discrimination: backgrounded git add merely naming the path" \
+  "$NOSTATE" "$(bash_json 'git add scripts/test/run-suites.sh && echo ok &')"
+run_hook 2 "command-position discrimination: the real backgrounded invocation still denies" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all &')"
+
+echo "Issue #134 — background-deny-does-not-over-block: no legitimate invocation is refused"
+run_hook 0 "foreground --all admitted" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all')"
+run_hook 0 "foreground --selected admitted" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --selected .autoflow/issue-134-run-set.txt')"
+run_hook 0 "redirection form containing & but not backgrounding: &> log" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all &> log')"
+run_hook 0 "redirection form containing & but not backgrounding: > log 2>&1" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all > log 2>&1')"
+run_hook 0 "unrelated command with the background field set is not this deny's concern" \
+  "$NOSTATE" "$(bash_bg_json 'git status' 'true')"
+run_hook 0 "path-token boundary: bash x/my-run-suites.sh --all & (different script, path group must require the trailing /)" \
+  "$NOSTATE" "$(bash_json 'bash x/my-run-suites.sh --all &')"
+run_hook 0 "quoted-mention admit: gh pr create body describing the deny (BG_TAIL anchor)" \
+  "$NOSTATE" "$(bash_json 'gh pr create --body "run bash scripts/test/run-suites.sh --all" &')"
+run_hook 0 "quoted-mention admit: git commit -m describing the deny (BG_TAIL anchor)" \
+  "$NOSTATE" "$(bash_json 'git commit -m "ran bash scripts/test/run-suites.sh --all in bg" &')"
+run_hook 0 "quoted-body-own-separator triple: prose body's own ';' does not manufacture a boundary (BG_TAIL arm)" \
+  "$NOSTATE" "$(bash_json 'git commit -m "deny: run it; bash scripts/test/run-suites.sh --all & is refused"')"
+run_hook 0 "quoted-body-own-separator triple: prose body's own '&&' does not manufacture a boundary (BG_TAIL arm)" \
+  "$NOSTATE" "$(bash_json 'gh pr comment 1 --body "e.g. cd x && bash scripts/test/run-suites.sh --all & now denies"')"
+run_hook 0 "quoted-body-own-separator triple: prose body's own ';' does not manufacture a boundary (BG_PREFIX arm)" \
+  "$NOSTATE" "$(bash_json 'gh pr create --body "the deny fires; nohup bash scripts/test/run-suites.sh --all is refused"')"
+run_hook 0 "no-state-file direction pinned: admits stay admitted with NO state file present" \
+  "$NOSTATE" "$(bash_json 'bash scripts/test/run-suites.sh --all')"
+
+echo "Issue #134 c2 — background-deny-fires: continuation fold / heredoc strip / post-heredoc tail (AC1, AC2, AC5, stage order, carried findings F1-F3)"
+# feature design (cycle 2) > shared-fold / heredoc-strip / bg-pipeline. Buffer
+# widens from a shell PHYSICAL line to a shell LOGICAL line (backslash-newline
+# continuations folded) and heredoc bodies are deleted-and-continued instead of
+# truncating the whole buffer at the first `<<`. All state-independent -- run
+# under $NOSTATE throughout, as the cycle-1 legs above do.
+run_hook 2 "AC1 continuation-fold: one-hop backslash-newline before &" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all \\\n&')"
+run_hook 2 "AC1 continuation-fold: multi-hop continuation splits interpreter, path and &" \
+  "$NOSTATE" "$(bash_json $'bash \\\nscripts/test/run-suites.sh \\\n--all \\\n&')"
+run_hook 2 "AC1 continuation-fold: CRLF spelling of the one-hop form" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all \\\r\n&')"
+run_hook 2 "AC1 continuation-fold: prefix surface -- nohup split from the invocation by a continuation" \
+  "$NOSTATE" "$(bash_json $'nohup \\\nbash scripts/test/run-suites.sh --all')"
+# carried finding F3: the discriminating payload-surface shape is
+# run_in_background:true + an invocation placed AFTER a terminated heredoc --
+# HEAD admits it (the cycle-1 `${COMMAND%%<<*}` truncation removes everything
+# from the heredoc introducer onward, including the invocation). A
+# continuation-split invocation with no `&` is NOT used here: grep -qE matches
+# per PHYSICAL line, so the split invocation's own line already starts with
+# the path token and RUN_SUITES already matches it at HEAD -- that shape does
+# not discriminate cycle-1 from cycle-2 behavior.
+run_hook 2 "payload surface (F3): run_in_background=true + invocation after a terminated heredoc" \
+  "$NOSTATE" "$(bash_bg_json $'cat <<EOF > doc.md\ntext\nEOF\nbash scripts/test/run-suites.sh --all' 'true')"
+run_hook 2 "AC2 heredoc-introducer: bare <<EOF & (introducer deleted, & retained)" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all <<EOF &\nbody\nEOF')"
+run_hook 2 "AC2 heredoc-introducer: tab-stripping <<-EOF &" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all <<-EOF &\n\tbody\nEOF')"
+run_hook 2 "AC2 heredoc-introducer: quoted-delimiter <<\"EOF\" &" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all <<"EOF" &\nbody\nEOF')"
+run_hook 2 "stage-order-pinned: continuation precedes the heredoc introducer (fold before strip)" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all \\\n<<EOF &\nbody\nEOF')"
+run_hook 2 "AC5 post-heredoc tail: bare heredoc block, invocation backgrounded on a LATER line" \
+  "$NOSTATE" "$(bash_json $'cat <<EOF > doc.md\ntext\nEOF\nbash scripts/test/run-suites.sh --all &')"
+run_hook 2 "AC5 post-heredoc tail: <<-EOF spelling, invocation backgrounded on a LATER line" \
+  "$NOSTATE" "$(bash_json $'cat <<-EOF > doc.md\n\ttext\nEOF\nbash scripts/test/run-suites.sh --all &')"
+run_hook 2 "AC5 post-heredoc tail: quoted-delimiter <<\"EOF\" spelling, invocation backgrounded on a LATER line" \
+  "$NOSTATE" "$(bash_json $'cat <<"EOF" > doc.md\ntext\nEOF\nbash scripts/test/run-suites.sh --all &')"
+run_hook 2 "AC5 post-here-string tail: an earlier here-string command, invocation backgrounded on a LATER line" \
+  "$NOSTATE" "$(bash_json $'grep -q x <<< \"\$V\"\nbash scripts/test/run-suites.sh --all &')"
+# misread-introducer-is-bounded -- deny half: a quoted `<<` mention on an
+# earlier logical line opens a heredoc that never terminates; totality buffers
+# (never discards) the body, so the following REAL invocation line survives
+# and this denies. The admit half sits in -does-not-over-block below.
+run_hook 2 "misread-introducer-is-bounded (deny half): a quoted << mention on an earlier line does not drop the following real invocation" \
+  "$NOSTATE" "$(bash_json $'git commit -m \"note << here\"\nbash scripts/test/run-suites.sh --all &')"
+
+echo "Issue #134 c2 — background-deny-discriminates: multi-line admits stay admitted (AC3)"
+run_hook 0 "AC3 discrimination: bare newline separates a foreground invocation from a LATER backgrounded command" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --all\necho done &')"
+run_hook 0 "AC3 discrimination: a backgrounded unrelated command stands BEFORE the foreground invocation" \
+  "$NOSTATE" "$(bash_json $'echo start &\nbash scripts/test/run-suites.sh --all')"
+run_hook 0 "AC3 discrimination: a continuation that ends without & stays admitted" \
+  "$NOSTATE" "$(bash_json $'bash scripts/test/run-suites.sh --selected \\\n.autoflow/issue-134-run-set.txt')"
+
+echo "Issue #134 c2 — background-deny-does-not-over-block: heredoc-body mentions, continuation-spanning quotes, degenerate input (AC3, totality)"
+run_hook 0 "AC3 quoted-body-still-admits: heredoc body merely WRITES the denied command text" \
+  "$NOSTATE" "$(bash_json $'cat <<EOF > doc.md\nbash scripts/test/run-suites.sh --all &\nEOF')"
+# the fold must run BEFORE the unquoting stage: if unquoting ran first, the
+# quote parity across the continuation would already be broken by the time the
+# fold joined the two physical lines, and this leg denies instead of admits.
+run_hook 0 "AC3 quoted-body-still-admits: git commit -m quoted message spans a continuation and ends in &" \
+  "$NOSTATE" "$(bash_json $'git commit -m \"deny fires when \\\nbash scripts/test/run-suites.sh --all &\"')"
+run_hook 0 "misread-introducer-is-bounded (admit half): single-line quoted << mention of the denied command" \
+  "$NOSTATE" "$(bash_json 'git commit -m "note << bash scripts/test/run-suites.sh --all &"')"
+run_hook 0 "degenerate-input-totality: empty command" \
+  "$NOSTATE" "$(bash_json '')"
+run_hook 0 "degenerate-input-totality: command is a single bare newline" \
+  "$NOSTATE" "$(bash_json $'\n')"
+
+echo "Issue #134 c2 — joined-parity: _fold_continuations output is byte-exact against the documented fold contract (carried finding F1)"
+# carried finding F1: a leg that MEASURES _JOINED byte-parity directly, not
+# only "siblings stay green". _fold_continuations is sourced from the hook at
+# GLOBAL SCOPE (feature design > shared-fold) in an isolated subshell: TOOL_NAME
+# is set to a value matching neither "Bash" nor "Agent" so no side-effecting
+# block runs, and `exit` is shadowed so the hook's own unconditional trailing
+# `exit 0` (check-autoflow-gate.sh, last line) returns control to this probe
+# instead of terminating it before the function call. The sentinel
+# append/strip idiom (feature design > joined-parity's own call-site pattern)
+# is reused here so a genuine trailing blank logical line is not silently
+# stripped by command substitution before the comparison runs.
+#
+# RED2 (issue #134 c2, VERIFY cause branch, ledger O18): stdin was originally
+# fed to `source` through a PIPE (`printf … | … source "$HOOK"`) -- `source`
+# was the pipeline's LAST command, but the pipeline as a whole still ran in a
+# separate subshell from `_fold_continuations`' later call site (measured
+# under bash 5.3.9 and /bin/bash 3.2.57: `_fold_continuations` was undefined
+# after the pipe form, defined after a plain `<<<` redirection). Fixed by
+# feeding stdin via a HEREDOC/HERESTRING REDIRECTION on the `source` command
+# itself, which attaches no extra subshell, keeping the isolated-subshell /
+# shadowed-`exit` protections unchanged. `hook` is parameterized (default
+# $HOOK) so the same probe can Red-confirm against a hook copy that lacks the
+# function (see the Red-confirmation measurement below / the c2 RED2 report).
+_probe_fold() {
+  local probe="$1" hook="${2:-$HOOK}" out
+  out=$(
+    exit() { return 0; }
+    CLAUDE_PROJECT_DIR="$NOSTATE" source "$hook" <<< '{"tool_name":"Noop","tool_input":{}}' >/dev/null 2>&1
+    _fold_continuations <<< "$probe"
+    printf X
+  )
+  printf '%s' "${out%X}"
+}
+_assert_fold() {
+  # The sentinel append/strip idiom is reapplied HERE too: $(_probe_fold ...)
+  # is itself a command substitution and strips a trailing newline from
+  # _probe_fold's own output, which would silently re-drop the very
+  # trailing-blank-logical-line case this leg exists to catch (RED2, same
+  # root cause as the sourcing fix above -- an outer capture undoing an
+  # inner one).
+  local desc="$1" probe="$2" expected="$3" got
+  got=$(_probe_fold "$probe"; printf X); got="${got%X}"
+  if [[ "$got" == "$expected" ]]; then
+    echo "  PASS: $desc"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: $desc (expected $(printf '%q' "$expected"), got $(printf '%q' "$got"))"
+    FAIL=$((FAIL + 1))
+  fi
+}
+_assert_fold "empty input folds to empty" "" ""
+_assert_fold "bare newline folds to a single newline" $'\n' $'\n'
+_assert_fold "single-hop continuation joins with one space, backslash removed" $'a\\\nb' 'a b'
+_assert_fold "multi-hop continuation joins every hop" $'a\\\nb\\\nc' 'a b c'
+_assert_fold "continuation at EOF keeps content, backslash removed, no join" $'a\\' 'a'
+_assert_fold "CRLF continuation is stripped before the continuation test, then joined" $'a\\\r\nb' 'a b'
+_assert_fold "a genuine trailing blank logical line is preserved, not silently dropped" $'a\n' $'a\n'
 
 echo "=============================="
 echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"

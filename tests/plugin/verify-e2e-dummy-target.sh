@@ -1,6 +1,9 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: docs/autoflow-guide.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh scripts/handoff/create-host-pr.sh scripts/issue/create-issue.sh scripts/ledger/ledger-entry-id.sh setup/init.sh setup/manifest.json tests/fixtures/e2e-bundle-purity-baseline.txt tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt tests/plugin/manual-scenarios-797.md tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: throwaway dummy-target E2E acceptance suite — Issue #797 [#785-S10]
 # =============================================================================
@@ -13,9 +16,10 @@
 #
 # This suite COMPOSES, it does not duplicate: install/manifest/drift/
 # host-purity unit-level assertions stay owned by
-# tests/plugin/verify-install-into-target.sh and
-# tests/test-issue-788-host-purity-delta.sh (delegated below as whole-suite
-# regressions). This suite's own new assertions are the composition-only
+# tests/plugin/verify-install-into-target.sh, which CI runs under its own
+# registered step (the whole-suite re-runs this file once carried are retired --
+# issue #103). This suite's own new
+# assertions are the composition-only
 # surface — the realistic fixture, non-destructive install into pre-existing
 # content, installed-fs manifest/drift parity, and the gate-hook scores-branch
 # + host-script HANDOFF runtime arms (the plugin-delivered hook RESOLUTION path
@@ -32,10 +36,13 @@
 #     E1c   pre-existing CLAUDE.md prose survives + shim fence present
 #     E1d   installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md,
 #           scripts/review/**, scripts/preflight/**, scripts/handoff/**,
-#           scripts/cleanup/**, .codex/**, AGENTS.md
+#           scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, .codex/**,
+#           AGENTS.md
 #           (#979 reviewer-backend delivery, source-path-preserved dests,
 #           ledger E12; scripts/handoff/**, scripts/cleanup/** widened for
-#           issue #10 manifest-registration-gap fix)
+#           issue #10 manifest-registration-gap fix; scripts/issue/** widened
+#           for the issue #96 AI issue-creation gate wrapper; scripts/ledger/**
+#           widened for the issue #97 ledger-entry-id.sh manifest artifact)
 #     E1e   second install run is idempotent (single fence, byte-identical)
 #
 #   W-E2 bundle-in-target host-purity (composition boundary of item 4):
@@ -45,7 +52,6 @@
 #           without a ratchet-down edit) -- ledger E15, supersedes the
 #           absolute zero-hit scan pending epic #785 S11a/S11b
 #     E2b   this suite's own fixture-generator paths are not host-purity-scanned
-#     E-Rc  tests/test-issue-788-host-purity-delta.sh whole-suite exits 0
 #
 #   W-E3 manifest & drift composition (boundary of items 5/6):
 #     E3a   every kind:copy manifest dest exists on disk in the installed target
@@ -102,8 +108,10 @@
 #           failing AC id and its owning-stage tag (self-tested)
 #
 #   W-R regression (baseline unaffected by this branch):
-#     E-Ra  tests/plugin/verify-install-into-target.sh whole-suite exits 0
-#     E-Rb  tests/plugin/verify-package.sh whole-suite exits 0
+#     E-Ra  tests/plugin/verify-install-into-target.sh is present (the
+#           whole-suite re-run is retired -- contract-suites.yml:317 runs it)
+#     E-Rb  tests/plugin/verify-package.sh is present (the whole-suite re-run
+#           is retired -- plugin-package.yml:93 runs it)
 #
 #   NOT automated (E/M types — see tests/plugin/manual-scenarios-797.md):
 #     E-M1  a live AutoFlow LLM cycle reasoning-driven inside the dummy target
@@ -132,7 +140,6 @@ E2A_BASELINE="$REPO_ROOT/tests/fixtures/e2e-bundle-purity-baseline.txt"
 CREATE_HOST_PR="$REPO_ROOT/scripts/handoff/create-host-pr.sh"
 VERIFY_INSTALL="$REPO_ROOT/tests/plugin/verify-install-into-target.sh"
 VERIFY_PACKAGE="$REPO_ROOT/tests/plugin/verify-package.sh"
-HOST_PURITY_SUITE="$REPO_ROOT/tests/test-issue-788-host-purity-delta.sh"
 MANUAL_SCENARIOS="$REPO_ROOT/tests/plugin/manual-scenarios-797.md"
 SELF_PATH_REL="tests/plugin/verify-e2e-dummy-target.sh"
 IMPORT_LINE='@./.claude/autoflow/METHODOLOGY.md'
@@ -372,7 +379,7 @@ else
   failc "E1c" "S5/#792" "prerequisite E1b failed or CLAUDE.md absent"
 fi
 
-echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, .codex/**, AGENTS.md =="
+echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, .codex/**, AGENTS.md =="
 if [ "$DRIVE_PASS" -eq 1 ]; then
   if cmp -s "$SNAP_DIR/package.json" "$DUMMY/package.json"; then
     pass "E1d: package.json byte-unchanged"
@@ -407,16 +414,22 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # listed, so the case pattern is widened to admit these two new dest
   # classes (same source-path-preserved copy-row shape as scripts/review/*
   # and scripts/preflight/*).
+  # issue #96 widening (ledger E36 CI red): the AI issue-creation gate ships
+  # scripts/issue/create-issue.sh as a root-layer copy row, so ./scripts/issue/*
+  # is admitted on the same source-path-preserved basis.
+  # issue #97 widening (CI red on PR #104): scripts/ledger/ledger-entry-id.sh
+  # ships as a root-layer manifest artifact (tier root-layer, kind copy), so
+  # ./scripts/ledger/* is admitted on the same source-path-preserved basis.
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done
   if [ -z "$BAD_NEW" ]; then
-    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, .codex/**, or AGENTS.md"
+    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, .codex/**, or AGENTS.md"
   else
-    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//.codex//AGENTS.md:$BAD_NEW"
+    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//.codex//AGENTS.md:$BAD_NEW"
   fi
 else
   failc "E1d" "S5/#792" "skipped -- prerequisite E1b failed"
@@ -482,21 +495,6 @@ if [ -f "$HOST_PURITY_PATHS" ]; then
   fi
 else
   failc "E2b" "S2/#788" "host-purity-paths.txt missing at $HOST_PURITY_PATHS"
-fi
-
-echo "== E-Rc: tests/test-issue-788-host-purity-delta.sh whole-suite regression =="
-if [ -f "$HOST_PURITY_SUITE" ]; then
-  HP_OUT=$(bash "$HOST_PURITY_SUITE" 2>&1)
-  HP_CODE=$?
-  HP_RESULT=$(printf '%s\n' "$HP_OUT" | grep -E '^(RESULT|Results):' | tail -1)
-  if [ "$HP_CODE" -eq 0 ]; then
-    pass "E-Rc: host-purity DELTA-guard suite exits 0 (#788 regression intact) -- $HP_RESULT"
-  else
-    printf '%s\n' "$HP_OUT" | grep '^FAIL:' | head -10
-    failc "E-Rc" "S2/#788" "host-purity DELTA-guard suite exited $HP_CODE -- $HP_RESULT"
-  fi
-else
-  failc "E-Rc" "S2/#788" "tests/test-issue-788-host-purity-delta.sh missing at $HOST_PURITY_SUITE"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -862,32 +860,22 @@ fi
 # W-R — regression (baseline unaffected)
 # ══════════════════════════════════════════════════════════════════════════════
 
-echo "== E-Ra: verify-install-into-target.sh whole-suite regression =="
+echo "== E-Ra: verify-install-into-target.sh is present =="
+# The whole-suite re-run is retired (issue #103 cycle 3): that suite carries its
+# own registered `run:` step at contract-suites.yml:317, so a regression in it
+# reds CI under its own name once rather than twice. The presence half stays --
+# this file composes against that suite's install output in the stages above.
+# Disposition row: docs/doc-invariant-registry.md 12.1.
 if [ -f "$VERIFY_INSTALL" ]; then
-  VI_OUT=$(sh "$VERIFY_INSTALL" 2>&1)
-  VI_CODE=$?
-  VI_RESULT=$(printf '%s\n' "$VI_OUT" | grep '^RESULT:' | head -1)
-  if [ "$VI_CODE" -eq 0 ]; then
-    pass "E-Ra: verify-install-into-target.sh exits 0 (#792 regression intact) -- $VI_RESULT"
-  else
-    printf '%s\n' "$VI_OUT" | grep '^FAIL:' | head -10
-    failc "E-Ra" "S5/#792" "verify-install-into-target.sh exited $VI_CODE -- $VI_RESULT"
-  fi
+  pass "E-Ra: install acceptance suite is present at $VERIFY_INSTALL"
 else
   failc "E-Ra" "S5/#792" "tests/plugin/verify-install-into-target.sh missing at $VERIFY_INSTALL"
 fi
 
-echo "== E-Rb: verify-package.sh whole-suite regression =="
+echo "== E-Rb: verify-package.sh is present =="
+# Same disposition as E-Ra; the callee's registered step is plugin-package.yml:93.
 if [ -f "$VERIFY_PACKAGE" ]; then
-  VP_OUT=$(sh "$VERIFY_PACKAGE" 2>&1)
-  VP_CODE=$?
-  VP_RESULT=$(printf '%s\n' "$VP_OUT" | grep '^RESULT:' | head -1)
-  if [ "$VP_CODE" -eq 0 ]; then
-    pass "E-Rb: verify-package.sh exits 0 (#790 regression intact) -- $VP_RESULT"
-  else
-    printf '%s\n' "$VP_OUT" | grep '^FAIL:' | head -10
-    failc "E-Rb" "S5/#792" "verify-package.sh exited $VP_CODE -- $VP_RESULT"
-  fi
+  pass "E-Rb: packaging acceptance suite is present at $VERIFY_PACKAGE"
 else
   failc "E-Rb" "S5/#792" "tests/plugin/verify-package.sh missing at $VERIFY_PACKAGE"
 fi

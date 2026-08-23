@@ -2,14 +2,13 @@
 # SPDX-License-Identifier: Elastic-2.0
 # .github/workflows/host-purity-delta.yml — diff-scoped host-purity DELTA guard (issue #788)
 #
-# Runs the host-purity acceptance suite (tests/test-issue-788-host-purity-delta.sh),
-# which drives scripts/test/check-host-purity-delta.sh over hermetic temp repos.
-# The guard fails a cycle when a service-identifier token (the denylist lives in
+# Runs scripts/test/check-host-purity-delta.sh directly over this run's own
+# merge-base..HEAD delta. The guard fails a cycle when a service-identifier token (the denylist lives in
 # tests/fixtures/host-purity-tokens.txt) is NEWLY introduced on an added line of a
 # changed host tool/mechanism file (merge-base..HEAD delta), so a generalized
 # framework repo does not silently re-accrete service names.
 #
-# Why GitHub Actions: the suite is pure bash + git with no node/npm, no bats, and
+# Why GitHub Actions: the guard is pure bash + git with no node/npm, no bats, and
 # no submodule checkout — the same zero-infra rationale as schema-hook-contract.yml /
 # workflow-regression.yml. ubuntu-latest ships bash 5.x + git; the guard needs the
 # merge-base against origin/main, so checkout uses fetch-depth: 0.
@@ -40,7 +39,9 @@ on:
       # re-run the acceptance guard.
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
-      - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'CLAUDE.md'
+      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
+      - 'tests/lib/**'
   push:
     branches: [main]
     # Scanner include surface — mirror of the pull_request block above. Kept in
@@ -60,14 +61,16 @@ on:
       # re-run the acceptance guard.
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
-      - 'tests/test-issue-788-host-purity-delta.sh'
+      - 'CLAUDE.md'
+      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
+      - 'tests/lib/**'
 
 permissions:
   contents: read
 
 jobs:
   host-purity-delta:
-    name: host-purity DELTA guard acceptance suite
+    name: host-purity DELTA guard
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -75,5 +78,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run host-purity DELTA acceptance suite
-        run: bash tests/test-issue-788-host-purity-delta.sh
+      # The guard itself (issue #788): a diff-scoped scan of this run's own
+      # merge-base..HEAD delta. Not a governed suite step — it is a standing lint
+      # with no budget header, run unconditionally like the other
+      # scripts/test/check-*.sh lints. On a pull_request event the merge-base is
+      # taken against the PR base branch; on push it is origin/main's prior tip.
+      - name: host-purity delta guard
+        timeout-minutes: 5
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          bash scripts/test/check-host-purity-delta.sh --base "$PR_BASE" --head HEAD

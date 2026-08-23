@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/improvement-backlog.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: init.sh legacy wizard removal + Language Rule user-scope reversion —
 # Issue #952
@@ -22,7 +25,6 @@
 #          history-prose token flip (DCR-2)
 #   AC4  — submodule-common-rules.md code-fence examples use non-substituted
 #          notation, scope-gated (DCR-3)
-#   AC5  — manifest sha256 coherence oracle (#949 pattern)
 #   G6   — doc reference-integrity on tests/test-sed-inplace.sh removal
 #          (GATE:QUALITY doc_updates cap finding, cycle 2): decoupling-plan
 #          row no longer a bare KEEP + retains a RETIRED marker (row
@@ -34,8 +36,11 @@
 #          preservation (Traps A/B, DCR-3)
 #   G5   — CI registration (this file wired into e2e-dummy-target.yml)
 #
-# Base ref for scope/diff oracles, overridable via env (precedent:
-# #797/#798/#799/#949): default = the dev-branch merge-base with main.
+# Retired in issue #121: the diff-scoped manifest-regen oracle this file used to
+# carry. It was an un-gated DELTA over a merged cycle's own diff, and the
+# same-commit-regen obligation it asserted is carried in whole-tree state form by
+# scripts/test/check-manifest-regen-clean.sh's FIXED POINT leg, which needs no
+# diff. Disposition: docs/doc-invariant-registry.md §16.
 #
 # RED expectation (pre-edit, this commit): AC1 (usage-token + prompt-banner
 # absence), AC2 (all == 0 static removal predicates, \bsed\b == 0 guard),
@@ -47,8 +52,6 @@
 # here would be a regression signal in the harness itself, not a valid RED):
 #   AC2 non-vacuity keystone (install_into_target/manifest.json intact) —
 #     PASS pre+post, nothing has touched install_into_target.
-#   AC5 manifest oracle — vacuously PASS pre-edit (no manifest source
-#     touched yet in the diff); becomes load-bearing post-GREEN.
 #   G4 preservation guards (README:12 bullet, 4 mermaid GATE nodes) — PASS
 #     pre+post, must NOT be flagged by the table-exclusive removal regex.
 # =============================================================================
@@ -58,16 +61,11 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INIT_SH="$PROJECT_ROOT/setup/init.sh"
-CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
-SUBMODULE_COMMON="$PROJECT_ROOT/docs/submodule-common-rules.md"
 README_MD="$PROJECT_ROOT/README.md"
 SETUP_GUIDE="$PROJECT_ROOT/setup/SETUP-GUIDE.md"
-MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
 DECOUPLING_PLAN="$PROJECT_ROOT/docs/host-service-decoupling-plan.md"
 IMPROVEMENT_BACKLOG="$PROJECT_ROOT/docs/improvement-backlog.md"
-
-BASE_REF="${ISSUE_952_BASE_REF:-$(git -C "$PROJECT_ROOT" merge-base HEAD main 2>/dev/null || true)}"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -121,13 +119,15 @@ if [ -n "$NOARG_TBIN" ]; then
   (cd "$NOARG_TMP" && "$NOARG_TBIN" 5 bash "$INIT_SH" </dev/null) >"$NOARG_LOG" 2>&1
   NOARG_EXIT=$?
 else
-  (cd "$NOARG_TMP" && bash "$INIT_SH" </dev/null) >"$NOARG_LOG" 2>&1 &
+  set -m
+  (cd "$NOARG_TMP" && bash "$INIT_SH" </dev/null) >"$NOARG_LOG" 2>&1 </dev/null &
   NOARG_PID=$!
-  ( sleep 5; kill "$NOARG_PID" 2>/dev/null ) &
+  ( sleep 5; kill -TERM -"$NOARG_PID" 2>/dev/null || kill "$NOARG_PID" 2>/dev/null ) >/dev/null 2>&1 &
   NOARG_WPID=$!
+  set +m
   wait "$NOARG_PID" 2>/dev/null
   NOARG_EXIT=$?
-  kill "$NOARG_WPID" 2>/dev/null
+  kill -TERM -"$NOARG_WPID" 2>/dev/null || kill "$NOARG_WPID" 2>/dev/null
   wait "$NOARG_WPID" 2>/dev/null
 fi
 NOARG_OUT="$(cat "$NOARG_LOG")"
@@ -143,7 +143,7 @@ else
 fi
 
 TESTS=$((TESTS + 1))
-if printf '%s' "$NOARG_OUT" | grep -qE 'target|Usage|usage'; then
+if grep -qE 'target|Usage|usage' <<<"$NOARG_OUT"; then
   echo "  PASS: AC1: no-arg run prints a --target/usage requirement token"
   PASS=$((PASS + 1))
 else
@@ -152,7 +152,7 @@ else
 fi
 
 TESTS=$((TESTS + 1))
-if printf '%s' "$NOARG_OUT" | grep -qE 'Project name|Setup Wizard|Proceed with setup'; then
+if grep -qE 'Project name|Setup Wizard|Proceed with setup' <<<"$NOARG_OUT"; then
   echo "  FAIL: AC1: no-arg run does not emit the wizard prompt banner (forbidden condition held)"
   FAIL=$((FAIL + 1))
 else
@@ -210,44 +210,6 @@ assert_true "AC2 non-vacuity keystone: manifest.json reference is intact in init
 
 # =============================================================================
 echo ""
-echo "=== AC3 delivered CLAUDE.md carries no Language Rule ==="
-
-assert_true "AC3: '## Language Rule' heading absent from CLAUDE.md" \
-  "[ \"\$(grep -c '^## Language Rule' '$CLAUDE_MD')\" -eq 0 ]"
-assert_true "AC3: Korean-only communication sentence absent from CLAUDE.md" \
-  "[ \"\$(grep -cF 'All communication with the user must be in Korean' '$CLAUDE_MD')\" -eq 0 ]"
-assert_true "AC3 guard: '## What This Repo Is' section still present in CLAUDE.md" \
-  "grep -qF '## What This Repo Is' '$CLAUDE_MD'"
-
-# DCR-2: CLAUDE.md:14 history-prose fixed-token flip.
-assert_true "AC3 (DCR-2): the substitution-mechanism clause is gone from CLAUDE.md" \
-  "[ \"\$(grep -cF 'instantiate them through' '$CLAUDE_MD')\" -eq 0 ]"
-assert_true "AC3 (DCR-2): the fixed replacement token is present in CLAUDE.md" \
-  "[ \"\$(grep -cF 'not a token an installer substitutes' '$CLAUDE_MD')\" -eq 1 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC4 submodule-common-rules.md examples use non-substituted notation ==="
-# Scope-gated by DCR-3 (resolved narrow-(ii)): only this file's three
-# code-fence tokens are asserted removed.
-
-assert_true "AC4: no {{...}} substitution-shaped token remains in submodule-common-rules.md" \
-  "[ \"\$(grep -c '{{' '$SUBMODULE_COMMON')\" -eq 0 ]"
-assert_true "AC4: replacement non-substituted notation is present ('<org>/')" \
-  "grep -qF '<org>/' '$SUBMODULE_COMMON'"
-# Meaning-preservation guard: the four subsection headings survive
-# byte-for-byte — the swap is notation-only.
-assert_true "AC4 guard: '### 1. Repo Identity' heading survives" \
-  "grep -qF '### 1. Repo Identity' '$SUBMODULE_COMMON'"
-assert_true "AC4 guard: '### 2. Tech Stack & Commands' heading survives" \
-  "grep -qF '### 2. Tech Stack & Commands' '$SUBMODULE_COMMON'"
-assert_true "AC4 guard: '### 3. Scope Boundaries' heading survives" \
-  "grep -qF '### 3. Scope Boundaries' '$SUBMODULE_COMMON'"
-assert_true "AC4 guard: '### 4. AutoFlow Reference' heading survives" \
-  "grep -qF '### 4. AutoFlow Reference' '$SUBMODULE_COMMON'"
-
-# =============================================================================
-echo ""
 echo "=== G2 no .template reintroduction ==="
 
 assert_true "G2: git ls-files '*.template' returns 0 rows" \
@@ -295,28 +257,6 @@ assert_true "G4 guard (Trap A): mermaid '{{GATE:QUALITY}}' node survives" \
 
 # =============================================================================
 echo ""
-echo "=== AC5 manifest sha256 coherence oracle (#949 pattern) ==="
-
-if [[ -z "$BASE_REF" ]]; then
-  echo "  SKIP: AC5 manifest oracle (no base ref available)"
-  TESTS=$((TESTS + 1))
-else
-  cycle_diff_files="$(git -C "$PROJECT_ROOT" diff --name-only "$BASE_REF"...HEAD 2>/dev/null || true)"
-  manifest_sources="$(jq -r '.artifacts[].source' "$MANIFEST_JSON" 2>/dev/null | sort)"
-  touched_sources="$(comm -12 <(printf '%s\n' "$cycle_diff_files" | sort) <(printf '%s\n' "$manifest_sources") | grep -v '^setup/manifest.json$' || true)"
-
-  if [[ -n "$touched_sources" ]]; then
-    assert_true "AC5: manifest.json is itself in the diff (regen ran, #949 [MUST]) — touched sources: $(printf '%s' "$touched_sources" | tr '\n' ' ')" \
-      "printf '%s\n' \"\$cycle_diff_files\" | grep -qx 'setup/manifest.json'"
-  else
-    echo "  PASS: AC5 manifest oracle vacuously true (no manifest-listed source touched yet pre-GREEN)"
-    PASS=$((PASS + 1)); TESTS=$((TESTS + 1))
-  fi
-fi
-
-
-# =============================================================================
-echo ""
 echo "=== G6 doc reference-integrity on tests/test-sed-inplace.sh removal (GATE:QUALITY doc_updates cap) ==="
 # G6 originally asserted that two internal planning docs (host-service-
 # decoupling-plan.md, improvement-backlog.md) carried post-deletion
@@ -345,27 +285,30 @@ echo "=== G5 CI registration ==="
 
 assert_true "G5: tests/test-issue-952-wizard-removal.sh referenced in e2e-dummy-target.yml run: step" \
   "grep -qF 'test-issue-952-wizard-removal.sh' '$CI_WORKFLOW'"
-# SIGPIPE-safe capture-then-match (docs/submodule-common-rules.md > Testing Standards item
-# 6, issues #964/#973): the prior direct `awk ... | grep -qF ...` piped a context-producing
-# awk into a short-circuiting grep -qF under this script's own `set -uo pipefail` — when the
-# match sits near the START of a long awk output (the push: block spans to EOF), grep exits
-# before awk finishes writing, and the resulting SIGPIPE (awk exit 141) flips a logically-
-# passing assertion to a flaky/deterministic FAIL (reproduced: consistently 141 for the push
-# half here, GATE:QUALITY FAIL #4 investigation, unrelated to #56's own diff content).
+# SIGPIPE-safe capture-then-here-string (docs/submodule-common-rules.md > Testing Standards
+# item 6, issues #964/#973/#114). Two producers had to go, not one. The capture
+# (`ctx=$(awk ...)`) removes the STREAMING producer: the prior direct `awk ...` feeding a
+# short-circuiting grep under this script's own `set -uo pipefail` left awk still writing when
+# grep exited on a match near the START of a long output (the push: block spans to EOF), and
+# the resulting SIGPIPE (awk exit 141) flipped a logically-passing assertion to a
+# flaky/deterministic FAIL. The capture alone does NOT remove the pipe (issue #114): a
+# `printf` of the captured string is itself a producer writing into a pipe whose reader may
+# exit first, and above the pipe's capacity it fails uniformly. The consumer therefore takes
+# the captured string by here-string (`<<<`), which leaves the producer with no outstanding
+# write when the consumer exits.
 pr_paths_ctx="$(awk '/^on:/{f=1} f && /pull_request:/{p=1} p && /^  push:/{exit} p' "$CI_WORKFLOW")"
 assert_true "G5: e2e-dummy-target.yml pull_request paths: trigger lists this suite" \
-  "printf '%s\n' \"\$pr_paths_ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+  "grep -qF 'test-issue-952-wizard-removal.sh' <<<\"\$pr_paths_ctx\""
 push_paths_ctx="$(awk '/^  push:/{f=1} f' "$CI_WORKFLOW")"
 assert_true "G5: e2e-dummy-target.yml push paths: trigger lists this suite" \
-  "printf '%s\n' \"\$push_paths_ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
-# Capture-then-match (docs/submodule-common-rules.md:212, issues #964/#973):
-# awk's buffered output piped directly into a short-circuiting `grep -q`
-# consumer can SIGPIPE the producer under `set -o pipefail`. Capture each
-# block once, then match the captured string.
+  "grep -qF 'test-issue-952-wizard-removal.sh' <<<\"\$push_paths_ctx\""
+# Same idiom, inline-capture variants (issues #964/#973/#114): capture each block once to
+# remove the streaming awk producer, then feed the captured string to the short-circuiting
+# consumer by here-string so no pipe remains between them.
 assert_true "G5: e2e-dummy-target.yml pull_request paths: trigger lists this suite" \
-  "ctx=\$(awk '/^on:/{f=1} f && /pull_request:/{p=1} p && /^  push:/{exit} p' '$CI_WORKFLOW'); printf '%s\n' \"\$ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+  "ctx=\$(awk '/^on:/{f=1} f && /pull_request:/{p=1} p && /^  push:/{exit} p' '$CI_WORKFLOW'); grep -qF 'test-issue-952-wizard-removal.sh' <<<\"\$ctx\""
 assert_true "G5: e2e-dummy-target.yml push paths: trigger lists this suite" \
-  "ctx=\$(awk '/^  push:/{f=1} f' '$CI_WORKFLOW'); printf '%s\n' \"\$ctx\" | grep -qF 'test-issue-952-wizard-removal.sh'"
+  "ctx=\$(awk '/^  push:/{f=1} f' '$CI_WORKFLOW'); grep -qF 'test-issue-952-wizard-removal.sh' <<<\"\$ctx\""
 
 # =============================================================================
 # Results

@@ -31,27 +31,16 @@ on:
   pull_request:
     paths:
       - '.gitmodules'
-      - 'tests/test-issue-798-topology-flip.sh'
-      - 'tests/test-issue-799-inert-cleanup.sh'
       - 'docs/phases/analysis.md'
       - 'docs/evaluation-system.md'
       - 'docs/security-checklist.md'
       - 'tests/test-issue-952-wizard-removal.sh'
-      - 'tests/test-issue-955-subagent-background-ban.sh'
-      - 'tests/test-issue-964-sigpipe-safe-pipes.sh'
-      - 'tests/test-issue-846-doc-assertions.sh'
-      - 'tests/test-issue-848-doc-assertions.sh'
-      - 'tests/test-issue-847-doc-assertions.sh'
-      - 'tests/run-doc-invariants.sh'
-      - 'tests/fixtures/doc-invariants.json'
-      - 'tests/lib/base-ref.sh'
+      - 'tests/lib/**'
       - 'docs/repo-boundary-rules.md'
-      - 'docs/doc-invariant-registry.md'
       - 'scripts/resync-submodules.sh'
       - 'tests/plugin/verify-e2e-dummy-target.sh'
       - 'tests/plugin/verify-install-into-target.sh'
       - 'tests/plugin/verify-package.sh'
-      - 'tests/test-issue-788-host-purity-delta.sh'
       - 'tests/fixtures/**'
       - 'setup/**'
       - 'plugin/autoflow/hooks/**'
@@ -66,9 +55,7 @@ on:
       - 'docs/teammate-contracts.md'
       - 'docs/external-review-sequencing.md'
       - 'docs/INDEX.md'
-      - 'docs/maintained-docs.md'
       - 'docs/git-workflow.md'
-      - 'tests/manual/issue-847-manual-scenarios.md'
       - '.claude/agents/autoflow-analyzer.md'
       - '.claude/agents/autoflow-planner.md'
       - '.claude/agents/autoflow-implementer.md'
@@ -77,6 +64,13 @@ on:
       - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
+      # #130: this workflow is the SOLE runner of
+      # check-cleanup-issue-boundary.sh, and that suite is the only layer that
+      # drives the in-repo refusal on the store library's call path. A change to
+      # either new script that did not select this workflow would leave that
+      # call path unexercised in CI.
+      - 'scripts/test/green-tree-store.sh'
+      - 'scripts/test/green-tree-register.sh'
       - '.github/workflows/e2e-dummy-target.yml'
       # #26 cycle-scoped RED suite (tests/test-issue-26-verify-architect-route.sh)
       # retired at issue #27's VERIFY (GATE:QUALITY Impact-scope regression):
@@ -93,68 +87,41 @@ on:
       # an unrelated guard (reproduced 2026-07-26).
       - 'tests/test-issue-35-phase-marker.sh'
       - 'scripts/canary/**'
-      - 'tests/test-issue-42-spawn-mode-contract.sh'
-      # #43 cycle surface. TAIL here (pull_request), for the reason the #26/#35
-      # comments above record: #799's AC6-ci reads this list through a fixed
-      # `grep -A40 '^ *paths:'` window, and inserting above an in-window entry
-      # pushes it out of the window and reds an unrelated guard.
-      - 'tests/test-issue-43-report-channel-contract.sh'
-      # #27 cycle surface (composition-oracle verification-design requirement).
-      # TAIL here, mirroring the #43/#35 entries immediately above.
-      - 'tests/test-issue-27-composition-oracle.sh'
-      - 'tests/manual/issue-27-manual-scenarios.md'
-      # #56 cycle surface (carry-channel evidence discipline). TAIL here,
-      # mirroring the #7/#27/#43/#35 entries above for the same reason those
-      # comments record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window).
-      - 'tests/test-issue-56-carry-evidence-discipline.sh'
-      - 'tests/manual/issue-56-manual-scenarios.md'
-      # #59 cycle surface (adoption-side evidence discipline). TAIL here,
-      # mirroring the #7/#27/#43/#35/#56 entries above for the same reason
-      # those comments record (#799's AC6-ci fixed `grep -A40 '^ *paths:'`
-      # window has zero headroom above this file's first `paths:` block).
-      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
-      - 'tests/manual/issue-59-manual-scenarios.md'
-      # #62 cycle surface (sequential rounds / carry compaction / citation
-      # partitioning). TAIL here for the same reason the #56/#59 comments
-      # above record.
-      - 'tests/test-issue-62-sequential-rounds.sh'
-      - 'tests/manual/issue-62-manual-scenarios.md'
-      # #67 cycle surface (ARCHITECT deliberation record redesign — register +
-      # dispositions). TAIL here for the same reason the #56/#59/#62 comments above
-      # record.
-      - 'tests/test-issue-67-deliberation-record.sh'
-      - 'tests/manual/issue-67-manual-scenarios.md'
-      # #51 cycle surface. TAIL here, mirroring the #7/#27/#43/#35 entries
-      # above for the same reason those comments record (#799's AC6-ci fixed
-      # `grep -A40 '^ *paths:'` window).
-      - 'tests/test-issue-51-teammate-removal-verdict.sh'
-      - 'tests/manual/issue-51-manual-scenarios.md'
-      # #69 cycle surface (verification-depth justification at ARCHITECT /
-      # GATE:PLAN). TAIL here, mirroring the #51/#67/#7/#27/#43/#35 entries
-      # above for the same reason those comments record (#799's AC6-ci fixed
-      # `grep -A40 '^ *paths:'` window).
-      - 'tests/test-issue-69-verification-depth.sh'
+      # #120 disposition-residue extension (issue #120) added six ci-subject
+      # paths not previously in this block.
+      - '.github/workflows/contract-suites.yml'
+      - 'scripts/test/check-suite-manifest.sh'
+      - 'tests/manual/issue-42-manual-scenarios.md'
+      - 'tests/test-issue-16-manifest-locale-invariance.sh'
       # #55 cycle surface. TAIL here for the same reason the #51 entries above
       # record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero
       # headroom, so nothing is inserted above an existing entry).
       - 'tests/test-issue-55-score-format-contract.sh'
-      - 'tests/manual/issue-55-manual-scenarios.md'
-      # #52 cycle surface. TAIL here for the same reason the #51/#55 entries
-      # above record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has
-      # zero headroom, so nothing is inserted above an existing entry).
-      - 'tests/test-issue-52-peer-facilitator-premise.sh'
       - 'tests/manual/issue-52-manual-scenarios.md'
-      # #71 cycle surface (cycle-digest emission + cross-issue recurrence
-      # scan removal). TAIL here for the same reason the #51/#55/#52 entries
-      # above record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has
-      # zero headroom, so nothing is inserted above an existing entry).
-      - 'tests/test-issue-71-digest-removal.sh'
-      - 'tests/manual/issue-71-manual-scenarios.md'
-      # #75 cycle surface (cycle-scope-guard retirement + the standing lint).
-      # TAIL here for the same reason the #51/#55/#52 entries above record
-      # (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero headroom,
-      # so nothing is inserted above an existing entry).
-      - 'scripts/test/check-cycle-scope-guard.sh'
+      - '.claude-plugin/marketplace.json'
+      - '.claude/hooks/check-autoflow-gate.sh'
+      - '.claude/workflows/architect-deliberation.js'
+      - '.claude/workflows/verify-cause-branch.js'
+      - '.github/workflows/workflow-regression.yml'
+      - 'docs/adr/0000-adr-template.md'
+      - 'docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md'
+      - 'docs/adr/0017-teammate-removal-feasibility.md'
+      - 'docs/adr/README.md'
+      - 'docs/gate-matching-standard.md'
+      - 'docs/improvement-backlog.md'
+      - 'plugin/autoflow/.claude-plugin/plugin.json'
+      - 'plugin/autoflow/agents/autoflow-analyzer.md'
+      - 'scripts/issue/create-issue.sh'
+      - 'scripts/ledger/ledger-entry-id.sh'
+      - 'scripts/test/check-suite-ci-coverage.sh'
+      - 'scripts/test/check-suite-leaf.sh'
+      - 'scripts/test/run-suites.sh'
+      - 'scripts/test/select-suites.sh'
+      - 'test/workflows/run.mjs'
+      - 'tests/issue-create/fixtures/corpus.jsonl'
+      - 'tests/plugin/manual-scenarios-797.md'
+      - 'tests/test-codex-review-label-step.sh'
+      - 'tests/test-gate-hardening.sh'
   push:
     branches: [main]
     paths:
@@ -166,8 +133,6 @@ on:
       - 'tests/test-issue-35-phase-marker.sh'
       - 'scripts/canary/**'
       - '.gitmodules'
-      - 'tests/test-issue-798-topology-flip.sh'
-      - 'tests/test-issue-799-inert-cleanup.sh'
       # #26 cycle-scoped RED suite retired at issue #27's VERIFY (PR #33
       # merged; docs/doc-invariant-registry.md §2). The manual-scenario doc
       # is not a cycle-scoped guard and stays registered.
@@ -175,21 +140,12 @@ on:
       - 'docs/evaluation-system.md'
       - 'docs/security-checklist.md'
       - 'tests/test-issue-952-wizard-removal.sh'
-      - 'tests/test-issue-955-subagent-background-ban.sh'
-      - 'tests/test-issue-964-sigpipe-safe-pipes.sh'
-      - 'tests/test-issue-846-doc-assertions.sh'
-      - 'tests/test-issue-848-doc-assertions.sh'
-      - 'tests/test-issue-847-doc-assertions.sh'
-      - 'tests/run-doc-invariants.sh'
-      - 'tests/fixtures/doc-invariants.json'
-      - 'tests/lib/base-ref.sh'
+      - 'tests/lib/**'
       - 'docs/repo-boundary-rules.md'
-      - 'docs/doc-invariant-registry.md'
       - 'scripts/resync-submodules.sh'
       - 'tests/plugin/verify-e2e-dummy-target.sh'
       - 'tests/plugin/verify-install-into-target.sh'
       - 'tests/plugin/verify-package.sh'
-      - 'tests/test-issue-788-host-purity-delta.sh'
       - 'tests/fixtures/**'
       - 'setup/**'
       - 'plugin/autoflow/hooks/**'
@@ -204,9 +160,7 @@ on:
       - 'docs/teammate-contracts.md'
       - 'docs/external-review-sequencing.md'
       - 'docs/INDEX.md'
-      - 'docs/maintained-docs.md'
       - 'docs/git-workflow.md'
-      - 'tests/manual/issue-847-manual-scenarios.md'
       - '.claude/agents/autoflow-analyzer.md'
       - '.claude/agents/autoflow-planner.md'
       - '.claude/agents/autoflow-implementer.md'
@@ -215,54 +169,48 @@ on:
       - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
+      # #130: this workflow is the SOLE runner of
+      # check-cleanup-issue-boundary.sh, and that suite is the only layer that
+      # drives the in-repo refusal on the store library's call path. A change to
+      # either new script that did not select this workflow would leave that
+      # call path unexercised in CI.
+      - 'scripts/test/green-tree-store.sh'
+      - 'scripts/test/green-tree-register.sh'
       - '.github/workflows/e2e-dummy-target.yml'
-      - 'tests/test-issue-42-spawn-mode-contract.sh'
-      # #43 cycle surface. TAIL here (push) as well — mirrors the #42 entry's
-      # own placement immediately above; no read-back guard in either block
-      # pins the HEAD slot for this cycle's suite.
-      - 'tests/test-issue-43-report-channel-contract.sh'
-      # #27 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-27-composition-oracle.sh'
-      - 'tests/manual/issue-27-manual-scenarios.md'
-      # #56 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-56-carry-evidence-discipline.sh'
-      - 'tests/manual/issue-56-manual-scenarios.md'
-      # #59 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
-      - 'tests/manual/issue-59-manual-scenarios.md'
-      # #62 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-62-sequential-rounds.sh'
-      - 'tests/manual/issue-62-manual-scenarios.md'
-      # #67 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-67-deliberation-record.sh'
-      - 'tests/manual/issue-67-manual-scenarios.md'
-      # #51 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-51-teammate-removal-verdict.sh'
-      - 'tests/manual/issue-51-manual-scenarios.md'
-      # #69 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-69-verification-depth.sh'
+      # #120 disposition-residue extension. TAIL here (push) as well —
+      # mirrors the pull_request block's own placement immediately above.
+      - '.github/workflows/contract-suites.yml'
+      - 'scripts/test/check-suite-manifest.sh'
+      - 'tests/manual/issue-42-manual-scenarios.md'
+      - 'tests/test-issue-16-manifest-locale-invariance.sh'
       # #55 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'tests/test-issue-55-score-format-contract.sh'
-      - 'tests/manual/issue-55-manual-scenarios.md'
-      # #52 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-52-peer-facilitator-premise.sh'
       - 'tests/manual/issue-52-manual-scenarios.md'
-      # #71 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-71-digest-removal.sh'
-      - 'tests/manual/issue-71-manual-scenarios.md'
-      # #75 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'scripts/test/check-cycle-scope-guard.sh'
+      - '.claude-plugin/marketplace.json'
+      - '.claude/hooks/check-autoflow-gate.sh'
+      - '.claude/workflows/architect-deliberation.js'
+      - '.claude/workflows/verify-cause-branch.js'
+      - '.github/workflows/workflow-regression.yml'
+      - 'docs/adr/0000-adr-template.md'
+      - 'docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md'
+      - 'docs/adr/0017-teammate-removal-feasibility.md'
+      - 'docs/adr/README.md'
+      - 'docs/gate-matching-standard.md'
+      - 'docs/improvement-backlog.md'
+      - 'plugin/autoflow/.claude-plugin/plugin.json'
+      - 'plugin/autoflow/agents/autoflow-analyzer.md'
+      - 'scripts/issue/create-issue.sh'
+      - 'scripts/ledger/ledger-entry-id.sh'
+      - 'scripts/test/check-suite-ci-coverage.sh'
+      - 'scripts/test/check-suite-leaf.sh'
+      - 'scripts/test/run-suites.sh'
+      - 'scripts/test/select-suites.sh'
+      - 'test/workflows/run.mjs'
+      - 'tests/issue-create/fixtures/corpus.jsonl'
+      - 'tests/plugin/manual-scenarios-797.md'
+      - 'tests/test-codex-review-label-step.sh'
+      - 'tests/test-gate-hardening.sh'
 
 permissions:
   contents: read
@@ -277,60 +225,33 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Selection (issue #103): scripts/test/select-suites.sh is the SOLE owner of
+      # "which suites does this change require". Each governed suite step below
+      # guards on this step's output; nothing here reimplements the predicate.
+      # Under a push event, or an empty delta from a resolved base, it selects
+      # the full set — the push delta is empty by construction, so a purely
+      # delta-driven selector would silently lose all coverage.
+      - id: select
+        name: select suites for this change
+        timeout-minutes: 5
+        run: |
+          rc=0
+          bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
+            > "$RUNNER_TEMP/selected-raw.txt" \
+            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
+          cat "$RUNNER_TEMP/selection-report.txt"
+          if [ "$rc" -ne 0 ]; then
+            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
+            exit "$rc"
+          fi
+          paste -sd' ' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
+          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
+
       - name: Run throwaway dummy-target E2E acceptance suite
+        id: s-verify-e2e-dummy-target
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/plugin/verify-e2e-dummy-target.sh ')
+        timeout-minutes: 10
         run: bash tests/plugin/verify-e2e-dummy-target.sh
-
-      # Topology-flip absence guard (S11a #798): claude-autoflow is the first
-      # reversal case this workflow pilots — the zero-submodule single-repo
-      # state must stay asserted in CI (CI has no glob discovery; registered by
-      # filename per the sibling suites). See tests/test-issue-798-topology-flip.sh.
-      - name: Run topology-flip detach guard (#798)
-        run: bash tests/test-issue-798-topology-flip.sh
-
-      # Inert/delete cleanup guard (S11b #799): the post-#798 doc surface
-      # (README consumed-tool flow, inert services=llmroute self-references,
-      # INDEX.md/maintained-docs.md inert routing, git-workflow.md deferral
-      # note) must stay corrected. CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-799-inert-cleanup.sh.
-      - name: Run inert-cleanup guard (#799)
-        run: bash tests/test-issue-799-inert-cleanup.sh
-
-      # Doc-invariant registry runner (#951): the single runner that replaces
-      # the per-issue doc-assertion suites (794/796/797/800/949 migrated into
-      # tests/fixtures/doc-invariants.json and deleted). It reads the registry
-      # via jq, resolves each entry's section by durable heading anchor, and
-      # evaluates every permanent STATE invariant against the current tree.
-      # Registering a new invariant thereafter is a data append to the registry
-      # with no workflow edit. CI has no glob discovery; registered by filename
-      # per the sibling suites. See tests/run-doc-invariants.sh and
-      # docs/doc-invariant-registry.md.
-      - name: Run doc-invariant registry runner (#951)
-        run: bash tests/run-doc-invariants.sh
-
-      # Spawn-mode-by-lifetime contract guard (#42, cycle-scoped): the
-      # DELTA-shaped and meta assertions the permanent registry structurally
-      # cannot hold — the PREFLIGHT step-1.5 / HANDOFF step-6.7 no-touch
-      # fence, the gate hook + gate-schema byte-invariance fence, the
-      # manifest regen-clean check, and the registry-append meta guard
-      # (no embedded newline; every origin_issue:42 literal re-checked in its
-      # own predicate's direction). CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-42-spawn-mode-contract.sh.
-      - name: Run spawn-mode contract guard (#42)
-        run: bash tests/test-issue-42-spawn-mode-contract.sh
-
-      # Reporting-channel contract guard (#43, cycle-scoped): the DELTA-shaped
-      # and meta assertions the permanent registry structurally cannot hold —
-      # the gate hook + gate-schema byte-invariance fence, the manifest
-      # regen-clean check, the origin_issue==43 registry entry count, the
-      # registry-append meta guard (no embedded newline; every origin_issue:43
-      # literal re-checked in its own predicate's direction), and the
-      # three-surface untouched-scope fence. CI has no glob discovery;
-      # registered by filename per the sibling suites. See
-      # tests/test-issue-43-report-channel-contract.sh.
-      - name: Run report-channel contract guard (#43)
-        run: bash tests/test-issue-43-report-channel-contract.sh
 
       # init.sh legacy wizard removal + Language Rule user-scope reversion
       # guard (#952): the no-arg usage guard, the removed
@@ -341,62 +262,10 @@ jobs:
       # filename per the sibling suites. See
       # tests/test-issue-952-wizard-removal.sh.
       - name: Run wizard-removal guard (#952)
+        id: s-test-issue-952-wizard-removal
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-952-wizard-removal.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-952-wizard-removal.sh
-
-      # Subagent run_in_background prohibition guard (#955): the canonical
-      # [MUST] clause (docs/teammate-common-rules.md > Bash Execution Mode),
-      # its mirror (docs/submodule-common-rules.md), the five
-      # .claude/agents/autoflow-*.md role-contract bullets, the
-      # teammate-contracts.md in-script-agent coverage, the CLAUDE.md
-      # orchestrator-only counterpart + idle-handling reading, and the
-      # autoflow-guide.md REFINE/VERIFY foreground notes must stay asserted.
-      # CI has no glob discovery; registered by filename per the sibling
-      # suites. See tests/test-issue-955-subagent-background-ban.sh.
-      - name: Run subagent background-ban guard (#955)
-        run: bash tests/test-issue-955-subagent-background-ban.sh
-
-      # SIGPIPE-safe assertion pipes guard (#964): the repo-wide zero-remaining
-      # hazard-shape guard (grep -[ABC] context producer piped directly into
-      # grep -q), the 949 AC-CI-b local guard, the source-extraction
-      # negative-equivalence fixture, and the Testing Standards SIGPIPE-safe
-      # convention must stay asserted. CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-964-sigpipe-safe-pipes.sh.
-      - name: Run SIGPIPE-safe assertion pipes guard (#964)
-        run: bash tests/test-issue-964-sigpipe-safe-pipes.sh
-      # Review-triage hardening guard (#846): the .codex/review.md
-      # label-clear fallback + gh pr view --json labels verification, the
-      # verbatim dual-file 7-attempt cap window phrase in
-      # docs/autoflow-guide.md step 6.5 and docs/design-rationale.md
-      # Decision 9, and the durable host-PR record on cap-fire + user
-      # re-entry must stay asserted. CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-846-doc-assertions.sh.
-      - name: Run review-triage hardening guard (#846)
-        run: bash tests/test-issue-846-doc-assertions.sh
-
-      # Pointer-bump procedure + propagation-batching guard (#848): the
-      # DELIVER/HANDOFF *Secondary* pointer-bump actor+format single-source,
-      # HANDOFF step 3 review-response re-bump [MUST] + git ls-tree check,
-      # step 6.5 propagation-batching norm, the git-workflow.md stale
-      # machine-verify retirement correction, and the CLAUDE.md Commit
-      # Ownership pointer-bump row must stay asserted. CI has no glob
-      # discovery; registered by filename per the sibling suites.
-      # See tests/test-issue-848-doc-assertions.sh.
-      - name: Run pointer-bump procedure guard (#848)
-        run: bash tests/test-issue-848-doc-assertions.sh
-
-      # INTEGRATE deploy/CI-path conditional verification guard (#847): the
-      # new "### Deploy/CI-path conditional verification" INTEGRATE
-      # subsection (trigger glob set for .gitmodules/.github/workflows/
-      # Jenkinsfile/deploy-*.sh/.env + the (a)/(b)/(c) bundle + mandatory
-      # FAIL->RED disposition + defined no-op), the frozen TRIGGER_REGEX
-      # byte-identity anchor, and the VALIDATE item 6 dual-anchor cross-
-      # reference must stay asserted. CI has no glob discovery; registered
-      # by filename per the sibling suites. See
-      # tests/test-issue-847-doc-assertions.sh.
-      - name: Run deploy/CI-path conditional verification guard (#847)
-        run: bash tests/test-issue-847-doc-assertions.sh
 
       # Cleanup archive-semantics guard (#978): scripts/cleanup/cleanup-issue.sh
       # replaces its unconditional `find -delete` with an archive `mv` to
@@ -422,27 +291,6 @@ jobs:
       - name: Run repo-key derivation guard (#978)
         run: bash scripts/test/check-repo-key.sh
 
-      # Cycle-scope-guard lint (#75): a cycle-scoped path allow-list must be
-      # evaluated only on its own dev/*-issue-<N> branch, so a merged cycle's
-      # guard cannot red an unrelated branch. The check is applied to the
-      # array's evaluation set (dereference, feeding `git diff --name-only`,
-      # `resolve_base_ref`), not to the array data, and its --self-test runs
-      # first so an empty subject set still exercises the detector. CI has no
-      # glob discovery; registered by filename per the sibling suites. See
-      # scripts/test/check-cycle-scope-guard.sh.
-      - name: Run cycle-scope-guard lint (#75)
-        run: bash scripts/test/check-cycle-scope-guard.sh
-
-      # Cycle-scope-guard retirement suite (#75): asserts the post-state of
-      # the §3 deletions (dead assertions, duplicate whole-suite re-runs,
-      # hardcoded sibling totals and unscoped allow-list arrays are gone, each
-      # with a §5 disposition row), the retained-lane survival legs, the
-      # runner's absorbed newline-literal gate, and this cycle's own
-      # branch-scoped allow_list lane. CI has no glob discovery; registered by
-      # filename per the sibling suites.
-      #
-      # The heavy composition legs (the real sibling re-runs) are opt-in: the
-
       # Phase-marker emitter guard (#35): the canary emitter
       # `scripts/canary/emit-phase-marker.sh` appends one phase-transition
       # record per invocation to `.autoflow/issue-<N>-phases.jsonl` and prints
@@ -451,88 +299,11 @@ jobs:
       # registered by filename per the sibling suites.
       # See tests/test-issue-35-phase-marker.sh.
       - name: Run phase-marker emitter guard (#35)
+        id: s-test-issue-35-phase-marker
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-35-phase-marker.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-35-phase-marker.sh
 
-      # Composition-oracle guard (#27, cycle-scoped): the count/diff-shaped
-      # assertions the permanent registry structurally cannot hold (the
-      # REQUIRED-token count fence, the new section's stack-neutrality guard,
-      # the GATE:PLAN/Regressions over-build fences, the .claude/ bounded-diff
-      # fence, the workflow-regression harness composition oracle, the
-      # manifest-freshness composition oracle, and the pre-existing-registry
-      # regression fence). CI has no glob discovery; registered by filename
-      # per the sibling suites. See
-      # tests/test-issue-27-composition-oracle.sh.
-      - name: Run composition-oracle guard (#27)
-        run: bash tests/test-issue-27-composition-oracle.sh
-
-      # Carry-channel evidence discipline guard (#56, cycle-scoped): the
-      # count/position-shaped assertions the permanent registry structurally
-      # cannot hold — the CARRY_NON_EVIDENTIARY / COUNTER_EVIDENCE_RULE
-      # constant-placement discriminators, the change-surface fence bound to
-      # architect-deliberation.js alone, and the manifest-hash derived-
-      # artifact gate. CI has no glob discovery; registered by filename per
-      # the sibling suites. See
-      # tests/test-issue-56-carry-evidence-discipline.sh.
-      - name: Run carry-channel evidence discipline guard (#56)
-        run: bash tests/test-issue-56-carry-evidence-discipline.sh
-
-      # Adoption-side evidence discipline guard (#59, cycle-scoped): the
-      # count/position/order-shaped assertions the permanent registry
-      # structurally cannot hold — the ADOPTION_EVIDENCE_RULE
-      # declaration/interpolation discriminators, the cross-cycle
-      # change-surface re-run fence (AC-59-11d, multi-minute), the ok-count
-      # cross-pin equality with test-issue-27, and the derived-artifact /
-      # SPDX / negative-control fences. CI has no glob discovery; registered
-      # by filename per the sibling suites. See
-      # tests/test-issue-59-adoption-evidence-discipline.sh.
-      - name: Run adoption-evidence discipline guard (#59)
-        run: bash tests/test-issue-59-adoption-evidence-discipline.sh
-
-      # Sequential-round / carry-compaction / citation-partitioning guard
-      # (#62, cycle-scoped): the structural and count-shaped assertions the
-      # permanent registry cannot hold — the single-`parallel(`-site
-      # discriminator, the non-comment `import(` fence, the ok-count
-      # cross-pin bump in its two foreign homes, the six branch-diff
-      # allow-list admissions, and the manifest-hash derived-artifact gate
-      # widened to three sources. CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-62-sequential-rounds.sh.
-      - name: Run sequential-round deliberation guard (#62)
-        run: bash tests/test-issue-62-sequential-rounds.sh
-
-      # ARCHITECT deliberation record redesign guard (#67, cycle-scoped): the
-      # two composition oracles (shared harness ok-count, manifest sha256 +
-      # version), doc present/absent pairs, the doc-invariant registry fence,
-      # CI registration, the three-halves carry-anchor re-anchoring, and the
-      # branch-scoped change-surface guard. CI has no glob discovery;
-      # registered by filename per the sibling suites. See
-      # tests/test-issue-67-deliberation-record.sh.
-      - name: Run deliberation record redesign guard (#67)
-        run: bash tests/test-issue-67-deliberation-record.sh
-      # Teammate-removal feasibility verdict (#51, cycle-scoped): the
-      # assertions the permanent registry structurally cannot hold — the
-      # base-relative Status fence and the migration-slice DELTA /
-      # byte-invariance fence (both lane A-delta, branch-scoped), the manifest
-      # and registry composition oracles driven through their real producers,
-      # the CI-wiring assertions on this file, and the origin_issue==51 entry
-      # count. Placed at the job TAIL, strictly below the doc-invariant
-      # registry runner step, so an unrelated cycle's broken registry entry
-      # reds the runner's own step first (job steps halt at the first failure)
-      # rather than a step bearing this cycle's name. CI has no glob
-      # discovery; registered by filename per the sibling suites. See
-      # tests/test-issue-51-teammate-removal-verdict.sh.
-      - name: Run teammate-removal feasibility verdict (#51)
-        run: bash tests/test-issue-51-teammate-removal-verdict.sh
-
-      # Verification-depth justification at ARCHITECT / GATE:PLAN (#69,
-      # cycle-scoped): ADR + registry-home agreement, CI registration, the
-      # rubric/composition-oracle invariance fences, the manifest and
-      # doc-invariant-registry composition oracles, the derived harness
-      # ok-count pin-agreement sweep, and the branch-scoped change-surface
-      # guard. CI has no glob discovery; registered by filename per the
-      # sibling suites. See tests/test-issue-69-verification-depth.sh.
-      - name: Run verification-depth justification guard (#69)
-        run: bash tests/test-issue-69-verification-depth.sh
       # #55 gate-score write contract at the producer site. Cycle-scoped: it
       # drives the CLAUDE.md SCORE-SHAPE-EXAMPLE fence through the real hook
       # (the digest-agreement arm that once also drove the real digest
@@ -543,29 +314,26 @@ jobs:
       # registered by filename per the sibling suites. See
       # tests/test-issue-55-score-format-contract.sh.
       - name: Run gate-score write contract (#55)
+        id: s-test-issue-55-score-format-contract
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-55-score-format-contract.sh ')
+        timeout-minutes: 10
         run: bash tests/test-issue-55-score-format-contract.sh
 
-      # #52 peer-teammate-facilitator premise, evidence-anchor correction.
-      # Cycle-scoped: the manual-scenario section skeleton + Observation-
-      # record field completeness, the .claude/workflows/ no-touch fence, this
-      # file's own CI-wiring assertions, and the manifest / doc-invariant-
-      # registry composition oracles driven through their real producers.
-      # Placed at the job TAIL, strictly below the doc-invariant registry
-      # runner step, for the reason the #51 comment above records. CI has no
-      # glob discovery; registered by filename per the sibling suites. See
-      # tests/test-issue-52-peer-facilitator-premise.sh.
-      - name: Run peer-facilitator premise evidence-anchor guard (#52)
-        run: bash tests/test-issue-52-peer-facilitator-premise.sh
-
-      # Cycle-digest emission + cross-issue recurrence scan removal (#71,
-      # cycle-scoped): the removal-state suite for the mechanism deletion
-      # (scripts, data plane, playbook steps, manifest rows, CI steps, the
-      # dedicated digest/scan suites) plus its own real-execution arms
-      # (collateral-suites-green, unconditional-guards-green — several of
-      # them multi-minute, see the suite's own header). Placed at the job
-      # TAIL, strictly below the doc-invariant registry runner step, for the
-      # reason the #51 comment above records. CI has no glob discovery;
-      # registered by filename per the sibling suites. See
-      # tests/test-issue-71-digest-removal.sh.
-      - name: Run removal-state guard (#71)
-        run: bash tests/test-issue-71-digest-removal.sh
+      # Reconciliation (issue #103): a step whose `if:` evaluates false is
+      # SKIPPED and the job still concludes successfully — so a green run is
+      # exactly what a wrongly-false guard produces, and enforcement here is
+      # advisory with no required status check behind it. This step compares the
+      # run's own selection report against the run's own step outcomes, so it
+      # needs no second source of truth.
+      - name: reconcile selection against step outcomes
+        if: always()
+        timeout-minutes: 5
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          printf '%s' "$STEPS_JSON" > "$RUNNER_TEMP/steps.json"
+          bash scripts/test/check-step-reconciliation.sh \
+            --selected "$RUNNER_TEMP/selection-report.txt" \
+            --job-status "$JOB_STATUS" \
+            --steps "$RUNNER_TEMP/steps.json"

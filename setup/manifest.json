@@ -13,14 +13,14 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8183f75c3950c043019c06baa6163fe15c75159263c73f1d33046a75cf2fa496"
+      "sha256": "591d368f2704891d1f031d32305d81ca7c6790587f2d7b9d104e7b8c2324277f"
     },
     {
       "source": "docs/INDEX.md",
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8e2a5e0857999dffd6aa3d14f67281327f851f8504071acc5dba97ddd0eb9c8e"
+      "sha256": "aaf99be91a7b9735087c7e0663a2e16b9c5f0c76beca1c03efeca5a4c5fead34"
     },
     {
       "source": "docs/adr/0000-adr-template.md",
@@ -55,7 +55,7 @@
       "dest": ".claude/autoflow/docs/adr/0017-teammate-removal-feasibility.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d11e976c5ab0f9949e54987985caa5578a176f5083f0b934cfa7ad5f197e5ff6"
+      "sha256": "cd59ca8f40d86ecf43d716d148d8b300eca9cbc97cfd57dd30442b4160d74b27"
     },
     {
       "source": "docs/adr/0018-verification-depth-justification.md",
@@ -65,53 +65,60 @@
       "sha256": "3295ee838a98f44806a0be469efe721c1328e9385120f731e12b108d2528deb1"
     },
     {
-      "source": "docs/adr/0019-c7-pilot-spawn-mode-result.md",
-      "dest": ".claude/autoflow/docs/adr/0019-c7-pilot-spawn-mode-result.md",
+      "source": "docs/adr/0019-scope-fit-verification-policy.md",
+      "dest": ".claude/autoflow/docs/adr/0019-scope-fit-verification-policy.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "27d12399316d25a4443c75fb9f2799ceee97a29c705072183ed918f5e3d9c83f"
+      "sha256": "387de9f88cc94908823ded6d7008fe2a0d3b47b4062e4aa51f5f74c2776359a0"
+    },
+    {
+      "source": "docs/adr/0020-acceptance-criterion-authority.md",
+      "dest": ".claude/autoflow/docs/adr/0020-acceptance-criterion-authority.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "0d8b061584efe0580d18fb377d8ddc30592237432807b08f884503e3f1402ce3"
+    },
+    {
+      "source": "docs/adr/0021-c7-pilot-spawn-mode-result.md",
+      "dest": ".claude/autoflow/docs/adr/0021-c7-pilot-spawn-mode-result.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "5d95a47a87c1720496539278136b479cb40b1abc7214a6d0798495a7406032ea"
     },
     {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5fcd859748f950ca62930bdd60bc0d8e04804f89bbbf9450c9a06d7ba17fe742"
+      "sha256": "52883a1f23532469ddf87e0c29e7596ff3d6884d0ee8cddc649a95686e5ffd5f"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "de2433ccccf8f2a97a41a837380171287a5f840e8bb47dedf7467b62618fce8e"
+      "sha256": "5cee9b3a7e9a83c79278e2d8260cbaf86378f5330d9cddb4e13772b29da0c719"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "55de5687a5994d022b2541b52918531d815d155aada4995d13ed2451ca7ffa4d"
+      "sha256": "3632e4883599a896eadfc97bbf652c2b9c9eed1ad0d1db28c57a0844dd43df54"
     },
     {
       "source": "docs/development-guideline.md",
       "dest": ".claude/autoflow/docs/development-guideline.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5b507e9c4d40c87b662f2beef39a37fbc1fe9dea5be1cdbb6944988086b3cfc5"
-    },
-    {
-      "source": "docs/doc-invariant-registry.md",
-      "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
-      "tier": "reference",
-      "kind": "copy",
-      "sha256": "a907771fc703a2c2223c666f925b8d4032425d856679d10e4773d29183d6d9aa"
+      "sha256": "24c9639937e6259c6ddb891218647ae9bd27d9c0523176a5a505c767c8c458c0"
     },
     {
       "source": "docs/evaluation-system.md",
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "551af9364cd1835c50e77914f0518ecae00cbea5d6652b6487068ed6e37714aa"
+      "sha256": "62daa985dcd41304447c54f1f9ea92e1615f15d3171d54eda68d6438d7dbd93d"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -135,18 +142,18 @@
       "sha256": "a76b5f60168d4d99dfc0d4f57892519ed214db086cef775f28c7ab5b4a645c13"
     },
     {
-      "source": "docs/maintained-docs.md",
-      "dest": ".claude/autoflow/docs/maintained-docs.md",
+      "source": "docs/issue-proposal.md",
+      "dest": ".claude/autoflow/docs/issue-proposal.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "50311fbdca361aac34814907d499be8643e9be548382bd9dc08b44b550857c15"
+      "sha256": "226c64f36bd1f0b0f5730d39d3bfcd7db7e1b1cd2997abd967efb40d99d1cc09"
     },
     {
       "source": "docs/phases/analysis.md",
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "98c42300131d3bd79121998f42aa09d7d84d3d10b36b4b247824b3c32e003851"
+      "sha256": "721adf69dcb6443ab772ea0ff52b892667b76931d1b63b8dde9c055b1c304529"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -181,21 +188,21 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a67eb36eb90c5b6bd5b8096288091487ed0381fd1890cd5770adb53a2c48beb0"
+      "sha256": "38c8ad72e0069916c86527e6f2993b6ff8c95ce2a267271318a18d469d059493"
     },
     {
       "source": "docs/teammate-common-rules.md",
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b8ba22392bda40dc81712874c0c446757e5e28a3c7e6ef06005c1c450ac956a1"
+      "sha256": "9e720670e9cfd508667b2ae514d3e3bffb74f5e3e251ead7e9605bf642fc9dbd"
     },
     {
       "source": "docs/teammate-contracts.md",
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f324292c67145f209208ba3ef4b46c16cd0a5c93ed6ea994372cdf670e765179"
+      "sha256": "357d4105c10e6c9f7b5c004316dbd4b65055d0aadd44023a4a3ae5339b872175"
     },
     {
       "source": "docs/title-guide.md",
@@ -216,14 +223,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "9318d4ae15f1221b14a4b26af5887bc29d764d08edb7f371c08357bf062f4f71"
+      "sha256": "47fdd89986d7ea876955a6bc60457810094323b4929d065a895412cee1fd264d"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "315e2069ae8526078b6149359e3aba92c7da1785547cde7d0fa9a65912494d3b"
+      "sha256": "72a7be6309fe7e74ec48c99df27478a6f94de1f6db5741972e14728b18927322"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -286,7 +293,7 @@
       "dest": "scripts/preflight/check-review-backend.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "2a2e04093232e7e418cf84fae664b13c245615bebc06f4bb137750861bbd0246"
+      "sha256": "cfefc35a75bdb5dd4bb28f0dfc02dcd11d6b805c583af6dd373d4e9980f4048f"
     },
     {
       "source": ".codex/review.md",
@@ -321,14 +328,28 @@
       "dest": "scripts/handoff/confirm-ci-green.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "a89f2c01b6433bb2367fb216b42ab8aa501379a0032413ef7b843e8f7d99ac53"
+      "sha256": "486ce97017324a1ddc06765419a76f29d059d078eddc89c380fe0e49c5fafa58"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",
       "dest": "scripts/cleanup/cleanup-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "1fe25369be7c480187e136b95d1e7203400e93c0eba75fc0791bb134c688495a"
+      "sha256": "3bbba744a0982d9f73ed8d4903b4742105342f335e4899f45e3f52c905db49fb"
+    },
+    {
+      "source": "scripts/ledger/ledger-entry-id.sh",
+      "dest": "scripts/ledger/ledger-entry-id.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "70ef41f7c8d413bd6465bf1ec2e5a1b97028651621fdb71b4ce06953bbdd39fc"
+    },
+    {
+      "source": "scripts/issue/create-issue.sh",
+      "dest": "scripts/issue/create-issue.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "5136de3ef1317bf49eab3a09ca9d33dc24d243c35ebd0ac7dec529af45d8cdc6"
     },
     {
       "source": "setup/manifest.json",

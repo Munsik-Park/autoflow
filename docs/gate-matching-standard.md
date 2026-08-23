@@ -24,6 +24,15 @@ A `^git push` / `^gh pr create` pattern fails to match the most common
 real command forms (`cd <dir> && git push`, `a && gh pr create`,
 `ENV=v git push`), silently bypassing the gate.
 
+P1's named primitives are the shared `CMD_BOUNDARY` prefix and the `SCAN`
+buffer defined below, the `GIT_PUSH` token-interposition fragment, the two
+global-scope normalisation functions `_fold_continuations` (logical-line
+folding, shared with the segment fold) and `_strip_heredoc_bodies` (heredoc-body
+removal, applied in that order), and — for the backgrounded suite-run deny — the
+deny-local scan buffer `BG_SCAN` those two build, together with the two composed
+patterns `BG_PREFIX` and `BG_TAIL` matched over it. Each is specified in its own
+refinement subsection below.
+
 Use a shared command-boundary prefix plus a word boundary on the command
 token:
 
@@ -171,6 +180,178 @@ false-positives over the whole buffer. Both denies now share the single
 `sed` primitive has one source of truth rather than a per-deny copy that
 could drift.
 
+### Backgrounded-invocation refinement — `BG_SCAN` / `BG_PREFIX` / `BG_TAIL` (applied)
+
+The backgrounded suite-run deny (issue #134,
+`.claude/hooks/check-autoflow-gate.sh` Section 1) adds three named
+primitives to P1's vocabulary. It is recorded here because P1 owns the
+hook's command-matching rules and this deny introduces a new window rule,
+a new scan buffer, and its own accepted residuals.
+
+**`BG_SCAN` reads shell *logical* lines, not physical lines.** `grep -qE` is
+line-oriented, so a buffer built from raw `COMMAND` text hands the matchers
+physical lines — and a shell command is not a physical line. `BG_SCAN` is
+therefore built by an ordered **three-stage** pipeline over `COMMAND`, and the
+order of the stages is load-bearing:
+
+```sh
+BG_SCAN=$(_fold_continuations <<< "$COMMAND" \
+  | _strip_heredoc_bodies \
+  | sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g")
+[ -n "$COMMAND" ] && [ -z "$BG_SCAN" ] && BG_SCAN=$COMMAND
+```
+
+1. **`_fold_continuations` — logical-line folding.** Each bare trailing `\` and
+   the newline after it become one space (chaining permitted); every other
+   newline is preserved as a real command separator; a trailing CR is stripped
+   before the continuation test, so the gate is never weaker on CRLF input. It
+   is the *same* function the segment fold uses (global scope, one definition,
+   as with `CMD_BOUNDARY` and `GIT_PUSH`), a pure `read`/`case` shell loop for
+   the recorded BSD/GNU `sed` `N`-at-EOF reason, and **total** — content is
+   never discarded. Without it `… run-suites.sh --all \`⏎`&` puts the
+   invocation token and its terminating `&` on two physical lines and no
+   surface matches.
+2. **`_strip_heredoc_bodies` — remove bodies, keep the tail.** Each heredoc
+   introducer token (`<<WORD`, `<<-WORD`, `<<"WORD"`, `<<'WORD'`) is deleted
+   from its own line while the rest of that line — a trailing `&` included — is
+   kept, and the body lines through the matching terminator are removed;
+   processing then **continues**, so no line after a heredoc leaves the buffer.
+   `<<<` is not an introducer (a here-string has no body): the scan steps over
+   it and keeps looking on the same line. On an **unterminated** heredoc the
+   body lines are buffered, not discarded, and emitted at end of input. This
+   replaces the earlier truncate-at-`<<` shape, which stopped at the first
+   introducer and so admitted a genuinely backgrounded run placed on any later
+   line.
+3. **the unquoting `sed`** — unchanged, and described next.
+
+*Fold before the heredoc stage*: the introducer may itself sit on a continued
+line (`… --all \`⏎`<<EOF &`), and under the truncating order the `&` was cut
+away before any fold could join it. *Fold before unquoting*: a quoted span split
+across a continuation regains quote parity on one line, so the separator-bounded
+rule below applies to it as written. *Strip before unquoting*: a heredoc body is
+arbitrary text and routinely carries an unbalanced apostrophe (`it's`), which
+would corrupt the quote pairing for every real command line after it; the
+reverse order buys nothing symmetric, because unquoting **keeps** the contents
+of a separator-free span and `git commit -m "a << b"` still presents a bare `<<`
+to the strip afterwards.
+
+The **fail-closed** guard on the last line is the same invariant the segment
+fold carries at `NOTE (C4)`: in a security gate an empty buffer fails **open**,
+so a non-empty `COMMAND` that yields an empty buffer falls back to the raw
+`COMMAND` — the only text guaranteed to be real content — never to a
+partially-built buffer. `SCAN` and `_SEGMENTS` are untouched by all of this.
+
+**`BG_SCAN` — when a deny may *unquote* a span instead of deleting it.**
+The shared `SCAN` deletes quoted substrings whole, which erases the
+commonest invocation spelling before any matcher runs:
+`bash "$ROOT/scripts/test/run-suites.sh" --all &` reduces to `bash  --all &`.
+`BG_SCAN` is a deny-local variant — `SCAN` and `_SEGMENTS` are untouched and
+every existing gate keeps reading them — in which a quoted span carrying **no**
+command separator is *unquoted* (quote characters dropped, content kept) while a
+span whose own text carries `;` `&` or `|` is **deleted whole**, as `SCAN`
+deletes it:
+
+(the third stage of the pipeline above):
+
+```sh
+sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g"
+```
+
+Unquoting is admissible only under **both** halves of the following condition,
+and each half is load-bearing:
+
+1. the deny's token test is **anchored at `CMD_BOUNDARY`**, so a
+   separator-free mention inside an argument is preceded by a word, not by a
+   command boundary, and cannot occupy a command position; **and**
+2. the unquoting is **bounded to separator-free spans**, because `CMD_BOUNDARY`
+   accepts the position after `;` `&` `|` — so once the quote characters are
+   gone, a prose body supplies the boundary itself and the anchor stops
+   discriminating. Half (1) alone is false in the case the next gate is
+   likeliest to meet: a `git commit -m` / `gh pr comment --body` text that
+   *describes* the prohibited form (`"deny: run it; bash …/run-suites.sh --all &
+   is refused"`), which would deny under an unconditional quote strip.
+
+The four alternatives are **ordered** so that each consumes a complete span —
+the safe form is tried first at a span's opening quote, the deleting form
+second. Two independent deleting substitutions followed by a blanket quote strip
+lose quote parity across two spans (the deleting pattern opens on the *closing*
+quote of the first span and closes on the *opening* quote of the second),
+admitting the genuine backgrounded run
+`bash "$ROOT/scripts/test/run-suites.sh" --all & echo "a; b"`. The `sed`
+replacement is a back-reference, never a newline, so the literal-newline
+constraint above does not apply to it; a non-participating group expands to the
+empty string on BSD and GNU `sed -E` alike.
+
+**`BG_PREFIX` and `BG_TAIL` are single composed patterns, not co-occurrences.**
+Both are built on `RUN_SUITES`, the command-position invocation matcher
+(`CMD_BOUNDARY` + a wrapper-word group + an optional interpreter + the path
+token), and both are matched **once** over `BG_SCAN`:
+
+```sh
+BG_PREFIX="${CMD_BOUNDARY}${BG_WRAPPER}(nohup|setsid)[[:space:]]+${BG_WRAPPER}${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
+BG_TAIL="${RUN_SUITES}"'([^;]*[^&;<>])?&([^&>]|$)'
+```
+
+They therefore fall on the *single-pattern* side of the segment-scoped
+co-occurrence MUST above, and the failure mode that MUST exists to prevent is
+structurally unavailable to them. `BG_PREFIX`'s wrapper word and path token are
+adjacent within one command position. `BG_TAIL`'s invocation token and
+backgrounding `&` are two parts of one pattern separated by a run of characters
+the pattern itself constrains — and that constraint, `[^;]*`, **is** a segment
+bound, expressed inside the regex instead of by pre-splitting the buffer. Note
+that neither surface may use `_SEGMENTS`: segmentation is a fold over `SCAN` and
+so cannot see a quoted invocation path either.
+
+**The `BG_TAIL` window rule.** The window closes on `;` and on end-of-line —
+the separators that start a *new* command — and stays **open** across `&&` and
+`|`, because a pipeline or an AND-list containing the invocation is backgrounded
+*as a whole* by a trailing `&`. Closing on those would produce false **admits**,
+which is the opposite of the co-occurrence MUST's concern. The `&` must not be
+preceded by `&` `;` `<` `>` (so `&&` and `2>&1` are not read as backgrounding)
+nor followed by `&` or `>` (so `&&` and `&> log` are not), and the intervening
+run is optional so the argument-less `bash …/run-suites.sh&` is caught. No `\n`
+appears in any bracket expression: its meaning inside a bracket is not portable
+across BSD and GNU, and it is unnecessary because the hook matches with
+`grep -qE`, which is line-oriented.
+
+**Accepted residuals** (all false *negatives*, per P1's preference for a
+false negative over a realistic false positive):
+
+- the `;` window — `bash …/run-suites.sh --all; echo done &` is admitted,
+  correctly, since only the `echo` is backgrounded; the brace-group form
+  `{ bash …/run-suites.sh --all; } &` does background the run and is admitted
+  with it. The brace group sits with the subshell and command-substitution
+  wrappers P1 already places outside the threat model;
+- an invocation reached through a wrapper word the group does not name, or
+  through a shell variable holding the path;
+- a quoted argument whose own text ends in a backgrounding-shaped `&` is
+  deleted whole by the span bound, so it cannot be mis-read as backgrounding.
+
+**The terminated-misread swallow — an accepted *under*-inclusive residual.**
+Because `_strip_heredoc_bodies` runs while the buffer is still quoted, a literal
+`<<` inside a quoted argument is read as an introducer. The totality clause
+bounds that misreading in the common case: the body is never terminated, so the
+following real command line is emitted and the deny still fires. It is **not**
+bounded when a later line happens to equal the misread delimiter word exactly —
+
+```
+echo "<< EOF is a heredoc"
+bash scripts/test/run-suites.sh --all &
+EOF
+```
+
+— where the third line terminates the misread body and the invocation is
+swallowed with it, so the form is **admitted** (exit 0). This is the one
+accepted residual in the under-inclusive direction on this surface; it is
+recorded rather than repaired because removing it means either parsing quotes
+before stripping bodies (which the *strip before unquoting* argument above
+rejects on the corruption ground) or narrowing the delimiter scan on shapes a
+quoted mention can always re-create. Every other residual listed above sits in
+the over-inclusive direction: multiple introducers on one line (`cat <<A <<B`)
+leave B's token and body as ordinary text, an unterminated heredoc keeps its
+body, and a body line ending in a bare `\` is folded into its terminator so the
+body stays in the buffer.
+
 ## Rule P2 — Unconditional Denies Precede the Activity Check
 
 A hook has two classes of gate:
@@ -222,7 +403,7 @@ the hook owns the role→gate mapping:
 `subagent_type` is the **sole** declaration channel. The team-spawn channel — a
 role prefix on the teammate `name` (`analysis-`, `plan-`, `impl-` / `dev-`,
 `test-`, `eval-`) — was removed jointly with the spawn-mode migration
-(ADR-0017 Q3; pilot discharged by ADR-0019), because every role is now an
+(ADR-0017 Q3; pilot discharged by ADR-0021), because every role is now an
 anonymous direct spawn and retaining the branch would have left an unreachable
 path that still name-prefix-overrode `subagent_type`.
 

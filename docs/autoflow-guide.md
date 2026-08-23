@@ -107,7 +107,7 @@ flowchart TD
     AUD -->|FAIL ×3| HUMAN
     AUD -->|PASS| QUAL
     QUAL -->|PASS| DEL
-    QUAL -->|FAIL ≤3×| RED
+    QUAL -->|FAIL ≤3× · re-entry by remedy_class<br/>doc commit / RED / GREEN / ARCHITECT| RED
     QUAL -->|FAIL ×4| HUMAN
     DEL --> INT
     INT -->|FAIL| RED
@@ -152,13 +152,13 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
                                                     AUDIT  ◄── retry ≤2×
                                                        │
                                                        ▼
-                                                GATE:QUALITY ◄── retry ≤3× → RED
+                                                GATE:QUALITY ◄── retry ≤3× → by remedy_class (doc commit / RED / GREEN / ARCHITECT)
                                                        │
                                                        ▼
                                                     DELIVER
                                                        │
                                                        ▼
-                                                   INTEGRATE → [FAIL] → RED
+                                                   INTEGRATE → [FAIL] → GREEN (impl)
                                                        │
                                                        ▼
                                                    HANDOFF ◄── retry ≤2×
@@ -184,6 +184,10 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
 **Git Clean Check** (procedural detail → [`git-workflow.md`](git-workflow.md) > Git Clean Check): working tree clean; new-issue mode → main synced with origin; review-response mode → existing dev branch fast-forwarded from origin (`git fetch && git pull --ff-only`). The Merged / Closed-unmerged resolution paths above also start the next cycle from a fresh state-file template, so a re-filed issue never inherits a stale `mode`.
 
 **Review-response mode setup** (requested issue has an open PR + `active:false`): `git checkout dev/<existing-branch>` (the issue's dev branch per the Step-5 naming convention `dev/<date>-issue-{target}`, located with `git branch --list 'dev/*-issue-{target}'`); set `mode: "review-response"`, `active: true`, `phase: "in-progress"`; identify the triggering reviewer comment/thread (the DIAGNOSE review-response target); increment the state file's `cycle` field and reset `phases` to the empty Creation template (preserving the `verdict` rule); add the `status:in-progress` label: `gh issue edit #N --add-label "status:in-progress"`. Skip dev-branch creation (step 5 is new-issue mode only).
+
+**[MUST] Preserve the previous cycle's artifacts** (issue #135): before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, and `issue-{N}-review-findings.md`, which are cycle-spanning. Without this the new cycle's Phase A/B/3, REFINE and AUDIT overwrite the flat names, and the bounded path below has nothing to reuse.
+
+**Scope-bounded entry** (issue #135): when `.autoflow/issue-{N}-review-findings.md` carries `scope-bounded: true` (written by HANDOFF step 6.5 from `scripts/review/scope-bounded.sh triage`), the cycle takes the **bounded path**: DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs with `args: { issue: "N", bounded: "true" }` (Draft + a 2-round ceiling; round-1 devil's advocate, closing half-round and resume unchanged), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE's whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-deliberated with the full cap (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `scope-bounded: false` or an absent line is the full path.
 
 **Resume procedure** (requested issue's own state file reads `active:true` — a mid-cycle session resumed after an abnormal end): resume deterministically, do not restart from PREFLIGHT.
 1. **Read the last confirmed point** from the state file: the highest phase whose gate `scores` are recorded in `phases` (or `verdict` set for `gate_hypothesis_cause`) is the last *passed* gate; `phase` gives the coarse marker.
@@ -245,8 +249,12 @@ Both perspectives participate, but the discussion runs inside an isolated
 **`Workflow`** (the facilitator — `architect-deliberation`), **not** as Agent-Teams
 teammates messaging the orchestrator: the Developer-AI and Test-AI run as in-script
 sub-agents, their cross-talk stays in workflow variables, and only a single verdict
-(`CONVERGED` + artifact paths, or `ESCALATE` at the 6-round cap) returns to the
-orchestrator. The facilitator also appends the settled decisions to the decision
+(`CONVERGED` + artifact paths, `AC_CHANGE` on an acceptance-criterion change that pauses for the
+operator, or `ESCALATE` at the 6-round cap) returns to the
+orchestrator. At the cap, when the Developer AI's final revision answers with a grounded
+ACCEPT, a **closing half-round** — one Test-AI-only evaluation of that revision — decides
+between the two; it is the second half of the sixth exchange rather than a seventh round, so
+one round is still one exchange and the returned round count is unchanged. The facilitator also appends the settled decisions to the decision
 ledger. Rationale: [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation)
 > Deliberation Isolation; contract: [`teammate-contracts.md`](teammate-contracts.md)
 > Facilitator. The orchestrator invokes the facilitation workflow, then **verifies** the
@@ -272,11 +280,20 @@ the capability lives at the layer that has a shell.
 1. **Feature Design Document** (Developer-AI-led): files to change, API interface, data structures, dependencies.
 2. **Verification Design Document** (Test-AI-led):
 
-| Acceptance criterion | Verification type | Method |
-|----------------------|-------------------|--------|
-| (criterion 1) | automated | pytest / API test / etc. |
-| (criterion 2) | manual    | scenario doc (delegated to user) |
-| (criterion 3) | environment-dependent | introduce mock or propose design change (except where the composition-oracle clause applies) |
+| Issue AC | Acceptance criterion | Verification type | Method |
+|----------|----------------------|-------------------|--------|
+| AC1 | (criterion 1) | automated | pytest / API test / etc. |
+| AC2 | (criterion 2) | manual    | scenario doc (delegated to user) |
+| — | (criterion 3) | environment-dependent | introduce mock or propose design change (except where the composition-oracle clause applies) |
+
+- **`Issue AC` is the join key.** Each row's value is either an `AC id` from the
+  `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, or `—` for a criterion this
+  verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
+  criterion the design declines, defers or weakens keeps its row and states that disposition — the
+  row is never deleted. A design-added criterion (`—`) is never a finding. This is what turns "was
+  an acceptance criterion dropped?" into a key join rather than a reading of prose, which is what
+  lets the Reconcile check stand in front of a human decision (Reconcile > *Acceptance-criterion
+  change* below).
 
 - For untestable items: state the reason and the alternative (design change / manual delegation (except where the composition-oracle clause applies) / mock (same exception)).
 - Design-change request: parts of the feature design that should be revised so they become testable.
@@ -377,15 +394,113 @@ Both documents reach ACCEPT from both teammates. The Discussion Protocol applies
 Before mutual ACCEPT, one exchange must verify the resolution conforms to any governing
 ADR — the first, non-gated approach check (GATE:PLAN is the gated one);
 a divergence is a COUNTER, not an ACCEPT. No score.
+Mutual ACCEPT is necessary but not sufficient: a converged run additionally passes the
+**Reconcile** acceptance-criterion check below, because whether the issue's acceptance criteria may
+change is not the deliberation's to settle.
 The facilitator records the converged decisions in the ledger and returns
-`CONVERGED` + artifact paths; non-convergence within the round cap returns `ESCALATE`.
+`CONVERGED` + artifact paths; a converged run carrying an unauthorized acceptance-criterion change
+returns `AC_CHANGE`; non-convergence within the round cap returns `ESCALATE`.
+At the round cap the Test AI's final ACCEPT is the closing half-round's — the Developer AI's
+cap-round revision is otherwise never evaluated, since one round = one exchange and the
+Developer AI answers second.
+
+### Acceptance-criterion change — the `AC_CHANGE` pause (operator-facing)
+
+An issue's acceptance criteria are the **operator's**, not the deliberation's. Nothing in the flow
+used to ask *who has the authority* to drop one: ARCHITECT converged on mutual ACCEPT alone, and the
+two gates behind it scored the quality of the stated reason. The **Reconcile** phase is the
+checkpoint that asks.
+
+**What runs.** Between `Converge` and `Ledger`, and **only on a converged run** (verdict precedence
+is `ESCALATE` before `AC_CHANGE` before `CONVERGED` — an infrastructure or non-convergence cause
+still outranks a design outcome), the facilitator calls one closed-schema comparison channel over
+three artifacts: the `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, the
+converged verification design's `Issue AC` column, and the issue ledger. The channel **transcribes**
+and never judges — whether a change was *justified* is exactly the faculty a well-written rationale
+can capture, and it is the operator's. The facilitator's own code derives, per AC id, at most one
+finding, first match wins:
+
+| Transcribed state | Finding |
+|---|---|
+| no verification-design row carries the id | `dropped` |
+| a row carries it and declines it | `not-carried` |
+| a row carries it and postpones it out of the cycle | `deferred` |
+| the carrying row's Method cell is empty, `—`, or names no executable artifact and no manual-scenario file | `weakened` |
+| the row's criterion asserts a different property than the issue's | `substituted` |
+
+`weakened` is deliberately **not** "asserts a strictly weaker property": that is a depth judgment
+about verification strength, which GATE:PLAN's `Scope` depth items already score and which would be
+an unbounded false-positive source here. A finding covered by an `[ac-decision]` ledger entry naming
+the same AC id (exact match after trimming — never a prefix) is **authorized** and is not a pause.
+
+**Fail-closed.** A null return, a malformed payload, or an absent, empty or unparseable AC table
+resolves to `AC_CHANGE` with its own sentinel — `ac reconciliation unavailable` or `ac list absent` — rather than
+degrading to `CONVERGED`. Degrading would silently restore the hole in the one failure mode where
+nothing else is watching. The sentinel is carried on the return's own `acReason` field, not inside
+`escalation`, so the operator can tell an infrastructure pause from a real acceptance-criterion
+finding. A well-formed payload whose transcribed row set is **empty** takes the `ac list absent`
+sentinel rather than converging: a channel that transcribed nothing is indistinguishable from one
+that found no table, and only the fail-closed reading keeps an unread source from passing silently
+— the same reading GATE:PLAN's AC-authority check already applies to an absent, empty or
+unparseable table.
+
+**Orchestrator disposition.** On `AC_CHANGE`: report **situation-first**
+([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation) naming the
+affected criteria and what the design proposes for each, set `active: false`,
+`phase: "awaiting-user"`, and **do not spawn GATE:PLAN**. The options offered are: exclude the
+criterion, revise it in the proposed form, or split it into a separate issue.
+
+**Recording the answer and re-entering.** The operator's answer is one `[ac-decision]` ledger entry
+per decided AC, in the grammar fixed at [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger >
+*Acceptance-criterion decisions*; when the disposition is `revised` or `split`, the Phase B AC table
+is edited to match first. Re-entry is the ordinary resume,
+`Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })` — the run mints
+one open register entry per pause cause, so the resume is not refused by the `no open entry` guard,
+and those minted entries are the resumed round's agenda. An AC pause and its resume consume **no**
+ARCHITECT re-entry budget (*Cap and counter accounting* below): the pause is a human authority
+checkpoint inside the deliberation already counted.
+
+**The infrastructure pause has no exit mechanism, by decision.** `ac reconciliation unavailable`
+is not clearable by an `[ac-decision]` entry — that path produces no finding for an entry to cover —
+so **every resume re-runs Reconcile** and re-pauses until the underlying cause is repaired. This is
+an accepted consequence, not an oversight: it follows the contract every other infrastructure
+escalation in this workflow already has (none carries a bounded retry or an in-flow override), and
+the operator's exit is the ordinary one — author the missing Phase B AC table or verification-design
+rows, or re-run once the channel recovers.
+
+### Bounded — a scope-bounded review-response deliberation
+
+When the review-response cycle entered on `scope-bounded: true` (PREFLIGHT > *Scope-bounded
+entry*), the orchestrator invokes
+`Workflow({ name: "architect-deliberation", args: { issue: "N", bounded: "true" } })`. The run is
+the cold path with one difference: its round ceiling is **2** instead of 6. Draft runs, the
+round-1 devil's-advocate rule holds, the cap round (round 2) is closed by the same closing
+half-round, and an `ESCALATE` may be resumed exactly as below (the resume admits one further round
+from the register regardless of the ceiling the escalated run had). `bounded` is accepted only as a
+JSON / object argument; a malformed value fails loud like a malformed `resume`. Rationale:
+[`design-rationale.md`](design-rationale.md) > Decision 12.
+
+### Resume — re-entering an ESCALATEd deliberation (operator-facing)
+
+An `ESCALATE` return hands the decision to the operator. Re-invoking the workflow bare would cold-restart it — Draft re-authors both design documents from scratch, round numbering restarts at 1, and the first exchange is again forbidden from converging. `resume` is the alternative: it re-enters the deliberation at the state the prior run left in its register.
+
+**Procedure**:
+
+1. **Read the register** — `.autoflow/issue-{N}-architect-register.json`. Its `entries` show every concern the prior run raised with its `conclusion`, `evidence` and `status`; `escalation` states why the run stopped. Its `lastResponses` field records each side's final verdict object — before deciding whether to spend a resume round, open it and read which side stopped short and on what verdict, since after an `ESCALATE` the ledger holds one outcome entry and no per-side record. No control-flow path reads that field; the operator is its reader.
+2. **Decide.** A resume is worth one round when the open entries look closable by one further exchange. When they do not — the split is a design disagreement needing a redefinition, or the run escalated for an infrastructure cause — resume is not the instrument, and the workflow refuses several of those shapes on its own (see the guard sentinels in [`teammate-contracts.md`](teammate-contracts.md) > Facilitator).
+3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The run continues from the register's `lastRound`, admits **exactly one** further round (`cap + 1`), and that round may converge through the closing half-round when the Developer AI answers with a grounded ACCEPT **and** **no register entry is left `open`** after that turn's dispositions — a resume converges only once its carried agenda is disposed of, since the entries' original raisers are no longer live to withdraw them. A converged resume returns `CONVERGED` only when the Reconcile check that follows finds no unauthorized acceptance-criterion change, and `AC_CHANGE` when it does. Otherwise the run returns `ESCALATE` with the sentinel `resume register still open at convergence`, the register is rewritten with those entries still open, and a further resume re-enters on the same agenda rather than being latched out by the `already converged` guard.
+4. **Route the return** exactly as a cold run's: `CONVERGED` → GATE:PLAN (after the artifact-existence check above), `AC_CHANGE` → the *Orchestrator disposition* above — report situation-first, set `active: false` / `phase: "awaiting-user"`, and **do not spawn GATE:PLAN** (a resume converging into an AC pause routes to the operator, not to the gate), `ESCALATE` → back to the operator, who may resume again.
+
+**Cap and counter accounting** — a resume is an operator decision that raises the **round** cap by one (6 → 7 → 8 → …) and is unbounded in how many times it may be taken; it does **not** consume the ARCHITECT re-entry budget of 3 per cycle. The re-entry counter tracks whole re-deliberations triggered by GATE:PLAN FAIL or a VERIFY design contradiction; a resume is a continuation of the deliberation already counted, not a new one. The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so this accounting is the orchestrator's, and the return's `resumed` field is what lets it tell the two entries apart.
 
 ---
 
 ## GATE:PLAN — Plan Evaluation
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: feature design + verification design from ARCHITECT.
+**Input**: feature design + verification design from ARCHITECT, the issue's acceptance-criterion
+list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the issue decision ledger
+(`.autoflow/issue-{N}-ledger.md`).
 
 ### Scoring (5 items × 10 points)
 
@@ -409,6 +524,28 @@ This named check makes the ADR-conformance concern explicit inside the two items
 
 Precedent: the GATE:QUALITY "Known blind-spot checks" below. Authority: [`docs/adr/0016-adr-conformance-gate-scoring.md`](adr/0016-adr-conformance-gate-scoring.md).
 
+### AC-authority check (scored within Scope)
+
+Same mechanism as the ADR-conformance check above: **no added scored item, no threshold change**; a
+violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 rule. Authority:
+[`docs/adr/0020-acceptance-criterion-authority.md`](adr/0020-acceptance-criterion-authority.md).
+
+- **The comparison** is a key join, both sides keyed: every `AC id` in the issue's
+  `## Acceptance criteria` table against the `Issue AC` column of the verification design's
+  acceptance-criteria table. A criterion the design does not carry, or carries while declining,
+  deferring, weakening or substituting it, is a **difference**.
+- **Trigger → cap**: any difference **not** covered by a `[ac-decision]`-marked ledger entry whose
+  `- AC:` line names that same id caps `Scope` at 6. The marker is what the gate matches on;
+  `operator decision` is that entry's authority **value** and is not itself the match key.
+- **An unresolvable check also caps.** An absent, empty or unparseable `## Acceptance criteria`
+  table caps `Scope` at 6: the gate cannot establish authority, and an unresolvable check that
+  scores normally is the same hole under a different name.
+- **N/A by default** applies only to the difference set, never to the source: no difference and a
+  readable AC table → no cap, the item scores normally.
+- **Effective from** — the check binds evaluations of cycles whose DIAGNOSE authored an AC table
+  under this clause, the same *Effective from* convention the composition-oracle and
+  verification-depth clauses use. A cycle already past DIAGNOSE is not retroactively deficient.
+
 - **PASS** (avg ≥ 7.5, each ≥ 7) → DISPATCH.
 - **FAIL** → ARCHITECT (max 3×).
 
@@ -420,7 +557,7 @@ Precedent: the GATE:QUALITY "Known blind-spot checks" below. Authority: [`docs/a
 
 - **Role spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned. At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — anonymous direct spawns (`subagent_type`), one per phase entry; see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
-- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**).
+- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt carries the whole-tree-run prohibition (GREEN step 2): the Developer AI runs only its resolved run set or the specific suites its change requires, and never a whole-tree run of the suite runner — neither the `--all` flag nor the bare invocation, which selects the full set on an empty delta or a `push` event.
 - Both receive: acceptance criteria + verification design + affected docs.
 
 ---
@@ -437,9 +574,33 @@ The Test AI writes test code from the verification design.
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
-**Naming**: an issue number belongs in a test file name only when that file is cycle-scoped — retired in the cycle's final commit per `docs/doc-invariant-registry.md` §2. A standing test is subject-named.
+**Header contract**: every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
 
-**Completion**: all automated tests Red + manual scenarios written.
+  ```
+  # ci-subject: <path-or-glob> [<path-or-glob> ...]
+  # lane: standing | cycle-scoped
+  # retire-with: #<issue-number>      (required iff lane: cycle-scoped)
+  # cycle-arm: #<issue-number>        (required iff a path allow-list array)
+  # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
+  ```
+
+- `ci-subject` — the trigger surface. It is no longer only a coverage declaration: `scripts/test/select-suites.sh` consumes it to decide which suites a change requires, so an under-declared surface is a coverage hole, not a cosmetic gap.
+- `lane` — `standing` asserts permanent state and lives forever; `cycle-scoped` asserts its own cycle's landed diff and is inert off its own dev branch. The two-lane partition is what makes the naming rule below machine-readable rather than remembered.
+- `retire-with` — names the issue whose merge retires a cycle-scoped suite.
+- `cycle-arm` — names the cycle whose landed diff a change-surface allow-list array asserts. It is separate from `retire-with` because a **standing** suite may carry a cycle-scoped arm; collapsing the two would mark live standing suites for retirement.
+- `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim, so a guessed budget is not a representable state. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
+
+**Naming**: an issue number belongs in a test file name only when that file is cycle-scoped — retired in the cycle's final commit. A standing test is subject-named. The `lane` field above is the declaration; the filename is a convention that follows it.
+
+**Leaf rule**: a suite executes its subject, not another suite. A sibling's regression is caught by that sibling's own CI step, under its own name; re-running it here is duplicate execution. Enforced by `scripts/test/check-suite-leaf.sh`.
+
+**Admission**: before creating a suite file at all, answer these four questions. They are the leaf rule and the two-lane rule applied *before* the file exists rather than after, and each one that answers "yes" removes a file this tree would otherwise have to maintain and retire.
+
+- Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
+- Is the check delivery-pinned to this cycle's landed diff? Then `lane: cycle-scoped` with `retire-with:` is the default, not an exception.
+- Does the check compare against a checked-in basis? Then the ratchet-or-fossil rule decides its lane.
+
+**Completion**: all automated tests Red + every new spec conforming to the header contract above + manual scenarios written.
 
 ---
 
@@ -453,6 +614,7 @@ The Developer AI writes the minimum code that passes the tests.
    - [MUST] Do NOT implement behavior not covered by tests.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
+   - [MUST] Never start a **whole-tree run** of the suite runner. The prohibition is keyed on the run, not on a flag: both the `--all` flag and the **bare invocation** reach the whole tree, the bare form whenever its resolved delta is empty or the event is a `push` (see [`submodule-common-rules.md`](submodule-common-rules.md) > Testing Standards). The whole-tree sweep has exactly one invoker and one position — the orchestrator, at VALIDATE step 1. Execute only your resolved run set, or the specific suites your change requires; the acceptance run that produces evidence is GREEN step 5's, which you do not run.
    - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
 3. Before committing, if this change touched a manifest-registered source, run
    the manifest regen and stage the result in the same commit.
@@ -464,7 +626,8 @@ The Developer AI writes the minimum code that passes the tests.
      [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
      Rules > Derived artifacts.
 4. Commit (feat/fix branch).
-5. Orchestrator (not the Developer AI): GREEN step 5 — evaluate the tree-identity
+5. Orchestrator (not the Developer AI): GREEN step 5 — quiesce the tree per the
+   capture point's own obligation (Green-tree register > Capture point), evaluate the tree-identity
    predicate at the capture point, run the acceptance run on the mismatch branch,
    and register the Green. See the step-5 block below.
 ```
@@ -493,13 +656,31 @@ evaluation" rule reaching this site by extension.
   never a source for it — at this site that report is the anchor being discharged, not the content
   of the record. The register's `Teammates never write it` clause constrains the writer; this
   sentence constrains the source, and both are needed where the writer is already the orchestrator.
-- **Acceptance-run scope**: the obligatory re-run of the cited command may be narrower than a suite
-  set; a run so bounded discharges the anchor for its own purpose but is **not registrable**,
-  because an offerable Green must not certify less than the consumer that inherits it would have
-  executed. [MUST] To obtain an offerable entry the orchestrator extends the run to the
-  suite set VERIFY step 1 would run at that tree, and the `result` field names every suite the run
-  executed with its summary line. When the orchestrator does not extend, no entry is written and
-  the first VERIFY runs the suite as before.
+- **Acceptance-run scope — record what you ran**: an entry is registrable when its `suites` field
+  names exactly the suites the run executed and passed over a clean capture point. The invariant
+  this replaces ("an offerable Green must not certify less than the consumer that inherits it would
+  have executed") is preserved **per suite** rather than per set, which is the stronger reading: a
+  later consumer inherits only the suites the source entry names, and everything else it needs is
+  resolved afresh. The scope is still stated **by reference**, not re-derived here: it is the
+  suite set VERIFY step 1 would run at that tree — the same resolver, at the same capture point.
+  [MUST] To obtain an offerable entry the orchestrator resolves that set and executes it:
+
+  ```
+  bash scripts/test/suite-coverage.sh --ledger .autoflow/issue-<N>-ledger.md --cycle <C> \
+    > .autoflow/issue-<N>-run-set.txt || { echo "suite-coverage BLOCK — running the enumerated set" >&2; }
+  bash scripts/test/run-suites.sh --selected .autoflow/issue-<N>-run-set.txt
+  ```
+
+  [MUST] The `|| { … }` between the two commands is load-bearing, not stylistic. The resolver's
+  non-zero exit is otherwise invisible to the second command, and an empty or truncated plan reaches
+  `run-suites: 0 suite(s) selected` and exit `0` — so an unread BLOCK would present as a clean pass,
+  the exact inverse of *degrades to executing, never to skipping*. With the check, the step records
+  `mismatch-cause: selection-block` instead of a silent `passed`. A step whose text omits the status
+  check is a defect.
+- **Writing the entry**: the register write is not hand-authored. `scripts/test/green-tree-register.sh
+  --append` writes the ledger entry and the shared-store entry from one call, re-takes the capture point
+  and refuses on a dirty worktree or a moved tree/head, and mints each named suite's `@<input-hash>`
+  token at the verified tree — see VERIFY > Green-tree register > *The writer*.
 - **Failure disposition**: an acceptance run that is not all-PASS writes no `green-tree` entry and
   writes a `green-tree-use` entry with `outcome: failed`. GREEN does not become a gate: the
   failure is carried into VERIFY, where step 1's predicate mismatches with `no-entry`, the suite
@@ -518,9 +699,13 @@ evaluation" rule reaching this site by extension.
 Run the tests; on failure, branch by cause.
 
 ```
-1. [MUST] Evaluate the tree-identity predicate (see Green-tree register below), then run all tests unless it matches.
-   Match    → do not run the suite; inherit the cited Green and report `inherited`.
-   Mismatch → run all tests (current behavior, unchanged).
+1. [MUST] Quiesce the tree before the capture point — the capture point's own obligation
+   (Green-tree register > Capture point). Then evaluate the tree-identity predicate, then the suite-coverage predicate it is the fast path of
+   (both under Green-tree register below), then execute the resolved run set.
+   Whole-tree match → nothing executes; inherit the cited Green and report `inherited`.
+   Otherwise        → execute the resolved run set (the resolver's plan, via the idiom in GREEN step 5);
+                      report `passed` when the plan was non-empty and every executed suite passed,
+                      `mixed` when some suites inherited and the rest executed and passed.
 2. Branch on result:
    All PASS → step 3.
    Some FAIL → cause branching (run under delegated facilitation — the `verify-cause-branch` workflow returns a single
@@ -609,6 +794,16 @@ entry entirely — the run still happens, but no entry is written for it. An ent
 values, never values re-taken at phase exit, so a tree change occurring after the capture point leaves the
 entry keyed to the tree the suite actually executed over.
 
+**Tree quiescence is a property of the capture point.** From the instant the capture point is taken
+until the run it opened has finished, no tracked-tree write occurs. The orchestrator obtains that
+condition through its **spawn schedule**: no tree-writing spawn is issued between the capture point
+and the end of the run it opened, and a capture point is taken only while no tree-writing spawn is
+in flight — with anonymous direct spawns there is no message channel through which mid-run tree work
+could arrive. Because the rule is scoped to the capture point rather than to a list of steps, it
+reaches every site that takes one, present and future, by construction. The spawned-agent side of
+the obligation is [`teammate-common-rules.md`](teammate-common-rules.md) > Tree Quiesce
+(spawn-boundary form).
+
 **Writer**: the orchestrator, at the exit of the phase whose step executed the run, and only on an all-PASS
 outcome over a clean capture point. Teammates never write it — that write authority is the provenance
 guarantee, and it is what makes the later inheritance something other than trusting a claim.
@@ -621,20 +816,96 @@ than left to the reader. An entry is a heading line followed by one line per fie
 - tree: <hash>
 - head: <hash>
 - worktree: clean
+- suites: <repo-relative path> [<repo-relative path> ...]
 - result: <summary line>
 - authority: Green-tree register
 ```
 
+- **`suites` is a mandatory field of the grammar, and there is no legacy-entry clause.** It names exactly the suites the run
+  executed and passed — the machine-readable form of what the `result` prose used to carry. An entry
+  written under the prior grammar is *incomplete* by the selection rule below, so no fast path and no
+  coverage fold can fire on it: the predicate mismatches with cause `no-entry` and the suite set
+  executes. That is the fail-safe direction, and it costs at most one extra run, because the ledger is
+  per-issue and the fold is cycle-scoped.
+
+- **A `suites` token carries the suite's input hash.** Each token is `<path>[@<input-hash>]`, split at
+  the **last** `@`, so the field's written form is
+
+  ```
+  - suites: <repo-relative path>@<input-hash> [<repo-relative path>@<input-hash> ...]
+  ```
+
+  A token with **no** `@` is the shipped bare-path form. It still folds and still satisfies the fast
+  path's membership test, but it carries no certificate, so the input-hash short-circuit in the
+  *Suite-coverage predicate* below cannot fire on it — every entry written before this grammar
+  therefore answers exactly as it did, and the extension is additive at the token level rather than a
+  migration. The hash is the suite's **input closure** at the entry's `tree`: the suite's own path,
+  every tracked path matching a token of its `# ci-subject:` header, and every tracked path under
+  `tests/lib/**`, hashed as one `(blob sha, path)` manifest. `tests/lib/**` is part of the closure
+  because the selector selects **every** suite when a shared library moves; a key omitting it would be
+  narrower than the selection boundary rather than a refinement of it. The token form never reaches a
+  plan: `scripts/test/suite-coverage.sh` prints bare repo-relative paths on stdout, because
+  `run-suites.sh --selected` consumes that stdout as a path list.
+
+- **The register spans two stores: the per-issue ledger and a repo-scoped shared store.** The same
+  certificate is written to both, by one writer, so the two cannot drift. The shared store lives
+  **outside the repository tree** at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md` —
+  never tracked content, never a dirty-worktree contributor at a capture point, never review surface —
+  and its entries carry their own marker and authority:
+
+  ```
+  ### green-tree-shared | issue: #<N> | cycle: <C> | runner: <PHASE> step <S>
+  - tree: <hash>
+  - head: <hash>
+  - worktree: clean
+  - suites: <repo-relative path>@<input-hash> [<repo-relative path>@<input-hash> ...]
+  - result: <summary line>
+  - authority: Green-tree register (shared store)
+  ```
+
+  The marker is deliberately **not** `### green-tree | cycle: `: the ledger scanner's marker literal
+  stays untouched, and `cycle` numbering is per-issue, so a shared file carrying the ledger marker
+  would collide two issues' cycle 1 entries under one selection rule. Carrying `issue:` in the heading
+  makes each certificate's provenance readable without opening another file.
+
+  **The shared store is a cache, not a ledger**, and the difference decides three dispositions. It
+  carries no authority; it may be **pruned** (the writer retains the 200 most recent entries by
+  default); and a **malformed entry in it is skipped with one warning, never a BLOCK** — the opposite
+  of the ledger's disposition, deliberately. A malformed *local* entry is a positive statement this
+  cycle cannot read, and guessing at it widens inheritance; skipping a foreign certificate narrows, so
+  halting every later issue over another issue's file would fail in the wrong direction. Losing the
+  store entirely costs re-runs and nothing else.
+
+- **The writer is `scripts/test/green-tree-register.sh`**, and both stores are written by one
+  invocation of it:
+
+  ```
+  bash scripts/test/green-tree-register.sh --append --root . --ledger .autoflow/issue-<N>-ledger.md \
+    --issue <N> --cycle <C> --runner "<PHASE> step <S>" --tree <hash> --head <hash> \
+    --result "<summary line>" --suites "<path> [<path> ...]"
+  ```
+
+  It **re-takes the capture point at write time** and refuses — writing to neither store — when the
+  worktree is dirty or when the observed `tree`/`head` differ from the ones the caller recorded before
+  the run. That turns the suppression rule above into a mechanical refusal and closes the window
+  between the run and the write. It computes each named suite's input hash at the verified tree, so
+  the caller passes bare paths and the tokens are minted, never hand-written. `--match [--cover-enumerated]`
+  is the query side, and is what condition 2's shared arm below is answered from.
+
 - **Marker**: the heading begins `### green-tree | cycle: ` — the literal that distinguishes it from
-  `verify-detection`, `review-autofix` and settled-decision entries.
+  `verify-detection`, `review-autofix` and settled-decision entries. A settled-decision entry is a **level-2**
+  heading carrying an allocated identifier — `## <ID> — <title> (cycle <C>, <PHASE>)`, and for a
+  review-autofix attempt `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see
+  [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*). The level distinction alone separates
+  the two families: a record entry is never level-2 and never carries an identifier.
 - **Field form**: `- <name>: <value>`; the name is unique within the entry and the value is the remainder of
   the line after the first `: `. Values are compared with `[` / `case`, never `eval`.
 - **Ordering / selection**: the ledger is append-only, so entries appear in chronological order. Selection is
   marker-scoped and then positional, in that order. "The most recent `green-tree` entry of the current cycle"
   is the entry under the **last** heading line in the file that both begins with the marker
   `### green-tree | cycle: ` and whose `cycle:` value equals the current cycle. Heading lines carrying any
-  other marker — `### green-tree-use | cycle: `, `verify-detection`, `review-autofix`, settled-decision
-  headings — are skipped by the scan, not selected and then rejected: a foreign-marker heading later in the
+  other marker — `### green-tree-use | cycle: `, `verify-detection`, and every level-2 settled-decision
+  heading `## <ID> — …` including the `[review-autofix]`-marked ones — are skipped by the scan, not selected and then rejected: a foreign-marker heading later in the
   file never terminates the search and never produces a mismatch. The rule is parameterised by marker — "the
   most recent `<marker>` entry of cycle `<C>`" is the entry under the last heading beginning
   `### <marker> | cycle: ` whose cycle matches — and condition 2 instantiates it with `green-tree` only. An
@@ -660,7 +931,8 @@ foreground, from the repository root, at the capture point defined above. **Matc
 
 1. `git status --porcelain` produces no output (worktree clean);
 2. `git rev-parse HEAD^{tree}` equals the `tree` field of the most recent `green-tree` entry of the current
-   cycle, selected by the ordering rule above;
+   cycle, selected by the ordering rule above, **or** `green-tree-register.sh --match --cover-enumerated`
+   selects a non-empty set of shared entries (the *shared arm*);
 3. that entry's `result` is a pass line.
 
 - **Match** → the step does not run the suite. It records an inheritance line
@@ -668,17 +940,104 @@ foreground, from the repository root, at the capture point defined above. **Matc
   rather than re-typing the summary as its own — the cited entry is the anchor a reader re-derives, and an anchor-less inheritance is rejected
   rather than interpreted. No new `green-tree` entry is written on an inherited path; the source entry
   remains the single record of that run.
-- **Mismatch** — any outcome other than a match → current behavior verbatim: full suite run, then a fresh
-  `green-tree` entry at phase exit on an all-PASS outcome over a clean capture point. The three mismatch
-  outcomes are: no selectable entry for the cycle (`no-entry`), a dirty worktree (`dirty-worktree`), and a
+- **Mismatch** — any outcome other than a match → the *Suite-coverage predicate* below decides the run
+  set per suite, and a fresh `green-tree` entry is written at phase exit on an all-PASS outcome over a
+  clean capture point, its `suites` field naming what ran. The fast path's own three mismatch outcomes
+  are: no selectable entry for the cycle (`no-entry`), a dirty worktree (`dirty-worktree`), and a
   differing tree (`tree-differs`).
+- **The shared arm.** A shared entry **qualifies** when its `tree` equals the captured tree, its
+  `result` is a pass, and its `head` resolves. `--cover-enumerated` applies the coverage test to the
+  **union** of the qualifying entries' `suites` fields — not to any one of them. The union is not a
+  convenience: certificates are minted per phase-step run naming the suites *that* run executed, so two
+  issues at one tree ordinarily leave two entries naming different subsets, and joint coverage is the
+  ordinary cross-issue case. It is also the rule the *Suite-coverage predicate* below applies, and the
+  two must agree — under a single-covering-entry rule the resolver would plan nothing while this
+  predicate reported a mismatch, which is `outcome: inherited` with a non-`none` cause, forbidden by the
+  biconditional below. On a match the `source:` field cites **every** heading the query printed, and
+  `mismatch-cause` stays `none`. Qualifying entries at the captured tree that do **not** jointly cover
+  the enumerated set are a mismatch with cause `no-entry` — the existing cause for "no selectable entry
+  covers what this step must certify"; the three mismatch causes are unchanged.
+- **Head resolvability is part of being selectable.** An entry whose `head` field **does not resolve to a commit**
+  in this repository is not selectable, exactly as an entry with an incomplete field block is not — condition 2's
+  ordering rule declines it and the predicate mismatches with the existing cause `no-entry`. The fast path does
+  **not** fall back to an earlier entry with the same `tree`: the declined entry stays visible to the
+  *Suite-coverage predicate* below, whose fold validates every head it lifts and executes the suites that entry
+  covers with the per-suite reason `unresolvable-head`. The requirement follows from what a match records — the
+  cited `head` is the anchor a reader re-derives, and a head naming no object cannot be re-derived — so declining
+  it moves a suite only from inheritance toward execution, never the reverse.
 - A cycle's first VERIFY inherits when GREEN step 5 registered a Green and the tree has not moved since
   that capture point. When no such entry is selectable — the acceptance run was narrower than the
   registrable scope, its capture point was dirty, or it was not all-PASS — the predicate mismatches with
   cause `no-entry` and the suite runs, which is the pre-existing behavior. The three mismatch causes are
   unchanged; the GREEN-acceptance path adds a producer and a consumer, not a fourth cause.
 
-**Reported vocabulary**: the step's reported outcome is one of `passed` / `inherited` / `failed`, and the
+### Suite-coverage predicate
+
+The three conditions above are the **whole-tree fast path**; they are not the whole predicate. When
+they do not all hold, the partition between what executes and what is inherited is decided **per
+suite**, by `scripts/test/suite-coverage.sh` — a script, not prose. The resolver owns no selection
+predicate of its own: it invokes `scripts/test/select-suites.sh` for every reach question, so the
+inheritance boundary is the selection boundary by construction. Governing record:
+[`docs/adr/0019-scope-fit-verification-policy.md`](adr/0019-scope-fit-verification-policy.md).
+
+Its resolution order, at the same capture point:
+
+1. **Declared out-of-tree inputs** — any enumerated suite whose header carries
+   `# out-of-tree-inputs: yes` is executed, reason `out-of-tree-inputs`, before any other test and
+   regardless of the reach answer. Such a suite's answer can move while the tree does not (a base ref
+   resolved through `resolve_base_ref` follows `origin/main`), and per-suite keying would otherwise
+   let it inherit across exactly that advance. Declaration beats derivation.
+2. **Dirty worktree** — every candidate executes, reason `dirty-worktree`. Unchanged.
+3. **Whole-tree fast path** — the three conditions above, over the cycle's own ledger; every suite the
+   selected entry's `suites` field names is inherited, cited `via: tree`.
+4. **Shared tree match** — any *shared* entry whose `tree` equals the captured tree, whose `result` is a
+   pass and whose `head` resolves contributes the suites it names, cited `via: shared-tree`. Unlike
+   step 3 this is a **union** over every matching entry, not a last-entry rule: tree equality is exact
+   content identity, so recency carries no information across issues and "last" is not even well
+   defined there. This is the step that removes the cross-issue cold start — an issue whose own ledger
+   is empty still inherits what another issue certified at this very tree.
+5. **Coverage fold** — the shared entries and then the cycle's `green-tree` entries are scanned in file
+   order into a map `suite → head at which it last passed`, a later entry superseding an earlier one
+   only for the suites it names, so a local entry of the current cycle supersedes a shared certificate
+   for the suites it names. Without the fold a narrow run would erase the coverage a wide run
+   established. Every head lifted out of either store is validated as a resolvable commit before it is
+   used as a ref; a head that does not resolve is the named cause `unresolvable-head` and its suites
+   execute. An entry the shared arm declined for an unresolvable head is still visible here, so it is
+   declined by name rather than silently dropped.
+6. **Input-hash short-circuit** — the covering entry carries an `@<input-hash>` token for this suite and
+   it equals the suite's input hash at the captured tree → inherit, cited `via: input-hash`. It is kept
+   deliberately **behind** the head validation above: the comparison itself needs no resolvable head, so
+   admitting one here would inherit on an anchor no reader can re-derive. It is sound rather than a
+   widening loophole because the input closure is *definitionally* the path set the selection predicate
+   reads — if every closure member's blob is identical at both trees, no delta restricted to that
+   closure can be non-empty and the selector cannot select the suite. It is strictly *more* defined than
+   the reach test in the two places that test degenerates: an empty delta, which the selector defines as
+   *select everything*, and a non-ancestor head, where three-dot semantics answer a different question.
+   It uses neither a delta nor ancestry, so neither degeneracy reaches it. A bare (hash-less) token
+   never short-circuits.
+7. **Reach test**, per distinct covering head `h`: `h` equal to the captured head → inherit (an empty
+   delta is defined as *select everything*, which is the inverse of the answer wanted here); `h` not
+   an ancestor of HEAD → execute, reason `head-not-ancestor` (three-dot delta semantics answer a
+   different question there, and the resolver refuses to reason rather than answer narrowly);
+   otherwise the selector's answer against `--base h` decides — selected → execute, reason
+   `reach-changed`; not selected → inherit, citing the covering entry `via: reach`.
+8. **Uncovered candidates** execute, reason `no-coverage`; **non-candidates** are recorded inherited with
+   reason `not-in-cycle-delta` and carry no source entry — a positive statement that the resolver
+   considered the suite and declined it, not a silence.
+
+Neither addition introduces a run reason: both produce INHERIT, so the reason vocabulary is unchanged.
+Each citation record instead carries a trailing **`via: <basis>`** naming which admission path produced
+it — `tree`, `shared-tree`, `input-hash` or `reach` — declared in the `citation-basis` block of
+`scripts/test/suite-coverage.sh` beside its `reason-tokens` block, and never restated here. In a
+`green-tree-use` entry every basis still maps to the single fixed token `covered-by-source`: the
+ledger's vocabulary does not grow with it.
+
+The resolver emits one record per **enumerated** suite in every mode, so `inherited-suites` and
+`ran-suites` below partition the enumerated set exactly. A BLOCK never emits a partial plan: the
+whole enumerated set becomes the plan, every record carries reason `block-fallback`, and the exit is non-zero
+— a failure to reason about inheritance degrades to executing, never to skipping.
+
+**Reported vocabulary**: the step's reported outcome is one of `passed` / `inherited` / `mixed` / `failed`, and the
 words are not interchangeable. `passed` = the suite executed at this step and all tests passed. `inherited`
 = the suite did **not** execute at this step; the predicate matched and the Green comes from the cited
 entry. `failed` = the suite executed and did not all pass. A step that did not execute the suite is reported
@@ -686,9 +1045,18 @@ as `inherited` and **never** as `passed` — the same truthfulness rule the *Det
 with `not-run` ≠ `clean`. `inherited` is nowhere defined as a synonym or subtype of `passed`, and a report on
 an inherited path that states a suite summary line as its own is a contract violation.
 
-**Mismatch-cause record**: on the mismatch path the step records which of the three conditions fired —
-`no-entry` / `dirty-worktree` / `tree-differs` — alongside the run's own outcome, so the re-aimed REFINE
-`[MUST]` leaves a trace on both branches rather than only on the match path.
+**Mismatch-cause record**: on the mismatch path the step records which condition fired, alongside the run's
+own outcome, so the re-aimed REFINE `[MUST]` leaves a trace on both branches rather than only on the match
+path. The field is **step-level and closed**: the fast path's own three outcomes — `no-entry`,
+`dirty-worktree`, `tree-differs` — plus `selection-block`, recorded when the resolver exits non-zero, and
+the value none, which is what the match path records because no condition fired there at all. That is why
+none is a member of the grammar without being a cause: it is the field's value in the absence of one. The
+resolver's per-suite reasons are a **different** vocabulary at a different layer and are never recorded
+here; they land in the run-reasons field below. Because the field is scalar and the step reaches the
+resolver only after a fast-path mismatch, a BLOCK evaluation has two fired conditions and one value must
+win: `selection-block` outranks every fast-path cause, and among the fast-path causes themselves only one
+can hold, since they are the three disjoint outcomes of a single predicate evaluation. The field is
+therefore single-valued by rule, not by luck.
 
 **Where both records land**: the inheritance line and the mismatch-cause record are one durable record of
 the step's predicate evaluation, written by the orchestrator at the same phase exit as the register write,
@@ -696,11 +1064,42 @@ on the same ledger, under its own marker `green-tree-use` and following the same
 
 ```
 ### green-tree-use | cycle: <C> | runner: <PHASE> step <S>
-- outcome: passed | inherited | failed
-- mismatch-cause: no-entry | dirty-worktree | tree-differs | none
-- source: <source entry heading> | tree: <hash> | head: <hash> | result: <summary line>
+- outcome: passed | inherited | mixed | failed
+- mismatch-cause: no-entry | dirty-worktree | tree-differs | selection-block | none
+- inherited-suites: <path> [...] | none
+- ran-suites: <path> [...] | none
+- run-reasons: <suite> <token> [; <suite> <token> ...] | none
+- source: <source entry heading> [; <source entry heading> ...] | tree: <hash> | head: <hash> [; <hash> ...] | result: <summary line> [; <summary line> ...]
 - authority: Green-tree register
 ```
+
+- `inherited-suites` and `ran-suites` are the resolver's partition of the enumerated set, recorded as
+  the step acted on it: `ran-suites` is exactly the plan the step executed, and the two together are
+  `suite_enumerate`. A wrong fold therefore leaves a re-derivable trace rather than a silent
+  narrowing.
+- `run-reasons` names, per enumerated suite, the reason it landed in its partition; the token vocabulary
+  is owned by the declaration block in `scripts/test/suite-coverage.sh` (between its `reason-tokens`
+  markers) and is never restated here, so the entry grammar cannot drift from the vocabulary the
+  resolver emits. `none` when the step never called the resolver. A suite whose resolver record is the
+  interpolated `source: … | head: … | result: …` citation is recorded with the fixed token
+  `covered-by-source` — the reason *class* (this suite inherited because a covering entry passed the
+  reach test), not the citation text, which carries both a ` | ` and free text and would leave the
+  field with no decidable record boundary. Records are written **grouped by token**, in the order the
+  resolver declares them, so a run in which forty suites share one reason reads as forty adjacent
+  pairs rather than an interleaved list. The grouping is an ordering convention only: the `<suite>
+  <token>` pair form is what the grammar fixes, because splitting on `;` and then on whitespace must
+  recover the (suite, token) pairs directly, with no regrouping step for a reader to get wrong.
+- `source`, `head` and `result` are **`;`-separated parallel lists**, in one order, because the shared
+  arm can match more than one entry. `;` is the separator because a heading already contains ` | `, so
+  `|` cannot separate a list of them, and `;` appears in no heading component — it is also the separator
+  `run-reasons` already uses. Citing one of several contributing entries would put a heading in the
+  record that does not account for the suites the others covered, which is the un-re-derivable citation
+  this field exists to prevent; every cited head must be re-derivable on its own. The single-entry form
+  is unchanged, and `tree` stays scalar: every contributing entry carries the same `tree` by the
+  qualification rule.
+- `mixed` is the new and now-ordinary outcome — some suites inherited, the rest executed and passed.
+  The truthfulness rule extends to it unchanged: a suite that did not execute is never reported inside
+  a `passed` claim, and `failed` still wins over both whenever any executed suite did not pass.
 
 - One is written on every predicate evaluation — including the dirty-capture run, whose cause record would
   otherwise be lost to the entry suppression above. `source` is present exactly when `outcome` is
@@ -725,7 +1124,9 @@ on the same ledger, under its own marker `green-tree-use` and following the same
    - Three parallel agents (reuse / quality / efficiency).
    - Apply suggested fixes (no behavior change — tests must pass without modification).
    - If /simplify finds nothing, proceed to step 2 (do NOT skip).
-2. [MUST] Re-run all tests → confirm Green, except on an inherited Green.
+2. [MUST] Re-run all tests the change requires — execute the resolved run set → confirm Green, except on an inherited Green.
+   - [MUST] Quiesce the tree before this step's capture point — the capture point's own obligation
+     (VERIFY > Green-tree register > Capture point).
    - [MUST] Evaluate the tree-identity predicate (VERIFY > Green-tree register) at this step's entry and
      record the outcome. The obligation is the evaluation, not the run, so the step cannot silently drop it;
      evaluate it even when step 1 made no changes, because a "/simplify changed nothing" claim is
@@ -733,7 +1134,7 @@ on the same ledger, under its own marker `green-tree-use` and following the same
      `green-tree` entry of the current cycle, over an empty `git status --porcelain` — and not by the claim.
    - Match → do not re-run; inherit that Green, report `inherited`, and cite the source entry.
    - Mismatch (`no-entry` / `dirty-worktree` / `tree-differs` — a /simplify edit is still uncommitted at this
-     point, so it shows dirty) → re-run all tests → confirm Green.
+     point, so it shows dirty) → execute the resolved run set (the idiom in GREEN step 5) → confirm Green.
    - On FAIL → revert /simplify changes → Developer AI fixes (max 2×).
 3. Commit (refactor type; skip if step 1 made no changes).
 ```
@@ -742,6 +1143,28 @@ on the same ledger, under its own marker `green-tree-use` and following the same
 **Max retries**: 2; on second failure, abandon refactor and proceed to VALIDATE
 with the Green state from VERIFY.
 
+### REFINE report (`.autoflow/issue-{N}-refine-report.md`)
+
+The Developer AI writes one report per REFINE pass, with three sections in this order — the report
+is an input to GATE:QUALITY, so every section is present and a section with nothing to say states
+`none` explicitly (an omitted section is a VALIDATE step-4 failure, not a silence):
+
+1. `## Applied` — each /simplify suggestion applied, one line each.
+2. `## Rejected / deferred` — each suggestion not applied, with the reason (`behavior-changing`,
+   `out of scope`, `disagree`, …).
+3. `## Out-of-scope observations — guard / boundary logic touched` — the subset of the rejected
+   list whose reason is *behavior-changing* **and** whose subject is validation, a guard, path /
+   root resolution, input or output boundary handling, or error handling. These are the suggestions
+   REFINE is right to refuse (REFINE preserves behavior) and that nevertheless describe a possible
+   defect in the shipped change. Each entry names the suggestion, the `path:line` it points at,
+   and what behavior would change. The section is the defect signal issue #135 found missing: in
+   #130 cycle 1 a /simplify agent proposed exactly the fix the external reviewer later filed as
+   Medium, REFINE correctly rejected it as behavior-changing, and no phase read the rejection.
+
+GATE:QUALITY reads section 3 as scoring input for `Quality` and `Impact scope` (below) and cites
+what it read. Writing the section is the Developer AI's duty; judging it is the fresh evaluator's —
+the author's "this is fine" is not the disposition.
+
 **Foreground execution note**: the step-2 re-run is a short foreground command — the assigned Developer AI runs it foreground and reports, or the orchestrator runs it directly foreground — never a background spawn-and-wait (`docs/teammate-common-rules.md` > Bash Execution Mode).
 
 ---
@@ -749,10 +1172,29 @@ with the Green state from VERIFY.
 ## VALIDATE — Verification Done
 
 ```
-1. Automated tests: all PASS confirmed (achieved in VERIFY).
+1. Automated tests: all PASS confirmed — and confirmed HERE, not inherited from VERIFY.
+   [MUST] Whole-tree sweep, the coverage floor: `bash scripts/test/run-suites.sh --all`,
+   unconditionally, evaluating no inheritance predicate, and register the resulting Green with
+   `suites` naming the enumerated set. [MUST] Quiesce the tree before the sweep's capture point —
+   the capture point's own obligation (VERIFY > Green-tree register > Capture point). This is the
+   one position at which a whole-tree run is invoked, and the orchestrator is its only invoker. This is the one position in a cycle at which the whole
+   enumerated tree executes. It does not inherit and has no exception: were the sweep allowed to
+   subtract inherited suites, a cycle could reach hand-off with every verdict tracing back through
+   inheritance to a first run that was itself selection-scoped. Inheritance rests on `ci-subject`
+   declaration quality, and this unconditional sweep is what bounds an under-declared header's
+   damage to a single cycle rather than letting it reach the reviewer.
+   On failure → cause-branched by the **first failing assertion's suite**: read that suite's
+   `# ci-subject:` header; a subject set naming only test assets (`tests/**`) classifies `test` →
+   RED, any other subject classifies `impl` → GREEN → VERIFY step 1 → REFINE → VALIDATE
+   (`scripts/gate/remedy-route.sh route <class>`). The header names what the suite covers, not
+   why it failed — when the subject set is mixed or the orchestrator cannot tell whether the suite
+   or its subject is wrong, classify `impl` (the farther point). The existing GREEN ↔ VERIFY
+   round-trip rules apply and no new cap is introduced.
 2. Minimal-implementation check: PASS confirmed (achieved in VERIFY step 3).
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
-4. Maintained-docs check: confirm impacted docs are updated.
+4. Maintained-docs check: confirm impacted docs are updated, and that the REFINE report
+   (`.autoflow/issue-{N}-refine-report.md`) exists with its three sections present — an empty
+   section says `none`; an omitted section fails this step (REFINE > REFINE report).
 5. Manifest coherence check: if the diff touched a manifest-registered source
    (Change Surface Rules > Derived artifacts), confirm `setup/manifest.json` was
    regenerated in the same change — re-run the set-intersection check locally so
@@ -763,9 +1205,26 @@ with the Green state from VERIFY.
    (against a target service repo, per tests/manual/issue-847-manual-scenarios.md)
    — re-state the matched paths so a silently-skipped INTEGRATE step is caught
    here, before HANDOFF. (Or diff touched no deploy/CI-path surface.)
+7. Lint-chain check: if the diff touched files the target repo's lint chain
+   covers (Change Surface Rules > Lint chain on the staged surface), confirm the
+   lint chain ran clean on them at commit time — re-derive it from the committing
+   role's per-chain lint-outcome anchor, so a skipped pre-commit lint is caught
+   here, before HANDOFF/CI, not at external review. A discovered chain covering a
+   staged file clears only on a confirmed execution — locally at commit time, or
+   by a named pull-request CI job that HANDOFF's CI-green confirmation requires;
+   a stated reason alone never clears it. The clearing outcomes are `clean`,
+   `fixed-and-staged`, `not-applicable` or `not-run (ci-deferred)` whose
+   covering-job evidence re-derives (Change Surface Rules > `not-run` reason
+   classes), and the deferral is discharged at HANDOFF step 5.
+   `not-run (unexecuted)` does not clear this step: the committing role runs the
+   chain over the staged surface and re-reports the outcome for re-evaluation,
+   or — if the chain is genuinely not executable in this checkout and no covering
+   job can be named — the cycle pauses for the user (`active:false`,
+   `phase:"awaiting-user"`), presented situation-first per host CLAUDE.md >
+   Execution Principles > Human-decision presentation.
 ```
 
-**Verdict**: automated tests all PASS + minimal-implementation PASS + manual scenarios listed + manifest coherence confirmed (or diff touched no manifest source) + deploy/CI-path verification confirmed (or diff touched no deploy/CI-path surface). Manual items marked "delegated to user" do not block VALIDATE.
+**Verdict**: automated tests all PASS + minimal-implementation PASS + manual scenarios listed + manifest coherence confirmed (or diff touched no manifest source) + deploy/CI-path verification confirmed (or diff touched no deploy/CI-path surface) + lint outcome confirmed per discovered chain, with no `unexecuted` chain outstanding (or diff touched no lint-covered file). Manual items marked "delegated to user" do not block VALIDATE.
 
 ---
 
@@ -776,7 +1235,19 @@ GATE:QUALITY's `Security` item with 5 dedicated, project-specific items.
 
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: change diff + the project-specific security checklist
-(`docs/security-checklist.md`).
+(`docs/security-checklist.md`). In a **review-response cycle**, additionally the previous cycle's
+AUDIT report (`.autoflow/issue-{N}-c{C-1}-audit.md`, preserved at PREFLIGHT) — its `## Low findings`
+list is the re-score's starting set.
+
+**Report file**: the evaluator's report is written to `.autoflow/issue-{N}-audit.md` and carries a
+`## Low findings` section (each Low item with `path:line` and a one-line claim; `none` when empty),
+so that a later cycle can take it as input. The state file keeps only the scores.
+
+**Review-response re-score** (issue #135): the fresh evaluator does not re-derive the whole audit.
+It re-scores **the change surface of this cycle** (the review-response diff) against the checklist,
+re-checks each prior Low finding only where that diff touches its file, and inherits the rest by
+citation — the same narrowed-input rule as GATE:QUALITY's re-entry re-score, using the same
+`rescore` output field. Fresh spawn is unchanged; the input is.
 
 ### Scoring (5 items × 10 points)
 
@@ -800,7 +1271,19 @@ GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate wo
 ## GATE:QUALITY — Completion Evaluation
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: full change set + test results + AUDIT result.
+**Input**: full change set + test results + AUDIT result, plus the issue's acceptance-criterion list
+(`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the converged verification design,
+the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the REFINE report
+(`.autoflow/issue-{N}-refine-report.md`, section `## Out-of-scope observations — guard / boundary
+logic touched`).
+
+**[MUST] REFINE observations are scoring input** (issue #135): the evaluator reads the REFINE
+report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
+`not a defect — reason`), and records the dispositions in the `refine_observations` output field
+([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). An entry dispositioned
+`defect` is scored under `Quality` or `Impact scope` like any other finding. An absent
+`refine_observations` field, or one that does not account for every entry in the section, is a
+report defect: reject and re-spawn, as for a missing `fail_hypothesis`.
 
 ### Scoring (10 items × 10 points)
 
@@ -836,7 +1319,7 @@ each-item ≥ 7 criterion:
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
   mentions). A dangling reference caps the affected item at 6.
 - **Test quality — test-asset disposition**: for each test file this cycle adds, state its
-  disposition under `docs/doc-invariant-registry.md` §1/§2 — **standing** (subject-named, no issue
+  disposition — **standing** (subject-named, no issue
   number, CI registration retained) or **cycle-scoped** (it depends on a base ref or a diff, or it
   asserts this cycle's own landed state → deleted in the cycle's final commit together with its
   disposition row and its CI registration). A file with no stated disposition, or a file judged
@@ -846,9 +1329,85 @@ each-item ≥ 7 criterion:
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check). A
   divergence from a governing ADR, or an architecture-impacting change with no governing
   ADR/owner decision, caps Fit at 6. Regression backstop for the GATE:PLAN check.
+- **Completeness — AC-authority check** (proactively-added per `ADR-0020`, not a past Codex catch):
+  the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a VERIFY → RED test
+  edit, or the satisfiable-subset GREEN implementation the GREEN playbook explicitly permits.
+  **This is not the GATE:PLAN key join, and the difference is deliberate**: there only one side is
+  keyed — the verification design carries `Issue AC`, while test assertions and implementation sites
+  carry no AC id and this policy adds one to neither. The check is therefore a **name-the-site
+  obligation**: for each verification-design row whose `Issue AC` is not `—`, the evaluator names
+  the test file and assertion, or the implementation site, that discharges it. A row for which no
+  site can be named, and which no `[ac-decision]`-marked ledger entry covers, caps `Completeness`
+  at 6. The guarantee is correspondingly **weaker** than GATE:PLAN's — an evaluator judgment over a
+  keyed checklist rather than a mechanical diff — because the alternative is an AC id annotation on
+  every test and source file, maintained by the same agents the check exists to witness against.
+  Neither gate subsumes the other: the ARCHITECT-side check cannot see post-ARCHITECT drift, and
+  this one runs only after the cycle's work is done. **Effective from** — as with the GATE:PLAN
+  half, this binds cycles whose DIAGNOSE authored an AC table under the clause.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → block) → DELIVER.
-- **FAIL** → RED (max 3×).
+- **FAIL** → routed by `remedy_class` (below; max 3× — the cap counts FAILs, not the distance re-entered).
+
+### FAIL routing (`remedy_class`)
+
+A FAIL does not route to RED by default. The evaluator tags **every failed item** (score < 7) with a
+`remedy_class` — the kind of change that clears it — and the orchestrator re-enters the cycle at the
+nearest phase that can make that change. The evaluator is the classifying authority (the same
+principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-classify.
+
+| `remedy_class` | Meaning | Re-entry |
+|---|---|---|
+| `doc` | the item clears by editing documentation / comments with no behavior change | orchestrator doc commit → selected suites → GATE:QUALITY re-score |
+| `test` | the item clears by changing test assets | RED (current path) |
+| `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
+| `design` | the item clears only by revisiting the converged design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
+| `operator` | the evaluator cannot classify with confidence | report situation-first, `active:false`, `phase:"awaiting-user"`; the operator's answer fixes the class |
+
+- **Default class per item** — the evaluator's starting point, overridable with a stated reason:
+  `Doc updates` → `doc`; `Test coverage`, `Test quality` → `test`; `Fit` → `design`; every other
+  item → `impl` (`scripts/gate/remedy-route.sh default-class <item>`). A `Doc updates` cap caused
+  by text that executes — a prompt string inside a workflow script, a hook message — is `impl`, not
+  `doc`. When the evaluator is not confident, it writes `operator` rather than guessing: an
+  unclassifiable item is never carried along a route chosen for its neighbours.
+- **Mixed classes go to the farthest point**: `design` > `impl` > `test` > `doc`; `operator` anywhere
+  pauses. `scripts/gate/remedy-route.sh route <class>...` is the single owner of this rule; the
+  orchestrator records the routed class as `phases.gate_quality.remedy_class` in the state file
+  ([`CLAUDE.md`](../CLAUDE.md) > AutoFlow State Tracking > Remedy class recording).
+- **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: reject
+  it and re-spawn a fresh Evaluation AI, exactly as for a missing `fail_hypothesis`
+  ([`teammate-contracts.md`](teammate-contracts.md) > Evaluation AI > Remedy class).
+- **Caps are unchanged**: `max 3×` and the escalation on the 4th FAIL stand. What changes is the
+  distance a re-entry travels, not the number of re-entries permitted.
+
+#### `doc` re-entry — class-level remedy
+
+The `doc` route skips RED / GREEN / VERIFY, so its remedy must be **class-level, not site-level**: the
+#138 cycle fixed the evaluator's listed sites twice and was failed twice more on residual sites of
+the same kind. The fix anchors on a **repo-wide sweep for the pattern the evaluator named**, not on
+the list of sites it happened to find.
+
+1. Write `.autoflow/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
+   command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
+   remedy fixes every hit (or records why a hit is legitimately exempt).
+2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../CLAUDE.md) > Team Structure /
+   Commit Ownership). **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
+   record exists with both sections non-empty** — it checks the record file, never the wording of an
+   instruction. On a second `doc` FAIL of the same class, the response is a wider sweep predicate,
+   not a standing doc-phrase suite (none are kept after #141).
+3. Run the suites the selection rule picks for the doc diff (`scripts/test/select-suites.sh`); no
+   whole-tree run — the cycle's one whole-tree sweep is VALIDATE step 1, already executed.
+4. Re-score (below).
+
+### Re-entry re-score
+
+After any class's re-entry, GATE:QUALITY runs again as a **fresh spawn with a narrowed input**: it
+re-scores the items that failed plus every previously-passing item whose anchor files the re-entry
+diff touched; the remaining items inherit their prior score by citation. The report states the
+re-scored item list and the inheritance source (the prior report's path) in its `rescore` field
+([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The state file still
+receives all ten scores — the hook computes avg / min over the full set — inherited ones copied
+verbatim from the cited report. An inherited item whose anchor file appears in the re-entry diff
+and is missing from the re-scored list is a report defect: reject and re-spawn.
 
 ---
 
@@ -879,7 +1438,7 @@ In a multi-repo deployment (one or more submodules), INTEGRATE builds the system
 4. Cross-cutting concerns (auth, network ingress, etc.) verified.
 ```
 
-**Failure**: INTEGRATE FAIL → RED (existing GREEN↔VERIFY round-trip rules apply).
+**Failure**: INTEGRATE FAIL → GREEN — fixed `impl` class (an integration or bundle failure is by nature an implementation-side remedy) → VERIFY step 1 → REFINE → VALIDATE; existing GREEN↔VERIFY round-trip rules apply.
 
 ### Deploy/CI-path conditional verification
 
@@ -911,7 +1470,7 @@ Non-empty ⇒ the verification bundle below is a **mandatory PASS/FAIL gate** fo
 
 The bundle commands exercise a *target service repo's* surfaces; their live effectiveness against a real target repo is walked in `tests/manual/issue-847-manual-scenarios.md` (this single-repo framework repo owns none of these surfaces, so its own cycles hit the defined no-op).
 
-**Failure**: a bundle item that fails is an **INTEGRATE FAIL → RED** (existing GREEN↔VERIFY round-trip rules apply; no new regression cap is introduced).
+**Failure**: a bundle item that fails is an **INTEGRATE FAIL → GREEN** (`impl` class; existing GREEN↔VERIFY round-trip rules apply; no new regression cap is introduced).
 
 ---
 
@@ -946,9 +1505,10 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
 6.5. Review triage (per-PR; after step 6, before termination). For each PR, read two signals: the `blocked-by-review` label state (`gh pr view <N> --json labels`) and the review verdict. The orchestrator does **not** read the reviewer comment body itself (Cost Control); an anonymous direct `sonnet` subagent ingests it (`gh pr view <N> --comments`), writes severity-classified findings to `.autoflow/issue-{N}-review-findings.md`, and returns `{max_severity, findings, low_confidence_items}` + the label state. The **verdict (`max_severity`) is the primary signal; the label is a derived, fail-open-prone signal** — the two can disagree because `.codex/review.md` lets a clean review still leave the label on if `--remove-label` fails. Branch on the pair:
    - **[MUST] Findings-file `max_severity` contract.** The ingesting subagent **always** writes exactly one `max_severity: <None|Low|Medium|High|Critical>` line to `.autoflow/issue-{N}-review-findings.md`, using **colon** notation as the canonical form — presence is mandatory, including on a **clean review**, which emits `max_severity: None` (never an omitted line). The consumer additionally tolerates `=` and whitespace separators, but colon is the contract the producer emits.
    - **Propagation batching (multi-repo).** When a sub-repo fix would bump the host `services` pointer, **defer** the host pointer bump until that sub-repo PR's `blocked-by-review` label has cleared (its reviewer re-review is clean); at that clean point bump **once** — the same re-bump point as step 3's `[MUST]`. This holds for the general parent-pointer / sub-repo-PR relation, independent of how many repos deep the change sits. If an intervening host-CI check makes an exceptional interim bump unavoidable, record the reason in the commit message (`chore(#N): interim services bump: <reason>`). This step 6.5 block is the source of truth for the batching norm; [`external-review-sequencing.md`](external-review-sequencing.md) carries a one-line cross-ref for reviewers.
+   - **[MUST] `scope-bounded` line** (issue #135). On every `max_severity ≥ Medium` verdict the orchestrator runs `bash scripts/review/scope-bounded.sh triage --findings .autoflow/issue-{N}-review-findings.md --pr <host PR>` and appends its three output lines (`scope-bounded:`, `scope-bounded-finding-files:`, `scope-bounded-grounds:`) to the findings file. The judgment is a set relation — every Medium+ finding names a file and those files are a subset of the PR's diff file set — never an agent's estimate of size. The artifact records the finding file set; the PR diff file set is not copied into it — it is re-derived from the anchor the triage context already holds (`gh pr diff <host PR> --name-only`), per the re-derivable-value rule in [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Verify teammate claims*. The line selects the review-response cycle's path at PREFLIGHT (> PREFLIGHT > Scope-bounded entry).
    - **`max_severity ≥ Medium`** (the reviewer confirmed `Critical`/`High`/`Medium`; the label is present as expected) — do **not** end. Auto-enter a review-response cycle in-session with the reviewer comment as the DIAGNOSE trigger target — the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, run the DIAGNOSE review-response loop check). The cycle flows DIAGNOSE → … → HANDOFF and re-runs step 6 reviewer review on that step's target set; the label is cleared **only** by that reviewer re-review — the orchestrator never removes it (hook deny). Each auto-triggered review-response entry is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker.
      - **Pause for the user** (`AskUserQuestion`, with the question and option descriptions written situation-first per [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation; `active:false`, `phase:"awaiting-user"`) when the attempt hits **any** of: (a) the fix needs a contract / acceptance-criterion change, (b) the fix direction is ambiguous, (c) the finding is a `Low Confidence` item, (d) the review-response loop check matches (same complaint class, new witness). The user's answer is appended to the ledger and selects re-entry.
-     - **Attempt cap = 7.** Count the *consecutive `review-autofix`-marked ledger entries since the last user re-entry decision (reset by that decision; if none yet this cycle, since the first auto-entry)* — the number of auto-resolution attempts not yet checked with the user. On the 7th such entry without the `blocked-by-review` label clearing, stop auto-resolving and pause for the user (`active:false`, `phase:"awaiting-user"`). A user re-entry decision (the user approving continuation at a pause) **resets** this window to zero — the next auto-entry starts a fresh budget of 7. The reset anchor is the user re-entry decision only.
+     - **Attempt cap = 7.** Count the *consecutive `review-autofix`-marked ledger entries since the last user re-entry decision (reset by that decision; if none yet this cycle, since the first auto-entry)* — the number of auto-resolution attempts not yet checked with the user. A marked entry is a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*): the allocated identifier sits at the front of the heading and the marker stays at the end, so the count predicate reads the marker exactly as it did before identifiers were introduced — it is unaffected by the `O<n>` prefix. On the 7th such entry without the `blocked-by-review` label clearing, stop auto-resolving and pause for the user (`active:false`, `phase:"awaiting-user"`). A user re-entry decision (the user approving continuation at a pause) **resets** this window to zero — the next auto-entry starts a fresh budget of 7. The reset anchor is the user re-entry decision only.
      - **Durable record (host PR).** Post a one-line comment on the **host PR** — the always-present cycle anchor carrying `Closes #N` — via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event). These GitHub-side records survive the scratch-file cleanup at the next PREFLIGHT prior-cycle resolution, so cap-fire and re-entry stay durably auditable.
    - **`max_severity ≥ Medium` but the label is absent** — the reviewer confirmed a `Critical`/`High`/`Medium` finding on a PR whose gate label a previous clean (Low-only) round legitimately cleared, and the reviewer's own attach did not land. Re-attach it as a backstop, then continue into the **same** auto-resolution path as the branch above (same attempt cap, same user-pause criteria, same `review-autofix` ledger marker): (1) **Primary** — `gh pr edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (2) **Fallback on primary failure** — `gh issue edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (3) **Verification** — `gh pr view <N> --json labels` (sub-repo PR: add `--repo <owner/name>`) confirming the label is present; if it is still absent after both surfaces, the label likely does not exist in that repo — report it as an operator setup gap (see [`external-review-sequencing.md`](external-review-sequencing.md) > Operator prerequisites). An attach failure does **not** block the auto-resolution: the verdict is the primary signal and justifies re-entry on its own. If this backstop attaches in error (the verdict was in fact below `Medium`), the recovery route is the branch below — a re-run of the step-6 reviewer review clears the label, and that path consumes no code-resolution attempt.
    - **Label present but `max_severity < Medium` (or no verdict is determinable)** — this is **not** a code finding. The review was clean (or produced no verdict) yet the label stuck — a `--remove-label` / review-infrastructure failure (`.codex/review.md` > label-removal-failure clause). Do **not** start a review-response cycle (there is nothing to fix). Re-run the step-6 reviewer review on that PR so the re-review clears the label; if a re-run still leaves the label on, escalate to the user / operator (`active:false`, `phase:"awaiting-user"`). This path does **not** consume the 7-attempt code-resolution cap (no code change is attempted).

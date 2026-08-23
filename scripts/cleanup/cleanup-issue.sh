@@ -31,8 +31,29 @@
 #
 # REPO-KEY: `--print-repo-key [<url>|--no-origin]` prints the derived archive
 # key (`<org>__<repo>` from the origin URL, or a path-encoding fallback) and
-# exits 0. It is a bounded introspection query for the AC-2 unit test, parsed
-# ABOVE the `.autoflow/` existence gate so it is CWD-independent.
+# exits 0. It is a bounded introspection query, parsed ABOVE the `.autoflow/`
+# existence gate so it answers whether or not that directory exists. It is NOT
+# CWD-independent, and the distinction matters to every caller: the root comes
+# from a bare `git rev-parse --show-toplevel` with no `-C`, so the subcommand
+# answers for the repository containing the CURRENT WORKING DIRECTORY. A caller
+# asking about some other repository must invoke it with its cwd inside that
+# repository — the cwd is a term of the call, not an incidental.
+#
+# ARCHIVE-ROOT GATE: `--check-archive-root` runs the in-repo refusal below and
+# exits 0 when the archive root resolves outside the repo tree, 65 when it does
+# not. Same hoisting, same CWD contract. It exists so the Green-tree register's
+# shared store — which lives under that same `$AUTOFLOW_ARCHIVE_ROOT` — reaches
+# THIS guard rather than carrying a copy of it: one root with two consumers has
+# nothing for two implementations to agree about, and a second copy could only
+# disagree.
+#
+# ON ACCEPTANCE THE GATE PRINTS THE ACCEPTED ARCHIVE ROOT on stdout: the
+# absolute, symlink-preserving form of the value it just validated, anchored on
+# the same $PWD its own resolution is anchored on. The guard is then the single
+# site that answers "which directory is the archive root", so a relative value
+# has no second anchor to be re-resolved against in whichever process consumes
+# it. On refusal it prints nothing and exits 65 before any print, so the
+# refusal path's stdout stays empty.
 #
 # Allow-list (so it never prompts even when rm is denied):
 #   "Bash(./scripts/cleanup/cleanup-issue.sh:*)"   (or the no-`./` form you invoke)
@@ -40,6 +61,7 @@
 # Usage:
 #   scripts/cleanup/cleanup-issue.sh <issue-number> [<issue-number> ...]
 #   scripts/cleanup/cleanup-issue.sh --print-repo-key [<url>|--no-origin]
+#   scripts/cleanup/cleanup-issue.sh --check-archive-root   (prints the accepted absolute archive root)
 set -euo pipefail
 
 # derive_repo_key <url> <root> — PURE normalization of an origin URL to a
@@ -75,9 +97,90 @@ derive_repo_key() {
   fi
 }
 
-# --print-repo-key introspection subcommand — hoisted ABOVE the existence gate
-# and the digits loop (CWD-independent `--print-repo-key … exit 0` query; a
-# leading `--` is never mistaken for an issue number).
+# absolute_path <path> — absolutize against $PWD WITHOUT touching symlinks or
+# `..`: a path already beginning with `/` is returned verbatim, anything else is
+# prefixed with `$PWD/`. Pure string work — it never stats, resolves or creates
+# anything, so it answers for a root that does not exist on disk.
+#
+# It is the case block `physical_path` used to open with, lifted to its own
+# definition so the guard's two derived forms — the physical one it JUDGES and
+# the symlink-preserving one it ANSWERS with — share one definition of what a
+# relative archive root is relative to. Two derivations, one anchor.
+absolute_path() {
+  case "$1" in
+    /*) printf '%s' "$1" ;;
+    *)  printf '%s' "$PWD/$1" ;;
+  esac
+}
+
+# physical_path <path> — canonicalize to the PHYSICAL absolute path, resolving
+# symlinks portably (POSIX `cd -P` + `pwd`; macOS has no `realpath -m`
+# guarantee). A relative path is absolutized against $PWD first (ledger E12,
+# now via `absolute_path`); a not-yet-existing tail is re-appended after
+# resolving the nearest existing directory ancestor, so a fresh archive root
+# canonicalizes too.
+physical_path() {
+  p="$(absolute_path "$1")"; tail=""
+  while [ ! -d "$p" ] && [ "$p" != "/" ]; do
+    tail="/${p##*/}$tail"
+    p="${p%/*}"
+    [ -z "$p" ] && p="/"
+  done
+  p="$(cd -P "$p" 2>/dev/null && pwd)" || return 1
+  [ "$p" = "/" ] && p=""
+  printf '%s' "${p}${tail}"
+}
+
+# gate_archive_root <repo root> — the boundary guard (AC-3 hardening): refuse an
+# archive root INSIDE the repo tree, since archiving into the tree would break
+# repo-tree non-interference. The compare is over the PHYSICAL resolution of
+# BOTH sides, not the textual prefix, so neither a relative value (GATE:PLAN
+# finding, ledger E12) nor a symlink at an outside-tree path whose target
+# resolves inside the tree (AUDIT r1, ledger E15) can bypass the refuse. Fail
+# closed (exit 65) if resolution is impossible.
+#
+# ONE FUNCTION, TWO CALLERS, hoisted above the `.autoflow/` existence gate: the
+# archival path below and the `--check-archive-root` query. It sets
+# $ARCHIVE_ROOT as a side effect, which the archival path then uses as the
+# destination prefix — the guarded value and the used value are the same
+# variable by construction, not by agreement.
+gate_archive_root() {
+  ARCHIVE_ROOT="${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}"
+  ROOT_PHYS="$(cd -P "$1" && pwd)"
+  if ! ARCHIVE_ROOT_PHYS="$(physical_path "$ARCHIVE_ROOT")"; then
+    echo "refuse: AUTOFLOW_ARCHIVE_ROOT ($ARCHIVE_ROOT) cannot be resolved" >&2
+    exit 65
+  fi
+  case "${ARCHIVE_ROOT_PHYS%/}/" in
+    "$ROOT_PHYS"/*)
+      echo "refuse: AUTOFLOW_ARCHIVE_ROOT ($ARCHIVE_ROOT) is inside the repo tree" >&2
+      exit 65
+      ;;
+  esac
+}
+
+# Introspection subcommands — hoisted ABOVE the existence gate and the digits
+# loop (a leading `--` is never mistaken for an issue number). Both resolve
+# their root from the CWD; see the ARCHIVE-ROOT GATE / REPO-KEY notes above.
+#
+# `--check-archive-root` prints the ABSOLUTE, SYMLINK-PRESERVING form of the
+# accepted root (computed here, not as a gate_archive_root side effect — the
+# archival path never reads it, so computing it unconditionally on every gate
+# call would be wasted work on the common path). Symlink-preserving rather
+# than physical is deliberate — the guard JUDGES the physical resolution, but
+# the answer it hands out preserves the operator's own spelling, so an
+# absolute $AUTOFLOW_ARCHIVE_ROOT comes back byte-identical to what was passed
+# in. The trailing slash is stripped here, at the guard's own boundary, so
+# every consumer of this stdout gets a normalized value — not only the one
+# consumer that happens to strip it again downstream.
+if [ "${1:-}" = "--check-archive-root" ]; then
+  ROOT="$(git rev-parse --show-toplevel)"
+  gate_archive_root "$ROOT"
+  ARCHIVE_ROOT_ABS="$(absolute_path "$ARCHIVE_ROOT")"
+  printf '%s\n' "${ARCHIVE_ROOT_ABS%/}"
+  exit 0
+fi
+
 if [ "${1:-}" = "--print-repo-key" ]; then
   ROOT="$(git rev-parse --show-toplevel)"
   case "${2:-}" in
@@ -102,46 +205,9 @@ if [ ! -d "$AUTOFLOW_DIR" ]; then
   exit 0
 fi
 
-ARCHIVE_ROOT="${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}"
-
-# physical_path <path> — canonicalize to the PHYSICAL absolute path, resolving
-# symlinks portably (POSIX `cd -P` + `pwd`; macOS has no `realpath -m`
-# guarantee). A relative path is absolutized against $PWD first (ledger E12);
-# a not-yet-existing tail is re-appended after resolving the nearest existing
-# directory ancestor, so a fresh archive root canonicalizes too.
-physical_path() {
-  p="$1"; tail=""
-  case "$p" in
-    /*) : ;;
-    *)  p="$PWD/$p" ;;
-  esac
-  while [ ! -d "$p" ] && [ "$p" != "/" ]; do
-    tail="/${p##*/}$tail"
-    p="${p%/*}"
-    [ -z "$p" ] && p="/"
-  done
-  p="$(cd -P "$p" 2>/dev/null && pwd)" || return 1
-  [ "$p" = "/" ] && p=""
-  printf '%s' "${p}${tail}"
-}
-
-# Boundary guard (AC-3 hardening): refuse an archive root INSIDE the repo tree —
-# archiving into the tree would break repo-tree non-interference. The compare is
-# over the PHYSICAL resolution of BOTH sides, not the textual prefix, so neither
-# a relative value (GATE:PLAN finding, ledger E12) nor a symlink at an
-# outside-tree path whose target resolves inside the tree (AUDIT r1, ledger E15)
-# can bypass the refuse. Fail closed (exit 65) if resolution is impossible.
-ROOT_PHYS="$(cd -P "$ROOT" && pwd)"
-if ! ARCHIVE_ROOT_PHYS="$(physical_path "$ARCHIVE_ROOT")"; then
-  echo "refuse: AUTOFLOW_ARCHIVE_ROOT ($ARCHIVE_ROOT) cannot be resolved" >&2
-  exit 65
-fi
-case "${ARCHIVE_ROOT_PHYS%/}/" in
-  "$ROOT_PHYS"/*)
-    echo "refuse: AUTOFLOW_ARCHIVE_ROOT ($ARCHIVE_ROOT) is inside the repo tree" >&2
-    exit 65
-    ;;
-esac
+# The SAME guard the `--check-archive-root` query runs — called, never
+# re-typed. It sets $ARCHIVE_ROOT, used as the destination prefix below.
+gate_archive_root "$ROOT"
 
 KEY="$(derive_repo_key "$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)" "$ROOT")"
 DATE="$(date +%F)"

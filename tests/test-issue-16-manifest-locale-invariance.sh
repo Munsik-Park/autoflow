@@ -2,17 +2,18 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: setup/gen-manifest-hashes.sh setup/manifest.json
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: locale-invariant manifest generation — Issue #16
 # =============================================================================
 # Tier-1 scripted assertion suite per verification design
 # (.autoflow/issue-16-verification-design.md §1). New dedicated file — the
 # feature design §7 devil's-advocate flag + verification design §0 R1
-# reconciliation moved these arms out of tests/adr-0016-conformance-check.sh
-# (concern mismatch: that file is scoped to ADR-0016 registration, not
-# generator locale-invariance). AC4 separately re-runs the existing
-# adr-0016-conformance-check.sh .source-keyed guards UNMODIFIED — it does not
-# land in this file.
+# reconciliation moved these arms out of the ADR-0016 conformance suite
+# (concern mismatch: that file was scoped to ADR-0016 registration, not
+# generator locale-invariance). That suite was retired by issue #120; its
+# arms live in the registry (docs/doc-invariant-registry.md §17).
 #
 # Scope (verification design §1):
 #   AC1 — generator is locale-pinned at the source (static grep for the
@@ -24,10 +25,9 @@
 #         installed pair discriminates. This is the core RED/GREEN
 #         discriminator for the locale defect itself (verification design
 #         §1 AC3 RED/GREEN discrimination note, §3 item 6).
-#   AC4 — existing order-insensitive guards remain green (regression
-#         confirmation only, zero new code — re-runs
-#         tests/adr-0016-conformance-check.sh as a subprocess and checks its
-#         own PASS/FAIL summary; does not duplicate its assertions here).
+#   AC4 — RETIRED. Its subject (the standing ADR-0016 conformance suite) was
+#         retired by issue #120; disposition row:
+#         docs/doc-invariant-registry.md §17.
 #   AC5 — RETIRED. It asserted "the manifest change is order-only" against a
 #         baseline snapshot, a one-time migration check whose cycle merged long
 #         ago. Its own header already labelled it a cycle-scoped gate, and
@@ -55,7 +55,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 GEN_MANIFEST_SH="$PROJECT_ROOT/setup/gen-manifest-hashes.sh"
 MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
-ADR_0016_TEST="$PROJECT_ROOT/tests/adr-0016-conformance-check.sh"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -158,24 +157,12 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# AC4 — existing order-insensitive guards remain green (regression
-# confirmation only; re-runs the standing adr-0016 suite unmodified as a
-# subprocess and checks ITS OWN summary, per feature design §7 / verif.
-# design §1 AC4 — this file adds no new .source-keyed assertions).
+# AC4 — fully retired. Issue #103 retired its subprocess re-run (the suite
+# carried its own registered `run:` step); issue #120 retired the remaining
+# existence half together with its subject, so nothing here reads a file that
+# no longer exists. Disposition rows: docs/doc-invariant-registry.md §12.1
+# (the #103 half) and §17 (the #120 half).
 # ---------------------------------------------------------------------------
-
-echo ""
-echo "=== AC4 (regression confirmation, zero new code) — existing order-insensitive guards stay green ==="
-
-if [ -x "$ADR_0016_TEST" ] || [ -f "$ADR_0016_TEST" ]; then
-  AC4_OUT="$(bash "$ADR_0016_TEST" 2>&1)"
-  AC4_EXIT=$?
-  echo "$AC4_OUT" | tail -3 | sed 's/^/  [adr-0016] /'
-  assert_true "AC4-adr0016-suite-exit0: tests/adr-0016-conformance-check.sh (AC-R3 sha256/count guards, order-insensitive by construction) exits 0 unmodified" \
-    "[ '$AC4_EXIT' -eq 0 ]"
-else
-  assert_true "AC4-adr0016-suite-exists: tests/adr-0016-conformance-check.sh exists" "false"
-fi
 
 # ---------------------------------------------------------------------------
 # AC-C2-1 — no unconditional HEAD-restore of the tracked manifest remains

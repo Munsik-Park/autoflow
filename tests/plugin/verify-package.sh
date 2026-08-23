@@ -1,6 +1,10 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
+# ci-subject: .claude-plugin/marketplace.json .claude/hooks/check-autoflow-gate.sh .claude/hooks/check-read-dedup.sh README.md plugin/autoflow/hooks/check-autoflow-gate.sh plugin/autoflow/skills/epic-dash/SKILL.md plugin/autoflow/skills/install/SKILL.md setup/SETUP-GUIDE.md setup/manifest.json setup/thin-root-layer/settings-pin.json
+# lane: standing
+# budget-secs: SUITE_BUDGET_CEILING_SECS
+# out-of-tree-inputs: yes
 # =============================================================================
 # Test: plugin packaging acceptance suite — Issue #790 [#785-S4a]
 # =============================================================================
@@ -27,6 +31,27 @@
 #   AC-R1/AC-R2 (cycle 2, Codex Medium on PR #918) packaged skill body names
 #       the ${CLAUDE_PLUGIN_ROOT}-first, .claude-fallback loop and no longer
 #       carries the bare host-only assignment as its sole locator
+#
+#   NOT automated (E types — see tests/plugin/manual-scenarios.md), the
+#   unautomatable-criteria complement of this suite, by that document's own
+#   scenario-heading identifiers:
+#     M-1   manifest loads in a real Claude Code session
+#     M-2   marketplace add + install
+#     M-3   hooks fire via the plugin channel
+#     M-4   ${CLAUDE_PROJECT_DIR} parity (mandatory)
+#     M-5   self-dogfooding preserved
+#     M-R1  packaged skill resolves scripts on a plugin-only install (mandatory)
+#     M-R2  skill namespace observed empirically (informational)
+#     M-6   skill namespace doc-sweep note
+#   This suite additionally owns the STATIC SKILL.md structural guards recorded
+#   in tests/plugin/manual-scenarios-943.md, whose own live-orchestration items
+#   stay unautomated there:
+#     AC2c  full skill orchestration (detect -> report -> confirm -> stamp)
+#     AC3c  re-stamp proposal + result on an installed+drifted fixture
+#     AC4b  declined confirmation -> zero writes
+#     AD3   multi-repo fork-URL confirmation (behavioral)
+#     M-3-style residual — ${CLAUDE_PLUGIN_ROOT} inline substitution in the
+#           install skill body
 #
 # DCR-4 non-vacuity correction (grounded against the live spec, fetched
 # 2026-07-06, https://code.claude.com/docs/en/plugins-reference > "Plugin
