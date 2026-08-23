@@ -41,7 +41,12 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
    necessity of each proposed resolution (a DRY-triage — is a code change
    genuinely needed — reuse-neutral, not a structural-fit judgment).
 
-   Phase A + Phase B: run in parallel.
+   Phase A + Phase B: run in parallel — except on the bounded path of a review-response cycle
+   (`scope-bounded: true` in the findings file; `docs/autoflow-guide.md` > PREFLIGHT > Scope-bounded
+   entry), where Phase A is NOT re-authored: the previous cycle's preserved
+   `.autoflow/issue-{N}-c{C}-phase-a.md` is Phase 3's structure input, because the dev branch HEAD at
+   entry is the PR head and the structure it describes has not changed. Phase B, Phase 3 and the loop
+   check run as usual.
 
    AI-A (structure analysis): is NOT given the issue content
      - Input: affected sub-repo + functional area (e.g., "librechat's normalization pipeline").

@@ -93,6 +93,7 @@ emerge, humans adjust the criteria.
   "scores": { "item": { "score": 8, "reason": "evidence" } },
   "remedy_class": { "<failed item>": "doc | test | impl | design | operator" },
   "rescore": { "source": "<prior report path>", "rescored": ["item"], "inherited": ["item"] },
+  "refine_observations": [ { "entry": "<suggestion @ path:line>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
   "recommendations": ["items 5-6"]
@@ -123,6 +124,12 @@ read it from the report (it reads the routed class the orchestrator records in s
 |-----|------|----------|---------|
 | `remedy_class` | object, one entry per failed item | **on every FAIL** (`{}` on a PASS) | Value enum `doc` \| `test` \| `impl` \| `design` \| `operator`. A failed item with no entry is a contract violation — reject + re-spawn, as for a missing `fail_hypothesis`. `operator` means "not classifiable with confidence" and pauses the cycle for the operator. |
 | `rescore` | object | **on a re-entry evaluation** (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items plus any inherited item whose anchor files the re-entry diff touched); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. |
+
+`refine_observations` (GATE:QUALITY only; issue #135) records the evaluator's disposition of every
+entry in the REFINE report's `## Out-of-scope observations — guard / boundary logic touched`
+section. Always present on a GATE:QUALITY report (`[]` when the section says `none`); a report that
+omits it or leaves an entry undispositioned is rejected and re-spawned. `rescore` is also the field
+a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](autoflow-guide.md) > AUDIT).
 
 `inherited_verdicts` carries the citation for every suite verdict the evaluator took from the host's
 own record instead of re-executing, per [`teammate-contracts.md`](teammate-contracts.md) >
