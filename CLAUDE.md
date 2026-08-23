@@ -288,7 +288,7 @@ Each phase's procedure body — its numbered steps, scoring rubric, and phase-lo
 | GREEN | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > GREEN; change surface: [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md) > Change Surface Rules |
 | VERIFY | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > VERIFY |
 | REFINE | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > REFINE |
-| VALIDATE | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > VALIDATE; affected docs: [`docs/maintained-docs.md`](docs/maintained-docs.md) |
+| VALIDATE | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > VALIDATE |
 | AUDIT | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > AUDIT; checklist: [`docs/security-checklist.md`](docs/security-checklist.md) |
 | GATE:QUALITY | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > GATE:QUALITY |
 | DELIVER | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > DELIVER |
@@ -490,5 +490,4 @@ Part of Munsik-Park/autoflow#N
 - **Git procedures**: [`docs/git-workflow.md`](docs/git-workflow.md)
 - **Repo boundary rules**: [`docs/repo-boundary-rules.md`](docs/repo-boundary-rules.md)
 - **Sub-repo common rules**: [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md)
-- **Maintained docs registry**: [`docs/maintained-docs.md`](docs/maintained-docs.md)
 - **Security checklist**: [`docs/security-checklist.md`](docs/security-checklist.md)

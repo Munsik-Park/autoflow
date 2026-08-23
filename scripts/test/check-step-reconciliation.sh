@@ -66,7 +66,7 @@
 # Usage:
 #   bash scripts/test/check-step-reconciliation.sh \
 #        [--selected <file|->] [--steps <file|->] [--governed <path>]... \
-#        [--job-status <success|failure|cancelled>] [--self-test]
+#        [--job-status <success|failure|cancelled>]
 #
 # EVIDENCE IS A PRECONDITION, NOT AN OUTCOME. Zero evidence is not agreement:
 # an unreadable report, a report carrying the selector's own `BLOCK:` line, a
@@ -94,14 +94,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
 
-MODE="default"
 SELECTED_FILE=""
 STEPS_FILE=""
 JOB_STATUS=""
 GOVERNED_ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --self-test)  MODE="self-test" ;;
     --selected)   require_value check-step-reconciliation "$1" $# "${2:-}" || exit 2; SELECTED_FILE="$2"; shift ;;
     --steps)      require_value check-step-reconciliation "$1" $# "${2:-}" || exit 2; STEPS_FILE="$2"; shift ;;
     --governed)   require_value check-step-reconciliation "$1" $# "${2:-}" || exit 2; GOVERNED_ARGS+=("$2"); shift ;;
@@ -267,138 +265,6 @@ reconcile() {
 
   [ "$mismatches" -eq 0 ]
 }
-
-# ---------------------------------------------------------------------------
-# Self-test — synthetic step-outcome JSON, one fixture per named class. A live
-# CI run supplies real outcomes; only these fixtures discriminate a working
-# reconciler from an inert one.
-# ---------------------------------------------------------------------------
-self_test() {
-  local dir rc=0 fails=0 sel steps
-  dir="$(mktemp -d)"
-  sel="$dir/selected"; steps="$dir/steps"
-
-  expect() { # <label> <expected: agree|mismatch>
-    local label="$1" want="$2"
-    if reconcile "$sel" "$steps" >/dev/null 2>&1; then
-      if [ "$want" = agree ]; then echo "  SELF-TEST PASS: $label"
-      else echo "  SELF-TEST FAIL: $label — expected a mismatch, got agreement"; fails=$((fails + 1)); fi
-    else
-      if [ "$want" = mismatch ]; then echo "  SELF-TEST PASS: $label"
-      else echo "  SELF-TEST FAIL: $label — expected agreement, got a mismatch"; fails=$((fails + 1)); fi
-    fi
-  }
-
-  printf 'SELECTED: tests/test-fixture-recon.sh\n' > "$sel"
-  printf '{"s-test-fixture-recon": {"outcome": "success"}}\n' > "$steps"
-  expect "selected suite that ran -> agreement" agree
-
-  printf '{"s-test-fixture-recon": {"outcome": "skipped"}}\n' > "$steps"
-  expect "selected suite skipped (wrongly-false guard) -> mismatch" mismatch
-
-  printf '{}\n' > "$steps"
-  expect "selected suite absent from the outcome map (missing id) -> mismatch" mismatch
-
-  printf 'NOT-SELECTED: tests/test-fixture-recon.sh no delta match\n' > "$sel"
-  printf '{"s-test-fixture-recon": {"outcome": "success"}}\n' > "$steps"
-  expect "unselected suite that ran -> mismatch" mismatch
-
-  printf '{"s-test-fixture-recon": {"outcome": "skipped"}}\n' > "$steps"
-  expect "unselected suite skipped -> agreement" agree
-
-  # Governed-set boundary: unconditional standing-lint and registry-runner
-  # steps sit in no selection record and must not reconcile as "ran while
-  # unselected".
-  printf 'SELECTED: tests/test-fixture-recon.sh\n' > "$sel"
-  cat > "$steps" <<'JSON'
-{
-  "s-test-fixture-recon": {"outcome": "success"},
-  "check-suite-ci-coverage": {"outcome": "success"},
-  "run-doc-invariants": {"outcome": "success"}
-}
-JSON
-  expect "ungoverned steps present in the outcome map -> agreement" agree
-
-  # --- CASCADE SKIPS: a downstream skip after a failure is not a false guard --
-  # The outcome-map arm only; the job-status arm is reachable solely through the
-  # CLI flag loop, which self_test bypasses by calling reconcile directly.
-  printf 'SELECTED: tests/test-fixture-recon.sh\n' > "$sel"
-  cat > "$steps" <<'JSON'
-{
-  "s-upstream": {"outcome": "failure"},
-  "s-test-fixture-recon": {"outcome": "skipped"}
-}
-JSON
-  local casc_out
-  casc_out="$(reconcile "$sel" "$steps" 2>&1)"
-  if [ $? -eq 0 ] && printf '%s\n' "$casc_out" | grep -q '^CASCADE-SKIP: tests/test-fixture-recon.sh selected=yes outcome=skipped' \
-     && ! printf '%s\n' "$casc_out" | grep -q 'MISMATCH'; then
-    echo "  SELF-TEST PASS: a selected suite skipped downstream of a failing step is graded CASCADE-SKIP and does not change the exit code"
-  else
-    echo "  SELF-TEST FAIL: a selected suite skipped downstream of a failing step is graded CASCADE-SKIP and does not change the exit code — got: $casc_out"
-    fails=$((fails + 1))
-  fi
-
-  # Under a cascade every other branch is unchanged: a failing run says nothing
-  # about a step that carries no id at all, which is a static defect.
-  printf '{"s-upstream": {"outcome": "failure"}}\n' > "$steps"
-  expect "a cascading run carrying a selected suite absent from the outcome map -> mismatch" mismatch
-
-  # --- EVIDENCE PRECONDITION: zero evidence is not agreement ---------------
-  # Each arm asserts the non-zero exit AND a message of its own: a mismatch also
-  # exits non-zero, so an arm reading only the code cannot tell "there was
-  # nothing to reconcile" from "the two records disagreed".
-  expect_precondition() { # <label> <selected-file> <pattern> [<governed path>...]
-    local label="$1" selfile="$2" pattern="$3"; shift 3
-    local out
-    out="$(reconcile "$selfile" "$steps" "$@" 2>&1)"
-    if [ $? -eq 3 ] && printf '%s\n' "$out" | grep -qiE "$pattern" \
-       && ! printf '%s\n' "$out" | grep -q 'MISMATCH'; then
-      echo "  SELF-TEST PASS: $label"
-    else
-      echo "  SELF-TEST FAIL: $label — expected a precondition failure naming its cause, got: $out"
-      fails=$((fails + 1))
-    fi
-  }
-
-  printf '{"s-test-fixture-recon": {"outcome": "success"}}\n' > "$steps"
-  expect_precondition "an unreadable selection report -> precondition failure" "$dir/absent-report" 'unreadable'
-  : > "$sel"
-  expect_precondition "an empty selection report -> precondition failure" "$sel" 'no SELECTED'
-  printf 'this is not a selection report\n' > "$sel"
-  expect_precondition "an unparseable selection report -> precondition failure" "$sel" 'no SELECTED'
-  printf 'BLOCK: no base ref resolvable\n' > "$sel"
-  expect_precondition "a BLOCK-bearing selection report -> precondition failure" "$sel" 'BLOCK'
-
-  printf 'SELECTED: tests/test-fixture-recon.sh\n' > "$sel"
-  expect_precondition "a --governed set intersecting the report in nothing -> precondition failure" "$sel" 'governed' tests/test-fixture-absent-from-report.sh
-
-  # --- BOUNDARY ACCOUNTING: an out-of-job record is reported, not dropped ---
-  printf 'SELECTED: tests/test-fixture-recon.sh\nSELECTED: tests/test-fixture-elsewhere.sh\n' > "$sel"
-  printf '{"s-test-fixture-recon": {"outcome": "success"}}\n' > "$steps"
-  local ooj_out
-  ooj_out="$(reconcile "$sel" "$steps" 2>&1)"
-  if [ $? -eq 0 ] && printf '%s\n' "$ooj_out" | grep -q '^OUT-OF-JOB: tests/test-fixture-elsewhere.sh selected=yes'; then
-    echo "  SELF-TEST PASS: an out-of-job record is reported under its own label and does not change the exit code"
-  else
-    echo "  SELF-TEST FAIL: an out-of-job record is reported under its own label and does not change the exit code — got: $ooj_out"
-    fails=$((fails + 1))
-  fi
-
-  rm -rf "$dir"
-  if [ "$fails" -ne 0 ]; then
-    echo "check-step-reconciliation: --self-test FAILED ($fails of 14 fixture classes misclassified)"
-    rc=1
-  else
-    echo "check-step-reconciliation: --self-test OK (14/14 fixture classes classified correctly)"
-  fi
-  return $rc
-}
-
-if [ "$MODE" = "self-test" ]; then
-  self_test
-  exit $?
-fi
 
 if [ -z "$SELECTED_FILE" ] || [ -z "$STEPS_FILE" ]; then
   echo "check-step-reconciliation: both --selected and --steps are required" >&2

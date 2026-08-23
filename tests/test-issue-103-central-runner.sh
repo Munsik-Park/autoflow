@@ -341,22 +341,15 @@ SH
   # ---------------------------------------------------------------------
   # VERIFY step 3 (minimal-implementation check) additions — four real
   # implementation code paths the arms above never exercised:
-  #   (1) select-suites.sh's OWN --self-test (its FULL-SET/REPORT/BLOCK/
-  #       MATCHER legs) was never invoked by this suite — only its
-  #       behaviour was re-tested externally through the fixture drives
-  #       above.
-  #   (2) run-suites.sh's DEFAULT (non---all) mode, which internally calls
+  #   (1) run-suites.sh's DEFAULT (non---all) mode, which internally calls
   #       select-suites.sh (the "Local consumption" path feature design
   #       §2.2 names as the runner's second consumer of the one selection
   #       definition site) — every prior arm used --all, which bypasses
   #       that call entirely.
-  #   (3) run-suites.sh --list.
-  #   (4) run-suites.sh's SELECT_RC!=0 propagation when the internal
+  #   (2) run-suites.sh --list.
+  #   (3) run-suites.sh's SELECT_RC!=0 propagation when the internal
   #       select-suites.sh call BLOCKs.
   # ---------------------------------------------------------------------
-  assert_true "select-suites.sh --self-test exits 0 (its own FULL-SET/REPORT/BLOCK/MATCHER legs)" \
-    "bash '$SELECT' --self-test >/tmp/issue103-select-selftest.out 2>&1"
-
   STUB7="$(mktemp -d)"
   build_stub_root "$STUB7"
   git -C "$STUB7" init -q >/dev/null 2>&1

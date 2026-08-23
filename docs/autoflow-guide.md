@@ -569,21 +569,20 @@ The Test AI writes test code from the verification design.
   ```
 
 - `ci-subject` — the trigger surface. It is no longer only a coverage declaration: `scripts/test/select-suites.sh` consumes it to decide which suites a change requires, so an under-declared surface is a coverage hole, not a cosmetic gap.
-- `lane` — `standing` asserts permanent state and lives forever; `cycle-scoped` asserts its own cycle's landed diff and is inert off its own dev branch. This is the two-lane rule of `docs/doc-invariant-registry.md` extended from doc checks to suites, and it is what makes the naming rule below machine-readable rather than remembered.
+- `lane` — `standing` asserts permanent state and lives forever; `cycle-scoped` asserts its own cycle's landed diff and is inert off its own dev branch. The two-lane partition is what makes the naming rule below machine-readable rather than remembered.
 - `retire-with` — names the issue whose merge retires a cycle-scoped suite.
-- `cycle-arm` — names the cycle whose landed diff a change-surface allow-list array asserts, and is the sole issue-number source of `scripts/test/check-cycle-scope-guard.sh`'s branch-gate match. It is separate from `retire-with` because a **standing** suite may carry a cycle-scoped arm; collapsing the two would mark live standing suites for retirement.
+- `cycle-arm` — names the cycle whose landed diff a change-surface allow-list array asserts. It is separate from `retire-with` because a **standing** suite may carry a cycle-scoped arm; collapsing the two would mark live standing suites for retirement.
 - `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim, so a guessed budget is not a representable state. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
 
-**Naming**: an issue number belongs in a test file name only when that file is cycle-scoped — retired in the cycle's final commit per `docs/doc-invariant-registry.md` §2. A standing test is subject-named. The `lane` field above is the declaration; the filename is a convention that follows it.
+**Naming**: an issue number belongs in a test file name only when that file is cycle-scoped — retired in the cycle's final commit. A standing test is subject-named. The `lane` field above is the declaration; the filename is a convention that follows it.
 
 **Leaf rule**: a suite executes its subject, not another suite. A sibling's regression is caught by that sibling's own CI step, under its own name; re-running it here is duplicate execution. Enforced by `scripts/test/check-suite-leaf.sh`.
 
 **Admission**: before creating a suite file at all, answer these four questions. They are the leaf rule and the two-lane rule applied *before* the file exists rather than after, and each one that answers "yes" removes a file this tree would otherwise have to maintain and retire.
 
-- Can the new check be expressed as a doc-invariant registry entry? If so it is a data append to `tests/fixtures/doc-invariants.json`, not a new suite.
 - Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
 - Is the check delivery-pinned to this cycle's landed diff? Then `lane: cycle-scoped` with `retire-with:` is the default, not an exception.
-- Does the check compare against a checked-in basis? Then the ratchet-or-fossil rule decides its lane — see `docs/doc-invariant-registry.md` § 18.
+- Does the check compare against a checked-in basis? Then the ratchet-or-fossil rule decides its lane.
 
 **Completion**: all automated tests Red + every new spec conforming to the header contract above + manual scenarios written.
 
@@ -1254,7 +1253,7 @@ each-item ≥ 7 criterion:
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
   mentions). A dangling reference caps the affected item at 6.
 - **Test quality — test-asset disposition**: for each test file this cycle adds, state its
-  disposition under `docs/doc-invariant-registry.md` §1/§2 — **standing** (subject-named, no issue
+  disposition — **standing** (subject-named, no issue
   number, CI registration retained) or **cycle-scoped** (it depends on a base ref or a diff, or it
   asserts this cycle's own landed state → deleted in the cycle's final commit together with its
   disposition row and its CI registration). A file with no stated disposition, or a file judged

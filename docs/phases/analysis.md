@@ -125,7 +125,7 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
    - Items that cannot be verified are marked "unverified".
 5. Hypothesis verdict notes: per hypothesis, eliminated / likely / unverified, with evidence.
 6. Task decomposition (only if code change is required).
-7. Identify affected docs (from the maintained-docs registry).
+7. Identify affected docs.
 ```
 
 **Per-role document injection whitelist** (preserves the isolation across the three pre-fan-out / structure roles; the orchestrator selects documents per role via `docs/INDEX.md` as a router and never injects it wholesale). The three roles are **distinct columns** — `Intake triage` and `Phase B` are NOT the same role:

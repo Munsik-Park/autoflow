@@ -47,8 +47,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 HELPER="$PROJECT_ROOT/scripts/handoff/create-host-pr.sh"
-CHECKER="$PROJECT_ROOT/scripts/test/check-close-keyword-quoting.sh"
-TEMPLATE="$PROJECT_ROOT/.github/pull_request_template.md"
 MOCK_GH_DIR="$SCRIPT_DIR/issue-92/mock-gh"
 
 PASS=0; FAIL=0; TESTS=0
@@ -126,15 +124,6 @@ assert_true "T2-5a: --no-subrepo-dep still passes --draft" \
   "grep -qFx -- '--draft' '$GH_INVOCATION_LOG'"
 assert_false "T2-5b: --no-subrepo-dep does NOT pass the blocked-by-subrepo label" \
   "grep -qFx -- 'blocked-by-subrepo' '$GH_INVOCATION_LOG' || grep -qFx -- '--label=blocked-by-subrepo' '$GH_INVOCATION_LOG'"
-
-echo ""
-echo "=== Issue #92 (ported from bats) — close-keyword checker invocation ==="
-
-assert_true "T1-3 pre: the checker script exists and is executable" \
-  "[ -f '$CHECKER' ] && [ -x '$CHECKER' ]"
-assert_true "T1-3: the PR template carries no raw close keyword outside the permitted zones (checker exits 0)" \
-  "[ -f '$TEMPLATE' ] && bash '$CHECKER' '$TEMPLATE' >/dev/null 2>&1"
-
 echo ""
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1

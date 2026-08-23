@@ -1,7 +1,0 @@
-AC2-tree: README structure tree lists docs/adr/, docs/phases/, .claude/agents/, .claude/workflows/, .github/workflows/, scripts/, tests/, plugin/, setup/manifest.json
-$label: present-tense self-claim co-occurs with a #798/detach reference
-$label: present-tense self-claim literal absent (no qualifier needed)
-AC4-guard: no broken repo-relative link in INDEX.md / maintained-docs.md
-AC6-ci: e2e-dummy-target.yml references tests/test-issue-799-inert-cleanup.sh
-AC6-ci: e2e-dummy-target.yml paths: trigger lists README.md
-AC6-ci: e2e-dummy-target.yml paths: trigger lists the edited docs/*.md files

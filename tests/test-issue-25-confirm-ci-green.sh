@@ -47,7 +47,7 @@
 #   "vacuous PASS" convention for a guard with nothing to detect) — they are
 #   guards, not RED discriminators for AC6; the existence check is what
 #   confirms overall Red.
-#   AC7, AC8 — FAIL (docs not yet restructured; current text asserted against
+#   AC7 — FAIL (docs not yet restructured; current text asserted against
 #   the design's stable tokens does not contain them).
 #
 # Cycle-2 (review-response, PR #28 Medium finding) RED expectation - added by
@@ -82,7 +82,6 @@ MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
 AUTOFLOW_GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
 EXTERNAL_REVIEW_SEQ="$PROJECT_ROOT/docs/external-review-sequencing.md"
 GIT_WORKFLOW="$PROJECT_ROOT/docs/git-workflow.md"
-MAINTAINED_DOCS="$PROJECT_ROOT/docs/maintained-docs.md"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -370,16 +369,6 @@ assert_true "AC7: external-review-sequencing.md Post-reconcile gate retains the 
 GITWORKFLOW_BODY="$(cat "$GIT_WORKFLOW" 2>/dev/null || true)"
 assert_true "AC7: git-workflow.md cross-references confirm-ci-green.sh (no third prose restatement)" \
   "printf '%s' \"\$GITWORKFLOW_BODY\" | grep -qF 'confirm-ci-green.sh'"
-
-# =============================================================================
-echo ""
-echo "=== AC8 (docs/maintained-docs.md registry row added) ==="
-
-MAINTAINED_BODY="$(cat "$MAINTAINED_DOCS" 2>/dev/null || true)"
-assert_true "AC8: maintained-docs.md contains a row citing scripts/handoff/confirm-ci-green.sh" \
-  "printf '%s' \"\$MAINTAINED_BODY\" | grep -qF 'scripts/handoff/confirm-ci-green.sh'"
-assert_true "AC8: maintained-docs.md row also cites the test tests/test-issue-25-confirm-ci-green.sh" \
-  "printf '%s' \"\$MAINTAINED_BODY\" | grep -qF 'tests/test-issue-25-confirm-ci-green.sh'"
 
 # =============================================================================
 echo ""

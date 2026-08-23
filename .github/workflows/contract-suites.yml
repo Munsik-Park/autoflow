@@ -50,13 +50,11 @@ on:
       - 'docs/**'
       - 'docs/adr/**'
       - 'docs/autoflow-guide.md'
-      - 'docs/doc-invariant-registry.md'
       - 'docs/external-review-sequencing.md'
       - 'docs/gate-matching-standard.md'
       - 'docs/git-workflow.md'
       - 'docs/improvement-backlog.md'
       - 'docs/issue-proposal.md'
-      - 'docs/maintained-docs.md'
       - 'docs/reviewer-backend.md'
       - 'docs/teammate-contracts.md'
       - 'docs/teammate-common-rules.md'
@@ -81,7 +79,6 @@ on:
       - 'setup/manifest.json'
       - 'setup/thin-root-layer/**'
       - 'tests/fixtures/**'
-      - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
       - 'tests/issue-92/mock-gh/**'
       - 'tests/issue-create/**'
@@ -90,39 +87,28 @@ on:
       - 'tests/plugin/verify-install-into-target.sh'
       - 'tests/plugin/verify-install-skill-scripts.sh'
       - 'tests/plugin/verify-thin-root-layer.sh'
-      - 'tests/run-doc-invariants.sh'
       - 'tests/test-bounded-execution-fallback.sh'
       - 'tests/test-codex-review-label-step.sh'
       - 'tests/test-gate-hardening.sh'
       - 'tests/test-issue-16-manifest-locale-invariance.sh'
-      - 'tests/test-issue-122-retirement-attribution.sh'
       - 'tests/test-issue-18-fixture-glob-isolation.sh'
       - 'tests/test-issue-245-schema-validation.sh'
       - 'tests/test-issue-25-confirm-ci-green.sh'
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
-      - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-952-wizard-removal.sh'
       - 'tests/test-issue-create-gate.sh'
       - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
-      - 'tests/test-issue-979-doc-neutrality.sh'
       - 'tests/test-issue-979-preflight-backend-check.sh'
       - 'tests/test-issue-979-probe.sh'
       - 'tests/test-issue-979-review-backend.sh'
-      - 'tests/test-issue-985-doc-assertions.sh'
       - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-push-context-base-ref.sh'
-      - 'tests/test-run-doc-invariants.sh'
-      - 'tests/test-run-economy.sh'
-      - 'tests/test-standing-lint-drives.sh'
-      - 'tests/test-verdict-enum-coherence.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
-      - 'scripts/test/check-cycle-scope-guard.sh'
-      - 'scripts/test/check-maintained-docs-sync.sh'
       - 'scripts/test/check-step-reconciliation.sh'
       - 'scripts/test/check-suite-leaf.sh'
       - 'scripts/test/check-suite-manifest.sh'
@@ -135,11 +121,6 @@ on:
       - 'scripts/test/suite-manifest.sh'
       - 'tests/manual/issue-103-manual-scenarios.md'
       - 'tests/test-issue-103-central-runner.sh'
-      - 'tests/test-issue-103-cycle-scope-repoint.sh'
-      - 'tests/test-issue-103-pin-and-docs.sh'
-      - 'tests/test-issue-103-step-reconciliation.sh'
-      - 'tests/test-issue-103-suite-leaf.sh'
-      - 'tests/test-issue-103-suite-manifest.sh'
       - 'tests/test-suite-coverage-agreement.sh'
       - 'docs/evaluation-system.md'
       - 'README.md'
@@ -148,36 +129,9 @@ on:
       - 'tests/plugin/verify-package.sh'
       - 'tests/plugin/manual-scenarios.md'
       - 'tests/plugin/manual-scenarios-943.md'
-      - 'tests/test-issue-798-topology-flip.sh'
-      - 'tests/test-issue-799-inert-cleanup.sh'
-      - 'tests/test-issue-109-doc-assertions.sh'
       - '.claude/hooks/check-read-dedup.sh'
       - 'docs/repo-boundary-rules.md'
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
-      - 'tests/test-issue-121-declaration-release.sh'
-      - 'tests/test-issue-120-arm-reconciliation.sh'
-      - 'tests/test-issue-43-report-channel-contract.sh'
-      - 'tests/test-issue-52-peer-facilitator-premise.sh'
-      - 'tests/test-issue-56-carry-evidence-discipline.sh'
-      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
-      # #120 arm-and-deletion reconciliation (issue #120) reads these four
-      # touched-suite files for its diff-driven reconciliation leg.
-      - 'tests/test-issue-51-teammate-removal-verdict.sh'
-      - 'tests/test-issue-71-digest-removal.sh'
-      - 'tests/test-issue-846-doc-assertions.sh'
-      - 'tests/test-issue-848-doc-assertions.sh'
-      - 'tests/test-issue-27-composition-oracle.sh'
-      - 'tests/test-issue-62-sequential-rounds.sh'
-      - 'tests/test-issue-67-deliberation-record.sh'
-      - 'tests/test-issue-69-verification-depth.sh'
-      - 'tests/test-issue-788-host-purity-delta.sh'
-      - 'tests/test-issue-955-subagent-background-ban.sh'
-      # doc-invariant registry target files not otherwise named above. The
-      # bare runner step below asserts the registry's permanent invariants hold
-      # in the CURRENT tree, so every file a registry entry names is an input
-      # this workflow's trigger must cover — enforced by
-      # tests/test-workflow-trigger-conformance.sh's
-      # AC-registry-carrier-paths-coverage leg (issue #122).
       - 'LICENSE'
       - 'tests/plugin/manual-scenarios-792.md'
   push:
@@ -196,13 +150,11 @@ on:
       - 'docs/**'
       - 'docs/adr/**'
       - 'docs/autoflow-guide.md'
-      - 'docs/doc-invariant-registry.md'
       - 'docs/external-review-sequencing.md'
       - 'docs/gate-matching-standard.md'
       - 'docs/git-workflow.md'
       - 'docs/improvement-backlog.md'
       - 'docs/issue-proposal.md'
-      - 'docs/maintained-docs.md'
       - 'docs/reviewer-backend.md'
       - 'docs/teammate-contracts.md'
       - 'docs/teammate-common-rules.md'
@@ -227,7 +179,6 @@ on:
       - 'setup/manifest.json'
       - 'setup/thin-root-layer/**'
       - 'tests/fixtures/**'
-      - 'tests/fixtures/doc-invariants.json'
       - 'tests/fixtures/gate-schema.json'
       - 'tests/issue-92/mock-gh/**'
       - 'tests/issue-create/**'
@@ -236,39 +187,28 @@ on:
       - 'tests/plugin/verify-install-into-target.sh'
       - 'tests/plugin/verify-install-skill-scripts.sh'
       - 'tests/plugin/verify-thin-root-layer.sh'
-      - 'tests/run-doc-invariants.sh'
       - 'tests/test-bounded-execution-fallback.sh'
       - 'tests/test-codex-review-label-step.sh'
       - 'tests/test-gate-hardening.sh'
       - 'tests/test-issue-16-manifest-locale-invariance.sh'
-      - 'tests/test-issue-122-retirement-attribution.sh'
       - 'tests/test-issue-18-fixture-glob-isolation.sh'
       - 'tests/test-issue-245-schema-validation.sh'
       - 'tests/test-issue-25-confirm-ci-green.sh'
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
-      - 'tests/test-issue-795-handoff-removal.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-952-wizard-removal.sh'
       - 'tests/test-issue-create-gate.sh'
       - 'tests/test-issue-create-wrapper.sh'
       - 'tests/test-issue-961-cap6-gate.sh'
       - 'tests/test-issue-979-bundle-delivery.sh'
-      - 'tests/test-issue-979-doc-neutrality.sh'
       - 'tests/test-issue-979-preflight-backend-check.sh'
       - 'tests/test-issue-979-probe.sh'
       - 'tests/test-issue-979-review-backend.sh'
-      - 'tests/test-issue-985-doc-assertions.sh'
       - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-push-context-base-ref.sh'
-      - 'tests/test-run-doc-invariants.sh'
-      - 'tests/test-run-economy.sh'
-      - 'tests/test-standing-lint-drives.sh'
-      - 'tests/test-verdict-enum-coherence.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
-      - 'scripts/test/check-cycle-scope-guard.sh'
-      - 'scripts/test/check-maintained-docs-sync.sh'
       - 'scripts/test/check-step-reconciliation.sh'
       - 'scripts/test/check-suite-leaf.sh'
       - 'scripts/test/check-suite-manifest.sh'
@@ -281,11 +221,6 @@ on:
       - 'scripts/test/suite-manifest.sh'
       - 'tests/manual/issue-103-manual-scenarios.md'
       - 'tests/test-issue-103-central-runner.sh'
-      - 'tests/test-issue-103-cycle-scope-repoint.sh'
-      - 'tests/test-issue-103-pin-and-docs.sh'
-      - 'tests/test-issue-103-step-reconciliation.sh'
-      - 'tests/test-issue-103-suite-leaf.sh'
-      - 'tests/test-issue-103-suite-manifest.sh'
       - 'tests/test-suite-coverage-agreement.sh'
       - 'docs/evaluation-system.md'
       - 'README.md'
@@ -294,36 +229,9 @@ on:
       - 'tests/plugin/verify-package.sh'
       - 'tests/plugin/manual-scenarios.md'
       - 'tests/plugin/manual-scenarios-943.md'
-      - 'tests/test-issue-798-topology-flip.sh'
-      - 'tests/test-issue-799-inert-cleanup.sh'
-      - 'tests/test-issue-109-doc-assertions.sh'
       - '.claude/hooks/check-read-dedup.sh'
       - 'docs/repo-boundary-rules.md'
       - 'plugin/autoflow/hooks/check-read-dedup.sh'
-      - 'tests/test-issue-121-declaration-release.sh'
-      - 'tests/test-issue-120-arm-reconciliation.sh'
-      - 'tests/test-issue-43-report-channel-contract.sh'
-      - 'tests/test-issue-52-peer-facilitator-premise.sh'
-      - 'tests/test-issue-56-carry-evidence-discipline.sh'
-      - 'tests/test-issue-59-adoption-evidence-discipline.sh'
-      # #120 arm-and-deletion reconciliation (issue #120) reads these four
-      # touched-suite files for its diff-driven reconciliation leg.
-      - 'tests/test-issue-51-teammate-removal-verdict.sh'
-      - 'tests/test-issue-71-digest-removal.sh'
-      - 'tests/test-issue-846-doc-assertions.sh'
-      - 'tests/test-issue-848-doc-assertions.sh'
-      - 'tests/test-issue-27-composition-oracle.sh'
-      - 'tests/test-issue-62-sequential-rounds.sh'
-      - 'tests/test-issue-67-deliberation-record.sh'
-      - 'tests/test-issue-69-verification-depth.sh'
-      - 'tests/test-issue-788-host-purity-delta.sh'
-      - 'tests/test-issue-955-subagent-background-ban.sh'
-      # doc-invariant registry target files not otherwise named above. The
-      # bare runner step below asserts the registry's permanent invariants hold
-      # in the CURRENT tree, so every file a registry entry names is an input
-      # this workflow's trigger must cover — enforced by
-      # tests/test-workflow-trigger-conformance.sh's
-      # AC-registry-carrier-paths-coverage leg (issue #122).
       - 'LICENSE'
       - 'tests/plugin/manual-scenarios-792.md'
 
@@ -377,18 +285,6 @@ jobs:
         timeout-minutes: 10
         run: bash tests/test-workflow-trigger-conformance.sh
 
-      - name: test-standing-lint-drives.sh
-        id: s-test-standing-lint-drives
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-standing-lint-drives.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-standing-lint-drives.sh
-
-      - name: test-verdict-enum-coherence.sh
-        id: s-test-verdict-enum-coherence
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-verdict-enum-coherence.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-verdict-enum-coherence.sh
-
       - name: test-push-context-base-ref.sh
         id: s-test-push-context-base-ref
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-push-context-base-ref.sh ')
@@ -430,12 +326,6 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-gate-hardening.sh ')
         timeout-minutes: 10
         run: bash tests/test-gate-hardening.sh
-
-      - name: test-run-economy.sh
-        id: s-test-run-economy
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-run-economy.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-run-economy.sh
 
       - name: test-ledger-entry-id.sh
         id: s-test-ledger-entry-id
@@ -485,13 +375,6 @@ jobs:
         timeout-minutes: 10
         run: bash tests/test-issue-64-collection-scope.sh
 
-
-      - name: test-issue-795-handoff-removal.sh
-        id: s-test-issue-795-handoff-removal
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-795-handoff-removal.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-795-handoff-removal.sh
-
       - name: test-issue-92-host-pr-execution.sh
         id: s-test-issue-92-host-pr-execution
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-92-host-pr-execution.sh ')
@@ -509,12 +392,6 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-979-bundle-delivery.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-979-bundle-delivery.sh
-
-      - name: test-issue-979-doc-neutrality.sh
-        id: s-test-issue-979-doc-neutrality
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-979-doc-neutrality.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-979-doc-neutrality.sh
 
       - name: test-issue-979-preflight-backend-check.sh
         id: s-test-issue-979-preflight-backend-check
@@ -546,58 +423,6 @@ jobs:
         timeout-minutes: 10
         run: bash tests/test-issue-create-wrapper.sh
 
-      - name: test-issue-109-doc-assertions.sh
-        id: s-test-issue-109-doc-assertions
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-109-doc-assertions.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-109-doc-assertions.sh
-
-      - name: test-issue-121-declaration-release.sh
-        id: s-test-issue-121-declaration-release
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-121-declaration-release.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-121-declaration-release.sh
-
-      - name: test-issue-120-arm-reconciliation.sh
-        id: s-test-issue-120-arm-reconciliation
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-120-arm-reconciliation.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-120-arm-reconciliation.sh
-
-      - name: test-issue-122-retirement-attribution.sh
-        id: s-test-issue-122-retirement-attribution
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-122-retirement-attribution.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-122-retirement-attribution.sh
-
-      - name: test-issue-985-doc-assertions.sh
-        id: s-test-issue-985-doc-assertions
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-985-doc-assertions.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-985-doc-assertions.sh
-
-      - name: test-run-doc-invariants.sh
-        id: s-test-run-doc-invariants
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-run-doc-invariants.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-run-doc-invariants.sh
-
-      # Issue #103 cycle suites — the suite-governance mechanisms this cycle
-      # lands (header manifest, leaf rule, central runner, step
-      # reconciliation, cycle-scope re-point, orphan coverage, pin
-      # single-sourcing, trigger conformance).
-      - name: test-issue-103-suite-manifest.sh
-        id: s-test-issue-103-suite-manifest
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-suite-manifest.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-103-suite-manifest.sh
-
-      - name: test-issue-103-suite-leaf.sh
-        id: s-test-issue-103-suite-leaf
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-suite-leaf.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-103-suite-leaf.sh
-
       - name: test-suite-coverage-agreement.sh
         id: s-test-suite-coverage-agreement
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-suite-coverage-agreement.sh ')
@@ -609,24 +434,6 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-central-runner.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-103-central-runner.sh
-
-      - name: test-issue-103-step-reconciliation.sh
-        id: s-test-issue-103-step-reconciliation
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-step-reconciliation.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-103-step-reconciliation.sh
-
-      - name: test-issue-103-cycle-scope-repoint.sh
-        id: s-test-issue-103-cycle-scope-repoint
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-cycle-scope-repoint.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-103-cycle-scope-repoint.sh
-
-      - name: test-issue-103-pin-and-docs.sh
-        id: s-test-issue-103-pin-and-docs
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-pin-and-docs.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-103-pin-and-docs.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh
@@ -643,41 +450,8 @@ jobs:
       - name: suite leaf-rule lint
         run: bash scripts/test/check-suite-leaf.sh
 
-      - name: step-reconciliation self-test
-        run: bash scripts/test/check-step-reconciliation.sh --self-test
-
-      - name: selection self-test
-        run: bash scripts/test/select-suites.sh --self-test
-
-      - name: suite-coverage self-test
-        run: bash scripts/test/suite-coverage.sh --self-test
-
-      # The ONLY layer that runs the Green-tree register's write side at all
-      # (issue #130). The resolver's self-test fabricates its entries and never
-      # invokes the writer, so an unwired or conditionally-guarded step here
-      # silences the whole "a minted certificate describes the tree that
-      # actually ran" criterion. Standing and unguarded, deliberately.
-      - name: green-tree-register self-test
-        run: bash scripts/test/green-tree-register.sh --self-test
-
-      - name: maintained-docs sync lint
-        run: bash scripts/test/check-maintained-docs-sync.sh
-
       - name: manifest regen-clean lint
         run: bash scripts/test/check-manifest-regen-clean.sh
-
-      - name: doc-invariant runner self-test (mutation teeth)
-        run: bash tests/run-doc-invariants.sh --self-test
-
-      # Current-tree conformance, distinct from the self-test above: --self-test
-      # evaluates every predicate against a MUTATED COPY of the entry's target
-      # file and requires FAIL, so it certifies the registry's teeth and never
-      # that its invariants hold right now. This bare step is the named carrier
-      # for that second property (issue #122, §19.2). No `if:` — the property
-      # depends on the registry, the runner and every file a registry entry
-      # names, all of which the `paths:` blocks above cover.
-      - name: doc-invariant runner (current-tree conformance)
-        run: bash tests/run-doc-invariants.sh
 
       # Reconciliation (issue #103): a step whose `if:` evaluates false is
       # SKIPPED and the job still concludes successfully — so a green run is

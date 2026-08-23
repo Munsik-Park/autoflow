@@ -212,9 +212,9 @@ scope fence that keeps this cycle from producing the measurement itself.
 - This cycle defers every migration-slice edit; no gate hook, role contract, agent definition,
   workflow script, or governing doc is modified by this record, so the conditions are stated where
   they cannot yet be enforced.
-- If the pilot reverses the verdict, a reversal retires none of this cycle's permanent doc-invariant
-  entries: supersession replaces this record with a later ADR rather than rewriting this body, so
-  each entry continues to pin what ADR-0017 decided, which stays true of a superseded record.
+- If the pilot reverses the verdict, supersession replaces this record with a later ADR rather than
+  rewriting this body, so this record continues to state what ADR-0017 decided, which stays true of a
+  superseded record.
 
 ## Related Issues / PRs
 

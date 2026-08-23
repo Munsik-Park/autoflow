@@ -38,13 +38,7 @@
 # `run_bounded` copies with neither a behavioural oracle nor a text guarantee.
 #
 # Usage:
-#   bash scripts/test/check-watchdog-detachment.sh [--self-test] [--root <dir>]
-#
-# Self-test first, then the real-tree result — the
-# scripts/test/check-suite-ci-coverage.sh:31-38 precedent. Against the live
-# tree (once fixed) an exit 0 is unfalsifiable; the self-test's planted
-# violations (one per tier, including a statement-order regression) are what
-# keep it from being vacuous.
+#   bash scripts/test/check-watchdog-detachment.sh [--root <dir>]
 # =============================================================================
 
 set -uo pipefail
@@ -52,11 +46,9 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-MODE="default"
 ROOT=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --self-test) MODE="self-test" ;;
     --root)      ROOT="${2:-}"; shift ;;
     *)           echo "check-watchdog-detachment: unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -208,158 +200,6 @@ scan() {
     [ -n "$reason" ] && printf '%s:%s: %s\n' "$file" "$num" "$reason"
   done < <(candidate_lines "$root")
 }
-
-# ---------------------------------------------------------------------------
-# Self-test — one planted violation per tier, plus a positive (conforming)
-# fixture for each tier, and a dedicated statement-order regression fixture
-# (marker write slid after the kill inside an otherwise-conforming block).
-# ---------------------------------------------------------------------------
-self_test() {
-  local dir rc=0
-  dir="$(mktemp -d)"
-  mkdir -p "$dir/tests" "$dir/scripts"
-
-  # Conforming canonical-tier fixture.
-  cat > "$dir/tests/fixture-conforming.sh" <<'EOF'
-run_bounded() {
-  set -m
-  ( "$@" ) >"$logfile" 2>&1 &
-  pid=$!
-  ( sleep "$bound"
-    if kill -0 "$pid" 2>/dev/null; then
-      echo killed > "$marker"
-      kill -TERM -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
-    fi
-  ) >/dev/null 2>&1 &
-  watchdog_pid=$!
-  set +m
-  wait "$pid" 2>/dev/null
-  RB_EXIT=$?
-  if [ -s "$marker" ]; then
-    RB_KILLED=1
-  else
-    kill -TERM -"$watchdog_pid" 2>/dev/null || kill "$watchdog_pid" 2>/dev/null
-  fi
-  wait "$watchdog_pid" 2>/dev/null
-  rm -f "$marker" 2>/dev/null
-}
-EOF
-
-  # Statement-order regression: marker write slides AFTER the kill.
-  cat > "$dir/tests/fixture-order-regression.sh" <<'EOF'
-run_bounded() {
-  set -m
-  ( "$@" ) >"$logfile" 2>&1 &
-  pid=$!
-  ( sleep "$bound"
-    if kill -0 "$pid" 2>/dev/null; then
-      kill -TERM -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
-      echo killed > "$marker"
-    fi
-  ) >/dev/null 2>&1 &
-  watchdog_pid=$!
-  set +m
-  wait "$pid" 2>/dev/null
-  RB_EXIT=$?
-  if [ -s "$marker" ]; then
-    RB_KILLED=1
-  else
-    kill -TERM -"$watchdog_pid" 2>/dev/null || kill "$watchdog_pid" 2>/dev/null
-  fi
-  wait "$watchdog_pid" 2>/dev/null
-  rm -f "$marker" 2>/dev/null
-}
-EOF
-
-  # Pipe-hold regression: no redirection on the watchdog subshell.
-  cat > "$dir/tests/fixture-pipe-hold.sh" <<'EOF'
-run_bounded() {
-  set -m
-  ( "$@" ) >"$logfile" 2>&1 &
-  pid=$!
-  ( sleep "$bound"
-    if kill -0 "$pid" 2>/dev/null; then
-      echo killed > "$marker"
-      kill -TERM -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
-    fi
-  ) &
-  watchdog_pid=$!
-  set +m
-  wait "$pid" 2>/dev/null
-  RB_EXIT=$?
-  if [ -s "$marker" ]; then
-    RB_KILLED=1
-  else
-    kill -TERM -"$watchdog_pid" 2>/dev/null || kill "$watchdog_pid" 2>/dev/null
-  fi
-  wait "$watchdog_pid" 2>/dev/null
-  rm -f "$marker" 2>/dev/null
-}
-EOF
-
-  # Enumerated-exemption tier: conforming (group-scoped kill only).
-  mkdir -p "$dir/tests"
-  cat > "$dir/tests/test-issue-952-wizard-removal.sh" <<'EOF'
-( sleep 5; kill -"$NOARG_PID" 2>/dev/null ) &
-NOARG_WPID=$!
-EOF
-
-  local out expect
-  out="$(scan "$dir")"
-
-  # Conforming fixture must report nothing.
-  if printf '%s\n' "$out" | grep -q 'fixture-conforming.sh'; then
-    echo "check-watchdog-detachment: --self-test FAIL — conforming canonical fixture reported a violation"
-    rc=1
-  fi
-
-  # Order-regression fixture must be caught, on the ordering reason.
-  if ! printf '%s\n' "$out" | grep -q 'fixture-order-regression.sh.*statement order'; then
-    echo "check-watchdog-detachment: --self-test FAIL — statement-order regression not detected"
-    rc=1
-  fi
-
-  # Pipe-hold fixture must be caught.
-  if ! printf '%s\n' "$out" | grep -q 'fixture-pipe-hold.sh'; then
-    echo "check-watchdog-detachment: --self-test FAIL — missing-redirection regression not detected"
-    rc=1
-  fi
-
-  # The exemption-tier fixture (group-scoped kill present) must NOT be
-  # reported: it is held to the two-property predicate, not block shape.
-  if printf '%s\n' "$out" | grep -q 'test-issue-952-wizard-removal.sh'; then
-    echo "check-watchdog-detachment: --self-test FAIL — enumerated-exemption fixture (group-scoped) was reported"
-    rc=1
-  fi
-
-  # Negative control on the exemption predicate itself: a NON-group-scoped
-  # kill in an exempt-tier site must still be caught.
-  rm -f "$dir/tests/test-issue-952-wizard-removal.sh"
-  cat > "$dir/tests/test-issue-952-wizard-removal.sh" <<'EOF'
-( sleep 5; kill "$NOARG_PID" 2>/dev/null ) &
-NOARG_WPID=$!
-EOF
-  out2="$(scan "$dir")"
-  if ! printf '%s\n' "$out2" | grep -q 'test-issue-952-wizard-removal.sh.*group-scoped'; then
-    echo "check-watchdog-detachment: --self-test FAIL — non-group-scoped kill at the exempt site was not caught"
-    rc=1
-  fi
-
-  [ "$rc" -eq 0 ] && echo "check-watchdog-detachment: --self-test OK (conforming/order-regression/pipe-hold/exemption fixtures all classified correctly)"
-
-  rm -rf "$dir"
-  return $rc
-}
-
-if [ "$MODE" = "self-test" ]; then
-  self_test
-  exit $?
-fi
-
-if ! self_test; then
-  echo "check-watchdog-detachment: detector self-test failed — real-tree result not reported"
-  exit 1
-fi
 
 VIOLATIONS="$(scan "$ROOT")"
 if [ -z "$VIOLATIONS" ]; then

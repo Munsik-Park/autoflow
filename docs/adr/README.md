@@ -39,5 +39,4 @@ Start from [0000-adr-template.md](0000-adr-template.md).
 **Numbering gap.** ADR numbers 0002, 0004–0014 are intentionally absent here:
 they were migrated to `services/librechat-deploy` during the 2026-06-27
 services-nesting split, so the sequence in this directory is deliberately
-non-contiguous. The authoritative cross-repo registry is
-[`docs/maintained-docs.md`](../maintained-docs.md) > ADRs.
+non-contiguous. The records in this directory are the authoritative set.

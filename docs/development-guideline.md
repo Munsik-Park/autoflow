@@ -75,7 +75,6 @@ Classify work before implementation:
 
 ## 8. Documentation Policy
 
-- New documents must be registered in `docs/maintained-docs.md`.
 - Review outputs should be navigable through clear file names, summaries,
   indexes, and cross-references where useful.
 - Existing operating manuals remain source-of-truth documents; review baseline

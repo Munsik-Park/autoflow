@@ -2,14 +2,13 @@
 # SPDX-License-Identifier: Elastic-2.0
 # .github/workflows/host-purity-delta.yml — diff-scoped host-purity DELTA guard (issue #788)
 #
-# Runs the host-purity acceptance suite (tests/test-issue-788-host-purity-delta.sh),
-# which drives scripts/test/check-host-purity-delta.sh over hermetic temp repos.
-# The guard fails a cycle when a service-identifier token (the denylist lives in
+# Runs scripts/test/check-host-purity-delta.sh directly over this run's own
+# merge-base..HEAD delta. The guard fails a cycle when a service-identifier token (the denylist lives in
 # tests/fixtures/host-purity-tokens.txt) is NEWLY introduced on an added line of a
 # changed host tool/mechanism file (merge-base..HEAD delta), so a generalized
 # framework repo does not silently re-accrete service names.
 #
-# Why GitHub Actions: the suite is pure bash + git with no node/npm, no bats, and
+# Why GitHub Actions: the guard is pure bash + git with no node/npm, no bats, and
 # no submodule checkout — the same zero-infra rationale as schema-hook-contract.yml /
 # workflow-regression.yml. ubuntu-latest ships bash 5.x + git; the guard needs the
 # merge-base against origin/main, so checkout uses fetch-depth: 0.
@@ -40,7 +39,6 @@ on:
       # re-run the acceptance guard.
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
-      - 'tests/test-issue-788-host-purity-delta.sh'
       - 'CLAUDE.md'
       - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
       - 'tests/lib/**'
@@ -63,7 +61,6 @@ on:
       # re-run the acceptance guard.
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
-      - 'tests/test-issue-788-host-purity-delta.sh'
       - 'CLAUDE.md'
       - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
       - 'tests/lib/**'
@@ -73,7 +70,7 @@ permissions:
 
 jobs:
   host-purity-delta:
-    name: host-purity DELTA guard acceptance suite
+    name: host-purity DELTA guard
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,49 +78,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Selection (issue #103): scripts/test/select-suites.sh is the SOLE owner of
-      # "which suites does this change require". Each governed suite step below
-      # guards on this step's output; nothing here reimplements the predicate.
-      # Under a push event, or an empty delta from a resolved base, it selects
-      # the full set — the push delta is empty by construction, so a purely
-      # delta-driven selector would silently lose all coverage.
-      - id: select
-        name: select suites for this change
-        timeout-minutes: 5
-        run: |
-          rc=0
-          bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
-            > "$RUNNER_TEMP/selected-raw.txt" \
-            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
-          cat "$RUNNER_TEMP/selection-report.txt"
-          if [ "$rc" -ne 0 ]; then
-            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
-            exit "$rc"
-          fi
-          paste -sd' ' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
-          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
-
-      - name: Run host-purity DELTA acceptance suite
-        id: s-test-issue-788-host-purity-delta
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-788-host-purity-delta.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-788-host-purity-delta.sh
-
-      # Reconciliation (issue #103): a step whose `if:` evaluates false is
-      # SKIPPED and the job still concludes successfully — so a green run is
-      # exactly what a wrongly-false guard produces, and enforcement here is
-      # advisory with no required status check behind it. This step compares the
-      # run's own selection report against the run's own step outcomes, so it
-      # needs no second source of truth.
-      - name: reconcile selection against step outcomes
-        if: always()
+      # The guard itself (issue #788): a diff-scoped scan of this run's own
+      # merge-base..HEAD delta. Not a governed suite step — it is a standing lint
+      # with no budget header, run unconditionally like the other
+      # scripts/test/check-*.sh lints. On a pull_request event the merge-base is
+      # taken against the PR base branch; on push it is origin/main's prior tip.
+      - name: host-purity delta guard
         timeout-minutes: 5
         env:
-          STEPS_JSON: ${{ toJSON(steps) }}
-          JOB_STATUS: ${{ job.status }}
+          PR_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          printf '%s' "$STEPS_JSON" > "$RUNNER_TEMP/steps.json"
-          bash scripts/test/check-step-reconciliation.sh \
-            --selected "$RUNNER_TEMP/selection-report.txt" \
-            --job-status "$JOB_STATUS" \
-            --steps "$RUNNER_TEMP/steps.json"
+          bash scripts/test/check-host-purity-delta.sh --base "$PR_BASE" --head HEAD
