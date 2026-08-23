@@ -71,7 +71,9 @@ declaration; `direct` = `{ subagent_type: "autoflow-tester", model: "sonnet" }`,
 replicate index were held fixed; no commit, amend or tracked-file edit occurred between the first
 spawn and the last return, and all six spawn-written `observed_head` values equal the single frozen
 `tree` — `42ab6f2c6eac8e3a4da4aab24af47791cd812ddc`. The frozen union is
-`tests/fixtures/c7-pilot-arms.json`; `tests/test-issue-74-c7-pilot.sh` re-derives the verdict from it.
+`tests/fixtures/c7-pilot-arms.json`; the cycle-scoped suite `tests/test-issue-74-c7-pilot.sh` —
+retired with its cycle at PR #147 per its `retire-with: #74` header, retrievable as
+`git show 7a7f98a^:tests/test-issue-74-c7-pilot.sh` — re-derived the verdict from it.
 
 Duty-text parity was a hard requirement, because the channels do not carry the duties equally. The
 `direct` arm receives the step-3, iteration-set and step-4 duties through the agent definition its
@@ -199,9 +201,10 @@ proposed supersession, leaving the `Accepted → Superseded` transition to the o
 
 ### Positive
 
-- C7 and C8 are discharged with a re-derivable record: the frozen union plus
-  `tests/test-issue-74-c7-pilot.sh` let a later reader recompute the verdict rather than trust this
-  prose.
+- C7 and C8 are discharged with a re-derivable record: the frozen union stays in the tree, and the
+  retired verdict suite (`git show 7a7f98a^:tests/test-issue-74-c7-pilot.sh`, retired at PR #147)
+  let a later reader recompute the verdict rather than trust this prose — the recomputation needs
+  only `tests/fixtures/c7-pilot-arms.json` and the predicate stated in this record.
 - The baseline is stronger than the one C7 described — concurrently measured, with probe, model and
   prompt controlled.
 - The migration proceeds with the hook's role-prefix branch removed jointly with it (ADR-0017 Q3),
@@ -241,4 +244,6 @@ proposed supersession, leaving the `Accepted → Superseded` transition to the o
 - The frozen union's `records[]` entries carry `outcomes`, `iteration_set` and `observed_head`
   verbatim from each spawn's scratch record; `arm`, `replicate`, `delivery`, `latency_seconds` and
   `turns` are orchestrator-stamped. An arm never self-labels the pilot's only independent variable.
-  The copy step is recorded in `tests/manual/issue-74-manual-scenarios.md`.
+  The copy step is recorded in the cycle's manual-scenario document — retired with the cycle at
+  PR #147, retrievable as `git show 7a7f98a^:tests/manual/issue-74-manual-scenarios.md` (an archived
+  copy also lives in the cycle's external archive).
