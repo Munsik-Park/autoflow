@@ -126,6 +126,15 @@ push-delivered.
 | Mark task done | `TaskUpdate(status: "completed")` | then check `TaskList` |
 | Cross-cutting impact notice | `SendMessage` | to affected teammate, or to lead |
 
+**Message economy** (issue #136). Every message you receive is a turn that can re-write your
+whole context, and every message you send to the lead lands as a turn in its context. So: do not
+send an ACK-only message (a report carries its anchor and summary, and nothing else is sent after
+it); do not expect one back — the lead's acceptance is recorded in the ledger and task state, and
+silence after your report means "accepted, no further instruction yet", not "lost". When your phase
+work is complete and no later phase in this cycle re-enters you, expect to be shut down at that
+boundary rather than held; a HOLD is sent only when a later re-entry is already scheduled, and it
+arrives bundled with that re-entry's instruction (Tree Quiesce above).
+
 **Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the discussion
 does **not** run as Agent-Teams teammates messaging the orchestrator. It runs inside
 an isolated **`Workflow`** (the facilitator): the Developer-AI and Test-AI run as
