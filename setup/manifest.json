@@ -90,14 +90,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ef424313f72663d1a97f1021c790d84f4c15f01f33fe054bd953975e79baa346"
+      "sha256": "b8d18490d065757f796470d7b74a94537e6f8a53dcab886d06369c84d7fcd1fb"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "43161508a7272301ffa42d19856b26689086502615d01511ae46e630692dda98"
+      "sha256": "3632e4883599a896eadfc97bbf652c2b9c9eed1ad0d1db28c57a0844dd43df54"
     },
     {
       "source": "docs/development-guideline.md",
