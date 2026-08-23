@@ -126,11 +126,30 @@ the difference is within the spread of three unreplicated draws and no direction
 The structural fact the turn column reports is not a sample estimate: the named channel requires one
 mailbox turn the direct channel does not, readable from the delivery-path table rather than inferred.
 
-**Token cost was not measured, and is not estimated here.** No tool surface exposes per-spawn token
-usage, so there is nothing to record; ADR-0017 `:167-169` already refuses to assert a direction it
-cannot measure, and this record holds that line rather than substituting a plausible number. C8 is
-answered with wall-clock, turn count and the structural extra-turn statement, and its token half stays
-open.
+**Token cost was not measured on the pilot arms, and is not estimated here.** No tool surface exposes
+per-spawn token usage, so there is nothing to record; ADR-0017 `:167-169` already refuses to assert a
+direction it cannot measure, and this record holds that line rather than substituting a plausible
+number. C8 is answered with wall-clock, turn count and the structural extra-turn statement, and its
+token half stays open at the arm granularity.
+
+**Session-transcript aggregation of this cycle's named teammates (recorded 2026-08-24, C8 method over
+the session JSONL — `message.usage` per assistant message, de-duplicated by `message.id`, re-write =
+a non-first turn with `cache_creation ≥ 0.9 × (cache_read + cache_creation)`).** This cycle began
+before the migration and ran its RED/GREEN/VERIFY teammates in the named mode, so its transcripts are
+a **pre-migration baseline**, not a measurement of the migrated default:
+
+| Agent | Turns | Re-write turns (excl. first) | Peak context |
+|---|---|---|---|
+| test-74 (sonnet, named) | 234 | 7 | 486K |
+| dev-74 (opus, named) | 122 | 4 | 225K |
+| orchestrator | — | 11 idle-notification "no action" answer turns (11 notifications) | — |
+
+These values sit inside the pattern ADR-0017 > Notes > C8 measured on #122/#130 (peaks 293–515K),
+corroborating the cost case for the migration. The after-side measurement — the same aggregation on
+the first cycle run under the migrated default — is issue #146, split out of this issue's acceptance
+criteria by operator decision (2026-08-24): the 150K figure that entered with #136 is an AI-proposed
+projection, not an operator threshold, so the confirmation is a before/after contrast judged by the
+operator, not a fixed-cutoff gate.
 
 ### Three departures from what C7 literally asked
 

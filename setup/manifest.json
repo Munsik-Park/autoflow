@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/adr/0021-c7-pilot-spawn-mode-result.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5d95a47a87c1720496539278136b479cb40b1abc7214a6d0798495a7406032ea"
+      "sha256": "3902819ae515fb83a81ea05399631a92f55b553a472b4465b57d61e5d38ea64f"
     },
     {
       "source": "docs/adr/README.md",
