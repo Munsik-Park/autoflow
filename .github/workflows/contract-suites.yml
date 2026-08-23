@@ -107,6 +107,9 @@ on:
       - 'tests/test-issue-979-probe.sh'
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-ledger-entry-id.sh'
+      - 'tests/test-issue-140-remedy-route.sh'
+      - 'scripts/gate/remedy-route.sh'
+      - 'tests/fixtures/issue-140-ledger-138.md'
       - 'tests/test-push-context-base-ref.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
       - 'scripts/test/check-step-reconciliation.sh'
@@ -207,6 +210,9 @@ on:
       - 'tests/test-issue-979-probe.sh'
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-ledger-entry-id.sh'
+      - 'tests/test-issue-140-remedy-route.sh'
+      - 'scripts/gate/remedy-route.sh'
+      - 'tests/fixtures/issue-140-ledger-138.md'
       - 'tests/test-push-context-base-ref.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
       - 'scripts/test/check-step-reconciliation.sh'
@@ -332,6 +338,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-ledger-entry-id.sh ')
         timeout-minutes: 10
         run: bash tests/test-ledger-entry-id.sh
+
+      - name: test-issue-140-remedy-route.sh
+        id: s-test-issue-140-remedy-route
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-140-remedy-route.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-140-remedy-route.sh
 
       - name: test-issue-16-manifest-locale-invariance.sh
         id: s-test-issue-16-manifest-locale-invariance

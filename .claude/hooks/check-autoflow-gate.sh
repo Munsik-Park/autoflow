@@ -44,6 +44,11 @@
 #                                     team-spawn name prefix — see resolve_spawn_role)
 #   - Bash(git push)                → AUDIT + GATE:QUALITY pass required
 #   - Bash(gh pr create)            → AUDIT + GATE:QUALITY pass required
+#   - Bash(git commit)              → while the latest GATE:QUALITY record carries
+#                                     remedy_class "doc": the doc re-entry's sweep
+#                                     record .autoflow/issue-N-remedy-sweep.md must
+#                                     exist with non-empty `## Command` and
+#                                     `## Output` sections (issue #140, Gate 5)
 
 set -e
 
@@ -79,6 +84,7 @@ SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 # definition) so all three consumers — the P2 default-branch deny, Gate 3, and
 # is_score_gated_surface (called on the Agent path too) — reference a set value.
 GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
+GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b'
 
 # ── _fold_continuations (issue #134 c2) ────────────────────────────────────
 # Backslash-newline line-continuation fold, defined at GLOBAL SCOPE beside
@@ -967,6 +973,39 @@ fi
 if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+create\b"; then
   block_with_scores "gh pr create requires AUDIT pass" "audit"
   block_with_scores "gh pr create requires GATE:QUALITY pass" "gate_quality"
+fi
+
+# ── Gate 5: git commit under a `doc` GATE:QUALITY remedy → sweep record required (issue #140) ──
+# A GATE:QUALITY FAIL whose remedy_class is `doc` re-enters at an orchestrator
+# doc commit instead of RED. The remedy obligation for that class is
+# class-level, not site-level: the fix anchors on a repo-wide sweep (command +
+# output), not on the evaluator's listed sites (docs/autoflow-guide.md >
+# GATE:QUALITY > FAIL routing). The gate checks the sweep RECORD FILE — its
+# presence and its two sections — never the wording of any instruction or
+# prompt (docs/gate-matching-standard.md > P3 rejects content inference).
+# `remedy_class` is read from the same most-recent-cycle location as
+# check_scores reads scores; an absent or non-`doc` value leaves commits
+# ungated. Fail closed only on the jq read erroring, as the score gates do.
+if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_COMMIT}"; then
+  if ! _remedy=$(printf '%s' "$STATE_JSON" | jq -r '[.. | objects | select(has("phases")) | select(.phases | has("gate_quality")) | .phases.gate_quality.remedy_class] | (last // "") | if type == "string" then . else "" end' 2>/dev/null); then
+    echo "BLOCKED: AutoFlow state schema is corrupt — cannot read phases.gate_quality.remedy_class; failing closed for git commit." >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+  if [ "$_remedy" = "doc" ]; then
+    _sweep="${STATE_FILE%.json}-remedy-sweep.md"
+    _sweep_ok=0
+    if [ -r "$_sweep" ] \
+       && awk 'BEGIN{c=0;o=0} /^## Command[[:space:]]*$/{s="c";next} /^## Output[[:space:]]*$/{s="o";next} /^## /{s=""} s=="c" && NF{c=1} s=="o" && NF{o=1} END{exit !(c&&o)}' "$_sweep"; then
+      _sweep_ok=1
+    fi
+    if [ "$_sweep_ok" -ne 1 ]; then
+      echo "BLOCKED: git commit under a GATE:QUALITY remedy_class=doc re-entry requires the sweep record." >&2
+      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy (docs/autoflow-guide.md > GATE:QUALITY > FAIL routing, issue #140)." >&2
+      echo "State file: $STATE_FILE" >&2
+      exit 2
+    fi
+  fi
 fi
 
 # Pass.

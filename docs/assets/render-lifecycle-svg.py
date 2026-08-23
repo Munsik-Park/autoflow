@@ -266,7 +266,9 @@ def render(theme):
     fail_loop("GATE:PLAN", "ARCHITECT", 1)        # plan FAIL -> ARCHITECT (max 3x)
     fail_loop("VERIFY", "RED", 2)                 # cause-branched fix (max 3 round-trips)
 
-    # GATE:QUALITY FAIL -> RED (max 3x): dashed edge through the col3/col4 gap
+    # GATE:QUALITY FAIL (max 3x) re-entry, drawn to RED — the farthest common
+    # point of the remedy_class routes (doc commit / RED / GREEN / ARCHITECT,
+    # issue #140); dashed edge through the col3/col4 gap
     (qx, qy), (rx_, ry_) = origin["GATE:QUALITY"], origin["RED"]
     x1, y1 = qx - 4, qy + NODE_H / 2
     x2, y2 = rx_ + NODE_W + 2, ry_ + 11
