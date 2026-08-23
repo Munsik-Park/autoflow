@@ -727,7 +727,12 @@ if (converged) {
     acReason = REASON_AC_RECONCILIATION_UNAVAILABLE
     acEvidence = `${phaseB}, ${verif}, ${ledger}`
     mintAcEntry(AC_ENTRY_RECONCILIATION_UNAVAILABLE, acReason, acEvidence)
-  } else if (!acDiff.ac_source_present) {
+  } else if (!acDiff.ac_source_present || acDiff.ac_rows.length === 0) {
+    // An empty `ac_rows` set is treated exactly as an absent list, not as "no criteria differ".
+    // From the script's side the two are indistinguishable: a channel that read the Phase B table
+    // and transcribed nothing looks identical to one that found no table at all, and the second is
+    // a silent pass on an unread source. GATE:PLAN's own AC-authority check already caps on an
+    // "absent, empty or unparseable" table; Reconcile resolves the same way — fail-closed.
     acReason = REASON_AC_LIST_ABSENT
     acEvidence = phaseB
     mintAcEntry(AC_ENTRY_AC_LIST_ABSENT, acReason, acEvidence)

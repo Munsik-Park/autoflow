@@ -130,6 +130,10 @@ change; only an operator decision may make it. The flow stops and asks.**
   contract every other infrastructure escalation in the facilitation script already has — none
   carries a bounded retry or an in-flow override. The operator's exit is the ordinary one: author the
   missing table or rows, or re-run once the channel recovers.
+- A well-formed reconciliation payload whose transcribed row set is **empty** resolves to `ac list
+  absent` rather than to a clean convergence, so a channel that read the table and transcribed
+  nothing pauses the run instead of passing it silently — at the cost of pausing a genuinely empty
+  acceptance-criteria table too, which this design treats as the correct outcome.
 
 ### Neutral / Trade-Offs
 

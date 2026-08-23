@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5db4f6af549c209754ffc480cc20fdee6a4d84e574cea4e9bf399dd48865b6c3"
+      "sha256": "572050af970ab2f26a74c108b652fc68451e49e67c32da8c9ee07c823469e92b"
     },
     {
       "source": "docs/INDEX.md",
@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/adr/0020-acceptance-criterion-authority.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "71ab7f29fef0edc43a0ff4a69434b53de4aaaf50dec06f572c6980adc25b5daf"
+      "sha256": "0d8b061584efe0580d18fb377d8ddc30592237432807b08f884503e3f1402ce3"
     },
     {
       "source": "docs/adr/README.md",
@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "48f691ce3c3d4a4e49bd336550691a36fa6f2184a356d88ed3c3a1872b559033"
+      "sha256": "bed0effafe1edd51b79d6fa0732d2c128deba9b6b043c6f21a93fee5c68bd05f"
     },
     {
       "source": "docs/design-rationale.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1c60f7bb22ab607e0fff8b7290343149ac75f30827d68d407e1f6693db3a591b"
+      "sha256": "4a76dd746d7c87b78a9b59b3873abea4b43af1ceeaa621d0b592128294d15b9d"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e4cd6f546a8a83e6a8372c49150918f013a056f14f7b96fda76f9bf9a52ca8bd"
+      "sha256": "c532c52b85301b128dce0fc62bb7ecf4d223a099ec9521599292c20165021dd6"
     },
     {
       "source": "docs/teammate-common-rules.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "2fb821974849737d22ce2c6d33ba19b9b8505f0eb725f19ad32d9161d7acfcdf"
+      "sha256": "67a1392a7e8089bf513739e9603b6b1bac2981802c950ee927548f1473243a4e"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
