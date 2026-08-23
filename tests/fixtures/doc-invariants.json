@@ -8485,6 +8485,64 @@
       "match": "fixed",
       "literal": "A well-formed payload whose transcribed row set is **empty**",
       "scope": "permanent"
+    },
+    {
+      "id": "138-contracts-register-artifact-stale-both",
+      "origin_issue": 138,
+      "intent": "coherence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Return Contract",
+      "section_end": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "on **both** verdicts",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-contracts-register-artifact-three-valued",
+      "origin_issue": 138,
+      "intent": "coherence",
+      "file": "docs/teammate-contracts.md",
+      "section": "Return Contract",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "on all three verdicts",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-contracts-ledger-rule-ac-change-authority",
+      "origin_issue": 138,
+      "intent": "coherence",
+      "file": "docs/teammate-contracts.md",
+      "section": "- **Ledger rule**:",
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "ARCHITECT ac-change",
+      "scope": "permanent",
+      "section_kind": "line"
+    },
+    {
+      "id": "138-arch-js-register-comment-stale-both",
+      "origin_issue": 138,
+      "intent": "coherence",
+      "file": ".claude/workflows/architect-deliberation.js",
+      "section": null,
+      "predicate": "absent",
+      "match": "fixed",
+      "literal": "BOTH verdicts",
+      "scope": "permanent"
+    },
+    {
+      "id": "138-arch-js-register-comment-three-valued",
+      "origin_issue": 138,
+      "intent": "coherence",
+      "file": ".claude/workflows/architect-deliberation.js",
+      "section": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "all three verdicts",
+      "scope": "permanent"
     }
   ]
 }

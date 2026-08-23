@@ -1614,8 +1614,9 @@ await test('ARCHITECT: a null cap-round Test verdict does not suppress the closi
 // the feature design, so every case identifies them STRUCTURALLY instead of assuming a
 // literal: on a resume run Draft never executes (Control flow > Entry), so the FIRST
 // agent() call is the register load; Control flow > Register write states the write is
-// a terminal phase run "after the Ledger phase, on both verdicts", so the first call
-// observed strictly after the 'ledger' call is the register write.
+// a terminal phase run "after the Ledger phase, on all three verdicts" (issue #138 widened this
+// from "both" to CONVERGED/AC_CHANGE/ESCALATE), so the first call observed strictly after the
+// 'ledger' call is the register write.
 //
 // Two RED-time design decisions this suite fixes because the documents left the exact
 // literal open (recorded in the RED report as a design-change addendum the Developer AI
