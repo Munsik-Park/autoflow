@@ -24,7 +24,33 @@
 # header records for every prior bump.
 #
 # Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123)
-# -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3).
+# -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3) -> 150 (#138) -> 156
+# (#138, VERIFY-step-3 legs) -> 157 (#138, RED3 -- O5(c) empty-ac_rows fail-closed
+# leg; TARGET value, RED3 itself MEASURES 156 ok + 1 FAIL) -> 164 (#138 cycle 2,
+# RED c2 -- codex F1 item-level ac-diff validation; TARGET value, RED c2 itself
+# MEASURES 156 ok + 8 FAIL: 7 new legs (row-nonboolean-method-executable,
+# row-nonboolean-carried, row-out-of-enum-disposition, row-missing-ac,
+# nonobject-row-fails-closed, substitution-item-fails-closed,
+# absent-with-carried-true-fails-closed) plus the pre-existing leg
+# ac-diff-schema-shape, which now carries one added assertion pinning that the
+# guard reads AC_ROW.properties.disposition.enum and fails closed for lack of
+# the guard itself. `node test/workflows/run.mjs` measures 156 ok + 8 FAIL
+# against the as-is script; 164 is the GREEN target once the row/substitution
+# guard ships (GREEN c2, bf5de75, measured 164 ok, matching the pin) -> 169
+# (#138 cycle 2, RED2 c2 -- VERIFY step-3 uncovered-clause legs per
+# .autoflow/issue-138-c2-verify-report.md). Five new legs
+# (row-ac-whitespace-only, row-nonstring-locator, row-nonstring-proposed,
+# substitution-ac-whitespace-only, substitution-nonstring-proposed) close a
+# verification-design coverage gap against clauses the GREEN c2 implementation
+# already carries as explicit design obligations (ac non-empty-after-trim,
+# locator/proposed as string, on both AC_ROW and AC_SUBSTITUTION) -- these are
+# the "add a test" branch of the minimal-implementation check, not a defect,
+# so all five PASS immediately against the unchanged GREEN c2 implementation.
+# `node test/workflows/run.mjs` measures 169 ok against the current tree,
+# matching the pin below. (A sixth finding, the redundant
+# `typeof row.disposition === 'string'` clause at architect-deliberation.js:392,
+# is a Developer AI removal and carries no new leg here -- see the verify
+# report.)
 # The #123, #127 and #127-cycle-2/3 bumps are all the RED-commit TARGET value, not the
 # RED-commit MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating),
 # #127 adds 25 resume cases (23 discriminating, 2 deliberate regression locks documented
@@ -60,7 +86,34 @@
 # composition oracle (tests/test-issue-27-composition-oracle.sh) intentionally reds
 # against this pin until GREEN, per
 # .autoflow/issue-127-verification-design.md > Composition oracle.
+# #138 adds 15 AC-authority reconciliation cases (Reconcile phase / AC_CHANGE
+# verdict / fail-closed sentinels / register minting / ledger branch), all 15
+# DISCRIMINATING at RED -- the AS-IS script has no Reconcile phase and calls no
+# 'ac-diff' sub-agent, so RED (d474cd7) MEASURES 135 ok + 15 FAIL. 150 is therefore
+# the GREEN TARGET value, in the #123/#127 discipline. NOTE (GREEN, #138): GREEN
+# (b1fcf63) measured 122 ok + 28 FAIL -- 28 pre-existing converging cases whose
+# responders did not answer the new 'ac-diff' label fell into the DELIBERATELY
+# fail-closed AC_CHANGE path, the same fixture-amendment class #127 cycle 3
+# recorded above for its 7 amended resume cases. RESOLVED (RED2b, 525c3f3): the
+# 28 responders (via the shared capResponder/resumeResponder factories plus 14
+# inline responders) now answer 'ac-diff' with
+# { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+# -- the shape the #138 ac-diff-plumbing leg proves yields CONVERGED with no
+# findings. No #138 fail-closed leg was touched. `node test/workflows/run.mjs`
+# now measures all 150 ok, matching the pin below.
+# NOTE (VERIFY step 3, #138): the orchestrator's minimal-implementation check
+# (.autoflow/issue-138-verify-report.md, tree d5600bd) found 8 implementation
+# hunks in architect-deliberation.js uncovered by any #138 leg. Hunks 1
+# (meta.phases metadata) and 8 (acChangeGrounds's structurally-unreachable
+# no-open-entries fallback) are accepted exceptions. Hunks 2-7 (AC_ROW/
+# AC_SUBSTITUTION/AC_DIFF schema shape, the per-finding ac-authority:<ac id>
+# minted name, the AC_CHANGE result.summary text, resuming from a persisted
+# AC_CHANGE register, acDiffWellFormed's non-null-malformed-payload guard,
+# mintAcEntry's upsert branch) each get a new leg here, all PASSING
+# immediately against the existing GREEN implementation (the "add a test"
+# branch of the check, not a defect). `node test/workflows/run.mjs` now
+# measures all 156 ok, matching the pin below.
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=135
+HARNESS_OK_COUNT=169

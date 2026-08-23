@@ -37,6 +37,7 @@ name: contract-suites
 on:
   pull_request:
     paths:
+      - '.claude/agents/**'
       - '.claude/agents/autoflow-implementer.md'
       - '.claude/hooks/check-autoflow-gate.sh'
       - '.claude/workflows/**'
@@ -46,6 +47,7 @@ on:
       - '.github/workflows/contract-suites.yml'
       - 'CLAUDE.md'
       - 'docs/INDEX.md'
+      - 'docs/**'
       - 'docs/adr/**'
       - 'docs/autoflow-guide.md'
       - 'docs/doc-invariant-registry.md'
@@ -117,6 +119,7 @@ on:
       - 'tests/test-run-doc-invariants.sh'
       - 'tests/test-run-economy.sh'
       - 'tests/test-standing-lint-drives.sh'
+      - 'tests/test-verdict-enum-coherence.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
       - 'scripts/test/check-cycle-scope-guard.sh'
       - 'scripts/test/check-maintained-docs-sync.sh'
@@ -180,6 +183,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.claude/agents/**'
       - '.claude/agents/autoflow-implementer.md'
       - '.claude/hooks/check-autoflow-gate.sh'
       - '.claude/workflows/**'
@@ -189,6 +193,7 @@ on:
       - '.github/workflows/contract-suites.yml'
       - 'CLAUDE.md'
       - 'docs/INDEX.md'
+      - 'docs/**'
       - 'docs/adr/**'
       - 'docs/autoflow-guide.md'
       - 'docs/doc-invariant-registry.md'
@@ -260,6 +265,7 @@ on:
       - 'tests/test-run-doc-invariants.sh'
       - 'tests/test-run-economy.sh'
       - 'tests/test-standing-lint-drives.sh'
+      - 'tests/test-verdict-enum-coherence.sh'
       - 'tests/test-workflow-trigger-conformance.sh'
       - 'scripts/test/check-cycle-scope-guard.sh'
       - 'scripts/test/check-maintained-docs-sync.sh'
@@ -376,6 +382,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-standing-lint-drives.sh ')
         timeout-minutes: 10
         run: bash tests/test-standing-lint-drives.sh
+
+      - name: test-verdict-enum-coherence.sh
+        id: s-test-verdict-enum-coherence
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-verdict-enum-coherence.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-verdict-enum-coherence.sh
 
       - name: test-push-context-base-ref.sh
         id: s-test-push-context-base-ref

@@ -381,8 +381,8 @@ assert_true "AC-C2-1: architect ledger non-converged branch (line carrying 'ARCH
 # agent( call site forces a re-derivation of the prompt-string count above.
 ARCH_SITE_COUNT="$(grep -cF 'agent(' "$ARCH_WF" || true)"
 VERIFY_SITE_COUNT="$(grep -cF 'agent(' "$VERIFY_WF" || true)"
-assert_true "AC-C2-1 tripwire: architect-deliberation.js has exactly 8 agent( call sites (re-anchored, issue #127 adds the resume register-load call and the terminal register-write call)" \
-  "[ \"$ARCH_SITE_COUNT\" -eq 8 ]"
+assert_true "AC-C2-1 tripwire: architect-deliberation.js has exactly 9 agent( call sites (re-anchored, issue #138 adds the Reconcile phase's 'ac-diff' comparison-channel call)" \
+  "[ \"$ARCH_SITE_COUNT\" -eq 9 ]"
 assert_true "AC-C2-1 tripwire: verify-cause-branch.js has exactly 3 agent( call sites" \
   "[ \"$VERIFY_SITE_COUNT\" -eq 3 ]"
 

@@ -1,0 +1,23 @@
+# Allow-list for tests/test-verdict-enum-coherence.sh (issue #138).
+#
+# Format: one entry per line, `<repo-relative-or-absolute path>:<literal substring>`.
+# An entry excludes a line under the suite's scanned roots (CLAUDE.md, docs/**,
+# .claude/workflows/**, .claude/agents/**) that names both CONVERGED and ESCALATE
+# (without AC_CHANGE) IF that line's content contains <literal substring> verbatim
+# AND the hit's path matches <path> exactly. Blank lines and lines starting with
+# '#' are ignored; a trailing `  # <reason>` comment on a data line is stripped
+# before matching.
+#
+# Populate ONLY with lines that are legitimately two-valued -- a statement of
+# NECESSARY conditions for CONVERGED that is still true after issue #138 widened
+# the return enum, or a historical ADR record of a pre-#138 decision. Every hit
+# must be judged individually; do not add an entry to silence a genuine stale
+# restatement (that is a GREEN fix, not an allow-list entry).
+#
+# No entries at this time (issue #138, RED6): the enum-sweep's 4 hits at RED
+# (.claude/workflows/architect-deliberation.js:674, docs/teammate-contracts.md:174,
+# docs/teammate-contracts.md:194, docs/autoflow-guide.md:475) are each judged to be
+# the stale-restatement class this suite exists to catch, not a legitimately
+# two-valued statement -- a round's closing verdict, or a resume round's outcome,
+# can still turn into AC_CHANGE once Reconcile runs after Converge, so none is
+# allow-listed. GREEN4 fixes the source text instead.

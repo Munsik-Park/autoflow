@@ -546,6 +546,42 @@ assert_false "single-home: no OTHER tracked markdown doc restates the namespace 
 
 # ---------------------------------------------------------------------------
 echo ""
+echo "=== AC-ac-decision-marker-readable (issue #138, operator-authority-is-readable) ==="
+# Feature design > The operator decision and re-entry: the operator's AC_CHANGE
+# decision is recorded as a ledger entry headed with the trailing `[ac-decision]`
+# marker, authority "operator decision". Per CLAUDE.md:165 a trailing marker does
+# not change the heading grammar `## <ID> — <title> (cycle <C>, <PHASE>) [marker]`,
+# so `check` already accepts any trailing marker generically (check_one matches
+# `^## [EOF][0-9]+ ` and treats everything after the ID as free text) -- this leg
+# is a regression-lock on that generality, not a RED discriminator by itself; the
+# RED-discriminating half of this row (LEDGER_SEED_RULE seeding "operator decision"
+# and excluding "ARCHITECT ac-change") is asserted against the real script in
+# test/workflows/run.mjs.
+AC_DECISION_LEDGER="$TMP_ROOT/ac-decision-ledger.md"
+cat > "$AC_DECISION_LEDGER" <<'EOF'
+# Decision Ledger — issue #138
+
+## O1 — earlier decision (cycle 1, ARCHITECT)
+
+- Decision: x
+- Grounds: y
+- Authority: z
+- Cycle/Phase: cycle 1, ARCHITECT
+
+## O2 — AC1 excluded under operator authority (cycle 1, ARCHITECT) [ac-decision]
+
+- AC: AC1
+- Disposition: excluded
+- Decision / Grounds / Authority: operator decision / cycle 1, ARCHITECT
+EOF
+run_check "$AC_DECISION_LEDGER"
+assert_true "AC-ac-decision-marker-readable: a [ac-decision]-marked operator entry passes check (exit 0)" \
+  '[ "$CHECK_EXIT" = "0" ]'
+assert_true "AC-ac-decision-marker-readable: emits no stderr" \
+  '[ -z "$CHECK_ERR" ]'
+
+# ---------------------------------------------------------------------------
+echo ""
 echo "=============================="
 echo "Results: $PASS/$TESTS passed, $FAIL failed"
 echo "=============================="

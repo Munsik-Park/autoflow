@@ -245,7 +245,8 @@ Both perspectives participate, but the discussion runs inside an isolated
 **`Workflow`** (the facilitator — `architect-deliberation`), **not** as Agent-Teams
 teammates messaging the orchestrator: the Developer-AI and Test-AI run as in-script
 sub-agents, their cross-talk stays in workflow variables, and only a single verdict
-(`CONVERGED` + artifact paths, or `ESCALATE` at the 6-round cap) returns to the
+(`CONVERGED` + artifact paths, `AC_CHANGE` on an acceptance-criterion change that pauses for the
+operator, or `ESCALATE` at the 6-round cap) returns to the
 orchestrator. At the cap, when the Developer AI's final revision answers with a grounded
 ACCEPT, a **closing half-round** — one Test-AI-only evaluation of that revision — decides
 between the two; it is the second half of the sixth exchange rather than a seventh round, so
@@ -275,11 +276,20 @@ the capability lives at the layer that has a shell.
 1. **Feature Design Document** (Developer-AI-led): files to change, API interface, data structures, dependencies.
 2. **Verification Design Document** (Test-AI-led):
 
-| Acceptance criterion | Verification type | Method |
-|----------------------|-------------------|--------|
-| (criterion 1) | automated | pytest / API test / etc. |
-| (criterion 2) | manual    | scenario doc (delegated to user) |
-| (criterion 3) | environment-dependent | introduce mock or propose design change (except where the composition-oracle clause applies) |
+| Issue AC | Acceptance criterion | Verification type | Method |
+|----------|----------------------|-------------------|--------|
+| AC1 | (criterion 1) | automated | pytest / API test / etc. |
+| AC2 | (criterion 2) | manual    | scenario doc (delegated to user) |
+| — | (criterion 3) | environment-dependent | introduce mock or propose design change (except where the composition-oracle clause applies) |
+
+- **`Issue AC` is the join key.** Each row's value is either an `AC id` from the
+  `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, or `—` for a criterion this
+  verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
+  criterion the design declines, defers or weakens keeps its row and states that disposition — the
+  row is never deleted. A design-added criterion (`—`) is never a finding. This is what turns "was
+  an acceptance criterion dropped?" into a key join rather than a reading of prose, which is what
+  lets the Reconcile check stand in front of a human decision (Reconcile > *Acceptance-criterion
+  change* below).
 
 - For untestable items: state the reason and the alternative (design change / manual delegation (except where the composition-oracle clause applies) / mock (same exception)).
 - Design-change request: parts of the feature design that should be revised so they become testable.
@@ -380,11 +390,79 @@ Both documents reach ACCEPT from both teammates. The Discussion Protocol applies
 Before mutual ACCEPT, one exchange must verify the resolution conforms to any governing
 ADR — the first, non-gated approach check (GATE:PLAN is the gated one);
 a divergence is a COUNTER, not an ACCEPT. No score.
+Mutual ACCEPT is necessary but not sufficient: a converged run additionally passes the
+**Reconcile** acceptance-criterion check below, because whether the issue's acceptance criteria may
+change is not the deliberation's to settle.
 The facilitator records the converged decisions in the ledger and returns
-`CONVERGED` + artifact paths; non-convergence within the round cap returns `ESCALATE`.
+`CONVERGED` + artifact paths; a converged run carrying an unauthorized acceptance-criterion change
+returns `AC_CHANGE`; non-convergence within the round cap returns `ESCALATE`.
 At the round cap the Test AI's final ACCEPT is the closing half-round's — the Developer AI's
 cap-round revision is otherwise never evaluated, since one round = one exchange and the
 Developer AI answers second.
+
+### Acceptance-criterion change — the `AC_CHANGE` pause (operator-facing)
+
+An issue's acceptance criteria are the **operator's**, not the deliberation's. Nothing in the flow
+used to ask *who has the authority* to drop one: ARCHITECT converged on mutual ACCEPT alone, and the
+two gates behind it scored the quality of the stated reason. The **Reconcile** phase is the
+checkpoint that asks.
+
+**What runs.** Between `Converge` and `Ledger`, and **only on a converged run** (verdict precedence
+is `ESCALATE` before `AC_CHANGE` before `CONVERGED` — an infrastructure or non-convergence cause
+still outranks a design outcome), the facilitator calls one closed-schema comparison channel over
+three artifacts: the `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, the
+converged verification design's `Issue AC` column, and the issue ledger. The channel **transcribes**
+and never judges — whether a change was *justified* is exactly the faculty a well-written rationale
+can capture, and it is the operator's. The facilitator's own code derives, per AC id, at most one
+finding, first match wins:
+
+| Transcribed state | Finding |
+|---|---|
+| no verification-design row carries the id | `dropped` |
+| a row carries it and declines it | `not-carried` |
+| a row carries it and postpones it out of the cycle | `deferred` |
+| the carrying row's Method cell is empty, `—`, or names no executable artifact and no manual-scenario file | `weakened` |
+| the row's criterion asserts a different property than the issue's | `substituted` |
+
+`weakened` is deliberately **not** "asserts a strictly weaker property": that is a depth judgment
+about verification strength, which GATE:PLAN's `Scope` depth items already score and which would be
+an unbounded false-positive source here. A finding covered by an `[ac-decision]` ledger entry naming
+the same AC id (exact match after trimming — never a prefix) is **authorized** and is not a pause.
+
+**Fail-closed.** A null return, a malformed payload, or an absent, empty or unparseable AC table
+resolves to `AC_CHANGE` with its own sentinel — `ac reconciliation unavailable` or `ac list absent` — rather than
+degrading to `CONVERGED`. Degrading would silently restore the hole in the one failure mode where
+nothing else is watching. The sentinel is carried on the return's own `acReason` field, not inside
+`escalation`, so the operator can tell an infrastructure pause from a real acceptance-criterion
+finding. A well-formed payload whose transcribed row set is **empty** takes the `ac list absent`
+sentinel rather than converging: a channel that transcribed nothing is indistinguishable from one
+that found no table, and only the fail-closed reading keeps an unread source from passing silently
+— the same reading GATE:PLAN's AC-authority check already applies to an absent, empty or
+unparseable table.
+
+**Orchestrator disposition.** On `AC_CHANGE`: report **situation-first**
+([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation) naming the
+affected criteria and what the design proposes for each, set `active: false`,
+`phase: "awaiting-user"`, and **do not spawn GATE:PLAN**. The options offered are: exclude the
+criterion, revise it in the proposed form, or split it into a separate issue.
+
+**Recording the answer and re-entering.** The operator's answer is one `[ac-decision]` ledger entry
+per decided AC, in the grammar fixed at [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger >
+*Acceptance-criterion decisions*; when the disposition is `revised` or `split`, the Phase B AC table
+is edited to match first. Re-entry is the ordinary resume,
+`Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })` — the run mints
+one open register entry per pause cause, so the resume is not refused by the `no open entry` guard,
+and those minted entries are the resumed round's agenda. An AC pause and its resume consume **no**
+ARCHITECT re-entry budget (*Cap and counter accounting* below): the pause is a human authority
+checkpoint inside the deliberation already counted.
+
+**The infrastructure pause has no exit mechanism, by decision.** `ac reconciliation unavailable`
+is not clearable by an `[ac-decision]` entry — that path produces no finding for an entry to cover —
+so **every resume re-runs Reconcile** and re-pauses until the underlying cause is repaired. This is
+an accepted consequence, not an oversight: it follows the contract every other infrastructure
+escalation in this workflow already has (none carries a bounded retry or an in-flow override), and
+the operator's exit is the ordinary one — author the missing Phase B AC table or verification-design
+rows, or re-run once the channel recovers.
 
 ### Resume — re-entering an ESCALATEd deliberation (operator-facing)
 
@@ -394,8 +472,8 @@ An `ESCALATE` return hands the decision to the operator. Re-invoking the workflo
 
 1. **Read the register** — `.autoflow/issue-{N}-architect-register.json`. Its `entries` show every concern the prior run raised with its `conclusion`, `evidence` and `status`; `escalation` states why the run stopped. Its `lastResponses` field records each side's final verdict object — before deciding whether to spend a resume round, open it and read which side stopped short and on what verdict, since after an `ESCALATE` the ledger holds one outcome entry and no per-side record. No control-flow path reads that field; the operator is its reader.
 2. **Decide.** A resume is worth one round when the open entries look closable by one further exchange. When they do not — the split is a design disagreement needing a redefinition, or the run escalated for an infrastructure cause — resume is not the instrument, and the workflow refuses several of those shapes on its own (see the guard sentinels in [`teammate-contracts.md`](teammate-contracts.md) > Facilitator).
-3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The run continues from the register's `lastRound`, admits **exactly one** further round (`cap + 1`), and that round may end in `CONVERGED` through the closing half-round when the Developer AI answers with a grounded ACCEPT **and** **no register entry is left `open`** after that turn's dispositions — a resume converges only once its carried agenda is disposed of, since the entries' original raisers are no longer live to withdraw them. Otherwise the run returns `ESCALATE` with the sentinel `resume register still open at convergence`, the register is rewritten with those entries still open, and a further resume re-enters on the same agenda rather than being latched out by the `already converged` guard.
-4. **Route the return** exactly as a cold run's: `CONVERGED` → GATE:PLAN (after the artifact-existence check above), `ESCALATE` → back to the operator, who may resume again.
+3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The run continues from the register's `lastRound`, admits **exactly one** further round (`cap + 1`), and that round may converge through the closing half-round when the Developer AI answers with a grounded ACCEPT **and** **no register entry is left `open`** after that turn's dispositions — a resume converges only once its carried agenda is disposed of, since the entries' original raisers are no longer live to withdraw them. A converged resume returns `CONVERGED` only when the Reconcile check that follows finds no unauthorized acceptance-criterion change, and `AC_CHANGE` when it does. Otherwise the run returns `ESCALATE` with the sentinel `resume register still open at convergence`, the register is rewritten with those entries still open, and a further resume re-enters on the same agenda rather than being latched out by the `already converged` guard.
+4. **Route the return** exactly as a cold run's: `CONVERGED` → GATE:PLAN (after the artifact-existence check above), `AC_CHANGE` → the *Orchestrator disposition* above — report situation-first, set `active: false` / `phase: "awaiting-user"`, and **do not spawn GATE:PLAN** (a resume converging into an AC pause routes to the operator, not to the gate), `ESCALATE` → back to the operator, who may resume again.
 
 **Cap and counter accounting** — a resume is an operator decision that raises the **round** cap by one (6 → 7 → 8 → …) and is unbounded in how many times it may be taken; it does **not** consume the ARCHITECT re-entry budget of 3 per cycle. The re-entry counter tracks whole re-deliberations triggered by GATE:PLAN FAIL or a VERIFY design contradiction; a resume is a continuation of the deliberation already counted, not a new one. The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so this accounting is the orchestrator's, and the return's `resumed` field is what lets it tell the two entries apart.
 
@@ -404,7 +482,9 @@ An `ESCALATE` return hands the decision to the operator. Re-invoking the workflo
 ## GATE:PLAN — Plan Evaluation
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: feature design + verification design from ARCHITECT.
+**Input**: feature design + verification design from ARCHITECT, the issue's acceptance-criterion
+list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the issue decision ledger
+(`.autoflow/issue-{N}-ledger.md`).
 
 ### Scoring (5 items × 10 points)
 
@@ -427,6 +507,28 @@ This named check makes the ADR-conformance concern explicit inside the two items
 - **N/A by default**: no governing ADR's Decision scope intersects **and** no trigger area is hit → the check does not apply, no cap, the item scores normally.
 
 Precedent: the GATE:QUALITY "Known blind-spot checks" below. Authority: [`docs/adr/0016-adr-conformance-gate-scoring.md`](adr/0016-adr-conformance-gate-scoring.md).
+
+### AC-authority check (scored within Scope)
+
+Same mechanism as the ADR-conformance check above: **no added scored item, no threshold change**; a
+violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 rule. Authority:
+[`docs/adr/0020-acceptance-criterion-authority.md`](adr/0020-acceptance-criterion-authority.md).
+
+- **The comparison** is a key join, both sides keyed: every `AC id` in the issue's
+  `## Acceptance criteria` table against the `Issue AC` column of the verification design's
+  acceptance-criteria table. A criterion the design does not carry, or carries while declining,
+  deferring, weakening or substituting it, is a **difference**.
+- **Trigger → cap**: any difference **not** covered by a `[ac-decision]`-marked ledger entry whose
+  `- AC:` line names that same id caps `Scope` at 6. The marker is what the gate matches on;
+  `operator decision` is that entry's authority **value** and is not itself the match key.
+- **An unresolvable check also caps.** An absent, empty or unparseable `## Acceptance criteria`
+  table caps `Scope` at 6: the gate cannot establish authority, and an unresolvable check that
+  scores normally is the same hole under a different name.
+- **N/A by default** applies only to the difference set, never to the source: no difference and a
+  readable AC table → no cap, the item scores normally.
+- **Effective from** — the check binds evaluations of cycles whose DIAGNOSE authored an AC table
+  under this clause, the same *Effective from* convention the composition-oracle and
+  verification-depth clauses use. A cycle already past DIAGNOSE is not retroactively deficient.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7) → DISPATCH.
 - **FAIL** → ARCHITECT (max 3×).
@@ -1114,7 +1216,9 @@ GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate wo
 ## GATE:QUALITY — Completion Evaluation
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: full change set + test results + AUDIT result.
+**Input**: full change set + test results + AUDIT result, plus the issue's acceptance-criterion list
+(`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the converged verification design and
+the issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
 
 ### Scoring (10 items × 10 points)
 
@@ -1160,6 +1264,21 @@ each-item ≥ 7 criterion:
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check). A
   divergence from a governing ADR, or an architecture-impacting change with no governing
   ADR/owner decision, caps Fit at 6. Regression backstop for the GATE:PLAN check.
+- **Completeness — AC-authority check** (proactively-added per `ADR-0020`, not a past Codex catch):
+  the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a VERIFY → RED test
+  edit, or the satisfiable-subset GREEN implementation the GREEN playbook explicitly permits.
+  **This is not the GATE:PLAN key join, and the difference is deliberate**: there only one side is
+  keyed — the verification design carries `Issue AC`, while test assertions and implementation sites
+  carry no AC id and this policy adds one to neither. The check is therefore a **name-the-site
+  obligation**: for each verification-design row whose `Issue AC` is not `—`, the evaluator names
+  the test file and assertion, or the implementation site, that discharges it. A row for which no
+  site can be named, and which no `[ac-decision]`-marked ledger entry covers, caps `Completeness`
+  at 6. The guarantee is correspondingly **weaker** than GATE:PLAN's — an evaluator judgment over a
+  keyed checklist rather than a mechanical diff — because the alternative is an AC id annotation on
+  every test and source file, maintained by the same agents the check exists to witness against.
+  Neither gate subsumes the other: the ARCHITECT-side check cannot see post-ARCHITECT drift, and
+  this one runs only after the cycle's work is done. **Effective from** — as with the GATE:PLAN
+  half, this binds cycles whose DIAGNOSE authored an AC table under the clause.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → block) → DELIVER.
 - **FAIL** → RED (max 3×).
