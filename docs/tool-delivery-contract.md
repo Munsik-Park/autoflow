@@ -16,6 +16,12 @@ delivered to a target project and kept consistent with it. It is
 code-change-free: the enforcing mechanisms land in later slices and must
 conform to these rules.
 
+Slice numbers below (`#790`–`#792`, epic `#785`, `#787`) are predecessor-tracker
+issues (`connev-llm/claude-autoflow`, archived) kept as provenance; see
+`docs/INDEX.md` > Issue-number provenance. The S4b question of moving the
+deliberation workflows into the plugin tier is closed as *not migrated*
+(ADR-0015 D1 > Superseding note, Munsik-Park/autoflow#53).
+
 | Rule | Enforced by (slice) |
 |------|---------------------|
 | R1 — Tool version pin | S4a #790 (plugin packaging, settings pin) |

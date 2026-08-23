@@ -4,6 +4,17 @@ Use this page as the first stop before assigning or implementing an issue.
 It links the current project baseline, existing operating manuals, and the
 review outputs that decide whether an issue is ready for implementation.
 
+## Issue-number provenance
+
+This framework was generalized out of a predecessor repository,
+`connev-llm/claude-autoflow` (archived, private). Bare issue references in the
+range `#600`–`#999` — in the playbooks, ADRs, and shipped scripts — point at
+that tracker and are kept as historical provenance for the rule they sit
+beside; they are not navigable from a consuming project and do not resolve in
+`Munsik-Park/autoflow`, whose own issues are numbered from `#1`. Where a
+predecessor reference carried an open decision, the decision is re-recorded in
+this repository (e.g. ADR-0015 D1 > Superseding note).
+
 ## Decision and Issue Readiness
 
 | Document | Use When |

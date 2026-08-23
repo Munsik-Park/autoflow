@@ -4,6 +4,15 @@
 
 Accepted (owner decision, 2026-07-05)
 
+Amended 2026-08-24 (operator decision, Munsik-Park/autoflow#53): the D1
+delegation to S4b is closed — the Deliberation-Isolation workflows stay in the
+thin root layer. See *D1 > Superseding note*.
+
+Issue numbers `#600`–`#999` cited in this ADR belong to the predecessor
+tracker `connev-llm/claude-autoflow` (archived, private) and are retained as
+historical provenance only; they do not resolve in `Munsik-Park/autoflow`. See
+`docs/INDEX.md` > Issue-number provenance.
+
 ## Context
 
 Epic #785 inverts the dependency direction between the AutoFlow framework and
@@ -74,6 +83,21 @@ host/service decoupling plan §6/§10 (with that plan's
   env. Whether the Deliberation-Isolation workflows can migrate into a plugin
   skill is explicitly delegated to S4b (#791) as its acceptance criterion; if
   proven there, a superseding note moves them into the plugin tier.
+
+  **Superseding note (2026-08-24, operator decision, Munsik-Park/autoflow#53).**
+  The S4b delegation is closed as **not migrated**: the workflows remain in
+  the thin root layer, and no successor issue is opened for the migration. The
+  predecessor-tracker slice `#791` is unreachable from this repository, so the
+  question it was to answer is settled here instead. Grounds: the project's
+  direction is to implement AutoFlow without depending on Claude Code-only
+  features (independence from the harness's roadmap; portability across
+  platforms), and moving the workflows into the plugin tier would bind them
+  more tightly to Claude Code packaging — the opposite direction. The
+  successor to the workflow scripts is a harness-neutral agent-invocation
+  module, which is separate work outside this ADR; the plugin tier is not the
+  destination. Feasibility was not the blocker — the skills
+  `architect-deliberation` / `verify-cause-branch` already wrap the workflow
+  scripts — the decision is one of direction.
 - **Host-only** (never shipped): the tool repo's own CI workflows, gate/test
   suites, epic scratch, and the installer's development surface. Files the
   decoupling plan classifies MOVE/DELETE (service-coupled runbooks, service
