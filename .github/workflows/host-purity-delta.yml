@@ -70,35 +70,13 @@ permissions:
 
 jobs:
   host-purity-delta:
-    name: host-purity DELTA guard acceptance suite
+    name: host-purity DELTA guard
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
-
-      # Selection (issue #103): scripts/test/select-suites.sh is the SOLE owner of
-      # "which suites does this change require". Each governed suite step below
-      # guards on this step's output; nothing here reimplements the predicate.
-      # Under a push event, or an empty delta from a resolved base, it selects
-      # the full set — the push delta is empty by construction, so a purely
-      # delta-driven selector would silently lose all coverage.
-      - id: select
-        name: select suites for this change
-        timeout-minutes: 5
-        run: |
-          rc=0
-          bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
-            > "$RUNNER_TEMP/selected-raw.txt" \
-            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
-          cat "$RUNNER_TEMP/selection-report.txt"
-          if [ "$rc" -ne 0 ]; then
-            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
-            exit "$rc"
-          fi
-          paste -sd' ' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
-          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
 
       # The guard itself (issue #788): a diff-scoped scan of this run's own
       # merge-base..HEAD delta. Not a governed suite step — it is a standing lint
@@ -111,22 +89,3 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           bash scripts/test/check-host-purity-delta.sh --base "$PR_BASE" --head HEAD
-
-      # Reconciliation (issue #103): a step whose `if:` evaluates false is
-      # SKIPPED and the job still concludes successfully — so a green run is
-      # exactly what a wrongly-false guard produces, and enforcement here is
-      # advisory with no required status check behind it. This step compares the
-      # run's own selection report against the run's own step outcomes, so it
-      # needs no second source of truth.
-      - name: reconcile selection against step outcomes
-        if: always()
-        timeout-minutes: 5
-        env:
-          STEPS_JSON: ${{ toJSON(steps) }}
-          JOB_STATUS: ${{ job.status }}
-        run: |
-          printf '%s' "$STEPS_JSON" > "$RUNNER_TEMP/steps.json"
-          bash scripts/test/check-step-reconciliation.sh \
-            --selected "$RUNNER_TEMP/selection-report.txt" \
-            --job-status "$JOB_STATUS" \
-            --steps "$RUNNER_TEMP/steps.json"
