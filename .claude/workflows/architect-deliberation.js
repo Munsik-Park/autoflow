@@ -389,7 +389,8 @@ const acKindOf = (row) => {
 const acRowWellFormed = (row) => !!row && typeof row === 'object' &&
   typeof row.ac === 'string' && row.ac.trim() !== '' &&
   typeof row.carried === 'boolean' &&
-  typeof row.disposition === 'string' &&
+  // No separate `typeof === 'string'` clause on `disposition`: the enum is an array of strings,
+  // so `includes` rejects every non-string value on its own.
   AC_ROW.properties.disposition.enum.includes(row.disposition) &&
   typeof row.method_executable === 'boolean' &&
   typeof row.locator === 'string' && typeof row.proposed === 'string' &&
