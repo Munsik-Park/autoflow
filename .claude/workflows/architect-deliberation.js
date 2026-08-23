@@ -386,23 +386,24 @@ const acKindOf = (row) => {
 // `ac` is the only field carrying an emptiness clause: it is the identity key the authorization
 // join compares after trim, and an empty id converges while naming no criterion. `locator` /
 // `proposed` are display values the join already defaults, so emptiness there stays accepted.
+// Shared by both item predicates below — `AC_ROW` and `AC_SUBSTITUTION` both carry this trio.
+const acCoreFieldsWellFormed = (x) =>
+  typeof x.ac === 'string' && x.ac.trim() !== '' &&
+  typeof x.locator === 'string' && typeof x.proposed === 'string'
 const acRowWellFormed = (row) => !!row && typeof row === 'object' &&
-  typeof row.ac === 'string' && row.ac.trim() !== '' &&
+  acCoreFieldsWellFormed(row) &&
   typeof row.carried === 'boolean' &&
   // No separate `typeof === 'string'` clause on `disposition`: the enum is an array of strings,
   // so `includes` rejects every non-string value on its own.
   AC_ROW.properties.disposition.enum.includes(row.disposition) &&
   typeof row.method_executable === 'boolean' &&
-  typeof row.locator === 'string' && typeof row.proposed === 'string' &&
   // One direction of AC_ROW's own stated rule ('absent' iff !carried): `absent` with
   // `carried: true` is an internally inconsistent transcription that `acKindOf` maps to no kind
   // at all. The reverse direction stays accepted on purpose — a `carried: false` row with a
   // non-absent disposition derives `dropped`, an operator pause that names the criterion, and
   // fail-closing it would replace that with a less informative one.
   !(row.disposition === 'absent' && row.carried === true)
-const acSubstitutionWellFormed = (sub) => !!sub && typeof sub === 'object' &&
-  typeof sub.ac === 'string' && sub.ac.trim() !== '' &&
-  typeof sub.locator === 'string' && typeof sub.proposed === 'string'
+const acSubstitutionWellFormed = (sub) => !!sub && typeof sub === 'object' && acCoreFieldsWellFormed(sub)
 const acDiffWellFormed = (d) => !!d && typeof d === 'object' &&
   typeof d.ac_source_present === 'boolean' &&
   Array.isArray(d.ac_rows) && Array.isArray(d.ledger_ac_decisions) && Array.isArray(d.substituted) &&
