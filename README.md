@@ -33,7 +33,7 @@ RED             Test Writing      — Tests from acceptance criteria (Red)
 GREEN           Implementation    — Minimum code to pass tests
 VERIFY          Test Run + Check  — All tests pass + minimal-implementation check
 REFINE          Refactor          — Code cleanup, Green re-confirmation
-VALIDATE        Verification Done — automated + manual + maintained-docs check
+VALIDATE        Verification Done — automated + manual checks
 AUDIT           Security Audit    — Independent project-specific security audit
 GATE:QUALITY    Completion Eval   — Scored quality assessment (gate)
 DELIVER         Sub-Repo Push     — each Submodule AI pushes its fork branch; Teammate shutdown
@@ -166,7 +166,6 @@ claude-autoflow/
 │   ├── submodule-common-rules.md      # Sub-repo shared rules + Discussion Protocol
 │   ├── teammate-common-rules.md       # Shared teammate behavior rules
 │   ├── security-checklist.md          # Project-specific security checklist
-│   ├── maintained-docs.md             # Document registry
 │   ├── adr/                           # Architecture Decision Records (docs/adr/)
 │   └── phases/                        # Per-phase playbooks (docs/phases/)
 │

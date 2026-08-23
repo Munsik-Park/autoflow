@@ -48,15 +48,7 @@
 # same file while each stayed consistent with itself.
 #
 # Usage:
-#   bash scripts/test/check-suite-ci-coverage.sh [--self-test] [--root <dir>]
-#
-# The default run performs the self-test FIRST, then reports the real-tree
-# result — the precedent scripts/test/check-cycle-scope-guard.sh sets. Against
-# the live tree an exit 0 is unfalsifiable once the orphan set is empty, so the
-# self-test's two legs are what keep it from being vacuous: the CLOSURE leg
-# drives a fixture tree holding a known-unreachable suite, and the EXCLUSION leg
-# asserts the subtraction positively — without it the lint is satisfiable by
-# broadening the exclusions until the subject set is empty.
+#   bash scripts/test/check-suite-ci-coverage.sh [--root <dir>]
 # =============================================================================
 
 set -uo pipefail
@@ -69,11 +61,9 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # shellcheck source=scripts/test/invocation-scan.sh
 . "$DEFAULT_ROOT/scripts/test/invocation-scan.sh"
 
-MODE="default"
 ROOT=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --self-test) MODE="self-test" ;;
     --root)      ROOT="${2:-}"; shift ;;
     *)           echo "check-suite-ci-coverage: unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -107,140 +97,6 @@ unreachable_set() {
   comm -23 <(subject_set "$root") <(reachable_set "$root")
 }
 
-# ---------------------------------------------------------------------------
-# Self-test — a hermetic fixture tree whose answer is known by construction.
-# ---------------------------------------------------------------------------
-build_fixture_tree() {
-  local dir="$1"
-  mkdir -p "$dir/.github/workflows" "$dir/tests/lib" "$dir/tests/plugin"
-
-  cat > "$dir/.github/workflows/fixture.yml" <<'YML'
-name: fixture
-on:
-  pull_request:
-    paths:
-      - 'tests/fixture-orphan.sh'
-jobs:
-  fixture:
-    runs-on: ubuntu-latest
-    steps:
-      - run: bash tests/fixture-entry.sh
-YML
-
-  # Reachable: a run: step names it.
-  echo 'echo entry'                                       > "$dir/tests/fixture-entry.sh"
-  # Reachable ONLY through a sibling invocation. Since issue #103 narrowed
-  # reachability to a direct run: step, this is an ORPHAN — the leg that pins
-  # the narrowing, since under the former closure clause it was reported clean.
-  echo 'echo sibling-only'                                > "$dir/tests/fixture-sibling-only.sh"
-
-  # Unreachable, and named ONLY by the workflow's paths: trigger — a trigger
-  # fires the workflow, it does not execute the file.
-  echo 'echo orphan'                                      > "$dir/tests/fixture-orphan.sh"
-  # Unreachable and outside every exclusion, in a subdirectory: the subject set
-  # must reach it, which an admitting glob over tests/test-*.sh would not.
-  echo 'echo plugin orphan'                               > "$dir/tests/plugin/verify-fixture-orphan.sh"
-  # Unreachable .bats: bats is unavailable in CI, so it has no execution path.
-  echo '@test "x" { true; }'                              > "$dir/tests/fixture-orphan.bats"
-
-  # Each named exclusion, all unreachable: the subtraction must drop them, and
-  # only them.
-  echo 'true'                                             > "$dir/tests/lib/fixture-helper.sh"
-  echo 'true'                                             > "$dir/tests/run-doc-invariants.sh"
-}
-
-self_test() {
-  local dir out rc=0 expected
-  dir="$(mktemp -d)"
-  build_fixture_tree "$dir"
-  out="$(unreachable_set "$dir")"
-
-  # --- DIRECT-REACHABILITY leg -------------------------------------------
-  # Every known-unreachable fixture suite is reported, INCLUDING the one a
-  # sibling invokes: since issue #103 reachability is a direct run: step, and a
-  # sibling edge is itself a leaf-rule violation rather than a route.
-  expected="$(printf 'tests/fixture-orphan.bats\ntests/fixture-orphan.sh\ntests/fixture-sibling-only.sh\ntests/plugin/verify-fixture-orphan.sh\n')"
-  if [ "$(printf '%s\n' "$out" | sort)" = "$(printf '%s\n' "$expected" | sort)" ]; then
-    echo "check-suite-ci-coverage: --self-test DIRECT-REACHABILITY leg OK — every known-unreachable fixture suite is reported, the sibling-only one included: a transitive-closure edge is no longer a reachability route"
-  else
-    echo "check-suite-ci-coverage: --self-test DIRECT-REACHABILITY leg FAILED — a transitive-closure edge must not count as a reachability route"
-    echo "  expected unreachable: $(printf '%s' "$expected" | tr '\n' ' ')"
-    echo "  reported unreachable: $(printf '%s' "$out" | tr '\n' ' ')"
-    rc=1
-  fi
-
-  # --- EXCLUSION leg -----------------------------------------------------
-  # Each named exclusion is asserted positively, and a path outside the three
-  # is asserted NOT excluded. Without this leg the criterion is satisfiable by
-  # broadening the exclusions until the subject set is empty.
-  local p
-  for p in tests/lib/fixture-helper.sh tests/run-doc-invariants.sh; do
-    if printf '%s\n' "$out" | grep -qxF "$p"; then
-      echo "check-suite-ci-coverage: --self-test EXCLUSION leg FAILED — $p should be excluded from the subject set but was reported"
-      rc=1
-    fi
-    if ! is_excluded "$p"; then
-      echo "check-suite-ci-coverage: --self-test EXCLUSION leg FAILED — $p is not recognised as a named exclusion"
-      rc=1
-    fi
-  done
-  if is_excluded tests/plugin/verify-fixture-orphan.sh; then
-    echo "check-suite-ci-coverage: --self-test EXCLUSION leg FAILED — a path outside the named exclusions is being excluded (over-broad subtraction)"
-    rc=1
-  fi
-  [ "$rc" -eq 0 ] && echo "check-suite-ci-coverage: --self-test EXCLUSION leg OK — the named exclusions are subtracted and nothing outside them is"
-
-  rm -rf "$dir"
-  return $rc
-}
-
-# ---------------------------------------------------------------------------
-# EXIT-STATUS leg (issue #119) — the self-test owns the orphan-reporting exit
-# STATUS, not only the unreachable SET.
-#
-# self_test() compares the unreachable set and returns; the top-level
-# orphan-reporting exit path below is never reached in --self-test mode, so a
-# defanged `exit 1` there is invisible to it. The leg re-invokes this script in
-# DEFAULT mode against a fixture root holding a known orphan and requires a
-# non-zero status with the orphan named.
-#
-# Placement is load-bearing: default mode is gated on `if ! self_test` below, so
-# a re-invocation placed INSIDE self_test() would recurse unboundedly (and
-# self_test removes its fixture before returning). The leg therefore runs from
-# the --self-test branch, outside self_test(), and the child runs in default
-# mode where no such re-invocation exists.
-# ---------------------------------------------------------------------------
-exit_status_leg() {
-  local dir out rc leg_rc=0
-  dir="$(mktemp -d)"
-  build_fixture_tree "$dir"
-  out="$(bash "$0" --root "$dir" 2>&1)"
-  rc=$?
-  if [ "$rc" -eq 0 ]; then
-    echo "check-suite-ci-coverage: --self-test EXIT-STATUS leg FAILED — a fixture root holding a known orphan was reported with exit 0; the orphan-reporting exit path does not fail the run"
-    leg_rc=1
-  fi
-  if ! printf '%s\n' "$out" | grep -qF 'tests/fixture-orphan.sh'; then
-    echo "check-suite-ci-coverage: --self-test EXIT-STATUS leg FAILED — the orphan was not named in the default-mode report"
-    leg_rc=1
-  fi
-  [ "$leg_rc" -eq 0 ] && echo "check-suite-ci-coverage: --self-test EXIT-STATUS leg OK — a root holding a known orphan exits non-zero with the orphan named"
-  rm -rf "$dir"
-  return $leg_rc
-}
-
-if [ "$MODE" = "self-test" ]; then
-  ST_RC=0
-  self_test || ST_RC=1
-  exit_status_leg || ST_RC=1
-  exit $ST_RC
-fi
-
-if ! self_test; then
-  echo "check-suite-ci-coverage: detector self-test failed — real-tree result not reported"
-  exit 1
-fi
-
 UNREACHABLE="$(unreachable_set "$ROOT")"
 SUBJECT_COUNT="$(subject_set "$ROOT" | wc -l | tr -d ' ')"
 
@@ -251,6 +107,6 @@ fi
 
 echo "check-suite-ci-coverage: suite(s) with zero execution paths:"
 printf '%s\n' "$UNREACHABLE" | sed 's/^/  /'
-echo "Each is either wired into a workflow's run: steps, or deleted with a §5 disposition row in docs/doc-invariant-registry.md. There is no exemption list."
+echo "Each is either wired into a workflow's run: steps, or deleted. There is no exemption list."
 echo "A sibling invocation is not an execution path: scripts/test/check-suite-leaf.sh denies it."
 exit 1

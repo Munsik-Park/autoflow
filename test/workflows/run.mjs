@@ -1378,8 +1378,7 @@ await test('ARCHITECT: prose args, single bare digit, no #/no issue-label — ti
 
 // ---- ARCHITECT: cap-round closing half-round (issue #123) --------------------
 // Verification design (.autoflow/issue-123-verification-design.md), AC1-AC6 and
-// AC10-AC13 (AC7 is doc prose with no harness home, AC8 is the composition oracle in
-// tests/lib/harness-pins.sh, AC9 is the manual scenario). Every fixture below drives
+// AC10-AC13 (AC7 is doc prose with no harness home, AC8 is the composition oracle, AC9 is the manual scenario). Every fixture below drives
 // five non-converging rounds (both sides COUNTER, never grounded) so the loop always
 // reaches round 6 -- MAX_ROUNDS -- as the cap round, regardless of what round 6 or the
 // closing call return; only the cap round and the closing call vary per criterion.
@@ -1399,7 +1398,7 @@ function capResponder(overrides) {
   return (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    // Fixture-amendment class recorded for #127 cycle 3 (tests/lib/harness-pins.sh), amended
+    // Fixture-amendment class recorded for #127 cycle 3, amended
     // this cycle for #138: a converging run now runs Reconcile before Ledger, which calls a
     // sub-agent labelled 'ac-diff'. The shape below is the one the 'ac-diff-plumbing' leg
     // proves yields CONVERGED with no findings -- it does not weaken any #138 fail-closed leg,
@@ -2632,7 +2631,7 @@ await test('ARCHITECT: a clean AC table (every AC carried, verified, executable)
     ac_source_present: true,
     ac_rows: [
       { ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'test/workflows/run.mjs', proposed: 'verified' },
-      { ac: 'AC2', carried: true, disposition: 'verified', method_executable: true, locator: 'tests/fixtures/doc-invariants.json', proposed: 'verified' },
+      { ac: 'AC2', carried: true, disposition: 'verified', method_executable: true, locator: 'tests/fixtures/gate-schema.json', proposed: 'verified' },
     ],
     ledger_ac_decisions: [],
     substituted: [],

@@ -1309,14 +1309,26 @@ if git clone -q "$PROJECT_ROOT" "$REALCLONE" >/dev/null 2>&1; then
     fi
     drive_suite_over_root "$REALCLONE"
     SEL_COUNT="$(printf '%s\n' "$DRIVE_OUT" | grep -cE '^SELECTED:' || true)"
-    if [ "$SEL_COUNT" -lt 1 ] || [ "$SEL_COUNT" -ge "$DERIVED_COUNT" ]; then
+    # Degenerate derived set: with a single derived subject a PROPER subset is
+    # unrepresentable (a non-empty proper subset of a one-element set does not
+    # exist), so the decidable half of the property is asserted instead — the
+    # subject's own path selects exactly that subject and nothing beyond the
+    # derived set. Stated as a narrowed predicate rather than a skip: a skip
+    # here is the vacuous-pass class this suite rejects.
+    if [ "$DERIVED_COUNT" -ge 2 ]; then
+      if [ "$SEL_COUNT" -lt 1 ] || [ "$SEL_COUNT" -ge "$DERIVED_COUNT" ]; then
+        PROPER_SUBSET_OK=0
+        echo "  (proper-subset probe FAILED for $subj: selected=$SEL_COUNT derived=$DERIVED_COUNT)"
+        break
+      fi
+    elif [ "$SEL_COUNT" -ne "$DERIVED_COUNT" ]; then
       PROPER_SUBSET_OK=0
-      echo "  (proper-subset probe FAILED for $subj: selected=$SEL_COUNT derived=$DERIVED_COUNT)"
+      echo "  (degenerate one-subject probe FAILED for $subj: selected=$SEL_COUNT derived=$DERIVED_COUNT)"
       break
     fi
     git -C "$REALCLONE" reset -q --hard "$REAL_HEAD" >/dev/null 2>&1
   done
-  assert_true "AC-benefit-proper-subset-real-tree: over the real derived set, a delta consisting of exactly one derived subject's own path selects a PROPER subset of the derived set, for every derived subject" \
+  assert_true "AC-benefit-proper-subset-real-tree: over the real derived set (size $DERIVED_COUNT), a delta consisting of exactly one derived subject's own path selects a PROPER subset of the derived set — or, when the derived set has a single member, exactly that member" \
     "[ '$PROPER_SUBSET_OK' -eq 1 ]"
 else
   assert_true "AC-benefit-empty-delta-real-tree / AC-benefit-proper-subset-real-tree: real-tree scratch clone available" "false"

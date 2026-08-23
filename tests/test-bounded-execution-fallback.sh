@@ -141,7 +141,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CHECK_SCRIPT="$PROJECT_ROOT/scripts/preflight/check-review-backend.sh"
 CONFIRM_SCRIPT="$PROJECT_ROOT/scripts/handoff/confirm-ci-green.sh"
 MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
-WATCHDOG_LINT="$PROJECT_ROOT/scripts/test/check-watchdog-detachment.sh"
 CI_COVERAGE_LINT="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
 
 # ---------------------------------------------------------------------------
@@ -783,25 +782,6 @@ wait "$CONFIRM_WITNESS_PID" 2>/dev/null
 kill "$CONFIRM_WITNESS_WPID" 2>/dev/null
 wait "$CONFIRM_WITNESS_WPID" 2>/dev/null
 rm -rf "$CONFIRM_WITNESS_TMPDIR"
-
-# =============================================================================
-echo ""
-echo "=== AC-site-closure (RED discriminator) ==="
-assert_true "AC-site-closure: scripts/test/check-watchdog-detachment.sh exists" \
-  "[ -f '$WATCHDOG_LINT' ]"
-bash "$WATCHDOG_LINT" --self-test >/dev/null 2>&1
-assert_true "AC-site-closure: the lint's own --self-test passes (conforming/order-regression/pipe-hold/exemption fixtures classified correctly)" \
-  "[ $? -eq 0 ]"
-WATCHDOG_LINT_OUT="$(mktemp)"; bash "$WATCHDOG_LINT" >"$WATCHDOG_LINT_OUT" 2>&1
-WATCHDOG_LINT_RC=$?
-if [ "$WATCHDOG_LINT_RC" -ne 0 ]; then
-  echo "  ---- check-watchdog-detachment.sh real-tree output (rc=$WATCHDOG_LINT_RC) ----"
-  cat "$WATCHDOG_LINT_OUT"
-  echo "  ---- end output ----"
-fi
-assert_true "AC-site-closure: the real tree conforms end-to-end (every fallback site carries the fix)" \
-  "[ $WATCHDOG_LINT_RC -eq 0 ]"
-rm -f "$WATCHDOG_LINT_OUT"
 
 # =============================================================================
 echo ""

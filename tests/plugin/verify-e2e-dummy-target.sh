@@ -16,10 +16,9 @@
 #
 # This suite COMPOSES, it does not duplicate: install/manifest/drift/
 # host-purity unit-level assertions stay owned by
-# tests/plugin/verify-install-into-target.sh and
-# tests/test-issue-788-host-purity-delta.sh, each of which CI runs under its own
+# tests/plugin/verify-install-into-target.sh, which CI runs under its own
 # registered step (the whole-suite re-runs this file once carried are retired --
-# issue #103; docs/doc-invariant-registry.md 12.1). This suite's own new
+# issue #103). This suite's own new
 # assertions are the composition-only
 # surface — the realistic fixture, non-destructive install into pre-existing
 # content, installed-fs manifest/drift parity, and the gate-hook scores-branch
@@ -53,7 +52,6 @@
 #           without a ratchet-down edit) -- ledger E15, supersedes the
 #           absolute zero-hit scan pending epic #785 S11a/S11b
 #     E2b   this suite's own fixture-generator paths are not host-purity-scanned
-#     E-Rc  tests/test-issue-788-host-purity-delta.sh whole-suite exits 0
 #
 #   W-E3 manifest & drift composition (boundary of items 5/6):
 #     E3a   every kind:copy manifest dest exists on disk in the installed target
@@ -142,7 +140,6 @@ E2A_BASELINE="$REPO_ROOT/tests/fixtures/e2e-bundle-purity-baseline.txt"
 CREATE_HOST_PR="$REPO_ROOT/scripts/handoff/create-host-pr.sh"
 VERIFY_INSTALL="$REPO_ROOT/tests/plugin/verify-install-into-target.sh"
 VERIFY_PACKAGE="$REPO_ROOT/tests/plugin/verify-package.sh"
-HOST_PURITY_SUITE="$REPO_ROOT/tests/test-issue-788-host-purity-delta.sh"
 MANUAL_SCENARIOS="$REPO_ROOT/tests/plugin/manual-scenarios-797.md"
 SELF_PATH_REL="tests/plugin/verify-e2e-dummy-target.sh"
 IMPORT_LINE='@./.claude/autoflow/METHODOLOGY.md'
@@ -498,18 +495,6 @@ if [ -f "$HOST_PURITY_PATHS" ]; then
   fi
 else
   failc "E2b" "S2/#788" "host-purity-paths.txt missing at $HOST_PURITY_PATHS"
-fi
-
-echo "== E-Rc: tests/test-issue-788-host-purity-delta.sh is present =="
-# The whole-suite re-run is retired (issue #103): that suite carries its own
-# registered `run:` step in host-purity-delta.yml, so a regression in it reds CI
-# under its own name once rather than twice. The presence half stays — this file
-# asserts its own classification against that suite's config scope above.
-# Disposition row: docs/doc-invariant-registry.md §12.1.
-if [ -f "$HOST_PURITY_SUITE" ]; then
-  pass "E-Rc: host-purity DELTA-guard suite is present at $HOST_PURITY_SUITE"
-else
-  failc "E-Rc" "S2/#788" "tests/test-issue-788-host-purity-delta.sh missing at $HOST_PURITY_SUITE"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════

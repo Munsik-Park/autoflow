@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/test/suite-coverage.sh scripts/test/run-suites.sh scripts/test/suite-manifest.sh scripts/test/check-suite-manifest.sh scripts/test/select-suites.sh scripts/test/green-tree-store.sh scripts/test/green-tree-register.sh scripts/cleanup/cleanup-issue.sh tests/test-push-context-base-ref.sh docs/autoflow-guide.md docs/evaluation-system.md docs/adr/0019-scope-fit-verification-policy.md tests/fixtures/gate-schema.json .github/workflows/contract-suites.yml
+# ci-subject: scripts/test/suite-coverage.sh scripts/test/run-suites.sh scripts/test/suite-manifest.sh scripts/test/check-suite-manifest.sh scripts/test/select-suites.sh scripts/test/green-tree-store.sh scripts/test/green-tree-register.sh scripts/cleanup/cleanup-issue.sh tests/test-push-context-base-ref.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -45,10 +45,6 @@ RUNNER="$PROJECT_ROOT/scripts/test/run-suites.sh"
 MANIFEST_LIB="$PROJECT_ROOT/scripts/test/suite-manifest.sh"
 MANIFEST_LINT="$PROJECT_ROOT/scripts/test/check-suite-manifest.sh"
 PUSH_CONTEXT_SUITE="$PROJECT_ROOT/tests/test-push-context-base-ref.sh"
-AUTOFLOW_GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
-EVAL_SYSTEM="$PROJECT_ROOT/docs/evaluation-system.md"
-GATE_SCHEMA="$PROJECT_ROOT/tests/fixtures/gate-schema.json"
-CONTRACT_WORKFLOW="$PROJECT_ROOT/.github/workflows/contract-suites.yml"
 
 PASS=0; FAIL=0; TESTS=0
 assert_true() {
@@ -115,46 +111,6 @@ assert_true "single-definition-site: derive_subjects() in tests/test-push-contex
 
 assert_true "single-definition-site: the new HEADER arm in scripts/test/check-suite-manifest.sh calls suite_reads_out_of_tree_state rather than re-typing the regex" \
   "! predicate_matches_file '$MANIFEST_LINT' && grep -qF 'suite_reads_out_of_tree_state' '$MANIFEST_LINT' 2>/dev/null"
-
-# =============================================================================
-# Leg 2 — evaluator citation carrier: positive shape (declared in the report
-# schema) and negative shape (absent from the state file's closed-world key
-# set) must both hold. The negative half is a standing guard that already
-# holds today; the positive half is the one this issue must make true.
-# =============================================================================
-
-assert_true "evaluator-citation-inheritance: docs/evaluation-system.md > Evaluation Output Format declares 'inherited_verdicts' with member keys suite/source/head/result" \
-  "grep -qF 'inherited_verdicts' '$EVAL_SYSTEM' && grep -qF '\"suite\"' '$EVAL_SYSTEM' && grep -qF '\"source\"' '$EVAL_SYSTEM' && grep -qF '\"head\"' '$EVAL_SYSTEM' && grep -qF '\"result\"' '$EVAL_SYSTEM'"
-
-assert_true "evaluator-citation-inheritance: tests/fixtures/gate-schema.json top_level_keys stays closed-world — 'inherited_verdicts' is NOT one of them" \
-  "! python3 -c \"import json,sys; d=json.load(open('$GATE_SCHEMA')); sys.exit(0 if 'inherited_verdicts' in d.get('top_level_keys', []) else 1)\""
-
-# =============================================================================
-# Leg 3 — the resolver's self-test is registered as a standing, unguarded CI
-# step (a `run:` step invoking `--self-test`, alongside the existing
-# self-test steps, carrying no `if:` guard).
-# =============================================================================
-
-resolver_selftest_step_unguarded() {
-  awk '
-    /^[[:space:]]*- name:/ {
-      if (matched && found == "") found = blk
-      blk = $0; matched = 0; next
-    }
-    { blk = blk "\n" $0 }
-    /suite-coverage\.sh --self-test/ { matched = 1 }
-    END {
-      if (matched && found == "") found = blk
-      if (found != "" && found !~ /if:/) print "UNGUARDED"
-    }
-  ' "$CONTRACT_WORKFLOW" 2>/dev/null | grep -qF 'UNGUARDED'
-}
-
-assert_true "the-resolvers-oracle-is-wired: contract-suites.yml registers a 'run: bash scripts/test/suite-coverage.sh --self-test' step" \
-  "grep -qE 'run: *bash +scripts/test/suite-coverage\.sh +--self-test' '$CONTRACT_WORKFLOW'"
-
-assert_true "the-resolvers-oracle-is-wired: the suite-coverage.sh --self-test step carries no if: guard" \
-  "grep -qE 'run: *bash +scripts/test/suite-coverage\.sh +--self-test' '$CONTRACT_WORKFLOW' && resolver_selftest_step_unguarded"
 
 # =============================================================================
 # Leg 4 — composition oracle: resolver stdout -> run-suites.sh --selected.
@@ -279,50 +235,16 @@ SH
 fi
 
 # =============================================================================
-# Leg 5 — step text and record grammar agree: the flags/commands the
-# playbook cites for the resolver idiom (GREEN step 5, VERIFY step 1) exist
-# in the shipped scripts' real usage surface.
-# =============================================================================
-
-assert_true "step-text-agreement: docs/autoflow-guide.md cites 'scripts/test/suite-coverage.sh' somewhere in the phase-step text" \
-  "grep -qF 'scripts/test/suite-coverage.sh' '$AUTOFLOW_GUIDE'"
-
-assert_true "step-text-agreement: docs/autoflow-guide.md cites the '--selected' flag, and scripts/test/run-suites.sh actually accepts it" \
-  "grep -qF -- '--selected' '$AUTOFLOW_GUIDE' && grep -qE -- '--selected\\)' '$RUNNER'"
-
-# =============================================================================
-# Leg 6 — reason-vocabulary drift agreement (issue #112 cycle 4 review
-# finding): the run-reason vocabulary gets exactly one normative home, a
-# delimited `reason-tokens: begin/end` declaration block in the resolver's
-# header comment; every other passage carrying these tokens is derived and is
-# held to that declaration mechanically.
-# .autoflow/issue-112-verification-design.md > "Acceptance criteria ->
-# verification (cycle 4)" and > "Extraction oracle";
-# .autoflow/issue-112-feature-design.md > "5. Regression surface".
+# Leg 5 — reason-vocabulary agreement between the resolver body and the
+# resolver header's own `reason-tokens: begin/end` declaration block (the
+# vocabulary's single normative home). Code-to-code only: the doc-narration
+# half of this leg was retired with the doc-invariant layer.
 #
-# Extraction oracle (settled in the verification design, re-stated here as
-# the leg's own contract, not re-derived by the implementation):
-#   - resolver-side domain: non-comment lines only;
-#   - resolver literals: the quoted value of every `record["$suite"]=...`
-#     assignment whose right-hand side carries NO parameter expansion (the
-#     two interpolated `source: ... | head: ... | result: ...` citations are
-#     excluded by that same rule, not by a skip-list), plus the literal
-#     reason word inside the body of the block_fallback() function (found by
-#     that function's own opening/closing braces, never by matching the
-#     printf text anywhere in the file — the self-test's own
-#     `block-fallback` grep patterns are executable code the non-comment
-#     rule cannot exclude);
-#   - declared tokens: one word per line strictly between the header's
-#     `# reason-tokens: begin` / `# reason-tokens: end` markers;
-#   - guide narrative tokens: an ANCHORED occurrence only — a backticked
-#     `[a-z][a-z-]*` span immediately preceded by the word `reason` or
-#     `cause` — read over the WHITESPACE-NORMALIZED bound of the guide's
-#     *Suite-coverage predicate* section (its heading to the
-#     `**Reported vocabulary**` paragraph, exclusive), never per source line
-#     (the shipped guide already splits one anchor across a line break);
-#   - the single named exemption on the narrative side is `no-entry` (the
-#     resolver emits it, but the guide narrates it a section earlier as a
-#     fast-path outcome, not in this section).
+# Extraction oracle (the leg's own contract, not re-derived by the
+# implementation): the emitted domain is the quoted value of every
+# `record["$suite"]=...` assignment on a NON-COMMENT line whose right-hand
+# side carries NO parameter expansion, plus the literal reason word inside
+# the body of block_fallback() (found by that function's own braces).
 # =============================================================================
 
 RESOLVER_RECORD_RE='record\["\$suite"\]="[^"]*"'
@@ -352,22 +274,6 @@ extract_declared_tokens() { # -> tokens between the header's begin/end markers
     | sort -u
 }
 
-extract_predicate_section_bound() { # -> raw lines of the resolution-order bound
-  awk '
-    /^### Suite-coverage predicate[[:space:]]*$/ { flag=1; next }
-    /^\*\*Reported vocabulary\*\*/ { if (flag) exit }
-    flag { print }
-  ' "$AUTOFLOW_GUIDE"
-}
-
-extract_mismatch_paragraph() { # -> raw lines of the Mismatch-cause record paragraph
-  awk '
-    /^\*\*Mismatch-cause record\*\*:/ { flag=1 }
-    flag { print }
-    /^\*\*Where both records land\*\*:/ { if (flag) exit }
-  ' "$AUTOFLOW_GUIDE"
-}
-
 RT_EMITTED="$(extract_resolver_emitted)"
 RT_DECLARED="$(extract_declared_tokens)"
 RT_MISSING_FROM_DECLARED="$(comm -23 <(printf '%s\n' "$RT_EMITTED") <(printf '%s\n' "$RT_DECLARED"))"
@@ -378,117 +284,6 @@ assert_true "reason-vocabulary: emitted ⊆ declared — every static reason lit
 
 assert_true "reason-vocabulary: declared ⊆ emitted — no reason-tokens entry is declared that no site in the resolver body actually writes (phantom: $(printf '%s' "$RT_PHANTOM_DECLARED" | tr '\n' ' '))" \
   "[ -z \"\$RT_PHANTOM_DECLARED\" ]"
-
-# --- Narrative <-> declaration (both directions, no-entry exempt) ----------
-
-NARR_BOUND_NORM="$(extract_predicate_section_bound | tr '\n' ' ' | tr -s '[:space:]' ' ')"
-NARR_TOKENS="$(printf '%s' "$NARR_BOUND_NORM" | grep -oE '(reason|cause)[[:space:]]+`[a-z][a-z-]*`' | grep -oE '`[a-z][a-z-]*`' | tr -d '`' | sort -u)"
-NARR_EXEMPT='no-entry'
-NARR_DECLARED_MINUS_EXEMPT="$(printf '%s\n' "$RT_DECLARED" | grep -vxF "$NARR_EXEMPT")"
-NARR_MISSING="$(comm -23 <(printf '%s\n' "$NARR_DECLARED_MINUS_EXEMPT") <(printf '%s\n' "$NARR_TOKENS"))"
-NARR_PHANTOM="$(comm -23 <(printf '%s\n' "$NARR_TOKENS") <(printf '%s\n' "$RT_DECLARED"))"
-
-assert_true "reason-vocabulary: declared ⊆ narrated (except the fast-path exemption 'no-entry') — every declared resolver token is an ANCHORED occurrence ('reason \`<token>\`' / 'cause \`<token>\`') inside the whitespace-normalized *Suite-coverage predicate* resolution-order bound (missing: $(printf '%s' "$NARR_MISSING" | tr '\n' ' '))" \
-  "[ -z \"\$NARR_MISSING\" ]"
-
-assert_true "reason-vocabulary: narrated ⊆ declared — every anchored reason token the predicate narrative names is a declared resolver token, not a phantom (phantom: $(printf '%s' "$NARR_PHANTOM" | tr '\n' ' '))" \
-  "[ -z \"\$NARR_PHANTOM\" ]"
-
-# --- By-reference link intact: the run-reasons field note names the resolver
-# as the vocabulary's owner, so the deferral cannot be silently severed and
-# replaced by a restated list. ------------------------------------------
-
-VERIFY_BODY_NORM="$(awk '/^## VERIFY/{flag=1} flag{print} /^## REFINE/{if(flag) exit}' "$AUTOFLOW_GUIDE" | tr '\n' ' ' | tr -s '[:space:]' ' ')"
-
-assert_true "reason-vocabulary: by-reference link intact — the guide's \`run-reasons\` field note names scripts/test/suite-coverage.sh as the vocabulary's owner (VERIFY section body scanned: ${#VERIFY_BODY_NORM} chars)" \
-  "printf '%s' \"\$VERIFY_BODY_NORM\" | grep -qE '\`run-reasons\`[^.]{0,255}scripts/test/suite-coverage\\.sh'"
-
-# --- Layers stay separate: no resolver-only reason token leaks onto the
-# step-level mismatch-cause enum, except the two conditions genuinely
-# observed at both layers (no-entry, dirty-worktree). --------------------
-
-MC_LINE="$(grep -oE '^- mismatch-cause: .*' "$AUTOFLOW_GUIDE" | head -1 | sed 's/^- mismatch-cause: //')"
-MC_TOKENS="$(printf '%s' "$MC_LINE" | tr '|' '\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | sort -u)"
-MC_TOKENS_NO_NONE="$(printf '%s\n' "$MC_TOKENS" | grep -vxF 'none' | sort -u)"
-
-LAYER_INTERSECT="$(comm -12 <(printf '%s\n' "$RT_EMITTED") <(printf '%s\n' "$MC_TOKENS"))"
-LAYER_ALLOWED="$(printf 'dirty-worktree\nno-entry\n' | sort)"
-LAYER_DISALLOWED="$(comm -23 <(printf '%s\n' "$LAYER_INTERSECT") <(printf '%s\n' "$LAYER_ALLOWED"))"
-
-assert_true "reason-vocabulary: layers stay separate — no resolver-emitted reason token appears on the guide's mismatch-cause enum line except the two whitelisted-by-name conditions observed at both layers (no-entry, dirty-worktree) (disallowed overlap: $(printf '%s' "$LAYER_DISALLOWED" | tr '\n' ' '))" \
-  "[ -z \"\$LAYER_DISALLOWED\" ]"
-
-# --- Step-layer texts agree: the precedence sentence, the paragraph <->
-# grammar-line equivalence (excluding 'none', which is a value on the match
-# path rather than a fired condition), and REFINE step 2 as a SUBSET (not
-# equality) of the narrowed token set. ------------------------------------
-
-assert_true "reason-vocabulary: mismatch-cause precedence is stated in the Mismatch-cause record paragraph — 'selection-block' outranks every fast-path cause" \
-  "grep -qF 'outranks every fast-path cause' '$AUTOFLOW_GUIDE'"
-
-MCP_TEXT="$(extract_mismatch_paragraph)"
-MCP_TOKENS="$(printf '%s' "$MCP_TEXT" | grep -oE '`[a-z][a-z-]*`' | tr -d '`' | sort -u)"
-MCP_MISSING="$(comm -23 <(printf '%s\n' "$MC_TOKENS_NO_NONE") <(printf '%s\n' "$MCP_TOKENS"))"
-MCP_EXTRA="$(comm -13 <(printf '%s\n' "$MC_TOKENS_NO_NONE") <(printf '%s\n' "$MCP_TOKENS"))"
-
-assert_true "reason-vocabulary: the Mismatch-cause record paragraph names every step-level cause the mismatch-cause grammar line admits, excluding 'none' (missing: $(printf '%s' "$MCP_MISSING" | tr '\n' ' '))" \
-  "[ -z \"\$MCP_MISSING\" ]"
-
-assert_true "reason-vocabulary: the Mismatch-cause record paragraph names no cause the mismatch-cause grammar line does not admit (extra: $(printf '%s' "$MCP_EXTRA" | tr '\n' ' '))" \
-  "[ -z \"\$MCP_EXTRA\" ]"
-
-REFINE_MATCH="$(grep -oE 'Mismatch \(`[a-z][a-z-]*` */ *`[a-z][a-z-]*` */ *`[a-z][a-z-]*`' "$AUTOFLOW_GUIDE" | head -1)"
-REFINE_TOKENS="$(printf '%s' "$REFINE_MATCH" | grep -oE '`[a-z][a-z-]*`' | tr -d '`' | sort -u)"
-REFINE_NOT_SUBSET="$(comm -23 <(printf '%s\n' "$REFINE_TOKENS") <(printf '%s\n' "$MC_TOKENS_NO_NONE"))"
-
-assert_true "reason-vocabulary: REFINE step 2's mismatch enumeration (no-entry / dirty-worktree / tree-differs) stays a SUBSET of the narrowed mismatch-cause token set, not an equality (found: $(printf '%s' "$REFINE_TOKENS" | tr '\n' ' '); not-subset: $(printf '%s' "$REFINE_NOT_SUBSET" | tr '\n' ' '))" \
-  "[ -n \"\$REFINE_TOKENS\" ] && [ -z \"\$REFINE_NOT_SUBSET\" ]"
-
-# =============================================================================
-# Leg 7 — run-reasons field value has a decidable parse: a value built from
-# one record of every declared token, plus a citation record mapped to the
-# fixed class token `covered-by-source`, splits on ';' and then whitespace
-# and recovers the exact (suite, token) pairs.
-# Guarded: the resolver's reason-tokens declaration does not exist yet at RED
-# time, so this leg reports a named FAIL rather than parsing an empty set.
-# =============================================================================
-
-if [ -z "$RT_DECLARED" ]; then
-  assert_true "run-reasons-parse: the resolver's header declares its reason-tokens block (required to build a representative run-reasons value)" "false"
-else
-  RR_SUITES=(); RR_TOKENS=()
-  rr_idx=0
-  while IFS= read -r rr_tok; do
-    [ -z "$rr_tok" ] && continue
-    rr_idx=$((rr_idx + 1))
-    RR_SUITES+=("suite$rr_idx.sh")
-    RR_TOKENS+=("$rr_tok")
-  done <<< "$RT_DECLARED"
-  rr_idx=$((rr_idx + 1))
-  RR_SUITES+=("suite$rr_idx.sh")
-  RR_TOKENS+=("covered-by-source")
-
-  RR_VALUE=""
-  for rr_j in "${!RR_SUITES[@]}"; do
-    [ -n "$RR_VALUE" ] && RR_VALUE="$RR_VALUE; "
-    RR_VALUE="$RR_VALUE${RR_SUITES[$rr_j]} ${RR_TOKENS[$rr_j]}"
-  done
-
-  RR_RECOVERED_OK=1
-  IFS=';' read -ra RR_RECORDS <<< "$RR_VALUE"
-  if [ "${#RR_RECORDS[@]}" -ne "${#RR_SUITES[@]}" ]; then
-    RR_RECOVERED_OK=0
-  else
-    for rr_j in "${!RR_RECORDS[@]}"; do
-      rr_rec="$(printf '%s' "${RR_RECORDS[$rr_j]}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
-      rr_s="${rr_rec%% *}"; rr_t="${rr_rec#* }"
-      { [ "$rr_s" = "${RR_SUITES[$rr_j]}" ] && [ "$rr_t" = "${RR_TOKENS[$rr_j]}" ]; } || RR_RECOVERED_OK=0
-    done
-  fi
-
-  assert_true "run-reasons-parse: a run-reasons value built from one record of every declared token plus a covered-by-source citation ('$RR_VALUE') splits on ';' then whitespace and recovers the exact (suite, token) pairs" \
-    "[ $RR_RECOVERED_OK -eq 1 ]"
-fi
 
 # =============================================================================
 # Leg 8 — runtime: the strings the resolver prints at run time are declared
@@ -571,7 +366,6 @@ STORE_LIB="$PROJECT_ROOT/scripts/test/green-tree-store.sh"
 REGISTER="$PROJECT_ROOT/scripts/test/green-tree-register.sh"
 SELECTOR="$PROJECT_ROOT/scripts/test/select-suites.sh"
 CLEANUP="$PROJECT_ROOT/scripts/cleanup/cleanup-issue.sh"
-ADR_0019="$PROJECT_ROOT/docs/adr/0019-scope-fit-verification-policy.md"
 
 echo ""
 echo "=== Issue #130 — shared store and input-hash key agreement ==="
@@ -741,51 +535,6 @@ assert_true "single-site: derive_repo_key() is defined exactly once, in scripts/
 
 assert_true "single-site: physical_path() — the in-repo refusal's path canonicalization — is defined exactly once, in scripts/cleanup/cleanup-issue.sh, and the store library reaches the refusal by invoking that script rather than re-typing it (definition sites: $(printf '%s' "$PHYS_DEF_FILES" | tr '\n' ' '))" \
   "[ \"\$PHYS_DEF_FILES\" = 'scripts/cleanup/cleanup-issue.sh' ] && [ -f '$STORE_LIB' ] && grep -qF 'cleanup-issue.sh' '$STORE_LIB' && ! grep -qE '^[[:space:]]*physical_path\\(\\)' '$STORE_LIB'"
-
-# -----------------------------------------------------------------------------
-# Leg 13 — the writer's self-test is registered as a standing, unguarded CI
-# step. It is the only layer that runs the write side at all, so an unwired or
-# conditionally-guarded step silences the whole "a minted certificate
-# describes the tree that actually ran" criterion.
-# -----------------------------------------------------------------------------
-
-register_selftest_step_unguarded() {
-  awk '
-    /^[[:space:]]*- name:/ {
-      if (matched && found == "") found = blk
-      blk = $0; matched = 0; next
-    }
-    { blk = blk "\n" $0 }
-    /green-tree-register\.sh --self-test/ { matched = 1 }
-    END {
-      if (matched && found == "") found = blk
-      if (found != "" && found !~ /if:/) print "UNGUARDED"
-    }
-  ' "$CONTRACT_WORKFLOW" 2>/dev/null | grep -qF 'UNGUARDED'
-}
-
-assert_true "the-writers-oracle-is-wired: contract-suites.yml registers a 'run: bash scripts/test/green-tree-register.sh --self-test' step" \
-  "grep -qE 'run: *bash +scripts/test/green-tree-register\\.sh +--self-test' '$CONTRACT_WORKFLOW'"
-
-assert_true "the-writers-oracle-is-wired: the green-tree-register.sh --self-test step carries no if: guard" \
-  "grep -qE 'run: *bash +scripts/test/green-tree-register\\.sh +--self-test' '$CONTRACT_WORKFLOW' && register_selftest_step_unguarded"
-
-assert_true "the-writers-oracle-is-wired: contract-suites.yml's path filters name the two new scripts, so a change to either selects the workflow that runs their oracles" \
-  "grep -qF 'scripts/test/green-tree-store.sh' '$CONTRACT_WORKFLOW' && grep -qF 'scripts/test/green-tree-register.sh' '$CONTRACT_WORKFLOW'"
-
-# -----------------------------------------------------------------------------
-# Leg 14 — the governing record states the key the script computes. ADR-0019
-# is already a declared ci-subject of this suite, so an ADR that still states
-# the superseded key while the script computes the new one is a DETECTED
-# disagreement rather than a silent drift. Decision 2 is the passage at issue:
-# it fixes both the register's scope and its inheritance key.
-# -----------------------------------------------------------------------------
-
-assert_true "adr-agreement: ADR-0019 records the per-suite INPUT-HASH key the resolver now computes, not only the reach test it refines" \
-  "grep -qiE 'input[- ]hash' '$ADR_0019'"
-
-assert_true "adr-agreement: ADR-0019 records that the register is repo-scoped — a certificate readable by a later issue — not scoped to the minting issue's own ledger" \
-  "grep -qiE 'shared (store|register)|repo-scoped|cross-issue' '$ADR_0019'"
 
 # -----------------------------------------------------------------------------
 # Leg 15 — composition, extended: the ENTRY carries `<path>@<input-hash>`

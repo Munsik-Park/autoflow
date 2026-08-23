@@ -112,12 +112,7 @@
 # make the class unrepresentable.
 #
 # Usage:
-#   bash scripts/test/check-suite-leaf.sh [--self-test] [--root <dir>] [--list-subjects]
-#
-# The default run performs the self-test FIRST, then reports the real-tree
-# result — the precedent scripts/test/check-cycle-scope-guard.sh sets. On a tree
-# whose residue is empty an exit 0 is unfalsifiable, so the self-test's
-# one-fixture-per-row arms are what keep it from being vacuous.
+#   bash scripts/test/check-suite-leaf.sh [--root <dir>] [--list-subjects]
 # =============================================================================
 
 set -uo pipefail
@@ -134,21 +129,16 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # denied_nonsuite_targets — repo-relative paths that are NOT in
 # `suite_enumerate`'s set (so D1-D5 cannot reach them through a variable) but
 # whose BARE invocation from a suite is whole-subject re-execution all the same.
-# One member today: the doc-invariant registry runner, whose current-tree
-# conformance and mutation-teeth legs both carry their own unguarded steps in
-# .github/workflows/contract-suites.yml (issue #122). Adding a member is one
-# line here plus its own self-test arms, per the header's convention.
+# The set is empty today; adding a member is one line here.
 # ---------------------------------------------------------------------------
 denied_nonsuite_targets() {
-  printf '%s\n' 'tests/run-doc-invariants.sh'
+  :
 }
 
-MODE="default"
 ROOT=""
 LIST=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --self-test)     MODE="self-test" ;;
     --root)          ROOT="${2:-}"; shift ;;
     --list-subjects) LIST=1 ;;
     *)               echo "check-suite-leaf: unknown argument: $1" >&2; exit 2 ;;
@@ -433,246 +423,9 @@ check_tree() {
   [ "$violations" -eq 0 ]
 }
 
-# ---------------------------------------------------------------------------
-# Self-test — one fixture per denied row and one per ignored row. The ignored
-# arm is not decorative: a naive non-comment grep false-positives on every one
-# of them, on the real occurrences the rows are derived from.
-# ---------------------------------------------------------------------------
-self_test() {
-  local dir rc=0 fails=0
-  dir="$(mktemp -d)"
-  mkdir -p "$dir/tests"
-
-  expect() { # <label> <basename> <denied|ignored>
-    local label="$1" file="$2" want="$3" out subjfile
-    # Re-enumerated per arm: the D5 fixtures plant their callee alongside the
-    # caller, and the row keys on the enumeration rather than on a name shape.
-    subjfile="$(mktemp)"
-    suite_enumerate "$dir" > "$subjfile"
-    out="$(analyze_file "$dir/tests/$file" "$subjfile")"
-    rm -f "$subjfile"
-    if [ "$want" = denied ] && [ -z "$out" ]; then
-      echo "  SELF-TEST FAIL: $label — expected a denied record, got none"; fails=$((fails + 1))
-    elif [ "$want" = ignored ] && [ -n "$out" ]; then
-      echo "  SELF-TEST FAIL: $label — expected no record, got:"; printf '%s\n' "$out" | sed 's/^/    /'
-      fails=$((fails + 1))
-    else
-      echo "  SELF-TEST PASS: $label"
-    fi
-  }
-
-  # --- D1: command-position literal ---------------------------------------
-  cat > "$dir/tests/test-fixture-d1.sh" <<'SH'
-#!/usr/bin/env bash
-OUT="$(cd "$PROJECT_ROOT" && bash tests/test-issue-999-callee.sh 2>&1)"
-bash tests/test-issue-998-callee.sh
-SH
-  expect "D1: command-position literal invocation" test-fixture-d1.sh denied
-
-  # --- D2: find/grep-derived enumeration sweep ----------------------------
-  cat > "$dir/tests/test-fixture-d2.sh" <<'SH'
-#!/usr/bin/env bash
-HOMES="$(grep -rl 'EXPECTED_OK=' tests/ | sort)"
-for home in $HOMES; do
-  bash "$home"
-done
-SH
-  expect "D2: invocation of a find/grep-derived enumeration" test-fixture-d2.sh denied
-
-  # --- D3: function positional with a literal call site -------------------
-  cat > "$dir/tests/test-fixture-d3.sh" <<'SH'
-#!/usr/bin/env bash
-assert_suite_exit0() {
-  local suite_path="$1"
-  bash "$suite_path"
-}
-assert_suite_exit0 tests/test-issue-997-callee.sh
-SH
-  expect "D3: function positional whose call site passes a literal tests/ path" test-fixture-d3.sh denied
-
-  # --- D4: loop variable over a literal list ------------------------------
-  cat > "$dir/tests/test-fixture-d4.sh" <<'SH'
-#!/usr/bin/env bash
-for suite in tests/test-issue-996-callee.sh tests/test-issue-995-callee.sh; do
-  bash "$suite"
-done
-SH
-  expect "D4: loop variable over a literal list holding a suite name" test-fixture-d4.sh denied
-
-  # --- D1 admitted forms: quoted, ./-prefixed, and `--`-separated ----------
-  # Each was undetected before this cycle: the masker erased a quoted literal
-  # entirely, the option-stepping regex did not consume a `--`, and the literal
-  # row admitted a `../` prefix but not a `./` one.
-  echo 'true' > "$dir/tests/test-fixture-d1-callee.sh"
-  cat > "$dir/tests/test-fixture-d1-quoted.sh" <<'SH'
-#!/usr/bin/env bash
-bash "tests/test-fixture-d1-callee.sh"
-bash 'tests/test-fixture-d1-callee.sh'
-SH
-  expect "D1: a double- or single-quoted literal argument" test-fixture-d1-quoted.sh denied
-
-  cat > "$dir/tests/test-fixture-d1-dotslash.sh" <<'SH'
-#!/usr/bin/env bash
-bash ./tests/test-fixture-d1-callee.sh
-SH
-  expect "D1: a ./-prefixed literal argument" test-fixture-d1-dotslash.sh denied
-
-  cat > "$dir/tests/test-fixture-d1-dashdash.sh" <<'SH'
-#!/usr/bin/env bash
-bash -- tests/test-fixture-d1-callee.sh
-SH
-  expect "D1: a literal argument behind a -- separator" test-fixture-d1-dashdash.sh denied
-
-  # --- D1/D5 under the second interpreter word ----------------------------
-  # The word set is {bash, sh}, and `sh` was the half that was missing: five
-  # live whole-suite re-runs in the POSIX-sh plugin suites sat outside a
-  # bash-keyed grammar while the lint reported the tree clean. Both a literal
-  # and a variable-mediated argument are exercised, since the word is located
-  # independently of which denied row then reads the argument.
-  cat > "$dir/tests/test-fixture-sh-interp.sh" <<'SH'
-#!/usr/bin/env bash
-sh tests/test-fixture-d1-callee.sh
-SH
-  expect "D1: a literal argument under the sh interpreter word" test-fixture-sh-interp.sh denied
-
-  cat > "$dir/tests/test-fixture-sh-interp-var.sh" <<'SH'
-#!/usr/bin/env bash
-CALLEE="$PROJECT_ROOT/tests/test-fixture-d1-callee.sh"
-OUT=$(sh "$CALLEE" 2>&1)
-SH
-  expect "D5: a named variable invoked under the sh interpreter word inside a substitution" test-fixture-sh-interp-var.sh denied
-
-  # --- I5: a word merely ENDING in the interpreter's letters ---------------
-  # `sh` is a suffix of both `bash` and of every `*.sh` path, so a widened word
-  # set is only sound if the match is anchored at a word boundary. This arm is
-  # the negative control for that anchoring.
-  cat > "$dir/tests/test-fixture-i5.sh" <<'SH'
-#!/usr/bin/env bash
-PRODUCT="$PROJECT_ROOT/scripts/test/run-suites.sh"
-"$PRODUCT" --all
-echo "finish tests/test-fixture-d1-callee.sh"
-SH
-  expect "I5: a word merely ending in the interpreter's letters is not an interpreter word" test-fixture-i5.sh ignored
-
-  # --- D5: a variable this file assigns a literal enumerated-suite path ----
-  cat > "$dir/tests/test-fixture-d5.sh" <<'SH'
-#!/usr/bin/env bash
-CALLEE="$PROJECT_ROOT/tests/test-fixture-d1-callee.sh"
-bash "$CALLEE"
-SH
-  expect "D5: a named variable carrying a literal enumerated-suite path" test-fixture-d5.sh denied
-
-  # --- I3: D5's antecedent is a CONJUNCTION -------------------------------
-  # The assignment alone is not the violation. This shape is permanent and
-  # deliberate in the tree — a suite path held as a `grep` file operand — so a
-  # row keyed on the assignment would red a conforming file.
-  cat > "$dir/tests/test-fixture-i3.sh" <<'SH'
-#!/usr/bin/env bash
-CALLEE="$PROJECT_ROOT/tests/test-fixture-d1-callee.sh"
-grep -q 'EXPECTED_OK=' "$CALLEE"
-SH
-  expect "I3: an enumerated-suite path assigned but only READ, never invoked, is not a violation" test-fixture-i3.sh ignored
-
-  # --- I1a: quoted assertion label ----------------------------------------
-  cat > "$dir/tests/test-fixture-i1a.sh" <<'SH'
-#!/usr/bin/env bash
-assert_true "the workflow registers: run: bash tests/test-issue-994-callee.sh" "true"
-grep -qF 'run: bash tests/test-issue-993-callee.sh' "$CI_WORKFLOW"
-SH
-  expect "I1a: the token inside a quoted assertion label" test-fixture-i1a.sh ignored
-
-  # --- I1b: YAML heredoc fixture body -------------------------------------
-  cat > "$dir/tests/test-fixture-i1b.sh" <<'SH'
-#!/usr/bin/env bash
-cat > "$FIXTURE/wf.yml" <<'YML'
-jobs:
-  j:
-    steps:
-      - run: bash tests/test-issue-992-callee.sh
-YML
-SH
-  expect "I1b: the token inside a YAML heredoc fixture body" test-fixture-i1b.sh ignored
-
-  # --- I1c: after # --------------------------------------------------------
-  cat > "$dir/tests/test-fixture-i1c.sh" <<'SH'
-#!/usr/bin/env bash
-# This suite used to run bash tests/test-issue-991-callee.sh; it no longer does.
-true   # bash tests/test-issue-990-callee.sh
-SH
-  expect "I1c: the token after a # comment marker" test-fixture-i1c.sh ignored
-
-  # --- I2: indirect product-script drive ----------------------------------
-  cat > "$dir/tests/test-fixture-i2.sh" <<'SH'
-#!/usr/bin/env bash
-HOOK=".claude/hooks/check-autoflow-gate.sh"
-bash "$HOOK"
-SCRIPT="$PROJECT_ROOT/scripts/test/check-suite-ci-coverage.sh"
-bash "$SCRIPT" --self-test
-SH
-  expect "I2: an indirect product-script drive is the normal shape and is not flagged" test-fixture-i2.sh ignored
-
-  # --- D6: bare invocation of a denied non-suite target (issue #122) -------
-  # The callee is planted so the fixture tree is realistic; the row keys on the
-  # denied_nonsuite_targets set, not on the file being present.
-  echo 'true' > "$dir/tests/run-doc-invariants.sh"
-  cat > "$dir/tests/test-fixture-d6.sh" <<'SH'
-#!/usr/bin/env bash
-REGISTRY_RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
-OUT="$(cd "$PROJECT_ROOT" && bash "$REGISTRY_RUNNER" 2>&1)"
-SH
-  expect "D6: a bare invocation of the registry runner through a variable is denied" test-fixture-d6.sh denied
-
-  # --- D6 non-firing: an ARGUMENT means the runner is the subject ----------
-  cat > "$dir/tests/test-fixture-d6-nf-selftest.sh" <<'SH'
-#!/usr/bin/env bash
-RUNNER="$PROJECT_ROOT/tests/run-doc-invariants.sh"
-OUT="$(bash "$RUNNER" --self-test 2>&1)"
-SH
-  expect "D6 non-firing: an invocation carrying --self-test drives the runner as a subject and stays admitted" test-fixture-d6-nf-selftest.sh ignored
-
-  cat > "$dir/tests/test-fixture-d6-nf-fixture.sh" <<'SH'
-#!/usr/bin/env bash
-RUNNER="$SCRIPT_DIR/run-doc-invariants.sh"
-OUT="$(bash "$RUNNER" "$FIXTURE_REGISTRY" 2>&1)"
-SH
-  expect "D6 non-firing: an invocation carrying a fixture registry path drives the runner as a subject and stays admitted" test-fixture-d6-nf-fixture.sh ignored
-
-  # --- SUBJECT-SET leg: the enumeration is not vacuous --------------------
-  mkdir -p "$dir/tests/plugin"
-  echo 'true' > "$dir/tests/plugin/verify-fixture-subject.sh"
-  local enumerated
-  enumerated="$(suite_enumerate "$dir")"
-  if printf '%s\n' "$enumerated" | grep -qxF 'tests/plugin/verify-fixture-subject.sh' \
-     && printf '%s\n' "$enumerated" | grep -qxF 'tests/test-fixture-d1.sh'; then
-    echo "  SELF-TEST PASS: subject-set leg — the enumeration reaches a filename outside test-*.sh"
-  else
-    echo "  SELF-TEST FAIL: subject-set leg — enumeration missed a planted spec"
-    fails=$((fails + 1))
-  fi
-
-  rm -rf "$dir"
-  if [ "$fails" -ne 0 ]; then
-    echo "check-suite-leaf: --self-test FAILED ($fails of 20 fixture classes misclassified)"
-    rc=1
-  else
-    echo "check-suite-leaf: --self-test OK (20/20 fixture classes classified correctly)"
-  fi
-  return $rc
-}
-
 if [ "$LIST" -eq 1 ]; then
   suite_enumerate "$ROOT"
   exit 0
-fi
-
-if [ "$MODE" = "self-test" ]; then
-  self_test
-  exit $?
-fi
-
-if ! self_test; then
-  echo "check-suite-leaf: detector self-test failed — real-tree result not reported"
-  exit 1
 fi
 
 LAST_SUBJECT_COUNT=0

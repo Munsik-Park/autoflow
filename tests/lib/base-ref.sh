@@ -5,14 +5,14 @@
 # Shared base-ref resolver — Issue #951 (AC4)
 # =============================================================================
 # One sourced function, `resolve_base_ref`, that resolves a comparison base
-# commit for a base-dependent (DELTA) doc-invariant guard and FAILS LOUD when
-# no base is resolvable — replacing the per-suite inline `merge-base HEAD main`
-# lines that silently `SKIP` on a CI checkout lacking a local `main`
+# commit for a base-dependent (DELTA) guard and FAILS LOUD when no base is
+# resolvable — replacing the per-suite inline `merge-base HEAD main` lines
+# that silently `SKIP` on a CI checkout lacking a local `main`
 # (Phase B cases 4/5).
 #
-# This is the doc-invariant lane's single definition site (ledger E9): the
-# runner and every future cycle-scoped doc-invariant RED suite source this
-# file instead of re-inlining `merge-base HEAD main`. It deliberately does
+# This is the base-resolution single definition site (ledger E9): every
+# base-dependent caller sources this file instead of re-inlining
+# `merge-base HEAD main`. It deliberately does
 # NOT unify scripts/test/check-host-purity-delta.sh, which keeps its own
 # established injectable --base/--head resolver (#788 precedent).
 #

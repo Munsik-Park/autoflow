@@ -13,14 +13,14 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "572050af970ab2f26a74c108b652fc68451e49e67c32da8c9ee07c823469e92b"
+      "sha256": "fb5fc377ec0f6531e96fd16ef7d66350c09aa819ffd8799ccb99c7baae10332f"
     },
     {
       "source": "docs/INDEX.md",
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7c6852d7d178f956dd870649369bf5385657cb6a225bf13feb7f32300db691b4"
+      "sha256": "aaf99be91a7b9735087c7e0663a2e16b9c5f0c76beca1c03efeca5a4c5fead34"
     },
     {
       "source": "docs/adr/0000-adr-template.md",
@@ -55,7 +55,7 @@
       "dest": ".claude/autoflow/docs/adr/0017-teammate-removal-feasibility.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d11e976c5ab0f9949e54987985caa5578a176f5083f0b934cfa7ad5f197e5ff6"
+      "sha256": "a39270a6c3dc423c466ff293a0df2a1bc0b8eb80b4564549d23fe8145b60c318"
     },
     {
       "source": "docs/adr/0018-verification-depth-justification.md",
@@ -83,14 +83,14 @@
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9910107784665b88c9e9a43101da19d6eb338e2b7b85e333219c86f01e6419c1"
+      "sha256": "32a7e83e2e9a96eb479b1dd4202b837a861b47777277bfa4cf4bd67e4067d2ea"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6028634b4846479ffdd97589cef32ebdfeeff4f70d14e7039dc614d23699625f"
+      "sha256": "bac4f826fd5b00d6c233500dd38b0de3e1ab4de9765543c228b76b74409bdce5"
     },
     {
       "source": "docs/design-rationale.md",
@@ -104,14 +104,7 @@
       "dest": ".claude/autoflow/docs/development-guideline.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5b507e9c4d40c87b662f2beef39a37fbc1fe9dea5be1cdbb6944988086b3cfc5"
-    },
-    {
-      "source": "docs/doc-invariant-registry.md",
-      "dest": ".claude/autoflow/docs/doc-invariant-registry.md",
-      "tier": "reference",
-      "kind": "copy",
-      "sha256": "b0cff5e392f0b1c01ec2ddd0b61798b477930eae2aad310d2f2ca7b6cd1e3193"
+      "sha256": "24c9639937e6259c6ddb891218647ae9bd27d9c0523176a5a505c767c8c458c0"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -149,18 +142,11 @@
       "sha256": "226c64f36bd1f0b0f5730d39d3bfcd7db7e1b1cd2997abd967efb40d99d1cc09"
     },
     {
-      "source": "docs/maintained-docs.md",
-      "dest": ".claude/autoflow/docs/maintained-docs.md",
-      "tier": "reference",
-      "kind": "copy",
-      "sha256": "8d4a824d7486668129d075f1e716981ce49312836fe49ffb2360a622419283d6"
-    },
-    {
       "source": "docs/phases/analysis.md",
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5e04419906f83cc18e0992dd6a08d0ffb7445bb9d06af1663a534a27c5f25018"
+      "sha256": "37fc24bb1ee77a332a7361e8ff8fb0f9fe861b4d2e1c77b206a63d463d5375de"
     },
     {
       "source": "docs/pr-body-guide.md",

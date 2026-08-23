@@ -19,7 +19,6 @@
 #              manifest naming both workflow source files
 #   AC3a/AC3b  CLAUDE_CODE_* env contract enumeration + census-subset keystone
 #   AC4a/AC4b  settings-pin artifact + marketplace no-skew + README-fence parity
-#   AC-Rg      docs/maintained-docs.md single-row registration
 #   AC5a       verify-package.sh is present (the whole-suite re-run is
 #              retired -- plugin-package.yml:93 runs it)
 #   AC5c       AC6d non-vacuity guard: static exactness + synthetic-pin arm
@@ -61,7 +60,6 @@ PIN="$REPO_ROOT/setup/thin-root-layer/settings-pin.json"
 TRLD="$REPO_ROOT/docs/thin-root-layer.md"
 MARKETPLACE="$REPO_ROOT/.claude-plugin/marketplace.json"
 PLUGIN_README="$REPO_ROOT/plugin/autoflow/README.md"
-MAINTAINED_DOCS="$REPO_ROOT/docs/maintained-docs.md"
 VERIFY_PACKAGE_SH="$REPO_ROOT/tests/plugin/verify-package.sh"
 IMPORT_LINE='@./.claude/autoflow/METHODOLOGY.md'
 
@@ -291,23 +289,6 @@ if [ -f "$PIN" ] && [ -f "$PLUGIN_README" ]; then
   fi
 else
   failc "AC4b" "settings-pin.json ($PIN) or README.md ($PLUGIN_README) missing"
-fi
-
-# ── AC-Rg: maintained-docs.md registration (state-based, single-row) ───────
-# Originally a one-time #791-cycle diff-vs-merge-base check (added_rows=1);
-# once the #791 PR merged, that diff is permanently empty on every later
-# branch, so the check is rewritten state-based: the thin-root-layer
-# registration row EXISTS at HEAD, exactly once (present, no duplicates).
-echo "== AC-Rg: docs/maintained-docs.md registration (state-based, single row at HEAD) =="
-if [ -f "$MAINTAINED_DOCS" ]; then
-  THIN_ROOT_ROWS=$(grep -cE '^\|.*thin-root-layer' "$MAINTAINED_DOCS")
-  if [ "$THIN_ROOT_ROWS" -eq 1 ]; then
-    pass "AC-Rg: exactly one thin-root-layer registration row present in docs/maintained-docs.md"
-  else
-    failc "AC-Rg" "expected exactly 1 thin-root-layer registration row in $MAINTAINED_DOCS; found $THIN_ROOT_ROWS"
-  fi
-else
-  failc "AC-Rg" "docs/maintained-docs.md missing at $MAINTAINED_DOCS"
 fi
 
 # ── AC5a: verify-package.sh is present ─────────────────────────────────────

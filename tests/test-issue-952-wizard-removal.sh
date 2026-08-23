@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/improvement-backlog.md docs/maintained-docs.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh
+# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/improvement-backlog.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -61,8 +61,6 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INIT_SH="$PROJECT_ROOT/setup/init.sh"
-CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
-SUBMODULE_COMMON="$PROJECT_ROOT/docs/submodule-common-rules.md"
 README_MD="$PROJECT_ROOT/README.md"
 SETUP_GUIDE="$PROJECT_ROOT/setup/SETUP-GUIDE.md"
 CI_WORKFLOW="$PROJECT_ROOT/.github/workflows/e2e-dummy-target.yml"
@@ -209,44 +207,6 @@ assert_true "AC2 non-vacuity keystone: install_into_target() is intact in init.s
   "grep -qF 'install_into_target()' '$INIT_SH'"
 assert_true "AC2 non-vacuity keystone: manifest.json reference is intact in init.sh" \
   "grep -qF 'manifest.json' '$INIT_SH'"
-
-# =============================================================================
-echo ""
-echo "=== AC3 delivered CLAUDE.md carries no Language Rule ==="
-
-assert_true "AC3: '## Language Rule' heading absent from CLAUDE.md" \
-  "[ \"\$(grep -c '^## Language Rule' '$CLAUDE_MD')\" -eq 0 ]"
-assert_true "AC3: Korean-only communication sentence absent from CLAUDE.md" \
-  "[ \"\$(grep -cF 'All communication with the user must be in Korean' '$CLAUDE_MD')\" -eq 0 ]"
-assert_true "AC3 guard: '## What This Repo Is' section still present in CLAUDE.md" \
-  "grep -qF '## What This Repo Is' '$CLAUDE_MD'"
-
-# DCR-2: CLAUDE.md:14 history-prose fixed-token flip.
-assert_true "AC3 (DCR-2): the substitution-mechanism clause is gone from CLAUDE.md" \
-  "[ \"\$(grep -cF 'instantiate them through' '$CLAUDE_MD')\" -eq 0 ]"
-assert_true "AC3 (DCR-2): the fixed replacement token is present in CLAUDE.md" \
-  "[ \"\$(grep -cF 'not a token an installer substitutes' '$CLAUDE_MD')\" -eq 1 ]"
-
-# =============================================================================
-echo ""
-echo "=== AC4 submodule-common-rules.md examples use non-substituted notation ==="
-# Scope-gated by DCR-3 (resolved narrow-(ii)): only this file's three
-# code-fence tokens are asserted removed.
-
-assert_true "AC4: no {{...}} substitution-shaped token remains in submodule-common-rules.md" \
-  "[ \"\$(grep -c '{{' '$SUBMODULE_COMMON')\" -eq 0 ]"
-assert_true "AC4: replacement non-substituted notation is present ('<org>/')" \
-  "grep -qF '<org>/' '$SUBMODULE_COMMON'"
-# Meaning-preservation guard: the four subsection headings survive
-# byte-for-byte — the swap is notation-only.
-assert_true "AC4 guard: '### 1. Repo Identity' heading survives" \
-  "grep -qF '### 1. Repo Identity' '$SUBMODULE_COMMON'"
-assert_true "AC4 guard: '### 2. Tech Stack & Commands' heading survives" \
-  "grep -qF '### 2. Tech Stack & Commands' '$SUBMODULE_COMMON'"
-assert_true "AC4 guard: '### 3. Scope Boundaries' heading survives" \
-  "grep -qF '### 3. Scope Boundaries' '$SUBMODULE_COMMON'"
-assert_true "AC4 guard: '### 4. AutoFlow Reference' heading survives" \
-  "grep -qF '### 4. AutoFlow Reference' '$SUBMODULE_COMMON'"
 
 # =============================================================================
 echo ""

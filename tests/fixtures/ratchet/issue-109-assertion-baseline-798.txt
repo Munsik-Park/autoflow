@@ -1,9 +1,0 @@
-AC1: .gitmodules absent from HEAD (git ls-tree empty)
-AC1 (fallback): no [submodule stanza in committed .gitmodules
-AC2a: git ls-tree HEAD -- services is empty
-AC2b: git ls-files -s -- services has no 160000 mode row
-AC3a: git submodule status is empty
-AC3b: HEAD .gitmodules path-entry count == 0
-AC12a: $ci_home references tests/test-issue-798-topology-flip.sh
-AC12b: $ci_home paths: trigger lists .gitmodules
-AC12a: some workflow references tests/test-issue-798-topology-flip.sh

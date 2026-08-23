@@ -128,12 +128,8 @@ SUITE_LOCAL_SLOWDOWN_FACTOR=8
 suite_is_excluded() {
   case "$1" in
     # Sourced libraries, not standalone specs: they have no independent exit
-    # status to register. tests/lib/harness-pins.sh lands under this entry.
+    # status to register.
     tests/lib/*.sh) return 0 ;;
-    # The registry runner, not a spec. It is CI-registered anyway, so this
-    # changes no verdict today; it is stated so the set is a decision rather
-    # than a coincidence.
-    tests/run-doc-invariants.sh) return 0 ;;
   esac
   return 1
 }
