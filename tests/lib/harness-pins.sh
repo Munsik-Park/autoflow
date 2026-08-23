@@ -26,7 +26,17 @@
 # Measurement history: 37 -> 58 -> 80 (#67) -> 82 (#69) -> 85 (#97) -> 97 (#123)
 # -> 122 (#127) -> 126 (#127 cycle 2) -> 135 (#127 cycle 3) -> 150 (#138) -> 156
 # (#138, VERIFY-step-3 legs) -> 157 (#138, RED3 -- O5(c) empty-ac_rows fail-closed
-# leg; TARGET value, RED3 itself MEASURES 156 ok + 1 FAIL).
+# leg; TARGET value, RED3 itself MEASURES 156 ok + 1 FAIL) -> 164 (#138 cycle 2,
+# RED c2 -- codex F1 item-level ac-diff validation; TARGET value, RED c2 itself
+# MEASURES 156 ok + 8 FAIL: 7 new legs (row-nonboolean-method-executable,
+# row-nonboolean-carried, row-out-of-enum-disposition, row-missing-ac,
+# nonobject-row-fails-closed, substitution-item-fails-closed,
+# absent-with-carried-true-fails-closed) plus the pre-existing leg
+# ac-diff-schema-shape, which now carries one added assertion pinning that the
+# guard reads AC_ROW.properties.disposition.enum and fails closed for lack of
+# the guard itself. `node test/workflows/run.mjs` measures 156 ok + 8 FAIL
+# against the as-is script; 164 is the GREEN target once the row/substitution
+# guard ships.
 # The #123, #127 and #127-cycle-2/3 bumps are all the RED-commit TARGET value, not the
 # RED-commit MEASURED value: #123 added 12 cap-round-closing cases (8 discriminating),
 # #127 adds 25 resume cases (23 discriminating, 2 deliberate regression locks documented
@@ -92,4 +102,4 @@
 # =============================================================================
 
 # Expected `ok` line count from `node test/workflows/run.mjs`.
-HARNESS_OK_COUNT=157
+HARNESS_OK_COUNT=164

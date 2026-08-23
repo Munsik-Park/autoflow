@@ -2855,6 +2855,13 @@ await test('ARCHITECT: AC_ROW/AC_SUBSTITUTION/AC_DIFF schema constants -- additi
   assert.match(acDiffSeg, /ac_rows:\s*\{\s*type:\s*['"]array['"],\s*items:\s*AC_ROW\s*\}/, 'AC_DIFF.ac_rows must be an array of AC_ROW')
   assert.match(acDiffSeg, /substituted:\s*\{\s*type:\s*['"]array['"],\s*items:\s*AC_SUBSTITUTION\s*\}/, 'AC_DIFF.substituted must be an array of AC_SUBSTITUTION')
 
+  // codex F1 cycle 2 (enum-reference-is-observable): the item-level row/substitution guard must
+  // read its accepted disposition members from AC_ROW.properties.disposition.enum -- the live
+  // member expression, not a second free-standing literal list -- so the schema constant and the
+  // runtime guard cannot drift apart. Presence-only: this proves the reference exists somewhere in
+  // the file, not that no duplicate list exists elsewhere (residual, Risk and residuals).
+  assert.match(src, /AC_ROW\.properties\.disposition\.enum/, 'the row/substitution guard must read AC_ROW.properties.disposition.enum, not a duplicated literal member list')
+
   // Behavioral half, in the same discipline as the VERDICT/DISPOSITION precedent (run.mjs:748):
   // a run whose ac-diff stub matches this schema shape still converges without a schema error.
   const acDiff = { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
@@ -2960,6 +2967,136 @@ await test('ARCHITECT: mintAcEntry updates an already-open ac-authority entry in
   assert.equal(matches[0].status, 'open')
   assert.notEqual(matches[0].conclusion, 'stale conclusion', 'the conclusion must be refreshed by this round\'s mint, not the stale carried one')
   assert.notEqual(matches[0].evidence, 'stale-evidence', 'the evidence must be refreshed by this round\'s mint, not the stale carried one')
+})
+
+// ---- ARCHITECT: item-level ac-diff validation (issue #138 cycle 2, codex F1 on PR #139) -------
+// F1: acDiffWellFormed() validates only the top-level ac-diff shape and never descends into
+// ac_rows[] / substituted[] items, so a row that is internally malformed but top-level-shaped-
+// correctly reaches acKindOf()/the authorization join unvalidated and the run silently converges.
+// Every leg below asserts the SENTINEL (acReason === 'ac reconciliation unavailable'), never the
+// verdict alone (verification design > Testability assessment > "Assert the sentinel..."): some of
+// these fixture shapes already reach AC_CHANGE today through the unauthorized-change path (a defect
+// row that still yields a kind produces a finding with ac: '', which then fails the authorization
+// join), so a verdict-only assertion would pass before the fix. All are RED against the as-is
+// script (verification design > Testability assessment > RED validity).
+
+await test('ARCHITECT: a row whose method_executable is a non-boolean string fails closed to AC_CHANGE with the reconciliation sentinel (AC1, row-nonboolean-method-executable)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: 'false', locator: 'x', proposed: 'x' }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { result, calls } = await runArch({ issue: '138-c2-row-nonbool-method' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a non-boolean method_executable must be caught by the fail-closed guard, not the unauthorized-change path')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
+await test('ARCHITECT: a row whose carried is a non-boolean string fails closed to AC_CHANGE with the reconciliation sentinel (AC2, row-nonboolean-carried)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ ac: 'AC1', carried: 'false', disposition: 'verified', method_executable: true, locator: 'x', proposed: 'x' }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { result, calls } = await runArch({ issue: '138-c2-row-nonbool-carried' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a non-boolean carried must be caught by the fail-closed guard, not the unauthorized-change path')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
+await test('ARCHITECT: a row whose disposition is outside the defined enum fails closed to AC_CHANGE with the reconciliation sentinel (AC3, row-out-of-enum-disposition)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ ac: 'AC1', carried: true, disposition: 'not-a-real-disposition', method_executable: true, locator: 'x', proposed: 'x' }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { result, calls } = await runArch({ issue: '138-c2-row-bad-enum' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'an out-of-enum disposition must be caught by the fail-closed guard, not the unauthorized-change path')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
+await test('ARCHITECT: a row missing the required ac field fails closed to AC_CHANGE with the reconciliation sentinel (AC4, row-missing-ac)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'x' }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { result, calls } = await runArch({ issue: '138-c2-row-missing-ac' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a row missing ac must be caught by the fail-closed guard, not the unauthorized-change path')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+})
+
+await test('ARCHITECT: a non-object ac_rows[] item (null or a bare string) fails closed to AC_CHANGE with the reconciliation sentinel, not a silent skip (nonobject-row-fails-closed)', async () => {
+  const cases = [
+    ['138-c2-row-null', [null]],
+    ['138-c2-row-barestring', ['AC1']],
+  ]
+  for (const [issueId, ac_rows] of cases) {
+    const acDiff = { ac_source_present: true, ac_rows, ledger_ac_decisions: [], substituted: [] }
+    const { result } = await runArch({ issue: issueId }, convergingWithAcDiff(acDiff))
+    assert.equal(result.verdict, 'AC_CHANGE', `${issueId}: a non-object row must not be silently skipped into a clean convergence`)
+    assert.equal(result.acReason, 'ac reconciliation unavailable', `${issueId}: a non-object row must be caught by the fail-closed guard, not the unauthorized-change path`)
+    assert.deepEqual(result.acChange, [], `${issueId}: a fail-closed row must produce no findings`)
+  }
+})
+
+await test('ARCHITECT: a malformed substituted[] item (non-object, missing ac, or a non-string field) fails closed to AC_CHANGE with the reconciliation sentinel, not the unauthorized-change sentinel (substitution-item-fails-closed)', async () => {
+  // Dispatch obligation 1: every fixture here pairs a clean, non-empty ac_rows row so the run does
+  // not take the "ac list absent" branch (architect-deliberation.js:729) instead of the guard under
+  // test -- an empty ac_rows array would assert the wrong branch (dispatch, .autoflow/issue-138-c2-
+  // dispatch.md item 1). The shape mirrors the existing 'substitution arm' leg's clean row
+  // (run.mjs:2621).
+  const cleanRow = { ac: 'AC2', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }
+  const cases = [
+    ['138-c2-sub-null', null],
+    ['138-c2-sub-missing-ac', { locator: 'x', proposed: 'x' }],
+    ['138-c2-sub-nonstring-locator', { ac: 'AC1', locator: 123, proposed: 'x' }],
+  ]
+  for (const [issueId, subItem] of cases) {
+    const acDiff = { ac_source_present: true, ac_rows: [cleanRow], ledger_ac_decisions: [], substituted: [subItem] }
+    const { result } = await runArch({ issue: issueId }, convergingWithAcDiff(acDiff))
+    assert.equal(result.verdict, 'AC_CHANGE', `${issueId}: a malformed substitution item must fail closed`)
+    // The sentinel, never the verdict alone (Testability assessment): the latter two shapes reach
+    // AC_CHANGE today through the unauthorized-change path (flatten() coerces a missing/non-string
+    // field to '' or its String() form, still producing a 'substituted' finding that then fails the
+    // authorization join) -- a verdict-only assertion would already pass pre-fix on those shapes.
+    assert.equal(result.acReason, 'ac reconciliation unavailable', `${issueId}: must be caught by the fail-closed guard, not the unauthorized-change path`)
+    assert.deepEqual(result.acChange, [], `${issueId}: a fail-closed substitution defect produces no findings`)
+  }
+})
+
+await test('ARCHITECT: disposition "absent" with carried: true fails closed to AC_CHANGE with the reconciliation sentinel -- one direction only (absent-with-carried-true-fails-closed)', async () => {
+  const acDiff = {
+    ac_source_present: true,
+    ac_rows: [{ ac: 'AC1', carried: true, disposition: 'absent', method_executable: true, locator: 'x', proposed: 'x' }],
+    ledger_ac_decisions: [],
+    substituted: [],
+  }
+  const { result, calls } = await runArch({ issue: '138-c2-absent-carried-true' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'AC_CHANGE')
+  assert.equal(result.acReason, 'ac reconciliation unavailable', 'disposition: absent with carried: true is an internally inconsistent row and must fail closed')
+  assert.deepEqual(result.acChange, [])
+  const payload = registerPayload(calls)
+  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
+  // AC6 regression guard, restated here: the REVERSE direction (carried: false with a non-absent
+  // disposition) must stay well-formed -- already pinned negatively by the existing leg
+  // 'kind-table-is-computed-in-script' (its 'AC-drop' row is carried: false, disposition: 'declined'
+  // and asserts derived kind 'dropped'); this leg does not repeat that assertion, only the forward
+  // direction the codex finding's class covers.
 })
 
 console.log(failures ? `\n${failures} test(s) FAILED` : '\nall workflow regression tests passed')
