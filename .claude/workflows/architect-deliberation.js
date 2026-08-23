@@ -378,9 +378,34 @@ const acKindOf = (row) => {
 // Payload well-formedness. A schema is advisory to this script (it is opaque here, exactly as
 // `applyDispositions` is the runtime guard behind DISPOSITION's enum), so a malformed return is
 // treated as the channel not having delivered — fail-closed, not fail-open.
+// Item level, not only top level: `acKindOf` reads `carried` / `method_executable` by truthiness
+// and matches `disposition` by `===`, so an item that is internally malformed but sits inside a
+// top-level-correct payload yields no finding and converges silently. Both item predicates are
+// module-local, take one item and return boolean; the required-field lists are not restated,
+// since `undefined` fails every per-field clause on its own.
+// `ac` is the only field carrying an emptiness clause: it is the identity key the authorization
+// join compares after trim, and an empty id converges while naming no criterion. `locator` /
+// `proposed` are display values the join already defaults, so emptiness there stays accepted.
+const acRowWellFormed = (row) => !!row && typeof row === 'object' &&
+  typeof row.ac === 'string' && row.ac.trim() !== '' &&
+  typeof row.carried === 'boolean' &&
+  typeof row.disposition === 'string' &&
+  AC_ROW.properties.disposition.enum.includes(row.disposition) &&
+  typeof row.method_executable === 'boolean' &&
+  typeof row.locator === 'string' && typeof row.proposed === 'string' &&
+  // One direction of AC_ROW's own stated rule ('absent' iff !carried): `absent` with
+  // `carried: true` is an internally inconsistent transcription that `acKindOf` maps to no kind
+  // at all. The reverse direction stays accepted on purpose — a `carried: false` row with a
+  // non-absent disposition derives `dropped`, an operator pause that names the criterion, and
+  // fail-closing it would replace that with a less informative one.
+  !(row.disposition === 'absent' && row.carried === true)
+const acSubstitutionWellFormed = (sub) => !!sub && typeof sub === 'object' &&
+  typeof sub.ac === 'string' && sub.ac.trim() !== '' &&
+  typeof sub.locator === 'string' && typeof sub.proposed === 'string'
 const acDiffWellFormed = (d) => !!d && typeof d === 'object' &&
   typeof d.ac_source_present === 'boolean' &&
-  Array.isArray(d.ac_rows) && Array.isArray(d.ledger_ac_decisions) && Array.isArray(d.substituted)
+  Array.isArray(d.ac_rows) && Array.isArray(d.ledger_ac_decisions) && Array.isArray(d.substituted) &&
+  d.ac_rows.every(acRowWellFormed) && d.substituted.every(acSubstitutionWellFormed)
 
 // A null draft return is a skipped/errored sub-agent — the ARCHITECT analogue of VERIFY's
 // `test ? test.verdict : 'missing'`. Record it as a distinct early-ESCALATE reason and skip
