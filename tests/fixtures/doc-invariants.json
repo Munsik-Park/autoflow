@@ -8473,6 +8473,18 @@
       "match": "fixed",
       "literal": "[ac-decision]",
       "scope": "permanent"
+    },
+    {
+      "id": "138-guide-architect-empty-rows-fail-closed-sentence",
+      "origin_issue": 138,
+      "intent": "coherence",
+      "file": "docs/autoflow-guide.md",
+      "section": "ARCHITECT — Plan Synthesis (Developer AI + Test AI)",
+      "section_end": null,
+      "predicate": "present",
+      "match": "fixed",
+      "literal": "A well-formed payload whose transcribed row set is **empty**",
+      "scope": "permanent"
     }
   ]
 }
