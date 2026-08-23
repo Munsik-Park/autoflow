@@ -8,7 +8,7 @@
 // Requires Claude Code v2.1.154+ (Workflow runtime).
 export const meta = {
   name: 'architect-deliberation',
-  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict. Invoke with args {issue: "N"} (issue number required), or {issue: "N", resume: "true"} to resume an ESCALATEd deliberation from its persisted register — skipping Draft and running one further round.',
+  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict. Invoke with args {issue: "N"} (issue number required), or {issue: "N", resume: "true"} to resume an ESCALATEd deliberation from its persisted register — skipping Draft and running one further round; {issue: "N", bounded: "true"} for a scope-bounded review-response cycle (Draft + a 2-round ceiling).',
   phases: [
     { title: 'Draft', detail: 'dev drafts feature design, test drafts verification design (independent) — cold runs only' },
     { title: 'Resume', detail: 'load the persisted issue register and re-enter Converge at the prior run\'s round — resume runs only' },
@@ -139,13 +139,25 @@ const argv = typeof args === 'string'
 const resumeArg = argv.resume
 const resume = resumeArg === true || resumeArg === 'true'
 const resumeMalformed = ![true, 'true', false, 'false', undefined, null].includes(resumeArg)
+// Bounded admission (issue #135): a review-response cycle whose triage artifact carries
+// `scope-bounded: true` runs Draft + a 2-round ceiling instead of MAX_ROUNDS. The flag is accepted
+// only as a JSON / object argument — deliberately NOT salvaged from prose, so the catch-path above
+// stays byte-identical to the harness mirror. Same strictness as `resume`: a malformed value fails
+// loud rather than silently running the full cap. The round-1 devil's-advocate rule, the closing
+// half-round and the resume extension are unchanged; only the cold ceiling differs.
+const boundedArg = argv.bounded
+const bounded = boundedArg === true || boundedArg === 'true'
+const boundedMalformed = ![true, 'true', false, 'false', undefined, null].includes(boundedArg)
+const BOUNDED_ROUNDS = 2
 // System boundary: reject a missing or malformed required arg loudly rather than proceeding with a
 // placeholder path. Kept as the SINGLE throw site — the resume rule extends this guard, it does not
 // add a second one.
-if (!argv.issue || resumeMalformed) {
+if (!argv.issue || resumeMalformed || boundedMalformed) {
   throw new Error(!argv.issue
     ? 'architect-deliberation: args.issue is required'
-    : `architect-deliberation: args.resume must be true, "true", false, "false" or absent (got ${JSON.stringify(resumeArg)})`)
+    : resumeMalformed
+      ? `architect-deliberation: args.resume must be true, "true", false, "false" or absent (got ${JSON.stringify(resumeArg)})`
+      : `architect-deliberation: args.bounded must be true, "true", false, "false" or absent (got ${JSON.stringify(boundedArg)})`)
 }
 const issue = argv.issue
 const feature = `.autoflow/issue-${issue}-feature-design.md`
@@ -448,7 +460,7 @@ const rehydrate = (e) => {
 
 if (!resume) {
   phase('Draft')
-  console.log(`ARCHITECT facilitation for issue #${issue} (cap ${MAX_ROUNDS} rounds)`)
+  console.log(`ARCHITECT facilitation for issue #${issue} (cap ${bounded ? BOUNDED_ROUNDS : MAX_ROUNDS} rounds${bounded ? ', scope-bounded review-response' : ''})`)
 
 // Independent first drafts — the two perspectives do not see each other's draft yet.
 const [devDraft, testDraft] = await parallel([
@@ -520,7 +532,7 @@ phase('Converge')
 // The loop still terminates on its own bound (Decision 7), not on a count of resumes taken.
 const startRound = resume && loaded ? (Number(loaded.lastRound) || 0) : 0
 let round = startRound
-const roundCeiling = resume ? startRound + 1 : MAX_ROUNDS
+const roundCeiling = resume ? startRound + 1 : (bounded ? BOUNDED_ROUNDS : MAX_ROUNDS)
 // The mandatory first-exchange rule and the cross-session ledger seed are the two run-level
 // switches the resume path flips. Neither adds a round-family prompt literal: there is no separate
 // "resume round prompt" — the resume path re-enters the same loop and the same closing block.

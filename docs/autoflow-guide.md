@@ -185,6 +185,10 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
 
 **Review-response mode setup** (requested issue has an open PR + `active:false`): `git checkout dev/<existing-branch>` (the issue's dev branch per the Step-5 naming convention `dev/<date>-issue-{target}`, located with `git branch --list 'dev/*-issue-{target}'`); set `mode: "review-response"`, `active: true`, `phase: "in-progress"`; identify the triggering reviewer comment/thread (the DIAGNOSE review-response target); increment the state file's `cycle` field and reset `phases` to the empty Creation template (preserving the `verdict` rule); add the `status:in-progress` label: `gh issue edit #N --add-label "status:in-progress"`. Skip dev-branch creation (step 5 is new-issue mode only).
 
+**[MUST] Preserve the previous cycle's artifacts** (issue #135): before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, and `issue-{N}-review-findings.md`, which are cycle-spanning. Without this the new cycle's Phase A/B/3, REFINE and AUDIT overwrite the flat names, and the bounded path below has nothing to reuse.
+
+**Scope-bounded entry** (issue #135): when `.autoflow/issue-{N}-review-findings.md` carries `scope-bounded: true` (written by HANDOFF step 6.5 from `scripts/review/scope-bounded.sh triage`), the cycle takes the **bounded path**: DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs with `args: { issue: "N", bounded: "true" }` (Draft + a 2-round ceiling; round-1 devil's advocate, closing half-round and resume unchanged), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE's whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-deliberated with the full cap (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `scope-bounded: false` or an absent line is the full path.
+
 **Resume procedure** (requested issue's own state file reads `active:true` — a mid-cycle session resumed after an abnormal end): resume deterministically, do not restart from PREFLIGHT.
 1. **Read the last confirmed point** from the state file: the highest phase whose gate `scores` are recorded in `phases` (or `verdict` set for `gate_hypothesis_cause`) is the last *passed* gate; `phase` gives the coarse marker.
 2. **Verify the resume prerequisites** before continuing: the issue's dev branch exists and is checked out, and the `.autoflow/issue-{N}-*.md` artifacts the next phase consumes are present. The branch is identified by the **documented dev-branch naming convention** (PREFLIGHT Step 5): the issue-scoped dev branch for `#N` is `dev/<date>-issue-<N>`, located with `git branch --list 'dev/*-issue-<N>'`. If it is missing, or matches ambiguously, or a required artifact is absent, treat the cycle as unrecoverable and report to the user (do not fabricate the missing artifact).
@@ -463,6 +467,18 @@ an accepted consequence, not an oversight: it follows the contract every other i
 escalation in this workflow already has (none carries a bounded retry or an in-flow override), and
 the operator's exit is the ordinary one — author the missing Phase B AC table or verification-design
 rows, or re-run once the channel recovers.
+
+### Bounded — a scope-bounded review-response deliberation
+
+When the review-response cycle entered on `scope-bounded: true` (PREFLIGHT > *Scope-bounded
+entry*), the orchestrator invokes
+`Workflow({ name: "architect-deliberation", args: { issue: "N", bounded: "true" } })`. The run is
+the cold path with one difference: its round ceiling is **2** instead of 6. Draft runs, the
+round-1 devil's-advocate rule holds, the cap round (round 2) is closed by the same closing
+half-round, and an `ESCALATE` may be resumed exactly as below (the resume admits one further round
+from the register regardless of the ceiling the escalated run had). `bounded` is accepted only as a
+JSON / object argument; a malformed value fails loud like a malformed `resume`. Rationale:
+[`design-rationale.md`](design-rationale.md) > Decision 12.
 
 ### Resume — re-entering an ESCALATEd deliberation (operator-facing)
 
@@ -1128,6 +1144,28 @@ on the same ledger, under its own marker `green-tree-use` and following the same
 **Max retries**: 2; on second failure, abandon refactor and proceed to VALIDATE
 with the Green state from VERIFY.
 
+### REFINE report (`.autoflow/issue-{N}-refine-report.md`)
+
+The Developer AI writes one report per REFINE pass, with three sections in this order — the report
+is an input to GATE:QUALITY, so every section is present and a section with nothing to say states
+`none` explicitly (an omitted section is a VALIDATE step-4 failure, not a silence):
+
+1. `## Applied` — each /simplify suggestion applied, one line each.
+2. `## Rejected / deferred` — each suggestion not applied, with the reason (`behavior-changing`,
+   `out of scope`, `disagree`, …).
+3. `## Out-of-scope observations — guard / boundary logic touched` — the subset of the rejected
+   list whose reason is *behavior-changing* **and** whose subject is validation, a guard, path /
+   root resolution, input or output boundary handling, or error handling. These are the suggestions
+   REFINE is right to refuse (REFINE preserves behavior) and that nevertheless describe a possible
+   defect in the shipped change. Each entry names the suggestion, the `path:line` it points at,
+   and what behavior would change. The section is the defect signal issue #135 found missing: in
+   #130 cycle 1 a /simplify agent proposed exactly the fix the external reviewer later filed as
+   Medium, REFINE correctly rejected it as behavior-changing, and no phase read the rejection.
+
+GATE:QUALITY reads section 3 as scoring input for `Quality` and `Impact scope` (below) and cites
+what it read. Writing the section is the Developer AI's duty; judging it is the fresh evaluator's —
+the author's "this is fine" is not the disposition.
+
 **Foreground execution note**: the step-2 re-run is a short foreground command — the assigned Developer AI runs it foreground and reports, or the orchestrator runs it directly foreground — never a background spawn-and-wait (`docs/teammate-common-rules.md` > Bash Execution Mode).
 
 ---
@@ -1155,7 +1193,9 @@ with the Green state from VERIFY.
    round-trip rules apply and no new cap is introduced.
 2. Minimal-implementation check: PASS confirmed (achieved in VERIFY step 3).
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
-4. Maintained-docs check: confirm impacted docs are updated.
+4. Maintained-docs check: confirm impacted docs are updated, and that the REFINE report
+   (`.autoflow/issue-{N}-refine-report.md`) exists with its three sections present — an empty
+   section says `none`; an omitted section fails this step (REFINE > REFINE report).
 5. Manifest coherence check: if the diff touched a manifest-registered source
    (Change Surface Rules > Derived artifacts), confirm `setup/manifest.json` was
    regenerated in the same change — re-run the set-intersection check locally so
@@ -1196,7 +1236,19 @@ GATE:QUALITY's `Security` item with 5 dedicated, project-specific items.
 
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: change diff + the project-specific security checklist
-(`docs/security-checklist.md`).
+(`docs/security-checklist.md`). In a **review-response cycle**, additionally the previous cycle's
+AUDIT report (`.autoflow/issue-{N}-c{C-1}-audit.md`, preserved at PREFLIGHT) — its `## Low findings`
+list is the re-score's starting set.
+
+**Report file**: the evaluator's report is written to `.autoflow/issue-{N}-audit.md` and carries a
+`## Low findings` section (each Low item with `path:line` and a one-line claim; `none` when empty),
+so that a later cycle can take it as input. The state file keeps only the scores.
+
+**Review-response re-score** (issue #135): the fresh evaluator does not re-derive the whole audit.
+It re-scores **the change surface of this cycle** (the review-response diff) against the checklist,
+re-checks each prior Low finding only where that diff touches its file, and inherits the rest by
+citation — the same narrowed-input rule as GATE:QUALITY's re-entry re-score, using the same
+`rescore` output field. Fresh spawn is unchanged; the input is.
 
 ### Scoring (5 items × 10 points)
 
@@ -1221,8 +1273,18 @@ GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate wo
 
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: full change set + test results + AUDIT result, plus the issue's acceptance-criterion list
-(`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the converged verification design and
-the issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
+(`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the converged verification design,
+the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the REFINE report
+(`.autoflow/issue-{N}-refine-report.md`, section `## Out-of-scope observations — guard / boundary
+logic touched`).
+
+**[MUST] REFINE observations are scoring input** (issue #135): the evaluator reads the REFINE
+report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
+`not a defect — reason`), and records the dispositions in the `refine_observations` output field
+([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). An entry dispositioned
+`defect` is scored under `Quality` or `Impact scope` like any other finding. An absent
+`refine_observations` field, or one that does not account for every entry in the section, is a
+report defect: reject and re-spawn, as for a missing `fail_hypothesis`.
 
 ### Scoring (10 items × 10 points)
 
@@ -1444,6 +1506,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
 6.5. Review triage (per-PR; after step 6, before termination). For each PR, read two signals: the `blocked-by-review` label state (`gh pr view <N> --json labels`) and the review verdict. The orchestrator does **not** read the reviewer comment body itself (Cost Control); an anonymous direct `sonnet` subagent ingests it (`gh pr view <N> --comments`), writes severity-classified findings to `.autoflow/issue-{N}-review-findings.md`, and returns `{max_severity, findings, low_confidence_items}` + the label state. The **verdict (`max_severity`) is the primary signal; the label is a derived, fail-open-prone signal** — the two can disagree because `.codex/review.md` lets a clean review still leave the label on if `--remove-label` fails. Branch on the pair:
    - **[MUST] Findings-file `max_severity` contract.** The ingesting subagent **always** writes exactly one `max_severity: <None|Low|Medium|High|Critical>` line to `.autoflow/issue-{N}-review-findings.md`, using **colon** notation as the canonical form — presence is mandatory, including on a **clean review**, which emits `max_severity: None` (never an omitted line). The consumer additionally tolerates `=` and whitespace separators, but colon is the contract the producer emits.
    - **Propagation batching (multi-repo).** When a sub-repo fix would bump the host `services` pointer, **defer** the host pointer bump until that sub-repo PR's `blocked-by-review` label has cleared (its reviewer re-review is clean); at that clean point bump **once** — the same re-bump point as step 3's `[MUST]`. This holds for the general parent-pointer / sub-repo-PR relation, independent of how many repos deep the change sits. If an intervening host-CI check makes an exceptional interim bump unavoidable, record the reason in the commit message (`chore(#N): interim services bump: <reason>`). This step 6.5 block is the source of truth for the batching norm; [`external-review-sequencing.md`](external-review-sequencing.md) carries a one-line cross-ref for reviewers.
+   - **[MUST] `scope-bounded` line** (issue #135). On every `max_severity ≥ Medium` verdict the orchestrator runs `bash scripts/review/scope-bounded.sh triage --findings .autoflow/issue-{N}-review-findings.md --pr <host PR>` and appends its three output lines (`scope-bounded:`, `scope-bounded-finding-files:`, `scope-bounded-grounds:`) to the findings file. The judgment is a set relation — every Medium+ finding names a file and those files are a subset of the PR's diff file set — never an agent's estimate of size. The artifact records the finding file set; the PR diff file set is not copied into it — it is re-derived from the anchor the triage context already holds (`gh pr diff <host PR> --name-only`), per the re-derivable-value rule in [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Verify teammate claims*. The line selects the review-response cycle's path at PREFLIGHT (> PREFLIGHT > Scope-bounded entry).
    - **`max_severity ≥ Medium`** (the reviewer confirmed `Critical`/`High`/`Medium`; the label is present as expected) — do **not** end. Auto-enter a review-response cycle in-session with the reviewer comment as the DIAGNOSE trigger target — the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, run the DIAGNOSE review-response loop check). The cycle flows DIAGNOSE → … → HANDOFF and re-runs step 6 reviewer review on that step's target set; the label is cleared **only** by that reviewer re-review — the orchestrator never removes it (hook deny). Each auto-triggered review-response entry is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker.
      - **Pause for the user** (`AskUserQuestion`, with the question and option descriptions written situation-first per [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation; `active:false`, `phase:"awaiting-user"`) when the attempt hits **any** of: (a) the fix needs a contract / acceptance-criterion change, (b) the fix direction is ambiguous, (c) the finding is a `Low Confidence` item, (d) the review-response loop check matches (same complaint class, new witness). The user's answer is appended to the ledger and selects re-entry.
      - **Attempt cap = 7.** Count the *consecutive `review-autofix`-marked ledger entries since the last user re-entry decision (reset by that decision; if none yet this cycle, since the first auto-entry)* — the number of auto-resolution attempts not yet checked with the user. A marked entry is a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*): the allocated identifier sits at the front of the heading and the marker stays at the end, so the count predicate reads the marker exactly as it did before identifiers were introduced — it is unaffected by the `O<n>` prefix. On the 7th such entry without the `blocked-by-review` label clearing, stop auto-resolving and pause for the user (`active:false`, `phase:"awaiting-user"`). A user re-entry decision (the user approving continuation at a pause) **resets** this window to zero — the next auto-entry starts a fresh budget of 7. The reset anchor is the user re-entry decision only.

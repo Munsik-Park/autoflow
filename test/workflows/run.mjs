@@ -3179,5 +3179,47 @@ await test('ARCHITECT: a substituted[] item whose proposed is a non-string fails
   assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
 })
 
+// ---- ARCHITECT: scope-bounded review-response ceiling (issue #135) ------------------------
+// `args.bounded` lowers the COLD ceiling from MAX_ROUNDS (6) to 2. Draft still runs, the round-1
+// devil's-advocate rule is untouched, the closing half-round fires on round 2 (the run's own
+// ceiling), and the resume extension is unchanged. The flag is JSON/object-only — not salvaged
+// from prose — so the catch-path mirror above stays byte-identical.
+
+await test('ARCHITECT (#135): bounded run never converging stops at round 2 with the 2-round escalation text', async () => {
+  const responder = capResponder({})
+  const { result, calls } = await runArch({ issue: '135-b1', bounded: true }, responder)
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.rounds, 2, 'bounded ceiling is 2 rounds')
+  assert.ok(calls.some((c) => c.label.endsWith('-draft')), 'Draft still runs on a bounded cold run')
+  assert.ok(!calls.some((c) => c.label === 'dev-r3'), 'no third round on a bounded run')
+  assert.match(result.escalation, /No mutual ACCEPT within 2 rounds \(reached round 2\)/)
+})
+
+await test('ARCHITECT (#135): bounded run — closing half-round fires on round 2 and a grounded closing ACCEPT converges', async () => {
+  const responder = capResponder({
+    'test-r2': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
+    'dev-r2': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: bounded cap-round dimensions verified'] },
+    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: re-verified'] },
+  })
+  const { result, calls } = await runArch({ issue: '135-b2', bounded: 'true' }, responder)
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.equal(result.rounds, 2)
+  assert.ok(calls.some((c) => c.label === CLOSING_CALL_LABEL), 'the closing call is made at the bounded ceiling')
+})
+
+await test('ARCHITECT (#135): bounded absent/false keeps the 6-round ceiling; malformed bounded fails loud', async () => {
+  const { result } = await runArch({ issue: '135-b3', bounded: false }, capResponder({}))
+  assert.equal(result.rounds, 6, 'bounded:false is the cold 6-round path')
+  await assert.rejects(
+    () => runArch({ issue: '135-b4', bounded: 'yes' }, capResponder({})),
+    /args\.bounded must be true, "true", false, "false" or absent/,
+  )
+})
+
+await test('ARCHITECT (#135): bounded is not salvaged from prose args (catch-path parity preserved)', async () => {
+  const { result } = await runArch('issue #135 bounded', capResponder({}))
+  assert.equal(result.rounds, 6, 'a prose "bounded" token must not lower the ceiling')
+})
+
 console.log(failures ? `\n${failures} test(s) FAILED` : '\nall workflow regression tests passed')
 process.exit(failures ? 1 : 0)

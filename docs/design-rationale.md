@@ -221,6 +221,18 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 
 **Route.** This is the methodology's second deliberate divergence from upstream (`CLAUDE.md` > What This Repo Is), taken as an **operator decision** — the issue (#140) was filed by the operator and the change was executed as operator work outside an AutoFlow cycle. Recorded here rather than as a new ADR, per [`development-guideline.md`](development-guideline.md) > ADR Policy.
 
+### Decision 12: A Review-Response Cycle Whose Scope Is Mechanically Bounded Re-derives Less, Verifies the Same
+
+**Problem.** A reviewer's Medium finding on an open PR re-opens the cycle, and that cycle re-ran everything a new issue runs: a structure analysis of a codebase that had not changed, a full design deliberation over a one-function fix, a security audit that re-confirmed the previous cycle's conclusions. And the one signal that would have caught the finding before hand-off — a /simplify suggestion REFINE had rejected as behavior-changing — sat in a report no phase read.
+
+**Evidence.** **#130 cycle 2** — 12 lines of shell changed, 13 minutes spent writing the test and the fix, 1 h 58 min and about $59 for the cycle; 89% procedure. The cycle-2 structure analysis was longer than cycle 1's (450 vs 271 lines) over an unchanged structure; the deliberation produced 14 new ledger entries for a one-function change. In cycle 1, REFINE's `Rejected / deferred` list contained the exact proposal the reviewer later filed ("expose the resolved `ARCHIVE_ROOT`"), correctly refused as behavior-changing — and nothing downstream read that list.
+
+**Decision.** Four changes. (1) REFINE writes a report with a mandatory *out-of-scope observations — guard / boundary logic touched* section, and GATE:QUALITY's fresh evaluator dispositions every entry as scoring input (`refine_observations`). (2) HANDOFF triage appends a `scope-bounded` judgment to the findings file — a set relation computed by `scripts/review/scope-bounded.sh` (every Medium+ finding names a file; those files ⊆ the PR's diff file set), re-checked after GREEN (a fix that adds a file leaves the bounded path). (3) On the bounded path the previous cycle's artifacts are preserved and Phase A is reused, ARCHITECT runs Draft + a 2-round ceiling (`args.bounded`), and AUDIT re-scores the prior Low list on the change surface. (4) GATE:PLAN, RED, GREEN, VERIFY, REFINE, the whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged.
+
+**What this does to the "no size judgment" rule.** The rule above (*All phases are performed regardless of change size*) was written against a specific actor: the implementing AI judging its own change small and skipping verification. That actor no longer makes the call — the judgment here is a set relation over files, computed by a script — the finding file set written down, the PR diff file set re-derived from its anchor (`gh pr diff <N> --name-only`) — so a reader re-computes it; the implementing role never sees or sets it. And the verification the rule protected is not what the bounded path removes: it removes *re-derivation* (a structure description of an unchanged tree, a six-round deliberation over a single function, an audit re-confirming itself), while every independent check — the gates, the whole-tree sweep, CI, and the external reviewer's re-review — runs unchanged. Two of those (CI and the external reviewer) did not exist when the rule was written; they are the backstop that makes the policy change safe to take.
+
+**Route.** Operator decision, recorded here per [`development-guideline.md`](development-guideline.md) > ADR Policy; the issue (#135) was operator-filed and the change operator-executed. The *No lightweight mode* limitation below is narrowed accordingly: there is no lightweight mode for a new issue; a review-response cycle has a bounded path selected by a mechanical rule.
+
 ---
 
 ## Generalization Rationale
@@ -277,7 +289,7 @@ The following may look like "better approaches" but undermine core principles:
 
 - **No failure learning loop**: No structured per-cycle evidence is captured; pass/fail pattern analysis is performed by humans externally.
 - **No cross-issue correlation detection**: A complaint class recurring across distinct issues is not detected; correlation analysis across issues is human-external. Decision 4 (no auto-modification of rubric/criteria) is unaffected.
-- **No lightweight mode**: Full phase execution even for small changes. Overhead exists.
+- **No lightweight mode for a new issue**: full phase execution regardless of change size. A review-response cycle has a bounded path, selected by a mechanical set relation rather than a size judgment (Decision 12); the overhead of re-derivation remains for new issues.
 
 ### Under Discussion
 
