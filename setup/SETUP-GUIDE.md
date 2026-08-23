@@ -55,18 +55,19 @@ can self-describe and self-verify offline.
 | Import shim (managed `AUTOFLOW-IMPORT` block in your `CLAUDE.md`) | `CLAUDE.md` | shim-stamp |
 | Methodology entrypoint + framework prose | `.claude/autoflow/METHODOLOGY.md`, `.claude/autoflow/CLAUDE.md`, `.claude/autoflow/docs/**` | copy |
 | Deliberation workflows | `.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js` | copy |
-| Settings pin (marketplace + `enabledPlugins` + `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`) | `.claude/settings.json` | json-merge |
+| Settings pin (marketplace + `enabledPlugins`) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
 | Local overrides scaffold (never overwritten) | `CLAUDE.local.md` | scaffold |
 
 The shim stamp is idempotent and only touches the `AUTOFLOW-IMPORT:BEGIN/END`
 managed block — your own `CLAUDE.md` prose is preserved. The settings merge is a
 deep-merge: your pre-existing `.claude/settings.json` keys are kept, and the
-AutoFlow marketplace/`enabledPlugins` pin is added. The pin also stamps
-`env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"`, enabling Claude Code's
-experimental Agent Teams (default-off upstream) that the Communication — Agent
-Teams layer requires. `CLAUDE.local.md` holds your target identity (R3) and is
-never overwritten, even with `--force`.
+AutoFlow marketplace/`enabledPlugins` pin is added. The pin carries no `env`
+block — the Agent Teams channel is retired (ADR-0017 / ADR-0021), so the
+`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` enablement an earlier pin stamped is no
+longer provisioned (see Prerequisites for targets stamped by that earlier pin).
+`CLAUDE.local.md` holds your target identity (R3) and is never overwritten, even
+with `--force`.
 
 ### Self-verify with the drift detector
 
@@ -91,10 +92,15 @@ is not locally resolvable.)
 
 ## Prerequisites
 
-- Agent Teams enablement: the methodology's Communication — Agent Teams layer
-  requires Claude Code's experimental Agent Teams
-  (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`, default-off upstream). The settings
-  pin ships it set to `"1"`, so a stamped target needs no manual env setup.
+- No Agent Teams enablement: the methodology no longer uses Claude Code's
+  experimental Agent Teams (the channel is retired — every role is an
+  anonymous direct `Agent` spawn), so the settings pin ships no
+  `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`. A target stamped by a pin older
+  than this change still carries `"env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }`
+  in `.claude/settings.json`: the stamp is a deep-merge and cannot delete a key,
+  so remove that entry by hand if you do not want the experimental feature
+  enabled. `drift-check.sh` does not flag the leftover (its D1 check is a
+  pin-subset test).
 - A GitHub repository (or multiple repos for multi-sub-repo setup).
 - For a private host repo and/or private submodule: an SSH key (or a
   per-repo deploy key) registered with GitHub and available to every

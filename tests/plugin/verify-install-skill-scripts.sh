@@ -72,12 +72,11 @@
 #   AC-T3  static SKILL.md arm (cycle 5): the Step-1 region documents the
 #          read-only mechanism -- a line naming both 'cache' and 'drift-check'
 #          (the pinned token pair of verification-design §2 AC-T3)
-#   AC3 (issue #963)  static SKILL.md arm: the Step-1 block (## Step 1 ..
-#          ## Step 2) carries the stable marker
-#          <!-- AGENT-TEAMS-ENV-DISCLOSURE --> naming
-#          CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS / "Agent Teams" plus an
-#          experimental/token-cost caveat, BEFORE the Step 3 confirmation
-#          (.autoflow/issue-963-verification-design.md §1 AC3)
+#   AC3 (issue #963, inverted by issue #95)  static SKILL.md arm: the
+#          <!-- AGENT-TEAMS-ENV-DISCLOSURE --> marker is ABSENT from SKILL.md
+#          and the file names CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS nowhere --
+#          the Agent Teams channel is retired, the pin no longer merges the
+#          env, so the disclosure it once required must be gone
 #   AC3b'  version-skew arm: installed manifest .version older than cache
 #          setup/manifest.json .version -> VERSION_SKEW=yes (both populated);
 #          equal-version fixture -> VERSION_SKEW=no
@@ -502,30 +501,21 @@ else
   failc "AC-T3" "expected the SKILL.md Step-1 region (## Step 1 .. next ## Step) to contain a line matching both 'cache' and 'drift-check' (case-insensitive) -- the read-only trust-source mechanism (cache-copy oracle execution) must be documented where the detection step is narrated"
 fi
 
-echo "== AC3 (issue #963, static): SKILL.md Step-1 block discloses the Agent Teams env merge via a stable marker, BEFORE Step 3 =="
-# Verification design §1 AC3 / feature design §2 D2 / §5 AC3 (DCR-3 option ii):
-# the disclosure is anchored on a stable marker
-# (<!-- AGENT-TEAMS-ENV-DISCLOSURE -->), not free prose -- a benign rephrase
-# that keeps the marker + variable + caveat passes; dropping the disclosure
-# removes the marker and fails. The awk range /^## Step 1/,/^## Step 2/
-# extracts ONLY the Step 1 block, which structurally enforces "before the
-# Step 3 confirmation" (a whole-file grep would wrongly pass a disclosure
-# landed in Step 3 or an unrelated section).
+echo "== AC3 (issue #95, static): SKILL.md no longer discloses a retired Agent Teams env merge =="
+# Issue #95 inversion of the #963 AC3 disclosure: the pin no longer merges
+# env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS, so SKILL.md must neither carry
+# the <!-- AGENT-TEAMS-ENV-DISCLOSURE --> marker nor name the variable
+# anywhere -- a stale disclosure would instruct the installer to announce a
+# merge that no longer happens. Whole-file grep on purpose: the marker or
+# variable is wrong in ANY section now.
 if [ ! -f "$INSTALL_SKILL_MD" ]; then
-  failc "AC3 (issue #963)" "install SKILL.md missing at $INSTALL_SKILL_MD"
+  failc "AC3 (issue #95)" "install SKILL.md missing at $INSTALL_SKILL_MD"
+elif grep -qF '<!-- AGENT-TEAMS-ENV-DISCLOSURE -->' "$INSTALL_SKILL_MD"; then
+  failc "AC3 (issue #95)" "stale marker <!-- AGENT-TEAMS-ENV-DISCLOSURE --> still present in $INSTALL_SKILL_MD -- the Agent Teams env merge disclosure must be removed with the retired pin"
+elif grep -q 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS' "$INSTALL_SKILL_MD"; then
+  failc "AC3 (issue #95)" "$INSTALL_SKILL_MD still names CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS -- the retired Agent Teams env must not be referenced by the install skill"
 else
-  STEP1_BLOCK=$(awk '/^## Step 1/{flag=1} /^## Step 2/{flag=0} flag' "$INSTALL_SKILL_MD")
-  if [ -z "$STEP1_BLOCK" ]; then
-    failc "AC3 (issue #963)" "could not extract a non-empty Step 1 block (## Step 1 .. ## Step 2) from $INSTALL_SKILL_MD"
-  elif ! printf '%s\n' "$STEP1_BLOCK" | grep -qF '<!-- AGENT-TEAMS-ENV-DISCLOSURE -->'; then
-    failc "AC3 (issue #963)" "stable marker <!-- AGENT-TEAMS-ENV-DISCLOSURE --> not found within the SKILL.md Step 1 block -- the Agent Teams env merge disclosure is missing or misplaced"
-  elif ! printf '%s\n' "$STEP1_BLOCK" | grep -qiE 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS|Agent Teams'; then
-    failc "AC3 (issue #963)" "marker present but Step 1 block does not name CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS / 'Agent Teams'"
-  elif ! printf '%s\n' "$STEP1_BLOCK" | grep -qiE 'experimental|token[- ]?cost'; then
-    failc "AC3 (issue #963)" "marker + variable present but Step 1 block lacks an experimental/token-cost caveat"
-  else
-    pass "AC3 (issue #963): SKILL.md Step 1 block carries the <!-- AGENT-TEAMS-ENV-DISCLOSURE --> marker naming the Agent Teams env with an experimental/token-cost caveat, structurally before Step 2/Step 3"
-  fi
+  pass "AC3 (issue #95): SKILL.md carries neither the AGENT-TEAMS-ENV-DISCLOSURE marker nor CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS (retired pin not disclosed)"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════

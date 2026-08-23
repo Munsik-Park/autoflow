@@ -156,7 +156,7 @@ by that suite's own census.
 | `CLAUDE_PROJECT_DIR` | Claude Code **harness** (project root) | consumed by hooks (`.claude/hooks/check-autoflow-gate.sh:42,99`) & workflows; the target must run Claude Code from the project root — the **harness** sets it, it is not a user var. |
 | `CLAUDE_PLUGIN_ROOT` | plugin **loader** (substituted in the plugin channel) | consumed only by the plugin channel (`hooks.json`, epic-dash `SKILL.md`); it never resolves `.autoflow`. **Loader**-provisioned, not host-required. |
 | `CLAUDE_CODE_DISABLE_WORKFLOWS` | operator / managed settings | **MUST remain unset / not be `1`** — the ARCHITECT/VERIFY workflows are REQUIRED (Item 2). Setting it to `1` disables the deliberation isolation boundary. This is the load-bearing env line of the thin root layer. |
-| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | thin-root **settings pin** (stamped into `.claude/settings.json`) | Enables Agent Teams (experimental, default-off upstream). REQUIRED for the Communication — Agent Teams layer; the pin sets it to `"1"`. Token-cost implication (experimental multi-teammate coordination). |
+| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | **nobody** — not provisioned | **Retired** with the Agent Teams channel (ADR-0017 / ADR-0021; issue #95). The settings pin no longer ships it; the thin root layer neither requires nor reads it. A target stamped by the earlier pin may still carry `"1"` — a leftover, not a contract (`setup/SETUP-GUIDE.md` > Prerequisites). |
 
 **Runtime prerequisite**: Claude Code **v2.1.154+** — the `Workflow` runtime the
 deliberation scripts depend on (`.claude/workflows/architect-deliberation.js:6`).
@@ -169,7 +169,7 @@ deliberation scripts depend on (`.claude/workflows/architect-deliberation.js:6`)
 |---|----|--------|-------------------|
 | 1 | Always-on import shim defined & artifact present | PASS | `setup/thin-root-layer/claude-md-shim.md` (marker fence + pinned `@./.claude/autoflow/METHODOLOGY.md`) |
 | 2 | Workflow-residence resolved | PASS | `SKILL-SUBSTITUTION = REJECTED` / `WORKFLOW = REQUIRED` (Item 2) |
-| 3 | `CLAUDE_CODE_*` env contract enumerated | PASS | four-var table (Item 3), `CLAUDE_CODE_DISABLE_WORKFLOWS` MUST-not-be-`1`, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` pin-provisioned |
+| 3 | `CLAUDE_CODE_*` env contract enumerated | PASS | four-var table (Item 3), `CLAUDE_CODE_DISABLE_WORKFLOWS` MUST-not-be-`1`, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` retired / not provisioned (issue #95) |
 | — | Settings pin present & README-parity | PASS | `setup/thin-root-layer/settings-pin.json` (jq-canonically equal to `plugin/autoflow/README.md` fence) |
 
 E-type items (not self-contained here; dated citations / deferred to #792): the

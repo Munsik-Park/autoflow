@@ -251,7 +251,7 @@
       "dest": ".claude/autoflow/settings-pin.json",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ea331c7b7b3b7f0802b22a2c78ede51fc3dff9b7b7160cc5ecba6f53b803500f"
+      "sha256": "b73e8d43af8ce1ccbc4ea92b912662cc087be68b704352a6f14170c325c62536"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -265,7 +265,7 @@
       "dest": ".claude/settings.json",
       "tier": "root-layer",
       "kind": "json-merge",
-      "sha256": "ea331c7b7b3b7f0802b22a2c78ede51fc3dff9b7b7160cc5ecba6f53b803500f"
+      "sha256": "b73e8d43af8ce1ccbc4ea92b912662cc087be68b704352a6f14170c325c62536"
     },
     {
       "source": "CLAUDE.local.md.example",

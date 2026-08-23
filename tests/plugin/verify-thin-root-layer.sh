@@ -24,12 +24,14 @@
 #   AC5c       AC6d non-vacuity guard: static exactness + synthetic-pin arm
 #
 # Issue #963 additions (.autoflow/issue-963-verification-design.md §1
-# AC1/AC4): the settings-pin must ship env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
-# == "1" -- AC4a gains a positive pin-content assertion, and a new "AC1 M-leg
-# / AC4 dual-hash" block (read-only, no gen-manifest-hashes.sh run) asserts
-# BOTH the manifest copy row and the json-merge row pin the current
-# settings-pin.json sha256 (closes FINDING-B: AC2e in
-# verify-install-into-target.sh only staleness-guards the copy row).
+# AC1/AC4): a new "AC1 M-leg / AC4 dual-hash" block (read-only, no
+# gen-manifest-hashes.sh run) asserts BOTH the manifest copy row and the
+# json-merge row pin the current settings-pin.json sha256 (closes FINDING-B:
+# AC2e in verify-install-into-target.sh only staleness-guards the copy row).
+# Issue #95 inversion: the #963 positive assertion that the pin ships
+# env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == "1" is inverted -- the Agent
+# Teams channel is retired (ADR-0017 / ADR-0021), so AC4a now asserts the pin
+# carries NO env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS key at all.
 #
 # NOTE (design §3 RED framing): AC1c (M), AC1d (E), AC2c-live (E) are NOT
 # automated here — see .autoflow/issue-791-manual-scenarios.md. AC2c-static
@@ -230,10 +232,10 @@ if [ -f "$PIN" ] && jq -e . "$PIN" >/dev/null 2>&1; then
   else
     failc "AC4a keystone" "marketplace.json missing/invalid at $MARKETPLACE — cannot cross-check"
   fi
-  if jq -e '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == "1"' "$PIN" >/dev/null 2>&1; then
-    pass "AC4a (issue #963): env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == \"1\" present in settings-pin.json"
+  if jq -e '(.env // {}) | has("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS") | not' "$PIN" >/dev/null 2>&1; then
+    pass "AC4a (issue #95): settings-pin.json carries no env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS key (Agent Teams channel retired)"
   else
-    failc "AC4a (issue #963)" "env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == \"1\" missing/wrong in $PIN"
+    failc "AC4a (issue #95)" "env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS still present in $PIN -- the retired Agent Teams pin must not be shipped"
   fi
 else
   failc "AC4a" "settings-pin.json missing or invalid JSON at $PIN"
