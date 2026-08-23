@@ -4,6 +4,5 @@
       "source": { "source": "github", "repo": "Munsik-Park/autoflow" }
     }
   },
-  "enabledPlugins": { "autoflow@autoflow": true },
-  "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }
+  "enabledPlugins": { "autoflow@autoflow": true }
 }

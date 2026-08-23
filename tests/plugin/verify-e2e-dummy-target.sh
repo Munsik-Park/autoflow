@@ -70,12 +70,12 @@
 #     E4w-nv  (permanent negative self-test, immediately after E4w) a scratch
 #           settings copy with enabledPlugins dropped -> assert_plugin_enabled()
 #           FAILs (proves E4w's predicate discriminates a broken pin)
-#     E4x   (issue #963 AC1 E-leg) the same post-init.sh settings.json also
-#           carries env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == "1" (Agent
-#           Teams enablement, settings-pin.json)
+#     E4x   (issue #95 inversion of the #963 AC1 E-leg) the same post-init.sh
+#           settings.json carries NO env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
+#           key (the Agent Teams channel is retired; the pin no longer ships it)
 #     E4x-nv  (permanent negative self-test, immediately after E4x) a scratch
-#           settings copy with .env dropped -> the env predicate FAILs
-#           (proves E4x's predicate discriminates a broken pin)
+#           settings copy with the retired env key injected -> the env
+#           predicate FAILs (proves E4x's predicate discriminates a stale pin)
 #     E4a   seeded PASS state -> `gh pr create` admitted (exit 0) via the
 #           gate hook's scores-gated branch, driven with CLAUDE_PROJECT_DIR=<dummy>
 #           against the plugin-package hook copy
@@ -645,20 +645,20 @@ else
   failc "E4w-nv" "single-repo-HANDOFF" "$DUMMY_SETTINGS missing -- cannot build the tampered scratch copy"
 fi
 
-echo "== E4x (issue #963 AC1 E-leg): post-init.sh target settings.json carries the Agent Teams enablement env =="
-if [ "$DRIVE_PASS" -eq 1 ] && [ -f "$DUMMY_SETTINGS" ] && jq -e '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == "1"' "$DUMMY_SETTINGS" >/dev/null 2>&1; then
-  pass "E4x: \$DUMMY/.claude/settings.json carries env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == \"1\""
+echo "== E4x (issue #95): post-init.sh target settings.json carries NO retired Agent Teams env key =="
+if [ "$DRIVE_PASS" -eq 1 ] && [ -f "$DUMMY_SETTINGS" ] && jq -e '(.env // {}) | has("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS") | not' "$DUMMY_SETTINGS" >/dev/null 2>&1; then
+  pass "E4x: \$DUMMY/.claude/settings.json carries no env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS key (Agent Teams channel retired)"
 else
-  failc "E4x" "single-repo-HANDOFF" "jq -e '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == \"1\"' failed on $DUMMY_SETTINGS -- settings-pin does not ship the Agent Teams enablement env (issue #963)"
+  failc "E4x" "single-repo-HANDOFF" "env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS found in $DUMMY_SETTINGS -- settings-pin still ships the retired Agent Teams env (issue #95)"
 fi
 
-echo "== E4x-nv (issue #963): negative self-test -- the env predicate FAILs on a settings copy with .env dropped =="
+echo "== E4x-nv (issue #95): negative self-test -- the env predicate FAILs on a settings copy with the retired key injected =="
 if [ -f "$DUMMY_SETTINGS" ]; then
-  jq 'del(.env)' "$DUMMY_SETTINGS" > "$SETTINGS_NV" 2>/dev/null
-  if ! jq -e '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == "1"' "$SETTINGS_NV" >/dev/null 2>&1; then
-    pass "E4x-nv: env predicate rejects a settings copy with .env dropped (E4x's predicate discriminates)"
+  jq '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"' "$DUMMY_SETTINGS" > "$SETTINGS_NV" 2>/dev/null
+  if ! jq -e '(.env // {}) | has("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS") | not' "$SETTINGS_NV" >/dev/null 2>&1; then
+    pass "E4x-nv: env predicate rejects a settings copy with the retired env key injected (E4x's predicate discriminates)"
   else
-    failc "E4x-nv" "single-repo-HANDOFF" "env predicate wrongly accepted a settings copy with .env dropped -- E4x would be vacuous"
+    failc "E4x-nv" "single-repo-HANDOFF" "env predicate wrongly accepted a settings copy carrying the retired env key -- E4x would be vacuous"
   fi
 else
   failc "E4x-nv" "single-repo-HANDOFF" "$DUMMY_SETTINGS missing -- cannot build the tampered scratch copy"

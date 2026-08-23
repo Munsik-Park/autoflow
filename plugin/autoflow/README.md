@@ -51,16 +51,17 @@ target only receives updates when the pin id's resolved version is bumped (unpin
       "source": { "source": "github", "repo": "Munsik-Park/autoflow" }
     }
   },
-  "enabledPlugins": { "autoflow@autoflow": true },
-  "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }
+  "enabledPlugins": { "autoflow@autoflow": true }
 }
 ```
 
 The `enabledPlugins` key is the `"<plugin>@<marketplace>"` composition
 (`autoflow@autoflow`), and the `extraKnownMarketplaces` key is the marketplace
-name (`autoflow`). The `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` key enables
-Claude Code's experimental Agent Teams — the methodology's Communication layer requires
-it, and it is default-off upstream, so the pin ships it set to `"1"`.
+name (`autoflow`). The pin carries no `env` block: the Agent Teams channel is
+retired (ADR-0017 / ADR-0021), so `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is no
+longer provisioned — a target that was stamped by an earlier pin may still carry
+`env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"` and can remove it by hand
+(`setup/SETUP-GUIDE.md` > Prerequisites).
 
 This snippet is a **reference only** — this package does not stamp it into any target.
 The installer that writes it into a target's settings is a separate deliverable.

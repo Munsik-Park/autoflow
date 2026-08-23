@@ -22,9 +22,11 @@
 #     AC1c        marker replace/append (prose preserved, fenced region updated)
 #     AC1d        workflow files byte-identical to source (cmp)
 #     AC1e        settings.json deep-merge (pin keys land, pre-existing key kept)
-#     AC2-ENV     (issue #963) re-stamp on a dedicated seeded target: unrelated
-#                 key + env.FOO survive; env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
-#                 seeded "0" -> "1" (pin-wins, D1 MANDATORY discriminating oracle)
+#     AC2-ENV     (issue #963, inverted by issue #95) re-stamp on a dedicated
+#                 seeded target: unrelated key + env.FOO survive; a seeded
+#                 env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "0" survives
+#                 UNCHANGED (the retired Agent Teams pin is no longer shipped,
+#                 so the pin must not touch that key -- discriminating oracle)
 #     AC1f        .claude/autoflow/METHODOLOGY.md exists post-install
 #     AC1g        @-import graph statically resolvable, max 3 hops from METHODOLOGY.md
 #     AC1j        CLAUDE.local.md scaffolded (absent->create), never overwritten
@@ -428,17 +430,18 @@ else
   failc "AC1e" "init.sh missing"
 fi
 
-# ── AC2-ENV (issue #963): re-stamp preserves unrelated keys; env pin-wins ─────
-# Verification design §1 AC2 / feature design §5 AC2 (C1, MANDATORY
-# discriminating oracle): a dedicated scratch target (NOT the shared $TARGET
-# or $SETTINGS_TARGET used above) is seeded with an unrelated key, an
-# unrelated env.FOO, and env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "0"
-# BEFORE the stamp. After re-stamping: (a) the unrelated key survives, (b)
-# env.FOO survives (env deep-merges key-by-key, not a whole-env replace),
-# and (c) env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS becomes "1" (pin overwrote
-# the seeded "0" -- the ONLY assertion that discriminates pin-wins from
-# insert-only; sibling/env.FOO preservation holds under both).
-echo "== AC2-ENV (issue #963): re-stamp on a seeded target -- unrelated keys survive, env.FOO survives, env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS \"0\"->\"1\" (pin-wins) =="
+# ── AC2-ENV (issue #963 / #95): re-stamp preserves unrelated keys; retired env untouched ──
+# Verification design §1 AC2 / feature design §5 AC2 (C1) as inverted by
+# issue #95: a dedicated scratch target (NOT the shared $TARGET or
+# $SETTINGS_TARGET used above) is seeded with an unrelated key, an unrelated
+# env.FOO, and env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "0" BEFORE the
+# stamp. After re-stamping: (a) the unrelated key survives, (b) env.FOO
+# survives (env deep-merges key-by-key, not a whole-env replace), and (c)
+# env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS stays "0" -- the Agent Teams
+# channel is retired (ADR-0017 / ADR-0021) and the pin no longer ships the
+# key, so a pin that still carried "1" would overwrite the seed and fail
+# here (the discriminating oracle for the #95 inversion).
+echo "== AC2-ENV (issue #963 / #95): re-stamp on a seeded target -- unrelated keys survive, env.FOO survives, seeded env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS \"0\" stays \"0\" (retired pin not shipped) =="
 mkdir -p "$RESTAMP_TARGET/.claude"
 printf '{"theme": "dark", "env": {"FOO": "bar", "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "0"}}\n' \
   > "$RESTAMP_TARGET/.claude/settings.json"
@@ -460,10 +463,10 @@ if [ -f "$INIT_SH" ]; then
     else
       failc "AC2-ENV" "unrelated pre-existing env.FOO lost or changed after re-stamp (got '$_foo')"
     fi
-    if [ "$_agt" = "1" ]; then
-      pass "AC2-ENV MANDATORY discriminating oracle: env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS seeded \"0\" -> \"1\" after re-stamp (pin-wins, D1)"
+    if [ "$_agt" = "0" ]; then
+      pass "AC2-ENV discriminating oracle (issue #95): seeded env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS \"0\" untouched after re-stamp (retired Agent Teams pin not shipped)"
     else
-      failc "AC2-ENV MANDATORY discriminating oracle" "env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS expected \"1\" (pin-wins overwrite of seeded \"0\") after re-stamp; got '$_agt' -- settings-pin.json does not ship the Agent Teams enablement env (issue #963)"
+      failc "AC2-ENV discriminating oracle (issue #95)" "env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS expected to stay \"0\" after re-stamp; got '$_agt' -- settings-pin.json still ships the retired Agent Teams env"
     fi
   else
     failc "AC2-ENV" "install into restamp target exited $_code or settings.json invalid JSON"

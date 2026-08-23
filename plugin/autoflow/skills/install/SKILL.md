@@ -76,15 +76,6 @@ written):
   `TOPOLOGY`. Empty fields were omitted on purpose (non-GitHub / no remote) —
   do not ask the user for them.
 
-<!-- AGENT-TEAMS-ENV-DISCLOSURE -->
-- **Agent Teams enablement (disclose before confirming).** The settings pin
-  merges `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"` into the target's
-  `.claude/settings.json`. This enables Claude Code's **experimental** Agent
-  Teams feature (default-off upstream), which AutoFlow's Communication layer
-  requires. Note the **token-cost implication**: multi-teammate coordination
-  runs additional agents. Surface this so the user confirms the stamp
-  (Step 3) informed.
-
 <!-- REVIEWER-BACKEND-DISCLOSURE -->
 - **Reviewer backend (disclose before confirming; issue #979).** Read
   `REVIEW_BACKEND` (configured backend, default `codex`), `REVIEW_CODEX_PRESENT`,
