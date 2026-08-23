@@ -844,7 +844,8 @@ await Promise.resolve()
   .catch(() => null)
 
 // Terminal Register phase (issue #127): persist the register so a later resume can re-enter from
-// it instead of cold-restarting. It runs on BOTH verdicts, and writing on the CONVERGED branch is
+// it instead of cold-restarting. It runs on all three verdicts (CONVERGED / AC_CHANGE / ESCALATE) —
+// the `registerHeld` guard below, not the verdict, decides — and writing on the CONVERGED branch is
 // load-bearing rather than incidental — the `already converged` resume guard reads this file's own
 // `verdict`, so skipping the write here would leave the file saying ESCALATE and let a later
 // resume reopen a design the ledger already records under "ARCHITECT mutual ACCEPT".

@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "60e93f3bb453d393d40b1000e9fe400e619eb080e333b92fbd86c75ffaee5847"
+      "sha256": "e521c89bb959e0b7514b5aece9861f0741053632e19139f88a414c405eb46555"
     },
     {
       "source": "docs/title-guide.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "67a1392a7e8089bf513739e9603b6b1bac2981802c950ee927548f1473243a4e"
+      "sha256": "16d24b92c187daaa60f910b1180715212b2802fcad6f386d404c70f2b247b786"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
