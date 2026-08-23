@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0ad45a8dd762e44946117d7b2e24eaa129fde438a6fdffab0ab8be57f15c7fc0"
+      "sha256": "702b787aaeb1d9ffd106985101d0b7cdb1253053a8e29fa686298d117107c2bc"
     },
     {
       "source": "docs/INDEX.md",
@@ -55,7 +55,7 @@
       "dest": ".claude/autoflow/docs/adr/0017-teammate-removal-feasibility.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a39270a6c3dc423c466ff293a0df2a1bc0b8eb80b4564549d23fe8145b60c318"
+      "sha256": "cd59ca8f40d86ecf43d716d148d8b300eca9cbc97cfd57dd30442b4160d74b27"
     },
     {
       "source": "docs/adr/0018-verification-depth-justification.md",
@@ -181,14 +181,14 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c532c52b85301b128dce0fc62bb7ecf4d223a099ec9521599292c20165021dd6"
+      "sha256": "0e9e16036dbbad7f6c163849dcc1ddc1b33275948613b0df33f190c877d1e66f"
     },
     {
       "source": "docs/teammate-common-rules.md",
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "85bf0486d874a18b9caeff23b2b11755bbb0b0c804cef499986c3b4934dab50d"
+      "sha256": "f92b3f458d2d7bf414efad399b3a9433bfd18e190921d5f4355e3a78e6852c95"
     },
     {
       "source": "docs/teammate-contracts.md",

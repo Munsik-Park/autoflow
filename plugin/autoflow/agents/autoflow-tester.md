@@ -27,6 +27,11 @@ Hard rules:
   holds however this spawn was created.
 - Report with an Evidence anchor (test summary line) per
   `docs/submodule-common-rules.md` > Reporting Format.
+- **[MUST]** Output hygiene: run the suite runner to a log file and read only
+  its tail (`… > "$LOG" 2>&1; tail -n 20 "$LOG"`; on failure, `grep -n` then
+  `sed -n 'A,Bp'` for the failing block — never `cat` the log). Re-read a file
+  you have already read by `sed -n 'A,Bp'` range, never by a second whole-file
+  read. See `docs/submodule-common-rules.md` > Testing Standards item 7.
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
   (test/build runs included). Wait for the result, then report — background +
   completion-notification is orchestrator-only. See

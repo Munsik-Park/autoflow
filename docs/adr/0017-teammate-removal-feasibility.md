@@ -231,3 +231,40 @@ scope fence that keeps this cycle from producing the measurement itself.
   `docs/adr/README.md` > Status Values. No automated check in this cycle obstructs it.
 - The condition identifiers C1 through C8 are stable and are referenced by the migration slice; a
   later cycle adding a condition appends rather than renumbers.
+
+### C8 — cost axis, measured on real cycles (issue #136, recorded 2026-08-23)
+
+Q6 above deferred the cost question to the pilot. The pilot record (PR #94, unmerged) carries C8 as
+latency / turn counts on seeded probe fixtures; the token and cost values were left to the operator.
+These are the values, taken from two real named-spawn cycles (#122 and #130 cycle 1), recorded here
+so the condition has a measurement on the actual workload rather than a fixture:
+
+| Agent (model) | Lifetime | Peak context | Wake / TTL re-writes | Share of agent cost |
+|---|---|---|---|---|
+| test-ai-122 (sonnet) | 3h59m, 162m idle | 515K | 4 × — $5.61 | 16% |
+| dev-ai-122 (opus) | 3h05m | 383K | 4 × — $8.80 | 24% |
+| test-red-130 (opus) | 3h44m, HOLD 79m + 82m | 393K | 9 × — $17.81 | 43% |
+| dev-green-130 (opus) | 2h09m, HOLD 56m | 293K | 3 × — $5.31 | 32% |
+
+Across the two sessions, re-writing context that had just been read cost $40.9 (11% of the two
+sessions' $367); orchestrator turns answering teammate idle / HOLD notifications with "no action"
+cost a further $22 over 81 turns. The named mode's purchased benefit — cross-phase context
+continuity — is not consumed: the Test AI contract re-enumerates from the tree at HEAD rather than
+from memory, and phase hand-off already travels through `.autoflow/*` reports.
+
+**Aggregation method** (so the numbers re-derive): read each session's JSONL transcript, take
+`message.usage` per assistant message, de-duplicate by `message.id` keeping the record with the
+largest output token count (streamed messages log several partial usage records), and price at list
+rates per model. A "re-write" is a turn, other than the agent's first, whose
+`cache_creation ≥ 0.9 × (cache_read + cache_creation)` — the whole prefix was re-written rather than
+read from cache. Two mechanisms produce it: a cold cache after an idle / HOLD gap longer than the
+cache TTL (or a suite run longer than it), and a wake message whose attachments change the prefix
+even when the previous turn was seconds old — the latter is harness behaviour and no repository
+rule removes it; the only repository-side response is not to wake the agent at all
+(`CLAUDE.md` > Cost Control > Teammate message rules).
+
+**Disposition of the work items** (issue #136): the message rules and the output-hygiene rules
+landed as operator changes (this note, `CLAUDE.md` > Cost Control, `docs/teammate-common-rules.md`,
+the `autoflow-tester` / `autoflow-implementer` agent definitions); making phase-boundary respawn
+the default (no named teammate survives a phase) is the body of issue #74 / PR #94 and is not
+re-done here.
