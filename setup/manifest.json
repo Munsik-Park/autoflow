@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2dd1fe485459854e7d85df418935a88eca2f3d7efdc0b3c1b11cf4750acb1552"
+      "sha256": "702b787aaeb1d9ffd106985101d0b7cdb1253053a8e29fa686298d117107c2bc"
     },
     {
       "source": "docs/INDEX.md",
@@ -188,7 +188,7 @@
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6744fe5be72d6433f5ca3a15003a5232b14cd93bcfc83d2965e1a8e3d689a9dd"
+      "sha256": "f92b3f458d2d7bf414efad399b3a9433bfd18e190921d5f4355e3a78e6852c95"
     },
     {
       "source": "docs/teammate-contracts.md",

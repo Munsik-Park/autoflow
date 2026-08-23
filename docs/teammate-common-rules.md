@@ -132,8 +132,10 @@ send an ACK-only message (a report carries its anchor and summary, and nothing e
 it); do not expect one back — the lead's acceptance is recorded in the ledger and task state, and
 silence after your report means "accepted, no further instruction yet", not "lost". When your phase
 work is complete and no later phase in this cycle re-enters you, expect to be shut down at that
-boundary rather than held; a HOLD is sent only when a later re-entry is already scheduled, and it
-arrives bundled with that re-entry's instruction (Tree Quiesce above).
+boundary rather than held. A `HOLD` still arrives on its own, before a capture point, carrying no
+work instruction; work resumes only through one message that carries `GO` together with the
+resuming instruction (Tree Quiesce above) — the economy rule removes messages around that order,
+not the order itself.
 
 **Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the discussion
 does **not** run as Agent-Teams teammates messaging the orchestrator. It runs inside
