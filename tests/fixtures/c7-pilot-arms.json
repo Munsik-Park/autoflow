@@ -1,0 +1,114 @@
+{
+  "replicates": 3,
+  "tree": "42ab6f2c6eac8e3a4da4aab24af47791cd812ddc",
+  "records": [
+    {
+      "arm": "named",
+      "replicate": 1,
+      "outcomes": {
+        "step3_planted": "detected",
+        "step3_clean": "not-run",
+        "step4_planted": "detected",
+        "step4_clean": "clean"
+      },
+      "iteration_set": [
+        "mock-real-tool/real-tool -> real-tool",
+        "mock-real-tool-b/real-tool-b -> real-tool-b"
+      ],
+      "observed_head": "42ab6f2c6eac8e3a4da4aab24af47791cd812ddc",
+      "delivery": "sendmessage",
+      "latency_seconds": 54,
+      "turns": 1
+    },
+    {
+      "arm": "named",
+      "replicate": 2,
+      "outcomes": {
+        "step3_planted": "detected",
+        "step3_clean": "not-run",
+        "step4_planted": "detected",
+        "step4_clean": "clean"
+      },
+      "iteration_set": [
+        "mock-real-tool/real-tool -> real-tool",
+        "mock-real-tool-b/real-tool-b -> real-tool-b"
+      ],
+      "observed_head": "42ab6f2c6eac8e3a4da4aab24af47791cd812ddc",
+      "delivery": "sendmessage",
+      "latency_seconds": 51,
+      "turns": 1
+    },
+    {
+      "arm": "named",
+      "replicate": 3,
+      "outcomes": {
+        "step3_planted": "detected",
+        "step3_clean": "not-run",
+        "step4_planted": "detected",
+        "step4_clean": "clean"
+      },
+      "iteration_set": [
+        "mock-real-tool/real-tool -> real-tool",
+        "mock-real-tool-b/real-tool-b -> real-tool-b"
+      ],
+      "observed_head": "42ab6f2c6eac8e3a4da4aab24af47791cd812ddc",
+      "delivery": "sendmessage",
+      "latency_seconds": 72,
+      "turns": 1
+    },
+    {
+      "arm": "direct",
+      "replicate": 1,
+      "outcomes": {
+        "step3_planted": "detected",
+        "step3_clean": "clean",
+        "step4_planted": "detected",
+        "step4_clean": "clean"
+      },
+      "iteration_set": [
+        "mock-real-tool/real-tool -> real-tool",
+        "mock-real-tool-b/real-tool-b -> real-tool-b"
+      ],
+      "observed_head": "42ab6f2c6eac8e3a4da4aab24af47791cd812ddc",
+      "delivery": "direct-return",
+      "latency_seconds": 79,
+      "turns": 0
+    },
+    {
+      "arm": "direct",
+      "replicate": 2,
+      "outcomes": {
+        "step3_planted": "detected",
+        "step3_clean": "clean",
+        "step4_planted": "detected",
+        "step4_clean": "clean"
+      },
+      "iteration_set": [
+        "mock-real-tool/real-tool -> real-tool",
+        "mock-real-tool-b/real-tool-b -> real-tool-b"
+      ],
+      "observed_head": "42ab6f2c6eac8e3a4da4aab24af47791cd812ddc",
+      "delivery": "direct-return",
+      "latency_seconds": 69,
+      "turns": 0
+    },
+    {
+      "arm": "direct",
+      "replicate": 3,
+      "outcomes": {
+        "step3_planted": "detected",
+        "step3_clean": "clean",
+        "step4_planted": "detected",
+        "step4_clean": "clean"
+      },
+      "iteration_set": [
+        "mock-real-tool/real-tool -> real-tool",
+        "mock-real-tool-b/real-tool-b -> real-tool-b"
+      ],
+      "observed_head": "42ab6f2c6eac8e3a4da4aab24af47791cd812ddc",
+      "delivery": "direct-return",
+      "latency_seconds": 74,
+      "turns": 0
+    }
+  ]
+}

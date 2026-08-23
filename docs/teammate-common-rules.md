@@ -30,7 +30,7 @@ git log --oneline -5        # confirm the recent history
 # After completing the assigned work
 git add <files> && git commit
 git push -u origin <branch-name>
-# The orchestrator opens the PR — report completion via SendMessage.
+# The orchestrator opens the PR — report completion in the spawn's return value.
 ```
 
 **Absolute rules**:
@@ -66,8 +66,9 @@ git status                  # any uncommitted work?
 ```
 
 1. Read the `Next:` line in the most recent commit and continue from there.
-2. Read pending `SendMessage` from the orchestrator (delivered automatically via
-   Agent Teams).
+2. Read the assignment in the spawn prompt — it carries the task and the
+   `.autoflow/*` paths. There is no mailbox to poll: the prompt is delivered
+   once, at spawn.
 
 ---
 
@@ -79,31 +80,33 @@ git status                  # any uncommitted work?
 
 ---
 
-## Tree Quiesce (HOLD/GO)
+## Tree Quiesce (spawn-boundary form)
 
-- **[MUST]** On receiving `HOLD` from the orchestrator, perform **no tracked-tree write** until `GO`
-  arrives — no commit, no `git add`/staging, no file edit under your target scope, no branch or index
-  operation. Report readiness and wait.
-- Reads and analysis remain permitted: they cannot move the tree.
+- **[MUST]** A spawned agent performs tracked-tree writes only inside its own spawn's lifetime, on
+  the assignment its spawn prompt carries — there is no message channel through which new tree work
+  can arrive mid-flight, and none through which a freeze could be delivered.
 - **Why:** the orchestrator takes a *capture point* (`git status --porcelain`, `git rev-parse
   HEAD^{tree}`, `git rev-parse HEAD`) immediately before starting a suite run, and the run's result is
   evidence only for the tree observed at that instant
   (`docs/autoflow-guide.md` > VERIFY > Green-tree register > *Capture point*). A tracked-tree write
   landing while that run is in flight moves the tree under it, the register refuses the entry, and the
   whole run is wasted.
-- `GO` arrives **bundled with the resuming instruction in the same message**; a `HOLD` is never sent
-  after a re-entry instruction as a second message. So there is no window in which you hold an
-  instruction to write and no `HOLD` yet: if you have work and no `GO`, you are held.
+- The quiesce obligation therefore sits with the **orchestrator's spawn schedule**, not with a
+  message protocol: no tree-writing spawn is issued between a capture point and the end of the run it
+  opened, and a capture point is taken only while no tree-writing spawn is in flight. (The HOLD/GO
+  message protocol this section previously specified belonged to the retired named-teammate mode —
+  see `CLAUDE.md` > Communication.)
 
 ---
 
 ## Work Completion Process
 
 ```
-Implement → /simplify → tests pass → push branch → SendMessage report
+Implement → /simplify → tests pass → push branch → return the report
 ```
 
-**Required content of the completion report** (`SendMessage(to: "team-lead")`):
+**Required content of the completion report** (the spawn's return value — write any
+body to `.autoflow/*` and return an anchor plus a one-line summary):
 
 - Files changed.
 - Test results (pass/fail).
@@ -115,48 +118,44 @@ Implement → /simplify → tests pass → push branch → SendMessage report
 
 ## Communication — Agent Teams
 
-The orchestrator spawns teammates with `Agent` (`team_name`, `name`). Messages are
-push-delivered.
+The Agent Teams channel is **retired**. The orchestrator spawns each role with `Agent`
+(`subagent_type`, explicit `model`), and the spawn's return value is its report. There
+is no team, no mailbox, and no peer-to-peer messaging between roles.
 
 | Action | Method | Note |
 |--------|--------|------|
-| Receive instruction from orchestrator | automatic (push) | message arrives via Agent Teams |
-| Discuss with another teammate | `SendMessage(to: "name")` | direct, no orchestrator routing |
-| Report to orchestrator | `SendMessage(to: "team-lead")` | completion, escalation |
+| Receive instruction from orchestrator | the spawn prompt | delivered once, at spawn |
+| Report to orchestrator | the spawn's return value | completion, escalation — body to `.autoflow/*`, return an anchor + one-line summary |
 | Mark task done | `TaskUpdate(status: "completed")` | then check `TaskList` |
-| Cross-cutting impact notice | `SendMessage` | to affected teammate, or to lead |
+| Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
+| Discuss with another role | not available | a deliberation is delegated to a facilitator `Workflow` (below), never held between spawns |
 
-**Message economy** (issue #136). Every message you receive is a turn that can re-write your
-whole context, and every message you send to the lead lands as a turn in its context. So: do not
-send an ACK-only message (a report carries its anchor and summary, and nothing else is sent after
-it); do not expect one back — the lead's acceptance is recorded in the ledger and task state, and
-silence after your report means "accepted, no further instruction yet", not "lost". When your phase
-work is complete and no later phase in this cycle re-enters you, expect to be shut down at that
-boundary rather than held. A `HOLD` still arrives on its own, before a capture point, carrying no
-work instruction; work resumes only through one message that carries `GO` together with the
-resuming instruction (Tree Quiesce above) — the economy rule removes messages around that order,
-not the order itself.
+**Message economy** (issue #136, discharged structurally by the spawn-mode migration). The #136
+measurement priced every named-teammate message as a context re-write. With every role an anonymous
+direct spawn there is no message channel left to economize: the assignment travels once in the spawn
+prompt, the report travels once in the return value, and no ACK, HOLD/GO, or idle-notification turn
+exists. The measurement itself is retained at `docs/adr/0017-teammate-removal-feasibility.md` >
+Notes > C8.
 
 **Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the discussion
-does **not** run as Agent-Teams teammates messaging the orchestrator. It runs inside
-an isolated **`Workflow`** (the facilitator): the Developer-AI and Test-AI run as
-in-script workflow sub-agents, their round-by-round exchange stays in workflow
-variables, and only a single structured result returns to the orchestrator. There is
-no `SendMessage(to: facilitator)` and no nested team — those are not supported by the
-Agent Teams runtime. See [`teammate-contracts.md`](teammate-contracts.md) > Facilitator
+runs inside an isolated **`Workflow`** (the facilitator). The Developer-AI and Test-AI
+run as in-script workflow sub-agents, their round-by-round exchange stays in workflow
+variables, and only a single structured result returns to the orchestrator. See
+[`teammate-contracts.md`](teammate-contracts.md) > Facilitator
 and [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) >
 Deliberation Isolation.
 
 ### Result delivery path by spawn mode
 
+Every role is an anonymous direct spawn, so there is exactly one delivery path.
+
 | Spawn mode | Where the final turn text goes | Required delivery action |
 |---|---|---|
-| anonymous direct (`subagent_type`, no `team_name`/`name`) | the spawn's return value (sync) or a task notification (background) | none — the final text is the report; write the body to `.autoflow/*` and return an anchor + one-line summary |
-| named team spawn (`team_name` + role-prefixed `name`) | discarded — never delivered to the lead | **[MUST]** report via `SendMessage(to: "team-lead")`; a report that exists only as the final turn text is lost with no error |
+| anonymous direct (`subagent_type`) — the only mode | the spawn's return value (sync) or a task notification (background) | none — the final text is the report; write the body to `.autoflow/*` and return an anchor + one-line summary |
 
-Observed, not guaranteed: across all 12 subagents of the #40 cycle, delivery matched the `SendMessage` call count 12 out of 12 — every spawn that called it once was received, every spawn that never called it was not, and no transport failure occurred. Three of those losses (`eval-gate-plan-40`, `eval-quality-40`, `test-red-40`) were recovered only by re-requesting the report. This describes current Claude Code Agent Teams behavior, re-derivable through `tests/manual/issue-42-manual-scenarios.md` M1 — treat it as an observation to re-check, not a runtime guarantee.
+**Why the other mode was removed, and the measurement that removed it.** A named team spawn's final turn text was **discarded — never delivered to the lead**, so a report existing only as the final response was lost with no error; that mode required an explicit `SendMessage(to: "team-lead")` instead. Observed, not guaranteed: across all 12 subagents of the #40 cycle, delivery matched the `SendMessage` call count 12 out of 12 — every spawn that called it once was received, every spawn that never called it was not, and no transport failure occurred. Three of those losses (`eval-gate-plan-40`, `eval-quality-40`, `test-red-40`) were recovered only by re-requesting the report. That measurement is the case for the migration and is retained here for that reason; it described Claude Code Agent Teams behavior at the time and was re-derivable through `tests/manual/issue-42-manual-scenarios.md` M1. The remaining open question — whether a direct spawn detects as well on VERIFY steps 3 and 4 — was settled by the ADR-0017 C7 pilot, which returned `EQUAL_OR_BETTER` (`docs/adr/0021-c7-pilot-spawn-mode-result.md`).
 
-Which roles use which mode is fixed by [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
+The single mode applies to every role; the per-role table is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
 
 ---
 

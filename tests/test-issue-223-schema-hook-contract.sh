@@ -710,27 +710,27 @@ run_hook_stderr 2 "multiple active" \
 # ---------------------------------------------------------------------------
 # H42-BEHAVIOR-EQ — issue #42 AC5 permanent behavioral oracle.
 # ---------------------------------------------------------------------------
-# CLAUDE.md > Spawn Model > Spawn mode by role lifetime (issue #42) is a
-# DOCUMENT-LEVEL contract: it binds each role to a spawn CHANNEL (anonymous
-# direct vs. named team). The hook (byte-unchanged, AC5) classifies the
-# declaration CHANNEL only and does not enforce that contract — an `eval-`
-# team spawn still passes the hook even though the #42 contract confines
-# Evaluation AI to anonymous direct spawns
-# (docs/gate-matching-standard.md > Rule P3, 42-AC3-p3-eval-note).
-# This block is the ONLY mechanical oracle for that "hook = floor, contract =
-# ceiling" claim: it proves the hook's role-classification path is reached
-# identically whether the spawn declares its role via subagent_type (direct)
-# or via a team `name` prefix (team), for BOTH an exempt role (evaluation)
-# and a gated role (implementation), plus a negative control (no prefix).
+# POST-MIGRATION (issue #74 / ADR-0021): CLAUDE.md > Spawn mode by role
+# lifetime now binds EVERY role to the single anonymous-direct channel, and
+# the hook's teammate-name-prefix declaration channel was retired jointly
+# (`resolve_spawn_role()`: any payload carrying `.tool_input.name` resolves
+# to "" / undeclared and is denied, regardless of the name's apparent prefix
+# or of any subagent_type riding along). The "hook = floor, contract =
+# ceiling" premise this block originally measured — a document-level channel
+# binding the hook itself does not enforce — no longer has two channels to
+# compare, so the differential (direct vs. team, exempt vs. gated) collapses:
+# every `agent_team_json` payload is now denied as undeclared, uniformly,
+# regardless of prefix. This block re-points to that single post-migration
+# fact rather than asserting a channel equivalence that no longer exists.
 #
 # Deliberately NOT reused: B11's five arms above all run against
 # $B11_AB_DIR, a multi-active (≥2 active state files) fail-closed CARVE-OUT
 # fixture — a corrupted-state repair path, not the normal single-active role
-# gate this contract is about. All 5 arms below share ONE single-active
-# fixture (verification design §2 AC5 [MUST]) so exit-code differences can
-# only be attributed to spawn CHANNEL, never to fixture drift.
+# gate this contract is about. All 3 arms below share ONE single-active
+# fixture (verification design §2 AC5 [MUST]) so results are attributable
+# only to the retired channel, never to fixture drift.
 echo ""
-echo "H42-BEHAVIOR-EQ — hook classifies declaration channel identically for direct vs. team spawns (issue #42 AC5)"
+echo "H42-BEHAVIOR-EQ — the team name-prefix channel is retired: every agent_team_json payload denies as undeclared, regardless of prefix (issue #42 AC5, re-pointed post issue #74)"
 
 H42_FAIL_JSON=$(jq '
   .active = true |
@@ -741,26 +741,29 @@ H42_FAIL_JSON=$(jq '
 ' <<< "$CANON_JSON")
 H42_DIR=$(stage_fixture "$H42_FAIL_JSON")
 
-# Differential arm 1 — evaluation is exempt from GATE:PLAN on BOTH channels.
+# Control — the direct channel is unaffected: evaluation is still exempt from
+# GATE:PLAN via subagent_type=autoflow-evaluator.
 run_hook 0 "H42-BEHAVIOR-EQ: direct evaluation spawn (autoflow-evaluator) exempt under GATE:PLAN-not-passed" \
   "$H42_DIR" "$(agent_json 'score this plan against the rubric' 'autoflow-evaluator')"
-run_hook 0 "H42-BEHAVIOR-EQ: team evaluation spawn (name eval-gate-plan) exempt under GATE:PLAN-not-passed" \
+
+# Differential arm 1 — an eval-prefixed name no longer grants the evaluation
+# exemption: the name channel is retired, so this payload is undeclared, not
+# resolved-and-exempt.
+run_hook_stderr 2 "without a declared AutoFlow role" \
+  "H42-BEHAVIOR-EQ: team spawn (name eval-gate-plan, no subagent_type) denied as undeclared — no evaluation exemption via name" \
   "$H42_DIR" "$(agent_team_json 'score this plan against the rubric' 'issue-42-team' 'eval-gate-plan')"
 
-# Differential arm 2 — implementation is gated by GATE:PLAN on BOTH channels
-# (proves the team channel actually reaches the role-classification path,
-# rather than merely defaulting to research/undeclared — verification
-# design §2 AC5 requirement 2).
-run_hook_stderr 2 "GATE:PLAN pass" \
-  "H42-BEHAVIOR-EQ: direct implementation spawn (autoflow-implementer) blocked under GATE:PLAN-not-passed" \
-  "$H42_DIR" "$(agent_json 'implement the fix and commit' 'autoflow-implementer')"
-run_hook_stderr 2 "GATE:PLAN pass" \
-  "H42-BEHAVIOR-EQ: team implementation spawn (name impl-green) blocked under GATE:PLAN-not-passed" \
+# Differential arm 2 — an impl-prefixed name is denied for a DIFFERENT reason
+# than before (undeclared, not "GATE:PLAN pass required") — the failure
+# reason itself is part of what changed, so it is asserted, not just the
+# exit code.
+run_hook_stderr 2 "without a declared AutoFlow role" \
+  "H42-BEHAVIOR-EQ: team spawn (name impl-green, no subagent_type) denied as undeclared, not GATE:PLAN-blocked" \
   "$H42_DIR" "$(agent_team_json 'implement the fix and commit' 'issue-42-team' 'impl-green')"
 
-# Positive control 3 — a team spawn with no recognized role prefix stays
-# undeclared and is denied, same as an undeclared direct spawn (B11l above),
-# so the 2 ALLOW results are not misread as "the hook allows everything".
+# Positive control 3 (retained, same reason as before and after) — a team
+# spawn with no recognized role prefix stays undeclared and is denied, same
+# disposition as every other name-carrying payload post-migration.
 run_hook_stderr 2 "without a declared AutoFlow role" \
   "H42-BEHAVIOR-EQ: team spawn with no role-prefixed name is denied (undeclared, positive control)" \
   "$H42_DIR" "$(agent_team_json 'do something' 'issue-42-team' 'no-prefix-name')"

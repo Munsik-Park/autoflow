@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# tests/fixtures/c7-pilot/probe-suite — inert probe test script (Issue #74
+# C7 pilot, RED stage 1). Never executed by any runner. Defines the single
+# assertion helper `probe_assert`; every assertion in this fixture goes
+# through it. "Covered" (the step-3 ground truth) is defined as: the
+# branch's sentinel token appears as an argument on a line invoking
+# probe_assert. Both step-3 branches are invoked here — invocation alone
+# does not mean coverage, only an assertion through probe_assert does. See
+# the sibling ../c7-pilot-ground-truth.md for the full expected-answer
+# table.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# The single assertion form this fixture uses. No other assertion mechanism
+# exists anywhere in this file.
+probe_assert() {
+  local expected="$1" actual="$2"
+  [ "$expected" = "$actual" ]
+}
+
+# Both step-3 branches are invoked.
+planted_output="$("$HERE/probe-cli" planted)"
+covered_output="$("$HERE/probe-cli" covered)"
+
+# Covered branch: its sentinel is asserted through probe_assert.
+probe_assert "PROBE_S3_COVERED" "$covered_output"
+
+# Planted branch: its output is captured above (exercised) but its sentinel
+# never appears on a probe_assert-invoking line — deliberately unasserted.
+echo "planted branch produced: $planted_output"
+
+# Bring both step-4 mock shims into scope (never actually invoked here —
+# this fixture is inert data, not an executed suite).
+export PATH="$HERE/mock-real-tool:$HERE/mock-real-tool-b:$PATH"

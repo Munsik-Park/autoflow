@@ -469,26 +469,33 @@ run_hook 0 "declared implementer w/ passing gate_plan → allowed" \
   "$PASSING" "$(agent_json 'autoflow-implementer' 'make the failing tests pass')"
 run_hook 0 "declared planner w/ hypothesis verdict skipped (feat) → allowed" \
   "$PASSING" "$(agent_json 'autoflow-planner' 'synthesize the plan')"
-# Team-spawn form: the role declaration travels in the teammate name prefix.
-run_hook 2 "team spawn name=impl-librechat → gate_plan gate fires (empty scores)" \
+# Team-spawn form (POST-MIGRATION, issue #74 / ADR-0021): the teammate
+# name-prefix channel is retired. ANY payload still carrying `.tool_input.name`
+# resolves to "" (undeclared) and is denied, regardless of the prefix's
+# apparent validity and regardless of any subagent_type riding along —
+# resolving by subagent_type instead would silently admit an obsolete
+# team-spawn attempt as a direct spawn and hide the caller's mistake.
+run_hook 2 "team spawn name=impl-librechat → denied (name channel retired, undeclared)" \
   "$ACTIVE" "$(team_json 'impl-librechat' 'satisfy the acceptance criteria')"
-run_hook 2 "team spawn name=test-librechat → gate_plan gate fires (empty scores)" \
+run_hook 2 "team spawn name=test-librechat → denied (name channel retired, undeclared)" \
   "$ACTIVE" "$(team_json 'test-librechat' 'author the acceptance checks')"
-run_hook 0 "team spawn name=eval-quality → allowed (evaluation role)" \
+run_hook 2 "team spawn name=eval-quality → denied (name channel retired, undeclared — no evaluation exemption via name)" \
   "$ACTIVE" "$(team_json 'eval-quality' 'score the completion rubric')"
-run_hook 2 "team spawn undeclared name → blocked" \
+run_hook 2 "team spawn undeclared name → denied" \
   "$ACTIVE" "$(team_json 'librechat-helper' 'assist with the task')"
-# Mixed payload (PR #506 review, Medium): on a team spawn the name prefix decides;
-# a research/autoflow-* subagent_type riding along must not override or exempt it.
-run_hook 2 "mixed: subagent_type=Explore + name=impl-librechat → gate_plan fires (name wins)" \
+# Mixed payload (PR #506 review, Medium — pre-migration; post-migration the
+# same shape is governed by the name-presence deny above): a research/autoflow-*
+# subagent_type riding along a `name` field does not rescue the payload —
+# presence of `name` alone denies it, so subagent_type is never consulted.
+run_hook 2 "mixed: subagent_type=Explore + name=impl-librechat → denied (name present, subagent_type not consulted)" \
   "$ACTIVE" "$(team_json_subtype 'impl-librechat' 'Explore' 'satisfy the acceptance criteria')"
-run_hook 2 "mixed: subagent_type=Explore + name=test-librechat → gate_plan fires (name wins)" \
+run_hook 2 "mixed: subagent_type=Explore + name=test-librechat → denied (name present, subagent_type not consulted)" \
   "$ACTIVE" "$(team_json_subtype 'test-librechat' 'Explore' 'author the acceptance checks')"
-run_hook 2 "mixed: subagent_type=autoflow-evaluator + name=impl-x → gate_plan fires (name wins)" \
+run_hook 2 "mixed: subagent_type=autoflow-evaluator + name=impl-x → denied (name present, subagent_type not consulted)" \
   "$ACTIVE" "$(team_json_subtype 'impl-x' 'autoflow-evaluator' 'satisfy the acceptance criteria')"
-run_hook 2 "mixed: subagent_type=Explore + undeclared name → blocked (contradiction not arbitrated)" \
+run_hook 2 "mixed: subagent_type=Explore + undeclared name → denied (name present, subagent_type not consulted)" \
   "$ACTIVE" "$(team_json_subtype 'librechat-helper' 'Explore' 'assist with the task')"
-run_hook 0 "mixed: subagent_type=Explore + name=eval-quality → allowed (name wins, evaluation)" \
+run_hook 2 "mixed: subagent_type=Explore + name=eval-quality → denied (name channel retired, no evaluation exemption via name)" \
   "$ACTIVE" "$(team_json_subtype 'eval-quality' 'Explore' 'score the completion rubric')"
 # No over-block outside a cycle: with no state file, undeclared spawns stay allowed.
 run_hook 0 "undeclared general-purpose with NO state → allowed (pre-PREFLIGHT)" \

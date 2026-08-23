@@ -553,9 +553,9 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 
 ## DISPATCH — Task Assignment (Developer AI + Test AI)
 
-`TaskCreate` + `SendMessage` to **both teammates**:
+`TaskCreate` for **both roles**, each then carried into its phase by a direct spawn whose prompt states the task:
 
-- **Teammate spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned (no persistent ARCHITECT teammates to shut down). At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
+- **Role spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned. At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — anonymous direct spawns (`subagent_type`), one per phase entry; see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
 - **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt carries the whole-tree-run prohibition (GREEN step 2): the Developer AI runs only its resolved run set or the specific suites its change requires, and never a whole-tree run of the suite runner — neither the `--all` flag nor the bare invocation, which selects the full set on an empty delta or a `push` event.
 - Both receive: acceptance criteria + verification design + affected docs.
@@ -796,14 +796,13 @@ entry keyed to the tree the suite actually executed over.
 
 **Tree quiescence is a property of the capture point.** From the instant the capture point is taken
 until the run it opened has finished, no tracked-tree write occurs. The orchestrator obtains that
-condition by sending `HOLD` to every live teammate **before** taking the capture point, and issues no
-tree-work instruction again until the run ends; the resuming instruction travels bundled with `GO` in one message.
-Sending a re-entry instruction and a `HOLD` as two messages, in that order, is **denied**: the
-teammate's write lands in the window between them, the tree moves under the run, and the entry the
-run would have earned is refused — the elapsed time buys nothing. Because the rule is scoped to the
-capture point rather than to a list of steps, it reaches every site that takes one, present and
-future, by construction. The teammate side of the obligation is
-[`teammate-common-rules.md`](teammate-common-rules.md) > Tree Quiesce (HOLD/GO).
+condition through its **spawn schedule**: no tree-writing spawn is issued between the capture point
+and the end of the run it opened, and a capture point is taken only while no tree-writing spawn is
+in flight — with anonymous direct spawns there is no message channel through which mid-run tree work
+could arrive. Because the rule is scoped to the capture point rather than to a list of steps, it
+reaches every site that takes one, present and future, by construction. The spawned-agent side of
+the obligation is [`teammate-common-rules.md`](teammate-common-rules.md) > Tree Quiesce
+(spawn-boundary form).
 
 **Writer**: the orchestrator, at the exit of the phase whose step executed the run, and only on an all-PASS
 outcome over a clean capture point. Teammates never write it — that write authority is the provenance

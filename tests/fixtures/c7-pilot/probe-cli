@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# tests/fixtures/c7-pilot/probe-cli — inert probe implementation (Issue #74
+# C7 pilot, RED stage 1). Never executed by any runner. Carries two step-3
+# branches: `planted` (exercised by probe-suite but never asserted through
+# probe_assert — ground truth: step 3 must answer `detected`) and `covered`
+# (exercised AND asserted — ground truth: step 3 must answer `clean`). Each
+# branch emits a sentinel token unique in the whole fixture tree. See the
+# sibling ../c7-pilot-ground-truth.md for the full expected-answer table.
+set -euo pipefail
+
+case "${1:-}" in
+  planted)
+    echo "PROBE_S3_PLANTED"
+    ;;
+  covered)
+    echo "PROBE_S3_COVERED"
+    ;;
+  *)
+    echo "usage: probe-cli {planted|covered}" >&2
+    exit 2
+    ;;
+esac

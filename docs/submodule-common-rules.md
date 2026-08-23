@@ -26,7 +26,7 @@ Every sub-repository **must** contain:
 
 AutoFlow state lives in the host (orchestrator) repository under `.autoflow/issue-{N}.json` — one file per issue. Sub-repos do not own AutoFlow state. A sub-repo that finds an `.autoflow/` directory locally should treat it as residual from a misconfigured run; the canonical state is in the host repo.
 
-The host's hook (`.claude/hooks/check-autoflow-gate.sh`) reads the state file and computes pass/fail directly from raw `scores`. Sub-repo AIs do not write to the state file — they receive instructions through `SendMessage` from the orchestrator.
+The host's hook (`.claude/hooks/check-autoflow-gate.sh`) reads the state file and computes pass/fail directly from raw `scores`. Sub-repo AIs do not write to the state file — they receive instructions in the spawn prompt the orchestrator issues.
 
 ---
 
@@ -226,7 +226,7 @@ The item fails when a hunk traces to neither an AC nor the confirmed cause — "
 
 ## Reporting Format
 
-When a teammate reports to the orchestrator (or to another teammate via `SendMessage`), the message must follow this shape to keep token cost bounded (see host [`CLAUDE.md`](../CLAUDE.md) > Cost Control). This format governs **AI↔AI / AI↔orchestrator** messages, whose audience is an AI that re-derives anchors deterministically. It does **not** govern a **human-facing decision pause** — that follows the situation-first contract in host [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation (situation → decision/options → anchors-as-evidence).
+When a teammate reports to the orchestrator — the report is the spawn's return value, with any body written to `.autoflow/*` and an anchor plus a one-line summary returned — it must follow this shape to keep token cost bounded (see host [`CLAUDE.md`](../CLAUDE.md) > Cost Control). This format governs **AI↔AI / AI↔orchestrator** reporting, whose audience is an AI that re-derives anchors deterministically: the returned report, and the round-by-round exchange between the Developer-AI and Test-AI sub-agents inside a facilitation `Workflow`. It does **not** govern a **human-facing decision pause** — that follows the situation-first contract in host [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation (situation → decision/options → anchors-as-evidence).
 
 1. **Reference paths, not bodies**: cite `.autoflow/*` files, source files, and commit hashes by path/hash. Do NOT paste full file bodies or document sections into messages.
 2. **One-line summaries**: each finding, fix, or status item gets one line. Tables of ≤ 10 rows are allowed for structured results (test counts, coverage percentages).

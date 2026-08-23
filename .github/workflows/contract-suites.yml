@@ -97,6 +97,7 @@ on:
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
+      - 'tests/test-issue-74-c7-pilot.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-952-wizard-removal.sh'
       - 'tests/test-issue-create-gate.sh'
@@ -202,6 +203,7 @@ on:
       - 'tests/test-issue-30-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
+      - 'tests/test-issue-74-c7-pilot.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
       - 'tests/test-issue-952-wizard-removal.sh'
       - 'tests/test-issue-create-gate.sh'
@@ -396,6 +398,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-64-collection-scope.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-64-collection-scope.sh
+
+      - name: test-issue-74-c7-pilot.sh
+        id: s-test-issue-74-c7-pilot
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-74-c7-pilot.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-74-c7-pilot.sh
 
       - name: test-issue-92-host-pr-execution.sh
         id: s-test-issue-92-host-pr-execution
