@@ -58,6 +58,38 @@ if [ ! -f "$CONFIG" ]; then
   echo; echo "PASS: $PASS  FAIL: $FAIL"; exit 1
 fi
 
+# Cycle-scoped, diff-dependent by construction: the assertions below compare
+# the CONFIG against this cycle's OWN merge-base -- a property that is only
+# well-formed while HEAD sits on the issue-150 dev branch and origin/main
+# predates the migration. Off that branch (in particular under push
+# topology, where HEAD *is* main and resolve_base_ref degenerates to
+# `merge-base HEAD origin/main` == HEAD itself), CLAUDE.md/analysis.md @
+# BASE_REF is the POST-migration text -- the table this suite reads was
+# retired by this same cycle's commit (3ad399b: "CLAUDE.md > Spawn Model
+# loses the value table for a pointer"), so the literal grep would find
+# nothing and every comparison would fail loud on a base that was never the
+# pre-migration source. Gate per the push-context oracle's own selection
+# rule (tests/test-push-context-base-ref.sh:268-281): a merge-base call that
+# belongs to a cycle must be dominated by a `dev/*-issue-<N>` branch gate,
+# mirroring tests/test-issue-59-adoption-evidence-discipline.sh:210-218 /
+# ea68a4c (tests/test-issue-7-oracle-hardening.sh AC-7-7b) exactly.
+HEAD_BRANCH="${GITHUB_HEAD_REF:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)}"
+
+note_deferred() { echo "  DEFERRED: $1"; }
+
+case "$HEAD_BRANCH" in
+  dev/*-issue-150|dev/*-issue-150-*)
+    ;;
+  *)
+    note_deferred "migration-fidelity: cycle-scoped merge-base fidelity check inert off the issue-150 dev branch (head: ${HEAD_BRANCH:-unknown}) -- this cycle's own pre-migration baseline is this PR's contract, not every branch's."
+    echo
+    echo "=============================================="
+    echo "PASS: $PASS  FAIL: $FAIL"
+    echo "=============================================="
+    exit 0
+    ;;
+esac
+
 BASE_REF="$(cd "$PROJECT_ROOT" && resolve_base_ref "${1:-}")" || {
   failc "migration-fidelity: no base ref resolvable (resolve_base_ref failed)"
   echo; echo "PASS: $PASS  FAIL: $FAIL"; exit 1
