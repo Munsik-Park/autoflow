@@ -76,17 +76,106 @@ const IMPL_CHECK = {
   required: ['verdict', 'reason'],
 }
 
+// -- Spawn policy load (issue #150) -------------------------------------------
+// The per-site spawn policy lives in exactly ONE machine-readable place,
+// .claude/autoflow/spawn-policy.json, and no `model:` literal remains in this
+// file. The Workflow runtime injects no filesystem access, so the file arrives
+// through a transcription sub-agent under a closed schema.
+//
+// This loader is the ONE bootstrap exemption to CLAUDE.md > Spawn Model's
+// explicit-`model` rule: it cannot read its own model from the policy it is
+// loading, so it omits `model` and inherits the resolved session model. It is
+// also the only call in this script carrying no `site()` spread.
+//
+// Fail-closed: this workflow has no ESCALATE verdict, so a missing, unreadable
+// or malformed policy raises at the boundary alongside the existing
+// `issue`/`failLog` guards. Degrading to session-inherited models is not an
+// option -- that is the bypass the single-source policy exists to close.
+const POLICY_PATH = '.claude/autoflow/spawn-policy.json'
+const WORKFLOW_NAME = 'verify-cause-branch'
+const POLICY_FILE = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    found: { type: 'boolean' },
+    content: { type: 'string' },
+  },
+  required: ['found', 'content'],
+}
+const policyLoaded = await Promise.resolve()
+  .then(() => agent(
+    `You are a transcription channel, not a reviewer. Read ${POLICY_PATH} and return its raw contents verbatim in "content" -- do not summarize, reword, add, drop or re-order anything, and do not re-serialize or pretty-print the JSON. Set "found" true only when the file exists AND is non-empty; when it does not, set "found" false and "content" to the empty string. Exercise no judgment about the policy itself. Run every Bash command in the foreground only -- never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    { schema: POLICY_FILE, label: 'policy-load', phase: 'Self-check' },
+  ))
+  .catch(() => null)
+let policy = null
+if (policyLoaded && policyLoaded.found) {
+  try { policy = JSON.parse(policyLoaded.content) } catch (_) { policy = null }
+}
+if (!policy || !policy.workflow_sites || !policy.workflow_sites[WORKFLOW_NAME]) {
+  throw new Error(`${WORKFLOW_NAME}: spawn policy could not be loaded from ${POLICY_PATH}`)
+}
+
+// Per-row totality + effort-contract shape (issue #150, cycle 2) -- see
+// architect-deliberation.js for the full rationale. The declaration is one BARE quoted key per
+// line between the markers, never in the site-call syntax: the contract CI extracts call-site keys by
+// grepping that syntax OUTSIDE this range, and a declaration written in it would satisfy its own
+// join. This workflow has no ESCALATE verdict, so the disposition is the boundary throw its
+// sibling guard above already uses -- ahead of the parallel([...]) self-checks (whose thunks
+// resolve a throw to null) and ahead of the terminal ledger call.
+const REQUIRED_SITE_KEYS = [
+  /* site-keys:begin */
+  'test-self-check',
+  'impl-self-check',
+  'ledger',
+  /* site-keys:end */
+]
+const contract = policy.effort_contract
+if (!contract || typeof contract !== 'object' || Array.isArray(contract)
+    || typeof contract.config_inherit_sentinel !== 'string' || !contract.config_inherit_sentinel) {
+  throw new Error(`${WORKFLOW_NAME}: spawn policy effort contract unusable (effort_contract.config_inherit_sentinel) in ${POLICY_PATH}`)
+}
+// Quantified over the DECLARED list, never over the loaded table's own keys -- a walk over the
+// table's keys has fewer rows to check on a short table and passes. The empty table is the widest
+// instance of the same quantifier and needs no branch of its own.
+const missingRows = REQUIRED_SITE_KEYS.filter((key) => {
+  const row = policy.workflow_sites[WORKFLOW_NAME][key]
+  return !row || typeof row !== 'object' || typeof row.model !== 'string' || !row.model
+    || !Object.prototype.hasOwnProperty.call(row, 'effort')
+})
+if (missingRows.length) {
+  throw new Error(`${WORKFLOW_NAME}: spawn policy row incomplete (${missingRows.join(', ')}) in ${POLICY_PATH}`)
+}
+
+// The site opts helper -- see architect-deliberation.js for the full rationale.
+// [MUST] The key is a STRING LITERAL at every call site: contract CI is pure
+// bash + jq with no node, so the static join is the only oracle over it. An
+// inheriting row yields an opts object with NO `effort` key, which is how the
+// runtime is documented to inherit.
+const site = (key) => {
+  const row = policy.workflow_sites[WORKFLOW_NAME][key]
+  if (!row || !row.model) throw new Error(`${WORKFLOW_NAME}: no spawn-policy row for workflow site "${key}"`)
+  // The inherit sentinel comes from the config's own contract -- one spelling, one home; no
+  // fallback literal. Guarded by the load-time contract clause above.
+  const inheritSentinel = policy.effort_contract.config_inherit_sentinel
+  // The sentinel -- and only the sentinel -- means inherit; an admitted falsy effort such as the
+  // integer zero is still a value and reaches the opts unchanged. No truthiness conjunct here.
+  return row.effort !== inheritSentinel
+    ? { model: row.model, effort: row.effort }
+    : { model: row.model }
+}
+
 phase('Self-check')
 console.log(`VERIFY cause-branch for issue #${issue}`)
 
 const [test, impl] = await parallel([
   () => agent(
     `You are the Test AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the test code, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Developer AI): does my test accurately reflect the acceptance criterion? Answer "fix_test" if the test is wrong, "no_problem" if the test is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-    { schema: TEST_CHECK, label: 'test-self-check', phase: 'Self-check', model: 'opus' },
+    { schema: TEST_CHECK, label: 'test-self-check', phase: 'Self-check', ...site('test-self-check') },
   ),
   () => agent(
     `You are the Developer AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the implementation, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Test AI): does my implementation meet the acceptance criterion? Answer "fix_impl" if the implementation is wrong, "no_problem" if the implementation is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-    { schema: IMPL_CHECK, label: 'impl-self-check', phase: 'Self-check', model: 'opus' },
+    { schema: IMPL_CHECK, label: 'impl-self-check', phase: 'Self-check', ...site('impl-self-check') },
   ),
 ])
 
@@ -105,7 +194,7 @@ else next = 'EVALUATION_AI' // both "no_problem" -> deadlock: Evaluation AI arbi
 
 await agent(
   `Append (do NOT rewrite or delete) to ${ledger} one VERIFY cause-branch entry: decision "next_action=${next}"; grounds (test self-check=${t}, impl self-check=${i}; failure log ${failLog}); authority "VERIFY self-check"; cycle/phase "VERIFY". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Head the entry \`## <ID> — <title> (cycle <C>, VERIFY)\`, allocating <ID> by running \`bash scripts/ledger/ledger-entry-id.sh next ${ledger} F\` immediately before the append — \`F\` is the facilitator delegate's namespace (CLAUDE.md > Decision Ledger). After the append, run \`bash scripts/ledger/ledger-entry-id.sh check ${ledger}\` and fix every defect it reports before returning. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-  { label: 'ledger', phase: 'Self-check', model: 'opus' },
+  { label: 'ledger', phase: 'Self-check', ...site('ledger') },
 )
 
 return {

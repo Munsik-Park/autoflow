@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/hooks/check-autoflow-gate.sh docs/gate-matching-standard.md
+# ci-subject: .claude/hooks/check-autoflow-gate.sh docs/gate-matching-standard.md .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -16,6 +16,11 @@
 #     unrelated label edits (status:in-progress) and other labels not blocked
 #   spawn-model — Agent spawn without an explicit `model` denied regardless of
 #     state (issue #475; CLAUDE.md > Spawn Model); research/evaluation included
+#   spawn-policy advisory (issue #150) — a declared `model` outside the config's
+#     admitted set for that `subagent_type` draws a WARNING (advisory only,
+#     never denies); a `subagent_type` the policy admits NO models for at all
+#     (policy_unmapped_agent_types, or a research type with no phases row)
+#     draws no advisory line
 #   no over-block — legit dev push + non-merge gh pr create allowed
 # =============================================================================
 
@@ -1006,6 +1011,66 @@ _assert_fold "multi-hop continuation joins every hop" $'a\\\nb\\\nc' 'a b c'
 _assert_fold "continuation at EOF keeps content, backslash removed, no join" $'a\\' 'a'
 _assert_fold "CRLF continuation is stripped before the continuation test, then joined" $'a\\\r\nb' 'a b'
 _assert_fold "a genuine trailing blank logical line is preserved, not silently dropped" $'a\n' $'a\n'
+
+# =============================================================================
+# hook-advisory / advisory-silence-on-empty-set (issue #150)
+# =============================================================================
+# .autoflow/issue-150-verification-design.md > section 2: "Hook advisory leg
+# (extends tests/test-gate-hardening.sh, no new file)". Two properties:
+#   - a spawn's declared `model` outside the config's admitted set for its
+#     `subagent_type` draws a WARNING (advisory only -- never denies), keyed
+#     on the row (`red` -> `autoflow-tester`, a SINGLETON admitted set, so the
+#     edit provably moves the verdict);
+#   - a spawn whose `subagent_type` the policy admits NO models for at all
+#     (`autoflow-planner`, `claude-code-guide`) draws NO advisory line, at
+#     exit 0, distinct from the mismatch case above.
+# Uses the $PASSING fixture already defined above (GATE:PLAN passed) so the
+# testing-role spawn clears the score gate and the advisory path is reached.
+# =============================================================================
+echo "== hook-advisory / advisory-silence-on-empty-set (issue #150) =="
+
+run_hook_out 0 "declared tester w/ passing gate_plan + model outside the config's admitted set for autoflow-tester -> allowed (advisory only, never denies)" \
+  "$PASSING" "$(agent_json 'autoflow-tester' 'author the acceptance checks' 'opus')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING.*(advisory|NOT blocked)'; then
+  echo "  PASS: mismatch draws a WARNING ... (advisory — this call is NOT blocked) line"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no advisory WARNING line on a model outside autoflow-tester's admitted set -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
+
+run_hook_out 0 "declared planner (policy_unmapped_agent_types) + any model -> allowed, no advisory" \
+  "$ACTIVE" "$(agent_json 'autoflow-planner' 'synthesize the plan' 'haiku')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING'; then
+  echo "  FAIL: advisory line drawn for autoflow-planner, whose admitted model set is empty -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: no advisory line for autoflow-planner (empty admitted set -> silence, not noise)"
+  PASS=$((PASS + 1))
+fi
+
+run_hook_out 0 "declared claude-code-guide research spawn + any model -> allowed, no advisory" \
+  "$ACTIVE" "$(agent_json 'claude-code-guide' 'explain a Claude Code feature' 'haiku')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING'; then
+  echo "  FAIL: advisory line drawn for claude-code-guide, whose admitted model set is empty -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: no advisory line for claude-code-guide (empty admitted set -> silence, not noise)"
+  PASS=$((PASS + 1))
+fi
+
+# Mirror image: Explore IS governed (the diagnose-loopcheck row), so it must
+# NOT fall silent the way the two ungoverned types above do -- keying the
+# advisory on the admitted-model SET, never on "is a research type".
+run_hook_out 0 "declared Explore research spawn + model outside diagnose-loopcheck's admitted set -> allowed, but DOES draw an advisory" \
+  "$ACTIVE" "$(agent_json 'Explore' 'search the repository' 'opus')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING.*(advisory|NOT blocked)'; then
+  echo "  PASS: Explore mismatch draws a WARNING (governed by diagnose-loopcheck, provenance is not the key)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no advisory WARNING line on Explore's model mismatch -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+fi
 
 echo "=============================="
 echo "Results: $((PASS + FAIL)) total, $PASS passed, $FAIL failed"

@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "591d368f2704891d1f031d32305d81ca7c6790587f2d7b9d104e7b8c2324277f"
+      "sha256": "8e05fb62cec4c279f7d7b69b0f8f2fb5a4fa03d8da1b00b70c7c0f559dcae2ee"
     },
     {
       "source": "docs/INDEX.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5cee9b3a7e9a83c79278e2d8260cbaf86378f5330d9cddb4e13772b29da0c719"
+      "sha256": "6d21225f6f80e2cac0155ac8dc7f657f0e813bc00215574b6c29db477c43b9f0"
     },
     {
       "source": "docs/design-rationale.md",
@@ -153,7 +153,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "721adf69dcb6443ab772ea0ff52b892667b76931d1b63b8dde9c055b1c304529"
+      "sha256": "2cbe4f22f3b3d65d20f9aae041a2d702be76bc7362dcee807c5cd31ecdc2e492"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -202,7 +202,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "357d4105c10e6c9f7b5c004316dbd4b65055d0aadd44023a4a3ae5339b872175"
+      "sha256": "5640f7c7fa21326c3a4a2f553953505f0a1ab20daa29fd7d9df237eed049c009"
     },
     {
       "source": "docs/title-guide.md",
@@ -223,14 +223,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "47fdd89986d7ea876955a6bc60457810094323b4929d065a895412cee1fd264d"
+      "sha256": "72b1813d392ab51fb0b690f3ba47749b5ddd20297a381b46e4cf0814b5e226ea"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "72a7be6309fe7e74ec48c99df27478a6f94de1f6db5741972e14728b18927322"
+      "sha256": "e33ff3f1ca69848e8b1f3d41cfca3f4236b5f6ce5875927d1c9114bbe3c7befc"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -350,6 +350,20 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "5136de3ef1317bf49eab3a09ca9d33dc24d243c35ebd0ac7dec529af45d8cdc6"
+    },
+    {
+      "source": ".claude/autoflow/spawn-policy.json",
+      "dest": ".claude/autoflow/spawn-policy.json",
+      "tier": "root-layer",
+      "kind": "scaffold",
+      "sha256": "d6630cf717ca7f91d3a853eb02989ef1ca947de4907ce0efb634aae8e52c66de"
+    },
+    {
+      "source": "scripts/spawn-policy/spawn-policy.sh",
+      "dest": "scripts/spawn-policy/spawn-policy.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "8d77a44b744e25cd9d6566b621868cd52446286a5c27afb28c96c3360d6f9efa"
     },
     {
       "source": "setup/manifest.json",

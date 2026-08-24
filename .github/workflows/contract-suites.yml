@@ -76,6 +76,7 @@ on:
       - 'scripts/test/check-tests-tree-hygiene.sh'
       - 'scripts/test/check-watchdog-detachment.sh'
       - 'setup/gen-manifest-hashes.sh'
+      - 'setup/init.sh'
       - 'setup/manifest.json'
       - 'setup/thin-root-layer/**'
       - 'tests/fixtures/**'
@@ -108,6 +109,16 @@ on:
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-issue-140-remedy-route.sh'
+      - '.claude/autoflow/spawn-policy.json'
+      - 'scripts/spawn-policy/spawn-policy.sh'
+      - '.claude/workflows/verify-cause-branch.js'
+      - '.claude/agents/autoflow-analyzer.md'
+      - '.claude/agents/autoflow-evaluator.md'
+      - '.claude/agents/autoflow-planner.md'
+      - '.claude/agents/autoflow-tester.md'
+      - 'docs/phases/analysis.md'
+      - 'tests/test-spawn-policy-single-source.sh'
+      - 'tests/test-issue-150-policy-migration.sh'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
       - 'scripts/gate/remedy-route.sh'
@@ -181,6 +192,7 @@ on:
       - 'scripts/test/check-tests-tree-hygiene.sh'
       - 'scripts/test/check-watchdog-detachment.sh'
       - 'setup/gen-manifest-hashes.sh'
+      - 'setup/init.sh'
       - 'setup/manifest.json'
       - 'setup/thin-root-layer/**'
       - 'tests/fixtures/**'
@@ -213,6 +225,16 @@ on:
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-issue-140-remedy-route.sh'
+      - '.claude/autoflow/spawn-policy.json'
+      - 'scripts/spawn-policy/spawn-policy.sh'
+      - '.claude/workflows/verify-cause-branch.js'
+      - '.claude/agents/autoflow-analyzer.md'
+      - '.claude/agents/autoflow-evaluator.md'
+      - '.claude/agents/autoflow-planner.md'
+      - '.claude/agents/autoflow-tester.md'
+      - 'docs/phases/analysis.md'
+      - 'tests/test-spawn-policy-single-source.sh'
+      - 'tests/test-issue-150-policy-migration.sh'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
       - 'scripts/gate/remedy-route.sh'
@@ -456,6 +478,18 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-103-central-runner.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-103-central-runner.sh
+
+      - name: test-spawn-policy-single-source.sh
+        id: s-test-spawn-policy-single-source
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-spawn-policy-single-source.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-spawn-policy-single-source.sh
+
+      - name: test-issue-150-policy-migration.sh
+        id: s-test-issue-150-policy-migration
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-150-policy-migration.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-150-policy-migration.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh

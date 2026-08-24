@@ -40,10 +40,27 @@ const phase = () => {}
 // Mirror the documented parallel(): concurrent, and a thunk that throws resolves to null.
 const parallel = (thunks) => Promise.all(thunks.map((t) => Promise.resolve().then(t).catch(() => null)))
 
-function makeAgent(responder, calls) {
+// Spawn-policy load default (issue #150 / #151 regression): both workflow scripts open with an
+// unlabelled `policy-load` transcription call (no `site()` spread — it is the one bootstrap
+// exemption, see architect-deliberation.js > Spawn policy load) that every OTHER agent() call
+// depends on via `site(key)`. A scenario's own `responder` never sees this label unless it opts in
+// via the third `policyLoad` arg below; by default every scenario answers it with the REAL policy
+// file's verbatim content, exactly as a working transcription sub-agent would, so the ~150
+// pre-existing scenarios (written before #150) do not need to individually stub a call they know
+// nothing about. The handful of scenarios that exercise the load failure itself (absent / malformed
+// / agent-missing) pass an explicit override.
+const REAL_POLICY_CONTENT = readFileSync(join(root, '.claude/autoflow/spawn-policy.json'), 'utf8')
+const DEFAULT_POLICY_LOAD_RESPONSE = { found: true, content: REAL_POLICY_CONTENT }
+
+function makeAgent(responder, calls, policyLoad = DEFAULT_POLICY_LOAD_RESPONSE) {
   return async (prompt, opts = {}) => {
     const label = opts.label || ''
-    calls.push({ label, prompt })
+    // `opts` is recorded verbatim (issue #150 cycle 2) so a scenario can assert what a call site's
+    // site(key) spread actually produced -- in particular whether an `effort` key reached the
+    // spawn opts at all, which is the observable the sentinel-from-config legs need. Additive: no
+    // existing assertion reads more than `.label` / `.prompt` off a `calls` entry (grepped).
+    calls.push({ label, prompt, opts })
+    if (label === 'policy-load') return typeof policyLoad === 'function' ? policyLoad() : policyLoad
     return responder(label, prompt)
   }
 }
@@ -118,13 +135,29 @@ const runArch = (args, responder, opts = {}) => {
   const calls = []
   const { issue } = extractArgv(args)
   writeDraftArtifacts(issue, opts.omitArtifact)
-  return arch(args, phase, parallel, makeAgent(responder, calls), mockConsole)
+  return arch(args, phase, parallel, makeAgent(responder, calls, opts.policyLoad), mockConsole)
     .then((result) => ({ result, calls }))
     .finally(() => removeDraftArtifacts(issue))
 }
-const runVerify = (args, responder) => {
+const runVerify = (args, responder, opts = {}) => {
   const calls = []
-  return verify(args, phase, parallel, makeAgent(responder, calls), mockConsole).then((result) => ({ result, calls }))
+  return verify(args, phase, parallel, makeAgent(responder, calls, opts.policyLoad), mockConsole).then((result) => ({ result, calls }))
+}
+// Issue #150 cycle 2, `required-row-omission-throws` / `fail-closed-precedes-work`: unlike runVerify
+// above, this variant does NOT let a rejection propagate past the call -- it captures `calls` even
+// when the run throws at the boundary, which the plain `assert.rejects(() => runVerify(...))` idiom
+// used by the four pre-existing load-failure scenarios cannot do (the `calls` array closed over
+// inside runVerify's promise chain is unreachable once that promise rejects).
+const runVerifyRaw = async (args, responder, opts = {}) => {
+  const calls = []
+  let result = null
+  let error = null
+  try {
+    result = await verify(args, phase, parallel, makeAgent(responder, calls, opts.policyLoad), mockConsole)
+  } catch (e) {
+    error = e
+  }
+  return { result, error, calls }
 }
 
 let failures = 0
@@ -138,7 +171,195 @@ async function test(name, fn) {
   }
 }
 
-// ---- ARCHITECT ----------------------------------------------------------------
+// ---- ARCHITECT: spawn-policy load (issue #150 / #151 regression) --------------
+// The transcription call itself never reaches the responder (see the `policy-load`
+// interception in `makeAgent` above) -- these three scenarios drive it directly via
+// `opts.policyLoad` to lock the three fail-closed sentinels architect-deliberation.js
+// derives from it (REASON_POLICY_LOAD_AGENT_MISSING / REASON_POLICY_ABSENT /
+// REASON_POLICY_MALFORMED), each escalating with ITS OWN distinct cause.
+
+await test('ARCHITECT: policy-load agent returns null (agent missing/errored) -> ESCALATE "spawn policy load agent missing"', async () => {
+  const { result } = await runArch({ issue: 'policy-null' }, () => 'x', { policyLoad: null })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy load agent missing')
+})
+
+await test('ARCHITECT: policy-load returns found:false (file absent/empty) -> ESCALATE "spawn policy absent"', async () => {
+  const { result } = await runArch({ issue: 'policy-absent' }, () => 'x', {
+    policyLoad: { found: false, content: '' },
+  })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy absent')
+})
+
+await test('ARCHITECT: policy-load content is not valid JSON -> ESCALATE "spawn policy malformed"', async () => {
+  const { result } = await runArch({ issue: 'policy-malformed-json' }, () => 'x', {
+    policyLoad: { found: true, content: 'not json' },
+  })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy malformed')
+})
+
+await test('ARCHITECT: policy-load content parses but lacks this workflow\'s site table -> ESCALATE "spawn policy malformed"', async () => {
+  const { result } = await runArch({ issue: 'policy-malformed-shape' }, () => 'x', {
+    policyLoad: { found: true, content: JSON.stringify({ workflow_sites: { 'verify-cause-branch': {} } }) },
+  })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy malformed')
+})
+
+await test('ARCHITECT: a valid policy-load (the real spawn-policy.json content, unmodified by any scenario) lets the run reach Draft normally', async () => {
+  const { calls } = await runArch({ issue: 'policy-ok' }, (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return null
+  })
+  assert.ok(calls.some((c) => c.label === 'policy-load'), 'the policy-load call must have been made')
+  assert.ok(calls.some((c) => c.label === 'dev-draft'), 'a valid default policy must let Draft proceed')
+})
+
+// ---- Issue #150 cycle 2 (F1 policy-row fail-closed totality) ------------------
+// Verification design > .autoflow/issue-150-verification-design.md > §1 rows
+// `required-row-omission-escalates` / `empty-site-table-fails-closed` /
+// `fail-closed-precedes-work` / `required-key-declaration-join`'s ARCHITECT half. Every payload is
+// derived from the REAL on-disk .claude/autoflow/spawn-policy.json (never a hand-written fixture),
+// per §3's composition oracle.
+const ARCH_REQUIRED_KEYS = [
+  'dev-draft', 'test-draft', 'register-load', 'test-round', 'dev-round',
+  'test-closing', 'ac-diff', 'ledger', 'register-write',
+]
+const VERIFY_REQUIRED_KEYS = ['test-self-check', 'impl-self-check', 'ledger']
+
+function policyPayload(mutate) {
+  const policy = JSON.parse(REAL_POLICY_CONTENT)
+  mutate(policy)
+  return { found: true, content: JSON.stringify(policy) }
+}
+
+for (const key of ARCH_REQUIRED_KEYS) {
+  await test(`ARCHITECT: required row "${key}" deleted from workflow_sites.architect-deliberation -> ESCALATE with a policy-row cause, exactly [policy-load] issued, register not written (required-row-omission-escalates)`, async () => {
+    const policyLoad = policyPayload((p) => { delete p.workflow_sites['architect-deliberation'][key] })
+    const { result, calls } = await runArch(
+      { issue: `policy-row-missing-${key}` },
+      () => { throw new Error(`no sub-agent should be spawned under an incomplete policy (deleted "${key}")`) },
+      { policyLoad },
+    )
+    assert.equal(result.verdict, 'ESCALATE', `deleting "${key}" must escalate`)
+    assert.match(result.escalation, /policy/i, `escalation cause must name the policy, got: ${result.escalation}`)
+    assert.equal(result.registerWritten, false, `deleting "${key}" must not write the register`)
+    assert.deepEqual(
+      calls.map((c) => c.label), ['policy-load'],
+      `exactly one call (policy-load) may be issued when required row "${key}" is missing -- no Draft, no Ledger, no Register spawn -- got: ${JSON.stringify(calls.map((c) => c.label))}`,
+    )
+  })
+}
+
+await test('ARCHITECT: workflow_sites.architect-deliberation present but empty ({}) -> the same malformed-policy disposition as a single omission, not a draft-agent cause (empty-site-table-fails-closed)', async () => {
+  const policyLoad = policyPayload((p) => { p.workflow_sites['architect-deliberation'] = {} })
+  const { result, calls } = await runArch({ issue: 'policy-row-empty-table' }, () => null, { policyLoad })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.match(result.escalation, /policy/i, `escalation cause must name the policy, got: ${result.escalation}`)
+  assert.doesNotMatch(result.escalation, /draft agent missing/i, 'an empty table must not be reported as a draft-agent-missing cause')
+  assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
+})
+
+await test('ARCHITECT: a REASON_DRAFT_AGENT_MISSING escalation (valid policy, Draft agent unreachable) still writes its ledger entry -- the Ledger suppression is keyed on policy-unusable, not on escalating at large (fail-closed-precedes-work non-regression)', async () => {
+  const { result, calls } = await runArch({ issue: 'draft-agent-missing-still-ledgers' }, (label) => {
+    if (label.endsWith('-draft')) return null // agent unreachable -> earlyEscalateReason set AFTER Draft, valid policy
+    if (label === 'ledger') return 'ledger ok'
+    return null
+  })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.ok(calls.some((c) => c.label === 'ledger'), 'a valid-policy draft-agent-missing escalation must still spawn the Ledger call')
+})
+
+await test('ARCHITECT: required effort_contract absent -> the policy-unusable disposition, cause naming the contract, exactly [policy-load] issued (effort-contract-unusable-fails-closed)', async () => {
+  const policyLoad = policyPayload((p) => { delete p.effort_contract })
+  const { result, calls } = await runArch({ issue: 'policy-contract-absent' }, () => { throw new Error('no sub-agent should be spawned under an unusable effort_contract') }, { policyLoad })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.match(result.escalation, /contract/i, `escalation cause must name the contract, got: ${result.escalation}`)
+  assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
+})
+
+await test('ARCHITECT: effort_contract.config_inherit_sentinel empty string -> the policy-unusable disposition, exactly [policy-load] issued (effort-contract-unusable-fails-closed)', async () => {
+  const policyLoad = policyPayload((p) => { p.effort_contract.config_inherit_sentinel = '' })
+  const { result, calls } = await runArch({ issue: 'policy-contract-sentinel-empty' }, () => { throw new Error('no sub-agent should be spawned under an unusable effort_contract') }, { policyLoad })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.match(result.escalation, /contract/i, `escalation cause must name the contract, got: ${result.escalation}`)
+  assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
+})
+
+function fullConvergenceResponder() {
+  return (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
+    const r = Number(label.split('-r')[1])
+    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
+    return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
+  }
+}
+
+await test('ARCHITECT: site() reads the inherit sentinel from effort_contract.config_inherit_sentinel, not the bare literal -- a row carrying the REWRITTEN sentinel omits the effort key (workflow-sentinel-from-config, arm a)', async () => {
+  const CUSTOM = 'CUSTOM_SENTINEL_XYZ'
+  const policyLoad = policyPayload((p) => {
+    p.effort_contract.config_inherit_sentinel = CUSTOM
+    p.workflow_sites['architect-deliberation']['dev-draft'].effort = CUSTOM
+  })
+  const { calls } = await runArch({ issue: 'sentinel-rewrite-a' }, fullConvergenceResponder(), { policyLoad })
+  const call = calls.find((c) => c.label === 'dev-draft')
+  assert.ok(call, 'dev-draft must have been spawned under a valid rewritten contract')
+  assert.equal('effort' in call.opts, false, `a row carrying the rewritten sentinel must omit the effort key, got opts=${JSON.stringify(call.opts)}`)
+})
+
+await test('ARCHITECT: under a REWRITTEN sentinel, a row still carrying the literal string "inherit" ships it as a CONCRETE effort value (workflow-sentinel-from-config, arm b)', async () => {
+  const CUSTOM = 'CUSTOM_SENTINEL_XYZ'
+  const policyLoad = policyPayload((p) => {
+    p.effort_contract.config_inherit_sentinel = CUSTOM
+    // test-draft keeps its shipped "inherit" value unchanged -- it is no longer the sentinel.
+  })
+  const { calls } = await runArch({ issue: 'sentinel-rewrite-b' }, fullConvergenceResponder(), { policyLoad })
+  const call = calls.find((c) => c.label === 'test-draft')
+  assert.ok(call, 'test-draft must have been spawned under a valid rewritten contract')
+  assert.equal(call.opts.effort, 'inherit', `"inherit" under a rewritten contract must ship as a concrete effort value, got opts=${JSON.stringify(call.opts)}`)
+})
+
+await test('ARCHITECT: the real, unmodified shipped policy still passes the row-totality and effort_contract checks and reaches Draft (valid-policy-unaffected, F1 over-strictness)', async () => {
+  const { result, calls } = await runArch({ issue: 'valid-policy-still-drafts' }, fullConvergenceResponder())
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.ok(calls.some((c) => c.label === 'dev-draft'), 'the real policy must not be rejected by the new per-row/contract check')
+})
+
+// ---- Issue #150 cycle 3 (F4 effort-truthiness pass-through) --------------------
+// Verification design > .autoflow/issue-150-verification-design.md > §1 rows
+// `effort-zero-admitted` / `unadmitted-falsy-passes-through`, §2 "Workflow-script
+// regression, ARCHITECT arm" / "Unadmitted-value pass-through". `site()` at
+// architect-deliberation.js:595 decides "override vs inherit" by `row.effort &&
+// row.effort !== inheritSentinel` -- a truthiness test that drops the contract-admitted
+// concrete value `0`, indistinguishable from "no override". The fix compares against the
+// sentinel ALONE. Both legs mutate the REAL on-disk config (policyPayload), per §3's
+// composition oracle.
+await test('ARCHITECT: a workflow_sites row carrying the contract-admitted concrete effort 0 reaches the spawn opts as 0, not silently dropped to inherit (effort-zero-propagates, ARCHITECT arm)', async () => {
+  const policyLoad = policyPayload((p) => {
+    p.workflow_sites['architect-deliberation']['dev-draft'].effort = 0
+  })
+  const { calls } = await runArch({ issue: 'effort-zero-propagates-arch' }, fullConvergenceResponder(), { policyLoad })
+  const call = calls.find((c) => c.label === 'dev-draft')
+  assert.ok(call, 'dev-draft must have been spawned under a valid policy')
+  assert.equal('effort' in call.opts, true, `a row carrying the concrete effort 0 must NOT be treated as inherit (no effort key), got opts=${JSON.stringify(call.opts)}`)
+  assert.equal(call.opts.effort, 0, `the concrete effort 0 must reach the spawn opts verbatim, got opts=${JSON.stringify(call.opts)}`)
+})
+
+await test('ARCHITECT: a workflow_sites row carrying an UNADMITTED falsy effort ("") reaches the spawn opts verbatim rather than degrading to inherit (unadmitted-falsy-passes-through, ARCHITECT arm)', async () => {
+  const policyLoad = policyPayload((p) => {
+    p.workflow_sites['architect-deliberation']['test-draft'].effort = ''
+  })
+  const { calls } = await runArch({ issue: 'unadmitted-falsy-passthrough-arch' }, fullConvergenceResponder(), { policyLoad })
+  const call = calls.find((c) => c.label === 'test-draft')
+  assert.ok(call, 'test-draft must have been spawned under a valid policy')
+  assert.equal('effort' in call.opts, true, `an unadmitted falsy value must reach opts verbatim, not degrade to inherit (no effort key), got opts=${JSON.stringify(call.opts)}`)
+  assert.equal(call.opts.effort, '', `the unadmitted value must reach the spawn opts verbatim (not coerced), got opts=${JSON.stringify(call.opts)}`)
+})
 
 await test('ARCHITECT: converges at round 2 with a grounded ACCEPT, ledger = mutual ACCEPT', async () => {
   const responder = (label) => {
@@ -1692,7 +1913,12 @@ await test('ARCHITECT: a malformed resume value throws at the boundary, extendin
     /resume/i,
   )
   const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
-  const normalizationBlock = src.slice(0, src.indexOf("phase('Draft')"))
+  // Scoped to the args-admission block specifically (up to `const issue = argv.issue`, the line
+  // right after the single admission guard) -- not to the whole pre-Draft prelude. Widening the
+  // slice to `phase('Draft')` would also capture the spawn-policy `site()` helper's OWN fail-closed
+  // throw (issue #150), which is a distinct, unrelated throw site and would make this count assert
+  // 2 for a reason this AC never claimed to guard.
+  const normalizationBlock = src.slice(0, src.indexOf('const issue = argv.issue'))
   assert.equal((normalizationBlock.match(/throw new Error/g) || []).length, 1, 'the resume admission rule must extend the single existing throw site, not add a second one')
 })
 
@@ -2098,6 +2324,7 @@ await test('ARCHITECT: a SYNCHRONOUS throw at the register-write call is absorbe
   try { unlinkSync(register) } catch (_) { /* none yet */ }
   const syncThrowAgent = (prompt, opts = {}) => {
     const label = (opts && opts.label) || ''
+    if (label === 'policy-load') return DEFAULT_POLICY_LOAD_RESPONSE
     if (label === 'register-write') throw new Error('sync register-write throw') // NOT a promise rejection
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
@@ -2369,7 +2596,167 @@ await test('ARCHITECT: a denied resume run persists ESCALATE with the entry stil
   assert.equal(runTwo.rounds, runOne.rounds + 1, 'the second invocation must be admitted to a further round, not refused before Converge')
 })
 
-// ---- VERIFY -------------------------------------------------------------------
+// ---- VERIFY: spawn-policy load (issue #150 / #151 regression) -----------------
+// verify-cause-branch.js has no ESCALATE verdict (Decision 7: a single self-check round,
+// deterministic next_action), so a missing/unreadable/malformed policy raises at the boundary
+// instead -- one throw message for all three causes (see verify-cause-branch.js > Spawn policy
+// load > "Fail-closed: this workflow has no ESCALATE verdict").
+
+await test('VERIFY: policy-load agent returns null (agent missing/errored) -> throws at the boundary', async () => {
+  await assert.rejects(
+    () => runVerify({ issue: '1', failLog: '/tmp/f.log' }, () => 'x', { policyLoad: null }),
+    /verify-cause-branch: spawn policy could not be loaded/,
+  )
+})
+
+await test('VERIFY: policy-load returns found:false (file absent/empty) -> throws at the boundary', async () => {
+  await assert.rejects(
+    () => runVerify({ issue: '1', failLog: '/tmp/f.log' }, () => 'x', {
+      policyLoad: { found: false, content: '' },
+    }),
+    /verify-cause-branch: spawn policy could not be loaded/,
+  )
+})
+
+await test('VERIFY: policy-load content is not valid JSON -> throws at the boundary', async () => {
+  await assert.rejects(
+    () => runVerify({ issue: '1', failLog: '/tmp/f.log' }, () => 'x', {
+      policyLoad: { found: true, content: 'not json' },
+    }),
+    /verify-cause-branch: spawn policy could not be loaded/,
+  )
+})
+
+await test('VERIFY: policy-load content parses but lacks this workflow\'s site table -> throws at the boundary', async () => {
+  await assert.rejects(
+    () => runVerify({ issue: '1', failLog: '/tmp/f.log' }, () => 'x', {
+      policyLoad: { found: true, content: JSON.stringify({ workflow_sites: { 'architect-deliberation': {} } }) },
+    }),
+    /verify-cause-branch: spawn policy could not be loaded/,
+  )
+})
+
+await test('VERIFY: a valid policy-load (the real spawn-policy.json content, unmodified by any scenario) lets the run reach the self-check calls', async () => {
+  const responder = (label) => {
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
+    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
+    return 'x'
+  }
+  const { calls, result } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder)
+  assert.ok(calls.some((c) => c.label === 'policy-load'), 'the policy-load call must have been made')
+  assert.equal(result.next_action, 'EVALUATION_AI')
+})
+
+// ---- Issue #150 cycle 2 (F1 policy-row fail-closed totality), VERIFY half ----
+// Verification design > §1 `required-row-omission-throws` / `empty-site-table-fails-closed` /
+// `fail-closed-precedes-work` / `effort-contract-unusable-fails-closed`, `workflow-sentinel-from-config`.
+for (const key of VERIFY_REQUIRED_KEYS) {
+  await test(`VERIFY: required row "${key}" deleted from workflow_sites.verify-cause-branch -> throws at the boundary with a policy-row cause, exactly [policy-load] issued (required-row-omission-throws)`, async () => {
+    const policyLoad = policyPayload((p) => { delete p.workflow_sites['verify-cause-branch'][key] })
+    const { error, calls } = await runVerifyRaw(
+      { issue: '1', failLog: '/tmp/f.log' },
+      () => { throw new Error(`no sub-agent should be spawned under an incomplete policy (deleted "${key}")`) },
+      { policyLoad },
+    )
+    assert.ok(error, `deleting "${key}" must throw at the boundary`)
+    assert.match(error.message, /policy/i, `boundary error must name the policy, got: ${error.message}`)
+    assert.deepEqual(
+      calls.map((c) => c.label), ['policy-load'],
+      `exactly one call (policy-load) may be issued when required row "${key}" is missing -- no self-check spawn, no Ledger spawn -- got: ${JSON.stringify(calls.map((c) => c.label))}`,
+    )
+  })
+}
+
+await test('VERIFY: workflow_sites.verify-cause-branch present but empty ({}) -> throws at the boundary with a policy-row cause, not an EVALUATION_AI route (empty-site-table-fails-closed)', async () => {
+  const policyLoad = policyPayload((p) => { p.workflow_sites['verify-cause-branch'] = {} })
+  const { result, error, calls } = await runVerifyRaw({ issue: '1', failLog: '/tmp/f.log' }, () => null, { policyLoad })
+  assert.equal(result, null, 'an empty table must throw rather than resolve to an EVALUATION_AI route')
+  assert.ok(error)
+  assert.match(error.message, /policy/i, `boundary error must name the policy, got: ${error.message}`)
+  assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
+})
+
+await test('VERIFY: effort_contract absent -> throws at the boundary with a contract-naming cause, exactly [policy-load] issued (effort-contract-unusable-fails-closed)', async () => {
+  const policyLoad = policyPayload((p) => { delete p.effort_contract })
+  const { error, calls } = await runVerifyRaw({ issue: '1', failLog: '/tmp/f.log' }, () => { throw new Error('no sub-agent should be spawned under an unusable effort_contract') }, { policyLoad })
+  assert.ok(error)
+  assert.match(error.message, /contract/i, `boundary error must name the contract, got: ${error.message}`)
+  assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
+})
+
+await test('VERIFY: effort_contract.config_inherit_sentinel empty string -> throws at the boundary with a contract-naming cause, exactly [policy-load] issued (effort-contract-unusable-fails-closed)', async () => {
+  const policyLoad = policyPayload((p) => { p.effort_contract.config_inherit_sentinel = '' })
+  const { error, calls } = await runVerifyRaw({ issue: '1', failLog: '/tmp/f.log' }, () => { throw new Error('no sub-agent should be spawned under an unusable effort_contract') }, { policyLoad })
+  assert.ok(error)
+  assert.match(error.message, /contract/i, `boundary error must name the contract, got: ${error.message}`)
+  assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
+})
+
+await test('VERIFY: site() reads the inherit sentinel from effort_contract.config_inherit_sentinel -- a row carrying the REWRITTEN sentinel omits the effort key (workflow-sentinel-from-config, arm a)', async () => {
+  const CUSTOM = 'CUSTOM_SENTINEL_XYZ'
+  const policyLoad = policyPayload((p) => {
+    p.effort_contract.config_inherit_sentinel = CUSTOM
+    p.workflow_sites['verify-cause-branch']['test-self-check'].effort = CUSTOM
+  })
+  const responder = (label) => {
+    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
+    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
+    return 'ledger ok'
+  }
+  const { calls } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder, { policyLoad })
+  const call = calls.find((c) => c.label === 'test-self-check')
+  assert.ok(call)
+  assert.equal('effort' in call.opts, false, `a row carrying the rewritten sentinel must omit the effort key, got opts=${JSON.stringify(call.opts)}`)
+})
+
+await test('VERIFY: under a REWRITTEN sentinel, a row still carrying the literal string "inherit" ships it as a CONCRETE effort value (workflow-sentinel-from-config, arm b)', async () => {
+  const CUSTOM = 'CUSTOM_SENTINEL_XYZ'
+  const policyLoad = policyPayload((p) => {
+    p.effort_contract.config_inherit_sentinel = CUSTOM
+    // impl-self-check keeps its shipped "inherit" value unchanged -- it is no longer the sentinel.
+  })
+  const responder = (label) => {
+    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
+    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
+    return 'ledger ok'
+  }
+  const { calls } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder, { policyLoad })
+  const call = calls.find((c) => c.label === 'impl-self-check')
+  assert.ok(call)
+  assert.equal(call.opts.effort, 'inherit', `"inherit" under a rewritten contract must ship as a concrete effort value, got opts=${JSON.stringify(call.opts)}`)
+})
+
+await test('VERIFY: the real, unmodified shipped policy still passes the row-totality and effort_contract checks and reaches the self-check calls (valid-policy-unaffected, F1 over-strictness)', async () => {
+  const responder = (label) => {
+    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
+    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
+    return 'ledger ok'
+  }
+  const { calls } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder)
+  assert.ok(calls.some((c) => c.label === 'test-self-check'), 'the real policy must not be rejected by the new per-row/contract check')
+})
+
+// ---- Issue #150 cycle 3 (F4 effort-truthiness pass-through), VERIFY arm -------
+// Verification design > §1 `effort-zero-admitted`, §2 "Workflow-script regression, VERIFY
+// arm" -- catches the same truthiness defect at verify-cause-branch.js:161 surviving after
+// architect-deliberation.js is fixed; the two scripts carry independent textual copies of
+// site(), so this is a separate falsifiable arm, not a re-run of the ARCHITECT one.
+await test('VERIFY: a workflow_sites row carrying the contract-admitted concrete effort 0 reaches the spawn opts as 0, not silently dropped to inherit (effort-zero-propagates, VERIFY arm)', async () => {
+  const policyLoad = policyPayload((p) => {
+    p.workflow_sites['verify-cause-branch']['test-self-check'].effort = 0
+  })
+  const responder = (label) => {
+    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
+    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
+    return 'ledger ok'
+  }
+  const { calls } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder, { policyLoad })
+  const call = calls.find((c) => c.label === 'test-self-check')
+  assert.ok(call, 'test-self-check must have been spawned under a valid policy')
+  assert.equal('effort' in call.opts, true, `a row carrying the concrete effort 0 must NOT be treated as inherit (no effort key), got opts=${JSON.stringify(call.opts)}`)
+  assert.equal(call.opts.effort, 0, `the concrete effort 0 must reach the spawn opts verbatim, got opts=${JSON.stringify(call.opts)}`)
+})
 
 const combos = [
   [{ verdict: 'fix_test', reason: 'x' }, { verdict: 'no_problem', reason: 'x' }, 'RED'],
