@@ -240,7 +240,21 @@ if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ]; then
   # Named negative case: `med` is rejected on a phases row.
   SCRATCH3="$(mktemp -d)"
   cp -R "$PROJECT_ROOT/scripts/spawn-policy" "$SCRATCH3/" 2>/dev/null
-  mkdir -p "$SCRATCH3/.claude/autoflow"
+  mkdir -p "$SCRATCH3/.claude/autoflow" "$SCRATCH3/.claude/agents"
+  cp "$AGENTS_DIR"/*.md "$SCRATCH3/.claude/agents/" 2>/dev/null
+  # Positive control: the unmodified config, in this same repaired SCRATCH3
+  # tree (agent definitions present), must pass check on its own -- so each
+  # negative below discriminates on the effort predicate alone, not on the
+  # base-resolution guard (spawn-policy.sh:200-203) firing unconditionally.
+  cp "$CONFIG" "$SCRATCH3/.claude/autoflow/spawn-policy.json"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH3/.claude/autoflow/spawn-policy.json" bash "$SCRATCH3/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  rc_control=$?
+  if [ "$rc_control" = "0" ]; then
+    pass "AC4 effort-value-admission: unmodified config in the repaired SCRATCH3 tree passes check (positive control)"
+  else
+    failc "AC4 effort-value-admission: unmodified config in the repaired SCRATCH3 tree FAILS check (exit $rc_control) -- negatives below would be vacuous"
+  fi
+
   first_phase_key=$(jq -r '.phases | keys[0]' "$CONFIG")
   jq --arg k "$first_phase_key" '.phases[$k].effort = "med"' "$CONFIG" > "$SCRATCH3/.claude/autoflow/spawn-policy.json"
   AUTOFLOW_SPAWN_POLICY="$SCRATCH3/.claude/autoflow/spawn-policy.json" bash "$SCRATCH3/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
@@ -477,6 +491,92 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ]; then
   rm -rf "$SCRATCH4"
 else
   failc "design-added: check-base-resolution -- $CONFIG or $RESOLVER not found"
+fi
+
+# -----------------------------------------------------------------------------
+# Design-added — plugin-prefix normalization discriminates on the resolver's
+# own output (spawn-policy.sh:78-83), not merely on an admitted-model check
+# that a deleted `*:autoflow-*` arm would still pass.
+# -----------------------------------------------------------------------------
+echo "== design-added: plugin-prefix normalization (models-for) =="
+
+if [ -x "$RESOLVER" ]; then
+  bare_models=$(bash "$RESOLVER" models-for "autoflow-tester" 2>/dev/null)
+  prefixed_models=$(bash "$RESOLVER" models-for "autoflow:autoflow-tester" 2>/dev/null)
+  if [ -n "$bare_models" ] && [ "$prefixed_models" = "$bare_models" ]; then
+    pass "design-added: plugin-prefix normalization -- 'autoflow:autoflow-tester' resolves to the same non-empty model set as 'autoflow-tester'"
+  else
+    failc "design-added: plugin-prefix normalization -- bare=[$bare_models] prefixed=[$prefixed_models] (want equal, non-empty; a deleted '*:autoflow-*' arm collapses prefixed to empty)"
+  fi
+else
+  failc "design-added: plugin-prefix normalization -- $RESOLVER not executable"
+fi
+
+# -----------------------------------------------------------------------------
+# Design-added — _check_effort type branches (spawn-policy.sh:162-181) and the
+# agent-effort divergent-declaration error path (spawn-policy.sh:118).
+# -----------------------------------------------------------------------------
+echo "== design-added: effort type branches + divergent-effort error path =="
+
+if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ] && [ -d "$AGENTS_DIR" ]; then
+  SCRATCH5="$(mktemp -d)"
+  cp -R "$PROJECT_ROOT/scripts/spawn-policy" "$SCRATCH5/" 2>/dev/null
+  mkdir -p "$SCRATCH5/.claude/autoflow" "$SCRATCH5/.claude/agents"
+  cp "$AGENTS_DIR"/*.md "$SCRATCH5/.claude/agents/" 2>/dev/null
+  first_phase_key=$(jq -r '.phases | keys[0]' "$CONFIG")
+
+  # (a) A non-integer JSON number (3.5) is rejected -- the "*.*" branch at
+  # spawn-policy.sh:169-171.
+  jq --arg k "$first_phase_key" '.phases[$k].effort = 3.5' "$CONFIG" > "$SCRATCH5/.claude/autoflow/spawn-policy.json"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH5/.claude/autoflow/spawn-policy.json" bash "$SCRATCH5/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  rc_float=$?
+  if [ "$rc_float" != "0" ]; then
+    pass "design-added: effort type branches -- a non-integer JSON number (3.5) is rejected (exit $rc_float)"
+  else
+    failc "design-added: effort type branches -- a non-integer JSON number (3.5) was NOT rejected (exit 0)"
+  fi
+
+  # (b) A non-string, non-number value (JSON boolean) is rejected -- the
+  # jtype != "string" branch at spawn-policy.sh:174-176.
+  jq --arg k "$first_phase_key" '.phases[$k].effort = true' "$CONFIG" > "$SCRATCH5/.claude/autoflow/spawn-policy.json"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH5/.claude/autoflow/spawn-policy.json" bash "$SCRATCH5/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  rc_bool=$?
+  if [ "$rc_bool" != "0" ]; then
+    pass "design-added: effort type branches -- a JSON boolean effort (true) is rejected (exit $rc_bool)"
+  else
+    failc "design-added: effort type branches -- a JSON boolean effort (true) was NOT rejected (exit 0)"
+  fi
+
+  # Same for a JSON array.
+  jq --arg k "$first_phase_key" '.phases[$k].effort = []' "$CONFIG" > "$SCRATCH5/.claude/autoflow/spawn-policy.json"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH5/.claude/autoflow/spawn-policy.json" bash "$SCRATCH5/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  rc_arr=$?
+  if [ "$rc_arr" != "0" ]; then
+    pass "design-added: effort type branches -- a JSON array effort ([]) is rejected (exit $rc_arr)"
+  else
+    failc "design-added: effort type branches -- a JSON array effort ([]) was NOT rejected (exit 0)"
+  fi
+
+  # (c) agent-effort's divergent-effort error path (spawn-policy.sh:117-120):
+  # two phases rows sharing one agent_type, forced to different concrete
+  # effort values.
+  second_phase_key=$(jq -r '.phases | keys[1]' "$CONFIG")
+  shared_type="__test_shared_type__"
+  jq --arg k1 "$first_phase_key" --arg k2 "$second_phase_key" --arg t "$shared_type" \
+    '.phases[$k1].agent_type = $t | .phases[$k1].effort = "high" | .phases[$k2].agent_type = $t | .phases[$k2].effort = "low"' \
+    "$CONFIG" > "$SCRATCH5/.claude/autoflow/spawn-policy.json"
+  out_div=$(AUTOFLOW_SPAWN_POLICY="$SCRATCH5/.claude/autoflow/spawn-policy.json" bash "$SCRATCH5/spawn-policy/spawn-policy.sh" agent-effort "$shared_type" 2>"$SCRATCH5/div.err")
+  rc_div=$?
+  err_div=$(cat "$SCRATCH5/div.err")
+  if [ "$rc_div" = "1" ] && [ -z "$out_div" ] && echo "$err_div" | grep -qi "divergent effort"; then
+    pass "design-added: agent-effort divergent-effort error path -- exit 1, empty stdout, stderr names the divergence"
+  else
+    failc "design-added: agent-effort divergent-effort error path -- exit $rc_div, stdout '$out_div', stderr '$err_div' (want exit 1, empty stdout, divergence message)"
+  fi
+
+  rm -rf "$SCRATCH5"
+else
+  failc "design-added: effort type branches + divergent-effort error path -- $RESOLVER, $CONFIG, or $AGENTS_DIR not found"
 fi
 
 echo
