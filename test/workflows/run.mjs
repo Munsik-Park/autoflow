@@ -330,6 +330,37 @@ await test('ARCHITECT: the real, unmodified shipped policy still passes the row-
   assert.ok(calls.some((c) => c.label === 'dev-draft'), 'the real policy must not be rejected by the new per-row/contract check')
 })
 
+// ---- Issue #150 cycle 3 (F4 effort-truthiness pass-through) --------------------
+// Verification design > .autoflow/issue-150-verification-design.md > §1 rows
+// `effort-zero-admitted` / `unadmitted-falsy-passes-through`, §2 "Workflow-script
+// regression, ARCHITECT arm" / "Unadmitted-value pass-through". `site()` at
+// architect-deliberation.js:595 decides "override vs inherit" by `row.effort &&
+// row.effort !== inheritSentinel` -- a truthiness test that drops the contract-admitted
+// concrete value `0`, indistinguishable from "no override". The fix compares against the
+// sentinel ALONE. Both legs mutate the REAL on-disk config (policyPayload), per §3's
+// composition oracle.
+await test('ARCHITECT: a workflow_sites row carrying the contract-admitted concrete effort 0 reaches the spawn opts as 0, not silently dropped to inherit (effort-zero-propagates, ARCHITECT arm)', async () => {
+  const policyLoad = policyPayload((p) => {
+    p.workflow_sites['architect-deliberation']['dev-draft'].effort = 0
+  })
+  const { calls } = await runArch({ issue: 'effort-zero-propagates-arch' }, fullConvergenceResponder(), { policyLoad })
+  const call = calls.find((c) => c.label === 'dev-draft')
+  assert.ok(call, 'dev-draft must have been spawned under a valid policy')
+  assert.equal('effort' in call.opts, true, `a row carrying the concrete effort 0 must NOT be treated as inherit (no effort key), got opts=${JSON.stringify(call.opts)}`)
+  assert.equal(call.opts.effort, 0, `the concrete effort 0 must reach the spawn opts verbatim, got opts=${JSON.stringify(call.opts)}`)
+})
+
+await test('ARCHITECT: a workflow_sites row carrying an UNADMITTED falsy effort ("") reaches the spawn opts verbatim rather than degrading to inherit (unadmitted-falsy-passes-through, ARCHITECT arm)', async () => {
+  const policyLoad = policyPayload((p) => {
+    p.workflow_sites['architect-deliberation']['test-draft'].effort = ''
+  })
+  const { calls } = await runArch({ issue: 'unadmitted-falsy-passthrough-arch' }, fullConvergenceResponder(), { policyLoad })
+  const call = calls.find((c) => c.label === 'test-draft')
+  assert.ok(call, 'test-draft must have been spawned under a valid policy')
+  assert.equal('effort' in call.opts, true, `an unadmitted falsy value must reach opts verbatim, not degrade to inherit (no effort key), got opts=${JSON.stringify(call.opts)}`)
+  assert.equal(call.opts.effort, '', `the unadmitted value must reach the spawn opts verbatim (not coerced), got opts=${JSON.stringify(call.opts)}`)
+})
+
 await test('ARCHITECT: converges at round 2 with a grounded ACCEPT, ledger = mutual ACCEPT', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
@@ -2704,6 +2735,27 @@ await test('VERIFY: the real, unmodified shipped policy still passes the row-tot
   }
   const { calls } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder)
   assert.ok(calls.some((c) => c.label === 'test-self-check'), 'the real policy must not be rejected by the new per-row/contract check')
+})
+
+// ---- Issue #150 cycle 3 (F4 effort-truthiness pass-through), VERIFY arm -------
+// Verification design > §1 `effort-zero-admitted`, §2 "Workflow-script regression, VERIFY
+// arm" -- catches the same truthiness defect at verify-cause-branch.js:161 surviving after
+// architect-deliberation.js is fixed; the two scripts carry independent textual copies of
+// site(), so this is a separate falsifiable arm, not a re-run of the ARCHITECT one.
+await test('VERIFY: a workflow_sites row carrying the contract-admitted concrete effort 0 reaches the spawn opts as 0, not silently dropped to inherit (effort-zero-propagates, VERIFY arm)', async () => {
+  const policyLoad = policyPayload((p) => {
+    p.workflow_sites['verify-cause-branch']['test-self-check'].effort = 0
+  })
+  const responder = (label) => {
+    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
+    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
+    return 'ledger ok'
+  }
+  const { calls } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder, { policyLoad })
+  const call = calls.find((c) => c.label === 'test-self-check')
+  assert.ok(call, 'test-self-check must have been spawned under a valid policy')
+  assert.equal('effort' in call.opts, true, `a row carrying the concrete effort 0 must NOT be treated as inherit (no effort key), got opts=${JSON.stringify(call.opts)}`)
+  assert.equal(call.opts.effort, 0, `the concrete effort 0 must reach the spawn opts verbatim, got opts=${JSON.stringify(call.opts)}`)
 })
 
 const combos = [

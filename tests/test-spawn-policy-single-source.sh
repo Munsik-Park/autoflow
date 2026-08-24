@@ -785,6 +785,56 @@ else
   failc "design-added: effort type branches + divergent-effort error path -- $RESOLVER, $CONFIG, or $AGENTS_DIR not found"
 fi
 
+# -----------------------------------------------------------------------------
+# effort-zero-admitted (issue #150 cycle 3, F4 -- verification design > §1
+# "the checker still admits the boundary value the resolver now honors, on
+# both row kinds"). `check` must admit the contract-valid concrete effort 0 on
+# a phases[] row AND on a workflow_sites[][] row; this is the premise the F4
+# resolver fix rests on. Pre-green: `_check_effort` (spawn-policy.sh:203-225)
+# already treats a JSON-number 0 as an admitted integer -- the truthiness
+# defect is confined to the JS site() helpers (architect-deliberation.js:595,
+# verify-cause-branch.js:161), which this shell checker never calls. The
+# phases[] arm mutates diagnose-loopcheck specifically, per GATE:PLAN: it is
+# the sole agent_type="Explore" row (checked: `jq -r '.phases[]|select(.agent_type=="Explore")|.key'`
+# returns exactly this one key), so mutating it alone cannot trip the
+# divergent-effort agreement check (spawn-policy.sh:291-296), which an
+# arbitrary shared-agent_type row would.
+# -----------------------------------------------------------------------------
+echo "== design-added: effort-zero-admitted (issue #150 cycle 3, F4) =="
+
+if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ] && [ -d "$AGENTS_DIR" ]; then
+  SCRATCH6="$(mktemp -d)"
+  cp -R "$PROJECT_ROOT/scripts/spawn-policy" "$SCRATCH6/" 2>/dev/null
+  mkdir -p "$SCRATCH6/.claude/autoflow" "$SCRATCH6/.claude/agents"
+  cp "$AGENTS_DIR"/*.md "$SCRATCH6/.claude/agents/" 2>/dev/null
+
+  # phases[] arm: diagnose-loopcheck (agent_type Explore, agent_type-unique).
+  jq '.phases["diagnose-loopcheck"].effort = 0' "$CONFIG" > "$SCRATCH6/.claude/autoflow/spawn-policy.json"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH6/.claude/autoflow/spawn-policy.json" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  rc_phase0=$?
+  if [ "$rc_phase0" = "0" ]; then
+    pass "design-added: effort-zero-admitted -- effort=0 on the phases[] row diagnose-loopcheck (agent_type-unique) passes check"
+  else
+    failc "design-added: effort-zero-admitted -- effort=0 on the phases[] row diagnose-loopcheck FAILED check (exit $rc_phase0)"
+  fi
+
+  # workflow_sites[][] arm: unconstrained, any row.
+  first_wf=$(jq -r '.workflow_sites | keys[0]' "$CONFIG")
+  first_site=$(jq -r --arg wf "$first_wf" '.workflow_sites[$wf] | keys[0]' "$CONFIG")
+  jq --arg wf "$first_wf" --arg s "$first_site" '.workflow_sites[$wf][$s].effort = 0' "$CONFIG" > "$SCRATCH6/.claude/autoflow/spawn-policy.json"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH6/.claude/autoflow/spawn-policy.json" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  rc_site0=$?
+  if [ "$rc_site0" = "0" ]; then
+    pass "design-added: effort-zero-admitted -- effort=0 on a workflow_sites[][] row ($first_wf.$first_site) passes check"
+  else
+    failc "design-added: effort-zero-admitted -- effort=0 on a workflow_sites[][] row FAILED check (exit $rc_site0)"
+  fi
+
+  rm -rf "$SCRATCH6"
+else
+  failc "design-added: effort-zero-admitted -- $RESOLVER, $CONFIG, or $AGENTS_DIR not found"
+fi
+
 echo
 echo "=============================================="
 echo "PASS: $PASS  FAIL: $FAIL"
