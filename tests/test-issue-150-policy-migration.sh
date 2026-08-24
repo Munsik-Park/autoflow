@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/autoflow/spawn-policy.json
+# ci-subject: .claude/autoflow/spawn-policy.json tests/manual/issue-150-manual-scenarios.md
 # lane: cycle-scoped
 # retire-with: #150
 # cycle-arm: #150
@@ -9,7 +9,9 @@
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #150 migration fidelity -- the config's model values equal the
-# values each source document/file carried at the merge-base.
+# values each source document/file carried at the merge-base -- PLUS (cycle 2,
+# finding F2) that the manual scenario file's ### Result sections carry a real
+# recorded disposition rather than the shipped placeholder.
 # =============================================================================
 # Cycle-scoped by construction (.autoflow/issue-150-verification-design.md >
 # section 2): the migration changed a policy value while claiming to preserve
@@ -39,6 +41,17 @@ allow_list=(
   ".claude/workflows/architect-deliberation.js"
   ".claude/workflows/verify-cause-branch.js"
   ".claude/autoflow/spawn-policy.json"
+)
+
+# DCR-7 (feature design §2): the manual-result-recorded leg below reads the
+# PRESENT tree -- it compares nothing against the merge-base baseline, so its
+# file does not belong in `allow_list` above (that array's own preceding
+# comment declares it as the baseline-comparison set, and widening it without
+# widening the comment would leave the comment describing a set it no longer
+# describes). Declared instead in its own array, in the same recognized
+# `ALLOWLIST_[0-9A-Za-z_]+=\(` grammar scripts/test/suite-manifest.sh matches.
+ALLOWLIST_MANUAL_RECORD=(
+  "tests/manual/issue-150-manual-scenarios.md"
 )
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -225,6 +238,59 @@ if [ -n "$closing_base_model" ] && [ "$closing_base_model" = "$cfg_closing" ]; t
   pass "migration-fidelity: workflow_sites.architect-deliberation.test-closing.model ($cfg_closing) == .js literal @ base ($closing_base_model)"
 else
   failc "migration-fidelity: workflow_sites.architect-deliberation.test-closing.model='$cfg_closing' vs .js literal @ base='$closing_base_model'"
+fi
+
+# -----------------------------------------------------------------------------
+# manual-result-recorded (finding F2, verification design > §1
+# `manual-result-recorded`). Each `### Result` section in the real manual
+# scenarios file must carry a REAL recorded disposition -- never the shipped
+# placeholder -- checked as a POSITIVE record shape, not a placeholder
+# blacklist (a blacklist would pass silently on a mere rewording of the
+# placeholder prose, the same evidence-honesty gap the finding reports).
+#
+# Record shape (declared HERE, per the verification design's instruction that
+# the vocabulary has a single home read by the implementation):
+#   Date: YYYY-MM-DD
+#   Disposition: PASS | FAIL | BLOCKED | DECLINED
+#   Authorized-by: <non-empty>     (required only when Disposition is BLOCKED
+#                                    or DECLINED -- DCR-3's authorized decline)
+# -----------------------------------------------------------------------------
+echo "== manual-result-recorded =="
+
+MANUAL_SCENARIOS="$PROJECT_ROOT/tests/manual/issue-150-manual-scenarios.md"
+
+check_result_section() {
+  local section_name="$1" body="$2"
+  local date_line disp_line disp_token auth_line
+  date_line=$(echo "$body" | grep -E '^Date:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$')
+  disp_line=$(echo "$body" | grep -E '^Disposition:[[:space:]]*(PASS|FAIL|BLOCKED|DECLINED)[[:space:]]*$')
+  disp_token=$(echo "$disp_line" | sed -E 's/^Disposition:[[:space:]]*//' | tr -d '[:space:]')
+
+  if [ -z "$date_line" ]; then
+    failc "manual-result-recorded: $section_name has no 'Date: YYYY-MM-DD' line"
+    return
+  fi
+  if [ -z "$disp_token" ]; then
+    failc "manual-result-recorded: $section_name has no 'Disposition: PASS|FAIL|BLOCKED|DECLINED' line"
+    return
+  fi
+  if [ "$disp_token" = "BLOCKED" ] || [ "$disp_token" = "DECLINED" ]; then
+    auth_line=$(echo "$body" | grep -E '^Authorized-by:[[:space:]]*[^[:space:]]')
+    if [ -z "$auth_line" ]; then
+      failc "manual-result-recorded: $section_name disposition=$disp_token requires a non-empty 'Authorized-by:' line"
+      return
+    fi
+  fi
+  pass "manual-result-recorded: $section_name carries a conforming recorded result (Date + Disposition=$disp_token)"
+}
+
+if [ -f "$MANUAL_SCENARIOS" ]; then
+  m1_body=$(awk '/^## M1 /{f=1; next} /^## M2 /{f=0} f' "$MANUAL_SCENARIOS" | awk '/^### Result/{f=1; next} /^---/{if (f) exit} f')
+  m2_body=$(awk '/^## M2 /{f=1; next} f' "$MANUAL_SCENARIOS" | awk '/^### Result/{f=1; next} /^---/{if (f) exit} f')
+  check_result_section "M1" "$m1_body"
+  check_result_section "M2" "$m2_body"
+else
+  failc "manual-result-recorded: $MANUAL_SCENARIOS not found"
 fi
 
 echo

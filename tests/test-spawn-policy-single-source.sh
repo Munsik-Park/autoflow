@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md CLAUDE.md docs/teammate-contracts.md docs/phases/analysis.md
+# ci-subject: .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md CLAUDE.md docs/teammate-contracts.md docs/phases/analysis.md setup/manifest.json setup/init.sh setup/thin-root-layer/drift-check.sh setup/SETUP-GUIDE.md
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -311,6 +311,199 @@ if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ]; then
   rm -rf "$SCRATCH3"
 else
   failc "AC4 effort-value-admission: $RESOLVER not executable or $CONFIG not found"
+fi
+
+# -----------------------------------------------------------------------------
+# O7 — required-key-declaration-join (issue #150 cycle 2, verification design
+# > §1 `required-key-declaration-join`, feature design §1 "Keeping the list
+# honest"). Widens the AC2 site-key-join two-way comparison above to a
+# three-way equality: the marker-delimited required-key declaration each
+# workflow script is expected to carry (/* site-keys:begin */ ... /* site-
+# keys:end */, bare quoted keys) must equal BOTH the site('<literal>') call-
+# site keys extracted OUTSIDE the marker range AND the config's own rows for
+# that workflow. No markers exist in the tree yet, so this leg is Red until
+# the totality-check implementation adds them.
+# -----------------------------------------------------------------------------
+echo "== O7: required-key-declaration-join =="
+
+if [ -f "$CONFIG" ]; then
+  for wf_file in "${WORKFLOWS[@]}"; do
+    wf_name="$(basename "$wf_file" .js)"
+    marker_keys=$(sed -n '/site-keys:begin/,/site-keys:end/p' "$wf_file" 2>/dev/null | grep -oE "'[^']*'" | tr -d "'" | sort -u)
+    call_keys_excl=$(sed '/site-keys:begin/,/site-keys:end/d' "$wf_file" 2>/dev/null | grep -oE "site\('[^']*'\)" | sed -E "s/site\('([^']*)'\)/\1/" | sort -u)
+    row_keys=$(jq -r --arg wf "$wf_name" '.workflow_sites[$wf] // {} | keys[]' "$CONFIG" 2>/dev/null | sort -u)
+    if [ -n "$marker_keys" ] && [ "$marker_keys" = "$call_keys_excl" ] && [ "$marker_keys" = "$row_keys" ]; then
+      pass "O7 required-key-declaration-join: $wf_name -- declared list, call-site keys (outside markers) and config rows all agree"
+    else
+      failc "O7 required-key-declaration-join: $wf_name -- declared=[$marker_keys] call-sites(outside markers)=[$call_keys_excl] config-rows=[$row_keys]"
+    fi
+  done
+else
+  failc "O7 required-key-declaration-join: $CONFIG not found"
+fi
+
+# -----------------------------------------------------------------------------
+# O7 — effort-vocabulary-from-config (verification design > §1
+# `effort-vocabulary-from-config`, feature design §3 policy-vocabulary-self-
+# read, DCR-9). The positive control (arm a) is already exercised by AC4
+# effort-value-admission above (the unmodified config passes check). These
+# four arms are the ones a hardcoded shell vocabulary cannot satisfy:
+#   (b) a value ADDED to admitted_values and used on a row is ADMITTED
+#   (c) a value REMOVED from admitted_values while a row still carries it is REJECTED
+#   (d) an arbitrary, previously-unenumerated model string is ADMITTED (unvalidated)
+#   (e) the <integer> meta-token's ABSENCE rejects a JSON-integer effort value
+# -----------------------------------------------------------------------------
+echo "== O7: effort-vocabulary-from-config =="
+
+if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ]; then
+  SCRATCH6="$(mktemp -d)"
+  cp -R "$PROJECT_ROOT/scripts/spawn-policy" "$SCRATCH6/" 2>/dev/null
+  mkdir -p "$SCRATCH6/.claude/autoflow" "$SCRATCH6/.claude/agents"
+  cp "$AGENTS_DIR"/*.md "$SCRATCH6/.claude/agents/" 2>/dev/null
+  SCRATCH6_CFG="$SCRATCH6/.claude/autoflow/spawn-policy.json"
+  first_wf6=$(jq -r '.workflow_sites | keys[0]' "$CONFIG")
+  first_site6=$(jq -r --arg wf "$first_wf6" '.workflow_sites[$wf] | keys[0]' "$CONFIG")
+  first_phase6=$(jq -r '.phases | keys[0]' "$CONFIG")
+
+  # (b) added value is admitted
+  jq --arg wf "$first_wf6" --arg s "$first_site6" \
+    '.effort_contract.admitted_values += ["custom_added_effort"] | .workflow_sites[$wf][$s].effort = "custom_added_effort"' \
+    "$CONFIG" > "$SCRATCH6_CFG"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH6_CFG" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    pass "O7 effort-vocabulary-from-config (b): a value ADDED to admitted_values and used on a row is admitted"
+  else
+    failc "O7 effort-vocabulary-from-config (b): a value added to the config's own admitted_values was still rejected -- the vocabulary is not being read from the config"
+  fi
+
+  # (c) removed value is rejected even though a hardcoded set would still admit it.
+  # A workflow_sites[][] row is used (not a phases[] row) so the discriminating
+  # rejection comes from the effort-vocabulary predicate alone -- a phases[] row
+  # sharing agent_type with another phase would instead be rejected by the
+  # unrelated divergent-effort-per-agent-type check, which is satisfied by the
+  # unmodified admitted_values already and would pass vacuously.
+  jq '.effort_contract.admitted_values -= ["xhigh"] | .workflow_sites["verify-cause-branch"]["ledger"].effort = "xhigh"' \
+    "$CONFIG" > "$SCRATCH6_CFG"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH6_CFG" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    pass "O7 effort-vocabulary-from-config (c): a value REMOVED from admitted_values is rejected even though a hardcoded set would still admit it"
+  else
+    failc "O7 effort-vocabulary-from-config (c): 'xhigh' was admitted after being removed from the config's own admitted_values -- the check is reading a hardcoded set, not the config"
+  fi
+
+  # (d) arbitrary model string is unvalidated
+  jq --arg k "$first_phase6" '.phases[$k].model = "custom-model-xyz"' "$CONFIG" > "$SCRATCH6_CFG"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH6_CFG" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    pass "O7 effort-vocabulary-from-config (d): an arbitrary, previously-unenumerated model string is admitted (models are unvalidated)"
+  else
+    failc "O7 effort-vocabulary-from-config (d): an arbitrary model string was rejected -- model admission must be dropped to presence/shape only"
+  fi
+
+  # (e) <integer> meta-token's absence rejects a JSON-integer effort
+  jq --arg wf "$first_wf6" --arg s "$first_site6" \
+    '.effort_contract.admitted_values -= ["<integer>"] | .workflow_sites[$wf][$s].effort = 3' \
+    "$CONFIG" > "$SCRATCH6_CFG"
+  AUTOFLOW_SPAWN_POLICY="$SCRATCH6_CFG" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    pass "O7 effort-vocabulary-from-config (e): a JSON-integer effort is rejected once the <integer> meta-token is removed from admitted_values"
+  else
+    failc "O7 effort-vocabulary-from-config (e): a JSON-integer effort was admitted despite <integer> being absent from admitted_values -- the meta-token is not being interpreted"
+  fi
+
+  rm -rf "$SCRATCH6"
+else
+  failc "O7 effort-vocabulary-from-config: $RESOLVER not executable or $CONFIG not found"
+fi
+
+# -----------------------------------------------------------------------------
+# O7 — stamp-semantic-matches-declaration (verification design > §1, DCR-8).
+# Declaration arm: the manifest's kind for spawn-policy.json. Behavioral arm:
+# a real setup/init.sh run into scratch targets, and setup/thin-root-layer/
+# drift-check.sh over an operator-edited target.
+# -----------------------------------------------------------------------------
+echo "== O7: stamp-semantic-matches-declaration =="
+
+MANIFEST_JSON="$PROJECT_ROOT/setup/manifest.json"
+manifest_kind=$(jq -r '.artifacts[] | select(.dest == ".claude/autoflow/spawn-policy.json") | .kind' "$MANIFEST_JSON" 2>/dev/null)
+if [ "$manifest_kind" = "scaffold" ]; then
+  pass "O7 stamp-semantic-matches-declaration: setup/manifest.json declares spawn-policy.json kind=scaffold"
+else
+  failc "O7 stamp-semantic-matches-declaration: setup/manifest.json declares kind='$manifest_kind', expected 'scaffold'"
+fi
+
+if [ -x "$PROJECT_ROOT/setup/init.sh" ]; then
+  T1="$(mktemp -d)"
+  bash "$PROJECT_ROOT/setup/init.sh" --target "$T1" >/dev/null 2>&1
+  if [ -f "$T1/.claude/autoflow/spawn-policy.json" ]; then
+    pass "O7 stamp-semantic-matches-declaration: init.sh creates spawn-policy.json in a target lacking it"
+  else
+    failc "O7 stamp-semantic-matches-declaration: init.sh did NOT create spawn-policy.json in an empty target"
+  fi
+
+  T2="$(mktemp -d)"
+  bash "$PROJECT_ROOT/setup/init.sh" --target "$T2" >/dev/null 2>&1
+  SENTINEL='{"__test_sentinel__":"operator-configured-value-must-survive-restamp"}'
+  printf '%s' "$SENTINEL" > "$T2/.claude/autoflow/spawn-policy.json"
+  bash "$PROJECT_ROOT/setup/init.sh" --target "$T2" --force >/dev/null 2>&1
+  after=$(cat "$T2/.claude/autoflow/spawn-policy.json" 2>/dev/null)
+  if [ "$after" = "$SENTINEL" ]; then
+    pass "O7 stamp-semantic-matches-declaration: a re-stamp, even under --force, does not overwrite an operator-configured spawn-policy.json"
+  else
+    failc "O7 stamp-semantic-matches-declaration: a re-stamp overwrote the operator's configured spawn-policy.json (expected preserved sentinel, got: $after)"
+  fi
+
+  if [ -f "$T2/.claude/autoflow/drift-check.sh" ]; then
+    drift_out=$(CLAUDE_PROJECT_DIR="$T2" sh "$T2/.claude/autoflow/drift-check.sh" 2>&1)
+    if echo "$drift_out" | grep -qE "scaffold:.*spawn-policy\.json present"; then
+      pass "O7 stamp-semantic-matches-declaration: drift-check.sh reports spawn-policy.json as target-owned (scaffold), not content drift"
+    else
+      failc "O7 stamp-semantic-matches-declaration: drift-check.sh did NOT report spawn-policy.json as a target-owned scaffold artifact"
+    fi
+  else
+    failc "O7 stamp-semantic-matches-declaration: drift-check.sh was not installed into the scratch target"
+  fi
+  rm -rf "$T1" "$T2"
+else
+  failc "O7 stamp-semantic-matches-declaration: $PROJECT_ROOT/setup/init.sh not executable"
+fi
+
+# -----------------------------------------------------------------------------
+# O7 — sample-contract-documented (verification design > §1). The config
+# states, in its own body, that its values are a stamp-time sample rather
+# than an enforced universal vocabulary; the introducing documents (CLAUDE.md
+# Spawn Model, setup/SETUP-GUIDE.md) say the same. Vocabulary declared here:
+# the config carries a top-level string field `sample_contract` naming both
+# "sample" and "stamp"; CLAUDE.md's Spawn Model section and setup/SETUP-
+# GUIDE.md each name "scaffold" beside "spawn-policy.json". A presence
+# predicate over a named field / section, never a prose-similarity match.
+# -----------------------------------------------------------------------------
+echo "== O7: sample-contract-documented =="
+
+cfg_sample_contract=$(jq -r '.sample_contract // empty' "$CONFIG" 2>/dev/null)
+if echo "$cfg_sample_contract" | grep -qi "sample" && echo "$cfg_sample_contract" | grep -qi "stamp"; then
+  pass "O7 sample-contract-documented: $CONFIG carries a top-level sample_contract field naming both 'sample' and 'stamp'"
+else
+  failc "O7 sample-contract-documented: $CONFIG has no top-level sample_contract field naming both 'sample' and 'stamp' (got: '$cfg_sample_contract')"
+fi
+
+CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
+if [ -f "$CLAUDE_MD" ]; then
+  spawn_section=$(awk '/^## Spawn Model/{flag=1} /^## [A-Z]/{if (flag && !/^## Spawn Model/) exit} flag' "$CLAUDE_MD")
+  if echo "$spawn_section" | grep -qi "scaffold"; then
+    pass "O7 sample-contract-documented: CLAUDE.md > Spawn Model section names 'scaffold' beside the config pointer"
+  else
+    failc "O7 sample-contract-documented: CLAUDE.md > Spawn Model section does not name 'scaffold'"
+  fi
+else
+  failc "O7 sample-contract-documented: $CLAUDE_MD not found"
+fi
+
+SETUP_GUIDE="$PROJECT_ROOT/setup/SETUP-GUIDE.md"
+if [ -f "$SETUP_GUIDE" ] && grep -qi "scaffold" "$SETUP_GUIDE" && grep -q "spawn-policy" "$SETUP_GUIDE"; then
+  pass "O7 sample-contract-documented: setup/SETUP-GUIDE.md names the scaffold disposition beside spawn-policy.json"
+else
+  failc "O7 sample-contract-documented: setup/SETUP-GUIDE.md does not name the scaffold disposition beside spawn-policy.json"
 fi
 
 # -----------------------------------------------------------------------------
