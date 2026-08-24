@@ -15,7 +15,8 @@ column by the archive's own criterion numbering.
 |---|---|---|---|---|---|
 | AC1 | duplicate-run-ac | **not carried as a criterion** | — | no layer. The ledger branch is refused on re-derived grounds and the offered replacement is an identity, so no verifiable content remains | — |
 | AC2 | dev-sweep-ban | automated | driving | `AC-2g` mirror diff over `.claude/agents/autoflow-implementer.md` | — |
-| AC3 | foreground-record | automated + manual | driving | `BG_SCAN` hook coverage + `tests/manual/issue-134-manual-scenarios.md` sweep-fits-the-tool-ceiling scenario | — |
+| AC3 | foreground-record | automated | driving | `BG_SCAN` hook coverage (the sweep-fits-the-tool-ceiling residual is the design-added manual row below) | — |
+| — | foreground-record — sweep-fits-the-tool-ceiling residual | manual | — | `tests/manual/issue-134-manual-scenarios.md` sweep-fits-the-tool-ceiling scenario | — |
 | AC4 | **parallel-suite-option** | **deferred — not verified in this cycle** | — | precondition unmet: `run-suites.sh` executes every suite as `(cd "$root" && bash "$suite")` against the shared repository root (`scripts/test/run-suites.sh:171,184`); no per-suite sandbox exists | verifying a parallel option without isolation would certify the contamination the issue cites |
 
 The `Type` / `Kind` / `Reason` columns follow the issue #153 grammar
