@@ -237,7 +237,7 @@ ARCHITECT       : Plan Synthesis    — isolated Workflow facilitation (Develope
 GATE:PLAN       : Plan Evaluation   — Evaluation AI (5 items × 10 points)
 DISPATCH        : Task Assignment   — TaskCreate, then a direct Test AI / Developer AI spawn per phase entry (acceptance criteria + verification design)
 RED             : Test Writing      — Test AI writes tests from acceptance criteria; Red confirmation
-GREEN           : Implementation    — Developer AI writes minimum code that passes the tests
+GREEN           : Implementation    — Developer AI writes minimum code that satisfies the in-scope acceptance criteria and passes the automated tests
 VERIFY          : Test Run + Check  — Green confirmation; on failure, branch by cause; minimal-implementation check
 REFINE          : Refactor          — Developer AI cleanup; Test AI re-confirms Green
 VALIDATE        : Verification Done — automated tests all PASS + manual checklist itemized + maintained docs updated

@@ -120,7 +120,7 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 
 ## Submodule AI (per sub-repo, Developer AI)
 - Understands and implements the assigned sub-repo's code.
-- Writes the minimum code that passes the tests written by the Test AI (does not implement behavior outside tests).
+- Writes the minimum code that satisfies the issue acceptance criteria within the agreed scope and passes the `automated` tests written by the Test AI (does not implement behavior outside that scope; an AC with a non-automated disposition is still implemented — see [`autoflow-guide.md`](autoflow-guide.md) > GREEN).
 - Has read access to other sub-repos; modifications stay within the assigned sub-repo.
 - Works directly in the target repo and pushes to origin (the target repo's own branch). PR creation is performed by the orchestrator.
 - *Secondary (multi-repo):* when the target is a sub-repo, the push goes to the AI's fork branch (in the fork-and-PR model).

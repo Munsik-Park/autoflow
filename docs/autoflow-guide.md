@@ -706,12 +706,16 @@ The Test AI writes test code from the verification design.
 
 ## GREEN — Implementation
 
-The Developer AI writes the minimum code that passes the tests.
+The Developer AI implements the issue acceptance criteria within the agreed scope — the feature
+design plus the verification design. Automated tests are one form of evidence for that scope, not
+its definition: an issue AC whose disposition is `manual`, `existing-coverage`, `delivery-check`,
+`environment-dependent` or `none` (ARCHITECT > Output artifacts > *Test necessity*) is still
+implemented; only its evidence differs.
 
 ```
-1. Read the test code authored by the Test AI.
-2. Write the minimum code that passes the tests.
-   - [MUST] Do NOT implement behavior not covered by tests.
+1. Read the verification design's acceptance-criteria table and the test code authored by the Test AI.
+2. Write the minimum code that satisfies every issue AC in scope and passes the `automated` tests.
+   - [MUST] Do NOT implement behavior outside the agreed scope (feature design + verification design's issue ACs). A required AC without an automated test is in scope; a behavior no AC requires is not, whether or not a test could be written for it.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
    - [MUST] Never start a **whole-tree run** of the suite runner. The prohibition is keyed on the run, not on a flag: both the `--all` flag and the **bare invocation** reach the whole tree, the bare form whenever its resolved delta is empty or the event is a `push` (see [`submodule-common-rules.md`](submodule-common-rules.md) > Testing Standards). The whole-tree sweep has exactly one invoker and one position — the orchestrator, at VALIDATE step 1. Execute only your resolved run set, or the specific suites your change requires; the acceptance run that produces evidence is GREEN step 5's, which you do not run.

@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4b599e194edacb04f4d976e8587420e0cac98b40a2979fa79fa941a179e2eb39"
+      "sha256": "01f896c8f06554f713328ca72f18363364f7b289684949cc2fffea52e8fccb1f"
     },
     {
       "source": "docs/INDEX.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b98b91e56386cd9bd6379b6b624a2202b5d8de4b9c8c6da40517c2431e9ce1dc"
+      "sha256": "c31d67e3775294b5ccb3e1d8e39e670ee0f76b55d3382908e48c1385d865f93e"
     },
     {
       "source": "docs/design-rationale.md",
@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "998b665dc901f37b393515cd47503eb2ca702d78a3ba668deb9418a69a1c597c"
+      "sha256": "c9fee85a96e2724e5e4f3244e9c939ab2df6221152be76c450184c3dbeba92c1"
     },
     {
       "source": "docs/title-guide.md",
