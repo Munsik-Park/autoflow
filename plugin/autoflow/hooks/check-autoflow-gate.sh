@@ -701,6 +701,68 @@ ledger_advisory_check() {
 }
 ledger_advisory_check || true
 
+# ── Section 1d: spawn-policy model advisory (NON-GATING, issue #150) ──────────
+# CLAUDE.md > Spawn Model routes every per-phase model value through
+# .claude/autoflow/spawn-policy.json. The hook sees `subagent_type` and `model`
+# on the payload but not which phase is active, so a phase↔model comparison is
+# not available to it. What IS derivable is the set of models the config admits
+# for that subagent_type — `spawn-policy.sh models-for <type>`. When that set is
+# NON-EMPTY and the declared model falls outside it, this step emits one warning
+# line and returns.
+#
+# An EMPTY admitted set yields no advice, keyed on the SET and never on the
+# type's provenance: `autoflow-planner` is declared `policy_unmapped_agent_types`
+# and the harness research types `Plan` / `claude-code-guide` are modelled by no
+# phase row, so warning on them would make the advisory a steady false-positive
+# stream on calls the policy has nothing to say about — and an advisory that
+# cries wolf on correct calls is worse than absent. `Explore` IS governed (the
+# `diagnose-loopcheck` row), so it draws advice exactly as an `autoflow-*` type
+# does; a provenance-keyed rule would silence it wrongly. The case where the
+# policy SHOULD have governed a type is caught in the tree by
+# `spawn-policy.sh check`'s partition rule, not by a runtime warning.
+#
+# Advisory only: Section 1b's presence-only `model` deny already ran above and
+# is untouched. This step never exits and never denies. Fail-open by
+# construction — the whole step runs under `|| true`, so a missing helper, a
+# missing `jq` or an unreadable config degrades to "no advice" rather than to a
+# broken hook (which would block the evaluation spawns that must stay
+# spawnable). The helper is resolved relative to THIS script, by the same
+# three-candidate list `ledger_advisory_check` uses, which is precisely what
+# lets .claude/hooks/ and plugin/autoflow/hooks/ stay byte-identical; the config
+# is then resolved by the readout relative to itself, never by this hook.
+spawn_policy_advisory_check() {
+  local _helper="" _cand _hookdir _subtype _model _admitted
+  [ "$TOOL_NAME" = "Agent" ] || return 0
+  _hookdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  for _cand in \
+    "$_hookdir/../../scripts/spawn-policy/spawn-policy.sh" \
+    "$_hookdir/../../../scripts/spawn-policy/spawn-policy.sh" \
+    "${CLAUDE_PROJECT_DIR:-.}/scripts/spawn-policy/spawn-policy.sh"; do
+    if [ -f "$_cand" ]; then _helper="$_cand"; break; fi
+  done
+  [ -n "$_helper" ] || return 0
+
+  _subtype=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)
+  _model=$(echo "$INPUT" | jq -r '.tool_input.model // empty' 2>/dev/null)
+  [ -n "$_subtype" ] || return 0
+  [ -n "$_model" ] || return 0
+  # Both values come from the payload and are passed as ONE quoted argument
+  # each — never interpolated into a command string, never word-split, never
+  # glob-expanded. The readout treats an unknown type as the empty set, so a
+  # hostile or malformed `subagent_type` yields silence, not an error path.
+  case "$_subtype" in
+    *[!A-Za-z0-9:_-]*) return 0 ;;
+  esac
+  _admitted=$(bash "$_helper" models-for "$_subtype" 2>/dev/null) || return 0
+  [ -n "$_admitted" ] || return 0
+  if ! printf '%s\n' "$_admitted" | grep -qxF "$_model"; then
+    echo "WARNING: spawn model '$_model' is outside the spawn policy's admitted set for subagent_type '$_subtype' (advisory — this call is NOT blocked)." >&2
+    echo "  Admitted: $(printf '%s' "$_admitted" | tr '\n' ' ')— resolve the phase's model with scripts/spawn-policy/spawn-policy.sh model <phase-key> (CLAUDE.md > Spawn Model)." >&2
+  fi
+  return 0
+}
+spawn_policy_advisory_check || true
+
 # ── Section 2: Activity check — locate the active issue state file ──
 # No state file means AutoFlow has not started — let the call through
 # (pre-PREFLIGHT). The Section 1 denies above already ran unconditionally.

@@ -179,6 +179,16 @@ build_rows() {
   # docs/issue-proposal.md enters via the doc-closure BFS above.
   emit_row "scripts/issue/create-issue.sh" \
            "scripts/issue/create-issue.sh" "root-layer" "copy" "file"
+  # Single-source spawn policy (issue #150). The config is source-path-preserved
+  # so one path serves the host repo and a stamped target alike, and the readout
+  # ships for the same reason ledger-entry-id.sh does: the stamped CLAUDE.md >
+  # Spawn Model instructs a consumer to run it before every direct spawn, and
+  # the two deliberation workflows above read the config at run time. The
+  # doc-closure BFS follows only .md links, so neither file enters on its own.
+  emit_row ".claude/autoflow/spawn-policy.json" \
+           ".claude/autoflow/spawn-policy.json" "root-layer" "copy" "file"
+  emit_row "scripts/spawn-policy/spawn-policy.sh" \
+           "scripts/spawn-policy/spawn-policy.sh" "root-layer" "copy" "file"
 
   # Manifest self-entry (copied last; cannot hash itself pre-write).
   emit_row "setup/manifest.json" \

@@ -54,34 +54,45 @@ This project: host repository with **zero submodules** → **single-repo** (the 
 
 AutoFlow teammate and subagent spawns choose the model by phase work type rather than inheriting the host session model (currently Opus 4.8). Rationale: (a) cost efficiency on rubric- or classification-bound phases (Sonnet 5 input/output = 60% of Opus 4.8 per M tokens; 40% during introductory pricing through 2026-08-31), (b) Anthropic's official guidance (Opus = "long-horizon agentic, complex reasoning"; Sonnet = "frontier intelligence at scale, agentic tool use"), (c) confining long-session degradation exposure to the phases that genuinely need Opus (`anthropics/claude-code#54991`, `#56367`, `#53459`, all OPEN as of 2026-04~05).
 
-| Phase | Model | Work type |
-|---|---|---|
-| DIAGNOSE Phase A (structure) | `sonnet` | factual code-structure description (issue-isolated) |
-| DIAGNOSE Phase B (issue) | `sonnet` | text classification + logical inference (no code) |
-| DIAGNOSE Phase 3 (necessity) | `sonnet` | necessity scoring (Behavior gap + Code-change lever; reuse-neutral) |
-| GATE:HYPOTHESIS | `sonnet` | rubric, 3 items × 10 points |
-| ARCHITECT | `opus` | multi-turn design discussion, devil's advocate (Developer AI + Test AI) |
-| ARCHITECT / VERIFY facilitator | `opus` | isolated `Workflow` whose in-script Developer-AI/Test-AI sub-agents run on `opus` (ARCHITECT design discussion; VERIFY self-check) — see Deliberation Isolation |
-| GATE:PLAN | `opus` | rubric, 5 items × 10 points — reverted from `sonnet` per the revert rule below (issue #287 cycle 1: sonnet PASS avg 8.8 contradicted by same-cycle Codex Medium findings its rubric covers — `useSearchEnabled` mechanism misread [Feasibility], `/d/library` blast radius [Dependencies/Scope]; evidence: Munsik-Park/autoflow#905 · LibreChat #268 review comments) |
-| RED | `sonnet` | acceptance criteria → test code (complex tests fall back to `opus`, with rationale in the Test AI report) |
-| GREEN | `opus` | minimum implementation that passes the tests |
-| VERIFY | `opus` | self-check + arbitration (sycophancy-risk surface) |
-| REFINE | `sonnet` | mechanical `/simplify` application |
-| AUDIT | `sonnet` | security rubric, 5 items × 10 points |
-| GATE:QUALITY | `opus` | rubric, 10 items × 10 points — reverted from `sonnet` per the revert rule below (issue #287 cycle 1: sonnet PASS avg 8.9 contradicted by a same-cycle Codex Medium finding its rubric covers — Test coverage/quality missed that the spec seeds `search.enabled: true` directly, masking the missing `useSearchEnabled` wiring; evidence: LibreChat #268 review comment) |
-| HANDOFF review-triage (finding ingestion + Low judgment) | `sonnet` | reviewer-comment ingestion (severity classification) + Low-finding impact judgment; the auto-resolution itself reuses the RED/GREEN/… rows above |
+The per-phase assignment itself — every phase's `model`, its `effort`, and the work type that
+justifies it — lives in exactly ONE machine-readable place and is **not** restated here:
+
+**`.claude/autoflow/spawn-policy.json`**, read through `scripts/spawn-policy/spawn-policy.sh`:
+
+```
+bash scripts/spawn-policy/spawn-policy.sh model  <phase-key>   # the model to declare on the spawn
+bash scripts/spawn-policy/spawn-policy.sh effort <phase-key>   # the effort, or the literal `inherit`
+bash scripts/spawn-policy/spawn-policy.sh check                # validate the config
+```
+
+The same file carries the two Workflow facilitations' per-site values (`workflow_sites`), which the
+deliberation scripts load at run time — no `model:` literal remains in
+`.claude/workflows/*.js`. It also documents its own inheritance rule (`effort_contract`) and
+declares any shipped agent type the policy governs no row for (`policy_unmapped_agent_types`).
+
+**Revert history** (the evidence, not the tiers — the tier each was reverted *to* is read from the
+config): GATE:PLAN and GATE:QUALITY were both reverted to the higher tier under the revert rule
+below, on issue #287 cycle 1. GATE:PLAN — a lower-tier PASS (avg 8.8) contradicted by same-cycle
+Codex Medium findings its own rubric covers: the `useSearchEnabled` mechanism misread
+[Feasibility] and the `/d/library` blast radius [Dependencies/Scope] (evidence:
+Munsik-Park/autoflow#905 · LibreChat #268 review comments). GATE:QUALITY — a lower-tier PASS
+(avg 8.9) contradicted by a same-cycle Codex Medium finding its rubric covers: Test
+coverage/quality missed that the spec seeds `search.enabled: true` directly, masking the missing
+`useSearchEnabled` wiring (evidence: LibreChat #268 review comment).
 
 Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (`TaskCreate` only), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent (see table).
 
-**[MUST]** Every `Agent` spawn declares the `model` parameter explicitly (`model: "sonnet"` or `model: "opus"`). Without it the host session model is inherited and this per-phase policy is bypassed. Enforced by the hook (`.claude/hooks/check-autoflow-gate.sh`, PreToolUse `Agent`): a spawn without `model` is denied, independent of Auto-Flow state — research and evaluation spawns included. The orchestrator's own model follows the user's session settings (outside this policy).
+**[MUST]** Every `Agent` spawn declares the `model` parameter explicitly (`model: "sonnet"` or `model: "opus"`). Without it the host session model is inherited and this per-phase policy is bypassed. Enforced by the hook (`.claude/hooks/check-autoflow-gate.sh`, PreToolUse `Agent`): a spawn without `model` is denied, independent of Auto-Flow state — research and evaluation spawns included. The orchestrator's own model follows the user's session settings (outside this policy). **One carve-out, and only one**: the `policy-load` transcription sub-agent at the top of each deliberation Workflow omits `model`, because it cannot read its own model from the policy it is loading; the call is a verbatim file transcription under a closed schema, where model tier is not load-bearing.
+
+**[MUST]** The value a spawn declares is **resolved by running the readout**, never recalled from a table or from memory of a prior cycle: `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>`. Editing one config row is therefore the whole of a policy change — no other file is touched. The hook additionally emits a non-gating advisory when a declared `model` falls outside the set the config admits for that `subagent_type`; it warns and never denies.
 
 **[MUST] Spawn role declaration**: every `Agent` spawn made while an AutoFlow cycle is active (`active:true` state file present) declares its **role structurally** — every spawn uses a dedicated `subagent_type` (`autoflow-analyzer` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator`, defined in `.claude/agents/`); the built-in research types (`Explore` / `Plan` / `claude-code-guide`) count as declared. `subagent_type` is the sole declaration channel — the teammate-name-prefix channel was removed jointly with the spawn-mode migration (ADR-0021; the removal itself is ADR-0017 Q3), since every role now spawns anonymously and directly. The hook owns the role→gate mapping (analysis / evaluation / research pass; planning → GATE:HYPOTHESIS; implementation / testing → GATE:PLAN) and **denies an undeclared spawn while a cycle is active**. The spawn prompt is never used to infer the spawn's class — prompt-keyword inference both over-blocked benign spawns (which were then re-worded to slip past, training evasion) and let keyword-free implementation spawns bypass GATE:PLAN. A spawn declares **who it is**; it never declares which gate applies to it. See `docs/gate-matching-standard.md` > P3. Every role's spawn mode is fixed by *Spawn mode by role lifetime* below.
 
-**[MUST]** REFINE entry spawns the Developer AI fresh on `sonnet`, carrying only `.autoflow/issue-{N}-*.md` paths. Every role is an anonymous direct spawn with no lifetime spanning phases (*Spawn mode by role lifetime* below), so each phase's spawn already selects its own model from the table above; the VERIFY → REFINE model change needs no separate teardown step. What the rule still forbids is carrying VERIFY's spawn into REFINE by reusing its context — the phase boundary is a fresh spawn, matching the DISPATCH-entry respawn in [Cost Control](#cost-control).
+**[MUST]** REFINE entry spawns the Developer AI fresh, on the model the policy names for REFINE, carrying only `.autoflow/issue-{N}-*.md` paths. Every role is an anonymous direct spawn with no lifetime spanning phases (*Spawn mode by role lifetime* below), so each phase's spawn already resolves its own model from the config; the VERIFY → REFINE model change needs no separate teardown step. What the rule still forbids is carrying VERIFY's spawn into REFINE by reusing its context — the phase boundary is a fresh spawn, matching the DISPATCH-entry respawn in [Cost Control](#cost-control).
 
-**[MUST]** Revert a phase to `opus` — updating this table in the same commit — when a `sonnet`-assigned gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through a VERIFY failure, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
+**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through a VERIFY failure, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
 
-**Rollout status**: the per-phase assignment above is settled (pilot complete); changes follow the revert rule above.
+**Rollout status**: the per-phase assignment in the config is settled (pilot complete); changes follow the revert rule above.
 
 **Sources**:
 - Anthropic model selection guide: https://docs.claude.com/en/docs/about-claude/models/choosing-a-model
@@ -99,7 +110,7 @@ Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT
 | DIAGNOSE (intake readiness triage, Phase A, Phase B, Phase 3, review-response loop check) | anonymous direct | single-shot — writes its body to `.autoflow/issue-{N}-*.md` and returns an anchor + one-line summary |
 | HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5) | anonymous direct | single-shot — ingests or serializes and returns; the auto-resolution it feeds re-enters through the Test AI / Developer AI rows |
 | Test AI (RED, VERIFY self-check, REFINE Green re-confirmation) | anonymous direct | one spawn per phase entry; continuity across RED → VERIFY → REFINE is carried by the `.autoflow/*` artifacts, not by a retained context |
-| Developer AI (GREEN, VERIFY self-check, REFINE) | anonymous direct | one spawn per phase entry; the same artifact-carried continuity, and each entry selects its own model from the table above |
+| Developer AI (GREEN, VERIFY self-check, REFINE) | anonymous direct | one spawn per phase entry; the same artifact-carried continuity, and each entry resolves its own model from the config |
 
 `Workflow`-based facilitation (ARCHITECT, VERIFY cause-branch) is not an `Agent` spawn — its Developer-AI / Test-AI participants are in-script workflow sub-agents and its result returns through the Facilitator Return Contract (`docs/teammate-contracts.md` > Facilitator).
 

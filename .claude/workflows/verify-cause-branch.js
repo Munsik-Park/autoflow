@@ -76,17 +76,70 @@ const IMPL_CHECK = {
   required: ['verdict', 'reason'],
 }
 
+// -- Spawn policy load (issue #150) -------------------------------------------
+// The per-site spawn policy lives in exactly ONE machine-readable place,
+// .claude/autoflow/spawn-policy.json, and no `model:` literal remains in this
+// file. The Workflow runtime injects no filesystem access, so the file arrives
+// through a transcription sub-agent under a closed schema.
+//
+// This loader is the ONE bootstrap exemption to CLAUDE.md > Spawn Model's
+// explicit-`model` rule: it cannot read its own model from the policy it is
+// loading, so it omits `model` and inherits the resolved session model. It is
+// also the only call in this script carrying no `site()` spread.
+//
+// Fail-closed: this workflow has no ESCALATE verdict, so a missing, unreadable
+// or malformed policy raises at the boundary alongside the existing
+// `issue`/`failLog` guards. Degrading to session-inherited models is not an
+// option -- that is the bypass the single-source policy exists to close.
+const POLICY_PATH = '.claude/autoflow/spawn-policy.json'
+const WORKFLOW_NAME = 'verify-cause-branch'
+const POLICY_FILE = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    found: { type: 'boolean' },
+    content: { type: 'string' },
+  },
+  required: ['found', 'content'],
+}
+const policyLoaded = await Promise.resolve()
+  .then(() => agent(
+    `You are a transcription channel, not a reviewer. Read ${POLICY_PATH} and return its raw contents verbatim in "content" -- do not summarize, reword, add, drop or re-order anything, and do not re-serialize or pretty-print the JSON. Set "found" true only when the file exists AND is non-empty; when it does not, set "found" false and "content" to the empty string. Exercise no judgment about the policy itself. Run every Bash command in the foreground only -- never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    { schema: POLICY_FILE, label: 'policy-load', phase: 'Self-check' },
+  ))
+  .catch(() => null)
+let policy = null
+if (policyLoaded && policyLoaded.found) {
+  try { policy = JSON.parse(policyLoaded.content) } catch (_) { policy = null }
+}
+if (!policy || !policy.workflow_sites || !policy.workflow_sites[WORKFLOW_NAME]) {
+  throw new Error(`${WORKFLOW_NAME}: spawn policy could not be loaded from ${POLICY_PATH}`)
+}
+
+// The site opts helper -- see architect-deliberation.js for the full rationale.
+// [MUST] The key is a STRING LITERAL at every call site: contract CI is pure
+// bash + jq with no node, so the static join is the only oracle over it. An
+// inheriting row yields an opts object with NO `effort` key, which is how the
+// runtime is documented to inherit.
+const site = (key) => {
+  const row = policy.workflow_sites[WORKFLOW_NAME][key]
+  if (!row || !row.model) throw new Error(`${WORKFLOW_NAME}: no spawn-policy row for workflow site "${key}"`)
+  return row.effort && row.effort !== 'inherit'
+    ? { model: row.model, effort: row.effort }
+    : { model: row.model }
+}
+
 phase('Self-check')
 console.log(`VERIFY cause-branch for issue #${issue}`)
 
 const [test, impl] = await parallel([
   () => agent(
     `You are the Test AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the test code, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Developer AI): does my test accurately reflect the acceptance criterion? Answer "fix_test" if the test is wrong, "no_problem" if the test is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-    { schema: TEST_CHECK, label: 'test-self-check', phase: 'Self-check', model: 'opus' },
+    { schema: TEST_CHECK, label: 'test-self-check', phase: 'Self-check', ...site('test-self-check') },
   ),
   () => agent(
     `You are the Developer AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the implementation, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Test AI): does my implementation meet the acceptance criterion? Answer "fix_impl" if the implementation is wrong, "no_problem" if the implementation is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-    { schema: IMPL_CHECK, label: 'impl-self-check', phase: 'Self-check', model: 'opus' },
+    { schema: IMPL_CHECK, label: 'impl-self-check', phase: 'Self-check', ...site('impl-self-check') },
   ),
 ])
 
@@ -105,7 +158,7 @@ else next = 'EVALUATION_AI' // both "no_problem" -> deadlock: Evaluation AI arbi
 
 await agent(
   `Append (do NOT rewrite or delete) to ${ledger} one VERIFY cause-branch entry: decision "next_action=${next}"; grounds (test self-check=${t}, impl self-check=${i}; failure log ${failLog}); authority "VERIFY self-check"; cycle/phase "VERIFY". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Head the entry \`## <ID> — <title> (cycle <C>, VERIFY)\`, allocating <ID> by running \`bash scripts/ledger/ledger-entry-id.sh next ${ledger} F\` immediately before the append — \`F\` is the facilitator delegate's namespace (CLAUDE.md > Decision Ledger). After the append, run \`bash scripts/ledger/ledger-entry-id.sh check ${ledger}\` and fix every defect it reports before returning. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-  { label: 'ledger', phase: 'Self-check', model: 'opus' },
+  { label: 'ledger', phase: 'Self-check', ...site('ledger') },
 )
 
 return {

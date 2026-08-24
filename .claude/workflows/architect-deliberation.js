@@ -56,6 +56,14 @@ const REASON_RESUME_OPEN_ENTRY_AT_CONVERGENCE = 'resume register still open at c
 const REASON_AC_RECONCILIATION_UNAVAILABLE = 'ac reconciliation unavailable'
 const REASON_AC_LIST_ABSENT = 'ac list absent'
 const REASON_AC_UNAUTHORIZED_CHANGE = 'unauthorized acceptance-criterion change'
+// Spawn-policy load sentinels (issue #150), same declare-once, assigned-BARE discipline. The
+// per-site model/effort policy is loaded through a transcription channel (there is no filesystem
+// here), and a run must never proceed on an unknown policy: degrading to session-inherited models
+// is precisely the bypass the single-source policy exists to close. Each cause is distinct so the
+// operator sees which half failed, and none is laundered into the generic round-exhaustion text.
+const REASON_POLICY_LOAD_AGENT_MISSING = 'spawn policy load agent missing'
+const REASON_POLICY_ABSENT = 'spawn policy absent'
+const REASON_POLICY_MALFORMED = 'spawn policy malformed'
 // Minted register-entry names for the two fail-closed paths (issue #138). Declared once so the
 // resume agenda an operator re-enters on is named by a literal, not by assembled prose.
 const AC_ENTRY_RECONCILIATION_UNAVAILABLE = 'ac-authority:reconciliation-unavailable'
@@ -458,7 +466,73 @@ const rehydrate = (e) => {
   return entry
 }
 
-if (!resume) {
+// -- Spawn policy load (issue #150) -------------------------------------------
+// The per-phase / per-site spawn policy lives in exactly ONE machine-readable
+// place, .claude/autoflow/spawn-policy.json, and no `model:` literal remains in
+// this file. The Workflow runtime injects no filesystem access and rejects
+// `import(` at parse time, so the file arrives through a transcription
+// sub-agent -- the same closed-schema channel `register-load` already uses.
+//
+// This loader is the ONE bootstrap exemption to CLAUDE.md > Spawn Model's
+// explicit-`model` rule: it cannot read its own model from the policy it is
+// loading, so it omits `model` and inherits the resolved session model (the
+// runtime's own documented default). The call is a verbatim file transcription
+// under a closed schema, where model tier is not load-bearing. It is also the
+// only call in this script that carries no `site()` spread.
+const POLICY_PATH = '.claude/autoflow/spawn-policy.json'
+const WORKFLOW_NAME = 'architect-deliberation'
+const POLICY_FILE = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    found: { type: 'boolean' },
+    content: { type: 'string' },
+  },
+  required: ['found', 'content'],
+}
+const policyLoaded = await Promise.resolve()
+  .then(() => agent(
+    `You are a transcription channel, not a reviewer. Read ${POLICY_PATH} and return its raw contents verbatim in "content" -- do not summarize, reword, add, drop or re-order anything, and do not re-serialize or pretty-print the JSON. Set "found" true only when the file exists AND is non-empty; when it does not, set "found" false and "content" to the empty string. Exercise no judgment about the policy itself. Run every Bash command in the foreground only -- never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    { schema: POLICY_FILE, label: 'policy-load', phase: 'Draft' },
+  ))
+  .catch(() => null)
+let policy = null
+if (policyLoaded && policyLoaded.found) {
+  try { policy = JSON.parse(policyLoaded.content) } catch (_) { policy = null }
+}
+if (!policy || !policy.workflow_sites || !policy.workflow_sites[WORKFLOW_NAME]) {
+  earlyEscalateReason = !policyLoaded
+    ? REASON_POLICY_LOAD_AGENT_MISSING
+    : !policyLoaded.found
+    ? REASON_POLICY_ABSENT
+    : REASON_POLICY_MALFORMED
+}
+
+// The site opts helper. Every spawn call site reads its model (and its effort,
+// when the row declares an override) from the loaded policy through this one
+// resolver, spread into the opts object beside that site's own label / phase /
+// schema. An INHERITING row yields an opts object with no `effort` key at all,
+// which is exactly how the runtime is documented to inherit -- the config
+// sentinel `inherit` is this policy's own vocabulary and is never written to a
+// harness channel.
+//
+// [MUST] The key is a STRING LITERAL at every call site -- never a variable, a
+// template string or any computed expression. Contract CI is pure bash + jq
+// with no node, so the join between call sites and config rows has no run-time
+// oracle: a literal key is what keeps that join decidable by static set
+// comparison (tests/test-spawn-policy-single-source.sh > site-key-join).
+const site = (key) => {
+  const row = policy.workflow_sites[WORKFLOW_NAME][key]
+  if (!row || !row.model) throw new Error(`${WORKFLOW_NAME}: no spawn-policy row for workflow site "${key}"`)
+  return row.effort && row.effort !== 'inherit'
+    ? { model: row.model, effort: row.effort }
+    : { model: row.model }
+}
+
+if (earlyEscalateReason) {
+  // Fail-closed: neither Draft nor Resume runs on an unknown policy. The
+  // terminal escalation below carries the cause verbatim.
+} else if (!resume) {
   phase('Draft')
   console.log(`ARCHITECT facilitation for issue #${issue} (cap ${bounded ? BOUNDED_ROUNDS : MAX_ROUNDS} rounds${bounded ? ', scope-bounded review-response' : ''})`)
 
@@ -466,11 +540,11 @@ if (!resume) {
 const [devDraft, testDraft] = await parallel([
   () => agent(
     `You are the Developer AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md (issue analysis + plan inputs) and any repo code you need. Author the Feature Design Document — files to change, API interface, data structures, dependencies — and WRITE it to ${feature}. Honor docs/teammate-common-rules.md > Discussion Protocol and docs/submodule-common-rules.md > Change Surface Rules. Return a one-line summary only; the document body goes in the file, not the return.${ADOPTION_EVIDENCE_RULE}${LEDGER_SEED_RULE}${RECORD_DISCIPLINE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-    { label: 'dev-draft', phase: 'Draft', model: 'opus' },
+    { label: 'dev-draft', phase: 'Draft', ...site('dev-draft') },
   ),
   () => agent(
     `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / manual / environment-dependent) -> method; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration); and the Verification depth determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth (a risk line naming who is harmed if this change is wrong, plus one line per verification layer and per new spec file naming the failure mode no other layer catches — a justification form, not a quantity cap) — and WRITE it to ${verif}. Return a one-line summary only.${ISSUE_AC_COLUMN_RULE}${ADOPTION_EVIDENCE_RULE}${LEDGER_SEED_RULE}${RECORD_DISCIPLINE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-    { label: 'test-draft', phase: 'Draft', model: 'opus' },
+    { label: 'test-draft', phase: 'Draft', ...site('test-draft') },
   ),
 ])
 
@@ -491,7 +565,7 @@ const [devDraft, testDraft] = await parallel([
   loaded = await Promise.resolve()
     .then(() => agent(
       `You are a transcription channel, not a reviewer. Read ${registerPath} and return its contents under the given schema, verbatim — do not summarize, reword, add, drop or re-order anything. Set "found" true only when the file exists AND parses as JSON; when it does not, set "found" false and return the other fields as empty defaults. Set "artifacts_present" true only when BOTH ${feature} and ${verif} exist and are non-empty. Copy "lastRound", "verdict" and every element of "entries" (name, conclusion, evidence, status, raisedBy) exactly as the file states them. Exercise no judgment about the design itself. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: REGISTER_FILE, label: 'register-load', phase: 'Resume', model: 'sonnet' },
+      { schema: REGISTER_FILE, label: 'register-load', phase: 'Resume', ...site('register-load') },
     ))
     .catch(() => null)
   // Resume guards, in declared order. Each resolves to its OWN bare sentinel so a load failure is
@@ -632,7 +706,7 @@ while (!earlyEscalateReason && round < roundCeiling && !converged) {
   const test = await Promise.resolve()
     .then(() => agent(
       `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange} If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds".${ISSUE_AC_COLUMN_RULE} Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: VERDICT, label: `test-r${round}`, phase: 'Converge', model: 'opus' },
+      { schema: VERDICT, label: `test-r${round}`, phase: 'Converge', ...site('test-round') },
     ))
     .catch(() => null)
   // The Developer AI answers within the SAME round, reading the Test AI's live verdict.
@@ -642,7 +716,7 @@ while (!earlyEscalateReason && round < roundCeiling && !converged) {
   const dev = await Promise.resolve()
     .then(() => agent(
       `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}.${peer} Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: VERDICT, label: `dev-r${round}`, phase: 'Converge', model: 'opus' },
+      { schema: VERDICT, label: `dev-r${round}`, phase: 'Converge', ...site('dev-round') },
     ))
     .catch(() => null)
   lastDev = dev
@@ -711,7 +785,7 @@ if (!earlyEscalateReason && !converged && round === roundCeiling && accepted(las
   const closing = await Promise.resolve()
     .then(() => agent(
       `You are the Test AI. This is the CLOSING evaluation of the Developer AI's final revision at the round cap (round ${round} of ${roundCeiling}): there is no further Developer-AI turn, and this verdict alone decides whether the run converges: a grounded ACCEPT converges it and a COUNTER/PARTIAL returns ESCALATE, after which the Reconcile check still decides whether a converged run returns CONVERGED or AC_CHANGE. Read the current ${feature} and ${verif}.${closingPeer} Apply the Discussion Protocol. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds".${ISSUE_AC_COLUMN_RULE} Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${closingCarry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: VERDICT, label: CLOSING_CALL_LABEL, phase: 'Converge', model: 'opus' },
+      { schema: VERDICT, label: CLOSING_CALL_LABEL, phase: 'Converge', ...site('test-closing') },
     ))
     .catch(() => null)
   if (!closing) {
@@ -751,7 +825,7 @@ if (converged) {
   const acDiff = await Promise.resolve()
     .then(() => agent(
       `You are a comparison channel, not a reviewer. Read three artifacts and return what they state under the given schema. (1) ${phaseB} — its "## Acceptance criteria" table. Set "ac_source_present" true only when that section exists AND parses as a table; when it does not, set it false and return the other fields as empty arrays. (2) ${verif} — its acceptance-criteria table, whose leading "Issue AC" column carries an AC id or "—". (3) ${ledger} — the issue decision ledger. Return "ac_rows" as ONE ROW PER AC ID in the ${phaseB} table, IN THAT TABLE'S ORDER, omitting none: "ac" is the AC id copied verbatim; "carried" is true when some ${verif} row's "Issue AC" cell equals that id; "disposition" is that carrying row's stated disposition mapped to exactly one of verified / declined / deferred / absent, and is "absent" if and only if "carried" is false; "method_executable" is true when the carrying row's Method cell names a file path, a command, or a manual-scenario file, and false when that cell is empty or "—"; "locator" is the carrying row's name, or "—"; "proposed" is that row's disposition wording copied verbatim. Return "ledger_ac_decisions" by pure grammar match, not by judgment: for each level-2 heading in ${ledger} whose text ends with the marker [ac-decision], copy the value of that entry's "- AC:" line. Copy nothing else into that list — not a paraphrase of a criterion, not a prose mention of an AC id, and not a "- AC:" line under any other marker or under no marker. Return "substituted" for each ${verif} row whose criterion asserts a DIFFERENT property than the ${phaseB} criterion of the same id. Exercise no judgment about whether any difference was justified, and do not decide whether an entry's disposition was appropriate — report presence and kind only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: AC_DIFF, label: 'ac-diff', phase: 'Reconcile', model: 'sonnet' },
+      { schema: AC_DIFF, label: 'ac-diff', phase: 'Reconcile', ...site('ac-diff') },
     ))
     .catch(() => null)
   // Minting (issue #138): every AC_CHANGE path mints at least one OPEN entry, so the resume the
@@ -879,7 +953,7 @@ const ledgerPrompt = verdict === 'AC_CHANGE'
 // writing. The full `Promise.resolve().then(...)` form — not a bare `.catch` on the call — is what
 // also converts a SYNCHRONOUS throw at the runtime boundary into the rejection `.catch` absorbs.
 await Promise.resolve()
-  .then(() => agent(ledgerPrompt, { label: 'ledger', phase: 'Ledger', model: 'opus' }))
+  .then(() => agent(ledgerPrompt, { label: 'ledger', phase: 'Ledger', ...site('ledger') }))
   .catch(() => null)
 
 // Terminal Register phase (issue #127): persist the register so a later resume can re-enter from
@@ -915,7 +989,7 @@ if (registerHeld) {
   const registerAck = await Promise.resolve()
     .then(() => agent(
       `You are a transcription channel, not an author. Write the text between the two fence markers below to ${registerPath}, byte for byte: no reformatting, no re-indentation, no added or dropped fields, no summarizing, no commentary in the file. Create the file if it does not exist and overwrite it if it does. Write exactly the bytes between the fences and nothing else, and do not write the fence markers themselves. Then return a one-line confirmation.\n${REGISTER_FENCE_START}\n${registerPayload}\n${REGISTER_FENCE_END}\nRun every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { label: 'register-write', phase: 'Register', model: 'sonnet' },
+      { label: 'register-write', phase: 'Register', ...site('register-write') },
     ))
     .catch(() => null)
   // A failed write does not alter the already-decided verdict: it is absorbed to a null
