@@ -40,10 +40,23 @@ const phase = () => {}
 // Mirror the documented parallel(): concurrent, and a thunk that throws resolves to null.
 const parallel = (thunks) => Promise.all(thunks.map((t) => Promise.resolve().then(t).catch(() => null)))
 
-function makeAgent(responder, calls) {
+// Spawn-policy load default (issue #150 / #151 regression): both workflow scripts open with an
+// unlabelled `policy-load` transcription call (no `site()` spread — it is the one bootstrap
+// exemption, see architect-deliberation.js > Spawn policy load) that every OTHER agent() call
+// depends on via `site(key)`. A scenario's own `responder` never sees this label unless it opts in
+// via the third `policyLoad` arg below; by default every scenario answers it with the REAL policy
+// file's verbatim content, exactly as a working transcription sub-agent would, so the ~150
+// pre-existing scenarios (written before #150) do not need to individually stub a call they know
+// nothing about. The handful of scenarios that exercise the load failure itself (absent / malformed
+// / agent-missing) pass an explicit override.
+const REAL_POLICY_CONTENT = readFileSync(join(root, '.claude/autoflow/spawn-policy.json'), 'utf8')
+const DEFAULT_POLICY_LOAD_RESPONSE = { found: true, content: REAL_POLICY_CONTENT }
+
+function makeAgent(responder, calls, policyLoad = DEFAULT_POLICY_LOAD_RESPONSE) {
   return async (prompt, opts = {}) => {
     const label = opts.label || ''
     calls.push({ label, prompt })
+    if (label === 'policy-load') return typeof policyLoad === 'function' ? policyLoad() : policyLoad
     return responder(label, prompt)
   }
 }
@@ -118,13 +131,13 @@ const runArch = (args, responder, opts = {}) => {
   const calls = []
   const { issue } = extractArgv(args)
   writeDraftArtifacts(issue, opts.omitArtifact)
-  return arch(args, phase, parallel, makeAgent(responder, calls), mockConsole)
+  return arch(args, phase, parallel, makeAgent(responder, calls, opts.policyLoad), mockConsole)
     .then((result) => ({ result, calls }))
     .finally(() => removeDraftArtifacts(issue))
 }
-const runVerify = (args, responder) => {
+const runVerify = (args, responder, opts = {}) => {
   const calls = []
-  return verify(args, phase, parallel, makeAgent(responder, calls), mockConsole).then((result) => ({ result, calls }))
+  return verify(args, phase, parallel, makeAgent(responder, calls, opts.policyLoad), mockConsole).then((result) => ({ result, calls }))
 }
 
 let failures = 0
@@ -138,7 +151,52 @@ async function test(name, fn) {
   }
 }
 
-// ---- ARCHITECT ----------------------------------------------------------------
+// ---- ARCHITECT: spawn-policy load (issue #150 / #151 regression) --------------
+// The transcription call itself never reaches the responder (see the `policy-load`
+// interception in `makeAgent` above) -- these three scenarios drive it directly via
+// `opts.policyLoad` to lock the three fail-closed sentinels architect-deliberation.js
+// derives from it (REASON_POLICY_LOAD_AGENT_MISSING / REASON_POLICY_ABSENT /
+// REASON_POLICY_MALFORMED), each escalating with ITS OWN distinct cause.
+
+await test('ARCHITECT: policy-load agent returns null (agent missing/errored) -> ESCALATE "spawn policy load agent missing"', async () => {
+  const { result } = await runArch({ issue: 'policy-null' }, () => 'x', { policyLoad: null })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy load agent missing')
+})
+
+await test('ARCHITECT: policy-load returns found:false (file absent/empty) -> ESCALATE "spawn policy absent"', async () => {
+  const { result } = await runArch({ issue: 'policy-absent' }, () => 'x', {
+    policyLoad: { found: false, content: '' },
+  })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy absent')
+})
+
+await test('ARCHITECT: policy-load content is not valid JSON -> ESCALATE "spawn policy malformed"', async () => {
+  const { result } = await runArch({ issue: 'policy-malformed-json' }, () => 'x', {
+    policyLoad: { found: true, content: 'not json' },
+  })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy malformed')
+})
+
+await test('ARCHITECT: policy-load content parses but lacks this workflow\'s site table -> ESCALATE "spawn policy malformed"', async () => {
+  const { result } = await runArch({ issue: 'policy-malformed-shape' }, () => 'x', {
+    policyLoad: { found: true, content: JSON.stringify({ workflow_sites: { 'verify-cause-branch': {} } }) },
+  })
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy malformed')
+})
+
+await test('ARCHITECT: a valid policy-load (the real spawn-policy.json content, unmodified by any scenario) lets the run reach Draft normally', async () => {
+  const { calls } = await runArch({ issue: 'policy-ok' }, (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return null
+  })
+  assert.ok(calls.some((c) => c.label === 'policy-load'), 'the policy-load call must have been made')
+  assert.ok(calls.some((c) => c.label === 'dev-draft'), 'a valid default policy must let Draft proceed')
+})
 
 await test('ARCHITECT: converges at round 2 with a grounded ACCEPT, ledger = mutual ACCEPT', async () => {
   const responder = (label) => {
@@ -1692,7 +1750,12 @@ await test('ARCHITECT: a malformed resume value throws at the boundary, extendin
     /resume/i,
   )
   const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
-  const normalizationBlock = src.slice(0, src.indexOf("phase('Draft')"))
+  // Scoped to the args-admission block specifically (up to `const issue = argv.issue`, the line
+  // right after the single admission guard) -- not to the whole pre-Draft prelude. Widening the
+  // slice to `phase('Draft')` would also capture the spawn-policy `site()` helper's OWN fail-closed
+  // throw (issue #150), which is a distinct, unrelated throw site and would make this count assert
+  // 2 for a reason this AC never claimed to guard.
+  const normalizationBlock = src.slice(0, src.indexOf('const issue = argv.issue'))
   assert.equal((normalizationBlock.match(/throw new Error/g) || []).length, 1, 'the resume admission rule must extend the single existing throw site, not add a second one')
 })
 
@@ -2098,6 +2161,7 @@ await test('ARCHITECT: a SYNCHRONOUS throw at the register-write call is absorbe
   try { unlinkSync(register) } catch (_) { /* none yet */ }
   const syncThrowAgent = (prompt, opts = {}) => {
     const label = (opts && opts.label) || ''
+    if (label === 'policy-load') return DEFAULT_POLICY_LOAD_RESPONSE
     if (label === 'register-write') throw new Error('sync register-write throw') // NOT a promise rejection
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
@@ -2369,7 +2433,57 @@ await test('ARCHITECT: a denied resume run persists ESCALATE with the entry stil
   assert.equal(runTwo.rounds, runOne.rounds + 1, 'the second invocation must be admitted to a further round, not refused before Converge')
 })
 
-// ---- VERIFY -------------------------------------------------------------------
+// ---- VERIFY: spawn-policy load (issue #150 / #151 regression) -----------------
+// verify-cause-branch.js has no ESCALATE verdict (Decision 7: a single self-check round,
+// deterministic next_action), so a missing/unreadable/malformed policy raises at the boundary
+// instead -- one throw message for all three causes (see verify-cause-branch.js > Spawn policy
+// load > "Fail-closed: this workflow has no ESCALATE verdict").
+
+await test('VERIFY: policy-load agent returns null (agent missing/errored) -> throws at the boundary', async () => {
+  await assert.rejects(
+    () => runVerify({ issue: '1', failLog: '/tmp/f.log' }, () => 'x', { policyLoad: null }),
+    /verify-cause-branch: spawn policy could not be loaded/,
+  )
+})
+
+await test('VERIFY: policy-load returns found:false (file absent/empty) -> throws at the boundary', async () => {
+  await assert.rejects(
+    () => runVerify({ issue: '1', failLog: '/tmp/f.log' }, () => 'x', {
+      policyLoad: { found: false, content: '' },
+    }),
+    /verify-cause-branch: spawn policy could not be loaded/,
+  )
+})
+
+await test('VERIFY: policy-load content is not valid JSON -> throws at the boundary', async () => {
+  await assert.rejects(
+    () => runVerify({ issue: '1', failLog: '/tmp/f.log' }, () => 'x', {
+      policyLoad: { found: true, content: 'not json' },
+    }),
+    /verify-cause-branch: spawn policy could not be loaded/,
+  )
+})
+
+await test('VERIFY: policy-load content parses but lacks this workflow\'s site table -> throws at the boundary', async () => {
+  await assert.rejects(
+    () => runVerify({ issue: '1', failLog: '/tmp/f.log' }, () => 'x', {
+      policyLoad: { found: true, content: JSON.stringify({ workflow_sites: { 'architect-deliberation': {} } }) },
+    }),
+    /verify-cause-branch: spawn policy could not be loaded/,
+  )
+})
+
+await test('VERIFY: a valid policy-load (the real spawn-policy.json content, unmodified by any scenario) lets the run reach the self-check calls', async () => {
+  const responder = (label) => {
+    if (label === 'ledger') return 'ledger ok'
+    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
+    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
+    return 'x'
+  }
+  const { calls, result } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder)
+  assert.ok(calls.some((c) => c.label === 'policy-load'), 'the policy-load call must have been made')
+  assert.equal(result.next_action, 'EVALUATION_AI')
+})
 
 const combos = [
   [{ verdict: 'fix_test', reason: 'x' }, { verdict: 'no_problem', reason: 'x' }, 'RED'],
