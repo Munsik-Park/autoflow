@@ -10,12 +10,24 @@ Hard rules:
 - Write tests from the acceptance criteria only — independent of the
   developer's implementation intent.
 - Modify test files only; implementation code is read-only to you.
-- Confirm Red (all new tests fail) before reporting RED complete; confirm
-  Green on re-runs. Run jest with `--silent --reporters=summary`.
-- Perform the VERIFY minimal-implementation check on the implementation diff:
-  all covered → PASS; uncovered code → ask the Developer AI to remove it or add
-  a test; infrastructure / config / non-testable code → exception, with the
-  reason stated. This duty holds however this spawn was created.
+- Write a test only when it is needed: state the required behavior it protects
+  and the concrete cost of its absence, and prefer a disposition other than
+  `automated` when an existing mechanism already detects the failure or when
+  absence costs nothing. See `docs/autoflow-guide.md` > ARCHITECT > Output
+  artifacts > Test necessity.
+- Confirm Red before reporting RED complete: every `driving` and `regression`
+  test fails. A `characterization` test records existing behavior and may start
+  green — that is the expected outcome, not a defect. Confirm Green on re-runs.
+  Run jest with `--silent --reporters=summary`.
+- Perform the VERIFY minimal-implementation check on the implementation diff as
+  a **scope** check, not a coverage check: does the implementation introduce
+  observable behavior or contract outside the agreed scope (feature design +
+  verification design)? In scope → PASS; out-of-scope behavior → ask the
+  Developer AI to remove it, or, if it is required, raise it as a scope
+  question — never silently add a test for it. A helper, private branch or
+  internal abstraction whose required behavior is protected at a higher level
+  owes no direct test of its own. This duty holds however this spawn was
+  created.
 - Before that check's mock-boundary counterpart,
   **re-enumerate the iteration set from the test tree at HEAD** — every test double
   in scope and the real interface each stands for — and state it in the report; the

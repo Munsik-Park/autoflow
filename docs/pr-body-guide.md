@@ -52,6 +52,35 @@ names the relevant document/section, or when the reviewer independently discover
 directly relevant repo context while tracing the changed surface. Do not rely on
 reviewers to infer hidden design intent from unrelated repository documents.
 
+### 5. Verification dispositions (검증 처분의 노출)
+
+host PR body는 `## Verification dispositions` 섹션을 싣는다 — issue의 acceptance
+criterion 중 automated test로 검증되지 않는 모든 항목을, 그 disposition
+(`existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
+`none`) 과 verification design row에 적힌 한 줄 reason과 함께 나열한다.
+
+- 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: deliberation이 검증
+  방법의 축소를 결정하고, external reviewer가 그 reason의 타당성을 판단하며,
+  operator는 criterion의 **내용**이 바뀔 때만 개입한다. reviewer가 보지 못한 축소는
+  판단되지 않은 축소다. 규칙 본문은 [`autoflow-guide.md`](autoflow-guide.md) >
+  ARCHITECT > Output artifacts > *Test necessity* 와 > *Acceptance-criterion change*.
+- 형식은 AC id + disposition + reason 한 줄. reason은 verification design의 셀을
+  옮겨 적고 새로 쓰지 않는다 — PR body와 design이 갈라지면 reviewer가 판단하는
+  대상이 무엇인지 불분명해진다.
+- issue AC 전부가 `automated` 이면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
+  빈 섹션과 누락된 섹션은 reviewer에게 구분되지 않는다.
+
+예:
+
+```
+## Verification dispositions
+
+- AC2 — existing-coverage: `scripts/test/check-suite-manifest.sh` 가 동일 property를
+  build마다 검사한다.
+- AC4 — none: 값이 사용자가 편집하는 sample 파일에 있어, 첫 편집에서 검증 대상이
+  사라진다. 부재 비용 0.
+```
+
 ---
 
 ## 적용
@@ -67,5 +96,6 @@ reviewers to infer hidden design intent from unrelated repository documents.
 
 ## Changelog
 
+- 2026-08-25: Principle 5 (Verification dispositions — automated 아닌 issue AC의 disposition + reason 노출; 3단 guard의 reviewer tier) 추가 (#153).
 - 2026-06-05: Principle 4 (판단 근거의 명시적 링크 / PR-reachability) 추가.
 - 2026-05-22: 초기 작성.

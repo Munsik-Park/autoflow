@@ -10,6 +10,7 @@ Source basis: synthesized from <https://claude.com/blog/code-review>. Do not tre
 - If the PR crosses a repo boundary — `services/librechat`, submodule pointers, dispatch workflows, or merge sequencing — also check the relevant repo-boundary and external-review docs.
 - Use repository documents as review evidence **only** when the PR links or names the relevant document/section, or when you independently discover directly relevant repo context while tracing the changed surface. Do not infer hidden design intent from unrelated repository documents, and do not treat a linked design doc as a reason to pass a change you cannot verify from the diff.
 - Read the **linked issue's acceptance criteria** before judging correctness; a "does not satisfy the contract" finding must be checked against the actual AC reachable from the PR, not an assumed contract.
+- Read the PR body's `## Verification dispositions` list and judge each stated reason: every issue acceptance criterion not verified by an automated test appears there with its disposition and a one-line reason. A reduction whose stated reason does not hold — an `existing-coverage` claim naming a mechanism that does not fail on that property, a `none` whose absence in fact costs something, a `manual` scenario that does not exist — is a finding. A reduction whose reason does hold is not a finding, and the absence of a test is not a finding on its own.
 
 ## Review Posture
 

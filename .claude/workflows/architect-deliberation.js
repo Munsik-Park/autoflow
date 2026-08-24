@@ -206,7 +206,15 @@ const LEDGER_SEED_RULE = ` Read ${ledger} first if it exists: every entry there 
 // turn, and the cap-round closing turn — because the column must exist before anything joins on
 // it, and the composition-oracle / verification-depth obligations reached the authoring agent
 // through these same prompt literals.
-const ISSUE_AC_COLUMN_RULE = ` The acceptance-criteria table in ${verif} carries a leading "Issue AC" column: each row's value is either an AC id copied from the "## Acceptance criteria" table in ${phaseB}, or "—" for a criterion this verification design added on its own. Every AC id in that table gets a row, and a criterion you decline, defer or weaken keeps its row and states that disposition — never drop the row. A design-added criterion ("—") is never a finding.`
+const ISSUE_AC_COLUMN_RULE = ` The acceptance-criteria table in ${verif} carries a leading "Issue AC" column: each row's value is either an AC id copied from the "## Acceptance criteria" table in ${phaseB}, or "—" for a criterion this verification design added on its own. Every AC id in that table gets a row, and a criterion you verify by anything other than an automated test keeps its row, states that disposition (existing-coverage / delivery-check / manual / environment-dependent / none) and states its Reason in one line — never drop the row. A design-added criterion ("—") is never a finding and owes no reason.`
+// Test necessity (issue #153). Reaches the Test AI at Draft and every turn: the burden of proof
+// lies on the test, and the two judgments are answered in the row that carries the verification.
+// Policy body: docs/autoflow-guide.md > ARCHITECT > Output artifacts > Test necessity — this
+// literal is a pointer plus the operative instruction, not a second home for the policy.
+const TEST_NECESSITY_RULE = ' Test necessity (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Test necessity): begin from the issue acceptance criteria and the observable contracts they name, never from an enumeration of failure modes. For each verification you propose, state the required behavior it protects, the concrete cost of its absence (who loses what if this breaks after merge), whether an existing test, lint rule, schema, compiler check or build check already detects it, and why it should outlive this cycle. Prefer the lowest-cost reliable oracle. "none" is a legitimate disposition and is the default when those two judgments cannot both be answered — not writing a test needs no justification. Do not duplicate a literal that already lives in a config or sample file, and do not pin implementation structure (helper names, call order, private branches, internal representations). A test that would imply a new product behavior is a scope question for the operator, not a new obligation you may adopt.'
+// Developer-AI counterpart of the same clause: the challenge direction, bounded so it cannot be
+// used to strip verification for implementation convenience.
+const TEST_NECESSITY_CHALLENGE_RULE = ' Test necessity (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Test necessity): challenge any proposed verification that constrains implementation details without protecting an observable contract. Do not remove verification solely to simplify the implementation; where two proposals give equal confidence, prefer the simpler evidence. Raise a proposed test that implies a new product requirement as a scope question rather than accepting it as an obligation.'
 // Record discipline (issue #67). All four prompts: the Draft agents author the documents this
 // rule governs, and the round agents edit them in place.
 const RECORD_DISCIPLINE_RULE = ' Record discipline: the design documents carry only the current design and its conclusions — no round history; measurement logs, command output and code text are never copied into them, so state evidence as one line of what was checked and how, and re-verify it next round with tooling. Name issues with short readable names instead of serial numbers, and write no totals or counts into the documents.'
@@ -367,15 +375,19 @@ const AC_ROW = {
     // Some verification-design row's `Issue AC` cell equals this id.
     carried: { type: 'boolean' },
     // The carrying row's stated disposition mapped to this closed set; 'absent' iff !carried.
-    disposition: { type: 'string', enum: ['verified', 'declined', 'deferred', 'absent'] },
-    // The carrying row's Method cell names a file path, a command, or a manual-scenario file.
-    method_executable: { type: 'boolean' },
+    // 'reduced' collapses every non-automated disposition the verification-design vocabulary
+    // admits — existing-coverage / delivery-check / manual / environment-dependent / none /
+    // deferred — because the finding does not turn on WHICH reduction was chosen, only on
+    // whether a reason was stated for it (issue #153).
+    disposition: { type: 'string', enum: ['automated', 'reduced', 'absent'] },
+    // The carrying row's Reason cell is non-empty and not '—'.
+    reason_stated: { type: 'boolean' },
     // The carrying row's name, or '—'.
     locator: { type: 'string' },
     // The row's disposition wording, copied verbatim.
     proposed: { type: 'string' },
   },
-  required: ['ac', 'carried', 'disposition', 'method_executable', 'locator', 'proposed'],
+  required: ['ac', 'carried', 'disposition', 'reason_stated', 'locator', 'proposed'],
 }
 const AC_SUBSTITUTION = {
   type: 'object',
@@ -399,22 +411,21 @@ const AC_DIFF = {
   },
   required: ['ac_source_present', 'ac_rows', 'ledger_ac_decisions', 'substituted'],
 }
-// The kind table, in the script, first match wins — one finding per row at most. `weakened` is
-// bounded to the DECIDABLE form (no executable method named): "asserts a strictly weaker property"
-// is a depth judgment about verification strength, which is both the faculty the channel is
-// forbidden to exercise and an unbounded false-positive source; real-but-executable weakening
-// stays with GATE:PLAN's depth items, which already score it.
+// The kind table, in the script, first match wins — one finding per row at most. The set is
+// narrowed to the states that reach the OPERATOR (issue #153): a reduced verification disposition
+// is a verification-method choice the deliberation may make, so it is a finding only when no
+// reason was stated for a reviewer to judge. A reasoned reduction passes to the PR body (tier 2,
+// the external reviewer) and its reason quality is scored by GATE:PLAN's `Scope` depth items —
+// judging a reason is the faculty this channel is forbidden to exercise.
 const acKindOf = (row) => {
   if (!row.carried) return 'dropped'
-  if (row.disposition === 'declined') return 'not-carried'
-  if (row.disposition === 'deferred') return 'deferred'
-  if (!row.method_executable) return 'weakened'
+  if (row.disposition === 'reduced' && !row.reason_stated) return 'unreasoned'
   return null
 }
 // Payload well-formedness. A schema is advisory to this script (it is opaque here, exactly as
 // `applyDispositions` is the runtime guard behind DISPOSITION's enum), so a malformed return is
 // treated as the channel not having delivered — fail-closed, not fail-open.
-// Item level, not only top level: `acKindOf` reads `carried` / `method_executable` by truthiness
+// Item level, not only top level: `acKindOf` reads `carried` / `reason_stated` by truthiness
 // and matches `disposition` by `===`, so an item that is internally malformed but sits inside a
 // top-level-correct payload yields no finding and converges silently. Both item predicates are
 // module-local, take one item and return boolean; the required-field lists are not restated,
@@ -432,7 +443,7 @@ const acRowWellFormed = (row) => !!row && typeof row === 'object' &&
   // No separate `typeof === 'string'` clause on `disposition`: the enum is an array of strings,
   // so `includes` rejects every non-string value on its own.
   AC_ROW.properties.disposition.enum.includes(row.disposition) &&
-  typeof row.method_executable === 'boolean' &&
+  typeof row.reason_stated === 'boolean' &&
   // One direction of AC_ROW's own stated rule ('absent' iff !carried): `absent` with
   // `carried: true` is an internally inconsistent transcription that `acKindOf` maps to no kind
   // at all. The reverse direction stays accepted on purpose — a `carried: false` row with a
@@ -637,7 +648,7 @@ const [devDraft, testDraft] = await parallel([
     { label: 'dev-draft', phase: 'Draft', ...site('dev-draft') },
   ),
   () => agent(
-    `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / manual / environment-dependent) -> method; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration); and the Verification depth determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth (a risk line naming who is harmed if this change is wrong, plus one line per verification layer and per new spec file naming the failure mode no other layer catches — a justification form, not a quantity cap) — and WRITE it to ${verif}. Return a one-line summary only.${ISSUE_AC_COLUMN_RULE}${ADOPTION_EVIDENCE_RULE}${LEDGER_SEED_RULE}${RECORD_DISCIPLINE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are the Test AI in AutoFlow ARCHITECT. Read .autoflow/issue-${issue}-*.md and the relevant code. Author the Verification Design Document — each acceptance criterion -> verification type (automated / existing-coverage / delivery-check / manual / environment-dependent / none) -> method -> one-line Reason for every non-automated type, plus the test kind (driving / regression / characterization) on each automated row; testability assessment; design-change requests for untestable items; the composition-oracle determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle (a non-mock oracle per intersecting shared-state identifier, or an explicit no-intersection declaration); and the Verification depth determination per docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth (a risk line naming who is harmed if this change is wrong, plus one line per verification layer and per new spec file naming the failure mode no other layer catches — a justification form, not a quantity cap) — and WRITE it to ${verif}. Return a one-line summary only.${TEST_NECESSITY_RULE}${ISSUE_AC_COLUMN_RULE}${ADOPTION_EVIDENCE_RULE}${LEDGER_SEED_RULE}${RECORD_DISCIPLINE_RULE} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
     { label: 'test-draft', phase: 'Draft', ...site('test-draft') },
   ),
 ])
@@ -810,11 +821,11 @@ while (!earlyEscalateReason && turn < turnCeiling && !converged) {
   const result = await Promise.resolve()
     .then(() => side === 'test'
       ? agent(
-          `You are the Test AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange(turn)} If the feature design changed testability, UPDATE ${verif} in place. Set "accept" true ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${ISSUE_AC_COLUMN_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+          `You are the Test AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange(turn)} If the feature design changed testability, UPDATE ${verif} in place. Set "accept" true ONLY when every acceptance criterion carries a row with a stated disposition — an automated method, or any reduced disposition (existing-coverage / delivery-check / manual / environment-dependent / none) whose Reason cell states in one line why it is the right answer — except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${TEST_NECESSITY_RULE}${ISSUE_AC_COLUMN_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
           { schema: TURN, label: `test-t${turn}`, phase: 'Converge', ...site('test-round') },
         )
       : agent(
-          `You are the Developer AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange(turn)} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Set "accept" true ONLY when both documents are mutually consistent and complete AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+          `You are the Developer AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange(turn)} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Set "accept" true ONLY when both documents are mutually consistent and complete AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${TEST_NECESSITY_CHALLENGE_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
           { schema: TURN, label: `dev-t${turn}`, phase: 'Converge', ...site('dev-round') },
         ))
     .catch(() => null)
@@ -861,7 +872,7 @@ let acEvidence = ''
 if (converged) {
   const acDiff = await Promise.resolve()
     .then(() => agent(
-      `You are a comparison channel, not a reviewer. Read three artifacts and return what they state under the given schema. (1) ${phaseB} — its "## Acceptance criteria" table. Set "ac_source_present" true only when that section exists AND parses as a table; when it does not, set it false and return the other fields as empty arrays. (2) ${verif} — its acceptance-criteria table, whose leading "Issue AC" column carries an AC id or "—". (3) ${ledger} — the issue decision ledger. Return "ac_rows" as ONE ROW PER AC ID in the ${phaseB} table, IN THAT TABLE'S ORDER, omitting none: "ac" is the AC id copied verbatim; "carried" is true when some ${verif} row's "Issue AC" cell equals that id; "disposition" is that carrying row's stated disposition mapped to exactly one of verified / declined / deferred / absent, and is "absent" if and only if "carried" is false; "method_executable" is true when the carrying row's Method cell names a file path, a command, or a manual-scenario file, and false when that cell is empty or "—"; "locator" is the carrying row's name, or "—"; "proposed" is that row's disposition wording copied verbatim. Return "ledger_ac_decisions" by pure grammar match, not by judgment: for each level-2 heading in ${ledger} whose text ends with the marker [ac-decision], copy the value of that entry's "- AC:" line. Copy nothing else into that list — not a paraphrase of a criterion, not a prose mention of an AC id, and not a "- AC:" line under any other marker or under no marker. Return "substituted" for each ${verif} row whose criterion asserts a DIFFERENT property than the ${phaseB} criterion of the same id. Exercise no judgment about whether any difference was justified, and do not decide whether an entry's disposition was appropriate — report presence and kind only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are a comparison channel, not a reviewer. Read three artifacts and return what they state under the given schema. (1) ${phaseB} — its "## Acceptance criteria" table. Set "ac_source_present" true only when that section exists AND parses as a table; when it does not, set it false and return the other fields as empty arrays. (2) ${verif} — its acceptance-criteria table, whose leading "Issue AC" column carries an AC id or "—". (3) ${ledger} — the issue decision ledger. Return "ac_rows" as ONE ROW PER AC ID in the ${phaseB} table, IN THAT TABLE'S ORDER, omitting none: "ac" is the AC id copied verbatim; "carried" is true when some ${verif} row's "Issue AC" cell equals that id; "disposition" is that carrying row's stated verification type mapped to exactly one of automated / reduced / absent — "automated" when the row's type is automated, "reduced" for every other stated type (existing-coverage, delivery-check, manual, environment-dependent, none, deferred, or any other non-automated wording), and "absent" if and only if "carried" is false; "reason_stated" is true when the carrying row's Reason cell is non-empty and is not "—", and false otherwise; "locator" is the carrying row's name, or "—"; "proposed" is that row's disposition wording copied verbatim. Return "ledger_ac_decisions" by pure grammar match, not by judgment: for each level-2 heading in ${ledger} whose text ends with the marker [ac-decision], copy the value of that entry's "- AC:" line. Copy nothing else into that list — not a paraphrase of a criterion, not a prose mention of an AC id, and not a "- AC:" line under any other marker or under no marker. Return "substituted" for each ${verif} row whose criterion asserts a DIFFERENT property than the ${phaseB} criterion of the same id. Exercise no judgment about whether any difference was justified, and do not decide whether an entry's disposition was appropriate — report presence and kind only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: AC_DIFF, label: 'ac-diff', phase: 'Reconcile', ...site('ac-diff') },
     ))
     .catch(() => null)

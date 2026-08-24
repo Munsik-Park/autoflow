@@ -282,20 +282,28 @@ the capability lives at the layer that has a shell.
 1. **Feature Design Document** (Developer-AI-led): files to change, API interface, data structures, dependencies.
 2. **Verification Design Document** (Test-AI-led):
 
-| Issue AC | Acceptance criterion | Verification type | Method |
-|----------|----------------------|-------------------|--------|
-| AC1 | (criterion 1) | automated | pytest / API test / etc. |
-| AC2 | (criterion 2) | manual    | scenario doc (delegated to user) |
-| — | (criterion 3) | environment-dependent | introduce mock or propose design change (except where the composition-oracle clause applies) |
+| Issue AC | Acceptance criterion | Type | Kind | Method | Reason |
+|----------|----------------------|------|------|--------|--------|
+| AC1 | (criterion 1) | automated | driving | pytest / API test / etc. | — |
+| AC2 | (criterion 2) | existing-coverage | — | the schema check that already rejects this shape | the check runs on every build and fails on exactly this property |
+| AC3 | (criterion 3) | manual | — | scenario doc (delegated to user) | no automatable oracle; the behavior is observed by a person |
+| AC4 | (criterion 4) | none | — | — | absence costs nothing: the value is read from a sample file the user edits |
+| — | (criterion 5) | environment-dependent | — | introduce mock or propose design change (except where the composition-oracle clause applies) | — |
 
+- **`Type` is the per-criterion verification disposition**, one of
+  `automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
+  `none`; `Kind` applies to `automated` rows only (`driving` / `regression` /
+  `characterization`). Both vocabularies, and when each disposition is the right answer, are
+  defined once at *Test necessity* below.
 - **`Issue AC` is the join key.** Each row's value is either an `AC id` from the
   `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, or `—` for a criterion this
   verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
-  criterion the design declines, defers or weakens keeps its row and states that disposition — the
-  row is never deleted. A design-added criterion (`—`) is never a finding. This is what turns "was
-  an acceptance criterion dropped?" into a key join rather than a reading of prose, which is what
-  lets the Reconcile check stand in front of a human decision (Reconcile > *Acceptance-criterion
-  change* below).
+  criterion the design verifies by anything other than an automated test keeps its row, states that
+  disposition, and states its `Reason` in one line — the row is never deleted. A design-added
+  criterion (`—`) is never a finding and owes no reason. This is what turns "was an acceptance
+  criterion dropped?" into a key join rather than a reading of prose, which is what lets the
+  Reconcile check stand in front of a human decision (Reconcile > *Acceptance-criterion change*
+  below).
 
 - For untestable items: state the reason and the alternative (design change / manual delegation (except where the composition-oracle clause applies) / mock (same exception)).
 - Design-change request: parts of the feature design that should be revised so they become testable.
@@ -327,6 +335,65 @@ in the two design documents. Consequences for what each artifact carries:
   cross-session half of the no-re-litigation rule. See
   [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
 
+#### Test necessity
+
+A test exists only when it is needed. The burden of proof lies on the test, never on its absence:
+not writing a test needs no justification, and a proposed test that cannot answer both judgments
+below is not written. This clause is the policy body; every other document references it rather
+than restating it.
+
+- **[MUST]** Each proposed verification answers two judgments, in the row that carries it:
+  1. **Required behavior** — is this a behavior or contract a consumer actually requires, as
+     opposed to an imagined failure mode?
+  2. **Cost of absence** — if no verification exists and this breaks after merge, who loses what,
+     concretely?
+- **[MUST]** When the two judgments cannot both be answered, the disposition is `none`. The
+  default is deliberate: the cost of an unneeded test is paid three times (authoring, checking,
+  maintaining) and has already been paid in a prior cycle, while the cost of the missing test on
+  such subjects was nil.
+- Necessity is a **judgment**, not a classification: no subject is exempt by category and none is
+  obligated by category. The two guidance notes below are that judgment applied to the two areas
+  where it is commonly wrong — they are not separate rules.
+
+**Verification disposition** (the `Type` of each acceptance-criteria row):
+
+| Disposition | Meaning |
+|---|---|
+| `automated` | an executable test in this cycle's suite |
+| `existing-coverage` | already detected by an existing test, lint rule, schema, compiler/type check, build or packaging check — the row names which |
+| `delivery-check` | a cycle-scoped check that the change was wired / generated / delivered; lives in the existing `lane: cycle-scoped` manifest lane, and RED/GREEN semantics do not apply to it |
+| `manual` | a scenario a person executes; the row names the scenario file |
+| `environment-dependent` | verifiable only against an environment this cycle cannot drive (except where the composition-oracle clause applies) |
+| `none` | no persistent verification has positive value — the row states why absence costs nothing |
+
+- **[MUST]** Every disposition other than `automated` on an **issue** AC row carries a one-line
+  `Reason`. A row for a design-added criterion (`Issue AC` = `—`) is never a finding and needs no
+  reason.
+
+**Test kind** (the `Kind` of each `automated` row, and the RED expectation for it):
+
+| Kind | Meaning | RED |
+|---|---|---|
+| `driving` | a required behavior not yet implemented | must FAIL before GREEN |
+| `regression` | reproduces a known defect | must FAIL before the fix |
+| `characterization` | records existing behavior the change must preserve | may PASS from the start |
+
+**Configuration and data.** A value is not a required behavior; the behavior that consumes it is.
+Asserting a literal that already lives in a config or sample file duplicates a fact and protects
+nothing, and a user-editable sample loses its verification subject at the first edit. Whether
+"production config boots the app" or "every reference resolves" deserves a test is decided by the
+two judgments above, not by the subject being data.
+
+**Implementation internals.** A helper name, call order, private branch or internal representation
+is not a required behavior. A test that pins these becomes a copy of the implementation and blocks
+refactoring. Production code gains no interface, indirection or dependency injection solely to fit
+a test shape.
+
+- **Effective from** — the obligation binds verification designs authored after this clause lands;
+  a cycle already past ARCHITECT is not retroactively deficient. The dispositions and reasons are
+  the Test AI's to author, and the ARCHITECT facilitator may record them on the Test AI's behalf
+  when it writes the converged artifact.
+
 #### Verification depth
 
 - **[MUST]** The verification design opens with a **risk line** — one line naming
@@ -335,7 +402,10 @@ in the two design documents. Consequences for what each artifact carries:
   cap: no layer count, file count, or line budget, because a proxy metric invites the distortion it
   is meant to prevent (blocking a needed layer, or merging layers to dodge a count).
 - **[MUST]** Every verification layer, and every new spec file, states in one line
-  the failure mode it catches that no other layer catches.
+  the failure mode it catches that no other layer catches. "Another layer" is any mechanism that
+  fails on that failure mode, not only another test — an existing test, a lint rule, a schema, a
+  compiler or type check, a build or packaging check all count, and naming one is the
+  `existing-coverage` disposition (*Test necessity* above).
   A layer that cannot name one is removed from the agreement rather than argued down —
   undiversified duplication is over-verification, which GATE:PLAN's `Scope` criterion scores as
   over-engineering.
@@ -412,6 +482,22 @@ used to ask *who has the authority* to drop one: ARCHITECT converged on mutual A
 two gates behind it scored the quality of the stated reason. The **Reconcile** phase is the
 checkpoint that asks.
 
+**What the operator is asked, and what they are not.** A reduction in *verification method* — an AC
+verified by an existing mechanism, a manual scenario, a delivery check, or by nothing at all — is a
+verification-method choice, not a change to the criterion. It passes three tiers, and only the third
+is the operator:
+
+1. **Deliberation (ARCHITECT).** The deliberation may choose any disposition in the *Test necessity*
+   vocabulary for an issue AC, **with its reason stated in that row**. A weak reason is argued down
+   here and never leaves the deliberation.
+2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
+   PR body (HANDOFF step 4), so the reviewer judges each one on its stated reason. A doubtful
+   judgment is caught here.
+3. **Operator.** Asked only when the AC's **content** must change — excluded, revised, or split.
+
+The findings below are exactly the states that reach tier 3: an AC no row carries, a reduction with
+no reason for a reviewer to judge, and a row asserting a different property than the issue's.
+
 **What runs.** Between `Converge` and `Ledger`, and **only on a converged run** (verdict precedence
 is `ESCALATE` before `AC_CHANGE` before `CONVERGED` — an infrastructure or non-convergence cause
 still outranks a design outcome), the facilitator calls one closed-schema comparison channel over
@@ -424,15 +510,15 @@ finding, first match wins:
 | Transcribed state | Finding |
 |---|---|
 | no verification-design row carries the id | `dropped` |
-| a row carries it and declines it | `not-carried` |
-| a row carries it and postpones it out of the cycle | `deferred` |
-| the carrying row's Method cell is empty, `—`, or names no executable artifact and no manual-scenario file | `weakened` |
+| a row carries it with a disposition other than `automated` and its `Reason` cell is empty or `—` | `unreasoned` |
 | the row's criterion asserts a different property than the issue's | `substituted` |
 
-`weakened` is deliberately **not** "asserts a strictly weaker property": that is a depth judgment
-about verification strength, which GATE:PLAN's `Scope` depth items already score and which would be
-an unbounded false-positive source here. A finding covered by an `[ac-decision]` ledger entry naming
-the same AC id (exact match after trimming — never a prefix) is **authorized** and is not a pause.
+A **reasoned** reduced disposition is not a finding — it is the deliberation exercising tier 1, and
+it is carried to the PR body for tier 2. The channel transcribes only whether a reason is *stated*,
+never whether it is *good*: judging a reason is the faculty a well-written rationale can capture, so
+it belongs to the reviewer and to GATE:PLAN's `Scope` depth items, not to a comparison channel. A
+finding covered by an `[ac-decision]` ledger entry naming the same AC id (exact match after
+trimming — never a prefix) is **authorized** and is not a pause.
 
 **Fail-closed.** A null return, a malformed payload, or an absent, empty or unparseable AC table
 resolves to `AC_CHANGE` with its own sentinel — `ac reconciliation unavailable` or `ac list absent` — rather than
@@ -533,8 +619,13 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 
 - **The comparison** is a key join, both sides keyed: every `AC id` in the issue's
   `## Acceptance criteria` table against the `Issue AC` column of the verification design's
-  acceptance-criteria table. A criterion the design does not carry, or carries while declining,
-  deferring, weakening or substituting it, is a **difference**.
+  acceptance-criteria table. A **difference** is one of exactly three states, the same set
+  Reconcile derives: the design carries no row for the criterion (`dropped`); it carries the
+  criterion with a disposition other than `automated` and states no reason (`unreasoned`); or the
+  row asserts a different property than the issue's (`substituted`). A reduced disposition **with**
+  a stated reason is not a difference — it is a verification-method choice the deliberation is
+  authorized to make (ARCHITECT > *Acceptance-criterion change*), and its **reason quality** is
+  scored by `Scope` under the existing verification-depth clause above, adding no scored item.
 - **Trigger → cap**: any difference **not** covered by a `[ac-decision]`-marked ledger entry whose
   `- AC:` line names that same id caps `Scope` at 6. The marker is what the gate matches on;
   `operator decision` is that entry's authority **value** and is not itself the match key.
@@ -568,10 +659,18 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 The Test AI writes test code from the verification design.
 
 ```
-1. Convert acceptance criteria → test code (only items typed "automated").
-2. Run tests → all must FAIL (Red).
-   - A test that does not fail means the criterion is already met or the test is wrong → investigate.
-3. For untestable items → write a manual verification scenario document.
+1. Convert acceptance criteria → test code (only rows typed `automated`).
+   - Rows typed `existing-coverage` / `none` produce no test — the verification design already
+     states what covers them, or why absence costs nothing.
+   - Rows typed `delivery-check` produce a cycle-scoped check in the existing `lane: cycle-scoped`
+     manifest lane, not a RED test; RED/GREEN semantics do not apply to them.
+2. Run the new tests → every `driving` and `regression` test must FAIL (Red).
+   - A `driving` or `regression` test that does not fail means the criterion is already met or the
+     test is wrong → investigate.
+   - A `characterization` test records existing behavior and may PASS from the start; a passing
+     characterization test is the expected outcome, not an investigation trigger.
+3. For rows typed `manual` (and `environment-dependent` rows resolved to a manual scenario) → write
+   a manual verification scenario document.
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
@@ -601,18 +700,22 @@ The Test AI writes test code from the verification design.
 - Is the check delivery-pinned to this cycle's landed diff? Then `lane: cycle-scoped` with `retire-with:` is the default, not an exception.
 - Does the check compare against a checked-in basis? Then the ratchet-or-fossil rule decides its lane.
 
-**Completion**: all automated tests Red + every new spec conforming to the header contract above + manual scenarios written.
+**Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new spec conforming to the header contract above + manual scenarios written.
 
 ---
 
 ## GREEN — Implementation
 
-The Developer AI writes the minimum code that passes the tests.
+The Developer AI implements the issue acceptance criteria within the agreed scope — the feature
+design plus the verification design. Automated tests are one form of evidence for that scope, not
+its definition: an issue AC whose disposition is `manual`, `existing-coverage`, `delivery-check`,
+`environment-dependent` or `none` (ARCHITECT > Output artifacts > *Test necessity*) is still
+implemented; only its evidence differs.
 
 ```
-1. Read the test code authored by the Test AI.
-2. Write the minimum code that passes the tests.
-   - [MUST] Do NOT implement behavior not covered by tests.
+1. Read the verification design's acceptance-criteria table and the test code authored by the Test AI.
+2. Write the minimum code that satisfies every issue AC in scope and passes the `automated` tests.
+   - [MUST] Do NOT implement behavior outside the agreed scope (feature design + verification design's issue ACs). A required AC without an automated test is in scope; a behavior no AC requires is not, whether or not a test could be written for it.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
    - [MUST] Never start a **whole-tree run** of the suite runner. The prohibition is keyed on the run, not on a flag: both the `--all` flag and the **bare invocation** reach the whole tree, the bare form whenever its resolved delta is empty or the event is a `push` (see [`submodule-common-rules.md`](submodule-common-rules.md) > Testing Standards). The whole-tree sweep has exactly one invoker and one position — the orchestrator, at VALIDATE step 1. Execute only your resolved run set, or the specific suites your change requires; the acceptance run that produces evidence is GREEN step 5's, which you do not run.
@@ -721,10 +824,13 @@ Run the tests; on failure, branch by cause.
        ├─ no_problem + no_problem → EVALUATION_AI → deadlock: Evaluation AI judges against acceptance criteria — except on a design contradiction (see Deadlock resolution below)
        └─ a missing/errored self-check → EVALUATION_AI (recorded as "missing", never as no_problem)
 3. Minimal-implementation check (Test AI):
-   diff analysis: are there parts of the impl diff not covered by any test?
-     ├─ All covered → PASS
-     ├─ Uncovered code → ask Developer AI to remove it, or add a test
-     └─ Infrastructure / config / non-testable code → exception allowed (state reason)
+   diff analysis: does the implementation introduce observable behavior or contract
+   outside the agreed scope (feature design + verification design)?
+     ├─ Everything the diff does is in scope → PASS
+     ├─ Out-of-scope observable behavior → ask the Developer AI to remove it; if it is in fact
+     │  required, raise it as a scope question (ARCHITECT), never by silently adding a test
+     └─ A helper, private branch or internal abstraction whose required behavior is already
+        protected at a higher level does not owe its own direct test — that is in scope, not a gap
 4. Mock-boundary fidelity check (Test AI):
    for every test double (mock / stub / fake) standing in for a real interface,
    re-derive the real interface at HEAD (signature, argument count, return shape,
@@ -750,7 +856,7 @@ Evaluation-AI arbitration on a branch). Entry fields: `step-3 minimal-implementa
 doubles by name with the real interface each stands for, or `none`; `grounds` — the Test AI report's
 Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 
-- **Vocabulary**: `detected` = the check found an uncovered implementation hunk or a diverging double;
+- **Vocabulary**: `detected` = the check found out-of-scope observable behavior or a diverging double;
   `clean` = the check ran and found none; `not-run` = the check did not execute. A check that did not
   execute is recorded as `not-run` and **never** as `clean` — the same truthfulness rule step 2 applies
   to a missing self-check.
@@ -1487,6 +1593,13 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
 4. Create PR(s) (skipped in review-response mode — step 3's push updates the existing PR):
    - PR title follows the [`title-guide.md`](title-guide.md) convention (`[type · epic-slice · #N] description`).
    - PR body follows the [`pr-body-guide.md`](pr-body-guide.md) principles.
+   - **[MUST]** The host PR body carries a `## Verification dispositions` list: every **issue**
+     acceptance criterion whose verification design row is typed anything other than `automated`,
+     with its disposition and its one-line reason, copied from that row. This is the reviewer tier
+     of the three-tier acceptance-criterion guard (ARCHITECT > *Acceptance-criterion change*) — the
+     reviewer judges each stated reason, so a reduction the reviewer never sees is a tier that did
+     not run. Form: [`pr-body-guide.md`](pr-body-guide.md) > *Verification dispositions*. When every
+     issue AC is `automated`, the section says so in one line rather than being omitted.
    - Host-only change (target-centric — the default): create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path> --no-subrepo-dep`. The script still passes `--draft` (uniform pre-review marker) and still applies the `blocked-by-review` gate label, but does not apply the `blocked-by-subrepo` label — a host-only PR carries no merge-order gate (see Merge Sequencing > host-only case).
    - *Secondary (multi-repo):* Sub-repo changes present:
      a. Create each sub-repo PR (fork → upstream) **with `--label "blocked-by-review"`**, body `Part of Munsik-Park/autoflow#N` (no close keyword). The review gate is **per-PR**: **every** PR created for this cycle — the host PR *and* each sub-repo PR — carries `blocked-by-review` and is reviewed on its **own diff** in step 6 (so the review scope is each repo's actual code, not "the host only"). The `blocked-by-review` label must exist in each sub-repo (one-time operator setup — see [`external-review-sequencing.md`](external-review-sequencing.md)). `blocked-by-subrepo` is a separate, host-only merge-order gate (step 4b), not a review gate.
