@@ -64,6 +64,14 @@ const REASON_AC_UNAUTHORIZED_CHANGE = 'unauthorized acceptance-criterion change'
 const REASON_POLICY_LOAD_AGENT_MISSING = 'spawn policy load agent missing'
 const REASON_POLICY_ABSENT = 'spawn policy absent'
 const REASON_POLICY_MALFORMED = 'spawn policy malformed'
+// Per-row totality sentinels (issue #150, cycle 2). The three causes above decide only that a
+// policy arrived and carries a table for this workflow; they say nothing about the rows inside it.
+// A required row that is absent or shapeless used to reach `site()`, whose synchronous throw every
+// call site converts into a swallowed rejection — so an incomplete policy read as an unreachable
+// agent. These two causes are distinct from each other and from the three above, so the operator
+// sees which half failed.
+const REASON_POLICY_ROW_INCOMPLETE = 'spawn policy row incomplete'
+const REASON_POLICY_EFFORT_CONTRACT_UNUSABLE = 'spawn policy effort contract unusable'
 // Minted register-entry names for the two fail-closed paths (issue #138). Declared once so the
 // resume agenda an operator re-enters on is named by a literal, not by assembled prose.
 const AC_ENTRY_RECONCILIATION_UNAVAILABLE = 'ac-authority:reconciliation-unavailable'
@@ -500,12 +508,67 @@ let policy = null
 if (policyLoaded && policyLoaded.found) {
   try { policy = JSON.parse(policyLoaded.content) } catch (_) { policy = null }
 }
+// The site keys this script spreads, declared once, in a fixed grep-parsable shape: one BARE quoted
+// key per line between the two markers, never written in the site-call syntax -- the contract CI extracts
+// call-site keys by grepping that syntax over the file OUTSIDE this range, so a declaration written
+// in it would be absorbed into the set it is joined against and the join would satisfy itself.
+// The three-way equality (declaration = call sites = config rows) lives in
+// tests/test-spawn-policy-single-source.sh > required-key-declaration-join.
+const REQUIRED_SITE_KEYS = [
+  /* site-keys:begin */
+  'dev-draft',
+  'test-draft',
+  'register-load',
+  'test-round',
+  'dev-round',
+  'test-closing',
+  'ac-diff',
+  'ledger',
+  'register-write',
+  /* site-keys:end */
+]
+// Universally quantified over the DECLARED list, never over the loaded table's own keys: a walk
+// over `Object.keys(table)` simply has fewer rows to check on a short table and passes, which is
+// the failure this check exists to close. The empty table is the widest instance of the same
+// quantifier, so it needs no branch of its own. `effort` must be PRESENT — the config's own
+// `effort_contract.absent_means` states that a row carrying no `effort` key is a validation error
+// rather than an inherit, and `scripts/spawn-policy/spawn-policy.sh` already rejects it.
+// The contract clause is checked here too, and first: `site()` reads
+// `effort_contract.config_inherit_sentinel`, so an unusable contract would ship every shipped row's
+// `inherit` to the harness as a literal effort value — the same fail-open class, one field over.
+// Value ADMISSION is deliberately absent: that is `spawn-policy.sh check`'s job, which reads the
+// admitted vocabulary out of the config itself.
+const policyRowDefect = (p) => {
+  const c = p.effort_contract
+  if (!c || typeof c !== 'object' || Array.isArray(c)
+      || typeof c.config_inherit_sentinel !== 'string' || !c.config_inherit_sentinel) {
+    return `${REASON_POLICY_EFFORT_CONTRACT_UNUSABLE} (effort_contract.config_inherit_sentinel)`
+  }
+  const table = p.workflow_sites[WORKFLOW_NAME]
+  const bad = REQUIRED_SITE_KEYS.filter((key) => {
+    const row = table[key]
+    return !row || typeof row !== 'object' || typeof row.model !== 'string' || !row.model
+      || !Object.prototype.hasOwnProperty.call(row, 'effort')
+  })
+  return bad.length ? `${REASON_POLICY_ROW_INCOMPLETE} (${bad.join(', ')})` : null
+}
+// The policy-unusable condition, kept separate from `earlyEscalateReason` at large: the latter is
+// also set AFTER Draft on REASON_DRAFT_AGENT_MISSING, where the policy is valid and the terminal
+// ledger entry is both writable and wanted.
+let policyUnusable = false
 if (!policy || !policy.workflow_sites || !policy.workflow_sites[WORKFLOW_NAME]) {
   earlyEscalateReason = !policyLoaded
     ? REASON_POLICY_LOAD_AGENT_MISSING
     : !policyLoaded.found
     ? REASON_POLICY_ABSENT
     : REASON_POLICY_MALFORMED
+  policyUnusable = true
+} else {
+  const defect = policyRowDefect(policy)
+  if (defect) {
+    earlyEscalateReason = defect
+    policyUnusable = true
+  }
 }
 
 // The site opts helper. Every spawn call site reads its model (and its effort,
@@ -524,7 +587,12 @@ if (!policy || !policy.workflow_sites || !policy.workflow_sites[WORKFLOW_NAME]) 
 const site = (key) => {
   const row = policy.workflow_sites[WORKFLOW_NAME][key]
   if (!row || !row.model) throw new Error(`${WORKFLOW_NAME}: no spawn-policy row for workflow site "${key}"`)
-  return row.effort && row.effort !== 'inherit'
+  // The inherit sentinel is the value the config's own contract names — one spelling, one home. No
+  // fallback literal: a fallback would both restore the copy this removes and ship the sentinel to
+  // the harness as a concrete effort value. The load-time clause above is what keeps this read
+  // fail-closed, so this line runs only under a contract it has already validated.
+  const inheritSentinel = policy.effort_contract.config_inherit_sentinel
+  return row.effort && row.effort !== inheritSentinel
     ? { model: row.model, effort: row.effort }
     : { model: row.model }
 }
@@ -952,9 +1020,16 @@ const ledgerPrompt = verdict === 'AC_CHANGE'
 // so a propagated rejection here would additionally prevent the Register phase below from ever
 // writing. The full `Promise.resolve().then(...)` form — not a bare `.catch` on the call — is what
 // also converts a SYNCHRONOUS throw at the runtime boundary into the rejection `.catch` absorbs.
-await Promise.resolve()
-  .then(() => agent(ledgerPrompt, { label: 'ledger', phase: 'Ledger', ...site('ledger') }))
-  .catch(() => null)
+// Held under the POLICY-UNUSABLE condition (issue #150, cycle 2), not under `earlyEscalateReason`
+// at large: no governed spawn runs under a policy the run has just declared incomplete, whichever
+// key is missing — while a valid-policy draft-agent-missing escalation still writes its entry. The
+// escalation is not lost: the cause returns in `escalation`, and the ledger is host-owned (CLAUDE.md
+// > Decision Ledger — the orchestrator appends the outcome after the phase).
+if (!policyUnusable) {
+  await Promise.resolve()
+    .then(() => agent(ledgerPrompt, { label: 'ledger', phase: 'Ledger', ...site('ledger') }))
+    .catch(() => null)
+}
 
 // Terminal Register phase (issue #127): persist the register so a later resume can re-enter from
 // it instead of cold-restarting. It runs on all three verdicts (CONVERGED / AC_CHANGE / ESCALATE) —

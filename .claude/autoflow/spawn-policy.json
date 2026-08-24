@@ -1,7 +1,9 @@
 {
   "version": 1,
   "description": "Single source of truth for AutoFlow's per-phase spawn policy (model + effort). Read it with scripts/spawn-policy/spawn-policy.sh; never restate its values in prose (CLAUDE.md > Spawn Model — Phase-by-Phase).",
+  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — an outdated scaffold is a diagnosable state, since both deliberation workflows fail closed on a missing required workflow_sites row.",
   "effort_contract": {
+    "is_the_vocabulary_check_applies": "`scripts/spawn-policy/spawn-policy.sh check` reads its admitted effort vocabulary and its inherit sentinel from THIS object, so `check` is a self-consistency check over one source. A runtime with a different effort vocabulary is accommodated by editing this contract, never by patching the checker; model values are deliberately unvalidated beyond presence and shape",
     "admitted_values": ["low", "medium", "high", "xhigh", "max", "<integer>"],
     "admitted_one_spelling_per_level": "both harness channels run the same coercion, which also accepts the alias \"med\" for \"medium\"; this policy admits one spelling per level, so \"med\" is deliberately not admitted here",
     "config_inherit_sentinel": "inherit",

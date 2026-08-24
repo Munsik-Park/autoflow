@@ -61,9 +61,17 @@ justifies it — lives in exactly ONE machine-readable place and is **not** rest
 
 ```
 bash scripts/spawn-policy/spawn-policy.sh model  <phase-key>   # the model to declare on the spawn
-bash scripts/spawn-policy/spawn-policy.sh effort <phase-key>   # the effort, or the literal `inherit`
+bash scripts/spawn-policy/spawn-policy.sh effort <phase-key>   # the effort, or the config's own inherit sentinel
 bash scripts/spawn-policy/spawn-policy.sh check                # validate the config
 ```
+
+That file is a **sample carrying the values currently applied, and it is target-owned**: it ships as
+a `scaffold` artifact, so a stamp or re-stamp creates it only when absent and never overwrites it
+(not even under `--force`), and each target is expected to configure it for its own runtime. Its
+`effort_contract` is the effort vocabulary `check` applies to it — a runtime with a different
+vocabulary is accommodated by editing that contract, never by patching the checker — and the
+`effort` readout prints the inherit sentinel that contract declares rather than a fixed literal. On
+a version bump the operator's obligation is to run `check` and add any newly required row.
 
 The same file carries the two Workflow facilitations' per-site values (`workflow_sites`), which the
 deliberation scripts load at run time — no `model:` literal remains in

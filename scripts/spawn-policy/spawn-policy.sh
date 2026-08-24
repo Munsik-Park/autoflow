@@ -68,8 +68,13 @@ jq -e . "$CONFIG" >/dev/null 2>&1 || { echo "spawn-policy: $CONFIG does not pars
 _cfgdir="$(cd "$(dirname "$CONFIG")" && pwd)"          # <base>/.claude/autoflow
 AGENTS_DIR="$(cd "$_cfgdir/.." && pwd)/agents"          # <base>/.claude/agents
 
-ADMITTED_MODELS="sonnet opus haiku"
-ADMITTED_EFFORTS="low medium high xhigh max"
+# No admitted MODEL set lives here (issue #150, cycle 2). The config is a sample
+# carrying the values currently applied, configured by the user at stamp/install
+# time — not a universal vocabulary this script enforces — so a model value is
+# checked for presence and shape only. The admitted EFFORT vocabulary is not
+# hardcoded either: `check` reads it out of the config's own `effort_contract`,
+# which makes `check` a self-consistency check over one source rather than a
+# comparison against a second copy of the same vocabulary.
 
 # Plugin-prefixed spellings (`<plugin>:autoflow-tester`) resolve to the bare
 # type, matching what the hook's own role classifier already does — otherwise
@@ -134,31 +139,67 @@ cmd_models_for() {
 
 cmd_check() {
   local errs=0 v key line t
+  local contract_ok=1 admitted_efforts="" inherit_sentinel="" integer_admitted=0
   _err() { echo "spawn-policy check: $1" >&2; errs=1; }
 
-  # Model admission.
+  # Model presence/shape. NOT vocabulary: a model value outside any previously
+  # enumerated set is admitted. What remains is exactly what both workflow
+  # scripts' site() already demands (a non-empty string `model`) and what their
+  # row-totality check makes load-bearing — dropping it would leave `check`
+  # green on a config both workflows refuse. A non-string model reaches the
+  # loop as the empty string and is reported here.
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     key="${line%%=*}"; v="${line#*=}"
-    case " $ADMITTED_MODELS " in
-      *" $v "*) ;;
-      *) _err "phases.$key.model='$v' is not one of: $ADMITTED_MODELS" ;;
-    esac
-  done < <(jq -r '.phases | to_entries[] | "\(.key)=\(.value.model // "")"' "$CONFIG")
+    [ -n "$v" ] || _err "phases.$key.model is absent, empty, or not a string"
+  done < <(jq -r '.phases | to_entries[] | "\(.key)=\(if (.value.model|type) == "string" then .value.model else "" end)"' "$CONFIG")
 
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     key="${line%%=*}"; v="${line#*=}"
-    case " $ADMITTED_MODELS " in
-      *" $v "*) ;;
-      *) _err "workflow_sites.$key.model='$v' is not one of: $ADMITTED_MODELS" ;;
-    esac
-  done < <(jq -r '.workflow_sites | to_entries[] | .key as $wf | .value | to_entries[] | "\($wf).\(.key)=\(.value.model // "")"' "$CONFIG")
+    [ -n "$v" ] || _err "workflow_sites.$key.model is absent, empty, or not a string"
+  done < <(jq -r '.workflow_sites | to_entries[] | .key as $wf | .value | to_entries[] | "\($wf).\(.key)=\(if (.value.model|type) == "string" then .value.model else "" end)"' "$CONFIG")
+
+  # `effort_contract` is validated BEFORE any row is examined, and its absence
+  # fails closed. Reading a vocabulary out of the file being checked is only
+  # safe when a missing or malformed contract is an error rather than an empty
+  # admitted set — an empty set read silently would either reject every row or,
+  # written the other way, admit every one. No row-level effort verdict is
+  # produced from an unusable contract.
+  if ! jq -e '(.effort_contract | type) == "object"' "$CONFIG" >/dev/null 2>&1; then
+    _err "effort_contract is absent or not an object"
+    contract_ok=0
+  fi
+  if [ "$contract_ok" = "1" ] \
+     && ! jq -e '.effort_contract.admitted_values as $a | (($a|type) == "array") and ($a | all(type == "string"))' "$CONFIG" >/dev/null 2>&1; then
+    _err "effort_contract.admitted_values is absent, not an array, or not an array of strings"
+    contract_ok=0
+  fi
+  if [ "$contract_ok" = "1" ]; then
+    # The published array mixes literal values with ONE type marker, `<integer>`.
+    # The split is what the contract means: entries other than the marker form
+    # the admitted string set, and the marker's presence is what enables the
+    # JSON-integer branch below. A contract omitting the marker rejects integer
+    # efforts.
+    admitted_efforts="$(jq -r '[.effort_contract.admitted_values[] | select(. != "<integer>")] | join(" ")' "$CONFIG")"
+    integer_admitted="$(jq -r 'if (.effort_contract.admitted_values | index("<integer>")) then 1 else 0 end' "$CONFIG")"
+    inherit_sentinel="$(jq -r 'if (.effort_contract.config_inherit_sentinel | type) == "string" then .effort_contract.config_inherit_sentinel else "" end' "$CONFIG")"
+    if [ -z "$admitted_efforts" ]; then
+      _err "effort_contract.admitted_values carries no admitted value besides the <integer> marker"
+      contract_ok=0
+    fi
+    if [ -z "$inherit_sentinel" ]; then
+      _err "effort_contract.config_inherit_sentinel is absent, empty, or not a string"
+      contract_ok=0
+    fi
+  fi
 
   # Effort admission — ONE admitted set for every row, no agent_type
-  # conditional, `med` deliberately excluded (one spelling per level). A row
-  # carrying no `effort` key at all fails here, so a misspelled key surfaces as
-  # a validation error rather than reading as an inherit.
+  # conditional, read from the config's own `effort_contract` (so a runtime with
+  # a different effort vocabulary is accommodated by editing the contract, never
+  # by patching this checker). A row carrying no `effort` key at all fails here,
+  # so a misspelled key surfaces as a validation error rather than reading as an
+  # inherit.
   _check_effort() {   # <row-label> <json-type> <raw-value>
     local label="$1" jtype="$2" raw="$3"
     if [ "$jtype" = "absent" ]; then
@@ -166,6 +207,10 @@ cmd_check() {
       return
     fi
     if [ "$jtype" = "number" ]; then
+      if [ "$integer_admitted" != "1" ]; then
+        _err "$label effort='$raw' is a JSON number, but effort_contract.admitted_values does not carry the <integer> marker"
+        return
+      fi
       case "$raw" in
         *.*) _err "$label effort='$raw' is not a JSON integer" ;;
       esac
@@ -175,20 +220,22 @@ cmd_check() {
       _err "$label effort='$raw' is neither a string nor an integer"
       return
     fi
-    [ "$raw" = "inherit" ] && return
-    case " $ADMITTED_EFFORTS " in
+    [ "$raw" = "$inherit_sentinel" ] && return
+    case " $admitted_efforts " in
       *" $raw "*) ;;
-      *) _err "$label effort='$raw' is not admitted (inherit | $ADMITTED_EFFORTS | <integer>)" ;;
+      *) _err "$label effort='$raw' is not admitted by effort_contract.admitted_values ($inherit_sentinel | $admitted_efforts$([ "$integer_admitted" = "1" ] && printf ' | <integer>'))" ;;
     esac
   }
 
   while IFS=$'\t' read -r label jtype raw; do
     [ -n "$label" ] || continue
+    [ "$contract_ok" = "1" ] || continue
     _check_effort "$label" "$jtype" "$raw"
   done < <(jq -r '.phases | to_entries[] | "phases.\(.key)\t\(if (.value|has("effort")) then (.value.effort|type) else "absent" end)\t\(.value.effort // "" | tostring)"' "$CONFIG")
 
   while IFS=$'\t' read -r label jtype raw; do
     [ -n "$label" ] || continue
+    [ "$contract_ok" = "1" ] || continue
     _check_effort "$label" "$jtype" "$raw"
   done < <(jq -r '.workflow_sites | to_entries[] | .key as $wf | .value | to_entries[] | "workflow_sites.\($wf).\(.key)\t\(if (.value|has("effort")) then (.value.effort|type) else "absent" end)\t\(.value.effort // "" | tostring)"' "$CONFIG")
 

@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "97645c3f8aeb1c18b472630b1b165360a6d7d12e187848cfb245d1e70db4a40d"
+      "sha256": "8e05fb62cec4c279f7d7b69b0f8f2fb5a4fa03d8da1b00b70c7c0f559dcae2ee"
     },
     {
       "source": "docs/INDEX.md",
@@ -223,14 +223,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "0d2ff0de4e2aded69ebdcd37c074500a72a9c73541bdeaae876dc0af029cc491"
+      "sha256": "0b4f8dfbb0a7d9aea9aa1efb9c04c922c10c00b74fa02ba1b696d4d7e8810815"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "98c2d0082e75d72f5f94c9a01bd0a0a31ae2b876ce094f068e3abd00bbfbfa06"
+      "sha256": "781377230d88ba98b2990899ebc89b7e6492455e4bef2fb86e4d1a5e6490b755"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -355,15 +355,15 @@
       "source": ".claude/autoflow/spawn-policy.json",
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "d3f4bf9986be15a8b7ba3341ccc6246e9a64ff54fa1696a49060b86fc0fda539"
+      "kind": "scaffold",
+      "sha256": "d6630cf717ca7f91d3a853eb02989ef1ca947de4907ce0efb634aae8e52c66de"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "40daf7c251cd76de4fe6dcbf13352509fc85739e6eb3e32b79f087cbd02269e7"
+      "sha256": "8d77a44b744e25cd9d6566b621868cd52446286a5c27afb28c96c3360d6f9efa"
     },
     {
       "source": "setup/manifest.json",

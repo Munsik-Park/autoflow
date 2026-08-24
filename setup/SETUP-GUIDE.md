@@ -58,6 +58,7 @@ can self-describe and self-verify offline.
 | Settings pin (marketplace + `enabledPlugins`) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
 | Local overrides scaffold (never overwritten) | `CLAUDE.local.md` | scaffold |
+| Spawn policy sample (target-configured, never overwritten) | `.claude/autoflow/spawn-policy.json` | scaffold |
 
 The shim stamp is idempotent and only touches the `AUTOFLOW-IMPORT:BEGIN/END`
 managed block — your own `CLAUDE.md` prose is preserved. The settings merge is a
@@ -67,7 +68,13 @@ block — the Agent Teams channel is retired (ADR-0017 / ADR-0021), so the
 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` enablement an earlier pin stamped is no
 longer provisioned (see Prerequisites for targets stamped by that earlier pin).
 `CLAUDE.local.md` holds your target identity (R3) and is never overwritten, even
-with `--force`.
+with `--force`. `.claude/autoflow/spawn-policy.json` is scaffolded for the same
+reason: it is a sample carrying the values currently applied, which you configure
+for your own runtime, so a re-stamp will not overwrite a configured policy and
+`drift-check.sh` reports it as target-owned rather than as content drift. On a
+version bump your obligation is to run
+`bash scripts/spawn-policy/spawn-policy.sh check` and add any newly required row —
+a scaffold is never refreshed for you.
 
 ### Self-verify with the drift detector
 

@@ -185,8 +185,15 @@ build_rows() {
   # Spawn Model instructs a consumer to run it before every direct spawn, and
   # the two deliberation workflows above read the config at run time. The
   # doc-closure BFS follows only .md links, so neither file enters on its own.
+  # SCAFFOLD, not copy (issue #150, cycle 2): the config is a sample the target
+  # configures at stamp time, so a re-stamp must never overwrite a configured
+  # policy (init.sh's scaffold arm is create-only, even under --force, and
+  # drift-check reports it target-owned rather than as content drift). The
+  # cost — a target stamped before a new row existed keeps a config missing it —
+  # is the state both workflow scripts and `spawn-policy.sh check` now report
+  # loudly rather than swallow, which is what makes the trade payable.
   emit_row ".claude/autoflow/spawn-policy.json" \
-           ".claude/autoflow/spawn-policy.json" "root-layer" "copy" "file"
+           ".claude/autoflow/spawn-policy.json" "root-layer" "scaffold" "file"
   emit_row "scripts/spawn-policy/spawn-policy.sh" \
            "scripts/spawn-policy/spawn-policy.sh" "root-layer" "copy" "file"
 

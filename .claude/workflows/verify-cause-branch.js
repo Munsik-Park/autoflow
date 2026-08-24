@@ -116,6 +116,37 @@ if (!policy || !policy.workflow_sites || !policy.workflow_sites[WORKFLOW_NAME]) 
   throw new Error(`${WORKFLOW_NAME}: spawn policy could not be loaded from ${POLICY_PATH}`)
 }
 
+// Per-row totality + effort-contract shape (issue #150, cycle 2) -- see
+// architect-deliberation.js for the full rationale. The declaration is one BARE quoted key per
+// line between the markers, never in the site-call syntax: the contract CI extracts call-site keys by
+// grepping that syntax OUTSIDE this range, and a declaration written in it would satisfy its own
+// join. This workflow has no ESCALATE verdict, so the disposition is the boundary throw its
+// sibling guard above already uses -- ahead of the parallel([...]) self-checks (whose thunks
+// resolve a throw to null) and ahead of the terminal ledger call.
+const REQUIRED_SITE_KEYS = [
+  /* site-keys:begin */
+  'test-self-check',
+  'impl-self-check',
+  'ledger',
+  /* site-keys:end */
+]
+const contract = policy.effort_contract
+if (!contract || typeof contract !== 'object' || Array.isArray(contract)
+    || typeof contract.config_inherit_sentinel !== 'string' || !contract.config_inherit_sentinel) {
+  throw new Error(`${WORKFLOW_NAME}: spawn policy effort contract unusable (effort_contract.config_inherit_sentinel) in ${POLICY_PATH}`)
+}
+// Quantified over the DECLARED list, never over the loaded table's own keys -- a walk over the
+// table's keys has fewer rows to check on a short table and passes. The empty table is the widest
+// instance of the same quantifier and needs no branch of its own.
+const missingRows = REQUIRED_SITE_KEYS.filter((key) => {
+  const row = policy.workflow_sites[WORKFLOW_NAME][key]
+  return !row || typeof row !== 'object' || typeof row.model !== 'string' || !row.model
+    || !Object.prototype.hasOwnProperty.call(row, 'effort')
+})
+if (missingRows.length) {
+  throw new Error(`${WORKFLOW_NAME}: spawn policy row incomplete (${missingRows.join(', ')}) in ${POLICY_PATH}`)
+}
+
 // The site opts helper -- see architect-deliberation.js for the full rationale.
 // [MUST] The key is a STRING LITERAL at every call site: contract CI is pure
 // bash + jq with no node, so the static join is the only oracle over it. An
@@ -124,7 +155,10 @@ if (!policy || !policy.workflow_sites || !policy.workflow_sites[WORKFLOW_NAME]) 
 const site = (key) => {
   const row = policy.workflow_sites[WORKFLOW_NAME][key]
   if (!row || !row.model) throw new Error(`${WORKFLOW_NAME}: no spawn-policy row for workflow site "${key}"`)
-  return row.effort && row.effort !== 'inherit'
+  // The inherit sentinel comes from the config's own contract -- one spelling, one home; no
+  // fallback literal. Guarded by the load-time contract clause above.
+  const inheritSentinel = policy.effort_contract.config_inherit_sentinel
+  return row.effort && row.effort !== inheritSentinel
     ? { model: row.model, effort: row.effort }
     : { model: row.model }
 }
