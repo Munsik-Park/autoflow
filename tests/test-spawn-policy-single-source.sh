@@ -130,11 +130,18 @@ if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ]; then
   if [ -n "$first_key" ]; then
     jq --arg k "$first_key" '.phases[$k].model = "haiku"' "$SCRATCH_CONFIG" > "$SCRATCH_CONFIG.tmp" && mv "$SCRATCH_CONFIG.tmp" "$SCRATCH_CONFIG"
     resolved=$(AUTOFLOW_SPAWN_POLICY="$SCRATCH_CONFIG" bash "$SCRATCH/scripts/spawn-policy/spawn-policy.sh" model "$first_key" 2>/dev/null)
+    # The scratch tree's own .autoflow/.gitkeep can register as changed here
+    # depending on the host tar/git toolchain's permission-bit handling on
+    # extraction (bsdtar vs GNU tar) even though its content never changes --
+    # it is scratch bookkeeping unrelated to what this leg verifies (config ->
+    # resolver propagation), so it is filtered out before the equality check.
+    # Any change OUTSIDE .autoflow/ still fails the assertion.
     changed_files=$(cd "$SCRATCH" && git status --porcelain | awk '{print $2}')
-    if [ "$resolved" = "haiku" ] && [ "$changed_files" = ".claude/autoflow/spawn-policy.json" ]; then
+    changed_files_relevant=$(printf '%s\n' "$changed_files" | grep -v '^\.autoflow/' | grep -v '^$')
+    if [ "$resolved" = "haiku" ] && [ "$changed_files_relevant" = ".claude/autoflow/spawn-policy.json" ]; then
       pass "AC2 resolver-propagation: editing $first_key.model propagates, only the config changed"
     else
-      failc "AC2 resolver-propagation: resolved='$resolved' (want haiku) changed_files='$changed_files' (want only the config)"
+      failc "AC2 resolver-propagation: resolved='$resolved' (want haiku) changed_files='$changed_files' relevant='$changed_files_relevant' (want only the config)"
     fi
   else
     failc "AC2 resolver-propagation: could not read a phases[] key from the scratch config"
