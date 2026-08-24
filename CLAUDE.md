@@ -267,7 +267,7 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | ARCHITECT (AC_CHANGE) → user | the deliberation converged but the converged verification design drops, substitutes, or reduces without a stated reason an issue acceptance criterion that no `[ac-decision]` ledger entry authorizes — or the reconciliation could not run at all → report situation-first, set `active:false`, `phase:"awaiting-user"`, and do **not** spawn GATE:PLAN. The operator's answer is recorded as one `[ac-decision]` ledger entry per decided AC; re-entry is the ordinary ARCHITECT resume |
 | GATE:PLAN → DISPATCH | plan evaluation PASS |
 | DISPATCH → RED | task instructions delivered (Test AI starts first) |
-| RED → GREEN | tests written + Red confirmed (all fail) |
+| RED → GREEN | tests written + Red confirmed — every `driving` / `regression` test fails; a `characterization` test may already pass |
 | GREEN → VERIFY | implementation done (or, when the acceptance criteria are mutually unsatisfiable, the satisfiable subset implemented and the contradiction recorded — see GREEN playbook) |
 | VERIFY → REFINE | all tests PASS + minimal-implementation and mock-boundary fidelity checks pass |
 | REFINE → VALIDATE | refactor done + Green re-confirmed |
