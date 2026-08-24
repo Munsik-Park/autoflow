@@ -592,7 +592,11 @@ const site = (key) => {
   // the harness as a concrete effort value. The load-time clause above is what keeps this read
   // fail-closed, so this line runs only under a contract it has already validated.
   const inheritSentinel = policy.effort_contract.config_inherit_sentinel
-  return row.effort && row.effort !== inheritSentinel
+  // The sentinel -- and only the sentinel -- means inherit. Every other value the row carries is a
+  // concrete effort and reaches the opts unchanged, including an admitted falsy one such as the
+  // integer zero. Do not re-add a truthiness conjunct as a null-safety improvement: it would drop
+  // that value silently, and row presence is already guaranteed by the load-time contract clause.
+  return row.effort !== inheritSentinel
     ? { model: row.model, effort: row.effort }
     : { model: row.model }
 }

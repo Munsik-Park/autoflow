@@ -158,7 +158,9 @@ const site = (key) => {
   // The inherit sentinel comes from the config's own contract -- one spelling, one home; no
   // fallback literal. Guarded by the load-time contract clause above.
   const inheritSentinel = policy.effort_contract.config_inherit_sentinel
-  return row.effort && row.effort !== inheritSentinel
+  // The sentinel -- and only the sentinel -- means inherit; an admitted falsy effort such as the
+  // integer zero is still a value and reaches the opts unchanged. No truthiness conjunct here.
+  return row.effort !== inheritSentinel
     ? { model: row.model, effort: row.effort }
     : { model: row.model }
 }
