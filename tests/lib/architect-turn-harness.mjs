@@ -49,7 +49,7 @@ async function run(scenario) {
     if (label === 'register-load') return scenario.register
     if (label === 'ac-diff') return {
       ac_source_present: true,
-      ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'spec', proposed: 'verified' }],
+      ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'spec', proposed: 'automated' }],
       ledger_ac_decisions: [],
       substituted: [],
     }

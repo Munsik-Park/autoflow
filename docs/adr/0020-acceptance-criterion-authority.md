@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted, amended by ADR-0022
 
 ## Context
 
@@ -153,5 +153,10 @@ change; only an operator decision may make it. The flow stops and asks.**
 ## Notes
 
 - Numbering: 0020 is the next free integer, contiguous after 0019.
+- Amended by [`0022-test-necessity-and-three-tier-ac-guard.md`](0022-test-necessity-and-three-tier-ac-guard.md):
+  the operator retains authority over acceptance-criterion **content**, while a verification-method
+  reduction carrying a stated reason is the deliberation's and is judged by the external reviewer —
+  so the finding set narrows from five kinds to `dropped` / `unreasoned` / `substituted`. The halt,
+  the fail-closed sentinels, the `[ac-decision]` grammar and the budget accounting are unchanged.
 - The decision alters agent-workflow gates and evaluation policy — a `docs/adr/README.md` >
   "When to Create an ADR" trigger area — so it lands with, or ahead of, the mechanism it governs.

@@ -152,11 +152,14 @@ payload:
 - **`ac_rows` completeness and order.** The returned `ac_rows` carries **one
   row per AC id in `issue-138-ac-phase-b.md`, in that table's order** (AC1,
   AC2, AC3, AC4) — no omitted row, no reordering — with `disposition` and
-  `method_executable` read as the schema defines them from
+  `reason_stated` read as the schema defines them from
   `issue-138-ac-verification-design.md`'s cells (AC1: `carried: false`,
-  `disposition: 'absent'`; AC4: `carried: true`, `disposition: 'deferred'`,
-  `method_executable: false`; AC2/AC3: `carried: true`,
-  `disposition: 'verified'`, `method_executable: true`). An omitted row is a
+  `disposition: 'absent'`; AC4: `carried: true`, `disposition: 'reduced'`,
+  `reason_stated: true` — a reasoned reduction, so no finding under the issue
+  #153 narrowed set; AC2/AC3: `carried: true`, `disposition: 'automated'`,
+  `reason_stated: false` — an automated row owes no reason, and the field is
+  read from the empty Reason cell, never inferred). The `AC_CHANGE` verdict for
+  this fixture therefore rests on AC1's `dropped` finding alone. An omitted row is a
   silent convergence the script cannot detect on its own — this is the sole
   layer that can catch it, per verification design > Testability assessment >
   `script-has-no-filesystem`.
