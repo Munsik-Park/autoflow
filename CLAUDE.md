@@ -80,7 +80,7 @@ Munsik-Park/autoflow#905 · LibreChat #268 review comments). GATE:QUALITY — a 
 coverage/quality missed that the spec seeds `search.enabled: true` directly, masking the missing
 `useSearchEnabled` wiring (evidence: LibreChat #268 review comment).
 
-Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (`TaskCreate` only), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent (see table).
+Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (`TaskCreate` only), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent (model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`).
 
 **[MUST]** Every `Agent` spawn declares the `model` parameter explicitly (`model: "sonnet"` or `model: "opus"`). Without it the host session model is inherited and this per-phase policy is bypassed. Enforced by the hook (`.claude/hooks/check-autoflow-gate.sh`, PreToolUse `Agent`): a spawn without `model` is denied, independent of Auto-Flow state — research and evaluation spawns included. The orchestrator's own model follows the user's session settings (outside this policy). **One carve-out, and only one**: the `policy-load` transcription sub-agent at the top of each deliberation Workflow omits `model`, because it cannot read its own model from the policy it is loading; the call is a verbatim file transcription under a closed schema, where model tier is not load-bearing.
 

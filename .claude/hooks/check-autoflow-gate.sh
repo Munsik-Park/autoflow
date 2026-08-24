@@ -551,7 +551,9 @@ fi
 # bills at whatever tier the host runs (2x the policy model when the host is on
 # a premium tier). Enforced BEFORE the state check so ad-hoc spawns outside an
 # Auto-Flow cycle are covered too. Research (Explore/Plan) and evaluation spawns
-# are NOT exempt: the Spawn Model table assigns them a model as well — their
+# are NOT exempt: the declaration rule applies to every spawn (the spawn policy
+# .claude/autoflow/spawn-policy.json models some of these types; a type it does
+# not model still declares — see Section 1d) — their
 # bypasses below apply only to the score gates, not to this declaration rule.
 # Presence-only check: the Agent tool's own enum validates the value.
 if [ "$TOOL_NAME" = "Agent" ]; then
