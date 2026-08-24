@@ -62,8 +62,23 @@ scenario after any Claude Code version bump that touches effort handling.
 
 ### Result
 
-_Not yet run — run after GREEN, before HANDOFF, and record the observation
-here (date, harness version, both channels' outcome)._
+Date: 2026-08-24
+Disposition: DECLINED
+Authorized-by: operator (issue #150 cycle-2 session decision)
+
+- Rationale: the config is a sample the user edits at stamp time; proving the
+  installed harness's runtime effort semantics for the sample's default values
+  guarantees nothing once the user changes them, and any observation is a
+  one-session, one-binary snapshot (this scenario's own environment-dependence
+  clause). Runtime-semantics verification is outside this issue's scope (the
+  issue adopts a config-defined format; format, delivery and validation are
+  closed by the automated legs).
+- Incidental observation retained: two spawns in this session recorded
+  `"effort":"medium"` (the session default) in their transcripts with no
+  effort declared — the omitted-value → session-inheritance fallback was
+  directly observed at the transcript level. A mid-session agent-definition
+  frontmatter edit was NOT reloaded (the `effort: low` spawn also ran
+  `medium`), so frontmatter-channel observation requires a fresh session.
 
 ---
 
@@ -112,6 +127,10 @@ than claimed as automated.
 
 ### Result
 
-_Not yet run — run after GREEN, before HANDOFF, and record the observation
-here (date, phase exercised, resolver output vs. declared spawn parameters,
-hook advisory presence/absence)._
+Date: 2026-08-24
+Disposition: PASS
+
+- Phase exercised: cycle-2 diagnostic analysis spawn (`autoflow-analyzer`, phase key `diagnose-phase-a`) on live issue #150, after cycle-2 GREEN (d6e2ab6).
+- Resolver output: `spawn-policy.sh model diagnose-phase-a` → `sonnet`; `spawn-policy.sh effort diagnose-phase-a` → `inherit`.
+- Declared spawn parameters: `model: "sonnet"` (matches resolver output exactly); no `effort` parameter declared (matches the `inherit` sentinel — inheritance is expressed by omission on the spawn channel).
+- Hook advisory: no `WARNING: … (advisory — this call is NOT blocked)` line appeared for the spawn; the call proceeded silently through the PreToolUse hook.
