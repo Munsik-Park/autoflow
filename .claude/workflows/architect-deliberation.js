@@ -8,30 +8,27 @@
 // Requires Claude Code v2.1.154+ (Workflow runtime).
 export const meta = {
   name: 'architect-deliberation',
-  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict. Invoke with args {issue: "N"} (issue number required), or {issue: "N", resume: "true"} to resume an ESCALATEd deliberation from its persisted register — skipping Draft and running one further round; {issue: "N", bounded: "true"} for a scope-bounded review-response cycle (Draft + a 2-round ceiling).',
+  description: 'Isolated ARCHITECT facilitation: Developer-AI + Test-AI converge on feature + verification design in workflow sub-contexts; returns a single verdict. Invoke with args {issue: "N"} (issue number required), or {issue: "N", resume: "true"} to resume an ESCALATEd deliberation from its persisted register — skipping Draft and admitting one further exchange (two turns); {issue: "N", bounded: "true"} for a scope-bounded review-response cycle (Draft + the config\'s bounded turn ceiling).',
   phases: [
     { title: 'Draft', detail: 'dev drafts feature design, test drafts verification design (independent) — cold runs only' },
-    { title: 'Resume', detail: 'load the persisted issue register and re-enter Converge at the prior run\'s round — resume runs only' },
-    { title: 'Converge', detail: 'cross-review rounds under the Discussion Protocol until mutual ACCEPT or the round cap' },
+    { title: 'Resume', detail: 'load the persisted issue register and re-enter Converge at the prior run\'s turn — resume runs only' },
+    { title: 'Converge', detail: 'alternating Test-AI / Developer-AI turns under the Discussion Protocol until two consecutive unmodified accepts or the turn ceiling' },
     { title: 'Reconcile', detail: 'on a converged run, compare the issue acceptance-criterion list against the converged verification design — converged runs only' },
     { title: 'Ledger', detail: 'append the settled decisions (append-only)' },
     { title: 'Register', detail: 'persist the issue register so a later resume can re-enter from it' },
   ],
 }
 
-const MAX_ROUNDS = 6 // Decision 7: explicit cap; a round = one Developer-AI <-> Test-AI exchange cycle.
+// Turn ceilings are CONFIG values, not literals (issue #152): the cold and bounded ceilings are
+// read from .claude/autoflow/spawn-policy.json > deliberation_caps below, so adjusting the cap is
+// a one-row config edit. Decision 7's requirement — the loop's bound is in code and every
+// invocation carries one — is unchanged: the ceiling is computed per invocation and the loop
+// exits on its own bound.
 // Stable escalation-reason literals (DCR-3): declared once, shared verbatim by this script
 // and the regression test's `escalation`/ledger-prompt assertions so those are not brittle
 // to prose rewording. Ported from verify-cause-branch.js's `missing`-sentinel discipline.
 const REASON_DRAFT_AGENT_MISSING = 'draft agent missing'
-const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_MISSING} for N consecutive round(s)`
-// The cap-round closing half-round's own sentinels (issue #123), in the same declare-once
-// discipline. The reason is assigned BARE — no interpolation, no suffix — so an assertion can
-// pin it by equality; it is a MISSING-judgment cause and must not be laundered into the generic
-// round-exhaustion text. The label is distinct from every `<side>-r<N>` round label (no digit run
-// after `-r`), so a consumer partitioning calls by the round-label shape keeps counting rounds.
-const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'
-const CLOSING_CALL_LABEL = 'test-closing'
+const REASON_SUBAGENT_MISSING = 'sub-agent missing' // full: `${REASON_SUBAGENT_MISSING} for N consecutive turn(s)`
 // Resume-path guard sentinels (issue #127), same declare-once discipline. Each is assigned BARE —
 // no interpolation, no suffix — so an assertion pins it by equality and a load failure is never
 // laundered into the generic round-exhaustion text. One literal per declared guard condition.
@@ -40,11 +37,6 @@ const REASON_RESUME_REGISTER_ABSENT = 'resume register absent'
 const REASON_RESUME_ARTIFACT_MISSING = 'resume design artifact missing'
 const REASON_RESUME_NO_OPEN_ENTRY = 'resume register has no open entry'
 const REASON_RESUME_ALREADY_CONVERGED = 'resume register already converged'
-// The resume-scoped open-entry precondition on CONVERGED (issue #127, cycle 3). Same declare-once,
-// assigned-BARE discipline: this is a design outcome with its own cause — a resume run whose agenda
-// entries were never disposed of — and laundering it into the generic round-exhaustion text would
-// hide from the operator which concern blocked the run.
-const REASON_RESUME_OPEN_ENTRY_AT_CONVERGENCE = 'resume register still open at convergence'
 // Acceptance-criterion authority sentinels (issue #138), same declare-once, assigned-BARE
 // discipline. They are carried on their OWN field, `acReason`, not inside `escalation`: an
 // AC_CHANGE run converged, so `escalation` stays null by its existing definition and the two
@@ -72,6 +64,11 @@ const REASON_POLICY_MALFORMED = 'spawn policy malformed'
 // sees which half failed.
 const REASON_POLICY_ROW_INCOMPLETE = 'spawn policy row incomplete'
 const REASON_POLICY_EFFORT_CONTRACT_UNUSABLE = 'spawn policy effort contract unusable'
+// Turn-ceiling config sentinel (issue #152), same discipline. The cold and bounded turn ceilings
+// live in the config's `deliberation_caps` table; a run must never proceed on a missing or
+// shapeless ceiling — an invented default here would restore the hardcoded literal the config
+// exists to replace.
+const REASON_POLICY_CAPS_INCOMPLETE = 'spawn policy deliberation caps incomplete'
 // Minted register-entry names for the two fail-closed paths (issue #138). Declared once so the
 // resume agenda an operator re-enters on is named by a literal, not by assembled prose.
 const AC_ENTRY_RECONCILIATION_UNAVAILABLE = 'ac-authority:reconciliation-unavailable'
@@ -90,16 +87,19 @@ const AC_ENTRY_PREFIX = 'ac-authority:'
 // produces them incidentally; a real collision is treated as a defect to fix, not a case to escape.
 const REGISTER_FENCE_START = '===AUTOFLOW-REGISTER-JSON-START==='
 const REGISTER_FENCE_END = '===AUTOFLOW-REGISTER-JSON-END==='
-// The mandatory devil's-advocate sentence (issue #127): extracted from both round prompts into one
-// declared constant so the resume path can lift it. A resume round continues a deliberation that
-// already had its first exchange, so manufacturing a further review surface there is exactly the
-// cold-restart cost this path exists to remove. Renders on the cold path, absent on a resume run.
-const FIRST_EXCHANGE_RULE = ' Round 1 is a mandatory devil\'s-advocate review: do NOT ACCEPT on round 1.'
-// Agenda partition on a resume round (issue #127). The open entries are the round's agenda; the
+// The mandatory devil's-advocate sentence (issue #127): declared once so the resume path can lift
+// it. A resume continues a deliberation that already had its first exchange, so manufacturing a
+// further review surface there is exactly the cold-restart cost that path exists to remove.
+// Renders on each side's FIRST turn of a cold run (turns 1 and 2), absent on a resume run. It is
+// prompt guidance under the Discussion Protocol, not a structural convergence guard (issue #152):
+// the termination condition itself does not special-case early turns beyond requiring a
+// predecessor turn to pair with.
+const FIRST_EXCHANGE_RULE = ' This is your first turn of this deliberation and it is a mandatory devil\'s-advocate review: do NOT return accept: true on this turn.'
+// Agenda partition on a resume turn (issue #127). The open entries are the turn's agenda; the
 // settled ones are carried under this heading as a record, NOT as work. Declared once — the
 // acceptance criterion "loads only prior open items into the round prompt" is assertable as an
 // equality against this constant rather than against matchable prose.
-const SETTLED_BLOCK_RULE = ' Settled record from the prior run — the entries below were disposed of before this resume and are NOT the agenda for this round; do not reopen one without a fact verified now that was unavailable when the entry was written:\n'
+const SETTLED_BLOCK_RULE = ' Settled record from the prior run — the entries below were disposed of before this resume and are NOT the agenda for this turn; do not reopen one without a fact verified now that was unavailable when the entry was written:\n'
 // Evidence discipline for the carry channel (issue #56). Declared once and interpolated into
 // BOTH round prompts so the dev and test channels cannot drift apart. The framing is emitted
 // only alongside the carried register; the counter rule governs every round, including round 1.
@@ -156,15 +156,14 @@ const resumeArg = argv.resume
 const resume = resumeArg === true || resumeArg === 'true'
 const resumeMalformed = ![true, 'true', false, 'false', undefined, null].includes(resumeArg)
 // Bounded admission (issue #135): a review-response cycle whose triage artifact carries
-// `scope-bounded: true` runs Draft + a 2-round ceiling instead of MAX_ROUNDS. The flag is accepted
-// only as a JSON / object argument — deliberately NOT salvaged from prose, so the catch-path above
-// stays byte-identical to the harness mirror. Same strictness as `resume`: a malformed value fails
-// loud rather than silently running the full cap. The round-1 devil's-advocate rule, the closing
-// half-round and the resume extension are unchanged; only the cold ceiling differs.
+// `scope-bounded: true` runs Draft + the config's bounded turn ceiling instead of the full one.
+// The flag is accepted only as a JSON / object argument — deliberately NOT salvaged from prose, so
+// the catch-path above stays byte-identical to the harness mirror. Same strictness as `resume`: a
+// malformed value fails loud rather than silently running the full cap. The first-turn
+// devil's-advocate rule and the resume extension are unchanged; only the cold ceiling differs.
 const boundedArg = argv.bounded
 const bounded = boundedArg === true || boundedArg === 'true'
 const boundedMalformed = ![true, 'true', false, 'false', undefined, null].includes(boundedArg)
-const BOUNDED_ROUNDS = 2
 // System boundary: reject a missing or malformed required arg loudly rather than proceeding with a
 // placeholder path. Kept as the SINGLE throw site — the resume rule extends this guard, it does not
 // add a second one.
@@ -185,19 +184,19 @@ const ledger = `.autoflow/issue-${issue}-ledger.md`
 // gives. Read only by the Reconcile channel — this script has no filesystem.
 const phaseB = `.autoflow/issue-${issue}-phase-b.md`
 // The durable issue register (issue #127): written by every run that ever held a faithful register,
-// read only by a resume run. It is what makes re-entry cost one round instead of a cold restart.
+// read only by a resume run. It is what makes re-entry cost one further exchange instead of a cold restart.
 const registerPath = `.autoflow/issue-${issue}-architect-register.json`
 // Register mechanics (issue #67). Round prompts only: the Draft calls pass no `schema`, so a
 // Draft agent has no `dispositions` channel and round 1's register is empty. Declared once and
 // interpolated byte-identically into both round prompts. It states disposal in its own words —
 // the carry-conditional "by dismissing it with the current" phrasing stays on the carry line,
 // which round 1 never receives.
-const REGISTER_RULE = ' The issue register carried below is this deliberation\'s record: refer to each entry by its short readable name, never by a serial number, and update an entry in place instead of appending a second one — entries are never renumbered. An entry marked `agreed` or `rejected` is not reopened without a newly verified fact. Dispose of every open entry before you ACCEPT: return one item in "dispositions" for each entry you close, naming it and giving it `agreed` or `rejected`. Only the side that raised an entry may close it — a disposition returned by the other side proposes a resolution, which is recorded in the entry\'s conclusion while its status stays open.'
+const REGISTER_RULE = ' The issue register carried below is this deliberation\'s record: refer to each entry by its short readable name, never by a serial number, and update an entry in place instead of appending a second one — entries are never renumbered. An entry marked `agreed` or `rejected` is not reopened without a newly verified fact. Dispose of every open entry before you return accept: true: return one item in "dispositions" for each entry you close, naming it and giving it `agreed` or `rejected`. Only the side that raised an entry may close it — a disposition returned by the other side proposes a resolution, which is recorded in the entry\'s conclusion while its status stays open.'
 // Ledger seeding (issue #67). Draft prompts only: the register is empty at Draft time, but the
 // prior deliberation's ledger is the cross-session half of the no-re-litigation rule, and only a
 // Draft agent (which has filesystem access; this script does not) can read it.
 // The authority set gains "operator decision" (issue #138): an operator's acceptance-criterion
-// ruling is settled by the one authority this deliberation cannot outvote, so a resumed round must
+// ruling is settled by the one authority this deliberation cannot outvote, so a resumed run must
 // treat it as closed rather than re-arguing it. "ARCHITECT ac-change" is deliberately NOT in the
 // set — that entry records content still awaiting the operator's decision, and seeding un-agreed
 // content as settled is precisely what the no-re-litigation rule would then lock in.
@@ -272,7 +271,7 @@ const renderEntry = (e) => `name: ${e.name}\nconclusion: ${e.conclusion}\neviden
 const renderRegister = (reg, keep) => [...reg.values()].filter(keep || (() => true)).map(renderEntry).join('')
 
 // A disposition is the RETURNED judgment on a register entry — the script cannot infer
-// agreement. Closed record, matching the discipline COUNTER and VERDICT already carry.
+// agreement. Closed record, matching the discipline COUNTER and TURN already carry.
 const DISPOSITION = {
   type: 'object',
   additionalProperties: false,
@@ -285,26 +284,35 @@ const DISPOSITION = {
   required: ['name', 'conclusion', 'evidence', 'status'],
 }
 
-const VERDICT = {
+// The per-turn report (issue #152): two facts decide termination — whether this turn MODIFIED a
+// design document, and whether this participant ACCEPTS the current design. No combination is
+// restricted: `modified: true, accept: true` is a valid state ("I changed the proposal and I am
+// satisfied with the result") that simply cannot terminate, because a modification occurred. The
+// remaining fields are the deliberation's record (register + ledger grounds), not termination
+// inputs — the retired ACCEPT/COUNTER/PARTIAL verdict enum and the grounded-ACCEPT structural
+// requirements were convergence machinery this model no longer needs.
+const TURN = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    response: { type: 'string', enum: ['ACCEPT', 'COUNTER', 'PARTIAL'] },
-    // Open concerns this party still has. ACCEPT REQUIRES this to be empty
-    // (Discussion Protocol: a raised concern is never dropped unresolved).
+    // True iff this turn edited a design document (either one, in any way).
+    modified: { type: 'boolean' },
+    // True iff this participant accepts the current design as-is.
+    accept: { type: 'boolean' },
+    // Open concerns this party still has (recorded into the issue register).
     counters: { type: 'array', items: COUNTER },
-    // Grounds for ACCEPT: the dimensions verified + why each passed (Discussion Protocol:
-    // ACCEPT must name the dimensions verified). ACCEPT REQUIRES this to be non-empty.
+    // On accept: the dimensions verified + why each passed (Discussion Protocol: an acceptance
+    // names the dimensions verified). Feeds the CONVERGED ledger entry's grounds.
     accept_grounds: { type: 'array', items: { type: 'string' } },
     // Judgments on register entries this party is closing. Required, but an empty array is
-    // valid — a round that disposes of nothing returns []. The enum above states the intent;
+    // valid — a turn that disposes of nothing returns []. The enum above states the intent;
     // the runtime guard is applyDispositions, since `schema` is opaque to this script.
     dispositions: { type: 'array', items: DISPOSITION },
   },
-  required: ['response', 'counters', 'accept_grounds', 'dispositions'],
+  required: ['modified', 'accept', 'counters', 'accept_grounds', 'dispositions'],
 }
 
-// Register load schema (issue #127). Closed, in the same discipline as COUNTER/DISPOSITION/VERDICT:
+// Register load schema (issue #127). Closed, in the same discipline as COUNTER/DISPOSITION/TURN:
 // the load call is a pure transcription channel, so what comes back is structured, not prose. The
 // persisted `escalation` and `lastResponses` fields are deliberately OUTSIDE this schema — no
 // control-flow decision reads them; their consumer is the operator, per the resume procedure in
@@ -330,7 +338,7 @@ const REGISTER_FILE = {
     // Both design documents exist and are non-empty. Checked HERE because resume skips Draft, and
     // this sub-agent is already reading the filesystem the script cannot reach.
     artifacts_present: { type: 'boolean' },
-    lastRound: { type: 'number' },
+    lastTurn: { type: 'number' },
     // Carried so the resume guards can refuse a resume of a run that already converged — the
     // `no open entry` guard cannot make that refusal (a CONVERGED run may still hold open entries).
     // Widened for AC_CHANGE (issue #138) so a persisted AC_CHANGE register LOADS instead of
@@ -339,7 +347,7 @@ const REGISTER_FILE = {
     verdict: { type: 'string', enum: ['CONVERGED', 'AC_CHANGE', 'ESCALATE'] },
     entries: { type: 'array', items: REGISTER_ENTRY },
   },
-  required: ['found', 'artifacts_present', 'lastRound', 'verdict', 'entries'],
+  required: ['found', 'artifacts_present', 'lastTurn', 'verdict', 'entries'],
 }
 
 // Reconcile channel schema (issue #138). Closed, in the same discipline as the schemas above. The
@@ -450,17 +458,17 @@ let loaded = null
 // persisted register before Converge (issue #127) rather than starting empty.
 const register = new Map()
 // Zero-argument open-entry predicate over the register's CURRENT state (issue #127, cycle 3),
-// declared with the register and read by the two convergence guard sites below. Zero-arity for the
-// same reason `renderCarry` is: the register is a run-level structure, so both sites want the same
-// question asked of the same map, not a parameterized view of it.
+// declared with the register and read by the resume admission guards below. Convergence itself
+// never reads it (issue #152): the register is the deliberation's record and the resume agenda,
+// not a termination input.
 const hasOpenEntry = () => [...register.values()].some((e) => e.status === 'open')
 // Rehydration is defensive (issue #127): a loaded entry passes back through the same flatten +
 // never-empty defaulting a raised counter does, so the four-labelled-lines-plus-terminator render
 // invariant holds whatever the load agent returned. An out-of-enum `status` coerces to `open` (the
 // conservative direction — it keeps the concern on the agenda); an out-of-enum `raisedBy` coerces
 // to `test`, because applyDispositions lets only the raiser close an entry and an unrecognized
-// value would make the entry permanently uncloseable, forcing a guaranteed ESCALATE. `test` is the
-// side the resumed round starts on and the side the closing half-round belongs to.
+// value would make the entry permanently uncloseable. `test` is the side a resumed run's first
+// turn belongs to.
 const rehydrate = (e) => {
   const src = e && typeof e === 'object'
     ? { agenda: e.name, locator: e.evidence, argument: e.conclusion }
@@ -521,7 +529,6 @@ const REQUIRED_SITE_KEYS = [
   'register-load',
   'test-round',
   'dev-round',
-  'test-closing',
   'ac-diff',
   'ledger',
   'register-write',
@@ -550,7 +557,17 @@ const policyRowDefect = (p) => {
     return !row || typeof row !== 'object' || typeof row.model !== 'string' || !row.model
       || !Object.prototype.hasOwnProperty.call(row, 'effort')
   })
-  return bad.length ? `${REASON_POLICY_ROW_INCOMPLETE} (${bad.join(', ')})` : null
+  if (bad.length) return `${REASON_POLICY_ROW_INCOMPLETE} (${bad.join(', ')})`
+  // Turn ceilings (issue #152): both ceilings must be integers >= 2 — a ceiling below one full
+  // exchange could never converge (termination needs a predecessor turn to pair with), so it is a
+  // config defect, not a small budget.
+  const caps = p.deliberation_caps && p.deliberation_caps[WORKFLOW_NAME]
+  const capOk = (v) => Number.isInteger(v) && v >= 2
+  if (!caps || typeof caps !== 'object' || Array.isArray(caps)
+      || !capOk(caps.max_turns) || !capOk(caps.bounded_max_turns)) {
+    return `${REASON_POLICY_CAPS_INCOMPLETE} (deliberation_caps.${WORKFLOW_NAME})`
+  }
+  return null
 }
 // The policy-unusable condition, kept separate from `earlyEscalateReason` at large: the latter is
 // also set AFTER Draft on REASON_DRAFT_AGENT_MISSING, where the policy is valid and the terminal
@@ -601,12 +618,17 @@ const site = (key) => {
     : { model: row.model }
 }
 
+// The validated turn ceilings (issue #152), null exactly when the policy is unusable — every read
+// below runs only on a usable policy (the Draft/Resume branches and the Converge loop are all held
+// behind `earlyEscalateReason`).
+const caps = policyUnusable ? null : policy.deliberation_caps[WORKFLOW_NAME]
+
 if (earlyEscalateReason) {
   // Fail-closed: neither Draft nor Resume runs on an unknown policy. The
   // terminal escalation below carries the cause verbatim.
 } else if (!resume) {
   phase('Draft')
-  console.log(`ARCHITECT facilitation for issue #${issue} (cap ${bounded ? BOUNDED_ROUNDS : MAX_ROUNDS} rounds${bounded ? ', scope-bounded review-response' : ''})`)
+  console.log(`ARCHITECT facilitation for issue #${issue} (ceiling ${bounded ? caps.bounded_max_turns : caps.max_turns} turns${bounded ? ', scope-bounded review-response' : ''})`)
 
 // Independent first drafts — the two perspectives do not see each other's draft yet.
 const [devDraft, testDraft] = await parallel([
@@ -636,12 +658,12 @@ const [devDraft, testDraft] = await parallel([
   console.log(`ARCHITECT resume for issue #${issue} — loading ${registerPath}`)
   loaded = await Promise.resolve()
     .then(() => agent(
-      `You are a transcription channel, not a reviewer. Read ${registerPath} and return its contents under the given schema, verbatim — do not summarize, reword, add, drop or re-order anything. Set "found" true only when the file exists AND parses as JSON; when it does not, set "found" false and return the other fields as empty defaults. Set "artifacts_present" true only when BOTH ${feature} and ${verif} exist and are non-empty. Copy "lastRound", "verdict" and every element of "entries" (name, conclusion, evidence, status, raisedBy) exactly as the file states them. Exercise no judgment about the design itself. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are a transcription channel, not a reviewer. Read ${registerPath} and return its contents under the given schema, verbatim — do not summarize, reword, add, drop or re-order anything. Set "found" true only when the file exists AND parses as JSON; when it does not, set "found" false and return the other fields as empty defaults. Set "artifacts_present" true only when BOTH ${feature} and ${verif} exist and are non-empty. Copy "lastTurn", "verdict" and every element of "entries" (name, conclusion, evidence, status, raisedBy) exactly as the file states them. Exercise no judgment about the design itself. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: REGISTER_FILE, label: 'register-load', phase: 'Resume', ...site('register-load') },
     ))
     .catch(() => null)
   // Resume guards, in declared order. Each resolves to its OWN bare sentinel so a load failure is
-  // attributable and is never laundered into the generic round-exhaustion text. A guard failure is
+  // attributable and is never laundered into the generic turn-exhaustion text. A guard failure is
   // also write-ineligible: the run never held a faithful register, so it must not overwrite one.
   if (!loaded) earlyEscalateReason = REASON_RESUME_LOAD_AGENT_MISSING
   else if (!loaded.found) earlyEscalateReason = REASON_RESUME_REGISTER_ABSENT
@@ -652,9 +674,9 @@ const [devDraft, testDraft] = await parallel([
       register.set(normalizeKey(entry.name), entry)
     }
     // A prior run that escalated with no open entry escalated for an infrastructure cause, and
-    // resume is not the instrument for that — a deliberate refusal, not a degenerate empty round.
+    // resume is not the instrument for that — a deliberate refusal, not a degenerate empty turn.
     if (!hasOpenEntry()) earlyEscalateReason = REASON_RESUME_NO_OPEN_ENTRY
-    // The refusal the row above cannot make: a run converges on mutual grounded ACCEPT regardless
+    // The refusal the row above cannot make: a run converges on two consecutive unmodified accepts regardless
     // of whether every entry was disposed of, so a CONVERGED run can persist open entries. Resuming
     // there would reopen a design the ledger already records under "ARCHITECT mutual ACCEPT".
     else if (loaded.verdict === 'CONVERGED') earlyEscalateReason = REASON_RESUME_ALREADY_CONVERGED
@@ -665,37 +687,35 @@ const [devDraft, testDraft] = await parallel([
 // a branch of the resume path: a run writes the register only if it ever held a faithful copy of
 // it. Both ineligible shapes are exactly the pre-Converge early escalations — a resume that failed
 // a load guard (it could not read the file it would overwrite) and a cold run that early-escalates
-// on a null draft (its register is empty and `round` stays 0, so a terminal write would destroy an
-// existing register with `{lastRound: 0, entries: []}`). The second is reachable by the operator's
+// on a null draft (its register is empty and `turn` stays 0, so a terminal write would destroy an
+// existing register with `{lastTurn: 0, entries: []}`). The second is reachable by the operator's
 // most natural action after an ESCALATE, a plain re-invocation, which is why the predicate is
 // stated over run shapes rather than over `resume`.
 const registerHeld = !earlyEscalateReason
 
 phase('Converge')
-// Round bounds (issue #127). A cold run starts at 0 and is bounded by MAX_ROUNDS, byte-identically
-// to before. A resume run continues the PERSISTED round number — never a number taken from an
-// argument — and admits exactly one further round: the operator-decided single-round extension.
-// The loop still terminates on its own bound (Decision 7), not on a count of resumes taken.
-const startRound = resume && loaded ? (Number(loaded.lastRound) || 0) : 0
-let round = startRound
-const roundCeiling = resume ? startRound + 1 : (bounded ? BOUNDED_ROUNDS : MAX_ROUNDS)
-// The mandatory first-exchange rule and the cross-session ledger seed are the two run-level
-// switches the resume path flips. Neither adds a round-family prompt literal: there is no separate
-// "resume round prompt" — the resume path re-enters the same loop and the same closing block.
-const firstExchange = resume ? '' : FIRST_EXCHANGE_RULE
+// Turn bounds (issue #152). A cold run starts at 0 and is bounded by the config ceiling (the
+// bounded ceiling on a scope-bounded run). A resume run continues the PERSISTED turn number —
+// never a number taken from an argument — and admits exactly one further exchange (two turns):
+// the operator-decided extension. The loop still terminates on its own bound (Decision 7), not on
+// a count of resumes taken.
+const startTurn = resume && loaded ? (Number(loaded.lastTurn) || 0) : 0
+let turn = startTurn
+const turnCeiling = resume
+  ? startTurn + 2
+  : (caps ? (bounded ? caps.bounded_max_turns : caps.max_turns) : 0)
+// The mandatory first-turn rule and the cross-session ledger seed are the two run-level switches
+// the resume path flips. `firstExchange` renders on each side's first turn of a cold run (turns 1
+// and 2) and never on a resume, which continues a deliberation whose first exchange already
+// happened.
+const firstExchange = (t) => (!resume && t <= 2) ? FIRST_EXCHANGE_RULE : ''
 // Draft prompts carry LEDGER_SEED_RULE on the cold path; resume skips Draft outright, so without
 // this the cross-session half of the no-re-litigation rule would be silently dropped. Renders the
 // empty string on the cold path, leaving those prompts byte-identical.
 const resumeSeed = resume ? LEDGER_SEED_RULE : ''
 let converged = false
-// This run's LAST convergence-guard decision (issue #127, cycle 3), not a latch. It is ASSIGNED at
-// every guard site, whether or not that site denied, because the terminal turn decides the reason:
-// an in-loop denial always summons the closing half-round, and if that turn COUNTERs then mutual
-// ACCEPT never happened on this run and the generic round-exhaustion text is the true one. The
-// `converged` conjunct is what makes the assignment at a non-denying site write `false`.
-let openEntryDenied = false
 // Raise path: upsert as `open`. A re-raise updates the existing entry in place; `raisedBy` and
-// the display `name` are fixed at first creation, so a carried name token is stable across rounds.
+// the display `name` are fixed at first creation, so a carried name token is stable across turns.
 const raise = (items, side) => {
   for (const item of Array.isArray(items) ? items : []) {
     const fresh = toEntry(item, side)
@@ -739,20 +759,14 @@ const applyDispositions = (items, side) => {
 }
 let lastDev = null
 let lastTest = null
-// A grounded ACCEPT: ACCEPT response + no open counters + named grounds (dimensions verified).
-const accepted = (v) => !!(
-  v && v.response === 'ACCEPT' &&
-  Array.isArray(v.counters) && v.counters.length === 0 &&
-  Array.isArray(v.accept_grounds) && v.accept_grounds.length > 0
-)
-// The register carry, rendered from the register's CURRENT state. Declared once and used by both
-// the round prompts and the closing half-round, so the closing turn evaluates under byte-identical
-// framing to the rounds it concludes (issue #123); it renders no differently than the inline form
-// it replaces.
-// Agenda partition (issue #127) is a property of the RUN, not of the call — both call sites want
-// the same partition on a resume — so it is read from the enclosing `resume` flag rather than from
-// a parameter. `renderCarry` therefore keeps its zero-arity declaration line unchanged: that exact
-// line is a cross-file anchor, and parameterizing it would red three standing suites at once.
+// The termination test (issue #152): this participant accepted the current design WITHOUT
+// modifying it. Deliberation converges only when two consecutive turns — one per side — both
+// satisfy it; a turn that modified a document can never converge, whatever its `accept` says,
+// because the modified design still owes the other side a review.
+const agreedWithoutChange = (t) => !!(t && t.accept === true && t.modified === false)
+// The register carry, rendered from the register's CURRENT state.
+// Agenda partition (issue #127) is a property of the RUN, not of the call, so it is read from the
+// enclosing `resume` flag rather than from a parameter.
 // Cold: every entry, as today. Resume: the open entries as the agenda, then the settled ones under
 // SETTLED_BLOCK_RULE as a record — never deleted, since after an ESCALATE the ledger holds no
 // record of what the prior run rejected.
@@ -761,124 +775,75 @@ const renderSettled = () => {
   const settled = renderRegister(register, (e) => e.status !== 'open')
   return settled ? `${SETTLED_BLOCK_RULE}${settled}` : ''
 }
-const renderCarry = () => register.size ? `${CARRY_NON_EVIDENTIARY} Issue register — address every entry whose status is open before ACCEPT, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${renderRegister(register, resume ? (e) => e.status === 'open' : null)}${renderSettled()}` : ''
+const renderCarry = () => register.size ? `${CARRY_NON_EVIDENTIARY} Issue register — address every entry whose status is open before you return accept: true, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${renderRegister(register, resume ? (e) => e.status === 'open' : null)}${renderSettled()}` : ''
 let consecutiveNull = 0
-const MAX_CONSECUTIVE_NULL = 2 // two consecutive both-null rounds => persistent infra failure, not a design split
-while (!earlyEscalateReason && round < roundCeiling && !converged) {
-  round++
-  // Thread the whole register into this round so fresh sub-agents see every issue raised so far
-  // with its conclusion and status. Rendering is done HERE, by the script, rather than delegated
-  // each round to a context-less fresh agent.
+const MAX_CONSECUTIVE_NULL = 2 // two consecutive null turns (one per side) => persistent infra failure, not a design split
+// The immediately-preceding turn's report — the other half of the termination pair. Starts null on
+// BOTH paths (issue #152): a resume does not restore the escalated run's last turn, so its first
+// turn is predecessor-less and structurally cannot converge alone — the same rule the cold first
+// turn already carries, at the cost of at most one extra turn.
+let prevTurn = null
+while (!earlyEscalateReason && turn < turnCeiling && !converged) {
+  turn++
+  // Alternation by parity, Test AI first (issue #62): the verification design challenges the
+  // feature design, so a test-then-dev order makes each exchange a complete challenge-and-response.
+  // A resume continues the persisted parity, so the alternation is unbroken across invocations.
+  const side = turn % 2 === 1 ? 'test' : 'dev'
+  // Thread the whole register into this turn so a fresh sub-agent sees every issue raised so far
+  // with its conclusion and status. Rendering is done HERE, by the script.
   const carry = renderCarry()
-  // Sequential, test first (issue #62). The verification design challenges the feature design,
-  // so test-then-dev makes each round a complete challenge-and-response and closes the window
-  // in which a citation is written against a snapshot the counterpart is concurrently editing.
-  // The `.catch(() => null)` wraps preserve the Draft phase's error semantics — the MISSING
-  // path below consumes a null, which a bare `await` would replace with a propagated rejection.
-  const test = await Promise.resolve()
-    .then(() => agent(
-      `You are the Test AI. Round ${round} of ARCHITECT convergence. Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange} If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds".${ISSUE_AC_COLUMN_RULE} Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: VERDICT, label: `test-r${round}`, phase: 'Converge', ...site('test-round') },
-    ))
-    .catch(() => null)
-  // The Developer AI answers within the SAME round, reading the Test AI's live verdict.
-  const peer = test && test.counters && test.counters.length
-    ? ` The Test AI has already completed round ${round} against the documents in their current state and returned ${test.response} with these open counters — they are current, not carried: ${JSON.stringify(test.counters)}. Dispose of each in THIS round: resolve it by editing ${feature}, or dismiss it by naming the section or item that already satisfies it.`
+  // The predecessor's live report, handed over as current — including its counters, which THIS
+  // turn is asked to dispose of.
+  const peerName = side === 'test' ? 'Developer AI' : 'Test AI'
+  const peer = prevTurn
+    ? ` The ${peerName} completed turn ${turn - 1} against the documents in their current state and returned modified: ${prevTurn.modified}, accept: ${prevTurn.accept}${prevTurn.counters && prevTurn.counters.length ? `, with these open counters — they are current, not carried: ${JSON.stringify(prevTurn.counters)}. Dispose of each in THIS turn: resolve it by editing the design, or dismiss it by naming the section or item that already satisfies it` : ''}.`
     : ''
-  const dev = await Promise.resolve()
-    .then(() => agent(
-      `You are the Developer AI. Round ${round} of ARCHITECT convergence. Read the current ${verif} and ${feature}.${peer} Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Respond ACCEPT ONLY when both documents are mutually consistent and complete AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds". Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: VERDICT, label: `dev-r${round}`, phase: 'Converge', ...site('dev-round') },
-    ))
+  // Shared turn-report instruction: `modified` is a fact about THIS turn's edits, never a strategy
+  // knob — the design's own rule (issue #152) is that a modification keeps the conversation open,
+  // so an improvement is never suppressed to protect convergence.
+  const turnReportRule = ` Report two facts about THIS turn: set "modified" true if you edited ${feature} or ${verif} in this turn and false if you made no edit; set "accept" per the condition above. A turn that modified a document continues the deliberation regardless of "accept" — never withhold an improvement to reach convergence, and never report an edit you made as unmodified.`
+  // Two call sites, one per side, so each carries its site key as a STRING LITERAL — the [MUST]
+  // above site(): contract CI joins call-site keys against config rows by static set comparison,
+  // and a computed key would be invisible to that join.
+  // The `.catch(() => null)` wrap preserves the Draft phase's error semantics — the MISSING path
+  // below consumes a null, which a bare `await` would replace with a propagated rejection.
+  const result = await Promise.resolve()
+    .then(() => side === 'test'
+      ? agent(
+          `You are the Test AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange(turn)} If the feature design changed testability, UPDATE ${verif} in place. Set "accept" true ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${ISSUE_AC_COLUMN_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+          { schema: TURN, label: `test-t${turn}`, phase: 'Converge', ...site('test-round') },
+        )
+      : agent(
+          `You are the Developer AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange(turn)} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Set "accept" true ONLY when both documents are mutually consistent and complete AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+          { schema: TURN, label: `dev-t${turn}`, phase: 'Converge', ...site('dev-round') },
+        ))
     .catch(() => null)
-  lastDev = dev
-  lastTest = test
-  // A round where BOTH sub-agents are null is a MISSING judgment, not a design disagreement.
-  // A single transient both-null round retries; two consecutive is a persistent infra failure —
-  // exit early (saving up to MAX_ROUNDS-2 rounds of opus spawns) with a distinct reason rather
-  // than laundering it into the generic "No mutual ACCEPT" text. A one-side-null round leaves the
-  // live side's counters doing real work, so it is NOT aborted (accepted(null) already blocks it).
-  const roundMissing = !dev && !test
-  consecutiveNull = roundMissing ? consecutiveNull + 1 : 0
-  // Bound-aware second disjunct (issue #127): a resume run admits exactly one round, so
-  // MAX_CONSECUTIVE_NULL is unreachable there and a both-null resume round would otherwise fall
-  // through to the generic "No mutual ACCEPT" text — laundering an infrastructure cause into a
-  // design outcome, and spending the operator's decided extra round to say the wrong thing. The
-  // rule is stated on the BOUND: a both-null round is a MISSING judgment as soon as no further
-  // round can retry it. `consecutiveNull` is per-invocation and is not a register field, so the
-  // rendered figure is 1 on the resume path and 2 at the cold threshold — the discriminating half.
-  // Scoped to `resume` deliberately: extending it to the cold cap round would alter the escalation
-  // text of a run that never asked for it, against this change's cold-path bit-identity criterion.
-  if (consecutiveNull >= MAX_CONSECUTIVE_NULL || (resume && roundMissing && round === roundCeiling)) {
-    earlyEscalateReason = `${REASON_SUBAGENT_MISSING} for ${consecutiveNull} consecutive round(s)`
+  const turnMissing = !result
+  consecutiveNull = turnMissing ? consecutiveNull + 1 : 0
+  // A null turn is a MISSING judgment, not a design disagreement. One transient null lets the
+  // other side's next turn proceed (its predecessor is simply absent, so no convergence pairs
+  // across the gap); two consecutive — one per side — is a persistent infra failure, exited early
+  // with a distinct reason rather than laundered into the generic no-convergence text. The
+  // bound-aware disjunct (issue #127) keeps a resume's final-turn null a MISSING judgment: with no
+  // further turn to retry it, falling through would spend the operator's decided extension to say
+  // the wrong thing.
+  if (consecutiveNull >= MAX_CONSECUTIVE_NULL || (resume && turnMissing && turn === turnCeiling)) {
+    earlyEscalateReason = `${REASON_SUBAGENT_MISSING} for ${consecutiveNull} consecutive turn(s)`
     break
   }
-  // No agreement on the first exchange (round > 1), and both sides must give a grounded ACCEPT
-  // with no open counters (a raised concern is never dropped). A resume round continues a
-  // deliberation whose first exchange already happened, so the guard is lifted there (issue #127):
-  // without the disjunct, a resume of a run that escalated before completing any round would land
-  // at round 1 and be silently forbidden from converging.
-  converged = (resume || round > 1) && accepted(dev) && accepted(test)
-  // Register update, in the design's stated order: raise first (both sides), then dispose.
-  raise(test && test.counters, 'test')
-  raise(dev && dev.counters, 'dev')
-  applyDispositions(test && test.dispositions, 'test')
-  applyDispositions(dev && dev.dispositions, 'dev')
-  // Guard site A (issue #127, cycle 3) — resume-scoped open-entry precondition, evaluated HERE
-  // because it must read the register AFTER this round's own raise/dispose: the round that resolves
-  // its own carried objection is exactly the round that should converge. `converged` itself is
-  // cleared, not merely flagged — the Ledger phase computes the verdict from `converged` alone and
-  // consults `escalationReason` only on the ESCALATE branch, so a flag-only guard is a no-op.
-  openEntryDenied = resume && converged && hasOpenEntry()
-  if (openEntryDenied) converged = false
-  console.log(`round ${round}: dev=${dev ? dev.response : 'missing'}(${(dev && dev.counters && dev.counters.length) || 0}) test=${test ? test.response : 'missing'}(${(test && test.counters && test.counters.length) || 0})`)
-}
-
-// Cap-round closing half-round (issue #123). The loop runs test-then-dev and computes `converged`
-// inside the same iteration, so at the cap it exits on a Developer-AI revision no Test-AI turn has
-// evaluated: a cap-round resolution could never be recognised as convergence, and the ESCALATE
-// grounds carried the Test AI's pre-revision counters. One Test-AI-only evaluation of that final
-// revision closes the gap. It is the second half of the sixth exchange, not a seventh: no Dev turn
-// is added and `round` is not incremented, so the returned `rounds` stays at the cap.
-// The predicate reads `lastDev` only — a null cap-round Test verdict is exactly the case that most
-// needs the closing turn, so it must not suppress it. An early-escalate reason (missing draft /
-// consecutive null) is an infrastructure cause and is never routed into a design outcome.
-// The predicate reads the run's own ceiling (issue #127): on the cold path `roundCeiling` IS
-// MAX_ROUNDS, so this is the same expression; on a resume run it gives the single admitted round
-// its closing Test-AI evaluation, which is what lets "exactly one round" end in CONVERGED rather
-// than being structurally forced to ESCALATE.
-if (!earlyEscalateReason && !converged && round === roundCeiling && accepted(lastDev)) {
-  // Rendered HERE, after the cap round's own raise/applyDispositions, so the closing turn sees the
-  // counters that round raised — the very concerns it exists to re-evaluate. The in-loop value is
-  // computed at the top of a round, before its register mutations, and is not reusable for this.
-  const closingCarry = renderCarry()
-  // Mirror of the in-round `peer` clause: the counterpart's live verdict handed over as current.
-  const closingPeer = ` The Developer AI has already completed round ${round} against the documents in their current state and returned a grounded ACCEPT on these verified dimensions — they are current, not carried: ${JSON.stringify((lastDev && lastDev.accept_grounds) || [])}.`
-  const closing = await Promise.resolve()
-    .then(() => agent(
-      `You are the Test AI. This is the CLOSING evaluation of the Developer AI's final revision at the round cap (round ${round} of ${roundCeiling}): there is no further Developer-AI turn, and this verdict alone decides whether the run converges: a grounded ACCEPT converges it and a COUNTER/PARTIAL returns ESCALATE, after which the Reconcile check still decides whether a converged run returns CONVERGED or AC_CHANGE. Read the current ${feature} and ${verif}.${closingPeer} Apply the Discussion Protocol. If the feature design changed testability, UPDATE ${verif} in place. Respond ACCEPT ONLY when every acceptance criterion has a concrete verification method — a stated manual or mock alternative counts, except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then return empty "counters" and list the dimensions you verified + why each passed in "accept_grounds".${ISSUE_AC_COLUMN_RULE} Otherwise return COUNTER/PARTIAL, list every open concern in "counters", and leave "accept_grounds" empty.${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${closingCarry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-      { schema: VERDICT, label: CLOSING_CALL_LABEL, phase: 'Converge', ...site('test-closing') },
-    ))
-    .catch(() => null)
-  if (!closing) {
-    // A missing closing judgment is an infrastructure failure, not a design disagreement.
-    earlyEscalateReason = REASON_CLOSING_AGENT_MISSING
-  } else {
-    // Assign BEFORE the Ledger phase computes `acceptGrounds` from `lastTest`, so a CONVERGED run's
-    // Test-side grounds are the closing verdict's, not the cap round's superseded ones.
-    lastTest = closing
-    converged = accepted(closing)
-    // In-loop order (verdict, raise, dispose) applied to the test side alone: the raiser-only close
-    // rule is why the missing turn had to be a Test-AI turn rather than an extra Developer-AI one.
-    raise(closing.counters, 'test')
-    applyDispositions(closing.dispositions, 'test')
-    // Guard site B (issue #127, cycle 3) — the same precondition on the closing half-round, which
-    // on a resume run IS the path to CONVERGED. Assigned again, superseding site A's decision for
-    // the same reason `lastTest = closing` supersedes the cap round's verdict.
-    openEntryDenied = resume && converged && hasOpenEntry()
-    if (openEntryDenied) converged = false
-    console.log(`closing half-round: test=${closing.response}(${(closing.counters && closing.counters.length) || 0})`)
-  }
+  // The termination condition (issue #152), and the whole of it: the previous turn and this turn
+  // both accepted the design without modifying it. A null predecessor (run start, or a missing
+  // turn) fails the test structurally. No other machinery decides convergence — no verdict
+  // history, no register state, no closing evaluation.
+  converged = agreedWithoutChange(prevTurn) && agreedWithoutChange(result)
+  // Register update, in the design's stated order: raise first, then dispose. Record only —
+  // convergence above is already decided.
+  raise(result && result.counters, side)
+  applyDispositions(result && result.dispositions, side)
+  if (side === 'dev') lastDev = result
+  else lastTest = result
+  console.log(`turn ${turn} (${side}): ${result ? `modified=${result.modified} accept=${result.accept}` : 'missing'}(${(result && result.counters && result.counters.length) || 0})`)
+  prevTurn = result
 }
 
 // Reconcile (issue #138) — the acceptance-criterion authority checkpoint, placed between Converge
@@ -903,7 +868,7 @@ if (converged) {
   // Minting (issue #138): every AC_CHANGE path mints at least one OPEN entry, so the resume the
   // operator takes after ruling on the change is admissible. `raisedBy: 'test'` follows the
   // rehydrate coercion's own stated reason — only the raiser may close an entry, and `test` is the
-  // side a resumed round starts on and the side the closing half-round belongs to.
+  // side a resumed run's first turn belongs to.
   const mintAcEntry = (name, conclusion, evidence) => {
     raise([{ agenda: name, argument: conclusion, locator: evidence }], 'test')
   }
@@ -963,13 +928,9 @@ if (converged) {
 phase('Ledger')
 const verdict = !converged ? 'ESCALATE' : acReason ? 'AC_CHANGE' : 'CONVERGED'
 // Cause-specific escalation reason: an early-exit reason (missing draft / artifact / consecutive
-// null) survives verbatim; then the resume open-entry sentinel (issue #127, cycle 3) — ordered
-// AFTER `earlyEscalateReason` because an infrastructure cause still outranks a design outcome, and
-// BEFORE the generic text because the register, not round exhaustion, is what blocked this run;
-// otherwise the generic round-exhaustion text.
+// null) survives verbatim; otherwise the generic turn-exhaustion text.
 const escalationReason = earlyEscalateReason
-  || (openEntryDenied ? REASON_RESUME_OPEN_ENTRY_AT_CONVERGENCE : null)
-  || `No mutual ACCEPT within ${roundCeiling} rounds (reached round ${round})`
+  || `No convergence within ${turnCeiling} turns (reached turn ${turn})`
 // Only a CONVERGED run records settled decisions under "ARCHITECT mutual ACCEPT".
 // A non-convergence run records a single outcome entry under a DISTINCT authority so
 // the append-only ledger is never polluted with un-agreed content (which would later
@@ -1048,7 +1009,7 @@ let registerWritten = false
 if (registerHeld) {
   const registerPayload = JSON.stringify({
     issue,
-    lastRound: round,
+    lastTurn: turn,
     verdict,
     // Persisted for the operator's diagnosis; deliberately outside the closed load schema.
     escalation: converged ? null : escalationReason,
@@ -1061,7 +1022,7 @@ if (registerHeld) {
     // anywhere to point at.
     entries: [...register.values()],
     // Read by the operator, not by any control-flow path: which side stopped short, and on what
-    // verdict. Not injected into the resume round prompt — the in-round `peer` clause frames a
+    // verdict. Not injected into the resume turn prompt — the in-turn `peer` clause frames a
     // verdict as current, and a verdict from a prior invocation is not.
     lastResponses: { dev: lastDev, test: lastTest },
   }, null, 2)
@@ -1075,7 +1036,7 @@ if (registerHeld) {
   // acknowledgement and reported as `registerWritten: false`. The consequence lands on the NEXT
   // resume, which re-enters from the last successfully persisted state — the register an earlier
   // run left behind when one exists; when none exists the resume load guard escalates with
-  // REASON_RESUME_REGISTER_ABSENT (zero rounds run), so the operator sees the gap rather than a
+  // REASON_RESUME_REGISTER_ABSENT (zero turns run), so the operator sees the gap rather than a
   // silent cold restart.
   registerWritten = !!registerAck
 }
@@ -1085,13 +1046,13 @@ return {
   verdict,
   artifacts: [feature, verif],
   ledger,
-  // Absolute, not per-invocation: a resume of a run that reached the cap returns the next number,
-  // so "how long has this deliberation gone on" stays a single monotone count.
-  rounds: round,
+  // Absolute, not per-invocation: a resume of a run that reached the ceiling returns the next
+  // number, so "how long has this deliberation gone on" stays a single monotone count.
+  turns: turn,
   summary: verdict === 'AC_CHANGE'
-    ? `ARCHITECT paused on an acceptance-criterion change in ${round} round(s) — operator decision required (${acReason})`
+    ? `ARCHITECT paused on an acceptance-criterion change in ${turn} turn(s) — operator decision required (${acReason})`
     : converged
-    ? `ARCHITECT converged in ${round} round(s)`
+    ? `ARCHITECT converged in ${turn} turn(s)`
     : `ARCHITECT did not converge — escalate (${escalationReason})`,
   escalation: converged ? null : escalationReason,
   resumed: resume,

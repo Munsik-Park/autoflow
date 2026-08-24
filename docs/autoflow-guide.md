@@ -187,7 +187,7 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
 
 **[MUST] Preserve the previous cycle's artifacts** (issue #135): before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, and `issue-{N}-review-findings.md`, which are cycle-spanning. Without this the new cycle's Phase A/B/3, REFINE and AUDIT overwrite the flat names, and the bounded path below has nothing to reuse.
 
-**Scope-bounded entry** (issue #135): when `.autoflow/issue-{N}-review-findings.md` carries `scope-bounded: true` (written by HANDOFF step 6.5 from `scripts/review/scope-bounded.sh triage`), the cycle takes the **bounded path**: DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs with `args: { issue: "N", bounded: "true" }` (Draft + a 2-round ceiling; round-1 devil's advocate, closing half-round and resume unchanged), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE's whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-deliberated with the full cap (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `scope-bounded: false` or an absent line is the full path.
+**Scope-bounded entry** (issue #135): when `.autoflow/issue-{N}-review-findings.md` carries `scope-bounded: true` (written by HANDOFF step 6.5 from `scripts/review/scope-bounded.sh triage`), the cycle takes the **bounded path**: DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs with `args: { issue: "N", bounded: "true" }` (Draft + the config's bounded turn ceiling; first-turn devil's advocate and resume unchanged), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE's whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-deliberated with the full cap (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `scope-bounded: false` or an absent line is the full path.
 
 **Resume procedure** (requested issue's own state file reads `active:true` — a mid-cycle session resumed after an abnormal end): resume deterministically, do not restart from PREFLIGHT.
 1. **Read the last confirmed point** from the state file: the highest phase whose gate `scores` are recorded in `phases` (or `verdict` set for `gate_hypothesis_cause`) is the last *passed* gate; `phase` gives the coarse marker.
@@ -250,11 +250,13 @@ Both perspectives participate, but the discussion runs inside an isolated
 teammates messaging the orchestrator: the Developer-AI and Test-AI run as in-script
 sub-agents, their cross-talk stays in workflow variables, and only a single verdict
 (`CONVERGED` + artifact paths, `AC_CHANGE` on an acceptance-criterion change that pauses for the
-operator, or `ESCALATE` at the 6-round cap) returns to the
-orchestrator. At the cap, when the Developer AI's final revision answers with a grounded
-ACCEPT, a **closing half-round** — one Test-AI-only evaluation of that revision — decides
-between the two; it is the second half of the sixth exchange rather than a seventh round, so
-one round is still one exchange and the returned round count is unchanged. The facilitator also appends the settled decisions to the decision
+operator, or `ESCALATE` at the configured turn ceiling) returns to the
+orchestrator. Convergence is turn-based (issue #152): the two participants alternate
+single-participant turns, each reporting `modified` and `accept`, and the deliberation ends
+only when two consecutive turns both report an unmodified accept — a turn that revised a
+document never converges, so a ceiling-turn revision simply escalates and its review belongs
+to a resumed exchange. The turn ceilings are config values
+(`.claude/autoflow/spawn-policy.json` > `deliberation_caps`). The facilitator also appends the settled decisions to the decision
 ledger. Rationale: [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation)
 > Deliberation Isolation; contract: [`teammate-contracts.md`](teammate-contracts.md)
 > Facilitator. The orchestrator invokes the facilitation workflow, then **verifies** the
@@ -390,19 +392,18 @@ When the Test AI flags an item as "not automatable", the team discusses whether 
 
 ### Agreement criteria
 
-Both documents reach ACCEPT from both teammates. The Discussion Protocol applies.
-Before mutual ACCEPT, one exchange must verify the resolution conforms to any governing
-ADR — the first, non-gated approach check (GATE:PLAN is the gated one);
-a divergence is a COUNTER, not an ACCEPT. No score.
-Mutual ACCEPT is necessary but not sufficient: a converged run additionally passes the
+Convergence is turn-based (issue #152): the deliberation ends only when two consecutive turns —
+one per participant — both report `modified: false, accept: true`; a turn that revised a
+document never converges, and every other state continues to the next participant. The
+Discussion Protocol applies. Before accepting, one exchange must verify the resolution conforms
+to any governing ADR — the first, non-gated approach check (GATE:PLAN is the gated one); a
+divergence is raised as a counter and `accept` is withheld. No score.
+Mutual acceptance is necessary but not sufficient: a converged run additionally passes the
 **Reconcile** acceptance-criterion check below, because whether the issue's acceptance criteria may
 change is not the deliberation's to settle.
 The facilitator records the converged decisions in the ledger and returns
 `CONVERGED` + artifact paths; a converged run carrying an unauthorized acceptance-criterion change
-returns `AC_CHANGE`; non-convergence within the round cap returns `ESCALATE`.
-At the round cap the Test AI's final ACCEPT is the closing half-round's — the Developer AI's
-cap-round revision is otherwise never evaluated, since one round = one exchange and the
-Developer AI answers second.
+returns `AC_CHANGE`; non-convergence within the configured turn ceiling returns `ESCALATE`.
 
 ### Acceptance-criterion change — the `AC_CHANGE` pause (operator-facing)
 
@@ -473,25 +474,25 @@ rows, or re-run once the channel recovers.
 When the review-response cycle entered on `scope-bounded: true` (PREFLIGHT > *Scope-bounded
 entry*), the orchestrator invokes
 `Workflow({ name: "architect-deliberation", args: { issue: "N", bounded: "true" } })`. The run is
-the cold path with one difference: its round ceiling is **2** instead of 6. Draft runs, the
-round-1 devil's-advocate rule holds, the cap round (round 2) is closed by the same closing
-half-round, and an `ESCALATE` may be resumed exactly as below (the resume admits one further round
-from the register regardless of the ceiling the escalated run had). `bounded` is accepted only as a
-JSON / object argument; a malformed value fails loud like a malformed `resume`. Rationale:
-[`design-rationale.md`](design-rationale.md) > Decision 12.
+the cold path with one difference: its turn ceiling is the config's `bounded_max_turns` instead of
+`max_turns` (`.claude/autoflow/spawn-policy.json` > `deliberation_caps`). Draft runs, the
+first-turn devil's-advocate rule holds, and an `ESCALATE` may be resumed exactly as below (the
+resume admits one further exchange from the register regardless of the ceiling the escalated run
+had). `bounded` is accepted only as a JSON / object argument; a malformed value fails loud like a
+malformed `resume`. Rationale: [`design-rationale.md`](design-rationale.md) > Decision 12.
 
 ### Resume — re-entering an ESCALATEd deliberation (operator-facing)
 
-An `ESCALATE` return hands the decision to the operator. Re-invoking the workflow bare would cold-restart it — Draft re-authors both design documents from scratch, round numbering restarts at 1, and the first exchange is again forbidden from converging. `resume` is the alternative: it re-enters the deliberation at the state the prior run left in its register.
+An `ESCALATE` return hands the decision to the operator. Re-invoking the workflow bare would cold-restart it — Draft re-authors both design documents from scratch and turn numbering restarts at 1. `resume` is the alternative: it re-enters the deliberation at the state the prior run left in its register.
 
 **Procedure**:
 
-1. **Read the register** — `.autoflow/issue-{N}-architect-register.json`. Its `entries` show every concern the prior run raised with its `conclusion`, `evidence` and `status`; `escalation` states why the run stopped. Its `lastResponses` field records each side's final verdict object — before deciding whether to spend a resume round, open it and read which side stopped short and on what verdict, since after an `ESCALATE` the ledger holds one outcome entry and no per-side record. No control-flow path reads that field; the operator is its reader.
-2. **Decide.** A resume is worth one round when the open entries look closable by one further exchange. When they do not — the split is a design disagreement needing a redefinition, or the run escalated for an infrastructure cause — resume is not the instrument, and the workflow refuses several of those shapes on its own (see the guard sentinels in [`teammate-contracts.md`](teammate-contracts.md) > Facilitator).
-3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The run continues from the register's `lastRound`, admits **exactly one** further round (`cap + 1`), and that round may converge through the closing half-round when the Developer AI answers with a grounded ACCEPT **and** **no register entry is left `open`** after that turn's dispositions — a resume converges only once its carried agenda is disposed of, since the entries' original raisers are no longer live to withdraw them. A converged resume returns `CONVERGED` only when the Reconcile check that follows finds no unauthorized acceptance-criterion change, and `AC_CHANGE` when it does. Otherwise the run returns `ESCALATE` with the sentinel `resume register still open at convergence`, the register is rewritten with those entries still open, and a further resume re-enters on the same agenda rather than being latched out by the `already converged` guard.
+1. **Read the register** — `.autoflow/issue-{N}-architect-register.json`. Its `entries` show every concern the prior run raised with its `conclusion`, `evidence` and `status`; `escalation` states why the run stopped. Its `lastResponses` field records each side's final turn report (`modified`/`accept` plus counters) — before deciding whether to spend a resume exchange, open it and read which state the run ended in: a final turn still modifying means the revision cycle ran out of budget (an extension is the natural prescription), while an unmodified `accept: false` deadlock means the same objection is likely to repeat — deciding the disputed point directly (e.g. an `[ac-decision]` ruling) may serve better than an extension. After an `ESCALATE` the ledger holds one outcome entry and no per-side record. No control-flow path reads that field; the operator is its reader.
+2. **Decide.** A resume is worth one exchange when the open entries look closable by one further exchange. When they do not — the split is a design disagreement needing a redefinition, or the run escalated for an infrastructure cause — resume is not the instrument, and the workflow refuses several of those shapes on its own (see the guard sentinels in [`teammate-contracts.md`](teammate-contracts.md) > Facilitator).
+3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The run continues from the register's `lastTurn` and admits **exactly one** further exchange (two turns, side parity continuing). The resumed run's first turn has no predecessor to pair with, so the exchange converges only on its own two unmodified-accept turns; the open register entries are the exchange's **agenda**, carried into both prompts, not a convergence condition. A converged resume returns `CONVERGED` only when the Reconcile check that follows finds no unauthorized acceptance-criterion change, and `AC_CHANGE` when it does; otherwise the run returns `ESCALATE`, the register is rewritten, and a further resume re-enters on the same agenda rather than being latched out by the `already converged` guard.
 4. **Route the return** exactly as a cold run's: `CONVERGED` → GATE:PLAN (after the artifact-existence check above), `AC_CHANGE` → the *Orchestrator disposition* above — report situation-first, set `active: false` / `phase: "awaiting-user"`, and **do not spawn GATE:PLAN** (a resume converging into an AC pause routes to the operator, not to the gate), `ESCALATE` → back to the operator, who may resume again.
 
-**Cap and counter accounting** — a resume is an operator decision that raises the **round** cap by one (6 → 7 → 8 → …) and is unbounded in how many times it may be taken; it does **not** consume the ARCHITECT re-entry budget of 3 per cycle. The re-entry counter tracks whole re-deliberations triggered by GATE:PLAN FAIL or a VERIFY design contradiction; a resume is a continuation of the deliberation already counted, not a new one. The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so this accounting is the orchestrator's, and the return's `resumed` field is what lets it tell the two entries apart.
+**Cap and counter accounting** — a resume is an operator decision that admits one further **exchange** (two turns) past the persisted turn count and is unbounded in how many times it may be taken; it does **not** consume the ARCHITECT re-entry budget of 3 per cycle. The re-entry counter tracks whole re-deliberations triggered by GATE:PLAN FAIL or a VERIFY design contradiction; a resume is a continuation of the deliberation already counted, not a new one. The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so this accounting is the orchestrator's, and the return's `resumed` field is what lets it tell the two entries apart.
 
 ---
 
