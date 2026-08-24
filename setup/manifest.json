@@ -363,7 +363,7 @@
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b0ece03b528f129c1720f1dc92d3397c3c135c0a8a7412ef70cd107c82631a56"
+      "sha256": "40daf7c251cd76de4fe6dcbf13352509fc85739e6eb3e32b79f087cbd02269e7"
     },
     {
       "source": "setup/manifest.json",

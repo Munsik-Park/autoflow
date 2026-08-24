@@ -202,6 +202,13 @@ cmd_check() {
     echo "spawn-policy check: agent definitions directory not found at $AGENTS_DIR (resolved from $CONFIG)" >&2
     return 1
   fi
+  # Every agent_type across .phases[], computed once and reused by the two
+  # loops below (full-set membership, then the autoflow-* partition) instead
+  # of re-querying the same static field from $CONFIG a third time further
+  # down.
+  local all_agent_types
+  all_agent_types=$(jq -r '.phases[].agent_type' "$CONFIG" | sort -u)
+
   local defs
   defs=$(ls "$AGENTS_DIR" 2>/dev/null | sed -n 's/^\(autoflow-[^.]*\)\.md$/\1/p' | sort -u)
   while IFS= read -r t; do
@@ -210,12 +217,12 @@ cmd_check() {
       Explore|Plan|claude-code-guide) continue ;;
     esac
     printf '%s\n' "$defs" | grep -qxF "$t" || _err "phases[].agent_type='$t' names neither a shipped agent definition nor a harness research type"
-  done < <(jq -r '.phases[].agent_type' "$CONFIG" | sort -u)
+  done < <(printf '%s\n' "$all_agent_types")
 
   # Partition (over the autoflow-* half only): the definition basenames equal
   # (autoflow-* phase types) ∪ (policy_unmapped_agent_types keys), disjoint.
   local phase_types unmapped union
-  phase_types=$(jq -r '.phases[].agent_type' "$CONFIG" | grep '^autoflow-' | sort -u)
+  phase_types=$(printf '%s\n' "$all_agent_types" | grep '^autoflow-')
   unmapped=$(jq -r '.policy_unmapped_agent_types // {} | keys[]' "$CONFIG" | sort -u)
   while IFS= read -r t; do
     [ -n "$t" ] || continue
@@ -239,7 +246,7 @@ cmd_check() {
     if [ "$(jq -r --arg t "$t" '[.phases[] | select(.agent_type == $t) | .effort | tostring] | unique | length' "$CONFIG")" != "1" ]; then
       _err "phases sharing agent_type '$t' declare divergent effort values"
     fi
-  done < <(jq -r '.phases[].agent_type' "$CONFIG" | sort -u)
+  done < <(printf '%s\n' "$all_agent_types")
 
   [ "$errs" = "0" ] || return 1
   return 0
