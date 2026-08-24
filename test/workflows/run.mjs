@@ -160,6 +160,17 @@ const runVerifyRaw = async (args, responder, opts = {}) => {
   return { result, error, calls }
 }
 
+// Turn-model shorthands (issue #152). The Converge loop is TURN-based: sides alternate
+// one-participant turns, Test AI first, so turn 2r-1 is the Test half of the r-th exchange and
+// turn 2r its Dev half. `roundOf` recovers that exchange number from a turn label, which is what
+// lets a fixture keep describing itself in exchanges while driving `test-t<N>` / `dev-t<N>` calls.
+const roundOf = (label) => Math.ceil(Number(label.split('-t')[1]) / 2)
+// A turn reports two facts and nothing else decides termination: whether it MODIFIED a design
+// document and whether it ACCEPTs. Two consecutive unmodified accepts converge; anything else
+// continues. `counters` / `accept_grounds` / `dispositions` are the deliberation's record only.
+const ACCEPT_TURN = { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+const OPEN_TURN = { modified: false, accept: false, counters: [], accept_grounds: [], dispositions: [] }
+
 let failures = 0
 async function test(name, fn) {
   try {
@@ -224,9 +235,11 @@ await test('ARCHITECT: a valid policy-load (the real spawn-policy.json content, 
 // `fail-closed-precedes-work` / `required-key-declaration-join`'s ARCHITECT half. Every payload is
 // derived from the REAL on-disk .claude/autoflow/spawn-policy.json (never a hand-written fixture),
 // per §3's composition oracle.
+// Eight site keys since issue #152 retired the cap-round closing half-round -- `test-closing` is
+// no longer declared, no longer called, and carries no config row.
 const ARCH_REQUIRED_KEYS = [
   'dev-draft', 'test-draft', 'register-load', 'test-round', 'dev-round',
-  'test-closing', 'ac-diff', 'ledger', 'register-write',
+  'ac-diff', 'ledger', 'register-write',
 ]
 const VERIFY_REQUIRED_KEYS = ['test-self-check', 'impl-self-check', 'ledger']
 
@@ -289,14 +302,43 @@ await test('ARCHITECT: effort_contract.config_inherit_sentinel empty string -> t
   assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
 })
 
+// Turn ceilings are config values since issue #152: `deliberation_caps["architect-deliberation"]`
+// carries `max_turns` / `bounded_max_turns`, and a payload without a valid caps row is unusable
+// for the same fail-closed reason a missing site row is -- inventing a default here would restore
+// the hardcoded literal the config exists to replace.
+await test('ARCHITECT: deliberation_caps deleted from the policy -> ESCALATE with the caps cause, exactly [policy-load] issued (caps-row-omission-escalates)', async () => {
+  const policyLoad = policyPayload((p) => { delete p.deliberation_caps })
+  const { result, calls } = await runArch(
+    { issue: 'policy-caps-missing' },
+    () => { throw new Error('no sub-agent should be spawned under a policy carrying no turn ceilings') },
+    { policyLoad },
+  )
+  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.escalation, 'spawn policy deliberation caps incomplete (deliberation_caps.architect-deliberation)')
+  assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
+})
+
+for (const [name, mutate] of [
+  ['max_turns below one full exchange', (p) => { p.deliberation_caps['architect-deliberation'].max_turns = 1 }],
+  ['bounded_max_turns non-integer', (p) => { p.deliberation_caps['architect-deliberation'].bounded_max_turns = 2.5 }],
+  ['the caps row is an array', (p) => { p.deliberation_caps['architect-deliberation'] = [12, 4] }],
+]) {
+  await test(`ARCHITECT: a caps row with ${name} is a config defect, not a small budget -> ESCALATE with the caps cause (caps-row-shape)`, async () => {
+    const { result } = await runArch({ issue: `policy-caps-${name.replace(/\W+/g, '-')}` }, () => null, { policyLoad: policyPayload(mutate) })
+    assert.equal(result.verdict, 'ESCALATE')
+    assert.match(result.escalation, /spawn policy deliberation caps incomplete/)
+  })
+}
+
+// Converges on the second exchange: turns 1-2 disagree, turns 3-4 are the unmodified accept pair.
 function fullConvergenceResponder() {
   return (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
   }
 }
 
@@ -361,67 +403,98 @@ await test('ARCHITECT: a workflow_sites row carrying an UNADMITTED falsy effort 
   assert.equal(call.opts.effort, '', `the unadmitted value must reach the spawn opts verbatim (not coerced), got opts=${JSON.stringify(call.opts)}`)
 })
 
-await test('ARCHITECT: converges at round 2 with a grounded ACCEPT, ledger = mutual ACCEPT', async () => {
+await test('ARCHITECT: converges on the second exchange (turns 3+4 both unmodified accepts), ledger = mutual ACCEPT', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
   }
   const { result, calls } = await runArch({ issue: '1' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
-  assert.equal(result.rounds, 2)
+  assert.equal(result.turns, 4)
   assert.match(calls.find((c) => c.label === 'ledger').prompt, /ARCHITECT mutual ACCEPT/)
 })
 
-await test('ARCHITECT: first-exchange ACCEPT cannot converge (round 1 blocked)', async () => {
+// Issue #152 Case A, replacing the retired "round-1 mutual ACCEPT is structurally blocked" test:
+// the first-exchange devil's-advocate sentence is prompt guidance, not a convergence guard, so
+// immediate agreement at turns 1 and 2 DOES converge. The mock runtime does not obey prompts,
+// which is exactly why the structural outcome is what this suite can assert.
+await test('ARCHITECT: immediate agreement — turns 1 and 2 both unmodified accepts converge at turn 2 (#152 Case A)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] } // ACCEPT every round
+    return ACCEPT_TURN
   }
   const { result } = await runArch({ issue: '1' }, responder)
-  assert.equal(result.rounds, 2, 'must not stop at round 1')
   assert.equal(result.verdict, 'CONVERGED')
+  assert.equal(result.turns, 2)
 })
 
-await test('ARCHITECT: ACCEPT without grounds never converges -> ESCALATE + non-convergence ledger', async () => {
+// The first turn of a run has no predecessor to pair with, so it can never converge alone --
+// the one early-turn condition the termination rule still carries (issue #152).
+await test('ARCHITECT: the first turn cannot converge alone — an accepting turn 1 followed by a non-accepting turn 2 runs on', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
+    const t = Number(label.split('-t')[1])
+    if (t === 2) return OPEN_TURN
+    return ACCEPT_TURN
+  }
+  const { result } = await runArch({ issue: '1' }, responder)
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.equal(result.turns, 4, 'the accepting pair is turns 3+4, not the lone accepting turn 1')
+})
+
+// Replaces the retired "ACCEPT without grounds never converges": accept_grounds is a record
+// field, not a termination input (issue #152). Persistent disagreement is what exhausts the
+// ceiling now, and the ceiling is the config's `max_turns` (12), not a MAX_ROUNDS literal.
+await test('ARCHITECT: persistent non-acceptance runs to the 12-turn ceiling -> ESCALATE + non-convergence ledger', async () => {
+  const responder = (label) => {
+    if (label.endsWith('-draft')) return 'drafted'
+    if (label === 'ledger') return 'ledger ok'
+    return OPEN_TURN
   }
   const { result, calls } = await runArch({ issue: '1' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.rounds, 6)
+  assert.equal(result.turns, 12)
+  assert.equal(result.escalation, 'No convergence within 12 turns (reached turn 12)')
   const ledger = calls.find((c) => c.label === 'ledger').prompt
   assert.match(ledger, /ARCHITECT non-convergence/)
   assert.doesNotMatch(ledger, /ARCHITECT mutual ACCEPT/)
 })
 
-await test('ARCHITECT: ACCEPT carrying open counters does not converge', async () => {
+// Replaces the retired "ACCEPT carrying open counters does not converge": counters no longer
+// block convergence (they are record-only). What blocks it is a MODIFICATION — a turn that
+// edited a design document owes the other side a review, whatever its `accept` says.
+await test('ARCHITECT: a modifying accepting turn does not converge; the following unmodified pair does (#152 Case B)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: ['still open'], accept_grounds: ['x: ok'] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
+    const t = Number(label.split('-t')[1])
+    if (t === 2) return { modified: true, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return ACCEPT_TURN
   }
   const { result } = await runArch({ issue: '1' }, responder)
-  assert.equal(result.verdict, 'ESCALATE')
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.equal(result.turns, 4, 'the modifying accept at turn 2 cannot terminate; turns 3+4 do')
 })
 
-await test('ARCHITECT: unresolved counter is threaded into the next round prompt', async () => {
+await test('ARCHITECT: unresolved counter is threaded into the next exchange\'s prompts', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['SCHEMA_GAP_42'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['SCHEMA_GAP_42'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '1' }, responder)
-  assert.match(calls.find((c) => c.label === 'dev-r2').prompt, /SCHEMA_GAP_42/)
+  assert.match(calls.find((c) => c.label === 'dev-t4').prompt, /SCHEMA_GAP_42/)
 })
 
 await test('ARCHITECT: missing args.issue throws at the boundary', async () => {
@@ -434,7 +507,7 @@ await test('ARCHITECT: missing args.issue throws at the boundary', async () => {
 await test('ARCHITECT: args delivered as a JSON string (real runtime form) resolves issue', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft') || label === 'ledger') return 'ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   // The Workflow runtime delivers args as a JSON STRING, not an object — pre-fix
   // this threw "args.issue is required"; the argv normalizer must resolve it.
@@ -447,13 +520,13 @@ await test('ARCHITECT: draft-null recorded as missing -> early ESCALATE', async 
     if (label === 'dev-draft') return null // simulate skipped/errored draft sub-agent
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result, calls } = await runArch({ issue: '845-1' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.rounds, 0, 'Converge loop must not be entered on a missing draft')
+  assert.equal(result.turns, 0, 'Converge loop must not be entered on a missing draft')
   assert.match(result.escalation, /draft agent missing/)
-  assert.ok(!calls.some((c) => /-r\d/.test(c.label)), 'no Converge-round call should be made')
+  assert.ok(!calls.some((c) => /-t\d/.test(c.label)), 'no Converge-round call should be made')
   const ledger = calls.find((c) => c.label === 'ledger').prompt
   assert.match(ledger, /missing/)
   assert.match(ledger, /ARCHITECT non-convergence/)
@@ -464,33 +537,32 @@ await test('ARCHITECT: both-null x2 consecutive -> early ESCALATE (budget not ex
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1 || r === 2) return null // both dev-rN and test-rN null for rounds 1 and 2
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    const r = roundOf(label)
+    if (r === 1 || r === 2) return null // every turn of the first two exchanges is missing
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch({ issue: '845-2' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.rounds, 2, 'must exit at round 2, not exhaust MAX_ROUNDS (6)')
-  assert.match(result.escalation, /sub-agent missing for 2 consecutive/)
+  assert.equal(result.turns, 2, 'must exit at the second consecutive null turn, not run to the 12-turn ceiling')
+  assert.match(result.escalation, /sub-agent missing for 2 consecutive turn\(s\)/)
 })
 
 await test('ARCHITECT: single transient one-side-null still converges (regression-lock, not RED-discriminating)', async () => {
-  // Round 1: dev-r1 null, test-r1 a grounded (but round-1-blocked) ACCEPT. Round 2: both ACCEPT.
-  // Per verification design §1/§3: this locks the "one-side-null does not early-exit and a
-  // single null round still gets a retry" guarantee. It is NOT expected to fail against the
-  // current pre-fix script (both pre- and post-fix converge at round 2 here) — its purpose is
-  // to catch a FUTURE regression to an any-null-triggers-escalate threshold.
+  // Turn 1 accepts, turn 2 is missing, turns 3+4 are the unmodified accept pair. The hole does
+  // not early-exit (one null is transient, not a persistent infra failure) and it does not pair
+  // across itself either: prevTurn is null after a missing turn (issue #152), so the two accepts
+  // on either side of the gap — both test-side — never converge together.
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
+    const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) return null
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch({ issue: '845-3' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
-  assert.equal(result.rounds, 2)
+  assert.equal(result.turns, 4)
 })
 
 await test('ARCHITECT: draft non-null with a withheld artifact no longer early-ESCALATEs (regression lock on the §D7 capability removal, issue #62)', async () => {
@@ -502,16 +574,16 @@ await test('ARCHITECT: draft non-null with a withheld artifact no longer early-E
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result, calls } = await runArch({ issue: '845-4' }, responder, { omitArtifact: 'verif' })
   assert.equal(result.verdict, 'CONVERGED')
-  assert.ok(result.rounds > 0, 'Converge loop must be entered even when a draft artifact was withheld')
+  assert.ok(result.turns > 0, 'Converge loop must be entered even when a draft artifact was withheld')
   assert.ok(!String(result.escalation ?? '').includes('draft artifact missing'))
-  assert.ok(calls.some((c) => /-r\d/.test(c.label)), 'Converge-round calls must be made')
+  assert.ok(calls.some((c) => /-t\d/.test(c.label)), 'Converge-round calls must be made')
 })
 
-// ---- ARCHITECT: sequential test->dev rounds + carry compaction + citation
+// ---- ARCHITECT: alternating test->dev turns + carry compaction + citation
 // partitioning by mutability (issue #62) ----------------------------------
 // Verification design §1/§5 (.autoflow/issue-62-verification-design.md). The
 // 15 cases below are RED against the current concurrent-round script; several
@@ -524,81 +596,82 @@ await test('ARCHITECT: test-side call completes before the dev-side call is invo
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'test-r1') {
+    if (label === 'test-t1') {
       return new Promise((resolve) => setTimeout(() => {
         testResolved = true
-        resolve({ response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] })
+        resolve({ modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] })
       }, 15))
     }
-    if (label === 'dev-r1') {
+    if (label === 'dev-t2') {
       devSawTestResolved = testResolved
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+      return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
     }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   await runArch({ issue: '62-1' }, responder)
-  assert.equal(devSawTestResolved, true, 'dev-r1 must be invoked only after test-r1 has resolved')
+  assert.equal(devSawTestResolved, true, 'dev-t2 must be invoked only after test-t1 has resolved')
 })
 
-await test('ARCHITECT: dev-rN prompt carries the same-round test-rN counter token (AC-62-2)', async () => {
+await test('ARCHITECT: the Dev turn prompt carries the immediately-preceding Test turn counter token (AC-62-2)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'test-r1') return { response: 'COUNTER', counters: ['TEST_PEER_TOKEN_62'], accept_grounds: [] }
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: ['dev-c1'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: ['TEST_PEER_TOKEN_62'], accept_grounds: [] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: ['dev-c1'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '62-2' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
   assert.match(devR1, /TEST_PEER_TOKEN_62/)
 })
 
-await test('ARCHITECT: test-r2 lacks the round-2 dev token but carries the round-1 one via ${carry} (AC-62-3)', async () => {
+await test('ARCHITECT: test-t3 cannot carry the not-yet-run dev-t4 token, and carries the dev-t2 one via ${carry} (AC-62-3)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: ['R1_DEV_TOKEN_62'], accept_grounds: [] }
-    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
-    if (label === 'dev-r2') return { response: 'COUNTER', counters: ['R2_DEV_TOKEN_62'], accept_grounds: [] }
-    if (label === 'test-r2') return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: ['R1_DEV_TOKEN_62'], accept_grounds: [] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: ['t1'], accept_grounds: [] }
+    if (label === 'dev-t4') return { modified: false, accept: false, counters: ['R2_DEV_TOKEN_62'], accept_grounds: [] }
+    if (label === 'test-t3') return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '62-3' }, responder)
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
   assert.doesNotMatch(testR2, /R2_DEV_TOKEN_62/)
   assert.match(testR2, /R1_DEV_TOKEN_62/)
 })
 
-await test('ARCHITECT: recorded call-log index of test-rN precedes dev-rN, every round (AC-62-4)', async () => {
+await test('ARCHITECT: recorded call-log index of the Test turn precedes the Dev turn, every exchange (AC-62-4)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r < 3) return { response: 'COUNTER', counters: [`c${r}`], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    const r = roundOf(label)
+    if (r < 3) return { modified: false, accept: false, counters: [`c${r}`], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '62-4' }, responder)
+  // Alternation is by turn parity (issue #152): exchange r is turn 2r-1 (Test) then turn 2r (Dev).
   for (let r = 1; r <= 3; r++) {
-    const testIdx = calls.findIndex((c) => c.label === `test-r${r}`)
-    const devIdx = calls.findIndex((c) => c.label === `dev-r${r}`)
-    assert.ok(testIdx >= 0 && devIdx >= 0, `round ${r} calls must exist`)
-    assert.ok(testIdx < devIdx, `round ${r}: test-r${r} (idx ${testIdx}) must precede dev-r${r} (idx ${devIdx})`)
+    const testIdx = calls.findIndex((c) => c.label === `test-t${2 * r - 1}`)
+    const devIdx = calls.findIndex((c) => c.label === `dev-t${2 * r}`)
+    assert.ok(testIdx >= 0 && devIdx >= 0, `exchange ${r} calls must exist`)
+    assert.ok(testIdx < devIdx, `exchange ${r}: test-t${2 * r - 1} (idx ${testIdx}) must precede dev-t${2 * r} (idx ${devIdx})`)
   }
 })
 
-await test('ARCHITECT: test-side null in a round still lets dev run that round (AC-62-8 new case)', async () => {
+await test('ARCHITECT: a missing Test turn still lets the Dev turn run, and does not pair across the gap (AC-62-8 new case)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
+    const r = roundOf(label)
     if (r === 1 && label.startsWith('test-')) return null
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result, calls } = await runArch({ issue: '62-5' }, responder)
-  assert.ok(calls.some((c) => c.label === 'dev-r1'), 'dev-r1 must still be invoked despite test-r1 being null')
+  assert.ok(calls.some((c) => c.label === 'dev-t2'), 'dev-t2 must still be invoked despite test-t1 being null')
   assert.equal(result.verdict, 'CONVERGED')
-  assert.equal(result.rounds, 2)
+  assert.equal(result.turns, 3, 'turn 2 has a null predecessor and cannot converge; turns 2+3 are the first real pair')
 })
 
 // AC-62-9 ("carried counter argument prose tail is absent from both r2 prompts") is
@@ -611,35 +684,35 @@ await test('ARCHITECT: test-side null in a round still lets dev run that round (
 // cycle's RED discriminators. The old test is retired here rather than left in place, since
 // keeping it would assert the property AC17 exists to reverse — a silent contradiction the
 // per-test disposition table (feature design §4 item 2) did not separately enumerate.
-await test('ARCHITECT: conclusion crosses the round boundary — a raised concern\'s argument/conclusion reaches both r2 prompts (AC17, conclusion-crosses-boundary)', async () => {
+await test('ARCHITECT: conclusion crosses the round boundary — a raised concern\'s argument/conclusion reaches the following turns\' prompts (AC17, conclusion-crosses-boundary)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: 'NAME_X_67', locator: 'LOC_X_67', argument: 'CONCLUSION_PROBE_67' }], accept_grounds: [], dispositions: [] }
-    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: [{ agenda: 'NAME_X_67', locator: 'LOC_X_67', argument: 'CONCLUSION_PROBE_67' }], accept_grounds: [], dispositions: [] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: ['t1'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-conclusion' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
-  assert.match(devR2, /CONCLUSION_PROBE_67/, 'dev-r2 must carry the substantive conclusion content, not only the name/locator')
-  assert.match(testR2, /CONCLUSION_PROBE_67/, 'test-r2 must carry the substantive conclusion content, not only the name/locator')
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
+  assert.match(devR2, /CONCLUSION_PROBE_67/, 'dev-t4 must carry the substantive conclusion content, not only the name/locator')
+  assert.match(testR2, /CONCLUSION_PROBE_67/, 'test-t3 must carry the substantive conclusion content, not only the name/locator')
 })
 
-await test('ARCHITECT: no counter lost to compaction — every open counter agenda reaches both r2 prompts (AC-62-10)', async () => {
+await test('ARCHITECT: no counter lost to compaction — every open counter agenda reaches the following turns\' prompts (AC-62-10)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: 'AGENDA_A_62', locator: 'a' }, { agenda: 'AGENDA_B_62', locator: 'b' }], accept_grounds: [] }
-    if (label === 'test-r1') return { response: 'COUNTER', counters: [{ agenda: 'AGENDA_C_62', locator: 'c' }], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: [{ agenda: 'AGENDA_A_62', locator: 'a' }, { agenda: 'AGENDA_B_62', locator: 'b' }], accept_grounds: [] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: [{ agenda: 'AGENDA_C_62', locator: 'c' }], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '62-7' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
   for (const tok of ['AGENDA_A_62', 'AGENDA_B_62', 'AGENDA_C_62']) {
-    assert.ok(devR2.includes(tok), `dev-r2 must carry ${tok}`)
-    assert.ok(testR2.includes(tok), `test-r2 must carry ${tok}`)
+    assert.ok(devR2.includes(tok), `dev-t4 must carry ${tok}`)
+    assert.ok(testR2.includes(tok), `test-t3 must carry ${tok}`)
   }
 })
 
@@ -647,13 +720,13 @@ await test('ARCHITECT: bare-string counter becomes a named register entry, name=
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: ['STALE_PROBE_62'], accept_grounds: [], dispositions: [] }
-    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: ['STALE_PROBE_62'], accept_grounds: [], dispositions: [] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: ['t1'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-11a' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
   for (const p of [devR2, testR2]) {
     assert.match(p, /STALE_PROBE_62/, 'the bare string becomes the entry name')
     assert.match(p, /unspecified/, 'evidence defaults to the unspecified placeholder')
@@ -664,13 +737,13 @@ await test('ARCHITECT: record without agenda normalized via JSON.stringify(item)
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ locator: 'PARTIAL_PROBE_62' }], accept_grounds: [], dispositions: [] }
-    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: [{ locator: 'PARTIAL_PROBE_62' }], accept_grounds: [], dispositions: [] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: ['t1'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-11b' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
   for (const p of [devR2, testR2]) {
     assert.ok(p.includes('PARTIAL_PROBE_62'), 'the locator content must reach the register (as the item\'s own JSON.stringify name)')
   }
@@ -680,13 +753,13 @@ await test('ARCHITECT: null counter item renders as unspecified concern, never {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: [null], accept_grounds: [], dispositions: [] }
-    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: [null], accept_grounds: [], dispositions: [] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: ['t1'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-11c' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
   for (const p of [devR2, testR2]) {
     assert.match(p, /unspecified concern/)
     assert.doesNotMatch(p, /\{\}/)
@@ -707,13 +780,13 @@ await test('ARCHITECT: no character cap or truncation marker survives in the scr
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: longAgenda, locator: 'src/x.js:1', argument: longConclusion }], accept_grounds: [], dispositions: [] }
-    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: [{ agenda: longAgenda, locator: 'src/x.js:1', argument: longConclusion }], accept_grounds: [], dispositions: [] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: ['t1'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-notrunc' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
   for (const p of [devR2, testR2]) {
     assert.ok(!p.includes('…[truncated]'), 'no truncation marker literal may appear in a rendered prompt')
     assert.ok(p.includes(longAgenda), 'an over-long name must survive untruncated in the register')
@@ -721,29 +794,29 @@ await test('ARCHITECT: no character cap or truncation marker survives in the scr
   }
 })
 
-await test('ARCHITECT: dev-r1 prompt instructs section/item-ID citation for mutable design-doc targets (AC-62-15)', async () => {
+await test('ARCHITECT: dev-t2 prompt instructs section/item-ID citation for mutable design-doc targets (AC-62-15)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '62-12' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
   assert.match(devR1, /cite it by section heading or item ID, never by line number/)
 })
 
-await test('ARCHITECT: dev-r1 prompt reserves path:line citation for immutable repository source (AC-62-16)', async () => {
+await test('ARCHITECT: dev-t2 prompt reserves path:line citation for immutable repository source (AC-62-16)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '62-13' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
   assert.match(devR1, /reserve `path:line` for immutable repository source files/)
 })
 
-await test('ARCHITECT: DEV_OPEN_CONCERN_RULE (document-as-durable-channel) no longer reaches dev-r1 (AC8, open-concern-rule-gone)', async () => {
+await test('ARCHITECT: DEV_OPEN_CONCERN_RULE (document-as-durable-channel) no longer reaches dev-t2 (AC8, open-concern-rule-gone)', async () => {
   // AC-62-28i deleted outright (its whole purpose is the mechanism AC8 removes). Retargeted
   // per feature design §5.1 test-contract-conflict: assert the literal phrase is gone from
   // the delivered script, not merely from one prompt.
@@ -751,15 +824,15 @@ await test('ARCHITECT: DEV_OPEN_CONCERN_RULE (document-as-durable-channel) no lo
   assert.doesNotMatch(src, /record its argument as a named open-concern entry/)
 })
 
-await test('ARCHITECT: register no-relitigation instruction reaches both round prompts, byte-identical, and neither Draft prompt (AC-62-28ii re-anchored to REGISTER_RULE / AC11b)', async () => {
+await test('ARCHITECT: register no-relitigation instruction reaches both turn prompts, byte-identical, and neither Draft prompt (AC-62-28ii re-anchored to REGISTER_RULE / AC11b)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-register-scope' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
+  const testR1 = calls.find((c) => c.label === 'test-t1').prompt
   const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
   const testDraft = calls.find((c) => c.label === 'test-draft').prompt
   // No exact prose is fixed by the feature design for the new REGISTER_RULE constant (unlike
@@ -768,8 +841,8 @@ await test('ARCHITECT: register no-relitigation instruction reaches both round p
   // "not reopened without a new verified fact" rule, present identically on both round-1
   // prompts (AC11b: REGISTER_RULE is byte-identical in dev-r*/test-r*) and absent from Draft.
   const reopenPattern = /not (?:be )?reopen\w* without (?:a )?(?:newly )?verified fact/i
-  assert.match(devR1, reopenPattern, 'dev-r1 must carry the no-relitigation instruction')
-  assert.match(testR1, reopenPattern, 'test-r1 must carry the no-relitigation instruction')
+  assert.match(devR1, reopenPattern, 'dev-t2 must carry the no-relitigation instruction')
+  assert.match(testR1, reopenPattern, 'test-t1 must carry the no-relitigation instruction')
   const devMatch = devR1.match(reopenPattern)[0]
   const testMatch = testR1.match(reopenPattern)[0]
   assert.equal(devMatch, testMatch, 'the no-relitigation instruction must be byte-identical across roles')
@@ -779,26 +852,26 @@ await test('ARCHITECT: register no-relitigation instruction reaches both round p
 
 // ---- ARCHITECT: issue register + disposition redesign (issue #67) -------------
 // Verification design §2 (.autoflow/issue-67-verification-design.md). The register replaces
-// the round-local open-counter carry: a concern raised in round n and not disposed of must
-// still reach round n+2's prompts (AC1), in place rather than duplicated (AC2), and a
+// the round-local open-counter carry: a concern raised on one turn and not disposed of must
+// still reach the prompts two turns later (AC1), in place rather than duplicated (AC2), and a
 // returned disposition must be able to flip its status (AC3) subject to raiser precedence
 // (AC16) and admission rules (AC18). Each entry renders as four labelled lines plus a `---`
 // terminator (AC4), with no character truncation (AC5, covered above) and no concern ever
 // lost to normalization (AC6, covered above via the re-anchored AC-62-11a/b/c). None of
 // these tests exist against the current carry-based script — every one is RED at HEAD.
 
-await test('ARCHITECT: a raised, undisposed concern is still carried at round n+2 (AC1, register-carried)', async () => {
+await test('ARCHITECT: a raised, undisposed concern is still carried two exchanges later (AC1, register-carried)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_CARRIED_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'COUNTER', counters: ['t1'], accept_grounds: [], dispositions: [] }
-    if (r === 2) return { response: 'COUNTER', counters: ['unrelated-c2'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_CARRIED_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: false, counters: ['t1'], accept_grounds: [], dispositions: [] }
+    if (r === 2) return { modified: false, accept: false, counters: ['unrelated-c2'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-carried' }, responder)
-  for (const label of ['dev-r2', 'test-r2', 'dev-r3', 'test-r3']) {
+  for (const label of ['dev-t4', 'test-t3', 'dev-t6', 'test-t5']) {
     const prompt = calls.find((c) => c.label === label).prompt
     assert.match(prompt, /NAME_CARRIED_67/, `${label} must still carry the undisposed concern`)
   }
@@ -808,23 +881,23 @@ await test('ARCHITECT: a resolved entry stays in the register alongside a fresh 
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_X_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'COUNTER', counters: ['t1'], accept_grounds: [], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_X_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: false, counters: ['t1'], accept_grounds: [], dispositions: [] }
     if (r === 2 && label.startsWith('dev-')) {
       return {
-        response: 'COUNTER',
+        modified: false, accept: false,
         counters: [{ agenda: 'NAME_Y_67', locator: 'l2', argument: 'a2' }],
         accept_grounds: [],
         dispositions: [{ name: 'NAME_X_67', conclusion: 'resolved', evidence: 'e', status: 'agreed' }],
       }
     }
-    if (r === 2) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (r === 2) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-cumulative' }, responder)
-  const devR3 = calls.find((c) => c.label === 'dev-r3').prompt
-  const testR3 = calls.find((c) => c.label === 'test-r3').prompt
+  const devR3 = calls.find((c) => c.label === 'dev-t6').prompt
+  const testR3 = calls.find((c) => c.label === 'test-t5').prompt
   for (const p of [devR3, testR3]) {
     assert.match(p, /NAME_X_67/, 'the resolved entry must not be dropped by a wholesale reassignment')
     assert.match(p, /NAME_Y_67/, 'the fresh entry raised alongside the disposition must also be carried')
@@ -835,10 +908,10 @@ await test('ARCHITECT: same name raised twice merges into one entry — in-place
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
+    const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) {
       return {
-        response: 'COUNTER',
+        modified: false, accept: false,
         counters: [
           { agenda: 'Register key', locator: 'l1', argument: 'a1' },
           { agenda: 'register  key', locator: 'l2', argument: 'a2' },
@@ -847,11 +920,11 @@ await test('ARCHITECT: same name raised twice merges into one entry — in-place
         dispositions: [],
       }
     }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-nearmiss1' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
   const nameLines = devR2.match(/^name: .*$/gm) || []
   assert.equal(nameLines.length, 1, 'case/whitespace near-miss names must merge into a single entry')
   assert.match(devR2, /^name: Register key$/m, 'the merged entry keeps the first-raised display name')
@@ -861,10 +934,10 @@ await test('ARCHITECT: names differing by content stay distinct entries (AC2, ne
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
+    const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) {
       return {
-        response: 'COUNTER',
+        modified: false, accept: false,
         counters: [
           { agenda: 'Register key A', locator: 'l1', argument: 'a1' },
           { agenda: 'Register key B', locator: 'l2', argument: 'a2' },
@@ -873,11 +946,11 @@ await test('ARCHITECT: names differing by content stay distinct entries (AC2, ne
         dispositions: [],
       }
     }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-nearmiss2' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
   const nameLines = devR2.match(/^name: .*$/gm) || []
   assert.equal(nameLines.length, 2, 'names differing by content must not merge')
   assert.match(devR2, /^name: Register key A$/m)
@@ -890,19 +963,19 @@ await test('ARCHITECT: register block grows linearly — N distinct names produc
     const responder = (label) => {
       if (label.endsWith('-draft')) return 'drafted'
       if (label === 'ledger') return 'ledger ok'
-      const r = Number(label.split('-r')[1])
+      const r = roundOf(label)
       if (r === 1 && label.startsWith('dev-')) {
         return {
-          response: 'COUNTER',
+          modified: false, accept: false,
           counters: names.map((agenda) => ({ agenda, locator: 'l', argument: 'a' })),
           accept_grounds: [],
           dispositions: [],
         }
       }
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+      return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
     }
     const { calls } = await runArch({ issue: `67-growth-${n}` }, responder)
-    const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+    const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
     const nameLines = devR2.match(/^name: .*$/gm) || []
     const terminators = devR2.match(/^---$/gm) || []
     assert.equal(nameLines.length, n, `N=${n}: name-line count must equal entry count`)
@@ -914,19 +987,19 @@ await test('ARCHITECT: a rendered entry is four labelled lines + one terminator;
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
+    const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) {
       return {
-        response: 'COUNTER',
+        modified: false, accept: false,
         counters: [{ agenda: 'NAME_WS_67', locator: 'a\tb  c', argument: 'line1\nline2\r\nline3   end' }],
         accept_grounds: [],
         dispositions: [],
       }
     }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-entryshape' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
   const m = devR2.match(/^name: NAME_WS_67\nconclusion: ([^\n]*)\nevidence: ([^\n]*)\nstatus: ([^\n]*)\n---$/m)
   assert.ok(m, 'the entry must render as exactly four labelled lines followed by one terminator line')
   assert.equal(m[1], 'line1 line2 line3 end', 'embedded newlines/CRLF/space-runs in conclusion must collapse to single spaces')
@@ -937,14 +1010,14 @@ await test('ARCHITECT: a field whose flattened value is exactly "---" renders as
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
+    const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) {
-      return { response: 'COUNTER', counters: [{ agenda: 'NAME_DASH_67', locator: 'l', argument: '---' }], accept_grounds: [], dispositions: [] }
+      return { modified: false, accept: false, counters: [{ agenda: 'NAME_DASH_67', locator: 'l', argument: '---' }], accept_grounds: [], dispositions: [] }
     }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-dashfield' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
   assert.match(devR2, /^conclusion: ---$/m, 'a field whose value is exactly the delimiter literal must still render as a labelled content line')
   const terminators = devR2.match(/^---$/gm) || []
   assert.equal(terminators.length, 1, 'the delimiter-valued field line must not be double-counted as a terminator')
@@ -954,29 +1027,33 @@ await test('ARCHITECT: a returned disposition sets the entry status, which survi
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_DISP_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_DISP_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
     if (r === 2 && label.startsWith('dev-')) {
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_DISP_67', conclusion: 'fixed', evidence: 'e', status: 'agreed' }] }
+      return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_DISP_67', conclusion: 'fixed', evidence: 'e', status: 'agreed' }] }
     }
-    if (r === 2) return { response: 'COUNTER', counters: ['stay-open'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (r === 2) return { modified: false, accept: false, counters: ['stay-open'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-dispapplied' }, responder)
-  const devR3 = calls.find((c) => c.label === 'dev-r3').prompt
-  const testR3 = calls.find((c) => c.label === 'test-r3').prompt
-  for (const p of [devR3, testR3]) {
-    assert.match(p, /name: NAME_DISP_67[\s\S]{0,120}status: agreed/, 'the disposed entry must reach the next round showing its new status')
-  }
+  // The register is updated after every turn (issue #152), so the disposition returned by the Dev
+  // turn 4 is already visible to the very next turn's prompt.
+  const testT5 = calls.find((c) => c.label === 'test-t5').prompt
+  assert.match(testT5, /name: NAME_DISP_67[\s\S]{0,120}status: agreed/, 'the disposed entry must reach the next turn showing its new status')
 })
 
-await test('ARCHITECT: dispositions schema — VERDICT.required, additionalProperties, and the closed DISPOSITION item shape (AC15, disposition-schema-shape)', async () => {
+await test('ARCHITECT: turn-report schema — TURN.required, additionalProperties, and the closed DISPOSITION item shape (AC15, disposition-schema-shape)', async () => {
   const src = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
-  const verdictMatch = src.match(/const VERDICT = \{[\s\S]*?\n\}/)
-  assert.ok(verdictMatch, 'VERDICT constant must exist')
-  assert.match(verdictMatch[0], /additionalProperties:\s*false/, 'VERDICT must keep additionalProperties: false')
-  assert.match(verdictMatch[0], /required:\s*\[[^\]]*['"]dispositions['"]/, 'dispositions must be in VERDICT.required (empty array permitted, not optional)')
+  // TURN replaced VERDICT in issue #152: the retired `response` verdict enum is gone and the two
+  // termination facts `modified` / `accept` are required alongside the record fields.
+  const turnMatch = src.match(/const TURN = \{[\s\S]*?\n\}/)
+  assert.ok(turnMatch, 'TURN constant must exist')
+  assert.match(turnMatch[0], /additionalProperties:\s*false/, 'TURN must keep additionalProperties: false')
+  assert.doesNotMatch(turnMatch[0], /response:/, 'the retired ACCEPT/COUNTER/PARTIAL verdict field must not survive in TURN')
+  for (const field of ['modified', 'accept', 'counters', 'accept_grounds', 'dispositions']) {
+    assert.match(turnMatch[0], new RegExp(`required:\\s*\\[[^\\]]*['"]${field}['"]`), `TURN.required must name ${field}`)
+  }
   const dispositionMatch = src.match(/const DISPOSITION = \{[\s\S]*?\n\}/)
   assert.ok(dispositionMatch, 'a DISPOSITION constant must exist')
   const seg = dispositionMatch[0]
@@ -991,9 +1068,9 @@ await test('ARCHITECT: dispositions schema — VERDICT.required, additionalPrope
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { result } = await runArch({ issue: '67-schema' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
@@ -1004,18 +1081,18 @@ await test('ARCHITECT: a disposition naming an entry no one raised is ignored �
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_REAL_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_REAL_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
     if (r === 2 && label.startsWith('test-')) {
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NEVER_RAISED_67', conclusion: 'c', evidence: 'e', status: 'rejected' }] }
+      return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NEVER_RAISED_67', conclusion: 'c', evidence: 'e', status: 'rejected' }] }
     }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { result, calls } = await runArch({ issue: '67-admission1' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
-  const devR3 = calls.find((c) => c.label === 'dev-r3')
-  const testR3 = calls.find((c) => c.label === 'test-r3')
+  const devR3 = calls.find((c) => c.label === 'dev-t6')
+  const testR3 = calls.find((c) => c.label === 'test-t5')
   for (const c of [devR3, testR3].filter(Boolean)) {
     assert.doesNotMatch(c.prompt, /NEVER_RAISED_67/, 'an unresolvable disposition name must never be minted into the register')
   }
@@ -1027,21 +1104,21 @@ await test('ARCHITECT: an out-of-enum disposition status is ignored — the entr
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_ENUM_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_ENUM_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
     if (r === 2 && label.startsWith('dev-')) {
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_ENUM_67', conclusion: 'c1', evidence: 'e1', status: 'agreed' }] }
+      return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_ENUM_67', conclusion: 'c1', evidence: 'e1', status: 'agreed' }] }
     }
-    if (r === 2) return { response: 'COUNTER', counters: ['stay-open'], accept_grounds: [], dispositions: [] }
+    if (r === 2) return { modified: false, accept: false, counters: ['stay-open'], accept_grounds: [], dispositions: [] }
     if (r === 3 && label.startsWith('dev-')) {
-      return { response: 'COUNTER', counters: ['still-going'], accept_grounds: [], dispositions: [{ name: 'NAME_ENUM_67', conclusion: 'c2', evidence: 'e2', status: 'open' }] }
+      return { modified: false, accept: false, counters: ['still-going'], accept_grounds: [], dispositions: [{ name: 'NAME_ENUM_67', conclusion: 'c2', evidence: 'e2', status: 'open' }] }
     }
-    if (r === 3) return { response: 'COUNTER', counters: ['stay-open-2'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (r === 3) return { modified: false, accept: false, counters: ['stay-open-2'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-admission2' }, responder)
-  const devR4 = calls.find((c) => c.label === 'dev-r4').prompt
+  const devR4 = calls.find((c) => c.label === 'dev-t8').prompt
   assert.match(devR4, /name: NAME_ENUM_67[\s\S]{0,120}status: agreed/, 'a status outside the enum must be ignored — the entry keeps its last valid status')
 })
 
@@ -1049,13 +1126,13 @@ await test('ARCHITECT: a disposition with a missing/non-string name is ignored w
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_SHAPE_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_SHAPE_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
     if (r === 2 && label.startsWith('dev-')) {
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 123, conclusion: 'c', evidence: 'e', status: 'agreed' }] }
+      return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 123, conclusion: 'c', evidence: 'e', status: 'agreed' }] }
     }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   await assert.doesNotReject(() => runArch({ issue: '67-admission3' }, responder))
 })
@@ -1064,30 +1141,29 @@ await test('ARCHITECT: only the raiser\'s side can close an entry — a peer dis
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('test-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_PREC_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('test-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_PREC_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
     if (r === 2 && label.startsWith('dev-')) {
       // dev is the PEER here (test raised it) — a peer disposition must not close it.
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_PREC_67', conclusion: 'PEER_FIX_67', evidence: 'e', status: 'agreed' }] }
+      return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_PREC_67', conclusion: 'PEER_FIX_67', evidence: 'e', status: 'agreed' }] }
     }
-    if (r === 2) return { response: 'COUNTER', counters: ['stay-open'], accept_grounds: [], dispositions: [] }
+    if (r === 2) return { modified: false, accept: false, counters: ['stay-open'], accept_grounds: [], dispositions: [] }
     if (r === 3 && label.startsWith('test-')) {
-      // test is the RAISER — its own disposition closes it.
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_PREC_67', conclusion: 'PEER_FIX_67', evidence: 'e', status: 'agreed' }] }
+      // test is the RAISER — its own disposition closes it. It keeps countering so the run does
+      // not converge on this turn and the following Dev turn's prompt is still rendered.
+      return { modified: false, accept: false, counters: ['keep-going'], accept_grounds: [], dispositions: [{ name: 'NAME_PREC_67', conclusion: 'PEER_FIX_67', evidence: 'e', status: 'agreed' }] }
     }
-    if (r === 3) return { response: 'COUNTER', counters: ['stay-open-2'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    if (r === 3) return { modified: false, accept: false, counters: ['stay-open-2'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-precedence' }, responder)
-  const devR3 = calls.find((c) => c.label === 'dev-r3').prompt
-  const testR3 = calls.find((c) => c.label === 'test-r3').prompt
-  for (const p of [devR3, testR3]) {
-    assert.match(p, /name: NAME_PREC_67[\s\S]{0,120}status: open/, 'a peer disposition must leave the entry open, one round after the peer proposal')
-    assert.match(p, /PEER_FIX_67/, 'the peer\'s proposed conclusion/evidence must still be carried, even though status stays open')
-  }
-  const devR4 = calls.find((c) => c.label === 'dev-r4').prompt
-  assert.match(devR4, /name: NAME_PREC_67[\s\S]{0,120}status: agreed/, 'the raiser\'s own disposition, returned in a later round, must close the entry')
+  // test-t5 is rendered after the peer's turn-4 disposition and before the raiser's own on turn 5.
+  const testT5 = calls.find((c) => c.label === 'test-t5').prompt
+  assert.match(testT5, /name: NAME_PREC_67[\s\S]{0,120}status: open/, 'a peer disposition must leave the entry open')
+  assert.match(testT5, /PEER_FIX_67/, 'the peer\'s proposed conclusion/evidence must still be carried, even though status stays open')
+  const devT6 = calls.find((c) => c.label === 'dev-t6').prompt
+  assert.match(devT6, /name: NAME_PREC_67[\s\S]{0,120}status: agreed/, 'the raiser\'s own disposition must close the entry')
 })
 
 await test('ARCHITECT: both sides ACCEPT with empty counters while an entry is still open still CONVERGES (AC7b, converge-unaffected-by-open-entry)', async () => {
@@ -1095,28 +1171,28 @@ await test('ARCHITECT: both sides ACCEPT with empty counters while an entry is s
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_SILENT_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_SILENT_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { result } = await runArch({ issue: '67-silentconverge' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
-  assert.equal(result.rounds, 2, 'convergence must not be blocked by an entry no one ever disposed of')
+  assert.equal(result.turns, 4, 'convergence must not be blocked by an entry no one ever disposed of')
 })
 
-await test('ARCHITECT: both round prompts render every open entry and instruct disposal before ACCEPT (AC7, open-entries-rendered-and-disposal-instructed)', async () => {
+await test('ARCHITECT: both turn prompts render every open entry and instruct disposal before an accept (AC7, open-entries-rendered-and-disposal-instructed)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_OPEN2_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'COUNTER', counters: ['t1'], accept_grounds: [], dispositions: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_OPEN2_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: false, counters: ['t1'], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-opendisposal' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
   const disposalPattern = /dispos\w*[^\n]{0,80}(?:before|prior to)[^\n]{0,20}ACCEPT/i
   for (const p of [devR2, testR2]) {
     assert.match(p, /name: NAME_OPEN2_67[\s\S]{0,120}status: open/, 'the open entry must be rendered')
@@ -1129,13 +1205,13 @@ await test('ARCHITECT: CONVERGED ledger names authority "ARCHITECT rejected" and
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1 && label.startsWith('dev-')) return { response: 'COUNTER', counters: [{ agenda: 'NAME_REJ_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
-    if (r === 1) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    const r = roundOf(label)
+    if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_REJ_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
+    if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
     if (r === 2 && label.startsWith('dev-')) {
-      return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_REJ_67', conclusion: 'not valid', evidence: 'e', status: 'rejected' }] }
+      return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [{ name: 'NAME_REJ_67', conclusion: 'not valid', evidence: 'e', status: 'rejected' }] }
     }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { result, calls } = await runArch({ issue: '67-ledgerrejected' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
@@ -1148,7 +1224,7 @@ await test('ARCHITECT: ESCALATE still appends exactly one outcome entry, never t
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: [], dispositions: [] } // never grounded -> never converges
+    return OPEN_TURN // never accepts -> never converges (issue #152: accept_grounds is a record field, not a termination input)
   }
   const { result, calls } = await runArch({ issue: '67-ledgeresc' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
@@ -1161,8 +1237,8 @@ await test('ARCHITECT: ESCALATE grounds carry the rendered open entries, never r
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: 'NAME_ESC_67', locator: 'l', argument: 'GROUNDS_PROBE_67' }], accept_grounds: [], dispositions: [] }
-    return { response: 'COUNTER', counters: ['still-open'], accept_grounds: [], dispositions: [] } // never accepts -> ESCALATE at MAX_ROUNDS
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: [{ agenda: 'NAME_ESC_67', locator: 'l', argument: 'GROUNDS_PROBE_67' }], accept_grounds: [], dispositions: [] }
+    return { modified: false, accept: false, counters: ['still-open'], accept_grounds: [], dispositions: [] } // never accepts -> ESCALATE at the turn ceiling
   }
   const { result, calls } = await runArch({ issue: '67-escgrounds' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
@@ -1177,7 +1253,7 @@ await test('ARCHITECT: an early ESCALATE with no open entry still has non-empty 
     if (label === 'dev-draft') return null // forces earlyEscalateReason before any Converge round
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { result, calls } = await runArch({ issue: '67-escnoopen' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
@@ -1190,13 +1266,13 @@ await test('ARCHITECT: LEDGER_SEED_RULE reaches both Draft prompts only, instruc
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-ledgerseed' }, responder)
   const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
   const testDraft = calls.find((c) => c.label === 'test-draft').prompt
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
+  const testR1 = calls.find((c) => c.label === 'test-t1').prompt
   for (const p of [devDraft, testDraft]) {
     assert.match(p, /ARCHITECT mutual ACCEPT/, 'the Draft prompt must instruct treating prior mutual-ACCEPT ledger entries as non-reopenable')
     assert.match(p, /ARCHITECT rejected/, 'the Draft prompt must instruct treating prior rejected ledger entries as non-reopenable')
@@ -1210,14 +1286,14 @@ await test('ARCHITECT: RECORD_DISCIPLINE_RULE reaches all four prompts — no tr
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'], dispositions: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
   }
   const { calls } = await runArch({ issue: '67-recorddiscipline' }, responder)
   const noTranscription = /(?:measurement logs?|command output|code text)[\s\S]{0,80}(?:never|not)[\s\S]{0,40}(?:copie|transcri|paste)/i
   const designOnly = /design documents?[\s\S]{0,80}(?:only|current design)/i
   const readableNaming = /short[\s\S]{0,20}name/i
   const noTotals = /no totals?(?:\/| or )counts?|totals? (?:and|or) counts? (?:are )?(?:never|not)/i
-  for (const label of ['dev-draft', 'test-draft', 'dev-r1', 'test-r1']) {
+  for (const label of ['dev-draft', 'test-draft', 'dev-t2', 'test-t1']) {
     const p = calls.find((c) => c.label === label).prompt
     assert.match(p, noTranscription, `${label} must forbid transcribing measurement logs/command output/code text`)
     assert.match(p, designOnly, `${label} must require design documents to hold only the current design`)
@@ -1226,7 +1302,7 @@ await test('ARCHITECT: RECORD_DISCIPLINE_RULE reaches all four prompts — no tr
   }
 })
 
-await test('ARCHITECT: REGISTER_RULE does not duplicate the dual-disposition phrase into round 1 (AC20, carry-text-locks-preserved part b)', async () => {
+await test('ARCHITECT: REGISTER_RULE does not duplicate the dual-disposition phrase into turn 1 (AC20, carry-text-locks-preserved part b)', async () => {
   // Complements the untouched AC-56-14b lock (round-1 doesNotMatch on the whole prompt):
   // pins the constraint at its SOURCE declaration, per verification design §5.4's
   // half (b) rationale, so REGISTER_RULE's own wording — which reaches round 1 — cannot
@@ -1242,82 +1318,86 @@ await test('ARCHITECT: REGISTER_RULE does not duplicate the dual-disposition phr
 // A1 = 'are a checklist of topics to re-verify, NOT evidence', A2 = 'may already be resolved'
 // (the non-evidentiary / staleness carry framing, D3: conditional on carry). A6 = 'by
 // dismissing it with the current' (D4 dual disposition, also carry-conditional). The citation
-// rule (A3 trimmed + A7 absence-case escape) is D3 unconditional — delivered every round
-// including round 1, where `carry` is empty.
+// rule (A3 trimmed + A7 absence-case escape) is D3 unconditional — delivered on every turn
+// including turn 1, where `carry` is empty.
+//
+// Re-anchored to turns (issue #152): under alternating one-participant turns the register is
+// already non-empty for the Dev turn 2 when the Test turn 1 raised a counter, so turn 1 — not
+// "round 1" — is the only turn whose carry is structurally empty.
 
-await test('ARCHITECT: carry framing (A1 non-evidentiary + A2 staleness) delivered on round 2, both roles (AC-56-1b)', async () => {
+await test('ARCHITECT: carry framing (A1 non-evidentiary + A2 staleness) delivered from turn 2 on, both roles (AC-56-1b)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['STALE_PROBE_56'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['STALE_PROBE_56'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '56-1' }, responder)
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
+  const devR2 = calls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = calls.find((c) => c.label === 'test-t3').prompt
   assert.match(devR2, /are a checklist of topics to re-verify, NOT evidence/)
   assert.match(devR2, /may already be resolved/)
   assert.match(testR2, /are a checklist of topics to re-verify, NOT evidence/)
   assert.match(testR2, /may already be resolved/)
 })
 
-await test('ARCHITECT: carry framing absent on round 1 (no counters carried yet) (AC-56-2b)', async () => {
+await test('ARCHITECT: carry framing absent on turn 1 (no counters raised yet) (AC-56-2b)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['STALE_PROBE_56'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['STALE_PROBE_56'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '56-2' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
-  assert.doesNotMatch(devR1, /are a checklist of topics to re-verify, NOT evidence/)
-  assert.doesNotMatch(devR1, /may already be resolved/)
-  assert.doesNotMatch(testR1, /are a checklist of topics to re-verify, NOT evidence/)
-  assert.doesNotMatch(testR1, /may already be resolved/)
+  const testT1 = calls.find((c) => c.label === 'test-t1').prompt
+  assert.doesNotMatch(testT1, /are a checklist of topics to re-verify, NOT evidence/)
+  assert.doesNotMatch(testT1, /may already be resolved/)
 })
 
-await test('ARCHITECT: citation rule + absence-case escape delivered to dev on round 1 (AC-56-3b)', async () => {
+await test('ARCHITECT: citation rule + absence-case escape delivered to dev on its first turn (AC-56-3b)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '56-3' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
   assert.match(devR1, /re-read the counterpart document/)
   assert.match(devR1, /name the section where it would belong/)
 })
 
-await test('ARCHITECT: citation rule + absence-case escape delivered to test on round 1 (AC-56-4b)', async () => {
+await test('ARCHITECT: citation rule + absence-case escape delivered to test on its first turn (AC-56-4b)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '56-4' }, responder)
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  const testR1 = calls.find((c) => c.label === 'test-t1').prompt
   assert.match(testR1, /re-read the counterpart document/)
   assert.match(testR1, /name the section where it would belong/)
 })
 
-await test('ARCHITECT: evidence-discipline segment byte-identical between dev and test round-1 prompts (AC-56-5)', async () => {
+await test('ARCHITECT: evidence-discipline segment byte-identical between the Test and Dev first turns (AC-56-5)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '56-5' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
-  // Anchor-delimited extraction (verification design §1 AC-56-5): the substring between
-  // the two literal anchors shared verbatim by both round-1 prompts.
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
+  const testR1 = calls.find((c) => c.label === 'test-t1').prompt
+  // Anchor-delimited extraction (verification design §1 AC-56-5): the substring between the two
+  // literal anchors shared verbatim by both turn prompts. Re-anchored for issue #152 — the old
+  // start anchor sat inside the retired ACCEPT/COUNTER verdict instruction. The shared tail begins
+  // at COUNTER_EVIDENCE_RULE, which both sides interpolate byte-identically.
   const extract = (s) => {
-    const startAnchor = 'leave "accept_grounds" empty.'
+    const startAnchor = ' Before raising or sustaining any counter'
     const endAnchor = ' Run every Bash command'
-    const start = s.indexOf(startAnchor) + startAnchor.length
+    const start = s.indexOf(startAnchor)
+    assert.ok(start >= 0, 'the counter-evidence anchor must be present')
     const end = s.indexOf(endAnchor)
     return s.slice(start, end)
   }
@@ -1331,19 +1411,17 @@ await test('ARCHITECT: dual-disposition clause (A6) delivered only when counters
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['STALE_PROBE_56'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['STALE_PROBE_56'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '56-6' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
-  const devR2 = calls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = calls.find((c) => c.label === 'test-r2').prompt
-  assert.match(devR2, /by dismissing it with the current/)
-  assert.match(testR2, /by dismissing it with the current/)
-  assert.doesNotMatch(devR1, /by dismissing it with the current/)
-  assert.doesNotMatch(testR1, /by dismissing it with the current/)
+  const testT1 = calls.find((c) => c.label === 'test-t1').prompt
+  const devT2 = calls.find((c) => c.label === 'dev-t2').prompt
+  const testT3 = calls.find((c) => c.label === 'test-t3').prompt
+  assert.match(devT2, /by dismissing it with the current/)
+  assert.match(testT3, /by dismissing it with the current/)
+  assert.doesNotMatch(testT1, /by dismissing it with the current/, 'turn 1 is the only turn with an empty register')
 })
 
 // ---- ARCHITECT: adoption-side evidence discipline (issue #59) -----------------
@@ -1358,7 +1436,7 @@ await test('ARCHITECT: adoption-evidence rule reaches dev-draft (AC-59-1b)', asy
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '59-1' }, responder)
   const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
@@ -1370,7 +1448,7 @@ await test('ARCHITECT: adoption-evidence rule reaches test-draft (AC-59-2b)', as
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '59-2' }, responder)
   const testDraft = calls.find((c) => c.label === 'test-draft').prompt
@@ -1378,73 +1456,72 @@ await test('ARCHITECT: adoption-evidence rule reaches test-draft (AC-59-2b)', as
   assert.ok(testDraft.includes(ADOPTION_A9), 'test-draft must carry A9')
 })
 
-await test('ARCHITECT: adoption-evidence rule reaches dev-r1, carry empty (AC-59-3b)', async () => {
+await test('ARCHITECT: adoption-evidence rule reaches the Dev turn, carry empty (AC-59-3b)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '59-3' }, responder)
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
-  assert.ok(devR1.includes(ADOPTION_A8), 'dev-r1 must carry A8')
-  assert.ok(devR1.includes(ADOPTION_A9), 'dev-r1 must carry A9')
-  assert.ok(devR1.includes(ADOPTION_A10), 'dev-r1 must carry A10')
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
+  assert.ok(devR1.includes(ADOPTION_A8), 'dev-t2 must carry A8')
+  assert.ok(devR1.includes(ADOPTION_A9), 'dev-t2 must carry A9')
+  assert.ok(devR1.includes(ADOPTION_A10), 'dev-t2 must carry A10')
 })
 
-await test('ARCHITECT: adoption-evidence rule reaches test-r1 (AC-59-4b)', async () => {
+await test('ARCHITECT: adoption-evidence rule reaches test-t1 (AC-59-4b)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '59-4' }, responder)
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
-  assert.ok(testR1.includes(ADOPTION_A8), 'test-r1 must carry A8')
-  assert.ok(testR1.includes(ADOPTION_A9), 'test-r1 must carry A9')
-  assert.ok(testR1.includes(ADOPTION_A10), 'test-r1 must carry A10')
+  const testR1 = calls.find((c) => c.label === 'test-t1').prompt
+  assert.ok(testR1.includes(ADOPTION_A8), 'test-t1 must carry A8')
+  assert.ok(testR1.includes(ADOPTION_A9), 'test-t1 must carry A9')
+  assert.ok(testR1.includes(ADOPTION_A10), 'test-t1 must carry A10')
 })
 
 await test('ARCHITECT: adoption-evidence delivery is unconditional, not carry-gated (AC-59-5b)', async () => {
   const countOccurrences = (s, sub) => s.split(sub).length - 1
 
-  // Part (i): an r1-COUNTER run converges at round 2 — A9 must reach dev-r2/test-r2,
+  // Part (i): an r1-COUNTER run converges at round 2 — A9 must reach dev-t4/test-t3,
   // exactly once per prompt (guards accidental double-interpolation once carry is non-empty).
   const counterResponder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['STALE_PROBE_59'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['STALE_PROBE_59'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls: counterCalls } = await runArch({ issue: '59-5a' }, counterResponder)
-  const devR2 = counterCalls.find((c) => c.label === 'dev-r2').prompt
-  const testR2 = counterCalls.find((c) => c.label === 'test-r2').prompt
-  assert.equal(countOccurrences(devR2, ADOPTION_A9), 1, 'dev-r2 must carry A9 exactly once')
-  assert.equal(countOccurrences(testR2, ADOPTION_A9), 1, 'test-r2 must carry A9 exactly once')
+  const devR2 = counterCalls.find((c) => c.label === 'dev-t4').prompt
+  const testR2 = counterCalls.find((c) => c.label === 'test-t3').prompt
+  assert.equal(countOccurrences(devR2, ADOPTION_A9), 1, 'dev-t4 must carry A9 exactly once')
+  assert.equal(countOccurrences(testR2, ADOPTION_A9), 1, 'test-t3 must carry A9 exactly once')
 
-  // Part (ii) — the discriminator: an all-ACCEPT-without-accept_grounds run never converges
-  // (accepted() requires accept_grounds.length > 0), so carry stays '' for all MAX_ROUNDS = 6
-  // rounds. A9 must still reach dev-r1 AND dev-r6 — a carry-gated implementation would pass
-  // 3b/4b/5b(i) and fail here.
-  const noGroundsResponder = (label) => {
+  // Part (ii) — the discriminator: a run that raises no counter at all keeps the register (and so
+  // the carry) empty for every turn up to the 12-turn ceiling. A9 must still reach dev-t2 AND
+  // dev-t12 — a carry-gated implementation would pass 3b/4b/5b(i) and fail here.
+  const noCarryResponder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: [] }
+    return OPEN_TURN
   }
-  const { calls: noGroundsCalls } = await runArch({ issue: '59-5b' }, noGroundsResponder)
-  const devR1 = noGroundsCalls.find((c) => c.label === 'dev-r1').prompt
-  const devR6 = noGroundsCalls.find((c) => c.label === 'dev-r6').prompt
-  assert.ok(devR1, 'dev-r1 call must exist')
-  assert.ok(devR6, 'dev-r6 call must exist (all 6 rounds run when accept_grounds never satisfies)')
-  assert.ok(devR1.includes(ADOPTION_A9), 'dev-r1 must carry A9 unconditionally')
-  assert.ok(devR6.includes(ADOPTION_A9), 'dev-r6 must carry A9 unconditionally')
+  const { calls: noGroundsCalls } = await runArch({ issue: '59-5b' }, noCarryResponder)
+  const devR1 = noGroundsCalls.find((c) => c.label === 'dev-t2').prompt
+  const devR6 = noGroundsCalls.find((c) => c.label === 'dev-t12').prompt
+  assert.ok(devR1, 'dev-t2 call must exist')
+  assert.ok(devR6, 'dev-t12 call must exist (every turn runs when no pair of unmodified accepts occurs)')
+  assert.ok(devR1.includes(ADOPTION_A9), 'dev-t2 must carry A9 unconditionally')
+  assert.ok(devR6.includes(ADOPTION_A9), 'dev-t12 must carry A9 unconditionally')
 })
 
 await test('ARCHITECT: adoption-evidence Draft segment byte-identical across dev/test (AC-59-6b)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '59-6' }, responder)
   const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
@@ -1475,44 +1552,46 @@ await test('ARCHITECT: adoption-evidence Draft segment byte-identical across dev
 // can distinguish *defined* from *delivered* (the text-matching registry/cycle-suite
 // layers cannot).
 
-await test('ARCHITECT: verification-depth OBLIGATION TEXT (not just the section path) reaches test-draft and test-r1, and stays off dev-draft/dev-r1 (AC-69-prompt-delivery)', async () => {
+await test('ARCHITECT: verification-depth OBLIGATION TEXT (not just the section path) reaches test-draft and test-t1, and stays off dev-draft/dev-t2 (AC-69-prompt-delivery)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '69-1' }, responder)
   const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
   const testDraft = calls.find((c) => c.label === 'test-draft').prompt
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  const devR1 = calls.find((c) => c.label === 'dev-t2').prompt
+  const testR1 = calls.find((c) => c.label === 'test-t1').prompt
   // The obligation's own content ("...names the failure mode it catches that no other layer
   // catches..."), not merely a "docs/autoflow-guide.md > ... > Verification depth" section-path
   // reference -- a path-only literal is satisfiable by an unrelated cross-reference and would not
   // discriminate "defined" from "the obligation's substance actually delivered".
   const obligationPattern = /failure mode (?:it catches |no other layer catches|that no other layer catches)/
   assert.match(testDraft, obligationPattern, 'test-draft must carry the Verification depth obligation TEXT')
-  assert.match(testR1, obligationPattern, 'test-r1 must carry the Verification depth obligation TEXT')
+  assert.match(testR1, obligationPattern, 'test-t1 must carry the Verification depth obligation TEXT')
   // ADR-0018 Decision 3: "The obligation is Test-AI-owned; no Developer-AI literal is added." --
   // negative fence mirroring the #56/#59 doesNotMatch idiom (:534-536, :1032-1035).
   assert.doesNotMatch(devDraft, obligationPattern, 'dev-draft must NOT carry the Verification depth obligation (Test-AI-owned, ADR-0018 Decision 3)')
-  assert.doesNotMatch(devR1, obligationPattern, 'dev-r1 must NOT carry the Verification depth obligation (Test-AI-owned, ADR-0018 Decision 3)')
+  assert.doesNotMatch(devR1, obligationPattern, 'dev-t2 must NOT carry the Verification depth obligation (Test-AI-owned, ADR-0018 Decision 3)')
 })
 
-await test('ARCHITECT: test-r1 ACCEPT-condition sentence (not merely the prompt at large) gates on the per-layer unique-failure-mode requirement (AC-69-accept-gating)', async () => {
+await test('ARCHITECT: test-t1 ACCEPT-condition sentence (not merely the prompt at large) gates on the per-layer unique-failure-mode requirement (AC-69-accept-gating)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '69-2' }, responder)
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  const testR1 = calls.find((c) => c.label === 'test-t1').prompt
   // Extract the ACCEPT-condition sentence specifically -- the verification design's method is
   // "the ACCEPT-condition sentence of the test-r{n} prompt carries the depth clause", and advisory
   // (mentioned anywhere in the prompt) vs. gating (inside the sentence that actually governs
   // ACCEPT) is the discriminant a prompt-wide `.includes()` cannot make.
-  const startAnchor = 'Respond ACCEPT ONLY when'
-  const endAnchor = 'Otherwise return COUNTER/PARTIAL'
+  // Re-anchored for issue #152: the accept condition is now stated as a `"accept"` boolean
+  // instruction, the ACCEPT/COUNTER/PARTIAL verdict enum having been retired.
+  const startAnchor = 'Set "accept" true ONLY when'
+  const endAnchor = 'Otherwise set "accept" false'
   const start = testR1.indexOf(startAnchor)
   const end = testR1.indexOf(endAnchor)
   assert.ok(start >= 0, 'ACCEPT-condition start anchor must be present')
@@ -1528,9 +1607,9 @@ await test('ARCHITECT: prose args, hashed number (reported shape) resolves and c
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
   }
   const { result } = await runArch('issue #215 — architect deliberation for the caching layer', responder)
   assert.match(result.artifacts[0], /issue-215-/)
@@ -1540,7 +1619,7 @@ await test('ARCHITECT: prose args, hashed number (reported shape) resolves and c
 await test('ARCHITECT: prose args, hash + incidental leading digit resolves 215 not 2 (DCR-2(a) lock)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft') || label === 'ledger') return 'ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch('v2 caching for issue #215', responder)
   assert.match(result.artifacts[0], /issue-215-/)
@@ -1556,7 +1635,7 @@ await test('ARCHITECT: valid-JSON string without issue still fails loudly (DCR-2
 await test('ARCHITECT: prose args, bare number, no hash resolves via fallback', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft') || label === 'ledger') return 'ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch('deliberation for issue 215', responder)
   assert.match(result.artifacts[0], /issue-215-/)
@@ -1565,7 +1644,7 @@ await test('ARCHITECT: prose args, bare number, no hash resolves via fallback', 
 await test('ARCHITECT: prose args, no hash + incidental earlier digit resolves 215 not 2 — reviewer witness fix lock (c2)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft') || label === 'ledger') return 'ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch('v2 caching for issue 215', responder)
   assert.match(result.artifacts[0], /issue-215-/)
@@ -1590,235 +1669,26 @@ await test('ARCHITECT: prose args, single bare digit, no #/no issue-label — ti
   const responder = (label) => {
     if (label.endsWith('-draft') || label === 'ledger') return 'ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch('build 42', responder)
   assert.match(result.artifacts[0], /issue-42-/)
   assert.equal(result.verdict, 'CONVERGED')
 })
 
-// ---- ARCHITECT: cap-round closing half-round (issue #123) --------------------
-// Verification design (.autoflow/issue-123-verification-design.md), AC1-AC6 and
-// AC10-AC13 (AC7 is doc prose with no harness home, AC8 is the composition oracle, AC9 is the manual scenario). Every fixture below drives
-// five non-converging rounds (both sides COUNTER, never grounded) so the loop always
-// reaches round 6 -- MAX_ROUNDS -- as the cap round, regardless of what round 6 or the
-// closing call return; only the cap round and the closing call vary per criterion.
-// RED at HEAD: the script has no post-loop closing step, so 'test-closing' is never
-// called and every fixture that expects it finds nothing -- AC1, AC2, AC4, AC5, AC6,
-// AC10, AC12 and AC13 must FAIL. AC3 (three fixtures) and AC11 are regression locks
-// on the pre-change ESCALATE/CONVERGED shape and are expected to PASS at RED.
-
-const CLOSING_CALL_LABEL = 'test-closing'
-const REASON_CLOSING_AGENT_MISSING = 'closing agent missing'
-
-// Rounds 1-5 default to non-converging COUNTER/COUNTER on both sides, so the loop
-// always reaches the round-6 cap regardless of the per-test overrides for round 6 and
-// the closing call. `overrides.closing` supplies the 'test-closing' response (default
-// null, matching a missing sub-agent, for fixtures where it must not even be invoked).
-function capResponder(overrides) {
+// A responder that never converges, so a run always reaches its own turn ceiling. It replaces
+// the retired `capResponder` (issue #123's cap-round closing half-round, removed by #152): what
+// remains of that fixture's job is simply "drive every turn to the ceiling", with per-label
+// overrides for the turns a case wants to shape.
+function ceilingResponder(overrides = {}) {
   return (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    // Fixture-amendment class recorded for #127 cycle 3, amended
-    // this cycle for #138: a converging run now runs Reconcile before Ledger, which calls a
-    // sub-agent labelled 'ac-diff'. The shape below is the one the 'ac-diff-plumbing' leg
-    // proves yields CONVERGED with no findings -- it does not weaken any #138 fail-closed leg,
-    // which stubs its OWN 'ac-diff' response and is unaffected by this default.
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    if (label === CLOSING_CALL_LABEL) {
-      return Object.prototype.hasOwnProperty.call(overrides, 'closing') ? overrides.closing : null
-    }
     if (Object.prototype.hasOwnProperty.call(overrides, label)) return overrides[label]
-    const r = Number(label.split('-r')[1])
-    if (r >= 1 && r <= 5) return { response: 'COUNTER', counters: [`c${r}`], accept_grounds: [] }
-    return { response: 'COUNTER', counters: ['fallback'], accept_grounds: [] }
+    return { modified: false, accept: false, counters: [`c${roundOf(label)}`], accept_grounds: [], dispositions: [] }
   }
 }
-
-await test('ARCHITECT: cap-round Test COUNTER + grounded Dev ACCEPT triggers the closing half-round; grounded closing ACCEPT -> CONVERGED (AC1)', async () => {
-  const responder = capResponder({
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: re-verified against final documents'] },
-  })
-  const { result, calls } = await runArch({ issue: '123-ac1' }, responder)
-  assert.equal(result.verdict, 'CONVERGED')
-  assert.ok(calls.some((c) => c.label === CLOSING_CALL_LABEL), 'the closing call must be made')
-})
-
-await test('ARCHITECT: closing COUNTER/PARTIAL -> ESCALATE, grounds carry the closing round\'s counters and dispositions attributed to the test side, escalation stays the round-exhaustion text (AC2, all four legs)', async () => {
-  const responder = capResponder({
-    'test-r1': { response: 'COUNTER', counters: [{ agenda: 'NAME_EARLIER_AC2', locator: 'l', argument: 'raised in round 1' }], accept_grounds: [] },
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
-    closing: {
-      response: 'COUNTER',
-      counters: [{ agenda: 'PROBE_NAME_AC2', locator: 'l2', argument: 'PROBE_ARG_AC2' }],
-      accept_grounds: [],
-      dispositions: [{ name: 'NAME_EARLIER_AC2', conclusion: 'closed by the closing turn', evidence: 'e', status: 'agreed' }],
-    },
-  })
-  const { result, calls } = await runArch({ issue: '123-ac2' }, responder)
-  assert.equal(result.verdict, 'ESCALATE')
-  const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
-  // leg 1 -- the closing counter's probe name and argument reach the ledger grounds
-  assert.match(ledgerPrompt, /PROBE_NAME_AC2/, 'the closing counter\'s name must reach the ledger grounds')
-  assert.match(ledgerPrompt, /PROBE_ARG_AC2/, 'the closing counter\'s argument must reach the ledger grounds')
-  // leg 2 -- the entry the closing step disposed of is no longer rendered open
-  assert.doesNotMatch(ledgerPrompt, /NAME_EARLIER_AC2/, 'an entry the closing disposition closed must not render as open')
-  // leg 3 -- the closing-raised entry renders as raised by the test side
-  assert.match(ledgerPrompt, /PROBE_NAME_AC2[\s\S]{0,200}raised by test/, 'the closing-raised entry must render as raised by the test side')
-  // leg 4 -- escalation stays the generic round-exhaustion text, not the closing-missing literal
-  assert.match(result.escalation, /No mutual ACCEPT within 6 rounds \(reached round 6\)/)
-  assert.doesNotMatch(result.escalation, new RegExp(REASON_CLOSING_AGENT_MISSING))
-})
-
-await test('ARCHITECT: cap-round Dev COUNTER suppresses the closing half-round entirely (AC3, fixture 1: Dev COUNTER)', async () => {
-  const responder = capResponder({
-    'test-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['test: ok'] },
-    'dev-r6': { response: 'COUNTER', counters: ['dev-c6'], accept_grounds: [] },
-  })
-  const { result, calls } = await runArch({ issue: '123-ac3a' }, responder)
-  assert.ok(!calls.some((c) => c.label === CLOSING_CALL_LABEL), 'no closing call may be made')
-  assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.rounds, 6)
-  assert.match(result.escalation, /No mutual ACCEPT within 6 rounds \(reached round 6\)/)
-})
-
-await test('ARCHITECT: cap-round Dev ACCEPT with non-empty counters suppresses the closing half-round (AC3, fixture 2: ungrounded ACCEPT via open counters)', async () => {
-  const responder = capResponder({
-    'test-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['test: ok'] },
-    'dev-r6': { response: 'ACCEPT', counters: ['still-open'], accept_grounds: ['dev: partial'] },
-  })
-  const { result, calls } = await runArch({ issue: '123-ac3b' }, responder)
-  assert.ok(!calls.some((c) => c.label === CLOSING_CALL_LABEL), 'no closing call may be made')
-  assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.rounds, 6)
-})
-
-await test('ARCHITECT: cap-round Dev ACCEPT with empty accept_grounds suppresses the closing half-round (AC3, fixture 3: ungrounded ACCEPT via empty grounds)', async () => {
-  const responder = capResponder({
-    'test-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['test: ok'] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: [] },
-  })
-  const { result, calls } = await runArch({ issue: '123-ac3c' }, responder)
-  assert.ok(!calls.some((c) => c.label === CLOSING_CALL_LABEL), 'no closing call may be made')
-  assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.rounds, 6)
-})
-
-await test('ARCHITECT: the closing half-round never increments the returned rounds, on both the CONVERGED and ESCALATE closing routes (AC4)', async () => {
-  const convergedResponder = capResponder({
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: ok'] },
-  })
-  const { result: convergedResult } = await runArch({ issue: '123-ac4a' }, convergedResponder)
-  assert.equal(convergedResult.verdict, 'CONVERGED')
-  assert.equal(convergedResult.rounds, 6)
-
-  const escalateResponder = capResponder({
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
-    closing: { response: 'COUNTER', counters: ['closing-counter'], accept_grounds: [] },
-  })
-  const { result: escalateResult } = await runArch({ issue: '123-ac4b' }, escalateResponder)
-  assert.equal(escalateResult.verdict, 'ESCALATE')
-  assert.equal(escalateResult.rounds, 6)
-})
-
-await test('ARCHITECT: a null closing return is a missing judgment, not agreement -- ESCALATE with the closing-missing literal (AC5)', async () => {
-  const responder = capResponder({
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
-    closing: null,
-  })
-  const { result, calls } = await runArch({ issue: '123-ac5' }, responder)
-  assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.escalation, REASON_CLOSING_AGENT_MISSING)
-  assert.doesNotMatch(result.escalation, /draft agent missing/)
-  assert.doesNotMatch(result.escalation, /sub-agent missing for 2 consecutive/)
-  assert.ok(calls.some((c) => c.label === CLOSING_CALL_LABEL), 'the closing call must still have been made')
-})
-
-await test('ARCHITECT: the closing call is distinguishable from the cap round\'s own Test call (AC6)', async () => {
-  const responder = capResponder({
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: ok'] },
-  })
-  const { calls } = await runArch({ issue: '123-ac6' }, responder)
-  assert.equal(calls.filter((c) => c.label === 'test-r6').length, 1, 'the cap round\'s own Test call must keep its test-r6 label, exactly once')
-  assert.equal(calls.filter((c) => c.label === CLOSING_CALL_LABEL).length, 1, 'the closing call must carry the declared closing label, exactly once')
-})
-
-await test('ARCHITECT: on CONVERGED, the ledger grounds are sourced from the closing verdict, not the superseded cap-round Test verdict (AC10)', async () => {
-  const responder = capResponder({
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: ['STALE_PROBE_AC10'] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['FRESH_PROBE_AC10'] },
-  })
-  const { result, calls } = await runArch({ issue: '123-ac10' }, responder)
-  assert.equal(result.verdict, 'CONVERGED')
-  const ledgerPrompt = calls.find((c) => c.label === 'ledger').prompt
-  assert.match(ledgerPrompt, /FRESH_PROBE_AC10/, 'the closing verdict\'s accept_grounds must reach the CONVERGED ledger grounds')
-  assert.doesNotMatch(ledgerPrompt, /STALE_PROBE_AC10/, 'the superseded cap-round Test verdict\'s accept_grounds must not leak into the CONVERGED ledger grounds')
-})
-
-await test('ARCHITECT: a run that converges at the cap round on its own does not fire the closing half-round (AC11)', async () => {
-  const responder = capResponder({
-    'test-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['test: cap ok'] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap ok'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['should not be called'] },
-  })
-  const { result, calls } = await runArch({ issue: '123-ac11' }, responder)
-  assert.equal(result.verdict, 'CONVERGED')
-  assert.equal(result.rounds, 6)
-  assert.ok(!calls.some((c) => c.label === CLOSING_CALL_LABEL), 'a run that converged at the cap on its own must not fire the closing call')
-})
-
-await test('ARCHITECT: the closing prompt carries the same register-carry framing as the cap round\'s Test prompt, and the cap-round Dev grounded-ACCEPT dimensions as current (AC12, two legs)', async () => {
-  const responder = capResponder({
-    'test-r1': { response: 'COUNTER', counters: [{ agenda: 'NAME_CARRY_AC12', locator: 'l', argument: 'raised round 1, never disposed' }], accept_grounds: [] },
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['DEV_GROUNDS_PROBE_AC12'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: ok'] },
-  })
-  const { calls } = await runArch({ issue: '123-ac12' }, responder)
-  const testR6Prompt = calls.find((c) => c.label === 'test-r6').prompt
-  const closingPrompt = calls.find((c) => c.label === CLOSING_CALL_LABEL).prompt
-
-  // leg 1 (narrowed by GATE:PLAN, ledger O3): the CARRY_NON_EVIDENTIARY prefix and the
-  // "address every entry whose status is open before ACCEPT" preamble are identical
-  // between the two prompts -- not whole-segment byte identity (the closing carry is
-  // re-rendered after the cap round's own raise/applyDispositions, so the entries
-  // themselves may legitimately differ).
-  const startAnchor = ' The register entries below are a checklist of topics to re-verify, NOT evidence'
-  const endAnchor = 'return that judgment in "dispositions":\n'
-  const extractFraming = (s) => {
-    const start = s.indexOf(startAnchor)
-    assert.ok(start >= 0, 'the CARRY_NON_EVIDENTIARY prefix must be present')
-    const end = s.indexOf(endAnchor, start)
-    assert.ok(end >= 0, 'the disposal preamble must be present')
-    return s.slice(start, end + endAnchor.length)
-  }
-  assert.equal(extractFraming(testR6Prompt), extractFraming(closingPrompt), 'the closing prompt must deliver the register carry under the same framing as a round prompt')
-
-  // leg 2 (ledger O3, point 3): the closing prompt hands over the cap-round Dev
-  // verdict's accept_grounds via JSON.stringify, mirroring the in-round `peer` clause.
-  assert.ok(closingPrompt.includes(JSON.stringify(['DEV_GROUNDS_PROBE_AC12'])), 'the closing prompt must hand over the cap-round Dev accept_grounds via JSON.stringify')
-})
-
-await test('ARCHITECT: a null cap-round Test verdict does not suppress the closing half-round (AC13)', async () => {
-  const responder = capResponder({
-    'test-r6': null,
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap ok'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: ok'] },
-  })
-  const { result, calls } = await runArch({ issue: '123-ac13' }, responder)
-  assert.ok(calls.some((c) => c.label === CLOSING_CALL_LABEL), 'the closing call must be made even when the cap-round Test verdict was null')
-  assert.equal(result.verdict, 'CONVERGED')
-})
 
 // ---- ARCHITECT: resume an ESCALATEd deliberation from its register (issue #127) ---
 // Verification design (.autoflow/issue-127-verification-design.md). RED at HEAD: the
@@ -1849,11 +1719,10 @@ const REGISTER_FENCE_START = '===AUTOFLOW-REGISTER-JSON-START==='
 const REGISTER_FENCE_END = '===AUTOFLOW-REGISTER-JSON-END==='
 
 // Generic resume-path responder. `overrides.load` controls the register-load call's
-// return (default: a passing register at lastRound 3 with one open entry); `overrides
-// [label]` controls an individual round call; `overrides.roundDefault` controls every
-// round call without its own override (default: grounded ACCEPT); `overrides.closing`
-// controls the cap-round closing call; `overrides.write` controls the register-write
-// call (default: a truthy ack).
+// return (default: a passing register at lastTurn 6 with one open entry); `overrides
+// [label]` controls an individual turn call; `overrides.roundDefault` controls every
+// turn call without its own override (default: an unmodified accept); `overrides.write`
+// controls the register-write call (default: a truthy ack).
 function resumeResponder(overrides = {}) {
   let seenLedger = false
   return (label) => {
@@ -1862,12 +1731,9 @@ function resumeResponder(overrides = {}) {
       seenLedger = true
       return Object.prototype.hasOwnProperty.call(overrides, 'ledger') ? overrides.ledger : 'ledger ok'
     }
-    if (label === CLOSING_CALL_LABEL) {
-      return Object.prototype.hasOwnProperty.call(overrides, 'closing') ? overrides.closing : null
-    }
-    if (label.startsWith('test-r') || label.startsWith('dev-r')) {
+    if (label.startsWith('test-t') || label.startsWith('dev-t')) {
       if (Object.prototype.hasOwnProperty.call(overrides, label)) return overrides[label]
-      return overrides.roundDefault !== undefined ? overrides.roundDefault : { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+      return overrides.roundDefault !== undefined ? overrides.roundDefault : { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
     }
     // Fixture-amendment class recorded for #127 cycle 3, amended this cycle for #138: a
     // converging run now runs Reconcile before Ledger, calling a sub-agent labelled
@@ -1882,7 +1748,7 @@ function resumeResponder(overrides = {}) {
     // Unclassified: register-load (before 'ledger') or register-write (after it).
     if (!seenLedger) {
       return Object.prototype.hasOwnProperty.call(overrides, 'load') ? overrides.load : {
-        found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE',
+        found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE',
         entries: [{ name: 'DEFAULT_OPEN', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }],
       }
     }
@@ -1942,7 +1808,7 @@ await test('ARCHITECT: a resume round prompt partitions the register -- the agen
   const settledBlockRule = m[2].replace(/\\n/g, '\n').replace(/\\'/g, "'").replace(/\\"/g, '"')
   const responder = resumeResponder({
     load: {
-      found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE',
+      found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE',
       entries: [
         { name: 'OPEN_TOK_127', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' },
         { name: 'AGREED_TOK_127', conclusion: '', evidence: 'e', status: 'agreed', raisedBy: 'dev' },
@@ -1951,7 +1817,7 @@ await test('ARCHITECT: a resume round prompt partitions the register -- the agen
     },
   })
   const { calls } = await runArch({ issue: '127-4', resume: true }, responder)
-  for (const label of ['test-r4', 'dev-r4']) {
+  for (const label of ['test-t7', 'dev-t8']) {
     const p = calls.find((c) => c.label === label).prompt
     const settledIdx = p.indexOf(settledBlockRule)
     assert.ok(settledIdx >= 0, `${label} must carry the declared settled-block heading`)
@@ -1967,48 +1833,47 @@ await test('ARCHITECT: a resume round prompt partitions the register -- the agen
 
 await test('ARCHITECT: a resume run executes exactly one exchange and returns (AC127-5, resume-one-exchange)', async () => {
   const { result, calls } = await runArch({ issue: '127-5', resume: true }, resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'ONE_EX', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [{ name: 'ONE_EX', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
   }))
-  assert.equal(calls.filter((c) => c.label === 'test-r4').length, 1)
-  assert.equal(calls.filter((c) => c.label === 'dev-r4').length, 1)
-  assert.ok(!calls.some((c) => /-r5\b/.test(c.label)), 'a resume run must not execute a second round')
-  assert.equal(result.rounds, 4)
+  assert.equal(calls.filter((c) => c.label === 'test-t7').length, 1)
+  assert.equal(calls.filter((c) => c.label === 'dev-t8').length, 1)
+  assert.ok(!calls.some((c) => /-t9\b/.test(c.label)), 'a resume run admits exactly one further exchange (two turns), no more')
+  assert.equal(result.turns, 8)
 })
 
-await test('ARCHITECT: round numbering continues from the register\'s lastRound, never from an argument (AC127-6, resume-round-source)', async () => {
+await test('ARCHITECT: round numbering continues from the register\'s lastTurn, never from an argument (AC127-6, resume-round-source)', async () => {
   const { result, calls } = await runArch({ issue: '127-6', resume: true }, resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 5, verdict: 'ESCALATE', entries: [{ name: 'RN', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    load: { found: true, artifacts_present: true, lastTurn: 10, verdict: 'ESCALATE', entries: [{ name: 'RN', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
   }))
-  assert.ok(calls.some((c) => c.label === 'test-r6'))
-  assert.ok(calls.some((c) => c.label === 'dev-r6'))
-  assert.equal(result.rounds, 6)
+  assert.ok(calls.some((c) => c.label === 'test-t11'))
+  assert.ok(calls.some((c) => c.label === 'dev-t12'))
+  assert.equal(result.turns, 12)
 })
 
-await test('ARCHITECT: a resume from lastRound 0 can converge at round 1 -- the mandatory first-exchange rule is lifted on resume (AC127-7, resume-lifts-first-exchange)', async () => {
+await test('ARCHITECT: a resume from lastTurn 0 converges on its own first exchange -- the first-turn devil\'s-advocate guidance is lifted on resume (AC127-7, resume-lifts-first-exchange)', async () => {
   const { result, calls } = await runArch({ issue: '127-7', resume: true }, resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 0, verdict: 'ESCALATE', entries: [{ name: 'ZR', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r1': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    // cycle-3 amendment (issue #127, resume-scoped open-entry precondition): the raiser ('dev')
-    // must dispose of its own carried entry in this round, or the new guard denies convergence --
-    // this case's own assertions (CONVERGED at round 1, first-exchange rule lifted) are unchanged.
-    'dev-r1': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'ZR', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
+    load: { found: true, artifacts_present: true, lastTurn: 0, verdict: 'ESCALATE', entries: [{ name: 'ZR', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-t1': { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'] },
+    'dev-t2': { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'ZR', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   }))
   assert.equal(result.verdict, 'CONVERGED')
-  assert.equal(result.rounds, 1)
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
-  const devR1 = calls.find((c) => c.label === 'dev-r1').prompt
-  assert.doesNotMatch(testR1, /do NOT ACCEPT on round 1/)
-  assert.doesNotMatch(devR1, /do NOT ACCEPT on round 1/)
+  assert.equal(result.turns, 2, 'the pair that converges is the resumed exchange\'s own two turns')
+  const testT1 = calls.find((c) => c.label === 'test-t1').prompt
+  const devT2 = calls.find((c) => c.label === 'dev-t2').prompt
+  // FIRST_EXCHANGE_RULE renders on a cold run's turns 1 and 2 only (issue #152) — a resume
+  // continues a deliberation whose first exchange already happened.
+  assert.doesNotMatch(testT1, /do NOT return accept: true on this turn/)
+  assert.doesNotMatch(devT2, /do NOT return accept: true on this turn/)
 })
 
 await test('ARCHITECT: a resume run issues its terminal persistence call on both the CONVERGED and ESCALATE route (AC127-8, resume-persists-both-verdicts)', async () => {
   const convergedResp = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'CV', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [{ name: 'CV', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-t7': { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'] },
     // cycle-3 amendment (issue #127): the raiser ('dev') disposes of the carried entry so this
     // shape still converges under the resume-scoped open-entry precondition; this case's own
     // assertion (a persistence call follows 'ledger' on CONVERGED) is unchanged.
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'CV', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
+    'dev-t8': { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'CV', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   })
   const { result: rConv, calls: cConv } = await runArch({ issue: '127-8a', resume: true }, convergedResp)
   assert.equal(rConv.verdict, 'CONVERGED')
@@ -2016,20 +1881,19 @@ await test('ARCHITECT: a resume run issues its terminal persistence call on both
   assert.ok(ledgerIdxConv >= 0 && cConv.length > ledgerIdxConv + 1, 'a persistence call must follow the ledger call on CONVERGED')
 
   const escalateResp = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'ES', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    roundDefault: { response: 'COUNTER', counters: ['still open'], accept_grounds: [] },
+    load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [{ name: 'ES', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    roundDefault: { modified: false, accept: false, counters: ['still open'], accept_grounds: [] },
   })
   const { result: rEsc, calls: cEsc } = await runArch({ issue: '127-8b', resume: true }, escalateResp)
   assert.equal(rEsc.verdict, 'ESCALATE')
   const ledgerIdxEsc = cEsc.findIndex((c) => c.label === 'ledger')
   assert.ok(ledgerIdxEsc >= 0 && cEsc.length > ledgerIdxEsc + 1, 'a persistence call must follow the ledger call on ESCALATE')
-  // The generic round-exhaustion text names the RESUMED run's own ceiling (lastRound 3 -> roundCeiling
-  // 4), never the cold-path constant 6 -- verification design's cold-path bit-identity criterion is
-  // what makes this a discriminator: a resume-unaware implementation would render "within 6 rounds".
-  // Exact equality, not a substring match: this run has no earlyEscalateReason, so escalationReason
-  // IS this whole string verbatim (architect-deliberation.js:571-572) -- an exact match catches an
-  // implementation that gets the figure right but wraps or prefixes the text differently.
-  assert.equal(rEsc.escalation, 'No mutual ACCEPT within 4 rounds (reached round 4)', 'the resume-path escalation text must name the run\'s own ceiling (4), not the constant 6')
+  // The generic turn-exhaustion text names the RESUMED run's own ceiling (lastTurn 6 -> turnCeiling
+  // 8), never the cold-path config ceiling (max_turns, 12): a resume-unaware implementation would
+  // render "within 12 turns". Exact equality, not a substring match -- this run has no
+  // earlyEscalateReason, so escalationReason IS this whole string verbatim, and an exact match
+  // catches an implementation that gets the figure right but wraps or prefixes the text differently.
+  assert.equal(rEsc.escalation, 'No convergence within 8 turns (reached turn 8)', 'the resume-path escalation text must name the run\'s own ceiling (8), not the cold-path config ceiling (12)')
 })
 
 await test('ARCHITECT: the return contract reports resumed/register/registerWritten truthfully, including a failed write (AC127-9, return-contract-fields)', async () => {
@@ -2039,12 +1903,12 @@ await test('ARCHITECT: the return contract reports resumed/register/registerWrit
   assert.equal(coldResult.register, `.autoflow/issue-127-9a-architect-register.json`)
 
   const { result: resumeNullWrite } = await runArch({ issue: '127-9b', resume: true }, resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'RW', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [{ name: 'RW', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-t7': { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'] },
     // cycle-3 amendment (issue #127): dispose of the carried entry from its raiser ('dev') so this
     // shape still converges under the resume-scoped open-entry precondition -- unrelated to what
     // this case actually pins (a failed write must not alter the already-decided verdict).
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'RW', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
+    'dev-t8': { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'RW', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
     write: null,
   }))
   assert.equal(resumeNullWrite.resumed, true)
@@ -2052,41 +1916,28 @@ await test('ARCHITECT: the return contract reports resumed/register/registerWrit
   assert.equal(resumeNullWrite.verdict, 'CONVERGED', 'a failed write must not alter the already-decided verdict')
 })
 
-await test('ARCHITECT: a resumed closing prompt names its own round ceiling, never a cap below the round number (AC127-10, closing-prompt-coherent-cap)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 6, verdict: 'ESCALATE', entries: [{ name: 'CAP', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r7': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    // cycle-3 amendment (issue #127): CAP is raised by 'dev' and must be disposed on dev-r7;
-    // cap-c is raised by 'test' (via its round-7 counter) and can only be disposed by the closing
-    // turn -- the raiser-only close rule (below) means neither can close the other's entry. Both
-    // dispositions are owed for this shape to still converge under the resume-scoped precondition;
-    // this case's own assertion (the closing prompt names its own ceiling) is unchanged.
-    'dev-r7': { response: 'ACCEPT', counters: [], accept_grounds: ['d: cap ok'], dispositions: [{ name: 'CAP', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: cap ok'], dispositions: [{ name: 'cap-c', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
-  })
-  const { result, calls } = await runArch({ issue: '127-10', resume: true }, responder)
-  assert.equal(result.verdict, 'CONVERGED')
-  const closingPrompt = calls.find((c) => c.label === CLOSING_CALL_LABEL).prompt
-  assert.match(closingPrompt, /round 7 of 7/, 'the closing prompt must name the resumed run\'s own ceiling, not the constant 6')
-  assert.doesNotMatch(closingPrompt, /round 7 of 6/)
-})
+// AC127-10 (the resumed closing prompt's ceiling coherence) is DELETED, not re-expressed: issue
+// #152 removed the cap-round closing half-round outright, so there is no closing prompt to check.
+// The turn prompts' own ceiling rendering is covered by the resume escalation-text leg above.
 
-await test('ARCHITECT: a both-null resume round escalates as an infrastructure cause naming exactly 1 consecutive round (AC127-11, resume-both-null-infra)', async () => {
+await test('ARCHITECT: a resume turn that goes missing at the ceiling escalates as an infrastructure cause naming exactly 1 consecutive turn (AC127-11, resume-final-turn-null-infra)', async () => {
+  // The bound-aware disjunct: with no further turn to retry it, a null at the resume ceiling is a
+  // MISSING judgment immediately rather than after a second consecutive null.
   const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'BN', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': null,
-    'dev-r4': null,
+    load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [{ name: 'BN', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-t7': { modified: false, accept: false, counters: ['still open'], accept_grounds: [] },
+    'dev-t8': null,
   })
   const { result } = await runArch({ issue: '127-11', resume: true }, responder)
   assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.escalation, 'sub-agent missing for 1 consecutive round(s)')
+  assert.equal(result.escalation, 'sub-agent missing for 1 consecutive turn(s)')
 })
 
 const resumeGuardCases = [
   { name: 'load agent returned null', overrides: { load: null }, sentinel: 'resume register load agent missing' },
-  { name: '`found` false', overrides: { load: { found: false, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [] } }, sentinel: 'resume register absent' },
-  { name: 'no open entry', overrides: { load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'X', conclusion: '', evidence: 'e', status: 'agreed', raisedBy: 'dev' }] } }, sentinel: 'resume register has no open entry' },
-  { name: '`verdict` is CONVERGED', overrides: { load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'CONVERGED', entries: [{ name: 'X', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] } }, sentinel: 'resume register already converged' },
+  { name: '`found` false', overrides: { load: { found: false, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [] } }, sentinel: 'resume register absent' },
+  { name: 'no open entry', overrides: { load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [{ name: 'X', conclusion: '', evidence: 'e', status: 'agreed', raisedBy: 'dev' }] } }, sentinel: 'resume register has no open entry' },
+  { name: '`verdict` is CONVERGED', overrides: { load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'CONVERGED', entries: [{ name: 'X', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] } }, sentinel: 'resume register already converged' },
 ]
 for (let i = 0; i < resumeGuardCases.length; i++) {
   const g = resumeGuardCases[i]
@@ -2094,7 +1945,7 @@ for (let i = 0; i < resumeGuardCases.length; i++) {
     const { result, calls } = await runArch({ issue: `127-12-${i}`, resume: true }, resumeResponder(g.overrides))
     assert.equal(result.verdict, 'ESCALATE')
     assert.equal(result.escalation, g.sentinel)
-    assert.ok(!calls.some((c) => c.label.startsWith('test-r') || c.label.startsWith('dev-r')), 'a guard failure must escalate before any round is entered')
+    assert.ok(!calls.some((c) => c.label.startsWith('test-t') || c.label.startsWith('dev-t')), 'a guard failure must escalate before any round is entered')
   })
 }
 
@@ -2110,7 +1961,7 @@ await test('ARCHITECT: the artifacts_present guard fires from a real missing des
     return {
       found: true,
       artifacts_present: existsSync(feature) && existsSync(verif),
-      lastRound: 3, verdict: 'ESCALATE', entries: [],
+      lastTurn: 6, verdict: 'ESCALATE', entries: [],
     }
   }
   const { result } = await runArch({ issue, resume: true }, responder, { omitArtifact: 'verif' })
@@ -2130,9 +1981,9 @@ await test('ARCHITECT: register round-trip -- a cold CONVERGED run persists verd
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: [{ agenda: 'ROUNDTRIP_CONCERN', locator: 'l', argument: 'a' }], accept_grounds: [] }
-    if (label === 'test-r1') return { response: 'COUNTER', counters: ['t1'], accept_grounds: [] }
-    if (label.startsWith('test-r') || label.startsWith('dev-r')) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: [{ agenda: 'ROUNDTRIP_CONCERN', locator: 'l', argument: 'a' }], accept_grounds: [] }
+    if (label === 'test-t1') return { modified: false, accept: false, counters: ['t1'], accept_grounds: [] }
+    if (label.startsWith('test-t') || label.startsWith('dev-t')) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
     // Unclassified => the terminal register-write call: extract the fenced payload and
     // write it for real -- the writing half of the round-trip oracle.
     const start = prompt.indexOf(REGISTER_FENCE_START)
@@ -2153,7 +2004,7 @@ await test('ARCHITECT: register round-trip -- a cold CONVERGED run persists verd
     if (label.endsWith('-draft')) return null
     if (label === 'ledger') return 'ledger ok'
     const onDiskNow = JSON.parse(readFileSync(register, 'utf8'))
-    return { found: true, artifacts_present: true, lastRound: onDiskNow.lastRound, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
+    return { found: true, artifacts_present: true, lastTurn: onDiskNow.lastTurn, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
   }
   const resumeResult = await arch({ issue, resume: true }, phase, parallel, makeAgent(resumeLoadResponder, []), mockConsole)
   removeDraftArtifacts(issue)
@@ -2175,7 +2026,7 @@ await test('ARCHITECT: a guard-failed resume leaves a real register file byte-id
   const after = readFileSync(register, 'utf8')
   removeDraftArtifacts(issue)
   assert.equal(after, before, 'a guard-failed resume must not touch the register file')
-  assert.ok(!calls.some((c) => /-r\d/.test(c.label)), 'no round call may be made')
+  assert.ok(!calls.some((c) => /-t\d/.test(c.label)), 'no round call may be made')
 })
 
 // Regression lock, vacuous PASS expected at RED (documented, not an oracle mistake): the
@@ -2194,7 +2045,7 @@ await test('ARCHITECT: a cold run that early-escalates on a null draft never ove
     if (label === 'dev-draft') return null
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const result = await arch({ issue }, phase, parallel, makeAgent(responder, []), mockConsole)
   const after = readFileSync(register, 'utf8')
@@ -2209,17 +2060,12 @@ await test('ARCHITECT: an out-of-enum status/raisedBy rehydrates to the declared
   const responder = (label, prompt) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') { seenLedger = true; return 'ledger ok' }
-    if (label === CLOSING_CALL_LABEL) return null
-    if (label === 'test-r4') return { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'BAD_RAISER', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
-    // cycle-3 amendment (issue #127): BAD_STATUS rehydrates raisedBy 'dev' (as written), so it can
-    // only be closed by a dev-side disposition -- owed so this shape still converges under the
-    // resume-scoped open-entry precondition. This case's own assertions (fallback rehydration,
-    // the coerced BAD_RAISER raiser closing it) are unchanged.
-    if (label === 'dev-r4') return { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'BAD_STATUS', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
+    if (label === 'test-t7') return { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'BAD_RAISER', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
+    if (label === 'dev-t8') return { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'BAD_STATUS', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
     if (!seenLedger) {
       return {
-        found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE',
+        found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE',
         entries: [
           { name: 'BAD_STATUS', conclusion: '', evidence: 'e', status: 'weird', raisedBy: 'dev' },
           { name: 'BAD_RAISER', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'nobody' },
@@ -2230,7 +2076,7 @@ await test('ARCHITECT: an out-of-enum status/raisedBy rehydrates to the declared
     return { written: true }
   }
   const { result, calls } = await runArch({ issue: '127-16', resume: true }, responder)
-  const testR4 = calls.find((c) => c.label === 'test-r4').prompt
+  const testR4 = calls.find((c) => c.label === 'test-t7').prompt
   assert.match(testR4, /BAD_STATUS[\s\S]{0,80}status: open/, 'an out-of-enum status must rehydrate as open')
   assert.match(testR4, /BAD_RAISER[\s\S]{0,80}raised by test/, 'an out-of-enum raisedBy must rehydrate as test')
   assert.equal(result.verdict, 'CONVERGED')
@@ -2244,18 +2090,15 @@ await test('ARCHITECT: an out-of-enum status/raisedBy rehydrates to the declared
   assert.equal(badRaiser.status, 'agreed', 'the coerced raiser ("test") must be the one able to close it')
 })
 
-await test('ARCHITECT: LEDGER_SEED_RULE reaches the resume round prompt and the resume closing prompt (AC127-17, resume-carries-ledger-seed)', async () => {
+await test('ARCHITECT: LEDGER_SEED_RULE reaches both turn prompts of a resume run (AC127-17, resume-carries-ledger-seed)', async () => {
   const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 6, verdict: 'ESCALATE', entries: [{ name: 'LS', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r7': { response: 'COUNTER', counters: ['ls-c'], accept_grounds: [] },
-    'dev-r7': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
+    load: { found: true, artifacts_present: true, lastTurn: 12, verdict: 'ESCALATE', entries: [{ name: 'LS', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-t13': { modified: false, accept: false, counters: ['ls-c'], accept_grounds: [] },
+    'dev-t14': { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'] },
   })
   const { calls } = await runArch({ issue: '127-17', resume: true }, responder)
-  const testR7 = calls.find((c) => c.label === 'test-r7').prompt
-  const devR7 = calls.find((c) => c.label === 'dev-r7').prompt
-  const closingPrompt = calls.find((c) => c.label === CLOSING_CALL_LABEL).prompt
-  for (const [label, p] of [['test-r7', testR7], ['dev-r7', devR7], [CLOSING_CALL_LABEL, closingPrompt]]) {
+  for (const label of ['test-t13', 'dev-t14']) {
+    const p = calls.find((c) => c.label === label).prompt
     assert.match(p, /is a settled registered issue/, `${label} must carry the ledger-seed instruction on a resume run`)
   }
 })
@@ -2297,12 +2140,12 @@ function interceptLabelReject(overrides, label, makeError) {
 
 await test('ARCHITECT: a rejecting register-write sub-agent leaves the already-decided verdict intact and reports a failed write (AC-C2-127-1, write-reject-absorbed)', async () => {
   const responder = interceptLabelReject({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'WRA', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [{ name: 'WRA', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-t7': { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'] },
     // cycle-3 amendment (issue #127): dispose of the carried entry from its raiser ('dev') so this
     // shape still converges under the resume-scoped open-entry precondition -- unrelated to what
     // this case pins (a rejecting register-write must not alter the already-decided verdict).
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'WRA', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
+    'dev-t8': { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'WRA', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   }, 'register-write', () => new Error('register-write rejected'))
   const { result } = await runArch({ issue: 'c2-127-1', resume: true }, responder)
   assert.equal(result.verdict, 'CONVERGED', 'a rejecting register-write must not alter the already-decided verdict')
@@ -2329,9 +2172,9 @@ await test('ARCHITECT: a SYNCHRONOUS throw at the register-write call is absorbe
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
-    if (label.startsWith('test-r') || label.startsWith('dev-r')) return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
+    if (label.startsWith('test-t') || label.startsWith('dev-t')) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
     return null
   }
   const result = await arch({ issue }, phase, parallel, syncThrowAgent, mockConsole)
@@ -2342,12 +2185,12 @@ await test('ARCHITECT: a SYNCHRONOUS throw at the register-write call is absorbe
 
 await test('ARCHITECT: a rejecting ledger sub-agent leaves the already-decided verdict intact, and the terminal register write still runs and succeeds (AC-C2-127-4, ledger-reject-absorbed)', async () => {
   const responder = interceptLabelReject({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'LRA', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
+    load: { found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE', entries: [{ name: 'LRA', conclusion: '', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
+    'test-t7': { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'] },
     // cycle-3 amendment (issue #127): dispose of the carried entry from its raiser ('dev') so this
     // shape still converges under the resume-scoped open-entry precondition -- unrelated to what
     // this case pins (a rejecting ledger call must not alter the already-decided verdict).
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'LRA', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
+    'dev-t8': { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'LRA', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
   }, 'ledger', () => new Error('ledger rejected'))
   const { result } = await runArch({ issue: 'c2-127-4', resume: true }, responder)
   assert.equal(result.verdict, 'CONVERGED', 'a rejecting ledger call must not alter the already-decided verdict')
@@ -2366,9 +2209,9 @@ await test('ARCHITECT: a failed register write on resume leaves a previously per
   try { unlinkSync(register) } catch (_) { /* none yet */ }
   writeDraftArtifacts(issue)
 
-  // Step 1 -- a real cold run that never converges (ACCEPT with no grounds, every round) persists
-  // a real ESCALATE register with one open entry raised at round 1, so it is resume-eligible (a
-  // CONVERGED register would be refused by the already-converged guard).
+  // Step 1 -- a real cold run that never converges (no turn accepts) persists a real ESCALATE
+  // register with one open entry raised on turn 2, so it is resume-eligible (a CONVERGED register
+  // would be refused by the already-converged guard).
   const coldResponder = (label, prompt) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
@@ -2379,29 +2222,27 @@ await test('ARCHITECT: a failed register write on resume leaves a previously per
       writeFileSync(register, prompt.slice(start + REGISTER_FENCE_START.length, end))
       return { written: true }
     }
-    if (label === 'dev-r1') return { response: 'COUNTER', counters: ['STALE_CONCERN'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: [] } // never converges (no grounds)
+    if (label === 'dev-t2') return { modified: false, accept: false, counters: ['STALE_CONCERN'], accept_grounds: [] }
+    return OPEN_TURN // never accepts -> never converges (issue #152)
   }
   const coldResult = await arch({ issue }, phase, parallel, makeAgent(coldResponder, []), mockConsole)
   assert.equal(coldResult.verdict, 'ESCALATE')
   assert.equal(coldResult.registerWritten, true)
   const before = readFileSync(register, 'utf8')
-  const beforeRound = JSON.parse(before).lastRound
+  const beforeTurn = JSON.parse(before).lastTurn
 
   // Step 2 -- a resume run against that same real file whose register-write call REJECTS.
   const rejectingResumeAgent = (label) => {
     if (label === 'register-load') {
       const onDiskNow = JSON.parse(readFileSync(register, 'utf8'))
-      return { found: true, artifacts_present: true, lastRound: onDiskNow.lastRound, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
+      return { found: true, artifacts_present: true, lastTurn: onDiskNow.lastTurn, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
     }
     if (label === 'ledger') return 'ledger ok'
     if (label === 'register-write') throw new Error('register-write rejected')
-    // Cycle-3 correction (issue #127): resume lifts first-exchange, but under the resume-scoped
-    // open-entry precondition an ACCEPT that disposes nothing leaves STALE_CONCERN open, so this
-    // run now ESCALATEs rather than converging immediately. The assertions below read
-    // `registerWritten`, on-disk byte equality and `rounds` only -- never `verdict` -- so the case
-    // stays green either way; this comment is corrected so it no longer describes a false outcome.
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    // The two resumed turns are both unmodified accepts, so this run converges (issue #152:
+    // open register entries no longer block convergence). The assertions below read
+    // `registerWritten`, on-disk byte equality and `turns` only -- never `verdict`.
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const rejectResult = await arch({ issue, resume: true }, phase, parallel, makeAgent(rejectingResumeAgent, []), mockConsole)
   assert.equal(rejectResult.registerWritten, false, 'the rejecting write must be reported as failed')
@@ -2409,191 +2250,19 @@ await test('ARCHITECT: a failed register write on resume leaves a previously per
   assert.equal(after, before, 'a failed register write must leave the previously persisted register byte-unchanged')
 
   // Step 3 -- a further resume whose load responder reads that same real (unchanged) file back
-  // must re-enter at the persisted round, not a fresh one.
+  // must re-enter at the persisted turn, not a fresh one.
   const finalLoadAgent = (label) => {
     if (label === 'register-load') {
       const onDiskNow = JSON.parse(readFileSync(register, 'utf8'))
-      return { found: true, artifacts_present: true, lastRound: onDiskNow.lastRound, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
+      return { found: true, artifacts_present: true, lastTurn: onDiskNow.lastTurn, verdict: onDiskNow.verdict, entries: onDiskNow.entries }
     }
     if (label === 'ledger') return 'ledger ok'
     if (label === 'register-write') return { written: true }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const finalResult = await arch({ issue, resume: true }, phase, parallel, makeAgent(finalLoadAgent, []), mockConsole)
   removeDraftArtifacts(issue)
-  assert.equal(finalResult.rounds, beforeRound + 1, 'the further resume must re-enter from the persisted round, not a fresh cold round')
-})
-
-// ---- ARCHITECT: resume-scoped open-entry precondition on CONVERGED (issue #127, cycle 3) -----
-// Verification design (.autoflow/issue-127-verification-design.md, cycle-3 section) + feature
-// design (.autoflow/issue-127-feature-design.md, cycle-3 section). At HEAD, `converged` is
-// assigned at architect-deliberation.js:516 from `accepted(dev) && accepted(test)` alone; the
-// register is never consulted, so a resume round can return and persist CONVERGED while a carried
-// entry is still `open`. GREEN owes a resume-scoped precondition, evaluated AFTER each guard
-// site's own `raise`/`applyDispositions`, at both the in-loop site and the cap-round closing
-// half-round, that denies convergence while any entry is open and reports a new declared bare
-// sentinel -- OPEN_ENTRY_SENTINEL below -- as the `escalation`, ordered after
-// REASON_CLOSING_AGENT_MISSING (earlyEscalateReason) and before the generic round-exhaustion text.
-// GREEN must adopt this literal byte-exact; the cases below pin it by equality, not substring.
-const OPEN_ENTRY_SENTINEL = 'resume register still open at convergence'
-
-await test('ARCHITECT: a resume round with a carried open entry and mutual grounded ACCEPT does not converge (AC-C3-1, open-entry-blocks-converge)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'OEB', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
-  })
-  const { result } = await runArch({ issue: 'c3-1', resume: true }, responder)
-  assert.notEqual(result.verdict, 'CONVERGED', 'a resume round pair returning grounded ACCEPT must not converge while a carried entry is still open')
-})
-
-await test('ARCHITECT: a resume round whose carried entry is disposed by its own raiser in that round still converges -- the predicate reads the register AFTER dispositions (AC-C3-2, disposed-entry-permits-converge)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'DEP', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'DEP', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
-  })
-  const { result } = await runArch({ issue: 'c3-2', resume: true }, responder)
-  assert.equal(result.verdict, 'CONVERGED', 'the round that resolves its own carried objection must still be the round that converges')
-})
-
-await test('ARCHITECT: a disposition returned by the side that did not raise the carried entry leaves it open, so convergence stays blocked (peer-disposition-does-not-unblock)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'PDN', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'PDN', conclusion: 'closed', evidence: 'e', status: 'agreed' }] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
-  })
-  const { result } = await runArch({ issue: 'c3-3-peer', resume: true }, responder)
-  assert.notEqual(result.verdict, 'CONVERGED', 'a peer disposition (from the side that did not raise the entry) must not close it -- the raiser-only close rule leaves it open, and convergence stays blocked')
-})
-
-await test('ARCHITECT: the escalation on a denied resume run whose closing turn also ACCEPTs without disposing is the declared sentinel, not the round-exhaustion text (AC-C3-4, sentinel-on-the-denied-run)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'SOD', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
-  })
-  const { result } = await runArch({ issue: 'c3-4', resume: true }, responder)
-  assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.escalation, OPEN_ENTRY_SENTINEL, 'the run whose terminal turn is the one the precondition denied must report the declared sentinel, not the generic text')
-  assert.notEqual(result.escalation, 'No mutual ACCEPT within 4 rounds (reached round 4)')
-})
-
-await test('ARCHITECT: a denied resume run whose closing turn COUNTERs reports the round-exhaustion text, not the sentinel -- the terminal turn decides the reason (AC-C3-9, terminal-turn-decides-the-reason)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'TTD', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
-    closing: { response: 'COUNTER', counters: ['still concerned'], accept_grounds: [] },
-  })
-  const { result } = await runArch({ issue: 'c3-9', resume: true }, responder)
-  assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.escalation, 'No mutual ACCEPT within 4 rounds (reached round 4)', 'a superseding closing COUNTER means mutual ACCEPT never occurred on this run -- the in-loop denial flag must be re-decided, not OR-latched into the sentinel')
-  assert.notEqual(result.escalation, OPEN_ENTRY_SENTINEL)
-})
-
-await test('ARCHITECT: a denied resume run whose closing agent is absent reports the closing-agent-missing literal, not the sentinel -- infrastructure outranks the design outcome (AC-C3-10, infrastructure-outranks-the-sentinel)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'IOS', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
-    // closing left at the resumeResponder factory default: null -- no plumbing added.
-  })
-  const { result } = await runArch({ issue: 'c3-10', resume: true }, responder)
-  assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.escalation, 'closing agent missing', 'a missing closing agent is an infrastructure cause and must outrank the design-outcome sentinel')
-  assert.notEqual(result.escalation, OPEN_ENTRY_SENTINEL)
-})
-
-await test('ARCHITECT: the cap-round closing half-round denies convergence when its own ACCEPT leaves the carried entry open -- the closing half-round carries the same precondition as the loop (AC-C3-3, closing-half-round-honors-precondition)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'CHR', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }] },
-    'test-r4': { response: 'COUNTER', counters: ['chr-c'], accept_grounds: [] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'] },
-  })
-  const { result } = await runArch({ issue: 'c3-3-closing', resume: true }, responder)
-  assert.equal(result.verdict, 'ESCALATE', 'a closing ACCEPT that leaves the carried entry open must not converge')
-  assert.equal(result.escalation, OPEN_ENTRY_SENTINEL, 'the closing half-round must report the same declared sentinel as the in-loop guard, not the generic round-exhaustion text')
-})
-
-await test('ARCHITECT: a concern raised during the resume round, by the test side, is still closable within that run by the closing turn (AC-C3-3, resume-amendment-closable-by-closing-turn)', async () => {
-  const responder = resumeResponder({
-    load: { found: true, artifacts_present: true, lastRound: 3, verdict: 'ESCALATE', entries: [{ name: 'RAC', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'test' }] },
-    'test-r4': { response: 'COUNTER', counters: ['rac-c'], accept_grounds: [] },
-    'dev-r4': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
-    closing: {
-      response: 'ACCEPT', counters: [], accept_grounds: ['c: ok'],
-      dispositions: [
-        { name: 'RAC', conclusion: 'closed', evidence: 'e', status: 'agreed' },
-        { name: 'rac-c', conclusion: 'closed', evidence: 'e', status: 'agreed' },
-      ],
-    },
-  })
-  const { result } = await runArch({ issue: 'c3-3-amend', resume: true }, responder)
-  assert.equal(result.verdict, 'CONVERGED', 'the closing turn is the only disposal opportunity a resume round has for a test-raised concern -- both entries raised by the test side must be closable there')
-})
-
-// Real-filesystem composition oracle (verification design > `open-entry-survives-into-persisted-
-// register`), driven directly against `arch()` twice over one real register file -- the same
-// carve-out AC127-13/14 and `stale-register-untouched` take, for the same reason: the runner's
-// `finally` teardown unlinks the register between invocations.
-await test('ARCHITECT: a denied resume run persists ESCALATE with the entry still open, and the next resume is admitted to a round rather than refused (AC-C3-5, open-entry-survives-into-persisted-register)', async () => {
-  const issue = 'c3-5-persist'
-  const { register } = artifactPaths(issue)
-  try { unlinkSync(register) } catch (_) { /* none yet */ }
-  writeDraftArtifacts(issue)
-
-  writeFileSync(register, JSON.stringify({
-    lastRound: 3, verdict: 'ESCALATE', escalation: 'seed',
-    entries: [{ name: 'PERSIST', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'dev' }],
-    lastResponses: {},
-  }))
-
-  const runOneAgent = (label, prompt) => {
-    if (label === 'register-load') {
-      const onDisk = JSON.parse(readFileSync(register, 'utf8'))
-      return { found: true, artifacts_present: true, lastRound: onDisk.lastRound, verdict: onDisk.verdict, entries: onDisk.entries }
-    }
-    if (label === 'ledger') return 'ledger ok'
-    if (label === 'register-write') {
-      const start = prompt.indexOf(REGISTER_FENCE_START)
-      const end = prompt.indexOf(REGISTER_FENCE_END)
-      assert.ok(start >= 0 && end > start, 'the register-write prompt must carry the declared fence literals around the payload')
-      writeFileSync(register, prompt.slice(start + REGISTER_FENCE_START.length, end))
-      return { written: true }
-    }
-    // round pair and closing turn all ACCEPT without disposing PERSIST -- the denied shape.
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
-  }
-  const runOne = await arch({ issue, resume: true }, phase, parallel, makeAgent(runOneAgent, []), mockConsole)
-  assert.equal(runOne.verdict, 'ESCALATE', 'a resume round that ACCEPTs without disposing a carried open entry must not converge')
-  assert.equal(runOne.registerWritten, true)
-
-  const onDiskAfterOne = JSON.parse(readFileSync(register, 'utf8'))
-  assert.equal(onDiskAfterOne.verdict, 'ESCALATE', 'the persisted register must carry ESCALATE, not CONVERGED')
-  const persisted = onDiskAfterOne.entries.find((e) => e.name === 'PERSIST')
-  assert.ok(persisted, 'PERSIST must survive into the persisted register')
-  assert.equal(persisted.status, 'open', 'the entry must still be open on disk')
-
-  const runTwoAgent = (label) => {
-    if (label === 'register-load') {
-      const d = JSON.parse(readFileSync(register, 'utf8'))
-      return { found: true, artifacts_present: true, lastRound: d.lastRound, verdict: d.verdict, entries: d.entries }
-    }
-    if (label === 'ledger') return 'ledger ok'
-    if (label === 'register-write') return { written: true }
-    return { response: 'COUNTER', counters: ['still working'], accept_grounds: [] }
-  }
-  const runTwo = await arch({ issue, resume: true }, phase, parallel, makeAgent(runTwoAgent, []), mockConsole)
-  removeDraftArtifacts(issue)
-  try { unlinkSync(register) } catch (_) { /* already removed above */ }
-  assert.notEqual(runTwo.escalation, 'resume register already converged', 'the second invocation must not be refused by the already-converged guard')
-  assert.notEqual(runTwo.escalation, 'resume register has no open entry', 'the second invocation must not be refused by the no-open-entry guard')
-  assert.equal(runTwo.rounds, runOne.rounds + 1, 'the second invocation must be admitted to a further round, not refused before Converge')
+  assert.equal(finalResult.turns, beforeTurn + 2, 'the further resume must re-enter from the persisted turn and run its one further exchange, not restart cold')
 })
 
 // ---- VERIFY: spawn-policy load (issue #150 / #151 regression) -----------------
@@ -2884,9 +2553,9 @@ await test('AC-facilitator-prompt: ARCHITECT CONVERGED ledger prompt carries the
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'verified', method_executable: true, locator: 'x', proposed: 'verified' }], ledger_ac_decisions: [], substituted: [] }
-    const r = Number(label.split('-r')[1])
-    if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
+    const r = roundOf(label)
+    if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
   }
   const { result, calls } = await runArch({ issue: '99900097' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
@@ -2899,7 +2568,7 @@ await test('AC-facilitator-prompt: ARCHITECT ESCALATE ledger prompt carries the 
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: [] } // never grounds -> never converges
+    return OPEN_TURN // never accepts -> never converges (issue #152)
   }
   const { result, calls } = await runArch({ issue: '99900097' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
@@ -2949,32 +2618,24 @@ const convergingWithAcDiff = (acDiffReturn) => (label) => {
   if (label === 'ledger') return 'ledger ok'
   if (label === 'register-write') return 'register written'
   if (label === 'ac-diff') return acDiffReturn
-  const r = Number(label.split('-r')[1])
-  if (r === 1) return { response: 'COUNTER', counters: ['c1'], accept_grounds: [] }
-  return { response: 'ACCEPT', counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
+  const r = roundOf(label)
+  if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
+  return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
 }
 
-await test('ARCHITECT: Test-AI draft/round/closing prompts carry the "Issue AC" column literal (dispatch obligation 1)', async () => {
+// Two Test-AI prompt sites since issue #152, not three: the cap-round closing prompt the dispatch
+// named as the third is gone with the closing half-round it belonged to.
+await test('ARCHITECT: both Test-AI prompt sites (draft, turn) carry the "Issue AC" column literal (dispatch obligation 1)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '138-ac0' }, responder)
   const testDraft = calls.find((c) => c.label === 'test-draft').prompt
-  const testR1 = calls.find((c) => c.label === 'test-r1').prompt
+  const testT1 = calls.find((c) => c.label === 'test-t1').prompt
   assert.match(testDraft, /Issue AC/, 'test-draft prompt must instruct the Issue AC column')
-  assert.match(testR1, /Issue AC/, 'test-r1 prompt must instruct the Issue AC column')
-
-  // Third location the dispatch names: the cap-round closing prompt (Test AI closing turn).
-  const closingResponder = capResponder({
-    'test-r6': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r6': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: cap-round dimensions verified'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: re-verified against final documents'] },
-  })
-  const { calls: closingCalls } = await runArch({ issue: '138-ac0-closing' }, closingResponder)
-  const closingPrompt = closingCalls.find((c) => c.label === CLOSING_CALL_LABEL).prompt
-  assert.match(closingPrompt, /Issue AC/, 'the closing prompt must also instruct the Issue AC column')
+  assert.match(testT1, /Issue AC/, 'test-t1 prompt must instruct the Issue AC column')
 })
 
 await test('ARCHITECT: an unauthorized ac-diff finding returns AC_CHANGE, not CONVERGED, with the declared acChange shape (AC1, ac-change-verdict-returns)', async () => {
@@ -3140,7 +2801,7 @@ await test('ARCHITECT: a non-converged run never calls ac-diff and never returns
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
     if (label === 'ac-diff') return { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result, calls } = await runArch({ issue: '138-ac-noreconcile' }, responder)
   assert.equal(result.verdict, 'ESCALATE')
@@ -3197,7 +2858,7 @@ await test('ARCHITECT: LEDGER_SEED_RULE seeds "operator decision" as settled aut
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    return { response: 'ACCEPT', counters: [], accept_grounds: ['x: ok'] }
+    return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { calls } = await runArch({ issue: '138-ac-seed' }, responder)
   const devDraft = calls.find((c) => c.label === 'dev-draft').prompt
@@ -3285,13 +2946,13 @@ await test('ARCHITECT: a resumed run whose persisted register carries verdict AC
   // authorizes the finding (ledger_ac_decisions carries AC9), so the run converges.
   const responder = resumeResponder({
     load: {
-      found: true, artifacts_present: true, lastRound: 4, verdict: 'AC_CHANGE',
+      found: true, artifacts_present: true, lastTurn: 8, verdict: 'AC_CHANGE',
       entries: [{ name: 'ac-authority:AC9', conclusion: 'dropped: x', evidence: 'e', status: 'open', raisedBy: 'test' }],
     },
     // The carried entry's raiser is 'test' (mintAcEntry always mints raisedBy: 'test'), so only a
     // test-side disposition can close it (raiser-only close rule) and let this round converge.
-    'test-r5': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'ac-authority:AC9', conclusion: 'authorized by operator', evidence: 'ledger', status: 'agreed' }] },
-    'dev-r5': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    'test-t9': { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'ac-authority:AC9', conclusion: 'authorized by operator', evidence: 'ledger', status: 'agreed' }] },
+    'dev-t10': { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'] },
     acDiff: {
       ac_source_present: true,
       ac_rows: [{ ac: 'AC9', carried: false, disposition: 'absent', method_executable: false, locator: '—', proposed: 'x' }],
@@ -3331,13 +2992,13 @@ await test('ARCHITECT: mintAcEntry updates an already-open ac-authority entry in
   // preserves the update-in-place discipline the raise() path already uses.
   const responder = resumeResponder({
     load: {
-      found: true, artifacts_present: true, lastRound: 4, verdict: 'AC_CHANGE',
+      found: true, artifacts_present: true, lastTurn: 8, verdict: 'AC_CHANGE',
       entries: [{ name: 'ac-authority:AC3', conclusion: 'stale conclusion', evidence: 'stale-evidence', status: 'open', raisedBy: 'test' }],
     },
     // Disposed this round (test-side, the raiser) so the resume converges and Reconcile actually
     // runs -- Reconcile then re-mints the SAME name, which is the upsert branch under test.
-    'test-r5': { response: 'ACCEPT', counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'ac-authority:AC3', conclusion: 'believed resolved', evidence: 'e', status: 'agreed' }] },
-    'dev-r5': { response: 'ACCEPT', counters: [], accept_grounds: ['d: ok'] },
+    'test-t9': { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'ac-authority:AC3', conclusion: 'believed resolved', evidence: 'e', status: 'agreed' }] },
+    'dev-t10': { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'] },
     acDiff: {
       ac_source_present: true,
       ac_rows: [{ ac: 'AC3', carried: false, disposition: 'absent', method_executable: false, locator: 'fresh-locator', proposed: 'still not carried' }],
@@ -3567,45 +3228,43 @@ await test('ARCHITECT: a substituted[] item whose proposed is a non-string fails
 })
 
 // ---- ARCHITECT: scope-bounded review-response ceiling (issue #135) ------------------------
-// `args.bounded` lowers the COLD ceiling from MAX_ROUNDS (6) to 2. Draft still runs, the round-1
-// devil's-advocate rule is untouched, the closing half-round fires on round 2 (the run's own
-// ceiling), and the resume extension is unchanged. The flag is JSON/object-only — not salvaged
-// from prose — so the catch-path mirror above stays byte-identical.
+// `args.bounded` swaps the COLD ceiling from the config's `max_turns` (12) to its
+// `bounded_max_turns` (4) — both read from .claude/autoflow/spawn-policy.json since issue #152,
+// never from a literal in the script. Draft still runs, the first-turn devil's-advocate guidance
+// is untouched, and the resume extension is unchanged. The flag is JSON/object-only — not
+// salvaged from prose — so the catch-path mirror above stays byte-identical.
 
-await test('ARCHITECT (#135): bounded run never converging stops at round 2 with the 2-round escalation text', async () => {
-  const responder = capResponder({})
-  const { result, calls } = await runArch({ issue: '135-b1', bounded: true }, responder)
+await test('ARCHITECT (#135): a bounded run that never converges stops at the config\'s 4-turn bounded ceiling', async () => {
+  const { result, calls } = await runArch({ issue: '135-b1', bounded: true }, ceilingResponder())
   assert.equal(result.verdict, 'ESCALATE')
-  assert.equal(result.rounds, 2, 'bounded ceiling is 2 rounds')
+  assert.equal(result.turns, 4, 'the bounded ceiling is bounded_max_turns (4)')
   assert.ok(calls.some((c) => c.label.endsWith('-draft')), 'Draft still runs on a bounded cold run')
-  assert.ok(!calls.some((c) => c.label === 'dev-r3'), 'no third round on a bounded run')
-  assert.match(result.escalation, /No mutual ACCEPT within 2 rounds \(reached round 2\)/)
+  assert.ok(!calls.some((c) => c.label === 'test-t5'), 'no turn beyond the bounded ceiling')
+  assert.equal(result.escalation, 'No convergence within 4 turns (reached turn 4)')
 })
 
-await test('ARCHITECT (#135): bounded run — closing half-round fires on round 2 and a grounded closing ACCEPT converges', async () => {
-  const responder = capResponder({
-    'test-r2': { response: 'COUNTER', counters: ['cap-c'], accept_grounds: [] },
-    'dev-r2': { response: 'ACCEPT', counters: [], accept_grounds: ['dev: bounded cap-round dimensions verified'] },
-    closing: { response: 'ACCEPT', counters: [], accept_grounds: ['closing: re-verified'] },
+await test('ARCHITECT (#135): a bounded run converging on its final turn pair returns CONVERGED at the ceiling', async () => {
+  const responder = ceilingResponder({
+    'test-t3': ACCEPT_TURN,
+    'dev-t4': ACCEPT_TURN,
   })
-  const { result, calls } = await runArch({ issue: '135-b2', bounded: 'true' }, responder)
+  const { result } = await runArch({ issue: '135-b2', bounded: 'true' }, responder)
   assert.equal(result.verdict, 'CONVERGED')
-  assert.equal(result.rounds, 2)
-  assert.ok(calls.some((c) => c.label === CLOSING_CALL_LABEL), 'the closing call is made at the bounded ceiling')
+  assert.equal(result.turns, 4)
 })
 
-await test('ARCHITECT (#135): bounded absent/false keeps the 6-round ceiling; malformed bounded fails loud', async () => {
-  const { result } = await runArch({ issue: '135-b3', bounded: false }, capResponder({}))
-  assert.equal(result.rounds, 6, 'bounded:false is the cold 6-round path')
+await test('ARCHITECT (#135): bounded absent/false keeps the 12-turn cold ceiling; malformed bounded fails loud', async () => {
+  const { result } = await runArch({ issue: '135-b3', bounded: false }, ceilingResponder())
+  assert.equal(result.turns, 12, 'bounded:false is the cold max_turns path')
   await assert.rejects(
-    () => runArch({ issue: '135-b4', bounded: 'yes' }, capResponder({})),
+    () => runArch({ issue: '135-b4', bounded: 'yes' }, ceilingResponder()),
     /args\.bounded must be true, "true", false, "false" or absent/,
   )
 })
 
 await test('ARCHITECT (#135): bounded is not salvaged from prose args (catch-path parity preserved)', async () => {
-  const { result } = await runArch('issue #135 bounded', capResponder({}))
-  assert.equal(result.rounds, 6, 'a prose "bounded" token must not lower the ceiling')
+  const { result } = await runArch('issue #135 bounded', ceilingResponder())
+  assert.equal(result.turns, 12, 'a prose "bounded" token must not lower the ceiling')
 })
 
 console.log(failures ? `\n${failures} test(s) FAILED` : '\nall workflow regression tests passed')

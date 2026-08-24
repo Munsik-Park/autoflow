@@ -285,6 +285,20 @@ cmd_check() {
     printf '%s\n' "$defs" | grep -qxF "$t" || _err "policy_unmapped_agent_types names '$t', which ships no agent definition"
   done < <(printf '%s\n' "$unmapped")
 
+  # Deliberation turn ceilings (issue #152): the architect deliberation reads
+  # its cold and bounded turn ceilings from `deliberation_caps` and fails
+  # closed on a missing or malformed row, so `check` surfaces the defect in
+  # the tree rather than at the next deliberation. Both values are integers
+  # >= 2 — the turn-based termination condition pairs a turn with its
+  # predecessor, so a ceiling below one full exchange could never converge.
+  for capkey in max_turns bounded_max_turns; do
+    if ! jq -e --arg k "$capkey" \
+      '.deliberation_caps["architect-deliberation"][$k] | (type == "number") and (. == floor) and (. >= 2)' \
+      "$CONFIG" >/dev/null 2>&1; then
+      _err "deliberation_caps.architect-deliberation.$capkey is absent, not an integer, or < 2"
+    fi
+  done
+
   # Effort agreement: phases sharing an agent type declare the same effort.
   # Per-agent-type is the only granularity the direct-spawn channel has, so a
   # divergent declaration is undeliverable and fails here rather than silently.

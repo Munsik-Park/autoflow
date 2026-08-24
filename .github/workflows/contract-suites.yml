@@ -119,6 +119,8 @@ on:
       - 'docs/phases/analysis.md'
       - 'tests/test-spawn-policy-single-source.sh'
       - 'tests/test-issue-150-policy-migration.sh'
+      - 'tests/test-issue-152-turn-convergence.sh'
+      - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
       - 'scripts/gate/remedy-route.sh'
@@ -235,6 +237,8 @@ on:
       - 'docs/phases/analysis.md'
       - 'tests/test-spawn-policy-single-source.sh'
       - 'tests/test-issue-150-policy-migration.sh'
+      - 'tests/test-issue-152-turn-convergence.sh'
+      - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
       - 'scripts/gate/remedy-route.sh'
@@ -490,6 +494,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-150-policy-migration.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-150-policy-migration.sh
+
+      - name: test-issue-152-turn-convergence.sh
+        id: s-test-issue-152-turn-convergence
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-152-turn-convergence.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-152-turn-convergence.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh

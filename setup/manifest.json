@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8e05fb62cec4c279f7d7b69b0f8f2fb5a4fa03d8da1b00b70c7c0f559dcae2ee"
+      "sha256": "744d60175a5d150e1d087f8314ebc8111f1009bd4cf0c460ddc3762804b0a60c"
     },
     {
       "source": "docs/INDEX.md",
@@ -97,14 +97,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6d21225f6f80e2cac0155ac8dc7f657f0e813bc00215574b6c29db477c43b9f0"
+      "sha256": "65885f9bff970b3bc938ba06d221d069310ceb854f38f250d22603727ea28053"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3632e4883599a896eadfc97bbf652c2b9c9eed1ad0d1db28c57a0844dd43df54"
+      "sha256": "407e3f18201b90e86eb55cf042cc7529ba33500c98813b9def6a17f08725cd06"
     },
     {
       "source": "docs/development-guideline.md",
@@ -202,7 +202,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5640f7c7fa21326c3a4a2f553953505f0a1ab20daa29fd7d9df237eed049c009"
+      "sha256": "254ef77ead27aa7e4bc7d93b17efd7660d048f64bd6db7b32fe64ffb866beef2"
     },
     {
       "source": "docs/title-guide.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "72b1813d392ab51fb0b690f3ba47749b5ddd20297a381b46e4cf0814b5e226ea"
+      "sha256": "79af1f6ca94698f558cd779535976e4a32c904081509f0aca3b0b0b82b3ec85c"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -356,14 +356,14 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "d6630cf717ca7f91d3a853eb02989ef1ca947de4907ce0efb634aae8e52c66de"
+      "sha256": "d20db49443648659d005bfdc142cf910824cb9f1737c6576b802b3212a041d15"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "8d77a44b744e25cd9d6566b621868cd52446286a5c27afb28c96c3360d6f9efa"
+      "sha256": "886ab375911924b21d2d6dd9dfbb646a66897f7783de33a5edc5c4009c1bfb18"
     },
     {
       "source": "setup/manifest.json",
