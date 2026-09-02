@@ -130,6 +130,15 @@ if grep -qF '| `substituted` |' "$GUIDE"; then
 else
   pass "docs: the Reconcile finding table lists no substituted row"
 fi
+# PR #163 review (Low): the ARCHITECT section's prose must not list "a row asserting a different
+# property" as a tier-3 state — the token-free wording the substituted grep cannot catch. Scoped to
+# the Acceptance-criterion change section (its heading to the next level-3 heading).
+ac_section=$(sed -n '/^### Acceptance-criterion change/,/^### /p' "$GUIDE")
+if [ -n "$ac_section" ] && ! printf '%s\n' "$ac_section" | grep -qiE "row asserting a different property|asserts a different property than the issue's"; then
+  pass "docs: ARCHITECT prose lists no different-property tier-3 state"
+else
+  failc "docs: ARCHITECT > Acceptance-criterion change still lists a different-property state (or the section was not found)"
+fi
 if grep -q "exactly two states" "$GUIDE"; then
   pass "docs: GATE:PLAN AC-authority check describes two states"
 else

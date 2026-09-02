@@ -499,8 +499,9 @@ is the operator:
    judgment is caught here.
 3. **Operator.** Asked only when the AC's **content** must change — excluded, revised, or split.
 
-The findings below are exactly the states that reach tier 3: an AC no row carries, a reduction with
-no reason for a reviewer to judge, and a row asserting a different property than the issue's.
+The findings below are exactly the states that reach tier 3: an AC no row carries, and a reduction
+with no reason for a reviewer to judge. Whether a row verifies the property its AC states is not a
+tier-3 state — that judgment is GATE:PLAN `Test plan`'s and GATE:QUALITY's (issue #160).
 
 **What runs.** Between `Converge` and `Ledger`, and **only on a converged run** (verdict precedence
 is `ESCALATE` before `AC_CHANGE` before `CONVERGED` — an infrastructure or non-convergence cause
