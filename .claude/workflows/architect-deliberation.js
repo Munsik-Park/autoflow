@@ -729,14 +729,18 @@ const [devDraft, testDraft] = await parallel([
     // pair formed. That is a deliberation one confirmation exchange can close, not an
     // infrastructure cause; the guard admits it and the exchange runs under
     // CONFIRMATION_EXCHANGE_RULE. A register with no `lastResponses` (pre-#159) is refused as before.
-    if (!hasOpenEntry()) {
+    //
+    // ORDER IS LOAD-BEARING (PR #162 review, Medium): the `already converged` refusal is evaluated
+    // FIRST. A cleanly converged register is itself {both accept, no open entry} — convergence is
+    // two accepting turns and its entries are ordinarily all disposed — so an admission evaluated
+    // before the CONVERGED check would re-open exactly the design the ledger already records under
+    // "ARCHITECT mutual ACCEPT". A run converges regardless of whether every entry was disposed of,
+    // so a CONVERGED run can also persist open entries; the verdict check covers both shapes.
+    if (loaded.verdict === 'CONVERGED') earlyEscalateReason = REASON_RESUME_ALREADY_CONVERGED
+    else if (!hasOpenEntry()) {
       if (allAcceptTerminal(loaded.lastResponses)) confirmationExchange = true
       else earlyEscalateReason = REASON_RESUME_NO_OPEN_ENTRY
     }
-    // The refusal the row above cannot make: a run converges on two consecutive unmodified accepts regardless
-    // of whether every entry was disposed of, so a CONVERGED run can persist open entries. Resuming
-    // there would reopen a design the ledger already records under "ARCHITECT mutual ACCEPT".
-    else if (loaded.verdict === 'CONVERGED') earlyEscalateReason = REASON_RESUME_ALREADY_CONVERGED
   }
 }
 

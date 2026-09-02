@@ -153,6 +153,16 @@ const scenarios = [
     turns: [],
     expect: (r) => r.result.verdict === 'ESCALATE' && r.result.turns === 16
       && r.result.escalation === 'resume register has no open entry' },
+  // PR #162 review (Medium): a cleanly CONVERGED register is itself {both accept, no open entry}.
+  // The `already converged` refusal must win over the all-accept admission, or a resume would
+  // re-open a design the ledger already records under "ARCHITECT mutual ACCEPT".
+  { name: 'issue-159-converged-all-accept-still-refused', args: { issue: '157', resume: 'true' },
+    register: { found: true, artifacts_present: true, lastTurn: 2, verdict: 'CONVERGED', entries: [],
+      lastResponses: { dev: { modified: false, accept: true }, test: { modified: false, accept: true } } },
+    turns: [],
+    expect: (r) => r.result.verdict === 'ESCALATE' && r.result.turns === 2
+      && r.result.escalation === 'resume register already converged'
+      && !r.calls.some((c) => /^(test|dev)-t\d+$|^ac-diff$|^register-write$/.test(c)) },
   // A confirmation exchange whose first turn still edits does not converge — the #152 rule holds
   // unchanged inside the admitted exchange; the escalated register is rewritten and resumable again.
   { name: 'issue-159-confirmation-exchange-still-editing', args: { issue: '157', resume: 'true' },

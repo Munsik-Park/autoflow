@@ -88,6 +88,7 @@ if command -v node >/dev/null 2>&1; then
   for sc in issue-159-all-accept-terminal-admitted \
             issue-159-no-open-not-all-accept-refused \
             issue-159-legacy-register-no-open-refused \
+            issue-159-converged-all-accept-still-refused \
             issue-159-confirmation-exchange-still-editing \
             issue-159-convergence-rule-on-every-turn; do
     if printf '%s\n' "$sim_out" | grep -qx "$sc PASS"; then
@@ -124,6 +125,14 @@ if grep -q "allAcceptTerminal(loaded.lastResponses)" "$WF" && grep -q "REASON_RE
   pass "statics: the no-open-entry guard is retained and gated by the all-accept check"
 else
   failc "statics: the guard / all-accept check pair is missing from $WF"
+fi
+# PR #162 review (Medium): the `already converged` refusal is evaluated before the admission.
+conv_line=$(grep -n "if (loaded.verdict === 'CONVERGED') earlyEscalateReason = REASON_RESUME_ALREADY_CONVERGED" "$WF" | head -1 | cut -d: -f1)
+adm_line=$(grep -n "if (allAcceptTerminal(loaded.lastResponses)) confirmationExchange = true" "$WF" | head -1 | cut -d: -f1)
+if [ -n "$conv_line" ] && [ -n "$adm_line" ] && [ "$conv_line" -lt "$adm_line" ]; then
+  pass "statics: the already-converged refusal precedes the all-accept admission"
+else
+  failc "statics: the all-accept admission is not preceded by the already-converged refusal"
 fi
 if grep -q "REGISTER_LAST_RESPONSE" "$WF" && grep -q "required: \['modified', 'accept'\]" "$WF"; then
   pass "statics: lastResponses loads in the reduced modified/accept shape"
