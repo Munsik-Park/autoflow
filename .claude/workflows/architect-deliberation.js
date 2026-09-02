@@ -95,6 +95,18 @@ const REGISTER_FENCE_END = '===AUTOFLOW-REGISTER-JSON-END==='
 // the termination condition itself does not special-case early turns beyond requiring a
 // predecessor turn to pair with.
 const FIRST_EXCHANGE_RULE = ' This is your first turn of this deliberation and it is a mandatory devil\'s-advocate review: do NOT return accept: true on this turn.'
+// The convergence rule, stated to the participant (issue #159). Under the #152 turn model a
+// modifying turn never converges, so a participant who accepts the design and still polishes a
+// sentence each turn produces the terminal state {both accept, both modified, no open entry} —
+// #157 cycle 1 spent two resumes there. Rendered on EVERY Converge turn: the rule the script
+// decides by is the rule the participant is told. It does not weaken `turnReportRule` — an edit
+// that changes what the design states is still owed; only an edit that changes nothing it states
+// is named as not a reason to edit.
+const CONVERGENCE_RULE = ' Convergence rule: this deliberation terminates only when two consecutive turns both report modified: false, accept: true. If you accept the current design, do not edit either document — report modified: false. Rewording, formatting or polishing a sentence that changes nothing the design states is not a reason to edit; make an edit only when it changes what the design states, and then report it as modified: true.'
+// The confirmation exchange (issue #159): a resume admitted on the all-accept terminal state has
+// no open entry to serve as its agenda, so its agenda is stated instead — confirm the design as it
+// stands. Rendered only on a resume the `lastResponses` admission let in.
+const CONFIRMATION_EXCHANGE_RULE = ' This is a confirmation exchange: the prior run ended with both sides accepting the design while each still edited a document, so no unmodified-accept pair formed and no register entry is open. Read the documents as they stand; if you accept them, make no edit and report modified: false, accept: true. Raise a counter only on a defect you can cite, not on wording.'
 // Agenda partition on a resume turn (issue #127). The open entries are the turn's agenda; the
 // settled ones are carried under this heading as a record, NOT as work. Declared once — the
 // acceptance criterion "loads only prior open items into the round prompt" is assertable as an
@@ -322,9 +334,20 @@ const TURN = {
 
 // Register load schema (issue #127). Closed, in the same discipline as COUNTER/DISPOSITION/TURN:
 // the load call is a pure transcription channel, so what comes back is structured, not prose. The
-// persisted `escalation` and `lastResponses` fields are deliberately OUTSIDE this schema — no
-// control-flow decision reads them; their consumer is the operator, per the resume procedure in
-// docs/autoflow-guide.md > ARCHITECT.
+// persisted `escalation` field is deliberately OUTSIDE this schema — no control-flow decision
+// reads it; its consumer is the operator, per the resume procedure in docs/autoflow-guide.md >
+// ARCHITECT. `lastResponses` is loaded in a REDUCED shape (issue #159): each side's `modified` /
+// `accept` pair and nothing else, read by exactly one control-flow decision — the resume admission
+// on the all-accept terminal state below. It is optional so a register written before #159 loads.
+const REGISTER_LAST_RESPONSE = {
+  type: ['object', 'null'],
+  additionalProperties: false,
+  properties: {
+    modified: { type: 'boolean' },
+    accept: { type: 'boolean' },
+  },
+  required: ['modified', 'accept'],
+}
 const REGISTER_ENTRY = {
   type: 'object',
   additionalProperties: false,
@@ -354,6 +377,13 @@ const REGISTER_FILE = {
     // is what keeps an AC_CHANGE register resumable — the operator's whole re-entry path.
     verdict: { type: 'string', enum: ['CONVERGED', 'AC_CHANGE', 'ESCALATE'] },
     entries: { type: 'array', items: REGISTER_ENTRY },
+    // Each side's final turn report, reduced to its two facts. Absent on a pre-#159 register.
+    lastResponses: {
+      type: 'object',
+      additionalProperties: false,
+      properties: { dev: REGISTER_LAST_RESPONSE, test: REGISTER_LAST_RESPONSE },
+      required: ['dev', 'test'],
+    },
   },
   required: ['found', 'artifacts_present', 'lastTurn', 'verdict', 'entries'],
 }
@@ -473,6 +503,13 @@ const register = new Map()
 // never reads it (issue #152): the register is the deliberation's record and the resume agenda,
 // not a termination input.
 const hasOpenEntry = () => [...register.values()].some((e) => e.status === 'open')
+// The all-accept terminal state (issue #159), read from the loaded register's reduced
+// `lastResponses`: both sides' final turn reports exist and accept. `modified` is deliberately
+// not consulted — the guard admits the state, and the confirmation exchange's own two turns decide.
+const allAcceptTerminal = (lr) => !!(lr && lr.dev && lr.test && lr.dev.accept === true && lr.test.accept === true)
+// Set by the resume admission when the register held no open entry but the all-accept terminal
+// state admitted the resume; read only by the Converge turn prompts.
+let confirmationExchange = false
 // Rehydration is defensive (issue #127): a loaded entry passes back through the same flatten +
 // never-empty defaulting a raised counter does, so the four-labelled-lines-plus-terminator render
 // invariant holds whatever the load agent returned. An out-of-enum `status` coerces to `open` (the
@@ -669,7 +706,7 @@ const [devDraft, testDraft] = await parallel([
   console.log(`ARCHITECT resume for issue #${issue} — loading ${registerPath}`)
   loaded = await Promise.resolve()
     .then(() => agent(
-      `You are a transcription channel, not a reviewer. Read ${registerPath} and return its contents under the given schema, verbatim — do not summarize, reword, add, drop or re-order anything. Set "found" true only when the file exists AND parses as JSON; when it does not, set "found" false and return the other fields as empty defaults. Set "artifacts_present" true only when BOTH ${feature} and ${verif} exist and are non-empty. Copy "lastTurn", "verdict" and every element of "entries" (name, conclusion, evidence, status, raisedBy) exactly as the file states them. Exercise no judgment about the design itself. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are a transcription channel, not a reviewer. Read ${registerPath} and return its contents under the given schema, verbatim — do not summarize, reword, add, drop or re-order anything. Set "found" true only when the file exists AND parses as JSON; when it does not, set "found" false and return the other fields as empty defaults. Set "artifacts_present" true only when BOTH ${feature} and ${verif} exist and are non-empty. Copy "lastTurn", "verdict" and every element of "entries" (name, conclusion, evidence, status, raisedBy) exactly as the file states them. When the file carries a "lastResponses" object, return "lastResponses" with, for each of its "dev" and "test" sides, that side's "modified" and "accept" values copied exactly (null when the side's value is null) and no other field; when the file has no "lastResponses", omit it. Exercise no judgment about the design itself. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: REGISTER_FILE, label: 'register-load', phase: 'Resume', ...site('register-load') },
     ))
     .catch(() => null)
@@ -686,11 +723,24 @@ const [devDraft, testDraft] = await parallel([
     }
     // A prior run that escalated with no open entry escalated for an infrastructure cause, and
     // resume is not the instrument for that — a deliberate refusal, not a degenerate empty turn.
-    if (!hasOpenEntry()) earlyEscalateReason = REASON_RESUME_NO_OPEN_ENTRY
-    // The refusal the row above cannot make: a run converges on two consecutive unmodified accepts regardless
-    // of whether every entry was disposed of, so a CONVERGED run can persist open entries. Resuming
-    // there would reopen a design the ledger already records under "ARCHITECT mutual ACCEPT".
-    else if (loaded.verdict === 'CONVERGED') earlyEscalateReason = REASON_RESUME_ALREADY_CONVERGED
+    // One admitted shape (issue #159): the all-accept terminal state. Both sides' final turn
+    // reports carry accept: true and no entry is open — every concern was disposed of and the run
+    // stopped only because each accepting turn also edited a document, so no unmodified-accept
+    // pair formed. That is a deliberation one confirmation exchange can close, not an
+    // infrastructure cause; the guard admits it and the exchange runs under
+    // CONFIRMATION_EXCHANGE_RULE. A register with no `lastResponses` (pre-#159) is refused as before.
+    //
+    // ORDER IS LOAD-BEARING (PR #162 review, Medium): the `already converged` refusal is evaluated
+    // FIRST. A cleanly converged register is itself {both accept, no open entry} — convergence is
+    // two accepting turns and its entries are ordinarily all disposed — so an admission evaluated
+    // before the CONVERGED check would re-open exactly the design the ledger already records under
+    // "ARCHITECT mutual ACCEPT". A run converges regardless of whether every entry was disposed of,
+    // so a CONVERGED run can also persist open entries; the verdict check covers both shapes.
+    if (loaded.verdict === 'CONVERGED') earlyEscalateReason = REASON_RESUME_ALREADY_CONVERGED
+    else if (!hasOpenEntry()) {
+      if (allAcceptTerminal(loaded.lastResponses)) confirmationExchange = true
+      else earlyEscalateReason = REASON_RESUME_NO_OPEN_ENTRY
+    }
   }
 }
 
@@ -812,6 +862,9 @@ while (!earlyEscalateReason && turn < turnCeiling && !converged) {
   // Shared turn-report instruction: `modified` is a fact about THIS turn's edits, never a strategy
   // knob — the design's own rule (issue #152) is that a modification keeps the conversation open,
   // so an improvement is never suppressed to protect convergence.
+  // The confirmation-exchange framing (issue #159) renders only on a resume admitted through the
+  // all-accept terminal state; CONVERGENCE_RULE renders on every turn.
+  const confirmation = confirmationExchange ? CONFIRMATION_EXCHANGE_RULE : ''
   const turnReportRule = ` Report two facts about THIS turn: set "modified" true if you edited ${feature} or ${verif} in this turn and false if you made no edit; set "accept" per the condition above. A turn that modified a document continues the deliberation regardless of "accept" — never withhold an improvement to reach convergence, and never report an edit you made as unmodified.`
   // Two call sites, one per side, so each carries its site key as a STRING LITERAL — the [MUST]
   // above site(): contract CI joins call-site keys against config rows by static set comparison,
@@ -821,11 +874,11 @@ while (!earlyEscalateReason && turn < turnCeiling && !converged) {
   const result = await Promise.resolve()
     .then(() => side === 'test'
       ? agent(
-          `You are the Test AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange(turn)} If the feature design changed testability, UPDATE ${verif} in place. Set "accept" true ONLY when every acceptance criterion carries a row with a stated disposition — an automated method, or any reduced disposition (existing-coverage / delivery-check / manual / environment-dependent / none) whose Reason cell states in one line why it is the right answer — except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${TEST_NECESSITY_RULE}${ISSUE_AC_COLUMN_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+          `You are the Test AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange(turn)} If the feature design changed testability, UPDATE ${verif} in place. Set "accept" true ONLY when every acceptance criterion carries a row with a stated disposition — an automated method, or any reduced disposition (existing-coverage / delivery-check / manual / environment-dependent / none) whose Reason cell states in one line why it is the right answer — except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${CONVERGENCE_RULE}${confirmation}${TEST_NECESSITY_RULE}${ISSUE_AC_COLUMN_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
           { schema: TURN, label: `test-t${turn}`, phase: 'Converge', ...site('test-round') },
         )
       : agent(
-          `You are the Developer AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange(turn)} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Set "accept" true ONLY when both documents are mutually consistent and complete AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${TEST_NECESSITY_CHALLENGE_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+          `You are the Developer AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange(turn)} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Set "accept" true ONLY when both documents are mutually consistent and complete AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${CONVERGENCE_RULE}${confirmation}${TEST_NECESSITY_CHALLENGE_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
           { schema: TURN, label: `dev-t${turn}`, phase: 'Converge', ...site('dev-round') },
         ))
     .catch(() => null)
@@ -1032,9 +1085,10 @@ if (registerHeld) {
     // open-only persistence would let a resumed sub-agent re-raise a rejected concern with nothing
     // anywhere to point at.
     entries: [...register.values()],
-    // Read by the operator, not by any control-flow path: which side stopped short, and on what
-    // verdict. Not injected into the resume turn prompt — the in-turn `peer` clause frames a
-    // verdict as current, and a verdict from a prior invocation is not.
+    // Read by the operator, and by exactly one control-flow path (issue #159): the resume
+    // admission's all-accept terminal-state check, which reads each side's `accept` alone. Not
+    // injected into the resume turn prompt — the in-turn `peer` clause frames a verdict as
+    // current, and a verdict from a prior invocation is not.
     lastResponses: { dev: lastDev, test: lastTest },
   }, null, 2)
   const registerAck = await Promise.resolve()

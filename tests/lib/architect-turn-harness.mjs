@@ -24,6 +24,19 @@ if (!root) { console.error('usage: node architect-turn-harness.mjs <repo-root>')
 const scriptSrc = readFileSync(join(root, '.claude/workflows/architect-deliberation.js'), 'utf8')
   .replace('export const meta', 'const meta')
 const policyContent = readFileSync(join(root, '.claude/autoflow/spawn-policy.json'), 'utf8')
+// Issue #159 regression fixture: the #157 cycle-1 register shape (all entries agreed, both
+// sides' final reports accept: true / modified: true). `loadedFixture` renders it the way the
+// register-load transcription channel returns a file — the closed REGISTER_FILE shape, with
+// `lastResponses` reduced to each side's modified/accept pair.
+const fixture159 = JSON.parse(readFileSync(join(root, 'tests/fixtures/issue-159-register-all-accept.json'), 'utf8'))
+const loadedFixture = (f) => ({
+  found: true, artifacts_present: true, lastTurn: f.lastTurn, verdict: f.verdict,
+  entries: f.entries.map((e) => ({ ...e })),
+  lastResponses: {
+    dev: f.lastResponses.dev && { modified: f.lastResponses.dev.modified, accept: f.lastResponses.dev.accept },
+    test: f.lastResponses.test && { modified: f.lastResponses.test.modified, accept: f.lastResponses.test.accept },
+  },
+})
 
 // eslint-disable-next-line no-new-func
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
@@ -40,10 +53,12 @@ const turnOf = (t) => t === null ? null : {
 
 async function run(scenario) {
   const calls = []
+  const prompts = {}
   const turns = [...scenario.turns]
   const agent = async (prompt, opts) => {
     const label = (opts && opts.label) || ''
     calls.push(label)
+    prompts[label] = prompt
     if (label === 'policy-load') return { found: true, content: scenario.policyContent || policyContent }
     if (label === 'dev-draft' || label === 'test-draft') return 'drafted'
     if (label === 'register-load') return scenario.register
@@ -67,7 +82,7 @@ async function run(scenario) {
   }
   const parallel = (thunks) => Promise.all(thunks.map((f) => Promise.resolve().then(f).catch(() => null)))
   const result = await wf(scenario.args, agent, parallel, () => {}, () => {}, { log: () => {} })
-  return { result, calls, leftover: turns.length }
+  return { result, calls, prompts, leftover: turns.length }
 }
 
 const scenarios = [
@@ -116,6 +131,52 @@ const scenarios = [
       entries: [{ name: 'open concern', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'test' }] },
     turns: [{ side: 'test', v: [true, false] }, { side: 'dev', v: [false, true] }],
     expect: (r) => r.result.verdict === 'ESCALATE' && r.result.turns === 14 },
+  // Issue #159 — the all-accept terminal state {both accept, both modified, no open entry}.
+  // The fixture mirrors the #157 cycle-1 register: every entry agreed, each side's final
+  // report accept: true with modified: true. The register load transcribes `lastResponses`
+  // in the reduced shape; the guard admits the resume as a confirmation exchange.
+  { name: 'issue-159-all-accept-terminal-admitted', args: { issue: '157', resume: 'true' },
+    register: loadedFixture(fixture159),
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 18 && r.result.resumed === true
+      && /confirmation exchange/.test(r.prompts['test-t17'] || '') && /confirmation exchange/.test(r.prompts['dev-t18'] || '') },
+  // The same register with one side's final report NOT accepting stays refused: no open entry
+  // and no all-accept state is the infrastructure-cause shape the guard was written for.
+  { name: 'issue-159-no-open-not-all-accept-refused', args: { issue: '157', resume: 'true' },
+    register: (() => { const reg = loadedFixture(fixture159); reg.lastResponses.dev.accept = false; return reg })(),
+    turns: [],
+    expect: (r) => r.result.verdict === 'ESCALATE' && r.result.turns === 16
+      && r.result.escalation === 'resume register has no open entry' },
+  // A pre-#159 register (no lastResponses) with no open entry is refused as before.
+  { name: 'issue-159-legacy-register-no-open-refused', args: { issue: '157', resume: 'true' },
+    register: (() => { const reg = loadedFixture(fixture159); delete reg.lastResponses; return reg })(),
+    turns: [],
+    expect: (r) => r.result.verdict === 'ESCALATE' && r.result.turns === 16
+      && r.result.escalation === 'resume register has no open entry' },
+  // PR #162 review (Medium): a cleanly CONVERGED register is itself {both accept, no open entry}.
+  // The `already converged` refusal must win over the all-accept admission, or a resume would
+  // re-open a design the ledger already records under "ARCHITECT mutual ACCEPT".
+  { name: 'issue-159-converged-all-accept-still-refused', args: { issue: '157', resume: 'true' },
+    register: { found: true, artifacts_present: true, lastTurn: 2, verdict: 'CONVERGED', entries: [],
+      lastResponses: { dev: { modified: false, accept: true }, test: { modified: false, accept: true } } },
+    turns: [],
+    expect: (r) => r.result.verdict === 'ESCALATE' && r.result.turns === 2
+      && r.result.escalation === 'resume register already converged'
+      && !r.calls.some((c) => /^(test|dev)-t\d+$|^ac-diff$|^register-write$/.test(c)) },
+  // A confirmation exchange whose first turn still edits does not converge — the #152 rule holds
+  // unchanged inside the admitted exchange; the escalated register is rewritten and resumable again.
+  { name: 'issue-159-confirmation-exchange-still-editing', args: { issue: '157', resume: 'true' },
+    register: loadedFixture(fixture159),
+    turns: [{ side: 'test', v: [true, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'ESCALATE' && r.result.turns === 18 },
+  // An ordinary resume (open entry present) is NOT framed as a confirmation exchange, and every
+  // Converge turn — cold or resumed — carries the convergence rule sentence.
+  { name: 'issue-159-convergence-rule-on-every-turn', args: { issue: '152' },
+    turns: [{ side: 'test', v: [true, false] }, { side: 'dev', v: [false, true] }, { side: 'test', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED'
+      && ['test-t1', 'dev-t2', 'test-t3'].every((k) => /Convergence rule: this deliberation terminates only when two consecutive turns both report modified: false, accept: true/.test(r.prompts[k] || ''))
+      && ['test-t1', 'dev-t2', 'test-t3'].every((k) => /do not edit either document — report modified: false/.test(r.prompts[k] || ''))
+      && !Object.values(r.prompts).some((p) => /confirmation exchange/.test(p)) },
   // Two consecutive missing turns (one per side) => infrastructure escalation.
   { name: 'consecutive-missing-turns', args: { issue: '152' },
     turns: [{ v: null }, { v: null }],

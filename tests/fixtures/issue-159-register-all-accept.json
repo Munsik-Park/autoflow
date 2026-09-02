@@ -1,0 +1,39 @@
+{
+  "issue": "157",
+  "lastTurn": 16,
+  "verdict": "ESCALATE",
+  "escalation": "No convergence within 16 turns (reached turn 16)",
+  "acReason": null,
+  "entries": [
+    {
+      "name": "ac-authority:AC3 reduced disposition reason",
+      "conclusion": "agreed: the manual disposition states its reason in the Reason cell",
+      "evidence": ".autoflow/issue-157-verification-design.md > Acceptance criteria table, row AC3",
+      "status": "agreed",
+      "raisedBy": "test"
+    },
+    {
+      "name": "repo-boundary signal wording",
+      "conclusion": "agreed: the generalized signal names the path shape, not a placeholder literal",
+      "evidence": ".autoflow/issue-157-feature-design.md > Change surface",
+      "status": "agreed",
+      "raisedBy": "dev"
+    }
+  ],
+  "lastResponses": {
+    "dev": {
+      "modified": true,
+      "accept": true,
+      "counters": [],
+      "accept_grounds": ["both documents mutually consistent; grounds sentences corrected in place"],
+      "dispositions": []
+    },
+    "test": {
+      "modified": true,
+      "accept": true,
+      "counters": [],
+      "accept_grounds": ["every AC row carries a disposition with a stated reason"],
+      "dispositions": []
+    }
+  }
+}
