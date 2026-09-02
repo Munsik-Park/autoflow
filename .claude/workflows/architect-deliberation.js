@@ -419,12 +419,6 @@ const AC_ROW = {
   },
   required: ['ac', 'carried', 'disposition', 'reason_stated', 'locator', 'proposed'],
 }
-const AC_SUBSTITUTION = {
-  type: 'object',
-  additionalProperties: false,
-  properties: { ac: { type: 'string' }, locator: { type: 'string' }, proposed: { type: 'string' } },
-  required: ['ac', 'locator', 'proposed'],
-}
 const AC_DIFF = {
   type: 'object',
   additionalProperties: false,
@@ -435,18 +429,23 @@ const AC_DIFF = {
     // Transcription, second list: one entry per level-2 ledger heading ending in the
     // `[ac-decision]` marker, carrying that entry's `- AC:` value. Nothing else.
     ledger_ac_decisions: { type: 'array', items: { type: 'string' } },
-    // The one reading the channel is asked for, and the design's stated residual
-    // false-positive surface.
-    substituted: { type: 'array', items: AC_SUBSTITUTION },
+    // No `substituted` list (issue #160). "The row asserts a different property than the issue's"
+    // is a semantic reading; asked of a channel forbidden to judge, it degraded to a wording
+    // comparison that paused a legitimate one-AC-two-rows split (#157 cycle 1) and passed a real
+    // misreading that kept the wording. Whether a row verifies the property its AC states is
+    // judged where an AC-reading rubric already exists: GATE:PLAN `Test plan` and GATE:QUALITY's
+    // assertion-claim alignment.
   },
-  required: ['ac_source_present', 'ac_rows', 'ledger_ac_decisions', 'substituted'],
+  required: ['ac_source_present', 'ac_rows', 'ledger_ac_decisions'],
 }
 // The kind table, in the script, first match wins — one finding per row at most. The set is
-// narrowed to the states that reach the OPERATOR (issue #153): a reduced verification disposition
-// is a verification-method choice the deliberation may make, so it is a finding only when no
-// reason was stated for a reviewer to judge. A reasoned reduction passes to the PR body (tier 2,
-// the external reviewer) and its reason quality is scored by GATE:PLAN's `Scope` depth items —
-// judging a reason is the faculty this channel is forbidden to exercise.
+// narrowed to the states that reach the OPERATOR (issue #153) AND are computable without reading
+// meaning (issue #160): a reduced verification disposition is a verification-method choice the
+// deliberation may make, so it is a finding only when no reason was stated for a reviewer to
+// judge. A reasoned reduction passes to the PR body (tier 2, the external reviewer) and its
+// reason quality is scored by GATE:PLAN's `Scope` depth items — judging a reason is the faculty
+// this channel is forbidden to exercise, and so is judging whether a row's proposition is the
+// AC's (the retired `substituted` kind).
 const acKindOf = (row) => {
   if (!row.carried) return 'dropped'
   if (row.disposition === 'reduced' && !row.reason_stated) return 'unreasoned'
@@ -463,12 +462,9 @@ const acKindOf = (row) => {
 // `ac` is the only field carrying an emptiness clause: it is the identity key the authorization
 // join compares after trim, and an empty id converges while naming no criterion. `locator` /
 // `proposed` are display values the join already defaults, so emptiness there stays accepted.
-// Shared by both item predicates below — `AC_ROW` and `AC_SUBSTITUTION` both carry this trio.
-const acCoreFieldsWellFormed = (x) =>
-  typeof x.ac === 'string' && x.ac.trim() !== '' &&
-  typeof x.locator === 'string' && typeof x.proposed === 'string'
 const acRowWellFormed = (row) => !!row && typeof row === 'object' &&
-  acCoreFieldsWellFormed(row) &&
+  typeof row.ac === 'string' && row.ac.trim() !== '' &&
+  typeof row.locator === 'string' && typeof row.proposed === 'string' &&
   typeof row.carried === 'boolean' &&
   // No separate `typeof === 'string'` clause on `disposition`: the enum is an array of strings,
   // so `includes` rejects every non-string value on its own.
@@ -480,11 +476,12 @@ const acRowWellFormed = (row) => !!row && typeof row === 'object' &&
   // non-absent disposition derives `dropped`, an operator pause that names the criterion, and
   // fail-closing it would replace that with a less informative one.
   !(row.disposition === 'absent' && row.carried === true)
-const acSubstitutionWellFormed = (sub) => !!sub && typeof sub === 'object' && acCoreFieldsWellFormed(sub)
+// A payload carrying a stray `substituted` list (a channel answering from a pre-#160 prompt) is
+// still well-formed: the list is simply not read, so it can neither pause nor converge a run.
 const acDiffWellFormed = (d) => !!d && typeof d === 'object' &&
   typeof d.ac_source_present === 'boolean' &&
-  Array.isArray(d.ac_rows) && Array.isArray(d.ledger_ac_decisions) && Array.isArray(d.substituted) &&
-  d.ac_rows.every(acRowWellFormed) && d.substituted.every(acSubstitutionWellFormed)
+  Array.isArray(d.ac_rows) && Array.isArray(d.ledger_ac_decisions) &&
+  d.ac_rows.every(acRowWellFormed)
 
 // A null draft return is a skipped/errored sub-agent — the ARCHITECT analogue of VERIFY's
 // `test ? test.verdict : 'missing'`. Record it as a distinct early-ESCALATE reason and skip
@@ -925,7 +922,7 @@ let acEvidence = ''
 if (converged) {
   const acDiff = await Promise.resolve()
     .then(() => agent(
-      `You are a comparison channel, not a reviewer. Read three artifacts and return what they state under the given schema. (1) ${phaseB} — its "## Acceptance criteria" table. Set "ac_source_present" true only when that section exists AND parses as a table; when it does not, set it false and return the other fields as empty arrays. (2) ${verif} — its acceptance-criteria table, whose leading "Issue AC" column carries an AC id or "—". (3) ${ledger} — the issue decision ledger. Return "ac_rows" as ONE ROW PER AC ID in the ${phaseB} table, IN THAT TABLE'S ORDER, omitting none: "ac" is the AC id copied verbatim; "carried" is true when some ${verif} row's "Issue AC" cell equals that id; "disposition" is that carrying row's stated verification type mapped to exactly one of automated / reduced / absent — "automated" when the row's type is automated, "reduced" for every other stated type (existing-coverage, delivery-check, manual, environment-dependent, none, deferred, or any other non-automated wording), and "absent" if and only if "carried" is false; "reason_stated" is true when the carrying row's Reason cell is non-empty and is not "—", and false otherwise; "locator" is the carrying row's name, or "—"; "proposed" is that row's disposition wording copied verbatim. Return "ledger_ac_decisions" by pure grammar match, not by judgment: for each level-2 heading in ${ledger} whose text ends with the marker [ac-decision], copy the value of that entry's "- AC:" line. Copy nothing else into that list — not a paraphrase of a criterion, not a prose mention of an AC id, and not a "- AC:" line under any other marker or under no marker. Return "substituted" for each ${verif} row whose criterion asserts a DIFFERENT property than the ${phaseB} criterion of the same id. Exercise no judgment about whether any difference was justified, and do not decide whether an entry's disposition was appropriate — report presence and kind only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+      `You are a comparison channel, not a reviewer. Read three artifacts and return what they state under the given schema. (1) ${phaseB} — its "## Acceptance criteria" table. Set "ac_source_present" true only when that section exists AND parses as a table; when it does not, set it false and return the other fields as empty arrays. (2) ${verif} — its acceptance-criteria table, whose leading "Issue AC" column carries an AC id or "—". (3) ${ledger} — the issue decision ledger. Return "ac_rows" as ONE ROW PER AC ID in the ${phaseB} table, IN THAT TABLE'S ORDER, omitting none: "ac" is the AC id copied verbatim; "carried" is true when some ${verif} row's "Issue AC" cell equals that id; "disposition" is that carrying row's stated verification type mapped to exactly one of automated / reduced / absent — "automated" when the row's type is automated, "reduced" for every other stated type (existing-coverage, delivery-check, manual, environment-dependent, none, deferred, or any other non-automated wording), and "absent" if and only if "carried" is false; "reason_stated" is true when the carrying row's Reason cell is non-empty and is not "—", and false otherwise; "locator" is the carrying row's name, or "—"; "proposed" is that row's disposition wording copied verbatim. Return "ledger_ac_decisions" by pure grammar match, not by judgment: for each level-2 heading in ${ledger} whose text ends with the marker [ac-decision], copy the value of that entry's "- AC:" line. Copy nothing else into that list — not a paraphrase of a criterion, not a prose mention of an AC id, and not a "- AC:" line under any other marker or under no marker. Do not compare the wording or the meaning of any ${verif} row's criterion against the ${phaseB} criterion of the same id — a criterion verified by more than one row, or restated in a row's own words, is transcribed exactly like any other carried id. Exercise no judgment about whether any difference was justified, and do not decide whether an entry's disposition was appropriate — report presence and kind only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
       { schema: AC_DIFF, label: 'ac-diff', phase: 'Reconcile', ...site('ac-diff') },
     ))
     .catch(() => null)
@@ -963,15 +960,6 @@ if (converged) {
         kind,
         locator: flatten(row.locator) || LOCATOR_UNSPECIFIED,
         proposed: flatten(row.proposed),
-      })
-    }
-    for (const sub of acDiff.substituted) {
-      if (!sub || typeof sub !== 'object') continue
-      findings.push({
-        ac: flatten(sub.ac),
-        kind: 'substituted',
-        locator: flatten(sub.locator) || LOCATOR_UNSPECIFIED,
-        proposed: flatten(sub.proposed),
       })
     }
     // Authority, in the script: exact-after-trim over the transcribed id list. Never a substring

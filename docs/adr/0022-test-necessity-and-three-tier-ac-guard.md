@@ -66,7 +66,8 @@ verification method pass through three tiers, of which the operator is only the 
 
 5. **The Reconcile finding set narrows to three kinds**: `dropped` (no row carries the id),
    `unreasoned` (a row carries it with a non-`automated` disposition and states no reason), and
-   `substituted` (the row asserts a different property than the issue's). The comparison channel
+   `substituted` (the row asserts a different property than the issue's — *retired by issue #160;
+   see Notes > Amendment*). The comparison channel
    still transcribes and never judges — it reports whether a reason is *stated*, never whether it is
    *good*, since judging a reason is exactly the faculty ADR-0020 refused to hand it. Reason
    **quality** is scored where a rubric already exists: GATE:PLAN's `Scope` verification-depth items,
@@ -137,6 +138,7 @@ verification method pass through three tiers, of which the operator is only the 
 ## Related Issues / PRs
 
 - Issue #153 — this decision and its implementation.
+- Issue #160 — amends item 5: retires the `substituted` kind (Notes > *Amendment (issue #160)*).
 - Amends `docs/adr/0020-acceptance-criterion-authority.md`: the operator keeps authority over
   acceptance-criterion **content**; a verification-method reduction with a stated reason is the
   deliberation's, judged by the external reviewer. ADR-0020's halt, fail-closed sentinels,
@@ -149,3 +151,14 @@ verification method pass through three tiers, of which the operator is only the 
 - Numbering: 0022 is the next free integer, contiguous after 0021.
 - The decision alters agent-workflow gates and evaluation policy — a `docs/adr/README.md` >
   "When to Create an ADR" trigger area — so it lands with the mechanism it governs.
+- **Amendment (issue #160)** — the Reconcile finding set is `dropped` / `unreasoned` only.
+  `substituted` was the one kind that required reading meaning ("asserts a different property"),
+  and item 5's own premise is that the channel never judges: asked of that channel, the reading
+  degraded to a wording comparison, which fails both ways — it paused #157 cycle 1 on a legitimate
+  split of one criterion into two rows with different verification methods (the AC's content
+  unchanged), and it passes a real misreading that keeps the wording. Strengthening the wording
+  rule cannot separate the two without judging meaning, which the channel contract forbids. The
+  misreading check is assigned to the places that already read an AC's meaning: GATE:PLAN
+  `Test plan` (input: the AC table) and GATE:QUALITY's assertion-claim alignment. The verification
+  design's criterion cell stays — a row states the proposition its method checks; it is not a copy
+  kept for comparison. Everything else in this ADR is unchanged.

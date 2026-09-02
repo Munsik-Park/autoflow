@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/adr/0020-acceptance-criterion-authority.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0a8654729da584cdb148357b61e0ca08e32a00e9eaf38f91b7ad10e276643d6a"
+      "sha256": "1e98fb30dcb7fac1c5f0e403a25dc31717788b0e6ca60a506a78d75077299f7f"
     },
     {
       "source": "docs/adr/0021-c7-pilot-spawn-mode-result.md",
@@ -90,28 +90,28 @@
       "dest": ".claude/autoflow/docs/adr/0022-test-necessity-and-three-tier-ac-guard.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "351c2d24eff81f792da2056572911e3a4cda2a1106448d67b967ccf2db3171fb"
+      "sha256": "168d07b9ead4d6d7c648a9d94ae836967fb64071eeca71850a4ecc494b2c0847"
     },
     {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "120bc530d4020e1013624c1929eceaea10289048c8474b7e9279eb1c610f7757"
+      "sha256": "cc38b86b69f00c39ee5dcfe1fff038cb80501b78deba6d4bfe98ec33a909d80f"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d370aeed7b048e9ab6625b63d994659e6544097417e8a9e2c66d64338441e91f"
+      "sha256": "a1e53f737d12567f57c5bcf522eaafcb9f31195dc711e17d53c63b7d2057853f"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b800cfe5fd17ee7ef31bb1919d8aba739710dc7ce5c2f13455c664906c5ff458"
+      "sha256": "ed86becf9a3d4bb4dfee326243a8be70370e035a2b584b790e0f28a1ff012825"
     },
     {
       "source": "docs/development-guideline.md",
@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e8157bb94f5afaf54228c61ae409d75d60afeb55e7ec915251aea03a55c784f9"
+      "sha256": "78093d8c6b55b80e849e5353e9364ba48532965c3cb87735f21e2e13510acbd7"
     },
     {
       "source": "docs/title-guide.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ade7fcb1692103c6cd8e9d66a72b2549aff427d3086035445b3249ab8fab0031"
+      "sha256": "91c6577daa3e8900e3cd36022e18f7a23dc8d8779670d88e221e8b12aee870e1"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
