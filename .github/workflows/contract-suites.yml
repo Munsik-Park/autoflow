@@ -121,6 +121,8 @@ on:
       - 'tests/test-spawn-policy-single-source.sh'
       - 'tests/test-issue-150-policy-migration.sh'
       - 'tests/test-issue-152-turn-convergence.sh'
+      - 'tests/test-issue-159-all-accept-resume.sh'
+      - 'tests/fixtures/issue-159-register-all-accept.json'
       - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
@@ -240,6 +242,8 @@ on:
       - 'tests/test-spawn-policy-single-source.sh'
       - 'tests/test-issue-150-policy-migration.sh'
       - 'tests/test-issue-152-turn-convergence.sh'
+      - 'tests/test-issue-159-all-accept-resume.sh'
+      - 'tests/fixtures/issue-159-register-all-accept.json'
       - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
@@ -502,6 +506,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-152-turn-convergence.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-152-turn-convergence.sh
+
+      - name: test-issue-159-all-accept-resume.sh
+        id: s-test-issue-159-all-accept-resume
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-159-all-accept-resume.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-159-all-accept-resume.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh
