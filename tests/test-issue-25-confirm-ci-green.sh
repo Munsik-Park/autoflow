@@ -363,8 +363,9 @@ assert_true "AC7: external-review-sequencing.md Post-reconcile gate references c
   "printf '%s' \"\$RECONCILE_JOINED\" | grep -qF 'confirm-ci-green.sh'"
 assert_true "AC7: external-review-sequencing.md Post-reconcile gate retains the TARGET pointer-equality token (DCR-7 retention guard)" \
   "printf '%s' \"\$RECONCILE_JOINED\" | grep -qF 'TARGET'"
-assert_true "AC7: external-review-sequencing.md Post-reconcile gate retains the authenticated-Jenkins curl token (DCR-7 retention guard)" \
-  "printf '%s' \"\$RECONCILE_JOINED\" | grep -qF 'curl'"
+# #161: the superset bullet is the head-SHA check-runs read (CI-product independent), no longer a Jenkins curl.
+assert_true "AC7: external-review-sequencing.md Post-reconcile gate retains the head-commit check-runs token (DCR-7 retention guard)" \
+  "printf '%s' \"\$RECONCILE_JOINED\" | grep -qF 'check-runs'"
 
 GITWORKFLOW_BODY="$(cat "$GIT_WORKFLOW" 2>/dev/null || true)"
 assert_true "AC7: git-workflow.md cross-references confirm-ci-green.sh (no third prose restatement)" \
