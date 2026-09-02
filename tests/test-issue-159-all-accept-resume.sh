@@ -2,7 +2,9 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/workflows/architect-deliberation.js tests/lib/architect-turn-harness.mjs docs/autoflow-guide.md docs/teammate-contracts.md
-# lane: standing
+# lane: cycle-scoped
+# retire-with: #159
+# cycle-arm: #159
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #159 — the all-accept terminal state is resumable
@@ -26,17 +28,36 @@
 #   2. STATICS — the script carries both rules and the reduced load shape.
 #   3. DOCS — the operator guide describes the confirmation-exchange admission
 #      and does not describe editing the register by hand as a procedure.
+#
+# CYCLE-SCOPED by construction: the behavioral half re-reads the harness the
+# standing #152 suite (tests/test-issue-152-turn-convergence.sh) already
+# executes on every run, so the resume-admission contract stays protected
+# after this suite retires. What is one-time is the rest — sentence literals
+# in the prompts, the load-schema shape, and the docs wording — which verify
+# this issue's acceptance criteria 2 and 3 once and would otherwise freeze
+# wording against later edits.
 # =============================================================================
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-WF="$PROJECT_ROOT/.claude/workflows/architect-deliberation.js"
-HARNESS="$PROJECT_ROOT/tests/lib/architect-turn-harness.mjs"
-FIXTURE="$PROJECT_ROOT/tests/fixtures/issue-159-register-all-accept.json"
-GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
-CONTRACTS="$PROJECT_ROOT/docs/teammate-contracts.md"
+# The fixed set of files this one-time assertion reads — declared as a path
+# allow-list array per scripts/test/suite-manifest.sh's cycle-scoped grammar:
+# retirement (`# retire-with: #159`) and this array's evaluation set are the
+# only things dominance is checkable over for a one-time property.
+allow_list=(
+  ".claude/workflows/architect-deliberation.js"
+  "tests/lib/architect-turn-harness.mjs"
+  "tests/fixtures/issue-159-register-all-accept.json"
+  "docs/autoflow-guide.md"
+  "docs/teammate-contracts.md"
+)
+WF="$PROJECT_ROOT/${allow_list[0]}"
+HARNESS="$PROJECT_ROOT/${allow_list[1]}"
+FIXTURE="$PROJECT_ROOT/${allow_list[2]}"
+GUIDE="$PROJECT_ROOT/${allow_list[3]}"
+CONTRACTS="$PROJECT_ROOT/${allow_list[4]}"
 
 PASS=0
 FAIL=0
