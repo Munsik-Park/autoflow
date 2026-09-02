@@ -32,7 +32,7 @@
 #
 # Tunables (env vars — the Approach-5 timeout / reconfirm policy as parameters):
 #   CI_POLL_TIMEOUT_SECS   (default 900) Total finite poll budget (deadline).
-#                          Generous so a normally-slow Jenkins build is not clipped.
+#                          Generous so a normally-slow CI build is not clipped.
 #   CI_POLL_INTERVAL_SECS  (default 20)  Sleep between poll iterations — also
 #                          caps the one-shot precheck read (pre_bound =
 #                          min(CI_POLL_INTERVAL_SECS, remaining-to-deadline)).
@@ -396,7 +396,7 @@ if [ "$mergeable_confirmed" -eq 0 ]; then
   exit 14
 fi
 if [ "$saw_checks" -eq 0 ]; then
-  echo "MERGEABLE but no check published within ${CI_POLL_TIMEOUT_SECS}s — suspect webhook / scan fallback (PeriodicFolderTrigger / synchronize re-push); NOT green" >&2
+  echo "MERGEABLE but no check published within ${CI_POLL_TIMEOUT_SECS}s — suspect CI trigger (webhook delivery / workflow trigger conditions) — re-push to force a synchronize event; NOT green" >&2
   exit 11
 else
   echo "checks present but no green verdict after ${CI_POLL_TIMEOUT_SECS}s (slow CI, or a confirmed-then-undetermined run whose rollup is green but mergeability never re-settled) — inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2

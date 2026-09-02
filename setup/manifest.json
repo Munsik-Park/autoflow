@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cb9b5eaee73f8039951b1f61f7a370282510f132b4e956abca54a21e544ab574"
+      "sha256": "dc8a75bbde0115d5a702925cf8a326ab6a178d54d215a25d74949a53fabd5e84"
     },
     {
       "source": "docs/design-rationale.md",
@@ -132,14 +132,14 @@
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8797a78f921dafcdd0aabeea716ac6e875c339ac84a039ebc50b25c7e22e5dea"
+      "sha256": "2963adf32d3a46be3fe905a89b142da21cad3527a75eb0b2a47c1e135613223b"
     },
     {
       "source": "docs/git-workflow.md",
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d0c0675a066f3f3fb8ddbff036157649ccc854f83894839f342d93e50431b3e7"
+      "sha256": "1fbaabbd9c9c077ee8254b402294bea1aa6f694172e50dd5dd9cc3869696a921"
     },
     {
       "source": "docs/improvement-backlog.md",
@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "38c8ad72e0069916c86527e6f2993b6ff8c95ce2a267271318a18d469d059493"
+      "sha256": "66001342e6bf225ecc9e8f8ad7d18f9a64fd74495be27f83865c5342abfb2804"
     },
     {
       "source": "docs/teammate-common-rules.md",
@@ -335,7 +335,7 @@
       "dest": "scripts/handoff/confirm-ci-green.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "486ce97017324a1ddc06765419a76f29d059d078eddc89c380fe0e49c5fafa58"
+      "sha256": "b34719fa050519633b38c7a0fe4a65be4e49e15b89cbd67d79f52a59897ae7d6"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",
