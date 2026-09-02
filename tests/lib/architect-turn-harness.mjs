@@ -38,6 +38,10 @@ const loadedFixture = (f) => ({
   },
 })
 
+// Issue #160 regression fixture: the transcription the ac-diff channel returns for the #157
+// cycle-1 verification design (tests/fixtures/issue-160-split-rows-verification-design.md).
+const fixture160 = JSON.parse(readFileSync(join(root, 'tests/fixtures/issue-160-ac-diff-split-rows.json'), 'utf8'))
+
 // eslint-disable-next-line no-new-func
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 const wf = new AsyncFunction('args', 'agent', 'parallel', 'phase', 'log', 'console', scriptSrc)
@@ -62,11 +66,12 @@ async function run(scenario) {
     if (label === 'policy-load') return { found: true, content: scenario.policyContent || policyContent }
     if (label === 'dev-draft' || label === 'test-draft') return 'drafted'
     if (label === 'register-load') return scenario.register
-    if (label === 'ac-diff') return {
+    // Reconcile's transcription. A scenario may script the payload (issue #160); the default is
+    // one clean carried row, exactly the post-#160 shape — no `substituted` list.
+    if (label === 'ac-diff') return scenario.acDiff || {
       ac_source_present: true,
       ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'spec', proposed: 'automated' }],
       ledger_ac_decisions: [],
-      substituted: [],
     }
     if (label === 'ledger' || label === 'register-write') return 'ok'
     const m = label.match(/^(test|dev)-t(\d+)$/)
@@ -177,6 +182,48 @@ const scenarios = [
       && ['test-t1', 'dev-t2', 'test-t3'].every((k) => /Convergence rule: this deliberation terminates only when two consecutive turns both report modified: false, accept: true/.test(r.prompts[k] || ''))
       && ['test-t1', 'dev-t2', 'test-t3'].every((k) => /do not edit either document — report modified: false/.test(r.prompts[k] || ''))
       && !Object.values(r.prompts).some((p) => /confirmation exchange/.test(p)) },
+  // Issue #160 — the #157 cycle-1 verification-design shape: one AC id carried by TWO rows whose
+  // propositions differ (the criterion split by verification method). The fixture is the
+  // payload the transcription channel returns for that design (tests/fixtures/issue-160-*.json):
+  // AC1 appears once in `ac_rows`, carried and automated. The run converges; no AC_CHANGE.
+  { name: 'issue-160-split-rows-no-pause', args: { issue: '157' },
+    acDiff: fixture160,
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.acChange.length === 0 && r.result.acReason === null },
+  // The ac-diff prompt asks for no property comparison: the channel has no `substituted` reading
+  // to return, so the halt cannot be reintroduced by the channel alone.
+  { name: 'issue-160-ac-diff-prompt-no-property-comparison', args: { issue: '157' },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED'
+      && !/substituted/i.test(r.prompts['ac-diff'] || '')
+      && !/DIFFERENT property/.test(r.prompts['ac-diff'] || '')
+      && /Do not compare the wording or the meaning/.test(r.prompts['ac-diff'] || '') },
+  // A channel still answering from the pre-#160 prompt may return a `substituted` list. It is not
+  // read: the payload stays well-formed (no fail-closed `reconciliation unavailable`) and the
+  // legacy finding derives nothing.
+  { name: 'issue-160-legacy-substituted-list-ignored', args: { issue: '157' },
+    acDiff: { ...fixture160, substituted: [{ ac: 'AC1', locator: 'row 2', proposed: 'a different property' }] },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.acChange.length === 0 && r.result.acReason === null },
+  // The two remaining kinds still pause (issue #138 / #153 arms, unchanged by #160).
+  { name: 'issue-160-dropped-still-pauses', args: { issue: '157' },
+    acDiff: { ac_source_present: true, ledger_ac_decisions: [],
+      ac_rows: [{ ac: 'AC1', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: '' }] },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'AC_CHANGE' && r.result.acChange.length === 1
+      && r.result.acChange[0].kind === 'dropped' && r.result.acChange[0].ac === 'AC1' },
+  { name: 'issue-160-unreasoned-still-pauses', args: { issue: '157' },
+    acDiff: { ac_source_present: true, ledger_ac_decisions: [],
+      ac_rows: [{ ac: 'AC1', carried: true, disposition: 'reduced', reason_stated: false, locator: 'row 1', proposed: 'manual' }] },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'AC_CHANGE' && r.result.acChange.length === 1
+      && r.result.acChange[0].kind === 'unreasoned' },
+  // An `[ac-decision]` entry naming the id still authorizes the finding.
+  { name: 'issue-160-dropped-authorized-by-ledger', args: { issue: '157' },
+    acDiff: { ac_source_present: true, ledger_ac_decisions: ['AC1'],
+      ac_rows: [{ ac: 'AC1', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: '' }] },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.acChange.length === 0 },
   // Two consecutive missing turns (one per side) => infrastructure escalation.
   { name: 'consecutive-missing-turns', args: { issue: '152' },
     turns: [{ v: null }, { v: null }],

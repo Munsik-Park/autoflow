@@ -102,7 +102,7 @@ fresh design with the same shape). Confirm the orchestrator:
 
 - does not spawn a GATE:PLAN evaluator on that run;
 - reports situation-first (`CLAUDE.md` > Execution Principles >
-  Human-decision presentation) naming the dropped/substituted/deferred AC(s)
+  Human-decision presentation) naming the dropped/unreasoned AC(s)
   and the operator's three options (exclude / revise / split);
 - sets `active: false`, `phase: "awaiting-user"` in `.autoflow/issue-{N}.json`.
 

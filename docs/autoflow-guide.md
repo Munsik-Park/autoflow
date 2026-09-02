@@ -499,8 +499,9 @@ is the operator:
    judgment is caught here.
 3. **Operator.** Asked only when the AC's **content** must change — excluded, revised, or split.
 
-The findings below are exactly the states that reach tier 3: an AC no row carries, a reduction with
-no reason for a reviewer to judge, and a row asserting a different property than the issue's.
+The findings below are exactly the states that reach tier 3: an AC no row carries, and a reduction
+with no reason for a reviewer to judge. Whether a row verifies the property its AC states is not a
+tier-3 state — that judgment is GATE:PLAN `Test plan`'s and GATE:QUALITY's (issue #160).
 
 **What runs.** Between `Converge` and `Ledger`, and **only on a converged run** (verdict precedence
 is `ESCALATE` before `AC_CHANGE` before `CONVERGED` — an infrastructure or non-convergence cause
@@ -515,7 +516,15 @@ finding, first match wins:
 |---|---|
 | no verification-design row carries the id | `dropped` |
 | a row carries it with a disposition other than `automated` and its `Reason` cell is empty or `—` | `unreasoned` |
-| the row's criterion asserts a different property than the issue's | `substituted` |
+
+Both findings are computed without reading meaning — a key join and a cell-emptiness check. There
+is no third, semantic finding (issue #160 retired `substituted`, "the row asserts a different
+property than the issue's"): asked of a channel forbidden to judge, that reading degraded to a
+wording comparison, which paused #157 cycle 1 on a legitimate split of one criterion into two rows
+with different verification methods and would pass a real misreading that keeps the wording. A
+criterion carried by more than one row, or restated in a row's own words, is not a finding. Whether
+a row verifies the property its AC states is judged where an AC-reading rubric already exists:
+GATE:PLAN `Test plan` (below) and GATE:QUALITY's assertion-claim alignment.
 
 A **reasoned** reduced disposition is not a finding — it is the deliberation exercising tier 1, and
 it is carried to the PR body for tier 2. The channel transcribes only whether a reason is *stated*,
@@ -601,7 +610,7 @@ list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the issu
 | Dependencies  | Are affected files and side effects identified? |
 | Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here) |
 | Security      | Any security implications introduced? |
-| Test plan     | Are acceptance criteria testable? |
+| Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160: this judgment is this item's, not Reconcile's) |
 
 `Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification layer or new spec file that names no failure mode another layer does not already catch (ARCHITECT > Output artifacts > *Verification depth*) fails Scope on the same clause. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
 
@@ -623,10 +632,11 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 
 - **The comparison** is a key join, both sides keyed: every `AC id` in the issue's
   `## Acceptance criteria` table against the `Issue AC` column of the verification design's
-  acceptance-criteria table. A **difference** is one of exactly three states, the same set
-  Reconcile derives: the design carries no row for the criterion (`dropped`); it carries the
-  criterion with a disposition other than `automated` and states no reason (`unreasoned`); or the
-  row asserts a different property than the issue's (`substituted`). A reduced disposition **with**
+  acceptance-criteria table. A **difference** is one of exactly two states, the same set
+  Reconcile derives: the design carries no row for the criterion (`dropped`); or it carries the
+  criterion with a disposition other than `automated` and states no reason (`unreasoned`). A row
+  whose proposition differs from the issue's is **not** a difference here — that is a semantic
+  reading, scored under `Test plan` (issue #160). A reduced disposition **with**
   a stated reason is not a difference — it is a verification-method choice the deliberation is
   authorized to make (ARCHITECT > *Acceptance-criterion change*), and its **reason quality** is
   scored by `Scope` under the existing verification-depth clause above, adding no scored item.
@@ -1422,7 +1432,8 @@ each-item ≥ 7 criterion:
   A double that diverges from the real interface caps `Test quality` at 6.
 - **Test quality / Completeness — assertion-claim alignment**: for each AC, confirm the
   test asserts the behavior the AC states, not a weaker proxy (e.g. "the function was
-  called" where the AC requires a result shape). Confirm every cited evidence line
+  called" where the AC requires a result shape) and not a different property than the
+  one the AC it names states (issue #160: Reconcile makes no such reading). Confirm every cited evidence line
   (test summary, log excerpt) reproduces by re-running the cited command — evidence that
   was authored but never produced by a run caps the citing item at 6.
 - **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates

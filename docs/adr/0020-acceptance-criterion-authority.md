@@ -123,7 +123,9 @@ change; only an operator decision may make it. The flow stops and asks.**
 - One new false-positive surface: `substituted` is a semantic reading, and a wrong one pauses an
   honest convergence and trains the operator to click the pause through. The design carries a
   negative control against it (a clean AC table must produce no findings) and states the residual
-  rather than assuming it away.
+  rather than assuming it away. *Realized and retired*: #157 cycle 1 paused on exactly this
+  surface (one criterion split into two rows by verification method), and issue #160 removed the
+  kind — see ADR-0022 > Notes > *Amendment (issue #160)*.
 - **The `ac reconciliation unavailable` pause has no exit mechanism, by decision.** That path
   produces no finding, so no `[ac-decision]` entry can clear it: every resume re-runs Reconcile and
   re-pauses until the underlying cause is repaired. This is an accepted consequence, following the
@@ -156,7 +158,8 @@ change; only an operator decision may make it. The flow stops and asks.**
 - Amended by [`0022-test-necessity-and-three-tier-ac-guard.md`](0022-test-necessity-and-three-tier-ac-guard.md):
   the operator retains authority over acceptance-criterion **content**, while a verification-method
   reduction carrying a stated reason is the deliberation's and is judged by the external reviewer —
-  so the finding set narrows from five kinds to `dropped` / `unreasoned` / `substituted`. The halt,
+  so the finding set narrows from five kinds to `dropped` / `unreasoned` / `substituted`; issue
+  #160 further retires `substituted`, leaving `dropped` / `unreasoned`. The halt,
   the fail-closed sentinels, the `[ac-decision]` grammar and the budget accounting are unchanged.
 - The decision alters agent-workflow gates and evaluation policy — a `docs/adr/README.md` >
   "When to Create an ADR" trigger area — so it lands with, or ahead of, the mechanism it governs.

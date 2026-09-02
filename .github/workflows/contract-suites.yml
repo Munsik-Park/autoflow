@@ -123,6 +123,8 @@ on:
       - 'tests/test-issue-152-turn-convergence.sh'
       - 'tests/test-issue-159-all-accept-resume.sh'
       - 'tests/fixtures/issue-159-register-all-accept.json'
+      - 'tests/test-issue-160-reconcile-substituted-removed.sh'
+      - 'tests/fixtures/issue-160-ac-diff-split-rows.json'
       - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
@@ -244,6 +246,8 @@ on:
       - 'tests/test-issue-152-turn-convergence.sh'
       - 'tests/test-issue-159-all-accept-resume.sh'
       - 'tests/fixtures/issue-159-register-all-accept.json'
+      - 'tests/test-issue-160-reconcile-substituted-removed.sh'
+      - 'tests/fixtures/issue-160-ac-diff-split-rows.json'
       - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
@@ -512,6 +516,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-159-all-accept-resume.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-159-all-accept-resume.sh
+
+      - name: test-issue-160-reconcile-substituted-removed.sh
+        id: s-test-issue-160-reconcile-substituted-removed
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-160-reconcile-substituted-removed.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-160-reconcile-substituted-removed.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh

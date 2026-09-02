@@ -335,7 +335,7 @@ function fullConvergenceResponder() {
   return (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
     return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
@@ -407,7 +407,7 @@ await test('ARCHITECT: converges on the second exchange (turns 3+4 both unmodifi
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
     return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
@@ -426,7 +426,7 @@ await test('ARCHITECT: immediate agreement — turns 1 and 2 both unmodified acc
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     return ACCEPT_TURN
   }
   const { result } = await runArch({ issue: '1' }, responder)
@@ -440,7 +440,7 @@ await test('ARCHITECT: the first turn cannot converge alone — an accepting tur
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const t = Number(label.split('-t')[1])
     if (t === 2) return OPEN_TURN
     return ACCEPT_TURN
@@ -475,7 +475,7 @@ await test('ARCHITECT: a modifying accepting turn does not converge; the followi
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const t = Number(label.split('-t')[1])
     if (t === 2) return { modified: true, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
     return ACCEPT_TURN
@@ -555,7 +555,7 @@ await test('ARCHITECT: single transient one-side-null still converges (regressio
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) return null
     return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
@@ -573,7 +573,7 @@ await test('ARCHITECT: draft non-null with a withheld artifact no longer early-E
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result, calls } = await runArch({ issue: '845-4' }, responder, { omitArtifact: 'verif' })
@@ -663,7 +663,7 @@ await test('ARCHITECT: a missing Test turn still lets the Dev turn run, and does
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1 && label.startsWith('test-')) return null
     return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
@@ -1067,7 +1067,7 @@ await test('ARCHITECT: turn-report schema — TURN.required, additionalPropertie
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [], dispositions: [] }
     return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
@@ -1080,7 +1080,7 @@ await test('ARCHITECT: a disposition naming an entry no one raised is ignored �
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_REAL_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
     if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
@@ -1170,7 +1170,7 @@ await test('ARCHITECT: both sides ACCEPT with empty counters while an entry is s
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_SILENT_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
     if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
@@ -1204,7 +1204,7 @@ await test('ARCHITECT: CONVERGED ledger names authority "ARCHITECT rejected" and
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1 && label.startsWith('dev-')) return { modified: false, accept: false, counters: [{ agenda: 'NAME_REJ_67', locator: 'l', argument: 'a' }], accept_grounds: [], dispositions: [] }
     if (r === 1) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'], dispositions: [] }
@@ -1606,7 +1606,7 @@ await test('ARCHITECT: prose args, hashed number (reported shape) resolves and c
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
     return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
@@ -1668,7 +1668,7 @@ await test('ARCHITECT: prose args, >=2 bare digit runs, no #/no issue-label — 
 await test('ARCHITECT: prose args, single bare digit, no #/no issue-label — tier-3 unique-adopt success (c2, NEW)', async () => {
   const responder = (label) => {
     if (label.endsWith('-draft') || label === 'ledger') return 'ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result } = await runArch('build 42', responder)
@@ -1684,7 +1684,7 @@ function ceilingResponder(overrides = {}) {
   return (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     if (Object.prototype.hasOwnProperty.call(overrides, label)) return overrides[label]
     return { modified: false, accept: false, counters: [`c${roundOf(label)}`], accept_grounds: [], dispositions: [] }
   }
@@ -1743,7 +1743,7 @@ function resumeResponder(overrides = {}) {
     if (label === 'ac-diff') {
       return Object.prototype.hasOwnProperty.call(overrides, 'acDiff')
         ? overrides.acDiff
-        : { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+        : { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     }
     // Unclassified: register-load (before 'ledger') or register-write (after it).
     if (!seenLedger) {
@@ -1980,7 +1980,7 @@ await test('ARCHITECT: register round-trip -- a cold CONVERGED run persists verd
   const coldResponder = (label, prompt) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     if (label === 'dev-t2') return { modified: false, accept: false, counters: [{ agenda: 'ROUNDTRIP_CONCERN', locator: 'l', argument: 'a' }], accept_grounds: [] }
     if (label === 'test-t1') return { modified: false, accept: false, counters: ['t1'], accept_grounds: [] }
     if (label.startsWith('test-t') || label.startsWith('dev-t')) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
@@ -2062,7 +2062,7 @@ await test('ARCHITECT: an out-of-enum status/raisedBy rehydrates to the declared
     if (label === 'ledger') { seenLedger = true; return 'ledger ok' }
     if (label === 'test-t7') return { modified: false, accept: true, counters: [], accept_grounds: ['t: ok'], dispositions: [{ name: 'BAD_RAISER', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
     if (label === 'dev-t8') return { modified: false, accept: true, counters: [], accept_grounds: ['d: ok'], dispositions: [{ name: 'BAD_STATUS', conclusion: 'closed', evidence: 'e', status: 'agreed' }] }
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     if (!seenLedger) {
       return {
         found: true, artifacts_present: true, lastTurn: 6, verdict: 'ESCALATE',
@@ -2171,7 +2171,7 @@ await test('ARCHITECT: a SYNCHRONOUS throw at the register-write call is absorbe
     if (label === 'register-write') throw new Error('sync register-write throw') // NOT a promise rejection
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
     if (label.startsWith('test-t') || label.startsWith('dev-t')) return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
@@ -2552,7 +2552,7 @@ await test('AC-facilitator-prompt: ARCHITECT CONVERGED ledger prompt carries the
   const responder = (label) => {
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
     const r = roundOf(label)
     if (r === 1) return { modified: false, accept: false, counters: ['c1'], accept_grounds: [] }
     return { modified: false, accept: true, counters: [], accept_grounds: ['feasibility: existing structure supports it'] }
@@ -2643,7 +2643,6 @@ await test('ARCHITECT: an unauthorized ac-diff finding returns AC_CHANGE, not CO
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: 'not carried as a criterion' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-ac1' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -2659,19 +2658,30 @@ await test('ARCHITECT: an unauthorized ac-diff finding returns AC_CHANGE, not CO
   assert.match(ledgerPrompt, entryCountPattern, 'ledger prompt must instruct exactly one outcome entry on the AC_CHANGE branch')
 })
 
-await test('ARCHITECT: a substituted ac-diff finding is plumbed through as kind "substituted" (AC1, substitution arm)', async () => {
+await test('ARCHITECT (#160): a legacy substituted[] list derives no finding -- the kind is retired and the list is not read (issue-160-substituted-retired)', async () => {
+  // A channel still answering from the pre-#160 prompt may return a `substituted` list. The script
+  // neither validates nor reads it: the payload stays well-formed (no `reconciliation unavailable`)
+  // and no `substituted` finding is derived, so the run converges on its ac_rows alone.
   const acDiff = {
     ac_source_present: true,
-    // A clean carried/verified/executable row for the OTHER AC (AC2) so this leg isolates the
-    // substitution arm from the O5(c) empty-ac_rows fail-closed rule (an empty ac_rows set is its
-    // own fail-closed path, tested separately by 'ac-diff-empty-rows-fail-closed').
     ac_rows: [{ ac: 'AC2', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }],
     ledger_ac_decisions: [],
     substituted: [{ ac: 'AC1', locator: 'design-doc-section', proposed: 'an always-true tautology' }],
   }
-  const { result } = await runArch({ issue: '138-ac1-sub' }, convergingWithAcDiff(acDiff))
-  assert.equal(result.verdict, 'AC_CHANGE')
-  assert.ok(result.acChange.some((f) => f.ac === 'AC1' && f.kind === 'substituted'))
+  const { result, calls } = await runArch({ issue: '160-sub-retired' }, convergingWithAcDiff(acDiff))
+  assert.equal(result.verdict, 'CONVERGED')
+  assert.equal(result.acReason, null)
+  assert.deepEqual(result.acChange, [])
+  // A malformed legacy item is equally ignored -- it is not a fail-closed surface any more.
+  for (const [issueId, subItem] of [['160-sub-null', null], ['160-sub-ws', { ac: ' ', locator: 'x', proposed: 'x' }], ['160-sub-nonstring', { ac: 'AC1', locator: 'x', proposed: 123 }]]) {
+    const r = await runArch({ issue: issueId }, convergingWithAcDiff({ ...acDiff, substituted: [subItem] }))
+    assert.equal(r.result.verdict, 'CONVERGED', `${issueId}: a legacy substituted item is ignored, not fail-closed`)
+    assert.equal(r.result.acReason, null)
+  }
+  // The prompt asks for no property comparison (AC1): the channel has nothing to return under it.
+  const acDiffPrompt = calls.find((c) => c.label === 'ac-diff').prompt
+  assert.doesNotMatch(acDiffPrompt, /substituted/i, 'the ac-diff prompt must not ask for a substituted list')
+  assert.doesNotMatch(acDiffPrompt, /DIFFERENT property/, 'the ac-diff prompt must not ask for a property comparison')
 })
 
 await test('ARCHITECT: a clean AC table (every AC carried, verified, executable) yields CONVERGED with no findings (Risk line, clean-fixture-yields-no-findings)', async () => {
@@ -2682,7 +2692,6 @@ await test('ARCHITECT: a clean AC table (every AC carried, verified, executable)
       { ac: 'AC2', carried: true, disposition: 'automated', reason_stated: true, locator: 'tests/fixtures/gate-schema.json', proposed: 'automated' },
     ],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result } = await runArch({ issue: '138-ac-clean' }, convergingWithAcDiff(acDiff))
   assert.deepEqual(result.acChange, [])
@@ -2697,7 +2706,7 @@ await test('ARCHITECT: ac_source_present:true with an EMPTY ac_rows set is fail-
   // check already treats "absent, empty or unparseable" as one unresolvable-check cap (Trigger ->
   // cap, docs/autoflow-guide.md > GATE:PLAN > AC-authority check); Reconcile must resolve the same
   // way rather than silently converging on an empty row set.
-  const acDiff = { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+  const acDiff = { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [] }
   const { result } = await runArch({ issue: '138-ac-empty-rows' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE', 'an empty ac_rows set must not converge silently')
   assert.equal(result.acReason, 'ac list absent', 'an empty ac_rows set is treated the same as ac_source_present:false')
@@ -2718,7 +2727,6 @@ await test('ARCHITECT: kind derivation is computed in the script under a fixed f
       { ac: 'AC-clean', carried: true, disposition: 'automated', reason_stated: false, locator: 'x', proposed: 'x' },
     ],
     ledger_ac_decisions: [],
-    substituted: [{ ac: 'AC-sub', locator: 'l', proposed: 'p' }],
   }
   const { result } = await runArch({ issue: '138-ac-kinds' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -2727,9 +2735,8 @@ await test('ARCHITECT: kind derivation is computed in the script under a fixed f
   assert.equal(kindOf('AC-unreasoned'), 'unreasoned')
   assert.equal(kindOf('AC-reasoned'), undefined, 'a reduced disposition carrying a stated reason must yield no finding (#153 tier 1)')
   assert.equal(kindOf('AC-clean'), undefined, 'an automated row must yield no finding, and owes no reason')
-  const lastFinding = result.acChange[result.acChange.length - 1]
-  assert.equal(lastFinding.ac, 'AC-sub', 'substituted findings are appended after the derived ones')
-  assert.equal(lastFinding.kind, 'substituted')
+  // #160: the table has exactly two kinds; nothing else is derived.
+  assert.deepEqual(result.acChange.map((f) => f.kind).sort(), ['dropped', 'unreasoned'])
 })
 
 await test('ARCHITECT: `authorized` is computed in the script by exact-after-trim match on ledger_ac_decisions, never substring/prefix (ac-diff-input-is-the-real-witness, half ii)', async () => {
@@ -2742,7 +2749,6 @@ await test('ARCHITECT: `authorized` is computed in the script by exact-after-tri
     // ' AC1 ' with surrounding whitespace must still match AC1 (trim); 'AC10' must NOT match on
     // the 'AC1' prefix (substring/prefix rejected).
     ledger_ac_decisions: [' AC1 '],
-    substituted: [],
   }
   const { result } = await runArch({ issue: '138-ac-auth' }, convergingWithAcDiff(acDiff))
   // AC1 is authorized -> excluded from acChange; AC10 is unauthorized -> included.
@@ -2755,7 +2761,6 @@ await test('ARCHITECT: an empty ledger_ac_decisions authorizes nothing -- acChan
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result } = await runArch({ issue: '138-ac-empty-ledger' }, convergingWithAcDiff(acDiff))
   assert.equal(result.acChange.length, 1)
@@ -2763,7 +2768,7 @@ await test('ARCHITECT: an empty ledger_ac_decisions authorizes nothing -- acChan
 })
 
 await test('ARCHITECT: the ac-diff prompt names all three input documents and states the ledger grammar verbatim (ac-diff-input-is-the-real-witness, half i, plumbing)', async () => {
-  const acDiff = { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+  const acDiff = { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [] }
   const { calls } = await runArch({ issue: '138-ac-plumbing' }, convergingWithAcDiff(acDiff))
   const acDiffCall = calls.find((c) => c.label === 'ac-diff')
   assert.ok(acDiffCall, 'a Reconcile phase must issue an agent call labelled "ac-diff" on a converged run')
@@ -2785,7 +2790,7 @@ await test('ARCHITECT: a null ac-diff return resolves AC_CHANGE with the "ac rec
 })
 
 await test('ARCHITECT: ac_source_present:false resolves AC_CHANGE with the "ac list absent" sentinel, distinct from the null-return sentinel (missing-diff-never-converges, leg ii)', async () => {
-  const acDiff = { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+  const acDiff = { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [] }
   const { result, calls } = await runArch({ issue: '138-ac-absent' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
   assert.deepEqual(result.acChange, [])
@@ -2800,7 +2805,7 @@ await test('ARCHITECT: a non-converged run never calls ac-diff and never returns
     if (label === 'dev-draft') return null // early ESCALATE before Converge
     if (label.endsWith('-draft')) return 'drafted'
     if (label === 'ledger') return 'ledger ok'
-    if (label === 'ac-diff') return { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+    if (label === 'ac-diff') return { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [] }
     return { modified: false, accept: true, counters: [], accept_grounds: ['x: ok'] }
   }
   const { result, calls } = await runArch({ issue: '138-ac-noreconcile' }, responder)
@@ -2814,7 +2819,6 @@ await test('ARCHITECT: an AC_CHANGE register round-trips the same acReason as th
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-ac-roundtrip' }, convergingWithAcDiff(acDiff))
   const payload = registerPayload(calls)
@@ -2830,7 +2834,7 @@ await test('ARCHITECT: the two fail-closed paths mint register entries under the
   const payloadNull = registerPayload(callsNull)
   assert.ok(payloadNull.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
 
-  const acDiffAbsent = { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+  const acDiffAbsent = { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [] }
   const { calls: callsAbsent } = await runArch({ issue: '138-ac-mint-absent' }, convergingWithAcDiff(acDiffAbsent))
   const payloadAbsent = registerPayload(callsAbsent)
   assert.ok(payloadAbsent.entries.some((e) => e.name === 'ac-authority:ac-list-absent' && e.status === 'open'))
@@ -2841,10 +2845,10 @@ await test('ARCHITECT: the AC_CHANGE ledger prompt grounds clause is non-empty a
     ['138-ac-grounds-unauth', {
       ac_source_present: true,
       ac_rows: [{ ac: 'AC1', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: 'x' }],
-      ledger_ac_decisions: [], substituted: [],
+      ledger_ac_decisions: [],
     }, 'unauthorized acceptance-criterion change'],
     ['138-ac-grounds-null', null, 'ac reconciliation unavailable'],
-    ['138-ac-grounds-nosource', { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [], substituted: [] }, 'ac list absent'],
+    ['138-ac-grounds-nosource', { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [] }, 'ac list absent'],
   ]
   for (const [issueId, acDiff, sentinel] of cases) {
     const { calls } = await runArch({ issue: issueId }, convergingWithAcDiff(acDiff))
@@ -2885,23 +2889,19 @@ await test('ARCHITECT: AC_ROW/AC_SUBSTITUTION/AC_DIFF schema constants -- additi
   assert.doesNotMatch(acRowSeg, /method_executable/, 'AC_ROW must no longer carry the retired method_executable field (#153)')
   assert.match(acRowSeg, /enum:\s*\[\s*['"]automated['"]\s*,\s*['"]reduced['"]\s*,\s*['"]absent['"]\s*\]/, 'AC_ROW.disposition enum must be exactly [automated, reduced, absent]')
 
-  const acSubMatch = src.match(/const AC_SUBSTITUTION = \{[\s\S]*?\n\}/)
-  assert.ok(acSubMatch, 'AC_SUBSTITUTION constant must exist')
-  const acSubSeg = acSubMatch[0]
-  assert.match(acSubSeg, /additionalProperties:\s*false/, 'AC_SUBSTITUTION must keep additionalProperties: false')
-  for (const field of ['ac', 'locator', 'proposed']) {
-    assert.match(acSubSeg, new RegExp(`required:\\s*\\[[^\\]]*['"]${field}['"]`), `AC_SUBSTITUTION.required must name ${field}`)
-  }
+  // #160: the substitution item schema is retired with its finding.
+  assert.doesNotMatch(src, /AC_SUBSTITUTION/, 'AC_SUBSTITUTION must no longer exist (#160)')
 
   const acDiffMatch = src.match(/const AC_DIFF = \{[\s\S]*?\n\}/)
   assert.ok(acDiffMatch, 'AC_DIFF constant must exist')
   const acDiffSeg = acDiffMatch[0]
   assert.match(acDiffSeg, /additionalProperties:\s*false/, 'AC_DIFF must keep additionalProperties: false')
-  for (const field of ['ac_source_present', 'ac_rows', 'ledger_ac_decisions', 'substituted']) {
+  for (const field of ['ac_source_present', 'ac_rows', 'ledger_ac_decisions']) {
     assert.match(acDiffSeg, new RegExp(`required:\\s*\\[[^\\]]*['"]${field}['"]`), `AC_DIFF.required must name ${field}`)
   }
+  assert.doesNotMatch(acDiffSeg, /required:\s*\[[^\]]*['"]substituted['"]/, 'AC_DIFF.required must not name substituted (#160)')
   assert.match(acDiffSeg, /ac_rows:\s*\{\s*type:\s*['"]array['"],\s*items:\s*AC_ROW\s*\}/, 'AC_DIFF.ac_rows must be an array of AC_ROW')
-  assert.match(acDiffSeg, /substituted:\s*\{\s*type:\s*['"]array['"],\s*items:\s*AC_SUBSTITUTION\s*\}/, 'AC_DIFF.substituted must be an array of AC_SUBSTITUTION')
+  assert.doesNotMatch(acDiffSeg, /substituted:\s*\{/, 'AC_DIFF must carry no substituted property (#160)')
 
   // codex F1 cycle 2 (enum-reference-is-observable): the item-level row/substitution guard must
   // read its accepted disposition members from AC_ROW.properties.disposition.enum -- the live
@@ -2912,7 +2912,7 @@ await test('ARCHITECT: AC_ROW/AC_SUBSTITUTION/AC_DIFF schema constants -- additi
 
   // Behavioral half, in the same discipline as the VERDICT/DISPOSITION precedent (run.mjs:748):
   // a run whose ac-diff stub matches this schema shape still converges without a schema error.
-  const acDiff = { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [], substituted: [] }
+  const acDiff = { ac_source_present: true, ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }], ledger_ac_decisions: [] }
   const { result } = await runArch({ issue: '138-ac-schema-shape' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'CONVERGED')
 })
@@ -2922,7 +2922,6 @@ await test('ARCHITECT: an unauthorized finding mints a register entry named ac-a
     ac_source_present: true,
     ac_rows: [{ ac: 'AC7', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { calls } = await runArch({ issue: '138-ac-prefix' }, convergingWithAcDiff(acDiff))
   const payload = registerPayload(calls)
@@ -2933,7 +2932,7 @@ await test('ARCHITECT: an unauthorized finding mints a register entry named ac-a
 })
 
 await test('ARCHITECT: result.summary states the AC_CHANGE pause and carries acReason (VERIFY-hunk-4, ac-change-summary-text)', async () => {
-  const acDiff = { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [], substituted: [] }
+  const acDiff = { ac_source_present: false, ac_rows: [], ledger_ac_decisions: [] }
   const { result } = await runArch({ issue: '138-ac-summary' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
   assert.match(result.summary, /ARCHITECT paused on an acceptance-criterion change/, 'summary must state the AC_CHANGE pause')
@@ -2958,7 +2957,6 @@ await test('ARCHITECT: a resumed run whose persisted register carries verdict AC
       ac_source_present: true,
       ac_rows: [{ ac: 'AC9', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: 'x' }],
       ledger_ac_decisions: ['AC9'], // now authorized -- the operator's [ac-decision] entry
-      substituted: [],
     },
   })
   const { result, calls } = await runArch({ issue: '138-ac-resume-latch', resume: true }, responder)
@@ -2970,10 +2968,9 @@ await test('ARCHITECT: a resumed run whose persisted register carries verdict AC
 
 await test('ARCHITECT: a non-null but malformed ac-diff payload (wrong types / non-array fields) is treated the same as a missing return -- fail-closed (VERIFY-hunk-6, ac-diff-malformed-non-null)', async () => {
   const cases = [
-    ['138-ac-malformed-1', { ac_source_present: 'yes', ac_rows: [], ledger_ac_decisions: [], substituted: [] }], // wrong type
-    ['138-ac-malformed-2', { ac_source_present: true, ac_rows: 'not-an-array', ledger_ac_decisions: [], substituted: [] }],
-    ['138-ac-malformed-3', { ac_source_present: true, ac_rows: [], ledger_ac_decisions: 'not-an-array', substituted: [] }],
-    ['138-ac-malformed-4', { ac_source_present: true, ac_rows: [], ledger_ac_decisions: [], substituted: 'not-an-array' }],
+    ['138-ac-malformed-1', { ac_source_present: 'yes', ac_rows: [], ledger_ac_decisions: [] }], // wrong type
+    ['138-ac-malformed-2', { ac_source_present: true, ac_rows: 'not-an-array', ledger_ac_decisions: [] }],
+    ['138-ac-malformed-3', { ac_source_present: true, ac_rows: [], ledger_ac_decisions: 'not-an-array' }],
   ]
   for (const [issueId, acDiff] of cases) {
     const { result } = await runArch({ issue: issueId }, convergingWithAcDiff(acDiff))
@@ -3004,7 +3001,6 @@ await test('ARCHITECT: mintAcEntry updates an already-open ac-authority entry in
       ac_source_present: true,
       ac_rows: [{ ac: 'AC3', carried: false, disposition: 'absent', reason_stated: false, locator: 'fresh-locator', proposed: 'still not carried' }],
       ledger_ac_decisions: [], // still unauthorized -- the same finding recurs this round
-      substituted: [],
     },
   })
   const { result, calls } = await runArch({ issue: '138-ac-mint-upsert', resume: true }, responder)
@@ -3019,7 +3015,7 @@ await test('ARCHITECT: mintAcEntry updates an already-open ac-authority entry in
 
 // ---- ARCHITECT: item-level ac-diff validation (issue #138 cycle 2, codex F1 on PR #139) -------
 // F1: acDiffWellFormed() validates only the top-level ac-diff shape and never descends into
-// ac_rows[] / substituted[] items, so a row that is internally malformed but top-level-shaped-
+// ac_rows[] items (and, before #160, substituted[] items), so a row that is internally malformed but top-level-shaped-
 // correctly reaches acKindOf()/the authorization join unvalidated and the run silently converges.
 // Every leg below asserts the SENTINEL (acReason === 'ac reconciliation unavailable'), never the
 // verdict alone (verification design > Testability assessment > "Assert the sentinel..."): some of
@@ -3033,7 +3029,6 @@ await test('ARCHITECT: a row whose reason_stated is a non-boolean string fails c
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: true, disposition: 'reduced', reason_stated: 'false', locator: 'x', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-c2-row-nonbool-reason' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -3048,7 +3043,6 @@ await test('ARCHITECT: a row whose carried is a non-boolean string fails closed 
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: 'false', disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-c2-row-nonbool-carried' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -3063,7 +3057,6 @@ await test('ARCHITECT: a row whose disposition is outside the defined enum fails
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: true, disposition: 'not-a-real-disposition', reason_stated: true, locator: 'x', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-c2-row-bad-enum' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -3078,7 +3071,6 @@ await test('ARCHITECT: a row missing the required ac field fails closed to AC_CH
     ac_source_present: true,
     ac_rows: [{ carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-c2-row-missing-ac' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -3094,36 +3086,11 @@ await test('ARCHITECT: a non-object ac_rows[] item (null or a bare string) fails
     ['138-c2-row-barestring', ['AC1']],
   ]
   for (const [issueId, ac_rows] of cases) {
-    const acDiff = { ac_source_present: true, ac_rows, ledger_ac_decisions: [], substituted: [] }
+    const acDiff = { ac_source_present: true, ac_rows, ledger_ac_decisions: [] }
     const { result } = await runArch({ issue: issueId }, convergingWithAcDiff(acDiff))
     assert.equal(result.verdict, 'AC_CHANGE', `${issueId}: a non-object row must not be silently skipped into a clean convergence`)
     assert.equal(result.acReason, 'ac reconciliation unavailable', `${issueId}: a non-object row must be caught by the fail-closed guard, not the unauthorized-change path`)
     assert.deepEqual(result.acChange, [], `${issueId}: a fail-closed row must produce no findings`)
-  }
-})
-
-await test('ARCHITECT: a malformed substituted[] item (non-object, missing ac, or a non-string field) fails closed to AC_CHANGE with the reconciliation sentinel, not the unauthorized-change sentinel (substitution-item-fails-closed)', async () => {
-  // Dispatch obligation 1: every fixture here pairs a clean, non-empty ac_rows row so the run does
-  // not take the "ac list absent" branch (architect-deliberation.js:729) instead of the guard under
-  // test -- an empty ac_rows array would assert the wrong branch (dispatch, .autoflow/issue-138-c2-
-  // dispatch.md item 1). The shape mirrors the existing 'substitution arm' leg's clean row
-  // (run.mjs:2621).
-  const cleanRow = { ac: 'AC2', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }
-  const cases = [
-    ['138-c2-sub-null', null],
-    ['138-c2-sub-missing-ac', { locator: 'x', proposed: 'x' }],
-    ['138-c2-sub-nonstring-locator', { ac: 'AC1', locator: 123, proposed: 'x' }],
-  ]
-  for (const [issueId, subItem] of cases) {
-    const acDiff = { ac_source_present: true, ac_rows: [cleanRow], ledger_ac_decisions: [], substituted: [subItem] }
-    const { result } = await runArch({ issue: issueId }, convergingWithAcDiff(acDiff))
-    assert.equal(result.verdict, 'AC_CHANGE', `${issueId}: a malformed substitution item must fail closed`)
-    // The sentinel, never the verdict alone (Testability assessment): the latter two shapes reach
-    // AC_CHANGE today through the unauthorized-change path (flatten() coerces a missing/non-string
-    // field to '' or its String() form, still producing a 'substituted' finding that then fails the
-    // authorization join) -- a verdict-only assertion would already pass pre-fix on those shapes.
-    assert.equal(result.acReason, 'ac reconciliation unavailable', `${issueId}: must be caught by the fail-closed guard, not the unauthorized-change path`)
-    assert.deepEqual(result.acChange, [], `${issueId}: a fail-closed substitution defect produces no findings`)
   }
 })
 
@@ -3132,7 +3099,6 @@ await test('ARCHITECT: disposition "absent" with carried: true fails closed to A
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: true, disposition: 'absent', reason_stated: true, locator: 'x', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-c2-absent-carried-true' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -3163,7 +3129,6 @@ await test('ARCHITECT: a row whose ac is present but empty/whitespace-only fails
     ac_source_present: true,
     ac_rows: [{ ac: '   ', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-c2-row-ac-whitespace' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -3178,7 +3143,6 @@ await test('ARCHITECT: a row whose locator is a non-string fails closed to AC_CH
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 123, proposed: 'x' }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-c2-row-nonstring-locator' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -3193,7 +3157,6 @@ await test('ARCHITECT: a row whose proposed is a non-string fails closed to AC_C
     ac_source_present: true,
     ac_rows: [{ ac: 'AC1', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 123 }],
     ledger_ac_decisions: [],
-    substituted: [],
   }
   const { result, calls } = await runArch({ issue: '138-c2-row-nonstring-proposed' }, convergingWithAcDiff(acDiff))
   assert.equal(result.verdict, 'AC_CHANGE')
@@ -3202,38 +3165,6 @@ await test('ARCHITECT: a row whose proposed is a non-string fails closed to AC_C
   const payload = registerPayload(calls)
   assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
 })
-
-await test('ARCHITECT: a substituted[] item whose ac is present but empty/whitespace-only fails closed to AC_CHANGE with the reconciliation sentinel (VERIFY-step-3, substitution-ac-whitespace-only)', async () => {
-  // Dispatch-pairing discipline carried from RED c2: a clean, non-empty ac_rows row accompanies the
-  // malformed substituted[] item so the run does not take the "ac list absent" branch instead of the
-  // guard under test (same clean-row shape as substitution-item-fails-closed, run.mjs).
-  const cleanRow = { ac: 'AC2', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }
-  const acDiff = { ac_source_present: true, ac_rows: [cleanRow], ledger_ac_decisions: [], substituted: [{ ac: ' ', locator: 'x', proposed: 'x' }] }
-  const { result, calls } = await runArch({ issue: '138-c2-sub-ac-whitespace' }, convergingWithAcDiff(acDiff))
-  assert.equal(result.verdict, 'AC_CHANGE')
-  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a whitespace-only substitution ac is not a valid identity key and must fail closed')
-  assert.deepEqual(result.acChange, [])
-  const payload = registerPayload(calls)
-  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
-})
-
-await test('ARCHITECT: a substituted[] item whose proposed is a non-string fails closed to AC_CHANGE with the reconciliation sentinel (VERIFY-step-3, substitution-nonstring-proposed)', async () => {
-  const cleanRow = { ac: 'AC2', carried: true, disposition: 'automated', reason_stated: true, locator: 'x', proposed: 'automated' }
-  const acDiff = { ac_source_present: true, ac_rows: [cleanRow], ledger_ac_decisions: [], substituted: [{ ac: 'AC1', locator: 'x', proposed: 123 }] }
-  const { result, calls } = await runArch({ issue: '138-c2-sub-nonstring-proposed' }, convergingWithAcDiff(acDiff))
-  assert.equal(result.verdict, 'AC_CHANGE')
-  assert.equal(result.acReason, 'ac reconciliation unavailable', 'a non-string substitution proposed must be caught by the fail-closed guard')
-  assert.deepEqual(result.acChange, [])
-  const payload = registerPayload(calls)
-  assert.ok(payload.entries.some((e) => e.name === 'ac-authority:reconciliation-unavailable' && e.status === 'open'))
-})
-
-// ---- ARCHITECT: scope-bounded review-response ceiling (issue #135) ------------------------
-// `args.bounded` swaps the COLD ceiling from the config's `max_turns` (12) to its
-// `bounded_max_turns` (4) — both read from .claude/autoflow/spawn-policy.json since issue #152,
-// never from a literal in the script. Draft still runs, the first-turn devil's-advocate guidance
-// is untouched, and the resume extension is unchanged. The flag is JSON/object-only — not
-// salvaged from prose — so the catch-path mirror above stays byte-identical.
 
 await test('ARCHITECT (#135): a bounded run that never converges stops at the config\'s 4-turn bounded ceiling', async () => {
   const { result, calls } = await runArch({ issue: '135-b1', bounded: true }, ceilingResponder())
