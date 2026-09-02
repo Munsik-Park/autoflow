@@ -104,14 +104,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c31d67e3775294b5ccb3e1d8e39e670ee0f76b55d3382908e48c1385d865f93e"
+      "sha256": "d370aeed7b048e9ab6625b63d994659e6544097417e8a9e2c66d64338441e91f"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2425ccd497c5cc79b084995541c452dfed3ad20d19a7e8a39e77bb73dd0cc26c"
+      "sha256": "b800cfe5fd17ee7ef31bb1919d8aba739710dc7ce5c2f13455c664906c5ff458"
     },
     {
       "source": "docs/development-guideline.md",
@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c9fee85a96e2724e5e4f3244e9c939ab2df6221152be76c450184c3dbeba92c1"
+      "sha256": "59b2dce51044a5738bf20722cd25c09185fb776014c1baffdad11af1662ee8a2"
     },
     {
       "source": "docs/title-guide.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "9a884e0bb8eb95fbb2f801fd414accbd229896d8dd544c18ef80e90e5f52aff2"
+      "sha256": "33e689acee565802a3b416c689f218f0eb394b6097654f95f73c80c9c5846f32"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
