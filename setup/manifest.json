@@ -307,7 +307,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "c6de18c611b5b32f93149f09530d8ba33936791baa4b69625dc097989592b86c"
+      "sha256": "6e6b95d114a4f6abad6d8a15d742dffd10f4d77db51c830dc8a7efc209a2e883"
     },
     {
       "source": "AGENTS.md",
