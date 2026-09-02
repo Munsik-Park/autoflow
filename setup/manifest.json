@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a1e53f737d12567f57c5bcf522eaafcb9f31195dc711e17d53c63b7d2057853f"
+      "sha256": "cb9b5eaee73f8039951b1f61f7a370282510f132b4e956abca54a21e544ab574"
     },
     {
       "source": "docs/design-rationale.md",
