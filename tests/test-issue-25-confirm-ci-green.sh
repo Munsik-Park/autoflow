@@ -368,6 +368,14 @@ assert_true "AC7: external-review-sequencing.md Post-reconcile gate retains the 
   "printf '%s' \"\$RECONCILE_JOINED\" | grep -qF 'check-runs'"
 
 GITWORKFLOW_BODY="$(cat "$GIT_WORKFLOW" 2>/dev/null || true)"
+# #161: the HANDOFF CI-confirmation and reconcile prose is CI-product independent — the
+# Jenkins `pr-merge` job token must not return to any of the four documents that carry the
+# procedure. Scoped to that token: `Jenkinsfile` stays a legitimate CI-config pattern.
+SUBMODULE_RULES="$PROJECT_ROOT/docs/submodule-common-rules.md"
+for _doc in "$AUTOFLOW_GUIDE" "$EXTERNAL_REVIEW_SEQ" "$GIT_WORKFLOW" "$SUBMODULE_RULES"; do
+  assert_true "AC7 (#161): $(basename "$_doc") carries no Jenkins pr-merge job token" \
+    "! grep -qiE 'jenkins[^\n]{0,10}pr-merge|PeriodicFolderTrigger|JENKINS_(URL|USER|API_TOKEN)' \"$_doc\""
+done
 assert_true "AC7: git-workflow.md cross-references confirm-ci-green.sh (no third prose restatement)" \
   "printf '%s' \"\$GITWORKFLOW_BODY\" | grep -qF 'confirm-ci-green.sh'"
 

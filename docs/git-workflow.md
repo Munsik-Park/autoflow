@@ -136,7 +136,7 @@ See also: issue #91 (stale-pointer risk), [`autoflow-guide.md`](autoflow-guide.m
 
 In a single-repo deployment (target-centric — the default; zero submodules), this step does not exist: with no `services` submodule there is no gitlink to reconcile. This is an active N/A — the guard below applies **only** to a multi-repo deployment, and a single-repo instance skips it entirely rather than silently omitting it.
 
-When a **reconcile request** (pointer bump after the sub-repo PR merges) is delegated to AutoFlow and several cycles are in external review at once, the dev branch may have forked before another cycle's host PR merged and reconciled the `services` pointer. A naive bump + push then leaves the host PR `CONFLICTING` and Jenkins' `pr-merge` build fails `NOT_MERGEABLE` — the recurring "second push not recognized" symptom. Before bumping, compare `BASE` (dev's merge-base pointer), `MAIN` (current `origin/main` pointer), and `TARGET` (this issue's `merge_commit_sha`); if `MAIN != BASE`, resolve by fork ancestry:
+When a **reconcile request** (pointer bump after the sub-repo PR merges) is delegated to AutoFlow and several cycles are in external review at once, the dev branch may have forked before another cycle's host PR merged and reconciled the `services` pointer. A naive bump + push then leaves the host PR `CONFLICTING` with no CI check published for it (`confirm-ci-green.sh` exit 10) — the recurring "second push not recognized" symptom. Before bumping, compare `BASE` (dev's merge-base pointer), `MAIN` (current `origin/main` pointer), and `TARGET` (this issue's `merge_commit_sha`); if `MAIN != BASE`, resolve by fork ancestry:
 
 ```bash
 git fetch origin main && git -C services fetch origin main
