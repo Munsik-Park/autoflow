@@ -78,13 +78,13 @@ If `MAIN == BASE`, no concurrent reconcile happened — bump to `TARGET` and pus
 **Post-reconcile gate** — before/after pushing, confirm **all three**, and do not report "reconciled" until all hold:
 
 - **Pointer == `TARGET`**: `git ls-tree HEAD services` equals `TARGET` — the merge-order gate's pointer-equality requirement the operator verifies before removing `blocked-by-subrepo`. Verify this *before* pushing.
-- The generic mergeable + check-rollup confirmation runs `scripts/handoff/confirm-ci-green.sh --pr <host-PR>` (the shared step-5 helper — issue #25), which asserts a confirmed-mergeable read — `mergeable: MERGEABLE` with a settled (non-`UNKNOWN`) `mergeStateStatus` (no longer `CONFLICTING`/`DIRTY`) and a green GitHub-surfaced check rollup. Using the shared script here keeps the generic mergeable/rollup check from diverging into an independently-maintained second copy; the pointer-equality bullet above and the authenticated-Jenkins bullet below stay as this doc's own gitlink **superset** additions.
-- The Jenkins rebuild on the new head commit is `result: SUCCESS`, queried via the **authenticated** API (the environment provides `JENKINS_URL` / `JENKINS_USER` / `JENKINS_API_TOKEN`):
+- The generic mergeable + check-rollup confirmation runs `scripts/handoff/confirm-ci-green.sh --pr <host-PR>` (the shared step-5 helper — issue #25), which asserts a confirmed-mergeable read — `mergeable: MERGEABLE` with a settled (non-`UNKNOWN`) `mergeStateStatus` (no longer `CONFLICTING`/`DIRTY`) and a green GitHub-surfaced check rollup. Using the shared script here keeps the generic mergeable/rollup check from diverging into an independently-maintained second copy; the pointer-equality bullet above and the head-commit check bullet below stay as this doc's own gitlink **superset** additions.
+- The CI checks on the **new head commit** are all `completed` / `success`, read by commit SHA rather than by job name or check name (CI product and check names differ per target — issue #161):
   ```bash
-  curl -s -u "$JENKINS_USER:$JENKINS_API_TOKEN" \
-    "https://jk.example.internal/job/claude-autoflow/job/PR-<n>/lastBuild/api/json?tree=number,result"
+  gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs \
+    --jq '.check_runs[] | "\(.name) \(.status) \(.conclusion)"'
   ```
-  **[MUST]** An **unauthenticated** call returns `403`/empty body — do **not** read that as "Jenkins unreachable / down". A host PR that reads `mergeable: CLEAN` but whose latest Jenkins build is `result: FAILURE` with a console `NOT_MERGEABLE` ran on the **pre-resolution (conflicted)** commit; re-verify after the post-push rebuild settles.
+  **[MUST]** Read the checks of the post-reconcile head SHA, never the PR's latest build in general: a host PR that reads `mergeable: CLEAN` but whose most recent CI run failed on a not-mergeable merge revision ran on the **pre-resolution (conflicted)** commit; re-verify after the post-push run on the new head settles.
 
 **Sequencing** — perform the reconcile against a **freshly-synced `main`**: run [Post-Merge Cleanup](git-workflow.md#post-merge-cleanup) for any prior cycles the operator has already merged (so `origin/main` and its pointer reflect the latest merge) *before* reconciling the current issue. This keeps `BASE ≈ MAIN` and turns most concurrent-cycle conflicts into a clean fast-forward.
 
