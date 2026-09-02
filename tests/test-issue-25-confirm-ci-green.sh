@@ -376,6 +376,16 @@ for _doc in "$AUTOFLOW_GUIDE" "$EXTERNAL_REVIEW_SEQ" "$GIT_WORKFLOW" "$SUBMODULE
   assert_true "AC7 (#161): $(basename "$_doc") carries no Jenkins pr-merge job token" \
     "! grep -qiE 'jenkins[^\n]{0,10}pr-merge|PeriodicFolderTrigger|JENKINS_(URL|USER|API_TOKEN)' \"$_doc\""
 done
+# #161 (review round 2): a CONFLICTING/DIRTY PR MAY receive no check — the script's exit 10
+# fires on the mergeability read, before any check is consulted, so the docs must not assert
+# that such a PR receives none. Step 5 keeps the hedged form; the procedure prose carries no
+# absolute form. (extract_section skips its matching heading line, so step 5's own line is read directly.)
+assert_true "AC7 (#161): autoflow-guide.md step 5 keeps the hedged 'may receive no check' wording" \
+  "grep -E '^5\\. Confirm CI is green' \"\$AUTOFLOW_GUIDE\" | grep -qiE 'may receive [*]*no check'"
+for _doc in "$AUTOFLOW_GUIDE" "$EXTERNAL_REVIEW_SEQ" "$GIT_WORKFLOW" "$SUBMODULE_RULES"; do
+  assert_true "AC7 (#161): $(basename "$_doc") asserts no absolute 'receives no check' / 'no check is published' rule" \
+    "! grep -qiE 'receives no check|no (ci )?check (is )?published' \"$_doc\""
+done
 assert_true "AC7: git-workflow.md cross-references confirm-ci-green.sh (no third prose restatement)" \
   "printf '%s' \"\$GITWORKFLOW_BODY\" | grep -qF 'confirm-ci-green.sh'"
 
