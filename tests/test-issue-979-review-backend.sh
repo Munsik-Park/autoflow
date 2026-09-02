@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/review/codex-review-pr.sh docs/reviewer-backend.md
+# ci-subject: scripts/review/codex-review-pr.sh docs/reviewer-backend.md .codex/review.md
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -227,6 +227,55 @@ assert_true "AC-8 (label-authority neutrality, D4): .codex/review.md's label-rem
   "grep -qi 'configured isolated reviewer subprocess' '$PROJECT_ROOT/.codex/review.md'"
 assert_false "AC-8 (label-authority neutrality, D4): the old codex-exec-specific authority phrasing is gone" \
   "grep -qi 'isolated .codex exec. subprocess' '$PROJECT_ROOT/.codex/review.md'"
+
+# ---------------------------------------------------------------------------
+# Issue #157 — AC-no-target-varying-path: path-shape guard (regression) +
+# placeholder-notation guard (characterization). Verification design
+# .autoflow/issue-157-verification-design.md "Acceptance criteria ->
+# verification" row 2/3; predicate = feature design
+# .autoflow/issue-157-feature-design.md "Acceptance criteria - how the
+# design meets them" (three rules: <...>-enclosed separators are argument
+# syntax, ://-scheme tokens are external references, every other
+# path-shaped backticked token must be a docs/ bundle-document citation).
+# Operates on the real committed .codex/review.md, not the fixture copy,
+# since this is a content property of the shipped file itself.
+#
+# RED expectation (pre-implementation): the path-shape guard FAILS — line 10
+# still carries the target-invalid `services/librechat` literal. The
+# non-vacuity arm and the placeholder-notation guard both PASS today
+# (characterization: no {{ notation has ever been present in this file).
+# ---------------------------------------------------------------------------
+PATH_SHAPE_TARGET="$PROJECT_ROOT/.codex/review.md"
+PATH_SHAPE_TOKEN_COUNT=0
+PATH_SHAPE_VIOLATION_COUNT=0
+while IFS= read -r tok; do
+  [ -z "$tok" ] && continue
+  inner="${tok#\`}"; inner="${inner%\`}"
+  case "$inner" in
+    */*) : ;;
+    *) continue ;;
+  esac
+  case "$inner" in
+    *"://"*) continue ;;
+  esac
+  stripped="$(printf '%s' "$inner" | sed -E 's/<[^>]*>//g')"
+  case "$stripped" in
+    */*) : ;;
+    *) continue ;;
+  esac
+  PATH_SHAPE_TOKEN_COUNT=$((PATH_SHAPE_TOKEN_COUNT + 1))
+  case "$inner" in
+    docs/*) : ;;
+    *) PATH_SHAPE_VIOLATION_COUNT=$((PATH_SHAPE_VIOLATION_COUNT + 1)) ;;
+  esac
+done < <(grep -oE '`[^`]+`' "$PATH_SHAPE_TARGET")
+
+assert_true "AC-no-target-varying-path (path-shape guard): the only path-shaped tokens .codex/review.md cites are bundle documents under docs/ — no target-varying literal remains" \
+  "[ \"\$PATH_SHAPE_VIOLATION_COUNT\" -eq 0 ]"
+assert_true "AC-no-target-varying-path (path-shape guard, non-vacuity): at least one path-shaped token survives extraction — the guard is not vacuously green because extraction found nothing" \
+  "[ \"\$PATH_SHAPE_TOKEN_COUNT\" -ge 1 ]"
+assert_false "AC-no-target-varying-path (placeholder-notation guard): .codex/review.md carries no {{ generalized-identifier token" \
+  "grep -qF '{{' '$PATH_SHAPE_TARGET'"
 
 # ---------------------------------------------------------------------------
 # VERIFY step-3 coverage additions (minimal-implementation check): two GREEN
