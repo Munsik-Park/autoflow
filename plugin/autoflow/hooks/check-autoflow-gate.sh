@@ -20,6 +20,11 @@
 #
 # Gate points:
 #   - Bash(gh pr merge)             → DENIED unconditionally (AutoFlow never merges)
+#   - TaskOutput (any call)         → DENIED unconditionally (issue #165): a
+#                                     blocking wait on one task queues every other
+#                                     completion notification and the user's input
+#                                     behind it; a tracked task is awaited by ending
+#                                     the turn and taking its task notification
 #   - Bash(backgrounded run-suites.sh) → DENIED unconditionally (foreground only)
 #   - Bash(git push <default br>)   → DENIED unconditionally (push dev branch + PR only)
 #   - Bash(gh issue create)         → DENIED unconditionally; also the REST form
@@ -329,6 +334,26 @@ $_shb_buf"; fi
 # agent's tools. Enforced regardless of any .autoflow state so that a
 # terminal phase setting active:false (or a removed state file) cannot
 # disable the prohibition. Merging is performed by external review.
+
+# ── Blocking-wait deny: TaskOutput (issue #165; state-independent — P2) ──
+# The harness re-invokes the session with a task notification when a subagent,
+# a Workflow or a backgrounded Bash task completes — that is the wait primitive
+# (CLAUDE.md > Execution Principles > Wait discipline). The deprecated
+# TaskOutput tool instead blocks the turn on ONE task until it ends or its
+# timeout fires: every other task's completion notification and every user
+# prompt queue behind the block, and a timed-out agent wait dumps the agent's
+# transcript tail into the orchestrator's context (#165 measurement: 77 blocks,
+# 6h33m of an 8h01m session inside the block, a user prompt never delivered,
+# two 16-27K-token transcript dumps). No actor has a legitimate use of it in a
+# governed repo, so the deny is tool-name-keyed and carries no state or
+# argument condition. Denied here, before the activity check, so an inactive
+# or absent state file cannot re-admit it.
+if [ "$TOOL_NAME" = "TaskOutput" ]; then
+  echo "BLOCKED: 'TaskOutput' blocking wait is denied (CLAUDE.md > Execution Principles > Wait discipline; issue #165)." >&2
+  echo "A subagent, Workflow or background task re-invokes this session with a task notification when it completes — end the turn and take the result from that notification. TaskOutput blocks every other notification and the user's input until its one target ends or times out." >&2
+  exit 2
+fi
+
 if [ "$TOOL_NAME" = "Bash" ]; then
   # Shell-separator segment split shared by the co-occurrence denies below
   # (label-gate REST form, default-branch push). Computed once from SCAN.

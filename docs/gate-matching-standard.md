@@ -358,7 +358,8 @@ A hook has two classes of gate:
 
 1. **Absolute prohibitions** — actions AutoFlow must never perform via the
    agent's tools regardless of state (e.g. `gh pr merge`, push to the
-   default branch). These MUST be placed in an unconditional block that
+   default branch, and — keyed on the tool name rather than a command
+   token — the `TaskOutput` blocking wait, issue #165). These MUST be placed in an unconditional block that
    executes **before** any active-issue / state lookup, so that tearing
    down or deactivating the state file cannot nullify them.
 2. **Conditional gates** — score- or phase-dependent checks (e.g. push only
@@ -373,7 +374,9 @@ avoids this by ordering its sections `1. Unconditional blocks` → then
 
 Behavioural consequence (intended, not a regression): the agent's Bash
 tool can never run `gh pr merge` or a default-branch push in a governed
-repo, even outside an active flow. Merging is performed by humans /
+repo, even outside an active flow, and `TaskOutput` is never callable there
+(the hook matcher must therefore list `TaskOutput` — a P2 deny on a tool the
+matcher does not route to the hook is a deny that never runs). Merging is performed by humans /
 external review through GitHub, not through the agent — consistent with
 the HANDOFF terminal-phase model.
 

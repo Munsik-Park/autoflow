@@ -276,9 +276,12 @@ assert_true "subject-set derivation finds at least one push-context base-ref con
 # reason — its resolver call sat in the AC-27-9 diff fence, a merged cycle's own
 # DELTA, which #121 rewrote as permanent registry entries. The 798 suite recorded
 # here as the former alternate could never have served: it holds no resolver or
-# merge-base call at all. tests/test-issue-788-host-purity-delta.sh is the alternate
-# now: it satisfies the same three checks (lane: standing, no cycle-arm, an
-# un-gated top-level merge-base assignment) and is a member of the derived set.
+# merge-base call at all. The alternate this block once named,
+# tests/test-issue-788-host-purity-delta.sh, no longer exists in the tree (#165
+# checked); as of #165 the pinned subject is the ONLY conforming member of the
+# derived set — verify-package.sh keeps a top-level merge-base call because it
+# carries the AC5 hook-command-set assertion, not to serve this pin — so a
+# future removal of that call must first establish a new conforming subject.
 if [ -z "${1:-}" ]; then
   assert_true "subject-set derivation includes a known real call site (tests/plugin/verify-package.sh) — regression guard against silent under-derivation" \
     "grep -qxF 'tests/plugin/verify-package.sh' < <(printf '%s\n' \"\${SUBJECTS[@]}\")"
@@ -891,8 +894,8 @@ assert_true "AC-native-coverage-premise-reach: a registering workflow whose push
 # no cycle-arm, an un-gated top-level base-ref call). Both halves were checked
 # against the registering workflow for tests/plugin/verify-package.sh rather
 # than assumed: the job carrying its run: step checks out at fetch-depth: 0,
-# and that workflow's push: paths block lists the suite's own path. The
-# alternate is tests/test-issue-788-host-purity-delta.sh.
+# and that workflow's push: paths block lists the suite's own path. No
+# alternate exists as of #165 (see the derivation pin above).
 drive_suite_over_root "$PROJECT_ROOT"
 assert_true "AC-native-coverage-premise-{depth,reach} (real tree): the pinned known call site reports NATIVE-COVERAGE PASS" \
   "printf '%s\n' \"\$DRIVE_OUT\" | grep -qE 'NATIVE-COVERAGE:[[:space:]]+tests/plugin/verify-package\.sh[[:space:]]+PASS'"
