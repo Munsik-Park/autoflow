@@ -198,7 +198,9 @@ echo "=== CLASS A: Static assertions ==="
 #       BG_TAIL trailing-&, Section 1 state-independent) → 14 with the issue
 #       #140 Gate 5 (`git commit` under a GATE:QUALITY remedy_class=doc
 #       re-entry: corrupt-state read fails closed + missing/incomplete sweep
-#       record denied) — the floor's current value. A deny ADDITION no longer reds this arm and needs no edit here;
+#       record denied) → 15 with the issue #165 TaskOutput deny (the
+#       deprecated blocking-wait tool refused by tool name, Section 1
+#       state-independent) — the floor's current value. A deny ADDITION no longer reds this arm and needs no edit here;
 #       a deny REMOVAL still does, which is the regression class the arm exists
 #       for (a consolidation that silently drops a deny). The floor is raised
 #       deliberately, never lowered. Naive grep -c 'exit 2' is
@@ -215,8 +217,8 @@ assert_eq "A8a: exactly ONE AUTOFLOW-SCHEMA-VALIDATION label in hook (consolidat
   # ^^^ FAILS on unmodified hook (count=0) — RED-confirming
 
 EXIT2_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$HOOK" 2>/dev/null || true)
-assert_static "A8b: anchored 'exit 2' statement count >= 14 — the deny-site floor (found: $EXIT2_COUNT)" \
-  bash -c "[[ $EXIT2_COUNT -ge 14 ]]"
+assert_static "A8b: anchored 'exit 2' statement count >= 15 — the deny-site floor (found: $EXIT2_COUNT)" \
+  bash -c "[[ $EXIT2_COUNT -ge 15 ]]"
   # See the ratchet record in the A8 comment block above. The floor is a
   # RATCHET: raise it deliberately when a deny addition is meant to become
   # permanent; never lower it. A8d/A8e below drive both directions against a

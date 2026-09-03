@@ -21,11 +21,13 @@
 #       real byte-copied gate script still enforces (behavioral keystone 8a)
 #   AC4 hook scripts resolve state via ${CLAUDE_PROJECT_DIR} only, never
 #       ${CLAUDE_PLUGIN_ROOT} (static grep + behavioral two-distinct-roots 8b)
-#   AC5 byte-copy parity + engine-core-unchanged (empty diff, AC-R3 narrowed
-#       to drop .claude/skills; #796 narrowed to drop .claude/agents; #843
-#       narrowed to drop .claude/hooks — parity carries agent/hook drift
-#       protection) + no agents/skills/hooks inside any .claude-plugin/ +
-#       packaged file-set coverage (workflows/CLAUDE.md/docs excluded)
+#   AC5 byte-copy parity + engine-core wiring parity (AC-R3 narrowed to drop
+#       .claude/skills; #796 narrowed to drop .claude/agents; #843 narrowed to
+#       drop .claude/hooks — parity carries agent/hook drift protection; #165
+#       replaced the last empty-diff leg, .claude/settings.json, with a
+#       host↔plugin hook-wiring parity check) + no agents/skills/hooks inside
+#       any .claude-plugin/ + packaged file-set coverage (workflows/CLAUDE.md/
+#       docs excluded)
 #   AC6 settings-pin reference snippet lives only inside the README fence,
 #       composes name@marketplace correctly, and no standalone pin file exists
 #   AC-R1/AC-R2 (cycle 2, Codex Medium on PR #918) packaged skill body names
@@ -427,10 +429,10 @@ if [ -f "$HOOKS_JSON" ] && jq -e . "$HOOKS_JSON" >/dev/null 2>&1; then
   PRE_CMD=$(jq -r '.hooks.PreToolUse[0].hooks[0].command // empty' "$HOOKS_JSON")
   POST_CMD=$(jq -r '.hooks.PostToolUse[0].hooks[0].command // empty' "$HOOKS_JSON")
 
-  if [ "$PRE_MATCHER" = "Write|Edit|MultiEdit|Bash|Agent" ]; then
+  if [ "$PRE_MATCHER" = "Write|Edit|MultiEdit|Bash|Agent|TaskOutput" ]; then
     pass "AC3b: PreToolUse matcher matches .claude/settings.json topology"
   else
-    failc "AC3b" "PreToolUse matcher='$PRE_MATCHER' (expected 'Write|Edit|MultiEdit|Bash|Agent')"
+    failc "AC3b" "PreToolUse matcher='$PRE_MATCHER' (expected 'Write|Edit|MultiEdit|Bash|Agent|TaskOutput')"
   fi
   if [ "$POST_MATCHER" = "Read" ]; then
     pass "AC3b: PostToolUse matcher matches .claude/settings.json topology"
@@ -618,37 +620,43 @@ else
   failc "AC-R1/AC-R2" "packaged SKILL.md missing at $PKG_SKILL_MD"
 fi
 
-# ── AC5: engine-core-unchanged (empty diff — regression guard) ──────────
-# AC-R3 narrowing: .claude/skills is dropped from scope because the host copy
-# now legitimately changes (identical portable edit applied to both copies,
-# verification design AC-R3/DCR-C2-2). Issue #796 narrowing (same shape):
-# .claude/agents is dropped because agent role prose now legitimately changes
-# (target-centric re-narration, #796 WI-4) — drift protection for agents is
-# carried by the AC5 byte-copy parity check above, which is stricter (byte
-# equality, CI-triggered on .claude/agents/**), so an engine agent edit cannot
-# land silently: the plugin copy must change in the same diff. Issue #843
-# narrowing (same shape): .claude/hooks is dropped from scope because the
-# gate hook now legitimately changes (first intentional engine-hook edit
-# since the #790 packaging) — drift protection for hooks is carried by the
-# AC5 byte-copy parity check above, which is stricter (byte equality,
-# plugin-package.yml CI-triggers on both .claude/hooks/** and plugin/**), so
-# an engine hook edit cannot land silently: the plugin copy must change in
-# the same diff. settings.json stays in scope — the gate-machinery drift
-# guard is not gutted.
-echo "== AC5: engine-core-unchanged (regression guard, AC-R3 + #796 + #843 narrowed) =="
-BASE_REF=$(git -C "$REPO_ROOT" merge-base HEAD origin/main 2>/dev/null)
-if [ -z "$BASE_REF" ]; then
-  BASE_REF=$(git -C "$REPO_ROOT" rev-parse origin/main 2>/dev/null)
-fi
-if [ -n "$BASE_REF" ]; then
-  DIFF_OUT=$(git -C "$REPO_ROOT" diff "$BASE_REF"...HEAD -- .claude/settings.json)
-  if [ -z "$DIFF_OUT" ]; then
-    pass "AC5 REGRESSION GUARD: engine-core diff vs $BASE_REF is empty (additive model, D-1, .claude/skills dropped per AC-R3, .claude/agents per #796, .claude/hooks per #843)"
+# ── AC5: engine-core wiring parity (regression guard) ─────────────────────
+# History of this leg: an empty-diff guard over the engine core vs origin/main.
+# AC-R3 dropped .claude/skills (the host copy legitimately changes with the
+# plugin copy), #796 dropped .claude/agents, #843 dropped .claude/hooks — each
+# time because the file had its first intentional edit and drift protection
+# was already carried by the stricter byte-copy parity above. Issue #165 is the
+# first intentional edit of the last remaining leg, .claude/settings.json (the
+# PreToolUse matcher gains TaskOutput so the hook's tool-name-keyed deny is
+# routed at all). Dropping it would leave the guard with an empty scope, so the
+# empty-diff form is replaced by the property it was standing in for: the host
+# channel (.claude/settings.json) and the plugin channel (hooks/hooks.json)
+# wire the SAME hook scripts to the SAME tool matchers. An edit to one channel
+# that does not land on the other in the same diff fails here, which is the
+# drift class the empty-diff leg guarded; an identical portable edit applied
+# to both passes, which the empty-diff leg could not express.
+echo "== AC5: engine-core wiring parity (host settings.json ↔ plugin hooks.json; #165) =="
+HOST_SETTINGS="$REPO_ROOT/.claude/settings.json"
+if [ -f "$HOST_SETTINGS" ] && [ -f "$HOOKS_JSON" ] && jq -e . "$HOST_SETTINGS" >/dev/null 2>&1; then
+  # Per event, the list of "<matcher> <hook-script-basename>" pairs, sorted.
+  wiring() { jq -r --arg ev "$2" '.hooks[$ev][]? | .matcher as $m | .hooks[] | "\($m) \(.command | split("/") | last)"' "$1" | sort; }
+  for ev in PreToolUse PostToolUse; do
+    HOST_W=$(wiring "$HOST_SETTINGS" "$ev")
+    PLUG_W=$(wiring "$HOOKS_JSON" "$ev")
+    if [ -n "$HOST_W" ] && [ "$HOST_W" = "$PLUG_W" ]; then
+      pass "AC5 WIRING PARITY: $ev — host and plugin route the same matchers to the same hook scripts ($(printf '%s' "$HOST_W" | tr '\n' ';'))"
+    else
+      failc "AC5 engine-core wiring parity" "$ev differs — host: [$(printf '%s' "$HOST_W" | tr '\n' ';')] plugin: [$(printf '%s' "$PLUG_W" | tr '\n' ';')]"
+    fi
+  done
+  HOST_CMDS=$(jq -r '.hooks[][] | .hooks[].command' "$HOST_SETTINGS")
+  if printf '%s\n' "$HOST_CMDS" | grep -vq '^\${CLAUDE_PROJECT_DIR}/\.claude/hooks/'; then
+    failc "AC5 engine-core wiring parity" "a host hook command is not \${CLAUDE_PROJECT_DIR}/.claude/hooks/-anchored: $(printf '%s' "$HOST_CMDS" | tr '\n' ';')"
   else
-    failc "AC5 engine-core-unchanged" "non-empty diff vs $BASE_REF — engine files were modified"
+    pass "AC5 WIRING PARITY: every host hook command is \${CLAUDE_PROJECT_DIR}/.claude/hooks/-anchored"
   fi
 else
-  failc "AC5 engine-core-unchanged" "cannot resolve origin/main to compute the base diff"
+  failc "AC5 engine-core wiring parity" "missing or invalid JSON: $HOST_SETTINGS or $HOOKS_JSON"
 fi
 
 # ── AC5: structure conformance (spec Warning) ────────────────────────────
