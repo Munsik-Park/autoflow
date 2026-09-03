@@ -20,9 +20,13 @@
 # resolve PLUGIN_CACHE_ROOT / missing cache setup/manifest.json).
 #
 # DRIFT vs VERSION_SKEW are two decoupled axes (feature-design §3.2):
-#   - DRIFT reuses the installed drift-check.sh and counts ONLY non-D2 (D1/D3)
-#     FAIL lines (line format `FAIL: <id> -- <msg>`); D2 version-skew is filtered
-#     out so a pure version bump never double-reports as content drift.
+#   - DRIFT reuses the cache's drift-check.sh and counts ONLY the FAIL lines a
+#     re-stamp of the thin root repairs — D1/D3 (installed content) and D4
+#     (installed bundle behind the marketplace clone, issue #167); line format
+#     `FAIL: <id> -- <msg>`. D2 (plugin.json version skew) and D5 (plugin cache
+#     vs clone plugin source) are filtered out: both are plugin-tier findings a
+#     stamp cannot change — D2 so a pure version bump never double-reports as
+#     content drift, D5 because its remedy is `/plugin update`, not init.sh.
 #   - VERSION_SKEW compares the installed manifest .version against the cache
 #     thin-root source setup/manifest.json .version (the exact file init.sh
 #     byte-copies in) — a distinct comparand from drift-check D2 (plugin.json).
@@ -54,7 +58,7 @@ else
   INSTALL_STATE=absent
 fi
 
-# ── DRIFT (D1/D3 only; D2 filtered out) ───────────────────────────────────────
+# ── DRIFT (D1/D3/D4 — stamp-repairable; D2/D5 plugin-tier, filtered out) ─────
 DRIFT_STATE=na
 DRIFT_FAILS=0
 DRIFT_FIRST=
@@ -70,7 +74,7 @@ if [ "$INSTALL_STATE" = installed ]; then
       # drift-check itself could not run (jq absent / manifest unreadable).
       DRIFT_STATE=error
     else
-      _nd2=$(printf '%s\n' "$_drift_out" | grep '^FAIL: ' | grep -v '^FAIL: D2 ')
+      _nd2=$(printf '%s\n' "$_drift_out" | grep '^FAIL: ' | grep -v -e '^FAIL: D2 ' -e '^FAIL: D5 ')
       if [ -n "$_nd2" ]; then
         DRIFT_STATE=drift
         DRIFT_FAILS=$(printf '%s\n' "$_nd2" | wc -l | tr -d ' ')
@@ -81,8 +85,8 @@ if [ "$INSTALL_STATE" = installed ]; then
         # with NO FAIL: line at all is an unexplained abnormal termination
         # (shell syntax error, set -u abort, or a bare exit N) -> error,
         # never silent clean (mirrors the L57-58 file-absent guarantee).
-        # A non-zero exit WITH a FAIL: line here can only be D2-only skew
-        # (intentionally filtered) -> stays clean.
+        # A non-zero exit WITH a FAIL: line here can only be D2/D5-only
+        # plugin-tier skew (intentionally filtered) -> stays clean.
         if [ "$_drift_rc" -ne 0 ] \
            && ! printf '%s\n' "$_drift_out" | grep -q '^FAIL: '; then
           DRIFT_STATE=error

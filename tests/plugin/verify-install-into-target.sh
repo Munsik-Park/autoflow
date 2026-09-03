@@ -110,7 +110,16 @@ cleanup() {
          "$LOCAL_TARGET_A" "$LOCAL_TARGET_B" \
          "$DRIFT_TARGET" "$SKEW_TARGET" "$RESTAMP_TARGET"
 }
-trap cleanup EXIT INT TERM
+# Hermetic plugin discovery (issue #167): drift-check.sh D2/D4/D5 resolve the
+# installed plugin and the marketplace clone through scripts/lib/plugin-root.sh
+# from ${CLAUDE_CONFIG_DIR:-~/.claude}/plugins. Point that at an empty scratch
+# dir so a developer machine's real plugin cache / marketplace clone never
+# leaks into a clean-install exit-0 or a D2 SKIP expectation below; a leg that
+# needs a plugin root passes CLAUDE_PLUGIN_ROOT explicitly.
+HERMETIC_CONFIG_DIR=$(mktemp -d)
+export CLAUDE_CONFIG_DIR="$HERMETIC_CONFIG_DIR"
+unset CLAUDE_PLUGIN_ROOT AUTOFLOW_MARKETPLACE_ROOT
+trap 'cleanup; rm -rf "$HERMETIC_CONFIG_DIR"' EXIT INT TERM
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

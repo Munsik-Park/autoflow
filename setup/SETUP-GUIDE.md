@@ -57,6 +57,7 @@ can self-describe and self-verify offline.
 | Deliberation workflows | `.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js` | copy |
 | Settings pin (marketplace + `enabledPlugins`) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
+| Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`) | `scripts/lib/plugin-root.sh` | copy |
 | Local overrides scaffold (never overwritten) | `CLAUDE.local.md` | scaffold |
 | Spawn policy sample (target-configured, never overwritten) | `.claude/autoflow/spawn-policy.json` | scaffold |
 
@@ -74,7 +75,17 @@ for your own runtime, so a re-stamp will not overwrite a configured policy and
 `drift-check.sh` reports it as target-owned rather than as content drift. On a
 version bump your obligation is to run
 `bash scripts/spawn-policy/spawn-policy.sh check` and add any newly required row —
-a scaffold is never refreshed for you.
+a scaffold is never refreshed for you. `check` validates the config's agent types
+against the agent definitions the session actually loads: `.claude/agents/` when
+that directory holds `autoflow-*.md` files (the framework repository, or a target
+carrying its own copies), otherwise the installed plugin's `agents/` — resolved
+through `scripts/lib/plugin-root.sh` from `CLAUDE_PLUGIN_ROOT` (hook context) or,
+in a plain shell, from the harness's own registries under
+`${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/`. A thin-root target ships no
+`.claude/agents/`, so the plugin is where `check` reads them; when the lookup
+cannot see the plugin, point it there: `CLAUDE_PLUGIN_ROOT=<plugin dir> bash
+scripts/spawn-policy/spawn-policy.sh check`. With no definitions anywhere `check`
+fails closed and lists every location it consulted.
 
 ### Self-verify with the drift detector
 
@@ -88,12 +99,28 @@ After installing, enable the plugin and run the shipped drift detector:
 sh .claude/autoflow/drift-check.sh
 ```
 
-`drift-check.sh` checks that every installed artifact still matches the manifest
-(content hashes, the shim managed region, and the settings-pin keys) and that the
-installed manifest `version` matches the plugin pin. A non-zero exit is a
-**PREFLIGHT stop condition** — resolve the reported drift before starting a new
-AutoFlow cycle. (Version-skew reports `SKIP`, not a failure, when the plugin root
-is not locally resolvable.)
+`drift-check.sh` runs five checks, all target-local and network-free:
+
+| Check | What it compares | On mismatch |
+|-------|------------------|-------------|
+| D1 | every installed artifact vs the installed manifest (content hashes, the shim managed region, the settings-pin keys; a scaffold is presence-only) | FAIL — repair the installed file |
+| D2 | installed manifest `version` vs the installed plugin's `plugin.json` | FAIL — re-stamp |
+| D3 | settings wiring never binds `.autoflow` state to the plugin root | FAIL — fix the wiring |
+| D4 | installed manifest vs the **marketplace clone's** `setup/manifest.json`, per artifact by sha256 — a bundle that is self-consistent (D1 PASS) but older than what the clone would stamp today, including upstream changes merged without a version bump | FAIL — re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`); a changed `scaffold` sample or an artifact upstream no longer ships is a `WARN` you dispose of by hand |
+| D5 | the installed plugin's files vs the clone's `plugin/<name>/` source — the hooks a session runs and the docs it reads must come from the same source | FAIL — `/plugin update autoflow@autoflow` |
+
+A non-zero exit is a **PREFLIGHT stop condition** — resolve the reported drift
+before starting a new AutoFlow cycle. D2, D4 and D5 do **not** need the
+hook-only `CLAUDE_PLUGIN_ROOT` variable: `scripts/lib/plugin-root.sh` resolves
+the installed plugin and the marketplace clone from the harness's own registries
+(`${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/installed_plugins.json`,
+`known_marketplaces.json`, then the `cache/` and `marketplaces/` directories), so
+the same result is produced from a plain shell, which is where PREFLIGHT runs it.
+Each of the three reports `SKIP`, not a failure, when its side is not locally
+resolvable (no plugin installed, no clone), naming the locations it consulted.
+If the clone itself is behind upstream, refresh it first
+(`/plugin marketplace update autoflow`) — D4 compares against the clone you have,
+which is also what a re-stamp would deliver.
 
 ---
 
