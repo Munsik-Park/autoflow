@@ -659,6 +659,31 @@ else
   failc "AC5 engine-core wiring parity" "missing or invalid JSON: $HOST_SETTINGS or $HOOKS_JSON"
 fi
 
+# The base-relative half of the former empty-diff leg, narrowed to what must
+# still not move without review: the SET of hook commands the host channel
+# runs. A matcher may widen (as #165 does); a hook script appearing in or
+# leaving .claude/settings.json is gate-machinery drift and stays a diff-vs-
+# base assertion. This is also the standing, top-level, un-gated base-ref call
+# tests/test-push-context-base-ref.sh pins as its known real call site — a
+# vestigial merge-base would satisfy that pin without guarding anything, so
+# the call is kept only because it carries this assertion.
+echo "== AC5: engine-core hook-command set unchanged vs base (regression guard) =="
+BASE_REF=$(git -C "$REPO_ROOT" merge-base HEAD origin/main 2>/dev/null)
+if [ -z "$BASE_REF" ]; then
+  BASE_REF=$(git -C "$REPO_ROOT" rev-parse origin/main 2>/dev/null)
+fi
+if [ -n "$BASE_REF" ]; then
+  BASE_CMDS=$(git -C "$REPO_ROOT" show "$BASE_REF:.claude/settings.json" 2>/dev/null | jq -r '.hooks[][] | .hooks[].command' 2>/dev/null | sort)
+  HEAD_CMDS=$(jq -r '.hooks[][] | .hooks[].command' "$HOST_SETTINGS" 2>/dev/null | sort)
+  if [ -n "$BASE_CMDS" ] && [ "$BASE_CMDS" = "$HEAD_CMDS" ]; then
+    pass "AC5 REGRESSION GUARD: host hook-command set unchanged vs $BASE_REF ($(printf '%s' "$HEAD_CMDS" | tr '\n' ';'))"
+  else
+    failc "AC5 engine-core hook-command set" "differs vs $BASE_REF — base: [$(printf '%s' "$BASE_CMDS" | tr '\n' ';')] head: [$(printf '%s' "$HEAD_CMDS" | tr '\n' ';')]"
+  fi
+else
+  failc "AC5 engine-core hook-command set" "cannot resolve origin/main to compute the base diff"
+fi
+
 # ── AC5: structure conformance (spec Warning) ────────────────────────────
 echo "== AC5: structure conformance =="
 for d in "$REPO_ROOT/.claude-plugin" "$PLUGIN_DIR/.claude-plugin"; do
