@@ -67,6 +67,7 @@ on:
       - 'plugin/autoflow/skills/**'
       - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/handoff/confirm-ci-green.sh'
+      - 'scripts/architect/record-discipline.sh'
       - 'scripts/handoff/create-host-pr.sh'
       - 'scripts/issue/create-issue.sh'
       - 'scripts/ledger/ledger-entry-id.sh'
@@ -127,6 +128,10 @@ on:
       - 'tests/fixtures/issue-159-register-all-accept.json'
       - 'tests/test-issue-160-reconcile-substituted-removed.sh'
       - 'tests/test-issue-165-taskoutput-deny.sh'
+      - 'tests/test-issue-166-deliberation-cost.sh'
+      - 'tests/fixtures/issue-166-record-residue.md'
+      - 'tests/fixtures/issue-166-record-clean.md'
+      - 'scripts/architect/record-discipline.sh'
       - 'tests/fixtures/issue-160-ac-diff-split-rows.json'
       - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
@@ -193,6 +198,7 @@ on:
       - 'plugin/autoflow/skills/**'
       - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/handoff/confirm-ci-green.sh'
+      - 'scripts/architect/record-discipline.sh'
       - 'scripts/handoff/create-host-pr.sh'
       - 'scripts/issue/create-issue.sh'
       - 'scripts/ledger/ledger-entry-id.sh'
@@ -253,6 +259,10 @@ on:
       - 'tests/fixtures/issue-159-register-all-accept.json'
       - 'tests/test-issue-160-reconcile-substituted-removed.sh'
       - 'tests/test-issue-165-taskoutput-deny.sh'
+      - 'tests/test-issue-166-deliberation-cost.sh'
+      - 'tests/fixtures/issue-166-record-residue.md'
+      - 'tests/fixtures/issue-166-record-clean.md'
+      - 'scripts/architect/record-discipline.sh'
       - 'tests/fixtures/issue-160-ac-diff-split-rows.json'
       - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
@@ -534,6 +544,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-165-taskoutput-deny.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-165-taskoutput-deny.sh
+
+      - name: test-issue-166-deliberation-cost.sh
+        id: s-test-issue-166-deliberation-cost
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-166-deliberation-cost.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-166-deliberation-cost.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh

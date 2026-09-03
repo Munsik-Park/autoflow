@@ -275,6 +275,15 @@ ESCALATE-equivalent rather than proceeding. The workflow script cannot perform t
 the hosted Workflow runtime injects no filesystem access and rejects `import(` at parse time, so
 the capability lives at the layer that has a shell.
 
+**Record-discipline advisory (orchestrator-side, issue #166).** Beside the existence check, run
+`bash scripts/architect/record-discipline.sh check .autoflow/issue-{N}-feature-design.md .autoflow/issue-{N}-verification-design.md`
+and carry its summary line into the session report. A hit names a Record-rules residue by grammar
+(*Record rules* below) — a register section inside a document, round-history phrasing, a
+measurement or command-output transcription. The check is **advisory**: nothing gates on it, the
+orchestrator does not edit the design documents, and whether a hit count should ever block is a
+separate decision the issue leaves open. What it closes is the gap the #595 measurement showed —
+the rule existed only as a prompt sentence, with no checker on either side of the deliberation.
+
 **Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the facilitator passes each in-script sub-agent only the documents its design task needs (e.g. the relevant `docs/adr/*`, `docs/design-rationale.md`). **Deliberation Isolation is unchanged** — the round-by-round cross-talk stays inside the workflow and only the verdict returns to the orchestrator.
 
 **Roles**:
@@ -332,12 +341,45 @@ in the two design documents. Consequences for what each artifact carries:
   serial number, and is updated in place rather than renumbered. Totals and counts are not
   written into the documents; the register is the count.
 - **The register is the durable channel.** Each entry carries `name` / `conclusion` / `evidence` /
-  `status` (`open` / `agreed` / `rejected`) plus the side that raised it, is rendered into both
-  round prompts every round from round 2 on, and closes only when its **raiser** returns a
+  `status` (`open` / `agreed` / `rejected` / `observation`) plus the side that raised it, is
+  rendered into every later turn's prompt, and closes only when its **raiser** returns a
   disposition. On `CONVERGED`, rejected entries are appended to the decision ledger under
   authority `ARCHITECT rejected`, which the next deliberation's Draft prompts read back — the
   cross-session half of the no-re-litigation rule. See
   [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
+- **Open entries in full, closed entries by name** (issue #166). A turn prompt renders an `open`
+  entry as its four lines — that is the turn's work — and every closed entry (`agreed` /
+  `rejected` / `observation`) as a name in a per-status list under one heading, never as its text.
+  A closed name is what the no-re-litigation rule points at; a disposition on a closed name is
+  ignored, and the turn schema offers only the open names for `dispositions`. #595 measured a turn
+  re-closing seven entries already closed four turns earlier because their full text was still
+  rendered as if it were work.
+- **A late counter names what it changes** (issue #166). Every counter carries `changes` — the
+  acceptance-criterion id, the verification layer, or the change-surface file that accepting it
+  alters. From the third turn on (and on every resume turn) a counter whose `changes` is empty is
+  recorded as an **observation**: kept by name, owed no disposition, never an escalation ground,
+  and not a reason to withhold `accept`. The first exchange is exempt — those are the
+  devil's-advocate full reads. #595 measured the late turns: after the second exchange every
+  counter was one side's new remark on a passage the same side had already accepted, four of ten
+  were prose consistency rather than a design change, and those turns were 62% of the
+  deliberation's wall time; the two real defects in the same sample both name what they change.
+- **Read by diff, not in full** (issue #166). Each side keeps a snapshot of both documents,
+  `.autoflow/issue-{N}-architect-snapshot-{side}-feature-design.md` and
+  `…-{side}-verification-design.md`, taken by the turn agent at the **start** of its own turn. A
+  side's first turn of a cold run snapshots and reads in full; every later turn — and every resume
+  turn, whose baseline is the escalated run's — runs `diff -u` against its side's snapshot first,
+  then overwrites the snapshot, and reads the changed hunks and their sections. A passage outside
+  the diff was already reviewed by that side and is not re-read for new counters; an absent
+  snapshot (a run that predates it) falls back to a full read. #595 measured 27 document reads on
+  one accepting turn and 4.0M cache-read tokens per turn on average.
+- **The check is mechanical** (issue #166). `bash scripts/architect/record-discipline.sh check
+  <feature-design> <verification-design>` reports, by grammar and per line, a register section
+  inside a document, round-history phrasing (`this round`, `re-checked`, `in turn 4`), a
+  `Measured` label, and pasted runner or test-summary output. A turn that authored or edited a
+  document runs it before returning and clears the hits in what it wrote; an accepting turn that
+  made no edit does not run it — clearing residue changes nothing the design states and would only
+  produce the modifying accept the convergence rule names. The orchestrator runs the same check
+  after a `CONVERGED` return as an advisory (*Artifact-existence check* above).
 
 #### Test necessity
 
@@ -588,7 +630,7 @@ An `ESCALATE` return hands the decision to the operator. Re-invoking the workflo
 
 1. **Read the register** — `.autoflow/issue-{N}-architect-register.json`. Its `entries` show every concern the prior run raised with its `conclusion`, `evidence` and `status`; `escalation` states why the run stopped. Its `lastResponses` field records each side's final turn report (`modified`/`accept` plus counters) — before deciding whether to spend a resume exchange, open it and read which state the run ended in: a final turn still modifying means the revision cycle ran out of budget (an extension is the natural prescription), while an unmodified `accept: false` deadlock means the same objection is likely to repeat — deciding the disputed point directly (e.g. an `[ac-decision]` ruling) may serve better than an extension. After an `ESCALATE` the ledger holds one outcome entry and no per-side record. One control-flow path reads that field (issue #159): the resume admission, which reads each side's `accept` alone to recognize the **all-accept terminal state** below; the operator is its other reader.
 2. **Decide.** A resume is worth one exchange when the open entries look closable by one further exchange. When they do not — the split is a design disagreement needing a redefinition, or the run escalated for an infrastructure cause — resume is not the instrument, and the workflow refuses several of those shapes on its own (see the guard sentinels in [`teammate-contracts.md`](teammate-contracts.md) > Facilitator). One no-open-entry shape is admitted rather than refused (issue #159): the **all-accept terminal state** — `lastResponses` shows both sides `accept: true`, every entry is `agreed` or `rejected`, and the run escalated only because each accepting turn also edited a document, so no unmodified-accept pair formed. That is a deliberation one further exchange can close, and the resume enters it as a **confirmation exchange**: both turn prompts state that no entry is open, that the exchange exists to confirm the design as it stands, and that accepting it means making no edit. The register is facilitator-owned state — the operator never edits it to manufacture an agenda; the admission is the workflow's own.
-3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The run continues from the register's `lastTurn` and admits **exactly one** further exchange (two turns, side parity continuing). The resumed run's first turn has no predecessor to pair with, so the exchange converges only on its own two unmodified-accept turns; the open register entries are the exchange's **agenda**, carried into both prompts, not a convergence condition — on a confirmation exchange there is none, and the stated agenda is the confirmation itself. A converged resume returns `CONVERGED` only when the Reconcile check that follows finds no unauthorized acceptance-criterion change, and `AC_CHANGE` when it does; otherwise the run returns `ESCALATE`, the register is rewritten, and a further resume re-enters on the same agenda rather than being latched out by the `already converged` guard.
+3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The escalated run's per-side snapshots (`.autoflow/issue-{N}-architect-snapshot-{side}-*.md`, *Record rules* > *Read by diff*) are the resumed turns' diff baseline — leave them in place; an operator edit to a design document between runs shows in that diff. The run continues from the register's `lastTurn` and admits **exactly one** further exchange (two turns, side parity continuing). The resumed run's first turn has no predecessor to pair with, so the exchange converges only on its own two unmodified-accept turns; the open register entries are the exchange's **agenda**, carried into both prompts, not a convergence condition — on a confirmation exchange there is none, and the stated agenda is the confirmation itself. A converged resume returns `CONVERGED` only when the Reconcile check that follows finds no unauthorized acceptance-criterion change, and `AC_CHANGE` when it does; otherwise the run returns `ESCALATE`, the register is rewritten, and a further resume re-enters on the same agenda rather than being latched out by the `already converged` guard.
 4. **Route the return** exactly as a cold run's: `CONVERGED` → GATE:PLAN (after the artifact-existence check above), `AC_CHANGE` → the *Orchestrator disposition* above — report situation-first, set `active: false` / `phase: "awaiting-user"`, and **do not spawn GATE:PLAN** (a resume converging into an AC pause routes to the operator, not to the gate), `ESCALATE` → back to the operator, who may resume again.
 
 **Cap and counter accounting** — a resume is an operator decision that admits one further **exchange** (two turns) past the persisted turn count and is unbounded in how many times it may be taken; it does **not** consume the ARCHITECT re-entry budget of 3 per cycle. The re-entry counter tracks whole re-deliberations triggered by GATE:PLAN FAIL or a VERIFY design contradiction; a resume is a continuation of the deliberation already counted, not a new one. The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so this accounting is the orchestrator's, and the return's `resumed` field is what lets it tell the two entries apart.

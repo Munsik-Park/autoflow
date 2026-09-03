@@ -1040,7 +1040,10 @@ await test('ARCHITECT: a returned disposition sets the entry status, which survi
   // The register is updated after every turn (issue #152), so the disposition returned by the Dev
   // turn 4 is already visible to the very next turn's prompt.
   const testT5 = calls.find((c) => c.label === 'test-t5').prompt
-  assert.match(testT5, /name: NAME_DISP_67[\s\S]{0,120}status: agreed/, 'the disposed entry must reach the next turn showing its new status')
+  // Since issue #166 a closed entry renders by name in the per-status closed list, never as its
+  // four lines — the status is the list it sits in.
+  assert.match(testT5, /^agreed: [^\n]*NAME_DISP_67/m, 'the disposed entry must reach the next turn under the agreed list')
+  assert.doesNotMatch(testT5, /name: NAME_DISP_67/, 'a closed entry must not render as an open four-line entry')
 })
 
 await test('ARCHITECT: turn-report schema — TURN.required, additionalProperties, and the closed DISPOSITION item shape (AC15, disposition-schema-shape)', async () => {
@@ -1119,7 +1122,7 @@ await test('ARCHITECT: an out-of-enum disposition status is ignored — the entr
   }
   const { calls } = await runArch({ issue: '67-admission2' }, responder)
   const devR4 = calls.find((c) => c.label === 'dev-t8').prompt
-  assert.match(devR4, /name: NAME_ENUM_67[\s\S]{0,120}status: agreed/, 'a status outside the enum must be ignored — the entry keeps its last valid status')
+  assert.match(devR4, /^agreed: [^\n]*NAME_ENUM_67/m, 'a status outside the enum must be ignored — the entry keeps its last valid status (issue #166: closed entries render by name)')
 })
 
 await test('ARCHITECT: a disposition with a missing/non-string name is ignored without throwing (AC18, disposition-admission part 3)', async () => {
@@ -1163,7 +1166,8 @@ await test('ARCHITECT: only the raiser\'s side can close an entry — a peer dis
   assert.match(testT5, /name: NAME_PREC_67[\s\S]{0,120}status: open/, 'a peer disposition must leave the entry open')
   assert.match(testT5, /PEER_FIX_67/, 'the peer\'s proposed conclusion/evidence must still be carried, even though status stays open')
   const devT6 = calls.find((c) => c.label === 'dev-t6').prompt
-  assert.match(devT6, /name: NAME_PREC_67[\s\S]{0,120}status: agreed/, 'the raiser\'s own disposition must close the entry')
+  assert.match(devT6, /^agreed: [^\n]*NAME_PREC_67/m, 'the raiser\'s own disposition must close the entry (issue #166: closed entries render by name)')
+  assert.doesNotMatch(devT6, /name: NAME_PREC_67[\s\S]{0,120}status: open/, 'a closed entry must not stay in the open agenda')
 })
 
 await test('ARCHITECT: both sides ACCEPT with empty counters while an entry is still open still CONVERGES (AC7b, converge-unaffected-by-open-entry)', async () => {

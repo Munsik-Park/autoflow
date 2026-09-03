@@ -107,11 +107,15 @@ const CONVERGENCE_RULE = ' Convergence rule: this deliberation terminates only w
 // no open entry to serve as its agenda, so its agenda is stated instead — confirm the design as it
 // stands. Rendered only on a resume the `lastResponses` admission let in.
 const CONFIRMATION_EXCHANGE_RULE = ' This is a confirmation exchange: the prior run ended with both sides accepting the design while each still edited a document, so no unmodified-accept pair formed and no register entry is open. Read the documents as they stand; if you accept them, make no edit and report modified: false, accept: true. Raise a counter only on a defect you can cite, not on wording.'
-// Agenda partition on a resume turn (issue #127). The open entries are the turn's agenda; the
-// settled ones are carried under this heading as a record, NOT as work. Declared once — the
-// acceptance criterion "loads only prior open items into the round prompt" is assertable as an
-// equality against this constant rather than against matchable prose.
-const SETTLED_BLOCK_RULE = ' Settled record from the prior run — the entries below were disposed of before this resume and are NOT the agenda for this turn; do not reopen one without a fact verified now that was unavailable when the entry was written:\n'
+// Agenda partition (issue #127; every turn since issue #166). The open entries are the turn's
+// agenda; the closed ones — agreed, rejected, observation — are carried under this heading as a
+// record, NOT as work, and by NAME only: #595 measured a turn re-closing seven entries already
+// closed four turns earlier, because their full text was still rendered as if it were work. The
+// name is what the no-re-litigation rule points at; the entry's text stays in the register and is
+// persisted at the end of the run. Declared once — the acceptance criterion "loads only prior open
+// items into the round prompt" is assertable as an equality against this constant rather than
+// against matchable prose.
+const SETTLED_BLOCK_RULE = ' Closed register entries — names only. Each was disposed of earlier in this deliberation or before this resume, is NOT the agenda for this turn, owes no disposition, and is not reopened without a fact verified now that was unavailable when it was closed. An observation is a concern raised after the first exchange without naming what it changes — recorded, not acted on:\n'
 // Evidence discipline for the carry channel (issue #56). Declared once and interpolated into
 // BOTH round prompts so the dev and test channels cannot drift apart. The framing is emitted
 // only alongside the carried register; the counter rule governs every round, including round 1.
@@ -198,6 +202,21 @@ const phaseB = `.autoflow/issue-${issue}-phase-b.md`
 // The durable issue register (issue #127): written by every run that ever held a faithful register,
 // read only by a resume run. It is what makes re-entry cost one further exchange instead of a cold restart.
 const registerPath = `.autoflow/issue-${issue}-architect-register.json`
+// Document snapshots (issue #166). Every turn is a fresh agent; with no baseline it reads both
+// documents from the first line — #595 measured 27 document reads on one ACCEPTING turn and 4.0M
+// cache-read tokens per turn on average, the accepting turns as costly as the countering ones. Each
+// side keeps a snapshot of both documents taken at the START of its own turn; the side's next turn
+// diffs the current documents against it and reads the changed hunks, not the whole text. The
+// script has no filesystem, so the copy and the diff are commands the turn agent runs. The
+// snapshot is taken at turn START rather than end so it exists whatever the turn later does; the
+// cost is that the diff also shows that turn's own edits — a superset of the other side's
+// response, which is what the next same-side turn needs anyway.
+const snapshotOf = (side) => ({
+  feature: `.autoflow/issue-${issue}-architect-snapshot-${side}-feature-design.md`,
+  verif: `.autoflow/issue-${issue}-architect-snapshot-${side}-verification-design.md`,
+})
+const snapshotTake = (side) => `cp ${feature} ${snapshotOf(side).feature}; cp ${verif} ${snapshotOf(side).verif}`
+const snapshotDiff = (side) => `diff -u ${snapshotOf(side).feature} ${feature}; diff -u ${snapshotOf(side).verif} ${verif}`
 // Register mechanics (issue #67). Round prompts only: the Draft calls pass no `schema`, so a
 // Draft agent has no `dispositions` channel and round 1's register is empty. Declared once and
 // interpolated byte-identically into both round prompts. It states disposal in its own words —
@@ -229,7 +248,20 @@ const TEST_NECESSITY_RULE = ' Test necessity (docs/autoflow-guide.md > ARCHITECT
 const TEST_NECESSITY_CHALLENGE_RULE = ' Test necessity (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Test necessity): challenge any proposed verification that constrains implementation details without protecting an observable contract. Do not remove verification solely to simplify the implementation; where two proposals give equal confidence, prefer the simpler evidence. Raise a proposed test that implies a new product requirement as a scope question rather than accepting it as an obligation.'
 // Record discipline (issue #67). All four prompts: the Draft agents author the documents this
 // rule governs, and the round agents edit them in place.
-const RECORD_DISCIPLINE_RULE = ' Record discipline: the design documents carry only the current design and its conclusions — no round history; measurement logs, command output and code text are never copied into them, so state evidence as one line of what was checked and how, and re-verify it next round with tooling. Name issues with short readable names instead of serial numbers, and write no totals or counts into the documents.'
+// The check is mechanical since issue #166: scripts/architect/record-discipline.sh reports a register
+// section, round-history phrasing and measurement / command-output residue by grammar. #595
+// measured what the sentence alone left behind — a 387-line `Register` section duplicating the
+// script's own register, 12 "re-checked this round"-class phrases, 28 "Measured" narratives, and
+// four turns spent clearing them by hand. The check binds a turn that WROTE: an accepting turn that
+// made no edit does not run it, since clearing residue changes nothing the design states and would
+// only produce the modifying accept CONVERGENCE_RULE names.
+const RECORD_DISCIPLINE_CHECK = `bash scripts/architect/record-discipline.sh check ${feature} ${verif}`
+const RECORD_DISCIPLINE_RULE = ` Record discipline: the design documents carry only the current design and its conclusions — no round history; measurement logs, command output and code text are never copied into them, so state evidence as one line of what was checked and how, and re-verify it next round with tooling. Name issues with short readable names instead of serial numbers, and write no totals or counts into the documents. The register is the script's, not the document's: keep no register, open-item table or round log inside either document. The check is mechanical — whenever you authored or edited a document in this turn, run \`${RECORD_DISCIPLINE_CHECK}\` before returning and clear every hit it reports in what you wrote; a hit in a passage you did not touch is not a reason to edit on a turn that otherwise makes no edit.`
+// Counter substance (issue #166), rendered on every Converge turn: the `changes` field's meaning.
+const COUNTER_CHANGES_RULE = ' Each counter states in "changes" what accepting it alters — an acceptance-criterion id, a verification layer, or a file in the change surface — and leaves it empty only when it alters none of these.'
+// The consequence, rendered from the third turn on (and on every resume turn): an unnamed change
+// is an observation and is not a reason to withhold accept. See `raise`.
+const COUNTER_SUBSTANCE_RULE = ' From this turn on a counter whose "changes" is empty is recorded as an observation: kept by name, owed no disposition, never an escalation ground, and not a reason to withhold accept — do not withhold accept over a concern you cannot name a change for. A new remark on a passage your side already accepted must name what it changes, or it is an observation.'
 
 // A counter is a three-field record (issue #62): the concern's NAME, WHERE to look, and
 // the case itself. All three cross a round boundary as a register entry — see toEntry below.
@@ -245,8 +277,14 @@ const COUNTER = {
     // The case itself. Becomes the entry's `conclusion` and DOES cross the round boundary
     // (issue #67) — the property the retired document-as-durable-channel rule stood in for.
     argument: { type: 'string' },
+    // What accepting this counter CHANGES (issue #166): an acceptance-criterion id, a
+    // verification layer, or a change-surface file. Empty when it changes none of these. After the
+    // first exchange a counter that names no change is recorded as an observation rather than an
+    // open register entry — see `raise`. Not carried into the entry: the field is a raise-time
+    // classifier, and the entry's status records its outcome.
+    changes: { type: 'string' },
   },
-  required: ['agenda', 'locator', 'argument'],
+  required: ['agenda', 'locator', 'argument', 'changes'],
 }
 
 // Register field placeholders (issue #67). No character cap survives: the per-entry bound is
@@ -289,6 +327,14 @@ const toEntry = (c, raisedBy) => {
 // whose flattened value is itself `---` renders as `conclusion: ---`, never as a delimiter.
 const renderEntry = (e) => `name: ${e.name}\nconclusion: ${e.conclusion}\nevidence: ${e.evidence}\nstatus: ${e.status} (raised by ${e.raisedBy})\n${ENTRY_DELIMITER}\n`
 const renderRegister = (reg, keep) => [...reg.values()].filter(keep || (() => true)).map(renderEntry).join('')
+// The closed-entry render (issue #166): one line per status that has members, `<status>: name;
+// name`. Names only — the four-line form is reserved for open entries, which are the turn's work.
+const CLOSED_STATUSES = ['agreed', 'rejected', 'observation']
+const renderClosedNames = (reg) => CLOSED_STATUSES
+  .map((status) => [status, [...reg.values()].filter((e) => e.status === status).map((e) => e.name)])
+  .filter(([, names]) => names.length)
+  .map(([status, names]) => `${status}: ${names.join('; ')}\n`)
+  .join('')
 
 // A disposition is the RETURNED judgment on a register entry — the script cannot infer
 // agreement. Closed record, matching the discipline COUNTER and TURN already carry.
@@ -331,6 +377,13 @@ const TURN = {
   },
   required: ['modified', 'accept', 'counters', 'accept_grounds', 'dispositions'],
 }
+// The per-turn schema instance (issue #166): `dispositions[].name` is offered as the enum of the
+// register's OPEN entry names whenever any entry is open, so the channel cannot address a closed
+// one; with nothing open the base schema stands (an empty enum is not a schema). The runtime guard
+// behind it is `applyDispositions`, which ignores a closed name — the enum is advisory.
+const turnSchemaFor = (openNames) => openNames.length
+  ? { ...TURN, properties: { ...TURN.properties, dispositions: { type: 'array', items: { ...DISPOSITION, properties: { ...DISPOSITION.properties, name: { type: 'string', enum: openNames } } } } } }
+  : TURN
 
 // Register load schema (issue #127). Closed, in the same discipline as COUNTER/DISPOSITION/TURN:
 // the load call is a pure transcription channel, so what comes back is structured, not prose. The
@@ -355,7 +408,8 @@ const REGISTER_ENTRY = {
     name: { type: 'string' },
     conclusion: { type: 'string' },
     evidence: { type: 'string' },
-    status: { type: 'string', enum: ['open', 'agreed', 'rejected'] },
+    // `observation` (issue #166): a counter raised after the first exchange that named no change.
+    status: { type: 'string', enum: ['open', 'agreed', 'rejected', 'observation'] },
     raisedBy: { type: 'string', enum: ['dev', 'test'] },
   },
   required: ['name', 'conclusion', 'evidence', 'status', 'raisedBy'],
@@ -523,7 +577,7 @@ const rehydrate = (e) => {
     console.log(`register entry "${e.name}" rehydrated with raisedBy coerced to ${raisedBy} (was "${e.raisedBy}")`)
   }
   const entry = toEntry(src, raisedBy)
-  entry.status = e && (e.status === 'agreed' || e.status === 'rejected') ? e.status : 'open'
+  entry.status = e && (e.status === 'agreed' || e.status === 'rejected' || e.status === 'observation') ? e.status : 'open'
   return entry
 }
 
@@ -772,20 +826,61 @@ const firstExchange = (t) => (!resume && t <= 2) ? FIRST_EXCHANGE_RULE : ''
 // empty string on the cold path, leaving those prompts byte-identical.
 const resumeSeed = resume ? LEDGER_SEED_RULE : ''
 let converged = false
-// Raise path: upsert as `open`. A re-raise updates the existing entry in place; `raisedBy` and
-// the display `name` are fixed at first creation, so a carried name token is stable across turns.
-const raise = (items, side) => {
+// Counter substance (issue #166). After the first exchange each side has reviewed both documents
+// once, so a counter raised from the third turn on must name what accepting it CHANGES — an
+// acceptance criterion, a verification layer, or a change-surface file (`changes` in COUNTER). One
+// that names none is an OBSERVATION: recorded in the register under its own status, rendered by
+// name only, owed no disposition, never an escalation ground, and not a reason to withhold accept.
+// #595 measured the late turns: after the second exchange every counter was one side's new remark
+// on a passage the same side had already accepted, four of ten were prose consistency rather than
+// a design change, and those turns were 62% of the deliberation's wall time. A counter that names a
+// change keeps the full open-entry path — the two real defects in that sample (a guard-forbidden
+// citation, an undeclared memory cap) both name what they change.
+// The bound mirrors `firstExchange`'s complement: a cold run's turns 1 and 2 are exempt (they are
+// the devil's-advocate full reads); a resume continues a deliberation past its first exchange, so
+// every resumed turn is bound.
+const substanceRequired = (t) => resume || t > 2
+const namesChange = (item) => !!item && typeof item === 'object' && typeof item.changes === 'string' && flatten(item.changes) !== ''
+// Raise path: upsert as `open`, or as `observation` when the substance rule binds and the counter
+// names no change. A re-raise updates the existing entry in place; `raisedBy` and the display
+// `name` are fixed at first creation, so a carried name token is stable across turns. An entry
+// that is already open was substantiated when it was raised and stays open; a closed entry
+// re-raised without a named change stays closed — the no-re-litigation rule asks for a new
+// verified fact, and a counter that changes nothing carries none. Returns the turn's raised
+// counters partitioned by outcome, so the next turn's peer clause asks for a disposition only on
+// the open ones and names the observations as owing none.
+const raise = (items, side, t) => {
+  const open = []
+  const observations = []
   for (const item of Array.isArray(items) ? items : []) {
     const fresh = toEntry(item, side)
-    const prior = register.get(normalizeKey(fresh.name))
+    const key = normalizeKey(fresh.name)
+    const prior = register.get(key)
+    const unnamed = substanceRequired(t) && !namesChange(item)
+    if (unnamed && prior && prior.status !== 'open' && prior.status !== 'observation') {
+      console.log(`counter recorded as observation (re-raise of a ${prior.status} entry names no change) "${fresh.name}" from ${side}`)
+      observations.push(fresh.name)
+      continue
+    }
+    let status
     if (prior) {
       prior.conclusion = fresh.conclusion
       prior.evidence = fresh.evidence
-      prior.status = 'open'
+      prior.status = unnamed ? (prior.status === 'open' ? 'open' : 'observation') : 'open'
+      status = prior.status
     } else {
-      register.set(normalizeKey(fresh.name), fresh)
+      fresh.status = unnamed ? 'observation' : 'open'
+      register.set(key, fresh)
+      status = fresh.status
+    }
+    if (status === 'observation') {
+      console.log(`counter recorded as observation (names no change) "${fresh.name}" from ${side}`)
+      observations.push(fresh.name)
+    } else {
+      open.push(item)
     }
   }
+  return { open, observations }
 }
 // Dispose path: the runtime guard the advisory schema cannot give. A disposition acts on an
 // EXISTING entry and only with an in-enum status; an ignored item is logged, never applied.
@@ -806,6 +901,13 @@ const applyDispositions = (items, side) => {
       console.log(`disposition ignored (status outside the enum) for "${d.name}" from ${side}`)
       continue
     }
+    // A closed entry owns no disposition (issue #166): the turn schema offers the OPEN names as the
+    // enum, so a closed name is a schema-advisory miss — logged, never applied. #595 measured a
+    // turn re-closing seven entries already closed.
+    if (entry.status !== 'open') {
+      console.log(`disposition ignored (entry not open: ${entry.status}) for "${d.name}" from ${side}`)
+      continue
+    }
     if (typeof d.conclusion === 'string' && d.conclusion) entry.conclusion = flatten(d.conclusion)
     if (typeof d.evidence === 'string' && d.evidence) entry.evidence = flatten(d.evidence)
     if (entry.raisedBy !== side) {
@@ -822,18 +924,25 @@ let lastTest = null
 // satisfy it; a turn that modified a document can never converge, whatever its `accept` says,
 // because the modified design still owes the other side a review.
 const agreedWithoutChange = (t) => !!(t && t.accept === true && t.modified === false)
-// The register carry, rendered from the register's CURRENT state.
-// Agenda partition (issue #127) is a property of the RUN, not of the call, so it is read from the
-// enclosing `resume` flag rather than from a parameter.
-// Cold: every entry, as today. Resume: the open entries as the agenda, then the settled ones under
-// SETTLED_BLOCK_RULE as a record — never deleted, since after an ESCALATE the ledger holds no
-// record of what the prior run rejected.
-const renderSettled = () => {
-  if (!resume) return ''
-  const settled = renderRegister(register, (e) => e.status !== 'open')
-  return settled ? `${SETTLED_BLOCK_RULE}${settled}` : ''
+// The register carry, rendered from the register's CURRENT state, the same way on both paths
+// (cold and resume alike since issue #166): the open entries in full as the turn's agenda, then
+// every closed entry by NAME under SETTLED_BLOCK_RULE. The #127 agenda partition is thereby a
+// property of every turn rather than of the resume path — a cold run rendered its closed entries
+// in full until #166, and #595 measured what that cost (see `raise` and `applyDispositions`). A
+// closed entry is never deleted: after an ESCALATE the ledger holds no record of what the prior
+// run rejected, and the name is what the no-re-litigation rule points at.
+const renderClosed = () => {
+  const closed = renderClosedNames(register)
+  return closed ? `${SETTLED_BLOCK_RULE}${closed}` : ''
 }
-const renderCarry = () => register.size ? `${CARRY_NON_EVIDENTIARY} Issue register — address every entry whose status is open before you return accept: true, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${renderRegister(register, resume ? (e) => e.status === 'open' : null)}${renderSettled()}` : ''
+const renderCarry = () => {
+  if (!register.size) return ''
+  const open = renderRegister(register, (e) => e.status === 'open')
+  const agenda = open
+    ? ` Issue register — address every entry whose status is open before you return accept: true, either by resolving it or by dismissing it with the current section or item that already satisfies it, and return that judgment in "dispositions":\n${open}`
+    : ' Issue register — no entry is open; nothing owes a disposition.'
+  return `${CARRY_NON_EVIDENTIARY}${agenda}${renderClosed()}`
+}
 let consecutiveNull = 0
 const MAX_CONSECUTIVE_NULL = 2 // two consecutive null turns (one per side) => persistent infra failure, not a design split
 // The immediately-preceding turn's report — the other half of the termination pair. Starts null on
@@ -841,6 +950,9 @@ const MAX_CONSECUTIVE_NULL = 2 // two consecutive null turns (one per side) => p
 // turn is predecessor-less and structurally cannot converge alone — the same rule the cold first
 // turn already carries, at the cost of at most one extra turn.
 let prevTurn = null
+// The predecessor's raised counters, partitioned by `raise` (issue #166): the open ones are what
+// the peer clause asks this turn to dispose of; the observations are named as owing nothing.
+let prevRaised = { open: [], observations: [] }
 while (!earlyEscalateReason && turn < turnCeiling && !converged) {
   turn++
   // Alternation by parity, Test AI first (issue #62): the verification design challenges the
@@ -854,8 +966,17 @@ while (!earlyEscalateReason && turn < turnCeiling && !converged) {
   // turn is asked to dispose of.
   const peerName = side === 'test' ? 'Developer AI' : 'Test AI'
   const peer = prevTurn
-    ? ` The ${peerName} completed turn ${turn - 1} against the documents in their current state and returned modified: ${prevTurn.modified}, accept: ${prevTurn.accept}${prevTurn.counters && prevTurn.counters.length ? `, with these open counters — they are current, not carried: ${JSON.stringify(prevTurn.counters)}. Dispose of each in THIS turn: resolve it by editing the design, or dismiss it by naming the section or item that already satisfies it` : ''}.`
+    ? ` The ${peerName} completed turn ${turn - 1} against the documents in their current state and returned modified: ${prevTurn.modified}, accept: ${prevTurn.accept}${prevRaised.open.length ? `, with these open counters — they are current, not carried: ${JSON.stringify(prevRaised.open)}. Dispose of each in THIS turn: resolve it by editing the design, or dismiss it by naming the section or item that already satisfies it` : ''}${prevRaised.observations.length ? `; it also recorded observations that name no change and owe no disposition: ${prevRaised.observations.join('; ')}` : ''}.`
     : ''
+  // The disposition-name enum for this turn's schema (issue #166): the open entry names.
+  const openNames = [...register.values()].filter((e) => e.status === 'open').map((e) => e.name)
+  const turnSchema = turnSchemaFor(openNames)
+  // Turn 1 and 2 of a cold run snapshot and read in full; every later turn, and every resume turn,
+  // diffs against its side's snapshot first (issue #166).
+  const readRule = (!resume && turn <= 2)
+    ? ` Snapshot first: before reading, run \`${snapshotTake(side)}\` — the baseline your side's next turn diffs against. Then read the current ${feature} and ${verif} in full.`
+    : ` Read by diff, not in full: your side's previous turn snapshotted both documents at its start. Run \`${snapshotDiff(side)}\` FIRST, and only then overwrite the baseline with \`${snapshotTake(side)}\`. The diff is everything that changed since your side's previous turn began — that turn's own edits and the other side's response. Read the changed hunks and the sections they belong to; a passage outside the diff was already reviewed by your side and is not re-read for new counters. If a snapshot file is absent (the prior run predates it), read both ${feature} and ${verif} in full and take the snapshot.`
+  const counterRule = `${COUNTER_CHANGES_RULE}${substanceRequired(turn) ? COUNTER_SUBSTANCE_RULE : ''}`
   // Shared turn-report instruction: `modified` is a fact about THIS turn's edits, never a strategy
   // knob — the design's own rule (issue #152) is that a modification keeps the conversation open,
   // so an improvement is never suppressed to protect convergence.
@@ -871,12 +992,12 @@ while (!earlyEscalateReason && turn < turnCeiling && !converged) {
   const result = await Promise.resolve()
     .then(() => side === 'test'
       ? agent(
-          `You are the Test AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${feature} and ${verif}. Apply the Discussion Protocol.${firstExchange(turn)} If the feature design changed testability, UPDATE ${verif} in place. Set "accept" true ONLY when every acceptance criterion carries a row with a stated disposition — an automated method, or any reduced disposition (existing-coverage / delivery-check / manual / environment-dependent / none) whose Reason cell states in one line why it is the right answer — except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${CONVERGENCE_RULE}${confirmation}${TEST_NECESSITY_RULE}${ISSUE_AC_COLUMN_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-          { schema: TURN, label: `test-t${turn}`, phase: 'Converge', ...site('test-round') },
+          `You are the Test AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer}${readRule} Apply the Discussion Protocol.${firstExchange(turn)} If the feature design changed testability, UPDATE ${verif} in place. Set "accept" true ONLY when every acceptance criterion carries a row with a stated disposition — an automated method, or any reduced disposition (existing-coverage / delivery-check / manual / environment-dependent / none) whose Reason cell states in one line why it is the right answer — except at a triggered composition contact point, where a mock or manual alternative is not acceptable and an oracle driving the real execution environment is owed — AND ${verif} carries the Verification depth determination, meaning every verification layer and every new spec file names a unique failure mode no other layer catches (docs/autoflow-guide.md > ARCHITECT > Output artifacts > Verification depth); a layer that cannot name one is removed rather than argued down — AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${counterRule}${turnReportRule}${CONVERGENCE_RULE}${confirmation}${TEST_NECESSITY_RULE}${ISSUE_AC_COLUMN_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+          { schema: turnSchema, label: `test-t${turn}`, phase: 'Converge', ...site('test-round') },
         )
       : agent(
-          `You are the Developer AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer} Read the current ${verif} and ${feature}. Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange(turn)} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Set "accept" true ONLY when both documents are mutually consistent and complete AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${turnReportRule}${CONVERGENCE_RULE}${confirmation}${TEST_NECESSITY_CHALLENGE_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
-          { schema: TURN, label: `dev-t${turn}`, phase: 'Converge', ...site('dev-round') },
+          `You are the Developer AI. Turn ${turn} of ARCHITECT convergence (ceiling ${turnCeiling} turns).${peer}${readRule} Apply the Discussion Protocol (UNDERSTAND -> VERIFY -> EVALUATE -> RESPOND).${firstExchange(turn)} If the verification design exposes a gap in the feature design, UPDATE ${feature} in place. Set "accept" true ONLY when both documents are mutually consistent and complete AND you have no open concerns — then list the dimensions you verified + why each passed in "accept_grounds". Otherwise set "accept" false and list every open concern in "counters".${counterRule}${turnReportRule}${CONVERGENCE_RULE}${confirmation}${TEST_NECESSITY_CHALLENGE_RULE}${COUNTER_EVIDENCE_RULE}${ADOPTION_EVIDENCE_RULE}${REGISTER_RULE}${RECORD_DISCIPLINE_RULE}${carry}${resumeSeed} Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+          { schema: turnSchema, label: `dev-t${turn}`, phase: 'Converge', ...site('dev-round') },
         ))
     .catch(() => null)
   const turnMissing = !result
@@ -899,12 +1020,13 @@ while (!earlyEscalateReason && turn < turnCeiling && !converged) {
   converged = agreedWithoutChange(prevTurn) && agreedWithoutChange(result)
   // Register update, in the design's stated order: raise first, then dispose. Record only —
   // convergence above is already decided.
-  raise(result && result.counters, side)
+  const raised = raise(result && result.counters, side, turn)
   applyDispositions(result && result.dispositions, side)
   if (side === 'dev') lastDev = result
   else lastTest = result
-  console.log(`turn ${turn} (${side}): ${result ? `modified=${result.modified} accept=${result.accept}` : 'missing'}(${(result && result.counters && result.counters.length) || 0})`)
+  console.log(`turn ${turn} (${side}): ${result ? `modified=${result.modified} accept=${result.accept}` : 'missing'}(${raised.open.length} open, ${raised.observations.length} observation)`)
   prevTurn = result
+  prevRaised = raised
 }
 
 // Reconcile (issue #138) — the acceptance-criterion authority checkpoint, placed between Converge
@@ -930,8 +1052,11 @@ if (converged) {
   // operator takes after ruling on the change is admissible. `raisedBy: 'test'` follows the
   // rehydrate coercion's own stated reason — only the raiser may close an entry, and `test` is the
   // side a resumed run's first turn belongs to.
+  // `changes` names the entry itself (issue #166): Reconcile runs after the first exchange, where
+  // `raise` records an unnamed change as an observation — and an observation is not open, so the
+  // operator's re-entry would be refused by the `no open entry` guard this minting exists to pass.
   const mintAcEntry = (name, conclusion, evidence) => {
-    raise([{ agenda: name, argument: conclusion, locator: evidence }], 'test')
+    raise([{ agenda: name, argument: conclusion, locator: evidence, changes: name }], 'test', turn)
   }
   if (!acDiffWellFormed(acDiff)) {
     // Null return or malformed payload. Fail-closed: the check could not run, so it did not pass.

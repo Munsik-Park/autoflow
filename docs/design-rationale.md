@@ -257,6 +257,46 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 
 ---
 
+### Decision 14: A Late Counter Names What It Changes, and a Turn Reads What Changed
+
+**What it does**
+
+Inside the ARCHITECT deliberation (issue #166), three script-side rules bound the cost of the turns
+that follow the first exchange. A counter raised from the third turn on carries a `changes` field —
+the acceptance criterion, verification layer or change-surface file it alters — and one that names
+none is recorded as an **observation**: kept by name, owed no disposition, never an escalation
+ground, and not a reason to withhold `accept`. A turn prompt renders open register entries in full
+and closed ones by name only, and the turn schema offers only the open names for a disposition.
+Each side's turn snapshots both documents at its start, and the side's next turn diffs against
+that snapshot and reads the changed hunks rather than the whole text. A fourth rule is a checker,
+not a bound: `scripts/architect/record-discipline.sh` reports the Record-rules residue by grammar,
+and a turn that wrote runs it before returning.
+
+**Why it works this way**
+
+The turn model (Decision 7, issue #152) fixed *when* a deliberation ends; it did not change what
+one turn costs or why an accepting turn still edits. The #595 measurement (two deliberations,
+3h56m, 49% of an 8h session) located the cost: after the second exchange every remaining counter
+was one side's new remark on a passage the same side had already accepted, and those turns were
+62% of the wall time. Every turn is a fresh agent that reads both documents from the first line — an
+accepting turn cost as much as a countering one, 27 document reads and 20 edits on one of them,
+most of the edits register bookkeeping duplicated inside the document. Four of the ten late
+counters were prose consistency rather than a design change; the two real defects in the same
+sample both name what they change, which is why the bound is a *named change* and not a turn
+number — a real defect passes it, a remark does not. The same measurement showed a turn re-closing
+seven entries already closed four turns earlier, because their full text was still rendered as
+work; a name is what the no-re-litigation rule points at, and it is enough.
+
+**What was rejected.** Adding the rule as more prompt text — refused, because the record
+discipline already existed as prompt text in all four prompts and the residue it forbids was
+measured anyway; a rule the script cannot see is a rule the script cannot apply. Making the
+diff a script-side computation — not available, since the Workflow runtime injects no filesystem,
+so the copy and the diff are commands the turn agent runs and the script names. Gating on the
+record-discipline hit count — deferred as a separate decision; the checker closes the "no
+checker" gap and the enforcement question is left open on the issue.
+
+---
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:

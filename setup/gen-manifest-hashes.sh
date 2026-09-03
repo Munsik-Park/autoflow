@@ -173,6 +173,12 @@ build_rows() {
   # satisfy the rule it is stamped with.
   emit_row "scripts/ledger/ledger-entry-id.sh" \
            "scripts/ledger/ledger-entry-id.sh" "root-layer" "copy" "file"
+  # Record-discipline checker (issue #166). The stamped facilitation workflow's
+  # Draft and Converge prompts instruct a sub-agent that wrote a design document
+  # to run it before returning, so a target that receives the workflow without
+  # the checker is told to run a command it does not have.
+  emit_row "scripts/architect/record-discipline.sh" \
+           "scripts/architect/record-discipline.sh" "root-layer" "copy" "file"
   # The issue-creation wrapper (issue #96): the hook's `gh issue create` deny
   # ships with the bundle, so the only filing path must ship with it too — a
   # target that installs the deny without the wrapper can file no issue at all.

@@ -46,23 +46,26 @@ const fixture160 = JSON.parse(readFileSync(join(root, 'tests/fixtures/issue-160-
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 const wf = new AsyncFunction('args', 'agent', 'parallel', 'phase', 'log', 'console', scriptSrc)
 
-// One scripted turn: [modified, accept] plus optional counters. `null` scripts
-// a missing (errored/skipped) sub-agent turn.
+// One scripted turn: [modified, accept] plus optional counters and (issue #166) optional
+// dispositions. `null` scripts a missing (errored/skipped) sub-agent turn.
 const turnOf = (t) => t === null ? null : {
   modified: t[0], accept: t[1],
   counters: t[2] || [],
   accept_grounds: t[1] ? ['scripted'] : [],
-  dispositions: [],
+  dispositions: t[3] || [],
 }
 
 async function run(scenario) {
   const calls = []
   const prompts = {}
+  // The schema each call declared (issue #166): the disposition-name enum is asserted from it.
+  const schemas = {}
   const turns = [...scenario.turns]
   const agent = async (prompt, opts) => {
     const label = (opts && opts.label) || ''
     calls.push(label)
     prompts[label] = prompt
+    schemas[label] = opts && opts.schema
     if (label === 'policy-load') return { found: true, content: scenario.policyContent || policyContent }
     if (label === 'dev-draft' || label === 'test-draft') return 'drafted'
     if (label === 'register-load') return scenario.register
@@ -87,7 +90,15 @@ async function run(scenario) {
   }
   const parallel = (thunks) => Promise.all(thunks.map((f) => Promise.resolve().then(f).catch(() => null)))
   const result = await wf(scenario.args, agent, parallel, () => {}, () => {}, { log: () => {} })
-  return { result, calls, prompts, leftover: turns.length }
+  return { result, calls, prompts, schemas, leftover: turns.length }
+}
+// Issue #166 shorthands: the snapshot paths a side's turn prompt names, and the register-write
+// payload (the persisted register is the only place an observation's status is observable).
+const snap = (issue, side, doc) => `.autoflow/issue-${issue}-architect-snapshot-${side}-${doc}.md`
+const dispositionNameEnum = (schema) => {
+  const d = schema && schema.properties && schema.properties.dispositions
+  const n = d && d.items && d.items.properties && d.items.properties.name
+  return n && n.enum
 }
 
 const scenarios = [
@@ -237,6 +248,140 @@ const scenarios = [
       { side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] },
     ],
     expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 4 },
+  // ---- Issue #166 — deliberation cost structure ------------------------------------------
+  // Counter substance: from the third turn on, a counter that names no change (`changes` empty)
+  // is an observation — not open, owed no disposition, rendered by name only, persisted under its
+  // own status; the run converges as soon as the turns pair.
+  { name: 'issue-166-late-counter-without-changes-is-observation', args: { issue: '166' },
+    turns: [
+      { side: 'test', v: [false, false] }, { side: 'dev', v: [false, true] },
+      { side: 'test', v: [false, false, [{ agenda: 'PROSE_NIT', locator: '§2', argument: 'wording', changes: '' }]] },
+      { side: 'dev', v: [false, true] }, { side: 'test', v: [false, true] },
+    ],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 5
+      && !/name: PROSE_NIT/.test(r.prompts['dev-t4'] || '')
+      && /^observation: [^\n]*PROSE_NIT/m.test(r.prompts['dev-t4'] || '')
+      && !/with these open counters/.test(r.prompts['dev-t4'] || '')
+      && /owe no disposition: PROSE_NIT/.test(r.prompts['dev-t4'] || '')
+      && /"name": "PROSE_NIT",[\s\S]{0,200}"status": "observation"/.test(r.prompts['register-write'] || '') },
+  // A late counter that names its change keeps the full open-entry path: rendered in full, handed
+  // to the peer as a current counter with its `changes`, and — as before — never a convergence input.
+  { name: 'issue-166-late-counter-with-changes-stays-open', args: { issue: '166' },
+    turns: [
+      { side: 'test', v: [false, false] }, { side: 'dev', v: [false, true] },
+      { side: 'test', v: [false, false, [{ agenda: 'REAL_GAP', locator: '§3', argument: 'the guard forbids this citation', changes: 'AC2' }]] },
+      { side: 'dev', v: [false, true] }, { side: 'test', v: [false, true] },
+    ],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 5
+      && /name: REAL_GAP[\s\S]{0,160}status: open/.test(r.prompts['dev-t4'] || '')
+      && /with these open counters[^\n]*"changes":"AC2"/.test(r.prompts['dev-t4'] || '')
+      && /"name": "REAL_GAP",[\s\S]{0,200}"status": "open"/.test(r.prompts['register-write'] || '') },
+  // The first exchange is exempt: a turn-1 bare-string counter is an open entry.
+  { name: 'issue-166-first-exchange-counter-exempt', args: { issue: '166' },
+    turns: [
+      { side: 'test', v: [false, false, ['EARLY']] }, { side: 'dev', v: [false, false] },
+      { side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] },
+    ],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 4
+      && /name: EARLY[\s\S]{0,160}status: open/.test(r.prompts['dev-t2'] || '')
+      && !/From this turn on a counter whose "changes" is empty/.test(r.prompts['test-t1'] || '')
+      && !/From this turn on a counter whose "changes" is empty/.test(r.prompts['dev-t2'] || '')
+      && /From this turn on a counter whose "changes" is empty/.test(r.prompts['test-t3'] || '') },
+  // Closed entries render by name only: the agreed entry appears under `agreed:` and never as its
+  // four lines; the open one stays in full.
+  { name: 'issue-166-closed-entry-renders-name-only', args: { issue: '166' },
+    turns: [
+      { side: 'test', v: [false, false, [{ agenda: 'CLOSE_ME', locator: 'l', argument: 'THE_ARGUMENT_TEXT', changes: 'AC1' }, { agenda: 'STAY_OPEN', locator: 'l', argument: 'still owed', changes: 'AC3' }]] },
+      { side: 'dev', v: [false, false] },
+      { side: 'test', v: [false, false, [], [{ name: 'CLOSE_ME', conclusion: 'done', evidence: 'e', status: 'agreed' }]] },
+      { side: 'dev', v: [false, true] }, { side: 'test', v: [false, true] },
+    ],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 5
+      && /^agreed: CLOSE_ME$/m.test(r.prompts['dev-t4'] || '')
+      && !/name: CLOSE_ME/.test(r.prompts['dev-t4'] || '')
+      && !/conclusion: done/.test(r.prompts['dev-t4'] || '')
+      && /name: STAY_OPEN[\s\S]{0,160}status: open/.test(r.prompts['dev-t4'] || '')
+      && /Closed register entries — names only/.test(r.prompts['dev-t4'] || '') },
+  // A disposition on a closed entry is ignored: the entry keeps its status.
+  { name: 'issue-166-disposition-on-closed-entry-ignored', args: { issue: '166' },
+    turns: [
+      { side: 'test', v: [false, false, [{ agenda: 'X', locator: 'l', argument: 'a', changes: 'AC1' }]] },
+      { side: 'dev', v: [false, false] },
+      { side: 'test', v: [false, false, [], [{ name: 'X', conclusion: 'done', evidence: 'e', status: 'agreed' }]] },
+      { side: 'dev', v: [false, false] },
+      { side: 'test', v: [false, false, [], [{ name: 'X', conclusion: 'changed my mind', evidence: 'e', status: 'rejected' }]] },
+      { side: 'dev', v: [false, true] }, { side: 'test', v: [false, true] },
+    ],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 7
+      && /^agreed: X$/m.test(r.prompts['dev-t6'] || '')
+      && !/^rejected: /m.test(r.prompts['dev-t6'] || '') },
+  // The disposition-name enum is the open set: offered when an entry is open, absent otherwise.
+  { name: 'issue-166-disposition-name-enum-is-open-set', args: { issue: '166' },
+    turns: [
+      { side: 'test', v: [false, false, ['A', 'B']] }, { side: 'dev', v: [false, false] },
+      { side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] },
+    ],
+    expect: (r) => r.result.verdict === 'CONVERGED'
+      && dispositionNameEnum(r.schemas['test-t1']) === undefined
+      && JSON.stringify(dispositionNameEnum(r.schemas['dev-t2'])) === JSON.stringify(['A', 'B']) },
+  // Snapshot / diff: a side's first cold turn snapshots and reads in full; its next turn diffs
+  // against that snapshot first and reads the hunks.
+  { name: 'issue-166-snapshot-first-then-read-by-diff', args: { issue: '166' },
+    turns: [
+      { side: 'test', v: [false, false] }, { side: 'dev', v: [false, false] },
+      { side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] },
+    ],
+    expect: (r) => r.result.verdict === 'CONVERGED'
+      && /Snapshot first/.test(r.prompts['test-t1']) && !/Read by diff/.test(r.prompts['test-t1'])
+      && r.prompts['test-t1'].includes(`cp .autoflow/issue-166-feature-design.md ${snap('166', 'test', 'feature-design')}`)
+      && /Snapshot first/.test(r.prompts['dev-t2'])
+      && r.prompts['dev-t2'].includes(`cp .autoflow/issue-166-verification-design.md ${snap('166', 'dev', 'verification-design')}`)
+      && /Read by diff, not in full/.test(r.prompts['test-t3']) && !/Snapshot first/.test(r.prompts['test-t3'])
+      && r.prompts['test-t3'].includes(`diff -u ${snap('166', 'test', 'feature-design')} .autoflow/issue-166-feature-design.md`)
+      && /Read by diff, not in full/.test(r.prompts['dev-t4'])
+      && r.prompts['dev-t4'].includes(`diff -u ${snap('166', 'dev', 'verification-design')} .autoflow/issue-166-verification-design.md`) },
+  // A resume turn reads by diff against the escalated run's snapshot, and the substance rule binds.
+  { name: 'issue-166-resume-turn-reads-by-diff-and-binds-substance', args: { issue: '166', resume: 'true' },
+    register: { found: true, artifacts_present: true, lastTurn: 12, verdict: 'ESCALATE',
+      entries: [{ name: 'open concern', conclusion: 'c', evidence: 'e', status: 'open', raisedBy: 'test' }] },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 14
+      && /Read by diff, not in full/.test(r.prompts['test-t13']) && !/Snapshot first/.test(r.prompts['test-t13'])
+      && /From this turn on a counter whose "changes" is empty/.test(r.prompts['test-t13']) },
+  // A register holding only observations is a no-open-entry register: with both sides accepting
+  // it is admitted as a confirmation exchange, and the observation rehydrates under its status.
+  { name: 'issue-166-observation-only-register-all-accept-resumable', args: { issue: '166', resume: 'true' },
+    register: { found: true, artifacts_present: true, lastTurn: 12, verdict: 'ESCALATE',
+      entries: [{ name: 'OBS_ONLY', conclusion: 'c', evidence: 'e', status: 'observation', raisedBy: 'dev' }],
+      lastResponses: { dev: { modified: true, accept: true }, test: { modified: true, accept: true } } },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED' && r.result.turns === 14
+      && /confirmation exchange/.test(r.prompts['test-t13'] || '')
+      && /^observation: OBS_ONLY$/m.test(r.prompts['test-t13'] || '')
+      && /"name": "OBS_ONLY",[\s\S]{0,200}"status": "observation"/.test(r.prompts['register-write'] || '') },
+  // An observation is never an escalation ground: a run that reaches the ceiling with only an
+  // observation on the register records the no-open-entry fallback.
+  { name: 'issue-166-observation-not-escalation-ground', args: { issue: '166' },
+    turns: Array.from({ length: 12 }, (_, i) => ({
+      v: i === 2 ? [false, false, [{ agenda: 'OBS_ONLY', locator: 'l', argument: 'a remark', changes: '' }]] : [false, false],
+    })),
+    expect: (r) => r.result.verdict === 'ESCALATE' && r.result.turns === 12
+      && /the register held no open entry/.test(r.prompts['ledger'] || '')
+      && !/name: OBS_ONLY/.test(r.prompts['ledger'] || '') },
+  // Reconcile's minted AC entry names its change, so it stays OPEN after the first exchange — the
+  // operator's re-entry depends on it (the `no open entry` guard).
+  { name: 'issue-166-ac-mint-stays-open', args: { issue: '166' },
+    acDiff: { ac_source_present: true, ledger_ac_decisions: [],
+      ac_rows: [{ ac: 'AC1', carried: false, disposition: 'absent', reason_stated: false, locator: '—', proposed: '' }] },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'AC_CHANGE'
+      && /"name": "ac-authority:AC1",[\s\S]{0,200}"status": "open"/.test(r.prompts['register-write'] || '') },
+  // The record-discipline check reaches the authoring prompts — Draft and every Converge turn.
+  { name: 'issue-166-record-discipline-check-in-authoring-prompts', args: { issue: '166' },
+    turns: [{ side: 'test', v: [false, true] }, { side: 'dev', v: [false, true] }],
+    expect: (r) => r.result.verdict === 'CONVERGED'
+      && ['dev-draft', 'test-draft', 'test-t1', 'dev-t2'].every((k) =>
+        (r.prompts[k] || '').includes('bash scripts/architect/record-discipline.sh check .autoflow/issue-166-feature-design.md .autoflow/issue-166-verification-design.md')) },
   // Missing deliberation_caps row => fail-closed with its own sentinel.
   { name: 'caps-missing-fail-closed', args: { issue: '152' },
     policyContent: JSON.stringify((() => { const p = JSON.parse(policyContent); delete p.deliberation_caps; return p })()),

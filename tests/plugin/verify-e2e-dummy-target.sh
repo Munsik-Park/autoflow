@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: docs/autoflow-guide.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh scripts/handoff/create-host-pr.sh scripts/issue/create-issue.sh scripts/ledger/ledger-entry-id.sh setup/init.sh setup/manifest.json tests/fixtures/e2e-bundle-purity-baseline.txt tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt tests/plugin/manual-scenarios-797.md tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh
+# ci-subject: docs/autoflow-guide.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh scripts/handoff/create-host-pr.sh scripts/issue/create-issue.sh scripts/ledger/ledger-entry-id.sh scripts/architect/record-discipline.sh setup/init.sh setup/manifest.json tests/fixtures/e2e-bundle-purity-baseline.txt tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt tests/plugin/manual-scenarios-797.md tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -36,13 +36,15 @@
 #     E1c   pre-existing CLAUDE.md prose survives + shim fence present
 #     E1d   installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md,
 #           scripts/review/**, scripts/preflight/**, scripts/handoff/**,
-#           scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, .codex/**,
-#           AGENTS.md
+#           scripts/cleanup/**, scripts/issue/**, scripts/ledger/**,
+#           scripts/spawn-policy/**, scripts/architect/**, .codex/**, AGENTS.md
 #           (#979 reviewer-backend delivery, source-path-preserved dests,
 #           ledger E12; scripts/handoff/**, scripts/cleanup/** widened for
 #           issue #10 manifest-registration-gap fix; scripts/issue/** widened
 #           for the issue #96 AI issue-creation gate wrapper; scripts/ledger/**
-#           widened for the issue #97 ledger-entry-id.sh manifest artifact)
+#           widened for the issue #97 ledger-entry-id.sh manifest artifact;
+#           scripts/architect/** widened for the issue #166 record-discipline.sh
+#           manifest artifact)
 #     E1e   second install run is idempotent (single fence, byte-identical)
 #
 #   W-E2 bundle-in-target host-purity (composition boundary of item 4):
@@ -379,7 +381,7 @@ else
   failc "E1c" "S5/#792" "prerequisite E1b failed or CLAUDE.md absent"
 fi
 
-echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, .codex/**, AGENTS.md =="
+echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, scripts/architect/**, .codex/**, AGENTS.md =="
 if [ "$DRIVE_PASS" -eq 1 ]; then
   if cmp -s "$SNAP_DIR/package.json" "$DUMMY/package.json"; then
     pass "E1d: package.json byte-unchanged"
@@ -424,16 +426,20 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # ships as a root-layer manifest artifact with its source path preserved,
   # so ./scripts/spawn-policy/* is admitted on the same source-path-preserved
   # basis as scripts/ledger/* and scripts/issue/*.
+  # issue #166 widening: scripts/architect/record-discipline.sh ships as a
+  # root-layer manifest artifact with its source path preserved (the stamped
+  # facilitation workflow's prompts run it), so ./scripts/architect/* is
+  # admitted on the same basis.
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/architect/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done
   if [ -z "$BAD_NEW" ]; then
-    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, .codex/**, or AGENTS.md"
+    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, scripts/architect/**, .codex/**, or AGENTS.md"
   else
-    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/spawn-policy//.codex//AGENTS.md:$BAD_NEW"
+    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/spawn-policy//scripts/architect//.codex//AGENTS.md:$BAD_NEW"
   fi
 else
   failc "E1d" "S5/#792" "skipped -- prerequisite E1b failed"

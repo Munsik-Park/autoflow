@@ -104,14 +104,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "dc8a75bbde0115d5a702925cf8a326ab6a178d54d215a25d74949a53fabd5e84"
+      "sha256": "20af2b60d5eb1baed0c9fb7726a375570145a2fe13ad94f7819c4b27468f518c"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ed86becf9a3d4bb4dfee326243a8be70370e035a2b584b790e0f28a1ff012825"
+      "sha256": "0a787b2914f698aa4675b9d902e8621dff1ed24e0ed4e23613a6de628cd38262"
     },
     {
       "source": "docs/development-guideline.md",
@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "78093d8c6b55b80e849e5353e9364ba48532965c3cb87735f21e2e13510acbd7"
+      "sha256": "8e7c1d5a6a6b43c4559f2c1095a4d6ad9412d2af85f52dec6d45bbcf581ee0f3"
     },
     {
       "source": "docs/title-guide.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "91c6577daa3e8900e3cd36022e18f7a23dc8d8779670d88e221e8b12aee870e1"
+      "sha256": "dd985d9ed549e3171ee9449f3d72b1d73b71026b83ab46737cd88d24357cfc3b"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -350,6 +350,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "70ef41f7c8d413bd6465bf1ec2e5a1b97028651621fdb71b4ce06953bbdd39fc"
+    },
+    {
+      "source": "scripts/architect/record-discipline.sh",
+      "dest": "scripts/architect/record-discipline.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "ed600d6a56b224630da67c0c4fa638ad9bfccfc3dc5e95475120c433699f08a3"
     },
     {
       "source": "scripts/issue/create-issue.sh",
