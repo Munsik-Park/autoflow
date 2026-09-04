@@ -50,10 +50,11 @@ is a different subsystem (PreToolUse hook vs. teammate mailbox routing).
    `Agent` call with `team_name` + a role-prefixed `name`, e.g. `test-42` or
    `impl-42`) and have it end its turn with a distinctive final message
    **without** calling `SendMessage`.
-4. Confirm that final message text does **not** appear anywhere in the
-   orchestrator's context — it is silently discarded, matching
-   `docs/teammate-common-rules.md` > Result delivery path by spawn mode's
-   named-mode row (`42-AC4-named-loss`).
+4. Record whether that final message text appears in the orchestrator's
+   context, and by what path. This is the **version-dependent** step: on the
+   #40 runtime it was silently discarded (`42-AC4-named-loss`); on 2.1.260 it
+   arrived in the teammate's `idle_notification` `result` field (see **Data
+   points** below).
 5. Re-spawn the same named teammate (or address it via `SendMessage`) and
    have it explicitly call `SendMessage(to: "main", message: ...)` carrying
    the same nonce. Confirm the nonce now **does** appear in the
@@ -66,9 +67,18 @@ is a different subsystem (PreToolUse hook vs. teammate mailbox routing).
    (`42-AC4-evidence-anchor`) needs a follow-up correction, not this test.
 
 **Pass condition:** anonymous-direct final text is observed to reach the
-orchestrator without a `SendMessage` call (step 2), and named-team final text
-is observed to be lost without one (step 4) and recovered with one (step 5) —
-reproducing the asymmetry `docs/teammate-common-rules.md` describes.
+orchestrator without a `SendMessage` call (step 2), and the named-team
+direction (steps 4–5) is recorded as a dated, versioned data point in
+`docs/teammate-common-rules.md` > Result delivery path by spawn mode. The
+scenario no longer asserts the asymmetry: since 2.1.260 the named-mode rule
+rests on cost and consistency (ADR-0017 C8, ADR-0021 C7), not on the loss.
+
+**Data points:**
+
+| Runtime | Date | Named final text without `SendMessage` | Source |
+|---|---|---|---|
+| Agent Teams runtime of the #40 cycle | 2026-07-31 | lost, 12/12 matched the `SendMessage` count | issue #40 |
+| Claude Code 2.1.260 | 2026-09-04 | delivered, 3/3, in the `idle_notification` `result` field | issue #168 |
 
 **Non-goal:** this scenario does not test whether the Agent Teams runtime
 *should* behave this way, only whether the current runtime *does* — matching

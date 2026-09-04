@@ -611,12 +611,33 @@ resolve_spawn_role() {
   local _subtype _name _role=""
   _subtype=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)
   _name=$(echo "$INPUT" | jq -r '.tool_input.name // empty' 2>/dev/null)
-  # A payload still carrying a teammate `name` is an OBSOLETE declaration on a
-  # retired channel: it stays undeclared → denied, even when subagent_type also
-  # names a valid role. Resolving it by subagent_type would silently admit a
-  # team-spawn attempt as a direct spawn and hide the caller's mistake; the
-  # pre-migration rule that a contradictory pair is blocked rather than
-  # arbitrated is preserved, now with the name side carrying no role at all.
+  # A payload carrying `name` stays undeclared → denied while a cycle is
+  # active, even when subagent_type also names a valid role. What `name`
+  # selects is decided by the RUNTIME, not by this hook: a named spawn launches
+  # as a persistent, resumable teammate (addressable by name; a later
+  # SendMessage re-wakes it from its transcript), so admitting the payload on
+  # its subagent_type would not turn it into a direct spawn — it would create
+  # the persistent teammate the policy forbids. The policy this branch encodes
+  # is "no persistent teammate inside a cycle", and its grounds are cost and
+  # consistency, not delivery correctness (issue #168):
+  #   - cost: every wake of a persistent teammate re-writes context it had
+  #     already read — 16–43% of agent cost across two measured cycles
+  #     (ADR-0017 > Notes > C8, issue #136); the #168 probe re-wrote 53% of
+  #     the prefix on a warm wake 57 s after the previous turn and 100% on a
+  #     cold wake past the cache TTL; a fresh
+  #     direct spawn per phase pays for its prefix once and carries continuity
+  #     through .autoflow/* instead;
+  #   - no offsetting benefit: the C7 pilot found the direct spawn's VERIFY
+  #     detection EQUAL_OR_BETTER than the named baseline (ADR-0021);
+  #   - consistency: one delivery path (the return value) and one declaration
+  #     channel (subagent_type) for every role (ADR-0017 Q3).
+  # The #40 final-text loss that first motivated the migration is NOT a ground:
+  # re-measured on Claude Code 2.1.260 (issue #168) a named spawn's final text
+  # does reach the lead, in its idle notification's `result` field — see
+  # docs/teammate-common-rules.md > Result delivery path by spawn mode. This
+  # branch keys on the presence of `name` alone (no prefix, no subagent_type):
+  # what it blocks is the named, persistent form. Resuming an anonymous spawn
+  # by raw agentId through SendMessage is outside this hook's surface.
   if [ -n "$_name" ]; then
     printf ''
     return 0
