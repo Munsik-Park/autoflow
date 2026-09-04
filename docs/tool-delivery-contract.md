@@ -116,7 +116,13 @@ below means both tiers together.
   the clone from the harness's local registries (`scripts/lib/plugin-root.sh`,
   shipped with the bundle) rather than from the hook-only `CLAUDE_PLUGIN_ROOT`,
   so they run from the plain shell PREFLIGHT uses; each reports `SKIP`, never a
-  failure, when its side is not locally resolvable. No network access.
+  failure, when its side is not locally resolvable. No network access. The
+  `/autoflow:install` skill resolves the clone it detects against and stamps
+  from through the same resolver — a byte-identical copy shipped inside the
+  plugin, since the plugin cache carries no `scripts/lib/` — with the plugin
+  root's `../..` as the last candidate (a directly loaded clone), never as the
+  derivation: under `/plugin install` that arithmetic lands in
+  `plugins/cache/<marketplace>/`, which holds no `setup/` (issue #174).
 - A drift-test failure is a **stop condition** for starting a new AutoFlow
   cycle on the target, in the same class as PREFLIGHT's Git-clean hard stop:
   resolve the drift (re-stamp, pin fix, plugin update, or reinstall) first.

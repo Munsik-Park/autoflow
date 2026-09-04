@@ -38,13 +38,27 @@ for S in \
   [ -d "$S" ] && break
 done
 
-# Source (where the tool lives): the marketplace-cache repo root, two levels up
-# from the plugin root — it holds setup/init.sh and setup/manifest.json.
-PLUGIN_CACHE_ROOT="${CLAUDE_PLUGIN_ROOT}/../.."
+# Source (where the tool lives): the marketplace clone — the tree holding
+# setup/init.sh and setup/manifest.json. Resolved from the harness's own
+# registries, never by path arithmetic from the plugin root: under
+# `/plugin install` the plugin is a versioned copy at
+# <config>/plugins/cache/<marketplace>/<plugin>/<version>/, whose grandparent
+# holds no setup/ (issue #174). Candidate order: $AUTOFLOW_MARKETPLACE_ROOT ->
+# known_marketplaces.json installLocation -> <config>/plugins/marketplaces/<mkt>/
+# -> ${CLAUDE_PLUGIN_ROOT}/../.. (a clone loaded directly: the development channel).
+PLUGIN_CACHE_ROOT=$(sh "$S/resolve-cache-root.sh") || PLUGIN_CACHE_ROOT=""
 
 # Target (where the stamp/state goes): the consuming project root.
 TARGET_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 ```
+
+If `PLUGIN_CACHE_ROOT` came back empty, the resolver printed on stderr every
+location it consulted, in order. **Report that list to the user and stop** —
+do not guess the clone's location or substitute a path by hand. The remedies
+are the user's: `/plugin marketplace add Munsik-Park/autoflow` when no clone
+exists, `/plugin marketplace update autoflow` when one exists but lacks
+`setup/manifest.json`, or `AUTOFLOW_MARKETPLACE_ROOT=<clone root>` for a clone
+the harness does not register (a local checkout).
 
 Never conflate `PLUGIN_CACHE_ROOT` (source) with `TARGET_ROOT` (target) — the
 same script-location vs state-location split the drift-check/hook layer enforces.

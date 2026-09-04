@@ -138,6 +138,31 @@ assume PASS.**
 
 ---
 
+## M-174 — Step 0 clone resolution on a `/plugin install` target (issue #174)
+
+**Why this cannot be fully scripted**: `tests/plugin/verify-install-skill-scripts.sh`
+AC-174-5 evaluates the Step 0 bash block under the real plugin-cache layout
+with `CLAUDE_PLUGIN_ROOT` exported as an environment variable; in a live
+session the loader inline-substitutes the token inside the skill body instead.
+The two are equivalent for the path values the block computes, but that
+equivalence is a claim about the harness, not about the shipped text.
+
+**Scenario**: on a target whose plugin came from `/plugin install autoflow@autoflow`
+(plugin root `~/.claude/plugins/cache/autoflow/autoflow/<version>/`, clone at
+`~/.claude/plugins/marketplaces/autoflow/`), invoke `/autoflow:install`.
+
+**Expected**: Step 1's `key=value` report appears (no `ERROR: PLUGIN_CACHE_ROOT
+unresolvable`), `VERSION_CACHE` equals the clone's `setup/manifest.json`
+`.version`, and the `PLUGIN_CACHE_ROOT` the skill reports is the clone —
+never `.../cache/autoflow/`.
+
+**Fail signal / escalation**: the hard error, or a `PLUGIN_CACHE_ROOT` under
+`plugins/cache/`. Do not substitute the clone path by hand to proceed — that
+workaround is how this defect stayed hidden from 0.1.0 through 0.1.9
+(connev-llm/llmroute dcf5bf1); report the candidate list the resolver printed.
+
+---
+
 ## Itemization note (VALIDATE)
 
 At VALIDATE, the assignee should confirm:

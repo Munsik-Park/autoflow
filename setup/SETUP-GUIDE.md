@@ -26,6 +26,16 @@ project before you confirm, and the skill never commits — you own the version
 record (R1). Maintenance later is just `/plugin marketplace update` →
 `/autoflow:install` (re-stamp).
 
+The skill locates the clone it detects against and stamps from through the
+harness's own registries — `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/known_marketplaces.json`,
+then `plugins/marketplaces/autoflow/` — never from the installed plugin's own
+path: under `/plugin install` the plugin is a versioned copy under
+`plugins/cache/`, whose parent tree is not the clone (issue #174). A clone the
+harness does not register (a local checkout loaded directly) is found last,
+two levels above the plugin root, or named explicitly with
+`AUTOFLOW_MARKETPLACE_ROOT=<clone root>`. A failed resolution lists every
+location consulted; the skill reports that list rather than guessing.
+
 ### Manual / CI-scripted install (`init.sh --target`)
 
 The `/autoflow:install` skill wraps exactly this call; run it by hand when you
@@ -57,7 +67,7 @@ can self-describe and self-verify offline.
 | Deliberation workflows | `.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js` | copy |
 | Settings pin (marketplace + `enabledPlugins`) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
-| Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`) | `scripts/lib/plugin-root.sh` | copy |
+| Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`; `/autoflow:install` Step 0 runs a byte-identical copy shipped inside the plugin, since the plugin cache holds no `scripts/lib/`) | `scripts/lib/plugin-root.sh` | copy |
 | Local overrides scaffold (never overwritten) | `CLAUDE.local.md` | scaffold |
 | Spawn policy sample (target-configured, never overwritten) | `.claude/autoflow/spawn-policy.json` | scaffold |
 

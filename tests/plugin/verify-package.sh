@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude-plugin/marketplace.json .claude/hooks/check-autoflow-gate.sh .claude/hooks/check-read-dedup.sh README.md plugin/autoflow/hooks/check-autoflow-gate.sh plugin/autoflow/skills/epic-dash/SKILL.md plugin/autoflow/skills/install/SKILL.md setup/SETUP-GUIDE.md setup/manifest.json setup/thin-root-layer/settings-pin.json
+# ci-subject: .claude-plugin/marketplace.json .claude/hooks/check-autoflow-gate.sh .claude/hooks/check-read-dedup.sh README.md plugin/autoflow/hooks/check-autoflow-gate.sh plugin/autoflow/skills/epic-dash/SKILL.md plugin/autoflow/skills/install/SKILL.md plugin/autoflow/skills/install/scripts/lib/plugin-root.sh scripts/lib/plugin-root.sh setup/SETUP-GUIDE.md setup/manifest.json setup/thin-root-layer/settings-pin.json
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # out-of-tree-inputs: yes
@@ -234,6 +234,24 @@ if [ -d "$INSTALL_SKILL_SCRIPTS" ]; then
   fi
 else
   failc "AC1b" "install skill scripts/ directory missing at $INSTALL_SKILL_SCRIPTS"
+fi
+
+echo "== AC1d (#174): resolve-cache-root.sh + lib/plugin-root.sh resolve in the packaged tree; the lib is byte-identical to scripts/lib/plugin-root.sh =="
+# The install skill resolves the marketplace clone through the same resolver
+# drift-check D4/D5 and spawn-policy check use (scripts/lib/plugin-root.sh),
+# but a plugin cache carries no scripts/lib/ and an uninstalled target none
+# either -- so the skill ships its own copy under scripts/lib/ of the skill.
+# Two copies of one resolver are one resolver only while they are
+# byte-identical; this pin is what makes an edit to either side visible.
+if [ -f "$INSTALL_SKILL_SCRIPTS/resolve-cache-root.sh" ]; then
+  pass "AC1d: resolve-cache-root.sh resolves in the packaged tree"
+else
+  failc "AC1d" "resolve-cache-root.sh missing at $INSTALL_SKILL_SCRIPTS/resolve-cache-root.sh"
+fi
+if [ -f "$INSTALL_SKILL_SCRIPTS/lib/plugin-root.sh" ] && cmp -s "$INSTALL_SKILL_SCRIPTS/lib/plugin-root.sh" "$REPO_ROOT/scripts/lib/plugin-root.sh"; then
+  pass "AC1d: skills/install/scripts/lib/plugin-root.sh is byte-identical to scripts/lib/plugin-root.sh"
+else
+  failc "AC1d" "skills/install/scripts/lib/plugin-root.sh missing or differs from scripts/lib/plugin-root.sh -- re-copy: cp scripts/lib/plugin-root.sh plugin/autoflow/skills/install/scripts/lib/plugin-root.sh"
 fi
 
 echo "== AC1c (#943, OC-3): this file records why AC5 parity stays epic-dash-scoped =="

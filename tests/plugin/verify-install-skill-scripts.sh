@@ -122,6 +122,29 @@
 #          config REFUSES (exit 1, file byte-unchanged) rather than
 #          clobbering; a run against an absent config still writes the
 #          canonical literal (nothing to preserve)
+#   AC-174-0  fixture non-vacuity (issue #174): under the plugin-cache layout
+#          <config>/plugins/cache/<mkt>/<plugin>/<ver>/ the old derivation
+#          ${CLAUDE_PLUGIN_ROOT}/../.. holds NO setup/manifest.json
+#   AC-174-1  registry arm: known_marketplaces.json installLocation names the
+#          clone (no conventional dir) -> resolve-cache-root.sh prints it
+#   AC-174-2  conventional arm: no registry; clone at
+#          <config>/plugins/marketplaces/<mkt>/ -> printed
+#   AC-174-3  development-channel arm: no registry, no conventional dir,
+#          plugin loaded from a clone (CLAUDE_PLUGIN_ROOT=<clone>/plugin/
+#          autoflow) -> <clone> via ../.. -- the LAST candidate: with a
+#          conventional clone present it loses to that clone (order pin)
+#   AC-174-4  unresolvable arm: cache plugin only, no clone anywhere ->
+#          non-zero exit, empty stdout, stderr names every location consulted
+#          (registry file, conventional dir, ../..)
+#   AC-174-5  Step 0 evaluation: the SKILL.md Step 0 bash block itself,
+#          evaluated under the cache layout with CLAUDE_PLUGIN_ROOT set, yields
+#          PLUGIN_CACHE_ROOT == the clone and S == the cache plugin's scripts/
+#          (the derivation is exercised, not an injected PLUGIN_CACHE_ROOT)
+#   AC-174-6  detect.sh: (a) an explicit unresolvable PLUGIN_CACHE_ROOT's hard
+#          error names the candidates; (b) PLUGIN_CACHE_ROOT unset under the
+#          cache layout -> detect.sh self-resolves, exit 0, VERSION_CACHE
+#          read from the clone; (c) an explicit wrong value is NOT replaced by
+#          self-resolution even when the clone is resolvable (still exit 1)
 #
 # RED framing: plugin/autoflow/skills/install/scripts/{detect,scaffold-identity}.sh
 # do not exist yet -- every arm below fails on the "script missing" guard.
@@ -337,6 +360,9 @@ NOJQ_DIR=$(mktemp -d)                 # C4-AC-6 (issue #979 cycle 4): jq-less
 BACKEND5_TARGET=$(mktemp -d)          # C5-AC-3/4/6 (issue #979 cycle 5):
                                        # detect.sh malformed/empty/absent/null
                                        # REVIEW_BACKEND arms, reseeded per arm
+I174_WORK=$(mktemp -d)                # AC-174-* (issue #174): scratch
+                                       # CLAUDE_CONFIG_DIRs carrying the
+                                       # plugin-cache layout + clone fixtures
 
 cleanup() {
   rm -rf "$ABSENT_TARGET" "$CLEAN_TARGET" "$DRIFT_TARGET" "$SKEW_TARGET" \
@@ -348,7 +374,7 @@ cleanup() {
          "$GITHUB_PREFIXED_HOST_TARGET" \
          "$SLASHBRANCH_TARGET" "$ORACLE_TAMPER_TARGET" "$DEGRADE_TARGET" \
          "$CRASH_CACHE" "$MISSING_ORACLE_CACHE" "$BACKEND_TARGET" "$NOJQ_DIR" \
-         "$BACKEND5_TARGET"
+         "$BACKEND5_TARGET" "$I174_WORK"
   if [ "${#NO_GH_MIRROR_DIRS[@]}" -gt 0 ]; then
     rm -rf "${NO_GH_MIRROR_DIRS[@]}"
   fi
@@ -1209,6 +1235,185 @@ if [ "$(get_kv "$DETECT_OUT" REVIEW_BACKEND)" = "codex" ]; then
   pass "C6-AC-2: config absent + jq absent -> detect.sh still reports REVIEW_BACKEND=codex"
 else
   failc "C6-AC-2" "expected REVIEW_BACKEND=codex when the config is absent and jq is absent (no over-trigger); got REVIEW_BACKEND=$(get_kv "$DETECT_OUT" REVIEW_BACKEND) exit=$DETECT_CODE"
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AC-174-* (issue #174) — Step 0 clone resolution under the plugin-cache layout
+# ══════════════════════════════════════════════════════════════════════════════
+# Under `/plugin install autoflow@autoflow` the harness copies the plugin to
+# <config>/plugins/cache/<mkt>/<plugin>/<version>/ (installed_plugins.json
+# `installPath`; Claude Code 2.1.260): a tree whose grandparent is
+# cache/<mkt>/ and holds no setup/. SKILL.md Step 0 derived PLUGIN_CACHE_ROOT
+# as ${CLAUDE_PLUGIN_ROOT}/../.. from 0.1.0 through 0.1.9, so detect.sh
+# hard-errored before its Step 1 report on every marketplace-installed target.
+# Every arm above injects PLUGIN_CACHE_ROOT explicitly, which is why the
+# derivation itself was never evaluated here. These arms build the real
+# layout under scratch CLAUDE_CONFIG_DIRs and evaluate the derivation.
+RESOLVE_SH="$REPO_ROOT/plugin/autoflow/skills/install/scripts/resolve-cache-root.sh"
+PLUGIN_SRC="$REPO_ROOT/plugin/autoflow"
+SKILL_MD_174="$REPO_ROOT/plugin/autoflow/skills/install/SKILL.md"
+
+# same_dir <a> <b> — physical-path equality (mktemp on macOS returns /var/...,
+# a symlink to /private/var/...; a `cd && pwd` on one side may differ textually).
+same_dir() {
+  [ -d "$1" ] && [ -d "$2" ] && [ "$(CDPATH= cd -- "$1" && pwd -P)" = "$(CDPATH= cd -- "$2" && pwd -P)" ]
+}
+# mk_clone <dir> — a minimal marketplace clone: what the resolver and an
+# absent-target detect.sh read (manifest, oracle, resolver lib, marketplace.json).
+mk_clone() {
+  mkdir -p "$1/setup/thin-root-layer" "$1/scripts/lib" "$1/.claude-plugin"
+  cp "$CACHE_MANIFEST" "$1/setup/manifest.json"
+  cp "$REPO_ROOT/setup/thin-root-layer/drift-check.sh" "$1/setup/thin-root-layer/"
+  cp "$REPO_ROOT/scripts/lib/plugin-root.sh" "$1/scripts/lib/"
+  cp "$REPO_ROOT/.claude-plugin/marketplace.json" "$1/.claude-plugin/"
+}
+# mk_cache_plugin <config-dir> <version> — the versioned plugin copy the
+# harness installs; prints its path (that install's CLAUDE_PLUGIN_ROOT).
+mk_cache_plugin() {
+  _cp="$1/plugins/cache/autoflow/autoflow/$2"
+  mkdir -p "$_cp"
+  cp -R "$PLUGIN_SRC"/. "$_cp/"
+  printf '%s\n' "$_cp"
+}
+# run_resolve <config-dir> <plugin-root> — sets RES_OUT / RES_ERR / RES_CODE.
+run_resolve() {
+  _ef="$I174_WORK/resolve.err"
+  RES_OUT=$(CLAUDE_CONFIG_DIR="$1" CLAUDE_PLUGIN_ROOT="$2" sh "$RESOLVE_SH" 2>"$_ef")
+  RES_CODE=$?
+  RES_ERR=$(cat "$_ef")
+}
+
+# Fixture 1: registry names the clone at a non-conventional location.
+CFG1="$I174_WORK/cfg-registry"; mkdir -p "$CFG1/plugins"
+PR1=$(mk_cache_plugin "$CFG1" 0.1.9)
+CLONE1="$I174_WORK/clone-registered"; mk_clone "$CLONE1"
+jq -n --arg loc "$CLONE1" '{autoflow:{source:{source:"github",repo:"Munsik-Park/autoflow"},installLocation:$loc,lastUpdated:"2026-09-04T00:00:00.000Z"}}' \
+  > "$CFG1/plugins/known_marketplaces.json"
+# Fixture 2: no registry; the conventional clone directory.
+CFG2="$I174_WORK/cfg-conventional"; mkdir -p "$CFG2/plugins/marketplaces"
+PR2=$(mk_cache_plugin "$CFG2" 0.1.9)
+CLONE2="$CFG2/plugins/marketplaces/autoflow"; mk_clone "$CLONE2"
+# Fixture 4: cache plugin only — no clone anywhere.
+CFG4="$I174_WORK/cfg-bare"; mkdir -p "$CFG4/plugins"
+PR4=$(mk_cache_plugin "$CFG4" 0.1.9)
+CFG3="$I174_WORK/cfg-empty"; mkdir -p "$CFG3/plugins"
+
+echo "== AC-174-0 (fixture non-vacuity): under the plugin-cache layout \${CLAUDE_PLUGIN_ROOT}/../../setup/manifest.json does NOT exist =="
+if [ -f "$PR1/.claude-plugin/plugin.json" ] && [ ! -f "$PR1/../../setup/manifest.json" ]; then
+  pass "AC-174-0: cache plugin at $PR1 has plugin.json and its ../.. holds no setup/manifest.json (the reported layout)"
+else
+  failc "AC-174-0" "fixture does not reproduce the reported layout (plugin.json present: $([ -f "$PR1/.claude-plugin/plugin.json" ] && echo yes || echo no); ../../setup/manifest.json present: $([ -f "$PR1/../../setup/manifest.json" ] && echo yes || echo no))"
+fi
+
+echo "== AC-174-1: registry arm -- known_marketplaces.json installLocation names the clone -> resolve-cache-root.sh prints it =="
+if [ ! -f "$RESOLVE_SH" ]; then
+  failc "AC-174-1" "resolve-cache-root.sh missing at $RESOLVE_SH"
+else
+  run_resolve "$CFG1" "$PR1"
+  if [ "$RES_CODE" -eq 0 ] && same_dir "$RES_OUT" "$CLONE1"; then
+    pass "AC-174-1: registry installLocation resolved ($RES_OUT)"
+  else
+    failc "AC-174-1" "expected exit 0 and $CLONE1; got exit=$RES_CODE stdout='$RES_OUT' stderr='$(printf '%s' "$RES_ERR" | head -c 300)'"
+  fi
+fi
+
+echo "== AC-174-2: conventional arm -- no registry, clone at <config>/plugins/marketplaces/autoflow/ -> printed =="
+if [ ! -f "$RESOLVE_SH" ]; then
+  failc "AC-174-2" "resolve-cache-root.sh missing at $RESOLVE_SH"
+else
+  run_resolve "$CFG2" "$PR2"
+  if [ "$RES_CODE" -eq 0 ] && same_dir "$RES_OUT" "$CLONE2"; then
+    pass "AC-174-2: conventional clone directory resolved ($RES_OUT)"
+  else
+    failc "AC-174-2" "expected exit 0 and $CLONE2; got exit=$RES_CODE stdout='$RES_OUT' stderr='$(printf '%s' "$RES_ERR" | head -c 300)'"
+  fi
+fi
+
+echo "== AC-174-3: development-channel arm -- no registry, no conventional dir, plugin loaded from a clone -> <clone> via ../.., and LAST in order =="
+if [ ! -f "$RESOLVE_SH" ]; then
+  failc "AC-174-3" "resolve-cache-root.sh missing at $RESOLVE_SH"
+else
+  run_resolve "$CFG3" "$PLUGIN_SRC"
+  if [ "$RES_CODE" -eq 0 ] && same_dir "$RES_OUT" "$REPO_ROOT"; then
+    pass "AC-174-3: a directly loaded clone resolves through ../.. ($RES_OUT)"
+  else
+    failc "AC-174-3" "expected exit 0 and $REPO_ROOT; got exit=$RES_CODE stdout='$RES_OUT' stderr='$(printf '%s' "$RES_ERR" | head -c 300)'"
+  fi
+  # Order pin: with a conventional clone present, ../.. does not win.
+  run_resolve "$CFG2" "$PLUGIN_SRC"
+  if [ "$RES_CODE" -eq 0 ] && same_dir "$RES_OUT" "$CLONE2"; then
+    pass "AC-174-3 (order): the registry/conventional clone wins over ../.. when both hold setup/manifest.json"
+  else
+    failc "AC-174-3 (order)" "expected $CLONE2 to win over $REPO_ROOT; got exit=$RES_CODE stdout='$RES_OUT'"
+  fi
+fi
+
+echo "== AC-174-4: unresolvable arm -- cache plugin only, no clone anywhere -> non-zero exit, empty stdout, stderr names every location consulted =="
+if [ ! -f "$RESOLVE_SH" ]; then
+  failc "AC-174-4" "resolve-cache-root.sh missing at $RESOLVE_SH"
+else
+  run_resolve "$CFG4" "$PR4"
+  if [ "$RES_CODE" -ne 0 ] && [ -z "$RES_OUT" ] \
+     && printf '%s\n' "$RES_ERR" | grep -qF "$CFG4/plugins/known_marketplaces.json" \
+     && printf '%s\n' "$RES_ERR" | grep -qF "$CFG4/plugins/marketplaces/autoflow/" \
+     && printf '%s\n' "$RES_ERR" | grep -q 'CLAUDE_PLUGIN_ROOT/\.\./\.\. (' \
+     && printf '%s\n' "$RES_ERR" | grep -qF "$(CDPATH= cd -- "$PR4/../.." && pwd)"; then
+    pass "AC-174-4: unresolvable -> exit $RES_CODE, empty stdout, stderr lists the registry file, the conventional dir and the evaluated ../.. candidate"
+  else
+    failc "AC-174-4" "expected non-zero exit, empty stdout and a candidate list on stderr; got exit=$RES_CODE stdout='$RES_OUT' stderr='$(printf '%s' "$RES_ERR" | tr '\n' ' ' | head -c 500)'"
+  fi
+fi
+
+echo "== AC-174-5: the SKILL.md Step 0 bash block, evaluated under the cache layout, yields PLUGIN_CACHE_ROOT == the clone (the derivation itself) =="
+STEP0_BLOCK=$(awk '/^## Step 0/{f=1; next} /^## Step 1/{f=0} f' "$SKILL_MD_174" \
+  | awk '/^```bash/{b=1; next} /^```/{if (b) exit} b')
+if [ -z "$STEP0_BLOCK" ]; then
+  failc "AC-174-5" "could not extract a bash fence from the SKILL.md Step 0 region"
+else
+  _s0f="$I174_WORK/step0.sh"
+  { printf '%s\n' "$STEP0_BLOCK"; printf 'printf "S=%%s\\nPLUGIN_CACHE_ROOT=%%s\\nTARGET_ROOT=%%s\\n" "$S" "$PLUGIN_CACHE_ROOT" "$TARGET_ROOT"\n'; } > "$_s0f"
+  _s0out=$(cd "$ABSENT_TARGET" && CLAUDE_CONFIG_DIR="$CFG1" CLAUDE_PLUGIN_ROOT="$PR1" CLAUDE_PROJECT_DIR="$ABSENT_TARGET" bash "$_s0f" 2>"$I174_WORK/step0.err")
+  _s0S=$(get_kv "$_s0out" S); _s0root=$(get_kv "$_s0out" PLUGIN_CACHE_ROOT); _s0t=$(get_kv "$_s0out" TARGET_ROOT)
+  if [ "$_s0S" = "$PR1/skills/install/scripts" ] && same_dir "$_s0root" "$CLONE1" && [ "$_s0t" = "$ABSENT_TARGET" ]; then
+    pass "AC-174-5: Step 0 evaluated -> S=<cache plugin>/skills/install/scripts, PLUGIN_CACHE_ROOT=<registered clone>, TARGET_ROOT=<project>"
+  else
+    failc "AC-174-5" "Step 0 block evaluated to S='$_s0S' PLUGIN_CACHE_ROOT='$_s0root' TARGET_ROOT='$_s0t' (expected S=$PR1/skills/install/scripts, root=$CLONE1, target=$ABSENT_TARGET); stderr='$(head -c 300 "$I174_WORK/step0.err")'"
+  fi
+  # Non-vacuity of the evaluation: the same block under the bare config (no
+  # clone anywhere) must leave PLUGIN_CACHE_ROOT empty, not fall back to ../..
+  _s0out=$(cd "$ABSENT_TARGET" && CLAUDE_CONFIG_DIR="$CFG4" CLAUDE_PLUGIN_ROOT="$PR4" CLAUDE_PROJECT_DIR="$ABSENT_TARGET" bash "$_s0f" 2>/dev/null)
+  if [ -z "$(get_kv "$_s0out" PLUGIN_CACHE_ROOT)" ]; then
+    pass "AC-174-5 (non-vacuity): with no clone anywhere the Step 0 block leaves PLUGIN_CACHE_ROOT empty (no silent ../.. fallback into cache/<mkt>/)"
+  else
+    failc "AC-174-5 (non-vacuity)" "expected an empty PLUGIN_CACHE_ROOT with no clone; got '$(get_kv "$_s0out" PLUGIN_CACHE_ROOT)'"
+  fi
+fi
+
+echo "== AC-174-6a: detect.sh hard error on an explicit unresolvable PLUGIN_CACHE_ROOT names the clone candidates =="
+run_detect "$ABSENT_TARGET" "$EMPTY_CACHE"
+if [ "$DETECT_CODE" -ne 0 ] && printf '%s\n' "$DETECT_OUT" | grep -q 'ERROR: PLUGIN_CACHE_ROOT unresolvable' \
+   && printf '%s\n' "$DETECT_OUT" | grep -q 'known_marketplaces.json' \
+   && printf '%s\n' "$DETECT_OUT" | grep -q 'plugins/marketplaces/autoflow/'; then
+  pass "AC-174-6a: detect.sh hard error lists the registry file and the conventional clone dir it would consult"
+else
+  failc "AC-174-6a" "expected the hard-error message to list the clone candidates; got exit=$DETECT_CODE: $(printf '%s' "$DETECT_OUT" | tr '\n' ' ' | head -c 400)"
+fi
+
+echo "== AC-174-6b: PLUGIN_CACHE_ROOT unset under the cache layout -> detect.sh self-resolves the clone (exit 0, VERSION_CACHE from the clone) =="
+_d6=$(CLAUDE_CONFIG_DIR="$CFG1" CLAUDE_PLUGIN_ROOT="$PR1" TARGET_ROOT="$ABSENT_TARGET" bash "$DETECT_SH" 2>&1); _d6rc=$?
+if [ "$_d6rc" -eq 0 ] && [ "$(get_kv "$_d6" INSTALL_STATE)" = "absent" ] \
+   && [ "$(get_kv "$_d6" VERSION_CACHE)" = "$(jq -r .version "$CACHE_MANIFEST")" ]; then
+  pass "AC-174-6b: detect.sh self-resolved the clone -> INSTALL_STATE=absent VERSION_CACHE=$(get_kv "$_d6" VERSION_CACHE) exit 0"
+else
+  failc "AC-174-6b" "expected exit 0, INSTALL_STATE=absent and VERSION_CACHE from the clone; got exit=$_d6rc: $(printf '%s' "$_d6" | tr '\n' ' ' | head -c 400)"
+fi
+
+echo "== AC-174-6c: an explicit wrong PLUGIN_CACHE_ROOT is NOT replaced by self-resolution even when the clone is resolvable =="
+_d6c=$(CLAUDE_CONFIG_DIR="$CFG1" CLAUDE_PLUGIN_ROOT="$PR1" TARGET_ROOT="$ABSENT_TARGET" PLUGIN_CACHE_ROOT="$EMPTY_CACHE" bash "$DETECT_SH" 2>&1); _d6crc=$?
+if [ "$_d6crc" -ne 0 ] && printf '%s\n' "$_d6c" | grep -qF "PLUGIN_CACHE_ROOT='$EMPTY_CACHE'"; then
+  pass "AC-174-6c: explicit wrong value stays a hard error naming that value (exit $_d6crc)"
+else
+  failc "AC-174-6c" "expected a hard error naming the explicit value; got exit=$_d6crc: $(printf '%s' "$_d6c" | tr '\n' ' ' | head -c 300)"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
