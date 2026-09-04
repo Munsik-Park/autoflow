@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/adr/0020-acceptance-criterion-authority.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "79d55bf8ba61a62c00e308f178c96f590a28025fc67190391a57a4cfae65d837"
+      "sha256": "9f256079db214f22660aa944a4e4d38de0f3d2a2b289fc2e04ee8caa7c40ebeb"
     },
     {
       "source": "docs/adr/0021-c7-pilot-spawn-mode-result.md",
@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/adr/0022-test-necessity-and-three-tier-ac-guard.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "50978ba130ae5972e681c7247e9b178d4b5da9b12e25c2e9e3f3c76d5b605079"
+      "sha256": "c903dd5b6c8e0b1a14fb456d07dbdb331d6a65a6267511c5ad2c28dbce63dcda"
     },
     {
       "source": "docs/adr/README.md",

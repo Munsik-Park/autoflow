@@ -165,7 +165,6 @@ change; only an operator decision may make it. The flow stops and asks.**
   "When to Create an ADR" trigger area — so it lands with, or ahead of, the mechanism it governs.
 
 ## Superseding note (issue #166)
-<!-- wording drafted under issue #166; operator confirmation pending -->
 
 The ARCHITECT deliberation returns to its original form — participants discuss a topic in relayed
 turns and report their conclusions — so the automatic Reconcile join between the issue's acceptance

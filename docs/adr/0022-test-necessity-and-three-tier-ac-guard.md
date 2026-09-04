@@ -164,7 +164,6 @@ verification method pass through three tiers, of which the operator is only the 
   kept for comparison. Everything else in this ADR is unchanged.
 
 ## Superseding note (issue #166)
-<!-- wording drafted under issue #166; operator confirmation pending -->
 
 Tier 3's automatic trigger — the Reconcile channel's `dropped` and `unreasoned` findings raised
 against the converged verification design — is retired with the ARCHITECT deliberation's return to
