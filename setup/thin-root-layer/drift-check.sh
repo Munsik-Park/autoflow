@@ -55,17 +55,20 @@ fi
 MANIFEST="$TARGET_ROOT/.claude/autoflow/manifest.json"
 SHIM_REF="$TARGET_ROOT/.claude/autoflow/claude-md-shim.md"
 PIN_REF="$TARGET_ROOT/.claude/autoflow/settings-pin.json"
-# The plugin / marketplace resolver: the target's shipped copy first; otherwise
-# the copy beside THIS script's own tree — when this script runs from a source
-# checkout or the marketplace clone (`setup/thin-root-layer/`, which is how the
-# install skill's detect.sh runs it as the cache oracle against a target),
-# $SCRIPT_DIR/../.. is that repository root. A target stamped before the
-# resolver shipped is thereby still compared against upstream (D4), instead of
-# the comparison silently SKIPping on the very bundles it exists to catch.
-PLUGIN_ROOT_LIB=""
-for _lib_cand in "$TARGET_ROOT/scripts/lib/plugin-root.sh" "$SCRIPT_DIR/../../scripts/lib/plugin-root.sh"; do
-  if [ -f "$_lib_cand" ]; then PLUGIN_ROOT_LIB="$_lib_cand"; break; fi
-done
+# The plugin / marketplace resolver is sourced from THIS script's own tree and
+# nowhere else: $SCRIPT_DIR/../../scripts/lib/plugin-root.sh. Installed at
+# .claude/autoflow/drift-check.sh that is the target's own shipped copy; run
+# from a source checkout or the marketplace clone (setup/thin-root-layer/ —
+# how the install skill's detect.sh runs it as the cache oracle against a
+# target) it is that repository's copy. The one thing this must never be is
+# $TARGET_ROOT/scripts/lib/plugin-root.sh resolved by the oracle: that file is
+# target-controlled and the oracle runs BEFORE the operator confirms a stamp,
+# so sourcing it would execute the target's shell code inside a read-only
+# detection (PR #172 review, High). The target's copy is hashed by D1 like any
+# other artifact, never executed by the oracle. A target stamped before the
+# resolver shipped is still compared against upstream (D4) — the oracle
+# brings its own copy.
+PLUGIN_ROOT_LIB="$SCRIPT_DIR/../../scripts/lib/plugin-root.sh"
 
 FAIL_COUNT=0
 SKIP_COUNT=0
@@ -92,11 +95,10 @@ sha256_of() {
   printf '%s' "$_h"
 }
 
-# No resolver on either side (a partial stamp of a target, or this script copied
-# out of its tree) degrades to SKIP with the reason named, never to a silent
-# PASS.
+# No resolver beside this script (a partial stamp, or the script copied out of
+# its tree) degrades to SKIP with the reason named, never to a silent PASS.
 _lib_ok=0
-if [ -n "$PLUGIN_ROOT_LIB" ] && [ -f "$PLUGIN_ROOT_LIB" ]; then
+if [ -f "$PLUGIN_ROOT_LIB" ]; then
   # shellcheck source=/dev/null
   . "$PLUGIN_ROOT_LIB" && _lib_ok=1
 fi

@@ -61,6 +61,12 @@
 #   DET-PRE-RESOLVER      detect.sh on that same-version pre-resolver target
 #                         with the current clone -> DRIFT_STATE=drift,
 #                         VERSION_SKEW=no                    [review finding 1]
+#   ORACLE-NO-TARGET-CODE the cache oracle never sources the TARGET's
+#                         scripts/lib/plugin-root.sh: a marker-writing target
+#                         copy leaves no marker under detect.sh, and D1
+#                         reports it as content drift  [review finding, High]
+#   TARGET-OWN-RESOLVER   run from inside the target, drift-check sources the
+#                         target's own copy (same trust domain) — D2 resolves
 #   D5-MATCH              installed plugin == clone plugin source -> PASS: D5
 #   D5-CHANGED            a clone hook file differs -> FAIL: D5 naming it,
 #                         HINT names /plugin update
@@ -437,6 +443,49 @@ else
     pass "DET-D4-DRIFT: a D4 FAIL line reads as DRIFT_STATE=drift with DRIFT_FIRST carrying it (a re-stamp is the remedy the skill offers)"
   else
     failc "DET-D4-DRIFT: $(printf '%s\n' "$out" | grep '^DRIFT_' | tr '\n' ' ')"
+  fi
+fi
+
+# -----------------------------------------------------------------------------
+echo "== TRUST: the cache oracle never executes target-controlled code =="
+# -----------------------------------------------------------------------------
+# /autoflow:install Step 1 is read-only and runs BEFORE the operator confirms a
+# stamp; the oracle it runs is the cache's drift-check.sh, and the target's
+# own files are hashed, never executed. The resolver is the one file the
+# oracle sources, so it must come from the oracle's own tree — a tampered
+# target copy is a D1 finding, not a code path.
+TT="$WORK/target-tampered-resolver"; stamp "$TT"
+if [ ! -f "$TT/scripts/lib/plugin-root.sh" ]; then
+  failc "ORACLE-NO-TARGET-CODE: stamp into $TT did not deliver scripts/lib/plugin-root.sh"
+else
+  printf '#!/bin/sh\n: > "%s/PWNED_MARKER"\nautoflow_plugin_root() { return 1; }\nautoflow_marketplace_root() { return 1; }\n' "$TT" > "$TT/scripts/lib/plugin-root.sh"
+  out=$(TARGET_ROOT="$TT" PLUGIN_CACHE_ROOT="$REPO_ROOT" sh "$DETECT_SH" 2>&1)
+  if [ ! -e "$TT/PWNED_MARKER" ] && printf '%s\n' "$out" | grep -q '^DRIFT_STATE=drift$' \
+     && printf '%s\n' "$out" | grep -q '^DRIFT_FIRST=content drift: scripts/lib/plugin-root.sh'; then
+    pass "ORACLE-NO-TARGET-CODE: detect.sh leaves no marker (the target's resolver was not sourced) and D1 reports it as content drift"
+  else
+    failc "ORACLE-NO-TARGET-CODE: marker=$([ -e "$TT/PWNED_MARKER" ] && echo CREATED || echo absent); $(printf '%s\n' "$out" | grep -E '^DRIFT_(STATE|FIRST)' | tr '\n' ' ')"
+  fi
+  # The same boundary for a direct oracle run from the source tree.
+  rm -f "$TT/PWNED_MARKER"
+  out=$(env CLAUDE_PROJECT_DIR="$TT" AUTOFLOW_MARKETPLACE_ROOT="$REPO_ROOT" sh "$DRIFT_SRC" 2>&1); rc=$?
+  if [ ! -e "$TT/PWNED_MARKER" ] && [ "$rc" -ne 0 ] && printf '%s\n' "$out" | grep -q '^FAIL: D1 -- content drift: scripts/lib/plugin-root.sh' \
+     && printf '%s\n' "$out" | grep -q '^PASS: D4'; then
+    pass "ORACLE-NO-TARGET-CODE: the source-tree oracle run directly also leaves no marker, flags the file in D1, and still evaluates D4 from its own resolver"
+  else
+    failc "ORACLE-NO-TARGET-CODE (direct oracle): marker=$([ -e "$TT/PWNED_MARKER" ] && echo CREATED || echo absent) rc=$rc; $(printf '%s\n' "$out" | grep -E ': D[14]' | head -2 | tr '\n' ' ')"
+  fi
+fi
+
+# Run from INSIDE the target (.claude/autoflow/drift-check.sh), the script's
+# own tree IS the target, so its shipped resolver copy is what resolves — the
+# existing D2-CACHE-PASS leg above already proves that path; pin it by name.
+if printf '%s\n' "$DRIFT_OUT" >/dev/null && [ -f "$T1/.claude/autoflow/drift-check.sh" ]; then
+  run_drift "$T1" CLAUDE_CONFIG_DIR="$WORK/cfg-d2-ok"
+  if printf '%s\n' "$DRIFT_OUT" | grep -q '^PASS: D2'; then
+    pass "TARGET-OWN-RESOLVER: the installed detector resolves through the target's own shipped resolver copy (same trust domain)"
+  else
+    failc "TARGET-OWN-RESOLVER: $(printf '%s\n' "$DRIFT_OUT" | grep ': D2' | head -1)"
   fi
 fi
 
