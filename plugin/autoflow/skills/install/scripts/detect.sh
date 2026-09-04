@@ -12,8 +12,11 @@
 #
 # Env contract (feature-design §3.2):
 #   TARGET_ROOT        consuming project root (default ${CLAUDE_PROJECT_DIR:-$PWD})
-#   PLUGIN_CACHE_ROOT  marketplace-cache repo root (holds setup/manifest.json);
-#                      SKILL.md passes ${CLAUDE_PLUGIN_ROOT}/../..
+#   PLUGIN_CACHE_ROOT  the marketplace clone (holds setup/manifest.json);
+#                      SKILL.md Step 0 passes what resolve-cache-root.sh
+#                      printed. Unset or empty -> resolved here through the
+#                      same script (issue #174); a caller-supplied value is
+#                      validated as given, never replaced.
 #
 # Exit: 0 normally (a non-git / non-GitHub target is NOT an error — those
 # derived fields are simply omitted); non-zero ONLY on hard error (cannot
@@ -34,20 +37,38 @@
 
 set -u
 
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+RESOLVER="$SCRIPT_DIR/resolve-cache-root.sh"
+
 TARGET_ROOT="${TARGET_ROOT:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 PLUGIN_CACHE_ROOT="${PLUGIN_CACHE_ROOT:-}"
+
+# Unset or empty: resolve the clone the way SKILL.md Step 0 does — the
+# harness's registries first, the ${CLAUDE_PLUGIN_ROOT}/../.. arithmetic last
+# (issue #174: under /plugin install that arithmetic lands in cache/<mkt>/,
+# which holds no setup/). An explicit value is never replaced: a wrong path
+# the caller named is the caller's error to see, not one to paper over.
+if [ -z "$PLUGIN_CACHE_ROOT" ] && [ -f "$RESOLVER" ]; then
+  PLUGIN_CACHE_ROOT=$(sh "$RESOLVER" 2>/dev/null) || PLUGIN_CACHE_ROOT=""
+fi
 
 # ── Hard-error guard: the cache source repo must be resolvable ────────────────
 CACHE_MANIFEST="$PLUGIN_CACHE_ROOT/setup/manifest.json"
 if [ -z "$PLUGIN_CACHE_ROOT" ] || [ ! -f "$CACHE_MANIFEST" ]; then
   echo "ERROR: PLUGIN_CACHE_ROOT unresolvable or missing setup/manifest.json (PLUGIN_CACHE_ROOT='$PLUGIN_CACHE_ROOT')" >&2
+  if [ -f "$RESOLVER" ]; then
+    # The clone's location is read from this list, never guessed (issue #174).
+    echo "  marketplace clone candidates, in order (each must hold setup/manifest.json):" >&2
+    sh "$RESOLVER" --candidates 2>/dev/null | sed 's/^/    /' >&2
+    echo "  remedy: /plugin marketplace add Munsik-Park/autoflow, or export AUTOFLOW_MARKETPLACE_ROOT=<clone root>" >&2
+  fi
   exit 1
 fi
 
 INSTALLED_MANIFEST="$TARGET_ROOT/.claude/autoflow/manifest.json"
 # DRIFT oracle is sourced from the cache (trusted) domain, NOT the target: the
 # target-owned drift-check.sh is untrusted pre-confirmation (a tampered copy must
-# never be executed). $PLUGIN_CACHE_ROOT is already hard-validated at L36. The
+# never be executed). $PLUGIN_CACHE_ROOT is already hard-validated above. The
 # target copy is read/hashed by the oracle's D1, never executed by detect.sh.
 DRIFT_ORACLE="$PLUGIN_CACHE_ROOT/setup/thin-root-layer/drift-check.sh"
 

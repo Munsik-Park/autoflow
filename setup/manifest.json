@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a07da80da15e51091641ca266964014dd53b90d546bcbb2065726d31387048c8"
+      "sha256": "5845accdec4d5052ef78ebb499d726b51d55e70f51a70beaa88bd81cb3b7ae82"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
