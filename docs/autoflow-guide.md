@@ -187,7 +187,7 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
 
 **[MUST] Preserve the previous cycle's artifacts** (issue #135): before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, and `issue-{N}-review-findings.md`, which are cycle-spanning. Without this the new cycle's Phase A/B/3, REFINE and AUDIT overwrite the flat names, and the bounded path below has nothing to reuse.
 
-**Scope-bounded entry** (issue #135): when `.autoflow/issue-{N}-review-findings.md` carries `scope-bounded: true` (written by HANDOFF step 6.5 from `scripts/review/scope-bounded.sh triage`), the cycle takes the **bounded path**: DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs with `args: { issue: "N", bounded: "true" }` (Draft + the config's bounded turn ceiling; first-turn devil's advocate and resume unchanged), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE's whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-deliberated with the full cap (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `scope-bounded: false` or an absent line is the full path.
+**Scope-bounded entry** (issue #135): when `.autoflow/issue-{N}-review-findings.md` carries `scope-bounded: true` (written by HANDOFF step 6.5 from `scripts/review/scope-bounded.sh triage`), the cycle takes the **bounded path**: DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs the same workflow with its brief stating the bounded scope — the Medium+ finding and the PR diff file set (ARCHITECT > *Re-discussion*), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE's whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-discussed on the full topic (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `scope-bounded: false` or an absent line is the full path.
 
 **Resume procedure** (requested issue's own state file reads `active:true` — a mid-cycle session resumed after an abnormal end): resume deterministically, do not restart from PREFLIGHT.
 1. **Read the last confirmed point** from the state file: the highest phase whose gate `scores` are recorded in `phases` (or `verdict` set for `gate_hypothesis_cause`) is the last *passed* gate; `phase` gives the coarse marker.
@@ -247,37 +247,43 @@ Feat issues skip this gate.
 
 ## ARCHITECT — Plan Synthesis (Developer AI + Test AI)
 
-Both perspectives participate, but the discussion runs inside an isolated
-**`Workflow`** (the facilitator — `architect-deliberation`), **not** as Agent-Teams
-teammates messaging the orchestrator: the Developer-AI and Test-AI run as in-script
-sub-agents, their cross-talk stays in workflow variables, and only a single verdict
-(`CONVERGED` + artifact paths, `AC_CHANGE` on an acceptance-criterion change that pauses for the
-operator, or `ESCALATE` at the configured turn ceiling) returns to the
-orchestrator. Convergence is turn-based (issue #152): the two participants alternate
-single-participant turns, each reporting `modified` and `accept`, and the deliberation ends
-only when two consecutive turns both report an unmodified accept — a turn that revised a
-document never converges, so a ceiling-turn revision simply escalates and its review belongs
-to a resumed exchange. Every Converge turn prompt states that rule to the participant in one
-sentence (issue #159): accepting the current design means making no edit and reporting
-`modified: false`; rewording that changes nothing the design states is not a reason to edit —
-without the sentence, participants who accepted the design kept polishing a line each turn and
-never formed the unmodified-accept pair. The turn ceilings are config values
-(`.claude/autoflow/spawn-policy.json` > `deliberation_caps`). The facilitator also appends the settled decisions to the decision
-ledger. Rationale: [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation)
-> Deliberation Isolation; contract: [`teammate-contracts.md`](teammate-contracts.md)
-> Facilitator. The orchestrator invokes the facilitation workflow, then **verifies** the
-returned verdict — spot-checking targeted artifact excerpts against re-derived facts (the
-full read-and-score is GATE:PLAN's); it does not facilitate the discussion turn-by-turn and
-does not receive the round-by-round messages.
+Both perspectives participate, and the discussion runs inside an isolated **`Workflow`** (the
+facilitator — `architect-deliberation`), **not** as teammates messaging the orchestrator: the
+Developer AI and the Test AI run as in-script sub-agents and their turns stay in workflow
+variables. The workflow has three phases — **Discuss**, **Report**, **Record** (issue #166).
+Invocation: `Workflow({ name: "architect-deliberation", args: { issue: "N" } })`.
 
-**Artifact-existence check (orchestrator-side).** On a `CONVERGED` return the orchestrator must
-confirm both design artifacts exist and are non-empty before GATE:PLAN — `.autoflow/issue-{N}-feature-design.md`
-and `.autoflow/issue-{N}-verification-design.md` — and treat a missing or empty one as
-ESCALATE-equivalent rather than proceeding. The workflow script cannot perform this check itself:
-the hosted Workflow runtime injects no filesystem access and rejects `import(` at parse time, so
-the capability lives at the layer that has a shell.
+**Discuss** is a relay. The Developer AI opens with a design proposal, the Test AI answers it, and
+the two alternate. Each turn receives one fixed prompt for its role, the topic stated once, and the
+transcript so far; the transcript is the participants' memory, and the other side's last message is
+what the turn answers. The design documents are written after the discussion, so nobody edits one
+while it runs. Each turn says whether it has anything further to raise, and the discussion ends
+when two consecutive turns both say it has nothing further — the participants' own conclusion ends
+it.
 
-**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the facilitator passes each in-script sub-agent only the documents its design task needs (e.g. the relevant `docs/adr/*`, `docs/design-rationale.md`). **Deliberation Isolation is unchanged** — the round-by-round cross-talk stays inside the workflow and only the verdict returns to the orchestrator.
+**Report** collects each participant's reading of the discussion: the design conclusions both
+accepted, and each point that participant considers worth raising to the orchestrator, with both
+positions and why it is worth raising. **Record** is one scribe that writes the feature design, the
+verification design and the report from those conclusions, followed by a ledger call that appends
+the agreed conclusions under the authority `ARCHITECT agreed`.
+
+The run returns `{ report: { agreed, unagreed[] }, artifacts, ledger, turns, summary, stopped }`.
+The orchestrator receives that object and routes it (*Report routing* below); it does not
+facilitate the discussion turn-by-turn and does not receive the turns. It **verifies** what the
+report rests on by spot-checking targeted artifact excerpts against re-derived facts — the full
+read-and-score is GATE:PLAN's. Rationale:
+[`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation;
+contract: [`teammate-contracts.md`](teammate-contracts.md) > Facilitator.
+
+**Artifact-existence check (orchestrator-side).** Before GATE:PLAN the orchestrator confirms the
+three artifacts the scribe writes exist and are non-empty — `.autoflow/issue-{N}-feature-design.md`,
+`.autoflow/issue-{N}-verification-design.md` and `.autoflow/issue-{N}-architect-report.md` — and
+treats a missing or empty one as an infrastructure cause to repair and re-run, rather than
+proceeding. The workflow script cannot perform this check itself: the hosted Workflow runtime
+injects no filesystem access and rejects `import(` at parse time, so the capability lives at the
+layer that has a shell.
+
+**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the facilitator passes each in-script sub-agent only the documents its design task needs (e.g. the relevant `docs/adr/*`, `docs/design-rationale.md`). **Deliberation Isolation is unchanged** — the turns stay inside the workflow and only the report returns to the orchestrator.
 
 **Roles**:
 - **Developer AI**: feature design (changed files, API interface, data structures).
@@ -308,7 +314,7 @@ the capability lives at the layer that has a shell.
   disposition, and states its `Reason` in one line — the row is never deleted. A design-added
   criterion (`—`) is never a finding and owes no reason. This is what turns "was an acceptance
   criterion dropped?" into a key join rather than a reading of prose, which is what lets the
-  Reconcile check stand in front of a human decision (Reconcile > *Acceptance-criterion change*
+  orchestrator and the two gates put such a change in front of the operator (*Report routing*
   below).
 
 - For untestable items: state the reason and the alternative (design change / manual delegation (except where the composition-oracle clause applies) / mock (same exception)).
@@ -319,27 +325,18 @@ the capability lives at the layer that has a shell.
   Derived artifacts) — do not wait for a test/CI failure to admit it
   (#800 `607720e`).
 
-#### Record rules
+3. **Deliberation report** (scribe-written): `.autoflow/issue-{N}-architect-report.md`, under the
+   headings `## Agreed` — one line per conclusion both participants accepted — and `## Unagreed` —
+   per point, the point, the Developer AI's position, the Test AI's position, and why it was
+   raised. This is the artifact the orchestrator routes (*Report routing* below).
 
-The deliberation's own record lives in the **issue register** the facilitation script holds, not
-in the two design documents. Consequences for what each artifact carries:
+#### Record
 
-- **The design documents are design-only.** They state the current design and its conclusions —
-  no round history, no per-round open/resolved tables, no closure rationale parked for a later
-  round to read. A superseded passage is rewritten, not annotated.
-- **No transcription.** Measurement logs, command output and code text are never copied into a
-  design document. Evidence is one line of *what was checked, how*, re-verified next round with
-  tooling rather than by re-reading the document.
-- **Readable naming, no tallies.** An issue is referred to by a short readable name, never by a
-  serial number, and is updated in place rather than renumbered. Totals and counts are not
-  written into the documents; the register is the count.
-- **The register is the durable channel.** Each entry carries `name` / `conclusion` / `evidence` /
-  `status` (`open` / `agreed` / `rejected`) plus the side that raised it, is rendered into both
-  round prompts every round from round 2 on, and closes only when its **raiser** returns a
-  disposition. On `CONVERGED`, rejected entries are appended to the decision ledger under
-  authority `ARCHITECT rejected`, which the next deliberation's Draft prompts read back — the
-  cross-session half of the no-re-litigation rule. See
-  [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
+The scribe writes the three artifacts after the discussion, from the report. The two design
+documents state the design and the conclusions the participants reached, in the form each is
+defined above; the report states what was agreed and what was not. The transcript is the
+discussion's own record and stays inside the workflow; the report is what leaves it. See
+[`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
 
 #### Test necessity
 
@@ -398,7 +395,7 @@ a test shape.
 - **Effective from** — the obligation binds verification designs authored after this clause lands;
   a cycle already past ARCHITECT is not retroactively deficient. The dispositions and reasons are
   the Test AI's to author, and the ARCHITECT facilitator may record them on the Test AI's behalf
-  when it writes the converged artifact.
+  when it writes the verification design.
 
 #### Verification depth
 
@@ -416,16 +413,15 @@ a test shape.
   undiversified duplication is over-verification, which GATE:PLAN's `Scope` criterion scores as
   over-engineering.
 - **Amendment** — a risk discovered mid-deliberation may raise depth, provided the reason is
-  recorded as an entry in the **issue register** the facilitation script holds. Depth is revisable,
-  not capped, and the amendment adds no artifact: the register is already the deliberation's
-  durable channel (*Record rules* above).
+  stated in the discussion and carried into the verification design. Depth is revisable, not
+  capped, and the amendment adds no artifact (*Record* above).
 - **[MUST]** State the determination once in the verification design. The obligation is
   unconditional — every verification design has at least one layer — so an absent statement is a
   missing obligation, not a "not applicable".
 - **Effective from** — the obligation binds verification designs authored after this clause lands;
   a cycle already past ARCHITECT is not retroactively deficient. The determination is the Test AI's
   to author, and the ARCHITECT facilitator may record it on the Test AI's behalf when it writes the
-  converged artifact.
+  verification design.
 
 #### Composition oracle
 
@@ -460,140 +456,83 @@ a test shape.
 - **Effective from** — the obligation binds verification designs authored after this clause lands;
   a cycle already past ARCHITECT is not retroactively deficient. The determination is the Test AI's
   to author, and the ARCHITECT facilitator may record it on the Test AI's behalf when it writes the
-  converged artifact.
+  verification design.
 
 ### Testability-driven design
 
 When the Test AI flags an item as "not automatable", the team discusses whether a feature-design change makes it testable. If not, the item stays as a manual scenario with a stated reason (except where the composition-oracle clause applies).
 
-### Agreement criteria
+### Report routing
 
-Convergence is turn-based (issue #152): the deliberation ends only when two consecutive turns —
-one per participant — both report `modified: false, accept: true`; a turn that revised a
-document never converges, and every other state continues to the next participant. The
-Discussion Protocol applies. Before accepting, one exchange must verify the resolution conforms
-to any governing ADR — the first, non-gated approach check (GATE:PLAN is the gated one); a
-divergence is raised as a counter and `accept` is withheld. No score.
-Mutual acceptance is necessary but not sufficient: a converged run additionally passes the
-**Reconcile** acceptance-criterion check below, because whether the issue's acceptance criteria may
-change is not the deliberation's to settle.
-The facilitator records the converged decisions in the ledger and returns
-`CONVERGED` + artifact paths; a converged run carrying an unauthorized acceptance-criterion change
-returns `AC_CHANGE`; non-convergence within the configured turn ceiling returns `ESCALATE`.
+The orchestrator receives the report and routes it. The discussion itself runs under the Discussion
+Protocol ([`teammate-common-rules.md`](teammate-common-rules.md) > Discussion Protocol), whose
+first-exchange devil's advocate carries ADR conformance as one of its axes: the resolution is
+checked against any governing ADR. That is the first, non-gated approach check, and GATE:PLAN is
+the gated one.
 
-### Acceptance-criterion change — the `AC_CHANGE` pause (operator-facing)
-
-An issue's acceptance criteria are the **operator's**, not the deliberation's. Nothing in the flow
-used to ask *who has the authority* to drop one: ARCHITECT converged on mutual ACCEPT alone, and the
-two gates behind it scored the quality of the stated reason. The **Reconcile** phase is the
-checkpoint that asks.
+- **`stopped` is non-null.** The run could not be carried out — a participant, a report or the
+  scribe was missing, or the spawn policy would not load. Repair the cause and re-run. This is
+  infrastructure state, never a design outcome, and it consumes no counter.
+- **No un-agreed point.** The design is the participants' joint conclusion. Run the
+  artifact-existence check, then GATE:PLAN (a fresh Evaluation AI on the 5-item rubric below). A
+  GATE:PLAN FAIL re-enters the deliberation with a brief (*Re-discussion* below); that is the
+  existing `GATE:PLAN FAIL → ARCHITECT (max 3×)` re-entry.
+- **An un-agreed point.** One judgment, and it is the orchestrator's: discuss further, or stop.
+  - **Discuss further** — prepare what the next discussion needs and re-run with that preparation
+    as the `brief`. A preparation may carry the un-agreed points as a narrowed topic, a fact the
+    orchestrator verified in the meantime (`path:line`, command output), the prior report's path,
+    or a different perspective for a participant to take. Record the judgment as an `O` ledger
+    entry — decision and grounds, authority `orchestrator judgment`. A re-discussion after an
+    un-agreed report is not a GATE:PLAN re-entry and consumes no re-entry counter.
+  - **Stop** — report situation-first ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles >
+    Human-decision presentation), set `active: false`, `phase: "awaiting-user"`. The user's
+    decision drives re-entry.
+- **An agreed conclusion changes an acceptance criterion's content.** Excluding, revising or
+  splitting an issue acceptance criterion is the operator's authority. Report situation-first
+  naming the affected criteria and what the design proposes for each, set `active: false`,
+  `phase: "awaiting-user"`, and do not spawn GATE:PLAN. Record the answer as one `[ac-decision]`
+  ledger entry per decided AC in the grammar at [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger >
+  *Acceptance-criterion decisions*; on `revised` or `split`, edit the Phase B acceptance-criterion
+  table to match; then continue to GATE:PLAN. The pause is a human authority checkpoint inside the
+  deliberation already counted, so it consumes no ARCHITECT re-entry budget.
 
 **What the operator is asked, and what they are not.** A reduction in *verification method* — an AC
 verified by an existing mechanism, a manual scenario, a delivery check, or by nothing at all — is a
 verification-method choice, not a change to the criterion. It passes three tiers, and only the third
 is the operator:
 
-1. **Deliberation (ARCHITECT).** The deliberation may choose any disposition in the *Test necessity*
+1. **Deliberation (ARCHITECT).** The deliberation chooses any disposition in the *Test necessity*
    vocabulary for an issue AC, **with its reason stated in that row**. A weak reason is argued down
    here and never leaves the deliberation.
 2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
    PR body (HANDOFF step 4), so the reviewer judges each one on its stated reason. A doubtful
    judgment is caught here.
-3. **Operator.** Asked only when the AC's **content** must change — excluded, revised, or split.
+3. **Operator.** Asked when the AC's **content** must change. The options offered are exactly the
+   three: exclude the criterion, revise it in the proposed form, or split it into a separate issue.
 
-The findings below are exactly the states that reach tier 3: an AC no row carries, and a reduction
-with no reason for a reviewer to judge. Whether a row verifies the property its AC states is not a
-tier-3 state — that judgment is GATE:PLAN `Test plan`'s and GATE:QUALITY's (issue #160).
+Whether a row verifies the property its AC states is not a tier-3 question — that judgment belongs
+to GATE:PLAN `Test plan` and to GATE:QUALITY's assertion-claim alignment (issue #160). Those two
+gate checks, together with GATE:PLAN's AC-authority check, are the scored backstops behind the
+routing above (issue #166).
 
-**What runs.** Between `Converge` and `Ledger`, and **only on a converged run** (verdict precedence
-is `ESCALATE` before `AC_CHANGE` before `CONVERGED` — an infrastructure or non-convergence cause
-still outranks a design outcome), the facilitator calls one closed-schema comparison channel over
-three artifacts: the `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, the
-converged verification design's `Issue AC` column, and the issue ledger. The channel **transcribes**
-and never judges — whether a change was *justified* is exactly the faculty a well-written rationale
-can capture, and it is the operator's. The facilitator's own code derives, per AC id, at most one
-finding, first match wins:
+### Re-discussion
 
-| Transcribed state | Finding |
-|---|---|
-| no verification-design row carries the id | `dropped` |
-| a row carries it with a disposition other than `automated` and its `Reason` cell is empty or `—` | `unreasoned` |
+A re-discussion is the same workflow, invoked with the orchestrator's preparation:
+`Workflow({ name: "architect-deliberation", args: { issue: "N", brief: "<preparation>" } })`. The
+brief is carried verbatim into the topic on every turn, and it is accepted only as a JSON / object
+argument.
 
-Both findings are computed without reading meaning — a key join and a cell-emptiness check. There
-is no third, semantic finding (issue #160 retired `substituted`, "the row asserts a different
-property than the issue's"): asked of a channel forbidden to judge, that reading degraded to a
-wording comparison, which paused #157 cycle 1 on a legitimate split of one criterion into two rows
-with different verification methods and would pass a real misreading that keeps the wording. A
-criterion carried by more than one row, or restated in a row's own words, is not a finding. Whether
-a row verifies the property its AC states is judged where an AC-reading rubric already exists:
-GATE:PLAN `Test plan` (below) and GATE:QUALITY's assertion-claim alignment.
+A brief carries what the next discussion needs — for instance a narrowed topic, facts the
+orchestrator verified since the prior run, the prior report's path, a perspective for a participant
+to take, or an evaluation to answer. On a GATE:PLAN FAIL re-entry the brief names the two design
+documents and the evaluation's failed items, so the discussion answers the evaluation instead of
+restarting from the issue. On a scope-bounded review-response cycle (PREFLIGHT > *Scope-bounded
+entry*) the brief states the bounded scope: the Medium+ finding and the PR diff file set; a fix that
+adds a file leaves the bounded path, and the re-discussion runs on the full topic.
 
-A **reasoned** reduced disposition is not a finding — it is the deliberation exercising tier 1, and
-it is carried to the PR body for tier 2. The channel transcribes only whether a reason is *stated*,
-never whether it is *good*: judging a reason is the faculty a well-written rationale can capture, so
-it belongs to the reviewer and to GATE:PLAN's `Scope` depth items, not to a comparison channel. A
-finding covered by an `[ac-decision]` ledger entry naming the same AC id (exact match after
-trimming — never a prefix) is **authorized** and is not a pause.
-
-**Fail-closed.** A null return, a malformed payload, or an absent, empty or unparseable AC table
-resolves to `AC_CHANGE` with its own sentinel — `ac reconciliation unavailable` or `ac list absent` — rather than
-degrading to `CONVERGED`. Degrading would silently restore the hole in the one failure mode where
-nothing else is watching. The sentinel is carried on the return's own `acReason` field, not inside
-`escalation`, so the operator can tell an infrastructure pause from a real acceptance-criterion
-finding. A well-formed payload whose transcribed row set is **empty** takes the `ac list absent`
-sentinel rather than converging: a channel that transcribed nothing is indistinguishable from one
-that found no table, and only the fail-closed reading keeps an unread source from passing silently
-— the same reading GATE:PLAN's AC-authority check already applies to an absent, empty or
-unparseable table.
-
-**Orchestrator disposition.** On `AC_CHANGE`: report **situation-first**
-([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation) naming the
-affected criteria and what the design proposes for each, set `active: false`,
-`phase: "awaiting-user"`, and **do not spawn GATE:PLAN**. The options offered are: exclude the
-criterion, revise it in the proposed form, or split it into a separate issue.
-
-**Recording the answer and re-entering.** The operator's answer is one `[ac-decision]` ledger entry
-per decided AC, in the grammar fixed at [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger >
-*Acceptance-criterion decisions*; when the disposition is `revised` or `split`, the Phase B AC table
-is edited to match first. Re-entry is the ordinary resume,
-`Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })` — the run mints
-one open register entry per pause cause, so the resume is not refused by the `no open entry` guard,
-and those minted entries are the resumed round's agenda. An AC pause and its resume consume **no**
-ARCHITECT re-entry budget (*Cap and counter accounting* below): the pause is a human authority
-checkpoint inside the deliberation already counted.
-
-**The infrastructure pause has no exit mechanism, by decision.** `ac reconciliation unavailable`
-is not clearable by an `[ac-decision]` entry — that path produces no finding for an entry to cover —
-so **every resume re-runs Reconcile** and re-pauses until the underlying cause is repaired. This is
-an accepted consequence, not an oversight: it follows the contract every other infrastructure
-escalation in this workflow already has (none carries a bounded retry or an in-flow override), and
-the operator's exit is the ordinary one — author the missing Phase B AC table or verification-design
-rows, or re-run once the channel recovers.
-
-### Bounded — a scope-bounded review-response deliberation
-
-When the review-response cycle entered on `scope-bounded: true` (PREFLIGHT > *Scope-bounded
-entry*), the orchestrator invokes
-`Workflow({ name: "architect-deliberation", args: { issue: "N", bounded: "true" } })`. The run is
-the cold path with one difference: its turn ceiling is the config's `bounded_max_turns` instead of
-`max_turns` (`.claude/autoflow/spawn-policy.json` > `deliberation_caps`). Draft runs, the
-first-turn devil's-advocate rule holds, and an `ESCALATE` may be resumed exactly as below (the
-resume admits one further exchange from the register regardless of the ceiling the escalated run
-had). `bounded` is accepted only as a JSON / object argument; a malformed value fails loud like a
-malformed `resume`. Rationale: [`design-rationale.md`](design-rationale.md) > Decision 12.
-
-### Resume — re-entering an ESCALATEd deliberation (operator-facing)
-
-An `ESCALATE` return hands the decision to the operator. Re-invoking the workflow bare would cold-restart it — Draft re-authors both design documents from scratch and turn numbering restarts at 1. `resume` is the alternative: it re-enters the deliberation at the state the prior run left in its register.
-
-**Procedure**:
-
-1. **Read the register** — `.autoflow/issue-{N}-architect-register.json`. Its `entries` show every concern the prior run raised with its `conclusion`, `evidence` and `status`; `escalation` states why the run stopped. Its `lastResponses` field records each side's final turn report (`modified`/`accept` plus counters) — before deciding whether to spend a resume exchange, open it and read which state the run ended in: a final turn still modifying means the revision cycle ran out of budget (an extension is the natural prescription), while an unmodified `accept: false` deadlock means the same objection is likely to repeat — deciding the disputed point directly (e.g. an `[ac-decision]` ruling) may serve better than an extension. After an `ESCALATE` the ledger holds one outcome entry and no per-side record. One control-flow path reads that field (issue #159): the resume admission, which reads each side's `accept` alone to recognize the **all-accept terminal state** below; the operator is its other reader.
-2. **Decide.** A resume is worth one exchange when the open entries look closable by one further exchange. When they do not — the split is a design disagreement needing a redefinition, or the run escalated for an infrastructure cause — resume is not the instrument, and the workflow refuses several of those shapes on its own (see the guard sentinels in [`teammate-contracts.md`](teammate-contracts.md) > Facilitator). One no-open-entry shape is admitted rather than refused (issue #159): the **all-accept terminal state** — `lastResponses` shows both sides `accept: true`, every entry is `agreed` or `rejected`, and the run escalated only because each accepting turn also edited a document, so no unmodified-accept pair formed. That is a deliberation one further exchange can close, and the resume enters it as a **confirmation exchange**: both turn prompts state that no entry is open, that the exchange exists to confirm the design as it stands, and that accepting it means making no edit. The register is facilitator-owned state — the operator never edits it to manufacture an agenda; the admission is the workflow's own.
-3. **Invoke** `Workflow({ name: "architect-deliberation", args: { issue: "N", resume: "true" } })`. Draft does not run and no design document is re-authored. The run continues from the register's `lastTurn` and admits **exactly one** further exchange (two turns, side parity continuing). The resumed run's first turn has no predecessor to pair with, so the exchange converges only on its own two unmodified-accept turns; the open register entries are the exchange's **agenda**, carried into both prompts, not a convergence condition — on a confirmation exchange there is none, and the stated agenda is the confirmation itself. A converged resume returns `CONVERGED` only when the Reconcile check that follows finds no unauthorized acceptance-criterion change, and `AC_CHANGE` when it does; otherwise the run returns `ESCALATE`, the register is rewritten, and a further resume re-enters on the same agenda rather than being latched out by the `already converged` guard.
-4. **Route the return** exactly as a cold run's: `CONVERGED` → GATE:PLAN (after the artifact-existence check above), `AC_CHANGE` → the *Orchestrator disposition* above — report situation-first, set `active: false` / `phase: "awaiting-user"`, and **do not spawn GATE:PLAN** (a resume converging into an AC pause routes to the operator, not to the gate), `ESCALATE` → back to the operator, who may resume again.
-
-**Cap and counter accounting** — a resume is an operator decision that admits one further **exchange** (two turns) past the persisted turn count and is unbounded in how many times it may be taken; it does **not** consume the ARCHITECT re-entry budget of 3 per cycle. The re-entry counter tracks whole re-deliberations triggered by GATE:PLAN FAIL or a VERIFY design contradiction; a resume is a continuation of the deliberation already counted, not a new one. The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so this accounting is the orchestrator's, and the return's `resumed` field is what lets it tell the two entries apart.
+The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so the ARCHITECT re-entry
+counter is the orchestrator's own accounting (Regressions, [`CLAUDE.md`](../CLAUDE.md) >
+Development Lifecycle).
 
 ---
 
@@ -612,7 +551,7 @@ list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the issu
 | Dependencies  | Are affected files and side effects identified? |
 | Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here) |
 | Security      | Any security implications introduced? |
-| Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160: this judgment is this item's, not Reconcile's) |
+| Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160) |
 
 `Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification layer or new spec file that names no failure mode another layer does not already catch (ARCHITECT > Output artifacts > *Verification depth*) fails Scope on the same clause. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
 
@@ -634,13 +573,14 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 
 - **The comparison** is a key join, both sides keyed: every `AC id` in the issue's
   `## Acceptance criteria` table against the `Issue AC` column of the verification design's
-  acceptance-criteria table. A **difference** is one of exactly two states, the same set
-  Reconcile derives: the design carries no row for the criterion (`dropped`); or it carries the
+  acceptance-criteria table. A **difference** is one of exactly two states, the set the ARCHITECT
+  Reconcile check derived until issue #166 retired it: the design carries no row for the criterion
+  (`dropped`); or it carries the
   criterion with a disposition other than `automated` and states no reason (`unreasoned`). A row
   whose proposition differs from the issue's is **not** a difference here — that is a semantic
   reading, scored under `Test plan` (issue #160). A reduced disposition **with**
   a stated reason is not a difference — it is a verification-method choice the deliberation is
-  authorized to make (ARCHITECT > *Acceptance-criterion change*), and its **reason quality** is
+  authorized to make (ARCHITECT > *Report routing*), and its **reason quality** is
   scored by `Scope` under the existing verification-depth clause above, adding no scored item.
 - **Trigger → cap**: any difference **not** covered by a `[ac-decision]`-marked ledger entry whose
   `- AC:` line names that same id caps `Scope` at 6. The marker is what the gate matches on;
@@ -880,7 +820,7 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
   a decision** — its marker is distinct from `review-autofix`, it is not an auto-resolution attempt, and it
   neither increments nor resets that cap's count window (step 6.5).
 - **Non-interference with the ARCHITECT ledger seed**: the entry's `authority` is `VERIFY step 3/4 record`,
-  outside the settled-decision set the seed rule selects (`ARCHITECT mutual ACCEPT` / `ARCHITECT rejected`),
+  outside the settled-decision set the seed rule selects (`ARCHITECT agreed` / `ARCHITECT mutual ACCEPT` / `ARCHITECT rejected`),
   so a detection record is never seeded into a later deliberation as a settled decision. The ledger's
   no-re-litigation rule binds decisions, so a later cycle's detection outcome neither supersedes nor is
   blocked by an earlier one.
@@ -1235,7 +1175,7 @@ on the same ledger, under its own marker `green-tree-use` and following the same
   mismatch. Inheritance never chains: every inherited Green traces in one hop to an entry written by a run
   that happened.
 - Like the *Detection record*, both entry types are a **record, not a decision**: each `authority`
-  sits outside the ARCHITECT settled-decision seed set (`ARCHITECT mutual ACCEPT` / `ARCHITECT rejected`),
+  sits outside the ARCHITECT settled-decision seed set (`ARCHITECT agreed` / `ARCHITECT mutual ACCEPT` / `ARCHITECT rejected`),
   and neither increments nor resets HANDOFF's auto-resolution count window (step 6.5).
 
 ---
@@ -1395,7 +1335,7 @@ GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate wo
 
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: full change set + test results + AUDIT result, plus the issue's acceptance-criterion list
-(`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the converged verification design,
+(`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the verification design,
 the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the REFINE report
 (`.autoflow/issue-{N}-refine-report.md`, section `## Out-of-scope observations — guard / boundary
 logic touched`).
@@ -1435,7 +1375,7 @@ each-item ≥ 7 criterion:
 - **Test quality / Completeness — assertion-claim alignment**: for each AC, confirm the
   test asserts the behavior the AC states, not a weaker proxy (e.g. "the function was
   called" where the AC requires a result shape) and not a different property than the
-  one the AC it names states (issue #160: Reconcile makes no such reading). Confirm every cited evidence line
+  one the AC it names states (issue #160). Confirm every cited evidence line
   (test summary, log excerpt) reproduces by re-running the cited command — evidence that
   was authored but never produced by a run caps the citing item at 6.
 - **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
@@ -1484,7 +1424,7 @@ principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-
 | `doc` | the item clears by editing documentation / comments with no behavior change | orchestrator doc commit → selected suites → GATE:QUALITY re-score |
 | `test` | the item clears by changing test assets | RED (current path) |
 | `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
-| `design` | the item clears only by revisiting the converged design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
+| `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
 | `operator` | the evaluator cannot classify with confidence | report situation-first, `active:false`, `phase:"awaiting-user"`; the operator's answer fixes the class |
 
 - **Default class per item** — the evaluator's starting point, overridable with a stated reason:
@@ -1613,7 +1553,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
    - **[MUST]** The host PR body carries a `## Verification dispositions` list: every **issue**
      acceptance criterion whose verification design row is typed anything other than `automated`,
      with its disposition and its one-line reason, copied from that row. This is the reviewer tier
-     of the three-tier acceptance-criterion guard (ARCHITECT > *Acceptance-criterion change*) — the
+     of the three-tier acceptance-criterion guard (ARCHITECT > *Report routing*) — the
      reviewer judges each stated reason, so a reduction the reviewer never sees is a tier that did
      not run. Form: [`pr-body-guide.md`](pr-body-guide.md) > *Verification dispositions*. When every
      issue AC is `automated`, the section says so in one line rather than being omitted.

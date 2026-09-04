@@ -241,7 +241,7 @@ When a teammate reports to the orchestrator — the report is the spawn's return
 
    Anchors must be deterministically re-derivable by the orchestrator (`git show <SHA>` / re-running the test command / `git show HEAD:<file>`). Reports without an anchor are rejected, not interpreted.
 
-6. **Facilitator return (deliberation phases)**: the facilitation `Workflow` returns one structured result, specific to the phase — ARCHITECT: `{ verdict: CONVERGED|AC_CHANGE|ESCALATE, acReason, acChange, artifact paths, ledger, summary }`; VERIFY: `{ test/impl self-check, next_action: RED|GREEN|SEQUENTIAL_FIX|EVALUATION_AI, ledger, summary }`. It carries no round-by-round messages and no duplicate dual reports. Shape and rationale: [host `CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation and [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
+6. **Facilitator return (deliberation phases)**: the facilitation `Workflow` returns one structured result, specific to the phase — ARCHITECT: `{ report: { agreed, unagreed[] }, artifacts, ledger, turns, summary, stopped }`; VERIFY: `{ test/impl self-check, next_action: RED|GREEN|SEQUENTIAL_FIX|EVALUATION_AI, ledger, summary }`. It carries no turn-by-turn messages and no duplicate dual reports. Shape and rationale: [host `CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation and [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
 
 ---
 

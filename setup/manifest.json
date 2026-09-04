@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f5fdd83832bedf6a7909b34a035899ed6b1f28db9eb8ffcce7c6395d7e706f2d"
+      "sha256": "bad1a4f6f43adde1062c7f1c9ec181531b6756f3344fbac16253660f8b6fff2f"
     },
     {
       "source": "docs/INDEX.md",
@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/adr/0018-verification-depth-justification.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3295ee838a98f44806a0be469efe721c1328e9385120f731e12b108d2528deb1"
+      "sha256": "a8eca8fd6e9dc554687a57598965a8032fa84acaa79ed8f232caeab2f703661c"
     },
     {
       "source": "docs/adr/0019-scope-fit-verification-policy.md",
@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/adr/0020-acceptance-criterion-authority.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1e98fb30dcb7fac1c5f0e403a25dc31717788b0e6ca60a506a78d75077299f7f"
+      "sha256": "9f256079db214f22660aa944a4e4d38de0f3d2a2b289fc2e04ee8caa7c40ebeb"
     },
     {
       "source": "docs/adr/0021-c7-pilot-spawn-mode-result.md",
@@ -90,28 +90,28 @@
       "dest": ".claude/autoflow/docs/adr/0022-test-necessity-and-three-tier-ac-guard.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "168d07b9ead4d6d7c648a9d94ae836967fb64071eeca71850a4ecc494b2c0847"
+      "sha256": "c903dd5b6c8e0b1a14fb456d07dbdb331d6a65a6267511c5ad2c28dbce63dcda"
     },
     {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cc38b86b69f00c39ee5dcfe1fff038cb80501b78deba6d4bfe98ec33a909d80f"
+      "sha256": "0977fb9d99c9a469ce0e6af239188e3554ee3b1a6ba0cc9958039202b4313e78"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e5534bfcd7efa35a1e652efabd850e346c32f9dd475cd2b4264f75666ab19b69"
+      "sha256": "6d79d1c1f53636ff5664e1b043927b78863e3e323dc54354e5997682e157b293"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ed86becf9a3d4bb4dfee326243a8be70370e035a2b584b790e0f28a1ff012825"
+      "sha256": "081f22d8031bed0d3987d8101b71e64ae835e6bdd67e049490a6d4e0c68852e8"
     },
     {
       "source": "docs/development-guideline.md",
@@ -160,14 +160,14 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2cbe4f22f3b3d65d20f9aae041a2d702be76bc7362dcee807c5cd31ecdc2e492"
+      "sha256": "8b92213b1d314ae407689fbefb24492ebbe0a6e98a25138bbbf082c278452163"
     },
     {
       "source": "docs/pr-body-guide.md",
       "dest": ".claude/autoflow/docs/pr-body-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "98c3d6bdacb954e624a23179c2988ab56abc9b5c47eac0b9c159f28b8640d48b"
+      "sha256": "98d41931814568e9b653590eb5cbb6625036ce284e28d65776ccd5b1c6402934"
     },
     {
       "source": "docs/repo-boundary-rules.md",
@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "66001342e6bf225ecc9e8f8ad7d18f9a64fd74495be27f83865c5342abfb2804"
+      "sha256": "741d5dcc94b791bb596a66c9db79ebbd1ad62d54b12b66047325eaf9b81eb3df"
     },
     {
       "source": "docs/teammate-common-rules.md",
@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e15ce10b6078819c1860d72275550f4bc79dd49973bee9090af18f2ea6d25a9d"
+      "sha256": "bd979795e929bdc0455a04ad6c403e60b8a8dbab781ceb64481b8e49ffa52791"
     },
     {
       "source": "docs/title-guide.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "91c6577daa3e8900e3cd36022e18f7a23dc8d8779670d88e221e8b12aee870e1"
+      "sha256": "90e6c8155567558ef61adea5dc824b39e81d35325b187f1bd5c3657c95807744"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -363,14 +363,14 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "dc8eb1c1bbff3470f5d5fc3a04a3dd2f61901d225a32a38d81df0f9aba7f45c5"
+      "sha256": "b8d2e5a74da251119c6e6b5610580238bc38f51bc44e986b6d0b23bfd932a539"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "4da07d43e97812d0906ef2ec3181a820ee9d1ceeeb8f7f9b688dadd8d69ed32a"
+      "sha256": "e94c988be02cffa3f0fe7b3138845c30619f2069590c3583c072f2a459acfdb5"
     },
     {
       "source": "scripts/lib/plugin-root.sh",

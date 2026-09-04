@@ -85,7 +85,10 @@ for your own runtime, so a re-stamp will not overwrite a configured policy and
 `drift-check.sh` reports it as target-owned rather than as content drift. On a
 version bump your obligation is to run
 `bash scripts/spawn-policy/spawn-policy.sh check` and add any newly required row —
-a scaffold is never refreshed for you. `check` validates the config's agent types
+a scaffold is never refreshed for you. Issue #166 renamed the architect
+deliberation's `workflow_sites` rows to `dev-turn` / `test-turn` / `scribe` /
+`ledger` and removed `deliberation_caps`, so a target scaffold still carrying the
+former rows fails closed at its next ARCHITECT until it is edited. `check` validates the config's agent types
 against the agent definitions the session actually loads: `.claude/agents/` when
 that directory holds `autoflow-*.md` files (the framework repository, or a target
 carrying its own copies), otherwise the installed plugin's `agents/` — resolved

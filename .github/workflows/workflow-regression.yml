@@ -4,11 +4,13 @@
 #
 # Mock-runtime regression for the deliberation workflow reference scripts
 # (.claude/workflows/{architect-deliberation,verify-cause-branch}.js). The harness
-# (test/workflows/run.mjs) locks their pure control-flow logic — convergence rule,
-# counter threading, ledger-authority branching, VERIFY next_action mapping,
-# missing-response handling, the arg guards — against a mock Workflow runtime. It does
-# NOT exercise a live Claude Code Workflow runtime (that is the operator-side smoke
-# scenario in docs/teammate-contracts.md > Verification scenarios).
+# (test/workflows/run.mjs) locks their pure control-flow logic — the ARCHITECT relay
+# (topic and transcript threading, the two-consecutive-done termination, the Report and
+# Record calls, the ledger condition), VERIFY next_action mapping, the spawn-policy
+# fail-closed guards, missing-response handling, the arg guards — against a mock
+# Workflow runtime. It does NOT exercise a live Claude Code Workflow runtime (that is
+# the operator-side smoke scenario in docs/teammate-contracts.md > Verification
+# scenarios).
 #
 # Why GitHub Actions and not Jenkins: the project's Jenkins pipeline is provisioned for
 # compose/shell validation and carries no node runtime — making the regression a hard

@@ -1,8 +1,0 @@
-{
-  "ac_source_present": true,
-  "ac_rows": [
-    { "ac": "AC1", "carried": true, "disposition": "automated", "reason_stated": true, "locator": "reconcile-substituted-removed", "proposed": "automated" },
-    { "ac": "AC2", "carried": true, "disposition": "automated", "reason_stated": true, "locator": "split-rows-no-pause", "proposed": "automated" }
-  ],
-  "ledger_ac_decisions": []
-}

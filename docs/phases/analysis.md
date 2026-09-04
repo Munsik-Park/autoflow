@@ -66,9 +66,9 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
        `AC id | criterion | source`, where `AC id` is a short readable name unique within the
        issue, `criterion` restates the issue's criterion faithfully, and `source` locates it in the
        issue body artifact. **[MUST]** This section is the issue's single machine-addressable
-       acceptance-criterion list: ARCHITECT's Reconcile check and both gate backstops join on
+       acceptance-criterion list: both gate backstops join on
        `AC id`, so an absent or unparseable table is itself a finding downstream
-       (`docs/autoflow-guide.md` > ARCHITECT > *Acceptance-criterion change*, > GATE:PLAN >
+       (`docs/autoflow-guide.md` > ARCHITECT > *Report routing*, > GATE:PLAN >
        *AC-authority check*). It is authored **once per issue**, in the `mode = new-issue` cycle.
      - **[MUST]** A review-response cycle's Phase B targets the reviewer comment, not the issue
        body, so it **carries the existing table forward unchanged** rather than re-deriving it — a

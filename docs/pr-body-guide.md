@@ -63,7 +63,7 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   방법의 축소를 결정하고, external reviewer가 그 reason의 타당성을 판단하며,
   operator는 criterion의 **내용**이 바뀔 때만 개입한다. reviewer가 보지 못한 축소는
   판단되지 않은 축소다. 규칙 본문은 [`autoflow-guide.md`](autoflow-guide.md) >
-  ARCHITECT > Output artifacts > *Test necessity* 와 > *Acceptance-criterion change*.
+  ARCHITECT > Output artifacts > *Test necessity* 와 ARCHITECT > *Report routing*.
 - 형식은 AC id + disposition + reason 한 줄. reason은 verification design의 셀을
   옮겨 적고 새로 쓰지 않는다 — PR body와 design이 갈라지면 reviewer가 판단하는
   대상이 무엇인지 불분명해진다.
