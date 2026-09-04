@@ -55,7 +55,17 @@ fi
 MANIFEST="$TARGET_ROOT/.claude/autoflow/manifest.json"
 SHIM_REF="$TARGET_ROOT/.claude/autoflow/claude-md-shim.md"
 PIN_REF="$TARGET_ROOT/.claude/autoflow/settings-pin.json"
-PLUGIN_ROOT_LIB="$TARGET_ROOT/scripts/lib/plugin-root.sh"
+# The plugin / marketplace resolver: the target's shipped copy first; otherwise
+# the copy beside THIS script's own tree — when this script runs from a source
+# checkout or the marketplace clone (`setup/thin-root-layer/`, which is how the
+# install skill's detect.sh runs it as the cache oracle against a target),
+# $SCRIPT_DIR/../.. is that repository root. A target stamped before the
+# resolver shipped is thereby still compared against upstream (D4), instead of
+# the comparison silently SKIPping on the very bundles it exists to catch.
+PLUGIN_ROOT_LIB=""
+for _lib_cand in "$TARGET_ROOT/scripts/lib/plugin-root.sh" "$SCRIPT_DIR/../../scripts/lib/plugin-root.sh"; do
+  if [ -f "$_lib_cand" ]; then PLUGIN_ROOT_LIB="$_lib_cand"; break; fi
+done
 
 FAIL_COUNT=0
 SKIP_COUNT=0
@@ -82,12 +92,11 @@ sha256_of() {
   printf '%s' "$_h"
 }
 
-# The plugin/marketplace resolver ships as a sibling artifact. A bundle stamped
-# before it existed carries a drift-check that predates this leg too, so the
-# only way to reach here without it is a partial stamp — degrade to SKIP with
-# the reason named, never to a silent PASS.
+# No resolver on either side (a partial stamp of a target, or this script copied
+# out of its tree) degrades to SKIP with the reason named, never to a silent
+# PASS.
 _lib_ok=0
-if [ -f "$PLUGIN_ROOT_LIB" ]; then
+if [ -n "$PLUGIN_ROOT_LIB" ] && [ -f "$PLUGIN_ROOT_LIB" ]; then
   # shellcheck source=/dev/null
   . "$PLUGIN_ROOT_LIB" && _lib_ok=1
 fi
@@ -230,12 +239,19 @@ elif [ -z "$_clone" ]; then
   skipc "D4" "marketplace clone not locally resolvable (tried: $(autoflow_marketplace_root_candidates "$MARKETPLACE_NAME" | tr '\n' ';' | sed 's/;$//; s/;/; /g')) — upstream drift check deferred"
 elif [ -z "$_clone_manifest" ]; then
   skipc "D4" "marketplace clone at $_clone carries no setup/manifest.json — upstream drift check deferred"
+elif ! jq -e '(.version | type) == "string" and (.artifacts | type) == "array"' "$_clone_manifest" >/dev/null 2>&1; then
+  # A clone that IS resolvable but whose manifest cannot be read is not "no
+  # drift": the comparison did not run. FAIL, never PASS — a re-fetch of the
+  # clone is the remedy, and a stop is the safe direction for PREFLIGHT.
+  failc "D4" "marketplace clone manifest at $_clone_manifest is not usable (invalid JSON, or no string version / artifacts array) — the upstream comparison could not run; refresh the clone (/plugin marketplace update $MARKETPLACE_NAME)"
 else
   _cver=$(jq -r '.version // "null"' "$_clone_manifest")
   _clone_desc="clone version $_cver at $_clone"
   _d4_tmp=$(mktemp)
   # One relation over both manifests, keyed by dest; the manifest self-entry
-  # (sha256 null) is excluded on both sides.
+  # (sha256 null) is excluded on both sides. The relation's exit status is
+  # checked below: an empty result means "no difference" only when jq ran.
+  _d4_rel_ok=1
   jq -n -r --slurpfile ins "$MANIFEST" --slurpfile up "$_clone_manifest" '
     def bykey: map(select(.sha256 != null)) | map({key: .dest, value: .}) | from_entries;
     ($ins[0].artifacts | bykey) as $i
@@ -246,9 +262,11 @@ else
           | "new-upstream\t\(.)\t\($u[.].kind)\t-\t\($u[.].sha256)" ] )
     + ( [ $i | keys[] | select($u[.] != null and $u[.].sha256 != $i[.].sha256)
           | "changed-upstream\t\(.)\t\($i[.].kind)\t\($i[.].sha256)\t\($u[.].sha256)" ] )
-    | .[]' > "$_d4_tmp" 2>/dev/null
+    | .[]' > "$_d4_tmp" 2>/dev/null || _d4_rel_ok=0
   _d4_fail_before=$FAIL_COUNT
-  if [ ! -s "$_d4_tmp" ]; then
+  if [ "$_d4_rel_ok" != 1 ]; then
+    failc "D4" "could not compute the installed-vs-clone artifact relation (jq failed over $MANIFEST and $_clone_manifest) — the upstream comparison could not run"
+  elif [ ! -s "$_d4_tmp" ]; then
     pass "D4: installed bundle matches the marketplace clone ($_clone_desc)"
   else
     while IFS="$(printf '\t')" read -r _rel _dest _kind _ih _uh; do

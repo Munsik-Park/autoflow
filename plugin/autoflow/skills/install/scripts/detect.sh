@@ -68,7 +68,13 @@ if [ "$INSTALL_STATE" = installed ]; then
     # unresolvable (corrupt/partial cache) -> DRIFT_STATE=error, never clean.
     DRIFT_STATE=error
   else
-    _drift_out=$(CLAUDE_PROJECT_DIR="$TARGET_ROOT" sh "$DRIFT_ORACLE" 2>&1)
+    # The oracle's D4 compares the target against the marketplace clone — and
+    # $PLUGIN_CACHE_ROOT IS that clone (the tree a confirmed stamp copies
+    # from), so it is named explicitly rather than re-derived from the
+    # harness registries. The oracle sources its resolver from its own tree
+    # when the target predates it (drift-check.sh resolver lookup), so a
+    # same-version target stamped before this leg existed is still compared.
+    _drift_out=$(CLAUDE_PROJECT_DIR="$TARGET_ROOT" AUTOFLOW_MARKETPLACE_ROOT="$PLUGIN_CACHE_ROOT" sh "$DRIFT_ORACLE" 2>&1)
     _drift_rc=$?
     if printf '%s\n' "$_drift_out" | grep -q '^FAIL: drift-check '; then
       # drift-check itself could not run (jq absent / manifest unreadable).

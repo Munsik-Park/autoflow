@@ -51,6 +51,16 @@
 #   D4-NEW-UPSTREAM       a row only upstream ships -> FAIL: D4, exit 1
 #   D4-REMOVED-UPSTREAM   a row upstream dropped -> WARN, exit 0
 #   D4-SKIP               no clone -> SKIP: D4
+#   D4-CLONE-MALFORMED    a resolvable clone whose manifest is invalid JSON ->
+#                         FAIL: D4 (never PASS), exit 1   [review finding 2]
+#   D4-CLONE-SCHEMA       a clone manifest with no artifacts array -> FAIL: D4
+#   ORACLE-PRE-RESOLVER   the source-tree oracle run against a target stamped
+#                         BEFORE the resolver shipped (no scripts/lib/) still
+#                         evaluates D4 (its own tree's copy) -> FAIL, not SKIP
+#                                                            [review finding 1]
+#   DET-PRE-RESOLVER      detect.sh on that same-version pre-resolver target
+#                         with the current clone -> DRIFT_STATE=drift,
+#                         VERSION_SKEW=no                    [review finding 1]
 #   D5-MATCH              installed plugin == clone plugin source -> PASS: D5
 #   D5-CHANGED            a clone hook file differs -> FAIL: D5 naming it,
 #                         HINT names /plugin update
@@ -306,6 +316,63 @@ if [ -f "$T1/.claude/autoflow/drift-check.sh" ]; then
     pass "D4-SKIP: no clone resolvable -> SKIP naming the registry, exit 0"
   else
     failc "D4-SKIP: rc=$DRIFT_RC; $(printf '%s\n' "$DRIFT_OUT" | grep ': D4' | head -1)"
+  fi
+
+  # Review finding 2 (PR #172): a resolvable clone whose manifest cannot be
+  # read must not read as "matches".
+  C6="$WORK/clone-malformed"; mkdir -p "$C6/setup"
+  printf '{ not json\n' > "$C6/setup/manifest.json"
+  run_drift "$T1" AUTOFLOW_MARKETPLACE_ROOT="$C6"
+  if [ "$DRIFT_RC" -ne 0 ] && printf '%s\n' "$DRIFT_OUT" | grep -q '^FAIL: D4 -- marketplace clone manifest at .* is not usable' \
+     && ! printf '%s\n' "$DRIFT_OUT" | grep -q '^PASS: D4'; then
+    pass "D4-CLONE-MALFORMED: an invalid-JSON clone manifest is a D4 FAIL (exit $DRIFT_RC), never a PASS"
+  else
+    failc "D4-CLONE-MALFORMED: rc=$DRIFT_RC; $(printf '%s\n' "$DRIFT_OUT" | grep ': D4' | head -1)"
+  fi
+  C7="$WORK/clone-schema"; mkdir -p "$C7/setup"
+  printf '{"version":"%s","artifacts":{}}\n' "$PLUGIN_VERSION" > "$C7/setup/manifest.json"
+  run_drift "$T1" AUTOFLOW_MARKETPLACE_ROOT="$C7"
+  if [ "$DRIFT_RC" -ne 0 ] && printf '%s\n' "$DRIFT_OUT" | grep -q '^FAIL: D4 -- marketplace clone manifest at .* is not usable'; then
+    pass "D4-CLONE-SCHEMA: a clone manifest with no artifacts array is a D4 FAIL"
+  else
+    failc "D4-CLONE-SCHEMA: rc=$DRIFT_RC; $(printf '%s\n' "$DRIFT_OUT" | grep ': D4' | head -1)"
+  fi
+fi
+
+# -----------------------------------------------------------------------------
+echo "== PRE-RESOLVER: a target stamped before scripts/lib/ shipped (review finding 1) =="
+# -----------------------------------------------------------------------------
+# Simulate the bundle every current target carries: stamped at the same
+# version, self-consistent (D1 PASS), no resolver and no manifest row for it,
+# and one artifact older than the clone's. The cache oracle — the source
+# tree's drift-check.sh, as detect.sh runs it — must still evaluate D4 from
+# its own tree's resolver copy, and detect.sh must report drift on it with
+# the version unchanged.
+TP="$WORK/target-pre-resolver"; stamp "$TP"
+if [ ! -f "$TP/.claude/autoflow/manifest.json" ]; then
+  failc "PRE-RESOLVER: stamp into $TP failed"
+else
+  rm -f "$TP/scripts/lib/plugin-root.sh"
+  jq 'del(.artifacts[] | select(.dest == "scripts/lib/plugin-root.sh"))' "$TP/.claude/autoflow/manifest.json" > "$TP/.m" && mv "$TP/.m" "$TP/.claude/autoflow/manifest.json"
+  OLD_WF="$TP/.claude/workflows/verify-cause-branch.js"
+  printf '\n// pre-fix revision\n' >> "$OLD_WF"
+  old_h=$(shasum -a 256 "$OLD_WF" | awk '{print $1}')
+  jq --arg h "$old_h" '(.artifacts[] | select(.dest == ".claude/workflows/verify-cause-branch.js") | .sha256) |= $h' "$TP/.claude/autoflow/manifest.json" > "$TP/.m" && mv "$TP/.m" "$TP/.claude/autoflow/manifest.json"
+
+  out=$(env CLAUDE_PROJECT_DIR="$TP" AUTOFLOW_MARKETPLACE_ROOT="$REPO_ROOT" sh "$DRIFT_SRC" 2>&1); rc=$?
+  if [ "$rc" -ne 0 ] && printf '%s\n' "$out" | grep -q '^FAIL: D4 -- upstream drift: .claude/workflows/verify-cause-branch.js differs' \
+     && ! printf '%s\n' "$out" | grep -q '^SKIP: D4' && ! printf '%s\n' "$out" | grep -q '^FAIL: D1'; then
+    pass "ORACLE-PRE-RESOLVER: the source-tree oracle sources its own resolver copy and reports the older artifact as D4 drift (D1 clean, no SKIP)"
+  else
+    failc "ORACLE-PRE-RESOLVER: rc=$rc; $(printf '%s\n' "$out" | grep -E ': D[14]' | head -3 | tr '\n' ' ')"
+  fi
+
+  out=$(TARGET_ROOT="$TP" PLUGIN_CACHE_ROOT="$REPO_ROOT" sh "$DETECT_SH" 2>&1)
+  if printf '%s\n' "$out" | grep -q '^DRIFT_STATE=drift$' && printf '%s\n' "$out" | grep -q '^VERSION_SKEW=no$' \
+     && printf '%s\n' "$out" | grep -q '^DRIFT_FIRST=upstream drift: '; then
+    pass "DET-PRE-RESOLVER: detect.sh reports DRIFT_STATE=drift with VERSION_SKEW=no on a same-version target stamped before the resolver shipped (DRIFT_FIRST: $(printf '%s\n' "$out" | sed -n 's/^DRIFT_FIRST=//p' | cut -c1-80))"
+  else
+    failc "DET-PRE-RESOLVER: $(printf '%s\n' "$out" | grep -E '^(DRIFT|VERSION)' | tr '\n' ' ')"
   fi
 fi
 
