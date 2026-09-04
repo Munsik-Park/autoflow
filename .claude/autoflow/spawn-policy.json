@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Single source of truth for AutoFlow's per-phase spawn policy (model + effort). Read it with scripts/spawn-policy/spawn-policy.sh; never restate its values in prose (CLAUDE.md > Spawn Model — Phase-by-Phase).",
-  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — an outdated scaffold is a diagnosable state, since both deliberation workflows fail closed on a missing required workflow_sites row, and the architect deliberation additionally fails closed on a missing deliberation_caps row (its turn ceilings live here too, not as code literals). `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly.",
+  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — an outdated scaffold is a diagnosable state, since both deliberation workflows fail closed on a missing required workflow_sites row (issue #166 renamed the architect deliberation's rows to dev-turn / test-turn / scribe / ledger and removed deliberation_caps — a target still carrying the former rows fails closed at its next ARCHITECT until this file is updated). `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly.",
   "effort_contract": {
     "is_the_vocabulary_check_applies": "`scripts/spawn-policy/spawn-policy.sh check` reads its admitted effort vocabulary and its inherit sentinel from THIS object, so `check` is a self-consistency check over one source. A runtime with a different effort vocabulary is accommodated by editing this contract, never by patching the checker; model values are deliberately unvalidated beyond presence and shape",
     "admitted_values": ["low", "medium", "high", "xhigh", "max", "<integer>"],
@@ -107,23 +107,15 @@
   },
   "workflow_sites": {
     "architect-deliberation": {
-      "dev-draft": { "model": "opus", "effort": "inherit" },
-      "test-draft": { "model": "opus", "effort": "inherit" },
-      "register-load": { "model": "sonnet", "effort": "inherit" },
-      "test-round": { "model": "opus", "effort": "inherit" },
-      "dev-round": { "model": "opus", "effort": "inherit" },
-      "ac-diff": { "model": "sonnet", "effort": "inherit" },
-      "ledger": { "model": "opus", "effort": "inherit" },
-      "register-write": { "model": "sonnet", "effort": "inherit" }
+      "dev-turn": { "model": "opus", "effort": "inherit" },
+      "test-turn": { "model": "opus", "effort": "inherit" },
+      "scribe": { "model": "opus", "effort": "inherit" },
+      "ledger": { "model": "opus", "effort": "inherit" }
     },
     "verify-cause-branch": {
       "test-self-check": { "model": "opus", "effort": "inherit" },
       "impl-self-check": { "model": "opus", "effort": "inherit" },
       "ledger": { "model": "opus", "effort": "inherit" }
     }
-  },
-  "deliberation_caps": {
-    "semantics": "Turn ceilings for the turn-based deliberation loop (issue #152): a turn is ONE participant's review (Test AI and Developer AI alternate), so one exchange = two turns. max_turns bounds a cold run; bounded_max_turns bounds a scope-bounded review-response run; a resume admits exactly one further exchange (two turns) past the persisted turn count, in code, and reads neither value. Both values are integers >= 2 — the termination condition pairs a turn with its predecessor, so a ceiling below one full exchange could never converge. The workflow fails closed (verdict ESCALATE, sentinel 'spawn policy deliberation caps incomplete') when its row here is missing or malformed.",
-    "architect-deliberation": { "max_turns": 12, "bounded_max_turns": 4 }
   }
 }

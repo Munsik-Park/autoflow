@@ -122,12 +122,8 @@ on:
       - 'docs/phases/analysis.md'
       - 'tests/test-spawn-policy-single-source.sh'
       - 'tests/test-issue-150-policy-migration.sh'
-      - 'tests/test-issue-152-turn-convergence.sh'
-      - 'tests/test-issue-159-all-accept-resume.sh'
-      - 'tests/fixtures/issue-159-register-all-accept.json'
-      - 'tests/test-issue-160-reconcile-substituted-removed.sh'
+      - 'tests/test-issue-166-relay-report.sh'
       - 'tests/test-issue-165-taskoutput-deny.sh'
-      - 'tests/fixtures/issue-160-ac-diff-split-rows.json'
       - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
@@ -253,12 +249,8 @@ on:
       - 'docs/phases/analysis.md'
       - 'tests/test-spawn-policy-single-source.sh'
       - 'tests/test-issue-150-policy-migration.sh'
-      - 'tests/test-issue-152-turn-convergence.sh'
-      - 'tests/test-issue-159-all-accept-resume.sh'
-      - 'tests/fixtures/issue-159-register-all-accept.json'
-      - 'tests/test-issue-160-reconcile-substituted-removed.sh'
+      - 'tests/test-issue-166-relay-report.sh'
       - 'tests/test-issue-165-taskoutput-deny.sh'
-      - 'tests/fixtures/issue-160-ac-diff-split-rows.json'
       - 'tests/lib/architect-turn-harness.mjs'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
@@ -527,23 +519,11 @@ jobs:
         timeout-minutes: 10
         run: bash tests/test-issue-150-policy-migration.sh
 
-      - name: test-issue-152-turn-convergence.sh
-        id: s-test-issue-152-turn-convergence
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-152-turn-convergence.sh ')
+      - name: test-issue-166-relay-report.sh
+        id: s-test-issue-166-relay-report
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-166-relay-report.sh ')
         timeout-minutes: 10
-        run: bash tests/test-issue-152-turn-convergence.sh
-
-      - name: test-issue-159-all-accept-resume.sh
-        id: s-test-issue-159-all-accept-resume
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-159-all-accept-resume.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-159-all-accept-resume.sh
-
-      - name: test-issue-160-reconcile-substituted-removed.sh
-        id: s-test-issue-160-reconcile-substituted-removed
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-160-reconcile-substituted-removed.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-160-reconcile-substituted-removed.sh
+        run: bash tests/test-issue-166-relay-report.sh
 
       - name: test-issue-165-taskoutput-deny.sh
         id: s-test-issue-165-taskoutput-deny

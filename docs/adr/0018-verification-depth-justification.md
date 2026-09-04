@@ -34,7 +34,9 @@ no gate has a stated basis to dock it.
      in one line the failure mode it catches that no other layer catches; a layer that cannot name
      one is removed from the agreement rather than argued down;
    - an **amendment clause** — a risk discovered mid-deliberation may raise depth when the reason
-     is recorded in the issue register the facilitation script holds.
+     is recorded in the verification design's depth determination (since issue #166 the
+     deliberation keeps no register; the design documents are written from the participants'
+     report, and an agreed amendment reaches the decision ledger through that report).
 
    The clause carries the composition-oracle clause's two structural properties: the determination
    is stated once and its absence is not read as "not applicable", and it is **effective-from**,
@@ -83,9 +85,9 @@ no gate has a stated basis to dock it.
 
 - Effective-from, so in-flight cycles are not retroactively deficient — at the cost of a period in
   which older designs sit unjustified.
-- The amendment route reuses the issue register rather than adding an artifact, which keeps the
-  record in the deliberation's established durable channel but leaves it invisible until
-  `CONVERGED` persists the register to the decision ledger.
+- The amendment route adds no artifact of its own: the reason lives in the verification design's
+  depth determination, and an agreed amendment reaches the decision ledger through the
+  deliberation's report (issue #166 retired the issue register this route first used).
 
 ## Related Issues / PRs
 

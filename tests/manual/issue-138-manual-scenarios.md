@@ -1,5 +1,13 @@
 # Manual verification scenarios — issue #138 (AC-authority reconciliation)
 
+**Superseded by issue #166 — kept as history.** The scenarios below verify the
+Reconcile channel and the `AC_CHANGE` halt, which issue #166 retired together with
+the ARCHITECT deliberation's return to its original form. The acceptance-criterion
+authority they were written to protect now runs through the orchestrator's routing
+of the deliberation report and the two gates' AC-authority checks
+(`docs/autoflow-guide.md` > ARCHITECT > *Report routing*). Nothing below is a live
+obligation; the file records what was checked and why.
+
 Source: `.autoflow/issue-138-verification-design.md` (rows typed `manual` or
 `automated + manual`) and `.autoflow/issue-138-dispatch.md` obligation 3.
 These properties are exhibited only by a live agent (a real DIAGNOSE Phase B

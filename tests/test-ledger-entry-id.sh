@@ -554,9 +554,12 @@ echo "=== AC-ac-decision-marker-readable (issue #138, operator-authority-is-read
 # so `check` already accepts any trailing marker generically (check_one matches
 # `^## [EOF][0-9]+ ` and treats everything after the ID as free text) -- this leg
 # is a regression-lock on that generality, not a RED discriminator by itself; the
-# RED-discriminating half of this row (LEDGER_SEED_RULE seeding "operator decision"
-# and excluding "ARCHITECT ac-change") is asserted against the real script in
-# test/workflows/run.mjs.
+# RED-discriminating half of this row lives in the ARCHITECT deliberation's topic,
+# which seeds "operator decision" as a settled authority and names no
+# "ARCHITECT ac-change" (issue #166 moved the seed from the retired LEDGER_SEED_RULE
+# constant into the topic stated once per run). It is asserted against the real
+# script in test/workflows/run.mjs > 'ARCHITECT: the Topic names "operator decision"
+# as a settled authority the discussion does not reopen'.
 AC_DECISION_LEDGER="$TMP_ROOT/ac-decision-ledger.md"
 cat > "$AC_DECISION_LEDGER" <<'EOF'
 # Decision Ledger — issue #138

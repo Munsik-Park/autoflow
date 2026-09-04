@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note)
 
 ## Context
 
@@ -162,3 +162,17 @@ verification method pass through three tiers, of which the operator is only the 
   `Test plan` (input: the AC table) and GATE:QUALITY's assertion-claim alignment. The verification
   design's criterion cell stays — a row states the proposition its method checks; it is not a copy
   kept for comparison. Everything else in this ADR is unchanged.
+
+## Superseding note (issue #166)
+<!-- wording drafted under issue #166; operator confirmation pending -->
+
+Tier 3's automatic trigger — the Reconcile channel's `dropped` and `unreasoned` findings raised
+against the converged verification design — is retired with the ARCHITECT deliberation's return to
+its original form.
+
+Tiers 1 and 2 are unchanged: the deliberation chooses a verification disposition with its reason
+stated in the row, and the external reviewer judges every reduction and its reason from the host PR
+body. Tier 3 is reached through the orchestrator's routing of the deliberation report — an agreed
+conclusion that changes an acceptance criterion's content goes to the operator before GATE:PLAN —
+and through the two gates' AC-authority checks, which are unchanged and scored. The test-necessity
+clause, the disposition vocabulary and the reason obligation are unaffected.

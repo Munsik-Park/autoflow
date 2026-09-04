@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, amended by ADR-0022
+Accepted, amended by ADR-0022; the ARCHITECT halt superseded by issue #166 (see Superseding note)
 
 ## Context
 
@@ -163,3 +163,24 @@ change; only an operator decision may make it. The flow stops and asks.**
   the fail-closed sentinels, the `[ac-decision]` grammar and the budget accounting are unchanged.
 - The decision alters agent-workflow gates and evaluation policy — a `docs/adr/README.md` >
   "When to Create an ADR" trigger area — so it lands with, or ahead of, the mechanism it governs.
+
+## Superseding note (issue #166)
+<!-- wording drafted under issue #166; operator confirmation pending -->
+
+The ARCHITECT deliberation returns to its original form — participants discuss a topic in relayed
+turns and report their conclusions — so the automatic Reconcile join between the issue's acceptance
+criteria and the verification design, and the `AC_CHANGE` halt it raised, are retired with it.
+
+The authority principle this ADR decided stands unchanged: an issue's acceptance-criterion
+**content** is the operator's, and a verification-method reduction carrying a stated reason is the
+deliberation's. It is now exercised at three points:
+
+1. **The orchestrator's routing of the deliberation report.** An agreed conclusion that excludes,
+   revises or splits an acceptance criterion is presented to the operator before GATE:PLAN, and the
+   answer is recorded as one `[ac-decision]` ledger entry per decided AC.
+2. **GATE:PLAN's AC-authority check** — unchanged, scored, capping `Scope` at 6 on a difference no
+   `[ac-decision]` entry covers.
+3. **GATE:QUALITY's assertion-claim alignment** — unchanged, scored.
+
+The `[ac-decision]` ledger grammar is unchanged: the entry heading marker, the `- AC:` and
+`- Disposition:` lines, and the authority value `operator decision`.
