@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f6890c487ca3b71b155a39b6451257b086933ba63a736545854091f492a3c9e1"
+      "sha256": "081f22d8031bed0d3987d8101b71e64ae835e6bdd67e049490a6d4e0c68852e8"
     },
     {
       "source": "docs/development-guideline.md",
