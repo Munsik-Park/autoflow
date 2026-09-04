@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "dc8a75bbde0115d5a702925cf8a326ab6a178d54d215a25d74949a53fabd5e84"
+      "sha256": "e5534bfcd7efa35a1e652efabd850e346c32f9dd475cd2b4264f75666ab19b69"
     },
     {
       "source": "docs/design-rationale.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e3540a0fe0db3203524857c3369c22fecbcdca010e05bc8f532cc9a9deef9da1"
+      "sha256": "a07da80da15e51091641ca266964014dd53b90d546bcbb2065726d31387048c8"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
@@ -244,7 +244,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "d18a20370494beeec0649ce3ae67b063c5c83698ab9d43bf429107a541f9f579"
+      "sha256": "ebab22e2c3b234f17bfc5f142a29a146dae1cd436a1f0c6106bd1d34e1a67192"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -363,14 +363,21 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "d20db49443648659d005bfdc142cf910824cb9f1737c6576b802b3212a041d15"
+      "sha256": "dc8eb1c1bbff3470f5d5fc3a04a3dd2f61901d225a32a38d81df0f9aba7f45c5"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "886ab375911924b21d2d6dd9dfbb646a66897f7783de33a5edc5c4009c1bfb18"
+      "sha256": "4da07d43e97812d0906ef2ec3181a820ee9d1ceeeb8f7f9b688dadd8d69ed32a"
+    },
+    {
+      "source": "scripts/lib/plugin-root.sh",
+      "dest": "scripts/lib/plugin-root.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "2de560f38e4c55160da2a1b1dc0a23ca1b8fb30b61c347ee605531923fed794b"
     },
     {
       "source": "setup/manifest.json",

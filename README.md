@@ -116,7 +116,11 @@ you — you own your version record. Maintenance is just
 `/plugin marketplace update` → `/autoflow:install` (re-stamp).
 
 A non-zero drift-check result is a **PREFLIGHT stop condition** — resolve the
-reported drift before starting a new AutoFlow cycle.
+reported drift before starting a new AutoFlow cycle. The detector checks the
+installed files against the installed manifest, and the installed bundle and
+plugin against the marketplace clone (per-artifact hashes, so an upstream change
+merged without a version bump is caught) — see `setup/SETUP-GUIDE.md` >
+*Self-verify with the drift detector*.
 
 ### Advanced / manual install
 
@@ -258,7 +262,7 @@ Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
 After running `setup/init.sh --target <path>`:
 
 - [ ] Your project `CLAUDE.md` carries the managed `AUTOFLOW-IMPORT` shim block.
-- [ ] `sh .claude/autoflow/drift-check.sh` exits zero (installed artifacts match the manifest).
+- [ ] `sh .claude/autoflow/drift-check.sh` exits zero (installed artifacts match the manifest; the bundle and the plugin match the marketplace clone).
 - [ ] `.claude/settings.json` pins the AutoFlow marketplace + `enabledPlugins`.
 - [ ] `CLAUDE.local.md` holds your target identity (never overwritten by `--force`).
 - [ ] `.gitignore` includes `.autoflow/issue-*.json` and `CLAUDE.local.md`.

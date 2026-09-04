@@ -105,9 +105,21 @@ below means both tiers together.
   the root-layer schema/state expectations (state stays in
   `${CLAUDE_PROJECT_DIR}/.autoflow`, per ADR-0015 D1). The detector is
   delivered with the hooks (implementation: S5 #792).
+- **[MUST]** The drift test also compares the installed bundle with **upstream
+  as locally available**: the installed manifest against the marketplace
+  clone's `setup/manifest.json` per artifact by sha256 (drift-check D4), and
+  the installed plugin's files against the clone's plugin source (D5). A
+  self-consistent bundle that is older than what the clone would stamp — the
+  issue #167 blind spot, which a version comparison alone misses when an
+  upstream change carries no version bump — is therefore a reported drift, not
+  a silent pass. Both legs, and the R2 skew check (D2), resolve the plugin and
+  the clone from the harness's local registries (`scripts/lib/plugin-root.sh`,
+  shipped with the bundle) rather than from the hook-only `CLAUDE_PLUGIN_ROOT`,
+  so they run from the plain shell PREFLIGHT uses; each reports `SKIP`, never a
+  failure, when its side is not locally resolvable. No network access.
 - A drift-test failure is a **stop condition** for starting a new AutoFlow
   cycle on the target, in the same class as PREFLIGHT's Git-clean hard stop:
-  resolve the drift (re-stamp, pin fix, or reinstall) first.
+  resolve the drift (re-stamp, pin fix, plugin update, or reinstall) first.
 
 ---
 

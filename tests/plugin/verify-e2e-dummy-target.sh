@@ -294,7 +294,16 @@ cleanup() {
          "$MOCK_GH_DIR" "$BODY_FILE" \
          "$E2A_CURRENT" "$E2A_BASELINE_SORTED" "$SETTINGS_NV"
 }
-trap cleanup EXIT INT TERM
+# Hermetic plugin discovery (issue #167): drift-check.sh D2/D4/D5 resolve the
+# installed plugin and the marketplace clone through scripts/lib/plugin-root.sh
+# from ${CLAUDE_CONFIG_DIR:-~/.claude}/plugins. Point that at an empty scratch
+# dir so a developer machine's real plugin cache / marketplace clone never
+# leaks into a clean-install exit-0 or a D2 SKIP expectation below; a leg that
+# needs a plugin root passes CLAUDE_PLUGIN_ROOT explicitly.
+HERMETIC_CONFIG_DIR=$(mktemp -d)
+export CLAUDE_CONFIG_DIR="$HERMETIC_CONFIG_DIR"
+unset CLAUDE_PLUGIN_ROOT AUTOFLOW_MARKETPLACE_ROOT
+trap 'cleanup; rm -rf "$HERMETIC_CONFIG_DIR"' EXIT INT TERM
 
 printf 'body\n' > "$BODY_FILE"
 
@@ -424,16 +433,19 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # ships as a root-layer manifest artifact with its source path preserved,
   # so ./scripts/spawn-policy/* is admitted on the same source-path-preserved
   # basis as scripts/ledger/* and scripts/issue/*.
+  # issues #167/#169: scripts/lib/plugin-root.sh (the plugin / marketplace-
+  # clone resolver sourced by drift-check.sh and spawn-policy.sh) ships the
+  # same way, so ./scripts/lib/* is admitted on the same basis.
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done
   if [ -z "$BAD_NEW" ]; then
-    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, .codex/**, or AGENTS.md"
+    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, scripts/lib/**, .codex/**, or AGENTS.md"
   else
-    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/spawn-policy//.codex//AGENTS.md:$BAD_NEW"
+    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/spawn-policy//scripts/lib//.codex//AGENTS.md:$BAD_NEW"
   fi
 else
   failc "E1d" "S5/#792" "skipped -- prerequisite E1b failed"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md CLAUDE.md docs/teammate-contracts.md docs/phases/analysis.md setup/manifest.json setup/init.sh setup/thin-root-layer/drift-check.sh setup/SETUP-GUIDE.md
+# ci-subject: .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh scripts/lib/plugin-root.sh .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md CLAUDE.md docs/teammate-contracts.md docs/phases/analysis.md setup/manifest.json setup/init.sh setup/thin-root-layer/drift-check.sh setup/SETUP-GUIDE.md
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -39,6 +39,17 @@ FAIL=0
 
 pass() { echo "  PASS: $1"; PASS=$((PASS + 1)); }
 failc() { echo "  FAIL: $1"; FAIL=$((FAIL + 1)); }
+
+# Hermetic plugin discovery (issues #167 / #169): `spawn-policy.sh check` and
+# drift-check.sh now resolve the installed plugin and the marketplace clone
+# through scripts/lib/plugin-root.sh from ${CLAUDE_CONFIG_DIR:-~/.claude}. Point
+# that at an empty scratch dir so a developer machine's real plugin cache never
+# satisfies a "no definitions anywhere" or "SKIP" expectation below; legs that
+# need a plugin build one and pass it explicitly.
+HERMETIC_CONFIG_DIR="$(mktemp -d)"
+export CLAUDE_CONFIG_DIR="$HERMETIC_CONFIG_DIR"
+unset CLAUDE_PLUGIN_ROOT AUTOFLOW_MARKETPLACE_ROOT
+trap 'rm -rf "$HERMETIC_CONFIG_DIR"' EXIT INT TERM
 
 # -----------------------------------------------------------------------------
 # AC1 — no-literal-model
@@ -697,6 +708,105 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ]; then
   rm -rf "$SCRATCH4"
 else
   failc "design-added: check-base-resolution -- $CONFIG or $RESOLVER not found"
+fi
+
+# -----------------------------------------------------------------------------
+# Issue #169 — thin-root layout: the target tree ships NO .claude/agents (the
+# manifest delivers spawn-policy.json + spawn-policy.sh only), the definitions
+# live in the installed plugin's agents/. `check` must pass there without a
+# symlink, resolving the plugin through the same helper drift-check D2 uses
+# (issue #167), and must still fail closed — naming what it consulted — when
+# no definitions exist anywhere.
+# -----------------------------------------------------------------------------
+echo "== issue #169: check agent-definition lookup on a thin-root target =="
+
+PLUGIN_SRC="$PROJECT_ROOT/plugin/autoflow"
+if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
+  SCRATCH7="$(mktemp -d)"
+  # The thin-root target: config + the shipped readout, no .claude/agents.
+  mkdir -p "$SCRATCH7/target/.claude/autoflow" "$SCRATCH7/target/scripts/spawn-policy" "$SCRATCH7/target/scripts/lib"
+  cp "$CONFIG" "$SCRATCH7/target/.claude/autoflow/spawn-policy.json"
+  cp "$RESOLVER" "$SCRATCH7/target/scripts/spawn-policy/spawn-policy.sh"
+  cp "$PROJECT_ROOT/scripts/lib/plugin-root.sh" "$SCRATCH7/target/scripts/lib/plugin-root.sh"
+  TCFG="$SCRATCH7/target/.claude/autoflow/spawn-policy.json"
+  TCHECK="$SCRATCH7/target/scripts/spawn-policy/spawn-policy.sh"
+
+  # (i) Hook context: CLAUDE_PLUGIN_ROOT names the plugin.
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_PLUGIN_ROOT="$PLUGIN_SRC" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/i.err"; rc=$?
+  if [ "$rc" = "0" ]; then
+    pass "issue #169: thin-root target (no .claude/agents) + CLAUDE_PLUGIN_ROOT -> check exit 0 (definitions read from the plugin, no symlink)"
+  else
+    failc "issue #169: thin-root target + CLAUDE_PLUGIN_ROOT -> exit $rc: $(head -1 "$SCRATCH7/i.err")"
+  fi
+
+  # (ii) Plain shell: the plugin is found through the harness registry under
+  # CLAUDE_CONFIG_DIR (installed_plugins.json), CLAUDE_PLUGIN_ROOT unset.
+  CFG7="$SCRATCH7/config"; mkdir -p "$CFG7/plugins/cache/autoflow/autoflow"
+  cp -R "$PLUGIN_SRC" "$CFG7/plugins/cache/autoflow/autoflow/0.1.9"
+  jq -n --arg p "$CFG7/plugins/cache/autoflow/autoflow/0.1.9" '{version:2, plugins:{"autoflow@autoflow":[{scope:"user", installPath:$p, version:"0.1.9"}]}}' > "$CFG7/plugins/installed_plugins.json"
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_CONFIG_DIR="$CFG7" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ii.err"; rc=$?
+  if [ "$rc" = "0" ]; then
+    pass "issue #169: thin-root target, CLAUDE_PLUGIN_ROOT unset, plugin registered under CLAUDE_CONFIG_DIR -> check exit 0 (the operator's plain-shell obligation is executable)"
+  else
+    failc "issue #169: registry lookup -> exit $rc: $(head -1 "$SCRATCH7/ii.err")"
+  fi
+
+  # (iii) Plain shell, no registry: the versioned cache directory alone.
+  rm -f "$CFG7/plugins/installed_plugins.json"
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_CONFIG_DIR="$CFG7" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/iii.err"; rc=$?
+  if [ "$rc" = "0" ]; then
+    pass "issue #169: thin-root target, plugin present only under plugins/cache/<mkt>/<plugin>/<ver>/ -> check exit 0"
+  else
+    failc "issue #169: cache-dir lookup -> exit $rc: $(head -1 "$SCRATCH7/iii.err")"
+  fi
+
+  # (iv) A target with its OWN .claude/agents (custom agents, no autoflow-*)
+  # still reads the AutoFlow definitions from the plugin.
+  mkdir -p "$SCRATCH7/target/.claude/agents"
+  printf -- '---\nname: my-custom\n---\n' > "$SCRATCH7/target/.claude/agents/my-custom.md"
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_CONFIG_DIR="$CFG7" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/iv.err"; rc=$?
+  if [ "$rc" = "0" ]; then
+    pass "issue #169: a target .claude/agents holding only non-autoflow agents falls through to the plugin -> check exit 0"
+  else
+    failc "issue #169: foreign-agents fallthrough -> exit $rc: $(head -1 "$SCRATCH7/iv.err")"
+  fi
+  rm -rf "$SCRATCH7/target/.claude/agents"
+
+  # (v) Nothing anywhere: fail closed, the message lists what was consulted
+  # and the CLAUDE_PLUGIN_ROOT override.
+  AUTOFLOW_SPAWN_POLICY="$TCFG" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/v.err"; rc=$?
+  if [ "$rc" = "1" ] && grep -q 'no agent definitions (autoflow-\*\.md) found' "$SCRATCH7/v.err" \
+     && grep -q 'installed_plugins.json' "$SCRATCH7/v.err" \
+     && grep -q 'plugins/cache/autoflow/autoflow' "$SCRATCH7/v.err" \
+     && grep -q 'CLAUDE_PLUGIN_ROOT=<plugin dir>' "$SCRATCH7/v.err"; then
+    pass "issue #169: no definitions anywhere -> exit 1; stderr lists the tree dir, the registry, the cache path and the CLAUDE_PLUGIN_ROOT override"
+  else
+    failc "issue #169: no-definitions arm -> exit $rc; stderr: $(tr '\n' ' ' < "$SCRATCH7/v.err" | cut -c1-300)"
+  fi
+
+  # (vi) The plugin's definition set is what the partition rule is checked
+  # against: a plugin shipping a definition the policy neither names nor
+  # declares unmapped is reported, so the fallback is not a vacuous pass.
+  cp -R "$PLUGIN_SRC" "$SCRATCH7/plugin-extra"
+  printf -- '---\nname: autoflow-extra\n---\n' > "$SCRATCH7/plugin-extra/agents/autoflow-extra.md"
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_PLUGIN_ROOT="$SCRATCH7/plugin-extra" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/vi.err"; rc=$?
+  if [ "$rc" = "1" ] && grep -q "agent definition 'autoflow-extra' is neither named by a phases row nor declared unmapped" "$SCRATCH7/vi.err"; then
+    pass "issue #169: the partition rule runs over the plugin's definitions (an unnamed plugin definition is reported), so the fallback is not vacuous"
+  else
+    failc "issue #169: partition over plugin definitions -> exit $rc; stderr: $(head -1 "$SCRATCH7/vi.err")"
+  fi
+
+  rm -rf "$SCRATCH7"
+else
+  failc "issue #169: $CONFIG, $RESOLVER or $PLUGIN_SRC/agents not found"
+fi
+
+# The operator-facing obligation text states where `check` finds the definitions.
+SETUP_GUIDE_169="$PROJECT_ROOT/setup/SETUP-GUIDE.md"
+if grep -q 'spawn-policy.sh check' "$SETUP_GUIDE_169" && grep -q 'CLAUDE_PLUGIN_ROOT=<plugin dir>' "$SETUP_GUIDE_169"; then
+  pass "issue #169: setup/SETUP-GUIDE.md keeps the bump-time check obligation and names the plugin fallback + CLAUDE_PLUGIN_ROOT override"
+else
+  failc "issue #169: setup/SETUP-GUIDE.md lacks the check fallback description"
 fi
 
 # -----------------------------------------------------------------------------
