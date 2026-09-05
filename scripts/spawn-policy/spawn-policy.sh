@@ -352,6 +352,28 @@ cmd_check() {
     fi
   done < <(printf '%s\n' "$all_agent_types")
 
+  # Effort projection (issue #180, PR #183 review): a direct spawn's effort is
+  # read by the harness from the agent definition's frontmatter, never from
+  # this config — the Agent tool carries `model` per call but no effort. So a
+  # phases[].effort is deliverable only when the LOADED definition carries the
+  # same line (`effort: <v>`, or no line for the inherit sentinel). The
+  # definitions are versioned tool source (a thin-root target loads the
+  # plugin's), which makes phase-row effort fixed per plugin version and NOT a
+  # per-target lever; only workflow_sites effort reaches its spawn from this
+  # file at run time. Fail closed on a mismatch, so a config that claims an
+  # effort the runtime will not apply cannot pass `check`.
+  while IFS= read -r t; do
+    [ -n "$t" ] || continue
+    case "$t" in autoflow-*) ;; *) continue ;; esac
+    _exp=$(jq -r --arg t "$t" '[.phases[] | select(.agent_type == $t) | .effort | tostring] | unique | .[0]' "$CONFIG")
+    _line=$(grep -E '^effort:' "$AGENTS_DIR/$t.md" 2>/dev/null | head -n1)
+    if [ "$_exp" = "$inherit_sentinel" ]; then
+      [ -z "$_line" ] || _err "phases rows for agent_type '$t' declare the inherit sentinel, but the loaded definition $AGENTS_DIR/$t.md carries '$_line' — a direct spawn's effort is fixed by the shipped definition's frontmatter (the channel the harness reads); set the rows to that value, since phase-row effort is not configurable per target (only workflow_sites effort is)"
+    else
+      [ "$_line" = "effort: $_exp" ] || _err "phases rows for agent_type '$t' declare effort '$_exp', but the loaded definition $AGENTS_DIR/$t.md carries '${_line:-no effort: line}' — a direct spawn's effort is fixed by the shipped definition's frontmatter (the channel the harness reads); set the rows to that value, since phase-row effort is not configurable per target (only workflow_sites effort is)"
+    fi
+  done < <(printf '%s\n' "$all_agent_types")
+
   [ "$errs" = "0" ] || return 1
   return 0
 }

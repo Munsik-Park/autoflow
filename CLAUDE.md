@@ -67,7 +67,12 @@ bash scripts/spawn-policy/spawn-policy.sh check                # validate the co
 
 That file is a **sample carrying the values currently applied, and it is target-owned**: it ships as
 a `scaffold` artifact, so a stamp or re-stamp creates it only when absent and never overwrites it
-(not even under `--force`), and each target is expected to configure it for its own runtime. Its
+(not even under `--force`), and each target is expected to configure it for its own runtime — its model
+rows and its `workflow_sites` effort. A `phases[]` row's effort is **not** a target lever: the harness reads a
+direct spawn's effort from the agent definition's `effort:` frontmatter (the Agent tool carries `model` per
+call, no effort), and the definitions are versioned tool source a thin-root target loads from the plugin, so
+that value is fixed per plugin version; the config row is the projection source at this repository and
+`check` fails closed when it differs from the loaded definition (`effort_contract.phase_effort_ownership`). Its
 `effort_contract` is the effort vocabulary `check` applies to it — a runtime with a different
 vocabulary is accommodated by editing that contract, never by patching the checker — and the
 `effort` readout prints the inherit sentinel that contract declares rather than a fixed literal. On

@@ -747,6 +747,25 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
     failc "issue #169: thin-root target + CLAUDE_PLUGIN_ROOT -> exit $rc: $(head -1 "$SCRATCH7/i.err")"
   fi
 
+  # (i-b) Effort ownership (PR #183 review, issue #180): a thin-root target
+  # that edits a phases[].effort away from the plugin definition's frontmatter
+  # — to the inherit sentinel or to another concrete value — must be refused
+  # by `check`, because the harness will run the spawn at the definition's
+  # value regardless. The loaded definition's line is the checkable proxy for
+  # the spawn's effort (the harness itself is not exercised here).
+  TCFG_MIS="$SCRATCH7/target-mismatch.json"
+  _def_line=$(grep -E '^effort:' "$PLUGIN_SRC/agents/autoflow-tester.md" | head -n1)
+  for _mis in inherit medium; do
+    jq --arg v "$_mis" '(.phases[] | select(.agent_type == "autoflow-tester") | .effort) = $v' "$TCFG" > "$TCFG_MIS"
+    AUTOFLOW_SPAWN_POLICY="$TCFG_MIS" CLAUDE_PLUGIN_ROOT="$PLUGIN_SRC" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ib-$_mis.err"; rc=$?
+    if [ "$rc" = "1" ] && grep -q "loaded definition" "$SCRATCH7/ib-$_mis.err" && grep -q "autoflow-tester" "$SCRATCH7/ib-$_mis.err"; then
+      pass "PR #183 review: thin-root target sets autoflow-tester effort '$_mis' while the plugin definition carries '$_def_line' -> check exit 1, names the loaded definition"
+    else
+      failc "PR #183 review: mismatch '$_mis' vs '$_def_line' -> exit $rc: $(head -1 "$SCRATCH7/ib-$_mis.err")"
+    fi
+  done
+  rm -f "$TCFG_MIS"
+
   # (ii) Plain shell: the plugin is found through the harness registry under
   # CLAUDE_CONFIG_DIR (installed_plugins.json), CLAUDE_PLUGIN_ROOT unset.
   CFG7="$SCRATCH7/config"; mkdir -p "$CFG7/plugins/cache/autoflow/autoflow"
@@ -927,7 +946,11 @@ if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ] && [ -d "$AGENTS_DIR" ]; then
   cp "$AGENTS_DIR"/*.md "$SCRATCH6/.claude/agents/" 2>/dev/null
 
   # phases[] arm: diagnose-loopcheck (agent_type autoflow-loopcheck, agent_type-unique).
+  # The projection leg (PR #183 review) requires the loaded definition to carry
+  # the same value, so the scratch copy's definition is projected alongside.
   jq '.phases["diagnose-loopcheck"].effort = 0' "$CONFIG" > "$SCRATCH6/.claude/autoflow/spawn-policy.json"
+  sed -i.bak -E 's/^effort: .*$/effort: 0/' "$SCRATCH6/.claude/agents/autoflow-loopcheck.md" && rm -f "$SCRATCH6/.claude/agents/autoflow-loopcheck.md.bak"
+  grep -q '^effort:' "$SCRATCH6/.claude/agents/autoflow-loopcheck.md" || printf 'effort: 0\n' >> "$SCRATCH6/.claude/agents/autoflow-loopcheck.md"
   AUTOFLOW_SPAWN_POLICY="$SCRATCH6/.claude/autoflow/spawn-policy.json" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
   rc_phase0=$?
   if [ "$rc_phase0" = "0" ]; then
@@ -936,7 +959,10 @@ if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ] && [ -d "$AGENTS_DIR" ]; then
     failc "design-added: effort-zero-admitted -- effort=0 on the phases[] row diagnose-loopcheck FAILED check (exit $rc_phase0)"
   fi
 
-  # workflow_sites[][] arm: unconstrained, any row.
+  # workflow_sites[][] arm: unconstrained, any row. The phases[] arm projected
+  # `effort: 0` into the scratch loopcheck definition; restore the shipped copy
+  # so this arm's config (loopcheck at its shipped effort) matches it again.
+  cp "$AGENTS_DIR/autoflow-loopcheck.md" "$SCRATCH6/.claude/agents/autoflow-loopcheck.md"
   first_wf=$(jq -r '.workflow_sites | keys[0]' "$CONFIG")
   first_site=$(jq -r --arg wf "$first_wf" '.workflow_sites[$wf] | keys[0]' "$CONFIG")
   jq --arg wf "$first_wf" --arg s "$first_site" '.workflow_sites[$wf][$s].effort = 0' "$CONFIG" > "$SCRATCH6/.claude/autoflow/spawn-policy.json"

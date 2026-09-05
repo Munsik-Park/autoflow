@@ -81,7 +81,10 @@ longer provisioned (see Prerequisites for targets stamped by that earlier pin).
 `CLAUDE.local.md` holds your target identity (R3) and is never overwritten, even
 with `--force`. `.claude/autoflow/spawn-policy.json` is scaffolded for the same
 reason: it is a sample carrying the values currently applied, which you configure
-for your own runtime, so a re-stamp will not overwrite a configured policy and
+for your own runtime — the model rows and the `workflow_sites` effort; a `phases[]`
+row's effort is fixed by the plugin's agent definitions (their `effort:` frontmatter
+is what a direct spawn actually runs at) and `check` fails closed if you change it —
+so a re-stamp will not overwrite a configured policy and
 `drift-check.sh` reports it as target-owned rather than as content drift. On a
 version bump your obligation is to run
 `bash scripts/spawn-policy/spawn-policy.sh check` and add any newly required row —
