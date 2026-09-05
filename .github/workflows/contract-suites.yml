@@ -73,6 +73,7 @@ on:
       - 'scripts/preflight/check-review-backend.sh'
       - 'scripts/review/codex-review-pr.sh'
       - 'scripts/review/lib/claude-isolation.sh'
+      - 'scripts/review/lib/review-config.sh'
       - 'scripts/test/check-close-keyword-quoting.sh'
       - 'scripts/test/check-manifest-regen-clean.sh'
       - 'scripts/test/check-suite-ci-coverage.sh'
@@ -109,6 +110,7 @@ on:
       - 'tests/test-issue-979-bundle-delivery.sh'
       - 'tests/test-issue-979-preflight-backend-check.sh'
       - 'tests/test-issue-979-probe.sh'
+      - 'tests/test-issue-184-review-model-effort.sh'
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-issue-140-remedy-route.sh'
@@ -206,6 +208,7 @@ on:
       - 'scripts/preflight/check-review-backend.sh'
       - 'scripts/review/codex-review-pr.sh'
       - 'scripts/review/lib/claude-isolation.sh'
+      - 'scripts/review/lib/review-config.sh'
       - 'scripts/test/check-close-keyword-quoting.sh'
       - 'scripts/test/check-manifest-regen-clean.sh'
       - 'scripts/test/check-suite-ci-coverage.sh'
@@ -242,6 +245,7 @@ on:
       - 'tests/test-issue-979-bundle-delivery.sh'
       - 'tests/test-issue-979-preflight-backend-check.sh'
       - 'tests/test-issue-979-probe.sh'
+      - 'tests/test-issue-184-review-model-effort.sh'
       - 'tests/test-issue-979-review-backend.sh'
       - 'tests/test-ledger-entry-id.sh'
       - 'tests/test-issue-140-remedy-route.sh'
@@ -482,6 +486,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-979-probe.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-979-probe.sh
+
+      - name: test-issue-184-review-model-effort.sh
+        id: s-test-issue-184-review-model-effort
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-184-review-model-effort.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-184-review-model-effort.sh
 
       - name: test-issue-979-review-backend.sh
         id: s-test-issue-979-review-backend

@@ -124,6 +124,10 @@ install_into_target() {
   echo "       .claude/autoflow.local.json; switch to claude there if preferred"
   echo "       (see docs/reviewer-backend.md). PREFLIGHT fail-closes if the"
   echo "       configured backend's CLI is absent."
+  echo "  5. Optionally pin the reviewer's model/effort per backend there"
+  echo "       (.review.codex / .review.claude -> {model, effort}); absent keys"
+  echo "       inherit the CLI's own defaults. Verify with"
+  echo "       scripts/preflight/check-review-backend.sh --probe."
 }
 
 # Dispatch: --target selects install mode; otherwise print usage and exit 1.

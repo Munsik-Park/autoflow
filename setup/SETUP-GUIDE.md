@@ -177,7 +177,13 @@ which is also what a re-stamp would deliver.
   auth check (one real round-trip); **PREFLIGHT itself stays presence-only**.
   PREFLIGHT is **fail-closed** on the configured backend: if its CLI is absent,
   `scripts/preflight/check-review-backend.sh` stops the cycle before DIAGNOSE.
-  See [`../docs/reviewer-backend.md`](../docs/reviewer-backend.md).
+  The same file may pin the reviewer's **model and effort per backend**
+  (`{"review":{"backend":"codex","codex":{"model":"…","effort":"high"},"claude":{"model":"…","effort":"high"}}}`);
+  an absent key inherits the CLI's own default, and an unsupported effort, an
+  empty value or malformed JSON fails closed before any reviewer launches. These
+  pins govern only the **isolated reviewer subprocess**, never the orchestrating
+  Claude session. See [`../docs/reviewer-backend.md`](../docs/reviewer-backend.md)
+  > *Model and effort*.
 - Basic familiarity with the AutoFlow methodology
   (see [`docs/autoflow-guide.md`](../docs/autoflow-guide.md)).
 

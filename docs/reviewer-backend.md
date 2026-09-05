@@ -41,6 +41,9 @@ Contract: reviewer-backend
 
 The single wrapper `scripts/review/codex-review-pr.sh` implements both branches;
 the CLI signature is unchanged across backends (the backend is not a flag).
+Either backend additionally receives the configured **model / effort** flags
+from the shared resolver (see *Model and effort* below), or none when
+inheriting.
 
 ## Config location
 
@@ -51,14 +54,17 @@ The backend is recorded in the target-owned scaffold
 { "review": { "backend": "codex" } }
 ```
 
-Read via `jq -r '.review.backend // "codex"'`. **Absent file or absent key ⇒
-`codex`** (preserves the current zero-config behavior). The scaffold is
+Read type-aware by `scripts/review/lib/review-config.sh` (the key's JSON type
+first, then its value — not `jq`'s `//`, which would also substitute for a
+boolean `false`). **Absent file or absent key ⇒ `codex`** (preserves the
+current zero-config behavior). The scaffold is
 delivered by `init.sh` and **never overwritten** on re-install, so a target
 operator's explicit `claude` selection survives (no silent downgrade).
 
 A **present-but-unparseable** file (invalid JSON), **a present file that cannot
 be read because `jq` is not on PATH**, **or a present file whose
-`.review.backend` is empty (`""`) or otherwise not `codex`/`claude`**, does
+`.review.backend` is empty (`""`), not a string (e.g. a boolean `false` — an
+explicit value, not an absent one), or otherwise not `codex`/`claude`**, does
 **not** default to `codex`: the consumers (`codex-review-pr.sh`,
 `check-review-backend.sh`) fail closed (**exit 2**) and the install-time reporter
 (`detect.sh`) reports `REVIEW_BACKEND=invalid` — a configured backend is never
@@ -66,6 +72,94 @@ silently downgraded by a corrupt or empty config. Only an **absent file, an
 absent `.review.backend` key, or an explicit `null`** resolves to the `codex`
 default. (Symmetric with `set-review-backend.sh`'s write-side
 unparseable-refuse.)
+
+## Model and effort
+
+The reviewer's model and reasoning effort can be pinned **per backend** in the
+same target-owned scaffold (issue #184). Every key is optional:
+
+```json
+{
+  "review": {
+    "backend": "codex",
+    "codex":  { "model": "gpt-5.6-sol", "effort": "high" },
+    "claude": { "model": "opus",        "effort": "high" }
+  }
+}
+```
+
+**Single source of truth.** `scripts/review/lib/review-config.sh` is the one
+parser, validator and flag-mapper for the whole `review` section. It is
+**sourced** by both the live wrapper (`codex-review-pr.sh`) and
+`check-review-backend.sh` (presence path and `--probe`), and it ships to targets
+as a `copy` artifact next to `claude-isolation.sh`. Neither consumer reads
+`.claude/autoflow.local.json` on its own, so the probe and the live review cannot
+drift on defaults or validation — the same drift class the isolation helper
+closed for the `CLAUDE*` scrub.
+
+**Flag mapping** (`build_review_backend_args`, the only place it is written):
+
+| Backend | model | effort |
+|---------|-------|--------|
+| `codex` | `codex exec --model <model>` | `codex exec -c model_reasoning_effort=<effort>` |
+| `claude` | `claude -p --model <model>` | `claude -p --effort <effort>` |
+
+Values travel as a bash array, one argv element per token, so a model id or
+effort string is never word-split or re-quoted by the shell.
+
+**Precedence** (per value, most specific first):
+
+| Value | Order |
+|-------|-------|
+| backend | `--backend` override (`check-review-backend.sh` only) → `.review.backend` → `codex` |
+| model | `.review.<backend>.model` → `MODEL` env (**claude only** — the pre-#184 passthrough, retained for compatibility) → **inherit** |
+| effort | `.review.<backend>.effort` → **inherit** |
+
+**Inherit means no flag.** When a key is absent (or JSON `null`) the wrapper
+passes nothing, and the CLI applies its own configuration exactly as before:
+`~/.codex/config.toml` (`model`, `model_reasoning_effort`) for `codex`, the
+claude CLI's user/default model and effort for `claude`. The scaffold delivered
+by `init.sh` pins **nothing** and is never overwritten, so adding this feature
+re-pins no existing install; review-only pinning is an explicit hand-edit of the
+target's file.
+
+**Supported effort values** (the vocabulary lives in `review-config.sh` and is
+edited there when a CLI's set evolves — model identifiers are not validated,
+since they change per vendor and release):
+
+| Backend | Accepted `effort` | Source |
+|---------|-------------------|--------|
+| `codex` | `none` `minimal` `low` `medium` `high` `xhigh` `max` `ultra` `persistent` | the named variants of `enum ReasoningEffort`, `codex-rs/protocol/src/openai_models.rs` (codex-cli 0.153.4). codex accepts any other string as a `Custom` variant and does **not** reject it at launch, so this list is the only guard. |
+| `claude` | `low` `medium` `high` `xhigh` `max` | `claude --help` → `--effort <level>` |
+
+**Fail-closed** (exit `2`, diagnostic on stderr, **before any reviewer
+launches** — in both the wrapper and `check-review-backend.sh`, so an invalid
+pin also stops PREFLIGHT rather than surfacing mid-HANDOFF):
+
+- the file is present but `jq` is not on PATH, or the file is not valid JSON
+  (unchanged from the backend rule above);
+- `.review.<backend>.model` or `.effort` is present but empty (`""`) or not a
+  string;
+- `.review.<backend>.effort` is a string outside that backend's vocabulary.
+
+Only the **configured** backend's section is validated; the other backend's
+section is not read. An absent key is inheritance, never an error.
+
+**Start marker.** The wrapper's marker names the backend and the effective
+explicitly configured values — `[codex-review] starting codex for PR #<N>
+(model=gpt-5.6-sol effort=high) at …`, or `model=inherit effort=inherit` when
+nothing is pinned — and prints nothing else from the environment (no
+credentials, no unrelated variables). `--probe` prints the same summary as
+`[check-review-backend] --probe: <backend> (model=… effort=…)` before its
+round-trip, and passes the identical flags.
+
+**Orchestrator vs. reviewer.** These pins govern only the **isolated reviewer
+subprocess** HANDOFF step 6 launches. The orchestrating Claude Code session's
+own model and effort follow the user's session settings, and the AutoFlow role
+spawns follow `.claude/autoflow/spawn-policy.json`; neither reads the `review`
+section, and the review pins read neither of them. A target can therefore fix
+its review quality/cost policy independently of the session that runs the
+cycle and of the operator's global `~/.codex/config.toml`.
 
 ## Claude isolation basis
 
@@ -129,8 +223,10 @@ and retain it on a seeded Medium+ finding.
 
 ## Availability (PREFLIGHT, fail-closed)
 
-`scripts/preflight/check-review-backend.sh [--backend codex|claude]` probes the
-configured backend's CLI **presence only** (`command -v`) and exits non-zero
+`scripts/preflight/check-review-backend.sh [--backend codex|claude]` resolves
+the `review` section through the shared resolver (so an invalid model/effort
+pin fails closed here too — *Model and effort* above) and probes the
+configured backend's CLI **presence only** (`command -v`), exiting non-zero
 with a reason when absent. PREFLIGHT wires it as a drift-check-style **stop
 condition**: the cycle does not begin until the CLI is installed or the backend
 is switched. Symmetrically, the live wrapper `scripts/review/codex-review-pr.sh`

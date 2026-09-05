@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c495436847f93e5aa2eb0ef1e0fddb5fcdcb3f9d555aec830fe55b18f99bb914"
+      "sha256": "ed4e2b05752f978ae5dc4b2c21a7c337e0c92a9d7777dcf50e81c9418e5833cf"
     },
     {
       "source": "docs/design-rationale.md",
@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "87c9c77c5804eccb04c4ca99b8f3adabc4a729bc8b7b4dd609ba15d6ae55c252"
+      "sha256": "a3a10ff51e0144c6f2df4093a5ebbb683179aa864f467892b8471bd3403451b8"
     },
     {
       "source": "docs/security-checklist.md",
@@ -300,7 +300,7 @@
       "dest": "scripts/review/codex-review-pr.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "63ea552f2068cd6a6caa538b0299770d1b651b8565e46ba0fb7994881b3c0b59"
+      "sha256": "47932854c4ee1fafadc581230fa0d86e25b13a06592b8c6c3f4239be052133b8"
     },
     {
       "source": "scripts/review/lib/claude-isolation.sh",
@@ -310,11 +310,18 @@
       "sha256": "f87cd303a1a582a7bfe69839857e8fe5a9404d963ec2ebdface385f049f3ffb0"
     },
     {
+      "source": "scripts/review/lib/review-config.sh",
+      "dest": "scripts/review/lib/review-config.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "db1f4822794f75eb83d096190656f7cf46d643a93a8e5d822080ba37db601314"
+    },
+    {
       "source": "scripts/preflight/check-review-backend.sh",
       "dest": "scripts/preflight/check-review-backend.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "cfefc35a75bdb5dd4bb28f0dfc02dcd11d6b805c583af6dd373d4e9980f4048f"
+      "sha256": "9074bf7690c8169b5b96890dad649ce64b26e79e119e0bc955d6baa105e44c99"
     },
     {
       "source": ".codex/review.md",

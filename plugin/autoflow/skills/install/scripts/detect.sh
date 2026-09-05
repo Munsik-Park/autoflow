@@ -257,13 +257,22 @@ if [ -f "$_bcfg" ]; then
     # read-side symmetry with check-review-backend.sh's fail-closed jq-absent
     # arm (issue #979 cycle 5b). detect.sh only REPORTS; it never exits.
     REVIEW_BACKEND=invalid
-  elif _rb=$(jq -r '.review.backend // "codex"' "$_bcfg" 2>/dev/null) && [ -n "$_rb" ]; then
-    # File present + jq available: verbatim configured value, or the `//` codex
-    # default for an absent/null key.
-    REVIEW_BACKEND=$_rb
+  elif _rbk=$(jq -r 'try (.review.backend | type) catch "unindexable"' "$_bcfg" 2>/dev/null); then
+    # File present + jq available: type-aware read (PR #188 review, Medium —
+    # jq's `//` also substitutes for `false`, which would mask a boolean as the
+    # codex default). Absent/null key -> codex; a non-empty string -> verbatim;
+    # anything else (boolean, number, object, empty string, non-object .review)
+    # -> `invalid`, read-side symmetry with scripts/review/lib/review-config.sh.
+    case "$_rbk" in
+      null) REVIEW_BACKEND=codex ;;
+      string)
+        _rb=$(jq -r '.review.backend' "$_bcfg" 2>/dev/null)
+        if [ -n "$_rb" ]; then REVIEW_BACKEND=$_rb; else REVIEW_BACKEND=invalid; fi ;;
+      *) REVIEW_BACKEND=invalid ;;
+    esac
   else
-    # File present + jq available but parse fails or value is empty: report a
-    # PARSE FAILURE as `invalid`, never masked as the codex default (AC-2/AC-3).
+    # File present + jq available but parse fails: report a PARSE FAILURE as
+    # `invalid`, never masked as the codex default (AC-2/AC-3).
     REVIEW_BACKEND=invalid
   fi
 fi
@@ -271,6 +280,42 @@ REVIEW_CODEX_PRESENT=no
 REVIEW_CLAUDE_PRESENT=no
 command -v codex  >/dev/null 2>&1 && REVIEW_CODEX_PRESENT=yes
 command -v claude >/dev/null 2>&1 && REVIEW_CLAUDE_PRESENT=yes
+
+# ── Reviewer model / effort (issue #184): the configured backend's pins ───────
+# Read-only report of `.review.<backend>.model` / `.effort` for the CONFIGURED
+# backend: `inherit` when the key is absent/null (the CLI's own default
+# applies — the never-overwrite scaffold pins nothing), the verbatim string
+# when set, `invalid` when the key is present but empty or not a string. The
+# effort VOCABULARY is deliberately not re-checked here: its single source is
+# scripts/review/lib/review-config.sh, which the live wrapper and the --probe
+# both run and which fails closed on an unsupported value — SKILL.md's advisory
+# probe surfaces that, so detect.sh does not carry a second copy of the list.
+REVIEW_MODEL=inherit
+REVIEW_EFFORT=inherit
+if [ "$REVIEW_BACKEND" = codex ] || [ "$REVIEW_BACKEND" = claude ]; then
+  # Nested (not compound) guards, matching the backend block above: a readable
+  # backend value already implies jq was present when the file exists.
+  if [ -f "$_bcfg" ]; then
+    for _rk in model effort; do
+      _rkind=$(jq -r --arg b "$REVIEW_BACKEND" --arg k "$_rk" '.review[$b][$k] | type' "$_bcfg" 2>/dev/null) || _rkind=invalid
+      case "$_rkind" in
+        null) _rval=inherit ;;
+        string)
+          _rval=$(jq -r --arg b "$REVIEW_BACKEND" --arg k "$_rk" '.review[$b][$k]' "$_bcfg" 2>/dev/null)
+          [ -n "$_rval" ] || _rval=invalid ;;
+        *) _rval=invalid ;;
+      esac
+      case "$_rk" in
+        model)  REVIEW_MODEL=$_rval ;;
+        effort) REVIEW_EFFORT=$_rval ;;
+      esac
+    done
+  fi
+else
+  # Unreadable/unknown backend: its section cannot be attributed.
+  REVIEW_MODEL=invalid
+  REVIEW_EFFORT=invalid
+fi
 
 # ── Report (printf: bash builtin, so this still emits under a stripped PATH) ───
 printf 'INSTALL_STATE=%s\n'     "$INSTALL_STATE"
@@ -304,5 +349,7 @@ printf 'LOCAL_MD_EXISTS=%s\n'   "$LOCAL_MD_EXISTS"
 printf 'REVIEW_BACKEND=%s\n'        "$REVIEW_BACKEND"
 printf 'REVIEW_CODEX_PRESENT=%s\n'  "$REVIEW_CODEX_PRESENT"
 printf 'REVIEW_CLAUDE_PRESENT=%s\n' "$REVIEW_CLAUDE_PRESENT"
+printf 'REVIEW_MODEL=%s\n'          "$REVIEW_MODEL"
+printf 'REVIEW_EFFORT=%s\n'         "$REVIEW_EFFORT"
 
 exit 0
