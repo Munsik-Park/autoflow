@@ -613,7 +613,7 @@ if [ -x "$RESOLVER" ]; then
     # The oracle reads the first YAML frontmatter block only — independently of
     # the checker's own extractor (PR #183 review: a whole-file grep accepted a
     # body-only `effort:` line the harness never reads).
-    fm_line=$(awk 'NR==1{ if ($0!="---") exit 3; next } !c && $0=="---"{ c=1; next } !c && /^["'"'"']?effort["'"'"']?[[:space:]]*:/{ if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; l=$0 } else { nc++ }; next } c && /^["'"'"']?effort["'"'"']?[[:space:]]*:/{ o++ } END{ if(!c) exit 3; if(nc>0) exit 6; if(n>1) exit 4; if(o>0) exit 5; if(n==1) print l; exit 0 }' "$def" 2>/dev/null); fm_rc=$?
+    fm_line=$(awk 'NR==1{ if ($0!="---") exit 3; next } !c && $0=="---"{ c=1; next } !c && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/{ if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; l=$0 } else { nc++ }; next } c && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/{ o++ } END{ if(!c) exit 3; if(nc>0) exit 6; if(n>1) exit 4; if(o>0) exit 5; if(n==1) print l; exit 0 }' "$def" 2>/dev/null); fm_rc=$?
     if [ "$fm_rc" != "0" ]; then
       failc "design-added: frontmatter-projection -- $t definition frontmatter malformed for effort (awk rc $fm_rc: 3 no block, 4 duplicate key, 5 effort outside the block, 6 non-canonical spelling)"
       continue
@@ -812,6 +812,19 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
         failc "PR #183 review: spelling [$_sp] -> exit $rc: $(head -1 "$SCRATCH7/ic2.err")"
       fi
     done
+  done
+  # (i-c3) The whole mapping indented by one space (PR #183 review): every
+  # key still parses as the same top-level mapping, so `effort: xhigh` is
+  # read by the runtime while a column-0 regex sees no key. Refused for both
+  # policy values.
+  awk 'NR==1{print; next} !c && $0=="---"{c=1; print; next} !c {print " " $0; next} {print}' "$PLUGIN_SRC/agents/autoflow-tester.md" > "$SCRATCH7P/agents/autoflow-tester.md"
+  for _cfgv in "$TCFG_INH" "$TCFG"; do
+    AUTOFLOW_SPAWN_POLICY="$_cfgv" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic3.err"; rc=$?
+    if [ "$rc" = "1" ] && grep -q "non-canonical form" "$SCRATCH7/ic3.err" && grep -q "autoflow-tester" "$SCRATCH7/ic3.err"; then
+      pass "PR #183 review: tester frontmatter mapping indented by one space with policy $( [ "$_cfgv" = "$TCFG_INH" ] && echo inherit || echo xhigh ) -> check exit 1, non-canonical spelling refused"
+    else
+      failc "PR #183 review: indented mapping -> exit $rc: $(head -1 "$SCRATCH7/ic3.err")"
+    fi
   done
   cp "$PLUGIN_SRC/agents/autoflow-tester.md" "$SCRATCH7P/agents/autoflow-tester.md"
   rm -f "$TCFG_INH"
