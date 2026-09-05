@@ -146,6 +146,11 @@ build_rows() {
   # targets alongside them (a missing sibling breaks the source line).
   emit_row "scripts/review/lib/claude-isolation.sh" \
            "scripts/review/lib/claude-isolation.sh" "root-layer" "copy" "file"
+  # Shared reviewer-config resolver (issue #184): backend + per-backend
+  # model/effort parsing, validation and flag mapping, sourced by BOTH
+  # codex-review-pr.sh and check-review-backend.sh — same sibling obligation.
+  emit_row "scripts/review/lib/review-config.sh" \
+           "scripts/review/lib/review-config.sh" "root-layer" "copy" "file"
   emit_row "scripts/preflight/check-review-backend.sh" \
            "scripts/preflight/check-review-backend.sh" "root-layer" "copy" "file"
   emit_row ".codex/review.md" \

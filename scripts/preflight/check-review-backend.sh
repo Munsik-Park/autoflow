@@ -34,6 +34,11 @@
 # Wired into PREFLIGHT (presence-only path) as a drift-check-style stop
 # condition: a non-zero exit stops the cycle before DIAGNOSE.
 #
+# Model / effort (issue #184): the backend's configured `.review.<backend>.model`
+# and `.effort` are resolved by the shared scripts/review/lib/review-config.sh —
+# the same resolver the live wrapper uses — and the --probe round-trip passes
+# them exactly as HANDOFF step 6 will (or nothing, when inheriting).
+#
 # Usage: scripts/preflight/check-review-backend.sh [--backend codex|claude] [--probe]
 # =============================================================================
 
@@ -62,43 +67,24 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Resolve the effective backend: explicit override wins; else the target-owned
-# scaffold; else the codex default.
-BACKEND="$BACKEND_OVERRIDE"
-if [ -z "$BACKEND" ]; then
-  CFG=".claude/autoflow.local.json"
-  if [ -f "$CFG" ]; then
-    # File present: jq is required to read it. If jq is absent, fail closed
-    # (exit 2) rather than silently downgrading a configured backend to codex —
-    # a configured backend must not be dropped just because its config cannot be
-    # parsed (issue #979 cycle 5b; matches scripts/review/codex-review-pr.sh's
-    # fail-closed stance in the same situation).
-    if ! command -v jq >/dev/null 2>&1; then
-      echo "[check-review-backend] ${CFG} is present but jq is not on PATH — refusing to fall back to codex (a configured backend must not be silently downgraded when its config cannot be read). Install jq or remove the file." >&2
-      exit 2
-    fi
-    # jq available: branch on jq's exit status. A parse failure fails closed
-    # (exit 2), never a silent codex fallback — a configured backend must not be
-    # downgraded on a corrupt config (issue #979 AC-2/AC-3).
-    if ! BACKEND="$(jq -r '.review.backend // "codex"' "$CFG" 2>/dev/null)"; then
-      echo "[check-review-backend] ${CFG} is present but not valid JSON — refusing to fall back to codex (a configured backend must not be silently downgraded). Fix or remove the file." >&2
-      exit 2
-    fi
-    if [ -z "$BACKEND" ]; then
-      echo "[check-review-backend] ${CFG} sets an empty .review.backend — refusing to fall back to codex (an empty configured value must not be silently downgraded). Set a valid backend or remove the key." >&2
-      exit 2
-    fi
-  fi
-  [ -n "$BACKEND" ] || BACKEND="codex"
-fi
+# Resolve the effective backend + model/effort through the SHARED resolver
+# (scripts/review/lib/review-config.sh, issue #184): explicit --backend override
+# wins; else the target-owned scaffold; else the codex default. Model / effort
+# come from `.review.<backend>` and default to inherit. The same parser,
+# defaults and validation the live wrapper (codex-review-pr.sh) applies run
+# here, so a config the review would reject is rejected at PREFLIGHT / probe
+# time with the same exit 2 (jq absent, malformed JSON, empty/unknown backend,
+# empty model/effort, effort outside the backend's vocabulary) — never a
+# silent codex/inherit downgrade (issue #979 AC-2/AC-3, cycle 5b).
+# shellcheck source=../review/lib/review-config.sh
+. "$SCRIPT_DIR/../review/lib/review-config.sh"
+resolve_review_config check-review-backend "$BACKEND_OVERRIDE"
+BACKEND="$REVIEW_BACKEND"
+build_review_backend_args
 
 case "$BACKEND" in
   codex) CLI="codex" ;;
   claude) CLI="claude" ;;
-  *)
-    echo "[check-review-backend] unknown review backend '${BACKEND}' — expected 'codex' or 'claude' (configured in .claude/autoflow.local.json)." >&2
-    exit 2
-    ;;
 esac
 
 # --------------------------------------------------------------------------
@@ -182,11 +168,14 @@ probe_claude() {
   build_claude_isolation
   local _orig; _orig="$(pwd)"
   cd "$NEUTRAL_CWD" 2>/dev/null || { cleanup_claude_isolation; PROBE_TIMED_OUT=1; probe_finish "$bound"; }
+  # REVIEW_BACKEND_ARGS (--model / --effort, or nothing = inherit) is the same
+  # array the live review passes, from the same resolver (issue #184).
   probe_run_bounded "$bound" \
     env "${CLAUDE_ISOLATION_UNSET[@]}" claude -p "Reply with the single token READY." \
       --setting-sources "" \
       --disallowedTools "Edit,Write,MultiEdit,Bash" \
-      --output-format json
+      --output-format json \
+      ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"}
   cd "$_orig" 2>/dev/null || cd /
   cleanup_claude_isolation
   probe_finish "$bound"
@@ -198,13 +187,22 @@ probe_claude() {
 # network_access flags govern the orthogonal command-execution sandbox).
 probe_codex() {
   local bound="${PROBE_TIMEOUT_SECS:-20}"
+  # REVIEW_BACKEND_ARGS (--model / -c model_reasoning_effort=…, or nothing =
+  # inherit ~/.codex/config.toml) is the same array the live review passes
+  # (issue #184).
   probe_run_bounded "$bound" \
-    codex exec -c approval_policy="never" "Reply with the single token READY."
+    codex exec -c approval_policy="never" \
+      ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} \
+      "Reply with the single token READY."
   probe_finish "$bound"
 }
 
 if command -v "$CLI" >/dev/null 2>&1; then
   if [ "$PROBE" -eq 1 ]; then
+    # Probe marker: the backend and the effective explicitly configured
+    # model/effort (`inherit` = the CLI's own default), nothing else from the
+    # environment — mirrors the live wrapper's start marker (issue #184).
+    echo "[check-review-backend] --probe: ${BACKEND} ($(review_config_summary))"
     case "$CLI" in
       claude) probe_claude ;;
       codex)  probe_codex  ;;

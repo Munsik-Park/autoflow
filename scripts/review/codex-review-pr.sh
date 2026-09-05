@@ -47,6 +47,11 @@ set -euo pipefail
 # below for the claude call).
 _CRP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$_CRP_DIR/lib/claude-isolation.sh"
+# Shared reviewer-config resolver (issue #184): backend + per-backend model /
+# effort are read, validated and mapped onto CLI flags in ONE place, sourced by
+# this wrapper and by check-review-backend.sh --probe, so the probe and the live
+# review cannot drift on parser, defaults or validation.
+. "$_CRP_DIR/lib/review-config.sh"
 
 PR=""
 REPO=""
@@ -84,33 +89,17 @@ fi
 
 cd "$(git rev-parse --show-toplevel)"
 
-# Reviewer backend selection (issue #979). Read from the target-owned scaffold
-# .claude/autoflow.local.json; default codex when the file or key is absent.
-BACKEND="codex"
-BACKEND_CFG=".claude/autoflow.local.json"
-if [[ -f "$BACKEND_CFG" ]]; then
-  # Present file: distinguish "valid JSON, key absent" (jq exits 0, prints the
-  # codex default) from a PARSE FAILURE. Branch on jq's exit status instead of
-  # swallowing it with an or-echo fallback: a malformed config must fail closed,
-  # not silently downgrade a configured backend (issue #979 AC-2/AC-3; symmetric with
-  # set-review-backend.sh's write-side unparseable-refuse).
-  if ! BACKEND="$(jq -r '.review.backend // "codex"' "$BACKEND_CFG" 2>/dev/null)"; then
-    echo "[codex-review] ${BACKEND_CFG} is present but not valid JSON — refusing to fall back to codex (a configured backend must not be silently downgraded). Fix or remove the file." >&2
-    exit 2
-  fi
-  if [[ -z "$BACKEND" ]]; then
-    echo "[codex-review] ${BACKEND_CFG} sets an empty .review.backend — refusing to fall back to codex (an empty configured value must not be silently downgraded). Set a valid backend or remove the key." >&2
-    exit 2
-  fi
-fi
-
-case "$BACKEND" in
-  codex|claude) ;;
-  *)
-    echo "[codex-review] unknown review backend '${BACKEND}' — expected 'codex' or 'claude' (configured in .claude/autoflow.local.json)." >&2
-    exit 2
-    ;;
-esac
+# Reviewer backend + model/effort resolution (issue #979, #184). Read from the
+# target-owned scaffold .claude/autoflow.local.json through the shared resolver:
+# backend defaults to codex when the file or key is absent; model / effort
+# default to INHERIT (no flag passed, the CLI's own user/default config
+# applies). A present-but-unreadable file (jq absent, malformed JSON), an empty
+# or unknown backend, an empty model/effort, or an effort outside the backend's
+# vocabulary fails closed here (exit 2) — a configured value is never silently
+# downgraded or dropped, and no reviewer launches on a rejected config.
+resolve_review_config codex-review
+BACKEND="$REVIEW_BACKEND"
+build_review_backend_args
 
 if [[ "$BACKEND" == "claude" ]]; then
   # claude runs neutral-cwd → it cannot resolve the repo from `.`, so resolve the
@@ -172,7 +161,10 @@ fi
 
 # Start marker — lands in the captured output at once, so a watcher confirms
 # this wrapper reached the reviewer call.
-echo "[codex-review] starting ${BACKEND} for PR #${PR}${REPO:+ (${REPO})} at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# It also names the effective EXPLICITLY configured model/effort (`inherit`
+# when the CLI's own default applies) — and nothing else from the environment,
+# so the log stays free of credentials (issue #184).
+echo "[codex-review] starting ${BACKEND} for PR #${PR}${REPO:+ (${REPO})} ($(review_config_summary)) at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 if [[ "$BACKEND" == "claude" ]]; then
   # claude backend (issue #979, D3/D4/§5.2): run headless `claude -p`
@@ -186,7 +178,6 @@ if [[ "$BACKEND" == "claude" ]]; then
   # `Bash(gh *)` and block edits; force subscription/OAuth billing by unsetting
   # ANTHROPIC_API_KEY.
   INSTRUCTIONS="$(git rev-parse --show-toplevel)/.codex/review.md"
-  MODEL="${MODEL:-}"
   if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
     echo "[codex-review] WARNING: ANTHROPIC_API_KEY is set; unsetting it for the claude reviewer subprocess to force subscription/OAuth billing (avoids metered API charges)." >&2
   fi
@@ -200,7 +191,8 @@ if [[ "$BACKEND" == "claude" ]]; then
   # below: it excludes the user-scope plugin gate hook that loads in EVERY claude
   # session regardless of cwd or env (also witnessed on PR #981). This wrapper
   # appends its review-specific flags (--system-prompt-file, the `Bash(gh *)`
-  # grant, --model).
+  # grant) and the resolved model/effort flags (REVIEW_BACKEND_ARGS: --model /
+  # --effort, or nothing when inheriting — issue #184).
   build_claude_isolation
   if ( cd "$NEUTRAL_CWD" && env "${CLAUDE_ISOLATION_UNSET[@]}" claude -p "$PROMPT" \
          --system-prompt-file "$INSTRUCTIONS" \
@@ -208,7 +200,7 @@ if [[ "$BACKEND" == "claude" ]]; then
          --allowedTools "Bash(gh *)" \
          --disallowedTools "Edit,Write,MultiEdit" \
          --output-format json \
-         ${MODEL:+--model "$MODEL"} ); then
+         ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} ); then
     claude_rc=0
   else
     claude_rc=$?
@@ -220,10 +212,14 @@ if [[ "$BACKEND" == "claude" ]]; then
   exit "$claude_rc"
 fi
 
+# codex backend: REVIEW_BACKEND_ARGS carries `--model <m>` and
+# `-c model_reasoning_effort=<e>` when configured, or nothing — then codex
+# inherits ~/.codex/config.toml exactly as before issue #184.
 if codex exec \
      -s workspace-write \
      -c sandbox_workspace_write.network_access=true \
      -c approval_policy="never" \
+     ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} \
      "$PROMPT" < /dev/null; then
   codex_rc=0
 else

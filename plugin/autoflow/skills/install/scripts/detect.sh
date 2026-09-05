@@ -272,6 +272,42 @@ REVIEW_CLAUDE_PRESENT=no
 command -v codex  >/dev/null 2>&1 && REVIEW_CODEX_PRESENT=yes
 command -v claude >/dev/null 2>&1 && REVIEW_CLAUDE_PRESENT=yes
 
+# ── Reviewer model / effort (issue #184): the configured backend's pins ───────
+# Read-only report of `.review.<backend>.model` / `.effort` for the CONFIGURED
+# backend: `inherit` when the key is absent/null (the CLI's own default
+# applies — the never-overwrite scaffold pins nothing), the verbatim string
+# when set, `invalid` when the key is present but empty or not a string. The
+# effort VOCABULARY is deliberately not re-checked here: its single source is
+# scripts/review/lib/review-config.sh, which the live wrapper and the --probe
+# both run and which fails closed on an unsupported value — SKILL.md's advisory
+# probe surfaces that, so detect.sh does not carry a second copy of the list.
+REVIEW_MODEL=inherit
+REVIEW_EFFORT=inherit
+if [ "$REVIEW_BACKEND" = codex ] || [ "$REVIEW_BACKEND" = claude ]; then
+  # Nested (not compound) guards, matching the backend block above: a readable
+  # backend value already implies jq was present when the file exists.
+  if [ -f "$_bcfg" ]; then
+    for _rk in model effort; do
+      _rkind=$(jq -r --arg b "$REVIEW_BACKEND" --arg k "$_rk" '.review[$b][$k] | type' "$_bcfg" 2>/dev/null) || _rkind=invalid
+      case "$_rkind" in
+        null) _rval=inherit ;;
+        string)
+          _rval=$(jq -r --arg b "$REVIEW_BACKEND" --arg k "$_rk" '.review[$b][$k]' "$_bcfg" 2>/dev/null)
+          [ -n "$_rval" ] || _rval=invalid ;;
+        *) _rval=invalid ;;
+      esac
+      case "$_rk" in
+        model)  REVIEW_MODEL=$_rval ;;
+        effort) REVIEW_EFFORT=$_rval ;;
+      esac
+    done
+  fi
+else
+  # Unreadable/unknown backend: its section cannot be attributed.
+  REVIEW_MODEL=invalid
+  REVIEW_EFFORT=invalid
+fi
+
 # ── Report (printf: bash builtin, so this still emits under a stripped PATH) ───
 printf 'INSTALL_STATE=%s\n'     "$INSTALL_STATE"
 printf 'DRIFT_STATE=%s\n'       "$DRIFT_STATE"
@@ -304,5 +340,7 @@ printf 'LOCAL_MD_EXISTS=%s\n'   "$LOCAL_MD_EXISTS"
 printf 'REVIEW_BACKEND=%s\n'        "$REVIEW_BACKEND"
 printf 'REVIEW_CODEX_PRESENT=%s\n'  "$REVIEW_CODEX_PRESENT"
 printf 'REVIEW_CLAUDE_PRESENT=%s\n' "$REVIEW_CLAUDE_PRESENT"
+printf 'REVIEW_MODEL=%s\n'          "$REVIEW_MODEL"
+printf 'REVIEW_EFFORT=%s\n'         "$REVIEW_EFFORT"
 
 exit 0

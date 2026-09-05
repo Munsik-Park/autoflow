@@ -143,6 +143,19 @@ written):
   result but never aborts the install, and PREFLIGHT itself stays
   presence-only. See
   [`docs/reviewer-backend.md`](../../../../docs/reviewer-backend.md).
+- **Reviewer model / effort (display-only; issue #184).** Read `REVIEW_MODEL`
+  and `REVIEW_EFFORT` from the Step-1 report — the configured backend's
+  `.review.<backend>.model` / `.effort` pins (`inherit` = the key is absent and
+  the CLI's own default applies; `invalid` = present but empty / not a string).
+  Report them as information: the install **never writes** these keys (the
+  scaffold pins nothing, so an existing install is never re-pinned), and an
+  operator who wants review-only pinning hand-edits the file. On `invalid`,
+  DISCLOSE that the live review and the probe will fail closed on that key
+  until it is fixed or removed. The Step-4 `--probe` applies the same resolver
+  (and the per-backend effort vocabulary) the live review uses, so a value the
+  review would reject is reported there. Supported values and precedence:
+  [`docs/reviewer-backend.md`](../../../../docs/reviewer-backend.md) > *Model
+  and effort*.
 
 ## Step 2: [multi-repo only] fork-URL proposal (display-only)
 
