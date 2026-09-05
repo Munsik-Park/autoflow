@@ -249,7 +249,7 @@ When the user files an issue, the flow below executes in order. Each phase auto-
 **PREFLIGHT cannot be skipped.** If PREFLIGHT's completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the blocking condition first and report.
 
 ```
-PREFLIGHT       : Pre-Work          — prior-cycle resolution (cleanup after external merge/close), Git clean check, remote sync, dev branch creation
+PREFLIGHT       : Pre-Work          — prior-cycle resolution (cleanup after external merge/close), Git clean check, remote sync, dev branch creation, target-declared local checks (`preflight.local_checks[]`; none declared → recorded no-op)
 DIAGNOSE        : Issue Analysis    — intake readiness triage (new-issue: planning/design/ADR pre-req filter), affected scope, hypothesis classification, lightweight verification, task decomposition, affected docs
 GATE:HYPOTHESIS : Hypothesis Eval   — Evaluation AI (3 items × 10 points), bug/incident issues only
 ARCHITECT       : Plan Synthesis    — orchestrator-relayed persistent participants (Developer AI + Test AI, ADR-0023) discuss on a transcript file; a Record Workflow writes the feature design + verification design
@@ -272,6 +272,7 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | Transition | Condition |
 |------|------|
 | PREFLIGHT → DIAGNOSE | Git clean, remote sync done |
+| PREFLIGHT → user | a fail-closed stop condition fails — bundle drift, reviewer-backend CLI absent, or a target-declared local check (`scripts/preflight/local-checks.sh`, issue #181, PREFLIGHT Step 1a — run before the Git clean check and before the state file is created, so a failure leaves no `active:true` state and the next entry starts PREFLIGHT again) that does not pass after its declared repair → report and stop; DIAGNOSE does not begin. Checks that pass but leave the worktree dirty route to PREFLIGHT Step 4 (resolve, then re-run), not to the user. Absent declaration is a no-op recorded in the ledger, not a stop |
 | PREFLIGHT (review-response) → DIAGNOSE bounded / full | the previous cycle's `.autoflow/issue-{N}-*.md` artifacts are preserved as `issue-{N}-c{C}-*.md`; `scope-bounded: true` in the findings file → bounded path (Phase A reused, ARCHITECT's brief states the bounded scope, AUDIT re-scores the prior Low list on the change surface); otherwise the full path. After GREEN, `scripts/review/scope-bounded.sh check-fix` — a fix that adds a file leaves the bounded path (ARCHITECT re-discussed with the full topic, no re-entry budget consumed). See `docs/autoflow-guide.md` > PREFLIGHT > Scope-bounded entry |
 | DIAGNOSE (intake readiness triage) → user | `mode=new-issue` only. A planning/design/ADR prerequisite is clearly required first → write reason + suggested issue-split draft to `.autoflow/issue-{N}-triage.md`, present situation-first (the user-visible problem + suggested split in domain terms; the file is the drill-down anchor — see Execution Principles > Human-decision presentation), pause (`active:false`, `phase:"awaiting-user"`). No auto issue creation; ambiguous → PASS to structure analysis. |
 | DIAGNOSE (intake readiness triage) → structure analysis | triage PASS (no clear prerequisite) → Phase A/B fan-out begins |

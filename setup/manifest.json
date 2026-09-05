@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "37b9bb2d3df5cd427ee10dbb4f4c62475ad5edca7204aac52553ece4c792f61c"
+      "sha256": "fd9af3a53546319909d52688cdf167d4647202f92fbaaa26de879710fb2c2e3f"
     },
     {
       "source": "docs/INDEX.md",
@@ -111,14 +111,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ed4e2b05752f978ae5dc4b2c21a7c337e0c92a9d7777dcf50e81c9418e5833cf"
+      "sha256": "348550fd52a3f4305b1a784422a7f25f6f402a26e5a748453c610cf9fef93aa0"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e9d7e3ce44987f06aae61fec064203f26f18068d3f773ef646d51f336f95b77d"
+      "sha256": "b852f2552d86bf1845cb4241ab2315013dc45d5305abe19606df593ccfbeff54"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -322,6 +322,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "9074bf7690c8169b5b96890dad649ce64b26e79e119e0bc955d6baa105e44c99"
+    },
+    {
+      "source": "scripts/preflight/local-checks.sh",
+      "dest": "scripts/preflight/local-checks.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "1270bf665294058544d80e748e20be2a7d09058f73730bbc587ff725d2172517"
     },
     {
       "source": ".codex/review.md",
