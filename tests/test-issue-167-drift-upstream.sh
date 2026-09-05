@@ -521,7 +521,11 @@ else
   failc "DOC-CONTRACT: docs/tool-delivery-contract.md does not name the marketplace-clone comparison"
 fi
 AG="$REPO_ROOT/docs/autoflow-guide.md"
-if awk '/^## PREFLIGHT/,/^## DIAGNOSE/' "$AG" | grep -q 'drift-check.sh'; then
+# One awk, no downstream `grep -q`: under this file's `pipefail`, a `-q` reader
+# that exits on its first match hands awk SIGPIPE (141) once the section is
+# larger than awk's output buffer, and the assertion reads a present line as
+# absent (issue #181 CI, reproduced with mawk 1.3.4 on ubuntu-24.04).
+if awk '/^## PREFLIGHT/,/^## DIAGNOSE/ { if (/drift-check\.sh/) found = 1 } END { exit !found }' "$AG"; then
   pass "DOC-PREFLIGHT: docs/autoflow-guide.md > PREFLIGHT runs drift-check.sh as a stop condition"
 else
   failc "DOC-PREFLIGHT: docs/autoflow-guide.md > PREFLIGHT does not name drift-check.sh"

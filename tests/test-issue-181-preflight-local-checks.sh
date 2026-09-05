@@ -166,9 +166,9 @@ assert_true "manifest ships scripts/preflight/local-checks.sh as a root-layer co
 assert_true "manifest sha256 for the script equals the current source hash" \
   "[ \"\$(jq -r '.artifacts[] | select(.source == \"scripts/preflight/local-checks.sh\") | .sha256' '$MANIFEST')\" = \"\$(shasum -a 256 '$SCRIPT' | awk '{print \$1}')\" ]"
 assert_true "PREFLIGHT playbook names local-checks.sh as a fail-closed stop condition" \
-  "awk '/^## PREFLIGHT/{f=1;next} f && /^## /{exit} f' '$GUIDE_MD' | grep -q 'scripts/preflight/local-checks.sh'"
+  "awk '/^## PREFLIGHT/{f=1;next} f && /^## /{exit} f && /scripts\\/preflight\\/local-checks\\.sh/ {found=1} END {exit !found}' '$GUIDE_MD'"
 assert_true "PREFLIGHT playbook names the declaration key preflight.local_checks" \
-  "awk '/^## PREFLIGHT/{f=1;next} f && /^## /{exit} f' '$GUIDE_MD' | grep -q 'preflight.local_checks'"
+  "awk '/^## PREFLIGHT/{f=1;next} f && /^## /{exit} f && /preflight\\.local_checks/ {found=1} END {exit !found}' '$GUIDE_MD'"
 
 echo ""
 echo "=============================="
