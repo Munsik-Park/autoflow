@@ -86,7 +86,17 @@ Codex Medium findings its own rubric covers: the `useSearchEnabled` mechanism mi
 Munsik-Park/autoflow#905 · LibreChat #268 review comments). GATE:QUALITY — a lower-tier PASS
 (avg 8.9) contradicted by a same-cycle Codex Medium finding its rubric covers: Test
 coverage/quality missed that the spec seeds `search.enabled: true` directly, masking the missing
-`useSearchEnabled` wiring (evidence: LibreChat #268 review comment).
+`useSearchEnabled` wiring (evidence: LibreChat #268 review comment). RED — reverted to the higher tier on issue
+#180: across three consecutive cycles of llmroute #279 (one new-issue, two review-response) the Test AI's Red
+confirmation was contradicted by VERIFY step 1, and the cause-branch workflow returned `test=fix_test,
+impl=no_problem` all three times (Test AI defects 7 / 2 files / 1 — design-document, real-type and runtime-
+environment mismatches, a fixture-precedence error, an arithmetic error; implementation defects 0; each
+round-trip ≈ 1.1M tokens of cause-branch plus ≈ 0.36M of RED re-entry against a RED spawn of 0.25–0.35M).
+A survey of the configured reviewer's findings across the four consuming repositories (856 reviewed PRs as
+of 2026-09-05) adds the escaped half of the same defect class: 5 Medium findings where the suite did not
+exercise the real contract or environment (those PRs averaged 4.75 review rounds), and 14 High findings
+where the PR's own main path failed at runtime after VERIFY had confirmed Green (evidence: issue #180 and
+its PR thread).
 
 Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (`TaskCreate` only), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent (model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`).
 
@@ -98,7 +108,7 @@ Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT
 
 **[MUST]** REFINE entry spawns the Developer AI fresh, on the model the policy names for REFINE, carrying only `.autoflow/issue-{N}-*.md` paths. Every role is an anonymous direct spawn with no lifetime spanning phases (*Spawn mode by role lifetime* below), so each phase's spawn already resolves its own model from the config; the VERIFY → REFINE model change needs no separate teardown step. What the rule still forbids is carrying VERIFY's spawn into REFINE by reusing its context — the phase boundary is a fresh spawn, matching the DISPATCH-entry respawn in [Cost Control](#cost-control).
 
-**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through a VERIFY failure, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
+**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through a VERIFY failure, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. A lower-tier **role spawn** is covered on the same terms (issue #180): the phase-exit claim it returns — RED's Red confirmation, GREEN's implementation-done — stands where a gate's PASS stands, and the contradicting signal is the VERIFY cause-branch verdict that attributes the failure to that role in the same cycle (`fix_test` for the Test AI, `fix_impl` for the Developer AI), or a reviewer-review Medium+ finding on the artifact that role produced. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
 
 **Rollout status**: the per-phase assignment in the config is settled (pilot complete); changes follow the revert rule above.
 

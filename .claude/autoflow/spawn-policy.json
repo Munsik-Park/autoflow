@@ -75,9 +75,9 @@
     },
     "red": {
       "agent_type": "autoflow-tester",
-      "model": "sonnet",
+      "model": "opus",
       "effort": "inherit",
-      "work_type": "acceptance criteria → test code (complex tests fall back to the higher tier, with rationale in the Test AI report)"
+      "work_type": "acceptance criteria → test code; test doubles re-derived from the real types and response shapes (tier reverted on issue #180 — record: CLAUDE.md > Spawn Model > Revert history)"
     },
     "green": {
       "agent_type": "autoflow-implementer",

@@ -1019,8 +1019,12 @@ _assert_fold "a genuine trailing blank logical line is preserved, not silently d
 # (extends tests/test-gate-hardening.sh, no new file)". Two properties:
 #   - a spawn's declared `model` outside the config's admitted set for its
 #     `subagent_type` draws a WARNING (advisory only -- never denies), keyed
-#     on the row (`red` -> `autoflow-tester`, a SINGLETON admitted set, so the
-#     edit provably moves the verdict);
+#     on the rows that use `autoflow-tester`. The config is a target-owned
+#     scaffold sample, so the "outside" model is DERIVED from it at run time
+#     (the first candidate `models-for autoflow-tester` does not list) rather
+#     than assumed -- issue #180 moved `red` off the singleton set the
+#     original text relied on, and a hardcoded literal would then test the
+#     inside of the set;
 #   - a spawn whose `subagent_type` the policy admits NO models for at all
 #     (`claude-code-guide`, a research type no phase row models; until issue
 #     #179 `autoflow-planner` was the other such type) draws NO advisory line,
@@ -1030,8 +1034,13 @@ _assert_fold "a genuine trailing blank logical line is preserved, not silently d
 # =============================================================================
 echo "== hook-advisory / advisory-silence-on-empty-set (issue #150) =="
 
-run_hook_out 0 "declared tester w/ passing gate_plan + model outside the config's admitted set for autoflow-tester -> allowed (advisory only, never denies)" \
-  "$PASSING" "$(agent_json 'autoflow-tester' 'author the acceptance checks' 'opus')"
+_admitted_tester=$(bash "$PROJECT_ROOT/scripts/spawn-policy/spawn-policy.sh" models-for autoflow-tester 2>/dev/null || true)
+OUTSIDE_MODEL=""
+for _cand in haiku fable opus sonnet; do
+  if ! printf '%s\n' "$_admitted_tester" | grep -qxF "$_cand"; then OUTSIDE_MODEL="$_cand"; break; fi
+done
+run_hook_out 0 "declared tester w/ passing gate_plan + model '$OUTSIDE_MODEL' outside the config's admitted set for autoflow-tester [$(printf '%s' "$_admitted_tester" | tr '\n' ' ')] -> allowed (advisory only, never denies)" \
+  "$PASSING" "$(agent_json 'autoflow-tester' 'author the acceptance checks' "$OUTSIDE_MODEL")"
 if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING.*(advisory|NOT blocked)'; then
   echo "  PASS: mismatch draws a WARNING ... (advisory — this call is NOT blocked) line"
   PASS=$((PASS + 1))

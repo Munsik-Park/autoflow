@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5bf8f33aabe55916c4bf63d7383e90109b5807cccd77fb65495fe85c8a4a15ec"
+      "sha256": "0ffeaaf41b045b2a25e44e9c9387fdb303527987dc0c666993b7d8988a2b50f1"
     },
     {
       "source": "docs/INDEX.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "63d752760eb747c2fb922470d21fa345ba3276b91ebecc5cd2e8a09ac2e6bae8"
+      "sha256": "2d9de145cf657efbc2d336cf0e5b2f8275b1dbfca7016951a014a603db8f5a98"
     },
     {
       "source": "docs/title-guide.md",
@@ -384,7 +384,7 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "60367804d5a778b6bb2bf2a74c17f51c0c88a362a12fb59cd83b29b12b432ede"
+      "sha256": "ba030b132914b0fe9d4ad5404f69165470b7bc9f5b274ecd95fa004c0ecda801"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
