@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/preflight/check-review-backend.sh scripts/review/lib/claude-isolation.sh
+# ci-subject: scripts/preflight/check-review-backend.sh scripts/review/lib/claude-isolation.sh scripts/review/lib/review-config.sh
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
