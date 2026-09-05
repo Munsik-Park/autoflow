@@ -346,21 +346,24 @@ assert_true "delivery: the scaffold .claude/autoflow.local.json still pins no mo
 assert_true "lib: bash -n parses under the system /bin/bash (macOS 3.2) as well" \
   "/bin/bash -n '$PROJECT_ROOT/$LIB_REL' && /bin/bash -n '$PROJECT_ROOT/$WRAPPER_REL'"
 
+# PLUGIN_CACHE_ROOT is passed explicitly (this checkout holds setup/manifest.json)
+# — detect.sh hard-errors before its report when no marketplace clone resolves,
+# which is the CI case (no ~/.claude/plugins registry there).
 DT="$(mktemp -d)"; git -C "$DT" init -q; mkdir -p "$DT/.claude"
 printf '%s\n' '{ "review": { "backend": "claude", "claude": { "model": "opus", "effort": "high" } } }' > "$DT/.claude/autoflow.local.json"
-DET="$(TARGET_ROOT="$DT" sh "$DETECT_SH" 2>/dev/null)"
+DET="$(TARGET_ROOT="$DT" PLUGIN_CACHE_ROOT="$PROJECT_ROOT" sh "$DETECT_SH" 2>/dev/null)"
 assert_true "detect.sh: reports the configured backend's pins as REVIEW_MODEL / REVIEW_EFFORT" \
   "printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_MODEL=opus' && printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_EFFORT=high'"
 printf '%s\n' '{ "review": { "backend": "codex", "claude": { "model": "opus" } } }' > "$DT/.claude/autoflow.local.json"
-DET="$(TARGET_ROOT="$DT" sh "$DETECT_SH" 2>/dev/null)"
+DET="$(TARGET_ROOT="$DT" PLUGIN_CACHE_ROOT="$PROJECT_ROOT" sh "$DETECT_SH" 2>/dev/null)"
 assert_true "detect.sh: absent pins for the configured backend report inherit (other section ignored)" \
   "printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_MODEL=inherit' && printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_EFFORT=inherit'"
 printf '%s\n' '{ "review": { "backend": "codex", "codex": { "model": "", "effort": 1 } } }' > "$DT/.claude/autoflow.local.json"
-DET="$(TARGET_ROOT="$DT" sh "$DETECT_SH" 2>/dev/null)"
+DET="$(TARGET_ROOT="$DT" PLUGIN_CACHE_ROOT="$PROJECT_ROOT" sh "$DETECT_SH" 2>/dev/null)"
 assert_true "detect.sh: empty / non-string pins report invalid" \
   "printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_MODEL=invalid' && printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_EFFORT=invalid'"
 rm -f "$DT/.claude/autoflow.local.json"
-DET="$(TARGET_ROOT="$DT" sh "$DETECT_SH" 2>/dev/null)"
+DET="$(TARGET_ROOT="$DT" PLUGIN_CACHE_ROOT="$PROJECT_ROOT" sh "$DETECT_SH" 2>/dev/null)"
 assert_true "detect.sh: absent config reports codex + inherit/inherit (backward compatible)" \
   "printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_BACKEND=codex' && printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_MODEL=inherit'"
 
