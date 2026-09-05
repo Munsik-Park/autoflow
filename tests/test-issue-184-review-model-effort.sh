@@ -2,7 +2,9 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/review/codex-review-pr.sh scripts/review/lib/review-config.sh scripts/preflight/check-review-backend.sh plugin/autoflow/skills/install/scripts/detect.sh docs/reviewer-backend.md setup/manifest.json
-# lane: standing
+# lane: cycle-scoped
+# retire-with: #184
+# cycle-arm: #184
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: reviewer backend model / effort configuration — Issue #184
@@ -27,6 +29,21 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Lane: cycle-scoped, retired with #184's merge (operator decision, PR #188):
+# this suite asserts #184's own landed diff — that the model/effort pins reach
+# the reviewer CLIs — and is not kept as a standing regression guard. Declared
+# as a path allow-list array per scripts/test/suite-manifest.sh's cycle-scoped
+# grammar: the landed files the assertions below evaluate, and the set the
+# delivery leg checks are present in the tree.
+allow_list=(
+  "scripts/review/codex-review-pr.sh"
+  "scripts/review/lib/review-config.sh"
+  "scripts/preflight/check-review-backend.sh"
+  "plugin/autoflow/skills/install/scripts/detect.sh"
+  "docs/reviewer-backend.md"
+  "setup/manifest.json"
+)
 WRAPPER_REL="scripts/review/codex-review-pr.sh"
 CHECK_REL="scripts/preflight/check-review-backend.sh"
 LIB_REL="scripts/review/lib/review-config.sh"
@@ -331,6 +348,9 @@ assert_true "AC-8 (presence path, absent config): still exit 0 on the codex defa
 # ---------------------------------------------------------------------------
 echo ""
 echo "=== Single source of truth + delivery + install-time reporting ==="
+for _landed in "${allow_list[@]}"; do
+  assert_true "delivery (cycle arm #184): landed file present — $_landed" "[ -f '$PROJECT_ROOT/$_landed' ]"
+done
 assert_true "SSOT: the wrapper sources scripts/review/lib/review-config.sh" \
   "grep -qE '^\. .*lib/review-config\.sh' '$PROJECT_ROOT/$WRAPPER_REL'"
 assert_true "SSOT: check-review-backend.sh sources scripts/review/lib/review-config.sh" \
