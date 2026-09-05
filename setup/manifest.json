@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/adr/0023-deliberation-participant-lifetime.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2d78a651e107b852297b8be7e25d9a0bea2bcdaef7e1e31b5095dd91f2a4d13b"
+      "sha256": "84c08983e10c3e0f92e3633cad2c72652f9b29c253cbb4f9e5ec559a29195886"
     },
     {
       "source": "docs/adr/README.md",

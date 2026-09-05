@@ -187,4 +187,56 @@ usage: issue #179's session; the same probe re-runs by the M1 steps with the nam
 
 ### Effect record (D4) — arm 0 vs arm A2
 
-<!-- EFFECT-RECORD -->
+Two ARCHITECT deliberations of issue #2 on the same frozen input — the 2026-09-04 baseline's
+`.autoflow/issue-2-{body,phase-a,phase-b,phase-3,triage,resolutions,ledger}.md` and
+`issue-2.json`, recovered verbatim from that session's transcripts — run sequentially on
+2026-09-05, Claude Code 2.1.261, `claude-opus-5` at effort `xhigh` on every governed site
+(session `modelSettings`), `subagentPromptCacheTtl: 1h`. Aggregated by
+`scripts/architect/deliberation-metrics.py` (the review §1.3 method; the script reproduces the
+review's §1 baseline exactly: 195 calls, 169 in turns, 246 Bash). Arm 0 is the per-turn respawn
+script at `f6aef75` (the #166 form, identical to the baseline's `e4e0257` on every file it reads);
+arm A2 is the relay at `1eb97b9` (this implementation) — the two trees differ only by this
+issue's own change, which is what makes the relay exist. Arm B (one-shot script with the D1
+sentence alone) was not run (optional in the review §6).
+
+| Metric | Arm 0 — per-turn respawn (`wf_dee472d1-78a`) | Arm A2 — orchestrator relay |
+|---|---|---|
+| Turns / agents | 10 turns; 15 sub-agents (policy-load, 10 turns, 2 reports, scribe, ledger) | 10 turns; 2 persistent participants (6 wakes each: 5 turns + 1 report) + Record workflow (policy-load, scribe, ledger) |
+| API calls (distinct `requestId`) | **213** — turns 176, reports 6, scribe 15, ledger 13, policy-load 3 | **121** — participants 89 (dev 52, test 37, reports included), scribe 20, ledger 10, policy-load 2 |
+| `Bash` tool calls | **278** — 239 inside turns | **128** — 93 inside the participants |
+| Wall clock, discussion | 7,512 s in-agent, of which **3,662 s is one tool hang** (turn 6: the Test AI's own probe script hit the Bash tool's 3,600 s timeout) → 3,850 s excluding it | 2,621 s in-agent (spawn of the Developer AI 07:55:33 → both reports in 08:38:51 = 43.3 min end to end, incl. the orchestrator's relay turns) |
+| Wall clock, Report + Record | 1,191 s (reports 263 + 302 in parallel, scribe 625, ledger 251) | 812 s Record (scribe 617, ledger 186) + 240 s report wakes (inside the discussion figure above) |
+| End to end | 145.8 min (`duration_ms` 8,745,751); ≈ 84.7 min excluding the hang | 57.8 min (07:55:33 → 08:53:21) |
+| Tool execution vs generation | tool 3,884 s (3,662 of it the hang) / generation ≈ 4,800 s | tool 111 s / generation ≈ 3,370 s |
+| Tokens (dedup by `message.id`) | cache_creation **1,733,661** · cache_read 21,636,867 · output **226,479** | cache_creation **880,978** · cache_read 15,967,231 · output **135,275** (participants: 534,685 / 13.0M / 84,709) |
+| Orchestrator's own share | one `Workflow` call; the result object | 2 `Agent` spawns + 10 `SendMessage` wakes + 2 report wakes + 1 `Workflow`; the session window 07:54:48–08:53:21 holds 43 orchestrator calls (an upper bound — it also contains this issue's own work and the arm-0 evaluator spawn), cache_creation 43,226 · output 16,671 |
+| Prompt growth (`first_in`, turn 1 → last turn) | 58,717 → 106,389 (the transcript re-sent every turn) | 56,523 → 214,306 (the participant's own context; nothing re-sent) |
+| Per-wake prefix re-write (`cache_creation` on the wake's first call) | n/a (fresh agent per turn: 58,715 · 43,371 · 50,464 · 55,060 · 61,025 · 65,694 · 70,895 · 75,571 · 81,058 · 85,215) | dev: 132,941 on its first wake, then 167 · 167 · 167 · 230; test: 167 · 167 · 167 · 167 · 262 — after one re-write, every wake read the whole prefix from cache |
+| Message length (chars, turn 1 → 10) | 14,153 → 11,325 (mean 13,730) | 24,728 → 7,826 (mean 13,755; turns 5–10 mean 10,330) |
+| Repeated reads (paths read by ≥ 5 agents / by both participants) | ledger 13, gate hook 12, `cleanup-issue.sh` 11, `issue-2.json` 10, `green-tree-store.sh` 10, `green-tree-register.sh` 9, `git-workflow.md` 8, `manifest.json` 7 | 10 paths read by both participants once each (the transcript, ledger, phase-b, resolutions, the gate hook, `docs/adr/README.md`, `autoflow-guide.md`, …); no path read by an agent more than once per side |
+| Outcome — report | 43 agreed conclusions, 4 un-agreed points (one an acceptance-criterion content change referred to the operator); ledger F1–F43 | 43 agreed conclusions, 0 un-agreed points (both reports record `unagreed: (none)` and do not differ); ledger F1–F45; the report itself routes a harness probe and a possible operator `[ac-decision]` ahead of GATE:PLAN |
+| GATE:PLAN (fresh `autoflow-evaluator`, opus, on the final tree) | **FAIL, avg 6.6** — Feasibility 8, Dependencies 6, Scope 6 (ADR-0015 D1 divergence cap), Security 7, Test plan 6 | **FAIL, avg 7.4** — Feasibility 8, Dependencies 7, Scope 7, Security 8, Test plan 7 (every item ≥ 7; the aggregate is 0.1 below the threshold). The evaluator's blocking issue is the design's own precondition: its agreed conclusion F1 routes a one-run harness probe and a possible operator `[ac-decision]` ahead of GATE:PLAN, and no probe was run for this record |
+| Isolation (`scripts/architect/isolation-check.sh`, first 200 chars of each turn body against the orchestrator's session log) | n/a (the turns never left the workflow) | **10/10 clean** |
+| Participant return discipline | n/a | 11 of 12 wakes returned exactly the one line; the Developer AI's first turn prefixed a three-sentence summary of its own proposal (a prompt-discipline miss, not a body leak — the isolation check passed) |
+
+**Reading.** On the same input the relay made 57% of the calls (121 vs 213), 46% of the Bash
+calls, 51% of the cache writes and 60% of the output tokens of the per-turn respawn, and it ended
+in 58 minutes against 85 (146 with arm 0's hang). The per-turn floor the review §1 named — a
+memoryless agent spending 4–10 calls to orient itself — is what moved: arm 0's late turns cost
+9–16 calls each, arm A2's 2–6, and the same-file re-reads (the ledger by 13 agents, the hook by
+12) became one read per side. The cache axis behaved as constraint 3 did **not** predict for this
+path: after one re-write on the Developer AI's first wake (132,941 tokens, its 153K context),
+every later wake wrote 167–262 tokens and read the rest from cache (1h TTL), so the wake cost was
+the answer, not the prefix. GATE:PLAN scored the relay's design higher (7.4 vs 6.6; no item below 7 vs three) on the same rubric and the same tree, and neither PASSed; the relay arm's FAIL rests on a precondition its own deliberation set (a harness probe before the gate), the respawn arm's on an unrecorded ADR-0015 D1 divergence, two unverified criteria and un-agreed points handed to the gate. Neither is the defect class D4 named as "fix in the relay" (a FAIL where the control PASSes, or turn text in the orchestrator's transcript): the control did not PASS, and the isolation check is clean. Neither arm's design was adopted — issue #2 is not
+in a cycle; the artifacts are kept in the session's scratchpad and cleared from `.autoflow/`.
+
+**Defects and limits observed.** (1) Arm 0's turn-6 hang is a property of both realizations: a
+participant that runs a long experiment blocks its turn until the Bash tool's 3,600 s timeout,
+and the relay would wait the same way — the participant prompt does not bound experiment
+length, and this record does not add such a bound. (2) The Developer AI's first return carried a
+summary before the required line; the participant prompt already forbids it, and later wakes
+complied. (3) The orchestrator spent one turn per participant turn (12 relay turns plus the
+Record call), as the ADR's Consequences anticipated. (4) Arm 0's tree (`f6aef75`) and arm A2's
+(`1eb97b9`) differ by this issue's change; the participants' design surface (the gate hook's
+state resolution, worktrees, cleanup) does not intersect it except for the hook's comment block
+and CLAUDE.md's Deliberation Isolation section.
