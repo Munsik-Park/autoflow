@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh scripts/lib/plugin-root.sh .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md CLAUDE.md docs/teammate-contracts.md docs/phases/analysis.md setup/manifest.json setup/init.sh setup/thin-root-layer/drift-check.sh setup/SETUP-GUIDE.md
+# ci-subject: .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh scripts/lib/plugin-root.sh .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-loopcheck.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md CLAUDE.md docs/teammate-contracts.md docs/phases/analysis.md setup/manifest.json setup/init.sh setup/thin-root-layer/drift-check.sh setup/SETUP-GUIDE.md
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
@@ -32,7 +32,7 @@ CONFIG="$PROJECT_ROOT/.claude/autoflow/spawn-policy.json"
 RESOLVER="$PROJECT_ROOT/scripts/spawn-policy/spawn-policy.sh"
 WORKFLOWS=("$PROJECT_ROOT/.claude/workflows/architect-deliberation.js" "$PROJECT_ROOT/.claude/workflows/verify-cause-branch.js")
 AGENTS_DIR="$PROJECT_ROOT/.claude/agents"
-AGENT_TYPES=(autoflow-analyzer autoflow-evaluator autoflow-implementer autoflow-planner autoflow-tester)
+AGENT_TYPES=(autoflow-analyzer autoflow-evaluator autoflow-implementer autoflow-loopcheck autoflow-planner autoflow-tester)
 
 PASS=0
 FAIL=0
@@ -218,20 +218,28 @@ fi
 echo "== AC4: inherit-marker =="
 
 if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ]; then
+  # Inherit case: use a shipped inheriting row when the sample carries one;
+  # otherwise construct one in a scratch copy -- since issue #180 every shipped
+  # row carries an explicit effort, and the sample is a target-owned scaffold
+  # whose values this suite must not assume.
   inherit_key=$(jq -r '.phases | to_entries[] | select(.value.effort == "inherit") | .key' "$CONFIG" 2>/dev/null | head -n1)
-  if [ -n "$inherit_key" ]; then
-    out=$(bash "$RESOLVER" effort "$inherit_key" 2>/dev/null); rc=$?
-    if [ "$rc" = "0" ] && [ "$out" = "inherit" ]; then
-      pass "AC4 inherit-marker: inheriting row '$inherit_key' -> exit 0, stdout 'inherit'"
-    else
-      failc "AC4 inherit-marker: inheriting row '$inherit_key' -> exit $rc, stdout '$out' (want 0, 'inherit')"
-    fi
+  inherit_cfg="$CONFIG"; inherit_resolver="$RESOLVER"
+  if [ -z "$inherit_key" ]; then
+    SCRATCH_INH="$(mktemp -d)"
+    cp -R "$PROJECT_ROOT/scripts/spawn-policy" "$SCRATCH_INH/" 2>/dev/null
+    mkdir -p "$SCRATCH_INH/.claude/autoflow"
+    jq '.phases["__test_inherit__"] = {"agent_type":"autoflow-tester","model":"sonnet","effort":"inherit","work_type":"test"}' "$CONFIG" > "$SCRATCH_INH/.claude/autoflow/spawn-policy.json"
+    inherit_key="__test_inherit__"; inherit_cfg="$SCRATCH_INH/.claude/autoflow/spawn-policy.json"; inherit_resolver="$SCRATCH_INH/spawn-policy/spawn-policy.sh"
+  fi
+  out=$(AUTOFLOW_SPAWN_POLICY="$inherit_cfg" bash "$inherit_resolver" effort "$inherit_key" 2>/dev/null); rc=$?
+  if [ "$rc" = "0" ] && [ "$out" = "inherit" ]; then
+    pass "AC4 inherit-marker: inheriting row '$inherit_key' -> exit 0, stdout 'inherit'"
   else
-    failc "AC4 inherit-marker: no inheriting phases[] row found in $CONFIG"
+    failc "AC4 inherit-marker: inheriting row '$inherit_key' -> exit $rc, stdout '$out' (want 0, 'inherit')"
   fi
 
-  # Concrete-value case: construct one in a scratch copy, since every shipped
-  # row carries the inherit sentinel this cycle (feature design §6).
+  # Concrete-value case: construct one in a scratch copy (the shipped rows'
+  # values are the sample's, not this suite's, to assume).
   SCRATCH2="$(mktemp -d)"
   cp -R "$PROJECT_ROOT/scripts/spawn-policy" "$SCRATCH2/" 2>/dev/null
   mkdir -p "$SCRATCH2/.claude/autoflow"
@@ -602,7 +610,15 @@ if [ -x "$RESOLVER" ]; then
   for t in "${AGENT_TYPES[@]}"; do
     def="$AGENTS_DIR/$t.md"
     out=$(bash "$RESOLVER" agent-effort "$t" 2>/dev/null); rc=$?
-    has_line=$(grep -qE '^effort:' "$def" 2>/dev/null && echo 1 || echo 0)
+    # The oracle reads the first YAML frontmatter block only — independently of
+    # the checker's own extractor (PR #183 review: a whole-file grep accepted a
+    # body-only `effort:` line the harness never reads).
+    fm_line=$(awk 'NR==1{ if ($0!="---") exit 3; next } !c && $0=="---"{ c=1; next } !c && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/{ if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; l=$0 } else { nc++ }; next } !c && !/^[[:space:]]*$/ && !/^#/ && !/^[A-Za-z_][A-Za-z0-9_-]*: [^[:space:]]/{ sh++; next } c && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/{ o++ } END{ if(!c) exit 3; if(sh>0) exit 7; if(nc>0) exit 6; if(n>1) exit 4; if(o>0) exit 5; if(n==1) print l; exit 0 }' "$def" 2>/dev/null); fm_rc=$?
+    if [ "$fm_rc" != "0" ]; then
+      failc "design-added: frontmatter-projection -- $t definition frontmatter malformed for effort (awk rc $fm_rc: 3 no block, 4 duplicate key, 5 effort outside the block, 6 non-canonical spelling, 7 non-block-style shape)"
+      continue
+    fi
+    has_line=$([ -n "$fm_line" ] && echo 1 || echo 0)
     if [ "$rc" != "0" ]; then
       failc "design-added: frontmatter-projection -- agent-effort $t exited $rc"
       continue
@@ -616,7 +632,7 @@ if [ -x "$RESOLVER" ]; then
         fi
         ;;
       *)
-        actual_line=$(grep -E '^effort:' "$def" 2>/dev/null | head -n1)
+        actual_line="$fm_line"
         if [ "$actual_line" = "effort: $out" ]; then
           pass "design-added: frontmatter-projection -- $t carries 'effort: $out'"
         else
@@ -738,6 +754,134 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
   else
     failc "issue #169: thin-root target + CLAUDE_PLUGIN_ROOT -> exit $rc: $(head -1 "$SCRATCH7/i.err")"
   fi
+
+  # (i-b) Effort ownership (PR #183 review, issue #180): a thin-root target
+  # that edits a phases[].effort away from the plugin definition's frontmatter
+  # — to the inherit sentinel or to another concrete value — must be refused
+  # by `check`, because the harness will run the spawn at the definition's
+  # value regardless. The loaded definition's line is the checkable proxy for
+  # the spawn's effort (the harness itself is not exercised here).
+  TCFG_MIS="$SCRATCH7/target-mismatch.json"
+  _def_line=$(grep -E '^effort:' "$PLUGIN_SRC/agents/autoflow-tester.md" | head -n1)
+  for _mis in inherit medium; do
+    jq --arg v "$_mis" '(.phases[] | select(.agent_type == "autoflow-tester") | .effort) = $v' "$TCFG" > "$TCFG_MIS"
+    AUTOFLOW_SPAWN_POLICY="$TCFG_MIS" CLAUDE_PLUGIN_ROOT="$PLUGIN_SRC" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ib-$_mis.err"; rc=$?
+    if [ "$rc" = "1" ] && grep -q "loaded definition" "$SCRATCH7/ib-$_mis.err" && grep -q "autoflow-tester" "$SCRATCH7/ib-$_mis.err"; then
+      pass "PR #183 review: thin-root target sets autoflow-tester effort '$_mis' while the plugin definition carries '$_def_line' -> check exit 1, names the loaded definition"
+    else
+      failc "PR #183 review: mismatch '$_mis' vs '$_def_line' -> exit $rc: $(head -1 "$SCRATCH7/ib-$_mis.err")"
+    fi
+  done
+  rm -f "$TCFG_MIS"
+
+  # (i-c) Frontmatter scope (PR #183 review): the projection is read from the
+  # first YAML block only. A definition whose `effort:` line sits in the body
+  # (the harness would inherit the session effort) and one carrying the key
+  # twice inside the block are both refused by `check`, naming the definition.
+  # A full plugin copy: plugin-root.sh accepts CLAUDE_PLUGIN_ROOT only when it
+  # is a plugin root (carries .claude-plugin/plugin.json), not a bare agents/.
+  SCRATCH7P="$SCRATCH7/plugin-shape"; rm -rf "$SCRATCH7P"; cp -R "$PLUGIN_SRC" "$SCRATCH7P"
+  _lc="$SCRATCH7P/agents/autoflow-loopcheck.md"
+  awk 'NR==1{print; next} !c && $0=="---"{c=1; print; next} !c && /^effort:/{held=$0; next} {print} END{print held}' "$PLUGIN_SRC/agents/autoflow-loopcheck.md" > "$_lc"
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic-body.err"; rc=$?
+  if [ "$rc" = "1" ] && grep -q "outside its frontmatter block" "$SCRATCH7/ic-body.err" && grep -q "autoflow-loopcheck" "$SCRATCH7/ic-body.err"; then
+    pass "PR #183 review: definition with 'effort:' only in the body (frontmatter carries none) -> check exit 1, names the out-of-block line"
+  else
+    failc "PR #183 review: body-only effort line -> exit $rc: $(head -1 "$SCRATCH7/ic-body.err")"
+  fi
+  awk 'NR==1{print; next} !c && $0=="---"{print "effort: low"; c=1; print; next} {print}' "$PLUGIN_SRC/agents/autoflow-loopcheck.md" > "$_lc"
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic-dup.err"; rc=$?
+  if [ "$rc" = "1" ] && grep -q "more than one 'effort:' key" "$SCRATCH7/ic-dup.err"; then
+    pass "PR #183 review: definition with a duplicate 'effort:' key inside the frontmatter -> check exit 1"
+  else
+    failc "PR #183 review: duplicate effort key -> exit $rc: $(head -1 "$SCRATCH7/ic-dup.err")"
+  fi
+  # (i-c2) Non-canonical spellings a YAML parser reads as the same key (PR #183
+  # review: `effort : xhigh` was read as "no line" while the runtime read
+  # xhigh). Each is refused whatever the policy declares — inherit or the
+  # spelled value — because the checker cannot equate it to the runtime.
+  # (i-c) left the scratch loopcheck definition with a duplicate key; restore
+  # it so the legs below judge the tester definition alone.
+  cp "$PLUGIN_SRC/agents/autoflow-loopcheck.md" "$SCRATCH7P/agents/autoflow-loopcheck.md"
+  TCFG_INH="$SCRATCH7/target-tester-inherit.json"
+  jq '(.phases[] | select(.agent_type == "autoflow-tester") | .effort) = "inherit"' "$TCFG" > "$TCFG_INH"
+  for _sp in 'effort : xhigh' '"effort": xhigh' "'effort': xhigh" 'effort: "xhigh"' 'effort: xhigh # pinned'; do
+    awk -v rep="$_sp" 'NR==1{print; next} !c && $0=="---"{c=1; print; next} !c && /^effort:/{print rep; next} {print}' "$PLUGIN_SRC/agents/autoflow-tester.md" > "$SCRATCH7P/agents/autoflow-tester.md"
+    for _cfgv in "$TCFG_INH" "$TCFG"; do
+      AUTOFLOW_SPAWN_POLICY="$_cfgv" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic2.err"; rc=$?
+      if [ "$rc" = "1" ] && grep -q "non-canonical form" "$SCRATCH7/ic2.err" && grep -q "autoflow-tester" "$SCRATCH7/ic2.err"; then
+        pass "PR #183 review: tester frontmatter spelled [$_sp] with policy $( [ "$_cfgv" = "$TCFG_INH" ] && echo inherit || echo xhigh ) -> check exit 1, non-canonical spelling refused"
+      else
+        failc "PR #183 review: spelling [$_sp] -> exit $rc: $(head -1 "$SCRATCH7/ic2.err")"
+      fi
+    done
+  done
+  # (i-c3) The whole mapping indented by one space (PR #183 review): every
+  # key still parses as the same top-level mapping, so `effort: xhigh` is
+  # read by the runtime while a column-0 regex sees no key. Refused for both
+  # policy values.
+  awk 'NR==1{print; next} !c && $0=="---"{c=1; print; next} !c {print " " $0; next} {print}' "$PLUGIN_SRC/agents/autoflow-tester.md" > "$SCRATCH7P/agents/autoflow-tester.md"
+  for _cfgv in "$TCFG_INH" "$TCFG"; do
+    AUTOFLOW_SPAWN_POLICY="$_cfgv" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic3.err"; rc=$?
+    # An indented mapping trips the block-style shape rule (every key is
+    # indented) before the effort-spelling rule; either refusal is the contract.
+    if [ "$rc" = "1" ] && grep -qE "non-canonical form|canonical block-style grammar" "$SCRATCH7/ic3.err" && grep -q "autoflow-tester" "$SCRATCH7/ic3.err"; then
+      pass "PR #183 review: tester frontmatter mapping indented by one space with policy $( [ "$_cfgv" = "$TCFG_INH" ] && echo inherit || echo xhigh ) -> check exit 1, refused"
+    else
+      failc "PR #183 review: indented mapping -> exit $rc: $(head -1 "$SCRATCH7/ic3.err")"
+    fi
+  done
+  # (i-c4) Shapes outside the block-style grammar (PR #183 review): a
+  # flow-style mapping carrying effort, an explicit key, and a merge key are
+  # each read by a YAML parser and invisible to a line-oriented reader, so the
+  # shape is refused before any inherit verdict — for both policy values.
+  _tail=$(awk 'c>=2{print} /^---$/{c++}' "$PLUGIN_SRC/agents/autoflow-tester.md")
+  for _shape in flow explicit merge; do
+    case "$_shape" in
+      flow)     _fm='{name: autoflow-tester, description: "AutoFlow RED spawn", effort: xhigh}' ;;
+      explicit) _fm=$'name: autoflow-tester\ndescription: AutoFlow RED spawn\n? effort\n: xhigh' ;;
+      merge)    _fm=$'name: autoflow-tester\ndescription: AutoFlow RED spawn\n<<: {effort: xhigh}' ;;
+    esac
+    printf -- '---\n%s\n---\n%s\n' "$_fm" "$_tail" > "$SCRATCH7P/agents/autoflow-tester.md"
+    for _cfgv in "$TCFG_INH" "$TCFG"; do
+      AUTOFLOW_SPAWN_POLICY="$_cfgv" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic4.err"; rc=$?
+      if [ "$rc" = "1" ] && grep -q "canonical block-style grammar" "$SCRATCH7/ic4.err" && grep -q "autoflow-tester" "$SCRATCH7/ic4.err"; then
+        pass "PR #183 review: tester frontmatter in $_shape style with policy $( [ "$_cfgv" = "$TCFG_INH" ] && echo inherit || echo xhigh ) -> check exit 1, shape refused"
+      else
+        failc "PR #183 review: $_shape-style frontmatter -> exit $rc: $(head -1 "$SCRATCH7/ic4.err")"
+      fi
+    done
+  done
+  cp "$PLUGIN_SRC/agents/autoflow-tester.md" "$SCRATCH7P/agents/autoflow-tester.md"
+  rm -f "$TCFG_INH"
+  rm -rf "$SCRATCH7P"
+
+  # (i-d) Harness research types (PR #183 review): Explore / Plan /
+  # claude-code-guide ship no definition, so a row on one of them can carry
+  # the inherit sentinel only — a concrete effort would be reported by the
+  # readout and never reach the spawn. The row is re-pointed from
+  # autoflow-loopcheck, whose definition is then declared unmapped so the
+  # partition rule stays satisfied.
+  for _rt in Explore Plan claude-code-guide; do
+    for _ev in inherit high; do
+      jq --arg t "$_rt" --arg v "$_ev" '.phases["diagnose-loopcheck"].agent_type = $t | .phases["diagnose-loopcheck"].effort = $v | .policy_unmapped_agent_types["autoflow-loopcheck"] = "re-pointed to a research type in this leg"' "$TCFG" > "$SCRATCH7/rt.json"
+      AUTOFLOW_SPAWN_POLICY="$SCRATCH7/rt.json" CLAUDE_PLUGIN_ROOT="$PLUGIN_SRC" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/rt-$_rt-$_ev.err"; rc=$?
+      if [ "$_ev" = "inherit" ]; then
+        if [ "$rc" = "0" ]; then
+          pass "PR #183 review: research type $_rt with the inherit sentinel -> check exit 0"
+        else
+          failc "PR #183 review: research type $_rt with inherit -> exit $rc: $(head -1 "$SCRATCH7/rt-$_rt-$_ev.err")"
+        fi
+      else
+        if [ "$rc" = "1" ] && grep -q "harness research type '$_rt'" "$SCRATCH7/rt-$_rt-$_ev.err"; then
+          pass "PR #183 review: research type $_rt with concrete effort '$_ev' -> check exit 1, names the type"
+        else
+          failc "PR #183 review: research type $_rt with concrete effort -> exit $rc: $(head -1 "$SCRATCH7/rt-$_rt-$_ev.err")"
+        fi
+      fi
+    done
+  done
+  rm -f "$SCRATCH7/rt.json"
 
   # (ii) Plain shell: the plugin is found through the harness registry under
   # CLAUDE_CONFIG_DIR (installed_plugins.json), CLAUDE_PLUGIN_ROOT unset.
@@ -905,7 +1049,7 @@ fi
 # defect is confined to the JS site() helpers (architect-deliberation.js:595,
 # verify-cause-branch.js:161), which this shell checker never calls. The
 # phases[] arm mutates diagnose-loopcheck specifically, per GATE:PLAN: it is
-# the sole agent_type="Explore" row (checked: `jq -r '.phases[]|select(.agent_type=="Explore")|.key'`
+# the sole agent_type="autoflow-loopcheck" row (issue #180 moved it off Explore; checked: `jq -r '.phases[]|select(.agent_type=="autoflow-loopcheck")|.key'`
 # returns exactly this one key), so mutating it alone cannot trip the
 # divergent-effort agreement check (spawn-policy.sh:291-296), which an
 # arbitrary shared-agent_type row would.
@@ -918,8 +1062,12 @@ if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ] && [ -d "$AGENTS_DIR" ]; then
   mkdir -p "$SCRATCH6/.claude/autoflow" "$SCRATCH6/.claude/agents"
   cp "$AGENTS_DIR"/*.md "$SCRATCH6/.claude/agents/" 2>/dev/null
 
-  # phases[] arm: diagnose-loopcheck (agent_type Explore, agent_type-unique).
+  # phases[] arm: diagnose-loopcheck (agent_type autoflow-loopcheck, agent_type-unique).
+  # The projection leg (PR #183 review) requires the loaded definition to carry
+  # the same value, so the scratch copy's definition is projected alongside.
   jq '.phases["diagnose-loopcheck"].effort = 0' "$CONFIG" > "$SCRATCH6/.claude/autoflow/spawn-policy.json"
+  sed -i.bak -E 's/^effort: .*$/effort: 0/' "$SCRATCH6/.claude/agents/autoflow-loopcheck.md" && rm -f "$SCRATCH6/.claude/agents/autoflow-loopcheck.md.bak"
+  grep -q '^effort:' "$SCRATCH6/.claude/agents/autoflow-loopcheck.md" || printf 'effort: 0\n' >> "$SCRATCH6/.claude/agents/autoflow-loopcheck.md"
   AUTOFLOW_SPAWN_POLICY="$SCRATCH6/.claude/autoflow/spawn-policy.json" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
   rc_phase0=$?
   if [ "$rc_phase0" = "0" ]; then
@@ -928,7 +1076,10 @@ if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ] && [ -d "$AGENTS_DIR" ]; then
     failc "design-added: effort-zero-admitted -- effort=0 on the phases[] row diagnose-loopcheck FAILED check (exit $rc_phase0)"
   fi
 
-  # workflow_sites[][] arm: unconstrained, any row.
+  # workflow_sites[][] arm: unconstrained, any row. The phases[] arm projected
+  # `effort: 0` into the scratch loopcheck definition; restore the shipped copy
+  # so this arm's config (loopcheck at its shipped effort) matches it again.
+  cp "$AGENTS_DIR/autoflow-loopcheck.md" "$SCRATCH6/.claude/agents/autoflow-loopcheck.md"
   first_wf=$(jq -r '.workflow_sites | keys[0]' "$CONFIG")
   first_site=$(jq -r --arg wf "$first_wf" '.workflow_sites[$wf] | keys[0]' "$CONFIG")
   jq --arg wf "$first_wf" --arg s "$first_site" '.workflow_sites[$wf][$s].effort = 0' "$CONFIG" > "$SCRATCH6/.claude/autoflow/spawn-policy.json"

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Single source of truth for AutoFlow's per-phase spawn policy (model + effort). Read it with scripts/spawn-policy/spawn-policy.sh; never restate its values in prose (CLAUDE.md > Spawn Model — Phase-by-Phase).",
-  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — an outdated scaffold is a diagnosable state, since both deliberation workflows fail closed on a missing required workflow_sites row (issue #166 renamed the architect deliberation's rows to dev-turn / test-turn / scribe / ledger and removed deliberation_caps; issue #179 moved the discussion turns out of the workflow — the architect-deliberation site rows are now scribe / ledger only, and the two participants are direct spawns governed by the new phases rows architect-dev-participant / architect-test-participant — a target still carrying the former rows or lacking the new ones fails closed at its next ARCHITECT until this file is updated). `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly.",
+  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — an outdated scaffold is a diagnosable state, since both deliberation workflows fail closed on a missing required workflow_sites row (issue #166 renamed the architect deliberation's rows to dev-turn / test-turn / scribe / ledger and removed deliberation_caps; issue #179 moved the discussion turns out of the workflow — the architect-deliberation site rows are now scribe / ledger only, and the two participants are direct spawns governed by the new phases rows architect-dev-participant / architect-test-participant — a target still carrying the former rows or lacking the new ones fails closed at its next ARCHITECT until this file is updated). `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly. Issue #180 made every effort value explicit (coding and judgment roles xhigh, analysis high, the ledger sites low) so a spawn's effort no longer follows the operator's session setting, and gave the loop check its own shipped definition `autoflow-loopcheck` in place of the harness `Explore` type — a target still carrying `agent_type: Explore` on `diagnose-loopcheck` keeps working (the hook admits Explore as a research type) but cannot pin that row's effort until it adopts the new type. A phases[].effort is not a target-side lever: it must equal the `effort:` frontmatter line of the definition the target actually loads (the plugin's, on a thin-root target) and `check` fails closed otherwise — see effort_contract.phase_effort_ownership; a target that needs a different direct-spawn effort changes the shipped definition, not this row. workflow_sites effort stays target-configurable.",
   "effort_contract": {
     "is_the_vocabulary_check_applies": "`scripts/spawn-policy/spawn-policy.sh check` reads its admitted effort vocabulary and its inherit sentinel from THIS object, so `check` is a self-consistency check over one source. A runtime with a different effort vocabulary is accommodated by editing this contract, never by patching the checker; model values are deliberately unvalidated beyond presence and shape",
     "admitted_values": [
@@ -15,110 +15,111 @@
     "admitted_one_spelling_per_level": "both harness channels run the same coercion, which also accepts the alias \"med\" for \"medium\"; this policy admits one spelling per level, so \"med\" is deliberately not admitted here",
     "config_inherit_sentinel": "inherit",
     "sentinel_is_config_only": "\"inherit\" is this file's own vocabulary and is never written to either harness channel: a Workflow agent() opts object omits the effort key, and an agent-definition frontmatter omits the effort line",
-    "absent_means": "identical to \"inherit\" — the row declares no override and the spawn inherits the session effort. A row carrying no effort key at all is a validation error, not an inherit: `spawn-policy.sh check` rejects it, so a misspelled key surfaces in the tree rather than reading as policy"
+    "absent_means": "identical to \"inherit\" — the row declares no override and the spawn inherits the session effort. A row carrying no effort key at all is a validation error, not an inherit: `spawn-policy.sh check` rejects it, so a misspelled key surfaces in the tree rather than reading as policy",
+    "phase_effort_ownership": "A phases[] row's effort is DELIVERED by the agent definition's `effort:` frontmatter line, not by this file: the harness reads a direct spawn's effort from the definition it loads, and the Agent tool carries `model` per call but no effort. The definitions are versioned tool source (a thin-root target loads the installed plugin's agents/), so phase-row effort is fixed per plugin version and is not a per-target lever; this file's phases[].effort is the projection source at the tool repository and must equal the loaded definition's line — `check` fails closed on a mismatch (issue #180, PR #183 review). Only workflow_sites effort reaches its spawn from this file at run time and is configurable per target. A harness research type (Explore / Plan / claude-code-guide) ships no definition at all, so a row that uses one admits the inherit sentinel only; `check` refuses a concrete effort there. The projection is recognised in one canonical spelling only — `effort: <value>` at column 0 of the first YAML block, unquoted, no trailing comment; any other spelling a YAML parser could read as that key — including an indented key, since a mapping indented as a whole is still the same mapping — is refused by `check`, since the checker carries no YAML parser and does not guess. The block itself is accepted in block style only — one plain `key: value` per line at column 0, blank lines and `#` comments; a flow mapping, an explicit key, a merge key or a multi-line scalar is refused as a shape, before any \"no effort line means inherit\" verdict."
   },
   "policy_unmapped_agent_types": {},
   "phases": {
     "diagnose-intake-triage": {
       "agent_type": "autoflow-analyzer",
       "model": "sonnet",
-      "effort": "inherit",
+      "effort": "high",
       "work_type": "new-issue readiness pre-filter (planning/design/ADR prerequisite), no code tools"
     },
     "diagnose-loopcheck": {
-      "agent_type": "Explore",
+      "agent_type": "autoflow-loopcheck",
       "model": "sonnet",
-      "effort": "inherit",
-      "work_type": "review-response loop check — prior-cycle complaint-class comparison"
+      "effort": "high",
+      "work_type": "review-response loop check — prior-cycle complaint-class comparison (issue #180: a shipped read-only definition replaces the harness Explore type so the row's effort projects into agent frontmatter)"
     },
     "diagnose-phase-a": {
       "agent_type": "autoflow-analyzer",
       "model": "sonnet",
-      "effort": "inherit",
+      "effort": "high",
       "work_type": "factual code-structure description (issue-isolated)"
     },
     "diagnose-phase-b": {
       "agent_type": "autoflow-analyzer",
       "model": "sonnet",
-      "effort": "inherit",
+      "effort": "high",
       "work_type": "text classification + logical inference (no code)"
     },
     "diagnose-phase-3": {
       "agent_type": "autoflow-analyzer",
       "model": "sonnet",
-      "effort": "inherit",
+      "effort": "high",
       "work_type": "necessity scoring (Behavior gap + Code-change lever; reuse-neutral)"
     },
     "gate-hypothesis": {
       "agent_type": "autoflow-evaluator",
       "model": "sonnet",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "rubric, 3 items × 10 points"
     },
     "architect-dev-participant": {
       "agent_type": "autoflow-planner",
       "model": "opus",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "ARCHITECT relay participant, Developer AI side — one persistent spawn per discussion, woken by agent ID for each of its turns (ADR-0023 D2); feature design under the Discussion Protocol"
     },
     "architect-test-participant": {
       "agent_type": "autoflow-planner",
       "model": "opus",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "ARCHITECT relay participant, Test AI side — one persistent spawn per discussion, woken by agent ID for each of its turns (ADR-0023 D2); verification design under the Discussion Protocol"
     },
     "gate-plan": {
       "agent_type": "autoflow-evaluator",
       "model": "opus",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "rubric, 5 items × 10 points"
     },
     "red": {
       "agent_type": "autoflow-tester",
-      "model": "sonnet",
-      "effort": "inherit",
-      "work_type": "acceptance criteria → test code (complex tests fall back to the higher tier, with rationale in the Test AI report)"
+      "model": "opus",
+      "effort": "xhigh",
+      "work_type": "acceptance criteria → test code; test doubles re-derived from the real types and response shapes (tier reverted on issue #180 — record: CLAUDE.md > Spawn Model > Revert history)"
     },
     "green": {
       "agent_type": "autoflow-implementer",
       "model": "opus",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "minimum implementation that passes the tests"
     },
     "verify-arbitration": {
       "agent_type": "autoflow-evaluator",
       "model": "opus",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "self-check + arbitration (sycophancy-risk surface)"
     },
     "refine-impl": {
       "agent_type": "autoflow-implementer",
       "model": "sonnet",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "mechanical /simplify application"
     },
     "refine-test-reconfirm": {
       "agent_type": "autoflow-tester",
       "model": "sonnet",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "Green re-confirmation after the refactor"
     },
     "audit": {
       "agent_type": "autoflow-evaluator",
-      "model": "sonnet",
-      "effort": "inherit",
-      "work_type": "security rubric, 5 items × 10 points"
+      "model": "opus",
+      "effort": "xhigh",
+      "work_type": "security rubric, 5 items × 10 points (tier raised on issue #180 — 23 rubric-covered findings escaped to the configured reviewer across four repositories, 17 of them cross-tenant / cross-org boundary violations)"
     },
     "gate-quality": {
       "agent_type": "autoflow-evaluator",
       "model": "opus",
-      "effort": "inherit",
+      "effort": "xhigh",
       "work_type": "rubric, 10 items × 10 points"
     },
     "handoff-review-triage": {
       "agent_type": "autoflow-analyzer",
       "model": "sonnet",
-      "effort": "inherit",
+      "effort": "high",
       "work_type": "reviewer-comment ingestion (severity classification) + Low-finding impact judgment"
     }
   },
@@ -129,22 +130,22 @@
         "effort": "inherit"
       },
       "ledger": {
-        "model": "opus",
-        "effort": "inherit"
+        "model": "sonnet",
+        "effort": "low"
       }
     },
     "verify-cause-branch": {
       "test-self-check": {
         "model": "opus",
-        "effort": "inherit"
+        "effort": "xhigh"
       },
       "impl-self-check": {
         "model": "opus",
-        "effort": "inherit"
+        "effort": "xhigh"
       },
       "ledger": {
-        "model": "opus",
-        "effort": "inherit"
+        "model": "sonnet",
+        "effort": "low"
       }
     }
   }

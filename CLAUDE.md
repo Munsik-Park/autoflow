@@ -67,7 +67,13 @@ bash scripts/spawn-policy/spawn-policy.sh check                # validate the co
 
 That file is a **sample carrying the values currently applied, and it is target-owned**: it ships as
 a `scaffold` artifact, so a stamp or re-stamp creates it only when absent and never overwrites it
-(not even under `--force`), and each target is expected to configure it for its own runtime. Its
+(not even under `--force`), and each target is expected to configure it for its own runtime — its model
+rows and its `workflow_sites` effort. A `phases[]` row's effort is **not** a target lever: the harness reads a
+direct spawn's effort from the agent definition's `effort:` frontmatter (the Agent tool carries `model` per
+call, no effort), and the definitions are versioned tool source a thin-root target loads from the plugin, so
+that value is fixed per plugin version; the config row is the projection source at this repository and
+`check` fails closed when it differs from the loaded definition, and a row on a harness research type — which ships no
+definition — admits the inherit sentinel only (`effort_contract.phase_effort_ownership`). Its
 `effort_contract` is the effort vocabulary `check` applies to it — a runtime with a different
 vocabulary is accommodated by editing that contract, never by patching the checker — and the
 `effort` readout prints the inherit sentinel that contract declares rather than a fixed literal. On
@@ -86,7 +92,17 @@ Codex Medium findings its own rubric covers: the `useSearchEnabled` mechanism mi
 Munsik-Park/autoflow#905 · LibreChat #268 review comments). GATE:QUALITY — a lower-tier PASS
 (avg 8.9) contradicted by a same-cycle Codex Medium finding its rubric covers: Test
 coverage/quality missed that the spec seeds `search.enabled: true` directly, masking the missing
-`useSearchEnabled` wiring (evidence: LibreChat #268 review comment).
+`useSearchEnabled` wiring (evidence: LibreChat #268 review comment). RED — reverted to the higher tier on issue
+#180: across three consecutive cycles of llmroute #279 (one new-issue, two review-response) the Test AI's Red
+confirmation was contradicted by VERIFY step 1, and the cause-branch workflow returned `test=fix_test,
+impl=no_problem` all three times (Test AI defects 7 / 2 files / 1 — design-document, real-type and runtime-
+environment mismatches, a fixture-precedence error, an arithmetic error; implementation defects 0; each
+round-trip ≈ 1.1M tokens of cause-branch plus ≈ 0.36M of RED re-entry against a RED spawn of 0.25–0.35M).
+A survey of the configured reviewer's findings across the four consuming repositories (856 reviewed PRs as
+of 2026-09-05) adds the escaped half of the same defect class: 5 Medium findings where the suite did not
+exercise the real contract or environment (those PRs averaged 4.75 review rounds), and 14 High findings
+where the PR's own main path failed at runtime after VERIFY had confirmed Green (evidence: issue #180 and
+its PR thread).
 
 Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (`TaskCreate` only), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent (model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`).
 
@@ -94,11 +110,11 @@ Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT
 
 **[MUST]** The value a spawn declares is **resolved by running the readout**, never recalled from a table or from memory of a prior cycle: `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>`. Editing one config row is therefore the whole of a policy change — no other file is touched. The hook additionally emits a non-gating advisory when a declared `model` falls outside the set the config admits for that `subagent_type`; it warns and never denies.
 
-**[MUST] Spawn role declaration**: every `Agent` spawn made while an AutoFlow cycle is active (`active:true` state file present) declares its **role structurally** — every spawn uses a dedicated `subagent_type` (`autoflow-analyzer` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator`, defined in `.claude/agents/`); the built-in research types (`Explore` / `Plan` / `claude-code-guide`) count as declared. `subagent_type` is the sole declaration channel — the teammate-name-prefix channel was removed jointly with the spawn-mode migration (ADR-0021; the removal itself is ADR-0017 Q3), since every role now spawns anonymously and directly. The hook owns the role→gate mapping (analysis / evaluation / research pass; planning → GATE:HYPOTHESIS; implementation / testing → GATE:PLAN) and **denies an undeclared spawn while a cycle is active**. The spawn prompt is never used to infer the spawn's class — prompt-keyword inference both over-blocked benign spawns (which were then re-worded to slip past, training evasion) and let keyword-free implementation spawns bypass GATE:PLAN. A spawn declares **who it is**; it never declares which gate applies to it. See `docs/gate-matching-standard.md` > P3. Every role's spawn mode is fixed by *Spawn mode by role lifetime* below.
+**[MUST] Spawn role declaration**: every `Agent` spawn made while an AutoFlow cycle is active (`active:true` state file present) declares its **role structurally** — every spawn uses a dedicated `subagent_type` (`autoflow-analyzer` / `autoflow-loopcheck` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator`, defined in `.claude/agents/`); the built-in research types (`Explore` / `Plan` / `claude-code-guide`) count as declared. `subagent_type` is the sole declaration channel — the teammate-name-prefix channel was removed jointly with the spawn-mode migration (ADR-0021; the removal itself is ADR-0017 Q3), since every role now spawns anonymously and directly. The hook owns the role→gate mapping (analysis / evaluation / research pass; planning → GATE:HYPOTHESIS; implementation / testing → GATE:PLAN) and **denies an undeclared spawn while a cycle is active**. The spawn prompt is never used to infer the spawn's class — prompt-keyword inference both over-blocked benign spawns (which were then re-worded to slip past, training evasion) and let keyword-free implementation spawns bypass GATE:PLAN. A spawn declares **who it is**; it never declares which gate applies to it. See `docs/gate-matching-standard.md` > P3. Every role's spawn mode is fixed by *Spawn mode by role lifetime* below.
 
 **[MUST]** REFINE entry spawns the Developer AI fresh, on the model the policy names for REFINE, carrying only `.autoflow/issue-{N}-*.md` paths. Every role is an anonymous direct spawn with no lifetime spanning phases (*Spawn mode by role lifetime* below), so each phase's spawn already resolves its own model from the config; the VERIFY → REFINE model change needs no separate teardown step. What the rule still forbids is carrying VERIFY's spawn into REFINE by reusing its context — the phase boundary is a fresh spawn, matching the DISPATCH-entry respawn in [Cost Control](#cost-control).
 
-**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through a VERIFY failure, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
+**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through a VERIFY failure, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. A lower-tier **role spawn** is covered on the same terms (issue #180): the phase-exit claim it returns — RED's Red confirmation, GREEN's implementation-done — stands where a gate's PASS stands, and the contradicting signal is the VERIFY cause-branch verdict that attributes the failure to that role in the same cycle (`fix_test` for the Test AI, `fix_impl` for the Developer AI), or a reviewer-review Medium+ finding on the artifact that role produced. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
 
 **Rollout status**: the per-phase assignment in the config is settled (pilot complete); changes follow the revert rule above.
 

@@ -137,6 +137,49 @@ normalize_type() {
   esac
 }
 
+# frontmatter_effort_line <definition.md>
+#   Prints the `effort: <v>` line found inside the FIRST YAML frontmatter block
+#   (line 1 is `---`, the block ends at the next `---`), or nothing when the
+#   block carries no effort key. Exit 0 on either; 3 when the file has no such
+#   block; 4 when the block carries the key more than once; 5 when an `effort:`
+#   line sits outside the block. The harness reads the block only, so this is
+#   the exact set of shapes the projection may accept (PR #183 review).
+#   Only the CANONICAL spelling `effort: <value>` at column 0 is accepted as
+#   the projection. Any other line a YAML parser would read as the same key —
+#   `effort : v`, `"effort": v`, `'effort': v`, a tab before the colon, a
+#   quoted or commented value, or an INDENTED key (a mapping whose every key
+#   sits one space in is still the same mapping to a YAML parser) — exits 6;
+#   any block line outside the block-style grammar (flow mapping, explicit or
+#   merge key, multi-line scalar) exits 7 — the shape is refused up front: the checker has no YAML parser, so it
+#   refuses every spelling it cannot equate to the runtime's reading rather
+#   than guessing (PR #183 review: `effort : xhigh` read as no line).
+frontmatter_effort_line() {
+  awk '
+    NR == 1 { if ($0 != "---") exit 3; next }
+    !closed && $0 == "---" { closed = 1; next }
+    !closed && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/ {
+      if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; line = $0 } else { noncanon++ }
+      next
+    }
+    # Every other line of the block must be canonical block style — one plain
+    # `key: value` at column 0, a blank line, or a `#` comment. A flow mapping
+    # (`{...}`), an explicit key (`? `), a merge key (`<<:`), an anchor-only
+    # line, a multi-line scalar continuation: each can carry an effort a YAML
+    # parser reads and this line-oriented checker cannot, so the shape itself
+    # is refused (exit 7) before any "no effort line = inherit" verdict.
+    !closed && !/^[[:space:]]*$/ && !/^#/ && !/^[A-Za-z_][A-Za-z0-9_-]*: [^[:space:]]/ { shape++; next }
+    closed && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/ { outside++ }
+    END {
+      if (!closed) exit 3
+      if (shape > 0) exit 7
+      if (noncanon > 0) exit 6
+      if (n > 1) exit 4
+      if (outside > 0) exit 5
+      if (n == 1) print line
+      exit 0
+    }' "$1"
+}
+
 cmd_model() {
   local key="$1" v
   v=$(jq -r --arg k "$key" '.phases[$k].model // empty' "$CONFIG")
@@ -349,6 +392,49 @@ cmd_check() {
     [ -n "$t" ] || continue
     if [ "$(jq -r --arg t "$t" '[.phases[] | select(.agent_type == $t) | .effort | tostring] | unique | length' "$CONFIG")" != "1" ]; then
       _err "phases sharing agent_type '$t' declare divergent effort values"
+    fi
+  done < <(printf '%s\n' "$all_agent_types")
+
+  # Effort projection (issue #180, PR #183 review): a direct spawn's effort is
+  # read by the harness from the agent definition's frontmatter, never from
+  # this config — the Agent tool carries `model` per call but no effort. So a
+  # phases[].effort is deliverable only when the LOADED definition carries the
+  # same line (`effort: <v>`, or no line for the inherit sentinel). The
+  # definitions are versioned tool source (a thin-root target loads the
+  # plugin's), which makes phase-row effort fixed per plugin version and NOT a
+  # per-target lever; only workflow_sites effort reaches its spawn from this
+  # file at run time. Fail closed on a mismatch, so a config that claims an
+  # effort the runtime will not apply cannot pass `check`.
+  # The line is read from the FIRST YAML frontmatter block only (line 1 `---`
+  # to the next `---`) — the harness reads nothing else. A duplicate key inside
+  # the block, an `effort:` line outside it, or no block at all is an error in
+  # its own right, never a silent "no line" (PR #183 review: a body-only line
+  # passed a whole-file grep while the runtime inherited the session effort).
+  while IFS= read -r t; do
+    [ -n "$t" ] || continue
+    _exp=$(jq -r --arg t "$t" '[.phases[] | select(.agent_type == $t) | .effort | tostring] | unique | .[0]' "$CONFIG")
+    case "$t" in
+      Explore|Plan|claude-code-guide)
+        # A harness research type ships no definition, so nothing carries an
+        # effort line to the spawn: its rows admit the inherit sentinel only.
+        [ "$_exp" = "$inherit_sentinel" ] || _err "phases rows for the harness research type '$t' declare effort '$_exp', but that type ships no agent definition, so a direct spawn of it inherits the session effort — only the inherit sentinel is deliverable there; a governed phase that needs a fixed effort uses a shipped definition (issue #180: diagnose-loopcheck moved to autoflow-loopcheck for this reason)"
+        continue ;;
+    esac
+    [ -f "$AGENTS_DIR/$t.md" ] || continue   # absence is the membership error above, not a projection error
+    _line=$(frontmatter_effort_line "$AGENTS_DIR/$t.md"); _frc=$?
+    case "$_frc" in
+      0) ;;
+      3) _err "agent definition $AGENTS_DIR/$t.md has no YAML frontmatter block (line 1 must be '---', closed by a later '---'); the harness reads effort from that block only"; continue ;;
+      4) _err "agent definition $AGENTS_DIR/$t.md carries more than one 'effort:' key inside its frontmatter block"; continue ;;
+      5) _err "agent definition $AGENTS_DIR/$t.md carries an 'effort:' line outside its frontmatter block — the harness does not read it, so it is not a projection"; continue ;;
+      7) _err "agent definition $AGENTS_DIR/$t.md carries a frontmatter line outside the canonical block-style grammar (one plain 'key: value' per line at column 0; flow mappings, explicit keys, merge keys and multi-line scalars are refused because this checker has no YAML parser and cannot tell what effort such a shape carries)"; continue ;;
+      6) _err "agent definition $AGENTS_DIR/$t.md spells the effort key in a non-canonical form inside its frontmatter (a YAML parser may read it as 'effort', this checker cannot equate it) — write exactly 'effort: <value>' at column 0 (no leading whitespace), unquoted, without a trailing comment"; continue ;;
+      *) _err "agent definition $AGENTS_DIR/$t.md: frontmatter read failed (rc $_frc)"; continue ;;
+    esac
+    if [ "$_exp" = "$inherit_sentinel" ]; then
+      [ -z "$_line" ] || _err "phases rows for agent_type '$t' declare the inherit sentinel, but the loaded definition $AGENTS_DIR/$t.md carries '$_line' — a direct spawn's effort is fixed by the shipped definition's frontmatter (the channel the harness reads); set the rows to that value, since phase-row effort is not configurable per target (only workflow_sites effort is)"
+    else
+      [ "$_line" = "effort: $_exp" ] || _err "phases rows for agent_type '$t' declare effort '$_exp', but the loaded definition $AGENTS_DIR/$t.md carries '${_line:-no effort: line}' — a direct spawn's effort is fixed by the shipped definition's frontmatter (the channel the harness reads); set the rows to that value, since phase-row effort is not configurable per target (only workflow_sites effort is)"
     fi
   done < <(printf '%s\n' "$all_agent_types")
 
