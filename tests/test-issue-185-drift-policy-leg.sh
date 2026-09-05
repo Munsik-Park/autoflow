@@ -59,7 +59,10 @@
 #                         D6 still evaluates with the oracle's own readout)
 #   TIMING                AC7: the D6 leg adds < 1 s to a drift-check run
 #   DET-*                 AC5 seam: detect.sh DRIFT_STATE unaffected by D6;
-#                         POLICY_STATE / POLICY_FAILS / POLICY_FINDING carry it
+#                         POLICY_STATE / POLICY_FAILS / POLICY_FINDING carry it;
+#                         a `PASS: D6` beside a `SKIP: D6` aggregates to skip,
+#                         and every skip reason is carried on POLICY_SKIP
+#                         (PR #186 review, Medium)
 #   SKILL-*               AC5: SKILL.md Step 1 reads the POLICY axis; Step 4
 #                         reports the D6 lines with the rows to fix
 #   DOC-*                 drift-check header, SETUP-GUIDE, tool-delivery-
@@ -293,16 +296,34 @@ else
 fi
 set_policy "$T" '.'
 out=$(env TARGET_ROOT="$T" PLUGIN_CACHE_ROOT="$REPO_ROOT" CLAUDE_PLUGIN_ROOT="$PLUGIN_DIR" sh "$DETECT_SH" 2>&1)
-if [ "$(kv "$out" POLICY_STATE)" = "pass" ] && [ "$(kv "$out" POLICY_FAILS)" = "0" ] && ! printf '%s\n' "$out" | grep -q '^POLICY_FINDING='; then
-  pass "DET-D6-PASS: a current scaffold -> POLICY_STATE=pass, POLICY_FAILS=0, no finding line"
+if [ "$(kv "$out" POLICY_STATE)" = "pass" ] && [ "$(kv "$out" POLICY_FAILS)" = "0" ] && ! printf '%s\n' "$out" | grep -qE '^POLICY_(FINDING|SKIP)='; then
+  pass "DET-D6-PASS: a current scaffold with both sub-checks run -> POLICY_STATE=pass, POLICY_FAILS=0, no finding or skip line"
 else
   failc "DET-D6-PASS: $(printf '%s\n' "$out" | grep -E '^POLICY_' | tr '\n' ' ')"
 fi
 out=$(env TARGET_ROOT="$T" PLUGIN_CACHE_ROOT="$REPO_ROOT" sh "$DETECT_SH" 2>&1)
-if [ "$(kv "$out" POLICY_STATE)" = "skip" ] && [ "$(kv "$out" DRIFT_STATE)" = "clean" ]; then
-  pass "DET-D6-SKIP: no definitions resolvable -> POLICY_STATE=skip, DRIFT_STATE unaffected"
+if [ "$(kv "$out" POLICY_STATE)" = "skip" ] && [ "$(kv "$out" DRIFT_STATE)" = "clean" ] \
+   && printf '%s\n' "$out" | grep '^POLICY_SKIP=agent definitions not locally resolvable (tried: ' | grep -F "$T/.claude/agents" | grep -qF 'installed_plugins.json'; then
+  pass "DET-D6-SKIP: no definitions resolvable -> POLICY_STATE=skip, DRIFT_STATE unaffected, and POLICY_SKIP carries the reason with the paths tried"
 else
-  failc "DET-D6-SKIP: $(printf '%s\n' "$out" | grep -E '^(DRIFT_STATE|POLICY_STATE)' | tr '\n' ' ')"
+  failc "DET-D6-SKIP: $(printf '%s\n' "$out" | grep -E '^(DRIFT_STATE|POLICY_)' | tr '\n' ' ' | cut -c1-300)"
+fi
+# PR #186 review (Medium): a cache whose clone carries no sample makes D6 emit
+# `PASS: D6` (the check projection) beside `SKIP: D6` (the required-row
+# comparison deferred). That is a partial verification and must aggregate to
+# skip, with the deferred sub-check's reason preserved.
+NS="$WORK/cache-no-sample"; mkdir -p "$NS/setup/thin-root-layer" "$NS/scripts/spawn-policy" "$NS/scripts/lib" "$NS/.claude-plugin"
+cp "$MANIFEST" "$NS/setup/manifest.json"; cp "$DRIFT_SRC" "$NS/setup/thin-root-layer/"
+cp "$READOUT" "$NS/scripts/spawn-policy/"; cp "$REPO_ROOT/scripts/lib/plugin-root.sh" "$NS/scripts/lib/"
+cp "$REPO_ROOT/.claude-plugin/marketplace.json" "$NS/.claude-plugin/"
+raw=$(env CLAUDE_PROJECT_DIR="$T" CLAUDE_PLUGIN_ROOT="$PLUGIN_DIR" AUTOFLOW_MARKETPLACE_ROOT="$NS" sh "$NS/setup/thin-root-layer/drift-check.sh" 2>&1)
+out=$(env TARGET_ROOT="$T" PLUGIN_CACHE_ROOT="$NS" CLAUDE_PLUGIN_ROOT="$PLUGIN_DIR" sh "$DETECT_SH" 2>&1)
+if printf '%s\n' "$raw" | grep -q '^PASS: D6' && printf '%s\n' "$raw" | grep -q '^SKIP: D6' \
+   && [ "$(kv "$out" POLICY_STATE)" = "skip" ] && [ "$(kv "$out" POLICY_FAILS)" = "0" ] \
+   && [ "$(kv "$out" POLICY_SKIP)" = "required-row comparison deferred (marketplace clone at $NS carries no .claude/autoflow/spawn-policy.json sample)" ]; then
+  pass "DET-D6-PARTIAL: the oracle emitting PASS: D6 beside SKIP: D6 (clone without a sample) aggregates to POLICY_STATE=skip, POLICY_SKIP naming the deferred comparison — never pass"
+else
+  failc "DET-D6-PARTIAL: oracle=$(printf '%s\n' "$raw" | grep -E '^(PASS|SKIP): D6' | cut -c1-40 | tr '\n' '|'); $(printf '%s\n' "$out" | grep -E '^POLICY_' | tr '\n' ' ' | cut -c1-300)"
 fi
 out=$(env TARGET_ROOT="$WORK/absent" PLUGIN_CACHE_ROOT="$REPO_ROOT" sh "$DETECT_SH" 2>&1)
 if [ "$(kv "$out" INSTALL_STATE)" = "absent" ] && [ "$(kv "$out" POLICY_STATE)" = "na" ]; then
@@ -330,6 +351,15 @@ if [ "$(kv "$out" DRIFT_STATE)" = "drift" ] && [ "$(kv "$out" POLICY_STATE)" = "
 else
   failc "DET-D6-ERROR: $(printf '%s\n' "$out" | grep -E '^(DRIFT_STATE|POLICY_STATE)' | tr '\n' ' ')"
 fi
+# The synthetic oracle helper is defined above; a PASS beside two SKIPs.
+OCPS="$WORK/oracle-pass-skip"; mk_oracle_cache "$OCPS" 'SKIP: D6 -- reason one (tried: /a; /b)' 'PASS: D6: scaffold agrees' 'SKIP: D6 -- reason two'
+out=$(env TARGET_ROOT="$T" PLUGIN_CACHE_ROOT="$OCPS" sh "$DETECT_SH" 2>&1)
+if [ "$(kv "$out" POLICY_STATE)" = "skip" ] && [ "$(printf '%s\n' "$out" | grep -c '^POLICY_SKIP=')" = "2" ] \
+   && printf '%s\n' "$out" | grep -qx 'POLICY_SKIP=reason one (tried: /a; /b)' && printf '%s\n' "$out" | grep -qx 'POLICY_SKIP=reason two'; then
+  pass "DET-D6-PASS-SKIP: a synthetic PASS+SKIP+SKIP oracle -> POLICY_STATE=skip with every SKIP reason carried verbatim, in order"
+else
+  failc "DET-D6-PASS-SKIP: $(printf '%s\n' "$out" | grep -E '^POLICY_' | tr '\n' ' ' | cut -c1-300)"
+fi
 
 # -----------------------------------------------------------------------------
 echo "== SKILL / DOC: the operator-facing description =="
@@ -337,8 +367,8 @@ echo "== SKILL / DOC: the operator-facing description =="
 step1=$(awk '/^## Step 1/,/^## Step 2/' "$SKILL_MD")
 step4=$(awk '/^## Step 4/,0' "$SKILL_MD")
 if printf '%s\n' "$step1" | grep -q 'POLICY_STATE' && printf '%s\n' "$step1" | grep -q 'POLICY_FINDING' \
-   && printf '%s\n' "$step1" | grep -qi 'never overwrites'; then
-  pass "SKILL-STEP1: Step 1 reads POLICY_STATE, lists every POLICY_FINDING line, and says the scaffold is never overwritten by the stamp"
+   && printf '%s\n' "$step1" | grep -q 'POLICY_SKIP' && printf '%s\n' "$step1" | grep -qi 'never overwrites'; then
+  pass "SKILL-STEP1: Step 1 reads POLICY_STATE, lists every POLICY_FINDING and POLICY_SKIP line, and says the scaffold is never overwritten by the stamp"
 else
   failc "SKILL-STEP1: Step 1 region lacks POLICY_STATE / POLICY_FINDING / the never-overwritten statement"
 fi

@@ -35,10 +35,16 @@
 #     is a hand edit, reported on its own axis below).
 #   - POLICY is the D6 axis, reported separately so SKILL.md can list the rows
 #     to fix in both the Step-1 (pre-stamp) and Step-4 (post-stamp) reports:
-#     POLICY_STATE = pass | fail | skip | na (target not installed, or the
-#     oracle did not run) | error (the oracle emitted no D6 line at all);
-#     POLICY_FAILS = the count of `FAIL: D6` lines; one POLICY_FINDING=<msg>
-#     line per finding (a repeated key — consumers read every occurrence).
+#     POLICY_STATE = fail | skip | pass | na (target not installed, or the
+#     oracle did not run) | error (the oracle emitted no D6 line at all), in
+#     that precedence: D6 emits one verdict per sub-check (the `check`
+#     projection, the required-row comparison), so a `PASS: D6` beside a
+#     `SKIP: D6` is a PARTIAL verification and aggregates to `skip`, never
+#     `pass` (PR #186 review, Medium); POLICY_FAILS = the count of `FAIL: D6`
+#     lines; one POLICY_FINDING=<msg> line per finding and one
+#     POLICY_SKIP=<reason> line per `SKIP: D6` (repeated keys — consumers
+#     read every occurrence; the skip reason names what could not be resolved
+#     and the paths tried, so SKILL.md Step 1 can say so).
 #   - VERSION_SKEW compares the installed manifest .version against the cache
 #     thin-root source setup/manifest.json .version (the exact file init.sh
 #     byte-copies in) — a distinct comparand from drift-check D2 (plugin.json).
@@ -95,6 +101,7 @@ DRIFT_FIRST=
 POLICY_STATE=na
 POLICY_FAILS=0
 POLICY_FINDINGS=
+POLICY_SKIPS=
 if [ "$INSTALL_STATE" = installed ]; then
   if [ ! -f "$DRIFT_ORACLE" ]; then
     # Deterministic degradation (no silent clean): the cache drift oracle is
@@ -121,14 +128,19 @@ if [ "$INSTALL_STATE" = installed ]; then
       # scaffold is never overwritten), so it never moves DRIFT_STATE; the
       # finding lines are carried verbatim for the skill to list.
       _d6_fails=$(printf '%s\n' "$_drift_out" | grep '^FAIL: D6 ' | sed -E 's/^FAIL: D6 -- //')
+      POLICY_SKIPS=$(printf '%s\n' "$_drift_out" | grep '^SKIP: D6 ' | sed -E 's/^SKIP: D6 -- //')
       if [ -n "$_d6_fails" ]; then
         POLICY_STATE=fail
         POLICY_FAILS=$(printf '%s\n' "$_d6_fails" | wc -l | tr -d ' ')
         POLICY_FINDINGS=$_d6_fails
+      elif [ -n "$POLICY_SKIPS" ]; then
+        # skip beats pass: D6 emits a verdict per sub-check, so a PASS beside
+        # a SKIP means one sub-check did not run (e.g. the `check` projection
+        # passed but the clone carries no sample for the required-row
+        # comparison) — a partial verification is not a pass.
+        POLICY_STATE=skip
       elif printf '%s\n' "$_drift_out" | grep -q '^PASS: D6'; then
         POLICY_STATE=pass
-      elif printf '%s\n' "$_drift_out" | grep -q '^SKIP: D6'; then
-        POLICY_STATE=skip
       else
         # The oracle ran but emitted no D6 verdict at all: an oracle that
         # predates the leg, or an abnormal termination before it — never
@@ -271,6 +283,12 @@ if [ -n "$POLICY_FINDINGS" ]; then
   printf '%s\n' "$POLICY_FINDINGS" | while IFS= read -r _pf; do
     [ -n "$_pf" ] || continue
     printf 'POLICY_FINDING=%s\n' "$_pf"
+  done
+fi
+if [ -n "$POLICY_SKIPS" ]; then
+  printf '%s\n' "$POLICY_SKIPS" | while IFS= read -r _ps; do
+    [ -n "$_ps" ] || continue
+    printf 'POLICY_SKIP=%s\n' "$_ps"
   done
 fi
 printf 'VERSION_INSTALLED=%s\n' "$VERSION_INSTALLED"
