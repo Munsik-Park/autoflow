@@ -391,7 +391,7 @@
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "4da522cc418bca19a5a159046959ae869160a1cce8747f80bf487b9835a9084c"
+      "sha256": "c5665a32d34311293bee01f52b97d9696cbbe610e8cc0ab18a2e2a52844f7e55"
     },
     {
       "source": "scripts/lib/plugin-root.sh",

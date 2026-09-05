@@ -137,6 +137,28 @@ normalize_type() {
   esac
 }
 
+# frontmatter_effort_line <definition.md>
+#   Prints the `effort: <v>` line found inside the FIRST YAML frontmatter block
+#   (line 1 is `---`, the block ends at the next `---`), or nothing when the
+#   block carries no effort key. Exit 0 on either; 3 when the file has no such
+#   block; 4 when the block carries the key more than once; 5 when an `effort:`
+#   line sits outside the block. The harness reads the block only, so this is
+#   the exact set of shapes the projection may accept (PR #183 review).
+frontmatter_effort_line() {
+  awk '
+    NR == 1 { if ($0 != "---") exit 3; next }
+    !closed && $0 == "---" { closed = 1; next }
+    !closed && /^effort:/ { n++; line = $0; next }
+    closed && /^effort:/ { outside++ }
+    END {
+      if (!closed) exit 3
+      if (n > 1) exit 4
+      if (outside > 0) exit 5
+      if (n == 1) print line
+      exit 0
+    }' "$1"
+}
+
 cmd_model() {
   local key="$1" v
   v=$(jq -r --arg k "$key" '.phases[$k].model // empty' "$CONFIG")
@@ -362,11 +384,24 @@ cmd_check() {
   # per-target lever; only workflow_sites effort reaches its spawn from this
   # file at run time. Fail closed on a mismatch, so a config that claims an
   # effort the runtime will not apply cannot pass `check`.
+  # The line is read from the FIRST YAML frontmatter block only (line 1 `---`
+  # to the next `---`) — the harness reads nothing else. A duplicate key inside
+  # the block, an `effort:` line outside it, or no block at all is an error in
+  # its own right, never a silent "no line" (PR #183 review: a body-only line
+  # passed a whole-file grep while the runtime inherited the session effort).
   while IFS= read -r t; do
     [ -n "$t" ] || continue
     case "$t" in autoflow-*) ;; *) continue ;; esac
+    [ -f "$AGENTS_DIR/$t.md" ] || continue   # absence is the membership error above, not a projection error
     _exp=$(jq -r --arg t "$t" '[.phases[] | select(.agent_type == $t) | .effort | tostring] | unique | .[0]' "$CONFIG")
-    _line=$(grep -E '^effort:' "$AGENTS_DIR/$t.md" 2>/dev/null | head -n1)
+    _line=$(frontmatter_effort_line "$AGENTS_DIR/$t.md"); _frc=$?
+    case "$_frc" in
+      0) ;;
+      3) _err "agent definition $AGENTS_DIR/$t.md has no YAML frontmatter block (line 1 must be '---', closed by a later '---'); the harness reads effort from that block only"; continue ;;
+      4) _err "agent definition $AGENTS_DIR/$t.md carries more than one 'effort:' key inside its frontmatter block"; continue ;;
+      5) _err "agent definition $AGENTS_DIR/$t.md carries an 'effort:' line outside its frontmatter block — the harness does not read it, so it is not a projection"; continue ;;
+      *) _err "agent definition $AGENTS_DIR/$t.md: frontmatter read failed (rc $_frc)"; continue ;;
+    esac
     if [ "$_exp" = "$inherit_sentinel" ]; then
       [ -z "$_line" ] || _err "phases rows for agent_type '$t' declare the inherit sentinel, but the loaded definition $AGENTS_DIR/$t.md carries '$_line' — a direct spawn's effort is fixed by the shipped definition's frontmatter (the channel the harness reads); set the rows to that value, since phase-row effort is not configurable per target (only workflow_sites effort is)"
     else

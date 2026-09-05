@@ -610,7 +610,15 @@ if [ -x "$RESOLVER" ]; then
   for t in "${AGENT_TYPES[@]}"; do
     def="$AGENTS_DIR/$t.md"
     out=$(bash "$RESOLVER" agent-effort "$t" 2>/dev/null); rc=$?
-    has_line=$(grep -qE '^effort:' "$def" 2>/dev/null && echo 1 || echo 0)
+    # The oracle reads the first YAML frontmatter block only — independently of
+    # the checker's own extractor (PR #183 review: a whole-file grep accepted a
+    # body-only `effort:` line the harness never reads).
+    fm_line=$(awk 'NR==1{ if ($0!="---") exit 3; next } !c && $0=="---"{ c=1; next } !c && /^effort:/{ n++; l=$0; next } c && /^effort:/{ o++ } END{ if(!c) exit 3; if(n>1) exit 4; if(o>0) exit 5; if(n==1) print l; exit 0 }' "$def" 2>/dev/null); fm_rc=$?
+    if [ "$fm_rc" != "0" ]; then
+      failc "design-added: frontmatter-projection -- $t definition frontmatter malformed for effort (awk rc $fm_rc: 3 no block, 4 duplicate key, 5 effort outside the block)"
+      continue
+    fi
+    has_line=$([ -n "$fm_line" ] && echo 1 || echo 0)
     if [ "$rc" != "0" ]; then
       failc "design-added: frontmatter-projection -- agent-effort $t exited $rc"
       continue
@@ -624,7 +632,7 @@ if [ -x "$RESOLVER" ]; then
         fi
         ;;
       *)
-        actual_line=$(grep -E '^effort:' "$def" 2>/dev/null | head -n1)
+        actual_line="$fm_line"
         if [ "$actual_line" = "effort: $out" ]; then
           pass "design-added: frontmatter-projection -- $t carries 'effort: $out'"
         else
@@ -765,6 +773,30 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
     fi
   done
   rm -f "$TCFG_MIS"
+
+  # (i-c) Frontmatter scope (PR #183 review): the projection is read from the
+  # first YAML block only. A definition whose `effort:` line sits in the body
+  # (the harness would inherit the session effort) and one carrying the key
+  # twice inside the block are both refused by `check`, naming the definition.
+  # A full plugin copy: plugin-root.sh accepts CLAUDE_PLUGIN_ROOT only when it
+  # is a plugin root (carries .claude-plugin/plugin.json), not a bare agents/.
+  SCRATCH7P="$SCRATCH7/plugin-shape"; rm -rf "$SCRATCH7P"; cp -R "$PLUGIN_SRC" "$SCRATCH7P"
+  _lc="$SCRATCH7P/agents/autoflow-loopcheck.md"
+  awk 'NR==1{print; next} !c && $0=="---"{c=1; print; next} !c && /^effort:/{held=$0; next} {print} END{print held}' "$PLUGIN_SRC/agents/autoflow-loopcheck.md" > "$_lc"
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic-body.err"; rc=$?
+  if [ "$rc" = "1" ] && grep -q "outside its frontmatter block" "$SCRATCH7/ic-body.err" && grep -q "autoflow-loopcheck" "$SCRATCH7/ic-body.err"; then
+    pass "PR #183 review: definition with 'effort:' only in the body (frontmatter carries none) -> check exit 1, names the out-of-block line"
+  else
+    failc "PR #183 review: body-only effort line -> exit $rc: $(head -1 "$SCRATCH7/ic-body.err")"
+  fi
+  awk 'NR==1{print; next} !c && $0=="---"{print "effort: low"; c=1; print; next} {print}' "$PLUGIN_SRC/agents/autoflow-loopcheck.md" > "$_lc"
+  AUTOFLOW_SPAWN_POLICY="$TCFG" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic-dup.err"; rc=$?
+  if [ "$rc" = "1" ] && grep -q "more than one 'effort:' key" "$SCRATCH7/ic-dup.err"; then
+    pass "PR #183 review: definition with a duplicate 'effort:' key inside the frontmatter -> check exit 1"
+  else
+    failc "PR #183 review: duplicate effort key -> exit $rc: $(head -1 "$SCRATCH7/ic-dup.err")"
+  fi
+  rm -rf "$SCRATCH7P"
 
   # (ii) Plain shell: the plugin is found through the harness registry under
   # CLAUDE_CONFIG_DIR (installed_plugins.json), CLAUDE_PLUGIN_ROOT unset.
