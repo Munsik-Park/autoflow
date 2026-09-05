@@ -243,17 +243,24 @@ removes more of the per-turn floor, at the price of moving isolation and relay o
 procedure, adding an orchestrator turn per participant turn, and — for A1 only — re-opening the
 declaration channel and the hook. A2 dominates A1: the same mechanics, none of the policy churn,
 no dependence on the experimental flag. Constraint 3 rules out the cache axis for A entirely;
-its case rests on the call count, which is what the pilot measures.
+its case rests on the call count, which is what the measurement in §6 records. The operator's
+decision on this comparison is in §7.
 
 ---
 
-## 6. Pilot design
+## 6. Pilot design — run as the effect record (operator decision, §7)
 
-**Arms.** Arm 0 — the script at HEAD (control). Arm B — the script with the VERIFY-scope sentence
-in `TURN_RULE`, the protocol sentence in place. Arm A2 — persistent anonymous participants
-relayed by the orchestrator, with the same sentence. A1 is not run (§5, dominated).
+This section was written as the gate on adopting A2. The operator decided on 2026-09-05 to
+proceed with the relay directly (§7, ADR-0023 D2), so the design below is kept as the
+**effect record** of the change — the issue #146 form — with step 0 as an implementation
+precondition rather than a decision gate.
 
-**Step 0 (before arm A2).** One anonymous `general-purpose` spawn on a small model, outside any
+**Arms.** Arm 0 — the script at HEAD (control). Arm A2 — persistent anonymous participants
+relayed by the orchestrator, carrying the VERIFY-scope sentence (option B) in their prompt.
+Arm B alone (the one-shot script with the sentence) is optional: it isolates the sentence's
+share of the effect and is worth one run if the operator wants that split. A1 is not run.
+
+**Step 0 (before the relay is implemented).** One anonymous `general-purpose` spawn on a small model, outside any
 cycle, told to end with a nonce and call no tool; resume it twice by agent ID with a new nonce
 each time; record whether each reply reaches the orchestrator as a task notification carrying
 the text — the issue #168 procedure (`tests/manual/issue-42-manual-scenarios.md` > M1) with the
@@ -280,42 +287,55 @@ target is the next issue that reaches ARCHITECT, or issue #2 re-derived through 
 | Outcome | turns, agreed / un-agreed counts, GATE:PLAN score of the resulting design from a fresh evaluator per arm | same |
 | Isolation | — | the orchestrator's session transcript contains no turn-message text (grep each turn's first 200 characters against it) |
 
-**Judgment.** The operator judges the direction and size of the before/after contrast — no fixed
-cutoff, the issue #146 precedent. Two conditions are disqualifying regardless of cost: an arm
-whose design FAILs GATE:PLAN where the control PASSes, and an A2 run whose isolation check finds
-turn text in the orchestrator's transcript. A2 is adopted only if it shows a further reduction
-beyond arm B in calls and wall clock that the operator judges worth the surface in §5's
-"documents / code touched" row.
+**Judgment.** The operator reads the direction and size of the before/after contrast — no fixed
+cutoff, the issue #146 precedent. Two findings are defects to fix in the relay before it is used
+in a cycle, not adoption gates: a design that FAILs GATE:PLAN where the control PASSes, and an
+isolation check that finds turn text in the orchestrator's transcript. The record, with the
+Claude Code version it ran on, is appended to ADR-0023.
 
 ---
 
 ## 7. Conclusion and follow-on scope
 
-**Decision proposed (ADR-0023).** Adopt B now. Treat A as re-opened but not adopted — the same
-standing Decision 8 gives the peer facilitator — with A2 admitted to a pilot and A1 rejected.
-Implementation is not this issue's; it is split as follows.
+**Review's recommendation.** Adopt B now; treat A as re-opened but not adopted — the standing
+Decision 8 gives the peer facilitator — with A2 admitted to a pilot and A1 rejected (§5).
 
-**Follow-on issue 1 — verification scope over the transcript, and the measurement.**
-- `docs/teammate-common-rules.md` > Discussion Protocol, step 2: the scope sentence.
-- `.claude/workflows/architect-deliberation.js` `TURN_RULE`: the same sentence, one line.
-- `setup/manifest.json` regenerated (`setup/gen-manifest-hashes.sh`); `test/workflows/run.mjs`
-  and `tests/lib/architect-turn-harness.mjs` re-run (the sentence is prompt text; the mock
-  runtime asserts control flow, so no assertion should change).
-- The aggregation script (§1.3) committed under `scripts/`, and arms 0 and B run and recorded.
+**Operator decision (2026-09-05, issue #177 session).** The relay is adopted directly: the two
+participants stay alive for the discussion and the orchestrator wakes them in turn. The review's
+pilot gate is not taken; §6 runs as the effect record. B's sentence is carried into the
+participants' prompt. The A2 realization (anonymous, resumed by agent ID) is the primary form and
+A1 the fallback if step 0 fails. The sub-agent cache-TTL question is parked for a separate
+discussion after this issue closes. Recorded as ADR-0023 (Accepted).
 
-**Follow-on issue 2 — the A2 pilot, conditional on issue 1's record.**
-- Step 0 delivery probe (§6) recorded with version.
-- Relay procedure in `docs/autoflow-guide.md` > ARCHITECT; transcript file grammar; a
-  relay-state script (next side, ended?) under `scripts/`.
+Implementation is not this issue's; it is one follow-on issue with the following scope.
+
+**Follow-on issue — orchestrator-relayed persistent participants for ARCHITECT.**
+- Step 0 delivery probe (§6) recorded with the Claude Code version; on a miss, the A1 fallback
+  (hook `resolve_spawn_role` exception for the two participants, ADR-0017 Q3 partial supersede
+  noted in ADR-0023).
 - Participant spawn: `subagent_type: autoflow-planner` (the planning role, gated on
   GATE:HYPOTHESIS, which ARCHITECT already satisfies), model from a new spawn-policy phase key
-  per participant, `.claude/agents/autoflow-planner.md` amended for the relay prompt.
-- `CLAUDE.md` > Deliberation Isolation (the `Workflow` `[MUST]` becomes "one of two
-  realizations"), > Spawn mode by role lifetime (a within-ARCHITECT row);
-  `docs/teammate-contracts.md` > Facilitator > Realization; `docs/design-rationale.md` >
-  Decision 8's realization paragraph; ADR-0023 status update with the pilot record.
-- Arm A2 run against arm B on the same input; the isolation check recorded.
+  per participant; `.claude/agents/autoflow-planner.md` amended for the relay prompt — the fixed
+  role prompt, the topic once, the VERIFY-scope sentence (option B), "append your turn to the
+  transcript file, end with one line".
+- Transcript file grammar (`.autoflow/issue-{N}-architect-transcript.md`, one `### Turn n — side`
+  block per turn) and a relay-state script under `scripts/` (prints the next side and whether
+  the discussion has ended: two consecutive "nothing further").
+- Orchestrator procedure in `docs/autoflow-guide.md` > ARCHITECT: spawn both, wake by agent ID in
+  alternation, wait by ending the turn (Wait discipline), read only the one-line notification,
+  run the state script, stop at the end condition; reports, scribe and ledger from the
+  transcript file (kept as a reduced `Workflow` given the path, or direct spawns).
+- Rules and records: `CLAUDE.md` > Deliberation Isolation (the `Workflow` `[MUST]` names the
+  relay as the ARCHITECT realization; the nested-team rejection stands) and > Spawn mode by role
+  lifetime (a within-ARCHITECT row); `docs/teammate-contracts.md` > Facilitator > Realization and
+  Return Contract; `docs/design-rationale.md` > Decision 8's realization paragraph;
+  `docs/teammate-common-rules.md` > Discussion Protocol step 2 (the scope sentence).
+- Tests: `test/workflows/run.mjs` ARCHITECT section and `tests/lib/architect-turn-harness.mjs`
+  retired or re-pointed; a hermetic test of the relay-state script; manifest regenerated.
+- Effect record (§6): the aggregation script committed under `scripts/`; arms 0 and A2 (B
+  optional) on one frozen input; the record appended to ADR-0023.
 
 **Out of scope.** The VERIFY cause-branch workflow (a single self-check round, no relay); every
 other role's lifetime (the single-mode rule stands for them); the hook's name denial (unchanged
-under A2); the effort row of the spawn policy (target-owned, the operator's lever).
+under A2); the effort row of the spawn policy (target-owned, the operator's lever); the sub-agent
+cache TTL (separate discussion after this issue).

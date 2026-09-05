@@ -1,8 +1,11 @@
-# ADR-0023: Deliberation participant lifetime — verification scope over the transcript now; persistent participants pilot-gated
+# ADR-0023: Deliberation participant lifetime — orchestrator-relayed persistent participants adopted; verification scope over the transcript
 
 ## Status
 
-Proposed
+Accepted — operator decision of 2026-09-05 (issue #177 session): the ARCHITECT participants are kept
+alive for the length of the discussion and the orchestrator wakes them in turn. The review had
+proposed gating this on a pilot; the operator chose to proceed directly, and the measurement in D4
+is kept as an effect record. Implementation is the follow-on issue named in the review §7.
 
 ## Context
 
@@ -35,51 +38,60 @@ Discussion Protocol's step 2 (`docs/teammate-common-rules.md`) and mirrored in t
 verified for both participants; a participant reads a file to ground a claim it is making or to
 dispute a cited one.* The per-turn respawn, the `Workflow` realization, the hook and every spawn
 rule are unchanged. This is a statement of an existing rule's scope, not a new check, cap or
-judgment (the class issue #166 removed), and it applies under D2 as well.
+judgment (the class issue #166 removed). It is carried into the persistent participants' prompt
+under D2: a participant that re-reads what it or the other side already anchored is the same
+waste.
 
-**D2 — Re-opened, not adopted: persistent participants relayed by the orchestrator.** The
-realization admitted to a pilot is **A2** — two anonymous direct spawns (`subagent_type`
-declared, no `name`) kept for the length of one ARCHITECT discussion and resumed by agent ID; each
-turn is appended to `.autoflow/issue-{N}-architect-transcript.md` and the participant's final
-text is one line (turn number, anything further to raise); the orchestrator alternates the wakes
-and ends the discussion at two consecutive "nothing further" (#166 unchanged); reports, scribe
-and ledger read the transcript file. **A1** — a named spawn woken by name — is rejected: same
-mechanics, but it re-opens the hook's name denial and ADR-0017 Q3, and under this repository's
-`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` it creates an in-process teammate that `/resume` does
-not restore. A2 becomes adopted only through the pilot in D4; until then the single realization
-stays the `Workflow`.
+**D2 — Adopted: persistent participants relayed by the orchestrator (operator decision,
+2026-09-05).** The Developer AI and the Test AI are spawned once per ARCHITECT discussion and
+kept for its length. Each turn is appended to `.autoflow/issue-{N}-architect-transcript.md` and
+the participant's final text is one line (turn number, anything further to raise); the
+orchestrator alternates the wakes and ends the discussion at two consecutive "nothing further"
+(#166 unchanged); reports, scribe and ledger read the transcript file. The realization is **A2**
+— two anonymous direct spawns (`subagent_type` declared, no `name`) resumed by agent ID through
+`SendMessage`. **A1** — a named spawn woken by name — is rejected as the primary realization: the
+same mechanics, but it re-opens the hook's name denial and ADR-0017 Q3, and under this
+repository's `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` it creates an in-process teammate that
+`/resume` does not restore. A1 is the fallback only if the delivery precondition in D4 fails for
+A2, since the operator's decision is the relay itself, not the addressing form.
 
 **D3 — Relation to the standing records (what is and is not superseded).**
 
 | Record | Standing after this ADR |
 |---|---|
 | ADR-0017 Q3 (one declaration channel, `subagent_type`) | **Not superseded.** A2 declares through `subagent_type` at spawn; resumption by agent ID adds no channel. A1 would have superseded it, and is rejected. |
-| CLAUDE.md > *Spawn mode by role lifetime* ("no role holds a lifetime spanning phases") | **Not superseded.** An A2 participant lives inside one phase. If A2 is adopted, the table gains a within-ARCHITECT row; the cross-phase rule stands for every role. |
-| The hook's name-carrying-payload denial | **Unchanged** under D1 and A2. |
+| CLAUDE.md > *Spawn mode by role lifetime* ("no role holds a lifetime spanning phases") | **Not superseded.** A relayed participant lives inside one phase. The table gains a within-ARCHITECT row (the follow-on issue); the cross-phase rule stands for every role. |
+| The hook's name-carrying-payload denial | **Unchanged** under A2. Touched only if the A1 fallback in D2 is taken. |
 | ADR-0021 (C7 `EQUAL_OR_BETTER`, C8 cost) | **Stands.** It compared named vs direct spawns across phases; nothing here re-measures detection. Its C8 cache reading is corrected by constraint 3: the warm-wake "saving" is the static prefix a fresh spawn also gets. |
-| `docs/design-rationale.md` > Decision 8 | **The rule stands; one clause is conditionally superseded.** Isolation of the orchestrator from round-by-round prose is kept by D1 and required of A2 (the isolation check in D4). The clause that binds the contract to the `Workflow` as the single realization that "enforces the relay order, the two-consecutive-`done` termination and the isolated report return in code" is superseded **only if** A2 is adopted, and then for the ARCHITECT participants only; A joins the peer facilitator in Decision 8's "reopened, not adopted" record until then. |
-| `docs/teammate-contracts.md` > Facilitator > *Realization — the `Workflow` tool (single supported mechanism)*; CLAUDE.md > Deliberation Isolation `[MUST]` (`Workflow`, not a nested team) | **Unchanged now**; amended to "one of two realizations" only on A2 adoption. |
+| `docs/design-rationale.md` > Decision 8 | **The rule stands; its realization clause is superseded for the ARCHITECT participants.** Isolation of the orchestrator from round-by-round prose is kept and is required of the relay (the isolation check in D4). The clause that binds the contract to the `Workflow` as the single realization that "enforces the relay order, the two-consecutive-`done` termination and the isolated report return in code" no longer holds for ARCHITECT: relay order and the end condition are computed by a decidable-state script over the transcript file and obeyed by the orchestrator's procedure. The VERIFY cause-branch keeps its `Workflow`. |
+| `docs/teammate-contracts.md` > Facilitator > *Realization — the `Workflow` tool (single supported mechanism)*; CLAUDE.md > Deliberation Isolation `[MUST]` (`Workflow`, not a nested team) | **Amended by the follow-on issue**: the orchestrator relay is the ARCHITECT realization; the `Workflow` remains the VERIFY cause-branch realization. The nested-team rejection stands. |
 | Issue #166 (form: fixed prompts, relay, conclusion report, participants' own end) | **Kept** by D1 and D2. |
-| Issue #168 (name denial rests on cost and consistency, not delivery) | **Kept**; constraint 3 removes the cache half of the cost ground for the deliberation participants specifically, leaving the call-count question to the pilot. |
+| Issue #168 (name denial rests on cost and consistency, not delivery) | **Kept**; constraint 3 removes the cache half of the cost ground for the deliberation participants specifically; the call-count effect is what D4 records. |
 
-**D4 — What decides A2, and who.** The pilot in the review §6: step 0 measures the anonymous
-resume's delivery path; arms 0 (HEAD), B (D1) and A2 run on one frozen input, one tree, one
-spawn policy, sequentially, and are aggregated by the committed script. The operator judges the
-before/after contrast (issue #146 precedent, no fixed cutoff). Two outcomes disqualify an arm
-regardless of cost: a GATE:PLAN FAIL where the control passes, and turn text found in the
-orchestrator's transcript under A2. On adoption, the pilot record is appended to this ADR and its
-status moves as the owner decides; on rejection, D2 is closed here and the `Workflow` stays the
-single realization.
+**D4 — Delivery precondition, and what the measurement records.** Before the relay is
+implemented, one probe outside any cycle measures whether an anonymous sub-agent resumed by agent
+ID returns its final text to the orchestrator as a task notification (the review §6, step 0 —
+the issue #168 procedure with the name replaced by the ID). A miss switches the realization to
+A1 (D2); it does not re-open the decision. The measurement in the review §6 is then run as an
+**effect record**, the issue #146 form: the script at HEAD and the relay on one frozen input, one
+tree, one spawn policy, sequentially, aggregated by the committed script, with GATE:PLAN scored
+per arm by a fresh evaluator and the isolation check on the orchestrator's transcript. A GATE:PLAN
+FAIL or turn text found in the orchestrator's transcript is a defect to fix in the relay, not an
+adoption gate. The record is appended to this ADR.
 
 ## Alternatives Considered
 
 - **A1 — named participants.** Rejected (D2). Same call-count effect as A2 at the price of the
   hook exception, the ADR-0017 Q3 partial supersede and the agent-teams dependency.
-- **Adopt A2 directly, without a pilot.** Rejected. Constraint 3 removed A's cache case; its
-  remaining case — fewer calls — is a projection from the late-turn floor in the review §1.2
-  (≈ 60–90 calls against ≈ 105–135 under D1), and the isolation and relay-order guarantees move
-  from code to procedure. That trade is not made on a projection; ADR-0017 took the same
-  position (conditional go, blocking pilot) for the spawn-mode migration.
+- **Pilot-gated adoption (the review's recommendation: D1 now, the relay only after a
+  three-arm pilot).** Not taken. The review argued that A's remaining case — fewer calls — is a
+  projection from the late-turn floor (≈ 60–90 calls against ≈ 105–135 under D1 alone) and that
+  isolation and relay order move from code to procedure, and proposed the ADR-0017 form
+  (conditional go, blocking pilot). The operator decided on 2026-09-05 to proceed with the relay
+  directly; the pilot's arms are retained as the effect record in D4.
+- **Raising the sub-agent prompt-cache TTL (`subagentPromptCacheTtl`).** Deferred by the
+  operator to a separate discussion after issue #177 closes. Whether the growing single-message
+  transcript would take a partial cache hit at all is unmeasured (review §5, uncached prompt row).
 - **Lower the turn sites' effort in `.claude/autoflow/spawn-policy.json`.** Not decided here.
   The 155-run scan shows `medium`-effort runs at 100–270 calls and 20–60 min against `xhigh` at
   416–575 calls and 101–136 min: effort multiplies each call's cost and does not remove calls,
@@ -96,23 +108,25 @@ single realization.
 
 ### Positive
 
-- D1 lands as one sentence in two places, with no change to spawn mode, hook, `Workflow`
-  realization or any ADR, and is expected (review §5) to remove roughly the re-verification half
-  of the per-turn cost.
-- The decision on persistence is tied to a measurement with a control arm and an isolation
-  check, not to the cache argument constraint 3 refuted.
+- The participants keep what they read: a file is read once per discussion, not once per turn,
+  and the narrated re-verification that lengthened every message (review §3) has no reason to
+  exist. Together with D1 this attacks both halves of the per-turn floor.
 - The declaration channel, the cross-phase single-mode rule and the hook stay exactly as ADR-0017
-  Q3 and issue #168 left them, whatever the pilot returns.
+  Q3 and issue #168 left them under the A2 realization.
+- The effect is recorded against a control arm on the same input, with an isolation check, so the
+  cost case rests on a measurement rather than on the cache argument constraint 3 refuted.
 
 ### Negative
 
 - D1 relies on the participants honoring a scope statement; a wrong citation is caught only by
   the other side reading and disputing it (the protocol's "re-raise until resolved"), not by the
   script.
-- If A2 is adopted, isolation and relay order are held by procedure and a state script rather
-  than by the workflow loop, one orchestrator turn is spent per participant turn, and the
-  `/workflows` progress view and run-level resume are lost for ARCHITECT.
-- The pilot costs three deliberations of one issue plus a delivery probe.
+- Isolation and relay order are held by the participants' prompt, the orchestrator's procedure
+  and a state script rather than by the workflow loop; one orchestrator turn is spent per
+  participant turn; the `/workflows` progress view and run-level resume are lost for ARCHITECT.
+- A session restart mid-discussion depends on the sub-agent transcripts surviving and the session
+  being resumed (constraint 4's documentation); under the A1 fallback it loses the participants.
+- The effect record costs two deliberations of one issue plus the delivery probe.
 
 ### Neutral / Trade-Offs
 
@@ -137,8 +151,10 @@ single realization.
 
 ## Notes
 
-- The `Proposed` to `Accepted` transition is the owner's decision, per `docs/adr/README.md` >
-  Status Values. D1 can be implemented under `Proposed`; D2's realization changes (the
-  conditional supersedes in D3) are made only after the pilot record is appended here.
+- Status was set to `Accepted` on the operator's decision in the issue #177 session
+  (2026-09-05), per `docs/adr/README.md` > Status Values. The realization changes in D3 are made
+  by the follow-on implementation issue; the effect record in D4 is appended here when it exists.
+- The sub-agent cache-TTL question is parked by the operator for a separate discussion after
+  issue #177 closes and is not part of the follow-on issue's scope.
 - Numbers in this record are the review's; the review is the single home of the measurement and
   its method, and this record does not restate its tables.
