@@ -54,14 +54,17 @@ The backend is recorded in the target-owned scaffold
 { "review": { "backend": "codex" } }
 ```
 
-Read via `jq -r '.review.backend // "codex"'`. **Absent file or absent key ⇒
-`codex`** (preserves the current zero-config behavior). The scaffold is
+Read type-aware by `scripts/review/lib/review-config.sh` (the key's JSON type
+first, then its value — not `jq`'s `//`, which would also substitute for a
+boolean `false`). **Absent file or absent key ⇒ `codex`** (preserves the
+current zero-config behavior). The scaffold is
 delivered by `init.sh` and **never overwritten** on re-install, so a target
 operator's explicit `claude` selection survives (no silent downgrade).
 
 A **present-but-unparseable** file (invalid JSON), **a present file that cannot
 be read because `jq` is not on PATH**, **or a present file whose
-`.review.backend` is empty (`""`) or otherwise not `codex`/`claude`**, does
+`.review.backend` is empty (`""`), not a string (e.g. a boolean `false` — an
+explicit value, not an absent one), or otherwise not `codex`/`claude`**, does
 **not** default to `codex`: the consumers (`codex-review-pr.sh`,
 `check-review-backend.sh`) fail closed (**exit 2**) and the install-time reporter
 (`detect.sh`) reports `REVIEW_BACKEND=invalid` — a configured backend is never

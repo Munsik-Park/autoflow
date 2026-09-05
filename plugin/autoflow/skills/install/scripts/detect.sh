@@ -257,13 +257,22 @@ if [ -f "$_bcfg" ]; then
     # read-side symmetry with check-review-backend.sh's fail-closed jq-absent
     # arm (issue #979 cycle 5b). detect.sh only REPORTS; it never exits.
     REVIEW_BACKEND=invalid
-  elif _rb=$(jq -r '.review.backend // "codex"' "$_bcfg" 2>/dev/null) && [ -n "$_rb" ]; then
-    # File present + jq available: verbatim configured value, or the `//` codex
-    # default for an absent/null key.
-    REVIEW_BACKEND=$_rb
+  elif _rbk=$(jq -r 'try (.review.backend | type) catch "unindexable"' "$_bcfg" 2>/dev/null); then
+    # File present + jq available: type-aware read (PR #188 review, Medium —
+    # jq's `//` also substitutes for `false`, which would mask a boolean as the
+    # codex default). Absent/null key -> codex; a non-empty string -> verbatim;
+    # anything else (boolean, number, object, empty string, non-object .review)
+    # -> `invalid`, read-side symmetry with scripts/review/lib/review-config.sh.
+    case "$_rbk" in
+      null) REVIEW_BACKEND=codex ;;
+      string)
+        _rb=$(jq -r '.review.backend' "$_bcfg" 2>/dev/null)
+        if [ -n "$_rb" ]; then REVIEW_BACKEND=$_rb; else REVIEW_BACKEND=invalid; fi ;;
+      *) REVIEW_BACKEND=invalid ;;
+    esac
   else
-    # File present + jq available but parse fails or value is empty: report a
-    # PARSE FAILURE as `invalid`, never masked as the codex default (AC-2/AC-3).
+    # File present + jq available but parse fails: report a PARSE FAILURE as
+    # `invalid`, never masked as the codex default (AC-2/AC-3).
     REVIEW_BACKEND=invalid
   fi
 fi

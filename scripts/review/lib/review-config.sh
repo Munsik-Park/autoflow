@@ -33,7 +33,9 @@
 # Fail-closed (exit 2, diagnostic on stderr, BEFORE any reviewer launches):
 #   - the file is present but jq is not on PATH
 #   - the file is present but not valid JSON
-#   - .review.backend is present but empty, or not codex|claude
+#   - .review.backend is present but empty, not a string (e.g. `false` — jq's
+#     `//` would otherwise read it as the default), or not codex|claude
+#   - .review or .review.<backend> is present but not an object
 #   - .review.<backend>.model / .effort is present but empty or not a string
 #   - .review.<backend>.effort is a string outside that backend's vocabulary
 # An explicit JSON `null` reads as absent (inherit), matching #979's backend
@@ -85,9 +87,15 @@ review_effort_vocab() {
 _review_read_optional_string() {
   local tag="$1" cfg="$2" backend="$3" key="$4" kind
   _REVIEW_OPT_VALUE=""
-  kind="$(jq -r --arg b "$backend" --arg k "$key" '.review[$b][$k] | type' "$cfg" 2>/dev/null)" || return 2
+  # `try … catch`: a non-object `.review.<backend>` section (e.g. a bare
+  # string) is reported, not surfaced as a bare jq error with no diagnostic.
+  kind="$(jq -r --arg b "$backend" --arg k "$key" 'try (.review[$b][$k] | type) catch "unindexable"' "$cfg")"
   case "$kind" in
     null) return 0 ;;
+    unindexable)
+      echo "[${tag}] ${cfg} sets .review.${backend} to a non-object, so .review.${backend}.${key} cannot be read — refusing to launch the reviewer. Make it an object ({ \"model\": …, \"effort\": … }) or remove it to inherit." >&2
+      return 1
+      ;;
     string)
       _REVIEW_OPT_VALUE="$(jq -r --arg b "$backend" --arg k "$key" '.review[$b][$k]' "$cfg")"
       if [[ -z "$_REVIEW_OPT_VALUE" ]]; then
@@ -130,11 +138,32 @@ resolve_review_config() {
   if [[ -n "$override" ]]; then
     REVIEW_BACKEND="$override"
   elif [[ "$have_cfg" -eq 1 ]]; then
-    REVIEW_BACKEND="$(jq -r '.review.backend // "codex"' "$REVIEW_CFG_PATH")"
-    if [[ -z "$REVIEW_BACKEND" ]]; then
-      echo "[${tag}] ${REVIEW_CFG_PATH} sets an empty .review.backend — refusing to fall back to codex (an empty configured value must not be silently downgraded). Set a valid backend or remove the key." >&2
-      exit 2
-    fi
+    # Type-aware read (PR #188 review, Medium): jq's `a // b` also substitutes
+    # for `false`, so `.review.backend // "codex"` would read an explicit
+    # boolean `false` as the codex default — a silent downgrade. Only an
+    # absent key or JSON `null` resolves to codex; any non-string value, an
+    # empty string, or an unknown string is rejected. `try … catch` turns a
+    # non-object `.review` into a diagnosable kind instead of a jq error.
+    local kind
+    kind="$(jq -r 'try (.review.backend | type) catch "unindexable"' "$REVIEW_CFG_PATH")"
+    case "$kind" in
+      null) REVIEW_BACKEND="codex" ;;
+      string)
+        REVIEW_BACKEND="$(jq -r '.review.backend' "$REVIEW_CFG_PATH")"
+        if [[ -z "$REVIEW_BACKEND" ]]; then
+          echo "[${tag}] ${REVIEW_CFG_PATH} sets an empty .review.backend — refusing to fall back to codex (an empty configured value must not be silently downgraded). Set a valid backend or remove the key." >&2
+          exit 2
+        fi
+        ;;
+      unindexable)
+        echo "[${tag}] ${REVIEW_CFG_PATH} sets .review to a non-object, so .review.backend cannot be read — refusing to fall back to codex. Make .review an object or remove the file." >&2
+        exit 2
+        ;;
+      *)
+        echo "[${tag}] ${REVIEW_CFG_PATH} sets .review.backend to a ${kind}, expected the string 'codex' or 'claude' — refusing to fall back to codex (a non-string configured value must not be silently downgraded). Set a valid backend or remove the key." >&2
+        exit 2
+        ;;
+    esac
   else
     REVIEW_BACKEND="codex"
   fi

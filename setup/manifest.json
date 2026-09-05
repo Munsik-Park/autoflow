@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "347ce59bbc24f896fb3c3198105cc37f8a04b50f76a5d86106de5fe7239df2a9"
+      "sha256": "a3a10ff51e0144c6f2df4093a5ebbb683179aa864f467892b8471bd3403451b8"
     },
     {
       "source": "docs/security-checklist.md",
@@ -314,7 +314,7 @@
       "dest": "scripts/review/lib/review-config.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "5fca877c60410b3a266ff94d636882a7c034c7f753ec04a3906ad20fa7d7cbf7"
+      "sha256": "db1f4822794f75eb83d096190656f7cf46d643a93a8e5d822080ba37db601314"
     },
     {
       "source": "scripts/preflight/check-review-backend.sh",

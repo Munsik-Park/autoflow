@@ -268,6 +268,13 @@ fail_closed_arm "non-string model"          '{ "review": { "backend": "codex",  
 fail_closed_arm "malformed JSON"            '{ "review": { "backend": "codex", "codex": { "model": '                  'not valid JSON'
 fail_closed_arm "empty backend"             '{ "review": { "backend": "" } }'                                          'empty .review.backend'
 fail_closed_arm "unknown backend"           '{ "review": { "backend": "gemini" } }'                                    'unknown review backend'
+# PR #188 review (Medium): jq's `//` substitutes for `false` too, so a boolean
+# backend must be rejected as a non-string, never read as the codex default.
+fail_closed_arm "boolean false backend"     '{ "review": { "backend": false, "codex": { "model": "unexpected-codex" } } }' 'review.backend to a boolean'
+fail_closed_arm "numeric backend"           '{ "review": { "backend": 1 } }'                                           'review.backend to a number'
+fail_closed_arm "object backend"            '{ "review": { "backend": { "name": "codex" } } }'                         'review.backend to a object'
+fail_closed_arm "non-object review section" '{ "review": "codex" }'                                                    'review to a non-object'
+fail_closed_arm "non-object backend section" '{ "review": { "backend": "codex", "codex": "high" } }'                  'review.codex to a non-object'
 
 # The OTHER backend's section is not validated (only the configured one is).
 printf '%s\n' '{ "review": { "backend": "codex", "codex": { "effort": "high" }, "claude": { "effort": "bogus" } } }' > "$CFG"
@@ -341,6 +348,11 @@ assert_true "AC-6 (presence path, invalid effort): PREFLIGHT presence check also
 printf '%s\n' '{ "review": { "backend": "codex", "codex": { "model": "" } } }' > "$CFG"
 run_check
 assert_true "AC-6 (presence path, empty model): exit 2 naming the empty key" "[ '$C_EXIT' -eq 2 ] && grep -qi 'empty .review.codex.model' '$C_LOG'"
+printf '%s\n' '{ "review": { "backend": false, "codex": { "model": "unexpected-codex" } } }' > "$CFG"
+run_check
+assert_true "AC-6 (presence path, boolean backend — PR #188 Medium): exit 2, not the codex default" "[ '$C_EXIT' -eq 2 ] && grep -qi 'review.backend to a boolean' '$C_LOG'"
+run_check --probe
+assert_true "AC-6 (probe, boolean backend — PR #188 Medium): exit 2 and no CLI invoked" "[ '$C_EXIT' -eq 2 ] && [ ! -s '$CAP_CODEX' ] && [ ! -s '$CAP_CLAUDE' ]"
 rm -f "$CFG"
 run_check
 assert_true "AC-8 (presence path, absent config): still exit 0 on the codex default" "[ '$C_EXIT' -eq 0 ]"
@@ -382,6 +394,10 @@ printf '%s\n' '{ "review": { "backend": "codex", "codex": { "model": "", "effort
 DET="$(TARGET_ROOT="$DT" PLUGIN_CACHE_ROOT="$PROJECT_ROOT" sh "$DETECT_SH" 2>/dev/null)"
 assert_true "detect.sh: empty / non-string pins report invalid" \
   "printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_MODEL=invalid' && printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_EFFORT=invalid'"
+printf '%s\n' '{ "review": { "backend": false } }' > "$DT/.claude/autoflow.local.json"
+DET="$(TARGET_ROOT="$DT" PLUGIN_CACHE_ROOT="$PROJECT_ROOT" sh "$DETECT_SH" 2>/dev/null)"
+assert_true "detect.sh: boolean backend reports REVIEW_BACKEND=invalid, not codex (PR #188 Medium, read-side symmetry)" \
+  "printf '%s\n' \"\$DET\" | grep -qx 'REVIEW_BACKEND=invalid'"
 rm -f "$DT/.claude/autoflow.local.json"
 DET="$(TARGET_ROOT="$DT" PLUGIN_CACHE_ROOT="$PROJECT_ROOT" sh "$DETECT_SH" 2>/dev/null)"
 assert_true "detect.sh: absent config reports codex + inherit/inherit (backward compatible)" \
