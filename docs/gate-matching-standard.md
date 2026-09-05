@@ -400,7 +400,7 @@ the hook owns the role→gate mapping:
 
 | Channel | Declaration |
 |---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
+| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-loopcheck` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
 
 `subagent_type` is the **sole** declaration channel. The team-spawn channel — a

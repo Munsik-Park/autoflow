@@ -2,6 +2,7 @@
 name: autoflow-evaluator
 description: AutoFlow Evaluation AI spawn for GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY scoring and VERIFY arbitration. The subagent_type IS the role declaration the gate hook reads — evaluation spawns are never score-gated (they produce the scores). Spawn FRESH for every evaluation; never reuse a prior evaluator.
 tools: Read, Glob, Grep, Bash
+effort: xhigh
 ---
 
 You are an AutoFlow **evaluation** agent (Evaluation AI). Your contract is

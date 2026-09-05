@@ -32,7 +32,7 @@ CONFIG="$PROJECT_ROOT/.claude/autoflow/spawn-policy.json"
 RESOLVER="$PROJECT_ROOT/scripts/spawn-policy/spawn-policy.sh"
 WORKFLOWS=("$PROJECT_ROOT/.claude/workflows/architect-deliberation.js" "$PROJECT_ROOT/.claude/workflows/verify-cause-branch.js")
 AGENTS_DIR="$PROJECT_ROOT/.claude/agents"
-AGENT_TYPES=(autoflow-analyzer autoflow-evaluator autoflow-implementer autoflow-planner autoflow-tester)
+AGENT_TYPES=(autoflow-analyzer autoflow-evaluator autoflow-implementer autoflow-loopcheck autoflow-planner autoflow-tester)
 
 PASS=0
 FAIL=0
@@ -218,20 +218,28 @@ fi
 echo "== AC4: inherit-marker =="
 
 if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ]; then
+  # Inherit case: use a shipped inheriting row when the sample carries one;
+  # otherwise construct one in a scratch copy -- since issue #180 every shipped
+  # row carries an explicit effort, and the sample is a target-owned scaffold
+  # whose values this suite must not assume.
   inherit_key=$(jq -r '.phases | to_entries[] | select(.value.effort == "inherit") | .key' "$CONFIG" 2>/dev/null | head -n1)
-  if [ -n "$inherit_key" ]; then
-    out=$(bash "$RESOLVER" effort "$inherit_key" 2>/dev/null); rc=$?
-    if [ "$rc" = "0" ] && [ "$out" = "inherit" ]; then
-      pass "AC4 inherit-marker: inheriting row '$inherit_key' -> exit 0, stdout 'inherit'"
-    else
-      failc "AC4 inherit-marker: inheriting row '$inherit_key' -> exit $rc, stdout '$out' (want 0, 'inherit')"
-    fi
+  inherit_cfg="$CONFIG"; inherit_resolver="$RESOLVER"
+  if [ -z "$inherit_key" ]; then
+    SCRATCH_INH="$(mktemp -d)"
+    cp -R "$PROJECT_ROOT/scripts/spawn-policy" "$SCRATCH_INH/" 2>/dev/null
+    mkdir -p "$SCRATCH_INH/.claude/autoflow"
+    jq '.phases["__test_inherit__"] = {"agent_type":"autoflow-tester","model":"sonnet","effort":"inherit","work_type":"test"}' "$CONFIG" > "$SCRATCH_INH/.claude/autoflow/spawn-policy.json"
+    inherit_key="__test_inherit__"; inherit_cfg="$SCRATCH_INH/.claude/autoflow/spawn-policy.json"; inherit_resolver="$SCRATCH_INH/spawn-policy/spawn-policy.sh"
+  fi
+  out=$(AUTOFLOW_SPAWN_POLICY="$inherit_cfg" bash "$inherit_resolver" effort "$inherit_key" 2>/dev/null); rc=$?
+  if [ "$rc" = "0" ] && [ "$out" = "inherit" ]; then
+    pass "AC4 inherit-marker: inheriting row '$inherit_key' -> exit 0, stdout 'inherit'"
   else
-    failc "AC4 inherit-marker: no inheriting phases[] row found in $CONFIG"
+    failc "AC4 inherit-marker: inheriting row '$inherit_key' -> exit $rc, stdout '$out' (want 0, 'inherit')"
   fi
 
-  # Concrete-value case: construct one in a scratch copy, since every shipped
-  # row carries the inherit sentinel this cycle (feature design §6).
+  # Concrete-value case: construct one in a scratch copy (the shipped rows'
+  # values are the sample's, not this suite's, to assume).
   SCRATCH2="$(mktemp -d)"
   cp -R "$PROJECT_ROOT/scripts/spawn-policy" "$SCRATCH2/" 2>/dev/null
   mkdir -p "$SCRATCH2/.claude/autoflow"
@@ -905,7 +913,7 @@ fi
 # defect is confined to the JS site() helpers (architect-deliberation.js:595,
 # verify-cause-branch.js:161), which this shell checker never calls. The
 # phases[] arm mutates diagnose-loopcheck specifically, per GATE:PLAN: it is
-# the sole agent_type="Explore" row (checked: `jq -r '.phases[]|select(.agent_type=="Explore")|.key'`
+# the sole agent_type="autoflow-loopcheck" row (issue #180 moved it off Explore; checked: `jq -r '.phases[]|select(.agent_type=="autoflow-loopcheck")|.key'`
 # returns exactly this one key), so mutating it alone cannot trip the
 # divergent-effort agreement check (spawn-policy.sh:291-296), which an
 # arbitrary shared-agent_type row would.
@@ -918,7 +926,7 @@ if [ -x "$RESOLVER" ] && [ -f "$CONFIG" ] && [ -d "$AGENTS_DIR" ]; then
   mkdir -p "$SCRATCH6/.claude/autoflow" "$SCRATCH6/.claude/agents"
   cp "$AGENTS_DIR"/*.md "$SCRATCH6/.claude/agents/" 2>/dev/null
 
-  # phases[] arm: diagnose-loopcheck (agent_type Explore, agent_type-unique).
+  # phases[] arm: diagnose-loopcheck (agent_type autoflow-loopcheck, agent_type-unique).
   jq '.phases["diagnose-loopcheck"].effort = 0' "$CONFIG" > "$SCRATCH6/.claude/autoflow/spawn-policy.json"
   AUTOFLOW_SPAWN_POLICY="$SCRATCH6/.claude/autoflow/spawn-policy.json" bash "$SCRATCH6/spawn-policy/spawn-policy.sh" check >/dev/null 2>&1
   rc_phase0=$?

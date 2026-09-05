@@ -645,6 +645,7 @@ resolve_spawn_role() {
   case "$_subtype" in
     Explore|Plan|claude-code-guide)              _role="research" ;;
     autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
+    autoflow-loopcheck|*:autoflow-loopcheck)     _role="analysis" ;;
     autoflow-planner|*:autoflow-planner)         _role="planning" ;;
     autoflow-implementer|*:autoflow-implementer) _role="implementation" ;;
     autoflow-tester|*:autoflow-tester)           _role="testing" ;;
@@ -763,9 +764,12 @@ ledger_advisory_check || true
 # are modelled by no phase row, so warning on them would make the advisory a
 # steady false-positive stream on calls the policy has nothing to say about —
 # and an advisory that cries wolf on correct calls is worse than absent.
-# `Explore` IS governed (the `diagnose-loopcheck` row), so it draws advice
-# exactly as an `autoflow-*` type does; a provenance-keyed rule would silence
-# it wrongly. `autoflow-planner` was the unmapped type until issue #179 gave it
+# `Explore` governed the `diagnose-loopcheck` row until issue #180 moved that
+# row to the shipped `autoflow-loopcheck` definition (so its effort projects
+# into frontmatter); Explore now yields an empty set like the other research
+# types and draws no advice, while `autoflow-loopcheck` draws it exactly as
+# every `autoflow-*` type does — a provenance-keyed rule would get both
+# wrong. `autoflow-planner` was the unmapped type until issue #179 gave it
 # the two ARCHITECT relay-participant rows, so it now draws advice like every
 # other `autoflow-*` type — nothing here changed for that, which is the point of
 # keying on the set. The case where the policy SHOULD have governed a type is
@@ -1065,7 +1069,7 @@ if [ "$TOOL_NAME" = "Agent" ]; then
       # prompt text is deliberately not attempted — a silent misclassification
       # (either direction) is worse than this explicit, self-describing stop.
       echo "BLOCKED: Agent spawn without a declared AutoFlow role while a cycle is active." >&2
-      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|planner|implementer|tester|evaluator}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
+      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|loopcheck|planner|implementer|tester|evaluator}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
       ;;

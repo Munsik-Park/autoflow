@@ -1082,16 +1082,34 @@ else
   PASS=$((PASS + 1))
 fi
 
-# Mirror image: Explore IS governed (the diagnose-loopcheck row), so it must
-# NOT fall silent the way the two ungoverned types above do -- keying the
-# advisory on the admitted-model SET, never on "is a research type".
-run_hook_out 0 "declared Explore research spawn + model outside diagnose-loopcheck's admitted set -> allowed, but DOES draw an advisory" \
+# Since issue #180 the diagnose-loopcheck row names the shipped `autoflow-loopcheck`
+# definition, so Explore is ungoverned like the two research types above and must
+# fall silent; the governed type must NOT -- keying the advisory on the
+# admitted-model SET, never on "is a research type". The outside model for the
+# governed type is derived from the config (a target-owned scaffold sample), not
+# assumed.
+run_hook_out 0 "declared Explore research spawn + any model -> allowed, no advisory (ungoverned since #180)" \
   "$ACTIVE" "$(agent_json 'Explore' 'search the repository' 'opus')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING'; then
+  echo "  FAIL: advisory line drawn for Explore, whose admitted model set is empty since #180 -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: no advisory line for Explore (empty admitted set -> silence, not noise)"
+  PASS=$((PASS + 1))
+fi
+
+_admitted_loopcheck=$(bash "$PROJECT_ROOT/scripts/spawn-policy/spawn-policy.sh" models-for autoflow-loopcheck 2>/dev/null || true)
+OUTSIDE_LOOPCHECK_MODEL=""
+for _cand in haiku fable opus sonnet; do
+  if ! printf '%s\n' "$_admitted_loopcheck" | grep -qxF "$_cand"; then OUTSIDE_LOOPCHECK_MODEL="$_cand"; break; fi
+done
+run_hook_out 0 "declared autoflow-loopcheck spawn + model '$OUTSIDE_LOOPCHECK_MODEL' outside diagnose-loopcheck's admitted set [$(printf '%s' "$_admitted_loopcheck" | tr '\n' ' ')] -> allowed, but DOES draw an advisory" \
+  "$ACTIVE" "$(agent_json 'autoflow-loopcheck' 'compare the complaint classes' "$OUTSIDE_LOOPCHECK_MODEL")"
 if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING.*(advisory|NOT blocked)'; then
-  echo "  PASS: Explore mismatch draws a WARNING (governed by diagnose-loopcheck, provenance is not the key)"
+  echo "  PASS: autoflow-loopcheck mismatch draws a WARNING (governed by diagnose-loopcheck, provenance is not the key)"
   PASS=$((PASS + 1))
 else
-  echo "  FAIL: no advisory WARNING line on Explore's model mismatch -- got: $HOOK_ERR"
+  echo "  FAIL: no advisory WARNING line on autoflow-loopcheck's model mismatch -- got: $HOOK_ERR"
   FAIL=$((FAIL + 1))
 fi
 

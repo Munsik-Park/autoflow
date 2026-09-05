@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0ffeaaf41b045b2a25e44e9c9387fdb303527987dc0c666993b7d8988a2b50f1"
+      "sha256": "37d2c55d9c4e2e32c9a980fa5e148e3f6404acbeefe647e8149d4b1463a7d5cb"
     },
     {
       "source": "docs/INDEX.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8b92213b1d314ae407689fbefb24492ebbe0a6e98a25138bbbf082c278452163"
+      "sha256": "74ef99c8e6b5f722f2db5108755313f473f9e70e523c8ae757c9a76e9d365ca6"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -384,7 +384,7 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "ba030b132914b0fe9d4ad5404f69165470b7bc9f5b274ecd95fa004c0ecda801"
+      "sha256": "2e25f6010810948913c4c15c87e26826ac0e3f2c478457e195de39a31e872cd3"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
