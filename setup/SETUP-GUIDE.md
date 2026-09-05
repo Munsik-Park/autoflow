@@ -184,6 +184,16 @@ which is also what a re-stamp would deliver.
   pins govern only the **isolated reviewer subprocess**, never the orchestrating
   Claude session. See [`../docs/reviewer-backend.md`](../docs/reviewer-backend.md)
   > *Model and effort*.
+- Target-declared local checks (PREFLIGHT, issue #181): if this repository has a
+  per-clone setup step of its own — a commit-hook installer, a generated config,
+  a toolchain probe — declare it in the same scaffold under
+  `preflight.local_checks[]`
+  (`{"preflight":{"local_checks":[{"name":"…","check":"<command>","repair":"<command>"}]}}`).
+  PREFLIGHT runs each `check` before DIAGNOSE, runs the optional `repair` once on
+  a failure and re-checks, and stops **fail-closed** when a check still does not
+  pass (`scripts/preflight/local-checks.sh`). Nothing declared is a recorded
+  no-op; the framework knows no specific tool. The outcome lands in the issue
+  ledger only, never in the state file.
 - Basic familiarity with the AutoFlow methodology
   (see [`docs/autoflow-guide.md`](../docs/autoflow-guide.md)).
 

@@ -153,6 +153,11 @@ build_rows() {
            "scripts/review/lib/review-config.sh" "root-layer" "copy" "file"
   emit_row "scripts/preflight/check-review-backend.sh" \
            "scripts/preflight/check-review-backend.sh" "root-layer" "copy" "file"
+  # PREFLIGHT target-declared local checks call site (issue #181): runs the
+  # target's own readiness declarations from the scaffold's
+  # `preflight.local_checks[]`; a no-op when none are declared.
+  emit_row "scripts/preflight/local-checks.sh" \
+           "scripts/preflight/local-checks.sh" "root-layer" "copy" "file"
   emit_row ".codex/review.md" \
            ".codex/review.md" "root-layer" "copy" "file"
   emit_row "AGENTS.md" \
