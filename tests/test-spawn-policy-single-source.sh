@@ -613,9 +613,9 @@ if [ -x "$RESOLVER" ]; then
     # The oracle reads the first YAML frontmatter block only — independently of
     # the checker's own extractor (PR #183 review: a whole-file grep accepted a
     # body-only `effort:` line the harness never reads).
-    fm_line=$(awk 'NR==1{ if ($0!="---") exit 3; next } !c && $0=="---"{ c=1; next } !c && /^effort:/{ n++; l=$0; next } c && /^effort:/{ o++ } END{ if(!c) exit 3; if(n>1) exit 4; if(o>0) exit 5; if(n==1) print l; exit 0 }' "$def" 2>/dev/null); fm_rc=$?
+    fm_line=$(awk 'NR==1{ if ($0!="---") exit 3; next } !c && $0=="---"{ c=1; next } !c && /^["'"'"']?effort["'"'"']?[[:space:]]*:/{ if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; l=$0 } else { nc++ }; next } c && /^["'"'"']?effort["'"'"']?[[:space:]]*:/{ o++ } END{ if(!c) exit 3; if(nc>0) exit 6; if(n>1) exit 4; if(o>0) exit 5; if(n==1) print l; exit 0 }' "$def" 2>/dev/null); fm_rc=$?
     if [ "$fm_rc" != "0" ]; then
-      failc "design-added: frontmatter-projection -- $t definition frontmatter malformed for effort (awk rc $fm_rc: 3 no block, 4 duplicate key, 5 effort outside the block)"
+      failc "design-added: frontmatter-projection -- $t definition frontmatter malformed for effort (awk rc $fm_rc: 3 no block, 4 duplicate key, 5 effort outside the block, 6 non-canonical spelling)"
       continue
     fi
     has_line=$([ -n "$fm_line" ] && echo 1 || echo 0)
@@ -796,6 +796,25 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
   else
     failc "PR #183 review: duplicate effort key -> exit $rc: $(head -1 "$SCRATCH7/ic-dup.err")"
   fi
+  # (i-c2) Non-canonical spellings a YAML parser reads as the same key (PR #183
+  # review: `effort : xhigh` was read as "no line" while the runtime read
+  # xhigh). Each is refused whatever the policy declares — inherit or the
+  # spelled value — because the checker cannot equate it to the runtime.
+  TCFG_INH="$SCRATCH7/target-tester-inherit.json"
+  jq '(.phases[] | select(.agent_type == "autoflow-tester") | .effort) = "inherit"' "$TCFG" > "$TCFG_INH"
+  for _sp in 'effort : xhigh' '"effort": xhigh' "'effort': xhigh" 'effort: "xhigh"' 'effort: xhigh # pinned'; do
+    awk -v rep="$_sp" 'NR==1{print; next} !c && $0=="---"{c=1; print; next} !c && /^effort:/{print rep; next} {print}' "$PLUGIN_SRC/agents/autoflow-tester.md" > "$SCRATCH7P/agents/autoflow-tester.md"
+    for _cfgv in "$TCFG_INH" "$TCFG"; do
+      AUTOFLOW_SPAWN_POLICY="$_cfgv" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic2.err"; rc=$?
+      if [ "$rc" = "1" ] && grep -q "non-canonical form" "$SCRATCH7/ic2.err" && grep -q "autoflow-tester" "$SCRATCH7/ic2.err"; then
+        pass "PR #183 review: tester frontmatter spelled [$_sp] with policy $( [ "$_cfgv" = "$TCFG_INH" ] && echo inherit || echo xhigh ) -> check exit 1, non-canonical spelling refused"
+      else
+        failc "PR #183 review: spelling [$_sp] -> exit $rc: $(head -1 "$SCRATCH7/ic2.err")"
+      fi
+    done
+  done
+  cp "$PLUGIN_SRC/agents/autoflow-tester.md" "$SCRATCH7P/agents/autoflow-tester.md"
+  rm -f "$TCFG_INH"
   rm -rf "$SCRATCH7P"
 
   # (i-d) Harness research types (PR #183 review): Explore / Plan /

@@ -144,14 +144,24 @@ normalize_type() {
 #   block; 4 when the block carries the key more than once; 5 when an `effort:`
 #   line sits outside the block. The harness reads the block only, so this is
 #   the exact set of shapes the projection may accept (PR #183 review).
+#   Only the CANONICAL spelling `effort: <value>` at column 0 is accepted as
+#   the projection. Any other line a YAML parser would read as the same key —
+#   `effort : v`, `"effort": v`, `'effort': v`, a tab before the colon, a
+#   quoted or commented value — exits 6: the checker has no YAML parser, so it
+#   refuses every spelling it cannot equate to the runtime's reading rather
+#   than guessing (PR #183 review: `effort : xhigh` read as no line).
 frontmatter_effort_line() {
   awk '
     NR == 1 { if ($0 != "---") exit 3; next }
     !closed && $0 == "---" { closed = 1; next }
-    !closed && /^effort:/ { n++; line = $0; next }
-    closed && /^effort:/ { outside++ }
+    !closed && /^["'"'"']?effort["'"'"']?[[:space:]]*:/ {
+      if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; line = $0 } else { noncanon++ }
+      next
+    }
+    closed && /^["'"'"']?effort["'"'"']?[[:space:]]*:/ { outside++ }
     END {
       if (!closed) exit 3
+      if (noncanon > 0) exit 6
       if (n > 1) exit 4
       if (outside > 0) exit 5
       if (n == 1) print line
@@ -406,6 +416,7 @@ cmd_check() {
       3) _err "agent definition $AGENTS_DIR/$t.md has no YAML frontmatter block (line 1 must be '---', closed by a later '---'); the harness reads effort from that block only"; continue ;;
       4) _err "agent definition $AGENTS_DIR/$t.md carries more than one 'effort:' key inside its frontmatter block"; continue ;;
       5) _err "agent definition $AGENTS_DIR/$t.md carries an 'effort:' line outside its frontmatter block — the harness does not read it, so it is not a projection"; continue ;;
+      6) _err "agent definition $AGENTS_DIR/$t.md spells the effort key in a non-canonical form inside its frontmatter (a YAML parser may read it as 'effort', this checker cannot equate it) — write exactly 'effort: <value>' at column 0, unquoted, without a trailing comment"; continue ;;
       *) _err "agent definition $AGENTS_DIR/$t.md: frontmatter read failed (rc $_frc)"; continue ;;
     esac
     if [ "$_exp" = "$inherit_sentinel" ]; then

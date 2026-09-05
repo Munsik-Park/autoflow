@@ -384,14 +384,14 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "c2e0cfc2807950dc6ccaa0a5cbcca461f375d63b07963eef2dec68d15de5ac7f"
+      "sha256": "b9ddfc4dc5dcd6f8ab79ff46daac2e84981726c52b9bc31cb4dcf3ab1c4923a4"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "05e43803e9ced6ecf883a568261e351444e711e4bc3022444168530a39042977"
+      "sha256": "bc621c9f04a56e69ee4a2ddb0b56ebe8470831cfc31e4c7657c31fed27fe678a"
     },
     {
       "source": "scripts/lib/plugin-root.sh",
