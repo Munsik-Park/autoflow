@@ -391,9 +391,15 @@ cmd_check() {
   # passed a whole-file grep while the runtime inherited the session effort).
   while IFS= read -r t; do
     [ -n "$t" ] || continue
-    case "$t" in autoflow-*) ;; *) continue ;; esac
-    [ -f "$AGENTS_DIR/$t.md" ] || continue   # absence is the membership error above, not a projection error
     _exp=$(jq -r --arg t "$t" '[.phases[] | select(.agent_type == $t) | .effort | tostring] | unique | .[0]' "$CONFIG")
+    case "$t" in
+      Explore|Plan|claude-code-guide)
+        # A harness research type ships no definition, so nothing carries an
+        # effort line to the spawn: its rows admit the inherit sentinel only.
+        [ "$_exp" = "$inherit_sentinel" ] || _err "phases rows for the harness research type '$t' declare effort '$_exp', but that type ships no agent definition, so a direct spawn of it inherits the session effort — only the inherit sentinel is deliverable there; a governed phase that needs a fixed effort uses a shipped definition (issue #180: diagnose-loopcheck moved to autoflow-loopcheck for this reason)"
+        continue ;;
+    esac
+    [ -f "$AGENTS_DIR/$t.md" ] || continue   # absence is the membership error above, not a projection error
     _line=$(frontmatter_effort_line "$AGENTS_DIR/$t.md"); _frc=$?
     case "$_frc" in
       0) ;;

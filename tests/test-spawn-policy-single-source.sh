@@ -798,6 +798,33 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
   fi
   rm -rf "$SCRATCH7P"
 
+  # (i-d) Harness research types (PR #183 review): Explore / Plan /
+  # claude-code-guide ship no definition, so a row on one of them can carry
+  # the inherit sentinel only — a concrete effort would be reported by the
+  # readout and never reach the spawn. The row is re-pointed from
+  # autoflow-loopcheck, whose definition is then declared unmapped so the
+  # partition rule stays satisfied.
+  for _rt in Explore Plan claude-code-guide; do
+    for _ev in inherit high; do
+      jq --arg t "$_rt" --arg v "$_ev" '.phases["diagnose-loopcheck"].agent_type = $t | .phases["diagnose-loopcheck"].effort = $v | .policy_unmapped_agent_types["autoflow-loopcheck"] = "re-pointed to a research type in this leg"' "$TCFG" > "$SCRATCH7/rt.json"
+      AUTOFLOW_SPAWN_POLICY="$SCRATCH7/rt.json" CLAUDE_PLUGIN_ROOT="$PLUGIN_SRC" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/rt-$_rt-$_ev.err"; rc=$?
+      if [ "$_ev" = "inherit" ]; then
+        if [ "$rc" = "0" ]; then
+          pass "PR #183 review: research type $_rt with the inherit sentinel -> check exit 0"
+        else
+          failc "PR #183 review: research type $_rt with inherit -> exit $rc: $(head -1 "$SCRATCH7/rt-$_rt-$_ev.err")"
+        fi
+      else
+        if [ "$rc" = "1" ] && grep -q "harness research type '$_rt'" "$SCRATCH7/rt-$_rt-$_ev.err"; then
+          pass "PR #183 review: research type $_rt with concrete effort '$_ev' -> check exit 1, names the type"
+        else
+          failc "PR #183 review: research type $_rt with concrete effort -> exit $rc: $(head -1 "$SCRATCH7/rt-$_rt-$_ev.err")"
+        fi
+      fi
+    done
+  done
+  rm -f "$SCRATCH7/rt.json"
+
   # (ii) Plain shell: the plugin is found through the harness registry under
   # CLAUDE_CONFIG_DIR (installed_plugins.json), CLAUDE_PLUGIN_ROOT unset.
   CFG7="$SCRATCH7/config"; mkdir -p "$CFG7/plugins/cache/autoflow/autoflow"
