@@ -100,15 +100,20 @@ written):
   (`$PLUGIN_CACHE_ROOT/.claude/autoflow/spawn-policy.json`); model values and
   `workflow_sites` effort are the target's own and are not findings. Because
   the cache's oracle ran this leg, the list already reflects the rows the
-  stamp about to be confirmed will leave stale. On `skip`, list **every**
-  `POLICY_SKIP=` line verbatim — each names what could not be resolved and the
-  paths tried (typically no installed plugin to read definitions from, or a
-  clone without a sample for the required-row comparison) — and say that
-  PREFLIGHT will re-run the check. `skip` takes precedence over `pass`: D6
-  reports the `check` projection and the required-row comparison separately,
-  so a `skip` here can mean one of them passed while the other did not run —
-  never narrate a partial verification as clean. On `error`, surface it —
-  never read it as clean.
+  stamp about to be confirmed will leave stale. **Whatever `POLICY_STATE`
+  is**, list **every** `POLICY_SKIP=` line verbatim — each names a D6
+  sub-check that did not run, what could not be resolved and the paths tried
+  (typically no installed plugin to read definitions from, or a clone without
+  a sample for the required-row comparison). D6 reports the `check`
+  projection and the required-row comparison separately, so a `fail` can
+  carry skip lines beside its findings (the projection failed while the row
+  comparison did not run), and a `skip` can mean one sub-check passed while
+  the other did not run — never narrate a partial verification as clean, and
+  say that PREFLIGHT will re-run the check. When a skip line names the
+  missing **sample**, the "add each missing row from the cache's sample"
+  remedy above cannot be carried out yet: tell the user to refresh the clone
+  first (`/plugin marketplace update autoflow`), then re-run detection so the
+  row comparison runs. On `error`, surface it — never read it as clean.
 - **Derived identity** (display-only): `ORG` / `REPO` / `DEFAULT_BRANCH` /
   `TOPOLOGY`. Empty fields were omitted on purpose (non-GitHub / no remote) —
   do not ask the user for them.

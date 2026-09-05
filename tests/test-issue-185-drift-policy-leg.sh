@@ -62,7 +62,8 @@
 #                         POLICY_STATE / POLICY_FAILS / POLICY_FINDING carry it;
 #                         a `PASS: D6` beside a `SKIP: D6` aggregates to skip,
 #                         and every skip reason is carried on POLICY_SKIP
-#                         (PR #186 review, Medium)
+#                         (PR #186 review, Medium); a `FAIL: D6` beside a
+#                         `SKIP: D6` keeps both field kinds (review, Low)
 #   SKILL-*               AC5: SKILL.md Step 1 reads the POLICY axis; Step 4
 #                         reports the D6 lines with the rows to fix
 #   DOC-*                 drift-check header, SETUP-GUIDE, tool-delivery-
@@ -351,6 +352,22 @@ if [ "$(kv "$out" DRIFT_STATE)" = "drift" ] && [ "$(kv "$out" POLICY_STATE)" = "
 else
   failc "DET-D6-ERROR: $(printf '%s\n' "$out" | grep -E '^(DRIFT_STATE|POLICY_STATE)' | tr '\n' ' ')"
 fi
+# PR #186 review (Low): FAIL and SKIP together — the projection failed while
+# the row comparison did not run (a target with an effort mismatch against a
+# cache whose clone has no sample). detect.sh must keep both field kinds, and
+# SKILL.md Step 1 must report the skip lines regardless of the state.
+set_policy "$T" '.phases.red.effort = "high"'
+raw=$(env CLAUDE_PROJECT_DIR="$T" CLAUDE_PLUGIN_ROOT="$PLUGIN_DIR" AUTOFLOW_MARKETPLACE_ROOT="$NS" sh "$NS/setup/thin-root-layer/drift-check.sh" 2>&1)
+out=$(env TARGET_ROOT="$T" PLUGIN_CACHE_ROOT="$NS" CLAUDE_PLUGIN_ROOT="$PLUGIN_DIR" sh "$DETECT_SH" 2>&1)
+if printf '%s\n' "$raw" | grep -q '^FAIL: D6' && printf '%s\n' "$raw" | grep -q '^SKIP: D6' \
+   && [ "$(kv "$out" POLICY_STATE)" = "fail" ] && [ "$(kv "$out" POLICY_FAILS)" != "0" ] \
+   && printf '%s\n' "$out" | grep '^POLICY_FINDING=' | grep -q "agent_type 'autoflow-tester' declare effort 'high'" \
+   && [ "$(kv "$out" POLICY_SKIP)" = "required-row comparison deferred (marketplace clone at $NS carries no .claude/autoflow/spawn-policy.json sample)" ]; then
+  pass "DET-D6-FAIL-SKIP: FAIL: D6 beside SKIP: D6 (effort mismatch + clone without a sample) -> POLICY_STATE=fail with the finding on POLICY_FINDING AND the deferred comparison on POLICY_SKIP — neither field kind is dropped"
+else
+  failc "DET-D6-FAIL-SKIP: oracle=$(printf '%s\n' "$raw" | grep -E '^(FAIL|SKIP): D6' | cut -c1-40 | tr '\n' '|'); $(printf '%s\n' "$out" | grep -E '^POLICY_' | tr '\n' ' ' | cut -c1-400)"
+fi
+set_policy "$T" '.'
 # The synthetic oracle helper is defined above; a PASS beside two SKIPs.
 OCPS="$WORK/oracle-pass-skip"; mk_oracle_cache "$OCPS" 'SKIP: D6 -- reason one (tried: /a; /b)' 'PASS: D6: scaffold agrees' 'SKIP: D6 -- reason two'
 out=$(env TARGET_ROOT="$T" PLUGIN_CACHE_ROOT="$OCPS" sh "$DETECT_SH" 2>&1)
@@ -371,6 +388,14 @@ if printf '%s\n' "$step1" | grep -q 'POLICY_STATE' && printf '%s\n' "$step1" | g
   pass "SKILL-STEP1: Step 1 reads POLICY_STATE, lists every POLICY_FINDING and POLICY_SKIP line, and says the scaffold is never overwritten by the stamp"
 else
   failc "SKILL-STEP1: Step 1 region lacks POLICY_STATE / POLICY_FINDING / the never-overwritten statement"
+fi
+# Review (Low): the skip lines are reported regardless of the aggregate state,
+# and a skip naming the missing sample defers the sample-based remedy.
+if printf '%s\n' "$step1" | tr '\n' ' ' | tr -s ' ' | grep -qi 'whatever `POLICY_STATE` is.*every.*`POLICY_SKIP=` line' \
+   && printf '%s\n' "$step1" | tr '\n' ' ' | grep -q '/plugin marketplace update autoflow'; then
+  pass "SKILL-STEP1-SKIP-ALWAYS: Step 1 lists every POLICY_SKIP line whatever POLICY_STATE is, and routes a missing-sample skip to a clone refresh before the sample-based remedy"
+else
+  failc "SKILL-STEP1-SKIP-ALWAYS: Step 1 does not report POLICY_SKIP independent of POLICY_STATE, or lacks the clone-refresh routing"
 fi
 if printf '%s\n' "$step4" | grep -q 'FAIL: D6' && printf '%s\n' "$step4" | grep -q 'spawn-policy.json'; then
   pass "SKILL-STEP4: Step 4 reports the D6 lines as rows to fix and names the sample to add missing rows from"
