@@ -304,8 +304,7 @@ Decision 8 gives the peer facilitator — with A2 admitted to a pilot and A1 rej
 participants stay alive for the discussion and the orchestrator wakes them in turn. The review's
 pilot gate is not taken; §6 runs as the effect record. B's sentence is carried into the
 participants' prompt. The A2 realization (anonymous, resumed by agent ID) is the primary form and
-A1 the fallback if step 0 fails. The sub-agent cache-TTL question is parked for a separate
-discussion after this issue closes. Recorded as ADR-0023 (Accepted).
+A1 the fallback if step 0 fails. Recorded as ADR-0023 (Accepted).
 
 Implementation is not this issue's; it is one follow-on issue with the following scope.
 
@@ -337,5 +336,4 @@ Implementation is not this issue's; it is one follow-on issue with the following
 
 **Out of scope.** The VERIFY cause-branch workflow (a single self-check round, no relay); every
 other role's lifetime (the single-mode rule stands for them); the hook's name denial (unchanged
-under A2); the effort row of the spawn policy (target-owned, the operator's lever); the sub-agent
-cache TTL (separate discussion after this issue).
+under A2); the effort row of the spawn policy (target-owned, the operator's lever).

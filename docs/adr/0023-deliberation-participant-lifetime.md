@@ -89,9 +89,6 @@ adoption gate. The record is appended to this ADR.
   isolation and relay order move from code to procedure, and proposed the ADR-0017 form
   (conditional go, blocking pilot). The operator decided on 2026-09-05 to proceed with the relay
   directly; the pilot's arms are retained as the effect record in D4.
-- **Raising the sub-agent prompt-cache TTL (`subagentPromptCacheTtl`).** Deferred by the
-  operator to a separate discussion after issue #177 closes. Whether the growing single-message
-  transcript would take a partial cache hit at all is unmeasured (review §5, uncached prompt row).
 - **Lower the turn sites' effort in `.claude/autoflow/spawn-policy.json`.** Not decided here.
   The 155-run scan shows `medium`-effort runs at 100–270 calls and 20–60 min against `xhigh` at
   416–575 calls and 101–136 min: effort multiplies each call's cost and does not remove calls,
@@ -154,7 +151,5 @@ adoption gate. The record is appended to this ADR.
 - Status was set to `Accepted` on the operator's decision in the issue #177 session
   (2026-09-05), per `docs/adr/README.md` > Status Values. The realization changes in D3 are made
   by the follow-on implementation issue; the effect record in D4 is appended here when it exists.
-- The sub-agent cache-TTL question is parked by the operator for a separate discussion after
-  issue #177 closes and is not part of the follow-on issue's scope.
 - Numbers in this record are the review's; the review is the single home of the measurement and
   its method, and this record does not restate its tables.

@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/adr/0023-deliberation-participant-lifetime.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "12840afce33014720194f123220b5a5e35649bdcfe39f72f0f49afa57a0964af"
+      "sha256": "5384e06d7dbd83d5177eb3cc7edc8e56d9a5295a8b8dee7d7f0438f5a298c95a"
     },
     {
       "source": "docs/adr/README.md",
@@ -125,7 +125,7 @@
       "dest": ".claude/autoflow/docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c6078cf1a583204e33713b58541d3ce4f889f38ecea4ef09684b137fc593426a"
+      "sha256": "f1033bd6cc0d2acdfb50147e4b5e2247c1d5d0640bfa5819489eeeb88b5379d7"
     },
     {
       "source": "docs/development-guideline.md",
