@@ -144,7 +144,8 @@ adoption gate. The record is appended to this ADR.
   > Spawn mode by role lifetime.
 - Upstream: `anthropics/claude-code#91971` (comment of 2026-09-04, the wake re-write
   measurement).
-- Follow-on issues: the review §7 lists the two implementation issues this decision splits into.
+- Follow-on issue: the review §7 lists the scope of the single implementation issue this decision
+  hands to.
 
 ## Notes
 

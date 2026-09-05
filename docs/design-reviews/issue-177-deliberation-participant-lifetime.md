@@ -335,8 +335,9 @@ Implementation is not this issue's; it is one follow-on issue with the following
   `docs/teammate-common-rules.md` > Discussion Protocol step 2 (the scope sentence).
 - Tests: `test/workflows/run.mjs` ARCHITECT section and `tests/lib/architect-turn-harness.mjs`
   retired or re-pointed; a hermetic test of the relay-state script; manifest regenerated.
-- Effect record (§6): the aggregation script committed under `scripts/`; arms 0 and A2 (B
-  optional) on one frozen input; the record appended to ADR-0023.
+- Effect record (§6): the aggregation script committed under `scripts/`; arm 0 and the relay
+  arm in the realization step 0 selected (A2, or A1 on a miss), arm B optional, on one frozen
+  input; the record appended to ADR-0023.
 
 **Out of scope.** The VERIFY cause-branch workflow (a single self-check round, no relay); every
 other role's lifetime (the single-mode rule stands for them); the hook's name denial (unchanged
