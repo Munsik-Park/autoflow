@@ -173,8 +173,8 @@ grun w-dirty
 assert_true "repair leaves an untracked file: checks pass but exit is 3 (dirty tree — PREFLIGHT Step 4, not a failed check)" "[ '$RC' -eq 3 ]"
 assert_true "dirty tree: stderr names the path left behind and Step 4" \
   "grep -q 'left-behind.txt' '$WORK/w-dirty.log' && grep -q 'Step 4' '$WORK/w-dirty.log'"
-assert_true "dirty tree: record reads PASS … worktree=dirty(1)" \
-  "grep -q -- '- result: PREFLIGHT local checks: PASS leaves-file=PASS(repaired) worktree=dirty(1)' '$GITW/.autoflow/ledger.md'"
+assert_true "dirty tree: record's leading verdict is DIRTY, not PASS (PR #191 re-review — a resume must not read it as a pass)" \
+  "grep -q -- '- result: PREFLIGHT local checks: DIRTY leaves-file=PASS(repaired) worktree=dirty(1)' '$GITW/.autoflow/ledger.md' && ! grep -q -- '- result: PREFLIGHT local checks: PASS.*worktree=dirty' '$GITW/.autoflow/ledger.md'"
 grun w-dirty-skip --no-worktree-check
 assert_true "--no-worktree-check: the same run exits 0 and records worktree=n/a" \
   "[ '$RC' -eq 0 ] && grep -q 'worktree=n/a' '$WORK/w-dirty-skip.log'"
@@ -211,6 +211,8 @@ assert_true "PREFLIGHT Step 1a states it runs before Step 5's state-file creatio
   "printf '%s\n' \"\$PREFLIGHT_SECTION\" | grep '^| 1a |' | grep -q 'before.*Step 5'"
 assert_true "Resume procedure requires a passing preflight-local-checks record for the current cycle, else re-runs Step 1a — PR #191 review, Medium 2" \
   "printf '%s\n' \"\$PREFLIGHT_SECTION\" | grep -q 'preflight-local-checks | cycle: <C>. record for the \*\*current\*\* cycle'"
+assert_true "Resume predicate admits only 'none declared' or 'PASS … worktree=clean', and names DIRTY as a re-run trigger — PR #191 re-review" \
+  "printf '%s\n' \"\$PREFLIGHT_SECTION\" | grep -q 'reads .none declared. or .PASS … worktree=clean.' && printf '%s\n' \"\$PREFLIGHT_SECTION\" | grep -q 'one reading .DIRTY ….*(exit 3'"
 assert_true "PREFLIGHT playbook routes exit 3 (dirty tree after a pass) to Step 4" \
   "printf '%s\n' \"\$PREFLIGHT_SECTION\" | grep -q 'exit 3 (checks passed, tree dirty afterwards) → Step 4'"
 assert_true "PREFLIGHT playbook names the declaration key preflight.local_checks" \

@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0437911757a5797b640b65bd0d7e52a95f81c9cfc92a544d4d172a811305aa07"
+      "sha256": "348550fd52a3f4305b1a784422a7f25f6f402a26e5a748453c610cf9fef93aa0"
     },
     {
       "source": "docs/design-rationale.md",
@@ -328,7 +328,7 @@
       "dest": "scripts/preflight/local-checks.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "1394c9f461f2ad347bdf1eb6274cafd3fb5074757a722fb09ad507f80c0f1ebc"
+      "sha256": "1270bf665294058544d80e748e20be2a7d09058f73730bbc587ff725d2172517"
     },
     {
       "source": ".codex/review.md",

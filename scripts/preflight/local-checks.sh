@@ -62,7 +62,13 @@
 # discard with user approval) before the run is repeated. The record carries
 # `worktree=clean` / `worktree=dirty(<n>)`; the dirty paths go to stderr.
 # `--no-worktree-check` skips the assertion (a non-git root skips it anyway
-# and records `worktree=n/a`).
+# and records `worktree=n/a`). The record's leading verdict token is DIRTY in
+# that case (PR #191 re-review): `PASS` is written only on exit 0, so a later
+# reader — the Resume procedure — judges one token, never `PASS` + a worktree
+# field it might overlook.
+#
+#   ### preflight-local-checks | cycle: <C>
+#   - result: DIRTY commit-hooks=PASS(repaired) worktree=dirty(2)
 #
 # Exit codes:
 #   0 = none declared, or every declared check passed (after repair if any)
@@ -241,7 +247,12 @@ if [ "$OVERALL" = "PASS" ] && [ "$NO_WORKTREE_CHECK" -eq 0 ] \
   fi
 fi
 
-record "PREFLIGHT local checks: $OVERALL$SUMMARY worktree=$WORKTREE"
+# The record's leading token is the terminal verdict, so a reader (the Resume
+# procedure) never has to combine two fields: PASS is written only for exit 0,
+# DIRTY for exit 3, FAIL for exit 1.
+VERDICT="$OVERALL"
+case "$WORKTREE" in dirty*) VERDICT="DIRTY" ;; esac
+record "PREFLIGHT local checks: $VERDICT$SUMMARY worktree=$WORKTREE"
 
 if [ "$OVERALL" = "FAIL" ]; then
   echo "[$TAG] a target-declared local check did not pass — PREFLIGHT stops before DIAGNOSE (fail-closed). Run the declared repair, or fix the declaration in $CONFIG, then re-run." >&2
