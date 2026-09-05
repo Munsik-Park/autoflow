@@ -137,6 +137,12 @@ WORKFLOW = REQUIRED
 **Consequence**: `.claude/workflows/architect-deliberation.js` and
 `.claude/workflows/verify-cause-branch.js` are thin-root-layer artifacts (ADR-0015
 D1's default branch holds; no superseding note moves them into the plugin tier).
+Since ADR-0023 (issue #179) the ARCHITECT discussion itself is an orchestrator relay
+of two persistent participants over `.autoflow/issue-{N}-architect-transcript.md`,
+and `architect-deliberation.js` is its Record phase; the workflow stays REQUIRED
+for that phase, `scripts/architect/relay-state.sh` ships beside it as a root-layer
+copy, and the participants' prompt rides the plugin channel in
+`agents/autoflow-planner.md`.
 The isolated-`Workflow` boundary is the **one documented isolation mechanism**, so
 the workflow-residence verdict rests on it directly. Because the workflows are
 required, `CLAUDE_CODE_DISABLE_WORKFLOWS` becomes a load-bearing env constraint

@@ -759,15 +759,18 @@ ledger_advisory_check || true
 # line and returns.
 #
 # An EMPTY admitted set yields no advice, keyed on the SET and never on the
-# type's provenance: `autoflow-planner` is declared `policy_unmapped_agent_types`
-# and the harness research types `Plan` / `claude-code-guide` are modelled by no
-# phase row, so warning on them would make the advisory a steady false-positive
-# stream on calls the policy has nothing to say about — and an advisory that
-# cries wolf on correct calls is worse than absent. `Explore` IS governed (the
-# `diagnose-loopcheck` row), so it draws advice exactly as an `autoflow-*` type
-# does; a provenance-keyed rule would silence it wrongly. The case where the
-# policy SHOULD have governed a type is caught in the tree by
-# `spawn-policy.sh check`'s partition rule, not by a runtime warning.
+# type's provenance: the harness research types `Plan` / `claude-code-guide`
+# are modelled by no phase row, so warning on them would make the advisory a
+# steady false-positive stream on calls the policy has nothing to say about —
+# and an advisory that cries wolf on correct calls is worse than absent.
+# `Explore` IS governed (the `diagnose-loopcheck` row), so it draws advice
+# exactly as an `autoflow-*` type does; a provenance-keyed rule would silence
+# it wrongly. `autoflow-planner` was the unmapped type until issue #179 gave it
+# the two ARCHITECT relay-participant rows, so it now draws advice like every
+# other `autoflow-*` type — nothing here changed for that, which is the point of
+# keying on the set. The case where the policy SHOULD have governed a type is
+# caught in the tree by `spawn-policy.sh check`'s partition rule, not by a
+# runtime warning.
 #
 # Advisory only: Section 1b's presence-only `model` deny already ran above and
 # is untouched. This step never exits and never denies. Fail-open by

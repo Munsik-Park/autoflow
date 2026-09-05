@@ -4,9 +4,10 @@
 #
 # Mock-runtime regression for the deliberation workflow reference scripts
 # (.claude/workflows/{architect-deliberation,verify-cause-branch}.js). The harness
-# (test/workflows/run.mjs) locks their pure control-flow logic — the ARCHITECT relay
-# (topic and transcript threading, the two-consecutive-done termination, the Report and
-# Record calls, the ledger condition), VERIFY next_action mapping, the spawn-policy
+# (test/workflows/run.mjs) locks their pure control-flow logic — the ARCHITECT Record
+# phase (the scribe call over the relay transcript file, the agreed-only ledger call;
+# the relay itself is orchestrator-run since issue #179 and is fixed by
+# tests/test-issue-179-relay-state.sh), VERIFY next_action mapping, the spawn-policy
 # fail-closed guards, missing-response handling, the arg guards — against a mock
 # Workflow runtime. It does NOT exercise a live Claude Code Workflow runtime (that is
 # the operator-side smoke scenario in docs/teammate-contracts.md > Verification

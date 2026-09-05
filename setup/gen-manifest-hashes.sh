@@ -173,6 +173,14 @@ build_rows() {
   # satisfy the rule it is stamped with.
   emit_row "scripts/ledger/ledger-entry-id.sh" \
            "scripts/ledger/ledger-entry-id.sh" "root-layer" "copy" "file"
+  # ARCHITECT relay state (issue #179, ADR-0023 D2). The stamped
+  # autoflow-guide.md > ARCHITECT > Relay procedure instructs the orchestrator to
+  # run it at every turn (init / state / brief), so a target that never
+  # receives it cannot run the relay it is stamped with. The two measurement
+  # tools beside it (isolation-check.sh, deliberation-metrics.py) are the
+  # effect-record tooling and stay unshipped.
+  emit_row "scripts/architect/relay-state.sh" \
+           "scripts/architect/relay-state.sh" "root-layer" "copy" "file"
   # The issue-creation wrapper (issue #96): the hook's `gh issue create` deny
   # ships with the bundle, so the only filing path must ship with it too — a
   # target that installs the deny without the wrapper can file no issue at all.

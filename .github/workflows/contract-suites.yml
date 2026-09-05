@@ -124,7 +124,11 @@ on:
       - 'tests/test-issue-150-policy-migration.sh'
       - 'tests/test-issue-166-relay-report.sh'
       - 'tests/test-issue-165-taskoutput-deny.sh'
-      - 'tests/lib/architect-turn-harness.mjs'
+      - 'tests/test-issue-179-relay-state.sh'
+      - 'scripts/architect/relay-state.sh'
+      - 'scripts/architect/isolation-check.sh'
+      - 'scripts/architect/deliberation-metrics.py'
+      - 'tests/fixtures/issue-179/**'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
       - 'scripts/gate/remedy-route.sh'
@@ -251,7 +255,11 @@ on:
       - 'tests/test-issue-150-policy-migration.sh'
       - 'tests/test-issue-166-relay-report.sh'
       - 'tests/test-issue-165-taskoutput-deny.sh'
-      - 'tests/lib/architect-turn-harness.mjs'
+      - 'tests/test-issue-179-relay-state.sh'
+      - 'scripts/architect/relay-state.sh'
+      - 'scripts/architect/isolation-check.sh'
+      - 'scripts/architect/deliberation-metrics.py'
+      - 'tests/fixtures/issue-179/**'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
       - 'scripts/gate/remedy-route.sh'
@@ -524,6 +532,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-166-relay-report.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-166-relay-report.sh
+
+      - name: test-issue-179-relay-state.sh
+        id: s-test-issue-179-relay-state
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-179-relay-state.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-179-relay-state.sh
 
       - name: test-issue-165-taskoutput-deny.sh
         id: s-test-issue-165-taskoutput-deny

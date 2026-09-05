@@ -436,9 +436,12 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # issues #167/#169: scripts/lib/plugin-root.sh (the plugin / marketplace-
   # clone resolver sourced by drift-check.sh and spawn-policy.sh) ships the
   # same way, so ./scripts/lib/* is admitted on the same basis.
+  # issue #179: scripts/architect/relay-state.sh (the ARCHITECT relay's
+  # transcript state, run by the stamped relay procedure) ships as a root-layer
+  # copy row, so ./scripts/architect/* is admitted on the same basis.
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./scripts/architect/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done

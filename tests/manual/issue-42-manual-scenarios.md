@@ -97,6 +97,7 @@ rests on cost and consistency (ADR-0017 C8, ADR-0021 C7), not on the loss.
 |---|---|---|---|---|
 | Agent Teams runtime of the #40 cycle | 2026-07-31 | lost, 12/12 matched the `SendMessage` count | not measured per wake (cycle-level shares: ADR-0017 > Notes > C8) | issue #40 |
 | Claude Code 2.1.260 | 2026-09-04 | delivered, 3/3, in the `idle_notification` `result` field | 53% warm (+57 s), 100% cold (+14 min 35 s) | issue #168 |
+| Claude Code 2.1.261 | 2026-09-05 | **anonymous** spawn resumed by agent ID (no `name`, `SendMessage` to the ID): delivered 3/3 as the resumed spawn's task notification, verbatim in `result` | 0.4% (+44 s: read 44,593 / write 190) and 0.4% (+55 s: read 44,783 / write 159), under `subagentPromptCacheTtl: 1h` | issue #179 step 0 (ADR-0023 D4) |
 
 **Non-goal:** this scenario does not test whether the Agent Teams runtime
 *should* behave this way, only whether the current runtime *does* — matching

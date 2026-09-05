@@ -247,33 +247,80 @@ Feat issues skip this gate.
 
 ## ARCHITECT — Plan Synthesis (Developer AI + Test AI)
 
-Both perspectives participate, and the discussion runs inside an isolated **`Workflow`** (the
-facilitator — `architect-deliberation`), **not** as teammates messaging the orchestrator: the
-Developer AI and the Test AI run as in-script sub-agents and their turns stay in workflow
-variables. The workflow has three phases — **Discuss**, **Report**, **Record** (issue #166).
-Invocation: `Workflow({ name: "architect-deliberation", args: { issue: "N" } })`.
+Both perspectives participate. The discussion is a **relay the orchestrator runs between two
+persistent participants** — the Developer AI and the Test AI, each spawned once for the discussion
+and woken by agent ID for each of its turns (ADR-0023 D2; issue #179) — and its whole record is one
+file, `.autoflow/issue-{N}-architect-transcript.md`, which every turn is appended to. The three
+phases of issue #166 are kept: **Discuss** and **Report** are the relay; **Record** is the
+`Workflow` named `architect-deliberation`, which reads the transcript file and writes the artifacts.
+The orchestrator relays but does not deliberate: it reads one line per turn and the transcript's
+decidable state, never a turn body (Deliberation Isolation, checked by
+`scripts/architect/isolation-check.sh`).
 
-**Discuss** is a relay. The Developer AI opens with a design proposal, the Test AI answers it, and
-the two alternate. Each turn receives one fixed prompt for its role, the topic stated once, and the
-transcript so far; the transcript is the participants' memory, and the other side's last message is
-what the turn answers. The design documents are written after the discussion, so nobody edits one
-while it runs. Each turn says whether it has anything further to raise, and the discussion ends
-when two consecutive turns both say it has nothing further — the participants' own conclusion ends
-it.
+**Discuss** is the relay. The Developer AI opens with a design proposal, the Test AI answers it, and
+the two alternate. Each participant holds one fixed prompt for its role
+(`.claude/agents/autoflow-planner.md` > *ARCHITECT relay participant*) and reads the topic once from
+the transcript file's `## Topic` section; its context is its memory across turns, and the file is
+the record the other side reads. The design documents are written after the discussion, so nobody
+edits one while it runs. Each turn's heading carries whether the author has anything further to
+raise (`[further: yes|none]`), and the discussion ends when two consecutive turns both say
+`none` — the participants' own conclusion ends it; `scripts/architect/relay-state.sh state`
+computes that condition and the next side, and the orchestrator obeys it. The Discussion
+Protocol's VERIFY step applies over the transcript (ADR-0023 D1): a fact the transcript cites with
+a `path:line` is verified for both participants, and a participant reads a file to ground a claim
+of its own or to dispute a cited one.
 
-**Report** collects each participant's reading of the discussion: the design conclusions both
-accepted, and each point that participant considers worth raising to the orchestrator, with both
-positions and why it is worth raising. **Record** is one scribe that writes the feature design, the
-verification design and the report from those conclusions, followed by a ledger call that appends
-the agreed conclusions under the authority `ARCHITECT agreed`.
+**Report** is one more wake per participant: each appends its reading of the discussion to the
+transcript under `## Report — <side>` — the design conclusions both accepted, and each point it
+considers worth raising to the orchestrator, with both positions and why it is worth raising.
+**Record** is the `Workflow`: one scribe reads the transcript file — topic, turns, any brief, both
+reports — and writes the feature design, the verification design and the report from those
+conclusions, followed by a ledger call that appends the agreed conclusions under the authority
+`ARCHITECT agreed`. Invocation: `Workflow({ name: "architect-deliberation", args: { issue: "N" } })`.
 
-The run returns `{ report: { agreed, unagreed[] }, artifacts, ledger, turns, summary, stopped }`.
-The orchestrator receives that object and routes it (*Report routing* below); it does not
-facilitate the discussion turn-by-turn and does not receive the turns. It **verifies** what the
-report rests on by spot-checking targeted artifact excerpts against re-derived facts — the full
-read-and-score is GATE:PLAN's. Rationale:
+The run returns `{ report: { agreed, unagreed[] }, artifacts, transcript, ledger, summary, stopped }`.
+The orchestrator receives that object and routes it (*Report routing* below); it does not receive
+the turns or the reports' bodies. It **verifies** what the report rests on by spot-checking targeted
+artifact excerpts against re-derived facts — the full read-and-score is GATE:PLAN's. Rationale:
 [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation;
-contract: [`teammate-contracts.md`](teammate-contracts.md) > Facilitator.
+contract: [`teammate-contracts.md`](teammate-contracts.md) > Facilitator; decision:
+[`adr/0023-deliberation-participant-lifetime.md`](adr/0023-deliberation-participant-lifetime.md).
+
+#### Relay procedure (orchestrator)
+
+Every spawn below declares `subagent_type: autoflow-planner` and the model the readout names
+(`bash scripts/spawn-policy/spawn-policy.sh model architect-dev-participant` /
+`… architect-test-participant`), and every wait is a **turn end** ([`CLAUDE.md`](../CLAUDE.md) >
+Execution Principles > *Wait discipline*): the participant's one-line answer arrives as the task
+notification of that resumed spawn, and nothing is polled.
+
+1. **Transcript.** `bash scripts/architect/relay-state.sh init .autoflow/issue-{N}-architect-transcript.md {N} ["<brief>"]`
+   writes the header — the topic stated once, naming the issue's inputs and the ledger's settled
+   authorities; a brief given here is carried into the topic. The file is append-only from this
+   point: `init` refuses an existing file.
+2. **Spawn the Developer AI** (`Agent`, anonymous, no `name`) with a prompt that names it *the
+   Developer AI participant of the ARCHITECT relay for issue #{N}*, the transcript path, and
+   *write Turn 1*. Keep the agent ID the spawn result returns. End the turn.
+3. **On the notification**, read only the one line it carries, then run
+   `bash scripts/architect/relay-state.sh state <transcript>` and act on `next`:
+   `test` → spawn the Test AI the same way on its first turn (*write Turn 2*; keep its ID) or, on a
+   later turn, `SendMessage` to its ID with *write Turn n*; `dev` → `SendMessage` to the Developer
+   AI's ID with *write Turn n*; end the turn after each wake. A `state` exit 1 (a malformed heading,
+   a mis-numbered turn) is a transcript defect: re-wake the author with the cause and *re-append
+   Turn n correctly*. A wake whose notification arrives with `turns` unchanged is a **missing
+   turn**: re-wake that side once with *your Turn n was not appended*; a second miss is the
+   infrastructure state `participant missing` — repair (a fresh spawn of that side, pointed at the
+   transcript) and continue, since the file is the memory.
+4. **`next=report`.** Wake both participants (in one turn) with *the discussion has ended — append
+   your report*; end the turn; when both notifications are in, run `state` again. A side named in
+   `reports_missing` is re-woken once; if it is still missing, continue — the scribe records that
+   side's positions from its turns.
+5. **`next=record`.** Invoke the Record workflow. On its return, run the artifact-existence check
+   below and route the report (*Report routing*).
+6. **Isolation and lifetime.** The participants are not woken again after the Record workflow
+   returns, except for a re-discussion (*Re-discussion* below). The orchestrator never reads the
+   transcript's turn bodies; after the cycle, `bash scripts/architect/isolation-check.sh <transcript>
+   <session.jsonl>` confirms none of them reached the session log (ADR-0023 D4).
 
 **Artifact-existence check (orchestrator-side).** Before GATE:PLAN the orchestrator confirms the
 three artifacts the scribe writes exist and are non-empty — `.autoflow/issue-{N}-feature-design.md`,
@@ -283,7 +330,7 @@ proceeding. The workflow script cannot perform this check itself: the hosted Wor
 injects no filesystem access and rejects `import(` at parse time, so the capability lives at the
 layer that has a shell.
 
-**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the facilitator passes each in-script sub-agent only the documents its design task needs (e.g. the relevant `docs/adr/*`, `docs/design-rationale.md`). **Deliberation Isolation is unchanged** — the turns stay inside the workflow and only the report returns to the orchestrator.
+**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the spawn prompt names each participant only the documents its design task needs (e.g. the relevant `docs/adr/*`, `docs/design-rationale.md`), and the participant reads them once — its context carries them across turns. **Deliberation Isolation is unchanged** — the turns live in the transcript file and only the Record workflow's report returns to the orchestrator.
 
 **Roles**:
 - **Developer AI**: feature design (changed files, API interface, data structures).
@@ -332,10 +379,12 @@ layer that has a shell.
 
 #### Record
 
-The scribe writes the three artifacts after the discussion, from the report. The two design
-documents state the design and the conclusions the participants reached, in the form each is
-defined above; the report states what was agreed and what was not. The transcript is the
-discussion's own record and stays inside the workflow; the report is what leaves it. See
+The scribe writes the three artifacts after the discussion, from the transcript file and the two
+reports of its last round (a re-discussion opens a new round with a `### Brief` block and ends with
+its own two reports; the earlier round's reports stay on the record). The two design documents state the design and the conclusions the participants
+reached, in the form each is defined above; the report states what was agreed and what was not.
+The transcript file is the discussion's own record and is read only by the participants and the
+scribe; the Record workflow's report is what reaches the orchestrator. See
 [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
 
 #### Test necessity
@@ -470,20 +519,22 @@ first-exchange devil's advocate carries ADR conformance as one of its axes: the 
 checked against any governing ADR. That is the first, non-gated approach check, and GATE:PLAN is
 the gated one.
 
-- **`stopped` is non-null.** The run could not be carried out — a participant, a report or the
-  scribe was missing, or the spawn policy would not load. Repair the cause and re-run. This is
-  infrastructure state, never a design outcome, and it consumes no counter.
+- **`stopped` is non-null.** The record could not be carried out — the scribe was missing, or the
+  spawn policy would not load. Repair the cause and re-run the Record workflow (the transcript is
+  intact). This is infrastructure state, never a design outcome, and it consumes no counter; its
+  relay-side counterpart is a participant that appends no turn after one re-wake (*Relay
+  procedure* step 3).
 - **No un-agreed point.** The design is the participants' joint conclusion. Run the
   artifact-existence check, then GATE:PLAN (a fresh Evaluation AI on the 5-item rubric below). A
   GATE:PLAN FAIL re-enters the deliberation with a brief (*Re-discussion* below); that is the
   existing `GATE:PLAN FAIL → ARCHITECT (max 3×)` re-entry.
 - **An un-agreed point.** One judgment, and it is the orchestrator's: discuss further, or stop.
-  - **Discuss further** — prepare what the next discussion needs and re-run with that preparation
-    as the `brief`. A preparation may carry the un-agreed points as a narrowed topic, a fact the
-    orchestrator verified in the meantime (`path:line`, command output), the prior report's path,
-    or a different perspective for a participant to take. Record the judgment as an `O` ledger
-    entry — decision and grounds, authority `orchestrator judgment`. A re-discussion after an
-    un-agreed report is not a GATE:PLAN re-entry and consumes no re-entry counter.
+  - **Discuss further** — prepare what the next discussion needs and append it as the `brief`
+    (*Re-discussion* below). A preparation may carry the un-agreed points as a narrowed topic, a
+    fact the orchestrator verified in the meantime (`path:line`, command output), the prior
+    report's path, or a different perspective for a participant to take. Record the judgment as an
+    `O` ledger entry — decision and grounds, authority `orchestrator judgment`. A re-discussion
+    after an un-agreed report is not a GATE:PLAN re-entry and consumes no re-entry counter.
   - **Stop** — report situation-first ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles >
     Human-decision presentation), set `active: false`, `phase: "awaiting-user"`. The user's
     decision drives re-entry.
@@ -517,22 +568,30 @@ routing above (issue #166).
 
 ### Re-discussion
 
-A re-discussion is the same workflow, invoked with the orchestrator's preparation:
-`Workflow({ name: "architect-deliberation", args: { issue: "N", brief: "<preparation>" } })`. The
-brief is carried verbatim into the topic on every turn, and it is accepted only as a JSON / object
-argument.
+A re-discussion continues the same transcript: the orchestrator appends its preparation with
+`bash scripts/architect/relay-state.sh brief <transcript> "<preparation>"` — a `### Brief` block,
+which re-opens the end condition and starts a new round (`relay-state.sh state` reports `round`,
+and counts report sections per round) — and resumes the relay at step 3 of the *Relay procedure*:
+the turn numbering and the alternation continue, and the participants answer the brief as they
+would a turn. The brief may follow the previous round's two report sections: a GATE:PLAN FAIL
+re-entry and an un-agreed re-discussion both continue the same file after a Record. When the participants are still resumable (the same session), they are re-woken by their IDs
+and keep everything they read; when they are not (a session restart), each side is spawned fresh
+with the transcript path — the file is the memory — and the relay continues from there. The Record
+workflow is invoked again at the end, and the scribe reads the brief where it sits.
 
 A brief carries what the next discussion needs — for instance a narrowed topic, facts the
 orchestrator verified since the prior run, the prior report's path, a perspective for a participant
 to take, or an evaluation to answer. On a GATE:PLAN FAIL re-entry the brief names the two design
 documents and the evaluation's failed items, so the discussion answers the evaluation instead of
 restarting from the issue. On a scope-bounded review-response cycle (PREFLIGHT > *Scope-bounded
-entry*) the brief states the bounded scope: the Medium+ finding and the PR diff file set; a fix that
-adds a file leaves the bounded path, and the re-discussion runs on the full topic.
+entry*) the brief is given at `init` (it enters the topic) and states the bounded scope: the Medium+
+finding and the PR diff file set; a fix that adds a file leaves the bounded path, and the
+re-discussion runs on the full topic. A new cycle starts a new transcript (the previous cycle's is
+preserved as `issue-{N}-c{C}-architect-transcript.md` at PREFLIGHT with the other artifacts).
 
-The workflow reads and writes no `.autoflow/issue-{N}.json` state file, so the ARCHITECT re-entry
-counter is the orchestrator's own accounting (Regressions, [`CLAUDE.md`](../CLAUDE.md) >
-Development Lifecycle).
+Neither the relay scripts nor the workflow read or write the `.autoflow/issue-{N}.json` state file,
+so the ARCHITECT re-entry counter is the orchestrator's own accounting (Regressions,
+[`CLAUDE.md`](../CLAUDE.md) > Development Lifecycle).
 
 ---
 
