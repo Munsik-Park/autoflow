@@ -205,7 +205,8 @@ build_rows() {
   emit_row "scripts/spawn-policy/spawn-policy.sh" \
            "scripts/spawn-policy/spawn-policy.sh" "root-layer" "copy" "file"
   # Plugin / marketplace-clone resolver (issues #167, #169): sourced by BOTH
-  # drift-check.sh (D2/D4/D5) and spawn-policy.sh (`check`'s agent-definition
+  # drift-check.sh (D2/D4/D5, and D6 which runs spawn-policy.sh — issue #185)
+  # and spawn-policy.sh (`check`'s agent-definition
   # lookup on a thin-root target, which ships no .claude/agents), so it ships
   # beside them — the same sibling-lib reasoning as claude-isolation.sh above.
   emit_row "scripts/lib/plugin-root.sh" \

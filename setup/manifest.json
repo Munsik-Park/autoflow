@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "354886e95d97caf439e9f60d9b783275c0c05881c2639376163d828898715631"
+      "sha256": "c495436847f93e5aa2eb0ef1e0fddb5fcdcb3f9d555aec830fe55b18f99bb914"
     },
     {
       "source": "docs/design-rationale.md",
@@ -237,7 +237,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5845accdec4d5052ef78ebb499d726b51d55e70f51a70beaa88bd81cb3b7ae82"
+      "sha256": "241f6f883a881703a01173e7426ca349914ab29d6ff35140c3844e566aa7286f"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
@@ -258,7 +258,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ebab22e2c3b234f17bfc5f142a29a146dae1cd436a1f0c6106bd1d34e1a67192"
+      "sha256": "b94ecc6af57b500b5d366bd84ef2cc633352b407e55b3fa75bbfcc8c268a96e3"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -384,7 +384,7 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "bc2b4d99de4a356cfec6188d64853b814703b084b2df5554934d484c2e3612b2"
+      "sha256": "1cfd0af30fcb7a531360b576dcfd50b96198986e8218f3b9028cddb3127f2bc5"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",

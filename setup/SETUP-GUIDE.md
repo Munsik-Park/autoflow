@@ -88,7 +88,12 @@ so a re-stamp will not overwrite a configured policy and
 `drift-check.sh` reports it as target-owned rather than as content drift. On a
 version bump your obligation is to run
 `bash scripts/spawn-policy/spawn-policy.sh check` and add any newly required row —
-a scaffold is never refreshed for you. Issue #166 renamed the architect
+a scaffold is never refreshed for you. You no longer have to remember to: the
+drift detector's D6 leg runs that same `check` over the scaffold, and names any
+row the clone's sample carries that the scaffold lacks, everywhere drift-check
+already runs — `/autoflow:install` before and after a stamp, and PREFLIGHT — so a
+stale scaffold is a `FAIL: D6` stop with the rows to fix listed, rather than a
+fail-closed readout at the first ARCHITECT spawn (issue #185). Issue #166 renamed the architect
 deliberation's `workflow_sites` rows to `dev-turn` / `test-turn` / `scribe` /
 `ledger` and removed `deliberation_caps`, so a target scaffold still carrying the
 former rows fails closed at its next ARCHITECT until it is edited; issue #179 then
@@ -120,7 +125,7 @@ After installing, enable the plugin and run the shipped drift detector:
 sh .claude/autoflow/drift-check.sh
 ```
 
-`drift-check.sh` runs five checks, all target-local and network-free:
+`drift-check.sh` runs six checks, all target-local and network-free:
 
 | Check | What it compares | On mismatch |
 |-------|------------------|-------------|
@@ -129,15 +134,16 @@ sh .claude/autoflow/drift-check.sh
 | D3 | settings wiring never binds `.autoflow` state to the plugin root | FAIL — fix the wiring |
 | D4 | installed manifest vs the **marketplace clone's** `setup/manifest.json`, per artifact by sha256 — a bundle that is self-consistent (D1 PASS) but older than what the clone would stamp today, including upstream changes merged without a version bump | FAIL — re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`); a changed `scaffold` sample or an artifact upstream no longer ships is a `WARN` you dispose of by hand |
 | D5 | the installed plugin's files vs the clone's `plugin/<name>/` source — the hooks a session runs and the docs it reads must come from the same source | FAIL — `/plugin update autoflow@autoflow` |
+| D6 | the target-owned `.claude/autoflow/spawn-policy.json` scaffold vs the agent definitions the session loads (issue #185): `scripts/spawn-policy/spawn-policy.sh check` over the scaffold — a `phases` row's effort must equal the loaded definition's `effort:` frontmatter and every `agent_type` must be shipped — plus the row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed. Model values and `workflow_sites` effort are yours and are not compared | FAIL — edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values, add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` |
 
 A non-zero exit is a **PREFLIGHT stop condition** — resolve the reported drift
-before starting a new AutoFlow cycle. D2, D4 and D5 do **not** need the
+before starting a new AutoFlow cycle. D2, D4, D5 and D6 do **not** need the
 hook-only `CLAUDE_PLUGIN_ROOT` variable: `scripts/lib/plugin-root.sh` resolves
 the installed plugin and the marketplace clone from the harness's own registries
 (`${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/installed_plugins.json`,
 `known_marketplaces.json`, then the `cache/` and `marketplaces/` directories), so
 the same result is produced from a plain shell, which is where PREFLIGHT runs it.
-Each of the three reports `SKIP`, not a failure, when its side is not locally
+Each of the four reports `SKIP`, not a failure, when its side is not locally
 resolvable (no plugin installed, no clone), naming the locations it consulted.
 If the clone itself is behind upstream, refresh it first
 (`/plugin marketplace update autoflow`) — D4 compares against the clone you have,
