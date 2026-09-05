@@ -613,9 +613,9 @@ if [ -x "$RESOLVER" ]; then
     # The oracle reads the first YAML frontmatter block only — independently of
     # the checker's own extractor (PR #183 review: a whole-file grep accepted a
     # body-only `effort:` line the harness never reads).
-    fm_line=$(awk 'NR==1{ if ($0!="---") exit 3; next } !c && $0=="---"{ c=1; next } !c && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/{ if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; l=$0 } else { nc++ }; next } c && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/{ o++ } END{ if(!c) exit 3; if(nc>0) exit 6; if(n>1) exit 4; if(o>0) exit 5; if(n==1) print l; exit 0 }' "$def" 2>/dev/null); fm_rc=$?
+    fm_line=$(awk 'NR==1{ if ($0!="---") exit 3; next } !c && $0=="---"{ c=1; next } !c && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/{ if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; l=$0 } else { nc++ }; next } !c && !/^[[:space:]]*$/ && !/^#/ && !/^[A-Za-z_][A-Za-z0-9_-]*: [^[:space:]]/{ sh++; next } c && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/{ o++ } END{ if(!c) exit 3; if(sh>0) exit 7; if(nc>0) exit 6; if(n>1) exit 4; if(o>0) exit 5; if(n==1) print l; exit 0 }' "$def" 2>/dev/null); fm_rc=$?
     if [ "$fm_rc" != "0" ]; then
-      failc "design-added: frontmatter-projection -- $t definition frontmatter malformed for effort (awk rc $fm_rc: 3 no block, 4 duplicate key, 5 effort outside the block, 6 non-canonical spelling)"
+      failc "design-added: frontmatter-projection -- $t definition frontmatter malformed for effort (awk rc $fm_rc: 3 no block, 4 duplicate key, 5 effort outside the block, 6 non-canonical spelling, 7 non-block-style shape)"
       continue
     fi
     has_line=$([ -n "$fm_line" ] && echo 1 || echo 0)
@@ -800,6 +800,9 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
   # review: `effort : xhigh` was read as "no line" while the runtime read
   # xhigh). Each is refused whatever the policy declares — inherit or the
   # spelled value — because the checker cannot equate it to the runtime.
+  # (i-c) left the scratch loopcheck definition with a duplicate key; restore
+  # it so the legs below judge the tester definition alone.
+  cp "$PLUGIN_SRC/agents/autoflow-loopcheck.md" "$SCRATCH7P/agents/autoflow-loopcheck.md"
   TCFG_INH="$SCRATCH7/target-tester-inherit.json"
   jq '(.phases[] | select(.agent_type == "autoflow-tester") | .effort) = "inherit"' "$TCFG" > "$TCFG_INH"
   for _sp in 'effort : xhigh' '"effort": xhigh' "'effort': xhigh" 'effort: "xhigh"' 'effort: xhigh # pinned'; do
@@ -820,11 +823,34 @@ if [ -f "$CONFIG" ] && [ -x "$RESOLVER" ] && [ -d "$PLUGIN_SRC/agents" ]; then
   awk 'NR==1{print; next} !c && $0=="---"{c=1; print; next} !c {print " " $0; next} {print}' "$PLUGIN_SRC/agents/autoflow-tester.md" > "$SCRATCH7P/agents/autoflow-tester.md"
   for _cfgv in "$TCFG_INH" "$TCFG"; do
     AUTOFLOW_SPAWN_POLICY="$_cfgv" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic3.err"; rc=$?
-    if [ "$rc" = "1" ] && grep -q "non-canonical form" "$SCRATCH7/ic3.err" && grep -q "autoflow-tester" "$SCRATCH7/ic3.err"; then
-      pass "PR #183 review: tester frontmatter mapping indented by one space with policy $( [ "$_cfgv" = "$TCFG_INH" ] && echo inherit || echo xhigh ) -> check exit 1, non-canonical spelling refused"
+    # An indented mapping trips the block-style shape rule (every key is
+    # indented) before the effort-spelling rule; either refusal is the contract.
+    if [ "$rc" = "1" ] && grep -qE "non-canonical form|canonical block-style grammar" "$SCRATCH7/ic3.err" && grep -q "autoflow-tester" "$SCRATCH7/ic3.err"; then
+      pass "PR #183 review: tester frontmatter mapping indented by one space with policy $( [ "$_cfgv" = "$TCFG_INH" ] && echo inherit || echo xhigh ) -> check exit 1, refused"
     else
       failc "PR #183 review: indented mapping -> exit $rc: $(head -1 "$SCRATCH7/ic3.err")"
     fi
+  done
+  # (i-c4) Shapes outside the block-style grammar (PR #183 review): a
+  # flow-style mapping carrying effort, an explicit key, and a merge key are
+  # each read by a YAML parser and invisible to a line-oriented reader, so the
+  # shape is refused before any inherit verdict — for both policy values.
+  _tail=$(awk 'c>=2{print} /^---$/{c++}' "$PLUGIN_SRC/agents/autoflow-tester.md")
+  for _shape in flow explicit merge; do
+    case "$_shape" in
+      flow)     _fm='{name: autoflow-tester, description: "AutoFlow RED spawn", effort: xhigh}' ;;
+      explicit) _fm=$'name: autoflow-tester\ndescription: AutoFlow RED spawn\n? effort\n: xhigh' ;;
+      merge)    _fm=$'name: autoflow-tester\ndescription: AutoFlow RED spawn\n<<: {effort: xhigh}' ;;
+    esac
+    printf -- '---\n%s\n---\n%s\n' "$_fm" "$_tail" > "$SCRATCH7P/agents/autoflow-tester.md"
+    for _cfgv in "$TCFG_INH" "$TCFG"; do
+      AUTOFLOW_SPAWN_POLICY="$_cfgv" CLAUDE_PLUGIN_ROOT="$SCRATCH7P" bash "$TCHECK" check >/dev/null 2>"$SCRATCH7/ic4.err"; rc=$?
+      if [ "$rc" = "1" ] && grep -q "canonical block-style grammar" "$SCRATCH7/ic4.err" && grep -q "autoflow-tester" "$SCRATCH7/ic4.err"; then
+        pass "PR #183 review: tester frontmatter in $_shape style with policy $( [ "$_cfgv" = "$TCFG_INH" ] && echo inherit || echo xhigh ) -> check exit 1, shape refused"
+      else
+        failc "PR #183 review: $_shape-style frontmatter -> exit $rc: $(head -1 "$SCRATCH7/ic4.err")"
+      fi
+    done
   done
   cp "$PLUGIN_SRC/agents/autoflow-tester.md" "$SCRATCH7P/agents/autoflow-tester.md"
   rm -f "$TCFG_INH"

@@ -148,7 +148,9 @@ normalize_type() {
 #   the projection. Any other line a YAML parser would read as the same key —
 #   `effort : v`, `"effort": v`, `'effort': v`, a tab before the colon, a
 #   quoted or commented value, or an INDENTED key (a mapping whose every key
-#   sits one space in is still the same mapping to a YAML parser) — exits 6: the checker has no YAML parser, so it
+#   sits one space in is still the same mapping to a YAML parser) — exits 6;
+#   any block line outside the block-style grammar (flow mapping, explicit or
+#   merge key, multi-line scalar) exits 7 — the shape is refused up front: the checker has no YAML parser, so it
 #   refuses every spelling it cannot equate to the runtime's reading rather
 #   than guessing (PR #183 review: `effort : xhigh` read as no line).
 frontmatter_effort_line() {
@@ -159,9 +161,17 @@ frontmatter_effort_line() {
       if ($0 ~ /^effort: [^[:space:]"'"'"'#]+$/) { n++; line = $0 } else { noncanon++ }
       next
     }
+    # Every other line of the block must be canonical block style — one plain
+    # `key: value` at column 0, a blank line, or a `#` comment. A flow mapping
+    # (`{...}`), an explicit key (`? `), a merge key (`<<:`), an anchor-only
+    # line, a multi-line scalar continuation: each can carry an effort a YAML
+    # parser reads and this line-oriented checker cannot, so the shape itself
+    # is refused (exit 7) before any "no effort line = inherit" verdict.
+    !closed && !/^[[:space:]]*$/ && !/^#/ && !/^[A-Za-z_][A-Za-z0-9_-]*: [^[:space:]]/ { shape++; next }
     closed && /^[[:space:]]*["'"'"']?effort["'"'"']?[[:space:]]*:/ { outside++ }
     END {
       if (!closed) exit 3
+      if (shape > 0) exit 7
       if (noncanon > 0) exit 6
       if (n > 1) exit 4
       if (outside > 0) exit 5
@@ -417,6 +427,7 @@ cmd_check() {
       3) _err "agent definition $AGENTS_DIR/$t.md has no YAML frontmatter block (line 1 must be '---', closed by a later '---'); the harness reads effort from that block only"; continue ;;
       4) _err "agent definition $AGENTS_DIR/$t.md carries more than one 'effort:' key inside its frontmatter block"; continue ;;
       5) _err "agent definition $AGENTS_DIR/$t.md carries an 'effort:' line outside its frontmatter block — the harness does not read it, so it is not a projection"; continue ;;
+      7) _err "agent definition $AGENTS_DIR/$t.md carries a frontmatter line outside the canonical block-style grammar (one plain 'key: value' per line at column 0; flow mappings, explicit keys, merge keys and multi-line scalars are refused because this checker has no YAML parser and cannot tell what effort such a shape carries)"; continue ;;
       6) _err "agent definition $AGENTS_DIR/$t.md spells the effort key in a non-canonical form inside its frontmatter (a YAML parser may read it as 'effort', this checker cannot equate it) — write exactly 'effort: <value>' at column 0 (no leading whitespace), unquoted, without a trailing comment"; continue ;;
       *) _err "agent definition $AGENTS_DIR/$t.md: frontmatter read failed (rc $_frc)"; continue ;;
     esac
