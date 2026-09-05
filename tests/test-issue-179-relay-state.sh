@@ -88,6 +88,48 @@ if [ "$RC" = "0" ] && [ "$(kv reports)" = "dev,test" ] && [ "$(kv reports_missin
 else
   failc "reports (both): rc=$RC out=[$(printf '%s' "$OUT" | tr '\n' ' ')]"
 fi
+if [ "$(kv round)" = "1" ]; then pass "round: a transcript with no Brief is round 1"; else failc "round: expected 1, got $(kv round)"; fi
+
+echo "== relay-state: re-discussion after a Record (PR #182 review, Medium) =="
+# GATE:PLAN FAIL -> ARCHITECT and un-agreed -> discuss further both continue the SAME transcript:
+# a Brief appended after the two report sections opens a new round, the turn numbering and the
+# alternation continue, and the new round owes its own two reports.
+
+run_state "$FX/transcript-rediscussion.md"
+if [ "$RC" = "0" ] && [ "$(kv round)" = "2" ] && [ "$(kv turns)" = "5" ] && [ "$(kv ended)" = "true" ] && [ "$(kv reports)" = "dev" ] && [ "$(kv reports_missing)" = "test" ] && [ "$(kv next)" = "record" ]; then
+  pass "re-discussion: reports -> Brief -> turns 3..5 (none/none) -> one round-2 report: round=2, ended, reports counted per round, next=record"
+else
+  failc "re-discussion fixture: rc=$RC err=[$ERR] out=[$(printf '%s' "$OUT" | tr '\n' ' ')]"
+fi
+R="$SCRATCH/r.md"; cp "$FX/transcript-both-reports.md" "$R"
+bash "$STATE" brief "$R" "answer the evaluation" >/dev/null 2>&1
+run_state "$R"
+if [ "$RC" = "0" ] && [ "$(kv round)" = "2" ] && [ "$(kv turns)" = "2" ] && [ "$(kv ended)" = "false" ] && [ "$(kv reports)" = "-" ] && [ "$(kv next)" = "dev" ]; then
+  pass "re-discussion: a Brief appended after both reports is accepted, re-opens the discussion, and the next turn (3) is the Developer AI's"
+else
+  failc "brief after reports: rc=$RC err=[$ERR] out=[$(printf '%s' "$OUT" | tr '\n' ' ')]"
+fi
+printf '\n### Turn 3 — Developer AI [further: none]\nanswered\n\n### Turn 4 — Test AI [further: none]\nsettled\n\n## Report — Developer AI\nagreed:\n- c2\n\n## Report — Test AI\nagreed:\n- c2\n' >> "$R"
+run_state "$R"
+if [ "$RC" = "0" ] && [ "$(kv round)" = "2" ] && [ "$(kv turns)" = "4" ] && [ "$(kv ended)" = "true" ] && [ "$(kv reports)" = "dev,test" ] && [ "$(kv reports_missing)" = "-" ] && [ "$(kv next)" = "record" ]; then
+  pass "re-discussion: the second round ends on its own pair and its own two reports -> next=record (a second Record is admissible)"
+else
+  failc "second round: rc=$RC err=[$ERR] out=[$(printf '%s' "$OUT" | tr '\n' ' ')]"
+fi
+U="$SCRATCH/u.md"; cp "$FX/transcript-both-reports.md" "$U"; printf '\n### Turn 3 — Developer AI [further: none]\nno brief\n' >> "$U"
+run_state "$U"
+if [ "$RC" = "1" ] && printf '%s' "$ERR" | grep -q 'turn heading after a report section'; then
+  pass "re-discussion: a turn after the reports WITHOUT a Brief is still rejected (a re-discussion opens with a Brief)"
+else
+  failc "turn after reports without brief: rc=$RC err=[$ERR]"
+fi
+V="$SCRATCH/v.md"; cp "$FX/transcript-rediscussion.md" "$V"; printf '\n## Report — Developer AI\nagreed:\n- dup\n' >> "$V"
+run_state "$V"
+if [ "$RC" = "1" ] && printf '%s' "$ERR" | grep -q 'duplicate Developer AI report in round 2'; then
+  pass "re-discussion: the duplicate-report guard is per round — a second Developer AI report in round 2 is rejected, round 1's is not counted"
+else
+  failc "duplicate per round: rc=$RC err=[$ERR]"
+fi
 
 echo "== relay-state: state fails closed on a malformed transcript =="
 

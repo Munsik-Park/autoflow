@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "488e2753d8beb91c64ae144943337ba8ee6ab029322a74190cf757596d0d6019"
+      "sha256": "354886e95d97caf439e9f60d9b783275c0c05881c2639376163d828898715631"
     },
     {
       "source": "docs/design-rationale.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "c20cb4233ca772f7d59643bd63fb068b6163f7189d580ddaf88d2d81d8c4d84b"
+      "sha256": "0f97051568cba3edd55e81eb7374082b307d54fee19de6a9f1aeb291cb63458c"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -370,7 +370,7 @@
       "dest": "scripts/architect/relay-state.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "1a89c9b2f3e45e9e4ffac0b8554bab5e16b52bc2f31cd12acaed270ee4c3149e"
+      "sha256": "6be24a7217b78ed9eb90a2f48b5ddc5bbcded76fc4983f9d2681e8a54f375cec"
     },
     {
       "source": "scripts/issue/create-issue.sh",

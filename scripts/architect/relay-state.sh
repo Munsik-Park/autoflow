@@ -34,19 +34,24 @@
 #   ## Report — <Developer AI|Test AI>
 #
 # A `### Brief` block — the orchestrator's preparation for a re-discussion —
-# may sit between turns. It re-opens a discussion that had ended, so the end
-# condition is evaluated over the turns written after the last brief; the turn
-# numbering and the alternation continue across it.
+# opens a new ROUND: it may sit between turns, or after both report sections
+# once a Record has been made (the GATE:PLAN FAIL → ARCHITECT re-entry and the
+# un-agreed → discuss-further route both continue the same transcript). A brief
+# re-opens the end condition, which is evaluated over the turns written after
+# the last brief; the turn numbering and the alternation continue across it;
+# and the report sections are counted per round, so a round that follows a
+# Record owes its own two reports (the scribe reads the last round's).
 #
 # `state` prints, one per line:
-#   turns=<n>                        turn blocks found
+#   turns=<n>                        turn blocks found (across every round)
+#   round=<r>                        1 + the number of Brief blocks
 #   last=<dev|test|->                side of the last turn (`-` when none)
-#   ended=<true|false>               the last two turns after the last brief both `further: none`
-#   reports=<dev,test|dev|test|->    report sections present
+#   ended=<true|false>               the last two turns of the current round both `further: none`
+#   reports=<dev,test|dev|test|->    report sections present in the current round
 #   reports_missing=<...|->          the complement of `reports` once ended, else `-`
 #   next=<dev|test|report|record>    dev / test: the side that writes the next turn;
-#                                    report: ended and no report yet;
-#                                    record: ended and at least one report present
+#                                    report: ended and no report yet in this round;
+#                                    record: ended and at least one report present in this round
 #
 # Exit: 0 state printed | 1 transcript malformed (cause on stderr) | 2 usage
 # =============================================================================
@@ -110,11 +115,11 @@ cmd_state() {
   [ -f "$t" ] || { echo "relay-state: $t not found" >&2; exit 2; }
   LC_ALL=C awk '
     function fail(msg) { printf("relay-state: line %d: %s\n", NR, msg) > "/dev/stderr"; bad = 1; exit 1 }
-    BEGIN { turns = 0; last = "-"; pair = 0; ended = 0; rdev = 0; rtest = 0; intx = 0; inrep = 0 }
+    BEGIN { turns = 0; last = "-"; pair = 0; ended = 0; rdev = 0; rtest = 0; intx = 0; inrep = 0; round = 1 }
     /^## Transcript$/ { intx = 1; next }
     /^### Turn / {
       if (!intx) fail("turn heading before the \"## Transcript\" header")
-      if (inrep) fail("turn heading after a report section")
+      if (inrep) fail("turn heading after a report section (a re-discussion opens with a \"### Brief\" block)")
       line = $0
       # ### Turn <n> — <side> [further: <yes|none>]   (the dash is U+2014, three bytes in C locale)
       if (line !~ /^### Turn [0-9]+ \xe2\x80\x94 (Developer AI|Test AI) \[further: (yes|none)\]$/) {
@@ -133,14 +138,16 @@ cmd_state() {
     }
     /^### Brief$/ {
       if (!intx) fail("brief before the \"## Transcript\" header")
-      if (inrep) fail("brief after a report section")
-      pair = 0; ended = 0
+      # A new round: the end condition re-opens, and a round that follows a
+      # Record starts with no report of its own (the previous reports stay on
+      # the record; the scribe reads the last round).
+      round++; pair = 0; ended = 0; inrep = 0; rdev = 0; rtest = 0
       next
     }
     /^## Report \xe2\x80\x94 / {
       if (!ended) fail("report section before the discussion has ended")
-      if ($0 ~ /^## Report \xe2\x80\x94 Developer AI$/) { if (rdev) fail("duplicate Developer AI report"); rdev = 1 }
-      else if ($0 ~ /^## Report \xe2\x80\x94 Test AI$/) { if (rtest) fail("duplicate Test AI report"); rtest = 1 }
+      if ($0 ~ /^## Report \xe2\x80\x94 Developer AI$/) { if (rdev) fail("duplicate Developer AI report in round " round); rdev = 1 }
+      else if ($0 ~ /^## Report \xe2\x80\x94 Test AI$/) { if (rtest) fail("duplicate Test AI report in round " round); rtest = 1 }
       else fail("malformed report heading: " $0)
       inrep = 1
       next
@@ -160,7 +167,7 @@ cmd_state() {
       if (!ended) nxt = (turns % 2 == 0) ? "dev" : "test"
       else if (!rdev && !rtest) nxt = "report"
       else nxt = "record"
-      printf("turns=%d\nlast=%s\nended=%s\nreports=%s\nreports_missing=%s\nnext=%s\n", turns, last, ended ? "true" : "false", reports, missing, nxt)
+      printf("turns=%d\nround=%d\nlast=%s\nended=%s\nreports=%s\nreports_missing=%s\nnext=%s\n", turns, round, last, ended ? "true" : "false", reports, missing, nxt)
     }
   ' "$t"
 }

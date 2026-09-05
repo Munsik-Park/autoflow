@@ -380,7 +380,8 @@ layer that has a shell.
 #### Record
 
 The scribe writes the three artifacts after the discussion, from the transcript file and the two
-reports in it. The two design documents state the design and the conclusions the participants
+reports of its last round (a re-discussion opens a new round with a `### Brief` block and ends with
+its own two reports; the earlier round's reports stay on the record). The two design documents state the design and the conclusions the participants
 reached, in the form each is defined above; the report states what was agreed and what was not.
 The transcript file is the discussion's own record and is read only by the participants and the
 scribe; the Record workflow's report is what reaches the orchestrator. See
@@ -569,9 +570,11 @@ routing above (issue #166).
 
 A re-discussion continues the same transcript: the orchestrator appends its preparation with
 `bash scripts/architect/relay-state.sh brief <transcript> "<preparation>"` — a `### Brief` block,
-which re-opens the end condition — and resumes the relay at step 3 of the *Relay procedure*: the
-turn numbering and the alternation continue, and the participants answer the brief as they would a
-turn. When the participants are still resumable (the same session), they are re-woken by their IDs
+which re-opens the end condition and starts a new round (`relay-state.sh state` reports `round`,
+and counts report sections per round) — and resumes the relay at step 3 of the *Relay procedure*:
+the turn numbering and the alternation continue, and the participants answer the brief as they
+would a turn. The brief may follow the previous round's two report sections: a GATE:PLAN FAIL
+re-entry and an un-agreed re-discussion both continue the same file after a Record. When the participants are still resumable (the same session), they are re-woken by their IDs
 and keep everything they read; when they are not (a session restart), each side is spawned fresh
 with the transcript path — the file is the memory — and the relay continues from there. The Record
 workflow is invoked again at the end, and the scribe reads the brief where it sits.
