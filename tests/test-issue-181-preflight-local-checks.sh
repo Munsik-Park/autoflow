@@ -150,11 +150,45 @@ echo '{ "preflight": { "local_checks": [ { "name": "ok", "check": "true" } ] } }
 run r3-ledger
 assert_true "state file is byte-identical after a run" "cmp -s '$WORK/.autoflow/issue-1.json' '$WORK/state-before.json'"
 assert_true "ledger record is a level-3 heading with the cycle and one result line" \
-  "grep -q '^### preflight-local-checks | cycle: 2\$' '$LEDGER' && grep -q -- '^- result: PREFLIGHT local checks: PASS ok=PASS\$' '$LEDGER'"
+  "grep -q '^### preflight-local-checks | cycle: 2\$' '$LEDGER' && grep -q -- '^- result: PREFLIGHT local checks: PASS ok=PASS worktree=n/a\$' '$LEDGER'"
 assert_true "ledger-entry-id.sh check stays clean over the records (no identifier required)" \
   "bash '$LEDGER_ID' check '$LEDGER' >/dev/null 2>&1"
 assert_true "ledger records are append-only across runs (every prior record still present)" \
   "[ \$(grep -c '^### preflight-local-checks | cycle: 2' '$LEDGER') -ge 8 ]"
+
+echo "=== worktree after the run (PR #191 review, Medium 1): a passing run must leave the tree clean ==="
+GITW="$WORK/gitrepo"
+mkdir -p "$GITW/.claude" && git -C "$GITW" init -q && git -C "$GITW" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+GCFG="$GITW/.claude/autoflow.local.json"
+gcommit() { git -C "$GITW" add -A && git -C "$GITW" -c user.email=t@t -c user.name=t commit -q -m "$1"; }
+grun() {  # grun <log-name> [args...] → sets RC; runs inside the git repo
+  local log="$1"; shift
+  ( "$SCRIPT" --root "$GITW" --config "$GCFG" --ledger "$GITW/.autoflow/ledger.md" --cycle 1 "$@" ) >"$WORK/$log.log" 2>&1
+  RC=$?
+}
+printf '%s\n' '{ "preflight": { "local_checks": [' \
+  '  { "name": "leaves-file", "check": "test -f left-behind.txt", "repair": "echo x > left-behind.txt" } ] } }' > "$GCFG"
+gcommit cfg
+grun w-dirty
+assert_true "repair leaves an untracked file: checks pass but exit is 3 (dirty tree — PREFLIGHT Step 4, not a failed check)" "[ '$RC' -eq 3 ]"
+assert_true "dirty tree: stderr names the path left behind and Step 4" \
+  "grep -q 'left-behind.txt' '$WORK/w-dirty.log' && grep -q 'Step 4' '$WORK/w-dirty.log'"
+assert_true "dirty tree: record reads PASS … worktree=dirty(1)" \
+  "grep -q -- '- result: PREFLIGHT local checks: PASS leaves-file=PASS(repaired) worktree=dirty(1)' '$GITW/.autoflow/ledger.md'"
+grun w-dirty-skip --no-worktree-check
+assert_true "--no-worktree-check: the same run exits 0 and records worktree=n/a" \
+  "[ '$RC' -eq 0 ] && grep -q 'worktree=n/a' '$WORK/w-dirty-skip.log'"
+rm -f "$GITW/left-behind.txt"
+printf '%s\n' '{ "preflight": { "local_checks": [ { "name": "clean", "check": "true" } ] } }' > "$GCFG"
+gcommit cfg2
+grun w-clean
+assert_true "check passes and leaves the tree clean: exit 0, worktree=clean" \
+  "[ '$RC' -eq 0 ] && grep -q 'PASS clean=PASS worktree=clean' '$WORK/w-clean.log'"
+printf '%s\n' '{ "preflight": { "local_checks": [ { "name": "fails-and-dirties", "check": "echo y > junk.txt; false" } ] } }' > "$GCFG"
+gcommit cfg3
+grun w-fail
+assert_true "a failed check takes exit 1 on its own verdict (the worktree assertion is not what stops it)" \
+  "[ '$RC' -eq 1 ] && grep -q 'FAIL fails-and-dirties=FAIL worktree=n/a' '$WORK/w-fail.log'"
 
 echo "=== framework knows no tool ==="
 assert_true "script source names no specific hook/lint tool (husky, lint-staged, prettier, eslint)" \
@@ -167,6 +201,18 @@ assert_true "manifest sha256 for the script equals the current source hash" \
   "[ \"\$(jq -r '.artifacts[] | select(.source == \"scripts/preflight/local-checks.sh\") | .sha256' '$MANIFEST')\" = \"\$(shasum -a 256 '$SCRIPT' | awk '{print \$1}')\" ]"
 assert_true "PREFLIGHT playbook names local-checks.sh as a fail-closed stop condition" \
   "awk '/^## PREFLIGHT/{f=1;next} f && /^## /{exit} f && /scripts\\/preflight\\/local-checks\\.sh/ {found=1} END {exit !found}' '$GUIDE_MD'"
+PREFLIGHT_SECTION="$(awk '/^## PREFLIGHT/{f=1;next} f && /^## /{exit} f' "$GUIDE_MD")"
+ROW_1A="$(printf '%s\n' "$PREFLIGHT_SECTION" | grep -n '^| 1a |.*local-checks.sh' | cut -d: -f1 | head -1)"
+# shellcheck disable=SC2016  # the backticks are the literal table cell, not a command
+ROW_2="$(printf '%s\n' "$PREFLIGHT_SECTION" | grep -n '^| 2 | `git status`' | cut -d: -f1 | head -1)"
+assert_true "PREFLIGHT step table runs local checks (Step 1a) BEFORE the git status step (Step 2) — PR #191 review, Medium 1" \
+  "[ -n '$ROW_1A' ] && [ -n '$ROW_2' ] && [ '$ROW_1A' -lt '$ROW_2' ]"
+assert_true "PREFLIGHT Step 1a states it runs before Step 5's state-file creation (a failure leaves no active:true state) — PR #191 review, Medium 2" \
+  "printf '%s\n' \"\$PREFLIGHT_SECTION\" | grep '^| 1a |' | grep -q 'before.*Step 5'"
+assert_true "Resume procedure requires a passing preflight-local-checks record for the current cycle, else re-runs Step 1a — PR #191 review, Medium 2" \
+  "printf '%s\n' \"\$PREFLIGHT_SECTION\" | grep -q 'preflight-local-checks | cycle: <C>. record for the \*\*current\*\* cycle'"
+assert_true "PREFLIGHT playbook routes exit 3 (dirty tree after a pass) to Step 4" \
+  "printf '%s\n' \"\$PREFLIGHT_SECTION\" | grep -q 'exit 3 (checks passed, tree dirty afterwards) → Step 4'"
 assert_true "PREFLIGHT playbook names the declaration key preflight.local_checks" \
   "awk '/^## PREFLIGHT/{f=1;next} f && /^## /{exit} f && /preflight\\.local_checks/ {found=1} END {exit !found}' '$GUIDE_MD'"
 

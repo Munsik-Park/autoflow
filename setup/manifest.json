@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5dcdc08eb5b845f125fadf07ef2c3ae0748cb330ae759702e088ba975e1f5abd"
+      "sha256": "fd9af3a53546319909d52688cdf167d4647202f92fbaaa26de879710fb2c2e3f"
     },
     {
       "source": "docs/INDEX.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3a22e3dbce939e077f91e3340969e1a605c526d0a5329b99949d4aca29db7f6b"
+      "sha256": "0437911757a5797b640b65bd0d7e52a95f81c9cfc92a544d4d172a811305aa07"
     },
     {
       "source": "docs/design-rationale.md",
@@ -328,7 +328,7 @@
       "dest": "scripts/preflight/local-checks.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "09c4f96f1895a122da055027c3da03fa66314cbf19d674a6d76c236a2219463f"
+      "sha256": "1394c9f461f2ad347bdf1eb6274cafd3fb5074757a722fb09ad507f80c0f1ebc"
     },
     {
       "source": ".codex/review.md",
