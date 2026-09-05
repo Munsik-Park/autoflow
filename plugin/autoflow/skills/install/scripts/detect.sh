@@ -26,10 +26,19 @@
 #   - DRIFT reuses the cache's drift-check.sh and counts ONLY the FAIL lines a
 #     re-stamp of the thin root repairs — D1/D3 (installed content) and D4
 #     (installed bundle behind the marketplace clone, issue #167); line format
-#     `FAIL: <id> -- <msg>`. D2 (plugin.json version skew) and D5 (plugin cache
-#     vs clone plugin source) are filtered out: both are plugin-tier findings a
-#     stamp cannot change — D2 so a pure version bump never double-reports as
-#     content drift, D5 because its remedy is `/plugin update`, not init.sh.
+#     `FAIL: <id> -- <msg>`. D2 (plugin.json version skew), D5 (plugin cache
+#     vs clone plugin source) and D6 (spawn-policy scaffold vs the loaded agent
+#     definitions, issue #185) are filtered out: none is a finding a stamp
+#     changes — D2 so a pure version bump never double-reports as content
+#     drift, D5 because its remedy is `/plugin update`, D6 because the
+#     scaffold is target-owned and a re-stamp never overwrites it (its remedy
+#     is a hand edit, reported on its own axis below).
+#   - POLICY is the D6 axis, reported separately so SKILL.md can list the rows
+#     to fix in both the Step-1 (pre-stamp) and Step-4 (post-stamp) reports:
+#     POLICY_STATE = pass | fail | skip | na (target not installed, or the
+#     oracle did not run) | error (the oracle emitted no D6 line at all);
+#     POLICY_FAILS = the count of `FAIL: D6` lines; one POLICY_FINDING=<msg>
+#     line per finding (a repeated key — consumers read every occurrence).
 #   - VERSION_SKEW compares the installed manifest .version against the cache
 #     thin-root source setup/manifest.json .version (the exact file init.sh
 #     byte-copies in) — a distinct comparand from drift-check D2 (plugin.json).
@@ -79,10 +88,13 @@ else
   INSTALL_STATE=absent
 fi
 
-# ── DRIFT (D1/D3/D4 — stamp-repairable; D2/D5 plugin-tier, filtered out) ─────
+# ── DRIFT (D1/D3/D4 — stamp-repairable; D2/D5/D6 not stamp-repairable, filtered out) ─
 DRIFT_STATE=na
 DRIFT_FAILS=0
 DRIFT_FIRST=
+POLICY_STATE=na
+POLICY_FAILS=0
+POLICY_FINDINGS=
 if [ "$INSTALL_STATE" = installed ]; then
   if [ ! -f "$DRIFT_ORACLE" ]; then
     # Deterministic degradation (no silent clean): the cache drift oracle is
@@ -103,7 +115,26 @@ if [ "$INSTALL_STATE" = installed ]; then
       # drift-check itself could not run (jq absent / manifest unreadable).
       DRIFT_STATE=error
     else
-      _nd2=$(printf '%s\n' "$_drift_out" | grep '^FAIL: ' | grep -v -e '^FAIL: D2 ' -e '^FAIL: D5 ')
+      _nd2=$(printf '%s\n' "$_drift_out" | grep '^FAIL: ' | grep -v -e '^FAIL: D2 ' -e '^FAIL: D5 ' -e '^FAIL: D6 ')
+      # D6 (issue #185) on its own axis: the spawn-policy scaffold vs the
+      # agent definitions the session loads. Not stamp-repairable (the
+      # scaffold is never overwritten), so it never moves DRIFT_STATE; the
+      # finding lines are carried verbatim for the skill to list.
+      _d6_fails=$(printf '%s\n' "$_drift_out" | grep '^FAIL: D6 ' | sed -E 's/^FAIL: D6 -- //')
+      if [ -n "$_d6_fails" ]; then
+        POLICY_STATE=fail
+        POLICY_FAILS=$(printf '%s\n' "$_d6_fails" | wc -l | tr -d ' ')
+        POLICY_FINDINGS=$_d6_fails
+      elif printf '%s\n' "$_drift_out" | grep -q '^PASS: D6'; then
+        POLICY_STATE=pass
+      elif printf '%s\n' "$_drift_out" | grep -q '^SKIP: D6'; then
+        POLICY_STATE=skip
+      else
+        # The oracle ran but emitted no D6 verdict at all: an oracle that
+        # predates the leg, or an abnormal termination before it — never
+        # read as pass.
+        POLICY_STATE=error
+      fi
       if [ -n "$_nd2" ]; then
         DRIFT_STATE=drift
         DRIFT_FAILS=$(printf '%s\n' "$_nd2" | wc -l | tr -d ' ')
@@ -115,7 +146,8 @@ if [ "$INSTALL_STATE" = installed ]; then
         # (shell syntax error, set -u abort, or a bare exit N) -> error,
         # never silent clean (mirrors the L57-58 file-absent guarantee).
         # A non-zero exit WITH a FAIL: line here can only be D2/D5-only
-        # plugin-tier skew (intentionally filtered) -> stays clean.
+        # plugin-tier skew or a D6-only scaffold finding (both intentionally
+        # filtered; D6 is reported on the POLICY axis) -> stays clean.
         if [ "$_drift_rc" -ne 0 ] \
            && ! printf '%s\n' "$_drift_out" | grep -q '^FAIL: '; then
           DRIFT_STATE=error
@@ -233,6 +265,14 @@ printf 'INSTALL_STATE=%s\n'     "$INSTALL_STATE"
 printf 'DRIFT_STATE=%s\n'       "$DRIFT_STATE"
 printf 'DRIFT_FAILS=%s\n'       "$DRIFT_FAILS"
 printf 'DRIFT_FIRST=%s\n'       "$DRIFT_FIRST"
+printf 'POLICY_STATE=%s\n'      "$POLICY_STATE"
+printf 'POLICY_FAILS=%s\n'      "$POLICY_FAILS"
+if [ -n "$POLICY_FINDINGS" ]; then
+  printf '%s\n' "$POLICY_FINDINGS" | while IFS= read -r _pf; do
+    [ -n "$_pf" ] || continue
+    printf 'POLICY_FINDING=%s\n' "$_pf"
+  done
+fi
 printf 'VERSION_INSTALLED=%s\n' "$VERSION_INSTALLED"
 printf 'VERSION_CACHE=%s\n'     "$VERSION_CACHE"
 printf 'VERSION_SKEW=%s\n'      "$VERSION_SKEW"

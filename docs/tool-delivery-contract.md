@@ -117,6 +117,16 @@ below means both tiers together.
   shipped with the bundle) rather than from the hook-only `CLAUDE_PLUGIN_ROOT`,
   so they run from the plain shell PREFLIGHT uses; each reports `SKIP`, never a
   failure, when its side is not locally resolvable. No network access. The
+  same test also checks the one artifact a re-stamp never refreshes against
+  the tool it must agree with (D6, issue #185): the target-owned
+  `.claude/autoflow/spawn-policy.json` scaffold is run through
+  `scripts/spawn-policy/spawn-policy.sh check` against the agent definitions
+  the session loads (phase-row effort equals the definition's `effort:`
+  frontmatter; every `agent_type` is shipped), and its row set is compared
+  with the clone's sample so a row the current version requires — or an
+  `agent_type` it renamed — is named before a fail-closed readout meets it.
+  A finding is a FAIL with the rows to fix listed; the remedy is a hand edit
+  of the scaffold, never a re-stamp. The
   `/autoflow:install` skill resolves the clone it detects against and stamps
   from through the same resolver — a byte-identical copy shipped inside the
   plugin, since the plugin cache carries no `scripts/lib/` — with the plugin

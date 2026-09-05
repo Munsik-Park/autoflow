@@ -161,6 +161,8 @@ on:
       - 'LICENSE'
       - 'tests/plugin/manual-scenarios-792.md'
       - 'tests/test-issue-167-drift-upstream.sh'
+      - 'tests/test-issue-185-drift-policy-leg.sh'
+      - 'plugin/autoflow/skills/install/SKILL.md'
       - 'scripts/lib/plugin-root.sh'
       - 'plugin/autoflow/skills/install/scripts/detect.sh'
       - 'setup/thin-root-layer/drift-check.sh'
@@ -292,6 +294,8 @@ on:
       - 'LICENSE'
       - 'tests/plugin/manual-scenarios-792.md'
       - 'tests/test-issue-167-drift-upstream.sh'
+      - 'tests/test-issue-185-drift-policy-leg.sh'
+      - 'plugin/autoflow/skills/install/SKILL.md'
       - 'scripts/lib/plugin-root.sh'
       - 'plugin/autoflow/skills/install/scripts/detect.sh'
       - 'setup/thin-root-layer/drift-check.sh'
@@ -520,6 +524,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-167-drift-upstream.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-167-drift-upstream.sh
+
+      - name: test-issue-185-drift-policy-leg.sh
+        id: s-test-issue-185-drift-policy-leg
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-185-drift-policy-leg.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-185-drift-policy-leg.sh
 
       - name: test-issue-150-policy-migration.sh
         id: s-test-issue-150-policy-migration

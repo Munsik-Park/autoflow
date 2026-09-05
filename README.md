@@ -262,7 +262,7 @@ Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
 After running `setup/init.sh --target <path>`:
 
 - [ ] Your project `CLAUDE.md` carries the managed `AUTOFLOW-IMPORT` shim block.
-- [ ] `sh .claude/autoflow/drift-check.sh` exits zero (installed artifacts match the manifest; the bundle and the plugin match the marketplace clone).
+- [ ] `sh .claude/autoflow/drift-check.sh` exits zero (installed artifacts match the manifest; the bundle and the plugin match the marketplace clone; the `spawn-policy.json` scaffold agrees with the loaded agent definitions and carries every row the current version requires).
 - [ ] `.claude/settings.json` pins the AutoFlow marketplace + `enabledPlugins`.
 - [ ] `CLAUDE.local.md` holds your target identity (never overwritten by `--force`).
 - [ ] `.gitignore` includes `.autoflow/issue-*.json` and `CLAUDE.local.md`.

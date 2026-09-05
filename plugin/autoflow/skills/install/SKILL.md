@@ -86,6 +86,24 @@ written):
   surface it, do not treat it as clean.
 - **Version skew**: if `VERSION_SKEW=yes`, note that a re-stamp will move the
   thin-root from `VERSION_INSTALLED` to `VERSION_CACHE`.
+- **Spawn-policy scaffold (drift-check D6, issue #185)**: `POLICY_STATE`
+  (`pass` / `fail` / `skip` / `na` / `error`). The scaffold
+  `.claude/autoflow/spawn-policy.json` is target-owned — a stamp creates it
+  only when absent and **never overwrites it** — so this axis is reported on
+  its own, not as drift a re-stamp repairs. On `fail`, list **every**
+  `POLICY_FINDING=` line verbatim (there is one per row to fix: an effort that
+  differs from the loaded agent definition's `effort:` frontmatter, an
+  `agent_type` the current version no longer names, or a `phases` /
+  `workflow_sites` row the current version requires and the scaffold lacks)
+  and state the remedy: edit the named rows by hand to the loaded definition's
+  values, and add each missing row from the cache's sample
+  (`$PLUGIN_CACHE_ROOT/.claude/autoflow/spawn-policy.json`); model values and
+  `workflow_sites` effort are the target's own and are not findings. Because
+  the cache's oracle ran this leg, the list already reflects the rows the
+  stamp about to be confirmed will leave stale. On `skip`, say what could not
+  be resolved (the oracle's `SKIP: D6` line names it — typically no installed
+  plugin to read definitions from) and that PREFLIGHT will re-run the check.
+  On `error`, surface it — never read it as clean.
 - **Derived identity** (display-only): `ORG` / `REPO` / `DEFAULT_BRANCH` /
   `TOPOLOGY`. Empty fields were omitted on purpose (non-GitHub / no remote) —
   do not ask the user for them.
@@ -192,6 +210,14 @@ presence-only). Map the exit code:
 CLAUDE_PROJECT_DIR="$TARGET_ROOT" sh "$TARGET_ROOT/.claude/autoflow/drift-check.sh"
 ```
 
-**f. Report the drift-check result and guide the user to commit.** Do NOT
-commit on their behalf — the target owns its version record via its own commits
-(R1). End here.
+**f. Report the drift-check result and guide the user to commit.** Report the
+`RESULT:` line and every `FAIL:` / `WARN:` line. Include the **D6** verdict
+explicitly (the `PASS: D6` / `FAIL: D6` / `SKIP: D6` lines): a `FAIL: D6`
+after a stamp is expected whenever the scaffold pre-dated this plugin version,
+since the stamp did not touch it — list each `FAIL: D6 -- ` line as a row to
+fix and repeat the remedy from Step 1 (edit the named rows to the loaded
+definition's values; add each missing row from the cache's sample at
+`$PLUGIN_CACHE_ROOT/.claude/autoflow/spawn-policy.json`). A D6 FAIL is a
+PREFLIGHT stop condition, so the user should fix it before the first cycle;
+it is not a reason to re-stamp. Do NOT commit on their behalf — the target
+owns its version record via its own commits (R1). End here.
