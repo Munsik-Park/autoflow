@@ -255,16 +255,20 @@ proceed with the relay directly (§7, ADR-0023 D2), so the design below is kept 
 **effect record** of the change — the issue #146 form — with step 0 as an implementation
 precondition rather than a decision gate.
 
-**Arms.** Arm 0 — the script at HEAD (control). Arm A2 — persistent anonymous participants
-relayed by the orchestrator, carrying the VERIFY-scope sentence (option B) in their prompt.
-Arm B alone (the one-shot script with the sentence) is optional: it isolates the sentence's
-share of the effect and is worth one run if the operator wants that split. A1 is not run.
+**Arms.** Arm 0 — the script at HEAD (control). Arm relay — persistent participants relayed by
+the orchestrator in the realization step 0 selects (A2, or A1 on a miss), carrying the
+VERIFY-scope sentence (option B) in their prompt. Arm B alone (the one-shot script with the
+sentence) is optional: it isolates the sentence's share of the effect and is worth one run if
+the operator wants that split. A1 is never run as a separate arm alongside A2.
 
 **Step 0 (before the relay is implemented).** One anonymous `general-purpose` spawn on a small model, outside any
 cycle, told to end with a nonce and call no tool; resume it twice by agent ID with a new nonce
 each time; record whether each reply reaches the orchestrator as a task notification carrying
 the text — the issue #168 procedure (`tests/manual/issue-42-manual-scenarios.md` > M1) with the
-name replaced by the ID. A miss means A2 has no delivery path; the pilot stops at arm B.
+name replaced by the ID. A miss means A2 has no delivery path: the realization falls back to A1
+(ADR-0023 D2 — the hook exception for the two participants and the ADR-0017 Q3 partial supersede
+noted there), the decision to relay is unchanged, and the effect record below runs on whichever
+realization step 0 selected.
 
 **Target and controls.** The 2026-09-05 input (issue #2's `.autoflow/issue-2-*.md`) was not
 preserved after the session, so the baseline is **produced in-cycle, not retrieved** — the
@@ -276,7 +280,7 @@ target is the next issue that reaches ARCHITECT, or issue #2 re-derived through 
 
 **Metrics** (aggregation committed under `scripts/`, §1.3 method):
 
-| Metric | Definition | Arm A2 addition |
+| Metric | Definition | Relay arm addition |
 |---|---|---|
 | Calls | distinct `requestId` per sub-agent transcript, summed | plus the orchestrator's relay turns, counted separately from the session transcript |
 | Reads | `Bash` `tool_use` count; the paths read by ≥ 8 agents | per participant across the whole discussion |
