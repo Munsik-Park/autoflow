@@ -1,0 +1,3 @@
+{"type":"user","timestamp":"2026-09-05T10:00:00.000Z","message":{"role":"user","content":"resolve issue 179"}}
+{"type":"assistant","timestamp":"2026-09-05T10:00:01.000Z","requestId":"req_1","message":{"id":"msg_1","role":"assistant","usage":{"input_tokens":10,"cache_creation_input_tokens":100,"cache_read_input_tokens":0,"output_tokens":5},"content":[{"type":"text","text":"turn 1 — further: yes"}]}}
+{"type":"user","timestamp":"2026-09-05T10:00:02.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"turns=4\nlast=test\nended=true\nreports=-\nreports_missing=dev,test\nnext=report\n"}]}}

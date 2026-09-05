@@ -1022,8 +1022,9 @@ _assert_fold "a genuine trailing blank logical line is preserved, not silently d
 #     on the row (`red` -> `autoflow-tester`, a SINGLETON admitted set, so the
 #     edit provably moves the verdict);
 #   - a spawn whose `subagent_type` the policy admits NO models for at all
-#     (`autoflow-planner`, `claude-code-guide`) draws NO advisory line, at
-#     exit 0, distinct from the mismatch case above.
+#     (`claude-code-guide`, a research type no phase row models; until issue
+#     #179 `autoflow-planner` was the other such type) draws NO advisory line,
+#     at exit 0, distinct from the mismatch case above.
 # Uses the $PASSING fixture already defined above (GATE:PLAN passed) so the
 # testing-role spawn clears the score gate and the advisory path is reached.
 # =============================================================================
@@ -1039,14 +1040,27 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-run_hook_out 0 "declared planner (policy_unmapped_agent_types) + any model -> allowed, no advisory" \
-  "$ACTIVE" "$(agent_json 'autoflow-planner' 'synthesize the plan' 'haiku')"
+run_hook_out 0 "declared research type (claude-code-guide, modelled by no phase row) + any model -> allowed, no advisory" \
+  "$ACTIVE" "$(agent_json 'claude-code-guide' 'explain the hook' 'haiku')"
 if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING'; then
-  echo "  FAIL: advisory line drawn for autoflow-planner, whose admitted model set is empty -- got: $HOOK_ERR"
+  echo "  FAIL: advisory line drawn for claude-code-guide, whose admitted model set is empty -- got: $HOOK_ERR"
   FAIL=$((FAIL + 1))
 else
-  echo "  PASS: no advisory line for autoflow-planner (empty admitted set -> silence, not noise)"
+  echo "  PASS: no advisory line for claude-code-guide (empty admitted set -> silence, not noise)"
   PASS=$((PASS + 1))
+fi
+
+# Issue #179: autoflow-planner is now governed by the two ARCHITECT relay-participant
+# rows, so a model outside that set draws the same advisory as any autoflow-* type
+# (still never a denial) -- the advisory keys on the admitted SET, not on provenance.
+run_hook_out 0 "declared planner + model outside the participant rows' admitted set -> allowed, advisory drawn" \
+  "$ACTIVE" "$(agent_json 'autoflow-planner' 'open the relay' 'haiku')"
+if printf '%s' "$HOOK_ERR" | grep -qE 'WARNING.*(advisory|NOT blocked)'; then
+  echo "  PASS: autoflow-planner now draws the advisory on a model outside its admitted set (issue #179 rows)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no advisory line for autoflow-planner although the policy now models it -- got: $HOOK_ERR"
+  FAIL=$((FAIL + 1))
 fi
 
 run_hook_out 0 "declared claude-code-guide research spawn + any model -> allowed, no advisory" \

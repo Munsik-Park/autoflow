@@ -88,7 +88,12 @@ version bump your obligation is to run
 a scaffold is never refreshed for you. Issue #166 renamed the architect
 deliberation's `workflow_sites` rows to `dev-turn` / `test-turn` / `scribe` /
 `ledger` and removed `deliberation_caps`, so a target scaffold still carrying the
-former rows fails closed at its next ARCHITECT until it is edited. `check` validates the config's agent types
+former rows fails closed at its next ARCHITECT until it is edited; issue #179 then
+moved the discussion out of the workflow, so the `architect-deliberation` rows are
+`scribe` / `ledger` only and two new `phases` rows —
+`architect-dev-participant` / `architect-test-participant` — govern the relay
+participants (a scaffold lacking them fails the readout at the first ARCHITECT
+spawn). `check` validates the config's agent types
 against the agent definitions the session actually loads: `.claude/agents/` when
 that directory holds `autoflow-*.md` files (the framework repository, or a target
 carrying its own copies), otherwise the installed plugin's `agents/` — resolved

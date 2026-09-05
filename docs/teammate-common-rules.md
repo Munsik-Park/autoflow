@@ -129,7 +129,7 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 | Report to orchestrator | the spawn's return value | completion, escalation — body to `.autoflow/*`, return an anchor + one-line summary |
 | Mark task done | `TaskUpdate(status: "completed")` | then check `TaskList` |
 | Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
-| Discuss with another role | not available | a deliberation is delegated to a facilitator `Workflow` (below), never held between spawns |
+| Discuss with another role | not available | a deliberation is delegated (below): at ARCHITECT to the orchestrator's relay of two persistent participants over a transcript file, at VERIFY to a facilitator `Workflow` — never held between ordinary spawns |
 
 **Message economy** (issue #136, discharged structurally by the spawn-mode migration). The #136
 measurement priced every named-teammate message as a context re-write. With every role an anonymous
@@ -138,21 +138,26 @@ prompt, the report travels once in the return value, and no ACK, HOLD/GO, or idl
 exists. The measurement itself is retained at `docs/adr/0017-teammate-removal-feasibility.md` >
 Notes > C8.
 
-**Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the discussion
-runs inside an isolated **`Workflow`** (the facilitator). The Developer-AI and Test-AI
-run as in-script workflow sub-agents, their round-by-round exchange stays in workflow
-variables, and only a single structured result returns to the orchestrator. See
+**Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the orchestrator
+never receives the round-by-round exchange. At **ARCHITECT** the Developer AI and the
+Test AI are two persistent participants (anonymous direct spawns of `autoflow-planner`)
+that the orchestrator wakes in alternation by agent ID; every turn and each report is
+appended to `.autoflow/issue-{N}-architect-transcript.md` and the participant returns one
+line, and a Record **`Workflow`** then writes the artifacts from that file (ADR-0023). At
+**VERIFY** the self-checks run as in-script sub-agents of an isolated `Workflow`. In
+both, only a single structured result returns to the orchestrator. See
 [`teammate-contracts.md`](teammate-contracts.md) > Facilitator
 and [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) >
 Deliberation Isolation.
 
 ### Result delivery path by spawn mode
 
-Every role is an anonymous direct spawn, so there is exactly one delivery path.
+Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's final text — whether the spawn is answering its prompt or a later wake.
 
 | Spawn mode | Where the final turn text goes | Required delivery action |
 |---|---|---|
 | anonymous direct (`subagent_type`) — the only mode | the spawn's return value (sync) or a task notification (background) | none — the final text is the report; write the body to `.autoflow/*` and return an anchor + one-line summary |
+| the same spawn **resumed by agent ID** (`SendMessage`, no `name`) — the ARCHITECT relay participants only (ADR-0023 D2) | a task notification of the resumed spawn, its final text verbatim in the `result` field | none — the final text is one line (`turn <n> — further: <yes|none>`); the turn body goes to the transcript file, never to the return |
 
 **Why the named mode is still not used — cost and consistency, not delivery correctness.** A named spawn is a persistent, resumable teammate: the runtime launches any spawn carrying `name` as one, and a later `SendMessage` re-wakes it from its transcript. The grounds for keeping every role anonymous and direct are:
 
@@ -161,6 +166,8 @@ Every role is an anonymous direct spawn, so there is exactly one delivery path.
 | Wake cost — a persistent teammate re-writes context it had already read on every wake | ADR-0017 > Notes > C8 (issue #136): 16–43% of agent cost across two real cycles. Re-confirmed by the #168 probe below: a warm wake 57 s after the previous turn, inside the 5-minute cache TTL, re-wrote 25.6K of a 48.0K-token prefix (53%) — the wake message itself changes the prefix — and a cold wake 14 min 35 s later, past the TTL, re-wrote the whole 48.2K-token prefix (100%) | current |
 | No offsetting benefit | ADR-0021 (C7 pilot): direct-spawn VERIFY step 3/4 detection `EQUAL_OR_BETTER` than the named baseline (sample of 3, fixture-based) | current |
 | Consistency — one delivery path (the return value), one declaration channel (`subagent_type`) | ADR-0017 Q3; the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle | design choice |
+
+**Anonymous resume by agent ID, measured (Claude Code 2.1.261, 2026-09-05, issue #179 step 0).** Outside a cycle, one anonymous `general-purpose` spawn (Haiku 4.5, no `name`) was told to end with a nonce line and to call no tool; it was then resumed twice by `SendMessage` to its agent ID, each time with a new nonce (44 s and 55 s after the previous answer, under `subagentPromptCacheTtl: 1h`). All three times the final text **reached the orchestrator** as the task notification of that spawn, verbatim in its `result` field (3/3, no `SendMessage` from the spawn). Per-turn usage from the spawn's transcript (`message.usage`): turn 1 — cache write 44,593, cache read 0; wake 1 — cache read 44,593, cache write 190; wake 2 — cache read 44,783, cache write 159. On this path and under this TTL the wake re-wrote only the new message; the #168 re-write below was measured on the **named** path at the 5-minute TTL. This is the delivery precondition ADR-0023 D4 set for the relay's A2 realization, and it held.
 
 **Delivery re-measured (Claude Code 2.1.260, 2026-09-04, issue #168).** Outside a cycle, one named spawn (`name: probe-168`, `general-purpose`, Haiku 4.5) was told to end with a nonce line and to call no tool and no `SendMessage`; it was then re-woken twice by `SendMessage`, each time with a new nonce — once inside the 5-minute cache TTL and once past it. All three times the final text **reached the lead**: it arrived as the teammate's `idle_notification` with the text verbatim in its `result` field, injected into the lead's conversation as a turn at the lead's next turn boundary (3/3, no `SendMessage` from the spawn). Per-turn usage from the spawn's transcript (`message.usage`, de-duplicated by `message.id`): turn 1 — cache write 47,691, cache read 0; turn 2 (warm wake, +57 s) — cache read 22,366, cache write 25,626; turn 3 (cold wake, +14 min 35 s) — cache read 0, cache write 48,216. Output was 197 tokens on turn 1 and a few tokens on each wake — the cost of a wake is the prefix, not the answer. The #40 loss below is therefore a property of the runtime of that time, not of the named mode as such, and the single-mode rule no longer rests on it. Procedure: `tests/manual/issue-42-manual-scenarios.md` > M1.
 
@@ -175,18 +182,22 @@ The single mode applies to every role; the per-role table is [`CLAUDE.md`](../CL
 The rules below govern every multi-AI discussion. They prevent groundless agreement
 and force grounded judgement. The orchestrator's `CLAUDE.md` references this section
 as the canonical Discussion Protocol. In facilitated deliberation phases (ARCHITECT,
-VERIFY cause-branch) this protocol is driven inside an isolated `Workflow` (the
-facilitator) and only a single result returns to the orchestrator — the protocol
-itself is unchanged; what differs is that the Developer-AI/Test-AI run as in-script
-workflow sub-agents rather than as orchestrator teammates (see Communication — Agent
-Teams above).
+VERIFY cause-branch) this protocol is driven outside the orchestrator's context — at
+ARCHITECT between two persistent participants over a transcript file the orchestrator
+relays, at VERIFY inside an isolated `Workflow` — and only a single result returns to
+the orchestrator; the protocol itself is unchanged; what differs is that the
+Developer-AI/Test-AI are not orchestrator teammates (see Communication — Agent Teams
+above).
 
 **Response process**:
 
 1. **UNDERSTAND** — restate the other party's proposal in concrete terms (a bare
    "I understand" is not acceptable).
 2. **VERIFY** — actually **read** the relevant source files, schemas, and config.
-   Memory alone is not enough.
+   Memory alone is not enough. Scope over a shared transcript (ADR-0023 D1): a fact
+   the transcript cites with a `path:line` (or a command and its output) is verified
+   for both participants; a participant reads a file to ground a claim it is making
+   or to dispute a cited one — not to re-verify what either side already anchored.
 3. **EVALUATE** — assess on at least two of:
    - Feasibility — is this possible with the current code/infrastructure?
    - Fit — does it follow existing patterns, naming, and layering?

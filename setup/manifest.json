@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bad1a4f6f43adde1062c7f1c9ec181531b6756f3344fbac16253660f8b6fff2f"
+      "sha256": "5bf8f33aabe55916c4bf63d7383e90109b5807cccd77fb65495fe85c8a4a15ec"
     },
     {
       "source": "docs/INDEX.md",
@@ -97,28 +97,28 @@
       "dest": ".claude/autoflow/docs/adr/0023-deliberation-participant-lifetime.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2c3233f22c5fde88285a45ae1a8fac63313fbe74f95a3e9a8e349badb002f85c"
+      "sha256": "2d78a651e107b852297b8be7e25d9a0bea2bcdaef7e1e31b5095dd91f2a4d13b"
     },
     {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bdb5820a99e93b1dfbeffbef5bab44263030ac5dd270ab649b35a23aaa64f6df"
+      "sha256": "61063c59597f40cc947845bfe375d2a7c1cb97bbc52e0a8e91746a3362aa19d6"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6d79d1c1f53636ff5664e1b043927b78863e3e323dc54354e5997682e157b293"
+      "sha256": "488e2753d8beb91c64ae144943337ba8ee6ab029322a74190cf757596d0d6019"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "081f22d8031bed0d3987d8101b71e64ae835e6bdd67e049490a6d4e0c68852e8"
+      "sha256": "e9d7e3ce44987f06aae61fec064203f26f18068d3f773ef646d51f336f95b77d"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -209,21 +209,21 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "741d5dcc94b791bb596a66c9db79ebbd1ad62d54b12b66047325eaf9b81eb3df"
+      "sha256": "dc6ed57a092c1816f382513233d68aa5e9b5b248b01ebe386d554256dd7b0f9c"
     },
     {
       "source": "docs/teammate-common-rules.md",
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "aee14290248bdb902f1d6b4e70d42517f84f27c9d571be18592bc33d798740e2"
+      "sha256": "ba24410f2d41ee034fcb016eac83537444f828b2d6b736838fdd4db39bed4feb"
     },
     {
       "source": "docs/teammate-contracts.md",
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bd979795e929bdc0455a04ad6c403e60b8a8dbab781ceb64481b8e49ffa52791"
+      "sha256": "63d752760eb747c2fb922470d21fa345ba3276b91ebecc5cd2e8a09ac2e6bae8"
     },
     {
       "source": "docs/title-guide.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "90e6c8155567558ef61adea5dc824b39e81d35325b187f1bd5c3657c95807744"
+      "sha256": "c20cb4233ca772f7d59643bd63fb068b6163f7189d580ddaf88d2d81d8c4d84b"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -366,6 +366,13 @@
       "sha256": "70ef41f7c8d413bd6465bf1ec2e5a1b97028651621fdb71b4ce06953bbdd39fc"
     },
     {
+      "source": "scripts/architect/relay-state.sh",
+      "dest": "scripts/architect/relay-state.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "1a89c9b2f3e45e9e4ffac0b8554bab5e16b52bc2f31cd12acaed270ee4c3149e"
+    },
+    {
       "source": "scripts/issue/create-issue.sh",
       "dest": "scripts/issue/create-issue.sh",
       "tier": "root-layer",
@@ -377,7 +384,7 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "b8d2e5a74da251119c6e6b5610580238bc38f51bc44e986b6d0b23bfd932a539"
+      "sha256": "60367804d5a778b6bb2bf2a74c17f51c0c88a362a12fb59cd83b29b12b432ede"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",

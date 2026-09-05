@@ -5,7 +5,9 @@
 Accepted — operator decision of 2026-09-05 (issue #177 session): the ARCHITECT participants are kept
 alive for the length of the discussion and the orchestrator wakes them in turn. The review had
 proposed gating this on a pilot; the operator chose to proceed directly, and the measurement in D4
-is kept as an effect record. Implementation is the follow-on issue named in the review §7.
+is kept as an effect record. **Implemented by issue #179 (2026-09-05)** in the A2 realization —
+the step-0 probe of D4 delivered 3/3 — with the realization changes of D3 made; the step-0 record
+and the effect record are in *Implementation record* below.
 
 ## Context
 
@@ -60,11 +62,11 @@ A2, since the operator's decision is the relay itself, not the addressing form.
 | Record | Standing after this ADR |
 |---|---|
 | ADR-0017 Q3 (one declaration channel, `subagent_type`) | **Not superseded.** A2 declares through `subagent_type` at spawn; resumption by agent ID adds no channel. A1 would have superseded it, and is rejected. |
-| CLAUDE.md > *Spawn mode by role lifetime* ("no role holds a lifetime spanning phases") | **Not superseded.** A relayed participant lives inside one phase. The table gains a within-ARCHITECT row (the follow-on issue); the cross-phase rule stands for every role. |
+| CLAUDE.md > *Spawn mode by role lifetime* ("no role holds a lifetime spanning phases") | **Not superseded.** A relayed participant lives inside one phase. The table gained a within-ARCHITECT row (issue #179); the cross-phase rule stands for every role. |
 | The hook's name-carrying-payload denial | **Unchanged** under A2. Touched only if the A1 fallback in D2 is taken. |
 | ADR-0021 (C7 `EQUAL_OR_BETTER`, C8 cost) | **Stands.** It compared named vs direct spawns across phases; nothing here re-measures detection. Its C8 cache reading is corrected by constraint 3: the warm-wake "saving" is the static prefix a fresh spawn also gets. |
 | `docs/design-rationale.md` > Decision 8 | **The rule stands; its realization clause is superseded for the ARCHITECT participants.** Isolation of the orchestrator from round-by-round prose is kept and is required of the relay (the isolation check in D4). The clause that binds the contract to the `Workflow` as the single realization that "enforces the relay order, the two-consecutive-`done` termination and the isolated report return in code" no longer holds for ARCHITECT: relay order and the end condition are computed by a decidable-state script over the transcript file and obeyed by the orchestrator's procedure. The VERIFY cause-branch keeps its `Workflow`. |
-| `docs/teammate-contracts.md` > Facilitator > *Realization — the `Workflow` tool (single supported mechanism)*; CLAUDE.md > Deliberation Isolation `[MUST]` (`Workflow`, not a nested team) | **Amended by the follow-on issue**: the orchestrator relay is the ARCHITECT realization; the `Workflow` remains the VERIFY cause-branch realization. The nested-team rejection stands. |
+| `docs/teammate-contracts.md` > Facilitator > *Realization — the `Workflow` tool (single supported mechanism)*; CLAUDE.md > Deliberation Isolation `[MUST]` (`Workflow`, not a nested team) | **Amended by issue #179**: the orchestrator relay is the ARCHITECT realization (Discuss + Report), the `architect-deliberation` `Workflow` is its Record phase, and the `Workflow` remains the VERIFY cause-branch realization. The nested-team rejection stands. |
 | Issue #166 (form: fixed prompts, relay, conclusion report, participants' own end) | **Kept** by D1 and D2. |
 | Issue #168 (name denial rests on cost and consistency, not delivery) | **Kept**; constraint 3 removes the cache half of the cost ground for the deliberation participants specifically; the call-count effect is what D4 records. |
 
@@ -144,13 +146,45 @@ adoption gate. The record is appended to this ADR.
   > Spawn mode by role lifetime.
 - Upstream: `anthropics/claude-code#91971` (comment of 2026-09-04, the wake re-write
   measurement).
-- Follow-on issue: the review §7 lists the scope of the single implementation issue this decision
-  hands to.
+- Follow-on issue: #179 (the review §7 scope) — `scripts/architect/relay-state.sh`,
+  `scripts/architect/isolation-check.sh`, `scripts/architect/deliberation-metrics.py`, the
+  Record-only `.claude/workflows/architect-deliberation.js`, the participant prompt in
+  `.claude/agents/autoflow-planner.md`, the `architect-dev-participant` /
+  `architect-test-participant` policy rows, the procedure at `docs/autoflow-guide.md` > ARCHITECT
+  > *Relay procedure*, and `tests/test-issue-179-relay-state.sh`.
 
 ## Notes
 
 - Status was set to `Accepted` on the operator's decision in the issue #177 session
   (2026-09-05), per `docs/adr/README.md` > Status Values. The realization changes in D3 are made
   by the follow-on implementation issue; the effect record in D4 is appended here when it exists.
-- Numbers in this record are the review's; the review is the single home of the measurement and
-  its method, and this record does not restate its tables.
+- Numbers in the sections above are the review's; the review is the single home of the baseline
+  measurement and its method, and this record does not restate its tables. The *Implementation
+  record* below carries the numbers issue #179 produced with the committed aggregation script.
+
+## Implementation record (issue #179)
+
+### Step 0 — delivery precondition (D4), Claude Code 2.1.261, 2026-09-05
+
+One anonymous `general-purpose` spawn (Haiku 4.5, `model: haiku`, no `name`), outside any cycle,
+told to end with a nonce line and to call no tool; resumed twice by `SendMessage` to its agent ID
+with a new nonce each time. `subagentPromptCacheTtl: 1h` (user settings);
+`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.local.json`, unused by this path.
+
+| Step | Sent (UTC) | Answer (UTC) | Reached the orchestrator as | cache read / write | output |
+|---|---|---|---|---|---|
+| spawn (turn 1) | 05:09:24 | 05:09:26 | task notification, `result` = the nonce line verbatim | 0 / 44,593 | 4 |
+| wake 1 (+44 s) | 05:10:08 | 05:10:10 | task notification of the same spawn, `result` verbatim | 44,593 / 190 | 82 |
+| wake 2 (+55 s) | 05:11:03 | 05:11:05 | task notification of the same spawn, `result` verbatim | 44,783 / 159 | 1 |
+
+Delivery 3/3 → realization **A2** (anonymous, resumed by agent ID); the A1 fallback was not taken,
+so the gate hook's name denial and ADR-0017 Q3 are untouched, as D3 anticipated. Wake cost on this
+path: each wake wrote only the new message and read the whole prefix from cache; constraint 3 of
+the review (the ≈ 22K-static-prefix re-write) was measured on the named path at the 5-minute
+TTL and did not reproduce here — recorded as a data point at `tests/manual/issue-42-manual-scenarios.md`
+> M1 and `docs/teammate-common-rules.md` > Result delivery path by spawn mode. Procedure and raw
+usage: issue #179's session; the same probe re-runs by the M1 steps with the name replaced by the ID.
+
+### Effect record (D4) — arm 0 vs arm A2
+
+<!-- EFFECT-RECORD -->
