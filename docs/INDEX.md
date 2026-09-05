@@ -41,12 +41,13 @@ not replace them.
 | [Reviewer Backend Contract](reviewer-backend.md) | HANDOFF external-reviewer backend abstraction: inputs/obligations, codex default + `claude -p` opt-in table, config location, per-backend oracle, isolation basis (issue #979). |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt (issue #96). |
 | [Security Checklist](security-checklist.md) | Security review checklist for this host scope. |
+| [Design Review — Deliberation Participant Lifetime](design-reviews/issue-177-deliberation-participant-lifetime.md) | Measurement, constraints, option comparison and pilot design behind ADR-0023 — the ARCHITECT deliberation's per-turn respawn vs orchestrator-relayed persistent participants (issue #177). |
 
 ## Quick Routing
 
 | If the issue touches... | Read first |
 | --- | --- |
-| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/design-rationale.md`, `docs/phases/analysis.md`, `docs/adr/0016-adr-conformance-gate-scoring.md`, `docs/adr/0017-teammate-removal-feasibility.md`, `docs/adr/0018-verification-depth-justification.md`, `docs/adr/0019-scope-fit-verification-policy.md`, `docs/adr/0020-acceptance-criterion-authority.md` |
+| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/design-rationale.md`, `docs/phases/analysis.md`, `docs/adr/0016-adr-conformance-gate-scoring.md`, `docs/adr/0017-teammate-removal-feasibility.md`, `docs/adr/0018-verification-depth-justification.md`, `docs/adr/0019-scope-fit-verification-policy.md`, `docs/adr/0020-acceptance-criterion-authority.md`, `docs/adr/0023-deliberation-participant-lifetime.md` |
 | Sub-repo implementation (multi-repo instances) | `docs/repo-boundary-rules.md` |
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Filing a new issue | `docs/issue-proposal.md` |
