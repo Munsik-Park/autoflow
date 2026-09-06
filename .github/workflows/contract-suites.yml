@@ -71,6 +71,7 @@ on:
       - 'scripts/issue/create-issue.sh'
       - 'scripts/ledger/ledger-entry-id.sh'
       - 'scripts/preflight/check-review-backend.sh'
+      - 'scripts/preflight/local-checks.sh'
       - 'scripts/review/codex-review-pr.sh'
       - 'scripts/review/lib/claude-isolation.sh'
       - 'scripts/review/lib/review-config.sh'
@@ -163,6 +164,7 @@ on:
       - 'tests/plugin/manual-scenarios-792.md'
       - 'tests/test-issue-167-drift-upstream.sh'
       - 'tests/test-issue-185-drift-policy-leg.sh'
+      - 'tests/test-issue-181-preflight-local-checks.sh'
       - 'plugin/autoflow/skills/install/SKILL.md'
       - 'scripts/lib/plugin-root.sh'
       - 'plugin/autoflow/skills/install/scripts/detect.sh'
@@ -205,6 +207,7 @@ on:
       - 'scripts/issue/create-issue.sh'
       - 'scripts/ledger/ledger-entry-id.sh'
       - 'scripts/preflight/check-review-backend.sh'
+      - 'scripts/preflight/local-checks.sh'
       - 'scripts/review/codex-review-pr.sh'
       - 'scripts/review/lib/claude-isolation.sh'
       - 'scripts/review/lib/review-config.sh'
@@ -297,6 +300,7 @@ on:
       - 'tests/plugin/manual-scenarios-792.md'
       - 'tests/test-issue-167-drift-upstream.sh'
       - 'tests/test-issue-185-drift-policy-leg.sh'
+      - 'tests/test-issue-181-preflight-local-checks.sh'
       - 'plugin/autoflow/skills/install/SKILL.md'
       - 'scripts/lib/plugin-root.sh'
       - 'plugin/autoflow/skills/install/scripts/detect.sh'
@@ -532,6 +536,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-185-drift-policy-leg.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-185-drift-policy-leg.sh
+
+      - name: test-issue-181-preflight-local-checks.sh
+        id: s-test-issue-181-preflight-local-checks
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-181-preflight-local-checks.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-181-preflight-local-checks.sh
 
       - name: test-issue-150-policy-migration.sh
         id: s-test-issue-150-policy-migration

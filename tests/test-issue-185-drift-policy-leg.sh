@@ -417,7 +417,9 @@ if grep -q 'D6' "$REPO_ROOT/docs/tool-delivery-contract.md"; then
 else
   failc "DOC-CONTRACT: docs/tool-delivery-contract.md does not name D6"
 fi
-if awk '/^## PREFLIGHT/,/^## DIAGNOSE/' "$REPO_ROOT/docs/autoflow-guide.md" | grep -q 'D6'; then
+# One awk, no downstream `grep -q` (SIGPIPE under pipefail — see the same
+# assertion in test-issue-167-drift-upstream.sh, issue #181).
+if awk '/^## PREFLIGHT/,/^## DIAGNOSE/ { if (/D6/) found = 1 } END { exit !found }' "$REPO_ROOT/docs/autoflow-guide.md"; then
   pass "DOC-PREFLIGHT: docs/autoflow-guide.md > PREFLIGHT names D6 and its remedy"
 else
   failc "DOC-PREFLIGHT: docs/autoflow-guide.md > PREFLIGHT does not name D6"

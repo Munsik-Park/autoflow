@@ -247,6 +247,16 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 
 ---
 
+### Decision 14: PREFLIGHT Has a Call Site for the Target's Own Readiness Procedure, Not Knowledge of Any Tool
+
+**Problem.** PREFLIGHT ran only what the framework itself needs — Git clean, remote sync, bundle drift, reviewer-backend presence. A target repository's own per-clone setup step (llmroute's commit-hook installer, documented there as a required setup step) had no point at which AutoFlow would read it, so a cycle could start with the target's lint chain uninstalled; six teammate commits in llmroute #279 skipped it, and the orchestrator swept 23 files at VALIDATE step 7 (issue #181). The same class had been recorded in the target's own docs once before.
+
+**Decision.** PREFLIGHT gains one **call site**, `scripts/preflight/local-checks.sh`, that runs whatever the target declares under `preflight.local_checks[]` in its own scaffold `.claude/autoflow.local.json` — a `check` command (exit 0 = ready), an optional `repair` run once on failure and followed by a re-check — and stops fail-closed when a check does not pass. Nothing declared is a no-op, recorded as one line. The outcome goes to the ledger as an identifier-free record, never to the state file.
+
+**Why a call site and not a rule.** The defect is a target property, not a methodology gap: what "ready" means differs per repository, and encoding one repository's tool (husky, lint-staged) in the framework would be wrong for every other target. A declaration slot generalizes; a rule about hooks would not. The lint-chain obligation at commit time (`submodule-common-rules.md`) is unchanged — the call site makes the chain *installed* before the first teammate commit; it does not substitute for running it.
+
+**Why fail-closed and why the ledger.** A target that wrote a declaration meant it to run, so an unreadable declaration is an error, not an absent one — the same stance `check-review-backend.sh` takes on an unreadable backend config. The record is a ledger line rather than a state-file field because the hook reads the state file as gate input and the ledger only advisorily: the new surface must add no gate and no schema change (issue #181 requirement 3).
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:
