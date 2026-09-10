@@ -161,6 +161,14 @@ adoption gate. The record is appended to this ADR.
 - Numbers in the sections above are the review's; the review is the single home of the baseline
   measurement and its method, and this record does not restate its tables. The *Implementation
   record* below carries the numbers issue #179 produced with the committed aggregation script.
+- **Superseding note (2026-09-11, operator decision) — the per-cycle isolation check is removed.**
+  `scripts/architect/isolation-check.sh` was the tool for D4's effect record, a one-time measurement
+  (10/10 clean, *Effect record* below). The #179 implementation also wrote it into every cycle's
+  ARCHITECT procedure. No rule ever defined what a detected leak changes: no route, gate or
+  re-deliberation reads its result. And a check run after the cycle cannot undo a judgment already
+  made. The per-cycle step, the script and its test legs are therefore removed. The isolation rule
+  itself stands, held by the participants' prompt (D2, D3). The effect-record rows below keep the
+  script's name as the record of that one measurement.
 
 ## Implementation record (issue #179)
 

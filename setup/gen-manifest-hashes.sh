@@ -186,9 +186,9 @@ build_rows() {
   # ARCHITECT relay state (issue #179, ADR-0023 D2). The stamped
   # autoflow-guide.md > ARCHITECT > Relay procedure instructs the orchestrator to
   # run it at every turn (init / state / brief), so a target that never
-  # receives it cannot run the relay it is stamped with. The two measurement
-  # tools beside it (isolation-check.sh, deliberation-metrics.py) are the
-  # effect-record tooling and stay unshipped.
+  # receives it cannot run the relay it is stamped with. The measurement tool
+  # beside it (deliberation-metrics.py) is effect-record tooling and stays
+  # unshipped.
   emit_row "scripts/architect/relay-state.sh" \
            "scripts/architect/relay-state.sh" "root-layer" "copy" "file"
   # Composition-oracle classifier (issue #206, D7). The stamped

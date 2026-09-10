@@ -257,8 +257,7 @@ file, `.autoflow/issue-{N}-architect-transcript.md`, which every turn is appende
 phases of issue #166 are kept: **Discuss** and **Report** are the relay; **Record** is the
 `Workflow` named `architect-deliberation`, which reads the transcript file and writes the artifacts.
 The orchestrator relays but does not deliberate: it reads one line per turn and the transcript's
-decidable state, never a turn body (Deliberation Isolation, checked by
-`scripts/architect/isolation-check.sh`).
+decidable state, never a turn body (Deliberation Isolation).
 
 **Discuss** is the relay. The Developer AI opens with a design proposal, the Test AI answers it, and
 the two alternate. Each participant holds one fixed prompt for its role
@@ -322,8 +321,7 @@ notification of that resumed spawn, and nothing is polled.
    below and route the report (*Report routing*).
 6. **Isolation and lifetime.** The participants are not woken again after the Record workflow
    returns, except for a re-discussion (*Re-discussion* below). The orchestrator never reads the
-   transcript's turn bodies; after the cycle, `bash scripts/architect/isolation-check.sh <transcript>
-   <session.jsonl>` confirms none of them reached the session log (ADR-0023 D4).
+   transcript's turn bodies.
 
 **Artifact-existence check (orchestrator-side).** Before GATE:PLAN the orchestrator confirms the
 three artifacts the scribe writes exist and are non-empty — `.autoflow/issue-{N}-feature-design.md`,
