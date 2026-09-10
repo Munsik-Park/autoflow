@@ -387,6 +387,90 @@
       "sha256": "4da899a3b53100fb9474309c05f8a1b15871d9f9657b25f9c9bc0d74a2d98c62"
     },
     {
+      "source": "scripts/gate/remedy-route.sh",
+      "dest": "scripts/gate/remedy-route.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "9a6a16af1f2c606192ecabca78c7ffd41003fa5e50b045010fb580212cef4ac7"
+    },
+    {
+      "source": "scripts/review/scope-bounded.sh",
+      "dest": "scripts/review/scope-bounded.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "c3fec8ec42dd2e8115a7c3c2e924414698353b2cc65618b83fa1f4aa8912bf91"
+    },
+    {
+      "source": "scripts/test/suite-manifest.sh",
+      "dest": "scripts/test/suite-manifest.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "0e0d5ee12b913ccd1ef571c5a7329b3efd7a0e0b1233bfd30d7e7274c89d8b93"
+    },
+    {
+      "source": "scripts/test/select-suites.sh",
+      "dest": "scripts/test/select-suites.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "a9c234e4543c14fad5a9c7cc0bdae01119c253d08adc90a2376f7ca92677a707"
+    },
+    {
+      "source": "scripts/test/run-suites.sh",
+      "dest": "scripts/test/run-suites.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "acb70e3a93430891022023325353ec4b72566c42a3634e9b056c6e53d376ff9c"
+    },
+    {
+      "source": "scripts/test/suite-coverage.sh",
+      "dest": "scripts/test/suite-coverage.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "096f1df6d5aa75236401b74ced6dcbd067f7ef5877e841023363fcecb891d23d"
+    },
+    {
+      "source": "scripts/test/green-tree-store.sh",
+      "dest": "scripts/test/green-tree-store.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "b68f6da739037edfdd4dddc9d53ffed2f3bc12686c54ae9325b6cec4af12580f"
+    },
+    {
+      "source": "scripts/test/green-tree-register.sh",
+      "dest": "scripts/test/green-tree-register.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "f397c253cf449e8dbfd0efff1467a5ae4bf5d55ba9b5dfee3d32396cc13d5945"
+    },
+    {
+      "source": "scripts/test/invocation-scan.sh",
+      "dest": "scripts/test/invocation-scan.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "79869b3f07669ac2ecdebf367a63badbba2d01b3eef25499863e46419af3fb64"
+    },
+    {
+      "source": "scripts/test/check-suite-manifest.sh",
+      "dest": "scripts/test/check-suite-manifest.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "6ea57ae186f2caca1974e231929b407a96d6edb3be466498f61b6c523a969cfc"
+    },
+    {
+      "source": "scripts/test/check-suite-leaf.sh",
+      "dest": "scripts/test/check-suite-leaf.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "209da0b39fd6d3a504043a9699625a5c5fe6a3cb2197567b9ba96271e768c015"
+    },
+    {
+      "source": "tests/lib/base-ref.sh",
+      "dest": "tests/lib/base-ref.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "f9a74fb6b1b33e90a15e93791ee2b9884ad81748e0eb0bb8ed171c914c254fb7"
+    },
+    {
       "source": "scripts/issue/create-issue.sh",
       "dest": "scripts/issue/create-issue.sh",
       "tier": "root-layer",
