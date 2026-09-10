@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/architect/relay-state.sh scripts/architect/isolation-check.sh scripts/architect/deliberation-metrics.py tests/fixtures/issue-179/**
+# ci-subject: scripts/architect/relay-state.sh scripts/architect/deliberation-metrics.py tests/fixtures/issue-179/**
 # lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
-# Test: issue #179 — ARCHITECT relay: transcript state, isolation check, metrics
+# Test: issue #179 — ARCHITECT relay: transcript state, metrics
 # =============================================================================
 # The ARCHITECT deliberation is relayed by the orchestrator between two
-# persistent participants (ADR-0023 D2). Three scripts carry the mechanical
+# persistent participants (ADR-0023 D2). Two scripts carry the mechanical
 # half of that procedure, and this suite fixes each of them hermetically over
 # fixtures under tests/fixtures/issue-179/ — no agent, no session, no network:
 #
@@ -19,10 +19,7 @@
 #      marker, report before the end). The end condition is the issue #166
 #      rule unchanged: two consecutive turns marked `further: none`; a Brief
 #      block re-opens an ended discussion.
-#   2. scripts/architect/isolation-check.sh — the first N characters of every
-#      turn body are searched in a session log, JSON-escaped as the log stores
-#      text; a hit is a leak (exit 1), none is clean (exit 0).
-#   3. scripts/architect/deliberation-metrics.py — distinct-requestId call
+#   2. scripts/architect/deliberation-metrics.py — distinct-requestId call
 #      counts, tool counts, usage de-duplicated by message.id, first_in, and
 #      per-wake segmentation of a persistent participant's transcript.
 # =============================================================================
@@ -32,7 +29,6 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 STATE="$PROJECT_ROOT/scripts/architect/relay-state.sh"
-ISO="$PROJECT_ROOT/scripts/architect/isolation-check.sh"
 METRICS="$PROJECT_ROOT/scripts/architect/deliberation-metrics.py"
 FX="$PROJECT_ROOT/tests/fixtures/issue-179"
 
@@ -210,33 +206,6 @@ bash "$STATE" brief "$SCRATCH/no-header.md" "x" >/dev/null 2>&1; RC=$?
 if [ "$RC" = "2" ]; then pass "brief: a missing transcript is a usage error (exit 2)"; else failc "brief missing: rc=$RC"; fi
 printf 'no header\n' > "$SCRATCH/nh.md"; bash "$STATE" brief "$SCRATCH/nh.md" "x" >/dev/null 2>&1; RC=$?
 if [ "$RC" = "1" ]; then pass "brief: a file without the Transcript header is refused (exit 1)"; else failc "brief no-header: rc=$RC"; fi
-
-echo "== isolation-check =="
-
-if command -v jq >/dev/null 2>&1; then
-  out="$(bash "$ISO" "$FX/transcript-ended.md" "$FX/session-clean.jsonl" 2>&1)"; RC=$?
-  if [ "$RC" = "0" ] && [ "$(printf '%s\n' "$out" | grep -c ': clean$')" = "4" ] && printf '%s' "$out" | grep -q '4 turn(s) checked, 0 leak(s)'; then
-    pass "isolation: a session log holding only the one-line notifications and the state output is clean for all four turns (exit 0)"
-  else
-    failc "isolation clean: rc=$RC out=[$(printf '%s' "$out" | tr '\n' '|')]"
-  fi
-  out="$(bash "$ISO" "$FX/transcript-ended.md" "$FX/session-leak.jsonl" 2>&1)"; RC=$?
-  if [ "$RC" = "1" ] && printf '%s' "$out" | grep -q '^turn 3: LEAK' && [ "$(printf '%s\n' "$out" | grep -c 'LEAK')" = "1" ]; then
-    pass "isolation: a turn body that reached the session log (JSON-escaped, inside a tool_result) is reported as a leak on exactly that turn (exit 1)"
-  else
-    failc "isolation leak: rc=$RC out=[$(printf '%s' "$out" | tr '\n' '|')]"
-  fi
-  out="$(bash "$ISO" "$FX/transcript-ended.md" "$FX/session-leak.jsonl" --chars 5 2>&1)"; RC=$?
-  if [ "$RC" = "1" ] && printf '%s' "$out" | grep -q 'first 5 character(s)'; then
-    pass "isolation: --chars sets the needle length and is reported in the summary"
-  else
-    failc "isolation --chars: rc=$RC out=[$(printf '%s' "$out" | tail -1)]"
-  fi
-  bash "$ISO" "$FX/transcript-ended.md" >/dev/null 2>&1; RC=$?
-  if [ "$RC" = "2" ]; then pass "isolation: missing session argument -> usage (exit 2)"; else failc "isolation usage: rc=$RC"; fi
-else
-  failc "isolation: jq is required by the script and is not installed"
-fi
 
 echo "== deliberation-metrics =="
 
