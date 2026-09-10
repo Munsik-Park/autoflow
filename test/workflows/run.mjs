@@ -341,7 +341,8 @@ await test('ARCHITECT: the scribe is instructed to run the composition-oracle cl
   const p = calls.find((c) => c.label === 'scribe').prompt
   assert.ok(p.includes('scripts/architect/composition-oracle.sh'), 'the scribe prompt must name the classifier the scribe runs (D5)')
   assert.ok(p.includes('.autoflow/issue-206-verification-design.md'), 'the classifier runs over the verification design the scribe wrote (D5)')
-  assert.match(p, /Composition oracle/, 'the block the scribe records is the one the guide clause defines (the prompt cites the clause)')
+  assert.match(p, /composition-oracle block/, 'the scribe must record the determination as the one composition-oracle block (D1, D5); the pre-#206 prompt named only "Composition oracle determinations"')
+  assert.match(p, /Output artifacts > Composition oracle/, 'the block\'s grammar is cited from the guide clause that defines it, not restated (F19)')
   assert.match(p, /stdout/, 'the scribe must attach the classifier\'s stdout (D5)')
   assert.match(p, /exit status/, 'the scribe must attach the classifier\'s exit status (D5, D3-1)')
   assert.match(p, /verbatim|exactly as the shell produced/, 'both signals are attached as the shell produced them, never re-typed (D5)')

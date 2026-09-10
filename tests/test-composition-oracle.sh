@@ -30,7 +30,7 @@
 #     outside {1, 2, 126, 127}, different from each other, and paired with
 #     their own result line on every run;
 #   - the evaluated block: stdout names `base` or `round <n>`, format free;
-#   - unknown/error: stdout prints a cause, wording free.
+#   - unknown/error: stdout carries the `cause:` field, its wording free.
 # =============================================================================
 
 set -uo pipefail
@@ -39,7 +39,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CO="$PROJECT_ROOT/scripts/architect/composition-oracle.sh"
 
 PASS=0; FAIL=0; SKIP=0
-T="$(mktemp -d)"
+T="$(mktemp -d)" || { echo "mktemp failed (T)" >&2; exit 1; }
+[ -n "$T" ] && [ -d "$T" ] || { echo "mktemp returned no directory (T='$T')" >&2; exit 1; }
 trap 'rm -rf "$T"' EXIT
 
 INT_RX='^result: intersection([[:space:]].*)?$'
@@ -61,6 +62,7 @@ names_base()  { grep -qiE '(^|[^[:alnum:]_])base([^[:alnum:]_]|$)' <<<"$OUT"; }
 names_round() { grep -qiE "(^|[^[:alnum:]_])round[[:space:]]+$1([^[:alnum:]_]|$)" <<<"$OUT"; }
 no_round()    { ! grep -qiE '(^|[^[:alnum:]_])round[[:space:]]+[0-9]+' <<<"$OUT"; }
 not_round()   { ! names_round "$1"; }
+not_base()    { ! names_base; }
 eq() { [ "$1" = "$2" ]; }
 ne() { [ "$1" != "$2" ]; }
 not_generic() { case " 1 2 126 127 " in *" $1 "*) return 1 ;; esac; return 0; }
@@ -93,7 +95,7 @@ expect_unknown() {
   need "a classifying result line is on stdout" no_line "$CLS_RX"
   need "exit status is the intersection status ($S_INT)" ne "$RC" "$S_INT"
   need "exit status is the empty status ($S_EMP)" ne "$RC" "$S_EMP"
-  need "stdout prints no cause" has_line '[^[:space:]]'
+  need "stdout carries no 'cause:' field with a cause" has_line '^cause:[[:space:]]*[^[:space:]]'
 }
 
 # ---------------------------------------------------------------------------
@@ -284,6 +286,67 @@ S: none
 ```
 MD
 
+# u14–u18: each record breaks exactly one rule of the grammar's list lines
+# (label once; a declaration's ground; entries follow a label; a whitespace-free
+# identifier; every line a label or an entry). Read past that rule, each would
+# compute `empty` — the outcome AC3 forbids for an unestablished input.
+fixture u14-duplicate-label <<'MD'
+## Composition oracle
+
+```composition-oracle
+T:
+- t1 | D1
+S:
+- t9 | #27
+S: none | no settled decision names t1
+```
+MD
+
+fixture u15-declaration-blank-ground <<'MD'
+## Composition oracle
+
+```composition-oracle
+T:
+- t1 | D1
+S: none |
+```
+MD
+
+fixture u16-entry-before-labels <<'MD'
+## Composition oracle
+
+```composition-oracle
+- t1 | D1
+T:
+- t2 | D4
+S:
+- t1 | F3
+```
+MD
+
+fixture u17-identifier-with-whitespace <<'MD'
+## Composition oracle
+
+```composition-oracle
+T:
+- t1 | D1
+S:
+- t1 t9 | F3
+```
+MD
+
+fixture u18-non-entry-line <<'MD'
+## Composition oracle
+
+```composition-oracle
+T:
+- t1 | D1
+S:
+- t9 | #27
+t1 | F3
+```
+MD
+
 # ---------------------------------------------------------------------------
 # Fixtures — delta rounds (t2). The restated block is the payload of one
 # `supersedes` bullet under a Decision 15 delta heading
@@ -377,6 +440,29 @@ S:
   - t7 | F3
   - t9 |
   ```
+MD
+
+# u19: the restated round-2 block is never closed. The base block is well-formed
+# and disjoint, so a fallback to it computes `empty`; the unclosed block's own
+# lines, read as if closed, compute `intersection` t1.
+fixture u19-unclosed-latest <<'MD'
+## Composition oracle
+
+```composition-oracle
+T:
+- t1 | D1
+S:
+- t9 | #27
+```
+
+## Delta — round 2 (GATE:PLAN FAIL)
+
+- composition-oracle determination: restated in full below — supersedes the base composition-oracle determination
+  ```composition-oracle
+  T:
+  - t1 | D1
+  S:
+  - t1 | F7
 MD
 
 echo "subject: scripts/architect/composition-oracle.sh ($([ -f "$CO" ] && echo present || echo absent))"
@@ -480,6 +566,26 @@ run "$(fx u12-declaration-without-ground)"
 expect_unknown
 finish "[AC3 · t1] an empty declaration without its one-line ground is unknown/error (D2)"
 
+run "$(fx u14-duplicate-label)"
+expect_unknown
+finish "[AC3 · t1] a list labelled twice (entries, then a none declaration) is unknown/error, not the later label's reading"
+
+run "$(fx u15-declaration-blank-ground)"
+expect_unknown
+finish "[AC3 · t1] an empty declaration whose ground after '|' is blank is unknown/error (D2)"
+
+run "$(fx u16-entry-before-labels)"
+expect_unknown
+finish "[AC3 · t1] an entry before the T and S labels is unknown/error, not skipped"
+
+run "$(fx u17-identifier-with-whitespace)"
+expect_unknown
+finish "[AC3 · t1] an entry identifier containing whitespace is unknown/error, not a token that matches nothing"
+
+run "$(fx u18-non-entry-line)"
+expect_unknown
+finish "[AC3 · t1] a block line that is neither a label nor an entry is unknown/error, not skipped"
+
 # ---------------------------------------------------------------------------
 # t2: the latest block in document order, restated inside a delta round (D4, D3-3)
 # ---------------------------------------------------------------------------
@@ -503,6 +609,11 @@ finish "[AC2 · t2] the evaluated block is named by the round it sits in (round 
 run "$(fx u13-malformed-latest)"
 expect_unknown
 finish "[AC3 · t2] a malformed latest block is unknown/error, with no fallback to the earlier well-formed block"
+
+run "$(fx u19-unclosed-latest)"
+expect_unknown
+need "stdout names the base block, an earlier block than the unclosed latest one (fallback)" not_base
+finish "[AC3 · t2] an unclosed latest block is unknown/error, with no fallback to the earlier well-formed block"
 
 # ---------------------------------------------------------------------------
 # D3-2: the output attached to the artifact never parses as a block
