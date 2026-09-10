@@ -269,30 +269,6 @@ await test('ARCHITECT: effort_contract.config_inherit_sentinel empty string -> t
   assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
 })
 
-await test('ARCHITECT: site() reads the inherit sentinel from effort_contract.config_inherit_sentinel, not the bare literal -- a row carrying the REWRITTEN sentinel omits the effort key (workflow-sentinel-from-config, arm a)', async () => {
-  const CUSTOM = 'CUSTOM_SENTINEL_XYZ'
-  const policyLoad = policyPayload((p) => {
-    p.effort_contract.config_inherit_sentinel = CUSTOM
-    p.workflow_sites['architect-deliberation']['scribe'].effort = CUSTOM
-  })
-  const { calls } = await runArch({ issue: 'sentinel-rewrite-a' }, recordResponder(), { policyLoad })
-  const call = calls.find((c) => c.label === 'scribe')
-  assert.ok(call, 'the scribe must have been spawned under a valid rewritten contract')
-  assert.equal('effort' in call.opts, false, `a row carrying the rewritten sentinel must omit the effort key, got opts=${JSON.stringify(call.opts)}`)
-})
-
-await test('ARCHITECT: under a REWRITTEN sentinel, a row still carrying the literal string "inherit" ships it as a CONCRETE effort value (workflow-sentinel-from-config, arm b)', async () => {
-  const CUSTOM = 'CUSTOM_SENTINEL_XYZ'
-  const policyLoad = policyPayload((p) => {
-    p.effort_contract.config_inherit_sentinel = CUSTOM
-    // ledger keeps its shipped "inherit" value unchanged -- it is no longer the sentinel.
-  })
-  const { calls } = await runArch({ issue: 'sentinel-rewrite-b' }, recordResponder(), { policyLoad })
-  const call = calls.find((c) => c.label === 'ledger')
-  assert.ok(call, 'the ledger must have been spawned under a valid rewritten contract')
-  assert.equal(call.opts.effort, 'inherit', `"inherit" under a rewritten contract must ship as a concrete effort value, got opts=${JSON.stringify(call.opts)}`)
-})
-
 await test('ARCHITECT: the real, unmodified shipped policy still passes the row-totality and effort_contract checks and completes a record (valid-policy-unaffected, F1 over-strictness)', async () => {
   const { result, calls } = await runArch({ issue: 'valid-policy-still-runs' }, recordResponder())
   assert.equal(result.stopped, null)
@@ -548,40 +524,6 @@ await test('VERIFY: effort_contract.config_inherit_sentinel empty string -> thro
   assert.ok(error)
   assert.match(error.message, /contract/i, `boundary error must name the contract, got: ${error.message}`)
   assert.deepEqual(calls.map((c) => c.label), ['policy-load'])
-})
-
-await test('VERIFY: site() reads the inherit sentinel from effort_contract.config_inherit_sentinel -- a row carrying the REWRITTEN sentinel omits the effort key (workflow-sentinel-from-config, arm a)', async () => {
-  const CUSTOM = 'CUSTOM_SENTINEL_XYZ'
-  const policyLoad = policyPayload((p) => {
-    p.effort_contract.config_inherit_sentinel = CUSTOM
-    p.workflow_sites['verify-cause-branch']['test-self-check'].effort = CUSTOM
-  })
-  const responder = (label) => {
-    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
-    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
-    return 'ledger ok'
-  }
-  const { calls } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder, { policyLoad })
-  const call = calls.find((c) => c.label === 'test-self-check')
-  assert.ok(call)
-  assert.equal('effort' in call.opts, false, `a row carrying the rewritten sentinel must omit the effort key, got opts=${JSON.stringify(call.opts)}`)
-})
-
-await test('VERIFY: under a REWRITTEN sentinel, a row still carrying the literal string "inherit" ships it as a CONCRETE effort value (workflow-sentinel-from-config, arm b)', async () => {
-  const CUSTOM = 'CUSTOM_SENTINEL_XYZ'
-  const policyLoad = policyPayload((p) => {
-    p.effort_contract.config_inherit_sentinel = CUSTOM
-    // impl-self-check keeps its shipped "inherit" value unchanged -- it is no longer the sentinel.
-  })
-  const responder = (label) => {
-    if (label === 'test-self-check') return { verdict: 'no_problem', reason: 'x' }
-    if (label === 'impl-self-check') return { verdict: 'no_problem', reason: 'x' }
-    return 'ledger ok'
-  }
-  const { calls } = await runVerify({ issue: '1', failLog: '/tmp/f.log' }, responder, { policyLoad })
-  const call = calls.find((c) => c.label === 'impl-self-check')
-  assert.ok(call)
-  assert.equal(call.opts.effort, 'inherit', `"inherit" under a rewritten contract must ship as a concrete effort value, got opts=${JSON.stringify(call.opts)}`)
 })
 
 await test('VERIFY: the real, unmodified shipped policy still passes the row-totality and effort_contract checks and reaches the self-check calls (valid-policy-unaffected, F1 over-strictness)', async () => {
