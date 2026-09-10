@@ -741,9 +741,14 @@ fi
 echo "== AC-1 (issue #10): methodology-step scripts registered as root-layer/copy =="
 if [ -f "$MANIFEST" ]; then
   _ac1_bad=""
+  # issue #206 (D7): scripts/architect/composition-oracle.sh is the classifier
+  # the stamped guide tells every target's Record step to run. It is held here
+  # permanently because #206's real-stamp delivery check is cycle-scoped and
+  # retires with that issue.
   for _ac1_src in \
     "scripts/handoff/create-host-pr.sh" \
-    "scripts/cleanup/cleanup-issue.sh"
+    "scripts/cleanup/cleanup-issue.sh" \
+    "scripts/architect/composition-oracle.sh"
   do
     _ac1_match=$(jq -r --arg s "$_ac1_src" \
       '.artifacts[] | select(.source == $s)' "$MANIFEST" 2>/dev/null)
