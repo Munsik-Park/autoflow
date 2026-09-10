@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# scripts/gate/remedy-route.sh — late-gate FAIL re-entry routing (issue #140)
+# scripts/gate/remedy-route.sh — class-routed re-entry (issues #140, #192)
 #
 # A GATE:QUALITY / VALIDATE / INTEGRATE FAIL no longer routes to RED
-# unconditionally. The evaluator tags every failed rubric item with a
-# `remedy_class`, and this script is the single owner of the mapping from
-# that class set to the phase the cycle re-enters:
+# unconditionally, and since issue #192 neither does a HANDOFF reviewer
+# finding. The classifier tags every failed rubric item — or, at HANDOFF
+# step 6.5, every Medium+ review finding — with a `remedy_class`, and this
+# script is the single owner of the mapping from that class set to the phase
+# the cycle re-enters:
 #
 #   doc      → DOC_COMMIT  (orchestrator doc commit → selected suites → GATE:QUALITY re-score)
 #   test     → RED
@@ -19,6 +21,13 @@
 # `operator` class anywhere in the set pauses regardless of the others — an
 # unclassifiable item must not be carried along a route chosen for its
 # neighbours.
+#
+# Call sites (all four read the same mapping; each interprets the printed
+# target in its own playbook, and none reimplements the ranking):
+#   - GATE:QUALITY FAIL, VALIDATE step-1 sweep FAIL, INTEGRATE FAIL (#140)
+#   - HANDOFF step 6.5 review triage (#192) — there `ARCHITECT` alone means
+#     the full review-response cycle; `RED` / `GREEN` / `DOC_COMMIT` are the
+#     thin path (one owning role + execution verification + reviewer re-review).
 #
 # Subcommands
 #   route <class>...          print the re-entry target for the class set

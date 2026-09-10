@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fd9af3a53546319909d52688cdf167d4647202f92fbaaa26de879710fb2c2e3f"
+      "sha256": "a9f0dae2cdc3da6bad111b15ee805f52dd35e049a2f800a676b0322ec7b884f7"
     },
     {
       "source": "docs/INDEX.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "348550fd52a3f4305b1a784422a7f25f6f402a26e5a748453c610cf9fef93aa0"
+      "sha256": "d051bcb4c633175316a6cf01095a8785f575d233a2c69163136023cc6c13c5f9"
     },
     {
       "source": "docs/design-rationale.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "62daa985dcd41304447c54f1f9ea92e1615f15d3171d54eda68d6438d7dbd93d"
+      "sha256": "2a225b87499de41bf214159a8f831edbe55b9de92b5b0760f9a9b64b03762de4"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2d9de145cf657efbc2d336cf0e5b2f8275b1dbfca7016951a014a603db8f5a98"
+      "sha256": "a28e52db09be3d12b66009093736e3d5d1e8504982ab242bad82040ef6d9c1a6"
     },
     {
       "source": "docs/title-guide.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "0f97051568cba3edd55e81eb7374082b307d54fee19de6a9f1aeb291cb63458c"
+      "sha256": "643532ea493fff4f1fa5947d479b1e09dd309cb2c8a6e6f36561f9d62baeba96"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -384,7 +384,7 @@
       "dest": "scripts/architect/relay-state.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "6be24a7217b78ed9eb90a2f48b5ddc5bbcded76fc4983f9d2681e8a54f375cec"
+      "sha256": "4da899a3b53100fb9474309c05f8a1b15871d9f9657b25f9c9bc0d74a2d98c62"
     },
     {
       "source": "scripts/issue/create-issue.sh",

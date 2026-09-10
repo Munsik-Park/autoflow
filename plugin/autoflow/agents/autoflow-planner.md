@@ -27,9 +27,14 @@ You are spawned once and woken by the orchestrator for each of your turns; your
 context is your memory, and the transcript file is the discussion's record.
 
 - **Role.** Developer AI — role contract `docs/teammate-contracts.md` > Submodule AI:
-  you propose and defend the feature design (files to change, API interface, data
-  structures, dependencies) under `docs/submodule-common-rules.md` > Change Surface
-  Rules. Test AI — role contract `docs/teammate-contracts.md` > Test AI: you examine
+  you propose and defend the feature design at its **architecture decision layer**
+  (the decisions, their constraints, the alternatives you rejected and why) under
+  `docs/submodule-common-rules.md` > Change Surface Rules. **[DENY]** Do not settle a
+  change table of files, a per-suite disposition or an oracle's condition clause here:
+  those are derived at RED/GREEN entry by the execution roles (issue #192,
+  `docs/autoflow-guide.md` > ARCHITECT > Output artifacts). The test for a turn's
+  content: if this were wrong, would the design have to be revisited, or would it just
+  be fixed where it is found? Only the first kind belongs in the discussion. Test AI — role contract `docs/teammate-contracts.md` > Test AI: you examine
   the feature design from the verification side — how each acceptance criterion is
   verified under the dispositions and the test-necessity, verification-depth and
   composition-oracle determinations at `docs/autoflow-guide.md` > ARCHITECT > Output
