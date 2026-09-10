@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/adr/0018-verification-depth-justification.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a8eca8fd6e9dc554687a57598965a8032fa84acaa79ed8f232caeab2f703661c"
+      "sha256": "f3303f74a1076534e177657c3f3fb55f8c1e037590f41e5ecfc31aded377cf2b"
     },
     {
       "source": "docs/adr/0019-scope-fit-verification-policy.md",
@@ -104,14 +104,14 @@
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "61063c59597f40cc947845bfe375d2a7c1cb97bbc52e0a8e91746a3362aa19d6"
+      "sha256": "3188217130dcba506acb4e9a8fb491b0b56b31a8a86aab1c121f3b02ef354948"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "82830e83e37a268cbb0077e02016bd3aa40df9ba48879eed14277d2842b6e52d"
+      "sha256": "d3ef48a6579ca44e31bc8102e15f3030d2c9a73a93fca10e357e61fb6c89ead4"
     },
     {
       "source": "docs/design-rationale.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2a225b87499de41bf214159a8f831edbe55b9de92b5b0760f9a9b64b03762de4"
+      "sha256": "c94a055e28722b32c6cef2d5f06078328f73e1b5e9ec6f0bd07cbecd018e30ea"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ef55af1b148a1a3c623546bd0b534e506087ea6da265a19b51bcc388f3e87e08"
+      "sha256": "2c8c95e6a321ad70d094366473946346b86db02f3fdcc358f9d6006b123647d8"
     },
     {
       "source": "docs/title-guide.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "c4659d6282b36deb4b438c9d8a3badf1dc80bbf9439b2b3aba80cee6c237b0f0"
+      "sha256": "e49a739c36242cfe924ee64e8c888a63c315394e07af1443a6dd71d30dd983a6"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -384,7 +384,7 @@
       "dest": "scripts/architect/relay-state.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "4da899a3b53100fb9474309c05f8a1b15871d9f9657b25f9c9bc0d74a2d98c62"
+      "sha256": "cfeb6c338bd34f3013df740e2c3dddc14c93d1e034d79ce69ff7ec79e51b29aa"
     },
     {
       "source": "scripts/architect/composition-oracle.sh",

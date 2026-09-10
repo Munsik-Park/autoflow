@@ -390,6 +390,50 @@ await test('ARCHITECT: a rejecting ledger sub-agent is absorbed -- the report an
   assert.deepEqual(result.report, AGREED_REPORT)
 })
 
+// ---- ARCHITECT: the failure-mode column's writer (issue #198) ------------------
+// Verification design > .autoflow/issue-198-verification-design.md > row AC1 (a) (L1) and its
+// `## RED amendment`. The Record scribe is the design's sole writer (ADR-0023), and its prompt
+// enumerates the row fields it wants, so a column missing from that list is the column the scribe
+// leaves out. These tests read the prompt DELIVERED to the scribe -- the instruction, not the
+// scribe's compliance, which is the live Record run at VERIFY (tests/manual/issue-198-manual-scenarios.md).
+// A clause is located by its numbered opener ("(2) The ..."); the assertions key on what the clause
+// must direct, not on today's wording of it.
+function scribeClause(prompt, n) {
+  const start = prompt.search(new RegExp(`\\(${n}\\) The `))
+  assert.ok(start >= 0, `the scribe prompt must keep its numbered clause (${n})`)
+  const next = prompt.search(new RegExp(`\\(${n + 1}\\) The `))
+  return prompt.slice(start, next > start ? next : undefined)
+}
+
+await test('ARCHITECT: the scribe\'s verification-design instruction names the failure-mode column among its enumerated row fields, at one row per verification (#198 AC1 (a), L1)', async () => {
+  const { calls } = await runArch({ issue: '198' }, recordResponder())
+  const clause = scribeClause(calls.find((c) => c.label === 'scribe').prompt, 2)
+  assert.ok(clause.includes('.autoflow/issue-198-verification-design.md'), 'clause (2) must be the instruction that writes the verification design')
+  // The enumerated row-field list opens at the join key (D3 keeps it) and runs up to the
+  // section-level determinations that follow it; the column is named inside that list (D2).
+  const fieldsAt = clause.search(/Issue AC id/i)
+  assert.ok(fieldsAt >= 0, 'clause (2) must keep its enumerated row-field list, which opens with the Issue AC id (D2, D3)')
+  const fieldsEnd = clause.indexOf('Test necessity', fieldsAt)
+  const fields = clause.slice(fieldsAt, fieldsEnd > fieldsAt ? fieldsEnd : undefined)
+  const unmet = []
+  if (!/failure[- ]mode/i.test(fields)) unmet.push('its enumerated row fields name no failure-mode column (D2)')
+  if (!/one row (?:per|for each) verification\b/i.test(clause)) unmet.push('its row grain is not one row per verification (D1)')
+  assert.deepEqual(unmet, [], `scribe clause (2): ${unmet.join('; ')}`)
+})
+
+await test('ARCHITECT: the scribe\'s feature-design instruction no longer asks for per-layer failure modes -- a failure-mode mention in clause (1) names the verification design\'s column (#198 AC1, RED amendment)', async () => {
+  const { calls } = await runArch({ issue: '198' }, recordResponder())
+  const clause = scribeClause(calls.find((c) => c.label === 'scribe').prompt, 1)
+  assert.ok(clause.includes('.autoflow/issue-198-feature-design.md'), 'clause (1) must be the instruction that writes the feature design')
+  // D2 / F4: clause (1) only names the column or points to it. A sentence that mentions a
+  // verification layer's failure mode without naming the column, or the verification design that
+  // holds it, asks the feature design for a second statement -- the one AC1 forbids.
+  const requests = clause.split(/(?<=[.!?])\s+(?=[A-Z(])/)
+    .filter((s) => /failure[- ]modes?/i.test(s) && /verification|layer/i.test(s))
+    .filter((s) => !/column|verification[- ]design/i.test(s))
+  assert.deepEqual(requests, [], `scribe clause (1) still asks the feature design for per-layer failure modes: ${requests.join(' | ')}`)
+})
+
 // ---- ARCHITECT: the orchestrator's brief is not a workflow argument (issue #179) --
 // A re-discussion is carried by the relay: the orchestrator appends a `### Brief` block to the
 // transcript (scripts/architect/relay-state.sh brief) and re-wakes the participants. The Record

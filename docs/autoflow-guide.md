@@ -341,9 +341,10 @@ layer that has a shell.
 
 1. **Feature Design Document** (Developer-AI-led) — `.autoflow/issue-{N}-feature-design.md`, the
    **architecture decision layer** and nothing below it (issue #192): the decisions, the constraints
-   they hold under, the alternatives considered and rejected with the ground for each rejection, and
-   the failure mode each verification layer exists to catch (*Verification depth* below). The
-   deliberation stops here. Rationale: [`design-rationale.md`](design-rationale.md) > Decision 15.
+   they hold under, and the alternatives considered and rejected with the ground for each rejection.
+   It cites the verification design's `Failure mode` column (below) for the failure mode each
+   verification exists to catch, rather than stating it. The deliberation stops here. Rationale:
+   [`design-rationale.md`](design-rationale.md) > Decision 15.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
@@ -360,13 +361,13 @@ layer that has a shell.
    output. What the split removes from it is depth, not rows: `Method` names the **kind** of oracle
    a row gets, and the condition clause that implements it is RED's.
 
-| Issue AC | Acceptance criterion | Type | Kind | Method | Reason |
-|----------|----------------------|------|------|--------|--------|
-| AC1 | (criterion 1) | automated | driving | pytest / API test / etc. | — |
-| AC2 | (criterion 2) | existing-coverage | — | the schema check that already rejects this shape | the check runs on every build and fails on exactly this property |
-| AC3 | (criterion 3) | manual | — | scenario doc (delegated to user) | no automatable oracle; the behavior is observed by a person |
-| AC4 | (criterion 4) | none | — | — | absence costs nothing: the value is read from a sample file the user edits |
-| — | (criterion 5) | environment-dependent | — | introduce mock or propose design change (except where the composition-oracle clause applies) | — |
+| Issue AC | Acceptance criterion | Type | Kind | Method | Failure mode | Reason |
+|----------|----------------------|------|------|--------|--------------|--------|
+| AC1 | (criterion 1) | automated | driving | pytest / API test / etc. | the defect only this test fails on | — |
+| AC2 | (criterion 2) | existing-coverage | — | the schema check that already rejects this shape | a value of the shape this criterion forbids | the check runs on every build |
+| AC3 | (criterion 3) | manual | — | scenario doc (delegated to user) | the behavior the scenario observes breaking | no automatable oracle; the behavior is observed by a person |
+| AC4 | (criterion 4) | none | — | — | — | absence costs nothing: the value is read from a sample file the user edits |
+| — | (criterion 5) | environment-dependent | — | introduce mock or propose design change (except where the composition-oracle clause applies) | the failure the mock itself can catch (`—` on a design-change request) | — |
 
 - **`Type` is the per-criterion verification disposition**, one of
   `automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
@@ -382,6 +383,31 @@ layer that has a shell.
   criterion dropped?" into a key join rather than a reading of prose, which is what lets the
   orchestrator and the two gates put such a change in front of the operator (*Report routing*
   below).
+- **`Failure mode` holds each verification's unique failure mode**, and this bullet is the only
+  place that obligation is defined. The cell names the defect that makes the row's verification
+  fail and that no other verification catches. On an `existing-coverage` row it names what the
+  named mechanism fails on, and `Reason` says why no new layer is owed without restating that
+  failure. On an `environment-dependent` row resolved to a mock, it names the failure the mock
+  itself can catch, not the environment behavior the mock stands in for. On a composition-oracle
+  row, it names the composition-time behavior at the traced identifier that the mock-boundary check
+  does not catch (*Composition oracle* below).
+  - **Row grain** — one row per verification: a criterion verified more than one way carries one
+    row per verification under the same `Issue AC`, and every other criterion keeps its one row. A
+    verification that spans rows carries the same label in `Method` on each of them.
+  - **Compared against** — every other distinct verification in the design, and every existing
+    mechanism that fails on the same defect: an existing test, a lint rule, a schema, a compiler or
+    type check, a build or packaging check. Naming such a mechanism is the `existing-coverage`
+    disposition (*Test necessity* below).
+  - **[MUST] Owed** on `automated`, `existing-coverage`, `delivery-check` and `manual` rows, on
+    `environment-dependent` rows resolved to a mock or a manual delegation, and on composition-oracle
+    rows. `none` and design-change-request rows carry `—`.
+  - **A cell that cannot be filled** — the verification names no defect that another verification
+    or mechanism does not already catch — removes that verification from the agreement rather than
+    being argued down: undiversified duplication is over-verification, which GATE:PLAN's `Scope`
+    criterion scores as over-engineering. A composition oracle is a floor and is never removed on
+    this ground.
+  - **Effective from** — binds verification designs authored after issue #198 lands; an earlier
+    design's per-layer depth statement is not read as an empty column.
 
 - For untestable items: state the reason and the alternative (design change / manual delegation (except where the composition-oracle clause applies) / mock (same exception)).
 - Design-change request: parts of the feature design that should be revised so they become testable.
@@ -493,18 +519,15 @@ a test shape.
   Depth is justified against that risk, and this clause sets a justification form, never a quantity
   cap: no layer count, file count, or line budget, because a proxy metric invites the distortion it
   is meant to prevent (blocking a needed layer, or merging layers to dodge a count).
-- **[MUST]** Every verification layer, and every new spec file, states in one line
-  the failure mode it catches that no other layer catches. "Another layer" is any mechanism that
-  fails on that failure mode, not only another test — an existing test, a lint rule, a schema, a
-  compiler or type check, a build or packaging check all count, and naming one is the
-  `existing-coverage` disposition (*Test necessity* above).
-  A layer that cannot name one is removed from the agreement rather than argued down —
-  undiversified duplication is over-verification, which GATE:PLAN's `Scope` criterion scores as
-  over-engineering.
+- **Per-verification failure mode** — carried by the acceptance-criteria table's `Failure mode`
+  column. The column's bullet under *Output artifacts* above defines what the cell names, what it
+  is compared against and what a cell that cannot be filled means.
 - **Amendment** — a risk discovered mid-deliberation may raise depth, provided the reason is
   stated in the discussion and carried into the verification design. Depth is revisable, not
   capped, and the amendment adds no artifact (*Record* above).
-- **[MUST]** State the determination once in the verification design. The obligation is
+- **[MUST]** State the determination once in the verification design, and restate no
+  verification's failure mode anywhere outside the `Failure mode` column; narrative that states no
+  per-layer failure mode (a layer removed, depth added) may stay. The obligation is
   unconditional — every verification design has at least one layer — so an absent statement is a
   missing obligation, not a "not applicable".
 - **Effective from** — the obligation binds verification designs authored after this clause lands;
@@ -704,7 +727,7 @@ override). Removing the item does not remove the check — it moves it to the la
 deterministically; a real dependency miss surfaces at RED, VERIFY step 1 or the VALIDATE whole-tree
 sweep and routes by the existing class rules, consuming no ARCHITECT re-entry.
 
-`Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification layer or new spec file that names no failure mode another layer does not already catch (ARCHITECT > Output artifacts > *Verification depth*) fails Scope on the same clause. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
+`Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that carries no unique failure mode fails Scope on the same clause. On a row that owes the `Failure mode` cell (ARCHITECT > Output artifacts, the column's bullet), the cell fails Scope when it is empty — `—` on such a row counts as empty — or when it cannot be told apart from the cell of another distinct verification anywhere in the design, or from a named existing mechanism; rows that share a `Method` label are one verification and are not compared with each other. The deduction rides this clause and adds no scored item, cap or `scores` key. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
 
 ### ADR-conformance check (scored within Feasibility / Scope)
 
