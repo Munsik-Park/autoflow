@@ -111,14 +111,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d051bcb4c633175316a6cf01095a8785f575d233a2c69163136023cc6c13c5f9"
+      "sha256": "02a7468aa87530d17d7bc1b2d9ea8bdd652d5094d95094fb90801f958298a379"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b852f2552d86bf1845cb4241ab2315013dc45d5305abe19606df593ccfbeff54"
+      "sha256": "43cdda38e99ada4a3a4d0a645e2535dba9a8c37dfb996bf1814a3d51b4b07ee0"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",

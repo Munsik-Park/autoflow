@@ -345,7 +345,7 @@ layer that has a shell.
    **architecture decision layer** and nothing below it (issue #192): the decisions, the constraints
    they hold under, the alternatives considered and rejected with the ground for each rejection, and
    the failure mode each verification layer exists to catch (*Verification depth* below). The
-   deliberation stops here.
+   deliberation stops here. Rationale: [`design-rationale.md`](design-rationale.md) > Decision 15.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
@@ -405,7 +405,7 @@ reports of its last round (a re-discussion opens a new round with a `### Brief` 
 its own two reports; the earlier round's reports stay on the record). The two design documents state the design and the conclusions the participants
 reached, in the form each is defined above; the report states what was agreed and what was not.
 
-**[MUST] A re-discussion's Record is a delta, never a rewrite** (issue #192). On the **first**
+**[MUST] A re-discussion's Record is a delta, never a rewrite** (issue #192; [`design-rationale.md`](design-rationale.md) > Decision 15). On the **first**
 Record of a cycle the scribe writes the documents whole. On every Record after that it reads the
 existing documents plus **only the turns appended since the previous Record** and both reports of
 this round — not the accumulated transcript — and **appends** a delta section rather than
@@ -1734,7 +1734,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → selected suites | step 6, per-PR |
      | `PAUSE` (from `operator`) | `active:false`, `phase:"awaiting-user"` | — |
 
-     Only the `ARCHITECT` route runs the **full** cycle: auto-enter a review-response cycle in-session with the reviewer comment as the DIAGNOSE trigger target — the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF. The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What the thin path removes is re-deliberation of a decision nothing moved; **every independent check is retained** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), and CI still gates. This is the same class-routed proportionality the late gates have had since issue #140, extended to the one entry point that still re-entered unconditionally (llmroute #280: a five-line production fix took a full cycle at ≈ $128).
+     Only the `ARCHITECT` route runs the **full** cycle: auto-enter a review-response cycle in-session with the reviewer comment as the DIAGNOSE trigger target — the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF. The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What the thin path removes is re-deliberation of a decision nothing moved; **every independent check is retained** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), and CI still gates. This is the same class-routed proportionality the late gates have had since issue #140 ([`design-rationale.md`](design-rationale.md) > Decision 11), extended to the one entry point that still re-entered unconditionally (Decision 15) (llmroute #280: a five-line production fix took a full cycle at ≈ $128).
 
      Either route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker, and the entry names the routed class — so the attempt cap below counts thin and full entries alike, and a later reader can see which route each attempt took. The four user-pause criteria below take precedence over any route.
 
