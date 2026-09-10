@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "43a521d6727a6f4b703421d78625efb4093958a0bc39bf769afd7f91194482a5"
+      "sha256": "6ad19d1f6049d58a3fda2ab0b793bc679b8d0083b0806052ec65b51741b3091f"
     },
     {
       "source": "docs/design-rationale.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a28e52db09be3d12b66009093736e3d5d1e8504982ab242bad82040ef6d9c1a6"
+      "sha256": "ba02b3cec58e678ad5706adfa3ed01ff6bd58e143bf673e4f4cf0cbb3a547fa6"
     },
     {
       "source": "docs/title-guide.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "643532ea493fff4f1fa5947d479b1e09dd309cb2c8a6e6f36561f9d62baeba96"
+      "sha256": "c4659d6282b36deb4b438c9d8a3badf1dc80bbf9439b2b3aba80cee6c237b0f0"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -385,6 +385,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "4da899a3b53100fb9474309c05f8a1b15871d9f9657b25f9c9bc0d74a2d98c62"
+    },
+    {
+      "source": "scripts/architect/composition-oracle.sh",
+      "dest": "scripts/architect/composition-oracle.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "829588b8079d63f3566ee1b6dadc4bc4c0502e823385a3c963c576517f4a3d07"
     },
     {
       "source": "scripts/gate/remedy-route.sh",
