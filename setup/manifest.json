@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "591e685dee50603055a2ea510b0ef841add5ebd6974f824c826e6c93a5936001"
+      "sha256": "3188217130dcba506acb4e9a8fb491b0b56b31a8a86aab1c121f3b02ef354948"
     },
     {
       "source": "docs/autoflow-guide.md",
