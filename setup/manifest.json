@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a9f0dae2cdc3da6bad111b15ee805f52dd35e049a2f800a676b0322ec7b884f7"
+      "sha256": "53e37e985047e35f5df7da519310c2d1bba744597a93162d364855fc9bc84d39"
     },
     {
       "source": "docs/INDEX.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "02a7468aa87530d17d7bc1b2d9ea8bdd652d5094d95094fb90801f958298a379"
+      "sha256": "43a521d6727a6f4b703421d78625efb4093958a0bc39bf769afd7f91194482a5"
     },
     {
       "source": "docs/design-rationale.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "74ef99c8e6b5f722f2db5108755313f473f9e70e523c8ae757c9a76e9d365ca6"
+      "sha256": "a2e7c14c5e5d13ee2e6493591b60c5471de8b2cc213a503ed213705b0947c76e"
     },
     {
       "source": "docs/pr-body-guide.md",
