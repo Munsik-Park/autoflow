@@ -103,3 +103,18 @@ no gate has a stated basis to dock it.
 - Unlike ADR-0016, whose empirical base was zero incidents, this decision rests on a measured
   cycle, so the wiring lands in the same cycle as the decision rather than being split to a
   follow-up.
+- **Amended by issue #198** — the per-layer unique failure mode is consolidated into a
+  `Failure mode` column of the verification design's acceptance-criteria table, at one row per
+  verification, in place of a separate one-line statement per layer. The column's bullet under
+  `docs/autoflow-guide.md` > ARCHITECT > Output artifacts is the obligation's single definition;
+  *Verification depth*, the feature design's content item, the Test AI contract and the Record
+  scribe's prompt name the column or point to that bullet. Decision 1's per-spec-file grain is not
+  carried over: files are derived at RED/GREEN entry since issue #192. `Reason` stays the ADR-0020 /
+  ADR-0022 join key. Decision 2 holds: the `Scope` deduction on the column is written once, in
+  GATE:PLAN's interpretive paragraph, with no new scored item, cap or `scores` key, and
+  `docs/evaluation-system.md` and `docs/teammate-contracts.md` point the evaluator to it — which
+  gives the hollow statement named under Negative a stated deduction. **Decision 3 is superseded**:
+  the Draft and round prompt literals it names were retired by issue #166 (`3b3d95d`), and the
+  discussion now ends when two consecutive turns say `further: none`. Enforcement reaches the agents
+  through the Record scribe prompt (`.claude/workflows/architect-deliberation.js`), the Test-AI
+  participant's pointer (`.claude/agents/autoflow-planner.md`) and GATE:PLAN `Scope`.
