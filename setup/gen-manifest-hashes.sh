@@ -191,6 +191,52 @@ build_rows() {
   # effect-record tooling and stay unshipped.
   emit_row "scripts/architect/relay-state.sh" \
            "scripts/architect/relay-state.sh" "root-layer" "copy" "file"
+  # Class-routed re-entry (issues #140, #192). The stamped autoflow-guide.md
+  # routes every GATE:QUALITY / VALIDATE / INTEGRATE FAIL and every Medium+
+  # reviewer finding through it, and it is the single owner of that mapping — a
+  # target without it must re-derive the routing by hand, which is the judgment
+  # the script exists to replace.
+  emit_row "scripts/gate/remedy-route.sh" \
+           "scripts/gate/remedy-route.sh" "root-layer" "copy" "file"
+  # Mechanical scope judgment (issue #135). HANDOFF step 6.5 runs it on every
+  # Medium+ verdict as a [MUST], and PREFLIGHT reads its `scope-bounded:` line to
+  # pick the bounded or full review-response path. Its whole point is that the
+  # judgment is a set relation rather than an agent's size estimate, so a target
+  # without it falls back to exactly the estimate it replaces (llmroute #280).
+  emit_row "scripts/review/scope-bounded.sh" \
+           "scripts/review/scope-bounded.sh" "root-layer" "copy" "file"
+  # Suite selection, execution and coverage (the RED / VERIFY / VALIDATE test
+  # plane). The stamped guide runs `run-suites.sh --all` at VALIDATE step 1,
+  # RED derives its affected suite set with `select-suites.sh` (issue #192), and
+  # VERIFY writes the Green-tree certificate with `green-tree-register.sh`; the
+  # gate hook that ships with the bundle even denies a backgrounded run-suites
+  # invocation, so the bundle already assumes the target has it. `suite-manifest.sh`
+  # is the sourced library the others read the header grammar from,
+  # `green-tree-store.sh` is the store half `green-tree-register.sh` and
+  # `suite-coverage.sh` source, and `invocation-scan.sh` is what the two standing
+  # lints source. `select-suites.sh` sources tests/lib/base-ref.sh and fails
+  # loud (BLOCK) without it rather than narrowing to an empty selection, so the
+  # library ships with it.
+  emit_row "scripts/test/suite-manifest.sh" \
+           "scripts/test/suite-manifest.sh" "root-layer" "copy" "file"
+  emit_row "scripts/test/select-suites.sh" \
+           "scripts/test/select-suites.sh" "root-layer" "copy" "file"
+  emit_row "scripts/test/run-suites.sh" \
+           "scripts/test/run-suites.sh" "root-layer" "copy" "file"
+  emit_row "scripts/test/suite-coverage.sh" \
+           "scripts/test/suite-coverage.sh" "root-layer" "copy" "file"
+  emit_row "scripts/test/green-tree-store.sh" \
+           "scripts/test/green-tree-store.sh" "root-layer" "copy" "file"
+  emit_row "scripts/test/green-tree-register.sh" \
+           "scripts/test/green-tree-register.sh" "root-layer" "copy" "file"
+  emit_row "scripts/test/invocation-scan.sh" \
+           "scripts/test/invocation-scan.sh" "root-layer" "copy" "file"
+  emit_row "scripts/test/check-suite-manifest.sh" \
+           "scripts/test/check-suite-manifest.sh" "root-layer" "copy" "file"
+  emit_row "scripts/test/check-suite-leaf.sh" \
+           "scripts/test/check-suite-leaf.sh" "root-layer" "copy" "file"
+  emit_row "tests/lib/base-ref.sh" \
+           "tests/lib/base-ref.sh" "root-layer" "copy" "file"
   # The issue-creation wrapper (issue #96): the hook's `gh issue create` deny
   # ships with the bundle, so the only filing path must ship with it too — a
   # target that installs the deny without the wrapper can file no issue at all.

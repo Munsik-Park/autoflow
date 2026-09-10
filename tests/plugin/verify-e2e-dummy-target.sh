@@ -388,7 +388,7 @@ else
   failc "E1c" "S5/#792" "prerequisite E1b failed or CLAUDE.md absent"
 fi
 
-echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, .codex/**, AGENTS.md =="
+echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, AGENTS.md =="
 if [ "$DRIVE_PASS" -eq 1 ]; then
   if cmp -s "$SNAP_DIR/package.json" "$DUMMY/package.json"; then
     pass "E1d: package.json byte-unchanged"
@@ -423,6 +423,16 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # listed, so the case pattern is widened to admit these two new dest
   # classes (same source-path-preserved copy-row shape as scripts/review/*
   # and scripts/preflight/*).
+  # issue #192 widening: the manifest-registration gap that #10 fixed for four
+  # scripts had re-accumulated -- nine more scripts the stamped docs instruct a
+  # target to run were unregistered (the suite plane run-suites/select-suites/
+  # suite-coverage/suite-manifest/green-tree-register and the two standing suite
+  # lints, plus scripts/gate/remedy-route.sh and scripts/review/scope-bounded.sh),
+  # together with the three files they source (green-tree-store.sh,
+  # invocation-scan.sh, tests/lib/base-ref.sh). They land under scripts/gate/**,
+  # scripts/test/** and tests/lib/**, none previously allow-listed, so the case
+  # pattern admits these three dest classes on the same source-path-preserved
+  # copy-row basis as scripts/handoff/** and scripts/cleanup/**.
   # issue #96 widening (ledger E36 CI red): the AI issue-creation gate ships
   # scripts/issue/create-issue.sh as a root-layer copy row, so ./scripts/issue/*
   # is admitted on the same source-path-preserved basis.
@@ -441,12 +451,12 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # copy row, so ./scripts/architect/* is admitted on the same basis.
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./scripts/architect/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./scripts/architect/*|./scripts/gate/*|./scripts/test/*|./tests/lib/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done
   if [ -z "$BAD_NEW" ]; then
-    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, scripts/lib/**, .codex/**, or AGENTS.md"
+    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, scripts/lib/**, scripts/architect/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, or AGENTS.md"
   else
     failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/spawn-policy//scripts/lib//.codex//AGENTS.md:$BAD_NEW"
   fi

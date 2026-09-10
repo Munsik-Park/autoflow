@@ -341,8 +341,26 @@ layer that has a shell.
 
 ### Output artifacts
 
-1. **Feature Design Document** (Developer-AI-led): files to change, API interface, data structures, dependencies.
-2. **Verification Design Document** (Test-AI-led):
+1. **Feature Design Document** (Developer-AI-led) — `.autoflow/issue-{N}-feature-design.md`, the
+   **architecture decision layer** and nothing below it (issue #192): the decisions, the constraints
+   they hold under, the alternatives considered and rejected with the ground for each rejection, and
+   the failure mode each verification layer exists to catch (*Verification depth* below). The
+   deliberation stops here. Rationale: [`design-rationale.md`](design-rationale.md) > Decision 15.
+
+   **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
+   oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
+   the change delta (`scripts/test/select-suites.sh` owns which suites a change requires) and from
+   the files those roles open to change anyway. The dividing line is one question: **would this
+   sentence being wrong mean the design has to be revisited, or would it just be fixed where it is
+   found?** The first belongs to the deliberation; the second does not. A derivation RED produces
+   under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
+   that exemption explicitly.
+
+2. **Verification Design Document** (Test-AI-led) — the `Issue AC` join key is **not** reduced by
+   the layer split above: an unverified acceptance criterion is the one class of defect execution
+   does not surface (the suite passes green), so the per-criterion disposition stays a deliberation
+   output. What the split removes from it is depth, not rows: `Method` names the **kind** of oracle
+   a row gets, and the condition clause that implements it is RED's.
 
 | Issue AC | Acceptance criterion | Type | Kind | Method | Reason |
 |----------|----------------------|------|------|--------|--------|
@@ -369,11 +387,11 @@ layer that has a shell.
 
 - For untestable items: state the reason and the alternative (design change / manual delegation (except where the composition-oracle clause applies) / mock (same exception)).
 - Design-change request: parts of the feature design that should be revised so they become testable.
-- Committed-surface allow-list: when the design's change surface includes a
-  manifest-registered source, pre-register `setup/manifest.json` as a
-  derived member of the allow-list at design time (Change Surface Rules >
-  Derived artifacts) — do not wait for a test/CI failure to admit it
-  (#800 `607720e`).
+- Committed-surface allow-list: a manifest-registered source in the change surface pulls
+  `setup/manifest.json` in as a derived member of the allow-list (Change Surface Rules > Derived
+  artifacts). Under the layer split above this is **derived at GREEN**, from the actual staged
+  surface, not predicted here — but it is still derived *before* the commit, never left to a
+  test/CI failure to admit (#800 `607720e`).
 
 3. **Deliberation report** (scribe-written): `.autoflow/issue-{N}-architect-report.md`, under the
    headings `## Agreed` — one line per conclusion both participants accepted — and `## Unagreed` —
@@ -386,6 +404,27 @@ The scribe writes the three artifacts after the discussion, from the transcript 
 reports of its last round (a re-discussion opens a new round with a `### Brief` block and ends with
 its own two reports; the earlier round's reports stay on the record). The two design documents state the design and the conclusions the participants
 reached, in the form each is defined above; the report states what was agreed and what was not.
+
+**[MUST] A re-discussion's Record is a delta, never a rewrite** (issue #192; [`design-rationale.md`](design-rationale.md) > Decision 15). On the **first**
+Record of a cycle the scribe writes the documents whole. On every Record after that it reads the
+existing documents plus **only the turns appended since the previous Record** and both reports of
+this round — not the accumulated transcript — and **appends** a delta section rather than
+re-authoring the body:
+
+```
+## Delta — round <n> (<brief origin: GATE:PLAN FAIL | un-agreed re-discussion | VERIFY design contradiction>)
+
+- <what changed>: <the decision as it now stands> — supersedes <the section or decision it replaces>
+- <what was added>: <the decision> — <ground>
+```
+
+Text a round did not change is **left exactly as it stands**. The grounds are cost and stability
+together: the transcript is append-only and each Record re-read it whole (llmroute #280 — 6,529
+lines by the last round, the round-6 scribe alone 8.2M tokens, the feature design growing
+376 → 775 lines across six rewrites), and a fresh scribe re-authoring settled text each round lets
+wording drift where no decision moved. The delta section is also GATE:PLAN's narrowed input on
+re-entry (GATE:PLAN > *Re-entry re-score*), so what the scribe writes and what the evaluator reads
+are the same object.
 The transcript file is the discussion's own record and is read only by the participants and the
 scribe; the Record workflow's report is what reaches the orchestrator. See
 [`teammate-contracts.md`](teammate-contracts.md) > Facilitator > Return Contract.
@@ -601,19 +640,29 @@ so the ARCHITECT re-entry counter is the orchestrator's own accounting (Regressi
 ## GATE:PLAN — Plan Evaluation
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: feature design + verification design from ARCHITECT, the issue's acceptance-criterion
-list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the issue decision ledger
-(`.autoflow/issue-{N}-ledger.md`).
+**Input**: the architecture decision document + verification design from ARCHITECT, the issue's
+acceptance-criterion list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the
+issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
 
-### Scoring (5 items × 10 points)
+### Scoring (4 items × 10 points)
 
 | Item | Criterion |
 |------|-----------|
 | Feasibility   | Can this plan be implemented with the current structure? (grounded in the actual mechanisms, not a misread) |
-| Dependencies  | Are affected files and side effects identified? |
 | Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here) |
 | Security      | Any security implications introduced? |
 | Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160) |
+
+**Affected files and side effects are not scored here** (issue #192). The gate scores the
+*decision* layer; which files a change touches and which suites it requires are **derived**, not
+predicted — by `scripts/test/select-suites.sh` from the change delta at RED/GREEN entry, and by the
+execution roles that open those files anyway. A prediction the gate scores is a prediction a FAIL
+sends back through a full re-deliberation; the same fact costs one suite run where execution meets
+it. The measurement is issue #192 (llmroute #280: four consecutive GATE:PLAN FAILs, all on this one
+item, all on facts RED met on first execution, all absorbed at RED/GREEN after an operator
+override). Removing the item does not remove the check — it moves it to the layer that derives it
+deterministically; a real dependency miss surfaces at RED, VERIFY step 1 or the VALIDATE whole-tree
+sweep and routes by the existing class rules, consuming no ARCHITECT re-entry.
 
 `Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification layer or new spec file that names no failure mode another layer does not already catch (ARCHITECT > Output artifacts > *Verification depth*) fails Scope on the same clause. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
 
@@ -659,6 +708,23 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 - **PASS** (avg ≥ 7.5, each ≥ 7) → DISPATCH.
 - **FAIL** → ARCHITECT (max 3×).
 
+### Re-entry re-score
+
+A re-deliberation's re-score is a **fresh spawn with a narrowed input**, on the same rule
+GATE:QUALITY's re-entry re-score states (issue #192 — until then GATE:PLAN was the only late gate
+re-scoring its whole input every pass, at llmroute #280 growing 7.2M → 25.6M across six passes).
+The evaluator reads the decision document's **delta section** for this round (ARCHITECT > *Record*)
+plus every previously-passing item whose anchor the delta touched, and re-scores exactly those; the
+remaining items inherit their prior score by citation. The report states the re-scored item list
+and the inheritance source (the prior report's path) in its `rescore` field
+([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The state file still
+receives all four scores — the hook computes avg / min over the full set — inherited ones copied
+verbatim from the cited report. An inherited item whose anchor the delta touched and which is
+missing from the re-scored list is a report defect: reject and re-spawn.
+
+A first evaluation of a cycle (no prior report to inherit from) scores the whole decision document;
+the narrowing binds re-entries only.
+
 ---
 
 ## DISPATCH — Task Assignment (Developer AI + Test AI)
@@ -675,6 +741,16 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 ## RED — Test Writing (Test First)
 
 The Test AI writes test code from the verification design.
+
+**Derivation on entry** (issue #192). ARCHITECT hands down decisions, not a change table: the file
+rows, the per-suite disposition and each oracle's condition clause are **derived here**, by the
+roles that open those files anyway. Before step 1 the Test AI resolves the affected suite set with
+`bash scripts/test/select-suites.sh` — the sole owner of "which suites does this change require",
+matching each suite's `ci-subject` header against the change delta — rather than reading a list a
+design document predicted. A suite the derivation names and the verification design did not
+anticipate is an ordinary RED input, **not** a plan defect and **not** acceptance-criterion drift
+(GATE:QUALITY > *Completeness — AC-authority check*); a design **decision** the derivation
+contradicts is the one thing that still returns to ARCHITECT, through the existing routes.
 
 ```
 1. Convert acceptance criteria → test code (only rows typed `automated`).
@@ -1470,6 +1546,13 @@ each-item ≥ 7 criterion:
   Neither gate subsumes the other: the ARCHITECT-side check cannot see post-ARCHITECT drift, and
   this one runs only after the cycle's work is done. **Effective from** — as with the GATE:PLAN
   half, this binds cycles whose DIAGNOSE authored an AC table under the clause.
+  **Derivation is not drift** (issue #192): a file row, suite disposition or oracle condition clause
+  RED or GREEN derived under the ARCHITECT layer split (ARCHITECT > *Output artifacts* item 1;
+  RED > *Derivation on entry*) is the designed division of labour, never a post-ARCHITECT AC change.
+  The check binds what it always bound — a verification-design row whose `Issue AC` is not `—` and
+  for which no discharging site can be named. Deriving *how* a named row is implemented never
+  removes the row, so it can never trip this check; only dropping or silently re-dispositioning a
+  criterion can.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → block) → DELIVER.
 - **FAIL** → routed by `remedy_class` (below; max 3× — the cap counts FAILs, not the distance re-entered).
@@ -1639,7 +1722,25 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
    - **[MUST] Findings-file `max_severity` contract.** The ingesting subagent **always** writes exactly one `max_severity: <None|Low|Medium|High|Critical>` line to `.autoflow/issue-{N}-review-findings.md`, using **colon** notation as the canonical form — presence is mandatory, including on a **clean review**, which emits `max_severity: None` (never an omitted line). The consumer additionally tolerates `=` and whitespace separators, but colon is the contract the producer emits.
    - **Propagation batching (multi-repo).** When a sub-repo fix would bump the host `services` pointer, **defer** the host pointer bump until that sub-repo PR's `blocked-by-review` label has cleared (its reviewer re-review is clean); at that clean point bump **once** — the same re-bump point as step 3's `[MUST]`. This holds for the general parent-pointer / sub-repo-PR relation, independent of how many repos deep the change sits. If an intervening host-CI check makes an exceptional interim bump unavoidable, record the reason in the commit message (`chore(#N): interim services bump: <reason>`). This step 6.5 block is the source of truth for the batching norm; [`external-review-sequencing.md`](external-review-sequencing.md) carries a one-line cross-ref for reviewers.
    - **[MUST] `scope-bounded` line** (issue #135). On every `max_severity ≥ Medium` verdict the orchestrator runs `bash scripts/review/scope-bounded.sh triage --findings .autoflow/issue-{N}-review-findings.md --pr <host PR>` and appends its three output lines (`scope-bounded:`, `scope-bounded-finding-files:`, `scope-bounded-grounds:`) to the findings file. The judgment is a set relation — every Medium+ finding names a file and those files are a subset of the PR's diff file set — never an agent's estimate of size. The artifact records the finding file set; the PR diff file set is not copied into it — it is re-derived from the anchor the triage context already holds (`gh pr diff <host PR> --name-only`), per the re-derivable-value rule in [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Verify teammate claims*. The line selects the review-response cycle's path at PREFLIGHT (> PREFLIGHT > Scope-bounded entry).
-   - **`max_severity ≥ Medium`** (the reviewer confirmed `Critical`/`High`/`Medium`; the label is present as expected) — do **not** end. Auto-enter a review-response cycle in-session with the reviewer comment as the DIAGNOSE trigger target — the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, run the DIAGNOSE review-response loop check). The cycle flows DIAGNOSE → … → HANDOFF and re-runs step 6 reviewer review on that step's target set; the label is cleared **only** by that reviewer re-review — the orchestrator never removes it (hook deny). Each auto-triggered review-response entry is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker.
+   - **[MUST] `remedy_class` per Medium+ finding** (issue #192). The ingesting subagent tags **every** `Critical`/`High`/`Medium` finding with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at GATE:QUALITY > *FAIL routing*) and writes it into `.autoflow/issue-{N}-review-findings.md` next to that finding. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the deliberation settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess. A Medium+ finding with no `remedy_class` is a report defect: reject and re-spawn the ingesting subagent, the same disposition a missing `fail_hypothesis` gets.
+
+   - **`max_severity ≥ Medium`** (the reviewer confirmed `Critical`/`High`/`Medium`; the label is present as expected) — do **not** end. Route by `bash scripts/gate/remedy-route.sh route <class>...` over the Medium+ findings' classes (mixed → farthest; `operator` anywhere pauses), which is the same single owner of the mapping the late gates use:
+
+     | Route | What the orchestrator runs | Re-review |
+     |---|---|---|
+     | `ARCHITECT` (from `design`) | the **full** review-response cycle below — the decision moved, so the deliberation owns it | step 6, per-PR |
+     | `GREEN` (from `impl`) | Developer AI fixes on the finding's own surface → VERIFY step 1 → REFINE → VALIDATE | step 6, per-PR |
+     | `RED` (from `test`) | Test AI fixes the test asset → re-Red → GREEN → VERIFY step 1 → REFINE → VALIDATE | step 6, per-PR |
+     | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → selected suites | step 6, per-PR |
+     | `PAUSE` (from `operator`) | `active:false`, `phase:"awaiting-user"` | — |
+
+     Only the `ARCHITECT` route runs the **full** cycle: auto-enter a review-response cycle in-session with the reviewer comment as the DIAGNOSE trigger target — the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF. The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What the thin path removes is re-deliberation of a decision nothing moved; **every independent check is retained** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), and CI still gates. This is the same class-routed proportionality the late gates have had since issue #140 ([`design-rationale.md`](design-rationale.md) > Decision 11), extended to the one entry point that still re-entered unconditionally (Decision 15) (llmroute #280: a five-line production fix took a full cycle at ≈ $128).
+
+     **[MUST] The loop check runs on every route, before the routed work starts.** The thin routes skip DIAGNOSE, and the review-response loop check has its other call site there ([`phases/analysis.md`](phases/analysis.md) > *Review-response loop check*) — so on a thin route the orchestrator runs that contract's **steps 1 and 2 here**: append this attempt's observation to the ledger (complaint class, witness case, prior-change shape, cycle), then compare it against the immediately-prior review-response observation, with the same suppression rule and the same situation-first pause on a match. Both halves are load-bearing and neither substitutes for the other: without the comparison a class whose witness case merely changes is patched case by case until the attempt cap, which is the pathology the check exists to stop; without the **unconditional record** a later full cycle has no baseline to compare against. The `review-autofix` count is an attempt tally, not a class comparison. Step 3 (re-enter after the user answers) applies unchanged when the check pauses. The contract's single documentary home stays `phases/analysis.md`; this is a second call site for the entry path that has no DIAGNOSE, the same shape as `scope-bounded.sh`'s `triage` and `check-fix` call sites.
+
+     Either route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker, and the entry names the routed class — so the attempt cap below counts thin and full entries alike, and a later reader can see which route each attempt took. The four user-pause criteria below take precedence over any route; criterion (d) is evaluable on every route because of the `[MUST]` above.
+
+     `scope-bounded:` is still written on every Medium+ verdict (the `[MUST]` above): it selects the path **within** the full cycle, and on a thin route it is the record of why the finding stayed on the PR's own surface.
      - **Pause for the user** (`AskUserQuestion`, with the question and option descriptions written situation-first per [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation; `active:false`, `phase:"awaiting-user"`) when the attempt hits **any** of: (a) the fix needs a contract / acceptance-criterion change, (b) the fix direction is ambiguous, (c) the finding is a `Low Confidence` item, (d) the review-response loop check matches (same complaint class, new witness). The user's answer is appended to the ledger and selects re-entry.
      - **Attempt cap = 7.** Count the *consecutive `review-autofix`-marked ledger entries since the last user re-entry decision (reset by that decision; if none yet this cycle, since the first auto-entry)* — the number of auto-resolution attempts not yet checked with the user. A marked entry is a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*): the allocated identifier sits at the front of the heading and the marker stays at the end, so the count predicate reads the marker exactly as it did before identifiers were introduced — it is unaffected by the `O<n>` prefix. On the 7th such entry without the `blocked-by-review` label clearing, stop auto-resolving and pause for the user (`active:false`, `phase:"awaiting-user"`). A user re-entry decision (the user approving continuation at a pause) **resets** this window to zero — the next auto-entry starts a fresh budget of 7. The reset anchor is the user re-entry decision only.
      - **Durable record (host PR).** Post a one-line comment on the **host PR** — the always-present cycle anchor carrying `Closes #N` — via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event). These GitHub-side records survive the scratch-file cleanup at the next PREFLIGHT prior-cycle resolution, so cap-fire and re-entry stay durably auditable.

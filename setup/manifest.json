@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fd9af3a53546319909d52688cdf167d4647202f92fbaaa26de879710fb2c2e3f"
+      "sha256": "53e37e985047e35f5df7da519310c2d1bba744597a93162d364855fc9bc84d39"
     },
     {
       "source": "docs/INDEX.md",
@@ -111,14 +111,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "348550fd52a3f4305b1a784422a7f25f6f402a26e5a748453c610cf9fef93aa0"
+      "sha256": "43a521d6727a6f4b703421d78625efb4093958a0bc39bf769afd7f91194482a5"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b852f2552d86bf1845cb4241ab2315013dc45d5305abe19606df593ccfbeff54"
+      "sha256": "43cdda38e99ada4a3a4d0a645e2535dba9a8c37dfb996bf1814a3d51b4b07ee0"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "62daa985dcd41304447c54f1f9ea92e1615f15d3171d54eda68d6438d7dbd93d"
+      "sha256": "2a225b87499de41bf214159a8f831edbe55b9de92b5b0760f9a9b64b03762de4"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "74ef99c8e6b5f722f2db5108755313f473f9e70e523c8ae757c9a76e9d365ca6"
+      "sha256": "a2e7c14c5e5d13ee2e6493591b60c5471de8b2cc213a503ed213705b0947c76e"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2d9de145cf657efbc2d336cf0e5b2f8275b1dbfca7016951a014a603db8f5a98"
+      "sha256": "a28e52db09be3d12b66009093736e3d5d1e8504982ab242bad82040ef6d9c1a6"
     },
     {
       "source": "docs/title-guide.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "0f97051568cba3edd55e81eb7374082b307d54fee19de6a9f1aeb291cb63458c"
+      "sha256": "643532ea493fff4f1fa5947d479b1e09dd309cb2c8a6e6f36561f9d62baeba96"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -384,7 +384,91 @@
       "dest": "scripts/architect/relay-state.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "6be24a7217b78ed9eb90a2f48b5ddc5bbcded76fc4983f9d2681e8a54f375cec"
+      "sha256": "4da899a3b53100fb9474309c05f8a1b15871d9f9657b25f9c9bc0d74a2d98c62"
+    },
+    {
+      "source": "scripts/gate/remedy-route.sh",
+      "dest": "scripts/gate/remedy-route.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "9a6a16af1f2c606192ecabca78c7ffd41003fa5e50b045010fb580212cef4ac7"
+    },
+    {
+      "source": "scripts/review/scope-bounded.sh",
+      "dest": "scripts/review/scope-bounded.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "c3fec8ec42dd2e8115a7c3c2e924414698353b2cc65618b83fa1f4aa8912bf91"
+    },
+    {
+      "source": "scripts/test/suite-manifest.sh",
+      "dest": "scripts/test/suite-manifest.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "0e0d5ee12b913ccd1ef571c5a7329b3efd7a0e0b1233bfd30d7e7274c89d8b93"
+    },
+    {
+      "source": "scripts/test/select-suites.sh",
+      "dest": "scripts/test/select-suites.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "a9c234e4543c14fad5a9c7cc0bdae01119c253d08adc90a2376f7ca92677a707"
+    },
+    {
+      "source": "scripts/test/run-suites.sh",
+      "dest": "scripts/test/run-suites.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "acb70e3a93430891022023325353ec4b72566c42a3634e9b056c6e53d376ff9c"
+    },
+    {
+      "source": "scripts/test/suite-coverage.sh",
+      "dest": "scripts/test/suite-coverage.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "096f1df6d5aa75236401b74ced6dcbd067f7ef5877e841023363fcecb891d23d"
+    },
+    {
+      "source": "scripts/test/green-tree-store.sh",
+      "dest": "scripts/test/green-tree-store.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "b68f6da739037edfdd4dddc9d53ffed2f3bc12686c54ae9325b6cec4af12580f"
+    },
+    {
+      "source": "scripts/test/green-tree-register.sh",
+      "dest": "scripts/test/green-tree-register.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "f397c253cf449e8dbfd0efff1467a5ae4bf5d55ba9b5dfee3d32396cc13d5945"
+    },
+    {
+      "source": "scripts/test/invocation-scan.sh",
+      "dest": "scripts/test/invocation-scan.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "79869b3f07669ac2ecdebf367a63badbba2d01b3eef25499863e46419af3fb64"
+    },
+    {
+      "source": "scripts/test/check-suite-manifest.sh",
+      "dest": "scripts/test/check-suite-manifest.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "6ea57ae186f2caca1974e231929b407a96d6edb3be466498f61b6c523a969cfc"
+    },
+    {
+      "source": "scripts/test/check-suite-leaf.sh",
+      "dest": "scripts/test/check-suite-leaf.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "209da0b39fd6d3a504043a9699625a5c5fe6a3cb2197567b9ba96271e768c015"
+    },
+    {
+      "source": "tests/lib/base-ref.sh",
+      "dest": "tests/lib/base-ref.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "f9a74fb6b1b33e90a15e93791ee2b9884ad81748e0eb0bb8ed171c914c254fb7"
     },
     {
       "source": "scripts/issue/create-issue.sh",
