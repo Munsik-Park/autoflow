@@ -141,7 +141,9 @@ Since ADR-0023 (issue #179) the ARCHITECT discussion itself is an orchestrator r
 of two persistent participants over `.autoflow/issue-{N}-architect-transcript.md`,
 and `architect-deliberation.js` is its Record phase; the workflow stays REQUIRED
 for that phase, `scripts/architect/relay-state.sh` ships beside it as a root-layer
-copy, and the participants' prompt rides the plugin channel in
+copy — as does `scripts/architect/composition-oracle.sh`, the classifier the Record
+phase runs over the verification design it writes (issue #206) — and the
+participants' prompt rides the plugin channel in
 `agents/autoflow-planner.md`.
 The isolated-`Workflow` boundary is the **one documented isolation mechanism**, so
 the workflow-residence verdict rests on it directly. Because the workflows are

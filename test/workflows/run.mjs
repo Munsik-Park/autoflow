@@ -336,6 +336,18 @@ await test('ARCHITECT: the scribe is instructed to write the three documents and
   assert.deepEqual(result.report, AGREED_REPORT, 'the scribe\'s consolidated report is the run\'s report')
 })
 
+await test('ARCHITECT: the scribe is instructed to run the composition-oracle classifier over the verification design it wrote and attach its stdout and exit status verbatim (#206 D5)', async () => {
+  const { calls } = await runArch({ issue: '206' }, recordResponder())
+  const p = calls.find((c) => c.label === 'scribe').prompt
+  assert.ok(p.includes('scripts/architect/composition-oracle.sh'), 'the scribe prompt must name the classifier the scribe runs (D5)')
+  assert.ok(p.includes('.autoflow/issue-206-verification-design.md'), 'the classifier runs over the verification design the scribe wrote (D5)')
+  assert.match(p, /composition-oracle block/, 'the scribe must record the determination as the one composition-oracle block (D1, D5); the pre-#206 prompt named only "Composition oracle determinations"')
+  assert.match(p, /Output artifacts > Composition oracle/, 'the block\'s grammar is cited from the guide clause that defines it, not restated (F19)')
+  assert.match(p, /stdout/, 'the scribe must attach the classifier\'s stdout (D5)')
+  assert.match(p, /exit status/, 'the scribe must attach the classifier\'s exit status (D5, D3-1)')
+  assert.match(p, /verbatim|exactly as the shell produced/, 'both signals are attached as the shell produced them, never re-typed (D5)')
+})
+
 await test('ARCHITECT: the scribe prompt carries no transcript body -- the transcript stays on disk, and the topic is read from the file (#179 isolation)', async () => {
   const { calls } = await runArch({ issue: '179' }, recordResponder())
   const p = calls.find((c) => c.label === 'scribe').prompt

@@ -191,6 +191,13 @@ build_rows() {
   # effect-record tooling and stay unshipped.
   emit_row "scripts/architect/relay-state.sh" \
            "scripts/architect/relay-state.sh" "root-layer" "copy" "file"
+  # Composition-oracle classifier (issue #206, D7). The stamped
+  # autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle tells
+  # every target's Record step to run it and attach its output, so a target
+  # that never receives it attaches an absent determination (exit 127, empty
+  # stdout) instead of a classified one.
+  emit_row "scripts/architect/composition-oracle.sh" \
+           "scripts/architect/composition-oracle.sh" "root-layer" "copy" "file"
   # Class-routed re-entry (issues #140, #192). The stamped autoflow-guide.md
   # routes every GATE:QUALITY / VALIDATE / INTEGRATE FAIL and every Medium+
   # reviewer finding through it, and it is the single owner of that mapping — a

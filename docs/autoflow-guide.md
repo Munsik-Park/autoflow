@@ -531,9 +531,49 @@ a test shape.
   deleting them leaves the trigger fully computable: e.g. a datastore collection or field and the
   query layer over it, a hardware register or firmware setting, a file-format field, a
   wire-protocol field, a shared memory region.
-- **[MUST]** State the determination once in the verification design. When the sets do not meet,
-  declare that explicitly — a `no intersection` determination. An absent statement is not read as
-  "not triggered".
+- **[MUST]** Record the determination once in the verification design, as one `composition-oracle`
+  block, and attach the output of `scripts/architect/composition-oracle.sh` run over the written
+  file — its stdout and its exit status, both exactly as the shell produced them, never re-typed
+  (issue #206). The Test AI identifies `T` and `S`; the scribe records the block at Record, runs the
+  script over the verification design it has just written, and runs it again in a delta round that
+  restates the block. This clause is the grammar's only definition — the script and the Record
+  prompt cite it:
+
+  ```composition-oracle
+  T:
+  - <identifier> | <source>
+  S: none | <one-line ground>
+  ```
+
+  - **Lists** — the label `T:` once and `S:` once, each followed by its entries, one per line:
+    `- <identifier> | <source>`. The identifier is one whitespace-free token and matches exactly —
+    whether two spellings name one item is the author's call, made by using one identifier for it in
+    both lists. A `T` entry's source is the design decision that names the shared state; an `S`
+    entry's source is the settled decision, as an ADR path, a prior issue id or a ledger entry id.
+  - **An empty list is declared, never implied** — `T: none | <one-line ground>`. A label with
+    neither entries nor that declaration, a declaration without its ground, and a declaration
+    together with entries each leave the list unestablished.
+  - **Delta rounds** — a round that changes `T` or `S` restates the whole block as the payload of
+    one `supersedes` bullet in its delta section (*Record* above). The script evaluates the
+    **latest** block in document order, never falls back to an earlier one, and names the block it
+    evaluated: `evaluated: base`, or `evaluated: round <n>` for the delta round the block sits in.
+  - **Outcomes** — `intersection`: exit status `10` with `result: intersection`, the intersecting
+    identifiers (the traces the oracle rows carry) on the `intersecting:` line; `empty`: exit
+    status `11` with `result: empty`; and `unknown/error` with its `cause:`. An outcome holds only
+    when the exit status and the `result:` line agree — any other status, a missing `result:` line,
+    or a line and status that disagree is `unknown/error`. An absent or unreadable file, a missing
+    block or list, an unestablished list, an entry without an identifier or a source, and a
+    malformed latest block are `unknown/error`, never `empty`.
+  - **Reading** — an absent statement is not read as "not triggered", and neither is an absent
+    output, an `unknown/error` output, or an attached `result:` line and exit status that disagree:
+    each is a missing determination. When a delta round attaches a new output, the latest attached
+    output governs; an earlier attachment stays as settled text and no longer reproduces on a
+    re-run. `empty` establishes that the recorded sets do not meet, not that the lists are complete.
+  - **Residual** — two cases rest on the reader alone. No layer verifies that a reader applies the
+    rule above to a disagreeing line and status. And a restated block whose fence or delta heading
+    the script does not recognise leaves an earlier block evaluated with no error: a stale `empty`
+    is then visible only as an `evaluated:` field naming an earlier block than the round that
+    restated it, so the reader compares the two.
 - When no such oracle can be built, that is a **design-change request** (the bullet above), not a
   manual-scenario fallback and not a mock. This clause narrows the untestable-items bullet and the
   table's environment-dependent row above for triggered composition contact points; both keep
@@ -547,7 +587,9 @@ a test shape.
 - **Effective from** — the obligation binds verification designs authored after this clause lands;
   a cycle already past ARCHITECT is not retroactively deficient. The determination is the Test AI's
   to author, and the ARCHITECT facilitator may record it on the Test AI's behalf when it writes the
-  verification design.
+  verification design. The block-and-output form binds verification designs written after
+  issue #206 lands: an earlier prose determination is not re-read, and the script classifying one
+  `unknown/error` is not a finding.
 
 ### Testability-driven design
 

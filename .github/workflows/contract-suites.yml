@@ -131,6 +131,8 @@ on:
       - 'scripts/architect/isolation-check.sh'
       - 'scripts/architect/deliberation-metrics.py'
       - 'tests/fixtures/issue-179/**'
+      - 'tests/test-composition-oracle.sh'
+      - 'scripts/architect/composition-oracle.sh'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
       - 'scripts/gate/remedy-route.sh'
@@ -267,6 +269,8 @@ on:
       - 'scripts/architect/isolation-check.sh'
       - 'scripts/architect/deliberation-metrics.py'
       - 'tests/fixtures/issue-179/**'
+      - 'tests/test-composition-oracle.sh'
+      - 'scripts/architect/composition-oracle.sh'
       - 'tests/test-issue-135-scope-bounded.sh'
       - 'scripts/review/scope-bounded.sh'
       - 'scripts/gate/remedy-route.sh'
@@ -560,6 +564,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-179-relay-state.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-179-relay-state.sh
+
+      - name: test-composition-oracle.sh
+        id: s-test-composition-oracle
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-composition-oracle.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-composition-oracle.sh
 
       - name: test-issue-165-taskoutput-deny.sh
         id: s-test-issue-165-taskoutput-deny
