@@ -1,5 +1,13 @@
 # Issue #112 — Manual/Environment-Dependent Verification Scenarios
 
+> **Retired with #228 (ADR-0024 D6 / Area 3).** Every scenario below observes the
+> Green-tree register — its `green-tree` / `green-tree-use` ledger entries, register
+> entries, the whole-tree run's once-per-cycle position and the evaluator's
+> `inherited` citations. That mechanism no longer exists: verdict inheritance was
+> retired, there is no local whole-tree run, and regression verification is
+> HANDOFF's CI. This document is kept as the historical record of how #112 was
+> verified; none of its steps is performable against the current tree.
+
 Two items in `.autoflow/issue-112-verification-design.md` > *Untestable items* have
 no in-repo observer and are discharged here rather than by an automated layer:
 the whole-tree run's once-per-cycle position, and the gate evaluator's actual
@@ -71,8 +79,8 @@ and the report-schema key (`inherited_verdicts`, with its always-present
 discipline) are both automated —
 `tests/fixtures/doc-invariants.json` entries `112-evaluator-citation-inheritance-must`,
 `112-evaluator-sampling-default`, `112-evaluator-time-cap`, and
-`tests/test-suite-coverage-agreement.sh`'s evaluator-citation-carrier leg (the
-suite was deleted with #228; the fixture entries still stand). Only
+`tests/test-suite-coverage-agreement.sh`'s evaluator-citation-carrier leg (both
+since deleted — the fixture with #141, the suite with #228). Only
 the runtime behaviour — did the evaluator actually stop at the cap, actually
 sample rather than enumerate, actually cite rather than re-run — is manual.
 

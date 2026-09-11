@@ -1,5 +1,11 @@
 # Issue #134 — Manual Verification Scenarios
 
+> **Partly retired with #228 (ADR-0024 D6 / Area 3).** The Green-tree register, its
+> register entries and register drift, and VALIDATE's whole-tree sweep no longer
+> exist — verdict inheritance was retired and there is no local whole-tree run.
+> Wherever a scenario below names them, that step is historical and unperformable;
+> the remaining steps of each scenario stand as written.
+
 Companion: `.autoflow/issue-134-verification-design.md` (`## Acceptance criteria →
 verification type → method`). Covers the acceptance criteria that are manual or
 environment-dependent — properties of a live session (message ordering, an
@@ -40,7 +46,8 @@ followed it in a given cycle.
 **Outcome → verdict**: all four sites HOLD-before-capture-point, and every
 resume is GO-bundled → PASS. Any capture point taken after a live teammate had
 already been told to resume tree work, or a resume sent as a message separate
-from GO → FAIL, and the register-drift/refusal (if any) is the evidence.
+from GO → FAIL. (The register-drift/refusal that was once the evidence is retired
+with the register, #228; the HOLD/GO message order alone is the evidence now.)
 
 ---
 
@@ -127,7 +134,8 @@ the 60-minute ceiling, but every cycle re-measures its own sweep.
    explicit `timeout` on the Bash call.
 2. Record the sweep's wall clock and the `timeout` value used.
 3. If the sweep does not complete in one foreground call, **re-run it whole —
-   never splice** two runs' result lines into one register entry (the spliced
+   never splice** two runs' result lines into one recorded run line (formerly a
+   register entry, retired with #228; the spliced
    composite line is the provenance defect #130's own GATE:QUALITY evaluator
    flagged).
 
