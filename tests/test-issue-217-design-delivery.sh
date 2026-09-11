@@ -264,16 +264,32 @@ leading_word() {
   printf '%s' "$1" | sed -e 's/[*`_]//g' -e 's/^[[:space:]]*//' -e 's/^\([A-Za-z][A-Za-z-]*\).*/\1/' | cut -c1-40
 }
 
-# expect_disposition <subject-ere> <label> [extra-admitted-word]
-expect_disposition() {
-  local rx="$1" label="$2" extra="${3:-}" row cell word
-  if [ -z "$ADR" ]; then no_adr "$label"; return; fi
+# disposition_cell <subject-ere> <label> — sets global $DISP_CELL to the
+# disposition cell (column 2) of the adjustment-scope row matching
+# <subject-ere>. Shared by the three expect_disposition* primitives below,
+# which differ only in what they do with the cell once found. On no ADR, or no
+# matching row, records the FAIL itself (via no_adr / failc — called directly,
+# not through a captured subshell, so the printed message is unchanged) and
+# returns 1 with $DISP_CELL empty. A global rather than an echoed return value,
+# so the diagnostic echo inside no_adr/failc is never swallowed by a caller's
+# command substitution.
+disposition_cell() {
+  local rx="$1" label="$2" row
+  DISP_CELL=""
+  if [ -z "$ADR" ]; then no_adr "$label"; return 1; fi
   row="$(printf '%s\n' "$ADR_TABLE_ROWS" | grep -iE "$rx" | head -n 1)"
   if [ -z "$row" ]; then
     failc "$label — no adjustment-scope row matching /$rx/ in $ADR_NAME"
-    return
+    return 1
   fi
-  cell="$(row_cell "$row" 2)"
+  DISP_CELL="$(row_cell "$row" 2)"
+}
+
+# expect_disposition <subject-ere> <label> [extra-admitted-word]
+expect_disposition() {
+  local rx="$1" label="$2" extra="${3:-}" cell word
+  disposition_cell "$rx" "$label" || return
+  cell="$DISP_CELL"
   word="$(leading_word "$cell")"
   case "$word" in
     deleted|replaced|retained|conditional)
@@ -306,14 +322,9 @@ expect_disposition() {
 # matching the subject leads with EXACTLY the named disposition word. A fate
 # change and a no-change claim are both inexpressible in the membership form.
 expect_disposition_word() {
-  local rx="$1" want="$2" label="$3" row cell word
-  if [ -z "$ADR" ]; then no_adr "$label"; return; fi
-  row="$(printf '%s\n' "$ADR_TABLE_ROWS" | grep -iE "$rx" | head -n 1)"
-  if [ -z "$row" ]; then
-    failc "$label — no adjustment-scope row matching /$rx/ in $ADR_NAME"
-    return
-  fi
-  cell="$(row_cell "$row" 2)"
+  local rx="$1" want="$2" label="$3" cell word
+  disposition_cell "$rx" "$label" || return
+  cell="$DISP_CELL"
   word="$(leading_word "$cell")"
   if [ "$word" = "$want" ]; then
     pass "$label — disposition '$word'"
@@ -327,14 +338,9 @@ expect_disposition_word() {
 # missing row is a FAIL, never a vacuous pass: "the clause is gone because the
 # whole row is gone" is a different delivery from the one the design settled.
 expect_disposition_text_absent() {
-  local rx="$1" bad="$2" label="$3" row cell
-  if [ -z "$ADR" ]; then no_adr "$label"; return; fi
-  row="$(printf '%s\n' "$ADR_TABLE_ROWS" | grep -iE "$rx" | head -n 1)"
-  if [ -z "$row" ]; then
-    failc "$label — no adjustment-scope row matching /$rx/ in $ADR_NAME"
-    return
-  fi
-  cell="$(row_cell "$row" 2)"
+  local rx="$1" bad="$2" label="$3" cell
+  disposition_cell "$rx" "$label" || return
+  cell="$DISP_CELL"
   if printf '%s' "$cell" | grep -qiE "$bad"; then
     failc "$label — the row's disposition text still matches /$bad/"
   else

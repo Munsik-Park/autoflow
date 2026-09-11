@@ -671,6 +671,5 @@ registry row.
   "When to Create an ADR" trigger area — so it lands ahead of the mechanisms it governs.
 - **Effective from the next cycle.** The cycle that writes this record is governed by the
   pre-existing rules; see *Clauses this ADR carries beyond M and D1–D6*.
-- **Revised in response to the external review of PR #220** — two `Medium` findings, on D3's
-  whole-tree exception and on its borrowed failure-verdict rule. The supersessions that revision
-  records, and the clauses it leaves standing, are listed in *Related Issues / PRs*.
+- **Revised in response to the external review of PR #220.** The two `Medium` findings, what
+  changed, and what stands are recorded in *Related Issues / PRs*.
