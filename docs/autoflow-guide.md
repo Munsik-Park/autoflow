@@ -19,7 +19,7 @@ by an external review process; AutoFlow does not merge.
 
 Key principles:
 
-- **No shortcuts** — every phase is executed in order.
+- **Judged route, fixed checks** — the phases run in the order below; which of them a change passes through, and how deep, is the working AI's judgment recorded with its grounds, while the independent checks — the gates, the push gate, CI, the reviewer review — are never skipped ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principles 1–3; > Execution Principles).
 - **Multi-agent separation** — distinct roles handle implementation, testing, and evaluation.
 - **Bias prevention** — 3-phase independent analysis before coding.
 - **Quantified quality** — 10-point evaluation with a defined PASS threshold.
@@ -1005,10 +1005,16 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 ## REFINE — Refactor (Green maintained)
 
 ```
-1. Developer AI: run /simplify
-   - Three parallel agents (reuse / quality / efficiency).
-   - Apply suggested fixes (no behavior change — tests must pass without modification).
-   - If /simplify finds nothing, proceed to step 2 (do NOT skip).
+1. Developer AI: decide whether to run /simplify, and over what — then run it as decided.
+   - Whether it runs and which files it covers is the Developer AI's judgment on the diff
+     ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in the
+     REFINE report's `simplify:` / `simplify-grounds:` lines (below). The report is written
+     whether or not it ran.
+   - When it runs: three parallel agents (reuse / quality / efficiency); apply suggested fixes
+     (no behavior change — tests must pass without modification); a finding of nothing is
+     `none` in each section.
+   - A wrong judgment is caught by GATE:QUALITY, which reads the report, and by the reviewer
+     (principle 3). No predicate script and no exclusion list decides this (issue #227).
 2. [MUST] Confirm Green after the refactor: when step 1 changed a file, re-run the cycle's local run
    set (VERIFY step 1's command) once and record the command and its summary line; when step 1
    changed nothing, the VERIFY step-1 record stands and nothing re-runs.
@@ -1016,7 +1022,6 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 3. Commit (refactor type; skip if step 1 made no changes).
 ```
 
-**Why /simplify?** Removes the AI's "nothing to clean up" skip bias by mechanically analysing the code.
 **Max retries**: 2; on second failure, abandon refactor and proceed to VALIDATE
 with the Green state from VERIFY.
 
@@ -1024,7 +1029,10 @@ with the Green state from VERIFY.
 
 The Developer AI writes one report per REFINE pass, with three sections in this order — the report
 is an input to GATE:QUALITY, so every section is present and a section with nothing to say states
-`none` explicitly (an omitted section is a VALIDATE step-4 failure, not a silence):
+`none` explicitly (an omitted section is a VALIDATE step-4 failure, not a silence). The report
+opens with two lines that record step 1's judgment — `simplify: run <files or scope>` or
+`simplify: not run`, then `simplify-grounds: <what in the diff did or did not warrant it>` — and
+when /simplify did not run each of the three sections reads `none`:
 
 1. `## Applied` — each /simplify suggestion applied, one line each.
 2. `## Rejected / deferred` — each suggestion not applied, with the reason (`behavior-changing`,
@@ -1056,8 +1064,9 @@ the author's "this is fine" is not the disposition.
 2. Minimal-implementation check: PASS confirmed (achieved in VERIFY step 3).
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
 4. Maintained-docs check: confirm impacted docs are updated, and that the REFINE report
-   (`.autoflow/issue-{N}-refine-report.md`) exists with its three sections present — an empty
-   section says `none`; an omitted section fails this step (REFINE > REFINE report).
+   (`.autoflow/issue-{N}-refine-report.md`) exists with its `simplify:` / `simplify-grounds:`
+   lines and its three sections present — an empty section says `none`; an omitted section or a
+   missing decision line fails this step (REFINE > REFINE report).
 5. Manifest coherence check: if the diff touched a manifest-registered source
    (Change Surface Rules > Derived artifacts), confirm `setup/manifest.json` was
    regenerated in the same change — re-run the set-intersection check locally so
@@ -1399,19 +1408,19 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
 
      | Route | What the orchestrator runs | Re-review |
      |---|---|---|
-     | `ARCHITECT` (from `design`) | the **full** review-response cycle below — the decision moved, so the deliberation owns it | step 6, per-PR |
+     | `ARCHITECT` (from `design`) | the deliberation owns the moved decision; the re-entry point is the orchestrator's recorded judgment (below) — a review-response cycle from DIAGNOSE, or an ARCHITECT re-deliberation on a `brief` | step 6, per-PR |
      | `GREEN` (from `impl`) | Developer AI fixes on the finding's own surface → VERIFY step 1 → REFINE → VALIDATE | step 6, per-PR |
      | `RED` (from `test`) | Test AI fixes the test asset → re-Red → GREEN → VERIFY step 1 → REFINE → VALIDATE | step 6, per-PR |
      | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | step 6, per-PR |
      | `PAUSE` (from `operator`) | `active:false`, `phase:"awaiting-user"` | — |
 
-     Only the `ARCHITECT` route runs the **full** cycle: auto-enter a review-response cycle in-session with the reviewer comment as the DIAGNOSE trigger target — the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF. The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What the thin path removes is re-deliberation of a decision nothing moved; **every independent check is retained** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), and CI still gates. This is the same class-routed proportionality the late gates have had since issue #140 ([`design-rationale.md`](design-rationale.md) > Decision 11), extended to the one entry point that still re-entered unconditionally (Decision 15) (llmroute #280: a five-line production fix took a full cycle at ≈ $128).
+     The `ARCHITECT` route is the one whose depth is judged. The finding moved a settled decision, so the deliberation owns the change; **where the re-entry starts is the orchestrator's judgment** (issue #227; [`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — auto-entered in-session with the reviewer comment as the DIAGNOSE trigger target, the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, preserve the previous cycle's artifacts, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a Phase A/B fact the decision rested on; (b) an **ARCHITECT re-deliberation** — the same setup, except that `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), the participants are spawned on a `brief` naming the finding and the ledger entry of the decision it moves (ARCHITECT > *Re-discussion*), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision entry it moves) and why the analysis does or does not stand. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT participants on the recorded GATE:HYPOTHESIS verdict and RED / GREEN on the GATE:PLAN the re-deliberation re-scores — so a shape that skips a phase never skips the gate after it, and a wrong judgment is caught by GATE:PLAN, the reviewer re-review and CI (principle 3). The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What a thin route removes is re-deliberation of a decision nothing moved; **every independent check is retained on every route and shape** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), CI still gates, and the loop check and the attempt cap below apply unchanged. This is the same class-routed proportionality the late gates have had since issue #140 ([`design-rationale.md`](design-rationale.md) > Decision 11), extended to the review entry point by Decision 15 (llmroute #280: a five-line production fix took a full cycle at ≈ $128) and, for the `design` class, to the re-entry point by Decision 17 (issue #217: three `design`-class review rounds each re-ran the cycle from DIAGNOSE).
 
-     **[MUST] The loop check runs on every route, before the routed work starts.** The thin routes skip DIAGNOSE, and the review-response loop check has its other call site there ([`phases/analysis.md`](phases/analysis.md) > *Review-response loop check*) — so on a thin route the orchestrator runs that contract's **steps 1 and 2 here**: append this attempt's observation to the ledger (complaint class, witness case, prior-change shape, cycle), then compare it against the immediately-prior review-response observation, with the same suppression rule and the same situation-first pause on a match. Both halves are load-bearing and neither substitutes for the other: without the comparison a class whose witness case merely changes is patched case by case until the attempt cap, which is the pathology the check exists to stop; without the **unconditional record** a later full cycle has no baseline to compare against. The `review-autofix` count is an attempt tally, not a class comparison. Step 3 (re-enter after the user answers) applies unchanged when the check pauses. The contract's single documentary home stays `phases/analysis.md`; this is a second call site for the entry path that has no DIAGNOSE, the same shape as `scope-bounded.sh`'s `triage` and `check-fix` call sites.
+     **[MUST] The loop check runs on every route, before the routed work starts.** The thin routes and the `ARCHITECT` route's re-deliberation shape skip DIAGNOSE, and the review-response loop check has its other call site there ([`phases/analysis.md`](phases/analysis.md) > *Review-response loop check*) — so on a route that skips DIAGNOSE the orchestrator runs that contract's **steps 1 and 2 here**: append this attempt's observation to the ledger (complaint class, witness case, prior-change shape, cycle), then compare it against the immediately-prior review-response observation, with the same suppression rule and the same situation-first pause on a match. Both halves are load-bearing and neither substitutes for the other: without the comparison a class whose witness case merely changes is patched case by case until the attempt cap, which is the pathology the check exists to stop; without the **unconditional record** a later attempt that runs DIAGNOSE has no baseline to compare against. The `review-autofix` count is an attempt tally, not a class comparison. Step 3 (re-enter after the user answers) applies unchanged when the check pauses. The contract's single documentary home stays `phases/analysis.md`; this is a second call site for the entry path that has no DIAGNOSE, the same shape as `scope-bounded.sh`'s `triage` and `check-fix` call sites.
 
-     Either route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker, and the entry names the routed class — so the attempt cap below counts thin and full entries alike, and a later reader can see which route each attempt took. The four user-pause criteria below take precedence over any route; criterion (d) is evaluable on every route because of the `[MUST]` above.
+     Every route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker, and the entry names the routed class and, on the `ARCHITECT` route, the judged shape with its grounds — so the attempt cap below counts every entry alike whatever depth it re-entered at, and a later reader can see which route and shape each attempt took. The four user-pause criteria below take precedence over any route; criterion (d) is evaluable on every route because of the `[MUST]` above.
 
-     `scope-bounded:` is still written on every Medium+ verdict (the `[MUST]` above): it selects the path **within** the full cycle, and on a thin route it is the record of why the finding stayed on the PR's own surface.
+     `scope-bounded:` is still written on every Medium+ verdict (the `[MUST]` above): it selects the path **within** a re-entry that runs DIAGNOSE (> PREFLIGHT > Scope-bounded entry), and on a route that does not run DIAGNOSE it is the record of why the finding stayed on the PR's own surface.
      - **Pause for the user** (`AskUserQuestion`, with the question and option descriptions written situation-first per [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation; `active:false`, `phase:"awaiting-user"`) when the attempt hits **any** of: (a) the fix needs a contract / acceptance-criterion change, (b) the fix direction is ambiguous, (c) the finding is a `Low Confidence` item, (d) the review-response loop check matches (same complaint class, new witness). The user's answer is appended to the ledger and selects re-entry.
      - **Attempt cap = 7.** Count the *consecutive `review-autofix`-marked ledger entries since the last user re-entry decision (reset by that decision; if none yet this cycle, since the first auto-entry)* — the number of auto-resolution attempts not yet checked with the user. A marked entry is a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*): the allocated identifier sits at the front of the heading and the marker stays at the end, so the count predicate reads the marker exactly as it did before identifiers were introduced — it is unaffected by the `O<n>` prefix. On the 7th such entry without the `blocked-by-review` label clearing, stop auto-resolving and pause for the user (`active:false`, `phase:"awaiting-user"`). A user re-entry decision (the user approving continuation at a pause) **resets** this window to zero — the next auto-entry starts a fresh budget of 7. The reset anchor is the user re-entry decision only.
      - **Durable record (host PR).** Post a one-line comment on the **host PR** — the always-present cycle anchor carrying `Closes #N` — via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event). These GitHub-side records survive the scratch-file cleanup at the next PREFLIGHT prior-cycle resolution, so cap-fire and re-entry stay durably auditable.
@@ -1492,7 +1501,8 @@ In a single-repo deployment (target-centric — the default; zero submodules), t
 
 → Single source of truth: [`CLAUDE.md`](../CLAUDE.md) > Execution Principles. These are
 always-on orchestrator invariants (not phase-local), so they stay resident in the core
-file: Safety first, Verify before transition, Every phase is mandatory, Teammate idle
+file: Safety first, Verify before transition, The route is the AI's judgment (the independent
+checks are not), Teammate idle
 handling, **Verify teammate claims before dispatch** (every report's Evidence anchor is
 verified before ACCEPT — an anchor-less report is rejected, not interpreted), and Stop on
 error.

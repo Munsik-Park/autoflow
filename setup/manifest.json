@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "33830544a89cbfe42a28d29f2bd2739069c739adcb5d289c9bfa6a5aea89c894"
+      "sha256": "6c8e9db2f992365eb1f8c5cedf3f98f667907cb545bc8ceab97250c5b7ee7a10"
     },
     {
       "source": "docs/INDEX.md",
@@ -118,14 +118,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "471cf88f2964290417bc5c542239f50465421c35852172965abcc930f30f9ca7"
+      "sha256": "cd540807696573006e9bb341ce35f714bac22c93dcbce59eecba1e1c656d42d4"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "adca379947b65939aaab445ac21a859e85299b97bf74dc8f33cc73a261f1900d"
+      "sha256": "3f88bd3b1b5d5abf7219bf46b5132e47d484beb57b63dd44f8279e64f48e7fde"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -181,7 +181,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a2e7c14c5e5d13ee2e6493591b60c5471de8b2cc213a503ed213705b0947c76e"
+      "sha256": "3daf4656128237b505318c508d1bae3f93e67c960418b8648c8aca95e741cafb"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -223,14 +223,14 @@
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "06107c2804d145ac92eb3cb67f9a9a14917a0736011667e7ecccf2450b4098f8"
+      "sha256": "7b352b9a31f172b465c75e93747cb79c553a6c09d80e0d359165500053cc4e10"
     },
     {
       "source": "docs/teammate-contracts.md",
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a6a91b8bf91ae79fa5dbb951f7486c7900f30b20be1692121dbc977c3c6406e7"
+      "sha256": "31d0480003e796eb3296a378acd3fb48765f176fe07e0d13c17fdefe86113228"
     },
     {
       "source": "docs/title-guide.md",
@@ -405,7 +405,7 @@
       "dest": "scripts/gate/remedy-route.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "9a6a16af1f2c606192ecabca78c7ffd41003fa5e50b045010fb580212cef4ac7"
+      "sha256": "46589e71404a60454119950d5c36c31aaf3f4df1ff753fa7bffaa7a38b78cb72"
     },
     {
       "source": "scripts/review/scope-bounded.sh",
