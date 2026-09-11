@@ -173,6 +173,15 @@ on:
       - 'docs/tool-delivery-contract.md'
       - 'tests/test-headerless-suite-target.sh'
       - 'plugin/autoflow/agents/autoflow-tester.md'
+      - '.autoflow/**'
+      - '.claude/autoflow.local.json'
+      - '.claude/autoflow.local.json.example'
+      - '.gitignore'
+      - 'scripts/gate/**'
+      - 'scripts/test/**'
+      - 'tests/test-cycle-layer-index.sh'
+      - 'tests/test-suite-plane-optin-single-site.sh'
+      - 'tests/test-verification-layer-token-set.sh'
   push:
     branches: [main]
     paths:
@@ -312,6 +321,15 @@ on:
       - 'docs/tool-delivery-contract.md'
       - 'tests/test-headerless-suite-target.sh'
       - 'plugin/autoflow/agents/autoflow-tester.md'
+      - '.autoflow/**'
+      - '.claude/autoflow.local.json'
+      - '.claude/autoflow.local.json.example'
+      - '.gitignore'
+      - 'scripts/gate/**'
+      - 'scripts/test/**'
+      - 'tests/test-cycle-layer-index.sh'
+      - 'tests/test-suite-plane-optin-single-site.sh'
+      - 'tests/test-verification-layer-token-set.sh'
 
 permissions:
   contents: read
@@ -584,6 +602,24 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-headerless-suite-target.sh ')
         timeout-minutes: 10
         run: bash tests/test-headerless-suite-target.sh
+
+      - name: test-suite-plane-optin-single-site.sh
+        id: s-test-suite-plane-optin-single-site
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-suite-plane-optin-single-site.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-suite-plane-optin-single-site.sh
+
+      - name: test-cycle-layer-index.sh
+        id: s-test-cycle-layer-index
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-cycle-layer-index.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-cycle-layer-index.sh
+
+      - name: test-verification-layer-token-set.sh
+        id: s-test-verification-layer-token-set
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-verification-layer-token-set.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-verification-layer-token-set.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh

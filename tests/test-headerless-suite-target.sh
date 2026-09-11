@@ -33,6 +33,14 @@
 #   RUN-SEL        AC2/AC3: run-suites.sh's selection path executes nothing,
 #                  exits 1 and names --all and the migration; --all runs the
 #                  enumerated set
+#   OPTIN-*        #228 AC3: the suite plane is opt-in (ADR-0024 D3) — the
+#                  installed selector's SELECTION PATH requires the header only
+#                  on a root that declares `tests.suite_plane`; the three
+#                  non-opted-in shapes (no `tests` key, an explicit false, no
+#                  declaration file) answer with one exit status that is neither
+#                  a selection, a BLOCK nor a usage error; a present-but-
+#                  unreadable declaration refuses rather than defaulting; and
+#                  --check-headers stays unkeyed (feature design P4)
 #   D7-FAIL        AC1: the installed drift-check FAILs once per header-less
 #                  suite — never `0 failed` — with a HINT naming the migration
 #   D7-SKIP        the selector absent beside the detector -> SKIP: D7 naming the
@@ -133,6 +141,21 @@ mkdir -p "$T/src"; echo v1 > "$T/src/app.txt"
 write_suite tests/check-legacy-alpha.sh ""
 write_suite tests/check-legacy-beta.sh "# ci-subject:"
 write_suite tests/nested/check-legacy-gamma.sh ""
+
+# The target declares the suite-plane opt-in (ADR-0024 D3, issue #228). Every
+# selector/runner leg below is a SELECTION-PATH leg and the selection path
+# resolves the declaration, so this file is part of the reproduction shape
+# rather than scenery. The stamp's own scaffold declares no `tests` key
+# (tests/test-issue-979-bundle-delivery.sh:85) — that is the non-opted-in state
+# the OPTIN-* section exercises, over this same root.
+optin() {  # <declaration JSON> | '-' to remove the file
+  if [ "$1" = "-" ]; then rm -f "$T/.claude/autoflow.local.json"
+  else printf '%s\n' "$1" > "$T/.claude/autoflow.local.json"; fi
+}
+OPTIN_IN='{ "review": { "backend": "codex" }, "tests": { "suite_plane": true } }'
+OPTIN_SCAFFOLD='{ "review": { "backend": "codex" } }'
+optin "$OPTIN_IN"
+
 git -C "$T" init -q
 g add -A && g commit -q -m base
 BASE=$(g rev-parse HEAD)
@@ -202,6 +225,81 @@ if [ "$rc" -eq 0 ] && [ "$out" = "$HEADERLESS" ] && [ -z "$(witness)" ]; then
   fi
 else
   failc "RUN-ALL (list): rc=$rc stdout='$(tr '\n' '|' <<<"$out")'"
+fi
+
+# -----------------------------------------------------------------------------
+echo "== the opt-in discriminator on the selection path (AC3, issue #228) =="
+# -----------------------------------------------------------------------------
+# ADR-0024 D3 makes the suite plane opt-in: its target-side enforcement fires
+# only where the target declares `tests.suite_plane`. These legs drive the
+# INSTALLED selector — what a target executes after a re-stamp — over the one
+# real root above, changing nothing but the target-owned declaration file. The
+# selector's declared statuses are 0 = selection, 1 = BLOCK, 2 = usage, so "not
+# opted in" is checkable as "none of those" without pinning the number the
+# implementation picks (feature design P3/F4, on the confirm-ci-green.sh
+# 11-vs-12 precedent that keeps "nothing ran" from reading as "passed").
+sel_run() {
+  SEL_OUT=$(bash "$SEL" --base "$BASE" 2>"$WORK/optin.err"); SEL_RC=$?
+  SEL_ERR=$(cat "$WORK/optin.err")
+}
+nblocks() { grep -c "declares no usable '# ci-subject:' header" <<<"$SEL_ERR"; }
+not_a_declared_status() { [ "$1" -ne 0 ] && [ "$1" -ne 1 ] && [ "$1" -ne 2 ]; }
+
+RC_SCAFFOLD=""; RC_FALSE=""; RC_NOFILE=""
+
+optin "$OPTIN_SCAFFOLD"; sel_run; RC_SCAFFOLD=$SEL_RC
+if not_a_declared_status "$SEL_RC" && [ -z "$SEL_OUT" ] && [ "$(nblocks)" -eq 0 ]; then
+  pass "OPTIN-ABSENT-KEY: the shipped scaffold's shape (no 'tests' key) does not require the header — rc=$SEL_RC is neither a selection, a BLOCK nor a usage error, and nothing is selected"
+else
+  failc "OPTIN-ABSENT-KEY: rc=$SEL_RC stdout='$SEL_OUT' blocks=$(nblocks); $(head -n 2 <<<"$SEL_ERR" | tr '\n' ' ' | cut -c1-300)"
+fi
+
+optin '{ "review": { "backend": "codex" }, "tests": { "suite_plane": false } }'
+sel_run; RC_FALSE=$SEL_RC
+if not_a_declared_status "$SEL_RC" && [ -z "$SEL_OUT" ] && [ "$(nblocks)" -eq 0 ]; then
+  pass "OPTIN-FALSE: an explicit 'suite_plane: false' does not require the header — rc=$SEL_RC, no BLOCK, no selection"
+else
+  failc "OPTIN-FALSE: rc=$SEL_RC stdout='$SEL_OUT' blocks=$(nblocks)"
+fi
+
+optin -; sel_run; RC_NOFILE=$SEL_RC
+if not_a_declared_status "$SEL_RC" && [ -z "$SEL_OUT" ] && [ "$(nblocks)" -eq 0 ]; then
+  pass "OPTIN-NO-FILE: an absent declaration file does not require the header — rc=$SEL_RC, no BLOCK, no selection"
+else
+  failc "OPTIN-NO-FILE: rc=$SEL_RC stdout='$SEL_OUT' blocks=$(nblocks)"
+fi
+
+if [ "$RC_SCAFFOLD" = "$RC_FALSE" ] && [ "$RC_FALSE" = "$RC_NOFILE" ]; then
+  pass "OPTIN-ONE-STATE: the three non-opted-in shapes answer with one and the same exit status ($RC_NOFILE) — 'not opted in' is one state, not three"
+else
+  failc "OPTIN-ONE-STATE: absent-key=$RC_SCAFFOLD false=$RC_FALSE no-file=$RC_NOFILE"
+fi
+
+# --check-headers stays unkeyed: it answers a question it was asked, and a
+# non-empty list is an answer rather than a requirement (feature design P4/F5).
+# Keying it would report `headers OK` for a root whose headers were never
+# examined — a not-run rendered as clean, which ADR-0024:213-219 forbids.
+out=$(bash "$SEL" --check-headers 2>"$WORK/chk.err"); rc=$?
+if [ "$rc" -eq 1 ] && [ "$out" = "$HEADERLESS" ]; then
+  pass "OPTIN-CHECK-UNKEYED: on a non-opted-in root --check-headers still exits 1 and lists the three header-less suites — the query consults no opt-in"
+else
+  failc "OPTIN-CHECK-UNKEYED: rc=$rc stdout='$(tr '\n' '|' <<<"$out")'"
+fi
+
+optin '{ "tests": { "suite_plane": true '
+sel_run
+if [ "$SEL_RC" -ne 0 ] && [ "$SEL_RC" != "$RC_NOFILE" ] && [ -z "$SEL_OUT" ] \
+   && grep -qF 'autoflow.local.json' <<<"$SEL_ERR"; then
+  pass "OPTIN-UNREADABLE: a present-but-unparseable declaration refuses rather than defaulting (rc=$SEL_RC, distinct from the not-opted-in rc=$RC_NOFILE) and names the declaration file"
+else
+  failc "OPTIN-UNREADABLE: rc=$SEL_RC (not-opted-in was $RC_NOFILE) stdout='$SEL_OUT'; $(head -n 2 <<<"$SEL_ERR" | tr '\n' ' ' | cut -c1-300)"
+fi
+
+optin "$OPTIN_IN"; sel_run
+if [ "$SEL_RC" -eq 1 ] && [ "$(nblocks)" -eq 3 ]; then
+  pass "OPTIN-DISCRIMINATES: restoring the opt-in restores the BLOCK over all three suites — the differences above are the declaration's, not a broken selector's"
+else
+  failc "OPTIN-DISCRIMINATES: rc=$SEL_RC blocks=$(nblocks)"
 fi
 
 # -----------------------------------------------------------------------------
