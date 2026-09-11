@@ -47,7 +47,7 @@ not replace them.
 
 | If the issue touches... | Read first |
 | --- | --- |
-| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/design-rationale.md`, `docs/phases/analysis.md`, `docs/adr/0016-adr-conformance-gate-scoring.md`, `docs/adr/0017-teammate-removal-feasibility.md`, `docs/adr/0018-verification-depth-justification.md`, `docs/adr/0019-scope-fit-verification-policy.md`, `docs/adr/0020-acceptance-criterion-authority.md`, `docs/adr/0023-deliberation-participant-lifetime.md` |
+| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/design-rationale.md`, `docs/phases/analysis.md`, and the ADRs listed in `docs/adr/README.md` > Current Drafts (the one maintained ADR list — this table does not repeat it) |
 | Sub-repo implementation (multi-repo instances) | `docs/repo-boundary-rules.md` |
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Filing a new issue | `docs/issue-proposal.md` |

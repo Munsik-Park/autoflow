@@ -11,9 +11,14 @@ format. Three consequences follow, and they are the issue's three recorded probl
 (`Munsik-Park/autoflow#217`).
 
 **The local run performs CI's scope.** VALIDATE step 1 requires an unconditional whole-tree sweep
-every cycle (`docs/autoflow-guide.md:1462`), and GREEN step 5, VERIFY step 1 and REFINE step 2 each
-re-run the selected set at a capture point (`:949`, `:985`, `:1413-1416`). The same tree costs 89 s
-in CI and 594 s locally (`scripts/test/suite-manifest.sh:50`). Issue #112 recorded that inversion;
+every cycle (`docs/autoflow-guide.md` > VALIDATE — "Whole-tree sweep, the coverage floor"), and
+GREEN step 5, VERIFY step 1 and REFINE step 2 each re-run the selected set at a capture point
+(`docs/autoflow-guide.md` > GREEN > *Acceptance-run scope — record what you ran* —
+"the orchestrator resolves that set and executes it"; > VERIFY —
+"Quiesce the tree before the capture point"; > REFINE — "Re-run all tests the change requires").
+The same tree costs 89 s in CI and 594 s locally (`scripts/test/suite-manifest.sh` > the
+`THE TWO CLOCKS ARE NOT THE SAME CLOCK` comment — "runs 89 s in CI against 594 s locally").
+Issue #112 recorded that inversion;
 the answers built since — local selection, suite-grained inheritance, the shared Green-tree register
 and its input hash (ADR-0019, issues #121, #130, #134) — all reduced the *cost* of the local run
 while leaving the *scope* where it was. Moving the floor to CI was explicitly left out of scope
@@ -21,23 +26,32 @@ at #130.
 
 **AutoFlow imposes its test format on the target.** Every `*.sh` under `tests/**` must carry the
 suite header contract; a target that has not migrated is BLOCKed at RED (issue #213) and, from
-0.2.2, stopped at PREFLIGHT by drift-check D7 (`setup/thin-root-layer/drift-check.sh:481`). Lint
-does not work this way: it follows the chain the target itself declares
-(`docs/submodule-common-rules.md:181`), and a place for the target to declare its test command
-already exists (`:99-101`).
+0.2.2, stopped at PREFLIGHT by drift-check D7 (`setup/thin-root-layer/drift-check.sh` > the `D7`
+leg — "D7: suite headers the shipped selector requires"). Lint does not work this way: it follows
+the chain the target itself declares (`docs/submodule-common-rules.md` > Change Surface Rules >
+*Lint chain on the staged surface* —
+"the target repo's `CLAUDE.md` > Development Commands `Lint` / `Format` entries"), and a place for
+the target to declare its test command already exists (`docs/submodule-common-rules.md` >
+CLAUDE.md Requirements > *2. Tech Stack & Commands* — "**Test**: `<test command>`").
 
 **There is no distinction between one-shot delivery verification and regression verification.**
-`lane: cycle-scoped` means only "inert off its own dev branch" (`docs/autoflow-guide.md:856`) — the
-file is still committed, still enumerated, and still forced into CI with no exemption
-(`scripts/test/check-suite-ci-coverage.sh:26-30`); retirement is a manual act at the cycle's final
-commit (`:872`). The test kinds (`driving` / `regression` / `characterization`, `:495-497`) classify
+`lane: cycle-scoped` means only "inert off its own dev branch" (`docs/autoflow-guide.md` > RED >
+*Header contract*) — the file is still committed, still enumerated, and still forced into CI with no
+exemption (`scripts/test/check-suite-ci-coverage.sh` > the header comment —
+"There is NO exemption list for unreachable suites"); retirement is a manual act at the cycle's
+final commit (`docs/autoflow-guide.md` > RED > *Naming* — "retired in the cycle's final commit").
+The test kinds (`driving` / `regression` / `characterization`; `docs/autoflow-guide.md` > ARCHITECT >
+Output artifacts > *Test necessity* — "records existing behavior the change must preserve") classify
 a test's role in RED, not its lifetime.
 
 **Why the local run holds that scope today.** Push is admitted only after AUDIT and GATE:QUALITY
-(`CLAUDE.md:430`) and CI runs only on `pull_request` (`.github/workflows/contract-suites.yml:38`),
-so no CI verdict exists during the cycle and the local run stands in for one. ADR-0019 rejected
-using CI results as an "advisory CI signal" (`docs/adr/0019-scope-fit-verification-policy.md:100-102`),
-yet HANDOFF step 5 already requires CI green as a `[MUST]` (`docs/autoflow-guide.md:1798`) — the
+(`CLAUDE.md` > AutoFlow State Tracking (Hook integration) —
+"`git push` → AUDIT + GATE:QUALITY pass required") and CI runs only on `pull_request`
+(`.github/workflows/contract-suites.yml` > `on.pull_request`), so no CI verdict exists during the
+cycle and the local run stands in for one. ADR-0019 rejected using CI results as an "advisory CI
+signal" (`docs/adr/0019-scope-fit-verification-policy.md` > Alternatives Considered > *Seed coverage
+from the integration branch's CI result*), yet HANDOFF step 5 already requires CI green as a
+`[MUST]` (`docs/autoflow-guide.md` > HANDOFF — "Confirm CI is green on the created PR(s)") — the
 rejection and the flow disagree.
 
 The operator's decision that governs this ADR: AutoFlow verifies **its own** tests; a target's test
@@ -78,7 +92,8 @@ layer's name.
 > `delivery-check` row. No other `automated` row executes locally.
 
 The rule is what keeps RED intact. A `driving` row must FAIL before GREEN
-(`docs/autoflow-guide.md:495-497`) and no CI run exists before push, so a reading of "locally, only
+(`docs/autoflow-guide.md` > ARCHITECT > Output artifacts > *Test necessity* —
+"a required behavior not yet implemented") and no CI run exists before push, so a reading of "locally, only
 a one-shot test of the changed part" that excluded this cycle's own new tests would delete RED. The
 sentence forbids that reading: what leaves the local run is the *unchanged* standing set, never the
 set this cycle wrote.
@@ -140,11 +155,16 @@ Three consequences are recorded here so that no gate re-derives them:
   depth judgment on an existing criterion and refused a new scored item. What GATE:PLAN scores is
   that the chosen `Type` cell is right — a `standing` token on a check that one local run would
   settle is a wrong cell, scored where `Test plan` and `Scope` already score
-  (`docs/autoflow-guide.md:717`, `:730`). Token membership in the closed list is a set relation, not
+  (`docs/autoflow-guide.md` > GATE:PLAN > Scoring — "Are acceptance criteria testable?" and
+  "or over-engineers a new one where an extension suffices fails Scope"). Token membership in the
+  closed list is a set relation, not
   a judgment, so it is checkable by a lint (S3) and never scored.
 - **ADR-0022's tier-2 mechanism is not amended.** A `delivery-check` row is `≠ automated`, so the
-  host PR body's `## Verification dispositions` inclusion predicate (`docs/autoflow-guide.md:1788`;
-  `docs/pr-body-guide.md:55-60`) admits it unchanged. A `cycle`-layer `automated` row is **not a
+  host PR body's `## Verification dispositions` inclusion predicate (`docs/autoflow-guide.md` >
+  HANDOFF — "whose verification design row is typed anything other than `automated`";
+  `docs/pr-body-guide.md` > Principles > *5. Verification dispositions (검증 처분의 노출)* —
+  "automated test로 검증되지 않는 모든 항목을") admits it unchanged. A `cycle`-layer `automated` row is
+  **not a
   reduction** — it is the default disposition of a verified criterion — so the predicate is not
   widened to admit it. What the external reviewer sees of such a row is its one-shot run's
   **record** (command and summary line, Reporting Format item 5), carried into the host PR body by
@@ -152,7 +172,9 @@ Three consequences are recorded here so that no gate re-derives them:
 - **The `automated` asset cell splits — for `standing` rows only.** AutoFlow establishes
   `committed` on every target; `CI-registered` only where the target opted in, because the target's
   own CI is the target's business. On a non-opted-in target GATE:QUALITY `Test coverage`'s standing
-  half is `not-applicable` (`docs/submodule-common-rules.md:197`) — which is not clean, and which is
+  half is `not-applicable` (`docs/submodule-common-rules.md` > Change Surface Rules > *Lint chain on
+  the staged surface* — "discovery found no lint chain by either route") — which is not clean, and
+  which is
   a rubric disposition, never a route class, so it never reaches `scripts/gate/remedy-route.sh`.
 
 A **composition oracle** is `standing` by this mapping and not by a separate rule: its subject is a
@@ -176,17 +198,21 @@ the rendering).
 The prefix must be a **single declared path prefix**, because a predicate needs a subject: "the
 cycle layer lives with the other cycle artifacts" is a convention, not something a check can read.
 `.autoflow/` costs nothing to name — it is already the cycle-artifact store and already ignored
-(`.gitignore:6-7`).
+(`.gitignore` > the `# Auto-Flow per-cycle local working state` block — ".autoflow/*").
 
-**Cross-cycle disposition.** The store is a **fourth cycle-spanning artifact** on
-`docs/autoflow-guide.md:189`'s exception list, alongside the ledger, the state file and the
-review-findings file. That line's rename pattern matches a flat `.md` and does not match a
+**Cross-cycle disposition.** The store is a **fourth cycle-spanning artifact** on the exception list
+at `docs/autoflow-guide.md` > PREFLIGHT > *Preserve the previous cycle's artifacts* —
+"except the ledger, the state file, and `issue-{N}-review-findings.md`, which are cycle-spanning" —
+alongside the ledger, the state file and the
+review-findings file. That rule's rename pattern matches a flat `.md` and does not match a
 directory, and the three existing exceptions are exactly the artifacts whose subject is *the issue*
 rather than *the cycle* — and a `delivery-check`'s subject is the open PR's **cumulative landed
 diff**, so on a review-response cycle the previous cycle's delivery checks still have a live
 subject. The store's **retained set is reviewed and re-authored at RED entry**, then re-executed at
 the new cycle's verification point; a check that did not execute is `not-run`, never `passed`
-(`docs/submodule-common-rules.md:196`). Review at RED entry rather than on a failure is deliberate:
+(`docs/submodule-common-rules.md` > Change Surface Rules > *Lint chain on the staged surface* —
+"a covered file was staged and a chain was discovered, but the chain did not execute"). Review at
+RED entry rather than on a failure is deliberate:
 it makes every retained check that executes one whose subject this cycle did not change, so a
 failure is unambiguous and needs no new branch — a `delivery-check` has no RED/GREEN semantics
 (ADR-0022 decision 2), so the VERIFY cause-branch is not its home.
@@ -213,10 +239,11 @@ enforcement fires only where the target declares it.
 declaration: the header contract (`scripts/test/check-suite-manifest.sh`), the selector
 (`scripts/test/select-suites.sh`) and drift-check D7, which gains a **new opt-in-keyed arm that
 calls the resolver** rather than carrying its own copy of the predicate. Three copies of one
-predicate is the defect, not the fix — `scripts/test/check-suite-ci-coverage.sh:20-24` already names
-that shape ("two definitions of one subject"), and three predicates that must agree is a
-verification that can pass while the system is inconsistent. D7 today has exactly two SKIP arms
-(`setup/thin-root-layer/drift-check.sh:501-505`) and the selector ships to every stamped target
+predicate is the defect, not the fix — `scripts/test/check-suite-ci-coverage.sh` > the header
+comment already names that shape ("two definitions of one subject"), and three predicates that must
+agree is a verification that can pass while the system is inconsistent. D7 today has exactly two
+SKIP arms (`setup/thin-root-layer/drift-check.sh` > the `D7` leg's SKIP arms —
+"suite selector not found beside this script") and the selector ships to every stamped target
 (`setup/manifest.json`), so a non-opted-in target resolves the selector, runs D7 and FAILs: the new
 arm is required, not optional.
 
@@ -227,7 +254,8 @@ run declares one.
 
 **Boundary.** AC2 and M bind what AutoFlow's phases require of **AutoFlow's own run set**. What a
 target's declared test command executes internally is **outside this model** — a target's test
-execution and format are the target's (설계 원칙 1, restated in this record's Context at `:43-46`) —
+execution and format are the target's (설계 원칙 1, restated in this record's Context —
+"AutoFlow verifies **its own** tests") —
 and no acceptance criterion of this issue verifies it. The ground travels with the sentence instead
 of being asserted: AC2's second sentence names the verification's object — *"조정 범위 1의 규정이
 모두 새 모델로 대체되거나 삭제된다"* — and every row of that enumeration is an AutoFlow rule
@@ -239,7 +267,9 @@ row is a target's test command.
 input: AutoFlow reports what the invocation returned and adjudicates nothing beyond it — scoping and
 failure attribution are the target's practice. The call site reports through the lint chain's outcome
 vocabulary, total over reachable states — `clean` / `fixed-and-staged` / `detected` / `not-run` /
-`not-applicable` with their reason classes (`docs/submodule-common-rules.md:192-196`) — including
+`not-applicable` with their reason classes (`docs/submodule-common-rules.md` > Change Surface Rules >
+*Lint chain on the staged surface* > *Outcome vocabulary* —
+"the report carries one word per discovered chain") — including
 that `not-run` is never `clean`. What does **not** carry across is that vocabulary's lint-side
 qualifier *attributable to the staged files*: a linter reports at the offending file and a test
 runner reports at the assertion site, so this decision takes the exit status rather than a reading of
@@ -247,8 +277,9 @@ the output. A non-zero exit is therefore reported non-clean, and AutoFlow neithe
 adjudicates its cause.
 
 **The unsatisfiable case.** A target that declares no test command while the design types a row
-`automated` is caught at **GATE:PLAN `Feasibility`** (`docs/autoflow-guide.md:730` — "a plan not
-grounded in the actual structure"). The fact is carried **in the verification design**, which
+`automated` is caught at **GATE:PLAN `Feasibility`** (`docs/autoflow-guide.md` > GATE:PLAN >
+Scoring — "a plan not grounded in the actual structure"). The fact is carried **in the verification
+design**, which
 GATE:PLAN reads; the PREFLIGHT ledger entry remains the record and carries no gate weight, because
 the ledger is not a gate input (`CLAUDE.md` > Decision Ledger). A residual state proceeds correctly:
 a target with no declared test command whose design types every row `none` / `manual` /
@@ -260,19 +291,23 @@ residual above already lets a design owing no automated verification proceed. GA
 sole point at which that judgment is ever re-derived, since an `automated` row reaches the external
 reviewer only as its run record (D1), never as a disposition to judge — the host PR body's
 `## Verification dispositions` section covers every criterion typed *other than* `automated`
-(`docs/autoflow-guide.md:1787-1790`). A blocking point whose remedy
+(`docs/autoflow-guide.md` > HANDOFF —
+"The host PR body carries a `## Verification dispositions` list"). A blocking point whose remedy
 lies entirely inside AutoFlow's own artifact mandates nothing of the target; one whose remedy lies in
 the target's declaration would be a device on the target path however it is worded.
 
 ### D4 — CI-layer verdict point and CI-failure re-entry
 
 **Verdict point.** **HANDOFF step 5**, `scripts/handoff/confirm-ci-green.sh` exit `0`
-(`docs/autoflow-guide.md:1798`), which is already a `[MUST]`. **The push gate is not relaxed**:
+(`docs/autoflow-guide.md` > HANDOFF — "Confirm CI is green on the created PR(s)"), which is already
+a `[MUST]`. **The push gate is not relaxed**:
 pulling CI earlier would change *when* the security gate binds, which is an ADR trigger in its own
 right, and no acceptance criterion asks for it.
 
 **Re-entry.** A CI failure re-enters by `remedy_class` through `scripts/gate/remedy-route.sh route`,
-replacing the unconditional route at **both** `CLAUDE.md:314` and `docs/autoflow-guide.md:1803`.
+replacing the unconditional route at **both** `CLAUDE.md` > Flow Control —
+"CI failure (code issue) → fix tests/implementation and re-flow" — and `docs/autoflow-guide.md` >
+HANDOFF — "a check concluded failure (red CI) → RED".
 
 **Classifier — three stages, every input a declaration.**
 
@@ -288,10 +323,12 @@ replacing the unconditional route at **both** `CLAUDE.md:314` and `docs/autoflow
   absorbs the log and returns a class, so reading the failure output does not put a log in the
   orchestrator's context.
 - **Stage 3 — not classifiable with confidence, or the failure output is unobtainable.** Class
-  `operator`, which `scripts/gate/remedy-route.sh:58`, `:69` routes to `PAUSE` — `operator`'s stated
+  `operator`, which `scripts/gate/remedy-route.sh` routes to `PAUSE` (> `rank_of()` —
+  "operator) echo 9 ;;"; > `route_of()` — "9) echo PAUSE ;;") — `operator`'s stated
   meaning, "AutoFlow holds no declaration here".
 
-Fail-closed per `docs/autoflow-guide.md:1814`, **cited, not rewritten**: not classifiable with
+Fail-closed per `docs/autoflow-guide.md` > HANDOFF > *`remedy_class` per Medium+ finding* —
+"The classifying question is **not** how large the fix is" — **cited, not rewritten**: not classifiable with
 confidence → `operator`, never a guess; and a CI failure routed with no recorded class is a report
 defect — reject the report and re-spawn the ingesting subagent.
 
@@ -306,8 +343,10 @@ This repository is a **consumer of its own model**: the local whole-tree floor i
 and `.github/workflows/contract-suites.yml` is its standing layer. The workflow **stays advisory at
 the branch-protection level**, while the AutoFlow-side verdict is binding — advisory-to-the-merger
 and binding-to-the-hand-off are different bindings, and both documents already say so
-(`.github/workflows/contract-suites.yml:31-33` against the `[MUST]` at
-`docs/autoflow-guide.md:1798`). Promoting the workflow to a required status check would bind the
+(`.github/workflows/contract-suites.yml` > the file-header comment —
+"Enforcement level: ADVISORY, as for every other workflow in this repo" — against the `[MUST]` at
+`docs/autoflow-guide.md` > HANDOFF — "Confirm CI is green on the created PR(s)").
+Promoting the workflow to a required status check would bind the
 **external reviewer's merge**, which is authority AutoFlow does not hold (ADR-0003).
 
 Two pre-existing fail-closed properties are what make an advisory workflow admissible as the
@@ -336,8 +375,9 @@ here it is the standing layer's trigger-coverage mechanism, even as D3 makes it 
   verification path". With its purpose gone it is pure carrying cost.
 - **ADR-0019 decision 3** (evaluator execution discipline) — **superseded in part.**
   `inherited_verdicts` goes with the register. The other three obligations are **retained and
-  re-homed in this ADR's body** (next section), and `docs/teammate-contracts.md:62-65`'s *Governing
-  record* pointer is repointed here. They govern evaluator **search** discipline and touch nothing
+  re-homed in this ADR's body** (next section), and the *Governing record* pointer at
+  `docs/teammate-contracts.md` > Evaluation AI > *Execution discipline (scope, sampling, time)* —
+  "Governing record:" — is repointed here. They govern evaluator **search** discipline and touch nothing
   in the layer model; they were bundled into ADR-0019 only because that was the cycle that wrote
   them.
 
@@ -353,7 +393,8 @@ here it is the standing layer's trigger-coverage mechanism, even as D3 makes it 
   step executes what it claims; the sub-class was added precisely as the exception for a step that
   did **not** execute, and that exception's subject is gone.
 - **`out-of-tree-inputs` — deleted, and the exposure it guarded is closed, not unguarded.** Its only
-  functional consumer is the inheritance exclusion (`scripts/test/suite-coverage.sh:440-442`). The
+  functional consumer is the inheritance exclusion (`scripts/test/suite-coverage.sh` >
+  `resolve_over()` — "a DECLARED out-of-tree reader executes before any other test"). The
   tightening existed because a base-ref-dependent suite can change answer while the tree is
   untouched — an inheritance-specific exposure; with nothing inheriting, such a suite simply runs.
   What would otherwise remain is a lint demanding a declaration nothing reads.
@@ -368,13 +409,16 @@ here it is the standing layer's trigger-coverage mechanism, even as D3 makes it 
 **Not superseded.** ADR-0018 and ADR-0022 stand. ADR-0022's disposition vocabulary is untouched;
 the amendments are `delivery-check`'s definition and the retention half of Test necessity (*Amends
 ADR-0022*, below; the split itself is the next section). The retained test-quality items —
-mock-boundary fidelity (`docs/teammate-contracts.md:110`), the existence half of Test necessity
-(`:104`) and output hygiene — are **`retained`**: they are independent of the layer partition.
+mock-boundary fidelity (`docs/teammate-contracts.md` > Test AI —
+"Performs the mock-boundary fidelity check after implementation"), the existence half of Test
+necessity (`docs/teammate-contracts.md` > Test AI — "the burden of proof lies on the test") and
+output hygiene — are **`retained`**: they are independent of the layer partition.
 
 ### Evaluator execution discipline (re-homed from ADR-0019 decision 3)
 
 This ADR is the governing record for the three obligations that survive ADR-0019 decision 3.
-`docs/teammate-contracts.md:62-65`'s *Governing record* pointer names this ADR.
+The *Governing record* pointer at `docs/teammate-contracts.md` > Evaluation AI > *Execution
+discipline (scope, sampling, time)* — "Governing record:" — names this ADR.
 
 1. **Resolve an anchor before executing.** An evaluator resolves the cited **anchor** — the
    `path:line`, the commit, the command — before it executes anything against it; an unresolved
@@ -407,7 +451,8 @@ disposes of each half explicitly.
   written against the default *test it*; for retention the default is now structural (`cycle`),
   and a burden that can always be discharged by a sentence is not a burden (Context).
 - **The rule sites that state necessity as the committed-suite filter** — `docs/autoflow-guide.md`
-  > ARCHITECT > Output artifacts > *Test necessity*, `docs/teammate-contracts.md:104`, and the
+  > ARCHITECT > Output artifacts > *Test necessity*, `docs/teammate-contracts.md` > Test AI —
+  "the burden of proof lies on the test" — and the
   agent definitions that cite them — are `replaced` by S1 so that the clause governs existence and
   D1 governs retention.
 
@@ -449,7 +494,9 @@ this record is the only carrier across that gap:
   S3's change surfaces, and the composition-oracle floor is carried to whichever sub-issue's surface
   names them.
 - **Dangling-reference forward-carry.** GATE:QUALITY's reference-integrity sweep
-  (`docs/autoflow-guide.md:1604-1607`) triggers on relocation and renaming. This cycle's diff adds a
+  (`docs/autoflow-guide.md` > GATE:QUALITY > Known blind-spot checks > *Impact scope / Doc updates —
+  reference integrity on moves* — "A dangling reference caps the affected item at 6") triggers on
+  relocation and renaming. This cycle's diff adds a
   file and edits status text, so the sweep never fires here; the obligation binds in the sub-issues,
   where relocation and renaming actually happen.
 - **Cycle-layer execution means (issue #222).** A default `automated` row's asset lives under
@@ -466,7 +513,10 @@ this record is the only carrier across that gap:
 
 - **Effective-from.** The cycle that writes this ADR is governed by the **pre-existing** rules —
   the header contract, the selector, the cycle-scoped lane and CI registration all apply to the
-  checks that cycle writes. Same convention as `docs/autoflow-guide.md:409`, `:510`, `:533`. Without
+  checks that cycle writes. Same convention as the *Effective from* clauses at
+  `docs/autoflow-guide.md` > ARCHITECT > Output artifacts —
+  "binds verification designs authored after issue #198 lands" — and, under *Test necessity* and
+  *Verification depth*, "a cycle already past ARCHITECT is not retroactively deficient". Without
   it, this cycle's own GATE:QUALITY would score `Test quality` against the test-asset rule the same
   cycle deletes.
 - **AC1 naming equivalence.** The issue's 로컬 layer is this ADR's **`cycle`** layer, and the
@@ -478,15 +528,18 @@ this record is the only carrier across that gap:
   carried when #222 was written keep their `standing` layer until a separate issue reclassifies them
   against the closed list; #222 changes the criterion, not the inventory.
 - **`Amends ADR-0022`** — see *Related Issues / PRs*.
-- **The adjustment-scope table below is not the change table `docs/autoflow-guide.md:347-353`
-  `[DENY]`s.** Issue #192 bars a *prediction of the files implementation will touch*, decided by
+- **The adjustment-scope table below is not the change table `[DENY]`d at `docs/autoflow-guide.md` >
+  ARCHITECT > Output artifacts** —
+  "The document does not carry a change table of files, a per-suite disposition". Issue #192 bars a
+  *prediction of the files implementation will touch*, decided by
   "would this being wrong mean the design is revisited, or just fixed where it is found?" Here the
   enumeration **is** the operator-declared deliverable and a wrong row means a rule survives that
   contradicts the model — the design is revisited. Same test, opposite answer; and the closed
   vocabulary enforces the discipline by construction, since `deleted` / `replaced` / `retained` /
   `conditional` are fates of rules, and a diff has no fate.
 - **Status `Proposed`** is sufficient for this record to govern the sub-issues
-  (`docs/adr/0018-verification-depth-justification.md:101`).
+  (`docs/adr/0018-verification-depth-justification.md` > Notes —
+  "Status `Proposed` is sufficient for the record to govern").
 
 ## Adjustment scope
 
@@ -508,23 +561,25 @@ editing".
 
 | Rule | Disposition |
 |---|---|
-| VALIDATE step 1's whole-tree sweep and its tree quiesce (`docs/autoflow-guide.md:1462`, `:1464`) | `deleted` — the coverage floor relocates to the standing layer (D4, D5) |
-| GREEN step 5 / VERIFY step 1 / REFINE step 2 capture-point execution, quiesce and tree-identity predicate (`docs/autoflow-guide.md:949`, `:985`, `:1413-1416`) | `replaced` — the predicate and the quiesce leave with the register (D6); the execution obligation narrows to M's execution rule |
-| Whole-tree-run prohibition and its one-invoker sentence (`docs/autoflow-guide.md:900`; `.claude/agents/autoflow-implementer.md:38`) | `replaced` — deleting VALIDATE step 1 falsifies the rule's own text, so it is rewritten to *the cycle layer carries no local whole-tree execution: none scheduled, none held in reserve*; the local run set is **declared** under M's execution rule rather than selected, so no device has a local whole-tree run to degrade to |
-| Selector-BLOCK degradation (`docs/autoflow-guide.md:1693-1695`) and its two coupled device sites — the selector's degrade-to-executing sentence (`scripts/test/select-suites.sh:195`) and the runner's failed-selection comment and operator message (`scripts/test/run-suites.sh:129-132, :135`) | `deleted` — the rule and its subject both go: with the local run set declared rather than selected, a selector BLOCK is a device failure on a path that no longer carries a coverage floor, not a local coverage hole to backfill by executing the standing set |
-| Runner/selector-only execution and the `\|\| { … }` idiom (`docs/submodule-common-rules.md:262`, `:277`) | `conditional` — keyed on the target's suite-plane opt-in (D3); the idiom leaves with `scripts/test/suite-coverage.sh` |
-| RED-entry derivation of the affected suites (`.claude/agents/autoflow-tester.md:11`) | `replaced` — by D3's call site to the target's declared test command |
-| `inherited` reporting and the green-tree discharge (`docs/teammate-contracts.md:67`, `:112`, `:127`; `docs/evaluation-system.md:141`, `:143`; `CLAUDE.md` > *Verify teammate claims*) | `deleted` — with the register and its shared store (D6) |
-| Header contract and suite-disposition derivation (`docs/autoflow-guide.md:349`, RED > *Completion*) | `conditional` — on the target's opt-in (D3); `retained` for this repository, where the contract is the standing layer's trigger-coverage input (D5) |
-| Cycle-artifact preservation list (`docs/autoflow-guide.md:189`) | `replaced` — `.autoflow/issue-{N}-local/` joins it as a fourth cycle-spanning artifact (D2) |
+| VALIDATE step 1's whole-tree sweep and its tree quiesce (`docs/autoflow-guide.md` > VALIDATE — "Whole-tree sweep, the coverage floor"; "Quiesce the tree before the sweep's capture point") | `deleted` — the coverage floor relocates to the standing layer (D4, D5) |
+| GREEN step 5 / VERIFY step 1 / REFINE step 2 capture-point execution, quiesce and tree-identity predicate (`docs/autoflow-guide.md` > GREEN > *Acceptance-run scope — record what you ran* — "the orchestrator resolves that set and executes it"; > VERIFY — "Quiesce the tree before the capture point"; > REFINE — "Re-run all tests the change requires") | `replaced` — the predicate and the quiesce leave with the register (D6); the execution obligation narrows to M's execution rule |
+| Whole-tree-run prohibition and its one-invoker sentence (`docs/autoflow-guide.md` > GREEN and `.claude/agents/autoflow-implementer.md` > *Hard rules*, both — "Never start a **whole-tree run** of the suite runner") | `replaced` — deleting VALIDATE step 1 falsifies the rule's own text, so it is rewritten to *the cycle layer carries no local whole-tree execution: none scheduled, none held in reserve*; the local run set is **declared** under M's execution rule rather than selected, so no device has a local whole-tree run to degrade to |
+| Selector-BLOCK degradation (`docs/autoflow-guide.md` > GATE:QUALITY > FAIL routing > *`doc` re-entry — class-level remedy* — "selector BLOCK is the exception (issue #213): the prohibition binds a selection that computed") and its two coupled device sites — the selector's degrade-to-executing sentence (`scripts/test/select-suites.sh` > `select_over()` — "a caller degrades to executing, never to skipping") and the runner's failed-selection comment and operator message (`scripts/test/run-suites.sh` > the failed-selection comment header — "A failed selection executes nothing" — and its operator message — "A selection that cannot compute degrades to executing, never to skipping") | `deleted` — the rule and its subject both go: with the local run set declared rather than selected, a selector BLOCK is a device failure on a path that no longer carries a coverage floor, not a local coverage hole to backfill by executing the standing set |
+| Runner/selector-only execution and the `\|\| { … }` idiom (`docs/submodule-common-rules.md` > Testing Standards > *Running the bash suite tree* — "Bash suites under `tests/**` are run through `scripts/test/run-suites.sh`"; "The resolver's non-zero exit is otherwise invisible to the second command") | `conditional` — keyed on the target's suite-plane opt-in (D3); the idiom leaves with `scripts/test/suite-coverage.sh` |
+| RED-entry derivation of the affected suites (`.claude/agents/autoflow-tester.md` > *Hard rules* — "Derive the affected suite set yourself on entry") | `replaced` — by D3's call site to the target's declared test command |
+| `inherited` reporting and the green-tree discharge (`docs/teammate-contracts.md` > Evaluation AI > *Execution discipline (scope, sampling, time)* — "Host-record citation-inheritance"; > Test AI and > Submodule AI — "reports the outcome word `inherited`, never `passed`"; `docs/evaluation-system.md` > Evaluation Output Format — "the `green-tree` entry heading it was cited from" and "`inherited_verdicts` is never written to"; `CLAUDE.md` > *Verify teammate claims*) | `deleted` — with the register and its shared store (D6) |
+| Header contract and suite-disposition derivation (`docs/autoflow-guide.md` > ARCHITECT > Output artifacts — "The document does not carry a change table of files, a per-suite disposition"; RED > *Completion*) | `conditional` — on the target's opt-in (D3); `retained` for this repository, where the contract is the standing layer's trigger-coverage input (D5) |
+| Cycle-artifact preservation list (`docs/autoflow-guide.md` > PREFLIGHT > *Preserve the previous cycle's artifacts* — "except the ledger, the state file, and `issue-{N}-review-findings.md`, which are cycle-spanning") | `replaced` — `.autoflow/issue-{N}-local/` joins it as a fourth cycle-spanning artifact (D2) |
 
 **Why the Selector-BLOCK row is `deleted` and not `replaced`.** Once the local run set is declared,
 the selector answers a different question — *which of the standing suites could this delta have
 broken* — and D4/D5 make that question CI's. A BLOCK on that path is a device failure, not a local
 coverage hole, so the rule that degraded it to executing has no surviving subject. What is
 **retained** is the **fail-closed** disposition wherever selection survives: the selector already
-refuses to emit an empty selection (`scripts/test/select-suites.sh:203-206`) and CI already exits
-non-zero on an unresolved selection (`.github/workflows/contract-suites.yml:353-356`) rather than
+refuses to emit an empty selection (`scripts/test/select-suites.sh` > `select_over()` —
+"refusing to emit an empty selection") and CI already exits non-zero on an unresolved selection
+(`.github/workflows/contract-suites.yml` > `jobs.contract-suites` > step
+`select suites for this change` — "refusing to run with an unresolved selection") rather than
 widening the run. That site is therefore not a coupled site of the deleted row — it carries the rule
 this record keeps, not the one it deletes.
 
@@ -532,55 +587,62 @@ this record keeps, not the one it deletes.
 
 | Criterion | Disposition |
 |---|---|
-| GATE:PLAN `Test plan` (`docs/autoflow-guide.md:717`; `docs/evaluation-system.md:67`) | `retained` — no new judgment is added: the layer is read from the `Type` cell and its `standing:` token, which this item and `Scope` already score; token membership in the closed list is a set relation for S3's lint, not a scored item |
-| GATE:PLAN `Feasibility` (`docs/autoflow-guide.md:730`) | `retained` — it carries D3's blocking point unchanged, with the fact supplied by the verification design |
-| GATE:QUALITY `Test quality` — test-asset disposition (`docs/autoflow-guide.md:1608-1614`) | `replaced` — its subject (a cycle-scoped asset left CI-registered) cannot occur; the replacement subject is a **layer violation** — a committed asset on a `cycle` row of any `Type`, an uncommitted asset on a `standing` row, or a `standing:` token outside D1's closed list |
-| GATE:QUALITY `Test coverage` (`docs/evaluation-system.md:69`) | `replaced` — the subject is restated from *CI result* to *standing-layer asset realisability + cycle-layer executed result*, both checkable strictly before push; `not-applicable` on a non-opted-in target |
-| ADR-0019 decision 3 (evaluator execution discipline) | `replaced` — in part (D6): `inherited_verdicts` goes with the register, while the anchor, sampling and wall-clock obligations are re-homed above and `docs/teammate-contracts.md:62-65`'s *Governing record* pointer is repointed to this ADR |
-| VALIDATE failure routing by `ci-subject` (`docs/autoflow-guide.md:1472`; `scripts/gate/remedy-route.sh`) | `replaced` — moved, not deleted: the same header-based classification becomes stage 1 of D4's CI-failure classifier, through the same routing script |
-| GATE:QUALITY `doc` remedy step 3's selected-suites run (`docs/autoflow-guide.md:1691-1695`) | `replaced` — by M's execution rule; the repo-wide doc sweep record (`.autoflow/issue-{N}-remedy-sweep.md`, hook-gated) is a doc sweep, not a test run, and stays untouched |
+| GATE:PLAN `Test plan` (`docs/autoflow-guide.md` > GATE:PLAN > Scoring — "Are acceptance criteria testable?"; `docs/evaluation-system.md` > Evaluation Types — "Feasibility, Scope, Security, Test plan (4)") | `retained` — no new judgment is added: the layer is read from the `Type` cell and its `standing:` token, which this item and `Scope` already score; token membership in the closed list is a set relation for S3's lint, not a scored item |
+| GATE:PLAN `Feasibility` (`docs/autoflow-guide.md` > GATE:PLAN > Scoring — "a plan not grounded in the actual structure") | `retained` — it carries D3's blocking point unchanged, with the fact supplied by the verification design |
+| GATE:QUALITY `Test quality` — test-asset disposition (`docs/autoflow-guide.md` > GATE:QUALITY > Known blind-spot checks > *Test quality — test-asset disposition* — "for each test file this cycle adds, state its") | `replaced` — its subject (a cycle-scoped asset left CI-registered) cannot occur; the replacement subject is a **layer violation** — a committed asset on a `cycle` row of any `Type`, an uncommitted asset on a `standing` row, or a `standing:` token outside D1's closed list |
+| GATE:QUALITY `Test coverage` (`docs/evaluation-system.md` > Evaluation Types — "Completeness, Quality, Test coverage, Test quality") | `replaced` — the subject is restated from *CI result* to *standing-layer asset realisability + cycle-layer executed result*, both checkable strictly before push; `not-applicable` on a non-opted-in target |
+| ADR-0019 decision 3 (evaluator execution discipline) | `replaced` — in part (D6): `inherited_verdicts` goes with the register, while the anchor, sampling and wall-clock obligations are re-homed above and the *Governing record* pointer at `docs/teammate-contracts.md` > Evaluation AI > *Execution discipline (scope, sampling, time)* ("Governing record:") is repointed to this ADR |
+| VALIDATE failure routing by `ci-subject` (`docs/autoflow-guide.md` > VALIDATE — "cause-branched by the **first failing assertion's suite**"; `scripts/gate/remedy-route.sh`) | `replaced` — moved, not deleted: the same header-based classification becomes stage 1 of D4's CI-failure classifier, through the same routing script |
+| GATE:QUALITY `doc` remedy step 3's selected-suites run (`docs/autoflow-guide.md` > GATE:QUALITY > FAIL routing > *`doc` re-entry — class-level remedy* — "Run the suites the selection rule picks for the doc diff") | `replaced` — by M's execution rule; the repo-wide doc sweep record (`.autoflow/issue-{N}-remedy-sweep.md`, hook-gated) is a doc sweep, not a test run, and stays untouched |
 
 ### Area 3 — enforcement devices
 
 | Device | Disposition |
 |---|---|
-| Backgrounded `run-suites.sh` deny (`.claude/hooks/check-autoflow-gate.sh:28`) | `retained` — a backgrounded run's result is not keyed to the tree the claim is made about; where the plane is not opted in there is no invocation to deny, so the rule is vacuous rather than wrong |
-| `scripts/test/check-suite-ci-coverage.sh:26-30` — CI registration with no exemption | `retained` — its subject becomes true by construction: every committed test is a standing-layer test by definition |
-| `scripts/test/check-suite-manifest.sh` and drift-check D7 (`setup/thin-root-layer/drift-check.sh:481` ff.) | `conditional` — a **new** opt-in-keyed arm that calls the one shared resolver (D3) |
+| Backgrounded `run-suites.sh` deny (`.claude/hooks/check-autoflow-gate.sh` > the `Gate points` comment header — "Bash(backgrounded run-suites.sh) → DENIED unconditionally (foreground only)") | `retained` — a backgrounded run's result is not keyed to the tree the claim is made about; where the plane is not opted in there is no invocation to deny, so the rule is vacuous rather than wrong |
+| `scripts/test/check-suite-ci-coverage.sh` > the header comment ("There is NO exemption list for unreachable suites") — CI registration with no exemption | `retained` — its subject becomes true by construction: every committed test is a standing-layer test by definition |
+| `scripts/test/check-suite-manifest.sh` and drift-check D7 (`setup/thin-root-layer/drift-check.sh` > the `D7` leg — "D7: suite headers the shipped selector requires") | `conditional` — a **new** opt-in-keyed arm that calls the one shared resolver (D3) |
 | `setup/manifest.json`'s suite-plane shipping rows | `retained` — shipping continues; only *enforcement* becomes conditional |
-| ADR-0019 decisions 1–3 (`docs/adr/0019-scope-fit-verification-policy.md:28-90`) | `replaced` — per D6's supersede mapping, decision by decision |
-| `CLAUDE.md:314` — HANDOFF CI failure → RED, unconditional | `replaced` — by D4's class route |
-| The `lane` header field (`docs/autoflow-guide.md:856`) | `deleted` (D6) — the cycle-scoped value becomes an empty category by construction |
-| The `retire-with` header field (`docs/autoflow-guide.md:857`) | `deleted` (D6) — it names the retirement of a lane that no longer exists |
-| The `cycle-arm` header field (`docs/autoflow-guide.md:858`) | `deleted` (D6) — zero live instances of the case its own rationale names |
+| ADR-0019 decisions 1–3 (`docs/adr/0019-scope-fit-verification-policy.md` > Decision — "Selection-based intermediate verification") | `replaced` — per D6's supersede mapping, decision by decision |
+| `CLAUDE.md` > Flow Control — "CI failure (code issue) → fix tests/implementation and re-flow", the unconditional HANDOFF route | `replaced` — by D4's class route |
+| The `lane` header field (`docs/autoflow-guide.md` > RED > *Header contract* — "`standing` asserts permanent state and lives forever") | `deleted` (D6) — the cycle-scoped value becomes an empty category by construction |
+| The `retire-with` header field (`docs/autoflow-guide.md` > RED > *Header contract* — "names the issue whose merge retires a cycle-scoped suite") | `deleted` (D6) — it names the retirement of a lane that no longer exists |
+| The `cycle-arm` header field (`docs/autoflow-guide.md` > RED > *Header contract* — "a **standing** suite may carry a cycle-scoped arm") | `deleted` (D6) — zero live instances of the case its own rationale names |
 | `tests/test-suite-coverage-agreement.sh` | `deleted` (D6) — an enforcement device whose subject is gone on both sides |
-| `cycle-arm`'s coupled sites — its grammar (`scripts/test/suite-manifest.sh:27`, `:314-319`), the three-way lint (`scripts/test/check-suite-manifest.sh:92`, `:104`, `:107`, `:110`), the one live declaration, and the quoted literal carried in the agreement suite (`:101`, `:106`) | `deleted` (D6) |
-| `out-of-tree-inputs` — the field, its lint (`scripts/test/check-suite-manifest.sh:133-138`), its doc sites (`docs/autoflow-guide.md:867`, `:1272`) and its three live declarations | `deleted` (D6) |
+| `cycle-arm`'s coupled sites — its grammar (`scripts/test/suite-manifest.sh` > the `HEADER GRAMMAR` comment block — "# cycle-arm: #<issue-number>" — and > `suite_declares_allow_list()` — "Counting it makes a lint demand a `cycle-arm` header naming a"), the three-way lint (`scripts/test/check-suite-manifest.sh` > `check_headers()` — the `cycle-arm` read `suite_header_field "$root/$f" cycle-arm` and its three arms: "declares a path allow-list array but no '# cycle-arm: #<issue>'", "declares '# cycle-arm: $arm' but no path allow-list array", "cycle-arm ($arm) and retire-with ($retire) disagree"), the one live declaration, and the quoted literal carried in the agreement suite (`tests/test-suite-coverage-agreement.sh` > Leg 1's single-definition-site case arm — "tests/test-cycle-arm-residue.sh) ;;" — and its assertion — "inside tests/test-cycle-arm-residue.sh's quoted assertion strings") | `deleted` (D6) |
+| `out-of-tree-inputs` — the field, its lint (`scripts/test/check-suite-manifest.sh` > `check_headers()` — "reads out-of-tree state (a base-ref call site) but declares no '# out-of-tree-inputs:'"), its doc sites (`docs/autoflow-guide.md` > RED > *Adopting the contract over existing suites* — "required when the suite's body resolves a base ref" — and > VERIFY > Suite-coverage predicate — "`# out-of-tree-inputs: yes` is executed, reason `out-of-tree-inputs`") and its three live declarations | `deleted` (D6) |
 | The Green-tree register and its shared store | `deleted` (D6) — every consumer disappears with M's execution rule |
-| `docs/autoflow-guide.md:1803` — `confirm-ci-green.sh` exit `12` → RED | `replaced` — the second site of the same unconditional route; leaving it makes the script's own exit contract contradict D4 |
-| `delivery-check`'s definition at `docs/autoflow-guide.md:482` | `replaced` — D2 makes the asset an uncommitted `.autoflow/issue-{N}-local/` artifact, not a check living in a manifest lane |
-| RED's `delivery-check` conversion rule (`docs/autoflow-guide.md:833`) | `replaced` — same subject, same replacement: the row produces a cycle-layer artifact under the declared prefix |
-| The Admission question's default for a delivery-pinned check (`docs/autoflow-guide.md:879`) | `replaced` — the default answer becomes the cycle-layer store, not a lane-declared committed suite |
-| The `lane` / `retire-with` grammar fence in the header block (`docs/autoflow-guide.md:849-850`) | `deleted` (D6) |
-| The lane adoption item (`docs/autoflow-guide.md:865`) | `deleted` (D6) |
-| The cycle-scoped naming rule (`docs/autoflow-guide.md:872`) | `deleted` (D6) — with the lane gone, an issue-numbered filename has no declaration to follow |
-| The `lane` / `retire-with` grammar in the manifest library (`scripts/test/suite-manifest.sh:25-26`) | `deleted` (D6) |
-| The lane-value lint arm (`scripts/test/check-suite-manifest.sh:87-88`) | `deleted` (D6) |
-| The cycle-scoped coupling lint arm (`scripts/test/check-suite-manifest.sh:96-98`) | `deleted` (D6) |
-| The ADR-0019 status records (`docs/adr/0019-scope-fit-verification-policy.md:5`, `docs/adr/README.md:36`) | `replaced` — adjacent sites of the enumerated ADR-0019 row, repaired to the composite status string form |
-| The ADR-0022 status records (`docs/adr/0022-test-necessity-and-three-tier-ac-guard.md:5`, `docs/adr/README.md:39`) | `replaced` — grounded in this ADR's *Amends ADR-0022* line, in the same composite form |
+| `docs/autoflow-guide.md` > HANDOFF — "a check concluded failure (red CI) → RED", the `confirm-ci-green.sh` exit-`12` route | `replaced` — the second site of the same unconditional route; leaving it makes the script's own exit contract contradict D4 |
+| `delivery-check`'s definition at `docs/autoflow-guide.md` > ARCHITECT > Output artifacts > *Test necessity* — "a cycle-scoped check that the change was wired / generated / delivered" | `replaced` — D2 makes the asset an uncommitted `.autoflow/issue-{N}-local/` artifact, not a check living in a manifest lane |
+| RED's `delivery-check` conversion rule (`docs/autoflow-guide.md` > RED — "Rows typed `delivery-check` produce a cycle-scoped check") | `replaced` — same subject, same replacement: the row produces a cycle-layer artifact under the declared prefix |
+| The Admission question's default for a delivery-pinned check (`docs/autoflow-guide.md` > RED > *Admission* — "Is the check delivery-pinned to this cycle's landed diff?") | `replaced` — the default answer becomes the cycle-layer store, not a lane-declared committed suite |
+| The `lane` / `retire-with` grammar fence in the header block (`docs/autoflow-guide.md` > RED > *Header contract* — "# retire-with: #<issue-number>") | `deleted` (D6) |
+| The lane adoption item (`docs/autoflow-guide.md` > RED > *Adopting the contract over existing suites* — "`cycle-scoped` only together with `retire-with:` and a path allow-list array") | `deleted` (D6) |
+| The cycle-scoped naming rule (`docs/autoflow-guide.md` > RED > *Naming* — "an issue number belongs in a test file name only when that file is cycle-scoped") | `deleted` (D6) — with the lane gone, an issue-numbered filename has no declaration to follow |
+| The `lane` / `retire-with` grammar in the manifest library (`scripts/test/suite-manifest.sh` > the `HEADER GRAMMAR` comment block — "# retire-with: #<issue-number>") | `deleted` (D6) |
+| The lane-value lint arm (`scripts/test/check-suite-manifest.sh` > `check_headers()` — `[ "$lane" != standing ] && [ "$lane" != cycle-scoped ]`) | `deleted` (D6) |
+| The cycle-scoped coupling lint arm (`scripts/test/check-suite-manifest.sh` > `check_headers()` — "'lane: cycle-scoped' requires a '# retire-with: #<issue>'") | `deleted` (D6) |
+| The ADR-0019 status records (`docs/adr/0019-scope-fit-verification-policy.md` > Status — "Proposed; superseded by ADR-0024"; `docs/adr/README.md` > Current Drafts, the ADR-0019 row) | `replaced` — adjacent sites of the enumerated ADR-0019 row, repaired to the composite status string form |
+| The ADR-0022 status records (`docs/adr/0022-test-necessity-and-three-tier-ac-guard.md` > Status — "decision 1's role as the retention filter replaced by ADR-0024 D1"; `docs/adr/README.md` > Current Drafts, the ADR-0022 row) | `replaced` — grounded in this ADR's *Amends ADR-0022* line, in the same composite form |
 | The `docs/adr/README.md` ADR-0024 row | **additive** — a new record, not a fate of an existing rule; outside the four-word vocabulary by construction |
 
 The two device sites coupled to the now-`deleted` Selector-BLOCK degradation rule
-(`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-132, :135`) are disposed in their
-parent rule's Area-1 row, under the same convention as `cycle-arm`'s coupled sites above.
+(`scripts/test/select-suites.sh` > `select_over()` —
+"a caller degrades to executing, never to skipping" — and `scripts/test/run-suites.sh` > the
+failed-selection comment header and its operator message —
+"A selection that cannot compute degrades to executing, never to skipping") are disposed
+in their parent rule's Area-1 row, under the same convention as `cycle-arm`'s coupled sites above.
 
 **Why the status rows are here and not cosmetic.** A governing ADR is one with status `Accepted` /
-`Proposed` whose Decision scope intersects the change surface (`docs/autoflow-guide.md:734`), and
+`Proposed` whose Decision scope intersects the change surface (`docs/autoflow-guide.md` > GATE:PLAN >
+ADR-conformance check — "whose Decision scope intersects the change surface"), and
 `Proposed` is sufficient for the record to govern. A stale record therefore makes superseded
 decisions **governing input** to the next cycle's two ADR-conformance checks, with every link
 resolving so no reference check fires. The repair form is the **composite status string** already
-used at `docs/adr/README.md:35`, `:37`, `:40`, recorded on both the ADR's `## Status` and its
+used at `docs/adr/README.md` > Current Drafts on the ADR-0018 row
+("Proposed, amended by issue #198 (failure-mode column; Decision 3 superseded)"), the ADR-0020 row
+("Accepted, amended by ADR-0022; ARCHITECT halt superseded by issue #166") and the ADR-0023 row
+("Accepted; implemented by issue #179 (A2 realization)"), recorded on both the ADR's `## Status` and its
 registry row.
 
 ## Alternatives Considered
@@ -612,7 +674,8 @@ registry row.
 - **Reusing the suite header's `lane: standing | cycle-scoped` as the declaration site.** It is
   already this partition, but it is declared in an artifact derived at RED (issue #192) and it has
   no execution consequence today: `cycle-scoped` means only "inert off its own dev branch" while
-  `scripts/test/check-suite-ci-coverage.sh:26` forces it into CI anyway with no exemption. A
+  `scripts/test/check-suite-ci-coverage.sh` > the header comment —
+  "There is NO exemption list for unreachable suites" — forces it into CI anyway. A
   partition with no teeth is not a declaration site.
 - **Committing the cycle-layer asset and excluding it structurally (D2 mechanism B).**
   Non-execution after merge would rest on an exclusion rule every future enumerator must keep
@@ -663,10 +726,12 @@ registry row.
   external review's own suggested path. Rejected: AC2 needs no exception once its second sentence is
   read — its object is this record's Area-1 enumeration of AutoFlow's own rules, not a target's test
   runtime (D3 > *Boundary*) — so the pause would purchase nothing, and it would ratify on the target
-  path a requirement the governing operator decision at `:43-46` excludes.
+  path a requirement the governing operator decision excludes (*Context* —
+  "AutoFlow verifies **its own** tests").
 - **Repairing or replacing the file-name predicate with any other AutoFlow-side attribution rule** —
   a base-tree differential, a known-failure test-id fingerprint set carried across cycles, or a
-  repair of name matching itself. Rejected on 설계 원칙 1 (`:43-46`): the defect is that AutoFlow
+  repair of name matching itself. Rejected on 설계 원칙 1 (*Context* —
+  "AutoFlow verifies **its own** tests"): the defect is that AutoFlow
   adjudicates the target's test execution at all, not that this particular predicate reads the
   unreliable half of a test runner's output. The declared command's exit status is what the outcome
   is read from, and attribution is the target's practice.
@@ -726,8 +791,12 @@ registry row.
   from it: D3's *AutoFlow synthesizes no selection predicate* clause; the whole-tree-run prohibition
   row's replacement text, which no longer holds a local whole-tree run in reserve; and the
   Selector-BLOCK degradation row's move `replaced` → `deleted`, carrying its two coupled device sites
-  (`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-132, :135`), with
-  `scripts/test/select-suites.sh:203-206` not among them because it carries the fail-closed rule this
+  (`scripts/test/select-suites.sh` > `select_over()` —
+  "a caller degrades to executing, never to skipping" — and `scripts/test/run-suites.sh` > the
+  failed-selection comment header and its operator message —
+  "A selection that cannot compute degrades to executing, never to skipping"), with the
+  selector's empty-selection refusal (`scripts/test/select-suites.sh` > `select_over()` —
+  "refusing to emit an empty selection") not among them because it carries the fail-closed rule this
   record retains. **Retracted by round 2 below** — named here so no reader takes them as governing —
   this entry's statements that the whole-tree-run clause was superseded by a declared-form
   precondition and the borrowed lint verdict rule by an exit-status verdict over a declared run set;
@@ -742,7 +811,8 @@ registry row.
   tool — it neither mandates how a target composes or runs its tests nor judges what a target's
   declared command executes internally**, and what this record delivers is a **rule** stated as
   guidance, never a gate on the target path. The delta is checkable against this record alone: the
-  round-1 text contradicted `:43-46`, the governing operator decision the Context already carried.
+  round-1 text contradicted the governing operator decision the Context already carried —
+  "AutoFlow verifies **its own** tests".
   - **Removed from D3**, each with the round-1 statement asserting it **retracted** above: the
     declared-form precondition and the infeasibility route it opened on the target's declaration; the
     grain rule and the categorical line over the declared form; the M-boundary clause and its
@@ -760,7 +830,9 @@ registry row.
     **boundary** sentence, carrying its own ground; the outcome vocabulary, whose input is the
     declared command's exit status; and the unsatisfiable case, which now carries the *whose artifact
     must change to clear the block* test and the re-homed tier-2 anchor
-    (`docs/autoflow-guide.md:1787-1790`). **M's execution rule does not move, and neither does its
+    (`docs/autoflow-guide.md` > HANDOFF —
+    "The host PR body carries a `## Verification dispositions` list"). **M's execution rule does not
+    move, and neither does its
     reach** — round 1's re-scoping of it is **withdrawn** rather than restated.
   - **Round 1's F1-b is closed by the boundary, not left open by the removal.** The case *the
     target's declared command cannot be narrowed to the change* no longer resolves to a local
@@ -770,9 +842,11 @@ registry row.
     of target runtime: what the declared command executes internally is outside this model, so there
     is nothing left for AutoFlow to require of it, degrade to, or refuse. What survives of round 1's
     residual state is a **report, not a gate**, and it is stated where it belongs — the outcome
-    vocabulary D3 keeps (`:241-243`: `not-run` is never `clean`) and D2's re-execution rule
-    (`:188`: a check that did not execute is `not-run`, never `passed`). The consequence for RED
-    follows from **M**'s RED-integrity paragraph (`:80-84`) rather than being stated there: a
+    vocabulary D3 keeps (D3 > *Outcome, and what it is read from* — "`not-run` is never `clean`")
+    and D2's re-execution rule (D2 > *Cross-cycle disposition* —
+    "a check that did not execute is `not-run`, never `passed`"). The consequence for RED
+    follows from **M**'s RED-integrity paragraph (M — "The rule is what keeps RED intact") rather
+    than being stated there: a
     `driving` row must FAIL before GREEN, so a row that never ran yields no Red confirmation —
     the absence of a confirmation AutoFlow owes **itself**, not a rule imposed on the target. D3
     states no residual `not-run` gate of its own.
@@ -826,3 +900,6 @@ registry row.
 - **Revised twice in response to the external review of PR #220**, and a third time by issue #222
   (D1's criterion). Each revision's findings, what changed, what stands and what is retracted are
   recorded in *Related Issues / PRs*.
+- **Citations are durable, not coordinate-based (issue #221).** This ADR's line-number citations were
+  converted to the form *document > section — "verbatim fragment"*; the `Adjustment scope` tables
+  identify each provision by section and sentence, not by coordinate.
