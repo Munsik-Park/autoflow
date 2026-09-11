@@ -1,1 +1,9 @@
-{ "review": { "backend": "codex" } }
+{
+  "review": {
+    "backend": "codex"
+  },
+  "tests": {
+    "command": "bash scripts/test/run-suites.sh",
+    "suite_plane": true
+  }
+}

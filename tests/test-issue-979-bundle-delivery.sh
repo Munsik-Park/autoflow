@@ -58,13 +58,16 @@ assert_true "AC-4: manifest ships .codex/review.md as a copy artifact" \
   "jq -e '.artifacts[] | select(.source == \".codex/review.md\" and .kind == \"copy\")' '$MANIFEST' >/dev/null 2>&1"
 assert_true "AC-4: manifest ships AGENTS.md as a scaffold artifact" \
   "jq -e '.artifacts[] | select(.source == \"AGENTS.md\" and .kind == \"scaffold\")' '$MANIFEST' >/dev/null 2>&1"
-assert_true "AC-3a/AC-4: manifest ships .claude/autoflow.local.json as a scaffold artifact" \
-  "jq -e '.artifacts[] | select(.source == \".claude/autoflow.local.json\" and .kind == \"scaffold\")' '$MANIFEST' >/dev/null 2>&1"
+assert_true "AC-3a/AC-4: manifest ships .claude/autoflow.local.json as a scaffold artifact, sourced from the neutral .example (#225)" \
+  "jq -e '.artifacts[] | select(.source == \".claude/autoflow.local.json.example\" and .dest == \".claude/autoflow.local.json\" and .kind == \"scaffold\")' '$MANIFEST' >/dev/null 2>&1"
 
 echo ""
 echo "=== fresh mktemp install materializes all five artifacts + never-overwrite scaffold arm ==="
 
 TARGET="$(mktemp -d)"
+# The target already declares its own test command (ADR-0024 D3 discovery
+# route 2); the stamp must not inject a higher-priority one (#225).
+printf '## Development Commands\n- **Test**: `npm test`\n' > "$TARGET/CLAUDE.md"
 ( bash "$INIT_SH" --target "$TARGET" </dev/null >/tmp/init-979-log.log 2>&1 )
 INIT_EXIT=$?
 
@@ -79,6 +82,8 @@ assert_true "AC-4: installed target has AGENTS.md (scaffold)" \
   "[ -f '$TARGET/AGENTS.md' ]"
 assert_true "AC-3a: installed target has .claude/autoflow.local.json (scaffold) shipping the codex default" \
   "[ -f '$TARGET/.claude/autoflow.local.json' ] && jq -e '.review.backend == \"codex\"' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
+assert_true "#225 (ADR-0024 D3): the stamped scaffold declares no tests.command and no suite_plane opt-in — the target's own CLAUDE.md test command stays the first discovery hit" \
+  "jq -e 'has(\"tests\") | not' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
 
 # Never-overwrite arm (C3 RESOLVED — mirror CLAUDE.local.md/AC1j): a target
 # operator's explicit backend=claude selection survives a second install.

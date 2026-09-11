@@ -64,9 +64,9 @@ be diluted by averaging.
 |------|---------------|-------|
 | Structure evaluation (GATE:HYPOTHESIS — structure form, runs in DIAGNOSE 3-Phase) | Behavior gap, Code-change necessity (2) | none — PASS/FAIL single verdict; reuse-neutral 2-item necessity gate. FAIL on gap-low (already satisfied) → review-response: reply + active:false (awaiting-external-review, no close); new-issue: auto-closed + terminated. FAIL on Code-change-necessity-low (non-code lever) → report to user + pause. No retry loop. (Canonical: [`phases/analysis.md`](phases/analysis.md)) |
 | Hypothesis evaluation (GATE:HYPOTHESIS — cause form, bug/incident only) | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× → DIAGNOSE |
-| Plan evaluation (GATE:PLAN) | Feasibility, Scope, Security, Test plan (4) — `Dependencies` was retired by issue #192: affected files and side effects are derived at RED/GREEN entry (`scripts/test/select-suites.sh`), not predicted and scored here. Feasibility/Scope absorb the structural-fit & over-engineering concern the DIAGNOSE structure gate deliberately does not score — over-engineering is scored symmetrically across the plan and its verification design, so an unjustified verification layer fails Scope — and carry the embedded ADR-conformance check (divergence from a governing ADR, or an architecture-impacting change with no governing ADR/owner decision, caps the named item at 6; N/A by default) and the embedded AC-authority check (a verification-design difference against the issue's acceptance-criteria table that no `[ac-decision]` ledger entry covers caps Scope at 6); the interpretive paragraph and both checks are at [`autoflow-guide.md`](autoflow-guide.md) > GATE:PLAN. Re-entry re-scores the decision document's delta section plus every inherited item whose anchor it touched (issue #192), reported in `rescore` | max 3× → ARCHITECT |
+| Plan evaluation (GATE:PLAN) | Feasibility, Scope, Security, Test plan (4) — `Dependencies` was retired by issue #192: affected files and side effects are derived at RED/GREEN entry by the execution roles, not predicted and scored here. Feasibility/Scope absorb the structural-fit & over-engineering concern the DIAGNOSE structure gate deliberately does not score — over-engineering is scored symmetrically across the plan and its verification design, so an unjustified verification layer fails Scope — and carry the embedded ADR-conformance check (divergence from a governing ADR, or an architecture-impacting change with no governing ADR/owner decision, caps the named item at 6; N/A by default) and the embedded AC-authority check (a verification-design difference against the issue's acceptance-criteria table that no `[ac-decision]` ledger entry covers caps Scope at 6); the interpretive paragraph and both checks are at [`autoflow-guide.md`](autoflow-guide.md) > GATE:PLAN. Re-entry re-scores the decision document's delta section plus every inherited item whose anchor it touched (issue #192), reported in `rescore` | max 3× → ARCHITECT |
 | Security audit (AUDIT) | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
-| Quality evaluation (GATE:QUALITY) | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) — Fit also carries the embedded ADR-conformance regression re-confirmation (caps Fit at 6; same trigger as GATE:PLAN), and Completeness carries the embedded AC-authority check for post-ARCHITECT drift (a carried verification-design row for which no test assertion or implementation site can be named, and which no `[ac-decision]` ledger entry covers, caps Completeness at 6) | max 3× → re-entry by `remedy_class` (doc commit / RED / GREEN / ARCHITECT; `operator` → pause) |
+| Quality evaluation (GATE:QUALITY) | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) — Test coverage's subject is the recorded local run for each `cycle` row and the committed asset for each `standing` row, never a CI result; Test quality carries the layer-violation check (a committed asset on a `cycle` row, an uncommitted one on a `standing` row, or a `standing:` token outside ADR-0024 D1's closed list caps it at 6); Fit also carries the embedded ADR-conformance regression re-confirmation (caps Fit at 6; same trigger as GATE:PLAN), and Completeness carries the embedded AC-authority check for post-ARCHITECT drift (a carried verification-design row for which no test assertion or implementation site can be named, and which no `[ac-decision]` ledger entry covers, caps Completeness at 6) | max 3× → re-entry by `remedy_class` (doc commit / RED / GREEN / ARCHITECT; `operator` → pause) |
 | Doc evaluation | Accuracy, Completeness, Clarity, Format compliance (4) | one revision |
 
 The category sets and weights should be customised per project. They reflect
@@ -87,9 +87,6 @@ emerge, humans adjust the criteria.
     "disposition": "refuted | survived | none_found",
     "reflected_in": ["rubric item name"]
   },
-  "inherited_verdicts": [
-    { "suite": "tests/<path>.sh", "source": "<green-tree entry heading>", "head": "<hash>", "result": "<summary line>" }
-  ],
   "scores": { "item": { "score": 8, "reason": "evidence" } },
   "remedy_class": { "<failed item>": "doc | test | impl | design | operator" },
   "rescore": { "source": "<prior report path>", "rescored": ["item"], "inherited": ["item"] },
@@ -131,21 +128,9 @@ section. Always present on a GATE:QUALITY report (`[]` when the section says `no
 omits it or leaves an entry undispositioned is rejected and re-spawned. `rescore` is also the field
 a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](autoflow-guide.md) > AUDIT).
 
-`inherited_verdicts` carries the citation for every suite verdict the evaluator took from the host's
-own record instead of re-executing, per [`teammate-contracts.md`](teammate-contracts.md) >
-Evaluation AI > *Host-record citation-inheritance*. It is the evaluator's report artifact, not the
-gate state file.
-
-| Key | Type | Required | Meaning |
-|-----|------|----------|---------|
-| `inherited_verdicts` | array of objects | **always present** (`[]` when the evaluator executed everything) | The same always-present discipline `reflected_in` carries: its absence is a defect, not a silence. Each member is `{ "suite", "source", "head", "result" }` — the repo-relative suite path, the `green-tree` entry heading it was cited from, that entry's `head` hash, and its `result` summary line. A prose citation is not sufficient: "I inherited" is itself an anchor a reader re-derives. |
-
-**[DENY]** `inherited_verdicts` is never written to `.autoflow/issue-{N}.json`. That file's
-`top_level_keys` are closed-world (`tests/fixtures/gate-schema.json`), so an additive top-level key
-is MALFORMED and fails `git push` / `gh pr create` closed for the whole cycle — the identical
-footgun this document already records for `fail_hypothesis`. Should a state-resident copy ever be
-wanted, the only admissible placement is a sibling of `evaluator` and `scores` **inside** the phase
-object; the report is the durable record and no such copy is asked for.
+A suite verdict the evaluator re-derives is the recorded local run — its command re-run — never a
+citation of a host record; the `inherited_verdicts` key that once carried such citations is retired
+with the Green-tree register (ADR-0024 D6) and is not written.
 
 ---
 

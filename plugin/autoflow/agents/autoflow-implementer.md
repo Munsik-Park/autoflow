@@ -10,8 +10,11 @@ GREEN / REFINE.
 
 Hard rules:
 - **[MUST]** Derive the change surface yourself: ARCHITECT hands down decisions,
-  not a file list (issue #192). Resolve the affected suites with
-  `bash scripts/test/select-suites.sh`, and when the staged surface includes a
+  not a file list (issue #192). Run the tests the change requires through the
+  target's declared test command (`.claude/autoflow.local.json` > `tests.command`,
+  else `CLAUDE.md` > Development Commands `Test`; on an opted-in target and in the
+  AutoFlow repository itself `bash scripts/test/select-suites.sh` names the
+  committed suites the delta reaches), and when the staged surface includes a
   manifest-registered source pull `setup/manifest.json` in as a derived allow-list
   member before you commit (`docs/submodule-common-rules.md` > Change Surface
   Rules > Derived artifacts) — derived from what you actually staged, never left to
@@ -35,10 +38,8 @@ Hard rules:
   (test/build runs included). Wait for the result, then report — background +
   completion-notification is orchestrator-only. See
   `docs/teammate-common-rules.md` > Bash Execution Mode.
-- **[MUST]** Never start a **whole-tree run** of the suite runner. Both the
-  `--all` flag and the bare invocation reach the whole tree — the bare form
-  whenever its resolved delta is empty or the event is a `push` — so the
-  prohibition is on the run, not on the flag. Execute only your resolved run set
-  or the specific suites your change requires; the whole-tree sweep has one
-  invoker and one position, the orchestrator at VALIDATE step 1
-  (`docs/autoflow-guide.md` > GREEN step 2, > VALIDATE step 1).
+- **[MUST]** Run locally, once, what the change requires and nothing more, and
+  report the command with its summary line. There is no local whole-tree run —
+  none scheduled, none held in reserve; regression verification is HANDOFF's CI
+  (`CLAUDE.md` > Rule Scope > *Local verification*; `docs/autoflow-guide.md` >
+  GREEN step 2).

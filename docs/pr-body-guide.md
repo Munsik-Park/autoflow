@@ -69,6 +69,10 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   대상이 무엇인지 불분명해진다.
 - issue AC 전부가 `automated` 이면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
   빈 섹션과 누락된 섹션은 reviewer에게 구분되지 않는다.
+- `cycle` 층의 `automated` row(`Type` 셀에 `standing:` 토큰이 없는 row)는 test 코드가
+  PR에 없으므로, 같은 섹션에 그 row의 **run record** — VERIFY step 1이 실행한 command와
+  summary line — 를 한 줄로 싣는다. reviewer가 재실행할 수 있는 것은 이 record다
+  (ADR-0024 D1, D2; `autoflow-guide.md` > HANDOFF step 4).
 
 예:
 
@@ -96,6 +100,7 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 ## Changelog
 
+- 2026-09-11: Principle 5에 `cycle` 층 `automated` row의 run record 노출 추가 (#225, ADR-0024 D1/D2).
 - 2026-08-25: Principle 5 (Verification dispositions — automated 아닌 issue AC의 disposition + reason 노출; 3단 guard의 reviewer tier) 추가 (#153).
 - 2026-06-05: Principle 4 (판단 근거의 명시적 링크 / PR-reachability) 추가.
 - 2026-05-22: 초기 작성.
