@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9448f7865444026f14f0e7c3e505fedc635a2159c58b9ef010c7061411d30564"
+      "sha256": "33830544a89cbfe42a28d29f2bd2739069c739adcb5d289c9bfa6a5aea89c894"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/adr/0000-adr-template.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fdaefdec533957bbf6a79442969b5ee910602cdd5901bbbf0ac020302d0557f9"
+      "sha256": "e8e31c82f8b1e80960f37c220eeda72d3f443faa17d4e5c12638a7849b96df56"
     },
     {
       "source": "docs/adr/0003-autoflow-ends-at-handoff.md",
@@ -104,28 +104,28 @@
       "dest": ".claude/autoflow/docs/adr/0024-two-layer-verification-and-target-owned-tests.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b6e5010401eea21395790f9682cc48ef0da060521c6d95b3dc25c6e206f2ff4b"
+      "sha256": "4e82b7dea5c7dd8d0479b29324075da4609081788f2b5e932950c5cc1d3bb0d8"
     },
     {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bce29b2b6e8753a409d0db333fc95a7ea6ac2e3a0c7b2c26596769e1fc158968"
+      "sha256": "666ef4d2575b6e2ba9684057ce194f5d8cf8e9f239769ddf2d39cead403b1b97"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "604c708b7b06294b97f156517f907d55f66777f8eb6328802cdfe8fb309526b9"
+      "sha256": "471cf88f2964290417bc5c542239f50465421c35852172965abcc930f30f9ca7"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "819664cd452cdf28572516a15ea77a7abca0715a2d8d93fc077dec8e94ce206d"
+      "sha256": "adca379947b65939aaab445ac21a859e85299b97bf74dc8f33cc73a261f1900d"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "78293310cd59feda78ea1a39e90dff9236ffd6edcd604d747499d4a0a1f78dce"
+      "sha256": "d6871d5e6e66af017283a4da50e19e39db5b66a989a2305534353f4eb285362a"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -188,7 +188,7 @@
       "dest": ".claude/autoflow/docs/pr-body-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "98d41931814568e9b653590eb5cbb6625036ce284e28d65776ccd5b1c6402934"
+      "sha256": "2c2a36a416ef927b60c494afce1123f93d585c7faf157b7611447e46a0ae1eb4"
     },
     {
       "source": "docs/repo-boundary-rules.md",
@@ -216,21 +216,21 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5e12e0fd607c729de50297d6ebca02b6101740064f125d0840f1b8dd5cc1b2f8"
+      "sha256": "b441a281a40eb45ff4ae76002cff8382365d4762058d6c795060d53659329cd9"
     },
     {
       "source": "docs/teammate-common-rules.md",
       "dest": ".claude/autoflow/docs/teammate-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ba24410f2d41ee034fcb016eac83537444f828b2d6b736838fdd4db39bed4feb"
+      "sha256": "06107c2804d145ac92eb3cb67f9a9a14917a0736011667e7ecccf2450b4098f8"
     },
     {
       "source": "docs/teammate-contracts.md",
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2c8c95e6a321ad70d094366473946346b86db02f3fdcc358f9d6006b123647d8"
+      "sha256": "a6a91b8bf91ae79fa5dbb951f7486c7900f30b20be1692121dbc977c3c6406e7"
     },
     {
       "source": "docs/title-guide.md",
@@ -356,7 +356,7 @@
       "dest": ".claude/autoflow.local.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "83c874995db25cb41d68caac324ec7df19e4f08527c76fa31d2d975844d31737"
+      "sha256": "5a07396a4a8e904c735d009e9f3eebad107bb0d25d19e9f84d66517ecebf3110"
     },
     {
       "source": "scripts/handoff/create-host-pr.sh",

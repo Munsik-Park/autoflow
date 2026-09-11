@@ -62,19 +62,13 @@ classifying authority and the implementing roles do not re-classify.
 This subsection **constrains** the pre-scoring FAIL hypothesis above; it does not replace it. The
 evaluator still forms the hypothesis first, still re-derives anchors, still records the search in
 `fail_hypothesis`. Governing record:
-[`docs/adr/0019-scope-fit-verification-policy.md`](adr/0019-scope-fit-verification-policy.md).
+[`docs/adr/0024-two-layer-verification-and-target-owned-tests.md`](adr/0024-two-layer-verification-and-target-owned-tests.md)
+> *Evaluator execution discipline*.
 
-- **[MUST] Host-record citation-inheritance.** Where the anchor being re-derived is a **suite
-  verdict**, resolve it against the host's own record before executing anything: run
-  `bash scripts/test/suite-coverage.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C> --candidates all`
-  and read the per-suite records. A suite reported `INHERIT` is **cited, not re-executed**. A suite
-  reported `RUN`, or a record the evaluator's own capture point contradicts, is executed. This
-  mirrors the discharge the orchestrator already holds ([`CLAUDE.md`](../CLAUDE.md) > Execution
-  Principles > *Verify teammate claims before dispatch*) and closes the asymmetry that no equivalent
-  rule reached the evaluator. The check is **performed** — a command with an output — never
-  asserted, so "I inherited" is itself an anchor a reader re-derives. The citation lands in
-  `inherited_verdicts`, a key of the [Evaluation Output Format](evaluation-system.md), always
-  present and `[]` when the evaluator executed everything.
+- **[MUST] Resolve the anchor before executing.** Where the anchor being re-derived is a **suite
+  verdict**, the anchor is the recorded local run — the command and the summary line it produced
+  (Reporting Format item 5) — and the evaluator re-runs that command; an unresolved anchor is a
+  report defect, not an input. Nothing is cited from a host record in place of a run.
 - **[MUST] Sampling default.** A blind-spot search over a **repeated surface** takes a
   representative sample per rubric item by default (one or two instances), and states the sample
   basis in `fail_hypothesis`. Exhaustive enumeration is entered only when a sampled instance yields
@@ -86,7 +80,7 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
   in which case the declared value governs and is reported. On reaching the cap the evaluator stops
   searching, scores what it searched, and records every unsearched item as `not-searched` in
   `fail_hypothesis` — **never as clean**. This is the same truthfulness rule the phase records apply
-  with `not-run` ≠ `clean` and `inherited` ≠ `passed`. A cap reached with unsearched items is a
+  with `not-run` ≠ `clean`. A cap reached with unsearched items is a
   signal to the orchestrator that the rubric item's evidence is thin, not a pass.
 
   *Basis for 30 minutes*: measured on the #108 cycle and recorded in issue #112's body — an
@@ -101,15 +95,14 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 ## Test AI (testing teammate)
 - Participates in plan synthesis (ARCHITECT) from a verification perspective — "how will this design be verified?"
 - Authors the verification design document: acceptance criteria → verification disposition (`automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` / `none`) → method, with a one-line reason on every non-automated issue-AC row and a test kind (`driving` / `regression` / `characterization`) on every automated row.
-- **[MUST]** Applies **Test necessity**: a test exists only when it is needed — the burden of proof lies on the test, and the default under uncertainty is `none`. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > Output artifacts > *Test necessity*.
+- **[MUST]** Applies **Test necessity** to existence: a test exists only when it is needed — the burden of proof lies on the test, and the default under uncertainty is `none`. Retention is a separate question the row's `Type` cell answers: `cycle` by default (uncommitted, run once from `.autoflow/issue-{N}-local/`), `standing` only under one of ADR-0024 D1's closed tokens (`automated / standing: <token>`). Rule body: [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > Output artifacts > *Test necessity*.
 - **[MUST]** Assigns a composition oracle — an oracle driving the contact point through the real execution environment, non-mock — whenever the design's change surface names shared state a settled decision also names, and identifies the `T` and `S` lists of the determination, which the verification design records as one `composition-oracle` block with the classifier's stdout and exit status attached (an empty list is declared, never implied). Rule body: [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > Output artifacts > *Composition oracle*.
 - **[MUST]** Justifies **Verification depth**: the verification design carries a risk line, and each verification's unique failure mode is its row's cell in the acceptance-criteria table's `Failure mode` column. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > Output artifacts — the `Failure mode` column's bullet, and *Verification depth*.
-- Writes test code before implementation (Test First) and confirms Red — every `driving` and `regression` test fails; a `characterization` test may start green.
+- Writes test code before implementation (Test First) and confirms Red — every `driving` and `regression` test fails; a `characterization` test may start green. Runs tests through the target's declared test command and judges which of the target's tests the change requires, recording the grounds; runs nothing tree-wide ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
 - For untestable items: states the reason and proposes alternatives (design change / manual scenario (except where the composition-oracle clause applies) / mock (same exception)).
 - Performs minimal-implementation verification after implementation: detects observable behavior or contract the implementation introduces outside the agreed scope (feature design + verification design), not code outside test coverage. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > VERIFY step 3.
 - **[MUST]** Performs the mock-boundary fidelity check after implementation: re-enumerates the iteration set from the test tree at HEAD (every double in scope and the real interface each stands for), re-derives each real interface at HEAD, and cites its `file:line`. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > VERIFY step 4.
 - **[MUST]** States, per check, the **detection outcome** — `detected` / `clean` / `not-run` — in the VERIFY report, together with the iteration set as named doubles; a check that did not execute is reported `not-run`, never `clean`. The orchestrator appends these outcomes to the decision ledger; see [`autoflow-guide.md`](autoflow-guide.md) > VERIFY > *Detection record*.
-- **[MUST]** On an inherited path — the tree-identity predicate matched, so the step did not execute the suite — reports the outcome word `inherited`, never `passed`, and cites the register entry as its Evidence anchor instead of stating a suite summary line it did not produce; a re-typed summary line on an inherited path is a contract violation. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > VERIFY > *Green-tree register*.
 - **[MUST]** Runs the target repository's lint chain over the staged files before committing, confirms zero errors attributable to them, and reports one outcome word per discovered chain as the commit's lint-outcome evidence anchor. Rule body: [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
 - Operates independently from the Developer AI — tests are written from acceptance criteria, not from the developer's intended implementation.
 - Spawn model: resolved from the spawn policy, never restated here — `bash scripts/spawn-policy/spawn-policy.sh model red` (and `refine-test-reconfirm` at REFINE). The row's tier moves only under the revert rule, and the record of each move is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model > *Revert history* (RED: issue #180). Source: `.claude/autoflow/spawn-policy.json`.
@@ -124,7 +117,7 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 - Has read access to other sub-repos; modifications stay within the assigned sub-repo.
 - Works directly in the target repo and pushes to origin (the target repo's own branch). PR creation is performed by the orchestrator.
 - *Secondary (multi-repo):* when the target is a sub-repo, the push goes to the AI's fork branch (in the fork-and-PR model).
-- **[MUST]** On an inherited path — the tree-identity predicate matched, so the step did not execute the suite — reports the outcome word `inherited`, never `passed`, and cites the register entry as its Evidence anchor instead of stating a suite summary line it did not produce; a re-typed summary line on an inherited path is a contract violation. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > VERIFY > *Green-tree register*.
+- Runs locally, once, the tests the change requires through the target's declared test command and reports the command with its summary line; never a whole-tree run ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
 - **[MUST]** Runs the target repository's lint chain over the staged files before committing, confirms zero errors attributable to them, and reports one outcome word per discovered chain as the commit's lint-outcome evidence anchor. Rule body: [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
 - **[MUST]** At REFINE, writes `.autoflow/issue-{N}-refine-report.md` with its three sections — `## Applied`, `## Rejected / deferred`, `## Out-of-scope observations — guard / boundary logic touched` — each present, `none` when empty. A /simplify suggestion rejected as behavior-changing that touches validation, a guard, path / root resolution, an input or output boundary, or error handling goes into the third section with its `path:line` and the behavior it would change; REFINE is right to refuse it and wrong to bury it (issue #135; `docs/autoflow-guide.md` > REFINE > REFINE report).
 - Common rules: see [`docs/submodule-common-rules.md`](submodule-common-rules.md).

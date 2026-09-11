@@ -113,7 +113,7 @@ flowchart TD
     INT -->|FAIL| RED
     INT -->|PASS| HAND
     HAND -.->|env / push rejection ≤2×| HAND
-    HAND -->|code issue| RED
+    HAND -->|CI failure · re-entry by remedy_class<br/>doc commit / RED / GREEN / ARCHITECT| RED
     HAND -->|retry exhausted| HUMAN
     HAND -->|PR created, CI green| DONE
 
@@ -186,9 +186,9 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
 
 **Review-response mode setup** (requested issue has an open PR + `active:false`): `git checkout dev/<existing-branch>` (the issue's dev branch per the Step-5 naming convention `dev/<date>-issue-{target}`, located with `git branch --list 'dev/*-issue-{target}'`); run Step 1a on that branch with `--cycle` set to the incremented cycle number, and only once it exits 0 set `mode: "review-response"`, `active: true`, `phase: "in-progress"`; identify the triggering reviewer comment/thread (the DIAGNOSE review-response target); increment the state file's `cycle` field and reset `phases` to the empty Creation template (preserving the `verdict` rule); add the `status:in-progress` label: `gh issue edit #N --add-label "status:in-progress"`. Skip dev-branch creation (step 5 is new-issue mode only).
 
-**[MUST] Preserve the previous cycle's artifacts** (issue #135): before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, and `issue-{N}-review-findings.md`, which are cycle-spanning. Without this the new cycle's Phase A/B/3, REFINE and AUDIT overwrite the flat names, and the bounded path below has nothing to reuse.
+**[MUST] Preserve the previous cycle's artifacts** (issue #135): before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, `issue-{N}-review-findings.md` and the cycle-layer store `issue-{N}-local/`, which are cycle-spanning (ADR-0024 D2: a `delivery-check`'s subject is the PR's cumulative landed diff, so the store's retained set is reviewed and re-authored at RED entry and re-executed at the new cycle's VERIFY step 1; a check that did not execute is `not-run`, never `passed`). Without this the new cycle's Phase A/B/3, REFINE and AUDIT overwrite the flat names, and the bounded path below has nothing to reuse.
 
-**Scope-bounded entry** (issue #135): when `.autoflow/issue-{N}-review-findings.md` carries `scope-bounded: true` (written by HANDOFF step 6.5 from `scripts/review/scope-bounded.sh triage`), the cycle takes the **bounded path**: DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs the same workflow with its brief stating the bounded scope — the Medium+ finding and the PR diff file set (ARCHITECT > *Re-discussion*), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE's whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-discussed on the full topic (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `scope-bounded: false` or an absent line is the full path.
+**Scope-bounded entry** (issue #135): when `.autoflow/issue-{N}-review-findings.md` carries `scope-bounded: true` (written by HANDOFF step 6.5 from `scripts/review/scope-bounded.sh triage`), the cycle takes the **bounded path**: DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs the same workflow with its brief stating the bounded scope — the Medium+ finding and the PR diff file set (ARCHITECT > *Re-discussion*), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-discussed on the full topic (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `scope-bounded: false` or an absent line is the full path.
 
 **Resume procedure** (requested issue's own state file reads `active:true` — a mid-cycle session resumed after an abnormal end): resume deterministically, do not restart from PREFLIGHT.
 1. **Read the last confirmed point** from the state file: the highest phase whose gate `scores` are recorded in `phases` (or `verdict` set for `gate_hypothesis_cause`) is the last *passed* gate; `phase` gives the coarse marker.
@@ -198,11 +198,11 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
 3. **Re-enter at the phase immediately after the last passed gate.** If the last confirmed point is indeterminate (no recorded gate `scores`, or artifacts inconsistent), fall back conservatively to **re-running from the phase that follows the most recent gate whose `scores` are present** — never skip a gate that has no recorded PASS. A gate is re-run, not assumed passed, whenever its `scores` are absent.
 4. Resume does **not** increment `cycle` and does **not** reset `phases` (contrast review-response entry, which does both) — it is a continuation of the same cycle, not a new one.
 
-**Bundle drift (fail-closed stop condition, issue #167).** Before DIAGNOSE, on a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this step), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6, issue #185 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here rather than at the fail-closed readout in ARCHITECT), and every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7, issue #213 — the selector's own `--check-headers` stage; a suite that predates the header contract BLOCKs every selection, RED's derivation first). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`, so the check is the same from this shell as from a hook; a side that is not locally resolvable reports `SKIP`, never a failure. A non-zero exit is a **fail-closed** hard PREFLIGHT stop: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per RED > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`). A `WARN` (a changed scaffold sample, an artifact upstream no longer ships) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
+**Bundle drift (fail-closed stop condition, issue #167).** Before DIAGNOSE, on a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this step), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6, issue #185 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here rather than at the fail-closed readout in ARCHITECT), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`, ADR-0024 D3; the opt-in-keyed arm ships with S4, until which the leg fires on every stamped target) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7, issue #213 — the selector's own `--check-headers` stage). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`, so the check is the same from this shell as from a hook; a side that is not locally resolvable reports `SKIP`, never a failure. A non-zero exit is a **fail-closed** hard PREFLIGHT stop: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per RED > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`). A `WARN` (a changed scaffold sample, an artifact upstream no longer ships) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
 
 **Reviewer-backend availability (fail-closed stop condition).** Before DIAGNOSE, PREFLIGHT confirms the configured HANDOFF step-6 review **backend** is **available** by running `scripts/preflight/check-review-backend.sh` — it reads the backend from `.claude/autoflow.local.json` (`.review.backend`, default `codex`; absent ⇒ codex) and probes the CLI presence-only (`command -v codex` / `command -v claude`; auth is not probed — a present-but-unauthenticated backend passes here and surfaces its auth failure at HANDOFF step 6). A non-zero exit is a **fail-closed** hard PREFLIGHT stop (mirrors `drift-check.sh`): the cycle does not begin until the configured backend's CLI is installed or the backend is switched in `.claude/autoflow.local.json`. This moves the former codex hard-requirement from HANDOFF-end to PREFLIGHT-entry. See [`reviewer-backend.md`](reviewer-backend.md).
 
-**Target-declared local checks (fail-closed stop condition, issue #181 — Step 1a above).** PREFLIGHT runs the target repository's **own** readiness procedure by executing `scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` at Step 1a — after prior-cycle resolution, before the Git clean check and before the state file is created. The target declares that procedure in the target-owned scaffold `.claude/autoflow.local.json` under `preflight.local_checks[]` — one entry per step, each `{ "name", "check", "repair"? }`, where `check` is the command PREFLIGHT runs (exit 0 = ready) and the optional `repair` is run once on a failed `check`, followed by a re-check whose exit is the verdict. A target whose docs name a per-clone setup step (a commit-hook installer, a generated config, a toolchain probe — the class that let llmroute #279 start with its commit hooks unwired, so six teammate commits skipped the target's lint chain until VALIDATE step 7) declares it here; the framework knows **no specific tool** — it runs what is declared and reads only the exit status. **Absent declaration ⇒ no-op**: the script exits 0 and records the single line `PREFLIGHT local checks: none declared`. A declared check that does not pass (after repair, when one is declared) is a **fail-closed** hard PREFLIGHT stop (exit 1, mirrors `check-review-backend.sh`): run the declared repair, or fix the declaration, then re-run. A declaration the script cannot read as declared (malformed JSON, wrong types, an entry without a string `check`) is exit 2 and also stops — never a silent no-op. Because a declared command is arbitrary target shell and a `repair` changes local state by design, a passing run additionally asserts `git status --porcelain` is empty afterwards: a dirty tree is exit 3 with the paths on stderr — not a failed check, but the Step 2 condition already broken, so the orchestrator disposes of those paths under Step 4 and re-runs Step 1a; Step 2 then confirms the clean tree on its own. The outcome is written **only** as a ledger record — a level-3 heading `### preflight-local-checks | cycle: <C>` with one `- result:` line whose leading token is the terminal verdict (`none declared`; `PASS <name>=PASS[(repaired)] … worktree=clean` for exit 0; `DIRTY <name>=PASS[(repaired)] … worktree=dirty(<n>)` for exit 3; `FAIL <name>=FAIL[(…)] … worktree=n/a` for exit 1 — `PASS` is written only on exit 0, so no reader has to combine the verdict with the worktree field) — in the same identifier-free record class as `green-tree` / `verify-detection`; the state file is untouched and the gate hook, which reads the ledger advisorily only, is unchanged. The commit-time lint-chain obligation (`submodule-common-rules.md` > *Lint chain on the staged surface*) stays as it is — this call site is what lets a target make its lint chain *installed* before the first teammate commit, not a replacement for running it.
+**Target-declared local checks (fail-closed stop condition, issue #181 — Step 1a above).** PREFLIGHT runs the target repository's **own** readiness procedure by executing `scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` at Step 1a — after prior-cycle resolution, before the Git clean check and before the state file is created. The target declares that procedure in the target-owned scaffold `.claude/autoflow.local.json` under `preflight.local_checks[]` — one entry per step, each `{ "name", "check", "repair"? }`, where `check` is the command PREFLIGHT runs (exit 0 = ready) and the optional `repair` is run once on a failed `check`, followed by a re-check whose exit is the verdict. A target whose docs name a per-clone setup step (a commit-hook installer, a generated config, a toolchain probe — the class that let llmroute #279 start with its commit hooks unwired, so six teammate commits skipped the target's lint chain until VALIDATE step 7) declares it here; the framework knows **no specific tool** — it runs what is declared and reads only the exit status. **Absent declaration ⇒ no-op**: the script exits 0 and records the single line `PREFLIGHT local checks: none declared`. A declared check that does not pass (after repair, when one is declared) is a **fail-closed** hard PREFLIGHT stop (exit 1, mirrors `check-review-backend.sh`): run the declared repair, or fix the declaration, then re-run. A declaration the script cannot read as declared (malformed JSON, wrong types, an entry without a string `check`) is exit 2 and also stops — never a silent no-op. Because a declared command is arbitrary target shell and a `repair` changes local state by design, a passing run additionally asserts `git status --porcelain` is empty afterwards: a dirty tree is exit 3 with the paths on stderr — not a failed check, but the Step 2 condition already broken, so the orchestrator disposes of those paths under Step 4 and re-runs Step 1a; Step 2 then confirms the clean tree on its own. The outcome is written **only** as a ledger record — a level-3 heading `### preflight-local-checks | cycle: <C>` with one `- result:` line whose leading token is the terminal verdict (`none declared`; `PASS <name>=PASS[(repaired)] … worktree=clean` for exit 0; `DIRTY <name>=PASS[(repaired)] … worktree=dirty(<n>)` for exit 3; `FAIL <name>=FAIL[(…)] … worktree=n/a` for exit 1 — `PASS` is written only on exit 0, so no reader has to combine the verdict with the worktree field) — in the same identifier-free record class as `verify-detection`; the state file is untouched and the gate hook, which reads the ledger advisorily only, is unchanged. The commit-time lint-chain obligation (`submodule-common-rules.md` > *Lint chain on the staged surface*) stays as it is — this call site is what lets a target make its lint chain *installed* before the first teammate commit, not a replacement for running it.
 
 **Hard stop**: if the Git state is not clean after resolution attempts (e.g. `--ff-only` fails), **stop and report to the user**. Do NOT proceed to DIAGNOSE.
 
@@ -348,8 +348,9 @@ layer that has a shell.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
-   the change delta (`scripts/test/select-suites.sh` owns which suites a change requires) and from
-   the files those roles open to change anyway. The dividing line is one question: **would this
+   the change delta, run through the target's declared test command ([`CLAUDE.md`](../CLAUDE.md) >
+   Rule Scope > *Local verification*; on an opted-in target the selector answers which committed
+   suites the delta reaches), and from the files those roles open to change anyway. The dividing line is one question: **would this
    sentence being wrong mean the design has to be revisited, or would it just be fixed where it is
    found?** The first belongs to the deliberation; the second does not. A derivation RED produces
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
@@ -371,9 +372,14 @@ layer that has a shell.
 
 - **`Type` is the per-criterion verification disposition**, one of
   `automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
-  `none`; `Kind` applies to `automated` rows only (`driving` / `regression` /
-  `characterization`). Both vocabularies, and when each disposition is the right answer, are
-  defined once at *Test necessity* below.
+  `none`, and the same cell carries the row's **layer** (ADR-0024 D1): an `automated` or `manual`
+  row is `cycle` by default — executed once, uncommitted, its run recorded — and is `standing`
+  (committed; CI-registered where the target opted in) only when the cell names one of D1's closed
+  tokens in the form `automated / standing: <token>` (`manual / standing: <token>`). The token list
+  is ADR-0024 D1's and is not copied here; a token outside it is a layer violation (GATE:QUALITY >
+  *Test quality — layer violation*). `Kind` applies to `automated` rows only (`driving` /
+  `regression` / `characterization`). Both vocabularies, and when each disposition is the right
+  answer, are defined once at *Test necessity* below.
 - **`Issue AC` is the join key.** Each row's value is either an `AC id` from the
   `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, or `—` for a criterion this
   verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
@@ -457,8 +463,11 @@ scribe; the Record workflow's report is what reaches the orchestrator. See
 
 A test exists only when it is needed. The burden of proof lies on the test, never on its absence:
 not writing a test needs no justification, and a proposed test that cannot answer both judgments
-below is not written. This clause is the policy body; every other document references it rather
-than restating it.
+below is not written. This clause decides **existence** only — whether a criterion is verified at
+all. Whether a verification **stays in the repository** is decided by ADR-0024 D1's closed
+`standing` list and by nothing else: a stated reason, however good, does not move a row out of the
+`cycle` layer (ADR-0024 > *Test necessity — what D1 replaces and what it retains*). This clause is
+the policy body; every other document references it rather than restating it.
 
 - **[MUST]** Each proposed verification answers two judgments, in the row that carries it:
   1. **Required behavior** — is this a behavior or contract a consumer actually requires, as
@@ -477,10 +486,10 @@ than restating it.
 
 | Disposition | Meaning |
 |---|---|
-| `automated` | an executable test in this cycle's suite |
+| `automated` | an executable test — `cycle` by default (run once from `.autoflow/issue-{N}-local/`, its run recorded), `standing` only with a D1 token in the cell |
 | `existing-coverage` | already detected by an existing test, lint rule, schema, compiler/type check, build or packaging check — the row names which |
-| `delivery-check` | a cycle-scoped check that the change was wired / generated / delivered; lives in the existing `lane: cycle-scoped` manifest lane, and RED/GREEN semantics do not apply to it |
-| `manual` | a scenario a person executes; the row names the scenario file |
+| `delivery-check` | a one-shot check that the change was wired / generated / delivered — a `cycle` artifact under `.autoflow/issue-{N}-local/`, never committed; RED/GREEN semantics do not apply to it |
+| `manual` | a scenario a person executes; the row names the checklist — a `cycle` artifact unless the cell carries a D1 token |
 | `environment-dependent` | verifiable only against an environment this cycle cannot drive (except where the composition-oracle clause applies) |
 | `none` | no persistent verification has positive value — the row states why absence costs nothing |
 
@@ -711,21 +720,21 @@ issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
 
 | Item | Criterion |
 |------|-----------|
-| Feasibility   | Can this plan be implemented with the current structure? (grounded in the actual mechanisms, not a misread) |
+| Feasibility   | Can this plan be implemented with the current structure? (grounded in the actual mechanisms, not a misread — a verification design that types a row `automated` on a target that declares no test command is not grounded, ADR-0024 D3) |
 | Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here) |
 | Security      | Any security implications introduced? |
 | Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160) |
 
 **Affected files and side effects are not scored here** (issue #192). The gate scores the
-*decision* layer; which files a change touches and which suites it requires are **derived**, not
-predicted — by `scripts/test/select-suites.sh` from the change delta at RED/GREEN entry, and by the
-execution roles that open those files anyway. A prediction the gate scores is a prediction a FAIL
+*decision* layer; which files a change touches and which tests it requires are **derived**, not
+predicted — by the execution roles at RED/GREEN entry, from the change delta and the target's
+declared test command, and from the files they open anyway. A prediction the gate scores is a prediction a FAIL
 sends back through a full re-deliberation; the same fact costs one suite run where execution meets
 it. The measurement is issue #192 (llmroute #280: four consecutive GATE:PLAN FAILs, all on this one
 item, all on facts RED met on first execution, all absorbed at RED/GREEN after an operator
 override). Removing the item does not remove the check — it moves it to the layer that derives it
-deterministically; a real dependency miss surfaces at RED, VERIFY step 1 or the VALIDATE whole-tree
-sweep and routes by the existing class rules, consuming no ARCHITECT re-entry.
+deterministically; a real dependency miss surfaces at RED, VERIFY step 1 or HANDOFF's CI and routes by
+the existing class rules, consuming no ARCHITECT re-entry.
 
 `Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that carries no unique failure mode fails Scope on the same clause. On a row that owes the `Failure mode` cell (ARCHITECT > Output artifacts, the column's bullet), the cell fails Scope when it is empty — `—` on such a row counts as empty — or when it cannot be told apart from the cell of another distinct verification anywhere in the design, or from a named existing mechanism; rows that share a `Method` label are one verification and are not compared with each other. The deduction rides this clause and adds no scored item, cap or `scores` key. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
 
@@ -796,7 +805,7 @@ the narrowing binds re-entries only.
 
 - **Role spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned. At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — anonymous direct spawns (`subagent_type`), one per phase entry; see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
-- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt carries the whole-tree-run prohibition (GREEN step 2): the Developer AI runs only its resolved run set or the specific suites its change requires, and never a whole-tree run of the suite runner — neither the `--all` flag nor the bare invocation, which selects the full set on an empty delta or a `push` event.
+- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the target's declared test command and the cycle-layer store `.autoflow/issue-{N}-local/` ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
 - Both receive: acceptance criteria + verification design + affected docs.
 
 ---
@@ -807,79 +816,67 @@ The Test AI writes test code from the verification design.
 
 **Derivation on entry** (issue #192). ARCHITECT hands down decisions, not a change table: the file
 rows, the per-suite disposition and each oracle's condition clause are **derived here**, by the
-roles that open those files anyway. Before step 1 the Test AI resolves the affected suite set with
-`bash scripts/test/select-suites.sh` — the sole owner of "which suites does this change require",
-matching each suite's `ci-subject` header against the change delta — rather than reading a list a
-design document predicted. A suite the derivation names and the verification design did not
-anticipate is an ordinary RED input, **not** a plan defect and **not** acceptance-criterion drift
-(GATE:QUALITY > *Completeness — AC-authority check*); a design **decision** the derivation
-contradicts is the one thing that still returns to ARCHITECT, through the existing routes.
-
-**When the derivation cannot compute** (issue #213). The selector exits `1` with `BLOCK:` lines when
-no base resolves, or when an enumerated suite declares no usable `# ci-subject:` header — every such
-suite is named. The derivation then degrades to executing, never to skipping, as the capture-point
-resolver does (VERIFY > *Green-tree register*): the affected set is the whole enumerated set
-(`bash scripts/test/run-suites.sh --all --list`), and the RED report carries the `BLOCK:` lines. A
-header BLOCK names suites that predate the header contract (*Adopting the contract over existing
-suites*, below). Back-filling them is the target's migration, not this cycle's change surface: the
-Test AI leaves those suites unedited and reports the list, and the orchestrator surfaces it to the
-user. drift-check D7 names the same suites at PREFLIGHT, so a cycle meets this branch only where
-that check did not run or a header was lost mid-cycle.
+roles that open those files anyway. Before step 1 the Test AI resolves the target's declared test
+command ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*: `.claude/autoflow.local.json`
+> `tests.command`, else the target's `CLAUDE.md` > Development Commands `Test`) and judges which of
+the target's tests the change requires, recording the grounds in its report; on an opted-in target
+and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the change
+delta reaches, and a `BLOCK:` line it prints is carried into the report, never worked around. A
+suite the derivation names and the verification design did not anticipate is an ordinary RED input,
+**not** a plan defect and **not** acceptance-criterion drift (GATE:QUALITY > *Completeness —
+AC-authority check*); a design **decision** the derivation contradicts is the one thing that still
+returns to ARCHITECT, through the existing routes.
 
 ```
-1. Convert acceptance criteria → test code (only rows typed `automated`).
+1. Convert acceptance criteria → test code (only rows typed `automated`). A `cycle` row's test is
+   written under `.autoflow/issue-{N}-local/`; a `standing` row's (`automated / standing: <token>`)
+   is written in the target's test tree.
    - Rows typed `existing-coverage` / `none` produce no test — the verification design already
      states what covers them, or why absence costs nothing.
-   - Rows typed `delivery-check` produce a cycle-scoped check in the existing `lane: cycle-scoped`
-     manifest lane, not a RED test; RED/GREEN semantics do not apply to them.
+   - Rows typed `delivery-check` produce a one-shot check under `.autoflow/issue-{N}-local/`, not a
+     RED test; RED/GREEN semantics do not apply to them.
 2. Run the new tests → every `driving` and `regression` test must FAIL (Red).
    - A `driving` or `regression` test that does not fail means the criterion is already met or the
      test is wrong → investigate.
    - A `characterization` test records existing behavior and may PASS from the start; a passing
      characterization test is the expected outcome, not an investigation trigger.
 3. For rows typed `manual` (and `environment-dependent` rows resolved to a manual scenario) → write
-   a manual verification scenario document.
+   a manual verification scenario document under `.autoflow/issue-{N}-local/` (a `standing`
+   scenario, `manual / standing: <token>`, is committed instead).
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
-**Header contract**: every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
+**Header contract** (opted-in targets and this repository — ADR-0024 D3, D5): every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
 
   ```
   # ci-subject: <path-or-glob> [<path-or-glob> ...]
-  # lane: standing | cycle-scoped
-  # retire-with: #<issue-number>      (required iff lane: cycle-scoped)
-  # cycle-arm: #<issue-number>        (required iff a path allow-list array)
+  # lane: standing
   # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
   ```
 
 - `ci-subject` — the trigger surface. It is no longer only a coverage declaration: `scripts/test/select-suites.sh` consumes it to decide which suites a change requires, so an under-declared surface is a coverage hole, not a cosmetic gap.
-- `lane` — `standing` asserts permanent state and lives forever; `cycle-scoped` asserts its own cycle's landed diff and is inert off its own dev branch. The two-lane partition is what makes the naming rule below machine-readable rather than remembered.
-- `retire-with` — names the issue whose merge retires a cycle-scoped suite.
-- `cycle-arm` — names the cycle whose landed diff a change-surface allow-list array asserts. It is separate from `retire-with` because a **standing** suite may carry a cycle-scoped arm; collapsing the two would mark live standing suites for retirement.
+- `lane` — `standing` is the only value a committed suite carries: under ADR-0024 D2 every committed test is standing, and a one-shot check lives uncommitted under `.autoflow/issue-{N}-local/`. The lint still requires the line (and, where it asks for one, `# out-of-tree-inputs: yes`) until S3 retires those fields together with it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 4).
 - `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim, so a guessed budget is not a representable state. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
 
-**Adopting the contract over existing suites** (issue #213). *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target whose `tests/**` held suites before it adopted the suite plane migrates them once, as target-owned work outside any cycle, before its first RED. drift-check D7 names each one at install and at PREFLIGHT, and `bash scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
+**Adopting the contract over existing suites** (issue #213). *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first RED. drift-check D7 names each one at install and at PREFLIGHT, and `bash scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
 
-1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and `run-suites.sh --all` executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
+1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and the runner executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
 2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An under-declared surface is a coverage hole and an over-declared one costs only runs, so an uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.
-3. **`lane`** — `standing` for a suite that asserts permanent state, which a pre-existing suite almost always does; `cycle-scoped` only together with `retire-with:` and a path allow-list array.
-4. **`budget-secs`** — `ceil(measured CI step duration × SUITE_BUDGET_HEADROOM_PERCENT / 100)` when the suite already has a CI step duration, otherwise `SUITE_BUDGET_CEILING_SECS` verbatim; a local wall-clock figure is never the source.
-5. **`out-of-tree-inputs`** — required when the suite's body resolves a base ref; `scripts/test/check-suite-manifest.sh` names each suite that needs it.
-6. **CI steps** — where the target's CI runs these suites, `check-suite-manifest.sh` requires one step per suite behind a `select` step that runs `select-suites.sh`, each carrying `id: s-<basename>`, the guard `if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/<file> ')` and `timeout-minutes` equal to `ceil(budget-secs / 60)`. A step that runs several suites is split into one step per suite.
+3. **`budget-secs`** — `ceil(measured CI step duration × SUITE_BUDGET_HEADROOM_PERCENT / 100)` when the suite already has a CI step duration, otherwise `SUITE_BUDGET_CEILING_SECS` verbatim; a local wall-clock figure is never the source.
+4. **CI steps** — where the target's CI runs these suites, `check-suite-manifest.sh` requires one step per suite behind a `select` step that runs `select-suites.sh`, each carrying `id: s-<basename>`, the guard `if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/<file> ')` and `timeout-minutes` equal to `ceil(budget-secs / 60)`. A step that runs several suites is split into one step per suite.
 
 The fields go in the file's leading comment block at column 1, before its first non-comment line. The migration is complete when `select-suites.sh --check-headers` exits `0`, `check-suite-manifest.sh` reports OK and drift-check reports `PASS: D7`.
 
-**Naming**: an issue number belongs in a test file name only when that file is cycle-scoped — retired in the cycle's final commit. A standing test is subject-named. The `lane` field above is the declaration; the filename is a convention that follows it.
+**Naming**: a committed test is subject-named; an issue number does not belong in its file name. A one-shot check is not a committed file (ADR-0024 D2), so no naming rule reaches it.
 
 **Leaf rule**: a suite executes its subject, not another suite. A sibling's regression is caught by that sibling's own CI step, under its own name; re-running it here is duplicate execution. Enforced by `scripts/test/check-suite-leaf.sh`.
 
-**Admission**: before creating a suite file at all, answer these four questions. They are the leaf rule and the two-lane rule applied *before* the file exists rather than after, and each one that answers "yes" removes a file this tree would otherwise have to maintain and retire.
+**Admission**: before creating a suite file at all, answer these two questions. They are the leaf rule and ADR-0024 D1 applied *before* the file exists rather than after, and each one that answers "yes" removes a file this tree would otherwise have to maintain.
 
 - Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
-- Is the check delivery-pinned to this cycle's landed diff? Then `lane: cycle-scoped` with `retire-with:` is the default, not an exception.
-- Does the check compare against a checked-in basis? Then the ratchet-or-fossil rule decides its lane.
+- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (ADR-0024 D1, D2).
 
-**Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new spec conforming to the header contract above + manual scenarios written.
+**Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new committed spec conforming to the header contract above (opted-in targets and this repository) + manual scenarios written.
 
 ---
 
@@ -897,7 +894,7 @@ implemented; only its evidence differs.
    - [MUST] Do NOT implement behavior outside the agreed scope (feature design + verification design's issue ACs). A required AC without an automated test is in scope; a behavior no AC requires is not, whether or not a test could be written for it.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
-   - [MUST] Never start a **whole-tree run** of the suite runner. The prohibition is keyed on the run, not on a flag: both the `--all` flag and the **bare invocation** reach the whole tree, the bare form whenever its resolved delta is empty or the event is a `push` (see [`submodule-common-rules.md`](submodule-common-rules.md) > Testing Standards). The whole-tree sweep has exactly one invoker and one position — the orchestrator, at VALIDATE step 1. Execute only your resolved run set, or the specific suites your change requires; the acceptance run that produces evidence is GREEN step 5's, which you do not run.
+   - [MUST] Run locally what the change requires and nothing more: this cycle's `automated` tests and the tests you judge the change reaches, through the target's declared test command, recording the command and its summary line. There is no local whole-tree run — none scheduled, none held in reserve ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
    - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
 3. Before committing, if this change touched a manifest-registered source, run
    the manifest regen and stage the result in the same commit.
@@ -908,72 +905,11 @@ implemented; only its evidence differs.
      mechanical set-intersection, not a judgment call. See
      [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
      Rules > Derived artifacts.
-4. Commit (feat/fix branch).
-5. Orchestrator (not the Developer AI): GREEN step 5 — quiesce the tree per the
-   capture point's own obligation (Green-tree register > Capture point), evaluate the tree-identity
-   predicate at the capture point, run the acceptance run on the mismatch branch,
-   and register the Green. See the step-5 block below.
+4. Commit (feat/fix branch). The report's Evidence anchor is the step-2 run's summary line with
+   the command that produced it (Reporting Format item 5); the orchestrator re-derives it by
+   re-running that command ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Verify teammate
+   claims*).
 ```
-
-**GREEN step 5 — acceptance run and register write.** Step 5 is run by the orchestrator
-rather than by the Developer AI: it is where the orchestrator discharges *Verify teammate claims
-before dispatch* ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles) for the step-4 commit's
-test-summary anchor. It is a producer site of the *Green-tree register* (see VERIFY >
-Green-tree register) and a consumer of it, so it opens by evaluating the *Tree-identity predicate*
-at that block's capture point — `git status --porcelain`, then `git rev-parse HEAD^{tree}` and
-`git rev-parse HEAD`, taken at one instant from the repository root, foreground, immediately
-before the acceptance run starts.
-
-- **Match** → the discharge applies: no acceptance run happens and no `green-tree` entry is
-  written, as on any inherited path. The outcome is reported `inherited` and cited to the source
-  entry.
-- **Mismatch** → the acceptance run happens, and a `green-tree` entry with `runner: GREEN step 5`
-  is written at GREEN exit when and only when all three hold: the capture point was clean, the run
-  was **all-PASS**, and the run covered the registrable scope below.
-
-Either way the step writes one `green-tree-use` entry — the register's "one on every predicate
-evaluation" rule reaching this site by extension.
-
-- **Provenance of the `result` field**: the `result` recorded is the summary line of the run the
-  orchestrator itself executed at this step. The Developer AI's reported summary line is
-  never a source for it — at this site that report is the anchor being discharged, not the content
-  of the record. The register's `Teammates never write it` clause constrains the writer; this
-  sentence constrains the source, and both are needed where the writer is already the orchestrator.
-- **Acceptance-run scope — record what you ran**: an entry is registrable when its `suites` field
-  names exactly the suites the run executed and passed over a clean capture point. The invariant
-  this replaces ("an offerable Green must not certify less than the consumer that inherits it would
-  have executed") is preserved **per suite** rather than per set, which is the stronger reading: a
-  later consumer inherits only the suites the source entry names, and everything else it needs is
-  resolved afresh. The scope is still stated **by reference**, not re-derived here: it is the
-  suite set VERIFY step 1 would run at that tree — the same resolver, at the same capture point.
-  [MUST] To obtain an offerable entry the orchestrator resolves that set and executes it:
-
-  ```
-  bash scripts/test/suite-coverage.sh --ledger .autoflow/issue-<N>-ledger.md --cycle <C> \
-    > .autoflow/issue-<N>-run-set.txt || { echo "suite-coverage BLOCK — running the enumerated set" >&2; }
-  bash scripts/test/run-suites.sh --selected .autoflow/issue-<N>-run-set.txt
-  ```
-
-  [MUST] The `|| { … }` between the two commands is load-bearing, not stylistic. The resolver's
-  non-zero exit is otherwise invisible to the second command, and an empty or truncated plan reaches
-  `run-suites: 0 suite(s) selected` and exit `0` — so an unread BLOCK would present as a clean pass,
-  the exact inverse of *degrades to executing, never to skipping*. With the check, the step records
-  `mismatch-cause: selection-block` instead of a silent `passed`. A step whose text omits the status
-  check is a defect.
-- **Writing the entry**: the register write is not hand-authored. `scripts/test/green-tree-register.sh
-  --append` writes the ledger entry and the shared-store entry from one call, re-takes the capture point
-  and refuses on a dirty worktree or a moved tree/head, and mints each named suite's `@<input-hash>`
-  token at the verified tree — see VERIFY > Green-tree register > *The writer*.
-- **Failure disposition**: an acceptance run that is not all-PASS writes no `green-tree` entry and
-  writes a `green-tree-use` entry with `outcome: failed`. GREEN does not become a gate: the
-  failure is carried into VERIFY, where step 1's predicate mismatches with `no-entry`, the suite
-  runs, and step 2's cause branching adjudicates it exactly as it does today. No flow-control
-  transition changes.
-- **Re-entry disposition**: a cycle's first GREEN always mismatches with cause `no-entry`, so the
-  run happens there. On a `VERIFY → GREEN` re-entry that lands a tracked change the tree has moved
-  and the step mismatches with `tree-differs`; a re-entry landing none matches and
-  inherits without re-running, writing no new `green-tree` entry — the `green-tree-use` entry
-  records the inheritance so the skipped run is not silent.
 
 ---
 
@@ -982,13 +918,12 @@ evaluation" rule reaching this site by extension.
 Run the tests; on failure, branch by cause.
 
 ```
-1. [MUST] Quiesce the tree before the capture point — the capture point's own obligation
-   (Green-tree register > Capture point). Then evaluate the tree-identity predicate, then the suite-coverage predicate it is the fast path of
-   (both under Green-tree register below), then execute the resolved run set.
-   Whole-tree match → nothing executes; inherit the cited Green and report `inherited`.
-   Otherwise        → execute the resolved run set (the resolver's plan, via the idiom in GREEN step 5);
-                      report `passed` when the plan was non-empty and every executed suite passed,
-                      `mixed` when some suites inherited and the rest executed and passed.
+1. [MUST] Local run, once: execute the cycle's local run set — every `automated` row this cycle
+   authored or changed plus every `delivery-check` row (ADR-0024 M) — through the target's declared
+   test command, and record the command and its summary line ([`CLAUDE.md`](../CLAUDE.md) > Rule
+   Scope > *Local verification*). A `cycle`-layer asset runs from `.autoflow/issue-{N}-local/`; a
+   check that did not execute is `not-run`, never `passed`. Nothing is inherited and no whole-tree
+   run happens here — regression verification is HANDOFF step 5's CI.
 2. Branch on result:
    All PASS → step 3.
    Some FAIL → cause branching (run under delegated facilitation — the `verify-cause-branch` workflow returns a single
@@ -1065,342 +1000,6 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 
 **Foreground execution note**: a short re-verification (a suite re-run) is a foreground command — the assigned Developer AI runs it foreground and reports, or the orchestrator runs it directly foreground — never a background spawn-and-wait (`docs/teammate-common-rules.md` > Bash Execution Mode).
 
-### Green-tree register
-
-A second fixed-field entry type on the same per-issue decision ledger `.autoflow/issue-{N}-ledger.md`,
-alongside the `verify-detection` entry above. It records that a suite run happened over a known tree, so a
-later step whose tree is provably identical can inherit that Green instead of re-running the suite.
-
-**Capture point**: all of an entry's observed values are taken at one instant — a command pair run from the
-repository root, foreground, immediately before the suite is started and before any other step work
-intervenes: `git status --porcelain`, then `git rev-parse HEAD^{tree}` and `git rev-parse HEAD`. The
-*Tree-identity predicate* below is evaluated at the same instant, so the branch decision and the entry are
-keyed to identical observations. A non-empty `git status --porcelain` at the capture point suppresses the
-entry entirely — the run still happens, but no entry is written for it. An entry carries the capture-point
-values, never values re-taken at phase exit, so a tree change occurring after the capture point leaves the
-entry keyed to the tree the suite actually executed over.
-
-**Tree quiescence is a property of the capture point.** From the instant the capture point is taken
-until the run it opened has finished, no tracked-tree write occurs. The orchestrator obtains that
-condition through its **spawn schedule**: no tree-writing spawn is issued between the capture point
-and the end of the run it opened, and a capture point is taken only while no tree-writing spawn is
-in flight — with anonymous direct spawns there is no message channel through which mid-run tree work
-could arrive. Because the rule is scoped to the capture point rather than to a list of steps, it
-reaches every site that takes one, present and future, by construction. The spawned-agent side of
-the obligation is [`teammate-common-rules.md`](teammate-common-rules.md) > Tree Quiesce
-(spawn-boundary form).
-
-**Writer**: the orchestrator, at the exit of the phase whose step executed the run, and only on an all-PASS
-outcome over a clean capture point. Teammates never write it — that write authority is the provenance
-guarantee, and it is what makes the later inheritance something other than trusting a claim.
-
-**Entry grammar**: condition 2 of the predicate selects an entry by machine, so the form is fixed rather
-than left to the reader. An entry is a heading line followed by one line per field:
-
-```
-### green-tree | cycle: <C> | runner: <PHASE> step <S>
-- tree: <hash>
-- head: <hash>
-- worktree: clean
-- suites: <repo-relative path> [<repo-relative path> ...]
-- result: <summary line>
-- authority: Green-tree register
-```
-
-- **`suites` is a mandatory field of the grammar, and there is no legacy-entry clause.** It names exactly the suites the run
-  executed and passed — the machine-readable form of what the `result` prose used to carry. An entry
-  written under the prior grammar is *incomplete* by the selection rule below, so no fast path and no
-  coverage fold can fire on it: the predicate mismatches with cause `no-entry` and the suite set
-  executes. That is the fail-safe direction, and it costs at most one extra run, because the ledger is
-  per-issue and the fold is cycle-scoped.
-
-- **A `suites` token carries the suite's input hash.** Each token is `<path>[@<input-hash>]`, split at
-  the **last** `@`, so the field's written form is
-
-  ```
-  - suites: <repo-relative path>@<input-hash> [<repo-relative path>@<input-hash> ...]
-  ```
-
-  A token with **no** `@` is the shipped bare-path form. It still folds and still satisfies the fast
-  path's membership test, but it carries no certificate, so the input-hash short-circuit in the
-  *Suite-coverage predicate* below cannot fire on it — every entry written before this grammar
-  therefore answers exactly as it did, and the extension is additive at the token level rather than a
-  migration. The hash is the suite's **input closure** at the entry's `tree`: the suite's own path,
-  every tracked path matching a token of its `# ci-subject:` header, and every tracked path under
-  `tests/lib/**`, hashed as one `(blob sha, path)` manifest. `tests/lib/**` is part of the closure
-  because the selector selects **every** suite when a shared library moves; a key omitting it would be
-  narrower than the selection boundary rather than a refinement of it. The token form never reaches a
-  plan: `scripts/test/suite-coverage.sh` prints bare repo-relative paths on stdout, because
-  `run-suites.sh --selected` consumes that stdout as a path list.
-
-- **The register spans two stores: the per-issue ledger and a repo-scoped shared store.** The same
-  certificate is written to both, by one writer, so the two cannot drift. The shared store lives
-  **outside the repository tree** at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/green-trees/register.md` —
-  never tracked content, never a dirty-worktree contributor at a capture point, never review surface —
-  and its entries carry their own marker and authority:
-
-  ```
-  ### green-tree-shared | issue: #<N> | cycle: <C> | runner: <PHASE> step <S>
-  - tree: <hash>
-  - head: <hash>
-  - worktree: clean
-  - suites: <repo-relative path>@<input-hash> [<repo-relative path>@<input-hash> ...]
-  - result: <summary line>
-  - authority: Green-tree register (shared store)
-  ```
-
-  The marker is deliberately **not** `### green-tree | cycle: `: the ledger scanner's marker literal
-  stays untouched, and `cycle` numbering is per-issue, so a shared file carrying the ledger marker
-  would collide two issues' cycle 1 entries under one selection rule. Carrying `issue:` in the heading
-  makes each certificate's provenance readable without opening another file.
-
-  **The shared store is a cache, not a ledger**, and the difference decides three dispositions. It
-  carries no authority; it may be **pruned** (the writer retains the 200 most recent entries by
-  default); and a **malformed entry in it is skipped with one warning, never a BLOCK** — the opposite
-  of the ledger's disposition, deliberately. A malformed *local* entry is a positive statement this
-  cycle cannot read, and guessing at it widens inheritance; skipping a foreign certificate narrows, so
-  halting every later issue over another issue's file would fail in the wrong direction. Losing the
-  store entirely costs re-runs and nothing else.
-
-- **The writer is `scripts/test/green-tree-register.sh`**, and both stores are written by one
-  invocation of it:
-
-  ```
-  bash scripts/test/green-tree-register.sh --append --root . --ledger .autoflow/issue-<N>-ledger.md \
-    --issue <N> --cycle <C> --runner "<PHASE> step <S>" --tree <hash> --head <hash> \
-    --result "<summary line>" --suites "<path> [<path> ...]"
-  ```
-
-  It **re-takes the capture point at write time** and refuses — writing to neither store — when the
-  worktree is dirty or when the observed `tree`/`head` differ from the ones the caller recorded before
-  the run. That turns the suppression rule above into a mechanical refusal and closes the window
-  between the run and the write. It computes each named suite's input hash at the verified tree, so
-  the caller passes bare paths and the tokens are minted, never hand-written. `--match [--cover-enumerated]`
-  is the query side, and is what condition 2's shared arm below is answered from.
-
-- **Marker**: the heading begins `### green-tree | cycle: ` — the literal that distinguishes it from
-  `verify-detection`, `review-autofix` and settled-decision entries. A settled-decision entry is a **level-2**
-  heading carrying an allocated identifier — `## <ID> — <title> (cycle <C>, <PHASE>)`, and for a
-  review-autofix attempt `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see
-  [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*). The level distinction alone separates
-  the two families: a record entry is never level-2 and never carries an identifier.
-- **Field form**: `- <name>: <value>`; the name is unique within the entry and the value is the remainder of
-  the line after the first `: `. Values are compared with `[` / `case`, never `eval`.
-- **Ordering / selection**: the ledger is append-only, so entries appear in chronological order. Selection is
-  marker-scoped and then positional, in that order. "The most recent `green-tree` entry of the current cycle"
-  is the entry under the **last** heading line in the file that both begins with the marker
-  `### green-tree | cycle: ` and whose `cycle:` value equals the current cycle. Heading lines carrying any
-  other marker — `### green-tree-use | cycle: `, `verify-detection`, and every level-2 settled-decision
-  heading `## <ID> — …` including the `[review-autofix]`-marked ones — are skipped by the scan, not selected and then rejected: a foreign-marker heading later in the
-  file never terminates the search and never produces a mismatch. The rule is parameterised by marker — "the
-  most recent `<marker>` entry of cycle `<C>`" is the entry under the last heading beginning
-  `### <marker> | cycle: ` whose cycle matches — and condition 2 instantiates it with `green-tree` only. An
-  entry the marker-scoped scan selects whose field block is incomplete or whose heading is malformed is
-  **not selected and yields a mismatch**; that clause applies to the selected marker's own entries, not to
-  entries of other markers. The `runner` value — `GREEN step 5`, `VERIFY step 1` or `REFINE step 2` — is
-  carried for citation, never consulted by the scan, so a GREEN-runner entry and a VERIFY-runner entry of
-  the same cycle compete on position alone and the admissible-phase vocabulary is not a precedence order.
-
-**What identity certifies**: an identical `tree` certifies an identical tracked-content input. It does not
-certify an identical suite outcome, because an assertion may read state that is not in the tree — a
-cycle-scoped delta assertion resolves its comparison base through `resolve_base_ref`, whose fallback is
-`git merge-base HEAD origin/main` (`tests/lib/base-ref.sh`), so a fetch that advances `origin/main` changes
-the computed diff while the tree hash is unchanged and the worktree stays clean.
-base-ref-dependent assertions, and any assertion whose result depends on state outside the tree
-(remote refs, network, clock, environment), are outside what the inheritance guarantee covers; widening
-inheritance across a boundary at which the base ref may move is out of scope.
-
-### Tree-identity predicate
-
-Evaluated by the orchestrator at GREEN step 5 entry, VERIFY step 1 entry and REFINE step 2 entry,
-foreground, from the repository root, at the capture point defined above. **Match** iff all three hold:
-
-1. `git status --porcelain` produces no output (worktree clean);
-2. `git rev-parse HEAD^{tree}` equals the `tree` field of the most recent `green-tree` entry of the current
-   cycle, selected by the ordering rule above, **or** `green-tree-register.sh --match --cover-enumerated`
-   selects a non-empty set of shared entries (the *shared arm*);
-3. that entry's `result` is a pass line.
-
-- **Match** → the step does not run the suite. It records an inheritance line
-  citing the source entry by its heading (cycle and `runner`) and its `tree`, `head` and `result` fields,
-  rather than re-typing the summary as its own — the cited entry is the anchor a reader re-derives, and an anchor-less inheritance is rejected
-  rather than interpreted. No new `green-tree` entry is written on an inherited path; the source entry
-  remains the single record of that run.
-- **Mismatch** — any outcome other than a match → the *Suite-coverage predicate* below decides the run
-  set per suite, and a fresh `green-tree` entry is written at phase exit on an all-PASS outcome over a
-  clean capture point, its `suites` field naming what ran. The fast path's own three mismatch outcomes
-  are: no selectable entry for the cycle (`no-entry`), a dirty worktree (`dirty-worktree`), and a
-  differing tree (`tree-differs`).
-- **The shared arm.** A shared entry **qualifies** when its `tree` equals the captured tree, its
-  `result` is a pass, and its `head` resolves. `--cover-enumerated` applies the coverage test to the
-  **union** of the qualifying entries' `suites` fields — not to any one of them. The union is not a
-  convenience: certificates are minted per phase-step run naming the suites *that* run executed, so two
-  issues at one tree ordinarily leave two entries naming different subsets, and joint coverage is the
-  ordinary cross-issue case. It is also the rule the *Suite-coverage predicate* below applies, and the
-  two must agree — under a single-covering-entry rule the resolver would plan nothing while this
-  predicate reported a mismatch, which is `outcome: inherited` with a non-`none` cause, forbidden by the
-  biconditional below. On a match the `source:` field cites **every** heading the query printed, and
-  `mismatch-cause` stays `none`. Qualifying entries at the captured tree that do **not** jointly cover
-  the enumerated set are a mismatch with cause `no-entry` — the existing cause for "no selectable entry
-  covers what this step must certify"; the three mismatch causes are unchanged.
-- **Head resolvability is part of being selectable.** An entry whose `head` field **does not resolve to a commit**
-  in this repository is not selectable, exactly as an entry with an incomplete field block is not — condition 2's
-  ordering rule declines it and the predicate mismatches with the existing cause `no-entry`. The fast path does
-  **not** fall back to an earlier entry with the same `tree`: the declined entry stays visible to the
-  *Suite-coverage predicate* below, whose fold validates every head it lifts and executes the suites that entry
-  covers with the per-suite reason `unresolvable-head`. The requirement follows from what a match records — the
-  cited `head` is the anchor a reader re-derives, and a head naming no object cannot be re-derived — so declining
-  it moves a suite only from inheritance toward execution, never the reverse.
-- A cycle's first VERIFY inherits when GREEN step 5 registered a Green and the tree has not moved since
-  that capture point. When no such entry is selectable — the acceptance run was narrower than the
-  registrable scope, its capture point was dirty, or it was not all-PASS — the predicate mismatches with
-  cause `no-entry` and the suite runs, which is the pre-existing behavior. The three mismatch causes are
-  unchanged; the GREEN-acceptance path adds a producer and a consumer, not a fourth cause.
-
-### Suite-coverage predicate
-
-The three conditions above are the **whole-tree fast path**; they are not the whole predicate. When
-they do not all hold, the partition between what executes and what is inherited is decided **per
-suite**, by `scripts/test/suite-coverage.sh` — a script, not prose. The resolver owns no selection
-predicate of its own: it invokes `scripts/test/select-suites.sh` for every reach question, so the
-inheritance boundary is the selection boundary by construction. Governing record:
-[`docs/adr/0019-scope-fit-verification-policy.md`](adr/0019-scope-fit-verification-policy.md).
-
-Its resolution order, at the same capture point:
-
-1. **Declared out-of-tree inputs** — any enumerated suite whose header carries
-   `# out-of-tree-inputs: yes` is executed, reason `out-of-tree-inputs`, before any other test and
-   regardless of the reach answer. Such a suite's answer can move while the tree does not (a base ref
-   resolved through `resolve_base_ref` follows `origin/main`), and per-suite keying would otherwise
-   let it inherit across exactly that advance. Declaration beats derivation.
-2. **Dirty worktree** — every candidate executes, reason `dirty-worktree`. Unchanged.
-3. **Whole-tree fast path** — the three conditions above, over the cycle's own ledger; every suite the
-   selected entry's `suites` field names is inherited, cited `via: tree`.
-4. **Shared tree match** — any *shared* entry whose `tree` equals the captured tree, whose `result` is a
-   pass and whose `head` resolves contributes the suites it names, cited `via: shared-tree`. Unlike
-   step 3 this is a **union** over every matching entry, not a last-entry rule: tree equality is exact
-   content identity, so recency carries no information across issues and "last" is not even well
-   defined there. This is the step that removes the cross-issue cold start — an issue whose own ledger
-   is empty still inherits what another issue certified at this very tree.
-5. **Coverage fold** — the shared entries and then the cycle's `green-tree` entries are scanned in file
-   order into a map `suite → head at which it last passed`, a later entry superseding an earlier one
-   only for the suites it names, so a local entry of the current cycle supersedes a shared certificate
-   for the suites it names. Without the fold a narrow run would erase the coverage a wide run
-   established. Every head lifted out of either store is validated as a resolvable commit before it is
-   used as a ref; a head that does not resolve is the named cause `unresolvable-head` and its suites
-   execute. An entry the shared arm declined for an unresolvable head is still visible here, so it is
-   declined by name rather than silently dropped.
-6. **Input-hash short-circuit** — the covering entry carries an `@<input-hash>` token for this suite and
-   it equals the suite's input hash at the captured tree → inherit, cited `via: input-hash`. It is kept
-   deliberately **behind** the head validation above: the comparison itself needs no resolvable head, so
-   admitting one here would inherit on an anchor no reader can re-derive. It is sound rather than a
-   widening loophole because the input closure is *definitionally* the path set the selection predicate
-   reads — if every closure member's blob is identical at both trees, no delta restricted to that
-   closure can be non-empty and the selector cannot select the suite. It is strictly *more* defined than
-   the reach test in the two places that test degenerates: an empty delta, which the selector defines as
-   *select everything*, and a non-ancestor head, where three-dot semantics answer a different question.
-   It uses neither a delta nor ancestry, so neither degeneracy reaches it. A bare (hash-less) token
-   never short-circuits.
-7. **Reach test**, per distinct covering head `h`: `h` equal to the captured head → inherit (an empty
-   delta is defined as *select everything*, which is the inverse of the answer wanted here); `h` not
-   an ancestor of HEAD → execute, reason `head-not-ancestor` (three-dot delta semantics answer a
-   different question there, and the resolver refuses to reason rather than answer narrowly);
-   otherwise the selector's answer against `--base h` decides — selected → execute, reason
-   `reach-changed`; not selected → inherit, citing the covering entry `via: reach`.
-8. **Uncovered candidates** execute, reason `no-coverage`; **non-candidates** are recorded inherited with
-   reason `not-in-cycle-delta` and carry no source entry — a positive statement that the resolver
-   considered the suite and declined it, not a silence.
-
-Neither addition introduces a run reason: both produce INHERIT, so the reason vocabulary is unchanged.
-Each citation record instead carries a trailing **`via: <basis>`** naming which admission path produced
-it — `tree`, `shared-tree`, `input-hash` or `reach` — declared in the `citation-basis` block of
-`scripts/test/suite-coverage.sh` beside its `reason-tokens` block, and never restated here. In a
-`green-tree-use` entry every basis still maps to the single fixed token `covered-by-source`: the
-ledger's vocabulary does not grow with it.
-
-The resolver emits one record per **enumerated** suite in every mode, so `inherited-suites` and
-`ran-suites` below partition the enumerated set exactly. A BLOCK never emits a partial plan: the
-whole enumerated set becomes the plan, every record carries reason `block-fallback`, and the exit is non-zero
-— a failure to reason about inheritance degrades to executing, never to skipping.
-
-**Reported vocabulary**: the step's reported outcome is one of `passed` / `inherited` / `mixed` / `failed`, and the
-words are not interchangeable. `passed` = the suite executed at this step and all tests passed. `inherited`
-= the suite did **not** execute at this step; the predicate matched and the Green comes from the cited
-entry. `failed` = the suite executed and did not all pass. A step that did not execute the suite is reported
-as `inherited` and **never** as `passed` — the same truthfulness rule the *Detection record* above applies
-with `not-run` ≠ `clean`. `inherited` is nowhere defined as a synonym or subtype of `passed`, and a report on
-an inherited path that states a suite summary line as its own is a contract violation.
-
-**Mismatch-cause record**: on the mismatch path the step records which condition fired, alongside the run's
-own outcome, so the re-aimed REFINE `[MUST]` leaves a trace on both branches rather than only on the match
-path. The field is **step-level and closed**: the fast path's own three outcomes — `no-entry`,
-`dirty-worktree`, `tree-differs` — plus `selection-block`, recorded when the resolver exits non-zero, and
-the value none, which is what the match path records because no condition fired there at all. That is why
-none is a member of the grammar without being a cause: it is the field's value in the absence of one. The
-resolver's per-suite reasons are a **different** vocabulary at a different layer and are never recorded
-here; they land in the run-reasons field below. Because the field is scalar and the step reaches the
-resolver only after a fast-path mismatch, a BLOCK evaluation has two fired conditions and one value must
-win: `selection-block` outranks every fast-path cause, and among the fast-path causes themselves only one
-can hold, since they are the three disjoint outcomes of a single predicate evaluation. The field is
-therefore single-valued by rule, not by luck.
-
-**Where both records land**: the inheritance line and the mismatch-cause record are one durable record of
-the step's predicate evaluation, written by the orchestrator at the same phase exit as the register write,
-on the same ledger, under its own marker `green-tree-use` and following the same *Entry grammar*:
-
-```
-### green-tree-use | cycle: <C> | runner: <PHASE> step <S>
-- outcome: passed | inherited | mixed | failed
-- mismatch-cause: no-entry | dirty-worktree | tree-differs | selection-block | none
-- inherited-suites: <path> [...] | none
-- ran-suites: <path> [...] | none
-- run-reasons: <suite> <token> [; <suite> <token> ...] | none
-- source: <source entry heading> [; <source entry heading> ...] | tree: <hash> | head: <hash> [; <hash> ...] | result: <summary line> [; <summary line> ...]
-- authority: Green-tree register
-```
-
-- `inherited-suites` and `ran-suites` are the resolver's partition of the enumerated set, recorded as
-  the step acted on it: `ran-suites` is exactly the plan the step executed, and the two together are
-  `suite_enumerate`. A wrong fold therefore leaves a re-derivable trace rather than a silent
-  narrowing.
-- `run-reasons` names, per enumerated suite, the reason it landed in its partition; the token vocabulary
-  is owned by the declaration block in `scripts/test/suite-coverage.sh` (between its `reason-tokens`
-  markers) and is never restated here, so the entry grammar cannot drift from the vocabulary the
-  resolver emits. `none` when the step never called the resolver. A suite whose resolver record is the
-  interpolated `source: … | head: … | result: …` citation is recorded with the fixed token
-  `covered-by-source` — the reason *class* (this suite inherited because a covering entry passed the
-  reach test), not the citation text, which carries both a ` | ` and free text and would leave the
-  field with no decidable record boundary. Records are written **grouped by token**, in the order the
-  resolver declares them, so a run in which forty suites share one reason reads as forty adjacent
-  pairs rather than an interleaved list. The grouping is an ordering convention only: the `<suite>
-  <token>` pair form is what the grammar fixes, because splitting on `;` and then on whitespace must
-  recover the (suite, token) pairs directly, with no regrouping step for a reader to get wrong.
-- `source`, `head` and `result` are **`;`-separated parallel lists**, in one order, because the shared
-  arm can match more than one entry. `;` is the separator because a heading already contains ` | `, so
-  `|` cannot separate a list of them, and `;` appears in no heading component — it is also the separator
-  `run-reasons` already uses. Citing one of several contributing entries would put a heading in the
-  record that does not account for the suites the others covered, which is the un-re-derivable citation
-  this field exists to prevent; every cited head must be re-derivable on its own. The single-entry form
-  is unchanged, and `tree` stays scalar: every contributing entry carries the same `tree` by the
-  qualification rule.
-- `mixed` is the new and now-ordinary outcome — some suites inherited, the rest executed and passed.
-  The truthfulness rule extends to it unchanged: a suite that did not execute is never reported inside
-  a `passed` claim, and `failed` still wins over both whenever any executed suite did not pass.
-
-- One is written on every predicate evaluation — including the dirty-capture run, whose cause record would
-  otherwise be lost to the entry suppression above. `source` is present exactly when `outcome` is
-  `inherited`, and `mismatch-cause` is `none` exactly then, so no entry can claim an inherited outcome and a
-  fired cause at once.
-- A `green-tree-use` entry is **never selectable by condition 2** of the predicate: only a `green-tree` entry
-  is. This is what the marker-scoped ordering rule above yields when instantiated with `green-tree` — a
-  `green-tree-use` heading is skipped during the scan rather than selected and then rejected — so such an
-  entry written after a `green-tree` entry in the same cycle neither becomes the selection nor forces a
-  mismatch. Inheritance never chains: every inherited Green traces in one hop to an entry written by a run
-  that happened.
-- Like the *Detection record*, both entry types are a **record, not a decision**: each `authority`
-  sits outside the ARCHITECT settled-decision seed set (`ARCHITECT agreed` / `ARCHITECT mutual ACCEPT` / `ARCHITECT rejected`),
-  and neither increments nor resets HANDOFF's auto-resolution count window (step 6.5).
-
 ---
 
 ## REFINE — Refactor (Green maintained)
@@ -1410,17 +1009,9 @@ on the same ledger, under its own marker `green-tree-use` and following the same
    - Three parallel agents (reuse / quality / efficiency).
    - Apply suggested fixes (no behavior change — tests must pass without modification).
    - If /simplify finds nothing, proceed to step 2 (do NOT skip).
-2. [MUST] Re-run all tests the change requires — execute the resolved run set → confirm Green, except on an inherited Green.
-   - [MUST] Quiesce the tree before this step's capture point — the capture point's own obligation
-     (VERIFY > Green-tree register > Capture point).
-   - [MUST] Evaluate the tree-identity predicate (VERIFY > Green-tree register) at this step's entry and
-     record the outcome. The obligation is the evaluation, not the run, so the step cannot silently drop it;
-     evaluate it even when step 1 made no changes, because a "/simplify changed nothing" claim is
-     settled by the hash comparison — `git rev-parse HEAD^{tree}` against the `tree` of the most recent
-     `green-tree` entry of the current cycle, over an empty `git status --porcelain` — and not by the claim.
-   - Match → do not re-run; inherit that Green, report `inherited`, and cite the source entry.
-   - Mismatch (`no-entry` / `dirty-worktree` / `tree-differs` — a /simplify edit is still uncommitted at this
-     point, so it shows dirty) → execute the resolved run set (the idiom in GREEN step 5) → confirm Green.
+2. [MUST] Confirm Green after the refactor: when step 1 changed a file, re-run the cycle's local run
+   set (VERIFY step 1's command) once and record the command and its summary line; when step 1
+   changed nothing, the VERIFY step-1 record stands and nothing re-runs.
    - On FAIL → revert /simplify changes → Developer AI fixes (max 2×).
 3. Commit (refactor type; skip if step 1 made no changes).
 ```
@@ -1458,24 +1049,10 @@ the author's "this is fine" is not the disposition.
 ## VALIDATE — Verification Done
 
 ```
-1. Automated tests: all PASS confirmed — and confirmed HERE, not inherited from VERIFY.
-   [MUST] Whole-tree sweep, the coverage floor: `bash scripts/test/run-suites.sh --all`,
-   unconditionally, evaluating no inheritance predicate, and register the resulting Green with
-   `suites` naming the enumerated set. [MUST] Quiesce the tree before the sweep's capture point —
-   the capture point's own obligation (VERIFY > Green-tree register > Capture point). This is the
-   one position at which a whole-tree run is invoked, and the orchestrator is its only invoker. This is the one position in a cycle at which the whole
-   enumerated tree executes. It does not inherit and has no exception: were the sweep allowed to
-   subtract inherited suites, a cycle could reach hand-off with every verdict tracing back through
-   inheritance to a first run that was itself selection-scoped. Inheritance rests on `ci-subject`
-   declaration quality, and this unconditional sweep is what bounds an under-declared header's
-   damage to a single cycle rather than letting it reach the reviewer.
-   On failure → cause-branched by the **first failing assertion's suite**: read that suite's
-   `# ci-subject:` header; a subject set naming only test assets (`tests/**`) classifies `test` →
-   RED, any other subject classifies `impl` → GREEN → VERIFY step 1 → REFINE → VALIDATE
-   (`scripts/gate/remedy-route.sh route <class>`). The header names what the suite covers, not
-   why it failed — when the subject set is mixed or the orchestrator cannot tell whether the suite
-   or its subject is wrong, classify `impl` (the farther point). The existing GREEN ↔ VERIFY
-   round-trip rules apply and no new cap is introduced.
+1. Automated tests: the cycle's local run record — VERIFY step 1's (or REFINE step 2's) command and
+   summary line — reproduces when re-run and covers every `automated` and `delivery-check` row of
+   the verification design. Regression verification is HANDOFF step 5's CI; no whole-tree run
+   happens here ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
 2. Minimal-implementation check: PASS confirmed (achieved in VERIFY step 3).
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
 4. Maintained-docs check: confirm impacted docs are updated, and that the REFINE report
@@ -1605,13 +1182,17 @@ each-item ≥ 7 criterion:
   or renames files, sections, or identifiers, require evidence of a repo-wide
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
   mentions). A dangling reference caps the affected item at 6.
-- **Test quality — test-asset disposition**: for each test file this cycle adds, state its
-  disposition — **standing** (subject-named, no issue
-  number, CI registration retained) or **cycle-scoped** (it depends on a base ref or a diff, or it
-  asserts this cycle's own landed state → deleted in the cycle's final commit together with its
-  CI registration; its disposition is its own `# lane:` / `# retire-with:` header and leaves with
-  the file). A file with no stated disposition, or a file judged
-  cycle-scoped that remains CI-registered, caps `Test quality` at 6.
+- **Test quality — layer violation** (ADR-0024 D1, D2): for each verification-design row, the
+  asset matches the layer its `Type` cell declares — a `cycle` row (no `standing:` token) has no
+  committed test file; a `standing` row has its committed file, CI-registered where the target
+  opted in; and every `standing:` token is one of ADR-0024 D1's closed list. A committed asset on a
+  `cycle` row, an uncommitted asset on a `standing` row, or a token outside the list caps
+  `Test quality` at 6.
+- **Test coverage — layer-partitioned subject** (ADR-0024 Area 2): the item's subject is not a CI
+  result (none exists before push). For each `cycle` `automated` / `delivery-check` row it is the
+  recorded local run — the command and summary line reproduce; for each `standing` row it is the
+  committed asset's realisability — the file exists, runs, and is CI-registered where the target
+  opted in (`not-applicable` on a non-opted-in target, which is not clean).
 - **Fit — ADR conformance** (proactively-added per `ADR-0016`, not a past Codex catch): on
   the final change set, re-confirm the shipped change conforms to any governing ADR (same
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check). A
@@ -1652,7 +1233,7 @@ principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-
 
 | `remedy_class` | Meaning | Re-entry |
 |---|---|---|
-| `doc` | the item clears by editing documentation / comments with no behavior change | orchestrator doc commit → selected suites → GATE:QUALITY re-score |
+| `doc` | the item clears by editing documentation / comments with no behavior change | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
 | `test` | the item clears by changing test assets | RED (current path) |
 | `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
 | `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
@@ -1689,11 +1270,9 @@ the list of sites it happened to find.
    record exists with both sections non-empty** — it checks the record file, never the wording of an
    instruction. On a second `doc` FAIL of the same class, the response is a wider sweep predicate,
    not a standing doc-phrase suite (none are kept after #141).
-3. Run the suites the selection rule picks for the doc diff (`scripts/test/select-suites.sh`); no
-   whole-tree run — the cycle's one whole-tree sweep is VALIDATE step 1, already executed. A
-   selector BLOCK is the exception (issue #213): the prohibition binds a selection that computed,
-   and one that cannot compute degrades to executing, never to skipping — run the enumerated set
-   (`bash scripts/test/run-suites.sh --all`) and record the `BLOCK:` lines.
+3. Run, once, the tests the doc diff requires ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local
+   verification*) — often none for a doc-only diff; on an opted-in target the selector names any
+   suite whose `ci-subject` reaches an edited doc — and record the command and its summary line.
 4. Re-score (below).
 
 ### Re-entry re-score
@@ -1790,7 +1369,10 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      of the three-tier acceptance-criterion guard (ARCHITECT > *Report routing*) — the
      reviewer judges each stated reason, so a reduction the reviewer never sees is a tier that did
      not run. Form: [`pr-body-guide.md`](pr-body-guide.md) > *Verification dispositions*. When every
-     issue AC is `automated`, the section says so in one line rather than being omitted.
+     issue AC is `automated`, the section says so in one line rather than being omitted. The same
+     section carries, for every `cycle`-layer `automated` row, the row's **run record** — the
+     command and summary line of VERIFY step 1's run — since the check's code is not in the PR and
+     the record is what the reviewer can re-run (ADR-0024 D1, D2).
    - Host-only change (target-centric — the default): create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path> --no-subrepo-dep`. The script still passes `--draft` (uniform pre-review marker) and still applies the `blocked-by-review` gate label, but does not apply the `blocked-by-subrepo` label — a host-only PR carries no merge-order gate (see Merge Sequencing > host-only case).
    - *Secondary (multi-repo):* Sub-repo changes present:
      a. Create each sub-repo PR (fork → upstream) **with `--label "blocked-by-review"`**, body `Part of Munsik-Park/autoflow#N` (no close keyword). The review gate is **per-PR**: **every** PR created for this cycle — the host PR *and* each sub-repo PR — carries `blocked-by-review` and is reviewed on its **own diff** in step 6 (so the review scope is each repo's actual code, not "the host only"). The `blocked-by-review` label must exist in each sub-repo (one-time operator setup — see [`external-review-sequencing.md`](external-review-sequencing.md)). `blocked-by-subrepo` is a separate, host-only merge-order gate (step 4b), not a review gate.
@@ -1800,7 +1382,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
    - confirmed mergeable requires both a `MERGEABLE` value and a settled (non-`UNKNOWN`) `mergeStateStatus` — either field still computing withholds the verdict and keeps the run in the bounded poll.
    - `10` — not mergeable (a **confirmed** `CONFLICTING` / `DIRTY` value) at precheck **or** on a mid-poll flip — **only on a JSON-confirmed read**; a failed / timed-out / empty / non-JSON read — at the precheck **or** on a mid-poll re-read — is **not** treated as a conflict, it **falls through** (the precheck to the bounded poll; a mid-poll degraded read to a retry within the budget) (never `10`). Mergeability is a tri-state, so a still-computing (`UNKNOWN`) mergeable value falls through to the bounded poll, never `10` — the verdict is taken from the settled value, and a mergeability that never settles inside the bound lands on `14`. The stderr carries the reserved `HANDOFF-INTERNAL-RETRY` token. Do **not** wait on CI; branch by cause — a concurrent cycle advancing `main`'s `services` gitlink → resolve via [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight; any other merge conflict → resolve against `origin/main` (rebase / merge) and re-push (HANDOFF internal retry).
    - `11` — `MERGEABLE` but no check ever published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900); confirm the CI trigger configuration (webhook delivery, workflow trigger conditions) or force a `synchronize` event by re-pushing before escalating to the operator — NOT green.
-   - `12` — a check concluded failure (red CI) → RED.
+   - `12` — a check concluded failure (red CI) → *CI-failure re-entry* below, by `remedy_class`.
    - `13` — checks present but no green verdict at the deadline → inconclusive. Two cases land here: checks still pending (slow CI), and the confirmed-then-undetermined case — mergeability was confirmed once, the rollup is all-green, but mergeability never re-settled by the deadline, so exit `0` (contracted as "green on a PR whose mergeable state was confirmed") is withheld. Raise `CI_POLL_TIMEOUT_SECS` / re-run (env retry, max 2), or escalate.
    - `14` — could not confirm the PR mergeable state within the bound: gh transport / auth / network / parse failure, or a merge state that never settled — an `UNKNOWN` `mergeable`, or an `UNKNOWN` `mergeStateStatus` — through the deadline, suspected (**not** a merge conflict). The precheck is bounded and a degraded or still-computing read falls through, so a run where neither the precheck nor any poll iteration ever confirms `mergeable` lands here; the stderr carries the reserved `HANDOFF-INTERNAL-RETRY` token → treat as an environment/transport error → HANDOFF internal retry (max 2), then escalate. Check `gh auth` / connectivity and re-run — NOT green.
    - `64` — usage / bad-arg / bad-env-int (caller fixes the invocation).
@@ -1820,7 +1402,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      | `ARCHITECT` (from `design`) | the **full** review-response cycle below — the decision moved, so the deliberation owns it | step 6, per-PR |
      | `GREEN` (from `impl`) | Developer AI fixes on the finding's own surface → VERIFY step 1 → REFINE → VALIDATE | step 6, per-PR |
      | `RED` (from `test`) | Test AI fixes the test asset → re-Red → GREEN → VERIFY step 1 → REFINE → VALIDATE | step 6, per-PR |
-     | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → selected suites | step 6, per-PR |
+     | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | step 6, per-PR |
      | `PAUSE` (from `operator`) | `active:false`, `phase:"awaiting-user"` | — |
 
      Only the `ARCHITECT` route runs the **full** cycle: auto-enter a review-response cycle in-session with the reviewer comment as the DIAGNOSE trigger target — the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF. The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What the thin path removes is re-deliberation of a decision nothing moved; **every independent check is retained** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), and CI still gates. This is the same class-routed proportionality the late gates have had since issue #140 ([`design-rationale.md`](design-rationale.md) > Decision 11), extended to the one entry point that still re-entered unconditionally (Decision 15) (llmroute #280: a five-line production fix took a full cycle at ≈ $128).
@@ -1849,13 +1431,33 @@ Topology decides which PRs HANDOFF creates (see [`CLAUDE.md`](../CLAUDE.md) > De
 
 The cleanup that follows an external merge or rejection runs at PREFLIGHT of the next cycle (or in the live session if it observes the decision before terminating) — dev-branch deletion plus archival (move to the external `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/` store) of the resolved issue's `.autoflow/issue-{N}*` management files; see PREFLIGHT > prior-cycle resolution.
 
+### CI-failure re-entry (step 5, exit `12`)
+
+A CI failure re-enters by `remedy_class` through `scripts/gate/remedy-route.sh route`, never
+unconditionally at RED (ADR-0024 D4; [`CLAUDE.md`](../CLAUDE.md) > Flow Control). The orchestrator
+does not read the failure log itself (Cost Control): an anonymous direct subagent —
+`subagent_type: autoflow-analyzer`, model per policy key `handoff-review-triage` — reads the failing
+check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
+`.autoflow/issue-{N}-ci-failure.md` with the failing check, the first failing assertion or error,
+**one `remedy_class`** (`doc` / `test` / `impl` / `design` / `operator`) and the grounds for it —
+the class of change that clears the failure, `design` when clearing it would discard or change a
+decision the deliberation settled — and returns the class plus a one-line summary.
+`scripts/gate/remedy-route.sh route <class>` picks the entry point (`DOC_COMMIT` / `RED` / `GREEN` /
+`ARCHITECT` / `PAUSE`); the re-entered phase runs forward to HANDOFF again and step 5 re-confirms.
+Not classifiable with confidence, or the failure output unobtainable → `operator`, never a guess
+([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
+report defect: reject and re-spawn the subagent, as for a missing `fail_hypothesis`. The orchestrator
+records the route as an `O` ledger entry naming the check and the class. No new cap: the existing
+GREEN ↔ VERIFY round-trip and ARCHITECT re-entry rules bound it, and the environment / transient and
+push-rejection branches below are untouched.
+
 ### HANDOFF failure → regression
 
 Classify the cause and regress along the matching path.
 
 ```
 PR creation / CI (steps 3-5) failure:
-  CI failure (code issue)      → RED (test/impl fix, existing rules apply)
+  CI failure (a check concluded failure, exit 12) → by remedy_class (CI-failure re-entry above)
   CI failure (env / transient) → CI retry, then step 5 retry (max 2)
   PR CONFLICTING (no checks,   → resolve vs origin/main (rebase/merge) + re-push, OR
    build silently skipped)        concurrent-cycle gitlink → Reconcile preflight;
@@ -1864,7 +1466,7 @@ PR creation / CI (steps 3-5) failure:
 ```
 
 **Max retries**: HANDOFF internal retry max 2. Two failures → human.
-**RED regression**: existing GREEN↔VERIFY round-trip rules (max 3) apply.
+**Re-entry regression**: the existing GREEN↔VERIFY round-trip (max 3) and ARCHITECT re-entry (max 3) rules apply.
 
 ### Merge Sequencing (external review)
 

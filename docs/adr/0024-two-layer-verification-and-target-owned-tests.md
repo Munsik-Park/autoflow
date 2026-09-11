@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues
 
 ## Context
 
@@ -309,31 +309,26 @@ replacing the unconditional route at **both** `CLAUDE.md` > Flow Control —
 "CI failure (code issue) → fix tests/implementation and re-flow" — and `docs/autoflow-guide.md` >
 HANDOFF — "a check concluded failure (red CI) → RED".
 
-**Classifier — three stages, every input a declaration.**
+**Classifier — one judgment, recorded with its grounds** (revised by issue #225; the three-stage
+form it replaces is recorded under Related Issues / PRs). The working AI reads the failing check's
+output and records **one `remedy_class`** with the grounds for it, and
+`scripts/gate/remedy-route.sh route` picks the phase. Concretely: the orchestrator does not absorb the
+log (`CLAUDE.md` > Cost Control); an anonymous direct subagent of the existing ingesting role reads
+the output — the output, not the check's identity, since AutoFlow's shipped CI reading surface is
+conclusion-only (step 5 reads any check by count and conclusion, never by name; exit `12` says only
+"a check concluded failure") — writes the check, the first failing assertion, the class and the
+grounds to `.autoflow/issue-{N}-ci-failure.md`, and returns the class. No header declaration is
+consulted: the route is the AI's judgment on the failure it read, and a wrong judgment is caught by
+the re-run CI, the reviewer and the gates (`CLAUDE.md` > Rule Scope, principle 3). Not classifiable
+with confidence, or the failure output unobtainable → class `operator`, which
+`scripts/gate/remedy-route.sh` routes to `PAUSE` (> `rank_of()` — "operator) echo 9 ;;";
+> `route_of()` — "9) echo PAUSE ;;"), never a guess. A CI failure routed with no recorded class is a
+report defect — reject and re-spawn the subagent. Rule site: `docs/autoflow-guide.md` > HANDOFF >
+*CI-failure re-entry*.
 
-- **Stage 1 — opted-in target.** The failing check's suite `ci-subject` header, declared by the
-  suite author. This is VALIDATE's existing header-based classification, moved rather than invented.
-- **Stage 2 — non-opted-in target.** The class authored by the existing tagging role, which performs
-  a **separate read of the failing check's output** — the output, not the check's identity.
-  AutoFlow's shipped CI reading surface is conclusion-only by design (step 5 reads any check by
-  count and conclusion, never by name; exit `12` says only "a check concluded failure"), so without
-  naming the input the role would have nothing but an identity and a conclusion in front of it, and
-  would author the very name-versus-path inference this decision rejects while wearing a signature.
-  The cost of the separate read is bounded by an existing shape: the classifier is a spawn that
-  absorbs the log and returns a class, so reading the failure output does not put a log in the
-  orchestrator's context.
-- **Stage 3 — not classifiable with confidence, or the failure output is unobtainable.** Class
-  `operator`, which `scripts/gate/remedy-route.sh` routes to `PAUSE` (> `rank_of()` —
-  "operator) echo 9 ;;"; > `route_of()` — "9) echo PAUSE ;;") — `operator`'s stated
-  meaning, "AutoFlow holds no declaration here".
-
-Fail-closed per `docs/autoflow-guide.md` > HANDOFF > *`remedy_class` per Medium+ finding* —
-"The classifying question is **not** how large the fix is" — **cited, not rewritten**: not classifiable with
-confidence → `operator`, never a guess; and a CI failure routed with no recorded class is a report
-defect — reject the report and re-spawn the ingesting subagent.
-
-**No new cap.** The CI-layer verdict inherits VALIDATE step 1's failure disposition because it
-inherits its role: it *is* the whole-tree floor, relocated. The existing
+**No new cap.** The CI-layer verdict takes over the whole-tree floor's role, and its failure is
+bounded by the existing GREEN ↔ VERIFY round-trip and ARCHITECT re-entry rules; VALIDATE's own
+`ci-subject`-based classification is deleted, not moved (issue #225). The existing
 `environment / push rejection → HANDOFF internal retry (max 2×)` branch is untouched — that is not a
 CI-layer verdict.
 
@@ -473,11 +468,13 @@ disposes of each half explicitly.
 Implementation is deferred by the issue's own `범위 밖` to four sub-issues, along the split the
 operator declared:
 
-- **S1 — rule documents.** `CLAUDE.md`, `docs/autoflow-guide.md`, `docs/submodule-common-rules.md`,
-  `docs/teammate-contracts.md` and the agent definitions: Area 1's rows, plus Area 3's two
-  unconditional-route sites.
-- **S2 — evaluation criteria.** `docs/evaluation-system.md` and the two gates' rubric items:
-  Area 2's rows.
+- **S1 + S2 — rule documents and evaluation criteria, one issue (#225).** `CLAUDE.md`,
+  `docs/autoflow-guide.md`, `docs/submodule-common-rules.md`, `docs/teammate-contracts.md`,
+  `docs/evaluation-system.md` and the agent definitions: Area 1's rows, Area 3's two
+  unconditional-route sites, and Area 2's rows — merged because changing the rule documents and
+  the evaluator's criteria separately would leave the rules on the new model while the evaluator
+  scored the old one. Done: the rule documents carry the operator's four principles at
+  `CLAUDE.md` > Rule Scope and cite them; Area 1's devices are deleted rather than transcribed.
 - **S3 — scripts, hook and lint.** `scripts/test/**`, `scripts/gate/**`, `.claude/hooks/**` and
   `tests/**`: the shared opt-in resolver, the classifier, the deletions, and **AC3's standing
   tracked-file predicate over `.autoflow/issue-{N}-local/`**.
@@ -592,7 +589,7 @@ this record keeps, not the one it deletes.
 | GATE:QUALITY `Test quality` — test-asset disposition (`docs/autoflow-guide.md` > GATE:QUALITY > Known blind-spot checks > *Test quality — test-asset disposition* — "for each test file this cycle adds, state its") | `replaced` — its subject (a cycle-scoped asset left CI-registered) cannot occur; the replacement subject is a **layer violation** — a committed asset on a `cycle` row of any `Type`, an uncommitted asset on a `standing` row, or a `standing:` token outside D1's closed list |
 | GATE:QUALITY `Test coverage` (`docs/evaluation-system.md` > Evaluation Types — "Completeness, Quality, Test coverage, Test quality") | `replaced` — the subject is restated from *CI result* to *standing-layer asset realisability + cycle-layer executed result*, both checkable strictly before push; `not-applicable` on a non-opted-in target |
 | ADR-0019 decision 3 (evaluator execution discipline) | `replaced` — in part (D6): `inherited_verdicts` goes with the register, while the anchor, sampling and wall-clock obligations are re-homed above and the *Governing record* pointer at `docs/teammate-contracts.md` > Evaluation AI > *Execution discipline (scope, sampling, time)* ("Governing record:") is repointed to this ADR |
-| VALIDATE failure routing by `ci-subject` (`docs/autoflow-guide.md` > VALIDATE — "cause-branched by the **first failing assertion's suite**"; `scripts/gate/remedy-route.sh`) | `replaced` — moved, not deleted: the same header-based classification becomes stage 1 of D4's CI-failure classifier, through the same routing script |
+| VALIDATE failure routing by `ci-subject` (`docs/autoflow-guide.md` > VALIDATE — "cause-branched by the **first failing assertion's suite**"; `scripts/gate/remedy-route.sh`) | `deleted` (issue #225) — the header-based classification goes with VALIDATE step 1; D4's classifier is the AI's recorded judgment on the failure output, through the same routing script |
 | GATE:QUALITY `doc` remedy step 3's selected-suites run (`docs/autoflow-guide.md` > GATE:QUALITY > FAIL routing > *`doc` re-entry — class-level remedy* — "Run the suites the selection rule picks for the doc diff") | `replaced` — by M's execution rule; the repo-wide doc sweep record (`.autoflow/issue-{N}-remedy-sweep.md`, hook-gated) is a doc sweep, not a test run, and stays untouched |
 
 ### Area 3 — enforcement devices
@@ -871,6 +868,23 @@ registry row.
   D5, the retirements of D6, Area 1 and Area 3 keep their words. AC3 of #222 is the *Test necessity*
   section; AC4 holds by construction — the change is a document edit and the revision authors no
   test file, standing or cycle.
+- **Revision — issue #225 (operator edit, outside an AutoFlow cycle; S1 + S2).** The rule documents
+  and evaluation criteria are brought onto this model, under four operator principles recorded once
+  at `CLAUDE.md` > Rule Scope: a rule binds authority and prevents self-certification; route, test
+  selection and scope are the working AI's judgment, recorded with grounds; a wrong judgment is
+  caught by CI, the reviewer and the gates, and doubt goes to the operator; a rule and its enforcing
+  device change together. What changed in this record: **D4's classifier** — the original three
+  stages (stage 1 the opted-in target's `ci-subject` header, stage 2 a separate output read by the
+  tagging role, stage 3 `operator`) are replaced by one recorded judgment on the failure output plus
+  `operator` for doubt, so no header declaration routes a CI failure; **Area 2's VALIDATE row** moves
+  `replaced` → `deleted`, since the `ci-subject` classification is not carried into D4; the
+  **Sub-issue split** merges S1 and S2. Area 1's rows are carried out as disposed, with one boundary
+  the issue delegated to the implementing AI: the header fields `lane` / `retire-with` / `cycle-arm`
+  / `out-of-tree-inputs` are deleted from the rule documents together with the lint that requires
+  them (S3, principle 4) — until then the rule documents say only that a committed suite carries
+  `lane: standing`, the one value D2 leaves reachable. The Adjustment-scope tables' quoted fragments
+  identify the pre-#225 text of each provision, as a record of what was disposed; they are not
+  live citations.
 - Supersedes `docs/adr/0019-scope-fit-verification-policy.md`: decision 1 and decision 2 in full,
   decision 3 in part — `inherited_verdicts` is deleted with the Green-tree register, while the
   anchor-before-execute, representative-sampling and wall-clock-cap obligations are retained and
@@ -897,9 +911,10 @@ registry row.
   "When to Create an ADR" trigger area — so it lands ahead of the mechanisms it governs.
 - **Effective from the next cycle.** The cycle that writes this record is governed by the
   pre-existing rules; see *Clauses this ADR carries beyond M and D1–D6*.
-- **Revised twice in response to the external review of PR #220**, and a third time by issue #222
-  (D1's criterion). Each revision's findings, what changed, what stands and what is retracted are
-  recorded in *Related Issues / PRs*.
+- **Revised twice in response to the external review of PR #220**, a third time by issue #222
+  (D1's criterion), and a fourth time by issue #225 (D4's classifier; S1 + S2 implemented). Each
+  revision's findings, what changed, what stands and what is retracted are recorded in *Related
+  Issues / PRs*.
 - **Citations are durable, not coordinate-based (issue #221).** This ADR's line-number citations were
   converted to the form *document > section — "verbatim fragment"*; the `Adjustment scope` tables
   identify each provision by section and sentence, not by coordinate.

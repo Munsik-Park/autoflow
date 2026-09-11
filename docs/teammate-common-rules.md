@@ -76,7 +76,7 @@ git status                  # any uncommitted work?
 
 - **[MUST]** A spawned teammate runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, planner, implementer, tester, evaluator) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
 - **Why (lifecycle contract):** the harness's background-task contract — *re-invoke the owning agent when the task completes* — holds only for an agent that has a future turn. A spawned subagent terminates with its final response, so any still-pending background process is **reaped at teardown**: its output is lost and no completion notification is ever delivered, stalling the orchestrator on a report that never arrives (issue #952 — 71-minute orchestrator deadlock, 2026-07-07). A background CPU-heavy process can also starve the agent's own foreground verification and distort the pass/fail verdict (issue #287). The background + completion-notification pattern is therefore **orchestrator-only** (the main loop is the sole actor with future turns).
-- **Enforced at the tool boundary for suite runs (issue #134):** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run, whose result must stay keyed to the capture-point tree (`docs/autoflow-guide.md` > VERIFY > Green-tree register; `docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
+- **Enforced at the tool boundary for suite runs (issue #134):** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run, whose result must stay keyed to the tree the claim is made about (`docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 - **The orchestrator's side of the wait (issue #165):** the notification the orchestrator waits for arrives only between its tool calls, so the orchestrator waits by **ending its turn**, never by blocking on one task — the deprecated `TaskOutput` tool is refused by the PreToolUse hook state-independently, and a foreground `sleep` loop polling for a spawn's result is the same fault by other means (`CLAUDE.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending.
 
 ---
@@ -86,17 +86,12 @@ git status                  # any uncommitted work?
 - **[MUST]** A spawned agent performs tracked-tree writes only inside its own spawn's lifetime, on
   the assignment its spawn prompt carries — there is no message channel through which new tree work
   can arrive mid-flight, and none through which a freeze could be delivered.
-- **Why:** the orchestrator takes a *capture point* (`git status --porcelain`, `git rev-parse
-  HEAD^{tree}`, `git rev-parse HEAD`) immediately before starting a suite run, and the run's result is
-  evidence only for the tree observed at that instant
-  (`docs/autoflow-guide.md` > VERIFY > Green-tree register > *Capture point*). A tracked-tree write
-  landing while that run is in flight moves the tree under it, the register refuses the entry, and the
-  whole run is wasted.
-- The quiesce obligation therefore sits with the **orchestrator's spawn schedule**, not with a
-  message protocol: no tree-writing spawn is issued between a capture point and the end of the run it
-  opened, and a capture point is taken only while no tree-writing spawn is in flight. (The HOLD/GO
-  message protocol this section previously specified belonged to the retired named-teammate mode —
-  see `CLAUDE.md` > Communication.)
+- **Why:** a test run's recorded command and summary line are evidence only for the tree the run
+  executed over; a tracked-tree write landing from another spawn while a run is in flight moves the
+  tree under it. The obligation sits with the orchestrator's spawn schedule: no tree-writing spawn is
+  issued while another spawn's run is in flight. (The HOLD/GO message protocol this section
+  previously specified belonged to the retired named-teammate mode — see `CLAUDE.md` >
+  Communication; the Green-tree register this section once served is retired by ADR-0024 D6.)
 
 ---
 

@@ -344,9 +344,8 @@ fi
 echo "== DOC: the instructions that consume the BLOCK (AC2) =="
 # -----------------------------------------------------------------------------
 red=$(region "$GUIDE" '^## RED ' '^## GREEN ')
-if contains "$red" "**When the derivation cannot compute**" && contains "$red" "degrades to executing, never to skipping" \
-   && contains "$red" "bash scripts/test/run-suites.sh --all --list"; then
-  pass "DOC-RED-DERIVATION: RED's derivation states the BLOCK disposition — the enumerated set, never an empty one"
+if contains "$red" "**Derivation on entry**" && contains "$red" 'a `BLOCK:` line it prints is carried into the report'; then
+  pass "DOC-RED-DERIVATION: RED's derivation states the BLOCK disposition — the BLOCK lines are carried into the report, never worked around (ADR-0024, #225)"
 else
   failc "DOC-RED-DERIVATION: docs/autoflow-guide.md > RED lacks the BLOCK disposition for the suite derivation"
 fi
@@ -356,8 +355,8 @@ else
   failc "DOC-MIGRATION: docs/autoflow-guide.md > RED lacks '$MIGRATION' (the tool messages point to it)"
 fi
 docre=$(region "$GUIDE" '^#### `doc` re-entry' '^###? ')
-if contains "$docre" "selector BLOCK is the exception" && contains "$docre" "bash scripts/test/run-suites.sh --all"; then
-  pass "DOC-DOC-REMEDY: the doc remedy's step 3 runs the enumerated set on a selector BLOCK instead of stopping"
+if contains "$docre" "the tests the doc diff requires" && contains "$docre" "record the command and its summary line"; then
+  pass "DOC-DOC-REMEDY: the doc remedy's step 3 runs what the doc diff requires and records the run (ADR-0024, #225)"
 else
   failc "DOC-DOC-REMEDY: docs/autoflow-guide.md > GATE:QUALITY > doc re-entry step 3 lacks the BLOCK disposition"
 fi
@@ -376,7 +375,7 @@ else
   failc "SKILL: plugin/autoflow/skills/install/SKILL.md Step 1 / Step 4 do not report the D7 axis"
 fi
 if cmp -s "$REPO_ROOT/.claude/agents/autoflow-tester.md" "$REPO_ROOT/plugin/autoflow/agents/autoflow-tester.md" \
-   && grep -qF 'derive against the whole enumerated set' "$REPO_ROOT/plugin/autoflow/agents/autoflow-tester.md"; then
+   && grep -qF 'carry any `BLOCK:` line it prints into your report' "$REPO_ROOT/plugin/autoflow/agents/autoflow-tester.md"; then
   pass "AGENT-TESTER: both shipped Test AI definitions carry the BLOCK disposition and are identical"
 else
   failc "AGENT-TESTER: the Test AI definitions differ or lack the BLOCK disposition"
