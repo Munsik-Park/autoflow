@@ -183,28 +183,38 @@ README="$PROJECT_ROOT/docs/adr/README.md"
 ADR19="$PROJECT_ROOT/docs/adr/0019-scope-fit-verification-policy.md"
 ADR22="$PROJECT_ROOT/docs/adr/0022-test-necessity-and-three-tier-ac-guard.md"
 
+# The file is read once here and every derived form below (NORM, D3_BODY,
+# REL_BODY, ADR_TABLE_ROWS, ADR_DECISION_LINES) is computed from this one
+# in-memory copy instead of re-opening $ADR from disk per derivation — the
+# same "computed once and reused" intent the full-file line extractions below
+# already state, extended to cover the whole setup block.
+ADR_CONTENT=""
+if [ -n "$ADR" ]; then
+  ADR_CONTENT="$(cat "$ADR")"
+fi
+
 # Newline-normalised body, so a proximity assertion is not defeated by the
 # document's own line wrapping.
 NORM=""
 if [ -n "$ADR" ]; then
-  NORM="$(tr '\n' ' ' < "$ADR" | tr -s ' ')"
+  NORM="$(printf '%s\n' "$ADR_CONTENT" | tr '\n' ' ' | tr -s ' ')"
 fi
 
-# section_text <file> <start-ere> <stop-ere> — the newline-normalised body of
-# one section, from the line matching <start-ere> to the line before the next
-# match of <stop-ere>. The stop rule is evaluated only after the section has
-# opened, so a start heading that also matches the stop pattern (`^### D3 …`
-# against `^### `) does not close the section it opens.
+# section_text <content> <start-ere> <stop-ere> — the newline-normalised body
+# of one section, from the line matching <start-ere> to the line before the
+# next match of <stop-ere>. The stop rule is evaluated only after the section
+# has opened, so a start heading that also matches the stop pattern (`^### D3
+# …` against `^### `) does not close the section it opens.
 section_text() {
-  awk -v s="$2" -v e="$3" 'f && $0 ~ e { exit } $0 ~ s { f = 1 } f' "$1" \
+  printf '%s\n' "$1" | awk -v s="$2" -v e="$3" 'f && $0 ~ e { exit } $0 ~ s { f = 1 } f' \
     | tr '\n' ' ' | tr -s ' '
 }
 
 D3_BODY=""
 REL_BODY=""
 if [ -n "$ADR" ]; then
-  D3_BODY="$(section_text "$ADR" '^### D3( |$|[^0-9])' '^### ')"
-  REL_BODY="$(section_text "$ADR" '^## Related Issues / PRs' '^## ')"
+  D3_BODY="$(section_text "$ADR_CONTENT" '^### D3( |$|[^0-9])' '^### ')"
+  REL_BODY="$(section_text "$ADR_CONTENT" '^## Related Issues / PRs' '^## ')"
 fi
 
 # Full-file line extractions, computed once and reused by the primitives below
@@ -214,8 +224,8 @@ fi
 ADR_TABLE_ROWS=""
 ADR_DECISION_LINES=""
 if [ -n "$ADR" ]; then
-  ADR_TABLE_ROWS="$(grep -E '^[[:space:]]*\|' "$ADR")"
-  ADR_DECISION_LINES="$(grep -E '^[[:space:]]*(#{2,6}[[:space:]]|([-*]|[0-9]+\.)[[:space:]]*\*\*|\*\*)' "$ADR")"
+  ADR_TABLE_ROWS="$(printf '%s\n' "$ADR_CONTENT" | grep -E '^[[:space:]]*\|')"
+  ADR_DECISION_LINES="$(printf '%s\n' "$ADR_CONTENT" | grep -E '^[[:space:]]*(#{2,6}[[:space:]]|([-*]|[0-9]+\.)[[:space:]]*\*\*|\*\*)')"
 fi
 README_TABLE_ROWS=""
 if [ -f "$README" ]; then
@@ -503,12 +513,15 @@ for d in 1 2 3 4 5 6; do
   adr_decision_entry "(^|[^A-Za-z0-9])D$d([^0-9]|\$)" \
     "AC1a: decision entry for D$d"
 done
-adr_near 'decisions?[[:space:]]+1([^0-9]|$)' 'supersed' 300 \
-  "AC1a: ADR-0019 decision 1 carries a recorded supersede scope"
-adr_near 'decisions?[[:space:]]+2([^0-9]|$)|decisions?[[:space:]]+1[^A-Za-z0-9]{1,3}2' 'supersed' 300 \
-  "AC1a: ADR-0019 decision 2 carries a recorded supersede scope"
-adr_near 'decisions?[[:space:]]+3([^0-9]|$)|decisions?[[:space:]]+1[^A-Za-z0-9]{1,3}3' 'supersed' 300 \
-  "AC1a: ADR-0019 decision 3 carries a recorded supersede scope"
+# Decision 1 is a plain "decision 1" mention; decisions 2/3 admit that OR a
+# "decision 1-and-N" combined mention (the compact form ADR-0019's own record
+# uses for a joint supersede), so only their alternation grows with $d.
+for d in 1 2 3; do
+  rx="decisions?[[:space:]]+$d([^0-9]|\$)"
+  [ "$d" != 1 ] && rx="$rx|decisions?[[:space:]]+1[^A-Za-z0-9]{1,3}$d"
+  adr_near "$rx" 'supersed' 300 \
+    "AC1a: ADR-0019 decision $d carries a recorded supersede scope"
+done
 adr_near 'green-tree register' 'retire|supersed|deleted' 300 \
   "AC1a: the Green-tree register's fate is recorded"
 adr_near 'shared store' 'retire|supersed|deleted' 300 \
