@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Proposed; superseded by ADR-0024 (decisions 1 and 2 in full; decision 3 in part — `inherited_verdicts` goes with the Green-tree register, while the anchor, sampling and wall-clock obligations are retained and re-homed in ADR-0024)
 
 ## Context
 

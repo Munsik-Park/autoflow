@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/adr/0019-scope-fit-verification-policy.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "387de9f88cc94908823ded6d7008fe2a0d3b47b4062e4aa51f5f74c2776359a0"
+      "sha256": "cc4d812903c7cff2d1e8dfed37d0f2f8949db578e1104fed90d46aab47743e6e"
     },
     {
       "source": "docs/adr/0020-acceptance-criterion-authority.md",
@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/adr/0022-test-necessity-and-three-tier-ac-guard.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c903dd5b6c8e0b1a14fb456d07dbdb331d6a65a6267511c5ad2c28dbce63dcda"
+      "sha256": "4f3bb5d0265b7d3141904fae16d8b03c705043488b56d76394026624459af4e7"
     },
     {
       "source": "docs/adr/0023-deliberation-participant-lifetime.md",
@@ -100,11 +100,18 @@
       "sha256": "ce3adcdbb1340d7449c7aa815fc3fb18a5ca28974d500ce9b1314dd8bd6f2f3f"
     },
     {
+      "source": "docs/adr/0024-two-layer-verification-and-target-owned-tests.md",
+      "dest": ".claude/autoflow/docs/adr/0024-two-layer-verification-and-target-owned-tests.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "46a9eeffc9ea196d3371885523cf6ec7102a352c12d5497d270d8ca0872b0143"
+    },
+    {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3188217130dcba506acb4e9a8fb491b0b56b31a8a86aab1c121f3b02ef354948"
+      "sha256": "9ee6b7240631ddc45ab2d3eba67c120dbce41e088236805c79f55a3c4d786eea"
     },
     {
       "source": "docs/autoflow-guide.md",
