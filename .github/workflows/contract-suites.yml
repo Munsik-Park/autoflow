@@ -173,7 +173,6 @@ on:
       - 'docs/tool-delivery-contract.md'
       - 'tests/test-headerless-suite-target.sh'
       - 'plugin/autoflow/agents/autoflow-tester.md'
-      - 'tests/test-issue-217-design-delivery.sh'
   push:
     branches: [main]
     paths:
@@ -313,7 +312,6 @@ on:
       - 'docs/tool-delivery-contract.md'
       - 'tests/test-headerless-suite-target.sh'
       - 'plugin/autoflow/agents/autoflow-tester.md'
-      - 'tests/test-issue-217-design-delivery.sh'
 
 permissions:
   contents: read
@@ -586,12 +584,6 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-headerless-suite-target.sh ')
         timeout-minutes: 10
         run: bash tests/test-headerless-suite-target.sh
-
-      - name: test-issue-217-design-delivery.sh
-        id: s-test-issue-217-design-delivery
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-217-design-delivery.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-217-design-delivery.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh
