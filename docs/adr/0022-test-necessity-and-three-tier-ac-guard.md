@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note)
+Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note); decision 2's `delivery-check` definition amended by ADR-0024 (see ADR-0024 > *Related Issues / PRs*)
 
 ## Context
 
