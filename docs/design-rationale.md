@@ -109,13 +109,13 @@ Injecting past evaluation results (bias injection) and looking up past code chan
 
 **What it does**
 
-Each phase transitions to the next only when its stated completion conditions are met. All phases are performed regardless of change size.
+Each phase transitions to the next only when its stated completion conditions are met.
 
 **Why it works this way**
 
-AI tends to judge "this change is small enough to skip phases." That judgment itself is a product of bias. The thought "this one is simple" causes verification to be skipped, and problems emerge from the skipped verification. Simplicity can be determined after the process, not before it.
+A completion condition is checkable after the fact — a recorded gate PASS, a Red or Green confirmation with its command and summary line, a PR whose CI is green — so a transition never rests on the transitioning AI's own sense of being done. The condition, not the AI, says when the next phase may start.
 
-The act of judging "this change is simple" is itself a product of bias. That judgment is made before implementation. Before implementation, there is no way to know whether it is actually simple. The judgment may sometimes be correct, but when it is wrong, problems emerge from the verification that was skipped. AutoFlow does not permit this judgment at all. Simplicity can be evaluated post-hoc, after all phases are completed. Pre-process judgment is not allowed.
+**History.** Until issue #227 this decision also read *All phases are performed regardless of change size*, on the ground that "this one is simple" is a pre-implementation judgment the AI cannot verify and so must not make. Decision 12 narrowed it for review-response cycles; Decision 17 retired it — the route and its depth are the working AI's recorded judgment, and what the retired rule protected, the independent checks, is what Decision 17 keeps fixed.
 
 ---
 
@@ -227,9 +227,9 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 
 **Decision.** Four changes. (1) REFINE writes a report with a mandatory *out-of-scope observations — guard / boundary logic touched* section, and GATE:QUALITY's fresh evaluator dispositions every entry as scoring input (`refine_observations`). (2) HANDOFF triage appends a `scope-bounded` judgment to the findings file — a set relation computed by `scripts/review/scope-bounded.sh` (every Medium+ finding names a file; those files ⊆ the PR's diff file set), re-checked after GREEN (a fix that adds a file leaves the bounded path). (3) On the bounded path the previous cycle's artifacts are preserved and Phase A is reused, ARCHITECT's brief states the bounded scope, and AUDIT re-scores the prior Low list on the change surface. (4) GATE:PLAN, RED, GREEN, VERIFY, REFINE, the whole-tree sweep, GATE:QUALITY, CI and the reviewer re-review are unchanged.
 
-**What this does to the "no size judgment" rule.** The rule above (*All phases are performed regardless of change size*) was written against a specific actor: the implementing AI judging its own change small and skipping verification. That actor no longer makes the call — the judgment here is a set relation over files, computed by a script — the finding file set written down, the PR diff file set re-derived from its anchor (`gh pr diff <N> --name-only`) — so a reader re-computes it; the implementing role never sees or sets it. And the verification the rule protected is not what the bounded path removes: it removes *re-derivation* (a structure description of an unchanged tree, an unnarrowed deliberation over a single function, an audit re-confirming itself), while every independent check — the gates, the whole-tree sweep, CI, and the external reviewer's re-review — runs unchanged. Two of those (CI and the external reviewer) did not exist when the rule was written; they are the backstop that makes the policy change safe to take.
+**What this does to the "no size judgment" rule.** The rule above (*All phases are performed regardless of change size*) was written against a specific actor: the implementing AI judging its own change small and skipping verification. That actor no longer makes the call — the judgment here is a set relation over files, computed by a script — the finding file set written down, the PR diff file set re-derived from its anchor (`gh pr diff <N> --name-only`) — so a reader re-computes it; the implementing role never sees or sets it. And the verification the rule protected is not what the bounded path removes: it removes *re-derivation* (a structure description of an unchanged tree, an unnarrowed deliberation over a single function, an audit re-confirming itself), while every independent check — the gates, the whole-tree sweep, CI, and the external reviewer's re-review — runs unchanged. Two of those (CI and the external reviewer) did not exist when the rule was written; they are the backstop that makes the policy change safe to take. Decision 17 later retired the rule itself; this paragraph stays as the record of its first narrowing.
 
-**Route.** Operator decision, recorded here per [`development-guideline.md`](development-guideline.md) > ADR Policy; the issue (#135) was operator-filed and the change operator-executed. The *No lightweight mode* limitation below is narrowed accordingly: there is no lightweight mode for a new issue; a review-response cycle has a bounded path selected by a mechanical rule.
+**Route.** Operator decision, recorded here per [`development-guideline.md`](development-guideline.md) > ADR Policy; the issue (#135) was operator-filed and the change operator-executed. The *No lightweight mode* limitation was narrowed accordingly at the time — no lightweight mode for a new issue; a bounded path for a review-response cycle, selected by a mechanical rule — and Decision 17 later retired it.
 
 ---
 
@@ -264,7 +264,7 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 **Decision.** Three changes, one mechanism (issue #192).
 
 1. **ARCHITECT stops at the architecture decision layer** — decisions, their constraints, rejected alternatives with grounds, and the failure mode each verification layer catches. A change table of files, a per-suite disposition and an oracle's condition clause are **derived at RED/GREEN entry** by the roles that open those files anyway (`scripts/test/select-suites.sh` already owned suite selection). `Dependencies` leaves the GATE:PLAN rubric (5 items → 4).
-2. **A review finding routes by cause, not by severity.** Every Medium+ finding is tagged with a `remedy_class` answering *does clearing this discard or change a settled decision?*; `scripts/gate/remedy-route.sh` — unchanged, the single owner since Decision 11 — picks the entry point. `design` runs the full review-response cycle; `impl`/`test`/`doc` take a thin route (one owning role, execution verification, a ledger delta, the same reviewer re-review).
+2. **A review finding routes by cause, not by severity.** Every Medium+ finding is tagged with a `remedy_class` answering *does clearing this discard or change a settled decision?*; `scripts/gate/remedy-route.sh` — unchanged, the single owner since Decision 11 — picks the entry point. `design` runs the full review-response cycle; `impl`/`test`/`doc` take a thin route (one owning role, execution verification, a ledger delta, the same reviewer re-review). (Decision 17 later made the `design` re-entry point — a cycle from DIAGNOSE, or ARCHITECT on a brief — the orchestrator's recorded judgment.)
 3. **Record and re-score by delta.** Only a cycle's first Record writes the documents whole; later ones append a `## Delta — round <n>` section and leave settled text untouched. GATE:PLAN gains the re-entry re-score narrowing GATE:QUALITY and AUDIT already had, reading that delta.
 
 **The dividing line.** One question decides which layer a sentence belongs to: *if this were wrong, would the design have to be revisited, or would it just be fixed where it is found?* The first is the deliberation's; the second is not. This is why the `Issue AC` join key was **not** reduced along with the rest — an unverified acceptance criterion is the one defect class execution does not surface, because the suite passes green. Everything else the gate used to predict, execution reports.
@@ -290,6 +290,28 @@ The tempting shortcut is "have the teammates report more cheaply" or "summarize 
 **Why not a checker.** A pattern over `:<digits>` cannot tell a line citation from a step number, a duration or a version string, and a checker that could would leave the drift class untouched — the failure is the reference form, not its notation. The wrapper's Grounds check (`scripts/issue/create-issue.sh`) was the one place that mechanically admitted a bare line anchor; it now accepts a commit SHA, a URL, or a durable citation, since an issue body is a long-lived document.
 
 **Scope.** Past ADRs and ledgers are not converted retroactively; the report formats of evaluators and roles keep their line numbers under rule 2.
+
+---
+
+### Decision 17: The Route Is the Working AI's Recorded Judgment; the Independent Checks Are the Rule
+
+**Problem.** Issue #225 put the operator's four principles at `CLAUDE.md` > Rule Scope — principle 2 makes the route, the tests run and the reach of the work the working AI's judgment, recorded with grounds. Two rules still fixed the route regardless. *Every phase is mandatory: no skipping based on perceived simplicity* (Execution Principles) sent a documentation-only change through every phase: issue #217 changed five files in about eight hours, about five of them in the execution and verification phases. And HANDOFF step 6.5's *Only the `ARCHITECT` route runs the full cycle* sent every `design`-class review finding back to DIAGNOSE; #217 did that three times, once per review round. Two open proposals for relief, #193 (a new-issue lightweight path) and #195 (a conditional REFINE /simplify), were both written on the premise that the judgment must be a script's, not an agent's — the premise principle 2 reverses.
+
+**Decision.** Operator decision (issue #227), three changes and no new device.
+
+1. **The Execution Principle is replaced.** Which work phases a change passes through and how deep each goes is the working AI's judgment, recorded with its grounds in the ledger entry or phase report that phase already produces. What is never skipped is an independent check — an authority rule under principle 1: PREFLIGHT's readiness conditions, the gate score thresholds, the push / PR-creation gate, CI, the configured-reviewer review and its label, and the auto-resolution caps.
+2. **The `design` re-entry point at HANDOFF step 6.5 is judged.** `scripts/gate/remedy-route.sh` still maps the class set to a route and `design` still means the deliberation owns the change; where that re-entry starts — a review-response cycle from DIAGNOSE, or an ARCHITECT re-deliberation on a `brief` — is the orchestrator's judgment, recorded with its grounds in the attempt's `[review-autofix]` ledger entry. The re-deliberation shape resets only the gate records it re-runs, so the hook's spawn gates admit exactly the roles whose preceding gate holds a recorded PASS, and it keeps the DIAGNOSE analysis artifacts in place under their flat names — GATE:PLAN and GATE:QUALITY read the acceptance-criterion table at its unchanged path — with each reused file's authoring cycle and hash recorded in the re-entry's ledger entry (PR #230 review, round 1). The seven-attempt cap, the loop check and the operator-pause criteria are unchanged.
+3. **REFINE's /simplify run is judged.** Whether it runs and over what is the Developer AI's judgment on the diff, recorded in the REFINE report's `simplify:` / `simplify-grounds:` lines; the report is written either way and GATE:QUALITY reads it. The *skip bias* ground and the *do NOT skip* sentence are deleted; no predicate script or exclusion list is introduced.
+
+**Why the devices need no change.** The hook never enforced phase order; it gates role spawns on the recorded PASS of the preceding gate, `git push` / `gh pr create` on AUDIT and GATE:QUALITY, and the merge on nothing (denied while active). A route that skips a phase therefore cannot skip the gate after it — a phase whose artifact a gate scores runs at least far enough to produce that artifact — which is the structural form of principle 3. `remedy-route.sh`'s mapping is unchanged (its header comment is updated, per principle 4); the Flow Control rows and the guide's step 6.5 restate the judged re-entry in words.
+
+**What this does to Decisions 5, 12 and 15.** Decision 5's *all phases regardless of change size* is retired (its *History* note records the ground it stood on); Decision 12's narrowing of that rule stays as history; Decision 15's *`design` runs the full cycle* is revised to the judged re-entry point. The bounded path of Decision 12 — a set relation over files that selects which DIAGNOSE inputs are reused — is unchanged: it decides what a re-entry that runs DIAGNOSE re-derives, not whether DIAGNOSE runs.
+
+**Dispositions.** #193 is closed as superseded: the judgment it wanted to give a script (a new-issue proportionality predicate that excludes the agent's estimate) is the judgment principle 2 gives the working AI, and its measurement criterion is the observation the Limitations list now names. #195 is closed as superseded by change 3: its predicate script and exclusion list are the shape principle 2 rejects, and its stated aim — no /simplify spawn on a diff that has nothing to simplify, with the grounds on record — is what the judged step 1 delivers.
+
+**What it costs.** A route judgment will sometimes be wrong in the direction the retired rule feared — too shallow — and the miss surfaces at a gate, in CI or at review rather than in the skipped phase. The recorded grounds make each such miss attributable to the judgment that caused it, which is what an observation series needs; none has been collected yet (Limitations).
+
+**Route.** Operator decision, recorded here per [`development-guideline.md`](development-guideline.md) > ADR Policy; the issue (#227) was operator-filed and the change operator-executed.
 
 ## Generalization Rationale
 
@@ -329,7 +351,7 @@ The following may look like "better approaches" but undermine core principles:
 | Reuse the Evaluation AI | Self-reinforcement bias → independence lost |
 | Trust the Hook's `pass` field | Trusting AI self-report → gate neutralized |
 | Inject past evaluation results into current analysis | Bias propagation → system hardens in one direction |
-| Allow phase-skipping judgment | "This one is simple" is itself a biased judgment |
+| Skip an independent check — a gate threshold, the push gate, CI, the reviewer review — on a route judgment | A rule binds authority (`CLAUDE.md` > Rule Scope, principle 1); the route is the AI's to judge, the checks are not (Decision 17) |
 | Let the pipeline modify its own criteria | Judgment tracing impossible → trust chain collapse |
 | Design loops without termination conditions | No maximum retry → infinite loop risk → system hangs |
 | Run a multi-teammate deliberation in the orchestrator's own context | Round-by-round cross-talk + duplicate reports accumulate → judgment contamination → decision oscillation (Decision 8) |
@@ -345,7 +367,7 @@ The following may look like "better approaches" but undermine core principles:
 
 - **No failure learning loop**: No structured per-cycle evidence is captured; pass/fail pattern analysis is performed by humans externally.
 - **No cross-issue correlation detection**: A complaint class recurring across distinct issues is not detected; correlation analysis across issues is human-external. Decision 4 (no auto-modification of rubric/criteria) is unaffected.
-- **No lightweight mode for a new issue**: full phase execution regardless of change size. A review-response cycle has a bounded path, selected by a mechanical set relation rather than a size judgment (Decision 12); the overhead of re-derivation remains for new issues.
+- **No measurement of judged routes yet**: Decision 17 makes a cycle's route and depth the working AI's recorded judgment, for new issues and review-response cycles alike. Whether that judgment is calibrated — what it skipped, and what a gate or the reviewer then caught — is read from the recorded grounds and the review outcomes after the fact, and no such series has been collected yet.
 
 ### Under Discussion
 

@@ -25,9 +25,11 @@
 # Call sites (all four read the same mapping; each interprets the printed
 # target in its own playbook, and none reimplements the ranking):
 #   - GATE:QUALITY FAIL, VALIDATE step-1 sweep FAIL, INTEGRATE FAIL (#140)
-#   - HANDOFF step 6.5 review triage (#192) — there `ARCHITECT` alone means
-#     the full review-response cycle; `RED` / `GREEN` / `DOC_COMMIT` are the
-#     thin path (one owning role + execution verification + reviewer re-review).
+#   - HANDOFF step 6.5 review triage (#192) — there `ARCHITECT` means the
+#     deliberation owns the moved decision and the orchestrator judges and
+#     records where the re-entry starts (a cycle from DIAGNOSE, or ARCHITECT
+#     on a brief — #227); `RED` / `GREEN` / `DOC_COMMIT` are the thin path
+#     (one owning role + execution verification + reviewer re-review).
 #
 # Subcommands
 #   route <class>...          print the re-entry target for the class set
