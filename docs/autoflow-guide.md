@@ -1198,7 +1198,11 @@ each-item ≥ 7 criterion:
   committed test file; a `standing` row has its committed file, CI-registered where the target
   opted in; and every `standing:` token is one of ADR-0024 D1's closed list. A committed asset on a
   `cycle` row, an uncommitted asset on a `standing` row, or a token outside the list caps
-  `Test quality` at 6.
+  `Test quality` at 6. The token check is a set relation, not a judgment: the evaluator runs
+  `bash scripts/gate/verification-layer-check.sh .autoflow/issue-{N}-verification-design.md`
+  (issue #228 — a committed device with a cycle-time subject) and attaches its output — a
+  non-zero exit is a token outside D1's closed list and caps the item; the device's second output,
+  the row↔asset pairing report, is input to this check and to `Test coverage`, never a verdict.
 - **Test coverage — layer-partitioned subject** (ADR-0024 Area 2): the item's subject is not a CI
   result (none exists before push). For each `cycle` `automated` / `delivery-check` row it is the
   recorded local run — the command and summary line reproduce; for each `standing` row it is the

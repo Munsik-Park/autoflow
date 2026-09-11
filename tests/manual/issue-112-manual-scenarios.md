@@ -8,7 +8,9 @@ are agent-execution properties, not tree properties, and neither is a
 triggered composition contact point (Composition-oracle determination finds no
 `T ∩ S` row for either) — the reasons the verification design gives for why no
 automated oracle exists. Every other automated criterion in the design is
-discharged by `tests/test-suite-coverage-agreement.sh`
+discharged by `tests/test-suite-coverage-agreement.sh` (deleted with #228 —
+ADR-0024 > Area 3 retired verdict inheritance; those criteria are no longer
+under automated coverage and this record is historical)
 (`origin_issue`-untagged, new agreement suite), by
 `tests/fixtures/doc-invariants.json` (`origin_issue: 112` entries), by the
 resolver's own hermetic `--self-test` (once shipped), or by the existing
@@ -69,7 +71,8 @@ and the report-schema key (`inherited_verdicts`, with its always-present
 discipline) are both automated —
 `tests/fixtures/doc-invariants.json` entries `112-evaluator-citation-inheritance-must`,
 `112-evaluator-sampling-default`, `112-evaluator-time-cap`, and
-`tests/test-suite-coverage-agreement.sh`'s evaluator-citation-carrier leg. Only
+`tests/test-suite-coverage-agreement.sh`'s evaluator-citation-carrier leg (the
+suite was deleted with #228; the fixture entries still stand). Only
 the runtime behaviour — did the evaluator actually stop at the cap, actually
 sample rather than enumerate, actually cite rather than re-run — is manual.
 

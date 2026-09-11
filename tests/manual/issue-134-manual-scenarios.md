@@ -31,9 +31,11 @@ followed it in a given cycle.
    inherited-Match branch) completed.
 3. Confirm the resuming instruction traveled **bundled with GO in one message**
    — not as a separate message following a bare HOLD.
-4. Record any `green-tree-register.sh --append` refusal on a moved tree
-   (drift) as a **failure of this criterion** — it is the observable symptom of
-   a commit landing between the capture point and the run's completion.
+4. *Retired with #228 (ADR-0024 > Area 3):* the Green-tree register and its
+   `--append` refusal no longer exist, so a commit landing between the capture
+   point and the run's completion has no register-side symptom to record. The
+   criterion is judged on steps 1–3 alone; a capture point taken after tree work
+   resumed is still a **failure of this criterion**.
 
 **Outcome → verdict**: all four sites HOLD-before-capture-point, and every
 resume is GO-bundled → PASS. Any capture point taken after a live teammate had
