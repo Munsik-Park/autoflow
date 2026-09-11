@@ -12,8 +12,9 @@
 # reflection E12(a), .autoflow/issue-97-ledger.md) — the script and its
 # behavior contract are permanent once shipped, so this suite is never
 # retired. The cycle-scoped registration delta (this suite's own CI wiring)
-# lives separately in tests/test-issue-97-ledger-id-registration.sh, deleted
-# before DELIVER per docs/doc-invariant-registry.md §1/§2.
+# lived separately in tests/test-issue-97-ledger-id-registration.sh, a
+# cycle-scoped suite deleted with its cycle per its `# retire-with:` header
+# (scripts/test/check-suite-manifest.sh).
 #
 # Verification design: .autoflow/issue-97-verification-design.md — AC-next-*,
 # AC-check-*, AC-autofix-marker-preserved.

@@ -6,9 +6,9 @@
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: suite-coverage agreement — Issue #112
-#   Cross-artifact derivations the permanent doc-invariant registry cannot
-#   hold (docs/doc-invariant-registry.md §1: a derivation across artifacts,
-#   not a single-document state assertion) and the resolver's own hermetic
+#   Cross-artifact derivations (a derivation across artifacts, not a
+#   single-document state assertion — the class the doc-invariant registry,
+#   retired in #141, could not hold) and the resolver's own hermetic
 #   self-test does not reach (a fixture-suite property, not an artifact
 #   agreement):
 #

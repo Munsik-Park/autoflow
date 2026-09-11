@@ -18,7 +18,7 @@
 # retired (trigger-window preservation AC-c-2, against the existing carrier
 # tests/test-issue-799-inert-cleanup.sh AC6-ci; the deleted-suite-still-read
 # sweep, whose inventory was issue #76's own deletion set) — dispositions
-# recorded in docs/doc-invariant-registry.md §7.
+# recorded in the doc-invariant registry §7 (itself retired in #141).
 # .autoflow/issue-76-verification-design.md (cycle 2 sections):
 #   AC-b-2 — each named orphan suite executes on an edit to its OWN subject:
 #     registration-effectiveness oracle, restated so the verdict is about the
@@ -575,7 +575,7 @@ assert_true "AC-b-3: scripts/test/check-suite-ci-coverage.sh exists" \
 # it — so both the real-tree verdict and the self-test legs are executed once per
 # CI pass either way. The existence arm above stays: it is the antecedent, and a
 # `run:` step naming a deleted file is AC-step-target-exists's subject below, not
-# this lint's. See docs/doc-invariant-registry.md § 19.8.
+# this lint's.
 
 # ---------------------------------------------------------------------------
 # AC-step-target-exists — every `run: bash <path>` step in every workflow

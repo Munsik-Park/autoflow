@@ -331,7 +331,6 @@ rm -f "$GH_INVOCATION_LOG" "$AC9_LOG"
 # retired (issue #103): that suite carries its own registered `run:` step, so a
 # regression in it reds CI under its own name once rather than twice, and
 # attributing a failure to the right suite is what per-step registration buys.
-# Disposition row: docs/doc-invariant-registry.md §12.1.
 
 # =============================================================================
 echo ""

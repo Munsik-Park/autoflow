@@ -6,10 +6,10 @@
 # embedded NUL byte.
 # =============================================================================
 # Promoted from the retired issue-#75 suite's NUL-byte-absence check, which
-# `docs/doc-invariant-registry.md` §5 routed to #76 as a promotion candidate.
-# The condition is permanent and its subject is a TREE rather than a named
-# document, so the doc-invariant registry cannot hold it — a registry entry's
-# `file` is one path.
+# the doc-invariant registry §5 (itself retired in #141) routed to #76 as a
+# promotion candidate. The condition is permanent and its subject is a TREE
+# rather than a named document, so a per-document registry could not hold
+# it — a registry entry's `file` was one path.
 #
 # The byte test is carried verbatim from the retired check, including its
 # deliberate avoidance of `grep -P`: `grep -aP '\x00'` exits 2 on the BSD grep

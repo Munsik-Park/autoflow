@@ -40,7 +40,7 @@
 # carry. It was an un-gated DELTA over a merged cycle's own diff, and the
 # same-commit-regen obligation it asserted is carried in whole-tree state form by
 # scripts/test/check-manifest-regen-clean.sh's FIXED POINT leg, which needs no
-# diff. Disposition: docs/doc-invariant-registry.md §16.
+# diff.
 #
 # RED expectation (pre-edit, this commit): AC1 (usage-token + prompt-banner
 # absence), AC2 (all == 0 static removal predicates, \bsed\b == 0 guard),

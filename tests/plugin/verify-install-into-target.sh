@@ -775,7 +775,7 @@ if [ -f "$MANIFEST" ]; then
     fi
   done
   # A global artifacts|length==47 fence was dropped here (the retired
-  # ADR-0016 AC-R3-c count-guard class, docs/doc-invariant-registry.md:113):
+  # ADR-0016 AC-R3-c count-guard class):
   # it reds on any legitimate later cycle's manifest addition (e.g. issue
   # #51's ADR-0017 row, 47->48), not just an AC-1 registration regression.
   # The four named-source checks in the loop above already fully discharge
@@ -1070,7 +1070,6 @@ echo "== AC-Ra: verify-package.sh is present =="
 # The whole-suite re-run is retired (issue #103 cycle 3): that suite carries its
 # own registered `run:` step at plugin-package.yml:93, so a regression in it reds
 # CI under its own name once rather than twice.
-# Disposition row: docs/doc-invariant-registry.md 12.1.
 if [ -f "$VERIFY_PACKAGE" ]; then
   pass "AC-Ra: packaging acceptance suite is present at $VERIFY_PACKAGE"
 else

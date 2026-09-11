@@ -7,8 +7,9 @@
 # =============================================================================
 # Replaces the retired `955 AC4-CLOSURE` DELTA, which compared the manifest's
 # source-row set at the base ref against HEAD and was silenced by a hardcoded
-# per-cycle admission list — the widening hand-maintained inventory
-# `docs/doc-invariant-registry.md` §1-2 retires by construction. What is
+# per-cycle admission list — a widening hand-maintained inventory of the kind
+# this tree does not keep (issue #141 retired the last one, the doc-invariant
+# registry). What is
 # promotable is the property that needs no inventory at all, and it is the two
 # legs below. Each leg has its own label so a failure attributes to a leg.
 #
@@ -35,7 +36,8 @@
 # ships at that tier, so any checker over the general case must re-declare the
 # intended ship set. That is the hand-maintained widening inventory this cycle
 # exists to retire, so the gap is retired as not machine-checkable rather than
-# routed forward — see docs/doc-invariant-registry.md §5.
+# routed forward (recorded in the doc-invariant registry §5, itself retired
+# in #141).
 #
 # Usage:
 #   bash scripts/test/check-manifest-regen-clean.sh [--root <dir>]

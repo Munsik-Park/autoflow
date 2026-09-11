@@ -6,8 +6,7 @@
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: wrapper behavior (scripts/issue/create-issue.sh) under a corpus-backed,
-#       argv-dispatching `gh` PATH shim — STANDING (issue #96 origin;
-#       docs/doc-invariant-registry.md §10)
+#       argv-dispatching `gh` PATH shim — STANDING (issue #96 origin)
 # =============================================================================
 # Covers, per .autoflow/issue-96-verification-design.md's acceptance-criteria
 # table:

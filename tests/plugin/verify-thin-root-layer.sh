@@ -45,8 +45,8 @@
 #   §8-C1 driver it once carried — verify-package.sh's AC6d flipping green->RED
 #   once GREEN commits the pin without the §3.5 edit — is now carried where that
 #   AC lives, by verify-package.sh's own registered CI step (plugin-package.yml:93);
-#   the whole-suite re-run here is retired (issue #103,
-#   docs/doc-invariant-registry.md 12.1). AC5c(b) below keeps this file's static
+#   the whole-suite re-run here is retired (issue #103). AC5c(b) below keeps
+#   this file's static
 #   half of the same reconciliation.
 #   AC5c(b)-ii (exact sanctioned exclusion token present) FAILs today (the
 #   §3.5 edit has not landed); AC5c(a) (synthetic stray-pin arm) and AC5c(b)-i
@@ -301,7 +301,6 @@ echo "== AC5a: verify-package.sh is present (#790 regression carrier) =="
 # expectation this arm carried is a statement about verify-package.sh's OWN
 # AC6d, and it is that suite's step that will red when the settings-pin lands
 # without the §3.5 edit; AC5c(b) below keeps this file's static half of it.
-# Disposition row: docs/doc-invariant-registry.md 12.1.
 if [ -f "$VERIFY_PACKAGE_SH" ]; then
   pass "AC5a: packaging acceptance suite is present at $VERIFY_PACKAGE_SH"
 else
