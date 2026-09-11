@@ -171,6 +171,8 @@ on:
       - 'plugin/autoflow/skills/install/scripts/detect.sh'
       - 'setup/thin-root-layer/drift-check.sh'
       - 'docs/tool-delivery-contract.md'
+      - 'tests/test-headerless-suite-target.sh'
+      - 'plugin/autoflow/agents/autoflow-tester.md'
   push:
     branches: [main]
     paths:
@@ -308,6 +310,8 @@ on:
       - 'plugin/autoflow/skills/install/scripts/detect.sh'
       - 'setup/thin-root-layer/drift-check.sh'
       - 'docs/tool-delivery-contract.md'
+      - 'tests/test-headerless-suite-target.sh'
+      - 'plugin/autoflow/agents/autoflow-tester.md'
 
 permissions:
   contents: read
@@ -574,6 +578,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-165-taskoutput-deny.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-165-taskoutput-deny.sh
+
+      - name: test-headerless-suite-target.sh
+        id: s-test-headerless-suite-target
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-headerless-suite-target.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-headerless-suite-target.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh

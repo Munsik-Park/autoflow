@@ -407,10 +407,15 @@ if grep -q '^#   D6  ' "$DRIFT_SRC" && grep -q 'D6 → edit the target-owned' "$
 else
   failc "DOC-HEADER: drift-check.sh header lacks the D6 entry / remedy"
 fi
-if grep -q '^| D6 |' "$REPO_ROOT/setup/SETUP-GUIDE.md" && grep -q 'six checks' "$REPO_ROOT/setup/SETUP-GUIDE.md"; then
-  pass "DOC-SETUP-GUIDE: the drift table carries a D6 row and the count reads six"
+# The count is derived from the table rather than pinned to a word: a later leg
+# (D7, issue #213) adds a row, and the property here is that the prose count
+# agrees with the table it introduces, not that it reads "six".
+_rows=$(grep -c '^| D[0-9] |' "$REPO_ROOT/setup/SETUP-GUIDE.md")
+_word=$(printf '%s\n' "zero one two three four five six seven eight nine" | cut -d' ' -f$((_rows + 1)))
+if grep -q '^| D6 |' "$REPO_ROOT/setup/SETUP-GUIDE.md" && grep -q "runs $_word checks" "$REPO_ROOT/setup/SETUP-GUIDE.md"; then
+  pass "DOC-SETUP-GUIDE: the drift table carries a D6 row and the prose count ($_word) matches its $_rows rows"
 else
-  failc "DOC-SETUP-GUIDE: setup/SETUP-GUIDE.md lacks the D6 row / six-check count"
+  failc "DOC-SETUP-GUIDE: setup/SETUP-GUIDE.md lacks the D6 row, or its 'runs <n> checks' count disagrees with the $_rows table rows"
 fi
 if grep -q 'D6' "$REPO_ROOT/docs/tool-delivery-contract.md"; then
   pass "DOC-CONTRACT: docs/tool-delivery-contract.md R4 names D6"

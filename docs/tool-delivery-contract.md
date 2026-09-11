@@ -126,7 +126,13 @@ below means both tiers together.
   with the clone's sample so a row the current version requires — or an
   `agent_type` it renamed — is named before a fail-closed readout meets it.
   A finding is a FAIL with the rows to fix listed; the remedy is a hand edit
-  of the scaffold, never a re-stamp. The
+  of the scaffold, never a re-stamp. It likewise checks the one precondition
+  of the shipped suite selector that lives in target-owned files (D7, issue
+  #213): every executable spec under the target's `tests/**` declares a usable
+  `# ci-subject:` header, or `scripts/test/select-suites.sh` BLOCKs every
+  selection. The check is the selector's own `--check-headers` stage run from
+  the detector's tree, each header-less suite is a FAIL, and the remedy is
+  back-filling the header — a re-stamp never touches `tests/**`. The
   `/autoflow:install` skill resolves the clone it detects against and stamps
   from through the same resolver — a byte-identical copy shipped inside the
   plugin, since the plugin cache carries no `scripts/lib/` — with the plugin

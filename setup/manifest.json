@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d3ef48a6579ca44e31bc8102e15f3030d2c9a73a93fca10e357e61fb6c89ead4"
+      "sha256": "3cb2086964fafc75a92d3bc366b3bdafafca8baf2db8f885a445b8823763a89d"
     },
     {
       "source": "docs/design-rationale.md",
@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "dc6ed57a092c1816f382513233d68aa5e9b5b248b01ebe386d554256dd7b0f9c"
+      "sha256": "12a9987a3d2efdd8282fba95553a1bf12968a86f7a8786a7f538febb5f71c1ad"
     },
     {
       "source": "docs/teammate-common-rules.md",
@@ -237,7 +237,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "241f6f883a881703a01173e7426ca349914ab29d6ff35140c3844e566aa7286f"
+      "sha256": "d5461448da99b1c4ccfa7ec3557dcf40df0a1e10ac86be861f337115dcc48f8e"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
@@ -258,7 +258,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b94ecc6af57b500b5d366bd84ef2cc633352b407e55b3fa75bbfcc8c268a96e3"
+      "sha256": "cb668595510402328e148d72ddffc24fb9a4e6ca1d1c0df508738ba84d070762"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -419,14 +419,14 @@
       "dest": "scripts/test/select-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "a9c234e4543c14fad5a9c7cc0bdae01119c253d08adc90a2376f7ca92677a707"
+      "sha256": "3e3a13890d9a6505bd2208cbe59840908567f5aaa81b4d4301166dc62fc07277"
     },
     {
       "source": "scripts/test/run-suites.sh",
       "dest": "scripts/test/run-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "acb70e3a93430891022023325353ec4b72566c42a3634e9b056c6e53d376ff9c"
+      "sha256": "093620f73bf63654b7a64e99b917eae6e085508f08bd0da880b6ea03de8e661a"
     },
     {
       "source": "scripts/test/suite-coverage.sh",

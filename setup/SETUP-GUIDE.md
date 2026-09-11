@@ -125,7 +125,7 @@ After installing, enable the plugin and run the shipped drift detector:
 sh .claude/autoflow/drift-check.sh
 ```
 
-`drift-check.sh` runs six checks, all target-local and network-free:
+`drift-check.sh` runs seven checks, all target-local and network-free:
 
 | Check | What it compares | On mismatch |
 |-------|------------------|-------------|
@@ -135,6 +135,7 @@ sh .claude/autoflow/drift-check.sh
 | D4 | installed manifest vs the **marketplace clone's** `setup/manifest.json`, per artifact by sha256 — a bundle that is self-consistent (D1 PASS) but older than what the clone would stamp today, including upstream changes merged without a version bump | FAIL — re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`); a changed `scaffold` sample or an artifact upstream no longer ships is a `WARN` you dispose of by hand |
 | D5 | the installed plugin's files vs the clone's `plugin/<name>/` source — the hooks a session runs and the docs it reads must come from the same source | FAIL — `/plugin update autoflow@autoflow` |
 | D6 | the target-owned `.claude/autoflow/spawn-policy.json` scaffold vs the agent definitions the session loads (issue #185): `scripts/spawn-policy/spawn-policy.sh check` over the scaffold — a `phases` row's effort must equal the loaded definition's `effort:` frontmatter and every `agent_type` must be shipped — plus the row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed. Model values and `workflow_sites` effort are yours and are not compared | FAIL — edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values, add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` |
+| D7 | every executable spec under your `tests/**` declares the `# ci-subject:` header `scripts/test/select-suites.sh` requires (issue #213): a suite that predates the header contract BLOCKs every selection, starting with RED's suite derivation. The check is the selector's own `--check-headers` stage, one FAIL per header-less suite | FAIL — back-fill each named suite's header per `docs/autoflow-guide.md` > RED > Header contract > *Adopting the contract over existing suites* (a re-stamp never touches `tests/**`); a sourced helper moves under `tests/lib/` instead |
 
 A non-zero exit is a **PREFLIGHT stop condition** — resolve the reported drift
 before starting a new AutoFlow cycle. D2, D4, D5 and D6 do **not** need the
