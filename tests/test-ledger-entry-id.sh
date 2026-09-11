@@ -12,8 +12,9 @@
 # behavior contract are permanent once shipped, so this suite is never
 # retired. The cycle-scoped registration delta (this suite's own CI wiring)
 # lived separately in tests/test-issue-97-ledger-id-registration.sh, a
-# cycle-scoped suite deleted with its cycle per its `# retire-with:` header
-# (scripts/test/check-suite-manifest.sh).
+# cycle-scoped suite deleted with its cycle (declared at the time by a header
+# field #228 retired; a cycle-layer asset is now uncommitted under
+# `.autoflow/issue-{N}-local/`, ADR-0024 D2).
 #
 # Verification design: .autoflow/issue-97-verification-design.md — AC-next-*,
 # AC-check-*, AC-autofix-marker-preserved.

@@ -47,15 +47,27 @@ assert_true "scripts/test/run-suites.sh exists" "[ -f '$RUNNER' ]"
 # file when executed, so the witness -- not the runner's own summary -- is
 # the oracle for "which suites ran, how many times".
 # ---------------------------------------------------------------------------
+# declare_optin <root> — ADR-0024 D5: the suite plane's header contract, the
+# selector and the runner apply only where the target opted in
+# (.claude/autoflow.local.json > tests.suite_plane). Every fixture root below
+# that drives the SELECTION path is an opted-in target, because the behaviour
+# under test is the selection itself; a non-opted-in root is the subject of
+# tests/test-headerless-suite-target.sh's own opt-in arms, not of this suite.
+# The --all and --selected legs bypass selection and need no declaration.
+declare_optin() { # <root>
+  mkdir -p "$1/.claude"
+  printf '%s\n' '{ "tests": { "suite_plane": true } }' > "$1/.claude/autoflow.local.json"
+}
+
 build_stub_root() { # <dir>
   local dir="$1" witness="$1/witness.log"
   mkdir -p "$dir/tests" "$dir/.git"
+  declare_optin "$dir"
   : > "$witness"
 
   cat > "$dir/tests/test-fixture-103-stub-a.sh" <<SH
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-a-subject.txt
-# lane: standing
 # budget-secs: 5
 echo "\$0" >> "$witness"
 exit 0
@@ -63,7 +75,6 @@ SH
   cat > "$dir/tests/test-fixture-103-stub-b.sh" <<SH
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-b-subject.txt
-# lane: standing
 # budget-secs: 5
 echo "\$0" >> "$witness"
 exit 0
@@ -163,7 +174,6 @@ if [ -f "$RUNNER" ] && [ -f "$SELECT" ]; then
   cat > "$STUB5/tests/test-fixture-103-slow.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-slow.txt
-# lane: standing
 # budget-secs: 1
 sleep 9
 exit 0
@@ -192,7 +202,6 @@ SH
   cat > "$STUB6/tests/test-fixture-103-fast.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-fast.txt
-# lane: standing
 # budget-secs: 30
 exit 0
 SH
@@ -239,7 +248,6 @@ SH
   cat > "$ARM_A_DIR/tests/test-fixture-103-decoupled-a.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-decoupled-a.txt
-# lane: standing
 # budget-secs: 1
 sleep 5
 exit 0
@@ -261,7 +269,6 @@ SH
   cat > "$ARM_B_DIR/tests/test-fixture-103-decoupled-b.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-decoupled-b.txt
-# lane: standing
 # budget-secs: 1
 sleep 9
 exit 0
@@ -286,7 +293,6 @@ SH
   cat > "$ARM_C_DIR/tests/test-fixture-103-decoupled-c.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-decoupled-c.txt
-# lane: standing
 # budget-secs: 1
 sleep 3
 exit 0
@@ -311,7 +317,6 @@ SH
   cat > "$ENV_HOLE_DIR/tests/test-fixture-103-env-hole.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-env-hole.txt
-# lane: standing
 # budget-secs: 1
 sleep 5
 exit 0
@@ -449,7 +454,6 @@ SH
   cat > "$STUB_NOBIN_A/tests/test-fixture-103-nobin-a.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-nobin-a-subject.txt
-# lane: standing
 # budget-secs: 5
 exit 0
 SH
@@ -480,7 +484,6 @@ SH
     cat > "$STUB_CONTROL/tests/test-fixture-103-control-a.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-control-a-subject.txt
-# lane: standing
 # budget-secs: 5
 exit 0
 SH
@@ -504,7 +507,6 @@ SH
   cat > "$STUB_NOBIN_CEIL/tests/test-fixture-103-nobin-ceiling.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-nobin-ceiling-subject.txt
-# lane: standing
 # budget-secs: 1
 sleep 9
 exit 0
@@ -542,10 +544,10 @@ if [ -f "$SELECT" ]; then
   # ---------------------------------------------------------------------
   GLOB_FIXTURE_ROOT="$(mktemp -d)"
   mkdir -p "$GLOB_FIXTURE_ROOT/tests"
+  declare_optin "$GLOB_FIXTURE_ROOT"
   cat > "$GLOB_FIXTURE_ROOT/tests/test-fixture-103-globcheck.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: fixture-glob-dir/*
-# lane: standing
 # budget-secs: 5
 exit 0
 SH
@@ -595,9 +597,9 @@ SH
   # ---------------------------------------------------------------------
   NOHDR_ROOT="$(mktemp -d)"
   mkdir -p "$NOHDR_ROOT/tests"
+  declare_optin "$NOHDR_ROOT"
   cat > "$NOHDR_ROOT/tests/test-fixture-103-no-header.sh" <<'SH'
 #!/usr/bin/env bash
-# lane: standing
 # budget-secs: 5
 exit 0
 SH
@@ -610,10 +612,10 @@ SH
 
   EMPTYHDR_ROOT="$(mktemp -d)"
   mkdir -p "$EMPTYHDR_ROOT/tests"
+  declare_optin "$EMPTYHDR_ROOT"
   cat > "$EMPTYHDR_ROOT/tests/test-fixture-103-empty-header.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject:
-# lane: standing
 # budget-secs: 5
 exit 0
 SH
@@ -626,10 +628,10 @@ SH
 
   CONFORMING_ROOT="$(mktemp -d)"
   mkdir -p "$CONFORMING_ROOT/tests"
+  declare_optin "$CONFORMING_ROOT"
   cat > "$CONFORMING_ROOT/tests/test-fixture-103-conforming-header.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-ok-subject.txt
-# lane: standing
 # budget-secs: 5
 exit 0
 SH
@@ -665,7 +667,6 @@ if [ -f "$RUNNER" ] && [ -f "$SELECT" ]; then
   cat > "$OUT_DIR/tests/test-fixture-108-out-pass.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-out-pass.txt
-# lane: standing
 # budget-secs: 5
 # Emits its own sentinel so the PASS leg is a real falsifier -- a silent
 # PASS stub could never distinguish "discarded" from "nothing to discard".
@@ -676,7 +677,6 @@ SH
   cat > "$OUT_DIR/tests/test-fixture-108-out-fail.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-out-fail.txt
-# lane: standing
 # budget-secs: 5
 echo "OUT-SENTINEL-FAIL-START"
 for i in $(seq 1 40); do echo "filler-out-$i"; done
@@ -690,7 +690,6 @@ SH
   cat > "$OUT_DIR/tests/test-fixture-108-out-timeout.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-out-timeout.txt
-# lane: standing
 # budget-secs: 1
 # Both sentinels are emitted BEFORE the sleep that trips the bound -- a
 # timeout-killed process is killed mid-run, so a trailing sentinel would
@@ -740,7 +739,6 @@ SH
     cat > "$OUT_WD_DIR/tests/test-fixture-108-out-wd-timeout.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-out-wd-timeout.txt
-# lane: standing
 # budget-secs: 1
 echo "OUT-SENTINEL-WDTIMEOUT-START"
 for i in $(seq 1 40); do echo "filler-out-$i"; done
@@ -782,7 +780,6 @@ SH
   cat > "$VF_TINY_ROOT/tests/test-fixture-108-vf-tiny.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-vf-tiny.txt
-# lane: standing
 # budget-secs: 5
 exit 0
 SH
@@ -799,7 +796,6 @@ SH
   cat > "$VF_SCRATCH/tests/test-fixture-108-vf-scratch.sh" <<'SH'
 #!/usr/bin/env bash
 # ci-subject: tests/fixture-vf-scratch.txt
-# lane: standing
 # budget-secs: 5
 exit 0
 SH

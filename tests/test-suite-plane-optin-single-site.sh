@@ -27,11 +27,22 @@
 # derivation, not this key.
 #
 # THE READ PREDICATE IS ANCHORED ON A KEY ACCESS, NOT ON THE WORD. A `jq` path
-# (`.tests.suite_plane`), a bracket access or a quoted key literal is a read;
-# the key's NAME inside a prose message or an assertion description is not
-# (tests/test-issue-979-bundle-delivery.sh legitimately carries one). Declaration
-# files are out of the scan set for the same reason: they declare the key, they
-# do not read it.
+# (`.tests.suite_plane`), a bracket access, or a quoted key literal in a lookup
+# position is a read; the key's NAME inside a prose message or an assertion
+# description is not (tests/test-issue-979-bundle-delivery.sh legitimately
+# carries one). Declaration files are out of the scan set for the same reason:
+# they declare the key, they do not read it.
+#
+# A DECLARATION A SUITE WRITES IS A DECLARATION, NOT A READ. The same exclusion
+# reaches the JSON object literals a behavioural suite writes into a fixture
+# root's .claude/autoflow.local.json (tests/test-headerless-suite-target.sh must
+# write the literal key to drive the real resolver against a real declaration).
+# The discriminator is the position, not the file: `"suite_plane"` immediately
+# followed by `:` is the JSON member-NAME position of a declaration being
+# supplied; every other occurrence of the key retrieves a value and counts. So a
+# genuine `.tests.suite_plane` access added to that same suite — the shape a
+# second resolver would take — is still counted, and the arity property the row
+# records (exactly one reader) is narrowed in shape, not in reach.
 # =============================================================================
 
 set -uo pipefail
@@ -50,8 +61,13 @@ RESOLVER_HOME='scripts/test/suite-manifest.sh'
 CONSUMERS=(scripts/test/select-suites.sh scripts/test/run-suites.sh scripts/test/check-suite-manifest.sh)
 SELF='tests/test-suite-plane-optin-single-site.sh'
 
-# A key ACCESS: a jq path, a bracket access, or a quoted key literal.
-READ_RE='\.suite_plane|"suite_plane"|'"'"'suite_plane'"'"'|\[suite_plane\]'
+# A key ACCESS: a jq path, a bracket access, or a quoted key literal in a lookup
+# position. A quoted literal immediately followed by ':' is the JSON member-name
+# position of a declaration being WRITTEN, not a read, so the two quoted arms
+# require a following non-':' character; readers() appends one to every line so
+# a key at end-of-line still matches without an in-group '$' anchor (its ERE
+# meaning is unspecified and this suite runs on BSD grep too).
+READ_RE='\.suite_plane|\[suite_plane\]|"suite_plane"[^:]|'"'"'suite_plane'"'"'[^:]'
 
 # The scan set: executable code, tree-wide. Declaration files (*.json) are not
 # in it — a declaration is not a reader.
@@ -70,7 +86,8 @@ readers() {
   while IFS= read -r f; do
     [ -f "$f" ] || continue
     [ "$f" = "$SELF" ] && continue
-    grep -vE '^[[:space:]]*#' "$f" 2>/dev/null | grep -qE -- "$READ_RE" && echo "$f"
+    grep -vE '^[[:space:]]*#' "$f" 2>/dev/null | sed 's/$/ /' \
+      | grep -qE -- "$READ_RE" && echo "$f"
   done < <(scan_set)
 }
 

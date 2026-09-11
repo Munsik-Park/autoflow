@@ -28,9 +28,10 @@ set -uo pipefail
 # to compare — the three baselines feature design §3 names (the CLAUDE.md
 # table, the docs/phases/analysis.md prose, and the two workflow scripts'
 # `model:` literals), plus the config it compares them against. Declared as a
-# path allow-list array per scripts/test/suite-manifest.sh's cycle-scoped
-# grammar: retirement (`# retire-with: #150`) and this array's evaluation set
-# are the only things dominance is checkable over for a one-time property.
+# path allow-list array per scripts/test/suite-manifest.sh's grammar: the
+# retirement marker this suite once carried (issue #228 retired that header
+# field) and this array's evaluation set are the only things dominance is
+# checkable over for a one-time property.
 allow_list=(
   "CLAUDE.md"
   "docs/phases/analysis.md"

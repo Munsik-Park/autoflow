@@ -388,9 +388,9 @@ fi
 # -----------------------------------------------------------------------------
 echo "== MIGRATED: the adoption procedure's end state =="
 # -----------------------------------------------------------------------------
-write_suite tests/check-legacy-alpha.sh $'# ci-subject: src/app.txt\n# lane: standing\n# budget-secs: SUITE_BUDGET_CEILING_SECS'
-write_suite tests/check-legacy-beta.sh $'# ci-subject: docs/\n# lane: standing\n# budget-secs: SUITE_BUDGET_CEILING_SECS'
-write_suite tests/nested/check-legacy-gamma.sh $'# ci-subject: src/**\n# lane: standing\n# budget-secs: SUITE_BUDGET_CEILING_SECS'
+write_suite tests/check-legacy-alpha.sh $'# ci-subject: src/app.txt\n# budget-secs: SUITE_BUDGET_CEILING_SECS'
+write_suite tests/check-legacy-beta.sh $'# ci-subject: docs/\n# budget-secs: SUITE_BUDGET_CEILING_SECS'
+write_suite tests/nested/check-legacy-gamma.sh $'# ci-subject: src/**\n# budget-secs: SUITE_BUDGET_CEILING_SECS'
 g add -A && g commit -q -m migrate
 MIGRATED=$(g rev-parse HEAD)
 echo v3 > "$T/src/app.txt"; g commit -q -am change-after-migration
