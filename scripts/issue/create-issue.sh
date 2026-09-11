@@ -201,10 +201,15 @@ if has_section "Body"; then
 fi
 if has_section "Grounds"; then
   GROUNDS="$(section_body "Grounds")"
-  # An anchor is a path:line, a commit SHA, or a URL — something a reader can
-  # re-derive rather than the author's summary of it.
-  if ! printf '%s' "$GROUNDS" | grep -qE '([^[:space:]]+:[0-9]+)|(^|[^0-9A-Za-z])[0-9a-f]{7,40}([^0-9A-Za-z]|$)|https?://'; then
-    MISSING="$MISSING  - a grounding anchor under '## Grounds' (a path:line, a commit SHA, or a URL)
+  # An anchor is a commit SHA, a URL, or a durable citation — a document, its
+  # section heading and a quoted fragment of the provision's sentence, written
+  # `<path>` > <heading> — "<fragment>" (docs/design-rationale.md > Decision 16)
+  # — something a reader can re-derive rather than the author's summary of it.
+  # A bare path:line is not an anchor here (issue #221): an issue body outlives
+  # the commit its line numbers were read at, so a line number counts only
+  # through the commit SHA it is read at.
+  if ! printf '%s' "$GROUNDS" | grep -qE '(^|[^0-9A-Za-z])[0-9a-f]{7,40}([^0-9A-Za-z]|$)|https?://|[^[:space:]]+\.[A-Za-z0-9]+`?[[:space:]]*>[[:space:]].*("|“).+("|”)'; then
+    MISSING="$MISSING  - a grounding anchor under '## Grounds' (a commit SHA, a URL, or a document citation: \`<path>\` > <heading> — \"<fragment>\")
 "
   fi
 fi

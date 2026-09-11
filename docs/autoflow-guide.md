@@ -269,7 +269,7 @@ raise (`[further: yes|none]`), and the discussion ends when two consecutive turn
 `none` — the participants' own conclusion ends it; `scripts/architect/relay-state.sh state`
 computes that condition and the next side, and the orchestrator obeys it. The Discussion
 Protocol's VERIFY step applies over the transcript (ADR-0023 D1): a fact the transcript cites with
-a `path:line` is verified for both participants, and a participant reads a file to ground a claim
+a `path:line` (read at the cycle's commit) or a document's section and quoted sentence is verified for both participants, and a participant reads a file to ground a claim
 of its own or to dispute a cited one.
 
 **Report** is one more wake per participant: each appends its reading of the discussion to the
@@ -636,7 +636,7 @@ the gated one.
 - **An un-agreed point.** One judgment, and it is the orchestrator's: discuss further, or stop.
   - **Discuss further** — prepare what the next discussion needs and append it as the `brief`
     (*Re-discussion* below). A preparation may carry the un-agreed points as a narrowed topic, a
-    fact the orchestrator verified in the meantime (`path:line`, command output), the prior
+    fact the orchestrator verified in the meantime (`path:line` at a commit SHA, command output), the prior
     report's path, or a different perspective for a participant to take. Record the judgment as an
     `O` ledger entry — decision and grounds, authority `orchestrator judgment`. A re-discussion
     after an un-agreed report is not a GATE:PLAN re-entry and consumes no re-entry counter.
@@ -898,7 +898,7 @@ implemented; only its evidence differs.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
    - [MUST] Never start a **whole-tree run** of the suite runner. The prohibition is keyed on the run, not on a flag: both the `--all` flag and the **bare invocation** reach the whole tree, the bare form whenever its resolved delta is empty or the event is a `push` (see [`submodule-common-rules.md`](submodule-common-rules.md) > Testing Standards). The whole-tree sweep has exactly one invoker and one position — the orchestrator, at VALIDATE step 1. Execute only your resolved run set, or the specific suites your change requires; the acceptance run that produces evidence is GREEN step 5's, which you do not run.
-   - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
+   - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
 3. Before committing, if this change touched a manifest-registered source, run
    the manifest regen and stage the result in the same commit.
    - [MUST] If `git diff --name-only <base>...HEAD` intersects
@@ -1014,7 +1014,7 @@ Run the tests; on failure, branch by cause.
    for every test double (mock / stub / fake) standing in for a real interface,
    re-derive the real interface at HEAD (signature, argument count, return shape,
    error path) and confirm the double matches — cite the real implementation's
-   file:line in the report.
+   file:line, at the commit the report is keyed to, in the report.
      ├─ All doubles match → PASS
      └─ A double diverges → masked failure, not a Green → branch by cause as in step 2
         (a test built on a wrong double → RED; the impl wrong against the real interface → GREEN)
@@ -1056,7 +1056,7 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
   acceptance criteria are mutually unsatisfiable, reproduced by measurement → **ARCHITECT
   re-deliberation**. The Developer AI has already recorded the contradiction in
   `.autoflow/issue-{N}-*-green-blocker.md` at GREEN (see GREEN step 2): the conflicting AC IDs,
-  the measurement that reproduces the conflict, and `path:line` anchors. The re-deliberation
+  the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit. The re-deliberation
   returns through GATE:PLAN and re-enters RED, and consumes the existing GATE:PLAN → ARCHITECT cap
   (max 3× per cycle; the 4th → human);
 - undecidable → human.
@@ -1442,7 +1442,7 @@ is an input to GATE:QUALITY, so every section is present and a section with noth
    list whose reason is *behavior-changing* **and** whose subject is validation, a guard, path /
    root resolution, input or output boundary handling, or error handling. These are the suggestions
    REFINE is right to refuse (REFINE preserves behavior) and that nevertheless describe a possible
-   defect in the shipped change. Each entry names the suggestion, the `path:line` it points at,
+   defect in the shipped change. Each entry names the suggestion, the `path:line` (at the report's commit) it points at,
    and what behavior would change. The section is the defect signal issue #135 found missing: in
    #130 cycle 1 a /simplify agent proposed exactly the fix the external reviewer later filed as
    Medium, REFINE correctly rejected it as behavior-changing, and no phase read the rejection.
@@ -1526,7 +1526,7 @@ AUDIT report (`.autoflow/issue-{N}-c{C-1}-audit.md`, preserved at PREFLIGHT) —
 list is the re-score's starting set.
 
 **Report file**: the evaluator's report is written to `.autoflow/issue-{N}-audit.md` and carries a
-`## Low findings` section (each Low item with `path:line` and a one-line claim; `none` when empty),
+`## Low findings` section (each Low item with `path:line` at the audited commit and a one-line claim; `none` when empty),
 so that a later cycle can take it as input. The state file keeps only the scores.
 
 **Review-response re-score** (issue #135): the fresh evaluator does not re-derive the whole audit.

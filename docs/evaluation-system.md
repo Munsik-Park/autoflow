@@ -93,7 +93,7 @@ emerge, humans adjust the criteria.
   "scores": { "item": { "score": 8, "reason": "evidence" } },
   "remedy_class": { "<failed item>": "doc | test | impl | design | operator" },
   "rescore": { "source": "<prior report path>", "rescored": ["item"], "inherited": ["item"] },
-  "refine_observations": [ { "entry": "<suggestion @ path:line>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
+  "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
   "recommendations": ["items 5-6"]

@@ -163,7 +163,7 @@ assert_true "no --draft argument exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
 assert_true "no --draft argument creates nothing" "[ \"\$(creation_call_count "$R1/gh.log")\" -eq 0 ]"
 
 D1B="$R1/.autoflow/valid.md"
-write_draft "$D1B" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+write_draft "$D1B" "some title words here" "0badc0ffee10" "zzqxxvterm" "candidates: none" "body text"
 run_wrapper "$R1" "$R1" --draft "$D1B" --repo
 assert_true "--repo with no following value exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
 assert_true "--repo with no following value creates nothing" "[ \"\$(creation_call_count "$R1/gh.log")\" -eq 0 ]"
@@ -173,7 +173,7 @@ echo "=== issue #96 — Wrapper preconditions: not a git repository, missing/sym
 NOTGIT=$(mktempd)   # a plain directory, never `git init`
 mkdir -p "$NOTGIT/.autoflow"
 D_NOTGIT="$NOTGIT/.autoflow/draft.md"
-write_draft "$D_NOTGIT" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+write_draft "$D_NOTGIT" "some title words here" "0badc0ffee10" "zzqxxvterm" "candidates: none" "body text"
 run_wrapper "$NOTGIT" "$NOTGIT" --draft "$D_NOTGIT"
 assert_true "outside any git repository: exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
 assert_true "outside any git repository: creates nothing" "[ \"\$(creation_call_count "$NOTGIT/gh.log")\" -eq 0 ]"
@@ -184,7 +184,7 @@ assert_true "a --draft path that does not exist exits 64" "[ \"$WRAPPER_STATUS\"
 assert_true "a --draft path that does not exist creates nothing" "[ \"\$(creation_call_count "$R1C/gh.log")\" -eq 0 ]"
 
 D_LINK_TARGET="$R1C/target-outside.md"
-write_draft "$D_LINK_TARGET" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+write_draft "$D_LINK_TARGET" "some title words here" "0badc0ffee10" "zzqxxvterm" "candidates: none" "body text"
 D_LINK="$R1C/.autoflow/symlink-draft.md"
 ln -s "$D_LINK_TARGET" "$D_LINK"
 run_wrapper "$R1C" "$R1C" --draft "$D_LINK"
@@ -195,7 +195,7 @@ echo ""
 echo "=== issue #96 — Wrapper-Rejects-Absent-Autoflow-Dir ==="
 R2=$(mktempd); git -C "$R2" init -q   # deliberately NO mkdir .autoflow
 OUTSIDE_DRAFT="$R2/somewhere-else.md"
-write_draft "$OUTSIDE_DRAFT" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+write_draft "$OUTSIDE_DRAFT" "some title words here" "0badc0ffee10" "zzqxxvterm" "candidates: none" "body text"
 run_wrapper "$R2" "$R2" --draft "$OUTSIDE_DRAFT"
 assert_true "absent .autoflow: exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
 assert_true "absent .autoflow: creates nothing" "[ \"\$(creation_call_count "$R2/gh.log")\" -eq 0 ]"
@@ -224,7 +224,7 @@ OUTSIDE1="$R3/.autoflow/fixtures/draft.md"     # fixtures/ subdir — different 
 OUTSIDE2="$R3/.autoflow/subdir/draft.md"       # arbitrary subdir — swept by nothing
 OUTSIDE3="$R3/../draft-outside-repo.md"        # outside the repository entirely
 for f in "$OUTSIDE1" "$OUTSIDE2" "$OUTSIDE3"; do
-  write_draft "$f" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+  write_draft "$f" "some title words here" "0badc0ffee10" "zzqxxvterm" "candidates: none" "body text"
 done
 run_wrapper "$R3" "$R3" --draft "$OUTSIDE1"
 assert_true "fixtures/ subdir draft: exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
@@ -258,7 +258,7 @@ candidates: none
 body text
 
 ## Grounds
-path/to/file.sh:10
+0badc0ffee10
 EOF
 run_wrapper "$R4" "$R4" --draft "$D_NOTITLE"
 assert_true "missing ## Title: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
@@ -292,7 +292,7 @@ cat > "$D_NOSEARCHED" <<'EOF'
 some title words here
 
 ## Grounds
-path/to/file.sh:10
+0badc0ffee10
 
 ## Duplicate check
 candidates: none
@@ -310,7 +310,7 @@ cat > "$D_NOBODY" <<'EOF'
 some title words here
 
 ## Grounds
-path/to/file.sh:10
+0badc0ffee10
 
 ## Duplicate check
 searched: zzqxxvterm
@@ -325,7 +325,7 @@ cat > "$D_EMPTYTITLE" <<'EOF'
 ## Title
 
 ## Grounds
-path/to/file.sh:10
+0badc0ffee10
 
 ## Duplicate check
 searched: zzqxxvterm
@@ -344,7 +344,7 @@ cat > "$D_EMPTYBODY" <<'EOF'
 some title words here
 
 ## Grounds
-path/to/file.sh:10
+0badc0ffee10
 
 ## Duplicate check
 searched: zzqxxvterm
@@ -360,7 +360,7 @@ echo ""
 echo "=== issue #96 — Wrapper-Reruns-Dupcheck (one query per term, unioned — not a joined string) ==="
 R5=$(new_repo)
 D5="$R5/.autoflow/two-term-draft.md"
-write_draft "$D5" "zzqxxvalpha zzqxxvbeta" "path/to/file.sh:10" "zzqxxvalpha zzqxxvbeta" "candidates: none" "body text"
+write_draft "$D5" "zzqxxvalpha zzqxxvbeta" "0badc0ffee10" "zzqxxvalpha zzqxxvbeta" "candidates: none" "body text"
 run_wrapper "$R5" "$R5" --draft "$D5"
 assert_true "two-term title: a --search call for the first term exists" \
   "[ \"\$(search_call_count_for_term "$R5/gh.log" zzqxxvalpha)\" -ge 1 ]"
@@ -393,7 +393,7 @@ R6=$(new_repo)
 # (i) Korean paraphrase sharing the substantive noun 검토 ("review") with
 # corpus issue #96's own title; searched: line names only non-colliding terms.
 D6A="$R6/.autoflow/korean-collision.md"
-write_draft "$D6A" "AI가 스스로 검토했다고 주장하는 파일링 방지" "path/to/file.sh:10" "zzqxxvnothing plughcode" "candidates: none" "body text"
+write_draft "$D6A" "AI가 스스로 검토했다고 주장하는 파일링 방지" "0badc0ffee10" "zzqxxvnothing plughcode" "candidates: none" "body text"
 run_wrapper "$R6" "$R6" --draft "$D6A"
 assert_true "Korean collision on a shared noun (검토): exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
 assert_true "Korean collision: the refusal names issue 96" "grep -qE '#96\b' '$R6/err.log' 2>/dev/null"
@@ -402,7 +402,7 @@ assert_true "Korean collision: creates nothing" "[ \"\$(creation_call_count "$R6
 # (ii) a bracket tag shared by many corpus rows, with content words that
 # collide with none of them — not refused on the tag alone.
 D6B="$R6/.autoflow/tag-only-shared.md"
-write_draft "$D6B" "[fix] zzqxxvgamma zzqxxvdelta" "path/to/file.sh:10" "zzqxxvgamma zzqxxvdelta" "candidates: none" "body text"
+write_draft "$D6B" "[fix] zzqxxvgamma zzqxxvdelta" "0badc0ffee10" "zzqxxvgamma zzqxxvdelta" "candidates: none" "body text"
 GH_CREATE_URL="https://github.com/example/repo/issues/777" run_wrapper "$R6" "$R6" --draft "$D6B"
 assert_true "tag-only collision: NOT refused merely for reusing a common tag (exit 0)" "[ \"$WRAPPER_STATUS\" -eq 0 ]"
 assert_true "tag-only collision: a creation call was issued" "[ \"\$(creation_call_count "$R6/gh.log")\" -eq 1 ]"
@@ -414,7 +414,7 @@ D7="$R7/.autoflow/underivable.md"
 # after the bracket tag is stripped: "a b c 力" — three ASCII tokens below the
 # 4-codepoint floor and one single-codepoint non-ASCII token below the
 # 2-codepoint floor: nothing survives derivation.
-write_draft "$D7" "[fix] a b c 力" "path/to/file.sh:10" "zzqxxvnomatch" "candidates: none" "body text"
+write_draft "$D7" "[fix] a b c 力" "0badc0ffee10" "zzqxxvnomatch" "candidates: none" "body text"
 run_wrapper "$R7" "$R7" --draft "$D7"
 assert_true "underivable title: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
 assert_true "underivable title: message names the title" "grep -qF 'a b c 力' '$R7/err.log' 2>/dev/null"
@@ -424,7 +424,7 @@ echo ""
 echo "=== issue #96 — Wrapper-Distrusts-Self-Report ==="
 R8=$(new_repo)
 D8="$R8/.autoflow/self-report.md"
-write_draft "$D8" "검토 절차를 스스로 마쳤다고 기록한 초안" "path/to/file.sh:10" "zzqxxvunrelated" "candidates: none  # reviewed, no duplicates found" "body text"
+write_draft "$D8" "검토 절차를 스스로 마쳤다고 기록한 초안" "0badc0ffee10" "zzqxxvunrelated" "candidates: none  # reviewed, no duplicates found" "body text"
 run_wrapper "$R8" "$R8" --draft "$D8"
 assert_true "self-report ignored: the wrapper's own query still surfaces the collision (exit 65)" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
 assert_true "self-report ignored: the refusal names issue 96" "grep -qE '#96\b' '$R8/err.log' 2>/dev/null"
@@ -434,14 +434,14 @@ echo ""
 echo "=== issue #96 — Wrapper-Query-Independent-Of-Recorded-Terms ==="
 R9=$(new_repo)
 D9="$R9/.autoflow/independent-run1.md"
-write_draft "$D9" "검토 없이 zzqxxvepsilon 이슈가 파일링됨" "path/to/file.sh:10" "zzqxxvepsilon 없이" "candidates: none" "body text"
+write_draft "$D9" "검토 없이 zzqxxvepsilon 이슈가 파일링됨" "0badc0ffee10" "zzqxxvepsilon 없이" "candidates: none" "body text"
 run_wrapper "$R9" "$R9" --draft "$D9"
 assert_true "run 1 (recorded line omits 검토): the title-derived term is still queried" \
   "[ \"\$(search_call_count_for_term "$R9/gh.log" 검토)\" -ge 1 ]"
 assert_true "run 1: the collision is recalled regardless (exit 65)" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
 
 D9B="$R9/.autoflow/independent-run2.md"
-write_draft "$D9B" "검토 없이 zzqxxvepsilon 이슈가 파일링됨" "path/to/file.sh:10" "zzqxxvnothingatall" "candidates: none" "body text"
+write_draft "$D9B" "검토 없이 zzqxxvepsilon 이슈가 파일링됨" "0badc0ffee10" "zzqxxvnothingatall" "candidates: none" "body text"
 run_wrapper "$R9" "$R9" --draft "$D9B"
 assert_true "run 2 (recorded line names a term in neither title nor corpus): the title-derived term is still queried" \
   "[ \"\$(search_call_count_for_term "$R9/gh.log" 검토)\" -ge 1 ]"
@@ -456,7 +456,7 @@ D10="$R10/.autoflow/locale-token.md"
 # floor check derives a DIFFERENT query per locale; a locale-free byte count
 # derives the SAME query (dropping the token either way, since 1 < the
 # non-ASCII floor of 2).
-write_draft "$D10" "[chore] 한 zzqxxvzeta" "path/to/file.sh:10" "zzqxxvzeta" "candidates: none" "body text"
+write_draft "$D10" "[chore] 한 zzqxxvzeta" "0badc0ffee10" "zzqxxvzeta" "candidates: none" "body text"
 # A successful run RENAMES its draft away (Wrapper-Rename-Binds-Create), so
 # comparing two runs of "the same draft" needs a FRESH copy per run — reusing
 # one path means the second run's --draft no longer exists after the first
@@ -480,7 +480,7 @@ echo ""
 echo "=== issue #96 — Wrapper-Derivation-Not-Tunable ==="
 R11=$(new_repo)
 D11="$R11/.autoflow/tunable-attempt.md"
-write_draft "$D11" "some title words here" "path/to/file.sh:10" "zzqxxvterm" "candidates: none" "body text"
+write_draft "$D11" "some title words here" "0badc0ffee10" "zzqxxvterm" "candidates: none" "body text"
 run_wrapper "$R11" "$R11" --draft "$D11" --term-cap 20
 assert_true "an unrecognised flag exits 64" "[ \"$WRAPPER_STATUS\" -eq 64 ]"
 assert_true "an unrecognised flag creates nothing" "[ \"\$(creation_call_count "$R11/gh.log")\" -eq 0 ]"
@@ -489,7 +489,7 @@ echo ""
 echo "=== issue #96 — Wrapper-Query-Sequence-Stable-And-Additive ==="
 R12=$(new_repo)
 D12="$R12/.autoflow/stable-run.md"
-write_draft "$D12" "zzqxxvalpha zzqxxvbeta" "path/to/file.sh:10" "zzqxxvalpha" "candidates: none" "body text"
+write_draft "$D12" "zzqxxvalpha zzqxxvbeta" "0badc0ffee10" "zzqxxvalpha" "candidates: none" "body text"
 # Fresh copy per run — a successful run renames its draft away (same reason
 # as the locale-stable fix above), so comparing "two runs of the identical
 # draft" needs two distinct on-disk copies, not one path run twice.
@@ -504,7 +504,7 @@ assert_true "determinism: two runs of the identical draft produce the identical 
   "diff -q <(normalize_gh_log '$LOG12A/gh.log') <(normalize_gh_log '$LOG12B/gh.log') >/dev/null 2>&1"
 
 D12W="$R12/.autoflow/wider-run.md"
-write_draft "$D12W" "zzqxxvalpha zzqxxvbeta" "path/to/file.sh:10" "zzqxxvalpha zzqxxvbeta zzqxxvextra" "candidates: none" "body text"
+write_draft "$D12W" "zzqxxvalpha zzqxxvbeta" "0badc0ffee10" "zzqxxvalpha zzqxxvbeta zzqxxvextra" "candidates: none" "body text"
 LOG12W=$(mktempd)
 run_wrapper "$R12" "$LOG12W" --draft "$D12W"
 assert_true "additivity: the search term added only via a wider searched: line is now queried too" \
@@ -516,7 +516,7 @@ echo ""
 echo "=== issue #96 — Wrapper-Query-Not-Truncated ==="
 R13=$(new_repo)
 D13="$R13/.autoflow/truncation.md"
-write_draft "$D13" "[chore] zzqxxvtruncationterm" "path/to/file.sh:10" "zzqxxvtruncationterm" "candidates: none" "body text"
+write_draft "$D13" "[chore] zzqxxvtruncationterm" "0badc0ffee10" "zzqxxvtruncationterm" "candidates: none" "body text"
 GH_FULL_PAGE_TERMS="zzqxxvtruncationterm" run_wrapper "$R13" "$R13" --draft "$D13"
 assert_true "a full-page term refuses rather than creating: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
 assert_true "the refusal names the truncated term" "grep -qF 'zzqxxvtruncationterm' '$R13/err.log' 2>/dev/null"
@@ -535,7 +535,7 @@ It has more than one line."
 # (e.g. "The exact title line") derives "line", which the corpus's own
 # issue #8 ("...one-liner...") is recalled on under --state all, turning this
 # into an unwanted strict-disposition refusal instead of a create.
-write_draft "$D14" "zzqxxvrenametitle zzqxxvpayloadtitle" "path/to/file.sh:10" "zzqxxvrename" "candidates: none" "$BODY_TEXT"
+write_draft "$D14" "zzqxxvrenametitle zzqxxvpayloadtitle" "0badc0ffee10" "zzqxxvrename" "candidates: none" "$BODY_TEXT"
 cp "$D14" "$R14/.autoflow/issue-proposal-demo.md.orig"
 
 BODY_CAPTURE=$(mktempd)/captured-body.md
@@ -553,17 +553,43 @@ assert_true "payload: --title carries the draft's ## Title line byte-for-byte" \
 assert_true "payload: the body-file bytes equal the draft's ## Body section verbatim" \
   "diff -q '$BODY_CAPTURE' <(printf '%s\n' \"$BODY_TEXT\") >/dev/null 2>&1"
 assert_true "payload: the body-file carries no Grounds/Duplicate-check text" \
-  "! grep -qF 'path/to/file.sh:10' '$BODY_CAPTURE' && ! grep -qF 'zzqxxvrename' '$BODY_CAPTURE'"
+  "! grep -qF '0badc0ffee10' '$BODY_CAPTURE' && ! grep -qF 'zzqxxvrename' '$BODY_CAPTURE'"
 
 # (ii) --dry-run — every check passes, nothing is created, nothing renamed.
 D14B="$R14/.autoflow/issue-proposal-dryrun.md"
-write_draft "$D14B" "dry run title" "path/to/file.sh:11" "zzqxxvdryrun" "candidates: none" "dry run body"
+write_draft "$D14B" "dry run title" "0badc0ffee11" "zzqxxvdryrun" "candidates: none" "dry run body"
 run_wrapper "$R14" "$R14" --draft "$D14B" --dry-run
 assert_true "dry-run: exits 0" "[ \"$WRAPPER_STATUS\" -eq 0 ]"
 assert_true "dry-run: creates nothing" "[ \"\$(creation_call_count "$R14/gh.log")\" -eq 0 ]"
 assert_true "dry-run: the draft is left in place" "[ -f '$D14B' ]"
 assert_true "dry-run: no numbered proposal file exists anywhere under .autoflow" \
   "[ -z \"\$(find '$R14/.autoflow' -name 'issue-*-proposal.md' ! -name 'issue-555-proposal.md')\" ]"
+
+# (ii-b) issue #221 — the Grounds anchor forms. A commit SHA or a URL alone is
+# enough; a durable citation (`<path>` > <heading> — "<fragment>") is an anchor;
+# a bare path:line is not — an issue body outlives the commit it was read at
+# (docs/design-rationale.md > Decision 16).
+D14U="$R14/.autoflow/issue-proposal-url-grounds.md"
+write_draft "$D14U" "url grounds title" "https://github.com/example/repo/issues/1 — the observation" "zzqxxvurlgrounds" "candidates: none" "url grounds body"
+run_wrapper "$R14" "$R14" --draft "$D14U" --dry-run
+assert_true "grounds with only a URL: accepted (dry-run exits 0)" "[ \"$WRAPPER_STATUS\" -eq 0 ]"
+
+D14S="$R14/.autoflow/issue-proposal-sha-grounds.md"
+write_draft "$D14S" "sha grounds title" "0123456789abcdef0123456789abcdef01234567 — the commit that introduced it" "zzqxxvshagrounds" "candidates: none" "sha grounds body"
+run_wrapper "$R14" "$R14" --draft "$D14S" --dry-run
+assert_true "grounds with only a commit SHA: accepted (dry-run exits 0)" "[ \"$WRAPPER_STATUS\" -eq 0 ]"
+
+D14Q="$R14/.autoflow/issue-proposal-citation-grounds.md"
+write_draft "$D14Q" "citation grounds title" '`docs/autoflow-guide.md` > VERIFY > Green-tree register — "records that a suite run happened over a known tree"' "zzqxxvcitationgrounds" "candidates: none" "citation grounds body"
+run_wrapper "$R14" "$R14" --draft "$D14Q" --dry-run
+assert_true "grounds with only a document citation (path > heading — \"fragment\"): accepted (dry-run exits 0)" "[ \"$WRAPPER_STATUS\" -eq 0 ]"
+
+D14L="$R14/.autoflow/issue-proposal-line-grounds.md"
+write_draft "$D14L" "line grounds title" "docs/autoflow-guide.md:1068 — the section" "zzqxxvlinegrounds" "candidates: none" "line grounds body"
+run_wrapper "$R14" "$R14" --draft "$D14L" --dry-run
+assert_true "grounds with only a bare path:line: refused (exits 65)" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
+assert_true "grounds with only a bare path:line: creates nothing" "[ \"\$(creation_call_count "$R14/gh.log")\" -eq 0 ]"
+assert_true "grounds with only a bare path:line: the refusal names the document-citation form" "grep -qF 'document citation' '$R14/err.log' 2>/dev/null"
 
 # (iii) a 65 refusal leaves the draft untouched (malformed draft, reused shape).
 D14C="$R14/.autoflow/issue-proposal-malformed.md"
@@ -575,14 +601,14 @@ assert_true "refusal: no numbered proposal file was created for it" \
 
 # (iv) a non-zero gh create exit propagates and leaves the draft untouched.
 D14D="$R14/.autoflow/issue-proposal-ghfail.md"
-write_draft "$D14D" "gh failure title" "path/to/file.sh:12" "zzqxxvghfail" "candidates: none" "gh failure body"
+write_draft "$D14D" "gh failure title" "0badc0ffee12" "zzqxxvghfail" "candidates: none" "gh failure body"
 GH_CREATE_EXIT=7 run_wrapper "$R14" "$R14" --draft "$D14D"
 assert_true "gh failure: propagates a non-zero exit" "[ \"$WRAPPER_STATUS\" -ne 0 ]"
 assert_true "gh failure: the draft is left in place" "[ -f '$D14D' ]"
 
 # (v) a create URL with no parsable trailing number is a failed bind.
 D14E="$R14/.autoflow/issue-proposal-nonumber.md"
-write_draft "$D14E" "no number url title" "path/to/file.sh:13" "zzqxxvnonumber" "candidates: none" "no number url body"
+write_draft "$D14E" "no number url title" "0badc0ffee13" "zzqxxvnonumber" "candidates: none" "no number url body"
 GH_CREATE_URL="https://github.com/example/repo/issues/not-a-number" run_wrapper "$R14" "$R14" --draft "$D14E"
 assert_true "unparsable URL: exits non-zero" "[ \"$WRAPPER_STATUS\" -ne 0 ]"
 assert_true "unparsable URL: the draft is left in place (no guessed rename)" "[ -f '$D14E' ]"
@@ -593,7 +619,7 @@ echo ""
 echo "=== issue #96 — the duplicate query itself failing (VERIFY minimal-implementation follow-up) ==="
 R15=$(new_repo)
 D15="$R15/.autoflow/list-fail.md"
-write_draft "$D15" "[chore] zzqxxvlistfailterm" "path/to/file.sh:10" "zzqxxvlistfailterm" "candidates: none" "body text"
+write_draft "$D15" "[chore] zzqxxvlistfailterm" "0badc0ffee10" "zzqxxvlistfailterm" "candidates: none" "body text"
 GH_LIST_FAIL_TERMS="zzqxxvlistfailterm" run_wrapper "$R15" "$R15" --draft "$D15"
 assert_true "a failed 'gh issue list' query refuses rather than treating it as zero candidates: exits 65" "[ \"$WRAPPER_STATUS\" -eq 65 ]"
 assert_true "a failed query names the term it was querying" "grep -qF 'zzqxxvlistfailterm' '$R15/err.log' 2>/dev/null"
@@ -604,7 +630,7 @@ echo ""
 echo "=== issue #96 — the post-create rename failing (VERIFY minimal-implementation follow-up) ==="
 R16=$(new_repo)
 D16="$R16/.autoflow/rename-fail.md"
-write_draft "$D16" "zzqxxvrenamefailalpha zzqxxvrenamefailbeta" "path/to/file.sh:10" "zzqxxvrenamefailalpha" "candidates: none" "body text"
+write_draft "$D16" "zzqxxvrenamefailalpha zzqxxvrenamefailbeta" "0badc0ffee10" "zzqxxvrenamefailalpha" "candidates: none" "body text"
 chmod 555 "$R16/.autoflow"   # the wrapper's own creation succeeds; only the rename's mv is denied
 GH_CREATE_URL="https://github.com/example/repo/issues/888" run_wrapper "$R16" "$R16" --draft "$D16"
 RENAME_FAIL_STATUS="$WRAPPER_STATUS"
