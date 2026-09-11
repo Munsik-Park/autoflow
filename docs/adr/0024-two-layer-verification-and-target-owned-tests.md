@@ -230,7 +230,7 @@ differential is evidence; an absent filename is not.
 **The differential is exculpatory only, never a required step.** Its unavailability yields
 `detected` — never `not-run`, never a BLOCK, never a pause. The shallow clone in which a scoped run
 is hardest is the same checkout in which a base-tree run is impossible (`fetch-depth: 0` at
-`.github/workflows/contract-suites.yml:338` is a standing-layer guarantee only), so a required
+`.github/workflows/contract-suites.yml:336` is a standing-layer guarantee only), so a required
 differential would re-open that environment as a new blocking point; and `not-run` attaches to the
 **non-execution of the chain** (`docs/submodule-common-rules.md:195`), whereas here the chain
 executed and it is the exculpation that could not be attempted.
@@ -467,7 +467,7 @@ broken* — and D4/D5 make that question CI's. A BLOCK on that path is a device 
 coverage hole, so the rule that degraded it to executing has no surviving subject. What is
 **retained** is the **fail-closed** disposition wherever selection survives: the selector already
 refuses to emit an empty selection (`scripts/test/select-suites.sh:203-206`) and CI already exits
-non-zero on an unresolved selection (`.github/workflows/contract-suites.yml:355-357`) rather than
+non-zero on an unresolved selection (`.github/workflows/contract-suites.yml:353-356`) rather than
 widening the run. That site is therefore not a coupled site of the deleted row — it carries the rule
 this record keeps, not the one it deletes.
 
