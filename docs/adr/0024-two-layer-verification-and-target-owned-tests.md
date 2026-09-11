@@ -408,7 +408,7 @@ editing".
 | VALIDATE step 1's whole-tree sweep and its tree quiesce (`docs/autoflow-guide.md:1462`, `:1464`) | `deleted` — the coverage floor relocates to the standing layer (D4, D5) |
 | GREEN step 5 / VERIFY step 1 / REFINE step 2 capture-point execution, quiesce and tree-identity predicate (`docs/autoflow-guide.md:949`, `:985`, `:1413-1416`) | `replaced` — the predicate and the quiesce leave with the register (D6); the execution obligation narrows to M's execution rule |
 | Whole-tree-run prohibition and its one-invoker sentence (`docs/autoflow-guide.md:900`; `.claude/agents/autoflow-implementer.md:38`) | `replaced` — deleting VALIDATE step 1 falsifies the rule's own text, so it is rewritten to *the cycle layer carries no local whole-tree execution: none scheduled, none held in reserve*; the local run set is **declared** under M's execution rule rather than selected, so no device has a local whole-tree run to degrade to |
-| Selector-BLOCK degradation (`docs/autoflow-guide.md:1693-1695`) and its two coupled device sites — the selector's degrade-to-executing sentence (`scripts/test/select-suites.sh:195`) and the runner's failed-selection comment and operator message (`scripts/test/run-suites.sh:129-137`) | `deleted` — the rule and its subject both go: with the local run set declared rather than selected, a selector BLOCK is a device failure on a path that no longer carries a coverage floor, not a local coverage hole to backfill by executing the standing set |
+| Selector-BLOCK degradation (`docs/autoflow-guide.md:1693-1695`) and its two coupled device sites — the selector's degrade-to-executing sentence (`scripts/test/select-suites.sh:195`) and the runner's failed-selection comment and operator message (`scripts/test/run-suites.sh:129-132, :135`) | `deleted` — the rule and its subject both go: with the local run set declared rather than selected, a selector BLOCK is a device failure on a path that no longer carries a coverage floor, not a local coverage hole to backfill by executing the standing set |
 | Runner/selector-only execution and the `\|\| { … }` idiom (`docs/submodule-common-rules.md:262`, `:277`) | `conditional` — keyed on the target's suite-plane opt-in (D3); the idiom leaves with `scripts/test/suite-coverage.sh` |
 | RED-entry derivation of the affected suites (`.claude/agents/autoflow-tester.md:11`) | `replaced` — by D3's call site to the target's declared test command |
 | `inherited` reporting and the green-tree discharge (`docs/teammate-contracts.md:67`, `:112`, `:127`; `docs/evaluation-system.md:141`, `:143`; `CLAUDE.md` > *Verify teammate claims*) | `deleted` — with the register and its shared store (D6) |
@@ -469,7 +469,7 @@ this record keeps, not the one it deletes.
 | The `docs/adr/README.md` ADR-0024 row | **additive** — a new record, not a fate of an existing rule; outside the four-word vocabulary by construction |
 
 The two device sites coupled to the now-`deleted` Selector-BLOCK degradation rule
-(`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-137`) are disposed in their
+(`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-132, :135`) are disposed in their
 parent rule's Area-1 row, under the same convention as `cycle-arm`'s coupled sites above.
 
 **Why the status rows are here and not cosmetic.** A governing ADR is one with status `Accepted` /
@@ -599,7 +599,7 @@ registry row.
   from it: D3's *AutoFlow synthesizes no selection predicate* clause; the whole-tree-run prohibition
   row's replacement text, which no longer holds a local whole-tree run in reserve; and the
   Selector-BLOCK degradation row's move `replaced` → `deleted`, carrying its two coupled device sites
-  (`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-137`), with
+  (`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-132, :135`), with
   `scripts/test/select-suites.sh:203-206` not among them because it carries the fail-closed rule this
   record retains. **Retracted by round 2 below** — named here so no reader takes them as governing —
   this entry's statements that the whole-tree-run clause was superseded by a declared-form
@@ -642,10 +642,13 @@ registry row.
     decision's own fourth clause, that AC2 is a property of AutoFlow's rules and not an observation
     of target runtime: what the declared command executes internally is outside this model, so there
     is nothing left for AutoFlow to require of it, degrade to, or refuse. What survives of round 1's
-    residual state is a **report, not a gate**, and it is stated where it belongs — **M**'s
-    RED-integrity paragraph (`:67-71`): a `driving` row that never ran yields no Red confirmation,
-    which is the absence of a confirmation AutoFlow owes **itself**, not a rule imposed on the
-    target. D3 states no residual `not-run` gate of its own.
+    residual state is a **report, not a gate**, and it is stated where it belongs — the outcome
+    vocabulary D3 keeps (`:188-190`: `not-run` is never `clean`) and D2's re-execution rule
+    (`:136`: a check that did not execute is `not-run`, never `passed`). The consequence for RED
+    follows from **M**'s RED-integrity paragraph (`:67-71`) rather than being stated there: a
+    `driving` row must FAIL before GREEN, so a row that never ran yields no Red confirmation —
+    the absence of a confirmation AutoFlow owes **itself**, not a rule imposed on the target. D3
+    states no residual `not-run` gate of its own.
   - **Also moved**: the two *Alternatives* entries whose subject was the precondition's candidate
     objects lose it and go; the file-name-predicate entry is rewritten to reject **any**
     AutoFlow-side attribution rule on 설계 원칙 1, absorbing the known-failure-fingerprint entry as

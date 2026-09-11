@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/adr/0024-two-layer-verification-and-target-owned-tests.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b0f69336de3256e957ec4275733fa6fa0dd6a034c45931cf0841d13c0fabcb6d"
+      "sha256": "155f498b8768b5a8c383c4bce5844bc5832d8151ae5d6af293d2653d5412b974"
     },
     {
       "source": "docs/adr/README.md",
