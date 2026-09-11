@@ -45,6 +45,14 @@
 #     POLICY_SKIP=<reason> line per `SKIP: D6` (repeated keys — consumers
 #     read every occurrence; the skip reason names what could not be resolved
 #     and the paths tried, so SKILL.md Step 1 can say so).
+#   - SUITE_HEADER is the D7 axis (issue #213), reported separately for the
+#     same reason: a suite under the target's tests/** that declares no usable
+#     `# ci-subject:` header BLOCKs the shipped selector, and the suites are
+#     target-owned — a re-stamp never adds a header. Same vocabulary and
+#     precedence as POLICY: SUITE_HEADER_STATE = fail | skip | pass | na |
+#     error; SUITE_HEADER_FAILS = the count of `FAIL: D7` lines; one
+#     SUITE_HEADER_FINDING=<msg> per header-less suite and one
+#     SUITE_HEADER_SKIP=<reason> per `SKIP: D7`.
 #   - VERSION_SKEW compares the installed manifest .version against the cache
 #     thin-root source setup/manifest.json .version (the exact file init.sh
 #     byte-copies in) — a distinct comparand from drift-check D2 (plugin.json).
@@ -94,7 +102,7 @@ else
   INSTALL_STATE=absent
 fi
 
-# ── DRIFT (D1/D3/D4 — stamp-repairable; D2/D5/D6 not stamp-repairable, filtered out) ─
+# ── DRIFT (D1/D3/D4 — stamp-repairable; D2/D5/D6/D7 not stamp-repairable, filtered out) ─
 DRIFT_STATE=na
 DRIFT_FAILS=0
 DRIFT_FIRST=
@@ -102,6 +110,10 @@ POLICY_STATE=na
 POLICY_FAILS=0
 POLICY_FINDINGS=
 POLICY_SKIPS=
+SUITE_HEADER_STATE=na
+SUITE_HEADER_FAILS=0
+SUITE_HEADER_FINDINGS=
+SUITE_HEADER_SKIPS=
 if [ "$INSTALL_STATE" = installed ]; then
   if [ ! -f "$DRIFT_ORACLE" ]; then
     # Deterministic degradation (no silent clean): the cache drift oracle is
@@ -122,7 +134,23 @@ if [ "$INSTALL_STATE" = installed ]; then
       # drift-check itself could not run (jq absent / manifest unreadable).
       DRIFT_STATE=error
     else
-      _nd2=$(printf '%s\n' "$_drift_out" | grep '^FAIL: ' | grep -v -e '^FAIL: D2 ' -e '^FAIL: D5 ' -e '^FAIL: D6 ')
+      _nd2=$(printf '%s\n' "$_drift_out" | grep '^FAIL: ' | grep -v -e '^FAIL: D2 ' -e '^FAIL: D5 ' -e '^FAIL: D6 ' -e '^FAIL: D7 ')
+      # D7 (issue #213) on its own axis, with POLICY's precedence: header-less
+      # suites are target-owned, so a finding never moves DRIFT_STATE.
+      _d7_fails=$(printf '%s\n' "$_drift_out" | grep '^FAIL: D7 ' | sed -E 's/^FAIL: D7 -- //')
+      SUITE_HEADER_SKIPS=$(printf '%s\n' "$_drift_out" | grep '^SKIP: D7 ' | sed -E 's/^SKIP: D7 -- //')
+      if [ -n "$_d7_fails" ]; then
+        SUITE_HEADER_STATE=fail
+        SUITE_HEADER_FAILS=$(printf '%s\n' "$_d7_fails" | wc -l | tr -d ' ')
+        SUITE_HEADER_FINDINGS=$_d7_fails
+      elif [ -n "$SUITE_HEADER_SKIPS" ]; then
+        SUITE_HEADER_STATE=skip
+      elif printf '%s\n' "$_drift_out" | grep -q '^PASS: D7'; then
+        SUITE_HEADER_STATE=pass
+      else
+        # No D7 verdict at all: an oracle that predates the leg — never pass.
+        SUITE_HEADER_STATE=error
+      fi
       # D6 (issue #185) on its own axis: the spawn-policy scaffold vs the
       # agent definitions the session loads. Not stamp-repairable (the
       # scaffold is never overwritten), so it never moves DRIFT_STATE; the
@@ -158,8 +186,9 @@ if [ "$INSTALL_STATE" = installed ]; then
         # (shell syntax error, set -u abort, or a bare exit N) -> error,
         # never silent clean (mirrors the L57-58 file-absent guarantee).
         # A non-zero exit WITH a FAIL: line here can only be D2/D5-only
-        # plugin-tier skew or a D6-only scaffold finding (both intentionally
-        # filtered; D6 is reported on the POLICY axis) -> stays clean.
+        # plugin-tier skew, a D6-only scaffold finding or a D7-only suite-header
+        # finding (all intentionally filtered; D6 is reported on the POLICY
+        # axis, D7 on the SUITE_HEADER axis) -> stays clean.
         if [ "$_drift_rc" -ne 0 ] \
            && ! printf '%s\n' "$_drift_out" | grep -q '^FAIL: '; then
           DRIFT_STATE=error
@@ -334,6 +363,20 @@ if [ -n "$POLICY_SKIPS" ]; then
   printf '%s\n' "$POLICY_SKIPS" | while IFS= read -r _ps; do
     [ -n "$_ps" ] || continue
     printf 'POLICY_SKIP=%s\n' "$_ps"
+  done
+fi
+printf 'SUITE_HEADER_STATE=%s\n' "$SUITE_HEADER_STATE"
+printf 'SUITE_HEADER_FAILS=%s\n' "$SUITE_HEADER_FAILS"
+if [ -n "$SUITE_HEADER_FINDINGS" ]; then
+  printf '%s\n' "$SUITE_HEADER_FINDINGS" | while IFS= read -r _sf; do
+    [ -n "$_sf" ] || continue
+    printf 'SUITE_HEADER_FINDING=%s\n' "$_sf"
+  done
+fi
+if [ -n "$SUITE_HEADER_SKIPS" ]; then
+  printf '%s\n' "$SUITE_HEADER_SKIPS" | while IFS= read -r _ss; do
+    [ -n "$_ss" ] || continue
+    printf 'SUITE_HEADER_SKIP=%s\n' "$_ss"
   done
 fi
 printf 'VERSION_INSTALLED=%s\n' "$VERSION_INSTALLED"

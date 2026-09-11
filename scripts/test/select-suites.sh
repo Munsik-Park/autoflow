@@ -44,17 +44,32 @@
 # is inert there. Callers verifying a working tree (the interim capture point in
 # scripts/test/suite-coverage.sh) pass it; CI, whose checkout is clean, does not.
 #
+# HEADER CHECK is the validation stage alone, through `--check-headers`: every
+# enumerated suite whose `ci-subject` header is absent or empty, one path per
+# line on stdout, and no selection. It resolves no delta, so it needs no git
+# checkout and never sources the root's tests/lib/base-ref.sh — which is what
+# lets setup/thin-root-layer/drift-check.sh (D7) run it from its own tree over a
+# target it has not been confirmed to trust. A suite that predates the header
+# contract is the case it exists for (issue #213): the contract binds a suite at
+# creation, the selection below binds every enumerated suite, and a target that
+# held suites before adopting the suite plane meets that gap at its first RED.
+# `--base`, `--event` and `--include-worktree` are inert under it.
+#
 # Usage:
 #   bash scripts/test/select-suites.sh [--root <dir>] [--base <ref>]
 #                                      [--event pull_request|push]
-#                                      [--include-worktree]
+#                                      [--include-worktree] [--check-headers]
 #
-# stdout: one selected repo-relative suite path per line.
-# stderr: the per-subject SELECTED: / NOT-SELECTED: report.
+# stdout: one selected repo-relative suite path per line; under
+#         --check-headers, one header-less suite path per line.
+# stderr: the per-subject SELECTED: / NOT-SELECTED: report; under
+#         --check-headers, a single summary record.
 # Exit:   0 normal, 1 BLOCK (unresolvable base, or an absent / empty
 #         `ci-subject` header on an enumerated suite — validated ahead of the
-#         selection loop, so a BLOCK never leaves a partial report behind),
-#         2 usage.
+#         selection loop, so a BLOCK never leaves a partial report behind; every
+#         such suite is named, not only the first), 2 usage. Under
+#         --check-headers: 0 when every enumerated suite declares a usable
+#         header (zero suites included), 1 when any does not.
 # =============================================================================
 
 set -uo pipefail
@@ -69,9 +84,11 @@ ROOT=""
 BASE=""
 EVENT="${GITHUB_EVENT_NAME:-pull_request}"
 INCLUDE_WORKTREE=0
+MODE=select
 while [ $# -gt 0 ]; do
   case "$1" in
     --include-worktree) INCLUDE_WORKTREE=1 ;;
+    --check-headers)    MODE=headers ;;
     --root)      require_value select-suites "$1" $# "${2:-}" || exit 2; ROOT="$2"; shift ;;
     --base)      require_value select-suites "$1" $# "${2:-}" || exit 2; BASE="$2"; shift ;;
     --event)     require_value select-suites "$1" $# "${2:-}" || exit 2; EVENT="$2"; shift ;;
@@ -123,13 +140,13 @@ resolve_delta() {
 }
 
 # ---------------------------------------------------------------------------
-# select_over <root> <event> <base> <include-worktree>
+# select_over <root> <event> <base> <include-worktree> <mode: select|headers>
 # ---------------------------------------------------------------------------
 select_over() {
-  local root="$1" event="$2" base="$3" include_worktree="${4:-0}"
+  local root="$1" event="$2" base="$3" include_worktree="${4:-0}" mode="${5:-select}"
   local delta="" full_set=0 lib_touched=0 suite tok path matched reason
   local hdr toks
-  local -a suites=()
+  local -a suites=() headerless=()
   local -A ci_subject_hdr=()
 
   # Enumerated once and reused by both the validation and selection loops below
@@ -148,14 +165,36 @@ select_over() {
   # partial report behind, which the reconciler now reads as evidence.
   # The validated header is cached per suite so the selection loop below reuses
   # it instead of re-reading and re-parsing each suite file a second time.
+  # Every suite is examined before the BLOCK is reported: a target whose suites
+  # predate the contract has to migrate all of them, and naming only the first
+  # turns one migration into as many runs as there are suites.
   for suite in ${suites[@]+"${suites[@]}"}; do
     if ! hdr="$(suite_header_field "$root/$suite" ci-subject)" || [ -z "$hdr" ]; then
-      echo "BLOCK: select-suites — $suite declares no usable '# ci-subject:' header; refusing to select against an unreadable trigger surface" >&2
-      echo "  A suite whose declared subject cannot be read is not correctly narrowed to nothing — it is unjudgeable." >&2
-      return 1
+      headerless+=("$suite")
+      continue
     fi
     ci_subject_hdr["$suite"]="$hdr"
   done
+
+  if [ "$mode" = headers ]; then
+    if [ "${#headerless[@]}" -eq 0 ]; then
+      echo "select-suites: headers OK — ${#suites[@]} suite(s) enumerated, none without a usable '# ci-subject:' header" >&2
+      return 0
+    fi
+    printf '%s\n' "${headerless[@]}"
+    echo "select-suites: ${#headerless[@]} of ${#suites[@]} enumerated suite(s) declare no usable '# ci-subject:' header — every selection BLOCKs until they do" >&2
+    echo "  Migration: docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites." >&2
+    return 1
+  fi
+
+  if [ "${#headerless[@]}" -gt 0 ]; then
+    for suite in "${headerless[@]}"; do
+      echo "BLOCK: select-suites — $suite declares no usable '# ci-subject:' header; refusing to select against an unreadable trigger surface" >&2
+    done
+    echo "  A suite whose declared subject cannot be read is not correctly narrowed to nothing — it is unjudgeable." >&2
+    echo "  A suite that predates the header contract is migrated once, outside any cycle: docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites. Until then a caller degrades to executing, never to skipping — 'run-suites.sh --all' runs the enumerated set." >&2
+    return 1
+  fi
 
   if [ "$event" = "push" ]; then
     full_set=1
@@ -219,5 +258,5 @@ select_over() {
   return 0
 }
 
-select_over "$ROOT" "$EVENT" "$BASE" "$INCLUDE_WORKTREE"
+select_over "$ROOT" "$EVENT" "$BASE" "$INCLUDE_WORKTREE" "$MODE"
 exit $?

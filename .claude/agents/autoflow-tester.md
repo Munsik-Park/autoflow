@@ -16,7 +16,10 @@ Hard rules:
   #192, `docs/autoflow-guide.md` > RED > *Derivation on entry*). A suite the
   derivation names and the design did not anticipate is ordinary RED input, not a
   plan defect; only a derivation that contradicts a design **decision** returns to
-  ARCHITECT.
+  ARCHITECT. When the selector BLOCKs (no base resolves, or a suite declares no
+  usable `ci-subject` header), derive against the whole enumerated set — never
+  an empty one — and carry the `BLOCK:` lines in your report; a header-less
+  suite outside the change surface is the target's migration, not yours to edit.
 - Write tests from the acceptance criteria only — independent of the
   developer's implementation intent.
 - Modify test files only; implementation code is read-only to you.

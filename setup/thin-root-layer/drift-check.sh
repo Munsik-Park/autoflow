@@ -41,6 +41,14 @@
 #       place a stale one is named before a fail-closed readout hits it in
 #       ARCHITECT (issue #185). SKIP when the readout, the scaffold or the
 #       definitions cannot be resolved, naming what was tried.
+#   D7  suite headers the shipped selector requires: every executable spec
+#       under the target's `tests/**` declares a usable `# ci-subject:`
+#       header, or `scripts/test/select-suites.sh` BLOCKs every selection —
+#       RED's suite derivation first. Suites that predate the header contract
+#       are target-owned and a re-stamp never adds their headers, so this is
+#       the only place they are named before RED meets the BLOCK (issue #213).
+#       One FAIL per header-less suite, from the selector's own
+#       `--check-headers` stage; SKIP when the selector cannot be resolved.
 #
 # Exit: 0 = no drift (SKIP and WARN allowed); 1 = any FAIL.
 #   A FAIL is a PREFLIGHT stop condition (see setup/SETUP-GUIDE.md): D1/D3 →
@@ -49,7 +57,9 @@
 #   refresh the clone first if it is the side that is behind); D5 → update the
 #   plugin (`/plugin update <plugin>@<marketplace>`); D6 → edit the target-owned
 #   scaffold by hand to the loaded definitions' values / add the missing rows
-#   (a re-stamp never overwrites it).
+#   (a re-stamp never overwrites it); D7 → back-fill each named suite's header
+#   (docs/autoflow-guide.md > RED > Header contract > Adopting the contract
+#   over existing suites; a re-stamp never touches tests/**).
 #
 # Consumers that parse this output (plugin/autoflow/skills/install/scripts/
 # detect.sh) key on the `FAIL: <id> -- ` line grammar; keep it.
@@ -466,6 +476,51 @@ else
   else
     hint "D6: the scaffold is target-owned and a re-stamp never overwrites it — edit $_policy by hand: set each named row's effort and agent_type to the loaded definition's values ($_d6_defs), and add each missing row from the current sample${_d6_sample:+ ($_d6_sample)}. Model values and workflow_sites effort are yours to keep."
   fi
+fi
+
+# ── D7: suite headers the shipped selector requires ──────────────────────────
+# The header contract binds a suite at creation, not retroactively; the
+# selector binds every enumerated suite, and BLOCKs the whole selection while
+# any one lacks a usable `ci-subject`. A target whose `tests/**` held
+# suites before it adopted the suite plane satisfies the first rule and fails
+# the second, and nothing else between a re-stamp and RED's derivation says so
+# (issue #213: a target with 7 standing suites and 0 headers re-stamped to a
+# `0 failed` drift-check, then could not derive a suite set).
+#
+# The predicate is not re-typed here: the leg runs the selector's own
+# `--check-headers` stage, which is the selection's validation loop with no
+# delta resolved. That stage reads the target's suites as data (awk over the
+# leading comment block) and never sources the target's tests/lib/base-ref.sh,
+# so the copy executed is the one beside THIS script's tree — the target's own
+# when run in-target, the oracle's own when run pre-confirmation — on the same
+# trust boundary as D6. Verdict is FAIL, not WARN, on D6's reasoning: RED
+# fails closed on the same suites anyway, later and further from the remedy.
+echo "== D7: suite headers the shipped selector requires =="
+SELECT_SUITES_SH="$SCRIPT_DIR/../../scripts/test/select-suites.sh"
+SUITE_MANIFEST_SH="$SCRIPT_DIR/../../scripts/test/suite-manifest.sh"
+if [ ! -f "$SELECT_SUITES_SH" ] || [ ! -f "$SUITE_MANIFEST_SH" ]; then
+  skipc "D7" "suite selector not found beside this script (tried: $SELECT_SUITES_SH; $SUITE_MANIFEST_SH) — suite-header check deferred"
+elif ! command -v bash >/dev/null 2>&1; then
+  skipc "D7" "bash not found (scripts/test/select-suites.sh requires it) — suite-header check deferred"
+else
+  _d7_out=$(mktemp); _d7_err=$(mktemp)
+  bash "$SELECT_SUITES_SH" --check-headers --root "$TARGET_ROOT" >"$_d7_out" 2>"$_d7_err"
+  _d7_rc=$?
+  # Each exit is accepted only with the evidence its own contract promises: a
+  # 0 carries the headers-OK record, a 1 names at least one suite. Anything
+  # else means the stage did not run to a verdict, which is never a PASS.
+  if [ "$_d7_rc" -eq 0 ] && grep -q '^select-suites: headers OK — ' "$_d7_err"; then
+    pass "D7: suite headers OK — $(sed -n 's/^select-suites: headers OK — //p' "$_d7_err" | head -n 1)"
+  elif [ "$_d7_rc" -eq 1 ] && [ -s "$_d7_out" ]; then
+    while IFS= read -r _s; do
+      [ -n "$_s" ] || continue
+      failc "D7" "$_s declares no usable '# ci-subject:' header — scripts/test/select-suites.sh BLOCKs every selection until it does (RED's suite derivation, run-suites.sh without --all)"
+    done < "$_d7_out"
+    hint "D7: these suites are target-owned and a re-stamp never adds their headers — back-fill '# ci-subject:' (with '# lane:' and '# budget-secs:') per docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites; a sourced helper rather than a standalone spec moves under tests/lib/ instead. Re-check with: bash scripts/test/select-suites.sh --check-headers"
+  else
+    failc "D7" "scripts/test/select-suites.sh --check-headers exited $_d7_rc without its verdict record ($(head -n 1 "$_d7_err")) — the suite-header check could not run"
+  fi
+  rm -f "$_d7_out" "$_d7_err"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────
