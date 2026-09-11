@@ -169,8 +169,79 @@ verification that can pass while the system is inconsistent. D7 today has exactl
 arm is required, not optional.
 
 **AutoFlow synthesizes no selection predicate for the target.** Where the target's declared command
-supports scoping, run it scoped; where it only runs whole-tree, run it whole-tree and require that
-no reported failure names a changed file — the lint chain's rule, verbatim in shape.
+supports scoping, run it scoped. What AutoFlow never does is derive, on the target's behalf, *which
+of the target's tests this change requires*.
+
+**The declared-form precondition.** The phases invoke the scoped form the target declares, **at the
+finest grain that declaration carries**; collateral is what that form forces, never what the invoker
+chose. A declaration that carries **no form parameterized by the change** — its only declared command
+runs the standing set unconditionally — **fails the precondition**, and that target's `automated`
+rows are **infeasible** at the blocking point this decision already owns: **GATE:PLAN
+`Feasibility`**, with the fact carried in the verification design (*The unsatisfiable case* below).
+No new gate, no new vocabulary, no new authority. The resolution path is the target declaring a
+scoped form at `.claude/autoflow.local.json` → `tests.command`, which is why JSON is first in the
+discovery order above.
+
+**The predicate's object is the declaration, not the command.** *The finest narrowing the command
+admits* would require AutoFlow to know that this runner takes a file, a class or a test id — the
+competence the preceding paragraph refuses, applied to granularity instead of membership — and no
+artifact records what a command admits, so it could only ever be discharged by assertion. That
+assertion would stand at the only gate that evaluates it: an `automated` row never reaches the
+external reviewer, because the host PR body's `## Verification dispositions` section covers every
+criterion typed *other than* `automated` (`docs/autoflow-guide.md:1787-1790`). The finest grain the
+**declaration** carries is re-derivable by reading the declaration file; what a command admits is
+not.
+
+**The line is categorical, not quantitative.** The question is *does the declared form take the
+change as an input at all?* A whole-tree-only declaration takes none and stays blocked; a coarse
+declared form such as `make test-package PKG=core` takes one and passes. No threshold is set on the
+unit's size: a size threshold is the proxy metric `docs/autoflow-guide.md:519-521` rejects, and
+judging a declared grain too coarse is the second-guessing the next clause forbids.
+
+**M-boundary clause.** M's execution rule binds **the set AutoFlow derives** — rows. The declared
+command's **minimum unit** is the *target's*, and *AutoFlow synthesizes no selection predicate* is
+the decision not to second-guess it. **Collateral** inside that minimum unit is therefore not
+"another `automated` row executing locally" in M's sense, and it is not licence to widen. The clause
+**re-scopes the execution rule's reach**; M's own text is unchanged.
+
+**The fact D3 carries into the verification design** names the declared form and the parameter
+through which this cycle's declared rows enter it — the rows read off the design's own `Type` cells
+— never a computed delta. A diff-valued parameter would need a base ref, which is the dependency a
+declared run set exists to remove.
+
+**Residual state.** A verification point reached with no executable declared form is `not-run` with
+its reason class, never `clean`; and since a `driving` row in `not-run` yields no Red confirmation,
+RED does not proceed. Fail-closed, inherited from the outcome vocabulary below rather than invented
+here.
+
+**Verdict rule — exit status over the declared run set.** The local run set is the cycle's declared
+rows, so **any non-zero outcome over that set is attributed to this cycle** → `detected`. A failure
+is excluded **only** by a **base-tree differential**: the identical command, executed at the
+merge-base tree, failing identically. The lint chain's file-name predicate does not transplant here,
+and the difference is structural rather than a defect of wording — a linter reports *at the offending
+file*, while a test runner reliably reports *which test failed* and never *which source caused it*.
+A predicate over reported file names therefore reads the unreliable half of a test runner's output
+and inverts the error direction from over-execution to under-detection: a change to `src/parser.py`
+that breaks an untouched `tests/test_parser.py` assertion names no changed file and would read as
+clean. The replacement is the lint chain's own principle, already written at
+`docs/submodule-common-rules.md:203` — the permissive class is the one earned by evidence. A
+differential is evidence; an absent filename is not.
+
+**The differential is exculpatory only, never a required step.** Its unavailability yields
+`detected` — never `not-run`, never a BLOCK, never a pause. The shallow clone in which a scoped run
+is hardest is the same checkout in which a base-tree run is impossible (`fetch-depth: 0` at
+`.github/workflows/contract-suites.yml:338` is a standing-layer guarantee only), so a required
+differential would re-open that environment as a new blocking point; and `not-run` attaches to the
+**non-execution of the chain** (`docs/submodule-common-rules.md:195`), whereas here the chain
+executed and it is the exculpation that could not be attempted.
+
+**The exclusion is a set predicate, not a failure predicate.** It reaches only members of the
+declared command's minimum unit that this cycle neither authored nor changed — membership tested
+against the declared row set, never against a diff — so a declared row is never excluded on any
+evidence, and a cycle that changes an already-red test carries that row's failure. Flakiness needs
+no clause: a failure not reproduced identically at the base tree is not excluded, so it resolves
+`detected`. Cost is bounded by the same declared form — the base-tree run is the size of the first
+run, and it is only ever paid on a failing path, so `clean` never costs a second run.
 
 **Outcome vocabulary.** The call site takes the lint chain's outcome vocabulary, total over
 reachable states — `clean` / `fixed-and-staged` / `detected` / `not-run` / `not-applicable` with
@@ -382,13 +453,23 @@ editing".
 |---|---|
 | VALIDATE step 1's whole-tree sweep and its tree quiesce (`docs/autoflow-guide.md:1462`, `:1464`) | `deleted` — the coverage floor relocates to the standing layer (D4, D5) |
 | GREEN step 5 / VERIFY step 1 / REFINE step 2 capture-point execution, quiesce and tree-identity predicate (`docs/autoflow-guide.md:949`, `:985`, `:1413-1416`) | `replaced` — the predicate and the quiesce leave with the register (D6); the execution obligation narrows to M's execution rule |
-| Whole-tree-run prohibition and its one-invoker sentence (`docs/autoflow-guide.md:900`; `.claude/agents/autoflow-implementer.md:38`) | `replaced` — deleting VALIDATE step 1 falsifies the rule's own text, so it is rewritten to *no scheduled whole-tree position; one fallback position — a selector BLOCK at a capture point, the orchestrator its only invoker* |
-| Selector-BLOCK degradation (`docs/autoflow-guide.md:1693-1695`) | `replaced` — `run-suites.sh --all` survives as the fallback, so "degrades to executing, never to skipping" stays literally true |
+| Whole-tree-run prohibition and its one-invoker sentence (`docs/autoflow-guide.md:900`; `.claude/agents/autoflow-implementer.md:38`) | `replaced` — deleting VALIDATE step 1 falsifies the rule's own text, so it is rewritten to *the cycle layer carries no local whole-tree execution: none scheduled, none held in reserve*; the local run set is **declared** under M's execution rule rather than selected, so no device has a local whole-tree run to degrade to |
+| Selector-BLOCK degradation (`docs/autoflow-guide.md:1693-1695`) and its two coupled device sites — the selector's degrade-to-executing sentence (`scripts/test/select-suites.sh:195`) and the runner's failed-selection comment and operator message (`scripts/test/run-suites.sh:129-137`) | `deleted` — the rule and its subject both go: with the local run set declared rather than selected, a selector BLOCK is a device failure on a path that no longer carries a coverage floor, not a local coverage hole to backfill by executing the standing set |
 | Runner/selector-only execution and the `\|\| { … }` idiom (`docs/submodule-common-rules.md:262`, `:277`) | `conditional` — keyed on the target's suite-plane opt-in (D3); the idiom leaves with `scripts/test/suite-coverage.sh` |
 | RED-entry derivation of the affected suites (`.claude/agents/autoflow-tester.md:11`) | `replaced` — by D3's call site to the target's declared test command |
 | `inherited` reporting and the green-tree discharge (`docs/teammate-contracts.md:67`, `:112`, `:127`; `docs/evaluation-system.md:141`, `:143`; `CLAUDE.md` > *Verify teammate claims*) | `deleted` — with the register and its shared store (D6) |
 | Header contract and suite-disposition derivation (`docs/autoflow-guide.md:349`, RED > *Completion*) | `conditional` — on the target's opt-in (D3); `retained` for this repository, where the contract is the standing layer's trigger-coverage input (D5) |
 | Cycle-artifact preservation list (`docs/autoflow-guide.md:189`) | `replaced` — `.autoflow/issue-{N}-local/` joins it as a fourth cycle-spanning artifact (D2) |
+
+**Why the Selector-BLOCK row is `deleted` and not `replaced`.** Once the local run set is declared,
+the selector answers a different question — *which of the standing suites could this delta have
+broken* — and D4/D5 make that question CI's. A BLOCK on that path is a device failure, not a local
+coverage hole, so the rule that degraded it to executing has no surviving subject. What is
+**retained** is the **fail-closed** disposition wherever selection survives: the selector already
+refuses to emit an empty selection (`scripts/test/select-suites.sh:203-206`) and CI already exits
+non-zero on an unresolved selection (`.github/workflows/contract-suites.yml:355-357`) rather than
+widening the run. That site is therefore not a coupled site of the deleted row — it carries the rule
+this record keeps, not the one it deletes.
 
 ### Area 2 — evaluation criteria
 
@@ -432,6 +513,10 @@ editing".
 | The ADR-0019 status records (`docs/adr/0019-scope-fit-verification-policy.md:5`, `docs/adr/README.md:36`) | `replaced` — adjacent sites of the enumerated ADR-0019 row, repaired to the composite status string form |
 | The ADR-0022 status records (`docs/adr/0022-test-necessity-and-three-tier-ac-guard.md:5`, `docs/adr/README.md:39`) | `replaced` — grounded in this ADR's *Amends ADR-0022* line, in the same composite form |
 | The `docs/adr/README.md` ADR-0024 row | **additive** — a new record, not a fate of an existing rule; outside the four-word vocabulary by construction |
+
+The two device sites coupled to the now-`deleted` Selector-BLOCK degradation rule
+(`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-137`) are disposed in their
+parent rule's Area-1 row, under the same convention as `cycle-arm`'s coupled sites above.
 
 **Why the status rows are here and not cosmetic.** A governing ADR is one with status `Accepted` /
 `Proposed` whose Decision scope intersects the change surface (`docs/autoflow-guide.md:734`), and
@@ -490,6 +575,30 @@ registry row.
 - **Promoting `contract-suites.yml` to a required status check.** It would bind the external
   reviewer's merge — authority AutoFlow does not hold — and convert a flaky check into a hard block
   the reviewer cannot judge around.
+- **Keeping a local whole-tree run as an operator-approved, logged exception.** It requires an
+  operator decision reopening the acceptance criterion that forbids the run (`CLAUDE.md` >
+  *Acceptance-criterion decisions*) — authority this record does not hold — and it puts a human in
+  every cycle run from a shallow clone, a common environment rather than a rare one.
+- **Re-deriving the change set by another route** — a worktree diff, a last-known-good SHA, a
+  target-declared file list — so that a selector BLOCK has something to degrade to. It reinstates
+  AutoFlow synthesizing a selection predicate for the target, which D3's first sentence refuses, and
+  it relocates the failure inside the selector instead of removing it; moot once the run set is
+  declared rather than selected.
+- **Declaring the un-narrowable path "locally unverifiable" and mandating CI registration on it.**
+  It contradicts D1's split (`CI-registered` only where the target opted in) and, decisively, it
+  breaks RED: no CI run exists before push, so a `driving` row would have no failing observation
+  anywhere. It trades one violation for another.
+- **"The finest narrowing the command admits" as the precondition's object**, and **"the declared
+  form runs the cycle's rows alone"** as its test. The first needs the competence D3 refuses and is
+  unfalsifiable at its sole re-derivation point; the second is unsatisfiable for ordinary command
+  granularities — a file-granular command runs untouched siblings — so under it an ordinary target
+  would have no feasible `automated` row at all.
+- **A known-failure test-id fingerprint set carried across cycles**, in place of the base-tree
+  differential. It requires a per-target baseline record to be maintained and refreshed, and a stale
+  record misses a new regression that reuses a past failure's id — evidence that decays, where a
+  differential is derived at the moment it is used.
+- **Repairing the file-name predicate rather than replacing it.** The causal file is structurally
+  absent from a test runner's output, so no repair of name matching can recover it.
 
 ## Consequences
 
@@ -525,6 +634,20 @@ registry row.
 ## Related Issues / PRs
 
 - Issue #217 — this decision; implementation deferred to the S1–S4 sub-issues above.
+- **Revision — PR #220 review (cycle 2).** The external review of this record returned two `Medium`
+  findings on D3 and its Area-1 rows, and this revision is the response. What changed: D3's
+  *AutoFlow synthesizes no selection predicate* clause **stands**; its whole-tree-run clause is
+  superseded by the **declared-form precondition**, and its borrowed lint verdict rule by the
+  **exit-status verdict over the declared run set**. The whole-tree-run prohibition row's replacement
+  text no longer holds a local whole-tree run in reserve, and the Selector-BLOCK degradation row
+  moves `replaced` → `deleted`, carrying its two coupled device sites
+  (`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-137`);
+  `scripts/test/select-suites.sh:203-206` is not one of them, because it carries the fail-closed rule
+  this revision retains. D3 additively gains the declared-form precondition, the M-boundary clause
+  and the content of the fact it carries into the verification design, superseding nothing further;
+  Area 2 and Area 3 keep their words. **M's execution rule itself does not move**: the M-boundary
+  clause re-scopes its *reach* — collateral inside the target's declared minimum unit is outside the
+  set AutoFlow derives — rather than changing the rule.
 - Supersedes `docs/adr/0019-scope-fit-verification-policy.md`: decision 1 and decision 2 in full,
   decision 3 in part — `inherited_verdicts` is deleted with the Green-tree register, while the
   anchor-before-execute, representative-sampling and wall-clock-cap obligations are retained and
@@ -548,3 +671,6 @@ registry row.
   "When to Create an ADR" trigger area — so it lands ahead of the mechanisms it governs.
 - **Effective from the next cycle.** The cycle that writes this record is governed by the
   pre-existing rules; see *Clauses this ADR carries beyond M and D1–D6*.
+- **Revised in response to the external review of PR #220** — two `Medium` findings, on D3's
+  whole-tree exception and on its borrowed failure-verdict rule. The supersessions that revision
+  records, and the clauses it leaves standing, are listed in *Related Issues / PRs*.
