@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note); decision 2's `delivery-check` definition amended by ADR-0024 (see ADR-0024 > *Related Issues / PRs*)
+Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note); decision 2's `delivery-check` definition amended by ADR-0024 (see ADR-0024 > *Related Issues / PRs*); decision 1's role as the retention filter replaced by ADR-0024 D1, issue #222 (see Superseding note (issue #222))
 
 ## Context
 
@@ -175,3 +175,16 @@ body. Tier 3 is reached through the orchestrator's routing of the deliberation r
 conclusion that changes an acceptance criterion's content goes to the operator before GATE:PLAN —
 and through the two gates' AC-authority checks, which are unchanged and scored. The test-necessity
 clause, the disposition vocabulary and the reason obligation are unaffected.
+
+## Superseding note (issue #222)
+
+Decision 1's necessity judgment no longer decides whether a verification **stays in the
+repository**. Retention is ADR-0024 D1's closed category list — a check is `standing` only when the
+defect it catches surfaces after deployment, and `automated` defaults to `cycle` (one local run,
+uncommitted, result recorded). Passing the two-input judgment does not imply a committed test, and
+a stated reason does not move a row out of `cycle`.
+
+What decision 1 still governs is **existence**: whether a criterion is verified at all (`none`
+against any other disposition), with `none` under uncertainty. Decisions 2–6 are unchanged. The
+replaced / retained split is recorded in full at ADR-0024 > *Test necessity — what D1 replaces and
+what it retains*.

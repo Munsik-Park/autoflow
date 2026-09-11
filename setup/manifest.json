@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/adr/0022-test-necessity-and-three-tier-ac-guard.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4f3bb5d0265b7d3141904fae16d8b03c705043488b56d76394026624459af4e7"
+      "sha256": "154fdc50fc2ea14d9de6ecb0248c8f2e0aeedf098155d86d216083f57b281405"
     },
     {
       "source": "docs/adr/0023-deliberation-participant-lifetime.md",
@@ -104,14 +104,14 @@
       "dest": ".claude/autoflow/docs/adr/0024-two-layer-verification-and-target-owned-tests.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "155f498b8768b5a8c383c4bce5844bc5832d8151ae5d6af293d2653d5412b974"
+      "sha256": "9af36603c837f9cc8ae13f21178b833ed9809827c59615341d9349ebc486e5c8"
     },
     {
       "source": "docs/adr/README.md",
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9ee6b7240631ddc45ab2d3eba67c120dbce41e088236805c79f55a3c4d786eea"
+      "sha256": "bce29b2b6e8753a409d0db333fc95a7ea6ac2e3a0c7b2c26596769e1fc158968"
     },
     {
       "source": "docs/autoflow-guide.md",
