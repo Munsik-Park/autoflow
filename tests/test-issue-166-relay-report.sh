@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/workflows/architect-deliberation.js .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh .claude/agents/autoflow-planner.md
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #166 / #179 — ARCHITECT deliberation: the record workflow and the

@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/gate/remedy-route.sh .claude/hooks/check-autoflow-gate.sh tests/fixtures/issue-140-ledger-138.md
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: late-gate FAIL cause-branch re-entry (issue #140)

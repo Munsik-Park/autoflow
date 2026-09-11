@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/select-suites.sh scripts/test/run-suites.sh scripts/test/suite-manifest.sh scripts/test/check-suite-manifest.sh setup/thin-root-layer/drift-check.sh setup/init.sh setup/manifest.json plugin/autoflow/skills/install/scripts/detect.sh plugin/autoflow/skills/install/SKILL.md docs/autoflow-guide.md .claude/agents/autoflow-tester.md plugin/autoflow/agents/autoflow-tester.md
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: a target whose tests/** holds suites that predate the header contract

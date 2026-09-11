@@ -2,10 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/autoflow/spawn-policy.json tests/manual/issue-150-manual-scenarios.md
-# lane: cycle-scoped
-# retire-with: #150
-# cycle-arm: #150
-# out-of-tree-inputs: yes
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #150 migration fidelity -- the config's model values equal the

@@ -64,23 +64,19 @@ on:
       - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
-      # #130: this workflow is the SOLE runner of
-      # check-cleanup-issue-boundary.sh, and that suite is the only layer that
-      # drives the in-repo refusal on the store library's call path. A change to
-      # either new script that did not select this workflow would leave that
-      # call path unexercised in CI.
-      - 'scripts/test/green-tree-store.sh'
-      - 'scripts/test/green-tree-register.sh'
+      # This workflow is the SOLE runner of check-cleanup-issue-boundary.sh,
+      # which is the only layer that drives cleanup-issue.sh's in-repo archive
+      # refusal. A change to either script that did not select this workflow
+      # would leave that call path unexercised in CI.
       - '.github/workflows/e2e-dummy-target.yml'
-      # #26 cycle-scoped RED suite (tests/test-issue-26-verify-architect-route.sh)
-      # retired at issue #27's VERIFY (GATE:QUALITY Impact-scope regression):
-      # PR #33 merged 2026-07-25, and a cycle-scoped guard (suite header
-      # `# lane: cycle-scoped` / `# retire-with:`, checked by
-      # scripts/test/check-suite-manifest.sh) is deleted — along with any
+      # #26 RED suite (tests/test-issue-26-verify-architect-route.sh) retired at
+      # issue #27's VERIFY (GATE:QUALITY Impact-scope regression): PR #33 merged
+      # 2026-07-25, and a one-shot cycle guard is deleted — along with any
       # allow-list entry naming it (removed in the same commit) — once its own
-      # PR merges. The manual-scenario doc below
-      # is not a cycle-scoped guard (no DELTA/count predicate; a Tier-2/3
-      # scenario record) and stays registered.
+      # PR merges. Under ADR-0024 D2 such a guard is no longer a committed suite
+      # at all: it lives uncommitted under `.autoflow/issue-{N}-local/`. The
+      # manual-scenario doc below is not a cycle guard (no DELTA/count
+      # predicate; a Tier-2/3 scenario record) and stays registered.
       # #35 cycle surface. TAIL here (pull_request), for the reason the #26
       # comment above records: #799's AC6-ci reads this list through a fixed
       # `grep -A40 '^ *paths:'` window, and inserting above
@@ -134,10 +130,10 @@ on:
       - 'tests/test-issue-35-phase-marker.sh'
       - 'scripts/canary/**'
       - '.gitmodules'
-      # #26 cycle-scoped RED suite retired at issue #27's VERIFY (PR #33
-      # merged; a cycle-scoped suite is deleted once its `# retire-with:` issue
-      # merges — scripts/test/check-suite-manifest.sh). The manual-scenario doc
-      # is not a cycle-scoped guard and stays registered.
+      # #26 RED suite retired at issue #27's VERIFY (PR #33 merged; a one-shot
+      # cycle guard is deleted once its issue merges, and under ADR-0024 D2 is
+      # not a committed suite at all). The manual-scenario doc is not a cycle
+      # guard and stays registered.
       - 'docs/phases/analysis.md'
       - 'docs/evaluation-system.md'
       - 'docs/security-checklist.md'
@@ -171,13 +167,10 @@ on:
       - 'scripts/cleanup/cleanup-issue.sh'
       - 'scripts/test/check-cleanup-issue-boundary.sh'
       - 'scripts/test/check-repo-key.sh'
-      # #130: this workflow is the SOLE runner of
-      # check-cleanup-issue-boundary.sh, and that suite is the only layer that
-      # drives the in-repo refusal on the store library's call path. A change to
-      # either new script that did not select this workflow would leave that
-      # call path unexercised in CI.
-      - 'scripts/test/green-tree-store.sh'
-      - 'scripts/test/green-tree-register.sh'
+      # This workflow is the SOLE runner of check-cleanup-issue-boundary.sh,
+      # which is the only layer that drives cleanup-issue.sh's in-repo archive
+      # refusal. A change to either script that did not select this workflow
+      # would leave that call path unexercised in CI.
       - '.github/workflows/e2e-dummy-target.yml'
       # #120 disposition-residue extension. TAIL here (push) as well —
       # mirrors the pull_request block's own placement immediately above.

@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/lib/plugin-root.sh setup/thin-root-layer/drift-check.sh plugin/autoflow/skills/install/scripts/detect.sh setup/gen-manifest-hashes.sh setup/manifest.json setup/init.sh setup/SETUP-GUIDE.md docs/tool-delivery-contract.md docs/autoflow-guide.md
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #167 — drift-check blind spot. A thin-root bundle that is

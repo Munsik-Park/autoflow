@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: setup/thin-root-layer/drift-check.sh scripts/spawn-policy/spawn-policy.sh plugin/autoflow/skills/install/scripts/detect.sh plugin/autoflow/skills/install/SKILL.md .claude/autoflow/spawn-policy.json setup/manifest.json setup/SETUP-GUIDE.md docs/tool-delivery-contract.md docs/autoflow-guide.md
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #185 — drift-check D6: a stale spawn-policy scaffold is named

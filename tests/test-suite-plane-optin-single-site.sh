@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/suite-manifest.sh scripts/test/select-suites.sh scripts/test/run-suites.sh scripts/test/check-suite-manifest.sh .claude/autoflow.local.json .claude/autoflow.local.json.example
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: the suite plane's opt-in declaration has ONE reader, and every consumer

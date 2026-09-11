@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/test/suite-coverage.sh scripts/test/run-suites.sh scripts/test/suite-manifest.sh scripts/test/check-suite-manifest.sh scripts/test/select-suites.sh scripts/test/green-tree-store.sh scripts/test/green-tree-register.sh scripts/cleanup/cleanup-issue.sh tests/test-push-context-base-ref.sh
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: suite-coverage agreement — Issue #112

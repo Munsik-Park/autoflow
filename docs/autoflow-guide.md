@@ -850,12 +850,11 @@ returns to ARCHITECT, through the existing routes.
 
   ```
   # ci-subject: <path-or-glob> [<path-or-glob> ...]
-  # lane: standing
   # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
   ```
 
 - `ci-subject` — the trigger surface. It is no longer only a coverage declaration: `scripts/test/select-suites.sh` consumes it to decide which suites a change requires, so an under-declared surface is a coverage hole, not a cosmetic gap.
-- `lane` — `standing` is the only value a committed suite carries: under ADR-0024 D2 every committed test is standing, and a one-shot check lives uncommitted under `.autoflow/issue-{N}-local/`. The lint still requires the line (and, where it asks for one, `# out-of-tree-inputs: yes`) until S3 retires those fields together with it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 4).
+- **The grammar is those two fields and nothing else.** Every committed suite is standing under ADR-0024 D2, and a one-shot check lives uncommitted under `.autoflow/issue-{N}-local/`, so the four fields that once declared a suite's lane, its retirement, its cycle arm and its out-of-tree reach carry no information a device reads. Issue #228 retired all four from the grammar site, from the lint and from every suite header in the same change ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 4); ADR-0024 > Area 3 records the ground for each.
 - `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim, so a guessed budget is not a representable state. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
 
 **Adopting the contract over existing suites** (issue #213). *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first RED. drift-check D7 names each one at install and at PREFLIGHT, and `bash scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
@@ -919,11 +918,14 @@ Run the tests; on failure, branch by cause.
 
 ```
 1. [MUST] Local run, once: execute the cycle's local run set — every `automated` row this cycle
-   authored or changed plus every `delivery-check` row (ADR-0024 M) — through the target's declared
-   test command, and record the command and its summary line ([`CLAUDE.md`](../CLAUDE.md) > Rule
-   Scope > *Local verification*). A `cycle`-layer asset runs from `.autoflow/issue-{N}-local/`; a
-   check that did not execute is `not-run`, never `passed`. Nothing is inherited and no whole-tree
-   run happens here — regression verification is HANDOFF step 5's CI.
+   authored or changed plus every `delivery-check` row (ADR-0024 M) — and record each run's command
+   and its summary line ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*). The means
+   follows the row's layer: a `standing` row's test runs **through the target's declared test
+   command**, while a `cycle`-layer asset is **invoked directly by its path** under
+   `.autoflow/issue-{N}-local/` (`bash .autoflow/issue-{N}-local/<asset>`) — no driver is shipped
+   for it, and the recorded command names that path, so the design table's declared run set has a
+   per-row witness. A check that did not execute is `not-run`, never `passed`. Nothing is inherited
+   and no whole-tree run happens here — regression verification is HANDOFF step 5's CI.
 2. Branch on result:
    All PASS → step 3.
    Some FAIL → cause branching (run under delegated facilitation — the `verify-cause-branch` workflow returns a single

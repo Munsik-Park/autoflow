@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/preflight/check-review-backend.sh scripts/handoff/confirm-ci-green.sh scripts/test/check-watchdog-detachment.sh scripts/test/run-suites.sh
-# lane: standing
 # budget-secs: 123
 # =============================================================================
 # Test: bounded-execution fallback watchdog — pipe-hold, orphan sleep, group
