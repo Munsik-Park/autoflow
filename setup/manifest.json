@@ -13,21 +13,21 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4af7262c42fdc6bff01d717e0732a0d5609ceda84d829b8260788106ce236a1d"
+      "sha256": "9448f7865444026f14f0e7c3e505fedc635a2159c58b9ef010c7061411d30564"
     },
     {
       "source": "docs/INDEX.md",
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "28f2b9f203bea3e111cdf870bd07fe76234acf1af17925bc8cd04ec879cce326"
+      "sha256": "aecf72964e891a4ff2927c86136921db097580fe7ebed4f026053917a9550ac0"
     },
     {
       "source": "docs/adr/0000-adr-template.md",
       "dest": ".claude/autoflow/docs/adr/0000-adr-template.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "861cffb902793dc98df802bcdd18d4d9e8e1fd24e2b885e3f647035d3007b602"
+      "sha256": "fdaefdec533957bbf6a79442969b5ee910602cdd5901bbbf0ac020302d0557f9"
     },
     {
       "source": "docs/adr/0003-autoflow-ends-at-handoff.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/adr/0024-two-layer-verification-and-target-owned-tests.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9af36603c837f9cc8ae13f21178b833ed9809827c59615341d9349ebc486e5c8"
+      "sha256": "b6e5010401eea21395790f9682cc48ef0da060521c6d95b3dc25c6e206f2ff4b"
     },
     {
       "source": "docs/adr/README.md",
@@ -118,14 +118,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a3312b8e4d18e54abaed7f14488a9dc3f2e57415824ef39663530d1e5783e875"
+      "sha256": "604c708b7b06294b97f156517f907d55f66777f8eb6328802cdfe8fb309526b9"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "02ea770ce8780793aadf531582f0fb5a803a72b80970113f65b4e957fa332df3"
+      "sha256": "819664cd452cdf28572516a15ea77a7abca0715a2d8d93fc077dec8e94ce206d"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c94a055e28722b32c6cef2d5f06078328f73e1b5e9ec6f0bd07cbecd018e30ea"
+      "sha256": "78293310cd59feda78ea1a39e90dff9236ffd6edcd604d747499d4a0a1f78dce"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/issue-proposal.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "226c64f36bd1f0b0f5730d39d3bfcd7db7e1b1cd2997abd967efb40d99d1cc09"
+      "sha256": "352d9459baf5be4f5f799f44458e548f5c4918df50d19727a7d6fc7206e58764"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -216,7 +216,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "12a9987a3d2efdd8282fba95553a1bf12968a86f7a8786a7f538febb5f71c1ad"
+      "sha256": "5e12e0fd607c729de50297d6ebca02b6101740064f125d0840f1b8dd5cc1b2f8"
     },
     {
       "source": "docs/teammate-common-rules.md",
@@ -489,7 +489,7 @@
       "dest": "scripts/issue/create-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "5136de3ef1317bf49eab3a09ca9d33dc24d243c35ebd0ac7dec529af45d8cdc6"
+      "sha256": "adecff00879c00fc5222da0f895a5e2e28e9b1b6a341b91984a5541031035ee7"
     },
     {
       "source": ".claude/autoflow/spawn-policy.json",
