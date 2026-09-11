@@ -1,10 +1,17 @@
 # Issue #134 — Manual Verification Scenarios
 
-> **Partly retired with #228 (ADR-0024 D6 / Area 3).** The Green-tree register, its
-> register entries and register drift, and VALIDATE's whole-tree sweep no longer
-> exist — verdict inheritance was retired and there is no local whole-tree run.
-> Wherever a scenario below names them, that step is historical and unperformable;
-> the remaining steps of each scenario stand as written.
+> **Partly retired — scenario by scenario.**
+> - *M1 (quiesce-rule-followed)* is retired as a whole: the capture-point quiesce and
+>   its tree-identity predicate "leave with the register" (ADR-0024 D6, retired by
+>   #225 `9d9f417` and #228), and the HOLD / GO message protocol its steps 1–3 check
+>   belongs to the named-teammate mode that is itself retired (`CLAUDE.md` >
+>   Communication; `docs/teammate-common-rules.md` > Result delivery path). Kept as
+>   the historical record; no step or verdict rule of M1 is performable.
+> - *M4 (sweep-fits-the-tool-ceiling)* is retired: there is no local whole-tree
+>   sweep at VALIDATE (#225 `9d9f417`; `CLAUDE.md` > Rule Scope — "none scheduled,
+>   none held in reserve"). Historical record only.
+> - *M2*, *M3* and *M5* stand as written (a run's executed set, the real Bash
+>   `PreToolUse` payload, and the multi-line `command` shape are live surfaces).
 
 Companion: `.autoflow/issue-134-verification-design.md` (`## Acceptance criteria →
 verification type → method`). Covers the acceptance criteria that are manual or
@@ -46,8 +53,8 @@ followed it in a given cycle.
 **Outcome → verdict**: all four sites HOLD-before-capture-point, and every
 resume is GO-bundled → PASS. Any capture point taken after a live teammate had
 already been told to resume tree work, or a resume sent as a message separate
-from GO → FAIL. (The register-drift/refusal that was once the evidence is retired
-with the register, #228; the HOLD/GO message order alone is the evidence now.)
+from GO → FAIL. (Historical verdict rule — M1 is retired as a whole, see the
+banner; neither the register drift nor the HOLD / GO order is a live evidence.)
 
 ---
 

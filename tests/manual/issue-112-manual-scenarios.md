@@ -1,12 +1,17 @@
 # Issue #112 — Manual/Environment-Dependent Verification Scenarios
 
-> **Retired with #228 (ADR-0024 D6 / Area 3).** Every scenario below observes the
-> Green-tree register — its `green-tree` / `green-tree-use` ledger entries, register
-> entries, the whole-tree run's once-per-cycle position and the evaluator's
-> `inherited` citations. That mechanism no longer exists: verdict inheritance was
-> retired, there is no local whole-tree run, and regression verification is
-> HANDOFF's CI. This document is kept as the historical record of how #112 was
-> verified; none of its steps is performable against the current tree.
+> **Partly retired — scenario by scenario.**
+> - *AC one-offerable-full-run* is retired: the whole-tree run went with #225
+>   (`9d9f417`; ADR-0024 D6 — "VALIDATE step 1's whole-tree sweep and its tree
+>   quiesce: deleted") and the Green-tree register with #228 (ADR-0024 D6 / Area 3).
+>   None of its steps is performable; it is kept as the historical record.
+> - *AC evaluator-execution-discipline* is split: steps 1–3 observe
+>   `inherited_verdicts`, which "goes with the register" (ADR-0024 D6;
+>   `docs/evaluation-system.md` > Evaluation Output Format states the key is no
+>   longer written) and are retired; steps 4–5 — the wall-clock cap and the
+>   representative-sample default — **stand**, their obligations re-homed at
+>   `docs/teammate-contracts.md` > Evaluation AI > *Sampling default* / *Time cap*
+>   (ADR-0024 D6: "the anchor, sampling and wall-clock obligations are re-homed").
 
 Two items in `.autoflow/issue-112-verification-design.md` > *Untestable items* have
 no in-repo observer and are discharged here rather than by an automated layer:
