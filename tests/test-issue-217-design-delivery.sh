@@ -131,6 +131,21 @@ if [ -n "$ADR" ]; then
   NORM="$(tr '\n' ' ' < "$ADR" | tr -s ' ')"
 fi
 
+# Full-file line extractions, computed once and reused by the primitives below
+# instead of re-scanning the same unchanging file on every one of their many
+# calls (expect_disposition/adr_decision_entry/readme_row are each called
+# repeatedly over the same subject).
+ADR_TABLE_ROWS=""
+ADR_DECISION_LINES=""
+if [ -n "$ADR" ]; then
+  ADR_TABLE_ROWS="$(grep -E '^[[:space:]]*\|' "$ADR")"
+  ADR_DECISION_LINES="$(grep -E '^[[:space:]]*(#{2,6}[[:space:]]|([-*]|[0-9]+\.)[[:space:]]*\*\*|\*\*)' "$ADR")"
+fi
+README_TABLE_ROWS=""
+if [ -f "$README" ]; then
+  README_TABLE_ROWS="$(grep -E '^[[:space:]]*\|' "$README")"
+fi
+
 echo "=============================================="
 echo "issue #217 design delivery — cycle-scoped checks"
 echo "=============================================="
@@ -206,8 +221,7 @@ adr_near() {
 adr_decision_entry() {
   local rx="$1" label="$2"
   if [ -z "$ADR" ]; then no_adr "$label"; return; fi
-  if grep -E '^[[:space:]]*(#{2,6}[[:space:]]|([-*]|[0-9]+\.)[[:space:]]*\*\*|\*\*)' "$ADR" \
-     | grep -qE "$rx"; then
+  if printf '%s\n' "$ADR_DECISION_LINES" | grep -qE "$rx"; then
     pass "$label"
   else
     failc "$label — no decision entry (heading or bold-lead list item) matching /$rx/ in $ADR_NAME"
@@ -228,7 +242,7 @@ leading_word() {
 expect_disposition() {
   local rx="$1" label="$2" extra="${3:-}" row cell word
   if [ -z "$ADR" ]; then no_adr "$label"; return; fi
-  row="$(grep -E '^[[:space:]]*\|' "$ADR" | grep -iE "$rx" | head -n 1)"
+  row="$(printf '%s\n' "$ADR_TABLE_ROWS" | grep -iE "$rx" | head -n 1)"
   if [ -z "$row" ]; then
     failc "$label — no adjustment-scope row matching /$rx/ in $ADR_NAME"
     return
@@ -256,7 +270,7 @@ status_body() {
 # readme_row <link-fragment-ere> — the registry row linking that ADR file.
 readme_row() {
   [ -f "$README" ] || return 1
-  grep -E '^[[:space:]]*\|' "$README" | grep -iE "$1" | head -n 1
+  printf '%s\n' "$README_TABLE_ROWS" | grep -iE "$1" | head -n 1
 }
 
 # =============================================================================
@@ -294,24 +308,34 @@ echo
 # =============================================================================
 echo "-- AC1b: two-sided supersede/amend records"
 
+# check_composite_status <text> <rel-ere> <label> <subject-phrase> — the
+# shared three-step "does this composite status record supersede/amend
+# ADR-0024" check both AC1b sites below need, differing only in what text and
+# subject phrase they supply (a '## Status' section body vs. a registry row's
+# status cell).
+check_composite_status() {
+  local text="$1" rel="$2" label="$3" subject="$4"
+  if ! printf '%s' "$text" | grep -qE 'Proposed|Accepted|Deprecated|Superseded'; then
+    failc "$label — $subject carries no base status word, so the composite form is not present"
+    return
+  fi
+  if ! printf '%s' "$text" | grep -qiE 'ADR-0024|0024-'; then
+    failc "$label — $subject does not reference ADR-0024"
+    return
+  fi
+  if ! printf '%s' "$text" | grep -qiE "$rel"; then
+    failc "$label — $subject references ADR-0024 but records no /$rel/ relation"
+    return
+  fi
+  pass "$label"
+}
+
 check_status_line() {
   # $1 file, $2 human name, $3 relation ERE (supersed|amend), $4 label
   local file="$1" name="$2" rel="$3" label="$4" body
   if [ ! -f "$file" ]; then failc "$label — $name not found"; return; fi
   body="$(status_body "$file" | tr '\n' ' ' | tr -s ' ')"
-  if ! printf '%s' "$body" | grep -qE 'Proposed|Accepted|Deprecated|Superseded'; then
-    failc "$label — the '## Status' section carries no base status word, so the composite form is not present"
-    return
-  fi
-  if ! printf '%s' "$body" | grep -qiE 'ADR-0024|0024-'; then
-    failc "$label — the '## Status' section does not reference ADR-0024"
-    return
-  fi
-  if ! printf '%s' "$body" | grep -qiE "$rel"; then
-    failc "$label — the '## Status' section references ADR-0024 but records no /$rel/ relation"
-    return
-  fi
-  pass "$label"
+  check_composite_status "$body" "$rel" "$label" "the '## Status' section"
 }
 
 check_readme_row() {
@@ -321,19 +345,7 @@ check_readme_row() {
   row="$(readme_row "$rx")"
   if [ -z "$row" ]; then failc "$label — no registry row matching /$rx/"; return; fi
   cell="$(row_cell "$row" 2)"
-  if ! printf '%s' "$cell" | grep -qE 'Proposed|Accepted|Deprecated|Superseded'; then
-    failc "$label — the registry row's status cell carries no base status word"
-    return
-  fi
-  if ! printf '%s' "$cell" | grep -qiE 'ADR-0024|0024-'; then
-    failc "$label — the registry row's status cell does not reference ADR-0024"
-    return
-  fi
-  if ! printf '%s' "$cell" | grep -qiE "$rel"; then
-    failc "$label — the registry row's status cell references ADR-0024 but records no /$rel/ relation"
-    return
-  fi
-  pass "$label"
+  check_composite_status "$cell" "$rel" "$label" "the registry row's status cell"
 }
 
 check_status_line "$ADR19" "docs/adr/0019-scope-fit-verification-policy.md" 'supersed' \
