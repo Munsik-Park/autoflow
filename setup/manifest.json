@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6c8e9db2f992365eb1f8c5cedf3f98f667907cb545bc8ceab97250c5b7ee7a10"
+      "sha256": "b088d51af1a87b9ed2f738fcb31310a7e59d8552009794dbb6d7dd907cf52c1f"
     },
     {
       "source": "docs/INDEX.md",
@@ -118,14 +118,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cd540807696573006e9bb341ce35f714bac22c93dcbce59eecba1e1c656d42d4"
+      "sha256": "4590687090a43bb566d0e6abeee11f54f09799317a4c978062fd6489248291b3"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3f88bd3b1b5d5abf7219bf46b5132e47d484beb57b63dd44f8279e64f48e7fde"
+      "sha256": "8531ea82427cba9a30b87f5b7086d09b63aaaa8811635c4b71f409e295f15ae5"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
