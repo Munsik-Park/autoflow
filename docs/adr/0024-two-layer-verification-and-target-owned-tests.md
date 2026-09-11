@@ -149,8 +149,7 @@ now, which no per-PR relation can see.
 **Entry point.** The phases invoke **the target's declared test command** through a call site, not
 through AutoFlow's runner. Discovery order, first hit wins: (1) `.claude/autoflow.local.json` →
 `tests.command`; (2) the target's `CLAUDE.md` > Development Commands `Test` entry. JSON first
-because it is machine-readable and can carry a scoped form; the `CLAUDE.md` entry second because it
-is free text.
+because it is machine-readable; the `CLAUDE.md` entry second because it is free text.
 
 **Suite plane.** The AutoFlow suite plane — the header contract, the selector, the runner,
 suite-coverage, `scripts/test/check-suite-manifest.sh` and drift-check D7 — becomes **opt-in, not
@@ -168,85 +167,31 @@ verification that can pass while the system is inconsistent. D7 today has exactl
 (`setup/manifest.json`), so a non-opted-in target resolves the selector, runs D7 and FAILs: the new
 arm is required, not optional.
 
-**AutoFlow synthesizes no selection predicate for the target.** Where the target's declared command
-supports scoping, run it scoped. What AutoFlow never does is derive, on the target's behalf, *which
-of the target's tests this change requires*.
+**AutoFlow synthesizes no selection predicate for the target.** What AutoFlow never does is derive,
+on the target's behalf, *which of the target's tests this change requires*. The phases invoke the
+command **as declared**: scoping is the target's practice, and a target that wants a change-scoped
+run declares one.
 
-**The declared-form precondition.** The phases invoke the scoped form the target declares, **at the
-finest grain that declaration carries**; collateral is what that form forces, never what the invoker
-chose. A declaration that carries **no form parameterized by the change** — its only declared command
-runs the standing set unconditionally — **fails the precondition**, and that target's `automated`
-rows are **infeasible** at the blocking point this decision already owns: **GATE:PLAN
-`Feasibility`**, with the fact carried in the verification design (*The unsatisfiable case* below).
-No new gate, no new vocabulary, no new authority. The resolution path is the target declaring a
-scoped form at `.claude/autoflow.local.json` → `tests.command`, which is why JSON is first in the
-discovery order above.
+**Boundary.** AC2 and M bind what AutoFlow's phases require of **AutoFlow's own run set**. What a
+target's declared test command executes internally is **outside this model** — a target's test
+execution and format are the target's (설계 원칙 1, restated in this record's Context at `:43-46`) —
+and no acceptance criterion of this issue verifies it. The ground travels with the sentence instead
+of being asserted: AC2's second sentence names the verification's object — *"조정 범위 1의 규정이
+모두 새 모델로 대체되거나 삭제된다"* — and every row of that enumeration is an AutoFlow rule
+(`docs/autoflow-guide.md`, `docs/submodule-common-rules.md`, `.claude/agents/*`,
+`docs/teammate-contracts.md`, `docs/evaluation-system.md`, `CLAUDE.md`, the header contract); not one
+row is a target's test command.
 
-**The predicate's object is the declaration, not the command.** *The finest narrowing the command
-admits* would require AutoFlow to know that this runner takes a file, a class or a test id — the
-competence the preceding paragraph refuses, applied to granularity instead of membership — and no
-artifact records what a command admits, so it could only ever be discharged by assertion. That
-assertion would stand at the only gate that evaluates it: an `automated` row never reaches the
-external reviewer, because the host PR body's `## Verification dispositions` section covers every
-criterion typed *other than* `automated` (`docs/autoflow-guide.md:1787-1790`). The finest grain the
-**declaration** carries is re-derivable by reading the declaration file; what a command admits is
-not.
-
-**The line is categorical, not quantitative.** The question is *does the declared form take the
-change as an input at all?* A whole-tree-only declaration takes none and stays blocked; a coarse
-declared form such as `make test-package PKG=core` takes one and passes. No threshold is set on the
-unit's size: a size threshold is the proxy metric `docs/autoflow-guide.md:519-521` rejects, and
-judging a declared grain too coarse is the second-guessing the next clause forbids.
-
-**M-boundary clause.** M's execution rule binds **the set AutoFlow derives** — rows. The declared
-command's **minimum unit** is the *target's*, and *AutoFlow synthesizes no selection predicate* is
-the decision not to second-guess it. **Collateral** inside that minimum unit is therefore not
-"another `automated` row executing locally" in M's sense, and it is not licence to widen. The clause
-**re-scopes the execution rule's reach**; M's own text is unchanged.
-
-**The fact D3 carries into the verification design** names the declared form and the parameter
-through which this cycle's declared rows enter it — the rows read off the design's own `Type` cells
-— never a computed delta. A diff-valued parameter would need a base ref, which is the dependency a
-declared run set exists to remove.
-
-**Residual state.** A verification point reached with no executable declared form is `not-run` with
-its reason class, never `clean`; and since a `driving` row in `not-run` yields no Red confirmation,
-RED does not proceed. Fail-closed, inherited from the outcome vocabulary below rather than invented
-here.
-
-**Verdict rule — exit status over the declared run set.** The local run set is the cycle's declared
-rows, so **any non-zero outcome over that set is attributed to this cycle** → `detected`. A failure
-is excluded **only** by a **base-tree differential**: the identical command, executed at the
-merge-base tree, failing identically. The lint chain's file-name predicate does not transplant here,
-and the difference is structural rather than a defect of wording — a linter reports *at the offending
-file*, while a test runner reliably reports *which test failed* and never *which source caused it*.
-A predicate over reported file names therefore reads the unreliable half of a test runner's output
-and inverts the error direction from over-execution to under-detection: a change to `src/parser.py`
-that breaks an untouched `tests/test_parser.py` assertion names no changed file and would read as
-clean. The replacement is the lint chain's own principle, already written at
-`docs/submodule-common-rules.md:203` — the permissive class is the one earned by evidence. A
-differential is evidence; an absent filename is not.
-
-**The differential is exculpatory only, never a required step.** Its unavailability yields
-`detected` — never `not-run`, never a BLOCK, never a pause. The shallow clone in which a scoped run
-is hardest is the same checkout in which a base-tree run is impossible (`fetch-depth: 0` at
-`.github/workflows/contract-suites.yml:336` is a standing-layer guarantee only), so a required
-differential would re-open that environment as a new blocking point; and `not-run` attaches to the
-**non-execution of the chain** (`docs/submodule-common-rules.md:195`), whereas here the chain
-executed and it is the exculpation that could not be attempted.
-
-**The exclusion is a set predicate, not a failure predicate.** It reaches only members of the
-declared command's minimum unit that this cycle neither authored nor changed — membership tested
-against the declared row set, never against a diff — so a declared row is never excluded on any
-evidence, and a cycle that changes an already-red test carries that row's failure. Flakiness needs
-no clause: a failure not reproduced identically at the base tree is not excluded, so it resolves
-`detected`. Cost is bounded by the same declared form — the base-tree run is the size of the first
-run, and it is only ever paid on a failing path, so `clean` never costs a second run.
-
-**Outcome vocabulary.** The call site takes the lint chain's outcome vocabulary, total over
-reachable states — `clean` / `fixed-and-staged` / `detected` / `not-run` / `not-applicable` with
-their reason classes (`docs/submodule-common-rules.md:193-197`) — including that `not-run` is never
-`clean`.
+**Outcome, and what it is read from.** The **exit status of the declared command as invoked** is the
+input: AutoFlow reports what the invocation returned and adjudicates nothing beyond it — scoping and
+failure attribution are the target's practice. The call site reports through the lint chain's outcome
+vocabulary, total over reachable states — `clean` / `fixed-and-staged` / `detected` / `not-run` /
+`not-applicable` with their reason classes (`docs/submodule-common-rules.md:192-196`) — including
+that `not-run` is never `clean`. What does **not** carry across is that vocabulary's lint-side
+qualifier *attributable to the staged files*: a linter reports at the offending file and a test
+runner reports at the assertion site, so this decision takes the exit status rather than a reading of
+the output. A non-zero exit is therefore reported non-clean, and AutoFlow neither excuses it nor
+adjudicates its cause.
 
 **The unsatisfiable case.** A target that declares no test command while the design types a row
 `automated` is caught at **GATE:PLAN `Feasibility`** (`docs/autoflow-guide.md:730` — "a plan not
@@ -255,6 +200,15 @@ GATE:PLAN reads; the PREFLIGHT ledger entry remains the record and carries no ga
 the ledger is not a gate input (`CLAUDE.md` > Decision Ledger). A residual state proceeds correctly:
 a target with no declared test command whose design types every row `none` / `manual` /
 `existing-coverage` is `not-applicable` and proceeds, because it owes no automated verification.
+
+**Why this blocking point is not a device on the target path.** The test is *whose artifact must
+change to clear the block?* — here, **AutoFlow's own verification design**: retype the row, and the
+residual above already lets a design owing no automated verification proceed. GATE:PLAN is also the
+sole point at which that judgment is ever re-derived, since an `automated` row never reaches the
+external reviewer — the host PR body's `## Verification dispositions` section covers every criterion
+typed *other than* `automated` (`docs/autoflow-guide.md:1787-1790`). A blocking point whose remedy
+lies entirely inside AutoFlow's own artifact mandates nothing of the target; one whose remedy lies in
+the target's declaration would be a device on the target path however it is worded.
 
 ### D4 — CI-layer verdict point and CI-failure re-entry
 
@@ -588,17 +542,18 @@ registry row.
   It contradicts D1's split (`CI-registered` only where the target opted in) and, decisively, it
   breaks RED: no CI run exists before push, so a `driving` row would have no failing observation
   anywhere. It trades one violation for another.
-- **"The finest narrowing the command admits" as the precondition's object**, and **"the declared
-  form runs the cycle's rows alone"** as its test. The first needs the competence D3 refuses and is
-  unfalsifiable at its sole re-derivation point; the second is unsatisfiable for ordinary command
-  granularities — a file-granular command runs untouched siblings — so under it an ordinary target
-  would have no feasible `automated` row at all.
-- **A known-failure test-id fingerprint set carried across cycles**, in place of the base-tree
-  differential. It requires a per-target baseline record to be maintained and refreshed, and a stale
-  record misses a new regression that reuses a past failure's id — evidence that decays, where a
-  differential is derived at the moment it is used.
-- **Repairing the file-name predicate rather than replacing it.** The causal file is structurally
-  absent from a test runner's output, so no repair of name matching can recover it.
+- **Requiring the target's declared command to take the change as an input, and obtaining an
+  operator `[ac-decision]` reopening AC2 to license the collateral such a command runs.** The
+  external review's own suggested path. Rejected: AC2 needs no exception once its second sentence is
+  read — its object is this record's Area-1 enumeration of AutoFlow's own rules, not a target's test
+  runtime (D3 > *Boundary*) — so the pause would purchase nothing, and it would ratify on the target
+  path a requirement the governing operator decision at `:43-46` excludes.
+- **Repairing or replacing the file-name predicate with any other AutoFlow-side attribution rule** —
+  a base-tree differential, a known-failure test-id fingerprint set carried across cycles, or a
+  repair of name matching itself. Rejected on 설계 원칙 1 (`:43-46`): the defect is that AutoFlow
+  adjudicates the target's test execution at all, not that this particular predicate reads the
+  unreliable half of a test runner's output. The declared command's exit status is what the outcome
+  is read from, and attribution is the target's practice.
 
 ## Consequences
 
@@ -623,6 +578,11 @@ registry row.
   check executes inside the same trust boundary as the agent that authored it.
 - The suite plane becomes two configurations to reason about (opted in / not), and a non-opted-in
   target's standing half of GATE:QUALITY `Test coverage` is `not-applicable` rather than verified.
+- With no AutoFlow-side attribution rule, a target whose declared command reports a failure this
+  change did not cause surfaces as a non-clean outcome, and the resolution is the coding AI's and the
+  human's practice: AutoFlow neither excuses the failure nor blocks the target. AC5's *변경분*
+  qualifier is discharged by invoking the declared command — whether that command is keyed to the
+  change is the target's practice under 설계 원칙 1.
 
 ### Neutral / Trade-Offs
 
@@ -634,20 +594,66 @@ registry row.
 ## Related Issues / PRs
 
 - Issue #217 — this decision; implementation deferred to the S1–S4 sub-issues above.
-- **Revision — PR #220 review (cycle 2).** The external review of this record returned two `Medium`
-  findings on D3 and its Area-1 rows, and this revision is the response. What changed: D3's
-  *AutoFlow synthesizes no selection predicate* clause **stands**; its whole-tree-run clause is
-  superseded by the **declared-form precondition**, and its borrowed lint verdict rule by the
-  **exit-status verdict over the declared run set**. The whole-tree-run prohibition row's replacement
-  text no longer holds a local whole-tree run in reserve, and the Selector-BLOCK degradation row
-  moves `replaced` → `deleted`, carrying its two coupled device sites
-  (`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-137`);
-  `scripts/test/select-suites.sh:203-206` is not one of them, because it carries the fail-closed rule
-  this revision retains. D3 additively gains the declared-form precondition, the M-boundary clause
-  and the content of the fact it carries into the verification design, superseding nothing further;
-  Area 2 and Area 3 keep their words. **M's execution rule itself does not move**: the M-boundary
-  clause re-scopes its *reach* — collateral inside the target's declared minimum unit is outside the
-  set AutoFlow derives — rather than changing the rule.
+- **Revision — PR #220 review, round 1 (cycle 2).** The external review of this record returned two
+  `Medium` findings on D3 and its Area-1 rows, and this revision was the response. What still stands
+  from it: D3's *AutoFlow synthesizes no selection predicate* clause; the whole-tree-run prohibition
+  row's replacement text, which no longer holds a local whole-tree run in reserve; and the
+  Selector-BLOCK degradation row's move `replaced` → `deleted`, carrying its two coupled device sites
+  (`scripts/test/select-suites.sh:195`, `scripts/test/run-suites.sh:129-137`), with
+  `scripts/test/select-suites.sh:203-206` not among them because it carries the fail-closed rule this
+  record retains. **Retracted by round 2 below** — named here so no reader takes them as governing —
+  this entry's statements that the whole-tree-run clause was superseded by a declared-form
+  precondition and the borrowed lint verdict rule by an exit-status verdict over a declared run set;
+  that *D3 additively gains the declared-form precondition, the M-boundary clause and the content of
+  the fact it carries into the verification design*; and that M's execution rule keeps its text while
+  the M-boundary clause re-scopes its reach. All three are **withdrawn** by round 2's removals.
+  Area 2 and Area 3 keep their words.
+- **Revision — PR #220 review, round 2 (cycle 2).** The re-review returned one `Medium` finding
+  (R2-F1): round 1's precondition on the target's declared command, and the minimum-unit collateral
+  reading that accompanied it, still placed AutoFlow's judgment on the target's own test execution.
+  The operator settled it (decision ledger `O13`, authority `operator decision`): **AutoFlow is a
+  tool — it neither mandates how a target composes or runs its tests nor judges what a target's
+  declared command executes internally**, and what this record delivers is a **rule** stated as
+  guidance, never a gate on the target path. The delta is checkable against this record alone: the
+  round-1 text contradicted `:43-46`, the governing operator decision the Context already carried.
+  - **Removed from D3**, each with the round-1 statement asserting it **retracted** above: the
+    declared-form precondition and the infeasibility route it opened on the target's declaration; the
+    grain rule and the categorical line over the declared form; the M-boundary clause and its
+    minimum-unit collateral reading; the fact D3 carried into the verification design, with its
+    parameter; the residual `not-run` state stated as a gate; the exit-status verdict over a declared
+    run set, its base-tree differential, the exculpatory-only clause, the set predicate, the flakiness
+    clause and the cost bound; and the residual *"where the target's declared command supports
+    scoping, run it scoped"* mandate, together with the *"can carry a scoped form"* reason for JSON's
+    place in the discovery order. Round 1's **deletion** of the file-name attribution predicate
+    stays: what round 2 removes is the replacement machinery, not the deletion.
+  - **What D3 now says**: the entry point with first-hit-wins discovery; the suite-plane opt-in and
+    the one shared resolver; *AutoFlow synthesizes no selection predicate for the target*, with the
+    invocation restated as practice — the phases invoke the command as declared, scoping is the
+    target's practice, and a target that wants a change-scoped run declares one; one additive
+    **boundary** sentence, carrying its own ground; the outcome vocabulary, whose input is the
+    declared command's exit status; and the unsatisfiable case, which now carries the *whose artifact
+    must change to clear the block* test and the re-homed tier-2 anchor
+    (`docs/autoflow-guide.md:1787-1790`). **M's execution rule does not move, and neither does its
+    reach** — round 1's re-scoping of it is **withdrawn** rather than restated.
+  - **Round 1's F1-b is closed by the boundary, not left open by the removal.** The case *the
+    target's declared command cannot be narrowed to the change* no longer resolves to a local
+    whole-tree run — that was round 1 — and it does not fall back to being unresolved now that the
+    precondition is gone. It is **closed** by the **boundary** sentence together with the operator
+    decision's own fourth clause, that AC2 is a property of AutoFlow's rules and not an observation
+    of target runtime: what the declared command executes internally is outside this model, so there
+    is nothing left for AutoFlow to require of it, degrade to, or refuse. What survives of round 1's
+    residual state is a **report, not a gate**, and it is stated where it belongs — **M**'s
+    RED-integrity paragraph (`:67-71`): a `driving` row that never ran yields no Red confirmation,
+    which is the absence of a confirmation AutoFlow owes **itself**, not a rule imposed on the
+    target. D3 states no residual `not-run` gate of its own.
+  - **Also moved**: the two *Alternatives* entries whose subject was the precondition's candidate
+    objects lose it and go; the file-name-predicate entry is rewritten to reject **any**
+    AutoFlow-side attribution rule on 설계 원칙 1, absorbing the known-failure-fingerprint entry as
+    one of its variants; and the reviewer's own suggested path — keep the requirement and obtain an
+    operator `[ac-decision]` reopening AC2 — is recorded and rejected. *Consequences > Negative*
+    gains the cost, stated plainly. **Acceptance-criterion content is unchanged**: round 2 removes
+    constraints rather than adding them, and AC2's own second sentence carries the boundary, so no
+    `[ac-decision]` is owed. Area 1, Area 2 and Area 3 keep their words and their dispositions.
 - Supersedes `docs/adr/0019-scope-fit-verification-policy.md`: decision 1 and decision 2 in full,
   decision 3 in part — `inherited_verdicts` is deleted with the Green-tree register, while the
   anchor-before-execute, representative-sampling and wall-clock-cap obligations are retained and
@@ -671,5 +677,5 @@ registry row.
   "When to Create an ADR" trigger area — so it lands ahead of the mechanisms it governs.
 - **Effective from the next cycle.** The cycle that writes this record is governed by the
   pre-existing rules; see *Clauses this ADR carries beyond M and D1–D6*.
-- **Revised in response to the external review of PR #220.** The two `Medium` findings, what
-  changed, and what stands are recorded in *Related Issues / PRs*.
+- **Revised twice in response to the external review of PR #220.** Each round's findings, what
+  changed, what stands and what is retracted are recorded in *Related Issues / PRs*.
