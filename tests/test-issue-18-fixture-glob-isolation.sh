@@ -19,8 +19,7 @@
 #       they guarded. Their whole subject was test-16's AC5 snapshot oracle
 #       (its path constant, its one-time top-level-residue migration, and its
 #       seed-then-compare sequence); AC5 was retired as a cycle-scoped guard
-#       whose cycle merged long ago. Disposition:
-#       docs/doc-invariant-registry.md §5.
+#       whose cycle merged long ago.
 #   AC-scope (static, negative property) — check-autoflow-gate.sh is
 #       byte-unchanged by this fix (ledger E2); the discovery-glob line is
 #       asserted unmodified.

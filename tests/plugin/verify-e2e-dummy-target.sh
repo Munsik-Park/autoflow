@@ -894,7 +894,6 @@ echo "== E-Ra: verify-install-into-target.sh is present =="
 # own registered `run:` step at contract-suites.yml:317, so a regression in it
 # reds CI under its own name once rather than twice. The presence half stays --
 # this file composes against that suite's install output in the stages above.
-# Disposition row: docs/doc-invariant-registry.md 12.1.
 if [ -f "$VERIFY_INSTALL" ]; then
   pass "E-Ra: install acceptance suite is present at $VERIFY_INSTALL"
 else

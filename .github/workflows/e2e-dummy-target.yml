@@ -74,10 +74,11 @@ on:
       - '.github/workflows/e2e-dummy-target.yml'
       # #26 cycle-scoped RED suite (tests/test-issue-26-verify-architect-route.sh)
       # retired at issue #27's VERIFY (GATE:QUALITY Impact-scope regression):
-      # PR #33 merged 2026-07-25, and docs/doc-invariant-registry.md §2
-      # (Retirement) requires a cycle-scoped guard's deletion — along with any
-      # allow-list entry naming it (registry entry 26-AC15a, removed in the
-      # same commit) — once its own PR merges. The manual-scenario doc below
+      # PR #33 merged 2026-07-25, and a cycle-scoped guard (suite header
+      # `# lane: cycle-scoped` / `# retire-with:`, checked by
+      # scripts/test/check-suite-manifest.sh) is deleted — along with any
+      # allow-list entry naming it (removed in the same commit) — once its own
+      # PR merges. The manual-scenario doc below
       # is not a cycle-scoped guard (no DELTA/count predicate; a Tier-2/3
       # scenario record) and stays registered.
       # #35 cycle surface. TAIL here (pull_request), for the reason the #26
@@ -134,7 +135,8 @@ on:
       - 'scripts/canary/**'
       - '.gitmodules'
       # #26 cycle-scoped RED suite retired at issue #27's VERIFY (PR #33
-      # merged; docs/doc-invariant-registry.md §2). The manual-scenario doc
+      # merged; a cycle-scoped suite is deleted once its `# retire-with:` issue
+      # merges — scripts/test/check-suite-manifest.sh). The manual-scenario doc
       # is not a cycle-scoped guard and stays registered.
       - 'docs/phases/analysis.md'
       - 'docs/evaluation-system.md'

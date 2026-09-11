@@ -274,8 +274,7 @@ if [ -x "$CHECK_SCRIPT" ]; then
   # C9-AC-5's whole-suite regression pin over
   # tests/test-issue-979-preflight-backend-check.sh is retired (issue #103):
   # that suite carries its own registered `run:` step, so a regression in it
-  # reds CI under its own name. Disposition row:
-  # docs/doc-invariant-registry.md §12.1.
+  # reds CI under its own name.
 
   echo ""
   echo "=== C9-AC-7 (claude probe reuses the isolation triple + OAuth carve-out, DCR-4) ==="
@@ -340,8 +339,7 @@ echo "=== C9-AC-6 (HANDOFF step-6 runtime surfacing unchanged — behavior-prese
 
 # C9-AC-6's whole-suite regression guard over
 # tests/test-issue-979-review-backend.sh is retired (issue #103): that suite
-# carries its own registered `run:` step. Disposition row:
-# docs/doc-invariant-registry.md §12.1.
+# carries its own registered `run:` step.
 
 assert_true "C9-AC-6 (doc-invariant): docs/reviewer-backend.md's start-confirmation / step-6 section still states auth failure surfaces at HANDOFF step 6" \
   "[ -f '$REVIEWER_BACKEND_MD' ] && grep -qi 'step 6' '$REVIEWER_BACKEND_MD' && grep -qi 'surfaces' '$REVIEWER_BACKEND_MD'"

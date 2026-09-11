@@ -12,8 +12,8 @@
 # feature design §7 devil's-advocate flag + verification design §0 R1
 # reconciliation moved these arms out of the ADR-0016 conformance suite
 # (concern mismatch: that file was scoped to ADR-0016 registration, not
-# generator locale-invariance). That suite was retired by issue #120; its
-# arms live in the registry (docs/doc-invariant-registry.md §17).
+# generator locale-invariance). That suite was retired by issue #120 (its
+# arms went to the doc-invariant registry §17, itself retired in #141).
 #
 # Scope (verification design §1):
 #   AC1 — generator is locale-pinned at the source (static grep for the
@@ -26,13 +26,12 @@
 #         discriminator for the locale defect itself (verification design
 #         §1 AC3 RED/GREEN discrimination note, §3 item 6).
 #   AC4 — RETIRED. Its subject (the standing ADR-0016 conformance suite) was
-#         retired by issue #120; disposition row:
-#         docs/doc-invariant-registry.md §17.
+#         retired by issue #120.
 #   AC5 — RETIRED. It asserted "the manifest change is order-only" against a
 #         baseline snapshot, a one-time migration check whose cycle merged long
-#         ago. Its own header already labelled it a cycle-scoped gate, and
-#         docs/doc-invariant-registry.md §2 retires a cycle-scoped guard when
-#         its cycle's PR merges. Disposition recorded in that document §5.
+#         ago. Its own header already labelled it a cycle-scoped gate, and a
+#         cycle-scoped guard is deleted when its `# retire-with:` issue's PR
+#         merges (scripts/test/check-suite-manifest.sh).
 #
 # RED expectation (this commit, no LC_ALL pin in setup/gen-manifest-hashes.sh
 # yet): AC1 FAILs (grep target absent). AC3 FAILs when the runner's ambient
@@ -160,8 +159,7 @@ fi
 # AC4 — fully retired. Issue #103 retired its subprocess re-run (the suite
 # carried its own registered `run:` step); issue #120 retired the remaining
 # existence half together with its subject, so nothing here reads a file that
-# no longer exists. Disposition rows: docs/doc-invariant-registry.md §12.1
-# (the #103 half) and §17 (the #120 half).
+# no longer exists.
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------

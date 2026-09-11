@@ -24,8 +24,10 @@
 # header-required by check-suite-manifest.sh and orphan-required by this lint.
 #
 # There is NO exemption list for unreachable suites: an allow-list here would be
-# the hand-maintained inventory `docs/doc-invariant-registry.md` §1-2 retires.
-# An unreachable suite is either wired or deleted with a disposition row.
+# a hand-maintained inventory of the kind this tree does not keep (issue #141
+# retired the doc-invariant registry). An unreachable suite is either wired or
+# deleted; its disposition is its own `# lane:` / `# retire-with:` header
+# (scripts/test/check-suite-manifest.sh) and leaves with the file.
 #
 # REACHABLE — a `run:` step in any workflow invokes it. DIRECT ONLY: the former
 # transitive-closure clause (a reachable suite invoking it as a subprocess) is

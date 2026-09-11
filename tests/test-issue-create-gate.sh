@@ -7,8 +7,7 @@
 # =============================================================================
 # Test: the hook-side and cross-mechanism half of the AI-initiated
 #       issue-creation gate — STANDING (issue #96 origin; see
-#       .autoflow/issue-96-verification-design.md and
-#       docs/doc-invariant-registry.md §10)
+#       .autoflow/issue-96-verification-design.md)
 # =============================================================================
 # Covers, per the verification design's acceptance-criteria table:
 #   Hook-Denies-Bare-Create, Hook-Denies-REST-Form, Hook-Deny-Is-State-Independent,
@@ -183,7 +182,7 @@ echo "=== issue #96 — Hook-Deny-Coexistence ==="
 # The whole-suite re-run of tests/test-gate-hardening.sh is retired (issue
 # #103): that suite carries its own registered `run:` step in
 # contract-suites.yml, so a regression in it reds CI under its own name once
-# rather than twice. Disposition row: docs/doc-invariant-registry.md §12.1.
+# rather than twice.
 run_hook 0 "coexistence: an unrelated label edit (status:in-progress) is still allowed" \
   "$NOSTATE" "$(bash_json 'gh issue edit 1 --remove-label status:in-progress')"
 run_hook 2 "coexistence: gate-label removal deny still fires standing alone" \

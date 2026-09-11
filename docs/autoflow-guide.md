@@ -1609,7 +1609,8 @@ each-item ≥ 7 criterion:
   disposition — **standing** (subject-named, no issue
   number, CI registration retained) or **cycle-scoped** (it depends on a base ref or a diff, or it
   asserts this cycle's own landed state → deleted in the cycle's final commit together with its
-  disposition row and its CI registration). A file with no stated disposition, or a file judged
+  CI registration; its disposition is its own `# lane:` / `# retire-with:` header and leaves with
+  the file). A file with no stated disposition, or a file judged
   cycle-scoped that remains CI-registered, caps `Test quality` at 6.
 - **Fit — ADR conformance** (proactively-added per `ADR-0016`, not a past Codex catch): on
   the final change set, re-confirm the shipped change conforms to any governing ADR (same
