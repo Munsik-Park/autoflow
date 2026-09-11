@@ -45,6 +45,18 @@ execution and format are the target's; locally only the changed part is tested o
 test must not execute after merge **by structure**, not by inertness; the CI layer is separated from
 it; and the `[MUST]` / `[DENY]` rules and evaluation criteria are adjusted to match.
 
+**The first classification criterion did not filter (issue #222).** D1 as first written asked
+*must this property still hold under a later, unrelated change?* and mapped every `automated` row to
+`standing`. That question is answerable "yes" for almost any test, so the only thing that bounded
+repository test growth was ADR-0022's Test-necessity judgment — a reason-type threshold. The
+measurement that retired that threshold shape is on the record twice: `connev-llm/llmroute#628`
+(TC-8, "a test stays if one line can name the change that re-triggers its failure", let 229 specs in
+over six weeks because a reason can always be given), and this repository after #153 — the last 30
+merged PRs changed 7,806 test lines against 5,015 code and 3,820 doc lines, and PR #220 landed a
+5-file change through 14 commits, 10 of which authored, re-authored, retired or re-pointed a
+temporary suite (issue #222). D1 is therefore restated below on a different predicate — *does the
+defect surface only after deployment?* — with the `standing` categories closed by enumeration.
+
 ## Decision
 
 ### M — The two-layer verification model
@@ -52,9 +64,10 @@ it; and the `[MUST]` / `[DENY]` rules and evaluation criteria are adjusted to ma
 Verification has **two layers**, partitioned by the **subject** of the verification and named by
 **persistence**, not by execution site:
 
-- **`standing`** — the property must still hold under a later, unrelated change.
-- **`cycle`** — the property's subject dies at merge: it was wired / generated / delivered /
-  converted / swept for *this* change.
+- **`standing`** — the defect the check catches surfaces only **after deployment** (merge or
+  stamp): the asset stays in the repository and, where the target opted in, in CI.
+- **`cycle`** — one local run settles the question: the asset is executed once in the cycle, never
+  committed, and only its result is recorded.
 
 The **verdict point** for a `standing` `automated` row is CI (D4). That is a separate fact from the
 layer's name.
@@ -76,50 +89,89 @@ that each layer is named by what defines it.
 
 ### D1 — Classification criterion and declaration site
 
-**Criterion.** *Must this property still hold under a later, unrelated change?* Yes → `standing`;
-no → `cycle`. The predicate is over the **property**, not over the file.
+*Revised by issue #222; the original predicate and mapping are recorded under Related Issues / PRs.*
+
+**Criterion.** *Is this a defect a single local run settles, or one that surfaces only after
+deployment (merge / stamp)?* Local run → `cycle`; after deployment → `standing`. The predicate is
+over the **defect**, not over the file, and it is the only predicate: whether a reason for keeping
+the check *can be stated* is **not** part of the criterion. A reason can always be stated
+(`connev-llm/llmroute#628`; Context), so a criterion that admits one bounds nothing.
+
+**Default.** `automated` defaults to **`cycle`**. A verification of an issue's acceptance criterion
+is, by default, a one-shot local run whose result is recorded; it enters the repository only when it
+names a `standing` category below.
+
+**Closed `standing` categories.** A check may be `standing` only if it is one of the four
+deployment-level kinds below, named by its token. The list is closed: a row that names no token is
+`cycle`, a row that names a token outside the list is a **layer violation** (Area 2, GATE:QUALITY
+`Test quality`), and a reason sentence never substitutes for a token — categories are extended by
+revising this ADR, never by describing a new one in a row.
+
+| Token | Deployment-level check |
+|---|---|
+| `packaging` | the shipped artifact builds, packs, installs or stamps — plugin package, thin-root bundle, install script |
+| `manifest` | a declared inventory agrees with the tree it describes — `setup/manifest.json`, a suite or CI registration, a scaffold list |
+| `target-runtime` | a shipped script or hook behaves as declared when executed on a stamped target — a hook's deny/allow contract, a script's exit-code contract |
+| `cross-file` | two or more files that must state the same fact do so — shared identifiers named by a settled decision, a rule and its enforcement device, an ADR's status and its registry row, a ko/en pair |
 
 **Declaration site.** The **existing `Type` cell** of the verification design's acceptance-criteria
-table. **No `Layer` column is added.** The layer is a **total function of `Type`** over ADR-0022
-decision 2's closed disposition vocabulary, and this ADR carries the mapping:
+table. **No `Layer` column is added.** The layer is read from the `Type` cell alone: a `standing`
+row carries its token in that cell — `automated / standing: <token>` — and a cell without a token is
+`cycle`. The mapping this ADR carries:
 
-| `Type` | Layer | Asset |
+| `Type` cell | Layer | Asset |
 |---|---|---|
-| `delivery-check` | `cycle` | one-shot, uncommitted, archived with the cycle's artifacts |
-| `automated` | `standing` | `committed` unconditionally; `CI-registered` only where the target opted in |
-| `existing-coverage` | `standing` | the named mechanism, already standing |
-| `manual` | `standing` | the committed scenario file; the verdict is a person's, not CI's |
-| `environment-dependent` | `standing` where resolved to an oracle or a mock; no asset on a design-change request | — |
+| `delivery-check` | `cycle` | one-shot, uncommitted, archived with the cycle's artifacts (D2) |
+| `automated` | `cycle` (default) | one-shot, uncommitted, executed once; the run's command and summary line are recorded (D2) |
+| `automated / standing: <token>` | `standing` | `committed`; `CI-registered` only where the target opted in |
+| `existing-coverage` | — | the named mechanism already stands; its layer was decided when it was authored, and this row adds no asset |
+| `manual` | `cycle` (default) | the itemized checklist VALIDATE requires, archived with the cycle |
+| `manual / standing: <token>` | `standing` | the committed scenario file; the verdict is a person's, not CI's |
+| `environment-dependent` | as the `automated` rows above, once resolved to an oracle or a mock; no asset on a design-change request | — |
 | `none` | — | — |
+
+The criterion is applied uniformly: a `manual` scenario is `standing` on the same closed list as a
+test, since a committed scenario file is a repository asset that every later cycle enumerates.
 
 Three consequences are recorded here so that no gate re-derives them:
 
-- **No new scored item anywhere.** Because the layer is derived rather than declared, there is no
-  named check to place on GATE:PLAN `Test plan`, and therefore no divergence from ADR-0018
-  decision 2, which placed a depth judgment on an existing criterion and explicitly refused a new
-  scored item. What GATE:PLAN scores is that the chosen `Type` is right, which `Test plan` and
-  `Scope` already score (`docs/autoflow-guide.md:717`, `:730`).
-- **ADR-0022's tier-2 mechanism is not amended.** Every `cycle`-layer row is `delivery-check`, which
-  is `≠ automated`, so the host PR body's `## Verification dispositions` inclusion predicate
-  (`docs/autoflow-guide.md:1788`; `docs/pr-body-guide.md:55-60`) already admits it: the external
-  reviewer sees every `cycle`-layer row with its stated reason, with no widening of the predicate.
-- **The `automated` asset cell splits.** AutoFlow establishes `committed` on every target;
-  `CI-registered` only where the target opted in, because the target's own CI is the target's
-  business. On a non-opted-in target GATE:QUALITY `Test coverage`'s standing half is
-  `not-applicable` (`docs/submodule-common-rules.md:197`) — which is not clean, and which is a
-  rubric disposition, never a route class, so it never reaches `scripts/gate/remedy-route.sh`.
+- **No new scored item anywhere.** The layer is read from the `Type` cell, so there is no named
+  check to place on GATE:PLAN `Test plan`, and no divergence from ADR-0018 decision 2, which placed a
+  depth judgment on an existing criterion and refused a new scored item. What GATE:PLAN scores is
+  that the chosen `Type` cell is right — a `standing` token on a check that one local run would
+  settle is a wrong cell, scored where `Test plan` and `Scope` already score
+  (`docs/autoflow-guide.md:717`, `:730`). Token membership in the closed list is a set relation, not
+  a judgment, so it is checkable by a lint (S3) and never scored.
+- **ADR-0022's tier-2 mechanism is not amended.** A `delivery-check` row is `≠ automated`, so the
+  host PR body's `## Verification dispositions` inclusion predicate (`docs/autoflow-guide.md:1788`;
+  `docs/pr-body-guide.md:55-60`) admits it unchanged. A `cycle`-layer `automated` row is **not a
+  reduction** — it is the default disposition of a verified criterion — so the predicate is not
+  widened to admit it. What the external reviewer sees of such a row is its one-shot run's
+  **record** (command and summary line, Reporting Format item 5), carried into the host PR body by
+  S1; the reviewer never sees the check's code, which *Consequences > Negative* records as the cost.
+- **The `automated` asset cell splits — for `standing` rows only.** AutoFlow establishes
+  `committed` on every target; `CI-registered` only where the target opted in, because the target's
+  own CI is the target's business. On a non-opted-in target GATE:QUALITY `Test coverage`'s standing
+  half is `not-applicable` (`docs/submodule-common-rules.md:197`) — which is not clean, and which is
+  a rubric disposition, never a route class, so it never reaches `scripts/gate/remedy-route.sh`.
 
-A **composition oracle** is `standing` by this mapping and not by a separate rule: an oracle row is
-`automated`, or an `environment-dependent` row resolved to a real-environment oracle, and neither
-maps to `cycle`. "A floor that does not survive merge is not a floor" is a consequence of the
+A **composition oracle** is `standing` by this mapping and not by a separate rule: its subject is a
+shared identifier that a settled decision also names, which is the `cross-file` category, and the
+defect it catches — two files disagreeing about that identifier after merge — is a post-deployment
+one by construction. "A floor that does not survive merge is not a floor" is a consequence of the
 mapping, recorded as one, rather than an independent clause that could drift from it.
 
 ### D2 — Storage form of cycle-layer assets
 
-A `cycle`-layer asset is **uncommitted**. It is a cycle artifact under the single declared prefix
+A `cycle`-layer asset — a `delivery-check`, a default `automated` row, a default `manual`
+checklist — is **uncommitted**. It is a cycle artifact under the single declared prefix
 `.autoflow/issue-{N}-local/`, executed once at the cycle's verification point and archived with the
 issue's other `.autoflow/issue-{N}*` artifacts at prior-cycle cleanup. It never enters the merged
-tree.
+tree. What outlives the cycle is the run's **record** — the command and the summary line it
+produced, in the form Reporting Format item 5 already fixes
+(`docs/submodule-common-rules.md` > Reporting Format) — written to the cycle's `.autoflow/*` report
+and, for an `automated` row, surfaced to the external reviewer in the host PR body (D1; S1 carries
+the rendering).
 
 The prefix must be a **single declared path prefix**, because a predicate needs a subject: "the
 cycle layer lives with the other cycle artifacts" is a convention, not something a check can read.
@@ -140,9 +192,10 @@ failure is unambiguous and needs no new branch — a `delivery-check` has no RED
 (ADR-0022 decision 2), so the VERIFY cause-branch is not its home.
 
 **AC3's confirming means.** One standing **tracked-file predicate** over the declared prefix,
-authored by a named sub-issue (S3 below). It is `standing` by D1's criterion: it must hold under a
-later, unrelated change — the realistic defect it catches is a `.gitignore` edit three cycles from
-now, which no per-PR relation can see.
+authored by a named sub-issue (S3 below). It is `standing` by D1's criterion under the `cross-file`
+token: the defect it catches is a cycle asset entering the merged tree — the ignore rule and the
+index disagreeing about the prefix, which a `.gitignore` edit three cycles from now would cause —
+and that defect surfaces only after merge, where no per-PR relation can see it.
 
 ### D3 — Target test entry point, and the suite plane's fate on targets
 
@@ -204,9 +257,10 @@ a target with no declared test command whose design types every row `none` / `ma
 **Why this blocking point is not a device on the target path.** The test is *whose artifact must
 change to clear the block?* — here, **AutoFlow's own verification design**: retype the row, and the
 residual above already lets a design owing no automated verification proceed. GATE:PLAN is also the
-sole point at which that judgment is ever re-derived, since an `automated` row never reaches the
-external reviewer — the host PR body's `## Verification dispositions` section covers every criterion
-typed *other than* `automated` (`docs/autoflow-guide.md:1787-1790`). A blocking point whose remedy
+sole point at which that judgment is ever re-derived, since an `automated` row reaches the external
+reviewer only as its run record (D1), never as a disposition to judge — the host PR body's
+`## Verification dispositions` section covers every criterion typed *other than* `automated`
+(`docs/autoflow-guide.md:1787-1790`). A blocking point whose remedy
 lies entirely inside AutoFlow's own artifact mandates nothing of the target; one whose remedy lies in
 the target's declaration would be a device on the target path however it is worded.
 
@@ -311,11 +365,11 @@ here it is the standing layer's trigger-coverage mechanism, even as D3 makes it 
 - **`tests/test-suite-coverage-agreement.sh` — deleted.** Its subject is the agreement between the
   resolver and the coverage predicate, and both sides are retired.
 
-**Not superseded.** ADR-0018 and ADR-0022 stand. ADR-0022's disposition vocabulary is untouched; the
-one amendment is `delivery-check`'s definition (*Amends ADR-0022*, below). The retained
-test-quality items — mock-boundary fidelity (`docs/teammate-contracts.md:110`), Test necessity
-(`:104`) and output hygiene — are **`retained`**: they are independent of the layer partition and
-nothing in this ADR touches them.
+**Not superseded.** ADR-0018 and ADR-0022 stand. ADR-0022's disposition vocabulary is untouched;
+the amendments are `delivery-check`'s definition and the retention half of Test necessity (*Amends
+ADR-0022*, below; the split itself is the next section). The retained test-quality items —
+mock-boundary fidelity (`docs/teammate-contracts.md:110`), the existence half of Test necessity
+(`:104`) and output hygiene — are **`retained`**: they are independent of the layer partition.
 
 ### Evaluator execution discipline (re-homed from ADR-0019 decision 3)
 
@@ -332,6 +386,42 @@ This ADR is the governing record for the three obligations that survive ADR-0019
    `not-searched` — never reported clean.
 
 `inherited_verdicts` is **not** re-homed: it is deleted with the register (D6).
+
+### Test necessity — what D1 replaces and what it retains (ADR-0022, issue #222)
+
+ADR-0022 decision 1 made necessity a judgment with two inputs — *required behavior* and *cost of
+absence* — and put the burden of proof on the test. Under the original D1 that judgment was also the
+only filter on what entered the repository: an `automated` row that passed it was committed
+unconditionally. The revised D1 separates the two questions the judgment had been carrying, and
+disposes of each half explicitly.
+
+**Replaced.**
+
+- **Necessity as the retention criterion.** Whether a verification stays in the repository is
+  decided by D1's closed category list and by nothing else. Passing the necessity judgment no
+  longer implies `standing`; a stated reason — however good — does not move a row out of `cycle`.
+  The *cost of absence* input's "if this breaks after merge, who loses what" reading is **not** a
+  proxy for D1's predicate: it asks whether a verification is worth writing at all, and D1 asks
+  where the defect surfaces.
+- **The burden-of-proof framing as applied to persistence.** "The burden lies on the test" was
+  written against the default *test it*; for retention the default is now structural (`cycle`),
+  and a burden that can always be discharged by a sentence is not a burden (Context).
+- **The rule sites that state necessity as the committed-suite filter** — `docs/autoflow-guide.md`
+  > ARCHITECT > Output artifacts > *Test necessity*, `docs/teammate-contracts.md:104`, and the
+  agent definitions that cite them — are `replaced` by S1 so that the clause governs existence and
+  D1 governs retention.
+
+**Retained.**
+
+- **Necessity as the existence judgment.** Whether a criterion is verified at all — `none` against
+  any other disposition — is still the two-input judgment, and under uncertainty the disposition is
+  still `none`. A `cycle` run is cheap but not free, and an imagined failure mode still owes no
+  verification.
+- **The closed disposition vocabulary**, the one-line reason on every non-`automated` issue-AC row,
+  the test-kind vocabulary and RED's expectation of it (ADR-0022 decisions 2 and 3).
+- **The three-tier acceptance-criterion guard** (decision 4) and the narrowed Reconcile finding set
+  (decision 5, as amended by #160 and #166).
+- **VERIFY step 3 as a scope check** (decision 6).
 
 ### Sub-issue split, and the obligations carried into it
 
@@ -362,6 +452,15 @@ this record is the only carrier across that gap:
   (`docs/autoflow-guide.md:1604-1607`) triggers on relocation and renaming. This cycle's diff adds a
   file and edits status text, so the sweep never fires here; the obligation binds in the sub-issues,
   where relocation and renaming actually happen.
+- **Cycle-layer execution means (issue #222).** A default `automated` row's asset lives under
+  `.autoflow/issue-{N}-local/`, outside the target's test tree, while D3 invokes the target's
+  declared test command as declared. How that asset is executed once — the declared command pointed
+  at the prefix where the target's runner admits it, or a self-contained script where it does not —
+  is S3's to settle, under two constraints this record fixes: the asset never enters the merged
+  tree (D2, AC3's predicate), and RED's Red confirmation is still owed for every `driving` /
+  `regression` row (M). S1 carries the record's rendering into the host PR body (D1, second
+  consequence) and the `standing:` token grammar into the rule documents; S3 carries the closed-list
+  membership lint.
 
 ### Clauses this ADR carries beyond M and D1–D6
 
@@ -374,6 +473,10 @@ this record is the only carrier across that gap:
   issue's CI layer is this ADR's **`standing`** layer. The renaming carries no content change, so
   neither gate's acceptance-criterion-authority check has to decide whether a renamed layer is a
   changed criterion.
+- **Effective-from of the #222 revision.** The revised D1 binds verification designs authored after
+  it lands — the same convention as the clause above. The 44 committed suites this repository
+  carried when #222 was written keep their `standing` layer until a separate issue reclassifies them
+  against the closed list; #222 changes the criterion, not the inventory.
 - **`Amends ADR-0022`** — see *Related Issues / PRs*.
 - **The adjustment-scope table below is not the change table `docs/autoflow-guide.md:347-353`
   `[DENY]`s.** Issue #192 bars a *prediction of the files implementation will touch*, decided by
@@ -429,9 +532,9 @@ this record keeps, not the one it deletes.
 
 | Criterion | Disposition |
 |---|---|
-| GATE:PLAN `Test plan` (`docs/autoflow-guide.md:717`; `docs/evaluation-system.md:67`) | `retained` — no new judgment is added: the layer is derived from `Type`, which this item and `Scope` already score |
+| GATE:PLAN `Test plan` (`docs/autoflow-guide.md:717`; `docs/evaluation-system.md:67`) | `retained` — no new judgment is added: the layer is read from the `Type` cell and its `standing:` token, which this item and `Scope` already score; token membership in the closed list is a set relation for S3's lint, not a scored item |
 | GATE:PLAN `Feasibility` (`docs/autoflow-guide.md:730`) | `retained` — it carries D3's blocking point unchanged, with the fact supplied by the verification design |
-| GATE:QUALITY `Test quality` — test-asset disposition (`docs/autoflow-guide.md:1608-1614`) | `replaced` — its subject (a cycle-scoped asset left CI-registered) cannot occur; the replacement subject is a **layer violation** — a committed asset on a `delivery-check` row, or an uncommitted one on an `automated` row |
+| GATE:QUALITY `Test quality` — test-asset disposition (`docs/autoflow-guide.md:1608-1614`) | `replaced` — its subject (a cycle-scoped asset left CI-registered) cannot occur; the replacement subject is a **layer violation** — a committed asset on a `cycle` row of any `Type`, an uncommitted asset on a `standing` row, or a `standing:` token outside D1's closed list |
 | GATE:QUALITY `Test coverage` (`docs/evaluation-system.md:69`) | `replaced` — the subject is restated from *CI result* to *standing-layer asset realisability + cycle-layer executed result*, both checkable strictly before push; `not-applicable` on a non-opted-in target |
 | ADR-0019 decision 3 (evaluator execution discipline) | `replaced` — in part (D6): `inherited_verdicts` goes with the register, while the anchor, sampling and wall-clock obligations are re-homed above and `docs/teammate-contracts.md:62-65`'s *Governing record* pointer is repointed to this ADR |
 | VALIDATE failure routing by `ci-subject` (`docs/autoflow-guide.md:1472`; `scripts/gate/remedy-route.sh`) | `replaced` — moved, not deleted: the same header-based classification becomes stage 1 of D4's CI-failure classifier, through the same routing script |
@@ -482,17 +585,30 @@ registry row.
 
 ## Alternatives Considered
 
-- **Naming the persistent layer "CI".** Under D1's mapping three of the five non-`none` dispositions
-  map to the persistent layer while **CI executes none of them** — `existing-coverage` is a
-  mechanism that already stands, `manual`'s verdict is a person's, and a resolved
-  `environment-dependent` row is executed by whatever runs the suite. Every rewritten rule site
-  would inherit an ambiguity between *the property persists* and *CI runs it*, and D1's criterion is
-  the first.
-- **A `Layer` column alongside `Failure mode`.** It adds an axis that can disagree with `Type`, it
-  would need a named GATE:PLAN check (the ADR-0018 decision 2 divergence D1 avoids), and it creates
-  a row class tier 2 cannot see — a `Layer: local` + `Type: automated` row is invisible both in the
-  diff and in the PR body. Making `Layer` merely *constrain* `Type`, or widening the PR-body
-  inclusion predicate, were superseded by deriving the layer outright.
+- **Naming the persistent layer "CI".** Under D1's mapping a `standing` `manual` scenario and an
+  `existing-coverage` mechanism persist while **CI executes neither** — the scenario's verdict is a
+  person's, and the mechanism is whatever already stands. Every rewritten rule site would inherit an
+  ambiguity between *the asset persists* and *CI runs it*, and D1's criterion is the first.
+- **A `Layer` column alongside `Failure mode`.** It adds an axis that can disagree with `Type` and
+  it would need a named GATE:PLAN check (the ADR-0018 decision 2 divergence D1 avoids). The
+  `standing:` token lives inside the `Type` cell for the same reason once #222 made the layer no
+  longer a function of `Type` alone: one cell, one reading. The original objection that a
+  `Layer: local` + `Type: automated` row is a class tier 2 cannot see is **withdrawn** by #222 —
+  that row is now the default, and its invisibility is accepted and recorded under *Consequences >
+  Negative*, with the run's record standing in for the code.
+- **Keeping a reason-type retention threshold with a stricter reason (issue #222).** Rejected on
+  measurement: TC-8's "name the change that re-triggers this failure" is already the strict form,
+  and it filtered nothing in six weeks (`connev-llm/llmroute#628`); this repository's own
+  test-to-code line ratio after #153 is the same shape (Context). A criterion a sentence can always
+  satisfy bounds nothing, whatever the sentence is asked to say.
+- **Letting a row argue its way to `standing` with a stated reason, categories open (issue
+  #222).** Rejected: it is the reason-type threshold under another name, and AC2 of #222 asks for
+  a list a reason cannot extend. The closed list is what makes the layer decision a set relation a
+  lint can check rather than a judgment a rubric must score.
+- **Applying the #222 criterion to `automated` only, leaving `manual` at `standing`.** Rejected: a
+  committed scenario file is enumerated, maintained and read by every later cycle exactly as a
+  test is, so exempting it re-creates the unbounded class on a different file type. The predicate
+  is over the defect, and a checklist's defect surfaces where a test's does.
 - **Reusing the suite header's `lane: standing | cycle-scoped` as the declaration site.** It is
   already this partition, but it is declared in an artifact derived at RED (issue #192) and it has
   no execution consequence today: `cycle-scoped` means only "inert off its own dev branch" while
@@ -566,6 +682,9 @@ registry row.
 - A target adopts AutoFlow without adopting AutoFlow's test format — the symmetry lint already has.
 - A CI failure re-enters at the phase its cause names instead of unconditionally at RED.
 - Three copies of the opt-in predicate are replaced by one resolver with three callers.
+- Repository test growth is bounded by a closed list rather than by a judgment (issue #222): a
+  cycle's verification of an issue criterion leaves a record, not a file, unless the defect it
+  catches is one deployment would surface.
 
 ### Negative
 
@@ -573,9 +692,16 @@ registry row.
   HANDOFF re-enters and re-traverses VERIFY → REFINE → VALIDATE → AUDIT → GATE:QUALITY → DELIVER →
   INTEGRATE → HANDOFF. No new cap is introduced (D4), so the bound is the existing GREEN ↔ VERIFY
   round-trip rules.
-- A `cycle`-layer asset is uncommitted, so the external reviewer sees the row's **reason** and never
-  the check's **code** — tier 2 of the three-tier guard loses that review surface. Low severity: the
-  check executes inside the same trust boundary as the agent that authored it.
+- A `cycle`-layer asset is uncommitted, so the external reviewer sees the row's **reason** (a
+  `delivery-check`) or the run's **record** (a default `automated` row, issue #222) and never the
+  check's **code** — tier 2 of the three-tier guard loses that review surface, and after #222 it
+  loses it for the default disposition, not for an exception. Low severity: the check executes
+  inside the same trust boundary as the agent that authored it, and the record carries the command
+  a reviewer can re-run.
+- A behavior verified in one cycle has no regression guard in a later one unless its defect is
+  deployment-level (issue #222). This is the decision, not a side effect: the guard that was being
+  kept was paid for on every later change and, on the measured population, protected checks whose
+  failure a person sees at the point of change.
 - The suite plane becomes two configurations to reason about (opted in / not), and a non-opted-in
   target's standing half of GATE:QUALITY `Test coverage` is `not-applicable` rather than verified.
 - With no AutoFlow-side attribution rule, a target whose declared command reports a failure this
@@ -586,8 +712,9 @@ registry row.
 
 ### Neutral / Trade-Offs
 
-- The layer is derived, not declared, so nothing new is scored and nothing new is written in a
-  verification design; the cost is that a reader must know the mapping, which is why it lives here.
+- The layer is read from the `Type` cell, so nothing new is scored and no new column is written in
+  a verification design; the cost is that a reader must know the mapping and the four tokens,
+  which is why both live here.
 - Retiring the inheritance machinery removes a correctness dependency (`ci-subject` declaration
   quality driving inheritance) at the price of losing the fast path it bought.
 
@@ -643,9 +770,9 @@ registry row.
     of target runtime: what the declared command executes internally is outside this model, so there
     is nothing left for AutoFlow to require of it, degrade to, or refuse. What survives of round 1's
     residual state is a **report, not a gate**, and it is stated where it belongs — the outcome
-    vocabulary D3 keeps (`:188-190`: `not-run` is never `clean`) and D2's re-execution rule
-    (`:136`: a check that did not execute is `not-run`, never `passed`). The consequence for RED
-    follows from **M**'s RED-integrity paragraph (`:67-71`) rather than being stated there: a
+    vocabulary D3 keeps (`:241-243`: `not-run` is never `clean`) and D2's re-execution rule
+    (`:188`: a check that did not execute is `not-run`, never `passed`). The consequence for RED
+    follows from **M**'s RED-integrity paragraph (`:80-84`) rather than being stated there: a
     `driving` row must FAIL before GREEN, so a row that never ran yields no Red confirmation —
     the absence of a confirmation AutoFlow owes **itself**, not a rule imposed on the target. D3
     states no residual `not-run` gate of its own.
@@ -657,14 +784,30 @@ registry row.
     gains the cost, stated plainly. **Acceptance-criterion content is unchanged**: round 2 removes
     constraints rather than adding them, and AC2's own second sentence carries the boundary, so no
     `[ac-decision]` is owed. Area 1, Area 2 and Area 3 keep their words and their dispositions.
+- **Revision — issue #222 (operator edit, outside an AutoFlow cycle).** D1's predicate is replaced
+  and its mapping restated; M's two layer definitions follow it. **Original D1, now superseded**:
+  *must this property still hold under a later, unrelated change?* — yes → `standing`, no →
+  `cycle`; `automated` → `standing` unconditionally; `manual` → `standing`; `delivery-check` →
+  `cycle`. **Revised D1**: *does the defect surface only after deployment?*; `automated` and
+  `manual` default to `cycle`; `standing` only under one of four closed tokens (`packaging`,
+  `manifest`, `target-runtime`, `cross-file`) carried in the `Type` cell; a stated reason is not a
+  criterion. Also revised: D2's asset set and the run record it keeps; the `Test quality`
+  layer-violation subject (Area 2); the *Test necessity* split (new section) and the *Not
+  superseded* paragraph of D6; two *Alternatives* entries, with three added; *Consequences*. D3, D4,
+  D5, the retirements of D6, Area 1 and Area 3 keep their words. AC3 of #222 is the *Test necessity*
+  section; AC4 holds by construction — the change is a document edit and the revision authors no
+  test file, standing or cycle.
 - Supersedes `docs/adr/0019-scope-fit-verification-policy.md`: decision 1 and decision 2 in full,
   decision 3 in part — `inherited_verdicts` is deleted with the Green-tree register, while the
   anchor-before-execute, representative-sampling and wall-clock-cap obligations are retained and
   re-homed in this ADR's *Evaluator execution discipline* section.
 - Amends `docs/adr/0022-test-necessity-and-three-tier-ac-guard.md`: decision 2's definition of
   `delivery-check` — the row's asset is a one-shot artifact under `.autoflow/issue-{N}-local/`, not
-  a committed check in the `lane: cycle-scoped` manifest lane. The closed disposition vocabulary,
-  the Test-necessity judgment and the three-tier acceptance-criterion guard are unchanged.
+  a committed check in the `lane: cycle-scoped` manifest lane; and, from issue #222, decision 1's
+  role as the retention filter — retention is D1's closed list, necessity decides existence only
+  (*Test necessity — what D1 replaces and what it retains*). The closed disposition vocabulary and
+  the three-tier acceptance-criterion guard are unchanged.
+- Issue #222 — the D1 revision; `connev-llm/llmroute#628` is the criterion's source.
 - Builds on `docs/adr/0018-verification-depth-justification.md`: the layer is derived from an
   existing cell, so no scored item is added.
 - Reinforces `docs/adr/0003-autoflow-ends-at-handoff.md`: D5 declines to bind the reviewer's merge.
@@ -680,5 +823,6 @@ registry row.
   "When to Create an ADR" trigger area — so it lands ahead of the mechanisms it governs.
 - **Effective from the next cycle.** The cycle that writes this record is governed by the
   pre-existing rules; see *Clauses this ADR carries beyond M and D1–D6*.
-- **Revised twice in response to the external review of PR #220.** Each round's findings, what
-  changed, what stands and what is retracted are recorded in *Related Issues / PRs*.
+- **Revised twice in response to the external review of PR #220**, and a third time by issue #222
+  (D1's criterion). Each revision's findings, what changed, what stands and what is retracted are
+  recorded in *Related Issues / PRs*.
