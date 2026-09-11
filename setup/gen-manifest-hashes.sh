@@ -162,7 +162,13 @@ build_rows() {
            ".codex/review.md" "root-layer" "copy" "file"
   emit_row "AGENTS.md" \
            "AGENTS.md" "root-layer" "scaffold" "file"
-  emit_row ".claude/autoflow.local.json" \
+  # The scaffold SOURCE is the neutral `.example` (backend default only), not
+  # this repository's own `.claude/autoflow.local.json`, which additionally
+  # declares this repository's test command and suite-plane opt-in (issue
+  # #225): a target's test command and opt-in are the target's to declare
+  # (ADR-0024 D3), never injected by a stamp. Same source/dest split as
+  # CLAUDE.local.md.example -> CLAUDE.local.md above.
+  emit_row ".claude/autoflow.local.json.example" \
            ".claude/autoflow.local.json" "root-layer" "scaffold" "file"
 
   # Root-layer tier: methodology-step scripts (issue #10). Scripts the

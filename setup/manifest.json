@@ -352,11 +352,11 @@
       "sha256": "f90535b46d56906c7be048f4eb0c4b6953368f91de1bf842251cab5a752fc83e"
     },
     {
-      "source": ".claude/autoflow.local.json",
+      "source": ".claude/autoflow.local.json.example",
       "dest": ".claude/autoflow.local.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "5a07396a4a8e904c735d009e9f3eebad107bb0d25d19e9f84d66517ecebf3110"
+      "sha256": "83c874995db25cb41d68caac324ec7df19e4f08527c76fa31d2d975844d31737"
     },
     {
       "source": "scripts/handoff/create-host-pr.sh",
