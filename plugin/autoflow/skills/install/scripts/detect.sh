@@ -53,6 +53,13 @@
 #     error; SUITE_HEADER_FAILS = the count of `FAIL: D7` lines; one
 #     SUITE_HEADER_FINDING=<msg> per header-less suite and one
 #     SUITE_HEADER_SKIP=<reason> per `SKIP: D7`.
+#   - STALE is the D4 `removed-upstream` axis (issue #236): STALE_COUNT and
+#     one STALE_UPSTREAM=<dest (kind, forecast)> line per artifact the
+#     installed manifest lists and the cache's manifest does not, carried
+#     verbatim from the oracle's WARN so SKILL.md Step 1 discloses — before
+#     the single confirmation — which of them the stamp will remove (a `copy`
+#     whose on-disk sha256 still equals the installed manifest's) and which
+#     it will keep. A WARN never moves DRIFT_STATE.
 #   - SUITE_PLANE is D7's opt-in arm (ADR-0024 D3, issues #228 / #229), read
 #     off the same D7 lines so this report and drift-check cannot disagree
 #     (issue #229 AC3): SUITE_PLANE_STATE = in | out | unreadable | na — `in`
@@ -128,6 +135,8 @@ SUITE_HEADER_FINDINGS=
 SUITE_HEADER_SKIPS=
 SUITE_PLANE_STATE=na
 SUITE_PLANE_DECL=na
+STALE_COUNT=0
+STALE_UPSTREAMS=
 if [ "$INSTALL_STATE" = installed ]; then
   if [ ! -f "$DRIFT_ORACLE" ]; then
     # Deterministic degradation (no silent clean): the cache drift oracle is
@@ -182,6 +191,16 @@ if [ "$INSTALL_STATE" = installed ]; then
         else
           SUITE_PLANE_DECL=present
         fi
+      fi
+      # Artifacts upstream no longer ships (D4 `removed-upstream` WARNs, issue
+      # #236) on their own axis: the stamp about to be confirmed removes a
+      # `copy` whose on-disk sha256 still equals the installed manifest's and
+      # keeps everything else with a reason, so the lines are carried verbatim
+      # for the skill to disclose BEFORE the Step-3 confirmation. A WARN never
+      # moves DRIFT_STATE.
+      STALE_UPSTREAMS=$(printf '%s\n' "$_drift_out" | grep '^WARN: D4 -- installed artifact no longer shipped upstream: ' | sed -E 's/^WARN: D4 -- installed artifact no longer shipped upstream: //')
+      if [ -n "$STALE_UPSTREAMS" ]; then
+        STALE_COUNT=$(printf '%s\n' "$STALE_UPSTREAMS" | wc -l | tr -d ' ')
       fi
       # D6 (issue #185) on its own axis: the spawn-policy scaffold vs the
       # agent definitions the session loads. Not stamp-repairable (the
@@ -413,6 +432,13 @@ if [ -n "$SUITE_HEADER_SKIPS" ]; then
 fi
 printf 'SUITE_PLANE_STATE=%s\n' "$SUITE_PLANE_STATE"
 printf 'SUITE_PLANE_DECL=%s\n' "$SUITE_PLANE_DECL"
+printf 'STALE_COUNT=%s\n'       "$STALE_COUNT"
+if [ -n "$STALE_UPSTREAMS" ]; then
+  printf '%s\n' "$STALE_UPSTREAMS" | while IFS= read -r _su; do
+    [ -n "$_su" ] || continue
+    printf 'STALE_UPSTREAM=%s\n' "$_su"
+  done
+fi
 printf 'VERSION_INSTALLED=%s\n' "$VERSION_INSTALLED"
 printf 'VERSION_CACHE=%s\n'     "$VERSION_CACHE"
 printf 'VERSION_SKEW=%s\n'      "$VERSION_SKEW"

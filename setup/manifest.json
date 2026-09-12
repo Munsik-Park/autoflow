@@ -244,7 +244,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "08b2674241cdf63b3775d945a378b122f5d4832243f192542b901fdf66c2a4e5"
+      "sha256": "97b697cd065f361fb1e15ed3521e0d6d4e60be59dafcaa45a896af4e81941dcf"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
@@ -265,7 +265,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "54c4c07328fdf62e030ac2c8c701ef88fe3e7252c47dc5f4f2e2753a82b88447"
+      "sha256": "d9f0f08abbf17cddf2d5aae1f835426b5103fb49828ab305b788586fa4ef5cf3"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",

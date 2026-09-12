@@ -146,6 +146,16 @@ written):
   instead. **Whatever `SUITE_HEADER_STATE` is**, list every
   `SUITE_HEADER_SKIP=` line verbatim and never narrate a `skip` as clean. On
   `error`, surface it — never read it as clean.
+- **Artifacts upstream no longer ships (drift-check D4, issue #236)**:
+  `STALE_COUNT` and one `STALE_UPSTREAM=` line per artifact the installed
+  manifest lists and the cache's manifest does not. List **every** line
+  verbatim — each names the dest, its kind, and what the stamp will do with
+  it: a `copy` whose on-disk sha256 still equals the installed manifest's is
+  **removed** by the stamp; a modified `copy` and every `scaffold` /
+  `shim-stamp` / `json-merge` artifact is **kept** and reported with its
+  reason. This is disclosed here, before Step 3, so the single confirmation
+  covers the removals; nothing is removed until the stamp runs. When the
+  installed manifest is unreadable the stamp removes nothing and says so.
 - **Derived identity** (display-only): `ORG` / `REPO` / `DEFAULT_BRANCH` /
   `TOPOLOGY`. Empty fields were omitted on purpose (non-GitHub / no remote) —
   do not ask the user for them.
@@ -198,8 +208,9 @@ separate prompt.
 ## Step 3: confirm — the single opt-in gate
 
 Ask the user **once** whether to stamp (in multi-repo, this same prompt also
-confirms the fork-URL shown above). This is the only confirmation across both
-topologies. **If the user declines, STOP here — perform zero writes** (the fork
+confirms the fork-URL shown above; when Step 1 listed `STALE_UPSTREAM=` lines,
+the same prompt names the artifacts the stamp will remove). This is the only
+confirmation across both topologies. **If the user declines, STOP here — perform zero writes** (the fork
 proposal and the stamp are both abandoned; the target stays byte-unchanged).
 
 ## Step 4: on confirmation — stamp (writes begin here)
@@ -222,6 +233,15 @@ TARGET_ROOT="$TARGET_ROOT" ORG="$ORG" REPO="$REPO" \
 ```bash
 bash "$PLUGIN_CACHE_ROOT/setup/init.sh" --target "$TARGET_ROOT"
 ```
+
+The installer reconciles the target against the manifest it installed last
+(issue #236) and prints one line per artifact that manifest listed and this
+one does not — `REMOVED: <dest> (...)` for a `copy` whose content was still
+what AutoFlow shipped, `KEPT: <dest> (<reason>)` for a modified `copy` or a
+`scaffold` / `shim-stamp` / `json-merge` artifact, `ABSENT: <dest>` for a
+`copy` already gone — followed by a one-line count. Keep these lines for
+step f. A first stamp prints that there was nothing to reconcile; an
+unreadable previous manifest prints a `[WARN]` and removes nothing.
 
 **c. Persist the reviewer-backend selection (only on an explicit switch).**
 <!-- REVIEWER-BACKEND-PERSIST -->
@@ -282,5 +302,21 @@ line as a suite to migrate (or, for the unreadable-declaration form, the file
 to repair) and repeat the Step-1 remedy. A `PASS: D7: suite plane not opted in`
 means no header is owed; a `HINT: D7: no tests declaration` beside it names the
 scaffold's missing `tests` object and its hand edit (Step 1). A D7 FAIL is
-likewise a PREFLIGHT stop condition and not a reason to re-stamp. Do NOT commit on their behalf — the target
+likewise a PREFLIGHT stop condition and not a reason to re-stamp.
+
+**Reconciled artifacts (issue #236).** Report every `REMOVED:` / `KEPT:` /
+`ABSENT:` line from step b verbatim, dest by dest, and the count line. For
+each `REMOVED:` dest, run one read-only reference probe over the target and
+report its hits as information:
+
+```bash
+git -C "$TARGET_ROOT" grep -n -I --untracked -e "$(basename "<dest>")" -- . ':!.claude/autoflow/docs' ':!docs/adr'
+```
+
+A hit is a place where the target still names a file upstream retired — a
+hook, a workflow, a script that sources it — and is the operator's to judge
+before committing (the installer removes only bytes AutoFlow shipped, so the
+removal is what surfaces the reference; it does not decide it). A `KEPT:`
+line's dest is the operator's to dispose of by hand — for a modified `copy`,
+by diffing it against the previous version before deleting it. Do NOT commit on their behalf — the target
 owns its version record via its own commits (R1). End here.

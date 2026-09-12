@@ -51,6 +51,17 @@ setup/init.sh --target /path/to/your-project
 setup/init.sh --target /path/to/your-project --force
 ```
 
+A re-stamp also **reconciles** the target against the manifest it installed
+last (issue #236): before the stamp overwrites `.claude/autoflow/manifest.json`
+the installer reads it, and every artifact that manifest lists and the new one
+does not is handled by ownership — a `copy` whose on-disk sha256 still equals
+the previous manifest's is removed (`REMOVED:`); a `copy` you modified, and
+every `scaffold` / `shim-stamp` / `json-merge` artifact, is kept and named with
+the reason (`KEPT:`); a `copy` already gone is `ABSENT:`. A target with no
+previous installed manifest (first stamp), or one that cannot be read, has
+nothing removed. The lines are printed dest by dest, and committing the result
+stays yours.
+
 The install is **manifest-driven**: `setup/manifest.json` is the exhaustive,
 machine-readable list of every artifact the installer writes, with a per-file
 `source`, `dest` (target-root-relative), `tier`, `kind`, and `sha256`. Nothing
@@ -132,7 +143,7 @@ sh .claude/autoflow/drift-check.sh
 | D1 | every installed artifact vs the installed manifest (content hashes, the shim managed region, the settings-pin keys; a scaffold is presence-only) | FAIL — repair the installed file |
 | D2 | installed manifest `version` vs the installed plugin's `plugin.json` | FAIL — re-stamp |
 | D3 | settings wiring never binds `.autoflow` state to the plugin root | FAIL — fix the wiring |
-| D4 | installed manifest vs the **marketplace clone's** `setup/manifest.json`, per artifact by sha256 — a bundle that is self-consistent (D1 PASS) but older than what the clone would stamp today, including upstream changes merged without a version bump | FAIL — re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`); a changed `scaffold` sample or an artifact upstream no longer ships is a `WARN` you dispose of by hand |
+| D4 | installed manifest vs the **marketplace clone's** `setup/manifest.json`, per artifact by sha256 — a bundle that is self-consistent (D1 PASS) but older than what the clone would stamp today, including upstream changes merged without a version bump | FAIL — re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`); a changed `scaffold` sample is a `WARN` you dispose of by hand; an artifact upstream no longer ships is a `WARN` that says what the re-stamp will do with it (issue #236) — remove a `copy` whose on-disk sha256 still equals the installed manifest's, keep and report a modified `copy` or any other kind |
 | D5 | the installed plugin's files vs the clone's `plugin/<name>/` source — the hooks a session runs and the docs it reads must come from the same source | FAIL — `/plugin update autoflow@autoflow` |
 | D6 | the target-owned `.claude/autoflow/spawn-policy.json` scaffold vs the agent definitions the session loads (issue #185): `scripts/spawn-policy/spawn-policy.sh check` over the scaffold — a `phases` row's effort must equal the loaded definition's `effort:` frontmatter and every `agent_type` must be shipped — plus the row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed. Model values and `workflow_sites` effort are yours and are not compared | FAIL — edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values, add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` |
 | D7 | **only where you opted into AutoFlow's suite plane** (`.claude/autoflow.local.json` > `tests` > `suite_plane: true` — ADR-0024 D3, issues #228 / #229; resolved through the shipped `scripts/test/suite-manifest.sh`, the plane's single resolver): every executable spec under your `tests/**` declares the `# ci-subject:` header `scripts/test/select-suites.sh` requires (issue #213): a suite that predates the header contract BLOCKs every selection, starting with RED's suite derivation. The check is the selector's own `--check-headers` stage, one FAIL per header-less suite. A target that has not opted in **passes without consulting the selector** — no header is owed and your own declared test command (`tests` > `command`, else `CLAUDE.md` > Development Commands `Test`) runs your tests; if your `.claude/autoflow.local.json` predates the `tests` object (stamped at 0.2.2 or earlier), the PASS carries a `HINT` naming it | FAIL (opted in) — back-fill each named suite's header per `docs/autoflow-guide.md` > RED > Header contract > *Adopting the contract over existing suites* (a re-stamp never touches `tests/**`); a sourced helper moves under `tests/lib/` instead. FAIL (declaration present but unreadable) — repair `.claude/autoflow.local.json`; an unreadable declaration is never read as "not opted in". HINT (no `tests` object) — add it by hand from `<clone>/.claude/autoflow.local.json.example`; a re-stamp never overwrites the scaffold |
