@@ -113,7 +113,11 @@ drift and reports the derived org/repo/branch/topology (read-only), asks for a
 cache (via `init.sh` under the hood) and runs the drift detector automatically.
 No file is written to your project before you confirm, and it never commits for
 you — you own your version record. Maintenance is just
-`/plugin marketplace update` → `/autoflow:install` (re-stamp).
+`/plugin marketplace update` → `/autoflow:install` (re-stamp). A re-stamp also
+removes the `copy` artifacts the previous version delivered and the new one no
+longer ships, when their content is still what AutoFlow shipped; anything you
+modified, and every target-owned scaffold, is kept and named (see
+`setup/SETUP-GUIDE.md` > *Manual / CI-scripted install*).
 
 A non-zero drift-check result is a **PREFLIGHT stop condition** — resolve the
 reported drift before starting a new AutoFlow cycle. The detector checks the

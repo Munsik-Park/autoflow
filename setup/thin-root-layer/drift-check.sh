@@ -25,8 +25,11 @@
 #       setup/manifest.json, per artifact by sha256 — catches a bundle that is
 #       self-consistent (D1 PASS) but older than what the clone would stamp,
 #       including upstream changes that carried no version bump (SKIP when no
-#       clone resolves). A changed `scaffold` sample and an artifact upstream no
-#       longer ships are WARNs: a re-stamp neither overwrites nor removes them.
+#       clone resolves). A changed `scaffold` sample is a WARN (a re-stamp never
+#       overwrites it). An artifact upstream no longer ships is a WARN that
+#       forecasts the re-stamp (issue #236): a `copy` whose on-disk sha256 still
+#       equals the installed manifest's is removed by the re-stamp; a modified
+#       `copy` and every other kind are kept and reported, to dispose of by hand.
 #   D5  plugin skew: the installed plugin's files vs the clone's plugin source
 #       (`plugin/<name>/`) — the hooks a session runs and the thin-root docs it
 #       reads must come from the same source (SKIP when either side is missing)
@@ -120,6 +123,29 @@ if [ ! -f "$MANIFEST" ]; then
   printf 'FAIL: drift-check -- installed manifest missing: %s\n' "$MANIFEST"
   exit 1
 fi
+
+# dest_escapes_target <dest> — true when a path component of <dest> under
+# $TARGET_ROOT is a symlink, or the parent's physical path is outside the
+# target's. The same guard setup/init.sh applies before removing a
+# previous-only `copy` (PR #237 review, High): the D4 forecast below must not
+# announce a removal the re-stamp will refuse.
+dest_escapes_target() {
+  _acc="$TARGET_ROOT"; _rest="$1"
+  while [ -n "$_rest" ]; do
+    _comp="${_rest%%/*}"
+    if [ "$_comp" = "$_rest" ]; then _rest=""; else _rest="${_rest#*/}"; fi
+    [ -n "$_comp" ] || continue
+    _acc="$_acc/$_comp"
+    [ -L "$_acc" ] && return 0
+  done
+  [ -d "$(dirname "$TARGET_ROOT/$1")" ] || return 1
+  _rt="$(cd -P -- "$TARGET_ROOT" 2>/dev/null && pwd -P)" || return 0
+  _rp="$(cd -P -- "$(dirname "$TARGET_ROOT/$1")" 2>/dev/null && pwd -P)" || return 0
+  case "$_rp/" in
+    "$_rt/"*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
 
 # Portable sha256 of a file.
 sha256_of() {
@@ -259,8 +285,10 @@ fi
 # per-artifact sha256 rather than `.version` is what catches an upstream change
 # merged without a version bump. Row kinds decide the disposition: a `copy`,
 # `shim-stamp` or `json-merge` row a re-stamp WOULD refresh is a FAIL; a
-# `scaffold` row (never overwritten) or a row upstream dropped (never removed)
-# is a WARN the operator disposes of by hand.
+# `scaffold` row (never overwritten) is a WARN the operator disposes of by hand;
+# a row upstream dropped is a WARN that says what the re-stamp will do with it
+# (issue #236): remove a `copy` whose on-disk sha256 still equals the installed
+# manifest's, keep — and report — a modified `copy` and every other kind.
 echo "== D4: upstream drift (installed bundle vs marketplace clone) =="
 _clone=""
 if [ "$_lib_ok" = 1 ]; then
@@ -317,8 +345,17 @@ else
         new-upstream:*)
           failc "D4" "upstream drift: $_dest is shipped by the marketplace clone but absent from the installed bundle ($_kind)"
           ;;
+        removed-upstream:copy)
+          # The re-stamp's own removal rule, forecast here so the operator sees
+          # it before confirming: owned (hash equal) → removed; otherwise kept.
+          if [ -f "$TARGET_ROOT/$_dest" ] && ! dest_escapes_target "$_dest" && [ "$(sha256_of "$TARGET_ROOT/$_dest")" = "$_ih" ]; then
+            warnc "D4" "installed artifact no longer shipped upstream: $_dest (copy, on-disk sha256 equals the installed manifest's — a re-stamp removes it)"
+          else
+            warnc "D4" "installed artifact no longer shipped upstream: $_dest (copy, on-disk content differs from the installed manifest or is not the shipped file — a re-stamp keeps it and reports why; dispose of it by hand)"
+          fi
+          ;;
         removed-upstream:*)
-          warnc "D4" "installed artifact no longer shipped upstream: $_dest ($_kind — a re-stamp does not remove it)"
+          warnc "D4" "installed artifact no longer shipped upstream: $_dest ($_kind — a re-stamp never removes a $_kind artifact; dispose of it by hand)"
           ;;
       esac
     done < "$_d4_tmp"

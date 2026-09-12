@@ -98,6 +98,21 @@ below means both tiers together.
   (plugin / root layer) and the source tool version. No delivered artifact
   may land outside the manifest — manifest coverage is total, and the
   manifest is the authoritative file list for upgrade re-stamp and removal.
+- **[MUST]** A re-stamp **reconciles** the target against the manifest it
+  previously installed (`.claude/autoflow/manifest.json`, read before the
+  stamp overwrites it — issue #236): an artifact the previous manifest lists
+  and the new manifest does not is removed only when AutoFlow still owns it —
+  kind `copy`, on-disk sha256 equal to the previous manifest's recorded value.
+  A `copy` whose hash differs (target-modified) and every `scaffold` /
+  `shim-stamp` / `json-merge` artifact are kept and reported with the reason;
+  a target with no previous installed manifest, or one that cannot be read,
+  has nothing removed. The installer prints one `REMOVED:` / `KEPT:` /
+  `ABSENT:` line per dest and `/autoflow:install` reports them; the commit
+  stays the operator's. Whether target code still references a removed file
+  is the install skill's read-only probe, not the installer's decision: the
+  installer removes only bytes AutoFlow shipped, so a reference it surfaces is
+  to a tool file upstream retired, and the judgment on it belongs with the
+  operator who commits.
 - **[MUST]** The manifest ships together with a **schema-hook-contract drift
   test** the target can run to self-verify bundle consistency: installed
   artifacts match the manifest, the root-layer stamp version matches the

@@ -10,6 +10,13 @@
 # legacy in-place placeholder-substitution wizard was removed (issue #952 — its
 # .template sources were deleted, making it a permanent no-op).
 #
+# A re-stamp also RECONCILES the target against the manifest it previously
+# installed (issue #236; docs/tool-delivery-contract.md > R4): an artifact the
+# previous installed manifest lists and the new manifest does not is removed
+# when — and only when — AutoFlow still owns it (kind `copy`, on-disk sha256
+# equal to the previous manifest's). Every other case is kept and named with
+# its reason. No previous manifest, or one that cannot be read, removes nothing.
+#
 # Usage:
 #   setup/init.sh --target /path/to/your-project [--force]
 #
@@ -71,7 +78,127 @@ merge_settings() {
   jq -s '.[0] * .[1]' "$settings" "$pin" > "$settings.tmp" && mv "$settings.tmp" "$settings"
 }
 
-# install_into_target <target> — apply every manifest artifact by kind.
+# sha256_of <file> — portable sha256 (shasum on macOS, sha256sum on Linux).
+sha256_of() {
+  local h
+  h="$(shasum -a 256 "$1" 2>/dev/null | awk '{print $1}')"
+  [ -n "$h" ] || h="$(sha256sum "$1" 2>/dev/null | awk '{print $1}')"
+  printf '%s' "$h"
+}
+
+# dest_escapes_target <target> <dest> — true when any path component of
+# <dest> under <target> is a symlink, or the parent directory's physical path
+# is not inside the target's physical path (PR #237 review, High). The
+# previous manifest is target-controlled input and so is the tree under it:
+# `target/retired-dir -> ../outside` plus a previous-only `copy` row naming
+# `retired-dir/retired.sh` with the outside file's hash would otherwise be
+# followed by the hash check and the `rm`. Every component is checked, not
+# only the leaf, and a symlink that resolves inside the target is refused
+# too — the removal rule is "the file AutoFlow wrote at this dest", and a
+# link is not that. A missing parent is not an escape (the file is absent).
+dest_escapes_target() {
+  local target="$1" dest="$2" acc="$target" rest="$dest" comp real_target real_parent
+  while [ -n "$rest" ]; do
+    comp="${rest%%/*}"
+    if [ "$comp" = "$rest" ]; then rest=""; else rest="${rest#*/}"; fi
+    [ -n "$comp" ] || continue
+    acc="$acc/$comp"
+    [ -L "$acc" ] && return 0
+  done
+  [ -d "$(dirname "$target/$dest")" ] || return 1
+  real_target="$(cd -P -- "$target" 2>/dev/null && pwd -P)" || return 0
+  real_parent="$(cd -P -- "$(dirname "$target/$dest")" 2>/dev/null && pwd -P)" || return 0
+  case "$real_parent/" in
+    "$real_target/"*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+# reconcile_removed <target> <prev-manifest> <new-manifest> — remove what the
+# previous installed manifest lists and the new one does not (issue #236).
+#
+# Removal contract (R4): a candidate is a `dest` present in the previous
+# installed manifest only. It is REMOVED only when AutoFlow still owns it —
+# kind `copy` and the on-disk sha256 equals the previous manifest's recorded
+# value. Everything else is KEPT and reported with its reason: a `copy` whose
+# hash differs (target-modified), a `copy` with no recorded hash, a dest with a
+# symlink on its path or a parent outside the target, an unsafe dest (absolute
+# or `..`), and every `scaffold` / `shim-stamp` /
+# `json-merge` row (target-owned or merged into a target file — never removed).
+# A candidate already absent from disk is reported as ABSENT. Directories are
+# never removed. The previous manifest is target-controlled input: its `dest`
+# values are validated before any path under the target is touched.
+#
+# Output is one line per candidate, `REMOVED:` / `KEPT:` / `ABSENT:` followed by
+# the dest and a parenthesised reason — the install skill reports these lines
+# dest by dest, and the commit stays the operator's.
+reconcile_removed() {
+  local target="$1" prev="$2" new="$3"
+  local pver nver rel n i dest kind psha dsha
+  pver="$(jq -r '.version // "unknown"' "$prev")"
+  nver="$(jq -r '.version // "unknown"' "$new")"
+  rel="$(mktemp)"
+  # One relation keyed by dest: rows the previous manifest lists and the new
+  # manifest does not, with the previous row's kind and recorded sha256.
+  if ! jq -n -r --slurpfile p "$prev" --slurpfile u "$new" '
+      ($u[0].artifacts | map(.dest) | map({key: ., value: true}) | from_entries) as $keep
+      | $p[0].artifacts[]
+      | select($keep[.dest] == null)
+      | [.dest, (.kind // "unknown"), (.sha256 // "null")] | @tsv' > "$rel" 2>/dev/null; then
+    rm -f "$rel"
+    warn "Previous installed manifest ($pver) could not be compared against $nver — nothing removed; compare the two by hand"
+    return 0
+  fi
+  if [ ! -s "$rel" ]; then
+    rm -f "$rel"
+    success "No artifact left behind by the previous installed manifest ($pver -> $nver)"
+    return 0
+  fi
+  info "Reconciling artifacts the previous installed manifest ($pver) lists and $nver does not:"
+  local removed=0 kept=0 absent=0
+  while IFS="$(printf '\t')" read -r dest kind psha; do
+    [ -n "$dest" ] || continue
+    case "$dest" in
+      /*|*/../*|../*|*/..|..)
+        echo "KEPT: $dest ($kind; unsafe dest in the previous manifest — not touched)"
+        kept=$((kept + 1)); continue ;;
+    esac
+    if [ "$kind" != copy ]; then
+      echo "KEPT: $dest ($kind; target-owned or merged into a target file — a re-stamp never removes a $kind artifact; dispose of it by hand)"
+      kept=$((kept + 1)); continue
+    fi
+    if dest_escapes_target "$target" "$dest"; then
+      echo "KEPT: $dest (copy; a symlink on the path or a parent outside the target — not the file AutoFlow wrote; dispose of it by hand)"
+      kept=$((kept + 1)); continue
+    fi
+    if [ ! -e "$target/$dest" ]; then
+      echo "ABSENT: $dest (copy; already absent — nothing to remove)"
+      absent=$((absent + 1)); continue
+    fi
+    if [ ! -f "$target/$dest" ]; then
+      echo "KEPT: $dest (copy; not a regular file on disk — dispose of it by hand)"
+      kept=$((kept + 1)); continue
+    fi
+    if [ "$psha" = null ] || [ -z "$psha" ]; then
+      echo "KEPT: $dest (copy; the previous manifest records no sha256, so ownership cannot be confirmed — dispose of it by hand)"
+      kept=$((kept + 1)); continue
+    fi
+    dsha="$(sha256_of "$target/$dest")"
+    if [ "$dsha" = "$psha" ]; then
+      rm -f "$target/$dest"
+      echo "REMOVED: $dest (copy; sha256 matched the previous manifest — no longer shipped by $nver)"
+      removed=$((removed + 1))
+    else
+      echo "KEPT: $dest (copy; sha256 differs from the previous manifest — target-modified; dispose of it by hand)"
+      kept=$((kept + 1))
+    fi
+  done < "$rel"
+  rm -f "$rel"
+  success "Reconciled against the previous installed manifest: $removed removed, $kept kept, $absent already absent"
+}
+
+# install_into_target <target> — apply every manifest artifact by kind, then
+# reconcile what the previous installed manifest delivered and this one drops.
 install_into_target() {
   local target="$1"
   [ -d "$target" ] || error "Target is not an existing directory: $target"
@@ -79,6 +206,20 @@ install_into_target() {
   local src="$INSTALL_PROJECT_ROOT"
   local manifest="$src/setup/manifest.json"
   [ -f "$manifest" ] || error "Manifest not found: $manifest"
+
+  # Snapshot the manifest this target installed last, before the `copy` loop
+  # below overwrites it (issue #236). Absent → first stamp, nothing to
+  # reconcile. Present but unreadable → nothing removed, the operator is told.
+  local prev_installed="$target/.claude/autoflow/manifest.json" prev_state=absent prev_snapshot=""
+  if [ -e "$prev_installed" ]; then
+    prev_snapshot="$(mktemp)"
+    if cp "$prev_installed" "$prev_snapshot" 2>/dev/null \
+       && jq -e '(.version | type) == "string" and (.artifacts | type) == "array"' "$prev_snapshot" >/dev/null 2>&1; then
+      prev_state=readable
+    else
+      prev_state=unreadable
+    fi
+  fi
 
   local n i source dest kind
   n="$(jq -r '.artifacts | length' "$manifest")"
@@ -110,6 +251,19 @@ install_into_target() {
     esac
     i=$((i + 1))
   done
+
+  case "$prev_state" in
+    absent)
+      info "No previous installed manifest at $prev_installed — nothing to reconcile (first stamp)"
+      ;;
+    unreadable)
+      warn "Previous installed manifest at $prev_installed could not be read (invalid JSON, or no string version / artifacts array) — nothing removed; artifacts it delivered that $(jq -r '.version' "$manifest") no longer ships must be compared by hand"
+      ;;
+    readable)
+      reconcile_removed "$target" "$prev_snapshot" "$manifest"
+      ;;
+  esac
+  [ -n "$prev_snapshot" ] && rm -f "$prev_snapshot"
 
   success "AutoFlow bundle installed into: $target"
   echo ""
