@@ -377,7 +377,7 @@
       "dest": "scripts/cleanup/cleanup-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "fd9e17ae5405e2df323a6425112a42f339befc31bee3154b84a7efc05bbf87d8"
+      "sha256": "21913fe272f6fbb9a04a497ce7405ae8b0e31aa80432412eb238e3ecdef67ebe"
     },
     {
       "source": "scripts/ledger/ledger-entry-id.sh",

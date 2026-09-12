@@ -290,9 +290,20 @@ for N in "$@"; do
   if [ -n "$local_store" ]; then
     # A fresh `$dest` never holds the name, so this is a rename into it, not a
     # merge; the store's own file count is reported so the line is checkable
-    # against the archive.
+    # against the archive. The count is data: an EMPTY store (created, no
+    # asset written yet) is a legitimate 0, and `grep -c .` exits 1 on 0 —
+    # under `set -e` that aborted the run after the `mv`, with no report and
+    # every later N unprocessed (PR #233 review, Medium). A failed enumeration
+    # is kept distinct from 0: it is reported as `?` on stderr, never as a
+    # count.
     mv "$local_store" "$dest/issue-${N}-local"
-    store_note=" + issue-${N}-local/ ($(find "$dest/issue-${N}-local" -type f | grep -c .) file(s))"
+    if store_list="$(find "$dest/issue-${N}-local" -type f 2>/dev/null)"; then
+      store_files="$(printf '%s\n' "$store_list" | grep -c . || true)"
+    else
+      echo "issue #${N}: warning — could not enumerate ${dest}/issue-${N}-local after the move" >&2
+      store_files="?"
+    fi
+    store_note=" + issue-${N}-local/ (${store_files} file(s))"
   fi
   echo "issue #${N}: archived ${count} file(s)${store_note} → ${dest}"
 done
