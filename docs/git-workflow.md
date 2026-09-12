@@ -170,11 +170,13 @@ git checkout main
 git pull origin main
 git branch -d <branch>             # local branch
 git push origin --delete <branch>  # remote branch (if not auto-deleted)
-scripts/cleanup/cleanup-issue.sh <N>  # archive the resolved issue's .autoflow/issue-<N>.* + issue-<N>-* files to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (rm-deny-safe wrapper; accepts multiple Ns)
+scripts/cleanup/cleanup-issue.sh <N>  # archive the resolved issue's .autoflow/issue-<N>.* + issue-<N>-* files and its issue-<N>-local/ store to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (rm-deny-safe wrapper; accepts multiple Ns)
 ```
 
 **Archive** (move, not delete) the resolved issue's `.autoflow/issue-{N}*` management files (state
-JSON, decision ledger, design docs, reports) to
+JSON, decision ledger, design docs, reports) **and its cycle-layer store `.autoflow/issue-{N}-local/`**
+(the uncommitted `automated` / `delivery-check` / `manual` assets of that cycle — ADR-0024 D2,
+issue #229; the directory moves whole, its name preserved) to
 `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<date>/` at cleanup via
 `scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`), so each later
 PREFLIGHT reads only live cycles while the resolved cycle's full artifacts are
@@ -183,13 +185,14 @@ durable record lives in the GitHub PR/issue and commit history.
 
 **[MUST] Use the wrapper, not a bare `rm`.** `cleanup-issue.sh` is invoked by
 path, so the Bash command carries no `rm` token, and it archives (moves, never
-deletes) only the resolved issue's files on an **exact number boundary** —
-`issue-<N>.*` and `issue-<N>-*` (NOT a bare `issue-<N>*` glob, which would also
-match `issue-<N>3` / a prefix-collision sibling like `123` for `N=12`) — with a
+deletes) only the resolved issue's files and store on an **exact number boundary** —
+`issue-<N>.*`, `issue-<N>-*` and the directory `issue-<N>-local` (NOT a bare `issue-<N>*` glob,
+which would also match `issue-<N>3` / a prefix-collision sibling like `123` for `N=12`, or
+`issue-22-local` for `N=2`) — with a
 digits-only `N` guard, a scoped `mv` to
 `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<date>/` (default `~/.autoflow`;
 repo-key = `<org>__<repo>` derived from `origin`) within `.autoflow/` at
-`maxdepth 1`. This keeps cleanup working under a broad `rm`
+`maxdepth 1` (the store is one such entry, moved whole). This keeps cleanup working under a broad `rm`
 permission deny: Claude Code precedence is **deny > allow**, so an `rm`
 allow-exception cannot override a broad `Bash(rm:*)` deny — only a non-`rm`
 wrapper survives it. Allow-list the wrapper

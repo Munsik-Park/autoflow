@@ -53,6 +53,18 @@
 #     error; SUITE_HEADER_FAILS = the count of `FAIL: D7` lines; one
 #     SUITE_HEADER_FINDING=<msg> per header-less suite and one
 #     SUITE_HEADER_SKIP=<reason> per `SKIP: D7`.
+#   - SUITE_PLANE is D7's opt-in arm (ADR-0024 D3, issues #228 / #229), read
+#     off the same D7 lines so this report and drift-check cannot disagree
+#     (issue #229 AC3): SUITE_PLANE_STATE = in | out | unreadable | na — `in`
+#     when D7 reached a header verdict (the leg consults the selector only on
+#     an opted-in root), `out` on the not-opted-in PASS (no header owed; the
+#     target's own test command runs its tests), `unreadable` when the
+#     declaration file is present but D7 could not read it (a FAIL, carried on
+#     the SUITE_HEADER axis), `na` when D7 reached no verdict. SUITE_PLANE_DECL
+#     = present | absent | na — `absent` when D7's HINT says the target's
+#     `.claude/autoflow.local.json` carries no `tests` object at all (a scaffold
+#     stamped before the declaration site shipped; a re-stamp never overwrites
+#     it, so the skill names the hand edit — issue #229 AC4).
 #   - VERSION_SKEW compares the installed manifest .version against the cache
 #     thin-root source setup/manifest.json .version (the exact file init.sh
 #     byte-copies in) — a distinct comparand from drift-check D2 (plugin.json).
@@ -114,6 +126,8 @@ SUITE_HEADER_STATE=na
 SUITE_HEADER_FAILS=0
 SUITE_HEADER_FINDINGS=
 SUITE_HEADER_SKIPS=
+SUITE_PLANE_STATE=na
+SUITE_PLANE_DECL=na
 if [ "$INSTALL_STATE" = installed ]; then
   if [ ! -f "$DRIFT_ORACLE" ]; then
     # Deterministic degradation (no silent clean): the cache drift oracle is
@@ -150,6 +164,24 @@ if [ "$INSTALL_STATE" = installed ]; then
       else
         # No D7 verdict at all: an oracle that predates the leg — never pass.
         SUITE_HEADER_STATE=error
+      fi
+      # The opt-in arm, keyed on D7's own line grammar (drift-check.sh keeps
+      # it): the not-opted-in PASS and the unreadable-declaration FAIL each
+      # open with a fixed phrase; any other header verdict means the leg went
+      # on to consult the selector, which it does only on an opted-in root.
+      if printf '%s\n' "$_drift_out" | grep -q '^PASS: D7: suite plane not opted in'; then
+        SUITE_PLANE_STATE=out
+      elif printf '%s\n' "$_drift_out" | grep -q '^FAIL: D7 -- .* is present but its JSON could not be read'; then
+        SUITE_PLANE_STATE=unreadable
+      elif [ "$SUITE_HEADER_STATE" = pass ] || [ "$SUITE_HEADER_STATE" = fail ]; then
+        SUITE_PLANE_STATE=in
+      fi
+      if [ "$SUITE_PLANE_STATE" != na ]; then
+        if printf '%s\n' "$_drift_out" | grep -q '^HINT: D7: no tests declaration'; then
+          SUITE_PLANE_DECL=absent
+        else
+          SUITE_PLANE_DECL=present
+        fi
       fi
       # D6 (issue #185) on its own axis: the spawn-policy scaffold vs the
       # agent definitions the session loads. Not stamp-repairable (the
@@ -379,6 +411,8 @@ if [ -n "$SUITE_HEADER_SKIPS" ]; then
     printf 'SUITE_HEADER_SKIP=%s\n' "$_ss"
   done
 fi
+printf 'SUITE_PLANE_STATE=%s\n' "$SUITE_PLANE_STATE"
+printf 'SUITE_PLANE_DECL=%s\n' "$SUITE_PLANE_DECL"
 printf 'VERSION_INSTALLED=%s\n' "$VERSION_INSTALLED"
 printf 'VERSION_CACHE=%s\n'     "$VERSION_CACHE"
 printf 'VERSION_SKEW=%s\n'      "$VERSION_SKEW"

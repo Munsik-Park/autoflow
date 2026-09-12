@@ -80,8 +80,13 @@ D=99900199     # AC-3 archive target (repo-tree non-interference)
 M=99900211     # AC-3 co-resident LIVE issue — never passed to the wrapper
 E=99900222     # AC-3 hardening: exit-65 inside-repo-root guard target
 F=99900233     # AUDIT r1: symlink-bypass guard target
+L=9990024      # #229 AC6: cycle-layer store `issue-<N>-local/` archive target
+LB=99900244    # #229 AC6: prefix-collision sibling store (`issue-2-*` vs `issue-22-local`)
+LE=9990025     # PR #233 review: EMPTY store, first argument of a multi-N run
+LF=9990026     # PR #233 review: filed store, second argument of the same run
 
 ARCHIVE_ROOT_1="$(mktemp -d)"   # AC-1/AC-7 phase
+ARCHIVE_ROOT_L="$(mktemp -d)"   # #229 AC6 cycle-layer store phase
 ARCHIVE_ROOT_3="$(mktemp -d)"   # AC-3 non-interference phase
 INSIDE_ROOT="$AF/inside-guard-archive-test"   # deliberately INSIDE $ROOT (and
                                                # still under gitignored
@@ -107,10 +112,12 @@ teardown() {
   find "$AF" -maxdepth 1 -type f \
     \( -name "issue-${A}*" -o -name "issue-${B}*" -o -name "issue-${C}*" \
        -o -name "issue-${D}*" -o -name "issue-${M}*" -o -name "issue-${E}*" \
-       -o -name "issue-${F}*" \) \
+       -o -name "issue-${F}*" -o -name "issue-${L}*" -o -name "issue-${LB}*" \
+       -o -name "issue-${LE}*" -o -name "issue-${LF}*" \) \
     -delete 2>/dev/null || true
-  rm -rf "$ARCHIVE_ROOT_1" "$ARCHIVE_ROOT_3" "$INSIDE_ROOT" "$AF/rel-guard-archive-test" \
-         "$SYMLINK_ROOT" "$EVIL_TARGET" 2>/dev/null || true
+  rm -rf "$ARCHIVE_ROOT_1" "$ARCHIVE_ROOT_3" "$ARCHIVE_ROOT_L" "$INSIDE_ROOT" "$AF/rel-guard-archive-test" \
+         "$SYMLINK_ROOT" "$EVIL_TARGET" "$AF/issue-${L}-local" "$AF/issue-${LB}-local" \
+         "$AF/issue-${LE}-local" "$AF/issue-${LF}-local" 2>/dev/null || true
 }
 trap teardown EXIT
 
@@ -152,6 +159,61 @@ assert_true "AC-1/number-boundary: prefix-collision sibling issue-${B} still in 
   "[ -e '$AF/issue-${B}.json' ] && [ -e '$AF/issue-${B}-ledger.md' ]"
 assert_true "AC-1/number-boundary: prefix-collision sibling issue-${C} still in live .autoflow/" \
   "[ -e '$AF/issue-${C}.json' ]"
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== #229 AC6: the cycle-layer store issue-<N>-local/ is archived whole, on the number boundary ==="
+# ---------------------------------------------------------------------------
+# ADR-0024 D2: a cycle-layer asset lives under `.autoflow/issue-{N}-local/` and
+# is "archived with the cycle's artifacts". The `-type f` walks never saw the
+# directory, so it outlived the cycle (issue #228 moved it by hand). The store
+# must land under the SAME dated landing dir as the files, with its name and
+# its nested layout intact, and `issue-<L>` must never take `issue-<LB>-local`.
+mkdir -p "$AF/issue-${L}-local/nested" "$AF/issue-${LB}-local"
+printf '%s' "issue-${L} state seed"        > "$AF/issue-${L}.json"
+printf '%s' "issue-${L} asset a"           > "$AF/issue-${L}-local/ac1-check.sh"
+printf '%s' "issue-${L} asset b"           > "$AF/issue-${L}-local/nested/driver.sh"
+printf '%s' "issue-${LB} sibling asset"    > "$AF/issue-${LB}-local/ac1-check.sh"
+
+OUT_L="$(AUTOFLOW_ARCHIVE_ROOT="$ARCHIVE_ROOT_L" "$CLEAN" "$L")"
+
+assert_true "AC6: issue-${L}-local/ is gone from live .autoflow/" \
+  "[ ! -e '$AF/issue-${L}-local' ]"
+assert_true "AC6: the state file went with it" \
+  "[ ! -e '$AF/issue-${L}.json' ]"
+DEST_L="$(find "$ARCHIVE_ROOT_L" -mindepth 2 -maxdepth 2 -type d -name "issue-${L}-*" 2>/dev/null | sort | head -1)"
+assert_true "AC6: the store landed under the same dated landing dir as the files, name preserved" \
+  "[ -n '$DEST_L' ] && [ -d '$DEST_L/issue-${L}-local' ] && [ -f '$DEST_L/issue-${L}.json' ]"
+assert_true "AC6: the store's nested layout is intact in the archive" \
+  "cmp_content '$DEST_L/issue-${L}-local/ac1-check.sh' 'issue-${L} asset a' && cmp_content '$DEST_L/issue-${L}-local/nested/driver.sh' 'issue-${L} asset b'"
+assert_true "AC6/number-boundary: prefix-collision sibling issue-${LB}-local/ is still live and untouched" \
+  "[ -d '$AF/issue-${LB}-local' ] && cmp_content '$AF/issue-${LB}-local/ac1-check.sh' 'issue-${LB} sibling asset'"
+assert_true "AC6: the report line names the store and its file count" \
+  "printf '%s' \"\$OUT_L\" | grep -qF 'issue-${L}-local/ (2 file(s))'"
+
+# A store-only issue (no top-level file left) is still archived, not skipped.
+mkdir -p "$AF/issue-${L}-local"
+printf '%s' "issue-${L} late asset" > "$AF/issue-${L}-local/late.sh"
+AUTOFLOW_ARCHIVE_ROOT="$ARCHIVE_ROOT_L" "$CLEAN" "$L" >/dev/null
+assert_true "AC6: a store-only issue is archived too (the early 'nothing to archive' exit accounts for the store)" \
+  "[ ! -e '$AF/issue-${L}-local' ] && [ -n \"\$(find '$ARCHIVE_ROOT_L' -type f -path '*/issue-${L}-local/late.sh' 2>/dev/null)\" ]"
+
+# An EMPTY store first, a filed store second, ONE invocation (PR #233 review,
+# Medium): `grep -c .` exits 1 on zero files, which `set -e` turned into an
+# abort after the `mv` — no report for the empty store and every later N left
+# unprocessed. The run must exit 0, archive both, and report both.
+mkdir -p "$AF/issue-${LE}-local" "$AF/issue-${LF}-local"
+printf '%s' "issue-${LF} asset" > "$AF/issue-${LF}-local/ac1-check.sh"
+OUT_EF="$(AUTOFLOW_ARCHIVE_ROOT="$ARCHIVE_ROOT_L" "$CLEAN" "$LE" "$LF" 2>&1)"; RC_EF=$?
+assert_eq "AC6/empty-store: 'cleanup <empty-store N> <filed-store N>' exits 0" "0" "$RC_EF"
+assert_true "AC6/empty-store: both stores are gone from live .autoflow/" \
+  "[ ! -e '$AF/issue-${LE}-local' ] && [ ! -e '$AF/issue-${LF}-local' ]"
+assert_true "AC6/empty-store: the empty store landed in the archive as an (empty) directory" \
+  "[ -n \"\$(find '$ARCHIVE_ROOT_L' -mindepth 3 -maxdepth 3 -type d -name 'issue-${LE}-local' 2>/dev/null)\" ]"
+assert_true "AC6/empty-store: the filed store that followed it landed too, content intact" \
+  "[ -n \"\$(find '$ARCHIVE_ROOT_L' -type f -path '*/issue-${LF}-local/ac1-check.sh' 2>/dev/null)\" ]"
+assert_true "AC6/empty-store: one success line per issue, the empty store reported as 0 file(s)" \
+  "printf '%s' \"\$OUT_EF\" | grep -qF 'issue #${LE}: archived 0 file(s) + issue-${LE}-local/ (0 file(s))' && printf '%s' \"\$OUT_EF\" | grep -qF 'issue #${LF}: archived 0 file(s) + issue-${LF}-local/ (1 file(s))'"
 
 # ---------------------------------------------------------------------------
 echo ""

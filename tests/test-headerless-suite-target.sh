@@ -21,7 +21,20 @@
 # verdicts below are D7's alone.
 #
 # Cases (AC = the issue's acceptance criteria):
-#   D7-EMPTY       a stamped target with no suite -> PASS: D7, 0 enumerated
+#   D7-EMPTY       a fresh stamp (#229): the shipped scaffold carries the
+#                  `tests` declaration site and does not opt in -> PASS: D7
+#                  "suite plane not opted in", no HINT; opted in with no
+#                  suite -> PASS: D7, 0 enumerated
+#   D7-OUT-*       #229 AC1/AC4/AC5: on a root that has NOT opted in, D7 is
+#                  keyed through the shipped resolver — header-less suites do
+#                  not FAIL it and the drift-check exits 0; a scaffold with no
+#                  `tests` object PASSes with a HINT naming the missing
+#                  declaration site; the shipped shape PASSes without one; a
+#                  present-but-unreadable declaration is a FAIL, never a
+#                  not-opted-in PASS
+#   DET-OUT-*      #229 AC3: detect.sh reports the same arm off the same lines
+#                  — SUITE_PLANE_STATE / SUITE_PLANE_DECL beside
+#                  SUITE_HEADER_STATE — never DRIFT
 #   SEL-BLOCK-ALL  AC3: the selector BLOCKs naming EVERY header-less suite (no
 #                  header, an empty header, a nested directory), emits no
 #                  selection and no SELECTED / NOT-SELECTED record, and names
@@ -127,11 +140,23 @@ RUN="$T/scripts/test/run-suites.sh"
 # -----------------------------------------------------------------------------
 echo "== D7 on a fresh stamp =="
 # -----------------------------------------------------------------------------
+# The shipped scaffold (#229): the `tests` declaration site is present and the
+# opt-in is off, so D7 answers "not opted in" without consulting the selector
+# and — the site being present — carries no HINT. The two facts are read
+# through the shipped resolver, never by a private read of the key.
 run_drift "$T"
-if grep -q '^PASS: D7: suite headers OK — 0 suite(s) enumerated' <<<"$DRIFT_OUT" && ! has "FAIL: D7"; then
-  pass "D7-EMPTY: a fresh stamp (tests/lib only) PASSes D7 with 0 suites enumerated"
+if grep -q '^PASS: D7: suite plane not opted in' <<<"$DRIFT_OUT" && ! has "FAIL: D7" && ! has "HINT: D7" \
+   && ( . "$REPO_ROOT/scripts/test/suite-manifest.sh"; suite_plane_declared "$T" && ! suite_plane_opted_in "$T" ); then
+  pass "D7-EMPTY: a fresh stamp carries the tests declaration site, does not opt in, and PASSes D7 as 'not opted in' with no HINT (#229 AC4)"
 else
   failc "D7-EMPTY: rc=$DRIFT_RC; $(d7)"
+fi
+printf '%s\n' '{ "review": { "backend": "codex" }, "tests": { "suite_plane": true } }' > "$T/.claude/autoflow.local.json"
+run_drift "$T"
+if grep -q '^PASS: D7: suite headers OK — 0 suite(s) enumerated' <<<"$DRIFT_OUT" && ! has "FAIL: D7"; then
+  pass "D7-EMPTY: opted in with no suite (tests/lib only) PASSes D7 with 0 suites enumerated"
+else
+  failc "D7-EMPTY (opted in): rc=$DRIFT_RC; $(d7)"
 fi
 
 # The reproduction shape: suites that predate the contract, committed, then a
@@ -144,15 +169,18 @@ write_suite tests/nested/check-legacy-gamma.sh ""
 # The target declares the suite-plane opt-in (ADR-0024 D3, issue #228). Every
 # selector/runner leg below is a SELECTION-PATH leg and the selection path
 # resolves the declaration, so this file is part of the reproduction shape
-# rather than scenery. The stamp's own scaffold declares no `tests` key
-# (tests/test-issue-979-bundle-delivery.sh:85) — that is the non-opted-in state
-# the OPTIN-* section exercises, over this same root.
+# rather than scenery. OPTIN_SCAFFOLD is the pre-#229 scaffold shape (no
+# `tests` key — the state every target stamped at 0.2.2 or earlier is in, and
+# a re-stamp never changes it); OPTIN_SHIPPED is what the stamp writes today
+# (tests/test-issue-979-bundle-delivery.sh). Both are non-opted-in states the
+# OPTIN-* and D7-OUT-* sections exercise, over this same root.
 optin() {  # <declaration JSON> | '-' to remove the file
   if [ "$1" = "-" ]; then rm -f "$T/.claude/autoflow.local.json"
   else printf '%s\n' "$1" > "$T/.claude/autoflow.local.json"; fi
 }
 OPTIN_IN='{ "review": { "backend": "codex" }, "tests": { "suite_plane": true } }'
 OPTIN_SCAFFOLD='{ "review": { "backend": "codex" } }'
+OPTIN_SHIPPED="$(cat "$REPO_ROOT/.claude/autoflow.local.json.example")"   # what init.sh's scaffold arm copies
 optin "$OPTIN_IN"
 
 git -C "$T" init -q
@@ -327,6 +355,63 @@ else
   failc "D7-SKIP: $(d7)"
 fi
 mv "$WORK/select-suites.bak" "$SEL"
+
+# -----------------------------------------------------------------------------
+echo "== D7 opt-in arm (#229 AC1 / AC3 / AC4 / AC5): the same three header-less suites, not opted in =="
+# -----------------------------------------------------------------------------
+# The llmroute shape (issue #229): standing suites with no header, a scaffold
+# from before the declaration site shipped, re-stamped. D7 must not FAIL, the
+# detector must exit 0, and the missing site must be named — not as a stop.
+detect_run() { DET_OUT=$(env TARGET_ROOT="$T" PLUGIN_CACHE_ROOT="$REPO_ROOT" sh "$DETECT_SH" 2>&1); }
+optin "$OPTIN_SCAFFOLD"; run_drift "$T"; detect_run
+if [ "$DRIFT_RC" -eq 0 ] && grep -q '^RESULT: drift-check 0 failed' <<<"$DRIFT_OUT" \
+   && grep -q '^PASS: D7: suite plane not opted in' <<<"$DRIFT_OUT" && ! has "FAIL: D7" \
+   && grep -q '^HINT: D7: no tests declaration' <<<"$DRIFT_OUT" \
+   && grep '^HINT: D7' <<<"$DRIFT_OUT" | grep -qF 'autoflow.local.json.example'; then
+  pass "D7-OUT-UNDECLARED: header-less suites on a pre-#229 scaffold -> PASS: D7 (not opted in), drift-check 0 failed / exit 0, HINT naming the missing tests declaration and the sample (AC1, AC4, AC5)"
+else
+  failc "D7-OUT-UNDECLARED: rc=$DRIFT_RC; $(d7); $(grep '^RESULT' <<<"$DRIFT_OUT")"
+fi
+if [ "$(kv "$DET_OUT" DRIFT_STATE)" = clean ] && [ "$(kv "$DET_OUT" SUITE_HEADER_STATE)" = pass ] \
+   && [ "$(kv "$DET_OUT" SUITE_HEADER_FAILS)" = 0 ] && ! grep -qE '^SUITE_HEADER_(FINDING|SKIP)=' <<<"$DET_OUT" \
+   && [ "$(kv "$DET_OUT" SUITE_PLANE_STATE)" = out ] && [ "$(kv "$DET_OUT" SUITE_PLANE_DECL)" = absent ]; then
+  pass "DET-OUT-UNDECLARED: detect.sh says the same — DRIFT clean, SUITE_HEADER_STATE=pass, SUITE_PLANE_STATE=out, SUITE_PLANE_DECL=absent (AC3, AC4)"
+else
+  failc "DET-OUT-UNDECLARED: $(grep -E '^(DRIFT_STATE|SUITE_HEADER_STATE|SUITE_HEADER_FAILS|SUITE_PLANE_)' <<<"$DET_OUT" | tr '\n' ' ')"
+fi
+
+optin "$OPTIN_SHIPPED"; run_drift "$T"; detect_run
+if [ "$DRIFT_RC" -eq 0 ] && grep -q '^PASS: D7: suite plane not opted in' <<<"$DRIFT_OUT" \
+   && ! has "FAIL: D7" && ! has "HINT: D7" \
+   && [ "$(kv "$DET_OUT" SUITE_PLANE_STATE)" = out ] && [ "$(kv "$DET_OUT" SUITE_PLANE_DECL)" = present ] \
+   && [ "$(kv "$DET_OUT" SUITE_HEADER_STATE)" = pass ]; then
+  pass "D7-OUT-SHIPPED / DET-OUT-SHIPPED: the shipped scaffold shape PASSes with no HINT; detect.sh SUITE_PLANE_STATE=out, SUITE_PLANE_DECL=present"
+else
+  failc "D7-OUT-SHIPPED: rc=$DRIFT_RC; $(d7); $(grep -E '^SUITE_PLANE_' <<<"$DET_OUT" | tr '\n' ' ')"
+fi
+
+optin '{ "tests": { "suite_plane": true '; run_drift "$T"; detect_run
+if [ "$DRIFT_RC" -ne 0 ] && has "FAIL: D7 -- $T/.claude/autoflow.local.json is present but its JSON could not be read" \
+   && ! has "PASS: D7" && ! has "SKIP: D7" \
+   && [ "$(kv "$DET_OUT" SUITE_HEADER_STATE)" = fail ] && [ "$(kv "$DET_OUT" SUITE_PLANE_STATE)" = unreadable ] \
+   && [ "$(kv "$DET_OUT" DRIFT_STATE)" = clean ]; then
+  pass "D7-OUT-UNREADABLE / DET-OUT-UNREADABLE: a present-but-unparseable declaration is a FAIL: D7 naming the file — never a not-opted-in PASS, never a SKIP; detect.sh SUITE_PLANE_STATE=unreadable on the SUITE_HEADER axis, DRIFT untouched"
+else
+  failc "D7-OUT-UNREADABLE: rc=$DRIFT_RC; $(d7); $(grep -E '^(DRIFT_STATE|SUITE_HEADER_STATE|SUITE_PLANE_)' <<<"$DET_OUT" | tr '\n' ' ')"
+fi
+
+# The arm is the resolver's, not a copy: a tree-wide single-reader property is
+# tests/test-suite-plane-optin-single-site.sh's; here the installed detector's
+# own tree is checked for the sourcing call, so the D7 leg cannot have answered
+# from anywhere else.
+_key=suite_plane   # composed, so this suite itself carries no key-access literal (single-site scan)
+if grep -qE "${_key}_opted_in" "$T/.claude/autoflow/drift-check.sh" \
+   && ! grep -vE '^[[:space:]]*#' "$T/.claude/autoflow/drift-check.sh" | grep -qE "[.]${_key}|[\"]${_key}[\"][^:]"; then
+  pass "D7-RESOLVER: the installed drift-check calls suite_plane_opted_in and carries no private read of the opt-in key"
+else
+  failc "D7-RESOLVER: the installed drift-check does not resolve the opt-in through the shipped resolver"
+fi
+optin "$OPTIN_IN"
 
 # -----------------------------------------------------------------------------
 echo "== TRUST: D7 evaluates the target's suites without executing target code =="

@@ -1,1 +1,4 @@
-{ "review": { "backend": "codex" } }
+{
+  "review": { "backend": "codex" },
+  "tests": { "command": null, "suite_plane": false }
+}

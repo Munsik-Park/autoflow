@@ -175,6 +175,7 @@ on:
       - '.gitignore'
       - 'scripts/gate/**'
       - 'scripts/test/**'
+      - 'tests/test-cycle-layer-devices-shipped.sh'
       - 'tests/test-cycle-layer-index.sh'
       - 'tests/test-suite-plane-optin-single-site.sh'
       - 'tests/test-verification-layer-token-set.sh'
@@ -319,6 +320,7 @@ on:
       - '.gitignore'
       - 'scripts/gate/**'
       - 'scripts/test/**'
+      - 'tests/test-cycle-layer-devices-shipped.sh'
       - 'tests/test-cycle-layer-index.sh'
       - 'tests/test-suite-plane-optin-single-site.sh'
       - 'tests/test-verification-layer-token-set.sh'
@@ -600,6 +602,11 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-cycle-layer-index.sh ')
         timeout-minutes: 10
         run: bash tests/test-cycle-layer-index.sh
+      - name: test-cycle-layer-devices-shipped.sh
+        id: s-test-cycle-layer-devices-shipped
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-cycle-layer-devices-shipped.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-cycle-layer-devices-shipped.sh
 
       - name: test-verification-layer-token-set.sh
         id: s-test-verification-layer-token-set

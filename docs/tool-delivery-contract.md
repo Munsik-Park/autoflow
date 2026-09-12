@@ -128,11 +128,21 @@ below means both tiers together.
   A finding is a FAIL with the rows to fix listed; the remedy is a hand edit
   of the scaffold, never a re-stamp. It likewise checks the one precondition
   of the shipped suite selector that lives in target-owned files (D7, issue
-  #213): every executable spec under the target's `tests/**` declares a usable
+  #213), **on a target that opted into AutoFlow's suite plane** (ADR-0024 D3;
+  the opt-in is `.claude/autoflow.local.json` > `tests` > `suite_plane: true`,
+  resolved through the shipped `scripts/test/suite-manifest.sh` — the plane's
+  one resolver, run from the detector's own tree — issues #228 / #229): every
+  executable spec under the target's `tests/**` declares a usable
   `# ci-subject:` header, or `scripts/test/select-suites.sh` BLOCKs every
   selection. The check is the selector's own `--check-headers` stage run from
   the detector's tree, each header-less suite is a FAIL, and the remedy is
-  back-filling the header — a re-stamp never touches `tests/**`. The
+  back-filling the header — a re-stamp never touches `tests/**`. A target
+  that has not opted in owes no header and PASSes without the selector being
+  consulted; a declaration file that is present but unreadable is a FAIL
+  (unknown is not clean); and a scaffold that predates the `tests` object —
+  the `scaffold` kind is never overwritten, so a re-stamp cannot add it — is
+  named by a `HINT` beside the PASS, pointing at the clone's
+  `.claude/autoflow.local.json.example`. The
   `/autoflow:install` skill resolves the clone it detects against and stamps
   from through the same resolver — a byte-identical copy shipped inside the
   plugin, since the plugin cache carries no `scripts/lib/` — with the plugin

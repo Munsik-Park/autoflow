@@ -125,15 +125,23 @@ for c in "${CONSUMERS[@]}"; do
   fi
 done
 
-# The declaration side. `absent` must stay the normal non-opted-in state
-# (ADR-0024 D3 / feature design P3): the shipped scaffold carries no `tests` key
-# at all, and this repository declares its own opt-in (ADR-0024 D5).
+# The declaration side. Since issue #229 the shipped scaffold CARRIES the
+# declaration site (`tests` > `command`, `tests` > `suite_plane`) and does not
+# opt in — a stamped target must not inherit an opt-in it never made — while
+# `absent` stays a normal non-opted-in state for a scaffold stamped before the
+# site shipped (ADR-0024 D3). Both facts are read through the resolver over a
+# scratch root holding the sample, never by a private read of the key; this
+# repository declares its own opt-in (ADR-0024 D5).
 if command -v jq >/dev/null 2>&1; then
-  if jq -e 'has("tests") | not' .claude/autoflow.local.json.example >/dev/null 2>&1; then
-    pass "SCAFFOLD-NEUTRAL: the shipped scaffold declares no 'tests' key — absent is the normal non-opted-in state, distinct from unreadable"
+  _scaf="$(mktemp -d)"; mkdir -p "$_scaf/.claude"
+  cp .claude/autoflow.local.json.example "$_scaf/.claude/autoflow.local.json"
+  if ( . "$RESOLVER_HOME"; suite_plane_declared "$_scaf" ) \
+     && ( . "$RESOLVER_HOME"; suite_plane_opted_in "$_scaf"; [ $? -eq "$( . "$RESOLVER_HOME"; echo "$SUITE_PLANE_NOT_OPTED_IN" )" ] ); then
+    pass "SCAFFOLD-NEUTRAL: the shipped scaffold carries the tests declaration site and the resolver answers 'not opted in' over it — a stamped target inherits the site, not an opt-in (#229)"
   else
-    failc "SCAFFOLD-NEUTRAL: .claude/autoflow.local.json.example declares a 'tests' key — a stamped target would inherit an opt-in it never made"
+    failc "SCAFFOLD-NEUTRAL: .claude/autoflow.local.json.example either lacks the tests declaration site or opts a stamped target in"
   fi
+  rm -rf "$_scaf"
   if jq -e '.tests.suite_plane == true' .claude/autoflow.local.json >/dev/null 2>&1; then
     pass "THIS-REPO-OPTS-IN: .claude/autoflow.local.json declares tests.suite_plane: true (ADR-0024 D5 — this repository's standing layer depends on the plane)"
   else
