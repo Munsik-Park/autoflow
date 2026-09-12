@@ -36,6 +36,11 @@
 #   AC2-NOHASH        previous-only `copy` with sha256 null -> kept
 #   AC2-UNSAFE        previous-only `copy` whose dest escapes the target ->
 #                     not touched, `KEPT:` names the unsafe dest
+#   AC2-SYMLINK-DIR   previous-only `copy` under a parent that is a symlink to
+#                     outside the target, outside file's hash == previous
+#                     manifest -> outside file survives, `KEPT:` names the
+#                     symlink (PR #237 review, High)
+#   AC2-SYMLINK-LEAF  previous-only `copy` that is itself a symlink -> kept
 #   AC3-ABSENT        previous-only `copy` already gone -> `ABSENT:` line
 #   AC3-SUMMARY       the count line reports removed / kept / absent
 #   AC4-NO-PREV       first stamp (no installed manifest) -> nothing removed,
@@ -48,6 +53,8 @@
 #                     re-stamp removes it
 #   D4-FORECAST-KEEP  clone drops a copy row, on-disk modified -> WARN says a
 #                     re-stamp keeps it
+#   D4-FORECAST-SYMLINK clone drops a copy row whose parent is a symlink out of
+#                     the target -> WARN says a re-stamp keeps it
 #   D4-NONCOPY        clone drops the scaffold row -> WARN says never removed
 #   D4-OLD-PHRASE     "a re-stamp does not remove it" is gone from drift-check
 #   DET-STALE         detect.sh carries the WARN as STALE_COUNT=1 +
@@ -149,8 +156,15 @@ else
   printf 'merged\n'              > "$T1/cfg/stale-merged.json"
   printf 'shim\n'                > "$T1/STALE-SHIM.md"
   printf 'outside\n'             > "$WORK/escape.sh"
+  mkdir -p "$WORK/outside-dir"
+  printf 'retired, outside the target\n' > "$WORK/outside-dir/retired.sh"
+  ln -s ../../outside-dir "$T1/scripts/retired-dir"       # target/scripts/retired-dir -> $WORK/outside-dir
+  printf 'link target\n' > "$T1/scripts/test/link-target.sh"
+  ln -s link-target.sh "$T1/scripts/test/stale-link.sh"
   H_OWNED="$(sha "$T1/scripts/test/stale-owned.sh")"
-  jq --arg h "$H_OWNED" '
+  H_RETIRED="$(sha "$WORK/outside-dir/retired.sh")"
+  H_LINK="$(sha "$T1/scripts/test/link-target.sh")"
+  jq --arg h "$H_OWNED" --arg hr "$H_RETIRED" --arg hl "$H_LINK" '
     .version = "0.0.1"
     | .artifacts += [
         {source:"x", dest:"scripts/test/stale-owned.sh",  tier:"root-layer", kind:"copy",       sha256:$h},
@@ -158,6 +172,8 @@ else
         {source:"x", dest:"scripts/test/stale-nohash.sh", tier:"root-layer", kind:"copy",       sha256:null},
         {source:"x", dest:"scripts/test/stale-gone.sh",   tier:"root-layer", kind:"copy",       sha256:"1111111111111111111111111111111111111111111111111111111111111111"},
         {source:"x", dest:"../escape.sh",                 tier:"root-layer", kind:"copy",       sha256:"2222222222222222222222222222222222222222222222222222222222222222"},
+        {source:"x", dest:"scripts/retired-dir/retired.sh", tier:"root-layer", kind:"copy",     sha256:$hr},
+        {source:"x", dest:"scripts/test/stale-link.sh",   tier:"root-layer", kind:"copy",       sha256:$hl},
         {source:"x", dest:"cfg/stale-scaffold.json",      tier:"root-layer", kind:"scaffold",   sha256:"3333333333333333333333333333333333333333333333333333333333333333"},
         {source:"x", dest:"cfg/stale-merged.json",        tier:"root-layer", kind:"json-merge", sha256:"4444444444444444444444444444444444444444444444444444444444444444"},
         {source:"x", dest:"STALE-SHIM.md",                tier:"root-layer", kind:"shim-stamp", sha256:"5555555555555555555555555555555555555555555555555555555555555555"}
@@ -205,14 +221,28 @@ else
     failc "AC2-UNSAFE: escape.sh present=$([ -f "$WORK/escape.sh" ] && echo yes || echo no); $(printf '%s\n' "$STAMP_OUT" | grep 'escape' | head -1)"
   fi
 
+  if [ -f "$WORK/outside-dir/retired.sh" ] && [ -L "$T1/scripts/retired-dir" ] \
+     && printf '%s\n' "$STAMP_OUT" | grep -q '^KEPT: scripts/retired-dir/retired.sh (copy; a symlink on the path or a parent outside the target'; then
+    pass "AC2-SYMLINK-DIR: a parent symlinked outside the target is refused even with a matching hash — the outside file survives (PR #237 review, High)"
+  else
+    failc "AC2-SYMLINK-DIR: outside present=$([ -f "$WORK/outside-dir/retired.sh" ] && echo yes || echo no); $(printf '%s\n' "$STAMP_OUT" | grep 'retired' | head -1)"
+  fi
+
+  if [ -L "$T1/scripts/test/stale-link.sh" ] && [ -f "$T1/scripts/test/link-target.sh" ] \
+     && printf '%s\n' "$STAMP_OUT" | grep -q '^KEPT: scripts/test/stale-link.sh (copy; a symlink on the path'; then
+    pass "AC2-SYMLINK-LEAF: a previous-only copy that is itself a symlink is kept, its link target untouched"
+  else
+    failc "AC2-SYMLINK-LEAF: $(printf '%s\n' "$STAMP_OUT" | grep 'stale-link' | head -1)"
+  fi
+
   if printf '%s\n' "$STAMP_OUT" | grep -q '^ABSENT: scripts/test/stale-gone.sh (copy; already absent'; then
     pass "AC3-ABSENT: a previous-only copy already gone from disk is reported as ABSENT"
   else
     failc "AC3-ABSENT: $(printf '%s\n' "$STAMP_OUT" | grep 'stale-gone' | head -1)"
   fi
 
-  if printf '%s\n' "$STAMP_OUT" | grep -q 'Reconciled against the previous installed manifest: 1 removed, 6 kept, 1 already absent'; then
-    pass "AC3-SUMMARY: the count line reports 1 removed / 6 kept / 1 already absent"
+  if printf '%s\n' "$STAMP_OUT" | grep -q 'Reconciled against the previous installed manifest: 1 removed, 8 kept, 1 already absent'; then
+    pass "AC3-SUMMARY: the count line reports 1 removed / 8 kept / 1 already absent"
   else
     failc "AC3-SUMMARY: $(printf '%s\n' "$STAMP_OUT" | grep 'Reconciled' | head -1)"
   fi
@@ -269,6 +299,16 @@ else
     pass "D4-FORECAST-KEEP: a modified copy upstream dropped -> WARN says a re-stamp keeps it"
   else
     failc "D4-FORECAST-KEEP: $(printf '%s\n' "$DRIFT_OUT" | grep 'no longer shipped' | head -1)"
+  fi
+
+  T5="$WORK/t-d4-symlink"; stamp "$T5"
+  mv "$T5/scripts/lib" "$WORK/outside-lib" && ln -s ../../outside-lib "$T5/scripts/lib"
+  run_drift "$T5" AUTOFLOW_MARKETPLACE_ROOT="$C_RM"
+  if printf '%s\n' "$DRIFT_OUT" | grep -q "^WARN: D4 -- installed artifact no longer shipped upstream: $COPY_DEST (copy, on-disk content differs from the installed manifest or is not the shipped file — a re-stamp keeps it" \
+     && ! printf '%s\n' "$DRIFT_OUT" | grep -q "a re-stamp removes it"; then
+    pass "D4-FORECAST-SYMLINK: a copy under a parent symlinked outside the target is forecast as kept, never as removed (PR #237 review, High)"
+  else
+    failc "D4-FORECAST-SYMLINK: $(printf '%s\n' "$DRIFT_OUT" | grep 'no longer shipped' | head -1)"
   fi
 
   C_SC="$WORK/clone-drop-scaffold"

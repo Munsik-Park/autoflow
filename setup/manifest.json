@@ -265,7 +265,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "d9f0f08abbf17cddf2d5aae1f835426b5103fb49828ab305b788586fa4ef5cf3"
+      "sha256": "84c76705b3f4e67e85143554e35b10265fb7b0da224f4bf76a677dda1376cc64"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",

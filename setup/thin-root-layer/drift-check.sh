@@ -124,6 +124,29 @@ if [ ! -f "$MANIFEST" ]; then
   exit 1
 fi
 
+# dest_escapes_target <dest> — true when a path component of <dest> under
+# $TARGET_ROOT is a symlink, or the parent's physical path is outside the
+# target's. The same guard setup/init.sh applies before removing a
+# previous-only `copy` (PR #237 review, High): the D4 forecast below must not
+# announce a removal the re-stamp will refuse.
+dest_escapes_target() {
+  _acc="$TARGET_ROOT"; _rest="$1"
+  while [ -n "$_rest" ]; do
+    _comp="${_rest%%/*}"
+    if [ "$_comp" = "$_rest" ]; then _rest=""; else _rest="${_rest#*/}"; fi
+    [ -n "$_comp" ] || continue
+    _acc="$_acc/$_comp"
+    [ -L "$_acc" ] && return 0
+  done
+  [ -d "$(dirname "$TARGET_ROOT/$1")" ] || return 1
+  _rt="$(cd -P -- "$TARGET_ROOT" 2>/dev/null && pwd -P)" || return 0
+  _rp="$(cd -P -- "$(dirname "$TARGET_ROOT/$1")" 2>/dev/null && pwd -P)" || return 0
+  case "$_rp/" in
+    "$_rt/"*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 # Portable sha256 of a file.
 sha256_of() {
   _h=$(shasum -a 256 "$1" 2>/dev/null | awk '{print $1}')
@@ -325,7 +348,7 @@ else
         removed-upstream:copy)
           # The re-stamp's own removal rule, forecast here so the operator sees
           # it before confirming: owned (hash equal) → removed; otherwise kept.
-          if [ -f "$TARGET_ROOT/$_dest" ] && [ ! -L "$TARGET_ROOT/$_dest" ] && [ "$(sha256_of "$TARGET_ROOT/$_dest")" = "$_ih" ]; then
+          if [ -f "$TARGET_ROOT/$_dest" ] && ! dest_escapes_target "$_dest" && [ "$(sha256_of "$TARGET_ROOT/$_dest")" = "$_ih" ]; then
             warnc "D4" "installed artifact no longer shipped upstream: $_dest (copy, on-disk sha256 equals the installed manifest's — a re-stamp removes it)"
           else
             warnc "D4" "installed artifact no longer shipped upstream: $_dest (copy, on-disk content differs from the installed manifest or is not the shipped file — a re-stamp keeps it and reports why; dispose of it by hand)"

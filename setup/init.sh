@@ -86,6 +86,34 @@ sha256_of() {
   printf '%s' "$h"
 }
 
+# dest_escapes_target <target> <dest> — true when any path component of
+# <dest> under <target> is a symlink, or the parent directory's physical path
+# is not inside the target's physical path (PR #237 review, High). The
+# previous manifest is target-controlled input and so is the tree under it:
+# `target/retired-dir -> ../outside` plus a previous-only `copy` row naming
+# `retired-dir/retired.sh` with the outside file's hash would otherwise be
+# followed by the hash check and the `rm`. Every component is checked, not
+# only the leaf, and a symlink that resolves inside the target is refused
+# too — the removal rule is "the file AutoFlow wrote at this dest", and a
+# link is not that. A missing parent is not an escape (the file is absent).
+dest_escapes_target() {
+  local target="$1" dest="$2" acc="$target" rest="$dest" comp real_target real_parent
+  while [ -n "$rest" ]; do
+    comp="${rest%%/*}"
+    if [ "$comp" = "$rest" ]; then rest=""; else rest="${rest#*/}"; fi
+    [ -n "$comp" ] || continue
+    acc="$acc/$comp"
+    [ -L "$acc" ] && return 0
+  done
+  [ -d "$(dirname "$target/$dest")" ] || return 1
+  real_target="$(cd -P -- "$target" 2>/dev/null && pwd -P)" || return 0
+  real_parent="$(cd -P -- "$(dirname "$target/$dest")" 2>/dev/null && pwd -P)" || return 0
+  case "$real_parent/" in
+    "$real_target/"*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 # reconcile_removed <target> <prev-manifest> <new-manifest> — remove what the
 # previous installed manifest lists and the new one does not (issue #236).
 #
@@ -93,8 +121,9 @@ sha256_of() {
 # installed manifest only. It is REMOVED only when AutoFlow still owns it —
 # kind `copy` and the on-disk sha256 equals the previous manifest's recorded
 # value. Everything else is KEPT and reported with its reason: a `copy` whose
-# hash differs (target-modified), a `copy` with no recorded hash, a symlink, an
-# unsafe dest (absolute or `..`), and every `scaffold` / `shim-stamp` /
+# hash differs (target-modified), a `copy` with no recorded hash, a dest with a
+# symlink on its path or a parent outside the target, an unsafe dest (absolute
+# or `..`), and every `scaffold` / `shim-stamp` /
 # `json-merge` row (target-owned or merged into a target file — never removed).
 # A candidate already absent from disk is reported as ABSENT. Directories are
 # never removed. The previous manifest is target-controlled input: its `dest`
@@ -138,8 +167,8 @@ reconcile_removed() {
       echo "KEPT: $dest ($kind; target-owned or merged into a target file — a re-stamp never removes a $kind artifact; dispose of it by hand)"
       kept=$((kept + 1)); continue
     fi
-    if [ -L "$target/$dest" ]; then
-      echo "KEPT: $dest (copy; a symlink on disk, not the file AutoFlow shipped — dispose of it by hand)"
+    if dest_escapes_target "$target" "$dest"; then
+      echo "KEPT: $dest (copy; a symlink on the path or a parent outside the target — not the file AutoFlow wrote; dispose of it by hand)"
       kept=$((kept + 1)); continue
     fi
     if [ ! -e "$target/$dest" ]; then
