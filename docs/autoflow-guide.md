@@ -1198,11 +1198,18 @@ each-item ≥ 7 criterion:
   committed test file; a `standing` row has its committed file, CI-registered where the target
   opted in; and every `standing:` token is one of ADR-0024 D1's closed list. A committed asset on a
   `cycle` row, an uncommitted asset on a `standing` row, or a token outside the list caps
-  `Test quality` at 6. The token check is a set relation, not a judgment: the evaluator runs
-  `bash scripts/gate/verification-layer-check.sh .autoflow/issue-{N}-verification-design.md`
-  (issue #228 — a committed device with a cycle-time subject) and attaches its output — a
-  non-zero exit is a token outside D1's closed list and caps the item; the device's second output,
-  the row↔asset pairing report, is input to this check and to `Test coverage`, never a verdict.
+  `Test quality` at 6. The token check is a set relation, not a judgment, and it is performed
+  **by the device where the device is present**: `scripts/gate/verification-layer-check.sh`
+  (issue #228 — a committed device with a cycle-time subject) is committed in the AutoFlow
+  repository today and reaches a stamped target once **S4** ships it (ADR-0024 > *Sub-issue split*
+  — `setup/manifest.json` and the thin-root layer are S4's, so this guide reaches a target ahead of
+  the checker). Where it is present, the evaluator runs
+  `bash scripts/gate/verification-layer-check.sh .autoflow/issue-{N}-verification-design.md` and
+  attaches its output — a non-zero exit is a token outside D1's closed list and caps the item; the
+  device's second output, the row↔asset pairing report, is input to this check and to
+  `Test coverage`, never a verdict. Where it is absent, the evaluator performs the same set
+  relation **by hand** against ADR-0024 D1's closed list and says so in the report, naming the
+  device's absence — the check is not skipped, and a not-run is never rendered as a pass.
 - **Test coverage — layer-partitioned subject** (ADR-0024 Area 2): the item's subject is not a CI
   result (none exists before push). For each `cycle` `automated` / `delivery-check` row it is the
   recorded local run — the command and summary line reproduce; for each `standing` row it is the

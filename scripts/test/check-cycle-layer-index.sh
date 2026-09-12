@@ -19,6 +19,16 @@
 # `git ls-files` reads the index, so a tracked path is found whether or not it
 # is still on disk, and an on-disk path that was never added is not a finding.
 #
+# THE READ FORM IS `-z`, NOT THE DEFAULT. `git ls-files`'s default output is not
+# the path: `core.quotePath` (default `true`) wraps any path carrying non-ASCII
+# or control bytes in double quotes and octal-escapes the bytes, so a tracked
+# `.autoflow/issue-9-local/검증.sh` is printed as
+# `".autoflow/issue-9-local/\352\262\200\354\246\235.sh"` — which no longer
+# starts with `.autoflow/` textually, so the prefix match misses it and the
+# predicate answers OK. That is a false pass of exactly the disagreement this
+# check exists to catch. `-z` emits raw NUL-terminated paths with no quoting at
+# all, so the match is over the path itself, for every byte a path may carry.
+#
 # THE SCOPE IS THE DECLARED PREFIX, not `.autoflow/` as a whole: this repository
 # legitimately tracks `.autoflow/.gitkeep`, and the ledger, the state file and
 # the review-findings file are cycle-spanning artifacts of the store, not
@@ -73,15 +83,21 @@ if [ -z "$TOP" ]; then
   exit 2
 fi
 
-TRACKED="$(git -C "$TOP" ls-files -- '.autoflow' 2>/dev/null | grep -E "$CYCLE_LAYER_RE" || true)"
+TRACKED=""
+TRACKED_COUNT=0
+while IFS= read -r -d '' INDEX_PATH; do
+  [[ "$INDEX_PATH" =~ $CYCLE_LAYER_RE ]] || continue
+  TRACKED="${TRACKED}${INDEX_PATH}"$'\n'
+  TRACKED_COUNT=$((TRACKED_COUNT + 1))
+done < <(git -C "$TOP" ls-files -z -- '.autoflow' 2>/dev/null)
 
-if [ -z "$TRACKED" ]; then
+if [ "$TRACKED_COUNT" -eq 0 ]; then
   echo "check-cycle-layer-index: OK — no path under $CYCLE_LAYER_PREFIX is tracked in $TOP"
   exit 0
 fi
 
-echo "check-cycle-layer-index: $(printf '%s\n' "$TRACKED" | grep -c .) cycle-layer asset(s) tracked under $CYCLE_LAYER_PREFIX in $TOP"
-printf '%s\n' "$TRACKED" | sed 's/^/  /'
+echo "check-cycle-layer-index: $TRACKED_COUNT cycle-layer asset(s) tracked under $CYCLE_LAYER_PREFIX in $TOP"
+printf '%s' "$TRACKED" | sed 's/^/  /'
 echo "  A cycle-layer asset is uncommitted by rule (ADR-0024 D2): it is executed once and archived with the issue's other .autoflow artifacts."
 echo "  Remove it from the index ('git rm --cached <path>'), and check that .gitignore still excludes the prefix — the two disagreeing is what this predicate exists to catch."
 exit 1
