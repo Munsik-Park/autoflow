@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/review/codex-review-pr.sh docs/reviewer-backend.md .codex/review.md scripts/review/lib/review-config.sh
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: HANDOFF reviewer backend selection — claude branch (AC-1a) + API-key

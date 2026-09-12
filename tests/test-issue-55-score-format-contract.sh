@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/hooks/check-autoflow-gate.sh .github/workflows/e2e-dummy-target.yml CLAUDE.md docs/git-workflow.md tests/fixtures/gate-schema.json tests/plugin/verify-install-into-target.sh tests/test-gate-hardening.sh
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: gate-score write contract at the producer site — Issue #55

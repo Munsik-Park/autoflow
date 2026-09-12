@@ -26,8 +26,9 @@
 # There is NO exemption list for unreachable suites: an allow-list here would be
 # a hand-maintained inventory of the kind this tree does not keep (issue #141
 # retired the doc-invariant registry). An unreachable suite is either wired or
-# deleted; its disposition is its own `# lane:` / `# retire-with:` header
-# (scripts/test/check-suite-manifest.sh) and leaves with the file.
+# deleted — and under ADR-0024 D2 a check that only one cycle needs is not a
+# committed suite at all: it lives uncommitted under
+# `.autoflow/issue-{N}-local/`, so it never reaches this lint's subject set.
 #
 # REACHABLE — a `run:` step in any workflow invokes it. DIRECT ONLY: the former
 # transitive-closure clause (a reachable suite invoking it as a subprocess) is

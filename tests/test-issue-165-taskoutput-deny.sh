@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .claude/hooks/check-autoflow-gate.sh plugin/autoflow/hooks/check-autoflow-gate.sh .claude/settings.json plugin/autoflow/hooks/hooks.json CLAUDE.md docs/teammate-common-rules.md docs/gate-matching-standard.md
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #165 — the TaskOutput blocking wait is denied at the tool

@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: docs/autoflow-guide.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh scripts/handoff/create-host-pr.sh scripts/issue/create-issue.sh scripts/ledger/ledger-entry-id.sh setup/init.sh setup/manifest.json tests/fixtures/e2e-bundle-purity-baseline.txt tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt tests/plugin/manual-scenarios-797.md tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: throwaway dummy-target E2E acceptance suite — Issue #797 [#785-S10]
@@ -426,10 +425,10 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # issue #192 widening: the manifest-registration gap that #10 fixed for four
   # scripts had re-accumulated -- nine more scripts the stamped docs instruct a
   # target to run were unregistered (the suite plane run-suites/select-suites/
-  # suite-coverage/suite-manifest/green-tree-register and the two standing suite
-  # lints, plus scripts/gate/remedy-route.sh and scripts/review/scope-bounded.sh),
-  # together with the three files they source (green-tree-store.sh,
-  # invocation-scan.sh, tests/lib/base-ref.sh). They land under scripts/gate/**,
+  # suite-manifest and the two standing suite lints, plus the result-inheritance
+  # scripts #228 has since deleted, scripts/gate/remedy-route.sh and
+  # scripts/review/scope-bounded.sh), together with the files they source
+  # (invocation-scan.sh, tests/lib/base-ref.sh). They land under scripts/gate/**,
   # scripts/test/** and tests/lib/**, none previously allow-listed, so the case
   # pattern admits these three dest classes on the same source-path-preserved
   # copy-row basis as scripts/handoff/** and scripts/cleanup/**.

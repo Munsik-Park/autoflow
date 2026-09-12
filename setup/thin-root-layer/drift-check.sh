@@ -516,7 +516,7 @@ else
       [ -n "$_s" ] || continue
       failc "D7" "$_s declares no usable '# ci-subject:' header — scripts/test/select-suites.sh BLOCKs every selection until it does (RED's suite derivation, run-suites.sh without --all)"
     done < "$_d7_out"
-    hint "D7: these suites are target-owned and a re-stamp never adds their headers — back-fill '# ci-subject:' (with '# lane:' and '# budget-secs:') per docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites; a sourced helper rather than a standalone spec moves under tests/lib/ instead. Re-check with: bash scripts/test/select-suites.sh --check-headers"
+    hint "D7: these suites are target-owned and a re-stamp never adds their headers — back-fill '# ci-subject:' (with '# budget-secs:') per docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites; a sourced helper rather than a standalone spec moves under tests/lib/ instead. Re-check with: bash scripts/test/select-suites.sh --check-headers"
   else
     failc "D7" "scripts/test/select-suites.sh --check-headers exited $_d7_rc without its verdict record ($(head -n 1 "$_d7_err")) — the suite-header check could not run"
   fi

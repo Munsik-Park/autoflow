@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b088d51af1a87b9ed2f738fcb31310a7e59d8552009794dbb6d7dd907cf52c1f"
+      "sha256": "288b1e7bc4f4a6f383b9fc37b03c50550bfd88db0720bc6973350032102af4f2"
     },
     {
       "source": "docs/INDEX.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4590687090a43bb566d0e6abeee11f54f09799317a4c978062fd6489248291b3"
+      "sha256": "9874eb2a1f2d56582b0d61fff2458a812698a000aad5946988845ef5a409f7ba"
     },
     {
       "source": "docs/design-rationale.md",
@@ -265,7 +265,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "cb668595510402328e148d72ddffc24fb9a4e6ca1d1c0df508738ba84d070762"
+      "sha256": "43702ac25493becbc60b3c255702479aa88bb7362bbb1529bdd53bd54e29ec8c"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -419,42 +419,21 @@
       "dest": "scripts/test/suite-manifest.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "0e0d5ee12b913ccd1ef571c5a7329b3efd7a0e0b1233bfd30d7e7274c89d8b93"
+      "sha256": "3b3ac8462926bf581312138e66bced99a03d0370d3c6d55f3650451ece7f573d"
     },
     {
       "source": "scripts/test/select-suites.sh",
       "dest": "scripts/test/select-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "3e3a13890d9a6505bd2208cbe59840908567f5aaa81b4d4301166dc62fc07277"
+      "sha256": "ff121be84dc78513a71e90e0205688cf0cd92d3d745a2aaafa35e97a40b30d56"
     },
     {
       "source": "scripts/test/run-suites.sh",
       "dest": "scripts/test/run-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "093620f73bf63654b7a64e99b917eae6e085508f08bd0da880b6ea03de8e661a"
-    },
-    {
-      "source": "scripts/test/suite-coverage.sh",
-      "dest": "scripts/test/suite-coverage.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "096f1df6d5aa75236401b74ced6dcbd067f7ef5877e841023363fcecb891d23d"
-    },
-    {
-      "source": "scripts/test/green-tree-store.sh",
-      "dest": "scripts/test/green-tree-store.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "b68f6da739037edfdd4dddc9d53ffed2f3bc12686c54ae9325b6cec4af12580f"
-    },
-    {
-      "source": "scripts/test/green-tree-register.sh",
-      "dest": "scripts/test/green-tree-register.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "f397c253cf449e8dbfd0efff1467a5ae4bf5d55ba9b5dfee3d32396cc13d5945"
+      "sha256": "7bcac66efb73ed98cb3bfedb20385b40e1ea23d49023174d4e748a5423ebe2c5"
     },
     {
       "source": "scripts/test/invocation-scan.sh",
@@ -468,7 +447,7 @@
       "dest": "scripts/test/check-suite-manifest.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "6ea57ae186f2caca1974e231929b407a96d6edb3be466498f61b6c523a969cfc"
+      "sha256": "ab9776bdf697b0d68ea61b77b76a243c7d6df24e34c02710f9f9de6066946f4a"
     },
     {
       "source": "scripts/test/check-suite-leaf.sh",

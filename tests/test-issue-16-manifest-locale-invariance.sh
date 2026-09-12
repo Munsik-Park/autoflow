@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: setup/gen-manifest-hashes.sh setup/manifest.json
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: locale-invariant manifest generation — Issue #16
@@ -30,8 +29,9 @@
 #   AC5 — RETIRED. It asserted "the manifest change is order-only" against a
 #         baseline snapshot, a one-time migration check whose cycle merged long
 #         ago. Its own header already labelled it a cycle-scoped gate, and a
-#         cycle-scoped guard is deleted when its `# retire-with:` issue's PR
-#         merges (scripts/test/check-suite-manifest.sh).
+#         cycle-scoped guard is deleted when its cycle ends — the header field
+#         that used to declare that was retired in #228, and a cycle-layer
+#         asset now lives under `.autoflow/issue-{N}-local/` (ADR-0024 D2).
 #
 # RED expectation (this commit, no LC_ALL pin in setup/gen-manifest-hashes.sh
 # yet): AC1 FAILs (grep target absent). AC3 FAILs when the runner's ambient

@@ -9,15 +9,22 @@
 # which this lint sources rather than re-parsing. What this file owns is the
 # CONFORMANCE rules over that grammar, in two groups:
 #
-#   HEADER      — presence and grammar of ci-subject / lane / retire-with /
-#                 cycle-arm / budget-secs, and the couplings between them.
+#   HEADER      — presence and grammar of the two declared fields, ci-subject
+#                 and budget-secs.
 #   WORKFLOW    — every GOVERNED suite step carries an `id`, a sentinel-delimited
 #                 `if:` guard, and `timeout-minutes` equal to
 #                 ceil(budget-secs / 60).
 #
-# `lane: cycle-scoped` implies the file declares a path allow-list array; the
-# converse is not asserted. `cycle-arm` is declared exactly when an array is,
-# and agrees with `retire-with` when both apply.
+# The grammar carried four further fields until ADR-0024 (issue #228) retired
+# them; their arms left with them, in the same change as the grammar's own
+# declaration (`CLAUDE.md` > Rule Scope, principle 4). The retirement grounds are
+# ADR-0024's, recorded there > Area 3 and summarised at the grammar site.
+#
+# THE SUITE PLANE IS OPT-IN, and this lint is one of the resolver's three
+# consumers (ADR-0024 D3): it calls `suite_plane_opted_in` from the sourced
+# library — never a second copy of the predicate — and a root that has not opted
+# in is neither clean nor in violation, so it gets the resolver's own exit status
+# rather than an OK line.
 #
 # THE GOVERNED SET is a strict subset of a job's steps. A step is governed when
 # its `run:` invokes a path with the SHAPE of an enumerated spec
@@ -73,70 +80,13 @@ advisory() { printf '  ADVISORY: %s\n' "$1"; }
 # HEADER group
 # ---------------------------------------------------------------------------
 check_headers() {
-  local root="$1" f lane retire arm budget resolved has_array oot
+  local root="$1" f budget
   while IFS= read -r f; do
     [ -n "$f" ] || continue
     [ -f "$root/$f" ] || continue
 
     suite_header_field "$root/$f" ci-subject >/dev/null \
       || violation "$f: no '# ci-subject:' header — the trigger surface is what selection consumes"
-
-    if ! lane="$(suite_header_field "$root/$f" lane)"; then
-      violation "$f: no '# lane:' header — every spec declares its lane at creation"
-      lane=""
-    elif [ "$lane" != standing ] && [ "$lane" != cycle-scoped ]; then
-      violation "$f: '# lane: $lane' is not one of standing | cycle-scoped"
-    fi
-
-    retire="$(suite_header_field "$root/$f" retire-with || true)"
-    arm="$(suite_header_field "$root/$f" cycle-arm || true)"
-    has_array=0
-    suite_declares_allow_list "$root/$f" && has_array=1
-
-    if [ "$lane" = cycle-scoped ]; then
-      [ -n "$retire" ] || violation "$f: 'lane: cycle-scoped' requires a '# retire-with: #<issue>' — the retirement condition needs a machine-readable subject"
-      [ "$has_array" -eq 1 ] || violation "$f: 'lane: cycle-scoped' requires a path allow-list array — behavioural inertness is not statically checkable, and the array's evaluation set is the only thing dominance is checkable over"
-    elif [ -n "$retire" ]; then
-      violation "$f: '# retire-with:' is forbidden on a standing suite — a standing suite asserts permanent state and is never retired by an issue's merge"
-    fi
-
-    if [ "$has_array" -eq 1 ] && [ -z "$arm" ]; then
-      violation "$f: declares a path allow-list array but no '# cycle-arm: #<issue>' — the arm names the cycle whose landed diff it asserts"
-    fi
-    if [ "$has_array" -eq 0 ] && [ -n "$arm" ]; then
-      violation "$f: declares '# cycle-arm: $arm' but no path allow-list array — there is no arm for it to name"
-    fi
-    if [ -n "$arm" ] && [ -n "$retire" ] && [ "$arm" != "$retire" ]; then
-      violation "$f: cycle-arm ($arm) and retire-with ($retire) disagree — on a cycle-scoped suite the arm and the retirement name the same cycle"
-    fi
-    for v in "$arm" "$retire"; do
-      if [ -n "$v" ] && ! printf '%s' "$v" | grep -qE '^#[0-9]+$'; then
-        violation "$f: '$v' is not a '#<issue-number>' value"
-      fi
-    done
-
-    # OUT-OF-TREE declaration. A suite whose body carries a base-ref call site
-    # can answer differently while the tracked tree is unchanged, so per-suite
-    # verdict inheritance must be told about it explicitly
-    # (docs/adr/0019-scope-fit-verification-policy.md, decision 2). The
-    # obligation is PRESENCE of the field, `yes` or `no` — absence is the only
-    # violation. Set equality was rejected: a suite declaring an explicit `no`
-    # would violate it, and it would force this lint to decide hermeticity,
-    # which a grep cannot. Presence fails closed on the case that matters — a
-    # new out-of-tree reader landing silently — and an explicit `no` is the
-    # escape, declared where the suite's other properties are declared rather
-    # than in a second list to keep in sync.
-    #
-    # The criterion is `suite_reads_out_of_tree_state` from the sourced
-    # library, its single definition site. Re-typing the expression here would
-    # be the second copy this lint's own second-home rule rejects.
-    oot="$(suite_header_field "$root/$f" out-of-tree-inputs || true)"
-    if suite_reads_out_of_tree_state "$root/$f" && [ -z "$oot" ]; then
-      violation "$f: reads out-of-tree state (a base-ref call site) but declares no '# out-of-tree-inputs:' — verdict inheritance keyed on declared reach cannot see a dependency that is not declared"
-    fi
-    if [ -n "$oot" ] && [ "$oot" != yes ] && [ "$oot" != no ]; then
-      violation "$f: '# out-of-tree-inputs: $oot' is not one of yes | no"
-    fi
 
     if ! budget="$(suite_header_field "$root/$f" budget-secs)"; then
       violation "$f: no '# budget-secs:' header — an undeclared cost is an unbounded one"
@@ -339,6 +289,24 @@ check_tree() {
 if [ "$LIST" -eq 1 ]; then
   suite_enumerate "$ROOT"
   exit 0
+fi
+
+# THE OPT-IN. The header contract this lint enforces is the suite plane's, so on
+# a root that has not declared the plane there is nothing here to be in
+# violation of — and nothing to certify either. The resolver's own exit status
+# says which of the two it is, so "the plane does not apply" can never be read
+# off an `OK` line (ADR-0024 D3; ADR-0024:213-219).
+suite_plane_opted_in "$ROOT"
+PLANE_RC=$?
+if [ "$PLANE_RC" -eq "$SUITE_PLANE_UNREADABLE" ]; then
+  echo "check-suite-manifest: $(suite_plane_decl_path "$ROOT") is present but its JSON could not be read — the header contract's applicability is unknown, so nothing was checked"
+  echo "  Repair the declaration file (or install jq). An unreadable declaration is not an absent one."
+  exit "$SUITE_PLANE_UNREADABLE"
+fi
+if [ "$PLANE_RC" -ne 0 ]; then
+  echo "check-suite-manifest: this root declares no AutoFlow suite-plane opt-in (tests > suite_plane in $(suite_plane_decl_path "$ROOT")) — the header contract does not bind here, so nothing was checked"
+  echo "  Exit $SUITE_PLANE_NOT_OPTED_IN is neither OK nor a violation: the suites under tests/** are the target's own (ADR-0024 D3)."
+  exit "$SUITE_PLANE_NOT_OPTED_IN"
 fi
 
 if check_tree "$ROOT"; then

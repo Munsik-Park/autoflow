@@ -41,8 +41,18 @@
 # committed delta, so an empty committed delta still selects the full set; an
 # unresolvable base is still a BLOCK, since the union applies only to a delta
 # that resolved; and under a push event no delta is resolved at all, so the flag
-# is inert there. Callers verifying a working tree (the interim capture point in
-# scripts/test/suite-coverage.sh) pass it; CI, whose checkout is clean, does not.
+# is inert there. A caller verifying a working tree (a local RED/GREEN
+# derivation) passes it; CI, whose checkout is clean, does not.
+#
+# THE SUITE PLANE IS OPT-IN, and the SELECTION PATH is where that binds
+# (ADR-0024 D3, issue #228). Before any header is required, this script resolves
+# the target's declaration through `suite_plane_opted_in`, the one resolver in
+# scripts/test/suite-manifest.sh; a root that has not opted in owes no
+# `# ci-subject:` header, so the selection neither BLOCKs nor emits, and says so
+# with an exit status of its own. `--check-headers` consults nothing: it ANSWERS
+# a question it was asked, where a non-empty list is an answer and not a
+# requirement, and keying it would report `headers OK` for a root whose headers
+# were never examined — a not-run rendered as clean.
 #
 # HEADER CHECK is the validation stage alone, through `--check-headers`: every
 # enumerated suite whose `ci-subject` header is absent or empty, one path per
@@ -67,9 +77,13 @@
 # Exit:   0 normal, 1 BLOCK (unresolvable base, or an absent / empty
 #         `ci-subject` header on an enumerated suite — validated ahead of the
 #         selection loop, so a BLOCK never leaves a partial report behind; every
-#         such suite is named, not only the first), 2 usage. Under
-#         --check-headers: 0 when every enumerated suite declares a usable
-#         header (zero suites included), 1 when any does not.
+#         such suite is named, not only the first), 2 usage,
+#         SUITE_PLANE_NOT_OPTED_IN (3) the root declares no suite-plane opt-in,
+#         SUITE_PLANE_UNREADABLE (4) its declaration file is present but
+#         unreadable — both from scripts/test/suite-manifest.sh, and neither is
+#         a selection, a BLOCK or a usage error. Under --check-headers: 0 when
+#         every enumerated suite declares a usable header (zero suites
+#         included), 1 when any does not — unkeyed, on every root.
 # =============================================================================
 
 set -uo pipefail
@@ -145,9 +159,27 @@ resolve_delta() {
 select_over() {
   local root="$1" event="$2" base="$3" include_worktree="${4:-0}" mode="${5:-select}"
   local delta="" full_set=0 lib_touched=0 suite tok path matched reason
-  local hdr toks
+  local hdr toks plane_rc
   local -a suites=() headerless=()
   local -A ci_subject_hdr=()
+
+  # THE OPT-IN, resolved before anything is required of the root. It gates the
+  # SELECTION path only: `--check-headers` answers over any root (P4/F5), and
+  # keying it would make drift-check D7 report clean on a root it never read.
+  if [ "$mode" != headers ]; then
+    suite_plane_opted_in "$root"
+    plane_rc=$?
+    if [ "$plane_rc" -eq "$SUITE_PLANE_UNREADABLE" ]; then
+      echo "select-suites: $(suite_plane_decl_path "$root") is present but its JSON could not be read — refusing to decide the suite plane's applicability from an unreadable declaration" >&2
+      echo "  Repair the declaration file (or install jq, which reads it). A malformed declaration is not an absent one: absent means the target never opted in, unreadable means the answer is unknown." >&2
+      return "$SUITE_PLANE_UNREADABLE"
+    fi
+    if [ "$plane_rc" -ne 0 ]; then
+      echo "select-suites: this root declares no AutoFlow suite-plane opt-in (tests > suite_plane in $(suite_plane_decl_path "$root")), so no '# ci-subject:' header is owed and nothing is selected" >&2
+      echo "  Not a selection, not a BLOCK and not a usage error — exit $SUITE_PLANE_NOT_OPTED_IN says the plane does not apply here. The target's own declared test command runs its tests (ADR-0024 D3)." >&2
+      return "$SUITE_PLANE_NOT_OPTED_IN"
+    fi
+  fi
 
   # Enumerated once and reused by both the validation and selection loops below
   # — the header validated per suite here is cached too, so together this

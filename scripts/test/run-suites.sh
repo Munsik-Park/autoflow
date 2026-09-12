@@ -25,13 +25,20 @@
 #
 # EXPLICIT RUN SET: `--selected <path>` reads the set to execute from a file, one
 # repo-relative path per line. This does not give the runner a predicate of its
-# own — the plan is produced by scripts/test/suite-coverage.sh, which itself
-# consumes select-suites.sh. A PATH ONLY, deliberately no `-`/stdin form: the one
-# composition a stdin form would enable is
-# `suite-coverage.sh | run-suites.sh --selected -`, in which the resolver's exit
-# status is invisible to the composing shell (this script's own `pipefail` is an
-# option of THIS process, not of the shell that composed the two), so a BLOCK
-# would be recorded as a clean pass.
+# own — the plan is the caller's, derived from select-suites.sh, the one
+# selection definition site. A PATH ONLY, deliberately no `-`/stdin form: a
+# stdin form would admit `<producer> | run-suites.sh --selected -`, in which the
+# producer's exit status is invisible to the composing shell (this script's own
+# `pipefail` is an option of THIS process, not of the shell that composed the
+# two), so a BLOCK would be recorded as a clean pass.
+#
+# THE SUITE PLANE IS OPT-IN (ADR-0024 D3, issue #228), and this runner is one of
+# the resolver's three consumers. It consults `suite_plane_opted_in` from the
+# sourced library — never a second copy of the predicate — on the SELECTION path
+# alone, which is the path the plane's enforcement lives on: `--all` and
+# `--selected` name their own run set and are inert under the opt-in. A root that
+# has not opted in executes nothing and exits with the resolver's own status, so
+# "the plane does not apply here" can never be read as "everything passed".
 #
 # Two fail-closed validations, both usage exit 2 with nothing executed:
 #   - `--all` together with `--selected`: the two name incompatible sources and
@@ -52,7 +59,8 @@
 #
 # One `PASS|FAIL|TIMEOUT <path> <elapsed>s` line per executed suite, then a
 # summary. Exit 0 when every executed suite passed, 1 on any failure or
-# overrun, 2 usage.
+# overrun, 2 usage, SUITE_PLANE_NOT_OPTED_IN (3) / SUITE_PLANE_UNREADABLE (4)
+# when the selection path's opt-in does not resolve to an opted-in root.
 # =============================================================================
 
 set -uo pipefail
@@ -120,6 +128,21 @@ elif [ "$ALL" -eq 1 ]; then
   SELECTED="$(suite_enumerate "$ROOT")"
   SELECT_RC=0
 else
+  # The opt-in, resolved through the one resolver before a selection is asked
+  # for. The selector answers the same way on the same root; consulting it here
+  # is what makes the runner's own report name the runner's own routes.
+  suite_plane_opted_in "$ROOT"
+  PLANE_RC=$?
+  if [ "$PLANE_RC" -eq "$SUITE_PLANE_UNREADABLE" ]; then
+    echo "run-suites: $(suite_plane_decl_path "$ROOT") is present but its JSON could not be read — no suite executed" >&2
+    echo "  Repair the declaration file (or install jq). An unreadable declaration is not an absent one, so the applicability of the suite plane is unknown rather than settled." >&2
+    exit "$SUITE_PLANE_UNREADABLE"
+  fi
+  if [ "$PLANE_RC" -ne 0 ]; then
+    echo "run-suites: this root declares no AutoFlow suite-plane opt-in (tests > suite_plane in $(suite_plane_decl_path "$ROOT")) — no suite executed" >&2
+    echo "  Exit $SUITE_PLANE_NOT_OPTED_IN is neither a pass nor a failure: the plane does not apply to this root, and the target's own declared test command runs its tests (ADR-0024 D3). To execute this tree's specs regardless, 'run-suites.sh --all'." >&2
+    exit "$SUITE_PLANE_NOT_OPTED_IN"
+  fi
   SELECT_ARGS=(--root "$ROOT" --event "$EVENT")
   [ -n "$BASE" ] && SELECT_ARGS+=(--base "$BASE")
   SELECTED="$(bash "$SCRIPT_DIR/select-suites.sh" "${SELECT_ARGS[@]}")"

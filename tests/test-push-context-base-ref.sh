@@ -2,9 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: .github/workflows/contract-suites.yml .github/workflows/e2e-dummy-target.yml scripts/test/suite-manifest.sh
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
-# out-of-tree-inputs: yes
 # =============================================================================
 # Test: push-trigger base-ref resolution, delta-scoped subject execution —
 # Issue #99 (standing; supersedes the Issue #85 whole-subject-sweep oracle)
@@ -266,9 +264,12 @@ assert_true "subject-set derivation finds at least one push-context base-ref con
 #
 # SELECTION RULE (established #121, after this pin decayed twice for the same
 # reason): pin a subject whose base-ref call CANNOT LEAVE WITH A CYCLE. A
-# conforming subject declares `# lane: standing`, declares no `cycle-arm`
-# field, and holds its base-ref call at top level, dominated by no
-# `dev/*-issue-<N>` branch gate. Repoint by that rule, never by convenience.
+# conforming subject is a STANDING suite, and holds its base-ref call at top
+# level, dominated by no `dev/*-issue-<N>` branch gate. (Issue #228 retired the
+# two header fields that used to declare that first half; the property is now
+# the suite's layer under ADR-0024 D1 — a standing suite lives in the committed
+# test tree, a cycle-scoped one under `.autoflow/issue-{N}-local/` and is never
+# committed.) Repoint by that rule, never by convenience.
 #
 # Pin history. #107 repointed off tests/test-issue-59-adoption-evidence-discipline.sh,
 # whose only resolver call sat in dormant dev/*-issue-59 arms that cycle retired.
@@ -890,8 +891,8 @@ assert_true "AC-native-coverage-premise-reach: a registering workflow whose push
 # which left the derived set when a cycle retired the branch-gated arms holding
 # its only base-ref call. The two pins are one decision — a subject that is no
 # longer derived cannot report a NATIVE-COVERAGE state at all — so they move
-# together, and they move by the selection rule recorded above (lane: standing,
-# no cycle-arm, an un-gated top-level base-ref call). Both halves were checked
+# together, and they move by the selection rule recorded above (a standing
+# suite, an un-gated top-level base-ref call). Both halves were checked
 # against the registering workflow for tests/plugin/verify-package.sh rather
 # than assumed: the job carrying its run: step checks out at fetch-depth: 0,
 # and that workflow's push: paths block lists the suite's own path. No

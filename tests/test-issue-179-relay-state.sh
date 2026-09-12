@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # ci-subject: scripts/architect/relay-state.sh scripts/architect/deliberation-metrics.py tests/fixtures/issue-179/**
-# lane: standing
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #179 — ARCHITECT relay: transcript state, metrics

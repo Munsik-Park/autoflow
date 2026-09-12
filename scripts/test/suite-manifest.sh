@@ -22,21 +22,29 @@
 # HEADER GRAMMAR — column-1 comment lines, one field per line:
 #
 #   # ci-subject: <path-or-glob> [<path-or-glob> ...]
-#   # lane: standing | cycle-scoped
-#   # retire-with: #<issue-number>      (required iff lane: cycle-scoped)
-#   # cycle-arm: #<issue-number>        (required iff a path allow-list array)
 #   # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
-#   # out-of-tree-inputs: yes | no    (optional; absent = no)
 #
-# `out-of-tree-inputs: yes` declares that the suite's answer can move while the
-# tracked tree does not — a base-ref-dependent assertion is the shipped case, and
-# `resolve_base_ref`'s fallback is `git merge-base HEAD origin/main`, so a fetch
-# that advances origin/main changes the answer with the tree untouched. Such a
-# suite is excluded from verdict inheritance entirely and executes
-# unconditionally (docs/adr/0019-scope-fit-verification-policy.md, decision 2).
-# The field is declared HERE because this file is the field vocabulary's single
-# definition site: a field a script reads but no grammar declares is the
-# second-definition-site failure this file exists to prevent.
+# THE GRAMMAR IS THIS LIST AND NOTHING ELSE. A field a script reads but no
+# grammar declares is the second-definition-site failure this file exists to
+# prevent, so the two directions are kept together: a field is added here and to
+# check-suite-manifest.sh in one change, and retired from both in one change.
+#
+# FOUR FIELDS WERE RETIRED under ADR-0024 (issue #228), and each retirement's
+# ground is recorded there > Area 3 rather than here:
+#
+#   `lane`, `retire-with`   under D2 every committed suite is standing and a
+#                           one-shot check lives uncommitted under
+#                           `.autoflow/issue-{N}-local/`, so a two-value field
+#                           with one reachable value is not a declaration
+#   `cycle-arm`             zero live instances of the case its own rationale
+#                           named
+#   `out-of-tree-inputs`    its only functional consumer was the verdict-
+#                           inheritance exclusion, which D6 retires with the
+#                           Green-tree register; with nothing inheriting, a
+#                           base-ref-dependent suite simply runs. The predicate
+#                           that decided it (`suite_reads_out_of_tree_state`
+#                           below) survives for its other caller, which derives
+#                           a subject set from it rather than a declaration
 #
 # `budget-secs` is a CI-CLOCK quantity: derived from the suite's own CI step
 # duration, bounded by the ceiling, and spent by CI. Local wall-clock is
@@ -236,9 +244,9 @@ suite_enumerate() {
 # suite_header_block <path> — the file's LEADING comment block: every line from
 # the top up to the first line that is neither blank nor a comment. Bounding the
 # search here is not tidiness. A suite that writes fixture files by heredoc
-# carries column-1 `# lane:` / `# retire-with:` lines in its BODY — the RED
-# suites of this very cycle do — and a whole-file grep reads one of those as the
-# suite's own declaration.
+# carries column-1 grammar lines in its BODY — a fixture header it emits, not a
+# declaration it makes — and a whole-file grep reads one of those as the suite's
+# own.
 # ---------------------------------------------------------------------------
 suite_header_block() {
   awk '/^[[:space:]]*$/ { next } /^#/ { print; next } { exit }' "$1" 2>/dev/null
@@ -308,39 +316,6 @@ suite_reads_out_of_tree_state() {
 }
 
 # ---------------------------------------------------------------------------
-# suite_declares_allow_list <path> — true when the file declares a path
-# allow-list array IN ITS OWN SCOPE. This is the subject test
-# check-cycle-scope-guard.sh binds to, and the antecedent of the header's
-# cycle-arm coupling.
-#
-# Heredoc bodies are skipped. A suite that writes fixture files inline carries
-# `allow_list=(` inside a heredoc — the RED suites of the cycle that introduced
-# this library do — and that is fixture TEXT the suite emits, not an array the
-# suite declares. Counting it makes a lint demand a `cycle-arm` header naming a
-# cycle the file has no arm for, and inflates the guard's own subject count.
-# ---------------------------------------------------------------------------
-suite_declares_allow_list() {
-  awk '
-    /^[[:space:]]*$/ { next }
-    in_here {
-      s = $0; sub(/^[[:space:]]+/, "", s)
-      if (s == tag) in_here = 0
-      next
-    }
-    {
-      if (match($0, /<<-?[[:space:]]*[\x27"]?[A-Za-z_][A-Za-z0-9_]*[\x27"]?/)) {
-        tag = substr($0, RSTART, RLENGTH)
-        sub(/^<<-?[[:space:]]*/, "", tag)
-        gsub(/[\x27"]/, "", tag)
-        if (tag != "") { in_here = 1; next }
-      }
-      if ($0 ~ /^[[:space:]]*(allow_list|ALLOWLIST_[0-9A-Za-z_]+)=\(/) { found = 1; exit }
-    }
-    END { exit(found ? 0 : 1) }
-  ' "$1" 2>/dev/null
-}
-
-# ---------------------------------------------------------------------------
 # suite_budget_secs <path> — the declared budget resolved to an integer. The
 # ceiling symbol resolves to SUITE_BUDGET_CEILING_SECS; anything else is echoed
 # verbatim for the caller to validate.
@@ -376,4 +351,62 @@ suite_budget_minutes() {
 # ---------------------------------------------------------------------------
 suite_local_allowance_secs() {
   printf '%s\n' "$(( $1 * SUITE_LOCAL_SLOWDOWN_FACTOR ))"
+}
+
+# ---------------------------------------------------------------------------
+# SUITE-PLANE OPT-IN — the single resolver (ADR-0024 D3, issue #228).
+#
+# AutoFlow's suite plane — this header grammar, the selector, the runner and the
+# manifest lint — applies only where the target declared it, plus this
+# repository, whose standing layer depends on it (ADR-0024 D5). The declaration
+# lives in the target-owned scaffold `.claude/autoflow.local.json`, under the
+# `tests` object's `suite_plane` key.
+#
+# THE KEY IS READ HERE AND NOWHERE ELSE. "Three copies of one predicate is the
+# defect, not the fix … three predicates that must agree is a verification that
+# can pass while the system is inconsistent" (ADR-0024 D3). Every consumer —
+# the selection path, the runner and the manifest lint — sources this file and
+# calls the function below; none of them re-types the key.
+# tests/test-suite-plane-optin-single-site.sh holds that arity.
+#
+# THREE ANSWERS, NOT TWO. "Not opted in" carries its OWN exit status wherever it
+# is consulted, distinct from success and from every failure code the consulting
+# device already defines — the precedent is scripts/handoff/confirm-ci-green.sh,
+# which keeps 11 ("nothing ran") distinct from 12 ("it failed") so that nothing
+# ran cannot read as passed. And ABSENT is not UNREADABLE: the shipped scaffold
+# carries no `tests` object at all (`.claude/autoflow.local.json.example`), so
+# absent is the normal non-opted-in state, while a declaration file that is
+# present and cannot be parsed is a refusal — the fail-closed contract
+# scripts/review/lib/review-config.sh already sets in this tree.
+#
+#   0                          opted in
+#   SUITE_PLANE_NOT_OPTED_IN   no declaration file, no `tests` object, or the
+#                              key is anything but true
+#   SUITE_PLANE_UNREADABLE     a declaration file is present but its JSON cannot
+#                              be read (malformed, unreadable, or no jq)
+# ---------------------------------------------------------------------------
+SUITE_PLANE_DECL_REL='.claude/autoflow.local.json'
+SUITE_PLANE_NOT_OPTED_IN=3
+SUITE_PLANE_UNREADABLE=4
+
+suite_plane_opted_in() {
+  local root="${1:-.}" decl verdict
+  decl="$root/$SUITE_PLANE_DECL_REL"
+  [ -f "$decl" ] || return "$SUITE_PLANE_NOT_OPTED_IN"
+  command -v jq >/dev/null 2>&1 || return "$SUITE_PLANE_UNREADABLE"
+  verdict="$(jq -r 'if (.tests.suite_plane? // false) == true then "in" else "out" end' "$decl" 2>/dev/null)" \
+    || return "$SUITE_PLANE_UNREADABLE"
+  case "$verdict" in
+    in)  return 0 ;;
+    out) return "$SUITE_PLANE_NOT_OPTED_IN" ;;
+    *)   return "$SUITE_PLANE_UNREADABLE" ;;
+  esac
+}
+
+# ---------------------------------------------------------------------------
+# suite_plane_decl_path <root> — the declaration file a message should name, so
+# every consumer reports the same path rather than composing its own.
+# ---------------------------------------------------------------------------
+suite_plane_decl_path() {
+  printf '%s/%s\n' "${1:-.}" "$SUITE_PLANE_DECL_REL"
 }

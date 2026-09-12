@@ -1,5 +1,17 @@
 # Issue #112 — Manual/Environment-Dependent Verification Scenarios
 
+> **Retired — historical record (operator decision, #228).** Both scenarios below
+> observe mechanisms that no longer exist: the whole-tree run and its capture-point
+> quiesce (retired by #225 `9d9f417`; ADR-0024 D6), the Green-tree register and its
+> `green-tree` ledger entries (retired by #228; ADR-0024 D6 / Area 3), the
+> `inherited_verdicts` report key ("goes with the register", ADR-0024 D6;
+> `docs/evaluation-system.md` > Evaluation Output Format: not written), and the
+> `tests/fixtures/doc-invariants.json` fixture (deleted in #141). No step, fixed
+> input or expected outcome in this document is performable against the current
+> tree. The one obligation that survives — the evaluator's wall-clock cap and
+> sampling default (`docs/teammate-contracts.md` > Evaluation AI) — is observed by
+> `tests/manual/evaluator-execution-discipline-manual-scenarios.md`.
+
 Two items in `.autoflow/issue-112-verification-design.md` > *Untestable items* have
 no in-repo observer and are discharged here rather than by an automated layer:
 the whole-tree run's once-per-cycle position, and the gate evaluator's actual
@@ -8,7 +20,9 @@ are agent-execution properties, not tree properties, and neither is a
 triggered composition contact point (Composition-oracle determination finds no
 `T ∩ S` row for either) — the reasons the verification design gives for why no
 automated oracle exists. Every other automated criterion in the design is
-discharged by `tests/test-suite-coverage-agreement.sh`
+discharged by `tests/test-suite-coverage-agreement.sh` (deleted with #228 —
+ADR-0024 > Area 3 retired verdict inheritance; those criteria are no longer
+under automated coverage and this record is historical)
 (`origin_issue`-untagged, new agreement suite), by
 `tests/fixtures/doc-invariants.json` (`origin_issue: 112` entries), by the
 resolver's own hermetic `--self-test` (once shipped), or by the existing
@@ -69,7 +83,8 @@ and the report-schema key (`inherited_verdicts`, with its always-present
 discipline) are both automated —
 `tests/fixtures/doc-invariants.json` entries `112-evaluator-citation-inheritance-must`,
 `112-evaluator-sampling-default`, `112-evaluator-time-cap`, and
-`tests/test-suite-coverage-agreement.sh`'s evaluator-citation-carrier leg. Only
+`tests/test-suite-coverage-agreement.sh`'s evaluator-citation-carrier leg (both
+since deleted — the fixture with #141, the suite with #228). Only
 the runtime behaviour — did the evaluator actually stop at the cap, actually
 sample rather than enumerate, actually cite rather than re-run — is manual.
 
