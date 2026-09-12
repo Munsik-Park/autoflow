@@ -89,7 +89,11 @@ emerge, humans adjust the criteria.
   },
   "scores": { "item": { "score": 8, "reason": "evidence" } },
   "remedy_class": { "<failed item>": "doc | test | impl | design | operator" },
-  "rescore": { "source": "<prior report path>", "rescored": ["item"], "inherited": ["item"] },
+  "rescore": {
+    "source": "<prior report path>", "rescored": ["item"], "inherited": ["item"],
+    "prior_findings": [ { "item": "item", "finding": "<the prior report's finding>", "status": "cleared | remains", "ground": "<path:line at <commit SHA> / command + summary line>" } ],
+    "new_findings": [ { "item": "item", "finding": "<defect newly seen on a re-scored item>", "disposition": "blocking — scored under <item> | recommendation", "ground": "<why it blocks, or why it does not>" } ]
+  },
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
@@ -120,7 +124,7 @@ read it from the report (it reads the routed class the orchestrator records in s
 | Key | Type | Required | Meaning |
 |-----|------|----------|---------|
 | `remedy_class` | object, one entry per failed item | **on every FAIL** (`{}` on a PASS) | Value enum `doc` \| `test` \| `impl` \| `design` \| `operator`. A failed item with no entry is a contract violation — reject + re-spawn, as for a missing `fail_hypothesis`. `operator` means "not classifiable with confidence" and pauses the cycle for the operator. |
-| `rescore` | object | **on a re-entry evaluation** (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items plus any inherited item whose anchor the re-entry touched — the re-entry diff at GATE:QUALITY / AUDIT, the decision document's delta section at GATE:PLAN); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. |
+| `rescore` | object | **on a re-entry evaluation** (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items plus any inherited item whose anchor the re-entry touched — the re-entry diff at GATE:QUALITY / AUDIT, the decision document's delta section at GATE:PLAN); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding the prior report recorded on a re-scored item, with `status` `cleared` or `remains` and the ground re-derived from the re-entry diff (issue #232: the re-score's FAIL hypothesis is "the flagged defect still remains", [`teammate-contracts.md`](teammate-contracts.md) > Evaluation AI > Pre-scoring FAIL hypothesis > *Re-entry form*); a prior finding with no entry is a report defect — reject + re-spawn, as for a missing `fail_hypothesis`. `new_findings` — one entry per defect newly seen on a re-scored item (`[]` when none), each with the evaluator's `disposition` — `blocking — scored under <item>`, or `recommendation` (also listed in `recommendations`, and the item's score is not lowered for it) — and its ground. Both lists are report material the orchestrator reads; the hook reads neither. |
 
 `refine_observations` (GATE:QUALITY only; issue #135) records the evaluator's disposition of every
 entry in the REFINE report's `## Out-of-scope observations — guard / boundary logic touched`

@@ -1192,7 +1192,32 @@ each-item ≥ 7 criterion:
 - **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
   or renames files, sections, or identifiers, require evidence of a repo-wide
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
-  mentions). A dangling reference caps the affected item at 6.
+  mentions). A dangling reference in a **normative document** caps the affected item at 6.
+  The cap binds normative documents only; a stale name in a **historical record** is the
+  evaluator's judgment (issue #232 — the #228 cycle failed `Doc updates` four times on old
+  device names in past issues' manual-verification records, and passed on the fifth only after
+  the operator retired those records wholesale).
+  - *Normative documents* — the one definition, cited from everywhere else — are what an agent
+    or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
+    rules, playbooks, role contracts, evaluation criteria and agent definitions a phase loads
+    (`CLAUDE.md`, `docs/autoflow-guide.md`, `docs/phases/*`, `docs/teammate-contracts.md`,
+    `docs/teammate-common-rules.md`, `docs/submodule-common-rules.md`, `docs/evaluation-system.md`,
+    `.claude/agents/*`, and the sections of an ADR that state a decision still in force);
+    (b) the scripts, hooks and workflows that run; (c) every document delivered to a target — the
+    boundary of (c) is the manifest generator's markdown-link closure of `CLAUDE.md` +
+    `docs/INDEX.md` plus its other artifact rows (`setup/gen-manifest-hashes.sh` >
+    `compute_doc_closure`), which already exists and is not restated.
+  - *Historical records* are what is kept as a record of a past state and followed by no one:
+    per-issue manual-verification records (`tests/manual/issue-*`), report-excerpt fixtures
+    (`tests/fixtures/*`), an ADR's change-history and superseded sections, and archived cycle
+    artifacts. A fixture that an executing test reads is still a historical record for this check
+    — its content is a past report's text — while the test that reads it is normative.
+  - For a stale name in a historical record the evaluator judges whether a reader following the
+    normative documents would be misled by it, and records the judgment with its grounds in the
+    item's `reason` (and in `recommendations` when it does not lower the score). A score reduction
+    rests on that recorded ground alone, never on the name's presence; a record whose stale names
+    mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for
+    (precedent: issue #211 kept old report excerpts verbatim).
 - **Test quality — layer violation** (ADR-0024 D1, D2): for each verification-design row, the
   asset matches the layer its `Type` cell declares — a `cycle` row (no `standing:` token) has no
   committed test file; a `standing` row has its committed file, CI-registered where the target
@@ -1281,16 +1306,27 @@ principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-
 The `doc` route skips RED / GREEN / VERIFY, so its remedy must be **class-level, not site-level**: the
 #138 cycle fixed the evaluator's listed sites twice and was failed twice more on residual sites of
 the same kind. The fix anchors on a **repo-wide sweep for the pattern the evaluator named**, not on
-the list of sites it happened to find.
+the list of sites it happened to find. The sweep enumerates; **which hits the remedy fixes is the
+orchestrator's judgment**, recorded with its grounds in the sweep record (`CLAUDE.md` > Rule Scope,
+principle 2; issue #232).
 
 1. Write `.autoflow/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
    command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
-   remedy fixes every hit (or records why a hit is legitimately exempt).
+   remedy fixes every hit in a normative document (*Known blind-spot checks* > reference integrity —
+   the one definition of the boundary) and records, beside the two sections, the scope judgment for
+   the rest: a hit in a historical record is fixed only where the evaluator's recorded judgment
+   named it as misleading, and is otherwise recorded as exempt with the ground (the record is
+   followed by no one; issue #211's old excerpts stay verbatim). The judgment and its grounds are
+   prose in the same file; the hook reads only the two sections.
 2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../CLAUDE.md) > Team Structure /
    Commit Ownership). **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
    record exists with both sections non-empty** — it checks the record file, never the wording of an
-   instruction. On a second `doc` FAIL of the same class, the response is a wider sweep predicate,
-   not a standing doc-phrase suite (none are kept after #141).
+   instruction. On a second `doc` FAIL of the same class, the orchestrator re-examines its scope
+   judgment against the grounds the new report records — the previously flagged defect that
+   `rescore.prior_findings` marks `remains`, or a new finding it marks blocking — and records the
+   revised judgment in the sweep record; a wider predicate is one possible outcome, not a rule
+   (the #228 cycle widened three times by rule, and each widening rewrote historical records whose
+   new sentences the next evaluator then flagged). No standing doc-phrase suite is kept (#141).
 3. Run, once, the tests the doc diff requires ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local
    verification*) — often none for a doc-only diff; on an opted-in target the selector names any
    suite whose `ci-subject` reaches an edited doc — and record the command and its summary line.
@@ -1306,6 +1342,20 @@ re-scored item list and the inheritance source (the prior report's path) in its 
 receives all ten scores — the hook computes avg / min over the full set — inherited ones copied
 verbatim from the cited report. An inherited item whose anchor file appears in the re-entry diff
 and is missing from the re-scored list is a report defect: reject and re-spawn.
+
+**The re-score's subject is the previously flagged defect** (issue #232). The re-entry exists to
+clear the defects the prior report named, so the fresh evaluator's FAIL hypothesis on a re-scored
+item is *"the flagged defect still remains"*, searched against the re-entry diff
+([`teammate-contracts.md`](teammate-contracts.md) > Evaluation AI > Pre-scoring FAIL hypothesis >
+*re-entry form*); each prior finding is dispositioned `cleared` / `remains` in
+`rescore.prior_findings`. A defect the evaluator newly sees on a re-scored item — including one in
+the sentences the remedy itself wrote — is recorded per *Finding coverage*, and the evaluator
+judges whether it blocks: a blocking finding is scored under its item and listed in
+`rescore.new_findings` with its ground; one that does not block goes to `recommendations` and does
+not lower the item. What the rule removes is the re-entry loop the #228 cycle ran — each
+re-score adopting *"this Nth remedy must FAIL"* and flagging the previous remedy's new sentences,
+four FAILs on one item with the reports growing from 29 KB to 55 KB — not the fresh spawn, the
+narrowed input or the finding-coverage rule, which are unchanged.
 
 ---
 
