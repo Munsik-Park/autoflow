@@ -81,8 +81,8 @@ assert_true "AC-4: installed target has AGENTS.md (scaffold)" \
   "[ -f '$TARGET/AGENTS.md' ]"
 assert_true "AC-3a: installed target has .claude/autoflow.local.json (scaffold) shipping the codex default" \
   "[ -f '$TARGET/.claude/autoflow.local.json' ] && jq -e '.review.backend == \"codex\"' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
-assert_true "#225 (ADR-0024 D3): the stamped scaffold declares no tests.command and no suite_plane opt-in — the target's own CLAUDE.md test command stays the first discovery hit" \
-  "jq -e 'has(\"tests\") | not' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
+assert_true "#229 (ADR-0024 D3/S4): the stamped scaffold carries the tests declaration site with a null command and no suite-plane opt-in, as the shipped resolver reads it — the target's own CLAUDE.md test command stays the first discovery hit" \
+  "( . '$PROJECT_ROOT/scripts/test/suite-manifest.sh'; suite_plane_declared '$TARGET' && ! suite_plane_opted_in '$TARGET' ) && jq -e '.tests.command == null' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
 
 # Never-overwrite arm (C3 RESOLVED — mirror CLAUDE.local.md/AC1j): a target
 # operator's explicit backend=claude selection survives a second install.

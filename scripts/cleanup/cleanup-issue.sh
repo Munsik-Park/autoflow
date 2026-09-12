@@ -5,7 +5,10 @@
 #
 # AutoFlow Post-Merge Cleanup helper — ARCHIVES (moves, never deletes) a
 # resolved issue's `.autoflow/issue-<N>.*` + `.autoflow/issue-<N>-*` management
-# files (state JSON, decision ledger, design docs, phase/eval reports) out of
+# files (state JSON, decision ledger, design docs, phase/eval reports) and its
+# cycle-layer store `.autoflow/issue-<N>-local/` (the cycle's uncommitted
+# `automated` / `delivery-check` / `manual` assets — ADR-0024 D2, issue #229;
+# the directory moves whole, name preserved) out of
 # the repo tree into an external, repo-identity-keyed store
 # `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/<repo-key>/issue-<N>-<date>/`. Run
 # at PREFLIGHT prior-cycle resolution once the issue's PR is observed merged or
@@ -27,6 +30,8 @@
 # never a digit. Matching `\( -name "issue-${N}.*" -o -name "issue-${N}-*" \)`
 # (NOT a bare `issue-${N}*` glob) archives only issue <N> and never a
 # prefix-collision sibling — `12` must not match `123`/`120` (review finding).
+# The store directory is matched by its exact name `issue-${N}-local`, so
+# `issue-2` never takes `issue-22-local` (issue #229 AC6).
 # The digits-only guard on N additionally blocks globs / path traversal / slashes.
 #
 # REPO-KEY: `--print-repo-key [<url>|--no-origin]` prints the derived archive
@@ -237,11 +242,24 @@ for N in "$@"; do
   # a fixture cannot overwrite a top-level file that happens to share its name.
   fixtures="$(find "$AUTOFLOW_DIR/fixtures" -maxdepth 1 -type f \( -name "issue-${N}.*" -o -name "issue-${N}-*" \) 2>/dev/null || true)"
 
-  if [ -z "$matches" ] && [ -z "$fixtures" ]; then
-    echo "issue #${N}: no .autoflow/issue-${N}.* or issue-${N}-* files — nothing to archive"
+  # The CYCLE-LAYER STORE `.autoflow/issue-<N>-local/` (ADR-0024 D2; issue
+  # #229). A default `automated` row's test, a `delivery-check` and a `manual`
+  # checklist are authored there, executed once by path, never committed, and
+  # "archived with the cycle's artifacts" — so the directory moves WHOLE, with
+  # its name, into the same landing dir. It is one `maxdepth 1` entry matched
+  # by its exact name (never `issue-<N>*`), so the number boundary above holds
+  # for it too. The `-type f` walks above cannot see it; without this arm the
+  # store outlived the cycle (issue #228 moved it by hand).
+  local_store=""
+  [ -d "$AUTOFLOW_DIR/issue-${N}-local" ] && local_store="$AUTOFLOW_DIR/issue-${N}-local"
+
+  if [ -z "$matches" ] && [ -z "$fixtures" ] && [ -z "$local_store" ]; then
+    echo "issue #${N}: no .autoflow/issue-${N}.* or issue-${N}-* files and no issue-${N}-local/ store — nothing to archive"
     continue
   fi
-  count="$( { printf '%s\n' "$matches"; printf '%s\n' "$fixtures"; } | grep -c . )"
+  # `grep -c` exits 1 on zero matches, which `set -e` would turn into an abort
+  # on a store-only issue (both file lists empty) — the count is data here.
+  count="$( { printf '%s\n' "$matches"; printf '%s\n' "$fixtures"; } | grep -c . || true )"
 
   # Non-destructive archive move: a `-2`, `-3`, … conflict suffix rather than
   # overwriting a prior same-day archive (issue re-opened + re-closed).
@@ -268,7 +286,15 @@ for N in "$@"; do
       [ -n "$f" ] && mv "$f" "$dest/fixtures/"
     done
   fi
-  echo "issue #${N}: archived ${count} file(s) → ${dest}"
+  store_note=""
+  if [ -n "$local_store" ]; then
+    # A fresh `$dest` never holds the name, so this is a rename into it, not a
+    # merge; the store's own file count is reported so the line is checkable
+    # against the archive.
+    mv "$local_store" "$dest/issue-${N}-local"
+    store_note=" + issue-${N}-local/ ($(find "$dest/issue-${N}-local" -type f | grep -c .) file(s))"
+  fi
+  echo "issue #${N}: archived ${count} file(s)${store_note} → ${dest}"
 done
 
 exit "$status"

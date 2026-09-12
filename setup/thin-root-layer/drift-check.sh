@@ -41,14 +41,23 @@
 #       place a stale one is named before a fail-closed readout hits it in
 #       ARCHITECT (issue #185). SKIP when the readout, the scaffold or the
 #       definitions cannot be resolved, naming what was tried.
-#   D7  suite headers the shipped selector requires: every executable spec
+#   D7  suite headers the shipped selector requires, on a target that OPTED
+#       INTO AutoFlow's suite plane (`.claude/autoflow.local.json` > tests >
+#       suite_plane — ADR-0024 D3, issues #228 / #229): every executable spec
 #       under the target's `tests/**` declares a usable `# ci-subject:`
 #       header, or `scripts/test/select-suites.sh` BLOCKs every selection —
 #       RED's suite derivation first. Suites that predate the header contract
 #       are target-owned and a re-stamp never adds their headers, so this is
 #       the only place they are named before RED meets the BLOCK (issue #213).
 #       One FAIL per header-less suite, from the selector's own
-#       `--check-headers` stage; SKIP when the selector cannot be resolved.
+#       `--check-headers` stage. The opt-in is resolved by the shipped
+#       resolver (`scripts/test/suite-manifest.sh` > suite_plane_opted_in,
+#       this script's own tree — never a copy of the predicate): a target
+#       that has not opted in owes no header and PASSes without consulting
+#       the selector, with a HINT when its scaffold carries no `tests`
+#       declaration at all (the declaration site shipped after the target
+#       was stamped); a declaration that is present but unreadable is a FAIL
+#       (unknown is not clean). SKIP when the selector cannot be resolved.
 #
 # Exit: 0 = no drift (SKIP and WARN allowed); 1 = any FAIL.
 #   A FAIL is a PREFLIGHT stop condition (see setup/SETUP-GUIDE.md): D1/D3 →
@@ -59,7 +68,8 @@
 #   scaffold by hand to the loaded definitions' values / add the missing rows
 #   (a re-stamp never overwrites it); D7 → back-fill each named suite's header
 #   (docs/autoflow-guide.md > RED > Header contract > Adopting the contract
-#   over existing suites; a re-stamp never touches tests/**).
+#   over existing suites; a re-stamp never touches tests/**), or repair the
+#   unreadable declaration file it names.
 #
 # Consumers that parse this output (plugin/autoflow/skills/install/scripts/
 # detect.sh) key on the `FAIL: <id> -- ` line grammar; keep it.
@@ -495,32 +505,77 @@ fi
 # when run in-target, the oracle's own when run pre-confirmation — on the same
 # trust boundary as D6. Verdict is FAIL, not WARN, on D6's reasoning: RED
 # fails closed on the same suites anyway, later and further from the remedy.
+#
+# THE OPT-IN ARM (ADR-0024 D3, issues #228 / #229). The suite plane applies
+# only where the target declared it, and `--check-headers` is deliberately
+# unkeyed (it answers what it is asked, over any root), so the keying is this
+# leg's. It is resolved by the ONE resolver the bundle ships —
+# `suite_plane_opted_in` in scripts/test/suite-manifest.sh, sourced from THIS
+# script's tree on the same trust boundary as the selector above — and this
+# leg never re-types the predicate: it maps the resolver's own three answers
+# (opted in / not opted in / unreadable) to a word and branches on that. A
+# not-opted-in root owes no header: PASS, selector not consulted. An
+# unreadable declaration is a FAIL, not a PASS and not a SKIP: the answer is
+# unknown, and a re-stamp does not repair a target-owned file. The declaration
+# SITE is a second, separate fact: a scaffold stamped before the `tests` object
+# shipped has nowhere to opt in or out, and a re-stamp never overwrites it, so
+# its absence is named as a HINT beside the PASS — the only place an existing
+# target learns the site exists (issue #229 AC4).
 echo "== D7: suite headers the shipped selector requires =="
 SELECT_SUITES_SH="$SCRIPT_DIR/../../scripts/test/select-suites.sh"
 SUITE_MANIFEST_SH="$SCRIPT_DIR/../../scripts/test/suite-manifest.sh"
+_d7_decl="$TARGET_ROOT/.claude/autoflow.local.json"
 if [ ! -f "$SELECT_SUITES_SH" ] || [ ! -f "$SUITE_MANIFEST_SH" ]; then
   skipc "D7" "suite selector not found beside this script (tried: $SELECT_SUITES_SH; $SUITE_MANIFEST_SH) — suite-header check deferred"
 elif ! command -v bash >/dev/null 2>&1; then
   skipc "D7" "bash not found (scripts/test/select-suites.sh requires it) — suite-header check deferred"
 else
-  _d7_out=$(mktemp); _d7_err=$(mktemp)
-  bash "$SELECT_SUITES_SH" --check-headers --root "$TARGET_ROOT" >"$_d7_out" 2>"$_d7_err"
-  _d7_rc=$?
-  # Each exit is accepted only with the evidence its own contract promises: a
-  # 0 carries the headers-OK record, a 1 names at least one suite. Anything
-  # else means the stage did not run to a verdict, which is never a PASS.
-  if [ "$_d7_rc" -eq 0 ] && grep -q '^select-suites: headers OK — ' "$_d7_err"; then
-    pass "D7: suite headers OK — $(sed -n 's/^select-suites: headers OK — //p' "$_d7_err" | head -n 1)"
-  elif [ "$_d7_rc" -eq 1 ] && [ -s "$_d7_out" ]; then
-    while IFS= read -r _s; do
-      [ -n "$_s" ] || continue
-      failc "D7" "$_s declares no usable '# ci-subject:' header — scripts/test/select-suites.sh BLOCKs every selection until it does (RED's suite derivation, run-suites.sh without --all)"
-    done < "$_d7_out"
-    hint "D7: these suites are target-owned and a re-stamp never adds their headers — back-fill '# ci-subject:' (with '# budget-secs:') per docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites; a sourced helper rather than a standalone spec moves under tests/lib/ instead. Re-check with: bash scripts/test/select-suites.sh --check-headers"
-  else
-    failc "D7" "scripts/test/select-suites.sh --check-headers exited $_d7_rc without its verdict record ($(head -n 1 "$_d7_err")) — the suite-header check could not run"
-  fi
-  rm -f "$_d7_out" "$_d7_err"
+  # The resolver's verdict as a word. The exit-code table is the resolver's
+  # (SUITE_PLANE_NOT_OPTED_IN / SUITE_PLANE_UNREADABLE), compared inside the
+  # same bash that sourced it, so no code literal is copied here.
+  _d7_plane=$(bash -c '
+    . "$1" || exit 3
+    suite_plane_opted_in "$2"; rc=$?
+    if [ "$rc" -eq 0 ]; then echo in
+    elif [ "$rc" -eq "$SUITE_PLANE_NOT_OPTED_IN" ]; then
+      if suite_plane_declared "$2"; then echo out; else echo out-undeclared; fi
+    elif [ "$rc" -eq "$SUITE_PLANE_UNREADABLE" ]; then echo unreadable
+    else echo "resolver-exit-$rc"; fi
+  ' _ "$SUITE_MANIFEST_SH" "$TARGET_ROOT" 2>/dev/null)
+  case "$_d7_plane" in
+    in)
+      _d7_out=$(mktemp); _d7_err=$(mktemp)
+      bash "$SELECT_SUITES_SH" --check-headers --root "$TARGET_ROOT" >"$_d7_out" 2>"$_d7_err"
+      _d7_rc=$?
+      # Each exit is accepted only with the evidence its own contract promises: a
+      # 0 carries the headers-OK record, a 1 names at least one suite. Anything
+      # else means the stage did not run to a verdict, which is never a PASS.
+      if [ "$_d7_rc" -eq 0 ] && grep -q '^select-suites: headers OK — ' "$_d7_err"; then
+        pass "D7: suite headers OK — $(sed -n 's/^select-suites: headers OK — //p' "$_d7_err" | head -n 1)"
+      elif [ "$_d7_rc" -eq 1 ] && [ -s "$_d7_out" ]; then
+        while IFS= read -r _s; do
+          [ -n "$_s" ] || continue
+          failc "D7" "$_s declares no usable '# ci-subject:' header — scripts/test/select-suites.sh BLOCKs every selection until it does (RED's suite derivation, run-suites.sh without --all)"
+        done < "$_d7_out"
+        hint "D7: these suites are target-owned and a re-stamp never adds their headers — back-fill '# ci-subject:' (with '# budget-secs:') per docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites; a sourced helper rather than a standalone spec moves under tests/lib/ instead. Re-check with: bash scripts/test/select-suites.sh --check-headers"
+      else
+        failc "D7" "scripts/test/select-suites.sh --check-headers exited $_d7_rc without its verdict record ($(head -n 1 "$_d7_err")) — the suite-header check could not run"
+      fi
+      rm -f "$_d7_out" "$_d7_err"
+      ;;
+    out|out-undeclared)
+      pass "D7: suite plane not opted in — $_d7_decl declares no tests > suite_plane opt-in, so no '# ci-subject:' header is owed and the selector is not consulted (ADR-0024 D3); the target's declared test command runs its tests"
+      if [ "$_d7_plane" = out-undeclared ]; then
+        hint "D7: no tests declaration — $_d7_decl carries no 'tests' object: the scaffold predates the declaration site and a re-stamp never overwrites it. To declare, add the 'tests' object from the clone's .claude/autoflow.local.json.example by hand (tests > command: the target's test command; tests > suite_plane: true only to adopt AutoFlow's suite plane, which then requires '# ci-subject:' headers under tests/**). Not a stop condition."
+      fi
+      ;;
+    unreadable)
+      failc "D7" "$_d7_decl is present but its JSON could not be read — the suite plane's applicability cannot be decided from an unreadable declaration (scripts/test/suite-manifest.sh refuses to default it); repair the file, or install jq, which reads it"
+      ;;
+    *)
+      failc "D7" "suite-plane resolver (scripts/test/suite-manifest.sh > suite_plane_opted_in) returned '${_d7_plane:-nothing}' instead of a verdict — the suite-header check could not run"
+      ;;
+  esac
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────

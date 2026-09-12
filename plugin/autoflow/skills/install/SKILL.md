@@ -115,7 +115,25 @@ written):
   first (`/plugin marketplace update autoflow`), then re-run detection so the
   row comparison runs. On `error`, surface it — never read it as clean.
 - **Suite headers (drift-check D7, issue #213)**: `SUITE_HEADER_STATE`
-  (`pass` / `fail` / `skip` / `na` / `error`). The shipped
+  (`pass` / `fail` / `skip` / `na` / `error`), qualified by the opt-in arm
+  `SUITE_PLANE_STATE` (`in` / `out` / `unreadable` / `na`) and
+  `SUITE_PLANE_DECL` (`present` / `absent` / `na`) — all three are read off
+  the same D7 lines, so this report says what drift-check says (ADR-0024 D3,
+  issues #228 / #229). AutoFlow's suite plane is **opt-in**: the header is owed
+  only where the target declares `tests` > `suite_plane: true` in its
+  `.claude/autoflow.local.json`. On `SUITE_PLANE_STATE=out`, say so — no
+  `# ci-subject:` header is owed, the selector is not consulted, and the
+  target's own declared test command (`tests` > `command`, else its `CLAUDE.md`
+  Test entry) runs its tests; there is nothing to migrate. On
+  `SUITE_PLANE_DECL=absent`, additionally report that the target's
+  `.claude/autoflow.local.json` carries no `tests` object (the scaffold predates
+  the declaration site and a stamp never overwrites it) and name the hand edit:
+  add the `tests` object from `$PLUGIN_CACHE_ROOT/.claude/autoflow.local.json.example`
+  — `command` = the target's test command, `suite_plane: true` only to adopt
+  the suite plane. Not a stop condition. On `SUITE_PLANE_STATE=unreadable` the
+  declaration file is present but unparseable — a `FAIL: D7` (carried as a
+  `SUITE_HEADER_FINDING=` line) and a PREFLIGHT stop; the remedy is repairing
+  that file, not a stamp. On `SUITE_PLANE_STATE=in`, the shipped
   `scripts/test/select-suites.sh` BLOCKs every selection — RED's suite
   derivation first — while any executable spec under the target's `tests/**`
   lacks a usable `# ci-subject:` header, and those suites are target-owned: a
@@ -257,8 +275,12 @@ definition's values; add each missing row from the cache's sample at
 `$PLUGIN_CACHE_ROOT/.claude/autoflow/spawn-policy.json`). A D6 FAIL is a
 PREFLIGHT stop condition, so the user should fix it before the first cycle;
 it is not a reason to re-stamp. Include the **D7** verdict the same way
-(`PASS: D7` / `FAIL: D7` / `SKIP: D7`): the stamp does not touch `tests/**`,
+(`PASS: D7` / `FAIL: D7` / `SKIP: D7`, plus a `HINT: D7` when present): the
+stamp does not touch `tests/**` or an existing `.claude/autoflow.local.json`,
 so a `FAIL: D7` that Step 1 reported is still there — list each `FAIL: D7 -- `
-line as a suite to migrate and repeat the Step-1 remedy. A D7 FAIL is likewise
-a PREFLIGHT stop condition and not a reason to re-stamp. Do NOT commit on their behalf — the target
+line as a suite to migrate (or, for the unreadable-declaration form, the file
+to repair) and repeat the Step-1 remedy. A `PASS: D7: suite plane not opted in`
+means no header is owed; a `HINT: D7: no tests declaration` beside it names the
+scaffold's missing `tests` object and its hand edit (Step 1). A D7 FAIL is
+likewise a PREFLIGHT stop condition and not a reason to re-stamp. Do NOT commit on their behalf — the target
 owns its version record via its own commits (R1). End here.

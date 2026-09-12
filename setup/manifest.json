@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "288b1e7bc4f4a6f383b9fc37b03c50550bfd88db0720bc6973350032102af4f2"
+      "sha256": "7a84c1cf3679125d5aa1e989ea77b0081bbb2880a15626af76a4887fcfe21fdc"
     },
     {
       "source": "docs/INDEX.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9874eb2a1f2d56582b0d61fff2458a812698a000aad5946988845ef5a409f7ba"
+      "sha256": "2f68f8bfa538507f008503206fbf1847c73443362207676266501a532a9d1ca2"
     },
     {
       "source": "docs/design-rationale.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1fbaabbd9c9c077ee8254b402294bea1aa6f694172e50dd5dd9cc3869696a921"
+      "sha256": "10450656ab6ea8d9d203a2845241ad1aa164e11317884d04a5885c96b5d80b9b"
     },
     {
       "source": "docs/improvement-backlog.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d5461448da99b1c4ccfa7ec3557dcf40df0a1e10ac86be861f337115dcc48f8e"
+      "sha256": "08b2674241cdf63b3775d945a378b122f5d4832243f192542b901fdf66c2a4e5"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
@@ -265,7 +265,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "43702ac25493becbc60b3c255702479aa88bb7362bbb1529bdd53bd54e29ec8c"
+      "sha256": "54c4c07328fdf62e030ac2c8c701ef88fe3e7252c47dc5f4f2e2753a82b88447"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -356,7 +356,7 @@
       "dest": ".claude/autoflow.local.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "83c874995db25cb41d68caac324ec7df19e4f08527c76fa31d2d975844d31737"
+      "sha256": "0dbb3ffde5087b63a04dbd7b6f8d8ad1018db5f93a4930087e7f22a0023ba3eb"
     },
     {
       "source": "scripts/handoff/create-host-pr.sh",
@@ -377,7 +377,7 @@
       "dest": "scripts/cleanup/cleanup-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "3bbba744a0982d9f73ed8d4903b4742105342f335e4899f45e3f52c905db49fb"
+      "sha256": "fd9e17ae5405e2df323a6425112a42f339befc31bee3154b84a7efc05bbf87d8"
     },
     {
       "source": "scripts/ledger/ledger-entry-id.sh",
@@ -419,7 +419,7 @@
       "dest": "scripts/test/suite-manifest.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "3b3ac8462926bf581312138e66bced99a03d0370d3c6d55f3650451ece7f573d"
+      "sha256": "2c137898c350982c3d2bb8bbc699cf2e0aa1f9d00619f19a06c8d09649a68929"
     },
     {
       "source": "scripts/test/select-suites.sh",
@@ -462,6 +462,20 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "f9a74fb6b1b33e90a15e93791ee2b9884ad81748e0eb0bb8ed171c914c254fb7"
+    },
+    {
+      "source": "scripts/gate/verification-layer-check.sh",
+      "dest": "scripts/gate/verification-layer-check.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "ed2d535469474dc94645fca8fb27569c65914537637911f00091d522385f32d6"
+    },
+    {
+      "source": "scripts/test/check-cycle-layer-index.sh",
+      "dest": "scripts/test/check-cycle-layer-index.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "dcb049fcaad0f6030cfd6fd55de60f66a56f10a144ff182e08176e22be599f27"
     },
     {
       "source": "scripts/issue/create-issue.sh",
