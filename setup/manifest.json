@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7a84c1cf3679125d5aa1e989ea77b0081bbb2880a15626af76a4887fcfe21fdc"
+      "sha256": "e4ccd9ede729d72b7de6a53e27f503ff42074e5572509b24e71a815dcbbe7a29"
     },
     {
       "source": "docs/INDEX.md",
@@ -118,14 +118,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2f68f8bfa538507f008503206fbf1847c73443362207676266501a532a9d1ca2"
+      "sha256": "d1d43b765415694dc5b5775999ebd6bd0eb3563c65b60112640484d60a732f9e"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8531ea82427cba9a30b87f5b7086d09b63aaaa8811635c4b71f409e295f15ae5"
+      "sha256": "f4936cfa2a56ac106d5e366680476e9c25a0644251f8807e3ef30fb9b7be8d55"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d6871d5e6e66af017283a4da50e19e39db5b66a989a2305534353f4eb285362a"
+      "sha256": "b7d7aebf53f6cdd8dd52e64c5b652efe2ddfd9831583da9315b0b37d3ea8137e"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "31d0480003e796eb3296a378acd3fb48765f176fe07e0d13c17fdefe86113228"
+      "sha256": "231070974aced33eeab43f39b29198e048881e66cea53fa3d21c0c7f19b5b29e"
     },
     {
       "source": "docs/title-guide.md",
