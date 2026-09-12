@@ -335,7 +335,7 @@
       "dest": "scripts/preflight/local-checks.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "1270bf665294058544d80e748e20be2a7d09058f73730bbc587ff725d2172517"
+      "sha256": "cc3371312ba01f6bbcf07f588f20aa8acaf6f57db512648c23f3d6c596db7b24"
     },
     {
       "source": ".codex/review.md",
@@ -384,7 +384,7 @@
       "dest": "scripts/ledger/ledger-entry-id.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "70ef41f7c8d413bd6465bf1ec2e5a1b97028651621fdb71b4ce06953bbdd39fc"
+      "sha256": "b7e86f6a58631ae18e3f234c6a7d3f84fff5540eec5ad3b128e4c14c504a12f3"
     },
     {
       "source": "scripts/architect/relay-state.sh",
