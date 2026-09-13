@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: setup/thin-root-layer/ docs/thin-root-layer.md setup/manifest.json
+# ci-subject: setup/thin-root-layer/ docs/thin-root-layer.md setup/manifest.json .claude-plugin/marketplace.json docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md docs/adr/README.md docs/tool-delivery-contract.md
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: thin-root-layer acceptance suite — Issue #791 [#785-S4b]
@@ -21,6 +21,10 @@
 #   AC5a       verify-package.sh is present (the whole-suite re-run is
 #              retired -- plugin-package.yml:93 runs it)
 #   AC5c       AC6d non-vacuity guard: static exactness + synthetic-pin arm
+#   AC4c       (issue #245) the two provisions that enumerate the committed
+#              settings pin -- R1 (docs/tool-delivery-contract.md) and
+#              ADR-0015 D1 -- and the ADR registry row that describes the
+#              amendment state the same fact
 #
 # Issue #963 additions (.autoflow/issue-963-verification-design.md §1
 # AC1/AC4): a new "AC1 M-leg / AC4 dual-hash" block (read-only, no
@@ -31,6 +35,23 @@
 # env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS == "1" is inverted -- the Agent
 # Teams channel is retired (ADR-0017 / ADR-0021), so AC4a now asserts the pin
 # carries NO env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS key at all.
+#
+# Issue #245: the repo-level enabledPlugins declaration is the project-scope
+# installation-record generator, so the pin stops carrying it. In this suite:
+#   - AC4a's positive `enabledPlugins["autoflow@autoflow"] == true` assertion
+#     is DELETED rather than inverted. The negative is held tree-wide by
+#     verify-package.sh's AC6d scan once that scan's pin-path exclusion is
+#     removed, and a second arm asserting the same property here would be the
+#     duplicate the admission rule exists to prevent.
+#   - the AC4a keystone loses its subject (the composed <plugin>@<marketplace>
+#     token was a pin key) and is RE-ANCHORED on the pin's marketplace name
+#     against marketplace.json's declared .name. The composed assertion is
+#     deliberately not re-created anywhere; its plugin-name half is
+#     verify-package.sh's AC6e.
+#   - AC5c(b)-ii INVERTS with the exclusion it guards: the sanctioned
+#     exclusion pathspec must now be ABSENT from verify-package.sh. The AC6d
+#     loop guard AC5c(b)-i and the blanket-broadening token ban still stand
+#     and still have work to do.
 #
 # NOTE (design §3 RED framing): AC1c (M), AC1d (E), AC2c-live (E) are NOT
 # automated here — see .autoflow/issue-791-manual-scenarios.md. AC2c-static
@@ -207,26 +228,24 @@ echo "== AC4a: settings-pin.json artifact =="
 if [ -f "$PIN" ] && jq -e . "$PIN" >/dev/null 2>&1; then
   pass "AC4a: setup/thin-root-layer/settings-pin.json exists and is valid JSON"
   EKM=$(jq -r '.extraKnownMarketplaces["autoflow"] // empty' "$PIN")
-  EP=$(jq -r '.enabledPlugins["autoflow@autoflow"] // empty' "$PIN")
+  # The pin always asserts at least the marketplace entry. This is not an
+  # incidental presence check: D1's json-merge leg is the fixed-point test
+  # `(.[0] * .[1]) == .[0]`, whose discriminating power is exactly the number
+  # of keys the pin asserts -- at zero keys it passes against any settings file
+  # whatsoever. The target-side half of the same floor is
+  # verify-install-into-target.sh AC3-245 (b).
   if [ -n "$EKM" ] && [ "$EKM" != "null" ]; then
-    pass "AC4a: extraKnownMarketplaces.autoflow present"
+    pass "AC4a: extraKnownMarketplaces.autoflow present (the pin is never empty -- D1's json-merge leg keeps a subject to discriminate)"
   else
-    failc "AC4a" "extraKnownMarketplaces.autoflow missing"
-  fi
-  if [ "$EP" = "true" ]; then
-    pass "AC4a: enabledPlugins['autoflow@autoflow'] == true"
-  else
-    failc "AC4a" "enabledPlugins['autoflow@autoflow'] != true (got '$EP')"
+    failc "AC4a" "extraKnownMarketplaces.autoflow missing -- an empty pin makes D1's json-merge leg pass against any settings file whatsoever"
   fi
   if [ -f "$MARKETPLACE" ] && jq -e . "$MARKETPLACE" >/dev/null 2>&1; then
     MP_NAME=$(jq -r '.name // empty' "$MARKETPLACE")
-    PLUGIN_NAME=$(jq -r '.plugins[0].name // empty' "$MARKETPLACE")
-    EXPECTED_TOKEN="${PLUGIN_NAME:-autoflow}@${MP_NAME:-autoflow}"
-    PIN_KEY=$(jq -r '.enabledPlugins | keys[0] // empty' "$PIN")
-    if [ "$PIN_KEY" = "$EXPECTED_TOKEN" ]; then
-      pass "AC4a keystone: enabledPlugins token '$PIN_KEY' matches marketplace <plugin>@<marketplace> (no skew)"
+    PIN_MP_KEY=$(jq -r '.extraKnownMarketplaces | keys[0] // empty' "$PIN")
+    if [ -n "$PIN_MP_KEY" ] && [ "$PIN_MP_KEY" = "$MP_NAME" ]; then
+      pass "AC4a keystone (re-anchored, issue #245): the pin's marketplace name '$PIN_MP_KEY' matches marketplace.json's declared .name (no skew)"
     else
-      failc "AC4a keystone" "enabledPlugins token '$PIN_KEY' != expected '$EXPECTED_TOKEN' (marketplace skew)"
+      failc "AC4a keystone" "the pin's marketplace name '$PIN_MP_KEY' != marketplace.json .name '$MP_NAME' -- the two-file no-skew fact lost the witness the retired composed <plugin>@<marketplace> token used to carry"
     fi
   else
     failc "AC4a keystone" "marketplace.json missing/invalid at $MARKETPLACE — cannot cross-check"
@@ -292,6 +311,71 @@ else
   failc "AC4b" "settings-pin.json ($PIN) or README.md ($PLUGIN_README) missing"
 fi
 
+# ── AC4c (issue #245): the pin provisions and the ADR registry row ──────
+# Verification design row :28, subject as amended by the round-2 delta. Both
+# clauses are two-or-more-files-state-the-same-fact checks over the provisions
+# that define this suite's subject.
+ADR_0015="$REPO_ROOT/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
+ADR_REGISTRY="$REPO_ROOT/docs/adr/README.md"
+TOOL_CONTRACT="$REPO_ROOT/docs/tool-delivery-contract.md"
+
+# (i) Neither provision enumerates enabledPlugins as a key OF THE COMMITTED
+# SETTINGS PIN. The subject is the parenthetical attached to that phrase, not
+# any mention of the key elsewhere in the document: the superseding note that
+# records WHY the key is gone is expected to name it.
+echo "== AC4c (i) (#245): R1 / ADR-0015 D1 no longer enumerate enabledPlugins as a settings-pin key =="
+for _prov in "R1:$TOOL_CONTRACT" "ADR-0015 D1:$ADR_0015"; do
+  _prov_label=${_prov%%:*}
+  _prov_file=${_prov#*:}
+  if [ -f "$_prov_file" ]; then
+    _prov_flat=$(tr '\n' ' ' < "$_prov_file" | sed 's/  */ /g')
+    if ! printf '%s\n' "$_prov_flat" | grep -qF 'settings pin'; then
+      failc "AC4c (i)" "$_prov_label no longer names the committed settings pin at all -- the provision has no statement left to check (non-vacuity)"
+    else
+      _prov_parens=$(printf '%s\n' "$_prov_flat" | grep -o 'settings pin[^(]\{0,40\}([^)]*)')
+      if printf '%s\n' "$_prov_parens" | grep -qF 'enabledPlugins'; then
+        failc "AC4c (i)" "$_prov_label still enumerates enabledPlugins as a key of the committed settings pin -- decision text the tree contradicts, and a member of this cycle's composition-oracle S set"
+      else
+        pass "AC4c (i): $_prov_label names the committed settings pin and does not enumerate enabledPlugins among its keys"
+      fi
+    fi
+  else
+    failc "AC4c (i)" "$_prov_label document missing at $_prov_file"
+  fi
+done
+
+# (ii) ADR-0015's own Status record and the registry row that describes it
+# state the same fact. The registry's Status cells are cumulative and
+# semicolon-joined, so recording one amendment rewrites the cell in full: a
+# cell that names ours while dropping an earlier one is not an untouched
+# pre-existing gap, it is a history published in a format that reads as
+# complete.
+echo "== AC4c (ii) (#245): ADR-0015 Status amendments <-> the ADR registry row =="
+if [ -f "$ADR_0015" ] && [ -f "$ADR_REGISTRY" ]; then
+  ADR_STATUS=$(awk '/^## Status/{f=1;next} /^## /{if(f)exit} f' "$ADR_0015")
+  ADR_AMENDMENTS=$(printf '%s\n' "$ADR_STATUS" | grep -oE 'Munsik-Park/autoflow#[0-9]+' \
+                   | grep -oE '#[0-9]+' | sort -u)
+  REGISTRY_ROW=$(grep -F '(0015-autoflow-distribution-plugin-plus-thin-root-layer.md)' "$ADR_REGISTRY" | head -1)
+  REGISTRY_STATUS=$(printf '%s\n' "$REGISTRY_ROW" | awk -F'|' '{print $3}')
+  if [ -z "$ADR_AMENDMENTS" ]; then
+    failc "AC4c (ii)" "ADR-0015's Status section records no amendment issue (no 'Munsik-Park/autoflow#N' reference) -- the pair has no fact to agree on (non-vacuity)"
+  elif [ -z "$REGISTRY_STATUS" ]; then
+    failc "AC4c (ii)" "no ADR-0015 row found in $ADR_REGISTRY -- the registry does not describe the ADR this change amends"
+  else
+    ADR_MISSING=""
+    for _amend in $ADR_AMENDMENTS; do
+      printf '%s\n' "$REGISTRY_STATUS" | grep -qF "$_amend" || ADR_MISSING="$ADR_MISSING $_amend"
+    done
+    if [ -z "$ADR_MISSING" ]; then
+      pass "AC4c (ii): the registry's ADR-0015 Status cell names every amendment ADR-0015's own Status records ($(printf '%s' "$ADR_AMENDMENTS" | tr '\n' ' '))"
+    else
+      failc "AC4c (ii)" "the registry's ADR-0015 Status cell ('$(printf '%s' "$REGISTRY_STATUS" | sed 's/^ *//; s/ *$//')') omits amendment(s)$ADR_MISSING that ADR-0015's own Status records -- the ADR's status and its registry row do not state the same fact"
+    fi
+  fi
+else
+  failc "AC4c (ii)" "ADR-0015 ($ADR_0015) or the ADR registry ($ADR_REGISTRY) missing"
+fi
+
 # ── AC5a: verify-package.sh is present ─────────────────────────────────────
 echo "== AC5a: verify-package.sh is present (#790 regression carrier) =="
 # The whole-suite re-run is retired (issue #103 cycle 3): that suite carries its
@@ -317,10 +401,14 @@ if [ -f "$VERIFY_PACKAGE_SH" ]; then
     failc "AC5c(b)-i" "AC6d scan loop / jq has(enabledPlugins) test / failc \"AC6d\" no longer found in verify-package.sh"
   fi
 
+  # INVERTED by issue #245: the exclusion's condition -- "this file is the
+  # sanctioned pin" -- is falsified once the pin no longer carries
+  # enabledPlugins, and the excluded path is exactly where a future editor
+  # would put the key back. The meta-guard inverts with the device it guards.
   if grep -qF "':!setup/thin-root-layer/settings-pin.json'" "$VERIFY_PACKAGE_SH"; then
-    pass "AC5c(b)-ii: the sanctioned exclusion pathspec ':!setup/thin-root-layer/settings-pin.json' is present"
+    failc "AC5c(b)-ii (issue #245)" "the pin-path exclusion ':!setup/thin-root-layer/settings-pin.json' is still applied by AC6d's scan -- the scan stays blind at precisely the path most likely to re-acquire enabledPlugins"
   else
-    failc "AC5c(b)-ii" "sanctioned exclusion pathspec ':!setup/thin-root-layer/settings-pin.json' not found (pre-GREEN: the §3.5 AC6d edit has not landed yet)"
+    pass "AC5c(b)-ii (issue #245): AC6d's scan applies no pin-path exclusion, so it states the negative directly -- no committed JSON in this tree declares enabledPlugins"
   fi
 
   BLANKET_FOUND=0

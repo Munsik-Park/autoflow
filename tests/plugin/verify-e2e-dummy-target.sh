@@ -64,11 +64,21 @@
 #   composition; plugin-delivered hook RESOLUTION is verify-package.sh AC4,
 #   :230-298 -- cross-referenced, not duplicated here):
 #     E4w   (pre-assertion, before E4a) the dummy target's post-init.sh
-#           .claude/settings.json actually landed the plugin-enable wiring
-#           (enabledPlugins + extraKnownMarketplaces) via assert_plugin_enabled()
+#           .claude/settings.json actually landed the MARKETPLACE wiring
+#           (extraKnownMarketplaces) via assert_marketplace_wiring()
+#           -- issue #245: the enable conjunct is DROPPED, not relocated. The
+#           stamp no longer writes enabledPlugins (the repo-level declaration
+#           is the project-scope-record generator), enablement is user-scope
+#           state outside the repository, and this suite executes no loader --
+#           so provisioning the enable in the hermetic config dir and then
+#           asserting it would be a double standing in for the state under
+#           test. What remains real about init.sh's output is asserted, and
+#           the predicate's name no longer claims enablement.
 #     E4w-nv  (permanent negative self-test, immediately after E4w) a scratch
-#           settings copy with enabledPlugins dropped -> assert_plugin_enabled()
-#           FAILs (proves E4w's predicate discriminates a broken pin)
+#           settings copy with extraKnownMarketplaces dropped ->
+#           assert_marketplace_wiring() FAILs (proves E4w's predicate
+#           discriminates a broken pin; re-pointed with E4w onto the conjunct
+#           that survives)
 #     E4x   (issue #95 inversion of the #963 AC1 E-leg) the same post-init.sh
 #           settings.json carries NO env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 #           key (the Agent Teams channel is retired; the pin no longer ships it)
@@ -254,19 +264,26 @@ log_has_merge() {
   grep -qix 'merge' "$1" 2>/dev/null
 }
 
-# assert_plugin_enabled <settings-json-path> — shared E4w/E4w-nv predicate
-# (feature §3.2/DCR-5): true iff the given settings file has both
-# enabledPlugins["autoflow@autoflow"] == true (explicit boolean
-# comparison, not `// empty` truthiness -- a dropped key must FAIL, not
-# silently pass) and extraKnownMarketplaces["autoflow"].source.repo ==
-# "Munsik-Park/autoflow". Both the real E4w wiring pre-assertion and the
-# E4w-nv negative self-test invoke this exact helper.
-assert_plugin_enabled() {
+# assert_marketplace_wiring <settings-json-path> — shared E4w/E4w-nv
+# predicate (feature §3.2/DCR-5, narrowed by issue #245): true iff the given
+# settings file has extraKnownMarketplaces["autoflow"].source.repo ==
+# "Munsik-Park/autoflow" -- an explicit value comparison, not `// empty`
+# truthiness, so a dropped key FAILs rather than silently passing.
+#
+# It asserts that the install-time MARKETPLACE wiring landed. It does NOT
+# assert that the plugin will load: after issue #245 there is no target-local
+# witness of enablement at all, because enablement is user-scope state outside
+# the repository that neither the installer nor the detector can reach. That
+# is a real reduction in what a stamped target can self-verify, accepted
+# deliberately as the price of removing the project-scope-record generator and
+# written down here rather than left to be inferred from a check that quietly
+# disappeared. If this suite ever gains a real loader invocation, provisioning
+# user scope becomes legitimate in the same moment.
+assert_marketplace_wiring() {
   _ape_settings="$1"
   [ -f "$_ape_settings" ] || return 1
   jq -e '
-    (.enabledPlugins["autoflow@autoflow"] == true)
-    and (.extraKnownMarketplaces["autoflow"].source.repo == "Munsik-Park/autoflow")
+    (.extraKnownMarketplaces["autoflow"].source.repo == "Munsik-Park/autoflow")
   ' "$_ape_settings" >/dev/null 2>&1
 }
 
@@ -285,7 +302,7 @@ MOCK_GH_DIR=$(mktemp -d)
 BODY_FILE=$(mktemp)
 E2A_CURRENT=$(mktemp)      # E2a: current installed-bundle offender set (sorted)
 E2A_BASELINE_SORTED=$(mktemp)  # E2a: committed ratchet baseline, normalized+sorted
-SETTINGS_NV=$(mktemp)      # E4w-nv: scratch settings copy with enabledPlugins dropped
+SETTINGS_NV=$(mktemp)      # E4w-nv: scratch settings copy with the asserted pin key dropped
 
 cleanup() {
   rm -rf "$DUMMY" "$DRIFT_DUMMY" "$SNAP_DIR" "$PRE_LIST_FILE" "$POST_LIST_FILE" \
@@ -654,20 +671,20 @@ mkdir -p "$DUMMY/.autoflow"
 GATE_STATE="$DUMMY/.autoflow/issue-999.json"
 DUMMY_SETTINGS="$DUMMY/.claude/settings.json"
 
-echo "== E4w: post-init.sh target settings.json landed the plugin-enable wiring =="
-if [ "$DRIVE_PASS" -eq 1 ] && assert_plugin_enabled "$DUMMY_SETTINGS"; then
-  pass "E4w: \$DUMMY/.claude/settings.json carries enabledPlugins + extraKnownMarketplaces for autoflow@autoflow"
+echo "== E4w: post-init.sh target settings.json landed the marketplace wiring =="
+if [ "$DRIVE_PASS" -eq 1 ] && assert_marketplace_wiring "$DUMMY_SETTINGS"; then
+  pass "E4w: \$DUMMY/.claude/settings.json carries extraKnownMarketplaces for autoflow (install-time marketplace wiring landed; enablement is user-scope and is not asserted here)"
 else
-  failc "E4w" "single-repo-HANDOFF" "assert_plugin_enabled failed on $DUMMY_SETTINGS -- settings-pin merge wiring did not land"
+  failc "E4w" "single-repo-HANDOFF" "assert_marketplace_wiring failed on $DUMMY_SETTINGS -- settings-pin merge wiring did not land"
 fi
 
-echo "== E4w-nv: negative self-test -- assert_plugin_enabled() FAILs on a tampered settings copy =="
+echo "== E4w-nv: negative self-test -- assert_marketplace_wiring() FAILs on a tampered settings copy =="
 if [ -f "$DUMMY_SETTINGS" ]; then
-  jq 'del(.enabledPlugins["autoflow@autoflow"])' "$DUMMY_SETTINGS" > "$SETTINGS_NV" 2>/dev/null
-  if ! assert_plugin_enabled "$SETTINGS_NV"; then
-    pass "E4w-nv: assert_plugin_enabled() rejects a settings copy with enabledPlugins dropped (E4w's predicate discriminates)"
+  jq 'del(.extraKnownMarketplaces["autoflow"])' "$DUMMY_SETTINGS" > "$SETTINGS_NV" 2>/dev/null
+  if ! assert_marketplace_wiring "$SETTINGS_NV"; then
+    pass "E4w-nv: assert_marketplace_wiring() rejects a settings copy with extraKnownMarketplaces dropped (E4w's predicate discriminates)"
   else
-    failc "E4w-nv" "single-repo-HANDOFF" "assert_plugin_enabled() wrongly accepted a settings copy with enabledPlugins dropped -- E4w would be vacuous"
+    failc "E4w-nv" "single-repo-HANDOFF" "assert_marketplace_wiring() wrongly accepted a settings copy with extraKnownMarketplaces dropped -- E4w would be vacuous"
   fi
 else
   failc "E4w-nv" "single-repo-HANDOFF" "$DUMMY_SETTINGS missing -- cannot build the tampered scratch copy"

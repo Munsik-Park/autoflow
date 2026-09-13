@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude-plugin/marketplace.json .claude/hooks/check-autoflow-gate.sh .claude/hooks/check-read-dedup.sh README.md plugin/autoflow/agents/ plugin/autoflow/hooks/check-autoflow-gate.sh plugin/autoflow/skills/epic-dash/SKILL.md plugin/autoflow/skills/install/SKILL.md plugin/autoflow/skills/install/scripts/lib/plugin-root.sh scripts/lib/plugin-root.sh setup/SETUP-GUIDE.md setup/manifest.json setup/thin-root-layer/settings-pin.json
+# ci-subject: .claude-plugin/marketplace.json .claude/hooks/check-autoflow-gate.sh .claude/hooks/check-read-dedup.sh README.md plugin/autoflow/agents/ plugin/autoflow/hooks/check-autoflow-gate.sh plugin/autoflow/skills/epic-dash/SKILL.md plugin/autoflow/skills/install/SKILL.md plugin/autoflow/skills/install/scripts/lib/plugin-root.sh scripts/lib/plugin-root.sh setup/SETUP-GUIDE.md setup/manifest.json setup/thin-root-layer/drift-check.sh setup/thin-root-layer/settings-pin.json
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: plugin packaging acceptance suite — Issue #790 [#785-S4a]
@@ -28,6 +28,26 @@
 #       docs excluded)
 #   AC6 settings-pin reference snippet lives only inside the README fence,
 #       composes name@marketplace correctly, and no standalone pin file exists
+#   Issue #245: the repo-level enabledPlugins declaration is the project-scope
+#       installation-record generator, so the pin stops carrying it. Three
+#       consequences land in this suite:
+#         - AC6b (the composed <plugin>@<marketplace> token cross-checked
+#           against the README fence's enabledPlugins key) loses its subject
+#           and is RETIRED. Its two halves are re-anchored separately and the
+#           composed assertion is deliberately not re-created anywhere: the
+#           marketplace half stays on AC6c, which reads ${MP_NAME} and is
+#           untouched; the plugin-name half moves to AC6e below.
+#         - AC6d's tree-wide tracked-JSON scan drops its one exclusion. That
+#           exclusion's condition -- "this file is the sanctioned pin" -- is
+#           falsified by this change, and the path it excluded is exactly where
+#           a future editor would put the key back. With it gone the scan
+#           states the negative directly: no committed JSON in this tree
+#           declares enabledPlugins.
+#         - AC6e (new) the shipped PLUGIN_NAME / MARKETPLACE_NAME defaults
+#           agree with marketplace.json's declared names. After the change
+#           every conforming target lands on those literals, so D2/D4/D5
+#           resolution depends on them; a rename desyncs them and the failure
+#           is fail-open -- SKIP at exit 0, on every stamped target at once.
 #   AC-R1/AC-R2 (cycle 2, Codex Medium on PR #918) packaged skill body names
 #       the ${CLAUDE_PLUGIN_ROOT}-first, .claude-fallback loop and no longer
 #       carries the bare host-only assignment as its sole locator
@@ -737,14 +757,11 @@ if [ -f "$README" ]; then
   SNIPPET=$(awk '/```json/{flag=1; next} /```/{if(flag){flag=0}} flag' "$README")
   if [ -n "$SNIPPET" ] && printf '%s' "$SNIPPET" | jq -e . >/dev/null 2>&1; then
     pass "AC6a: README fenced \`\`\`json block extracts and parses as valid JSON"
-    ENABLED_KEY=$(printf '%s' "$SNIPPET" | jq -r '.enabledPlugins | keys[0] // empty')
+    # AC6b RETIRED (issue #245): the composed <plugin>@<marketplace> token was
+    # anchored on the fence's enabledPlugins key, which the pin no longer
+    # carries. The composed assertion is not re-created -- its marketplace half
+    # is AC6c immediately below and its plugin-name half is AC6e.
     EKM_KEY=$(printf '%s' "$SNIPPET" | jq -r '.extraKnownMarketplaces | keys[0] // empty')
-    EXPECTED_ENABLED="${NAME:-autoflow}@${MP_NAME:-autoflow}"
-    if [ "$ENABLED_KEY" = "$EXPECTED_ENABLED" ]; then
-      pass "AC6b: enabledPlugins key == '$EXPECTED_ENABLED' (name@marketplace composition)"
-    else
-      failc "AC6b" "enabledPlugins key='$ENABLED_KEY' != expected '$EXPECTED_ENABLED'"
-    fi
     if [ "$EKM_KEY" = "${MP_NAME:-autoflow}" ]; then
       pass "AC6c: extraKnownMarketplaces key == '${MP_NAME:-autoflow}'"
     else
@@ -759,15 +776,47 @@ fi
 
 echo "== AC6: boundary — no standalone committed settings-pin artifact =="
 PIN_HITS=""
-for jf in $(git -C "$REPO_ROOT" ls-files -- '*.json' ':!services/*' ':!setup/thin-root-layer/settings-pin.json' 2>/dev/null); do
+for jf in $(git -C "$REPO_ROOT" ls-files -- '*.json' ':!services/*' 2>/dev/null); do
   if jq -e 'has("enabledPlugins")' "$REPO_ROOT/$jf" >/dev/null 2>&1; then
     PIN_HITS="$PIN_HITS $jf"
   fi
 done
 if [ -z "$PIN_HITS" ]; then
-  pass "AC6d: no unsanctioned standalone pin — the only committed pin is the sanctioned installable fragment setup/thin-root-layer/settings-pin.json, parity-checked against the README fence (#791 §3.3)"
+  pass "AC6d (issue #245): no committed JSON in this tree declares enabledPlugins -- the scan's one exclusion, the settings pin itself, is removed because this change falsifies its condition"
 else
-  failc "AC6d" "found unsanctioned standalone pin artifact(s):$PIN_HITS"
+  failc "AC6d" "committed JSON declaring enabledPlugins found:$PIN_HITS -- the repo-level declaration is the project-scope-record generator and no committed artifact of the stamp surface may carry it (issue #245)"
+fi
+
+# ── AC6e (issue #245): shipped name defaults vs marketplace.json ─────────
+# The retired AC6b carried two facts as one string. Its plugin-name half is
+# re-anchored here, on the literals the resolution actually uses: drift-check's
+# fallback branch (which every conforming target now lands on, since its
+# PIN_REF no longer carries a composed key) and the shipped resolver's own
+# parameter defaults.
+echo "== AC6e (#245): shipped PLUGIN_NAME / MARKETPLACE_NAME defaults agree with marketplace.json =="
+DRIFT_CHECK_SRC="$REPO_ROOT/setup/thin-root-layer/drift-check.sh"
+PLUGIN_ROOT_LIB_SRC="$REPO_ROOT/scripts/lib/plugin-root.sh"
+if [ -n "$MP_NAME" ] && [ -n "$P0_NAME" ] \
+   && [ -f "$DRIFT_CHECK_SRC" ] && [ -f "$PLUGIN_ROOT_LIB_SRC" ]; then
+  DC_FALLBACK=$(grep -E '^[[:space:]]*\*\)[[:space:]]+PLUGIN_NAME=' "$DRIFT_CHECK_SRC" | head -1)
+  DC_PLG=$(printf '%s\n' "$DC_FALLBACK" | sed -n 's/.*PLUGIN_NAME="\([^"]*\)".*/\1/p')
+  DC_MKT=$(printf '%s\n' "$DC_FALLBACK" | sed -n 's/.*MARKETPLACE_NAME="\([^"]*\)".*/\1/p')
+  LIB_PLG=$(grep -E '_apr_plg="\$\{3:-[^}]*\}"' "$PLUGIN_ROOT_LIB_SRC" \
+            | sed -n 's/.*_apr_plg="\${3:-\([^}]*\)}".*/\1/p' | head -1)
+  LIB_MKT=$(grep -E '_amr_mkt="\$\{1:-[^}]*\}"' "$PLUGIN_ROOT_LIB_SRC" \
+            | sed -n 's/.*_amr_mkt="\${1:-\([^}]*\)}".*/\1/p' | head -1)
+  if [ -n "$DC_PLG" ] && [ "$DC_PLG" = "$P0_NAME" ] && [ -n "$DC_MKT" ] && [ "$DC_MKT" = "$MP_NAME" ]; then
+    pass "AC6e: drift-check's name fallback ('$DC_PLG' / '$DC_MKT') agrees with marketplace.json (.plugins[0].name / .name)"
+  else
+    failc "AC6e" "drift-check's name fallback plugin='$DC_PLG' marketplace='$DC_MKT' != marketplace.json '$P0_NAME' / '$MP_NAME' -- every conforming target's D2/D4/D5 resolution degrades to SKIP at exit 0"
+  fi
+  if [ -n "$LIB_PLG" ] && [ "$LIB_PLG" = "$P0_NAME" ] && [ -n "$LIB_MKT" ] && [ "$LIB_MKT" = "$MP_NAME" ]; then
+    pass "AC6e: scripts/lib/plugin-root.sh's resolver defaults ('$LIB_PLG' / '$LIB_MKT') agree with marketplace.json (.plugins[0].name / .name)"
+  else
+    failc "AC6e" "resolver defaults plugin='$LIB_PLG' marketplace='$LIB_MKT' != marketplace.json '$P0_NAME' / '$MP_NAME' -- the shipped defaults have desynced from the declared names"
+  fi
+else
+  failc "AC6e" "cannot cross-check the shipped name defaults (MP_NAME='$MP_NAME' P0_NAME='$P0_NAME', drift-check.sh / scripts/lib/plugin-root.sh present?)"
 fi
 
 # ── Issue #943 AC4a: static opt-in-boundary guard (no unconditional stamp) ──
