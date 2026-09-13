@@ -162,8 +162,22 @@ if [ -f "$PLUGIN_ROOT_LIB" ]; then
   . "$PLUGIN_ROOT_LIB" && _lib_ok=1
 fi
 
-# Marketplace / plugin names, read from the shipped settings pin
-# (`enabledPlugins: { "<plugin>@<marketplace>": true }`); defaults otherwise.
+# Marketplace / plugin names.
+#
+# The shipped settings pin no longer carries an `enabledPlugins` key (issue
+# #245: a repo-level declaration is what mints a frozen project-scope
+# installation record), so every conforming target lands on the literals in the
+# `*)` branch below. Those literals are the NORMAL path now, not a fallback, and
+# they are cross-checked against .claude-plugin/marketplace.json's declared
+# names by tests/plugin/verify-package.sh (AC6e) — a desync would degrade D2/D4/
+# D5 to SKIP at exit 0 on every stamped target at once.
+#
+# The `_pin_key` branch stays live as back-compat and is not an orphan: this
+# detector also runs as the marketplace cache's known-good copy against a target
+# tree (plugin/autoflow/skills/install/SKILL.md), and a target stamped before
+# #245 still carries `enabledPlugins: { "<plugin>@<marketplace>": true }` in its
+# PIN_REF. Deleting the branch would fail OPEN — an unresolved plugin root makes
+# D2/D4 SKIP at exit 0, the worst signal shape available.
 _pin_key=""
 [ -f "$PIN_REF" ] && _pin_key=$(jq -r '.enabledPlugins // {} | keys | .[0] // empty' "$PIN_REF" 2>/dev/null)
 case "$_pin_key" in

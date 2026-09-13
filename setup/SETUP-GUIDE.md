@@ -18,13 +18,59 @@ commands**, run from a Claude Code session rooted in your project:
 3. /autoflow:install        # detects → confirms → stamps → drift-checks
 ```
 
+The three commands are two different things, and keeping them apart is what
+keeps a stamped repository from freezing on an old plugin version:
+
+- **Steps 1–2 enable the plugin, once, at USER scope.** `/plugin install` writes
+  the enablement into `~/.claude/settings.json`, and that is what turns AutoFlow
+  on in every project you open. You run this once per machine, not once per
+  repository.
+- **Step 3 stamps ONE repository.** It delivers the thin root layer, declares the
+  marketplace in the repo's `.claude/settings.json`, and writes the target's
+  version record (`.claude/autoflow/manifest.json` `.version`). It does **not**
+  enable the plugin, and a stamped repository carries no
+  `enabledPlugins["autoflow@autoflow"]` key (see *A stamped repository declares
+  no enablement* below).
+- **Maintenance is both, in that order**: update the plugin at user scope
+  (`/plugin marketplace update` → `/plugin update autoflow@autoflow`), then
+  re-stamp each target (`/autoflow:install`) so its bundle and version record
+  catch up.
+
 Step 3 is the `/autoflow:install` skill. It detects root-layer absence or drift
 and reports the derived org/repo/branch/topology (read-only), asks for a
 **single** confirmation, then stamps the thin-root bundle from the marketplace
 cache and runs `drift-check.sh` automatically. Nothing is written to your
 project before you confirm, and the skill never commits — you own the version
-record (R1). Maintenance later is just `/plugin marketplace update` →
-`/autoflow:install` (re-stamp).
+record (R1).
+
+### A stamped repository declares no enablement
+
+The stamp writes `extraKnownMarketplaces` into your `.claude/settings.json` and
+**nothing else**: no `enabledPlugins` key (issue #245). The reason is worth
+knowing before you "repair" the absence by adding it back. A repo-level
+`enabledPlugins["autoflow@autoflow"]: true` declaration makes Claude Code create
+and freeze a **project-scope installation record** for the plugin, pinning that
+repository to whatever version was resolved when the record was minted; nothing
+refreshes it afterwards, so every stamped repository would drift onto its own
+frozen version. A `false` declaration mints no such record — it turns the plugin
+off in that repository, and is the record-free opt-out below. Enablement lives at user scope, where
+one update moves every project at once. The retained marketplace entry is the
+target's record of *which* marketplace its AutoFlow comes from, so that
+`/plugin install autoflow@autoflow` resolves on a fresh clone of the target.
+
+Two consequences to know:
+
+- **Turning AutoFlow off in one repository** is supported and is yours to write:
+  put `"enabledPlugins": {"autoflow@autoflow": false}` in that repository's
+  `.claude/settings.json` by hand. A re-stamp **preserves** a `false` value — it
+  deletes only the literal `true` an old stamp wrote — and reports what it did on
+  stdout, one `REMOVED:` / `KEPT:` line naming the file and the key, so the
+  change you are about to commit is never silent.
+- **A repository stamped before this change** carries
+  `"autoflow@autoflow": true` from the old stamp. The next `/autoflow:install`
+  re-stamp removes that key and prunes an `enabledPlugins` object it emptied; a
+  repository that is never re-stamped keeps its frozen record, so re-stamp the
+  ones you care about.
 
 The skill locates the clone it detects against and stamps from through the
 harness's own registries — `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/known_marketplaces.json`,
@@ -76,7 +122,7 @@ can self-describe and self-verify offline.
 | Import shim (managed `AUTOFLOW-IMPORT` block in your `CLAUDE.md`) | `CLAUDE.md` | shim-stamp |
 | Methodology entrypoint + framework prose | `.claude/autoflow/METHODOLOGY.md`, `.claude/autoflow/CLAUDE.md`, `.claude/autoflow/docs/**` | copy |
 | Deliberation workflows | `.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js` | copy |
-| Settings pin (marketplace + `enabledPlugins`) | `.claude/settings.json` | json-merge |
+| Settings pin (`extraKnownMarketplaces` — the marketplace this target's AutoFlow comes from; no enablement key) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
 | Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`; `/autoflow:install` Step 0 runs a byte-identical copy shipped inside the plugin, since the plugin cache holds no `scripts/lib/`) | `scripts/lib/plugin-root.sh` | copy |
 | Local overrides scaffold (never overwritten) | `CLAUDE.local.md` | scaffold |
@@ -85,8 +131,12 @@ can self-describe and self-verify offline.
 The shim stamp is idempotent and only touches the `AUTOFLOW-IMPORT:BEGIN/END`
 managed block — your own `CLAUDE.md` prose is preserved. The settings merge is a
 deep-merge: your pre-existing `.claude/settings.json` keys are kept, and the
-AutoFlow marketplace/`enabledPlugins` pin is added. The pin carries no `env`
-block — the Agent Teams channel is retired (ADR-0017 / ADR-0021), so the
+AutoFlow marketplace declaration is added. The pin carries no enablement key —
+see *A stamped repository declares no enablement* above for why, and for the
+one key the re-stamp deletes (`"autoflow@autoflow": true`, the literal an old
+stamp wrote) and the one it preserves (`false`, your per-repo opt-out); both
+outcomes are named on stdout, one line per key. The pin carries no `env`
+block either — the Agent Teams channel is retired (ADR-0017 / ADR-0021), so the
 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` enablement an earlier pin stamped is no
 longer provisioned (see Prerequisites for targets stamped by that earlier pin).
 `CLAUDE.local.md` holds your target identity (R3) and is never overwritten, even
@@ -174,6 +224,14 @@ which is also what a re-stamp would deliver.
   so remove that entry by hand if you do not want the experimental feature
   enabled. `drift-check.sh` does not flag the leftover (its D1 check is a
   pin-subset test).
+- Plugin enablement is **user scope**, and the per-repository opt-out is yours:
+  `/plugin install autoflow@autoflow` (steps 1–2 above) enables AutoFlow in every
+  project you open, and a stamp adds no enablement key to any repository (see
+  *A stamped repository declares no enablement*). To keep AutoFlow **off** in one
+  repository, write `"enabledPlugins": {"autoflow@autoflow": false}` into that
+  repository's `.claude/settings.json` by hand: a re-stamp preserves any value
+  other than the literal `true` an old stamp wrote, and names on stdout what it
+  removed (`REMOVED:`) or declined to interpret (`KEPT:`, with the value found).
 - A GitHub repository (or multiple repos for multi-sub-repo setup).
 - For a private host repo and/or private submodule: an SSH key (or a
   per-repo deploy key) registered with GitHub and available to every

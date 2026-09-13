@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: setup/manifest.json setup/thin-root-layer/ .claude/workflows/
+# ci-subject: setup/init.sh setup/manifest.json setup/thin-root-layer/ scripts/lib/plugin-root.sh .claude/workflows/
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: install-into-TARGET acceptance suite — Issue #792 [#785-S5]
@@ -48,6 +48,43 @@
 #   W4 docs:
 #     AC4a        SETUP-GUIDE.md documents install model, manifest, drift command
 #     AC4b        guide copy-list/checklist names thin-root artifacts
+#
+#   Issue #245 additions (.autoflow/issue-245-verification-design.md, rows
+#   :20 :21 :22 :23 :24 :25 :26 and the round-3 rows :214 :215). The repo-level
+#   `enabledPlugins["autoflow@autoflow"]` declaration is the project-scope
+#   installation-record generator, so the stamp stops writing it and a re-stamp
+#   removes the literal the old stamp wrote:
+#     AC1-245     a FRESH stamp declares no enabledPlugins["autoflow@autoflow"]
+#                 (driving) while extraKnownMarketplaces["autoflow"] still lands
+#                 (characterization) -- both folded into the AC1e arm, which is
+#                 already a real-installer stamp into a scratch target
+#     AC2-245 (a) seeded enabledPlugins false opt-out survives a re-stamp, and
+#                 the run discloses the KEPT with the value it found (driving)
+#     AC2-245 (b) foreign-key non-interference: another plugin's entry, an
+#                 unrelated key, and the container itself while a foreign entry
+#                 remains in it (driving; already satisfied at 24509cb -- the
+#                 merge is additive, see the RED framing note below)
+#     AC2-245 (c) seeded enabledPlugins["autoflow@autoflow"]=true is REMOVED by
+#                 the re-stamp, and the run discloses the removal (driving)
+#     AC2-245 (d) the enabledPlugins container our deletion emptied is pruned
+#                 (driving; independent of (c) -- a bare {} satisfies (c))
+#     AC2-245 (e) a settings write that cannot land is fail-closed: the run
+#                 exits non-zero, the target's settings.json is byte-unchanged,
+#                 and NO disclosure line is printed (driving; PR #247 review
+#                 round 1, Medium -- the disclosure `case` appended after the
+#                 jq/mv AND-list made a write failure return 0)
+#     AC3-245 (a) a target carrying no enabledPlugins declaration is not a
+#                 drift FAIL (driving)
+#     AC3-245 (b) non-vacuity floor on a CLEAN target: D1's json-merge leg still
+#                 discriminates the RETAINED pin key (regression; already
+#                 satisfied at 24509cb)
+#     AC3-245 (c) the _pin_key back-compat branch still derives the plugin /
+#                 marketplace names from a pre-#245 target's PIN_REF instead of
+#                 falling to the shipped default (characterization)
+#   AC3c arm (iii) is RE-POINTED by the same change: deleting
+#   enabledPlugins["autoflow@autoflow"] from a target's settings stops being
+#   pin drift once the pin no longer asserts the key, so the arm mutates the
+#   retained marketplace entry instead.
 #
 #   Regression:
 #     AC-Ra       verify-package.sh is present (the whole-suite re-run is
@@ -103,11 +140,22 @@ LOCAL_TARGET_B=$(mktemp -d)  # AC1j arm (b): existing -> never overwrite
 DRIFT_TARGET=$(mktemp -d)    # AC3c mutation arms
 SKEW_TARGET=$(mktemp -d)     # AC3d version skew arm
 RESTAMP_TARGET=$(mktemp -d)  # issue #963 AC2: dedicated scratch, re-stamp pin-wins arm
+P245_OPTOUT=$(mktemp -d)     # issue #245 AC2-245 (a): seeded `false` opt-out
+P245_FOREIGN=$(mktemp -d)    # issue #245 AC2-245 (b): foreign-key non-interference
+P245_MIGRATE=$(mktemp -d)    # issue #245 AC2-245 (c): seeded `true` removal
+P245_PRUNE=$(mktemp -d)      # issue #245 AC2-245 (d): empty-container prune
+P245_WRITEFAIL=$(mktemp -d)  # issue #245 AC2-245 (e): settings write cannot land
+P245_TOLERATE=$(mktemp -d)   # issue #245 AC3-245 (a): no-declaration tolerance
+P245_FLOOR=$(mktemp -d)      # issue #245 AC3-245 (b): D1 json-merge non-vacuity floor
+P245_BACKCOMPAT=$(mktemp -d) # issue #245 AC3-245 (c): _pin_key back-compat derivation
 
 cleanup() {
   rm -rf "$TARGET" "$COMPLEX_TARGET" "$SETTINGS_TARGET" \
          "$LOCAL_TARGET_A" "$LOCAL_TARGET_B" \
-         "$DRIFT_TARGET" "$SKEW_TARGET" "$RESTAMP_TARGET"
+         "$DRIFT_TARGET" "$SKEW_TARGET" "$RESTAMP_TARGET" \
+         "$P245_OPTOUT" "$P245_FOREIGN" "$P245_MIGRATE" "$P245_PRUNE" \
+         "$P245_WRITEFAIL" \
+         "$P245_TOLERATE" "$P245_FLOOR" "$P245_BACKCOMPAT"
 }
 # Hermetic plugin discovery (issue #167): drift-check.sh D2/D4/D5 resolve the
 # installed plugin and the marketplace clone through scripts/lib/plugin-root.sh
@@ -126,6 +174,26 @@ trap 'cleanup; rm -rf "$HERMETIC_CONFIG_DIR"' EXIT INT TERM
 run_install() {
   _tgt="$1"; shift
   bash "$INIT_SH" --target "$_tgt" "$@" </dev/null 2>&1
+}
+
+# The settings-pin seed a repository stamped by a pre-#245 AutoFlow carries:
+# the marketplace entry the pin still ships, written as the real pin writes it.
+P245_EKM_SEED='"extraKnownMarketplaces":{"autoflow":{"source":{"source":"github","repo":"Munsik-Park/autoflow"}}}'
+
+# disclosure_line <init.sh-output> <status-word> -- the issue #245 P2 stdout
+# disclosure register. The removal is a write to a target-owned file the
+# operator commits, so it is disclosed in the register R4 already fixes for
+# reconcile (init.sh stdout, one line per candidate, one line per dest). The
+# candidate is the key present in the target's settings at read time, so
+# exactly two outcomes carry a line -- `removed`, and `kept` naming the value
+# found -- and no candidate emits no line. This predicate is deliberately
+# tolerant about wording and fixes only what the contract fixes: the line
+# names the dest and the key, and says which of the two outcomes it was.
+disclosure_line() {
+  printf '%s\n' "$1" \
+    | grep -F '.claude/settings.json' \
+    | grep -F 'autoflow@autoflow' \
+    | grep -iF "$2"
 }
 
 # BFS walk of @-import lines from METHODOLOGY.md (depth counted from METHODOLOGY.md).
@@ -404,7 +472,7 @@ for _wf in "architect-deliberation.js" "verify-cause-branch.js"; do
 done
 
 # ── AC1e: settings.json deep-merge ────────────────────────────────────────────
-echo "== AC1e: settings.json merge (pin keys land, pre-existing key preserved) =="
+echo "== AC1e / AC1-245: fresh-stamp settings.json merge (marketplace key lands, enable key absent, pre-existing key preserved) =="
 mkdir -p "$SETTINGS_TARGET/.claude"
 printf '{"sentinel_key": "sentinel_value", "other": 42}\n' \
   > "$SETTINGS_TARGET/.claude/settings.json"
@@ -417,14 +485,14 @@ if [ -f "$INIT_SH" ]; then
     _ep=$(jq -r '.enabledPlugins["autoflow@autoflow"] // empty' "$_s" 2>/dev/null)
     _sent=$(jq -r '.sentinel_key // empty' "$_s" 2>/dev/null)
     if [ -n "$_ekm" ] && [ "$_ekm" != "null" ]; then
-      pass "AC1e: extraKnownMarketplaces[autoflow] present after merge"
+      pass "AC1e / AC1-245 (characterization): extraKnownMarketplaces[autoflow] present after a fresh stamp -- the target's committed record of which marketplace its AutoFlow comes from"
     else
-      failc "AC1e" "extraKnownMarketplaces[autoflow] missing after merge"
+      failc "AC1e / AC1-245 (characterization)" "extraKnownMarketplaces[autoflow] missing after merge -- '/plugin install autoflow@autoflow' stops resolving on a fresh clone of the target"
     fi
-    if [ "$_ep" = "true" ]; then
-      pass "AC1e: enabledPlugins[autoflow@autoflow] == true"
+    if jq -e '(.enabledPlugins // {}) | has("autoflow@autoflow") | not' "$_s" >/dev/null 2>&1; then
+      pass "AC1-245 (driving): a freshly stamped target declares no enabledPlugins[autoflow@autoflow]"
     else
-      failc "AC1e" "enabledPlugins[autoflow@autoflow] != true (got '$_ep')"
+      failc "AC1-245 (driving)" "a freshly stamped target still declares enabledPlugins[autoflow@autoflow] (got '$_ep') -- the settings pin still writes the project-scope-record generator (issue #245 AC1)"
     fi
     if [ "$_sent" = "sentinel_value" ]; then
       pass "AC1e: pre-existing sentinel_key preserved after merge"
@@ -481,6 +549,169 @@ if [ -f "$INIT_SH" ]; then
   fi
 else
   failc "AC2-ENV" "init.sh missing"
+fi
+
+# ── AC2-245 (issue #245 AC2): re-stamp key removal, bounded by ownership ──────
+# Verification design rows :22 (`false` opt-out), :23 (foreign-key
+# non-interference), :214 (`true`-valued removal) and :215 (empty-container
+# prune). Each arm gets its own scratch target, seeded to the shape a
+# repository stamped by a pre-#245 AutoFlow carries, and the REAL installer is
+# re-run over it: no hand-authored settings fixture stands in for what a stamp
+# would write (verification design > "No double may stand in for the shared
+# state"). The P2 stdout disclosure contract is asserted INSIDE these arms, on
+# the candidate-present cases, independently of the state assertion beside it.
+
+echo "== AC2-245 (a): re-stamp preserves a repo-level enabledPlugins \"false\" opt-out and discloses the keep =="
+mkdir -p "$P245_OPTOUT/.claude"
+printf '{%s,"enabledPlugins":{"autoflow@autoflow":false},"theme":"dark"}\n' "$P245_EKM_SEED" \
+  > "$P245_OPTOUT/.claude/settings.json"
+if [ -f "$INIT_SH" ]; then
+  _p245_out=$(run_install "$P245_OPTOUT")
+  _p245_code=$?
+  _p245_s="$P245_OPTOUT/.claude/settings.json"
+  if [ "$_p245_code" -eq 0 ] && jq -e . "$_p245_s" >/dev/null 2>&1; then
+    _p245_v=$(jq -r '.enabledPlugins["autoflow@autoflow"]' "$_p245_s" 2>/dev/null)
+    if [ "$_p245_v" = "false" ]; then
+      pass "AC2-245 (a) state: seeded enabledPlugins[autoflow@autoflow]=false survives the re-stamp (the per-repo opt-out is not ours to delete)"
+    else
+      failc "AC2-245 (a) state" "seeded enabledPlugins[autoflow@autoflow]=false became '$_p245_v' after the re-stamp -- the opt-out repository is silently re-enabled by the user-scope true"
+    fi
+    if [ -n "$(disclosure_line "$_p245_out" kept | grep -F 'false')" ]; then
+      pass "AC2-245 (a) disclosure: the run printed a KEPT line naming .claude/settings.json, the key, and the value it declined to interpret"
+    else
+      failc "AC2-245 (a) disclosure" "no KEPT disclosure line naming .claude/settings.json + autoflow@autoflow + the value 'false' on stdout -- the operator commits a file whose untouched key was never reported"
+    fi
+  else
+    failc "AC2-245 (a)" "re-stamp over the seeded opt-out target exited $_p245_code or settings.json is not valid JSON"
+  fi
+else
+  failc "AC2-245 (a)" "init.sh missing"
+fi
+
+echo "== AC2-245 (b): re-stamp touches no key that is not ours (foreign entry, unrelated key, container retained) =="
+mkdir -p "$P245_FOREIGN/.claude"
+printf '{%s,"enabledPlugins":{"autoflow@autoflow":true,"other-plugin@other-marketplace":true},"theme":"dark"}\n' "$P245_EKM_SEED" \
+  > "$P245_FOREIGN/.claude/settings.json"
+if [ -f "$INIT_SH" ]; then
+  run_install "$P245_FOREIGN" >/dev/null 2>&1
+  _p245_code=$?
+  _p245_s="$P245_FOREIGN/.claude/settings.json"
+  if [ "$_p245_code" -eq 0 ] && jq -e . "$_p245_s" >/dev/null 2>&1; then
+    if [ "$(jq -r '.enabledPlugins["other-plugin@other-marketplace"]' "$_p245_s" 2>/dev/null)" = "true" ]; then
+      pass "AC2-245 (b): another plugin's enabledPlugins entry is untouched by the re-stamp"
+    else
+      failc "AC2-245 (b)" "another plugin's enabledPlugins entry was changed or removed -- a third party's configuration destroyed by a write the operator did not ask for"
+    fi
+    if [ "$(jq -r '.theme // empty' "$_p245_s" 2>/dev/null)" = "dark" ]; then
+      pass "AC2-245 (b): the unrelated top-level settings key is untouched by the re-stamp"
+    else
+      failc "AC2-245 (b)" "the unrelated top-level settings key was changed or removed by the re-stamp"
+    fi
+    if jq -e 'has("enabledPlugins")' "$_p245_s" >/dev/null 2>&1; then
+      pass "AC2-245 (b): the enabledPlugins container is retained while a foreign entry remains in it (pruned iff OUR deletion emptied it)"
+    else
+      failc "AC2-245 (b)" "the enabledPlugins container was pruned while a foreign entry remained in it -- the prune is not conditioned on our own deletion emptying it"
+    fi
+  else
+    failc "AC2-245 (b)" "re-stamp over the seeded foreign-key target exited $_p245_code or settings.json is not valid JSON"
+  fi
+else
+  failc "AC2-245 (b)" "init.sh missing"
+fi
+
+echo "== AC2-245 (c): re-stamp removes a seeded enabledPlugins[autoflow@autoflow]=true and discloses the removal =="
+mkdir -p "$P245_MIGRATE/.claude"
+printf '{%s,"enabledPlugins":{"autoflow@autoflow":true},"theme":"dark"}\n' "$P245_EKM_SEED" \
+  > "$P245_MIGRATE/.claude/settings.json"
+if [ -f "$INIT_SH" ]; then
+  _p245_out=$(run_install "$P245_MIGRATE")
+  _p245_code=$?
+  _p245_s="$P245_MIGRATE/.claude/settings.json"
+  if [ "$_p245_code" -eq 0 ] && jq -e . "$_p245_s" >/dev/null 2>&1; then
+    if jq -e '(.enabledPlugins // {}) | has("autoflow@autoflow") | not' "$_p245_s" >/dev/null 2>&1; then
+      pass "AC2-245 (c) state: the seeded enabledPlugins[autoflow@autoflow]=true is gone after the re-stamp (the literal the old stamp wrote is the one we remove)"
+    else
+      failc "AC2-245 (c) state" "the seeded enabledPlugins[autoflow@autoflow]=true survived the re-stamp -- the migration is a no-op and every already-stamped repository keeps minting a frozen project-scope record at every session start"
+    fi
+    if [ -n "$(disclosure_line "$_p245_out" removed)" ]; then
+      pass "AC2-245 (c) disclosure: the run printed a REMOVED line naming .claude/settings.json and the key"
+    else
+      failc "AC2-245 (c) disclosure" "no REMOVED disclosure line naming .claude/settings.json + autoflow@autoflow on stdout -- a key was deleted from a target-owned file the operator commits, unreported"
+    fi
+  else
+    failc "AC2-245 (c)" "re-stamp over the seeded migrate target exited $_p245_code or settings.json is not valid JSON"
+  fi
+else
+  failc "AC2-245 (c)" "init.sh missing"
+fi
+
+echo "== AC2-245 (d): the enabledPlugins container our deletion emptied is pruned =="
+mkdir -p "$P245_PRUNE/.claude"
+printf '{%s,"enabledPlugins":{"autoflow@autoflow":true},"theme":"dark"}\n' "$P245_EKM_SEED" \
+  > "$P245_PRUNE/.claude/settings.json"
+if [ -f "$INIT_SH" ]; then
+  run_install "$P245_PRUNE" >/dev/null 2>&1
+  _p245_code=$?
+  _p245_s="$P245_PRUNE/.claude/settings.json"
+  if [ "$_p245_code" -eq 0 ] && jq -e . "$_p245_s" >/dev/null 2>&1; then
+    if jq -e 'has("enabledPlugins") | not' "$_p245_s" >/dev/null 2>&1; then
+      pass "AC2-245 (d): the emptied enabledPlugins container is pruned -- the migrated target lands on the measured configuration (marketplace entry only), not on a bare {}"
+    else
+      failc "AC2-245 (d)" "enabledPlugins remains as $(jq -c '.enabledPlugins' "$_p245_s" 2>/dev/null) after the re-stamp emptied it -- an absence assertion alone admits a bare {}, the one configuration the five-configuration table never measured"
+    fi
+    if [ "$(jq -r '.theme // empty' "$_p245_s" 2>/dev/null)" = "dark" ]; then
+      pass "AC2-245 (d) non-vacuity: the prune did not take the rest of the settings file with it"
+    else
+      failc "AC2-245 (d) non-vacuity" "the unrelated top-level key is gone -- the prune removed more than the container it emptied"
+    fi
+  else
+    failc "AC2-245 (d)" "re-stamp over the seeded prune target exited $_p245_code or settings.json is not valid JSON"
+  fi
+else
+  failc "AC2-245 (d)" "init.sh missing"
+fi
+
+echo "== AC2-245 (e): a settings write that cannot land aborts the run and discloses nothing =="
+# PR #247 review round 1 (Medium): the disclosure `case` was appended AFTER the
+# `jq ... > "$settings.tmp" && mv ...` AND-list, so a failing write was no
+# longer the function's return value -- the run printed `REMOVED:` and installed
+# on while the target's settings kept the stale `true`. The oracle is the
+# fail-closed property the design settles (F8): the write either lands or the
+# run stops, and a disclosure line is only ever printed about a write that
+# landed. The failure is injected portably and deterministically by occupying
+# the temp path with a DIRECTORY -- `>` onto a directory fails on every POSIX
+# shell, with no root, no quota games and no mid-write truncation -- which is
+# the same class of failure as a full disk or an unwritable .claude directory.
+_p245_wf_seed=$(printf '{%s,"enabledPlugins":{"autoflow@autoflow":true},"theme":"dark"}\n' "$P245_EKM_SEED")
+mkdir -p "$P245_WRITEFAIL/.claude"
+printf '%s\n' "$_p245_wf_seed" > "$P245_WRITEFAIL/.claude/settings.json"
+mkdir -p "$P245_WRITEFAIL/.claude/settings.json.tmp"
+if [ -f "$INIT_SH" ]; then
+  _p245_out=$(run_install "$P245_WRITEFAIL")
+  _p245_code=$?
+  _p245_s="$P245_WRITEFAIL/.claude/settings.json"
+  if [ "$_p245_code" -ne 0 ]; then
+    pass "AC2-245 (e) exit: the run failed (exit $_p245_code) when the settings write could not land -- the operator is told the stamp did not complete"
+  else
+    failc "AC2-245 (e) exit" "the run exited 0 although the settings write could not land -- the install reports success over a target whose settings were never written (fail-closed property F8 not delivered)"
+  fi
+  if printf '%s\n' "$_p245_wf_seed" | cmp -s - "$_p245_s"; then
+    pass "AC2-245 (e) state: the target's settings.json is byte-unchanged -- the failed write left no partial file behind"
+  else
+    failc "AC2-245 (e) state" "the target's settings.json changed although the write could not land: $(jq -c . "$_p245_s" 2>/dev/null || cat "$_p245_s")"
+  fi
+  if [ -z "$(disclosure_line "$_p245_out" removed)" ]; then
+    pass "AC2-245 (e) disclosure: no REMOVED line was printed for a removal that never happened"
+  else
+    failc "AC2-245 (e) disclosure" "the run printed a REMOVED disclosure line although the write never landed -- the operator is told a key was deleted while the target still carries it (stale 'true' survives, unreported)"
+  fi
+  if [ "$(jq -r '.enabledPlugins["autoflow@autoflow"]' "$_p245_s" 2>/dev/null)" = "true" ]; then
+    pass "AC2-245 (e) non-vacuity: the seeded 'true' key is still present, so the three assertions above were made against a real migration candidate"
+  else
+    failc "AC2-245 (e) non-vacuity" "the seeded enabledPlugins[autoflow@autoflow]=true is not readable in the target after the run -- the arm no longer proves anything about the migration path"
+  fi
+else
+  failc "AC2-245 (e)" "init.sh missing"
 fi
 
 # ── AC1f: METHODOLOGY.md exists post-install ──────────────────────────────────
@@ -885,11 +1116,17 @@ if [ "$_dt_code" -eq 0 ] && [ -f "$_drift_det" ]; then
     failc "AC3c (ii)" "target CLAUDE.md missing in DRIFT_TARGET — cannot test shim-region drift"
   fi
 
-  # Arm (iii): remove pin key from installed settings.json
+  # Arm (iii): remove a pin key from installed settings.json.
+  # RE-POINTED by issue #245: D1's json-merge leg is the fixed-point test
+  # `(.[0] * .[1]) == .[0]`, so its expectation IS the pin's content. Once the
+  # pin stops asserting enabledPlugins, deleting that key from a target's
+  # settings is no longer drift and this arm would have gone quietly vacuous.
+  # It mutates the RETAINED marketplace entry instead; the dedicated
+  # non-vacuity floor on a clean target is AC3-245 (b) below.
   echo "== AC3c arm (iii): json-merge pin key removed -> detector catches it =="
   _dsettings="$DRIFT_TARGET/.claude/settings.json"
   if [ -f "$_dsettings" ] && jq -e . "$_dsettings" >/dev/null 2>&1; then
-    jq 'del(.enabledPlugins["autoflow@autoflow"])' \
+    jq 'del(.extraKnownMarketplaces["autoflow"])' \
       "$_dsettings" > "$_dsettings.tmp" && mv "$_dsettings.tmp" "$_dsettings"
     DRIFT_OUT3=$(CLAUDE_PROJECT_DIR="$DRIFT_TARGET" sh "$_drift_det" 2>&1)
     DRIFT_CODE3=$?
@@ -951,6 +1188,89 @@ if [ "$_sk_code" -eq 0 ] && [ -f "$_skew_det" ]; then
 else
   failc "AC3d (a)" "install into SKEW_TARGET failed (exit $_sk_code) or detector absent"
   failc "AC3d (b)" "install into SKEW_TARGET failed — cannot test D2 SKIP"
+fi
+
+# ── AC3-245 (issue #245 AC3): drift-check over the migrated settings shape ────
+# Verification design rows :24 (tolerance), :25 (non-vacuity floor) and :26
+# (_pin_key back-compat). Each arm installs its own clean target and then
+# MUTATES that real product to represent the state under test -- perturbing the
+# product is admissible; substituting the producer is not.
+
+echo "== AC3-245 (a): a target carrying no enabledPlugins declaration is not a drift FAIL =="
+if [ -f "$INIT_SH" ]; then
+  run_install "$P245_TOLERATE" >/dev/null 2>&1
+  _p245_code=$?
+else
+  _p245_code=1
+fi
+_p245_det="$P245_TOLERATE/.claude/autoflow/drift-check.sh"
+_p245_s="$P245_TOLERATE/.claude/settings.json"
+if [ "$_p245_code" -eq 0 ] && [ -f "$_p245_det" ] && jq -e . "$_p245_s" >/dev/null 2>&1; then
+  jq 'del(.enabledPlugins)' "$_p245_s" > "$_p245_s.tmp" && mv "$_p245_s.tmp" "$_p245_s"
+  P245_TOL_OUT=$(CLAUDE_PROJECT_DIR="$P245_TOLERATE" sh "$_p245_det" 2>&1)
+  P245_TOL_CODE=$?
+  if printf '%s\n' "$P245_TOL_OUT" | grep -qF 'pin drift in .claude/settings.json'; then
+    failc "AC3-245 (a)" "D1 reports pin drift on a target with no enabledPlugins declaration -- every migrated repository is hard-blocked at PREFLIGHT by a drift FAIL that is a stop condition"
+  else
+    pass "AC3-245 (a): no D1 pin-drift FAIL is raised on account of the absent enabledPlugins declaration"
+  fi
+  if [ "$P245_TOL_CODE" -eq 0 ]; then
+    pass "AC3-245 (a): the detector exits 0 on a target carrying no enabledPlugins declaration"
+  else
+    failc "AC3-245 (a)" "detector exited $P245_TOL_CODE on a target with no enabledPlugins declaration (expected 0): $(printf '%s\n' "$P245_TOL_OUT" | grep '^FAIL:' | tr '\n' ';')"
+  fi
+else
+  failc "AC3-245 (a)" "install into P245_TOLERATE failed (exit $_p245_code), detector absent, or settings.json invalid"
+fi
+
+echo "== AC3-245 (b): D1 json-merge non-vacuity floor -- the RETAINED pin key is still discriminated on a clean target =="
+if [ -f "$INIT_SH" ]; then
+  run_install "$P245_FLOOR" >/dev/null 2>&1
+  _p245_code=$?
+else
+  _p245_code=1
+fi
+_p245_det="$P245_FLOOR/.claude/autoflow/drift-check.sh"
+_p245_s="$P245_FLOOR/.claude/settings.json"
+if [ "$_p245_code" -eq 0 ] && [ -f "$_p245_det" ] && jq -e . "$_p245_s" >/dev/null 2>&1; then
+  jq 'del(.extraKnownMarketplaces["autoflow"])' "$_p245_s" > "$_p245_s.tmp" && mv "$_p245_s.tmp" "$_p245_s"
+  P245_FLOOR_OUT=$(CLAUDE_PROJECT_DIR="$P245_FLOOR" sh "$_p245_det" 2>&1)
+  P245_FLOOR_CODE=$?
+  if [ "$P245_FLOOR_CODE" -ne 0 ] \
+     && printf '%s\n' "$P245_FLOOR_OUT" | grep -qF 'pin drift in .claude/settings.json'; then
+    pass "AC3-245 (b): removing the retained marketplace entry from a clean target's settings still produces a non-zero D1 pin-drift FAIL (the leg discriminates what the pin asserts)"
+  else
+    failc "AC3-245 (b)" "detector exited $P245_FLOOR_CODE with no D1 pin-drift FAIL after the retained marketplace entry was removed -- D1's json-merge leg has stopped discriminating and a green drift-check now checks nothing"
+  fi
+else
+  failc "AC3-245 (b)" "install into P245_FLOOR failed (exit $_p245_code), detector absent, or settings.json invalid"
+fi
+
+echo "== AC3-245 (c): the _pin_key back-compat branch still derives the names from a pre-#245 target's PIN_REF =="
+if [ -f "$INIT_SH" ]; then
+  run_install "$P245_BACKCOMPAT" >/dev/null 2>&1
+  _p245_code=$?
+else
+  _p245_code=1
+fi
+_p245_det="$P245_BACKCOMPAT/.claude/autoflow/drift-check.sh"
+_p245_pin="$P245_BACKCOMPAT/.claude/autoflow/settings-pin.json"
+if [ "$_p245_code" -eq 0 ] && [ -f "$_p245_det" ] && [ -f "$_p245_pin" ]; then
+  # A pre-#245 target's PIN_REF carries the composed enable key. The probe
+  # token is deliberately NOT autoflow@autoflow: the shipped default is
+  # autoflow/autoflow, so only a distinct token can tell the derivation apart
+  # from the fallback. The detector is run as the cache's known-good copy
+  # against such a target, so the branch is live, not an orphan.
+  printf '{"extraKnownMarketplaces":{"probe-marketplace":{"source":{"source":"github","repo":"Munsik-Park/autoflow"}}},"enabledPlugins":{"probe-plugin@probe-marketplace":true}}\n' \
+    > "$_p245_pin"
+  P245_BC_OUT=$(CLAUDE_PROJECT_DIR="$P245_BACKCOMPAT" sh "$_p245_det" 2>&1)
+  if printf '%s\n' "$P245_BC_OUT" | grep -qF 'probe-plugin@probe-marketplace'; then
+    pass "AC3-245 (c): the plugin / marketplace names resolve from the target's PIN_REF composed key, not from the shipped default"
+  else
+    failc "AC3-245 (c)" "the resolution report never names the PIN_REF's composed key -- the _pin_key branch was deleted as an orphan and a pre-#245 target's drift-check degrades to all-SKIP at exit 0, the worst signal shape available: $(printf '%s\n' "$P245_BC_OUT" | grep -i 'D2' | tr '\n' ';')"
+  fi
+else
+  failc "AC3-245 (c)" "install into P245_BACKCOMPAT failed (exit $_p245_code), detector or PIN_REF absent"
 fi
 
 # ── AC3e: detector independence (no network calls + source-repo-removed run) ──
