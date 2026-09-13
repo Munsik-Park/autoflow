@@ -110,11 +110,12 @@ host/service decoupling plan §6/§10 (with that plan's
   and the target owns a committed version record — but the pin's content is
   narrowed to `extraKnownMarketplaces`, and that key is the target's record of
   *which marketplace* its AutoFlow comes from, not a version pin. Ground: a
-  repo-level `enabledPlugins["autoflow@autoflow"]` declaration — either boolean
-  — makes Claude Code create and freeze a project-scope installation record,
-  which nothing refreshes, so every stamped repository minted its own frozen
-  version pin at the next session start; `extraKnownMarketplaces` alone never
-  does, and the user-scope `enabledPlugins` is what actually enables the plugin.
+  repo-level `enabledPlugins["autoflow@autoflow"]: true` declaration makes
+  Claude Code create and freeze a project-scope installation record, which
+  nothing refreshes, so every stamped repository minted its own frozen version
+  pin at the next session start; a `false` declaration mints none — it is the
+  record-free per-repo opt-out — `extraKnownMarketplaces` alone never does, and
+  the user-scope `enabledPlugins` is what actually enables the plugin.
   The target's version record is the installed manifest
   `.claude/autoflow/manifest.json` (`.version`), compared against the installed
   plugin's `plugin.json` by the drift detector (D2). See

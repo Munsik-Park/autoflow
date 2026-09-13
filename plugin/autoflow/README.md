@@ -70,14 +70,15 @@ version record is the installed manifest `.claude/autoflow/manifest.json`
 `plugin.json` (D2).
 
 The pin deliberately carries **no `enabledPlugins` key** (issue #245). A
-repo-level `enabledPlugins["autoflow@autoflow"]` declaration — `true` or `false`
-alike — makes Claude Code create and freeze a project-scope installation record
-for the plugin, which is a version pin nothing in this tree ever refreshes; the
-user-scope enablement above is what actually turns the plugin on. Do not add the
-key back to restore "enablement": that re-creates the generator this pin was
-narrowed to remove. A repository that wants AutoFlow **off** writes
+repo-level `enabledPlugins["autoflow@autoflow"]: true` declaration makes Claude
+Code create and freeze a project-scope installation record for the plugin, which
+is a version pin nothing in this tree ever refreshes; the user-scope enablement
+above is what actually turns the plugin on. Do not add the key back to restore
+"enablement": that re-creates the generator this pin was narrowed to remove. A
+repository that wants AutoFlow **off** writes
 `"enabledPlugins": {"autoflow@autoflow": false}` into its own
-`.claude/settings.json` by hand, and a re-stamp preserves it
+`.claude/settings.json` by hand — a `false` declaration mints no record — and a
+re-stamp preserves it
 (`setup/SETUP-GUIDE.md` > Prerequisites).
 
 The pin carries no `env` block either: the Agent Teams channel is retired

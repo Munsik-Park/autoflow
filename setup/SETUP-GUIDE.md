@@ -48,11 +48,12 @@ record (R1).
 The stamp writes `extraKnownMarketplaces` into your `.claude/settings.json` and
 **nothing else**: no `enabledPlugins` key (issue #245). The reason is worth
 knowing before you "repair" the absence by adding it back. A repo-level
-`enabledPlugins["autoflow@autoflow"]` declaration — `true` or `false` alike —
-makes Claude Code create and freeze a **project-scope installation record** for
-the plugin, pinning that repository to whatever version was resolved when the
-record was minted; nothing refreshes it afterwards, so every stamped repository
-would drift onto its own frozen version. Enablement lives at user scope, where
+`enabledPlugins["autoflow@autoflow"]: true` declaration makes Claude Code create
+and freeze a **project-scope installation record** for the plugin, pinning that
+repository to whatever version was resolved when the record was minted; nothing
+refreshes it afterwards, so every stamped repository would drift onto its own
+frozen version. A `false` declaration mints no such record — it turns the plugin
+off in that repository, and is the record-free opt-out below. Enablement lives at user scope, where
 one update moves every project at once. The retained marketplace entry is the
 target's record of *which* marketplace its AutoFlow comes from, so that
 `/plugin install autoflow@autoflow` resolves on a fresh clone of the target.

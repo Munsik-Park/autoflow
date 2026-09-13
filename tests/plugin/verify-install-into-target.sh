@@ -68,6 +68,11 @@
 #                 the re-stamp, and the run discloses the removal (driving)
 #     AC2-245 (d) the enabledPlugins container our deletion emptied is pruned
 #                 (driving; independent of (c) -- a bare {} satisfies (c))
+#     AC2-245 (e) a settings write that cannot land is fail-closed: the run
+#                 exits non-zero, the target's settings.json is byte-unchanged,
+#                 and NO disclosure line is printed (driving; PR #247 review
+#                 round 1, Medium -- the disclosure `case` appended after the
+#                 jq/mv AND-list made a write failure return 0)
 #     AC3-245 (a) a target carrying no enabledPlugins declaration is not a
 #                 drift FAIL (driving)
 #     AC3-245 (b) non-vacuity floor on a CLEAN target: D1's json-merge leg still
@@ -139,6 +144,7 @@ P245_OPTOUT=$(mktemp -d)     # issue #245 AC2-245 (a): seeded `false` opt-out
 P245_FOREIGN=$(mktemp -d)    # issue #245 AC2-245 (b): foreign-key non-interference
 P245_MIGRATE=$(mktemp -d)    # issue #245 AC2-245 (c): seeded `true` removal
 P245_PRUNE=$(mktemp -d)      # issue #245 AC2-245 (d): empty-container prune
+P245_WRITEFAIL=$(mktemp -d)  # issue #245 AC2-245 (e): settings write cannot land
 P245_TOLERATE=$(mktemp -d)   # issue #245 AC3-245 (a): no-declaration tolerance
 P245_FLOOR=$(mktemp -d)      # issue #245 AC3-245 (b): D1 json-merge non-vacuity floor
 P245_BACKCOMPAT=$(mktemp -d) # issue #245 AC3-245 (c): _pin_key back-compat derivation
@@ -148,6 +154,7 @@ cleanup() {
          "$LOCAL_TARGET_A" "$LOCAL_TARGET_B" \
          "$DRIFT_TARGET" "$SKEW_TARGET" "$RESTAMP_TARGET" \
          "$P245_OPTOUT" "$P245_FOREIGN" "$P245_MIGRATE" "$P245_PRUNE" \
+         "$P245_WRITEFAIL" \
          "$P245_TOLERATE" "$P245_FLOOR" "$P245_BACKCOMPAT"
 }
 # Hermetic plugin discovery (issue #167): drift-check.sh D2/D4/D5 resolve the
@@ -662,6 +669,49 @@ if [ -f "$INIT_SH" ]; then
   fi
 else
   failc "AC2-245 (d)" "init.sh missing"
+fi
+
+echo "== AC2-245 (e): a settings write that cannot land aborts the run and discloses nothing =="
+# PR #247 review round 1 (Medium): the disclosure `case` was appended AFTER the
+# `jq ... > "$settings.tmp" && mv ...` AND-list, so a failing write was no
+# longer the function's return value -- the run printed `REMOVED:` and installed
+# on while the target's settings kept the stale `true`. The oracle is the
+# fail-closed property the design settles (F8): the write either lands or the
+# run stops, and a disclosure line is only ever printed about a write that
+# landed. The failure is injected portably and deterministically by occupying
+# the temp path with a DIRECTORY -- `>` onto a directory fails on every POSIX
+# shell, with no root, no quota games and no mid-write truncation -- which is
+# the same class of failure as a full disk or an unwritable .claude directory.
+_p245_wf_seed=$(printf '{%s,"enabledPlugins":{"autoflow@autoflow":true},"theme":"dark"}\n' "$P245_EKM_SEED")
+mkdir -p "$P245_WRITEFAIL/.claude"
+printf '%s\n' "$_p245_wf_seed" > "$P245_WRITEFAIL/.claude/settings.json"
+mkdir -p "$P245_WRITEFAIL/.claude/settings.json.tmp"
+if [ -f "$INIT_SH" ]; then
+  _p245_out=$(run_install "$P245_WRITEFAIL")
+  _p245_code=$?
+  _p245_s="$P245_WRITEFAIL/.claude/settings.json"
+  if [ "$_p245_code" -ne 0 ]; then
+    pass "AC2-245 (e) exit: the run failed (exit $_p245_code) when the settings write could not land -- the operator is told the stamp did not complete"
+  else
+    failc "AC2-245 (e) exit" "the run exited 0 although the settings write could not land -- the install reports success over a target whose settings were never written (fail-closed property F8 not delivered)"
+  fi
+  if printf '%s\n' "$_p245_wf_seed" | cmp -s - "$_p245_s"; then
+    pass "AC2-245 (e) state: the target's settings.json is byte-unchanged -- the failed write left no partial file behind"
+  else
+    failc "AC2-245 (e) state" "the target's settings.json changed although the write could not land: $(jq -c . "$_p245_s" 2>/dev/null || cat "$_p245_s")"
+  fi
+  if [ -z "$(disclosure_line "$_p245_out" removed)" ]; then
+    pass "AC2-245 (e) disclosure: no REMOVED line was printed for a removal that never happened"
+  else
+    failc "AC2-245 (e) disclosure" "the run printed a REMOVED disclosure line although the write never landed -- the operator is told a key was deleted while the target still carries it (stale 'true' survives, unreported)"
+  fi
+  if [ "$(jq -r '.enabledPlugins["autoflow@autoflow"]' "$_p245_s" 2>/dev/null)" = "true" ]; then
+    pass "AC2-245 (e) non-vacuity: the seeded 'true' key is still present, so the three assertions above were made against a real migration candidate"
+  else
+    failc "AC2-245 (e) non-vacuity" "the seeded enabledPlugins[autoflow@autoflow]=true is not readable in the target after the run -- the arm no longer proves anything about the migration path"
+  fi
+else
+  failc "AC2-245 (e)" "init.sh missing"
 fi
 
 # ── AC1f: METHODOLOGY.md exists post-install ──────────────────────────────────

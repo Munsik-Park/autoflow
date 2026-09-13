@@ -114,10 +114,10 @@ once per machine, not once per repository. **Step 3 stamps one repository**: it
 delivers the thin root layer, declares the marketplace in that repo's
 `.claude/settings.json`, and writes the target's version record
 (`.claude/autoflow/manifest.json` `.version`). A stamp does **not** enable the
-plugin, and it writes no `enabledPlugins` key — a repo-level declaration is what
-makes Claude Code freeze a project-scope installation record, and never gets
-refreshed (see `setup/SETUP-GUIDE.md` > *A stamped repository declares no
-enablement*, which also documents the per-repo `false` opt-out).
+plugin, and it writes no `enabledPlugins` key — a repo-level `true` declaration
+is what makes Claude Code freeze a project-scope installation record, and never
+gets refreshed (see `setup/SETUP-GUIDE.md` > *A stamped repository declares no
+enablement*, which also documents the record-free per-repo `false` opt-out).
 
 Step 3 runs the `/autoflow:install` skill: it detects root-layer absence or
 drift and reports the derived org/repo/branch/topology (read-only), asks for a

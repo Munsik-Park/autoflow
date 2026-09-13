@@ -54,8 +54,8 @@ below means both tiers together.
   key has ever named a version — the marketplace entry is
   `{"source":"github","repo":"Munsik-Park/autoflow"}` — and the pin no longer
   carries an enablement key at all: a repo-level
-  `enabledPlugins["autoflow@autoflow"]` declaration is what makes Claude Code
-  mint and freeze a project-scope installation record, so the stamp stopped
+  `enabledPlugins["autoflow@autoflow"]: true` declaration is what makes Claude
+  Code mint and freeze a project-scope installation record, so the stamp stopped
   writing it and enabling the plugin is a one-time **user-scope** step. The rule
   itself is unchanged — the target owns a committed version record — and the
   artifact that carries it is named above. Read the "explicit edit to the pin"

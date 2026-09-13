@@ -68,9 +68,10 @@ stamp_shim() {
 }
 
 # The enable key a pre-#245 stamp wrote into the target's settings. The pin no
-# longer carries it (issue #245): a repo-level `enabledPlugins` declaration —
-# either boolean — is what makes Claude Code mint and freeze a project-scope
-# installation record, and enablement is a one-time USER-scope step
+# longer carries it (issue #245): a repo-level `enabledPlugins` declaration of
+# `true` is what makes Claude Code mint and freeze a project-scope installation
+# record — a `false` declaration mints none, and is the supported record-free
+# per-repo opt-out — and enablement is a one-time USER-scope step
 # (`/plugin install autoflow@autoflow`), not an installer write.
 AUTOFLOW_ENABLE_KEY="autoflow@autoflow"
 
@@ -98,7 +99,11 @@ AUTOFLOW_ENABLE_KEY="autoflow@autoflow"
 #
 # Fail-closed is inherited, not added: under `set -euo pipefail` a failing jq
 # aborts the run, `mv` never runs, and the settings file is left byte-unchanged
-# — which is what makes "no disclosure line" unambiguous.
+# — which is what makes "no disclosure line" unambiguous. The write is two plain
+# statements on purpose: errexit governs a member of an `&&` list only when it
+# is the last one, so re-joining them into `jq … && mv …` would let a failed
+# write fall through to the disclosure `case` below — which always exits 0 —
+# and report `REMOVED:` over a settings file that was never written.
 merge_settings() {
   local target="$1" pin="$2" dest="$3"
   local settings="$target/$dest" prior
@@ -113,7 +118,8 @@ merge_settings() {
       | if (.enabledPlugins | type) == "object" and .enabledPlugins[$k] == true
         then del(.enabledPlugins[$k])
              | if (.enabledPlugins | length) == 0 then del(.enabledPlugins) else . end
-        else . end' "$settings" "$pin" > "$settings.tmp" && mv "$settings.tmp" "$settings"
+        else . end' "$settings" "$pin" > "$settings.tmp"
+  mv "$settings.tmp" "$settings"
   case "$prior" in
     absent) ;;
     true)

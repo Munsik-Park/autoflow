@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ad5cc0d08d42a7da804df2f2d27a9e17aec1f1b594eeca7fef981845e6e24157"
+      "sha256": "3ff6e7c0577b80c54727353c788bb85bd9bd7aa3e6a3c7bc73d575592576642e"
     },
     {
       "source": "docs/adr/0016-adr-conformance-gate-scoring.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "383b1c26b0dc107286808b2a4614d296e352bfb31ecf4aa43ef49760e6746279"
+      "sha256": "66e24ccbba0448f4d8b41f2e351fba777f4a2f4f8fcd5757a0135d90b5b67537"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
