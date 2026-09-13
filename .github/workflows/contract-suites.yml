@@ -37,6 +37,7 @@ name: contract-suites
 on:
   pull_request:
     paths:
+      - '.claude-plugin/**'
       - '.claude/agents/**'
       - '.claude/agents/autoflow-implementer.md'
       - '.claude/hooks/check-autoflow-gate.sh'
@@ -183,6 +184,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.claude-plugin/**'
       - '.claude/agents/**'
       - '.claude/agents/autoflow-implementer.md'
       - '.claude/hooks/check-autoflow-gate.sh'

@@ -35,6 +35,7 @@ on:
       - 'README.md'
       - 'setup/SETUP-GUIDE.md'
       - 'setup/manifest.json'
+      - 'setup/thin-root-layer/drift-check.sh'
       - 'setup/thin-root-layer/settings-pin.json'
       - 'tests/lib/**'
   push:
@@ -51,6 +52,7 @@ on:
       - 'README.md'
       - 'setup/SETUP-GUIDE.md'
       - 'setup/manifest.json'
+      - 'setup/thin-root-layer/drift-check.sh'
       - 'setup/thin-root-layer/settings-pin.json'
       - 'tests/lib/**'
 
