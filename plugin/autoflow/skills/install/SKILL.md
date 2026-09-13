@@ -304,10 +304,12 @@ means no header is owed; a `HINT: D7: no tests declaration` beside it names the
 scaffold's missing `tests` object and its hand edit (Step 1). A D7 FAIL is
 likewise a PREFLIGHT stop condition and not a reason to re-stamp.
 
-**Reconciled artifacts (issue #236).** Report every `REMOVED:` / `KEPT:` /
-`ABSENT:` line from step b verbatim, dest by dest, and the count line. For
-each `REMOVED:` dest, run one read-only reference probe over the target and
-report its hits as information:
+**Reconciled artifacts (issue #236).** Report every artifact-dest `REMOVED:` /
+`KEPT:` / `ABSENT:` line from step b verbatim, dest by dest, and the count
+line — an artifact-dest line carries a `(copy; ...)` / `(<kind>; ...)`
+parenthetical right after `<dest>`. (The settings-key lines are a different
+class — see below.) For each `REMOVED:` dest in this class, run one read-only
+reference probe over the target and report its hits as information:
 
 ```bash
 git -C "$TARGET_ROOT" grep -n -I --untracked -e "$(basename "<dest>")" -- . ':!.claude/autoflow/docs' ':!docs/adr'
@@ -318,5 +320,20 @@ hook, a workflow, a script that sources it — and is the operator's to judge
 before committing (the installer removes only bytes AutoFlow shipped, so the
 removal is what surfaces the reference; it does not decide it). A `KEPT:`
 line's dest is the operator's to dispose of by hand — for a modified `copy`,
-by diffing it against the previous version before deleting it. Do NOT commit on their behalf — the target
-owns its version record via its own commits (R1). End here.
+by diffing it against the previous version before deleting it. Do NOT commit
+on their behalf — the target owns its version record via its own commits
+(R1).
+
+**The settings-key lines (issue #245) are a different class — never probe
+them.** `merge_settings` (also step b, the same stamp invocation) prints
+`REMOVED: <dest> enabledPlugins["autoflow@autoflow"] (...)` / `KEPT: <dest>
+enabledPlugins["autoflow@autoflow"] (...)` — recognizable by `enabledPlugins[`
+immediately after `<dest>`, unlike the artifact-dest form above. This is a
+*key* removed from a settings file that still exists, not a file AutoFlow
+retired, so it is never a reference-probe candidate; report the line
+verbatim and read it for the operator instead. `REMOVED:` means a pre-#245
+stamp's `enabledPlugins` entry (value `true`) was deleted, because enabling
+AutoFlow is a one-time **user-scope** step (`/plugin install
+autoflow@autoflow`), never a per-repo installer write. `KEPT:` with value
+`false` is the supported per-repo opt-out, left untouched — see
+`setup/SETUP-GUIDE.md` > Prerequisites. End here.
