@@ -133,9 +133,11 @@ host/service decoupling plan §6/§10 (with that plan's
 
 AutoFlow is distributed as a Claude Code **plugin** carrying everything the
 plugin spec supports, complemented by the **thin root layer** for what it
-cannot carry. The version pin is owned by the target as a committed settings
-pin (plugin version), satisfying the epic's "the target owns the version
-record" requirement. The reverse-submodule alternative is rejected (see
+cannot carry. The version record is owned by the target as the committed
+installed manifest (`.claude/autoflow/manifest.json` `.version`), beside a
+committed settings pin that declares which marketplace the plugin comes from
+(`extraKnownMarketplaces`; amended by #245 — the pin itself carries no version),
+satisfying the epic's "the target owns the version record" requirement. The reverse-submodule alternative is rejected (see
 Alternatives). Rule vocabulary downstream (S1, #787) uses plugin-version
 terms.
 

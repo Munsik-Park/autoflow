@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3ff6e7c0577b80c54727353c788bb85bd9bd7aa3e6a3c7bc73d575592576642e"
+      "sha256": "7788d098236f01c471f33985ea72a4564dd2a07b9acee2b6438d645ec97cb952"
     },
     {
       "source": "docs/adr/0016-adr-conformance-gate-scoring.md",
