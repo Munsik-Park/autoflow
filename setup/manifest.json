@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bd0cffc9d478773edffdcd1421b5f59cf4232ee522f79474427ac53405b3ba75"
+      "sha256": "ad5cc0d08d42a7da804df2f2d27a9e17aec1f1b594eeca7fef981845e6e24157"
     },
     {
       "source": "docs/adr/0016-adr-conformance-gate-scoring.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/adr/README.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "666ef4d2575b6e2ba9684057ce194f5d8cf8e9f239769ddf2d39cead403b1b97"
+      "sha256": "5e804f8908109e3e56f47f4f69eca65be84cdb40d0f5bec9962dd1f5ca85bebc"
     },
     {
       "source": "docs/autoflow-guide.md",
@@ -244,7 +244,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "97b697cd065f361fb1e15ed3521e0d6d4e60be59dafcaa45a896af4e81941dcf"
+      "sha256": "383b1c26b0dc107286808b2a4614d296e352bfb31ecf4aa43ef49760e6746279"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
@@ -265,7 +265,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "84c76705b3f4e67e85143554e35b10265fb7b0da224f4bf76a677dda1376cc64"
+      "sha256": "474b34dcbcc77f64c1a0fcd99bec0befb3ab70b429ef8f495b94255fae7f5cf8"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -279,7 +279,7 @@
       "dest": ".claude/autoflow/settings-pin.json",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b73e8d43af8ce1ccbc4ea92b912662cc087be68b704352a6f14170c325c62536"
+      "sha256": "252f026e97e73ac04c28330f27208d0f74b528e0cc234900837f7540633dd676"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -293,7 +293,7 @@
       "dest": ".claude/settings.json",
       "tier": "root-layer",
       "kind": "json-merge",
-      "sha256": "b73e8d43af8ce1ccbc4ea92b912662cc087be68b704352a6f14170c325c62536"
+      "sha256": "252f026e97e73ac04c28330f27208d0f74b528e0cc234900837f7540633dd676"
     },
     {
       "source": "CLAUDE.local.md.example",

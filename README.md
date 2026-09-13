@@ -107,13 +107,27 @@ project:
 3. /autoflow:install        # detects → confirms → stamps → drift-checks
 ```
 
+Steps 1–2 and step 3 do different jobs. **Steps 1–2 enable the plugin once, at
+user scope** (`/plugin install` writes the enablement into
+`~/.claude/settings.json`, which turns AutoFlow on in every project you open) —
+once per machine, not once per repository. **Step 3 stamps one repository**: it
+delivers the thin root layer, declares the marketplace in that repo's
+`.claude/settings.json`, and writes the target's version record
+(`.claude/autoflow/manifest.json` `.version`). A stamp does **not** enable the
+plugin, and it writes no `enabledPlugins` key — a repo-level declaration is what
+makes Claude Code freeze a project-scope installation record, and never gets
+refreshed (see `setup/SETUP-GUIDE.md` > *A stamped repository declares no
+enablement*, which also documents the per-repo `false` opt-out).
+
 Step 3 runs the `/autoflow:install` skill: it detects root-layer absence or
 drift and reports the derived org/repo/branch/topology (read-only), asks for a
 **single** confirmation, then stamps the thin-root bundle from the marketplace
 cache (via `init.sh` under the hood) and runs the drift detector automatically.
 No file is written to your project before you confirm, and it never commits for
-you — you own your version record. Maintenance is just
-`/plugin marketplace update` → `/autoflow:install` (re-stamp). A re-stamp also
+you — you own your version record. Maintenance is both, in order: update the
+plugin at user scope (`/plugin marketplace update` →
+`/plugin update autoflow@autoflow`), then re-stamp each target
+(`/autoflow:install`). A re-stamp also
 removes the `copy` artifacts the previous version delivered and the new one no
 longer ships, when their content is still what AutoFlow shipped; anything you
 modified, and every target-owned scaffold, is kept and named (see
@@ -267,7 +281,9 @@ After running `setup/init.sh --target <path>`:
 
 - [ ] Your project `CLAUDE.md` carries the managed `AUTOFLOW-IMPORT` shim block.
 - [ ] `sh .claude/autoflow/drift-check.sh` exits zero (installed artifacts match the manifest; the bundle and the plugin match the marketplace clone; the `spawn-policy.json` scaffold agrees with the loaded agent definitions and carries every row the current version requires).
-- [ ] `.claude/settings.json` pins the AutoFlow marketplace + `enabledPlugins`.
+- [ ] `.claude/settings.json` declares the AutoFlow marketplace
+      (`extraKnownMarketplaces`) — and **no** `enabledPlugins` key: the plugin is
+      enabled once at user scope by `/plugin install autoflow@autoflow`.
 - [ ] `CLAUDE.local.md` holds your target identity (never overwritten by `--force`).
 - [ ] `.gitignore` includes `.autoflow/issue-*.json` and `CLAUDE.local.md`.
 - [ ] Each sub-repo carries its own `CLAUDE.md` (multi-repo instances only).

@@ -40,10 +40,28 @@ below means both tiers together.
 
 ## R1 — Tool Version Pin (target-owned)
 
-- **[MUST]** The target owns the AutoFlow version record: a **committed
-  settings pin** in the target repository (`extraKnownMarketplaces` /
-  `enabledPlugins` naming an explicit plugin version). Consuming an
-  unpinned ("latest") plugin is not a supported configuration.
+- **[MUST]** The target owns the AutoFlow version record: a **committed version
+  record** in the target repository — the installed manifest
+  `.claude/autoflow/manifest.json` (`.version`), a `copy`-kind thin-root
+  artifact, which the drift detector compares against the installed plugin's
+  `plugin.json` (D2). The committed **settings pin** (`extraKnownMarketplaces`)
+  is committed beside it and declares *which marketplace* the target's AutoFlow
+  comes from. Consuming an unpinned ("latest") plugin is not a supported
+  configuration.
+
+  **Superseding note (2026-09-13, Munsik-Park/autoflow#245).** The superseded
+  text named the pin's keys as "naming an explicit plugin version". No pinned
+  key has ever named a version — the marketplace entry is
+  `{"source":"github","repo":"Munsik-Park/autoflow"}` — and the pin no longer
+  carries an enablement key at all: a repo-level
+  `enabledPlugins["autoflow@autoflow"]` declaration is what makes Claude Code
+  mint and freeze a project-scope installation record, so the stamp stopped
+  writing it and enabling the plugin is a one-time **user-scope** step. The rule
+  itself is unchanged — the target owns a committed version record — and the
+  artifact that carries it is named above. Read the "explicit edit to the pin"
+  below as an edit to that version record: a re-stamp refreshes
+  `.claude/autoflow/manifest.json`, which is the commit the target's history
+  carries.
 - **[MUST]** The tool never records the target's version. There is no
   host-side gitlink, pointer file, or per-PR reconciliation between tool and
   target — the dependency is one-way, target → tool.

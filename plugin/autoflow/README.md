@@ -26,8 +26,10 @@ through `${CLAUDE_PLUGIN_ROOT}`.
 
 ## Installing
 
-Attach the self-hosted marketplace with the git-add form (the marketplace repo is
-cloned, so the plugin's relative `source: ./plugin/autoflow` resolves):
+Enabling the plugin is a **one-time user-scope step**, done once per machine and
+not once per repository. Attach the self-hosted marketplace with the git-add form
+(the marketplace repo is cloned, so the plugin's relative
+`source: ./plugin/autoflow` resolves), then install it:
 
 ```sh
 /plugin marketplace add Munsik-Park/autoflow
@@ -37,12 +39,19 @@ cloned, so the plugin's relative `source: ./plugin/autoflow` resolves):
 > Note: use the `owner/repo` git-add form above. A raw-URL marketplace add fetches
 > only the marketplace JSON and would not resolve the relative plugin `source`.
 
-## Pinning in project settings (reference)
+`/plugin install` writes the enablement into your **user** settings
+(`~/.claude/settings.json`), which is what turns the plugin on in every project
+you open. A per-repository stamp (`/autoflow:install`) delivers the thin root
+layer and the version record into one target; it does not enable the plugin, and
+updating the plugin is `/plugin marketplace update` at user scope followed by a
+re-stamp of each target.
 
-To enable the plugin non-interactively, a target project pins it in its own
-`.claude/settings.json`. The plugin is version-pinned by the marketplace entry, so a
-target only receives updates when the pin id's resolved version is bumped (unpinned
-"latest" is not a supported configuration). Merge this into the target's settings:
+## Marketplace declaration in project settings (reference)
+
+A target project records **which marketplace its AutoFlow comes from** in its own
+`.claude/settings.json`, so that `/plugin install autoflow@autoflow` resolves on a
+fresh clone of that target on a machine that does not yet know the marketplace.
+The stamp merges this in:
 
 ```json
 {
@@ -50,16 +59,30 @@ target only receives updates when the pin id's resolved version is bumped (unpin
     "autoflow": {
       "source": { "source": "github", "repo": "Munsik-Park/autoflow" }
     }
-  },
-  "enabledPlugins": { "autoflow@autoflow": true }
+  }
 }
 ```
 
-The `enabledPlugins` key is the `"<plugin>@<marketplace>"` composition
-(`autoflow@autoflow`), and the `extraKnownMarketplaces` key is the marketplace
-name (`autoflow`). The pin carries no `env` block: the Agent Teams channel is
-retired (ADR-0017 / ADR-0021), so `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is no
-longer provisioned — a target that was stamped by an earlier pin may still carry
+The `extraKnownMarketplaces` key is the marketplace name (`autoflow`), and the
+entry names the repository to clone — **not** a plugin version. The target's
+version record is the installed manifest `.claude/autoflow/manifest.json`
+(`.version`), which the drift detector compares against the installed plugin's
+`plugin.json` (D2).
+
+The pin deliberately carries **no `enabledPlugins` key** (issue #245). A
+repo-level `enabledPlugins["autoflow@autoflow"]` declaration — `true` or `false`
+alike — makes Claude Code create and freeze a project-scope installation record
+for the plugin, which is a version pin nothing in this tree ever refreshes; the
+user-scope enablement above is what actually turns the plugin on. Do not add the
+key back to restore "enablement": that re-creates the generator this pin was
+narrowed to remove. A repository that wants AutoFlow **off** writes
+`"enabledPlugins": {"autoflow@autoflow": false}` into its own
+`.claude/settings.json` by hand, and a re-stamp preserves it
+(`setup/SETUP-GUIDE.md` > Prerequisites).
+
+The pin carries no `env` block either: the Agent Teams channel is retired
+(ADR-0017 / ADR-0021), so `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is no longer
+provisioned — a target that was stamped by an earlier pin may still carry
 `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"` and can remove it by hand
 (`setup/SETUP-GUIDE.md` > Prerequisites).
 

@@ -8,6 +8,11 @@ Amended 2026-08-24 (operator decision, Munsik-Park/autoflow#53): the D1
 delegation to S4b is closed — the Deliberation-Isolation workflows stay in the
 thin root layer. See *D1 > Superseding note*.
 
+Amended 2026-09-13 (Munsik-Park/autoflow#245): D1's thin-root enumeration of the
+committed settings pin drops `enabledPlugins` — the pin declares the marketplace
+only, and plugin enablement is a one-time user-scope step. See *D1 > Superseding
+note (2026-09-13)*.
+
 Issue numbers `#600`–`#999` cited in this ADR belong to the predecessor
 tracker `connev-llm/claude-autoflow` (archived, private) and are retained as
 historical provenance only; they do not resolve in `Munsik-Park/autoflow`. See
@@ -79,7 +84,7 @@ host/service decoupling plan §6/§10 (with that plan's
   shim), the framework playbooks under `docs/` (autoflow-guide, phases,
   teammate contracts, etc.), `.claude/workflows/*.js` (ARCHITECT/VERIFY
   deliberation — the plugin spec has no workflow slot), the committed settings
-  pin (`extraKnownMarketplaces`/`enabledPlugins`), and any `CLAUDE_CODE_*`
+  pin (`extraKnownMarketplaces`), and any `CLAUDE_CODE_*`
   env. Whether the Deliberation-Isolation workflows can migrate into a plugin
   skill is explicitly delegated to S4b (#791) as its acceptance criterion; if
   proven there, a superseding note moves them into the plugin tier.
@@ -98,6 +103,22 @@ host/service decoupling plan §6/§10 (with that plan's
   destination. Feasibility was not the blocker — the skills
   `architect-deliberation` / `verify-cause-branch` already wrap the workflow
   scripts — the decision is one of direction.
+
+  **Superseding note (2026-09-13, Munsik-Park/autoflow#245).** The enumeration
+  above previously read `extraKnownMarketplaces`/`enabledPlugins`. The tier
+  assignment is unchanged — the committed settings pin is a thin-root artifact,
+  and the target owns a committed version record — but the pin's content is
+  narrowed to `extraKnownMarketplaces`, and that key is the target's record of
+  *which marketplace* its AutoFlow comes from, not a version pin. Ground: a
+  repo-level `enabledPlugins["autoflow@autoflow"]` declaration — either boolean
+  — makes Claude Code create and freeze a project-scope installation record,
+  which nothing refreshes, so every stamped repository minted its own frozen
+  version pin at the next session start; `extraKnownMarketplaces` alone never
+  does, and the user-scope `enabledPlugins` is what actually enables the plugin.
+  The target's version record is the installed manifest
+  `.claude/autoflow/manifest.json` (`.version`), compared against the installed
+  plugin's `plugin.json` by the drift detector (D2). See
+  `docs/tool-delivery-contract.md` > R1 > *Superseding note (2026-09-13…)*.
 - **Host-only** (never shipped): the tool repo's own CI workflows, gate/test
   suites, epic scratch, and the installer's development surface. Files the
   decoupling plan classifies MOVE/DELETE (service-coupled runbooks, service

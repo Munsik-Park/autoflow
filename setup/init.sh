@@ -67,15 +67,62 @@ stamp_shim() {
   fi
 }
 
-# merge_settings <target> <pin-src> <dest-rel> — jq deep-merge (R1 pin delivery).
-# Recursive object merge preserves the target's pre-existing keys; the pin's
-# marketplace + enabledPlugins keys are added.
+# The enable key a pre-#245 stamp wrote into the target's settings. The pin no
+# longer carries it (issue #245): a repo-level `enabledPlugins` declaration —
+# either boolean — is what makes Claude Code mint and freeze a project-scope
+# installation record, and enablement is a one-time USER-scope step
+# (`/plugin install autoflow@autoflow`), not an installer write.
+AUTOFLOW_ENABLE_KEY="autoflow@autoflow"
+
+# merge_settings <target> <pin-src> <dest-rel> — jq deep-merge (R1 pin delivery)
+# plus the issue #245 re-stamp migration, in one pass over the target's file.
+#
+# Merge: a recursive object merge preserves the target's pre-existing keys; the
+# pin's marketplace key is added.
+#
+# Migration: `enabledPlugins["autoflow@autoflow"]` is deleted iff its value is
+# exactly `true` — the literal the old stamp itself wrote — and the
+# `enabledPlugins` container is pruned iff THAT deletion left it empty. Any
+# other value is the target's own edit and is not ours to interpret: `false` is
+# a working per-repo opt-out (documented in setup/SETUP-GUIDE.md), and deleting
+# it would let the user-scope enable silently turn the plugin back on there. A
+# container still holding a foreign entry is left exactly as found.
+#
+# Disclosure: the deletion is a write to a target-owned file the operator
+# commits, so it is reported in the same register reconcile_removed uses —
+# stdout, one line per candidate. The candidate is the key as the target carries
+# it at read time, so exactly two outcomes carry a line: `REMOVED:`, and `KEPT:`
+# naming the value found. A target with no such key is not a candidate and
+# prints nothing (a line every target prints forever trains the operator to stop
+# reading the register).
+#
+# Fail-closed is inherited, not added: under `set -euo pipefail` a failing jq
+# aborts the run, `mv` never runs, and the settings file is left byte-unchanged
+# — which is what makes "no disclosure line" unambiguous.
 merge_settings() {
   local target="$1" pin="$2" dest="$3"
-  local settings="$target/$dest"
+  local settings="$target/$dest" prior
   mkdir -p "$(dirname "$settings")"
   [ -f "$settings" ] || echo '{}' > "$settings"
-  jq -s '.[0] * .[1]' "$settings" "$pin" > "$settings.tmp" && mv "$settings.tmp" "$settings"
+  prior="$(jq -r --arg k "$AUTOFLOW_ENABLE_KEY" '
+      if (.enabledPlugins | type) == "object" and (.enabledPlugins | has($k))
+      then (.enabledPlugins[$k] | tojson)
+      else "absent" end' "$settings")"
+  jq -s --arg k "$AUTOFLOW_ENABLE_KEY" '
+      (.[0] * .[1])
+      | if (.enabledPlugins | type) == "object" and .enabledPlugins[$k] == true
+        then del(.enabledPlugins[$k])
+             | if (.enabledPlugins | length) == 0 then del(.enabledPlugins) else . end
+        else . end' "$settings" "$pin" > "$settings.tmp" && mv "$settings.tmp" "$settings"
+  case "$prior" in
+    absent) ;;
+    true)
+      echo "REMOVED: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value true — the literal an earlier stamp wrote; a repo-level declaration mints a frozen project-scope record, and enabling the plugin is a one-time user-scope step)"
+      ;;
+    *)
+      echo "KEPT: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value $prior — not the literal a stamp wrote, so it is your own declaration and is left untouched; see setup/SETUP-GUIDE.md > Prerequisites for the supported per-repo opt-out)"
+      ;;
+  esac
 }
 
 # sha256_of <file> — portable sha256 (shasum on macOS, sha256sum on Linux).
@@ -268,7 +315,9 @@ install_into_target() {
   success "AutoFlow bundle installed into: $target"
   echo ""
   echo "Next steps:"
-  echo "  1. Install the plugin in this target:"
+  echo "  1. Enable the plugin ONCE at user scope (it is not enabled per"
+  echo "     repository — this stamp declares the marketplace, it does not"
+  echo "     turn the plugin on):"
   echo "       /plugin marketplace add Munsik-Park/autoflow"
   echo "       /plugin install autoflow@autoflow"
   echo "  2. Self-verify the install:"
