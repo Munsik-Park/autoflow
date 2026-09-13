@@ -117,10 +117,10 @@ merge_settings() {
   case "$prior" in
     absent) ;;
     true)
-      echo "REMOVED: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value true — the literal an earlier stamp wrote; a repo-level declaration mints a frozen project-scope record, and enabling the plugin is a one-time user-scope step)"
+      echo "REMOVED: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value true — a stale pre-#245 stamp key; see setup/SETUP-GUIDE.md > A stamped repository declares no enablement)"
       ;;
     *)
-      echo "KEPT: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value $prior — not the literal a stamp wrote, so it is your own declaration and is left untouched; see setup/SETUP-GUIDE.md > Prerequisites for the supported per-repo opt-out)"
+      echo "KEPT: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value $prior — your own declaration, left untouched; see setup/SETUP-GUIDE.md > Prerequisites for the supported per-repo opt-out)"
       ;;
   esac
 }
@@ -315,9 +315,9 @@ install_into_target() {
   success "AutoFlow bundle installed into: $target"
   echo ""
   echo "Next steps:"
-  echo "  1. Enable the plugin ONCE at user scope (it is not enabled per"
-  echo "     repository — this stamp declares the marketplace, it does not"
-  echo "     turn the plugin on):"
+  echo "  1. Enable the plugin ONCE at user scope (a stamp declares the"
+  echo "     marketplace only, not enablement — see setup/SETUP-GUIDE.md >"
+  echo "     A stamped repository declares no enablement):"
   echo "       /plugin marketplace add Munsik-Park/autoflow"
   echo "       /plugin install autoflow@autoflow"
   echo "  2. Self-verify the install:"
