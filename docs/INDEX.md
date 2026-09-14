@@ -34,7 +34,6 @@ not replace them.
 | [AutoFlow Guide](autoflow-guide.md) | Phase-by-phase lifecycle details. |
 | [DIAGNOSE Analysis Playbook](phases/analysis.md) | Existing issue analysis and necessity-evaluation procedure. |
 | [Design Rationale](design-rationale.md) | Why the AutoFlow rules exist. |
-| [Improvement Backlog](improvement-backlog.md) | Durable registry of verified audit findings and their dispositions — the shared future-improvement backlog. |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool (epic #785 S1; ADR-0015). |

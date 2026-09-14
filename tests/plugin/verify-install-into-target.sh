@@ -277,7 +277,7 @@ resolve_md_link() {
 # Links whose resolved target does not exist in the SOURCE repo tree are
 # skipped as pre-existing source doc defects (AC1k asserts the installed tree
 # is self-contained relative to what the source ships — it cannot require
-# targets already broken at source, e.g. docs/improvement-backlog.md quoting
+# targets already broken at source, e.g. a source doc quoting
 # CLAUDE.md root-relative link text). Skips are counted and reported.
 # Returns 0 if all source-valid targets exist, 1 otherwise.
 walk_md_links() {
