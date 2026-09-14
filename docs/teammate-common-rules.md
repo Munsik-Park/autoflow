@@ -89,9 +89,7 @@ git status                  # any uncommitted work?
 - **Why:** a test run's recorded command and summary line are evidence only for the tree the run
   executed over; a tracked-tree write landing from another spawn while a run is in flight moves the
   tree under it. The obligation sits with the orchestrator's spawn schedule: no tree-writing spawn is
-  issued while another spawn's run is in flight. (The HOLD/GO message protocol this section
-  previously specified belonged to the retired named-teammate mode — see `CLAUDE.md` >
-  Communication; the Green-tree register this section once served is retired by ADR-0024 D6.)
+  issued while another spawn's run is in flight.
 
 ---
 
@@ -112,9 +110,9 @@ body to `.autoflow/*` and return an anchor plus a one-line summary):
 
 ---
 
-## Communication — Agent Teams
+## Communication
 
-The Agent Teams channel is **retired**. The orchestrator spawns each role with `Agent`
+The orchestrator spawns each role with `Agent`
 (`subagent_type`, explicit `model`), and the spawn's return value is its report. There
 is no team, no mailbox, and no peer-to-peer messaging between roles.
 
@@ -164,9 +162,7 @@ Every role is an anonymous direct spawn, so there is exactly one delivery path �
 
 **Anonymous resume by agent ID, measured (Claude Code 2.1.261, 2026-09-05, issue #179 step 0).** Outside a cycle, one anonymous `general-purpose` spawn (Haiku 4.5, no `name`) was told to end with a nonce line and to call no tool; it was then resumed twice by `SendMessage` to its agent ID, each time with a new nonce (44 s and 55 s after the previous answer, under `subagentPromptCacheTtl: 1h`). All three times the final text **reached the orchestrator** as the task notification of that spawn, verbatim in its `result` field (3/3, no `SendMessage` from the spawn). Per-turn usage from the spawn's transcript (`message.usage`): turn 1 — cache write 44,593, cache read 0; wake 1 — cache read 44,593, cache write 190; wake 2 — cache read 44,783, cache write 159. On this path and under this TTL the wake re-wrote only the new message; the #168 re-write below was measured on the **named** path at the 5-minute TTL. This is the delivery precondition ADR-0023 D4 set for the relay's A2 realization, and it held.
 
-**Delivery re-measured (Claude Code 2.1.260, 2026-09-04, issue #168).** Outside a cycle, one named spawn (`name: probe-168`, `general-purpose`, Haiku 4.5) was told to end with a nonce line and to call no tool and no `SendMessage`; it was then re-woken twice by `SendMessage`, each time with a new nonce — once inside the 5-minute cache TTL and once past it. All three times the final text **reached the lead**: it arrived as the teammate's `idle_notification` with the text verbatim in its `result` field, injected into the lead's conversation as a turn at the lead's next turn boundary (3/3, no `SendMessage` from the spawn). Per-turn usage from the spawn's transcript (`message.usage`, de-duplicated by `message.id`): turn 1 — cache write 47,691, cache read 0; turn 2 (warm wake, +57 s) — cache read 22,366, cache write 25,626; turn 3 (cold wake, +14 min 35 s) — cache read 0, cache write 48,216. Output was 197 tokens on turn 1 and a few tokens on each wake — the cost of a wake is the prefix, not the answer. The #40 loss below is therefore a property of the runtime of that time, not of the named mode as such, and the single-mode rule no longer rests on it. Procedure: `tests/manual/issue-42-manual-scenarios.md` > M1.
-
-**The #40 measurement (2026-07-31, superseded on delivery, retained as the migration's origin).** On the runtime of that cycle a named team spawn's final turn text was **discarded — never delivered to the lead**, so a report existing only as the final response was lost with no error; that mode required an explicit `SendMessage(to: "team-lead")` instead. Across all 12 subagents of the #40 cycle, delivery matched the `SendMessage` call count 12 out of 12 — every spawn that called it once was received, every spawn that never called it was not, and no transport failure occurred. Three of those losses (`eval-gate-plan-40`, `eval-quality-40`, `test-red-40`) were recovered only by re-requesting the report. The remaining open question at migration time — whether a direct spawn detects as well on VERIFY steps 3 and 4 — was settled by the ADR-0017 C7 pilot, which returned `EQUAL_OR_BETTER` (`docs/adr/0021-c7-pilot-spawn-mode-result.md`).
+**Delivery re-measured (Claude Code 2.1.260, 2026-09-04, issue #168).** Outside a cycle, one named spawn (`name: probe-168`, `general-purpose`, Haiku 4.5) was told to end with a nonce line and to call no tool and no `SendMessage`; it was then re-woken twice by `SendMessage`, each time with a new nonce — once inside the 5-minute cache TTL and once past it. All three times the final text **reached the lead**: it arrived as the teammate's `idle_notification` with the text verbatim in its `result` field, injected into the lead's conversation as a turn at the lead's next turn boundary (3/3, no `SendMessage` from the spawn). Per-turn usage from the spawn's transcript (`message.usage`, de-duplicated by `message.id`): turn 1 — cache write 47,691, cache read 0; turn 2 (warm wake, +57 s) — cache read 22,366, cache write 25,626; turn 3 (cold wake, +14 min 35 s) — cache read 0, cache write 48,216. Output was 197 tokens on turn 1 and a few tokens on each wake — the cost of a wake is the prefix, not the answer. Procedure: `tests/manual/issue-42-manual-scenarios.md` > M1.
 
 The single mode applies to every role; the per-role table is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
 
@@ -180,8 +176,7 @@ as the canonical Discussion Protocol. In facilitated deliberation phases (ARCHIT
 VERIFY cause-branch) this protocol is driven outside the orchestrator's context — at
 ARCHITECT between two persistent participants over a transcript file the orchestrator
 relays, at VERIFY inside an isolated `Workflow` — and only a single result returns to
-the orchestrator; the protocol itself is unchanged; what differs is that the
-Developer-AI/Test-AI are not orchestrator teammates (see Communication — Agent Teams
+the orchestrator; the Developer-AI/Test-AI are not orchestrator teammates (see Communication
 above).
 
 **Response process**:
