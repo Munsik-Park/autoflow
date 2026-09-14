@@ -115,18 +115,21 @@ WORKFLOW = REQUIRED
 **Grounds (concrete deciding constraint, all repo-anchored):**
 
 - The isolation property required is that **intermediate deliberation results stay
-  out of the caller's (orchestrator's) context**. `docs/design-rationale.md:158,160`
-  states the `Workflow` runtime is "the one runtime mechanism documented to keep
-  intermediate results out of the caller's context," binding the contract to it
-  "rather than to an abstract 'sub-context'." `.claude/workflows/architect-deliberation.js:3-5`
-  encodes the same: the Developer-AI/Test-AI sub-agents converge inside the
-  workflow and their round-by-round exchange never enters the orchestrator's
-  context.
+  out of the caller's (orchestrator's) context**. `docs/design-rationale.md` >
+  Decision 8 > *What it does* states the `Workflow` runtime is "the one runtime
+  mechanism documented to keep intermediate results out of the caller's context,"
+  binding the contract to it "rather than to an abstract 'sub-context'."
+  `.claude/workflows/architect-deliberation.js` encodes the same for its phase:
+  it is ARCHITECT's Record phase (ADR-0023 D2) — its scribe and ledger sub-agents
+  read the relay transcript file in-script, and the orchestrator receives only
+  the returned object, never the transcript body. For VERIFY,
+  `.claude/workflows/verify-cause-branch.js` holds the Developer-AI/Test-AI
+  self-check exchange in-script the same way.
 - A **skill** is injected instruction content that executes **in the invoking
   agent's own context** — it provides no separate sub-context that shields the
   caller from the round-by-round messages, so it fails the exact
-  context-non-contamination property (`docs/design-rationale.md:166`) that
-  motivates Decision 8. A skill could hold the *protocol prose* but not the
+  context-non-contamination property (`docs/design-rationale.md` > Decision 8 >
+  *Why it works this way*) that motivates Decision 8. A skill could hold the *protocol prose* but not the
   *isolation boundary*.
 - Independently, the plugin spec has **no plugin `workflows/` component slot**
   (ADR-0015 Context, checked against the Claude Code plugin spec: it ships

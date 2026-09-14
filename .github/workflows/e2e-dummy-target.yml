@@ -94,7 +94,6 @@ on:
       # record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero
       # headroom, so nothing is inserted above an existing entry).
       - 'tests/test-issue-55-score-format-contract.sh'
-      - 'tests/manual/issue-52-manual-scenarios.md'
       - '.claude-plugin/marketplace.json'
       - '.claude/hooks/check-autoflow-gate.sh'
       - '.claude/workflows/architect-deliberation.js'
@@ -181,7 +180,6 @@ on:
       # #55 cycle surface. TAIL here (push) as well — mirrors the pull_request
       # block's own placement immediately above.
       - 'tests/test-issue-55-score-format-contract.sh'
-      - 'tests/manual/issue-52-manual-scenarios.md'
       - '.claude-plugin/marketplace.json'
       - '.claude/hooks/check-autoflow-gate.sh'
       - '.claude/workflows/architect-deliberation.js'
