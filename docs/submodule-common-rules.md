@@ -34,7 +34,7 @@ The host's hook (`.claude/hooks/check-autoflow-gate.sh`) reads the state file an
 
 Applies to host repositories that operate a **host-private fork** as the submodule source — i.e., the fork carries host-private changes that are **not** bound for the upstream repository. The host repo's submodule pointer therefore lives in fork commits, not upstream commits.
 
-In a multi-repo instance of this framework, the host's direct submodule is `services` = **`<org>/<service-host>`** (host-operated nesting repo). Nested `librechat` (`<org>/<submodule>` fork) and `librechat-deploy` are submodules **inside llmroute**; they follow the same host-operated fork model but at the llmroute level. (`claude-autoflow` itself no longer nests `services` — it was detached in #798 and is now single-repo; the example is illustrative of a multi-repo consumer.)
+In a multi-repo instance of this framework, the host's direct submodule is `services` = **`<org>/<service-host>`** (host-operated nesting repo). Nested `librechat` (`<org>/<submodule>` fork) and `librechat-deploy` are submodules **inside llmroute**; they follow the same host-operated fork model but at the llmroute level. (This repository is single-repo; the example is illustrative of a multi-repo consumer.)
 
 ### URL — `.gitmodules` fixed to the host-operated fork
 

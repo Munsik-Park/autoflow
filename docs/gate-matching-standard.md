@@ -68,7 +68,7 @@ places body text lives — the heredoc body (everything from the first `<<`)
 and quoted substrings (inline `--body "..."`) — *before* the boundary
 match. A real chained command outside quotes (`... --body "x" && gh pr
 merge 1`) is preserved and still denied; a body that merely *mentions* a
-prohibited token no longer false-positives.
+prohibited token does not false-positive.
 
 Discovery: the original pattern (boundary set including backtick/`(`,
 matched against the whole command) false-positived on this PR's own
@@ -403,12 +403,11 @@ the hook owns the role→gate mapping:
 | Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-loopcheck` / `autoflow-planner` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
 
-`subagent_type` is the **sole** declaration channel. The team-spawn channel — a
-role prefix on the teammate `name` (`analysis-`, `plan-`, `impl-` / `dev-`,
-`test-`, `eval-`) — was removed jointly with the spawn-mode migration
-(ADR-0017 Q3; pilot discharged by ADR-0021), because every role is now an
-anonymous direct spawn and retaining the branch would have left an unreachable
-path that still name-prefix-overrode `subagent_type`.
+`subagent_type` is the **sole** declaration channel. A role prefix on the
+teammate `name` (`analysis-`, `plan-`, `impl-` / `dev-`, `test-`, `eval-`) is
+not a declaration channel (ADR-0017 Q3; ADR-0021): every role is an anonymous
+direct spawn, and a name-prefix branch would be an unreachable path that still
+overrode `subagent_type`.
 
 The `<plugin>:<agent>` prefix is accepted for the `autoflow-*` types only —
 the built-in research types stay bare (no namespace), since Claude Code
@@ -419,9 +418,8 @@ built-ins are never plugin-namespaced and widening them would let a
 is undeclared → denied during an active cycle, **even when `subagent_type` names
 a research or `autoflow-*` type**. Resolving such a payload by its
 `subagent_type` would silently admit a team-spawn attempt as a direct spawn and
-hide the caller's mistake on a channel that no longer exists; the older rule that
-a contradictory declaration is blocked rather than arbitrated (PR #506 review,
-Medium) is preserved, now with the `name` side carrying no role at all.
+hide the caller's mistake; a contradictory declaration is blocked rather than
+arbitrated (PR #506 review, Medium), with the `name` side carrying no role at all.
 
 Mapping (hook-owned — a spawn never selects its own gate): `planning` →
 GATE:HYPOTHESIS (skip-verdict bypass for feat issues); `implementation` /
@@ -437,7 +435,7 @@ The trust model matches the score gates: the AI *records* a fact (its
 declared role), the hook *computes* the verdict. A false declaration is an
 explicit, auditable act — unlike keyword omission, it leaves evidence.
 
-The hook classifies the declaration channel only; it does not enforce spawn mode. A payload carrying a teammate `name` — an `eval-` prefixed one included — is no longer admitted by the mapping above: that channel is retired, so the payload is denied as undeclared, and [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime now names the anonymous direct spawn as every role's only mode. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): narrowing the hook to the contract would deny a spawn shape that a corrupted-state repair path still needs, so the contract binds the caller and the hook stays permissive.
+The hook classifies the declaration channel only; it does not enforce spawn mode. A payload carrying a teammate `name` — an `eval-` prefixed one included — is not admitted by the mapping above: it is denied as undeclared, and [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime names the anonymous direct spawn as every role's only mode. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): narrowing the hook to the contract would deny a spawn shape that a corrupted-state repair path still needs, so the contract binds the caller and the hook stays permissive.
 
 ## Verification Requirement
 

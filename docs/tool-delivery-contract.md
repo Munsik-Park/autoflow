@@ -49,19 +49,16 @@ below means both tiers together.
   comes from. Consuming an unpinned ("latest") plugin is not a supported
   configuration.
 
-  **Superseding note (2026-09-13, Munsik-Park/autoflow#245).** The superseded
-  text named the pin's keys as "naming an explicit plugin version". No pinned
-  key has ever named a version — the marketplace entry is
-  `{"source":"github","repo":"Munsik-Park/autoflow"}` — and the pin no longer
-  carries an enablement key at all: a repo-level
-  `enabledPlugins["autoflow@autoflow"]: true` declaration is what makes Claude
-  Code mint and freeze a project-scope installation record, so the stamp stopped
-  writing it and enabling the plugin is a one-time **user-scope** step. The rule
-  itself is unchanged — the target owns a committed version record — and the
-  artifact that carries it is named above. Read the "explicit edit to the pin"
-  below as an edit to that version record: a re-stamp refreshes
-  `.claude/autoflow/manifest.json`, which is the commit the target's history
-  carries.
+  **What the pin does and does not carry (Munsik-Park/autoflow#245).** No pinned
+  key names a version — the marketplace entry is
+  `{"source":"github","repo":"Munsik-Park/autoflow"}` — and the pin carries no
+  enablement key: a repo-level `enabledPlugins["autoflow@autoflow"]: true`
+  declaration is what makes Claude Code mint and freeze a project-scope
+  installation record, so the stamp does not write it and enabling the plugin is
+  a one-time **user-scope** step. The version record is the artifact named
+  above. Read the "explicit edit to the pin" below as an edit to that version
+  record: a re-stamp refreshes `.claude/autoflow/manifest.json`, which is the
+  commit the target's history carries.
 - **[MUST]** The tool never records the target's version. There is no
   host-side gitlink, pointer file, or per-PR reconciliation between tool and
   target — the dependency is one-way, target → tool.
@@ -129,7 +126,7 @@ below means both tiers together.
   stays the operator's. Whether target code still references a removed file
   is the install skill's read-only probe, not the installer's decision: the
   installer removes only bytes AutoFlow shipped, so a reference it surfaces is
-  to a tool file upstream retired, and the judgment on it belongs with the
+  to a tool file the new manifest does not ship, and the judgment on it belongs with the
   operator who commits.
 - **[MUST]** The manifest ships together with a **schema-hook-contract drift
   test** the target can run to self-verify bundle consistency: installed

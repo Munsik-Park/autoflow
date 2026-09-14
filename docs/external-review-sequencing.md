@@ -30,7 +30,7 @@ Its lifecycle has **three** actions, not two — attach, remove, and **re-attach
 
 Merge-order clearance is operator-performed. Once every sub-repo merge for the cycle is complete (the llmroute PR merged into `{{REPO_SERVICE_HOST}}:main`) and the host pointer reconcile is confirmed, the operator removes the `blocked-by-subrepo` label from the host PR — that removal is the merge-order gate the merge actor honours.
 
-The confirmation is the operator's manual check that the host PR's `services` submodule pointer equals the llmroute PR's merge commit (see Reconcile preflight below). An automated workflow formerly published this confirmation as a machine status check; that status-check machinery was retired in issue #795 (per ADR-0015 D3, which found the signal was advisory-only and never an enforceable required check) — the merge-order gate is now the operator's `blocked-by-subrepo` label removal alone.
+The confirmation is the operator's manual check that the host PR's `services` submodule pointer equals the llmroute PR's merge commit (see Reconcile preflight below). The merge-order gate is the operator's `blocked-by-subrepo` label removal alone (ADR-0015 D3 — a machine status check for this signal is advisory-only, never an enforceable required check).
 
 This clearance sits alongside the protections the reviewer verifies before merging (PR review >= 1, CI green) — the same enforcement model as every other check on this repo (see [`teammate-contracts.md`](teammate-contracts.md) > Verification scenarios).
 
@@ -78,7 +78,7 @@ If `MAIN == BASE`, no concurrent reconcile happened — bump to `TARGET` and pus
 **Post-reconcile gate** — before/after pushing, confirm **all three**, and do not report "reconciled" until all hold:
 
 - **Pointer == `TARGET`**: `git ls-tree HEAD services` equals `TARGET` — the merge-order gate's pointer-equality requirement the operator verifies before removing `blocked-by-subrepo`. Verify this *before* pushing.
-- The generic mergeable + check-rollup confirmation runs `scripts/handoff/confirm-ci-green.sh --pr <host-PR>` (the shared step-5 helper — issue #25), which asserts a confirmed-mergeable read — `mergeable: MERGEABLE` with a settled (non-`UNKNOWN`) `mergeStateStatus` (no longer `CONFLICTING`/`DIRTY`) and a green GitHub-surfaced check rollup. Using the shared script here keeps the generic mergeable/rollup check from diverging into an independently-maintained second copy; the pointer-equality bullet above and the head-commit check bullet below stay as this doc's own gitlink **superset** additions.
+- The generic mergeable + check-rollup confirmation runs `scripts/handoff/confirm-ci-green.sh --pr <host-PR>` (the shared step-5 helper — issue #25), which asserts a confirmed-mergeable read — `mergeable: MERGEABLE` with a settled (non-`UNKNOWN`) `mergeStateStatus` (not `CONFLICTING`/`DIRTY`) and a green GitHub-surfaced check rollup. Using the shared script here keeps the generic mergeable/rollup check from diverging into an independently-maintained second copy; the pointer-equality bullet above and the head-commit check bullet below stay as this doc's own gitlink **superset** additions.
 - The CI checks on the **new head commit** are all `completed` / `success`, read by commit SHA rather than by job name or check name (CI product and check names differ per target — issue #161):
   ```bash
   gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs \
