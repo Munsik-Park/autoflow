@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e4ccd9ede729d72b7de6a53e27f503ff42074e5572509b24e71a815dcbbe7a29"
+      "sha256": "3ec96f4c35fa5291555ed3f8bae1baa98711c1288733a7e93518695b1d471239"
     },
     {
       "source": "docs/INDEX.md",
@@ -125,7 +125,7 @@
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f4936cfa2a56ac106d5e366680476e9c25a0644251f8807e3ef30fb9b7be8d55"
+      "sha256": "4f93756d64abef6c4635a92b26f65920b223f4fe2fea338ed9897f4f5822a2ff"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/autoflow/docs/teammate-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "231070974aced33eeab43f39b29198e048881e66cea53fa3d21c0c7f19b5b29e"
+      "sha256": "a78f094de96de4e289f826fc614b6a79cbff07c55852a524950fe410e18c2dbe"
     },
     {
       "source": "docs/title-guide.md",
