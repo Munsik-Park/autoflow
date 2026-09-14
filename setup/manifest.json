@@ -20,7 +20,7 @@
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "aecf72964e891a4ff2927c86136921db097580fe7ebed4f026053917a9550ac0"
+      "sha256": "aebd5b1ff3088b52fe9945886083731972b043c1a8108502868432b97a17102e"
     },
     {
       "source": "docs/adr/0000-adr-template.md",
@@ -161,13 +161,6 @@
       "tier": "reference",
       "kind": "copy",
       "sha256": "10450656ab6ea8d9d203a2845241ad1aa164e11317884d04a5885c96b5d80b9b"
-    },
-    {
-      "source": "docs/improvement-backlog.md",
-      "dest": ".claude/autoflow/docs/improvement-backlog.md",
-      "tier": "reference",
-      "kind": "copy",
-      "sha256": "a76b5f60168d4d99dfc0d4f57892519ed214db086cef775f28c7ab5b4a645c13"
     },
     {
       "source": "docs/issue-proposal.md",

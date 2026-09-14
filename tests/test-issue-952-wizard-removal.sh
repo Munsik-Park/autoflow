@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/improvement-backlog.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh
+# ci-subject: .github/workflows/e2e-dummy-target.yml CLAUDE.md README.md docs/submodule-common-rules.md setup/SETUP-GUIDE.md setup/init.sh
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: init.sh legacy wizard removal + Language Rule user-scope reversion —
@@ -27,8 +27,8 @@
 #   G6   — doc reference-integrity on tests/test-sed-inplace.sh removal
 #          (GATE:QUALITY doc_updates cap finding, cycle 2): decoupling-plan
 #          row no longer a bare KEEP + retains a RETIRED marker (row
-#          preserved for inventory history); improvement-backlog.md
-#          setup-instantiation-1 entry carries a #952 resolution marker
+#          preserved for inventory history); the improvement backlog
+#          doc removed outright (issue #250) — the path must not exist
 #   G2   — no .template reintroduction
 #   G3   — SETUP-GUIDE stale-source purge (.template == 0)
 #   G4   — README table-exclusive placeholder removal + notation/mermaid
@@ -258,24 +258,20 @@ assert_true "G4 guard (Trap A): mermaid '{{GATE:QUALITY}}' node survives" \
 echo ""
 echo "=== G6 doc reference-integrity on tests/test-sed-inplace.sh removal (GATE:QUALITY doc_updates cap) ==="
 # G6 originally asserted that two internal planning docs (host-service-
-# decoupling-plan.md, improvement-backlog.md) carried post-deletion
+# decoupling-plan.md and the improvement backlog) carried post-deletion
 # reference-integrity markers for tests/test-sed-inplace.sh. Both docs were
 # removed outright by the ratified GATE:PLAN public-release doc sweep
 # (Issue #985) — ADR/planning-doc separation, not a #952 regression.
-# host-service-decoupling-plan.md stays deleted, so its absence is still the
-# right check. improvement-backlog.md is NOT: ledger entry Q1 (issue #985
-# GATE:QUALITY) supersedes the original full deletion — the file is
-# restored as an empty-start public artifact (#954's live PREFLIGHT-scan
-# append target and its docs/maintained-docs.md registry row both depend on
-# the path surviving). Reworked to assert the path survives with no
-# dangling reference to the deleted tests/test-sed-inplace.sh, which
-# remains a G6-scoped reference-integrity check.
+# The backlog was later restored as an empty-start artifact (issue #985
+# ledger Q1) and then abolished for good by issue #250 once its only intake
+# path (#954 scan) had been removed in #71. Both paths are therefore
+# absent, and absence is the reference-integrity check for each.
 
 assert_true "G6: host-service-decoupling-plan.md is absent (removed by Issue #985 public-release sweep; no reference-integrity marker to check)" \
   "[ ! -f '$DECOUPLING_PLAN' ]"
 
-assert_true "G6: improvement-backlog.md survives (restored empty-start, ledger Q1) with no dangling reference to the deleted tests/test-sed-inplace.sh" \
-  "[ -f '$IMPROVEMENT_BACKLOG' ] && ! grep -q 'test-sed-inplace' '$IMPROVEMENT_BACKLOG'"
+assert_true "G6: the improvement backlog doc is absent (abolished by issue #250; no reference-integrity marker to check)" \
+  "[ ! -f '$IMPROVEMENT_BACKLOG' ]"
 
 
 # =============================================================================
