@@ -1,21 +1,21 @@
-# Teammate Common Rules
+# Role Common Rules
 
-> Shared rules that apply to all teammates (Test AI, Developer AI) participating in
+> Shared rules that apply to every role spawn (Test AI, Developer AI) participating in
 > the AutoFlow lifecycle in this repository.
 
-The orchestrator (the main session) coordinates work; teammates are spawned as
+The orchestrator (the main session) coordinates work; role spawns are launched as
 Agents and execute the actual writing of code, tests, and documentation. The rules
-below describe the contract every teammate honours.
+below describe the contract every role spawn honours.
 
 ---
 
 ## Identity
 
-- The teammate understands, implements, and tests files within its assigned scope.
-- The teammate may **read** any file in the repository.
-- The teammate **may not modify** files outside the scope assigned by the dispatch
+- The role spawn understands, implements, and tests files within its assigned scope.
+- The role spawn may **read** any file in the repository.
+- The role spawn **may not modify** files outside the scope assigned by the dispatch
   instructions for the current issue.
-- PR creation is the orchestrator's responsibility — the teammate's git work
+- PR creation is the orchestrator's responsibility — the role spawn's git work
   finishes at `git push` of its branch.
 
 ---
@@ -74,7 +74,7 @@ git status                  # any uncommitted work?
 
 ## Bash Execution Mode
 
-- **[MUST]** A spawned teammate runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, planner, implementer, tester, evaluator) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
+- **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, planner, implementer, tester, evaluator) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
 - **Why (lifecycle contract):** the harness's background-task contract — *re-invoke the owning agent when the task completes* — holds only for an agent that has a future turn. A spawned subagent terminates with its final response, so any still-pending background process is **reaped at teardown**: its output is lost and no completion notification is ever delivered, stalling the orchestrator on a report that never arrives (issue #952 — 71-minute orchestrator deadlock, 2026-07-07). A background CPU-heavy process can also starve the agent's own foreground verification and distort the pass/fail verdict (issue #287). The background + completion-notification pattern is therefore **orchestrator-only** (the main loop is the sole actor with future turns).
 - **Enforced at the tool boundary for suite runs (issue #134):** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run, whose result must stay keyed to the tree the claim is made about (`docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 - **The orchestrator's side of the wait (issue #165):** the notification the orchestrator waits for arrives only between its tool calls, so the orchestrator waits by **ending its turn**, never by blocking on one task — the deprecated `TaskOutput` tool is refused by the PreToolUse hook state-independently, and a foreground `sleep` loop polling for a spawn's result is the same fault by other means (`CLAUDE.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending.
@@ -139,7 +139,7 @@ appended to `.autoflow/issue-{N}-architect-transcript.md` and the participant re
 line, and a Record **`Workflow`** then writes the artifacts from that file (ADR-0023). At
 **VERIFY** the self-checks run as in-script sub-agents of an isolated `Workflow`. In
 both, only a single structured result returns to the orchestrator. See
-[`teammate-contracts.md`](teammate-contracts.md) > Facilitator
+[`role-contracts.md`](role-contracts.md) > Facilitator
 and [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) >
 Deliberation Isolation.
 
@@ -176,7 +176,7 @@ as the canonical Discussion Protocol. In facilitated deliberation phases (ARCHIT
 VERIFY cause-branch) this protocol is driven outside the orchestrator's context — at
 ARCHITECT between two persistent participants over a transcript file the orchestrator
 relays, at VERIFY inside an isolated `Workflow` — and only a single result returns to
-the orchestrator; the Developer-AI/Test-AI are not orchestrator teammates (see Communication
+the orchestrator; the Developer AI and the Test AI are role spawns, not members of an orchestrator team (see Communication
 above).
 
 **Response process**:

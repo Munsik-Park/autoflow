@@ -39,7 +39,7 @@ Co-Authored-By: Claude <model> <noreply@anthropic.com>
 `type`: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`.
 
 The `Next:` line lets the next session pick up where this one left off (see
-[`teammate-common-rules.md`](teammate-common-rules.md#session-protocol)).
+[`role-common-rules.md`](role-common-rules.md#session-protocol)).
 
 ---
 

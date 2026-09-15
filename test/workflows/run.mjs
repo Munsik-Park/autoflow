@@ -9,7 +9,7 @@
 // next_action mapping, the spawn-policy fail-closed guards, missing-response
 // handling, and the arg guards — by running each script against a mock runtime.
 // They do NOT exercise a live Claude Code Workflow runtime (that is the
-// operator-side smoke scenario in docs/teammate-contracts.md > Verification
+// operator-side smoke scenario in docs/role-contracts.md > Verification
 // scenarios); they catch the logic-bug class found in PR #197 review without
 // spawning real agents.
 //

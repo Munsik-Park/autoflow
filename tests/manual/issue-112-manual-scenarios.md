@@ -9,7 +9,7 @@
 > `tests/fixtures/doc-invariants.json` fixture (deleted in #141). No step, fixed
 > input or expected outcome in this document is performable against the current
 > tree. The one obligation that survives — the evaluator's wall-clock cap and
-> sampling default (`docs/teammate-contracts.md` > Evaluation AI) — is observed by
+> sampling default (`docs/role-contracts.md` > Evaluation AI) — is observed by
 > `tests/manual/evaluator-execution-discipline-manual-scenarios.md`.
 
 Two items in `.autoflow/issue-112-verification-design.md` > *Untestable items* have

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh scripts/lib/plugin-root.sh .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-loopcheck.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md CLAUDE.md docs/teammate-contracts.md docs/phases/analysis.md setup/manifest.json setup/init.sh setup/thin-root-layer/drift-check.sh setup/SETUP-GUIDE.md
+# ci-subject: .claude/autoflow/spawn-policy.json scripts/spawn-policy/spawn-policy.sh scripts/lib/plugin-root.sh .claude/workflows/architect-deliberation.js .claude/workflows/verify-cause-branch.js .claude/agents/autoflow-analyzer.md .claude/agents/autoflow-evaluator.md .claude/agents/autoflow-implementer.md .claude/agents/autoflow-loopcheck.md .claude/agents/autoflow-planner.md .claude/agents/autoflow-tester.md CLAUDE.md docs/role-contracts.md docs/phases/analysis.md setup/manifest.json setup/init.sh setup/thin-root-layer/drift-check.sh setup/SETUP-GUIDE.md
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: single-source spawn policy (issue #150)
@@ -561,7 +561,7 @@ else
 fi
 
 # Secondary documents: whole-file range, no backtick span with a model word.
-for doc in "docs/teammate-contracts.md" "docs/phases/analysis.md"; do
+for doc in "docs/role-contracts.md" "docs/phases/analysis.md"; do
   docpath="$PROJECT_ROOT/$doc"
   if [ -f "$docpath" ]; then
     hits=$(grep -noE '`[^`]*`' "$docpath" | grep -iE 'sonnet|opus|haiku' || true)

@@ -18,4 +18,4 @@ Hard rules:
   the prior cycle's ledger observation and the trigger comment are the inputs.
 - **[MUST]** Run every Bash command in the **foreground**; never
   `run_in_background` — background + completion-notification is
-  orchestrator-only. See `docs/teammate-common-rules.md` > Bash Execution Mode.
+  orchestrator-only. See `docs/role-common-rules.md` > Bash Execution Mode.

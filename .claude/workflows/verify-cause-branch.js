@@ -104,7 +104,7 @@ const POLICY_FILE = {
 }
 const policyLoaded = await Promise.resolve()
   .then(() => agent(
-    `You are a transcription channel, not a reviewer. Read ${POLICY_PATH} and return its raw contents verbatim in "content" -- do not summarize, reword, add, drop or re-order anything, and do not re-serialize or pretty-print the JSON. Set "found" true only when the file exists AND is non-empty; when it does not, set "found" false and "content" to the empty string. Exercise no judgment about the policy itself. Run every Bash command in the foreground only -- never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are a transcription channel, not a reviewer. Read ${POLICY_PATH} and return its raw contents verbatim in "content" -- do not summarize, reword, add, drop or re-order anything, and do not re-serialize or pretty-print the JSON. Set "found" true only when the file exists AND is non-empty; when it does not, set "found" false and "content" to the empty string. Exercise no judgment about the policy itself. Run every Bash command in the foreground only -- never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
     { schema: POLICY_FILE, label: 'policy-load', phase: 'Self-check' },
   ))
   .catch(() => null)
@@ -170,11 +170,11 @@ console.log(`VERIFY cause-branch for issue #${issue}`)
 
 const [test, impl] = await parallel([
   () => agent(
-    `You are the Test AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the test code, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Developer AI): does my test accurately reflect the acceptance criterion? Answer "fix_test" if the test is wrong, "no_problem" if the test is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are the Test AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the test code, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Developer AI): does my test accurately reflect the acceptance criterion? Answer "fix_test" if the test is wrong, "no_problem" if the test is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
     { schema: TEST_CHECK, label: 'test-self-check', phase: 'Self-check', ...site('test-self-check') },
   ),
   () => agent(
-    `You are the Developer AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the implementation, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Test AI): does my implementation meet the acceptance criterion? Answer "fix_impl" if the implementation is wrong, "no_problem" if the implementation is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+    `You are the Developer AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the implementation, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Test AI): does my implementation meet the acceptance criterion? Answer "fix_impl" if the implementation is wrong, "no_problem" if the implementation is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
     { schema: IMPL_CHECK, label: 'impl-self-check', phase: 'Self-check', ...site('impl-self-check') },
   ),
 ])
@@ -193,7 +193,7 @@ else if (t === 'fix_test' && i === 'fix_impl') next = 'SEQUENTIAL_FIX' // fix te
 else next = 'EVALUATION_AI' // both "no_problem" -> deadlock: Evaluation AI arbitrates
 
 await agent(
-  `Append (do NOT rewrite or delete) to ${ledger} one VERIFY cause-branch entry: decision "next_action=${next}"; grounds (test self-check=${t}, impl self-check=${i}; failure log ${failLog}); authority "VERIFY self-check"; cycle/phase "VERIFY". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Head the entry \`## <ID> — <title> (cycle <C>, VERIFY)\`, allocating <ID> by running \`bash scripts/ledger/ledger-entry-id.sh next ${ledger} F\` immediately before the append — \`F\` is the facilitator delegate's namespace (CLAUDE.md > Decision Ledger). After the append, run \`bash scripts/ledger/ledger-entry-id.sh check ${ledger}\` and fix every defect it reports before returning. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).`,
+  `Append (do NOT rewrite or delete) to ${ledger} one VERIFY cause-branch entry: decision "next_action=${next}"; grounds (test self-check=${t}, impl self-check=${i}; failure log ${failLog}); authority "VERIFY self-check"; cycle/phase "VERIFY". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Head the entry \`## <ID> — <title> (cycle <C>, VERIFY)\`, allocating <ID> by running \`bash scripts/ledger/ledger-entry-id.sh next ${ledger} F\` immediately before the append — \`F\` is the facilitator delegate's namespace (CLAUDE.md > Decision Ledger). After the append, run \`bash scripts/ledger/ledger-entry-id.sh check ${ledger}\` and fix every defect it reports before returning. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
   { label: 'ledger', phase: 'Self-check', ...site('ledger') },
 )
 

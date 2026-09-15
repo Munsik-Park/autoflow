@@ -1,6 +1,6 @@
 # Evaluator Execution Discipline — Manual Verification Scenario
 
-Companion to `docs/teammate-contracts.md` > Evaluation AI > *Sampling default* and
+Companion to `docs/role-contracts.md` > Evaluation AI > *Sampling default* and
 *Time cap* (the two `[MUST]`s; governing record: ADR-0024 > *Evaluator execution
 discipline*). Re-homed from `tests/manual/issue-112-manual-scenarios.md` steps 4–5
 when that document was retired with #228 (ADR-0024 D6: the anchor, sampling and

@@ -8,7 +8,7 @@ Headings and first Decision line of the entries surrounding the three GATE:QUALI
 
 ## O7 — GATE:QUALITY attempt 2 FAIL (Doc updates 6, avg 8.0) → RED; remedy fixed by a command-driven sweep (cycle 1, GATE:QUALITY)
 
-- Decision: attempt 2 FAIL on the same item/class as attempt 1 — two residual two-valued restatements of the ARCHITECT verdict set: `docs/teammate-contracts.md:165` ("on **both** verdicts"; the register is written on all three — `architect-deliberation.js:855` `registerHeld` guard, payload `acReason` `:862-864`) and `.claude/workflows/architect-deliberation.js:847` comment ("runs on BOTH verdicts"). Route FAIL → RED …
+- Decision: attempt 2 FAIL on the same item/class as attempt 1 — two residual two-valued restatements of the ARCHITECT verdict set: `docs/role-contracts.md:165` ("on **both** verdicts"; the register is written on all three — `architect-deliberation.js:855` `registerHeld` guard, payload `acReason` `:862-864`) and `.claude/workflows/architect-deliberation.js:847` comment ("runs on BOTH verdicts"). Route FAIL → RED …
 
 ## O8 — VALIDATE pass 3 PASS; AUDIT pass 3 PASS (avg 9.0) (cycle 1, AUDIT)
 
@@ -16,7 +16,7 @@ Headings and first Decision line of the entries surrounding the three GATE:QUALI
 
 ## O9 — GATE:QUALITY attempt 3 FAIL (Doc updates 6, avg 8.0) → RED (3rd and last permitted regression); class-level standing check replaces per-site pins (cycle 1, GATE:QUALITY)
 
-- Decision: attempt 3 FAIL on the same class — `docs/teammate-contracts.md:194` (Termination bullet) and `.claude/workflows/architect-deliberation.js:674` (closing-round prompt "this verdict alone decides CONVERGED versus ESCALATE") contradict the verdict expression at `:779`; the O7 sweep's P2 adjacency predicate could not match prose-separated restatements. Cap accounting: GATE:QUALITY FAIL → RED is `max 3×` = thre …
+- Decision: attempt 3 FAIL on the same class — `docs/role-contracts.md:194` (Termination bullet) and `.claude/workflows/architect-deliberation.js:674` (closing-round prompt "this verdict alone decides CONVERGED versus ESCALATE") contradict the verdict expression at `:779`; the O7 sweep's P2 adjacency predicate could not match prose-separated restatements. Cap accounting: GATE:QUALITY FAIL → RED is `max 3×` = thre …
 
 ## O11 — GATE:QUALITY attempt 4 PASS (avg 8.0) → DELIVER (cycle 1, GATE:QUALITY)
 

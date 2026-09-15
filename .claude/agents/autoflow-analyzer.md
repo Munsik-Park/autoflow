@@ -27,4 +27,4 @@ Hard rules:
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
   (test/build runs included). Wait for the result, then report — background +
   completion-notification is orchestrator-only. See
-  `docs/teammate-common-rules.md` > Bash Execution Mode.
+  `docs/role-common-rules.md` > Bash Execution Mode.

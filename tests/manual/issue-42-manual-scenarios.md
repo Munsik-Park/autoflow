@@ -24,7 +24,7 @@ issue #168). Those runtime-behavioral observations are this file's M1.
 
 ## M1 — AC4 residual: anonymous direct vs. named team spawn, actual final-text delivery (Tier 3)
 
-**Source AC:** AC4 (`docs/teammate-common-rules.md` > Result delivery path by
+**Source AC:** AC4 (`docs/role-common-rules.md` > Result delivery path by
 spawn mode) — the document records where each spawn mode's final text lands
 as an *observed, runtime-version-dependent* fact (`42-AC4-evidence-anchor`):
 dated data points (the #40 cycle's 12/12 loss; the 2.1.260 3/3 delivery,
@@ -78,7 +78,7 @@ notification routing).
    nonce and confirm that path delivers.
 6. Record the outcome as a dated, versioned data point — runtime version,
    date, delivery direction and path, wake usage — in the **Data points**
-   table below and in `docs/teammate-common-rules.md` > Result delivery path
+   table below and in `docs/role-common-rules.md` > Result delivery path
    by spawn mode. A direction that differs from the latest data point there
    means that document's measurement paragraph needs a follow-up correction,
    not this test; the rule's grounds (cost, consistency) are re-examined only
@@ -87,7 +87,7 @@ notification routing).
 **Pass condition:** anonymous-direct final text is observed to reach the
 orchestrator without a `SendMessage` call (step 2), and the named-team
 direction (steps 4–5) is recorded as a dated, versioned data point in
-`docs/teammate-common-rules.md` > Result delivery path by spawn mode. The
+`docs/role-common-rules.md` > Result delivery path by spawn mode. The
 scenario no longer asserts the asymmetry: since 2.1.260 the named-mode rule
 rests on cost and consistency (ADR-0017 C8, ADR-0021 C7), not on the loss.
 

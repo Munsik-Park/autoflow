@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8095c260842ff3506b56eb881bca9eea5cda41bd62bb1d23532cca755a062749"
+      "sha256": "f3d4ab2f96984c739e4aafef71716a0d5643e1c3359da9001fc6172999ad9153"
     },
     {
       "source": "docs/INDEX.md",
@@ -118,14 +118,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6cf3a9a098307e735f91715463042030af8a96d7977a15d8e4692fa4ffd143b9"
+      "sha256": "5992632fe927ded676882a4bcebf191be990ea2743951573af992aa828372b43"
     },
     {
       "source": "docs/design-rationale.md",
       "dest": ".claude/autoflow/docs/design-rationale.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "78f0e62c1ee632929ad79046a518f8a7f64de5d48ea14b2fc616e39cd67d05bd"
+      "sha256": "b72515800f7609468cc6921703c73624ea80a5068bd6f1dffa8294450cc55f88"
     },
     {
       "source": "docs/design-reviews/issue-177-deliberation-participant-lifetime.md",
@@ -146,21 +146,21 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1342598099e16e8837afd07ee77d48f3d5c19dd8c0be832f0c4332512325b809"
+      "sha256": "aa2258f6194cf77137857c943c063132428b57fca5d1d9e9ccad67f5a1539b53"
     },
     {
       "source": "docs/external-review-sequencing.md",
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c097cbc18940279e1a0e3c61f0bde8ed9d3b64b512a2bf4d7236b4e3de7933e5"
+      "sha256": "02620e2779307b647980f52bf5a7d96dfbbb56ffb1a6997a53c89d35d263d4cf"
     },
     {
       "source": "docs/git-workflow.md",
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4616a5cec09c7395be9c1638444034d9cc9910d5edafa77f2bd1df5a9276b947"
+      "sha256": "51700c2ec4967f8e975f080e87428af96704e9f6f280458637436496bcf9c43d"
     },
     {
       "source": "docs/issue-proposal.md",
@@ -198,6 +198,20 @@
       "sha256": "a3a10ff51e0144c6f2df4093a5ebbb683179aa864f467892b8471bd3403451b8"
     },
     {
+      "source": "docs/role-common-rules.md",
+      "dest": ".claude/autoflow/docs/role-common-rules.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "a004a0512bc7086b33c22a1419b44a8bd1b7b8e227b20088b08761bedbdb6996"
+    },
+    {
+      "source": "docs/role-contracts.md",
+      "dest": ".claude/autoflow/docs/role-contracts.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "5e5169ff694b91225f9cf27c37c2334535b23da950874c18c115a49f7cbe6a54"
+    },
+    {
       "source": "docs/security-checklist.md",
       "dest": ".claude/autoflow/docs/security-checklist.md",
       "tier": "reference",
@@ -209,21 +223,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e1caa7812eaa39175fcb1aed7fb9bdf2bb526d2679ddea032bc81ebd72d335c1"
-    },
-    {
-      "source": "docs/teammate-common-rules.md",
-      "dest": ".claude/autoflow/docs/teammate-common-rules.md",
-      "tier": "reference",
-      "kind": "copy",
-      "sha256": "bb3381b27e0e492d8e00126b77df18843bd0360b037db36b9b0aaead3fcfa176"
-    },
-    {
-      "source": "docs/teammate-contracts.md",
-      "dest": ".claude/autoflow/docs/teammate-contracts.md",
-      "tier": "reference",
-      "kind": "copy",
-      "sha256": "cae7e7c6054fc134252232ecd84ca382b2af0fee4668af8e03198e1936c899bc"
+      "sha256": "c0c830c0fbefb8d85e34656567bdee25c84f866858b23b965b1b205c2399055a"
     },
     {
       "source": "docs/title-guide.md",
@@ -244,14 +244,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e49a739c36242cfe924ee64e8c888a63c315394e07af1443a6dd71d30dd983a6"
+      "sha256": "b37c61f2c31bf8d496fdf14b625ae0107c7c7c17c33a702477bdd74567f6dcd7"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e33ff3f1ca69848e8b1f3d41cfca3f4236b5f6ce5875927d1c9114bbe3c7befc"
+      "sha256": "4b1967ebae0d1744bc23b8f104502946ff1dc5f93cb037c694699a370a891ecb"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
