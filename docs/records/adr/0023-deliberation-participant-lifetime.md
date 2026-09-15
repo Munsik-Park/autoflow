@@ -19,7 +19,7 @@ only the 21K static prefix read from cache; 14 of 21 sub-agents read the gate ho
 ledger. The cause is two rules compounding — each turn's agent has no memory, and the Discussion
 Protocol's VERIFY step ("actually read … memory alone is not enough") makes that agent re-verify
 everything the transcript asserts. The full measurement, the constraints and the option
-comparison are in `docs/design-reviews/issue-177-deliberation-participant-lifetime.md` (the
+comparison are in `docs/records/design-reviews/issue-177-deliberation-participant-lifetime.md` (the
 review); this record states the decision and its relation to the earlier records.
 
 Constraints measured on 2.1.260 that bound the decision (review §2): a persistent participant
@@ -65,7 +65,7 @@ A2, since the operator's decision is the relay itself, not the addressing form.
 | CLAUDE.md > *Spawn mode by role lifetime* ("no role holds a lifetime spanning phases") | **Not superseded.** A relayed participant lives inside one phase. The table gained a within-ARCHITECT row (issue #179); the cross-phase rule stands for every role. |
 | The hook's name-carrying-payload denial | **Unchanged** under A2. Touched only if the A1 fallback in D2 is taken. |
 | ADR-0021 (C7 `EQUAL_OR_BETTER`, C8 cost) | **Stands.** It compared named vs direct spawns across phases; nothing here re-measures detection. Its C8 cache reading is corrected by constraint 3: the warm-wake "saving" is the static prefix a fresh spawn also gets. |
-| `docs/design-rationale.md` > Decision 8 | **The rule stands; its realization clause is superseded for the ARCHITECT participants.** Isolation of the orchestrator from round-by-round prose is kept and is required of the relay (the isolation check in D4). The clause that binds the contract to the `Workflow` as the single realization that "enforces the relay order, the two-consecutive-`done` termination and the isolated report return in code" no longer holds for ARCHITECT: relay order and the end condition are computed by a decidable-state script over the transcript file and obeyed by the orchestrator's procedure. The VERIFY cause-branch keeps its `Workflow`. |
+| `docs/records/design-rationale.md` > Decision 8 | **The rule stands; its realization clause is superseded for the ARCHITECT participants.** Isolation of the orchestrator from round-by-round prose is kept and is required of the relay (the isolation check in D4). The clause that binds the contract to the `Workflow` as the single realization that "enforces the relay order, the two-consecutive-`done` termination and the isolated report return in code" no longer holds for ARCHITECT: relay order and the end condition are computed by a decidable-state script over the transcript file and obeyed by the orchestrator's procedure. The VERIFY cause-branch keeps its `Workflow`. |
 | `docs/teammate-contracts.md` > Facilitator > *Realization — the `Workflow` tool (single supported mechanism)*; CLAUDE.md > Deliberation Isolation `[MUST]` (`Workflow`, not a nested team) | **Amended by issue #179**: the orchestrator relay is the ARCHITECT realization (Discuss + Report), the `architect-deliberation` `Workflow` is its Record phase, and the `Workflow` remains the VERIFY cause-branch realization. The nested-team rejection stands. |
 | Issue #166 (form: fixed prompts, relay, conclusion report, participants' own end) | **Kept** by D1 and D2. |
 | Issue #168 (name denial rests on cost and consistency, not delivery) | **Kept**; constraint 3 removes the cache half of the cost ground for the deliberation participants specifically; the call-count effect is what D4 records. |
@@ -141,7 +141,7 @@ adoption gate. The record is appended to this ADR.
   grounds re-verified); issue #136 and ADR-0017 > Notes > C8 (wake cost measurement, corrected on
   the cache axis by constraint 3); issue #146 (before/after contrast as the judgment form);
   issues #51, #52, #74 and ADR-0021 (teammate removal, pilot and migration — stand).
-- `docs/design-rationale.md` > Decision 8 (isolation rule; realization clause conditionally
+- `docs/records/design-rationale.md` > Decision 8 (isolation rule; realization clause conditionally
   superseded); `docs/teammate-contracts.md` > Facilitator; CLAUDE.md > Deliberation Isolation and
   > Spawn mode by role lifetime.
 - Upstream: `anthropics/claude-code#91971` (comment of 2026-09-04, the wake re-write
@@ -156,7 +156,7 @@ adoption gate. The record is appended to this ADR.
 ## Notes
 
 - Status was set to `Accepted` on the operator's decision in the issue #177 session
-  (2026-09-05), per `docs/adr/README.md` > Status Values. The realization changes in D3 are made
+  (2026-09-05), per `docs/records/adr/README.md` > Status Values. The realization changes in D3 are made
   by the follow-on implementation issue; the effect record in D4 is appended here when it exists.
 - Numbers in the sections above are the review's; the review is the single home of the baseline
   measurement and its method, and this record does not restate its tables. The *Implementation
@@ -221,7 +221,7 @@ sentence alone) was not run (optional in the review §6).
 | Prompt growth (`first_in`, turn 1 → last turn) | 58,717 → 106,389 (the transcript re-sent every turn) | 56,523 → 214,306 (the participant's own context; nothing re-sent) |
 | Per-wake prefix re-write (`cache_creation` on the wake's first call) | n/a (fresh agent per turn: 58,715 · 43,371 · 50,464 · 55,060 · 61,025 · 65,694 · 70,895 · 75,571 · 81,058 · 85,215) | dev: 132,941 on its first wake, then 167 · 167 · 167 · 230; test: 167 · 167 · 167 · 167 · 262 — after one re-write, every wake read the whole prefix from cache |
 | Message length (chars, turn 1 → 10) | 14,153 → 11,325 (mean 13,730) | 24,728 → 7,826 (mean 13,755; turns 5–10 mean 10,330) |
-| Repeated reads (paths read by ≥ 5 agents / by both participants) | ledger 13, gate hook 12, `cleanup-issue.sh` 11, `issue-2.json` 10, `green-tree-store.sh` 10, `green-tree-register.sh` 9, `git-workflow.md` 8, `manifest.json` 7 | 10 paths read by both participants once each (the transcript, ledger, phase-b, resolutions, the gate hook, `docs/adr/README.md`, `autoflow-guide.md`, …); no path read by an agent more than once per side |
+| Repeated reads (paths read by ≥ 5 agents / by both participants) | ledger 13, gate hook 12, `cleanup-issue.sh` 11, `issue-2.json` 10, `green-tree-store.sh` 10, `green-tree-register.sh` 9, `git-workflow.md` 8, `manifest.json` 7 | 10 paths read by both participants once each (the transcript, ledger, phase-b, resolutions, the gate hook, `docs/records/adr/README.md`, `autoflow-guide.md`, …); no path read by an agent more than once per side |
 | Outcome — report | 43 agreed conclusions, 4 un-agreed points (one an acceptance-criterion content change referred to the operator); ledger F1–F43 | 43 agreed conclusions, 0 un-agreed points (both reports record `unagreed: (none)` and do not differ); ledger F1–F45; the report itself routes a harness probe and a possible operator `[ac-decision]` ahead of GATE:PLAN |
 | GATE:PLAN (fresh `autoflow-evaluator`, opus, on the final tree) | **FAIL, avg 6.6** — Feasibility 8, Dependencies 6, Scope 6 (ADR-0015 D1 divergence cap), Security 7, Test plan 6 | **FAIL, avg 7.4** — Feasibility 8, Dependencies 7, Scope 7, Security 8, Test plan 7 (every item ≥ 7; the aggregate is 0.1 below the threshold). The evaluator's blocking issue is the design's own precondition: its agreed conclusion F1 routes a one-run harness probe and a possible operator `[ac-decision]` ahead of GATE:PLAN, and no probe was run for this record |
 | Isolation (`scripts/architect/isolation-check.sh`, first 200 chars of each turn body against the orchestrator's session log) | n/a (the turns never left the workflow) | **10/10 clean** |

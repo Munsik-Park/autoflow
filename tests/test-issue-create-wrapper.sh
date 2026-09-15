@@ -567,7 +567,7 @@ assert_true "dry-run: no numbered proposal file exists anywhere under .autoflow"
 # (ii-b) issue #221 — the Grounds anchor forms. A commit SHA or a URL alone is
 # enough; a durable citation (`<path>` > <heading> — "<fragment>") is an anchor;
 # a bare path:line is not — an issue body outlives the commit it was read at
-# (docs/design-rationale.md > Decision 16).
+# (docs/records/design-rationale.md > Decision 16).
 D14U="$R14/.autoflow/issue-proposal-url-grounds.md"
 write_draft "$D14U" "url grounds title" "https://github.com/example/repo/issues/1 — the observation" "zzqxxvurlgrounds" "candidates: none" "url grounds body"
 run_wrapper "$R14" "$R14" --draft "$D14U" --dry-run

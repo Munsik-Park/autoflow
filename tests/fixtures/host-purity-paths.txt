@@ -47,7 +47,7 @@ allow clients/**
 
 # generated artifact (issue #792): setup/manifest.json is emitted by
 # setup/gen-manifest-hashes.sh and its rows verbatim-mirror docs/** paths (the
-# markdown-link doc closure, e.g. docs/adr/0001-...librechat-submodule-boundary.md).
+# markdown-link doc closure, e.g. docs/records/adr/0001-...librechat-submodule-boundary.md).
 # docs/** is exclude-tier because prose/paths legitimately name services; the
 # generated mirror of those paths inherits that property. Hand-authored setup
 # logic (init.sh, thin-root-layer/*, gen-manifest-hashes.sh) stays in scope

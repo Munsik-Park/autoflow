@@ -131,7 +131,7 @@ T:
 - t2 | D4
 - t3 | D7
 S:
-- t1 | docs/adr/0018-verification-depth-justification.md
+- t1 | docs/records/adr/0018-verification-depth-justification.md
 - t3 | #800
 - t9 | O4
 ```
@@ -161,7 +161,7 @@ T:
 - surface-submit | D2
 S:
 - t10 | #27
-- rgb-surface-submit | docs/adr/0020-acceptance-criterion-authority.md
+- rgb-surface-submit | docs/records/adr/0020-acceptance-criterion-authority.md
 ```
 MD
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: docs/adr/0024-two-layer-verification-and-target-owned-tests.md scripts/gate/
+# ci-subject: docs/records/adr/0024-two-layer-verification-and-target-owned-tests.md scripts/gate/
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: the standing-category token set the layer check enforces is the closed
@@ -31,7 +31,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ADR="$PROJECT_ROOT/docs/adr/0024-two-layer-verification-and-target-owned-tests.md"
+ADR="$PROJECT_ROOT/docs/records/adr/0024-two-layer-verification-and-target-owned-tests.md"
 DEVICE="$PROJECT_ROOT/scripts/gate/verification-layer-check.sh"
 
 PASS=0; FAIL=0

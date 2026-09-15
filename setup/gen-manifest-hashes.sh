@@ -53,6 +53,16 @@ norm_path() {
   }'
 }
 
+# Record-tier prefix (ADR-0015 D1 > Superseding note 2026-09-16, issue #253):
+# the design and decision records under docs/records/ — the ADRs, the design
+# reviews and design-rationale.md — are read for a decision's history but are
+# not the source of any rule, so a target never receives them. The closure
+# walk below neither emits nor traverses a link that resolves under this
+# prefix. tests/plugin/verify-install-into-target.sh AC1k skips the same
+# prefix when it walks the installed tree, and
+# tests/plugin/verify-thin-root-layer.sh AC4d asserts no manifest row names it.
+RECORD_TIER_PREFIX="docs/records/"
+
 # Transitive markdown-link closure from CLAUDE.md + docs/INDEX.md.
 # Only files that exist are emitted (broken links are skipped — they are not
 # installable sources; the installed tree carries the resolvable closure).
@@ -70,6 +80,7 @@ compute_doc_closure() {
         [ -n "$lnk" ] || continue
         if [ "$d" = "." ]; then resolved="$(norm_path "$lnk")"
         else resolved="$(norm_path "$d/$lnk")"; fi
+        case "$resolved" in "$RECORD_TIER_PREFIX"*) continue ;; esac
         if ! grep -qxF "$resolved" "$seen"; then
           echo "$resolved" >> "$seen"
           echo "$resolved" >> "$nxt"

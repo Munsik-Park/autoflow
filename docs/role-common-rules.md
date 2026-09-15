@@ -128,7 +128,7 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 measurement priced every named-teammate message as a context re-write. With every role an anonymous
 direct spawn there is no message channel left to economize: the assignment travels once in the spawn
 prompt, the report travels once in the return value, and no ACK, HOLD/GO, or idle-notification turn
-exists. The measurement itself is retained at `docs/adr/0017-teammate-removal-feasibility.md` >
+exists. The measurement itself is retained at `docs/records/adr/0017-teammate-removal-feasibility.md` >
 Notes > C8.
 
 **Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the orchestrator

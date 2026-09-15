@@ -13,6 +13,13 @@ committed settings pin drops `enabledPlugins` — the pin declares the marketpla
 only, and plugin enablement is a one-time user-scope step. See *D1 > Superseding
 note (2026-09-13)*.
 
+Amended 2026-09-16 (Munsik-Park/autoflow#253): D1's thin-root enumeration of
+"the framework playbooks under `docs/`" is narrowed to the **usage documents**;
+the design and decision **records** move to `docs/records/` and are not shipped,
+and the placement rule for a stamped target's tree (`.claude/autoflow/`,
+`.autoflow/`, `docs/autoflow/`, the rest of `docs/`) is fixed. See *D1 >
+Superseding note (2026-09-16)*.
+
 Issue numbers `#600`–`#999` cited in this ADR belong to the predecessor
 tracker `connev-llm/claude-autoflow` (archived, private) and are retained as
 historical provenance only; they do not resolve in `Munsik-Park/autoflow`. See
@@ -120,6 +127,56 @@ host/service decoupling plan §6/§10 (with that plan's
   `.claude/autoflow/manifest.json` (`.version`), compared against the installed
   plugin's `plugin.json` by the drift detector (D2). See
   `docs/tool-delivery-contract.md` > R1 > *Superseding note (2026-09-13…)*.
+
+  **Superseding note (2026-09-16, Munsik-Park/autoflow#253).** The `docs/` tree
+  of this repository holds two document classes, and only one of them is
+  thin-root content:
+
+  - **Usage documents** — what an agent reads and follows while a cycle runs:
+    `CLAUDE.md` and the playbooks, rules, contracts and checklists under `docs/`
+    that `docs/INDEX.md` routes. They are the source of the rules and ship as
+    the reference tier, landing at `.claude/autoflow/docs/**`.
+  - **Record documents** — dated design and decision records, read for a
+    decision's history and grounds but the source of no rule: the ADRs
+    (`docs/records/adr/`), the design reviews (`docs/records/design-reviews/`)
+    and `docs/records/design-rationale.md`. They live under `docs/records/` and
+    are **never shipped**: the manifest generator's markdown-link closure
+    neither emits nor traverses a link that resolves under that prefix
+    (`setup/gen-manifest-hashes.sh` > `RECORD_TIER_PREFIX`). A usage document
+    may still cite a record for its grounds; the citation resolves in this
+    repository, not in a target. `docs/INDEX.md` routes the two classes in
+    separate tables — the usage rows name no record, and one row points at the
+    records for "why / when was this decided".
+
+  Grounds. (1) Issue #196: two documents describing the same decision as of
+  different moments split an agent's judgment by which one it happened to read;
+  a decision's history belongs in the record tier and its current form in the
+  usage tier, so the location says which is which. (2) The stamped copies of
+  the 15 record files (13 under `docs/adr/`, one design review,
+  `design-rationale.md`) were bytes a target's agent had no reason to read, and
+  two of them (ADR-0015, `adr/README.md`) carried host-purity hits that the
+  ratchet baseline `tests/fixtures/e2e-bundle-purity-baseline.txt` had to
+  allow; dropping them from the bundle ratchets that baseline down.
+
+  Location alternative rejected: moving the usage documents to
+  `docs/autoflow/` in this repository (the issue's other candidate). The
+  stamped dest already namespaces them under `.claude/autoflow/docs/`, the
+  separation the issue asks for is obtained by the records subtree alone, and
+  the move would rewrite every inbound reference to the usage tree
+  (`docs/autoflow-guide.md` alone is named in 68 files) for no change in what a
+  target receives. `docs/autoflow/` is reserved for the target side, below.
+
+  **Target placement.** A stamped target's tree follows this rule; the
+  installer and the drift detector enforce the first two rows, the last two
+  are the convention a target is told to keep:
+
+  | Path in the target | Owner | Content |
+  |---|---|---|
+  | `.claude/autoflow/` | AutoFlow — stamped, read-only for the target, reconciled on re-stamp (`docs/tool-delivery-contract.md` R4) | the installed manifest, `METHODOLOGY.md`, `CLAUDE.md`, the `docs/**` usage documents, `drift-check.sh`, the settings-pin copy. The read-only stamped documents **stay here** rather than moving under `docs/autoflow/`: the shim imports `./.claude/autoflow/METHODOLOGY.md` (`docs/thin-root-layer.md` Item 1), every installer, drift and purity check keys on this path, and a directory the target edits must not share a tree with bytes a re-stamp overwrites — which is the mixing this amendment removes. |
+  | `.autoflow/` | AutoFlow scratch (gitignored) | per-issue state, ledger and analysis artifacts, and the cycle-layer store `.autoflow/issue-{N}-local/`; archived off-tree at cleanup (ADR-0024 D2). |
+  | `docs/autoflow/` | target — committed, target-authored; AutoFlow reads it | files AutoFlow uses that the target writes and maintains (its test conventions, the runbooks behind `preflight.local_checks[]`, and the like). AutoFlow never stamps or overwrites a file here. No shipped script reads a fixed file at this path today; the row fixes where such a file goes when one is introduced, so it lands neither in `.claude/autoflow/` (overwritten by a re-stamp) nor loose in the target's own `docs/`. |
+  | `docs/` (the rest) | target | the target's own documentation, its own ADRs included; outside AutoFlow's surface. |
+
 - **Host-only** (never shipped): the tool repo's own CI workflows, gate/test
   suites, epic scratch, and the installer's development surface. Files the
   decoupling plan classifies MOVE/DELETE (service-coupled runbooks, service

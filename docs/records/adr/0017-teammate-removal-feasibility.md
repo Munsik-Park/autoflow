@@ -173,9 +173,9 @@ scope fence that keeps this cycle from producing the measurement itself.
 
 ## Alternatives Considered
 
-- **Record the decision as a `docs/design-rationale.md` Decision entry instead of an ADR.**
+- **Record the decision as a `docs/records/design-rationale.md` Decision entry instead of an ADR.**
   Rejected: that file records why existing rules exist, while this decides a future change, and
-  `docs/adr/README.md` names agent workflow gates and evaluation policy as an ADR trigger.
+  `docs/records/adr/README.md` names agent workflow gates and evaluation policy as an ADR trigger.
 - **An archive-incidence corpus audit over `~/.autoflow-archive`, correlating prior verification
   designs against a real-interface anchor predicate, as empirical corroboration for Q1.**
   This alternative was **considered and rejected**, on three grounds re-derived independently: the
@@ -220,15 +220,15 @@ scope fence that keeps this cycle from producing the measurement itself.
 
 - Issue #51 — the feasibility question this record answers.
 - Issue #40 — the cycle whose report-loss measurement motivates the migration.
-- ADR-0016 (`docs/adr/0016-adr-conformance-gate-scoring.md`) — the precedent for recording a
+- ADR-0016 (`docs/records/adr/0016-adr-conformance-gate-scoring.md`) — the precedent for recording a
   self-referential AutoFlow policy decision as an ADR and splitting the wiring to a follow-up.
-- ADR-0003 (`docs/adr/0003-autoflow-ends-at-handoff.md`) — the record that the owner, not AutoFlow,
+- ADR-0003 (`docs/records/adr/0003-autoflow-ends-at-handoff.md`) — the record that the owner, not AutoFlow,
   holds the authority this ADR's `## Status` transition belongs to.
 
 ## Notes
 
 - The `Proposed` to `Accepted` transition is the owner's decision, delegated per
-  `docs/adr/README.md` > Status Values. No automated check in this cycle obstructs it.
+  `docs/records/adr/README.md` > Status Values. No automated check in this cycle obstructs it.
 - The condition identifiers C1 through C8 are stable and are referenced by the migration slice; a
   later cycle adding a condition appends rather than renumbers.
 

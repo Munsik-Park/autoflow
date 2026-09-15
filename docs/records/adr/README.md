@@ -13,14 +13,11 @@ operational responsibility.
 
 ## When to Create an ADR
 
-Create or update an ADR before implementation when a change affects:
-
-- Host/submodule responsibility boundaries.
-- Deployment topology or CI/CD authority.
-- Tenant isolation, accounting ownership, file visibility, or access control.
-- Secret/config management.
-- Agent workflow gates, evaluation policy, or merge authority.
-- External service dependencies.
+The trigger areas — the list a change is checked against — are defined in
+`docs/development-guideline.md` > ADR Policy > *When to create an ADR*, a usage
+document that ships to every target; the two gate checks that read them
+(`docs/autoflow-guide.md` > GATE:PLAN > ADR-conformance check, GATE:QUALITY >
+Fit — ADR conformance) cite that list, and this registry does not restate it.
 
 Start from [0000-adr-template.md](0000-adr-template.md).
 
@@ -29,7 +26,7 @@ Start from [0000-adr-template.md](0000-adr-template.md).
 | ADR | Status | Topic |
 | --- | --- | --- |
 | [0003-autoflow-ends-at-handoff.md](0003-autoflow-ends-at-handoff.md) | Proposed | AutoFlow creates PRs and hands off; external reviewer merges. |
-| [0015-autoflow-distribution-plugin-plus-thin-root-layer.md](0015-autoflow-distribution-plugin-plus-thin-root-layer.md) | Accepted; D1's S4b workflow-migration delegation closed by issue #53 (the Deliberation-Isolation workflows stay in the thin root layer); D1's settings-pin enumeration amended by issue #245 (the committed pin declares the marketplace only — `enabledPlugins` dropped, enablement is user-scope) | AutoFlow ships as plugin + thin root layer; `subrepo-merged` status-check machinery retired. |
+| [0015-autoflow-distribution-plugin-plus-thin-root-layer.md](0015-autoflow-distribution-plugin-plus-thin-root-layer.md) | Accepted; D1's S4b workflow-migration delegation closed by issue #53 (the Deliberation-Isolation workflows stay in the thin root layer); D1's settings-pin enumeration amended by issue #245 (the committed pin declares the marketplace only — `enabledPlugins` dropped, enablement is user-scope); D1's `docs/` enumeration narrowed to the usage documents by issue #253 (the records under `docs/records/` are not shipped; target placement rule fixed) | AutoFlow ships as plugin + thin root layer; `subrepo-merged` status-check machinery retired. |
 | [0016-adr-conformance-gate-scoring.md](0016-adr-conformance-gate-scoring.md) | Accepted | ADR-conformance scoring at ARCHITECT/GATE:PLAN/GATE:QUALITY. |
 | [0017-teammate-removal-feasibility.md](0017-teammate-removal-feasibility.md) | Accepted | Test AI / Developer AI as anonymous direct spawns: conditional go, with ordered preconditions and a blocking pilot. |
 | [0018-verification-depth-justification.md](0018-verification-depth-justification.md) | Proposed, amended by issue #198 (failure-mode column; Decision 3 superseded) | Verification depth governed by a per-layer unique-failure-mode justification, not a quantity cap; GATE:PLAN `Scope` widened to the verification design. |

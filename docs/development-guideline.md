@@ -46,6 +46,22 @@ Classify work before implementation:
 - Proposed ADRs should distinguish observed current state from recommended
   target state.
 
+### When to create an ADR
+
+Create or update an ADR before implementation when a change affects one of
+these **trigger areas**. This list is the one the ADR-conformance checks read
+— GATE:PLAN's *ADR-conformance check* and GATE:QUALITY's *Fit — ADR
+conformance* item in `docs/autoflow-guide.md` decide "trigger area hit" and
+"N/A" against it — so it lives in this usage document, which every target
+receives, rather than in the ADR registry, which does not ship.
+
+- Host/submodule responsibility boundaries.
+- Deployment topology or CI/CD authority.
+- Tenant isolation, accounting ownership, file visibility, or access control.
+- Secret/config management.
+- Agent workflow gates, evaluation policy, or merge authority.
+- External service dependencies.
+
 ## 5. PR Policy
 
 - Keep the existing host PR template contract, especially `HOST-CLOSE-LINE`,

@@ -6,7 +6,7 @@ Proposed
 
 ## Context
 
-ADR-0017 (`docs/adr/0017-teammate-removal-feasibility.md`) is Accepted with condition **C7**
+ADR-0017 (`docs/records/adr/0017-teammate-removal-feasibility.md`) is Accepted with condition **C7**
 blocking (`:87`): "one migrated cycle runs the Test AI as an anonymous direct spawn, and its step-3
 and step-4 detection outcomes are compared against the named-spawn baseline". **C8** (`:88`) asks
 for cost and latency on the same pilot cycle. Both are answered here, in the migration slice
@@ -230,17 +230,17 @@ proposed supersession, leaving the `Accepted → Superseded` transition to the o
 ## Related Issues / PRs
 
 - Issue #74 — the migration slice this record is produced in.
-- ADR-0017 (`docs/adr/0017-teammate-removal-feasibility.md`) — the conditional decision whose C7 and
+- ADR-0017 (`docs/records/adr/0017-teammate-removal-feasibility.md`) — the conditional decision whose C7 and
   C8 this record discharges.
 - Issue #40 — the cycle whose report-loss measurement motivates the migration; its record is retained
   in `docs/teammate-common-rules.md` per ADR-0017 Q5.
-- ADR-0003 (`docs/adr/0003-autoflow-ends-at-handoff.md`) — untouched; nothing here moves the
+- ADR-0003 (`docs/records/adr/0003-autoflow-ends-at-handoff.md`) — untouched; nothing here moves the
   termination boundary.
 
 ## Notes
 
 - Status: `Proposed`. The `Proposed` to `Accepted` transition is the owner's decision, per
-  `docs/adr/README.md` > Status Values.
+  `docs/records/adr/README.md` > Status Values.
 - The frozen union's `records[]` entries carry `outcomes`, `iteration_set` and `observed_head`
   verbatim from each spawn's scratch record; `arm`, `replicate`, `delivery`, `latency_seconds` and
   `turns` are orchestrator-stamped. An arm never self-labels the pilot's only independent variable.

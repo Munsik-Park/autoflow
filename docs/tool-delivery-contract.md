@@ -2,7 +2,7 @@
 
 > The four delivery-contract rules for AutoFlow as a consumed, versioned tool
 > (epic #785, slice S1 / issue #787). Governing decision:
-> [ADR-0015](adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md)
+> [ADR-0015](records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md)
 > (plugin + thin root layer). Per ADR-0015 D2, rule vocabulary uses
 > **plugin-version** terms; the reverse-submodule (gitlink-SHA) form was
 > rejected there and appears below only as rejected vocabulary.
@@ -188,7 +188,7 @@ below means both tiers together.
 ## Related
 
 - Epic: #785 (host↔target inversion); this rule set is slice S1 (#787).
-- Governing ADR: [ADR-0015](adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md)
+- Governing ADR: [ADR-0015](records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md)
   — D1 (tier boundary), D2 (plugin + thin root layer, plugin-version
   vocabulary), Consequences > Negative (two-channel skew is the need this
   rule set covers).

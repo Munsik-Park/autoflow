@@ -285,6 +285,7 @@ walk_md_links() {
   _starters="$2"
   _fail=0
   _skipcnt=0
+  _reccnt=0
   _cur=$(mktemp)
   _vis=$(mktemp)
   for _s in $_starters; do
@@ -309,6 +310,11 @@ walk_md_links() {
         # Resolve relative to current file's location
         _resolved=$(resolve_md_link "$_f" "$_lnk")
         [ -n "$_resolved" ] || continue
+        # Skip links into the record tier (docs/records/ — ADR-0015 D1 >
+        # Superseding note 2026-09-16, issue #253): the generator neither
+        # emits nor traverses them, so the installed tree never carries them
+        # by design. Counted separately from source-broken skips.
+        case "$_resolved" in docs/records/*) _reccnt=$((_reccnt + 1)); continue ;; esac
         # Skip links whose target does not exist in the SOURCE repo either:
         # a pre-existing source doc defect, not an install-completeness gap.
         # (The installed autoflow-dir layout mirrors repo-root-relative
@@ -331,6 +337,9 @@ LINKS
   rm -f "$_cur" "$_vis"
   if [ "$_skipcnt" -gt 0 ]; then
     printf 'NOTE: AC1k -- %d link(s) skipped as pre-existing source-broken targets\n' "$_skipcnt"
+  fi
+  if [ "$_reccnt" -gt 0 ]; then
+    printf 'NOTE: AC1k -- %d link(s) into the record tier (docs/records/) skipped: not shipped by design (ADR-0015 D1, #253)\n' "$_reccnt"
   fi
   return $_fail
 }
@@ -810,6 +819,38 @@ if [ -f "$_aCLAUDE" ] || [ -f "$_aINDEX" ]; then
   fi
 else
   failc "AC1k" "neither CLAUDE.md nor docs/INDEX.md installed — cannot walk link closure"
+fi
+
+# ── AC1l (#253 review): the ADR-conformance trigger areas ship with the gates ─
+# The record tier (docs/records/) is not installed, so the list GATE:PLAN's
+# ADR-conformance check and GATE:QUALITY's Fit — ADR conformance item decide
+# "trigger area hit" / "N/A" against must live in an installed usage document.
+# The installed guide names its source; that source must be installed and must
+# carry the list. AC1k's record-tier skip cannot see this — it treats every
+# record link alike — so this leg reads the gate input specifically.
+echo "== AC1l (#253): ADR-conformance trigger areas are readable in the installed tree =="
+_aGUIDE="$TARGET/.claude/autoflow/docs/autoflow-guide.md"
+if [ -f "$_aGUIDE" ]; then
+  _trig_lines=$(grep -n 'When to create an ADR' "$_aGUIDE" || true)
+  _trig_src=$(printf '%s\n' "$_trig_lines" | grep -oE 'docs/[A-Za-z0-9_./-]+\.md' | sort -u)
+  if [ -z "$_trig_lines" ]; then
+    failc "AC1l" "installed docs/autoflow-guide.md never names the 'When to create an ADR' trigger-area list -- the gates have no declared source for it"
+  elif [ "$(printf '%s\n' "$_trig_src" | grep -c .)" -ne 1 ]; then
+    failc "AC1l" "the guide cites $(printf '%s' "$_trig_src" | tr '\n' ' ') as the trigger-area source -- expected exactly one path"
+  elif printf '%s\n' "$_trig_src" | grep -q '^docs/records/'; then
+    failc "AC1l" "the trigger-area source $_trig_src is a record-tier path, which is not installed"
+  elif ! [ -f "$TARGET/.claude/autoflow/$_trig_src" ]; then
+    failc "AC1l" "the trigger-area source $_trig_src is not installed at .claude/autoflow/$_trig_src"
+  else
+    _trig_list=$(awk '/^### When to create an ADR/{f=1;next} /^#/{if(f)exit} f' "$TARGET/.claude/autoflow/$_trig_src" | grep -c '^- ')
+    if [ "$_trig_list" -ge 1 ]; then
+      pass "AC1l: installed $_trig_src > 'When to create an ADR' carries the trigger-area list ($_trig_list areas), and both gate checks name it ($(printf '%s\n' "$_trig_lines" | grep -c .) citations)"
+    else
+      failc "AC1l" "installed $_trig_src has no '### When to create an ADR' section with bullet items"
+    fi
+  fi
+else
+  failc "AC1l" "installed docs/autoflow-guide.md missing at $_aGUIDE"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════

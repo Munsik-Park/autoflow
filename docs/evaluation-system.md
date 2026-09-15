@@ -23,7 +23,7 @@ conversation history. This is mandatory.
 **Why**: when the same agent creates a plan and evaluates it, it struggles to
 reject its own work. A freshly spawned agent sees only the deliverable — it has
 no investment in the process. Bias elimination takes priority over token cost.
-See [`design-rationale.md`](design-rationale.md#decision-2-evaluation-ai-is-spawned-fresh-every-time).
+See [`records/design-rationale.md`](records/design-rationale.md#decision-2-evaluation-ai-is-spawned-fresh-every-time).
 
 ---
 
@@ -141,7 +141,7 @@ citation of a host record; no `inherited_verdicts` key is written (ADR-0024 D6).
 
 `check-autoflow-gate.sh` does **not** read the AI's `pass`, `avg`, or `min`
 fields. It computes them from raw `scores`. The trust chain stops at the script
-level — see [`design-rationale.md`](design-rationale.md#decision-3-the-hook-does-not-trust-ais-pass-judgment).
+level — see [`records/design-rationale.md`](records/design-rationale.md#decision-3-the-hook-does-not-trust-ais-pass-judgment).
 
 ---
 

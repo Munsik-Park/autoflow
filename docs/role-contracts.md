@@ -66,7 +66,7 @@ classifying authority and the implementing roles do not re-classify.
 This subsection **constrains** the pre-scoring FAIL hypothesis above; it does not replace it. The
 evaluator still forms the hypothesis first, still re-derives anchors, still records the search in
 `fail_hypothesis`. Governing record:
-[`docs/adr/0024-two-layer-verification-and-target-owned-tests.md`](adr/0024-two-layer-verification-and-target-owned-tests.md)
+[`docs/records/adr/0024-two-layer-verification-and-target-owned-tests.md`](records/adr/0024-two-layer-verification-and-target-owned-tests.md)
 > *Evaluator execution discipline*.
 
 - **[MUST] Resolve the anchor before executing.** Where the anchor being re-derived is a **suite
@@ -135,14 +135,14 @@ The Submodule AI operates as the Developer AI directly in the target repo. *Seco
 
 ## Facilitator (deliberation sub-context)
 
-The Facilitator runs a multi-participant deliberation so that the orchestrator never receives the round-by-round cross-talk. Two phases run a Developer-AI ↔ Test-AI deliberation, and since ADR-0023 (issue #179) they are realized differently: **ARCHITECT** (feature design + verification design) is an **orchestrator relay of two persistent participants** whose record is a transcript file, followed by a **Record** `Workflow`; the **VERIFY** cause-branch is an isolated `Workflow`. Rationale and the structural rule: [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation; [`docs/design-rationale.md`](design-rationale.md) > Decision 8; the decision: [`adr/0023-deliberation-participant-lifetime.md`](adr/0023-deliberation-participant-lifetime.md).
+The Facilitator runs a multi-participant deliberation so that the orchestrator never receives the round-by-round cross-talk. Two phases run a Developer-AI ↔ Test-AI deliberation, and since ADR-0023 (issue #179) they are realized differently: **ARCHITECT** (feature design + verification design) is an **orchestrator relay of two persistent participants** whose record is a transcript file, followed by a **Record** `Workflow`; the **VERIFY** cause-branch is an isolated `Workflow`. Rationale and the structural rule: [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation; [`docs/records/design-rationale.md`](records/design-rationale.md) > Decision 8; the decision: [`records/adr/0023-deliberation-participant-lifetime.md`](records/adr/0023-deliberation-participant-lifetime.md).
 
 ### Realization — ARCHITECT: orchestrator relay + Record `Workflow`; VERIFY: `Workflow`
 
 Neither phase is a nested Agent Team, and neither runs in the orchestrator's own turn stream:
 
 - A spawned teammate **cannot** create its own team or teammates, and a team's lead is **fixed for the team's lifetime** (no lead transfer). So "a spawned facilitator that leads a nested Developer-AI ↔ Test-AI team" is not executable — ruled out. (Agent Teams > Limitations: <https://code.claude.com/docs/en/agent-teams>.)
-- A peer facilitator — a role spawn relaying the participants — is not executable: a woken participant's reply reaches only the session's main loop ([`docs/adr/0023-deliberation-participant-lifetime.md`](adr/0023-deliberation-participant-lifetime.md) > Alternatives Considered, constraint 2). The current realization is the ADR-0023 relay.
+- A peer facilitator — a role spawn relaying the participants — is not executable: a woken participant's reply reaches only the session's main loop ([`docs/records/adr/0023-deliberation-participant-lifetime.md`](records/adr/0023-deliberation-participant-lifetime.md) > Alternatives Considered, constraint 2). The current realization is the ADR-0023 relay.
 - **ARCHITECT — the relay.** The orchestrator spawns the Developer AI and the Test AI once each as anonymous direct spawns (`subagent_type: autoflow-planner`, no `name`; models from the policy rows `architect-dev-participant` / `architect-test-participant`) and wakes them in alternation by agent ID with `SendMessage`, waiting for each answer by ending its turn. Each participant appends its turn to `.autoflow/issue-{N}-architect-transcript.md` and returns one line; `scripts/architect/relay-state.sh state` prints the next side and the end condition (two consecutive `further: none`), and the orchestrator obeys it. Each participant then appends its report to the same file. Isolation holds by the participants' prompt (`.claude/agents/autoflow-planner.md` > *ARCHITECT relay participant*: bodies to the file, one line back). The procedure is [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > *Relay procedure*.
 - **ARCHITECT — Record, and VERIFY — the `Workflow` tool.** The `Workflow` tool **is** documented as isolating: "intermediate results stay in script variables instead of landing in Claude's context," and the orchestrator receives one final result. (Workflows: <https://code.claude.com/docs/en/workflows>.) The `architect-deliberation` workflow is the Record phase: its scribe reads the transcript file in-script and writes the artifacts, its ledger call appends the agreed conclusions. The `verify-cause-branch` workflow runs both self-checks in-script.
 

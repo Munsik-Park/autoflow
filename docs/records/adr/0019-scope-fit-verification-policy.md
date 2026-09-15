@@ -142,14 +142,14 @@ per-suite record.
 ## Related Issues / PRs
 
 - Issue #112 — scope-fit testing requirement.
-- ADR-0016 (`docs/adr/0016-adr-conformance-gate-scoring.md`) — the same self-referential
+- ADR-0016 (`docs/records/adr/0016-adr-conformance-gate-scoring.md`) — the same self-referential
   gate-policy class recorded as an ADR trigger.
-- ADR-0018 (`docs/adr/0018-verification-depth-justification.md`) — the evaluation-policy precedent
+- ADR-0018 (`docs/records/adr/0018-verification-depth-justification.md`) — the evaluation-policy precedent
   this decision follows.
 
 ## Notes
 
-`docs/adr/README.md` > *When to Create an ADR* lists "Agent workflow gates, evaluation policy, or
+`docs/records/adr/README.md` > *When to Create an ADR* lists "Agent workflow gates, evaluation policy, or
 merge authority" among the classes requiring an ADR before implementation. This change meets that
 trigger in three independent places: two `[MUST]`s added to `docs/teammate-contracts.md` >
 Evaluation AI, the `inherited_verdicts` key added to `docs/evaluation-system.md` > *Evaluation

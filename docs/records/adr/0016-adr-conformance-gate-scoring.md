@@ -22,7 +22,7 @@ this gap PASS (8/7/8, `.autoflow/issue-818.json`) and DIAGNOSE Phase 3 scored
 its necessity PASS (8/7/8, avg 7.67).
 
 This is a self-referential change to AutoFlow's own gate policy — an area
-`docs/adr/README.md:22` ("Agent workflow gates, evaluation policy, or merge
+`docs/records/adr/README.md:22` ("Agent workflow gates, evaluation policy, or merge
 authority") names as an ADR trigger — so the decision is recorded as an ADR
 rather than an inline rubric edit. The deliverable of this cycle is the
 decision only; the rubric-prose wiring is split to a follow-up implementation
@@ -118,7 +118,7 @@ GATE:PLAN check names two items, the cap lands on:
 One divergence never leaves both items uncapped.
 
 The ARCHITECT axis is first because injection without a consensus criterion is
-skippable: `autoflow-guide.md:245` permits `docs/adr/*` injection at ARCHITECT,
+skippable: `autoflow-guide.md:245` permits `docs/records/adr/*` injection at ARCHITECT,
 but the mutual-ACCEPT criterion (`autoflow-guide.md:274-276`) does not name
 conformance. Making it an explicit axis closes that specific hole.
 
@@ -134,9 +134,9 @@ threshold — no new arithmetic, no new denominator.
 
 ### N/A convention
 
-A **governing ADR** for a change surface is an ADR in `docs/adr/` with status
+A **governing ADR** for a change surface is an ADR in `docs/records/adr/` with status
 `Accepted` or `Proposed` whose Decision scope intersects the change surface,
-**or** a change that hits one of the `docs/adr/README.md:16-23` "When to Create
+**or** a change that hits one of the `docs/records/adr/README.md:16-23` "When to Create
 an ADR" trigger areas (host/submodule boundary, deployment/CI-CD authority,
 tenant isolation / accounting / file-visibility / access-control, secret/config
 management, agent workflow gates / evaluation policy / merge authority,
@@ -233,7 +233,7 @@ docs into the analysis roles (`docs/phases/analysis.md:126`, whitelist row at
 roles, which must judge the current-state gap without seeing
 recommended-direction / ADR-priority wording. All three placements above sit
 **strictly downstream of DIAGNOSE**, at or after ARCHITECT — the one surface
-where `docs/adr/*` injection is *already* permitted (`autoflow-guide.md:245`).
+where `docs/records/adr/*` injection is *already* permitted (`autoflow-guide.md:245`).
 The check therefore does not reintroduce ADR into DIAGNOSE; it **assigns the
 verification responsibility that DIAGNOSE's exclusion deliberately defers**.
 

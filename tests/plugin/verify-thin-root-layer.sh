@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: setup/thin-root-layer/ docs/thin-root-layer.md setup/manifest.json .claude-plugin/marketplace.json docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md docs/adr/README.md docs/tool-delivery-contract.md
+# ci-subject: setup/thin-root-layer/ docs/thin-root-layer.md setup/manifest.json .claude-plugin/marketplace.json docs/records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md docs/records/adr/README.md docs/tool-delivery-contract.md
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: thin-root-layer acceptance suite — Issue #791 [#785-S4b]
@@ -315,8 +315,8 @@ fi
 # Verification design row :28, subject as amended by the round-2 delta. Both
 # clauses are two-or-more-files-state-the-same-fact checks over the provisions
 # that define this suite's subject.
-ADR_0015="$REPO_ROOT/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
-ADR_REGISTRY="$REPO_ROOT/docs/adr/README.md"
+ADR_0015="$REPO_ROOT/docs/records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md"
+ADR_REGISTRY="$REPO_ROOT/docs/records/adr/README.md"
 TOOL_CONTRACT="$REPO_ROOT/docs/tool-delivery-contract.md"
 
 # (i) Neither provision enumerates enabledPlugins as a key OF THE COMMITTED
@@ -374,6 +374,33 @@ if [ -f "$ADR_0015" ] && [ -f "$ADR_REGISTRY" ]; then
   fi
 else
   failc "AC4c (ii)" "ADR-0015 ($ADR_0015) or the ADR registry ($ADR_REGISTRY) missing"
+fi
+
+# ── AC4d (issue #253): the record tier is not a manifest source ─────────────
+# ADR-0015 D1 > Superseding note (2026-09-16): docs/records/ (ADRs, design
+# reviews, design-rationale.md) is read for a decision's history and is never
+# shipped. Two clauses: (i) no artifacts[].source lies under the prefix, with
+# the prefix non-empty so the clause is not vacuous; (ii) the ADR's D1 names
+# the prefix — the manifest and the decision state the same fact.
+echo "== AC4d (#253): docs/records/ is not a setup/manifest.json artifact source =="
+RECORDS_DIR="$REPO_ROOT/docs/records"
+if [ -f "$MANIFEST_JSON" ] && [ -d "$RECORDS_DIR" ]; then
+  _rec_files=$(find "$RECORDS_DIR" -type f -name '*.md' | wc -l | tr -d ' ')
+  _rec_rows=$(jq -r '.artifacts[] | select(.source | startswith("docs/records/")) | .source' "$MANIFEST_JSON" 2>/dev/null)
+  if [ "$_rec_files" -eq 0 ]; then
+    failc "AC4d (i)" "docs/records/ holds no markdown file -- the exclusion has nothing to exclude (non-vacuity)"
+  elif [ -n "$_rec_rows" ]; then
+    failc "AC4d (i)" "setup/manifest.json registers record-tier source(s): $(printf '%s' "$_rec_rows" | tr '\n' ' ')"
+  else
+    pass "AC4d (i): none of the $_rec_files docs/records/**/*.md files is a manifest artifact source"
+  fi
+  if [ -f "$ADR_0015" ] && awk '/^### D1/{f=1} /^### D2/{f=0} f' "$ADR_0015" | grep -qF 'docs/records/'; then
+    pass "AC4d (ii): ADR-0015 D1 names docs/records/ as the unshipped record tier"
+  else
+    failc "AC4d (ii)" "ADR-0015 D1 does not name docs/records/ -- the manifest excludes a tier the decision does not declare"
+  fi
+else
+  failc "AC4d" "setup/manifest.json ($MANIFEST_JSON) or docs/records/ ($RECORDS_DIR) missing"
 fi
 
 # ── AC5a: verify-package.sh is present ─────────────────────────────────────

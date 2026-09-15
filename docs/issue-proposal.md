@@ -64,7 +64,7 @@ sections — becomes the created issue's body.
 | Section | Content | Wrapper's check |
 |---------|---------|-----------------|
 | `## Title` | one line — the issue title | non-empty single line |
-| `## Grounds` | why the issue is warranted | at least one anchor: a commit SHA, a URL, or a durable citation — a document, its section heading and a quoted sentence, written `` `<path>` > <heading> — "<fragment>" `` (`docs/design-rationale.md` > Decision 16). A bare `path:line` is not an anchor here: an issue body outlives the commit its line numbers were read at |
+| `## Grounds` | why the issue is warranted | at least one anchor: a commit SHA, a URL, or a durable citation — a document, its section heading and a quoted sentence, written `` `<path>` > <heading> — "<fragment>" `` (`docs/records/design-rationale.md` > Decision 16). A bare `path:line` is not an anchor here: an issue body outlives the commit its line numbers were read at |
 | `## Duplicate check` | a `searched:` line listing the query terms, then either `candidates: none` or one `#<number> — <disposition>` row per candidate | the `searched:` line is present and non-empty; its tokens feed the term derivation; the candidate rows are the set the disposition invariant compares against |
 | `## Body` | the text from its heading to the next level-2 heading | non-empty; becomes the issue body |
 

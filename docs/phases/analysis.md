@@ -11,7 +11,7 @@
 > the fresh-spawn Evaluation AI's scores; the hook enforces only the four gated phases
 > (`gate_hypothesis_cause`, `gate_plan`, `audit`, `gate_quality` — see `CLAUDE.md` >
 > AutoFlow State Tracking). Design rationale:
-> [`design-rationale.md`](../design-rationale.md) > Decision 1, Decision 6.
+> [`design-rationale.md`](../records/design-rationale.md) > Decision 1, Decision 6.
 
 When an issue arrives, classify cause hypotheses **before** code analysis.
 

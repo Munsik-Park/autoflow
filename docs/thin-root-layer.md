@@ -5,7 +5,7 @@
 > package** (S4a / #790) structurally cannot carry it. This document is the single
 > source of truth that #792's installer and drift self-verify detector consume.
 >
-> Governing decision: [`docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md`](adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md) > D1/D2.
+> Governing decision: [`docs/records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md`](records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md) > D1/D2.
 
 ---
 
@@ -19,8 +19,13 @@ ADR-0015 D1 distributes AutoFlow across three tiers:
 2. **Thin-root tier** *(this document's scope)* — the residue the plugin channel
    cannot inject, which must land at the target's own project root.
 3. **Reference tier** — the methodology prose itself (this repo's `CLAUDE.md` +
-   the `docs/` playbook tree routed by `docs/INDEX.md`), imported by the target's
-   own `CLAUDE.md` through the shim (Item 1).
+   the `docs/` usage-document tree routed by `docs/INDEX.md`), imported by the
+   target's own `CLAUDE.md` through the shim (Item 1). The record tier under
+   `docs/records/` (ADRs, design reviews, `design-rationale.md`) is not part
+   of it: the manifest generator's link closure stops at that prefix, so a
+   target never receives a record (ADR-0015 D1 > Superseding note 2026-09-16,
+   issue #253 — which also fixes the placement rule for a stamped target's
+   `.claude/autoflow/`, `.autoflow/`, `docs/autoflow/` and remaining `docs/`).
 
 This document scopes to the **middle (thin-root) tier**. The installer that copies
 these artifacts into an external target, plus the drift detector, is #792 (S5) —
@@ -32,7 +37,7 @@ The artifact set a target receives at its project root:
 
 | Artifact | Target-root location | Source in this repo | Kind |
 |---|---|---|---|
-| Methodology prose | target's own `CLAUDE.md` imports it | this repo's `CLAUDE.md` + `docs/` playbooks | reference (installed by #792) |
+| Methodology prose | target's own `CLAUDE.md` imports it | this repo's `CLAUDE.md` + the `docs/` usage documents (the link closure of `CLAUDE.md` + `docs/INDEX.md`, minus `docs/records/`) | reference (installed by #792) |
 | Always-on import shim | target `CLAUDE.md` managed block | `setup/thin-root-layer/claude-md-shim.md` | shim (Item 1) |
 | Deliberation workflows | `.claude/workflows/*.js` | `.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js` | copied file (Item 2) |
 | Settings pin | `.claude/settings.json` merge | `setup/thin-root-layer/settings-pin.json` | JSON merge (Item 3 env is §Item 3; pin form §3.3 of the feature design) |
@@ -115,7 +120,7 @@ WORKFLOW = REQUIRED
 **Grounds (concrete deciding constraint, all repo-anchored):**
 
 - The isolation property required is that **intermediate deliberation results stay
-  out of the caller's (orchestrator's) context**. `docs/design-rationale.md` >
+  out of the caller's (orchestrator's) context**. `docs/records/design-rationale.md` >
   Decision 8 > *What it does* states the `Workflow` runtime is "the one runtime
   mechanism documented to keep intermediate results out of the caller's context,"
   binding the contract to it "rather than to an abstract 'sub-context'."
@@ -128,7 +133,7 @@ WORKFLOW = REQUIRED
 - A **skill** is injected instruction content that executes **in the invoking
   agent's own context** — it provides no separate sub-context that shields the
   caller from the round-by-round messages, so it fails the exact
-  context-non-contamination property (`docs/design-rationale.md` > Decision 8 >
+  context-non-contamination property (`docs/records/design-rationale.md` > Decision 8 >
   *Why it works this way*) that motivates Decision 8. A skill could hold the *protocol prose* but not the
   *isolation boundary*.
 - Independently, the plugin spec has **no plugin `workflows/` component slot**

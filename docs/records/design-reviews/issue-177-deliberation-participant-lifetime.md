@@ -6,11 +6,11 @@ participants instead persist across turns and be relayed by the orchestrator, or
 per-turn respawn stay and the re-verification rule be narrowed? This review compares the two on
 the 2026-09-05 measurement, states the runtime constraints that were measured, designs the pilot
 that decides between them, and lists what a follow-on implementation issue would touch. The
-decision itself is ADR-0023 (`docs/adr/0023-deliberation-participant-lifetime.md`).
+decision itself is ADR-0023 (`docs/records/adr/0023-deliberation-participant-lifetime.md`).
 
 **What is not re-opened.** The deliberation's *form* — fixed prompts, turn relay, conclusion
 report, ending at the participants' own conclusion — is issue #166's decision and is kept by both
-options. The Deliberation Isolation rule (`docs/design-rationale.md` > Decision 8: the orchestrator
+options. The Deliberation Isolation rule (`docs/records/design-rationale.md` > Decision 8: the orchestrator
 never receives the round-by-round prose) is kept by both options; what differs is how it is
 realized.
 
@@ -331,7 +331,7 @@ Implementation is not this issue's; it is one follow-on issue with the following
 - Rules and records: `CLAUDE.md` > Deliberation Isolation (the `Workflow` `[MUST]` names the
   relay as the ARCHITECT realization; the nested-team rejection stands) and > Spawn mode by role
   lifetime (a within-ARCHITECT row); `docs/teammate-contracts.md` > Facilitator > Realization and
-  Return Contract; `docs/design-rationale.md` > Decision 8's realization paragraph;
+  Return Contract; `docs/records/design-rationale.md` > Decision 8's realization paragraph;
   `docs/teammate-common-rules.md` > Discussion Protocol step 2 (the scope sentence).
 - Tests: `test/workflows/run.mjs` ARCHITECT section and `tests/lib/architect-turn-harness.mjs`
   retired or re-pointed; a hermetic test of the relay-state script; manifest regenerated.
