@@ -90,4 +90,4 @@ If `MAIN == BASE`, no concurrent reconcile happened — bump to `TARGET` and pus
 
 ## Why this exists
 
-See [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF > Merge Sequencing (the orchestrator-facing phase body; `CLAUDE.md` routes there via its Phase Playbook Loading Contract), `design-rationale.md`, and issue #82 cycles 1-3 for the incident history that drove this design.
+See [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF > Merge Sequencing (the orchestrator-facing phase body; `CLAUDE.md` routes there via its Phase Playbook Loading Contract), `records/design-rationale.md`, and issue #82 cycles 1-3 for the incident history that drove this design.

@@ -6,7 +6,7 @@
 The effect record of ADR-0023 D4 compares two ARCHITECT arms — the per-turn
 respawn script (arm 0) and the orchestrator-relayed persistent participants
 (arm A2) — on the same input. The review that measured the baseline
-(docs/design-reviews/issue-177-deliberation-participant-lifetime.md, §1.3)
+(docs/records/design-reviews/issue-177-deliberation-participant-lifetime.md, §1.3)
 computed its numbers with scratch scripts that were not committed; this script
 is that method, committed so the metric re-derives:
 

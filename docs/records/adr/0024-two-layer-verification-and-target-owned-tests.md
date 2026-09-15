@@ -49,7 +49,7 @@ a test's role in RED, not its lifetime.
 "`git push` → AUDIT + GATE:QUALITY pass required") and CI runs only on `pull_request`
 (`.github/workflows/contract-suites.yml` > `on.pull_request`), so no CI verdict exists during the
 cycle and the local run stands in for one. ADR-0019 rejected using CI results as an "advisory CI
-signal" (`docs/adr/0019-scope-fit-verification-policy.md` > Alternatives Considered > *Seed coverage
+signal" (`docs/records/adr/0019-scope-fit-verification-policy.md` > Alternatives Considered > *Seed coverage
 from the integration branch's CI result*), yet HANDOFF step 5 already requires CI green as a
 `[MUST]` (`docs/autoflow-guide.md` > HANDOFF — "Confirm CI is green on the created PR(s)") — the
 rejection and the flow disagree.
@@ -535,7 +535,7 @@ this record is the only carrier across that gap:
   vocabulary enforces the discipline by construction, since `deleted` / `replaced` / `retained` /
   `conditional` are fates of rules, and a diff has no fate.
 - **Status `Proposed`** is sufficient for this record to govern the sub-issues
-  (`docs/adr/0018-verification-depth-justification.md` > Notes —
+  (`docs/records/adr/0018-verification-depth-justification.md` > Notes —
   "Status `Proposed` is sufficient for the record to govern").
 
 ## Adjustment scope
@@ -600,7 +600,7 @@ this record keeps, not the one it deletes.
 | `scripts/test/check-suite-ci-coverage.sh` > the header comment ("There is NO exemption list for unreachable suites") — CI registration with no exemption | `retained` — its subject becomes true by construction: every committed test is a standing-layer test by definition |
 | `scripts/test/check-suite-manifest.sh` and drift-check D7 (`setup/thin-root-layer/drift-check.sh` > the `D7` leg — "D7: suite headers the shipped selector requires") | `conditional` — a **new** opt-in-keyed arm that calls the one shared resolver (D3) |
 | `setup/manifest.json`'s suite-plane shipping rows | `retained` — shipping continues; only *enforcement* becomes conditional |
-| ADR-0019 decisions 1–3 (`docs/adr/0019-scope-fit-verification-policy.md` > Decision — "Selection-based intermediate verification") | `replaced` — per D6's supersede mapping, decision by decision |
+| ADR-0019 decisions 1–3 (`docs/records/adr/0019-scope-fit-verification-policy.md` > Decision — "Selection-based intermediate verification") | `replaced` — per D6's supersede mapping, decision by decision |
 | `CLAUDE.md` > Flow Control — "CI failure (code issue) → fix tests/implementation and re-flow", the unconditional HANDOFF route | `replaced` — by D4's class route |
 | The `lane` header field (`docs/autoflow-guide.md` > RED > *Header contract* — "`standing` asserts permanent state and lives forever") | `deleted` (D6) — the cycle-scoped value becomes an empty category by construction |
 | The `retire-with` header field (`docs/autoflow-guide.md` > RED > *Header contract* — "names the issue whose merge retires a cycle-scoped suite") | `deleted` (D6) — it names the retirement of a lane that no longer exists |
@@ -619,9 +619,9 @@ this record keeps, not the one it deletes.
 | The `lane` / `retire-with` grammar in the manifest library (`scripts/test/suite-manifest.sh` > the `HEADER GRAMMAR` comment block — "# retire-with: #<issue-number>") | `deleted` (D6) |
 | The lane-value lint arm (`scripts/test/check-suite-manifest.sh` > `check_headers()` — `[ "$lane" != standing ] && [ "$lane" != cycle-scoped ]`) | `deleted` (D6) |
 | The cycle-scoped coupling lint arm (`scripts/test/check-suite-manifest.sh` > `check_headers()` — "'lane: cycle-scoped' requires a '# retire-with: #<issue>'") | `deleted` (D6) |
-| The ADR-0019 status records (`docs/adr/0019-scope-fit-verification-policy.md` > Status — "Proposed; superseded by ADR-0024"; `docs/adr/README.md` > Current Drafts, the ADR-0019 row) | `replaced` — adjacent sites of the enumerated ADR-0019 row, repaired to the composite status string form |
-| The ADR-0022 status records (`docs/adr/0022-test-necessity-and-three-tier-ac-guard.md` > Status — "decision 1's role as the retention filter replaced by ADR-0024 D1"; `docs/adr/README.md` > Current Drafts, the ADR-0022 row) | `replaced` — grounded in this ADR's *Amends ADR-0022* line, in the same composite form |
-| The `docs/adr/README.md` ADR-0024 row | **additive** — a new record, not a fate of an existing rule; outside the four-word vocabulary by construction |
+| The ADR-0019 status records (`docs/records/adr/0019-scope-fit-verification-policy.md` > Status — "Proposed; superseded by ADR-0024"; `docs/records/adr/README.md` > Current Drafts, the ADR-0019 row) | `replaced` — adjacent sites of the enumerated ADR-0019 row, repaired to the composite status string form |
+| The ADR-0022 status records (`docs/records/adr/0022-test-necessity-and-three-tier-ac-guard.md` > Status — "decision 1's role as the retention filter replaced by ADR-0024 D1"; `docs/records/adr/README.md` > Current Drafts, the ADR-0022 row) | `replaced` — grounded in this ADR's *Amends ADR-0022* line, in the same composite form |
+| The `docs/records/adr/README.md` ADR-0024 row | **additive** — a new record, not a fate of an existing rule; outside the four-word vocabulary by construction |
 
 The two device sites coupled to the now-`deleted` Selector-BLOCK degradation rule
 (`scripts/test/select-suites.sh` > `select_over()` —
@@ -636,7 +636,7 @@ ADR-conformance check — "whose Decision scope intersects the change surface"),
 `Proposed` is sufficient for the record to govern. A stale record therefore makes superseded
 decisions **governing input** to the next cycle's two ADR-conformance checks, with every link
 resolving so no reference check fires. The repair form is the **composite status string** already
-used at `docs/adr/README.md` > Current Drafts on the ADR-0018 row
+used at `docs/records/adr/README.md` > Current Drafts on the ADR-0018 row
 ("Proposed, amended by issue #198 (failure-mode column; Decision 3 superseded)"), the ADR-0020 row
 ("Accepted, amended by ADR-0022; ARCHITECT halt superseded by issue #166") and the ADR-0023 row
 ("Accepted; implemented by issue #179 (A2 realization)"), recorded on both the ADR's `## Status` and its
@@ -885,20 +885,20 @@ registry row.
   `lane: standing`, the one value D2 leaves reachable. The Adjustment-scope tables' quoted fragments
   identify the pre-#225 text of each provision, as a record of what was disposed; they are not
   live citations.
-- Supersedes `docs/adr/0019-scope-fit-verification-policy.md`: decision 1 and decision 2 in full,
+- Supersedes `docs/records/adr/0019-scope-fit-verification-policy.md`: decision 1 and decision 2 in full,
   decision 3 in part — `inherited_verdicts` is deleted with the Green-tree register, while the
   anchor-before-execute, representative-sampling and wall-clock-cap obligations are retained and
   re-homed in this ADR's *Evaluator execution discipline* section.
-- Amends `docs/adr/0022-test-necessity-and-three-tier-ac-guard.md`: decision 2's definition of
+- Amends `docs/records/adr/0022-test-necessity-and-three-tier-ac-guard.md`: decision 2's definition of
   `delivery-check` — the row's asset is a one-shot artifact under `.autoflow/issue-{N}-local/`, not
   a committed check in the `lane: cycle-scoped` manifest lane; and, from issue #222, decision 1's
   role as the retention filter — retention is D1's closed list, necessity decides existence only
   (*Test necessity — what D1 replaces and what it retains*). The closed disposition vocabulary and
   the three-tier acceptance-criterion guard are unchanged.
 - Issue #222 — the D1 revision; `connev-llm/llmroute#628` is the criterion's source.
-- Builds on `docs/adr/0018-verification-depth-justification.md`: the layer is derived from an
+- Builds on `docs/records/adr/0018-verification-depth-justification.md`: the layer is derived from an
   existing cell, so no scored item is added.
-- Reinforces `docs/adr/0003-autoflow-ends-at-handoff.md`: D5 declines to bind the reviewer's merge.
+- Reinforces `docs/records/adr/0003-autoflow-ends-at-handoff.md`: D5 declines to bind the reviewer's merge.
 - Issues #112, #121, #130, #134 — the local-cost series this decision closes.
 - Issue #213 — the target header BLOCK and drift-check D7 that D3 makes conditional.
 - Issue #140 — the `remedy_class` cause branch D4 routes through.
@@ -907,7 +907,7 @@ registry row.
 ## Notes
 
 - Numbering: 0024 is the next free integer, contiguous after 0023.
-- The decision alters agent-workflow gates and evaluation policy — a `docs/adr/README.md` >
+- The decision alters agent-workflow gates and evaluation policy — a `docs/records/adr/README.md` >
   "When to Create an ADR" trigger area — so it lands ahead of the mechanisms it governs.
 - **Effective from the next cycle.** The cycle that writes this record is governed by the
   pre-existing rules; see *Clauses this ADR carries beyond M and D1–D6*.

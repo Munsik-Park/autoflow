@@ -350,15 +350,15 @@ assert_true "AC-entry-shape subject-wiring: this suite's own # ci-subject: heade
 # rows: "pattern|||path|||expected"
 GLOB_CONFORMANCE_ROWS=(
   # --- required negative rows -------------------------------------------
-  "docs/adr/|||docs/adr/0016.md|||nomatch"                       # reviewed defect, permanent negative
-  "docs/adr/*|||docs/adr/sub/x.md|||nomatch"                      # single-star does not cross /
+  "docs/records/adr/|||docs/records/adr/0016.md|||nomatch"                       # reviewed defect, permanent negative
+  "docs/records/adr/*|||docs/records/adr/sub/x.md|||nomatch"                      # single-star does not cross /
   "setup/manifest.json|||setup/manifest.json.bak|||nomatch"       # exact entry is not an implicit prefix
-  "docs/adr|||docs/adr/0016.md|||nomatch"                         # bare dir name, no wildcard, matches nothing under it
+  "docs/adr|||docs/records/adr/0016.md|||nomatch"                         # bare dir name, no wildcard, matches nothing under it
   # --- required positive rows --------------------------------------------
-  "docs/adr/**|||docs/adr/0016.md|||match"
-  "docs/adr/**|||docs/adr/sub/x.md|||match"
-  "docs/adr/*|||docs/adr/0016.md|||match"
-  "**.md|||docs/adr/0016.md|||match"
+  "docs/records/adr/**|||docs/records/adr/0016.md|||match"
+  "docs/records/adr/**|||docs/records/adr/sub/x.md|||match"
+  "docs/records/adr/*|||docs/records/adr/0016.md|||match"
+  "**.md|||docs/records/adr/0016.md|||match"
   "setup/manifest.json|||setup/manifest.json|||match"             # exact entry matches its own path
 )
 for row in "${GLOB_CONFORMANCE_ROWS[@]}"; do
@@ -374,10 +374,10 @@ done
 
 # --- three legs outside the table (matcher-self-test) -----------------------
 # (i) directory-cover rule: dir/** covers dir/, dir/ alone does not.
-DC1=true; subject_covered "docs/adr/" "docs/adr/**" || DC1=false
-assert_true "matcher-self-test: subject_covered — pattern 'docs/adr/**' covers directory subject 'docs/adr/'" "$DC1"
-DC2=true; subject_covered "docs/adr/" "docs/adr/" && DC2=false
-assert_true "matcher-self-test: subject_covered — pattern 'docs/adr/' (bare trailing slash) does NOT cover directory subject 'docs/adr/'" "$DC2"
+DC1=true; subject_covered "docs/records/adr/" "docs/records/adr/**" || DC1=false
+assert_true "matcher-self-test: subject_covered — pattern 'docs/records/adr/**' covers directory subject 'docs/records/adr/'" "$DC1"
+DC2=true; subject_covered "docs/records/adr/" "docs/records/adr/" && DC2=false
+assert_true "matcher-self-test: subject_covered — pattern 'docs/records/adr/' (bare trailing slash) does NOT cover directory subject 'docs/records/adr/'" "$DC2"
 
 # (ii) hosting-workflow-scoping: a pattern belonging to a non-reaching
 # workflow does not credit coverage — hermetic two-workflow fixture.
@@ -501,8 +501,8 @@ done
 # live-tree loop above passes vacuously — a fixture token is required.
 SG1=true; is_subject_grammar_valid 'docs/*.md' && SG1=false
 assert_true "AC-subject-grammar hermetic: a glob-bearing token ('docs/*.md') fails the grammar check" "$SG1"
-SG2=true; is_subject_grammar_valid 'docs/adr/' || SG2=false
-assert_true "AC-subject-grammar hermetic: a real trailing-slash directory token ('docs/adr/') passes" "$SG2"
+SG2=true; is_subject_grammar_valid 'docs/records/adr/' || SG2=false
+assert_true "AC-subject-grammar hermetic: a real trailing-slash directory token ('docs/records/adr/') passes" "$SG2"
 SG3=true; is_subject_grammar_valid 'setup/manifest.json' || SG3=false
 assert_true "AC-subject-grammar hermetic: a real file-path token ('setup/manifest.json') passes" "$SG3"
 

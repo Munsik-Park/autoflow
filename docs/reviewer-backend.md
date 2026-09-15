@@ -5,7 +5,7 @@ contract**. `codex` is the default backend; `claude` is an opt-in fallback. This
 document is the single home for the abstraction — the inputs, obligations,
 output, backend table, config location, and the per-backend start-confirmation
 oracle. It is referenced from [`autoflow-guide.md`](autoflow-guide.md) HANDOFF
-step 6, [`design-rationale.md`](design-rationale.md) Decision 9, and `CLAUDE.md`.
+step 6, [`records/design-rationale.md`](records/design-rationale.md) Decision 9, and `CLAUDE.md`.
 
 ## Contract
 

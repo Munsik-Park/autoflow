@@ -285,6 +285,7 @@ walk_md_links() {
   _starters="$2"
   _fail=0
   _skipcnt=0
+  _reccnt=0
   _cur=$(mktemp)
   _vis=$(mktemp)
   for _s in $_starters; do
@@ -309,6 +310,11 @@ walk_md_links() {
         # Resolve relative to current file's location
         _resolved=$(resolve_md_link "$_f" "$_lnk")
         [ -n "$_resolved" ] || continue
+        # Skip links into the record tier (docs/records/ — ADR-0015 D1 >
+        # Superseding note 2026-09-16, issue #253): the generator neither
+        # emits nor traverses them, so the installed tree never carries them
+        # by design. Counted separately from source-broken skips.
+        case "$_resolved" in docs/records/*) _reccnt=$((_reccnt + 1)); continue ;; esac
         # Skip links whose target does not exist in the SOURCE repo either:
         # a pre-existing source doc defect, not an install-completeness gap.
         # (The installed autoflow-dir layout mirrors repo-root-relative
@@ -331,6 +337,9 @@ LINKS
   rm -f "$_cur" "$_vis"
   if [ "$_skipcnt" -gt 0 ]; then
     printf 'NOTE: AC1k -- %d link(s) skipped as pre-existing source-broken targets\n' "$_skipcnt"
+  fi
+  if [ "$_reccnt" -gt 0 ]; then
+    printf 'NOTE: AC1k -- %d link(s) into the record tier (docs/records/) skipped: not shipped by design (ADR-0015 D1, #253)\n' "$_reccnt"
   fi
   return $_fail
 }

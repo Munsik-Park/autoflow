@@ -286,7 +286,7 @@ the turns or the reports' bodies. It **verifies** what the report rests on by sp
 artifact excerpts against re-derived facts — the full read-and-score is GATE:PLAN's. Rationale:
 [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation;
 contract: [`role-contracts.md`](role-contracts.md) > Facilitator; decision:
-[`adr/0023-deliberation-participant-lifetime.md`](adr/0023-deliberation-participant-lifetime.md).
+[`records/adr/0023-deliberation-participant-lifetime.md`](records/adr/0023-deliberation-participant-lifetime.md).
 
 #### Relay procedure (orchestrator)
 
@@ -331,7 +331,7 @@ proceeding. The workflow script cannot perform this check itself: the hosted Wor
 injects no filesystem access and rejects `import(` at parse time, so the capability lives at the
 layer that has a shell.
 
-**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the spawn prompt names each participant only the documents its design task needs (e.g. the relevant `docs/adr/*`, `docs/design-rationale.md`), and the participant reads them once — its context carries them across turns. **Deliberation Isolation is unchanged** — the turns live in the transcript file and only the Record workflow's report returns to the orchestrator.
+**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the spawn prompt names each participant only the documents its design task needs (e.g. the relevant `docs/records/adr/*`, `docs/records/design-rationale.md`), and the participant reads them once — its context carries them across turns. **Deliberation Isolation is unchanged** — the turns live in the transcript file and only the Record workflow's report returns to the orchestrator.
 
 **Roles**:
 - **Developer AI**: feature design (changed files, API interface, data structures).
@@ -344,7 +344,7 @@ layer that has a shell.
    they hold under, and the alternatives considered and rejected with the ground for each rejection.
    It cites the verification design's `Failure mode` column (below) for the failure mode each
    verification exists to catch, rather than stating it. The deliberation stops here. Rationale:
-   [`design-rationale.md`](design-rationale.md) > Decision 15.
+   [`records/design-rationale.md`](records/design-rationale.md) > Decision 15.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
@@ -435,7 +435,7 @@ reports of its last round (a re-discussion opens a new round with a `### Brief` 
 its own two reports; the earlier round's reports stay on the record). The two design documents state the design and the conclusions the participants
 reached, in the form each is defined above; the report states what was agreed and what was not.
 
-**[MUST] A re-discussion's Record is a delta, never a rewrite** (issue #192; [`design-rationale.md`](design-rationale.md) > Decision 15). On the **first**
+**[MUST] A re-discussion's Record is a delta, never a rewrite** (issue #192; [`records/design-rationale.md`](records/design-rationale.md) > Decision 15). On the **first**
 Record of a cycle the scribe writes the documents whole. On every Record after that it reads the
 existing documents plus **only the turns appended since the previous Record** and both reports of
 this round — not the accumulated transcript — and **appends** a delta section rather than
@@ -554,7 +554,7 @@ a test shape.
   fires when `T ∩ S ≠ ∅`. One oracle is owed **per element** of `T ∩ S`. A single oracle may discharge
   several elements, provided every element is traced by some oracle — each oracle's row carries the
   intersecting identifier(s) as its trace.
-- **Settled decision** — an accepted or proposed ADR under `docs/adr/`, a prior issue's agreed
+- **Settled decision** — an accepted or proposed ADR under `docs/records/adr/`, a prior issue's agreed
   design, or an entry in this issue's decision ledger (`.autoflow/issue-{N}-ledger.md`).
 - **Shared state** — state that outlives a single call and that more than one decision reads or
   writes. The obligation binds to no concrete realization; the following are examples only, and
@@ -740,19 +740,19 @@ the existing class rules, consuming no ARCHITECT re-entry.
 
 ### ADR-conformance check (scored within Feasibility / Scope)
 
-This named check makes the ADR-conformance concern explicit inside the two items that already absorb structural fit — it adds **no scored item** and changes **no PASS threshold**; a violation caps the named item at 6, failing via the each-item ≥ 7 rule (identical mechanism to the GATE:QUALITY "Known blind-spot checks" below). A **governing ADR** for the change surface is an ADR in `docs/adr/` with status `Accepted`/`Proposed` whose Decision scope intersects the change surface, **or** a change hitting a `docs/adr/README.md:16-23` "When to Create an ADR" trigger area.
+This named check makes the ADR-conformance concern explicit inside the two items that already absorb structural fit — it adds **no scored item** and changes **no PASS threshold**; a violation caps the named item at 6, failing via the each-item ≥ 7 rule (identical mechanism to the GATE:QUALITY "Known blind-spot checks" below). A **governing ADR** for the change surface is an ADR in `docs/records/adr/` with status `Accepted`/`Proposed` whose Decision scope intersects the change surface, **or** a change hitting a `docs/records/adr/README.md:16-23` "When to Create an ADR" trigger area.
 
 - **Trigger → cap**: divergence from a governing ADR, **or** an architecture-impacting change with no governing ADR/owner decision → cap.
 - **Per-item cap distribution**: `Feasibility` caps on a structural-grounding divergence (the plan is not grounded in the ADR's decided structure); `Scope` caps on a redundant-mechanism / boundary divergence **or** the undocumented-ADR trigger; **both** cap when both defects are present. One divergence never leaves both items uncapped.
 - **N/A by default**: no governing ADR's Decision scope intersects **and** no trigger area is hit → the check does not apply, no cap, the item scores normally.
 
-Precedent: the GATE:QUALITY "Known blind-spot checks" below. Authority: [`docs/adr/0016-adr-conformance-gate-scoring.md`](adr/0016-adr-conformance-gate-scoring.md).
+Precedent: the GATE:QUALITY "Known blind-spot checks" below. Authority: [`docs/records/adr/0016-adr-conformance-gate-scoring.md`](records/adr/0016-adr-conformance-gate-scoring.md).
 
 ### AC-authority check (scored within Scope)
 
 Same mechanism as the ADR-conformance check above: **no added scored item, no threshold change**; a
 violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 rule. Authority:
-[`docs/adr/0020-acceptance-criterion-authority.md`](adr/0020-acceptance-criterion-authority.md).
+[`docs/records/adr/0020-acceptance-criterion-authority.md`](records/adr/0020-acceptance-criterion-authority.md).
 
 - **The comparison** is a key join, both sides keyed: every `AC id` in the issue's
   `## Acceptance criteria` table against the `Issue AC` column of the verification design's
@@ -1193,7 +1193,7 @@ each-item ≥ 7 criterion:
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
   mentions). A dangling reference in a **normative document** caps the affected item at 6.
   The cap binds normative documents only; a stale name in a **historical record** is the
-  evaluator's judgment (issue #232; [`design-rationale.md`](design-rationale.md) > Decision 18).
+  evaluator's judgment (issue #232; [`records/design-rationale.md`](records/design-rationale.md) > Decision 18).
   - *Normative documents* — the one definition, cited from everywhere else — are what an agent
     or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
     rules, playbooks, role contracts, evaluation criteria and agent definitions a phase loads
@@ -1473,7 +1473,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | step 6, per-PR |
      | `PAUSE` (from `operator`) | `active:false`, `phase:"awaiting-user"` | — |
 
-     The `ARCHITECT` route is the one whose depth is judged. The finding moved a settled decision, so the deliberation owns the change; **where the re-entry starts is the orchestrator's judgment** (issue #227; [`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — auto-entered in-session with the reviewer comment as the DIAGNOSE trigger target, the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, preserve the previous cycle's artifacts, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a Phase A/B fact the decision rested on; (b) an **ARCHITECT re-deliberation** — the same setup, with two differences that follow from the analysis standing: `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), and the **DIAGNOSE analysis artifacts are not renamed** — `issue-{N}-phase-a.md`, `issue-{N}-phase-b.md` and `issue-{N}-phase-3.md` stay in place under their flat names as this cycle's analysis inputs (the *Preserve the previous cycle's artifacts* rule at PREFLIGHT excludes them for this shape), so GATE:PLAN, GATE:QUALITY and the evaluator prompt read the `## Acceptance criteria` table at the unchanged path `.autoflow/issue-{N}-phase-b.md` ([`role-contracts.md`](role-contracts.md) > Evaluation AI Prompt Rules item 1) and the AC-authority check has its declared source. The participants are spawned on a `brief` naming the finding and the ledger entry of the decision it moves (ARCHITECT > *Re-discussion*), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision entry it moves), why the analysis stands, and the **provenance of each reused analysis file** — its path, the cycle that authored it and its `shasum -a 256` — so that across consecutive re-entries a reader can trace which analysis a gate scored against, and a later shape-(a) entry's rename (which stamps the *previous* cycle number, not the authoring one) does not lose the trail. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT participants on the recorded GATE:HYPOTHESIS verdict and RED / GREEN on the GATE:PLAN the re-deliberation re-scores — so a shape that skips a phase never skips the gate after it, and a wrong judgment is caught by GATE:PLAN, the reviewer re-review and CI (principle 3). The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What a thin route removes is re-deliberation of a decision nothing moved; **every independent check is retained on every route and shape** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), CI still gates, and the loop check and the attempt cap below apply unchanged. This is the same class-routed proportionality the late gates have had since issue #140 ([`design-rationale.md`](design-rationale.md) > Decision 11), extended to the review entry point by Decision 15 (llmroute #280: a five-line production fix took a full cycle at ≈ $128) and, for the `design` class, to the re-entry point by Decision 17 (issue #217: three `design`-class review rounds each re-ran the cycle from DIAGNOSE).
+     The `ARCHITECT` route is the one whose depth is judged. The finding moved a settled decision, so the deliberation owns the change; **where the re-entry starts is the orchestrator's judgment** (issue #227; [`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — auto-entered in-session with the reviewer comment as the DIAGNOSE trigger target, the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, preserve the previous cycle's artifacts, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a Phase A/B fact the decision rested on; (b) an **ARCHITECT re-deliberation** — the same setup, with two differences that follow from the analysis standing: `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), and the **DIAGNOSE analysis artifacts are not renamed** — `issue-{N}-phase-a.md`, `issue-{N}-phase-b.md` and `issue-{N}-phase-3.md` stay in place under their flat names as this cycle's analysis inputs (the *Preserve the previous cycle's artifacts* rule at PREFLIGHT excludes them for this shape), so GATE:PLAN, GATE:QUALITY and the evaluator prompt read the `## Acceptance criteria` table at the unchanged path `.autoflow/issue-{N}-phase-b.md` ([`role-contracts.md`](role-contracts.md) > Evaluation AI Prompt Rules item 1) and the AC-authority check has its declared source. The participants are spawned on a `brief` naming the finding and the ledger entry of the decision it moves (ARCHITECT > *Re-discussion*), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision entry it moves), why the analysis stands, and the **provenance of each reused analysis file** — its path, the cycle that authored it and its `shasum -a 256` — so that across consecutive re-entries a reader can trace which analysis a gate scored against, and a later shape-(a) entry's rename (which stamps the *previous* cycle number, not the authoring one) does not lose the trail. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT participants on the recorded GATE:HYPOTHESIS verdict and RED / GREEN on the GATE:PLAN the re-deliberation re-scores — so a shape that skips a phase never skips the gate after it, and a wrong judgment is caught by GATE:PLAN, the reviewer re-review and CI (principle 3). The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What a thin route removes is re-deliberation of a decision nothing moved; **every independent check is retained on every route and shape** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), CI still gates, and the loop check and the attempt cap below apply unchanged. This is the same class-routed proportionality the late gates have had since issue #140 ([`records/design-rationale.md`](records/design-rationale.md) > Decision 11), extended to the review entry point by Decision 15 (llmroute #280: a five-line production fix took a full cycle at ≈ $128) and, for the `design` class, to the re-entry point by Decision 17 (issue #217: three `design`-class review rounds each re-ran the cycle from DIAGNOSE).
 
      **[MUST] The loop check runs on every route, before the routed work starts.** The thin routes and the `ARCHITECT` route's re-deliberation shape skip DIAGNOSE, and the review-response loop check has its other call site there ([`phases/analysis.md`](phases/analysis.md) > *Review-response loop check*) — so on a route that skips DIAGNOSE the orchestrator runs that contract's **steps 1 and 2 here**: append this attempt's observation to the ledger (complaint class, witness case, prior-change shape, cycle), then compare it against the immediately-prior review-response observation, with the same suppression rule and the same situation-first pause on a match. Both halves are load-bearing and neither substitutes for the other: without the comparison a class whose witness case merely changes is patched case by case until the attempt cap, which is the pathology the check exists to stop; without the **unconditional record** a later attempt that runs DIAGNOSE has no baseline to compare against. The `review-autofix` count is an attempt tally, not a class comparison. Step 3 (re-enter after the user answers) applies unchanged when the check pauses. The contract's single documentary home stays `phases/analysis.md`; this is a second call site for the entry path that has no DIAGNOSE, the same shape as `scope-bounded.sh`'s `triage` and `check-fix` call sites.
 
@@ -1572,7 +1572,7 @@ error.
 
 - [`CLAUDE.md`](../CLAUDE.md) — cross-phase invariants, the router (phase list + Flow Control), regression caps, Execution Principles, state schema.
 - [`phases/analysis.md`](phases/analysis.md) — DIAGNOSE analysis procedure (3-Phase A/B/3, scoring rubric, bias prevention).
-- [`design-rationale.md`](design-rationale.md) — why every rule exists.
+- [`records/design-rationale.md`](records/design-rationale.md) — why every rule exists.
 - [`evaluation-system.md`](evaluation-system.md) — scoring and PASS thresholds.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — Discussion Protocol, sub-repo rules.
 - [`repo-boundary-rules.md`](repo-boundary-rules.md) — cross-repo coordination.

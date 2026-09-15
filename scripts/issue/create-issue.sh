@@ -203,7 +203,7 @@ if has_section "Grounds"; then
   GROUNDS="$(section_body "Grounds")"
   # An anchor is a commit SHA, a URL, or a durable citation — a document, its
   # section heading and a quoted fragment of the provision's sentence, written
-  # `<path>` > <heading> — "<fragment>" (docs/design-rationale.md > Decision 16)
+  # `<path>` > <heading> — "<fragment>" (docs/records/design-rationale.md > Decision 16)
   # — something a reader can re-derive rather than the author's summary of it.
   # A bare path:line is not an anchor here (issue #221): an issue body outlives
   # the commit its line numbers were read at, so a line number counts only

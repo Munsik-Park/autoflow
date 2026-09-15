@@ -22,8 +22,6 @@
 # Adding a NEW entry here to suppress a newly-introduced leak is forbidden --
 # only removals (as files are cleaned) are legitimate edits to this file.
 .claude/autoflow/CLAUDE.md
-.claude/autoflow/docs/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md
-.claude/autoflow/docs/adr/README.md
 .claude/autoflow/docs/autoflow-guide.md
 .claude/autoflow/docs/development-guideline.md
 .claude/autoflow/docs/external-review-sequencing.md

@@ -149,7 +149,7 @@ change; only an operator decision may make it. The flow stops and asks.**
 
 - Issue #138 — this decision and its implementation.
 - Issue #134 — the incident that motivated it (two criteria changed with no operator decision).
-- Precedent: `docs/adr/0016-adr-conformance-gate-scoring.md` (cap-at-6 inside an existing item, no
+- Precedent: `docs/records/adr/0016-adr-conformance-gate-scoring.md` (cap-at-6 inside an existing item, no
   added scored item, no threshold change).
 
 ## Notes
@@ -161,7 +161,7 @@ change; only an operator decision may make it. The flow stops and asks.**
   so the finding set narrows from five kinds to `dropped` / `unreasoned` / `substituted`; issue
   #160 further retires `substituted`, leaving `dropped` / `unreasoned`. The halt,
   the fail-closed sentinels, the `[ac-decision]` grammar and the budget accounting are unchanged.
-- The decision alters agent-workflow gates and evaluation policy — a `docs/adr/README.md` >
+- The decision alters agent-workflow gates and evaluation policy — a `docs/records/adr/README.md` >
   "When to Create an ADR" trigger area — so it lands with, or ahead of, the mechanism it governs.
 
 ## Superseding note (issue #166)

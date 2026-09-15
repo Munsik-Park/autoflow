@@ -139,17 +139,17 @@ verification method pass through three tiers, of which the operator is only the 
 
 - Issue #153 — this decision and its implementation.
 - Issue #160 — amends item 5: retires the `substituted` kind (Notes > *Amendment (issue #160)*).
-- Amends `docs/adr/0020-acceptance-criterion-authority.md`: the operator keeps authority over
+- Amends `docs/records/adr/0020-acceptance-criterion-authority.md`: the operator keeps authority over
   acceptance-criterion **content**; a verification-method reduction with a stated reason is the
   deliberation's, judged by the external reviewer. ADR-0020's halt, fail-closed sentinels,
   `[ac-decision]` grammar, resume and budget accounting are unchanged.
-- Builds on `docs/adr/0018-verification-depth-justification.md` (per-layer unique-failure-mode
+- Builds on `docs/records/adr/0018-verification-depth-justification.md` (per-layer unique-failure-mode
   justification) by widening "another layer" to non-test mechanisms.
 
 ## Notes
 
 - Numbering: 0022 is the next free integer, contiguous after 0021.
-- The decision alters agent-workflow gates and evaluation policy — a `docs/adr/README.md` >
+- The decision alters agent-workflow gates and evaluation policy — a `docs/records/adr/README.md` >
   "When to Create an ADR" trigger area — so it lands with the mechanism it governs.
 - **Amendment (issue #160)** — the Reconcile finding set is `dropped` / `unreasoned` only.
   `substituted` was the one kind that required reading meaning ("asserts a different property"),

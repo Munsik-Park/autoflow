@@ -179,8 +179,8 @@ claude-autoflow/
 ├── .github/
 │   └── workflows/                     # Advisory CI guards (.github/workflows/)
 │
-├── docs/
-│   ├── design-rationale.md            # Why every rule exists — read first
+├── docs/                              # Usage documents — stamped to targets
+│   ├── INDEX.md                       # Router: usage documents vs records
 │   ├── autoflow-guide.md              # Phase-by-phase AutoFlow guide
 │   ├── evaluation-system.md           # Evaluation scoring details
 │   ├── git-workflow.md                # Git procedures
@@ -188,8 +188,11 @@ claude-autoflow/
 │   ├── submodule-common-rules.md      # Sub-repo shared rules + Discussion Protocol
 │   ├── role-common-rules.md       # Shared role-spawn behavior rules
 │   ├── security-checklist.md          # Project-specific security checklist
-│   ├── adr/                           # Architecture Decision Records (docs/adr/)
-│   └── phases/                        # Per-phase playbooks (docs/phases/)
+│   ├── phases/                        # Per-phase playbooks (docs/phases/)
+│   └── records/                       # Design & decision records — not stamped to targets
+│       ├── design-rationale.md        # Why every rule exists — read first
+│       ├── adr/                       # Architecture Decision Records
+│       └── design-reviews/            # Design reviews behind the ADRs
 │
 ├── plugin/                            # Packaged plugin distribution surface (plugin/)
 ├── scripts/                           # Helper / handoff scripts (scripts/)
@@ -264,7 +267,7 @@ Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
 
 | Document | Description |
 |----------|-------------|
-| [**Design Rationale**](docs/design-rationale.md) | **Read first** — why every design decision was made |
+| [**Design Rationale**](docs/records/design-rationale.md) | **Read first** — why every design decision was made |
 | [AutoFlow Guide](docs/autoflow-guide.md) | Detailed phase-by-phase lifecycle |
 | [Evaluation System](docs/evaluation-system.md) | Scoring, PASS criteria, output format |
 | [Git Workflow](docs/git-workflow.md) | Branch naming, commits, PR process |

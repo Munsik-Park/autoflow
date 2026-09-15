@@ -14,7 +14,7 @@ text source stays in the README (collapsed) as the greppable fallback the
 issue-952 G4 preservation guards assert on.
 
 Beyond the happy path, the diagram encodes the design decisions of
-``docs/design-rationale.md``:
+``docs/records/design-rationale.md``:
 
 - D1  DIAGNOSE structure analysis is issue-isolated (node subtitle)
 - D2  every gate is a fresh-spawned Evaluation AI (gate subtitles, legend)
