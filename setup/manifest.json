@@ -27,14 +27,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5040eb3d6c0cae2ea309b49ee4c28de8c426d41c9fdf02ffe812db97c6b7099a"
+      "sha256": "aa887d568227108451a0d6e1cde6c9661181b975d8626c1bab679ca2bd166711"
     },
     {
       "source": "docs/development-guideline.md",
       "dest": ".claude/autoflow/docs/development-guideline.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "24c9639937e6259c6ddb891218647ae9bd27d9c0523176a5a505c767c8c458c0"
+      "sha256": "2126aef6d6a87791f119f3b7862aaef037d198a8e58cde38286e5df7aa298b2d"
     },
     {
       "source": "docs/evaluation-system.md",

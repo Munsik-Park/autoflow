@@ -740,7 +740,7 @@ the existing class rules, consuming no ARCHITECT re-entry.
 
 ### ADR-conformance check (scored within Feasibility / Scope)
 
-This named check makes the ADR-conformance concern explicit inside the two items that already absorb structural fit — it adds **no scored item** and changes **no PASS threshold**; a violation caps the named item at 6, failing via the each-item ≥ 7 rule (identical mechanism to the GATE:QUALITY "Known blind-spot checks" below). A **governing ADR** for the change surface is an ADR in `docs/records/adr/` with status `Accepted`/`Proposed` whose Decision scope intersects the change surface, **or** a change hitting a `docs/records/adr/README.md:16-23` "When to Create an ADR" trigger area.
+This named check makes the ADR-conformance concern explicit inside the two items that already absorb structural fit — it adds **no scored item** and changes **no PASS threshold**; a violation caps the named item at 6, failing via the each-item ≥ 7 rule (identical mechanism to the GATE:QUALITY "Known blind-spot checks" below). A **governing ADR** for the change surface is an ADR in the repository's ADR directory (`docs/records/adr/` in this repository; a consuming target's own ADR location) with status `Accepted`/`Proposed` whose Decision scope intersects the change surface, **or** a change hitting a **trigger area** of `docs/development-guideline.md` > ADR Policy > *When to create an ADR* — the list is defined there, in a shipped usage document, and nowhere else.
 
 - **Trigger → cap**: divergence from a governing ADR, **or** an architecture-impacting change with no governing ADR/owner decision → cap.
 - **Per-item cap distribution**: `Feasibility` caps on a structural-grounding divergence (the plan is not grounded in the ADR's decided structure); `Scope` caps on a redundant-mechanism / boundary divergence **or** the undocumented-ADR trigger; **both** cap when both defects are present. One divergence never leaves both items uncapped.
@@ -1238,7 +1238,8 @@ each-item ≥ 7 criterion:
   opted in (`not-applicable` on a non-opted-in target, which is not clean).
 - **Fit — ADR conformance** (proactively-added per `ADR-0016`, not a past Codex catch): on
   the final change set, re-confirm the shipped change conforms to any governing ADR (same
-  governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check). A
+  governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check; the
+  trigger areas are `docs/development-guideline.md` > ADR Policy > *When to create an ADR*). A
   divergence from a governing ADR, or an architecture-impacting change with no governing
   ADR/owner decision, caps Fit at 6. Regression backstop for the GATE:PLAN check.
 - **Completeness — AC-authority check** (proactively-added per `ADR-0020`, not a past Codex catch):

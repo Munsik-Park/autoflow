@@ -13,14 +13,11 @@ operational responsibility.
 
 ## When to Create an ADR
 
-Create or update an ADR before implementation when a change affects:
-
-- Host/submodule responsibility boundaries.
-- Deployment topology or CI/CD authority.
-- Tenant isolation, accounting ownership, file visibility, or access control.
-- Secret/config management.
-- Agent workflow gates, evaluation policy, or merge authority.
-- External service dependencies.
+The trigger areas — the list a change is checked against — are defined in
+`docs/development-guideline.md` > ADR Policy > *When to create an ADR*, a usage
+document that ships to every target; the two gate checks that read them
+(`docs/autoflow-guide.md` > GATE:PLAN > ADR-conformance check, GATE:QUALITY >
+Fit — ADR conformance) cite that list, and this registry does not restate it.
 
 Start from [0000-adr-template.md](0000-adr-template.md).
 

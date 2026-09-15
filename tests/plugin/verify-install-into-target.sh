@@ -821,6 +821,38 @@ else
   failc "AC1k" "neither CLAUDE.md nor docs/INDEX.md installed — cannot walk link closure"
 fi
 
+# ── AC1l (#253 review): the ADR-conformance trigger areas ship with the gates ─
+# The record tier (docs/records/) is not installed, so the list GATE:PLAN's
+# ADR-conformance check and GATE:QUALITY's Fit — ADR conformance item decide
+# "trigger area hit" / "N/A" against must live in an installed usage document.
+# The installed guide names its source; that source must be installed and must
+# carry the list. AC1k's record-tier skip cannot see this — it treats every
+# record link alike — so this leg reads the gate input specifically.
+echo "== AC1l (#253): ADR-conformance trigger areas are readable in the installed tree =="
+_aGUIDE="$TARGET/.claude/autoflow/docs/autoflow-guide.md"
+if [ -f "$_aGUIDE" ]; then
+  _trig_lines=$(grep -n 'When to create an ADR' "$_aGUIDE" || true)
+  _trig_src=$(printf '%s\n' "$_trig_lines" | grep -oE 'docs/[A-Za-z0-9_./-]+\.md' | sort -u)
+  if [ -z "$_trig_lines" ]; then
+    failc "AC1l" "installed docs/autoflow-guide.md never names the 'When to create an ADR' trigger-area list -- the gates have no declared source for it"
+  elif [ "$(printf '%s\n' "$_trig_src" | grep -c .)" -ne 1 ]; then
+    failc "AC1l" "the guide cites $(printf '%s' "$_trig_src" | tr '\n' ' ') as the trigger-area source -- expected exactly one path"
+  elif printf '%s\n' "$_trig_src" | grep -q '^docs/records/'; then
+    failc "AC1l" "the trigger-area source $_trig_src is a record-tier path, which is not installed"
+  elif ! [ -f "$TARGET/.claude/autoflow/$_trig_src" ]; then
+    failc "AC1l" "the trigger-area source $_trig_src is not installed at .claude/autoflow/$_trig_src"
+  else
+    _trig_list=$(awk '/^### When to create an ADR/{f=1;next} /^#/{if(f)exit} f' "$TARGET/.claude/autoflow/$_trig_src" | grep -c '^- ')
+    if [ "$_trig_list" -ge 1 ]; then
+      pass "AC1l: installed $_trig_src > 'When to create an ADR' carries the trigger-area list ($_trig_list areas), and both gate checks name it ($(printf '%s\n' "$_trig_lines" | grep -c .) citations)"
+    else
+      failc "AC1l" "installed $_trig_src has no '### When to create an ADR' section with bullet items"
+    fi
+  fi
+else
+  failc "AC1l" "installed docs/autoflow-guide.md missing at $_aGUIDE"
+fi
+
 # ══════════════════════════════════════════════════════════════════════════════
 # W2 — artifact manifest
 # ══════════════════════════════════════════════════════════════════════════════
