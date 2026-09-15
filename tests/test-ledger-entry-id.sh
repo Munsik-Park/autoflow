@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/ledger/ledger-entry-id.sh CLAUDE.md docs/teammate-contracts.md
+# ci-subject: scripts/ledger/ledger-entry-id.sh CLAUDE.md docs/role-contracts.md
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: decision-ledger entry-ID uniqueness — allocation (`next`) + detection
@@ -533,7 +533,7 @@ echo "=== AC-rule-text / writer-namespace — single-home sweep ==="
 # feature design writer-namespace > "Single home for the mapping": the
 # writer -> namespace table (Orchestrator=O / Facilitator delegate=F) has
 # exactly one documentary home, CLAUDE.md > Decision Ledger. No second
-# document restates the table itself (docs/teammate-contracts.md cites it,
+# document restates the table itself (docs/role-contracts.md cites it,
 # it does not carry the letter). This is a permanent property of the doc
 # tree, not expressible as a single-file registry entry (the registry
 # schema is one file per entry), so it lives here as a repo-wide sweep.

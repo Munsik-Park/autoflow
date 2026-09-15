@@ -5,7 +5,7 @@
 >   its tree-identity predicate "leave with the register" (ADR-0024 D6, retired by
 >   #225 `9d9f417` and #228), and the HOLD / GO message protocol its steps 1–3 check
 >   belongs to the named-teammate mode that is itself retired (`CLAUDE.md` >
->   Communication; `docs/teammate-common-rules.md` > Result delivery path). Kept as
+>   Communication; `docs/role-common-rules.md` > Result delivery path). Kept as
 >   the historical record; no step or verdict rule of M1 is performable.
 > - *M4 (sweep-fits-the-tool-ceiling)* is retired: there is no local whole-tree
 >   sweep at VALIDATE (#225 `9d9f417`; `CLAUDE.md` > Rule Scope — "none scheduled,

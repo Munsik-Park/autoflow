@@ -92,7 +92,7 @@ const POLICY_FILE = {
   },
   required: ['found', 'content'],
 }
-const FOREGROUND_RULE = ' Run every Bash command in the foreground only — never run_in_background (see docs/teammate-common-rules.md > Bash Execution Mode).'
+const FOREGROUND_RULE = ' Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).'
 const policyLoaded = await Promise.resolve()
   .then(() => agent(
     `You are a transcription channel, not a reviewer. Read ${POLICY_PATH} and return its raw contents verbatim in "content" -- do not summarize, reword, add, drop or re-order anything, and do not re-serialize or pretty-print the JSON. Set "found" true only when the file exists AND is non-empty; when it does not, set "found" false and "content" to the empty string. Exercise no judgment about the policy itself.${FOREGROUND_RULE}`,

@@ -32,7 +32,7 @@ Merge-order clearance is operator-performed. Once every sub-repo merge for the c
 
 The confirmation is the operator's manual check that the host PR's `services` submodule pointer equals the llmroute PR's merge commit (see Reconcile preflight below). The merge-order gate is the operator's `blocked-by-subrepo` label removal alone (ADR-0015 D3 — a machine status check for this signal is advisory-only, never an enforceable required check).
 
-This clearance sits alongside the protections the reviewer verifies before merging (PR review >= 1, CI green) — the same enforcement model as every other check on this repo (see [`teammate-contracts.md`](teammate-contracts.md) > Verification scenarios).
+This clearance sits alongside the protections the reviewer verifies before merging (PR review >= 1, CI green) — the same enforcement model as every other check on this repo (see [`role-contracts.md`](role-contracts.md) > Verification scenarios).
 
 ## Per-issue procedure
 

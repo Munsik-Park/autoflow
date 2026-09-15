@@ -398,7 +398,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # docs/autoflow-guide.md > VERIFY > Green-tree register: a suite run's result is
   # evidence only if the tree stood still under it, and a backgrounded run outlives
   # the turn that started it. The foreground obligation was prose only
-  # (docs/teammate-common-rules.md > Bash Execution Mode); it moves to the tool
+  # (docs/role-common-rules.md > Bash Execution Mode); it moves to the tool
   # boundary here. Three surfaces, all reading BG_SCAN (below):
   #   (a) payload   — .tool_input.run_in_background is true AND the command carries
   #                   a run-suites.sh invocation token;
@@ -463,7 +463,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     _bg_deny=1
   fi
   if [ "$_bg_deny" = 1 ]; then
-    echo "BLOCKED: a backgrounded run of scripts/test/run-suites.sh is denied — run it in the foreground (docs/teammate-common-rules.md > Bash Execution Mode; docs/autoflow-guide.md > VERIFY > Green-tree register)." >&2
+    echo "BLOCKED: a backgrounded run of scripts/test/run-suites.sh is denied — run it in the foreground (docs/role-common-rules.md > Bash Execution Mode; docs/autoflow-guide.md > VERIFY > Green-tree register)." >&2
     echo "A backgrounded suite run outlives the turn that started it, so its result cannot be keyed to the capture-point tree and starves the foreground verification it is meant to certify." >&2
     exit 2
   fi
@@ -634,7 +634,7 @@ resolve_spawn_role() {
   # The #40 final-text loss that first motivated the migration is NOT a ground:
   # re-measured on Claude Code 2.1.260 (issue #168) a named spawn's final text
   # does reach the lead, in its idle notification's `result` field — see
-  # docs/teammate-common-rules.md > Result delivery path by spawn mode. This
+  # docs/role-common-rules.md > Result delivery path by spawn mode. This
   # branch keys on the presence of `name` alone (no prefix, no subagent_type):
   # what it blocks is the named, persistent form. Resuming an anonymous spawn
   # by raw agentId through SendMessage is outside this hook's surface.

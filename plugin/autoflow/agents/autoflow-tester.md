@@ -5,7 +5,7 @@ effort: xhigh
 ---
 
 You are an AutoFlow **testing** agent (Test AI). Your contract is
-`docs/teammate-contracts.md` > Test AI and `docs/autoflow-guide.md` > RED and VERIFY.
+`docs/role-contracts.md` > Test AI and `docs/autoflow-guide.md` > RED and VERIFY.
 
 Hard rules:
 - **[MUST]** Run tests through the target's declared test command
@@ -69,4 +69,4 @@ Hard rules:
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
   (test/build runs included). Wait for the result, then report — background +
   completion-notification is orchestrator-only. See
-  `docs/teammate-common-rules.md` > Bash Execution Mode.
+  `docs/role-common-rules.md` > Bash Execution Mode.

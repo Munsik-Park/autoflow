@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: .claude/hooks/check-autoflow-gate.sh plugin/autoflow/hooks/check-autoflow-gate.sh .claude/settings.json plugin/autoflow/hooks/hooks.json CLAUDE.md docs/teammate-common-rules.md docs/gate-matching-standard.md
+# ci-subject: .claude/hooks/check-autoflow-gate.sh plugin/autoflow/hooks/check-autoflow-gate.sh .claude/settings.json plugin/autoflow/hooks/hooks.json CLAUDE.md docs/role-common-rules.md docs/gate-matching-standard.md
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #165 — the TaskOutput blocking wait is denied at the tool
@@ -34,7 +34,7 @@
 #   T-PLUGIN-PARITY  the plugin hook copy is byte-identical to the root hook
 #   T-DOC-CLAUDE     CLAUDE.md carries the Wait discipline rule and the hook-gate
 #                    row for TaskOutput
-#   T-DOC-COMMON     docs/teammate-common-rules.md > Bash Execution Mode states
+#   T-DOC-COMMON     docs/role-common-rules.md > Bash Execution Mode states
 #                    the orchestrator's side of the wait
 #   T-DOC-P2         docs/gate-matching-standard.md > Rule P2 lists the deny
 # =============================================================================
@@ -121,7 +121,7 @@ cmp -s "$HOOK" "$PLUGIN_HOOK"; check "T-PLUGIN-PARITY: plugin/autoflow/hooks/che
 echo "== T-DOC: the wait discipline is documented where the hook message points =="
 grep -q '^\- \*\*\[MUST\] Wait discipline (orchestrator)\*\*' "$PROJECT_ROOT/CLAUDE.md"; check "T-DOC-CLAUDE: Execution Principles carries the [MUST] Wait discipline bullet" $?
 grep -q '`TaskOutput` (any call) → \*\*denied state-independently\*\*' "$PROJECT_ROOT/CLAUDE.md"; check "T-DOC-CLAUDE: Hook gates list carries the TaskOutput row" $?
-grep -q "The orchestrator's side of the wait (issue #165)" "$PROJECT_ROOT/docs/teammate-common-rules.md"; check "T-DOC-COMMON: Bash Execution Mode states the orchestrator's side of the wait" $?
+grep -q "The orchestrator's side of the wait (issue #165)" "$PROJECT_ROOT/docs/role-common-rules.md"; check "T-DOC-COMMON: Bash Execution Mode states the orchestrator's side of the wait" $?
 grep -q 'TaskOutput` blocking wait, issue #165' "$PROJECT_ROOT/docs/gate-matching-standard.md"; check "T-DOC-P2: Rule P2 lists the TaskOutput deny" $?
 
 echo
