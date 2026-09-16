@@ -4,28 +4,28 @@
 # ci-subject: setup/manifest.json setup/gen-manifest-hashes.sh setup/init.sh scripts/gate/verification-layer-check.sh scripts/test/check-cycle-layer-index.sh
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
-# Test: the two-layer verification devices are bundle artifacts — a fresh stamp
-#       delivers them, byte-identical to the manifest's recorded hash, and each
-#       runs to a verdict from the stamped tree.
+# Test: the cycle-layer device is a bundle artifact — a fresh stamp delivers it,
+#       byte-identical to the manifest's recorded hash, and it runs to a verdict
+#       from the stamped tree — while the layer-token device stays home.
 # =============================================================================
 # STANDING suite (`automated / standing: cross-file`), subject-named.
 #
-# ADR-0024 D1/D2 gave every target two devices in issue #228 — the closed-list
-# token check GATE:QUALITY runs over a cycle's verification design
-# (scripts/gate/verification-layer-check.sh) and the standing predicate that no
-# `.autoflow/issue-{N}-local/` asset entered the merged tree
-# (scripts/test/check-cycle-layer-index.sh) — and left their shipping to S4
-# (issue #229, task 6 / AC7): "installed on a newly stamped target and matching
-# the manifest hash". Until they shipped, the stamped GATE:QUALITY guide had a
-# by-hand branch for their absence.
+# ADR-0024 D2's standing predicate that no `.autoflow/issue-{N}-local/` asset
+# entered the merged tree (scripts/test/check-cycle-layer-index.sh) is every
+# target's, delivered by S4 (issue #229): "installed on a newly stamped target
+# and matching the manifest hash". The closed-list token check GATE:QUALITY runs
+# over a verification design (scripts/gate/verification-layer-check.sh, ADR-0024
+# D1) is this repository's own convention and is NOT delivered (issue #238): a
+# target's retention is judged by the reviewer from the PR body, not by a token.
+# Both directions are asserted — a delivered row that reaches the target, and an
+# undelivered device that does not.
 #
 # WHY A STAMP AND NOT A MANIFEST READ. A manifest row is a promise; what a target
 # executes is the file init.sh copied. The legs therefore stamp a scratch target
-# and compare THREE hashes per device — source, manifest row, installed copy —
-# and then run each device from the stamped tree: a file that is present but
-# does not run is not delivered. The fixed-point property of the manifest as a
-# whole is scripts/test/check-manifest-regen-clean.sh's; this suite is about
-# these two rows reaching a target.
+# and compare THREE hashes for the device — source, manifest row, installed copy
+# — and then run it from the stamped tree: a file that is present but does not
+# run is not delivered. The fixed-point property of the manifest as a whole is
+# scripts/test/check-manifest-regen-clean.sh's; this suite is about these rows.
 # =============================================================================
 
 set -uo pipefail
@@ -40,9 +40,10 @@ pass()  { echo "  PASS: $1"; PASS=$((PASS + 1)); }
 failc() { echo "  FAIL: $1"; FAIL=$((FAIL + 1)); }
 sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
 
-DEVICES=(scripts/gate/verification-layer-check.sh scripts/test/check-cycle-layer-index.sh)
+DEVICES=(scripts/test/check-cycle-layer-index.sh)
+NOT_SHIPPED=scripts/gate/verification-layer-check.sh
 
-echo "=== ADR-0024 devices shipped (#229 AC7) ==="
+echo "=== ADR-0024 devices shipped (#229 AC7; #238 scope) ==="
 
 if ! command -v jq >/dev/null 2>&1; then
   failc "jq is unavailable — the manifest cannot be read, and a skipped check is never a pass"
@@ -82,14 +83,27 @@ for d in "${DEVICES[@]}"; do
   fi
 done
 
-# Each device runs to a verdict from the stamped tree — a delivered file that
-# cannot execute there is not a delivered device.
-out="$(cd "$T" && bash scripts/gate/verification-layer-check.sh --list-tokens 2>&1)"; rc=$?
-if [ "$rc" -eq 0 ] && [ -n "$out" ]; then
-  pass "RUNS: verification-layer-check.sh --list-tokens prints ADR-0024 D1's closed list from the stamped tree ($(printf '%s\n' "$out" | grep -c .) token(s))"
+# The layer-token device stays in this repository: no manifest row names it and
+# no stamp delivers it (issue #238).
+row_n="$(jq -r --arg s "$NOT_SHIPPED" '[.artifacts[] | select(.source == $s or .dest == $s)] | length' "$MANIFEST")"
+if [ "$row_n" = 0 ]; then
+  pass "NOT-SHIPPED: $NOT_SHIPPED has no row in setup/manifest.json"
 else
-  failc "RUNS: verification-layer-check.sh --list-tokens rc=$rc: $(head -n 2 <<<"$out" | tr '\n' ' ' | cut -c1-200)"
+  failc "NOT-SHIPPED: $NOT_SHIPPED has $row_n row(s) in setup/manifest.json — the layer-token check is this repository's convention, not a target's"
 fi
+if [ ! -e "$T/$NOT_SHIPPED" ]; then
+  pass "NOT-SHIPPED: $NOT_SHIPPED is absent from the stamped target"
+else
+  failc "NOT-SHIPPED: $NOT_SHIPPED was delivered to the stamped target"
+fi
+if [ -x "$REPO_ROOT/$NOT_SHIPPED" ] && out="$(bash "$REPO_ROOT/$NOT_SHIPPED" --list-tokens 2>&1)" && [ -n "$out" ]; then
+  pass "HOME: $NOT_SHIPPED still runs in this repository ($(printf '%s\n' "$out" | grep -c .) token(s))"
+else
+  failc "HOME: $NOT_SHIPPED does not run in this repository"
+fi
+
+# The delivered device runs to a verdict from the stamped tree — a delivered
+# file that cannot execute there is not a delivered device.
 
 git -C "$T" init -q && git -C "$T" -c user.email=t@example.invalid -c user.name=t -c commit.gpgsign=false add -A \
   && git -C "$T" -c user.email=t@example.invalid -c user.name=t -c commit.gpgsign=false commit -q -m stamp

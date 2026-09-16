@@ -151,9 +151,9 @@ build_rows() {
   # the backend-selection scaffold ship as target-owned scaffolds (never
   # overwritten). docs/reviewer-backend.md enters via the doc-closure BFS above.
   # Since issue #229 the same scaffold also carries the `tests` declaration
-  # site (`command`: the target's test command, `suite_plane`: the suite-plane
-  # opt-in, shipped `false`) — a re-stamp never adds it to an existing target;
-  # drift-check D7 names its absence as a HINT.
+  # site (`suite_plane`: the suite-plane opt-in, shipped `false`; no test
+  # command — AutoFlow asks the target for none, issue #238) — a re-stamp never
+  # adds it to an existing target; drift-check D7 names its absence as a HINT.
   emit_row "scripts/review/codex-review-pr.sh" \
            "scripts/review/codex-review-pr.sh" "root-layer" "copy" "file"
   # Shared claude-isolation helper (issue #979 cycle 9 §3.2): sourced by BOTH
@@ -258,16 +258,14 @@ build_rows() {
            "scripts/test/check-suite-leaf.sh" "root-layer" "copy" "file"
   emit_row "tests/lib/base-ref.sh" \
            "tests/lib/base-ref.sh" "root-layer" "copy" "file"
-  # Two-layer verification devices (ADR-0024 D1/D2; built in issue #228,
-  # shipped by issue #229 — S4). The stamped autoflow-guide.md > GATE:QUALITY
-  # tells the evaluator to run verification-layer-check.sh over the cycle's
-  # verification design where the device is present, and to perform the same
-  # closed-list set relation by hand where it is absent; shipping it removes
-  # the by-hand branch from every stamped target. check-cycle-layer-index.sh is
-  # the standing predicate that no `.autoflow/issue-{N}-local/` asset entered
-  # the merged tree — the D2 invariant every target inherits with the prefix.
-  emit_row "scripts/gate/verification-layer-check.sh" \
-           "scripts/gate/verification-layer-check.sh" "root-layer" "copy" "file"
+  # Cycle-layer device (ADR-0024 D2; built in issue #228, shipped by issue
+  # #229 — S4). check-cycle-layer-index.sh is the standing predicate that no
+  # `.autoflow/issue-{N}-local/` asset entered the merged tree — the D2
+  # invariant every target inherits with the prefix. The layer-token device
+  # (scripts/gate/verification-layer-check.sh, ADR-0024 D1) is NOT shipped: the
+  # closed standing-category list is this repository's own convention, and a
+  # target's retention is judged by the reviewer from the PR body, not by a
+  # token (issue #238; a re-stamp removes the copy earlier versions delivered).
   emit_row "scripts/test/check-cycle-layer-index.sh" \
            "scripts/test/check-cycle-layer-index.sh" "root-layer" "copy" "file"
   # The issue-creation wrapper (issue #96): the hook's `gh issue create` deny

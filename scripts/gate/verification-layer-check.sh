@@ -25,6 +25,11 @@
 # arm A's alone — a run over a populated cycle-layer store and a run over an
 # empty one answer identically.
 #
+# THIS DEVICE RUNS IN THE AUTOFLOW REPOSITORY ONLY. The closed list is this
+# repository's convention for its own verification designs (issue #238); the
+# device is not delivered to targets, where a test file a cycle adds is judged
+# by the reviewer from the PR body's listing, not by a token.
+#
 # THE TOKEN LIST IS THIS FILE'S AND THE ADR'S, and they must agree: that
 # agreement is itself a standing verification
 # (tests/test-verification-layer-token-set.sh), asserted in both directions and

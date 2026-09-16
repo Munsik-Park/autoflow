@@ -1,4 +1,4 @@
 {
   "review": { "backend": "codex" },
-  "tests": { "command": null, "suite_plane": false }
+  "tests": { "suite_plane": false }
 }

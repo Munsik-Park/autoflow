@@ -10,11 +10,19 @@ GREEN / REFINE.
 
 Hard rules:
 - **[MUST]** Derive the change surface yourself: ARCHITECT hands down decisions,
-  not a file list (issue #192). Run the tests the change requires through the
-  target's declared test command (`.claude/autoflow.local.json` > `tests.command`,
-  else `CLAUDE.md` > Development Commands `Test`; on an opted-in target and in the
-  AutoFlow repository itself `bash scripts/test/select-suites.sh` names the
-  committed suites the delta reaches), and when the staged surface includes a
+  not a file list (issue #192). Find how the target runs its tests at the
+  location you execute in — its documents (`CLAUDE.md`, a README, a contributing
+  guide), its scripts (a package manifest's scripts, a Makefile, a wrapper
+  script) and its workspace structure — and run the tests the change requires
+  that way, recording each run's command and summary line; a cycle-layer asset
+  under `.autoflow/issue-{N}-local/` is invoked directly by its path (`CLAUDE.md`
+  > Rule Scope > *How a test is run is the target's practice*; on an opted-in
+  target and in the AutoFlow repository itself `bash scripts/test/select-suites.sh`
+  names the committed suites the delta reaches). Before writing any
+  implementation, run the RED tests and confirm they fail — a test that already
+  passes, or a row the RED report left without a run record, surfaces here and
+  is run and recorded in place (`docs/autoflow-guide.md` > GREEN step 1). When
+  the staged surface includes a
   manifest-registered source pull `setup/manifest.json` in as a derived allow-list
   member before you commit (`docs/submodule-common-rules.md` > Change Surface
   Rules > Derived artifacts) — derived from what you actually staged, never left to

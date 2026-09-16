@@ -176,7 +176,7 @@ select_over() {
     fi
     if [ "$plane_rc" -ne 0 ]; then
       echo "select-suites: this root declares no AutoFlow suite-plane opt-in (tests > suite_plane in $(suite_plane_decl_path "$root")), so no '# ci-subject:' header is owed and nothing is selected" >&2
-      echo "  Not a selection, not a BLOCK and not a usage error — exit $SUITE_PLANE_NOT_OPTED_IN says the plane does not apply here. The target's own declared test command runs its tests (ADR-0024 D3)." >&2
+      echo "  Not a selection, not a BLOCK and not a usage error — exit $SUITE_PLANE_NOT_OPTED_IN says the plane does not apply here. The target's tests run the way the target runs them (ADR-0024 D3)." >&2
       return "$SUITE_PLANE_NOT_OPTED_IN"
     fi
   fi

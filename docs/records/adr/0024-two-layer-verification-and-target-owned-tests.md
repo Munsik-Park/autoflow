@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238
 
 ## Context
 
@@ -104,7 +104,10 @@ that each layer is named by what defines it.
 
 ### D1 — Classification criterion and declaration site
 
-*Revised by issue #222; the original predicate and mapping are recorded under Related Issues / PRs.*
+*Revised by issue #222; the original predicate and mapping are recorded under Related Issues / PRs.
+Scope narrowed by issue #238: the closed list and the layer violation below bind this repository's
+own verification designs; on a target, retention is not classified — see* **Scope on targets** *at
+the end of this section.*
 
 **Criterion.** *Is this a defect a single local run settles, or one that surfaces only after
 deployment (merge / stamp)?* Local run → `cycle`; after deployment → `standing`. The predicate is
@@ -177,11 +180,22 @@ Three consequences are recorded here so that no gate re-derives them:
   which is
   a rubric disposition, never a route class, so it never reaches `scripts/gate/remedy-route.sh`.
 
-A **composition oracle** is `standing` by this mapping and not by a separate rule: its subject is a
-shared identifier that a settled decision also names, which is the `cross-file` category, and the
-defect it catches — two files disagreeing about that identifier after merge — is a post-deployment
-one by construction. "A floor that does not survive merge is not a floor" is a consequence of the
-mapping, recorded as one, rather than an independent clause that could drift from it.
+**Scope on targets (issue #238).** The closed list, the `standing:` token grammar and the layer
+violation are **this repository's** convention for its own verification designs, and the device
+that checks the set relation (`scripts/gate/verification-layer-check.sh`) runs only here and is not
+delivered to targets. On a target AutoFlow classifies retention by no token: a cycle adds no test
+file to the target's tree by default, a file it does add is listed in the host PR body with the
+reason it is kept and the CI job that executed it, and the reviewer and the operator judge that
+listing against the target's own convention (`CLAUDE.md` > Rule Scope > *What a cycle leaves in
+the target's tree*; `docs/autoflow-guide.md` > HANDOFF steps 4 and 5). The grounds are the
+measurement in `connev-llm/llmroute#285`: eleven of a design's twelve `standing` rows named
+`cross-file`, and a category can be fitted to a functional check as readily as a reason can be
+stated for one (`connev-llm/llmroute#628`), so refining the token list or its definitions does not
+bound what a cycle leaves in a target — exposure to the reviewer does. The former sentence that a
+composition oracle is `standing` by this mapping is withdrawn with the same revision: a
+composition oracle's subject and its non-mock obligation are unchanged
+(`docs/autoflow-guide.md` > ARCHITECT > Output artifacts > *Composition oracle*), and whether its
+file stays in a target's tree is the reviewer's judgment like any other addition.
 
 ### D2 — Storage form of cycle-layer assets
 
@@ -225,10 +239,29 @@ and that defect surfaces only after merge, where no per-PR relation can see it.
 
 ### D3 — Target test entry point, and the suite plane's fate on targets
 
-**Entry point.** The phases invoke **the target's declared test command** through a call site, not
-through AutoFlow's runner. Discovery order, first hit wins: (1) `.claude/autoflow.local.json` →
-`tests.command`; (2) the target's `CLAUDE.md` > Development Commands `Test` entry. JSON first
-because it is machine-readable; the `CLAUDE.md` entry second because it is free text.
+*Revised by issue #238; the original declared-command entry point and its unsatisfiable case are
+recorded under Related Issues / PRs.*
+
+**Entry point.** AutoFlow prescribes no test command to a target and reads none from a declaration.
+The role that runs a test — the Test AI at RED, the Developer AI at GREEN, either at VERIFY — finds,
+at the location it executes in, how the target runs its tests: its documents (`CLAUDE.md`, a
+README, a contributing guide), its scripts (a package manifest's scripts, a Makefile, a wrapper
+script) and its workspace structure (a monorepo's per-package runner, a submodule's own tree); runs
+the tests it judges the change requires that way; and records the command and its summary line
+(`CLAUDE.md` > Rule Scope > *How a test is run is the target's practice*). This is guidance the
+roles follow, not a precondition a gate checks: the `tests.command` key the S4 scaffold shipped is
+withdrawn from `.claude/autoflow.local.json.example`, drift-check D7's HINT no longer asks for it,
+and GATE:PLAN `Feasibility` no longer scores its absence. A cycle-layer asset is invoked directly by
+its path, as D2 fixes.
+
+**Omission handling.** A row with no run record is `not-run`, never `passed`, and the omission is
+not gated: it surfaces at the next point that reads the record — GREEN's entry run of the RED tests,
+VERIFY step 1, VALIDATE step 1, the spawn prompt that hands the record to the next role, GATE:QUALITY
+`Test coverage` — and is run there and its record filled in, by the role at that point. It is not a
+FAIL, consumes no cap and routes nowhere; a run that fails routes by the phase's own rules. The
+measurement behind this is `connev-llm/llmroute#285`: a declaration the target never had was
+discovered only at GATE:PLAN, after DIAGNOSE and ARCHITECT, and the recorded remedy retyped
+automated rows to weaker dispositions rather than running the tests.
 
 **Suite plane.** The AutoFlow suite plane — the header contract, the selector, the runner,
 suite-coverage, `scripts/test/check-suite-manifest.sh` and drift-check D7 — becomes **opt-in, not
@@ -248,9 +281,9 @@ SKIP arms (`setup/thin-root-layer/drift-check.sh` > the `D7` leg's SKIP arms —
 arm is required, not optional.
 
 **AutoFlow synthesizes no selection predicate for the target.** What AutoFlow never does is derive,
-on the target's behalf, *which of the target's tests this change requires*. The phases invoke the
-command **as declared**: scoping is the target's practice, and a target that wants a change-scoped
-run declares one.
+on the target's behalf, *which of the target's tests this change requires* by a device of its own.
+The roles run the target's tests the way the target runs them: scoping is the target's practice,
+and which of those tests a change requires is the running role's recorded judgment.
 
 **Boundary.** AC2 and M bind what AutoFlow's phases require of **AutoFlow's own run set**. What a
 target's declared test command executes internally is **outside this model** — a target's test
@@ -263,8 +296,8 @@ of being asserted: AC2's second sentence names the verification's object — *"�
 `docs/teammate-contracts.md`, `docs/evaluation-system.md`, `CLAUDE.md`, the header contract); not one
 row is a target's test command.
 
-**Outcome, and what it is read from.** The **exit status of the declared command as invoked** is the
-input: AutoFlow reports what the invocation returned and adjudicates nothing beyond it — scoping and
+**Outcome, and what it is read from.** The **exit status of the command as the role invoked it** is
+the input: AutoFlow reports what the invocation returned and adjudicates nothing beyond it — scoping and
 failure attribution are the target's practice. The call site reports through the lint chain's outcome
 vocabulary, total over reachable states — `clean` / `fixed-and-staged` / `detected` / `not-run` /
 `not-applicable` with their reason classes (`docs/submodule-common-rules.md` > Change Surface Rules >
@@ -276,25 +309,14 @@ runner reports at the assertion site, so this decision takes the exit status rat
 the output. A non-zero exit is therefore reported non-clean, and AutoFlow neither excuses it nor
 adjudicates its cause.
 
-**The unsatisfiable case.** A target that declares no test command while the design types a row
-`automated` is caught at **GATE:PLAN `Feasibility`** (`docs/autoflow-guide.md` > GATE:PLAN >
-Scoring — "a plan not grounded in the actual structure"). The fact is carried **in the verification
-design**, which
-GATE:PLAN reads; the PREFLIGHT ledger entry remains the record and carries no gate weight, because
-the ledger is not a gate input (`CLAUDE.md` > Decision Ledger). A residual state proceeds correctly:
-a target with no declared test command whose design types every row `none` / `manual` /
-`existing-coverage` is `not-applicable` and proceeds, because it owes no automated verification.
-
-**Why this blocking point is not a device on the target path.** The test is *whose artifact must
-change to clear the block?* — here, **AutoFlow's own verification design**: retype the row, and the
-residual above already lets a design owing no automated verification proceed. GATE:PLAN is also the
-sole point at which that judgment is ever re-derived, since an `automated` row reaches the external
-reviewer only as its run record (D1), never as a disposition to judge — the host PR body's
-`## Verification dispositions` section covers every criterion typed *other than* `automated`
-(`docs/autoflow-guide.md` > HANDOFF —
-"The host PR body carries a `## Verification dispositions` list"). A blocking point whose remedy
-lies entirely inside AutoFlow's own artifact mandates nothing of the target; one whose remedy lies in
-the target's declaration would be a device on the target path however it is worded.
+**CI on targets.** The target's CI is whatever the target runs — GitHub Actions, a self-hosted
+runner, Jenkins — and AutoFlow follows it rather than registering into a plane of its own. For a
+test file a cycle adds to the target's tree, RED checks how that CI discovers tests and wires an
+explicit registration in the same commit where one is needed; HANDOFF step 5, once CI is green,
+finds in the run's logs the job that executed each added file and records it in the host PR body —
+the criterion is execution visible in the log, not registration, because a registered step can be
+skipped by a condition — wiring a file no job executed inside HANDOFF, and recording `no CI; local
+run only` where the target has none (`docs/autoflow-guide.md` > RED step 1; HANDOFF step 5).
 
 ### D4 — CI-layer verdict point and CI-failure re-entry
 
@@ -497,10 +519,10 @@ this record is the only carrier across that gap:
   file and edits status text, so the sweep never fires here; the obligation binds in the sub-issues,
   where relocation and renaming actually happen.
 - **Cycle-layer execution means (issue #222).** A default `automated` row's asset lives under
-  `.autoflow/issue-{N}-local/`, outside the target's test tree, while D3 invokes the target's
-  declared test command as declared. How that asset is executed once — the declared command pointed
-  at the prefix where the target's runner admits it, or a self-contained script where it does not —
-  is S3's to settle, under two constraints this record fixes: the asset never enters the merged
+  `.autoflow/issue-{N}-local/`, outside the target's test tree, while a test in that tree runs the
+  way the target runs its tests (D3 as revised by #238). How that asset is executed once — a
+  self-contained script invoked by its path — is settled by D2 and `CLAUDE.md` > Rule Scope, under
+  two constraints this record fixes: the asset never enters the merged
   tree (D2, AC3's predicate), and RED's Red confirmation is still owed for every `driving` /
   `regression` row (M). S1 carries the record's rendering into the host PR body (D1, second
   consequence) and the `standing:` token grammar into the rule documents; S3 carries the closed-list
@@ -896,6 +918,28 @@ registry row.
   (*Test necessity — what D1 replaces and what it retains*). The closed disposition vocabulary and
   the three-tier acceptance-criterion guard are unchanged.
 - Issue #222 — the D1 revision; `connev-llm/llmroute#628` is the criterion's source.
+- **Revision — issue #238 (operator edit, outside an AutoFlow cycle).** Two of the model's rules
+  toward targets are replaced by guidance. **D3's original entry point** read: *the phases invoke
+  the target's declared test command through a call site, discovered first-hit-wins from
+  `.claude/autoflow.local.json` > `tests.command`, then the target's `CLAUDE.md` > Development
+  Commands `Test`; a target that declares no command while the design types a row `automated` is
+  caught at GATE:PLAN `Feasibility`, and the remedy is to retype the row.* `connev-llm/llmroute#285`
+  showed the shape of that rule on a target whose tests run per workspace from a submodule's own
+  documents: twelve `standing` rows, no declaration to discover, the absence surfacing only at
+  GATE:PLAN, and a remedy that weakened the verification instead of running it. The revised D3
+  has the running role find the target's practice at the execution location and record the command
+  and result, and fills a missing run at the next point that reads the record instead of gating it.
+  **D1's original reach** applied the closed token list, the layer violation and the shipped
+  `scripts/gate/verification-layer-check.sh` to every target, and read a composition oracle as
+  `standing` by the `cross-file` mapping; eleven of #285's twelve `standing` rows were `cross-file`,
+  including functional checks the deliberation itself had called settled by one local run. The
+  revision confines the list, the grammar and the device to this repository, withdraws the
+  composition-oracle mapping sentence, and replaces classification on targets with a no-add default
+  and reviewer judgment over the PR body's listing of added files and the CI jobs that executed them.
+  Unchanged: M, D2, D4–D6, the suite plane's `tests.suite_plane` opt-in and its resolver (this
+  repository's plane still depends on them), and every authority rule of `CLAUDE.md` > Rule Scope
+  principle 1. Grounds and the rejected alternative (refining the token list) are recorded at
+  `docs/records/design-rationale.md` > Decision 21.
 - Builds on `docs/records/adr/0018-verification-depth-justification.md`: the layer is derived from an
   existing cell, so no scored item is added.
 - Reinforces `docs/records/adr/0003-autoflow-ends-at-handoff.md`: D5 declines to bind the reviewer's merge.

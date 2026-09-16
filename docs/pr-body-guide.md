@@ -73,6 +73,12 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   PR에 없으므로, 같은 섹션에 그 row의 **run record** — VERIFY step 1이 실행한 command와
   summary line — 를 한 줄로 싣는다. reviewer가 재실행할 수 있는 것은 이 record다
   (ADR-0024 D1, D2; `autoflow-guide.md` > HANDOFF step 4).
+- cycle이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
+  남겨 두는 이유, 그리고 HANDOFF 5단계가 CI 로그에서 확인한 실행 job(target에 CI가 없으면
+  `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다. reviewer는 이
+  목록으로 추가를 target 규약에 비춰 판단한다 — AutoFlow는 보관을 분류로 인증하지 않는다
+  (`CLAUDE.md` > Rule Scope > *What a cycle leaves in the target's tree*;
+  `autoflow-guide.md` > HANDOFF step 4·5).
 
 예:
 
@@ -83,6 +89,9 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   build마다 검사한다.
 - AC4 — none: 값이 사용자가 편집하는 sample 파일에 있어, 첫 편집에서 검증 대상이
   사라진다. 부재 비용 0.
+- AC1 — automated (cycle): `bash .autoflow/issue-42-local/ac1-retry.sh` → `PASS 3/3`
+- Added test files: `tests/retry-backoff.test.ts` — 재시도 간격은 배포 후 설정값에
+  따라 달라지므로 target의 회귀 대상; CI job `unit (ubuntu-latest)`에서 실행 확인.
 ```
 
 ---

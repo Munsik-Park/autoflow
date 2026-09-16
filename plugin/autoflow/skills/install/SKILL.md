@@ -123,14 +123,13 @@ written):
   only where the target declares `tests` > `suite_plane: true` in its
   `.claude/autoflow.local.json`. On `SUITE_PLANE_STATE=out`, say so — no
   `# ci-subject:` header is owed, the selector is not consulted, and the
-  target's own declared test command (`tests` > `command`, else its `CLAUDE.md`
-  Test entry) runs its tests; there is nothing to migrate. On
+  target's tests run the way the target runs them (AutoFlow asks for no test
+  command); there is nothing to migrate. On
   `SUITE_PLANE_DECL=absent`, additionally report that the target's
   `.claude/autoflow.local.json` carries no `tests` object (the scaffold predates
   the declaration site and a stamp never overwrites it) and name the hand edit:
   add the `tests` object from `$PLUGIN_CACHE_ROOT/.claude/autoflow.local.json.example`
-  — `command` = the target's test command, `suite_plane: true` only to adopt
-  the suite plane. Not a stop condition. On `SUITE_PLANE_STATE=unreadable` the
+  — `suite_plane: true` only to adopt the suite plane. Not a stop condition. On `SUITE_PLANE_STATE=unreadable` the
   declaration file is present but unparseable — a `FAIL: D7` (carried as a
   `SUITE_HEADER_FINDING=` line) and a PREFLIGHT stop; the remedy is repairing
   that file, not a stamp. On `SUITE_PLANE_STATE=in`, the shipped

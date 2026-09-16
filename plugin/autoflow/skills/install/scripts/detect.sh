@@ -65,7 +65,7 @@
 #     (issue #229 AC3): SUITE_PLANE_STATE = in | out | unreadable | na — `in`
 #     when D7 reached a header verdict (the leg consults the selector only on
 #     an opted-in root), `out` on the not-opted-in PASS (no header owed; the
-#     target's own test command runs its tests), `unreadable` when the
+#     target's tests run the way the target runs them), `unreadable` when the
 #     declaration file is present but D7 could not read it (a FAIL, carried on
 #     the SUITE_HEADER axis), `na` when D7 reached no verdict. SUITE_PLANE_DECL
 #     = present | absent | na — `absent` when D7's HINT says the target's
