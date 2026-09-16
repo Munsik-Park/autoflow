@@ -328,6 +328,22 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Route.** Operator decision, recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 11 and 17; the issue (#232) was operator-filed and the change operator-executed.
 
+### Decision 19: What the Orchestrator Reads Directly Is Its Recorded Judgment; Gate Scoring and Deliberation Bodies Stay Fixed
+
+**Problem.** `CLAUDE.md` > Cost Control > *Orchestrator context discipline* forbade the orchestrator every raw read — "never raw material", "does not read a full artifact" — and had it spawn a subagent to be handed a summary of any completed artifact instead. The prohibition cited no measurement of its own. The #136 figure in the same section (a Test AI at 515K of context, 86% of it Bash output and file dumps) is a role spawn's context blow-up, and the judgment-contamination case behind Decision 8 (issue #189) is deliberation prose accumulating round by round; neither shows a risk in the orchestrator reading a short, finished fact document, and nothing shows that a context ratio alone manages contamination either. Under `CLAUDE.md` > Rule Scope a rule binds authority and prevents self-certification (principle 1), while how far a read reaches is a judgment the AI makes and records (principle 2) — the blanket read ban made that judgment by rule, and paid a spawn for every summary.
+
+**Decision.** Operator decision (issue #199), one rule rewritten and no device change.
+
+1. **The direct-read scope is the orchestrator's judgment, recorded with its grounds** in the report or ledger entry the phase already produces — the same form as the route judgment of Decision 17. A cheap anchor-check (`git show <SHA>`, a one-line command re-run, a targeted `git show HEAD:<file>`) is unchanged and needs no recorded ground; a completed artifact — a single report, a design document — may be read in full when the orchestrator judges the read necessary, and the entry names what was read and why.
+2. **Two rows stay fixed**, because each binds authority rather than cost. The orchestrator never scores what a gate scores: the full read-and-score of a gate's artifact set is the fresh Evaluation AI's (Decision 2), and an orchestrator read of those artifacts informs a spot-check, never a verdict. And the orchestrator never receives a deliberation body: an ARCHITECT transcript turn or a participant report reaches it only as the Record workflow's structured result and artifact paths (Decision 8).
+3. **A spawn's return shape is unchanged.** *Role-spawn report format* still has every spawn write its body to `.autoflow/*` and return an anchor + one-line summary; the judgment is over what the orchestrator then reads of that body, not over what a spawn sends back — a spawn that inlined its body would decide the orchestrator's intake for it.
+
+**Why the devices need no change.** No hook ever read the rule: gate `scores` are written from the Evaluation AI's report, deliberation isolation is held by the participants' prompt and the Record workflow's return contract (`scripts/architect/relay-state.sh`, `.claude/workflows/architect-deliberation.js`), and the ledger check is advisory. The two fixed rows are enforced where they always were.
+
+**What it costs.** An orchestrator that reads a long artifact in full carries it until compaction, and a wrong read-scope judgment surfaces as the oscillation Decision 8 describes rather than at a gate; the ledger's new-verified-fact rule is the backstop. The *Wait discipline* exclusion of an unchosen intake — a timed-out agent's transcript dump (issue #165) — stands, since that intake is not a judgment at all.
+
+**Route.** Operator decision, recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 17 and 18; the issue (#199) was operator-filed and the change operator-executed.
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:
@@ -367,6 +383,7 @@ The following may look like "better approaches" but undermine core principles:
 | Trust the Hook's `pass` field | Trusting AI self-report → gate neutralized |
 | Inject past evaluation results into current analysis | Bias propagation → system hardens in one direction |
 | Skip an independent check — a gate threshold, the push gate, CI, the reviewer review — on a route judgment | A rule binds authority (`CLAUDE.md` > Rule Scope, principle 1); the route is the AI's to judge, the checks are not (Decision 17) |
+| Have the orchestrator score a gate's artifact set itself, or take a deliberation body into its context | The two read-scope rows that bind authority (Decision 19): self-scoring neutralizes the fresh-evaluator gate (Decision 2); deliberation prose contaminates judgment (Decision 8) |
 | Let the pipeline modify its own criteria | Judgment tracing impossible → trust chain collapse |
 | Design loops without termination conditions | No maximum retry → infinite loop risk → system hangs |
 | Run a multi-participant deliberation in the orchestrator's own context | Round-by-round cross-talk + duplicate reports accumulate → judgment contamination → decision oscillation (Decision 8) |
@@ -382,7 +399,7 @@ The following may look like "better approaches" but undermine core principles:
 
 - **No failure learning loop**: No structured per-cycle evidence is captured; pass/fail pattern analysis is performed by humans externally.
 - **No cross-issue correlation detection**: A complaint class recurring across distinct issues is not detected; correlation analysis across issues is human-external. Decision 4 (no auto-modification of rubric/criteria) is unaffected.
-- **No measurement of judged routes yet**: Decision 17 makes a cycle's route and depth the working AI's recorded judgment, for new issues and review-response cycles alike. Whether that judgment is calibrated — what it skipped, and what a gate or the reviewer then caught — is read from the recorded grounds and the review outcomes after the fact, and no such series has been collected yet. Decision 18's evaluator judgments (a historical record's stale name; a re-score's new finding) join the same unmeasured series.
+- **No measurement of judged routes yet**: Decision 17 makes a cycle's route and depth the working AI's recorded judgment, for new issues and review-response cycles alike. Whether that judgment is calibrated — what it skipped, and what a gate or the reviewer then caught — is read from the recorded grounds and the review outcomes after the fact, and no such series has been collected yet. Decision 18's evaluator judgments (a historical record's stale name; a re-score's new finding) join the same unmeasured series. Decision 19's orchestrator read-scope judgment joins it too: whether a direct read of a completed artifact was worth its context, or fed the oscillation Decision 8 describes, is read from the recorded grounds and the ledger after the fact.
 
 ### Under Discussion
 
