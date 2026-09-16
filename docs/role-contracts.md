@@ -214,7 +214,7 @@ The workflow's only output to the orchestrator is one structured result, **speci
 
 After the result returns, the orchestrator **verifies** it before accepting — this is preserved, only the deliberation prose is isolated:
 
-- It does **not** read the design docs cover-to-cover to *judge* them — that full read-and-score is GATE:PLAN's fresh Evaluation AI. The orchestrator instead **spot-checks targeted excerpts**: it pulls the specific `path:line` a returned decision rests on and re-derives the cited fact (`git show`, command re-run, `git show HEAD:<file>`). This is the same targeted anchor-check carved out by [`CLAUDE.md`](../CLAUDE.md#cost-control) > Orchestrator context discipline, not a full-body absorption.
+- It does **not** read the design docs cover-to-cover to *judge* them — that full read-and-score is GATE:PLAN's fresh Evaluation AI. The orchestrator instead **spot-checks targeted excerpts**: it pulls the specific `path:line` a returned decision rests on and re-derives the cited fact (`git show`, command re-run, `git show HEAD:<file>`). A wider read of a returned artifact is the orchestrator's judgment, recorded with its grounds ([`CLAUDE.md`](../CLAUDE.md#cost-control) > Orchestrator context discipline); what stays fixed is that such a read informs a spot-check, never the gate's verdict.
 
 ### Verification scenarios (manual)
 
