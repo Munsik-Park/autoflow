@@ -86,7 +86,7 @@ git status                  # any uncommitted work?
 - **[MUST]** A spawned agent performs tracked-tree writes only inside its own spawn's lifetime, on
   the assignment its spawn prompt carries — there is no message channel through which new tree work
   can arrive mid-flight, and none through which a freeze could be delivered.
-- **Why:** a test run's recorded command and summary line are evidence only for the tree the run
+- **Why:** a test run's recorded command, log and summary line are evidence only for the tree the run
   executed over; a tracked-tree write landing from another spawn while a run is in flight moves the
   tree under it. The obligation sits with the orchestrator's spawn schedule: no tree-writing spawn is
   issued while another spawn's run is in flight.

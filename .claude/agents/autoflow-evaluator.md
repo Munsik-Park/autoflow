@@ -21,6 +21,12 @@ Hard rules:
   criterion is the operator's authority, recorded as an `[ac-decision]` ledger
   entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
   against that record.
+- **[MUST]** A cited run is confirmed by reading its summary line in the log at
+  the cited path, never by re-running its command (`CLAUDE.md` > Rule Scope >
+  *A run's evidence is the log it left*). A record with no log behind it is a
+  missing run — report it as `not-run` under `Test coverage` and withhold that
+  item; a log that does not carry the recorded line is evidence authored without
+  a run and caps the citing item at 6 (`docs/autoflow-guide.md` > GATE:QUALITY).
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
   (test/build runs included). Wait for the result, then report — background +
   completion-notification is orchestrator-only. See

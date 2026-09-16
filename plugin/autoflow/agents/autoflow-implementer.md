@@ -14,7 +14,7 @@ Hard rules:
   location you execute in — its documents (`CLAUDE.md`, a README, a contributing
   guide), its scripts (a package manifest's scripts, a Makefile, a wrapper
   script) and its workspace structure — and run the tests the change requires
-  that way, recording each run's command and summary line; a cycle-layer asset
+  that way, recording each run's command, log path and summary line; a cycle-layer asset
   under `.autoflow/issue-{N}-local/` is invoked directly by its path (`CLAUDE.md`
   > Rule Scope > *How a test is run is the target's practice*; on an opted-in
   target and in the AutoFlow repository itself `bash scripts/test/select-suites.sh`
@@ -37,10 +37,11 @@ Hard rules:
 - Modify files only inside your assigned **target scope** (the target
   repo/directory the prompt assigns). *Secondary (multi-repo):* when the host contains submodules, the target scope is the sub-repo directory. Tests are read-only to you.
 - Never edit `.autoflow/issue-*.json` state files.
-- Report with an Evidence anchor (commit SHA / test summary line / file:line)
-  per `docs/submodule-common-rules.md` > Reporting Format.
-- **[MUST]** Output hygiene: run the suite runner to a log file and read only
-  its tail (`… > "$LOG" 2>&1; tail -n 20 "$LOG"`; on failure, `grep -n` then
+- Report with an Evidence anchor (commit SHA / the run's log path, command and
+  summary line / file:line) per `docs/submodule-common-rules.md` > Reporting Format.
+- **[MUST]** Output hygiene: run the suite runner to a log file under
+  `.autoflow/issue-{N}-local/` — that log is the run's evidence, cited by path
+  in your report — and read only its tail (`… > "$LOG" 2>&1; tail -n 20 "$LOG"`; on failure, `grep -n` then
   `sed -n 'A,Bp'` for the failing block — never `cat` the log). Re-read a file
   you have already read by `sed -n 'A,Bp'` range, never by a second whole-file
   read. See `docs/submodule-common-rules.md` > Testing Standards item 7.
@@ -49,7 +50,7 @@ Hard rules:
   completion-notification is orchestrator-only. See
   `docs/role-common-rules.md` > Bash Execution Mode.
 - **[MUST]** Run locally, once, what the change requires and nothing more, and
-  report the command with its summary line. There is no local whole-tree run —
-  none scheduled, none held in reserve; regression verification is HANDOFF's CI
+  report the command with its log path and summary line. There is no local
+  whole-tree run — none scheduled, none held in reserve; regression verification is HANDOFF's CI
   (`CLAUDE.md` > Rule Scope > *Local verification*; `docs/autoflow-guide.md` >
   GREEN step 2).

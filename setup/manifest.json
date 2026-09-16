@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c9f8a40150aa9474c75dabed13ec611d272f6ef9066c6e004858a30da153788a"
+      "sha256": "ae574a254ce0b101c90b9a337f5c307a5644e86c2ba15265ab5a2083e3e77102"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8ea75723250b004a868366a57823c55f627a3577ed72a42bcf249e9be6f4ce83"
+      "sha256": "34171b7d46e7d6ee4b773646b9e99236ba9912ae640bb88a78d4a086ac40f7f0"
     },
     {
       "source": "docs/development-guideline.md",
@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "60b50279962bfd74f892034b309f066ee6364daf2a1b75a0839dd6663c2b9b79"
+      "sha256": "be7d9915b52002f5a546aaba07981c07f953c1dd746bf2ef0e0da950c246fcb2"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -97,14 +97,14 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c84e35d784f580a9b9edf556f0881db651b0cd10421f29e0f8d39c8a69077b73"
+      "sha256": "5d5f99f9c142a2f73a3c53f6e37f8ea20620cc996d1845f77f3d8ffa1c60db7d"
     },
     {
       "source": "docs/role-contracts.md",
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "907f28228c86b784ae4766c1ba47e97f64822060268291f574961a9449d6fa4d"
+      "sha256": "304fb6a0985a2d6328d8b73af7d7249528bd153b0558bd7ba0b3c99732bbb802"
     },
     {
       "source": "docs/security-checklist.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c02aaabd18b2881dd4a17ae3ef9b45fea2a7012cf7aa002c638732f4710eae2d"
+      "sha256": "d82cab4927c9b1321b73956f8ca41635131f84fe86fc53b0907038292a0040da"
     },
     {
       "source": "docs/thin-root-layer.md",

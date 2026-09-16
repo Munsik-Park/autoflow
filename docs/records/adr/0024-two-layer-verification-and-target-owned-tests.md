@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249
 
 ## Context
 
@@ -140,7 +140,7 @@ row carries its token in that cell — `automated / standing: <token>` — and a
 | `Type` cell | Layer | Asset |
 |---|---|---|
 | `delivery-check` | `cycle` | one-shot, uncommitted, archived with the cycle's artifacts (D2) |
-| `automated` | `cycle` (default) | one-shot, uncommitted, executed once; the run's command and summary line are recorded (D2) |
+| `automated` | `cycle` (default) | one-shot, uncommitted, executed once; the run's command, log and summary line are recorded (D2) |
 | `automated / standing: <token>` | `standing` | `committed`; `CI-registered` only where the target opted in |
 | `existing-coverage` | — | the named mechanism already stands; its layer was decided when it was authored, and this row adds no asset |
 | `manual` | `cycle` (default) | the itemized checklist VALIDATE requires, archived with the cycle |
@@ -170,7 +170,7 @@ Three consequences are recorded here so that no gate re-derives them:
   **not a
   reduction** — it is the default disposition of a verified criterion — so the predicate is not
   widened to admit it. What the external reviewer sees of such a row is its one-shot run's
-  **record** (command and summary line, Reporting Format item 5), carried into the host PR body by
+  **record** (command, log and summary line, Reporting Format item 5), carried into the host PR body by
   S1; the reviewer never sees the check's code, which *Consequences > Negative* records as the cost.
 - **The `automated` asset cell splits — for `standing` rows only.** AutoFlow establishes
   `committed` on every target; `CI-registered` only where the target opted in, because the target's
@@ -203,8 +203,8 @@ A `cycle`-layer asset — a `delivery-check`, a default `automated` row, a defau
 checklist — is **uncommitted**. It is a cycle artifact under the single declared prefix
 `.autoflow/issue-{N}-local/`, executed once at the cycle's verification point and archived with the
 issue's other `.autoflow/issue-{N}*` artifacts at prior-cycle cleanup. It never enters the merged
-tree. What outlives the cycle is the run's **record** — the command and the summary line it
-produced, in the form Reporting Format item 5 already fixes
+tree. What outlives the cycle is the run's **record** — the command, the log it wrote and the summary
+line read from that log, in the form Reporting Format item 5 fixes
 (`docs/submodule-common-rules.md` > Reporting Format) — written to the cycle's `.autoflow/*` report
 and, for an `automated` row, surfaced to the external reviewer in the host PR body (D1; S1 carries
 the rendering).
@@ -247,14 +247,15 @@ The role that runs a test — the Test AI at RED, the Developer AI at GREEN, eit
 at the location it executes in, how the target runs its tests: its documents (`CLAUDE.md`, a
 README, a contributing guide), its scripts (a package manifest's scripts, a Makefile, a wrapper
 script) and its workspace structure (a monorepo's per-package runner, a submodule's own tree); runs
-the tests it judges the change requires that way; and records the command and its summary line
-(`CLAUDE.md` > Rule Scope > *How a test is run is the target's practice*). This is guidance the
+the tests it judges the change requires that way; and records the command, the log and its summary
+line (`CLAUDE.md` > Rule Scope > *How a test is run is the target's practice*). This is guidance the
 roles follow, not a precondition a gate checks: the `tests.command` key the S4 scaffold shipped is
 withdrawn from `.claude/autoflow.local.json.example`, drift-check D7's HINT no longer asks for it,
 and GATE:PLAN `Feasibility` no longer scores its absence. A cycle-layer asset is invoked directly by
 its path, as D2 fixes.
 
-**Omission handling.** A row with no run record is `not-run`, never `passed`, and the omission is
+**Omission handling.** A row with no run record — or whose record has no log behind it, or a log
+that does not carry the recorded line — is `not-run`, never `passed`, and the omission is
 not gated: it surfaces at the next point that reads the record — GREEN's entry run of the RED tests,
 VERIFY step 1, VALIDATE step 1, the spawn prompt that hands the record to the next role, GATE:QUALITY
 `Test coverage` — and is run there and its record filled in, by the role at that point. It is not a
@@ -406,8 +407,8 @@ here it is the standing layer's trigger-coverage mechanism, even as D3 makes it 
   retirement has no gate consequence by its own charter — `CLAUDE.md` already declares it "a cache,
   not a ledger … not gate input".
 - **Reporting Format's `inherited Green` anchor sub-class — retired.** Item 5's primary test-pass
-  anchor (the exact summary line plus the command that produced it) covers every step once every
-  step executes what it claims; the sub-class was added precisely as the exception for a step that
+  anchor (the run's log, with the command that produced it and the summary line read from it)
+  covers every step once every step executes what it claims; the sub-class was added precisely as the exception for a step that
   did **not** execute, and that exception's subject is gone.
 - **`out-of-tree-inputs` — deleted, and the exposure it guarded is closed, not unguarded.** Its only
   functional consumer is the inheritance exclusion (`scripts/test/suite-coverage.sh` >
@@ -439,7 +440,10 @@ discipline (scope, sampling, time)* — "Governing record:" — names this ADR.
 
 1. **Resolve an anchor before executing.** An evaluator resolves the cited **anchor** — the
    `path:line`, the commit, the command — before it executes anything against it; an unresolved
-   anchor is a report defect, not an input.
+   anchor is a report defect, not an input. Resolving a suite-verdict anchor is reading the
+   recorded summary line in the log the run left at the cited path; the command is re-run only
+   where that log is absent, which makes the row `not-run` (D3 > *Omission handling*), and never to
+   confirm a line the log carries (issue #249).
 2. **Representative sampling, escalating to exhaustive on a hit.** A search starts from a
    representative sample and escalates to the exhaustive set as soon as the sample yields a hit.
 3. **A declared wall-clock cap, with unsearched items recorded.** The search declares its
@@ -940,6 +944,22 @@ registry row.
   repository's plane still depends on them), and every authority rule of `CLAUDE.md` > Rule Scope
   principle 1. Grounds and the rejected alternative (refining the token list) are recorded at
   `docs/records/design-rationale.md` > Decision 21.
+- **Revision — issue #249 (operator edit, outside an AutoFlow cycle).** The run record's evidence
+  form is the log the run left, and a record is confirmed against it rather than re-executed. **The
+  original form** in D1's `Type` table, D2 (*"the command and the summary line it produced"*), D3's
+  practice sentence and D6's Reporting Format note read the record as *command and summary line*,
+  and the original *Evaluator execution discipline* item 1 let the evaluator re-derive a suite
+  verdict by re-running the recorded command (`docs/role-contracts.md` > Evaluation AI —
+  *"the evaluator re-runs that command"*). `connev-llm/llmroute#285` ran the same set three times —
+  the role, the orchestrator confirming the report, the GATE:QUALITY evaluator — because the
+  summary line was the evidence and the only way to confirm a line was to produce it again. The
+  revision names the log as the evidence, the summary line as the value read from it, and
+  confirmation as reading the line at the cited path; a record with no log behind it is an omission
+  under D3's *Omission handling*, and a line the log does not carry is evidence authored without a
+  run under GATE:QUALITY's existing cap. Unchanged: M's execution rule, every layer and retention
+  decision, and the Decision Ledger's re-opening ground, which stays the reproducing command
+  (`docs/records/design-rationale.md` > Decision 20). Grounds:
+  `docs/records/design-rationale.md` > Decision 22.
 - Builds on `docs/records/adr/0018-verification-depth-justification.md`: the layer is derived from an
   existing cell, so no scored item is added.
 - Reinforces `docs/records/adr/0003-autoflow-ends-at-handoff.md`: D5 declines to bind the reviewer's merge.

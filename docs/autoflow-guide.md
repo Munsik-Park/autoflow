@@ -827,7 +827,7 @@ the narrowing binds re-entries only.
 - **Role spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned. At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — anonymous direct spawns (`subagent_type`), one per phase entry; see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
 - **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the cycle-layer store `.autoflow/issue-{N}-local/` and hands over the **run record so far** — the RED report's path — naming each verification-design row that still has no record as *run first* ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it is found*).
-- Both receive: acceptance criteria + verification design + affected docs, and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command and its result ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
+- Both receive: acceptance criteria + verification design + affected docs, and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
 - Every later role spawn in the cycle — VERIFY, REFINE, the GATE:QUALITY evaluator — receives the run record the same way: the prior reports' paths, with any row lacking a record marked *run first*.
 
 ---
@@ -842,7 +842,7 @@ roles that open those files anyway. Before step 1 the Test AI finds how the targ
 at the location it executes in — the target's documents (`CLAUDE.md`, a README, a contributing
 guide), its scripts (a package manifest's scripts, a Makefile, a wrapper script) and its workspace
 structure (a per-package runner, a submodule's own tree) — and judges which of the target's tests
-the change requires, recording the grounds and, for every run, the command and its summary line in
+the change requires, recording the grounds and, for every run, the command, the log and its summary line in
 its report ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's
 practice*); on an opted-in target and in this repository `bash scripts/test/select-suites.sh`
 answers which committed suites the change delta reaches, and a `BLOCK:` line it prints is carried into the report,
@@ -929,7 +929,7 @@ implemented; only its evidence differs.
    - [MUST] Do NOT implement behavior outside the agreed scope (feature design + verification design's issue ACs). A required AC without an automated test is in scope; a behavior no AC requires is not, whether or not a test could be written for it.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
-   - [MUST] Run locally what the change requires and nothing more: this cycle's `automated` tests and the tests you judge the change reaches, the way the target runs its tests (RED > *Derivation on entry*), recording the command and its summary line. There is no local whole-tree run — none scheduled, none held in reserve ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
+   - [MUST] Run locally what the change requires and nothing more: this cycle's `automated` tests and the tests you judge the change reaches, the way the target runs its tests (RED > *Derivation on entry*), recording the command, the log and its summary line. There is no local whole-tree run — none scheduled, none held in reserve ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
    - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
 3. Before committing, if this change touched a manifest-registered source, run
    the manifest regen and stage the result in the same commit.
@@ -940,10 +940,11 @@ implemented; only its evidence differs.
      mechanical set-intersection, not a judgment call. See
      [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
      Rules > Derived artifacts.
-4. Commit (feat/fix branch). The report's Evidence anchor is the step-2 run's summary line with
-   the command that produced it (Reporting Format item 5); the orchestrator re-derives it by
-   re-running that command ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Verify role-spawn
-   claims*).
+4. Commit (feat/fix branch). The report's Evidence anchor is the step-2 run's log, with the
+   command that produced it and the summary line read from it (Reporting Format item 5); the
+   orchestrator confirms it by reading that line at the cited log path, and re-runs the command
+   only when the log is absent or does not carry it ([`CLAUDE.md`](../CLAUDE.md) > Execution
+   Principles > *Verify role-spawn claims*).
 ```
 
 ---
@@ -954,14 +955,15 @@ Run the tests; on failure, branch by cause.
 
 ```
 1. [MUST] Local run, once: execute the cycle's local run set — every `automated` row this cycle
-   authored or changed plus every `delivery-check` row (ADR-0024 M) — and record each run's command
-   and its summary line ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*). The means
+   authored or changed plus every `delivery-check` row (ADR-0024 M) — and record each run's command,
+   its log and its summary line ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*). The means
    follows where the asset lives: a test in the target's tree runs **the way the target runs its
    tests** (RED > *Derivation on entry*), while a `cycle`-layer asset is **invoked directly by its
    path** under `.autoflow/issue-{N}-local/` (`bash .autoflow/issue-{N}-local/<asset>`) — no driver
    is shipped for it, and the recorded command names that path, so the design table's declared run
    set has a per-row witness. Before the run, match the design table's rows against the run record
-   so far (the RED and GREEN reports): a row with no record is run here and its record filled in — an
+   so far (the RED and GREEN reports): a row with no record — or whose log is absent or does not
+   carry the recorded line — is run here and its record filled in — an
    omission is filled in place, never routed as a failure ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope >
    *A missing run is filled where it is found*). A check that did not execute is `not-run`, never
    `passed`. Nothing is inherited and no whole-tree run happens here — regression verification is
@@ -1058,7 +1060,7 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
    - A wrong judgment is caught by GATE:QUALITY, which reads the report, and by the reviewer
      (principle 3). No predicate script and no exclusion list decides this (issue #227).
 2. [MUST] Confirm Green after the refactor: when step 1 changed a file, re-run the cycle's local run
-   set (VERIFY step 1's command) once and record the command and its summary line; when step 1
+   set (VERIFY step 1's command) once and record the command, the log and its summary line; when step 1
    changed nothing, the VERIFY step-1 record stands and nothing re-runs.
    - On FAIL → revert /simplify changes → Developer AI fixes (max 2×).
 3. Commit (refactor type; skip if step 1 made no changes).
@@ -1099,10 +1101,11 @@ the author's "this is fine" is not the disposition.
 ## VALIDATE — Verification Done
 
 ```
-1. Automated tests: the cycle's local run record — VERIFY step 1's (or REFINE step 2's) command and
-   summary line — reproduces when re-run and covers every `automated` and `delivery-check` row of
-   the verification design. Match the design table's rows against the record: a row with no record
-   is run here — a cycle-layer asset by its path, a test in the target's tree the way the target runs
+1. Automated tests: the cycle's local run record — VERIFY step 1's (or REFINE step 2's) command,
+   log and summary line — is confirmed against the log (the recorded line read at the cited path,
+   not a re-run) and covers every `automated` and `delivery-check` row of the verification design.
+   Match the design table's rows against the record: a row with no record, or whose log is absent
+   or does not carry the recorded line, is run here — a cycle-layer asset by its path, a test in the target's tree the way the target runs
    its tests — and its record filled in, not failed ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A
    missing run is filled where it is found*). Regression verification is HANDOFF step 5's CI; no
    whole-tree run happens here ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
@@ -1230,8 +1233,11 @@ each-item ≥ 7 criterion:
   test asserts the behavior the AC states, not a weaker proxy (e.g. "the function was
   called" where the AC requires a result shape) and not a different property than the
   one the AC it names states (issue #160). Confirm every cited evidence line
-  (test summary, log excerpt) reproduces by re-running the cited command — evidence that
-  was authored but never produced by a run caps the citing item at 6.
+  (test summary, log excerpt) against the log the cited run left, read at the cited path —
+  never by re-running the command; a recorded line the log does not carry was authored, not
+  produced by a run, and caps the citing item at 6. A record with no log behind it is not a
+  fabricated line but a missing run: it takes the `Test coverage` omission path below, not this
+  cap ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A run's evidence is the log it left*).
 - **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
   or renames files, sections, or identifiers, require evidence of a repo-wide
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
@@ -1279,11 +1285,12 @@ each-item ≥ 7 criterion:
   `Test quality` at 6.
 - **Test coverage — the run record is the subject** (ADR-0024 Area 2; issue #238): the item's
   subject is not a CI result (none exists before push). For each `automated` / `delivery-check` row
-  it is the row's recorded run — the command and summary line reproduce; in this repository a
+  it is the row's recorded run — the command, the log and the summary line read from it, confirmed
+  by reading the line at the cited log path rather than by re-running; in this repository a
   `standing` row's subject is additionally the committed asset's realisability — the file exists,
   runs, and is CI-registered.
   - **Execution omission is not a defect** ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run
-    is filled where it is found*). A row with no run record is `not-run`, and the evaluator does
+    is filled where it is found*). A row with no run record — or with no log behind it — is `not-run`, and the evaluator does
     **not** score `Test coverage` over it: the report names each such row under `Test coverage` as
     `not-run: <rows>` and withholds that item's score. Such a report is not a verdict — it is not
     recorded in the state file, consumes no FAIL of the `max 3×` cap, and carries no `remedy_class`
@@ -1384,7 +1391,8 @@ principle 2; issue #232).
    new sentences the next evaluator then flagged). No standing doc-phrase suite is kept (#141).
 3. Run, once, the tests the doc diff requires ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local
    verification*) — often none for a doc-only diff; on an opted-in target the selector names any
-   suite whose `ci-subject` reaches an edited doc — and record the command and its summary line.
+   suite whose `ci-subject` reaches an edited doc — and record the command and its summary line,
+   with the log the run wrote.
 4. Re-score (below).
 
 ### Re-entry re-score

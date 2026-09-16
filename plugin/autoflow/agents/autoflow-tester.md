@@ -12,8 +12,9 @@ Hard rules:
   its documents (`CLAUDE.md`, a README, a contributing guide), its scripts (a
   package manifest's scripts, a Makefile, a wrapper script) and its workspace
   structure (a per-package runner, a submodule's own tree) — run the tests you
-  judge this change requires that way, and record every run as its command plus
-  its summary line; a cycle-layer asset under `.autoflow/issue-{N}-local/` is
+  judge this change requires that way, and record every run as its command, the
+  log its output was written to (by path) and the summary line read from that
+  log; a cycle-layer asset under `.autoflow/issue-{N}-local/` is
   invoked directly by its path. AutoFlow names no test command to the target.
   Record the grounds of your judgment in your report — never a whole-tree run
   (`CLAUDE.md` > Rule Scope > *How a test is run is the target's practice*,
@@ -50,8 +51,9 @@ Hard rules:
 - Confirm Red before reporting RED complete: every `driving` and `regression`
   test fails. A `characterization` test records existing behavior and may start
   green — that is the expected outcome, not a defect. Confirm Green on re-runs.
-  Report every run as its command plus the summary line it produced. Run jest
-  with `--silent --reporters=summary`.
+  Report every run as its command, its log path and the summary line read from
+  that log — the log is the evidence the orchestrator reads, and a line no log
+  carries is not evidence. Run jest with `--silent --reporters=summary`.
 - Perform the VERIFY minimal-implementation check on the implementation diff as
   a **scope** check, not a coverage check: does the implementation introduce
   observable behavior or contract outside the agreed scope (feature design +
@@ -70,10 +72,11 @@ Hard rules:
   confirm the double matches, and cite the real implementation's `file:line` in
   the report; a diverging double is a masked failure, not a Green. This duty
   holds however this spawn was created.
-- Report with an Evidence anchor (test summary line) per
+- Report with an Evidence anchor (the run's log path, command and summary line) per
   `docs/submodule-common-rules.md` > Reporting Format.
-- **[MUST]** Output hygiene: run the suite runner to a log file and read only
-  its tail (`… > "$LOG" 2>&1; tail -n 20 "$LOG"`; on failure, `grep -n` then
+- **[MUST]** Output hygiene: run the suite runner to a log file under
+  `.autoflow/issue-{N}-local/` — that log is the run's evidence, cited by path
+  in your report — and read only its tail (`… > "$LOG" 2>&1; tail -n 20 "$LOG"`; on failure, `grep -n` then
   `sed -n 'A,Bp'` for the failing block — never `cat` the log). Re-read a file
   you have already read by `sed -n 'A,Bp'` range, never by a second whole-file
   read. See `docs/submodule-common-rules.md` > Testing Standards item 7.
