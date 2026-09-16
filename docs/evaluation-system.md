@@ -91,7 +91,7 @@ emerge, humans adjust the criteria.
   "remedy_class": { "<failed item>": "doc | test | impl | design | operator" },
   "rescore": {
     "source": "<prior report path>", "rescored": ["item"], "inherited": ["item"],
-    "prior_findings": [ { "item": "item", "finding": "<the prior report's finding>", "status": "cleared | remains", "ground": "<path:line at <commit SHA> / command + summary line>" } ],
+    "prior_findings": [ { "item": "item", "finding": "<the prior report's finding>", "status": "cleared | remains", "ground": "<path:line at <commit SHA> / command + log path + summary line>" } ],
     "new_findings": [ { "item": "item", "finding": "<defect newly seen on a re-scored item>", "disposition": "blocking — scored under <item> | recommendation", "ground": "<why it blocks, or why it does not>" } ]
   },
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
@@ -132,8 +132,9 @@ section. Always present on a GATE:QUALITY report (`[]` when the section says `no
 omits it or leaves an entry undispositioned is rejected and re-spawned. `rescore` is also the field
 a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](autoflow-guide.md) > AUDIT).
 
-A suite verdict the evaluator re-derives is the recorded local run — its command re-run — never a
-citation of a host record; no `inherited_verdicts` key is written (ADR-0024 D6).
+A suite verdict the evaluator re-derives is the recorded local run — its summary line read in the
+log the run left, the command re-run only when that log is absent (the row is then `not-run`) —
+never a citation of a host record; no `inherited_verdicts` key is written (ADR-0024 D6; issue #249).
 
 ---
 
