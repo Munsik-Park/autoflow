@@ -615,9 +615,9 @@ else
       rm -f "$_d7_out" "$_d7_err"
       ;;
     out|out-undeclared)
-      pass "D7: suite plane not opted in — $_d7_decl declares no tests > suite_plane opt-in, so no '# ci-subject:' header is owed and the selector is not consulted (ADR-0024 D3); the target's declared test command runs its tests"
+      pass "D7: suite plane not opted in — $_d7_decl declares no tests > suite_plane opt-in, so no '# ci-subject:' header is owed and the selector is not consulted (ADR-0024 D3); the target's tests run the way the target runs them"
       if [ "$_d7_plane" = out-undeclared ]; then
-        hint "D7: no tests declaration — $_d7_decl carries no 'tests' object: the scaffold predates the declaration site and a re-stamp never overwrites it. To declare, add the 'tests' object from the clone's .claude/autoflow.local.json.example by hand (tests > command: the target's test command; tests > suite_plane: true only to adopt AutoFlow's suite plane, which then requires '# ci-subject:' headers under tests/**). Not a stop condition."
+        hint "D7: no tests declaration — $_d7_decl carries no 'tests' object: the scaffold predates the declaration site and a re-stamp never overwrites it. To declare, add the 'tests' object from the clone's .claude/autoflow.local.json.example by hand (tests > suite_plane: true only to adopt AutoFlow's suite plane, which then requires '# ci-subject:' headers under tests/**; AutoFlow asks for no test command — the roles find the target's own). Not a stop condition."
       fi
       ;;
     unreadable)

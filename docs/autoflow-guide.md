@@ -348,9 +348,9 @@ layer that has a shell.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
-   the change delta, run through the target's declared test command ([`CLAUDE.md`](../CLAUDE.md) >
-   Rule Scope > *Local verification*; on an opted-in target the selector answers which committed
-   suites the delta reaches), and from the files those roles open to change anyway. The dividing line is one question: **would this
+   the change delta, run the way the target runs its tests ([`CLAUDE.md`](../CLAUDE.md) >
+   Rule Scope > *How a test is run is the target's practice*; on an opted-in target the selector
+   answers which committed suites the delta reaches), and from the files those roles open to change anyway. The dividing line is one question: **would this
    sentence being wrong mean the design has to be revisited, or would it just be fixed where it is
    found?** The first belongs to the deliberation; the second does not. A derivation RED produces
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
@@ -372,14 +372,18 @@ layer that has a shell.
 
 - **`Type` is the per-criterion verification disposition**, one of
   `automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
-  `none`, and the same cell carries the row's **layer** (ADR-0024 D1): an `automated` or `manual`
-  row is `cycle` by default — executed once, uncommitted, its run recorded — and is `standing`
-  (committed; CI-registered where the target opted in) only when the cell names one of D1's closed
-  tokens in the form `automated / standing: <token>` (`manual / standing: <token>`). The token list
-  is ADR-0024 D1's and is not copied here; a token outside it is a layer violation (GATE:QUALITY >
-  *Test quality — layer violation*). `Kind` applies to `automated` rows only (`driving` /
-  `regression` / `characterization`). Both vocabularies, and when each disposition is the right
-  answer, are defined once at *Test necessity* below.
+  `none`. An `automated` or `manual` row is `cycle` — executed once, uncommitted under
+  `.autoflow/issue-{N}-local/`, its run recorded. **In this repository only**, the same cell also
+  carries the row's **layer** (ADR-0024 D1): a row is `standing` (committed; CI-registered) when the
+  cell names one of D1's closed tokens in the form `automated / standing: <token>`
+  (`manual / standing: <token>`); the token list is ADR-0024 D1's and is not copied here, and a
+  token outside it is a layer violation (GATE:QUALITY > *Test quality — layer violation*). On a
+  target the cell carries no layer token: a cycle adds no test file to the target's tree by default,
+  and a file it does add is listed in the PR body with its reason for the reviewer to judge
+  ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *What a cycle leaves in the target's tree*). `Kind`
+  applies to `automated` rows only (`driving` / `regression` / `characterization`). Both
+  vocabularies, and when each disposition is the right answer, are defined once at *Test necessity*
+  below.
 - **`Issue AC` is the join key.** Each row's value is either an `AC id` from the
   `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, or `—` for a criterion this
   verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
@@ -720,15 +724,15 @@ issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
 
 | Item | Criterion |
 |------|-----------|
-| Feasibility   | Can this plan be implemented with the current structure? (grounded in the actual mechanisms, not a misread — a verification design that types a row `automated` on a target that declares no test command is not grounded, ADR-0024 D3) |
+| Feasibility   | Can this plan be implemented with the current structure? (grounded in the actual mechanisms, not a misread) |
 | Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here) |
 | Security      | Any security implications introduced? |
 | Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160) |
 
 **Affected files and side effects are not scored here** (issue #192). The gate scores the
 *decision* layer; which files a change touches and which tests it requires are **derived**, not
-predicted — by the execution roles at RED/GREEN entry, from the change delta and the target's
-declared test command, and from the files they open anyway. A prediction the gate scores is a prediction a FAIL
+predicted — by the execution roles at RED/GREEN entry, from the change delta and the way the
+target runs its tests, and from the files they open anyway. A prediction the gate scores is a prediction a FAIL
 sends back through a full re-deliberation; the same fact costs one suite run where execution meets
 it. The measurement is issue #192 (llmroute #280: four consecutive GATE:PLAN FAILs, all on this one
 item, all on facts RED met on first execution, all absorbed at RED/GREEN after an operator
@@ -804,8 +808,9 @@ the narrowing binds re-entries only.
 
 - **Role spawn**: ARCHITECT ran as a self-contained `Workflow` that already returned. At DISPATCH entry the orchestrator spawns fresh agents for RED/GREEN — anonymous direct spawns (`subagent_type`), one per phase entry; see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
-- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the target's declared test command and the cycle-layer store `.autoflow/issue-{N}-local/` ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
-- Both receive: acceptance criteria + verification design + affected docs.
+- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the cycle-layer store `.autoflow/issue-{N}-local/` and hands over the **run record so far** — the RED report's path — naming each verification-design row that still has no record as *run first* ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it is found*).
+- Both receive: acceptance criteria + verification design + affected docs, and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command and its result ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
+- Every later role spawn in the cycle — VERIFY, REFINE, the GATE:QUALITY evaluator — receives the run record the same way: the prior reports' paths, with any row lacking a record marked *run first*.
 
 ---
 
@@ -815,12 +820,15 @@ The Test AI writes test code from the verification design.
 
 **Derivation on entry** (issue #192). ARCHITECT hands down decisions, not a change table: the file
 rows, the per-suite disposition and each oracle's condition clause are **derived here**, by the
-roles that open those files anyway. Before step 1 the Test AI resolves the target's declared test
-command ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*: `.claude/autoflow.local.json`
-> `tests.command`, else the target's `CLAUDE.md` > Development Commands `Test`) and judges which of
-the target's tests the change requires, recording the grounds in its report; on an opted-in target
-and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the change
-delta reaches, and a `BLOCK:` line it prints is carried into the report, never worked around. A
+roles that open those files anyway. Before step 1 the Test AI finds how the target runs its tests
+at the location it executes in — the target's documents (`CLAUDE.md`, a README, a contributing
+guide), its scripts (a package manifest's scripts, a Makefile, a wrapper script) and its workspace
+structure (a per-package runner, a submodule's own tree) — and judges which of the target's tests
+the change requires, recording the grounds and, for every run, the command and its summary line in
+its report ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's
+practice*); on an opted-in target and in this repository `bash scripts/test/select-suites.sh`
+answers which committed suites the change delta reaches, and a `BLOCK:` line it prints is carried into the report,
+never worked around. A
 suite the derivation names and the verification design did not anticipate is an ordinary RED input,
 **not** a plan defect and **not** acceptance-criterion drift (GATE:QUALITY > *Completeness —
 AC-authority check*); a design **decision** the derivation contradicts is the one thing that still
@@ -828,8 +836,13 @@ returns to ARCHITECT, through the existing routes.
 
 ```
 1. Convert acceptance criteria → test code (only rows typed `automated`). A `cycle` row's test is
-   written under `.autoflow/issue-{N}-local/`; a `standing` row's (`automated / standing: <token>`)
-   is written in the target's test tree.
+   written under `.autoflow/issue-{N}-local/`. A test file goes into the target's test tree only as
+   the exception to the no-add default — in this repository, a `standing` row
+   (`automated / standing: <token>`); on a target, a file the Test AI judges the target should keep,
+   with the reason recorded in its report for the PR body. When adding such a file, check how the
+   target's CI discovers tests (a glob in the workflow, an explicit list, a package script); if
+   explicit registration is needed, wire it in the same commit, and record the CI job expected to
+   run it — HANDOFF step 5 matches that expectation against the CI log.
    - Rows typed `existing-coverage` / `none` produce no test — the verification design already
      states what covers them, or why absence costs nothing.
    - Rows typed `delivery-check` produce a one-shot check under `.autoflow/issue-{N}-local/`, not a
@@ -840,8 +853,8 @@ returns to ARCHITECT, through the existing routes.
    - A `characterization` test records existing behavior and may PASS from the start; a passing
      characterization test is the expected outcome, not an investigation trigger.
 3. For rows typed `manual` (and `environment-dependent` rows resolved to a manual scenario) → write
-   a manual verification scenario document under `.autoflow/issue-{N}-local/` (a `standing`
-   scenario, `manual / standing: <token>`, is committed instead).
+   a manual verification scenario document under `.autoflow/issue-{N}-local/` (in this repository a
+   `standing` scenario, `manual / standing: <token>`, is committed instead).
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
@@ -872,7 +885,7 @@ The fields go in the file's leading comment block at column 1, before its first 
 **Admission**: before creating a suite file at all, answer these two questions. They are the leaf rule and ADR-0024 D1 applied *before* the file exists rather than after, and each one that answers "yes" removes a file this tree would otherwise have to maintain.
 
 - Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
-- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (ADR-0024 D1, D2).
+- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (ADR-0024 D2; in this repository the `standing` categories are D1's closed list, and on a target the default is to add no file at all).
 
 **Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new committed spec conforming to the header contract above (opted-in targets and this repository) + manual scenarios written.
 
@@ -887,12 +900,18 @@ its definition: an issue AC whose disposition is `manual`, `existing-coverage`, 
 implemented; only its evidence differs.
 
 ```
-1. Read the verification design's acceptance-criteria table and the test code authored by the Test AI.
+1. Read the verification design's acceptance-criteria table and the test code authored by the Test AI,
+   then run the RED tests the way the target runs its tests before writing any implementation and
+   confirm that every `driving` and `regression` test fails — a `characterization` test may already
+   pass, as RED step 2 says. A `driving` or `regression` test that already passes surfaces here —
+   the criterion is already met, or the test is wrong (RED step 2) — and a row the RED report left
+   without a run record is run here and its record filled in ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it
+   is found*).
 2. Write the minimum code that satisfies every issue AC in scope and passes the `automated` tests.
    - [MUST] Do NOT implement behavior outside the agreed scope (feature design + verification design's issue ACs). A required AC without an automated test is in scope; a behavior no AC requires is not, whether or not a test could be written for it.
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
-   - [MUST] Run locally what the change requires and nothing more: this cycle's `automated` tests and the tests you judge the change reaches, through the target's declared test command, recording the command and its summary line. There is no local whole-tree run — none scheduled, none held in reserve ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
+   - [MUST] Run locally what the change requires and nothing more: this cycle's `automated` tests and the tests you judge the change reaches, the way the target runs its tests (RED > *Derivation on entry*), recording the command and its summary line. There is no local whole-tree run — none scheduled, none held in reserve ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
    - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
 3. Before committing, if this change touched a manifest-registered source, run
    the manifest regen and stage the result in the same commit.
@@ -919,12 +938,16 @@ Run the tests; on failure, branch by cause.
 1. [MUST] Local run, once: execute the cycle's local run set — every `automated` row this cycle
    authored or changed plus every `delivery-check` row (ADR-0024 M) — and record each run's command
    and its summary line ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*). The means
-   follows the row's layer: a `standing` row's test runs **through the target's declared test
-   command**, while a `cycle`-layer asset is **invoked directly by its path** under
-   `.autoflow/issue-{N}-local/` (`bash .autoflow/issue-{N}-local/<asset>`) — no driver is shipped
-   for it, and the recorded command names that path, so the design table's declared run set has a
-   per-row witness. A check that did not execute is `not-run`, never `passed`. Nothing is inherited
-   and no whole-tree run happens here — regression verification is HANDOFF step 5's CI.
+   follows where the asset lives: a test in the target's tree runs **the way the target runs its
+   tests** (RED > *Derivation on entry*), while a `cycle`-layer asset is **invoked directly by its
+   path** under `.autoflow/issue-{N}-local/` (`bash .autoflow/issue-{N}-local/<asset>`) — no driver
+   is shipped for it, and the recorded command names that path, so the design table's declared run
+   set has a per-row witness. Before the run, match the design table's rows against the run record
+   so far (the RED and GREEN reports): a row with no record is run here and its record filled in — an
+   omission is filled in place, never routed as a failure ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope >
+   *A missing run is filled where it is found*). A check that did not execute is `not-run`, never
+   `passed`. Nothing is inherited and no whole-tree run happens here — regression verification is
+   HANDOFF step 5's CI.
 2. Branch on result:
    All PASS → step 3.
    Some FAIL → cause branching (run under delegated facilitation — the `verify-cause-branch` workflow returns a single
@@ -1060,8 +1083,11 @@ the author's "this is fine" is not the disposition.
 ```
 1. Automated tests: the cycle's local run record — VERIFY step 1's (or REFINE step 2's) command and
    summary line — reproduces when re-run and covers every `automated` and `delivery-check` row of
-   the verification design. Regression verification is HANDOFF step 5's CI; no whole-tree run
-   happens here ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
+   the verification design. Match the design table's rows against the record: a row with no record
+   is run here — a cycle-layer asset by its path, a test in the target's tree the way the target runs
+   its tests — and its record filled in, not failed ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A
+   missing run is filled where it is found*). Regression verification is HANDOFF step 5's CI; no
+   whole-tree run happens here ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
 2. Minimal-implementation check: PASS confirmed (achieved in VERIFY step 3).
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
 4. Maintained-docs check: confirm impacted docs are updated, and that the REFINE report
@@ -1215,27 +1241,40 @@ each-item ≥ 7 criterion:
     rests on that recorded ground alone, never on the name's presence; a record whose stale names
     mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for
     (precedent: issue #211 kept old report excerpts verbatim).
-- **Test quality — layer violation** (ADR-0024 D1, D2): for each verification-design row, the
-  asset matches the layer its `Type` cell declares — a `cycle` row (no `standing:` token) has no
-  committed test file; a `standing` row has its committed file, CI-registered where the target
-  opted in; and every `standing:` token is one of ADR-0024 D1's closed list. A committed asset on a
-  `cycle` row, an uncommitted asset on a `standing` row, or a token outside the list caps
+- **Test quality — layer violation** (ADR-0024 D1, D2; **this repository only**): for each
+  verification-design row, the asset matches the layer its `Type` cell declares — a `cycle` row
+  (no `standing:` token) has no committed test file; a `standing` row has its committed file,
+  CI-registered; and every `standing:` token is one of ADR-0024 D1's closed list. A committed asset
+  on a `cycle` row, an uncommitted asset on a `standing` row, or a token outside the list caps
   `Test quality` at 6. The token check is a set relation, not a judgment, and it is performed
-  **by the device**: `scripts/gate/verification-layer-check.sh` (issue #228 — a committed device
-  with a cycle-time subject) is a bundle artifact since issue #229 (ADR-0024 > *Sub-issue split*,
-  S4), so a target stamped at or after that version carries it beside this guide. The evaluator
-  runs `bash scripts/gate/verification-layer-check.sh .autoflow/issue-{N}-verification-design.md`
-  and attaches its output — a non-zero exit is a token outside D1's closed list and caps the item;
-  the device's second output, the row↔asset pairing report, is input to this check and to
-  `Test coverage`, never a verdict. On a target stamped before the device shipped (drift-check D4
-  names the missing artifact; the remedy is a re-stamp), the evaluator performs the same set
-  relation **by hand** against ADR-0024 D1's closed list and says so in the report, naming the
-  device's absence — the check is not skipped, and a not-run is never rendered as a pass.
-- **Test coverage — layer-partitioned subject** (ADR-0024 Area 2): the item's subject is not a CI
-  result (none exists before push). For each `cycle` `automated` / `delivery-check` row it is the
-  recorded local run — the command and summary line reproduce; for each `standing` row it is the
-  committed asset's realisability — the file exists, runs, and is CI-registered where the target
-  opted in (`not-applicable` on a non-opted-in target, which is not clean).
+  **by the device**: the evaluator runs
+  `bash scripts/gate/verification-layer-check.sh .autoflow/issue-{N}-verification-design.md` and
+  attaches its output — a non-zero exit is a token outside D1's closed list and caps the item; the
+  device's second output, the row↔asset pairing report, is input to this check and to
+  `Test coverage`, never a verdict. The device is not delivered to targets and the check does not
+  run there: on a target, a test file the cycle added is judged by the reviewer against the target's
+  convention from the PR body's listing (HANDOFF step 4), not by a token ([`CLAUDE.md`](../CLAUDE.md)
+  > Rule Scope > *What a cycle leaves in the target's tree*); under this item the evaluator confirms
+  that every test file the cycle added to the target's tree carries, in the Test AI's RED report,
+  the reason it is kept and the CI job expected to run it — the record HANDOFF step 4 copies into
+  the PR body, which does not exist yet at this gate — and an added file with no such record caps
+  `Test quality` at 6.
+- **Test coverage — the run record is the subject** (ADR-0024 Area 2; issue #238): the item's
+  subject is not a CI result (none exists before push). For each `automated` / `delivery-check` row
+  it is the row's recorded run — the command and summary line reproduce; in this repository a
+  `standing` row's subject is additionally the committed asset's realisability — the file exists,
+  runs, and is CI-registered.
+  - **Execution omission is not a defect** ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run
+    is filled where it is found*). A row with no run record is `not-run`, and the evaluator does
+    **not** score `Test coverage` over it: the report names each such row under `Test coverage` as
+    `not-run: <rows>` and withholds that item's score. Such a report is not a verdict — it is not
+    recorded in the state file, consumes no FAIL of the `max 3×` cap, and carries no `remedy_class`
+    for the omission. The orchestrator has each named row run in place — a cycle-layer asset by its
+    path (the orchestrator itself may run it), a test in the target's tree by the owning role the
+    way the target runs its tests — and its record filled in, then spawns a fresh evaluator that
+    re-scores `Test coverage` only, in the *Re-entry re-score* form below with the withheld report
+    as the inheritance source. A recorded run that **fails** is a defect and is scored and classed
+    as before.
 - **Fit — ADR conformance** (proactively-added per `ADR-0016`, not a past Codex catch): on
   the final change set, re-confirm the shipped change conforms to any governing ADR (same
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check; the
@@ -1441,13 +1480,26 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      issue AC is `automated`, the section says so in one line rather than being omitted. The same
      section carries, for every `cycle`-layer `automated` row, the row's **run record** — the
      command and summary line of VERIFY step 1's run — since the check's code is not in the PR and
-     the record is what the reviewer can re-run (ADR-0024 D1, D2).
+     the record is what the reviewer can re-run (ADR-0024 D1, D2). The same section lists **every
+     test file this cycle added to the target's tree**, each with the reason it is kept and — filled
+     in at step 5 — the CI job that executed it; a cycle that added none says so in one line. The
+     listing is what lets the reviewer judge the addition against the target's own convention
+     ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *What a cycle leaves in the target's tree*).
    - Host-only change (target-centric — the default): create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path> --no-subrepo-dep`. The script still passes `--draft` (uniform pre-review marker) and still applies the `blocked-by-review` gate label, but does not apply the `blocked-by-subrepo` label — a host-only PR carries no merge-order gate (see Merge Sequencing > host-only case).
    - *Secondary (multi-repo):* Sub-repo changes present:
      a. Create each sub-repo PR (fork → upstream) **with `--label "blocked-by-review"`**, body `Part of Munsik-Park/autoflow#N` (no close keyword). The review gate is **per-PR**: **every** PR created for this cycle — the host PR *and* each sub-repo PR — carries `blocked-by-review` and is reviewed on its **own diff** in step 6 (so the review scope is each repo's actual code, not "the host only"). The `blocked-by-review` label must exist in each sub-repo (one-time operator setup — see [`external-review-sequencing.md`](external-review-sequencing.md)). `blocked-by-subrepo` is a separate, host-only merge-order gate (step 4b), not a review gate.
      b. Create the host PR. **Before** creating it, the **orchestrator** aligns the host dev branch's `services` gitlink to this cycle's sub-repo PR head — this is the **single source** of the pointer-bump commit format: run `git -C services checkout <sub-repo-PR-head>`, then `git add services`, then commit with the message `chore(#N): bump services pointer to <short-sha>` (the same `chore(#N): …` convention as the `git-workflow.md` reconcile snippet; DELIVER and the review-response re-bump in step 3 forward-ref this format rather than restating it). Then create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path>`. The script always passes `--draft`, applies the `blocked-by-review` gate label (cleared by the configured-reviewer review in step 6 when clean), and applies the `blocked-by-subrepo` label. The body file is the template-rendered host PR body (see `.github/pull_request_template.md` and PR Issue Auto-Close in [`git-workflow.md`](git-workflow.md)).
 5. Confirm CI is green on the created PR(s). **[MUST]** Step 5 confirms CI by running `scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]` — the orchestrator does **not** hand-write a poll loop (the same named-invocation enforcement step 4 has via `create-host-pr.sh`). The script reads `gh pr view <N> --json mergeable,mergeStateStatus` **first** and early-exits before any poll only on a **confirmed** not-mergeable read, then runs a finite, deadline-bounded poll on every other read — an undetermined or still-computing (`UNKNOWN`) mergeability, like a degraded read, falls through to that poll instead of early-exiting — never reading a clean-but-empty status as green. This confirmation is a **topology-independent invariant** (single- and multi-repo identical); only the exit-`10` *resolution* is topology-branched. The script judges the checks the host CI publishes on the PR head — any check, by count and conclusion, never by name (verified on a consuming target whose host CI moved to GitHub Actions: the script judged the new checks unmodified — issue #161). A `CONFLICTING` / `mergeStateStatus: DIRTY` PR may receive **no check at all** — a CI that builds the merge revision has nothing to build — so the status stays 0-count and a naive "wait for green" loop hangs forever; do **not** misread the empty status as a webhook miss (webhook deliveries are 200 OK in this case — see #570). Exit-code contract (`scripts/handoff/confirm-ci-green.sh`):
    - `0` — CI green: `scripts/handoff/confirm-ci-green.sh` saw ≥1 check present and every element green.
+   - **Added test files — CI log match** (issue #238), on exit `0` and before step 6: for each test
+     file this cycle added to the target's tree (step 4's listing), find in the green run's logs the
+     job that executed it and record the job beside the file in the PR body's
+     `## Verification dispositions`. The criterion is **execution visible in the log**, not
+     registration — a registered step can be skipped by a condition (`if:`, a `paths:` filter, a
+     matrix exclusion). A file no job executed is wired inside HANDOFF — the registration the
+     target's CI needs, committed and pushed as a HANDOFF internal retry (step 3, then step 5 again;
+     no re-entry) — and a file the wiring still cannot reach is listed as such for the reviewer. A
+     target with no CI records `no CI; local run only` beside each file.
    - confirmed mergeable requires both a `MERGEABLE` value and a settled (non-`UNKNOWN`) `mergeStateStatus` — either field still computing withholds the verdict and keeps the run in the bounded poll.
    - `10` — not mergeable (a **confirmed** `CONFLICTING` / `DIRTY` value) at precheck **or** on a mid-poll flip — **only on a JSON-confirmed read**; a failed / timed-out / empty / non-JSON read — at the precheck **or** on a mid-poll re-read — is **not** treated as a conflict, it **falls through** (the precheck to the bounded poll; a mid-poll degraded read to a retry within the budget) (never `10`). Mergeability is a tri-state, so a still-computing (`UNKNOWN`) mergeable value falls through to the bounded poll, never `10` — the verdict is taken from the settled value, and a mergeability that never settles inside the bound lands on `14`. The stderr carries the reserved `HANDOFF-INTERNAL-RETRY` token. Do **not** wait on CI; branch by cause — a concurrent cycle advancing `main`'s `services` gitlink → resolve via [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight; any other merge conflict → resolve against `origin/main` (rebase / merge) and re-push (HANDOFF internal retry).
    - `11` — `MERGEABLE` but no check ever published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900); confirm the CI trigger configuration (webhook delivery, workflow trigger conditions) or force a `synchronize` event by re-pushing before escalating to the operator — NOT green.

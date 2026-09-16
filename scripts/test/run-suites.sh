@@ -140,7 +140,7 @@ else
   fi
   if [ "$PLANE_RC" -ne 0 ]; then
     echo "run-suites: this root declares no AutoFlow suite-plane opt-in (tests > suite_plane in $(suite_plane_decl_path "$ROOT")) — no suite executed" >&2
-    echo "  Exit $SUITE_PLANE_NOT_OPTED_IN is neither a pass nor a failure: the plane does not apply to this root, and the target's own declared test command runs its tests (ADR-0024 D3). To execute this tree's specs regardless, 'run-suites.sh --all'." >&2
+    echo "  Exit $SUITE_PLANE_NOT_OPTED_IN is neither a pass nor a failure: the plane does not apply to this root, and the target's tests run the way the target runs them (ADR-0024 D3). To execute this tree's specs regardless, 'run-suites.sh --all'." >&2
     exit "$SUITE_PLANE_NOT_OPTED_IN"
   fi
   SELECT_ARGS=(--root "$ROOT" --event "$EVENT")

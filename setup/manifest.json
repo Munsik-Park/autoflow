@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "281bcb77ffed5dd3620a5390c488c8169eee9a7fee0fbcc427a45b56412cd245"
+      "sha256": "4a97c144ce6d77330d4fa996a0854bf008ce8c1f832b72a6bb6f6bfb6f9f9310"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "aa887d568227108451a0d6e1cde6c9661181b975d8626c1bab679ca2bd166711"
+      "sha256": "b4aa8ee0589ae72450333a94056d0c7a6d1fc9eed3b57f0d8c4049ab424ec8ab"
     },
     {
       "source": "docs/development-guideline.md",
@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/pr-body-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2c2a36a416ef927b60c494afce1123f93d585c7faf157b7611447e46a0ae1eb4"
+      "sha256": "56aac48316f658b9255ce8381c4865d0cc8e6f1b66a41f33bf0ba49f31f986ca"
     },
     {
       "source": "docs/repo-boundary-rules.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "40a24eff7c34613bea8c61274e3006207f122e2009b5bb275617c2ba98a7721c"
+      "sha256": "907f28228c86b784ae4766c1ba47e97f64822060268291f574961a9449d6fa4d"
     },
     {
       "source": "docs/security-checklist.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "513e927c00c592bc55a8e2ebb007c33e09ba561b0973bcbe35e043b75d91617d"
+      "sha256": "c02aaabd18b2881dd4a17ae3ef9b45fea2a7012cf7aa002c638732f4710eae2d"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/drift-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "474b34dcbcc77f64c1a0fcd99bec0befb3ab70b429ef8f495b94255fae7f5cf8"
+      "sha256": "35b9d16dbc1d8be97cd7289882b817850f3eb87a3b6f6e82dba9adaa6ce6ab23"
     },
     {
       "source": "setup/thin-root-layer/claude-md-shim.md",
@@ -251,7 +251,7 @@
       "dest": ".claude/autoflow.local.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "0dbb3ffde5087b63a04dbd7b6f8d8ad1018db5f93a4930087e7f22a0023ba3eb"
+      "sha256": "2a660453e1240c14678dc70166c3fb7327a8f620c2f1402d141670dc486cfc22"
     },
     {
       "source": "scripts/handoff/create-host-pr.sh",
@@ -321,14 +321,14 @@
       "dest": "scripts/test/select-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ff121be84dc78513a71e90e0205688cf0cd92d3d745a2aaafa35e97a40b30d56"
+      "sha256": "bc4bd8798d98742310215426e291115df382c171c384a85d84e41957d772ef4f"
     },
     {
       "source": "scripts/test/run-suites.sh",
       "dest": "scripts/test/run-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "7bcac66efb73ed98cb3bfedb20385b40e1ea23d49023174d4e748a5423ebe2c5"
+      "sha256": "545e7aaceb32633b5c15d59efa90ce6b3f3cbc138b4d1eecb57c9b073f11cfb4"
     },
     {
       "source": "scripts/test/invocation-scan.sh",
@@ -357,13 +357,6 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "f9a74fb6b1b33e90a15e93791ee2b9884ad81748e0eb0bb8ed171c914c254fb7"
-    },
-    {
-      "source": "scripts/gate/verification-layer-check.sh",
-      "dest": "scripts/gate/verification-layer-check.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "ed2d535469474dc94645fca8fb27569c65914537637911f00091d522385f32d6"
     },
     {
       "source": "scripts/test/check-cycle-layer-index.sh",
