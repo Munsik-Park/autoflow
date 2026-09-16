@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4b5df455c79122df0b61d1cf6102ffedce3f573545fd4a61939bf10ba8abb65c"
+      "sha256": "f22e171ec49da2d76a4dd9848cf46ec05bab7d7e516851d5f0af766fdbdc8d5d"
     },
     {
       "source": "docs/pr-body-guide.md",
