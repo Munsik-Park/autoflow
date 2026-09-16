@@ -344,6 +344,22 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Route.** Operator decision, recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 17 and 18; the issue (#199) was operator-filed and the change operator-executed.
 
+### Decision 20: A Verified Error in a Ledger Entry's Own Grounds Is Corrected by the Decision's Original Authority; Preference and Re-reading Stay Barred
+
+**Problem.** `CLAUDE.md` > Decision Ledger admits re-opening a recorded decision only on a *new verified fact* — one unavailable when the entry was written and deterministically checkable. That definition has no place for an error in the record itself: an entry whose two grounds contradict each other, whose number was miscalculated, or whose cited source does not say what the entry claims. Such an error was available at writing time, so it is not a new fact, and the only route to correcting it was the operator (Rule Scope, principle 3) — even where a single command over the cited material reproduces the error. The alternative the issue rejected, a "stated reason plus an attempt cap", would admit the failure Decision 8 records from issue #189: the same material re-read and the judgment reversed, now with a reason attached.
+
+**Decision.** Operator decision (issue #202), one exception sentence added to the rule and no device change.
+
+1. **Three conditions, all required.** The error is reproduced by command output over the material the entry cites; the re-opening is judged by the decision's original authority; and the superseding entry's grounds carry the reproducing command with its summary line — the existing "summary line with its command" grounds form (Decision 16) — and name the superseded entry's identifier. The append-only rule is untouched: the correction is a new entry, never an edit.
+2. **The original authority judges, mapped by what settled the entry.** A gate verdict is re-scored by a fresh Evaluation AI on that item (Decision 2 — the orchestrator never scores what a gate scores, Decision 19); an ARCHITECT conclusion goes back to the deliberation on a `brief` naming the entry, and that is an ARCHITECT re-entry consuming the re-entry counter unless the deliberation is still open, on the same terms as a VERIFY design contradiction; an operator decision returns to the operator. Where the authority cannot say with confidence that the reproduced error changes the decision, it asks the operator — the principle-3 route is narrowed, not removed.
+3. **What is not an error.** A changed preference, a re-weighting, or a re-interpretation of material already on the record reproduces nothing by command and remains barred; the exception keys on the reproduction, not on the strength of the argument.
+
+**Why the devices need no change.** The ledger is not a gate input (`CLAUDE.md` > AutoFlow State Tracking): no hook, cap or transition reads the re-litigation rule, and `scripts/ledger/ledger-entry-id.sh` checks identifiers, not grounds. The rule is enforced where it always was — by the reader of the ledger and by the reviewer at HANDOFF — and the superseding entry's recorded command is what makes a correction checkable after the fact.
+
+**Relation to #249.** Issue #249 relaxes ordinary report confirmation from re-execution to log evidence, and leaves the ledger's re-opening ground to this decision. Re-opening a settled decision is the case where the reproduction itself is the ground, so the entry records the command and its summary line; a log path may accompany it as drill-down but does not replace the command line.
+
+**Route.** Operator decision, recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 17–19; the issue (#202) was operator-filed and the change operator-executed. No ADR: no gate threshold, cap, hook or merge authority changes, and the exception routes each correction to the authority that already owned the decision.
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:
@@ -388,7 +404,7 @@ The following may look like "better approaches" but undermine core principles:
 | Design loops without termination conditions | No maximum retry → infinite loop risk → system hangs |
 | Run a multi-participant deliberation in the orchestrator's own context | Round-by-round cross-talk + duplicate reports accumulate → judgment contamination → decision oscillation (Decision 8) |
 | Replace deliberation isolation with a cheaper in-loop summary | Orchestrator stays in the loop → duplicate accumulation and oscillation remain; it is a bias mechanism, not a cost tweak |
-| Re-open a ledgered decision without a new verified fact | Re-reading the same material re-opens settled scope → oscillation-driven round explosion |
+| Re-open a ledgered decision without a new verified fact, or without an error reproduced by command output and judged by the decision's original authority (Decision 20) | Re-reading the same material re-opens settled scope → oscillation-driven round explosion; a stated reason without a reproduction is a re-reading with a label |
 | Add improvements to this repository before they exist in upstream | Generalization is mirror, not branch — improvements diverge the methodology and break parity |
 
 ---
@@ -399,7 +415,7 @@ The following may look like "better approaches" but undermine core principles:
 
 - **No failure learning loop**: No structured per-cycle evidence is captured; pass/fail pattern analysis is performed by humans externally.
 - **No cross-issue correlation detection**: A complaint class recurring across distinct issues is not detected; correlation analysis across issues is human-external. Decision 4 (no auto-modification of rubric/criteria) is unaffected.
-- **No measurement of judged routes yet**: Decision 17 makes a cycle's route and depth the working AI's recorded judgment, for new issues and review-response cycles alike. Whether that judgment is calibrated — what it skipped, and what a gate or the reviewer then caught — is read from the recorded grounds and the review outcomes after the fact, and no such series has been collected yet. Decision 18's evaluator judgments (a historical record's stale name; a re-score's new finding) join the same unmeasured series. Decision 19's orchestrator read-scope judgment joins it too: whether a direct read of a completed artifact was worth its context, or fed the oscillation Decision 8 describes, is read from the recorded grounds and the ledger after the fact.
+- **No measurement of judged routes yet**: Decision 17 makes a cycle's route and depth the working AI's recorded judgment, for new issues and review-response cycles alike. Whether that judgment is calibrated — what it skipped, and what a gate or the reviewer then caught — is read from the recorded grounds and the review outcomes after the fact, and no such series has been collected yet. Decision 18's evaluator judgments (a historical record's stale name; a re-score's new finding) join the same unmeasured series. Decision 19's orchestrator read-scope judgment joins it too: whether a direct read of a completed artifact was worth its context, or fed the oscillation Decision 8 describes, is read from the recorded grounds and the ledger after the fact. Decision 20's error-correction exception joins it as well: how often a ledger entry is superseded on a reproduced error, and whether the original authority's re-judgment held at the reviewer, is read from the superseding entries' recorded commands after the fact.
 
 ### Under Discussion
 
