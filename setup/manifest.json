@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4a97c144ce6d77330d4fa996a0854bf008ce8c1f832b72a6bb6f6bfb6f9f9310"
+      "sha256": "c9f8a40150aa9474c75dabed13ec611d272f6ef9066c6e004858a30da153788a"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b4aa8ee0589ae72450333a94056d0c7a6d1fc9eed3b57f0d8c4049ab424ec8ab"
+      "sha256": "8ea75723250b004a868366a57823c55f627a3577ed72a42bcf249e9be6f4ce83"
     },
     {
       "source": "docs/development-guideline.md",
