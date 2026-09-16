@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4a409ce6329567dc4fe7a1a01971c2d555bb88a50576dc8076cfbc24e0b63c23"
+      "sha256": "281bcb77ffed5dd3620a5390c488c8169eee9a7fee0fbcc427a45b56412cd245"
     },
     {
       "source": "docs/INDEX.md",
@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "946f18c7f0d2f023e92f5585656215e056bf2f5156687cca6be0fd7314c743af"
+      "sha256": "a7e2844523016e89c06557e8ac1c821226f8fc02371296770b41182a12d2da69"
     },
     {
       "source": "docs/pr-body-guide.md",

@@ -176,8 +176,9 @@ sub-agents and the orchestrator's own Bash compete for it. Two Claude Code
 behaviors turn that into a **false "absent / stub" reading** that has escalated
 a phantom blocker to the user (issue #243):
 
-- **Read-dedup stub (anthropics/claude-code#46749).** A re-read of an unchanged
-  file returns a 1-line stub ("file unchanged … refer to that earlier
+- **Read-dedup stub (anthropics/claude-code#46749, closed 2026-04-12 as a
+  duplicate of #42264, which is OPEN; reproduced on 2.1.187, 2026-06-24).** A
+  re-read of an unchanged file returns a 1-line stub ("file unchanged … refer to that earlier
   tool_result"); the dedup ledger is not reset on compaction, so after a long
   session the referenced earlier read can be gone and the model confabulates
   the content (a 197-line file read as a phantom "57-line stub"). The `Read`
@@ -193,7 +194,9 @@ a phantom blocker to the user (issue #243):
   user escalation**. A single read is never sufficient grounds.
 - **[MUST]** A blocker/escalation-feeding spot-check reads via **shell**
   (`sed -n 'N,Mp' <file>`, `grep -n`, `wc -l`), not the Read tool, so the dedup
-  ledger is bypassed (the documented #46749 workaround).
+  ledger is bypassed (the workaround documented on anthropics/claude-code#46749,
+  closed 2026-04-12 as a duplicate of #42264, which is OPEN; reproduced on
+  2.1.187, 2026-06-24).
 - **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
   1-line result (`Wasted call` / `file unchanged` / `Cancelled`). It is a
   harness stub, not data — re-run the single command sequentially first.
