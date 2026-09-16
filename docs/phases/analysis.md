@@ -53,7 +53,7 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
      - Instruction: "Analyze how this area currently works — pipeline structure, design intent, data flow."
      - Output: factual description of the area as it stands.
      - [MUST] Do NOT include the issue number, title, or problem description in the prompt.
-     - [MUST] Do NOT use words like "problem", "fix", "missing", "insufficient" in the prompt.
+     - [MUST] The prompt describes the current structure and does not convey the issue's defect hypothesis.
 
    AI-B (issue analysis): does NOT see the code
      - Input: issue body.
