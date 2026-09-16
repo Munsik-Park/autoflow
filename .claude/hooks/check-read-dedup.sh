@@ -19,7 +19,9 @@
 # What this hook does:
 #   On a Read whose result IS such a stub, inject a system-reminder telling the
 #   model the stub is NOT data — re-read via shell (sed -n / grep / wc -l),
-#   which bypasses the dedup ledger (the workaround documented on #46749 / #42264) — and
+#   which bypasses the dedup ledger (the workaround documented on
+#   anthropics/claude-code#46749, closed 2026-04-12 as a duplicate of #42264,
+#   which is OPEN; reproduced on 2.1.187, 2026-06-24) — and
 #   never conclude "absent / empty / stub / smaller-than-expected" from it.
 #
 # This fires on every occurrence, so the guard does not depend on the model

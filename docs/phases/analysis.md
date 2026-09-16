@@ -194,7 +194,9 @@ a phantom blocker to the user (issue #243):
   user escalation**. A single read is never sufficient grounds.
 - **[MUST]** A blocker/escalation-feeding spot-check reads via **shell**
   (`sed -n 'N,Mp' <file>`, `grep -n`, `wc -l`), not the Read tool, so the dedup
-  ledger is bypassed (the workaround documented on #46749 / #42264).
+  ledger is bypassed (the workaround documented on anthropics/claude-code#46749,
+  closed 2026-04-12 as a duplicate of #42264, which is OPEN; reproduced on
+  2.1.187, 2026-06-24).
 - **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
   1-line result (`Wasted call` / `file unchanged` / `Cancelled`). It is a
   harness stub, not data — re-run the single command sequentially first.
