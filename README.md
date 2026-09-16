@@ -190,7 +190,7 @@ claude-autoflow/
 │   ├── security-checklist.md          # Project-specific security checklist
 │   ├── phases/                        # Per-phase playbooks (docs/phases/)
 │   └── records/                       # Design & decision records — not stamped to targets
-│       ├── design-rationale.md        # Why every rule exists — read first
+│       ├── design-rationale.md        # Why every rule exists — read for a decision's grounds, routed per role
 │       ├── adr/                       # Architecture Decision Records
 │       └── design-reviews/            # Design reviews behind the ADRs
 │
@@ -267,7 +267,7 @@ Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
 
 | Document | Description |
 |----------|-------------|
-| [**Design Rationale**](docs/records/design-rationale.md) | **Read first** — why every design decision was made |
+| [**Design Rationale**](docs/records/design-rationale.md) | Why every design decision was made — a record read for a decision's grounds; which documents a role receives is routed per role (`CLAUDE.md` > Context Injection — Role-Scoped Document Routing) |
 | [AutoFlow Guide](docs/autoflow-guide.md) | Detailed phase-by-phase lifecycle |
 | [Evaluation System](docs/evaluation-system.md) | Scoring, PASS criteria, output format |
 | [Git Workflow](docs/git-workflow.md) | Branch naming, commits, PR process |
