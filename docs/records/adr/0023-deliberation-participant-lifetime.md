@@ -7,7 +7,11 @@ alive for the length of the discussion and the orchestrator wakes them in turn. 
 proposed gating this on a pilot; the operator chose to proceed directly, and the measurement in D4
 is kept as an effect record. **Implemented by issue #179 (2026-09-05)** in the A2 realization —
 the step-0 probe of D4 delivered 3/3 — with the realization changes of D3 made; the step-0 record
-and the effect record are in *Implementation record* below.
+and the effect record are in *Implementation record* below. **Amended by issue #244
+(2026-09-16)**: D2's "once per ARCHITECT discussion" is one cycle's ARCHITECT entry, its
+same-cycle re-discussions included; a new cycle's re-deliberation spawns both sides fresh and
+never resumes the previous cycle's participants by ID (the amendment note under D2 and the
+D3 row for CLAUDE.md > *Spawn mode by role lifetime*).
 
 ## Context
 
@@ -57,12 +61,24 @@ repository's `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` it creates an in-process t
 `/resume` does not restore. A1 is the fallback only if the delivery precondition in D4 fails for
 A2, since the operator's decision is the relay itself, not the addressing form.
 
+*Amended by issue #244 (2026-09-16).* "Once per ARCHITECT discussion" is one cycle's ARCHITECT
+entry: the participants are re-woken by ID only for that cycle's re-discussions (a GATE:PLAN
+FAIL re-entry, an un-agreed re-discussion). A re-deliberation in a new cycle — a review-response
+cycle, or a HANDOFF step 6.5 shape (b) re-entry — spawns both sides fresh on a new transcript
+whose `init` brief names the previous cycle's transcript and report paths, whether or not the
+session is the same. Grounds: on connev-llm/llmroute#280 and #285 the next cycle's
+re-deliberation resumed the previous cycle's participants by ID 7–8 hours later; on #285 cycle 2
+the first wake re-wrote ≈ 288K and ≈ 298K tokens after the prompt cache had expired, and the
+participants carried the decision the cycle was to re-examine — the inconsistency the
+single-mode ground in CLAUDE.md > *Spawn mode by role lifetime* names. The usage rule is
+`docs/autoflow-guide.md` > ARCHITECT > *Re-discussion*.
+
 **D3 — Relation to the standing records (what is and is not superseded).**
 
 | Record | Standing after this ADR |
 |---|---|
 | ADR-0017 Q3 (one declaration channel, `subagent_type`) | **Not superseded.** A2 declares through `subagent_type` at spawn; resumption by agent ID adds no channel. A1 would have superseded it, and is rejected. |
-| CLAUDE.md > *Spawn mode by role lifetime* ("no role holds a lifetime spanning phases") | **Not superseded.** A relayed participant lives inside one phase. The table gained a within-ARCHITECT row (issue #179); the cross-phase rule stands for every role. |
+| CLAUDE.md > *Spawn mode by role lifetime* ("no role holds a lifetime spanning phases") | **Not superseded.** A relayed participant lives inside one phase of one cycle — the cross-cycle case is stated by the issue #244 amendment above. The table gained a within-ARCHITECT row (issue #179); the cross-phase rule stands for every role. |
 | The hook's name-carrying-payload denial | **Unchanged** under A2. Touched only if the A1 fallback in D2 is taken. |
 | ADR-0021 (C7 `EQUAL_OR_BETTER`, C8 cost) | **Stands.** It compared named vs direct spawns across phases; nothing here re-measures detection. Its C8 cache reading is corrected by constraint 3: the warm-wake "saving" is the static prefix a fresh spawn also gets. |
 | `docs/records/design-rationale.md` > Decision 8 | **The rule stands; its realization clause is superseded for the ARCHITECT participants.** Isolation of the orchestrator from round-by-round prose is kept and is required of the relay (the isolation check in D4). The clause that binds the contract to the `Workflow` as the single realization that "enforces the relay order, the two-consecutive-`done` termination and the isolated report return in code" no longer holds for ARCHITECT: relay order and the end condition are computed by a decidable-state script over the transcript file and obeyed by the orchestrator's procedure. The VERIFY cause-branch keeps its `Workflow`. |
