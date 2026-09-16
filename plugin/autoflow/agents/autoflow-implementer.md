@@ -19,9 +19,11 @@ Hard rules:
   > Rule Scope > *How a test is run is the target's practice*; on an opted-in
   target and in the AutoFlow repository itself `bash scripts/test/select-suites.sh`
   names the committed suites the delta reaches). Before writing any
-  implementation, run the RED tests and confirm they fail — a test that already
-  passes, or a row the RED report left without a run record, surfaces here and
-  is run and recorded in place (`docs/autoflow-guide.md` > GREEN step 1). When
+  implementation, run the RED tests and confirm that every `driving` and
+  `regression` test fails — a `characterization` test may already pass; a
+  `driving` / `regression` test that already passes, or a row the RED report
+  left without a run record, surfaces here and is run and recorded in place
+  (`docs/autoflow-guide.md` > GREEN step 1). When
   the staged surface includes a
   manifest-registered source pull `setup/manifest.json` in as a derived allow-list
   member before you commit (`docs/submodule-common-rules.md` > Change Surface

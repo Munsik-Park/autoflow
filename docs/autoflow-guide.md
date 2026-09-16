@@ -901,10 +901,11 @@ implemented; only its evidence differs.
 
 ```
 1. Read the verification design's acceptance-criteria table and the test code authored by the Test AI,
-   then run the RED tests the way the target runs its tests and confirm they fail before writing any
-   implementation. A test that already passes surfaces here — the criterion is already met, or the
-   test is wrong (RED step 2) — and a row the RED report left without a run record is run here and
-   its record filled in ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it
+   then run the RED tests the way the target runs its tests before writing any implementation and
+   confirm that every `driving` and `regression` test fails — a `characterization` test may already
+   pass, as RED step 2 says. A `driving` or `regression` test that already passes surfaces here —
+   the criterion is already met, or the test is wrong (RED step 2) — and a row the RED report left
+   without a run record is run here and its record filled in ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it
    is found*).
 2. Write the minimum code that satisfies every issue AC in scope and passes the `automated` tests.
    - [MUST] Do NOT implement behavior outside the agreed scope (feature design + verification design's issue ACs). A required AC without an automated test is in scope; a behavior no AC requires is not, whether or not a test could be written for it.
@@ -1254,7 +1255,9 @@ each-item ≥ 7 criterion:
   run there: on a target, a test file the cycle added is judged by the reviewer against the target's
   convention from the PR body's listing (HANDOFF step 4), not by a token ([`CLAUDE.md`](../CLAUDE.md)
   > Rule Scope > *What a cycle leaves in the target's tree*); under this item the evaluator confirms
-  that every such file is listed there with its reason, and an unlisted added file caps
+  that every test file the cycle added to the target's tree carries, in the Test AI's RED report,
+  the reason it is kept and the CI job expected to run it — the record HANDOFF step 4 copies into
+  the PR body, which does not exist yet at this gate — and an added file with no such record caps
   `Test quality` at 6.
 - **Test coverage — the run record is the subject** (ADR-0024 Area 2; issue #238): the item's
   subject is not a CI result (none exists before push). For each `automated` / `delivery-check` row
