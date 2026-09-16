@@ -3,7 +3,7 @@
 This document explains the design intent and reasoning behind every major decision in AutoFlow.
 Where CLAUDE.md describes **what to do and how**, this document explains **why** it was designed that way.
 
-**Any new AI reading this repository should read this document first.**
+**This document is not read first by every AI: which documents a role receives is routed per role (`CLAUDE.md` > Context Injection — Role-Scoped Document Routing), and this record is read when a decision's grounds are needed (`docs/INDEX.md` > Design and decision records).**
 Understanding the design intent takes priority over following the rules.
 Without understanding the reasons, an AI may propose something that "looks better" but undermines a core principle.
 
