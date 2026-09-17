@@ -14,7 +14,8 @@ paths.
   One issue      result line · spawn timeline (role lane x time, colour = model,
                  re-written wakes ticked) · orchestrator context curve (gate
                  spawns and cold re-writes marked) · cost by phase, the base
-                 context share (calls x first_in) apart from the accumulated one
+                 context share (calls x first_in, per segment and per wake, then
+                 summed) apart from the accumulated one
 
 Idle stretches longer than 30 minutes are folded on the time axis, so a cycle
 that waited a week on a reviewer still shows its working hours.
@@ -41,8 +42,6 @@ def slim(issue):
     out['segments'] = [[s['start'], s['end']] for s in issue.get('segments') or []]
     out['outcome'] = {k: v for k, v in (issue.get('outcome') or {}).items() if k != 'phase_markers'}
     out['orch'] = [[c[0], c[1], c[6]] for c in issue.get('orch_calls') or []]
-    calls = issue.get('orch_calls') or []
-    out['orch_first_in'] = calls[0][1] if calls else 0
     agents = []
     for a in issue.get('agents') or []:
         s = {k: a.get(k) for k in AGENT_FIELDS}
@@ -246,7 +245,7 @@ function drawCtx(iss){const W=1140,L=60,H=240,B=26,Tp=10,s=svg($('ctx'),W,H),ax=
 
 function drawCost(iss){const g={};
  const add=(k,base,total,out,calls)=>{const r=g[k]||(g[k]={k,base:0,total:0,out:0,calls:0,n:0});r.base+=Math.min(base,total);r.total+=total;r.out+=out;r.calls+=calls;r.n++};
- const oc=iss.orch.length,ot=iss.totals.orchestrator;add('orchestrator',oc*iss.orch_first_in,inTok(ot),ot.output,oc);
+ const oc=iss.orch.length,ot=iss.totals.orchestrator;add('orchestrator',iss.totals.orch_base,inTok(ot),ot.output,oc);
  for(const a of iss.agents){const ws=a.wakes.length?a.wakes:[[0,0,a.calls,a.first_in,0]];
   add(a.phase_key||a.phase_marker||(a.role||'?').replace('autoflow-','')+' (no key)',ws.reduce((s,w)=>s+w[2]*w[3],0),inTok(a.usage),a.usage.output,a.calls)}
  const rows=Object.values(g).sort((a,b)=>b.total-a.total),W=1140,L=230,RH=22,H=rows.length*RH+24,s=svg($('cost'),W,H);

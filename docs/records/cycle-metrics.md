@@ -116,6 +116,9 @@ every past issue.
   its last one (or where the next segment opens, or when an agent spawned inside it ends). Calls
   outside every segment are counted as unattributed, not charged to an issue.
 - An issue row sums its segments across sessions; an agent belongs to the segment it started in.
+- The orchestrator's base-context share is computed per segment — the context the segment opened
+  with, times that segment's calls — and then summed, so it does not depend on the order the
+  session records are read in; the merged call series is in time order.
 - A segment's boundary with the next segment is exclusive; the session's own last record is
   included in its last segment.
 - Outcome columns belong to the arm that produced them: they are read for the AutoFlow arm only, and
@@ -142,7 +145,9 @@ A session run without AutoFlow leaves no state file and no `.autoflow` reference
 only thing that ties it to an issue: the whole session is attributed to the labelled issue. The two
 arms of one issue are two rows (`repo#N` and `repo#N@B`). Operator prompt counts and wall time are
 derived from the transcript for both arms; `operator_minutes` is the operator's own figure for the
-arm they drove.
+arm they drove. A label is per session: an issue row **sums** the minutes of its labelled sessions,
+each session once however many segments it has in that issue, and joins their notes in session
+order. A value that is not a number adds nothing.
 
 ## Verification record
 

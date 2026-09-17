@@ -727,7 +727,8 @@ def derive(args):
             arm = (label or {}).get('arm') or ('A' if s['refs'] else '')
             key = '%s#%s' % (repo, s['issue']) + ('' if arm in ('', 'A') else '@' + arm)
             it = issues.setdefault(key, {
-                'key': key, 'repo': repo, 'issue': s['issue'], 'arm': arm, 'operator_minutes': '', 'note': '',
+                'key': key, 'repo': repo, 'issue': s['issue'], 'arm': arm, 'operator_minutes': '', 'notes': [], 'labelled': [],
+                'orch_base': 0,
                 'sessions': [], 'segments': [], 'cwd': [], 'orch_calls': [], 'agents': [], 'pr_links': [],
                 'operator_prompts': 0, 'operator_prompts_known': True,
             })
@@ -736,11 +737,22 @@ def derive(args):
             if sess['session'] not in it['sessions']:
                 it['sessions'].append(sess['session'])
             it['cwd'] = list(dict.fromkeys(it['cwd'] + (sess.get('cwd') or [])))
-            if label:
-                it['operator_minutes'] = label['operator_minutes'] or it['operator_minutes']
-                it['note'] = label['note'] or it['note']
+            # A label is per session: its minutes are summed over the issue's sessions, once per session
+            # however many segments that session has in the issue.
+            if label and sess['session'] not in it['labelled']:
+                it['labelled'].append(sess['session'])
+                try:
+                    it['operator_minutes'] = round((it['operator_minutes'] or 0) + float(label['operator_minutes']), 2)
+                except ValueError:
+                    pass                    # blank or not a number: nothing to add
+                if label['note']:
+                    it['notes'].append((s['start'], label['note']))
             seg_calls = [c for c in calls if inside(c[0])]
             seg_agents = [a for a in sess['agents'] if inside(a.get('start'))]
+            # Base context is a property of the segment: the context it opened with, paid on each of its
+            # calls. Summed per segment, so it does not depend on which session file is read first.
+            if seg_calls:
+                it['orch_base'] += len(seg_calls) * seg_calls[0][1]
             taken_calls += len(seg_calls)
             taken_agents += len(seg_agents)
             it['segments'].append({'session': sess['session'], 'start': s['start'],
@@ -761,6 +773,11 @@ def derive(args):
     rows = []
     for key in sorted(issues, key=lambda k: (issues[k]['repo'], issues[k]['issue'])):
         it = issues[key]
+        it['orch_calls'].sort(key=lambda c: c[0])
+        it['agents'].sort(key=lambda a: norm_ts(a.get('start')) or '')
+        it['segments'].sort(key=lambda g: g['start'])
+        it['note'] = '; '.join(dict.fromkeys(n for _, n in sorted(it.pop('notes'))))   # in session order
+        del it['labelled']
         # The .autoflow artifacts are the AutoFlow arm's. Another arm of the same issue has none of its
         # own, and borrowing these would put arm A's scores and rounds on arm B's row.
         adir, where = (find_artifacts(args.archive_root, it['repo'], it['issue'], it['cwd'])
@@ -796,6 +813,7 @@ def derive(args):
         top = [a for a in it['agents'] if not a['workflow'] and not a['parent'] and a['role'].startswith('autoflow-')]
         it['totals'] = {
             'orchestrator': orch, 'agents': ag, 'tokens': total,
+            'orch_base': min(it.pop('orch_base'), orch['input'] + orch['cache_read'] + orch['cache_creation']),
             'orch_share': round(sum(orch.values()) / total, 4) if total else None,
             'gate_share': round(gate / total, 4) if total else None,
             'wall_h': round(wall / 3600, 2),
@@ -808,7 +826,8 @@ def derive(args):
         rows.append([
             it['repo'], it['issue'], it['arm'], len(it['sessions']),
             min(s['start'] for s in it['segments']), max(s['end'] for s in it['segments']), t['wall_h'],
-            it['operator_prompts'] if it['operator_prompts_known'] else '', it['operator_minutes'],
+            it['operator_prompts'] if it['operator_prompts_known'] else '',
+            ('%g' % it['operator_minutes']) if it['operator_minutes'] != '' else '',
             len(it['orch_calls']), orch['cache_read'], orch['cache_creation'], orch['output'],
             len(it['agents']), ag['cache_read'], ag['cache_creation'], ag['output'],
             t['tokens'], t['orch_share'], t['gate_share'], t['max_orch_context'], t['rewrites'],
