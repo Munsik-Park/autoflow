@@ -123,7 +123,7 @@ every past issue.
   included in its last segment.
 - Outcome columns belong to the arm that produced them: they are read for the AutoFlow arm only, and
   another arm's row leaves them empty rather than borrowing them. They come from the issue's `.autoflow` artifacts — the archive copy, else the live
-  directory: `cycle`, gate averages, ARCHITECT turns and rounds (`### Brief` blocks + 1), the number
+  directory: `cycle`, gate averages, ARCHITECT turns and rounds (per transcript file, `### Brief` blocks + 1 where it holds a turn, summed over the cycles' transcripts), the number
   of GATE:PLAN / AUDIT / GATE:QUALITY evaluation reports, `[review-autofix]` ledger headings,
   reviewer rounds (`review-comment-*` files), CI rounds (`issue-{N}-local/handoff-ci-*.log`). A CI
   round is judged by the `exit=<n>` line in its log, never by its position — a later log is often a

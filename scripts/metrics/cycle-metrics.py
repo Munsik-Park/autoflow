@@ -642,14 +642,19 @@ def outcome(adir, issue):
     o['audit_evals'] = count(pre + r'audit(?:-\d+)?\.md')
     o['gate_quality_evals'] = count(pre + r'gate-quality(?:-\d+)?\.md')
     o['reviewer_rounds'] = count(pre + r'review-comment-.*\.md')
-    turns = briefs = 0
+    # One transcript per cycle's ARCHITECT entry (a later cycle's is preserved as issue-N-cC-*): each
+    # discussion is its opening round plus one per Brief, so the rounds are counted per file.
+    turns = rounds = 0
     for p in glob.glob(os.path.join(adir, 'issue-%s-*architect-transcript.md' % issue)):
+        t = b = 0
         with open(p, encoding='utf-8') as f:
             for ln in f:
-                turns += ln.startswith('### Turn ')
-                briefs += ln.startswith('### Brief')
+                t += ln.startswith('### Turn ')
+                b += ln.startswith('### Brief')
+        turns += t
+        rounds += (b + 1) if t else 0
     o['architect_turns'] = turns
-    o['architect_rounds'] = (briefs + 1) if turns else 0
+    o['architect_rounds'] = rounds
     heads = []
     for p in glob.glob(os.path.join(adir, 'issue-%s-*ledger.md' % issue)) + \
             glob.glob(os.path.join(adir, 'issue-%s-ledger.md' % issue)):
