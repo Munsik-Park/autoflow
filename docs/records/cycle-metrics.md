@@ -82,7 +82,10 @@ A session record carries the `schema` it was written under. When the collector's
 record is **replaced only by a collection that covers it** — at least its orchestrator calls, and
 every one of its agents with at least its calls. The roots are tried in the order given, so a
 session whose transcript has expired is upgraded from a preserved copy passed as a later
-`--projects-root`. A record with no covering source is left exactly as it is, on its older schema;
+`--projects-root`. A record with no covering source is left exactly as it is, on its older schema — also when its
+source has grown in the meantime (a resumed session whose agent transcript expired): the merge that
+handles that case is for a record of the current schema only, since merging would stamp the record
+with the new schema while the agents it keeps still carry the old one's fields;
 the run reports how many (`schema 2: upgraded N from the transcripts, N from a preserved copy; N
 kept on an older schema`), `issues.tsv` counts them per row (`stale_schema_sessions`), and a later
 run retries. A record is never deleted to be rebuilt. Schema 2 (the agent role from the declared
@@ -150,8 +153,10 @@ every past issue.
   orchestrator and carries no outcome, and in the share-over-time chart it reads as a 100% point
   that hides the real cycles' 11–36%. A row is `cycle` when any one of these holds, recorded as
   `kind_basis` in `issues.json`, and `non-cycle` otherwise:
-  - `label` — the row is tied to its issue by `labels.tsv` (the other arm of a comparison has no
-    state by construction and is never classified away);
+  - `label` — one of the row's sessions is labelled in `labels.tsv`, and the label names this issue
+    or none (the other arm of a comparison has no state by construction and is never classified
+    away; an explicit arm A label counts the same). A label that names another issue links nothing
+    to this row, its minutes included;
   - `role-spawn` — at least one of its agents was spawned with an AutoFlow role
     (`subagent_type: autoflow-*`);
   - `state-date` — it has no role spawn, the issue's state file exists, and the state's `date` lies

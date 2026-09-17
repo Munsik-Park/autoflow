@@ -535,15 +535,19 @@ def collect(args, now):
                 continue
             # A record is REPLACED only by a collection that covers it. A schema upgrade with no
             # covering source leaves the record exactly as it is — still readable, still the older
-            # schema, reported as such — and is retried on a later run. A source that grew but no
-            # longer covers the record (a resumed session, an expired agent) is merged into it.
+            # schema, reported as such — and is retried on every later run, grown source or not. On
+            # the current schema, a source that grew but no longer covers the record (a resumed
+            # session, an expired agent) is merged into it.
             rec = None
             for m in found[sid] if old_schema else grown:
                 cand = collect_session(m, policy_keys)
                 if covers(cand, prior):
                     rec = cand
                     break
-            if rec is None and grown:
+            # The merge is for a record of the CURRENT schema only. Merging into an older record would
+            # stamp it with the new schema while the agents it keeps still carry the old one's fields,
+            # and the upgrade would never be retried.
+            if rec is None and grown and not old_schema:
                 rec = merge_prior(collect_session(grown[0], policy_keys), prior)
             if rec is None:
                 counts['kept'] += 1
@@ -801,7 +805,7 @@ def derive(args):
             key = '%s#%s' % (repo, s['issue']) + ('' if arm in ('', 'A') else '@' + arm)
             it = issues.setdefault(key, {
                 'key': key, 'repo': repo, 'issue': s['issue'], 'arm': arm, 'operator_minutes': '', 'notes': [], 'labelled': [],
-                'stale_schema_sessions': [],
+                'stale_schema_sessions': [], 'label_sessions': [],
                 'orch_base': 0,
                 'sessions': [], 'segments': [], 'cwd': [], 'orch_calls': [], 'agents': [], 'pr_links': [],
                 'operator_prompts': 0, 'operator_prompts_known': True,
@@ -815,7 +819,12 @@ def derive(args):
             it['cwd'] = list(dict.fromkeys(it['cwd'] + (sess.get('cwd') or [])))
             # A label is per session: its minutes are summed over the issue's sessions, once per session
             # however many segments that session has in the issue.
-            if label and sess['session'] not in it['labelled']:
+            # The label's own link to this row, kept explicitly: the session is labelled, and the label
+            # names this issue or none. Neither the arm's value nor the reference count stands in for it.
+            linked = bool(label) and label['issue'] in ('', str(s['issue']))
+            if linked and sess['session'] not in it['label_sessions']:
+                it['label_sessions'].append(sess['session'])
+            if linked and sess['session'] not in it['labelled']:
                 it['labelled'].append(sess['session'])
                 try:
                     it['operator_minutes'] = round((it['operator_minutes'] or 0) + float(label['operator_minutes']), 2)
@@ -907,7 +916,7 @@ def derive(args):
         # cycle's files finds that cycle's state too. With no role spawn of its own, the state counts as
         # this row's only when its `date` lies within a day of the row's segments — which keeps a cycle
         # that stopped right after PREFLIGHT or at triage, and drops the reader.
-        by_label = it['arm'] not in ('', 'A') or any(not g['refs'] for g in it['segments'])
+        by_label = bool(it['label_sessions'])
         role_spawns = sum(1 for a in it['agents'] if (a.get('role') or '').startswith('autoflow-'))
         own_state = False
         day = parse_ts((it['outcome'].get('state_date') or '') + 'T12:00:00+00:00')
