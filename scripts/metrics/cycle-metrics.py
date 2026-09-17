@@ -15,9 +15,11 @@ Two steps, run together by default:
            -> $ROOT/sessions/<session-id>.json, written once per session and left
            alone afterwards. A session whose last record is younger than
            --settle-hours is not finalized yet and is skipped. The one case a
-           session file is written again is a source that GREW after collection
-           (a resumed session): the new aggregate is a superset of the old one.
-           A source that shrank or vanished never touches the record.
+           session file is written again is a source transcript that GREW after
+           collection (a resumed session), judged per source. The new record is
+           merged with the old one, never a replacement: an agent whose
+           transcript has expired in the meantime keeps its prior aggregate, and
+           a main transcript that shrank or vanished leaves the record alone.
 
   derive   $ROOT/sessions/*.json + $ROOT/labels.tsv + the .autoflow archive
            -> $ROOT/issues.tsv and $ROOT/issues.json, REGENERATED on every run,
@@ -264,15 +266,60 @@ def session_files(main):
     return direct, wf
 
 
-def source_bytes(main):
+def source_sizes(main):
+    """{relative path: bytes} for every transcript of the session that is present now."""
+    base = os.path.dirname(main)
     direct, wf = session_files(main)
-    total = 0
+    sizes = {}
     for p in [main] + direct + wf:
         try:
-            total += os.path.getsize(p)
+            sizes[os.path.relpath(p, base)] = os.path.getsize(p)
         except OSError:
             pass
-    return total, 1 + len(direct) + len(wf)
+    return sizes
+
+
+def grew(sizes, prior):
+    """Has any source the prior record was built from grown, or a new one appeared?
+
+    Judged per source, never on the total: an expired agent transcript and a resumed main transcript
+    move the total in opposite directions, and neither direction says the record is a superset.
+    """
+    src = prior.get('source') or {}
+    known = src.get('sizes')
+    if known is None:                                   # a record older than per-source tracking
+        return sum(sizes.values()) > src.get('bytes', 0)
+    return any(n > known.get(rel, 0) for rel, n in sizes.items())
+
+
+def merge_prior(rec, prior):
+    """Keep what the prior record holds and the present sources no longer can.
+
+    Transcripts only grow until the harness deletes them, so the better aggregate of one source is
+    the one over more calls. An agent whose transcript expired (absent now, or present with fewer
+    calls) keeps its prior record; an orchestrator transcript that shrank or vanished keeps the whole
+    prior record (None). The merged source sizes are the per-source maxima, so an expired source is
+    not mistaken for growth on the next run.
+    """
+    if len(rec['orchestrator']['calls']) < len((prior.get('orchestrator') or {}).get('calls') or []):
+        return None
+    now = {a['id']: a for a in rec['agents']}
+    for old in prior.get('agents') or []:
+        cur = now.get(old['id'])
+        if cur is None or cur['calls'] < old['calls']:
+            now[old['id']] = dict(old, source_expired=True)
+    rec['agents'] = sorted(now.values(), key=lambda a: a['start'] or '')
+    top = [a for a in rec['agents'] if not a['workflow'] and not a['parent'] and a['role'].startswith('autoflow-')]
+    by_method = {}
+    for a in top:
+        m = a['phase_key_method'] or 'none'
+        by_method[m] = by_method.get(m, 0) + 1
+    rec['phase_key_recovery'] = {'spawns': len(top), 'by_method': by_method}
+    known = (prior.get('source') or {}).get('sizes') or {}
+    sizes = rec['source']['sizes']
+    rec['source']['sizes'] = {rel: max(sizes.get(rel, 0), known.get(rel, 0)) for rel in set(sizes) | set(known)}
+    rec['source']['bytes'] = max(sum(rec['source']['sizes'].values()), (prior.get('source') or {}).get('bytes', 0))
+    return rec
 
 
 def collect_session(main, policy_keys):
@@ -373,7 +420,8 @@ def collect_session(main, policy_keys):
         m = a['phase_key_method'] or 'none'
         by_method[m] = by_method.get(m, 0) + 1
 
-    nbytes, nfiles = source_bytes(main)
+    sizes = source_sizes(main)
+    nbytes, nfiles = sum(sizes.values()), len(sizes)
     models = {}
     for c in calls:
         if c['model']:
@@ -386,7 +434,7 @@ def collect_session(main, policy_keys):
         'git_branches': distinct('gitBranch'),
         'versions': distinct('version'),
         'source': {
-            'bytes': nbytes, 'files': nfiles, 'records': len(recs),
+            'bytes': nbytes, 'files': nfiles, 'records': len(recs), 'sizes': sizes,
             'form': 'stripped' if any('user' in r and isinstance(r.get('user'), dict) for r in recs[:200]) else 'raw',
         },
         'start': start, 'end': end,
@@ -433,7 +481,6 @@ def collect(args, now):
                 continue
             seen.add(sid)
             dest = os.path.join(out_dir, sid + '.json')
-            nbytes, _ = source_bytes(main)
             prior = None
             if os.path.exists(dest):
                 try:
@@ -441,10 +488,15 @@ def collect(args, now):
                         prior = json.load(f)
                 except (OSError, ValueError):
                     prior = None
-                if prior and nbytes <= (prior.get('source') or {}).get('bytes', 0):
+                if prior and not grew(source_sizes(main), prior):
                     counts['kept'] += 1
                     continue
             rec = collect_session(main, policy_keys)
+            if prior:
+                rec = merge_prior(rec, prior)
+                if rec is None:
+                    counts['kept'] += 1
+                    continue
             last = parse_ts(rec['end'])
             for a in rec['agents']:
                 t = parse_ts(a['end'])
@@ -511,10 +563,14 @@ def segments_of(sess):
         tail = parse_ts(s['last'])
         cap = norm_ts((tail + dt.timedelta(seconds=TAIL_S)).isoformat()) if tail else None
         s['end'] = min(x for x in (limit, cap) if x) if (limit or cap) else s['last']
+        bounded_by_next = i + 1 < len(segs)
         # an agent spawned inside the segment may outlive its last reference
         for a_start, a_end in spans:
             if a_start and a_end and s['start'] <= a_start < s['end'] < a_end:
                 s['end'] = min(a_end, limit) if limit else a_end
+        # The boundary with the next segment is exclusive (that record is the next issue's); the
+        # session's own last record has no next segment to belong to, so the end includes it.
+        s['end_inclusive'] = not (bounded_by_next and s['end'] == limit)
     return segs
 
 
@@ -675,7 +731,8 @@ def derive(args):
                 'sessions': [], 'segments': [], 'cwd': [], 'orch_calls': [], 'agents': [], 'pr_links': [],
                 'operator_prompts': 0, 'operator_prompts_known': True,
             })
-            inside = lambda ts: ts is not None and s['start'] <= norm_ts(ts) < s['end']  # noqa: E731
+            inside = lambda ts: ts is not None and (  # noqa: E731
+                s['start'] <= norm_ts(ts) < s['end'] or (s.get('end_inclusive') and norm_ts(ts) == s['end']))
             if sess['session'] not in it['sessions']:
                 it['sessions'].append(sess['session'])
             it['cwd'] = list(dict.fromkeys(it['cwd'] + (sess.get('cwd') or [])))
@@ -704,7 +761,10 @@ def derive(args):
     rows = []
     for key in sorted(issues, key=lambda k: (issues[k]['repo'], issues[k]['issue'])):
         it = issues[key]
-        adir, where = find_artifacts(args.archive_root, it['repo'], it['issue'], it['cwd'])
+        # The .autoflow artifacts are the AutoFlow arm's. Another arm of the same issue has none of its
+        # own, and borrowing these would put arm A's scores and rounds on arm B's row.
+        adir, where = (find_artifacts(args.archive_root, it['repo'], it['issue'], it['cwd'])
+                       if it['arm'] in ('', 'A') else (None, None))
         it['outcome'] = outcome(adir, it['issue'])
         it['outcome']['artifacts'] = where
         for a in it['agents']:

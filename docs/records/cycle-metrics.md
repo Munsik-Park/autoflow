@@ -36,9 +36,11 @@ no file in this repository or in a target repository is created or changed.
 
 A session is finalized once its last record is older than `--settle-hours` (default 12); a younger
 one is reported as `unsettled` and picked up by a later run. A collected session is not written
-again, with one exception: a source that **grew** after collection (a resumed session) is
-re-aggregated, the new record being a superset of the old. A source that shrank or expired never
-touches its record.
+again, with one exception: a session one of whose source transcripts **grew** after collection (a
+resumed session) is re-aggregated. Growth is judged per source, never on the total, and the new
+record is **merged** with the old one rather than replacing it: an agent whose transcript has
+expired in the meantime keeps its prior aggregate (marked `source_expired`), and a main transcript
+that shrank or vanished leaves the whole record alone.
 
 Useful flags: `--projects-root DIR` (repeatable; the first root holding a session id wins — a
 stripped metering-only copy of expired transcripts can be given as a second root), `--session ID`,
@@ -114,7 +116,10 @@ every past issue.
   its last one (or where the next segment opens, or when an agent spawned inside it ends). Calls
   outside every segment are counted as unattributed, not charged to an issue.
 - An issue row sums its segments across sessions; an agent belongs to the segment it started in.
-- Outcome columns come from the issue's `.autoflow` artifacts — the archive copy, else the live
+- A segment's boundary with the next segment is exclusive; the session's own last record is
+  included in its last segment.
+- Outcome columns belong to the arm that produced them: they are read for the AutoFlow arm only, and
+  another arm's row leaves them empty rather than borrowing them. They come from the issue's `.autoflow` artifacts — the archive copy, else the live
   directory: `cycle`, gate averages, ARCHITECT turns and rounds (`### Brief` blocks + 1), the number
   of GATE:PLAN / AUDIT / GATE:QUALITY evaluation reports, `[review-autofix]` ledger headings,
   reviewer rounds (`review-comment-*` files), CI rounds (`issue-{N}-local/handoff-ci-*.log`). A CI
