@@ -148,6 +148,25 @@ every past issue.
   green re-confirmation: `exit=12` (red build) is a failed round, any other non-zero exit
   (`confirm-ci-green.sh`: not mergeable, no check published, no verdict) is counted apart as
   `ci_other_rounds`, and a log with no exit line is `ci_undetermined` and counted as nothing else.
+- **A number is a count; an empty cell is "not recorded".** The artifacts the outcome columns are
+  counted from were introduced over time, so an older archive holds none of them, and a 0 there
+  would read as "no rounds" when nothing was recorded. Each metric is a number only where at least
+  one of *its own* source artifacts exists, and is otherwise `null` in `issues.json`, empty in
+  `issues.tsv` and "–" in the page:
+
+  | Columns | Source artifact | Without it |
+  |---|---|---|
+  | `architect_turns`, `architect_rounds` | an `architect-transcript.md` (the relay transcript) | empty |
+  | `reviewer_rounds` | a `review-comment-*.md` | empty |
+  | `ci_rounds`, `ci_fail_rounds`, `ci_other_rounds`, `ci_undetermined` | a `issue-{N}-local/handoff-ci-*.log` | empty |
+  | `gate_plan_evals`, `audit_evals`, `gate_quality_evals` | that gate's evaluation report | empty |
+  | `review_autofix`, `ac_decisions`, `ledger_entries` | the ledger | empty — and **with a ledger, 0 is a value**: the cycle recorded its decisions and none was an auto-fix |
+  | `cycle`, the gate averages | the state file | empty |
+
+  The scatter draws only rows that have a value for the chosen outcome and states below the chart
+  how many it left out. On the first run of this rule, of 48 cycle rows: ARCHITECT 39 empty (the
+  relay transcript first appears 2026-09-05), reviewer rounds 47, CI 48, GATE:PLAN / AUDIT /
+  GATE:QUALITY reports 23 / 13 / 24, ledger-backed columns 4.
 - **`kind`.** A session that references an issue's `.autoflow` files three times becomes a row
   whether or not it ran a cycle — drafting the issue, analysing a finished cycle. Such a row is all
   orchestrator and carries no outcome, and in the share-over-time chart it reads as a 100% point

@@ -705,9 +705,13 @@ def outcome(adir, issue):
     for gate in ('gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit', 'gate_quality'):
         o[gate] = score_avg(((st.get('phases') or {}).get(gate) or {}).get('scores'))
 
+    # A number means "counted from its source"; None means "no source to count from". The artifacts
+    # were introduced over time — an archive older than the relay transcript, the handoff-ci logs or
+    # the review-comment files holds none of them, and a 0 there would read as "no rounds" when it is
+    # "not recorded". Each metric is a number only where at least one of ITS source artifacts exists.
     def count(pattern):
         rx = re.compile(pattern)
-        return sum(1 for n in os.listdir(adir) if rx.fullmatch(n))
+        return sum(1 for n in os.listdir(adir) if rx.fullmatch(n)) or None
 
     pre = r'issue-%s-(?:c\d+-)?' % issue
     o['gate_plan_evals'] = count(pre + r'gate-plan(?:-\d+)?\.md')
@@ -725,23 +729,27 @@ def outcome(adir, issue):
                 b += ln.startswith('### Brief')
         turns += t
         rounds += (b + 1) if t else 0
-    o['architect_turns'] = turns
-    o['architect_rounds'] = rounds
+    transcripts = glob.glob(os.path.join(adir, 'issue-%s-*architect-transcript.md' % issue))
+    o['architect_turns'] = turns if transcripts else None
+    o['architect_rounds'] = rounds if transcripts else None
     heads = []
-    for p in glob.glob(os.path.join(adir, 'issue-%s-*ledger.md' % issue)) + \
-            glob.glob(os.path.join(adir, 'issue-%s-ledger.md' % issue)):
+    ledgers = sorted(set(glob.glob(os.path.join(adir, 'issue-%s-*ledger.md' % issue)) +
+                         glob.glob(os.path.join(adir, 'issue-%s-ledger.md' % issue))))
+    for p in ledgers:
         with open(p, encoding='utf-8') as f:
             heads += [ln.strip() for ln in f if ln.startswith('## ')]
     heads = list(dict.fromkeys(heads))
-    o['ledger_entries'] = len(heads)
-    o['review_autofix'] = sum(1 for h in heads if h.endswith('[review-autofix]'))
-    o['ac_decisions'] = sum(1 for h in heads if h.endswith('[ac-decision]'))
+    # With a ledger present, 0 is a finding: the cycle recorded its decisions and none was an auto-fix.
+    o['ledger_entries'] = len(heads) if ledgers else None
+    o['review_autofix'] = sum(1 for h in heads if h.endswith('[review-autofix]')) if ledgers else None
+    o['ac_decisions'] = sum(1 for h in heads if h.endswith('[ac-decision]')) if ledgers else None
     # A CI round is judged by the `exit=<n>` line confirm-ci-green.sh's caller left in the log, never by
     # its position: a later log is often a green re-confirmation. 12 is the red build; any other
     # non-zero exit (not mergeable, no check published, no verdict) is a round that did not fail the
     # build; a log with no exit line is undetermined and counted as nothing else.
-    o['ci_rounds'] = o['ci_fail_rounds'] = o['ci_other_rounds'] = o['ci_undetermined'] = 0
-    for p in glob.glob(os.path.join(adir, 'issue-%s-local' % issue, 'handoff-ci-*.log')):
+    ci_logs = glob.glob(os.path.join(adir, 'issue-%s-local' % issue, 'handoff-ci-*.log'))
+    o['ci_rounds'] = o['ci_fail_rounds'] = o['ci_other_rounds'] = o['ci_undetermined'] = 0 if ci_logs else None
+    for p in ci_logs:
         with open(p, encoding='utf-8', errors='replace') as f:
             exits = re.findall(r'^exit=(\d+)\s*$', f.read(), re.M)
         if not exits:
