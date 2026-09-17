@@ -9,8 +9,10 @@ resource of any kind, so it opens without a network. Only aggregate values go
 in — the same fields the session records hold, minus the working-directory
 paths.
 
-  Across issues  sortable table · cost against outcome (scatter, colour = arm)
-                 · orchestrator / gate share over time
+  Across issues  sortable table (every row; non-cycle rows marked) · cost against
+                 outcome (scatter, colour = arm) · orchestrator / gate share over
+                 time — the two charts draw cycle rows and labelled arms only,
+                 with a toggle to include the non-cycle rows
   One issue      result line · spawn timeline (role lane x time, colour = model,
                  re-written wakes ticked) · orchestrator context curve (gate
                  spawns and cold re-writes marked) · cost by phase, the base
@@ -32,7 +34,7 @@ import sys
 
 AGENT_FIELDS = ('id', 'role', 'model', 'description', 'phase_key', 'phase_key_method', 'phase_marker',
                 'workflow', 'parent', 'start', 'end', 'calls', 'usage', 'first_in', 'max_context', 'rewrites')
-ISSUE_FIELDS = ('key', 'repo', 'issue', 'arm', 'operator_minutes', 'note', 'operator_prompts',
+ISSUE_FIELDS = ('key', 'repo', 'issue', 'arm', 'kind', 'operator_minutes', 'note', 'operator_prompts',
                 'operator_prompts_known', 'segments', 'prs', 'pr_states', 'outcome', 'totals')
 
 
@@ -75,6 +77,8 @@ th,td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--grid);white
 th:first-child,td:first-child{text-align:left}
 th{color:var(--ink2);font-weight:600;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface)}
 tbody tr{cursor:pointer}tbody tr:hover{background:var(--page)}tbody tr.sel{outline:2px solid var(--s1);outline-offset:-2px}
+tbody tr.noncycle td{color:var(--muted)}.nc{border:1px solid var(--axis);border-radius:4px;padding:0 4px;font-size:11px;color:var(--ink2)}
+code{font-size:12px}
 .tiles{display:flex;flex-wrap:wrap;gap:8px 22px;margin:0 0 4px}
 .tile b{display:block;font-size:20px;font-weight:600}.tile span{color:var(--ink2);font-size:12px}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--ink2);font-size:12px;margin:0 0 6px}
@@ -90,7 +94,9 @@ border-radius:6px;padding:6px 8px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,
 <h1>AutoFlow cycle metrics</h1>
 <p class="sub" id="sub"></p>
 <div class="card"><h2>Issues</h2><div class="scroll" style="max-height:420px"><table id="tbl"></table></div>
-<p class="note">Click a row for the issue view below. Click a header to sort. Tokens = input + cache read + cache write + output, orchestrator and agents together.</p></div>
+<p class="note">A <span class="nc">non-cycle</span> row is a session that referenced an issue's <code>.autoflow</code> files without running a cycle (no AutoFlow role spawn, and no state file dated within a day of it) — a draft, a post-hoc analysis. Click a row for the issue view below. Click a header to sort. Tokens = input + cache read + cache write + output, orchestrator and agents together.</p></div>
+<p class="note" style="margin:0 0 10px"><label><input type="checkbox" id="ncToggle"> include non-cycle rows in the two charts below</label>
+<span id="ncCount"></span></p>
 <div class="grid2">
 <div class="card"><h2>Cost against outcome</h2>
 <div class="legend" id="scLegend"></div>
@@ -134,7 +140,7 @@ function ticks(lo,hi,n){const span=hi-lo||1,step=Math.pow(10,Math.floor(Math.log
 $('sub').textContent=`${I.length} issues · generated ${D.generated} · machine-local aggregate, no transcript text`;
 
 // ---- table
-const COLS=[['key','issue'],['arm','arm'],['wall_h','wall h',i=>i.totals.wall_h],['tokens','tokens',i=>i.totals.tokens,fmt],
+const COLS=[['key','issue'],['arm','arm'],['kind','kind'],['wall_h','wall h',i=>i.totals.wall_h],['tokens','tokens',i=>i.totals.tokens,fmt],
  ['orch','orch share',i=>i.totals.orch_share,pct],['gate','gate share',i=>i.totals.gate_share,pct],
  ['ctx','peak orch ctx',i=>i.totals.max_orch_context,fmt],['rw','re-writes',i=>i.totals.rewrites],
  ['sp','spawns',i=>i.totals.spawns],['op','operator prompts',i=>i.operator_prompts_known?i.operator_prompts:null],
@@ -147,8 +153,12 @@ const val=(i,c)=>c[2]?c[2](i):i[c[0]];
 function drawTable(){const c=COLS.find(c=>c[0]===sortCol);
  const rows=[...I].sort((a,b)=>{const x=val(a,c),y=val(b,c);if(x==null)return 1;if(y==null)return -1;return(x>y?1:x<y?-1:0)*sortDir});
  $('tbl').innerHTML='<thead><tr>'+COLS.map(c=>`<th data-c="${c[0]}">${esc(c[1])}${c[0]===sortCol?(sortDir>0?' ▲':' ▼'):''}</th>`).join('')+
- '</tr></thead><tbody>'+rows.map(i=>`<tr data-k="${esc(i.key)}" class="${i.key===current?'sel':''}">`+COLS.map(c=>{const v=val(i,c);
- return `<td>${esc(v==null||v===''?'–':c[3]?c[3](v):v)}</td>`}).join('')+'</tr>').join('')+'</tbody>'}
+ '</tr></thead><tbody>'+rows.map(i=>`<tr data-k="${esc(i.key)}" class="${i.key===current?'sel':''}${i.kind==='non-cycle'?' noncycle':''}">`+COLS.map(c=>{const v=val(i,c);
+ return c[0]==='kind'?`<td>${v==='non-cycle'?'<span class="nc">non-cycle</span>':esc(v||'–')}</td>`:`<td>${esc(v==null||v===''?'–':c[3]?c[3](v):v)}</td>`}).join('')+'</tr>').join('')+'</tbody>'}
+// The charts read cycles (and labelled arms); a non-cycle row is all orchestrator by construction and would flatten them.
+const charted=()=>$('ncToggle').checked?I:I.filter(i=>i.kind!=='non-cycle');
+$('ncCount').textContent=`(${I.filter(i=>i.kind==='non-cycle').length} of ${I.length} rows are non-cycle)`;
+$('ncToggle').addEventListener('change',()=>{drawScatter();drawTrend()});
 $('tbl').addEventListener('click',e=>{const th=e.target.closest('th'),tr=e.target.closest('tbody tr');
  if(th){const k=th.dataset.c;sortDir=k===sortCol?-sortDir:1;sortCol=k;drawTable()}else if(tr)show(tr.dataset.k)});
 
@@ -157,7 +167,7 @@ const YS=[['gate_quality','GATE:QUALITY average'],['gate_plan','GATE:PLAN averag
  ['reviewer_rounds','reviewer rounds'],['ci_fail_rounds','CI fail rounds'],['cycle','cycles'],['architect_rounds','ARCHITECT rounds']];
 $('ySel').innerHTML=YS.map(y=>`<option value="${y[0]}">${y[1]}</option>`).join('');
 $('ySel').addEventListener('change',drawScatter);
-function drawScatter(){const yk=$('ySel').value,pts=I.filter(i=>i.outcome[yk]!=null&&i.totals.tokens>0);
+function drawScatter(){const yk=$('ySel').value,pts=charted().filter(i=>i.outcome[yk]!=null&&i.totals.tokens>0);
  const W=540,H=300,L=44,R=12,Tp=10,B=34,s=svg($('scatter'),W,H);
  const arms=[...new Set(I.map(i=>i.arm||'–'))].sort();
  $('scLegend').innerHTML=arms.map(a=>`<span><i style="background:${armColor(a)};border-radius:50%"></i>arm ${esc(a)}</span>`).join('');
@@ -172,7 +182,7 @@ function drawScatter(){const yk=$('ySel').value,pts=I.filter(i=>i.outcome[yk]!=n
   hover(c,`<b>${esc(i.key)}</b><div>${fmt(i.totals.tokens)} tokens · ${esc(yk)} ${esc(i.outcome[yk])} · arm ${esc(i.arm||'–')}</div>`);c.addEventListener('click',()=>show(i.key))}}
 
 // ---- trend
-function drawTrend(){const pts=I.filter(i=>i.totals.tokens>0&&i.segments.length).map(i=>({i,t:T(i.segments[0][0])})).sort((a,b)=>a.t-b.t);
+function drawTrend(){const pts=charted().filter(i=>i.totals.tokens>0&&i.segments.length).map(i=>({i,t:T(i.segments[0][0])})).sort((a,b)=>a.t-b.t);
  const W=540,H=300,L=44,R=12,Tp=10,B=34,s=svg($('trend'),W,H);if(!pts.length)return;
  const X=k=>L+(pts.length<2?.5:k/(pts.length-1))*(W-L-R),Y=v=>H-B-v*(H-B-Tp);
  for(const t of[0,.25,.5,.75,1]){el('line',{x1:L,x2:W-R,y1:Y(t),y2:Y(t),stroke:'var(--grid)'},s);el('text',{x:L-6,y:Y(t)+4,'text-anchor':'end'},s,t*100+'%')}
@@ -260,7 +270,7 @@ function drawCost(iss){const g={};
   rows.map(r=>`<tr><td>${esc(r.k)}</td><td>${r.k==='orchestrator'?'–':r.n}</td><td>${r.calls}</td><td>${fmt(r.total)}</td><td>${fmt(r.base)}</td><td>${fmt(r.total-r.base)}</td><td>${fmt(r.out)}</td></tr>`).join('')+'</tbody>'}
 
 drawTable();drawScatter();drawTrend();
-if(I.length)show([...I].sort((a,b)=>b.totals.tokens-a.totals.tokens)[0].key);
+if(I.length)show([...(charted().length?charted():I)].sort((a,b)=>b.totals.tokens-a.totals.tokens)[0].key);
 </script></body></html>
 '''
 

@@ -21,13 +21,19 @@ Two steps, run together by default:
            transcript has expired in the meantime keeps its prior aggregate, and
            a main transcript that shrank or vanished leaves the record alone.
 
+           A record written under an older schema is replaced only by a
+           collection that covers it (the roots are tried in order, so a
+           preserved copy can stand in for an expired transcript); with no
+           covering source it is left as it is and reported.
+
   derive   $ROOT/sessions/*.json + $ROOT/labels.tsv + the .autoflow archive
            -> $ROOT/issues.tsv and $ROOT/issues.json, REGENERATED on every run,
            so a fix to the attribution logic recomputes every past issue.
 
 $ROOT is ${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/_metrics.
 
-What a session record holds is aggregate only — per agent: role (`agentType`),
+What a session record holds is aggregate only — per agent: role (the declared
+`subagent_type`),
 model, the spawn's short `description` label, phase-key, call count, cache
 read / write / output, peak context, start / end, per-wake figures; for the
 orchestrator: one row per API call (timestamp, context, cache read / write,
@@ -68,7 +74,7 @@ from transcript_stats import (  # noqa: E402
     context_of, dedup_calls, is_rewrite, is_wake, load, parse_ts, tool_use_blocks, wake_indices,
 )
 
-SCHEMA = 1
+SCHEMA = 2            # 2: an agent's role is the orchestrator's declared subagent_type, not the meta file's agentType
 PK_RE = re.compile(r'spawn-policy\.sh["\']?\s+(?:model|effort)\s+([A-Za-z0-9][A-Za-z0-9_-]*)')
 PK_LOOP_RE = re.compile(r'\bfor\s+\w+\s+in\s+([^;\n]+?)\s*;\s*do\b')
 ISSUE_RE = re.compile(r'\.autoflow/issue-(\d+)(?=[-./\s"\'`)\\]|$)')   # not a truncated preview (`issue-5…`)
@@ -229,8 +235,9 @@ def agent_record(path, meta):
             models[c['model']] = models.get(c['model'], 0) + 1
     return {
         'id': os.path.basename(path)[len('agent-'):-len('.jsonl')],
-        'role': role_of(meta.get('agentType')),
+        'role': role_of(meta.get('agentType')),      # collect_session overrides this with the spawn's declaration
         'agent_type': meta.get('agentType'),
+        'name': meta.get('name'),
         'model': meta.get('model'),
         'api_models': models,
         'description': (meta.get('description') or '')[:DESC_MAX],
@@ -340,6 +347,10 @@ def collect_session(main, policy_keys):
     # One pass over the orchestrator's tool calls, in order: readouts, spawns, issue references.
     pending, pool = [], []
     spawn_keys = {}                     # tool_use id -> (phase_key, method)
+    # The role a spawn declared is the orchestrator's `subagent_type`. The meta file's `agentType`
+    # repeats it for an anonymous spawn, but for a named teammate it holds the NAME and no toolUseId,
+    # so the declaration is joined by tool_use id and, failing that, by name.
+    spawn_decl, spawn_decl_by_name = {}, {}
     refs = []                           # [issue, first_ts, last_ts, count] runs
     state_writes = []
     tools = {}
@@ -350,6 +361,10 @@ def collect_session(main, policy_keys):
                 continue
             seen.add(b.get('id'))
             name = b.get('name') or '?'
+            if 'input' not in b and b.get('subagent_type') and name not in ('Agent', 'Task'):
+                # a stripped copy that flattened the spawn's own `name` over the tool name
+                b = dict(b, spawn_name=name)
+                name = 'Agent'
             tools[name] = tools.get(name, 0) + 1
             inp = b.get('input') or {}
             if name == 'Bash':
@@ -361,6 +376,10 @@ def collect_session(main, policy_keys):
                 role = role_of(inp.get('subagent_type') or b.get('subagent_type'))
                 desc = inp.get('description') or b.get('description') or ''
                 spawn_keys[b.get('id')] = recover_phase_key(role, desc, pending, pool, policy_keys)
+                decl = {'id': b.get('id'), 'role': role}
+                spawn_decl[b.get('id')] = decl
+                if inp.get('name') or b.get('spawn_name'):
+                    spawn_decl_by_name[inp.get('name') or b.get('spawn_name')] = decl
             for n in issue_refs(b):
                 ts = r.get('timestamp')
                 if refs and refs[-1][0] == n:
@@ -400,8 +419,10 @@ def collect_session(main, policy_keys):
     for p in direct:
         a = agent_record(p, read_meta(p))
         a['workflow'] = None
-        if a['tool_use_id'] in spawn_keys:
-            a['phase_key'], a['phase_key_method'] = spawn_keys[a['tool_use_id']]
+        decl = spawn_decl.get(a['tool_use_id']) or spawn_decl_by_name.get(a['name'] or a['agent_type'])
+        if decl:
+            a['role'] = decl['role'] or a['role']
+            a['phase_key'], a['phase_key_method'] = spawn_keys.get(decl['id'], (None, None))
         agents.append(a)
     for p in wf:
         a = agent_record(p, read_meta(p))
@@ -468,50 +489,96 @@ def write_json(path, obj):
     os.replace(tmp, path)
 
 
+def covers(rec, prior):
+    """Does `rec` hold everything `prior` holds? The test for replacing a record outright.
+
+    Judged on the aggregates, not on file sizes — a raw transcript and its stripped copy differ in
+    size and agree in calls: the orchestrator has at least the prior's calls, and every agent of the
+    prior record is present with at least its calls.
+    """
+    if len(rec['orchestrator']['calls']) < len((prior.get('orchestrator') or {}).get('calls') or []):
+        return False
+    now = {a['id']: a['calls'] for a in rec['agents']}
+    return all(now.get(old['id'], -1) >= old['calls'] for old in prior.get('agents') or [])
+
+
 def collect(args, now):
     out_dir = os.path.join(args.root, 'sessions')
     os.makedirs(out_dir, exist_ok=True)
     policy_keys, _ = load_policy(args.policy)
     counts = {'written': 0, 'updated': 0, 'kept': 0, 'unsettled': 0, 'empty': 0}
-    seen = set()
+    upgrade = {'raw': 0, 'stripped': 0}
+    # Every root that holds a session, in the order given: a later root (a preserved copy) is tried
+    # when an earlier one no longer holds the whole session.
+    found = {}
     for root in args.projects_root:
         for main in sorted(glob.glob(os.path.join(root, '*', '*.jsonl'))):
             sid = os.path.basename(main)[:-len('.jsonl')]
-            if sid in seen or (args.session and sid not in args.session):
+            if not args.session or sid in args.session:
+                found.setdefault(sid, []).append(main)
+    for sid in sorted(found):
+        dest = os.path.join(out_dir, sid + '.json')
+        prior = None
+        if os.path.exists(dest):
+            try:
+                with open(dest, encoding='utf-8') as f:
+                    prior = json.load(f)
+            except (OSError, ValueError):
+                prior = None
+        if prior is None:
+            rec = collect_session(found[sid][0], policy_keys)
+        else:
+            old_schema = (prior.get('schema') or 0) < SCHEMA
+            grown = [m for m in found[sid] if grew(source_sizes(m), prior)]
+            if not old_schema and not grown:
+                counts['kept'] += 1
                 continue
-            seen.add(sid)
-            dest = os.path.join(out_dir, sid + '.json')
-            prior = None
-            if os.path.exists(dest):
-                try:
-                    with open(dest, encoding='utf-8') as f:
-                        prior = json.load(f)
-                except (OSError, ValueError):
-                    prior = None
-                if prior and not grew(source_sizes(main), prior):
-                    counts['kept'] += 1
-                    continue
-            rec = collect_session(main, policy_keys)
-            if prior:
-                rec = merge_prior(rec, prior)
-                if rec is None:
-                    counts['kept'] += 1
-                    continue
-            last = parse_ts(rec['end'])
-            for a in rec['agents']:
-                t = parse_ts(a['end'])
-                if t and (last is None or t > last):
-                    last = t
-            if last is None:
-                counts['empty'] += 1
+            # A record is REPLACED only by a collection that covers it. A schema upgrade with no
+            # covering source leaves the record exactly as it is — still readable, still the older
+            # schema, reported as such — and is retried on a later run. A source that grew but no
+            # longer covers the record (a resumed session, an expired agent) is merged into it.
+            rec = None
+            for m in found[sid] if old_schema else grown:
+                cand = collect_session(m, policy_keys)
+                if covers(cand, prior):
+                    rec = cand
+                    break
+            if rec is None and grown:
+                rec = merge_prior(collect_session(grown[0], policy_keys), prior)
+            if rec is None:
+                counts['kept'] += 1
                 continue
-            if (now - last).total_seconds() < args.settle_hours * 3600:
-                counts['unsettled'] += 1
-                continue
-            rec['collected_at'] = now.isoformat()
-            write_json(dest, rec)
-            counts['updated' if prior else 'written'] += 1
+        last = parse_ts(rec['end'])
+        for a in rec['agents']:
+            t = parse_ts(a['end'])
+            if t and (last is None or t > last):
+                last = t
+        if last is None:
+            counts['empty'] += 1
+            continue
+        if (now - last).total_seconds() < args.settle_hours * 3600:
+            counts['unsettled'] += 1
+            continue
+        rec['collected_at'] = now.isoformat()
+        write_json(dest, rec)
+        counts['updated' if prior else 'written'] += 1
+        if prior and (prior.get('schema') or 0) < SCHEMA:
+            upgrade[rec['source']['form']] += 1
+    counts['upgrade'] = upgrade
     return counts
+
+
+def stale_sessions(root):
+    """Session records still on an older schema: their source was gone, or no longer whole."""
+    stale = []
+    for p in sorted(glob.glob(os.path.join(root, 'sessions', '*.json'))):
+        try:
+            with open(p, encoding='utf-8') as f:
+                if (json.load(f).get('schema') or 0) < SCHEMA:
+                    stale.append(os.path.basename(p)[:-len('.json')])
+        except (OSError, ValueError):
+            pass
+    return stale
 
 
 # --------------------------------------------------------------------------- derive
@@ -628,6 +695,7 @@ def outcome(adir, issue):
     except (OSError, ValueError):
         st = {}
     o['cycle'] = st.get('cycle')
+    o['state_date'] = st.get('date')
     o['state_phase'] = st.get('phase')
     o['mode'] = st.get('mode')
     for gate in ('gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit', 'gate_quality'):
@@ -733,6 +801,7 @@ def derive(args):
             key = '%s#%s' % (repo, s['issue']) + ('' if arm in ('', 'A') else '@' + arm)
             it = issues.setdefault(key, {
                 'key': key, 'repo': repo, 'issue': s['issue'], 'arm': arm, 'operator_minutes': '', 'notes': [], 'labelled': [],
+                'stale_schema_sessions': [],
                 'orch_base': 0,
                 'sessions': [], 'segments': [], 'cwd': [], 'orch_calls': [], 'agents': [], 'pr_links': [],
                 'operator_prompts': 0, 'operator_prompts_known': True,
@@ -741,6 +810,8 @@ def derive(args):
                 s['start'] <= norm_ts(ts) < s['end'] or (s.get('end_inclusive') and norm_ts(ts) == s['end']))
             if sess['session'] not in it['sessions']:
                 it['sessions'].append(sess['session'])
+                if (sess.get('schema') or 0) < SCHEMA:
+                    it['stale_schema_sessions'].append(sess['session'])
             it['cwd'] = list(dict.fromkeys(it['cwd'] + (sess.get('cwd') or [])))
             # A label is per session: its minutes are summed over the issue's sessions, once per session
             # however many segments that session has in the issue.
@@ -827,9 +898,27 @@ def derive(args):
             'spawns': len(top),
             'phase_keys_recovered': sum(1 for a in top if a['phase_key']),
         }
+        # A session that only read or wrote an issue's .autoflow files three times — drafting the issue,
+        # analysing it afterwards — becomes a row like any other, all orchestrator and no outcome. It
+        # is not a cycle: no state file (no `cycle` value) and no AutoFlow role spawn. A row tied to
+        # its issue by labels.tsv is the other arm of a comparison; it has no state by construction
+        # and is never classified away.
+        # The state file is looked up by issue number, so a later session that merely read a finished
+        # cycle's files finds that cycle's state too. With no role spawn of its own, the state counts as
+        # this row's only when its `date` lies within a day of the row's segments — which keeps a cycle
+        # that stopped right after PREFLIGHT or at triage, and drops the reader.
+        by_label = it['arm'] not in ('', 'A') or any(not g['refs'] for g in it['segments'])
+        role_spawns = sum(1 for a in it['agents'] if (a.get('role') or '').startswith('autoflow-'))
+        own_state = False
+        day = parse_ts((it['outcome'].get('state_date') or '') + 'T12:00:00+00:00')
+        if it['outcome'].get('cycle') is not None and day:
+            own_state = any(parse_ts(g['start']) - dt.timedelta(days=1) <= day <= parse_ts(g['end']) + dt.timedelta(days=1)
+                            for g in it['segments'] if parse_ts(g['start']) and parse_ts(g['end']))
+        it['kind_basis'] = 'label' if by_label else 'role-spawn' if role_spawns else 'state-date' if own_state else None
+        it['kind'] = 'cycle' if it['kind_basis'] else 'non-cycle'
         o, t = it['outcome'], it['totals']
         rows.append([
-            it['repo'], it['issue'], it['arm'], len(it['sessions']),
+            it['repo'], it['issue'], it['arm'], it['kind'], len(it['sessions']), len(it['stale_schema_sessions']),
             min(s['start'] for s in it['segments']), max(s['end'] for s in it['segments']), t['wall_h'],
             it['operator_prompts'] if it['operator_prompts_known'] else '',
             ('%g' % it['operator_minutes']) if it['operator_minutes'] != '' else '',
@@ -846,7 +935,7 @@ def derive(args):
             it['note'],
         ])
     header = [
-        'repo', 'issue', 'arm', 'sessions', 'start', 'end', 'wall_h', 'operator_prompts', 'operator_minutes',
+        'repo', 'issue', 'arm', 'kind', 'sessions', 'stale_schema_sessions', 'start', 'end', 'wall_h', 'operator_prompts', 'operator_minutes',
         'orch_calls', 'orch_cache_read', 'orch_cache_creation', 'orch_output',
         'agents', 'agent_cache_read', 'agent_cache_creation', 'agent_output',
         'tokens', 'orch_share', 'gate_share', 'max_orch_context', 'rewrites', 'spawns', 'phase_keys_recovered',
@@ -910,6 +999,10 @@ def main(argv=None):
             print('phase-key recovery: %d / %d orchestrator spawns (%.1f%%) — %s' % (
                 recovered, spawns, 100.0 * recovered / spawns,
                 ', '.join('%s %d' % kv for kv in sorted(methods.items()))))
+        stale = stale_sessions(args.root)
+        if stale or sum(c['upgrade'].values()):
+            print('schema %d: upgraded %d from the transcripts, %d from a preserved copy; %d kept on an older schema'
+                  % (SCHEMA, c['upgrade']['raw'], c['upgrade']['stripped'], len(stale)))
     if not args.no_derive:
         n, un = derive(args)
         print('derive: %d issue rows -> %s' % (n, os.path.join(args.root, 'issues.tsv')))

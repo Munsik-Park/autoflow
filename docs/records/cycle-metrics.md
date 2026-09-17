@@ -76,12 +76,27 @@ Replace the checkout path with this repository's location on the machine. A dail
 seconds (197 sessions were aggregated in about 6 s on the first backfill) and already-collected
 sessions are skipped by a `stat`.
 
+### Schema upgrades
+
+A session record carries the `schema` it was written under. When the collector's schema is newer, a
+record is **replaced only by a collection that covers it** — at least its orchestrator calls, and
+every one of its agents with at least its calls. The roots are tried in the order given, so a
+session whose transcript has expired is upgraded from a preserved copy passed as a later
+`--projects-root`. A record with no covering source is left exactly as it is, on its older schema;
+the run reports how many (`schema 2: upgraded N from the transcripts, N from a preserved copy; N
+kept on an older schema`), `issues.tsv` counts them per row (`stale_schema_sessions`), and a later
+run retries. A record is never deleted to be rebuilt. Schema 2 (the agent role from the declared
+`subagent_type`) upgraded 195 records from the transcripts and 2 from the preserved copy, with none
+left behind.
+
 ## What a session record holds
 
 Aggregate values only. No transcript text, no tool output and no prompt body is stored — those carry
 the target's code.
 
-- per agent: role (`agentType`), model, the spawn's short `description` label, phase-key and the
+- per agent: role (the `subagent_type` the orchestrator's `Agent` call declared — joined by tool-use id,
+  or by spawn name for a named teammate, whose meta file holds the name in `agentType` and no
+  tool-use id), model, the spawn's short `description` label, phase-key and the
   method that recovered it, API call count, cache read / cache write / output, peak context,
   start / end, and the same figures per wake for a resumed agent;
 - the orchestrator's calls, one row each: timestamp, context, cache read, cache write, output, and
@@ -130,6 +145,23 @@ every past issue.
   green re-confirmation: `exit=12` (red build) is a failed round, any other non-zero exit
   (`confirm-ci-green.sh`: not mergeable, no check published, no verdict) is counted apart as
   `ci_other_rounds`, and a log with no exit line is `ci_undetermined` and counted as nothing else.
+- **`kind`.** A session that references an issue's `.autoflow` files three times becomes a row
+  whether or not it ran a cycle — drafting the issue, analysing a finished cycle. Such a row is all
+  orchestrator and carries no outcome, and in the share-over-time chart it reads as a 100% point
+  that hides the real cycles' 11–36%. A row is `cycle` when any one of these holds, recorded as
+  `kind_basis` in `issues.json`, and `non-cycle` otherwise:
+  - `label` — the row is tied to its issue by `labels.tsv` (the other arm of a comparison has no
+    state by construction and is never classified away);
+  - `role-spawn` — at least one of its agents was spawned with an AutoFlow role
+    (`subagent_type: autoflow-*`);
+  - `state-date` — it has no role spawn, the issue's state file exists, and the state's `date` lies
+    within a day of the row's segments. The state file is looked up by issue number, so a later
+    session that only read a finished cycle's files finds that cycle's state too; the date keeps a
+    cycle that stopped right after PREFLIGHT or at triage and drops the reader.
+
+  The table lists every row and marks the non-cycle ones; the two cross-issue charts draw `cycle`
+  rows only, with a toggle to include the rest. On the first classification 8 of 56 rows were
+  non-cycle.
 - The repository name is the base name of the session's working directory, so two clones of one
   target fall into the same rows.
 
