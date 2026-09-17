@@ -202,7 +202,7 @@ function show(key){const iss=I.find(i=>i.key===key);if(!iss)return;current=key;d
  const tiles=[['tokens',fmt(t.tokens)],['orchestrator',pct(t.orch_share)],['gates',pct(t.gate_share)],['wall',t.wall_h+' h'],
   ['peak orch context',fmt(t.max_orch_context)],['re-writes',t.rewrites],['spawns',t.spawns],['phase keys',`${t.phase_keys_recovered}/${t.spawns}`],
   ['cycle',o.cycle],['GATE:PLAN',o.gate_plan],['AUDIT',o.audit],['GATE:QUALITY',o.gate_quality],['ARCHITECT rounds',o.architect_rounds],
-  ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI fail rounds',o.ci_fail_rounds],
+  ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI fail rounds',o.ci_fail_rounds],['CI logs undetermined',o.ci_undetermined||null],
   ['operator prompts',iss.operator_prompts_known?iss.operator_prompts:null],['operator min',iss.operator_minutes||null]];
  $('tiles').innerHTML=tiles.map(([l,v])=>`<div class="tile"><b>${esc(v==null?'–':v)}</b><span>${esc(l)}</span></div>`).join('');
  $('iNote').textContent=[iss.sessions+' session(s)',o.artifacts?'outcome from '+o.artifacts+' .autoflow':'no .autoflow artifacts found',

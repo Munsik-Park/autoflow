@@ -117,8 +117,11 @@ every past issue.
 - Outcome columns come from the issue's `.autoflow` artifacts — the archive copy, else the live
   directory: `cycle`, gate averages, ARCHITECT turns and rounds (`### Brief` blocks + 1), the number
   of GATE:PLAN / AUDIT / GATE:QUALITY evaluation reports, `[review-autofix]` ledger headings,
-  reviewer rounds (`review-comment-*` files), CI rounds (`issue-{N}-local/handoff-ci-*.log`; rounds
-  past the first per PR are counted as failed rounds).
+  reviewer rounds (`review-comment-*` files), CI rounds (`issue-{N}-local/handoff-ci-*.log`). A CI
+  round is judged by the `exit=<n>` line in its log, never by its position — a later log is often a
+  green re-confirmation: `exit=12` (red build) is a failed round, any other non-zero exit
+  (`confirm-ci-green.sh`: not mergeable, no check published, no verdict) is counted apart as
+  `ci_other_rounds`, and a log with no exit line is `ci_undetermined` and counted as nothing else.
 - The repository name is the base name of the session's working directory, so two clones of one
   target fall into the same rows.
 

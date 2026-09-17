@@ -603,13 +603,21 @@ def outcome(adir, issue):
     o['ledger_entries'] = len(heads)
     o['review_autofix'] = sum(1 for h in heads if h.endswith('[review-autofix]'))
     o['ac_decisions'] = sum(1 for h in heads if h.endswith('[ac-decision]'))
-    per_pr = {}
+    # A CI round is judged by the `exit=<n>` line confirm-ci-green.sh's caller left in the log, never by
+    # its position: a later log is often a green re-confirmation. 12 is the red build; any other
+    # non-zero exit (not mergeable, no check published, no verdict) is a round that did not fail the
+    # build; a log with no exit line is undetermined and counted as nothing else.
+    o['ci_rounds'] = o['ci_fail_rounds'] = o['ci_other_rounds'] = o['ci_undetermined'] = 0
     for p in glob.glob(os.path.join(adir, 'issue-%s-local' % issue, 'handoff-ci-*.log')):
-        m = re.fullmatch(r'handoff-ci-(\d+)(?:-\d+)?\.log', os.path.basename(p))
-        if m:
-            per_pr[m.group(1)] = per_pr.get(m.group(1), 0) + 1
-    o['ci_rounds'] = sum(per_pr.values())
-    o['ci_fail_rounds'] = sum(max(n - 1, 0) for n in per_pr.values())
+        with open(p, encoding='utf-8', errors='replace') as f:
+            exits = re.findall(r'^exit=(\d+)\s*$', f.read(), re.M)
+        if not exits:
+            o['ci_undetermined'] += 1
+            continue
+        o['ci_rounds'] += 1
+        code = int(exits[-1])
+        o['ci_fail_rounds'] += code == 12
+        o['ci_other_rounds'] += code not in (0, 12)
     markers = []
     for p in glob.glob(os.path.join(adir, 'issue-%s-phases.jsonl' % issue)):
         with open(p, encoding='utf-8') as f:
@@ -749,7 +757,7 @@ def derive(args):
             o.get('gate_plan'), o.get('audit'), o.get('gate_quality'),
             o.get('architect_turns'), o.get('architect_rounds'), o.get('gate_plan_evals'), o.get('audit_evals'),
             o.get('gate_quality_evals'), o.get('review_autofix'), o.get('reviewer_rounds'),
-            o.get('ci_rounds'), o.get('ci_fail_rounds'),
+            o.get('ci_rounds'), o.get('ci_fail_rounds'), o.get('ci_other_rounds'), o.get('ci_undetermined'),
             ' '.join(it['prs']), ' '.join('%s=%s' % kv for kv in sorted(it['pr_states'].items()) if kv[1]),
             it['note'],
         ])
@@ -760,7 +768,7 @@ def derive(args):
         'tokens', 'orch_share', 'gate_share', 'max_orch_context', 'rewrites', 'spawns', 'phase_keys_recovered',
         'cycle', 'state_phase', 'gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit',
         'gate_quality', 'architect_turns', 'architect_rounds', 'gate_plan_evals', 'audit_evals',
-        'gate_quality_evals', 'review_autofix', 'reviewer_rounds', 'ci_rounds', 'ci_fail_rounds',
+        'gate_quality_evals', 'review_autofix', 'reviewer_rounds', 'ci_rounds', 'ci_fail_rounds', 'ci_other_rounds', 'ci_undetermined',
         'prs', 'pr_states', 'note',
     ]
     tmp = os.path.join(args.root, 'issues.tsv.tmp')
