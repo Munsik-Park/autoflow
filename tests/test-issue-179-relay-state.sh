@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/architect/relay-state.sh scripts/architect/deliberation-metrics.py tests/fixtures/issue-179/**
+# ci-subject: scripts/architect/relay-state.sh scripts/architect/deliberation-metrics.py scripts/metrics/transcript_stats.py tests/fixtures/issue-179/**
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: issue #179 — ARCHITECT relay: transcript state, metrics
