@@ -10,7 +10,8 @@ in — the same fields the session records hold, minus the working-directory
 paths.
 
   Across issues  sortable table (every row; non-cycle rows marked) · cost against
-                 outcome (scatter, colour = arm) · orchestrator / gate share over
+                 outcome (scatter, colour = arm; a row with no recorded value for
+                 the chosen outcome is not drawn, and the count is stated) · orchestrator / gate share over
                  time — the two charts draw cycle rows and labelled arms only,
                  with a toggle to include the non-cycle rows
   One issue      result line · spawn timeline (role lane x time, colour = model,
@@ -100,7 +101,8 @@ border-radius:6px;padding:6px 8px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,
 <div class="grid2">
 <div class="card"><h2>Cost against outcome</h2>
 <div class="legend" id="scLegend"></div>
-<label class="note">y: <select id="ySel"></select></label><div id="scatter"></div></div>
+<label class="note">y: <select id="ySel"></select></label><div id="scatter"></div>
+<p class="note" id="scDropped"></p></div>
 <div class="card"><h2>Orchestrator and gate share of tokens, by issue start</h2>
 <div class="legend"><span><i style="background:var(--s1)"></i>orchestrator</span><span><i style="background:var(--s2)"></i>gates (Evaluation AI)</span></div>
 <div id="trend"></div></div></div>
@@ -167,7 +169,9 @@ const YS=[['gate_quality','GATE:QUALITY average'],['gate_plan','GATE:PLAN averag
  ['reviewer_rounds','reviewer rounds'],['ci_fail_rounds','CI fail rounds'],['cycle','cycles'],['architect_rounds','ARCHITECT rounds']];
 $('ySel').innerHTML=YS.map(y=>`<option value="${y[0]}">${y[1]}</option>`).join('');
 $('ySel').addEventListener('change',drawScatter);
-function drawScatter(){const yk=$('ySel').value,pts=charted().filter(i=>i.outcome[yk]!=null&&i.totals.tokens>0);
+function drawScatter(){const yk=$('ySel').value,pool=charted().filter(i=>i.totals.tokens>0),pts=pool.filter(i=>i.outcome[yk]!=null);
+ // "–" is not 0: a row whose archive predates this metric's source artifact has no value to plot.
+ $('scDropped').textContent=pool.length-pts.length?`${pool.length-pts.length} of ${pool.length} rows are not drawn: this outcome was not recorded for them (shown as "–", not 0).`:'';
  const W=540,H=300,L=44,R=12,Tp=10,B=34,s=svg($('scatter'),W,H);
  const arms=[...new Set(I.map(i=>i.arm||'–'))].sort();
  $('scLegend').innerHTML=arms.map(a=>`<span><i style="background:${armColor(a)};border-radius:50%"></i>arm ${esc(a)}</span>`).join('');
@@ -211,7 +215,7 @@ function show(key){const iss=I.find(i=>i.key===key);if(!iss)return;current=key;d
  const tiles=[['tokens',fmt(t.tokens)],['orchestrator',pct(t.orch_share)],['gates',pct(t.gate_share)],['wall',t.wall_h+' h'],
   ['peak orch context',fmt(t.max_orch_context)],['re-writes',t.rewrites],['spawns',t.spawns],['phase keys',`${t.phase_keys_recovered}/${t.spawns}`],
   ['cycle',o.cycle],['GATE:PLAN',o.gate_plan],['AUDIT',o.audit],['GATE:QUALITY',o.gate_quality],['ARCHITECT rounds',o.architect_rounds],
-  ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI fail rounds',o.ci_fail_rounds],['CI logs undetermined',o.ci_undetermined||null],
+  ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI fail rounds',o.ci_fail_rounds],['CI logs undetermined',o.ci_undetermined],
   ['operator prompts',iss.operator_prompts_known?iss.operator_prompts:null],['operator min',iss.operator_minutes||null]];
  $('tiles').innerHTML=tiles.map(([l,v])=>`<div class="tile"><b>${esc(v==null?'–':v)}</b><span>${esc(l)}</span></div>`).join('');
  $('iNote').textContent=[iss.sessions+' session(s)',o.artifacts?'outcome from '+o.artifacts+' .autoflow':'no .autoflow artifacts found',
@@ -270,7 +274,9 @@ function drawCost(iss){const g={};
   rows.map(r=>`<tr><td>${esc(r.k)}</td><td>${r.k==='orchestrator'?'–':r.n}</td><td>${r.calls}</td><td>${fmt(r.total)}</td><td>${fmt(r.base)}</td><td>${fmt(r.total-r.base)}</td><td>${fmt(r.out)}</td></tr>`).join('')+'</tbody>'}
 
 drawTable();drawScatter();drawTrend();
-if(I.length)show([...(charted().length?charted():I)].sort((a,b)=>b.totals.tokens-a.totals.tokens)[0].key);
+// `#<issue key>` in the URL opens that issue (a link to one row); otherwise the largest charted one.
+const asked=decodeURIComponent(location.hash.slice(1));
+if(I.length)show(I.some(i=>i.key===asked)?asked:[...(charted().length?charted():I)].sort((a,b)=>b.totals.tokens-a.totals.tokens)[0].key);
 </script></body></html>
 '''
 
