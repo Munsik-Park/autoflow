@@ -215,7 +215,7 @@ function show(key){const iss=I.find(i=>i.key===key);if(!iss)return;current=key;d
  const tiles=[['tokens',fmt(t.tokens)],['orchestrator',pct(t.orch_share)],['gates',pct(t.gate_share)],['wall',t.wall_h+' h'],
   ['peak orch context',fmt(t.max_orch_context)],['re-writes',t.rewrites],['spawns',t.spawns],['phase keys',`${t.phase_keys_recovered}/${t.spawns}`],
   ['cycle',o.cycle],['GATE:PLAN',o.gate_plan],['AUDIT',o.audit],['GATE:QUALITY',o.gate_quality],['ARCHITECT rounds',o.architect_rounds],
-  ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI fail rounds',o.ci_fail_rounds],['CI logs undetermined',o.ci_undetermined||null],
+  ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI fail rounds',o.ci_fail_rounds],['CI logs undetermined',o.ci_undetermined],
   ['operator prompts',iss.operator_prompts_known?iss.operator_prompts:null],['operator min',iss.operator_minutes||null]];
  $('tiles').innerHTML=tiles.map(([l,v])=>`<div class="tile"><b>${esc(v==null?'–':v)}</b><span>${esc(l)}</span></div>`).join('');
  $('iNote').textContent=[iss.sessions+' session(s)',o.artifacts?'outcome from '+o.artifacts+' .autoflow':'no .autoflow artifacts found',
@@ -274,7 +274,9 @@ function drawCost(iss){const g={};
   rows.map(r=>`<tr><td>${esc(r.k)}</td><td>${r.k==='orchestrator'?'–':r.n}</td><td>${r.calls}</td><td>${fmt(r.total)}</td><td>${fmt(r.base)}</td><td>${fmt(r.total-r.base)}</td><td>${fmt(r.out)}</td></tr>`).join('')+'</tbody>'}
 
 drawTable();drawScatter();drawTrend();
-if(I.length)show([...(charted().length?charted():I)].sort((a,b)=>b.totals.tokens-a.totals.tokens)[0].key);
+// `#<issue key>` in the URL opens that issue (a link to one row); otherwise the largest charted one.
+const asked=decodeURIComponent(location.hash.slice(1));
+if(I.length)show(I.some(i=>i.key===asked)?asked:[...(charted().length?charted():I)].sort((a,b)=>b.totals.tokens-a.totals.tokens)[0].key);
 </script></body></html>
 '''
 
