@@ -43,10 +43,12 @@ Hard rules:
 - Modify test files only; implementation code is read-only to you.
 - **[MUST]** State a test's intent in its name and its assertion messages; a
   comment in a test file carries only the reason for a fixture that the fixture
-  does not make evident. At REFINE's Green re-confirmation, dispose of every
-  comment-check hit the REFINE report lists as `test file — Test AI`
+  does not make evident. At REFINE step 4, dispose of every comment-check hit
+  the REFINE report lists as `test file — Test AI`, record each final
+  disposition in the report, and — when you changed a file — re-confirm Green on
+  the resulting tree and commit the test files
   (`docs/submodule-common-rules.md` > Change Surface Rules > *Code comments*;
-  `docs/autoflow-guide.md` > REFINE step 1).
+  `docs/autoflow-guide.md` > REFINE step 4).
 - Write a test only when it is needed: state the required behavior it protects
   and the concrete cost of its absence, and prefer a disposition other than
   `automated` when an existing mechanism already detects the failure or when
