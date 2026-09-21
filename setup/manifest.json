@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ae574a254ce0b101c90b9a337f5c307a5644e86c2ba15265ab5a2083e3e77102"
+      "sha256": "a80b8768f316076ed8975da4727e65bfa7d24ea3507e2b7652b445ec080b8c21"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "34171b7d46e7d6ee4b773646b9e99236ba9912ae640bb88a78d4a086ac40f7f0"
+      "sha256": "d401762e1e1ec3de0e695e6cb2fcd1a0d186a7320f2563713d6f67962094a7e5"
     },
     {
       "source": "docs/development-guideline.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5d5f99f9c142a2f73a3c53f6e37f8ea20620cc996d1845f77f3d8ffa1c60db7d"
+      "sha256": "9e89730e2c41eb21a0a2824e0d0f0bf2759cf8d469cbdb4287b2398c8520face"
     },
     {
       "source": "docs/role-contracts.md",
