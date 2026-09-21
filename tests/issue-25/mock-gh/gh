@@ -33,6 +33,11 @@
 #     — sleeps that many seconds on ONLY the precheck-shape call before
 #     responding, to simulate a hang that the precheck's own bound must cut
 #     off (AC-C2-1a/1b). Does not affect poll-shape calls.
+#   - Actions run lookup (issue #274):
+#     `gh api [--hostname H] repos/<owner>/<repo>/actions/runs/<run_id> --jq .workflow_id`
+#     — prints the workflow id $GH_MOCK_RUN_WORKFLOWS maps <run_id> to (a
+#     space-separated list of `<run_id>=<workflow_id>` pairs). A run id absent
+#     from the list exits 1 with no output, modelling a failed lookup.
 
 set -uo pipefail
 
@@ -76,6 +81,20 @@ case "$ARGS" in
     fi
     printf '%s\n' "${GH_MOCK_PRECHECK_BODY-{\}}"
     exit 0
+    ;;
+esac
+
+case "$ARGS" in
+  "api "*"/actions/runs/"*)
+    RUN_ID="${ARGS#*/actions/runs/}"
+    RUN_ID="${RUN_ID%% *}"
+    for PAIR in ${GH_MOCK_RUN_WORKFLOWS:-}; do
+      if [ "${PAIR%%=*}" = "$RUN_ID" ]; then
+        printf '%s\n' "${PAIR#*=}"
+        exit 0
+      fi
+    done
+    exit 1
     ;;
 esac
 

@@ -33,6 +33,9 @@
 #       UNION of the two suites' former copies, so each caller keeps its own
 #       behaviour and neither gains a variable it sets: an unset member
 #       forwards as the empty string, exactly as it did before.
+#       GH_MOCK_RUN_WORKFLOWS (the mock's Actions run lookup) is added for
+#       tests/test-issue-274-confirm-ci-green.sh; the #25/#30 suites leave it
+#       unset, and their fixtures carry no detailsUrl, so no lookup is issued.
 #
 #   PRECHECK_MERGEABLE_CLEAN
 #       The shared precheck fixture body, a constant. tests/test-issue-25's
@@ -118,6 +121,7 @@ run_confirm() {
     GH_MOCK_POLL_BODY="${GH_MOCK_POLL_BODY:-}" \
     GH_MOCK_POLL_SEQUENCE_FILE="${GH_MOCK_POLL_SEQUENCE_FILE:-}" \
     GH_MOCK_POLL_COUNTER_FILE="${GH_MOCK_POLL_COUNTER_FILE:-}" \
+    GH_MOCK_RUN_WORKFLOWS="${GH_MOCK_RUN_WORKFLOWS:-}" \
     CI_POLL_TIMEOUT_SECS="${CI_POLL_TIMEOUT_SECS:-}" \
     CI_POLL_INTERVAL_SECS="${CI_POLL_INTERVAL_SECS:-}" \
     bash "$SCRIPT" "$@" ) >"$out" 2>&1

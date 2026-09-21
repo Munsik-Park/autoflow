@@ -15,8 +15,13 @@
 # replacement run is green (connev-llm/LibreChat PR 479; llmroute #607 / #630).
 #
 # The fix drops a CANCELLED CheckRun of a run superseded by a newer run of the
-# same workflow, the run read from detailsUrl. This suite pins that, and the
-# three cases that must stay red.
+# same workflow, the run read from detailsUrl and the workflow resolved to its
+# workflow_id through the Actions run API — never the workflowName display name,
+# which two workflow files may share (PR #285 review, Medium 1). This suite pins
+# that, the cases that must stay red, and the lookup's own contract: narrowed to
+# the candidate runs, cached, and on failure delaying green without granting it
+# or turning red. The lookup is answered by the mock's `gh api` arm
+# (GH_MOCK_RUN_WORKFLOWS, tests/issue-25/mock-gh/gh).
 #
 # Fixtures carry the real `gh pr view --json statusCheckRollup` CheckRun shape:
 # the eight keys gh exports (cli/cli api/export_pr.go, the statusCheckRollup
@@ -26,7 +31,9 @@
 # CompletedAt are time.Time, cli/cli api/queries_pr.go CheckContext). Run and
 # job ids, names and timestamps are the observed ones: cancelled run
 # 35517948721 attempt 1 and replacement run 35517992531, workflow
-# "Backend Unit Tests", connev-llm/LibreChat.
+# "Backend Unit Tests", connev-llm/LibreChat; both runs resolve to workflow_id
+# 303841190 (.github/workflows/backend-review.yml) through
+# `gh api repos/connev-llm/LibreChat/actions/runs/<id>`.
 #
 # The same-identity behaviour of #30 is tests/test-issue-30-confirm-ci-green.sh's
 # subject and is not re-run here (suite leaf rule).
@@ -80,6 +87,8 @@ WF="Backend Unit Tests"
 RUN_OLD=35517948721
 RUN_NEW=35517992531
 UNEXPANDED='Tests: api (shard ${{ matrix.shard }})'
+WF_ID=303841190
+RUN_WFS="$RUN_OLD=$WF_ID $RUN_NEW=$WF_ID"
 
 check_run() {
   jq -cn --arg w "$1" --arg n "$2" --arg s "$3" --arg c "$4" \
@@ -105,16 +114,24 @@ NEW_SHARD1_RUNNING="$(check_run "$WF" "Tests: api (shard 1)" IN_PROGRESS "" 2026
 NEW_SHARD2_QUEUED="$(check_run "$WF" "Tests: api (shard 2)" QUEUED "" "$ZERO_TIME" "$ZERO_TIME" $RUN_NEW 106102312879)"
 NEW_SHARD2_FAILED="$(check_run "$WF" "Tests: api (shard 2)" COMPLETED FAILURE 2026-09-20T15:04:52Z 2026-09-20T15:07:30Z $RUN_NEW 106102312879)"
 
-# run_poll <body> — one confirm-ci-green run against a fixed poll body; exits on
-# the first poll for a terminal verdict.
+# run_poll <body> [<run_workflows>] — one confirm-ci-green run against a fixed poll
+# body; exits on the first poll for a terminal verdict. <run_workflows> is the
+# mock's run -> workflow_id map (default: both observed runs -> WF_ID). The gh
+# invocation log is kept in API_CALLS as the `gh api` lines only.
 run_poll() {
-  GH_INVOCATION_LOG=""
+  GH_INVOCATION_LOG="$(mktemp)"
   GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
   GH_MOCK_POLL_BODY="$1"
   GH_MOCK_POLL_SEQUENCE_FILE=""
   GH_MOCK_POLL_COUNTER_FILE=""
+  GH_MOCK_RUN_WORKFLOWS="${2-$RUN_WFS}"
   CI_POLL_TIMEOUT_SECS=5 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 479
+  API_CALLS="$(grep '^api ' "$GH_INVOCATION_LOG" || true)"
+  rm -f "$GH_INVOCATION_LOG"
 }
+
+# count_lines <text> -> number of non-empty lines.
+count_lines() { printf '%s' "$1" | grep -c . || true; }
 
 echo "=============================================="
 echo "confirm-ci-green.sh superseded cancelled run (HANDOFF step-5, issue #274)"
@@ -147,6 +164,10 @@ assert_true "AC-274-1: superseded run's CANCELLED rows (incl. the unexpanded mat
   "[ \"\$RUN_EXIT\" -eq 0 ]"
 assert_false "AC-274-1: exit code is NOT 12 (the false red this issue reports)" \
   "[ \"\$RUN_EXIT\" -eq 12 ]"
+AC1_API_OLD="$(count_lines "$(printf '%s\n' "$API_CALLS" | grep -F "repos/connev-llm/LibreChat/actions/runs/$RUN_OLD " || true)")"
+AC1_API_NEW="$(count_lines "$(printf '%s\n' "$API_CALLS" | grep -F "repos/connev-llm/LibreChat/actions/runs/$RUN_NEW " || true)")"
+assert_true "AC-274-1: the workflow of both candidate runs is looked up on the check's own host and repository" \
+  "[ \"\$AC1_API_OLD\" -eq 1 ] && [ \"\$AC1_API_NEW\" -eq 1 ] && printf '%s' \"\$API_CALLS\" | grep -qF -- '--hostname github.com'"
 
 AC1_REVERSED="$(rollup_body "$NEW_SHARD1" "$NEW_BUILD" "$OLD_MATRIX" "$OLD_BUILD")"
 run_poll "$AC1_REVERSED"
@@ -169,6 +190,7 @@ AC1_LOG="$(mktemp)"
 run_bounded 8 "$AC1_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
   GH_MOCK_POLL_BODY="$AC1_RUNNING" \
+  GH_MOCK_RUN_WORKFLOWS="$RUN_WFS" \
   CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
   bash "$SCRIPT" --pr 479
 assert_true "AC-274-1 (running): outer watchdog never fired (script self-terminated)" \
@@ -183,18 +205,22 @@ rm -f "$AC1_LOG"
 AC1_SEQ="$(mktemp)"; AC1_COUNTER="$(mktemp)"
 printf '%s\n%s\n' "$AC1_RUNNING" "$(rollup_body "$OLD_BUILD" "$OLD_MATRIX" "$NEW_BUILD" "$NEW_SHARD1" "$NEW_SHARD2")" >"$AC1_SEQ"
 printf '0' >"$AC1_COUNTER"
-GH_INVOCATION_LOG=""
+GH_INVOCATION_LOG="$(mktemp)"
 GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN"
 GH_MOCK_POLL_BODY=""
 GH_MOCK_POLL_SEQUENCE_FILE="$AC1_SEQ"
 GH_MOCK_POLL_COUNTER_FILE="$AC1_COUNTER"
+GH_MOCK_RUN_WORKFLOWS="$RUN_WFS"
 CI_POLL_TIMEOUT_SECS=10 CI_POLL_INTERVAL_SECS=1 run_confirm --pr 479
 AC1_POLLS="$(cat "$AC1_COUNTER")"
+AC1_SEQ_API="$(count_lines "$(grep '^api ' "$GH_INVOCATION_LOG" || true)")"
 assert_true "AC-274-1 (running -> done): the poll continues past the running read and exits 0 once the replacement completes" \
   "[ \"\$RUN_EXIT\" -eq 0 ]"
 assert_true "AC-274-1 (running -> done): exit 0 came on the second poll, not the first" \
   "[ \"\$AC1_POLLS\" -eq 2 ]"
-rm -f "$AC1_SEQ" "$AC1_COUNTER"
+assert_true "AC-274-1 (running -> done): each run's workflow is looked up once across both polls (cached)" \
+  "[ \"\$AC1_SEQ_API\" -eq 2 ]"
+rm -f "$AC1_SEQ" "$AC1_COUNTER" "$GH_INVOCATION_LOG"
 GH_MOCK_POLL_SEQUENCE_FILE=""; GH_MOCK_POLL_COUNTER_FILE=""
 
 # =============================================================================
@@ -227,6 +253,25 @@ run_poll "$AC2_EXTERNAL"
 assert_true "AC-274-2: a CANCELLED check with no Actions run in detailsUrl stays red -> exit 12" \
   "[ \"\$RUN_EXIT\" -eq 12 ]"
 
+# Two workflow files sharing one display name (PR #285 review, Medium 1): the
+# cancelled run of workflow A is not superseded by a newer run of workflow B,
+# although both carry workflowName "CI" and no job name is shared.
+SHARED_A_OLD="$(check_run "CI" "workflow-a-only-job" COMPLETED CANCELLED 2026-09-20T14:55:14Z 2026-09-20T14:56:11Z 35517948800 106096960001)"
+SHARED_B_NEW="$(check_run "CI" "workflow-b-only-job" COMPLETED SUCCESS 2026-09-20T14:56:30Z 2026-09-20T14:58:00Z 35517948801 106096960002)"
+SHARED_A_NEW="$(check_run "CI" "workflow-a-only-job-2" COMPLETED SUCCESS 2026-09-20T14:57:00Z 2026-09-20T14:59:00Z 35517948802 106096960003)"
+SHARED_WFS="35517948800=111 35517948801=222 35517948802=111"
+AC2_SHARED="$(rollup_body "$SHARED_A_OLD" "$SHARED_B_NEW")"
+run_poll "$AC2_SHARED" "$SHARED_WFS"
+assert_true "AC-274-2: a newer run of another workflow with the same display name does not supersede -> exit 12" \
+  "[ \"\$RUN_EXIT\" -eq 12 ]"
+assert_false "AC-274-2: exit code is NOT 0 (the false green of a display-name key)" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+# ...while workflow A's own newer run, among them, still supersedes it.
+AC2_SHARED_OWN="$(rollup_body "$SHARED_A_OLD" "$SHARED_B_NEW" "$SHARED_A_NEW")"
+run_poll "$AC2_SHARED_OWN" "$SHARED_WFS"
+assert_true "AC-274-2: the same rollup plus workflow A's own newer run is superseded -> exit 0" \
+  "[ \"\$RUN_EXIT\" -eq 0 ]"
+
 # =============================================================================
 echo ""
 echo "=== AC-274-3 (a FAILURE in the replacement run stays red -> exit 12) ==="
@@ -242,6 +287,35 @@ OLD_MATRIX_FAILED="$(check_run "$WF" "$UNEXPANDED" COMPLETED FAILURE 2026-09-20T
 AC3_OLD_FAILURE="$(rollup_body "$OLD_BUILD" "$OLD_MATRIX_FAILED" "$NEW_BUILD" "$NEW_SHARD1")"
 run_poll "$AC3_OLD_FAILURE"
 assert_true "AC-274-3: a superseded run's own FAILURE row is not dropped -> exit 12" \
+  "[ \"\$RUN_EXIT\" -eq 12 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-274-6 (the workflow lookup: narrowed, and a failed lookup never decides the verdict) ==="
+
+# No candidate: a rollup with no CANCELLED row of a non-newest run issues no call.
+AC6_NO_CANDIDATE="$(rollup_body "$NEW_BUILD" "$NEW_SHARD1" "$NEW_SHARD2")"
+run_poll "$AC6_NO_CANDIDATE"
+AC6_NONE="$(count_lines "$API_CALLS")"
+assert_true "AC-274-6: a rollup with no superseded-run candidate is green without any gh api call -> exit 0" \
+  "[ \"\$RUN_EXIT\" -eq 0 ] && [ \"\$AC6_NONE\" -eq 0 ]"
+
+# Failed lookup on the issue repro: neither the false red nor a green verdict;
+# the poll runs to the deadline.
+AC6_LOG="$(mktemp)"
+run_bounded 8 "$AC6_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
+  GH_MOCK_PRECHECK_BODY="$PRECHECK_MERGEABLE_CLEAN" \
+  GH_MOCK_POLL_BODY="$AC1_BODY" \
+  GH_MOCK_RUN_WORKFLOWS="" \
+  CI_POLL_TIMEOUT_SECS=2 CI_POLL_INTERVAL_SECS=1 \
+  bash "$SCRIPT" --pr 479
+assert_true "AC-274-6: a failed lookup withholds green and does not turn red -> exit 13 at the deadline" \
+  "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+rm -f "$AC6_LOG"
+
+# Failed lookup beside a genuine FAILURE: still red.
+run_poll "$AC3_BODY" ""
+assert_true "AC-274-6: a failed lookup does not mask a FAILURE in the replacement run -> exit 12" \
   "[ \"\$RUN_EXIT\" -eq 12 ]"
 
 # =============================================================================
