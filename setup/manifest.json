@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d401762e1e1ec3de0e695e6cb2fcd1a0d186a7320f2563713d6f67962094a7e5"
+      "sha256": "f5ca57b49be4b4ba4fae4a4dae32d0537ec5a4d71ad41c37546d2558347a3f59"
     },
     {
       "source": "docs/development-guideline.md",
@@ -265,7 +265,7 @@
       "dest": "scripts/handoff/confirm-ci-green.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b34719fa050519633b38c7a0fe4a65be4e49e15b89cbd67d79f52a59897ae7d6"
+      "sha256": "988a95601e65e3f545a72880feb9fd659930726e3bcaaea46d1c0731b331d1b4"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",

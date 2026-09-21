@@ -25,9 +25,12 @@
 #
 # Options:
 #   --pr <N>            Required. PR number to confirm. Non-numeric/missing -> exit 64.
-#   --repo <owner/name> Optional. Forwarded to every `gh` call (cross-repo
+#   --repo <owner/name> Optional. Forwarded to every `gh pr view` call (cross-repo
 #                       selector, mirrors scripts/review/codex-review-pr.sh).
-#                       Omitted => the current repository (host PR).
+#                       Omitted => the current repository (host PR). The
+#                       superseded-run lookup (`gh api .../actions/runs/<id>`,
+#                       issue #274) names its repository from the check's
+#                       detailsUrl instead.
 #   -h | --help         Usage to stdout, exit 0.
 #
 # Tunables (env vars — the Approach-5 timeout / reconfirm policy as parameters):
@@ -53,15 +56,22 @@
 #   a MERGEABLE value.
 #   11  0 checks         — MERGEABLE but no check ever published within the bound.
 #   12  red build        — a check concluded FAILURE/ERROR/CANCELLED/TIMED_OUT.
+#                          A CANCELLED check of a run superseded by a newer run of
+#                          the same workflow is not counted (drop_superseded_runs).
 #   13  no green verdict  — checks present but the run never reached the exit-0
-#                          verdict at the deadline. TWO cases land here: checks
-#                          still pending (slow CI), and the confirmed-then-
+#                          verdict at the deadline. THREE cases land here: checks
+#                          still pending (slow CI); the confirmed-then-
 #                          undetermined case — mergeability was confirmed once
 #                          (so it is not 14) and the rollup is already
 #                          all-green, but mergeability never re-settled before
 #                          the deadline, and exit 0 is contracted as "green on
 #                          a PR whose mergeable state was confirmed", so the
-#                          undetermined arm withholds it.
+#                          undetermined arm withholds it; and an all-green
+#                          rollup whose superseded-run lookup (issue #274) never
+#                          resolved every candidate run's workflow, which
+#                          withholds exit 0 the same way — a second stderr line
+#                          names this case and points at the token's
+#                          `actions: read` access, not a longer timeout.
 #   14  inconclusive     — could not confirm mergeable within the bound; gh
 #                          transport/auth/parse failure, or a mergeability that
 #                          never settled within the bound, suspected (NOT a
@@ -217,6 +227,112 @@ classify_rollup() {
   ' 2>/dev/null
 }
 
+# Superseded-run filter (issue #274), a pre-pass over the poll body whose output
+# classify_rollup above reads unchanged: a CANCELLED CheckRun of a SUPERSEDED run
+# is dropped from statusCheckRollup. A run is superseded when the rollup carries
+# a newer run of the SAME WORKFLOW — the run read from detailsUrl
+# (.../<owner>/<repo>/actions/runs/<run_id>/job/<job_id>), "newer" meaning a
+# larger run_id (GitHub assigns run ids in creation order), and the workflow
+# being the run's workflow_id from the Actions run API, never the workflowName
+# display name, which two workflow files may share. The rollup is the PR head
+# commit's, so the newer run is on the same head SHA. This covers the cancelled
+# row whose name the replacement never repeats — a matrix job cancelled before
+# expansion stays "Tests (shard ${{ matrix.shard }})" while the replacement
+# expands to "Tests (shard 1)" — which classify_rollup's identity dedup leaves
+# alone in its group and counts red. Only CANCELLED is dropped: a FAILURE/ERROR/
+# TIMED_OUT row of a superseded run, a CANCELLED row of a workflow's newest run,
+# and a row whose run cannot be read from detailsUrl (a non-Actions check) are
+# classified as before.
+#
+# The lookup is narrowed to the candidate runs — every run of a workflowName that
+# carries a CANCELLED row of a non-newest run, since two runs of one workflow share
+# its display name on one head SHA — so a rollup with no such row issues no call.
+# Each lookup is one read-only, bounded `gh api` GET inside the poll deadline, and
+# a resolved run is cached for the script's lifetime (a run's workflow never
+# changes). While any candidate is unresolved (failed / timed-out lookup), the
+# drop falls back to the display-name rule for the red count only and the exit-0
+# verdict is withheld (RUN_WF_COMPLETE=0): an unresolved lookup can delay green,
+# never grant it, and never turn a lookup failure into a false red.
+RUN_REF_JQ='
+  def run_ref:
+    if .__typename == "CheckRun" and ((.workflowName // "") != "") then
+      [ (.detailsUrl // "")
+        | capture("^https?://(?<host>[^/]+)/(?<repo>[^/]+/[^/]+)/actions/runs/(?<id>[0-9]+)") ]
+      | first
+    else
+      null
+    end;
+  def run_num: run_ref | if . == null then null else (.id | tonumber) end;
+  def latest_run_by(f):
+    reduce ( .[] | run_num as $n | select($n != null) | [ f, $n ] | select(.[0] != null) ) as $p
+      ( {}; .[$p[0]] = ([ .[$p[0]] // 0, $p[1] ] | max) );
+  def superseded_in($latest; f):
+    .__typename == "CheckRun" and .conclusion == "CANCELLED"
+    and (f as $k | run_num as $n | $k != null and $n != null and $n < ($latest[$k] // 0));
+'
+
+# supersede_candidates — reads a poll body on stdin, prints one "<host>|<owner/repo>|<run_id>"
+# line per candidate run whose workflow the superseded-run filter needs.
+supersede_candidates() {
+  jq -r "$RUN_REF_JQ"'
+    ( .statusCheckRollup // [] ) as $rows
+    | ( $rows | latest_run_by(.workflowName) ) as $lbn
+    | [ $rows[] | select(superseded_in($lbn; .workflowName)) | .workflowName ] as $names
+    | [ $rows[] | select(.workflowName as $w | any($names[]; . == $w))
+        | run_ref | select(. != null) | "\(.host)|\(.repo)|\(.id)" ]
+    | unique | .[]
+  ' 2>/dev/null
+}
+
+# RUN_WF_CACHE — {"<run_id>": "<host>/<owner>/<repo>#<workflow_id>"} for every run resolved so far.
+RUN_WF_CACHE='{}'
+RUN_WF_COMPLETE=1
+
+# resolve_run_workflows <body> — resolves the workflow of every candidate run not
+# yet in RUN_WF_CACHE, one bounded `gh api` GET per run within the deadline; sets
+# RUN_WF_COMPLETE=1 when every candidate is resolved, 0 otherwise.
+resolve_run_workflows() {
+  local cands c host repo id wid out now remaining
+  RUN_WF_COMPLETE=1
+  cands="$(printf '%s' "$1" | supersede_candidates)"
+  for c in $cands; do
+    IFS='|' read -r host repo id <<<"$c"
+    if [ "$(printf '%s' "$RUN_WF_CACHE" | jq -r --arg k "$id" 'has($k)')" = "true" ]; then
+      continue
+    fi
+    now="$(date +%s)"; remaining=$(( deadline - now ))
+    if [ "$remaining" -le 0 ]; then RUN_WF_COMPLETE=0; break; fi
+    out="$(mktemp)"
+    gh_bounded "$(clamp_to_interval "$remaining")" "$out" \
+      gh api --hostname "$host" "repos/$repo/actions/runs/$id" --jq '.workflow_id'
+    wid="$(cat "$out")"; rm -f "$out"
+    case "$wid" in
+      ''|*[!0-9]*) RUN_WF_COMPLETE=0 ;;
+      *)
+        if [ "${GH_TIMED_OUT:-0}" -eq 0 ] && [ "${GH_RC:-0}" -eq 0 ]; then
+          RUN_WF_CACHE="$(printf '%s' "$RUN_WF_CACHE" | jq -c --arg k "$id" --arg v "$host/$repo#$wid" '.[$k] = $v')"
+        else
+          RUN_WF_COMPLETE=0
+        fi ;;
+    esac
+  done
+}
+
+# drop_superseded_runs — reads a poll body on stdin, writes it back with every
+# superseded run's CANCELLED CheckRun removed from statusCheckRollup. Reads
+# RUN_WF_CACHE / RUN_WF_COMPLETE, set by resolve_run_workflows for this body.
+drop_superseded_runs() {
+  jq -c --argjson wf "$RUN_WF_CACHE" --argjson complete "$RUN_WF_COMPLETE" "$RUN_REF_JQ"'
+    def wf_key: run_ref as $r | if $r == null then null else $wf[$r.id] end;
+    ( .statusCheckRollup // [] ) as $rows
+    | ( $rows | latest_run_by(.workflowName) ) as $lbn
+    | ( $rows | latest_run_by(wf_key) ) as $lbw
+    | .statusCheckRollup = [ $rows[]
+        | select(( if $complete == 1 then superseded_in($lbw; wf_key)
+                   else superseded_in($lbn; .workflowName) end ) | not) ]
+  ' 2>/dev/null
+}
+
 # Mergeability is a TRI-state, not a binary (issue #81): GitHub returns
 # mergeable=UNKNOWN while it is still computing the merge, which is the normal
 # state right after a push. Two predicates, three outcomes — confirmed
@@ -363,7 +479,8 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
     exit 10
   fi
 
-  stats="$(printf '%s' "$body" | classify_rollup)"
+  resolve_run_workflows "$body"
+  stats="$(printf '%s' "$body" | drop_superseded_runs | classify_rollup)"
   read -r total fail green <<<"${stats:-0 0 0}"
   total="${total:-0}"; fail="${fail:-0}"; green="${green:-0}"
 
@@ -376,7 +493,9 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   # above and the saw_checks accounting below still run — a concluded failure is
   # true of the read however mergeability resolves, and masking it would sleep a
   # red build to a deadline code that never routes to RED.
-  if [ "$undetermined" -eq 0 ] && [ "$total" -gt 0 ] && [ "$green" -eq "$total" ]; then
+  # An unresolved superseded-run lookup withholds the GREEN verdict the same way.
+  if [ "$undetermined" -eq 0 ] && [ "$RUN_WF_COMPLETE" -eq 1 ] \
+     && [ "$total" -gt 0 ] && [ "$green" -eq "$total" ]; then
     exit 0
   fi
   if [ "$total" -gt 0 ]; then
@@ -400,5 +519,8 @@ if [ "$saw_checks" -eq 0 ]; then
   exit 11
 else
   echo "checks present but no green verdict after ${CI_POLL_TIMEOUT_SECS}s (slow CI, or a confirmed-then-undetermined run whose rollup is green but mergeability never re-settled) — inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2
+  if [ "$RUN_WF_COMPLETE" -eq 0 ]; then
+    echo "superseded-run workflow lookup unresolved at the deadline (gh api repos/<owner>/<repo>/actions/runs/<run_id> for a run with a CANCELLED check) — exit 0 is withheld until it resolves; check the token's actions: read access to that repository before raising CI_POLL_TIMEOUT_SECS" >&2
+  fi
   exit 13
 fi
