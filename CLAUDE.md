@@ -131,7 +131,7 @@ exercise the real contract or environment (those PRs averaged 4.75 review rounds
 where the PR's own main path failed at runtime after VERIFY had confirmed Green (evidence: issue #180 and
 its PR thread).
 
-Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (`TaskCreate` only), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier (step 5) — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
+Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (orchestrator; each task travels in the RED / GREEN spawn prompt), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier (step 5) — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
 
 **[MUST]** Every `Agent` spawn declares the `model` parameter explicitly (`model: "sonnet"` or `model: "opus"`). Without it the host session model is inherited and this per-phase policy is bypassed. Enforced by the hook (`.claude/hooks/check-autoflow-gate.sh`, PreToolUse `Agent`): a spawn without `model` is denied, independent of Auto-Flow state — research and evaluation spawns included. The orchestrator's own model follows the user's session settings (outside this policy). **One carve-out, and only one**: the `policy-load` transcription sub-agent at the top of each deliberation Workflow omits `model`, because it cannot read its own model from the policy it is loading; the call is a verbatim file transcription under a closed schema, where model tier is not load-bearing.
 
@@ -272,7 +272,7 @@ DIAGNOSE        : Issue Analysis    — intake readiness triage (new-issue: plan
 GATE:HYPOTHESIS : Hypothesis Eval   — Evaluation AI (3 items × 10 points), bug/incident issues only
 ARCHITECT       : Plan Synthesis    — orchestrator-relayed persistent participants (Developer AI + Test AI, ADR-0023) discuss on a transcript file; a Record Workflow writes the architecture decision layer + verification design (file rows / suite dispositions / oracle clauses are derived at RED/GREEN, not written here — #192)
 GATE:PLAN       : Plan Evaluation   — Evaluation AI (5 items × 10 points)
-DISPATCH        : Task Assignment   — TaskCreate, then a direct Test AI / Developer AI spawn per phase entry (acceptance criteria + verification design)
+DISPATCH        : Task Assignment   — each role's task delivered in its phase-entry direct spawn prompt, Test AI then Developer AI (acceptance criteria + verification design)
 RED             : Test Writing      — Test AI writes tests from acceptance criteria; Red confirmation
 GREEN           : Implementation    — Developer AI writes minimum code that satisfies the in-scope acceptance criteria and passes the automated tests
 VERIFY          : Test Run + Check  — Green confirmation; on failure, branch by cause; minimal-implementation check

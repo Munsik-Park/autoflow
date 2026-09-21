@@ -120,7 +120,6 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 |--------|--------|------|
 | Receive instruction from orchestrator | the spawn prompt | delivered once, at spawn |
 | Report to orchestrator | the spawn's return value | completion, escalation — body to `.autoflow/*`, return an anchor + one-line summary |
-| Mark task done | `TaskUpdate(status: "completed")` | then check `TaskList` |
 | Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
 | Discuss with another role | not available | a deliberation is delegated (below): at ARCHITECT to the orchestrator's relay of two persistent participants over a transcript file, at VERIFY to a facilitator `Workflow` — never held between ordinary spawns |
 
