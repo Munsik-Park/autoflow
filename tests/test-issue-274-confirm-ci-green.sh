@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/handoff/confirm-ci-green.sh tests/lib/confirm-ci-green-harness.sh
+# ci-subject: scripts/handoff/confirm-ci-green.sh docs/autoflow-guide.md tests/lib/confirm-ci-green-harness.sh
 # budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: HANDOFF step-5 CI-green confirm helper — superseded cancelled run, Issue #274
@@ -21,7 +21,9 @@
 # that, the cases that must stay red, and the lookup's own contract: narrowed to
 # the candidate runs, cached, and on failure delaying green without granting it
 # or turning red. The lookup is answered by the mock's `gh api` arm
-# (GH_MOCK_RUN_WORKFLOWS, tests/issue-25/mock-gh/gh).
+# (GH_MOCK_RUN_WORKFLOWS, tests/issue-25/mock-gh/gh). The unresolved-lookup
+# case of exit 13 is named on stderr and in docs/autoflow-guide.md HANDOFF step 5
+# (PR #285 review, Low 1), which AC-274-7 pins.
 #
 # Fixtures carry the real `gh pr view --json statusCheckRollup` CheckRun shape:
 # the eight keys gh exports (cli/cli api/export_pr.go, the statusCheckRollup
@@ -49,6 +51,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCRIPT="$PROJECT_ROOT/scripts/handoff/confirm-ci-green.sh"
 MOCK_GH_DIR="$PROJECT_ROOT/tests/issue-25/mock-gh"
+AUTOFLOW_GUIDE="$PROJECT_ROOT/docs/autoflow-guide.md"
+LOOKUP_STDERR='superseded-run workflow lookup unresolved'
 
 # Shared harness: run_bounded, run_confirm, PRECHECK_MERGEABLE_CLEAN (issue #122).
 # Sourced after SCRIPT and MOCK_GH_DIR, which run_confirm reads.
@@ -199,6 +203,9 @@ assert_true "AC-274-1 (running): a replacement still in progress stays pending t
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
 assert_false "AC-274-1 (running): exit code is NOT 12 on the first poll" \
   "[ \"\$RB_EXIT\" -eq 12 ]"
+AC1_OUT="$(cat "$AC1_LOG")"
+assert_false "AC-274-1 (running): a resolved lookup adds no unresolved-lookup stderr line to exit 13" \
+  "printf '%s' \"\$AC1_OUT\" | grep -qF \"\$LOOKUP_STDERR\""
 rm -f "$AC1_LOG"
 
 # Poll sequence: running on the first read, complete on the second -> exit 0.
@@ -311,12 +318,28 @@ run_bounded 8 "$AC6_LOG" env PATH="$MOCK_GH_DIR:$PATH" \
   bash "$SCRIPT" --pr 479
 assert_true "AC-274-6: a failed lookup withholds green and does not turn red -> exit 13 at the deadline" \
   "[ \"\$RB_KILLED\" -eq 0 ] && [ \"\$RB_EXIT\" -eq 13 ]"
+AC6_OUT="$(cat "$AC6_LOG")"
+assert_true "AC-274-6: exit 13 names the unresolved lookup on stderr and points at actions: read" \
+  "printf '%s' \"\$AC6_OUT\" | grep -qF \"\$LOOKUP_STDERR\" && printf '%s' \"\$AC6_OUT\" | grep -qF 'actions: read'"
 rm -f "$AC6_LOG"
 
 # Failed lookup beside a genuine FAILURE: still red.
 run_poll "$AC3_BODY" ""
 assert_true "AC-274-6: a failed lookup does not mask a FAILURE in the replacement run -> exit 12" \
   "[ \"\$RUN_EXIT\" -eq 12 ]"
+
+# =============================================================================
+echo ""
+echo "=== AC-274-7 (HANDOFF step 5 exit-code contract names the superseded-run behaviour) ==="
+
+# The `12` and `13` bullets of docs/autoflow-guide.md HANDOFF step 5, the
+# operator's source of truth for this script's exit codes.
+STEP5_12="$(grep -E '^   - `12` — ' "$AUTOFLOW_GUIDE" || true)"
+STEP5_13="$(grep -E '^   - `13` — ' "$AUTOFLOW_GUIDE" || true)"
+assert_true "AC-274-7: the step-5 \`12\` bullet states a superseded run's CANCELLED check is not counted" \
+  "printf '%s' \"\$STEP5_12\" | grep -qF 'superseded' && printf '%s' \"\$STEP5_12\" | grep -qF 'workflow_id'"
+assert_true "AC-274-7: the step-5 \`13\` bullet lists the unresolved lookup as a case, with its stderr line and actions: read" \
+  "printf '%s' \"\$STEP5_13\" | grep -qF \"\$LOOKUP_STDERR\" && printf '%s' \"\$STEP5_13\" | grep -qF 'actions: read'"
 
 # =============================================================================
 # Results

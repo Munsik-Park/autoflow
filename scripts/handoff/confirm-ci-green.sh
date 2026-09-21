@@ -69,7 +69,9 @@
 #                          undetermined arm withholds it; and an all-green
 #                          rollup whose superseded-run lookup (issue #274) never
 #                          resolved every candidate run's workflow, which
-#                          withholds exit 0 the same way.
+#                          withholds exit 0 the same way — a second stderr line
+#                          names this case and points at the token's
+#                          `actions: read` access, not a longer timeout.
 #   14  inconclusive     — could not confirm mergeable within the bound; gh
 #                          transport/auth/parse failure, or a mergeability that
 #                          never settled within the bound, suspected (NOT a
@@ -516,6 +518,9 @@ if [ "$saw_checks" -eq 0 ]; then
   echo "MERGEABLE but no check published within ${CI_POLL_TIMEOUT_SECS}s — suspect CI trigger (webhook delivery / workflow trigger conditions) — re-push to force a synchronize event; NOT green" >&2
   exit 11
 else
-  echo "checks present but no green verdict after ${CI_POLL_TIMEOUT_SECS}s (slow CI, a confirmed-then-undetermined run whose rollup is green but mergeability never re-settled, or a superseded-run workflow lookup that never completed) — inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2
+  echo "checks present but no green verdict after ${CI_POLL_TIMEOUT_SECS}s (slow CI, or a confirmed-then-undetermined run whose rollup is green but mergeability never re-settled) — inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2
+  if [ "$RUN_WF_COMPLETE" -eq 0 ]; then
+    echo "superseded-run workflow lookup unresolved at the deadline (gh api repos/<owner>/<repo>/actions/runs/<run_id> for a run with a CANCELLED check) — exit 0 is withheld until it resolves; check the token's actions: read access to that repository before raising CI_POLL_TIMEOUT_SECS" >&2
+  fi
   exit 13
 fi
