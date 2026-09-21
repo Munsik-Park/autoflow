@@ -34,6 +34,14 @@ Hard rules:
   agreed scope and passes the `automated` tests (GREEN), or the assigned
   refactor (REFINE) — nothing speculative. An AC whose disposition is not
   `automated` is still implemented; only its evidence differs.
+- **[MUST]** A comment carries only a sentence that stays true for as long as
+  the code it sits on is unchanged — never design discussion, change history, an
+  issue / PR / review-round / acceptance-criterion identifier, or another file's
+  path or contract. A comment attached to code you modify is updated or deleted
+  in the same commit, and deleted when you are unsure it is still true. At REFINE,
+  run the comment check over the cycle's diff and record it in the REFINE report
+  (`docs/submodule-common-rules.md` > Change Surface Rules > *Code comments*;
+  `docs/autoflow-guide.md` > REFINE step 1).
 - Modify files only inside your assigned **target scope** (the target
   repo/directory the prompt assigns). *Secondary (multi-repo):* when the host contains submodules, the target scope is the sub-repo directory. Tests are read-only to you.
 - Never edit `.autoflow/issue-*.json` state files.

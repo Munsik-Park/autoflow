@@ -148,15 +148,38 @@ Every changed line must trace to the issue's acceptance criteria or the agreed p
 
 ### Surrounding code
 - **[MUST]** Match the existing style and naming in the file you edit, even if you would write it differently in a greenfield.
-- **[MUST]** Leave adjacent code, comments, formatting, and import order untouched unless an AC requires the change.
+- **[MUST]** Leave adjacent code, comments, formatting, and import order untouched unless an AC requires the change. A comment attached to code this change modifies is not adjacent — it is part of the change (**Code comments** > *Changing commented code*).
 - **[MUST]** Pre-existing dead code, suspicious patterns, or stylistic inconsistencies you notice in passing are reported in the cycle report (one line each, with file:line). Filing a separate issue is the follow-up path; do not remove or "improve" them in this cycle.
 
 ### Over-engineering guard
 The trace rule rejects scope creep *across* the change surface; this guard rejects depth creep *inside* it. Keep the solution to the minimum the current AC needs:
 - **Scope**: don't add features, configurability, or "improvements" beyond the AC. A bug fix doesn't clean up surrounding code; a simple feature doesn't gain extra options.
-- **Documentation**: don't add docstrings, comments, or type annotations to code you didn't change. Comment only where the logic isn't self-evident.
+- **Documentation**: don't add docstrings, comments, or type annotations to code you didn't change. What a comment on changed code may carry is **Code comments** below.
 - **Defensive coding**: don't add error handling, fallbacks, or validation for scenarios that can't occur. Trust internal code and framework guarantees; validate only at system boundaries (user input, external APIs).
 - **Abstractions**: don't create helpers or abstractions for a one-time operation, and don't design for hypothetical future requirements.
+
+### Code comments
+A comment is a present-tense claim about the code it sits on. A record of how that code came to be — a decision's grounds, a discussion, a change history — was true at the moment it was written; placed in a comment it becomes a claim that goes false when the code or another file changes, and someone has to keep it in step. Placed in a record that does not change with the code, it cannot go out of step, and nothing is lost. The rule governs every comment in code a cycle writes or modifies — implementation and test files, in a target and in this repository (`docs/records/design-rationale.md` > Decision 23). Existing comments on code the cycle leaves untouched stay as they are (**Surrounding code**).
+
+- **[MUST] The test**: a comment carries only a sentence that stays true for as long as the code it sits on is unchanged — however much time passes, and whatever changes in other files.
+- **What a comment carries** — only what a reader cannot recover from the code:
+  - an external constraint: the behavior of a runtime, a tool, or a protocol the code depends on;
+  - an invariant that the code does not make evident;
+  - what breaks if the code is written otherwise, in a line or two;
+  - a function's contract — its arguments, return value, and exit codes — in one line.
+- **What a comment does not carry**:
+  - a restatement of what the code does;
+  - design discussion and rejected alternatives;
+  - change history — what the code did before, what it no longer does, what an earlier version wrote;
+  - an issue, PR, review-round, or acceptance-criterion identifier;
+  - the path or the contract of another file;
+  - commented-out code.
+- **Where that content goes**: a decision and its grounds → the repository's decision record (in this repository, `docs/records/adr/` and `docs/records/design-rationale.md`); change history → the commit message and the PR body; discussion → the cycle's `.autoflow/*` design documents and the issue. The only reference a comment carries is at most one ADR identifier (`ADR-0024`); an issue or PR number is reached from the line through `git blame` and the commit message, so a comment carries none.
+- **Test files**: a test's intent is stated in its name and its assertion messages. A comment in a test file carries only the reason for a fixture that the fixture does not make evident.
+- **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it — a rewritten comment can be wrong again, a deleted one cannot.
+- **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
+
+REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REFINE step 1, *Comment check*).
 
 ### Orphans from this cycle
 - **[MUST]** Imports, variables, and functions that **your** changes rendered unused are removed in the same commit.

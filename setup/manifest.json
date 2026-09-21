@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f5ca57b49be4b4ba4fae4a4dae32d0537ec5a4d71ad41c37546d2558347a3f59"
+      "sha256": "f8db536134668cde7f06d926445f40ae4415122ce34a8349900b3ef81c50c47d"
     },
     {
       "source": "docs/development-guideline.md",
@@ -97,14 +97,14 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9e89730e2c41eb21a0a2824e0d0f0bf2759cf8d469cbdb4287b2398c8520face"
+      "sha256": "28378effbf9368ae1947862e7d4a205baa99495fb8501f1939fd3d457b480b58"
     },
     {
       "source": "docs/role-contracts.md",
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "304fb6a0985a2d6328d8b73af7d7249528bd153b0558bd7ba0b3c99732bbb802"
+      "sha256": "93e979709a8acfde0b7ec2c1fecf5dd0950d1746b3c9853c2844f26078b76fae"
     },
     {
       "source": "docs/security-checklist.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d82cab4927c9b1321b73956f8ca41635131f84fe86fc53b0907038292a0040da"
+      "sha256": "a3a5b5a31956f3e5c025f2f99055c5cbf9f75f6ca9282fb749f4e2ff63c68627"
     },
     {
       "source": "docs/thin-root-layer.md",

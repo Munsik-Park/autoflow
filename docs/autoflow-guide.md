@@ -1049,8 +1049,10 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 ## REFINE — Refactor (Green maintained)
 
 ```
-1. Developer AI: decide whether to run /simplify, and over what — then run it as decided.
-   - Whether it runs and which files it covers is the Developer AI's judgment on the diff
+1. Developer AI: the refactor pass over the cycle's diff — /simplify as judged, then the comment check.
+   /simplify:
+   - Decide whether to run /simplify, and over what — then run it as decided. Whether it runs
+     and which files it covers is the Developer AI's judgment on the diff
      ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in the
      REFINE report's `simplify:` / `simplify-grounds:` lines (below). The report is written
      whether or not it ran.
@@ -1059,6 +1061,25 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
      `none` in each section.
    - A wrong judgment is caught by GATE:QUALITY, which reads the report, and by the reviewer
      (principle 3). No predicate script and no exclusion list decides this (issue #227).
+   Comment check (every pass, whether or not /simplify ran):
+   - Over the lines the cycle's diff adds (`git diff <base>...HEAD`), identify the comment lines
+     by each file's language; a directive a tool reads is code, not a comment
+     ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules >
+     *Code comments*).
+   - Match each added comment line against the classes that rule sends out of a comment and that
+     a pattern finds without judgment: an issue / PR reference (`#<digits>`, `PR #`), a review
+     round, an acceptance-criterion identifier, a path of another file, a change-history marker
+     (`no longer`, `previously`, `formerly`, and their equivalents in the comment's language).
+   - Dispose of every hit: removed, or rewritten to what the rule admits (when unsure the
+     rewrite is still true, removed); kept only when the match is not the class — the reason
+     stated. The content goes where the rule sends it when it is not already there. A hit in a
+     test file is outside the Developer AI's write scope: it is listed for the Test AI, which
+     disposes of it when it re-confirms Green.
+   - Record the ratio of comment lines to added lines as an observation. No threshold passes or
+     fails it — no quantitative basis for a right comment density was found
+     (`docs/records/design-rationale.md` > Decision 23).
+   - The check is a signal written into the report, not a gate: no hook reads it and it routes
+     nowhere.
 2. [MUST] Confirm Green after the refactor: when step 1 changed a file, re-run the cycle's local run
    set (VERIFY step 1's command) once and record the command, the log and its summary line; when step 1
    changed nothing, the VERIFY step-1 record stands and nothing re-runs.
@@ -1071,12 +1092,12 @@ with the Green state from VERIFY.
 
 ### REFINE report (`.autoflow/issue-{N}-refine-report.md`)
 
-The Developer AI writes one report per REFINE pass, with three sections in this order — the report
+The Developer AI writes one report per REFINE pass, with four sections in this order — the report
 is an input to GATE:QUALITY, so every section is present and a section with nothing to say states
 `none` explicitly (an omitted section is a VALIDATE step-4 failure, not a silence). The report
 opens with two lines that record step 1's judgment — `simplify: run <files or scope>` or
 `simplify: not run`, then `simplify-grounds: <what in the diff did or did not warrant it>` — and
-when /simplify did not run each of the three sections reads `none`:
+when /simplify did not run each of the first three sections reads `none`:
 
 1. `## Applied` — each /simplify suggestion applied, one line each.
 2. `## Rejected / deferred` — each suggestion not applied, with the reason (`behavior-changing`,
@@ -1089,6 +1110,11 @@ when /simplify did not run each of the three sections reads `none`:
    and what behavior would change. The section is the defect signal issue #135 found missing: in
    #130 cycle 1 a /simplify agent proposed exactly the fix the external reviewer later filed as
    Medium, REFINE correctly rejected it as behavior-changing, and no phase read the rejection.
+4. `## Comment check` — step 1's comment check, written on every pass. It opens with the line
+   `comment-ratio: <added comment lines>/<added lines> (<percent>)`, an observation with no
+   threshold, then one line per hit: its `path:line` at the report's commit, its class, and its
+   disposition — `removed`, `rewritten`, `kept — <why the match is not the class>`, or
+   `test file — Test AI`. A pass with no hit states `none` below the ratio line.
 
 GATE:QUALITY reads section 3 as scoring input for `Quality` and `Impact scope` (below) and cites
 what it read. Writing the section is the Developer AI's duty; judging it is the fresh evaluator's —
@@ -1113,7 +1139,7 @@ the author's "this is fine" is not the disposition.
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
 4. Maintained-docs check: confirm impacted docs are updated, and that the REFINE report
    (`.autoflow/issue-{N}-refine-report.md`) exists with its `simplify:` / `simplify-grounds:`
-   lines and its three sections present — an empty section says `none`; an omitted section or a
+   lines and its four sections present — an empty section says `none`; an omitted section or a
    missing decision line fails this step (REFINE > REFINE report).
 5. Manifest coherence check: if the diff touched a manifest-registered source
    (Change Surface Rules > Derived artifacts), confirm `setup/manifest.json` was
