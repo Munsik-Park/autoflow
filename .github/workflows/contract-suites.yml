@@ -101,6 +101,7 @@ on:
       - 'tests/test-issue-245-schema-validation.sh'
       - 'tests/test-issue-25-confirm-ci-green.sh'
       - 'tests/test-issue-30-confirm-ci-green.sh'
+      - 'tests/test-issue-274-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
@@ -248,6 +249,7 @@ on:
       - 'tests/test-issue-245-schema-validation.sh'
       - 'tests/test-issue-25-confirm-ci-green.sh'
       - 'tests/test-issue-30-confirm-ci-green.sh'
+      - 'tests/test-issue-274-confirm-ci-green.sh'
       - 'tests/test-issue-40-hook-additive.sh'
       - 'tests/test-issue-64-collection-scope.sh'
       - 'tests/test-issue-92-host-pr-execution.sh'
@@ -468,6 +470,12 @@ jobs:
         if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-30-confirm-ci-green.sh ')
         timeout-minutes: 10
         run: bash tests/test-issue-30-confirm-ci-green.sh
+
+      - name: test-issue-274-confirm-ci-green.sh
+        id: s-test-issue-274-confirm-ci-green
+        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-274-confirm-ci-green.sh ')
+        timeout-minutes: 10
+        run: bash tests/test-issue-274-confirm-ci-green.sh
 
       - name: test-issue-40-hook-additive.sh
         id: s-test-issue-40-hook-additive

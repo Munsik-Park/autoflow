@@ -53,6 +53,8 @@
 #   a MERGEABLE value.
 #   11  0 checks         — MERGEABLE but no check ever published within the bound.
 #   12  red build        — a check concluded FAILURE/ERROR/CANCELLED/TIMED_OUT.
+#                          A CANCELLED check of a run superseded by a newer run of
+#                          the same workflow is not counted (classify_rollup).
 #   13  no green verdict  — checks present but the run never reached the exit-0
 #                          verdict at the deadline. TWO cases land here: checks
 #                          still pending (slow CI), and the confirmed-then-
@@ -157,6 +159,19 @@ gh_bounded() {
   return 0
 }
 
+# Superseded-run filter (issue #274), applied before the per-identity reduction
+# described next: a CANCELLED CheckRun of a SUPERSEDED run is dropped. A run
+# is superseded when the rollup carries a newer run of the same workflowName,
+# the run read from detailsUrl (.../actions/runs/<run_id>/job/<job_id>) and "newer"
+# meaning a larger run_id (GitHub assigns run ids in creation order). The rollup is
+# the PR head commit's, so the newer run is on the same head SHA. This covers the
+# cancelled row whose name the replacement never repeats — a matrix job cancelled
+# before expansion stays "Tests (shard ${{ matrix.shard }})" while the replacement
+# expands to "Tests (shard 1)" — which the identity dedup below leaves alone in its
+# group and counts red. Only CANCELLED is dropped: a FAILURE/ERROR/TIMED_OUT row of a
+# superseded run, a CANCELLED row of a workflow's newest run, and a row whose run
+# cannot be read from detailsUrl (a non-Actions check) are classified as before.
+#
 # Classify a poll body's statusCheckRollup into "<total> <fail> <green>", one row
 # per check identity. A same-identity group with ANY non-terminal (QUEUED/PENDING/
 # WAITING/in-progress) entry is pending outright — a stale CANCELLED/FAILURE left by
@@ -171,6 +186,16 @@ gh_bounded() {
 # all-terminal group by latest-per-identity dedup (feature #30 c2 §3 / c4 §3.3).
 classify_rollup() {
   jq -r '
+    def run_id:
+      if .__typename == "CheckRun" and ((.workflowName // "") != "") then
+        [ (.detailsUrl // "") | capture("/actions/runs/(?<id>[0-9]+)") | .id | tonumber ] | first
+      else
+        null
+      end;
+    def superseded($latest):
+      run_id as $id
+      | .__typename == "CheckRun" and .conclusion == "CANCELLED"
+        and $id != null and $id < $latest[.workflowName];
     def ident:
       if .__typename == "CheckRun" and ((.name // "") != "") then
         ["CheckRun", (.workflowName // ""), .name]
@@ -194,7 +219,10 @@ classify_rollup() {
     def has_start:
       if .__typename == "CheckRun" then (.startedAt // "") != ""
       else (.createdAt // "") != "" end;
-    ( .statusCheckRollup // [] )
+    ( .statusCheckRollup // [] ) as $rows
+    | ( reduce ( $rows[] | run_id as $id | select($id != null) | [ .workflowName, $id ] ) as $p
+          ( {}; .[$p[0]] = ([ .[$p[0]] // 0, $p[1] ] | max) ) ) as $latest
+    | [ $rows[] | select(superseded($latest) | not) ]
     | group_by(ident)
     | map(
         ( [ .[] | select(non_terminal) ] ) as $nt
