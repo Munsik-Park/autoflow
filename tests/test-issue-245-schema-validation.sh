@@ -400,6 +400,14 @@ grep -q 'def remedy_ok:' "$HOOK" || _A9_RC_MISSING=1
 assert_static "A9e: hook contains every gate-schema.json remedy_class_enum member as a literal inside remedy_ok (remedy_class closed to enum)" \
   bash -c "[[ $_A9_RC_MISSING -eq 0 ]]"
 
+# A9f (issue #275, PR #290 review round 2): the phase list the validator checks remedy_class on
+# equals gate-schema.json:remedy_class_phase_keys — the structure form included, which the
+# score-gated list deliberately omits.
+SCHEMA_RC_KEYS_LITERAL=$(jq -r '[.remedy_class_phase_keys[]] | @json' "$SCHEMA")
+HOOK_RC_KEYS_LITERAL=$(grep -oE '\["gate_hypothesis_structure"[^]]*\]' "$HOOK" 2>/dev/null | head -1 | tr -d ' \t' || true)
+assert_eq "A9f: hook remedy_class phase list equals gate-schema.json:remedy_class_phase_keys (structure form validated)" \
+  "$HOOK_RC_KEYS_LITERAL" "$SCHEMA_RC_KEYS_LITERAL"
+
 # A9b: hook top-level-key whitelist literal equals gate-schema.json:top_level_keys (no hardcoding).
 SCHEMA_TLK_LITERAL=$(jq -r '[.top_level_keys[]] | @json' "$SCHEMA")
 HOOK_TLK_LITERAL=$(grep -oE 'keys_unsorted - \[[^]]*\]' "$HOOK" 2>/dev/null | head -1 | sed -E 's/keys_unsorted - //' | tr -d ' \t' || true)

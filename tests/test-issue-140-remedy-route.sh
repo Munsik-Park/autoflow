@@ -194,6 +194,30 @@ for raw in '""' '0' '{}' '"fix"'; do
   run_hook_stderr 2 "malformed AutoFlow state file" "remedy_class=$raw → MALFORMED state, gh pr create fails closed" "$MAL" "$(bash_json 'gh pr create --title x')"
   rm -rf "$MAL"
 done
+# The un-score-gated structure form is validated too (PR #290 review round 2): a
+# malformed remedy_class on gate_hypothesis_structure is MALFORMED even with
+# passing AUDIT / GATE:QUALITY scores; a valid one is not an open re-entry the
+# push gate reads (it reads audit / gate_quality), so it stays admitted.
+mk_struct_state() { # <dir> <raw gate_hypothesis_structure remedy_class JSON value>
+  local d="$1" raw="$2"
+  mkdir -p "$d/.autoflow"
+  cat > "$d/.autoflow/issue-275.json" <<JSON
+{ "active": true, "issue": "#275",
+  "phases": {
+    "gate_hypothesis_structure": { "remedy_class": $raw, "scores": { "Behavior gap": 8 } },
+    "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+    "audit": { "scores": { "Authn": 9 } },
+    "gate_quality": { "scores": { "Completeness": 8 } } } }
+JSON
+}
+for raw in '""' '0' '{}' '"fix"'; do
+  SM=$(mktemp -d); mk_struct_state "$SM" "$raw"
+  run_hook_stderr 2 "malformed AutoFlow state file" "gate_hypothesis_structure remedy_class=$raw → MALFORMED state, git push fails closed" "$SM" "$(bash_json 'git push')"
+  rm -rf "$SM"
+done
+SV=$(mktemp -d); mk_struct_state "$SV" '"impl"'
+run_hook 0 "gate_hypothesis_structure remedy_class=impl (valid) → state well-formed, git push admitted on audit / gate_quality" "$SV" "$(bash_json 'git push')"
+rm -rf "$SV"
 NESTMAL=$(mktemp -d); mkdir -p "$NESTMAL/.autoflow"
 cat > "$NESTMAL/.autoflow/issue-275.json" <<'JSON'
 { "active": true, "issue": "#275",

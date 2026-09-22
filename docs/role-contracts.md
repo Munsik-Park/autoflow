@@ -17,7 +17,7 @@
 4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
 
 ### Finding coverage (model-recall guard)
-- **[MUST]** Surface every issue found, including low-severity and uncertain ones — list them in `recommendations` (or `blocking_issues` when score-blocking). Severity and confidence are expressed through the `score` and `reason`, never by silently omitting a finding. The rubric score is the filter; the finding stage prioritizes coverage.
+- **[MUST]** Surface every issue found, including low-severity and uncertain ones — list them in `recommendations` (or `blocking_issues` when score-blocking). Each finding states its severity and confidence on its own item (the next bullet) and is reflected in the `score` and `reason`; a finding is never expressed by silently omitting it. The rubric score is the filter; the finding stage prioritizes coverage.
 - **[MUST]** Each `recommendations` item is an object carrying its **subject** — a `path:line` at the evaluated commit, or the design document's section — the rubric **item** it was found under, its **severity** in the reviewer's vocabulary (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence` for a finding the evaluator could not confirm), the finding, and — on `Medium` and above — its `remedy_class` (*Remedy class* below). After a PASS the orchestrator triages the list by the reviewer-finding procedure, so the subject is what locates the problem and the severity and class are what route it ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation triage*). An item missing any of these is a report defect: reject and re-spawn, as for a missing `fail_hypothesis`.
 - **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Recent Claude models follow such filtering instructions literally — they investigate just as deeply but drop sub-bar findings instead of reporting them, which lowers recall. Let it report all findings and let the score rank them.
 
@@ -312,19 +312,8 @@ After the result returns, the orchestrator **verifies** it before accepting — 
 
 ### Evaluation Output Format
 
-```json
-{
-  "type": "hypothesis_evaluation | plan_evaluation | security_audit | quality_evaluation | doc_evaluation",
-  "target": "scope name",
-  "issue": "#N",
-  "fail_hypothesis": {
-    "case": "strongest rubric-framed reason this deliverable should FAIL",
-    "disposition": "refuted | survived | none_found",
-    "reflected_in": ["rubric item name"]
-  },
-  "scores": { "item": { "score": 8, "reason": "evidence" } },
-  "summary": "overall assessment",
-  "blocking_issues": ["items ≤ 3"],
-  "recommendations": ["items 5-6"]
-}
-```
+The format has one home — [`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format —
+and is not copied here: `fail_hypothesis` before `scores`, `remedy_class` per failed item, `rescore`
+on a re-entry, `refine_observations` at GATE:QUALITY, and `recommendations` as a list of objects
+(subject, item, severity, finding, `remedy_class` on `Medium` and above — *Finding coverage* above).
+A report in any other shape is rejected and the evaluator re-spawned, as that section says.
