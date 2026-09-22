@@ -190,7 +190,7 @@ The authority principle stands unchanged: acceptance-criterion **content** is th
 things widen ([`../design-rationale.md`](../design-rationale.md) > Decision 25):
 
 1. **Where a content change is raised.** Besides the orchestrator's routing of the ARCHITECT report
-   and VERIFY's design contradiction, a role at GREEN, VERIFY or REFINE that meets a problem showing a
+   and VERIFY's design contradiction, a role at RED, GREEN, VERIFY or REFINE that meets a problem showing a
    criterion is wrong, or that the issue must promise a behavior its criteria do not state, raises it
    in its report, and a gate's PASS recommendation whose fix needs such a change reaches the
    operator through the first pause criterion of the procedure it takes

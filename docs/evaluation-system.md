@@ -95,7 +95,6 @@ emerge, humans adjust the criteria.
     "new_findings": [ { "item": "item", "finding": "<defect newly seen on a re-scored item>", "disposition": "blocking — scored under <item> | recommendation", "ground": "<why it blocks, or why it does not>" } ]
   },
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
-  "carried_recommendations": [ { "recommendation": "<the carried recommendation>", "from": "<the gate that raised it>", "status": "cleared | remains", "ground": "<path:line at <commit SHA> / command + log path + summary line>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
   "recommendations": [ { "subject": "<path:line at <commit SHA>> | <cycle artifact § section>", "item": "rubric item name", "finding": "what is wrong", "severity": "Critical | High | Medium | Low", "low_confidence": false, "remedy_class": "doc | test | impl | design | operator (Medium and above only)" } ]
@@ -135,13 +134,7 @@ when its evidence is weak; one at `Medium` or above also carries a `remedy_class
 above). A recommendation missing a field it requires is a contract violation — reject + re-spawn, as
 for a missing `fail_hypothesis`. After a PASS the orchestrator handles the recommendations by the
 procedure a reviewer finding takes ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *PASS
-recommendations*); the hook reads none of it. `carried_recommendations` is present on the evaluation
-of a gate that receives recommendations an earlier gate raised and could not score, because their fix
-lay ahead of it — GATE:PLAN for GATE:HYPOTHESIS's, GATE:QUALITY for GATE:PLAN's (`[]` when none was
-carried): one entry per carried recommendation, `cleared` or `remains` with the ground re-derived
-from the work, and a `remains` one also listed in `recommendations` or `blocking_issues` at its
-severity. A report that omits the field where recommendations were carried to it, or leaves one
-unaccounted for, is rejected and re-spawned, as for `refine_observations`.
+recommendations*); the hook reads none of it.
 
 `refine_observations` (GATE:QUALITY only; issue #135) records the evaluator's disposition of every
 entry in the REFINE report's `## Out-of-scope observations — guard / boundary logic touched`

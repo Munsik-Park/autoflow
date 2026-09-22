@@ -677,7 +677,7 @@ the gated one.
   authority checkpoint inside the deliberation already counted, so it consumes no ARCHITECT
   re-entry budget.
 - **An acceptance-criterion change raised later in the cycle.** The criteria are the issue author's
-  assumptions, and work can show one wrong: a role at GREEN, VERIFY or REFINE that meets a problem
+  assumptions, and work can show one wrong: a role at RED, GREEN, VERIFY or REFINE that meets a problem
   showing a criterion is wrong, or that the issue must promise a behavior its criteria do not state,
   raises it in its report with the criterion, the proposed change and the fact that shows the need
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope
@@ -782,8 +782,7 @@ so the ARCHITECT re-entry counter is the orchestrator's own accounting (Regressi
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: the architecture decision document + verification design from ARCHITECT, the issue's
 acceptance-criterion list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the
-issue decision ledger (`.autoflow/issue-{N}-ledger.md`) — which names any GATE:HYPOTHESIS
-recommendation carried to this gate (GATE:QUALITY > *PASS recommendations*).
+issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
 
 ### Scoring (4 items × 10 points)
 
@@ -921,6 +920,11 @@ returns to ARCHITECT, through the existing routes.
 2. Run the new tests → every `driving` and `regression` test must FAIL (Red).
    - A `driving` or `regression` test that does not fail means the criterion is already met or the
      test is wrong → investigate.
+   - A criterion that writing or running its test shows to be wrong, or that must promise a
+     behavior it does not state, is not rewritten in the test: the Test AI raises it in the RED
+     report with the criterion, the proposed change and the fact that shows the need, for the
+     operator (ARCHITECT > *Report routing* > *An acceptance-criterion change raised later in the
+     cycle*).
    - A `characterization` test records existing behavior and may PASS from the start; a passing
      characterization test is the expected outcome, not an investigation trigger.
 3. For rows typed `manual` (and `environment-dependent` rows resolved to a manual scenario) → write
@@ -1310,7 +1314,6 @@ logic touched`, and — on a target — section `## Comment check`), and the cyc
 the feature design's `## Scope` section and every `## Scope judgments` section in the cycle's
 `.autoflow/issue-{N}-*.md` reports
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
-The ledger names any GATE:PLAN recommendation carried to this gate (*PASS recommendations* below).
 
 **[MUST] REFINE observations are scoring input** (issue #135): the evaluator reads the REFINE
 report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
@@ -1559,45 +1562,46 @@ step 6.5's; three things differ, because the finding comes from a gate rather th
   findings file, so no ingesting subagent runs. A report whose recommendation lacks its subject or
   severity, or whose `Medium`+ recommendation lacks its class, is rejected and the evaluator
   re-spawned, as a findings file lacking a class is at step 6.5.
-- **The gate re-scores in place of the reviewer.** The gate whose report raised a recommendation
-  scores its fix — or, for a fix its phase has not reached yet, the gate that scores that phase's
-  work (below) — as a fresh spawn in the narrowed form its re-entry already uses (GATE:PLAN >
-  *Re-entry re-score*, AUDIT > *Review-response re-score*, *Re-entry re-score* above): it re-scores
-  the item each fixed recommendation was listed under plus every item whose anchor the fix touched,
-  and dispositions the fixed recommendation `cleared` / `remains` as a prior finding. GATE:HYPOTHESIS,
-  whose forms have no narrowed re-score, re-scores every item of its form. A re-score that FAILs is
-  an ordinary FAIL, routed and counted by that gate's FAIL rule; one that PASSes with a `Medium`+
-  recommendation starts the next attempt.
+- **The gate re-scores in place of the reviewer.** A fix is never declared done by the role that
+  made it, and never reaches the next phase or the reviewer unscored. The gate whose report raised a
+  recommendation scores its fix, as a fresh spawn in the narrowed form its re-entry already uses
+  (GATE:PLAN > *Re-entry re-score*, AUDIT > *Review-response re-score*, *Re-entry re-score* above):
+  it re-scores the item each fixed recommendation was listed under plus every item whose anchor the
+  fix touched, and dispositions the fixed recommendation `cleared` / `remains` as a prior finding.
+  GATE:HYPOTHESIS, whose forms have no narrowed re-score, re-scores every item of its form. A fix
+  whose phase lies ahead of the recommending gate is scored with the rest of the change by the gates
+  that score that phase's work (below). A re-score that FAILs is an ordinary FAIL, routed and
+  counted by that gate's FAIL rule; one that PASSes with a `Medium`+ recommendation starts the next
+  attempt.
 - **Step 6.5's PR-bound parts have no counterpart.** A gate attempt carries no `blocked-by-review`
   label and opens no new cycle, so the label branches and the `scope-bounded` line do not apply;
   the durable host-PR comment is posted only where a host PR already exists.
 
 By severity:
 
-- **`Medium` or above — fixed before the cycle moves past the fix.** `bash
-  scripts/gate/remedy-route.sh route <class>...` over the recommendations' classes names the entry
-  point, as at step 6.5 (mixed → farthest; `operator` anywhere pauses), and the fix is made there. An
-  entry point the cycle has passed is re-entered the way a FAIL's is (*FAIL routing* above) and the
-  cycle runs forward to the recommending gate, which re-scores the fix; the transition waits for it.
-  An entry point still ahead of the gate — as at GATE:HYPOTHESIS and GATE:PLAN, before any change
-  exists — is reached by the cycle's own course; the recommending gate cannot score a fix that does
-  not exist when it runs, so the gate that scores that phase's work does:
+- **`Medium` or above — fixed where the route names.** `bash scripts/gate/remedy-route.sh route
+  <class>...` over the recommendations' classes names the entry point, as at step 6.5 (mixed →
+  farthest; `operator` anywhere pauses), and the fix is made there:
+  - **An entry point the cycle has passed** is re-entered the way a FAIL's is (*FAIL routing*
+    above), and the cycle runs forward to the recommending gate, which re-scores the fix; the
+    transition waits for it. At AUDIT and GATE:QUALITY every entry point is behind the gate; so is
+    ARCHITECT at GATE:PLAN (a re-discussion on a `brief` naming the recommendation, ARCHITECT >
+    *Re-discussion*, whose delta GATE:PLAN re-scores); and so, at GATE:HYPOTHESIS, is the DIAGNOSE
+    step that wrote the analysis, for a recommendation whose subject is that analysis — the gate's
+    FAIL re-entry point.
+  - **An entry point still ahead of the gate** — RED, GREEN or the orchestrator's doc commit at
+    GATE:PLAN, and any class's entry point at GATE:HYPOTHESIS for a recommendation on the work
+    rather than on the analysis — is reached by the cycle's own course, so the recommendation enters
+    that phase as input: the `brief` of ARCHITECT's topic, the RED / GREEN spawn prompt at DISPATCH,
+    or the doc commit. What it produces is part of what the later gates score — GATE:PLAN for a
+    design decision, VERIFY and GATE:QUALITY for tests, implementation and documents — so it reaches
+    neither the next phase nor the reviewer unscored; the recommending gate cannot score a fix that
+    does not exist when it runs.
 
-  | Gate | Where the fix is made | What scores it |
-  |---|---|---|
-  | GATE:HYPOTHESIS | a recommendation whose subject is the analysis the gate scored: the DIAGNOSE step that wrote it, the gate's FAIL re-entry point; any other: ARCHITECT's topic, as a `brief` naming it | the gate's re-score; for the carried one, GATE:PLAN |
-  | GATE:PLAN | the entry point the route names — `design`: an ARCHITECT re-discussion on a `brief` naming it (ARCHITECT > *Re-discussion*); `test` / `impl`: RED / GREEN, the recommendation entering their spawn prompt at DISPATCH; `doc`: the orchestrator's doc commit | GATE:PLAN's re-entry re-score of the delta; for the others, GATE:QUALITY |
-  | AUDIT, GATE:QUALITY | the entry point, re-entered as a FAIL's is | that gate's re-score |
-
-  A **carried** recommendation — one whose fix is scored by a later gate — travels with the
-  transition and stays open: that gate's evaluation receives it and dispositions it `cleared` /
-  `remains` in its `carried_recommendations` field, and a `remains` one is that gate's own finding
-  at its severity, handled by this procedure there
-  ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). A return to
-  ARCHITECT consumes the ARCHITECT re-entry counter, as every return does
-  ([`CLAUDE.md`](../CLAUDE.md) > Regressions). A recommendation is handled once a re-score, or the gate it
-  was carried to, marks it `cleared`, once it has been recorded as not this issue's work (below), or
-  once the operator has decided it.
+  A return to ARCHITECT consumes the ARCHITECT re-entry counter, as every return does
+  ([`CLAUDE.md`](../CLAUDE.md) > Regressions). A recommendation is handled once its fix has passed
+  the recommending gate's re-score, it has entered the phase ahead that fixes it, it has been
+  recorded as not this issue's work (below), or the operator has decided it.
 - **`Low` — the orchestrator's judgment**, as at step 6.5: fix it now — the orchestrator naming the
   class the evaluator leaves unset at `Low`, and the fix taking the same route and re-score — or
   leave it, the gate's verdict entry in the ledger noting that it was reviewed and left. The two

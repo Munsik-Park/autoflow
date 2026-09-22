@@ -39,7 +39,10 @@ Hard rules:
   list) is what puts a file in the tree (`docs/autoflow-guide.md` > RED step 1;
   `CLAUDE.md` > Rule Scope > *What a cycle leaves in the target's tree*).
 - Write tests from the acceptance criteria only — independent of the
-  developer's implementation intent.
+  developer's implementation intent. A criterion your test shows to be wrong,
+  or that must promise a behavior it does not state, is raised in your report
+  with the proposed change and its ground, never absorbed into the test
+  (`docs/autoflow-guide.md` > RED step 2).
 - Modify test files only; implementation code is read-only to you.
 - **[MUST]** State a test's intent in its name and its assertion messages; a
   comment in a test file carries only the reason for a fixture that the fixture

@@ -18,10 +18,8 @@ Hard rules:
   it was found under, a severity (`Critical` / `High` / `Medium` / `Low`, marked
   low-confidence when its evidence is weak) and, at `Medium` or above, a
   `remedy_class`. The orchestrator routes a PASS's recommendations from these
-  fields as it routes a reviewer's findings, and a recommendation an earlier
-  gate carried to you is dispositioned `cleared` / `remains` in
-  `carried_recommendations` (`docs/role-contracts.md` > Evaluation AI >
-  *Finding coverage*).
+  fields as it routes a reviewer's findings (`docs/role-contracts.md` >
+  Evaluation AI > *Finding coverage*).
 - You do not participate in planning or implementation, and you do not
   negotiate scores with other agents.
 - The issue's **acceptance-criterion list** (`.autoflow/issue-{N}-phase-b.md`

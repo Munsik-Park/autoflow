@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "17290671297a2bf8fbb48d9fdd2c588aef1aa11253cff13f701e8596e417c3e3"
+      "sha256": "44b66214a6a40981c7cb65147497f25ebe518b0be79f25f5e998c6a332be340d"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cd6260c0538b89d8b7b131bb916219461e8c7dde5f62847dcd967233a566a1cb"
+      "sha256": "cf2c134cfb03b5f3a158d8712d50f46ab2489d956c70cbdf1e15d353e1621a3a"
     },
     {
       "source": "docs/development-guideline.md",
@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "46bc6fad35e246b7a03c6c1048e1535f83572e71e62bac8c90e304befe639f19"
+      "sha256": "42fa22fd3bceb63ca736b5b4d083a33d34c89c2897b1c0e2277fdecc2ff43914"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5d2d636d92ea716782aba08e4d7ca97dd1fb3588f28f6c25129c0fc18fb977e1"
+      "sha256": "182022e4a4cff38ed1d4a39ba1ed81d4b9784b94b049a6969bb813561c66c4ea"
     },
     {
       "source": "docs/security-checklist.md",
