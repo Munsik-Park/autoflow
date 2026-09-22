@@ -164,8 +164,8 @@ if [ "$RC" = "2" ]; then pass "usage: no arguments -> exit 2"; else failc "usage
 echo "== relay-state: init and brief =="
 
 T="$SCRATCH/t.md"
-if bash "$STATE" init "$T" 179 2>/dev/null && grep -q '^# ARCHITECT transcript — issue #179$' "$T" && grep -q '^## Topic$' "$T" && grep -q 'Issue #179\. Inputs: \.autoflow/issue-179-phase-a\.md' "$T" && grep -q '"operator decision" is settled' "$T" && grep -q '^## Transcript$' "$T" && ! grep -q 'From the orchestrator' "$T"; then
-  pass "init: writes the header with the topic stated once, naming the issue's inputs and the settled authorities, no brief line"
+if bash "$STATE" init "$T" 179 2>/dev/null && grep -q '^# ARCHITECT transcript — issue #179$' "$T" && grep -q '^## Topic$' "$T" && grep -q 'Issue #179\. Inputs: \.autoflow/issue-179-phase-a\.md' "$T" && grep -q '"operator decision" is settled' "$T" && grep -q 'Change Surface Rules > Scope judgment' "$T" && grep -q '^## Transcript$' "$T" && ! grep -q 'From the orchestrator' "$T"; then
+  pass "init: writes the header with the topic stated once, naming the issue's inputs, the settled authorities and the scope question, no brief line"
 else
   failc "init: header not as expected: $(head -5 "$T" 2>/dev/null | tr '\n' '|')"
 fi

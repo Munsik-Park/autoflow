@@ -140,20 +140,42 @@ All AutoFlow phases, evaluation criteria, and gate rules apply.
 
 ## Change Surface Rules
 
-Every changed line must trace to the issue's acceptance criteria or the agreed plan. The scope of a cycle is exactly what the issue asked for — adjacent improvements belong to a separate issue.
+Every changed line traces to the cycle's scope: the issue's acceptance criteria, the confirmed cause recorded in DIAGNOSE, the agreed plan, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the cycle is decided by that judgment, not by whether an acceptance criterion names the line. How small the change stays inside that scope is unchanged: **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
+
+### Scope judgment
+A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds, under a `## Scope judgments` heading in the report or artifact its phase already produces ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2; `docs/records/design-rationale.md` > Decision 25).
+
+1. **Is it directly related to this issue?** It is when any one of these holds:
+   - it comes from the same confirmed cause;
+   - this change created it or exposed it;
+   - unless it is fixed, the behavior an acceptance criterion promises does not hold in actual use.
+2. **Is fixing it in this cycle desirable?** It is when it lies in the same module, is confirmed by the same verification, and fixing it separately would reopen the same code. It is not when it needs a design decision of its own, touches another ownership scope, or carries more risk than this issue.
+
+| Judgment | Disposition |
+|---|---|
+| Directly related, fixing it here desirable | fixed in this cycle; the recorded judgment is the trace of its hunks |
+| Directly related, fixing it here not desirable | separated, with its **separation reason** recorded |
+| Not directly related | separated as before — reported in one line with its `path:line`; a separate issue is the follow-up path |
+
+- **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **REFINE scope**).
+- **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
+- **An inclusion is verified like the rest of the scope.** At ARCHITECT it gets a verification-design row whose `Issue AC` is `—`; found later, the role that fixes it runs the tests it judges the fix requires and records the run ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
+- **Including a problem does not change an acceptance criterion.** When a problem shows that a criterion is wrong, or that the issue must promise a behavior its criteria do not state, what has to change is the criteria's content, which is the operator's: the role raises it in its report and the orchestrator puts it to the operator ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*).
+- **A wrong judgment is caught downstream** — by VERIFY step 3, by GATE:QUALITY's `Minimal implementation` and `Impact scope` (**GATE:QUALITY linkage** below), and by the reviewer. A role that is not confident, or whose inclusion would change a design decision, raises the question instead of deciding it (principle 3).
+- **Where it is applied**: DIAGNOSE's task decomposition and the ARCHITECT feature design's `## Scope` section set the cycle's scope; GREEN, VERIFY step 3 and REFINE judge what they meet during the work. A gate's PASS recommendations are handled by the procedure a reviewer finding takes, and there the two questions decide which recommendation is not this issue's work — a separate issue is its follow-up path — and ground the orchestrator's judgment on whether a `Low` one is fixed now (`docs/autoflow-guide.md` > GATE:QUALITY > *PASS recommendations*).
 
 ### Trace rule
-- **[MUST]** Each touched file/line answers the question: "which AC or plan item requires this?" If the answer is "none — I noticed it while I was here", revert that line.
-- **[MUST]** Before opening the PR, run `git diff <base>...HEAD` and self-audit: any hunk without an AC ID in its rationale is removed.
+- **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
+- **[MUST]** Before opening the PR, run `git diff <base>...HEAD` and self-audit: any hunk whose rationale names none of them is removed.
 
 ### Surrounding code
 - **[MUST]** Match the existing style and naming in the file you edit, even if you would write it differently in a greenfield.
-- **[MUST]** Leave adjacent code, comments, formatting, and import order untouched unless an AC requires the change. A comment attached to code this change modifies is not adjacent — it is part of the change (**Code comments** > *Changing commented code*).
-- **[MUST]** Pre-existing dead code, suspicious patterns, or stylistic inconsistencies you notice in passing are reported in the cycle report (one line each, with file:line). Filing a separate issue is the follow-up path; do not remove or "improve" them in this cycle.
+- **[MUST]** Leave adjacent code, comments, formatting, and import order untouched unless an AC or a recorded scope judgment requires the change. A comment attached to code this change modifies is not adjacent — it is part of the change (**Code comments** > *Changing commented code*).
+- **[MUST]** Pre-existing dead code, suspicious patterns, or stylistic inconsistencies you notice in passing — which **Scope judgment** does not make directly related — are reported in the cycle report (one line each, with file:line). Filing a separate issue is the follow-up path; do not remove or "improve" them in this cycle.
 
 ### Over-engineering guard
-The trace rule rejects scope creep *across* the change surface; this guard rejects depth creep *inside* it. Keep the solution to the minimum the current AC needs:
-- **Scope**: don't add features, configurability, or "improvements" beyond the AC. A bug fix doesn't clean up surrounding code; a simple feature doesn't gain extra options.
+The trace rule rejects scope creep *across* the change surface; this guard rejects depth creep *inside* it. Keep the solution to the minimum the cycle's scope needs:
+- **Scope**: don't add features, configurability, or "improvements" beyond the cycle's scope (**Scope judgment**). A bug fix doesn't clean up surrounding code; a simple feature doesn't gain extra options.
 - **Documentation**: don't add docstrings, comments, or type annotations to code you didn't change. What a comment on changed code may carry is **Code comments** below.
 - **Defensive coding**: don't add error handling, fallbacks, or validation for scenarios that can't occur. Trust internal code and framework guarantees; validate only at system boundaries (user input, external APIs).
 - **Abstractions**: don't create helpers or abstractions for a one-time operation, and don't design for hypothetical future requirements.
@@ -183,7 +205,7 @@ REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REF
 
 ### Orphans from this cycle
 - **[MUST]** Imports, variables, and functions that **your** changes rendered unused are removed in the same commit.
-- **[MUST]** Do not remove pre-existing unused symbols unless an AC explicitly requires it.
+- **[MUST]** Do not remove pre-existing unused symbols unless an AC or a recorded scope judgment requires it.
 
 ### Derived artifacts
 - **[MUST]** `setup/manifest.json` is a **derived member of the change surface**
@@ -232,18 +254,21 @@ A `ci-deferred` deferral is discharged at HANDOFF step 5, which confirms the PR'
 **Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format item 5, whose single-anchor requirement it satisfies as a per-chain enumeration (form and cardinality there).
 
 ### REFINE scope
-REFINE applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. The refactor tool's findings are advisory, not licence to expand the change surface.
+REFINE applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. The refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not REFINE's to apply, since REFINE preserves behavior: the Developer AI records its **Scope judgment**, and one judged directly related goes to the REFINE report's out-of-scope-observations section for the evaluator to dispose of (`docs/autoflow-guide.md` > REFINE > REFINE report).
 
 ### GATE:QUALITY linkage
-GATE:QUALITY's `Minimal implementation` item is scored against this section: prefer the smallest sufficient change that resolves the confirmed problem within the diagnosed scope. The diagnosed scope is the cycle's acceptance criteria plus the confirmed cause recorded in DIAGNOSE (`.autoflow/issue-{N}-phase-*.md`) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch.
+GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope. The cycle's scope is the acceptance criteria, the confirmed cause recorded in DIAGNOSE (`.autoflow/issue-{N}-phase-*.md`), and the problems the cycle's recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section and every `## Scope judgments` section in the cycle's `.autoflow/issue-{N}-*.md` reports, and the ledger's gate entries, which record how each gate's PASS recommendations were handled.
 
 A high-scoring change:
 - resolves the confirmed cause, not only the reported symptom
 - stays inside the module or component that owns that cause
-- includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit, because the fix is what makes them necessary and they answer "which AC or plan item requires this?"; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this cycle** is the symbol-removal instance of this same test, not its limit
-- leaves every surface outside the issue untouched — behavior, APIs, configuration, and documentation are examples of such a surface, not the boundary
+- includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit, because the fix is what makes them necessary and they answer "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?"; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this cycle** is the symbol-removal instance of this same test, not its limit
+- fixes each directly related problem its scope judgments include, and leaves out a directly related problem only with a recorded separation reason
+- leaves every surface outside the scope untouched — behavior, APIs, configuration, and documentation are examples of such a surface, not the boundary
 
-The item fails when a hunk traces to neither an AC nor the confirmed cause — "I noticed it while I was here" cleanup (**Surrounding code**) or depth creep beyond what the AC needs (**Over-engineering guard**) — regardless of code quality. It fails symmetrically when the change is too narrow to resolve the confirmed cause: a change that leaves the confirmed cause in place is not sufficient, and does not score well for being small.
+`Minimal implementation` asks whether each hunk is needed. It fails when a hunk traces to no acceptance criterion, confirmed cause or recorded scope judgment — "I noticed it while I was here" cleanup (**Surrounding code**) or depth creep beyond what the scope needs (**Over-engineering guard**) — regardless of code quality, and when a hunk rests on a scope judgment that meets none of question 1's three conditions. It fails symmetrically when the change is too narrow to resolve the confirmed cause: a change that leaves the confirmed cause in place is not sufficient, and does not score well for being small.
+
+`Impact scope` asks the same question from the other side: whether the change reaches what its scope requires. A directly related problem that the cycle's own records show — a scope judgment, a REFINE observation, a gate recommendation the ledger records as left — and that the change leaves out with no separation reason recorded lowers it, as does a separation reason that answers neither half of question 2.
 
 **Comments in a target's code.** The item also weighs the comments the change adds, by content and by volume, reading the REFINE report's `## Comment check` section (`docs/autoflow-guide.md` > REFINE > REFINE report) — its `comment-ratio` line and its hits — with the comments in the diff:
 - *Content*: a comment that **Code comments** does not admit — a restatement of the code, a design ground, a reference or a history — is depth the AC does not need, as an unneeded hunk is.
