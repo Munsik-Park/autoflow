@@ -73,13 +73,16 @@ Decision 24).
   carry, is a `Low` finding** — a restatement of the code, a design ground, an acceptance-criterion,
   issue or PR reference, another file's path or contract, or a change history. Record it in
   `recommendations` with its `path:line`; it takes no item below 7, so it is never a failed item and
-  carries no `remedy_class`. Whether it is fixed is the orchestrator's judgment, and the fix is its
+  carries no `remedy_class`; whether it is fixed is the orchestrator's judgment, and the fix is its
   direct commit ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Code comments in a target*).
+  Only that finding is `Low`: a defect a comment carries on its own ground — an exposed credential,
+  token or personal data, for example — is scored under the item its impact belongs to, with that
+  item's usual cap and class.
 - A line a tool reads to change its behavior — a lint suppression, a type-checker directive — is
   code even in comment syntax: a defect in it is scored under the item its behavior belongs to, not
   by this rule. An explanation written beside it is a comment.
 - `Minimal implementation` weighs the comments the change adds — the REFINE report's
-  `## Comment check` section with the comments in the diff — under the same floor
+  `## Comment check` section with the comments in the diff — and such a finding stays under the same floor
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > GATE:QUALITY
   linkage).
 
