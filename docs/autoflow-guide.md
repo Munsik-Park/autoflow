@@ -195,7 +195,12 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
 2. **Verify the resume prerequisites** before continuing: the issue's dev branch exists and is checked out, the `.autoflow/issue-{N}-*.md` artifacts the next phase consumes are present, and the **last** `### preflight-local-checks | cycle: <C>` record for the **current** cycle in the ledger reads `none declared` or `PASS … worktree=clean` — exactly the two lines an exit-0 run writes; a resume re-enters mid-cycle without repeating PREFLIGHT, so this record is what carries the Step 1a guarantee across the session boundary. Any other state — no record for this cycle, a last record reading `FAIL …` (exit 1), or one reading `DIRTY …` (exit 3: the checks passed but the tree they left is what a session ended on, between Step 4 and the re-run) — means Step 1a runs now, with the same exit handling (1 → stop and report, 3 → Step 4 then re-run, 2 → fix the scaffold), before any phase is re-entered. The branch is identified by the **documented dev-branch naming convention** (PREFLIGHT Step 5): the issue-scoped dev branch for `#N` is `dev/<date>-issue-<N>`, located with `git branch --list 'dev/*-issue-<N>'`. If it is missing, or matches ambiguously, or a required artifact is absent, treat the cycle as unrecoverable and report to the user (do not fabricate the missing artifact).
 
    *Note (branch-source):* the state schema (`CLAUDE.md` > AutoFlow State Tracking) carries **no `branch` field**, so the issue→branch mapping cannot be read from the state file. Rather than add a schema field (a data-model change out of family with this spec-consistency fix), the branch is made derivable by the documented Step-5 convention (`dev/<date>-issue-<N>`, aligned to live practice), so step 2 resolves the branch deterministically against a documented rule — not against undocumented live practice or a non-existent state field.
-3. **Re-enter at the phase immediately after the last passed gate.** If the last confirmed point is indeterminate (no recorded gate `scores`, or artifacts inconsistent), fall back conservatively to **re-running from the phase that follows the most recent gate whose `scores` are present** — never skip a gate that has no recorded PASS. A gate is re-run, not assumed passed, whenever its `scores` are absent.
+3. **Re-enter at the phase immediately after the last passed gate** — once that gate's PASS is
+   closed. A PASS is closed when the ledger holds that gate's `PASS recommendations` entry for this
+   cycle, every `fix` line in it is covered by the re-score verdict entry that names its commit, and
+   every `operator` line has its final-disposition line (GATE:QUALITY > *Recommendation
+   disposition*). When any of the three is missing, resume at that disposition — dispose, route the
+   open fixes, run the re-score — before the next phase is entered. If the last confirmed point is indeterminate (no recorded gate `scores`, or artifacts inconsistent), fall back conservatively to **re-running from the phase that follows the most recent gate whose `scores` are present** — never skip a gate that has no recorded PASS. A gate is re-run, not assumed passed, whenever its `scores` are absent.
 4. Resume does **not** increment `cycle` and does **not** reset `phases` (contrast review-response entry, which does both) — it is a continuation of the same cycle, not a new one.
 
 **Bundle drift (fail-closed stop condition, issue #167).** Before DIAGNOSE, on a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this step), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6, issue #185 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here rather than at the fail-closed readout in ARCHITECT), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`, ADR-0024 D3; the leg resolves the opt-in through the shipped `scripts/test/suite-manifest.sh` and a target that has not opted in PASSes without the selector being consulted — issues #228 / #229) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7, issue #213 — the selector's own `--check-headers` stage); a declaration file that is present but unreadable is a D7 FAIL, and a scaffold with no `tests` object at all is named by a `HINT` beside the PASS (a re-stamp never adds it). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`, so the check is the same from this shell as from a hook; a side that is not locally resolvable reports `SKIP`, never a failure. A non-zero exit is a **fail-closed** hard PREFLIGHT stop: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per RED > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`), or repair the unreadable `.claude/autoflow.local.json` it names. A `WARN` (a changed scaffold sample, an artifact the current manifest does not ship) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
@@ -1475,7 +1480,8 @@ opens, the orchestrator disposes of them
     operator, situation-first.
 - **The record** is one ledger entry per pass, headed `## O<n> — <gate> PASS recommendations (cycle
   <C>, <gate>)`, one line per recommendation — its `path:line` or text, the disposition, the
-  grounds — appended before the transition. The verdict entry of the re-score that follows names
+  grounds — appended before the transition; a PASS with no recommendation still gets the entry,
+  reading `none`, so a resume can tell a closed disposition from one never made. The verdict entry of the re-score that follows names
   the commits that carry the `fix` lines. An `operator` line is closed once the operator answers:
   the entry that records the answer — or, when the answer is an `[ac-decision]` entry, the `O` entry
   that records the re-entry judgment — carries a line naming the recommendation and its final
@@ -1484,20 +1490,22 @@ opens, the orchestrator disposes of them
 - **A fix travels the route its class names**, as a FAIL's re-entry does: the orchestrator judges
   the class (`doc` / `test` / `impl` / `design`, defined at *FAIL routing* below), records it on the
   line, and `scripts/gate/remedy-route.sh route` picks the entry point, several `fix` lines going
-  together to the farthest. At GATE:HYPOTHESIS, where neither a design nor a change exists, a `fix`
-  item is carried into the ARCHITECT transcript's `init` brief: the deliberation settles it and
-  GATE:PLAN scores the result, so no GATE:HYPOTHESIS re-score runs. At GATE:PLAN, where no change
-  exists yet, an item below the decision
+  together to the farthest. At GATE:HYPOTHESIS the route is DIAGNOSE: the role that wrote the
+  analysis the recommendation names — the structure analysis (Phase A / Phase 3) for the structure
+  form, the cause hypotheses and their lightweight verification for the cause form — amends that
+  artifact, and a problem the confirmed cause carries enters its `## Scope judgments`. At GATE:PLAN,
+  where no change exists yet, an item below the decision
   layer (ARCHITECT > *Output artifacts* item 1, the dividing question) is carried into the RED /
   GREEN spawn prompt at DISPATCH, and an item that moves a decision goes to an ARCHITECT
   re-discussion on a `brief` naming it. A `doc` fix owes no sweep record: the hook's `doc` gate reads
   a FAIL's recorded class, and a PASS records none.
 - **The fix is scored before the cycle moves on.** The gate whose report carried the recommendation
   runs again as a fresh spawn with the narrowed input its re-entry uses (GATE:PLAN > *Re-entry
-  re-score*, AUDIT > *Review-response re-score*, *Re-entry re-score* below), re-scoring the items
+  re-score*, AUDIT > *Review-response re-score*, *Re-entry re-score* below; at GATE:HYPOTHESIS the
+  same form over the amended DIAGNOSE artifact), re-scoring the items
   whose anchors the fix touched and the item the recommendation was listed under; the rest inherit.
   No tree a gate did not score reaches the reviewer — the ground #607's ledger gave for leaving its
-  recommendations unfixed. A fix carried into ARCHITECT's brief or DISPATCH is scored where the work it enters is scored.
+  recommendations unfixed. A fix carried into DISPATCH is scored where the work it enters is scored.
 - **Bounds.** One fix pass per gate per cycle on the orchestrator's authority. It is not a FAIL and
   consumes no FAIL cap; a failing re-score is an ordinary FAIL, routed by `remedy_class` and counted,
   and a route through ARCHITECT consumes the ARCHITECT re-entry counter. The re-score's own

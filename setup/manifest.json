@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "99cfe85f6635b5eede5b5a1f7506b5aa102cc039c0c049232efedbace868e165"
+      "sha256": "a62069cdd0db78b623d092fabb2f20e344374711cfbaa07dc2368776cfb76ec0"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "00e7bcaf1e3075576512da04be4be095025a4fe39667a44aa659ee712264fa1a"
+      "sha256": "fa449f06448bc1e3fd425c7efd0ff308d84d612b3f4f92828df43a6693139202"
     },
     {
       "source": "docs/development-guideline.md",
@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3e862a4194bd62392de14a6e28ce818a4048b6c9b7f1834bafc11f72998479b7"
+      "sha256": "be33a0b6e578c270490783a51adde28d843f8f8d572e1915bdcb76def3032046"
     },
     {
       "source": "docs/external-review-sequencing.md",
