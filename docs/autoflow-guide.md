@@ -849,7 +849,7 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 
 - **PASS** (avg ≥ 7.5, each ≥ 7) → recommendation triage (GATE:QUALITY > *Recommendation triage*;
   here every `Medium`+ recommendation re-enters ARCHITECT on a `brief` and this gate re-scores the
-  delta, and a `Low` below the decision layer is handed to the DISPATCH spawn prompt) → DISPATCH.
+  delta, and a `Low` below the decision layer is deferred to the DISPATCH spawn prompt) → DISPATCH.
 - **FAIL** → ARCHITECT (max 3×).
 
 ### Re-entry re-score
@@ -878,7 +878,7 @@ Each role's task is delivered in the prompt of the direct spawn that enters its 
 - **Role spawn**: ARCHITECT was the orchestrator's relay of two participants, recorded from the transcript file by the Record workflow (ADR-0023 D2); those participants are not woken for RED or GREEN. The orchestrator spawns a fresh agent at each phase entry — the Test AI at RED entry, the Developer AI at GREEN entry once RED is complete — anonymous direct spawns (`subagent_type`); see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
 - **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the cycle-layer store `.autoflow/issue-{N}-local/` and hands over the **run record so far** — the RED report's path — naming each verification-design row that still has no record as *run first* ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it is found*).
-- Both receive: acceptance criteria + verification design + affected docs — and each `Low` recommendation below the decision layer that GATE:PLAN's triage handed to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
+- Both receive: acceptance criteria + verification design + affected docs — and each `Low` recommendation below the decision layer that GATE:PLAN's triage deferred to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
 - Every later role spawn in the cycle — VERIFY, REFINE, the GATE:QUALITY evaluator — receives the run record the same way: the prior reports' paths, with any row lacking a record marked *run first*.
 
 ---
@@ -1498,8 +1498,11 @@ No separate disposition system exists for gate recommendations
     artifact as the ground ARCHITECT or DISPATCH then reads, and it never sends the cycle forward
     past the gate unre-scored. A fact below the decision layer (ARCHITECT > *Output artifacts*
     item 1) is not a defect of the artifact these gates score — the layer split derives it at RED /
-    GREEN — so the evaluator records it at `Low`, and the orchestrator's `Low` judgment hands it to
-    the executing role in the DISPATCH spawn prompt or defers it.
+    GREEN — so the evaluator records it at `Low`, and the orchestrator's `Low` judgment **defers**
+    it: to the executing role — recorded in the gate's verdict entry as deferred to DISPATCH, carried
+    in the RED / GREEN spawn prompt, and judged with that work at GATE:QUALITY — or to the known-gaps
+    line. It is never a fix-now attempt: nothing in the artifact this gate scores changes, so there is
+    nothing for this gate to re-score, no `[gate-autofix]` entry and no `remedy_class` in state.
   - **Not directly related** — none of question 1's three conditions holds — is separated as *Scope
     judgment*'s table says, recorded with its ground and a separate issue the follow-up path. A
     `Medium`+ recommendation that **is** directly related is fixed on its route or paused for the
@@ -1515,7 +1518,8 @@ No separate disposition system exists for gate recommendations
   reviewer's loop check exists to stop. The user's answer is appended to the ledger and selects
   re-entry.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
-  gate's verdict entry: fix now, or defer and name it in the PR body's known-gaps line. A `Low`
+  gate's verdict entry: fix now, or defer — to the PR body's known-gaps line, or, for a `Low` below
+  the decision layer at a gate before execution, to the executing role at DISPATCH (above). A `Low`
   fixed now **enters the procedure above as an attempt from that point**: the orchestrator judges
   its `remedy_class` (the evaluator tags none on a `Low`), and the fix is routed, recorded as a
   `[gate-autofix]` entry, marked in `phases.<gate>.remedy_class`, re-scored by the same gate and
