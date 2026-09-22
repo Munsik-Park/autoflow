@@ -188,7 +188,7 @@ mk_raw_state() { # <dir> <raw gate_quality remedy_class JSON value>
     "gate_quality": { "remedy_class": $raw, "scores": { "Completeness": 8 } } } }
 JSON
 }
-for raw in '""' '0' '{}' '"fix"'; do
+for raw in '""' '0' '{}' '"fix"' 'null'; do
   MAL=$(mktemp -d); mk_raw_state "$MAL" "$raw"
   run_hook_stderr 2 "malformed AutoFlow state file" "remedy_class=$raw → MALFORMED state, git push fails closed" "$MAL" "$(bash_json 'git push')"
   run_hook_stderr 2 "malformed AutoFlow state file" "remedy_class=$raw → MALFORMED state, gh pr create fails closed" "$MAL" "$(bash_json 'gh pr create --title x')"
@@ -210,7 +210,7 @@ mk_struct_state() { # <dir> <raw gate_hypothesis_structure remedy_class JSON val
     "gate_quality": { "scores": { "Completeness": 8 } } } }
 JSON
 }
-for raw in '""' '0' '{}' '"fix"'; do
+for raw in '""' '0' '{}' '"fix"' 'null'; do
   SM=$(mktemp -d); mk_struct_state "$SM" "$raw"
   run_hook_stderr 2 "malformed AutoFlow state file" "gate_hypothesis_structure remedy_class=$raw → MALFORMED state, git push fails closed" "$SM" "$(bash_json 'git push')"
   rm -rf "$SM"
@@ -228,6 +228,30 @@ cat > "$NESTMAL/.autoflow/issue-275.json" <<'JSON'
 JSON
 run_hook_stderr 2 "malformed AutoFlow state file" "empty remedy_class in the latest fix_regression record → MALFORMED, git push fails closed" "$NESTMAL" "$(bash_json 'git push')"
 rm -rf "$NESTMAL"
+# Explicit null (PR #290 review round 3): the field is present, so it is not the
+# optional absence — it is outside the enum, MALFORMED at the root and in the
+# latest fix_regression record, on audit and on gate_quality alike.
+NULLA=$(mktemp -d); mkdir -p "$NULLA/.autoflow"
+cat > "$NULLA/.autoflow/issue-275.json" <<'JSON'
+{ "active": true, "issue": "#275",
+  "phases": { "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+              "audit": { "remedy_class": null, "scores": { "Authn": 9 } },
+              "gate_quality": { "scores": { "Completeness": 8 } } } }
+JSON
+run_hook_stderr 2 "malformed AutoFlow state file" "audit remedy_class=null at the root → MALFORMED, git push fails closed" "$NULLA" "$(bash_json 'git push')"
+run_hook_stderr 2 "malformed AutoFlow state file" "audit remedy_class=null at the root → MALFORMED, gh pr create fails closed" "$NULLA" "$(bash_json 'gh pr create --title x')"
+rm -rf "$NULLA"
+NULLN=$(mktemp -d); mkdir -p "$NULLN/.autoflow"
+cat > "$NULLN/.autoflow/issue-275.json" <<'JSON'
+{ "active": true, "issue": "#275",
+  "phases": { "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+              "audit": { "scores": { "Authn": 9 } },
+              "gate_quality": { "scores": { "Completeness": 8 } } },
+  "fix_regression": { "phases": { "gate_quality": { "remedy_class": null, "scores": { "Completeness": 9 } } } } }
+JSON
+run_hook_stderr 2 "malformed AutoFlow state file" "gate_quality remedy_class=null in the latest fix_regression record → MALFORMED, git push fails closed" "$NULLN" "$(bash_json 'git push')"
+run_hook_stderr 2 "malformed AutoFlow state file" "gate_quality remedy_class=null in the latest fix_regression record → MALFORMED, gh pr create fails closed" "$NULLN" "$(bash_json 'gh pr create --title x')"
+rm -rf "$NULLN"
 rm -rf "$OPENQ" "$OPENA" "$CLEAN" "$SUP"
 
 echo
