@@ -1460,7 +1460,7 @@ judgment, ledger record and attempt cap — after the PASS of every rubric-score
 (GATE:HYPOTHESIS in both forms, GATE:PLAN, AUDIT, GATE:QUALITY) and before the transition it opens.
 The one thing added is the evaluator's output contract for `recommendations`
 ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format): each item names its
-subject, its severity in the reviewer's vocabulary, and — on `Medium` and above — its `remedy_class`.
+subject — a `path:line` of the evaluated artifact at the evaluated commit, or a section of the evaluated artifact (a design document, a DIAGNOSE analysis file) — its severity in the reviewer's vocabulary, and — on `Medium` and above — its `remedy_class`.
 No separate disposition system exists for gate recommendations
 ([`records/design-rationale.md`](records/design-rationale.md) > Decision 25).
 
@@ -1737,6 +1737,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
 1. Change summary (changed files, commit hashes; per-sub-repo if applicable).
 2. Test results report.
 3. Push the dev branch: `git push -u origin dev/<branch>` (in review-response mode the branch is already tracked; the push updates the existing PR).
+   - **[MUST] Body sync (review-response mode).** A push updates the PR's diff, not its body, and step 4 is skipped, so the orchestrator re-renders the host PR body from this cycle's records and writes it with `gh pr edit <hostPR> --body-file <rendered body>` **before** the step-6 re-review: the `## Verification dispositions` list and the known-gaps line (step 4's two record obligations) carry this cycle's rows, separations and deferred recommendations, so the re-review reads the judgments this cycle made, not the previous cycle's. The reviewer can catch a wrong separation only where it can read it (PR #290 review round 4).
    - **[MUST]** *Secondary (multi-repo), review-response mode*: once the sub-repo fix has landed and that sub-repo PR's `blocked-by-review` label has cleared (the AC4 propagation-batching condition — see step 6.5), and **before** this push updates the host PR, re-bump the host `services` pointer to that sub-repo PR's new head **once**, then confirm `git ls-tree HEAD services | awk '{print $3}'` equals that head. This manual pointer-equality check is the **only** defense against a stale pointer (ADR-0015 D3); it fires once at the clean point, not for a fix push in isolation.
 4. Create PR(s) (skipped in review-response mode — step 3's push updates the existing PR):
    - PR title follows the [`title-guide.md`](title-guide.md) convention (`[type · epic-slice · #N] description`).
@@ -1756,7 +1757,8 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      listing is what lets the reviewer judge the addition against the target's own convention
      ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *What a cycle leaves in the target's tree*).
    - The known-gaps line ([`pr-body-guide.md`](pr-body-guide.md) > *한계와 known gaps*) names each
-     directly related problem the cycle separated, with the separation reason its scope record
+     directly related problem the cycle separated — on every cycle: here on creation, and in
+     review-response mode by step 3's body sync — with the separation reason its scope record
      carries ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules >
      *Scope judgment*), and each gate recommendation deferred or separated at triage
      (GATE:QUALITY > *Recommendation triage*) — the reviewer can catch a wrong separation only

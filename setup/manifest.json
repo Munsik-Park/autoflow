@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "29677ea2816f8392dd586eaeaad83649b840e7ffbc762480840c90a4bfc7f226"
+      "sha256": "b8f59a9227070138fa968c6d62f9dd9d37f24b00191e9144c2c3ebf3a3f54e54"
     },
     {
       "source": "docs/development-guideline.md",
@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "dd0c3a5d5762b9f19f0008677b6984e4c18a01e9c588ef7fb315b8af398bb44f"
+      "sha256": "268dc70db95f3d254a3533c6c976e5b825cfae6a9147f1b46ed3c4c342d99fcd"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "277d0b505c7f284358890c9f7cac385fc498a22317092058ae34627fd92b7955"
+      "sha256": "7465718f9fbfe5086b5efc18051f4fedb0e681e7139c8820a531b6910752f54a"
     },
     {
       "source": "docs/security-checklist.md",

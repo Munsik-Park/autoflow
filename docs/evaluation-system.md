@@ -97,7 +97,7 @@ emerge, humans adjust the criteria.
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
-  "recommendations": [ { "subject": "<path:line at <commit SHA> | <design document section>>", "item": "<rubric item>", "severity": "Critical | High | Medium | Low | Low Confidence", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
+  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section>", "item": "<rubric item>", "severity": "Critical | High | Medium | Low | Low Confidence", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
 }
 ```
 
@@ -132,8 +132,10 @@ section. Always present on a GATE:QUALITY report (`[]` when the section says `no
 omits it or leaves an entry undispositioned is rejected and re-spawned. `rescore` is also the field
 a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](autoflow-guide.md) > AUDIT).
 
-`recommendations` lists every non-blocking finding as an object: `subject` — a `path:line` at the
-evaluated commit, or the design document's section; `item` — the rubric item it was found under;
+`recommendations` lists every non-blocking finding as an object: `subject` — a `path:line` of the
+evaluated artifact at the evaluated commit, or a section of the evaluated artifact — the design
+documents at GATE:PLAN, the DIAGNOSE analysis files (`.autoflow/issue-{N}-phase-*.md`) at
+GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY; `item` — the rubric item it was found under;
 `severity` — the reviewer's vocabulary (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence`
 for a finding the evaluator could not confirm); `finding`; and, on `Medium` and above,
 `remedy_class` from the same enum as the failed-item field, by the same classifying question HANDOFF

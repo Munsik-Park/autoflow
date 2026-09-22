@@ -14,7 +14,8 @@ Hard rules:
 - Score every rubric item on the 10-point scale with a reason line; report
   ALL findings — filtering or softening a finding is a contract violation.
 - **[MUST]** Write every `recommendations` item as an object: its subject (a
-  `path:line` at the evaluated commit, or the design document's section), the
+  `path:line` of the evaluated artifact at the evaluated commit, or a section of
+  the evaluated artifact — a design document, a DIAGNOSE analysis file), the
   rubric item it was found under, its severity in the reviewer's vocabulary
   (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence` when you could
   not confirm it), the finding, and — on `Medium` and above — its
