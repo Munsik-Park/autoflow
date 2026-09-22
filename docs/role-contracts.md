@@ -83,8 +83,9 @@ Decision 24).
 - A line a tool reads to change its behavior — a lint suppression, a type-checker directive — is
   code even in comment syntax: a defect in it is scored under the item its behavior belongs to, not
   by this rule. An explanation written beside it is a comment.
-- `Minimal implementation` weighs the comments the change adds — the REFINE report's
-  `## Comment check` section with the comments in the diff — and such a finding stays under the same floor
+- `Minimal implementation` weighs the comments the change adds by content and by volume — the REFINE
+  report's `## Comment check` section, its `comment-ratio` line included, with the comments in the
+  diff — and a content or volume finding stays under the same floor
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > GATE:QUALITY
   linkage).
 
