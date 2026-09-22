@@ -242,7 +242,9 @@ Feat issues skip this gate.
 | Verification sufficiency | Was lightweight verification actually performed? Are unverified items justified? |
 | Verdict evidence | Is the conclusion (code change required / not required) logically supported? |
 
-- **PASS** → ARCHITECT.
+- **PASS** → the orchestrator disposes of the report's recommendations (GATE:QUALITY >
+  *Recommendation disposition*) → ARCHITECT. The structure form's PASS is disposed of the same way
+  before DIAGNOSE continues.
 - **FAIL** → DIAGNOSE (max 2×). Third FAIL → human decision.
 - **Non-code root cause confirmed** → report to user (situation-first — [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation), pause AutoFlow.
 
@@ -455,7 +457,7 @@ this round — not the accumulated transcript — and **appends** a delta sectio
 re-authoring the body:
 
 ```
-## Delta — round <n> (<brief origin: GATE:PLAN FAIL | un-agreed re-discussion | VERIFY design contradiction>)
+## Delta — round <n> (<brief origin: GATE:PLAN FAIL | un-agreed re-discussion | VERIFY design contradiction | design re-entry | acceptance-criterion decision | gate recommendation>)
 
 - <what changed>: <the decision as it now stands> — supersedes <the section or decision it replaces>
 - <what was added>: <the decision> — <ground>
@@ -725,6 +727,22 @@ their IDs and keep everything they read; when they are not (a session restart), 
 spawned fresh with the transcript path — the file is the memory — and the relay continues from
 there. The Record workflow is invoked again at the end, and the scribe reads the brief where it
 sits.
+
+**A return from a later phase of the same cycle spawns the participants fresh on the same
+transcript.** A return to ARCHITECT after DISPATCH — a VERIFY design contradiction, a `design`
+re-entry from GATE:QUALITY or from HANDOFF's CI failure, an acceptance-criterion decision raised
+after ARCHITECT (*Report routing*), or a gate recommendation's `fix` that moves a decision
+(GATE:QUALITY > *Recommendation disposition*) — crosses the phase boundary that ended the
+participants' lifetime ([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Phase-boundary respawn*), so
+they are never re-woken for it. The orchestrator appends the `brief` to the **same** transcript —
+naming what the return is for: the blocker report, the failed items and their findings, the
+`[ac-decision]` entries, or the recommendation lines — and spawns each side fresh by step 2 of the
+*Relay procedure*, pointed at the transcript; the turn numbering continues, and the file is the
+memory. The Record appends a delta section whose origin names the trigger (`VERIFY design
+contradiction`, `design re-entry`, `acceptance-criterion decision`, `gate recommendation`), GATE:PLAN
+re-scores that delta (*Re-entry re-score*), and the cycle re-enters RED. The counter is the
+trigger's: every one of them consumes the ARCHITECT re-entry counter except an acceptance-criterion
+decision, which the operator's own decision bounds.
 
 **A new cycle's re-discussion spawns the participants fresh.** A participant's lifetime is one
 cycle's ARCHITECT entry ([`CLAUDE.md`](../CLAUDE.md) > Spawn mode by role lifetime; ADR-0023
@@ -1432,8 +1450,9 @@ each-item ≥ 7 criterion:
 
 A PASS report's `recommendations` are findings the evaluator recorded without scoring the item down,
 and one left unread comes back as a reviewer finding: in #594, #607 and #630 a recommendation carried
-past a PASS returned as a reviewer `Medium` (issue #275). After a PASS of GATE:PLAN, AUDIT or
-GATE:QUALITY, and before the transition it opens, the orchestrator disposes of them
+past a PASS returned as a reviewer `Medium` (issue #275). After the PASS of every rubric-scored gate
+— GATE:HYPOTHESIS in both forms, GATE:PLAN, AUDIT and GATE:QUALITY — and before the transition it
+opens, the orchestrator disposes of them
 ([`records/design-rationale.md`](records/design-rationale.md) > Decision 25).
 
 - **Which.** Every recommendation that gate's reports in this cycle recorded, up to and including the
@@ -1457,11 +1476,18 @@ GATE:QUALITY, and before the transition it opens, the orchestrator disposes of t
 - **The record** is one ledger entry per pass, headed `## O<n> — <gate> PASS recommendations (cycle
   <C>, <gate>)`, one line per recommendation — its `path:line` or text, the disposition, the
   grounds — appended before the transition. The verdict entry of the re-score that follows names
-  the commits that carry the `fix` lines.
+  the commits that carry the `fix` lines. An `operator` line is closed once the operator answers:
+  the entry that records the answer — or, when the answer is an `[ac-decision]` entry, the `O` entry
+  that records the re-entry judgment — carries a line naming the recommendation and its final
+  disposition, `fix`, `reject — <reason>` or `outside — <reason>`. A recommendation's final
+  disposition is the last line that names it; *Exposure* and HANDOFF step 4 read that one.
 - **A fix travels the route its class names**, as a FAIL's re-entry does: the orchestrator judges
   the class (`doc` / `test` / `impl` / `design`, defined at *FAIL routing* below), records it on the
   line, and `scripts/gate/remedy-route.sh route` picks the entry point, several `fix` lines going
-  together to the farthest. At GATE:PLAN, where no change exists yet, an item below the decision
+  together to the farthest. At GATE:HYPOTHESIS, where neither a design nor a change exists, a `fix`
+  item is carried into the ARCHITECT transcript's `init` brief: the deliberation settles it and
+  GATE:PLAN scores the result, so no GATE:HYPOTHESIS re-score runs. At GATE:PLAN, where no change
+  exists yet, an item below the decision
   layer (ARCHITECT > *Output artifacts* item 1, the dividing question) is carried into the RED /
   GREEN spawn prompt at DISPATCH, and an item that moves a decision goes to an ARCHITECT
   re-discussion on a `brief` naming it. A `doc` fix owes no sweep record: the hook's `doc` gate reads
@@ -1471,7 +1497,7 @@ GATE:QUALITY, and before the transition it opens, the orchestrator disposes of t
   re-score*, AUDIT > *Review-response re-score*, *Re-entry re-score* below), re-scoring the items
   whose anchors the fix touched and the item the recommendation was listed under; the rest inherit.
   No tree a gate did not score reaches the reviewer — the ground #607's ledger gave for leaving its
-  recommendations unfixed. A fix carried into DISPATCH is scored where the work it enters is scored.
+  recommendations unfixed. A fix carried into ARCHITECT's brief or DISPATCH is scored where the work it enters is scored.
 - **Bounds.** One fix pass per gate per cycle on the orchestrator's authority. It is not a FAIL and
   consumes no FAIL cap; a failing re-score is an ordinary FAIL, routed by `remedy_class` and counted,
   and a route through ARCHITECT consumes the ARCHITECT re-entry counter. The re-score's own
@@ -1480,9 +1506,9 @@ GATE:QUALITY, and before the transition it opens, the orchestrator disposes of t
   the problem is separated, and the answer is an `O` ledger entry with the authority `operator
   decision`. The bound of the pass is never a separation reason — it answers neither half of
   question 2.
-- **Exposure.** Every line not disposed `fix` — `reject` and `outside` — is carried with its reason
-  into the host PR body's `## Scope separations` (HANDOFF step 4), so the reviewer judges each one on
-  its stated reason.
+- **Exposure.** Every recommendation whose final disposition is not `fix` — `reject` or `outside`,
+  an operator-decided separation included — is carried with its reason into the host PR body's
+  `## Scope separations` (HANDOFF step 4), so the reviewer judges each one on its stated reason.
 
 ### FAIL routing (`remedy_class`)
 
@@ -1703,8 +1729,8 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
    - **[MUST]** The host PR body carries a `## Scope separations` list: every directly related
      problem the cycle left out, with its separation reason, taken from the scope records
      ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope
-     judgment*), and every gate recommendation not disposed `fix` — `reject` or `outside` — with its
-     reason (GATE:QUALITY > *Recommendation disposition*). A cycle with none says so in one line. A separation is a
+     judgment*), and every gate recommendation whose final disposition is not `fix` — `reject` or
+     `outside` — with its reason (GATE:QUALITY > *Recommendation disposition*). A cycle with none says so in one line. A separation is a
      judgment, and the reviewer can catch a wrong one only where it can read it. Form:
      [`pr-body-guide.md`](pr-body-guide.md) > *Scope separations*.
    - Host-only change (target-centric — the default): create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path> --no-subrepo-dep`. The script still passes `--draft` (uniform pre-review marker) and still applies the `blocked-by-review` gate label, but does not apply the `blocked-by-subrepo` label — a host-only PR carries no merge-order gate (see Merge Sequencing > host-only case).

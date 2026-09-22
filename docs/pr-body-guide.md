@@ -97,8 +97,8 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 ### 6. Scope separations (범위 분리의 노출)
 
 host PR body는 `## Scope separations` 섹션을 싣는다 — cycle이 이슈와 직접 관련이라고
-판단하고도 분리한 문제 각각과 그 분리 사유, 그리고 gate 권고 중 `fix`가 아닌 처분
-(`reject`, `outside`)을 받은 항목 각각과 그 사유.
+판단하고도 분리한 문제 각각과 그 분리 사유, 그리고 gate 권고 중 최종 처분이 `fix`가
+아닌(`reject`, `outside` — 운영자가 분리를 결정한 권고 포함) 항목 각각과 그 사유.
 
 - 범위 판정은 판단이고 틀릴 수 있다. reviewer는 읽을 수 있는 분리만 판단할 수 있다 —
   PASS 권고를 PR 밖으로 넘긴 cycle에서 같은 지적이 reviewer `Medium`으로 돌아왔다(#275).

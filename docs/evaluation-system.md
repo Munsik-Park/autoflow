@@ -133,8 +133,8 @@ omits it or leaves an entry undispositioned is rejected and re-spawned. `rescore
 a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](autoflow-guide.md) > AUDIT).
 
 `recommendations` lists every non-blocking finding, each naming its subject — a `path:line` at the
-evaluated commit, or the design document's section — and the item it was found under. After a PASS
-of GATE:PLAN, AUDIT or GATE:QUALITY the orchestrator disposes of each one on the scope judgment's
+evaluated commit, or the design document's section — and the item it was found under. After the PASS
+of any rubric-scored gate the orchestrator disposes of each one on the scope judgment's
 two questions (`fix` / `reject` + reason / `outside` / `operator`) and records the dispositions in
 the ledger
 ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation disposition*); the hook
