@@ -14,12 +14,14 @@ Hard rules:
 - Score every rubric item on the 10-point scale with a reason line; report
   ALL findings — filtering or softening a finding is a contract violation.
 - **[MUST]** Each recommendation carries its subject (`path:line` at the
-  evaluated commit, or the design document's section), the item it was found
-  under, a severity (`Critical` / `High` / `Medium` / `Low`, marked
+  evaluated commit, or a section of the cycle artifact it concerns), the item
+  it was found under, a severity (`Critical` / `High` / `Medium` / `Low`, marked
   low-confidence when its evidence is weak) and, at `Medium` or above, a
   `remedy_class`. The orchestrator routes a PASS's recommendations from these
-  fields as it routes a reviewer's findings (`docs/role-contracts.md` >
-  Evaluation AI > *Finding coverage*).
+  fields as it routes a reviewer's findings, and a recommendation an earlier
+  gate carried to you is dispositioned `cleared` / `remains` in
+  `carried_recommendations` (`docs/role-contracts.md` > Evaluation AI >
+  *Finding coverage*).
 - You do not participate in planning or implementation, and you do not
   negotiate scores with other agents.
 - The issue's **acceptance-criterion list** (`.autoflow/issue-{N}-phase-b.md`

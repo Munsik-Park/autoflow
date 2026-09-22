@@ -782,7 +782,8 @@ so the ARCHITECT re-entry counter is the orchestrator's own accounting (Regressi
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: the architecture decision document + verification design from ARCHITECT, the issue's
 acceptance-criterion list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the
-issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
+issue decision ledger (`.autoflow/issue-{N}-ledger.md`) — which names any GATE:HYPOTHESIS
+recommendation carried to this gate (GATE:QUALITY > *PASS recommendations*).
 
 ### Scoring (4 items × 10 points)
 
@@ -1309,6 +1310,7 @@ logic touched`, and — on a target — section `## Comment check`), and the cyc
 the feature design's `## Scope` section and every `## Scope judgments` section in the cycle's
 `.autoflow/issue-{N}-*.md` reports
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
+The ledger names any GATE:PLAN recommendation carried to this gate (*PASS recommendations* below).
 
 **[MUST] REFINE observations are scoring input** (issue #135): the evaluator reads the REFINE
 report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
@@ -1547,16 +1549,19 @@ transition that PASS opens ([`records/design-rationale.md`](records/design-ratio
 Decision 25). Its classification, routes, pause criteria, `Low` judgment, record and attempt cap are
 step 6.5's; three things differ, because the finding comes from a gate rather than from the reviewer:
 
-- **The evaluator classifies.** Each recommendation names its subject, the item it was found under
-  and a severity on the reviewer's scale — `Critical` / `High` / `Medium` / `Low`, marked
+- **The evaluator classifies.** Each recommendation names its subject — a `path:line` at the
+  evaluated commit, or a section of the cycle artifact it concerns, such as a design document or the
+  DIAGNOSE analysis, which no commit carries — the item it was found under and a severity on the
+  reviewer's scale — `Critical` / `High` / `Medium` / `Low`, marked
   low-confidence when uncertain — and one at `Medium` or above carries a `remedy_class` answering
   step 6.5's question: does clearing it discard or change a decision the deliberation settled?
   ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The report is the
   findings file, so no ingesting subagent runs. A report whose recommendation lacks its subject or
   severity, or whose `Medium`+ recommendation lacks its class, is rejected and the evaluator
   re-spawned, as a findings file lacking a class is at step 6.5.
-- **The gate re-scores in place of the reviewer.** The gate whose report carried a recommendation
-  scores its fix, as a fresh spawn in the narrowed form its re-entry already uses (GATE:PLAN >
+- **The gate re-scores in place of the reviewer.** The gate whose report raised a recommendation
+  scores its fix — or, for a fix its phase has not reached yet, the gate that scores that phase's
+  work (below) — as a fresh spawn in the narrowed form its re-entry already uses (GATE:PLAN >
   *Re-entry re-score*, AUDIT > *Review-response re-score*, *Re-entry re-score* above): it re-scores
   the item each fixed recommendation was listed under plus every item whose anchor the fix touched,
   and dispositions the fixed recommendation `cleared` / `remains` as a prior finding. GATE:HYPOTHESIS,
@@ -1569,25 +1574,35 @@ step 6.5's; three things differ, because the finding comes from a gate rather th
 
 By severity:
 
-- **`Medium` or above — the transition waits.** `bash scripts/gate/remedy-route.sh route
-  <class>...` over the recommendations' classes names the entry point, as at step 6.5 (mixed →
-  farthest; `operator` anywhere pauses). Where the fix is made follows from the gate's place in the
-  cycle:
+- **`Medium` or above — fixed before the cycle moves past the fix.** `bash
+  scripts/gate/remedy-route.sh route <class>...` over the recommendations' classes names the entry
+  point, as at step 6.5 (mixed → farthest; `operator` anywhere pauses), and the fix is made there. An
+  entry point the cycle has passed is re-entered the way a FAIL's is (*FAIL routing* above) and the
+  cycle runs forward to the recommending gate, which re-scores the fix; the transition waits for it.
+  An entry point still ahead of the gate — as at GATE:HYPOTHESIS and GATE:PLAN, before any change
+  exists — is reached by the cycle's own course; the recommending gate cannot score a fix that does
+  not exist when it runs, so the gate that scores that phase's work does:
 
   | Gate | Where the fix is made | What scores it |
   |---|---|---|
-  | GATE:HYPOTHESIS | a recommendation whose subject is the analysis the gate scored: the DIAGNOSE step that wrote it, the gate's FAIL re-entry point; one on the work ahead: ARCHITECT's topic, as a `brief` naming it | the gate's re-evaluation; for the carried one, GATE:PLAN |
-  | GATE:PLAN | `design`: an ARCHITECT re-discussion on a `brief` naming it (ARCHITECT > *Re-discussion*); `test` / `impl` / `doc`: the RED / GREEN spawn prompt at DISPATCH, since no change exists yet and the fix changes no document GATE:PLAN reads | GATE:PLAN's re-entry re-score of the delta; for the carried one, GATE:QUALITY with the work it enters |
-  | AUDIT, GATE:QUALITY | the entry point, re-entered the way a FAIL's is (*FAIL routing* above), the cycle running forward to the gate again | that gate's re-score |
+  | GATE:HYPOTHESIS | a recommendation whose subject is the analysis the gate scored: the DIAGNOSE step that wrote it, the gate's FAIL re-entry point; any other: ARCHITECT's topic, as a `brief` naming it | the gate's re-score; for the carried one, GATE:PLAN |
+  | GATE:PLAN | the entry point the route names — `design`: an ARCHITECT re-discussion on a `brief` naming it (ARCHITECT > *Re-discussion*); `test` / `impl`: RED / GREEN, the recommendation entering their spawn prompt at DISPATCH; `doc`: the orchestrator's doc commit | GATE:PLAN's re-entry re-score of the delta; for the others, GATE:QUALITY |
+  | AUDIT, GATE:QUALITY | the entry point, re-entered as a FAIL's is | that gate's re-score |
 
-  A return to ARCHITECT consumes the ARCHITECT re-entry counter, as every return does
-  ([`CLAUDE.md`](../CLAUDE.md) > Regressions). A recommendation is handled once its fix has passed
-  the re-score, it has been carried to the phase that fixes it, it has been recorded as not this
-  issue's work (below), or the operator has decided it.
+  A **carried** recommendation — one whose fix is scored by a later gate — travels with the
+  transition and stays open: that gate's evaluation receives it and dispositions it `cleared` /
+  `remains` in its `carried_recommendations` field, and a `remains` one is that gate's own finding
+  at its severity, handled by this procedure there
+  ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). A return to
+  ARCHITECT consumes the ARCHITECT re-entry counter, as every return does
+  ([`CLAUDE.md`](../CLAUDE.md) > Regressions). A recommendation is handled once a re-score, or the gate it
+  was carried to, marks it `cleared`, once it has been recorded as not this issue's work (below), or
+  once the operator has decided it.
 - **`Low` — the orchestrator's judgment**, as at step 6.5: fix it now — the orchestrator naming the
   class the evaluator leaves unset at `Low`, and the fix taking the same route and re-score — or
-  leave it, the gate's verdict entry in the ledger noting that it was reviewed and left. The two questions of [`submodule-common-rules.md`](submodule-common-rules.md) > Change
-  Surface Rules > *Scope judgment* are the ground of that judgment. A target comment's divergence or
+  leave it, the gate's verdict entry in the ledger noting that it was reviewed and left. The two
+  questions of [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules >
+  *Scope judgment* are the ground of that judgment. A target comment's divergence or
   disallowed-content finding keeps its own handling (*Code comments in a target* below).
 - **Not this issue's work.** A recommendation, of any severity, whose problem meets none of the
   first question's three conditions is not fixed in this cycle: the gate's verdict entry records it
