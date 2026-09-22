@@ -1468,7 +1468,7 @@ No separate disposition system exists for gate recommendations
 |---|---|
 | Classification: the reviewer's severity (`Critical` / `High` / `Medium` / `Low`, `Low Confidence`) | the evaluator's, per item, in the same vocabulary |
 | `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the deliberation settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
-| Route: `scripts/gate/remedy-route.sh route <class>...` | the same script, the printed target read at the gate's own position (below) |
+| Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route, since no code exists yet (below) |
 | Pause criteria (a)–(d) | the same four, read for a gate (below) |
 | `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* |
 | Verification of the fix: the reviewer re-review (step 6) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; GATE:PLAN > *Re-entry re-score*; AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
@@ -1479,16 +1479,17 @@ No separate disposition system exists for gate recommendations
   directly — the reviewer needs an ingesting subagent because its output is a prose comment. A
   `Medium`+ item with no `remedy_class`, or any item with no subject or severity, is a report defect:
   reject and re-spawn the evaluator, as for a missing `fail_hypothesis`.
-- **`Medium` and above → do not transition.** Route by `scripts/gate/remedy-route.sh route` over the
-  `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere pauses). The script prints
-  a phase; each gate reads it at its own position, as each call site of the script already does:
-  - **A gate after execution** — AUDIT and GATE:QUALITY — re-enters the phase the script prints
-    (`DOC_COMMIT` / `RED` / `GREEN` / `ARCHITECT`, exactly as at *FAIL routing*, the `doc` route's
-    sweep record included); the routed work flows forward, and the recommending gate re-scores on the
-    narrowed input its re-entry already uses.
-  - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — resolves every `Medium`+
-    recommendation on the artifact it scores, by its own FAIL route narrowed to the item, and
-    re-scores it by the same form: at GATE:PLAN an ARCHITECT re-discussion on a `brief` naming the
+- **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
+  the change (issue #275 AC2 as revised on 2026-09-23: the earlier wording named the script's route,
+  which presumed a gate at which code already exists):
+  - **A gate after execution** — AUDIT and GATE:QUALITY — routes by `scripts/gate/remedy-route.sh
+    route` over the `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere pauses)
+    and re-enters the phase it prints (`DOC_COMMIT` / `RED` / `GREEN` / `ARCHITECT`, exactly as at
+    *FAIL routing*, the `doc` route's sweep record included); the routed work flows forward, and the
+    recommending gate re-scores on the narrowed input its re-entry already uses.
+  - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — has no code to return to, so the
+    script is not called: every `Medium`+ recommendation is resolved on the artifact the gate scores,
+    by the gate's own FAIL route narrowed to the item, and re-scored by the same form: at GATE:PLAN an ARCHITECT re-discussion on a `brief` naming the
     recommendation (ARCHITECT > *Re-discussion*), then GATE:PLAN's *Re-entry re-score* over the
     delta; at GATE:HYPOTHESIS the role that wrote the analysis it names amends that artifact — a
     problem the confirmed cause carries enters its `## Scope judgments` — then the same form

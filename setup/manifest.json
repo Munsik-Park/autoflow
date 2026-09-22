@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "eba5badc1b42ed63ae8fa16405114ace02c8350b60c6fb10b74d8c057860e76f"
+      "sha256": "fa54e9e3cfc7e5f3c7a74da60a48a5a593ffee3f8fd87959a8e28faa812e27e8"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7539c804f72e62c7286ceaf941f340252ddd720b6bf92666d53040256a0bd6a2"
+      "sha256": "ea7cef0d3ebc74bf6274d467db86207253c1f13d723d6a14410a7e08bb3190f8"
     },
     {
       "source": "docs/development-guideline.md",
@@ -300,7 +300,7 @@
       "dest": "scripts/gate/remedy-route.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "46589e71404a60454119950d5c36c31aaf3f4df1ff753fa7bffaa7a38b78cb72"
+      "sha256": "ee1981731565fcfd3fbef5d738222286fc589105e7109785f61f643739030b4a"
     },
     {
       "source": "scripts/review/scope-bounded.sh",
