@@ -132,6 +132,13 @@ section. Always present on a GATE:QUALITY report (`[]` when the section says `no
 omits it or leaves an entry undispositioned is rejected and re-spawned. `rescore` is also the field
 a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](autoflow-guide.md) > AUDIT).
 
+`recommendations` lists every non-blocking finding, each naming its subject — a `path:line` at the
+evaluated commit, or the design document's section — and the item it was found under. After a PASS
+of GATE:PLAN, AUDIT or GATE:QUALITY the orchestrator disposes of each one within the cycle's scope
+(`fix` / `reject` + reason / `operator`) and records the dispositions in the ledger
+([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation disposition*); the hook
+reads none of it.
+
 A suite verdict the evaluator re-derives is the recorded local run — its summary line read in the
 log the run left, the command re-run only when that log is absent (the row is then `not-run`) —
 never a citation of a host record; no `inherited_verdicts` key is written (ADR-0024 D6; issue #249).

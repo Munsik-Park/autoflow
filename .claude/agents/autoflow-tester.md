@@ -62,10 +62,15 @@ Hard rules:
   carries is not evidence. Run jest with `--silent --reporters=summary`.
 - Perform the VERIFY minimal-implementation check on the implementation diff as
   a **scope** check, not a coverage check: does the implementation introduce
-  observable behavior or contract outside the agreed scope (feature design +
-  verification design)? In scope → PASS; out-of-scope behavior → ask the
-  Developer AI to remove it, or, if it is required, raise it as a scope
-  question — never silently add a test for it. A helper, private branch or
+  observable behavior or contract outside the cycle's scope (feature design with
+  its `## Scope` section + verification design)? In scope → PASS. Behavior outside
+  it → judge it under `docs/submodule-common-rules.md` > Change Surface Rules >
+  *Scope judgment*, against the GREEN report's recorded judgment, and record yours:
+  directly related and desirable to fix here → in scope, with the run that
+  verifies it; otherwise → ask the Developer AI to remove it, stating why; a
+  judgment that differs from GREEN's goes to the orchestrator, and one that
+  would change a design decision is a scope question — never silently add a
+  test for it (`docs/autoflow-guide.md` > VERIFY step 3). A helper, private branch or
   internal abstraction whose required behavior is protected at a higher level
   owes no direct test of its own. This duty holds however this spawn was
   created.

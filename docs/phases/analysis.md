@@ -130,6 +130,12 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
    - Items that cannot be verified are marked "unverified".
 5. Hypothesis verdict notes: per hypothesis, eliminated / likely / unverified, with evidence.
 6. Task decomposition (only if code change is required).
+   - Beyond the acceptance criteria, name the problems the confirmed cause carries — its other
+     sites, and what fixing it will expose — and record the scope judgment for each
+     ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules >
+     *Scope judgment*) with its grounds, under `## Scope judgments` in the DIAGNOSE artifact that
+     carries the task decomposition. ARCHITECT reads it as an input and settles the cycle's scope
+     in the feature design's `## Scope` section; DIAGNOSE does not decide it alone.
 7. Identify affected docs.
 ```
 

@@ -222,7 +222,7 @@ PASS/FAIL thresholds (Type 1: each ≥ 7, two items; Type 2: each ≥ 7 and avg 
 items), the FAIL disposition by failing item and cycle `mode` (gap-low → new-issue close /
 review-response reply on PR; non-code lever → report to user + pause), the review-response loop check (trigger repeats the prior cycle's complaint class with a new witness case → reply on PR + pause for the user), cause hypotheses
 (≥ 3, "not a code bug" must be one), lightweight verification, hypothesis verdict notes,
-task decomposition, affected-docs identification, and the structure- and confirmation-bias
+task decomposition with the scope judgments the confirmed cause calls for, affected-docs identification, and the structure- and confirmation-bias
 safeguards.
 
 ---
@@ -346,6 +346,14 @@ layer that has a shell.
    verification exists to catch, rather than stating it. The deliberation stops here. Rationale:
    [`records/design-rationale.md`](records/design-rationale.md) > Decision 15.
 
+   **[MUST]** The document carries a `## Scope` section: the cycle's scope beyond the acceptance
+   criteria. Each problem the deliberation judged under
+   [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope
+   judgment* — DIAGNOSE's `## Scope judgments` and any the participants found — is listed as
+   included or separated, with the conditions it meets and, for a directly related problem left
+   out, its separation reason. A section with nothing beyond the criteria says `none`. Scope is a
+   decision: a wrong one sends the design back, so it is settled here, not derived below.
+
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
    the change delta, run the way the target runs its tests ([`CLAUDE.md`](../CLAUDE.md) >
@@ -389,7 +397,8 @@ layer that has a shell.
   verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
   criterion the design verifies by anything other than an automated test keeps its row, states that
   disposition, and states its `Reason` in one line — the row is never deleted. A design-added
-  criterion (`—`) is never a finding and owes no reason. This is what turns "was an acceptance
+  criterion (`—`) is never a finding and owes no reason; each problem the feature design's
+  `## Scope` section includes gets one. This is what turns "was an acceptance
   criterion dropped?" into a key join rather than a reading of prose, which is what lets the
   orchestrator and the two gates put such a change in front of the operator (*Report routing*
   below).
@@ -657,13 +666,28 @@ the gated one.
     Human-decision presentation), set `active: false`, `phase: "awaiting-user"`. The user's
     decision drives re-entry.
 - **An agreed conclusion changes an acceptance criterion's content.** Excluding, revising or
-  splitting an issue acceptance criterion is the operator's authority. Report situation-first
-  naming the affected criteria and what the design proposes for each, set `active: false`,
-  `phase: "awaiting-user"`, and do not spawn GATE:PLAN. Record the answer as one `[ac-decision]`
-  ledger entry per decided AC in the grammar at [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger >
-  *Acceptance-criterion decisions*; on `revised` or `split`, edit the Phase B acceptance-criterion
-  table to match; then continue to GATE:PLAN. The pause is a human authority checkpoint inside the
-  deliberation already counted, so it consumes no ARCHITECT re-entry budget.
+  splitting an issue acceptance criterion, or adding one, is the operator's authority. Report
+  situation-first naming the affected criteria and what the design proposes for each, set
+  `active: false`, `phase: "awaiting-user"`, and do not spawn GATE:PLAN. Record the answer as one
+  `[ac-decision]` ledger entry per decided AC in the grammar at [`CLAUDE.md`](../CLAUDE.md) >
+  Decision Ledger > *Acceptance-criterion decisions*; on `revised`, `split` or `added`, edit the
+  Phase B acceptance-criterion table to match; then continue to GATE:PLAN. The pause is a human
+  authority checkpoint inside the deliberation already counted, so it consumes no ARCHITECT
+  re-entry budget.
+- **An acceptance-criterion change raised later in the cycle.** The criteria are the issue author's
+  assumptions, and work can show one wrong: a role at GREEN, VERIFY or REFINE that meets a problem
+  showing a criterion is wrong, or that the issue must promise a behavior its criteria do not state,
+  raises it in its report with the criterion, the proposed change and the fact that shows the need
+  ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope
+  judgment*); a gate recommendation reaches the same point through its `operator` disposition
+  (GATE:QUALITY > *Recommendation disposition*). The orchestrator reports it situation-first, sets
+  `active: false`, `phase: "awaiting-user"`, and records the answer in the same grammar with the
+  phase the change surfaced in, editing the Phase B table on `revised`, `split` or `added`. Where
+  the cycle then re-enters is its judgment, recorded with its grounds in an `O` ledger entry: at
+  ARCHITECT, on a `brief` naming the `[ac-decision]` entries, when a verification-design row must be
+  added or rewritten — then GATE:PLAN's re-entry re-score and RED; at GREEN when only the
+  implementation changes; otherwise at the point it paused. A return to ARCHITECT on this ground
+  consumes no re-entry budget, since each is bounded by the operator's own decision.
 
 **What the operator is asked, and what they are not.** A reduction in *verification method* — an AC
 verified by an existing mechanism, a manual scenario, a delivery check, or by nothing at all — is a
@@ -676,8 +700,10 @@ is the operator:
 2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
    PR body (HANDOFF step 4), so the reviewer judges each one on its stated reason. A doubtful
    judgment is caught here.
-3. **Operator.** Asked when the AC's **content** must change. The options offered are exactly the
-   three: exclude the criterion, revise it in the proposed form, or split it into a separate issue.
+3. **Operator.** Asked when the AC's **content** must change — at ARCHITECT or later in the cycle
+   (*An acceptance-criterion change raised later in the cycle* above). The options offered are
+   exactly these: exclude the criterion, revise it in the proposed form, split it into a separate
+   issue, or add a criterion the issue did not state.
 
 Whether a row verifies the property its AC states is not a tier-3 question — that judgment belongs
 to GATE:PLAN `Test plan` and to GATE:QUALITY's assertion-claim alignment (issue #160). Those two
@@ -743,7 +769,7 @@ issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
 | Item | Criterion |
 |------|-----------|
 | Feasibility   | Can this plan be implemented with the current structure? (grounded in the actual mechanisms, not a misread) |
-| Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here) |
+| Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here; the feature design's `## Scope` section judges each problem the confirmed cause carries under Change Surface Rules > *Scope judgment*, and a directly related problem left out owes a separation reason) |
 | Security      | Any security implications introduced? |
 | Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160) |
 
@@ -788,7 +814,9 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
   scored by `Scope` under the existing verification-depth clause above, adding no scored item.
 - **Trigger → cap**: any difference **not** covered by a `[ac-decision]`-marked ledger entry whose
   `- AC:` line names that same id caps `Scope` at 6. The marker is what the gate matches on;
-  `operator decision` is that entry's authority **value** and is not itself the match key.
+  `operator decision` is that entry's authority **value** and is not itself the match key. An entry
+  whose `- Disposition:` is `added` covers nothing: the criterion it adds is owed its row like any
+  other ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*).
 - **An unresolvable check also caps.** An absent, empty or unparseable `## Acceptance criteria`
   table caps `Scope` at 6: the gate cannot establish authority, and an unresolvable check that
   scores normally is the same hole under a different name.
@@ -798,7 +826,8 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
   under this clause, the same *Effective from* convention the composition-oracle and
   verification-depth clauses use. A cycle already past DIAGNOSE is not retroactively deficient.
 
-- **PASS** (avg ≥ 7.5, each ≥ 7) → DISPATCH.
+- **PASS** (avg ≥ 7.5, each ≥ 7) → the orchestrator disposes of the report's recommendations
+  (GATE:QUALITY > *Recommendation disposition*) → DISPATCH.
 - **FAIL** → ARCHITECT (max 3×).
 
 ### Re-entry re-score
@@ -914,8 +943,8 @@ The fields go in the file's leading comment block at column 1, before its first 
 
 ## GREEN — Implementation
 
-The Developer AI implements the issue acceptance criteria within the agreed scope — the feature
-design plus the verification design. Automated tests are one form of evidence for that scope, not
+The Developer AI implements the issue acceptance criteria within the cycle's scope — the feature
+design, its `## Scope` section included, plus the verification design. Automated tests are one form of evidence for that scope, not
 its definition: an issue AC whose disposition is `manual`, `existing-coverage`, `delivery-check`,
 `environment-dependent` or `none` (ARCHITECT > Output artifacts > *Test necessity*) is still
 implemented; only its evidence differs.
@@ -929,7 +958,8 @@ implemented; only its evidence differs.
    without a run record is run here and its record filled in ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it
    is found*).
 2. Write the minimum code that satisfies every issue AC in scope and passes the `automated` tests.
-   - [MUST] Do NOT implement behavior outside the agreed scope (feature design + verification design's issue ACs). A required AC without an automated test is in scope; a behavior no AC requires is not, whether or not a test could be written for it.
+   - [MUST] Do NOT implement behavior outside the cycle's scope — the feature design, its `## Scope` section included, and the verification design's rows. A required AC without an automated test is in scope; a behavior neither the scope nor a recorded scope judgment requires is not, whether or not a test could be written for it.
+   - [MUST] A problem met while implementing that the scope does not name is judged under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* and recorded under `## Scope judgments` in the GREEN report: directly related and desirable to fix here → fixed in this cycle, with the tests the fix requires run and recorded; directly related but not desirable → left, with its separation reason; not directly related → left, reported in one line. A fix that would contradict a design **decision** returns to ARCHITECT, and a problem showing that an acceptance criterion must change is raised in the report for the operator (ARCHITECT > *Report routing* > *An acceptance-criterion change raised later in the cycle*).
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
    - [MUST] Run locally what the change requires and nothing more: this cycle's `automated` tests and the tests you judge the change reaches, the way the target runs its tests (RED > *Derivation on entry*), recording the command, the log and its summary line. There is no local whole-tree run — none scheduled, none held in reserve ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
@@ -986,10 +1016,22 @@ Run the tests; on failure, branch by cause.
        └─ a missing/errored self-check → EVALUATION_AI (recorded as "missing", never as no_problem)
 3. Minimal-implementation check (Test AI):
    diff analysis: does the implementation introduce observable behavior or contract
-   outside the agreed scope (feature design + verification design)?
+   outside the cycle's scope (feature design with its `## Scope` section + verification design)?
      ├─ Everything the diff does is in scope → PASS
-     ├─ Out-of-scope observable behavior → ask the Developer AI to remove it; if it is in fact
-     │  required, raise it as a scope question (ARCHITECT), never by silently adding a test
+     ├─ Behavior outside it → the Test AI judges it under Change Surface Rules > Scope judgment,
+     │  against the GREEN report's recorded judgment when there is one, and records its own under
+     │  `## Scope judgments` in the VERIFY report:
+     │    ├─ directly related, desirable to fix here → in scope; the Test AI names the run GREEN
+     │    │  recorded for it, and a fix with none has the tests it requires run here and recorded —
+     │    │  never by silently adding a test
+     │    ├─ directly related but not desirable, or not directly related → ask the Developer AI
+     │    │  to remove it, stating the separation reason or the condition that fails
+     │    ├─ the Test AI's judgment differs from the GREEN report's → one orchestrator judgment
+     │    │  between the two recorded grounds, in an `O` ledger entry (the operator's when the
+     │    │  orchestrator is not confident) — not an ARCHITECT round
+     │    └─ keeping it would change a design decision → a scope question to ARCHITECT; it shows
+     │       an acceptance criterion must change → raised for the operator (ARCHITECT > Report
+     │       routing > An acceptance-criterion change raised later in the cycle)
      └─ A helper, private branch or internal abstraction whose required behavior is already
         protected at a higher level does not owe its own direct test — that is in scope, not a gap
 4. Mock-boundary fidelity check (Test AI):
@@ -1017,7 +1059,8 @@ Evaluation-AI arbitration on a branch). Entry fields: `step-3 minimal-implementa
 doubles by name with the real interface each stands for, or `none`; `grounds` — the Test AI report's
 Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 
-- **Vocabulary**: `detected` = the check found out-of-scope observable behavior or a diverging double;
+- **Vocabulary**: `detected` = the check found out-of-scope observable behavior it did not accept
+  into the scope, or a diverging double;
   `clean` = the check ran and found none; `not-run` = the check did not execute. A check that did not
   execute is recorded as `not-run` and **never** as `clean` — the same truthfulness rule step 2 applies
   to a missing self-check.
@@ -1064,6 +1107,11 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
      `none` in each section.
    - A wrong judgment is caught by GATE:QUALITY, which reads the report, and by the reviewer
      (principle 3). No predicate script and no exclusion list decides this (issue #227).
+   - A suggestion outside the change surface is a refactor noticed in passing and is rejected
+     (Change Surface Rules > REFINE scope). A suggestion that describes a behavior defect is
+     rejected as behavior-changing and judged under Change Surface Rules > *Scope judgment*; one
+     judged directly related goes to the report's section 3 whatever its subject, since REFINE
+     cannot apply it and the evaluator disposes of that section.
    Comment check (every pass, whether or not /simplify ran):
    - Over the lines the cycle's diff adds (`git diff <base>...HEAD`), identify the comment lines
      by each file's language; a directive a tool reads is code, not a comment
@@ -1109,10 +1157,13 @@ when /simplify did not run each of the first three sections reads `none`:
 
 1. `## Applied` — each /simplify suggestion applied, one line each.
 2. `## Rejected / deferred` — each suggestion not applied, with the reason (`behavior-changing`,
-   `out of scope`, `disagree`, …).
+   `out of scope`, `disagree`, …). A `behavior-changing` suggestion carries its scope judgment
+   (`directly related — <condition>` or `not directly related`).
 3. `## Out-of-scope observations — guard / boundary logic touched` — the subset of the rejected
    list whose reason is *behavior-changing* **and** whose subject is validation, a guard, path /
-   root resolution, input or output boundary handling, or error handling. These are the suggestions
+   root resolution, input or output boundary handling, or error handling — plus every
+   behavior-changing suggestion the Developer AI judged directly related to the issue, whatever its
+   subject, with that judgment. These are the suggestions
    REFINE is right to refuse (REFINE preserves behavior) and that nevertheless describe a possible
    defect in the shipped change. Each entry names the suggestion, the `path:line` (at the report's commit) it points at,
    and what behavior would change. The section is the defect signal issue #135 found missing: in
@@ -1219,7 +1270,8 @@ Items adapt to the project's threat surface; defaults below.
 | Infra isolation   | Are internal ports/services not exposed externally? |
 | Dependencies      | No known vulnerabilities in changed external dependencies? |
 
-- **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → immediate block) → GATE:QUALITY.
+- **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → immediate block) → the orchestrator disposes of the
+  report's recommendations (GATE:QUALITY > *Recommendation disposition*) → GATE:QUALITY.
 - **FAIL** → fix, re-evaluate (max 2×). Third FAIL → human.
 
 GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate work.
@@ -1233,7 +1285,10 @@ GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate wo
 (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the verification design,
 the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the REFINE report
 (`.autoflow/issue-{N}-refine-report.md`, section `## Out-of-scope observations — guard / boundary
-logic touched`, and — on a target — section `## Comment check`).
+logic touched`, and — on a target — section `## Comment check`), and the cycle's scope records —
+the feature design's `## Scope` section, every `## Scope judgments` section in the cycle's
+`.autoflow/issue-{N}-*.md` reports, and the ledger's recommendation dispositions
+([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
 **[MUST] REFINE observations are scoring input** (issue #135): the evaluator reads the REFINE
 report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
@@ -1249,8 +1304,9 @@ Completeness, Quality, Test coverage, Test quality, Security (references AUDIT),
 Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates.
 
 The `Minimal implementation` item is scored against [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > GATE:QUALITY linkage, which holds the criterion body and the positive criteria the item is scored by.
-Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the diagnosed scope.
-A hunk tracing to neither an AC nor the confirmed cause fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
+Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope — the acceptance criteria, the confirmed cause, and the problems the cycle's recorded scope judgments include.
+A hunk tracing to none of them fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
+`Impact scope` is scored against the same section and the same scope from the other side: a directly related problem the cycle's records show, left out with no recorded separation reason, lowers it.
 On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the REFINE report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score, since a lowered score counts toward the average the PASS criteria bound as well as the per-item minimum (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
 
 ### Known blind-spot checks (scored within existing items)
@@ -1354,7 +1410,7 @@ each-item ≥ 7 criterion:
   obligation**: for each verification-design row whose `Issue AC` is not `—`, the evaluator names
   the test file and assertion, or the implementation site, that discharges it. A row for which no
   site can be named, and which no `[ac-decision]`-marked ledger entry covers, caps `Completeness`
-  at 6. The guarantee is correspondingly **weaker** than GATE:PLAN's — an evaluator judgment over a
+  at 6 (an `added` entry covers nothing: the criterion it adds is owed its row and its site). The guarantee is correspondingly **weaker** than GATE:PLAN's — an evaluator judgment over a
   keyed checklist rather than a mechanical diff — because the alternative is an AC id annotation on
   every test and source file, maintained by the same agents the check exists to witness against.
   Neither gate subsumes the other: the ARCHITECT-side check cannot see post-ARCHITECT drift, and
@@ -1368,8 +1424,59 @@ each-item ≥ 7 criterion:
   removes the row, so it can never trip this check; only dropping or silently re-dispositioning a
   criterion can.
 
-- **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → block) → DELIVER.
+- **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → block) → the orchestrator disposes of the report's
+  recommendations (*Recommendation disposition* below) → DELIVER.
 - **FAIL** → routed by `remedy_class` (below; max 3× — the cap counts FAILs, not the distance re-entered).
+
+### Recommendation disposition
+
+A PASS report's `recommendations` are findings the evaluator recorded without scoring the item down,
+and one left unread comes back as a reviewer finding: in #594, #607 and #630 a recommendation carried
+past a PASS returned as a reviewer `Medium` (issue #275). After a PASS of GATE:PLAN, AUDIT or
+GATE:QUALITY, and before the transition it opens, the orchestrator disposes of them
+([`records/design-rationale.md`](records/design-rationale.md) > Decision 25).
+
+- **Which.** Every recommendation that gate's reports in this cycle recorded, up to and including the
+  passing one, taken once. One whose subject lies within the cycle's scope — a file the cycle's diff
+  touches (`git diff --name-only <base>...HEAD`), and at GATE:PLAN a decision or row of the two
+  design documents — is disposed; one outside it is listed as `outside — <where>` and takes the
+  ordinary follow-up path. A target comment's divergence or disallowed-content finding keeps its own
+  handling (*Code comments in a target* below).
+- **The disposition** answers the two questions of
+  [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*
+  and is one of:
+  - `fix` — directly related and desirable to fix here; the fix is made in this cycle (below);
+  - `reject — <reason>` — not a defect (why), not directly related (the condition that fails), or
+    directly related but separated (the separation reason);
+  - `operator` — clearing it would change an acceptance criterion's content, or the orchestrator is
+    not confident of the disposition: the cycle pauses for the operator (ARCHITECT > *Report
+    routing* > *An acceptance-criterion change raised later in the cycle*).
+- **The record** is one ledger entry per pass, headed `## O<n> — <gate> PASS recommendations (cycle
+  <C>, <gate>)`, one line per recommendation — its `path:line` or text, the disposition, the
+  grounds — appended before the transition. The verdict entry of the re-score that follows names
+  the commits that carry the `fix` lines.
+- **A fix travels the route its class names**, as a FAIL's re-entry does: the orchestrator judges
+  the class (`doc` / `test` / `impl` / `design`, defined at *FAIL routing* below), records it on the
+  line, and `scripts/gate/remedy-route.sh route` picks the entry point, several `fix` lines going
+  together to the farthest. At GATE:PLAN, where no change exists yet, an item below the decision
+  layer (ARCHITECT > *Output artifacts* item 1, the dividing question) is carried into the RED /
+  GREEN spawn prompt at DISPATCH, and an item that moves a decision goes to an ARCHITECT
+  re-discussion on a `brief` naming it. A `doc` fix owes no sweep record: the hook's `doc` gate reads
+  a FAIL's recorded class, and a PASS records none.
+- **The fix is scored before the cycle moves on.** The gate whose report carried the recommendation
+  runs again as a fresh spawn with the narrowed input its re-entry uses (GATE:PLAN > *Re-entry
+  re-score*, AUDIT > *Review-response re-score*, *Re-entry re-score* below), re-scoring the items
+  whose anchors the fix touched and the item the recommendation was listed under; the rest inherit.
+  No tree a gate did not score reaches the reviewer — the ground #607's ledger gave for leaving its
+  recommendations unfixed. A fix carried into DISPATCH is scored where the work it enters is scored.
+- **Bounds.** One disposition pass per gate per cycle. It is not a FAIL and consumes no FAIL cap; a
+  failing re-score is an ordinary FAIL, routed by `remedy_class` and counted, and a route through
+  ARCHITECT consumes the ARCHITECT re-entry counter. The re-score's own recommendations are recorded
+  the same way but none is disposed `fix`: each is `reject` — for a directly related one, *the pass
+  is spent* is an admitted reason — or `operator`.
+- **Exposure.** Every `reject` line, with its reason, is carried into the host PR body's
+  `## Scope separations` (HANDOFF step 4), so the reviewer judges each rejection on its stated
+  reason.
 
 ### FAIL routing (`remedy_class`)
 
@@ -1587,6 +1694,13 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      in at step 5 — the CI job that executed it; a cycle that added none says so in one line. The
      listing is what lets the reviewer judge the addition against the target's own convention
      ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *What a cycle leaves in the target's tree*).
+   - **[MUST]** The host PR body carries a `## Scope separations` list: every directly related
+     problem the cycle left out, with its separation reason, taken from the scope records
+     ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope
+     judgment*), and every gate recommendation disposed `reject`, with its reason (GATE:QUALITY >
+     *Recommendation disposition*). A cycle with none says so in one line. A separation is a
+     judgment, and the reviewer can catch a wrong one only where it can read it. Form:
+     [`pr-body-guide.md`](pr-body-guide.md) > *Scope separations*.
    - Host-only change (target-centric — the default): create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path> --no-subrepo-dep`. The script still passes `--draft` (uniform pre-review marker) and still applies the `blocked-by-review` gate label, but does not apply the `blocked-by-subrepo` label — a host-only PR carries no merge-order gate (see Merge Sequencing > host-only case).
    - *Secondary (multi-repo):* Sub-repo changes present:
      a. Create each sub-repo PR (fork → upstream) **with `--label "blocked-by-review"`**, body `Part of Munsik-Park/autoflow#N` (no close keyword). The review gate is **per-PR**: **every** PR created for this cycle — the host PR *and* each sub-repo PR — carries `blocked-by-review` and is reviewed on its **own diff** in step 6 (so the review scope is each repo's actual code, not "the host only"). The `blocked-by-review` label must exist in each sub-repo (one-time operator setup — see [`external-review-sequencing.md`](external-review-sequencing.md)). `blocked-by-subrepo` is a separate, host-only merge-order gate (step 4b), not a review gate.
