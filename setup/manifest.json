@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2a5113675b44dd65d74c38062096627e149934077d80105c253306e4cec8e67b"
+      "sha256": "1d16b0d832e37e3e5578a1fcf0e4209a591f96961deb1c51f3872766e4bb9cab"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "473f622112016f461b8d7cc87b0f09948c0ed6cf2762e8d2987c67cbeb326403"
+      "sha256": "427e8804b6de85d23ff39568d9924dd3a67eb68b5e4a68aa2b8cc1d163b96072"
     },
     {
       "source": "docs/development-guideline.md",
@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "db5f43e86ac580d8bee6eb42d32eabb46772574ae93905fcbad5d13b8257655a"
+      "sha256": "597b3c5d5a2563be26a099af8f57bd9800e51e965a7858ae739a4d0911d29d01"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/pr-body-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "da3f5e2e0a55f809be40cf2b5ac52af8e60947c54cad58c75269f98f4606472d"
+      "sha256": "c2ef8281b81dc3c31852ce4aad99e865e72f83bd2c3a8219c0400bec118a0034"
     },
     {
       "source": "docs/repo-boundary-rules.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "44074672fb9499d1722ab59d86490621df2d67f8cc1715c1a669a10c1d33eab4"
+      "sha256": "05a7b205b25a4f89d0ceb1118412e569abbab9d4392644b8a14429137c1faa06"
     },
     {
       "source": "docs/security-checklist.md",

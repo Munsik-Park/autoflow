@@ -134,8 +134,9 @@ a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](au
 
 `recommendations` lists every non-blocking finding, each naming its subject — a `path:line` at the
 evaluated commit, or the design document's section — and the item it was found under. After a PASS
-of GATE:PLAN, AUDIT or GATE:QUALITY the orchestrator disposes of each one within the cycle's scope
-(`fix` / `reject` + reason / `operator`) and records the dispositions in the ledger
+of GATE:PLAN, AUDIT or GATE:QUALITY the orchestrator disposes of each one on the scope judgment's
+two questions (`fix` / `reject` + reason / `outside` / `operator`) and records the dispositions in
+the ledger
 ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation disposition*); the hook
 reads none of it.
 

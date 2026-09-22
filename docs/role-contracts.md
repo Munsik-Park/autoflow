@@ -18,7 +18,7 @@
 
 ### Finding coverage (model-recall guard)
 - **[MUST]** Surface every issue found, including low-severity and uncertain ones — list them in `recommendations` (or `blocking_issues` when score-blocking). Severity and confidence are expressed through the `score` and `reason`, never by silently omitting a finding. The rubric score is the filter; the finding stage prioritizes coverage.
-- **[MUST]** Each recommendation names its subject — a `path:line` at the evaluated commit, or the design document's section — and the item it was found under. After a PASS the orchestrator disposes of every recommendation within the cycle's scope, and the subject is what places it there ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation disposition*).
+- **[MUST]** Each recommendation names its subject — a `path:line` at the evaluated commit, or the design document's section — and the item it was found under. After a PASS the orchestrator disposes of every recommendation on the scope judgment's two questions, and the subject is what locates the problem ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation disposition*).
 - **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Recent Claude models follow such filtering instructions literally — they investigate just as deeply but drop sub-bar findings instead of reporting them, which lowers recall. Let it report all findings and let the score rank them.
 
 ### Pre-scoring FAIL hypothesis (consider-the-opposite)

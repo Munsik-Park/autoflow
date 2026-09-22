@@ -97,8 +97,8 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 ### 6. Scope separations (범위 분리의 노출)
 
 host PR body는 `## Scope separations` 섹션을 싣는다 — cycle이 이슈와 직접 관련이라고
-판단하고도 분리한 문제 각각과 그 분리 사유, 그리고 gate 권고 중 `reject`로 처분한 항목
-각각과 그 사유.
+판단하고도 분리한 문제 각각과 그 분리 사유, 그리고 gate 권고 중 `fix`가 아닌 처분
+(`reject`, `outside`)을 받은 항목 각각과 그 사유.
 
 - 범위 판정은 판단이고 틀릴 수 있다. reviewer는 읽을 수 있는 분리만 판단할 수 있다 —
   PASS 권고를 PR 밖으로 넘긴 cycle에서 같은 지적이 reviewer `Medium`으로 돌아왔다(#275).
@@ -107,7 +107,8 @@ host PR body는 `## Scope separations` 섹션을 싣는다 — cycle이 이슈�
   *Recommendation disposition*.
 - 형식은 대상(`path:line` 또는 권고) + 처분 + 사유 한 줄. 사유는 scope record와 ledger의
   문장을 옮겨 적고 새로 쓰지 않는다.
-- 관련 없음으로 분리한 문제는 싣지 않는다 — 지금처럼 별도 이슈가 후속 경로다.
+- 작업 중 만난 문제 중 관련 없음으로 분리한 것은 싣지 않는다 — 지금처럼 별도 이슈가 후속
+  경로다. gate 권고는 처분과 관계없이 `fix`가 아니면 모두 싣는다.
 - 해당 항목이 없으면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
 
 예:
@@ -136,7 +137,7 @@ host PR body는 `## Scope separations` 섹션을 싣는다 — cycle이 이슈�
 
 ## Changelog
 
-- 2026-09-22: Principle 6 (Scope separations — 직접 관련 문제의 분리 사유와 `reject` 처분된 gate 권고의 노출) 추가 (#275).
+- 2026-09-22: Principle 6 (Scope separations — 직접 관련 문제의 분리 사유와 `fix` 외로 처분된 gate 권고의 노출) 추가 (#275).
 - 2026-09-11: Principle 5에 `cycle` 층 `automated` row의 run record 노출 추가 (#225, ADR-0024 D1/D2).
 - 2026-08-25: Principle 5 (Verification dispositions — automated 아닌 issue AC의 disposition + reason 노출; 3단 guard의 reviewer tier) 추가 (#153).
 - 2026-06-05: Principle 4 (판단 근거의 명시적 링크 / PR-reachability) 추가.

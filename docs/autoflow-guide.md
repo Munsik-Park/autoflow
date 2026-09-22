@@ -1437,20 +1437,23 @@ GATE:QUALITY, and before the transition it opens, the orchestrator disposes of t
 ([`records/design-rationale.md`](records/design-rationale.md) > Decision 25).
 
 - **Which.** Every recommendation that gate's reports in this cycle recorded, up to and including the
-  passing one, taken once. One whose subject lies within the cycle's scope — a file the cycle's diff
-  touches (`git diff --name-only <base>...HEAD`), and at GATE:PLAN a decision or row of the two
-  design documents — is disposed; one outside it is listed as `outside — <where>` and takes the
-  ordinary follow-up path. A target comment's divergence or disallowed-content finding keeps its own
+  passing one, taken once — and every one is disposed. Whether it belongs to the cycle is decided by
+  the two questions below, not by where its subject sits: the recommendation's `path:line` or design
+  section locates the problem, and a file the diff has not touched can be exactly the one a directly
+  related fix needs. A target comment's divergence or disallowed-content finding keeps its own
   handling (*Code comments in a target* below).
 - **The disposition** answers the two questions of
   [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*
   and is one of:
   - `fix` — directly related and desirable to fix here; the fix is made in this cycle (below);
-  - `reject — <reason>` — not a defect (why), not directly related (the condition that fails), or
-    directly related but separated (the separation reason);
-  - `operator` — clearing it would change an acceptance criterion's content, or the orchestrator is
-    not confident of the disposition: the cycle pauses for the operator (ARCHITECT > *Report
-    routing* > *An acceptance-criterion change raised later in the cycle*).
+  - `reject — <reason>` — not a defect (why), or directly related but separated (a separation
+    reason that answers question 2);
+  - `outside — <reason>` — not directly related: none of question 1's conditions holds; the
+    ordinary follow-up path, a separate issue;
+  - `operator` — clearing it would change an acceptance criterion's content (ARCHITECT > *Report
+    routing* > *An acceptance-criterion change raised later in the cycle*), the orchestrator is not
+    confident of the disposition, or the fix pass is spent (*Bounds* below): the cycle pauses for the
+    operator, situation-first.
 - **The record** is one ledger entry per pass, headed `## O<n> — <gate> PASS recommendations (cycle
   <C>, <gate>)`, one line per recommendation — its `path:line` or text, the disposition, the
   grounds — appended before the transition. The verdict entry of the re-score that follows names
@@ -1469,14 +1472,17 @@ GATE:QUALITY, and before the transition it opens, the orchestrator disposes of t
   whose anchors the fix touched and the item the recommendation was listed under; the rest inherit.
   No tree a gate did not score reaches the reviewer — the ground #607's ledger gave for leaving its
   recommendations unfixed. A fix carried into DISPATCH is scored where the work it enters is scored.
-- **Bounds.** One disposition pass per gate per cycle. It is not a FAIL and consumes no FAIL cap; a
-  failing re-score is an ordinary FAIL, routed by `remedy_class` and counted, and a route through
-  ARCHITECT consumes the ARCHITECT re-entry counter. The re-score's own recommendations are recorded
-  the same way but none is disposed `fix`: each is `reject` — for a directly related one, *the pass
-  is spent* is an admitted reason — or `operator`.
-- **Exposure.** Every `reject` line, with its reason, is carried into the host PR body's
-  `## Scope separations` (HANDOFF step 4), so the reviewer judges each rejection on its stated
-  reason.
+- **Bounds.** One fix pass per gate per cycle on the orchestrator's authority. It is not a FAIL and
+  consumes no FAIL cap; a failing re-score is an ordinary FAIL, routed by `remedy_class` and counted,
+  and a route through ARCHITECT consumes the ARCHITECT re-entry counter. The re-score's own
+  recommendations are disposed of on the same two questions, except that one judged directly related
+  and desirable to fix here is disposed `operator`: the operator decides whether another pass runs or
+  the problem is separated, and the answer is an `O` ledger entry with the authority `operator
+  decision`. The bound of the pass is never a separation reason — it answers neither half of
+  question 2.
+- **Exposure.** Every line not disposed `fix` — `reject` and `outside` — is carried with its reason
+  into the host PR body's `## Scope separations` (HANDOFF step 4), so the reviewer judges each one on
+  its stated reason.
 
 ### FAIL routing (`remedy_class`)
 
@@ -1697,8 +1703,8 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
    - **[MUST]** The host PR body carries a `## Scope separations` list: every directly related
      problem the cycle left out, with its separation reason, taken from the scope records
      ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope
-     judgment*), and every gate recommendation disposed `reject`, with its reason (GATE:QUALITY >
-     *Recommendation disposition*). A cycle with none says so in one line. A separation is a
+     judgment*), and every gate recommendation not disposed `fix` — `reject` or `outside` — with its
+     reason (GATE:QUALITY > *Recommendation disposition*). A cycle with none says so in one line. A separation is a
      judgment, and the reviewer can catch a wrong one only where it can read it. Form:
      [`pr-body-guide.md`](pr-body-guide.md) > *Scope separations*.
    - Host-only change (target-centric — the default): create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path> --no-subrepo-dep`. The script still passes `--draft` (uniform pre-review marker) and still applies the `blocked-by-review` gate label, but does not apply the `blocked-by-subrepo` label — a host-only PR carries no merge-order gate (see Merge Sequencing > host-only case).
