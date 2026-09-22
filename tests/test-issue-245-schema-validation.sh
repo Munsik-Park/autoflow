@@ -390,6 +390,16 @@ assert_static "A9a: hook contains every gate-schema.json verdict_enum member as 
   bash -c "[[ $_A9_VE_MISSING -eq 0 ]]"
   # ^^^ FAILS on cycle-1 hook (enum literals absent) — RED-confirming
 
+# A9e (issue #275): every remedy_class_enum member appears as a quoted literal in the hook's
+# remedy_ok definition, so the optional phases.<gate>.remedy_class is closed to the enum.
+_A9_RC_MISSING=0
+while IFS= read -r _v; do
+  grep -qF "\"$_v\"" "$HOOK" || _A9_RC_MISSING=1
+done < <(jq -r '.remedy_class_enum[]' "$SCHEMA")
+grep -q 'def remedy_ok:' "$HOOK" || _A9_RC_MISSING=1
+assert_static "A9e: hook contains every gate-schema.json remedy_class_enum member as a literal inside remedy_ok (remedy_class closed to enum)" \
+  bash -c "[[ $_A9_RC_MISSING -eq 0 ]]"
+
 # A9b: hook top-level-key whitelist literal equals gate-schema.json:top_level_keys (no hardcoding).
 SCHEMA_TLK_LITERAL=$(jq -r '[.top_level_keys[]] | @json' "$SCHEMA")
 HOOK_TLK_LITERAL=$(grep -oE 'keys_unsorted - \[[^]]*\]' "$HOOK" 2>/dev/null | head -1 | sed -E 's/keys_unsorted - //' | tr -d ' \t' || true)

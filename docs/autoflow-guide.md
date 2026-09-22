@@ -848,8 +848,8 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
   verification-depth clauses use. A cycle already past DIAGNOSE is not retroactively deficient.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7) → recommendation triage (GATE:QUALITY > *Recommendation triage*;
-  here a `design` recommendation re-enters ARCHITECT and a `doc` / `test` / `impl` one is carried
-  into the DISPATCH spawn prompt) → DISPATCH.
+  here every `Medium`+ recommendation re-enters ARCHITECT on a `brief` and this gate re-scores the
+  delta, and a `Low` below the decision layer is handed to the DISPATCH spawn prompt) → DISPATCH.
 - **FAIL** → ARCHITECT (max 3×).
 
 ### Re-entry re-score
@@ -878,7 +878,7 @@ Each role's task is delivered in the prompt of the direct spawn that enters its 
 - **Role spawn**: ARCHITECT was the orchestrator's relay of two participants, recorded from the transcript file by the Record workflow (ADR-0023 D2); those participants are not woken for RED or GREEN. The orchestrator spawns a fresh agent at each phase entry — the Test AI at RED entry, the Developer AI at GREEN entry once RED is complete — anonymous direct spawns (`subagent_type`); see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
 - **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the cycle-layer store `.autoflow/issue-{N}-local/` and hands over the **run record so far** — the RED report's path — naming each verification-design row that still has no record as *run first* ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it is found*).
-- Both receive: acceptance criteria + verification design + affected docs — and each `doc` / `test` / `impl` recommendation GATE:PLAN's triage carried forward to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
+- Both receive: acceptance criteria + verification design + affected docs — and each `Low` recommendation below the decision layer that GATE:PLAN's triage handed to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
 - Every later role spawn in the cycle — VERIFY, REFINE, the GATE:QUALITY evaluator — receives the run record the same way: the prior reports' paths, with any row lacking a record marked *run first*.
 
 ---
@@ -1482,23 +1482,23 @@ No separate disposition system exists for gate recommendations
 - **`Medium` and above → do not transition.** Route by `scripts/gate/remedy-route.sh route` over the
   `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere pauses). The script prints
   a phase; each gate reads it at its own position, as each call site of the script already does:
-  - **A phase behind the gate** (it has run this cycle) is re-entered, the routed work flows forward,
-    and the recommending gate re-scores on the narrowed input its re-entry already uses. This is every
-    route at AUDIT and GATE:QUALITY (`DOC_COMMIT` / `RED` / `GREEN` / `ARCHITECT`, exactly as at
-    *FAIL routing*, the `doc` route's sweep record included), and `ARCHITECT` at GATE:PLAN — an
-    ARCHITECT re-discussion on a `brief` naming the recommendation (ARCHITECT > *Re-discussion*),
-    the GATE:PLAN FAIL route narrowed to the item.
-  - **A phase ahead of the gate** (it has not run) is not re-entered: the recommendation is carried
-    to it as input — a `doc` / `test` / `impl` recommendation at GATE:PLAN is an item below the
-    decision layer (ARCHITECT > *Output artifacts* item 1) and travels in the RED / GREEN spawn
-    prompt at DISPATCH, scored by GATE:QUALITY, the gate that scores that layer; the transition
-    proceeds. A carry-forward opens no re-entry: it is recorded in the gate's verdict entry, not as
-    a `[gate-autofix]` attempt, and writes no `remedy_class` to the state file.
-  - **At GATE:HYPOTHESIS** the analysis is the only artifact the gate scores and DIAGNOSE its only
-    owner, so every `Medium`+ recommendation takes the gate's FAIL route narrowed to the item: the
-    role that wrote the analysis it names amends that artifact — a problem the confirmed cause
-    carries enters its `## Scope judgments` — and the same form re-scores it. The class rides on the
-    amended artifact as the ground ARCHITECT or DISPATCH then reads.
+  - **A gate after execution** — AUDIT and GATE:QUALITY — re-enters the phase the script prints
+    (`DOC_COMMIT` / `RED` / `GREEN` / `ARCHITECT`, exactly as at *FAIL routing*, the `doc` route's
+    sweep record included); the routed work flows forward, and the recommending gate re-scores on the
+    narrowed input its re-entry already uses.
+  - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — resolves every `Medium`+
+    recommendation on the artifact it scores, by its own FAIL route narrowed to the item, and
+    re-scores it by the same form: at GATE:PLAN an ARCHITECT re-discussion on a `brief` naming the
+    recommendation (ARCHITECT > *Re-discussion*), then GATE:PLAN's *Re-entry re-score* over the
+    delta; at GATE:HYPOTHESIS the role that wrote the analysis it names amends that artifact — a
+    problem the confirmed cause carries enters its `## Scope judgments` — then the same form
+    re-scores. The class such a recommendation carries (`doc` / `test` / `impl` / `design`) names the
+    change the problem will need once the design or analysis carries it; it rides on the amended
+    artifact as the ground ARCHITECT or DISPATCH then reads, and it never sends the cycle forward
+    past the gate unre-scored. A fact below the decision layer (ARCHITECT > *Output artifacts*
+    item 1) is not a defect of the artifact these gates score — the layer split derives it at RED /
+    GREEN — so the evaluator records it at `Low`, and the orchestrator's `Low` judgment hands it to
+    the executing role in the DISPATCH spawn prompt or defers it.
   - **Not directly related** — none of question 1's three conditions holds — is separated as *Scope
     judgment*'s table says, recorded with its ground and a separate issue the follow-up path. A
     `Medium`+ recommendation that **is** directly related is fixed on its route or paused for the
@@ -1536,8 +1536,8 @@ No separate disposition system exists for gate recommendations
 - **Not a FAIL.** An attempt consumes no FAIL cap; a re-score that FAILs is an ordinary FAIL, routed
   and counted by the gate's own rule, and a route through ARCHITECT consumes the ARCHITECT re-entry
   counter. The transition opens when the PASS stands and no `Medium`+ recommendation is open —
-  each one fixed and re-scored clean, carried forward, separated as not directly related, or
-  decided by the operator.
+  each one fixed and re-scored clean, separated as not directly related, or decided by the
+  operator.
 
 ### FAIL routing (`remedy_class`)
 

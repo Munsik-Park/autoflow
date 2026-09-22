@@ -174,6 +174,36 @@ cat > "$SUP/.autoflow/issue-275.json" <<'JSON'
   "fix_regression": { "phases": { "gate_quality": { "scores": { "Completeness": 9 } } } } }
 JSON
 run_hook 0 "open class superseded by a later cycle's gate_quality record → git push admitted" "$SUP" "$(bash_json 'git push')"
+# Malformed remedy_class (PR #290 review, Medium 2): the validator closes the
+# value to the enum, so an empty string, a number or an object is a MALFORMED
+# state and every score-gated command fails closed — never an admitted push.
+mk_raw_state() { # <dir> <raw gate_quality remedy_class JSON value>
+  local d="$1" raw="$2"
+  mkdir -p "$d/.autoflow"
+  cat > "$d/.autoflow/issue-275.json" <<JSON
+{ "active": true, "issue": "#275",
+  "phases": {
+    "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+    "audit": { "scores": { "Authn": 9 } },
+    "gate_quality": { "remedy_class": $raw, "scores": { "Completeness": 8 } } } }
+JSON
+}
+for raw in '""' '0' '{}' '"fix"'; do
+  MAL=$(mktemp -d); mk_raw_state "$MAL" "$raw"
+  run_hook_stderr 2 "malformed AutoFlow state file" "remedy_class=$raw → MALFORMED state, git push fails closed" "$MAL" "$(bash_json 'git push')"
+  run_hook_stderr 2 "malformed AutoFlow state file" "remedy_class=$raw → MALFORMED state, gh pr create fails closed" "$MAL" "$(bash_json 'gh pr create --title x')"
+  rm -rf "$MAL"
+done
+NESTMAL=$(mktemp -d); mkdir -p "$NESTMAL/.autoflow"
+cat > "$NESTMAL/.autoflow/issue-275.json" <<'JSON'
+{ "active": true, "issue": "#275",
+  "phases": { "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+              "audit": { "scores": { "Authn": 9 } },
+              "gate_quality": { "scores": { "Completeness": 8 } } },
+  "fix_regression": { "phases": { "gate_quality": { "remedy_class": "", "scores": { "Completeness": 9 } } } } }
+JSON
+run_hook_stderr 2 "malformed AutoFlow state file" "empty remedy_class in the latest fix_regression record → MALFORMED, git push fails closed" "$NESTMAL" "$(bash_json 'git push')"
+rm -rf "$NESTMAL"
 rm -rf "$OPENQ" "$OPENA" "$CLEAN" "$SUP"
 
 echo
