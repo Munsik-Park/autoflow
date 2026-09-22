@@ -1541,9 +1541,11 @@ No separate disposition system exists for gate recommendations
   gate reads its presence on `audit` and `gate_quality`, so an open attempt is never pushed past.
   The Resume procedure reads the same field (PREFLIGHT > *Resume procedure* step 3).
 - **Attempt cap = 7**, counted as step 6.5 counts: the consecutive `[gate-autofix]` entries this
-  cycle since the last user re-entry decision. On the 7th without the gate's re-score coming back
-  free of `Medium`+, pause for the user; the user's decision resets the window. A re-score's own
-  recommendations enter this triage on the same window. The cap bounds attempts, and reaching it is
+  cycle since the last user re-entry decision. When the triage after the 7th such attempt would open
+  another — a `Medium`+ still open, or a `Low` the orchestrator would fix now — it pauses for the
+  user instead; the user's decision resets the window. A re-score's own recommendations enter this
+  triage on the same window, so a run of `Low`-only re-scores each fixed now counts like a run of
+  `Medium`+ fixes. The cap bounds attempts, and reaching it is
   never a separation reason — the disposition at the cap is the operator's.
 - **Not a FAIL.** An attempt consumes no FAIL cap; a re-score that FAILs is an ordinary FAIL, routed
   and counted by the gate's own rule, and a route through ARCHITECT consumes the ARCHITECT re-entry
