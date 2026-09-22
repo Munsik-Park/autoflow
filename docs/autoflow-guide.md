@@ -197,9 +197,10 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
    *Note (branch-source):* the state schema (`CLAUDE.md` > AutoFlow State Tracking) carries **no `branch` field**, so the issue→branch mapping cannot be read from the state file. Rather than add a schema field (a data-model change out of family with this spec-consistency fix), the branch is made derivable by the documented Step-5 convention (`dev/<date>-issue-<N>`, aligned to live practice), so step 2 resolves the branch deterministically against a documented rule — not against undocumented live practice or a non-existent state field.
 3. **Re-enter at the phase immediately after the last passed gate** — once that gate's PASS is
    closed. A PASS is closed when the ledger holds that gate's `PASS recommendations` entry for this
-   cycle, every `fix` line in it is covered by the re-score verdict entry that names its commit, and
-   every `operator` line has its final-disposition line (GATE:QUALITY > *Recommendation
-   disposition*). When any of the three is missing, resume at that disposition — dispose, route the
+   cycle, every `fix` line in it is closed by its route's evidence — the re-score verdict entry that
+   names its commit, or a line reading `fix — carried to DISPATCH` or `fix — <commit SHA>` for the
+   two routes that run no re-score — and every `operator` line has its final-disposition line
+   (GATE:QUALITY > *Recommendation disposition*). When any of the three is missing, resume at that disposition — dispose, route the
    open fixes, run the re-score — before the next phase is entered. If the last confirmed point is indeterminate (no recorded gate `scores`, or artifacts inconsistent), fall back conservatively to **re-running from the phase that follows the most recent gate whose `scores` are present** — never skip a gate that has no recorded PASS. A gate is re-run, not assumed passed, whenever its `scores` are absent.
 4. Resume does **not** increment `cycle` and does **not** reset `phases` (contrast review-response entry, which does both) — it is a continuation of the same cycle, not a new one.
 
@@ -1465,7 +1466,8 @@ opens, the orchestrator disposes of them
   the two questions below, not by where its subject sits: the recommendation's `path:line` or design
   section locates the problem, and a file the diff has not touched can be exactly the one a directly
   related fix needs. A target comment's divergence or disallowed-content finding keeps its own
-  handling (*Code comments in a target* below).
+  handling (*Code comments in a target* below): its line reads `fix — <commit SHA>` for the
+  orchestrator's direct comment commit, or `reject — <reason>`.
 - **The disposition** answers the two questions of
   [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*
   and is one of:
@@ -1481,8 +1483,11 @@ opens, the orchestrator disposes of them
 - **The record** is one ledger entry per pass, headed `## O<n> — <gate> PASS recommendations (cycle
   <C>, <gate>)`, one line per recommendation — its `path:line` or text, the disposition, the
   grounds — appended before the transition; a PASS with no recommendation still gets the entry,
-  reading `none`, so a resume can tell a closed disposition from one never made. The verdict entry of the re-score that follows names
-  the commits that carry the `fix` lines. An `operator` line is closed once the operator answers:
+  reading `none`, so a resume can tell a closed disposition from one never made. A `fix` line is
+  closed by the evidence of the route it took: the verdict entry of the re-score that follows,
+  naming the commits that carry the fix; or, on the two routes that run no re-score, the line itself
+  — `fix — carried to DISPATCH` for a GATE:PLAN item below the decision layer, `fix — <commit SHA>`
+  for a target comment's direct commit. An `operator` line is closed once the operator answers:
   the entry that records the answer — or, when the answer is an `[ac-decision]` entry, the `O` entry
   that records the re-entry judgment — carries a line naming the recommendation and its final
   disposition, `fix`, `reject — <reason>` or `outside — <reason>`. A recommendation's final
@@ -1505,7 +1510,9 @@ opens, the orchestrator disposes of them
   same form over the amended DIAGNOSE artifact), re-scoring the items
   whose anchors the fix touched and the item the recommendation was listed under; the rest inherit.
   No tree a gate did not score reaches the reviewer — the ground #607's ledger gave for leaving its
-  recommendations unfixed. A fix carried into DISPATCH is scored where the work it enters is scored.
+  recommendations unfixed. Two routes run no re-score of the recommending gate: a GATE:PLAN item
+  carried into DISPATCH changes no document GATE:PLAN reads, and is scored with the work it enters
+  at GATE:QUALITY; a target comment's direct commit ends without re-score by its own rule.
 - **Bounds.** One fix pass per gate per cycle on the orchestrator's authority. It is not a FAIL and
   consumes no FAIL cap; a failing re-score is an ordinary FAIL, routed by `remedy_class` and counted,
   and a route through ARCHITECT consumes the ARCHITECT re-entry counter. The re-score's own
