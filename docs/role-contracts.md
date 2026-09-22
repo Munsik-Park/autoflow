@@ -74,8 +74,9 @@ Decision 24).
   on is unchanged. **A comment that diverges from its code, or that carries what a comment does not
   carry, is a `Low` finding** — a restatement of the code, a design ground, an acceptance-criterion,
   issue or PR reference, another file's path or contract, or a change history. Record it in
-  `recommendations` with its `path:line`; it takes no item below 7, so it is never a failed item and
-  carries no `remedy_class`; whether it is fixed is the orchestrator's judgment, and the fix is its
+  `recommendations` with its `path:line`; it lowers no item's score — a lowered score counts toward
+  the average as well as the per-item minimum — so it is never a failed item and carries no
+  `remedy_class`; whether it is fixed is the orchestrator's judgment, and the fix is its
   direct commit ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Code comments in a target*).
   Only that finding is `Low`: a defect a comment carries on its own ground — an exposed credential,
   token or personal data, for example — is scored under the item its impact belongs to, with that
@@ -85,9 +86,9 @@ Decision 24).
   by this rule. An explanation written beside it is a comment.
 - `Minimal implementation` weighs the comments the change adds by content and by volume — the REFINE
   report's `## Comment check` section, its `comment-ratio` line included, with the comments in the
-  diff — and a content or volume finding stays under the same floor
-  ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > GATE:QUALITY
-  linkage).
+  diff — and records a content or volume finding in its `reason` and in `recommendations` without
+  lowering its score ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
+  Rules > GATE:QUALITY linkage).
 
 ### Execution discipline (scope, sampling, time)
 

@@ -249,7 +249,7 @@ The item fails when a hunk traces to neither an AC nor the confirmed cause — "
 - *Content*: a comment that **Code comments** does not admit — a restatement of the code, a design ground, a reference or a history — is depth the AC does not need, as an unneeded hunk is.
 - *Volume*: even where every comment is admitted, the evaluator judges whether their amount, absolute and relative to the code they sit on, exceeds what a reader of the changed code needs — a comment block larger than the logic it explains, for example. The judgment is qualitative, with no ratio threshold (`docs/records/design-rationale.md` > Decision 23), and names the comment blocks it rests on.
 
-The evaluator records each such finding in the item's `reason` and in `recommendations`. A content or volume finding may lower the item but never below 7: in a target it never fails the gate (`docs/role-contracts.md` > Evaluation AI > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this floor does not cover). In this repository the item is scored without this comment weighing.
+The evaluator records each such finding in the item's `reason` and in `recommendations`, and does not lower the item's score for it: a lowered score counts toward the average as well as the per-item minimum of the PASS criteria (`docs/evaluation-system.md` > PASS Criteria), so any reduction could fail the gate, and in a target a comment finding never does (`docs/role-contracts.md` > Evaluation AI > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this exclusion does not cover). In this repository the item is scored without this comment weighing.
 
 ---
 

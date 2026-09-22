@@ -1125,8 +1125,8 @@ when /simplify did not run each of the first three sections reads `none`:
    `test file — outside scope`, or `not disposed — refactor abandoned`. A pass with no hit states
    `none` below the ratio line. The section is a signal recorded in the report; no phase passes
    or fails on its content. On a target, GATE:QUALITY reads it — the ratio line included — under
-   `Minimal implementation`, which weighs the comments' content and volume but never goes below 7
-   on either (GATE:QUALITY > *Code comments in a target*).
+   `Minimal implementation`, which records the comments' content and volume findings without
+   lowering its score (GATE:QUALITY > *Code comments in a target*).
 
 GATE:QUALITY reads section 3 as scoring input for `Quality` and `Impact scope` (below) and cites
 what it read. Writing the section is the Developer AI's duty; judging it is the fresh evaluator's —
@@ -1251,7 +1251,7 @@ Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates.
 The `Minimal implementation` item is scored against [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > GATE:QUALITY linkage, which holds the criterion body and the positive criteria the item is scored by.
 Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the diagnosed scope.
 A hunk tracing to neither an AC nor the confirmed cause fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
-On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the REFINE report's `comment-ratio` and the diff, with no threshold — and neither takes it below 7 (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
+On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the REFINE report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score, since a lowered score counts toward the average the PASS criteria bound as well as the per-item minimum (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
 
 ### Known blind-spot checks (scored within existing items)
 
@@ -1468,9 +1468,9 @@ Decision 24).
 - **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Code comments*),
   is a `Low` finding. The reviewer never keeps or attaches `blocked-by-review` for it
-  (`.codex/review.md`); the evaluator records it in `recommendations` and takes no item below 7 for
+  (`.codex/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
   it ([`role-contracts.md`](role-contracts.md) > Evaluation AI > *Code comments in a target*). It is
-  therefore never a failed item, carries no `remedy_class`, and is not a `doc` item. Only that
+  therefore never a failed item, never the cause of a FAIL on the average, carries no `remedy_class`, and is not a `doc` item. Only that
   finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
   personal data, for example — takes the severity and the route its impact sets, as any finding does.
 - **Fix — the orchestrator's direct commit.** Whether a comment surfaced by this gate's
