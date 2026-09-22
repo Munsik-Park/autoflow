@@ -861,6 +861,9 @@ returns to ARCHITECT, through the existing routes.
    target's CI discovers tests (a glob in the workflow, an explicit list, a package script); if
    explicit registration is needed, wire it in the same commit, and record the CI job expected to
    run it — HANDOFF step 5 matches that expectation against the CI log.
+   - Before committing a test file, the Test AI runs the comment check (REFINE step 1) over the
+     lines it adds to that file and disposes of every hit, recording each in its report — the
+     Test AI is the only role that writes a test file, so its hits are disposed of here.
    - Rows typed `existing-coverage` / `none` produce no test — the verification design already
      states what covers them, or why absence costs nothing.
    - Rows typed `delivery-check` produce a one-shot check under `.autoflow/issue-{N}-local/`, not a
@@ -1073,8 +1076,9 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
    - Dispose of every hit: removed, or rewritten to what the rule admits (when unsure the
      rewrite is still true, removed); kept only when the match is not the class — the reason
      stated. The content goes where the rule sends it when it is not already there. A hit in a
-     test file is outside the Developer AI's write scope: it is listed with the interim
-     disposition `test file — Test AI`, and step 4 disposes of it.
+     test file is outside the Developer AI's write scope — the Test AI disposes of test-file hits
+     before its commit (RED step 1) — so it is recorded as `test file — outside scope` and left
+     in place.
    - Record the ratio of comment lines to added lines as an observation. No threshold passes or
      fails it — no quantitative basis for a right comment density was found
      (`docs/records/design-rationale.md` > Decision 23).
@@ -1083,23 +1087,13 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 2. [MUST] Confirm Green after the refactor: when step 1 changed a file, re-run the cycle's local run
    set (VERIFY step 1's command) once and record the command, the log and its summary line; when step 1
    changed nothing, the VERIFY step-1 record stands and nothing re-runs.
-   - On FAIL → revert /simplify changes → Developer AI fixes (max 2×).
+   - On FAIL → revert step 1's changes → Developer AI fixes (max 2×).
 3. Commit (refactor type; skip if step 1 made no changes).
-4. Test-file comment hits — only when the report's `## Comment check` lists a
-   `test file — Test AI` entry: the orchestrator spawns the Test AI fresh (model per
-   `bash scripts/spawn-policy/spawn-policy.sh model refine-test-reconfirm`), handing it the report path.
-   - The Test AI disposes of each listed hit under the same rule as step 1 (removed, rewritten, or
-     kept with the reason) and replaces the entry's interim disposition in the report with the
-     final one.
-   - [MUST] When it changed a file, it re-runs the cycle's local run set once on the resulting tree,
-     records the command, the log and its summary line in the report, and commits the test files
-     (`test` type). On FAIL it reverts its change and records each hit as
-     `kept — <why the change broke Green>`.
-   - A report that still carries a `test file — Test AI` disposition fails VALIDATE step 4.
 ```
 
 **Max retries**: 2; on second failure, abandon refactor and proceed to VALIDATE
-with the Green state from VERIFY.
+with the Green state from VERIFY. A comment-check hit the abandoned change had removed or rewritten
+is then recorded as `not disposed — refactor abandoned`.
 
 ### REFINE report (`.autoflow/issue-{N}-refine-report.md`)
 
@@ -1124,15 +1118,16 @@ when /simplify did not run each of the first three sections reads `none`:
 4. `## Comment check` — step 1's comment check, written on every pass. It opens with the line
    `comment-ratio: <added comment lines>/<added lines> (<percent>)`, an observation with no
    threshold, then one line per hit: its `path:line` at the report's commit, its class, and its
-   disposition — `removed`, `rewritten`, `kept — <why the match is not the class>`, or the
-   interim `test file — Test AI`, which step 4 replaces with the final one. A pass with no hit
-   states `none` below the ratio line.
+   disposition — `removed`, `rewritten`, `kept — <why the match is not the class>`,
+   `test file — outside scope`, or `not disposed — refactor abandoned`. A pass with no hit states
+   `none` below the ratio line. The section is a signal recorded in the report; no phase passes
+   or fails on its content.
 
 GATE:QUALITY reads section 3 as scoring input for `Quality` and `Impact scope` (below) and cites
 what it read. Writing the section is the Developer AI's duty; judging it is the fresh evaluator's —
 the author's "this is fine" is not the disposition.
 
-**Foreground execution note**: the step-2 and step-4 re-runs are short foreground commands — the assigned Developer AI (step 2) or Test AI (step 4) runs it foreground and reports, or the orchestrator runs it directly foreground — never a background spawn-and-wait (`docs/role-common-rules.md` > Bash Execution Mode).
+**Foreground execution note**: the step-2 re-run is a short foreground command — the assigned Developer AI runs it foreground and reports, or the orchestrator runs it directly foreground — never a background spawn-and-wait (`docs/role-common-rules.md` > Bash Execution Mode).
 
 ---
 
@@ -1151,9 +1146,8 @@ the author's "this is fine" is not the disposition.
 3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
 4. Maintained-docs check: confirm impacted docs are updated, and that the REFINE report
    (`.autoflow/issue-{N}-refine-report.md`) exists with its `simplify:` / `simplify-grounds:`
-   lines and its four sections present — an empty section says `none`; an omitted section, a
-   missing decision line, or a `## Comment check` entry still at the interim
-   `test file — Test AI` disposition fails this step (REFINE > REFINE report, step 4).
+   lines and its four sections present — an empty section says `none`; an omitted section or a
+   missing decision line fails this step (REFINE > REFINE report).
 5. Manifest coherence check: if the diff touched a manifest-registered source
    (Change Surface Rules > Derived artifacts), confirm `setup/manifest.json` was
    regenerated in the same change — re-run the set-intersection check locally so

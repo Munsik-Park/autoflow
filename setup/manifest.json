@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d1f639925c36739d70ea88e54db24719b167336e0f69c78dd635434b76abb0b4"
+      "sha256": "aa3f18adb1f8ddab3c1460a1da955d56532d961d291ace7afa9752093fb4693f"
     },
     {
       "source": "docs/development-guideline.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8dba85d69d0ad621b7570abbcc22a2b98f8348ecc1c35903e4851dad63f4f313"
+      "sha256": "1b0bce15f15d452cd4e1a92d083831744485e54babb384a6308ed0a79c041e42"
     },
     {
       "source": "docs/security-checklist.md",
