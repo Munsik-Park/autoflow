@@ -71,7 +71,7 @@ This project: host repository with **zero submodules** → **single-repo** (the 
 ### AI Orchestrator (host repo)
 - Does not write code directly; coordinates role spawns.
 - Issue analysis, plan synthesis, role assignment, PR management, integration verification.
-- Exception: project rules/configuration, infrastructure, and bulk documentation updates may be committed by the orchestrator directly.
+- Exception: project rules/configuration, infrastructure, and bulk documentation updates may be committed by the orchestrator directly, as may a comment fix in a target's code (`docs/autoflow-guide.md` > GATE:QUALITY > *Code comments in a target*).
 
 ### Evaluation AI — contract: `docs/role-contracts.md` > Evaluation AI
 ### Test AI — contract: `docs/role-contracts.md` > Test AI
@@ -506,6 +506,7 @@ Co-Authored-By: Claude <model> <noreply@anthropic.com>
 | Feature (implementation, sub-repo) | Submodule AI                     | Orchestrator |
 | Feature (tests, sub-repo)          | Test AI (sub-repo)                | Orchestrator |
 | Rules / config / infra / bulk docs | Orchestrator                      | Orchestrator |
+| Comment fix (target code)          | Orchestrator (sub-repo: Submodule AI) | Orchestrator |
 | Submodule pointer bump (`services` gitlink) | Orchestrator               | Orchestrator |
 
 ### PR Flow

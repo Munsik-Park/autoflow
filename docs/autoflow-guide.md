@@ -1073,6 +1073,9 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
      a pattern finds without judgment: an issue / PR reference (`#<digits>`, `PR #`), a review
      round, an acceptance-criterion identifier, a path of another file, a change-history marker
      (`no longer`, `previously`, `formerly`, and their equivalents in the comment's language).
+   - Read the added comments the pattern did not hit against the same rule: a restatement of the
+     code, design discussion, another file's contract and commented-out code are found by reading,
+     not by a pattern. Each comment read as one of them is a hit of that class.
    - Dispose of every hit: removed, or rewritten to what the rule admits (when unsure the
      rewrite is still true, removed); kept only when the match is not the class — the reason
      stated. The content goes where the rule sends it when it is not already there. A hit in a
@@ -1121,7 +1124,8 @@ when /simplify did not run each of the first three sections reads `none`:
    disposition — `removed`, `rewritten`, `kept — <why the match is not the class>`,
    `test file — outside scope`, or `not disposed — refactor abandoned`. A pass with no hit states
    `none` below the ratio line. The section is a signal recorded in the report; no phase passes
-   or fails on its content.
+   or fails on its content. On a target, GATE:QUALITY reads it under `Minimal implementation`,
+   where a comment finding never takes the item below 7 (GATE:QUALITY > *Code comments in a target*).
 
 GATE:QUALITY reads section 3 as scoring input for `Quality` and `Impact scope` (below) and cites
 what it read. Writing the section is the Developer AI's duty; judging it is the fresh evaluator's —
@@ -1228,7 +1232,7 @@ GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate wo
 (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the verification design,
 the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the REFINE report
 (`.autoflow/issue-{N}-refine-report.md`, section `## Out-of-scope observations — guard / boundary
-logic touched`).
+logic touched`, and — on a target — section `## Comment check`).
 
 **[MUST] REFINE observations are scoring input** (issue #135): the evaluator reads the REFINE
 report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
@@ -1246,6 +1250,7 @@ Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates.
 The `Minimal implementation` item is scored against [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > GATE:QUALITY linkage, which holds the criterion body and the positive criteria the item is scored by.
 Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the diagnosed scope.
 A hunk tracing to neither an AC nor the confirmed cause fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
+On a target the item also weighs the comments the change adds, and a comment finding never takes it below 7 (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
 
 ### Known blind-spot checks (scored within existing items)
 
@@ -1374,7 +1379,7 @@ principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-
 
 | `remedy_class` | Meaning | Re-entry |
 |---|---|---|
-| `doc` | the item clears by editing documentation / comments with no behavior change | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
+| `doc` | the item clears by editing documentation with no behavior change — in this repository comment text too; a comment in a target's code is never a failed item (*Code comments in a target* below) | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
 | `test` | the item clears by changing test assets | RED (current path) |
 | `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
 | `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
@@ -1452,6 +1457,39 @@ not lower the item. What the rule removes is the re-entry loop the #228 cycle ra
 re-score adopting *"this Nth remedy must FAIL"* and flagging the previous remedy's new sentences,
 four FAILs on one item with the reports growing from 29 KB to 55 KB — not the fresh spawn, the
 narrowed input or the finding-coverage rule, which are unchanged.
+
+### Code comments in a target
+
+A comment in a target's code never routes the cycle ([`records/design-rationale.md`](records/design-rationale.md)
+> Decision 24).
+
+- **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
+  ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Code comments*),
+  is a `Low` finding. The reviewer never keeps or attaches `blocked-by-review` for it
+  (`.codex/review.md`); the evaluator records it in `recommendations` and takes no item below 7 for
+  it ([`role-contracts.md`](role-contracts.md) > Evaluation AI > *Code comments in a target*). It is
+  therefore never a failed item, carries no `remedy_class`, and is not a `doc` item.
+- **Fix — the orchestrator's direct commit.** Whether a comment surfaced by this gate's
+  `recommendations`, the REFINE report's `## Comment check` or the reviewer's `Low` findings (HANDOFF
+  step 6.5) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
+  ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
+  changes comment lines only, and it ends there: no sweep record, no re-entry, no re-score, and no
+  reviewer re-review — a comment finding is `Low` by rule, so re-reviewing a comment-only diff cannot
+  change the gate label. The commit still runs the lint chain over its staged files
+  ([`CLAUDE.md`](../CLAUDE.md) > Commit Rules); one made after HANDOFF's push is pushed, and step 5
+  confirms CI on the new head. A comment whose correct wording is uncertain is deleted, not
+  rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a
+  comment is not this route.
+- **Directives.** A line a tool reads to change its behavior is code even in comment syntax, and
+  which lines those are is the working AI's judgment in that target, with no list kept (*Code
+  comments* > *Directives are code*). A defect in one takes the severity and the route of the
+  behavior it changes.
+- **This repository is excluded.** Here the documents are the product and a suite's `# ci-subject:`
+  header line executes, so comments stay under the checks they had: the reviewer's severity as
+  judged, the `doc` class, and the `doc` re-entry's sweep record.
+- *Secondary (multi-repo):* a comment in a sub-repo is outside the orchestrator's scope
+  ([`CLAUDE.md`](../CLAUDE.md) > Cross-Project Boundary Rules); the Developer AI of that scope makes
+  the same single commit on the same terms.
 
 ---
 
@@ -1597,7 +1635,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      - **Durable record (host PR).** Post a one-line comment on the **host PR** — the always-present cycle anchor carrying `Closes #N` — via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event). These GitHub-side records survive the scratch-file cleanup at the next PREFLIGHT prior-cycle resolution, so cap-fire and re-entry stay durably auditable.
    - **`max_severity ≥ Medium` but the label is absent** — the reviewer confirmed a `Critical`/`High`/`Medium` finding on a PR whose gate label a previous clean (Low-only) round legitimately cleared, and the reviewer's own attach did not land. Re-attach it as a backstop, then continue into the **same** auto-resolution path as the branch above (same attempt cap, same user-pause criteria, same `review-autofix` ledger marker): (1) **Primary** — `gh pr edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (2) **Fallback on primary failure** — `gh issue edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (3) **Verification** — `gh pr view <N> --json labels` (sub-repo PR: add `--repo <owner/name>`) confirming the label is present; if it is still absent after both surfaces, the label likely does not exist in that repo — report it as an operator setup gap (see [`external-review-sequencing.md`](external-review-sequencing.md) > Operator prerequisites). An attach failure does **not** block the auto-resolution: the verdict is the primary signal and justifies re-entry on its own. If this backstop attaches in error (the verdict was in fact below `Medium`), the recovery route is the branch below — a re-run of the step-6 reviewer review clears the label, and that path consumes no code-resolution attempt.
    - **Label present but `max_severity < Medium` (or no verdict is determinable)** — this is **not** a code finding. The review was clean (or produced no verdict) yet the label stuck — a `--remove-label` / review-infrastructure failure (`.codex/review.md` > label-removal-failure clause). Do **not** start a review-response cycle (there is nothing to fix). Re-run the step-6 reviewer review on that PR so the re-review clears the label; if a re-run still leaves the label on, escalate to the user / operator (`active:false`, `phase:"awaiting-user"`). This path does **not** consume the 7-attempt code-resolution cap (no code change is attempted).
-   - **No label and `max_severity = Low`** — the subagent returns the `Low` items + an impact note. The orchestrator decides by **pure agent judgment** (no fixed rule) whether any `Low` finding is worth fixing now: yes → run the same in-session review-response resolution loop for those items (`Low` alone does not trigger a user pause unless one of the 4 criteria above is hit); no → proceed to step 7, optionally leaving a one-line PR note that the `Low` items were reviewed and deferred.
+   - **No label and `max_severity = Low`** — the subagent returns the `Low` items + an impact note. The orchestrator decides by **pure agent judgment** (no fixed rule) whether any `Low` finding is worth fixing now: yes → run the same in-session review-response resolution loop for those items (`Low` alone does not trigger a user pause unless one of the 4 criteria above is hit); no → proceed to step 7, optionally leaving a one-line PR note that the `Low` items were reviewed and deferred. A `Low` finding on a comment in a target's code never enters that loop: it is the orchestrator's direct commit or it is left (GATE:QUALITY > *Code comments in a target*).
    - **No label and no findings** — proceed directly to step 7.
 7. `.autoflow/issue-{N}.json` (only once review triage is resolved — no PR retains `blocked-by-review`): set `active` to `false`, record `phase: "awaiting-external-review"`; remove the `status:in-progress` label from the issue: `gh issue edit #N --remove-label "status:in-progress"`.
 8. Report: "PR #N open (draft) — configured-reviewer review posted — handed to external review." AutoFlow ends; the session may terminate.

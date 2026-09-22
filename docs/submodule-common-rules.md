@@ -179,7 +179,7 @@ A comment is a present-tense claim about the code it sits on. A record of how th
 - **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it — a rewritten comment can be wrong again, a deleted one cannot.
 - **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
 
-REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REFINE step 1, *Comment check*).
+REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REFINE step 1, *Comment check*). In a target's code, a comment the rule does not admit is a `Low` finding for the reviewer and the evaluator, and its fix is the orchestrator's direct commit (`docs/autoflow-guide.md` > GATE:QUALITY > *Code comments in a target*).
 
 ### Orphans from this cycle
 - **[MUST]** Imports, variables, and functions that **your** changes rendered unused are removed in the same commit.
@@ -244,6 +244,8 @@ A high-scoring change:
 - leaves every surface outside the issue untouched — behavior, APIs, configuration, and documentation are examples of such a surface, not the boundary
 
 The item fails when a hunk traces to neither an AC nor the confirmed cause — "I noticed it while I was here" cleanup (**Surrounding code**) or depth creep beyond what the AC needs (**Over-engineering guard**) — regardless of code quality. It fails symmetrically when the change is too narrow to resolve the confirmed cause: a change that leaves the confirmed cause in place is not sufficient, and does not score well for being small.
+
+**Comments in a target's code.** The item also weighs the comments the change adds: a comment that **Code comments** does not admit — a restatement of the code, a design ground, a reference or a history — is depth the AC does not need, as an unneeded hunk is. The evaluator reads the REFINE report's `## Comment check` section (`docs/autoflow-guide.md` > REFINE > REFINE report) with the comments in the diff, and records each such comment in the item's `reason` and in `recommendations`. A comment finding may lower the item but never below 7: in a target a comment never fails the gate (`docs/role-contracts.md` > Evaluation AI > *Code comments in a target*). In this repository the item is scored without this paragraph.
 
 ---
 
