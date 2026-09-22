@@ -878,7 +878,7 @@ Each role's task is delivered in the prompt of the direct spawn that enters its 
 - **Role spawn**: ARCHITECT was the orchestrator's relay of two participants, recorded from the transcript file by the Record workflow (ADR-0023 D2); those participants are not woken for RED or GREEN. The orchestrator spawns a fresh agent at each phase entry — the Test AI at RED entry, the Developer AI at GREEN entry once RED is complete — anonymous direct spawns (`subagent_type`); see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
 - **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the cycle-layer store `.autoflow/issue-{N}-local/` and hands over the **run record so far** — the RED report's path — naming each verification-design row that still has no record as *run first* ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it is found*).
-- Both receive: acceptance criteria + verification design + affected docs — and each `Low` recommendation below the decision layer that GATE:PLAN's triage deferred to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
+- Both receive: acceptance criteria + verification design + affected docs — and each `Low` recommendation below the decision layer that a gate before execution's triage deferred to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
 - Every later role spawn in the cycle — VERIFY, REFINE, the GATE:QUALITY evaluator — receives the run record the same way: the prior reports' paths, with any row lacking a record marked *run first*.
 
 ---
@@ -1470,14 +1470,15 @@ No separate disposition system exists for gate recommendations
 | `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the deliberation settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
 | Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route, since no code exists yet (below) |
 | Pause criteria (a)–(d) | the same four, read for a gate (below) |
-| `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* |
+| `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to DISPATCH (below) |
 | Verification of the fix: the reviewer re-review (step 6) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; GATE:PLAN > *Re-entry re-score*; AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
 | Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
 
 - **No ingesting subagent.** The evaluator's report is the spawn's return value and its
   `recommendations` list already carries the classification, so the orchestrator reads that list
   directly — the reviewer needs an ingesting subagent because its output is a prose comment. A
-  `Medium`+ item with no `remedy_class`, or any item with no subject or severity, is a report defect:
+  `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
+  severity, finding), is a report defect:
   reject and re-spawn the evaluator, as for a missing `fail_hypothesis`.
 - **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
   the change (issue #275 AC2 as revised on 2026-09-23: the earlier wording named the script's route,
@@ -1518,13 +1519,14 @@ No separate disposition system exists for gate recommendations
   reviewer's loop check exists to stop. The user's answer is appended to the ledger and selects
   re-entry.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
-  gate's verdict entry: fix now, or defer — to the PR body's known-gaps line, or, for a `Low` below
-  the decision layer at a gate before execution, to the executing role at DISPATCH (above). A `Low`
+  gate's verdict entry: fix now, or defer — to the PR body's known-gaps line
+  ([`pr-body-guide.md`](pr-body-guide.md) > *한계와 known gaps*), or, for a `Low` below the decision
+  layer at a gate before execution, to the executing role at DISPATCH (above). A `Low`
   fixed now **enters the procedure above as an attempt from that point**: the orchestrator judges
   its `remedy_class` (the evaluator tags none on a `Low`), and the fix is routed, recorded as a
   `[gate-autofix]` entry, marked in `phases.<gate>.remedy_class`, re-scored by the same gate and
   counted on the same window exactly as a `Medium`+ attempt — so a session that ends before its
-  re-score resumes on it, never past the gate. The known-gaps line ([`pr-body-guide.md`](pr-body-guide.md) > *한계와 known gaps*). A `Low` on a target
+  re-score resumes on it, never past the gate. A `Low` on a target
   comment's divergence or disallowed content keeps its own handling — the orchestrator's direct
   commit, or left (*Code comments in a target* below).
 - **Record.** Each attempt — a `Medium`+ recommendation, or a `Low` the orchestrator fixes now: a route that re-enters a phase and awaits the gate's re-score — is one ledger entry headed
@@ -1534,7 +1536,8 @@ No separate disposition system exists for gate recommendations
   neither cap's count reads the other's marker. While an attempt is open the orchestrator records
   the routed class as `phases.<gate>.remedy_class` in the state file, as it does for a FAIL
   ([`CLAUDE.md`](../CLAUDE.md) > AutoFlow State Tracking > *Remedy class recording*), and removes it
-  once the re-score PASSes with nothing `Medium`+ left open; the hook's `git push` / `gh pr create`
+  once the re-score PASSes and no attempt is left open — a `Medium`+ the re-score itself raises is a
+  new attempt; the hook's `git push` / `gh pr create`
   gate reads its presence on `audit` and `gate_quality`, so an open attempt is never pushed past.
   The Resume procedure reads the same field (PREFLIGHT > *Resume procedure* step 3).
 - **Attempt cap = 7**, counted as step 6.5 counts: the consecutive `[gate-autofix]` entries this
@@ -1544,9 +1547,9 @@ No separate disposition system exists for gate recommendations
   never a separation reason — the disposition at the cap is the operator's.
 - **Not a FAIL.** An attempt consumes no FAIL cap; a re-score that FAILs is an ordinary FAIL, routed
   and counted by the gate's own rule, and a route through ARCHITECT consumes the ARCHITECT re-entry
-  counter. The transition opens when the PASS stands and no `Medium`+ recommendation is open —
-  each one fixed and re-scored clean, separated as not directly related, or decided by the
-  operator.
+  counter. The transition opens when the PASS stands and no attempt is open — every `Medium`+
+  fixed and re-scored clean, separated as not directly related, or decided by the operator, and any
+  `Low` fixed now re-scored.
 
 ### FAIL routing (`remedy_class`)
 

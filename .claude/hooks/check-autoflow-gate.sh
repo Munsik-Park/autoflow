@@ -1100,7 +1100,7 @@ block_if_open_reentry() {
   fi
   if [ -n "$_open" ]; then
     echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
-    echo "Finish the routed fix, run the gate's re-score, and remove the value once nothing Medium+ is open (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage, issue #275)." >&2
+    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage, issue #275)." >&2
     echo "State file: $STATE_FILE" >&2
     exit 2
   fi
