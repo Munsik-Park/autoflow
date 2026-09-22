@@ -1380,7 +1380,7 @@ principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-
 
 | `remedy_class` | Meaning | Re-entry |
 |---|---|---|
-| `doc` | the item clears by editing documentation with no behavior change — in this repository comment text too; a comment in a target's code is never a failed item (*Code comments in a target* below) | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
+| `doc` | the item clears by editing documentation with no behavior change — in this repository comment text too; a target comment's divergence or disallowed content is never a failed item, while a defect a comment carries on its own ground is classed like any other (*Code comments in a target* below) | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
 | `test` | the item clears by changing test assets | RED (current path) |
 | `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
 | `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |

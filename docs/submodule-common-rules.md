@@ -179,7 +179,7 @@ A comment is a present-tense claim about the code it sits on. A record of how th
 - **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it — a rewritten comment can be wrong again, a deleted one cannot.
 - **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
 
-REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REFINE step 1, *Comment check*). In a target's code, a comment the rule does not admit is a `Low` finding for the reviewer and the evaluator, and its fix is the orchestrator's direct commit (`docs/autoflow-guide.md` > GATE:QUALITY > *Code comments in a target*).
+REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REFINE step 1, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator, and its fix is the orchestrator's direct commit; a defect a comment carries on its own ground, such as an exposed credential, takes the severity and route its impact sets (`docs/autoflow-guide.md` > GATE:QUALITY > *Code comments in a target*).
 
 ### Orphans from this cycle
 - **[MUST]** Imports, variables, and functions that **your** changes rendered unused are removed in the same commit.

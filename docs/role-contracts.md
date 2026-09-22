@@ -44,8 +44,10 @@ Binds the GATE:QUALITY form only. The orchestrator routes a FAIL's re-entry from
 classifying authority and the implementing roles do not re-classify.
 
 - **[MUST]** On a FAIL, tag every item scored below 7 with a `remedy_class` — `doc` (documentation,
-  no behavior change; in this repository comment text too — a comment in a target's code is never a
-  failed item, *Code comments in a target* below), `test` (test assets), `impl` (implementation), `design` (the
+  no behavior change; in this repository comment text too — a target comment's divergence or
+  disallowed content is never a failed item, while a defect a comment carries on its own ground is
+  classed like any other, *Code comments in a target* below), `test` (test assets), `impl`
+  (implementation), `design` (the
   agreed design itself) — starting from the default per item (`scripts/gate/remedy-route.sh
   default-class <item>`) and overriding it with a stated reason when the default misreads the
   defect (a `Doc updates` cap caused by a prompt string or a hook message is `impl`).
