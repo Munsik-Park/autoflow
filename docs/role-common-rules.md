@@ -96,7 +96,7 @@ git status                  # any uncommitted work?
 ## Work Completion Process
 
 ```
-Implement → /simplify as judged (REFINE step 1) → tests pass → push branch → return the report
+Implement → /simplify as judged and the comment check (REFINE step 1) → tests pass → push branch → return the report
 ```
 
 **Required content of the completion report** (the spawn's return value — write any
@@ -215,7 +215,7 @@ above).
 - Read and understand the existing code before changing it.
 - Run the relevant tests after each change and confirm they pass.
 - Run `/simplify` after implementation when the diff warrants it — the judgment and its grounds go in the REFINE report (`docs/autoflow-guide.md` > REFINE step 1).
-- Do not add unnecessary refactors, comments, or type annotations.
+- Do not add unnecessary refactors or type annotations. A comment carries only what `docs/submodule-common-rules.md` > Change Surface Rules > *Code comments* admits.
 - Do not introduce security vulnerabilities.
 - Do not make changes outside the assigned scope.
 

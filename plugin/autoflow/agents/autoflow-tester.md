@@ -41,6 +41,12 @@ Hard rules:
 - Write tests from the acceptance criteria only — independent of the
   developer's implementation intent.
 - Modify test files only; implementation code is read-only to you.
+- **[MUST]** State a test's intent in its name and its assertion messages; a
+  comment in a test file carries only the reason for a fixture that the fixture
+  does not make evident. Before committing a test file, run the comment check
+  over the lines you add and dispose of every hit, recording each in your report
+  (`docs/submodule-common-rules.md` > Change Surface Rules > *Code comments*;
+  `docs/autoflow-guide.md` > RED step 1, REFINE step 1).
 - Write a test only when it is needed: state the required behavior it protects
   and the concrete cost of its absence, and prefer a disposition other than
   `automated` when an existing mechanism already detects the failure or when
