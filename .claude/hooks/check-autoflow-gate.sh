@@ -49,7 +49,7 @@
 #                                     see resolve_spawn_role)
 #   - Bash(git push)                → AUDIT + GATE:QUALITY pass required, and neither
 #                                     gate's latest record carries a remedy_class (an
-#                                     open re-entry — a Medium+ recommendation attempt
+#                                     open re-entry — a recommendation attempt
 #                                     not yet re-scored clean; issue #275)
 #   - Bash(gh pr create)            → the same two conditions
 #   - Bash(git commit)              → while the latest GATE:QUALITY record carries
@@ -1080,7 +1080,7 @@ if [ "$TOOL_NAME" = "Agent" ]; then
 fi
 
 # An open re-entry is not pushed past (issue #275): while a gate's latest record
-# carries `remedy_class`, a Medium+ recommendation attempt is routed and not yet
+# carries `remedy_class`, a recommendation attempt (Medium+, or a Low fixed now) is routed and not yet
 # re-scored clean (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage) —
 # the orchestrator removes the value once the re-score passes with nothing open.
 # The value is read at the same most-recent-cycle location as check_scores reads
@@ -1099,7 +1099,7 @@ block_if_open_reentry() {
     exit 2
   fi
   if [ -n "$_open" ]; then
-    echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a Medium+ recommendation attempt not yet re-scored clean)." >&2
+    echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
     echo "Finish the routed fix, run the gate's re-score, and remove the value once nothing Medium+ is open (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage, issue #275)." >&2
     echo "State file: $STATE_FILE" >&2
     exit 2

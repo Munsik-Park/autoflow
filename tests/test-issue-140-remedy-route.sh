@@ -22,7 +22,7 @@
 #      top-level and score-shaped only).
 #   4. Hook Gates 3 / 4 (issue #275) — `git push` / `gh pr create` on passing
 #      AUDIT + GATE:QUALITY scores are denied while either gate's latest
-#      record carries a remedy_class (an open Medium+ recommendation attempt),
+#      record carries a remedy_class (an open recommendation attempt),
 #      and admitted once the value is removed or superseded by a later cycle's
 #      record.
 # =============================================================================

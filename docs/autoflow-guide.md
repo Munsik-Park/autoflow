@@ -1514,11 +1514,15 @@ No separate disposition system exists for gate recommendations
   reviewer's loop check exists to stop. The user's answer is appended to the ledger and selects
   re-entry.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
-  gate's verdict entry: fix now through the same route, or defer and name it in the PR body's
-  known-gaps line ([`pr-body-guide.md`](pr-body-guide.md) > *한계와 known gaps*). A `Low` on a target
+  gate's verdict entry: fix now, or defer and name it in the PR body's known-gaps line. A `Low`
+  fixed now **enters the procedure above as an attempt from that point**: the orchestrator judges
+  its `remedy_class` (the evaluator tags none on a `Low`), and the fix is routed, recorded as a
+  `[gate-autofix]` entry, marked in `phases.<gate>.remedy_class`, re-scored by the same gate and
+  counted on the same window exactly as a `Medium`+ attempt — so a session that ends before its
+  re-score resumes on it, never past the gate. The known-gaps line ([`pr-body-guide.md`](pr-body-guide.md) > *한계와 known gaps*). A `Low` on a target
   comment's divergence or disallowed content keeps its own handling — the orchestrator's direct
   commit, or left (*Code comments in a target* below).
-- **Record.** Each `Medium`+ attempt — a route that re-enters a phase and awaits the gate's re-score — is one ledger entry headed
+- **Record.** Each attempt — a `Medium`+ recommendation, or a `Low` the orchestrator fixes now: a route that re-enters a phase and awaits the gate's re-score — is one ledger entry headed
   `## O<n> — <title> (cycle <C>, <GATE>) [gate-autofix]`, naming each recommendation it routes
   (subject, severity, class), the route, and the grounds — appended before the routed work starts.
   The marker sits at the end of the heading like `[review-autofix]`, and the two are distinct:
