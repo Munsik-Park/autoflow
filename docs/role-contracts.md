@@ -18,6 +18,7 @@
 
 ### Finding coverage (model-recall guard)
 - **[MUST]** Surface every issue found, including low-severity and uncertain ones — list them in `recommendations` (or `blocking_issues` when score-blocking). Severity and confidence are expressed through the `score` and `reason`, never by silently omitting a finding. The rubric score is the filter; the finding stage prioritizes coverage.
+- **[MUST]** Each `recommendations` item is an object carrying its **subject** — a `path:line` at the evaluated commit, or the design document's section — the rubric **item** it was found under, its **severity** in the reviewer's vocabulary (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence` for a finding the evaluator could not confirm), the finding, and — on `Medium` and above — its `remedy_class` (*Remedy class* below). After a PASS the orchestrator triages the list by the reviewer-finding procedure, so the subject is what locates the problem and the severity and class are what route it ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation triage*). An item missing any of these is a report defect: reject and re-spawn, as for a missing `fail_hypothesis`.
 - **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Recent Claude models follow such filtering instructions literally — they investigate just as deeply but drop sub-bar findings instead of reporting them, which lowers recall. Let it report all findings and let the score rank them.
 
 ### Pre-scoring FAIL hypothesis (consider-the-opposite)
@@ -37,11 +38,21 @@ Binds the GATE:QUALITY form only (issue #135).
 - **[MUST]** Read the REFINE report's `## Out-of-scope observations — guard / boundary logic touched` section, disposition every entry (`defect — scored under <item>` or `not a defect — <reason>`), and record the dispositions in the `refine_observations` output field. A `defect` entry is scored under `Quality` or `Impact scope`. The author's rejection reason is context, not the disposition — the section exists because REFINE may not change behavior and therefore cannot be the judge of the behavior it declined to change.
 - **[MUST]** A report whose `refine_observations` is absent, or that does not account for every entry in the section, is rejected and the evaluator re-spawned, with the same cap (max 2) and escalation as an empty `fail_hypothesis`.
 
-### Remedy class (GATE:QUALITY FAIL routing)
+### Scope judgments (GATE:PLAN / GATE:QUALITY)
 
-Binds the GATE:QUALITY form only. The orchestrator routes a FAIL's re-entry from this field
-([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > FAIL routing); the evaluator is the
-classifying authority and the implementing roles do not re-classify.
+The cycle's scope is its acceptance criteria, its confirmed cause, and the problems its recorded scope judgments include ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
+
+- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the feature design's `## Scope` section. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read the `## Scope` section, every `## Scope judgments` section in the cycle's `.autoflow/issue-{N}-*.md` reports, and the ledger's `[gate-autofix]` entries and gate verdict entries recording how earlier gates' recommendations were triaged (Change Surface Rules > GATE:QUALITY linkage).
+- A hunk that rests on a recorded judgment is in scope when the judgment meets one of question 1's three conditions; a judgment that meets none is scored under `Minimal implementation`. A directly related problem the records show, left out with no separation reason or with one that answers neither half of question 2, is scored under `Impact scope` (GATE:PLAN: `Scope`).
+- A separation reason is judged for whether it answers question 2, not for whether the evaluator would have separated the problem; the reviewer reads every such reason in the PR body.
+
+### Remedy class (GATE:QUALITY FAIL routing; `Medium`+ recommendations at every gate)
+
+The failed-item rule binds the GATE:QUALITY form only; the recommendation rule binds every
+rubric-scored gate. The orchestrator routes a FAIL's re-entry and a `Medium`+ recommendation's fix
+from this field ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > FAIL routing, >
+*Recommendation triage*); the evaluator is the classifying authority and the implementing roles do
+not re-classify.
 
 - **[MUST]** On a FAIL, tag every item scored below 7 with a `remedy_class` — `doc` (documentation,
   no behavior change; in this repository comment text too — a target comment's divergence or
@@ -51,6 +62,11 @@ classifying authority and the implementing roles do not re-classify.
   agreed design itself) — starting from the default per item (`scripts/gate/remedy-route.sh
   default-class <item>`) and overriding it with a stated reason when the default misreads the
   defect (a `Doc updates` cap caused by a prompt string or a hook message is `impl`).
+- **[MUST]** Tag every `recommendations` item of severity `Medium` or above with a `remedy_class`
+  from the same vocabulary, at every rubric-scored gate, by the question HANDOFF step 6.5 asks of a
+  reviewer finding — *does clearing this discard or change a decision the deliberation settled?*
+  Yes → `design`; no → the kind of change that clears it. A `Low` or `Low Confidence` item carries
+  none.
 - **[MUST]** Write `operator` when the class cannot be stated with confidence. Do not guess: an
   `operator` entry pauses the cycle for the operator's decision, which is cheaper than a wrong route.
 - **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: the
@@ -74,7 +90,7 @@ Decision 24).
   on is unchanged. **A comment that diverges from its code, or that carries what a comment does not
   carry, is a `Low` finding** — a restatement of the code, a design ground, an acceptance-criterion,
   issue or PR reference, another file's path or contract, or a change history. Record it in
-  `recommendations` with its `path:line`; it lowers no item's score — a lowered score counts toward
+  `recommendations` with its `path:line` and the severity `Low`; it lowers no item's score — a lowered score counts toward
   the average as well as the per-item minimum — so it is never a failed item and carries no
   `remedy_class`; whether it is fixed is the orchestrator's judgment, and the fix is its
   direct commit ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Code comments in a target*).
@@ -138,7 +154,7 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 - Writes test code before implementation (Test First) and confirms Red — every `driving` and `regression` test fails; a `characterization` test may start green. Finds how the target runs its tests at the location it executes in, judges which of the target's tests the change requires, runs them that way and records each run's command, log and summary line with the grounds; runs nothing tree-wide ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*, *Local verification*).
 - **[MUST]** Writes comments in test files under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Code comments*: a test's intent is stated in its name and its assertion messages, and a comment in a test file carries only the reason for a fixture that the fixture does not make evident. Before committing a test file it runs the comment check over the lines it adds and disposes of every hit, recording each in its report ([`autoflow-guide.md`](autoflow-guide.md) > RED step 1; the check is REFINE step 1's).
 - For untestable items: states the reason and proposes alternatives (design change / manual scenario (except where the composition-oracle clause applies) / mock (same exception)).
-- Performs minimal-implementation verification after implementation: detects observable behavior or contract the implementation introduces outside the agreed scope (feature design + verification design), not code outside test coverage. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > VERIFY step 3.
+- Performs minimal-implementation verification after implementation: detects observable behavior or contract the implementation introduces outside the cycle's scope (feature design with its `## Scope` section + verification design), not code outside test coverage, and judges each such behavior under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*, recording the judgment in its report — a directly related behavior desirable to fix here is in scope; one that is not is removed with its separation reason. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > VERIFY step 3.
 - **[MUST]** Performs the mock-boundary fidelity check after implementation: re-enumerates the iteration set from the test tree at HEAD (every double in scope and the real interface each stands for), re-derives each real interface at HEAD, and cites its `file:line`. Rule body: [`autoflow-guide.md`](autoflow-guide.md) > VERIFY step 4.
 - **[MUST]** States, per check, the **detection outcome** — `detected` / `clean` / `not-run` — in the VERIFY report, together with the iteration set as named doubles; a check that did not execute is reported `not-run`, never `clean`. The orchestrator appends these outcomes to the decision ledger; see [`autoflow-guide.md`](autoflow-guide.md) > VERIFY > *Detection record*.
 - **[MUST]** Runs the target repository's lint chain over the staged files before committing, confirms zero errors attributable to them, and reports one outcome word per discovered chain as the commit's lint-outcome evidence anchor. Rule body: [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
@@ -151,13 +167,14 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 
 ## Submodule AI (per sub-repo, Developer AI)
 - Understands and implements the assigned sub-repo's code.
-- Writes the minimum code that satisfies the issue acceptance criteria within the agreed scope and passes the `automated` tests written by the Test AI (does not implement behavior outside that scope; an AC with a non-automated disposition is still implemented — see [`autoflow-guide.md`](autoflow-guide.md) > GREEN).
+- Writes the minimum code that satisfies the issue acceptance criteria within the cycle's scope and passes the `automated` tests written by the Test AI (does not implement behavior outside that scope; an AC with a non-automated disposition is still implemented — see [`autoflow-guide.md`](autoflow-guide.md) > GREEN).
+- **[MUST]** Judges a problem it meets that the scope does not name under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* and records the judgment in its report: a directly related problem desirable to fix here is fixed in the cycle, one that is not is left with its separation reason, and one showing that an acceptance criterion must change is raised for the operator ([`autoflow-guide.md`](autoflow-guide.md) > GREEN step 2).
 - Has read access to other sub-repos; modifications stay within the assigned sub-repo.
 - Works directly in the target repo and pushes to origin (the target repo's own branch). PR creation is performed by the orchestrator.
 - *Secondary (multi-repo):* when the target is a sub-repo, the push goes to the AI's fork branch (in the fork-and-PR model).
 - Runs the RED tests first and confirms that every `driving` and `regression` test fails before implementing — a `characterization` test may already pass ([`autoflow-guide.md`](autoflow-guide.md) > GREEN step 1); then runs locally, once, the tests the change requires, the way the target runs its tests, and reports each command with its log and summary line; never a whole-tree run ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*, *Local verification*).
 - **[MUST]** Runs the target repository's lint chain over the staged files before committing, confirms zero errors attributable to them, and reports one outcome word per discovered chain as the commit's lint-outcome evidence anchor. Rule body: [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
-- **[MUST]** At REFINE, writes `.autoflow/issue-{N}-refine-report.md` — opening with the `simplify:` / `simplify-grounds:` lines that record whether /simplify ran, over what, and why (the Developer AI's judgment on the diff, issue #227) — with its four sections — `## Applied`, `## Rejected / deferred`, `## Out-of-scope observations — guard / boundary logic touched`, `## Comment check` — each present, `none` when empty. A /simplify suggestion rejected as behavior-changing that touches validation, a guard, path / root resolution, an input or output boundary, or error handling goes into the third section with its `path:line` and the behavior it would change; REFINE is right to refuse it and wrong to bury it (issue #135; `docs/autoflow-guide.md` > REFINE > REFINE report). The fourth section records the comment check over the cycle's diff — the comment-line ratio as an observation and each hit's disposition (`docs/autoflow-guide.md` > REFINE step 1).
+- **[MUST]** At REFINE, writes `.autoflow/issue-{N}-refine-report.md` — opening with the `simplify:` / `simplify-grounds:` lines that record whether /simplify ran, over what, and why (the Developer AI's judgment on the diff, issue #227) — with its four sections — `## Applied`, `## Rejected / deferred`, `## Out-of-scope observations — guard / boundary logic touched`, `## Comment check` — each present, `none` when empty. A /simplify suggestion rejected as behavior-changing that touches validation, a guard, path / root resolution, an input or output boundary, or error handling — or that it judges directly related to the issue, whatever its subject — goes into the third section with its `path:line` and the behavior it would change; REFINE is right to refuse it and wrong to bury it (issue #135; `docs/autoflow-guide.md` > REFINE > REFINE report). The fourth section records the comment check over the cycle's diff — the comment-line ratio as an observation and each hit's disposition (`docs/autoflow-guide.md` > REFINE step 1).
 - **[MUST]** Writes and changes comments under [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Code comments* — a comment attached to code it modifies is updated or deleted in the same commit, and deleted when it is uncertain whether it is still true — and at REFINE runs the comment check over the cycle's diff ([`autoflow-guide.md`](autoflow-guide.md) > REFINE step 1).
 - Common rules: see [`docs/submodule-common-rules.md`](submodule-common-rules.md).
 - Spawn model: resolved from the spawn policy, never restated here — `bash scripts/spawn-policy/spawn-policy.sh model green` and `… model refine-impl`. REFINE is spawned fresh at REFINE entry, since each phase's spawn resolves its own model. Source: `.claude/autoflow/spawn-policy.json`.

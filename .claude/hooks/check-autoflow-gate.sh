@@ -47,8 +47,11 @@
 #   - Agent (undeclared spawn)      → DENIED while a cycle is active (declare the
 #                                     role via subagent_type autoflow-<role> —
 #                                     see resolve_spawn_role)
-#   - Bash(git push)                → AUDIT + GATE:QUALITY pass required
-#   - Bash(gh pr create)            → AUDIT + GATE:QUALITY pass required
+#   - Bash(git push)                → AUDIT + GATE:QUALITY pass required, and neither
+#                                     gate's latest record carries a remedy_class (an
+#                                     open re-entry — a Medium+ recommendation attempt
+#                                     not yet re-scored clean; issue #275)
+#   - Bash(gh pr create)            → the same two conditions
 #   - Bash(git commit)              → while the latest GATE:QUALITY record carries
 #                                     remedy_class "doc": the doc re-entry's sweep
 #                                     record .autoflow/issue-N-remedy-sweep.md must
@@ -1076,16 +1079,42 @@ if [ "$TOOL_NAME" = "Agent" ]; then
   esac
 fi
 
-# ── Gate 3: git push → AUDIT + GATE:QUALITY pass required ──
+# An open re-entry is not pushed past (issue #275): while a gate's latest record
+# carries `remedy_class`, a Medium+ recommendation attempt is routed and not yet
+# re-scored clean (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage) —
+# the orchestrator removes the value once the re-score passes with nothing open.
+# The value is read at the same most-recent-cycle location as check_scores reads
+# scores; a FAIL's class is already behind its failing scores, so this branch
+# only ever adds the PASS-with-open-attempt case. Fail closed on a jq error.
+block_if_open_reentry() {
+  local action=$1 phase_key=$2 _open
+  if ! _open=$(printf '%s' "$STATE_JSON" | jq -r --arg phase "$phase_key" '[.. | objects | select(has("phases")) | select(.phases | has($phase)) | .phases[$phase].remedy_class] | (last // "") | if type == "string" then . else "" end' 2>/dev/null); then
+    echo "BLOCKED: AutoFlow state schema is corrupt — cannot read phases.${phase_key}.remedy_class; failing closed for ${action}." >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+  if [ -n "$_open" ]; then
+    echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a Medium+ recommendation attempt not yet re-scored clean)." >&2
+    echo "Finish the routed fix, run the gate's re-score, and remove the value once nothing Medium+ is open (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage, issue #275)." >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+}
+
+# ── Gate 3: git push → AUDIT + GATE:QUALITY pass required, no open re-entry ──
 if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_PUSH}"; then
   block_with_scores "git push requires AUDIT pass" "audit"
   block_with_scores "git push requires GATE:QUALITY pass" "gate_quality"
+  block_if_open_reentry "git push" "audit"
+  block_if_open_reentry "git push" "gate_quality"
 fi
 
-# ── Gate 4: gh pr create → AUDIT + GATE:QUALITY pass required ──
+# ── Gate 4: gh pr create → AUDIT + GATE:QUALITY pass required, no open re-entry ──
 if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+create\b"; then
   block_with_scores "gh pr create requires AUDIT pass" "audit"
   block_with_scores "gh pr create requires GATE:QUALITY pass" "gate_quality"
+  block_if_open_reentry "gh pr create" "audit"
+  block_if_open_reentry "gh pr create" "gate_quality"
 fi
 
 # ── Gate 5: git commit under a `doc` GATE:QUALITY remedy → sweep record required (issue #140) ──

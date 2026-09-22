@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, amended by ADR-0022; the ARCHITECT halt superseded by issue #166 (see Superseding note)
+Accepted, amended by ADR-0022; the ARCHITECT halt superseded by issue #166 (see Superseding note); entry points and the `added` disposition widened by issue #275 (see Amendment note)
 
 ## Context
 
@@ -183,3 +183,23 @@ deliberation's. It is now exercised at three points:
 
 The `[ac-decision]` ledger grammar is unchanged: the entry heading marker, the `- AC:` and
 `- Disposition:` lines, and the authority value `operator decision`.
+
+## Amendment note (issue #275)
+
+The authority principle stands unchanged: acceptance-criterion **content** is the operator's. Two
+things widen ([`../design-rationale.md`](../design-rationale.md) > Decision 25):
+
+1. **Where a content change is raised.** Besides the orchestrator's routing of the ARCHITECT report
+   and VERIFY's design contradiction, a role at GREEN, VERIFY or REFINE that meets a problem showing a
+   criterion is wrong, or that the issue must promise a behavior its criteria do not state, raises it
+   in its report, and a gate recommendation reaches the operator through the recommendation
+   triage's acceptance-criterion pause criterion — the reviewer-finding procedure the gates reuse
+   (`docs/autoflow-guide.md` > GATE:QUALITY > *Recommendation triage*). The heading names the phase
+   the change surfaced in:
+   `## O<n> — <title> (cycle <C>, <PHASE>) [ac-decision]`.
+2. **The disposition vocabulary** gains `added`. An `added` entry covers no difference in either gate
+   backstop — the criterion it adds is owed a verification-design row and a discharging site like
+   any other.
+
+The marker, the `- AC:` line and the authority value `operator decision` are unchanged. The grammar's
+home is `CLAUDE.md` > Decision Ledger > *Acceptance-criterion decisions*.

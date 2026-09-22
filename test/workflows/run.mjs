@@ -336,6 +336,18 @@ await test('ARCHITECT: the scribe is instructed to write the three documents and
   assert.deepEqual(result.report, AGREED_REPORT, 'the scribe\'s consolidated report is the run\'s report')
 })
 
+await test('ARCHITECT: the scribe writes the feature design\'s Scope section, a design-added row per included problem, and a delta origin for every return to ARCHITECT (#275)', async () => {
+  const { calls } = await runArch({ issue: '275' }, recordResponder())
+  const p = calls.find((c) => c.label === 'scribe').prompt
+  assert.match(p, /"## Scope" section/, 'the feature design carries the cycle\'s scope beyond the acceptance criteria')
+  assert.match(p, /Change Surface Rules > Scope judgment/, 'the Scope section cites the judgment it records, not a restatement')
+  assert.match(p, /separation reason/, 'a directly related problem left out carries its separation reason')
+  assert.match(p, /a row whose Issue AC is — for each problem the Scope section includes/, 'each included problem gets a design-added verification row')
+  for (const origin of ['GATE:PLAN FAIL', 'un-agreed re-discussion', 'VERIFY design contradiction', 'design re-entry', 'acceptance-criterion decision', 'gate recommendation']) {
+    assert.ok(p.includes(origin), `the delta heading grammar must admit the origin "${origin}"`)
+  }
+})
+
 await test('ARCHITECT: the scribe is instructed to run the composition-oracle classifier over the verification design it wrote and attach its stdout and exit status verbatim (#206 D5)', async () => {
   const { calls } = await runArch({ issue: '206' }, recordResponder())
   const p = calls.find((c) => c.label === 'scribe').prompt

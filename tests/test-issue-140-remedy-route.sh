@@ -20,6 +20,11 @@
 #      non-commit command stay ungated; `remedy_class` as a phase-object
 #      sibling key is NOT a MALFORMED state (the closed-world validator is
 #      top-level and score-shaped only).
+#   4. Hook Gates 3 / 4 (issue #275) — `git push` / `gh pr create` on passing
+#      AUDIT + GATE:QUALITY scores are denied while either gate's latest
+#      record carries a remedy_class (an open Medium+ recommendation attempt),
+#      and admitted once the value is removed or superseded by a later cycle's
+#      record.
 # =============================================================================
 
 set -uo pipefail
@@ -136,6 +141,40 @@ JSON
 run_hook 0 "doc class superseded by a later cycle's record → ungated" "$NEST" "$(bash_json 'git commit -m x')"
 
 rm -rf "$DOC" "$TEST" "$NONE" "$NEST"
+
+echo "=== 4. hook Gates 3 / 4: open re-entry (issue #275) ==="
+mk_pass_state() { # <dir> <audit remedy_class or ''> <gate_quality remedy_class or ''>
+  local d="$1" arc="$2" qrc="$3" aline="" qline=""
+  mkdir -p "$d/.autoflow"
+  [[ -n "$arc" ]] && aline="\"remedy_class\": \"$arc\","
+  [[ -n "$qrc" ]] && qline="\"remedy_class\": \"$qrc\","
+  cat > "$d/.autoflow/issue-275.json" <<JSON
+{ "active": true, "issue": "#275",
+  "phases": {
+    "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+    "audit": { $aline "scores": { "Authn": 9, "Input": 8 } },
+    "gate_quality": { $qline "scores": { "Completeness": 8, "Quality": 9 } } } }
+JSON
+}
+OPENQ=$(mktemp -d); mk_pass_state "$OPENQ" "" impl
+run_hook_stderr 2 "open re-entry" "PASS scores + gate_quality remedy_class=impl → git push denied" "$OPENQ" "$(bash_json 'git push -u origin dev/x')"
+run_hook_stderr 2 "open re-entry" "PASS scores + gate_quality remedy_class=impl → gh pr create denied" "$OPENQ" "$(bash_json 'gh pr create --title x')"
+run_hook 0 "open re-entry gates push only — git commit stays ungated (class is not doc)" "$OPENQ" "$(bash_json 'git commit -m x')"
+OPENA=$(mktemp -d); mk_pass_state "$OPENA" design ""
+run_hook_stderr 2 "phases.audit carries remedy_class=design" "PASS scores + audit remedy_class=design → git push denied" "$OPENA" "$(bash_json 'git push')"
+CLEAN=$(mktemp -d); mk_pass_state "$CLEAN" "" ""
+run_hook 0 "PASS scores, no remedy_class → git push admitted" "$CLEAN" "$(bash_json 'git push')"
+run_hook 0 "PASS scores, no remedy_class → gh pr create admitted" "$CLEAN" "$(bash_json 'gh pr create --title x')"
+SUP=$(mktemp -d); mkdir -p "$SUP/.autoflow"
+cat > "$SUP/.autoflow/issue-275.json" <<'JSON'
+{ "active": true, "issue": "#275",
+  "phases": { "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+              "audit": { "scores": { "Authn": 9 } },
+              "gate_quality": { "remedy_class": "impl", "scores": { "Completeness": 8 } } },
+  "fix_regression": { "phases": { "gate_quality": { "scores": { "Completeness": 9 } } } } }
+JSON
+run_hook 0 "open class superseded by a later cycle's gate_quality record → git push admitted" "$SUP" "$(bash_json 'git push')"
+rm -rf "$OPENQ" "$OPENA" "$CLEAN" "$SUP"
 
 echo
 echo "Tests: $PASS passed, $FAIL failed"

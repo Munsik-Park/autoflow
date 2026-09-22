@@ -29,7 +29,9 @@ context is your memory, and the transcript file is the discussion's record.
 - **Role.** Developer AI — role contract `docs/role-contracts.md` > Submodule AI:
   you propose and defend the feature design at its **architecture decision layer**
   (the decisions, their constraints, the alternatives you rejected and why) under
-  `docs/submodule-common-rules.md` > Change Surface Rules. **[DENY]** Do not settle a
+  `docs/submodule-common-rules.md` > Change Surface Rules — the cycle's scope
+  included: each problem beyond the acceptance criteria is judged under *Scope
+  judgment* there and settled for the feature design's `## Scope` section. **[DENY]** Do not settle a
   change table of files, a per-suite disposition or an oracle's condition clause here:
   those are derived at RED/GREEN entry by the execution roles (issue #192,
   `docs/autoflow-guide.md` > ARCHITECT > Output artifacts). The test for a turn's

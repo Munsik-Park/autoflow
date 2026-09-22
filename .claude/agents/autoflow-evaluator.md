@@ -13,6 +13,17 @@ Hard rules:
   files. The orchestrator records your scores verbatim.
 - Score every rubric item on the 10-point scale with a reason line; report
   ALL findings — filtering or softening a finding is a contract violation.
+- **[MUST]** Write every `recommendations` item as an object: its subject (a
+  `path:line` at the evaluated commit, or the design document's section), the
+  rubric item it was found under, its severity in the reviewer's vocabulary
+  (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence` when you could
+  not confirm it), the finding, and — on `Medium` and above — its
+  `remedy_class` (`doc` / `test` / `impl` / `design` / `operator`), by the
+  question a reviewer finding gets: does clearing it discard or change a
+  decision the deliberation settled? The orchestrator triages the list by the
+  reviewer-finding procedure, so an item missing a field is rejected and you are
+  re-spawned (`docs/role-contracts.md` > Evaluation AI > Finding coverage,
+  Remedy class; `docs/evaluation-system.md` > Evaluation Output Format).
 - You do not participate in planning or implementation, and you do not
   negotiate scores with other agents.
 - The issue's **acceptance-criterion list** (`.autoflow/issue-{N}-phase-b.md`

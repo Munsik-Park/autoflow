@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note); decision 2's `delivery-check` definition amended by ADR-0024 (see ADR-0024 > *Related Issues / PRs*); decision 1's role as the retention filter replaced by ADR-0024 D1, issue #222 (see Superseding note (issue #222))
+Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note); decision 2's `delivery-check` definition amended by ADR-0024 (see ADR-0024 > *Related Issues / PRs*); decision 1's role as the retention filter replaced by ADR-0024 D1, issue #222 (see Superseding note (issue #222)); decision 6's handling of out-of-scope behavior and the tier-3 options amended by issue #275 (see Amendment note (issue #275))
 
 ## Context
 
@@ -188,3 +188,17 @@ What decision 1 still governs is **existence**: whether a criterion is verified 
 against any other disposition), with `none` under uncertainty. Decisions 2–6 are unchanged. The
 replaced / retained split is recorded in full at ADR-0024 > *Test necessity — what D1 replaces and
 what it retains*.
+
+## Amendment note (issue #275)
+
+Decision 6 keeps VERIFY step 3 a scope check, and a behavior is still never absorbed by silently
+adding a test. What changes is what "outside the agreed scope" leads to: the scope now includes the
+problems a recorded scope judgment includes, and a behavior outside it is judged by the Test AI —
+directly related to the issue and desirable to fix in this cycle, it is in scope; otherwise it is
+removed, with its separation reason when it is directly related. A disagreement with the GREEN
+report's judgment is one orchestrator judgment, and a scope question goes to ARCHITECT only when
+keeping the behavior would change a design decision. Tier 3 of the guard also offers adding a
+criterion the issue did not state, and a content change can be raised after ARCHITECT. Rule homes:
+`docs/submodule-common-rules.md` > Change Surface Rules > *Scope judgment*;
+`docs/autoflow-guide.md` > VERIFY step 3 and ARCHITECT > *Report routing*; decision:
+[`../design-rationale.md`](../design-rationale.md) > Decision 25.
