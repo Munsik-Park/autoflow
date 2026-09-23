@@ -1032,12 +1032,32 @@ that catch a deployment failure. The `standing` categories this repository keeps
 its enforcement device, a ko/en pair and the like) leave. The decision applies to this repository;
 what a cycle leaves in a target's tree stays unclassified by AutoFlow (issue #238).
 
-**Grounds.** D1's criterion asks whether a defect surfaces only after deployment. A broken hook
-contract or two documents that disagree is introduced by a change and is visible in that change's
-own one-shot run; it surfaces later only when an unrelated change breaks it, and guarding against
-that is the regression guard #222 already declined to keep for functional checks (*Consequences >
-Negative* — "A behavior verified in one cycle has no regression guard in a later one unless its
-defect is deployment-level"). The two removed categories had become where that guard survived:
+**Two kinds of check.** What this repository verifies is of two kinds, and they differ in where a
+defect shows itself:
+
+- **AutoFlow's own rules** — the rule documents, a rule and the device that enforces it, an ADR and
+  its registry row, a ko/en pair, and the conventions and devices that run only here (the layer
+  check, the spawn-policy single source, the suite plane as this repository used it). A defect is
+  introduced by a change to this repository and is visible to that change's one-shot run; nothing
+  downstream sees it first.
+- **What a stamp delivers** — the behavior of what runs on a stamped target: the gate hook (delivered
+  in the plugin), the shipped scripts and workflows, the installer's reconciliation, drift-check. A
+  change to one is verified by its cycle's one-shot run like any change; how it behaves on a target
+  shows where it is stamped. Target structures vary more than a fixture can hold — a fixture shows
+  only that a state already known to work still works — so the stamp is corrected on real targets:
+  a failure there returns to this repository as an issue (`connev-llm/llmroute#629` → #236,
+  `connev-llm/llmroute#595` → #167, `connev-llm/llmroute#285` → #238). CI keeps the part that fails
+  for every target alike — the bundle builds, stamps, lands and resolves, and a delivered hook runs
+  once (`packaging`, `manifest`) — and no rule asks a cycle to verify a delivered behavior on a
+  throwaway stamped target (operator decision, 2026-09-24).
+
+**Grounds.** D1's criterion asks whether a defect surfaces only after deployment. For AutoFlow's own
+rules it does not: the change that introduces the defect is where it appears, and a later unrelated
+change that breaks the rule is the regression guard #222 already declined to keep for functional
+checks (*Consequences > Negative* — "A behavior verified in one cycle has no regression guard in a
+later one unless its defect is deployment-level"). For what a stamp delivers it does, and it
+surfaces on the target, whose own structure decides it — which a committed check here does not
+reproduce. The two removed categories had become where the declined guard survived:
 `connev-llm/llmroute#285` put eleven of twelve `standing` rows under `cross-file` (D1 > *Scope on
 targets*), and in this repository the 44 committed suites and 5 plugin suites carried 27,136 lines
 and the five workflows that ran them 58 direct step invocations, against this record's own
@@ -1045,12 +1065,14 @@ measurement that test lines already outgrew code and doc lines (Context). After 
 reclassification the 8 kept suites carry 2,518 lines and the three standing workflows 11
 invocations.
 
-**Accepted consequences** (the operator's, recorded with the decision). The regression of a hook
-that enforces a principle-1 authority rule — the push gate, the merge prohibition, the score
-thresholds, the `TaskOutput` and `gh issue create` denials — is no longer caught by CI; it is
-checked only by the one-shot run of the cycle that changes that hook. Agreement between documents —
-a rule and its device, an ADR and its registry row, a ko/en pair — is likewise checked only by the
-cycle that changes one of them. The external reviewer and the gates still see every such change.
+**Accepted consequences** (the operator's, recorded with the decision).
+
+- *AutoFlow's own rules.* Agreement between documents, and between a rule and its device, is checked
+  only by the cycle that changes one of them, by the external reviewer and by the gates.
+- *What a stamp delivers.* A regression in a delivered behavior that its changing cycle's one-shot
+  run misses is not caught by CI — including in a hook that enforces a principle-1 authority rule
+  (the push gate, the merge prohibition, the score thresholds, the `TaskOutput` and `gh issue create`
+  denials). It reaches the targets the bundle is stamped into and returns from there as an issue.
 
 **The suite plane (issue AC5).** This repository withdraws its opt-in
 (`.claude/autoflow.local.json` > `tests.suite_plane: false`). D5 retained the header contract here
@@ -1060,32 +1082,37 @@ removes the residual the mechanism bounded (D5 as revised). The plane — header
 runner, `check-suite-manifest.sh`, `check-suite-leaf.sh`, drift-check D7 — stays shipped and opt-in
 for targets (D3), unchanged.
 
-**Disposition.** Kept checks are named by the category of what remains in them; a kept file's other
-legs were deleted leg by leg on the same criterion. One boundary inside `packaging`: a delivered
-hook is invoked once and must return allow for a benign command — a smoke that catches a broken
-script, since a bash parse failure exits 2 like a deny — and its case-by-case deny/allow contract is
-`target-runtime`.
+**Disposition.** Each row names its kind — *rule* (AutoFlow's own rules) or *stamp* (what a stamp
+delivers) — and, for a kept check, the category of what remains in it; a kept file's other legs were
+deleted leg by leg on the same criterion. One boundary inside `packaging`: a delivered hook is
+invoked once and must return allow for a benign command — a smoke that catches a broken script,
+since a bash parse failure exits 2 like a deny — and its case-by-case deny/allow contract is the
+delivered behavior the stamp kind above leaves to real targets.
 
-| Check | Disposition | Category / ground |
-|---|---|---|
-| `tests/plugin/verify-package.sh` | kept, 19 of 35 legs | `packaging`, `manifest` — the package resolves, parity with the `.claude/` originals, one gate-hook smoke |
-| `tests/plugin/verify-install-into-target.sh` | kept, 20 of 43 legs | `packaging`, `manifest` — install, idempotency, scaffolds, settings merge, link closure, manifest rows and hashes, clean drift-check |
-| `tests/plugin/verify-install-skill-scripts.sh` | kept, 2 of 59 legs | `manifest` (manifest and plugin versions agree), `packaging` (the install skill's Step 0 resolves under the cache layout); the rest was the detection script's branch logic |
-| `tests/plugin/verify-thin-root-layer.sh` | kept, 8 of 23 legs | `packaging`, `manifest` — the shim, the settings pin and its manifest rows |
-| `tests/plugin/verify-e2e-dummy-target.sh` | kept, 13 of 30 legs | `packaging` — a realistic target is stamped and resolves from its installed location; one leg is the installed bundle's host-purity ratchet, retained as repository hygiene outside this list (operator decision) |
-| `tests/test-issue-236-restamp-removal.sh` | kept, the re-stamp reconciliation cases | `packaging`; drift-check's forecast wording, the detection script and doc legs deleted |
-| `tests/test-issue-979-bundle-delivery.sh` | kept, all but one leg | `packaging`, `manifest`; the SETUP-GUIDE wording leg deleted |
-| `tests/test-cycle-layer-devices-shipped.sh` | kept, all but two legs | `packaging`, `manifest`; the in-repository layer-check run and the device's detection arm deleted |
-| `scripts/test/check-manifest-regen-clean.sh`, `scripts/test/check-suite-ci-coverage.sh` | kept in CI | `manifest` |
-| `scripts/test/check-tests-tree-hygiene.sh`, `.github/workflows/host-purity-delta.yml`, `.github/workflows/reuse.yml` | kept in CI | repository hygiene, outside this list (operator decision) |
-| `scripts/test/check-suite-manifest.sh`, `scripts/test/check-suite-leaf.sh` | removed from this repository's CI; files kept | suite-plane lints shipped to opted-in targets |
-| `tests/test-gate-hardening.sh`, `test-issue-18-fixture-glob-isolation.sh`, `test-issue-40-hook-additive.sh`, `test-issue-55-score-format-contract.sh`, `test-issue-64-collection-scope.sh`, `test-issue-140-remedy-route.sh`, `test-issue-165-taskoutput-deny.sh`, `test-issue-223-schema-hook-contract.sh`, `test-issue-245-schema-validation.sh`, `test-issue-961-cap6-gate.sh`, `test-issue-create-gate.sh`; `.github/workflows/schema-hook-contract.yml` | deleted | `target-runtime` — the gate hook's deny/allow and schema contract |
-| `tests/test-bounded-execution-fallback.sh`, `test-codex-review-label-step.sh`, `test-composition-oracle.sh`, `test-issue-135-scope-bounded.sh`, `test-issue-166-relay-report.sh`, `test-issue-179-relay-state.sh`, `test-issue-181-preflight-local-checks.sh`, `test-issue-25-confirm-ci-green.sh`, `test-issue-30-confirm-ci-green.sh`, `test-issue-274-confirm-ci-green.sh`, `test-issue-35-phase-marker.sh`, `test-issue-92-host-pr-execution.sh`, `test-issue-979-preflight-backend-check.sh`, `test-issue-979-probe.sh`, `test-issue-979-review-backend.sh`, `test-issue-create-wrapper.sh`, `test-ledger-entry-id.sh`; `scripts/test/check-cleanup-issue-boundary.sh`, `scripts/test/check-repo-key.sh`; `test/workflows/run.mjs` and `.github/workflows/workflow-regression.yml` | deleted | `target-runtime` — a shipped script's or workflow's behavior contract |
-| `tests/test-issue-167-drift-upstream.sh`, `test-issue-185-drift-policy-leg.sh`, `test-headerless-suite-target.sh` | deleted | `target-runtime` — drift-check and suite-plane behavior on a target |
-| `tests/test-issue-103-central-runner.sh`, `test-push-context-base-ref.sh`, `test-workflow-trigger-conformance.sh`; `scripts/test/check-step-reconciliation.sh` | deleted | this repository's suite plane, withdrawn (D5) |
-| `tests/test-cycle-layer-index.sh`, `test-spawn-policy-single-source.sh`, `test-suite-plane-optin-single-site.sh`, `test-verification-layer-token-set.sh`; `scripts/test/check-watchdog-detachment.sh` | deleted | `cross-file` |
-| `tests/test-issue-150-policy-migration.sh`, `test-issue-952-wizard-removal.sh`, `test-issue-16-manifest-locale-invariance.sh` | deleted | a one-time property of a past change; the committed-manifest equality the last also asserted is `check-manifest-regen-clean.sh`'s |
-| `tests/manual/*.md` (11), `tests/plugin/manual-scenarios*.md` (4) | deleted | per-issue VALIDATE checklists; no procedure re-runs any of them, so none is a `manual / standing:` scenario |
+| Kind | Check | Disposition | Category / ground |
+|---|---|---|---|
+| stamp | `tests/plugin/verify-package.sh` | kept, 19 of 35 legs | `packaging`, `manifest` — the package resolves, parity with the `.claude/` originals, one gate-hook smoke |
+| stamp | `tests/plugin/verify-install-into-target.sh` | kept, 20 of 43 legs | `packaging`, `manifest` — install, idempotency, scaffolds, settings merge, link closure, manifest rows and hashes, clean drift-check |
+| stamp | `tests/plugin/verify-install-skill-scripts.sh` | kept, 2 of 59 legs | `manifest` (manifest and plugin versions agree), `packaging` (the install skill's Step 0 resolves under the cache layout); the rest was the detection script's branch logic |
+| stamp | `tests/plugin/verify-thin-root-layer.sh` | kept, 8 of 23 legs | `packaging`, `manifest` — the shim, the settings pin and its manifest rows |
+| stamp | `tests/plugin/verify-e2e-dummy-target.sh` | kept, 13 of 30 legs | `packaging` — a realistic target is stamped and resolves from its installed location; one leg is the installed bundle's host-purity ratchet, retained as repository hygiene outside this list (operator decision) |
+| stamp | `tests/test-issue-236-restamp-removal.sh` | kept, the re-stamp reconciliation cases | `packaging`; drift-check's forecast wording, the detection script and doc legs deleted |
+| stamp | `tests/test-issue-979-bundle-delivery.sh` | kept, all but one leg | `packaging`, `manifest`; the SETUP-GUIDE wording leg deleted |
+| stamp | `tests/test-cycle-layer-devices-shipped.sh` | kept, all but two legs | `packaging`, `manifest`; the in-repository layer-check run and the device's detection arm deleted |
+| stamp | `scripts/test/check-manifest-regen-clean.sh` | kept in CI | `manifest` — the bundle manifest is a fixed point of its generator |
+| rule | `scripts/test/check-suite-ci-coverage.sh` | kept in CI | `manifest` — every committed check here has an execution path |
+| — | `scripts/test/check-tests-tree-hygiene.sh`, `.github/workflows/host-purity-delta.yml`, `.github/workflows/reuse.yml` | kept in CI | repository hygiene, outside this list (operator decision) |
+| stamp | `scripts/test/check-suite-manifest.sh`, `scripts/test/check-suite-leaf.sh` | removed from this repository's CI; files kept | suite-plane lints shipped to opted-in targets |
+| stamp | `tests/test-gate-hardening.sh`, `test-issue-18-fixture-glob-isolation.sh`, `test-issue-40-hook-additive.sh`, `test-issue-55-score-format-contract.sh`, `test-issue-64-collection-scope.sh`, `test-issue-140-remedy-route.sh`, `test-issue-165-taskoutput-deny.sh`, `test-issue-223-schema-hook-contract.sh`, `test-issue-245-schema-validation.sh`, `test-issue-961-cap6-gate.sh`, `test-issue-create-gate.sh`; `.github/workflows/schema-hook-contract.yml` | deleted | the delivered gate hook's deny/allow and schema contract (`target-runtime`) |
+| stamp | `tests/test-bounded-execution-fallback.sh`, `test-codex-review-label-step.sh`, `test-composition-oracle.sh`, `test-issue-135-scope-bounded.sh`, `test-issue-166-relay-report.sh`, `test-issue-179-relay-state.sh`, `test-issue-181-preflight-local-checks.sh`, `test-issue-25-confirm-ci-green.sh`, `test-issue-30-confirm-ci-green.sh`, `test-issue-274-confirm-ci-green.sh`, `test-issue-92-host-pr-execution.sh`, `test-issue-979-preflight-backend-check.sh`, `test-issue-979-probe.sh`, `test-issue-979-review-backend.sh`, `test-issue-create-wrapper.sh`, `test-ledger-entry-id.sh`; `scripts/test/check-cleanup-issue-boundary.sh`, `scripts/test/check-repo-key.sh`; `test/workflows/run.mjs` and `.github/workflows/workflow-regression.yml` | deleted | the behavior contract of a shipped script or workflow (`target-runtime`) |
+| stamp | `tests/test-issue-167-drift-upstream.sh`, `test-issue-185-drift-policy-leg.sh`, `test-headerless-suite-target.sh` | deleted | drift-check and suite-plane behavior on a target (`target-runtime`) |
+| stamp | `tests/test-issue-952-wizard-removal.sh` | deleted | a one-time property of a past change to the installer |
+| stamp | `tests/plugin/manual-scenarios*.md` (4), `tests/manual/issue-96-manual-scenarios.md`, `tests/manual/issue-100-manual-scenarios.md` | deleted | they walked what every real stamp exercises — the plugin loading in a live session, the install skill's flow, the harness's permission prompt on the issue wrapper, a host without GNU `timeout`; real targets exercise them and return a failure as an issue |
+| rule | `tests/test-issue-103-central-runner.sh`, `test-push-context-base-ref.sh`, `test-workflow-trigger-conformance.sh`; `scripts/test/check-step-reconciliation.sh` | deleted | this repository's suite plane, withdrawn (D5) |
+| rule | `tests/test-cycle-layer-index.sh`, `test-spawn-policy-single-source.sh`, `test-suite-plane-optin-single-site.sh`, `test-verification-layer-token-set.sh`; `scripts/test/check-watchdog-detachment.sh` | deleted | agreement between files (`cross-file`) |
+| rule | `tests/test-issue-150-policy-migration.sh`, `test-issue-16-manifest-locale-invariance.sh` | deleted | a one-time property of a past change; the committed-manifest equality the latter also asserted is `check-manifest-regen-clean.sh`'s |
+| rule | `tests/test-issue-35-phase-marker.sh` | deleted | the behavior of a device that runs only here (`scripts/canary/emit-phase-marker.sh`, not shipped) |
+| rule | `tests/manual/*.md` (the other 9) | deleted | per-issue checklists of AutoFlow's own procedures and measurements — verification cost, quiesce, AC authority, policy migration, the Record scribe's output, the evaluator's discipline, spawn delivery; no procedure re-runs them |
 
 Fixtures and mocks only the deleted checks read went with them; `tests/fixtures/gate-schema.json`
 (the documented vocabulary source the gate hook's literals follow), the host-purity lists, the E2E

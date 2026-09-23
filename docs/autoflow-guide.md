@@ -1283,9 +1283,9 @@ the author's "this is fine" is not the disposition.
 6. Deploy/CI-path verification check: if the diff matched the INTEGRATE
    deploy/CI-path condition (### Deploy/CI-path conditional verification),
    confirm the INTEGRATE deploy/CI-path bundle (a)/(b)/(c) ran and passed
-   (against a target service repo, per tests/manual/issue-847-manual-scenarios.md)
-   — re-state the matched paths so a silently-skipped INTEGRATE step is caught
-   here, before HANDOFF. (Or diff touched no deploy/CI-path surface.)
+   against the target service repo — re-state the matched paths so a
+   silently-skipped INTEGRATE step is caught here, before HANDOFF. (Or diff
+   touched no deploy/CI-path surface.)
 7. Lint-chain check: if the diff touched files the target repo's lint chain
    covers (Change Surface Rules > Lint chain on the staged surface), confirm the
    lint chain ran clean on them at commit time — re-derive it from the committing
@@ -1426,7 +1426,7 @@ each-item ≥ 7 criterion:
     `docs/INDEX.md` plus its other artifact rows (`setup/gen-manifest-hashes.sh` >
     `compute_doc_closure`), which already exists and is not restated.
   - *Historical records* are what is kept as a record of a past state and followed by no one:
-    per-issue manual-verification records (`tests/manual/issue-*`), report-excerpt fixtures
+    per-issue manual-verification records, report-excerpt fixtures
     (`tests/fixtures/*`), an ADR's change-history and superseded sections, and archived cycle
     artifacts. A fixture that an executing test reads is still a historical record for this check
     — its content is a past report's text — while the test that reads it is normative.
@@ -1793,7 +1793,7 @@ Non-empty ⇒ the verification bundle below is a **mandatory PASS/FAIL gate** fo
 - **(b) CI-config static validation** — lint / schema-check the changed CI file itself (`.github/workflows/*` via `actionlint` / YAML-schema; `Jenkinsfile` via the target's `jenkins declarative-linter` or equivalent). Catches the #776 class. *No-op* when no CI file changed.
 - **(c) Landing/host routing smoke check** — a smoke request against the built host / landing route (health / routing reachability), catching production build-wiring breakage. Catches the #781 class. *No-op* when the target exposes no host / landing route.
 
-The bundle commands exercise a *target service repo's* surfaces; their live effectiveness against a real target repo is walked in `tests/manual/issue-847-manual-scenarios.md` (this single-repo framework repo owns none of these surfaces, so its own cycles hit the defined no-op).
+The bundle commands exercise a *target service repo's* surfaces, so their effectiveness shows on the target repos where they run, and a bundle item that misses a real breakage there is filed back as an issue; this single-repo framework repo owns none of these surfaces, so its own cycles hit the defined no-op.
 
 **Failure**: a bundle item that fails is an **INTEGRATE FAIL → GREEN** (`impl` class; existing GREEN↔VERIFY round-trip rules apply; no new regression cap is introduced).
 
