@@ -27,6 +27,7 @@ Two steps, run together by default:
            covering source it is left as it is and reported.
 
   derive   $ROOT/sessions/*.json + $ROOT/labels.tsv + the .autoflow archive
+           + $ROOT/github/*.json (the cycle rows' PRs, fetched with --gh)
            -> $ROOT/issues.tsv and $ROOT/issues.json, REGENERATED on every run,
            so a fix to the attribution logic recomputes every past issue.
 
@@ -38,7 +39,9 @@ model, the spawn's short `description` label, phase-key, call count, cache
 read / write / output, peak context, start / end, per-wake figures; for the
 orchestrator: one row per API call (timestamp, context, cache read / write,
 output, re-write flag); the `.autoflow/issue-{N}` reference runs; operator
-prompt timestamps. No transcript text, tool output or prompt body is stored.
+prompt and AskUserQuestion-answer timestamps; the issues whose own state file
+the session wrote; configured-reviewer launches; the harness's session cost.
+No transcript text, tool output or prompt body is stored.
 
 Phase-key recovery. Every spawn is preceded (a `[MUST]`) by a
 `spawn-policy.sh model <phase-key>` readout, so the key is recovered from the
@@ -74,15 +77,21 @@ from transcript_stats import (  # noqa: E402
     context_of, dedup_calls, is_rewrite, is_wake, load, parse_ts, tool_use_blocks, wake_indices,
 )
 
-SCHEMA = 2            # 2: an agent's role is the orchestrator's declared subagent_type, not the meta file's agentType
+SCHEMA = 3            # 3: state writes from the shell and the edit tools, reviewer runs, AskUserQuestion answers, the harness's session cost
 PK_RE = re.compile(r'spawn-policy\.sh["\']?\s+(?:model|effort)\s+([A-Za-z0-9][A-Za-z0-9_-]*)')
 PK_LOOP_RE = re.compile(r'\bfor\s+\w+\s+in\s+([^;\n]+?)\s*;\s*do\b')
 ISSUE_RE = re.compile(r'\.autoflow/issue-(\d+)(?=[-./\s"\'`)\\]|$)')   # not a truncated preview (`issue-5…`)
 WF_ISSUE_RE = re.compile(r'''["']?issue["']?\s*[:=]\s*["']?#?(\d+)''')
+STATE_RE = re.compile(r'\.autoflow/issue-(\d+)\.json')
+EDIT_TOOLS = ('Write', 'Edit', 'MultiEdit', 'NotebookEdit')
+REVIEWER_RE = re.compile(r'codex-review-pr\.sh\b([^;&|\n>]*)')
 SWITCH_REFS = 3       # consecutive references that move the session to another issue
 TAIL_S = 1800         # a segment reaches this far past its last reference, no further
+REVIEW_WINDOW_S = 7200  # a reviewer run's comment is looked for this far past its launch, no further
 DESC_MAX = 80
 USAGE_KEYS = ('input', 'cache_creation', 'cache_read', 'output')
+CI_FAILED = ('failure', 'timed_out', 'startup_failure')
+CI_NOT_RUN = ('cancelled', 'skipped', 'neutral', 'stale')
 
 
 # --------------------------------------------------------------------------- collect
@@ -135,6 +144,58 @@ def issue_refs(block):
     if block.get('name') in ('Workflow', 'Skill'):
         found |= set(WF_ISSUE_RE.findall(blob.replace('\\"', '"')))
     return sorted(int(n) for n in found)
+
+
+def written_states(name, inp, cwds):
+    """Issue numbers whose own .autoflow/issue-{N}.json this tool call writes.
+
+    The working tree's state file only: a relative `.autoflow/…` path, one under a working
+    directory of the session, or a shell or script variable assigned to either. A copy written
+    under a scratch or temp directory is not the state file. A shell write is a redirect into the
+    path, the path as the last argument of mv / cp / install, tee, sed -i, or a script opening it
+    for writing.
+    """
+    roots = '|'.join(re.escape(c.rstrip('/')) + '/' for c in cwds if c)
+    if name in EDIT_TOOLS:
+        fp = inp.get('file_path') or inp.get('notebook_path') or ''
+        m = re.fullmatch(r'(?:%s)?(?:\./)?\.autoflow/issue-(\d+)\.json' % roots, fp) if roots else \
+            re.fullmatch(r'(?:\./)?\.autoflow/issue-(\d+)\.json', fp)
+        return {int(m.group(1))} if m else set()
+    if name != 'Bash':
+        return set()
+    cmd = inp.get('command') or ''
+    out = set()
+    q = '["\']?'
+    for n in {int(x) for x in STATE_RE.findall(cmd)}:
+        own = r'(?:%s)?(?:\./)?\.autoflow/issue-%d\.json' % (roots, n) if roots else r'(?:\./)?\.autoflow/issue-%d\.json' % n
+        lit = r'(?:(?<=[\s"\'=(>])|^)' + own
+        if not re.search(lit, cmd, re.M):
+            continue
+        shell_vars = re.findall(r'\b([A-Za-z_]\w*)=["\']?' + own + r'(?=["\']?(?:$|[\s;&|]))', cmd, re.M)
+        tgt = '(?:%s)' % '|'.join([lit] + [r'\$\{?%s\}?' % v for v in shell_vars])
+        end = r'["\']?(?=$|[\s;&|)])'
+        script_vars = re.findall(r'\b([A-Za-z_]\w*)\s*=\s*(?:Path\()?["\']' + own + r'["\']', cmd)
+        stgt = '(?:%s)' % '|'.join([r'["\']' + own + r'["\']'] + [r'\b%s\b' % v for v in script_vars])
+        if (re.search(r'>>?\s*' + q + tgt + end, cmd, re.M)
+                or re.search(r'\b(?:mv|cp|install)\b[^;&|\n]*\s' + q + tgt + r'["\']?\s*(?=$|[;&|)])', cmd, re.M)
+                or re.search(r'\btee\b[^;&|\n]*\s' + q + tgt + end, cmd, re.M)
+                or re.search(r'\bsed\s+-i\b[^;&|\n]*' + tgt, cmd, re.M)
+                or re.search(r'open\(\s*' + stgt + r'\s*,\s*["\'][wa]', cmd)
+                or re.search(stgt + r'\)?\.write_text\(', cmd)
+                or re.search(r'writeFileSync\(\s*' + stgt, cmd)):
+            out.add(n)
+    return out
+
+
+def reviewer_runs(cmd):
+    """[repo or None, pr] for each configured-reviewer launch (`codex-review-pr.sh --pr N`) in one command."""
+    out = []
+    for m in REVIEWER_RE.finditer(cmd or ''):
+        pr = re.search(r'--pr\s+["\']?(\d+)', m.group(1))
+        repo = re.search(r'--repo\s+["\']?([\w.-]+/[\w.-]+)', m.group(1))
+        if pr:
+            out.append([repo.group(1) if repo else None, int(pr.group(1))])
+    return out
 
 
 def best_by_description(cands, desc):
@@ -344,6 +405,10 @@ def collect_session(main, policy_keys):
                 seen.append(v)
         return seen
 
+    # A stripped copy keeps no tool input and no tool result: what is read from them is not derivable.
+    stripped = any('user' in r and isinstance(r.get('user'), dict) for r in recs[:200])
+    cwds = distinct('cwd')
+
     # One pass over the orchestrator's tool calls, in order: readouts, spawns, issue references.
     pending, pool = [], []
     spawn_keys = {}                     # tool_use id -> (phase_key, method)
@@ -353,6 +418,8 @@ def collect_session(main, policy_keys):
     spawn_decl, spawn_decl_by_name = {}, {}
     refs = []                           # [issue, first_ts, last_ts, count] runs
     state_writes = []
+    reviews = []                        # [ts, repo or None, pr] configured-reviewer launches
+    asks = set()                        # AskUserQuestion tool_use ids
     tools = {}
     seen = set()
     for r in assistant:
@@ -367,11 +434,16 @@ def collect_session(main, policy_keys):
                 name = 'Agent'
             tools[name] = tools.get(name, 0) + 1
             inp = b.get('input') or {}
+            ts = r.get('timestamp')
+            state_writes += [[ts, n] for n in sorted(written_states(name, inp, cwds))]
             if name == 'Bash':
                 keys = readout_keys(b)
                 if keys:
                     pending = keys
                     pool = keys + [k for k in pool if k not in keys]
+                reviews += [[ts] + run for run in reviewer_runs(inp.get('command'))]
+            elif name == 'AskUserQuestion':
+                asks.add(b.get('id'))
             elif name in ('Agent', 'Task'):
                 role = role_of(inp.get('subagent_type') or b.get('subagent_type'))
                 desc = inp.get('description') or b.get('description') or ''
@@ -381,19 +453,23 @@ def collect_session(main, policy_keys):
                 if inp.get('name') or b.get('spawn_name'):
                     spawn_decl_by_name[inp.get('name') or b.get('spawn_name')] = decl
             for n in issue_refs(b):
-                ts = r.get('timestamp')
                 if refs and refs[-1][0] == n:
                     refs[-1][2] = ts
                     refs[-1][3] += 1
                 else:
                     refs.append([n, ts, ts, 1])
-                fp = inp.get('file_path') or ''
-                if name == 'Write' and re.search(r'\.autoflow/issue-%d\.json$' % n, fp):
-                    state_writes.append([ts, n])
 
     prompts = []
+    answers = []                        # an AskUserQuestion the operator answered; a rejected one is not an answer
     derivable = False
+    cost = None
     for r in recs:
+        if r.get('type') == 'cost-state':
+            # The harness's own running total for the session, restored on resume: the last one stands.
+            cost = {'usd': r.get('totalCostUSD'),
+                    'by_model': {m: (u or {}).get('costUSD') for m, u in (r.get('modelUsage') or {}).items()},
+                    'unknown_model_cost': bool(r.get('hasUnknownModelCost'))}
+            continue
         if r.get('type') != 'user':
             continue
         v = is_operator_prompt(r)
@@ -401,6 +477,11 @@ def collect_session(main, policy_keys):
             derivable = True
         if v:
             prompts.append(r.get('timestamp'))
+        content = (r.get('message') or {}).get('content')
+        for p in content if isinstance(content, list) else []:
+            if (isinstance(p, dict) and p.get('type') == 'tool_result' and p.get('tool_use_id') in asks
+                    and not p.get('is_error') and not r.get('toolDenialKind')):
+                answers.append(r.get('timestamp'))
 
     workflows = {}
     for p in sorted(glob.glob(os.path.join(main[:-len('.jsonl')], 'workflows', 'wf_*.json'))):
@@ -456,10 +537,11 @@ def collect_session(main, policy_keys):
         'versions': distinct('version'),
         'source': {
             'bytes': nbytes, 'files': nfiles, 'records': len(recs), 'sizes': sizes,
-            'form': 'stripped' if any('user' in r and isinstance(r.get('user'), dict) for r in recs[:200]) else 'raw',
+            'form': 'stripped' if stripped else 'raw',
         },
         'start': start, 'end': end,
-        'operator': {'prompts': prompts if derivable else None},
+        'operator': {'prompts': prompts if derivable else None, 'answers': None if stripped else answers},
+        'cost': cost,
         'orchestrator': {
             'models': models,
             'usage': sum_usage(calls),
@@ -474,7 +556,8 @@ def collect_session(main, policy_keys):
         'agents': agents,
         'workflows': workflows,
         'issue_refs': refs,
-        'state_writes': state_writes,
+        'state_writes': None if stripped else state_writes,
+        'reviewer_runs': None if stripped else reviews,
         'pr_links': [{'ts': r.get('timestamp'), 'repo': r.get('prRepository'), 'number': r.get('prNumber')}
                      for r in recs if r.get('type') == 'pr-link' and r.get('prNumber')],
         'phase_key_recovery': {'spawns': len(top), 'by_method': by_method},
@@ -661,8 +744,9 @@ def read_labels(path):
         c = ln.split('\t')
         if c[0] in ('session-id', 'session_id'):
             continue
-        c += [''] * (5 - len(c))
-        rows[c[0]] = {'arm': c[1], 'issue': c[2].lstrip('#'), 'operator_minutes': c[3], 'note': c[4]}
+        c += [''] * (6 - len(c))
+        rows[c[0]] = {'arm': c[1], 'issue': c[2].lstrip('#'), 'operator_minutes': c[3], 'note': c[4],
+                      'cost_usd': c[5]}
     return rows
 
 
@@ -717,7 +801,7 @@ def outcome(adir, issue):
     o['gate_plan_evals'] = count(pre + r'gate-plan(?:-\d+)?\.md')
     o['audit_evals'] = count(pre + r'audit(?:-\d+)?\.md')
     o['gate_quality_evals'] = count(pre + r'gate-quality(?:-\d+)?\.md')
-    o['reviewer_rounds'] = count(pre + r'review-comment-.*\.md')
+    o['archive_reviewer_rounds'] = count(pre + r'review-comment-.*\.md')
     # One transcript per cycle's ARCHITECT entry (a later cycle's is preserved as issue-N-cC-*): each
     # discussion is its opening round plus one per Brief, so the rounds are counted per file.
     turns = rounds = 0
@@ -749,17 +833,18 @@ def outcome(adir, issue):
     # non-zero exit (not mergeable, no check published, no verdict) is a round that did not fail the
     # build; a log with no exit line is undetermined and counted as nothing else.
     ci_logs = glob.glob(os.path.join(adir, 'issue-%s-local' % issue, 'handoff-ci-*.log'))
-    o['ci_rounds'] = o['ci_fail_rounds'] = o['ci_other_rounds'] = o['ci_undetermined'] = 0 if ci_logs else None
+    for k in ('archive_ci_rounds', 'archive_ci_fail_rounds', 'archive_ci_other_rounds', 'archive_ci_undetermined'):
+        o[k] = 0 if ci_logs else None
     for p in ci_logs:
         with open(p, encoding='utf-8', errors='replace') as f:
             exits = re.findall(r'^exit=(\d+)\s*$', f.read(), re.M)
         if not exits:
-            o['ci_undetermined'] += 1
+            o['archive_ci_undetermined'] += 1
             continue
-        o['ci_rounds'] += 1
+        o['archive_ci_rounds'] += 1
         code = int(exits[-1])
-        o['ci_fail_rounds'] += code == 12
-        o['ci_other_rounds'] += code not in (0, 12)
+        o['archive_ci_fail_rounds'] += code == 12
+        o['archive_ci_other_rounds'] += code not in (0, 12)
     markers = []
     for p in glob.glob(os.path.join(adir, 'issue-%s-phases.jsonl' % issue)):
         with open(p, encoding='utf-8') as f:
@@ -781,19 +866,153 @@ def marker_phase(markers, ts):
     return cur
 
 
-def gh_pr_state(repo, number):
+# --------------------------------------------------------------------------- GitHub
+
+def gh_lines(args):
+    """One JSON value per output line of `gh api … --jq '… | tojson'`."""
+    r = subprocess.run(['gh', 'api'] + args, capture_output=True, text=True, timeout=120)
+    if r.returncode:
+        raise RuntimeError((r.stderr or r.stdout).strip()[:200])
+    return [json.loads(ln) for ln in r.stdout.splitlines() if ln.strip()]
+
+
+def fetch_pr(repo, number):
+    """What the outcome needs from one PR: its state, its comments (no body — only whether a comment
+    has the configured reviewer's output format) and the workflow runs of its head branch, each run
+    with every attempt's conclusion."""
+    pr = gh_lines(['repos/%s/pulls/%d' % (repo, number), '--jq',
+                   '{state, merged_at, created_at, closed_at, head_ref: .head.ref} | tojson'])[0]
+    comments = gh_lines(['--paginate', 'repos/%s/issues/%d/comments' % (repo, number), '--jq',
+                         '.[] | {id, created_at, author: .user.login, '
+                         'review: ((.body // "") | test("\\\\A\\\\s*# Review Summary\\\\b"))} | tojson'])
+    runs = gh_lines(['--paginate', '-X', 'GET', 'repos/%s/actions/runs' % repo, '-f', 'branch=%s' % pr['head_ref'],
+                     '-f', 'per_page=100', '--jq',
+                     '.workflow_runs[] | {id, workflow: .name, event, head_sha, run_attempt, created_at, status, '
+                     'conclusion} | tojson'])
+    # The head branch's runs from ten minutes before the PR opened (the push that opened it) to its close.
+    lo = parse_ts(pr['created_at']) - dt.timedelta(minutes=10)
+    hi = parse_ts(pr['closed_at']) if pr.get('closed_at') else None
+    kept = []
+    for run in runs:
+        t = parse_ts(run['created_at'])
+        if t < lo or (hi and t > hi):
+            continue
+        attempts = []
+        for n in range(1, (run.get('run_attempt') or 1)):
+            a = gh_lines(['repos/%s/actions/runs/%d/attempts/%d' % (repo, run['id'], n), '--jq',
+                          '{status, conclusion} | tojson'])[0]
+            attempts.append([n, a.get('status'), a.get('conclusion')])
+        attempts.append([run.get('run_attempt') or 1, run.get('status'), run.get('conclusion')])
+        kept.append({'id': run['id'], 'workflow': run.get('workflow'), 'event': run.get('event'),
+                     'head_sha': run['head_sha'], 'created_at': run['created_at'], 'attempts': attempts})
+    return {'repo': repo, 'number': number, 'pr': pr, 'comments': comments, 'runs': kept}
+
+
+def pr_cache_path(root, repo, number):
+    return os.path.join(root, 'github', '%s__%d.json' % (repo.replace('/', '__'), number))
+
+
+def load_pr(root, repo, number, fetch):
+    """The cached PR record; with `fetch`, (re)fetched unless the cache holds a closed PR."""
+    path = pr_cache_path(root, repo, number)
+    cached = None
     try:
-        r = subprocess.run(['gh', 'pr', 'view', str(number), '-R', repo, '--json', 'state', '-q', '.state'],
-                           capture_output=True, text=True, timeout=30)
-        return r.stdout.strip() or None
-    except (OSError, subprocess.SubprocessError):
-        return None
+        with open(path, encoding='utf-8') as f:
+            cached = json.load(f)
+    except (OSError, ValueError):
+        pass
+    if fetch and (cached is None or (cached.get('pr') or {}).get('state') == 'open'):
+        try:
+            rec = fetch_pr(repo, number)
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError, IndexError, KeyError) as e:
+            print('gh: %s#%d not fetched (%s)' % (repo, number, e), file=sys.stderr)
+            return cached
+        rec['fetched_at'] = dt.datetime.now(dt.timezone.utc).isoformat()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        write_json(path, rec)
+        return rec
+    return cached
+
+
+def pr_state(rec):
+    pr = (rec or {}).get('pr') or {}
+    if pr.get('merged_at'):
+        return 'MERGED'
+    return (pr.get('state') or '').upper() or None
+
+
+def ci_heads(rec):
+    """One entry per head SHA of the PR's runs, in the order CI first saw it.
+
+    A head is a CI round when at least one of its attempts ran — a head whose every run was
+    cancelled or skipped was not evaluated. It is a failed round when an attempt failed; a cancelled
+    attempt is not a failure. A rerun is an attempt past the first of the same run: it evaluates the
+    same head again and opens no round of its own.
+    """
+    heads = {}
+    for run in sorted(rec.get('runs') or [], key=lambda r: r['created_at']):
+        h = heads.setdefault(run['head_sha'], {'sha': run['head_sha'], 'first': run['created_at'], 'runs': 0,
+                                               'attempts': 0, 'ran': 0, 'failed': 0, 'cancelled': 0, 'reruns': 0})
+        h['runs'] += 1
+        h['reruns'] += len(run['attempts']) - 1
+        for _, status, conclusion in run['attempts']:
+            h['attempts'] += 1
+            h['ran'] += conclusion not in CI_NOT_RUN
+            h['failed'] += conclusion in CI_FAILED
+            h['cancelled'] += conclusion == 'cancelled'
+    return list(heads.values())
+
+
+def reviewer_matches(rec, launches):
+    """Comments of the configured reviewer on this PR: a comment in the reviewer's output format posted
+    after a reviewer launch for this PR, the first such comment per launch, before the next launch and
+    within REVIEW_WINDOW_S. A comment in that format that no launch of the row's own sessions accounts
+    for — another review run elsewhere, an evaluator's comparison — is not the configured reviewer's."""
+    revs = sorted((parse_ts(c['created_at']), c['id']) for c in rec.get('comments') or [] if c.get('review'))
+    times = sorted(parse_ts(t) for t in launches if parse_ts(t))
+    used = []
+    for i, t in enumerate(times):
+        hi = t + dt.timedelta(seconds=REVIEW_WINDOW_S)
+        if i + 1 < len(times):
+            hi = min(hi, times[i + 1])
+        for ct, cid in revs:
+            if cid not in used and t <= ct < hi:
+                used.append(cid)
+                break
+    return used, len(revs)
+
+
+def github_outcome(it, gh):
+    """The outcome read from the row's own PRs — the same for either arm. Per PR in `github`, summed
+    over the row's PRs in `o`; a row with no PR, or a PR not fetched, has no source: None."""
+    per = {}
+    for k in it['prs']:
+        rec = gh.get(k)
+        if not rec:
+            continue
+        repo, number = rec['repo'], rec['number']
+        launches = [ts for ts, r, n in it['reviewer_runs'] if n == number and (r is None or r.lower() == repo.lower())]
+        matched, review_format = reviewer_matches(rec, launches)
+        per[k] = {'state': pr_state(rec), 'reviewer_launches': len(launches),
+                  'reviewer_rounds': len(matched) if it['reviewer_runs_known'] else None,
+                  'review_format_comments': review_format, 'ci_heads': ci_heads(rec)}
+    whole = bool(it['prs']) and len(per) == len(it['prs'])
+    heads = [h for v in per.values() for h in v['ci_heads']]
+    o = {
+        'reviewer_rounds': sum(v['reviewer_rounds'] for v in per.values()) if whole and it['reviewer_runs_known'] else None,
+        'ci_rounds': sum(1 for h in heads if h['ran']) if whole else None,
+        'ci_fail_rounds': sum(1 for h in heads if h['failed']) if whole else None,
+        'ci_cancelled': sum(h['cancelled'] for h in heads) if whole else None,
+        'ci_reruns': sum(h['reruns'] for h in heads) if whole else None,
+    }
+    return o, per
 
 
 def derive(args):
     labels = read_labels(os.path.join(args.root, 'labels.tsv'))
     issues = {}
     unattributed = []
+    sess_cost = {}
     for path in sorted(glob.glob(os.path.join(args.root, 'sessions', '*.json'))):
         try:
             with open(path, encoding='utf-8') as f:
@@ -807,17 +1026,34 @@ def derive(args):
             segs = [{'issue': int(label['issue']), 'start': norm_ts(sess['start']), 'end': '9999', 'refs': 0}]
         calls = sess['orchestrator']['calls']
         prompts = sess['operator']['prompts']
+        answers = sess['operator'].get('answers')
+        sess_cost[sess['session']] = sess.get('cost')
+        # The issues whose own state file the session wrote. A record of an older schema — its transcript
+        # expired before it could be re-read — or a stripped copy cannot tell: None.
+        wrote = ({n for _, n in sess['state_writes']}
+                 if (sess.get('schema') or 0) >= 3 and sess.get('state_writes') is not None else None)
         taken_calls = taken_agents = 0
         for s in segs:
+            # The label's own link to this segment, kept explicitly: the session is labelled, and the label
+            # names this issue or none. Neither the arm's value nor the reference count stands in for it.
+            linked = bool(label) and label['issue'] in ('', str(s['issue']))
+            # A session performs an issue when a label names it or it wrote the issue's state file. Any
+            # other session that referenced the issue's files only read them: its segment is a reference
+            # row of its own, never merged into the issue's cycle row. None: the record cannot tell.
+            performed = True if linked else (s['issue'] in wrote if wrote is not None else None)
             # Two arms of one issue are two rows: the comparison is the point of the label.
-            arm = (label or {}).get('arm') or ('A' if s['refs'] else '')
-            key = '%s#%s' % (repo, s['issue']) + ('' if arm in ('', 'A') else '@' + arm)
+            arm = (label['arm'] if linked else '') or ('A' if s['refs'] and performed is not False else '')
+            key = ('%s#%s' % (repo, s['issue']) + ('' if arm in ('', 'A') else '@' + arm)
+                   + ('~ref' if performed is False else ''))
             it = issues.setdefault(key, {
-                'key': key, 'repo': repo, 'issue': s['issue'], 'arm': arm, 'operator_minutes': '', 'notes': [], 'labelled': [],
-                'stale_schema_sessions': [], 'label_sessions': [],
+                'key': key, 'repo': repo, 'issue': s['issue'], 'arm': arm, 'reference': performed is False,
+                'operator_minutes': '', 'operator_cost_usd': '', 'notes': [], 'labelled': [],
+                'stale_schema_sessions': [], 'label_sessions': [], 'write_sessions': [], 'legacy_sessions': [],
                 'orch_base': 0,
                 'sessions': [], 'segments': [], 'cwd': [], 'orch_calls': [], 'agents': [], 'pr_links': [],
                 'operator_prompts': 0, 'operator_prompts_known': True,
+                'operator_answers': 0, 'operator_answers_known': True,
+                'reviewer_runs': [], 'reviewer_runs_known': True,
             })
             inside = lambda ts: ts is not None and (  # noqa: E731
                 s['start'] <= norm_ts(ts) < s['end'] or (s.get('end_inclusive') and norm_ts(ts) == s['end']))
@@ -826,19 +1062,21 @@ def derive(args):
                 if (sess.get('schema') or 0) < SCHEMA:
                     it['stale_schema_sessions'].append(sess['session'])
             it['cwd'] = list(dict.fromkeys(it['cwd'] + (sess.get('cwd') or [])))
-            # A label is per session: its minutes are summed over the issue's sessions, once per session
-            # however many segments that session has in the issue.
-            # The label's own link to this row, kept explicitly: the session is labelled, and the label
-            # names this issue or none. Neither the arm's value nor the reference count stands in for it.
-            linked = bool(label) and label['issue'] in ('', str(s['issue']))
+            if performed and not linked and sess['session'] not in it['write_sessions']:
+                it['write_sessions'].append(sess['session'])
+            if performed is None and sess['session'] not in it['legacy_sessions']:
+                it['legacy_sessions'].append(sess['session'])
+            # A label is per session: its minutes and cost are summed over the issue's sessions, once per
+            # session however many segments that session has in the issue.
             if linked and sess['session'] not in it['label_sessions']:
                 it['label_sessions'].append(sess['session'])
             if linked and sess['session'] not in it['labelled']:
                 it['labelled'].append(sess['session'])
-                try:
-                    it['operator_minutes'] = round((it['operator_minutes'] or 0) + float(label['operator_minutes']), 2)
-                except ValueError:
-                    pass                    # blank or not a number: nothing to add
+                for field, col in (('operator_minutes', 'operator_minutes'), ('operator_cost_usd', 'cost_usd')):
+                    try:
+                        it[field] = round((it[field] or 0) + float(label[col]), 2)
+                    except ValueError:
+                        pass                # blank or not a number: nothing to add
                 if label['note']:
                     it['notes'].append((s['start'], label['note']))
             seg_calls = [c for c in calls if inside(c[0])]
@@ -859,6 +1097,14 @@ def derive(args):
                 it['operator_prompts_known'] = False
             else:
                 it['operator_prompts'] += sum(1 for p in prompts if inside(p))
+            if answers is None:
+                it['operator_answers_known'] = False
+            else:
+                it['operator_answers'] += sum(1 for a in answers if inside(a))
+            if sess.get('reviewer_runs') is None:
+                it['reviewer_runs_known'] = False
+            else:
+                it['reviewer_runs'] += [r for r in sess['reviewer_runs'] if inside(r[0])]
         rest = len(calls) - taken_calls
         if rest or len(sess['agents']) - taken_agents:
             unattributed.append({'session': sess['session'], 'repo': repo, 'orch_calls': rest,
@@ -873,9 +1119,10 @@ def derive(args):
         it['note'] = '; '.join(dict.fromkeys(n for _, n in sorted(it.pop('notes'))))   # in session order
         del it['labelled']
         # The .autoflow artifacts are the AutoFlow arm's. Another arm of the same issue has none of its
-        # own, and borrowing these would put arm A's scores and rounds on arm B's row.
+        # own, and borrowing these would put arm A's scores and rounds on arm B's row; a reference row
+        # only read them.
         adir, where = (find_artifacts(args.archive_root, it['repo'], it['issue'], it['cwd'])
-                       if it['arm'] in ('', 'A') else (None, None))
+                       if it['arm'] in ('', 'A') and not it['reference'] else (None, None))
         it['outcome'] = outcome(adir, it['issue'])
         it['outcome']['artifacts'] = where
         for a in it['agents']:
@@ -885,7 +1132,6 @@ def derive(args):
         for p in it['pr_links']:
             prs['%s#%s' % (p['repo'], p['number'])] = p
         it['prs'] = sorted(prs)
-        it['pr_states'] = {k: gh_pr_state(p['repo'], p['number']) for k, p in prs.items()} if args.gh else {}
         del it['pr_links']
 
         orch = dict.fromkeys(USAGE_KEYS, 0)
@@ -916,30 +1162,57 @@ def derive(args):
             'spawns': len(top),
             'phase_keys_recovered': sum(1 for a in top if a['phase_key']),
         }
-        # A session that only read or wrote an issue's .autoflow files three times — drafting the issue,
-        # analysing it afterwards — becomes a row like any other, all orchestrator and no outcome. It
-        # is not a cycle: no state file (no `cycle` value) and no AutoFlow role spawn. A row tied to
-        # its issue by labels.tsv is the other arm of a comparison; it has no state by construction
-        # and is never classified away.
-        # The state file is looked up by issue number, so a later session that merely read a finished
-        # cycle's files finds that cycle's state too. With no role spawn of its own, the state counts as
-        # this row's only when its `date` lies within a day of the row's segments — which keeps a cycle
-        # that stopped right after PREFLIGHT or at triage, and drops the reader.
+        # A row is a cycle when one of its sessions performed the issue: a label names it (the other arm
+        # of a comparison has no state by construction and is never classified away), or the session
+        # wrote the issue's own state file. A reference row — sessions that only read the issue's files —
+        # is never a cycle. A session whose record cannot tell a state write (an older schema, a stripped
+        # copy) is classified as before: an AutoFlow role spawn in the row, or the issue's state `date`
+        # within a day of the row's segments.
         by_label = bool(it['label_sessions'])
+        by_write = bool(it['write_sessions'])
         role_spawns = sum(1 for a in it['agents'] if (a.get('role') or '').startswith('autoflow-'))
         own_state = False
         day = parse_ts((it['outcome'].get('state_date') or '') + 'T12:00:00+00:00')
         if it['outcome'].get('cycle') is not None and day:
             own_state = any(parse_ts(g['start']) - dt.timedelta(days=1) <= day <= parse_ts(g['end']) + dt.timedelta(days=1)
                             for g in it['segments'] if parse_ts(g['start']) and parse_ts(g['end']))
-        it['kind_basis'] = 'label' if by_label else 'role-spawn' if role_spawns else 'state-date' if own_state else None
+        legacy = ('role-spawn' if role_spawns else 'state-date' if own_state else None) if it['legacy_sessions'] else None
+        it['kind_basis'] = 'label' if by_label else 'state-write' if by_write else legacy
         it['kind'] = 'cycle' if it['kind_basis'] else 'non-cycle'
+        # The GitHub outcome is a cycle row's own PRs'; a reference or non-cycle row carries none.
+        gh = {k: load_pr(args.root, prs[k]['repo'], prs[k]['number'], args.gh) for k in it['prs']} \
+            if it['kind'] == 'cycle' else {}
+        it['pr_states'] = {k: pr_state(r) for k, r in gh.items() if r}
+        o_gh, it['github'] = github_outcome(it, gh) if it['kind'] == 'cycle' else ({}, {})
+        it['outcome'].update(o_gh)
+        it['operator_decisions'] = (it['operator_prompts'] + it['operator_answers']
+                                    if it['operator_prompts_known'] and it['operator_answers_known'] else None)
+        del it['reviewer_runs']
+
+    # The harness's own session cost (`cost-state`) is a session total, not split by segment: it is a
+    # cycle row's only when every session of the row performed this row and no other cycle row.
+    cycle_rows_of = {}
+    for it in issues.values():
+        if it['kind'] == 'cycle':
+            for sid in it['sessions']:
+                cycle_rows_of.setdefault(sid, []).append(it['key'])
+    for key in sorted(issues, key=lambda k: (issues[k]['repo'], issues[k]['issue'], k)):
+        it = issues[key]
+        costs = [sess_cost.get(sid) for sid in it['sessions']]
+        whole = it['kind'] == 'cycle' and all(cycle_rows_of.get(sid) == [key] for sid in it['sessions'])
+        it['cost_usd'] = (round(sum(c['usd'] for c in costs), 2)
+                          if whole and costs and all(c and isinstance(c.get('usd'), (int, float)) for c in costs) else None)
         o, t = it['outcome'], it['totals']
+        orch, ag = t['orchestrator'], t['agents']
         rows.append([
-            it['repo'], it['issue'], it['arm'], it['kind'], len(it['sessions']), len(it['stale_schema_sessions']),
+            it['repo'], it['issue'], it['arm'], it['kind'], it['kind_basis'], len(it['sessions']),
+            len(it['stale_schema_sessions']),
             min(s['start'] for s in it['segments']), max(s['end'] for s in it['segments']), t['wall_h'],
             it['operator_prompts'] if it['operator_prompts_known'] else '',
+            it['operator_answers'] if it['operator_answers_known'] else '',
+            it['operator_decisions'],
             ('%g' % it['operator_minutes']) if it['operator_minutes'] != '' else '',
+            it['cost_usd'], ('%g' % it['operator_cost_usd']) if it['operator_cost_usd'] != '' else '',
             len(it['orch_calls']), orch['cache_read'], orch['cache_creation'], orch['output'],
             len(it['agents']), ag['cache_read'], ag['cache_creation'], ag['output'],
             t['tokens'], t['orch_share'], t['gate_share'], t['max_orch_context'], t['rewrites'],
@@ -947,19 +1220,26 @@ def derive(args):
             o.get('cycle'), o.get('state_phase'), o.get('gate_hypothesis_structure'), o.get('gate_hypothesis_cause'),
             o.get('gate_plan'), o.get('audit'), o.get('gate_quality'),
             o.get('architect_turns'), o.get('architect_rounds'), o.get('gate_plan_evals'), o.get('audit_evals'),
-            o.get('gate_quality_evals'), o.get('review_autofix'), o.get('gate_autofix'), o.get('reviewer_rounds'),
-            o.get('ci_rounds'), o.get('ci_fail_rounds'), o.get('ci_other_rounds'), o.get('ci_undetermined'),
+            o.get('gate_quality_evals'), o.get('review_autofix'), o.get('gate_autofix'),
+            o.get('reviewer_rounds'), o.get('ci_rounds'), o.get('ci_fail_rounds'), o.get('ci_cancelled'),
+            o.get('ci_reruns'),
+            o.get('archive_reviewer_rounds'), o.get('archive_ci_rounds'), o.get('archive_ci_fail_rounds'),
+            o.get('archive_ci_other_rounds'), o.get('archive_ci_undetermined'),
             ' '.join(it['prs']), ' '.join('%s=%s' % kv for kv in sorted(it['pr_states'].items()) if kv[1]),
             it['note'],
         ])
     header = [
-        'repo', 'issue', 'arm', 'kind', 'sessions', 'stale_schema_sessions', 'start', 'end', 'wall_h', 'operator_prompts', 'operator_minutes',
+        'repo', 'issue', 'arm', 'kind', 'kind_basis', 'sessions', 'stale_schema_sessions', 'start', 'end', 'wall_h',
+        'operator_prompts', 'operator_answers', 'operator_decisions', 'operator_minutes', 'cost_usd', 'operator_cost_usd',
         'orch_calls', 'orch_cache_read', 'orch_cache_creation', 'orch_output',
         'agents', 'agent_cache_read', 'agent_cache_creation', 'agent_output',
         'tokens', 'orch_share', 'gate_share', 'max_orch_context', 'rewrites', 'spawns', 'phase_keys_recovered',
         'cycle', 'state_phase', 'gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit',
         'gate_quality', 'architect_turns', 'architect_rounds', 'gate_plan_evals', 'audit_evals',
-        'gate_quality_evals', 'review_autofix', 'gate_autofix', 'reviewer_rounds', 'ci_rounds', 'ci_fail_rounds', 'ci_other_rounds', 'ci_undetermined',
+        'gate_quality_evals', 'review_autofix', 'gate_autofix',
+        'reviewer_rounds', 'ci_rounds', 'ci_fail_rounds', 'ci_cancelled', 'ci_reruns',
+        'archive_reviewer_rounds', 'archive_ci_rounds', 'archive_ci_fail_rounds', 'archive_ci_other_rounds',
+        'archive_ci_undetermined',
         'prs', 'pr_states', 'note',
     ]
     tmp = os.path.join(args.root, 'issues.tsv.tmp')
@@ -989,7 +1269,9 @@ def main(argv=None):
     ap.add_argument('--policy', default=os.path.join(here, '..', '..', '.claude', 'autoflow', 'spawn-policy.json'))
     ap.add_argument('--no-collect', action='store_true')
     ap.add_argument('--no-derive', action='store_true')
-    ap.add_argument('--gh', action='store_true', help='query each linked PR\'s state with the gh CLI (network)')
+    ap.add_argument('--gh', action='store_true',
+                    help='fetch each cycle row\'s linked PRs (state, comments, workflow runs) with the gh CLI '
+                         'into <root>/github/ (network); without it the cached copies are read')
     args = ap.parse_args(argv)
     args.projects_root = args.projects_root or [os.path.join(os.path.expanduser('~'), '.claude', 'projects')]
     args.root = args.root or os.path.join(args.archive_root, '_metrics')

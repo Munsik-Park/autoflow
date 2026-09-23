@@ -35,8 +35,9 @@ import sys
 
 AGENT_FIELDS = ('id', 'role', 'model', 'description', 'phase_key', 'phase_key_method', 'phase_marker',
                 'workflow', 'parent', 'start', 'end', 'calls', 'usage', 'first_in', 'max_context', 'rewrites')
-ISSUE_FIELDS = ('key', 'repo', 'issue', 'arm', 'kind', 'operator_minutes', 'note', 'operator_prompts',
-                'operator_prompts_known', 'segments', 'prs', 'pr_states', 'outcome', 'totals')
+ISSUE_FIELDS = ('key', 'repo', 'issue', 'arm', 'kind', 'kind_basis', 'operator_minutes', 'note', 'operator_prompts',
+                'operator_prompts_known', 'operator_answers', 'operator_answers_known', 'operator_decisions',
+                'cost_usd', 'operator_cost_usd', 'segments', 'prs', 'pr_states', 'outcome', 'totals')
 
 
 def slim(issue):
@@ -45,6 +46,9 @@ def slim(issue):
     out['segments'] = [[s['start'], s['end']] for s in issue.get('segments') or []]
     out['outcome'] = {k: v for k, v in (issue.get('outcome') or {}).items() if k != 'phase_markers'}
     out['orch'] = [[c[0], c[1], c[6]] for c in issue.get('orch_calls') or []]
+    out['github'] = {k: [v.get('reviewer_rounds'), sum(1 for h in v.get('ci_heads') or [] if h['ran']),
+                         sum(1 for h in v.get('ci_heads') or [] if h['failed'])]
+                     for k, v in (issue.get('github') or {}).items()}
     agents = []
     for a in issue.get('agents') or []:
         s = {k: a.get(k) for k in AGENT_FIELDS}
@@ -95,7 +99,7 @@ border-radius:6px;padding:6px 8px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,
 <h1>AutoFlow cycle metrics</h1>
 <p class="sub" id="sub"></p>
 <div class="card"><h2>Issues</h2><div class="scroll" style="max-height:420px"><table id="tbl"></table></div>
-<p class="note">A <span class="nc">non-cycle</span> row is a session that referenced an issue's <code>.autoflow</code> files without running a cycle (no AutoFlow role spawn, and no state file dated within a day of it) — a draft, a post-hoc analysis. Click a row for the issue view below. Click a header to sort. Tokens = input + cache read + cache write + output, orchestrator and agents together.</p></div>
+<p class="note">A <span class="nc">non-cycle</span> row holds sessions that referenced an issue's <code>.autoflow</code> files without performing it — none of them wrote the issue's state file or is labelled for it (a key ending in <code>~ref</code>: a draft, an advisory read, a post-hoc analysis). Reviewer and CI rounds are read from each cycle row's own PRs on GitHub, for either arm. Click a row for the issue view below. Click a header to sort. Tokens = input + cache read + cache write + output, orchestrator and agents together.</p></div>
 <p class="note" style="margin:0 0 10px"><label><input type="checkbox" id="ncToggle"> include non-cycle rows in the two charts below</label>
 <span id="ncCount"></span></p>
 <div class="grid2">
@@ -142,13 +146,15 @@ function ticks(lo,hi,n){const span=hi-lo||1,step=Math.pow(10,Math.floor(Math.log
 $('sub').textContent=`${I.length} issues · generated ${D.generated} · machine-local aggregate, no transcript text`;
 
 // ---- table
+const usd=v=>'$'+v.toFixed(2);
 const COLS=[['key','issue'],['arm','arm'],['kind','kind'],['wall_h','wall h',i=>i.totals.wall_h],['tokens','tokens',i=>i.totals.tokens,fmt],
+ ['cost','cost',i=>i.cost_usd,usd],
  ['orch','orch share',i=>i.totals.orch_share,pct],['gate','gate share',i=>i.totals.gate_share,pct],
  ['ctx','peak orch ctx',i=>i.totals.max_orch_context,fmt],['rw','re-writes',i=>i.totals.rewrites],
- ['sp','spawns',i=>i.totals.spawns],['op','operator prompts',i=>i.operator_prompts_known?i.operator_prompts:null],
+ ['sp','spawns',i=>i.totals.spawns],['op','operator decisions',i=>i.operator_decisions],
  ['cycle','cycle',i=>i.outcome.cycle],['gp','GATE:PLAN',i=>i.outcome.gate_plan],['gq','GATE:QUALITY',i=>i.outcome.gate_quality],
  ['ar','ARCHITECT rounds',i=>i.outcome.architect_rounds],['af','review-autofix',i=>i.outcome.review_autofix],
- ['rr','reviewer rounds',i=>i.outcome.reviewer_rounds],['ci','CI fail rounds',i=>i.outcome.ci_fail_rounds],
+ ['rr','reviewer rounds',i=>i.outcome.reviewer_rounds],['cr','CI rounds',i=>i.outcome.ci_rounds],['ci','CI fail rounds',i=>i.outcome.ci_fail_rounds],
  ['pr','PR',i=>Object.values(i.pr_states||{}).filter(Boolean).join(' ')||null]];
 let sortCol='key',sortDir=1,current=null;
 const val=(i,c)=>c[2]?c[2](i):i[c[0]];
@@ -166,7 +172,7 @@ $('tbl').addEventListener('click',e=>{const th=e.target.closest('th'),tr=e.targe
 
 // ---- scatter
 const YS=[['gate_quality','GATE:QUALITY average'],['gate_plan','GATE:PLAN average'],['review_autofix','review-autofix attempts'],
- ['reviewer_rounds','reviewer rounds'],['ci_fail_rounds','CI fail rounds'],['cycle','cycles'],['architect_rounds','ARCHITECT rounds']];
+ ['reviewer_rounds','reviewer rounds'],['ci_rounds','CI rounds'],['ci_fail_rounds','CI fail rounds'],['cycle','cycles'],['architect_rounds','ARCHITECT rounds']];
 $('ySel').innerHTML=YS.map(y=>`<option value="${y[0]}">${y[1]}</option>`).join('');
 $('ySel').addEventListener('change',drawScatter);
 function drawScatter(){const yk=$('ySel').value,pool=charted().filter(i=>i.totals.tokens>0),pts=pool.filter(i=>i.outcome[yk]!=null);
@@ -215,11 +221,17 @@ function show(key){const iss=I.find(i=>i.key===key);if(!iss)return;current=key;d
  const tiles=[['tokens',fmt(t.tokens)],['orchestrator',pct(t.orch_share)],['gates',pct(t.gate_share)],['wall',t.wall_h+' h'],
   ['peak orch context',fmt(t.max_orch_context)],['re-writes',t.rewrites],['spawns',t.spawns],['phase keys',`${t.phase_keys_recovered}/${t.spawns}`],
   ['cycle',o.cycle],['GATE:PLAN',o.gate_plan],['AUDIT',o.audit],['GATE:QUALITY',o.gate_quality],['ARCHITECT rounds',o.architect_rounds],
-  ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI fail rounds',o.ci_fail_rounds],['CI logs undetermined',o.ci_undetermined],
-  ['operator prompts',iss.operator_prompts_known?iss.operator_prompts:null],['operator min',iss.operator_minutes||null]];
+  ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI rounds',o.ci_rounds],['CI fail rounds',o.ci_fail_rounds],
+  ['CI cancelled',o.ci_cancelled],['CI reruns',o.ci_reruns],['archive reviewer rounds',o.archive_reviewer_rounds],
+  ['archive CI fail rounds',o.archive_ci_fail_rounds],['archive CI logs undetermined',o.archive_ci_undetermined],
+  ['operator prompts',iss.operator_prompts_known?iss.operator_prompts:null],['operator answers',iss.operator_answers_known?iss.operator_answers:null],
+  ['operator decisions',iss.operator_decisions],['operator min',iss.operator_minutes||null],
+  ['cost',iss.cost_usd==null?null:usd(iss.cost_usd)],['operator cost',iss.operator_cost_usd===''||iss.operator_cost_usd==null?null:usd(iss.operator_cost_usd)]];
  $('tiles').innerHTML=tiles.map(([l,v])=>`<div class="tile"><b>${esc(v==null?'–':v)}</b><span>${esc(l)}</span></div>`).join('');
  $('iNote').textContent=[iss.sessions+' session(s)',o.artifacts?'outcome from '+o.artifacts+' .autoflow':'no .autoflow artifacts found',
-  o.state_phase,(iss.prs||[]).map(p=>p+(iss.pr_states[p]?' '+iss.pr_states[p]:'')).join(', '),iss.note].filter(Boolean).join(' · ');
+  o.state_phase,iss.kind_basis?'cycle by '+iss.kind_basis:'',
+  (iss.prs||[]).map(p=>{const g=iss.github[p];return p+(iss.pr_states[p]?' '+iss.pr_states[p]:'')+(g?` (reviewer ${g[0]==null?'–':g[0]}, CI ${g[1]} heads, ${g[2]} failed)`:'')}).join(', '),
+  iss.note].filter(Boolean).join(' · ');
  drawTimeline(iss);drawCtx(iss);drawCost(iss)}
 
 function drawTimeline(iss){const roles=[...new Set(iss.agents.map(a=>a.workflow?'workflow':a.role||'?'))];
