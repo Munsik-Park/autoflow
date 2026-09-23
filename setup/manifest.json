@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e10805bf5e1214388a551d65bc8133a74d3f3ce1f75c1abf82153f3f158a8dba"
+      "sha256": "2ffb4e99f86af42ebf4bcb269fa846834de2941f69a7202ca2c897cacd8ebb69"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "75d3b1773105e9de14ea911534db68e64d2744c330fff290cf24a9c6922adeaa"
+      "sha256": "ff4709ffc5e1947db9516a63ba2f9a3f290bcd713f5b7f0e73358fc2293eecff"
     },
     {
       "source": "docs/development-guideline.md",
@@ -69,14 +69,14 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c5bed72cb26f003ecb85ac797bde025e6e340fe4c787461651c097498846754b"
+      "sha256": "df94ab52f7de8a2a6dc27ea1c428ff04905b53b809cb09ec887db758be3fcfb1"
     },
     {
       "source": "docs/pr-body-guide.md",
       "dest": ".claude/autoflow/docs/pr-body-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "56aac48316f658b9255ce8381c4865d0cc8e6f1b66a41f33bf0ba49f31f986ca"
+      "sha256": "b02bec4e81bc00d318fb139f44307c2fb5c41eddd71be292a1025f94a5bdcfb1"
     },
     {
       "source": "docs/repo-boundary-rules.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7465718f9fbfe5086b5efc18051f4fedb0e681e7139c8820a531b6910752f54a"
+      "sha256": "6e13fcf50f70276ea6f0faeb7cb1d0f87a13880960f6964f3aac3fbefb4a86f4"
     },
     {
       "source": "docs/security-checklist.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ca482fb6393824f9774b87ad8142fba1aeaa52e0d5ae72fe8bf9f657f543a336"
+      "sha256": "2f924e5d528d6443680100533531eb5ae120c63a7fd14051bdb0879b27bf7b11"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "2ad7bbff03c39968b49378da04d6f263cb75d5f348750bd6eb79e014b50ebd7c"
+      "sha256": "e241209b80befcfdd92dfb05197d3b060ae59e69016c53c5d3b13924b7d52e44"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",

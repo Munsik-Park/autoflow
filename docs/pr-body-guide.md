@@ -73,6 +73,9 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   PR에 없으므로, 같은 섹션에 그 row의 **run record** — VERIFY step 1이 실행한 command와
   summary line — 를 한 줄로 싣는다. reviewer가 재실행할 수 있는 것은 이 record다
   (ADR-0024 D1, D2; `autoflow-guide.md` > HANDOFF step 4).
+- AI가 도구로 실행한 `manual` row는 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
+  한 줄로 싣는다. 사람이 실행하는 `manual` row는 reason에 도구를 확보할 수 없었던 이유가 들어
+  있다 (`CLAUDE.md` > Rule Scope > *The tools the work needs*; `autoflow-guide.md` > ARCHITECT > *Tools*).
 - cycle이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
   남겨 두는 이유, 그리고 HANDOFF 5단계가 CI 로그에서 확인한 실행 job(target에 CI가 없으면
   `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다. reviewer는 이
@@ -90,6 +93,8 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 - AC4 — none: 값이 사용자가 편집하는 sample 파일에 있어, 첫 편집에서 검증 대상이
   사라진다. 부재 비용 0.
 - AC1 — automated (cycle): `bash .autoflow/issue-42-local/ac1-retry.sh` → `PASS 3/3`
+- AC3 — manual (AI: browser): `.autoflow/issue-42-local/ac3-observation.md` →
+  `observation: match` — 렌더링된 목록 화면을 이슈가 링크한 시안과 대조.
 - Added test files: `tests/retry-backoff.test.ts` — 재시도 간격은 배포 후 설정값에
   따라 달라지므로 target의 회귀 대상; CI job `unit (ubuntu-latest)`에서 실행 확인.
 ```
@@ -109,6 +114,7 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 ## Changelog
 
+- 2026-09-23: Principle 5에 AI가 도구로 실행한 `manual` row의 observation record 노출 추가 (#277).
 - 2026-09-11: Principle 5에 `cycle` 층 `automated` row의 run record 노출 추가 (#225, ADR-0024 D1/D2).
 - 2026-08-25: Principle 5 (Verification dispositions — automated 아닌 issue AC의 disposition + reason 노출; 3단 guard의 reviewer tier) 추가 (#153).
 - 2026-06-05: Principle 4 (판단 근거의 명시적 링크 / PR-reachability) 추가.

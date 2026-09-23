@@ -61,7 +61,14 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
        1. List the concrete cases mentioned in the issue.
        2. Identify the higher-level problem type these cases share.
        3. Propose resolution approaches (what mechanism is needed).
-     - Output: cases + problem types + resolution approaches, plus a required
+       4. Open each material the issue body or an acceptance criterion references — a design
+          mockup, an asset, an external document — and record it under `## Referenced materials`:
+          what it is, where it is, how it was opened, and what it shows for the criterion that
+          names it. The material, not an abbreviated example in the body, is what the criterion
+          means; a material that cannot be opened is recorded `not opened: <reason>`
+          (`CLAUDE.md` > Rule Scope > *The tools the work needs*).
+     - Output: cases + problem types + resolution approaches + `## Referenced materials` (`none`
+       when the issue references no material), plus a required
        `## Acceptance criteria` section — a table with the fixed columns
        `AC id | criterion | source`, where `AC id` is a short readable name unique within the
        issue, `criterion` restates the issue's criterion faithfully, and `source` locates it in the
@@ -75,7 +82,8 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
        reviewer comment never edits the acceptance-criterion list; only an operator decision does,
        recorded as an `[ac-decision]` ledger entry (`CLAUDE.md` > Decision Ledger). Regenerating
        the artifact without the table silently empties the join key.
-     - [MUST] Do NOT use code search/read tools.
+     - [MUST] Do NOT use code search/read tools. Opening a material the issue itself references
+       (step 4 above) is not a code read.
 
    Phase 3: AI-A evaluates the necessity of AI-B's resolution approaches against the actual structure (reuse-neutral — not a structural-fit judgment).
 
@@ -125,9 +133,14 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
    - Environment / configuration: env var missing, service not running, network.
    - External dependency: external API outage.
    - Already fixed: resolved in a recent commit.
-4. Lightweight verification (when a dev environment is available):
+4. Lightweight verification:
    - API calls, queries, service status, log inspection.
-   - Items that cannot be verified are marked "unverified".
+   - Find the tools the verification needs — in this environment and in the target's documents
+     and scripts — before marking an item "unverified"; a tool that is off is started by the
+     target's own procedure, and one that needs the operator is requested (`CLAUDE.md` > Rule Scope
+     > *The tools the work needs*). Record with the verdict notes each tool, whether it was usable,
+     and how it was secured.
+   - Items that cannot be verified are marked "unverified", naming the tool they needed.
 5. Hypothesis verdict notes: per hypothesis, eliminated / likely / unverified, with evidence.
 6. Task decomposition (only if code change is required).
    - Beyond the acceptance criteria, name the problems the confirmed cause carries — its other
@@ -148,8 +161,9 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
 | host `development-guideline.md` + the sub-repo's work-type / workflow-audit doc (work-type) | denied | allowed | **denied** |
 | the sub-repo's product / actor context doc (product / actor) | denied | optional / limited if a readiness call needs it | **denied** |
 | the sub-repo's problem / risk / improvement / priority docs (ADR candidates, risk analysis, tech-debt, refactoring queue) | denied | denied | denied |
+| a material the issue body or an acceptance criterion references (a design mockup, an asset, an external document) | denied | denied | allowed — **opened by Phase B itself** and recorded under `## Referenced materials` |
 
-- **[MUST] Phase B is issue-body only.** Its role is to analyze the issue body without code — not to expand interpretation with product-background or work-type docs. **No baseline, work-type, or product-background doc is injected into Phase B — `denied`, with no exception.** Work-type classification is the intake triage's job, not Phase B's, so a "classification need" is never grounds to inject the work-type or product-background docs into Phase B.
+- **[MUST] Phase B is issue-body only.** Its role is to analyze the issue body without code — not to expand interpretation with product-background or work-type docs. **No baseline, work-type, or product-background doc is injected into Phase B — `denied`, with no exception.** A material the issue itself references is part of the issue, not an injected document: Phase B opens it and records it (AI-B step 4), and Phase A never receives it, since it carries what the issue asks for. A material recorded `not opened` is raised to the operator before the cycle leaves DIAGNOSE (`CLAUDE.md` > Flow Control > *tool or referenced material → user*). Work-type classification is the intake triage's job, not Phase B's, so a "classification need" is never grounds to inject the work-type or product-background docs into Phase B.
 - **[MUST] Intake triage** receives the issue body + the readiness/work-type docs (host `development-guideline.md` + the sub-repo's work-type / workflow-audit doc, if any); the sub-repo's product / actor context doc only if a readiness call genuinely needs it. It shares Phase B's no-code rule but is a **separate role with a separate input set**.
 - **[MUST]** Phase A receives **current-state / observed-structure excerpts only**. Exclude problem, risk, recommended-direction, ADR-priority, issue-intent, and prerequisite-necessity wording — these leak what the issue is trying to do.
 - **[MUST]** Phase A excerpt selection uses the **functional-area coordinate** Phase A already receives (e.g. "host deployment structure", "submodule boundary"), not the issue's problem statement. Inject the matching excerpt, never the whole file.
@@ -227,3 +241,6 @@ above are the in-repo defense; these are fallbacks.
   by the cycle `mode`.
 - **Review-response loop check match** → reply on PR + pause for the user (`awaiting-user`); the
   user's decision selects the re-entry.
+- **A referenced material not opened, or a tool the analysis needs and the target's procedures
+  cannot provide** → request it from the operator, situation-first (`awaiting-user`; `CLAUDE.md` >
+  Flow Control > *tool or referenced material → user*).

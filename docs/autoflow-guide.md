@@ -221,7 +221,7 @@ filter that pauses for the user on FAIL, no auto issue creation), the 3-Phase in
 structure analysis (Phase A structure-only, Phase B issue-only, Phase 3 necessity scoring),
 **the per-role document injection whitelist (three distinct roles — Phase A = current-state
 area excerpts only; intake triage = issue body + readiness/work-type docs; Phase B = issue
-body only)**, the issue-type classification (Type 1 code / Type 2 docs), the per-type scoring rubric and
+body only, plus the materials the issue itself references, which Phase B opens and records)**, the issue-type classification (Type 1 code / Type 2 docs), the per-type scoring rubric and
 PASS/FAIL thresholds (Type 1: each ≥ 7, two items; Type 2: each ≥ 7 and avg ≥ 7.5, three
 items), the FAIL disposition by failing item and cycle `mode` (gap-low → new-issue close /
 review-response reply on PR; non-code lever → report to user + pause), the review-response loop check (trigger repeats the prior cycle's complaint class with a new witness case → reply on PR + pause for the user), cause hypotheses
@@ -331,8 +331,8 @@ notification of that resumed spawn, and nothing is polled.
 **Artifact-existence check (orchestrator-side).** Before GATE:PLAN the orchestrator confirms the
 three artifacts the scribe writes exist and are non-empty — `.autoflow/issue-{N}-feature-design.md`,
 `.autoflow/issue-{N}-verification-design.md` and `.autoflow/issue-{N}-architect-report.md` — and
-treats a missing or empty one as an infrastructure cause to repair and re-run, rather than
-proceeding. The workflow script cannot perform this check itself: the hosted Workflow runtime
+treats a missing or empty one — or a verification design without its `## Tools` section
+(*Tools* below) — as an infrastructure cause to repair and re-run, rather than proceeding. The workflow script cannot perform this check itself: the hosted Workflow runtime
 injects no filesystem access and rejects `import(` at parse time, so the capability lives at the
 layer that has a shell.
 
@@ -340,7 +340,7 @@ layer that has a shell.
 
 **Roles**:
 - **Developer AI**: feature design (changed files, API interface, data structures).
-- **Test AI**: verification design (acceptance criteria → verification method, testability assessment).
+- **Test AI**: verification design (acceptance criteria → verification method, testability assessment, and the tools each criterion needs — *Tools* below).
 
 ### Output artifacts
 
@@ -379,7 +379,7 @@ layer that has a shell.
 |----------|----------------------|------|------|--------|--------------|--------|
 | AC1 | (criterion 1) | automated | driving | pytest / API test / etc. | the defect only this test fails on | — |
 | AC2 | (criterion 2) | existing-coverage | — | the schema check that already rejects this shape | a value of the shape this criterion forbids | the check runs on every build |
-| AC3 | (criterion 3) | manual | — | scenario doc (delegated to user) | the behavior the scenario observes breaking | no automatable oracle; the behavior is observed by a person |
+| AC3 | (criterion 3) | manual | — | AI: `<tool in ## Tools>` — scenario doc; the result compared against the referenced material | the behavior the scenario observes breaking | no executable assertion states it; the AI observes it with the tool `## Tools` records |
 | AC4 | (criterion 4) | none | — | — | — | absence costs nothing: the value is read from a sample file the user edits |
 | — | (criterion 5) | environment-dependent | — | introduce mock or propose design change (except where the composition-oracle clause applies) | the failure the mock itself can catch (`—` on a design-change request) | — |
 
@@ -433,7 +433,7 @@ layer that has a shell.
   - **Effective from** — binds verification designs authored after issue #198 lands; an earlier
     design's per-layer depth statement is not read as an empty column.
 
-- For untestable items: state the reason and the alternative (design change / manual delegation (except where the composition-oracle clause applies) / mock (same exception)).
+- For untestable items: first find the tool that verifies the item directly (*Tools* below); only when none can be secured, state the reason and the alternative (design change / a `manual` row executed by a person (except where the composition-oracle clause applies) / mock (same exception)).
 - Design-change request: parts of the feature design that should be revised so they become testable.
 - Committed-surface allow-list: a manifest-registered source in the change surface pulls
   `setup/manifest.json` in as a derived member of the allow-list (Change Surface Rules > Derived
@@ -507,8 +507,8 @@ the policy body; every other document references it rather than restating it.
 | `automated` | an executable test — `cycle` by default (run once from `.autoflow/issue-{N}-local/`, its run recorded), `standing` only with a D1 token in the cell |
 | `existing-coverage` | already detected by an existing test, lint rule, schema, compiler/type check, build or packaging check — the row names which |
 | `delivery-check` | a one-shot check that the change was wired / generated / delivered — a `cycle` artifact under `.autoflow/issue-{N}-local/`, never committed; RED/GREEN semantics do not apply to it |
-| `manual` | a scenario a person executes; the row names the checklist — a `cycle` artifact unless the cell carries a D1 token |
-| `environment-dependent` | verifiable only against an environment this cycle cannot drive (except where the composition-oracle clause applies) |
+| `manual` | a scenario verified by observation, not by an executable assertion; `Method` names its executor — `AI: <tool>`, the tool the `## Tools` section records, or `person` only when no tool can be secured, the `Reason` saying why (*Tools* below); the row names the checklist — a `cycle` artifact unless the cell carries a D1 token |
+| `environment-dependent` | verifiable only against an environment this cycle cannot drive with the tools the `## Tools` section records (except where the composition-oracle clause applies) |
 | `none` | no persistent verification has positive value — the row states why absence costs nothing |
 
 - **[MUST]** Every disposition other than `automated` on an **issue** AC row carries a one-line
@@ -639,9 +639,42 @@ a test shape.
   issue #206 lands: an earlier prose determination is not re-read, and the script classifying one
   `unknown/error` is not a finding.
 
+#### Tools
+
+The rule is [`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *The tools the work needs* (issue #277);
+this clause is where the verification design applies it. The participants open the materials
+Phase B's `## Referenced materials` section lists ([`phases/analysis.md`](phases/analysis.md) >
+per-role injection whitelist) — the material, not the issue body's abbreviated example, is the
+design's input — and the Test AI finds, for each criterion, the tool that verifies it directly
+**before** settling it as a `manual` row executed by a person, as `environment-dependent`, or on a
+mock.
+
+- **[MUST]** The verification design carries a `## Tools` section: one line per tool — the tool,
+  the rows it verifies (or the design question it serves), its availability, and the ground the
+  availability rests on. Availability is one of `available` (usable in this environment now),
+  `target procedure: <document section or script>` (off, and the target carries the procedure that
+  starts it), or `operator: <what is needed>` (an installation, a credential, a permission setting,
+  enabling an MCP server or a browser extension, access to a material). A design that needs no
+  tool says `none`, with its ground in one line. AutoFlow names no tool here: which tool, and how
+  it is used, is the participants' judgment in the target.
+- **Availability is settled here, not at VERIFY.** After the Record workflow returns, the
+  orchestrator reads this section — a targeted excerpt, not a full read ([`CLAUDE.md`](../CLAUDE.md)
+  > Cost Control > *Orchestrator context discipline*) — before GATE:PLAN. An `operator` item is the
+  tool request pause ([`CLAUDE.md`](../CLAUDE.md) > Flow Control > *tool or referenced material →
+  user*), presented situation-first, and GATE:PLAN is not spawned until the operator answers. A
+  `target procedure` item is started when the phase that uses it begins — by the orchestrator when
+  the tool must outlive a role spawn. A tool found missing later, at RED, GREEN or VERIFY, takes
+  the same pause.
+- A criterion no tool can reach after this search keeps the fallbacks of the untestable-items
+  bullet above — a `manual` row executed by a person, or a mock — and its `Reason` states why no
+  tool could be secured; GATE:PLAN's `Test plan` reads that reason.
+- The row verified with a tool is looked at with it once implemented: the Developer AI looks at its
+  own result while implementing (GREEN step 2), and the evidence — the row's observation record —
+  is the Test AI's, written at VERIFY step 1, so the implementer does not certify its own result.
+
 ### Testability-driven design
 
-When the Test AI flags an item as "not automatable", the team discusses whether a feature-design change makes it testable. If not, the item stays as a manual scenario with a stated reason (except where the composition-oracle clause applies).
+When the Test AI flags an item as "not automatable", the team discusses whether a feature-design change makes it testable. If not, the item stays as a manual scenario with a stated reason — executed by the AI with the tool the `## Tools` section records, or by a person only when no tool can be secured (*Tools* above) — except where the composition-oracle clause applies.
 
 ### Report routing
 
@@ -657,7 +690,8 @@ the gated one.
   relay-side counterpart is a participant that appends no turn after one re-wake (*Relay
   procedure* step 3).
 - **No un-agreed point.** The design is the participants' joint conclusion. Run the
-  artifact-existence check, then GATE:PLAN (a fresh Evaluation AI on the 5-item rubric below). A
+  artifact-existence check and read the verification design's `## Tools` section — an `operator`
+  item is the tool request pause (*Tools* above) — then GATE:PLAN (a fresh Evaluation AI on the 5-item rubric below). A
   GATE:PLAN FAIL re-enters the deliberation with a brief (*Re-discussion* below); that is the
   existing `GATE:PLAN FAIL → ARCHITECT (max 3×)` re-entry.
 - **An un-agreed point.** One judgment, and it is the orchestrator's: discuss further, or stop.
@@ -792,7 +826,7 @@ issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
 | Feasibility   | Can this plan be implemented with the current structure? (grounded in the actual mechanisms, not a misread) |
 | Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here; the feature design's `## Scope` section judges each problem the confirmed cause carries under Change Surface Rules > *Scope judgment*, and a directly related problem left out owes a separation reason) |
 | Security      | Any security implications introduced? |
-| Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160) |
+| Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160) — and does each `manual` row executed by a person, and each row resolved to a mock, state in its `Reason` why the `## Tools` section secured no tool for it? (issue #277) |
 
 **Affected files and side effects are not scored here** (issue #192). The gate scores the
 *decision* layer; which files a change touches and which tests it requires are **derived**, not
@@ -878,7 +912,7 @@ Each role's task is delivered in the prompt of the direct spawn that enters its 
 - **Role spawn**: ARCHITECT was the orchestrator's relay of two participants, recorded from the transcript file by the Record workflow (ADR-0023 D2); those participants are not woken for RED or GREEN. The orchestrator spawns a fresh agent at each phase entry — the Test AI at RED entry, the Developer AI at GREEN entry once RED is complete — anonymous direct spawns (`subagent_type`); see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
 - **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the cycle-layer store `.autoflow/issue-{N}-local/` and hands over the **run record so far** — the RED report's path — naming each verification-design row that still has no record as *run first* ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it is found*).
-- Both receive: acceptance criteria + verification design + affected docs — and each `Low` recommendation below the decision layer that a gate before execution's triage deferred to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
+- Both receive: acceptance criteria + verification design + affected docs — and each `Low` recommendation below the decision layer that a gate before execution's triage deferred to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — and how its CI selects tests for a change, run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*, *Local verification*); and use the tools the verification design's `## Tools` section records, reporting a tool you find missing rather than acquiring it (*The tools the work needs*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
 - Every later role spawn in the cycle — VERIFY, REFINE, the GATE:QUALITY evaluator — receives the run record the same way: the prior reports' paths, with any row lacking a record marked *run first*.
 
 ---
@@ -892,7 +926,8 @@ rows, the per-suite disposition and each oracle's condition clause are **derived
 roles that open those files anyway. Before step 1 the Test AI finds how the target runs its tests
 at the location it executes in — the target's documents (`CLAUDE.md`, a README, a contributing
 guide), its scripts (a package manifest's scripts, a Makefile, a wrapper script) and its workspace
-structure (a per-package runner, a submodule's own tree) — and judges which of the target's tests
+structure (a per-package runner, a submodule's own tree) — finds how the target's CI selects tests
+for a change (a changed-since selection, a path filter), and judges which of the target's tests
 the change requires, recording the grounds and, for every run, the command, the log and its summary line in
 its report ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's
 practice*); on an opted-in target and in this repository `bash scripts/test/select-suites.sh`
@@ -926,7 +961,9 @@ returns to ARCHITECT, through the existing routes.
      characterization test is the expected outcome, not an investigation trigger.
 3. For rows typed `manual` (and `environment-dependent` rows resolved to a manual scenario) → write
    a manual verification scenario document under `.autoflow/issue-{N}-local/` (in this repository a
-   `standing` scenario, `manual / standing: <token>`, is committed instead).
+   `standing` scenario, `manual / standing: <token>`, is committed instead). The document names its
+   executor; for an `AI: <tool>` row it states what is opened with the tool, the referenced material
+   the result is compared against, and what counts as a match (ARCHITECT > *Tools*).
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
@@ -984,6 +1021,7 @@ implemented; only its evidence differs.
    - [MUST] A problem met while implementing that the scope does not name is judged under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* and recorded under `## Scope judgments` in the GREEN report: directly related and desirable to fix here → fixed in this cycle, with the tests the fix requires run and recorded; directly related but not desirable → left, with its separation reason; not directly related → left, reported in one line. A fix that would contradict a design **decision** returns to ARCHITECT, and a problem showing that an acceptance criterion must change is raised in the report for the operator (ARCHITECT > *Report routing* > *An acceptance-criterion change raised later in the cycle*).
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
+   - For a row verified with a tool (a `manual` row whose executor is `AI: <tool>`), look at the result with that tool while implementing; the row's evidence is the observation record the Test AI writes at VERIFY step 1, not this look (ARCHITECT > *Tools*).
    - [MUST] Run locally what the change requires and nothing more: this cycle's `automated` tests and the tests you judge the change reaches, the way the target runs its tests (RED > *Derivation on entry*), recording the command, the log and its summary line. There is no local whole-tree run — none scheduled, none held in reserve ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
    - [MUST] If the acceptance criteria are themselves mutually unsatisfiable — no implementation can satisfy them all — implement the satisfiable subset, record the contradiction in `.autoflow/issue-{N}-*-green-blocker.md` (the conflicting AC IDs, the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit), and proceed to VERIFY; the residual failure is what the arbitration adjudicates.
 3. Before committing, if this change touched a manifest-registered source, run
@@ -1023,6 +1061,13 @@ Run the tests; on failure, branch by cause.
    *A missing run is filled where it is found*). A check that did not execute is `not-run`, never
    `passed`. Nothing is inherited and no whole-tree run happens here — regression verification is
    HANDOFF step 5's CI.
+   A `manual` row whose executor is `AI: <tool>` is part of the run set: the Test AI performs its
+   scenario with the tool and writes the row's **observation record** under
+   `.autoflow/issue-{N}-local/` — what was looked at, how (the tool and the steps), the artifacts it
+   left (by path under the same prefix), the comparison against the referenced material, and one
+   result line, `observation: match` or `observation: mismatch — <what differs>`
+   ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *The tools the work needs*). A mismatch is a failure
+   and branches as step 2; a row with no record is `not-run` and is filled here.
 2. Branch on result:
    All PASS → step 3.
    Some FAIL → cause branching (run under delegated facilitation — the `verify-cause-branch` workflow returns a single
@@ -1214,14 +1259,16 @@ the author's "this is fine" is not the disposition.
 ```
 1. Automated tests: the cycle's local run record — VERIFY step 1's (or REFINE step 2's) command,
    log and summary line — is confirmed against the log (the recorded line read at the cited path,
-   not a re-run) and covers every `automated` and `delivery-check` row of the verification design.
+   not a re-run) and covers every `automated` and `delivery-check` row of the verification design,
+   and every `manual` row executed by the AI through its observation record (VERIFY step 1).
    Match the design table's rows against the record: a row with no record, or whose log is absent
    or does not carry the recorded line, is run here — a cycle-layer asset by its path, a test in the target's tree the way the target runs
    its tests — and its record filled in, not failed ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A
    missing run is filled where it is found*). Regression verification is HANDOFF step 5's CI; no
    whole-tree run happens here ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
 2. Minimal-implementation check: PASS confirmed (achieved in VERIFY step 3).
-3. Manual checklist: list the manual scenarios from the Test AI (mark "delegated to user").
+3. Manual checklist: list the manual scenarios executed by a person (mark "delegated to user"); a
+   scenario executed by the AI is covered by step 1.
 4. Maintained-docs check: confirm impacted docs are updated, and that the REFINE report
    (`.autoflow/issue-{N}-refine-report.md`) exists with its `simplify:` / `simplify-grounds:`
    lines and its four sections present — an empty section says `none`; an omitted section or a
@@ -1255,7 +1302,7 @@ the author's "this is fine" is not the disposition.
    Execution Principles > Human-decision presentation.
 ```
 
-**Verdict**: automated tests all PASS + minimal-implementation PASS + manual scenarios listed + manifest coherence confirmed (or diff touched no manifest source) + deploy/CI-path verification confirmed (or diff touched no deploy/CI-path surface) + lint outcome confirmed per discovered chain, with no `unexecuted` chain outstanding (or diff touched no lint-covered file). Manual items marked "delegated to user" do not block VALIDATE.
+**Verdict**: automated tests all PASS + every `manual` row executed by the AI recorded `observation: match` + minimal-implementation PASS + manual scenarios executed by a person listed + manifest coherence confirmed (or diff touched no manifest source) + deploy/CI-path verification confirmed (or diff touched no deploy/CI-path surface) + lint outcome confirmed per discovered chain, with no `unexecuted` chain outstanding (or diff touched no lint-covered file). Manual items marked "delegated to user" do not block VALIDATE.
 
 ---
 
@@ -1355,7 +1402,10 @@ each-item ≥ 7 criterion:
   never by re-running the command; a recorded line the log does not carry was authored, not
   produced by a run, and caps the citing item at 6. A record with no log behind it is not a
   fabricated line but a missing run: it takes the `Test coverage` omission path below, not this
-  cap ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A run's evidence is the log it left*).
+  cap ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A run's evidence is the log it left*). For an
+  observation record, confirm that the result was compared against the material the AC names — the
+  referenced mockup, asset or document itself; a comparison against the issue body's abbreviated
+  example, or a check that the result merely renders, is a weaker proxy (issue #277).
 - **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
   or renames files, sections, or identifiers, require evidence of a repo-wide
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
@@ -1406,7 +1456,10 @@ each-item ≥ 7 criterion:
   it is the row's recorded run — the command, the log and the summary line read from it, confirmed
   by reading the line at the cited log path rather than by re-running; in this repository a
   `standing` row's subject is additionally the committed asset's realisability — the file exists,
-  runs, and is CI-registered.
+  runs, and is CI-registered. For a `manual` row executed by the AI it is the row's observation
+  record (VERIFY step 1), confirmed by reading the record and opening the artifacts it cites — a
+  screenshot is read as an image — never by observing again (issue #277); a row with no record, or
+  a record whose artifacts are absent, takes the omission path below.
   - **Execution omission is not a defect** ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run
     is filled where it is found*). A row with no run record — or with no log behind it — is `not-run`, and the evaluator does
     **not** score `Test coverage` over it: the report names each such row under `Test coverage` as
@@ -1765,7 +1818,9 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      issue AC is `automated`, the section says so in one line rather than being omitted. The same
      section carries, for every `cycle`-layer `automated` row, the row's **run record** — the
      command and summary line of VERIFY step 1's run — since the check's code is not in the PR and
-     the record is what the reviewer can re-run (ADR-0024 D1, D2). The same section lists **every
+     the record is what the reviewer can re-run (ADR-0024 D1, D2), and for every `manual` row
+     executed by the AI, its executor, the path of its observation record and its result line. The
+     same section lists **every
      test file this cycle added to the target's tree**, each with the reason it is kept and — filled
      in at step 5 — the CI job that executed it; a cycle that added none says so in one line. The
      listing is what lets the reviewer judge the addition against the target's own convention

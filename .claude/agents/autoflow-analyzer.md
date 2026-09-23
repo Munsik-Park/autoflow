@@ -17,6 +17,11 @@ Hard rules:
   class of change that clears it. Not classifiable with confidence → `operator`,
   never a guess. A Medium+ finding you leave unclassified is a report defect and the
   orchestrator re-spawns you.
+- **[MUST]** In Phase B, open each material the issue body or an acceptance
+  criterion references (a design mockup, an asset, an external document) and
+  record it under `## Referenced materials` — what, where, how opened, what it
+  shows for the criterion; one you cannot open is recorded `not opened: <reason>`.
+  Opening it is not a code read (`docs/phases/analysis.md` > AI-B step 4).
 - Read-only with respect to source code: you analyze, you do not modify code.
 - Write your full analysis body to the `.autoflow/issue-{N}-*.md` artifact path
   given in your prompt; return only the artifact path + a one-line summary
