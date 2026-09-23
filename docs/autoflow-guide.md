@@ -1067,13 +1067,16 @@ Run the tests; on failure, branch by cause.
    left (by path under the same prefix), the comparison against the referenced material, and one
    result line, `observation: match` or `observation: mismatch — <what differs>`
    ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *The tools the work needs*). A mismatch is a failure
-   and branches as step 2; a row with no record is `not-run` and is filled here.
+   and branches as step 2, the observation record passed as the workflow's `failLog`; a row with no
+   record is `not-run` and is filled here.
 2. Branch on result:
    All PASS → step 3.
    Some FAIL → cause branching (run under delegated facilitation — the `verify-cause-branch` workflow returns a single
    next_action — RED | GREEN | SEQUENTIAL_FIX | EVALUATION_AI — and the orchestrator
    routes on it; it never sees the round-by-round exchange; see [`CLAUDE.md`](../CLAUDE.md) > Deliberation Isolation):
-     The workflow hands the failure log + test code + implementation code to both AIs.
+     The workflow hands the failure log + test code + implementation code to both AIs — for an
+     observation mismatch, the observation record (as `failLog`) + the scenario document and the
+     referenced material it names, in place of the log and the test code.
      Test AI:      "Does my test accurately reflect the acceptance criterion?" — self-check.
      Developer AI: "Does my implementation meet the acceptance criterion?"     — self-check.
        ├─ fix_test + no_problem → RED            → fix test → re-confirm Red → re-enter GREEN

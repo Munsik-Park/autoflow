@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // VERIFY cause-branch — isolated facilitation (issue #153, Decision 8).
 // Invoked by the orchestrator: Workflow({ name: "verify-cause-branch", args: { issue: "N", failLog: "<path>" } }).
+// `failLog` is the failure's evidence: a failing run's log, or, for a `manual` row verified with a
+// tool, the row's observation record whose result line reads `observation: mismatch`.
 // The Test-AI and Developer-AI self-checks run INSIDE this workflow; only the
 // canonical next action crosses back to the orchestrator. The orchestrator routes
 // strictly on `next_action`. Requires Claude Code v2.1.154+ (Workflow runtime).
@@ -12,7 +14,7 @@
 // orchestrator enforces in CLAUDE.md > Flow Control.
 export const meta = {
   name: 'verify-cause-branch',
-  description: 'Isolated VERIFY cause-branch: Test-AI + Developer-AI self-check on a test failure; returns only the canonical next action. Invoke with args {issue: "N", failLog: "<path>"} (both required).',
+  description: 'Isolated VERIFY cause-branch: Test-AI + Developer-AI self-check on a test failure or an observation mismatch; returns only the canonical next action. Invoke with args {issue: "N", failLog: "<path>"} (both required; failLog is the failing run\'s log, or the observation record of a manual row verified with a tool).',
   phases: [
     { title: 'Self-check', detail: 'test-AI and dev-AI each self-check against the acceptance criterion (one round)' },
   ],
@@ -56,6 +58,9 @@ if (!argv.failLog) throw new Error('verify-cause-branch: args.failLog is require
 const issue = argv.issue
 const failLog = argv.failLog
 const ledger = `.autoflow/issue-${issue}-ledger.md`
+// What the failure evidence is, for both self-checks: a run's log beside its test code, or an
+// observation record beside the scenario document and the referenced material it names.
+const EVIDENCE = `The failure evidence is at ${failLog}: either a failing test run's log, read with the test code; or, when it is a manual row's observation record (its result line reads "observation: mismatch"), the record itself — what was looked at, how, the artifacts it cites and the comparison against the referenced material — read with the row's scenario document under .autoflow/issue-${issue}-local/ and the referenced material the record names, which stand in for the test code.`
 
 const TEST_CHECK = {
   type: 'object',
@@ -170,11 +175,11 @@ console.log(`VERIFY cause-branch for issue #${issue}`)
 
 const [test, impl] = await parallel([
   () => agent(
-    `You are the Test AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the test code, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Developer AI): does my test accurately reflect the acceptance criterion? Answer "fix_test" if the test is wrong, "no_problem" if the test is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
+    `You are the Test AI. A verification is failing in AutoFlow VERIFY. ${EVIDENCE} Read that evidence and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Developer AI): does my test — or, for an observation, my scenario and the comparison it made against the material the criterion names — accurately reflect the acceptance criterion? Answer "fix_test" if the test or the scenario is wrong, "no_problem" if the test is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
     { schema: TEST_CHECK, label: 'test-self-check', phase: 'Self-check', ...site('test-self-check') },
   ),
   () => agent(
-    `You are the Developer AI. A test is failing in AutoFlow VERIFY. Read the failure log at ${failLog}, the implementation, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Test AI): does my implementation meet the acceptance criterion? Answer "fix_impl" if the implementation is wrong, "no_problem" if the implementation is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
+    `You are the Developer AI. A verification is failing in AutoFlow VERIFY. ${EVIDENCE} Read that evidence, the implementation, and the acceptance criteria in .autoflow/issue-${issue}-*.md. Single self-check (one round, no discussion with the Test AI): does my implementation meet the acceptance criterion — for an observation, does the result the record shows match the referenced material? Answer "fix_impl" if the implementation is wrong, "no_problem" if the implementation is correct. Return your verdict + a one-line reason. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
     { schema: IMPL_CHECK, label: 'impl-self-check', phase: 'Self-check', ...site('impl-self-check') },
   ),
 ])
@@ -193,7 +198,7 @@ else if (t === 'fix_test' && i === 'fix_impl') next = 'SEQUENTIAL_FIX' // fix te
 else next = 'EVALUATION_AI' // both "no_problem" -> deadlock: Evaluation AI arbitrates
 
 await agent(
-  `Append (do NOT rewrite or delete) to ${ledger} one VERIFY cause-branch entry: decision "next_action=${next}"; grounds (test self-check=${t}, impl self-check=${i}; failure log ${failLog}); authority "VERIFY self-check"; cycle/phase "VERIFY". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Head the entry \`## <ID> — <title> (cycle <C>, VERIFY)\`, allocating <ID> by running \`bash scripts/ledger/ledger-entry-id.sh next ${ledger} F\` immediately before the append — \`F\` is the facilitator delegate's namespace (CLAUDE.md > Decision Ledger). After the append, run \`bash scripts/ledger/ledger-entry-id.sh check ${ledger}\` and fix every defect it reports before returning. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
+  `Append (do NOT rewrite or delete) to ${ledger} one VERIFY cause-branch entry: decision "next_action=${next}"; grounds (test self-check=${t}, impl self-check=${i}; failure evidence ${failLog}); authority "VERIFY self-check"; cycle/phase "VERIFY". If ${ledger} does not exist, create it with a "# Decision Ledger — issue #${issue}" header first. Append-only. Head the entry \`## <ID> — <title> (cycle <C>, VERIFY)\`, allocating <ID> by running \`bash scripts/ledger/ledger-entry-id.sh next ${ledger} F\` immediately before the append — \`F\` is the facilitator delegate's namespace (CLAUDE.md > Decision Ledger). After the append, run \`bash scripts/ledger/ledger-entry-id.sh check ${ledger}\` and fix every defect it reports before returning. Return a one-line summary only. Run every Bash command in the foreground only — never run_in_background (see docs/role-common-rules.md > Bash Execution Mode).`,
   { label: 'ledger', phase: 'Self-check', ...site('ledger') },
 )
 

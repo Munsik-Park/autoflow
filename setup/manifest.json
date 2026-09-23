@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ff4709ffc5e1947db9516a63ba2f9a3f290bcd713f5b7f0e73358fc2293eecff"
+      "sha256": "99c15444dad1038b47f2d42f299ce2ddc18c73111461d6395c47ff034d2bd052"
     },
     {
       "source": "docs/development-guideline.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6e13fcf50f70276ea6f0faeb7cb1d0f87a13880960f6964f3aac3fbefb4a86f4"
+      "sha256": "6c03c68d4e00fc496e132652ee9eba023091926484bd3d2876d90792b507921f"
     },
     {
       "source": "docs/security-checklist.md",
@@ -153,7 +153,7 @@
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "4b1967ebae0d1744bc23b8f104502946ff1dc5f93cb037c694699a370a891ecb"
+      "sha256": "268984d3267cce783a0444cb8c4840631cdb2322e55befacc27b2222de140a75"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
