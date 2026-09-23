@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277))
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293))
 
 ## Context
 
@@ -107,7 +107,8 @@ that each layer is named by what defines it.
 *Revised by issue #222; the original predicate and mapping are recorded under Related Issues / PRs.
 Scope narrowed by issue #238: the closed list and the layer violation below bind this repository's
 own verification designs; on a target, retention is not classified — see* **Scope on targets** *at
-the end of this section.*
+the end of this section. The closed list narrowed from four tokens to two by issue #293 — see*
+**Amendment note (issue #293)**.
 
 **Criterion.** *Is this a defect a single local run settles, or one that surfaces only after
 deployment (merge / stamp)?* Local run → `cycle`; after deployment → `standing`. The predicate is
@@ -119,7 +120,7 @@ the check *can be stated* is **not** part of the criterion. A reason can always 
 is, by default, a one-shot local run whose result is recorded; it enters the repository only when it
 names a `standing` category below.
 
-**Closed `standing` categories.** A check may be `standing` only if it is one of the four
+**Closed `standing` categories.** A check may be `standing` only if it is one of the two
 deployment-level kinds below, named by its token. The list is closed: a row that names no token is
 `cycle`, a row that names a token outside the list is a **layer violation** (Area 2, GATE:QUALITY
 `Test quality`), and a reason sentence never substitutes for a token — categories are extended by
@@ -129,8 +130,13 @@ revising this ADR, never by describing a new one in a row.
 |---|---|
 | `packaging` | the shipped artifact builds, packs, installs or stamps — plugin package, thin-root bundle, install script |
 | `manifest` | a declared inventory agrees with the tree it describes — `setup/manifest.json`, a suite or CI registration, a scaffold list |
-| `target-runtime` | a shipped script or hook behaves as declared when executed on a stamped target — a hook's deny/allow contract, a script's exit-code contract |
-| `cross-file` | two or more files that must state the same fact do so — shared identifiers named by a settled decision, a rule and its enforcement device, an ADR's status and its registry row, a ko/en pair |
+
+Until issue #293 the list also carried `target-runtime` (a shipped script or hook behaves as
+declared when executed — a hook's deny/allow contract, a script's exit-code contract) and
+`cross-file` (two or more files that must state the same fact do so — a rule and its enforcement
+device, an ADR's status and its registry row, a ko/en pair). Both left it: such a defect is
+introduced by a change and settled by that change's one-shot run, and what CI keeps is what catches
+a deployment failure (*Amendment note (issue #293)*).
 
 **Declaration site.** The **existing `Type` cell** of the verification design's acceptance-criteria
 table. **No `Layer` column is added.** The layer is read from the `Type` cell alone: a `standing`
@@ -231,11 +237,12 @@ it makes every retained check that executes one whose subject this cycle did not
 failure is unambiguous and needs no new branch — a `delivery-check` has no RED/GREEN semantics
 (ADR-0022 decision 2), so the VERIFY cause-branch is not its home.
 
-**AC3's confirming means.** One standing **tracked-file predicate** over the declared prefix,
-authored by a named sub-issue (S3 below). It is `standing` by D1's criterion under the `cross-file`
-token: the defect it catches is a cycle asset entering the merged tree — the ignore rule and the
-index disagreeing about the prefix, which a `.gitignore` edit three cycles from now would cause —
-and that defect surfaces only after merge, where no per-PR relation can see it.
+**AC3's confirming means.** One **tracked-file predicate** over the declared prefix, authored by a
+named sub-issue (S3 below) and shipped to targets by S4 (issue #229): the defect it catches is a
+cycle asset entering the merged tree — the ignore rule and the index disagreeing about the prefix.
+It ran here as a `standing` check under the `cross-file` token until issue #293 removed that token;
+the device still ships, and in this repository the cycle that edits the ignore rule or the prefix
+runs it once.
 
 ### D3 — Target test entry point, and the suite plane's fate on targets
 
@@ -357,28 +364,30 @@ CI-layer verdict.
 
 ### D5 — This repository, and the advisory CI
 
-This repository is a **consumer of its own model**: the local whole-tree floor is removed here too,
-and `.github/workflows/contract-suites.yml` is its standing layer. The workflow **stays advisory at
-the branch-protection level**, while the AutoFlow-side verdict is binding — advisory-to-the-merger
-and binding-to-the-hand-off are different bindings, and both documents already say so
-(`.github/workflows/contract-suites.yml` > the file-header comment —
-"Enforcement level: ADVISORY, as for every other workflow in this repo" — against the `[MUST]` at
-`docs/autoflow-guide.md` > HANDOFF — "Confirm CI is green on the created PR(s)").
-Promoting the workflow to a required status check would bind the
-**external reviewer's merge**, which is authority AutoFlow does not hold (ADR-0003).
+*Revised by issue #293; the original text is recorded under Related Issues / PRs.*
 
-Two pre-existing fail-closed properties are what make an advisory workflow admissible as the
-standing layer, and both are retained:
+This repository is a **consumer of its own model**: the local whole-tree floor is removed here too,
+and its standing layer is the deployment-level checks D1 admits — `packaging` and `manifest` — which
+`.github/workflows/contract-suites.yml`, `plugin-package.yml` and `e2e-dummy-target.yml` run, each
+invoked directly by its path. The workflows **stay advisory at the branch-protection level**, while
+the AutoFlow-side verdict is binding — advisory-to-the-merger and binding-to-the-hand-off are
+different bindings (`docs/autoflow-guide.md` > HANDOFF — "Confirm CI is green on the created
+PR(s)"). Promoting a workflow to a required status check would bind the **external reviewer's
+merge**, which is authority AutoFlow does not hold (ADR-0003).
+
+Two fail-closed properties make an advisory workflow admissible as the standing layer:
 
 - "No check published" is **not** green — `confirm-ci-green.sh` exit `11` is a distinct non-green
   code, so a CI that never fired cannot read as a pass.
-- A path-filtered CI could publish some green check while the relevant suite step never ran. That
-  residual is bounded by a standing oracle: the workflow's `paths:` blocks must carry every path
-  declared by a registered suite's `ci-subject` header, asserted by
-  `tests/test-workflow-trigger-conformance.sh`.
+- No check can publish green while its step never ran: the standing workflows carry **no `paths:`
+  filter and no selection step**, so every check runs on every pull request and every push to
+  `main`. The residual a path filter left — some green check published while the relevant step was
+  filtered out — was bounded by a trigger-coverage oracle over the suite headers until issue #293;
+  with a handful of checks, running all of them removes the residual rather than bounding it.
 
-The suite **header contract is therefore retained here as a gate input**, not as a CI convenience:
-here it is the standing layer's trigger-coverage mechanism, even as D3 makes it opt-in for targets.
+This repository therefore **does not opt in to the suite plane** (`.claude/autoflow.local.json` >
+`tests.suite_plane: false`): selection has nothing to decide over a set this small, and no suite
+here carries the header contract. The plane stays shipped and opt-in for targets (D3).
 
 ### D6 — ADR-0019's supersede scope, and the retirements that follow
 
@@ -549,7 +558,8 @@ this record is the only carrier across that gap:
 - **Effective-from of the #222 revision.** The revised D1 binds verification designs authored after
   it lands — the same convention as the clause above. The 44 committed suites this repository
   carried when #222 was written keep their `standing` layer until a separate issue reclassifies them
-  against the closed list; #222 changes the criterion, not the inventory.
+  against the closed list; #222 changes the criterion, not the inventory. Issue #293 is that issue
+  (*Amendment note (issue #293)*).
 - **`Amends ADR-0022`** — see *Related Issues / PRs*.
 - **The adjustment-scope table below is not the change table `[DENY]`d at `docs/autoflow-guide.md` >
   ARCHITECT > Output artifacts** —
@@ -801,7 +811,7 @@ registry row.
 ### Neutral / Trade-Offs
 
 - The layer is read from the `Type` cell, so nothing new is scored and no new column is written in
-  a verification design; the cost is that a reader must know the mapping and the four tokens,
+  a verification design; the cost is that a reader must know the mapping and the tokens,
   which is why both live here.
 - Retiring the inheritance machinery removes a correctness dependency (`ci-subject` declaration
   quality driving inheritance) at the price of losing the fast path it bought.
@@ -960,6 +970,24 @@ registry row.
   decision, and the Decision Ledger's re-opening ground, which stays the reproducing command
   (`docs/records/design-rationale.md` > Decision 20). Grounds:
   `docs/records/design-rationale.md` > Decision 22.
+- **Revision — issue #293 (operator edit, outside an AutoFlow cycle).** D1's closed list narrows to
+  `packaging` and `manifest`; this repository's committed checks are reclassified against it; D5 is
+  rewritten. **The original D5** made `.github/workflows/contract-suites.yml` this repository's
+  standing layer over every committed suite, bounded the path-filter residual with a standing oracle
+  — the workflow's `paths:` blocks must carry every path a registered suite's `ci-subject` header
+  declares, asserted by `tests/test-workflow-trigger-conformance.sh` — and **retained the suite
+  header contract here as a gate input**, the standing layer's trigger-coverage mechanism, while D3
+  made it opt-in for targets. Also revised: D1's closed list (the two removed tokens are recorded in
+  place), D2's *AC3's confirming means*, the *Effective-from of the #222 revision* clause, and one
+  *Neutral* sentence. Withdrawn by the same revision, without editing their rows: Area 1's
+  *Header contract* row's "`retained` for this repository" half, since this repository no longer
+  opts in; and the second ground of the *Removing the suite plane from targets outright*
+  alternative ("it strands this repository"), whose first ground — the target that migrated under
+  #213 — still carries the rejection. Unchanged: M, D2's asset model, D3, D4, D6, the target-facing
+  rules (`CLAUDE.md` > Rule Scope > *What a cycle leaves in the target's tree*), and every authority
+  rule of `CLAUDE.md` > Rule Scope principle 1. Grounds, the accepted consequences and the
+  per-check disposition: *Amendment note (issue #293)*; `docs/records/design-rationale.md` >
+  Decision 27.
 - Builds on `docs/records/adr/0018-verification-depth-justification.md`: the layer is derived from an
   existing cell, so no scored item is added.
 - Reinforces `docs/records/adr/0003-autoflow-ends-at-handoff.md`: D5 declines to bind the reviewer's merge.
@@ -994,3 +1022,74 @@ a `cycle` artifact like a run's log (D2), and the local run set's judgment takes
 selection as guidance. D1's layers and the target's test entry point are unchanged. Rule home:
 [`CLAUDE.md`](../../../CLAUDE.md) > Rule Scope > *The tools the work needs*; decision:
 [`../design-rationale.md`](../design-rationale.md) > Decision 26.
+
+## Amendment note (issue #293)
+
+**The operator decision** (2026-09-23, recorded during issue #277). A change's functional
+verification is a one-shot test in the cycle, and only its record is kept. CI keeps only the checks
+that catch a deployment failure. The `standing` categories this repository keeps are `packaging` and
+`manifest`; `target-runtime` (a hook's deny/allow contract and the like) and `cross-file` (a rule and
+its enforcement device, a ko/en pair and the like) leave. The decision applies to this repository;
+what a cycle leaves in a target's tree stays unclassified by AutoFlow (issue #238).
+
+**Grounds.** D1's criterion asks whether a defect surfaces only after deployment. A broken hook
+contract or two documents that disagree is introduced by a change and is visible in that change's
+own one-shot run; it surfaces later only when an unrelated change breaks it, and guarding against
+that is the regression guard #222 already declined to keep for functional checks (*Consequences >
+Negative* — "A behavior verified in one cycle has no regression guard in a later one unless its
+defect is deployment-level"). The two removed categories had become where that guard survived:
+`connev-llm/llmroute#285` put eleven of twelve `standing` rows under `cross-file` (D1 > *Scope on
+targets*), and in this repository the 44 committed suites and 5 plugin suites carried 27,136 lines
+and the five workflows that ran them 58 direct step invocations, against this record's own
+measurement that test lines already outgrew code and doc lines (Context). After the
+reclassification the 8 kept suites carry 2,518 lines and the three standing workflows 11
+invocations.
+
+**Accepted consequences** (the operator's, recorded with the decision). The regression of a hook
+that enforces a principle-1 authority rule — the push gate, the merge prohibition, the score
+thresholds, the `TaskOutput` and `gh issue create` denials — is no longer caught by CI; it is
+checked only by the one-shot run of the cycle that changes that hook. Agreement between documents —
+a rule and its device, an ADR and its registry row, a ko/en pair — is likewise checked only by the
+cycle that changes one of them. The external reviewer and the gates still see every such change.
+
+**The suite plane (issue AC5).** This repository withdraws its opt-in
+(`.claude/autoflow.local.json` > `tests.suite_plane: false`). D5 retained the header contract here
+as the standing layer's trigger-coverage mechanism; with eleven checks left, the standing workflows
+drop their `paths:` filters and selection steps and run every check on every pull request, which
+removes the residual the mechanism bounded (D5 as revised). The plane — header contract, selector,
+runner, `check-suite-manifest.sh`, `check-suite-leaf.sh`, drift-check D7 — stays shipped and opt-in
+for targets (D3), unchanged.
+
+**Disposition.** Kept checks are named by the category of what remains in them; a kept file's other
+legs were deleted leg by leg on the same criterion. One boundary inside `packaging`: a delivered
+hook is invoked once and must return allow for a benign command — a smoke that catches a broken
+script, since a bash parse failure exits 2 like a deny — and its case-by-case deny/allow contract is
+`target-runtime`.
+
+| Check | Disposition | Category / ground |
+|---|---|---|
+| `tests/plugin/verify-package.sh` | kept, 19 of 35 legs | `packaging`, `manifest` — the package resolves, parity with the `.claude/` originals, one gate-hook smoke |
+| `tests/plugin/verify-install-into-target.sh` | kept, 20 of 43 legs | `packaging`, `manifest` — install, idempotency, scaffolds, settings merge, link closure, manifest rows and hashes, clean drift-check |
+| `tests/plugin/verify-install-skill-scripts.sh` | kept, 2 of 59 legs | `manifest` (manifest and plugin versions agree), `packaging` (the install skill's Step 0 resolves under the cache layout); the rest was the detection script's branch logic |
+| `tests/plugin/verify-thin-root-layer.sh` | kept, 8 of 23 legs | `packaging`, `manifest` — the shim, the settings pin and its manifest rows |
+| `tests/plugin/verify-e2e-dummy-target.sh` | kept, 13 of 30 legs | `packaging` — a realistic target is stamped and resolves from its installed location; one leg is the installed bundle's host-purity ratchet, retained as repository hygiene outside this list (operator decision) |
+| `tests/test-issue-236-restamp-removal.sh` | kept, the re-stamp reconciliation cases | `packaging`; drift-check's forecast wording, the detection script and doc legs deleted |
+| `tests/test-issue-979-bundle-delivery.sh` | kept, all but one leg | `packaging`, `manifest`; the SETUP-GUIDE wording leg deleted |
+| `tests/test-cycle-layer-devices-shipped.sh` | kept, all but two legs | `packaging`, `manifest`; the in-repository layer-check run and the device's detection arm deleted |
+| `scripts/test/check-manifest-regen-clean.sh`, `scripts/test/check-suite-ci-coverage.sh` | kept in CI | `manifest` |
+| `scripts/test/check-tests-tree-hygiene.sh`, `.github/workflows/host-purity-delta.yml`, `.github/workflows/reuse.yml` | kept in CI | repository hygiene, outside this list (operator decision) |
+| `scripts/test/check-suite-manifest.sh`, `scripts/test/check-suite-leaf.sh` | removed from this repository's CI; files kept | suite-plane lints shipped to opted-in targets |
+| `tests/test-gate-hardening.sh`, `test-issue-18-fixture-glob-isolation.sh`, `test-issue-40-hook-additive.sh`, `test-issue-55-score-format-contract.sh`, `test-issue-64-collection-scope.sh`, `test-issue-140-remedy-route.sh`, `test-issue-165-taskoutput-deny.sh`, `test-issue-223-schema-hook-contract.sh`, `test-issue-245-schema-validation.sh`, `test-issue-961-cap6-gate.sh`, `test-issue-create-gate.sh`; `.github/workflows/schema-hook-contract.yml` | deleted | `target-runtime` — the gate hook's deny/allow and schema contract |
+| `tests/test-bounded-execution-fallback.sh`, `test-codex-review-label-step.sh`, `test-composition-oracle.sh`, `test-issue-135-scope-bounded.sh`, `test-issue-166-relay-report.sh`, `test-issue-179-relay-state.sh`, `test-issue-181-preflight-local-checks.sh`, `test-issue-25-confirm-ci-green.sh`, `test-issue-30-confirm-ci-green.sh`, `test-issue-274-confirm-ci-green.sh`, `test-issue-35-phase-marker.sh`, `test-issue-92-host-pr-execution.sh`, `test-issue-979-preflight-backend-check.sh`, `test-issue-979-probe.sh`, `test-issue-979-review-backend.sh`, `test-issue-create-wrapper.sh`, `test-ledger-entry-id.sh`; `scripts/test/check-cleanup-issue-boundary.sh`, `scripts/test/check-repo-key.sh`; `test/workflows/run.mjs` and `.github/workflows/workflow-regression.yml` | deleted | `target-runtime` — a shipped script's or workflow's behavior contract |
+| `tests/test-issue-167-drift-upstream.sh`, `test-issue-185-drift-policy-leg.sh`, `test-headerless-suite-target.sh` | deleted | `target-runtime` — drift-check and suite-plane behavior on a target |
+| `tests/test-issue-103-central-runner.sh`, `test-push-context-base-ref.sh`, `test-workflow-trigger-conformance.sh`; `scripts/test/check-step-reconciliation.sh` | deleted | this repository's suite plane, withdrawn (D5) |
+| `tests/test-cycle-layer-index.sh`, `test-spawn-policy-single-source.sh`, `test-suite-plane-optin-single-site.sh`, `test-verification-layer-token-set.sh`; `scripts/test/check-watchdog-detachment.sh` | deleted | `cross-file` |
+| `tests/test-issue-150-policy-migration.sh`, `test-issue-952-wizard-removal.sh`, `test-issue-16-manifest-locale-invariance.sh` | deleted | a one-time property of a past change; the committed-manifest equality the last also asserted is `check-manifest-regen-clean.sh`'s |
+| `tests/manual/*.md` (11), `tests/plugin/manual-scenarios*.md` (4) | deleted | per-issue VALIDATE checklists; no procedure re-runs any of them, so none is a `manual / standing:` scenario |
+
+Fixtures and mocks only the deleted checks read went with them; `tests/fixtures/gate-schema.json`
+(the documented vocabulary source the gate hook's literals follow), the host-purity lists, the E2E
+purity baseline, the C7 pilot fixtures ADR-0021 cites and the shipped `tests/lib/base-ref.sh` stay.
+
+**Effective from.** This revision binds verification designs authored after it lands. The change
+that writes it was verified by one local run of each kept check, recorded in its PR body.

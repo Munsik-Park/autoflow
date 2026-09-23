@@ -104,10 +104,10 @@ if (policyLoaded && policyLoaded.found) {
   try { policy = JSON.parse(policyLoaded.content) } catch (_) { policy = null }
 }
 // The site keys this script spreads, declared once, in a fixed grep-parsable shape: one BARE quoted
-// key per line between the two markers, never written in the site-call syntax -- the contract CI
+// key per line between the two markers, never written in the site-call syntax -- a static check
 // extracts call-site keys by grepping that syntax over the file OUTSIDE this range. The three-way
-// equality (declaration = call sites = config rows) lives in
-// tests/test-spawn-policy-single-source.sh > required-key-declaration-join. The discussion turns
+// equality (declaration = call sites = config rows) is confirmed by the one-shot run of the cycle
+// that changes any of the three (issue #293). The discussion turns
 // have no site here since issue #179: the participants are direct spawns whose model the
 // orchestrator resolves from the policy's `phases` rows (architect-dev-participant /
 // architect-test-participant).
@@ -149,9 +149,9 @@ if (!policy || !policy.workflow_sites || !policy.workflow_sites[WORKFLOW_NAME]) 
   stopped = policyRowDefect(policy)
 }
 // The site opts helper. [MUST] The key is a STRING LITERAL at every call site -- never a variable,
-// a template string or any computed expression: contract CI is pure bash + jq with no node, so the
-// join between call sites and config rows has no run-time oracle, and a literal key is what keeps
-// that join decidable by static set comparison (tests/test-spawn-policy-single-source.sh).
+// a template string or any computed expression: the join between call sites and config rows has
+// no run-time oracle, and a literal key is what keeps that join decidable by static set
+// comparison in bash + jq, with no node.
 // An INHERITING row yields an opts object with no `effort` key at all, which is exactly how the
 // runtime is documented to inherit -- the config sentinel is this policy's own vocabulary and is
 // never written to a harness channel. Every other value the row carries is a concrete effort and

@@ -30,10 +30,10 @@
 # device is not delivered to targets, where a test file a cycle adds is judged
 # by the reviewer from the PR body's listing, not by a token.
 #
-# THE TOKEN LIST IS THIS FILE'S AND THE ADR'S, and they must agree: that
-# agreement is itself a standing verification
-# (tests/test-verification-layer-token-set.sh), asserted in both directions and
-# then driven behaviourally, so `--list-tokens` cannot become a decorative list.
+# THE TOKEN LIST IS THIS FILE'S AND THE ADR'S, and they must agree. The two
+# change in the same change (CLAUDE.md > Rule Scope, principle 4); a revision
+# that lands on one side only is caught by that cycle's one-shot run, not by a
+# standing check (issue #293 removed `cross-file` from the list).
 #
 # Usage:
 #   bash scripts/gate/verification-layer-check.sh <verification-design.md>
@@ -48,10 +48,8 @@
 
 set -uo pipefail
 
-# ADR-0024 D1 > "Closed `standing` categories" — one token per line, in the
-# ADR's own order. Revising this list without revising that table is the defect
-# tests/test-verification-layer-token-set.sh exists to catch.
-STANDING_TOKENS=(packaging manifest target-runtime cross-file)
+# ADR-0024 D1 > "Closed `standing` categories", in the ADR's own order.
+STANDING_TOKENS=(packaging manifest)
 
 if [ "$#" -ne 1 ]; then
   echo "verification-layer-check: usage: verification-layer-check.sh <verification-design.md> | --list-tokens" >&2

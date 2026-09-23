@@ -204,7 +204,7 @@ run_suite_bounded() {
   fi
 
   # No bound tool resolves: detached sleep+kill watchdog, in the canonical block
-  # shape scripts/test/check-watchdog-detachment.sh holds every such site to.
+  # shape every such site shares (issue #100).
   # `</dev/null` is required here and only here: `set -m` puts the background
   # suite in its own process group, so a suite reading stdin would be stopped by
   # SIGTTIN with no visible cause.

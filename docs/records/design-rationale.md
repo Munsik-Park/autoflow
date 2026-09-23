@@ -479,6 +479,30 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, which accepts "an ADR or a documented owner decision". It touches two trigger areas — agent workflow gates (a new pause) and evaluation policy (`Test coverage`, assertion-claim alignment, `Test plan`) — and is recorded as the documented owner decision, on the precedent of Decisions 11, 24 and 25. It widens ADR-0024 D3 from the test command to the tools the work needs and changes the meaning of ADR-0022's `manual` disposition; both carry amendment notes.
 
+### Decision 27: This Repository's CI Keeps Only Deployment-Level Checks; Functional Verification Is the Cycle's One-Shot Run
+
+**Problem.** ADR-0024 split verification into a `cycle` layer (run once, uncommitted, its record kept) and a `standing` layer (committed, run by CI), and #222 closed `standing` to four categories — but left the 44 suites this repository already carried at `standing` until a separate issue reclassified them. Two of the four categories kept the old growth open: `target-runtime` (a hook's deny/allow contract, a script's exit-code contract) and `cross-file` (a rule and its device, a ko/en pair) fit almost any functional check — `connev-llm/llmroute#285` put eleven of twelve `standing` rows under `cross-file` — and here the suites and plugin suites stood at 27,136 lines behind 58 CI step invocations, with the suite plane's selector, headers and trigger-coverage oracle kept in this repository to decide which of them a change required.
+
+**Decision.** Operator decision (issue #293, recorded 2026-09-23 during issue #277), executed at the operator's instruction as orchestrator work outside an AutoFlow cycle.
+
+1. **Functional verification is the cycle's one-shot run, recorded; CI keeps only what catches a deployment failure.** ADR-0024 D1's closed list narrows to `packaging` and `manifest`.
+2. **Scope: this repository.** What a cycle leaves in a target's tree stays unclassified by AutoFlow ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope > *What a cycle leaves in the target's tree*; Decision 21); the plane stays shipped and opt-in for targets.
+3. **Accepted consequence.** The regression of a principle-1 enforcement hook (push gate, merge prohibition, score thresholds, the `TaskOutput` and `gh issue create` denials) and of document agreement is caught only by the cycle that changes that hook or document, by the external reviewer and by the gates — not by CI. [`CLAUDE.md`](../../CLAUDE.md) > Rule Scope > *Local verification* states it.
+
+**The points the issue left to the design.**
+
+- *Each check's disposition.* Classified by what a leg checks, not by the file: a kept file keeps only its `packaging` / `manifest` legs, the rest deleted leg by leg — the operator chose this over keeping whole files whose main subject is packaging, which would have left hook-contract and document-agreement legs in CI. Inside `packaging`, a delivered hook is invoked once and must allow a benign command — a bash parse failure exits 2 like a deny, so only the allow case catches a broken script; its case-by-case contract is `target-runtime`. The table is ADR-0024 > *Amendment note (issue #293)*: 8 suites kept (2,518 lines), 41 suites and 15 manual scenarios deleted, 11 CI invocations left.
+- *The suite plane here.* Withdrawn (`tests.suite_plane: false`). ADR-0024 D5 kept it as the standing layer's trigger-coverage mechanism; over eleven checks the standing workflows drop their `paths:` filters and selection steps instead, so no check can read green while its step never ran — the residual is removed rather than bounded.
+- *Manual scenarios.* All 15 were per-issue VALIDATE checklists that no procedure runs again, so none is a `manual / standing:` scenario; the plugin ones included, since no release step names them.
+- *`test/workflows/run.mjs`.* Deleted with its CI job: the workflows' control flow is functional, verified by the cycle that changes it ([`role-contracts.md`](../role-contracts.md) > Facilitator > *Verification scenarios (manual)*).
+- *CI checks that are not suites.* The license (REUSE) and host-purity guards and the tests-tree NUL-byte lint are repository hygiene, not verification of AutoFlow's rules; the operator placed them outside this decision.
+
+**What was rejected.** Keeping whole files by their main subject (above). Keeping the suite plane here for a handful of checks — its header contract, selector, reconciliation step and trigger-coverage oracle existed to decide which of many suites a change required. Deleting the plane's shipped devices — they are a target's opt-in (ADR-0024 D3), outside this repository's scope.
+
+**Why the devices change here.** The rule and its device change together (principle 4): `scripts/gate/verification-layer-check.sh` enforces the two-token list, and the CI workflows are the standing layer's execution. No hook, gate threshold or state field changes.
+
+**Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 21 and 26; ADR-0024 carries the revision (D1, D2, D5, the amendment note).
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:

@@ -2,24 +2,18 @@
 # SPDX-License-Identifier: Elastic-2.0
 # .github/workflows/e2e-dummy-target.yml — throwaway dummy-target E2E suite (issue #797 [#785-S10])
 #
-# Runs the composed end-to-end acceptance suite (tests/plugin/verify-e2e-dummy-target.sh),
-# which provisions a structurally-real, zero-submodule dummy library target, installs the
-# AutoFlow tool into it via setup/init.sh, and drives the already-unit-covered mechanisms
-# (install, manifest, drift, host-purity, single-repo HANDOFF gate + create-host-pr.sh label
-# runtime) end-to-end AS A COMPOSITION — the PILOT gate before claude-autoflow itself becomes
-# the first reversal case (S11a #798). The suite COMPOSES; it delegates the unit-level
-# assertions to verify-install-into-target.sh / verify-package.sh / test-issue-788-host-purity-delta.sh
-# as whole-suite regressions and adds only the composition-only arms.
+# Runs tests/plugin/verify-e2e-dummy-target.sh, which stamps the thin-root bundle
+# into a structurally-real, zero-submodule dummy library target through
+# setup/init.sh and checks that the install lands intact and resolves from the
+# installed location — deployment-level checks only (ADR-0024 D1; issue #293).
+# It runs on every pull request and every push to main, with no `paths:` filter.
 #
-# Why GitHub Actions: the suite is pure POSIX sh + jq/cmp/diff/grep/awk/git with no node/npm,
-# no bats, and no submodule checkout — the same zero-infra rationale as plugin-package.yml /
-# host-purity-delta.yml / schema-hook-contract.yml. ubuntu-latest ships bash 5.x + git + jq;
-# the delegated regression suites walk the merge-base against origin/main, so checkout uses
-# fetch-depth: 0.
+# Why GitHub Actions: the suite is pure POSIX sh + jq/cmp/diff/grep/awk/git with
+# no node/npm, no bats, and no submodule checkout; ubuntu-latest ships bash 5.x +
+# git + jq.
 #
-# One file per subject: this is a DEDICATED sibling workflow (not a job added to
-# plugin-package.yml), matching the four existing advisory workflows' one-file-per-subject
-# convention and keeping the E2E's path-filter independent of the packaging suite's.
+# One file per subject: a dedicated sibling workflow, not a job added to
+# plugin-package.yml.
 #
 # Enforcement level: ADVISORY. This repo's plan provides no branch-protection /
 # required-status-checks, so a red run here does NOT auto-block merge; it surfaces a
@@ -29,179 +23,8 @@ name: e2e-dummy-target
 
 on:
   pull_request:
-    paths:
-      - '.gitmodules'
-      - 'docs/phases/analysis.md'
-      - 'docs/evaluation-system.md'
-      - 'docs/security-checklist.md'
-      - 'tests/test-issue-952-wizard-removal.sh'
-      - 'tests/lib/**'
-      - 'docs/repo-boundary-rules.md'
-      - 'scripts/resync-submodules.sh'
-      - 'tests/plugin/verify-e2e-dummy-target.sh'
-      - 'tests/plugin/verify-install-into-target.sh'
-      - 'tests/plugin/verify-package.sh'
-      - 'tests/fixtures/**'
-      - 'setup/**'
-      - 'plugin/autoflow/hooks/**'
-      - 'scripts/handoff/**'
-      - 'docs/autoflow-guide.md'
-      - 'docs/records/design-rationale.md'
-      - '.codex/review.md'
-      - 'CLAUDE.md'
-      - 'README.md'
-      - 'docs/submodule-common-rules.md'
-      - 'docs/role-common-rules.md'
-      - 'docs/role-contracts.md'
-      - 'docs/external-review-sequencing.md'
-      - 'docs/INDEX.md'
-      - 'docs/git-workflow.md'
-      - '.claude/agents/autoflow-analyzer.md'
-      - '.claude/agents/autoflow-planner.md'
-      - '.claude/agents/autoflow-implementer.md'
-      - '.claude/agents/autoflow-tester.md'
-      - '.claude/agents/autoflow-evaluator.md'
-      - 'scripts/cleanup/cleanup-issue.sh'
-      - 'scripts/test/check-cleanup-issue-boundary.sh'
-      - 'scripts/test/check-repo-key.sh'
-      # This workflow is the SOLE runner of check-cleanup-issue-boundary.sh,
-      # which is the only layer that drives cleanup-issue.sh's in-repo archive
-      # refusal. A change to either script that did not select this workflow
-      # would leave that call path unexercised in CI.
-      - '.github/workflows/e2e-dummy-target.yml'
-      # #26 RED suite (tests/test-issue-26-verify-architect-route.sh) retired at
-      # issue #27's VERIFY (GATE:QUALITY Impact-scope regression): PR #33 merged
-      # 2026-07-25, and a one-shot cycle guard is deleted — along with any
-      # allow-list entry naming it (removed in the same commit) — once its own
-      # PR merges. Under ADR-0024 D2 such a guard is no longer a committed suite
-      # at all: it lives uncommitted under `.autoflow/issue-{N}-local/`. The
-      # manual-scenario doc below is not a cycle guard (no DELTA/count
-      # predicate; a Tier-2/3 scenario record) and stays registered.
-      # #35 cycle surface. TAIL here (pull_request), for the reason the #26
-      # comment above records: #799's AC6-ci reads this list through a fixed
-      # `grep -A40 '^ *paths:'` window, and inserting above
-      # `docs/maintained-docs.md` pushes that literal out of the window and reds
-      # an unrelated guard (reproduced 2026-07-26).
-      - 'tests/test-issue-35-phase-marker.sh'
-      - 'scripts/canary/**'
-      # #120 disposition-residue extension (issue #120) added six ci-subject
-      # paths not previously in this block.
-      - '.github/workflows/contract-suites.yml'
-      - 'scripts/test/check-suite-manifest.sh'
-      - 'tests/manual/issue-42-manual-scenarios.md'
-      - 'tests/test-issue-16-manifest-locale-invariance.sh'
-      # #55 cycle surface. TAIL here for the same reason the #51 entries above
-      # record (#799's AC6-ci fixed `grep -A40 '^ *paths:'` window has zero
-      # headroom, so nothing is inserted above an existing entry).
-      - 'tests/test-issue-55-score-format-contract.sh'
-      - '.claude-plugin/marketplace.json'
-      - '.claude/hooks/check-autoflow-gate.sh'
-      - '.claude/workflows/architect-deliberation.js'
-      - '.claude/workflows/verify-cause-branch.js'
-      - '.github/workflows/workflow-regression.yml'
-      - 'docs/records/adr/0000-adr-template.md'
-      - 'docs/records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md'
-      - 'docs/records/adr/0017-teammate-removal-feasibility.md'
-      - 'docs/records/adr/README.md'
-      - 'docs/gate-matching-standard.md'
-      - 'plugin/autoflow/.claude-plugin/plugin.json'
-      - 'plugin/autoflow/agents/autoflow-analyzer.md'
-      - 'scripts/issue/create-issue.sh'
-      - 'scripts/ledger/ledger-entry-id.sh'
-      - 'scripts/test/check-suite-ci-coverage.sh'
-      - 'scripts/test/check-suite-leaf.sh'
-      - 'scripts/test/run-suites.sh'
-      - 'scripts/test/select-suites.sh'
-      - 'test/workflows/run.mjs'
-      - 'tests/issue-create/fixtures/corpus.jsonl'
-      - 'tests/plugin/manual-scenarios-797.md'
-      - 'tests/test-codex-review-label-step.sh'
-      - 'tests/test-gate-hardening.sh'
   push:
     branches: [main]
-    paths:
-      # #35 cycle surface. HEAD here (push), mirroring #26's pinned asymmetry:
-      # this suite's own E3-CI-b reads back from the suite path with `grep -B30`
-      # and must reach a `paths:` line, which only a near-`paths:` occurrence
-      # satisfies. Placement in the two blocks is NOT interchangeable
-      # (reproduced 2026-07-26: TAIL in both reds E3-CI-b).
-      - 'tests/test-issue-35-phase-marker.sh'
-      - 'scripts/canary/**'
-      - '.gitmodules'
-      # #26 RED suite retired at issue #27's VERIFY (PR #33 merged; a one-shot
-      # cycle guard is deleted once its issue merges, and under ADR-0024 D2 is
-      # not a committed suite at all). The manual-scenario doc is not a cycle
-      # guard and stays registered.
-      - 'docs/phases/analysis.md'
-      - 'docs/evaluation-system.md'
-      - 'docs/security-checklist.md'
-      - 'tests/test-issue-952-wizard-removal.sh'
-      - 'tests/lib/**'
-      - 'docs/repo-boundary-rules.md'
-      - 'scripts/resync-submodules.sh'
-      - 'tests/plugin/verify-e2e-dummy-target.sh'
-      - 'tests/plugin/verify-install-into-target.sh'
-      - 'tests/plugin/verify-package.sh'
-      - 'tests/fixtures/**'
-      - 'setup/**'
-      - 'plugin/autoflow/hooks/**'
-      - 'scripts/handoff/**'
-      - 'docs/autoflow-guide.md'
-      - 'docs/records/design-rationale.md'
-      - '.codex/review.md'
-      - 'CLAUDE.md'
-      - 'README.md'
-      - 'docs/submodule-common-rules.md'
-      - 'docs/role-common-rules.md'
-      - 'docs/role-contracts.md'
-      - 'docs/external-review-sequencing.md'
-      - 'docs/INDEX.md'
-      - 'docs/git-workflow.md'
-      - '.claude/agents/autoflow-analyzer.md'
-      - '.claude/agents/autoflow-planner.md'
-      - '.claude/agents/autoflow-implementer.md'
-      - '.claude/agents/autoflow-tester.md'
-      - '.claude/agents/autoflow-evaluator.md'
-      - 'scripts/cleanup/cleanup-issue.sh'
-      - 'scripts/test/check-cleanup-issue-boundary.sh'
-      - 'scripts/test/check-repo-key.sh'
-      # This workflow is the SOLE runner of check-cleanup-issue-boundary.sh,
-      # which is the only layer that drives cleanup-issue.sh's in-repo archive
-      # refusal. A change to either script that did not select this workflow
-      # would leave that call path unexercised in CI.
-      - '.github/workflows/e2e-dummy-target.yml'
-      # #120 disposition-residue extension. TAIL here (push) as well —
-      # mirrors the pull_request block's own placement immediately above.
-      - '.github/workflows/contract-suites.yml'
-      - 'scripts/test/check-suite-manifest.sh'
-      - 'tests/manual/issue-42-manual-scenarios.md'
-      - 'tests/test-issue-16-manifest-locale-invariance.sh'
-      # #55 cycle surface. TAIL here (push) as well — mirrors the pull_request
-      # block's own placement immediately above.
-      - 'tests/test-issue-55-score-format-contract.sh'
-      - '.claude-plugin/marketplace.json'
-      - '.claude/hooks/check-autoflow-gate.sh'
-      - '.claude/workflows/architect-deliberation.js'
-      - '.claude/workflows/verify-cause-branch.js'
-      - '.github/workflows/workflow-regression.yml'
-      - 'docs/records/adr/0000-adr-template.md'
-      - 'docs/records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md'
-      - 'docs/records/adr/0017-teammate-removal-feasibility.md'
-      - 'docs/records/adr/README.md'
-      - 'docs/gate-matching-standard.md'
-      - 'plugin/autoflow/.claude-plugin/plugin.json'
-      - 'plugin/autoflow/agents/autoflow-analyzer.md'
-      - 'scripts/issue/create-issue.sh'
-      - 'scripts/ledger/ledger-entry-id.sh'
-      - 'scripts/test/check-suite-ci-coverage.sh'
-      - 'scripts/test/check-suite-leaf.sh'
-      - 'scripts/test/run-suites.sh'
-      - 'scripts/test/select-suites.sh'
-      - 'test/workflows/run.mjs'
-      - 'tests/issue-create/fixtures/corpus.jsonl'
-      - 'tests/plugin/manual-scenarios-797.md'
-      - 'tests/test-codex-review-label-step.sh'
-      - 'tests/test-gate-hardening.sh'
 
 permissions:
   contents: read
@@ -213,118 +36,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          fetch-depth: 0
-
-      # Selection (issue #103): scripts/test/select-suites.sh is the SOLE owner of
-      # "which suites does this change require". Each governed suite step below
-      # guards on this step's output; nothing here reimplements the predicate.
-      # Under a push event, or an empty delta from a resolved base, it selects
-      # the full set — the push delta is empty by construction, so a purely
-      # delta-driven selector would silently lose all coverage.
-      - id: select
-        name: select suites for this change
-        timeout-minutes: 5
-        run: |
-          rc=0
-          bash scripts/test/select-suites.sh --event "$GITHUB_EVENT_NAME" \
-            > "$RUNNER_TEMP/selected-raw.txt" \
-            2> "$RUNNER_TEMP/selection-report.txt" || rc=$?
-          cat "$RUNNER_TEMP/selection-report.txt"
-          if [ "$rc" -ne 0 ]; then
-            echo "select-suites exited $rc — refusing to run with an unresolved selection" >&2
-            exit "$rc"
-          fi
-          paste -sd' ' - < "$RUNNER_TEMP/selected-raw.txt" > "$RUNNER_TEMP/selected.txt"
-          printf 'suites=%s\n' "$(cat "$RUNNER_TEMP/selected.txt")" >> "$GITHUB_OUTPUT"
 
       - name: Run throwaway dummy-target E2E acceptance suite
-        id: s-verify-e2e-dummy-target
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/plugin/verify-e2e-dummy-target.sh ')
         timeout-minutes: 10
         run: bash tests/plugin/verify-e2e-dummy-target.sh
-
-      # init.sh legacy wizard removal + Language Rule user-scope reversion
-      # guard (#952): the no-arg usage guard, the removed
-      # replace_placeholders/prompt/sed_inplace machinery, the delivered
-      # CLAUDE.md Language Rule absence, the submodule-common-rules
-      # non-substituted notation, and the README/SETUP-GUIDE stale-template
-      # purge must stay asserted. CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # tests/test-issue-952-wizard-removal.sh.
-      - name: Run wizard-removal guard (#952)
-        id: s-test-issue-952-wizard-removal
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-952-wizard-removal.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-952-wizard-removal.sh
-
-      # Cleanup archive-semantics guard (#978): scripts/cleanup/cleanup-issue.sh
-      # replaces its unconditional `find -delete` with an archive `mv` to
-      # $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<date>/ — this suite guards
-      # the move (not delete), set integrity (count + byte content), the
-      # number-boundary match, the destination-exists conflict-suffix, repo-tree
-      # non-interference (git status --porcelain unchanged + the hook still
-      # reading a co-resident live issue as active), and the exit-65
-      # inside-repo-root refuse guard. CI has no glob discovery; registered by
-      # filename per the sibling suites. See
-      # scripts/test/check-cleanup-issue-boundary.sh.
-      - name: Run cleanup archive-semantics guard (#978)
-        run: bash scripts/test/check-cleanup-issue-boundary.sh
-
-      # Repo-key derivation guard (#978): the bounded introspection subcommand
-      # `cleanup-issue.sh --print-repo-key [<url>|--no-origin]` normalizes an
-      # origin URL (scp / https / ssh:// / trailing-slash+.git forms) to the
-      # same Munsik-Park__autoflow slug, falls back to a runtime-computed
-      # path-encoded slug with --no-origin, agrees with the live-remote no-arg
-      # read, and is parsed above the .autoflow-dir existence gate (CWD
-      # independence). CI has no glob discovery; registered by filename per the
-      # sibling suites. See scripts/test/check-repo-key.sh.
-      - name: Run repo-key derivation guard (#978)
-        run: bash scripts/test/check-repo-key.sh
-
-      # Phase-marker emitter guard (#35): the canary emitter
-      # `scripts/canary/emit-phase-marker.sh` appends one phase-transition
-      # record per invocation to `.autoflow/issue-<N>-phases.jsonl` and prints
-      # only a `path:line` anchor, so orchestrator context growth can be joined
-      # to phase boundaries from local session logs. CI has no glob discovery;
-      # registered by filename per the sibling suites.
-      # See tests/test-issue-35-phase-marker.sh.
-      - name: Run phase-marker emitter guard (#35)
-        id: s-test-issue-35-phase-marker
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-35-phase-marker.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-35-phase-marker.sh
-
-      # #55 gate-score write contract at the producer site. Cycle-scoped: it
-      # drives the CLAUDE.md SCORE-SHAPE-EXAMPLE fence through the real hook
-      # (the digest-agreement arm that once also drove the real digest
-      # emitter was dropped by #71, which retired the emitter), and asserts
-      # its own CI registration on this file. Placed at the job TAIL,
-      # strictly below the doc-invariant registry runner step, for the
-      # reason the #51 comment above records. CI has no glob discovery;
-      # registered by filename per the sibling suites. See
-      # tests/test-issue-55-score-format-contract.sh.
-      - name: Run gate-score write contract (#55)
-        id: s-test-issue-55-score-format-contract
-        if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/test-issue-55-score-format-contract.sh ')
-        timeout-minutes: 10
-        run: bash tests/test-issue-55-score-format-contract.sh
-
-      # Reconciliation (issue #103): a step whose `if:` evaluates false is
-      # SKIPPED and the job still concludes successfully — so a green run is
-      # exactly what a wrongly-false guard produces, and enforcement here is
-      # advisory with no required status check behind it. This step compares the
-      # run's own selection report against the run's own step outcomes, so it
-      # needs no second source of truth.
-      - name: reconcile selection against step outcomes
-        if: always()
-        timeout-minutes: 5
-        env:
-          STEPS_JSON: ${{ toJSON(steps) }}
-          JOB_STATUS: ${{ job.status }}
-        run: |
-          printf '%s' "$STEPS_JSON" > "$RUNNER_TEMP/steps.json"
-          bash scripts/test/check-step-reconciliation.sh \
-            --selected "$RUNNER_TEMP/selection-report.txt" \
-            --job-status "$JOB_STATUS" \
-            --steps "$RUNNER_TEMP/steps.json"

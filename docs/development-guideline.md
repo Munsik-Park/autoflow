@@ -82,10 +82,11 @@ receives, rather than in the ADR registry, which does not ship.
 ## 7. Testing Policy
 
 - Choose tests based on changed surface.
-- Host shell/deployment changes should run the relevant `tests/test-*.sh` harnesses, including `tests/test-issue-788-host-purity-delta.sh` (host-purity DELTA guard) when touching host tool/mechanism files.
-- AutoFlow hook/schema changes should include schema-hook and gate contract
-  tests.
-- Workflow script changes should include `node test/workflows/run.mjs`.
+- This repository commits only deployment-level checks (ADR-0024 D1: `packaging`, `manifest`); a
+  change to a hook, a schema, a workflow script or any other rule or device is verified by a
+  one-shot run under `.autoflow/issue-{N}-local/`, recorded in the PR body (issue #293).
+- Host tool/mechanism changes run `scripts/test/check-host-purity-delta.sh` (host-purity DELTA
+  guard).
 - LibreChat submodule changes should use the submodule's package scripts and
   should respect submodule ownership.
 

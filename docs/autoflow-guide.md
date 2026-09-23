@@ -930,7 +930,7 @@ structure (a per-package runner, a submodule's own tree) — finds how the targe
 for a change (a changed-since selection, a path filter), and judges which of the target's tests
 the change requires, recording the grounds and, for every run, the command, the log and its summary line in
 its report ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's
-practice*); on an opted-in target and in this repository `bash scripts/test/select-suites.sh`
+practice*); on an opted-in target `bash scripts/test/select-suites.sh`
 answers which committed suites the change delta reaches, and a `BLOCK:` line it prints is carried into the report,
 never worked around. A
 suite the derivation names and the verification design did not anticipate is an ordinary RED input,
@@ -967,7 +967,7 @@ returns to ARCHITECT, through the existing routes.
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
-**Header contract** (opted-in targets and this repository — ADR-0024 D3, D5): every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
+**Header contract** (opted-in targets — ADR-0024 D3; this repository does not opt in, D5): every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
 
   ```
   # ci-subject: <path-or-glob> [<path-or-glob> ...]
@@ -996,7 +996,7 @@ The fields go in the file's leading comment block at column 1, before its first 
 - Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
 - Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (ADR-0024 D2; in this repository the `standing` categories are D1's closed list, and on a target the default is to add no file at all).
 
-**Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new committed spec conforming to the header contract above (opted-in targets and this repository) + manual scenarios written.
+**Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new committed spec conforming to the header contract above (opted-in targets) + manual scenarios written.
 
 ---
 
@@ -1727,9 +1727,9 @@ Decision 24).
   which lines those are is the working AI's judgment in that target, with no list kept (*Code
   comments* > *Directives are code*). A defect in one takes the severity and the route of the
   behavior it changes.
-- **This repository is excluded.** Here the documents are the product and a suite's `# ci-subject:`
-  header line executes, so comments stay under the checks they had: the reviewer's severity as
-  judged, the `doc` class, and the `doc` re-entry's sweep record.
+- **This repository is excluded.** Here the documents are the product, so comments stay under the
+  checks they had: the reviewer's severity as judged, the `doc` class, and the `doc` re-entry's
+  sweep record.
 - *Secondary (multi-repo):* a comment in a sub-repo is outside the orchestrator's scope
   ([`CLAUDE.md`](../CLAUDE.md) > Cross-Project Boundary Rules); the Developer AI of that scope makes
   the same single commit on the same terms.

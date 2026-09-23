@@ -43,8 +43,8 @@
 # offer.
 #
 # WHAT COUNTS AS AN INVOCATION is not decided here. scripts/test/invocation-scan.sh
-# owns that relation and this lint consumes it, as does
-# tests/test-workflow-trigger-conformance.sh and the manifest lint's step reader.
+# owns that relation and this lint consumes it, as does the manifest lint's
+# step reader.
 # The line-based rule this file used to carry read a `bash` token wherever it
 # appeared — inside a quoted grep pattern naming a `run:` line included — and
 # missed a block-scalar `run:` body entirely, so the two lints disagreed on the
