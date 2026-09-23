@@ -742,6 +742,7 @@ def outcome(adir, issue):
     # With a ledger present, 0 is a finding: the cycle recorded its decisions and none was an auto-fix.
     o['ledger_entries'] = len(heads) if ledgers else None
     o['review_autofix'] = sum(1 for h in heads if h.endswith('[review-autofix]')) if ledgers else None
+    o['gate_autofix'] = sum(1 for h in heads if h.endswith('[gate-autofix]')) if ledgers else None
     o['ac_decisions'] = sum(1 for h in heads if h.endswith('[ac-decision]')) if ledgers else None
     # A CI round is judged by the `exit=<n>` line confirm-ci-green.sh's caller left in the log, never by
     # its position: a later log is often a green re-confirmation. 12 is the red build; any other
@@ -946,7 +947,7 @@ def derive(args):
             o.get('cycle'), o.get('state_phase'), o.get('gate_hypothesis_structure'), o.get('gate_hypothesis_cause'),
             o.get('gate_plan'), o.get('audit'), o.get('gate_quality'),
             o.get('architect_turns'), o.get('architect_rounds'), o.get('gate_plan_evals'), o.get('audit_evals'),
-            o.get('gate_quality_evals'), o.get('review_autofix'), o.get('reviewer_rounds'),
+            o.get('gate_quality_evals'), o.get('review_autofix'), o.get('gate_autofix'), o.get('reviewer_rounds'),
             o.get('ci_rounds'), o.get('ci_fail_rounds'), o.get('ci_other_rounds'), o.get('ci_undetermined'),
             ' '.join(it['prs']), ' '.join('%s=%s' % kv for kv in sorted(it['pr_states'].items()) if kv[1]),
             it['note'],
@@ -958,7 +959,7 @@ def derive(args):
         'tokens', 'orch_share', 'gate_share', 'max_orch_context', 'rewrites', 'spawns', 'phase_keys_recovered',
         'cycle', 'state_phase', 'gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit',
         'gate_quality', 'architect_turns', 'architect_rounds', 'gate_plan_evals', 'audit_evals',
-        'gate_quality_evals', 'review_autofix', 'reviewer_rounds', 'ci_rounds', 'ci_fail_rounds', 'ci_other_rounds', 'ci_undetermined',
+        'gate_quality_evals', 'review_autofix', 'gate_autofix', 'reviewer_rounds', 'ci_rounds', 'ci_fail_rounds', 'ci_other_rounds', 'ci_undetermined',
         'prs', 'pr_states', 'note',
     ]
     tmp = os.path.join(args.root, 'issues.tsv.tmp')

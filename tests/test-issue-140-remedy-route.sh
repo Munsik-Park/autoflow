@@ -20,6 +20,11 @@
 #      non-commit command stay ungated; `remedy_class` as a phase-object
 #      sibling key is NOT a MALFORMED state (the closed-world validator is
 #      top-level and score-shaped only).
+#   4. Hook Gates 3 / 4 (issue #275) — `git push` / `gh pr create` on passing
+#      AUDIT + GATE:QUALITY scores are denied while either gate's latest
+#      record carries a remedy_class (an open recommendation attempt),
+#      and admitted once the value is removed or superseded by a later cycle's
+#      record.
 # =============================================================================
 
 set -uo pipefail
@@ -136,6 +141,118 @@ JSON
 run_hook 0 "doc class superseded by a later cycle's record → ungated" "$NEST" "$(bash_json 'git commit -m x')"
 
 rm -rf "$DOC" "$TEST" "$NONE" "$NEST"
+
+echo "=== 4. hook Gates 3 / 4: open re-entry (issue #275) ==="
+mk_pass_state() { # <dir> <audit remedy_class or ''> <gate_quality remedy_class or ''>
+  local d="$1" arc="$2" qrc="$3" aline="" qline=""
+  mkdir -p "$d/.autoflow"
+  [[ -n "$arc" ]] && aline="\"remedy_class\": \"$arc\","
+  [[ -n "$qrc" ]] && qline="\"remedy_class\": \"$qrc\","
+  cat > "$d/.autoflow/issue-275.json" <<JSON
+{ "active": true, "issue": "#275",
+  "phases": {
+    "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+    "audit": { $aline "scores": { "Authn": 9, "Input": 8 } },
+    "gate_quality": { $qline "scores": { "Completeness": 8, "Quality": 9 } } } }
+JSON
+}
+OPENQ=$(mktemp -d); mk_pass_state "$OPENQ" "" impl
+run_hook_stderr 2 "open re-entry" "PASS scores + gate_quality remedy_class=impl → git push denied" "$OPENQ" "$(bash_json 'git push -u origin dev/x')"
+run_hook_stderr 2 "open re-entry" "PASS scores + gate_quality remedy_class=impl → gh pr create denied" "$OPENQ" "$(bash_json 'gh pr create --title x')"
+run_hook 0 "open re-entry gates push only — git commit stays ungated (class is not doc)" "$OPENQ" "$(bash_json 'git commit -m x')"
+OPENA=$(mktemp -d); mk_pass_state "$OPENA" design ""
+run_hook_stderr 2 "phases.audit carries remedy_class=design" "PASS scores + audit remedy_class=design → git push denied" "$OPENA" "$(bash_json 'git push')"
+CLEAN=$(mktemp -d); mk_pass_state "$CLEAN" "" ""
+run_hook 0 "PASS scores, no remedy_class → git push admitted" "$CLEAN" "$(bash_json 'git push')"
+run_hook 0 "PASS scores, no remedy_class → gh pr create admitted" "$CLEAN" "$(bash_json 'gh pr create --title x')"
+SUP=$(mktemp -d); mkdir -p "$SUP/.autoflow"
+cat > "$SUP/.autoflow/issue-275.json" <<'JSON'
+{ "active": true, "issue": "#275",
+  "phases": { "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+              "audit": { "scores": { "Authn": 9 } },
+              "gate_quality": { "remedy_class": "impl", "scores": { "Completeness": 8 } } },
+  "fix_regression": { "phases": { "gate_quality": { "scores": { "Completeness": 9 } } } } }
+JSON
+run_hook 0 "open class superseded by a later cycle's gate_quality record → git push admitted" "$SUP" "$(bash_json 'git push')"
+# Malformed remedy_class (PR #290 review, Medium 2): the validator closes the
+# value to the enum, so an empty string, a number or an object is a MALFORMED
+# state and every score-gated command fails closed — never an admitted push.
+mk_raw_state() { # <dir> <raw gate_quality remedy_class JSON value>
+  local d="$1" raw="$2"
+  mkdir -p "$d/.autoflow"
+  cat > "$d/.autoflow/issue-275.json" <<JSON
+{ "active": true, "issue": "#275",
+  "phases": {
+    "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+    "audit": { "scores": { "Authn": 9 } },
+    "gate_quality": { "remedy_class": $raw, "scores": { "Completeness": 8 } } } }
+JSON
+}
+for raw in '""' '0' '{}' '"fix"' 'null'; do
+  MAL=$(mktemp -d); mk_raw_state "$MAL" "$raw"
+  run_hook_stderr 2 "malformed AutoFlow state file" "remedy_class=$raw → MALFORMED state, git push fails closed" "$MAL" "$(bash_json 'git push')"
+  run_hook_stderr 2 "malformed AutoFlow state file" "remedy_class=$raw → MALFORMED state, gh pr create fails closed" "$MAL" "$(bash_json 'gh pr create --title x')"
+  rm -rf "$MAL"
+done
+# The un-score-gated structure form is validated too (PR #290 review round 2): a
+# malformed remedy_class on gate_hypothesis_structure is MALFORMED even with
+# passing AUDIT / GATE:QUALITY scores; a valid one is not an open re-entry the
+# push gate reads (it reads audit / gate_quality), so it stays admitted.
+mk_struct_state() { # <dir> <raw gate_hypothesis_structure remedy_class JSON value>
+  local d="$1" raw="$2"
+  mkdir -p "$d/.autoflow"
+  cat > "$d/.autoflow/issue-275.json" <<JSON
+{ "active": true, "issue": "#275",
+  "phases": {
+    "gate_hypothesis_structure": { "remedy_class": $raw, "scores": { "Behavior gap": 8 } },
+    "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+    "audit": { "scores": { "Authn": 9 } },
+    "gate_quality": { "scores": { "Completeness": 8 } } } }
+JSON
+}
+for raw in '""' '0' '{}' '"fix"' 'null'; do
+  SM=$(mktemp -d); mk_struct_state "$SM" "$raw"
+  run_hook_stderr 2 "malformed AutoFlow state file" "gate_hypothesis_structure remedy_class=$raw → MALFORMED state, git push fails closed" "$SM" "$(bash_json 'git push')"
+  rm -rf "$SM"
+done
+SV=$(mktemp -d); mk_struct_state "$SV" '"impl"'
+run_hook 0 "gate_hypothesis_structure remedy_class=impl (valid) → state well-formed, git push admitted on audit / gate_quality" "$SV" "$(bash_json 'git push')"
+rm -rf "$SV"
+NESTMAL=$(mktemp -d); mkdir -p "$NESTMAL/.autoflow"
+cat > "$NESTMAL/.autoflow/issue-275.json" <<'JSON'
+{ "active": true, "issue": "#275",
+  "phases": { "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+              "audit": { "scores": { "Authn": 9 } },
+              "gate_quality": { "scores": { "Completeness": 8 } } },
+  "fix_regression": { "phases": { "gate_quality": { "remedy_class": "", "scores": { "Completeness": 9 } } } } }
+JSON
+run_hook_stderr 2 "malformed AutoFlow state file" "empty remedy_class in the latest fix_regression record → MALFORMED, git push fails closed" "$NESTMAL" "$(bash_json 'git push')"
+rm -rf "$NESTMAL"
+# Explicit null (PR #290 review round 3): the field is present, so it is not the
+# optional absence — it is outside the enum, MALFORMED at the root and in the
+# latest fix_regression record, on audit and on gate_quality alike.
+NULLA=$(mktemp -d); mkdir -p "$NULLA/.autoflow"
+cat > "$NULLA/.autoflow/issue-275.json" <<'JSON'
+{ "active": true, "issue": "#275",
+  "phases": { "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+              "audit": { "remedy_class": null, "scores": { "Authn": 9 } },
+              "gate_quality": { "scores": { "Completeness": 8 } } } }
+JSON
+run_hook_stderr 2 "malformed AutoFlow state file" "audit remedy_class=null at the root → MALFORMED, git push fails closed" "$NULLA" "$(bash_json 'git push')"
+run_hook_stderr 2 "malformed AutoFlow state file" "audit remedy_class=null at the root → MALFORMED, gh pr create fails closed" "$NULLA" "$(bash_json 'gh pr create --title x')"
+rm -rf "$NULLA"
+NULLN=$(mktemp -d); mkdir -p "$NULLN/.autoflow"
+cat > "$NULLN/.autoflow/issue-275.json" <<'JSON'
+{ "active": true, "issue": "#275",
+  "phases": { "gate_hypothesis_cause": { "verdict": "skipped (feat issue)" },
+              "audit": { "scores": { "Authn": 9 } },
+              "gate_quality": { "scores": { "Completeness": 8 } } },
+  "fix_regression": { "phases": { "gate_quality": { "remedy_class": null, "scores": { "Completeness": 9 } } } } }
+JSON
+run_hook_stderr 2 "malformed AutoFlow state file" "gate_quality remedy_class=null in the latest fix_regression record → MALFORMED, git push fails closed" "$NULLN" "$(bash_json 'git push')"
+run_hook_stderr 2 "malformed AutoFlow state file" "gate_quality remedy_class=null in the latest fix_regression record → MALFORMED, gh pr create fails closed" "$NULLN" "$(bash_json 'gh pr create --title x')"
+rm -rf "$NULLN"
+rm -rf "$OPENQ" "$OPENA" "$CLEAN" "$SUP"
 
 echo
 echo "Tests: $PASS passed, $FAIL failed"

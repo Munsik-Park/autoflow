@@ -199,7 +199,11 @@ echo "=== CLASS A: Static assertions ==="
 #       re-entry: corrupt-state read fails closed + missing/incomplete sweep
 #       record denied) → 15 with the issue #165 TaskOutput deny (the
 #       deprecated blocking-wait tool refused by tool name, Section 1
-#       state-independent) — the floor's current value. A deny ADDITION no longer reds this arm and needs no edit here;
+#       state-independent) → 17 with the issue #275 open-re-entry deny
+#       (`git push` / `gh pr create` refused while the latest `audit` or
+#       `gate_quality` record carries a remedy_class — a Medium+ recommendation
+#       attempt not yet re-scored clean: corrupt-state read fails closed +
+#       open re-entry denied) — the floor's current value. A deny ADDITION no longer reds this arm and needs no edit here;
 #       a deny REMOVAL still does, which is the regression class the arm exists
 #       for (a consolidation that silently drops a deny). The floor is raised
 #       deliberately, never lowered. Naive grep -c 'exit 2' is
@@ -216,8 +220,8 @@ assert_eq "A8a: exactly ONE AUTOFLOW-SCHEMA-VALIDATION label in hook (consolidat
   # ^^^ FAILS on unmodified hook (count=0) — RED-confirming
 
 EXIT2_COUNT=$(grep -cE '^[[:space:]]*exit 2[[:space:]]*$' "$HOOK" 2>/dev/null || true)
-assert_static "A8b: anchored 'exit 2' statement count >= 15 — the deny-site floor (found: $EXIT2_COUNT)" \
-  bash -c "[[ $EXIT2_COUNT -ge 15 ]]"
+assert_static "A8b: anchored 'exit 2' statement count >= 17 — the deny-site floor (found: $EXIT2_COUNT)" \
+  bash -c "[[ $EXIT2_COUNT -ge 17 ]]"
   # See the ratchet record in the A8 comment block above. The floor is a
   # RATCHET: raise it deliberately when a deny addition is meant to become
   # permanent; never lower it. A8d/A8e below drive both directions against a
@@ -385,6 +389,24 @@ done < <(jq -r '.verdict_enum[]' "$SCHEMA")
 assert_static "A9a: hook contains every gate-schema.json verdict_enum member as a literal (verdict closed to enum)" \
   bash -c "[[ $_A9_VE_MISSING -eq 0 ]]"
   # ^^^ FAILS on cycle-1 hook (enum literals absent) — RED-confirming
+
+# A9e (issue #275): every remedy_class_enum member appears as a quoted literal in the hook's
+# remedy_ok definition, so the optional phases.<gate>.remedy_class is closed to the enum.
+_A9_RC_MISSING=0
+while IFS= read -r _v; do
+  grep -qF "\"$_v\"" "$HOOK" || _A9_RC_MISSING=1
+done < <(jq -r '.remedy_class_enum[]' "$SCHEMA")
+grep -q 'def remedy_ok:' "$HOOK" || _A9_RC_MISSING=1
+assert_static "A9e: hook contains every gate-schema.json remedy_class_enum member as a literal inside remedy_ok (remedy_class closed to enum)" \
+  bash -c "[[ $_A9_RC_MISSING -eq 0 ]]"
+
+# A9f (issue #275, PR #290 review round 2): the phase list the validator checks remedy_class on
+# equals gate-schema.json:remedy_class_phase_keys — the structure form included, which the
+# score-gated list deliberately omits.
+SCHEMA_RC_KEYS_LITERAL=$(jq -r '[.remedy_class_phase_keys[]] | @json' "$SCHEMA")
+HOOK_RC_KEYS_LITERAL=$(grep -oE '\["gate_hypothesis_structure"[^]]*\]' "$HOOK" 2>/dev/null | head -1 | tr -d ' \t' || true)
+assert_eq "A9f: hook remedy_class phase list equals gate-schema.json:remedy_class_phase_keys (structure form validated)" \
+  "$HOOK_RC_KEYS_LITERAL" "$SCHEMA_RC_KEYS_LITERAL"
 
 # A9b: hook top-level-key whitelist literal equals gate-schema.json:top_level_keys (no hardcoding).
 SCHEMA_TLK_LITERAL=$(jq -r '[.top_level_keys[]] | @json' "$SCHEMA")

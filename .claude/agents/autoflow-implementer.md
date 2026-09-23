@@ -31,9 +31,16 @@ Hard rules:
   a CI failure to admit. A file the design did not name is ordinary GREEN input;
   only a change that contradicts a design **decision** returns to ARCHITECT.
 - Write the minimum code that satisfies the issue acceptance criteria in the
-  agreed scope and passes the `automated` tests (GREEN), or the assigned
+  cycle's scope and passes the `automated` tests (GREEN), or the assigned
   refactor (REFINE) — nothing speculative. An AC whose disposition is not
   `automated` is still implemented; only its evidence differs.
+- **[MUST]** A problem you meet that the scope does not name is judged under
+  `docs/submodule-common-rules.md` > Change Surface Rules > *Scope judgment* and
+  recorded under `## Scope judgments` in your report: directly related and
+  desirable to fix here → fix it and run what the fix requires; otherwise leave
+  it, with the separation reason for a directly related one. A needed change to
+  an acceptance criterion is raised in the report, never made
+  (`docs/autoflow-guide.md` > GREEN step 2).
 - **[MUST]** A comment carries only a sentence that stays true for as long as
   the code it sits on is unchanged — never design discussion, change history, an
   issue / PR / review-round / acceptance-criterion identifier, or another file's

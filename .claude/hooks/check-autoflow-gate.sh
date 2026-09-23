@@ -47,8 +47,11 @@
 #   - Agent (undeclared spawn)      → DENIED while a cycle is active (declare the
 #                                     role via subagent_type autoflow-<role> —
 #                                     see resolve_spawn_role)
-#   - Bash(git push)                → AUDIT + GATE:QUALITY pass required
-#   - Bash(gh pr create)            → AUDIT + GATE:QUALITY pass required
+#   - Bash(git push)                → AUDIT + GATE:QUALITY pass required, and neither
+#                                     gate's latest record carries a remedy_class (an
+#                                     open re-entry — a recommendation attempt
+#                                     not yet re-scored clean; issue #275)
+#   - Bash(gh pr create)            → the same two conditions
 #   - Bash(git commit)              → while the latest GATE:QUALITY record carries
 #                                     remedy_class "doc": the doc re-entry's sweep
 #                                     record .autoflow/issue-N-remedy-sweep.md must
@@ -881,7 +884,7 @@ if [ -d "$AUTOFLOW_DIR" ]; then
     # test-issue-245-schema-validation.sh CLASS A (A9). check_scores below is UNTOUCHED — a
     # validator-passing doc has phases only at grammar-legal cycles, so its walk is uncontaminated.
     if _content=$(cat "$_sf" 2>/dev/null) \
-       && _verdict=$(printf '%s' "$_content" | jq -s -er 'def in_range: type == "number" and . >= 0 and . <= 10; def is_score: in_range or (type == "object" and (.score | in_range)); def scores_ok: (type == "object") and ((to_entries | map(.value | is_score)) | all); def verdict_ok: (type == "string") and (. == "" or . == "pending" or . == "evaluated" or . == "skipped (feat issue)"); def phase_ok($p): (.phases[$p] == null) or ((.phases[$p] | type == "object") and ((.phases[$p].verdict == null) or (.phases[$p].verdict | verdict_ok)) and ((.phases[$p].scores == null) or (.phases[$p].scores | scores_ok))); def topkeys_ok: (keys_unsorted - ["active","issue","title","date","cycle","mode","phase","phases","fix_regression"]) | map(select(test("^fix_regression_cycle_[0-9]+$") | not)) | length == 0; def topvalues_ok: ((has("issue")|not) or (.issue|type=="string")) and ((has("title")|not) or (.title|type=="string")) and ((has("date")|not) or (.date|type=="string")) and ((has("cycle")|not) or (.cycle|type=="number")) and ((has("mode")|not) or (.mode|type=="string")) and ((has("phase")|not) or (.phase|type=="string")) and ((has("phases")|not) or (.phases|type=="object")); if (length != 1) or (.[0] | type != "object") then error("state file must be exactly one JSON object") else .[0] | if (has("active") | not) or (.active | type != "boolean") then error("active must be a boolean") elif .active != true then "inactive" elif (topkeys_ok | not) then error("unknown top-level key") elif (topvalues_ok | not) then error("top-level field has wrong type") else ( [.. | objects | select(has("phases"))] as $cycles | ([., (to_entries[] | select(.key == "fix_regression" or (.key | test("^fix_regression_cycle_[0-9]+$"))) | .value)] | map(select(type == "object" and has("phases")))) as $allowed | if (($cycles | length) != ($allowed | length)) then error("phases in a disallowed location") elif ($cycles | map(.phases | type == "object") | all | not) then error("phases must be an object") elif ($cycles | map(. as $c | ["gate_hypothesis_cause","gate_plan","audit","gate_quality"] | map(. as $p | $c | phase_ok($p)) | all) | all | not) then error("gated phase has invalid shape") else "active" end ) end end' 2>/dev/null); then
+       && _verdict=$(printf '%s' "$_content" | jq -s -er 'def in_range: type == "number" and . >= 0 and . <= 10; def is_score: in_range or (type == "object" and (.score | in_range)); def scores_ok: (type == "object") and ((to_entries | map(.value | is_score)) | all); def verdict_ok: (type == "string") and (. == "" or . == "pending" or . == "evaluated" or . == "skipped (feat issue)"); def remedy_ok: (type == "string") and (. == "doc" or . == "test" or . == "impl" or . == "design" or . == "operator"); def phase_ok($p): (.phases[$p] == null) or ((.phases[$p] | type == "object") and ((.phases[$p].verdict == null) or (.phases[$p].verdict | verdict_ok)) and ((.phases[$p].scores == null) or (.phases[$p].scores | scores_ok))); def remedy_field_ok($p): (.phases[$p] == null) or ((.phases[$p] | type != "object") or ((.phases[$p] | has("remedy_class")) | not) or (.phases[$p].remedy_class | remedy_ok)); def topkeys_ok: (keys_unsorted - ["active","issue","title","date","cycle","mode","phase","phases","fix_regression"]) | map(select(test("^fix_regression_cycle_[0-9]+$") | not)) | length == 0; def topvalues_ok: ((has("issue")|not) or (.issue|type=="string")) and ((has("title")|not) or (.title|type=="string")) and ((has("date")|not) or (.date|type=="string")) and ((has("cycle")|not) or (.cycle|type=="number")) and ((has("mode")|not) or (.mode|type=="string")) and ((has("phase")|not) or (.phase|type=="string")) and ((has("phases")|not) or (.phases|type=="object")); if (length != 1) or (.[0] | type != "object") then error("state file must be exactly one JSON object") else .[0] | if (has("active") | not) or (.active | type != "boolean") then error("active must be a boolean") elif .active != true then "inactive" elif (topkeys_ok | not) then error("unknown top-level key") elif (topvalues_ok | not) then error("top-level field has wrong type") else ( [.. | objects | select(has("phases"))] as $cycles | ([., (to_entries[] | select(.key == "fix_regression" or (.key | test("^fix_regression_cycle_[0-9]+$"))) | .value)] | map(select(type == "object" and has("phases")))) as $allowed | if (($cycles | length) != ($allowed | length)) then error("phases in a disallowed location") elif ($cycles | map(.phases | type == "object") | all | not) then error("phases must be an object") elif ($cycles | map(. as $c | ["gate_hypothesis_cause","gate_plan","audit","gate_quality"] | map(. as $p | $c | phase_ok($p)) | all) | all | not) then error("gated phase has invalid shape") elif ($cycles | map(. as $c | ["gate_hypothesis_structure","gate_hypothesis_cause","gate_plan","audit","gate_quality"] | map(. as $p | $c | remedy_field_ok($p)) | all) | all | not) then error("remedy_class outside its enum") else "active" end ) end end' 2>/dev/null); then
       if [ "$_verdict" = "active" ]; then
         # Count EVERY active file (no break) so a second simultaneously-active
         # state file cannot be silently ignored: the first-active-wins glob
@@ -1076,16 +1079,47 @@ if [ "$TOOL_NAME" = "Agent" ]; then
   esac
 fi
 
-# ── Gate 3: git push → AUDIT + GATE:QUALITY pass required ──
+# An open re-entry is not pushed past (issue #275): while a gate's latest record
+# carries `remedy_class`, a recommendation attempt (Medium+, or a Low fixed now) is routed and not yet
+# re-scored clean (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage) —
+# the orchestrator removes the value once the re-score passes with nothing open.
+# The value is read at the same most-recent-cycle location as check_scores reads
+# scores; a FAIL's class is already behind its failing scores, so this branch
+# only ever adds the PASS-with-open-attempt case. The validator above closes
+# the value to the doc|test|impl|design|operator enum (a malformed value is a
+# MALFORMED state, fail-closed before any gate) and admits only the field's
+# ABSENCE as "no open re-entry" — an explicit null is malformed, not absent —
+# and the reader applies the same distinction (has(), not == null) and fails
+# closed on its own if it meets anything but a non-empty enum string.
+block_if_open_reentry() {
+  local action=$1 phase_key=$2 _open
+  if ! _open=$(printf '%s' "$STATE_JSON" | jq -r --arg phase "$phase_key" '[.. | objects | select(has("phases")) | select(.phases | has($phase)) | .phases[$phase]] | last | if . == null then "" elif (type == "object" and ((has("remedy_class")) | not)) then "" elif (type == "object" and (.remedy_class | type == "string" and length > 0)) then .remedy_class else error("malformed remedy_class") end' 2>/dev/null); then
+    echo "BLOCKED: AutoFlow state schema is corrupt — cannot read phases.${phase_key}.remedy_class; failing closed for ${action}." >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+  if [ -n "$_open" ]; then
+    echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
+    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage, issue #275)." >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+}
+
+# ── Gate 3: git push → AUDIT + GATE:QUALITY pass required, no open re-entry ──
 if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_PUSH}"; then
   block_with_scores "git push requires AUDIT pass" "audit"
   block_with_scores "git push requires GATE:QUALITY pass" "gate_quality"
+  block_if_open_reentry "git push" "audit"
+  block_if_open_reentry "git push" "gate_quality"
 fi
 
-# ── Gate 4: gh pr create → AUDIT + GATE:QUALITY pass required ──
+# ── Gate 4: gh pr create → AUDIT + GATE:QUALITY pass required, no open re-entry ──
 if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+create\b"; then
   block_with_scores "gh pr create requires AUDIT pass" "audit"
   block_with_scores "gh pr create requires GATE:QUALITY pass" "gate_quality"
+  block_if_open_reentry "gh pr create" "audit"
+  block_if_open_reentry "gh pr create" "gate_quality"
 fi
 
 # ── Gate 5: git commit under a `doc` GATE:QUALITY remedy → sweep record required (issue #140) ──
@@ -1100,7 +1134,7 @@ fi
 # check_scores reads scores; an absent or non-`doc` value leaves commits
 # ungated. Fail closed only on the jq read erroring, as the score gates do.
 if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_COMMIT}"; then
-  if ! _remedy=$(printf '%s' "$STATE_JSON" | jq -r '[.. | objects | select(has("phases")) | select(.phases | has("gate_quality")) | .phases.gate_quality.remedy_class] | (last // "") | if type == "string" then . else "" end' 2>/dev/null); then
+  if ! _remedy=$(printf '%s' "$STATE_JSON" | jq -r '[.. | objects | select(has("phases")) | select(.phases | has("gate_quality")) | .phases.gate_quality] | last | if . == null then "" elif (type == "object" and ((has("remedy_class")) | not)) then "" elif (type == "object" and (.remedy_class | type == "string" and length > 0)) then .remedy_class else error("malformed remedy_class") end' 2>/dev/null); then
     echo "BLOCKED: AutoFlow state schema is corrupt — cannot read phases.gate_quality.remedy_class; failing closed for git commit." >&2
     echo "State file: $STATE_FILE" >&2
     exit 2
