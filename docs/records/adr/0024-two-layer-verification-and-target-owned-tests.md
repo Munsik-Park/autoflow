@@ -1091,7 +1091,7 @@ delivered behavior the stamp kind above leaves to real targets.
 
 | Kind | Check | Disposition | Category / ground |
 |---|---|---|---|
-| stamp | `tests/plugin/verify-package.sh` | kept, 19 of 35 legs | `packaging`, `manifest` — the package resolves, parity with the `.claude/` originals, one gate-hook smoke |
+| stamp | `tests/plugin/verify-package.sh` | kept, 18 of 35 legs | `packaging`, `manifest` — the package resolves, parity with the `.claude/` originals, one gate-hook smoke |
 | stamp | `tests/plugin/verify-install-into-target.sh` | kept, 20 of 43 legs | `packaging`, `manifest` — install, idempotency, scaffolds, settings merge, link closure, manifest rows and hashes, clean drift-check |
 | stamp | `tests/plugin/verify-install-skill-scripts.sh` | kept, 2 of 59 legs | `manifest` (manifest and plugin versions agree), `packaging` (the install skill's Step 0 resolves under the cache layout); the rest was the detection script's branch logic |
 | stamp | `tests/plugin/verify-thin-root-layer.sh` | kept, 8 of 23 legs | `packaging`, `manifest` — the shim, the settings pin and its manifest rows |

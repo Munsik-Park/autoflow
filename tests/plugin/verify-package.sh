@@ -17,8 +17,6 @@
 #          oracle, with its fixture specimens AC-R2d/e/g)
 #   AC3    hooks/hooks.json commands are ${CLAUDE_PLUGIN_ROOT}/hooks/-anchored
 #   AC3 8a the packaged gate hook, invoked once, returns a decision (allow)
-#   AC4    the gate hook resolves state via ${CLAUDE_PROJECT_DIR}, never
-#          ${CLAUDE_PLUGIN_ROOT}
 #   AC5    byte-copy parity host <-> package (hooks, agents, epic-dash skill);
 #          no component directory inside any .claude-plugin/
 #   AC-R1/AC-R2  the packaged epic-dash skill locates its scripts
@@ -412,23 +410,6 @@ if [ -f "$GATE_SH" ] && [ -x "$GATE_SH" ]; then
   rm -rf "$BENIGN_DIR"
 else
   failc "AC3 8a" "plugin/autoflow/hooks/check-autoflow-gate.sh missing or not executable — cannot drive the real script"
-fi
-
-# ── AC4: state-path separation (static grep) ────────────────────────────
-echo "== AC4: state-path separation (static, regression guard) =="
-if [ -f "$GATE_SH" ]; then
-  if grep -qE '\$\{CLAUDE_PLUGIN_ROOT\}[^"'"'"']*\.autoflow' "$GATE_SH"; then
-    failc "AC4 static" "found a \${CLAUDE_PLUGIN_ROOT}-anchored .autoflow reference in $GATE_SH"
-  else
-    pass "AC4 REGRESSION GUARD: no \${CLAUDE_PLUGIN_ROOT}-anchored .autoflow reference"
-  fi
-  if grep -qF '${CLAUDE_PROJECT_DIR' "$GATE_SH"; then
-    pass "AC4 REGRESSION GUARD: \${CLAUDE_PROJECT_DIR} present for state resolution"
-  else
-    failc "AC4 static" "no \${CLAUDE_PROJECT_DIR} reference found for state resolution"
-  fi
-else
-  failc "AC4 static" "plugin gate script missing at $GATE_SH"
 fi
 
 # ── AC5: byte-copy parity (D-1 guard) ────────────────────────────────────
