@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2ffb4e99f86af42ebf4bcb269fa846834de2941f69a7202ca2c897cacd8ebb69"
+      "sha256": "28f912587a1a0a14729f6ce86b68d8fc48a214e7ce488b954ec271497d0d4996"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,14 +27,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "99c15444dad1038b47f2d42f299ce2ddc18c73111461d6395c47ff034d2bd052"
+      "sha256": "fec0d0172d2cdbe5d16adc89939ba16283ca7dcfc26afc28ecce1afa371b3a88"
     },
     {
       "source": "docs/development-guideline.md",
       "dest": ".claude/autoflow/docs/development-guideline.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2126aef6d6a87791f119f3b7862aaef037d198a8e58cde38286e5df7aa298b2d"
+      "sha256": "8cf8d996f416ca3ce66132d42dbf45b5307e2992367dfb59504384ff0c954635"
     },
     {
       "source": "docs/evaluation-system.md",
@@ -97,28 +97,28 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "28378effbf9368ae1947862e7d4a205baa99495fb8501f1939fd3d457b480b58"
+      "sha256": "7fb63fa561f6d61b387778e2a7274ba4bc0f3a93e1fe819aa2ce4a745abec6aa"
     },
     {
       "source": "docs/role-contracts.md",
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6c03c68d4e00fc496e132652ee9eba023091926484bd3d2876d90792b507921f"
+      "sha256": "097c2699fcd5185578cbe1935943128b0b5b3b809ad33d126fd592485efc2a03"
     },
     {
       "source": "docs/security-checklist.md",
       "dest": ".claude/autoflow/docs/security-checklist.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3fc37a125331d312b3d7df583b9344b4a663bff630d74481e9907b992ba62545"
+      "sha256": "a6b21dc25268a05232eac026eaf30c5583181acc5e9ab2c5e9589fb2f7a4573b"
     },
     {
       "source": "docs/submodule-common-rules.md",
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2f924e5d528d6443680100533531eb5ae120c63a7fd14051bdb0879b27bf7b11"
+      "sha256": "dbf7e786d0d7160a9c018cb0b3356568582dce7699e377502ffad667e9efd983"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e241209b80befcfdd92dfb05197d3b060ae59e69016c53c5d3b13924b7d52e44"
+      "sha256": "fd9eaf33c8f2e60e461f0820b01f1d52116a9dc5be33b4bdcd17b6abfa163d91"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -314,21 +314,21 @@
       "dest": "scripts/test/suite-manifest.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "2c137898c350982c3d2bb8bbc699cf2e0aa1f9d00619f19a06c8d09649a68929"
+      "sha256": "ca12a9c1fecc46d0198f18ed8436cd01f0b9d19c7df1476d7b13836bfea40bb4"
     },
     {
       "source": "scripts/test/select-suites.sh",
       "dest": "scripts/test/select-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "bc4bd8798d98742310215426e291115df382c171c384a85d84e41957d772ef4f"
+      "sha256": "89bc9f0a48e8aa822178cf522fb99236519d8a0ae63c94efd6976a8485e71ce8"
     },
     {
       "source": "scripts/test/run-suites.sh",
       "dest": "scripts/test/run-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "545e7aaceb32633b5c15d59efa90ce6b3f3cbc138b4d1eecb57c9b073f11cfb4"
+      "sha256": "47f2a67cad3643cdbd9b8aee593bd708bdeb01643c212fc2dfd017e26f517061"
     },
     {
       "source": "scripts/test/invocation-scan.sh",
@@ -342,7 +342,7 @@
       "dest": "scripts/test/check-suite-manifest.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ab9776bdf697b0d68ea61b77b76a243c7d6df24e34c02710f9f9de6066946f4a"
+      "sha256": "7cd2be0de9ce8c2480c9ca2c39bb4a94a661832df15b248e3c123ce08f84bf54"
     },
     {
       "source": "scripts/test/check-suite-leaf.sh",

@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: setup/manifest.json setup/gen-manifest-hashes.sh setup/init.sh scripts/gate/verification-layer-check.sh scripts/test/check-cycle-layer-index.sh
-# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
 # Test: the cycle-layer device is a bundle artifact — a fresh stamp delivers it,
-#       byte-identical to the manifest's recorded hash, and it runs to a verdict
-#       from the stamped tree — while the layer-token device stays home.
+#       byte-identical to the manifest's recorded hash, and it runs from the
+#       stamped tree — while the layer-token device stays home.
 # =============================================================================
-# STANDING suite (`automated / standing: cross-file`), subject-named.
+# STANDING suite (`automated / standing: packaging`), subject-named.
 #
 # ADR-0024 D2's standing predicate that no `.autoflow/issue-{N}-local/` asset
 # entered the merged tree (scripts/test/check-cycle-layer-index.sh) is every
@@ -23,8 +21,8 @@
 # WHY A STAMP AND NOT A MANIFEST READ. A manifest row is a promise; what a target
 # executes is the file init.sh copied. The legs therefore stamp a scratch target
 # and compare THREE hashes for the device — source, manifest row, installed copy
-# — and then run it from the stamped tree: a file that is present but does not
-# run is not delivered. The fixed-point property of the manifest as a whole is
+# — and then run it once from the stamped tree: a file that is present but does
+# not run is not delivered. The fixed-point property of the manifest as a whole is
 # scripts/test/check-manifest-regen-clean.sh's; this suite is about these rows.
 # =============================================================================
 
@@ -96,14 +94,9 @@ if [ ! -e "$T/$NOT_SHIPPED" ]; then
 else
   failc "NOT-SHIPPED: $NOT_SHIPPED was delivered to the stamped target"
 fi
-if [ -x "$REPO_ROOT/$NOT_SHIPPED" ] && out="$(bash "$REPO_ROOT/$NOT_SHIPPED" --list-tokens 2>&1)" && [ -n "$out" ]; then
-  pass "HOME: $NOT_SHIPPED still runs in this repository ($(printf '%s\n' "$out" | grep -c .) token(s))"
-else
-  failc "HOME: $NOT_SHIPPED does not run in this repository"
-fi
 
-# The delivered device runs to a verdict from the stamped tree — a delivered
-# file that cannot execute there is not a delivered device.
+# The delivered device runs from the stamped tree — a delivered file that cannot
+# execute there is not a delivered device.
 
 git -C "$T" init -q && git -C "$T" -c user.email=t@example.invalid -c user.name=t -c commit.gpgsign=false add -A \
   && git -C "$T" -c user.email=t@example.invalid -c user.name=t -c commit.gpgsign=false commit -q -m stamp
@@ -112,14 +105,6 @@ if [ "$rc" -eq 0 ]; then
   pass "RUNS: check-cycle-layer-index.sh answers OK over the stamped target's index (no cycle-layer asset tracked)"
 else
   failc "RUNS: check-cycle-layer-index.sh rc=$rc: $(head -n 2 <<<"$out" | tr '\n' ' ' | cut -c1-200)"
-fi
-mkdir -p "$T/.autoflow/issue-9-local" && printf '#!/bin/sh\nexit 0\n' > "$T/.autoflow/issue-9-local/ac1.sh"
-git -C "$T" add -f .autoflow/issue-9-local/ac1.sh
-out="$(cd "$T" && bash scripts/test/check-cycle-layer-index.sh 2>&1)"; rc=$?
-if [ "$rc" -ne 0 ] && grep -qF 'issue-9-local/ac1.sh' <<<"$out"; then
-  pass "RUNS: check-cycle-layer-index.sh names a cycle-layer asset forced into the stamped target's index"
-else
-  failc "RUNS: check-cycle-layer-index.sh did not name the forced asset (rc=$rc): $(head -n 2 <<<"$out" | tr '\n' ' ' | cut -c1-200)"
 fi
 
 echo

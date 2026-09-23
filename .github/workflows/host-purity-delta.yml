@@ -9,8 +9,8 @@
 # framework repo does not silently re-accrete service names.
 #
 # Why GitHub Actions: the guard is pure bash + git with no node/npm, no bats, and
-# no submodule checkout — the same zero-infra rationale as schema-hook-contract.yml /
-# workflow-regression.yml. ubuntu-latest ships bash 5.x + git; the guard needs the
+# no submodule checkout — the same zero-infra rationale as the other workflows here.
+# ubuntu-latest ships bash 5.x + git; the guard needs the
 # merge-base against origin/main, so checkout uses fetch-depth: 0.
 #
 # Enforcement level: ADVISORY. This repo's plan provides no GitHub branch-protection /

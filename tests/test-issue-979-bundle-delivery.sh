@@ -1,26 +1,16 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: scripts/preflight/check-review-backend.sh scripts/review/codex-review-pr.sh setup/manifest.json
-# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
-# Test: reviewer-backend bundle delivery + install config scaffold — Issue #979
+# Test: reviewer-backend bundle delivery + install config scaffold (packaging /
+#       manifest)
 # =============================================================================
-# Scope (.autoflow/issue-979-verification-design.md §1 AC-3/AC-4, feature
-# design D1/rows 1-10): the manifest ships five new artifacts (two `copy` —
-# scripts/review/codex-review-pr.sh, scripts/preflight/check-review-backend.sh
-# — one `copy` for .codex/review.md, two `scaffold` — AGENTS.md,
-# .claude/autoflow.local.json), and a fresh mktemp install materializes all
-# five so an installed target can actually execute HANDOFF step 6.
-#
-# AC-3a's realigned oracle (verification design §1, C3 RESOLVED): the scaffold
-# ALWAYS ships its codex default (never-overwrite arm) — "unset" is not the
-# fail-closed trigger; a codex-absent target fails closed at the codex-
-# presence probe (AC-2), not on an unset field.
-#
-# RED expectation (pre-implementation, this commit): ALL assertions FAIL — the
-# manifest carries none of these five rows yet, so a fresh install delivers
-# none of them, and SETUP-GUIDE.md has no Reviewer backend subsection.
+# The manifest ships the artifacts HANDOFF step 6 executes on a target — two
+# `copy` scripts (scripts/review/codex-review-pr.sh,
+# scripts/preflight/check-review-backend.sh), one `copy` for .codex/review.md,
+# two `scaffold` rows (AGENTS.md, .claude/autoflow.local.json) — and a fresh
+# mktemp install materializes all five. The scaffold ships its codex default and
+# is never overwritten by a re-install.
 # =============================================================================
 
 set -uo pipefail
@@ -29,7 +19,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INIT_SH="$PROJECT_ROOT/setup/init.sh"
 MANIFEST="$PROJECT_ROOT/setup/manifest.json"
-SETUP_GUIDE="$PROJECT_ROOT/setup/SETUP-GUIDE.md"
 
 PASS=0; FAIL=0; TESTS=0
 
@@ -97,12 +86,6 @@ else
   assert_true "AC-3a (no silent downgrade): scaffold present to test never-overwrite arm" "false"
 fi
 rm -rf "$TARGET" /tmp/init-979-log.log /tmp/init-979-reinstall.log 2>/dev/null
-
-echo ""
-echo "=== SETUP-GUIDE.md Reviewer backend subsection (AC-4) ==="
-
-assert_true "AC-4: SETUP-GUIDE.md Prerequisites documents a Reviewer backend subsection (codex default, claude opt-in, config file, fail-closed)" \
-  "ctx=\$(awk '/^## Prerequisites/{f=1;next} f && /^## /{exit} f' '$SETUP_GUIDE'); printf '%s\n' \"\$ctx\" | grep -qi 'reviewer backend'"
 
 echo ""
 echo "=============================="

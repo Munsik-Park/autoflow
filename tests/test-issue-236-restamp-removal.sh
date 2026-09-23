@@ -1,32 +1,17 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: setup/init.sh setup/manifest.json setup/thin-root-layer/drift-check.sh plugin/autoflow/skills/install/scripts/detect.sh plugin/autoflow/skills/install/SKILL.md docs/tool-delivery-contract.md setup/SETUP-GUIDE.md README.md
-# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
-# Test: issue #236 — a re-stamp reconciles the target against the manifest it
-#       previously installed. Before this change `setup/init.sh --target`
-#       applied only the new manifest's rows, so an artifact upstream dropped
-#       (#228 / a72e265: scripts/test/green-tree-*.sh, suite-coverage.sh)
-#       stayed on the target after the 0.2.3 re-stamp and was removed by hand
-#       (connev-llm/llmroute#629). R4 already named the manifest as the
-#       authority for removal; no device performed it.
+# Test: a re-stamp reconciles the target against the manifest it previously
+#       installed (packaging — the install script's stamp). `setup/init.sh
+#       --target` removes an artifact upstream dropped when its on-disk content
+#       is still what AutoFlow shipped, and keeps and names everything else.
 # =============================================================================
-# Subjects:
-#   setup/init.sh                        — reconcile_removed: previous installed
-#                                          manifest vs new manifest by dest;
-#                                          remove a `copy` whose on-disk sha256
-#                                          equals the previous manifest's, keep
-#                                          and name everything else
-#   setup/thin-root-layer/drift-check.sh — D4 `removed-upstream` WARN forecasts
-#                                          the re-stamp instead of "does not
-#                                          remove it"
-#   plugin/autoflow/skills/install/scripts/detect.sh — STALE_COUNT /
-#                                          STALE_UPSTREAM= lines for the skill's
-#                                          pre-confirmation disclosure
-#   SKILL.md / R4 / SETUP-GUIDE / README  — describe the new behaviour
+# Subject: setup/init.sh > reconcile_removed — previous installed manifest vs
+# new manifest by dest; remove a `copy` whose on-disk sha256 equals the
+# previous manifest's, keep and name everything else.
 #
-# Cases (AC ids from the issue):
+# Cases:
 #   AC1-REMOVED       previous-only `copy`, on-disk hash == previous manifest
 #                     -> removed, `REMOVED: <dest>` printed
 #   AC2-MODIFIED      previous-only `copy`, on-disk hash differs -> kept,
@@ -39,28 +24,17 @@
 #   AC2-SYMLINK-DIR   previous-only `copy` under a parent that is a symlink to
 #                     outside the target, outside file's hash == previous
 #                     manifest -> outside file survives, `KEPT:` names the
-#                     symlink (PR #237 review, High)
+#                     symlink
 #   AC2-SYMLINK-LEAF  previous-only `copy` that is itself a symlink -> kept
 #   AC3-ABSENT        previous-only `copy` already gone -> `ABSENT:` line
 #   AC3-SUMMARY       the count line reports removed / kept / absent
+#   AC3-MANIFEST      the new manifest replaces the previous one
 #   AC4-NO-PREV       first stamp (no installed manifest) -> nothing removed,
 #                     a pre-existing unrelated file survives
 #   AC4-UNREADABLE    installed manifest is not JSON -> nothing removed, WARN,
 #                     exit 0, the new manifest is installed
 #   IDEMPOTENT        same-version re-stamp -> no REMOVED line, "No artifact
 #                     left behind"
-#   D4-FORECAST-RM    clone drops a copy row, on-disk unchanged -> WARN says a
-#                     re-stamp removes it
-#   D4-FORECAST-KEEP  clone drops a copy row, on-disk modified -> WARN says a
-#                     re-stamp keeps it
-#   D4-FORECAST-SYMLINK clone drops a copy row whose parent is a symlink out of
-#                     the target -> WARN says a re-stamp keeps it
-#   D4-NONCOPY        clone drops the scaffold row -> WARN says never removed
-#   D4-OLD-PHRASE     "a re-stamp does not remove it" is gone from drift-check
-#   DET-STALE         detect.sh carries the WARN as STALE_COUNT=1 +
-#                     STALE_UPSTREAM= naming the dest
-#   DET-NONE          a matching clone -> STALE_COUNT=0, no STALE_UPSTREAM=
-#   DOC-*             R4, SETUP-GUIDE, README, SKILL.md describe the rule
 # =============================================================================
 
 set -uo pipefail
@@ -70,12 +44,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 INIT_SH="$REPO_ROOT/setup/init.sh"
 MANIFEST="$REPO_ROOT/setup/manifest.json"
-DRIFT_SRC="$REPO_ROOT/setup/thin-root-layer/drift-check.sh"
-DETECT_SH="$REPO_ROOT/plugin/autoflow/skills/install/scripts/detect.sh"
-SKILL_MD="$REPO_ROOT/plugin/autoflow/skills/install/SKILL.md"
-CONTRACT_MD="$REPO_ROOT/docs/tool-delivery-contract.md"
-GUIDE_MD="$REPO_ROOT/setup/SETUP-GUIDE.md"
-README_MD="$REPO_ROOT/README.md"
 CUR_VER="$(jq -r '.version' "$MANIFEST")"
 
 PASS=0; FAIL=0
@@ -99,33 +67,7 @@ stamp() {
   STAMP_RC=$?
 }
 
-# run_drift <target> [VAR=value ...] — the installed detector; DRIFT_OUT / DRIFT_RC.
-run_drift() {
-  local t="$1"; shift
-  DRIFT_OUT=$(env CLAUDE_PROJECT_DIR="$t" "$@" sh "$t/.claude/autoflow/drift-check.sh" 2>&1)
-  DRIFT_RC=$?
-}
-
-# mk_clone <dir> <jq-filter> — a marketplace clone whose manifest is the real
-# one under <filter>, with the real drift-check oracle (detect.sh runs it).
-mk_clone() {
-  mkdir -p "$1/setup/thin-root-layer" "$1/.claude-plugin" "$1/scripts/lib"
-  jq "$2" "$MANIFEST" > "$1/setup/manifest.json"
-  cp "$DRIFT_SRC" "$1/setup/thin-root-layer/drift-check.sh"
-  cp "$REPO_ROOT/scripts/lib/plugin-root.sh" "$1/scripts/lib/plugin-root.sh"
-  cp "$REPO_ROOT/.claude-plugin/marketplace.json" "$1/.claude-plugin/marketplace.json"
-}
-
-# run_detect <target> <clone> — DETECT_OUT / DETECT_RC.
-run_detect() {
-  DETECT_OUT=$(TARGET_ROOT="$1" PLUGIN_CACHE_ROOT="$2" bash "$DETECT_SH" 2>&1)
-  DETECT_RC=$?
-}
-
-# A copy row every real manifest carries, to drop from a synthetic clone.
-COPY_DEST="scripts/lib/plugin-root.sh"
-
-echo "=== Issue #236 — re-stamp reconciles the previous installed manifest ==="
+echo "=== re-stamp reconciles the previous installed manifest ==="
 
 # ── AC4-NO-PREV: first stamp removes nothing ─────────────────────────────────
 echo "== AC4-NO-PREV: first stamp (no installed manifest) — nothing reconciled =="
@@ -223,7 +165,7 @@ else
 
   if [ -f "$WORK/outside-dir/retired.sh" ] && [ -L "$T1/scripts/retired-dir" ] \
      && printf '%s\n' "$STAMP_OUT" | grep -q '^KEPT: scripts/retired-dir/retired.sh (copy; a symlink on the path or a parent outside the target'; then
-    pass "AC2-SYMLINK-DIR: a parent symlinked outside the target is refused even with a matching hash — the outside file survives (PR #237 review, High)"
+    pass "AC2-SYMLINK-DIR: a parent symlinked outside the target is refused even with a matching hash — the outside file survives"
   else
     failc "AC2-SYMLINK-DIR: outside present=$([ -f "$WORK/outside-dir/retired.sh" ] && echo yes || echo no); $(printf '%s\n' "$STAMP_OUT" | grep 'retired' | head -1)"
   fi
@@ -275,113 +217,6 @@ if [ "$STAMP_RC" -eq 0 ] && [ -f "$T2/scripts/test/stale.sh" ] \
   pass "AC4-UNREADABLE: unreadable previous manifest -> WARN, nothing removed, exit 0, new manifest installed"
 else
   failc "AC4-UNREADABLE: rc=$STAMP_RC stale=$([ -f "$T2/scripts/test/stale.sh" ] && echo present || echo gone) ver=$(jq -r '.version' "$T2/.claude/autoflow/manifest.json" 2>/dev/null); $(printf '%s\n' "$STAMP_OUT" | grep -i 'previous' | head -1)"
-fi
-
-# ── D4 forecast wording ──────────────────────────────────────────────────────
-echo "== D4: the removed-upstream WARN forecasts what the re-stamp does =="
-T3="$WORK/t-d4"; stamp "$T3"
-if [ ! -f "$T3/.claude/autoflow/drift-check.sh" ]; then
-  failc "SETUP: stamp into $T3 did not deliver drift-check.sh"
-else
-  C_RM="$WORK/clone-drop-copy"
-  mk_clone "$C_RM" 'del(.artifacts[] | select(.dest == "'"$COPY_DEST"'"))'
-  run_drift "$T3" AUTOFLOW_MARKETPLACE_ROOT="$C_RM"
-  if [ "$DRIFT_RC" -eq 0 ] && printf '%s\n' "$DRIFT_OUT" | grep -q "^WARN: D4 -- installed artifact no longer shipped upstream: $COPY_DEST (copy, on-disk sha256 equals the installed manifest's — a re-stamp removes it)"; then
-    pass "D4-FORECAST-RM: an unmodified copy upstream dropped -> WARN says a re-stamp removes it (exit 0)"
-  else
-    failc "D4-FORECAST-RM: rc=$DRIFT_RC; $(printf '%s\n' "$DRIFT_OUT" | grep 'no longer shipped' | head -1)"
-  fi
-
-  T4="$WORK/t-d4-mod"; stamp "$T4"
-  printf '\n# local edit\n' >> "$T4/$COPY_DEST"
-  run_drift "$T4" AUTOFLOW_MARKETPLACE_ROOT="$C_RM"
-  if printf '%s\n' "$DRIFT_OUT" | grep -q "^WARN: D4 -- installed artifact no longer shipped upstream: $COPY_DEST (copy, on-disk content differs from the installed manifest or is not the shipped file — a re-stamp keeps it"; then
-    pass "D4-FORECAST-KEEP: a modified copy upstream dropped -> WARN says a re-stamp keeps it"
-  else
-    failc "D4-FORECAST-KEEP: $(printf '%s\n' "$DRIFT_OUT" | grep 'no longer shipped' | head -1)"
-  fi
-
-  T5="$WORK/t-d4-symlink"; stamp "$T5"
-  mv "$T5/scripts/lib" "$WORK/outside-lib" && ln -s ../../outside-lib "$T5/scripts/lib"
-  run_drift "$T5" AUTOFLOW_MARKETPLACE_ROOT="$C_RM"
-  if printf '%s\n' "$DRIFT_OUT" | grep -q "^WARN: D4 -- installed artifact no longer shipped upstream: $COPY_DEST (copy, on-disk content differs from the installed manifest or is not the shipped file — a re-stamp keeps it" \
-     && ! printf '%s\n' "$DRIFT_OUT" | grep -q "a re-stamp removes it"; then
-    pass "D4-FORECAST-SYMLINK: a copy under a parent symlinked outside the target is forecast as kept, never as removed (PR #237 review, High)"
-  else
-    failc "D4-FORECAST-SYMLINK: $(printf '%s\n' "$DRIFT_OUT" | grep 'no longer shipped' | head -1)"
-  fi
-
-  C_SC="$WORK/clone-drop-scaffold"
-  mk_clone "$C_SC" 'del(.artifacts[] | select(.dest == ".claude/autoflow/spawn-policy.json"))'
-  run_drift "$T3" AUTOFLOW_MARKETPLACE_ROOT="$C_SC"
-  if [ "$DRIFT_RC" -eq 0 ] && printf '%s\n' "$DRIFT_OUT" | grep -q '^WARN: D4 -- installed artifact no longer shipped upstream: .claude/autoflow/spawn-policy.json (scaffold — a re-stamp never removes a scaffold artifact'; then
-    pass "D4-NONCOPY: a scaffold upstream dropped -> WARN says a re-stamp never removes it"
-  else
-    failc "D4-NONCOPY: rc=$DRIFT_RC; $(printf '%s\n' "$DRIFT_OUT" | grep 'no longer shipped' | head -1)"
-  fi
-
-  if ! grep -q 'a re-stamp does not remove it' "$DRIFT_SRC"; then
-    pass "D4-OLD-PHRASE: the pre-#236 wording 'a re-stamp does not remove it' is gone from drift-check.sh"
-  else
-    failc "D4-OLD-PHRASE: drift-check.sh still says 'a re-stamp does not remove it'"
-  fi
-
-  # ── detect.sh carries the WARN for the skill's pre-confirmation disclosure ──
-  echo "== detect.sh: STALE_COUNT / STALE_UPSTREAM= =="
-  run_detect "$T3" "$C_RM"
-  if [ "$DETECT_RC" -eq 0 ] && printf '%s\n' "$DETECT_OUT" | grep -q '^STALE_COUNT=1$' \
-     && printf '%s\n' "$DETECT_OUT" | grep -q "^STALE_UPSTREAM=$COPY_DEST (copy, on-disk sha256 equals the installed manifest's — a re-stamp removes it)$"; then
-    pass "DET-STALE: detect.sh reports STALE_COUNT=1 and a STALE_UPSTREAM= line naming the dest and the forecast"
-  else
-    failc "DET-STALE: rc=$DETECT_RC; $(printf '%s\n' "$DETECT_OUT" | grep '^STALE' | tr '\n' ' ')"
-  fi
-  if printf '%s\n' "$DETECT_OUT" | grep -q '^DRIFT_STATE=clean$'; then
-    pass "DET-STALE-NOT-DRIFT: the removed-upstream WARN does not move DRIFT_STATE (clean)"
-  else
-    failc "DET-STALE-NOT-DRIFT: $(printf '%s\n' "$DETECT_OUT" | grep '^DRIFT_STATE' )"
-  fi
-
-  C_EQ="$WORK/clone-equal"
-  mk_clone "$C_EQ" '.'
-  run_detect "$T3" "$C_EQ"
-  if printf '%s\n' "$DETECT_OUT" | grep -q '^STALE_COUNT=0$' && ! printf '%s\n' "$DETECT_OUT" | grep -q '^STALE_UPSTREAM='; then
-    pass "DET-NONE: a clone equal to the installed manifest -> STALE_COUNT=0, no STALE_UPSTREAM= line"
-  else
-    failc "DET-NONE: $(printf '%s\n' "$DETECT_OUT" | grep '^STALE' | tr '\n' ' ')"
-  fi
-fi
-
-# ── Docs ─────────────────────────────────────────────────────────────────────
-echo "== DOC: R4 / SETUP-GUIDE / README / SKILL.md describe the reconciliation =="
-if grep -q 'reconciles\*\* the target against the manifest it' "$CONTRACT_MD" && grep -q 'issue #236' "$CONTRACT_MD" \
-   && grep -q 'kind `copy`, on-disk sha256 equal to the previous manifest' "$CONTRACT_MD"; then
-  pass "DOC-CONTRACT: R4 states the reconciliation rule (copy + equal sha256 removed; the rest kept and reported)"
-else
-  failc "DOC-CONTRACT: docs/tool-delivery-contract.md R4 does not state the #236 reconciliation rule"
-fi
-if grep -q 'A re-stamp also \*\*reconciles\*\*' "$GUIDE_MD" && grep -q 'REMOVED:' "$GUIDE_MD" && grep -q 'KEPT:' "$GUIDE_MD" \
-   && ! grep -q 'an artifact upstream no longer ships is a `WARN` you dispose of by hand' "$GUIDE_MD"; then
-  pass "DOC-SETUP-GUIDE: the re-stamp section and the D4 row describe removal by ownership and the REMOVED:/KEPT: lines"
-else
-  failc "DOC-SETUP-GUIDE: setup/SETUP-GUIDE.md does not describe the #236 re-stamp reconciliation, or still says D4's dropped artifact is disposed of by hand"
-fi
-if grep -q 'A re-stamp also' "$README_MD" && grep -q 'when their content is still what AutoFlow shipped' "$README_MD"; then
-  pass "DOC-README: README names the re-stamp removal"
-else
-  failc "DOC-README: README.md does not name the re-stamp removal"
-fi
-STEP1=$(awk '/^## Step 1/{f=1} /^## Step 2/{f=0} f' "$SKILL_MD")
-STEP4=$(awk '/^## Step 4/{f=1} f' "$SKILL_MD")
-if printf '%s\n' "$STEP1" | grep -q 'STALE_UPSTREAM=' && printf '%s\n' "$STEP1" | grep -q 'before Step 3'; then
-  pass "DOC-SKILL-STEP1: Step 1 discloses the STALE_UPSTREAM= lines before the confirmation"
-else
-  failc "DOC-SKILL-STEP1: SKILL.md Step 1 does not disclose STALE_UPSTREAM= before Step 3"
-fi
-if printf '%s\n' "$STEP4" | grep -q 'REMOVED: <dest>' && printf '%s\n' "$STEP4" | grep -q 'Reconciled artifacts (issue #236)' \
-   && printf '%s\n' "$STEP4" | grep -q 'git -C "\$TARGET_ROOT" grep -n -I --untracked'; then
-  pass "DOC-SKILL-STEP4: Step 4 reports the REMOVED:/KEPT: lines dest by dest and runs the read-only reference probe"
-else
-  failc "DOC-SKILL-STEP4: SKILL.md Step 4 lacks the reconciled-artifacts report or the reference probe"
 fi
 
 echo ""

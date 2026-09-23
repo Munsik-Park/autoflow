@@ -930,7 +930,7 @@ structure (a per-package runner, a submodule's own tree) — finds how the targe
 for a change (a changed-since selection, a path filter), and judges which of the target's tests
 the change requires, recording the grounds and, for every run, the command, the log and its summary line in
 its report ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's
-practice*); on an opted-in target and in this repository `bash scripts/test/select-suites.sh`
+practice*); on an opted-in target `bash scripts/test/select-suites.sh`
 answers which committed suites the change delta reaches, and a `BLOCK:` line it prints is carried into the report,
 never worked around. A
 suite the derivation names and the verification design did not anticipate is an ordinary RED input,
@@ -967,7 +967,7 @@ returns to ARCHITECT, through the existing routes.
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
-**Header contract** (opted-in targets and this repository — ADR-0024 D3, D5): every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
+**Header contract** (opted-in targets — ADR-0024 D3; this repository does not opt in, D5): every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
 
   ```
   # ci-subject: <path-or-glob> [<path-or-glob> ...]
@@ -996,7 +996,7 @@ The fields go in the file's leading comment block at column 1, before its first 
 - Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
 - Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (ADR-0024 D2; in this repository the `standing` categories are D1's closed list, and on a target the default is to add no file at all).
 
-**Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new committed spec conforming to the header contract above (opted-in targets and this repository) + manual scenarios written.
+**Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new committed spec conforming to the header contract above (opted-in targets) + manual scenarios written.
 
 ---
 
@@ -1283,9 +1283,9 @@ the author's "this is fine" is not the disposition.
 6. Deploy/CI-path verification check: if the diff matched the INTEGRATE
    deploy/CI-path condition (### Deploy/CI-path conditional verification),
    confirm the INTEGRATE deploy/CI-path bundle (a)/(b)/(c) ran and passed
-   (against a target service repo, per tests/manual/issue-847-manual-scenarios.md)
-   — re-state the matched paths so a silently-skipped INTEGRATE step is caught
-   here, before HANDOFF. (Or diff touched no deploy/CI-path surface.)
+   against the target service repo — re-state the matched paths so a
+   silently-skipped INTEGRATE step is caught here, before HANDOFF. (Or diff
+   touched no deploy/CI-path surface.)
 7. Lint-chain check: if the diff touched files the target repo's lint chain
    covers (Change Surface Rules > Lint chain on the staged surface), confirm the
    lint chain ran clean on them at commit time — re-derive it from the committing
@@ -1426,7 +1426,7 @@ each-item ≥ 7 criterion:
     `docs/INDEX.md` plus its other artifact rows (`setup/gen-manifest-hashes.sh` >
     `compute_doc_closure`), which already exists and is not restated.
   - *Historical records* are what is kept as a record of a past state and followed by no one:
-    per-issue manual-verification records (`tests/manual/issue-*`), report-excerpt fixtures
+    per-issue manual-verification records, report-excerpt fixtures
     (`tests/fixtures/*`), an ADR's change-history and superseded sections, and archived cycle
     artifacts. A fixture that an executing test reads is still a historical record for this check
     — its content is a past report's text — while the test that reads it is normative.
@@ -1727,9 +1727,9 @@ Decision 24).
   which lines those are is the working AI's judgment in that target, with no list kept (*Code
   comments* > *Directives are code*). A defect in one takes the severity and the route of the
   behavior it changes.
-- **This repository is excluded.** Here the documents are the product and a suite's `# ci-subject:`
-  header line executes, so comments stay under the checks they had: the reviewer's severity as
-  judged, the `doc` class, and the `doc` re-entry's sweep record.
+- **This repository is excluded.** Here the documents are the product, so comments stay under the
+  checks they had: the reviewer's severity as judged, the `doc` class, and the `doc` re-entry's
+  sweep record.
 - *Secondary (multi-repo):* a comment in a sub-repo is outside the orchestrator's scope
   ([`CLAUDE.md`](../CLAUDE.md) > Cross-Project Boundary Rules); the Developer AI of that scope makes
   the same single commit on the same terms.
@@ -1793,7 +1793,7 @@ Non-empty ⇒ the verification bundle below is a **mandatory PASS/FAIL gate** fo
 - **(b) CI-config static validation** — lint / schema-check the changed CI file itself (`.github/workflows/*` via `actionlint` / YAML-schema; `Jenkinsfile` via the target's `jenkins declarative-linter` or equivalent). Catches the #776 class. *No-op* when no CI file changed.
 - **(c) Landing/host routing smoke check** — a smoke request against the built host / landing route (health / routing reachability), catching production build-wiring breakage. Catches the #781 class. *No-op* when the target exposes no host / landing route.
 
-The bundle commands exercise a *target service repo's* surfaces; their live effectiveness against a real target repo is walked in `tests/manual/issue-847-manual-scenarios.md` (this single-repo framework repo owns none of these surfaces, so its own cycles hit the defined no-op).
+The bundle commands exercise a *target service repo's* surfaces, so their effectiveness shows on the target repos where they run, and a bundle item that misses a real breakage there is filed back as an issue; this single-repo framework repo owns none of these surfaces, so its own cycles hit the defined no-op.
 
 **Failure**: a bundle item that fails is an **INTEGRATE FAIL → GREEN** (`impl` class; existing GREEN↔VERIFY round-trip rules apply; no new regression cap is introduced).
 

@@ -1,5 +1,5 @@
 {
-  "$comment": "Machine-readable contract source for the AutoFlow gate hook (issue #223). Single source of truth read by tests/test-issue-223-schema-hook-contract.sh to assert the hook's in-script literals/keys/paths equal these declared values. Values mirror .claude/hooks/check-autoflow-gate.sh EXACTLY; do not edit one without the other or the contract test fails (that is the drift signal).",
+  "$comment": "Machine-readable contract source for the AutoFlow gate hook (issue #223). Values mirror .claude/hooks/check-autoflow-gate.sh EXACTLY; edit one only together with the other. The standing contract test that asserted the agreement was retired by issue #293: the cycle that changes either checks one against the other in its one-shot run.",
   "thresholds": {
     "avg_min": 7.5,
     "item_min": 7,

@@ -1,140 +1,46 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# ci-subject: docs/autoflow-guide.md plugin/autoflow/hooks/check-autoflow-gate.sh scripts/cleanup/cleanup-issue.sh scripts/handoff/create-host-pr.sh scripts/issue/create-issue.sh scripts/ledger/ledger-entry-id.sh setup/init.sh setup/manifest.json tests/fixtures/e2e-bundle-purity-baseline.txt tests/fixtures/host-purity-paths.txt tests/fixtures/host-purity-tokens.txt tests/plugin/manual-scenarios-797.md tests/plugin/verify-install-into-target.sh tests/plugin/verify-package.sh
-# budget-secs: SUITE_BUDGET_CEILING_SECS
 # =============================================================================
-# Test: throwaway dummy-target E2E acceptance suite — Issue #797 [#785-S10]
+# Test: throwaway dummy-target E2E suite
 # =============================================================================
-# Composes the already-CI-covered unit mechanisms (install, manifest, drift,
-# host-purity, single-repo HANDOFF) into one re-runnable regression against a
-# real, structurally-different, zero-submodule dummy library target — the
-# PILOT gate before claude-autoflow itself becomes the first reversal case
-# (S11a #798). Plain POSIX sh + jq/cmp/diff/grep/awk/git only (no bats, no
-# node/npm), matching tests/plugin/verify-install-into-target.sh's harness form.
+# Stamps the thin-root bundle into a realistic, zero-submodule dummy library
+# target -- its own git history, a foreign package.json/src/ payload, a README
+# and a pre-existing CLAUDE.md -- and checks that the install lands intact and
+# resolves from the installed location. Plain POSIX sh + jq/cmp/grep/awk/git
+# only (no bats, no node/npm).
 #
-# This suite COMPOSES, it does not duplicate: install/manifest/drift/
-# host-purity unit-level assertions stay owned by
-# tests/plugin/verify-install-into-target.sh, which CI runs under its own
-# registered step (the whole-suite re-runs this file once carried are retired --
-# issue #103). This suite's own new
-# assertions are the composition-only
-# surface — the realistic fixture, non-destructive install into pre-existing
-# content, installed-fs manifest/drift parity, and the gate-hook scores-branch
-# + host-script HANDOFF runtime arms (the plugin-delivered hook RESOLUTION path
-# — ${CLAUDE_PLUGIN_ROOT} substitution — is owned by verify-package.sh AC4,
-# :230-298, not here).
+# Legs (category):
 #
-# Acceptance criteria (canonical IDs from
-#   .autoflow/issue-797-feature-design.md §5, reconciled with
-#   .autoflow/issue-797-verification-design.md §1):
-#
-#   W-E1 provisioning & install composition:
-#     E1a   make_dummy_target() yields a realistic, zero-submodule fixture
+#   W-E1 install into the dummy target (packaging):
+#     E1a   make_dummy_target() yields a realistic, zero-submodule fixture (the
+#           precondition E1c-E1e rest on)
 #     E1b   `setup/init.sh --target <dummy> </dev/null` exits 0 (non-interactive)
 #     E1c   pre-existing CLAUDE.md prose survives + shim fence present
-#     E1d   installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md,
-#           scripts/review/**, scripts/preflight/**, scripts/handoff/**,
-#           scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, .codex/**,
-#           AGENTS.md
-#           (#979 reviewer-backend delivery, source-path-preserved dests,
-#           ledger E12; scripts/handoff/**, scripts/cleanup/** widened for
-#           issue #10 manifest-registration-gap fix; scripts/issue/** widened
-#           for the issue #96 AI issue-creation gate wrapper; scripts/ledger/**
-#           widened for the issue #97 ledger-entry-id.sh manifest artifact)
+#     E1d   the foreign payload stays byte-unchanged and every new file lands
+#           under a dest class the manifest's copy rows install to
 #     E1e   second install run is idempotent (single fence, byte-identical)
 #
-#   W-E2 bundle-in-target host-purity (composition boundary of item 4):
+#   W-E2 installed-bundle host purity (hygiene, retained):
 #     E2a   installed .claude/autoflow/** host-purity-tokens.txt hits are a
 #           RATCHET against tests/fixtures/e2e-bundle-purity-baseline.txt (no
 #           new offender beyond the baseline; no baseline entry gone clean
-#           without a ratchet-down edit) -- ledger E15, supersedes the
-#           absolute zero-hit scan pending epic #785 S11a/S11b
-#     E2b   this suite's own fixture-generator paths are not host-purity-scanned
+#           without a ratchet-down edit)
 #
-#   W-E3 manifest & drift composition (boundary of items 5/6):
+#   W-E3 installed manifest closure and clean drift-check (packaging):
 #     E3a   every kind:copy manifest dest exists on disk in the installed target
+#     E3a-x shipped methodology-step scripts are installed executable
 #     E3b   installed drift-check.sh exits 0 on the clean install (in-target)
-#     E3c   installed drift-check.sh still exits 0 with the source repo relocated
-#           out of reach (source/network independence in the composed context)
-#     E3d   injected content drift -> installed drift-check.sh exits 1, D1 class
-#           (non-vacuity arm guarding E3b/E3c)
+#     E3c   no installed file embeds the source repo's path, and the installed
+#           drift-check.sh still exits 0 with the source repo out of reach
 #
-#   W-E4 single-repo HANDOFF gate behavior (item 7, gate-hook scores-branch
-#   composition; plugin-delivered hook RESOLUTION is verify-package.sh AC4,
-#   :230-298 -- cross-referenced, not duplicated here):
-#     E4w   (pre-assertion, before E4a) the dummy target's post-init.sh
-#           .claude/settings.json actually landed the MARKETPLACE wiring
-#           (extraKnownMarketplaces) via assert_marketplace_wiring()
-#           -- issue #245: the enable conjunct is DROPPED, not relocated. The
-#           stamp no longer writes enabledPlugins (the repo-level declaration
-#           is the project-scope-record generator), enablement is user-scope
-#           state outside the repository, and this suite executes no loader --
-#           so provisioning the enable in the hermetic config dir and then
-#           asserting it would be a double standing in for the state under
-#           test. What remains real about init.sh's output is asserted, and
-#           the predicate's name no longer claims enablement.
-#     E4w-nv  (permanent negative self-test, immediately after E4w) a scratch
-#           settings copy with extraKnownMarketplaces dropped ->
-#           assert_marketplace_wiring() FAILs (proves E4w's predicate
-#           discriminates a broken pin; re-pointed with E4w onto the conjunct
-#           that survives)
-#     E4x   (issue #95 inversion of the #963 AC1 E-leg) the same post-init.sh
-#           settings.json carries NO env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
-#           key (the Agent Teams channel is retired; the pin no longer ships it)
-#     E4x-nv  (permanent negative self-test, immediately after E4x) a scratch
-#           settings copy with the retired env key injected -> the env
-#           predicate FAILs (proves E4x's predicate discriminates a stale pin)
-#     E4a   seeded PASS state -> `gh pr create` admitted (exit 0) via the
-#           gate hook's scores-gated branch, driven with CLAUDE_PROJECT_DIR=<dummy>
-#           against the plugin-package hook copy
-#     E4b   `gh pr merge` denied unconditionally (exit 2)
-#     E4c   `git push origin main` denied while active:true (exit 2)
-#     E4d   NOT-passing AUDIT/GATE:QUALITY scores -> `gh pr create` denied (exit 2)
-#     E4-claim  (after E4d) static self-check: the retired over-claim phrase
-#           (see _E4CLAIM_PATTERN below) is absent whole-suite, and the
-#           corrected claim + AC4 cross-reference are present in the W-E4 region
-#     E4e   installed docs/autoflow-guide.md documents the single-repo
-#           no-`blocked-by-subrepo`-label Merge-Sequencing rule
-#
-#   W-E4' HOST-runtime label observation (item-7 runtime gap):
-#     E4f   `--no-subrepo-dep` invocation of the HOST create-host-pr.sh (run
-#           under bash, a gh-stub on PATH) carries --draft + blocked-by-review,
-#           NOT blocked-by-subrepo
-#     E4g   contrast arm (same entrypoint, no flag) -> blocked-by-subrepo IS
-#           present (non-vacuity guard on E4f)
-#     E4h   no-merge invariant: the gh stub records no `gh pr merge` across
-#           the E4f/E4g invocations (independently captured logs, via the
-#           shared log_has_merge() helper)
-#     E4h-nv  (permanent non-vacuity self-test, after E4h) a synthesized
-#           E4f-window log carrying a `merge` token -> log_has_merge() detects it
-#
-#   W-E5 generalization-defect capture discipline (item 8):
-#     E5a   F3 (manual-scenarios-797.md) exists, prescribes the live-LLM-cycle
-#           pilot, carries the generalization-defect->S-stage/#-issue recording
-#           template, and marks every deferred step NOT-automated with a reason
-#     E5b   failc() self-attributes: a forced failure line carries both the
-#           failing AC id and its owning-stage tag (self-tested)
-#
-#   W-R regression (baseline unaffected by this branch):
-#     E-Ra  tests/plugin/verify-install-into-target.sh is present (the
-#           whole-suite re-run is retired -- contract-suites.yml:317 runs it)
-#     E-Rb  tests/plugin/verify-package.sh is present (the whole-suite re-run
-#           is retired -- plugin-package.yml:93 runs it)
-#
-#   NOT automated (E/M types — see tests/plugin/manual-scenarios-797.md):
-#     E-M1  a live AutoFlow LLM cycle reasoning-driven inside the dummy target
-#     E-M2  a real `gh pr create` against a live GitHub remote from the target
-#
-# RED framing (feature §5 / verification §5): before this file exists, every
-# EA-*/E-series assertion is unreachable (suite absent). Once authored, the
-# composed mechanisms it drives (install/manifest/drift/host-purity/gate-hook/
-# create-host-pr.sh) are already merged on `main` (#788, #790-#796 CLOSED), so
-# a correct composition is expected to PASS immediately — a RED-state FAIL
-# here would localize a genuine composition/ordering defect, which is
-# precisely the surface #797 targets (verification §5 RED-first note). F2 (CI
-# workflow wiring) is the only artifact this suite's authoring does not itself
-# provide and is Developer-AI/GREEN scope.
+#   W-E4 installed settings wiring and gate-hook smoke (packaging):
+#     E4w   the post-install .claude/settings.json carries the marketplace
+#           wiring (extraKnownMarketplaces) via assert_marketplace_wiring()
+#     E4w-nv  negative self-test: assert_marketplace_wiring() FAILs on a
+#           settings copy with extraKnownMarketplaces dropped
+#     E4b   the packaged gate hook, invoked once, returns a decision: a benign
+#           command is allowed (exit 0)
 # =============================================================================
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -144,13 +50,7 @@ INIT_SH="$REPO_ROOT/setup/init.sh"
 MANIFEST="$REPO_ROOT/setup/manifest.json"
 HOOK="$REPO_ROOT/plugin/autoflow/hooks/check-autoflow-gate.sh"
 TOKENS="$REPO_ROOT/tests/fixtures/host-purity-tokens.txt"
-HOST_PURITY_PATHS="$REPO_ROOT/tests/fixtures/host-purity-paths.txt"
 E2A_BASELINE="$REPO_ROOT/tests/fixtures/e2e-bundle-purity-baseline.txt"
-CREATE_HOST_PR="$REPO_ROOT/scripts/handoff/create-host-pr.sh"
-VERIFY_INSTALL="$REPO_ROOT/tests/plugin/verify-install-into-target.sh"
-VERIFY_PACKAGE="$REPO_ROOT/tests/plugin/verify-package.sh"
-MANUAL_SCENARIOS="$REPO_ROOT/tests/plugin/manual-scenarios-797.md"
-SELF_PATH_REL="tests/plugin/verify-e2e-dummy-target.sh"
 IMPORT_LINE='@./.claude/autoflow/METHODOLOGY.md'
 
 PASS_COUNT=0
@@ -211,61 +111,13 @@ CLAUDEMD
   )
 }
 
-# glob_match <path> <glob> — scanner-equivalent glob semantics (per
-# tests/fixtures/host-purity-paths.txt header): `**` matches any characters
-# including `/`; a single `*` matches within one path segment (not `/`);
-# every other character is literal.
-glob_match() {
-  _gm_pat_ere=$(printf '%s' "$2" \
-    | sed -e 's/[.[\^$()+{}|]/\\&/g' \
-          -e 's/\*\*/@@DBLSTAR@@/g' \
-          -e 's/\*/[^\/]*/g' \
-          -e 's/@@DBLSTAR@@/.*/g')
-  printf '%s' "$1" | grep -qE "^${_gm_pat_ere}\$"
-}
-
-# path_is_host_scanned <repo-relative-path> — total per-path precedence
-# (allow > exclude > include) per tests/fixtures/host-purity-paths.txt header.
-# Prints "yes"/"no".
-path_is_host_scanned() {
-  _phs_path="$1"
-  _phs_included=0; _phs_excluded=0; _phs_allowed=0
-  while IFS= read -r _phs_line; do
-    case "$_phs_line" in
-      ''|'#'*) continue ;;
-    esac
-    _phs_kind=$(printf '%s' "$_phs_line" | awk '{print $1}')
-    _phs_pat=$(printf '%s' "$_phs_line" | awk '{print $2}')
-    [ -n "$_phs_pat" ] || continue
-    case "$_phs_kind" in
-      include) glob_match "$_phs_path" "$_phs_pat" && _phs_included=1 ;;
-      exclude) glob_match "$_phs_path" "$_phs_pat" && _phs_excluded=1 ;;
-      allow)   glob_match "$_phs_path" "$_phs_pat" && _phs_allowed=1 ;;
-    esac
-  done < "$HOST_PURITY_PATHS"
-  if [ "$_phs_included" -eq 1 ] && [ "$_phs_excluded" -eq 0 ] && [ "$_phs_allowed" -eq 0 ]; then
-    printf 'yes'
-  else
-    printf 'no'
-  fi
-}
-
 # gate_bash_json <command> — synthesize a PreToolUse Bash payload.
 gate_bash_json() {
   printf '{"tool_name":"Bash","tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)"
 }
 
-# log_has_merge <log-file> — shared E4h/E4h-nv predicate (feature §4.2/DCR-4):
-# true iff the captured gh-stub argv log contains a bare `merge` token. Both
-# the real E4h no-merge assertion and the E4h-nv non-vacuity self-test invoke
-# this exact helper, so the self-test exercises E4h's real code path instead
-# of a re-typed parallel grep that could silently drift (e.g. lose `-x`).
-log_has_merge() {
-  grep -qix 'merge' "$1" 2>/dev/null
-}
-
 # assert_marketplace_wiring <settings-json-path> — shared E4w/E4w-nv
-# predicate (feature §3.2/DCR-5, narrowed by issue #245): true iff the given
+# predicate (narrowed by issue #245): true iff the given
 # settings file has extraKnownMarketplaces["autoflow"].source.repo ==
 # "Munsik-Park/autoflow" -- an explicit value comparison, not `// empty`
 # truthiness, so a dropped key FAILs rather than silently passing.
@@ -288,26 +140,19 @@ assert_marketplace_wiring() {
 }
 
 # ── Temp targets ──────────────────────────────────────────────────────────────
-DUMMY=$(mktemp -d)         # primary: E1a-e, E2a/b, E3a/b, E4w/a-e
-DRIFT_DUMMY=$(mktemp -d)   # E3d: content-drift injection arm
+DUMMY=$(mktemp -d)         # primary: E1a-e, E2a, E3a/b, E4w, E4b
 SNAP_DIR=$(mktemp -d)      # E1d: pre-install snapshots of foreign payload
 PRE_LIST_FILE=$(mktemp)
 POST_LIST_FILE=$(mktemp)
 CLAUDE_SNAP1=$(mktemp)
 RELOC_PARENT=$(mktemp -d)  # E3c: relocated-target independence check
-GH_LOG_F=$(mktemp)         # E4f/E4h: gh-stub argv recording (--no-subrepo-dep invocation)
-GH_LOG_G=$(mktemp)         # E4g/E4h: gh-stub argv recording (default invocation)
-GH_LOG_NV=$(mktemp)        # E4h-nv: synthesized E4f-window log carrying a forced merge token
-MOCK_GH_DIR=$(mktemp -d)
-BODY_FILE=$(mktemp)
 E2A_CURRENT=$(mktemp)      # E2a: current installed-bundle offender set (sorted)
 E2A_BASELINE_SORTED=$(mktemp)  # E2a: committed ratchet baseline, normalized+sorted
 SETTINGS_NV=$(mktemp)      # E4w-nv: scratch settings copy with the asserted pin key dropped
 
 cleanup() {
-  rm -rf "$DUMMY" "$DRIFT_DUMMY" "$SNAP_DIR" "$PRE_LIST_FILE" "$POST_LIST_FILE" \
-         "$CLAUDE_SNAP1" "$RELOC_PARENT" "$GH_LOG_F" "$GH_LOG_G" "$GH_LOG_NV" \
-         "$MOCK_GH_DIR" "$BODY_FILE" \
+  rm -rf "$DUMMY" "$SNAP_DIR" "$PRE_LIST_FILE" "$POST_LIST_FILE" \
+         "$CLAUDE_SNAP1" "$RELOC_PARENT" \
          "$E2A_CURRENT" "$E2A_BASELINE_SORTED" "$SETTINGS_NV"
 }
 # Hermetic plugin discovery (issue #167): drift-check.sh D2/D4/D5 resolve the
@@ -321,23 +166,8 @@ export CLAUDE_CONFIG_DIR="$HERMETIC_CONFIG_DIR"
 unset CLAUDE_PLUGIN_ROOT AUTOFLOW_MARKETPLACE_ROOT
 trap 'cleanup; rm -rf "$HERMETIC_CONFIG_DIR"' EXIT INT TERM
 
-printf 'body\n' > "$BODY_FILE"
-
-# gh stub — records argv (one element per line) when $GH_INVOCATION_LOG is set,
-# then exits 0. Same technique as tests/issue-92/mock-gh (repo's established
-# mocked-binary pattern), written independently here (host-script arms only).
-MOCK_GH="$MOCK_GH_DIR/gh"
-cat > "$MOCK_GH" <<'MOCKGH'
-#!/bin/sh
-if [ -n "${GH_INVOCATION_LOG:-}" ]; then
-  for _a in "$@"; do printf '%s\n' "$_a" >> "$GH_INVOCATION_LOG"; done
-fi
-exit 0
-MOCKGH
-chmod +x "$MOCK_GH"
-
 # ══════════════════════════════════════════════════════════════════════════════
-# W-E1 — provisioning & install composition
+# W-E1 — install into the dummy target
 # ══════════════════════════════════════════════════════════════════════════════
 
 echo "== E1a: make_dummy_target() yields a realistic, zero-submodule fixture =="
@@ -424,47 +254,11 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   ( cd "$DUMMY" && find . -type f -not -path './.git/*' | sort ) > "$POST_LIST_FILE"
   NEW_FILES=$(comm -13 "$PRE_LIST_FILE" "$POST_LIST_FILE")
   BAD_NEW=""
-  # #979 lockstep update (feature design §4 rows 1-6, §8 OQ3, GATE:PLAN PASS
-  # avg 9.0, ledger E12): the reviewer-backend-selection delivery adds four
-  # source-path-preserved dests outside .claude/ on a fresh (dummy) target --
-  # scripts/review/, scripts/preflight/ (copy rows, mirrors the workflow-file
-  # source-path-preserved precedent), .codex/review.md and AGENTS.md (copy +
-  # scaffold rows; on a real repo these paths pre-exist, but the E1a dummy
-  # fixture starts empty so install genuinely creates them here).
-  # issue #10 widening (verification-design DCR-1 / feature design C4): the
-  # manifest-registration-gap fix registers the methodology-step scripts the
-  # stamped docs already instruct a consumer to run. scripts/handoff/create-
-  # host-pr.sh and scripts/cleanup/cleanup-issue.sh land under
-  # scripts/handoff/** and scripts/cleanup/**, neither previously allow-
-  # listed, so the case pattern is widened to admit these two new dest
-  # classes (same source-path-preserved copy-row shape as scripts/review/*
-  # and scripts/preflight/*).
-  # issue #192 widening: the manifest-registration gap that #10 fixed for four
-  # scripts had re-accumulated -- nine more scripts the stamped docs instruct a
-  # target to run were unregistered (the suite plane run-suites/select-suites/
-  # suite-manifest and the two standing suite lints, plus the result-inheritance
-  # scripts #228 has since deleted, scripts/gate/remedy-route.sh and
-  # scripts/review/scope-bounded.sh), together with the files they source
-  # (invocation-scan.sh, tests/lib/base-ref.sh). They land under scripts/gate/**,
-  # scripts/test/** and tests/lib/**, none previously allow-listed, so the case
-  # pattern admits these three dest classes on the same source-path-preserved
-  # copy-row basis as scripts/handoff/** and scripts/cleanup/**.
-  # issue #96 widening (ledger E36 CI red): the AI issue-creation gate ships
-  # scripts/issue/create-issue.sh as a root-layer copy row, so ./scripts/issue/*
-  # is admitted on the same source-path-preserved basis.
-  # issue #97 widening (CI red on PR #104): scripts/ledger/ledger-entry-id.sh
-  # ships as a root-layer manifest artifact (tier root-layer, kind copy), so
-  # ./scripts/ledger/* is admitted on the same source-path-preserved basis.
-  # issue #150 widening (feature design §9): scripts/spawn-policy/spawn-policy.sh
-  # ships as a root-layer manifest artifact with its source path preserved,
-  # so ./scripts/spawn-policy/* is admitted on the same source-path-preserved
-  # basis as scripts/ledger/* and scripts/issue/*.
-  # issues #167/#169: scripts/lib/plugin-root.sh (the plugin / marketplace-
-  # clone resolver sourced by drift-check.sh and spawn-policy.sh) ships the
-  # same way, so ./scripts/lib/* is admitted on the same basis.
-  # issue #179: scripts/architect/relay-state.sh (the ARCHITECT relay's
-  # transcript state, run by the stamped relay procedure) ships as a root-layer
-  # copy row, so ./scripts/architect/* is admitted on the same basis.
+  # The admitted dest classes are where the manifest's root-layer copy and
+  # scaffold rows install outside .claude/, each with its source path preserved
+  # (scripts/<dir>/*, tests/lib/*, .codex/review.md, AGENTS.md). On a real
+  # repository some of these paths pre-exist; the E1a fixture starts without
+  # them, so install genuinely creates them here.
   for _nf in $NEW_FILES; do
     case "$_nf" in
       ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./scripts/architect/*|./scripts/gate/*|./scripts/test/*|./tests/lib/*|./.codex/*|./AGENTS.md) : ;;
@@ -500,7 +294,7 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# W-E2 — bundle-in-target host-purity (composition boundary of item 4)
+# W-E2 — installed-bundle host purity
 # ══════════════════════════════════════════════════════════════════════════════
 
 echo "== E2a: installed .claude/autoflow/** host-purity-token hits are ratcheted against the committed baseline =="
@@ -530,20 +324,8 @@ else
   failc "E2a" "S2/#788" "installed .claude/autoflow absent, tokens fixture missing, or baseline fixture missing -- cannot scan"
 fi
 
-echo "== E2b: this suite's own fixture-generator path is not host-purity-scanned (self-clean) =="
-if [ -f "$HOST_PURITY_PATHS" ]; then
-  _scanned=$(path_is_host_scanned "$SELF_PATH_REL")
-  if [ "$_scanned" = "no" ]; then
-    pass "E2b: $SELF_PATH_REL is not classified host-owned by the DELTA-guard config scope (excluded via tests/**)"
-  else
-    failc "E2b" "S2/#788" "$SELF_PATH_REL is classified host-owned -- adding this E2E would trip the DELTA guard"
-  fi
-else
-  failc "E2b" "S2/#788" "host-purity-paths.txt missing at $HOST_PURITY_PATHS"
-fi
-
 # ══════════════════════════════════════════════════════════════════════════════
-# W-E3 — manifest & drift composition (boundary of items 5/6)
+# W-E3 — installed manifest closure and clean drift-check
 # ══════════════════════════════════════════════════════════════════════════════
 
 echo "== E3a: every kind:copy manifest dest exists on disk in the installed target =="
@@ -564,8 +346,8 @@ else
   failc "E3a" "S5/#792" "prerequisite install failed or manifest.json absent"
 fi
 
-# ── E3a-x (issue #10, DCR-2 settled IN scope): installed exec bit on the 4 ────
-# new methodology-step scripts. init.sh:93 copies via plain `cp` (no -p), so
+# ── E3a-x (issue #10): installed exec bit on the shipped methodology-step ─────
+# scripts. init.sh copies via plain `cp` (no -p), so
 # mode preservation is umask/platform-adjacent, not guaranteed by install
 # logic; the Post-Merge Cleanup [MUST] wrapper invokes
 # ./scripts/cleanup/cleanup-issue.sh <N> directly and the allow-list entry
@@ -628,47 +410,10 @@ else
   failc "E3c" "S5/#792" "drift-check.sh not installed -- cannot run relocation-independence check"
 fi
 
-echo "== E3d: injected content drift -> installed drift-check.sh exits 1 with D1 class (non-vacuity) =="
-make_dummy_target "$DRIFT_DUMMY"
-if [ -f "$INIT_SH" ]; then
-  bash "$INIT_SH" --target "$DRIFT_DUMMY" </dev/null >/dev/null 2>&1
-  _dd_code=$?
-else
-  _dd_code=1
-fi
-DRIFT_TARGET_SH="$DRIFT_DUMMY/.claude/autoflow/drift-check.sh"
-if [ "$_dd_code" -eq 0 ] && [ -f "$DRIFT_TARGET_SH" ]; then
-  _mutate_target="$DRIFT_DUMMY/.claude/autoflow/METHODOLOGY.md"
-  if [ -f "$_mutate_target" ]; then
-    printf '\nDRIFT_MUTATION_E3D\n' >> "$_mutate_target"
-    E3D_OUT=$(CLAUDE_PROJECT_DIR="$DRIFT_DUMMY" sh "$DRIFT_TARGET_SH" 2>&1)
-    E3D_CODE=$?
-    if [ "$E3D_CODE" -ne 0 ] && printf '%s\n' "$E3D_OUT" | grep -qF 'D1'; then
-      pass "E3d: injected content drift caught by the installed detector (non-zero, D1 class)"
-    elif [ "$E3D_CODE" -ne 0 ]; then
-      pass "E3d: injected content drift caught by the installed detector (non-zero exit)"
-    else
-      failc "E3d" "S5/#792" "installed detector exited 0 after content mutation (drift not caught -- vacuity risk)"
-    fi
-  else
-    failc "E3d" "S5/#792" "METHODOLOGY.md missing in DRIFT_DUMMY -- cannot mutate for D1 arm"
-  fi
-else
-  failc "E3d" "S5/#792" "install into DRIFT_DUMMY failed (exit $_dd_code) or detector absent"
-fi
-
 # ══════════════════════════════════════════════════════════════════════════════
-# W-E4 — single-repo HANDOFF gate behavior (gate hook scores-gated admit/deny
-# branches, resolved via CLAUDE_PROJECT_DIR=<dummy> against the plugin-package
-# hook copy, HOOK=$REPO_ROOT/plugin/autoflow/hooks/... at :98). The plugin-
-# delivered hook RESOLUTION seam (${CLAUDE_PLUGIN_ROOT} substitution / decoy)
-# is covered behaviorally by verify-package.sh AC4 (:230-298), NOT here --
-# E4w below only asserts that the install-time wiring landed (issue-797
-# review-response cycle 2, Codex Medium finding 1 / :98,:516).
+# W-E4 — installed settings wiring and gate-hook smoke
 # ══════════════════════════════════════════════════════════════════════════════
 
-mkdir -p "$DUMMY/.autoflow"
-GATE_STATE="$DUMMY/.autoflow/issue-999.json"
 DUMMY_SETTINGS="$DUMMY/.claude/settings.json"
 
 echo "== E4w: post-init.sh target settings.json landed the marketplace wiring =="
@@ -690,238 +435,19 @@ else
   failc "E4w-nv" "single-repo-HANDOFF" "$DUMMY_SETTINGS missing -- cannot build the tampered scratch copy"
 fi
 
-echo "== E4x (issue #95): post-init.sh target settings.json carries NO retired Agent Teams env key =="
-if [ "$DRIVE_PASS" -eq 1 ] && [ -f "$DUMMY_SETTINGS" ] && jq -e '(.env // {}) | has("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS") | not' "$DUMMY_SETTINGS" >/dev/null 2>&1; then
-  pass "E4x: \$DUMMY/.claude/settings.json carries no env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS key (Agent Teams channel retired)"
-else
-  failc "E4x" "single-repo-HANDOFF" "env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS found in $DUMMY_SETTINGS -- settings-pin still ships the retired Agent Teams env (issue #95)"
-fi
-
-echo "== E4x-nv (issue #95): negative self-test -- the env predicate FAILs on a settings copy with the retired key injected =="
-if [ -f "$DUMMY_SETTINGS" ]; then
-  jq '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"' "$DUMMY_SETTINGS" > "$SETTINGS_NV" 2>/dev/null
-  if ! jq -e '(.env // {}) | has("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS") | not' "$SETTINGS_NV" >/dev/null 2>&1; then
-    pass "E4x-nv: env predicate rejects a settings copy with the retired env key injected (E4x's predicate discriminates)"
-  else
-    failc "E4x-nv" "single-repo-HANDOFF" "env predicate wrongly accepted a settings copy carrying the retired env key -- E4x would be vacuous"
-  fi
-else
-  failc "E4x-nv" "single-repo-HANDOFF" "$DUMMY_SETTINGS missing -- cannot build the tampered scratch copy"
-fi
-
-echo "== E4a: seeded PASS state -> gh pr create admitted via the gate hook's scores-gated branch =="
-cat > "$GATE_STATE" <<'STATEPASS'
-{"active": true, "issue": "#999", "phases": {"audit": {"scores": {"a": {"score": 8}, "b": {"score": 8}}}, "gate_quality": {"scores": {"a": {"score": 8}, "b": {"score": 8}}}}}
-STATEPASS
+# The allow case is the smoke: exit 0 cannot come from a script bash fails to
+# parse, whose exit status (2) coincides with the deny status.
+echo "== E4b: packaged gate hook smoke -- a benign command is allowed (exit 0) =="
 if [ -f "$HOOK" ]; then
-  E4A_OUT=$(printf '%s' "$(gate_bash_json 'gh pr create --draft --title t --body-file b.md')" | CLAUDE_PROJECT_DIR="$DUMMY" bash "$HOOK" 2>&1)
-  E4A_CODE=$?
-  if [ "$E4A_CODE" -eq 0 ]; then
-    pass "E4a: gate hook admits gh pr create with PASS scores (exit 0)"
-  else
-    failc "E4a" "single-repo-HANDOFF" "gate hook denied gh pr create with PASS scores (exit $E4A_CODE): $E4A_OUT"
-  fi
-else
-  failc "E4a" "single-repo-HANDOFF" "gate hook missing at $HOOK"
-fi
-
-echo "== E4b: gh pr merge denied unconditionally via the gate hook's scores-gated branch =="
-if [ -f "$HOOK" ]; then
-  E4B_OUT=$(printf '%s' "$(gate_bash_json 'gh pr merge 999 --squash')" | CLAUDE_PROJECT_DIR="$DUMMY" bash "$HOOK" 2>&1)
+  E4B_OUT=$(printf '%s' "$(gate_bash_json 'ls')" | CLAUDE_PROJECT_DIR="$DUMMY" bash "$HOOK" 2>&1)
   E4B_CODE=$?
-  if [ "$E4B_CODE" -eq 2 ]; then
-    pass "E4b: gate hook denies gh pr merge (exit 2)"
+  if [ "$E4B_CODE" -eq 0 ]; then
+    pass "E4b: installed gate hook runs and allows a benign command (exit 0)"
   else
-    failc "E4b" "single-repo-HANDOFF" "gate hook did not deny gh pr merge (exit $E4B_CODE)"
+    failc "E4b" "single-repo-HANDOFF" "installed gate hook did not return allow for a benign command (exit $E4B_CODE): $E4B_OUT"
   fi
 else
   failc "E4b" "single-repo-HANDOFF" "gate hook missing at $HOOK"
-fi
-
-echo "== E4c: git push origin main denied while active:true via the gate hook's scores-gated branch =="
-if [ -f "$HOOK" ]; then
-  E4C_OUT=$(printf '%s' "$(gate_bash_json 'git push origin main')" | CLAUDE_PROJECT_DIR="$DUMMY" bash "$HOOK" 2>&1)
-  E4C_CODE=$?
-  if [ "$E4C_CODE" -eq 2 ]; then
-    pass "E4c: gate hook denies default-branch push (exit 2)"
-  else
-    failc "E4c" "single-repo-HANDOFF" "gate hook did not deny default-branch push (exit $E4C_CODE)"
-  fi
-else
-  failc "E4c" "single-repo-HANDOFF" "gate hook missing at $HOOK"
-fi
-
-echo "== E4d: NOT-passing AUDIT/GATE:QUALITY scores -> gh pr create denied via the gate hook's scores-gated branch =="
-cat > "$GATE_STATE" <<'STATEFAIL'
-{"active": true, "issue": "#999", "phases": {"audit": {"scores": {}}, "gate_quality": {"scores": {}}}}
-STATEFAIL
-if [ -f "$HOOK" ]; then
-  E4D_OUT=$(printf '%s' "$(gate_bash_json 'gh pr create --draft --title t --body-file b.md')" | CLAUDE_PROJECT_DIR="$DUMMY" bash "$HOOK" 2>&1)
-  E4D_CODE=$?
-  if [ "$E4D_CODE" -eq 2 ]; then
-    pass "E4d: gate hook denies gh pr create with unscored AUDIT/GATE:QUALITY (exit 2)"
-  else
-    failc "E4d" "single-repo-HANDOFF" "gate hook did not deny gh pr create with unscored gates (exit $E4D_CODE)"
-  fi
-else
-  failc "E4d" "single-repo-HANDOFF" "gate hook missing at $HOOK"
-fi
-
-echo "== E4-claim: claim-accuracy self-check -- retired over-claim phrase absent, corrected claim + AC4 cross-reference present =="
-# Built from split literals so the retired phrase never appears CONTIGUOUS
-# anywhere in this suite's own source (self-grep safety: the guard must not
-# self-match its own pattern definition -- GATE:PLAN Feasibility caveat).
-_E4CLAIM_HOOK_TOKEN="installed[- ]gate[- ]hook"
-_E4CLAIM_COMP_A="installed-hook"
-_E4CLAIM_COMP_B=" composition"
-_E4CLAIM_PATTERN="${_E4CLAIM_HOOK_TOKEN}|${_E4CLAIM_COMP_A}${_E4CLAIM_COMP_B}"
-SELF_ABS="$REPO_ROOT/$SELF_PATH_REL"
-_e4claim_ok=1
-if [ -f "$SELF_ABS" ] && grep -inE "$_E4CLAIM_PATTERN" "$SELF_ABS" >/dev/null 2>&1; then
-  failc "E4-claim" "single-repo-HANDOFF" "a retired over-claim phrase still survives (whole-suite phrase sweep) in $SELF_ABS"
-  _e4claim_ok=0
-fi
-_w_e4_ctx="$(grep -A8 '^# W-E4 ' "$SELF_ABS" 2>/dev/null)"
-if ! printf '%s\n' "$_w_e4_ctx" | grep -qF 'verify-package.sh AC4'; then
-  failc "E4-claim" "single-repo-HANDOFF" "W-E4 region is missing the verify-package.sh AC4 cross-reference"
-  _e4claim_ok=0
-fi
-if ! printf '%s\n' "$_w_e4_ctx" | grep -qF 'scores-gated admit/deny'; then
-  failc "E4-claim" "single-repo-HANDOFF" "W-E4 region is missing the corrected claim wording (scores-gated admit/deny)"
-  _e4claim_ok=0
-fi
-[ "$_e4claim_ok" -eq 1 ] && pass "E4-claim: no over-claim phrase survives, and the corrected claim + AC4 cross-reference are present"
-
-echo "== E4e: installed docs/autoflow-guide.md documents the single-repo no-blocked-by-subrepo rule =="
-INSTALLED_GUIDE="$DUMMY/.claude/autoflow/docs/autoflow-guide.md"
-if [ -f "$INSTALLED_GUIDE" ]; then
-  if grep -qF 'zero submodules' "$INSTALLED_GUIDE" \
-     && grep -qF 'no `blocked-by-subrepo` label' "$INSTALLED_GUIDE"; then
-    pass "E4e: installed methodology copy documents the single-repo zero-submodule no-blocked-by-subrepo rule"
-  else
-    failc "E4e" "single-repo-HANDOFF" "installed autoflow-guide.md lacks the single-repo no-blocked-by-subrepo Merge-Sequencing text"
-  fi
-else
-  failc "E4e" "single-repo-HANDOFF" "installed docs/autoflow-guide.md missing at $INSTALLED_GUIDE"
-fi
-
-# ══════════════════════════════════════════════════════════════════════════════
-# W-E4' — HOST-runtime label observation (item-7 runtime gap)
-# ══════════════════════════════════════════════════════════════════════════════
-# create-host-pr.sh is #!/usr/bin/env bash and builds argv with a bash array
-# (args=(...) at create-host-pr.sh:47) -- run under bash explicitly, never
-# sourced into / run under this suite's POSIX-sh body. Absent from
-# setup/manifest.json: never installed into a target (host-script runtime,
-# distinct from the E4w/E4a-e gate-hook scores-branch arms above).
-
-echo "== E4f: --no-subrepo-dep host invocation carries --draft + blocked-by-review, NOT blocked-by-subrepo =="
-if [ -f "$CREATE_HOST_PR" ]; then
-  PATH="$MOCK_GH_DIR:$PATH" GH_INVOCATION_LOG="$GH_LOG_F" \
-    bash "$CREATE_HOST_PR" --issue 999 --title "E2E dummy-target test" --body-file "$BODY_FILE" --no-subrepo-dep >/dev/null 2>&1
-  E4F_CODE=$?
-  if [ "$E4F_CODE" -eq 0 ]; then
-    if grep -qFx -- '--draft' "$GH_LOG_F" \
-       && grep -qFx -- 'blocked-by-review' "$GH_LOG_F" \
-       && ! grep -qFx -- 'blocked-by-subrepo' "$GH_LOG_F"; then
-      pass "E4f: --no-subrepo-dep argv carries --draft + blocked-by-review, omits blocked-by-subrepo"
-    else
-      failc "E4f" "single-repo-HANDOFF" "argv did not match expected single-repo label set: $(cat "$GH_LOG_F" | tr '\n' ' ')"
-    fi
-  else
-    failc "E4f" "single-repo-HANDOFF" "create-host-pr.sh --no-subrepo-dep exited $E4F_CODE"
-  fi
-else
-  failc "E4f" "single-repo-HANDOFF" "scripts/handoff/create-host-pr.sh missing at $CREATE_HOST_PR"
-fi
-
-echo "== E4g: contrast arm (no --no-subrepo-dep) -> blocked-by-subrepo IS present (non-vacuity) =="
-if [ -f "$CREATE_HOST_PR" ]; then
-  PATH="$MOCK_GH_DIR:$PATH" GH_INVOCATION_LOG="$GH_LOG_G" \
-    bash "$CREATE_HOST_PR" --issue 999 --title "E2E dummy-target test" --body-file "$BODY_FILE" >/dev/null 2>&1
-  E4G_CODE=$?
-  if [ "$E4G_CODE" -eq 0 ] && grep -qFx -- 'blocked-by-subrepo' "$GH_LOG_G"; then
-    pass "E4g: default (no --no-subrepo-dep) invocation carries blocked-by-subrepo -- proves E4f's absence is flag-caused"
-  else
-    failc "E4g" "single-repo-HANDOFF" "default invocation did not carry blocked-by-subrepo (exit $E4G_CODE; log: $(cat "$GH_LOG_G" | tr '\n' ' '))"
-  fi
-else
-  failc "E4g" "single-repo-HANDOFF" "scripts/handoff/create-host-pr.sh missing at $CREATE_HOST_PR"
-fi
-
-echo "== E4h: no-merge invariant across BOTH the E4f and E4g invocations -- gh stub records no gh pr merge =="
-if [ -f "$CREATE_HOST_PR" ]; then
-  if log_has_merge "$GH_LOG_F"; then
-    failc "E4h" "single-repo-HANDOFF" "gh stub recorded a 'merge' token in the E4f (--no-subrepo-dep) HANDOFF invocation"
-  elif log_has_merge "$GH_LOG_G"; then
-    failc "E4h" "single-repo-HANDOFF" "gh stub recorded a 'merge' token in the E4g (default) HANDOFF invocation"
-  else
-    pass "E4h: gh stub recorded no 'gh pr merge' in EITHER HANDOFF entrypoint invocation (E4f + E4g)"
-  fi
-else
-  failc "E4h" "single-repo-HANDOFF" "scripts/handoff/create-host-pr.sh missing at $CREATE_HOST_PR"
-fi
-
-echo "== E4h-nv: non-vacuity self-test -- a synthesized E4f-window merge token IS detected by log_has_merge() =="
-printf 'merge\n' > "$GH_LOG_NV"
-if log_has_merge "$GH_LOG_NV"; then
-  pass "E4h-nv: log_has_merge() detects a synthesized merge token in the E4f-window log (E4h's real code path is exercised)"
-else
-  failc "E4h-nv" "single-repo-HANDOFF" "log_has_merge() failed to detect a synthesized merge token -- E4h's no-merge check would be vacuous"
-fi
-
-# ══════════════════════════════════════════════════════════════════════════════
-# W-E5 — generalization-defect capture discipline (item 8)
-# ══════════════════════════════════════════════════════════════════════════════
-
-echo "== E5a: F3 manual-scenarios-797.md exists, prescribes the live-cycle pilot + defect-recording template =="
-if [ -f "$MANUAL_SCENARIOS" ]; then
-  _e5a_ok=1
-  if ! grep -qiE 'PREFLIGHT|HANDOFF|full.*cycle|live.*cycle' "$MANUAL_SCENARIOS"; then
-    failc "E5a" "single-repo-HANDOFF" "F3 lacks live-LLM-cycle pilot step prescription"
-    _e5a_ok=0
-  fi
-  if ! grep -qiE 'generalization.defect' "$MANUAL_SCENARIOS" || ! grep -qiE 'S-stage|S[0-9]|#[0-9]' "$MANUAL_SCENARIOS"; then
-    failc "E5a" "single-repo-HANDOFF" "F3 lacks a generalization-defect -> S-stage/#-issue recording template"
-    _e5a_ok=0
-  fi
-  if ! grep -qiE 'NOT.automated|not automated' "$MANUAL_SCENARIOS"; then
-    failc "E5a" "single-repo-HANDOFF" "F3 does not explicitly mark deferred steps NOT-automated"
-    _e5a_ok=0
-  fi
-  [ "$_e5a_ok" -eq 1 ] && pass "E5a: F3 exists and covers live-pilot steps, defect-recording template, and NOT-automated marking"
-else
-  failc "E5a" "single-repo-HANDOFF" "tests/plugin/manual-scenarios-797.md missing at $MANUAL_SCENARIOS"
-fi
-
-echo "== E5b: failc() self-attributes -- forced failure emits both the AC id and the owning-stage tag =="
-E5B_OUT=$(failc 'E5B-SELFTEST' 'S2/#788' 'synthetic self-test failure (forced, not a real defect)')
-if printf '%s\n' "$E5B_OUT" | grep -qF 'E5B-SELFTEST' && printf '%s\n' "$E5B_OUT" | grep -qF '[stage:S2/#788]'; then
-  pass "E5b: failc() emits both the failing AC id and the owning-stage tag on a forced failure (self-attributing)"
-else
-  failc "E5b" "single-repo-HANDOFF" "failc() self-test did not emit expected AC id + stage tag; output=$E5B_OUT"
-fi
-
-# ══════════════════════════════════════════════════════════════════════════════
-# W-R — regression (baseline unaffected)
-# ══════════════════════════════════════════════════════════════════════════════
-
-echo "== E-Ra: verify-install-into-target.sh is present =="
-# The whole-suite re-run is retired (issue #103 cycle 3): that suite carries its
-# own registered `run:` step at contract-suites.yml:317, so a regression in it
-# reds CI under its own name once rather than twice. The presence half stays --
-# this file composes against that suite's install output in the stages above.
-if [ -f "$VERIFY_INSTALL" ]; then
-  pass "E-Ra: install acceptance suite is present at $VERIFY_INSTALL"
-else
-  failc "E-Ra" "S5/#792" "tests/plugin/verify-install-into-target.sh missing at $VERIFY_INSTALL"
-fi
-
-echo "== E-Rb: verify-package.sh is present =="
-# Same disposition as E-Ra; the callee's registered step is plugin-package.yml:93.
-if [ -f "$VERIFY_PACKAGE" ]; then
-  pass "E-Rb: packaging acceptance suite is present at $VERIFY_PACKAGE"
-else
-  failc "E-Rb" "S5/#792" "tests/plugin/verify-package.sh missing at $VERIFY_PACKAGE"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────

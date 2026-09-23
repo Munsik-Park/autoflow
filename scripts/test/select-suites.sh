@@ -17,10 +17,10 @@
 #     behaviour can change).
 #
 # EVENT HANDLING is explicit, not incidental. Under the push topology
-# `origin/main` equals HEAD and the delta is empty BY CONSTRUCTION — proved
-# hermetically by tests/test-push-context-base-ref.sh. A purely delta-driven
-# selector would select nothing on a push and silently lose all coverage. So a
-# `push` event, or an empty delta from a resolved base, selects the FULL SET.
+# `origin/main` equals HEAD and the delta is empty BY CONSTRUCTION. A purely
+# delta-driven selector would select nothing on a push and silently lose all
+# coverage. So a `push` event, or an empty delta from a resolved base, selects
+# the FULL SET.
 # Narrowing happens only where a non-empty delta was resolved.
 #
 # REPORTING is positive on both sides — one `SELECTED:` or `NOT-SELECTED:

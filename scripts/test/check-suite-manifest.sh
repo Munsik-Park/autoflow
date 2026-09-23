@@ -32,16 +32,16 @@
 # unconditionally and are UNGOVERNED — they carry no budget header to agree with,
 # and demanding one of a script that has none is how this arm would red a correct
 # workflow. The boundary is by shape, not by filename: `tests/plugin/verify-*.sh`
-# and `tests/test-gate-hardening.sh` are governed too.
+# and `tests/test-*.sh` are governed too.
 #
 # WHY THE SENTINEL FORM IS MECHANICAL, NOT STYLISTIC: one suite path is a prefix
 # of another's, so a bare `contains(steps.select.outputs.suites, 'tests/x.sh')`
 # mis-selects. The guard must test membership with delimiters:
 # `contains(format(' {0} ', steps.select.outputs.suites), ' tests/x.sh ')`.
 # And every guarded step needs an `id`, because a step without one does not
-# appear in the Actions `steps` context — which is exactly the input
-# scripts/test/check-step-reconciliation.sh reads to catch a guard that
-# evaluates false at run time.
+# appear in the Actions `steps` context — which is exactly the input a
+# reconciliation of the run's selection against its step outcomes reads to
+# catch a guard that evaluates false at run time.
 #
 # Usage:
 #   bash scripts/test/check-suite-manifest.sh [--root <dir>] [--list-subjects]
@@ -160,7 +160,7 @@ check_workflows() {
       fi
 
       if [ -z "$sid" ]; then
-        violation "$rel:$start: governed step running $runpath declares no 'id:' — a step without one is absent from the Actions steps context, so check-step-reconciliation.sh cannot see whether it ran"
+        violation "$rel:$start: governed step running $runpath declares no 'id:' — a step without one is absent from the Actions steps context, so no reconciliation of the run's selection against its step outcomes can see whether it ran"
       else
         want="$(suite_step_id "$runpath")"
         [ "$sid" = "$want" ] || violation "$rel:$start: governed step running $runpath declares 'id: $sid' but the convention requires 'id: $want' — the outcome key is the only link back to the suite path, so a deviating id makes the step read as absent"
