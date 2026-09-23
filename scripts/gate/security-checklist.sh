@@ -28,9 +28,15 @@
 #   - Checklist: <the declared path at HEAD, or none>
 #   - Blob: <git rev-parse HEAD:<path>, or none>
 #   - Disposition: accepted
+#   - Decision: <the decision, one line>
+#   - Grounds: <why, one line>
+#   - Authority: operator decision
 #
-# An entry covers the change only while its Checklist and Blob equal HEAD's, so
-# a later edit to the checklist is a new change that needs its own decision.
+# An entry covers the change only when its Decision and Grounds lines are
+# non-empty and its Authority is `operator decision` — the decider and the
+# grounds are what makes it an operator decision (PR #297 review, Medium 1) —
+# and only while its Checklist and Blob equal HEAD's, so a later edit to the
+# checklist is a new change that needs its own decision.
 #
 # Subcommand
 #   status [--base <rev>] [--ledger <path>]
@@ -118,8 +124,9 @@ decision_id() {
   awk -v want_path="$2" -v want_blob="$3" '
     function trim(s) { gsub(/`/, "", s); gsub(/^[ \t]+|[ \t\r]+$/, "", s); return s }
     function close_entry() {
-      if (id != "" && path == want_path && blob == want_blob && disp == "accepted") hit = id
-      id = ""; path = ""; blob = ""; disp = ""
+      if (id != "" && path == want_path && blob == want_blob && disp == "accepted" \
+          && dec != "" && grounds != "" && auth ~ /^operator decision\.?$/) hit = id
+      id = ""; path = ""; blob = ""; disp = ""; dec = ""; grounds = ""; auth = ""
     }
     /^## / {
       close_entry()
@@ -129,6 +136,9 @@ decision_id() {
     id != "" && /^- Checklist:/   { path = trim(substr($0, length("- Checklist:") + 1)); next }
     id != "" && /^- Blob:/        { blob = trim(substr($0, length("- Blob:") + 1)); next }
     id != "" && /^- Disposition:/ { disp = trim(substr($0, length("- Disposition:") + 1)); next }
+    id != "" && /^- Decision:/    { dec = trim(substr($0, length("- Decision:") + 1)); next }
+    id != "" && /^- Grounds:/     { grounds = trim(substr($0, length("- Grounds:") + 1)); next }
+    id != "" && /^- Authority:/   { auth = trim(substr($0, length("- Authority:") + 1)); next }
     END { close_entry(); print hit }' "$1"
 }
 

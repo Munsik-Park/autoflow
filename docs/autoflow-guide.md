@@ -1342,7 +1342,8 @@ its one record line:
   declaration that points at it — without effect on that cycle's AUDIT until the operator accepts it
   ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 1). The answer is a `[checklist-decision]`
   ledger entry ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Security-checklist decisions*):
-  `accepted`, carrying the committed version's blob → the status re-run reports `changed-decided`;
+  `accepted`, carrying the committed version's blob and non-empty Decision and Grounds lines under
+  the authority `operator decision` → the status re-run reports `changed-decided`;
   `rejected` → the change is reverted and the status re-run. The pause consumes no re-entry budget.
 - **The evaluator reads the named version.** The spawn prompt carries the record line; the evaluator
   re-runs the same status (it only reads), reads the checklist at the `score=` spec with `git show`,

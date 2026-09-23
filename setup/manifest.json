@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9450ebd92ba4610e5528511c1568b2b67ef35436b394002d2d234e64a2716fca"
+      "sha256": "702ba37a13dca70c1caef07cf63e79203da34549b4dd7fa57dfaf27fd57d3c86"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4fd3255e9436da9662fe2c26a7ac17d15381fd25c41a572b701cc89269904391"
+      "sha256": "501371d1099261bf406c5b296dd32e00e277a812e1a841e3d45a79e5c9ada140"
     },
     {
       "source": "docs/development-guideline.md",
@@ -300,7 +300,7 @@
       "dest": "scripts/gate/security-checklist.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "3d2a0817a032b4563d8df87a5928f651a5e42239b7ac111034baaa21e7c95006"
+      "sha256": "3022d8e94e0786b55fdabec83e6e8e79a203f918f7566c82e2153fc761f70164"
     },
     {
       "source": "scripts/review/scope-bounded.sh",

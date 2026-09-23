@@ -270,9 +270,10 @@ heading `## O<n> — <title> (cycle <C>, AUDIT) [checklist-decision]`, followed 
 (the declared path at HEAD, or `none` when the declaration is dropped), a `- Blob:` line (the
 `git rev-parse HEAD:<path>` of the approved version, or `none`), a `- Disposition:` line valued
 `accepted` / `rejected`, and the ordinary Decision / Grounds / Authority lines with the authority value
-`operator decision`. The script counts an `accepted` entry only while its Checklist and Blob equal
-HEAD's, so a later edit to the checklist is a new change owed its own decision; a `rejected` entry
-records the answer, and the change is reverted before AUDIT.
+`operator decision`. The script counts an entry only when it is `accepted`, its Decision and
+Grounds lines are non-empty and its Authority is `operator decision`, and only while its Checklist
+and Blob equal HEAD's, so a later edit to the checklist is a new change owed its own decision; a
+`rejected` entry records the answer, and the change is reverted before AUDIT.
 
 - **[MUST]** `bash scripts/ledger/ledger-entry-id.sh next <ledger> <NS>` allocates every identifier, and is called immediately before that entry's own append — one call per entry, never a serial incremented locally across a batch. The script holds no state: it derives the serial from the file on disk at call time, and that is precisely what keeps two writers who cannot see each other's in-flight appends from colliding. A batch that allocates once and counts up locally re-introduces the collision it was meant to prevent.
 - **[MUST]** `bash scripts/ledger/ledger-entry-id.sh check <ledger>` runs after the appends, and every defect it reports is resolved before the writer returns. `check` exits 1 on a duplicated identifier or an unidentified level-2 heading, 2 on a usage error. The gate hook runs the same check as a **non-gating advisory** over changed ledgers: it warns, and never denies a tool call over a ledger defect.
