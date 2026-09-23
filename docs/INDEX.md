@@ -40,7 +40,6 @@ These documents are the operating source of truth.
 | [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool (epic #785 S1; ADR-0015). |
 | [Reviewer Backend Contract](reviewer-backend.md) | HANDOFF external-reviewer backend abstraction: inputs/obligations, codex default + `claude -p` opt-in table, config location, per-backend oracle, isolation basis (issue #979). |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt (issue #96). |
-| [Security Checklist](security-checklist.md) | Security review checklist for this host scope. |
 | [Thin Root Layer Contract](thin-root-layer.md) | The artifacts that must live at a consuming target's project root and the `CLAUDE_CODE_*` env contract. |
 
 ### Quick Routing

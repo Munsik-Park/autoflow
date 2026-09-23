@@ -33,6 +33,12 @@ Hard rules:
   criterion is the operator's authority, recorded as an `[ac-decision]` ledger
   entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
   against that record.
+- **[MUST]** At AUDIT, the target's security checklist is likewise a declared
+  input, read at the version `bash scripts/audit/security-checklist.sh status`
+  names (`score=`, read with `git show`) — never the working-tree file, and
+  never judged on its merit. Changing it is the operator's authority, recorded
+  as a `[checklist-decision]` ledger entry. Copy the status line into your
+  report's `## Security checklist` section (`docs/autoflow-guide.md` > AUDIT).
 - **[MUST]** A cited run is confirmed by reading its summary line in the log at
   the cited path, never by re-running its command (`CLAUDE.md` > Rule Scope >
   *A run's evidence is the log it left*). A record with no log behind it is a

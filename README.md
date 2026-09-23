@@ -187,7 +187,7 @@ claude-autoflow/
 │   ├── repo-boundary-rules.md         # Cross-repo coordination rules
 │   ├── submodule-common-rules.md      # Sub-repo shared rules + Discussion Protocol
 │   ├── role-common-rules.md       # Shared role-spawn behavior rules
-│   ├── security-checklist.md          # Project-specific security checklist
+│   ├── security-checklist.md          # This repository's own security checklist (declared in .claude/autoflow.local.json; not stamped to targets)
 │   ├── phases/                        # Per-phase playbooks (docs/phases/)
 │   └── records/                       # Design & decision records — not stamped to targets
 │       ├── design-rationale.md        # Why every rule exists — read for a decision's grounds, routed per role
@@ -273,7 +273,7 @@ Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
 | [Git Workflow](docs/git-workflow.md) | Branch naming, commits, PR process |
 | [Repo Boundary Rules](docs/repo-boundary-rules.md) | Cross-repo coordination |
 | [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Discussion Protocol, sub-repo rules |
-| [Security Checklist](docs/security-checklist.md) | Project-specific security items |
+| [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/autoflow-guide.md` > AUDIT) |
 | [Setup Guide](setup/SETUP-GUIDE.md) | Manual setup instructions |
 
 ---

@@ -4,5 +4,8 @@
   },
   "tests": {
     "suite_plane": false
+  },
+  "audit": {
+    "security_checklist": "docs/security-checklist.md"
   }
 }

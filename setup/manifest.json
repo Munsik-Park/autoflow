@@ -13,21 +13,21 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "28f912587a1a0a14729f6ce86b68d8fc48a214e7ce488b954ec271497d0d4996"
+      "sha256": "475a9842c344c29380225ea408f1ba4ed4359c489d5b50bfd7bac0d155d3c1c8"
     },
     {
       "source": "docs/INDEX.md",
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9fe291fc27b355edfc93d12850d4a9acb57905cdb96c1ba40bc6af8c0dfe1b3f"
+      "sha256": "4945032e5c35eae3745bec9bf84d13831dd2863452873d16f27a120fd5d900b0"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fec0d0172d2cdbe5d16adc89939ba16283ca7dcfc26afc28ecce1afa371b3a88"
+      "sha256": "fb0d60495f84b1fb1db665cc7e535ca41870b7c6b63b1bacca9d0289471aed42"
     },
     {
       "source": "docs/development-guideline.md",
@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b2e6f95d387a7fc1c880ecb3d3b0ef8ccc87414d1253c27aa96a3b6bce4862d3"
+      "sha256": "fdc00cd889b4d2031686a4d15434aa5ee9260845f050eda15a90762275030884"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -105,13 +105,6 @@
       "tier": "reference",
       "kind": "copy",
       "sha256": "097c2699fcd5185578cbe1935943128b0b5b3b809ad33d126fd592485efc2a03"
-    },
-    {
-      "source": "docs/security-checklist.md",
-      "dest": ".claude/autoflow/docs/security-checklist.md",
-      "tier": "reference",
-      "kind": "copy",
-      "sha256": "a6b21dc25268a05232eac026eaf30c5583181acc5e9ab2c5e9589fb2f7a4573b"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -301,6 +294,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "ee1981731565fcfd3fbef5d738222286fc589105e7109785f61f643739030b4a"
+    },
+    {
+      "source": "scripts/audit/security-checklist.sh",
+      "dest": "scripts/audit/security-checklist.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "3d2a0817a032b4563d8df87a5928f651a5e42239b7ac111034baaa21e7c95006"
     },
     {
       "source": "scripts/review/scope-bounded.sh",
