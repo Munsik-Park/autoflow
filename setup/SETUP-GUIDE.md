@@ -264,6 +264,23 @@ which is also what a re-stamp would deliver.
   pass (`scripts/preflight/local-checks.sh`). Nothing declared is a recorded
   no-op; the framework knows no specific tool. The outcome lands in the issue
   ledger only, never in the state file.
+- Security checklist (AUDIT, issue #281): AUDIT scores a change against **your**
+  security checklist — AutoFlow ships none and names no item. Declare its
+  repository-relative path in the same scaffold under `audit.security_checklist`
+  (`{"audit":{"security_checklist":"docs/security-checklist.md"}}`). With none
+  declared, AUDIT scores its five rubric items from the change alone and records
+  that no checklist was declared. A cycle's AUDIT reads the checklist as of the
+  cycle's base commit, so a change a cycle makes to it applies only once you
+  accept it, recorded as a `[checklist-decision]` ledger entry
+  (`scripts/gate/security-checklist.sh`; `docs/autoflow-guide.md` > AUDIT). A
+  change you commit outside a cycle is simply the checklist the next cycle reads.
+  **Upgrading from a stamp that shipped `.claude/autoflow/docs/security-checklist.md`**:
+  that file was AutoFlow's reference-deployment checklist, and a re-stamp removes
+  it when you have not modified it (`drift-check.sh` D4 forecasts the removal as
+  a WARN; a modified copy is kept and reported for you to dispose of by hand). If
+  your AUDIT relied on it, copy it to a path you own before re-stamping —
+  `cp .claude/autoflow/docs/security-checklist.md docs/security-checklist.md` —
+  adapt it to your service, declare that path, and commit both.
 - Basic familiarity with the AutoFlow methodology
   (see [`docs/autoflow-guide.md`](../docs/autoflow-guide.md)).
 

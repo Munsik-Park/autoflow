@@ -27,5 +27,4 @@
 .claude/autoflow/docs/external-review-sequencing.md
 .claude/autoflow/docs/git-workflow.md
 .claude/autoflow/docs/phases/analysis.md
-.claude/autoflow/docs/security-checklist.md
 .claude/autoflow/docs/submodule-common-rules.md

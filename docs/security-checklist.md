@@ -1,17 +1,14 @@
-# Security Checklist
+# Security Checklist — AutoFlow Repository
 
-> Every PR must pass this security checklist before merge. Items are verified during AUDIT (independent security audit) and re-checked at GATE:QUALITY's `Security` item, then again during human PR review.
+> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads it at the version `scripts/gate/security-checklist.sh status` names, and GATE:QUALITY's `Security` item references the AUDIT result (`docs/autoflow-guide.md` > AUDIT). It is **not** stamped to targets: a target's security checklist is the target's own, declared in its own scaffold (issue #281).
 
 ---
 
-## Tech Stack Context
+## Scope
 
-**Project**: AutoFlow (reference deployment)
-**Stack**: Node.js (Bun/npm) + React (Vite) + MongoDB + MeiliSearch + Docker Compose / Helm, with pluggable LLM provider integrations (OpenAI, Anthropic, Google, Azure, AWS Bedrock, Ollama, etc.) and optional RAG/MCP backends.
+This repository ships meta artifacts — rules, docs, the gate hook, the installer and the scripts it stamps into targets. Its threat surface is bounded by *who can run the hook* and *what the hook trusts*.
 
-**Scope notes**:
-- The host (orchestrator) repository itself ships only meta artifacts (rules, docs, hooks, setup scripts). Its threat surface is bounded by *who can run the hook* and *what the hook trusts*.
-- The runtime threat surface lives in the `services/librechat` sub-repo. Items below explicitly mark which side they apply to.
+The items below are grouped under AUDIT's five rubric items. A rubric item with no section here is scored from the change alone.
 
 ---
 
@@ -19,92 +16,25 @@
 
 ### 1. Authentication & Authorization
 
-**Applies to**: `services/librechat` (runtime).
-
-- [ ] All API routes under `services/librechat/api/` require valid auth (JWT / session) — no accidental unauthenticated endpoints.
-- [ ] OAuth / OIDC integrations validate `state`, `nonce`, and redirect URIs; tokens are stored server-side, never echoed to the client.
-- [ ] Password hashing uses bcrypt/argon2 with a current work factor; no plaintext or fast-hash storage.
-- [ ] Admin / moderator routes enforce role checks server-side, not just by hiding UI.
-- [ ] Refresh tokens rotate on use; revocation is enforced (logout / password change invalidates sessions).
-- [ ] Rate limiting is enforced on login, registration, password-reset, and LLM-completion endpoints.
-
-**Host-scope sub-item**:
 - [ ] `.claude/hooks/check-autoflow-gate.sh` does not trust AI-supplied `pass` flags — verdicts are computed from raw `scores` only (existing rule; re-verify on any hook change).
 - [ ] `.claude/hooks/check-autoflow-gate.sh` validates the whole state document against a **closed-world** declarative schema on load and **fails closed (`exit 2`) for score-gated commands on any deviation**. Closed-world = a positive allow-list that rejects everything not explicitly declared (vs an open-world list that only rejects known-bad shapes — the latter leaks a new fail-open per unchecked field): single top-level object; `active` boolean; and — when active — top-level keys restricted to the `gate-schema.json:top_level_keys` whitelist (or a `cycle_key_grammar` `fix_regression_cycle_N`), each declared field type-checked, `phases` only at root + `fix_regression*` cycles, each gated phase's `verdict` ∈ `gate-schema.json:verdict_enum` (or empty/absent — gate-not-triggered), and each score a number (or `{score:number}`) in `score_range` `[0,10]`. Any other shape → MALFORMED. A syntactically-valid-but-schema-corrupt state (e.g. `"active":"true"`; a non-canonical `verdict` containing "skip" such as `"pending-but-skip-this"`; an out-of-range score `999`; an unknown top-level key or wrong-typed field) thus cannot be silently mis-read as inactive or pass a gate (fail-open); non-gated/repair commands stay unblocked to avoid deadlock. The validator's literals follow `tests/fixtures/gate-schema.json` (single source); the two change together, and the cycle that changes either checks one against the other in its one-shot run (issue #293). Scope: validation is closed-world over the gate-feeding surface (the top-level document + the four gated phases); a **non-gated** phase entry (e.g. `gate_hypothesis_structure`, or an unrecognised key/extra field inside a phase) is intentionally tolerated — it cannot reach a gate (the gates read only the gated phases' `verdict`/`scores`, and the phases-location guard rejects any nested `phases` smuggle), so closing it would add over-block/deadlock risk for zero exploit-closure. (issue #245 R3; re-verify on any hook change.)
 
 ### 2. Input Validation
 
-**Applies to**: `services/librechat` (runtime).
-
-- [ ] User chat messages flowing to LLM providers do not concatenate untrusted strings into system prompts; tool-call arguments are schema-validated.
-- [ ] MongoDB queries use parameterized objects, never user-built `$where` / JavaScript evaluation; `$regex` inputs are sanitized or length-capped.
-- [ ] File uploads (chat attachments, RAG ingest) validate MIME type, extension, and size; binary content is scanned for embedded payloads where feasible.
-- [ ] User-supplied URLs (RAG fetch, MCP server discovery, image proxy) are validated against an allowlist or blocked from internal/private CIDRs to prevent SSRF.
-- [ ] Markdown / HTML rendered in the client uses a sanitizer (e.g., DOMPurify) — no raw `dangerouslySetInnerHTML` on user content.
-- [ ] WebSocket / SSE stream messages are size-bounded and rate-limited per connection.
+- [ ] `scripts/gate/security-checklist.sh` accepts a declared checklist path only when it is repository-relative and stays inside the repository, and reads the checklist from git objects (`git show <rev>:<path>`), never from outside the repository (issue #281).
 
 ### 3. Data Exposure Prevention
 
-**Applies to**: `services/librechat` (runtime) and host (logging configuration).
-
-- [ ] **LLM provider API keys** (OpenAI/Anthropic/Google/Azure/Bedrock/etc.) live in env vars or a secret store — never committed, never logged, never returned in API responses or error payloads.
-- [ ] Server logs redact: auth tokens, refresh tokens, OAuth codes, password fields, full conversation bodies (or are stored on a separate, access-controlled stream).
-- [ ] Error responses to the client are generic (`{"error": "internal"}`); stack traces, DB schema details, and file paths stay server-side.
-- [ ] Conversation transcripts that contain PII / sensitive data are retained per a documented retention policy; user deletion requests propagate to MongoDB and MeiliSearch indexes.
-- [ ] Cross-tenant data access is impossible: every MongoDB read is scoped by authenticated `userId`; MeiliSearch queries enforce per-user filter tokens.
-- [ ] Per-user / per-conversation token usage and cost data are not visible to other users.
-- [ ] Host-side: `.autoflow/issue-*.json` is gitignored and treated as working data; AI evaluation output that quotes user input is not pushed to public mirrors.
-
-### 4. Infrastructure Isolation
-
-**Applies to**: `services/librechat` (deploy/compose/helm).
-
-- [ ] MongoDB port (default 27017) is bound to the internal Docker network only — never published to the host or public LB.
-- [ ] MeiliSearch master key is set to a strong random value and stored as a secret; the search service is not publicly exposed without an API key gate.
-- [ ] Reverse proxy / ingress terminates TLS; HTTP→HTTPS redirect is enforced; HSTS is set in production.
-- [ ] Containers run as non-root where the upstream image allows; readonly root filesystem where possible.
-- [ ] Docker Compose `.env`, Helm `values.yaml`, and Kubernetes Secrets are not committed; example files use placeholder values only.
-- [ ] CORS allowlist is explicit (no `*` for credentialed requests); cookies use `Secure; HttpOnly; SameSite=Lax|Strict`.
-- [ ] No internal services (Mongo, Meili, RAG vector store) are reachable from the public LLM-egress route.
+- [ ] `.autoflow/issue-*.json` is gitignored and treated as working data; AI evaluation output that quotes user input is not pushed to public mirrors.
 
 ### 5. Dependency Vulnerabilities
 
-**Applies to**: `services/librechat` (runtime) and host (hook + setup script).
-
-- [ ] `services/librechat/package-lock.json` and `services/librechat/bun.lock` are committed and consistent (no `package.json` change without a lockfile update).
-- [ ] `npm audit --omit=dev` (or `bun audit`) reports no `critical` or `high` items at PR time — exceptions documented with CVE id + rationale.
-- [ ] No `postinstall` scripts execute arbitrary network code at install time; lifecycle scripts are reviewed when dependencies are added.
-- [ ] `dependabot.yml` or equivalent is configured to bump direct deps on a defined cadence; major bumps go through ARCHITECT/GATE:PLAN.
-- [ ] Container base images (`Dockerfile`, `Dockerfile.multi`) are pinned to a digest or specific tag; rebuilds run a CVE scan (Trivy / Grype) in CI.
-- [ ] Host-side: `setup/init.sh` does `set -euo pipefail` and uses only the system `sed`/`cp` — no curl|sh of remote scripts.
-
----
-
-## Integration with AutoFlow
-
-### During AUDIT
-A fresh-spawned Evaluation AI scores these 5 items independently. PASS criteria: average ≥ 7.5, each ≥ 7, security ≤ 3 → block.
-
-### During GATE:QUALITY
-The 10-item quality evaluation references the AUDIT result for its `Security` item to avoid duplicate work.
-
-### During PR Review
-The PR template includes this checklist. The PR author must check each applicable item before requesting review.
-
-### CI Integration (recommended)
-- **SAST**: Semgrep or CodeQL with rulesets for Node.js + React.
-- **SCA**: Dependabot or Snyk for `services/librechat/package.json`.
-- **Secret scanning**: GitHub Secret Scanning + pre-commit `gitleaks`.
-- **Image scanning**: Trivy step before pushing container images.
+- [ ] `setup/init.sh` does `set -euo pipefail` and uses only the system `sed`/`cp` — no curl|sh of remote scripts.
 
 ---
 
 ## Update Protocol
 
-This file is updated when:
-- A new attack surface is introduced (new auth flow, new external dependency, new exposed port).
-- A CVE in a direct dependency requires permanent mitigation steps.
-- The LLM provider integration set changes (new provider added, key handling differs).
-- The deployment topology changes (Compose → K8s, new ingress, etc.).
+This file is updated when a new attack surface is introduced (a hook change, or a new stamped script or installer step) or when a CVE in a dependency requires permanent mitigation steps.
 
-Maintainer: Human (security-sensitive — never auto-edited).
+Maintainer: Human (security-sensitive — never auto-edited). Inside an AutoFlow cycle a change to this file is read by AUDIT only once the operator accepts it (`CLAUDE.md` > Decision Ledger > *Security-checklist decisions*).

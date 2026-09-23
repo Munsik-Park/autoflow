@@ -226,6 +226,12 @@ build_rows() {
   # the script exists to replace.
   emit_row "scripts/gate/remedy-route.sh" \
            "scripts/gate/remedy-route.sh" "root-layer" "copy" "file"
+  # AUDIT security-checklist resolver (issue #281). The checklist is the
+  # target's own, declared under the scaffold's `audit.security_checklist`; the
+  # stamped autoflow-guide.md has AUDIT read the version this script names, so a
+  # cycle cannot loosen the checklist its own AUDIT scores against.
+  emit_row "scripts/gate/security-checklist.sh" \
+           "scripts/gate/security-checklist.sh" "root-layer" "copy" "file"
   # Mechanical scope judgment (issue #135). HANDOFF step 6.5 runs it on every
   # Medium+ verdict as a [MUST], and PREFLIGHT reads its `scope-bounded:` line to
   # pick the bounded or full review-response path. Its whole point is that the

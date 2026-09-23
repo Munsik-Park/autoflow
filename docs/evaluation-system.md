@@ -173,8 +173,8 @@ The phase keys recorded in the state file are below. The hook **gates** only the
 four cause/plan/audit/quality keys; `gate_hypothesis_structure` is recorded in
 state but **not gated** by the hook (DIAGNOSE 3-Phase structure evaluation —
 orchestrator-judged against the CLAUDE.md thresholds, not enforced at a hook gate
-point), matching `docs/security-checklist.md` and the `gated_phase_keys`
-allow-list in `tests/fixtures/gate-schema.json`, which both omit it:
+point), matching the `gated_phase_keys` allow-list in
+`tests/fixtures/gate-schema.json`, which omits it:
 
 - `gate_hypothesis_structure` — DIAGNOSE 3-Phase structure evaluation (recorded in state, **not gated** by the hook — orchestrator-judged)
 - `gate_hypothesis_cause` — GATE:HYPOTHESIS cause analysis (hook-gated)

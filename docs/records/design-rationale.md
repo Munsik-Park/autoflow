@@ -504,6 +504,28 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 21 and 26; ADR-0024 carries the revision (D1, D2, D5, the amendment note).
 
+### Decision 28: The Security Checklist AUDIT Scores Against Is the Target's Own; a Cycle Reads It at Its Base Commit and Changes It Only on an Operator Decision
+
+**Problem.** AUDIT scored every target against `docs/security-checklist.md`, a document of this repository shipped to targets as a `copy` artifact with a fixed sha256. Its content was two scopes at once: the runtime requirements of the reference deployment AutoFlow carried while it held the `services/librechat` submodule (`Tech Stack Context` — Node.js + React + MongoDB + MeiliSearch; every runtime item `Applies to: services/librechat`), and this repository's own hook and installer items. A target could not revise its own security requirements — an edit was bundle drift, a fail-closed PREFLIGHT stop, and the next re-stamp overwrote it — and a target on another stack was scored against the same LibreChat items. Observation: `connev-llm/llmroute#658` — llmroute, a LibreChat-based target, issues its OAuth portal marker cookie with `SameSite=None` for the apple and saml providers (their callback is a cross-site POST), the checklist's §4 allows only `SameSite=Lax|Strict`, and the `Infra isolation` item of `connev-llm/llmroute#607`'s AUDIT stayed at the pass floor of 7 in cycles 3 and 4 (finding `L15`); whether to accept the exception was llmroute's operator's decision, and llmroute owned no checklist to record it in.
+
+**Decision.** Operator decision (issue #281, revised 2026-09-24), executed at the operator's instruction as orchestrator work outside an AutoFlow cycle.
+
+1. **AutoFlow owns how AUDIT scores; the target owns what each item is judged by.** The fresh evaluator, the five rubric items and the PASS thresholds stay AutoFlow's — the AUDIT rubric already read "Items adapt to the project's threat surface". The checklist is the target's, declared at `.claude/autoflow.local.json` > `audit.security_checklist`, on the precedent of the scaffold's other target declarations (`review`, `preflight.local_checks`, `tests`). None declared → AUDIT scores the five items from the change alone and records that none was declared.
+2. **A cycle reads the checklist at its base commit; a change it makes applies only on an operator decision.** Once the checklist is the target's, the cycle it grades could loosen it — self-certification ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 1). `scripts/gate/security-checklist.sh status` resolves the version AUDIT reads: the base version when nothing changed, the changed version when a `[checklist-decision]` ledger entry accepted that exact blob, and exit `3` — the orchestrator pauses for the operator before spawning AUDIT — otherwise. The entry records the decider (`operator decision`) and the grounds, and the resolver counts it only when both are there; it covers only the blob it names, so a later edit needs its own decision.
+3. **This repository ships no checklist.** Its own `docs/security-checklist.md` keeps only its own scope (the gate hook, the installer, the resolver) and is declared in its own scaffold; it leaves the stamped closure with its links from `CLAUDE.md` and `docs/INDEX.md`.
+
+**The points the issue left to the design.**
+
+- *Where the declaration lives.* The existing target-owned scaffold, not a new artifact: the scaffold is never overwritten by a re-stamp, and its other declarations already carry target-owned facts AutoFlow reads.
+- *How a checklist change inside a cycle is bounded.* By the version AUDIT reads, not by denying the edit: a hook cannot know whether the operator agreed, while the base-commit read makes an unagreed change inert for that cycle's AUDIT and the pause asks the operator before AUDIT runs. The external reviewer still sees the change in the PR.
+- *The existing targets' transition.* A re-stamp removes an unmodified `copy` that upstream no longer ships and keeps a modified one (issue #236); `drift-check.sh` D4 forecasts the removal before the re-stamp. A target whose AUDIT relied on the shipped file copies it to a path it owns and declares it before re-stamping (`setup/SETUP-GUIDE.md` > Prerequisites). llmroute's #658 decision is made in the checklist it adopts.
+
+**What was rejected.** A target-owned exception record beside a fixed shipped checklist — the issue's first draft: it keeps a target's security requirements in this repository and records each disagreement with them as an exception, when the requirements themselves are the target's to revise. Shipping the checklist as a `scaffold` sample — every new target would start from LibreChat items.
+
+**Why the device changes here.** The rule and its device change together (principle 4): the resolver script, its manifest row, the AUDIT playbook, the evaluator definition and the Flow Control pause change in this change. No hook, gate threshold or state field changes; the pause uses the existing `awaiting-user` state.
+
+**Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 26 and 27. It touches the agent workflow gates (a new pause before AUDIT) and evaluation input (AUDIT's checklist), and is recorded as the documented owner decision.
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:

@@ -259,6 +259,22 @@ match before re-entry, and this entry is the record of who authorized the edit. 
 covers no difference in either gate backstop: the criterion it adds is owed its verification-design
 row and its discharging site like any other.
 
+**Security-checklist decisions** (`[checklist-decision]`). The security checklist AUDIT scores
+against is the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist`,
+and a cycle's AUDIT reads it as of the cycle's base commit, so a cycle cannot loosen the checklist
+that grades it (Rule Scope, principle 1; issue #281). Changing it inside a cycle — the file, or the
+declaration that points at it — is the **operator's** authority. When
+`scripts/gate/security-checklist.sh status` reports the change at AUDIT entry, the orchestrator
+presents it to the operator, and the answer is recorded in the same trailing-marker grammar: the
+heading `## O<n> — <title> (cycle <C>, AUDIT) [checklist-decision]`, followed by a `- Checklist:` line
+(the declared path at HEAD, or `none` when the declaration is dropped), a `- Blob:` line (the
+`git rev-parse HEAD:<path>` of the approved version, or `none`), a `- Disposition:` line valued
+`accepted` / `rejected`, and the ordinary Decision / Grounds / Authority lines with the authority value
+`operator decision`. The script counts an entry only when it is `accepted`, its Decision and
+Grounds lines are non-empty and its Authority is `operator decision`, and only while its Checklist
+and Blob equal HEAD's, so a later edit to the checklist is a new change owed its own decision; a
+`rejected` entry records the answer, and the change is reverted before AUDIT.
+
 - **[MUST]** `bash scripts/ledger/ledger-entry-id.sh next <ledger> <NS>` allocates every identifier, and is called immediately before that entry's own append — one call per entry, never a serial incremented locally across a batch. The script holds no state: it derives the serial from the file on disk at call time, and that is precisely what keeps two writers who cannot see each other's in-flight appends from colliding. A batch that allocates once and counts up locally re-introduces the collision it was meant to prevent.
 - **[MUST]** `bash scripts/ledger/ledger-entry-id.sh check <ledger>` runs after the appends, and every defect it reports is resolved before the writer returns. `check` exits 1 on a duplicated identifier or an unidentified level-2 heading, 2 on a usage error. The gate hook runs the same check as a **non-gating advisory** over changed ledgers: it warns, and never denies a tool call over a ledger defect.
 - **Legacy ambiguity**. Entries written before this protocol may already share an identifier, and repairing them would rewrite an append-only record — so they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair.
@@ -287,7 +303,7 @@ GREEN           : Implementation    — Developer AI writes minimum code that sa
 VERIFY          : Test Run + Check  — Green confirmation; on failure, branch by cause; minimal-implementation check
 REFINE          : Refactor          — Developer AI cleanup; Test AI re-confirms Green
 VALIDATE        : Verification Done — automated tests all PASS + manual checklist itemized + maintained docs updated
-AUDIT           : Security Audit    — independent Evaluation AI (5 items × 10 points), project-specific security checklist
+AUDIT           : Security Audit    — independent Evaluation AI (5 items × 10 points), the target's own security checklist at the version `scripts/gate/security-checklist.sh` names (none declared → the rubric alone)
 GATE:QUALITY    : Completion Eval   — Evaluation AI (10 items × 10 points)
 DELIVER         : Sub-Repo Push     — each Submodule AI pushes its fork branch; Submodule AI shutdown
 INTEGRATE       : Integration Test  — system build, health check, functional test (single-repo: project-level integration test)
@@ -327,6 +343,7 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | VERIFY → ARCHITECT | design contradiction — the arbitration finds implementation and test each faithful to the design while the acceptance criteria are mutually unsatisfiable, reproduced by measurement and recorded in the GREEN blocker report `.autoflow/issue-{N}-*-green-blocker.md` → ARCHITECT re-deliberation → GATE:PLAN re-evaluation → RED re-entry (cap: see Regressions line below) |
 | VALIDATE → AUDIT | automated tests all PASS + manual checklist itemized |
 | VALIDATE → user | lint-chain check: a discovered chain covering a staged file is `not-run (unexecuted)` and is neither executable in this checkout nor covered by a nameable pull-request CI job → report situation-first + pause (`active:false`, `phase:"awaiting-user"`) |
+| AUDIT entry (security-checklist change) → user | at AUDIT entry `scripts/gate/security-checklist.sh status` exits `3`: the cycle changed the target's declared security checklist — the file, or the declaration that points at it — and no `[checklist-decision]` ledger entry covers the committed version → report situation-first, set `active:false`, `phase:"awaiting-user"`, and do **not** spawn AUDIT. The operator's answer is recorded as a `[checklist-decision]` entry (Decision Ledger > *Security-checklist decisions*): accepted → AUDIT reads the changed version; not accepted → the change is reverted and the status re-run. Consumes no re-entry budget (issue #281; `docs/autoflow-guide.md` > AUDIT) |
 | AUDIT → GATE:QUALITY | security audit PASS + its recommendations triaged (no attempt open) |
 | GATE:QUALITY → DELIVER | completion evaluation PASS + its recommendations triaged (no attempt open) |
 | GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY (PASS, a `Medium`+ recommendation) → doc commit / RED / GREEN / ARCHITECT / DIAGNOSE → that gate's re-score | a PASS report's `recommendations` are triaged by the reviewer-finding procedure of HANDOFF step 6.5, not by a procedure of their own (`docs/autoflow-guide.md` > GATE:QUALITY > *Recommendation triage*): the evaluator puts on every item a subject and a severity and on every `Medium`+ item a `remedy_class`; the route is a FAIL re-entry's — the phase that owns the change: at a gate after execution (AUDIT, GATE:QUALITY) `scripts/gate/remedy-route.sh route` picks it and the gate re-scores on its narrowed input; a gate before execution (GATE:HYPOTHESIS, GATE:PLAN) has no code to return to and resolves every `Medium`+ on the artifact it scores by its own FAIL route narrowed to the item — DIAGNOSE amends the analysis, ARCHITECT re-discusses on a brief — and re-scores by the same form, a fact below the decision layer being `Low` and deferred to DISPATCH (no attempt, no re-score). A recommendation none of the three direct-relation conditions covers is separated with its ground (a separate issue the follow-up); the same four pause criteria as step 6.5 apply, (a) recording the operator's answer as an `[ac-decision]` entry. `Low` → orchestrator judgment (fix now — the `Low` then enters the procedure as an attempt, its class the orchestrator's judgment — or defer with a known-gaps line in the PR body). Each attempt (a `Medium`+, or a `Low` fixed now) is a `[gate-autofix]` ledger entry and the routed class is recorded as `phases.<gate>.remedy_class` while the attempt is open — the hook denies `git push` / `gh pr create` on its presence at `audit` / `gate_quality`, and the Resume procedure resumes on it. Cap 7 consecutive attempts since the last user decision → pause; not a FAIL, no FAIL cap consumed; a failing re-score is an ordinary FAIL; a route through ARCHITECT consumes the ARCHITECT re-entry counter |
@@ -366,7 +383,7 @@ Each phase's procedure body — its numbered steps, scoring rubric, and phase-lo
 | VERIFY | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > VERIFY |
 | REFINE | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > REFINE |
 | VALIDATE | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > VALIDATE |
-| AUDIT | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > AUDIT; checklist: [`docs/security-checklist.md`](docs/security-checklist.md) |
+| AUDIT | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > AUDIT; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `scripts/gate/security-checklist.sh` |
 | GATE:QUALITY | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > GATE:QUALITY |
 | DELIVER | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > DELIVER |
 | INTEGRATE | [`docs/autoflow-guide.md`](docs/autoflow-guide.md) > INTEGRATE |
@@ -425,7 +442,7 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
 
 **`mode` field**: `"new-issue"` on Creation; PREFLIGHT sets `"review-response"` on review-response entry (target issue's PR is open). The DIAGNOSE structure-gate disposition reads `mode` rather than re-deriving the PR state — a single persisted source of the cycle classification. The hook does not read it (additive field).
 
-**`phase` field**: coarse, non-exhaustive lifecycle marker (the hook does not read it; additive field) — `"in-progress"` during a cycle; `"review-triage"` while HANDOFF triages the configured-reviewer review result (auto-resolving Medium+ findings or judging Low findings before handoff); `"awaiting-external-review"` at HANDOFF (set only once the review is clean — no `blocked-by-review` label remains) and at a structure-gate no-work review-response exit (both hand the open PR to external review); `"awaiting-user"` at a non-code-lever / non-code-root-cause pause, at a review-response loop-check match awaiting the user's re-entry decision, at an ARCHITECT stop or an acceptance-criterion content change awaiting the operator — raised at ARCHITECT or later in the cycle — at a tool or referenced material the operator is asked to provide, or at a HANDOFF review-triage user-decision / 7-attempt-cap / label-clear-failure escalation pause. A terminal or escalation state this list does not name leaves `phase` at its last value; `active` is the authoritative run flag.
+**`phase` field**: coarse, non-exhaustive lifecycle marker (the hook does not read it; additive field) — `"in-progress"` during a cycle; `"review-triage"` while HANDOFF triages the configured-reviewer review result (auto-resolving Medium+ findings or judging Low findings before handoff); `"awaiting-external-review"` at HANDOFF (set only once the review is clean — no `blocked-by-review` label remains) and at a structure-gate no-work review-response exit (both hand the open PR to external review); `"awaiting-user"` at a non-code-lever / non-code-root-cause pause, at a review-response loop-check match awaiting the user's re-entry decision, at an ARCHITECT stop or an acceptance-criterion content change awaiting the operator — raised at ARCHITECT or later in the cycle — at a tool or referenced material the operator is asked to provide, at a security-checklist change awaiting the operator before AUDIT, or at a HANDOFF review-triage user-decision / 7-attempt-cap / label-clear-failure escalation pause. A terminal or escalation state this list does not name leaves `phase` at its last value; `active` is the authoritative run flag.
 
 **`verdict` rule** (gate_hypothesis_cause only):
 
@@ -573,4 +590,3 @@ Part of Munsik-Park/autoflow#N
 - **Git procedures**: [`docs/git-workflow.md`](docs/git-workflow.md)
 - **Repo boundary rules**: [`docs/repo-boundary-rules.md`](docs/repo-boundary-rules.md)
 - **Sub-repo common rules**: [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md)
-- **Security checklist**: [`docs/security-checklist.md`](docs/security-checklist.md)
