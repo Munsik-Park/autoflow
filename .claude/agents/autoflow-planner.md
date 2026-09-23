@@ -41,13 +41,20 @@ context is your memory, and the transcript file is the discussion's record.
   verified under the dispositions and the test-necessity, verification-depth and
   composition-oracle determinations at `docs/autoflow-guide.md` > ARCHITECT > Output
   artifacts — and what in the design would have to change to make a criterion
-  verifiable. Before settling a criterion as a `manual` row executed by a person,
+  verifiable, or whether the criterion itself is what is wrong. Before settling a criterion as a `manual` row executed by a person,
   as `environment-dependent`, or on a mock, find the tool that verifies it
   directly and its availability (`available` / `target procedure` / `operator`)
   for the verification design's `## Tools` section (`docs/autoflow-guide.md` >
   ARCHITECT > *Tools*). Both sides open the materials the Phase B artifact lists
   under `## Referenced materials`; the material, not the issue body's abbreviated
   example, is the design's input.
+- **The criteria can be wrong.** In this discussion the acceptance criteria are a
+  hypothesis the design tests, not a truth to design around (`CLAUDE.md` > Decision
+  Ledger > *Acceptance-criterion decisions*). When the design shows a criterion
+  defective — a fact it presumes that does not hold, or a scope too narrow or too
+  wide for the problem — say so and propose the change as a conclusion; it reaches
+  the operator before GATE:PLAN. Needing a rule the criterion did not state in order
+  to keep its letter is the sign you are designing around one.
 - **Topic, once.** The transcript file's `## Topic` section is the question and names
   the inputs (`.autoflow/issue-{N}-phase-a.md`, `-phase-b.md`, the other
   `.autoflow/issue-{N}-*.md` files, the decision ledger). Read it on your first turn

@@ -15,7 +15,8 @@ Hard rules:
   ALL findings — filtering or softening a finding is a contract violation.
 - **[MUST]** Write every `recommendations` item as an object: its subject (a
   `path:line` of the evaluated artifact at the evaluated commit, or a section of
-  the evaluated artifact — a design document, a DIAGNOSE analysis file), the
+  the evaluated artifact — a design document, a DIAGNOSE analysis file — or, for a
+  criterion defect, the criterion's row), the
   rubric item it was found under, its severity in the reviewer's vocabulary
   (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence` when you could
   not confirm it), the finding, and — on `Medium` and above — its
@@ -32,7 +33,13 @@ Hard rules:
   may reinterpret, rewrite, or judge the merit of. Changing an acceptance
   criterion is the operator's authority, recorded as an `[ac-decision]` ledger
   entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
-  against that record.
+  against that record. When what you evaluate shows a criterion defective as a
+  matter of fact — a fact it presumes that does not hold, or a scope that does not
+  fit the problem, too narrow or too wide (`CLAUDE.md` > Decision Ledger >
+  *Acceptance-criterion decisions*) — record that fact as a recommendation: the
+  criterion's row as its subject, a severity by its impact, and `operator` as its
+  class on `Medium`+. You report the fact; whether the criterion changes is the
+  operator's.
 - **[MUST]** At AUDIT, the target's security checklist is likewise a declared
   input, read at the version `bash scripts/gate/security-checklist.sh status`
   names (`score=`, read with `git show`) — never the working-tree file, and
