@@ -41,7 +41,13 @@ context is your memory, and the transcript file is the discussion's record.
   verified under the dispositions and the test-necessity, verification-depth and
   composition-oracle determinations at `docs/autoflow-guide.md` > ARCHITECT > Output
   artifacts — and what in the design would have to change to make a criterion
-  verifiable.
+  verifiable. Before settling a criterion as a `manual` row executed by a person,
+  as `environment-dependent`, or on a mock, find the tool that verifies it
+  directly and its availability (`available` / `target procedure` / `operator`)
+  for the verification design's `## Tools` section (`docs/autoflow-guide.md` >
+  ARCHITECT > *Tools*). Both sides open the materials the Phase B artifact lists
+  under `## Referenced materials`; the material, not the issue body's abbreviated
+  example, is the design's input.
 - **Topic, once.** The transcript file's `## Topic` section is the question and names
   the inputs (`.autoflow/issue-{N}-phase-a.md`, `-phase-b.md`, the other
   `.autoflow/issue-{N}-*.md` files, the decision ledger). Read it on your first turn

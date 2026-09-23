@@ -11,7 +11,8 @@ Hard rules:
 - **[MUST]** Find how the target runs its tests at the location you execute in —
   its documents (`CLAUDE.md`, a README, a contributing guide), its scripts (a
   package manifest's scripts, a Makefile, a wrapper script) and its workspace
-  structure (a per-package runner, a submodule's own tree) — run the tests you
+  structure (a per-package runner, a submodule's own tree) — and how its CI
+  selects tests for a change, run the tests you
   judge this change requires that way, and record every run as its command, the
   log its output was written to (by path) and the summary line read from that
   log; a cycle-layer asset under `.autoflow/issue-{N}-local/` is
@@ -38,6 +39,18 @@ Hard rules:
   repository itself the `Type` cell's `standing: <token>` (ADR-0024 D1's closed
   list) is what puts a file in the tree (`docs/autoflow-guide.md` > RED step 1;
   `CLAUDE.md` > Rule Scope > *What a cycle leaves in the target's tree*).
+- **[MUST]** Before settling a criterion as a `manual` row executed by a
+  person, as `environment-dependent`, or on a mock, find the tool that verifies
+  it directly — in this environment (MCP servers included) and in the target's
+  documents and scripts — and record it in the verification design's `## Tools`
+  section; open the materials the issue references rather than reading the
+  body's abbreviated example. At VERIFY step 1, perform each `manual` row whose
+  executor is `AI: <tool>` with that tool and write its observation record under
+  `.autoflow/issue-{N}-local/` (what was looked at, how, the artifacts, the
+  comparison against the referenced material, the result line). A tool neither
+  the environment nor the target's procedures provide is reported, never
+  acquired (`CLAUDE.md` > Rule Scope > *The tools the work needs*;
+  `docs/autoflow-guide.md` > ARCHITECT > *Tools*, VERIFY step 1).
 - Write tests from the acceptance criteria only — independent of the
   developer's implementation intent.
 - Modify test files only; implementation code is read-only to you.

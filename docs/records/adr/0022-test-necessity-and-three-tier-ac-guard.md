@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note); decision 2's `delivery-check` definition amended by ADR-0024 (see ADR-0024 > *Related Issues / PRs*); decision 1's role as the retention filter replaced by ADR-0024 D1, issue #222 (see Superseding note (issue #222)); decision 6's handling of out-of-scope behavior and the tier-3 options amended by issue #275 (see Amendment note (issue #275))
+Accepted; the Reconcile tier-3 trigger superseded by issue #166 (see Superseding note); decision 2's `delivery-check` definition amended by ADR-0024 (see ADR-0024 > *Related Issues / PRs*); decision 1's role as the retention filter replaced by ADR-0024 D1, issue #222 (see Superseding note (issue #222)); decision 6's handling of out-of-scope behavior and the tier-3 options amended by issue #275 (see Amendment note (issue #275)); decision 2's `manual` disposition amended by issue #277 (see Amendment note (issue #277))
 
 ## Context
 
@@ -202,3 +202,16 @@ criterion the issue did not state, and a content change can be raised after ARCH
 `docs/submodule-common-rules.md` > Change Surface Rules > *Scope judgment*;
 `docs/autoflow-guide.md` > VERIFY step 3 and ARCHITECT > *Report routing*; decision:
 [`../design-rationale.md`](../design-rationale.md) > Decision 25.
+
+## Amendment note (issue #277)
+
+Decision 2's `manual` disposition is a scenario verified by observation rather than by an
+executable assertion, and the row names its executor: `AI: <tool>` — a tool the verification
+design's `## Tools` section records — or a person only when no tool can be secured, the row's
+`Reason` saying why. The untestable-items bullet asks for that tool before it offers a
+person-executed scenario or a mock. An AI-executed row's evidence is the Test AI's observation
+record at VERIFY step 1, which GATE:QUALITY `Test coverage` reads. The tiers of the guard are
+unchanged: a person-executed row is still a reduced disposition with its reason, judged by the
+reviewer. Rule homes: [`CLAUDE.md`](../../../CLAUDE.md) > Rule Scope > *The tools the work
+needs*; `docs/autoflow-guide.md` > ARCHITECT > Output artifacts > *Tools*; decision:
+[`../design-rationale.md`](../design-rationale.md) > Decision 26.

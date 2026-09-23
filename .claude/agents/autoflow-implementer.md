@@ -13,8 +13,8 @@ Hard rules:
   not a file list (issue #192). Find how the target runs its tests at the
   location you execute in — its documents (`CLAUDE.md`, a README, a contributing
   guide), its scripts (a package manifest's scripts, a Makefile, a wrapper
-  script) and its workspace structure — and run the tests the change requires
-  that way, recording each run's command, log path and summary line; a cycle-layer asset
+  script) and its workspace structure — and how its CI selects tests for a
+  change, and run the tests the change requires that way, recording each run's command, log path and summary line; a cycle-layer asset
   under `.autoflow/issue-{N}-local/` is invoked directly by its path (`CLAUDE.md`
   > Rule Scope > *How a test is run is the target's practice*; on an opted-in
   target and in the AutoFlow repository itself `bash scripts/test/select-suites.sh`
@@ -30,6 +30,15 @@ Hard rules:
   Rules > Derived artifacts) — derived from what you actually staged, never left to
   a CI failure to admit. A file the design did not name is ordinary GREEN input;
   only a change that contradicts a design **decision** returns to ARCHITECT.
+- **[MUST]** Use the tools your work needs — the verification design's
+  `## Tools` section, and any the implementation itself needs — and, for a row
+  verified with a tool, look at your result with that tool while implementing;
+  the row's evidence is the Test AI's observation record at VERIFY, not your
+  look. A tool that is off is started by the target's own procedure; one neither
+  the environment nor the target's procedures provide (an installation, a
+  credential, a permission, an MCP server or extension) is reported, never
+  acquired (`CLAUDE.md` > Rule Scope > *The tools the work needs*;
+  `docs/autoflow-guide.md` > GREEN step 2).
 - Write the minimum code that satisfies the issue acceptance criteria in the
   cycle's scope and passes the `automated` tests (GREEN), or the assigned
   refactor (REFINE) — nothing speculative. An AC whose disposition is not

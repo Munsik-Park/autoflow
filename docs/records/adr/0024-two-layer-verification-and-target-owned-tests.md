@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277))
 
 ## Context
 
@@ -982,3 +982,15 @@ registry row.
 - **Citations are durable, not coordinate-based (issue #221).** This ADR's line-number citations were
   converted to the form *document > section — "verbatim fragment"*; the `Adjustment scope` tables
   identify each provision by section and sentence, not by coordinate.
+
+## Amendment note (issue #277)
+
+D3 left how a test is run to the target's practice; the same rule now covers every tool the work
+needs — a browser, a database, a running server, any other — found in the environment and in the
+target's documents and scripts, started by the target's own procedure where one exists, and
+requested from the operator beyond it. AutoFlow still names no tool and no method to a target. A
+criterion verified with a tool leaves an observation record under `.autoflow/issue-{N}-local/`,
+a `cycle` artifact like a run's log (D2), and the local run set's judgment takes the target's CI
+selection as guidance. D1's layers and the target's test entry point are unchanged. Rule home:
+[`CLAUDE.md`](../../../CLAUDE.md) > Rule Scope > *The tools the work needs*; decision:
+[`../design-rationale.md`](../design-rationale.md) > Decision 26.
