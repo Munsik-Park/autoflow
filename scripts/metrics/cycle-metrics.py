@@ -876,6 +876,16 @@ def gh_lines(args):
     return [json.loads(ln) for ln in r.stdout.splitlines() if ln.strip()]
 
 
+_VIEWER = []
+
+
+def gh_viewer():
+    """The account the local gh CLI acts as — the one codex-review-pr.sh posts its review as."""
+    if not _VIEWER:
+        _VIEWER.append(gh_lines(['user', '--jq', '.login | tojson'])[0])
+    return _VIEWER[0]
+
+
 def fetch_pr(repo, number):
     """What the outcome needs from one PR: its state, its comments (no body — only whether a comment
     has the configured reviewer's output format) and the workflow runs of its head branch, each run
@@ -905,7 +915,7 @@ def fetch_pr(repo, number):
         attempts.append([run.get('run_attempt') or 1, run.get('status'), run.get('conclusion')])
         kept.append({'id': run['id'], 'workflow': run.get('workflow'), 'event': run.get('event'),
                      'head_sha': run['head_sha'], 'created_at': run['created_at'], 'attempts': attempts})
-    return {'repo': repo, 'number': number, 'pr': pr, 'comments': comments, 'runs': kept}
+    return {'repo': repo, 'number': number, 'viewer': gh_viewer(), 'pr': pr, 'comments': comments, 'runs': kept}
 
 
 def pr_cache_path(root, repo, number):
@@ -944,31 +954,39 @@ def pr_state(rec):
 def ci_heads(rec):
     """One entry per head SHA of the PR's runs, in the order CI first saw it.
 
-    A head is a CI round when at least one of its attempts ran — a head whose every run was
-    cancelled or skipped was not evaluated. It is a failed round when an attempt failed; a cancelled
-    attempt is not a failure. A rerun is an attempt past the first of the same run: it evaluates the
-    same head again and opens no round of its own.
+    A head is a CI round when at least one of its attempts completed having run — a head whose every
+    run was cancelled or skipped was not evaluated, and a queued or running attempt counts only once
+    it completes. It is a failed round when an attempt failed; a cancelled attempt is not a failure.
+    A rerun is an attempt past the first of the same run: it evaluates the same head again and opens
+    no round of its own.
     """
     heads = {}
     for run in sorted(rec.get('runs') or [], key=lambda r: r['created_at']):
         h = heads.setdefault(run['head_sha'], {'sha': run['head_sha'], 'first': run['created_at'], 'runs': 0,
-                                               'attempts': 0, 'ran': 0, 'failed': 0, 'cancelled': 0, 'reruns': 0})
+                                               'attempts': 0, 'ran': 0, 'pending': 0, 'failed': 0, 'cancelled': 0,
+                                               'reruns': 0})
         h['runs'] += 1
         h['reruns'] += len(run['attempts']) - 1
         for _, status, conclusion in run['attempts']:
+            done = status == 'completed'
             h['attempts'] += 1
-            h['ran'] += conclusion not in CI_NOT_RUN
-            h['failed'] += conclusion in CI_FAILED
-            h['cancelled'] += conclusion == 'cancelled'
+            h['pending'] += not done
+            h['ran'] += done and conclusion not in CI_NOT_RUN
+            h['failed'] += done and conclusion in CI_FAILED
+            h['cancelled'] += done and conclusion == 'cancelled'
     return list(heads.values())
 
 
 def reviewer_matches(rec, launches):
-    """Comments of the configured reviewer on this PR: a comment in the reviewer's output format posted
-    after a reviewer launch for this PR, the first such comment per launch, before the next launch and
-    within REVIEW_WINDOW_S. A comment in that format that no launch of the row's own sessions accounts
-    for — another review run elsewhere, an evaluator's comparison — is not the configured reviewer's."""
-    revs = sorted((parse_ts(c['created_at']), c['id']) for c in rec.get('comments') or [] if c.get('review'))
+    """Comments of the configured reviewer on this PR: a comment in the reviewer's output format, by the
+    account the reviewer posts as, posted after a reviewer launch for this PR — the first such comment
+    per launch, before the next launch and within REVIEW_WINDOW_S. A comment in that format by another
+    account, or that no launch of the row's own sessions accounts for — another review run elsewhere,
+    an evaluator's comparison — is not the configured reviewer's. None when the record names no account."""
+    if not rec.get('viewer'):
+        return None, 0
+    revs = sorted((parse_ts(c['created_at']), c['id']) for c in rec.get('comments') or []
+                  if c.get('review') and c.get('author') == rec['viewer'])
     times = sorted(parse_ts(t) for t in launches if parse_ts(t))
     used = []
     for i, t in enumerate(times):
@@ -994,12 +1012,13 @@ def github_outcome(it, gh):
         launches = [ts for ts, r, n in it['reviewer_runs'] if n == number and (r is None or r.lower() == repo.lower())]
         matched, review_format = reviewer_matches(rec, launches)
         per[k] = {'state': pr_state(rec), 'reviewer_launches': len(launches),
-                  'reviewer_rounds': len(matched) if it['reviewer_runs_known'] else None,
+                  'reviewer_rounds': len(matched) if it['reviewer_runs_known'] and matched is not None else None,
                   'review_format_comments': review_format, 'ci_heads': ci_heads(rec)}
     whole = bool(it['prs']) and len(per) == len(it['prs'])
     heads = [h for v in per.values() for h in v['ci_heads']]
     o = {
-        'reviewer_rounds': sum(v['reviewer_rounds'] for v in per.values()) if whole and it['reviewer_runs_known'] else None,
+        'reviewer_rounds': (sum(v['reviewer_rounds'] for v in per.values())
+                            if whole and all(v['reviewer_rounds'] is not None for v in per.values()) else None),
         'ci_rounds': sum(1 for h in heads if h['ran']) if whole else None,
         'ci_fail_rounds': sum(1 for h in heads if h['failed']) if whole else None,
         'ci_cancelled': sum(h['cancelled'] for h in heads) if whole else None,
@@ -1162,12 +1181,7 @@ def derive(args):
             'spawns': len(top),
             'phase_keys_recovered': sum(1 for a in top if a['phase_key']),
         }
-        # A row is a cycle when one of its sessions performed the issue: a label names it (the other arm
-        # of a comparison has no state by construction and is never classified away), or the session
-        # wrote the issue's own state file. A reference row — sessions that only read the issue's files —
-        # is never a cycle. A session whose record cannot tell a state write (an older schema, a stripped
-        # copy) is classified as before: an AutoFlow role spawn in the row, or the issue's state `date`
-        # within a day of the row's segments.
+        # The role-spawn and state-date bases apply only to sessions whose record cannot tell a state write.
         by_label = bool(it['label_sessions'])
         by_write = bool(it['write_sessions'])
         role_spawns = sum(1 for a in it['agents'] if (a.get('role') or '').startswith('autoflow-'))

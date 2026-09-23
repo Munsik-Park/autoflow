@@ -189,19 +189,24 @@ every past issue.
   its segments), for **either arm** and for cycle rows only. `--gh` fetches each PR once it is closed
   — while it is open, on every `--gh` run — into `github/`: its state, each comment's time, author and
   whether it is in the configured reviewer's output format (a body starting `# Review Summary`,
-  `.codex/review.md` > Output Format; no body is stored), and the workflow runs of its head branch
+  `.codex/review.md` > Output Format; no body is stored), the account the local `gh` acts as (the one
+  `codex-review-pr.sh` posts its review as), and the workflow runs of its head branch
   from ten minutes before it opened to its close, with every attempt's conclusion. A run without
   `--gh` reads the cached copies. Per PR, then summed over the row's PRs:
-  - `reviewer_rounds` — the configured reviewer's comments: a comment in that format posted after one
-    of the row's own reviewer launches for that PR, the first such comment per launch, before the next
-    launch and within two hours. A comment in the same format that no launch of the row's sessions
-    accounts for — an evaluator's comparison, a review run elsewhere — is not counted: on llmroute #660
+  - `reviewer_rounds` — the configured reviewer's comments: a comment in that format, by the account
+    the reviewer posts as, posted after one of the row's own reviewer launches for that PR, the first
+    such comment per launch, before the next launch and within two hours. A comment in the same format
+    by another account, or that no launch of the row's sessions accounts for — an evaluator's
+    comparison, a review run elsewhere — is not counted. The account check alone does not separate an
+    evaluator that posts through the same `gh` account; the launch match does: on llmroute #660
     the A/B evaluator's comparison is the fourth `# Review Summary` comment, and the row counts three.
     Across the 2026-09-23 data, 107 launches met 114 comments in that format and 100 were matched;
     launch to comment took 3.4 minutes at the median, 8.8 at p90 and 16.7 at most. A row whose record
     predates the launches (schema 2) leaves it empty.
   - `ci_rounds` — the head SHAs of the PR's runs that CI evaluated: at least one attempt of a run on
-    that head ran (a head whose every run was cancelled or skipped was not evaluated).
+    that head completed having run (a head whose every run was cancelled or skipped was not evaluated,
+    and a queued or running attempt counts only once it completes — an open PR is fetched again on
+    every `--gh` run).
   - `ci_fail_rounds` — the heads where an attempt concluded `failure`, `timed_out` or
     `startup_failure`. A `cancelled` attempt is not a failure; `ci_cancelled` counts those attempts.
   - `ci_reruns` — the attempts past the first of one run. A rerun evaluates the same head again, so it
