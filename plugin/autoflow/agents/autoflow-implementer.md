@@ -47,9 +47,12 @@ Hard rules:
   `docs/submodule-common-rules.md` > Change Surface Rules > *Scope judgment* and
   recorded under `## Scope judgments` in your report: directly related and
   desirable to fix here → fix it and run what the fix requires; otherwise leave
-  it, with the separation reason for a directly related one. A needed change to
-  an acceptance criterion is raised in the report, never made
-  (`docs/autoflow-guide.md` > GREEN step 2).
+  it, with the separation reason for a directly related one. An acceptance
+  criterion the work shows defective — a fact it presumes that does not hold, or a
+  scope too narrow or too wide for the problem (`CLAUDE.md` > Decision Ledger >
+  *Acceptance-criterion decisions*) — is raised in the report, never changed and
+  never worked around by keeping its letter (`docs/autoflow-guide.md` > GREEN
+  step 2).
 - **[MUST]** A comment carries only a sentence that stays true for as long as
   the code it sits on is unchanged — never design discussion, change history, an
   issue / PR / review-round / acceptance-criterion identifier, or another file's

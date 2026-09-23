@@ -238,8 +238,8 @@ HANDOFF (the three-tier guard — [`docs/autoflow-guide.md`](docs/autoflow-guide
 *Report routing*). An acceptance criterion is an assumption made when the issue was written and can
 be wrong, so a content change reaches the operator from wherever it surfaces: an agreed conclusion of
 the ARCHITECT deliberation, presented before GATE:PLAN; a problem a role meets during GREEN, VERIFY or
-REFINE and raises in its report; or a gate recommendation whose triage hits the acceptance-criterion
-pause criterion ([`docs/autoflow-guide.md`](docs/autoflow-guide.md) > ARCHITECT > *Report routing*,
+REFINE and raises in its report; or a gate recommendation that records a criterion defect, or whose
+triage hits the acceptance-criterion pause criterion ([`docs/autoflow-guide.md`](docs/autoflow-guide.md) > ARCHITECT > *Report routing*,
 > GATE:QUALITY > *Recommendation triage*). The change excludes, revises or splits a criterion, or adds one. The
 orchestrator presents it to the operator, and the operator's answer is recorded as one entry per
 decided AC, in the same trailing-marker grammar:
@@ -247,6 +247,21 @@ the heading `## O<n> — <title> (cycle <C>, <PHASE>) [ac-decision]`, `<PHASE>` 
 change surfaced in, followed by the entry's own `- AC: <ac id>` line (for an added criterion, the id it
 takes), a `- Disposition:` line valued `excluded` / `revised` / `split` / `added`, and the ordinary
 Decision / Grounds / Authority lines with the authority value `operator decision`.
+
+**From ARCHITECT on, a criterion can be wrong** (issue #291; `docs/records/design-rationale.md` >
+Decision 29). DIAGNOSE takes the criteria as written. From ARCHITECT on — the deliberation, GREEN,
+VERIFY, REFINE and every gate after them — a criterion is a hypothesis the work tests, not a truth the
+work is bent to fit: wherever the work and a criterion disagree, *is the criterion wrong?* is one of the
+answers the judgment weighs, beside *how is it satisfied?* A criterion is **defective** when (a) a fact
+it presumes does not hold — a device, a phase or a state it takes for granted (issue #275's AC2
+presumed code to return to at every gate); or (b) the scope it draws does not fit the problem — too
+narrow, when the same cause reaches past what it names, and the question is then whether the issue saw
+the problem as local and the approach itself must change, not only whether to include the rest (a
+widening: `revised` / `added`); or too wide, when it binds in a problem separate from this issue (a
+split: `split` / `excluded`). A defect so judged is raised for the operator; it is never resolved by
+keeping the criterion's letter. One signal of a defect: a document has to add a rule the criterion did
+not state in order to keep the criterion's letter. This paragraph is the principle's single home;
+the playbooks and agent definitions cite it.
 
 The marker sits at the **end** of the heading, so HANDOFF's `[review-autofix]` count predicate is
 unaffected — the same non-interference the `verify-detection` record declares. The issue text's
@@ -329,7 +344,7 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | ARCHITECT → GATE:PLAN | the deliberation's report carries no un-agreed point, and no agreed conclusion changes an acceptance criterion's content — a reduced verification disposition carrying a stated reason is not one: it passes the three-tier guard (deliberation → external reviewer at HANDOFF → operator only for AC content changes) — and the verification design's `## Tools` section carries no `operator` item |
 | ARCHITECT (un-agreed) → ARCHITECT / user | the report raises an un-agreed point → one orchestrator judgment. Discuss further: prepare what the next discussion needs — a narrowed topic, facts verified in the meantime, the prior report path, a different perspective for a participant to take — and re-run with that `brief`. Or stop: report situation-first, set `active:false`, `phase:"awaiting-user"`, and let the user's decision drive re-entry |
 | ARCHITECT (acceptance-criterion content change) → user | an agreed conclusion excludes, revises or splits an issue acceptance criterion, or adds one → report situation-first, set `active:false`, `phase:"awaiting-user"`, and do **not** spawn GATE:PLAN. The operator's answer is recorded as one `[ac-decision]` ledger entry per decided AC and the Phase B acceptance-criterion table is edited to match on `revised` / `split` / `added`; the cycle then continues to GATE:PLAN, consuming no re-entry budget |
-| GREEN / VERIFY / REFINE / gate recommendation (acceptance-criterion content change) → user | a role's report raises, or a gate recommendation's triage hits pause criterion (a) on, a change to an acceptance criterion's content → report situation-first, set `active:false`, `phase:"awaiting-user"`. The answer is recorded as `[ac-decision]` entries headed with the phase the change surfaced in, and the cycle re-enters where the orchestrator judges the decision reaches — ARCHITECT when a verification-design row must be added or rewritten, GREEN when only the implementation changes, otherwise the point it paused at — recorded with its grounds and consuming no re-entry budget (`docs/autoflow-guide.md` > ARCHITECT > *Report routing*) |
+| GREEN / VERIFY / REFINE / gate recommendation (acceptance-criterion content change) → user | a role's report raises a change to an acceptance criterion's content, or a gate recommendation records a criterion defect or its triage hits pause criterion (a) on one (Decision Ledger > *Acceptance-criterion decisions* > *From ARCHITECT on, a criterion can be wrong*) → report situation-first, set `active:false`, `phase:"awaiting-user"`. The answer is recorded as `[ac-decision]` entries headed with the phase the change surfaced in, and the cycle re-enters where the orchestrator judges the decision reaches — ARCHITECT when a verification-design row must be added or rewritten, GREEN when only the implementation changes, otherwise the point it paused at — recorded with its grounds and consuming no re-entry budget (`docs/autoflow-guide.md` > ARCHITECT > *Report routing*) |
 | any phase (tool or referenced material → user) | the work needs a tool, or a material an acceptance criterion or the issue body references, that neither this environment nor a procedure in the target's documents or scripts can provide — a Phase B `not opened` material at DIAGNOSE, an `operator` item in the verification design's `## Tools` section after ARCHITECT's Record (GATE:PLAN is not spawned), or a tool found missing in a later phase → report situation-first — what the work needs it for, what was found, and what the operator is asked to provide (an installation, a credential, a permission setting, enabling an MCP server or a browser extension, access to the material) — set `active:false`, `phase:"awaiting-user"`. The answer is an `O` ledger entry with the authority `operator decision`; provided → the cycle resumes where it paused; not provided → ARCHITECT on a `brief` naming the entry when a verification-design row must change (a `manual` row executed by a person, or a mock, with its reason), otherwise the point it paused at — the orchestrator's judgment, recorded with its grounds and consuming no re-entry budget (Rule Scope > *The tools the work needs*; `docs/autoflow-guide.md` > ARCHITECT > *Tools*) |
 | GATE:PLAN → DISPATCH | plan evaluation PASS + its recommendations triaged (no attempt open — every `Medium`+ re-enters ARCHITECT on a brief and GATE:PLAN re-scores; a `Low` below the decision layer is deferred to the DISPATCH spawn prompt) |
 | DISPATCH → RED | task instructions delivered (Test AI starts first) |

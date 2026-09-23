@@ -97,7 +97,7 @@ emerge, humans adjust the criteria.
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
-  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section>", "item": "<rubric item>", "severity": "Critical | High | Medium | Low | Low Confidence", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
+  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | AC id, for a criterion defect>", "item": "<rubric item>", "severity": "Critical | High | Medium | Low | Low Confidence", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
 }
 ```
 
@@ -135,7 +135,10 @@ a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](au
 `recommendations` lists every non-blocking finding as an object: `subject` — a `path:line` of the
 evaluated artifact at the evaluated commit, or a section of the evaluated artifact — the design
 documents at GATE:PLAN, the DIAGNOSE analysis files (`.autoflow/issue-{N}-phase-*.md`) at
-GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY; `item` — the rubric item it was found under;
+GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY — or, for an acceptance criterion the evaluator
+observes defective as a matter of fact ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion
+decisions*), the criterion's row in `.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`, whose
+`remedy_class` on `Medium`+ is `operator`, since whether it changes is the operator's; `item` — the rubric item it was found under;
 `severity` — the reviewer's vocabulary (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence`
 for a finding the evaluator could not confirm); `finding`; and, on `Medium` and above,
 `remedy_class` from the same enum as the failed-item field, by the same classifying question HANDOFF

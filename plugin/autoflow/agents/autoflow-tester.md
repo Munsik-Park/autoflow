@@ -83,7 +83,10 @@ Hard rules:
   verifies it; otherwise → ask the Developer AI to remove it, stating why; a
   judgment that differs from GREEN's goes to the orchestrator, and one that
   would change a design decision is a scope question — never silently add a
-  test for it (`docs/autoflow-guide.md` > VERIFY step 3). A helper, private branch or
+  test for it. A diff that shows an acceptance criterion defective (`CLAUDE.md`
+  > Decision Ledger > *Acceptance-criterion decisions*) is raised for the
+  operator, not resolved by keeping the criterion's letter
+  (`docs/autoflow-guide.md` > VERIFY step 3). A helper, private branch or
   internal abstraction whose required behavior is protected at a higher level
   owes no direct test of its own. This duty holds however this spawn was
   created.

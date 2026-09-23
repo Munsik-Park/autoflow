@@ -714,11 +714,12 @@ the gated one.
   authority checkpoint inside the deliberation already counted, so it consumes no ARCHITECT
   re-entry budget.
 - **An acceptance-criterion change raised later in the cycle.** The criteria are the issue author's
-  assumptions, and work can show one wrong: a role at GREEN, VERIFY or REFINE that meets a problem
-  showing a criterion is wrong, or that the issue must promise a behavior its criteria do not state,
+  assumptions, and work can show one wrong: a role at GREEN, VERIFY or REFINE whose work shows a
+  criterion defective — a fact it presumes that does not hold, or a scope too narrow or too wide for
+  the problem ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*) —
   raises it in its report with the criterion, the proposed change and the fact that shows the need
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope
-  judgment*); a gate recommendation reaches the same point through the triage's pause criterion (a)
+  judgment*); a gate recommendation reaches the same point through the triage
   (GATE:QUALITY > *Recommendation triage*). The orchestrator reports it situation-first, sets
   `active: false`, `phase: "awaiting-user"`, and records the answer in the same grammar with the
   phase the change surfaced in, editing the Phase B table on `revised`, `split` or `added`. Where
@@ -1018,7 +1019,7 @@ implemented; only its evidence differs.
    is found*).
 2. Write the minimum code that satisfies every issue AC in scope and passes the `automated` tests.
    - [MUST] Do NOT implement behavior outside the cycle's scope — the feature design, its `## Scope` section included, and the verification design's rows. A required AC without an automated test is in scope; a behavior neither the scope nor a recorded scope judgment requires is not, whether or not a test could be written for it.
-   - [MUST] A problem met while implementing that the scope does not name is judged under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* and recorded under `## Scope judgments` in the GREEN report: directly related and desirable to fix here → fixed in this cycle, with the tests the fix requires run and recorded; directly related but not desirable → left, with its separation reason; not directly related → left, reported in one line. A fix that would contradict a design **decision** returns to ARCHITECT, and a problem showing that an acceptance criterion must change is raised in the report for the operator (ARCHITECT > *Report routing* > *An acceptance-criterion change raised later in the cycle*).
+   - [MUST] A problem met while implementing that the scope does not name is judged under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* and recorded under `## Scope judgments` in the GREEN report: directly related and desirable to fix here → fixed in this cycle, with the tests the fix requires run and recorded; directly related but not desirable → left, with its separation reason; not directly related → left, reported in one line. A fix that would contradict a design **decision** returns to ARCHITECT. Work that shows an acceptance criterion defective — whether through a problem the scope does not name or an item a criterion names ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*) — is raised in the report for the operator, not worked around by keeping the criterion's letter (ARCHITECT > *Report routing* > *An acceptance-criterion change raised later in the cycle*).
    - [MUST] Stay on the change surface defined in the plan — see [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules.
    - [MUST] Tests verify correctness; they do not define the solution. Implement the actual logic that solves the problem for all valid inputs — never hard-code to the test inputs, special-case the assertions, or add workaround/helper scripts just to turn a test green. "Minimum code" means the smallest *general* implementation that satisfies the AC, not the narrowest path that satisfies the assertions. If a test looks wrong or infeasible, raise it as a VERIFY cause-branch rather than coding around it.
    - For a row verified with a tool (a `manual` row whose executor is `AI: <tool>`), look at the result with that tool while implementing; the row's evidence is the observation record the Test AI writes at VERIFY step 1, not this look (ARCHITECT > *Tools*).
@@ -1099,9 +1100,11 @@ Run the tests; on failure, branch by cause.
      │    ├─ the Test AI's judgment differs from the GREEN report's → one orchestrator judgment
      │    │  between the two recorded grounds, in an `O` ledger entry (the operator's when the
      │    │  orchestrator is not confident) — not an ARCHITECT round
-     │    └─ keeping it would change a design decision → a scope question to ARCHITECT; it shows
-     │       an acceptance criterion must change → raised for the operator (ARCHITECT > Report
-     │       routing > An acceptance-criterion change raised later in the cycle)
+     │    └─ keeping it would change a design decision → a scope question to ARCHITECT
+     ├─ What the diff shows — in scope or out — reveals an acceptance criterion defective
+     │  (CLAUDE.md > Decision Ledger > Acceptance-criterion decisions) → raised for the operator,
+     │  not resolved by keeping the criterion's letter (ARCHITECT > Report routing > An
+     │  acceptance-criterion change raised later in the cycle)
      └─ A helper, private branch or internal abstraction whose required behavior is already
         protected at a higher level does not owe its own direct test — that is in scope, not a gap
 4. Mock-boundary fidelity check (Test AI):
@@ -1568,6 +1571,14 @@ No separate disposition system exists for gate recommendations
   `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
   severity, finding), is a report defect:
   reject and re-spawn the evaluator, as for a missing `fail_hypothesis`.
+- **A criterion defect goes to the operator, at any severity.** A recommendation that records an
+  acceptance criterion defective — the evaluator records one as a fact, the criterion as its subject
+  ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format) — or one whose fix
+  could keep a criterion's letter only by adding a rule the criterion did not state
+  ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*), is neither
+  routed, separated nor deferred as a `Low`: it is put to the operator and the answer recorded as
+  `[ac-decision]` entries (ARCHITECT > *Report routing* > *An acceptance-criterion change raised
+  later in the cycle*).
 - **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
   the change (issue #275 AC2 as revised on 2026-09-23: the earlier wording named the script's route,
   which presumed a gate at which code already exists):
@@ -1915,7 +1926,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      Every route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker, and the entry names the routed class and, on the `ARCHITECT` route, the judged shape with its grounds — so the attempt cap below counts every entry alike whatever depth it re-entered at, and a later reader can see which route and shape each attempt took. The four user-pause criteria below take precedence over any route; criterion (d) is evaluable on every route because of the `[MUST]` above.
 
      `scope-bounded:` is still written on every Medium+ verdict (the `[MUST]` above): it selects the path **within** a re-entry that runs DIAGNOSE (> PREFLIGHT > Scope-bounded entry), and on a route that does not run DIAGNOSE it is the record of why the finding stayed on the PR's own surface.
-     - **Pause for the user** (`AskUserQuestion`, with the question and option descriptions written situation-first per [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation; `active:false`, `phase:"awaiting-user"`) when the attempt hits **any** of: (a) the fix needs a contract / acceptance-criterion change, (b) the fix direction is ambiguous, (c) the finding is a `Low Confidence` item, (d) the review-response loop check matches (same complaint class, new witness). The user's answer is appended to the ledger and selects re-entry.
+     - **Pause for the user** (`AskUserQuestion`, with the question and option descriptions written situation-first per [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation; `active:false`, `phase:"awaiting-user"`) when the attempt hits **any** of: (a) the fix needs a contract / acceptance-criterion change, or the finding shows a criterion defective ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*), (b) the fix direction is ambiguous, (c) the finding is a `Low Confidence` item, (d) the review-response loop check matches (same complaint class, new witness). The user's answer is appended to the ledger and selects re-entry.
      - **Attempt cap = 7.** Count the *consecutive `review-autofix`-marked ledger entries since the last user re-entry decision (reset by that decision; if none yet this cycle, since the first auto-entry)* — the number of auto-resolution attempts not yet checked with the user. A marked entry is a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*): the allocated identifier sits at the front of the heading and the marker stays at the end, so the count predicate reads the marker exactly as it did before identifiers were introduced — it is unaffected by the `O<n>` prefix, and a gate's recommendation attempt carries its own marker, `[gate-autofix]`, on its own window (GATE:QUALITY > *Recommendation triage*), so neither count reads the other's marker. On the 7th such entry without the `blocked-by-review` label clearing, stop auto-resolving and pause for the user (`active:false`, `phase:"awaiting-user"`). A user re-entry decision (the user approving continuation at a pause) **resets** this window to zero — the next auto-entry starts a fresh budget of 7. The reset anchor is the user re-entry decision only.
      - **Durable record (host PR).** Post a one-line comment on the **host PR** — the always-present cycle anchor carrying `Closes #N` — via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event). These GitHub-side records survive the scratch-file cleanup at the next PREFLIGHT prior-cycle resolution, so cap-fire and re-entry stay durably auditable.
    - **`max_severity ≥ Medium` but the label is absent** — the reviewer confirmed a `Critical`/`High`/`Medium` finding on a PR whose gate label a previous clean (Low-only) round legitimately cleared, and the reviewer's own attach did not land. Re-attach it as a backstop, then continue into the **same** auto-resolution path as the branch above (same attempt cap, same user-pause criteria, same `review-autofix` ledger marker): (1) **Primary** — `gh pr edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (2) **Fallback on primary failure** — `gh issue edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (3) **Verification** — `gh pr view <N> --json labels` (sub-repo PR: add `--repo <owner/name>`) confirming the label is present; if it is still absent after both surfaces, the label likely does not exist in that repo — report it as an operator setup gap (see [`external-review-sequencing.md`](external-review-sequencing.md) > Operator prerequisites). An attach failure does **not** block the auto-resolution: the verdict is the primary signal and justifies re-entry on its own. If this backstop attaches in error (the verdict was in fact below `Medium`), the recovery route is the branch below — a re-run of the step-6 reviewer review clears the label, and that path consumes no code-resolution attempt.
