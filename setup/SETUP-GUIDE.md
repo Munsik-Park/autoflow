@@ -272,7 +272,7 @@ which is also what a re-stamp would deliver.
   that no checklist was declared. A cycle's AUDIT reads the checklist as of the
   cycle's base commit, so a change a cycle makes to it applies only once you
   accept it, recorded as a `[checklist-decision]` ledger entry
-  (`scripts/audit/security-checklist.sh`; `docs/autoflow-guide.md` > AUDIT). A
+  (`scripts/gate/security-checklist.sh`; `docs/autoflow-guide.md` > AUDIT). A
   change you commit outside a cycle is simply the checklist the next cycle reads.
   **Upgrading from a stamp that shipped `.claude/autoflow/docs/security-checklist.md`**:
   that file was AutoFlow's reference-deployment checklist, and a re-stamp removes

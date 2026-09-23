@@ -1,6 +1,6 @@
 # Security Checklist — AutoFlow Repository
 
-> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads it at the version `scripts/audit/security-checklist.sh status` names, and GATE:QUALITY's `Security` item references the AUDIT result (`docs/autoflow-guide.md` > AUDIT). It is **not** stamped to targets: a target's security checklist is the target's own, declared in its own scaffold (issue #281).
+> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads it at the version `scripts/gate/security-checklist.sh status` names, and GATE:QUALITY's `Security` item references the AUDIT result (`docs/autoflow-guide.md` > AUDIT). It is **not** stamped to targets: a target's security checklist is the target's own, declared in its own scaffold (issue #281).
 
 ---
 
@@ -21,7 +21,7 @@ The items below are grouped under AUDIT's five rubric items. A rubric item with 
 
 ### 2. Input Validation
 
-- [ ] `scripts/audit/security-checklist.sh` accepts a declared checklist path only when it is repository-relative and stays inside the repository, and reads the checklist from git objects (`git show <rev>:<path>`), never from outside the repository (issue #281).
+- [ ] `scripts/gate/security-checklist.sh` accepts a declared checklist path only when it is repository-relative and stays inside the repository, and reads the checklist from git objects (`git show <rev>:<path>`), never from outside the repository (issue #281).
 
 ### 3. Data Exposure Prevention
 

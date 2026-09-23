@@ -34,7 +34,7 @@ Hard rules:
   entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
   against that record.
 - **[MUST]** At AUDIT, the target's security checklist is likewise a declared
-  input, read at the version `bash scripts/audit/security-checklist.sh status`
+  input, read at the version `bash scripts/gate/security-checklist.sh status`
   names (`score=`, read with `git show`) — never the working-tree file, and
   never judged on its merit. Changing it is the operator's authority, recorded
   as a `[checklist-decision]` ledger entry. Copy the status line into your

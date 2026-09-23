@@ -1326,7 +1326,7 @@ AUDIT scores — the fresh evaluator, the five items below, the PASS thresholds 
 what each item is judged by. A target declares its checklist in the target-owned scaffold
 `.claude/autoflow.local.json` (`{"audit":{"security_checklist":"<repository-relative path>"}}`).
 At AUDIT entry the orchestrator runs
-`bash scripts/audit/security-checklist.sh status --ledger .autoflow/issue-{N}-ledger.md` and acts on
+`bash scripts/gate/security-checklist.sh status --ledger .autoflow/issue-{N}-ledger.md` and acts on
 its one record line:
 
 | Exit | Verdict | AUDIT reads |

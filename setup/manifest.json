@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "475a9842c344c29380225ea408f1ba4ed4359c489d5b50bfd7bac0d155d3c1c8"
+      "sha256": "9450ebd92ba4610e5528511c1568b2b67ef35436b394002d2d234e64a2716fca"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fb0d60495f84b1fb1db665cc7e535ca41870b7c6b63b1bacca9d0289471aed42"
+      "sha256": "4fd3255e9436da9662fe2c26a7ac17d15381fd25c41a572b701cc89269904391"
     },
     {
       "source": "docs/development-guideline.md",
@@ -296,8 +296,8 @@
       "sha256": "ee1981731565fcfd3fbef5d738222286fc589105e7109785f61f643739030b4a"
     },
     {
-      "source": "scripts/audit/security-checklist.sh",
-      "dest": "scripts/audit/security-checklist.sh",
+      "source": "scripts/gate/security-checklist.sh",
+      "dest": "scripts/gate/security-checklist.sh",
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "3d2a0817a032b4563d8df87a5928f651a5e42239b7ac111034baaa21e7c95006"
