@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/phases/architect.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "477928e8bb24aab38692018b8bab17020632f93761021806c2deb7b562ff2f23"
+      "sha256": "b86407bec307794bc2d4048c6a2af048b23a020a5653701432ade570498685e3"
     },
     {
       "source": "docs/phases/audit.md",
@@ -118,7 +118,7 @@
       "dest": ".claude/autoflow/docs/phases/gate-plan.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6523c06e17c8f94839423f6ba29055a399f4e660d70fb04719fe44237518bf66"
+      "sha256": "ea1ef60c0c8492e0d03fbaf4fec382fe3e5cc9139a827cb37dc0e11665da9984"
     },
     {
       "source": "docs/phases/gate-quality.md",
@@ -167,7 +167,7 @@
       "dest": ".claude/autoflow/docs/phases/refine.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e6f0d5e8c0f49c53340d735427d37ab012b18b236cb0de522112b0e18c6460e4"
+      "sha256": "2b1736c487feed717ec2871c1da116e5bc065238c73ce058e66a11ee94ebdd23"
     },
     {
       "source": "docs/phases/validate.md",
