@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7fb63fa561f6d61b387778e2a7274ba4bc0f3a93e1fe819aa2ce4a745abec6aa"
+      "sha256": "63fb57a2174cbe62615ce84a811c2e30bba465e4f4a32923e168f4e1e67bcf69"
     },
     {
       "source": "docs/role-contracts.md",

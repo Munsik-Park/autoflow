@@ -76,6 +76,39 @@ git status                  # any uncommitted work?
 
 - **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, planner, implementer, tester, evaluator) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
 - **Why (lifecycle contract):** the harness's background-task contract — *re-invoke the owning agent when the task completes* — holds only for an agent that has a future turn. A spawned subagent terminates with its final response, so any still-pending background process is **reaped at teardown**: its output is lost and no completion notification is ever delivered, stalling the orchestrator on a report that never arrives (issue #952 — 71-minute orchestrator deadlock, 2026-07-07). A background CPU-heavy process can also starve the agent's own foreground verification and distort the pass/fail verdict (issue #287). The background + completion-notification pattern is therefore **orchestrator-only** (the main loop is the sole actor with future turns).
+- **[MUST] A foreground command ends on its own (issue #279).** Foreground-only moves the risk from a background task reaped at teardown to a foreground command that never returns: a spawn blocked in one looks to the orchestrator like a spawn still working, and nothing times it out (llmroute #594 — a CI-failure classifier's `kill $STRESS_PIDS 2>/dev/null; wait` held its spawn until the operator killed the processes by hand). This binds the same actors as the first bullet, in three forms:
+  - **The session shell may not be bash.** The Bash tool's shell is initialized from the user's profile, and a stock macOS profile is zsh, whose expansion differs from bash's: an unquoted `$VAR` is not word-split (the incident's `kill` received its twelve PIDs as one argument and failed with `illegal pid`), an unmatched glob is an error (`no matches found`) instead of the literal word, and a word beginning with `=` is replaced by a command's path. A list — PIDs, file names, arguments — is held in an array and expanded quoted, `"${pids[@]}"`, which gives one word per element in bash and zsh alike; a glob meant as an argument is quoted (`--include='*.sh'`); a procedure written for bash runs under bash — `bash -c '…'`, or a file run with `bash <path>`.
+  - **No bare `wait`.** `wait` with no operand blocks until every child of the shell has ended, so one child a failed cleanup left running blocks it for good. `wait "$pid"` names its process and is for a process that ends by itself; a process that must be stopped — a load generator, a server — is waited out by a bounded poll: `kill -0 "$pid"` against a counter, then `kill -KILL`, then a report of any PID that is still alive. The bound does not depend on `timeout`, which not every host carries (a stock macOS has none; `probe_run_bounded` in `scripts/preflight/check-review-backend.sh` falls back to a sleep+kill watchdog for the same reason).
+  - **A cleanup command's stderr is kept.** The `kill` that stops the processes is what reports that the cleanup failed; `2>/dev/null` on it turns the failure into silence that a later wait then hangs on. Its exit status is read one PID at a time: a `kill` given several PIDs reports failure differently by shell — bash returns success when any one signal was sent, zsh returns failure when any one was not. Only a probe whose failure is the expected answer — `kill -0` asking whether a process is still alive — discards it.
+
+  A reproduction that starts background processes and stops them in the same command, in a form that reaches its end whether or not the cleanup succeeds:
+
+  ```bash
+  # Start: every PID recorded in an array, one element each.
+  pids=()
+  for i in 1 2 3 4; do
+    yes > /dev/null &
+    pids+=("$!")
+  done
+
+  # ... the reproduction ...
+
+  # Stop: one kill per PID, stderr kept; then each wait is bounded (about 5 s, then KILL).
+  for pid in "${pids[@]}"; do
+    kill "$pid" || echo "cleanup: kill $pid failed (stderr above)"
+  done
+  for pid in "${pids[@]}"; do
+    n=0
+    while kill -0 "$pid" 2>/dev/null && [ "$n" -lt 50 ]; do
+      sleep 0.1
+      n=$((n + 1))
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "cleanup: $pid survived TERM; sending KILL"
+      kill -KILL "$pid"
+    fi
+  done
+  ```
 - **Enforced at the tool boundary for suite runs (issue #134):** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run, whose result must stay keyed to the tree the claim is made about (`docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 - **The orchestrator's side of the wait (issue #165):** the notification the orchestrator waits for arrives only between its tool calls, so the orchestrator waits by **ending its turn**, never by blocking on one task — the deprecated `TaskOutput` tool is refused by the PreToolUse hook state-independently, and a foreground `sleep` loop polling for a spawn's result is the same fault by other means (`CLAUDE.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending.
 
