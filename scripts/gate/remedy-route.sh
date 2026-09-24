@@ -30,12 +30,9 @@
 #     records where the re-entry starts (a cycle from DIAGNOSE, or ARCHITECT
 #     on a brief — #227); `RED` / `GREEN` / `DOC_COMMIT` are the thin path
 #     (one owning role + execution verification + reviewer re-review).
-#   - Recommendation triage after a PASS (#275) — a Medium+ recommendation
-#     re-enters as a FAIL would, to the phase that owns the change: at AUDIT
-#     and GATE:QUALITY that is this mapping; at GATE:HYPOTHESIS and GATE:PLAN
-#     no code exists yet, so the route is the gate's own FAIL route (DIAGNOSE /
-#     ARCHITECT) and the class rides on the amended artifact instead of
-#     selecting a phase here — this script is not called at those two gates.
+#   - Recommendation triage after a PASS at AUDIT and GATE:QUALITY (#275);
+#     GATE:HYPOTHESIS and GATE:PLAN do not call this script
+#     (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage).
 #
 # Subcommands
 #   route <class>...          print the re-entry target for the class set

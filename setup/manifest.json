@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "35acd255e3cf397391ec6a87f5af6582f910bf097af1db6c9781c8c99bbea9c9"
+      "sha256": "710a7fe20d8a01d95163594b5c94f95e4a925c08bd727252b4dff1da660cfa65"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,21 +27,21 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bce451c533962a5d209ee271d80afee0932f142ce80233ab517fdbe22e1297e0"
+      "sha256": "b92f3c976a9636ca37ea990d767bfbc33f9c165f5682fe0019c27cf22dd00a51"
     },
     {
       "source": "docs/development-guideline.md",
       "dest": ".claude/autoflow/docs/development-guideline.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8cf8d996f416ca3ce66132d42dbf45b5307e2992367dfb59504384ff0c954635"
+      "sha256": "4300f7acf42af6afb55e319221dd790978bcea804f142078ddee54d53d4b1a0f"
     },
     {
       "source": "docs/evaluation-system.md",
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "594aba2bc594078c21377f003325c202acd71c1bf66ae467ccc0118320713cd3"
+      "sha256": "00f5fd05c29be20bb70b268cbc67c5b7cb826224c147ac8757c1a25ca4f34478"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "032566958637a64a78190bd51f523bfad5ca03f2a44e8f997a9fee41f58e4305"
+      "sha256": "d53c015b25dbbe5085e1bdf8a586542b9060c859f0605d14e9293a06c2b62db6"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -293,7 +293,7 @@
       "dest": "scripts/gate/remedy-route.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ee1981731565fcfd3fbef5d738222286fc589105e7109785f61f643739030b4a"
+      "sha256": "5296250b99f49e07ffcad22ec6d405198ce208487bfd0382aee52bd8c41b9c34"
     },
     {
       "source": "scripts/gate/security-checklist.sh",

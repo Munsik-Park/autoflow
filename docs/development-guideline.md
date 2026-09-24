@@ -99,4 +99,23 @@ receives, rather than in the ADR registry, which does not ship.
   indexes, and cross-references where useful.
 - Existing operating manuals remain source-of-truth documents; review baseline
   docs should route to them, not duplicate or override them.
+- **A rule's body has one home.** A rule a phase, a role or a device acts on is
+  stated in full in one section, which declares itself the rule's only home.
+  Every other site that needs it — a `CLAUDE.md` Flow Control row, another
+  phase's step, a role contract, an agent definition, a hook comment or message,
+  a script header, a fixture comment — carries only what that site acts on
+  itself (a transition condition, the check its device makes, a cap's number)
+  and cites the home by path and section. Which cases the rule covers, where it
+  routes them and when it closes them are not restated there: a second
+  statement is a second copy to keep in step, and one left behind is a
+  contradiction its reader acts on (`docs/records/design-rationale.md` >
+  Decision 30).
+- **A rule change is checked against every site before it is committed.** The
+  home lists the search terms that find every sentence stating or citing its
+  rule. Before committing a change to the rule, run `git grep` with those terms,
+  read the hits as one set against the changed rule, and bring each into line —
+  a site that has drifted is reduced to a citation, not re-worded to match.
+  Hits in historical records (`docs/records/`) are read, not rewritten. A home
+  with no search terms yet gets them in the same change, and the PR body names
+  the command that was run.
 
