@@ -19,3 +19,10 @@ Hard rules:
 - **[MUST]** Run every Bash command in the **foreground**; never
   `run_in_background` — background + completion-notification is
   orchestrator-only. See `docs/role-common-rules.md` > Bash Execution Mode.
+- **[MUST]** Every foreground command must end on its own. The shell may be zsh,
+  not bash: hold a PID or argument list in an array expanded quoted
+  (`"${pids[@]}"`), quote a glob passed as an argument, or run a bash procedure
+  under `bash -c` / `bash <path>`. Never a bare `wait` — stop a background
+  process with one `kill` per PID and a bounded poll (`kill -0` against a
+  counter, then `kill -KILL`), and never discard the cleanup `kill`'s stderr.
+  See `docs/role-common-rules.md` > Bash Execution Mode (with an example).
