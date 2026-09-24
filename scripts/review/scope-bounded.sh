@@ -29,7 +29,7 @@
 #         Exit 0 when bounded, 1 when not, 2 on usage / unreadable input / unreadable diff.
 #   entry --issue <N> [--dir <dir>]
 #         Combines the per-PR findings files <dir>/issue-<N>-review-findings-*.md (dir default
-#         .autoflow; a pre-#280 issue-<N>-review-findings.md is read too) for PREFLIGHT's
+#         .autoflow; a pre-#280 issue-<N>-review-findings.md only when none exists) for PREFLIGHT's
 #         Scope-bounded entry. Bounded only when at least one file's max_severity is Medium+ and
 #         every such file carries `scope-bounded: true`; a `false`, a Medium+ file with no line,
 #         or a file whose max_severity line is missing, repeated or unparseable is the full path.
@@ -180,8 +180,12 @@ cmd_entry() {
   [[ "$issue" =~ ^[0-9]+$ ]] || usage
   [ -d "$dir" ] || usage
 
+  # A pre-#280 single file is read only when no per-PR file exists: beside per-PR files it is
+  # a stale verdict from before the switch, and would decide the path for reviews that no
+  # longer hold.
   local files
-  files=$(find "$dir" -maxdepth 1 -type f \( -name "issue-${issue}-review-findings-*.md" -o -name "issue-${issue}-review-findings.md" \) | LC_ALL=C sort)
+  files=$(find "$dir" -maxdepth 1 -type f -name "issue-${issue}-review-findings-*.md" | LC_ALL=C sort)
+  [ -n "$files" ] || files=$(find "$dir" -maxdepth 1 -type f -name "issue-${issue}-review-findings.md")
   if [ -z "$files" ]; then
     printf 'scope-bounded: false\nscope-bounded-grounds: no findings file for issue #%s — full path\n' "$issue"
     return 1
@@ -190,16 +194,18 @@ cmd_entry() {
   local f name sev count verdict notes="" defect=0 bounded=0 medium=0
   while IFS= read -r f; do
     name=${f##*/}
-    # max_severity: exactly one line; colon canonical, `=` and whitespace tolerated.
-    count=$(grep -cE '^[[:space:]]*max_severity([[:space:]]*[:=][[:space:]]*|[[:space:]]+)[A-Za-z]+[[:space:]]*$' "$f" || true)
-    sev=$(sed -nE 's/^[[:space:]]*max_severity([[:space:]]*[:=][[:space:]]*|[[:space:]]+)([A-Za-z]+)[[:space:]]*$/\2/p' "$f" | head -n 1)
+    # max_severity: count every line that declares the key, whatever its value, so a malformed
+    # second declaration is a repeat rather than invisible; then parse the one line — colon
+    # canonical, `=` and whitespace tolerated.
+    count=$(grep -cE '^[[:space:]]*max_severity([[:space:]:=]|$)' "$f" || true)
     if [ "$count" -ne 1 ]; then
       notes="${notes:+$notes; }$name max_severity lines: $count"; defect=1; continue
     fi
+    sev=$(sed -nE 's/^[[:space:]]*max_severity([[:space:]]*[:=][[:space:]]*|[[:space:]]+)([A-Za-z]+)[[:space:]]*$/\2/p' "$f")
     case "$sev" in
       None|Low) continue ;;
       Medium|High|Critical) medium=$((medium + 1)) ;;
-      *) notes="${notes:+$notes; }$name max_severity unparseable: $sev"; defect=1; continue ;;
+      *) notes="${notes:+$notes; }$name max_severity unparseable: $(grep -m 1 -E '^[[:space:]]*max_severity' "$f" | sed -E 's/^[[:space:]]+//')"; defect=1; continue ;;
     esac
     verdict=$(sed -nE 's/^scope-bounded:[[:space:]]*(true|false)[[:space:]]*$/\1/p' "$f" | sort -u | tr '\n' ' ')
     case "$verdict" in
