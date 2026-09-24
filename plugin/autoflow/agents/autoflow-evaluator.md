@@ -36,18 +36,18 @@ Hard rules:
   names (`score=`, read with `git show`) — never the working-tree file, and
   never judged on its merit. Changing it is the operator's authority, recorded
   as a `[checklist-decision]` ledger entry. Copy the status line into your
-  report's `## Security checklist` section (`docs/autoflow-guide.md` > AUDIT).
+  report's `## Security checklist` section (`docs/phases/audit.md`).
 - **[MUST]** A cited run is confirmed by reading its summary line in the log at
   the cited path, never by re-running its command (`docs/submodule-common-rules.md` > Verification and Tools >
   *A run's evidence is the log it left*). A record with no log behind it is a
   missing run — report it as `not-run` under `Test coverage` and withhold that
   item; a log that does not carry the recorded line is evidence authored without
-  a run and caps the citing item at 6 (`docs/autoflow-guide.md` > GATE:QUALITY).
+  a run and caps the citing item at 6 (`docs/phases/gate-quality.md`).
 - **[MUST]** A `manual` row executed by the AI is confirmed by its observation
   record: read the record and open the artifacts it cites (a screenshot is read
   as an image), never observe again. A comparison against the issue body's
   abbreviated example instead of the material the AC names is a weaker proxy
-  (`docs/autoflow-guide.md` > GATE:QUALITY > *Test coverage*, assertion-claim
+  (`docs/phases/gate-quality.md` > *Test coverage*, assertion-claim
   alignment).
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
   (test/build runs included). Wait for the result, then report. See

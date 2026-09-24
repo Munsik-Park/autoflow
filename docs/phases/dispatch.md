@@ -1,0 +1,13 @@
+# DISPATCH — Task Assignment (Developer AI + Test AI)
+
+> Phase playbook for DISPATCH. [`CLAUDE.md`](../../CLAUDE.md) > Phase Playbook Loading
+> Contract routes to this file; the other phases are listed in
+> [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
+
+Each role's task is delivered in the prompt of the direct spawn that enters its phase — the Test AI's at RED, then the Developer AI's at GREEN. The spawn's return value is its report ([`CLAUDE.md`](../../CLAUDE.md) > Communication):
+
+- **Role spawn**: ARCHITECT was the orchestrator's relay of two participants, recorded from the transcript file by the Record workflow; those participants are not woken for RED or GREEN. The orchestrator spawns a fresh agent at each phase entry — the Test AI at RED entry, the Developer AI at GREEN entry once RED is complete — anonymous direct spawns (`subagent_type`); see [`CLAUDE.md`](../../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
+- **Test AI**: verification-design "automated" items → test-writing tasks.
+- **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the cycle-layer store `.autoflow/issue-{N}-local/` and hands over the **run record so far** — the RED report's path — naming each verification-design row that still has no record as *run first* ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *A missing run is filled where it is found*).
+- Both receive: acceptance criteria + verification design + affected docs — and each recommendation a gate's triage deferred to its role, with its subject and finding ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — and how its CI selects tests for a change, run the tests the change requires that way, and record the command, the log and the summary line read from it ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *How a test is run is the target's practice*, *Local verification*); and use the tools the verification design's `## Tools` section records, reporting a tool you find missing rather than acquiring it (*The tools the work needs*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
+- Every later role spawn in the cycle — VERIFY, REFINE, the GATE:QUALITY evaluator — receives the run record the same way: the prior reports' paths, with any row lacking a record marked *run first*.

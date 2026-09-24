@@ -6,7 +6,7 @@
 # HANDOFF step 5 — deterministic "confirm CI is green" helper.
 #
 # Promotes the topology-independent step-5 invariant from prose
-# (docs/autoflow-guide.md step 5) into a single enforceable invocation so the
+# (docs/phases/handoff.md step 5) into a single enforceable invocation so the
 # orchestrator never hand-writes a polling loop again (issue #25). It reads
 # `mergeable`/`mergeStateStatus` FIRST and early-exits on CONFLICTING/DIRTY
 # WITHOUT ever entering a poll (the PR #321 infinite-wait class); only when the

@@ -180,7 +180,7 @@ claude-autoflow/
 │
 ├── docs/                              # Usage documents — stamped to targets
 │   ├── INDEX.md                       # Router: usage documents vs records
-│   ├── autoflow-guide.md              # Phase-by-phase AutoFlow guide
+│   ├── autoflow-guide.md              # Lifecycle overview + index of the phase playbooks
 │   ├── evaluation-system.md           # Evaluation scoring details
 │   ├── git-workflow.md                # Git procedures
 │   ├── repo-boundary-rules.md         # Cross-repo coordination rules
@@ -267,12 +267,12 @@ Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
 | Document | Description |
 |----------|-------------|
 | [**Design Rationale**](docs/records/design-rationale.md) | Why every design decision was made — a record read for a decision's grounds; which documents a role receives is routed per role (`CLAUDE.md` > Context Injection — Role-Scoped Document Routing) |
-| [AutoFlow Guide](docs/autoflow-guide.md) | Detailed phase-by-phase lifecycle |
+| [AutoFlow Guide](docs/autoflow-guide.md) | Lifecycle overview and diagram; index of the per-phase playbooks (`docs/phases/`) |
 | [Evaluation System](docs/evaluation-system.md) | Scoring, PASS criteria, output format |
 | [Git Workflow](docs/git-workflow.md) | Branch naming, commits, PR process |
 | [Repo Boundary Rules](docs/repo-boundary-rules.md) | Cross-repo coordination |
 | [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Discussion Protocol, sub-repo rules |
-| [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/autoflow-guide.md` > AUDIT) |
+| [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/phases/audit.md`) |
 | [Setup Guide](setup/SETUP-GUIDE.md) | Manual setup instructions |
 
 ---

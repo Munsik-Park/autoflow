@@ -70,7 +70,7 @@
 #   plugin (`/plugin update <plugin>@<marketplace>`); D6 → edit the target-owned
 #   scaffold by hand to the loaded definitions' values / add the missing rows
 #   (a re-stamp never overwrites it); D7 → back-fill each named suite's header
-#   (docs/autoflow-guide.md > RED > Header contract > Adopting the contract
+#   (docs/phases/red.md > Header contract > Adopting the contract
 #   over existing suites; a re-stamp never touches tests/**), or repair the
 #   unreadable declaration file it names.
 #
@@ -608,7 +608,7 @@ else
           [ -n "$_s" ] || continue
           failc "D7" "$_s declares no usable '# ci-subject:' header — scripts/test/select-suites.sh BLOCKs every selection until it does (RED's suite derivation, run-suites.sh without --all)"
         done < "$_d7_out"
-        hint "D7: these suites are target-owned and a re-stamp never adds their headers — back-fill '# ci-subject:' (with '# budget-secs:') per docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites; a sourced helper rather than a standalone spec moves under tests/lib/ instead. Re-check with: bash scripts/test/select-suites.sh --check-headers"
+        hint "D7: these suites are target-owned and a re-stamp never adds their headers — back-fill '# ci-subject:' (with '# budget-secs:') per docs/phases/red.md > Header contract > Adopting the contract over existing suites; a sourced helper rather than a standalone spec moves under tests/lib/ instead. Re-check with: bash scripts/test/select-suites.sh --check-headers"
       else
         failc "D7" "scripts/test/select-suites.sh --check-headers exited $_d7_rc without its verdict record ($(head -n 1 "$_d7_err")) — the suite-header check could not run"
       fi

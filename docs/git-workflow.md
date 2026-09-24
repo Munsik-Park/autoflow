@@ -128,7 +128,7 @@ In a multi-repo deployment (host PR with sub-repo dependencies), the merge order
 
 Full reviewer-facing procedure: [`external-review-sequencing.md`](external-review-sequencing.md).
 
-See also: [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF > Merge Sequencing (external review).
+See also: [`phases/handoff.md`](phases/handoff.md) > Merge Sequencing (external review).
 
 ### Pointer reconciliation — concurrent-cycle gitlink guard
 
@@ -150,7 +150,7 @@ fi
 # MAIN descendant of TARGET OR divergent -> do NOT push; escalate to operator
 ```
 
-Before/after pushing, verify **all three**: (1) `git ls-tree HEAD <submodule>` == `TARGET` (manual pointer-equality check); (2) the generic mergeable + check-rollup confirmation via `scripts/handoff/confirm-ci-green.sh --pr <PR>` (the shared HANDOFF step-5 helper; see [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF step 5 and [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight — not restated here); (3) the CI checks on the new head commit all `success`, read by commit SHA (`gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs`), never by job or check name. **[MUST]** Read the post-reconcile head's checks, not the PR's latest run. Run the reconcile against a freshly-synced `main` (Post-Merge Cleanup of prior merges first). Full procedure: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
+Before/after pushing, verify **all three**: (1) `git ls-tree HEAD <submodule>` == `TARGET` (manual pointer-equality check); (2) the generic mergeable + check-rollup confirmation via `scripts/handoff/confirm-ci-green.sh --pr <PR>` (the shared HANDOFF step-5 helper; see [`phases/handoff.md`](phases/handoff.md) > step 5 and [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight — not restated here); (3) the CI checks on the new head commit all `success`, read by commit SHA (`gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs`), never by job or check name. **[MUST]** Read the post-reconcile head's checks, not the PR's latest run. Run the reconcile against a freshly-synced `main` (Post-Merge Cleanup of prior merges first). Full procedure: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
 
 ---
 

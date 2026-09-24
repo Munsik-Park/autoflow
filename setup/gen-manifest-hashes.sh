@@ -187,7 +187,7 @@ build_rows() {
            ".claude/autoflow.local.json" "root-layer" "scaffold" "file"
 
   # Root-layer tier: methodology-step scripts (issue #10). Scripts the
-  # stamped docs (autoflow-guide.md HANDOFF, git-workflow.md Post-Merge
+  # stamped docs (phases/handoff.md, git-workflow.md Post-Merge
   # Cleanup) instruct a consumer to run but which
   # 0.1.0 never registered, so install_into_target never delivered them.
   # Source-path-preserved copies (identity dest), same shape as the reviewer-
@@ -205,7 +205,7 @@ build_rows() {
   emit_row "scripts/ledger/ledger-entry-id.sh" \
            "scripts/ledger/ledger-entry-id.sh" "root-layer" "copy" "file"
   # ARCHITECT relay state (issue #179, ADR-0023 D2). The stamped
-  # autoflow-guide.md > ARCHITECT > Relay procedure instructs the orchestrator to
+  # phases/architect.md > Relay procedure instructs the orchestrator to
   # run it at every turn (init / state / brief), so a target that never
   # receives it cannot run the relay it is stamped with. The measurement tool
   # beside it (deliberation-metrics.py) is effect-record tooling and stays
@@ -213,14 +213,14 @@ build_rows() {
   emit_row "scripts/architect/relay-state.sh" \
            "scripts/architect/relay-state.sh" "root-layer" "copy" "file"
   # Composition-oracle classifier (issue #206, D7). The stamped
-  # autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle tells
+  # phases/architect.md > Output artifacts > Composition oracle tells
   # every target's Record step to run it and attach its output, so a target
   # that never receives it attaches an absent determination (exit 127, empty
   # stdout) instead of a classified one.
   emit_row "scripts/architect/composition-oracle.sh" \
            "scripts/architect/composition-oracle.sh" "root-layer" "copy" "file"
-  # Class-routed re-entry (issues #140, #192). The stamped autoflow-guide.md
-  # routes every GATE:QUALITY / VALIDATE / INTEGRATE FAIL and every Medium+
+  # Class-routed re-entry (issues #140, #192). The stamped phase playbooks
+  # (docs/phases/) route every GATE:QUALITY / VALIDATE / INTEGRATE FAIL and every Medium+
   # reviewer finding through it, and it is the single owner of that mapping — a
   # target without it must re-derive the routing by hand, which is the judgment
   # the script exists to replace.
@@ -228,7 +228,7 @@ build_rows() {
            "scripts/gate/remedy-route.sh" "root-layer" "copy" "file"
   # AUDIT security-checklist resolver (issue #281). The checklist is the
   # target's own, declared under the scaffold's `audit.security_checklist`; the
-  # stamped autoflow-guide.md has AUDIT read the version this script names, so a
+  # stamped docs/phases/audit.md has AUDIT read the version this script names, so a
   # cycle cannot loosen the checklist its own AUDIT scores against.
   emit_row "scripts/gate/security-checklist.sh" \
            "scripts/gate/security-checklist.sh" "root-layer" "copy" "file"

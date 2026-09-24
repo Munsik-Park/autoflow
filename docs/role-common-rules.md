@@ -226,7 +226,7 @@ above).
 
 - Read and understand the existing code before changing it.
 - Run the relevant tests after each change and confirm they pass.
-- Run `/simplify` after implementation when the diff warrants it — the judgment and its grounds go in the REFINE report (`docs/autoflow-guide.md` > REFINE step 1).
+- Run `/simplify` after implementation when the diff warrants it — the judgment and its grounds go in the REFINE report (`docs/phases/refine.md` > step 1).
 - Do not add unnecessary refactors or type annotations. A comment carries only what `docs/submodule-common-rules.md` > Change Surface Rules > *Code comments* admits.
 - Do not introduce security vulnerabilities.
 - Do not make changes outside the assigned scope.

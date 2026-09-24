@@ -51,7 +51,7 @@ Classify work before implementation:
 Create or update an ADR before implementation when a change affects one of
 these **trigger areas**. This list is the one the ADR-conformance checks read:
 GATE:PLAN's *ADR-conformance check* and GATE:QUALITY's *Fit — ADR
-conformance* item in `docs/autoflow-guide.md` decide "trigger area hit" and
+conformance* item (`docs/phases/gate-plan.md`, `docs/phases/gate-quality.md`) decide "trigger area hit" and
 "N/A" against it.
 
 - Host/submodule responsibility boundaries.

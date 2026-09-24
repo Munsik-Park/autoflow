@@ -1,6 +1,6 @@
 # Security Checklist — AutoFlow Repository
 
-> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads it at the version `scripts/gate/security-checklist.sh status` names, and GATE:QUALITY's `Security` item references the AUDIT result (`docs/autoflow-guide.md` > AUDIT). It is **not** stamped to targets: a target's security checklist is the target's own, declared in its own scaffold.
+> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads it at the version `scripts/gate/security-checklist.sh status` names, and GATE:QUALITY's `Security` item references the AUDIT result (`docs/phases/audit.md`). It is **not** stamped to targets: a target's security checklist is the target's own, declared in its own scaffold.
 
 ---
 

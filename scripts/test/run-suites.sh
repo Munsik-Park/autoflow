@@ -156,7 +156,7 @@ fi
 if [ "$SELECT_RC" -ne 0 ]; then
   echo "run-suites: selection failed (exit $SELECT_RC) — no suite executed" >&2
   echo "  The selector's BLOCK: lines above name the cause. A selection that cannot compute degrades to executing, never to skipping: 'run-suites.sh --all' runs the whole enumerated set." >&2
-  echo "  A suite without a usable '# ci-subject:' header is a target migration item ('select-suites.sh --check-headers' lists every one): docs/autoflow-guide.md > RED > Header contract > Adopting the contract over existing suites." >&2
+  echo "  A suite without a usable '# ci-subject:' header is a target migration item ('select-suites.sh --check-headers' lists every one): docs/phases/red.md > Header contract > Adopting the contract over existing suites." >&2
   exit 1
 fi
 

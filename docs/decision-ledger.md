@@ -10,7 +10,7 @@ allocation and check — are [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger.
 - Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `ARCHITECT mutual ACCEPT`, `GATE:PLAN PASS (avg 8.2)`, `VERIFY Evaluation-AI arbitration`), and the cycle/phase.
 - **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the re-opening is **judged by the decision's original authority** — a gate verdict by a fresh Evaluation AI re-scoring that item, an ARCHITECT conclusion by re-deliberation on a `brief` naming the entry (an ARCHITECT re-entry, consuming that counter, unless the deliberation is still open), an operator decision by the operator — and when that authority cannot say with confidence that the error changes the decision, it asks the operator ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3); (3) the superseding entry's grounds record the reproducing command and its summary line in the grounds form above and name the superseded entry's identifier. A change of preference or a re-interpretation of the same material is not an error and stays barred.
 
-**Writers**. The facilitator appends the deliberation's agreed conclusions under the authority `ARCHITECT agreed`; the orchestrator appends each gate's verdict after the gate, records a loop-check observation (complaint class, witness, prior-change shape, cycle) on **every** review-response attempt — at DIAGNOSE entry, or at HANDOFF step 6.5 for a thin route that runs no DIAGNOSE — appends the VERIFY detection record (the steps 3/4 outcomes, `verify-detection`-marked — a record, not a decision; see [`autoflow-guide.md`](autoflow-guide.md) > VERIFY > *Detection record*) at VERIFY exit, and — when a match pauses for the user — appends the user's re-entry decision as a separate entry after they answer.
+**Writers**. The facilitator appends the deliberation's agreed conclusions under the authority `ARCHITECT agreed`; the orchestrator appends each gate's verdict after the gate, records a loop-check observation (complaint class, witness, prior-change shape, cycle) on **every** review-response attempt — at DIAGNOSE entry, or at HANDOFF step 6.5 for a thin route that runs no DIAGNOSE — appends the VERIFY detection record (the steps 3/4 outcomes, `verify-detection`-marked — a record, not a decision; see [`phases/verify.md`](phases/verify.md) > *Detection record*) at VERIFY exit, and — when a match pauses for the user — appends the user's re-entry decision as a separate entry after they answer.
 
 ## Entry identifier
 
@@ -31,12 +31,12 @@ This table is the mapping's only documentary home; other documents cite it rathe
 **Acceptance-criterion decisions** (`[ac-decision]`). Changing an issue's acceptance **content** is the
 **operator's** authority, never a deliberation's; choosing how a criterion is *verified* is the
 deliberation's, provided the row states its reason, which the external reviewer then judges at
-HANDOFF (the three-tier guard — [`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT >
+HANDOFF (the three-tier guard — [`phases/architect.md`](phases/architect.md) >
 *Report routing*). A content change reaches the operator from wherever it surfaces: an agreed conclusion of
 the ARCHITECT deliberation, presented before GATE:PLAN; a problem a role meets during GREEN, VERIFY or
 REFINE and raises in its report; or a gate recommendation that records a criterion defect, or whose
-triage hits the acceptance-criterion pause criterion ([`autoflow-guide.md`](autoflow-guide.md) > ARCHITECT > *Report routing*,
-> GATE:QUALITY > *Recommendation triage*). The change excludes, revises or splits a criterion, or adds one. The
+triage hits the acceptance-criterion pause criterion ([`phases/architect.md`](phases/architect.md) > *Report routing*,
+[`phases/gate-quality.md`](phases/gate-quality.md) > *Recommendation triage*). The change excludes, revises or splits a criterion, or adds one. The
 orchestrator presents it to the operator, and the operator's answer is recorded as one entry per
 decided AC, in the same trailing-marker grammar:
 the heading `## O<n> — <title> (cycle <C>, <PHASE>) [ac-decision]`, `<PHASE>` being the phase the

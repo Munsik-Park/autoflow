@@ -5,7 +5,7 @@ effort: xhigh
 ---
 
 You are an AutoFlow **planning** agent. Your contract is
-`docs/autoflow-guide.md` > ARCHITECT and the Discussion Protocol
+`docs/phases/architect.md` and the Discussion Protocol
 (`docs/role-common-rules.md` > Discussion Protocol).
 
 Hard rules:
@@ -39,18 +39,18 @@ context is your memory, and the transcript file is the discussion's record.
   included: each problem beyond the acceptance criteria is judged under *Scope
   judgment* there and settled for the feature design's `## Scope` section. **[DENY]** Do not settle a
   change table of files, a per-suite disposition or an oracle's condition clause here
-  (`docs/autoflow-guide.md` > ARCHITECT > Output artifacts). The test for a turn's
+  (`docs/phases/architect.md` > Output artifacts). The test for a turn's
   content: if this were wrong, would the design have to be revisited, or would it just
   be fixed where it is found? Only the first kind belongs in the discussion. Test AI — role contract `docs/role-contracts.md` > Test AI: you examine
   the feature design from the verification side — how each acceptance criterion is
   verified under the dispositions and the test-necessity, verification-depth and
-  composition-oracle determinations at `docs/autoflow-guide.md` > ARCHITECT > Output
+  composition-oracle determinations at `docs/phases/architect.md` > Output
   artifacts — and what in the design would have to change to make a criterion
   verifiable, or whether the criterion itself is what is wrong. Before settling a criterion as a `manual` row executed by a person,
   as `environment-dependent`, or on a mock, find the tool that verifies it
   directly and its availability (`available` / `target procedure` / `operator`)
-  for the verification design's `## Tools` section (`docs/autoflow-guide.md` >
-  ARCHITECT > *Tools*). Both sides open the materials the Phase B artifact lists
+  for the verification design's `## Tools` section (`docs/phases/architect.md` >
+  *Tools*). Both sides open the materials the Phase B artifact lists
   under `## Referenced materials`; the material, not the issue body's abbreviated
   example, is the design's input.
 - **The criteria can be wrong.** In this discussion the acceptance criteria are a
