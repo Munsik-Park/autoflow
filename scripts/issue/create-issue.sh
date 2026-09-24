@@ -28,14 +28,15 @@
 #
 # Draft grammar: docs/issue-proposal.md (feature design §6). Four `## `-headed
 # sections, order-independent: `## Title`, `## Grounds`, `## Duplicate check`,
-# `## Body`.
+# `## Body`. No other `## ` heading is admitted.
 #
 # Exit codes:
 #   0   created, or --dry-run with every check passed
 #   64  usage / missing argument / draft not directly inside the derived
 #       `.autoflow` (including that directory being absent)
-#   65  refusal — missing section, no grounding anchor, no derivable query term,
-#       an undispositioned candidate, or a query at its page limit
+#   65  refusal — missing section, a level-2 heading outside the four sections,
+#       no grounding anchor, no derivable query term, an undispositioned
+#       candidate, or a query at its page limit
 #   70  gh reported success but its output could not be bound to a number
 #   *   gh's own non-zero exit, propagated
 
@@ -182,6 +183,21 @@ has_section "Grounds"        || MISSING="$MISSING  - the '## Grounds' section
 has_section "Duplicate check" || MISSING="$MISSING  - the '## Duplicate check' section
 "
 has_section "Body"           || MISSING="$MISSING  - the '## Body' section
+"
+
+# A `## ` line ends the section above it wherever it sits — inside a fenced code
+# block included — so a level-2 heading that names none of the four sections
+# would drop the text under it without a word (issue #278). Each one is named,
+# with its line, so the author can demote it rather than find the loss on the
+# created issue.
+STRAY_HEADINGS="$(awk -v q="'" '
+  /^## / {
+    name = substr($0, 4)
+    if (name != "Title" && name != "Grounds" && name != "Duplicate check" && name != "Body")
+      printf "  - line %d %s%s%s: a level-2 heading outside the four sections — the text under it belongs to no section and would be dropped; write it at level 3 or deeper (%s### %s%s)\n", NR, q, $0, q, q, name, q
+  }
+' "$DRAFT_PATH")"
+[ -z "$STRAY_HEADINGS" ] || MISSING="$MISSING$STRAY_HEADINGS
 "
 
 TITLE=""

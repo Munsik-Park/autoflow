@@ -68,6 +68,13 @@ sections — becomes the created issue's body.
 | `## Duplicate check` | a `searched:` line listing the query terms, then either `candidates: none` or one `#<number> — <disposition>` row per candidate | the `searched:` line is present and non-empty; its tokens feed the term derivation; the candidate rows are the set the disposition invariant compares against |
 | `## Body` | the text from its heading to the next level-2 heading | non-empty; becomes the issue body |
 
+A heading inside the body is written at level 3 or deeper (`### Background`),
+never at level 2. A `## ` line ends the section above it wherever it sits — a
+fenced code block included — so the text under a level-2 heading that names none
+of the four sections belongs to no section. The wrapper refuses such a draft,
+naming each such heading with its line, instead of filing the body cut short at
+it.
+
 The grammar is deliberately thin. It exists so the wrapper can perform a
 mechanical comparison — not to make the draft a form an agent fills in to earn a
 pass.
@@ -95,8 +102,9 @@ rename puts it in the `issue-<N>-*` companion form the matcher sweeps.
    directory. A draft that is itself a symlink is refused rather than resolved —
    renaming a link would move the link and leave the content outside every
    cycle's archival set.
-2. Refuses a draft missing any required element, naming **every** missing one so
-   the caller can repair it without guessing.
+2. Refuses a draft missing any required element, or carrying a level-2 heading
+   outside the four sections, naming **every** such defect so the caller can
+   repair it without guessing.
 3. Derives title terms by a rule with no implementation freedom: strip a leading
    `[tag]`; lowercase the ASCII range only; split on whitespace and ASCII
    punctuation, with bytes outside ASCII never acting as separators, so a
@@ -131,7 +139,7 @@ rename puts it in the `issue-<N>-*` companion form the matcher sweeps.
 |------|---------|
 | `0` | created, or `--dry-run` passed every check |
 | `64` | usage, or the draft is not directly inside the derived `.autoflow` (including that directory being absent) |
-| `65` | refusal — missing section, no grounding anchor, no derivable term, an undispositioned candidate, or a query at its page limit |
+| `65` | refusal — missing section, a level-2 heading outside the four sections, no grounding anchor, no derivable term, an undispositioned candidate, or a query at its page limit |
 | `70` | the issue was created but its number could not be bound |
 | other | `gh`'s own exit, propagated |
 
