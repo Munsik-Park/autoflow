@@ -56,22 +56,22 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 - 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: deliberation이 검증
   방법의 축소를 결정하고, external reviewer가 그 reason의 타당성을 판단하며,
-  operator는 criterion의 **내용**이 바뀔 때만 개입한다. 규칙 본문은 [`autoflow-guide.md`](autoflow-guide.md) >
-  ARCHITECT > Output artifacts > *Test necessity* 와 ARCHITECT > *Report routing*.
+  operator는 criterion의 **내용**이 바뀔 때만 개입한다. 규칙 본문은 [`phases/architect.md`](phases/architect.md) >
+  Output artifacts > *Test necessity* 와 *Report routing*.
 - 형식은 AC id + disposition + reason 한 줄. reason은 verification design의 셀을
   옮겨 적고 새로 쓰지 않는다.
 - issue AC 전부가 `automated` 이면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
 - `cycle` 층의 `automated` row(`Type` 셀에 `standing:` 토큰이 없는 row)는 같은 섹션에 그
   row의 **run record** — VERIFY step 1이 실행한 command와 summary line — 를 한 줄로 싣는다
-  (`autoflow-guide.md` > HANDOFF step 4).
+  (`phases/handoff.md` > step 4).
 - AI가 도구로 실행한 `manual` row는 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
   한 줄로 싣는다. 사람이 실행하는 `manual` row는 reason에 도구를 확보할 수 없었던 이유가 들어
-  있다 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; `autoflow-guide.md` > ARCHITECT > *Tools*).
+  있다 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; `phases/architect.md` > *Tools*).
 - cycle이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
   남겨 두는 이유, 그리고 HANDOFF 5단계가 CI 로그에서 확인한 실행 job(target에 CI가 없으면
   `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *What a cycle leaves in the target's tree*;
-  `autoflow-guide.md` > HANDOFF step 4·5).
+  `phases/handoff.md` > step 4·5).
 
 예:
 
@@ -95,7 +95,7 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 본 가이드는 권고. PR 유형에 따라 일부 섹션은 적용되지 않을 수 있다.
 
-- [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF 가 본 가이드를 cross-reference (AI orchestrator).
+- [`phases/handoff.md`](phases/handoff.md) 가 본 가이드를 cross-reference (AI orchestrator).
 - 수동 PR 작성 시도 동일하게 참조.
 
 새 principle 추가 시 형식 유지 (이름 + 본문 + 예시 1-2건).

@@ -125,7 +125,7 @@ written):
   axis is reported on its own, not as drift
   a re-stamp repairs. On `fail`, list **every** `SUITE_HEADER_FINDING=` line
   verbatim (one per suite to migrate) and state the remedy: back-fill each
-  named suite's header per `docs/autoflow-guide.md` > RED > Header contract >
+  named suite's header per `docs/phases/red.md` > Header contract >
   *Adopting the contract over existing suites* before the first cycle — a
   sourced helper rather than a standalone spec moves under `tests/lib/`
   instead. **Whatever `SUITE_HEADER_STATE` is**, list every

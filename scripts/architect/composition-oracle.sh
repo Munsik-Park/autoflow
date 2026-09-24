@@ -11,7 +11,7 @@
 # the determination.
 #
 # The record grammar, the three outcomes with their exit statuses, and the reading rule are
-# defined once, in docs/autoflow-guide.md > ARCHITECT > Output artifacts > Composition oracle.
+# defined once, in docs/phases/architect.md > Output artifacts > Composition oracle.
 # This script implements that clause and does not restate it. Two properties of the output are
 # the script's own, and the clause relies on both:
 #   - the `result:` line is printed last, immediately before the explicit exit, so a run that

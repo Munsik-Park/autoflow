@@ -315,5 +315,5 @@ if check_tree "$ROOT"; then
 fi
 echo "check-suite-manifest: $VIOLATIONS violation(s)"
 echo "  A suite declares its lane, its trigger surface and its cost at creation, and the"
-echo "  workflow step that runs it agrees. See docs/autoflow-guide.md > RED > Header contract."
+echo "  workflow step that runs it agrees. See docs/phases/red.md > Header contract."
 exit 1

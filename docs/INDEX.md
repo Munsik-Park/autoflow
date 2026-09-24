@@ -22,7 +22,7 @@ These documents are the operating source of truth.
 | Document | Role |
 | --- | --- |
 | [CLAUDE.md](../CLAUDE.md) | AutoFlow operating manual and phase router. |
-| [AutoFlow Guide](autoflow-guide.md) | Phase-by-phase lifecycle details. |
+| [AutoFlow Guide](autoflow-guide.md) | Lifecycle overview and diagram; index of the per-phase playbooks under `phases/`. |
 | [DIAGNOSE Analysis Playbook](phases/analysis.md) | Issue analysis and necessity-evaluation procedure. |
 | [Decision Ledger](decision-ledger.md) | The per-issue decision ledger's entry grammar, identifiers, and operator-decision entries (`[ac-decision]`, `[checklist-decision]`). |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
@@ -36,7 +36,7 @@ These documents are the operating source of truth.
 
 | If the issue touches... | Read first |
 | --- | --- |
-| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/autoflow-guide.md`, `docs/phases/analysis.md` |
+| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/autoflow-guide.md`, `docs/phases/*.md` |
 | Sub-repo implementation (multi-repo instances) | `docs/repo-boundary-rules.md` |
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Filing a new issue | `docs/issue-proposal.md` |

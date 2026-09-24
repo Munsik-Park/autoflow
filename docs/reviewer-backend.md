@@ -4,7 +4,7 @@ HANDOFF step 6 (external review) runs through a **backend-neutral reviewer
 contract**. `codex` is the default backend; `claude` is an opt-in fallback. This
 document is the single home for the abstraction — the inputs, obligations,
 output, backend table, config location, and the per-backend start-confirmation
-oracle. It is referenced from [`autoflow-guide.md`](autoflow-guide.md) HANDOFF
+oracle. It is referenced from [`phases/handoff.md`](phases/handoff.md)
 step 6 and `CLAUDE.md`.
 
 ## Contract

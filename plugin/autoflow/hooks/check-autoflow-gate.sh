@@ -398,7 +398,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   fi
 
   # ── Backgrounded suite-run deny (issue #134; state-independent — P2) ──
-  # docs/autoflow-guide.md > VERIFY > Green-tree register: a suite run's result is
+  # docs/phases/verify.md > Green-tree register: a suite run's result is
   # evidence only if the tree stood still under it, and a backgrounded run outlives
   # the turn that started it. The foreground obligation was prose only
   # (docs/role-common-rules.md > Bash Execution Mode); it moves to the tool
@@ -466,7 +466,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     _bg_deny=1
   fi
   if [ "$_bg_deny" = 1 ]; then
-    echo "BLOCKED: a backgrounded run of scripts/test/run-suites.sh is denied — run it in the foreground (docs/role-common-rules.md > Bash Execution Mode; docs/autoflow-guide.md > VERIFY > Green-tree register)." >&2
+    echo "BLOCKED: a backgrounded run of scripts/test/run-suites.sh is denied — run it in the foreground (docs/role-common-rules.md > Bash Execution Mode; docs/phases/verify.md > Green-tree register)." >&2
     echo "A backgrounded suite run outlives the turn that started it, so its result cannot be keyed to the capture-point tree and starves the foreground verification it is meant to certify." >&2
     exit 2
   fi
@@ -1099,7 +1099,7 @@ block_if_open_reentry() {
   fi
   if [ -n "$_open" ]; then
     echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
-    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage, issue #275)." >&2
+    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/phases/gate-quality.md > Recommendation triage, issue #275)." >&2
     echo "State file: $STATE_FILE" >&2
     exit 2
   fi
@@ -1125,8 +1125,8 @@ fi
 # A GATE:QUALITY FAIL whose remedy_class is `doc` re-enters at an orchestrator
 # doc commit instead of RED. The remedy obligation for that class is
 # class-level, not site-level: the fix anchors on a repo-wide sweep (command +
-# output), not on the evaluator's listed sites (docs/autoflow-guide.md >
-# GATE:QUALITY > FAIL routing). The gate checks the sweep RECORD FILE — its
+# output), not on the evaluator's listed sites (docs/phases/gate-quality.md >
+# FAIL routing). The gate checks the sweep RECORD FILE — its
 # presence and its two sections — never the wording of any instruction or
 # prompt (docs/gate-matching-standard.md > P3 rejects content inference).
 # `remedy_class` is read from the same most-recent-cycle location as
@@ -1147,7 +1147,7 @@ if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}$
     fi
     if [ "$_sweep_ok" -ne 1 ]; then
       echo "BLOCKED: git commit under a GATE:QUALITY remedy_class=doc re-entry requires the sweep record." >&2
-      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy (docs/autoflow-guide.md > GATE:QUALITY > FAIL routing, issue #140)." >&2
+      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy (docs/phases/gate-quality.md > FAIL routing, issue #140)." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
     fi

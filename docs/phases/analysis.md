@@ -14,7 +14,7 @@
 
 When an issue arrives, classify cause hypotheses **before** code analysis.
 
-**Review-response loop check** (`mode = review-response` only). It runs **once per review-response attempt**, at whichever point that attempt begins: at DIAGNOSE entry, ahead of the structure analysis below, for an attempt that runs DIAGNOSE; and at HANDOFF step 6.5 before the routed work, for a route that does not — a thin route, or a `design` re-entry judged to start at ARCHITECT ([`autoflow-guide.md`](../autoflow-guide.md) > HANDOFF). Steps 1 and 2 below are what the step-6.5 call site executes; step 3 applies unchanged when either call site pauses. This section is the contract's only documentary home — the call sites cite it rather than restate it. An `autoflow-loopcheck` sub-agent (a shipped read-only definition), on the model the policy names for `diagnose-loopcheck` (clears the pre-GATE hook like Phase A/3), writes `.autoflow/issue-{N}-loopcheck.md` and returns a one-line summary. The contract has three separated steps:
+**Review-response loop check** (`mode = review-response` only). It runs **once per review-response attempt**, at whichever point that attempt begins: at DIAGNOSE entry, ahead of the structure analysis below, for an attempt that runs DIAGNOSE; and at HANDOFF step 6.5 before the routed work, for a route that does not — a thin route, or a `design` re-entry judged to start at ARCHITECT ([`handoff.md`](handoff.md)). Steps 1 and 2 below are what the step-6.5 call site executes; step 3 applies unchanged when either call site pauses. This section is the contract's only documentary home — the call sites cite it rather than restate it. An `autoflow-loopcheck` sub-agent (a shipped read-only definition), on the model the policy names for `diagnose-loopcheck` (clears the pre-GATE hook like Phase A/3), writes `.autoflow/issue-{N}-loopcheck.md` and returns a one-line summary. The contract has three separated steps:
 
 1. **Record the observation — on every review-response DIAGNOSE entry, before comparing.** Append a ledger observation for this cycle: the **complaint class** (the property the reviewer asserts, e.g. "duplicate-member detection is incomplete"), the **witness case** (e.g. two identical entries, then three identical entries), the **shape of the prior change** (a check for the named case, or a rule over the whole property), and the cycle number. Recording is unconditional (not only on a match): the first review-response cycle records its observation too, with no prior to compare against.
 2. **Compare against the immediately-prior review-response observation.** When the class matches and only the witness case differs, first check the ledger for an **active *case-specific* suppression** on this class — a *case-specific* decision recorded for this class with no different class observed in any later cycle. If one is active, the class is suppressed: continue the normal flow without pausing. Otherwise reply on the PR with the comparison and ask the user how to proceed **situation-first** ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation) — for example restating the acceptance criterion as one rule over the whole input, or a further case-specific change — then set `active: false`, `phase: "awaiting-user"`, and append a ledger entry marking the match. Do **not** record a decision here. When the class **and** witness are both the same (a fix that did not take), this check does not apply — continue to the structure analysis (scope-split applies); a different class also continues normally and, by appearing, releases any earlier suppression on other classes.
@@ -39,7 +39,7 @@ A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion 
 
    Phase A + Phase B: run in parallel — except on the bounded path of a review-response cycle
    (`scripts/review/scope-bounded.sh entry` prints `scope-bounded: true` over the per-PR findings
-   files; `docs/autoflow-guide.md` > PREFLIGHT > Scope-bounded
+   files; `docs/phases/preflight.md` > Scope-bounded
    entry), where Phase A is NOT re-authored: the previous cycle's preserved
    `.autoflow/issue-{N}-c{C}-phase-a.md` is Phase 3's structure input. Phase B, Phase 3 and the loop
    check run as usual.
@@ -70,7 +70,7 @@ A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion 
        issue, `criterion` restates the issue's criterion faithfully, and `source` locates it in the
        issue body artifact. **[MUST]** This section is the issue's single machine-addressable
        acceptance-criterion list; an absent or unparseable table is itself a finding downstream
-       (`docs/autoflow-guide.md` > ARCHITECT > *Report routing*, > GATE:PLAN >
+       (`docs/phases/architect.md` > *Report routing*; `docs/phases/gate-plan.md` >
        *AC-authority check*). It is authored **once per issue**, in the `mode = new-issue` cycle.
      - **[MUST]** A review-response cycle's Phase B targets the reviewer comment, not the issue
        body, so it **carries the existing table forward unchanged** rather than re-deriving it — a
@@ -217,7 +217,7 @@ above are the in-repo defense; this is a fallback.
 
 - **Intake readiness triage FAIL** (`mode = new-issue`; a planning/design/ADR prerequisite is clearly required) → pause for the user (`awaiting-user`); the user's explicit request starts any prerequisite work as a separate cycle. Structure fan-out is not run.
 - **Bug / incident issue** (structure PASS, code change required) → **GATE:HYPOTHESIS**
-  (cause analysis evaluation) — see [`autoflow-guide.md`](../autoflow-guide.md) > GATE:HYPOTHESIS.
+  (cause analysis evaluation) — see [`gate-hypothesis.md`](gate-hypothesis.md).
 - **Feat issue** (structure PASS) → **ARCHITECT** directly (GATE:HYPOTHESIS cause is skipped).
 - **Structure FAIL** → disposition above (close / reply on PR / report to user + pause), driven
   by the cycle `mode`.

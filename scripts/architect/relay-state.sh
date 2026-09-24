@@ -10,7 +10,7 @@
 # appended by its author to `.autoflow/issue-{N}-architect-transcript.md`.
 # That file is the discussion's single record and the participants' shared
 # memory. This script reads it and prints the state the orchestrator's
-# procedure (docs/autoflow-guide.md > ARCHITECT) consumes: how many turns
+# procedure (docs/phases/architect.md) consumes: how many turns
 # exist, whose turn is next, whether the discussion has ended — two
 # consecutive turns marked `further: none` (issue #166, unchanged) — and which
 # reports are present. It computes and never judges: no turn is read for its
