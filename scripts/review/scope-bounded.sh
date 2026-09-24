@@ -26,8 +26,10 @@
 #           scope-bounded-grounds: <reason>
 #         Exit 0 when bounded, 1 when not, 2 on usage / unreadable input / unreadable diff.
 #   entry --issue <N> [--dir <dir>]
-#         Combines the per-PR findings files <dir>/issue-<N>-review-findings-*.md (dir default
-#         .autoflow; a single issue-<N>-review-findings.md only when none exists) for PREFLIGHT's
+#         Combines the per-PR findings files <dir>/issue-<N>-review-findings-<name>-<pr>.md whose
+#         pr: line names <owner>/<name>#<pr> (dir default .autoflow; another name under that
+#         prefix takes no part, a disagreeing pr: line is the full path, and a single
+#         issue-<N>-review-findings.md is read only when no per-PR name exists) for PREFLIGHT's
 #         Scope-bounded entry. Bounded only when at least one file's max_severity is Medium+ and
 #         every such file carries `scope-bounded: true`; a `false`, a Medium+ file with no line,
 #         or a file whose max_severity line is missing, repeated or unparseable is the full path.
@@ -172,17 +174,39 @@ cmd_entry() {
   [[ "$issue" =~ ^[0-9]+$ ]] || usage
   [ -d "$dir" ] || usage
 
-  # The single issue-<N>-review-findings.md is read only when no per-PR file exists.
-  local files
-  files=$(find "$dir" -maxdepth 1 -type f -name "issue-${issue}-review-findings-*.md" | LC_ALL=C sort)
-  [ -n "$files" ] || files=$(find "$dir" -maxdepth 1 -type f -name "issue-${issue}-review-findings.md")
-  if [ -z "$files" ]; then
-    printf 'scope-bounded: false\nscope-bounded-grounds: no findings file for issue #%s — full path\n' "$issue"
+  # A per-PR file is named issue-<N>-review-findings-<name>-<pr>.md and its pr: line names
+  # <owner>/<name>#<pr>. Any other issue-<N>-review-findings-*.md takes no part; a per-PR name
+  # whose pr: line disagrees is a defect. The single issue-<N>-review-findings.md is read only
+  # when no per-PR name exists.
+  local f name rname rnum ref rrepo files="" ignored="" notes="" defect=0
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    name=${f##*/}
+    rname=${name#"issue-${issue}-review-findings-"}; rname=${rname%.md}
+    if [[ "$rname" =~ ^(.+)-([0-9]+)$ ]]; then
+      rname=${BASH_REMATCH[1]}; rnum=${BASH_REMATCH[2]}
+      ref=$(file_pr "$f"); rrepo=${ref%#*}; rrepo=${rrepo##*/}
+      if [[ "$ref" =~ $REF_RE ]] && [ "${ref##*#}" = "$rnum" ] && [ "$rrepo" = "$rname" ]; then
+        files="${files:+$files$'\n'}$f"
+      else
+        notes="${notes:+$notes; }$name pr: line ${ref:-absent} does not name its PR"; defect=1
+      fi
+    else
+      ignored="${ignored:+$ignored, }$name"
+    fi
+  done <<< "$(find "$dir" -maxdepth 1 -type f -name "issue-${issue}-review-findings-*.md" | LC_ALL=C sort)"
+  if [ -z "$files" ] && [ "$defect" -eq 0 ]; then
+    files=$(find "$dir" -maxdepth 1 -type f -name "issue-${issue}-review-findings.md")
+  fi
+  [ -z "$ignored" ] || ignored="not per-PR files, ignored: $ignored"
+  if [ -z "$files" ] && [ "$defect" -eq 0 ]; then
+    printf 'scope-bounded: false\nscope-bounded-grounds: no findings file for issue #%s — full path%s\n' "$issue" "${ignored:+; $ignored}"
     return 1
   fi
 
-  local f name sev count verdict notes="" defect=0 bounded=0 medium=0
+  local sev count verdict bounded=0 medium=0
   while IFS= read -r f; do
+    [ -n "$f" ] || continue
     name=${f##*/}
     # Every line declaring max_severity counts, whatever its value; exactly one is parsed —
     # colon canonical, `=` and whitespace tolerated.
@@ -205,14 +229,14 @@ cmd_entry() {
   done <<< "$files"
 
   if [ "$medium" -eq 0 ] && [ "$defect" -eq 0 ]; then
-    printf 'scope-bounded: false\nscope-bounded-grounds: no Medium+ findings file — nothing to bound\n'
+    printf 'scope-bounded: false\nscope-bounded-grounds: no Medium+ findings file — nothing to bound%s\n' "${ignored:+; $ignored}"
     return 1
   fi
   if [ "$defect" -ne 0 ] || [ "$bounded" -ne "$medium" ]; then
-    printf 'scope-bounded: false\nscope-bounded-grounds: %s\n' "$notes"
+    printf 'scope-bounded: false\nscope-bounded-grounds: %s%s\n' "$notes" "${ignored:+; $ignored}"
     return 1
   fi
-  printf 'scope-bounded: true\nscope-bounded-grounds: %s\n' "$notes"
+  printf 'scope-bounded: true\nscope-bounded-grounds: %s%s\n' "$notes" "${ignored:+; $ignored}"
   return 0
 }
 
