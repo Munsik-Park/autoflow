@@ -544,6 +544,20 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 26–28. It keeps [ADR-0020](adr/0020-acceptance-criterion-authority.md)'s authority — a criterion's content is the operator's — and changes only when a role raises a change.
 
+### Decision 30: A Rule's Body Has One Home and Every Other Site Cites It; a Rule Change Is Checked Against Every Site Its Home's Search Terms Find
+
+**Problem.** A rule stated in full in its home was also restated, in part, at the sites that act on it. A change to the rule reached some copies and not others, and a copy left behind contradicts the home while its reader acts on it. Decision 16 item 3 ("One list, one home") covered hand-maintained lists, not a rule's body, and no step checked every copy before a rule change was committed.
+
+**Decision.** Operator decision (issue #292), executed as orchestrator work outside an AutoFlow cycle.
+
+1. The rule and the procedure are [`development-guideline.md`](../development-guideline.md) > Documentation Policy. They are applied here to the recommendation triage (`docs/autoflow-guide.md` > GATE:QUALITY > *Recommendation triage*): the sites that restated it are reduced to their condition and a citation, and the home's body is unchanged.
+2. The home carries search terms, not a list of sites: a new site that uses the rule's vocabulary is found without being listed, and a list of sites would itself go stale.
+3. Other rules that are restated at several sites — FAIL routing, `[ac-decision]`, the Resume procedure — take the procedure at their next change. Converting them here would widen this change to every file that states them.
+
+**Why no checker.** Whether a sentence is a citation or a restatement depends on whether it decides a case of the rule, which a reader can judge and a pattern cannot (Decision 16 item 5). The device is the home's declaration, its search terms and the procedure.
+
+**Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, extending Decision 16 item 3 from lists to rule bodies. No trigger area: no gate, threshold, cap or route changes.
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:

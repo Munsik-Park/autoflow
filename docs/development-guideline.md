@@ -99,4 +99,15 @@ receives, rather than in the ADR registry, which does not ship.
   indexes, and cross-references where useful.
 - Existing operating manuals remain source-of-truth documents; review baseline
   docs should route to them, not duplicate or override them.
-
+- **A rule's body has one home.** A rule is stated in full in one section,
+  which declares itself the rule's only home. Another site that needs the rule
+  carries only what it acts on itself — a transition condition, the check its
+  device makes, a cap's number — and cites the home; it does not restate which
+  cases the rule covers, where it routes them or when it closes them
+  (`docs/records/design-rationale.md` > Decision 30).
+- **A rule change is checked against every site before it is committed.** The
+  home lists search terms that find every sentence stating or citing the rule.
+  Before committing a change to the rule, run `git grep` with those terms and
+  read the hits as one set; a site that disagrees is reduced to a citation, not
+  re-worded. Hits in `docs/records/` are read, not rewritten. A home without
+  search terms gets them in the same change.
