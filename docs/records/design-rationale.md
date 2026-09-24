@@ -558,6 +558,25 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, extending Decision 16 item 3 from lists to rule bodies. No trigger area: no gate, threshold, cap or route changes.
 
+### Decision 31: A Finding Can Be Wrong; One That Does Not Hold Is Rebutted With Grounds and Judged by the Side That Raised It
+
+**Problem.** HANDOFF step 6.5 asked of each `Medium`+ reviewer finding which change clears it, and the recommendation triage takes the same procedure for a gate's recommendations (Decision 25). No disposition said that a finding did not hold, and none of the pause criteria (a)–(d) covers it. Observation: PR #299 (issue #291) — the reviewer's round-1 `Medium` claimed that the AC-defect rule conflicted with DIAGNOSE taking the criteria as written; the orchestrator took the claim as stated and wrote a GATE:HYPOTHESIS exclusion at five sites, discarded before push. The conflict did not exist; the wording did invite the misreading, and once it was clarified the round-2 review withdrew the finding (Decision 29 item 1).
+
+**Decision.** Operator decision (issue #300), executed as orchestrator work outside an AutoFlow cycle.
+
+1. **Most findings are right; handling one weighs whether it holds beside how it is cleared.** A finding does not hold when what it claims does not — it does not reproduce, its cited source says otherwise, it misreads a rule. It holds in part when its claim does not hold and the problem that prompted it is real; the real problem is fixed.
+2. **A rebuttal carries verified grounds** — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. Without them it is not a rebuttal.
+3. **A rebuttal is not a dismissal.** The reviewer re-review judges a reviewer finding and the recommending gate's fresh re-score judges a recommendation; the label is cleared only by the reviewer re-review. When a finding is kept and the two sides still disagree, the orchestrator asks the operator ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 3).
+4. **No count rule for rebuttal rounds.** A round that only rebuts is not an attempt under the cap. When to ask the operator is the orchestrator's judgment, since cases differ; if escalation comes too early or too late in practice, the operator adjusts from what is observed.
+5. **The one that reads a finding first weighs it.** For the reviewer that is the ingesting subagent: the orchestrator does not read the comment body, and a judgment made by reading it would be read again by the role that fixes it. For a gate it is the orchestrator, which reads the recommendations list directly.
+6. **Written as intent** (Decision 29 item 5), with one home: [`docs/autoflow-guide.md`](../autoflow-guide.md) > HANDOFF step 6.5 > *Whether a finding holds*, carrying its search terms (Decision 30).
+
+**Not changed.** `.codex/review.md`: the reviewer reads the comments since the previous change, so a rebuttal posted on the PR reaches it. The pause criteria (a)–(d), the cap of 7 and the label authority.
+
+**Why the device changes here.** The rule and its device change together (principle 4): the home in step 6.5 and the step's route line, the recommendation triage, the re-score contract ([`docs/role-contracts.md`](../role-contracts.md) > *Re-entry form*; [`docs/evaluation-system.md`](../evaluation-system.md) `rescore`), the analyzer definition with its plugin copy, and three `CLAUDE.md` Flow Control rows. No hook, script, threshold or state field changes.
+
+**Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 26–30 (trigger area: evaluation policy).
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:
