@@ -42,7 +42,8 @@ The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** 
    genuinely needed — reuse-neutral, not a structural-fit judgment).
 
    Phase A + Phase B: run in parallel — except on the bounded path of a review-response cycle
-   (`scope-bounded: true` in the findings file; `docs/autoflow-guide.md` > PREFLIGHT > Scope-bounded
+   (`scripts/review/scope-bounded.sh entry` prints `scope-bounded: true` over the per-PR findings
+   files; `docs/autoflow-guide.md` > PREFLIGHT > Scope-bounded
    entry), where Phase A is NOT re-authored: the previous cycle's preserved
    `.autoflow/issue-{N}-c{C}-phase-a.md` is Phase 3's structure input, because the dev branch HEAD at
    entry is the PR head and the structure it describes has not changed. Phase B, Phase 3 and the loop

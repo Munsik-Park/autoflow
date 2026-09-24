@@ -31,8 +31,8 @@
 #
 # THE SCOPE IS THE DECLARED PREFIX, not `.autoflow/` as a whole: this repository
 # legitimately tracks `.autoflow/.gitkeep`, and the ledger, the state file and
-# the review-findings file are cycle-spanning artifacts of the store, not
-# cycle-layer assets.
+# the per-PR review-findings files are cycle-spanning artifacts of the store,
+# not cycle-layer assets.
 #
 # Usage:
 #   bash scripts/test/check-cycle-layer-index.sh [--root <dir>]

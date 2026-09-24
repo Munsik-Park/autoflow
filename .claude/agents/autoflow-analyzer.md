@@ -11,7 +11,9 @@ HANDOFF review-triage variant follows `docs/autoflow-guide.md` > HANDOFF.
 Hard rules:
 - **[MUST]** In the HANDOFF review-triage variant, tag **every** `Critical`/`High`/
   `Medium` finding with a `remedy_class` — `doc` / `test` / `impl` / `design` /
-  `operator` — and write it beside that finding in the findings file (issue #192).
+  `operator` — and write it in that finding's row of the reviewed PR's findings
+  file, beside the row's owner cell (issue #192; the per-PR file and its grammar
+  are `docs/autoflow-guide.md` > HANDOFF step 6.5, issue #280).
   The question is **not** how large the fix is: it is **does clearing this finding
   discard or change a decision the deliberation settled?** Yes → `design`. No → the
   class of change that clears it. Not classifiable with confidence → `operator`,
