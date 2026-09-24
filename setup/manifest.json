@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/issue-proposal.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5ccad975b57c4773cf2ebe59aa9062386ca412f3167363d96478ed71c0b4bc3a"
+      "sha256": "a13c380f52bca85bcdecbbceabd7fb6aaf09ee3a8edbfec36eb2d35f884b40d3"
     },
     {
       "source": "docs/phases/analysis.md",
@@ -370,7 +370,7 @@
       "dest": "scripts/issue/create-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e0061050c120b8978fcf8cbae4f53a5c0b2686de25a28519eee34381cf706a82"
+      "sha256": "5d85fa337bae2e207a373f849a21e6d4678d39b12d51b55bafa4af3ffdb167e7"
     },
     {
       "source": ".claude/autoflow/spawn-policy.json",
