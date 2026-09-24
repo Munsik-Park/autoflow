@@ -158,6 +158,27 @@ below means both tiers together.
   cycle on the target, in the same class as PREFLIGHT's Git-clean hard stop:
   resolve the drift (re-stamp, pin fix, plugin update, or reinstall) first.
 
+### Spawn policy scaffold
+
+`.claude/autoflow/spawn-policy.json` — the per-phase spawn model and effort policy ([`CLAUDE.md`](../CLAUDE.md) > Spawn Model) — is a **sample carrying the values currently applied, and it is target-owned**: it ships as
+a `scaffold` artifact, so a stamp or re-stamp creates it only when absent and never overwrites it
+(not even under `--force`), and each target is expected to configure it for its own runtime — its model
+rows and its `workflow_sites` effort. A `phases[]` row's effort is **not** a target lever: the harness reads a
+direct spawn's effort from the agent definition's `effort:` frontmatter (the Agent tool carries `model` per
+call, no effort), and the definitions are versioned tool source a thin-root target loads from the plugin, so
+that value is fixed per plugin version; the config row is the projection source at this repository and
+`check` fails closed when it differs from the loaded definition, and a row on a harness research type
+admits the inherit sentinel only (`effort_contract.phase_effort_ownership`). Its
+`effort_contract` is the effort vocabulary `check` applies to it — a runtime with a different
+vocabulary is accommodated by editing that contract, never by patching the checker — and the
+`effort` readout prints the inherit sentinel that contract declares rather than a fixed literal. On
+a version bump the operator's obligation is to run `check` and add any newly required row.
+
+The same file carries the two Workflow facilitations' per-site values (`workflow_sites`), which the
+deliberation scripts load at run time — `.claude/workflows/*.js` carries no `model:` literal. It
+also documents its own inheritance rule (`effort_contract`) and declares any shipped agent type the
+policy governs no row for (`policy_unmapped_agent_types`).
+
 ---
 
 ## Related

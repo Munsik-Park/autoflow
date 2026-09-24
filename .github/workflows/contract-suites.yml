@@ -6,7 +6,7 @@
 # deployment — the shipped artifact installs or stamps (`packaging`), and a
 # declared inventory agrees with the tree it describes (`manifest`). A change's
 # functional verification is a one-shot cycle run recorded in the PR body, not a
-# step here (CLAUDE.md > Rule Scope > Local verification).
+# step here (docs/development-guideline.md > 7. Testing Policy).
 #
 # Every step runs on every pull request and every push to main. There is no
 # `paths:` filter, so no check can read green while its step never ran, and no

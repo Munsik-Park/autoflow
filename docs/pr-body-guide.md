@@ -66,11 +66,11 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   (`autoflow-guide.md` > HANDOFF step 4).
 - AI가 도구로 실행한 `manual` row는 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
   한 줄로 싣는다. 사람이 실행하는 `manual` row는 reason에 도구를 확보할 수 없었던 이유가 들어
-  있다 (`CLAUDE.md` > Rule Scope > *The tools the work needs*; `autoflow-guide.md` > ARCHITECT > *Tools*).
+  있다 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; `autoflow-guide.md` > ARCHITECT > *Tools*).
 - cycle이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
   남겨 두는 이유, 그리고 HANDOFF 5단계가 CI 로그에서 확인한 실행 job(target에 CI가 없으면
   `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
-  (`CLAUDE.md` > Rule Scope > *What a cycle leaves in the target's tree*;
+  ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *What a cycle leaves in the target's tree*;
   `autoflow-guide.md` > HANDOFF step 4·5).
 
 예:

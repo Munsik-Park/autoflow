@@ -201,12 +201,20 @@ repo-key = `<org>__<repo>` derived from `origin`) within `.autoflow/` at
 
 ## Issue Auto-Close
 
-The PR body includes a close keyword.
+In the target-centric default, the cycle's single (host) PR carries `Closes #N` directly.
+
+*Secondary (multi-repo):* when the host contains a submodule, the cycle splits into two PRs — the host PR carries the close keyword and merges last, each sub-repo PR references only and merges first:
 
 ```
-Closes #<issue-number>
+# Host PR (merges last — closes the issue)
+Closes #N
+
+# Sub-repo PR (merges first — references only, does NOT close)
+Part of Munsik-Park/autoflow#N
 ```
 
-*Secondary (multi-repo):* in a multi-repo deployment only the host PR uses `Closes`; each sub-repo PR uses `Part of Munsik-Park/autoflow#N` — see [`CLAUDE.md`](../CLAUDE.md) > PR Issue Auto-Close.
-
-Recognised keywords: `Closes`, `Fixes`, `Resolves` (case-insensitive).
+- Close keywords: `Closes`, `Fixes`, `Resolves` (case-insensitive).
+- Cross-repo references are recognised in PR bodies only (commit messages do not trigger cross-repo close).
+- **[MUST]** Sub-repo PRs do NOT use `Closes`.
+- **[MUST]** Only the host PR uses `Closes #N`.
+- **[MUST]** PR bodies generated from `.github/pull_request_template.md` never inline a plain-text close-keyword token in the template itself. The template uses the marker `<!-- HOST-CLOSE-LINE -->`; the orchestrator's HANDOFF renderer substitutes the marker with the active `Closes #N` line in the rendered host PR body. Templates / docs / design notes that **describe** the close-keyword pattern must wrap the example in backticks or code-fences.

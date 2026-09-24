@@ -41,8 +41,7 @@ Sub-repo PR: use `Part of Munsik-Park/autoflow#N` (no close keyword).
 
 Rules / infra PR: write `N/A` if there is no tracking issue.
 
-Reference: docs/git-workflow.md > Issue Auto-Close,
-CLAUDE.md > PR Issue Auto-Close.
+Reference: docs/git-workflow.md > Issue Auto-Close.
 -->
 
 ## Sub-repo merge dependency

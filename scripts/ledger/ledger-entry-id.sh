@@ -20,8 +20,8 @@
 #   ledger-entry-id.sh next  <ledger-path> <namespace>   -> prints <NS><serial>
 #   ledger-entry-id.sh check <ledger-path>               -> reports defects
 #
-# Namespaces (CLAUDE.md > Decision Ledger — the single documentary home of the
-# writer -> namespace mapping): `O` = orchestrator, `F` = facilitator delegate.
+# Namespaces (docs/decision-ledger.md > Entry identifier — the single documentary
+# home of the writer -> namespace mapping): `O` = orchestrator, `F` = facilitator delegate.
 # `E` is the pre-protocol legacy namespace: readable, never issuable.
 #
 # Exit codes:

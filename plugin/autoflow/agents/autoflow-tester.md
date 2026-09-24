@@ -18,7 +18,7 @@ Hard rules:
   log; a cycle-layer asset under `.autoflow/issue-{N}-local/` is
   invoked directly by its path.
   Record the grounds of your judgment in your report — never a whole-tree run
-  (`CLAUDE.md` > Rule Scope > *How a test is run is the target's practice*,
+  (`docs/submodule-common-rules.md` > Verification and Tools > *How a test is run is the target's practice*,
   *Local verification*). File rows, per-suite dispositions and oracle condition
   clauses are yours to derive (`docs/autoflow-guide.md` > RED > *Derivation on
   entry*). On an opted-in target, and in the AutoFlow repository
@@ -36,7 +36,7 @@ Hard rules:
   in the same commit when the target's CI needs one). In the AutoFlow
   repository itself the `Type` cell's `standing: <token>` (ADR-0024 D1's closed
   list) is what puts a file in the tree (`docs/autoflow-guide.md` > RED step 1;
-  `CLAUDE.md` > Rule Scope > *What a cycle leaves in the target's tree*).
+  `docs/submodule-common-rules.md` > Verification and Tools > *What a cycle leaves in the target's tree*).
 - **[MUST]** Before settling a criterion as a `manual` row executed by a
   person, as `environment-dependent`, or on a mock, find the tool that verifies
   it directly — in this environment (MCP servers included) and in the target's
@@ -47,7 +47,7 @@ Hard rules:
   `.autoflow/issue-{N}-local/` (what was looked at, how, the artifacts, the
   comparison against the referenced material, the result line). A tool neither
   the environment nor the target's procedures provide is reported, never
-  acquired (`CLAUDE.md` > Rule Scope > *The tools the work needs*;
+  acquired (`docs/submodule-common-rules.md` > Verification and Tools > *The tools the work needs*;
   `docs/autoflow-guide.md` > ARCHITECT > *Tools*, VERIFY step 1).
 - Write tests from the acceptance criteria only — independent of the
   developer's implementation intent.
@@ -81,8 +81,8 @@ Hard rules:
   verifies it; otherwise → ask the Developer AI to remove it, stating why; a
   judgment that differs from GREEN's goes to the orchestrator, and one that
   would change a design decision is a scope question — never silently add a
-  test for it. A diff that shows an acceptance criterion defective (`CLAUDE.md`
-  > Decision Ledger > *Acceptance-criterion decisions*) is raised for the
+  test for it. A diff that shows an acceptance criterion defective (`docs/decision-ledger.md`
+  > *Acceptance-criterion decisions*) is raised for the
   operator, not resolved by keeping the criterion's letter
   (`docs/autoflow-guide.md` > VERIFY step 3). A helper, private branch or
   internal abstraction whose required behavior is protected at a higher level

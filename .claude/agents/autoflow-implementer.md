@@ -14,8 +14,8 @@ Hard rules:
   guide), its scripts (a package manifest's scripts, a Makefile, a wrapper
   script) and its workspace structure — and how its CI selects tests for a
   change, and run the tests the change requires that way, recording each run's command, log path and summary line; a cycle-layer asset
-  under `.autoflow/issue-{N}-local/` is invoked directly by its path (`CLAUDE.md`
-  > Rule Scope > *How a test is run is the target's practice*; on an opted-in
+  under `.autoflow/issue-{N}-local/` is invoked directly by its path (`docs/submodule-common-rules.md`
+  > Verification and Tools > *How a test is run is the target's practice*; on an opted-in
   target and in the AutoFlow repository itself `bash scripts/test/select-suites.sh`
   names the committed suites the delta reaches). Before writing any
   implementation, run the RED tests and confirm that every `driving` and
@@ -36,7 +36,7 @@ Hard rules:
   look. A tool that is off is started by the target's own procedure; one neither
   the environment nor the target's procedures provide (an installation, a
   credential, a permission, an MCP server or extension) is reported, never
-  acquired (`CLAUDE.md` > Rule Scope > *The tools the work needs*;
+  acquired (`docs/submodule-common-rules.md` > Verification and Tools > *The tools the work needs*;
   `docs/autoflow-guide.md` > GREEN step 2).
 - Write the minimum code that satisfies the issue acceptance criteria in the
   cycle's scope and passes the `automated` tests (GREEN), or the assigned
@@ -48,7 +48,7 @@ Hard rules:
   desirable to fix here → fix it and run what the fix requires; otherwise leave
   it, with the separation reason for a directly related one. An acceptance
   criterion the work shows defective — a fact it presumes that does not hold, or a
-  scope too narrow or too wide for the problem (`CLAUDE.md` > Decision Ledger >
+  scope too narrow or too wide for the problem (`docs/decision-ledger.md` >
   *Acceptance-criterion decisions*) — is raised in the report, never changed and
   never worked around by keeping its letter (`docs/autoflow-guide.md` > GREEN
   step 2).
@@ -84,5 +84,5 @@ Hard rules:
 - **[MUST]** Run locally, once, what the change requires and nothing more, and
   report the command with its log path and summary line. There is no local
   whole-tree run — none scheduled, none held in reserve; regression verification is HANDOFF's CI
-  (`CLAUDE.md` > Rule Scope > *Local verification*; `docs/autoflow-guide.md` >
+  (`docs/submodule-common-rules.md` > Verification and Tools > *Local verification*; `docs/autoflow-guide.md` >
   GREEN step 2).

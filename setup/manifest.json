@@ -13,35 +13,42 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3d6ced9bd0536c56ca03a107d261fe0aef2aef07e7a5af86c6e51d2b6493c9f6"
+      "sha256": "67ce767458d0fb638fb1f3b9b12065f631eda576d74409fa94b6520561b8faa9"
     },
     {
       "source": "docs/INDEX.md",
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a6810cde1d1bd1e9e55899a4475822738a0e65f144909425c1ccdbd32423db5d"
+      "sha256": "7445cf6fa88afa292e739f9ff3e3eb3ff81247bb667285805a66d467f44c6fc0"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5d142d8bcac3cb60fb24fe28aee2451f07551dc14c7178332bdecf43b106b40c"
+      "sha256": "b020918c1d2c0de8a119b292b11daff1abcd5b2936dc22f7d3ee5a53540cd9bf"
+    },
+    {
+      "source": "docs/decision-ledger.md",
+      "dest": ".claude/autoflow/docs/decision-ledger.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "aab1e313f66b156c37e1e0694fbe9f7d59def80635eedfa8b5f21b81fe423cfb"
     },
     {
       "source": "docs/development-guideline.md",
       "dest": ".claude/autoflow/docs/development-guideline.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2141e4da5642ed86ac0fe0c0236207ba30d8fda68a1eb10783769ce156c17171"
+      "sha256": "b6dfe4fd7fd3462a2945d9a7809432ee55042bf374569b0e5dcaf91947e8c4d1"
     },
     {
       "source": "docs/evaluation-system.md",
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ccc2801d95a0a08459285e0d0ee57d6960456066df6c90fb4499c7f16446b49c"
+      "sha256": "95f1dc9a2f708313cac33609c2c28753c225d37096e3c3c740faac0f052589cc"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -55,7 +62,7 @@
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c671e1da9201e41eab49baa7939dd5b871ba8fdcbf33e45ea11cc049fde06d03"
+      "sha256": "ccb477e45b405c411ab45d3801f7fe91401ef18a27204eb49fb36106a849d480"
     },
     {
       "source": "docs/issue-proposal.md",
@@ -69,21 +76,21 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8bb6e5b036afbb9c9f0f30f59832cf1a182638d51d10d047a44cdb61ef8ade1a"
+      "sha256": "1c36f7e1a049d3dd412d13c5fc3ec8f061d3c81f932e284bc62dd90e616ed8ef"
     },
     {
       "source": "docs/pr-body-guide.md",
       "dest": ".claude/autoflow/docs/pr-body-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "121d5b9889eb811ddaf30b9e184e25b10e2b68f1282260bdfe371f9278d56152"
+      "sha256": "ff892521f2871df31578c44a01b16bf523ed7457becacdb49de6517a9242960c"
     },
     {
       "source": "docs/repo-boundary-rules.md",
       "dest": ".claude/autoflow/docs/repo-boundary-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8a7d9dd59b12c6e148e6d43a8ce9737e1be63f5865ee36affd7edb4bdd207c1e"
+      "sha256": "627a68927ba539050fb163349e3ee75cdbe7c6e8d18f5850105869d0011b0d8c"
     },
     {
       "source": "docs/reviewer-backend.md",
@@ -97,21 +104,21 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "57d3c91340caa4d25f1dc73f2dd5af03563b6db2241c016c22c8c06d56ff867a"
+      "sha256": "955063268b2911b5445dc540ad597808d04d681b51d349f7174517d158ce898e"
     },
     {
       "source": "docs/role-contracts.md",
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6e1fa6ed2c131635d03b204d86cfc6ce02483230bf0c8e5dfe8b056279d142ff"
+      "sha256": "16ac88bb85e1dad1c8e22c873eb221560c1c87927c0fe40fab6f5913836861a0"
     },
     {
       "source": "docs/submodule-common-rules.md",
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5cca2f249223b45939646ca0a7e299fb50ac92f55220e55b99d65998d1dcece0"
+      "sha256": "e07f120823bdca787c22a868b1dd04daf398614da9cb44a5a8cfae1b7dc9af1f"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -132,21 +139,21 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9ff76f1f21f3e13530661737cc9a5691e505c2eed3f695a97a3a771bca33f6a5"
+      "sha256": "549fe11782953ce13d4476c7c849c5e9457a2e1cb2c41cfcaf621e54ea3a40a7"
     },
     {
       "source": ".claude/workflows/architect-deliberation.js",
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "fd9eaf33c8f2e60e461f0820b01f1d52116a9dc5be33b4bdcd17b6abfa163d91"
+      "sha256": "9751139c517f7c44828784a2e0d649da1fd4a8bcafd6a89e3b9acd570fbbb47d"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "268984d3267cce783a0444cb8c4840631cdb2322e55befacc27b2222de140a75"
+      "sha256": "a9f854d284d411cff31208ae12b1e205efc4609981d3692f572fd44e1b76adca"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -272,7 +279,7 @@
       "dest": "scripts/ledger/ledger-entry-id.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b7e86f6a58631ae18e3f234c6a7d3f84fff5540eec5ad3b128e4c14c504a12f3"
+      "sha256": "b98d137d7d65c690f47464e62c823311266382d23d8f4bad510f922582d6921a"
     },
     {
       "source": "scripts/architect/relay-state.sh",
@@ -300,7 +307,7 @@
       "dest": "scripts/gate/security-checklist.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "3022d8e94e0786b55fdabec83e6e8e79a203f918f7566c82e2153fc761f70164"
+      "sha256": "a8c65ea0911334c10b02ace28e58ad9b8883d1e6fe3812e88a0343fb76fe2547"
     },
     {
       "source": "scripts/review/scope-bounded.sh",

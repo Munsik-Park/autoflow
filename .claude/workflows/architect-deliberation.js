@@ -209,7 +209,7 @@ if (!stopped) {
 // The ledger records only what was agreed: one entry per agreed conclusion, under the authority
 // "ARCHITECT agreed" the topic seeds as settled. An un-agreed point is not a decision and is not
 // written here — it lives in the report the orchestrator routes. The entry identifier is allocated
-// per CLAUDE.md > Decision Ledger (the facilitator delegate's namespace, one `next` call
+// per docs/decision-ledger.md > Entry identifier and CLAUDE.md > Decision Ledger (the facilitator delegate's namespace, one `next` call
 // immediately before each append, `check` after). This call runs after the result is settled, so a
 // failed append is absorbed to a null acknowledgement and never alters the report.
 if (!stopped && report.agreed.length) {
