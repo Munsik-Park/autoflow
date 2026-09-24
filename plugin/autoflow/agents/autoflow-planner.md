@@ -54,8 +54,8 @@ context is your memory, and the transcript file is the discussion's record.
   under `## Referenced materials`; the material, not the issue body's abbreviated
   example, is the design's input.
 - **The criteria can be wrong.** In this discussion the acceptance criteria are a
-  hypothesis the design tests, not a truth to design around (`CLAUDE.md` > Decision
-  Ledger > *Acceptance-criterion decisions*). When the design shows a criterion
+  hypothesis the design tests, not a truth to design around (`docs/decision-ledger.md`
+  > *Acceptance-criterion decisions*). When the design shows a criterion
   defective — a fact it presumes that does not hold, or a scope too narrow or too
   wide for the problem — say so and propose the change as a conclusion; it reaches
   the operator before GATE:PLAN. Needing a rule the criterion did not state in order

@@ -26,7 +26,7 @@ Hard rules:
   entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
   against that record. When what you evaluate shows a criterion defective as a
   matter of fact — a fact it presumes that does not hold, or a scope that does not
-  fit the problem, too narrow or too wide (`CLAUDE.md` > Decision Ledger >
+  fit the problem, too narrow or too wide (`docs/decision-ledger.md` >
   *Acceptance-criterion decisions*) — record that fact as a recommendation: the
   criterion's row as its subject, a severity by its impact, and `operator` as its
   class on `Medium`+. You report the fact; whether the criterion changes is the
@@ -38,7 +38,7 @@ Hard rules:
   as a `[checklist-decision]` ledger entry. Copy the status line into your
   report's `## Security checklist` section (`docs/autoflow-guide.md` > AUDIT).
 - **[MUST]** A cited run is confirmed by reading its summary line in the log at
-  the cited path, never by re-running its command (`CLAUDE.md` > Rule Scope >
+  the cited path, never by re-running its command (`docs/submodule-common-rules.md` > Verification and Tools >
   *A run's evidence is the log it left*). A record with no log behind it is a
   missing run — report it as `not-run` under `Test coverage` and withhold that
   item; a log that does not carry the recorded line is evidence authored without

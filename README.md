@@ -11,8 +11,9 @@ deployment orchestrator. The only changes from upstream are:
 1. **Name generalization** — numeric `STEP 0~9` (and `5a/5b/5c/5d/5.5/5.7`) identifiers replaced by semantic phase names.
 2. **Identifier placeholders** — service-specific names (`ontology-api`, `saiso`, etc.) replaced by `{{REPO_*}}`/`{{GITHUB_ORG}}` placeholders.
 3. **Terminal scope** — AutoFlow ends at PR creation (`HANDOFF`) instead of upstream's merge-and-close terminal step; an external review process performs the merge. **AutoFlow never merges.**
+4. **Late-gate re-entry** — a late-gate FAIL (GATE:QUALITY, VALIDATE, INTEGRATE) re-enters the cycle at the phase its cause names (`remedy_class`: doc commit / RED / GREEN / ARCHITECT) instead of upstream's unconditional return to RED; the caps are unchanged.
 
-Aside from this terminal divergence, every rule, retry cap, evaluation category, and pass
+Aside from these divergences, every rule, retry cap, evaluation category, and pass
 threshold is preserved from upstream. Single-repo projects are supported as the degenerate case
 (DELIVER pushes one branch, INTEGRATE / HANDOFF collapse to a single PR flow).
 

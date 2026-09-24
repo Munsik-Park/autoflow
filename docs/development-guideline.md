@@ -84,9 +84,12 @@ conformance* item in `docs/autoflow-guide.md` decide "trigger area hit" and
 - This repository commits only deployment-level checks (`packaging`, `manifest`).
   Any other change is verified by a one-shot run under `.autoflow/issue-{N}-local/`, recorded in the
   PR body: a change to AutoFlow's own rules (a rule document, a rule and its device) is
-  settled there; a change to what a stamp delivers (a hook, a shipped script, a workflow) is checked
-  there too, and its behavior across targets shows where it is stamped — a failure on a real target
-  comes back as an issue.
+  settled there, by the external reviewer and by the gates; a change to what a stamp delivers (a
+  hook, a shipped script, a workflow) is checked there too, and its behavior across targets shows
+  where it is stamped — a failure on a real target comes back as an issue, not to CI.
+- ADR-0024 D1's closed category list is this repository's convention for its own verification
+  designs, and its layer device runs only here.
+- This repository does not opt into AutoFlow's suite plane (`tests.suite_plane`).
 - Host tool/mechanism changes run `scripts/test/check-host-purity-delta.sh` (host-purity DELTA
   guard).
 - Submodule changes should use the submodule's package scripts and should
@@ -127,3 +130,11 @@ conformance* item in `docs/autoflow-guide.md` decide "trigger area hit" and
   ```
   git grep -n -i -E 'prescribes behavior|rule document|how a rule came to be'
   ```
+- Document language and placement:
+  - Code/policy: English.
+  - Markdown docs: English (source of truth).
+  - HTML docs: Korean (translation), if maintained.
+  - MD↔HTML pairs are kept in sync.
+  - Cross-project docs: a dedicated docs sub-repo, if used.
+  - Per-sub-repo docs: each sub-repo's `docs/`.
+  - Numbering convention: `00N-<name>` within the cross-project docs repo.

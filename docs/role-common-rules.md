@@ -176,7 +176,7 @@ Every role is an anonymous direct spawn, so there is exactly one delivery path �
 
 A spawn carries no `name`: the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle.
 
-The single mode applies to every role; the per-role table is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
+The single mode applies to every role; the per-role table is [`role-contracts.md`](role-contracts.md) > Spawn mode by role lifetime.
 
 ---
 

@@ -120,7 +120,7 @@ a review-response AUDIT uses for its narrowed re-score ([`autoflow-guide.md`](au
 evaluated artifact at the evaluated commit, or a section of the evaluated artifact — the design
 documents at GATE:PLAN, the DIAGNOSE analysis files (`.autoflow/issue-{N}-phase-*.md`) at
 GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY — or, for an acceptance criterion the evaluator
-observes defective as a matter of fact ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion
+observes defective as a matter of fact ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion
 decisions*), the criterion's row in `.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`, whose
 `remedy_class` on `Medium`+ is `operator`; `item` — the rubric item it was found under;
 `severity` — the reviewer's vocabulary (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence`

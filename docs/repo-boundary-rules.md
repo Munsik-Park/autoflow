@@ -26,7 +26,9 @@ Coordination steps — work breakdown, sequencing, integration verification, and
 
 ### Backlog (백로그)
 
-Tracker placement follows each repo's composition: AutoFlow-framework tracking items — issues, sub-issues, and the tracking hub — live in this host repository (`Munsik-Park/autoflow`). Each item is routed to the scope that will execute it. *Secondary (multi-repo, where no service-host tracker is designated):* all tracking items live in that instance's host repository — each affected sub-repo has its own work item filed in the host and labeled with that sub-repo (no tracker lives inside the sub-repo); the sub-repo's PR cross-references the host issue as `Part of <host>#N`, and forks host no issues. *See:* Issue Management (`CLAUDE.md`), Rule 1's coordination path (below), and the Checklist for Cross-Repo Changes (below).
+Tracker placement follows each repo's composition: AutoFlow-framework tracking items — issues, sub-issues, and the tracking hub — live in this host repository (`Munsik-Park/autoflow`). Each item is routed to the scope that will execute it. *Secondary (multi-repo, where no service-host tracker is designated):* all tracking items live in that instance's host repository — each affected sub-repo has its own work item filed in the host and labeled with that sub-repo (no tracker lives inside the sub-repo); the sub-repo's PR cross-references the host issue as `Part of <host>#N`, and forks host no issues. *See:* Rule 1's coordination path (below) and the Checklist for Cross-Repo Changes (below).
+
+Issue labels: `ai:<agent>` (automation target, e.g. `ai:claude`), sub-repo name, priority.
 
 ---
 

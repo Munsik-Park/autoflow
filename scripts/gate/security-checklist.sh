@@ -21,7 +21,7 @@
 # self-certification (CLAUDE.md > Rule Scope, principle 1). So AUDIT reads the
 # checklist as of the cycle's base commit, and a change the cycle makes to it —
 # the file, or the declaration that points at it — is read only on an operator
-# decision recorded in the issue ledger (CLAUDE.md > Decision Ledger >
+# decision recorded in the issue ledger (docs/decision-ledger.md >
 # *Security-checklist decisions*):
 #
 #   ## O<n> — <title> (cycle <C>, AUDIT) [checklist-decision]

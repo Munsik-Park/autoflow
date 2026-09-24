@@ -37,4 +37,4 @@ The items below are grouped under AUDIT's five rubric items. A rubric item with 
 
 This file is updated when a new attack surface is introduced (a hook change, or a new stamped script or installer step) or when a CVE in a dependency requires permanent mitigation steps.
 
-Maintainer: Human (never auto-edited). Inside an AutoFlow cycle a change to this file is read by AUDIT only once the operator accepts it (`CLAUDE.md` > Decision Ledger > *Security-checklist decisions*).
+Maintainer: Human (never auto-edited). Inside an AutoFlow cycle a change to this file is read by AUDIT only once the operator accepts it ([`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*).

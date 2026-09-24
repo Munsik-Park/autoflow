@@ -62,7 +62,7 @@ A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion 
           what it is, where it is, how it was opened, and what it shows for the criterion that
           names it. The material, not an abbreviated example in the body, is what the criterion
           means; a material that cannot be opened is recorded `not opened: <reason>`
-          (`CLAUDE.md` > Rule Scope > *The tools the work needs*).
+          ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *The tools the work needs*).
      - Output: cases + problem types + resolution approaches + `## Referenced materials` (`none`
        when the issue references no material), plus a required
        `## Acceptance criteria` section — a table with the fixed columns
@@ -131,7 +131,7 @@ A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion 
    - API calls, queries, service status, log inspection.
    - Find the tools the verification needs — in this environment and in the target's documents
      and scripts — before marking an item "unverified"; a tool that is off is started by the
-     target's own procedure, and one that needs the operator is requested (`CLAUDE.md` > Rule Scope
+     target's own procedure, and one that needs the operator is requested ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools
      > *The tools the work needs*). Record with the verdict notes each tool, whether it was usable,
      and how it was secured.
    - Items that cannot be verified are marked "unverified", naming the tool they needed.
@@ -179,7 +179,7 @@ context discipline applies: Phase A/B/3 write their bodies to `.autoflow/issue-{
 and return only an anchor + one-line summary (`CLAUDE.md` > Cost Control > Orchestrator
 context discipline).
 
-Spawn channel: all five DIAGNOSE spawns — intake readiness triage, Phase A, Phase B, Phase 3, and the review-response loop check — are anonymous direct spawns (a `subagent_type` only, with no `team_name`/`name` pair), so each one's anchor + summary reaches the orchestrator as the spawn's own return value. See [`CLAUDE.md`](../../CLAUDE.md) > Spawn Model — Phase-by-Phase > Spawn mode by role lifetime.
+Spawn channel: all five DIAGNOSE spawns — intake readiness triage, Phase A, Phase B, Phase 3, and the review-response loop check — are anonymous direct spawns (a `subagent_type` only, with no `team_name`/`name` pair), so each one's anchor + summary reaches the orchestrator as the spawn's own return value. See [`role-contracts.md`](../role-contracts.md) > Spawn mode by role lifetime.
 
 ## Spot-check & escalation discipline (incomplete-output guard)
 
