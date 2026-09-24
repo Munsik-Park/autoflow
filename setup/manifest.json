@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f1960a6bb80205802bec7f12fc1a10796fd34acfce0503b0c753a11965b79e23"
+      "sha256": "35acd255e3cf397391ec6a87f5af6582f910bf097af1db6c9781c8c99bbea9c9"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fddd2cc9d7ce58529d229dfe3d988f9ca7fcd973bdd863a3cbb46ef24aba54d9"
+      "sha256": "bce451c533962a5d209ee271d80afee0932f142ce80233ab517fdbe22e1297e0"
     },
     {
       "source": "docs/development-guideline.md",
@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "df94ab52f7de8a2a6dc27ea1c428ff04905b53b809cb09ec887db758be3fcfb1"
+      "sha256": "e88bee04359149d8a9ab402ca57e58f4ef23be5dcf1e3fbed9dcd4788679d9bb"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -307,7 +307,7 @@
       "dest": "scripts/review/scope-bounded.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "c3fec8ec42dd2e8115a7c3c2e924414698353b2cc65618b83fa1f4aa8912bf91"
+      "sha256": "a0066955fbf434b7b14c071033c6c733419d890882f446afbccadfc26c8743e0"
     },
     {
       "source": "scripts/test/suite-manifest.sh",
@@ -363,7 +363,7 @@
       "dest": "scripts/test/check-cycle-layer-index.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "dcb049fcaad0f6030cfd6fd55de60f66a56f10a144ff182e08176e22be599f27"
+      "sha256": "00342ee703025e72fc96bfc20d86220c1071246221f3fc6e6ca0e1b0ffd9a1e3"
     },
     {
       "source": "scripts/issue/create-issue.sh",
