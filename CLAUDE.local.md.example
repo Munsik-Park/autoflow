@@ -1,7 +1,7 @@
 # CLAUDE.local.md — Local Overrides (Example)
 
 > This file is `.gitignore`d and allows individual developers to customize
-> Claude Code behavior without affecting the shared CLAUDE.md.
+> Claude Code behavior.
 
 ---
 

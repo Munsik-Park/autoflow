@@ -34,17 +34,15 @@ The host's hook (`.claude/hooks/check-autoflow-gate.sh`) reads the state file an
 
 Applies to host repositories that operate a **host-private fork** as the submodule source — i.e., the fork carries host-private changes that are **not** bound for the upstream repository. The host repo's submodule pointer therefore lives in fork commits, not upstream commits.
 
-In a multi-repo instance of this framework, the host's direct submodule is `services` = **`<org>/<service-host>`** (host-operated nesting repo). Nested `librechat` (`<org>/<submodule>` fork) and `librechat-deploy` are submodules **inside llmroute**; they follow the same host-operated fork model but at the llmroute level. (This repository is single-repo; the example is illustrative of a multi-repo consumer.)
-
 ### URL — `.gitmodules` fixed to the host-operated fork
 
 ```
 .gitmodules submodule.<name>.url → <host-operated fork URL>   (e.g., <org>/<service-host>)
 ```
 
-- `.gitmodules` is **never modified** in a PR. PR diffs must not touch `.gitmodules` (URL is fixed at framework init).
-- Local fork URL override is unnecessary: the URL is the fork to begin with.
-- `setup/init.sh` substitutes the URL when the framework is propagated to another project, so each operator inherits the same model with their own fork.
+- `.gitmodules` is **never modified** in a PR. PR diffs must not touch `.gitmodules`.
+- Local fork URL override is unnecessary.
+- `setup/init.sh` substitutes the URL when the framework is propagated to another project.
 
 ### Pointer SHA — host main reachability
 
@@ -52,33 +50,27 @@ In a multi-repo instance of this framework, the host's direct submodule is `serv
 host main HEAD's submodule pointer SHA  →  reachable in the host-operated fork
 ```
 
-- A commit that exists only on a fork **feature branch** (not yet merged into the fork's `main`) **must not** appear as the submodule pointer on host `main`. Fork feature branches can be deleted or force-pushed at any time; relying on them is a stale-pointer footgun.
-- **Dev branch exception**: while a host PR's dev branch is open, the submodule pointer may temporarily reference a fork feature-branch SHA (this is normal for in-progress work). Reachability against fork `main` is enforced at host-`main`-merge time.
+- A commit that exists only on a fork **feature branch** (not yet merged into the fork's `main`) **must not** appear as the submodule pointer on host `main`.
+- **Dev branch exception**: while a host PR's dev branch is open, the submodule pointer may temporarily reference a fork feature-branch SHA. Reachability against fork `main` is enforced at host-`main`-merge time.
 
 ### Multi-developer concurrent work
 
 - `.gitmodules` is **never** modified — URL stays fixed.
 - Each developer commits **only the submodule pointer** for their issue's dev branch.
-  - The "developer" who commits that pointer on the host dev branch is the **orchestrator** — the host `services` gitlink is a host-file change it owns (see [`CLAUDE.md`](../CLAUDE.md) > Commit Ownership > Submodule pointer bump); the two rules name the same actor, not two.
-- No per-developer local URL override is required (the URL is already the fork).
+  - The "developer" who commits that pointer on the host dev branch is the **orchestrator** (see [`CLAUDE.md`](../CLAUDE.md) > Commit Ownership > Submodule pointer bump); the two rules name the same actor, not two.
+- No per-developer local URL override is required.
 
 ### Sub-repo cycle close-out
 
 When a sub-repo work cycle is complete:
 
 1. Merge the fork feature branch (e.g., `feat/<issue>-<topic>`) into the fork's `main`.
-2. Reconcile the host's submodule pointer to this cycle's sub-repo merge commit on fork `main` (in the host PR's dev branch, before host PR merge). **[MUST]** When several cycles are in external review at once, reconcile **against the current `origin/main`**, not the branch's stale fork point: host-PR merges (one at a time) advance `main`'s pointer, so a stale-base bump leaves the host PR `CONFLICTING`, on which `confirm-ci-green.sh` exits 10 before waiting on any check. Resolve by fork ancestry — if this cycle's merge commit (`TARGET`, the llmroute PR's merge commit; nested librechat/deploy pointer reconcile inside llmroute is llmroute's internal concern) is a **descendant** of the current `main` pointer, set the dev gitlink to `TARGET` first (`git -C services checkout <TARGET>; git add services; git commit`) **then** merge `origin/main` (with the dev pointer at `TARGET` ⊇ `MAIN`, the submodule stays at `TARGET`, no content conflict); if `main`'s pointer is a descendant (a regression) or the two diverge, **escalate to the operator**. **[MUST]** The end-state pointer must equal `TARGET` — verify `git ls-tree HEAD services == TARGET` before pushing (a bare `git merge origin/main` from a `BASE` dev pointer resolves the gitlink to `MAIN`, failing the operator's pointer-equality reconcile check). Full procedure + the post-reconcile mergeable/head-commit check gate: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
-3. The fork feature branch may then be deleted; the pointer SHA is preserved on fork `main`.
-
-This is the lifecycle that makes the **Pointer SHA — host main reachability** rule hold without requiring branch-protection rules on every fork feature branch.
+2. Reconcile the host's submodule pointer to this cycle's sub-repo merge commit on fork `main` (in the host PR's dev branch, before host PR merge). **[MUST]** When several cycles are in external review at once, reconcile **against the current `origin/main`**, not the branch's stale fork point. Resolve by fork ancestry — if this cycle's merge commit (`TARGET`, the sub-repo PR's merge commit; a submodule nested inside the sub-repo is reconciled by the sub-repo itself) is a **descendant** of the current `main` pointer, set the dev gitlink to `TARGET` first (`git -C <submodule> checkout <TARGET>; git add <submodule>; git commit`) **then** merge `origin/main`; if `main`'s pointer is a descendant (a regression) or the two diverge, **escalate to the operator**. **[MUST]** The end-state pointer must equal `TARGET` — verify `git ls-tree HEAD <submodule> == TARGET` before pushing. Full procedure + the post-reconcile mergeable/head-commit check gate: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
+3. The fork feature branch may then be deleted.
 
 ### Framework propagation
 
-Operators initializing this framework on a different project run `setup/init.sh`, which substitutes the submodule URL to point at the operator's own fork (same model — host-operated fork, host-private changes allowed). The Pointer SHA rule is unchanged: host `main` always points at a commit reachable in the operator's fork.
-
-### Transition note (issue #91)
-
-The original wording in `docs/autoflow-guide.md > HANDOFF > Merge Sequencing` / `docs/external-review-sequencing.md` was authored under issue #92 cycle 4 with an "upstream merge" framing (i.e., sub-repo PR → `danny-avila/LibreChat:main`). The services-nesting refactor (2026-06-27) updated the host-level sub-repo identity: the host's direct submodule is now `services` = `<org>/<service-host>`. `docs/external-review-sequencing.md` has been reconciled to reflect llmroute as the `SUBREPO` target. This section remains the authoritative pointer URL & pointer SHA policy. **As of #798 (2026-07) `claude-autoflow` carries zero submodules and is single-repo — the `services` submodule was detached; the present-tense wording above is a historical record of the pre-#798 nesting era and applies to a multi-repo consumer operating such a host-private fork.**
+Operators initializing this framework on a different project run `setup/init.sh`, which substitutes the submodule URL to point at the operator's own fork (same model — host-operated fork, host-private changes allowed). The Pointer SHA rule holds there: host `main` always points at a commit reachable in the operator's fork.
 
 ---
 
@@ -140,10 +132,10 @@ All AutoFlow phases, evaluation criteria, and gate rules apply.
 
 ## Change Surface Rules
 
-Every changed line traces to the cycle's scope: the issue's acceptance criteria, the confirmed cause recorded in DIAGNOSE, the agreed plan, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the cycle is decided by that judgment, not by whether an acceptance criterion names the line. How small the change stays inside that scope is unchanged: **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
+Every changed line traces to the cycle's scope: the issue's acceptance criteria, the confirmed cause recorded in DIAGNOSE, the agreed plan, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the cycle is decided by that judgment, not by whether an acceptance criterion names the line. How small the change stays inside that scope is governed by **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
 
 ### Scope judgment
-A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds, under a `## Scope judgments` heading in the report or artifact its phase already produces ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2; `docs/records/design-rationale.md` > Decision 25).
+A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds, under a `## Scope judgments` heading in the report or artifact its phase already produces ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2).
 
 1. **Is it directly related to this issue?** It is when any one of these holds:
    - it comes from the same confirmed cause;
@@ -155,13 +147,13 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 |---|---|
 | Directly related, fixing it here desirable | fixed in this cycle; the recorded judgment is the trace of its hunks |
 | Directly related, fixing it here not desirable | separated, with its **separation reason** recorded |
-| Not directly related | separated as before — reported in one line with its `path:line`; a separate issue is the follow-up path |
+| Not directly related | separated — reported in one line with its `path:line`; a separate issue is the follow-up path |
 
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **REFINE scope**).
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
 - **An inclusion is verified like the rest of the scope.** At ARCHITECT it gets a verification-design row whose `Issue AC` is `—`; found later, the role that fixes it runs the tests it judges the fix requires and records the run ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*).
-- **The criteria themselves can be wrong.** From ARCHITECT on they are a hypothesis the work tests ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*), so beside the two questions the role weighs whether what it met shows a criterion defective. A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here and raised in the report with the criterion, the proposed change and the fact that shows it, and the orchestrator puts it to the operator.
-- **A wrong judgment is caught downstream** — by VERIFY step 3, by GATE:QUALITY's `Minimal implementation` and `Impact scope` (**GATE:QUALITY linkage** below), and by the reviewer, who reads every separation of a directly related problem in the PR body. A role that is not confident, or whose inclusion would change a design decision, raises the question instead of deciding it (principle 3).
+- **Criterion defects.** From ARCHITECT on, beside the two questions the role weighs whether what it met shows a criterion defective ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here and raised in the report with the criterion, the proposed change and the fact that shows it, and the orchestrator puts it to the operator.
+- A role that is not confident, or whose inclusion would change a design decision, raises the question instead of deciding it (principle 3).
 - **Where it is applied**: DIAGNOSE's task decomposition and the ARCHITECT feature design's `## Scope` section set the cycle's scope; GREEN, VERIFY step 3 and REFINE judge what they meet during the work; and the gates' recommendations are triaged by the reviewer-finding procedure, where the same two questions decide which recommendation is not the issue's and ground the `Low` judgment (`docs/autoflow-guide.md` > GATE:QUALITY > *Recommendation triage*).
 
 ### Trace rule
@@ -181,7 +173,7 @@ The trace rule rejects scope creep *across* the change surface; this guard rejec
 - **Abstractions**: don't create helpers or abstractions for a one-time operation, and don't design for hypothetical future requirements.
 
 ### Code comments
-A comment is a present-tense claim about the code it sits on. A record of how that code came to be — a decision's grounds, a discussion, a change history — was true at the moment it was written; placed in a comment it becomes a claim that goes false when the code or another file changes, and someone has to keep it in step. Placed in a record that does not change with the code, it cannot go out of step, and nothing is lost. The rule governs every comment in code a cycle writes or modifies — implementation and test files, in a target and in this repository (`docs/records/design-rationale.md` > Decision 23). Existing comments on code the cycle leaves untouched stay as they are (**Surrounding code**).
+The rule governs every comment in code a cycle writes or modifies — implementation and test files, in a target and in this repository. Existing comments on code the cycle leaves untouched stay as they are (**Surrounding code**).
 
 - **[MUST] The test**: a comment carries only a sentence that stays true for as long as the code it sits on is unchanged — however much time passes, and whatever changes in other files.
 - **What a comment carries** — only what a reader cannot recover from the code:
@@ -196,9 +188,9 @@ A comment is a present-tense claim about the code it sits on. A record of how th
   - an issue, PR, review-round, or acceptance-criterion identifier;
   - the path or the contract of another file;
   - commented-out code.
-- **Where that content goes**: a decision and its grounds → the repository's decision record (in this repository, `docs/records/adr/` and `docs/records/design-rationale.md`); change history → the commit message and the PR body; discussion → the cycle's `.autoflow/*` design documents and the issue. The only reference a comment carries is at most one ADR identifier (`ADR-0024`); an issue or PR number is reached from the line through `git blame` and the commit message, so a comment carries none.
+- **Where that content goes**: a decision and its grounds → the repository's decision record (in this repository, `docs/records/adr/` and `docs/records/design-rationale.md`); change history → the commit message and the PR body; discussion → the cycle's `.autoflow/*` design documents and the issue. The only reference a comment carries is at most one ADR identifier (`ADR-0024`).
 - **Test files**: a test's intent is stated in its name and its assertion messages. A comment in a test file carries only the reason for a fixture that the fixture does not make evident.
-- **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it — a rewritten comment can be wrong again, a deleted one cannot.
+- **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it.
 - **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
 
 REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REFINE step 1, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator, and its fix is the orchestrator's direct commit; a defect a comment carries on its own ground, such as an exposed credential, takes the severity and route its impact sets (`docs/autoflow-guide.md` > GATE:QUALITY > *Code comments in a target*).
@@ -213,22 +205,20 @@ REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REF
   `git diff --name-only <base>...HEAD` intersects
   `jq -r '.artifacts[].source' setup/manifest.json` on any path other than
   `setup/manifest.json` itself, the manifest must be regenerated
-  (`setup/gen-manifest-hashes.sh`) and staged in the **same commit** — its
-  updated `sha256` rows trace to that same edit, so they do not violate the
-  trace rule. CI `AC2e` (`tests/plugin/verify-install-into-target.sh`) fails the
-  PR otherwise (#798/#799/#800 precedent).
+  (`setup/gen-manifest-hashes.sh`) and staged in the **same commit**. CI
+  (`tests/plugin/verify-install-into-target.sh`) fails the PR otherwise.
 
 ### Lint chain on the staged surface
-- **[MUST]** When the staged change surface contains at least one file covered by the target repository's lint chain, the committing role runs that chain over the staged files and confirms zero errors attributable to them **before** the commit is made — for every chain the discovery order below converts into a command. Auto-fixable formatting is applied and staged in the same commit: the fix traces to the same edit, so it does not violate the trace rule (identical reasoning to **Derived artifacts**).
+- **[MUST]** When the staged change surface contains at least one file covered by the target repository's lint chain, the committing role runs that chain over the staged files and confirms zero errors attributable to them **before** the commit is made — for every chain the discovery order below converts into a command. Auto-fixable formatting is applied and staged in the same commit.
 
 **Chain discovery** — deterministic order, first hit wins. Each route must yield a command string the committing role can invoke in the working checkout; a route that names a lint but yields no such command is not a hit, and discovery continues.
 
 1. the target repo's `CLAUDE.md` > Development Commands `Lint` / `Format` entries — the entry *is* the command;
 2. the target repo's pull-request CI lint steps, restricted to steps that carry a `run:` body — the `run:` body is the command, taken verbatim and executed from the repository root.
 
-**Execution trust boundary** — **[MUST]** before running a route-2 command, the committing role confirms the `run:` body is unchanged versus the baseline branch (`main` / the merge-base) for the current branch; a body altered in this branch is not executed — report `not-run` naming the step and the reason `modified-in-branch`, deferring the unreviewed change to code review rather than running it sight-unseen. `modified-in-branch` classifies as `ci-deferred` when a covering pull-request job can be named — the `pull_request` run executes this branch's own workflow body, which is the body under review — and as `unexecuted` when none can (**`not-run` reason classes** below). Route 2 grants execution of the discovered lint/check command exactly as written — a read-only check, not licence to run any other step, argument, or command it happens to name.
+**Execution trust boundary** — **[MUST]** before running a route-2 command, the committing role confirms the `run:` body is unchanged versus the baseline branch (`main` / the merge-base) for the current branch; a body altered in this branch is not executed — report `not-run` naming the step and the reason `modified-in-branch`. `modified-in-branch` classifies as `ci-deferred` when a covering pull-request job can be named and as `unexecuted` when none can (**`not-run` reason classes** below). Route 2 grants execution of the discovered lint/check command exactly as written — a read-only check, not licence to run any other step, argument, or command it happens to name.
 
-**Conversion limit** — a CI lint step whose work is performed by a third-party action reference (`uses:` with no `run:` body) yields no local command and is therefore not convertible. "Not a hit" in **Chain discovery** governs which route supplies the command, not whether the step is reported: discovery moves on to the next route, and the rejected step remains a discovered chain the report must dispose of. A discovered chain the conversion limit rejects imposes no blocking requirement, only a reporting one: when every discovered lint is non-convertible the committing role does not block the commit, it reports `not-run` naming the non-convertible step, so the unexecuted check stays visible instead of silently passing. The commit-time and gate-time obligations are separate, and not blocking the commit is not clearing the gate: the rejection yields the reason class `ci-deferred` where a covering pull-request job can be named and `unexecuted` where none can, and VALIDATE clears only the former (**`not-run` reason classes** below). Making an action-only chain locally executable belongs to the target repository's ops and is outside this rule's authority.
+**Conversion limit** — a CI lint step whose work is performed by a third-party action reference (`uses:` with no `run:` body) yields no local command and is therefore not convertible. "Not a hit" in **Chain discovery** governs which route supplies the command, not whether the step is reported: discovery moves on to the next route, and the rejected step remains a discovered chain the report must dispose of. A discovered chain the conversion limit rejects imposes no blocking requirement, only a reporting one: when every discovered lint is non-convertible the committing role does not block the commit, it reports `not-run` naming the non-convertible step. The commit-time and gate-time obligations are separate, and not blocking the commit is not clearing the gate: the rejection yields the reason class `ci-deferred` where a covering pull-request job can be named and `unexecuted` where none can, and VALIDATE clears only the former (**`not-run` reason classes** below). Making an action-only chain locally executable belongs to the target repository's ops and is outside this rule's authority.
 
 **Scoping** — run the chain restricted to the staged files where the chain supports scoping. Where the chain only runs whole-tree, run it whole-tree and require that no reported error names a staged file; pre-existing errors on untouched files are not this cycle's surface (**Surrounding code**).
 
@@ -249,12 +239,12 @@ REFINE checks the cycle's diff against this rule (`docs/autoflow-guide.md` > REF
 
 A `ci-deferred` deferral is discharged at HANDOFF step 5, which confirms the PR's check rollup is green — at least one check present and every element green (`scripts/handoff/confirm-ci-green.sh`). That confirmation is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format item 5) are what tie the deferral to a job that actually runs, and VALIDATE re-derives them before clearing.
 
-- **[MUST]** A chain that did not execute is reported `not-run`, never `clean` — a chain the committing role did not run is not evidence that the staged files are clean, and reporting it as such is the exact claim this rule exists to make re-derivable.
+- **[MUST]** A chain that did not execute is reported `not-run`, never `clean`.
 
 **Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format item 5, whose single-anchor requirement it satisfies as a per-chain enumeration (form and cardinality there).
 
 ### REFINE scope
-REFINE applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. The refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not REFINE's to apply, since REFINE preserves behavior: the Developer AI records its **Scope judgment**, and one judged directly related goes to the REFINE report's out-of-scope-observations section for the evaluator to dispose of (`docs/autoflow-guide.md` > REFINE > REFINE report).
+REFINE applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. The refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not REFINE's to apply: the Developer AI records its **Scope judgment**, and one judged directly related goes to the REFINE report's out-of-scope-observations section for the evaluator to dispose of (`docs/autoflow-guide.md` > REFINE > REFINE report).
 
 ### GATE:QUALITY linkage
 GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope. The cycle's scope is the acceptance criteria, the confirmed cause recorded in DIAGNOSE (`.autoflow/issue-{N}-phase-*.md`), and the problems the cycle's recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section and every `## Scope judgments` section in the cycle's `.autoflow/issue-{N}-*.md` reports, with the ledger's `[gate-autofix]` entries and gate verdict entries (`docs/autoflow-guide.md` > GATE:QUALITY > *Recommendation triage*).
@@ -262,7 +252,7 @@ GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored agai
 A high-scoring change:
 - resolves the confirmed cause, not only the reported symptom
 - stays inside the module or component that owns that cause
-- includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit, because the fix is what makes them necessary and they answer "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?"; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this cycle** is the symbol-removal instance of this same test, not its limit
+- includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this cycle** is the symbol-removal instance of this same test, not its limit
 - fixes each directly related problem its scope judgments include, and leaves out a directly related problem only with a recorded separation reason
 - leaves every surface outside the scope untouched — behavior, APIs, configuration, and documentation are examples of such a surface, not the boundary
 
@@ -272,30 +262,30 @@ A high-scoring change:
 
 **Comments in a target's code.** The item also weighs the comments the change adds, by content and by volume, reading the REFINE report's `## Comment check` section (`docs/autoflow-guide.md` > REFINE > REFINE report) — its `comment-ratio` line and its hits — with the comments in the diff:
 - *Content*: a comment that **Code comments** does not admit — a restatement of the code, a design ground, a reference or a history — is depth the AC does not need, as an unneeded hunk is.
-- *Volume*: even where every comment is admitted, the evaluator judges whether their amount, absolute and relative to the code they sit on, exceeds what a reader of the changed code needs — a comment block larger than the logic it explains, for example. The judgment is qualitative, with no ratio threshold (`docs/records/design-rationale.md` > Decision 23), and names the comment blocks it rests on.
+- *Volume*: even where every comment is admitted, the evaluator judges whether their amount, absolute and relative to the code they sit on, exceeds what a reader of the changed code needs — a comment block larger than the logic it explains, for example. The judgment is qualitative, with no ratio threshold, and names the comment blocks it rests on.
 
-The evaluator records each such finding in the item's `reason` and in `recommendations`, and does not lower the item's score for it: a lowered score counts toward the average as well as the per-item minimum of the PASS criteria (`docs/evaluation-system.md` > PASS Criteria), so any reduction could fail the gate, and in a target a comment finding never does (`docs/role-contracts.md` > Evaluation AI > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this exclusion does not cover). In this repository the item is scored without this comment weighing.
+The evaluator records each such finding in the item's `reason` and in `recommendations`, and does not lower the item's score for it: in a target a comment finding never fails the gate (`docs/role-contracts.md` > Evaluation AI > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this exclusion does not cover). In this repository the item is scored without this comment weighing.
 
 ---
 
 ## Reporting Format
 
-When a role spawn reports to the orchestrator — the report is the spawn's return value, with any body written to `.autoflow/*` and an anchor plus a one-line summary returned — it must follow this shape to keep token cost bounded (see host [`CLAUDE.md`](../CLAUDE.md) > Cost Control). This format governs **AI↔AI / AI↔orchestrator** reporting, whose audience is an AI that re-derives anchors deterministically: the returned report, and the round-by-round exchange between the Developer-AI and Test-AI sub-agents inside a facilitation `Workflow`. It does **not** govern a **human-facing decision pause** — that follows the situation-first contract in host [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation (situation → decision/options → anchors-as-evidence).
+When a role spawn reports to the orchestrator — the report is the spawn's return value, with any body written to `.autoflow/*` and an anchor plus a one-line summary returned — it must follow this shape (see host [`CLAUDE.md`](../CLAUDE.md) > Cost Control). This format governs **AI↔AI / AI↔orchestrator** reporting: the returned report, and the round-by-round exchange between the Developer-AI and Test-AI sub-agents inside a facilitation `Workflow`. It does **not** govern a **human-facing decision pause** — that follows the situation-first contract in host [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation (situation → decision/options → anchors-as-evidence).
 
 1. **Reference paths, not bodies**: cite `.autoflow/*` files, source files, and commit hashes by path/hash. Do NOT paste full file bodies or document sections into messages.
 2. **One-line summaries**: each finding, fix, or status item gets one line. Tables of ≤ 10 rows are allowed for structured results (test counts, coverage percentages).
 3. **Test output**: report the jest summary line (e.g., "Tests: 147 passed, 147 total"), read from the run's log (item 5), + coverage percentage. Never paste per-case PASS/FAIL lines or the full coverage report.
-4. **Cited code excerpts**: when quoting code is unavoidable (e.g., to point out a bug), keep excerpts ≤ 10 lines AND verify the excerpt against the live file at quoting time — stale working-memory snapshots are a known incident pattern.
+4. **Cited code excerpts**: when quoting code is unavoidable (e.g., to point out a bug), keep excerpts ≤ 10 lines AND verify the excerpt against the live file at quoting time.
 5. **Evidence anchor (mandatory)**: every "done" / "PASS" / "fixed" claim must end with one verifiable anchor — pick whichever fits:
    - code change → full 40-char commit SHA
    - test pass  → the run's **log** — the file its output was written to (Testing Standards item 7), cited by path under `.autoflow/issue-{N}-local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (host [`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A run's evidence is the log it left*)
-   - file state → `path:line` at the commit SHA the report is keyed to, plus the verbatim content of that line (a line number is read only at that commit; a report is a one-shot artifact re-derived when the tree changes — host [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger, `docs/records/design-rationale.md` > Decision 16)
+   - file state → `path:line` at the commit SHA the report is keyed to, plus the verbatim content of that line (a line number is read only at that commit — host [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger)
    - observation (a criterion verified with a tool) → the row's observation record, cited by path under `.autoflow/issue-{N}-local/`, with its result line (`observation: match` / `observation: mismatch — …`) read from it; the artifacts it cites are under the same prefix (host [`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *The tools the work needs*)
    - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → one line per chain the discovery order found, the enumeration as a whole standing as this item's one anchor. Each line's form follows its outcome word: `clean` / `fixed-and-staged` / `detected` → the command as invoked plus the result line it produced; `not-run` → the literal `not-run` plus its reason class in parentheses (`ci-deferred` / `unexecuted`, Change Surface Rules > *`not-run` reason classes*) and the unexecuted step's identity (`path:line` of the workflow file and the step name), and a `ci-deferred` line additionally names the covering pull-request job (workflow `path:line` plus job/step name) and the trigger evidence that it runs for this diff — the workflow's `on: pull_request` entry, and either no `paths:` filter or one whose patterns match a staged file; a line missing that evidence is `unexecuted`, not `ci-deferred`; `not-applicable` → that word alone, naming which discovery routes came up empty. A report citing one chain where discovery found several is malformed, not compliant.
 
-   Anchors must be deterministically confirmable by the orchestrator against what produced them (`git show <SHA>` / the summary line read in the cited log / `git show <SHA>:<file>`); a test-pass anchor is confirmed by reading, not by re-running — the command is re-run only when the log is absent or does not carry the line, and the run is then `not-run` and run in place. Reports without an anchor are rejected, not interpreted. This item's line-number forms are for the report, which is bound to one commit; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead (`docs/records/design-rationale.md` > Decision 16).
+   Anchors must be deterministically confirmable by the orchestrator against what produced them (`git show <SHA>` / the summary line read in the cited log / `git show <SHA>:<file>`); a test-pass anchor is confirmed by reading, not by re-running — the command is re-run only when the log is absent or does not carry the line, and the run is then `not-run` and run in place. Reports without an anchor are rejected, not interpreted. This item's line-number forms are for the report; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
 
-6. **Facilitator return (deliberation phases)**: the facilitation `Workflow` returns one structured result, specific to the phase — ARCHITECT (the Record workflow over the relay transcript): `{ report: { agreed, unagreed[] }, artifacts, transcript, ledger, summary, stopped }`; VERIFY: `{ test/impl self-check, next_action: RED|GREEN|SEQUENTIAL_FIX|EVALUATION_AI, ledger, summary }`. It carries no turn-by-turn messages and no duplicate dual reports; an ARCHITECT relay participant's own return is one line per turn. Shape and rationale: [host `CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation and [`role-contracts.md`](role-contracts.md) > Facilitator > Return Contract.
+6. **Facilitator return (deliberation phases)**: the facilitation `Workflow` returns one structured result, specific to the phase — ARCHITECT (the Record workflow over the relay transcript): `{ report: { agreed, unagreed[] }, artifacts, transcript, ledger, summary, stopped }`; VERIFY: `{ test/impl self-check, next_action: RED|GREEN|SEQUENTIAL_FIX|EVALUATION_AI, ledger, summary }`. It carries no turn-by-turn messages and no duplicate dual reports; an ARCHITECT relay participant's own return is one line per turn. Shape: [host `CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation and [`role-contracts.md`](role-contracts.md) > Facilitator > Return Contract.
 
 ---
 
@@ -306,27 +296,27 @@ Every sub-repo must maintain:
 1. **Unit tests** for business logic
 2. **Integration tests** for API endpoints / component interactions
 3. **No broken tests on `main`** — all tests must pass before merge
-4. **Test execution follows the target's practice** — AutoFlow names no test command to a target. The role that runs a test finds, at the location it executes in, how the target runs its tests (its documents, scripts and workspace structure) and how its CI selects tests for a change, runs the tests the change requires that way, and records the command, the log its output was written to and the summary line read from it; the phases read the outcome and adjudicate nothing beyond it (ADR-0024 D3; host [`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). What the command executes internally is the target's practice
-5. **Cost-aware execution**: invoke jest with `--silent --reporters=summary` when running for a role spawn's report (verbose output is for local debugging only). Coverage reports use the summary reporter; per-file HTML reports stay on disk and are referenced by path, not pasted.
-6. **SIGPIPE-safe assertion pipes**: under `set -o pipefail`, do not pipe a *streaming/context* producer (`grep -A/-B/-C`, and awk/section-extractor functions whose buffered output is still flushing when the consumer exits, and other producers that keep writing past the match) directly into a *short-circuiting* consumer (`grep -q`, `grep -m`, `head`) when the pipeline's exit status is the assertion verdict. The consumer's early exit can send the producer `SIGPIPE` (exit 141), which `pipefail` promotes to a pipeline failure — flipping a logically-passing assertion to a flaky FAIL (`grep: write error: Broken pipe`). Capture the producer first, then feed the captured string to the consumer **without a pipe** — `ctx=$(<producer>); grep -q <pattern> <<<"$ctx"` — or drop `-q` so the consumer reads to EOF. The capture and the here-string remove two different producers, and both removals are needed: capturing removes the *streaming* producer, but a `printf` of the captured string piped into a short-circuiting consumer is itself a producer writing into a pipe whose reader may exit first, so that form is not a repair (issue #114). The governing condition is unwritten producer bytes at consumer exit, not any particular pipe-capacity threshold — and the capacity a given pipe was granted is an environment property no suite observes, so the pipe goes at every such site regardless of payload size. When the assertion chains `grep` checks with `&&`, capture once and reuse `$ctx` across every branch — do not re-split the capture per branch (a bare `;` drops the `&&` ordering and silently weakens the assertion). (issues #964, #973, #114)
-7. **Output hygiene for shell suites** (the shell counterpart of item 5 — issue #136): a suite runner's output never streams into an agent's context. Run it to a log file under `.autoflow/issue-{N}-local/` — that log is the run's evidence (Reporting Format item 5), cited by path, and the store outlives the spawn and is archived with the issue — and read the tail — `bash scripts/test/run-suites.sh … > "$LOG" 2>&1; tail -n 20 "$LOG"` — and on a failure pull only the failing suite's block from the log (`grep -n`, then `sed -n 'A,Bp'`), never `cat` the log. Re-read a file you have already read by `sed -n 'A,Bp'` over the lines you need, never by a second whole-file read: a whole-file dump re-enters every line into the context, and lines that scroll out of reach are what drive repeated re-reads. Applies to every spawn mode — a direct spawn exceeds 300K inside a single phase the same way a named one does.
+4. **Test execution follows the target's practice** — AutoFlow names no test command to a target. The role that runs a test finds, at the location it executes in, how the target runs its tests (its documents, scripts and workspace structure) and how its CI selects tests for a change, runs the tests the change requires that way, and records the command, the log its output was written to and the summary line read from it; the phases read the outcome and adjudicate nothing beyond it (host [`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*). What the command executes internally is the target's practice
+5. **jest output**: invoke jest with `--silent --reporters=summary` when running for a role spawn's report (verbose output is for local debugging only). Coverage reports use the summary reporter; per-file HTML reports stay on disk and are referenced by path, not pasted.
+6. **SIGPIPE-safe assertion pipes**: under `set -o pipefail`, do not pipe a *streaming/context* producer (`grep -A/-B/-C`, and awk/section-extractor functions whose buffered output is still flushing when the consumer exits, and other producers that keep writing past the match) directly into a *short-circuiting* consumer (`grep -q`, `grep -m`, `head`) when the pipeline's exit status is the assertion verdict. Capture the producer first, then feed the captured string to the consumer **without a pipe** — `ctx=$(<producer>); grep -q <pattern> <<<"$ctx"` — or drop `-q` so the consumer reads to EOF. Both the capture and the here-string are needed: a `printf` of the captured string piped into a short-circuiting consumer is not a repair. The governing condition is unwritten producer bytes at consumer exit, not any particular pipe-capacity threshold, so the pipe goes at every such site regardless of payload size. When the assertion chains `grep` checks with `&&`, capture once and reuse `$ctx` across every branch, keeping the `&&` chain — do not re-split the capture per branch.
+7. **Output hygiene for shell suites**: a suite runner's output never streams into an agent's context. Run it to a log file under `.autoflow/issue-{N}-local/` — that log is the run's evidence (Reporting Format item 5), cited by path — and read the tail — `bash scripts/test/run-suites.sh … > "$LOG" 2>&1; tail -n 20 "$LOG"` — and on a failure pull only the failing suite's block from the log (`grep -n`, then `sed -n 'A,Bp'`), never `cat` the log. Re-read a file you have already read by `sed -n 'A,Bp'` over the lines you need, never by a second whole-file read. Applies to every spawn mode.
 
 ### Running the bash suite tree (opted-in targets)
 
-Where the target opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`), bash suites under `tests/**` are run through `scripts/test/run-suites.sh`, not by ad-hoc enumeration. Selection has one owner — `scripts/test/select-suites.sh` — and both CI and the local runner consume it, so what a local run executes and what CI executes are decided by the same predicate. Which suites a change requires is the working AI's judgment, recorded with its grounds (host [`CLAUDE.md`](../CLAUDE.md) > Rule Scope); the selector is the device that answers it here. Elsewhere the target's tests run the way the target runs them (ADR-0024 D3).
+Where the target opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`), bash suites under `tests/**` are run through `scripts/test/run-suites.sh`, not by ad-hoc enumeration. Selection has one owner — `scripts/test/select-suites.sh` — and both CI and the local runner consume it. Which suites a change requires is the working AI's judgment, recorded with its grounds (host [`CLAUDE.md`](../CLAUDE.md) > Rule Scope); the selector is the device that answers it here. Elsewhere the target's tests run the way the target runs them.
 
 - `bash scripts/test/run-suites.sh` — the suites this change requires, selected from each suite's own `# ci-subject:` header against the resolved delta. An unresolvable base, or an enumerated suite with no usable `# ci-subject:` header, is a visible `BLOCK` and a non-zero exit with nothing executed, never a silent empty selection — carry the `BLOCK:` lines into the report (`docs/autoflow-guide.md` > RED > Header contract > *Adopting the contract over existing suites*).
 - `bash scripts/test/run-suites.sh --list` — the selected set without running it.
 
-The runner de-duplicates by resolved path, so a suite cannot execute twice in one pass; arms a wall-clock bound of `<effective local ceiling>` around each suite — via `timeout`, `gtimeout`, or a detached sleep-and-kill watchdog when neither binary exists on the host — and reports an overrun as a distinct `TIMEOUT`; and prints one result line with elapsed time per suite, so cost drift is visible long before it reds. Each suite's output is captured while it runs: a `PASS` discards the capture, while a `FAIL` or `TIMEOUT` replays it in full between framing lines directly under that suite's result line — the runner is the only driver for the tree, so a failure is diagnosable from the run that produced it without re-running the suite by hand (issue #108).
+The runner de-duplicates by resolved path, so a suite cannot execute twice in one pass; arms a wall-clock bound of `<effective local ceiling>` around each suite — via `timeout`, `gtimeout`, or a detached sleep-and-kill watchdog when neither binary exists on the host — and reports an overrun as a distinct `TIMEOUT`; and prints one result line with elapsed time per suite. Each suite's output is captured while it runs: a `PASS` discards the capture, while a `FAIL` or `TIMEOUT` replays it in full between framing lines directly under that suite's result line.
 
 **The two clocks are not the same clock.** `budget-secs` is a **CI-clock** quantity — derived from the suite's own CI step duration, bounded by `SUITE_BUDGET_CEILING_SECS`, and spent by CI through that step's `timeout-minutes`. A local run spends a **local allowance** derived from it by one tree-wide ratio:
 
     effective local ceiling = budget-secs × SUITE_LOCAL_SLOWDOWN_FACTOR
 
-Both constants live in `scripts/test/suite-manifest.sh`, and the factor is deliberately not environment-settable. The separation is measured, not stylistic: the same suite runs 89 s in CI against 594 s locally, so spending a CI-derived number on the local clock is a unit error, and deriving the budget *more* accurately makes the local failure worse rather than better.
+Both constants live in `scripts/test/suite-manifest.sh`, and the factor is not environment-settable.
 
-**A local `TIMEOUT` is not a budget signal.** At this size the local gate is a hang detector, not a seconds-level cost gate, so an overrun is a hang or an order-of-magnitude regression. **Investigate the suite — do not bump `budget-secs`**, which carries a CI number that a local overrun is no evidence about. Cost is governed where the numbers are derived: on the CI clock, by `timeout-minutes`.
+**A local `TIMEOUT` is not a budget signal.** The local gate is a hang detector, not a seconds-level cost gate, so an overrun is a hang or an order-of-magnitude regression. **Investigate the suite — do not bump `budget-secs`**. Cost is governed where the numbers are derived: on the CI clock, by `timeout-minutes`.
 
 A suite executes its subject, not another suite (`scripts/test/check-suite-leaf.sh`). Confirming that a sibling has not regressed is its own CI step's job.
 
@@ -335,8 +325,8 @@ A suite executes its subject, not another suite (`scripts/test/check-suite-leaf.
 > Canonical: docs/role-common-rules.md > Bash Execution Mode.
 
 - **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, planner, implementer, tester, evaluator) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
-- **Why (lifecycle contract):** the harness's background-task contract — *re-invoke the owning agent when the task completes* — holds only for an agent that has a future turn. A spawned subagent terminates with its final response, so any still-pending background process is **reaped at teardown**: its output is lost and no completion notification is ever delivered, stalling the orchestrator on a report that never arrives (issue #952 — 71-minute orchestrator deadlock, 2026-07-07). A background CPU-heavy process can also starve the agent's own foreground verification and distort the pass/fail verdict (issue #287). The background + completion-notification pattern is therefore **orchestrator-only** (the main loop is the sole actor with future turns).
-- **Enforced at the tool boundary for suite runs (issue #134):** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run, whose result must stay keyed to the tree the claim is made about (`docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
+- The background + completion-notification pattern is **orchestrator-only**.
+- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run (`docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 
 ---
 
@@ -348,7 +338,7 @@ A suite executes its subject, not another suite (`scripts/test/check-suite-leaf.
 - Coordinate version bumps through the Orchestrator
 
 ### External Dependencies
-- Pin major versions to prevent breaking changes
+- Pin major versions
 - Run vulnerability scans as part of CI
 - Document any known CVE exceptions with rationale
 
@@ -356,12 +346,10 @@ A suite executes its subject, not another suite (`scripts/test/check-suite-leaf.
 
 ## Shared Conventions
 
-To maintain consistency across all sub-repos:
-
 ### Code Style
 - Follow the language-specific style guide chosen for the project
 - Use automated formatters (Prettier, Black, gofmt, etc.)
-- Enforce via CI — no style debates in reviews
+- Enforce via CI
 
 ### Documentation
 - Update docs when changing public interfaces

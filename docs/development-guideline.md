@@ -49,11 +49,10 @@ Classify work before implementation:
 ### When to create an ADR
 
 Create or update an ADR before implementation when a change affects one of
-these **trigger areas**. This list is the one the ADR-conformance checks read
-— GATE:PLAN's *ADR-conformance check* and GATE:QUALITY's *Fit — ADR
+these **trigger areas**. This list is the one the ADR-conformance checks read:
+GATE:PLAN's *ADR-conformance check* and GATE:QUALITY's *Fit — ADR
 conformance* item in `docs/autoflow-guide.md` decide "trigger area hit" and
-"N/A" against it — so it lives in this usage document, which every target
-receives, rather than in the ADR registry, which does not ship.
+"N/A" against it.
 
 - Host/submodule responsibility boundaries.
 - Deployment topology or CI/CD authority.
@@ -82,32 +81,49 @@ receives, rather than in the ADR registry, which does not ship.
 ## 7. Testing Policy
 
 - Choose tests based on changed surface.
-- This repository commits only deployment-level checks (ADR-0024 D1: `packaging`, `manifest`).
+- This repository commits only deployment-level checks (`packaging`, `manifest`).
   Any other change is verified by a one-shot run under `.autoflow/issue-{N}-local/`, recorded in the
-  PR body (issue #293): a change to AutoFlow's own rules (a rule document, a rule and its device) is
+  PR body: a change to AutoFlow's own rules (a rule document, a rule and its device) is
   settled there; a change to what a stamp delivers (a hook, a shipped script, a workflow) is checked
   there too, and its behavior across targets shows where it is stamped — a failure on a real target
   comes back as an issue.
 - Host tool/mechanism changes run `scripts/test/check-host-purity-delta.sh` (host-purity DELTA
   guard).
-- LibreChat submodule changes should use the submodule's package scripts and
-  should respect submodule ownership.
+- Submodule changes should use the submodule's package scripts and should
+  respect submodule ownership.
 
 ## 8. Documentation Policy
 
 - Review outputs should be navigable through clear file names, summaries,
   indexes, and cross-references where useful.
-- Existing operating manuals remain source-of-truth documents; review baseline
-  docs should route to them, not duplicate or override them.
+- Operating manuals are source-of-truth documents; review baseline docs route
+  to them, not duplicate or override them.
 - **A rule's body has one home.** A rule is stated in full in one section,
   which declares itself the rule's only home. Another site that needs the rule
   carries only what it acts on itself — a transition condition, the check its
   device makes, a cap's number — and cites the home; it does not restate which
-  cases the rule covers, where it routes them or when it closes them
-  (`docs/records/design-rationale.md` > Decision 30).
+  cases the rule covers, where it routes them or when it closes them.
 - **A rule change is checked against every site before it is committed.** The
   home lists search terms that find every sentence stating or citing the rule.
   Before committing a change to the rule, run `git grep` with those terms and
   read the hits as one set; a site that disagrees is reduced to a citation, not
   re-worded. Hits in `docs/records/` are read, not rewritten. A home without
   search terms gets them in the same change.
+- **A rule document prescribes behavior.** A rule document — `CLAUDE.md`, the
+  documents under `docs/` other than `docs/records/`, the agent and skill
+  definitions, the review guides under `.codex/`, the PR and issue templates,
+  the guides under `setup/`, and the descriptive fields of
+  `.claude/autoflow/spawn-policy.json` — states what to do, when, and under
+  which constraint. It carries no account of how a rule came to be (a case; an
+  issue, PR, ADR or Decision number; a change relative to an earlier version; a
+  changelog), no reason why a rule is needed or right, and no structure,
+  procedure or example of a specific target repository. Those go to the issue
+  and PR thread, `docs/records/`, and the target's own documents; git reaches
+  them (`git log -S`, the `(#N)` in a commit title). A sentence belongs in a
+  rule document only if removing it would change what a reader must do, what a
+  judgment rests on, or what is constrained. **This bullet is the rule's only
+  home.** Its search terms:
+
+  ```
+  git grep -n -i -E 'prescribes behavior|rule document|how a rule came to be'
+  ```

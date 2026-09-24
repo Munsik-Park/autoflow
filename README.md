@@ -2,9 +2,9 @@
 
 A reusable template for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-AutoFlow is a 16-phase development lifecycle (PREFLIGHT → HANDOFF) that ensures
-quality through multi-agent role separation, independent analysis, and
-quantified evaluation gates. This template is the **generalized form** of the
+AutoFlow is a 16-phase development lifecycle (PREFLIGHT → HANDOFF) built on
+multi-agent role separation, independent analysis, and quantified evaluation
+gates. This template is the **generalized form** of the
 methodology originally implemented in `ontology-platform` — a multi-sub-repo
 deployment orchestrator. The only changes from upstream are:
 
@@ -84,7 +84,7 @@ flowchart LR
 ### Key Features
 
 - **Multi-Agent Roles** — Orchestrator, Submodule AI (Developer), Test AI, Evaluation AI with separated responsibilities.
-- **3-Phase Independent Analysis** — Structure / Issue / Cross-Verification analyses to prevent tunnel-vision bias.
+- **3-Phase Independent Analysis** — Structure / Issue / Cross-Verification analyses.
 - **Evaluation Gates** — 10-point scoring system with a defined PASS threshold (≥ 7.5, each ≥ 7, security ≤ 3 → block).
 - **Hook Enforcement** — A shell hook validates AutoFlow state before allowing Agent spawns, `git push`, or `gh pr create`.
 - **Multi-Sub-Repo Support** — orchestrator pattern for coordinating work across submodules; single-repo is the degenerate case.
@@ -114,10 +114,9 @@ once per machine, not once per repository. **Step 3 stamps one repository**: it
 delivers the thin root layer, declares the marketplace in that repo's
 `.claude/settings.json`, and writes the target's version record
 (`.claude/autoflow/manifest.json` `.version`). A stamp does **not** enable the
-plugin, and it writes no `enabledPlugins` key — a repo-level `true` declaration
-is what makes Claude Code freeze a project-scope installation record, and never
-gets refreshed (see `setup/SETUP-GUIDE.md` > *A stamped repository declares no
-enablement*, which also documents the record-free per-repo `false` opt-out).
+plugin, and it writes no `enabledPlugins` key (see `setup/SETUP-GUIDE.md` > *A
+stamped repository declares no enablement*, which also documents the per-repo
+`false` opt-out).
 
 Step 3 runs the `/autoflow:install` skill: it detects root-layer absence or
 drift and reports the derived org/repo/branch/topology (read-only), asks for a
@@ -136,8 +135,7 @@ modified, and every target-owned scaffold, is kept and named (see
 A non-zero drift-check result is a **PREFLIGHT stop condition** — resolve the
 reported drift before starting a new AutoFlow cycle. The detector checks the
 installed files against the installed manifest, and the installed bundle and
-plugin against the marketplace clone (per-artifact hashes, so an upstream change
-merged without a version bump is caught) — see `setup/SETUP-GUIDE.md` >
+plugin against the marketplace clone (per-artifact hashes) — see `setup/SETUP-GUIDE.md` >
 *Self-verify with the drift detector*.
 
 ### Advanced / manual install
@@ -302,7 +300,7 @@ After running `setup/init.sh --target <path>`:
 
 Note: this repository is the **generalized form** of `ontology-platform`'s
 AutoFlow methodology. New methodology changes belong in the upstream project
-first; this repository tracks rather than diverges.
+first.
 
 ---
 

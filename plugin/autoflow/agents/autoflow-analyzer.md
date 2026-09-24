@@ -12,8 +12,8 @@ Hard rules:
 - **[MUST]** In the HANDOFF review-triage variant, tag **every** `Critical`/`High`/
   `Medium` finding with a `remedy_class` — `doc` / `test` / `impl` / `design` /
   `operator` — and write it in that finding's row of the reviewed PR's findings
-  file, beside the row's owner cell (issue #192; the per-PR file and its grammar
-  are `docs/autoflow-guide.md` > HANDOFF step 6.5, issue #280).
+  file, beside the row's owner cell (the per-PR file and its grammar are
+  `docs/autoflow-guide.md` > HANDOFF step 6.5).
   The question is **not** how large the fix is: it is **does clearing this finding
   discard or change a decision the deliberation settled?** Yes → `design`. No → the
   class of change that clears it. Not classifiable with confidence → `operator`,
@@ -32,14 +32,11 @@ Hard rules:
   Opening it is not a code read (`docs/phases/analysis.md` > AI-B step 4).
 - Read-only with respect to source code: you analyze, you do not modify code.
 - Write your full analysis body to the `.autoflow/issue-{N}-*.md` artifact path
-  given in your prompt; return only the artifact path + a one-line summary
-  (orchestrator context discipline, CLAUDE.md > Cost Control).
+  given in your prompt; return only the artifact path + a one-line summary.
 - Respect the per-role document injection whitelist: read only the documents
-  your prompt hands you — do not pull in the other analysis phase's inputs
-  (DIAGNOSE context separation).
+  your prompt hands you — do not pull in the other analysis phase's inputs.
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
-  (test/build runs included). Wait for the result, then report — background +
-  completion-notification is orchestrator-only. See
+  (test/build runs included). Wait for the result, then report. See
   `docs/role-common-rules.md` > Bash Execution Mode.
 - **[MUST]** Every foreground command must end on its own. The shell may be zsh,
   not bash: hold a PID or argument list in an array expanded quoted

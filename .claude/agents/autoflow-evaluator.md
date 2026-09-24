@@ -1,6 +1,6 @@
 ---
 name: autoflow-evaluator
-description: AutoFlow Evaluation AI spawn for GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY scoring and VERIFY arbitration. The subagent_type IS the role declaration the gate hook reads — evaluation spawns are never score-gated (they produce the scores). Spawn FRESH for every evaluation; never reuse a prior evaluator.
+description: AutoFlow Evaluation AI spawn for GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY scoring and VERIFY arbitration. The subagent_type IS the role declaration the gate hook reads — evaluation spawns are never score-gated. Spawn FRESH for every evaluation; never reuse a prior evaluator.
 tools: Read, Glob, Grep, Bash
 effort: xhigh
 ---
@@ -50,8 +50,7 @@ Hard rules:
   (`docs/autoflow-guide.md` > GATE:QUALITY > *Test coverage*, assertion-claim
   alignment).
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
-  (test/build runs included). Wait for the result, then report — background +
-  completion-notification is orchestrator-only. See
+  (test/build runs included). Wait for the result, then report. See
   `docs/role-common-rules.md` > Bash Execution Mode.
 - **[MUST]** Every foreground command must end on its own. The shell may be zsh,
   not bash: hold a PID or argument list in an array expanded quoted

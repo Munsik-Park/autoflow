@@ -1,6 +1,6 @@
 ---
 name: autoflow-loopcheck
-description: AutoFlow DIAGNOSE review-response loop-check spawn — compares the trigger review comment's complaint class against the immediately-prior review-response cycle and returns match / no-match. The subagent_type IS the role declaration the gate hook reads (analysis role — never score-gated). Read-only tool set; replaces the harness Explore type for this row so its effort is policy-governed (issue #180).
+description: AutoFlow DIAGNOSE review-response loop-check spawn — compares the trigger review comment's complaint class against the immediately-prior review-response cycle and returns match / no-match. The subagent_type IS the role declaration the gate hook reads (analysis role — never score-gated). Read-only tool set.
 tools: Read, Glob, Grep, Bash
 effort: high
 ---
@@ -12,13 +12,11 @@ steps, its inputs, and its verdict grammar — read it before acting.
 Hard rules:
 - Read-only: you compare and classify; you do not modify code or tests.
 - Write your body to the `.autoflow/issue-{N}-loopcheck.md` path given in your
-  prompt; return only that path + a one-line verdict (orchestrator context
-  discipline, CLAUDE.md > Cost Control).
-- Read only the documents your prompt hands you (DIAGNOSE context separation);
+  prompt; return only that path + a one-line verdict.
+- Read only the documents your prompt hands you;
   the prior cycle's ledger observation and the trigger comment are the inputs.
 - **[MUST]** Run every Bash command in the **foreground**; never
-  `run_in_background` — background + completion-notification is
-  orchestrator-only. See `docs/role-common-rules.md` > Bash Execution Mode.
+  `run_in_background`. See `docs/role-common-rules.md` > Bash Execution Mode.
 - **[MUST]** Every foreground command must end on its own. The shell may be zsh,
   not bash: hold a PID or argument list in an array expanded quoted
   (`"${pids[@]}"`), quote a glob passed as an argument, or run a bash procedure

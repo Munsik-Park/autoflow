@@ -13,15 +13,13 @@
 ## Overview
 
 AutoFlow defines 16 phases (`PREFLIGHT` → `HANDOFF`) that guide every code change
-from issue analysis to PR hand-off. Each phase has explicit entry/exit criteria, and
-evaluation gates prevent low-quality work from reaching the PR. Merging is performed
+from issue analysis to PR hand-off. Each phase has explicit entry/exit criteria. Merging is performed
 by an external review process; AutoFlow does not merge.
 
 Key principles:
 
 - **Judged route, fixed checks** — the phases run in the order below; which of them a change passes through, and how deep, is the working AI's judgment recorded with its grounds, while the independent checks — the gates, the push gate, CI, the reviewer review — are never skipped ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principles 1–3; > Execution Principles).
 - **Multi-agent separation** — distinct roles handle implementation, testing, and evaluation.
-- **Bias prevention** — 3-phase independent analysis before coding.
 - **Quantified quality** — 10-point evaluation with a defined PASS threshold.
 - **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` and never restated in prose; the rule that governs it is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase.
 
@@ -175,37 +173,35 @@ DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
 
 | Step | Action |
 |------|--------|
-| 1 | Prior-cycle resolution — reconcile every `.autoflow/issue-*.json` against its GitHub PR: merged or closed → delete its dev branch (local + origin), sync main, **and archive the issue's `.autoflow/issue-{N}*` files** — they are moved out to the external archive at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<date>/`, outside the repo tree (never delete; the move fires only on an observed merged/closed PR) (re-filing a rejected issue is a separate, external decision); requested issue with open PR + `active:false` → review-response mode (checkout dev branch; set `mode:review-response`; increment `cycle`); **requested issue's own state `active:true` → resume the in-progress cycle per the Resume procedure below (this is distinct from *another* issue's `active:true`, which is "report and hold")**; another issue `active:true` → report and hold (one-issue-at-a-time); other `active:false` (PR in external review) → cleared, proceed; **any issue `active:false` with `phase:"awaiting-user"` and no PR yet (a pre-PR human-decision pause — DIAGNOSE intake-triage FAIL, structure-gate non-code lever, or GATE:HYPOTHESIS non-code root cause) → preserve its `.autoflow/issue-{N}*` files **in place** and report the pending decision; do NOT archive (the archive move requires an observed merged/closed PR, which this state has never reached).** |
-| 1a | **Target-declared local checks** — `bash scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` (the paragraph below). Runs **here**, after prior-cycle resolution and **before** Step 2, so anything a declared check or repair leaves in the worktree is what Step 2 sees and Step 4 disposes of; and **before** Step 5, so a failing check never leaves an `active:true` state file behind — the next entry starts PREFLIGHT again rather than the Resume procedure. Exit 1 (a check failed) → hard stop; exit 3 (checks passed, tree dirty afterwards) → Step 4, then re-run 1a; exit 2 (unreadable declaration) → fix the scaffold, re-run 1a. `<C>` is the cycle the state file will carry once created — `1` on a new issue, the incremented value on review-response entry |
+| 1 | Prior-cycle resolution — reconcile every `.autoflow/issue-*.json` against its GitHub PR: merged or closed → delete its dev branch (local + origin), sync main, **and archive the issue's `.autoflow/issue-{N}*` files** — they are moved out to the external archive at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<date>/`, outside the repo tree (never delete; the move fires only on an observed merged/closed PR) (re-filing a rejected issue is a separate, external decision); requested issue with open PR + `active:false` → review-response mode (checkout dev branch; set `mode:review-response`; increment `cycle`); **requested issue's own state `active:true` → resume the in-progress cycle per the Resume procedure below (this is distinct from *another* issue's `active:true`, which is "report and hold")**; another issue `active:true` → report and hold (one-issue-at-a-time); other `active:false` (PR in external review) → cleared, proceed; **any issue `active:false` with `phase:"awaiting-user"` and no PR yet (a pre-PR human-decision pause — DIAGNOSE intake-triage FAIL, structure-gate non-code lever, or GATE:HYPOTHESIS non-code root cause) → preserve its `.autoflow/issue-{N}*` files **in place** and report the pending decision; do NOT archive.** |
+| 1a | **Target-declared local checks** — `bash scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` (the paragraph below). Runs **here**, after prior-cycle resolution and **before** Step 2 and Step 5. Exit 1 (a check failed) → hard stop; exit 3 (checks passed, tree dirty afterwards) → Step 4, then re-run 1a; exit 2 (unreadable declaration) → fix the scaffold, re-run 1a. `<C>` is the cycle the state file will carry once created — `1` on a new issue, the incremented value on review-response entry |
 | 2 | `git status` — confirm no uncommitted changes or untracked files in the working area |
 | 3 | `git fetch origin` — sync with remote |
 | 4 | Resolve any dirty state (stash, commit, or discard with user approval) |
-| 5 | `git checkout -b dev/YYYY-MM-DD-issue-N main` — create a dev branch (new-issue mode); the branch name carries the issue number so `#N`'s dev branch is derivable by convention (`dev/<date>-issue-<N>`) — this convention is what the Resume procedure and the review-response setup below resolve the branch from, since the state schema has no `branch` field; the state file is created from the template with `mode: "new-issue"`, `phase: "in-progress"`; add the `status:in-progress` label to the issue: `gh issue edit #N --add-label "status:in-progress"` |
+| 5 | `git checkout -b dev/YYYY-MM-DD-issue-N main` — create a dev branch (new-issue mode); the branch name carries the issue number; the state file is created from the template with `mode: "new-issue"`, `phase: "in-progress"`; add the `status:in-progress` label to the issue: `gh issue edit #N --add-label "status:in-progress"` |
 
-**Git Clean Check** (procedural detail → [`git-workflow.md`](git-workflow.md) > Git Clean Check): working tree clean; new-issue mode → main synced with origin; review-response mode → existing dev branch fast-forwarded from origin (`git fetch && git pull --ff-only`). The Merged / Closed-unmerged resolution paths above also start the next cycle from a fresh state-file template, so a re-filed issue never inherits a stale `mode`.
+**Git Clean Check** (procedural detail → [`git-workflow.md`](git-workflow.md) > Git Clean Check): working tree clean; new-issue mode → main synced with origin; review-response mode → existing dev branch fast-forwarded from origin (`git fetch && git pull --ff-only`). The Merged / Closed-unmerged resolution paths above also start the next cycle from a fresh state-file template.
 
 **Review-response mode setup** (requested issue has an open PR + `active:false`): `git checkout dev/<existing-branch>` (the issue's dev branch per the Step-5 naming convention `dev/<date>-issue-{target}`, located with `git branch --list 'dev/*-issue-{target}'`); run Step 1a on that branch with `--cycle` set to the incremented cycle number, and only once it exits 0 set `mode: "review-response"`, `active: true`, `phase: "in-progress"`; identify the triggering reviewer comment/thread (the DIAGNOSE review-response target); increment the state file's `cycle` field and reset `phases` to the empty Creation template (preserving the `verdict` rule); add the `status:in-progress` label: `gh issue edit #N --add-label "status:in-progress"`. Skip dev-branch creation (step 5 is new-issue mode only).
 
-**[MUST] Preserve the previous cycle's artifacts** (issue #135): before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, the per-PR findings files `issue-{N}-review-findings-*.md` (HANDOFF step 6.5; a pre-#280 `issue-{N}-review-findings.md` likewise) and the cycle-layer store `issue-{N}-local/`, which are cycle-spanning, and — only on a HANDOFF step 6.5 `design` re-entry judged to start at ARCHITECT — the DIAGNOSE analysis artifacts that shape reuses in place (`phase-a.md`, `phase-b.md`, `phase-3.md`; HANDOFF step 6.5, shape (b)) (ADR-0024 D2: a `delivery-check`'s subject is the PR's cumulative landed diff, so the store's retained set is reviewed and re-authored at RED entry and re-executed at the new cycle's VERIFY step 1; a check that did not execute is `not-run`, never `passed`). Without this the new cycle's Phase A/B/3, REFINE and AUDIT overwrite the flat names, and the bounded path below has nothing to reuse.
+**[MUST] Preserve the previous cycle's artifacts**: before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, the per-PR findings files `issue-{N}-review-findings-*.md` (HANDOFF step 6.5; the single findings file `issue-{N}-review-findings.md` likewise) and the cycle-layer store `issue-{N}-local/`, which are cycle-spanning, and — only on a HANDOFF step 6.5 `design` re-entry judged to start at ARCHITECT — the DIAGNOSE analysis artifacts that shape reuses in place (`phase-a.md`, `phase-b.md`, `phase-3.md`; HANDOFF step 6.5, shape (b)) (the store's retained set is reviewed and re-authored at RED entry and re-executed at the new cycle's VERIFY step 1; a check that did not execute is `not-run`, never `passed`).
 
-**Scope-bounded entry** (issue #135): when `bash scripts/review/scope-bounded.sh entry --issue {N}` prints `scope-bounded: true`, the cycle takes the **bounded path**. The judgment is read from the per-PR findings files, whose `scope-bounded:` lines HANDOFF step 6.5 wrote from `scripts/review/scope-bounded.sh triage`; the review-response cycle is one per issue, so `entry` combines them as mixed severities and classes combine — the heavier one wins (issue #280): every file whose `max_severity` is Medium+ must carry `scope-bounded: true`, and a PR with no Medium+ finding takes no part. A per-PR file is one whose name `issue-{N}-review-findings-<owner>.<name>-<pr>.md` and `pr:` line name the same PR: any other file under that prefix (an improvised round file, say) takes no part, a per-PR name whose `pr:` line disagrees is read as the full path, and a pre-#280 single findings file is read only when no per-PR file exists — beside them it is a stale verdict. On the bounded path, DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input — the dev branch HEAD is the PR head at entry, so the structure it describes is unchanged), ARCHITECT runs the same workflow with its brief stating the bounded scope — the Medium+ finding and the PR diff file set (ARCHITECT > *Re-discussion*), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE, GATE:QUALITY, CI and the reviewer re-review are unchanged — those are the independent checks, and the bounded path removes re-derivation, not verification. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-discussed on the full topic (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `entry` printing `scope-bounded: false` is the full path — one `false`, a Medium+ file with no line, a file whose `max_severity` line is missing, repeated or unparseable, no Medium+ file at all, or no findings file.
+**Scope-bounded entry**: when `bash scripts/review/scope-bounded.sh entry --issue {N}` prints `scope-bounded: true`, the cycle takes the **bounded path**. The judgment is read from the per-PR findings files, whose `scope-bounded:` lines HANDOFF step 6.5 wrote from `scripts/review/scope-bounded.sh triage`; `entry` combines them as mixed severities and classes combine — the heavier one wins: every file whose `max_severity` is Medium+ must carry `scope-bounded: true`, and a PR with no Medium+ finding takes no part. A per-PR file is one whose name `issue-{N}-review-findings-<owner>.<name>-<pr>.md` and `pr:` line name the same PR: any other file under that prefix (an improvised round file, say) takes no part, a per-PR name whose `pr:` line disagrees is read as the full path, and the single findings file `issue-{N}-review-findings.md` is read only when no per-PR file exists. On the bounded path, DIAGNOSE Phase A is not re-authored (the previous cycle's `issue-{N}-c{C}-phase-a.md` is its input), ARCHITECT runs the same workflow with its brief stating the bounded scope — the Medium+ finding and the PR diff file set (ARCHITECT > *Re-discussion*), and AUDIT takes the previous cycle's Low list as input (AUDIT above). Phase B, Phase 3, the loop check, GATE:PLAN, RED, GREEN, VERIFY, REFINE, VALIDATE, GATE:QUALITY, CI and the reviewer re-review are unchanged. After GREEN the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-discussed on the full topic (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and Phase A is re-authored before it. `entry` printing `scope-bounded: false` is the full path — one `false`, a Medium+ file with no line, a file whose `max_severity` line is missing, repeated or unparseable, no Medium+ file at all, or no findings file.
 
 **Resume procedure** (requested issue's own state file reads `active:true` — a mid-cycle session resumed after an abnormal end): resume deterministically, do not restart from PREFLIGHT.
 1. **Read the last confirmed point** from the state file: the highest phase whose gate `scores` are recorded in `phases` (or `verdict` set for `gate_hypothesis_cause`) is the last *passed* gate; `phase` gives the coarse marker.
-2. **Verify the resume prerequisites** before continuing: the issue's dev branch exists and is checked out, the `.autoflow/issue-{N}-*.md` artifacts the next phase consumes are present, and the **last** `### preflight-local-checks | cycle: <C>` record for the **current** cycle in the ledger reads `none declared` or `PASS … worktree=clean` — exactly the two lines an exit-0 run writes; a resume re-enters mid-cycle without repeating PREFLIGHT, so this record is what carries the Step 1a guarantee across the session boundary. Any other state — no record for this cycle, a last record reading `FAIL …` (exit 1), or one reading `DIRTY …` (exit 3: the checks passed but the tree they left is what a session ended on, between Step 4 and the re-run) — means Step 1a runs now, with the same exit handling (1 → stop and report, 3 → Step 4 then re-run, 2 → fix the scaffold), before any phase is re-entered. The branch is identified by the **documented dev-branch naming convention** (PREFLIGHT Step 5): the issue-scoped dev branch for `#N` is `dev/<date>-issue-<N>`, located with `git branch --list 'dev/*-issue-<N>'`. If it is missing, or matches ambiguously, or a required artifact is absent, treat the cycle as unrecoverable and report to the user (do not fabricate the missing artifact).
-
-   *Note (branch-source):* the state schema (`CLAUDE.md` > AutoFlow State Tracking) carries **no `branch` field**, so the issue→branch mapping cannot be read from the state file. Rather than add a schema field (a data-model change out of family with this spec-consistency fix), the branch is made derivable by the documented Step-5 convention (`dev/<date>-issue-<N>`, aligned to live practice), so step 2 resolves the branch deterministically against a documented rule — not against undocumented live practice or a non-existent state field.
+2. **Verify the resume prerequisites** before continuing: the issue's dev branch exists and is checked out, the `.autoflow/issue-{N}-*.md` artifacts the next phase consumes are present, and the **last** `### preflight-local-checks | cycle: <C>` record for the **current** cycle in the ledger reads `none declared` or `PASS … worktree=clean` — exactly the two lines an exit-0 run writes. Any other state — no record for this cycle, a last record reading `FAIL …` (exit 1), or one reading `DIRTY …` (exit 3: the checks passed but the tree they left is what a session ended on, between Step 4 and the re-run) — means Step 1a runs now, with the same exit handling (1 → stop and report, 3 → Step 4 then re-run, 2 → fix the scaffold), before any phase is re-entered. The branch is identified by the **documented dev-branch naming convention** (PREFLIGHT Step 5): the issue-scoped dev branch for `#N` is `dev/<date>-issue-<N>`, located with `git branch --list 'dev/*-issue-<N>'`. If it is missing, or matches ambiguously, or a required artifact is absent, treat the cycle as unrecoverable and report to the user (do not fabricate the missing artifact).
 3. **Re-enter at the phase immediately after the last passed gate** — unless that gate's latest
    record still carries `remedy_class`: a passed gate carrying one has an open recommendation
    attempt (GATE:QUALITY > *Recommendation triage*), and the cycle resumes on the route the last
-   `[gate-autofix]` entry names, not past the gate; a failed gate carrying one resumes on its FAIL route as before. A passed gate whose latest `[rebuttal]` entry has no verdict entry of that gate after it resumes at that gate's re-score (HANDOFF step 6.5 > *Whether a finding holds*). If the last confirmed point is indeterminate (no recorded gate `scores`, or artifacts inconsistent), fall back conservatively to **re-running from the phase that follows the most recent gate whose `scores` are present** — never skip a gate that has no recorded PASS. A gate is re-run, not assumed passed, whenever its `scores` are absent.
-4. Resume does **not** increment `cycle` and does **not** reset `phases` (contrast review-response entry, which does both) — it is a continuation of the same cycle, not a new one.
+   `[gate-autofix]` entry names, not past the gate; a failed gate carrying one resumes on its FAIL route. A passed gate whose latest `[rebuttal]` entry has no verdict entry of that gate after it resumes at that gate's re-score (HANDOFF step 6.5 > *Whether a finding holds*). If the last confirmed point is indeterminate (no recorded gate `scores`, or artifacts inconsistent), fall back conservatively to **re-running from the phase that follows the most recent gate whose `scores` are present** — never skip a gate that has no recorded PASS. A gate is re-run, not assumed passed, whenever its `scores` are absent.
+4. Resume does **not** increment `cycle` and does **not** reset `phases` (contrast review-response entry, which does both).
 
-**Bundle drift (fail-closed stop condition, issue #167).** Before DIAGNOSE, on a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this step), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6, issue #185 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here rather than at the fail-closed readout in ARCHITECT), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`, ADR-0024 D3; the leg resolves the opt-in through the shipped `scripts/test/suite-manifest.sh` and a target that has not opted in PASSes without the selector being consulted — issues #228 / #229) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7, issue #213 — the selector's own `--check-headers` stage); a declaration file that is present but unreadable is a D7 FAIL, and a scaffold with no `tests` object at all is named by a `HINT` beside the PASS (a re-stamp never adds it). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`, so the check is the same from this shell as from a hook; a side that is not locally resolvable reports `SKIP`, never a failure. A non-zero exit is a **fail-closed** hard PREFLIGHT stop: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per RED > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`), or repair the unreadable `.claude/autoflow.local.json` it names. A `WARN` (a changed scaffold sample, an artifact the current manifest does not ship) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
+**Bundle drift (fail-closed stop condition).** Before DIAGNOSE, on a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this step), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`; the leg resolves the opt-in through the shipped `scripts/test/suite-manifest.sh` and a target that has not opted in PASSes without the selector being consulted) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7 — the selector's own `--check-headers` stage); a declaration file that is present but unreadable is a D7 FAIL, and a scaffold with no `tests` object at all is named by a `HINT` beside the PASS (a re-stamp never adds it). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`; a side that is not locally resolvable reports `SKIP`, never a failure. A non-zero exit is a **fail-closed** hard PREFLIGHT stop: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per RED > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`), or repair the unreadable `.claude/autoflow.local.json` it names. A `WARN` (a changed scaffold sample, an artifact the current manifest does not ship) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
 
-**Reviewer-backend availability (fail-closed stop condition).** Before DIAGNOSE, PREFLIGHT confirms the configured HANDOFF step-6 review **backend** is **available** by running `scripts/preflight/check-review-backend.sh` — it reads the backend from `.claude/autoflow.local.json` (`.review.backend`, default `codex`; absent ⇒ codex) and probes the CLI presence-only (`command -v codex` / `command -v claude`; auth is not probed — a present-but-unauthenticated backend passes here and surfaces its auth failure at HANDOFF step 6). A non-zero exit is a **fail-closed** hard PREFLIGHT stop (mirrors `drift-check.sh`): the cycle does not begin until the configured backend's CLI is installed or the backend is switched in `.claude/autoflow.local.json`. This moves the former codex hard-requirement from HANDOFF-end to PREFLIGHT-entry. See [`reviewer-backend.md`](reviewer-backend.md).
+**Reviewer-backend availability (fail-closed stop condition).** Before DIAGNOSE, PREFLIGHT confirms the configured HANDOFF step-6 review **backend** is **available** by running `scripts/preflight/check-review-backend.sh` — it reads the backend from `.claude/autoflow.local.json` (`.review.backend`, default `codex`; absent ⇒ codex) and probes the CLI presence-only (`command -v codex` / `command -v claude`; auth is not probed — a present-but-unauthenticated backend passes here and surfaces its auth failure at HANDOFF step 6). A non-zero exit is a **fail-closed** hard PREFLIGHT stop: the cycle does not begin until the configured backend's CLI is installed or the backend is switched in `.claude/autoflow.local.json`. See [`reviewer-backend.md`](reviewer-backend.md).
 
-**Target-declared local checks (fail-closed stop condition, issue #181 — Step 1a above).** PREFLIGHT runs the target repository's **own** readiness procedure by executing `scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` at Step 1a — after prior-cycle resolution, before the Git clean check and before the state file is created. The target declares that procedure in the target-owned scaffold `.claude/autoflow.local.json` under `preflight.local_checks[]` — one entry per step, each `{ "name", "check", "repair"? }`, where `check` is the command PREFLIGHT runs (exit 0 = ready) and the optional `repair` is run once on a failed `check`, followed by a re-check whose exit is the verdict. A target whose docs name a per-clone setup step (a commit-hook installer, a generated config, a toolchain probe — the class that let llmroute #279 start with its commit hooks unwired, so six role-spawn commits skipped the target's lint chain until VALIDATE step 7) declares it here; the framework knows **no specific tool** — it runs what is declared and reads only the exit status. **Absent declaration ⇒ no-op**: the script exits 0 and records the single line `PREFLIGHT local checks: none declared`. A declared check that does not pass (after repair, when one is declared) is a **fail-closed** hard PREFLIGHT stop (exit 1, mirrors `check-review-backend.sh`): run the declared repair, or fix the declaration, then re-run. A declaration the script cannot read as declared (malformed JSON, wrong types, an entry without a string `check`) is exit 2 and also stops — never a silent no-op. Because a declared command is arbitrary target shell and a `repair` changes local state by design, a passing run additionally asserts `git status --porcelain` is empty afterwards: a dirty tree is exit 3 with the paths on stderr — not a failed check, but the Step 2 condition already broken, so the orchestrator disposes of those paths under Step 4 and re-runs Step 1a; Step 2 then confirms the clean tree on its own. The outcome is written **only** as a ledger record — a level-3 heading `### preflight-local-checks | cycle: <C>` with one `- result:` line whose leading token is the terminal verdict (`none declared`; `PASS <name>=PASS[(repaired)] … worktree=clean` for exit 0; `DIRTY <name>=PASS[(repaired)] … worktree=dirty(<n>)` for exit 3; `FAIL <name>=FAIL[(…)] … worktree=n/a` for exit 1 — `PASS` is written only on exit 0, so no reader has to combine the verdict with the worktree field) — in the same identifier-free record class as `verify-detection`; the state file is untouched and the gate hook, which reads the ledger advisorily only, is unchanged. The commit-time lint-chain obligation (`submodule-common-rules.md` > *Lint chain on the staged surface*) stays as it is — this call site is what lets a target make its lint chain *installed* before the first role-spawn commit, not a replacement for running it.
+**Target-declared local checks (fail-closed stop condition — Step 1a above).** PREFLIGHT runs the target repository's **own** readiness procedure by executing `scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` at Step 1a — after prior-cycle resolution, before the Git clean check and before the state file is created. The target declares that procedure in the target-owned scaffold `.claude/autoflow.local.json` under `preflight.local_checks[]` — one entry per step, each `{ "name", "check", "repair"? }`, where `check` is the command PREFLIGHT runs (exit 0 = ready) and the optional `repair` is run once on a failed `check`, followed by a re-check whose exit is the verdict. A target whose docs name a per-clone setup step (a commit-hook installer, a generated config, a toolchain probe) declares it here; the framework knows **no specific tool** — it runs what is declared and reads only the exit status. **Absent declaration ⇒ no-op**: the script exits 0 and records the single line `PREFLIGHT local checks: none declared`. A declared check that does not pass (after repair, when one is declared) is a **fail-closed** hard PREFLIGHT stop (exit 1): run the declared repair, or fix the declaration, then re-run. A declaration the script cannot read as declared (malformed JSON, wrong types, an entry without a string `check`) is exit 2 and also stops — never a silent no-op. A passing run additionally asserts `git status --porcelain` is empty afterwards: a dirty tree is exit 3 with the paths on stderr — not a failed check, but the Step 2 condition already broken, so the orchestrator disposes of those paths under Step 4 and re-runs Step 1a; Step 2 then confirms the clean tree on its own. The outcome is written **only** as a ledger record — a level-3 heading `### preflight-local-checks | cycle: <C>` with one `- result:` line whose leading token is the terminal verdict (`none declared`; `PASS <name>=PASS[(repaired)] … worktree=clean` for exit 0; `DIRTY <name>=PASS[(repaired)] … worktree=dirty(<n>)` for exit 3; `FAIL <name>=FAIL[(…)] … worktree=n/a` for exit 1 — `PASS` is written only on exit 0) — in the same identifier-free record class as `verify-detection`; the state file is untouched, and the gate hook reads the ledger advisorily only. The commit-time lint-chain obligation (`submodule-common-rules.md` > *Lint chain on the staged surface*) applies on its own: a declared check that installs the lint chain does not replace running it.
 
 **Hard stop**: if the Git state is not clean after resolution attempts (e.g. `--ff-only` fails), **stop and report to the user**. Do NOT proceed to DIAGNOSE.
 
@@ -256,9 +252,9 @@ Feat issues skip this gate.
 
 Both perspectives participate. The discussion is a **relay the orchestrator runs between two
 persistent participants** — the Developer AI and the Test AI, each spawned once for the discussion
-and woken by agent ID for each of its turns (ADR-0023 D2; issue #179) — and its whole record is one
-file, `.autoflow/issue-{N}-architect-transcript.md`, which every turn is appended to. The three
-phases of issue #166 are kept: **Discuss** and **Report** are the relay; **Record** is the
+and woken by agent ID for each of its turns — and its whole record is one
+file, `.autoflow/issue-{N}-architect-transcript.md`, which every turn is appended to. The discussion
+has three phases: **Discuss** and **Report** are the relay; **Record** is the
 `Workflow` named `architect-deliberation`, which reads the transcript file and writes the artifacts.
 The orchestrator relays but does not deliberate: it reads one line per turn and the transcript's
 decidable state, never a turn body (Deliberation Isolation).
@@ -267,12 +263,11 @@ decidable state, never a turn body (Deliberation Isolation).
 the two alternate. Each participant holds one fixed prompt for its role
 (`.claude/agents/autoflow-planner.md` > *ARCHITECT relay participant*) and reads the topic once from
 the transcript file's `## Topic` section; its context is its memory across turns, and the file is
-the record the other side reads. The design documents are written after the discussion, so nobody
-edits one while it runs. Each turn's heading carries whether the author has anything further to
+the record the other side reads. The design documents are written after the discussion. Each turn's heading carries whether the author has anything further to
 raise (`[further: yes|none]`), and the discussion ends when two consecutive turns both say
 `none` — the participants' own conclusion ends it; `scripts/architect/relay-state.sh state`
 computes that condition and the next side, and the orchestrator obeys it. The Discussion
-Protocol's VERIFY step applies over the transcript (ADR-0023 D1): a fact the transcript cites with
+Protocol's VERIFY step applies over the transcript: a fact the transcript cites with
 a `path:line` (read at the cycle's commit) or a document's section and quoted sentence is verified for both participants, and a participant reads a file to ground a claim
 of its own or to dispute a cited one.
 
@@ -287,10 +282,9 @@ conclusions, followed by a ledger call that appends the agreed conclusions under
 The run returns `{ report: { agreed, unagreed[] }, artifacts, transcript, ledger, summary, stopped }`.
 The orchestrator receives that object and routes it (*Report routing* below); it does not receive
 the turns or the reports' bodies. It **verifies** what the report rests on by spot-checking targeted
-artifact excerpts against re-derived facts — the full read-and-score is GATE:PLAN's. Rationale:
+artifact excerpts against re-derived facts — the full read-and-score is GATE:PLAN's. Isolation rule:
 [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation;
-contract: [`role-contracts.md`](role-contracts.md) > Facilitator; decision:
-[`records/adr/0023-deliberation-participant-lifetime.md`](records/adr/0023-deliberation-participant-lifetime.md).
+contract: [`role-contracts.md`](role-contracts.md) > Facilitator.
 
 #### Relay procedure (orchestrator)
 
@@ -316,7 +310,7 @@ notification of that resumed spawn, and nothing is polled.
    Turn n correctly*. A wake whose notification arrives with `turns` unchanged is a **missing
    turn**: re-wake that side once with *your Turn n was not appended*; a second miss is the
    infrastructure state `participant missing` — repair (a fresh spawn of that side, pointed at the
-   transcript) and continue, since the file is the memory.
+   transcript) and continue.
 4. **`next=report`.** Wake both participants (in one turn) with *the discussion has ended — append
    your report*; end the turn; when both notifications are in, run `state` again. A side named in
    `reports_missing` is re-woken once; if it is still missing, continue — the scribe records that
@@ -331,11 +325,9 @@ notification of that resumed spawn, and nothing is polled.
 three artifacts the scribe writes exist and are non-empty — `.autoflow/issue-{N}-feature-design.md`,
 `.autoflow/issue-{N}-verification-design.md` and `.autoflow/issue-{N}-architect-report.md` — and
 treats a missing or empty one — or a verification design without its `## Tools` section
-(*Tools* below) — as an infrastructure cause to repair and re-run, rather than proceeding. The workflow script cannot perform this check itself: the hosted Workflow runtime
-injects no filesystem access and rejects `import(` at parse time, so the capability lives at the
-layer that has a shell.
+(*Tools* below) — as an infrastructure cause to repair and re-run, rather than proceeding.
 
-**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation no longer applies — the Developer-AI and Test-AI both work from code and design together. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the spawn prompt names each participant only the documents its design task needs (e.g. the relevant `docs/records/adr/*`, `docs/records/design-rationale.md`), and the participant reads them once — its context carries them across turns. **Deliberation Isolation is unchanged** — the turns live in the transcript file and only the Record workflow's report returns to the orchestrator.
+**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation does not apply. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the spawn prompt names each participant only the documents its design task needs (e.g. the relevant `docs/records/adr/*`, `docs/records/design-rationale.md`), and the participant reads them once. **Deliberation Isolation is unchanged** — the turns live in the transcript file and only the Record workflow's report returns to the orchestrator.
 
 **Roles**:
 - **Developer AI**: feature design (changed files, API interface, data structures).
@@ -344,11 +336,10 @@ layer that has a shell.
 ### Output artifacts
 
 1. **Feature Design Document** (Developer-AI-led) — `.autoflow/issue-{N}-feature-design.md`, the
-   **architecture decision layer** and nothing below it (issue #192): the decisions, the constraints
+   **architecture decision layer** and nothing below it: the decisions, the constraints
    they hold under, and the alternatives considered and rejected with the ground for each rejection.
    It cites the verification design's `Failure mode` column (below) for the failure mode each
-   verification exists to catch, rather than stating it. The deliberation stops here. Rationale:
-   [`records/design-rationale.md`](records/design-rationale.md) > Decision 15.
+   verification exists to catch, rather than stating it. The deliberation stops here.
 
    **[MUST]** The document carries a `## Scope` section: the cycle's scope beyond the acceptance
    criteria. Each problem the deliberation judged under
@@ -356,7 +347,7 @@ layer that has a shell.
    judgment* — DIAGNOSE's `## Scope judgments` and any the participants found — is listed as
    included or separated, with the conditions it meets and, for a directly related problem left
    out, its separation reason. A section with nothing beyond the criteria says `none`. Scope is a
-   decision: a wrong one sends the design back, so it is settled here, not derived below.
+   decision, settled here, not derived below.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
@@ -369,9 +360,7 @@ layer that has a shell.
    that exemption explicitly.
 
 2. **Verification Design Document** (Test-AI-led) — the `Issue AC` join key is **not** reduced by
-   the layer split above: an unverified acceptance criterion is the one class of defect execution
-   does not surface (the suite passes green), so the per-criterion disposition stays a deliberation
-   output. What the split removes from it is depth, not rows: `Method` names the **kind** of oracle
+   the layer split above: the per-criterion disposition is a deliberation output. What the split removes from it is depth, not rows: `Method` names the **kind** of oracle
    a row gets, and the condition clause that implements it is RED's.
 
 | Issue AC | Acceptance criterion | Type | Kind | Method | Failure mode | Reason |
@@ -386,13 +375,12 @@ layer that has a shell.
   `automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
   `none`. An `automated` or `manual` row is `cycle` — executed once, uncommitted under
   `.autoflow/issue-{N}-local/`, its run recorded. **In this repository only**, the same cell also
-  carries the row's **layer** (ADR-0024 D1): a row is `standing` (committed; CI-registered) when the
+  carries the row's **layer**: a row is `standing` (committed; CI-registered) when the
   cell names one of D1's closed tokens in the form `automated / standing: <token>`
   (`manual / standing: <token>`); the token list is ADR-0024 D1's and is not copied here, and a
   token outside it is a layer violation (GATE:QUALITY > *Test quality — layer violation*). On a
-  target the cell carries no layer token: a cycle adds no test file to the target's tree by default,
-  and a file it does add is listed in the PR body with its reason for the reviewer to judge
-  ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *What a cycle leaves in the target's tree*). `Kind`
+  target the cell carries no layer token ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *What a cycle
+  leaves in the target's tree*). `Kind`
   applies to `automated` rows only (`driving` / `regression` / `characterization`). Both
   vocabularies, and when each disposition is the right answer, are defined once at *Test necessity*
   below.
@@ -402,10 +390,7 @@ layer that has a shell.
   criterion the design verifies by anything other than an automated test keeps its row, states that
   disposition, and states its `Reason` in one line — the row is never deleted. A design-added
   criterion (`—`) is never a finding and owes no reason; each problem the feature design's
-  `## Scope` section includes gets one. This is what turns "was an acceptance
-  criterion dropped?" into a key join rather than a reading of prose, which is what lets the
-  orchestrator and the two gates put such a change in front of the operator (*Report routing*
-  below).
+  `## Scope` section includes gets one.
 - **`Failure mode` holds each verification's unique failure mode**, and this bullet is the only
   place that obligation is defined. The cell names the defect that makes the row's verification
   fail and that no other verification catches. On an `existing-coverage` row it names what the
@@ -426,11 +411,8 @@ layer that has a shell.
     rows. `none` and design-change-request rows carry `—`.
   - **A cell that cannot be filled** — the verification names no defect that another verification
     or mechanism does not already catch — removes that verification from the agreement rather than
-    being argued down: undiversified duplication is over-verification, which GATE:PLAN's `Scope`
-    criterion scores as over-engineering. A composition oracle is a floor and is never removed on
+    being argued down. A composition oracle is a floor and is never removed on
     this ground.
-  - **Effective from** — binds verification designs authored after issue #198 lands; an earlier
-    design's per-layer depth statement is not read as an empty column.
 
 - For untestable items: first find the tool that verifies the item directly (*Tools* below); only when none can be secured, state the reason and the alternative (design change / a `manual` row executed by a person (except where the composition-oracle clause applies) / mock (same exception)).
 - Design-change request: parts of the feature design that should be revised so they become testable.
@@ -438,7 +420,7 @@ layer that has a shell.
   `setup/manifest.json` in as a derived member of the allow-list (Change Surface Rules > Derived
   artifacts). Under the layer split above this is **derived at GREEN**, from the actual staged
   surface, not predicted here — but it is still derived *before* the commit, never left to a
-  test/CI failure to admit (#800 `607720e`).
+  test/CI failure to admit.
 
 3. **Deliberation report** (scribe-written): `.autoflow/issue-{N}-architect-report.md`, under the
    headings `## Agreed` — one line per conclusion both participants accepted — and `## Unagreed` —
@@ -452,7 +434,7 @@ reports of its last round (a re-discussion opens a new round with a `### Brief` 
 its own two reports; the earlier round's reports stay on the record). The two design documents state the design and the conclusions the participants
 reached, in the form each is defined above; the report states what was agreed and what was not.
 
-**[MUST] A re-discussion's Record is a delta, never a rewrite** (issue #192; [`records/design-rationale.md`](records/design-rationale.md) > Decision 15). On the **first**
+**[MUST] A re-discussion's Record is a delta, never a rewrite**. On the **first**
 Record of a cycle the scribe writes the documents whole. On every Record after that it reads the
 existing documents plus **only the turns appended since the previous Record** and both reports of
 this round — not the accumulated transcript — and **appends** a delta section rather than
@@ -465,13 +447,8 @@ re-authoring the body:
 - <what was added>: <the decision> — <ground>
 ```
 
-Text a round did not change is **left exactly as it stands**. The grounds are cost and stability
-together: the transcript is append-only and each Record re-read it whole (llmroute #280 — 6,529
-lines by the last round, the round-6 scribe alone 8.2M tokens, the feature design growing
-376 → 775 lines across six rewrites), and a fresh scribe re-authoring settled text each round lets
-wording drift where no decision moved. The delta section is also GATE:PLAN's narrowed input on
-re-entry (GATE:PLAN > *Re-entry re-score*), so what the scribe writes and what the evaluator reads
-are the same object.
+Text a round did not change is **left exactly as it stands**. The delta section is also GATE:PLAN's
+narrowed input on re-entry (GATE:PLAN > *Re-entry re-score*).
 The transcript file is the discussion's own record and is read only by the participants and the
 scribe; the Record workflow's report is what reaches the orchestrator. See
 [`role-contracts.md`](role-contracts.md) > Facilitator > Return Contract.
@@ -483,7 +460,7 @@ not writing a test needs no justification, and a proposed test that cannot answe
 below is not written. This clause decides **existence** only — whether a criterion is verified at
 all. Whether a verification **stays in the repository** is decided by ADR-0024 D1's closed
 `standing` list and by nothing else: a stated reason, however good, does not move a row out of the
-`cycle` layer (ADR-0024 > *Test necessity — what D1 replaces and what it retains*). This clause is
+`cycle` layer. This clause is
 the policy body; every other document references it rather than restating it.
 
 - **[MUST]** Each proposed verification answers two judgments, in the row that carries it:
@@ -491,13 +468,10 @@ the policy body; every other document references it rather than restating it.
      opposed to an imagined failure mode?
   2. **Cost of absence** — if no verification exists and this breaks after merge, who loses what,
      concretely?
-- **[MUST]** When the two judgments cannot both be answered, the disposition is `none`. The
-  default is deliberate: the cost of an unneeded test is paid three times (authoring, checking,
-  maintaining) and has already been paid in a prior cycle, while the cost of the missing test on
-  such subjects was nil.
+- **[MUST]** When the two judgments cannot both be answered, the disposition is `none`.
 - Necessity is a **judgment**, not a classification: no subject is exempt by category and none is
-  obligated by category. The two guidance notes below are that judgment applied to the two areas
-  where it is commonly wrong — they are not separate rules.
+  obligated by category. The two guidance notes below are that judgment applied to two areas —
+  they are not separate rules.
 
 **Verification disposition** (the `Type` of each acceptance-criteria row):
 
@@ -523,28 +497,23 @@ the policy body; every other document references it rather than restating it.
 | `characterization` | records existing behavior the change must preserve | may PASS from the start |
 
 **Configuration and data.** A value is not a required behavior; the behavior that consumes it is.
-Asserting a literal that already lives in a config or sample file duplicates a fact and protects
-nothing, and a user-editable sample loses its verification subject at the first edit. Whether
+Whether
 "production config boots the app" or "every reference resolves" deserves a test is decided by the
 two judgments above, not by the subject being data.
 
 **Implementation internals.** A helper name, call order, private branch or internal representation
-is not a required behavior. A test that pins these becomes a copy of the implementation and blocks
-refactoring. Production code gains no interface, indirection or dependency injection solely to fit
+is not a required behavior. Production code gains no interface, indirection or dependency injection solely to fit
 a test shape.
 
-- **Effective from** — the obligation binds verification designs authored after this clause lands;
-  a cycle already past ARCHITECT is not retroactively deficient. The dispositions and reasons are
-  the Test AI's to author, and the ARCHITECT facilitator may record them on the Test AI's behalf
-  when it writes the verification design.
+- The dispositions and reasons are the Test AI's to author, and the ARCHITECT facilitator may
+  record them on the Test AI's behalf when it writes the verification design.
 
 #### Verification depth
 
 - **[MUST]** The verification design opens with a **risk line** — one line naming
   who is harmed and how if this change is wrong.
   Depth is justified against that risk, and this clause sets a justification form, never a quantity
-  cap: no layer count, file count, or line budget, because a proxy metric invites the distortion it
-  is meant to prevent (blocking a needed layer, or merging layers to dodge a count).
+  cap: no layer count, file count, or line budget.
 - **Per-verification failure mode** — carried by the acceptance-criteria table's `Failure mode`
   column. The column's bullet under *Output artifacts* above defines what the cell names, what it
   is compared against and what a cell that cannot be filled means.
@@ -556,10 +525,8 @@ a test shape.
   per-layer failure mode (a layer removed, depth added) may stay. The obligation is
   unconditional — every verification design has at least one layer — so an absent statement is a
   missing obligation, not a "not applicable".
-- **Effective from** — the obligation binds verification designs authored after this clause lands;
-  a cycle already past ARCHITECT is not retroactively deficient. The determination is the Test AI's
-  to author, and the ARCHITECT facilitator may record it on the Test AI's behalf when it writes the
-  verification design.
+- The determination is the Test AI's to author, and the ARCHITECT facilitator may record it on the
+  Test AI's behalf when it writes the verification design.
 
 #### Composition oracle
 
@@ -574,14 +541,13 @@ a test shape.
 - **Settled decision** — an accepted or proposed ADR under `docs/records/adr/`, a prior issue's agreed
   design, or an entry in this issue's decision ledger (`.autoflow/issue-{N}-ledger.md`).
 - **Shared state** — state that outlives a single call and that more than one decision reads or
-  writes. The obligation binds to no concrete realization; the following are examples only, and
-  deleting them leaves the trigger fully computable: e.g. a datastore collection or field and the
-  query layer over it, a hardware register or firmware setting, a file-format field, a
-  wire-protocol field, a shared memory region.
+  writes. The obligation binds to no concrete realization; the following are examples only: e.g. a
+  datastore collection or field and the query layer over it, a hardware register or firmware
+  setting, a file-format field, a wire-protocol field, a shared memory region.
 - **[MUST]** Record the determination once in the verification design, as one `composition-oracle`
   block, and attach the output of `scripts/architect/composition-oracle.sh` run over the written
-  file — its stdout and its exit status, both exactly as the shell produced them, never re-typed
-  (issue #206). The Test AI identifies `T` and `S`; the scribe records the block at Record, runs the
+  file — its stdout and its exit status, both exactly as the shell produced them, never re-typed.
+  The Test AI identifies `T` and `S`; the scribe records the block at Record, runs the
   script over the verification design it has just written, and runs it again in a delta round that
   restates the block. This clause is the grammar's only definition — the script and the Record
   prompt cite it:
@@ -628,19 +594,11 @@ a test shape.
 - **Complements, does not replace, the VERIFY mock-boundary check.** Step 4's
   `Mock-boundary fidelity check (Test AI)` compares a double's *shape* against the real interface;
   this clause covers **composition-time behavior** — what the change does when it meets the real
-  state a settled decision contracted over. The two axes are independent; neither subsumes the
-  other. The reactive counterpart is the VERIFY → ARCHITECT design-contradiction route, which
-  catches the same class after implementation.
-- **Effective from** — the obligation binds verification designs authored after this clause lands;
-  a cycle already past ARCHITECT is not retroactively deficient. The determination is the Test AI's
-  to author, and the ARCHITECT facilitator may record it on the Test AI's behalf when it writes the
-  verification design. The block-and-output form binds verification designs written after
-  issue #206 lands: an earlier prose determination is not re-read, and the script classifying one
-  `unknown/error` is not a finding.
+  state a settled decision contracted over.
 
 #### Tools
 
-The rule is [`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *The tools the work needs* (issue #277);
+The rule is [`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *The tools the work needs*;
 this clause is where the verification design applies it. The participants open the materials
 Phase B's `## Referenced materials` section lists ([`phases/analysis.md`](phases/analysis.md) >
 per-role injection whitelist) — the material, not the issue body's abbreviated example, is the
@@ -669,7 +627,7 @@ mock.
   tool could be secured; GATE:PLAN's `Test plan` reads that reason.
 - The row verified with a tool is looked at with it once implemented: the Developer AI looks at its
   own result while implementing (GREEN step 2), and the evidence — the row's observation record —
-  is the Test AI's, written at VERIFY step 1, so the implementer does not certify its own result.
+  is the Test AI's, written at VERIFY step 1.
 
 ### Testability-driven design
 
@@ -684,8 +642,7 @@ checked against any governing ADR. That is the first, non-gated approach check, 
 the gated one.
 
 - **`stopped` is non-null.** The record could not be carried out — the scribe was missing, or the
-  spawn policy would not load. Repair the cause and re-run the Record workflow (the transcript is
-  intact). This is infrastructure state, never a design outcome, and it consumes no counter; its
+  spawn policy would not load. Repair the cause and re-run the Record workflow. This is infrastructure state, never a design outcome, and it consumes no counter; its
   relay-side counterpart is a participant that appends no turn after one re-wake (*Relay
   procedure* step 3).
 - **No un-agreed point.** The design is the participants' joint conclusion. Run the
@@ -709,11 +666,9 @@ the gated one.
   `active: false`, `phase: "awaiting-user"`, and do not spawn GATE:PLAN. Record the answer as one
   `[ac-decision]` ledger entry per decided AC in the grammar at [`CLAUDE.md`](../CLAUDE.md) >
   Decision Ledger > *Acceptance-criterion decisions*; on `revised`, `split` or `added`, edit the
-  Phase B acceptance-criterion table to match; then continue to GATE:PLAN. The pause is a human
-  authority checkpoint inside the deliberation already counted, so it consumes no ARCHITECT
-  re-entry budget.
-- **An acceptance-criterion change raised later in the cycle.** The criteria are the issue author's
-  assumptions, and work can show one wrong: a role at GREEN, VERIFY or REFINE whose work shows a
+  Phase B acceptance-criterion table to match; then continue to GATE:PLAN. The pause consumes no
+  ARCHITECT re-entry budget.
+- **An acceptance-criterion change raised later in the cycle.** A role at GREEN, VERIFY or REFINE whose work shows a
   criterion defective — a fact it presumes that does not hold, or a scope too narrow or too wide for
   the problem ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*) —
   raises it in its report with the criterion, the proposed change and the fact that shows the need
@@ -726,7 +681,7 @@ the gated one.
   ARCHITECT, on a `brief` naming the `[ac-decision]` entries, when a verification-design row must be
   added or rewritten — then GATE:PLAN's re-entry re-score and RED; at GREEN when only the
   implementation changes; otherwise at the point it paused. A return to ARCHITECT on this ground
-  consumes no re-entry budget, since each is bounded by the operator's own decision.
+  consumes no re-entry budget.
 
 **What the operator is asked, and what they are not.** A reduction in *verification method* — an AC
 verified by an existing mechanism, a manual scenario, a delivery check, or by nothing at all — is a
@@ -737,17 +692,14 @@ is the operator:
    vocabulary for an issue AC, **with its reason stated in that row**. A weak reason is argued down
    here and never leaves the deliberation.
 2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
-   PR body (HANDOFF step 4), so the reviewer judges each one on its stated reason. A doubtful
-   judgment is caught here.
+   PR body (HANDOFF step 4), so the reviewer judges each one on its stated reason.
 3. **Operator.** Asked when the AC's **content** must change — at ARCHITECT or later in the cycle
    (*An acceptance-criterion change raised later in the cycle* above). The options offered are
    exactly these: exclude the criterion, revise it in the proposed form, split it into a separate
    issue, or add a criterion the issue did not state.
 
 Whether a row verifies the property its AC states is not a tier-3 question — that judgment belongs
-to GATE:PLAN `Test plan` and to GATE:QUALITY's assertion-claim alignment (issue #160). Those two
-gate checks, together with GATE:PLAN's AC-authority check, are the scored backstops behind the
-routing above (issue #166).
+to GATE:PLAN `Test plan` and to GATE:QUALITY's assertion-claim alignment.
 
 ### Re-discussion
 
@@ -761,46 +713,38 @@ re-entry and an un-agreed re-discussion both continue the same file after a Reco
 re-discussions **inside the cycle that spawned the participants**, and only there are the
 participants re-woken: when they are still resumable (the same session), they are re-woken by
 their IDs and keep everything they read; when they are not (a session restart), each side is
-spawned fresh with the transcript path — the file is the memory — and the relay continues from
-there. The Record workflow is invoked again at the end, and the scribe reads the brief where it
+spawned fresh with the transcript path and the relay continues from there. The Record workflow is invoked again at the end, and the scribe reads the brief where it
 sits.
 
 **A return from a later phase of the same cycle spawns the participants fresh on the same
 transcript.** A return to ARCHITECT after DISPATCH — a VERIFY design contradiction, a `design`
 re-entry from GATE:QUALITY or from HANDOFF's CI failure, an acceptance-criterion decision raised
 after ARCHITECT (*Report routing*), or a `design`-class gate recommendation at AUDIT or
-GATE:QUALITY (GATE:QUALITY > *Recommendation triage*) — crosses the phase boundary that ended the
-participants' lifetime ([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Phase-boundary respawn*), so
-they are never re-woken for it. The orchestrator appends the `brief` to the **same** transcript —
+GATE:QUALITY (GATE:QUALITY > *Recommendation triage*) — never re-wakes the participants
+([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Phase-boundary respawn*). The orchestrator appends the `brief` to the **same** transcript —
 naming what the return is for: the blocker report, the failed items and their findings, the
 `[ac-decision]` entries, or the recommendation's subject and finding — and spawns each side fresh by step 2 of the
-*Relay procedure*, pointed at the transcript; the turn numbering continues, and the file is the
-memory. The Record appends a delta section whose origin names the trigger (`VERIFY design
+*Relay procedure*, pointed at the transcript; the turn numbering continues. The Record appends a delta section whose origin names the trigger (`VERIFY design
 contradiction`, `design re-entry`, `acceptance-criterion decision`, `gate recommendation`), GATE:PLAN
 re-scores that delta (*Re-entry re-score*), and the cycle re-enters RED. The counter is the
 trigger's: every one of them consumes the ARCHITECT re-entry counter except an acceptance-criterion
-decision, which the operator's own decision bounds.
+decision.
 
 **A new cycle's re-discussion spawns the participants fresh.** A participant's lifetime is one
-cycle's ARCHITECT entry ([`CLAUDE.md`](../CLAUDE.md) > Spawn mode by role lifetime; ADR-0023
-D2), so a re-discussion in a new cycle — a review-response cycle entered at PREFLIGHT, or a
+cycle's ARCHITECT entry ([`CLAUDE.md`](../CLAUDE.md) > Spawn mode by role lifetime), so a re-discussion in a new cycle — a review-response cycle entered at PREFLIGHT, or a
 HANDOFF step 6.5 shape (b) re-deliberation — never wakes the previous cycle's participants by
 their IDs, whether or not the session is the same. It starts a new transcript (the previous
 cycle's is preserved as `issue-{N}-c{C}-architect-transcript.md` at PREFLIGHT with the other
 artifacts) whose `init` brief names, next to what the re-discussion is for, the previous cycle's
 transcript and report paths (`issue-{N}-c{C}-architect-transcript.md`,
 `issue-{N}-c{C}-architect-report.md`), and spawns each side by step 2 of the *Relay procedure*.
-The prior discussion reaches the participants as a file they read, not as a context they carry:
-a participant carrying the decision the new cycle is to re-examine is the inconsistency the
-single spawn mode exists to prevent, and a wake after the cache has expired re-writes the whole
-carried context (llmroute #285 cycle 2: ≈ 288K and ≈ 298K tokens on the first wake). The brief
+The prior discussion reaches the participants as a file they read, not as a context they carry. The brief
 in the new transcript's header is the record of the handover.
 
 A brief carries what the next discussion needs — for instance a narrowed topic, facts the
 orchestrator verified since the prior run, the prior report's path, a perspective for a participant
 to take, or an evaluation to answer. On a GATE:PLAN FAIL re-entry the brief names the two design
-documents and the evaluation's failed items, so the discussion answers the evaluation instead of
-restarting from the issue. On a scope-bounded review-response cycle (PREFLIGHT > *Scope-bounded
+documents and the evaluation's failed items. On a scope-bounded review-response cycle (PREFLIGHT > *Scope-bounded
 entry*) the brief is given at `init` (it enters the topic) and states the bounded scope: the Medium+
 finding and the PR diff file set; a fix that adds a file leaves the bounded path, and the
 re-discussion runs on the full topic. Either way the cycle's brief sits on its own new transcript
@@ -826,20 +770,15 @@ issue decision ledger (`.autoflow/issue-{N}-ledger.md`).
 | Feasibility   | Can this plan be implemented with the current structure? (grounded in the actual mechanisms, not a misread) |
 | Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here; the feature design's `## Scope` section judges each problem the confirmed cause carries under Change Surface Rules > *Scope judgment*, and a directly related problem left out owes a separation reason) |
 | Security      | Any security implications introduced? |
-| Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? (issue #160) — and does each `manual` row executed by a person, and each row resolved to a mock, state in its `Reason` why the `## Tools` section secured no tool for it? (issue #277) |
+| Test plan     | Are acceptance criteria testable? — and does each verification-design row verify the property the AC it names states, not a weaker or different proposition? — and does each `manual` row executed by a person, and each row resolved to a mock, state in its `Reason` why the `## Tools` section secured no tool for it? |
 
-**Affected files and side effects are not scored here** (issue #192). The gate scores the
+**Affected files and side effects are not scored here**. The gate scores the
 *decision* layer; which files a change touches and which tests it requires are **derived**, not
 predicted — by the execution roles at RED/GREEN entry, from the change delta and the way the
-target runs its tests, and from the files they open anyway. A prediction the gate scores is a prediction a FAIL
-sends back through a full re-deliberation; the same fact costs one suite run where execution meets
-it. The measurement is issue #192 (llmroute #280: four consecutive GATE:PLAN FAILs, all on this one
-item, all on facts RED met on first execution, all absorbed at RED/GREEN after an operator
-override). Removing the item does not remove the check — it moves it to the layer that derives it
-deterministically; a real dependency miss surfaces at RED, VERIFY step 1 or HANDOFF's CI and routes by
-the existing class rules, consuming no ARCHITECT re-entry.
+target runs its tests, and from the files they open anyway. A dependency miss surfaces at RED,
+VERIFY step 1 or HANDOFF's CI and routes by the class rules, consuming no ARCHITECT re-entry.
 
-`Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that carries no unique failure mode fails Scope on the same clause. On a row that owes the `Failure mode` cell (ARCHITECT > Output artifacts, the column's bullet), the cell fails Scope when it is empty — `—` on such a row counts as empty — or when it cannot be told apart from the cell of another distinct verification anywhere in the design, or from a named existing mechanism; rows that share a `Method` label are one verification and are not compared with each other. The deduction rides this clause and adds no scored item, cap or `scores` key. This is where an actual design exists to judge it — DIAGNOSE only decides *whether* a code change is needed, GATE:PLAN judges *whether the plan fits*. By design this defers wrong-approach detection (e.g. a resolution targeting the wrong subsystem) past ARCHITECT: that judgment needs a design, so ARCHITECT's devil's-advocate is the first approach check and GATE:PLAN the gated one — DIAGNOSE cannot make it without re-introducing the altitude error of scoring feasibility before a design exists.
+`Feasibility` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Feasibility; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that carries no unique failure mode fails Scope on the same clause. On a row that owes the `Failure mode` cell (ARCHITECT > Output artifacts, the column's bullet), the cell fails Scope when it is empty — `—` on such a row counts as empty — or when it cannot be told apart from the cell of another distinct verification anywhere in the design, or from a named existing mechanism; rows that share a `Method` label are one verification and are not compared with each other. The deduction rides this clause and adds no scored item, cap or `scores` key.
 
 ### ADR-conformance check (scored within Feasibility / Scope)
 
@@ -849,13 +788,10 @@ This named check makes the ADR-conformance concern explicit inside the two items
 - **Per-item cap distribution**: `Feasibility` caps on a structural-grounding divergence (the plan is not grounded in the ADR's decided structure); `Scope` caps on a redundant-mechanism / boundary divergence **or** the undocumented-ADR trigger; **both** cap when both defects are present. One divergence never leaves both items uncapped.
 - **N/A by default**: no governing ADR's Decision scope intersects **and** no trigger area is hit → the check does not apply, no cap, the item scores normally.
 
-Precedent: the GATE:QUALITY "Known blind-spot checks" below. Authority: [`docs/records/adr/0016-adr-conformance-gate-scoring.md`](records/adr/0016-adr-conformance-gate-scoring.md).
-
 ### AC-authority check (scored within Scope)
 
 Same mechanism as the ADR-conformance check above: **no added scored item, no threshold change**; a
-violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 rule. Authority:
-[`docs/records/adr/0020-acceptance-criterion-authority.md`](records/adr/0020-acceptance-criterion-authority.md).
+violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 rule.
 
 - **The comparison** is a key join, both sides keyed: every `AC id` in the issue's
   `## Acceptance criteria` table against the `Issue AC` column of the verification design's
@@ -863,7 +799,7 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
   (`dropped`); or it carries the
   criterion with a disposition other than `automated` and states no reason (`unreasoned`). A row
   whose proposition differs from the issue's is **not** a difference here — that is a semantic
-  reading, scored under `Test plan` (issue #160). A reduced disposition **with**
+  reading, scored under `Test plan`. A reduced disposition **with**
   a stated reason is not a difference — it is a verification-method choice the deliberation is
   authorized to make (ARCHITECT > *Report routing*), and its **reason quality** is
   scored by `Scope` under the existing verification-depth clause above, adding no scored item.
@@ -873,13 +809,9 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
   whose `- Disposition:` is `added` covers nothing: the criterion it adds is owed its row like any
   other ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*).
 - **An unresolvable check also caps.** An absent, empty or unparseable `## Acceptance criteria`
-  table caps `Scope` at 6: the gate cannot establish authority, and an unresolvable check that
-  scores normally is the same hole under a different name.
+  table caps `Scope` at 6.
 - **N/A by default** applies only to the difference set, never to the source: no difference and a
   readable AC table → no cap, the item scores normally.
-- **Effective from** — the check binds evaluations of cycles whose DIAGNOSE authored an AC table
-  under this clause, the same *Effective from* convention the composition-oracle and
-  verification-depth clauses use. A cycle already past DIAGNOSE is not retroactively deficient.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7) → recommendation triage (GATE:QUALITY > *Recommendation triage*)
   → DISPATCH.
@@ -888,14 +820,12 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
 ### Re-entry re-score
 
 A re-deliberation's re-score is a **fresh spawn with a narrowed input**, on the same rule
-GATE:QUALITY's re-entry re-score states (issue #192 — until then GATE:PLAN was the only late gate
-re-scoring its whole input every pass, at llmroute #280 growing 7.2M → 25.6M across six passes).
-The evaluator reads the decision document's **delta section** for this round (ARCHITECT > *Record*)
+GATE:QUALITY's re-entry re-score states. The evaluator reads the decision document's **delta section** for this round (ARCHITECT > *Record*)
 plus every previously-passing item whose anchor the delta touched, and re-scores exactly those; the
 remaining items inherit their prior score by citation. The report states the re-scored item list
 and the inheritance source (the prior report's path) in its `rescore` field
 ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The state file still
-receives all four scores — the hook computes avg / min over the full set — inherited ones copied
+receives all four scores, inherited ones copied
 verbatim from the cited report. An inherited item whose anchor the delta touched and which is
 missing from the re-scored list is a report defect: reject and re-spawn.
 
@@ -906,9 +836,9 @@ the narrowing binds re-entries only.
 
 ## DISPATCH — Task Assignment (Developer AI + Test AI)
 
-Each role's task is delivered in the prompt of the direct spawn that enters its phase — the Test AI's at RED, then the Developer AI's at GREEN. The spawn's return value is its report, so the task needs no separate registration and its completion no separate marking ([`CLAUDE.md`](../CLAUDE.md) > Communication):
+Each role's task is delivered in the prompt of the direct spawn that enters its phase — the Test AI's at RED, then the Developer AI's at GREEN. The spawn's return value is its report ([`CLAUDE.md`](../CLAUDE.md) > Communication):
 
-- **Role spawn**: ARCHITECT was the orchestrator's relay of two participants, recorded from the transcript file by the Record workflow (ADR-0023 D2); those participants are not woken for RED or GREEN. The orchestrator spawns a fresh agent at each phase entry — the Test AI at RED entry, the Developer AI at GREEN entry once RED is complete — anonymous direct spawns (`subagent_type`); see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
+- **Role spawn**: ARCHITECT was the orchestrator's relay of two participants, recorded from the transcript file by the Record workflow; those participants are not woken for RED or GREEN. The orchestrator spawns a fresh agent at each phase entry — the Test AI at RED entry, the Developer AI at GREEN entry once RED is complete — anonymous direct spawns (`subagent_type`); see [`CLAUDE.md`](../CLAUDE.md) > Cost Control. Spawn prompts pass `.autoflow/*` paths only; discussion history is not carried over.
 - **Test AI**: verification-design "automated" items → test-writing tasks.
 - **Developer AI**: feature-design implementation tasks (**starts after RED is complete**). The spawn prompt names the cycle-layer store `.autoflow/issue-{N}-local/` and hands over the **run record so far** — the RED report's path — naming each verification-design row that still has no record as *run first* ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run is filled where it is found*).
 - Both receive: acceptance criteria + verification design + affected docs — and each recommendation a gate's triage deferred to its role, with its subject and finding (GATE:QUALITY > *Recommendation triage*) — and the same guidance on execution: find how the target runs its tests at the location you execute in — its documents, scripts and workspace structure — and how its CI selects tests for a change, run the tests the change requires that way, and record the command, the log and the summary line read from it ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *How a test is run is the target's practice*, *Local verification*); and use the tools the verification design's `## Tools` section records, reporting a tool you find missing rather than acquiring it (*The tools the work needs*). AutoFlow names no test command to the target; on an opted-in target and in this repository `bash scripts/test/select-suites.sh` answers which committed suites the delta reaches.
@@ -920,7 +850,7 @@ Each role's task is delivered in the prompt of the direct spawn that enters its 
 
 The Test AI writes test code from the verification design.
 
-**Derivation on entry** (issue #192). ARCHITECT hands down decisions, not a change table: the file
+**Derivation on entry**. ARCHITECT hands down decisions, not a change table: the file
 rows, the per-suite disposition and each oracle's condition clause are **derived here**, by the
 roles that open those files anyway. Before step 1 the Test AI finds how the target runs its tests
 at the location it executes in — the target's documents (`CLAUDE.md`, a README, a contributing
@@ -947,10 +877,8 @@ returns to ARCHITECT, through the existing routes.
    explicit registration is needed, wire it in the same commit, and record the CI job expected to
    run it — HANDOFF step 5 matches that expectation against the CI log.
    - Before committing a test file, the Test AI runs the comment check (REFINE step 1) over the
-     lines it adds to that file and disposes of every hit, recording each in its report — the
-     Test AI is the only role that writes a test file, so its hits are disposed of here.
-   - Rows typed `existing-coverage` / `none` produce no test — the verification design already
-     states what covers them, or why absence costs nothing.
+     lines it adds to that file and disposes of every hit, recording each in its report.
+   - Rows typed `existing-coverage` / `none` produce no test.
    - Rows typed `delivery-check` produce a one-shot check under `.autoflow/issue-{N}-local/`, not a
      RED test; RED/GREEN semantics do not apply to them.
 2. Run the new tests → every `driving` and `regression` test must FAIL (Red).
@@ -966,34 +894,34 @@ returns to ARCHITECT, through the existing routes.
 4. Hand the test code + scenario document to the Developer AI.
 ```
 
-**Header contract** (opted-in targets — ADR-0024 D3; this repository does not opt in, D5): every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
+**Header contract** (opted-in targets; this repository does not opt in): every executable spec under `tests/**` declares, in a column-1 comment header, what it is and what it costs — at creation, not retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and `scripts/test/check-suite-manifest.sh` enforces it.
 
   ```
   # ci-subject: <path-or-glob> [<path-or-glob> ...]
   # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
   ```
 
-- `ci-subject` — the trigger surface. It is a coverage declaration and the selector's input: `scripts/test/select-suites.sh` consumes it to decide which suites a change requires, so an under-declared surface is a coverage hole, not a cosmetic gap.
-- **The grammar is those two fields and nothing else.** Every committed suite is standing under ADR-0024 D2, and a one-shot check lives uncommitted under `.autoflow/issue-{N}-local/`, so a field declaring a suite's lane, its retirement, its cycle arm or its out-of-tree reach would carry no information a device reads, and the lint admits none (ADR-0024 > Area 3 records the ground for each).
-- `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim, so a guessed budget is not a representable state. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
+- `ci-subject` — the trigger surface. It is a coverage declaration and the selector's input: `scripts/test/select-suites.sh` consumes it to decide which suites a change requires.
+- **The grammar is those two fields and nothing else.** The lint admits no other field.
+- `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
 
-**Adopting the contract over existing suites** (issue #213). *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first RED. drift-check D7 names each one at install and at PREFLIGHT, and `bash scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
+**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first RED. drift-check D7 names each one at install and at PREFLIGHT, and `bash scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
 
 1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and the runner executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
-2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An under-declared surface is a coverage hole and an over-declared one costs only runs, so an uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.
+2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.
 3. **`budget-secs`** — `ceil(measured CI step duration × SUITE_BUDGET_HEADROOM_PERCENT / 100)` when the suite already has a CI step duration, otherwise `SUITE_BUDGET_CEILING_SECS` verbatim; a local wall-clock figure is never the source.
 4. **CI steps** — where the target's CI runs these suites, `check-suite-manifest.sh` requires one step per suite behind a `select` step that runs `select-suites.sh`, each carrying `id: s-<basename>`, the guard `if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/<file> ')` and `timeout-minutes` equal to `ceil(budget-secs / 60)`. A step that runs several suites is split into one step per suite.
 
 The fields go in the file's leading comment block at column 1, before its first non-comment line. The migration is complete when `select-suites.sh --check-headers` exits `0`, `check-suite-manifest.sh` reports OK and drift-check reports `PASS: D7`.
 
-**Naming**: a committed test is subject-named; an issue number does not belong in its file name. A one-shot check is not a committed file (ADR-0024 D2), so no naming rule reaches it.
+**Naming**: a committed test is subject-named; an issue number does not belong in its file name. A one-shot check is not a committed file, so no naming rule reaches it.
 
-**Leaf rule**: a suite executes its subject, not another suite. A sibling's regression is caught by that sibling's own CI step, under its own name; re-running it here is duplicate execution. Enforced by `scripts/test/check-suite-leaf.sh`.
+**Leaf rule**: a suite executes its subject, not another suite. Enforced by `scripts/test/check-suite-leaf.sh`.
 
-**Admission**: before creating a suite file at all, answer these two questions. They are the leaf rule and ADR-0024 D1 applied *before* the file exists rather than after, and each one that answers "yes" removes a file this tree would otherwise have to maintain.
+**Admission**: before creating a suite file at all, answer these two questions.
 
 - Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
-- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (ADR-0024 D2; in this repository the `standing` categories are D1's closed list, and on a target the default is to add no file at all).
+- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (in this repository the `standing` categories are ADR-0024 D1's closed list, and on a target the default is to add no file at all).
 
 **Completion**: every `driving` / `regression` test Red (a `characterization` test may be green) + every new committed spec conforming to the header contract above (opted-in targets) + manual scenarios written.
 
@@ -1047,13 +975,12 @@ Run the tests; on failure, branch by cause.
 
 ```
 1. [MUST] Local run, once: execute the cycle's local run set — every `automated` row this cycle
-   authored or changed plus every `delivery-check` row (ADR-0024 M) — and record each run's command,
+   authored or changed plus every `delivery-check` row — and record each run's command,
    its log and its summary line ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local verification*). The means
    follows where the asset lives: a test in the target's tree runs **the way the target runs its
    tests** (RED > *Derivation on entry*), while a `cycle`-layer asset is **invoked directly by its
    path** under `.autoflow/issue-{N}-local/` (`bash .autoflow/issue-{N}-local/<asset>`) — no driver
-   is shipped for it, and the recorded command names that path, so the design table's declared run
-   set has a per-row witness. Before the run, match the design table's rows against the run record
+   is shipped for it, and the recorded command names that path. Before the run, match the design table's rows against the run record
    so far (the RED and GREEN reports): a row with no record — or whose log is absent or does not
    carry the recorded line — is run here and its record filled in — an
    omission is filled in place, never routed as a failure ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope >
@@ -1115,14 +1042,9 @@ Run the tests; on failure, branch by cause.
         (a test built on a wrong double → RED; the impl wrong against the real interface → GREEN)
 ```
 
-**Mock-boundary fidelity rationale**: a passing suite whose doubles diverge from the real
-interface is a masked failure — issue #309 shipped three mock-masked integration gaps
-through every internal gate; only external review caught them. The check is a sampled
-re-derivation against HEAD, not a re-read of the test's own claims.
-
 **Detection record**: the outcomes of steps 3 and 4 are recorded on the per-issue decision ledger
 `.autoflow/issue-{N}-ledger.md` as a fixed-field entry whose heading carries a `verify-detection` marker,
-the cycle, and the VERIFY pass. The Test AI reports the outcomes; the ledger is host-owned, so
+the cycle, and the VERIFY pass. The Test AI reports the outcomes;
 **the orchestrator appends the record** — written **at VERIFY exit**, on every VERIFY pass that reached
 step 3, before the phase transition is taken (to REFINE on a pass, or to RED / GREEN / SEQUENTIAL_FIX /
 Evaluation-AI arbitration on a branch). Entry fields: `step-3 minimal-implementation` and
@@ -1133,8 +1055,7 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 - **Vocabulary**: `detected` = the check found out-of-scope observable behavior it did not accept
   into the scope, or a diverging double;
   `clean` = the check ran and found none; `not-run` = the check did not execute. A check that did not
-  execute is recorded as `not-run` and **never** as `clean` — the same truthfulness rule step 2 applies
-  to a missing self-check.
+  execute is recorded as `not-run` and **never** as `clean`.
 - **Non-interference with HANDOFF's auto-resolution cap**: a `verify-detection` entry is a **record, not
   a decision** — its marker is distinct from `review-autofix`, it is not an auto-resolution attempt, and it
   neither increments nor resets that cap's count window (step 6.5).
@@ -1144,7 +1065,7 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
   no-re-litigation rule binds decisions, so a later cycle's detection outcome neither supersedes nor is
   blocked by an earlier one.
 
-**Deadlock resolution**: Evaluation AI judges against the acceptance criteria as the objective baseline — except on a design contradiction, where that oracle is the contradicted artifact and the verdict is ARCHITECT re-deliberation. Its verdict is one of four:
+**Deadlock resolution**: Evaluation AI judges against the acceptance criteria as the objective baseline — except on a design contradiction, where the verdict is ARCHITECT re-deliberation. Its verdict is one of four:
 
 - the test misreads an acceptance criterion → RED;
 - the implementation misses an acceptance criterion → GREEN;
@@ -1176,13 +1097,10 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
    - When it runs: three parallel agents (reuse / quality / efficiency); apply suggested fixes
      (no behavior change — tests must pass without modification); a finding of nothing is
      `none` in each section.
-   - A wrong judgment is caught by GATE:QUALITY, which reads the report, and by the reviewer
-     (principle 3). No predicate script and no exclusion list decides this (issue #227).
    - A suggestion outside the change surface is a refactor noticed in passing and is rejected
      (Change Surface Rules > REFINE scope). A suggestion that describes a behavior defect is
      rejected as behavior-changing and judged under Change Surface Rules > *Scope judgment*; one
-     judged directly related goes to the report's section 3 whatever its subject, since REFINE
-     cannot apply it and the evaluator disposes of that section.
+     judged directly related goes to the report's section 3 whatever its subject.
    Comment check (every pass, whether or not /simplify ran):
    - Over the lines the cycle's diff adds (`git diff <base>...HEAD`), identify the comment lines
      by each file's language; a directive a tool reads is code, not a comment
@@ -1202,8 +1120,7 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
      before its commit (RED step 1) — so it is recorded as `test file — outside scope` and left
      in place.
    - Record the ratio of comment lines to added lines as an observation. No threshold passes or
-     fails it — no quantitative basis for a right comment density was found
-     (`docs/records/design-rationale.md` > Decision 23).
+     fails it.
    - The check is a signal written into the report, not a gate: no hook reads it and it routes
      nowhere.
 2. [MUST] Confirm Green after the refactor: when step 1 changed a file, re-run the cycle's local run
@@ -1219,8 +1136,8 @@ is then recorded as `not disposed — refactor abandoned`.
 
 ### REFINE report (`.autoflow/issue-{N}-refine-report.md`)
 
-The Developer AI writes one report per REFINE pass, with four sections in this order — the report
-is an input to GATE:QUALITY, so every section is present and a section with nothing to say states
+The Developer AI writes one report per REFINE pass, with four sections in this order — every
+section is present and a section with nothing to say states
 `none` explicitly (an omitted section is a VALIDATE step-4 failure, not a silence). The report
 opens with two lines that record step 1's judgment — `simplify: run <files or scope>` or
 `simplify: not run`, then `simplify-grounds: <what in the diff did or did not warrant it>` — and
@@ -1234,12 +1151,8 @@ when /simplify did not run each of the first three sections reads `none`:
    list whose reason is *behavior-changing* **and** whose subject is validation, a guard, path /
    root resolution, input or output boundary handling, or error handling — plus every
    behavior-changing suggestion the Developer AI judged directly related to the issue, whatever its
-   subject, with that judgment. These are the suggestions
-   REFINE is right to refuse (REFINE preserves behavior) and that nevertheless describe a possible
-   defect in the shipped change. Each entry names the suggestion, the `path:line` (at the report's commit) it points at,
-   and what behavior would change. The section is the defect signal issue #135 found missing: in
-   #130 cycle 1 a /simplify agent proposed exactly the fix the external reviewer later filed as
-   Medium, REFINE correctly rejected it as behavior-changing, and no phase read the rejection.
+   subject, with that judgment. Each entry names the suggestion, the `path:line` (at the report's commit) it points at,
+   and what behavior would change.
 4. `## Comment check` — step 1's comment check, written on every pass. It opens with the line
    `comment-ratio: <added comment lines>/<added lines> (<percent>)`, an observation with no
    threshold, then one line per hit: its `path:line` at the report's commit, its class, and its
@@ -1279,19 +1192,16 @@ the author's "this is fine" is not the disposition.
    missing decision line fails this step (REFINE > REFINE report).
 5. Manifest coherence check: if the diff touched a manifest-registered source
    (Change Surface Rules > Derived artifacts), confirm `setup/manifest.json` was
-   regenerated in the same change — re-run the set-intersection check locally so
-   a missed GREEN regen is caught here, before HANDOFF/CI, not at AC2e.
+   regenerated in the same change — re-run the set-intersection check locally.
 6. Deploy/CI-path verification check: if the diff matched the INTEGRATE
    deploy/CI-path condition (### Deploy/CI-path conditional verification),
    confirm the INTEGRATE deploy/CI-path bundle (a)/(b)/(c) ran and passed
-   against the target service repo — re-state the matched paths so a
-   silently-skipped INTEGRATE step is caught here, before HANDOFF. (Or diff
+   against the target service repo — re-state the matched paths. (Or diff
    touched no deploy/CI-path surface.)
 7. Lint-chain check: if the diff touched files the target repo's lint chain
    covers (Change Surface Rules > Lint chain on the staged surface), confirm the
    lint chain ran clean on them at commit time — re-derive it from the committing
-   role's per-chain lint-outcome anchor, so a skipped pre-commit lint is caught
-   here, before HANDOFF/CI, not at external review. A discovered chain covering a
+   role's per-chain lint-outcome anchor. A discovered chain covering a
    staged file clears only on a confirmed execution — locally at commit time, or
    by a named pull-request CI job that HANDOFF's CI-green confirmation requires;
    a stated reason alone never clears it. The clearing outcomes are `clean`,
@@ -1321,8 +1231,7 @@ GATE:QUALITY's `Security` item with 5 dedicated, project-specific items.
 additionally the previous cycle's AUDIT report (`.autoflow/issue-{N}-c{C-1}-audit.md`, preserved at
 PREFLIGHT) — its `## Low findings` list is the re-score's starting set.
 
-**Security checklist — the target's own** (issue #281). What a target's service must satisfy is the
-target's security requirement, so AutoFlow ships no checklist and names no item: AutoFlow owns how
+**Security checklist — the target's own**. AutoFlow ships no checklist and names no item: AutoFlow owns how
 AUDIT scores — the fresh evaluator, the five items below, the PASS thresholds — and the target owns
 what each item is judged by. A target declares its checklist in the target-owned scaffold
 `.claude/autoflow.local.json` (`{"audit":{"security_checklist":"<repository-relative path>"}}`).
@@ -1338,10 +1247,8 @@ its one record line:
 | 3 | `changed-undecided` | nothing yet — **[MUST]** AUDIT is not spawned: the orchestrator presents the change to the operator situation-first and pauses (`active:false`, `phase:"awaiting-user"`) |
 | 2 | — | nothing — a malformed declaration, a declared file not committed, an uncommitted edit to the declaration or the checklist, or no resolvable base; repair it and re-run |
 
-- **Why the base version.** A target-owned checklist could be loosened by the cycle it grades.
-  Reading it as of the cycle's base commit leaves a change the cycle makes to it — the file, or the
-  declaration that points at it — without effect on that cycle's AUDIT until the operator accepts it
-  ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 1). The answer is a `[checklist-decision]`
+- **A change the cycle makes to its checklist.** A change to the file, or to the declaration that
+  points at it, has no effect on that cycle's AUDIT until the operator accepts it. The answer is a `[checklist-decision]`
   ledger entry ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Security-checklist decisions*):
   `accepted`, carrying the committed version's blob and non-empty Decision and Grounds lines under
   the authority `operator decision` → the status re-run reports `changed-decided`;
@@ -1353,10 +1260,10 @@ its one record line:
 
 **Report file**: the evaluator's report is written to `.autoflow/issue-{N}-audit.md` and carries a
 `## Security checklist` section (the status record line) and a
-`## Low findings` section (each Low item with `path:line` at the audited commit and a one-line claim; `none` when empty),
-so that a later cycle can take it as input. The state file keeps only the scores.
+`## Low findings` section (each Low item with `path:line` at the audited commit and a one-line claim; `none` when empty).
+The state file keeps only the scores.
 
-**Review-response re-score** (issue #135): the fresh evaluator does not re-derive the whole audit.
+**Review-response re-score**: the fresh evaluator does not re-derive the whole audit.
 It re-scores **the change surface of this cycle** (the review-response diff) against the checklist,
 re-checks each prior Low finding only where that diff touches its file, and inherits the rest by
 citation — the same narrowed-input rule as GATE:QUALITY's re-entry re-score, using the same
@@ -1379,7 +1286,7 @@ item is judged by; with none declared, the criteria below are the whole of it.
   (GATE:QUALITY > *Recommendation triage*) → GATE:QUALITY.
 - **FAIL** → fix, re-evaluate (max 2×). Third FAIL → human.
 
-GATE:QUALITY's `Security` item references the AUDIT result to avoid duplicate work.
+GATE:QUALITY's `Security` item references the AUDIT result.
 
 ---
 
@@ -1396,7 +1303,7 @@ the feature design's `## Scope` section, every `## Scope judgments` section in t
 record how earlier gates' recommendations were triaged
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-**[MUST] REFINE observations are scoring input** (issue #135): the evaluator reads the REFINE
+**[MUST] REFINE observations are scoring input**: the evaluator reads the REFINE
 report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
 `not a defect — reason`), and records the dispositions in the `refine_observations` output field
 ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). An entry dispositioned
@@ -1413,17 +1320,11 @@ The `Minimal implementation` item is scored against [`submodule-common-rules.md`
 Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope — the acceptance criteria, the confirmed cause, and the problems the cycle's recorded scope judgments include.
 A hunk tracing to none of them fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
 `Impact scope` is scored against the same section and the same scope from the other side: a directly related problem the cycle's records show, left out with no recorded separation reason, lowers it.
-On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the REFINE report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score, since a lowered score counts toward the average the PASS criteria bound as well as the per-item minimum (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
+On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the REFINE report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
 
 ### Known blind-spot checks (scored within existing items)
 
-Several defect patterns repeatedly passed every internal gate and were caught only by
-external (Codex) review — #309 (mock-masked integration gaps), #120 (a test asserting a
-weaker proxy than its AC, plus a fabricated log cited as evidence), #222 (relocation
-regressions: stale inbound references and a false-RED doc harness) — plus one
-**proactively-added** check mandated by `ADR-0016` (conformance to a governing ADR), which
-is not a past Codex catch but a policy the gate now enforces. The evaluator applies
-these checks **inside the existing 10 items** — they add no scored items and change no
+The evaluator applies the checks below **inside the existing 10 items** — they add no scored items and change no
 PASS threshold. Each violation caps the named item at 6, which fails the gate via the
 each-item ≥ 7 criterion:
 
@@ -1433,7 +1334,7 @@ each-item ≥ 7 criterion:
 - **Test quality / Completeness — assertion-claim alignment**: for each AC, confirm the
   test asserts the behavior the AC states, not a weaker proxy (e.g. "the function was
   called" where the AC requires a result shape) and not a different property than the
-  one the AC it names states (issue #160). Confirm every cited evidence line
+  one the AC it names states. Confirm every cited evidence line
   (test summary, log excerpt) against the log the cited run left, read at the cited path —
   never by re-running the command; a recorded line the log does not carry was authored, not
   produced by a run, and caps the citing item at 6. A record with no log behind it is not a
@@ -1441,13 +1342,13 @@ each-item ≥ 7 criterion:
   cap ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A run's evidence is the log it left*). For an
   observation record, confirm that the result was compared against the material the AC names — the
   referenced mockup, asset or document itself; a comparison against the issue body's abbreviated
-  example, or a check that the result merely renders, is a weaker proxy (issue #277).
+  example, or a check that the result merely renders, is a weaker proxy.
 - **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
   or renames files, sections, or identifiers, require evidence of a repo-wide
   inbound-reference sweep (direct references, test-harness expectations, paraphrased
   mentions). A dangling reference in a **normative document** caps the affected item at 6.
   The cap binds normative documents only; a stale name in a **historical record** is the
-  evaluator's judgment (issue #232; [`records/design-rationale.md`](records/design-rationale.md) > Decision 18).
+  evaluator's judgment.
   - *Normative documents* — the one definition, cited from everywhere else — are what an agent
     or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
     rules, playbooks, role contracts, evaluation criteria and agent definitions a phase loads
@@ -1457,19 +1358,18 @@ each-item ≥ 7 criterion:
     (b) the scripts, hooks and workflows that run; (c) every document delivered to a target — the
     boundary of (c) is the manifest generator's markdown-link closure of `CLAUDE.md` +
     `docs/INDEX.md` plus its other artifact rows (`setup/gen-manifest-hashes.sh` >
-    `compute_doc_closure`), which already exists and is not restated.
+    `compute_doc_closure`).
   - *Historical records* are what is kept as a record of a past state and followed by no one:
     per-issue manual-verification records, report-excerpt fixtures
     (`tests/fixtures/*`), an ADR's change-history and superseded sections, and archived cycle
-    artifacts. A fixture that an executing test reads is still a historical record for this check
-    — its content is a past report's text — while the test that reads it is normative.
+    artifacts. A fixture that an executing test reads is still a historical record for this check,
+    while the test that reads it is normative.
   - For a stale name in a historical record the evaluator judges whether a reader following the
     normative documents would be misled by it, and records the judgment with its grounds in the
     item's `reason` (and in `recommendations` when it does not lower the score). A score reduction
     rests on that recorded ground alone, never on the name's presence; a record whose stale names
-    mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for
-    (precedent: issue #211 kept old report excerpts verbatim).
-- **Test quality — layer violation** (ADR-0024 D1, D2; **this repository only**): for each
+    mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for.
+- **Test quality — layer violation** (**this repository only**): for each
   verification-design row, the asset matches the layer its `Type` cell declares — a `cycle` row
   (no `standing:` token) has no committed test file; a `standing` row has its committed file,
   CI-registered; and every `standing:` token is one of ADR-0024 D1's closed list. A committed asset
@@ -1485,16 +1385,16 @@ each-item ≥ 7 criterion:
   > Rule Scope > *What a cycle leaves in the target's tree*); under this item the evaluator confirms
   that every test file the cycle added to the target's tree carries, in the Test AI's RED report,
   the reason it is kept and the CI job expected to run it — the record HANDOFF step 4 copies into
-  the PR body, which does not exist yet at this gate — and an added file with no such record caps
+  the PR body — and an added file with no such record caps
   `Test quality` at 6.
-- **Test coverage — the run record is the subject** (ADR-0024 Area 2; issue #238): the item's
-  subject is not a CI result (none exists before push). For each `automated` / `delivery-check` row
+- **Test coverage — the run record is the subject**: the item's subject is not a CI result. For
+  each `automated` / `delivery-check` row
   it is the row's recorded run — the command, the log and the summary line read from it, confirmed
   by reading the line at the cited log path rather than by re-running; in this repository a
   `standing` row's subject is additionally the committed asset's realisability — the file exists,
   runs, and is CI-registered. For a `manual` row executed by the AI it is the row's observation
   record (VERIFY step 1), confirmed by reading the record and opening the artifacts it cites — a
-  screenshot is read as an image — never by observing again (issue #277); a row with no record, or
+  screenshot is read as an image — never by observing again; a row with no record, or
   a record whose artifacts are absent, takes the omission path below.
   - **Execution omission is not a defect** ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *A missing run
     is filled where it is found*). A row with no run record — or with no log behind it — is `not-run`, and the evaluator does
@@ -1505,68 +1405,53 @@ each-item ≥ 7 criterion:
     path (the orchestrator itself may run it), a test in the target's tree by the owning role the
     way the target runs its tests — and its record filled in, then spawns a fresh evaluator that
     re-scores `Test coverage` only, in the *Re-entry re-score* form below with the withheld report
-    as the inheritance source. A recorded run that **fails** is a defect and is scored and classed
-    as before.
-- **Fit — ADR conformance** (proactively-added per `ADR-0016`, not a past Codex catch): on
-  the final change set, re-confirm the shipped change conforms to any governing ADR (same
+    as the inheritance source. A recorded run that **fails** is a defect, scored and classed like
+    any other.
+- **Fit — ADR conformance**: on the final change set, re-confirm the shipped change conforms to any governing ADR (same
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check; the
   trigger areas are `docs/development-guideline.md` > ADR Policy > *When to create an ADR*). A
   divergence from a governing ADR, or an architecture-impacting change with no governing
-  ADR/owner decision, caps Fit at 6. Regression backstop for the GATE:PLAN check.
-- **Completeness — AC-authority check** (proactively-added per `ADR-0020`, not a past Codex catch):
-  the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a VERIFY → RED test
+  ADR/owner decision, caps Fit at 6.
+- **Completeness — AC-authority check**: the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a VERIFY → RED test
   edit, or the satisfiable-subset GREEN implementation the GREEN playbook explicitly permits.
-  **This is not the GATE:PLAN key join, and the difference is deliberate**: there only one side is
-  keyed — the verification design carries `Issue AC`, while test assertions and implementation sites
-  carry no AC id and this policy adds one to neither. The check is therefore a **name-the-site
-  obligation**: for each verification-design row whose `Issue AC` is not `—`, the evaluator names
-  the test file and assertion, or the implementation site, that discharges it. A row for which no
+  The check is a **name-the-site obligation**, not the GATE:PLAN key join: for each
+  verification-design row whose `Issue AC` is not `—`, the evaluator names the test file and
+  assertion, or the implementation site, that discharges it. A row for which no
   site can be named, and which no `[ac-decision]`-marked ledger entry covers, caps `Completeness`
-  at 6 (an `added` entry covers nothing: the criterion it adds is owed its row and its site). The guarantee is correspondingly **weaker** than GATE:PLAN's — an evaluator judgment over a
-  keyed checklist rather than a mechanical diff — because the alternative is an AC id annotation on
-  every test and source file, maintained by the same agents the check exists to witness against.
-  Neither gate subsumes the other: the ARCHITECT-side check cannot see post-ARCHITECT drift, and
-  this one runs only after the cycle's work is done. **Effective from** — as with the GATE:PLAN
-  half, this binds cycles whose DIAGNOSE authored an AC table under the clause.
-  **Derivation is not drift** (issue #192): a file row, suite disposition or oracle condition clause
+  at 6 (an `added` entry covers nothing: the criterion it adds is owed its row and its site).
+  **Derivation is not drift**: a file row, suite disposition or oracle condition clause
   RED or GREEN derived under the ARCHITECT layer split (ARCHITECT > *Output artifacts* item 1;
   RED > *Derivation on entry*) is the designed division of labour, never a post-ARCHITECT AC change.
-  The check binds what it always bound — a verification-design row whose `Issue AC` is not `—` and
-  for which no discharging site can be named. Deriving *how* a named row is implemented never
-  removes the row, so it can never trip this check; only dropping or silently re-dispositioning a
-  criterion can.
+  The check binds a verification-design row whose `Issue AC` is not `—` and for which no
+  discharging site can be named.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → block) → *Recommendation triage* (below) → DELIVER.
 - **FAIL** → routed by `remedy_class` (below; max 3× — the cap counts FAILs, not the distance re-entered).
 
 ### Recommendation triage
 
-A PASS report's `recommendations` are findings the evaluator recorded without scoring the item down,
-and one left unread comes back as a reviewer finding: in #594, #607 and #630 a recommendation carried
-past a PASS returned as a reviewer `Medium` (issue #275). They are triaged by **the procedure the
+A PASS report's `recommendations` are findings the evaluator recorded without scoring the item down.
+They are triaged by **the procedure the
 reviewer's findings already take** — HANDOFF step 6.5's classification, the weighing of whether a finding holds, route, pause criteria, `Low`
 judgment, ledger record and attempt cap — after the PASS of every rubric-scored gate
 (GATE:HYPOTHESIS in both forms, GATE:PLAN, AUDIT, GATE:QUALITY) and before the transition it opens.
 The one thing added is the evaluator's output contract for `recommendations`
 ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format): each item names its
 subject — a `path:line` of the evaluated artifact at the evaluated commit, or a section of the evaluated artifact (a design document, a DIAGNOSE analysis file) — its severity in the reviewer's vocabulary, and — on `Medium` and above — its `remedy_class`.
-No separate disposition system exists for gate recommendations
-([`records/design-rationale.md`](records/design-rationale.md) > Decision 25).
+No separate disposition system exists for gate recommendations.
 
 | Step 6.5 | Gate recommendation |
 |---|---|
 | Classification: the reviewer's severity (`Critical` / `High` / `Medium` / `Low`, `Low Confidence`) | the evaluator's, per item, in the same vocabulary |
 | `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the deliberation settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
-| Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route, since no code exists yet (below) |
+| Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(d) | the same four, read for a gate (below) |
 | `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to DISPATCH (below) |
 | Verification of the fix: the reviewer re-review (step 6) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; GATE:PLAN > *Re-entry re-score*; AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
 | Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
 
-- **No ingesting subagent.** The evaluator's report is the spawn's return value and its
-  `recommendations` list already carries the classification, so the orchestrator reads that list
-  directly — the reviewer needs an ingesting subagent because its output is a prose comment. It is
-  therefore the orchestrator that weighs whether each item holds (HANDOFF step 6.5 > *Whether a
+- **No ingesting subagent.** The orchestrator reads the evaluator's `recommendations` list
+  directly. It is therefore the orchestrator that weighs whether each item holds (HANDOFF step 6.5 > *Whether a
   finding holds*), and the recommending gate's re-score that judges a rebuttal. A
   `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
   severity, finding), is a report defect:
@@ -1580,15 +1465,13 @@ No separate disposition system exists for gate recommendations
   `[ac-decision]` entries (ARCHITECT > *Report routing* > *An acceptance-criterion change raised
   later in the cycle*).
 - **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
-  the change (issue #275 AC2 as revised on 2026-09-23: the earlier wording named the script's route,
-  which presumed a gate at which code already exists):
+  the change:
   - **A gate after execution** — AUDIT and GATE:QUALITY — routes by `scripts/gate/remedy-route.sh
     route` over the `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere pauses)
     and re-enters the phase it prints (`DOC_COMMIT` / `RED` / `GREEN` / `ARCHITECT`, exactly as at
     *FAIL routing*, the `doc` route's sweep record included); the routed work flows forward, and the
     recommending gate re-scores on the narrowed input its re-entry already uses.
-  - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — has no code to return to, so the
-    script is not called: every `Medium`+ recommendation is resolved on the artifact the gate scores,
+  - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — does not call the script: every `Medium`+ recommendation is resolved on the artifact the gate scores,
     by the gate's own FAIL route narrowed to the item, and re-scored by the same form: at GATE:PLAN an ARCHITECT re-discussion on a `brief` naming the
     recommendation (ARCHITECT > *Re-discussion*), then GATE:PLAN's *Re-entry re-score* over the
     delta; at GATE:HYPOTHESIS the role that wrote the analysis it names amends that artifact — a
@@ -1597,12 +1480,11 @@ No separate disposition system exists for gate recommendations
     change the problem will need once the design or analysis carries it; it rides on the amended
     artifact as the ground ARCHITECT or DISPATCH then reads, and it never sends the cycle forward
     past the gate unre-scored. A fact below the decision layer (ARCHITECT > *Output artifacts*
-    item 1) is not a defect of the artifact these gates score — the layer split derives it at RED /
-    GREEN — so the evaluator records it at `Low`, and the orchestrator's `Low` judgment **defers**
+    item 1) is not a defect of the artifact these gates score, so the evaluator records it at `Low`, and the orchestrator's `Low` judgment **defers**
     it: to the executing role — recorded in the gate's verdict entry as deferred to DISPATCH, carried
     in the RED / GREEN spawn prompt, and judged with that work at GATE:QUALITY — or to the known-gaps
-    line. It is never a fix-now attempt: nothing in the artifact this gate scores changes, so there is
-    nothing for this gate to re-score, no `[gate-autofix]` entry and no `remedy_class` in state.
+    line. It is never a fix-now attempt: it takes no re-score by this gate, no `[gate-autofix]` entry
+    and no `remedy_class` in state.
   - **Not directly related** — none of question 1's three conditions holds — is separated as *Scope
     judgment*'s table says, recorded with its ground and a separate issue the follow-up path. A
     `Medium`+ recommendation that **is** directly related is fixed on its route or paused for the
@@ -1614,8 +1496,7 @@ No separate disposition system exists for gate recommendations
   (b) the fix direction is ambiguous, or the orchestrator judges a directly related recommendation
   undesirable to fix in this cycle (question 2) and would separate it; (c) the item is
   `Low Confidence`; (d) the re-score dispositions the previous attempt's finding `remains` after its
-  fix (`rescore.prior_findings`) — the same complaint answered twice, which is the pathology the
-  reviewer's loop check exists to stop. The user's answer is appended to the ledger and selects
+  fix (`rescore.prior_findings`) — the same complaint answered twice. The user's answer is appended to the ledger and selects
   re-entry.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
   gate's verdict entry: fix now, or defer — to the PR body's known-gaps line
@@ -1624,8 +1505,7 @@ No separate disposition system exists for gate recommendations
   fixed now **enters the procedure above as an attempt from that point**: the orchestrator judges
   its `remedy_class` (the evaluator tags none on a `Low`), and the fix is routed, recorded as a
   `[gate-autofix]` entry, marked in `phases.<gate>.remedy_class`, re-scored by the same gate and
-  counted on the same window exactly as a `Medium`+ attempt — so a session that ends before its
-  re-score resumes on it, never past the gate. A `Low` on a target
+  counted on the same window exactly as a `Medium`+ attempt. A `Low` on a target
   comment's divergence or disallowed content keeps its own handling — the orchestrator's direct
   commit, or left (*Code comments in a target* below).
 - **Record.** Each attempt — a `Medium`+ recommendation, or a `Low` the orchestrator fixes now: a route that re-enters a phase and awaits the gate's re-score — is one ledger entry headed
@@ -1636,8 +1516,8 @@ No separate disposition system exists for gate recommendations
   the routed class as `phases.<gate>.remedy_class` in the state file, as it does for a FAIL
   ([`CLAUDE.md`](../CLAUDE.md) > AutoFlow State Tracking > *Remedy class recording*), and removes it
   once the re-score PASSes and no attempt is left open — a `Medium`+ the re-score itself raises is a
-  new attempt; the hook's `git push` / `gh pr create`
-  gate reads its presence on `audit` and `gate_quality`, so an open attempt is never pushed past.
+  new attempt; the hook denies `git push` / `gh pr create` while it is present on `audit` or
+  `gate_quality`.
   The Resume procedure reads the same field (PREFLIGHT > *Resume procedure* step 3).
 - **Attempt cap = 7**, counted as step 6.5 counts: the consecutive `[gate-autofix]` entries this
   cycle since the last user re-entry decision. When the triage after the 7th such attempt would open
@@ -1662,15 +1542,15 @@ git grep -n -i -E 'recommendation triage|recommendations triaged|recommendation 
 
 ### FAIL routing (`remedy_class`)
 
-A FAIL does not route to RED by default. The evaluator tags **every failed item** (score < 7) with a
+The evaluator tags **every failed item** (score < 7) with a
 `remedy_class` — the kind of change that clears it — and the orchestrator re-enters the cycle at the
-nearest phase that can make that change. The evaluator is the classifying authority (the same
-principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-classify.
+nearest phase that can make that change. The evaluator is the classifying authority: the Developer AI /
+Test AI do not re-classify.
 
 | `remedy_class` | Meaning | Re-entry |
 |---|---|---|
 | `doc` | the item clears by editing documentation with no behavior change — in this repository comment text too; a target comment's divergence or disallowed content is never a failed item, while a defect a comment carries on its own ground is classed like any other (*Code comments in a target* below) | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
-| `test` | the item clears by changing test assets | RED (current path) |
+| `test` | the item clears by changing test assets | RED |
 | `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
 | `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
 | `operator` | the evaluator cannot classify with confidence | report situation-first, `active:false`, `phase:"awaiting-user"`; the operator's answer fixes the class |
@@ -1688,17 +1568,13 @@ principle as VERIFY deadlock arbitration): the Developer AI / Test AI do not re-
 - **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: reject
   it and re-spawn a fresh Evaluation AI, exactly as for a missing `fail_hypothesis`
   ([`role-contracts.md`](role-contracts.md) > Evaluation AI > Remedy class).
-- **Caps are unchanged**: `max 3×` and the escalation on the 4th FAIL stand. What changes is the
-  distance a re-entry travels, not the number of re-entries permitted.
 
 #### `doc` re-entry — class-level remedy
 
-The `doc` route skips RED / GREEN / VERIFY, so its remedy must be **class-level, not site-level**: the
-#138 cycle fixed the evaluator's listed sites twice and was failed twice more on residual sites of
-the same kind. The fix anchors on a **repo-wide sweep for the pattern the evaluator named**, not on
-the list of sites it happened to find. The sweep enumerates; **which hits the remedy fixes is the
-orchestrator's judgment**, recorded with its grounds in the sweep record (`CLAUDE.md` > Rule Scope,
-principle 2; issue #232).
+The `doc` route's remedy must be **class-level, not site-level**. The fix anchors on a **repo-wide sweep
+for the pattern the evaluator named**, not on the list of sites it happened to find. The sweep
+enumerates; **which hits the remedy fixes is the orchestrator's judgment**, recorded with its grounds
+in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
 
 1. Write `.autoflow/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
    command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
@@ -1706,7 +1582,7 @@ principle 2; issue #232).
    the one definition of the boundary) and records, beside the two sections, the scope judgment for
    the rest: a hit in a historical record is fixed only where the evaluator's recorded judgment
    named it as misleading, and is otherwise recorded as exempt with the ground (the record is
-   followed by no one; issue #211's old excerpts stay verbatim). The judgment and its grounds are
+   followed by no one). The judgment and its grounds are
    prose in the same file; the hook reads only the two sections.
 2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../CLAUDE.md) > Team Structure /
    Commit Ownership). **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
@@ -1714,9 +1590,8 @@ principle 2; issue #232).
    instruction. On a second `doc` FAIL of the same class, the orchestrator re-examines its scope
    judgment against the grounds the new report records — the previously flagged defect that
    `rescore.prior_findings` marks `remains`, or a new finding it marks blocking — and records the
-   revised judgment in the sweep record; a wider predicate is one possible outcome, not a rule
-   (the #228 cycle widened three times by rule, and each widening rewrote historical records whose
-   new sentences the next evaluator then flagged). No standing doc-phrase suite is kept (#141).
+   revised judgment in the sweep record; a wider predicate is one possible outcome, not a rule.
+   No standing doc-phrase suite is kept.
 3. Run, once, the tests the doc diff requires ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *Local
    verification*) — often none for a doc-only diff; on an opted-in target the selector names any
    suite whose `ci-subject` reaches an edited doc — and record the command and its summary line,
@@ -1730,29 +1605,24 @@ re-scores the items that failed plus every previously-passing item whose anchor 
 diff touched; the remaining items inherit their prior score by citation. The report states the
 re-scored item list and the inheritance source (the prior report's path) in its `rescore` field
 ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The state file still
-receives all ten scores — the hook computes avg / min over the full set — inherited ones copied
+receives all ten scores, inherited ones copied
 verbatim from the cited report. An inherited item whose anchor file appears in the re-entry diff
 and is missing from the re-scored list is a report defect: reject and re-spawn.
 
-**The re-score's subject is the previously flagged defect** (issue #232). The re-entry exists to
-clear the defects the prior report named, so the fresh evaluator's FAIL hypothesis on a re-scored
-item is *"the flagged defect still remains"*, searched against the re-entry diff
+**The re-score's subject is the previously flagged defect**. The fresh evaluator's FAIL hypothesis
+on a re-scored item is *"the flagged defect still remains"*, searched against the re-entry diff
 ([`role-contracts.md`](role-contracts.md) > Evaluation AI > Pre-scoring FAIL hypothesis >
 *re-entry form*); each prior finding is dispositioned `cleared` / `remains` in
 `rescore.prior_findings`. A defect the evaluator newly sees on a re-scored item — including one in
 the sentences the remedy itself wrote — is recorded per *Finding coverage*, and the evaluator
 judges whether it blocks: a blocking finding is scored under its item and listed in
 `rescore.new_findings` with its ground; one that does not block goes to `recommendations` and does
-not lower the item. What the rule removes is the re-entry loop the #228 cycle ran — each
-re-score adopting *"this Nth remedy must FAIL"* and flagging the previous remedy's new sentences,
-four FAILs on one item with the reports growing from 29 KB to 55 KB — not the fresh spawn, the
-narrowed input or the finding-coverage rule, which are unchanged.
+not lower the item.
 
 ### Code comments in a target
 
 A comment in a target's code that diverges from its code, or that carries what a comment does not
-carry, never routes the cycle ([`records/design-rationale.md`](records/design-rationale.md) >
-Decision 24).
+carry, never routes the cycle.
 
 - **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Code comments*),
@@ -1767,9 +1637,7 @@ Decision 24).
   step 6.5) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
   ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
   deletes comment lines or corrects their sentences and changes nothing else, and it ends there: no
-  sweep record, no re-entry, no re-score, and no reviewer re-review — a divergence or
-  disallowed-content finding is `Low` by rule, so a re-review of that fix cannot change the gate label
-  on that ground. The commit still runs the lint chain over its staged files
+  sweep record, no re-entry, no re-score, and no reviewer re-review. The commit still runs the lint chain over its staged files
   ([`CLAUDE.md`](../CLAUDE.md) > Commit Rules); one made after HANDOFF's push is pushed, and step 5
   confirms CI on the new head. A comment whose correct wording is uncertain is deleted, not
   rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a
@@ -1778,9 +1646,8 @@ Decision 24).
   which lines those are is the working AI's judgment in that target, with no list kept (*Code
   comments* > *Directives are code*). A defect in one takes the severity and the route of the
   behavior it changes.
-- **This repository is excluded.** Here the documents are the product, so comments stay under the
-  checks they had: the reviewer's severity as judged, the `doc` class, and the `doc` re-entry's
-  sweep record.
+- **This repository is excluded.** Here a comment takes the reviewer's severity as judged, the
+  `doc` class, and the `doc` re-entry's sweep record.
 - *Secondary (multi-repo):* a comment in a sub-repo is outside the orchestrator's scope
   ([`CLAUDE.md`](../CLAUDE.md) > Cross-Project Boundary Rules); the Developer AI of that scope makes
   the same single commit on the same terms.
@@ -1797,7 +1664,7 @@ In a single-repo deployment (target-centric — the default; zero submodules, se
 
 - Each Submodule AI pushes its branch to its fork (`git push origin <branch>`).
 - Submodule AI shutdown — Submodule AIs report completion and stop.
-- The host's dev branch is NOT pushed yet (that happens at HANDOFF, when the host PR is created). By the time the host PR is created, the host dev branch's `services` gitlink (the submodule pointer) must point to this cycle's sub-repo PR head. The commit that bumps that pointer is the **orchestrator's** — the host `services` gitlink is a host-file change (see [`CLAUDE.md`](../CLAUDE.md) > Commit Ownership), and it is committed at HANDOFF step 4b, the single source of the pointer-bump commit format (DELIVER names the actor and target only; it does not restate the format).
+- The host's dev branch is NOT pushed yet (that happens at HANDOFF, when the host PR is created). By the time the host PR is created, the host dev branch's `<submodule>` gitlink (the submodule pointer) must point to this cycle's sub-repo PR head. The commit that bumps that pointer is the **orchestrator's** (see [`CLAUDE.md`](../CLAUDE.md) > Commit Ownership), and it is committed at HANDOFF step 4b, the single source of the pointer-bump commit format (DELIVER names the actor and target only; it does not restate the format).
 
 ---
 
@@ -1814,22 +1681,22 @@ In a multi-repo deployment (one or more submodules), INTEGRATE builds the system
 4. Cross-cutting concerns (auth, network ingress, etc.) verified.
 ```
 
-**Failure**: INTEGRATE FAIL → GREEN — fixed `impl` class (an integration or bundle failure is by nature an implementation-side remedy) → VERIFY step 1 → REFINE → VALIDATE; existing GREEN↔VERIFY round-trip rules apply.
+**Failure**: INTEGRATE FAIL → GREEN — fixed `impl` class → VERIFY step 1 → REFINE → VALIDATE; existing GREEN↔VERIFY round-trip rules apply.
 
 ### Deploy/CI-path conditional verification
 
-Some integration-breaking changes never touch the dev-compose surface the steps above build: deploy scripts, CI-config files, submodule layout, and env / build-arg wiring pass the dev-compose run clean and the breakage surfaces only after merge (the #774 / #776 / #778 / #781 class from the single #773 restructure — each a priority:high post-merge regression that consumed a full separate cycle). This check adds a **diff-path-conditional** gate keyed on the class of surface being integrated. It is topology-independent — it lives outside the single-repo / multi-repo branch above and applies in both: CI-config and build-wiring diffs occur in single-repo targets too, while the submodule / deploy classes resolve to a defined no-op there.
+This check adds a **diff-path-conditional** gate keyed on the class of surface being integrated. It is topology-independent — it lives outside the single-repo / multi-repo branch above and applies in both; in a single-repo target the submodule / deploy classes resolve to a defined no-op.
 
 **Trigger predicate (deterministic).** Let the diff be `git diff --name-only <base>...HEAD` (base = `git merge-base HEAD main`). The condition **fires** iff any changed path matches the trigger glob set:
 
-| Class | Glob(s) | Regression witness |
-|---|---|---|
-| Submodule layout | `.gitmodules` | #778 (nested container path) |
-| CI config | `.github/workflows/**`, `**/Jenkinsfile`, `Jenkinsfile` | #776 (Jenkinsfile Validate-Compose) |
-| Deploy scripts | `deploy-*.sh`, `**/deploy-*.sh` | #774 (deploy-librechat.sh submodule not updated) |
-| Env / build-arg | `.env`, `.env.*`, `**/.env`, `**/.env.*` | #776 (nested `services/.env`), #781 (build wiring) |
+| Class | Glob(s) |
+|---|---|
+| Submodule layout | `.gitmodules` |
+| CI config | `.github/workflows/**`, `**/Jenkinsfile`, `Jenkinsfile` |
+| Deploy scripts | `deploy-*.sh`, `**/deploy-*.sh` |
+| Env / build-arg | `.env`, `.env.*`, `**/.env`, `**/.env.*` |
 
-Stated as an enforceable one-liner (the frozen predicate — mirrors the manifest `comm` / `grep` idiom in [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > Derived artifacts):
+Stated as an enforceable one-liner (the frozen predicate):
 
 ```
 git diff --name-only <base>...HEAD \
@@ -1840,13 +1707,13 @@ Non-empty ⇒ the verification bundle below is a **mandatory PASS/FAIL gate** fo
 
 **Verification bundle** (runs only when the trigger is non-empty; each item is itself a defined no-op when the target ships no such surface):
 
-- **(a) Deploy-script dry-run, incl. recursive submodule init** — run the target's `deploy-*.sh` in dry-run (`--dry-run` / read-only) with `git submodule update --init --recursive`, confirming the deploy path resolves the current submodule pointers. Catches the #774 / #778 class (deploy / container-path breakage). *No-op* when the target ships no deploy script.
-- **(b) CI-config static validation** — lint / schema-check the changed CI file itself (`.github/workflows/*` via `actionlint` / YAML-schema; `Jenkinsfile` via the target's `jenkins declarative-linter` or equivalent). Catches the #776 class. *No-op* when no CI file changed.
-- **(c) Landing/host routing smoke check** — a smoke request against the built host / landing route (health / routing reachability), catching production build-wiring breakage. Catches the #781 class. *No-op* when the target exposes no host / landing route.
+- **(a) Deploy-script dry-run, incl. recursive submodule init** — run the target's `deploy-*.sh` in dry-run (`--dry-run` / read-only) with `git submodule update --init --recursive`, confirming the deploy path resolves the current submodule pointers. *No-op* when the target ships no deploy script.
+- **(b) CI-config static validation** — lint / schema-check the changed CI file itself (`.github/workflows/*` via `actionlint` / YAML-schema; `Jenkinsfile` via the target's `jenkins declarative-linter` or equivalent). *No-op* when no CI file changed.
+- **(c) Landing/host routing smoke check** — a smoke request against the built host / landing route (health / routing reachability). *No-op* when the target exposes no host / landing route.
 
-The bundle commands exercise a *target service repo's* surfaces, so their effectiveness shows on the target repos where they run, and a bundle item that misses a real breakage there is filed back as an issue; this single-repo framework repo owns none of these surfaces, so its own cycles hit the defined no-op.
+A bundle item that misses a real breakage on the target where it runs is filed back as an issue.
 
-**Failure**: a bundle item that fails is an **INTEGRATE FAIL → GREEN** (`impl` class; existing GREEN↔VERIFY round-trip rules apply; no new regression cap is introduced).
+**Failure**: a bundle item that fails is an **INTEGRATE FAIL → GREEN** (`impl` class; existing GREEN↔VERIFY round-trip rules apply).
 
 ---
 
@@ -1858,69 +1725,61 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
 1. Change summary (changed files, commit hashes; per-sub-repo if applicable).
 2. Test results report.
 3. Push the dev branch: `git push -u origin dev/<branch>` (in review-response mode the branch is already tracked; the push updates the existing PR).
-   - **[MUST] Body sync (review-response mode).** A push updates the PR's diff, not its body, and step 4 is skipped, so the orchestrator re-renders the host PR body from this cycle's records and writes it with `gh pr edit <hostPR> --body-file <rendered body>` **before** the step-6 re-review: the `## Verification dispositions` list and the known-gaps line (step 4's two record obligations) carry this cycle's rows, separations and deferred recommendations, so the re-review reads the judgments this cycle made, not the previous cycle's. The reviewer can catch a wrong separation only where it can read it (PR #290 review round 4).
-   - **[MUST]** *Secondary (multi-repo), review-response mode*: once the sub-repo fix has landed and that sub-repo PR's `blocked-by-review` label has cleared (the AC4 propagation-batching condition — see step 6.5), and **before** this push updates the host PR, re-bump the host `services` pointer to that sub-repo PR's new head **once**, then confirm `git ls-tree HEAD services | awk '{print $3}'` equals that head. This manual pointer-equality check is the **only** defense against a stale pointer (ADR-0015 D3); it fires once at the clean point, not for a fix push in isolation.
+   - **[MUST] Body sync (review-response mode).** The orchestrator re-renders the host PR body from this cycle's records and writes it with `gh pr edit <hostPR> --body-file <rendered body>` **before** the step-6 re-review: the `## Verification dispositions` list and the known-gaps line (step 4's two record obligations) carry this cycle's rows, separations and deferred recommendations.
+   - **[MUST]** *Secondary (multi-repo), review-response mode*: once the sub-repo fix has landed and that sub-repo PR's `blocked-by-review` label has cleared (the propagation-batching condition — see step 6.5), and **before** this push updates the host PR, re-bump the host `<submodule>` pointer to that sub-repo PR's new head **once**, then confirm `git ls-tree HEAD <submodule> | awk '{print $3}'` equals that head. This manual pointer-equality check fires once at the clean point, not for a fix push in isolation.
 4. Create PR(s) (skipped in review-response mode — step 3's push updates the existing PR):
    - PR title follows the [`title-guide.md`](title-guide.md) convention (`[type · epic-slice · #N] description`).
    - PR body follows the [`pr-body-guide.md`](pr-body-guide.md) principles.
    - **[MUST]** The host PR body carries a `## Verification dispositions` list: every **issue**
      acceptance criterion whose verification design row is typed anything other than `automated`,
-     with its disposition and its one-line reason, copied from that row. This is the reviewer tier
-     of the three-tier acceptance-criterion guard (ARCHITECT > *Report routing*) — the
-     reviewer judges each stated reason, so a reduction the reviewer never sees is a tier that did
-     not run. Form: [`pr-body-guide.md`](pr-body-guide.md) > *Verification dispositions*. When every
+     with its disposition and its one-line reason, copied from that row. Form: [`pr-body-guide.md`](pr-body-guide.md) > *Verification dispositions*. When every
      issue AC is `automated`, the section says so in one line rather than being omitted. The same
      section carries, for every `cycle`-layer `automated` row, the row's **run record** — the
-     command and summary line of VERIFY step 1's run — since the check's code is not in the PR and
-     the record is what the reviewer can re-run (ADR-0024 D1, D2), and for every `manual` row
+     command and summary line of VERIFY step 1's run — and for every `manual` row
      executed by the AI, its executor, the path of its observation record and its result line. The
      same section lists **every
      test file this cycle added to the target's tree**, each with the reason it is kept and — filled
-     in at step 5 — the CI job that executed it; a cycle that added none says so in one line. The
-     listing is what lets the reviewer judge the addition against the target's own convention
-     ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope > *What a cycle leaves in the target's tree*).
+     in at step 5 — the CI job that executed it; a cycle that added none says so in one line.
    - The known-gaps line ([`pr-body-guide.md`](pr-body-guide.md) > *한계와 known gaps*) names each
      directly related problem the cycle separated — on every cycle: here on creation, and in
      review-response mode by step 3's body sync — with the separation reason its scope record
      carries ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules >
      *Scope judgment*), and each gate recommendation deferred or separated at triage
-     (GATE:QUALITY > *Recommendation triage*) — the reviewer can catch a wrong separation only
-     where it can read it.
-   - Host-only change (target-centric — the default): create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path> --no-subrepo-dep`. The script still passes `--draft` (uniform pre-review marker) and still applies the `blocked-by-review` gate label, but does not apply the `blocked-by-subrepo` label — a host-only PR carries no merge-order gate (see Merge Sequencing > host-only case).
+     (GATE:QUALITY > *Recommendation triage*).
+   - Host-only change (target-centric — the default): create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path> --no-subrepo-dep`. The script still passes `--draft` and still applies the `blocked-by-review` gate label, but does not apply the `blocked-by-subrepo` label (see Merge Sequencing > host-only case).
    - *Secondary (multi-repo):* Sub-repo changes present:
-     a. Create each sub-repo PR (fork → upstream) **with `--label "blocked-by-review"`**, body `Part of Munsik-Park/autoflow#N` (no close keyword). The review gate is **per-PR**: **every** PR created for this cycle — the host PR *and* each sub-repo PR — carries `blocked-by-review` and is reviewed on its **own diff** in step 6 (so the review scope is each repo's actual code, not "the host only"). The `blocked-by-review` label must exist in each sub-repo (one-time operator setup — see [`external-review-sequencing.md`](external-review-sequencing.md)). `blocked-by-subrepo` is a separate, host-only merge-order gate (step 4b), not a review gate.
-     b. Create the host PR. **Before** creating it, the **orchestrator** aligns the host dev branch's `services` gitlink to this cycle's sub-repo PR head — this is the **single source** of the pointer-bump commit format: run `git -C services checkout <sub-repo-PR-head>`, then `git add services`, then commit with the message `chore(#N): bump services pointer to <short-sha>` (the same `chore(#N): …` convention as the `git-workflow.md` reconcile snippet; DELIVER and the review-response re-bump in step 3 forward-ref this format rather than restating it). Then create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path>`. The script always passes `--draft`, applies the `blocked-by-review` gate label (cleared by the configured-reviewer review in step 6 when clean), and applies the `blocked-by-subrepo` label. The body file is the template-rendered host PR body (see `.github/pull_request_template.md` and PR Issue Auto-Close in [`git-workflow.md`](git-workflow.md)).
-5. Confirm CI is green on the created PR(s). **[MUST]** Step 5 confirms CI by running `scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]` — the orchestrator does **not** hand-write a poll loop (the same named-invocation enforcement step 4 has via `create-host-pr.sh`). The script reads `gh pr view <N> --json mergeable,mergeStateStatus` **first** and early-exits before any poll only on a **confirmed** not-mergeable read, then runs a finite, deadline-bounded poll on every other read — an undetermined or still-computing (`UNKNOWN`) mergeability, like a degraded read, falls through to that poll instead of early-exiting — never reading a clean-but-empty status as green. This confirmation is a **topology-independent invariant** (single- and multi-repo identical); only the exit-`10` *resolution* is topology-branched. The script judges the checks the host CI publishes on the PR head — any check, by count and conclusion, never by name (verified on a consuming target whose host CI moved to GitHub Actions: the script judged the new checks unmodified — issue #161). A `CONFLICTING` / `mergeStateStatus: DIRTY` PR may receive **no check at all** — a CI that builds the merge revision has nothing to build — so the status stays 0-count and a naive "wait for green" loop hangs forever; do **not** misread the empty status as a webhook miss (webhook deliveries are 200 OK in this case — see #570). Exit-code contract (`scripts/handoff/confirm-ci-green.sh`):
+     a. Create each sub-repo PR (fork → upstream) **with `--label "blocked-by-review"`**, body `Part of Munsik-Park/autoflow#N` (no close keyword). The review gate is **per-PR**: **every** PR created for this cycle — the host PR *and* each sub-repo PR — carries `blocked-by-review` and is reviewed on its **own diff** in step 6. The `blocked-by-review` label must exist in each sub-repo (one-time operator setup — see [`external-review-sequencing.md`](external-review-sequencing.md)). `blocked-by-subrepo` is a separate, host-only merge-order gate (step 4b), not a review gate.
+     b. Create the host PR. **Before** creating it, the **orchestrator** aligns the host dev branch's `<submodule>` gitlink to this cycle's sub-repo PR head — this is the **single source** of the pointer-bump commit format: run `git -C <submodule> checkout <sub-repo-PR-head>`, then `git add <submodule>`, then commit with the message `chore(#N): bump <submodule> pointer to <short-sha>` (the same `chore(#N): …` convention as the `git-workflow.md` reconcile snippet; DELIVER and the review-response re-bump in step 3 forward-ref this format rather than restating it). Then create the host PR via `scripts/handoff/create-host-pr.sh --issue N --title "..." --body-file <path>`. The script always passes `--draft`, applies the `blocked-by-review` gate label (cleared by the configured-reviewer review in step 6 when clean), and applies the `blocked-by-subrepo` label. The body file is the template-rendered host PR body (see `.github/pull_request_template.md` and PR Issue Auto-Close in [`git-workflow.md`](git-workflow.md)).
+5. Confirm CI is green on the created PR(s). **[MUST]** Step 5 confirms CI by running `scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]` — the orchestrator does **not** hand-write a poll loop. The script reads `gh pr view <N> --json mergeable,mergeStateStatus` **first** and early-exits before any poll only on a **confirmed** not-mergeable read, then runs a finite, deadline-bounded poll on every other read — an undetermined or still-computing (`UNKNOWN`) mergeability, like a degraded read, falls through to that poll instead of early-exiting — never reading a clean-but-empty status as green. This confirmation is a **topology-independent invariant** (single- and multi-repo identical); only the exit-`10` *resolution* is topology-branched. The script judges the checks the host CI publishes on the PR head — any check, by count and conclusion, never by name. A `CONFLICTING` / `mergeStateStatus: DIRTY` PR may receive **no check at all**; do **not** misread the empty status as a webhook miss. Exit-code contract (`scripts/handoff/confirm-ci-green.sh`):
    - `0` — CI green: `scripts/handoff/confirm-ci-green.sh` saw ≥1 check present and every element green.
-   - **Added test files — CI log match** (issue #238), on exit `0` and before step 6: for each test
+   - **Added test files — CI log match**, on exit `0` and before step 6: for each test
      file this cycle added to the target's tree (step 4's listing), find in the green run's logs the
      job that executed it and record the job beside the file in the PR body's
      `## Verification dispositions`. The criterion is **execution visible in the log**, not
-     registration — a registered step can be skipped by a condition (`if:`, a `paths:` filter, a
-     matrix exclusion). A file no job executed is wired inside HANDOFF — the registration the
+     registration. A file no job executed is wired inside HANDOFF — the registration the
      target's CI needs, committed and pushed as a HANDOFF internal retry (step 3, then step 5 again;
      no re-entry) — and a file the wiring still cannot reach is listed as such for the reviewer. A
      target with no CI records `no CI; local run only` beside each file.
    - confirmed mergeable requires both a `MERGEABLE` value and a settled (non-`UNKNOWN`) `mergeStateStatus` — either field still computing withholds the verdict and keeps the run in the bounded poll.
-   - `10` — not mergeable (a **confirmed** `CONFLICTING` / `DIRTY` value) at precheck **or** on a mid-poll flip — **only on a JSON-confirmed read**; a failed / timed-out / empty / non-JSON read — at the precheck **or** on a mid-poll re-read — is **not** treated as a conflict, it **falls through** (the precheck to the bounded poll; a mid-poll degraded read to a retry within the budget) (never `10`). Mergeability is a tri-state, so a still-computing (`UNKNOWN`) mergeable value falls through to the bounded poll, never `10` — the verdict is taken from the settled value, and a mergeability that never settles inside the bound lands on `14`. The stderr carries the reserved `HANDOFF-INTERNAL-RETRY` token. Do **not** wait on CI; branch by cause — a concurrent cycle advancing `main`'s `services` gitlink → resolve via [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight; any other merge conflict → resolve against `origin/main` (rebase / merge) and re-push (HANDOFF internal retry).
+   - `10` — not mergeable (a **confirmed** `CONFLICTING` / `DIRTY` value) at precheck **or** on a mid-poll flip — **only on a JSON-confirmed read**; a failed / timed-out / empty / non-JSON read — at the precheck **or** on a mid-poll re-read — is **not** treated as a conflict, it **falls through** (the precheck to the bounded poll; a mid-poll degraded read to a retry within the budget) (never `10`). Mergeability is a tri-state, so a still-computing (`UNKNOWN`) mergeable value falls through to the bounded poll, never `10` — the verdict is taken from the settled value, and a mergeability that never settles inside the bound lands on `14`. The stderr carries the reserved `HANDOFF-INTERNAL-RETRY` token. Do **not** wait on CI; branch by cause — a concurrent cycle advancing `main`'s `<submodule>` gitlink → resolve via [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight; any other merge conflict → resolve against `origin/main` (rebase / merge) and re-push (HANDOFF internal retry).
    - `11` — `MERGEABLE` but no check ever published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900); confirm the CI trigger configuration (webhook delivery, workflow trigger conditions) or force a `synchronize` event by re-pushing before escalating to the operator — NOT green.
    - `12` — a check concluded failure (red CI) → *CI-failure re-entry* below, by `remedy_class`. A `CANCELLED` check of a run superseded by a newer run of the same workflow (the same `workflow_id`) on the head commit is not counted.
    - `13` — checks present but no green verdict at the deadline → inconclusive. Three cases land here: checks still pending (slow CI); the confirmed-then-undetermined case — mergeability was confirmed once, the rollup is all-green, but mergeability never re-settled by the deadline, so exit `0` (contracted as "green on a PR whose mergeable state was confirmed") is withheld; and an unresolved superseded-run lookup — the rollup carries a `CANCELLED` check of an older run, and the script could not resolve that workflow's runs to their `workflow_id` through `gh api repos/<owner>/<repo>/actions/runs/<run_id>` by the deadline, so exit `0` is withheld the same way. For the first two, raise `CI_POLL_TIMEOUT_SECS` / re-run (env retry, max 2), or escalate. The third is named by its own stderr line (`superseded-run workflow lookup unresolved`); check the token's `actions: read` access to that repository before raising the timeout.
    - `14` — could not confirm the PR mergeable state within the bound: gh transport / auth / network / parse failure, or a merge state that never settled — an `UNKNOWN` `mergeable`, or an `UNKNOWN` `mergeStateStatus` — through the deadline, suspected (**not** a merge conflict). The precheck is bounded and a degraded or still-computing read falls through, so a run where neither the precheck nor any poll iteration ever confirms `mergeable` lands here; the stderr carries the reserved `HANDOFF-INTERNAL-RETRY` token → treat as an environment/transport error → HANDOFF internal retry (max 2), then escalate. Check `gh auth` / connectivity and re-run — NOT green.
    - `64` — usage / bad-arg / bad-env-int (caller fixes the invocation).
-6. Post-PR reviewer review (the configured reviewer backend — `codex` default, `claude` opt-in; see [`reviewer-backend.md`](reviewer-backend.md)) (**per-PR**): run `scripts/review/codex-review-pr.sh --pr <N> --expected-head <branch> [--repo <owner/name>]` on **every** PR created in step 4 — the host PR (omit `--repo` → current repo) **and each sub-repo PR** (`--repo <sub-repo>`), each reviewed against **its own diff** (passing `--expected-head` — the PR's own head branch — lets the wrapper confirm it is reviewing the intended OPEN PR, so a clipped `--pr` value lands on a clear stop rather than a review of the wrong PR). Each spawns an independent reviewer session (per [`reviewer-backend.md`](reviewer-backend.md); its model / effort are the target's `.claude/autoflow.local.json` `.review.<backend>` pins when set, else the CLI's own defaults — [`reviewer-backend.md`](reviewer-backend.md) > *Model and effort*) that reviews against the shared `.codex/review.md` instruction body and posts a Korean review comment to that PR (with `--repo`, the sub-repo PR under review; severity-ranked findings). Per `.codex/review.md`, the configured reviewer removes the `blocked-by-review` gate label from the PR when the review finds zero `Critical`/`High`/`Medium` findings, and leaves it in place otherwise — gate-label clearing runs inside the isolated reviewer session. The review output is the PR comment itself, not a session response, so a later session or the operator reads it from GitHub. Each PR's `blocked-by-review` is cleared by its **own** review (with `--repo`, the clear targets that sub-repo PR). A sub-repo PR review is **required**, not optional — for a multi-repo change the host PR's diff is only the `services` submodule-pointer bump (pointing to llmroute), so reviewing the host alone never covers the sub-repo code. It does not approve/request-changes, merge, or close. In review-response mode (re-review) it re-runs per-PR against each PR of this cycle whose head this cycle advanced — the host PR updated by step 3's push and each sub-repo PR updated by its DELIVER push, identified by the commit hashes step 1's change summary records for this cycle (`gh pr view <N> --json headRefOid`) — independent of the PR's `blocked-by-review` label state; the reviewer recognises the re-review and updates accordingly. Per `.codex/review.md`, the reviewer also **attaches** the label to a PR whose review confirms a `Critical`/`High`/`Medium` finding while the label is absent, so a Low-only round that legitimately cleared the gate does not leave a later Medium+ finding unsignalled.
+6. Post-PR reviewer review (the configured reviewer backend — `codex` default, `claude` opt-in; see [`reviewer-backend.md`](reviewer-backend.md)) (**per-PR**): run `scripts/review/codex-review-pr.sh --pr <N> --expected-head <branch> [--repo <owner/name>]` on **every** PR created in step 4 — the host PR (omit `--repo` → current repo) **and each sub-repo PR** (`--repo <sub-repo>`), each reviewed against **its own diff** (`--expected-head` is the PR's own head branch; the wrapper stops when the PR it is given is not that OPEN PR). Each spawns an independent reviewer session (per [`reviewer-backend.md`](reviewer-backend.md); its model / effort are the target's `.claude/autoflow.local.json` `.review.<backend>` pins when set, else the CLI's own defaults — [`reviewer-backend.md`](reviewer-backend.md) > *Model and effort*) that reviews against the shared `.codex/review.md` instruction body and posts a Korean review comment to that PR (with `--repo`, the sub-repo PR under review; severity-ranked findings). Per `.codex/review.md`, the configured reviewer removes the `blocked-by-review` gate label from the PR when the review finds zero `Critical`/`High`/`Medium` findings, and leaves it in place otherwise — gate-label clearing runs inside the isolated reviewer session. The review output is the PR comment itself, not a session response, so a later session or the operator reads it from GitHub. Each PR's `blocked-by-review` is cleared by its **own** review (with `--repo`, the clear targets that sub-repo PR). A sub-repo PR review is **required**, not optional. It does not approve/request-changes, merge, or close. In review-response mode (re-review) it re-runs per-PR against each PR of this cycle whose head this cycle advanced — the host PR updated by step 3's push and each sub-repo PR updated by its DELIVER push, identified by the commit hashes step 1's change summary records for this cycle (`gh pr view <N> --json headRefOid`) — independent of the PR's `blocked-by-review` label state; the reviewer recognises the re-review and updates accordingly. Per `.codex/review.md`, the reviewer also **attaches** the label to a PR whose review confirms a `Critical`/`High`/`Medium` finding while the label is absent.
 
-   **Start confirmation.** Each review runs in the background, and several run at once (the host PR plus each sub-repo PR), so confirm each one began with a signal scoped to its own PR. The wrapper passes the PR number into the codex prompt, so the same `pull request #<N>` string appears in both the `codex exec` argv and the rollout: `pgrep -f "pull request #<N>"` matches only this PR's session, and a fresh `~/.codex/sessions/<date>/rollout-*.jsonl` carrying `task_started` whose prompt names `pull request #<N>` attributes that rollout to this PR (add the `--repo` owner/name to the pattern when a host and a sub-repo PR happen to share a number). Either PR-scoped signal proves this review began its task. The wrapper's `[codex-review] starting codex … (model=… effort=…)` marker in this invocation's own captured output is a supporting signal that the wrapper reached the launch point, and records which explicitly configured model / effort the review ran with (`inherit` = the CLI's own default). A confirmed start with an advancing rollout `mtime` means the review is healthy, so let it finish on its own clock, however long that takes. When the window (~30s) passes with this PR's process and rollout both absent — even after the marker printed — treat the launch as not started: run it again once, and hand to the operator on a second miss. The codex branch closes `codex exec` stdin (`< /dev/null`) so an inherited parent stdin cannot hold the background review open, and prints `[review] codex completed for PR #<N> (exit=…)` when the subprocess returns; a non-zero exit means the review run itself failed. This keeps each PR's start judged on its own session, lets a slow-but-healthy review run to completion, and surfaces a launch that never started within the first half-minute. **This start-confirmation oracle is per-backend (issue #979).** The `~/.codex/sessions` rollout / `pgrep` / advancing-`mtime` signals above are the **codex** backend's start/health oracle; the completion marker is the codex finish signal. The **claude** backend instead runs `claude -p` synchronously and prints a wrapper **completion marker** `[review] claude completed for PR #<N> (exit=…)` when the subprocess returns — that marker (not a codex rollout probe) is the claude start/finish signal; a non-zero exit in the marker means the review run itself failed. See [`reviewer-backend.md`](reviewer-backend.md).
-6.5. Review triage (per-PR; after step 6, before termination). For each PR, read two signals: the `blocked-by-review` label state (`gh pr view <N> --json labels`) and the review verdict. The orchestrator does **not** read the reviewer comment body itself (Cost Control); an anonymous direct subagent — on the model the policy names for `handoff-review-triage` — ingests it (`gh pr view <N> --comments`), writes severity-classified findings to that PR's findings file (below), and returns `{max_severity, findings, low_confidence_items}` + the label state. Its spawn prompt names the PR under triage and every PR of this cycle as `<owner>/<name>#<N>`, each sub-repo PR with its submodule path. The **verdict (`max_severity`) is the primary signal; the label is a derived, fail-open-prone signal** — the two can disagree because `.codex/review.md` lets a clean review still leave the label on if `--remove-label` fails. Branch on the pair:
-   - **[MUST] One findings file per reviewed PR** (issue #280). Each PR's triage writes `.autoflow/issue-{N}-review-findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity, since a host PR and a sub-repo PR may share a number (step 6 > *Start confirmation*) and two repositories may share a name; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's triage writes the file, and a re-review round of the same PR **overwrites** it; the previous round's review stays as the PR comment. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, the `max_severity` line below, and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <owner> | <finding> |` — severity first, location second (a path relative to the root of the repository that owns it), `remedy_class` on every Medium+ row (below), and the owner in the fourth cell — `scripts/review/scope-bounded.sh` reads the owner from that cell only, and an empty or non-reference cell is the reviewed PR.
-   - **[MUST] A finding belongs to the PR whose repository owns the code it names** (issue #280), not to the PR whose review raised it. The owner cell names that PR as `<owner>/<name>#<N>`: the reviewed PR, unless the location lies in another repository with a PR in this cycle — a host PR review reads into a submodule (`.codex/review.md`), and a finding under a submodule directory belongs to that submodule's PR, its location recorded relative to the submodule root. A finding in a repository with no PR in this cycle stays with the reviewed PR. The row stays in the reviewed PR's file — one writer per file — and the consumers follow the owner cell: the owning PR's role clears the finding (the routes below), `scope-bounded` compares it against the owning PR's diff, and the host PR has nothing of its own to fix. The reviewed PR's `max_severity` still counts the row, so a host PR whose Medium+ finding belongs to a sub-repo PR keeps `max_severity ≥ Medium` with its label on — the **`max_severity ≥ Medium`** branch below, never the label-clear-failure branch — and its label clears at the host re-review that follows the pointer bump (*Propagation batching* below).
+   **Start confirmation.** The reviews run in the background, several at once (the host PR plus each sub-repo PR); confirm each one began with a signal scoped to its own PR: `pgrep -f "pull request #<N>"` matches only this PR's session, and a fresh `~/.codex/sessions/<date>/rollout-*.jsonl` carrying `task_started` whose prompt names `pull request #<N>` attributes that rollout to this PR (add the `--repo` owner/name to the pattern when a host and a sub-repo PR happen to share a number). Either PR-scoped signal proves this review began its task. The wrapper's `[codex-review] starting codex … (model=… effort=…)` marker in this invocation's own captured output is a supporting signal that the wrapper reached the launch point, and records which explicitly configured model / effort the review ran with (`inherit` = the CLI's own default). A confirmed start with an advancing rollout `mtime` means the review is healthy, so let it finish on its own clock, however long that takes. When the window (~30s) passes with this PR's process and rollout both absent — even after the marker printed — treat the launch as not started: run it again once, and hand to the operator on a second miss. The codex branch closes `codex exec` stdin (`< /dev/null`) and prints `[review] codex completed for PR #<N> (exit=…)` when the subprocess returns; a non-zero exit means the review run itself failed. **This start-confirmation oracle is per-backend.** The `~/.codex/sessions` rollout / `pgrep` / advancing-`mtime` signals above are the **codex** backend's start/health oracle; the completion marker is the codex finish signal. The **claude** backend instead runs `claude -p` synchronously and prints a wrapper **completion marker** `[review] claude completed for PR #<N> (exit=…)` when the subprocess returns — that marker (not a codex rollout probe) is the claude start/finish signal; a non-zero exit in the marker means the review run itself failed. See [`reviewer-backend.md`](reviewer-backend.md).
+6.5. Review triage (per-PR; after step 6, before termination). For each PR, read two signals: the `blocked-by-review` label state (`gh pr view <N> --json labels`) and the review verdict. The orchestrator does **not** read the reviewer comment body itself (Cost Control); an anonymous direct subagent — on the model the policy names for `handoff-review-triage` — ingests it (`gh pr view <N> --comments`), writes severity-classified findings to that PR's findings file (below), and returns `{max_severity, findings, low_confidence_items}` + the label state. Its spawn prompt names the PR under triage and every PR of this cycle as `<owner>/<name>#<N>`, each sub-repo PR with its submodule path. The **verdict (`max_severity`) is the primary signal; the label is a derived, fail-open-prone signal** — the two can disagree. Branch on the pair:
+   - **[MUST] One findings file per reviewed PR**. Each PR's triage writes `.autoflow/issue-{N}-review-findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's triage writes the file, and a re-review round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, the `max_severity` line below, and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <owner> | <finding> |` — severity first, location second (a path relative to the root of the repository that owns it), `remedy_class` on every Medium+ row (below), and the owner in the fourth cell — `scripts/review/scope-bounded.sh` reads the owner from that cell only, and an empty or non-reference cell is the reviewed PR.
+   - **[MUST] A finding belongs to the PR whose repository owns the code it names**, not to the PR whose review raised it. The owner cell names that PR as `<owner>/<name>#<N>`: the reviewed PR, unless the location lies in another repository with a PR in this cycle — a host PR review reads into a submodule (`.codex/review.md`), and a finding under a submodule directory belongs to that submodule's PR, its location recorded relative to the submodule root. A finding in a repository with no PR in this cycle stays with the reviewed PR. The row stays in the reviewed PR's file — one writer per file — and the consumers follow the owner cell: the owning PR's role clears the finding (the routes below), `scope-bounded` compares it against the owning PR's diff, and the host PR has nothing of its own to fix. The reviewed PR's `max_severity` still counts the row, so a host PR whose Medium+ finding belongs to a sub-repo PR keeps `max_severity ≥ Medium` with its label on — the **`max_severity ≥ Medium`** branch below, never the label-clear-failure branch — and its label clears at the host re-review that follows the pointer bump (*Propagation batching* below).
    - **[MUST] Findings-file `max_severity` contract.** The ingesting subagent **always** writes exactly one `max_severity: <None|Low|Medium|High|Critical>` line to the PR's findings file, using **colon** notation as the canonical form — presence is mandatory, including on a **clean review**, which emits `max_severity: None` (never an omitted line). The line is the reviewed PR's verdict over every finding its review raised, whichever PR owns each. Its consumer, `scripts/review/scope-bounded.sh entry` (PREFLIGHT > Scope-bounded entry), additionally tolerates `=` and whitespace separators, but colon is the contract the producer emits; a file whose line is missing, repeated or unparseable is read as the full path.
-   - **Propagation batching (multi-repo).** When a sub-repo fix would bump the host `services` pointer, **defer** the host pointer bump until that sub-repo PR's `blocked-by-review` label has cleared (its reviewer re-review is clean); at that clean point bump **once** — the same re-bump point as step 3's `[MUST]`. This holds for the general parent-pointer / sub-repo-PR relation, independent of how many repos deep the change sits. If an intervening host-CI check makes an exceptional interim bump unavoidable, record the reason in the commit message (`chore(#N): interim services bump: <reason>`). This step 6.5 block is the source of truth for the batching norm; [`external-review-sequencing.md`](external-review-sequencing.md) carries a one-line cross-ref for reviewers.
-   - **[MUST] `scope-bounded` line** (issue #135). On every `max_severity ≥ Medium` verdict the orchestrator runs `bash scripts/review/scope-bounded.sh triage --findings <that PR's findings file> --pr <N> [--repo <owner/name>]` for that PR (`--repo` for a sub-repo PR, as in step 6) and appends its three output lines (`scope-bounded:`, `scope-bounded-finding-files:`, `scope-bounded-grounds:`) to that file. The judgment is a set relation — every Medium+ finding names a file and each file is in the diff of the PR that owns the finding (the owner cell above) — never an agent's estimate of size; no PR's finding is compared against another PR's diff, and a `--pr` / `--repo` that contradicts the file's `pr:` line is refused. The artifact records the finding file set; the PR diff file sets are not copied into it — they are re-derived from the anchors the triage context already holds (`gh pr diff <N> [--repo <owner/name>] --name-only`), per the re-derivable-value rule in [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Verify role-spawn claims*. The lines of the reviewed PRs' files select the review-response cycle's path at PREFLIGHT (> PREFLIGHT > Scope-bounded entry).
-   - **[MUST] `remedy_class` per Medium+ finding** (issue #192). The ingesting subagent tags **every** `Critical`/`High`/`Medium` finding with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at GATE:QUALITY > *FAIL routing*) and writes it in that finding's row of the PR's findings file. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the deliberation settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess. A Medium+ finding with no `remedy_class` is a report defect: reject and re-spawn the ingesting subagent, the same disposition a missing `fail_hypothesis` gets.
-   - **Whether a finding holds** (issue #300). Most findings — the reviewer's, and a gate's recommendations (GATE:QUALITY > *Recommendation triage*) — are right, but a finding can be wrong, and handling one weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter — PR #299's first-round finding claimed a conflict that did not exist, while the wording it read did invite the misreading ([`records/design-rationale.md`](records/design-rationale.md) > Decision 29 item 1). The ingesting subagent, the one that reads the comment, weighs each `Medium`+ finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A role the route hands a finding to that finds in its work that the finding does not hold reports it with the same grounds.
+   - **Propagation batching (multi-repo).** When a sub-repo fix would bump the host `<submodule>` pointer, **defer** the host pointer bump until that sub-repo PR's `blocked-by-review` label has cleared (its reviewer re-review is clean); at that clean point bump **once** — the same re-bump point as step 3's `[MUST]`. This holds for the general parent-pointer / sub-repo-PR relation, independent of how many repos deep the change sits. If an intervening host-CI check makes an exceptional interim bump unavoidable, record the reason in the commit message (`chore(#N): interim <submodule> bump: <reason>`). This step 6.5 block is the source of truth for the batching norm; [`external-review-sequencing.md`](external-review-sequencing.md) carries a one-line cross-ref for reviewers.
+   - **[MUST] `scope-bounded` line**. On every `max_severity ≥ Medium` verdict the orchestrator runs `bash scripts/review/scope-bounded.sh triage --findings <that PR's findings file> --pr <N> [--repo <owner/name>]` for that PR (`--repo` for a sub-repo PR, as in step 6) and appends its three output lines (`scope-bounded:`, `scope-bounded-finding-files:`, `scope-bounded-grounds:`) to that file. The judgment is a set relation — every Medium+ finding names a file and each file is in the diff of the PR that owns the finding (the owner cell above) — never an agent's estimate of size; no PR's finding is compared against another PR's diff, and a `--pr` / `--repo` that contradicts the file's `pr:` line is refused. The artifact records the finding file set; the PR diff file sets are not copied into it — they are re-derived from the anchors the triage context already holds (`gh pr diff <N> [--repo <owner/name>] --name-only`), per the re-derivable-value rule in [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Verify role-spawn claims*. The lines of the reviewed PRs' files select the review-response cycle's path at PREFLIGHT (> PREFLIGHT > Scope-bounded entry).
+   - **[MUST] `remedy_class` per Medium+ finding**. The ingesting subagent tags **every** `Critical`/`High`/`Medium` finding with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at GATE:QUALITY > *FAIL routing*) and writes it in that finding's row of the PR's findings file. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the deliberation settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess. A Medium+ finding with no `remedy_class` is a report defect: reject and re-spawn the ingesting subagent, the same disposition a missing `fail_hypothesis` gets.
+   - **Whether a finding holds**. Handling a finding — the reviewer's, or a gate's recommendation (GATE:QUALITY > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The ingesting subagent, the one that reads the comment, weighs each `Medium`+ finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A role the route hands a finding to that finds in its work that the finding does not hold reports it with the same grounds.
 
-     A rebuttal is not a dismissal: the side that raised the finding judges it. The orchestrator posts the rebuttal with its grounds on the PR and runs the step-6 review on that PR again; the reviewer reads it with the comments since the previous change and keeps or withdraws the finding, and the label is still cleared only by that re-review. A gate recommendation's rebuttal is judged by the recommending gate's re-score. A finding that does not hold is not routed — its row keeps the class its own fix would take, in case it is kept — and one that holds in part is routed by the class its real problem needs. Each rebuttal is recorded with its grounds in the ledger entry of its round: the attempt's `[review-autofix]` entry, or, for a round that only rebuts and so routes nothing, an `O` entry whose heading ends in `[rebuttal]`, which no cap counts. At a gate that entry is also what an interrupted session resumes from (PREFLIGHT > *Resume procedure* step 3), so a rebuttal awaiting its re-score is never resumed past. When a rebutted finding is kept and the two sides still disagree, the orchestrator asks the operator ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3). When to ask is its judgment and no count decides it: a finding kept on a ground that answers the rebuttal may simply be right.
+     A rebuttal is not a dismissal: the side that raised the finding judges it. The orchestrator posts the rebuttal with its grounds on the PR and runs the step-6 review on that PR again; the reviewer reads it with the comments since the previous change and keeps or withdraws the finding, and the label is still cleared only by that re-review. A gate recommendation's rebuttal is judged by the recommending gate's re-score. A finding that does not hold is not routed — its row keeps the class its own fix would take — and one that holds in part is routed by the class its real problem needs. Each rebuttal is recorded with its grounds in the ledger entry of its round: the attempt's `[review-autofix]` entry, or, for a round that only rebuts and so routes nothing, an `O` entry whose heading ends in `[rebuttal]`, which no cap counts. At a gate that entry is also what an interrupted session resumes from (PREFLIGHT > *Resume procedure* step 3). When a rebutted finding is kept and the two sides still disagree, the orchestrator asks the operator ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3). When to ask is its judgment and no count decides it.
 
      **This bullet is the rule's only home** ([`development-guideline.md`](development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -1938,18 +1797,18 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
      | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | step 6, per-PR |
      | `PAUSE` (from `operator`) | `active:false`, `phase:"awaiting-user"` | — |
 
-     The `ARCHITECT` route is the one whose depth is judged. The finding moved a settled decision, so the deliberation owns the change; **where the re-entry starts is the orchestrator's judgment** (issue #227; [`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — auto-entered in-session with the reviewer comment as the DIAGNOSE trigger target, the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, preserve the previous cycle's artifacts, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a Phase A/B fact the decision rested on; (b) an **ARCHITECT re-deliberation** — the same setup, with two differences that follow from the analysis standing: `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), and the **DIAGNOSE analysis artifacts are not renamed** — `issue-{N}-phase-a.md`, `issue-{N}-phase-b.md` and `issue-{N}-phase-3.md` stay in place under their flat names as this cycle's analysis inputs (the *Preserve the previous cycle's artifacts* rule at PREFLIGHT excludes them for this shape), so GATE:PLAN, GATE:QUALITY and the evaluator prompt read the `## Acceptance criteria` table at the unchanged path `.autoflow/issue-{N}-phase-b.md` ([`role-contracts.md`](role-contracts.md) > Evaluation AI Prompt Rules item 1) and the AC-authority check has its declared source. The participants are spawned **fresh** on a new transcript — the previous cycle's participants are never re-woken by their IDs, and its transcript is preserved as `issue-{N}-c{C}-architect-transcript.md` like the other renamed artifacts — with an `init` brief naming the finding, the ledger entry of the decision it moves, and the previous cycle's transcript and report paths (ARCHITECT > *Re-discussion*, the new-cycle rule), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision entry it moves), why the analysis stands, and the **provenance of each reused analysis file** — its path, the cycle that authored it and its `shasum -a 256` — so that across consecutive re-entries a reader can trace which analysis a gate scored against, and a later shape-(a) entry's rename (which stamps the *previous* cycle number, not the authoring one) does not lose the trail. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT participants on the recorded GATE:HYPOTHESIS verdict and RED / GREEN on the GATE:PLAN the re-deliberation re-scores — so a shape that skips a phase never skips the gate after it, and a wrong judgment is caught by GATE:PLAN, the reviewer re-review and CI (principle 3). The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. What a thin route removes is re-deliberation of a decision nothing moved; **every independent check is retained on every route and shape** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), CI still gates, and the loop check and the attempt cap below apply unchanged. This is the same class-routed proportionality the late gates have had since issue #140 ([`records/design-rationale.md`](records/design-rationale.md) > Decision 11), extended to the review entry point by Decision 15 (llmroute #280: a five-line production fix took a full cycle at ≈ $128) and, for the `design` class, to the re-entry point by Decision 17 (issue #217: three `design`-class review rounds each re-ran the cycle from DIAGNOSE).
+     The `ARCHITECT` route is the one whose depth is judged. **Where the re-entry starts is the orchestrator's judgment** ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — auto-entered in-session with the reviewer comment as the DIAGNOSE trigger target, the same setup PREFLIGHT performs for a user-initiated review-response (set `mode:"review-response"`, increment `cycle`, reset `phases`, preserve the previous cycle's artifacts, run the DIAGNOSE review-response loop check), flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a Phase A/B fact the decision rested on; (b) an **ARCHITECT re-deliberation** — the same setup, with two differences that follow from the analysis standing: `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), and the **DIAGNOSE analysis artifacts are not renamed** — `issue-{N}-phase-a.md`, `issue-{N}-phase-b.md` and `issue-{N}-phase-3.md` stay in place under their flat names as this cycle's analysis inputs (the *Preserve the previous cycle's artifacts* rule at PREFLIGHT excludes them for this shape). The participants are spawned **fresh** on a new transcript — the previous cycle's participants are never re-woken by their IDs, and its transcript is preserved as `issue-{N}-c{C}-architect-transcript.md` like the other renamed artifacts — with an `init` brief naming the finding, the ledger entry of the decision it moves, and the previous cycle's transcript and report paths (ARCHITECT > *Re-discussion*, the new-cycle rule), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision entry it moves), why the analysis stands, and the **provenance of each reused analysis file** — its path, the cycle that authored it and its `shasum -a 256`. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT participants on the recorded GATE:HYPOTHESIS verdict and RED / GREEN on the GATE:PLAN the re-deliberation re-scores. The other three routes are **thin**: one owning role, execution verification, a delta recorded in the ledger, and the same step-6 re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. **Every independent check is retained on every route and shape** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), CI still gates, and the loop check and the attempt cap below apply unchanged.
 
-     **[MUST] The loop check runs on every route, before the routed work starts.** The thin routes and the `ARCHITECT` route's re-deliberation shape skip DIAGNOSE, and the review-response loop check has its other call site there ([`phases/analysis.md`](phases/analysis.md) > *Review-response loop check*) — so on a route that skips DIAGNOSE the orchestrator runs that contract's **steps 1 and 2 here**: append this attempt's observation to the ledger (complaint class, witness case, prior-change shape, cycle), then compare it against the immediately-prior review-response observation, with the same suppression rule and the same situation-first pause on a match. Both halves are load-bearing and neither substitutes for the other: without the comparison a class whose witness case merely changes is patched case by case until the attempt cap, which is the pathology the check exists to stop; without the **unconditional record** a later attempt that runs DIAGNOSE has no baseline to compare against. The `review-autofix` count is an attempt tally, not a class comparison. Step 3 (re-enter after the user answers) applies unchanged when the check pauses. The contract's single documentary home stays `phases/analysis.md`; this is a second call site for the entry path that has no DIAGNOSE, the same shape as `scope-bounded.sh`'s `triage` and `check-fix` call sites.
+     **[MUST] The loop check runs on every route, before the routed work starts.** The thin routes and the `ARCHITECT` route's re-deliberation shape skip DIAGNOSE, and the review-response loop check has its other call site there ([`phases/analysis.md`](phases/analysis.md) > *Review-response loop check*) — so on a route that skips DIAGNOSE the orchestrator runs that contract's **steps 1 and 2 here**: append this attempt's observation to the ledger (complaint class, witness case, prior-change shape, cycle), then compare it against the immediately-prior review-response observation, with the same suppression rule and the same situation-first pause on a match. Step 3 (re-enter after the user answers) applies unchanged when the check pauses. The contract's single documentary home stays `phases/analysis.md`; this is a second call site for the entry path that has no DIAGNOSE.
 
-     Every route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker, and the entry names the routed class and, on the `ARCHITECT` route, the judged shape with its grounds — so the attempt cap below counts every entry alike whatever depth it re-entered at, and a later reader can see which route and shape each attempt took. The four user-pause criteria below take precedence over any route; criterion (d) is evaluable on every route because of the `[MUST]` above.
+     Every route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker, and the entry names the routed class and, on the `ARCHITECT` route, the judged shape with its grounds. The four user-pause criteria below take precedence over any route.
 
-     `scope-bounded:` is still written on every Medium+ verdict (the `[MUST]` above): it selects the path **within** a re-entry that runs DIAGNOSE (> PREFLIGHT > Scope-bounded entry), and on a route that does not run DIAGNOSE it is the record of why the finding stayed on the PR's own surface.
+     `scope-bounded:` is written on every Medium+ verdict, whatever the route (the `[MUST]` above): it selects the path **within** a re-entry that runs DIAGNOSE (> PREFLIGHT > Scope-bounded entry).
      - **Pause for the user** (`AskUserQuestion`, with the question and option descriptions written situation-first per [`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision presentation; `active:false`, `phase:"awaiting-user"`) when the attempt hits **any** of: (a) the fix needs a contract / acceptance-criterion change, or the finding shows a criterion defective ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion decisions*), (b) the fix direction is ambiguous, (c) the finding is a `Low Confidence` item, (d) the review-response loop check matches (same complaint class, new witness). The user's answer is appended to the ledger and selects re-entry. A rebutted finding kept while the two sides still disagree reaches the operator by the orchestrator's judgment (*Whether a finding holds* above), not by a criterion here.
-     - **Attempt cap = 7.** Count the *consecutive `review-autofix`-marked ledger entries since the last user re-entry decision (reset by that decision; if none yet this cycle, since the first auto-entry)* — the number of auto-resolution attempts not yet checked with the user. A marked entry is a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*): the allocated identifier sits at the front of the heading and the marker stays at the end, so the count predicate reads the marker exactly as it did before identifiers were introduced — it is unaffected by the `O<n>` prefix, and a gate's recommendation attempt carries its own marker, `[gate-autofix]`, on its own window (GATE:QUALITY > *Recommendation triage*), so neither count reads the other's marker. On the 7th such entry without the `blocked-by-review` label clearing, stop auto-resolving and pause for the user (`active:false`, `phase:"awaiting-user"`). A user re-entry decision (the user approving continuation at a pause) **resets** this window to zero — the next auto-entry starts a fresh budget of 7. The reset anchor is the user re-entry decision only.
-     - **Durable record (host PR).** Post a one-line comment on the **host PR** — the always-present cycle anchor carrying `Closes #N` — via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event). These GitHub-side records survive the scratch-file cleanup at the next PREFLIGHT prior-cycle resolution, so cap-fire and re-entry stay durably auditable.
-   - **`max_severity ≥ Medium` but the label is absent** — the reviewer confirmed a `Critical`/`High`/`Medium` finding on a PR whose gate label a previous clean (Low-only) round legitimately cleared, and the reviewer's own attach did not land. Re-attach it as a backstop, then continue into the **same** auto-resolution path as the branch above (same attempt cap, same user-pause criteria, same `review-autofix` ledger marker): (1) **Primary** — `gh pr edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (2) **Fallback on primary failure** — `gh issue edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (3) **Verification** — `gh pr view <N> --json labels` (sub-repo PR: add `--repo <owner/name>`) confirming the label is present; if it is still absent after both surfaces, the label likely does not exist in that repo — report it as an operator setup gap (see [`external-review-sequencing.md`](external-review-sequencing.md) > Operator prerequisites). An attach failure does **not** block the auto-resolution: the verdict is the primary signal and justifies re-entry on its own. If this backstop attaches in error (the verdict was in fact below `Medium`), the recovery route is the branch below — a re-run of the step-6 reviewer review clears the label, and that path consumes no code-resolution attempt.
-   - **Label present but `max_severity < Medium` (or no verdict is determinable)** — this is **not** a code finding. The review was clean (or produced no verdict) yet the label stuck — a `--remove-label` / review-infrastructure failure (`.codex/review.md` > label-removal-failure clause). Do **not** start a review-response cycle (there is nothing to fix). Re-run the step-6 reviewer review on that PR so the re-review clears the label; if a re-run still leaves the label on, escalate to the user / operator (`active:false`, `phase:"awaiting-user"`). This path does **not** consume the 7-attempt code-resolution cap (no code change is attempted).
+     - **Attempt cap = 7.** Count the *consecutive `review-autofix`-marked ledger entries since the last user re-entry decision (reset by that decision; if none yet this cycle, since the first auto-entry)* — the number of auto-resolution attempts not yet checked with the user. A marked entry is a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` (see [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Entry identifier*): the allocated identifier sits at the front of the heading and the marker stays at the end, and a gate's recommendation attempt carries its own marker, `[gate-autofix]`, on its own window (GATE:QUALITY > *Recommendation triage*), so neither count reads the other's marker. On the 7th such entry without the `blocked-by-review` label clearing, stop auto-resolving and pause for the user (`active:false`, `phase:"awaiting-user"`). A user re-entry decision (the user approving continuation at a pause) **resets** this window to zero — the next auto-entry starts a fresh budget of 7. The reset anchor is the user re-entry decision only.
+     - **Durable record (host PR).** Post a one-line comment on the **host PR** via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event).
+   - **`max_severity ≥ Medium` but the label is absent** — the reviewer confirmed a `Critical`/`High`/`Medium` finding on a PR whose gate label a previous clean (Low-only) round legitimately cleared, and the reviewer's own attach did not land. Re-attach it as a backstop, then continue into the **same** auto-resolution path as the branch above (same attempt cap, same user-pause criteria, same `review-autofix` ledger marker): (1) **Primary** — `gh pr edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (2) **Fallback on primary failure** — `gh issue edit <N> --add-label blocked-by-review` (sub-repo PR: add `--repo <owner/name>`). (3) **Verification** — `gh pr view <N> --json labels` (sub-repo PR: add `--repo <owner/name>`) confirming the label is present; if it is still absent after both surfaces, the label likely does not exist in that repo — report it as an operator setup gap (see [`external-review-sequencing.md`](external-review-sequencing.md) > Operator prerequisites). An attach failure does **not** block the auto-resolution. If this backstop attaches in error (the verdict was in fact below `Medium`), the recovery route is the branch below — a re-run of the step-6 reviewer review clears the label, and that path consumes no code-resolution attempt.
+   - **Label present but `max_severity < Medium` (or no verdict is determinable)** — this is **not** a code finding. The review was clean (or produced no verdict) yet the label stuck — a `--remove-label` / review-infrastructure failure (`.codex/review.md` > label-removal-failure clause). Do **not** start a review-response cycle. Re-run the step-6 reviewer review on that PR so the re-review clears the label; if a re-run still leaves the label on, escalate to the user / operator (`active:false`, `phase:"awaiting-user"`). This path does **not** consume the 7-attempt code-resolution cap.
    - **No label and `max_severity = Low`** — the subagent returns the `Low` items + an impact note. The orchestrator decides by **pure agent judgment** (no fixed rule) whether any `Low` finding is worth fixing now: yes → run the same in-session review-response resolution loop for those items (`Low` alone does not trigger a user pause unless one of the 4 criteria above is hit); no → proceed to step 7, optionally leaving a one-line PR note that the `Low` items were reviewed and deferred. A `Low` finding on a target comment's divergence or disallowed content never enters that loop: it is the orchestrator's direct commit or it is left (GATE:QUALITY > *Code comments in a target*).
    - **No label and no findings** — proceed directly to step 7.
 7. `.autoflow/issue-{N}.json` (only once review triage is resolved — no PR retains `blocked-by-review`): set `active` to `false`, record `phase: "awaiting-external-review"`; remove the `status:in-progress` label from the issue: `gh issue edit #N --remove-label "status:in-progress"`.
@@ -1958,7 +1817,7 @@ AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the
 
 **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch (`main`). Merging — including, for multi-repo changes, the sub-repo → pointer → host sequencing — is owned entirely by the external review process. Submodule pointer reconciliation defaults to the operator but may be delegated to AutoFlow on explicit request after the sub-repo PR is merged upstream.
 
-**[MUST]** The host PR body uses `Closes #N` so the external merge closes the issue automatically. Sub-repo PR bodies use `Part of Munsik-Park/autoflow#N` and omit `Closes`.
+**[MUST]** The host PR body uses `Closes #N`. Sub-repo PR bodies use `Part of Munsik-Park/autoflow#N` and omit `Closes`.
 
 Topology decides which PRs HANDOFF creates (see [`CLAUDE.md`](../CLAUDE.md) > Deployment Topology): in a single-repo deployment (target-centric — the default; zero submodules), HANDOFF creates one host PR with `Closes #N`. In a multi-repo deployment (one or more submodules), HANDOFF creates each affected sub-repo PR plus the host PR; change scope determines which sub-repo PRs exist.
 
@@ -1966,8 +1825,8 @@ The cleanup that follows an external merge or rejection runs at PREFLIGHT of the
 
 ### CI-failure re-entry (step 5, exit `12`)
 
-A CI failure re-enters by `remedy_class` through `scripts/gate/remedy-route.sh route`, never
-unconditionally at RED (ADR-0024 D4; [`CLAUDE.md`](../CLAUDE.md) > Flow Control). The orchestrator
+A CI failure re-enters by `remedy_class` through `scripts/gate/remedy-route.sh route`
+([`CLAUDE.md`](../CLAUDE.md) > Flow Control). The orchestrator
 does not read the failure log itself (Cost Control): an anonymous direct subagent —
 `subagent_type: autoflow-analyzer`, model per policy key `handoff-review-triage` — reads the failing
 check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
@@ -1980,9 +1839,8 @@ decision the deliberation settled — and returns the class plus a one-line summ
 Not classifiable with confidence, or the failure output unobtainable → `operator`, never a guess
 ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
 report defect: reject and re-spawn the subagent, as for a missing `fail_hypothesis`. The orchestrator
-records the route as an `O` ledger entry naming the check and the class. No new cap: the existing
-GREEN ↔ VERIFY round-trip and ARCHITECT re-entry rules bound it, and the environment / transient and
-push-rejection branches below are untouched.
+records the route as an `O` ledger entry naming the check and the class. It has no cap of its own:
+the GREEN ↔ VERIFY round-trip and ARCHITECT re-entry rules bound it.
 
 ### HANDOFF failure → regression
 
@@ -2005,17 +1863,15 @@ PR creation / CI (steps 3-5) failure:
 
 In a single-repo deployment (target-centric — the default; zero submodules), the cycle produces a single host PR and there is no sub-repo merge-order step at all: HANDOFF opens one host PR with no `blocked-by-subrepo` label, and the external reviewer promotes the draft to ready and merges it directly. The merge-order sequence below governs only a multi-repo deployment.
 
-> **Transition note (issue #91 → services nesting; historical, #798-detached)** — **As of #798 (2026-07) `claude-autoflow` carries zero submodules and is single-repo: the `services` submodule was detached, so the wording below is a historical record of the pre-#798 nesting era and applies only to a multi-repo consumer that operates such a host-private fork submodule.** This section was authored with `danny-avila/LibreChat:main` (upstream) as the sub-repo merge target, later revised (issue #91) to the host-operated fork. After the services-nesting refactor (2026-06-27) the host's direct submodule is `services` = **`{{REPO_SERVICE_HOST}}`**: the host-level sub-repo PR that the `blocked-by-subrepo` merge-order gate governs is the **llmroute PR** (merged into `{{REPO_SERVICE_HOST}}:main`). Nested `librechat` (`{{REPO_SUBMODULE}}` fork) and `librechat-deploy` PRs are llmroute's internal concern — merged inside llmroute before the llmroute PR — and are outside host handoff scope. The authoritative procedure is [`external-review-sequencing.md`](external-review-sequencing.md) and [`submodule-common-rules.md`](submodule-common-rules.md) > **Submodule URL & Pointer Policy**.
+*Secondary (multi-repo):* AutoFlow opens the host PR as a draft with the `blocked-by-subrepo` label; merging is performed by the external reviewer in this order (see [`external-review-sequencing.md`](external-review-sequencing.md) for the full reviewer-facing procedure, and [`submodule-common-rules.md`](submodule-common-rules.md) > **Submodule URL & Pointer Policy**):
 
-*Secondary (multi-repo):* AutoFlow opens the host PR as a draft with the `blocked-by-subrepo` label; merging is performed by the external reviewer in this order (see also issue #91 for stale-pointer risk and [`external-review-sequencing.md`](external-review-sequencing.md) for the full reviewer-facing procedure):
-
-1. **Sub-repo (llmroute) PR merged first.** The reviewer merges the host's direct sub-repo PR into `{{REPO_SERVICE_HOST}}:main` (nested `librechat`/`librechat-deploy` PRs are merged inside llmroute first — llmroute's internal concern, outside host handoff scope). The host PR carries the `blocked-by-subrepo` label through this step; the operator removes the label once the sub-repo merge and pointer reconcile are confirmed complete, which clears the host PR for merge (see [`external-review-sequencing.md`](external-review-sequencing.md) > Merge-order clearance).
-2. **Pointer reconciliation in the host dev branch.** The reviewer updates the submodule pointer in the host PR's dev branch to the llmroute PR merge commit, then pushes (or asks the original branch owner to push, which may be AutoFlow on explicit request). When delegated to AutoFlow, this step follows the **Reconcile preflight** (concurrent-cycle gitlink guard + post-reconcile mergeable/head-commit check gate) in [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight — with multiple cycles in external review, a stale-base pointer bump otherwise leaves the PR `CONFLICTING`, on which `confirm-ci-green.sh` exits 10 before waiting on any check.
-3. **Operator confirms the sub-repo merge and pointer reconcile.** Before the merge-order gate is cleared, the operator manually verifies that (i) the host PR is open and carries `blocked-by-subrepo`, (ii) the upstream sub-repo (llmroute) PR is `merged`, and (iii) the host PR's `services` submodule pointer equals the llmroute PR's merge commit (nested librechat/deploy pointer reconcile is llmroute's internal concern). This pointer-equality confirmation is the operator's manual check (see [`external-review-sequencing.md`](external-review-sequencing.md) > Merge-order clearance). Once confirmed, the operator removes `blocked-by-subrepo` (a single gate cannot safely serialize N concurrent sub-repo cycles automatically). See [`external-review-sequencing.md`](external-review-sequencing.md) for the full operator + reviewer guide.
+1. **Sub-repo PR merged first.** The reviewer merges the host's direct sub-repo PR into `{{REPO_SERVICE_HOST}}:main` (the PR of a submodule nested inside the sub-repo is merged by that sub-repo's own procedure first, outside host handoff scope). The host PR carries the `blocked-by-subrepo` label through this step; the operator removes the label once the sub-repo merge and pointer reconcile are confirmed complete, which clears the host PR for merge (see [`external-review-sequencing.md`](external-review-sequencing.md) > Merge-order clearance).
+2. **Pointer reconciliation in the host dev branch.** The reviewer updates the submodule pointer in the host PR's dev branch to the sub-repo PR's merge commit, then pushes (or asks the original branch owner to push, which may be AutoFlow on explicit request). When delegated to AutoFlow, this step follows the **Reconcile preflight** (concurrent-cycle gitlink guard + post-reconcile mergeable/head-commit check gate) in [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
+3. **Operator confirms the sub-repo merge and pointer reconcile.** Before the merge-order gate is cleared, the operator manually verifies that (i) the host PR is open and carries `blocked-by-subrepo`, (ii) the upstream sub-repo PR is `merged`, and (iii) the host PR's submodule pointer equals that sub-repo PR's merge commit (the pointer reconcile of a submodule nested inside the sub-repo is the sub-repo's own concern). This pointer-equality confirmation is the operator's manual check (see [`external-review-sequencing.md`](external-review-sequencing.md) > Merge-order clearance). Once confirmed, the operator removes `blocked-by-subrepo`. See [`external-review-sequencing.md`](external-review-sequencing.md) for the full operator + reviewer guide.
 4. **Promote the host PR draft → ready.** The reviewer manually clicks "Ready for review" once their internal review checklist is satisfied. AutoFlow does not auto-promote.
-5. **Merge the host PR.** With the `blocked-by-subrepo` label removed and the PR ready, the reviewer merges (the operator's step-3 pointer-reconcile confirmation backs the label removal). The host PR body's literal close-keyword line closes the issue.
+5. **Merge the host PR.** With the `blocked-by-subrepo` label removed and the PR ready, the reviewer merges. The host PR body's literal close-keyword line closes the issue.
 
-**Host-only case**: steps 1-3 are skipped — a host-only PR carries no `blocked-by-subrepo` label and no merge-order gate. The reviewer still performs steps 4 and 5 manually.
+**Host-only case**: steps 1-3 are skipped. The reviewer still performs steps 4 and 5 manually.
 
 **[MUST]** AutoFlow does not perform steps 1, 4, or 5. Step 2 may be delegated to AutoFlow on explicit request. AutoFlow only creates the draft PR(s) at HANDOFF step 4. The hook continues to deny `gh pr merge` and pushes to `main` while a state file has `active:true`.
 
@@ -2024,8 +1880,7 @@ In a single-repo deployment (target-centric — the default; zero submodules), t
 ## Execution Principles
 
 → Single source of truth: [`CLAUDE.md`](../CLAUDE.md) > Execution Principles. These are
-always-on orchestrator invariants (not phase-local), so they stay resident in the core
-file: Safety first, Verify before transition, The route is the AI's judgment (the independent
+always-on orchestrator invariants: Safety first, Verify before transition, The route is the AI's judgment (the independent
 checks are not), Role-spawn idle
 handling, **Verify role-spawn claims before dispatch** (every report's Evidence anchor is
 verified before ACCEPT — an anchor-less report is rejected, not interpreted), and Stop on
@@ -2037,7 +1892,6 @@ error.
 
 - [`CLAUDE.md`](../CLAUDE.md) — cross-phase invariants, the router (phase list + Flow Control), regression caps, Execution Principles, state schema.
 - [`phases/analysis.md`](phases/analysis.md) — DIAGNOSE analysis procedure (3-Phase A/B/3, scoring rubric, bias prevention).
-- [`records/design-rationale.md`](records/design-rationale.md) — why every rule exists.
 - [`evaluation-system.md`](evaluation-system.md) — scoring and PASS thresholds.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — Discussion Protocol, sub-repo rules.
 - [`repo-boundary-rules.md`](repo-boundary-rules.md) — cross-repo coordination.

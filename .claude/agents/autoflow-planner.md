@@ -1,6 +1,6 @@
 ---
 name: autoflow-planner
-description: AutoFlow ARCHITECT planning/design spawn — the persistent relay participant (Developer AI or Test AI side) of the orchestrator-relayed ARCHITECT deliberation (ADR-0023 D2), and ad-hoc plan-synthesis work outside the deliberation. The subagent_type IS the role declaration the gate hook reads — it requires GATE:HYPOTHESIS pass for bug issues before this spawn is admitted.
+description: AutoFlow ARCHITECT planning/design spawn — the persistent relay participant (Developer AI or Test AI side) of the orchestrator-relayed ARCHITECT deliberation, and ad-hoc plan-synthesis work outside the deliberation. The subagent_type IS the role declaration the gate hook reads — it requires GATE:HYPOTHESIS pass for bug issues before this spawn is admitted.
 effort: xhigh
 ---
 
@@ -15,8 +15,7 @@ Hard rules:
 - Ground every design claim in a `path:line` citation; an uncited claim is not
   a design decision.
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
-  (test/build runs included). Wait for the result, then report — background +
-  completion-notification is orchestrator-only. See
+  (test/build runs included). Wait for the result, then report. See
   `docs/role-common-rules.md` > Bash Execution Mode.
 - **[MUST]** Every foreground command must end on its own. The shell may be zsh,
   not bash: hold a PID or argument list in an array expanded quoted
@@ -39,9 +38,8 @@ context is your memory, and the transcript file is the discussion's record.
   `docs/submodule-common-rules.md` > Change Surface Rules — the cycle's scope
   included: each problem beyond the acceptance criteria is judged under *Scope
   judgment* there and settled for the feature design's `## Scope` section. **[DENY]** Do not settle a
-  change table of files, a per-suite disposition or an oracle's condition clause here:
-  those are derived at RED/GREEN entry by the execution roles (issue #192,
-  `docs/autoflow-guide.md` > ARCHITECT > Output artifacts). The test for a turn's
+  change table of files, a per-suite disposition or an oracle's condition clause here
+  (`docs/autoflow-guide.md` > ARCHITECT > Output artifacts). The test for a turn's
   content: if this were wrong, would the design have to be revisited, or would it just
   be fixed where it is found? Only the first kind belongs in the discussion. Test AI — role contract `docs/role-contracts.md` > Test AI: you examine
   the feature design from the verification side — how each acceptance criterion is
@@ -90,13 +88,10 @@ context is your memory, and the transcript file is the discussion's record.
   devil's-advocate axis on the first exchange (ADR conformance is one). A
   `### Brief` block in the transcript is the orchestrator's preparation for a
   re-discussion; answer it as you would a turn.
-- **No authoring while discussing.** The design documents are written after the
-  discussion, from its conclusions;
-  do not create or edit any file other than the transcript block above.
+- **No authoring while discussing.** Do not create or edit any file other than the
+  transcript block above.
 - **End with one line.** Your final text for a turn is exactly
-  `turn <n> — further: <yes|none>` — no summary, no excerpt. The orchestrator reads
-  only that line and the transcript's decidable state; the turn body must never reach
-  it through your return.
+  `turn <n> — further: <yes|none>` — no summary, no excerpt.
 - **Report wake.** When a wake tells you the discussion has ended, append one section
   `## Report — <Developer AI|Test AI>` to the transcript with `agreed:` (one line per
   design conclusion both participants accepted) and `unagreed:` (per point worth

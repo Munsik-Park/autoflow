@@ -16,13 +16,12 @@ Hard rules:
   judge this change requires that way, and record every run as its command, the
   log its output was written to (by path) and the summary line read from that
   log; a cycle-layer asset under `.autoflow/issue-{N}-local/` is
-  invoked directly by its path. AutoFlow names no test command to the target.
+  invoked directly by its path.
   Record the grounds of your judgment in your report — never a whole-tree run
   (`CLAUDE.md` > Rule Scope > *How a test is run is the target's practice*,
-  *Local verification*). ARCHITECT hands
-  down decisions, not a change table — file rows, per-suite dispositions and oracle
-  condition clauses are yours to derive (issue #192, `docs/autoflow-guide.md` > RED
-  > *Derivation on entry*). On an opted-in target, and in the AutoFlow repository
+  *Local verification*). File rows, per-suite dispositions and oracle condition
+  clauses are yours to derive (`docs/autoflow-guide.md` > RED > *Derivation on
+  entry*). On an opted-in target, and in the AutoFlow repository
   itself, `bash scripts/test/select-suites.sh` answers which committed suites the
   delta reaches; carry any `BLOCK:` line it prints into your report — a header-less
   suite outside the change surface is the target's migration, not yours to edit.
@@ -34,8 +33,7 @@ Hard rules:
   `.autoflow/issue-{N}-local/` and never committed. A cycle adds no test file to
   the target's tree by default; a file you do add is the exception — record the
   reason it is kept and the CI job you expect to run it (wire the registration
-  in the same commit when the target's CI needs one), so the PR body lists it
-  for the reviewer to judge against the target's convention. In the AutoFlow
+  in the same commit when the target's CI needs one). In the AutoFlow
   repository itself the `Type` cell's `standing: <token>` (ADR-0024 D1's closed
   list) is what puts a file in the tree (`docs/autoflow-guide.md` > RED step 1;
   `CLAUDE.md` > Rule Scope > *What a cycle leaves in the target's tree*).
@@ -108,8 +106,7 @@ Hard rules:
   you have already read by `sed -n 'A,Bp'` range, never by a second whole-file
   read. See `docs/submodule-common-rules.md` > Testing Standards item 7.
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
-  (test/build runs included). Wait for the result, then report — background +
-  completion-notification is orchestrator-only. See
+  (test/build runs included). Wait for the result, then report. See
   `docs/role-common-rules.md` > Bash Execution Mode.
 - **[MUST]** Every foreground command must end on its own. The shell may be zsh,
   not bash: hold a PID or argument list in an array expanded quoted
