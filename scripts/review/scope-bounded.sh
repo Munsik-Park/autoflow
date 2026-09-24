@@ -26,8 +26,8 @@
 #           scope-bounded-grounds: <reason>
 #         Exit 0 when bounded, 1 when not, 2 on usage / unreadable input / unreadable diff.
 #   entry --issue <N> [--dir <dir>]
-#         Combines the per-PR findings files <dir>/issue-<N>-review-findings-<name>-<pr>.md whose
-#         pr: line names <owner>/<name>#<pr> (dir default .autoflow; another name under that
+#         Combines the per-PR findings files <dir>/issue-<N>-review-findings-<owner>.<name>-<pr>.md
+#         whose pr: line is <owner>/<name>#<pr> (dir default .autoflow; another name under that
 #         prefix takes no part, a disagreeing pr: line is the full path, and a single
 #         issue-<N>-review-findings.md is read only when no per-PR name exists) for PREFLIGHT's
 #         Scope-bounded entry. Bounded only when at least one file's max_severity is Medium+ and
@@ -174,19 +174,18 @@ cmd_entry() {
   [[ "$issue" =~ ^[0-9]+$ ]] || usage
   [ -d "$dir" ] || usage
 
-  # A per-PR file is named issue-<N>-review-findings-<name>-<pr>.md and its pr: line names
-  # <owner>/<name>#<pr>. Any other issue-<N>-review-findings-*.md takes no part; a per-PR name
-  # whose pr: line disagrees is a defect. The single issue-<N>-review-findings.md is read only
-  # when no per-PR name exists.
-  local f name rname rnum ref rrepo files="" ignored="" notes="" defect=0
+  # A per-PR file is named issue-<N>-review-findings-<owner>.<name>-<pr>.md (an owner name holds
+  # no `.`) and its pr: line is <owner>/<name>#<pr>. Any other issue-<N>-review-findings-*.md
+  # takes no part; a per-PR name whose pr: line disagrees is a defect. The single
+  # issue-<N>-review-findings.md is read only when no per-PR name exists.
+  local f name stem ref files="" ignored="" notes="" defect=0
   while IFS= read -r f; do
     [ -n "$f" ] || continue
     name=${f##*/}
-    rname=${name#"issue-${issue}-review-findings-"}; rname=${rname%.md}
-    if [[ "$rname" =~ ^(.+)-([0-9]+)$ ]]; then
-      rname=${BASH_REMATCH[1]}; rnum=${BASH_REMATCH[2]}
-      ref=$(file_pr "$f"); rrepo=${ref%#*}; rrepo=${rrepo##*/}
-      if [[ "$ref" =~ $REF_RE ]] && [ "${ref##*#}" = "$rnum" ] && [ "$rrepo" = "$rname" ]; then
+    stem=${name#"issue-${issue}-review-findings-"}; stem=${stem%.md}
+    if [[ "$stem" =~ ^([A-Za-z0-9-]+)\.(.+)-([0-9]+)$ ]]; then
+      ref=$(file_pr "$f")
+      if [ "$ref" = "${BASH_REMATCH[1]}/${BASH_REMATCH[2]}#${BASH_REMATCH[3]}" ]; then
         files="${files:+$files$'\n'}$f"
       else
         notes="${notes:+$notes; }$name pr: line ${ref:-absent} does not name its PR"; defect=1

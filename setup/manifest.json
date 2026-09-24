@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "53d30abb3d8c93c106b67fce720bcb21df767e997d3187521bdb9e4217d91894"
+      "sha256": "81d95bcc12ad7728d59e78abd87c5e0ceaa12b9e8d78f0edd709fb39dec2a198"
     },
     {
       "source": "docs/development-guideline.md",
@@ -307,7 +307,7 @@
       "dest": "scripts/review/scope-bounded.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "32478e47380be0628b53749440daf849acb59ba3d941f02ba0f1ba5b47ed3a0f"
+      "sha256": "972e91c8f0a11184aab08617c6a952db12d714b9e11edf2bacdb4b29e7cda0c1"
     },
     {
       "source": "scripts/test/suite-manifest.sh",
