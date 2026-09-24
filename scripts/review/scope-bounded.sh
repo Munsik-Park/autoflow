@@ -7,10 +7,8 @@
 # judgment below holds. The judgment is a set relation, never an agent's "this is small":
 #
 #   triage   every Medium+ finding names a file, and each file is in the diff of the PR the
-#            finding belongs to (issue #280: the PR whose repository owns the code, which is
-#            not always the PR whose review raised it);
-#   entry    every reviewed PR whose findings file carries a Medium+ verdict judged `true` —
-#            the review-response cycle is one per issue, so the heavier judgment wins;
+#            finding's owner cell names (the reviewed PR when the row has none);
+#   entry    every findings file whose max_severity is Medium+ carries `scope-bounded: true`;
 #   fix      the fix adds no new file (a new script / workflow / hook / test file is a new
 #            mechanism and leaves the bounded path).
 #
@@ -29,7 +27,7 @@
 #         Exit 0 when bounded, 1 when not, 2 on usage / unreadable input / unreadable diff.
 #   entry --issue <N> [--dir <dir>]
 #         Combines the per-PR findings files <dir>/issue-<N>-review-findings-*.md (dir default
-#         .autoflow; a pre-#280 issue-<N>-review-findings.md only when none exists) for PREFLIGHT's
+#         .autoflow; a single issue-<N>-review-findings.md only when none exists) for PREFLIGHT's
 #         Scope-bounded entry. Bounded only when at least one file's max_severity is Medium+ and
 #         every such file carries `scope-bounded: true`; a `false`, a Medium+ file with no line,
 #         or a file whose max_severity line is missing, repeated or unparseable is the full path.
@@ -108,8 +106,7 @@ cmd_triage() {
   [ -z "$difffile" ] || [ -r "$difffile" ] || usage
   [ -z "$repo" ] || [[ "$repo#0" =~ $REF_RE ]] || usage
 
-  # The reviewed PR: the file's own `pr:` line, which --pr / --repo must not contradict — a
-  # findings file judged against another PR's diff is the defect issue #280 removes.
+  # The reviewed PR is the file's own `pr:` line; a --pr / --repo that contradicts it is refused.
   local own_ref
   own_ref=$(file_pr "$findings")
   if [ -n "$own_ref" ]; then
@@ -180,9 +177,7 @@ cmd_entry() {
   [[ "$issue" =~ ^[0-9]+$ ]] || usage
   [ -d "$dir" ] || usage
 
-  # A pre-#280 single file is read only when no per-PR file exists: beside per-PR files it is
-  # a stale verdict from before the switch, and would decide the path for reviews that no
-  # longer hold.
+  # The single issue-<N>-review-findings.md is read only when no per-PR file exists.
   local files
   files=$(find "$dir" -maxdepth 1 -type f -name "issue-${issue}-review-findings-*.md" | LC_ALL=C sort)
   [ -n "$files" ] || files=$(find "$dir" -maxdepth 1 -type f -name "issue-${issue}-review-findings.md")
@@ -194,9 +189,8 @@ cmd_entry() {
   local f name sev count verdict notes="" defect=0 bounded=0 medium=0
   while IFS= read -r f; do
     name=${f##*/}
-    # max_severity: count every line that declares the key, whatever its value, so a malformed
-    # second declaration is a repeat rather than invisible; then parse the one line — colon
-    # canonical, `=` and whitespace tolerated.
+    # Every line declaring max_severity counts, whatever its value; exactly one is parsed —
+    # colon canonical, `=` and whitespace tolerated.
     count=$(grep -cE '^[[:space:]]*max_severity([[:space:]:=]|$)' "$f" || true)
     if [ "$count" -ne 1 ]; then
       notes="${notes:+$notes; }$name max_severity lines: $count"; defect=1; continue
