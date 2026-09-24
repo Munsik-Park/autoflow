@@ -42,16 +42,10 @@
 #           scope-bounded-fix: true|false
 #           scope-bounded-fix-grounds: <reason>
 #         Exit 0 when the bounded path holds, 1 when it must be left, 2 on usage.
-#
-# Findings-file grammar (docs/autoflow-guide.md > HANDOFF step 6.5): a `pr: <owner/name>#<N>`
-# line naming the reviewed PR, one `max_severity: <None|Low|Medium|High|Critical>` line (`=` and
-# whitespace separators tolerated), and a markdown table whose cells are the severity, `path:line`
-# (or `path`), remedy_class, the owner `<owner/name>#<N>` and the finding — the owner is read from
-# the fourth cell only. Rows below the first "superseded" / "historical" heading are ignored.
 
 set -euo pipefail
 
-usage() { sed -n '/^# Subcommands/,/^# Findings-file/p' "$0" | sed 's/^# \{0,1\}//' | sed '$d' >&2; exit 2; }
+usage() { sed -n '/^# Subcommands/,/^$/p' "$0" | sed 's/^# \{0,1\}//' | sed '$d' >&2; exit 2; }
 die() { echo "scope-bounded: error: $*" >&2; exit 2; }
 
 REF_RE='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$'

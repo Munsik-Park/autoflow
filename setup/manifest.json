@@ -307,7 +307,7 @@
       "dest": "scripts/review/scope-bounded.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ce06f262b67642c4780e2541a022760ac34a99471cf4a1f8e2399855e259657e"
+      "sha256": "a0066955fbf434b7b14c071033c6c733419d890882f446afbccadfc26c8743e0"
     },
     {
       "source": "scripts/test/suite-manifest.sh",
