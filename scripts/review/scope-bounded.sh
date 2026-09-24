@@ -15,8 +15,8 @@
 # Subcommands
 #   triage --findings <file> (--pr <N> [--repo <owner/name>] | --diff-files <file>)
 #          [--owner-diff <owner/name>#<N>=<file>]...
-#         Judges one reviewed PR's findings file. A Medium+ row with no owner cell, or whose
-#         owner is the file's own `pr:` line, is compared against the reviewed PR's diff
+#         Judges one reviewed PR's findings file. A Medium+ row whose owner cell is empty, is
+#         not a PR reference, or is the file's own `pr:` line is compared against the reviewed PR's diff
 #         (`gh pr diff <N> [--repo]`, or --diff-files); a row owned by another PR against that
 #         PR's diff (--owner-diff, else `gh pr diff <N> --repo <owner/name>`). A --pr / --repo
 #         that disagrees with the file's `pr:` line is a usage error. Prints three lines for
@@ -45,9 +45,9 @@
 #
 # Findings-file grammar (docs/autoflow-guide.md > HANDOFF step 6.5): a `pr: <owner/name>#<N>`
 # line naming the reviewed PR, one `max_severity: <None|Low|Medium|High|Critical>` line (`=` and
-# whitespace separators tolerated), and a markdown table whose first cell is the severity, whose
-# second cell is `path:line` (or `path`), and one of whose later cells is the owner
-# `<owner/name>#<N>`. Rows below the first "superseded" / "historical" heading are ignored.
+# whitespace separators tolerated), and a markdown table whose cells are the severity, `path:line`
+# (or `path`), remedy_class, the owner `<owner/name>#<N>` and the finding — the owner is read from
+# the fourth cell only. Rows below the first "superseded" / "historical" heading are ignored.
 
 set -euo pipefail
 
@@ -61,17 +61,14 @@ finding_rows() {
     /^#+ .*([Ss]uperseded|[Hh]istorical)/ { stop = 1 }
     stop { next }
     /^\|/ {
-      n = split($0, c, "|")
+      split($0, c, "|")
       sev = c[2]; gsub(/^[ \t]+|[ \t]+$/, "", sev)
       if (sev != "Medium" && sev != "High" && sev != "Critical") next
       loc = c[3]; gsub(/`/, "", loc); gsub(/^[ \t]+|[ \t]+$/, "", loc)
       sub(/:[0-9].*$/, "", loc); sub(/[ \t].*$/, "", loc)
       if (loc == "" || loc == "—" || loc == "-") loc = "<nofile>"
-      owner = ""
-      for (i = 4; i < n; i++) {
-        v = c[i]; gsub(/`/, "", v); gsub(/^[ \t]+|[ \t]+$/, "", v)
-        if (v ~ /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#[0-9]+$/) { owner = v; break }
-      }
+      owner = c[5]; gsub(/`/, "", owner); gsub(/^[ \t]+|[ \t]+$/, "", owner)
+      if (owner !~ /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#[0-9]+$/) owner = ""
       print owner "\t" loc
     }' "$1" | sort -u
 }
@@ -103,7 +100,6 @@ cmd_triage() {
   [ -z "$difffile" ] || [ -r "$difffile" ] || usage
   [ -z "$repo" ] || [[ "$repo#0" =~ $REF_RE ]] || usage
 
-  # The reviewed PR is the file's own `pr:` line; a --pr / --repo that contradicts it is refused.
   local own_ref
   own_ref=$(file_pr "$findings")
   if [ -n "$own_ref" ]; then
@@ -127,7 +123,6 @@ cmd_triage() {
     return 1
   fi
 
-  # Compare each owner's rows against that owner's diff; the empty owner is the reviewed PR.
   local outside="" sizes="" owner diff_set paths out mapped
   while IFS= read -r owner; do
     if [ -z "$owner" ]; then
@@ -174,10 +169,6 @@ cmd_entry() {
   [[ "$issue" =~ ^[0-9]+$ ]] || usage
   [ -d "$dir" ] || usage
 
-  # A per-PR file is named issue-<N>-review-findings-<owner>.<name>-<pr>.md (an owner name holds
-  # no `.`) and its pr: line is <owner>/<name>#<pr>. Any other issue-<N>-review-findings-*.md
-  # takes no part; a per-PR name whose pr: line disagrees is a defect. The single
-  # issue-<N>-review-findings.md is read only when no per-PR name exists.
   local f name stem ref files="" ignored="" notes="" defect=0
   while IFS= read -r f; do
     [ -n "$f" ] || continue
@@ -207,8 +198,6 @@ cmd_entry() {
   while IFS= read -r f; do
     [ -n "$f" ] || continue
     name=${f##*/}
-    # Every line declaring max_severity counts, whatever its value; exactly one is parsed —
-    # colon canonical, `=` and whitespace tolerated.
     count=$(grep -cE '^[[:space:]]*max_severity([[:space:]:=]|$)' "$f" || true)
     if [ "$count" -ne 1 ]; then
       notes="${notes:+$notes; }$name max_severity lines: $count"; defect=1; continue
