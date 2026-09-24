@@ -54,9 +54,6 @@ die() { echo "scope-bounded: error: $*" >&2; exit 2; }
 
 REF_RE='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$'
 
-# finding_rows <findings.md> → one "<owner>\t<path>" line per Medium+ row; the owner is empty when
-# the row has no `owner/name#N` cell, and the path is "<nofile>" for a Medium+ row with no
-# parseable path so the caller can fail closed.
 finding_rows() {
   awk '
     /^#+ .*([Ss]uperseded|[Hh]istorical)/ { stop = 1 }
@@ -77,12 +74,10 @@ finding_rows() {
     }' "$1" | sort -u
 }
 
-# file_pr <findings.md> → the value of the first `pr:` line (empty when absent).
 file_pr() {
   awk '/^[ \t]*pr:/ { v = $0; sub(/^[ \t]*pr:[ \t]*/, "", v); gsub(/`/, "", v); sub(/[ \t]+$/, "", v); print v; exit }' "$1"
 }
 
-# pr_diff <owner/name#N> → the PR's changed file names, sorted.
 pr_diff() {
   local out
   out=$(gh pr diff "${1##*#}" --repo "${1%#*}" --name-only) || die "could not read the diff of $1"
