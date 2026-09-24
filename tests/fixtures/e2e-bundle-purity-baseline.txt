@@ -21,10 +21,3 @@
 # converges back to the absolute zero-hit scan it started as (ledger E14).
 # Adding a NEW entry here to suppress a newly-introduced leak is forbidden --
 # only removals (as files are cleaned) are legitimate edits to this file.
-.claude/autoflow/CLAUDE.md
-.claude/autoflow/docs/autoflow-guide.md
-.claude/autoflow/docs/development-guideline.md
-.claude/autoflow/docs/external-review-sequencing.md
-.claude/autoflow/docs/git-workflow.md
-.claude/autoflow/docs/phases/analysis.md
-.claude/autoflow/docs/submodule-common-rules.md

@@ -8,30 +8,25 @@
 
 **Each AI agent operates within its assigned repository only.**
 
-Cross-repository modifications require explicit coordination through the Orchestrator, ensuring traceability and preventing conflicting changes.
+Cross-repository modifications require explicit coordination through the Orchestrator.
 
 ---
 
 ## General Boundary Principles
 
-Throughout these rules, **target** (equivalently **target scope**) means the scope that receives the work — the repository or directory whose source a change lands in — and, under the epic-#785 host↔target inversion, the development project that consumes AutoFlow as a versioned tool (see [`tool-delivery-contract.md`](tool-delivery-contract.md) and [ADR-0015](records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md)). Its opposite pole is the **host** repository and its **Orchestrator** — the coordinating source. A single reading holds under both layouts: today the target scope is a sub-repo; after the inversion it is the consuming project root. The three principles below are topology-agnostic — they hold whether the host contains zero submodules or many — and each restates an existing rule rather than adding one, with the multi-repo elaboration kept as secondary detail.
+Throughout these rules, **target** (equivalently **target scope**) means the scope that receives the work — the repository or directory whose source a change lands in — and the development project that consumes AutoFlow as a versioned tool (see [`tool-delivery-contract.md`](tool-delivery-contract.md)). Its opposite pole is the **host** repository and its **Orchestrator** — the coordinating source. The three principles below are topology-agnostic — they hold whether the host contains zero submodules or many — with the multi-repo elaboration kept as secondary detail.
 
 ### Artifacts (산출물)
 
-Every produced artifact belongs to the scope that owns the files it lives in: code and tests belong to the target scope that owns that source; the decision ledger and AutoFlow state belong to the host; a pull request is opened from the host regardless of which scope produced the commits. *Secondary (multi-repo):* the owning scope is a sub-repo directory, so each sub-repo's Submodule AI commits to its fork and the Orchestrator opens the PR. *Trace:* the Commit Ownership committer column and the Decision Ledger host-ownership rule (`CLAUDE.md`), and the own-repo Read + Write cells of the Permission Matrix (below) — the principle names an existing ownership, not a new obligation.
+Every produced artifact belongs to the scope that owns the files it lives in: code and tests belong to the target scope that owns that source; the decision ledger and AutoFlow state belong to the host; a pull request is opened from the host regardless of which scope produced the commits. *Secondary (multi-repo):* the owning scope is a sub-repo directory, so each sub-repo's Submodule AI commits to its fork and the Orchestrator opens the PR. *See:* the Commit Ownership committer column and the Decision Ledger host-ownership rule (`CLAUDE.md`), and the own-repo Read + Write cells of the Permission Matrix (below).
 
 ### Procedures (절차)
 
-Coordination steps — work breakdown, sequencing, integration verification, and PR opening — belong to the Orchestrator; execution steps — writing code and tests, and committing them — belong to the target scope. No agent performs a step outside its scope. *Secondary (multi-repo):* cross-repo sequencing (sub-repo → pointer bump → host), merge ordering, and fork push are the Orchestrator's coordination surface. *Trace:* Rule 1, Rule 3, and Rule 4 (below), and the PR-opener = Orchestrator column of Commit Ownership (`CLAUDE.md`) — the narration subject shifts to the target, the obligations do not.
+Coordination steps — work breakdown, sequencing, integration verification, and PR opening — belong to the Orchestrator; execution steps — writing code and tests, and committing them — belong to the target scope. No agent performs a step outside its scope. *Secondary (multi-repo):* cross-repo sequencing (sub-repo → pointer bump → host), merge ordering, and fork push are the Orchestrator's coordination surface. *See:* Rule 1, Rule 3, and Rule 4 (below), and the PR-opener = Orchestrator column of Commit Ownership (`CLAUDE.md`).
 
 ### Backlog (백로그)
 
-Tracker placement follows each repo's composition (D4, settled in S12 #800): AutoFlow-framework tracking items — issues, sub-issues, and the tracking hub — live in this host repository (`Munsik-Park/autoflow`). Each item is routed to the scope that will execute it. *Secondary (multi-repo, where no service-host tracker is designated):* all tracking items live in that instance's host repository — each affected sub-repo has its own work item filed in the host and labeled with that sub-repo (no tracker lives inside the sub-repo); the sub-repo's PR cross-references the host issue as `Part of <host>#N`, and forks host no issues. *Trace:* Issue Management (`CLAUDE.md`), Rule 1's coordination path (below), and the Checklist for Cross-Repo Changes (below).
-
-> **Transition note (epic #785):** The target-owned re-attribution — routing AutoFlow-framework issues
-> to this host repository (`Munsik-Park/autoflow`) — was
-> executed in S12 (#800), following the S11a (#798) host↔target flip; historical
-> tracking placement was reconciled under the S12 go/no-go migration manifest.
+Tracker placement follows each repo's composition: AutoFlow-framework tracking items — issues, sub-issues, and the tracking hub — live in this host repository (`Munsik-Park/autoflow`). Each item is routed to the scope that will execute it. *Secondary (multi-repo, where no service-host tracker is designated):* all tracking items live in that instance's host repository — each affected sub-repo has its own work item filed in the host and labeled with that sub-repo (no tracker lives inside the sub-repo); the sub-repo's PR cross-references the host issue as `Part of <host>#N`, and forks host no issues. *See:* Issue Management (`CLAUDE.md`), Rule 1's coordination path (below), and the Checklist for Cross-Repo Changes (below).
 
 ---
 
@@ -53,8 +48,6 @@ Tracker placement follows each repo's composition (D4, settled in S12 #800): Aut
 ### Rule 1: No Cross-Repo Direct Commits
 
 An AI agent assigned to `repo-backend` **must not** commit to `repo-frontend`, even if the change is trivial (e.g., updating an API URL constant).
-
-**Why**: Cross-repo commits bypass that repo's AutoFlow evaluation cycle, creating unreviewed changes.
 
 **Instead**: The Orchestrator files a work item in the host repository, labels it with the target repo, and dispatches it to that repo's Submodule AI; the target scope executes the work but hosts no tracker of its own.
 
@@ -110,7 +103,7 @@ All exceptions must be:
 ```
 ┌─────────────────────────────────┐
 │        Orchestrator AI          │
-│       (claude-autoflow)         │
+│           (host repo)           │
 ├─────────────────────────────────┤
 │  - Creates sub-issues           │
 │  - Coordinates merge order      │

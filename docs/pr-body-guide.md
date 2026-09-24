@@ -1,15 +1,13 @@
 # PR Body Authoring Guide
 
 PR body 작성 시 참고하는 가이드. AI orchestrator와 수동 PR 작성자 모두 대상.
-가이드는 living document — 시간이 지나며 항목이 추가될 수 있다.
 
 ## Principles
 
 ### 1. Claim의 정확도
 
 PR이 body에서 약속하는 동작 / 검증 / 보호 범위는 실제로 구현하는 것과 정확히
-일치해야 한다. overstated claim (실제보다 강한 약속) 은 리뷰에서 catch되며
-추가 round-trip을 만든다.
+일치해야 한다.
 
 - 강한 표현 (machine-verified, fully enforced, idempotent, atomic, race-free
   등) 은 실제로 그 수준을 충족할 때만 사용.
@@ -19,8 +17,7 @@ PR이 body에서 약속하는 동작 / 검증 / 보호 범위는 실제로 구�
 ### 2. 거부된 대안의 노출
 
 implementation을 결정하는 과정에서 고려했으나 거부한 대안이 있다면, 거부
-사유와 함께 body에 노출한다. 리뷰어가 거부 정당화의 타당성을 평가할 수 있게
-한다.
+사유와 함께 body에 노출한다.
 
 - 거부 사유는 정확하게: "architectural boundary 위반"인지 "비용 trade-off"인지
   분명히 구분.
@@ -29,7 +26,6 @@ implementation을 결정하는 과정에서 고려했으나 거부한 대안이 
 ### 3. 한계와 known gaps
 
 이 PR이 cover하지 않는 path / 잔존 risk / 후속 작업이 필요한 항목을 명시.
-이미 인지된 한계를 리뷰어가 다시 catch하지 않게 한다.
 
 - "이 PR이 다루지 않는 것" 섹션 또는 body 본문에 단락으로.
 - 후속 issue 번호가 있다면 cross-reference.
@@ -43,9 +39,8 @@ context / AC 를 판단 근거로 삼았는지 `path > section` 형태로 명시
 - ADR / design note / architecture context 를 명시적으로 링크. ADR 불필요 시
   사유 한 줄 ("ADR not required: ...").
 - linked issue 의 AC 를 PR 에서 도달 가능하게 (이슈 링크 + AC 섹션, 또는 body 에 명시).
-  AC 미확인으로 인한 반복 `High` 오판을 막는다.
-- `.autoflow/*` scratch 는 gitignore 라 PR 에서 도달 불가 — 리뷰 입력으로 링크하지
-  않고, 리뷰어가 봐야 할 근거는 linked issue 나 commit 된 문서로 옮긴다.
+- `.autoflow/*` scratch 는 리뷰 입력으로 링크하지 않고, 리뷰어가 봐야 할 근거는
+  linked issue 나 commit 된 문서로 옮긴다.
 
 정책: Repository documents may be used as review evidence only when the PR links or
 names the relevant document/section, or when the reviewer independently discovers
@@ -61,25 +56,20 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 - 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: deliberation이 검증
   방법의 축소를 결정하고, external reviewer가 그 reason의 타당성을 판단하며,
-  operator는 criterion의 **내용**이 바뀔 때만 개입한다. reviewer가 보지 못한 축소는
-  판단되지 않은 축소다. 규칙 본문은 [`autoflow-guide.md`](autoflow-guide.md) >
+  operator는 criterion의 **내용**이 바뀔 때만 개입한다. 규칙 본문은 [`autoflow-guide.md`](autoflow-guide.md) >
   ARCHITECT > Output artifacts > *Test necessity* 와 ARCHITECT > *Report routing*.
 - 형식은 AC id + disposition + reason 한 줄. reason은 verification design의 셀을
-  옮겨 적고 새로 쓰지 않는다 — PR body와 design이 갈라지면 reviewer가 판단하는
-  대상이 무엇인지 불분명해진다.
+  옮겨 적고 새로 쓰지 않는다.
 - issue AC 전부가 `automated` 이면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
-  빈 섹션과 누락된 섹션은 reviewer에게 구분되지 않는다.
-- `cycle` 층의 `automated` row(`Type` 셀에 `standing:` 토큰이 없는 row)는 test 코드가
-  PR에 없으므로, 같은 섹션에 그 row의 **run record** — VERIFY step 1이 실행한 command와
-  summary line — 를 한 줄로 싣는다. reviewer가 재실행할 수 있는 것은 이 record다
-  (ADR-0024 D1, D2; `autoflow-guide.md` > HANDOFF step 4).
+- `cycle` 층의 `automated` row(`Type` 셀에 `standing:` 토큰이 없는 row)는 같은 섹션에 그
+  row의 **run record** — VERIFY step 1이 실행한 command와 summary line — 를 한 줄로 싣는다
+  (`autoflow-guide.md` > HANDOFF step 4).
 - AI가 도구로 실행한 `manual` row는 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
   한 줄로 싣는다. 사람이 실행하는 `manual` row는 reason에 도구를 확보할 수 없었던 이유가 들어
   있다 (`CLAUDE.md` > Rule Scope > *The tools the work needs*; `autoflow-guide.md` > ARCHITECT > *Tools*).
 - cycle이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
   남겨 두는 이유, 그리고 HANDOFF 5단계가 CI 로그에서 확인한 실행 job(target에 CI가 없으면
-  `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다. reviewer는 이
-  목록으로 추가를 target 규약에 비춰 판단한다 — AutoFlow는 보관을 분류로 인증하지 않는다
+  `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
   (`CLAUDE.md` > Rule Scope > *What a cycle leaves in the target's tree*;
   `autoflow-guide.md` > HANDOFF step 4·5).
 
@@ -108,14 +98,4 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 - [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF 가 본 가이드를 cross-reference (AI orchestrator).
 - 수동 PR 작성 시도 동일하게 참조.
 
-새 principle 추가 시 형식 유지 (이름 + 본문 + 예시 1-2건) + Changelog 한 줄.
-
----
-
-## Changelog
-
-- 2026-09-23: Principle 5에 AI가 도구로 실행한 `manual` row의 observation record 노출 추가 (#277).
-- 2026-09-11: Principle 5에 `cycle` 층 `automated` row의 run record 노출 추가 (#225, ADR-0024 D1/D2).
-- 2026-08-25: Principle 5 (Verification dispositions — automated 아닌 issue AC의 disposition + reason 노출; 3단 guard의 reviewer tier) 추가 (#153).
-- 2026-06-05: Principle 4 (판단 근거의 명시적 링크 / PR-reachability) 추가.
-- 2026-05-22: 초기 작성.
+새 principle 추가 시 형식 유지 (이름 + 본문 + 예시 1-2건).

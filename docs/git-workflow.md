@@ -38,7 +38,7 @@ Co-Authored-By: Claude <model> <noreply@anthropic.com>
 
 `type`: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`.
 
-The `Next:` line lets the next session pick up where this one left off (see
+The `Next:` line names the action the next session continues from (see
 [`role-common-rules.md`](role-common-rules.md#session-protocol)).
 
 ---
@@ -113,8 +113,6 @@ Closes #<issue-number>
 
 ### Recommended: Squash and Merge
 
-- Keeps `main` history clean.
-- Each feature/fix becomes a single commit.
 - PR description becomes the commit body.
 
 ### When to Use Regular Merge
@@ -126,35 +124,33 @@ Closes #<issue-number>
 
 In a single-repo deployment (target-centric — the default; zero submodules, see `CLAUDE.md` > Deployment Topology), the cycle produces a single host PR and there is no sub-repo merge-order constraint: the host PR carries no `blocked-by-subrepo` label, and the external reviewer promotes the draft to ready and merges it directly.
 
-In a multi-repo deployment (host PR with sub-repo dependencies), the merge order is sub-repo → pointer bump → host. The host PR is created as a draft with the `blocked-by-subrepo` label at HANDOFF. Merge-order clearance is operator-performed (ADR-0015 D3 — a machine status check for this signal is advisory-only, never an enforceable required check): once the sub-repo merge and pointer reconcile are confirmed complete, the operator removes the `blocked-by-subrepo` label at merge time (a single dispatch cannot safely gate N concurrent sub-repo cycles automatically; see `docs/external-review-sequencing.md` > Merge-order clearance). Pointer alignment now rests on the operator's **manual** `git ls-tree HEAD services` check as the only remaining stale-pointer defense.
+In a multi-repo deployment (host PR with sub-repo dependencies), the merge order is sub-repo → pointer bump → host. The host PR is created as a draft with the `blocked-by-subrepo` label at HANDOFF. Merge-order clearance is operator-performed; a machine status check for this signal is advisory-only, never an enforceable required check. Once the sub-repo merge and pointer reconcile are confirmed complete, the operator removes the `blocked-by-subrepo` label at merge time (see `docs/external-review-sequencing.md` > Merge-order clearance). Pointer alignment is checked by the operator's **manual** `git ls-tree HEAD <submodule>` check.
 
 Full reviewer-facing procedure: [`external-review-sequencing.md`](external-review-sequencing.md).
 
-See also: issue #91 (stale-pointer risk), [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF > Merge Sequencing (external review).
+See also: [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF > Merge Sequencing (external review).
 
 ### Pointer reconciliation — concurrent-cycle gitlink guard
 
-In a single-repo deployment (target-centric — the default; zero submodules), this step does not exist: with no `services` submodule there is no gitlink to reconcile. This is an active N/A — the guard below applies **only** to a multi-repo deployment, and a single-repo instance skips it entirely rather than silently omitting it.
+In a single-repo deployment (target-centric — the default; zero submodules), this step does not exist. This is an active N/A — the guard below applies **only** to a multi-repo deployment, and a single-repo instance skips it entirely rather than silently omitting it.
 
-When a **reconcile request** (pointer bump after the sub-repo PR merges) is delegated to AutoFlow and several cycles are in external review at once, the dev branch may have forked before another cycle's host PR merged and reconciled the `services` pointer. A naive bump + push then leaves the host PR `CONFLICTING`, on which `confirm-ci-green.sh` exits 10 before waiting on any check — the recurring "second push not recognized" symptom. Before bumping, compare `BASE` (dev's merge-base pointer), `MAIN` (current `origin/main` pointer), and `TARGET` (this issue's `merge_commit_sha`); if `MAIN != BASE`, resolve by fork ancestry:
+When a **reconcile request** (pointer bump after the sub-repo PR merges) is delegated to AutoFlow and several cycles are in external review at once, the dev branch may have forked before another cycle's host PR merged and reconciled the submodule pointer. Before bumping, compare `BASE` (dev's merge-base pointer), `MAIN` (current `origin/main` pointer), and `TARGET` (this issue's sub-repo PR `merge_commit_sha`); if `MAIN != BASE`, resolve by fork ancestry:
 
 ```bash
-git fetch origin main && git -C services fetch origin main
+git fetch origin main && git -C <submodule> fetch origin main
 # TARGET descendant of MAIN: put TARGET on the dev gitlink FIRST, then merge main.
 # A bare `git merge origin/main` with the dev pointer still at BASE resolves the
-# gitlink to MAIN (3-way merge takes theirs when ours==base), NOT TARGET.
-# Note: TARGET here is the llmroute (services) PR merge commit; nested
-# librechat/deploy pointer reconcile inside llmroute is llmroute's internal concern.
-if git -C services merge-base --is-ancestor <MAIN> <TARGET>; then
-  git -C services checkout <TARGET>
-  git add services && git commit -m "chore(#<N>): reconcile services pointer to <TARGET>"
+# gitlink to MAIN, NOT TARGET.
+if git -C <submodule> merge-base --is-ancestor <MAIN> <TARGET>; then
+  git -C <submodule> checkout <TARGET>
+  git add <submodule> && git commit -m "chore(#<N>): reconcile <submodule> pointer to <TARGET>"
   git merge --no-edit origin/main          # dev gitlink TARGET ⊇ MAIN -> submodule stays at TARGET
-  test "$(git ls-tree HEAD services | awk '{print $3}')" = "<TARGET>" || echo "POINTER != TARGET — fix before push"
+  test "$(git ls-tree HEAD <submodule> | awk '{print $3}')" = "<TARGET>" || echo "POINTER != TARGET — fix before push"
 fi
-# MAIN descendant of TARGET (would regress the pointer) OR divergent -> do NOT push; escalate to operator
+# MAIN descendant of TARGET OR divergent -> do NOT push; escalate to operator
 ```
 
-Before/after pushing, verify **all three**: (1) `git ls-tree HEAD services` == `TARGET` (manual pointer-equality check — ADR-0015 D3); (2) the generic mergeable + check-rollup confirmation via `scripts/handoff/confirm-ci-green.sh --pr <PR>` (the shared HANDOFF step-5 helper — issue #25; see [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF step 5 and [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight — not restated here); (3) the CI checks on the new head commit all `success`, read by commit SHA (`gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs`), never by job or check name. **[MUST]** Read the post-reconcile head's checks, not the PR's latest run — a run on the pre-resolution (conflicted) commit is not evidence for the new head. Run the reconcile against a freshly-synced `main` (Post-Merge Cleanup of prior merges first) so `BASE ≈ MAIN`. Full procedure: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
+Before/after pushing, verify **all three**: (1) `git ls-tree HEAD <submodule>` == `TARGET` (manual pointer-equality check); (2) the generic mergeable + check-rollup confirmation via `scripts/handoff/confirm-ci-green.sh --pr <PR>` (the shared HANDOFF step-5 helper; see [`autoflow-guide.md`](autoflow-guide.md) > HANDOFF step 5 and [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight — not restated here); (3) the CI checks on the new head commit all `success`, read by commit SHA (`gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs`), never by job or check name. **[MUST]** Read the post-reconcile head's checks, not the PR's latest run. Run the reconcile against a freshly-synced `main` (Post-Merge Cleanup of prior merges first). Full procedure: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
 
 ---
 
@@ -170,33 +166,25 @@ git checkout main
 git pull origin main
 git branch -d <branch>             # local branch
 git push origin --delete <branch>  # remote branch (if not auto-deleted)
-scripts/cleanup/cleanup-issue.sh <N>  # archive the resolved issue's .autoflow/issue-<N>.* + issue-<N>-* files and its issue-<N>-local/ store to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (rm-deny-safe wrapper; accepts multiple Ns)
+scripts/cleanup/cleanup-issue.sh <N>  # archive the resolved issue's .autoflow/issue-<N>.* + issue-<N>-* files and its issue-<N>-local/ store to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
 ```
 
 **Archive** (move, not delete) the resolved issue's `.autoflow/issue-{N}*` management files (state
 JSON, decision ledger, design docs, reports) **and its cycle-layer store `.autoflow/issue-{N}-local/`**
-(the uncommitted `automated` / `delivery-check` / `manual` assets of that cycle — ADR-0024 D2,
-issue #229; the directory moves whole, its name preserved) to
+(the uncommitted `automated` / `delivery-check` / `manual` assets of that cycle; the directory
+moves whole, its name preserved) to
 `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<date>/` at cleanup via
-`scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`), so each later
-PREFLIGHT reads only live cycles while the resolved cycle's full artifacts are
-retained outside the tree. They are gitignored working scratch; the
-durable record lives in the GitHub PR/issue and commit history.
+`scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`).
 
 **[MUST] Use the wrapper, not a bare `rm`.** `cleanup-issue.sh` is invoked by
-path, so the Bash command carries no `rm` token, and it archives (moves, never
+path and archives (moves, never
 deletes) only the resolved issue's files and store on an **exact number boundary** —
-`issue-<N>.*`, `issue-<N>-*` and the directory `issue-<N>-local` (NOT a bare `issue-<N>*` glob,
-which would also match `issue-<N>3` / a prefix-collision sibling like `123` for `N=12`, or
-`issue-22-local` for `N=2`) — with a
+`issue-<N>.*`, `issue-<N>-*` and the directory `issue-<N>-local` (NOT a bare `issue-<N>*` glob) — with a
 digits-only `N` guard, a scoped `mv` to
 `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<date>/` (default `~/.autoflow`;
 repo-key = `<org>__<repo>` derived from `origin`) within `.autoflow/` at
-`maxdepth 1` (the store is one such entry, moved whole). This keeps cleanup working under a broad `rm`
-permission deny: Claude Code precedence is **deny > allow**, so an `rm`
-allow-exception cannot override a broad `Bash(rm:*)` deny — only a non-`rm`
-wrapper survives it. Allow-list the wrapper
-(`Bash(./scripts/cleanup/cleanup-issue.sh:*)`) so it never prompts.
+`maxdepth 1` (the store is one such entry, moved whole). Allow-list the wrapper
+(`Bash(./scripts/cleanup/cleanup-issue.sh:*)`).
 
 ---
 
@@ -213,8 +201,7 @@ wrapper survives it. Allow-list the wrapper
 
 ## Issue Auto-Close
 
-The PR body includes a close keyword so that merging closes the issue
-automatically.
+The PR body includes a close keyword.
 
 ```
 Closes #<issue-number>

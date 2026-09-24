@@ -11,13 +11,11 @@ description: >-
 # install
 
 `/autoflow:install` stamps (or re-stamps) the AutoFlow thin-root layer into the
-current project from the marketplace cache — turning onboarding into three
-commands (`/plugin marketplace add` → `/plugin install autoflow@autoflow`
-→ `/autoflow:install`). It carries **no install logic of its own**: it detects,
+current project from the marketplace cache. It carries **no install logic of its own**: it detects,
 reports, gates on a single confirmation, then delegates the write to the existing
 `setup/init.sh --target` installer and re-runs the shipped `drift-check.sh`.
 
-**Opt-in boundary (AC4).** Steps 0–2 are read-only (git queries, hash reads, a
+**Opt-in boundary.** Steps 0–2 are read-only (git queries, hash reads, a
 `gh` existence probe). There is exactly **one** confirmation point (Step 3). No
 filesystem write to the target happens before it. Declining leaves the target
 byte-unchanged. This skill never commits — it guides the user to commit.
@@ -27,9 +25,7 @@ byte-unchanged. This skill never commits — it guides the user to commit.
 ## Step 0: resolve script dir + roots
 
 Resolve the skill's `scripts/` directory across install channels (plugin-root
-candidate FIRST — the Claude Code loader inline-substitutes `${CLAUDE_PLUGIN_ROOT}`
-inside skill content; on a project/`.claude` channel it is unset, so `-d` fails
-and the loop falls through to the `$PWD/.claude/...` fallback):
+candidate FIRST):
 
 ```bash
 for S in \
@@ -40,11 +36,9 @@ done
 
 # Source (where the tool lives): the marketplace clone — the tree holding
 # setup/init.sh and setup/manifest.json. Resolved from the harness's own
-# registries, never by path arithmetic from the plugin root: under
-# `/plugin install` the plugin is a versioned copy at
-# <config>/plugins/cache/<marketplace>/<plugin>/<version>/, whose grandparent
-# holds no setup/ (issue #174). Candidate order: $AUTOFLOW_MARKETPLACE_ROOT ->
-# known_marketplaces.json installLocation -> <config>/plugins/marketplaces/<mkt>/
+# registries, never by path arithmetic from the plugin root. Candidate order:
+# $AUTOFLOW_MARKETPLACE_ROOT -> known_marketplaces.json installLocation ->
+# <config>/plugins/marketplaces/<mkt>/
 # -> ${CLAUDE_PLUGIN_ROOT}/../.. (a clone loaded directly: the development channel).
 PLUGIN_CACHE_ROOT=$(sh "$S/resolve-cache-root.sh") || PLUGIN_CACHE_ROOT=""
 
@@ -60,8 +54,7 @@ exists, `/plugin marketplace update autoflow` when one exists but lacks
 `setup/manifest.json`, or `AUTOFLOW_MARKETPLACE_ROOT=<clone root>` for a clone
 the harness does not register (a local checkout).
 
-Never conflate `PLUGIN_CACHE_ROOT` (source) with `TARGET_ROOT` (target) — the
-same script-location vs state-location split the drift-check/hook layer enforces.
+Never conflate `PLUGIN_CACHE_ROOT` (source) with `TARGET_ROOT` (target).
 
 ## Step 1: detect + report (automatic, NO write)
 
@@ -72,9 +65,8 @@ TARGET_ROOT="$TARGET_ROOT" PLUGIN_CACHE_ROOT="$PLUGIN_CACHE_ROOT" sh "$S/detect.
 ```
 
 Detection runs the **cache's** known-good `drift-check.sh` against the target
-tree — the target's own copy is *read and hashed*, never executed — so a drifted
-or tampered target copy is reported as drift, not run. Nothing is written to the
-target.
+tree — the target's own copy is *read and hashed*, never executed. Nothing is
+written to the target.
 
 Then **narrate** the situation to the user (read-only — nothing has been
 written):
@@ -86,7 +78,7 @@ written):
   surface it, do not treat it as clean.
 - **Version skew**: if `VERSION_SKEW=yes`, note that a re-stamp will move the
   thin-root from `VERSION_INSTALLED` to `VERSION_CACHE`.
-- **Spawn-policy scaffold (drift-check D6, issue #185)**: `POLICY_STATE`
+- **Spawn-policy scaffold (drift-check D6)**: `POLICY_STATE`
   (`pass` / `fail` / `skip` / `na` / `error`). The scaffold
   `.claude/autoflow/spawn-policy.json` is target-owned — a stamp creates it
   only when absent and **never overwrites it** — so this axis is reported on
@@ -98,9 +90,8 @@ written):
   and state the remedy: edit the named rows by hand to the loaded definition's
   values, and add each missing row from the cache's sample
   (`$PLUGIN_CACHE_ROOT/.claude/autoflow/spawn-policy.json`); model values and
-  `workflow_sites` effort are the target's own and are not findings. Because
-  the cache's oracle ran this leg, the list already reflects the rows the
-  stamp about to be confirmed will leave stale. **Whatever `POLICY_STATE`
+  `workflow_sites` effort are the target's own and are not findings. The list
+  reflects the rows the stamp about to be confirmed will leave stale. **Whatever `POLICY_STATE`
   is**, list **every** `POLICY_SKIP=` line verbatim — each names a D6
   sub-check that did not run, what could not be resolved and the paths tried
   (typically no installed plugin to read definitions from, or a clone without
@@ -114,29 +105,24 @@ written):
   remedy above cannot be carried out yet: tell the user to refresh the clone
   first (`/plugin marketplace update autoflow`), then re-run detection so the
   row comparison runs. On `error`, surface it — never read it as clean.
-- **Suite headers (drift-check D7, issue #213)**: `SUITE_HEADER_STATE`
+- **Suite headers (drift-check D7)**: `SUITE_HEADER_STATE`
   (`pass` / `fail` / `skip` / `na` / `error`), qualified by the opt-in arm
   `SUITE_PLANE_STATE` (`in` / `out` / `unreadable` / `na`) and
   `SUITE_PLANE_DECL` (`present` / `absent` / `na`) — all three are read off
-  the same D7 lines, so this report says what drift-check says (ADR-0024 D3,
-  issues #228 / #229). AutoFlow's suite plane is **opt-in**: the header is owed
+  the same D7 lines. AutoFlow's suite plane is **opt-in**: the header is owed
   only where the target declares `tests` > `suite_plane: true` in its
   `.claude/autoflow.local.json`. On `SUITE_PLANE_STATE=out`, say so — no
   `# ci-subject:` header is owed, the selector is not consulted, and the
-  target's tests run the way the target runs them (AutoFlow asks for no test
-  command); there is nothing to migrate. On
+  target's tests run the way the target runs them; there is nothing to migrate. On
   `SUITE_PLANE_DECL=absent`, additionally report that the target's
-  `.claude/autoflow.local.json` carries no `tests` object (the scaffold predates
-  the declaration site and a stamp never overwrites it) and name the hand edit:
+  `.claude/autoflow.local.json` carries no `tests` object and name the hand edit:
   add the `tests` object from `$PLUGIN_CACHE_ROOT/.claude/autoflow.local.json.example`
   — `suite_plane: true` only to adopt the suite plane. Not a stop condition. On `SUITE_PLANE_STATE=unreadable` the
   declaration file is present but unparseable — a `FAIL: D7` (carried as a
   `SUITE_HEADER_FINDING=` line) and a PREFLIGHT stop; the remedy is repairing
-  that file, not a stamp. On `SUITE_PLANE_STATE=in`, the shipped
-  `scripts/test/select-suites.sh` BLOCKs every selection — RED's suite
-  derivation first — while any executable spec under the target's `tests/**`
-  lacks a usable `# ci-subject:` header, and those suites are target-owned: a
-  stamp never adds a header. So this axis is reported on its own, not as drift
+  that file, not a stamp. On `SUITE_PLANE_STATE=in`, the suites under the
+  target's `tests/**` are target-owned and a stamp never adds a header, so this
+  axis is reported on its own, not as drift
   a re-stamp repairs. On `fail`, list **every** `SUITE_HEADER_FINDING=` line
   verbatim (one per suite to migrate) and state the remedy: back-fill each
   named suite's header per `docs/autoflow-guide.md` > RED > Header contract >
@@ -145,22 +131,22 @@ written):
   instead. **Whatever `SUITE_HEADER_STATE` is**, list every
   `SUITE_HEADER_SKIP=` line verbatim and never narrate a `skip` as clean. On
   `error`, surface it — never read it as clean.
-- **Artifacts upstream no longer ships (drift-check D4, issue #236)**:
+- **Artifacts upstream no longer ships (drift-check D4)**:
   `STALE_COUNT` and one `STALE_UPSTREAM=` line per artifact the installed
   manifest lists and the cache's manifest does not. List **every** line
   verbatim — each names the dest, its kind, and what the stamp will do with
   it: a `copy` whose on-disk sha256 still equals the installed manifest's is
   **removed** by the stamp; a modified `copy` and every `scaffold` /
   `shim-stamp` / `json-merge` artifact is **kept** and reported with its
-  reason. This is disclosed here, before Step 3, so the single confirmation
-  covers the removals; nothing is removed until the stamp runs. When the
+  reason. This is disclosed here, before Step 3; nothing is removed until the
+  stamp runs. When the
   installed manifest is unreadable the stamp removes nothing and says so.
 - **Derived identity** (display-only): `ORG` / `REPO` / `DEFAULT_BRANCH` /
   `TOPOLOGY`. Empty fields were omitted on purpose (non-GitHub / no remote) —
   do not ask the user for them.
 
 <!-- REVIEWER-BACKEND-DISCLOSURE -->
-- **Reviewer backend (disclose before confirming; issue #979).** Read
+- **Reviewer backend (disclose before confirming).** Read
   `REVIEW_BACKEND` (configured backend, default `codex`), `REVIEW_CODEX_PRESENT`,
   and `REVIEW_CLAUDE_PRESENT` from the Step-1 report. The install delivers the
   target-owned scaffold `.claude/autoflow.local.json` with its **`codex`
@@ -177,19 +163,17 @@ written):
   `REVIEW_BACKEND` is neither `codex` nor `claude` (e.g. `invalid`), DISCLOSE**
   that `.claude/autoflow.local.json` is present but **unparseable or has an empty
   `.review.backend`** — it must be hand-fixed before HANDOFF review (the
-  consumers fail closed rather than treat a corrupt config as a clean codex
-  default), not silently downgraded. **After** the selection is persisted, the
+  consumers fail closed on it), not silently downgraded. **After** the selection is persisted, the
   install runs an advisory on-demand `--probe` auth check (one real
   authenticated round-trip against the configured backend); it narrates the
   result but never aborts the install, and PREFLIGHT itself stays
   presence-only. See
   [`docs/reviewer-backend.md`](../../../../docs/reviewer-backend.md).
-- **Reviewer model / effort (display-only; issue #184).** Read `REVIEW_MODEL`
+- **Reviewer model / effort (display-only).** Read `REVIEW_MODEL`
   and `REVIEW_EFFORT` from the Step-1 report — the configured backend's
   `.review.<backend>.model` / `.effort` pins (`inherit` = the key is absent and
   the CLI's own default applies; `invalid` = present but empty / not a string).
-  Report them as information: the install **never writes** these keys (the
-  scaffold pins nothing, so an existing install is never re-pinned), and an
+  Report them as information: the install **never writes** these keys, and an
   operator who wants review-only pinning hand-edits the file. On `invalid`,
   DISCLOSE that the live review and the probe will fail closed on that key
   until it is fixed or removed. The Step-4 `--probe` applies the same resolver
@@ -217,8 +201,7 @@ proposal and the stamp are both abandoned; the target stays byte-unchanged).
 Only after the user confirms at Step 3:
 
 **a. Scaffold the identity draft (if absent).** Write a derived
-`CLAUDE.local.md` draft *before* the stamp, so `init.sh`'s own scaffold step
-no-ops and the derived identity wins over the generic boilerplate. When
+`CLAUDE.local.md` draft *before* the stamp. When
 `CLAUDE.local.md` already exists this is a no-op (R3 — never overwrite):
 
 ```bash
@@ -234,7 +217,7 @@ bash "$PLUGIN_CACHE_ROOT/setup/init.sh" --target "$TARGET_ROOT"
 ```
 
 The installer reconciles the target against the manifest it installed last
-(issue #236) and prints one line per artifact that manifest listed and this
+and prints one line per artifact that manifest listed and this
 one does not — `REMOVED: <dest> (...)` for a `copy` whose content was still
 what AutoFlow shipped, `KEPT: <dest> (<reason>)` for a modified `copy` or a
 `scaffold` / `shim-stamp` / `json-merge` artifact, `ABSENT: <dest>` for a
@@ -254,13 +237,12 @@ sub-step and leave the `codex` default in place (no silent downgrade):
 TARGET_ROOT="$TARGET_ROOT" BACKEND=claude sh "$S/set-review-backend.sh"
 ```
 
-**d. Probe the configured reviewer backend's auth (advisory; issue #979).**
+**d. Probe the configured reviewer backend's auth (advisory).**
 <!-- REVIEWER-BACKEND-PROBE -->
 Now that the selection is persisted (step c, or the retained `codex` default),
 run the shipped on-demand `--probe` against the just-persisted backend. This is
 one real authenticated round-trip over the identical channel HANDOFF step 6
-uses — it verifies the operator will not hit a silent auth failure on their
-first cycle. Runs for **both** the `codex` default and an explicit `claude`
+uses. Runs for **both** the `codex` default and an explicit `claude`
 switch:
 
 ```bash
@@ -268,8 +250,7 @@ bash "$TARGET_ROOT/scripts/preflight/check-review-backend.sh" --probe
 ```
 
 **Advisory only — narrate the outcome, never abort the install** on a
-non-zero exit (the probe is an operator diagnostic, not a gate; PREFLIGHT stays
-presence-only). Map the exit code:
+non-zero exit. Map the exit code:
 - `0` → "auth verified — the configured backend is authenticated and responsive."
 - `1` → "the configured backend's CLI is not installed — install it (see the
   presence remedy in the drift-check output)."
@@ -287,8 +268,8 @@ CLAUDE_PROJECT_DIR="$TARGET_ROOT" sh "$TARGET_ROOT/.claude/autoflow/drift-check.
 **f. Report the drift-check result and guide the user to commit.** Report the
 `RESULT:` line and every `FAIL:` / `WARN:` line. Include the **D6** verdict
 explicitly (the `PASS: D6` / `FAIL: D6` / `SKIP: D6` lines): a `FAIL: D6`
-after a stamp is expected whenever the scaffold pre-dated this plugin version,
-since the stamp did not touch it — list each `FAIL: D6 -- ` line as a row to
+after a stamp is expected whenever the scaffold pre-dated this plugin version —
+list each `FAIL: D6 -- ` line as a row to
 fix and repeat the remedy from Step 1 (edit the named rows to the loaded
 definition's values; add each missing row from the cache's sample at
 `$PLUGIN_CACHE_ROOT/.claude/autoflow/spawn-policy.json`). A D6 FAIL is a
@@ -303,7 +284,7 @@ means no header is owed; a `HINT: D7: no tests declaration` beside it names the
 scaffold's missing `tests` object and its hand edit (Step 1). A D7 FAIL is
 likewise a PREFLIGHT stop condition and not a reason to re-stamp.
 
-**Reconciled artifacts (issue #236).** Report every artifact-dest `REMOVED:` /
+**Reconciled artifacts.** Report every artifact-dest `REMOVED:` /
 `KEPT:` / `ABSENT:` line from step b verbatim, dest by dest, and the count
 line — an artifact-dest line carries a `(copy; ...)` / `(<kind>; ...)`
 parenthetical right after `<dest>`. (The settings-key lines are a different
@@ -316,23 +297,18 @@ git -C "$TARGET_ROOT" grep -n -I --untracked -e "$(basename "<dest>")" -- . ':!.
 
 A hit is a place where the target still names a file upstream retired — a
 hook, a workflow, a script that sources it — and is the operator's to judge
-before committing (the installer removes only bytes AutoFlow shipped, so the
-removal is what surfaces the reference; it does not decide it). A `KEPT:`
+before committing. A `KEPT:`
 line's dest is the operator's to dispose of by hand — for a modified `copy`,
 by diffing it against the previous version before deleting it. Do NOT commit
-on their behalf — the target owns its version record via its own commits
-(R1).
+on their behalf (R1).
 
-**The settings-key lines (issue #245) are a different class — never probe
-them.** `merge_settings` (also step b, the same stamp invocation) prints
+**The settings-key lines are a different class — never probe them.** `merge_settings` (also step b, the same stamp invocation) prints
 `REMOVED: <dest> enabledPlugins["autoflow@autoflow"] (...)` / `KEPT: <dest>
 enabledPlugins["autoflow@autoflow"] (...)` — recognizable by `enabledPlugins[`
 immediately after `<dest>`, unlike the artifact-dest form above. This is a
 *key* removed from a settings file that still exists, not a file AutoFlow
 retired, so it is never a reference-probe candidate; report the line
-verbatim and read it for the operator instead. `REMOVED:` means a pre-#245
-stamp's `enabledPlugins` entry (value `true`) was deleted, because enabling
-AutoFlow is a one-time **user-scope** step (`/plugin install
-autoflow@autoflow`), never a per-repo installer write. `KEPT:` with value
+verbatim and read it for the operator instead. `REMOVED:` means a stamp's
+`enabledPlugins` entry (value `true`) was deleted. `KEPT:` with value
 `false` is the supported per-repo opt-out, left untouched — see
 `setup/SETUP-GUIDE.md` > Prerequisites. End here.

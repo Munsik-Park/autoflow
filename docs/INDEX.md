@@ -1,22 +1,11 @@
 # Documentation Index
 
 Use this page as the first stop before assigning or implementing an issue.
-It routes two document classes that live in separate trees (ADR-0015 D1 >
-Superseding note 2026-09-16): the **usage documents** an agent reads and
-follows while a cycle runs — the source of the rules, stamped to every target
-— and the **design and decision records** under `docs/records/`, read for a
-decision's history and grounds, the source of no rule, and never stamped.
-
-## Issue-number provenance
-
-This framework was generalized out of a predecessor repository,
-`connev-llm/claude-autoflow` (archived, private). Bare issue references in the
-range `#600`–`#999` — in the playbooks, ADRs, and shipped scripts — point at
-that tracker and are kept as historical provenance for the rule they sit
-beside; they are not navigable from a consuming project and do not resolve in
-`Munsik-Park/autoflow`, whose own issues are numbered from `#1`. Where a
-predecessor reference carried an open decision, the decision is re-recorded in
-this repository (e.g. ADR-0015 D1 > Superseding note).
+It routes two document classes that live in separate trees: the **usage
+documents** an agent reads and follows while a cycle runs — the source of the
+rules, stamped to every target — and the **design and decision records** under
+`docs/records/`, read for a decision's history and grounds, the source of no
+rule, and never stamped.
 
 ## Usage documents
 
@@ -34,12 +23,12 @@ These documents are the operating source of truth.
 | --- | --- |
 | [CLAUDE.md](../CLAUDE.md) | AutoFlow operating manual and phase router. |
 | [AutoFlow Guide](autoflow-guide.md) | Phase-by-phase lifecycle details. |
-| [DIAGNOSE Analysis Playbook](phases/analysis.md) | Existing issue analysis and necessity-evaluation procedure. |
+| [DIAGNOSE Analysis Playbook](phases/analysis.md) | Issue analysis and necessity-evaluation procedure. |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
-| [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool (epic #785 S1; ADR-0015). |
-| [Reviewer Backend Contract](reviewer-backend.md) | HANDOFF external-reviewer backend abstraction: inputs/obligations, codex default + `claude -p` opt-in table, config location, per-backend oracle, isolation basis (issue #979). |
-| [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt (issue #96). |
+| [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool. |
+| [Reviewer Backend Contract](reviewer-backend.md) | HANDOFF external-reviewer backend abstraction: inputs/obligations, codex default + `claude -p` opt-in table, config location, per-backend oracle, isolation basis. |
+| [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
 | [Thin Root Layer Contract](thin-root-layer.md) | The artifacts that must live at a consuming target's project root and the `CLAUDE_CODE_*` env contract. |
 
 ### Quick Routing

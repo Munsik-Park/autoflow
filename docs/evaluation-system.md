@@ -1,29 +1,22 @@
 # Evaluation System
 
 > The AutoFlow evaluation system provides quantified quality assessment at the
-> three gates (`GATE:HYPOTHESIS`, `GATE:PLAN`, `GATE:QUALITY`) and at `AUDIT`,
-> ensuring consistent standards across all changes.
+> three gates (`GATE:HYPOTHESIS`, `GATE:PLAN`, `GATE:QUALITY`) and at `AUDIT`.
 >
-> **상세 기준은** [`role-contracts.md`](role-contracts.md) > Evaluation System **을 참조한다.** 본 문서는 평가 시스템의 설계 의도, 훅 신뢰 경계, 상태 파일 연동 등 운영 컨텍스트를 다룬다.
+> **상세 기준은** [`role-contracts.md`](role-contracts.md) > Evaluation System **을 참조한다.**
 
 ---
 
 ## Overview
 
 The Evaluation AI is an **independent agent** that scores completed work before
-it reaches human review. This separation keeps judgment objective — the agent
-that wrote the work never evaluates it.
+it reaches human review. The agent that wrote the work never evaluates it.
 
 ### Critical Rule: Fresh Spawn Every Time
 
 The Evaluation AI must be **spawned fresh for every evaluation** — at
 GATE:HYPOTHESIS, GATE:PLAN, AUDIT, and GATE:QUALITY. It carries no prior
 conversation history. This is mandatory.
-
-**Why**: when the same agent creates a plan and evaluates it, it struggles to
-reject its own work. A freshly spawned agent sees only the deliverable — it has
-no investment in the process. Bias elimination takes priority over token cost.
-See [`records/design-rationale.md`](records/design-rationale.md#decision-2-evaluation-ai-is-spawned-fresh-every-time).
 
 ---
 
@@ -49,13 +42,6 @@ A change passes evaluation when **all** of the following hold:
 
 If any condition fails, the change fails.
 
-### Why these thresholds are strict
-
-Lenient criteria create a pattern of "scoring high on easy items to raise the
-average while passing weak items." The per-item minimum (≥ 7) prevents this
-gaming. Security ≤ 3 triggers mandatory rework because security failures cannot
-be diluted by averaging.
-
 ---
 
 ## Evaluation Types
@@ -64,13 +50,12 @@ be diluted by averaging.
 |------|---------------|-------|
 | Structure evaluation (GATE:HYPOTHESIS — structure form, runs in DIAGNOSE 3-Phase) | Behavior gap, Code-change necessity (2) | none — PASS/FAIL single verdict; reuse-neutral 2-item necessity gate. FAIL on gap-low (already satisfied) → review-response: reply + active:false (awaiting-external-review, no close); new-issue: auto-closed + terminated. FAIL on Code-change-necessity-low (non-code lever) → report to user + pause. No retry loop. (Canonical: [`phases/analysis.md`](phases/analysis.md)) |
 | Hypothesis evaluation (GATE:HYPOTHESIS — cause form, bug/incident only) | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× → DIAGNOSE |
-| Plan evaluation (GATE:PLAN) | Feasibility, Scope, Security, Test plan (4) — affected files and side effects are derived at RED/GREEN entry by the execution roles, not predicted and scored here (issue #192). Feasibility/Scope absorb the structural-fit & over-engineering concern the DIAGNOSE structure gate deliberately does not score — over-engineering is scored symmetrically across the plan and its verification design, so an unjustified verification layer fails Scope — and carry the embedded ADR-conformance check (divergence from a governing ADR, or an architecture-impacting change with no governing ADR/owner decision, caps the named item at 6; N/A by default) and the embedded AC-authority check (a verification-design difference against the issue's acceptance-criteria table that no `[ac-decision]` ledger entry covers caps Scope at 6); the interpretive paragraph and both checks are at [`autoflow-guide.md`](autoflow-guide.md) > GATE:PLAN. Re-entry re-scores the decision document's delta section plus every inherited item whose anchor it touched (issue #192), reported in `rescore` | max 3× → ARCHITECT |
+| Plan evaluation (GATE:PLAN) | Feasibility, Scope, Security, Test plan (4) — affected files and side effects are derived at RED/GREEN entry by the execution roles, not predicted and scored here. Feasibility/Scope absorb the structural-fit & over-engineering concern the DIAGNOSE structure gate does not score — over-engineering is scored symmetrically across the plan and its verification design, so an unjustified verification layer fails Scope — and carry the embedded ADR-conformance check (divergence from a governing ADR, or an architecture-impacting change with no governing ADR/owner decision, caps the named item at 6; N/A by default) and the embedded AC-authority check (a verification-design difference against the issue's acceptance-criteria table that no `[ac-decision]` ledger entry covers caps Scope at 6); the interpretive paragraph and both checks are at [`autoflow-guide.md`](autoflow-guide.md) > GATE:PLAN. Re-entry re-scores the decision document's delta section plus every inherited item whose anchor it touched, reported in `rescore` | max 3× → ARCHITECT |
 | Security audit (AUDIT) | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
 | Quality evaluation (GATE:QUALITY) | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) — Test coverage's subject is the recorded local run for each `cycle` row and the committed asset for each `standing` row, never a CI result; Test quality carries the layer-violation check (a committed asset on a `cycle` row, an uncommitted one on a `standing` row, or a `standing:` token outside ADR-0024 D1's closed list caps it at 6); Fit also carries the embedded ADR-conformance regression re-confirmation (caps Fit at 6; same trigger as GATE:PLAN), and Completeness carries the embedded AC-authority check for post-ARCHITECT drift (a carried verification-design row for which no test assertion or implementation site can be named, and which no `[ac-decision]` ledger entry covers, caps Completeness at 6) | max 3× → re-entry by `remedy_class` (doc commit / RED / GREEN / ARCHITECT; `operator` → pause) |
 | Doc evaluation | Accuracy, Completeness, Clarity, Format compliance (4) | one revision |
 
-The category sets and weights should be customised per project. They reflect
-"what actually matters in this project," not universal standards. As patterns
+The category sets and weights should be customised per project. As patterns
 emerge, humans adjust the criteria.
 
 ---
@@ -107,12 +92,11 @@ The `scores` object is what the gate hook reads. Each item is either a number
 `fail_hypothesis` records the pre-scoring consider-the-opposite search required by
 [`role-contracts.md`](role-contracts.md) > Evaluation AI > Pre-scoring FAIL
 hypothesis. It is narrative/audit material: nothing reads it programmatically and no
-gate consumes it. It is placed before `scores` because the ordering is the procedure —
-the search precedes scoring.
+gate consumes it. It is placed before `scores`.
 
 | Key | Type | Required | Meaning |
 |-----|------|----------|---------|
-| `case` | string, non-empty | always | The strongest FAIL argument found. With `disposition: "none_found"` it states **what was searched** (which items, which anchors re-derived), so the record is evidence of the search rather than a blank. |
+| `case` | string, non-empty | always | The strongest FAIL argument found. With `disposition: "none_found"` it states **what was searched** (which items, which anchors re-derived). |
 | `disposition` | enum `refuted` \| `survived` \| `none_found` | always | Outcome of the refutation attempt. |
 | `reflected_in` | array of rubric item names | always present (`[]` when `disposition != "survived"`) | Which scored item(s) recorded the surviving case — the join between the narrative record and the numeric `scores`. "Recorded" does not imply "scored down": an item listed here may still score ≥ 7. |
 
@@ -124,9 +108,9 @@ read it from the report (it reads the routed class the orchestrator records in s
 | Key | Type | Required | Meaning |
 |-----|------|----------|---------|
 | `remedy_class` | object, one entry per failed item | **on every FAIL** (`{}` on a PASS) | Value enum `doc` \| `test` \| `impl` \| `design` \| `operator`. A failed item with no entry is a contract violation — reject + re-spawn, as for a missing `fail_hypothesis`. `operator` means "not classifiable with confidence" and pauses the cycle for the operator. |
-| `rescore` | object | **on a re-entry evaluation** — after a FAIL's re-entry, or after a recommendation attempt or rebuttal ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation triage*; HANDOFF step 6.5 > *Whether a finding holds*) (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items — after a recommendation fix or rebuttal, the items the routed or rebutted recommendations were listed under — plus any inherited item whose anchor the re-entry touched — the re-entry diff at GATE:QUALITY / AUDIT, the decision document's delta section at GATE:PLAN, the amended DIAGNOSE artifact at GATE:HYPOTHESIS); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding the prior report recorded on a re-scored item, with `status` `cleared` or `remains` and the ground re-derived from the re-entry diff — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (issue #232: the re-score's FAIL hypothesis is "the flagged defect still remains", [`role-contracts.md`](role-contracts.md) > Evaluation AI > Pre-scoring FAIL hypothesis > *Re-entry form*); a prior finding with no entry is a report defect — reject + re-spawn, as for a missing `fail_hypothesis`. `new_findings` — one entry per defect newly seen on a re-scored item (`[]` when none), each with the evaluator's `disposition` — `blocking — scored under <item>`, or `recommendation` (also listed in `recommendations`, and the item's score is not lowered for it) — and its ground. Both lists are report material the orchestrator reads; the hook reads neither. |
+| `rescore` | object | **on a re-entry evaluation** — after a FAIL's re-entry, or after a recommendation attempt or rebuttal ([`autoflow-guide.md`](autoflow-guide.md) > GATE:QUALITY > *Recommendation triage*; HANDOFF step 6.5 > *Whether a finding holds*) (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items — after a recommendation fix or rebuttal, the items the routed or rebutted recommendations were listed under — plus any inherited item whose anchor the re-entry touched — the re-entry diff at GATE:QUALITY / AUDIT, the decision document's delta section at GATE:PLAN, the amended DIAGNOSE artifact at GATE:HYPOTHESIS); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding the prior report recorded on a re-scored item, with `status` `cleared` or `remains` and the ground re-derived from the re-entry diff — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (the re-score's FAIL hypothesis is "the flagged defect still remains", [`role-contracts.md`](role-contracts.md) > Evaluation AI > Pre-scoring FAIL hypothesis > *Re-entry form*); a prior finding with no entry is a report defect — reject + re-spawn, as for a missing `fail_hypothesis`. `new_findings` — one entry per defect newly seen on a re-scored item (`[]` when none), each with the evaluator's `disposition` — `blocking — scored under <item>`, or `recommendation` (also listed in `recommendations`, and the item's score is not lowered for it) — and its ground. Both lists are report material the orchestrator reads; the hook reads neither. |
 
-`refine_observations` (GATE:QUALITY only; issue #135) records the evaluator's disposition of every
+`refine_observations` (GATE:QUALITY only) records the evaluator's disposition of every
 entry in the REFINE report's `## Out-of-scope observations — guard / boundary logic touched`
 section. Always present on a GATE:QUALITY report (`[]` when the section says `none`); a report that
 omits it or leaves an entry undispositioned is rejected and re-spawned. `rescore` is also the field
@@ -138,7 +122,7 @@ documents at GATE:PLAN, the DIAGNOSE analysis files (`.autoflow/issue-{N}-phase-
 GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY — or, for an acceptance criterion the evaluator
 observes defective as a matter of fact ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger > *Acceptance-criterion
 decisions*), the criterion's row in `.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`, whose
-`remedy_class` on `Medium`+ is `operator`, since whether it changes is the operator's; `item` — the rubric item it was found under;
+`remedy_class` on `Medium`+ is `operator`; `item` — the rubric item it was found under;
 `severity` — the reviewer's vocabulary (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence`
 for a finding the evaluator could not confirm); `finding`; and, on `Medium` and above,
 `remedy_class` from the same enum as the failed-item field, by the same classifying question HANDOFF
@@ -150,16 +134,14 @@ any item missing a field, is a contract violation — reject + re-spawn, as for 
 `fail_hypothesis`.
 
 A suite verdict the evaluator re-derives is the recorded local run — its summary line read in the
-log the run left, the command re-run only when that log is absent (the row is then `not-run`) —
-never a citation of a host record; no `inherited_verdicts` key is written (ADR-0024 D6; issue #249).
+log the run left, the command re-run only when that log is absent (the row is then `not-run`).
 
 ---
 
 ## Hook Trust Boundary
 
 `check-autoflow-gate.sh` does **not** read the AI's `pass`, `avg`, or `min`
-fields. It computes them from raw `scores`. The trust chain stops at the script
-level — see [`records/design-rationale.md`](records/design-rationale.md#decision-3-the-hook-does-not-trust-ais-pass-judgment).
+fields. It computes them from raw `scores`.
 
 ---
 
@@ -182,7 +164,7 @@ point), matching the `gated_phase_keys` allow-list in
 - `audit` — AUDIT (hook-gated)
 - `gate_quality` — GATE:QUALITY (hook-gated)
 
-- **[MUST]** When an evaluation's `fail_hypothesis` is recorded in state, it is written at `phases.<phase_key>.fail_hypothesis` — a sibling of `evaluator` and `scores` inside the phase object. **[DENY]** Never at the state file's top level and never as an entry inside `scores`: the hook's state-file validator is closed-world at top level and score-shaped inside `scores`, so either placement makes it fail closed (MALFORMED, exit 2) and deadlocks `git push` / `gh pr create` for the whole cycle. Recording is permitted, not required — the durable record is the evaluator's report.
+- **[MUST]** When an evaluation's `fail_hypothesis` is recorded in state, it is written at `phases.<phase_key>.fail_hypothesis` — a sibling of `evaluator` and `scores` inside the phase object. **[DENY]** Never at the state file's top level and never as an entry inside `scores`. Recording is permitted, not required.
 
 See [`CLAUDE.md`](../CLAUDE.md#autoflow-state-tracking-hook-integration) for the
 full schema.

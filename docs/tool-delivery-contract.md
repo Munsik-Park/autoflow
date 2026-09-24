@@ -1,35 +1,24 @@
 # Tool Delivery Contract
 
-> The four delivery-contract rules for AutoFlow as a consumed, versioned tool
-> (epic #785, slice S1 / issue #787). Governing decision:
-> [ADR-0015](records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md)
-> (plugin + thin root layer). Per ADR-0015 D2, rule vocabulary uses
-> **plugin-version** terms; the reverse-submodule (gitlink-SHA) form was
-> rejected there and appears below only as rejected vocabulary.
+> The four delivery-contract rules for AutoFlow as a consumed, versioned tool.
+> Rule vocabulary uses **plugin-version** terms.
 
 ---
 
 ## Scope and Status
 
 This document is the **policy source of truth** for how the AutoFlow tool is
-delivered to a target project and kept consistent with it. It is
-code-change-free: the enforcing mechanisms land in later slices and must
-conform to these rules.
+delivered to a target project and kept consistent with it. The enforcing
+mechanisms conform to these rules.
 
-Slice numbers below (`#790`–`#792`, epic `#785`, `#787`) are predecessor-tracker
-issues (`connev-llm/claude-autoflow`, archived) kept as provenance; see
-`docs/INDEX.md` > Issue-number provenance. The S4b question of moving the
-deliberation workflows into the plugin tier is closed as *not migrated*
-(ADR-0015 D1 > Superseding note, Munsik-Park/autoflow#53).
+| Rule | Enforced by |
+|------|-------------|
+| R1 — Tool version pin | plugin packaging, settings pin |
+| R2 — CLAUDE.md delivery + version-skew re-stamp | root layer, installer |
+| R3 — Target-identity separation (`CLAUDE.local.md`) | root layer, installer |
+| R4 — Install artifact manifest + drift test | installer |
 
-| Rule | Enforced by (slice) |
-|------|---------------------|
-| R1 — Tool version pin | S4a #790 (plugin packaging, settings pin) |
-| R2 — CLAUDE.md delivery + version-skew re-stamp | S4b #791 (root layer), S5 #792 (installer) |
-| R3 — Target-identity separation (`CLAUDE.local.md`) | S4b #791, S5 #792 |
-| R4 — Install artifact manifest + drift test | S5 #792 |
-
-Terminology (ADR-0015 D1): the **plugin package** is the
+Terminology: the **plugin package** is the
 marketplace-distributed, versioned component (`agents/`, `hooks/`, `skills/`);
 the **thin root layer** is what the installer stamps into the target's project
 root (`CLAUDE.md` methodology prose, framework playbooks under `docs/`,
@@ -49,12 +38,10 @@ below means both tiers together.
   comes from. Consuming an unpinned ("latest") plugin is not a supported
   configuration.
 
-  **What the pin does and does not carry (Munsik-Park/autoflow#245).** No pinned
-  key names a version — the marketplace entry is
-  `{"source":"github","repo":"Munsik-Park/autoflow"}` — and the pin carries no
-  enablement key: a repo-level `enabledPlugins["autoflow@autoflow"]: true`
-  declaration is what makes Claude Code mint and freeze a project-scope
-  installation record, so the stamp does not write it and enabling the plugin is
+  **What the pin does and does not carry.** No pinned key names a version — the
+  marketplace entry is `{"source":"github","repo":"Munsik-Park/autoflow"}` — and
+  the pin carries no enablement key: the stamp does not write a repo-level
+  `enabledPlugins["autoflow@autoflow"]` declaration, and enabling the plugin is
   a one-time **user-scope** step. The version record is the artifact named
   above. Read the "explicit edit to the pin" below as an edit to that version
   record: a re-stamp refreshes `.claude/autoflow/manifest.json`, which is the
@@ -64,10 +51,8 @@ below means both tiers together.
   target — the dependency is one-way, target → tool.
 - A tool upgrade is an explicit edit to the pin in the target's history. The
   pin edit and the matching root-layer re-stamp (R2) belong to the same
-  change, so the target's history always identifies which tool version
-  governed which commits.
-- Rejected vocabulary: a gitlink-SHA pin (reverse submodule) is not a valid
-  form of this rule — ADR-0015 rejects the mechanism it would ride on.
+  change.
+- A gitlink-SHA pin (reverse submodule) is not a valid form of this rule.
 
 ## R2 — CLAUDE.md Delivery and Version-Skew Re-Stamp
 
@@ -79,13 +64,12 @@ below means both tiers together.
 - **[MUST]** **Version skew** — the pinned plugin version (R1) differing from
   the stamped root-layer version — is resolved by **re-stamping the root
   layer** before starting a new AutoFlow cycle. The two delivery channels
-  (plugin, root layer) are the skew surface ADR-0015 names; skew detection is
+  (plugin, root layer) are the skew surface; skew detection is
   part of the drift self-verify shipped under R4.
 - **[DENY]** Hand-editing the delivered prose in place to diverge from the
   pinned tool version. A framework change goes upstream to the tool
   repository (and arrives via a pin upgrade); target-local behavior goes to
-  the target-identity overlay (R3). This is what keeps a re-stamp
-  loss-free.
+  the target-identity overlay (R3).
 
 ## R3 — Target-Identity Separation via `CLAUDE.local.md` [MUST]
 
@@ -102,9 +86,6 @@ below means both tiers together.
 - Whether the target commits `CLAUDE.local.md` or keeps it ignored is the
   target's own policy; this contract fixes only the boundary — identity
   content sits outside the tool-delivered surface.
-- Consequence: combined with R2's [DENY], a re-stamp is destructive-safe by
-  construction — the delivered `CLAUDE.md` contains no target-authored
-  content, so replacing it wholesale loses nothing.
 
 ## R4 — Install Artifact Manifest (exhaustive) + Drift Test
 
@@ -115,7 +96,7 @@ below means both tiers together.
   manifest is the authoritative file list for upgrade re-stamp and removal.
 - **[MUST]** A re-stamp **reconciles** the target against the manifest it
   previously installed (`.claude/autoflow/manifest.json`, read before the
-  stamp overwrites it — issue #236): an artifact the previous manifest lists
+  stamp overwrites it): an artifact the previous manifest lists
   and the new manifest does not is removed only when AutoFlow still owns it —
   kind `copy`, on-disk sha256 equal to the previous manifest's recorded value.
   A `copy` whose hash differs (target-modified) and every `scaffold` /
@@ -124,61 +105,55 @@ below means both tiers together.
   has nothing removed. The installer prints one `REMOVED:` / `KEPT:` /
   `ABSENT:` line per dest and `/autoflow:install` reports them; the commit
   stays the operator's. Whether target code still references a removed file
-  is the install skill's read-only probe, not the installer's decision: the
-  installer removes only bytes AutoFlow shipped, so a reference it surfaces is
-  to a tool file the new manifest does not ship, and the judgment on it belongs with the
-  operator who commits.
+  is the install skill's read-only probe, not the installer's decision: a
+  reference it surfaces is to a tool file the new manifest does not ship, and
+  the judgment on it belongs with the operator who commits.
 - **[MUST]** The manifest ships together with a **schema-hook-contract drift
   test** the target can run to self-verify bundle consistency: installed
   artifacts match the manifest, the root-layer stamp version matches the
   settings pin (R2 skew check), and the plugin-delivered hook contracts match
   the root-layer schema/state expectations (state stays in
-  `${CLAUDE_PROJECT_DIR}/.autoflow`, per ADR-0015 D1). The detector is
-  delivered with the hooks (implementation: S5 #792).
+  `${CLAUDE_PROJECT_DIR}/.autoflow`). The detector is delivered with the
+  hooks.
 - **[MUST]** The drift test also compares the installed bundle with **upstream
   as locally available**: the installed manifest against the marketplace
   clone's `setup/manifest.json` per artifact by sha256 (drift-check D4), and
   the installed plugin's files against the clone's plugin source (D5). A
-  self-consistent bundle that is older than what the clone would stamp — the
-  issue #167 blind spot, which a version comparison alone misses when an
-  upstream change carries no version bump — is therefore a reported drift, not
-  a silent pass. Both legs, and the R2 skew check (D2), resolve the plugin and
-  the clone from the harness's local registries (`scripts/lib/plugin-root.sh`,
-  shipped with the bundle) rather than from the hook-only `CLAUDE_PLUGIN_ROOT`,
-  so they run from the plain shell PREFLIGHT uses; each reports `SKIP`, never a
-  failure, when its side is not locally resolvable. No network access. The
+  self-consistent bundle that is older than what the clone would stamp is a
+  reported drift, not a silent pass. Both legs, and the R2 skew check (D2),
+  resolve the plugin and the clone from the harness's local registries
+  (`scripts/lib/plugin-root.sh`, shipped with the bundle) rather than from the
+  hook-only `CLAUDE_PLUGIN_ROOT`; each reports `SKIP`, never a failure, when
+  its side is not locally resolvable. No network access. The
   same test also checks the one artifact a re-stamp never refreshes against
-  the tool it must agree with (D6, issue #185): the target-owned
+  the tool it must agree with (D6): the target-owned
   `.claude/autoflow/spawn-policy.json` scaffold is run through
   `scripts/spawn-policy/spawn-policy.sh check` against the agent definitions
   the session loads (phase-row effort equals the definition's `effort:`
   frontmatter; every `agent_type` is shipped), and its row set is compared
-  with the clone's sample so a row the current version requires — or an
-  `agent_type` it renamed — is named before a fail-closed readout meets it.
+  with the clone's sample; the comparison names a row the current version
+  requires, or an `agent_type` it renamed.
   A finding is a FAIL with the rows to fix listed; the remedy is a hand edit
   of the scaffold, never a re-stamp. It likewise checks the one precondition
-  of the shipped suite selector that lives in target-owned files (D7, issue
-  #213), **on a target that opted into AutoFlow's suite plane** (ADR-0024 D3;
-  the opt-in is `.claude/autoflow.local.json` > `tests` > `suite_plane: true`,
-  resolved through the shipped `scripts/test/suite-manifest.sh` — the plane's
-  one resolver, run from the detector's own tree — issues #228 / #229): every
+  of the shipped suite selector that lives in target-owned files (D7),
+  **on a target that opted into AutoFlow's suite plane** (the opt-in is
+  `.claude/autoflow.local.json` > `tests` > `suite_plane: true`, resolved
+  through the shipped `scripts/test/suite-manifest.sh` — the plane's one
+  resolver, run from the detector's own tree): every
   executable spec under the target's `tests/**` declares a usable
   `# ci-subject:` header, or `scripts/test/select-suites.sh` BLOCKs every
   selection. The check is the selector's own `--check-headers` stage run from
   the detector's tree, each header-less suite is a FAIL, and the remedy is
   back-filling the header — a re-stamp never touches `tests/**`. A target
   that has not opted in owes no header and PASSes without the selector being
-  consulted; a declaration file that is present but unreadable is a FAIL
-  (unknown is not clean); and a scaffold that predates the `tests` object —
-  the `scaffold` kind is never overwritten, so a re-stamp cannot add it — is
-  named by a `HINT` beside the PASS, pointing at the clone's
+  consulted; a declaration file that is present but unreadable is a FAIL;
+  and a scaffold that has no `tests` object is named by a `HINT` beside the
+  PASS, pointing at the clone's
   `.claude/autoflow.local.json.example`. The
   `/autoflow:install` skill resolves the clone it detects against and stamps
   from through the same resolver — a byte-identical copy shipped inside the
-  plugin, since the plugin cache carries no `scripts/lib/` — with the plugin
-  root's `../..` as the last candidate (a directly loaded clone), never as the
-  derivation: under `/plugin install` that arithmetic lands in
-  `plugins/cache/<marketplace>/`, which holds no `setup/` (issue #174).
+  plugin — with the plugin root's `../..` as the last candidate (a directly
+  loaded clone), never as the derivation.
 - A drift-test failure is a **stop condition** for starting a new AutoFlow
   cycle on the target, in the same class as PREFLIGHT's Git-clean hard stop:
   resolve the drift (re-stamp, pin fix, plugin update, or reinstall) first.
@@ -187,10 +162,4 @@ below means both tiers together.
 
 ## Related
 
-- Epic: #785 (host↔target inversion); this rule set is slice S1 (#787).
-- Governing ADR: [ADR-0015](records/adr/0015-autoflow-distribution-plugin-plus-thin-root-layer.md)
-  — D1 (tier boundary), D2 (plugin + thin root layer, plugin-version
-  vocabulary), Consequences > Negative (two-channel skew is the need this
-  rule set covers).
-- Implementing slices: #790 (S4a), #791 (S4b), #792 (S5).
 - Local overlay example: `CLAUDE.local.md.example` (R3 scaffold source).

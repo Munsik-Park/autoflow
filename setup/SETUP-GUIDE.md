@@ -8,9 +8,9 @@
 
 ## Install as a consumed tool
 
-Epic #785 inverts the dependency direction: your dev project is the repo root
-(host) and AutoFlow is a **versioned tool it consumes**. Onboarding is **3
-commands**, run from a Claude Code session rooted in your project:
+Your dev project is the repo root (host) and AutoFlow is a **versioned tool it
+consumes**. Onboarding is **3 commands**, run from a Claude Code session rooted in
+your project:
 
 ```
 1. /plugin marketplace add Munsik-Park/autoflow
@@ -18,8 +18,7 @@ commands**, run from a Claude Code session rooted in your project:
 3. /autoflow:install        # detects → confirms → stamps → drift-checks
 ```
 
-The three commands are two different things, and keeping them apart is what
-keeps a stamped repository from freezing on an old plugin version:
+The three commands are two different things:
 
 - **Steps 1–2 enable the plugin, once, at USER scope.** `/plugin install` writes
   the enablement into `~/.claude/settings.json`, and that is what turns AutoFlow
@@ -33,8 +32,7 @@ keeps a stamped repository from freezing on an old plugin version:
   no enablement* below).
 - **Maintenance is both, in that order**: update the plugin at user scope
   (`/plugin marketplace update` → `/plugin update autoflow@autoflow`), then
-  re-stamp each target (`/autoflow:install`) so its bundle and version record
-  catch up.
+  re-stamp each target (`/autoflow:install`).
 
 Step 3 is the `/autoflow:install` skill. It detects root-layer absence or drift
 and reports the derived org/repo/branch/topology (read-only), asks for a
@@ -46,39 +44,28 @@ record (R1).
 ### A stamped repository declares no enablement
 
 The stamp writes `extraKnownMarketplaces` into your `.claude/settings.json` and
-**nothing else**: no `enabledPlugins` key (issue #245). The reason is worth
-knowing before you "repair" the absence by adding it back. A repo-level
-`enabledPlugins["autoflow@autoflow"]: true` declaration makes Claude Code create
-and freeze a **project-scope installation record** for the plugin, pinning that
-repository to whatever version was resolved when the record was minted; nothing
-refreshes it afterwards, so every stamped repository would drift onto its own
-frozen version. A `false` declaration mints no such record — it turns the plugin
-off in that repository, and is the record-free opt-out below. Enablement lives at user scope, where
-one update moves every project at once. The retained marketplace entry is the
-target's record of *which* marketplace its AutoFlow comes from, so that
-`/plugin install autoflow@autoflow` resolves on a fresh clone of the target.
+**nothing else**: no `enabledPlugins` key. Do not add a repo-level
+`enabledPlugins["autoflow@autoflow"]: true` declaration. A `false` declaration
+turns the plugin off in that repository, and is the opt-out below. Enablement
+lives at user scope. The retained marketplace entry is the target's record of
+*which* marketplace its AutoFlow comes from.
 
 Two consequences to know:
 
 - **Turning AutoFlow off in one repository** is supported and is yours to write:
   put `"enabledPlugins": {"autoflow@autoflow": false}` in that repository's
   `.claude/settings.json` by hand. A re-stamp **preserves** a `false` value — it
-  deletes only the literal `true` an old stamp wrote — and reports what it did on
-  stdout, one `REMOVED:` / `KEPT:` line naming the file and the key, so the
-  change you are about to commit is never silent.
-- **A repository stamped before this change** carries
-  `"autoflow@autoflow": true` from the old stamp. The next `/autoflow:install`
-  re-stamp removes that key and prunes an `enabledPlugins` object it emptied; a
-  repository that is never re-stamped keeps its frozen record, so re-stamp the
-  ones you care about.
+  deletes only the literal `true` — and reports what it did on stdout, one
+  `REMOVED:` / `KEPT:` line naming the file and the key.
+- **A repository carrying `"autoflow@autoflow": true`**: the next
+  `/autoflow:install` re-stamp removes that key and prunes an `enabledPlugins`
+  object it emptied; the key stays until the repository is re-stamped.
 
 The skill locates the clone it detects against and stamps from through the
 harness's own registries — `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/known_marketplaces.json`,
 then `plugins/marketplaces/autoflow/` — never from the installed plugin's own
-path: under `/plugin install` the plugin is a versioned copy under
-`plugins/cache/`, whose parent tree is not the clone (issue #174). A clone the
-harness does not register (a local checkout loaded directly) is found last,
-two levels above the plugin root, or named explicitly with
+path. A clone the harness does not register (a local checkout loaded directly) is
+found last, two levels above the plugin root, or named explicitly with
 `AUTOFLOW_MARKETPLACE_ROOT=<clone root>`. A failed resolution lists every
 location consulted; the skill reports that list rather than guessing.
 
@@ -98,7 +85,7 @@ setup/init.sh --target /path/to/your-project --force
 ```
 
 A re-stamp also **reconciles** the target against the manifest it installed
-last (issue #236): before the stamp overwrites `.claude/autoflow/manifest.json`
+last: before the stamp overwrites `.claude/autoflow/manifest.json`
 the installer reads it, and every artifact that manifest lists and the new one
 does not is handled by ownership — a `copy` whose on-disk sha256 still equals
 the previous manifest's is removed (`REMOVED:`); a `copy` you modified, and
@@ -112,8 +99,7 @@ The install is **manifest-driven**: `setup/manifest.json` is the exhaustive,
 machine-readable list of every artifact the installer writes, with a per-file
 `source`, `dest` (target-root-relative), `tier`, `kind`, and `sha256`. Nothing
 is hardcoded in `init.sh`; the manifest is the single source of truth and is
-itself copied into the target (`.claude/autoflow/manifest.json`) so the target
-can self-describe and self-verify offline.
+itself copied into the target (`.claude/autoflow/manifest.json`).
 
 ### What lands in the target (thin-root artifacts)
 
@@ -124,7 +110,7 @@ can self-describe and self-verify offline.
 | Deliberation workflows | `.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js` | copy |
 | Settings pin (`extraKnownMarketplaces` — the marketplace this target's AutoFlow comes from; no enablement key) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
-| Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`; `/autoflow:install` Step 0 runs a byte-identical copy shipped inside the plugin, since the plugin cache holds no `scripts/lib/`) | `scripts/lib/plugin-root.sh` | copy |
+| Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`; `/autoflow:install` Step 0 runs a byte-identical copy shipped inside the plugin) | `scripts/lib/plugin-root.sh` | copy |
 | Local overrides scaffold (never overwritten) | `CLAUDE.local.md` | scaffold |
 | Spawn policy sample (target-configured, never overwritten) | `.claude/autoflow/spawn-policy.json` | scaffold |
 
@@ -132,37 +118,24 @@ The shim stamp is idempotent and only touches the `AUTOFLOW-IMPORT:BEGIN/END`
 managed block — your own `CLAUDE.md` prose is preserved. The settings merge is a
 deep-merge: your pre-existing `.claude/settings.json` keys are kept, and the
 AutoFlow marketplace declaration is added. The pin carries no enablement key —
-see *A stamped repository declares no enablement* above for why, and for the
-one key the re-stamp deletes (`"autoflow@autoflow": true`, the literal an old
-stamp wrote) and the one it preserves (`false`, your per-repo opt-out); both
-outcomes are named on stdout, one line per key. The pin carries no `env`
-block either — the Agent Teams channel is retired (ADR-0017 / ADR-0021), so the
-`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` enablement an earlier pin stamped is no
-longer provisioned (see Prerequisites for targets stamped by that earlier pin).
+see *A stamped repository declares no enablement* above for the one key the
+re-stamp deletes (`"autoflow@autoflow": true`) and the one it preserves (`false`,
+your per-repo opt-out); both outcomes are named on stdout, one line per key. The
+pin carries no `env` block either (see Prerequisites for an existing
+`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` entry).
 `CLAUDE.local.md` holds your target identity (R3) and is never overwritten, even
-with `--force`. `.claude/autoflow/spawn-policy.json` is scaffolded for the same
-reason: it is a sample carrying the values currently applied, which you configure
-for your own runtime — the model rows and the `workflow_sites` effort; a `phases[]`
-row's effort is fixed by the plugin's agent definitions (their `effort:` frontmatter
-is what a direct spawn actually runs at) and `check` fails closed if you change it —
-so a re-stamp will not overwrite a configured policy and
-`drift-check.sh` reports it as target-owned rather than as content drift. On a
-version bump your obligation is to run
-`bash scripts/spawn-policy/spawn-policy.sh check` and add any newly required row —
-a scaffold is never refreshed for you. You no longer have to remember to: the
-drift detector's D6 leg runs that same `check` over the scaffold, and names any
-row the clone's sample carries that the scaffold lacks, everywhere drift-check
-already runs — `/autoflow:install` before and after a stamp, and PREFLIGHT — so a
-stale scaffold is a `FAIL: D6` stop with the rows to fix listed, rather than a
-fail-closed readout at the first ARCHITECT spawn (issue #185). Issue #166 renamed the architect
-deliberation's `workflow_sites` rows to `dev-turn` / `test-turn` / `scribe` /
-`ledger` and removed `deliberation_caps`, so a target scaffold still carrying the
-former rows fails closed at its next ARCHITECT until it is edited; issue #179 then
-moved the discussion out of the workflow, so the `architect-deliberation` rows are
-`scribe` / `ledger` only and two new `phases` rows —
-`architect-dev-participant` / `architect-test-participant` — govern the relay
-participants (a scaffold lacking them fails the readout at the first ARCHITECT
-spawn). `check` validates the config's agent types
+with `--force`. `.claude/autoflow/spawn-policy.json` is a scaffold too: a sample
+carrying the values currently applied, which you configure for your own runtime —
+the model rows and the `workflow_sites` effort; a `phases[]` row's effort is fixed
+by the plugin's agent definitions and `check` fails closed if you change it. A
+re-stamp does not overwrite a configured policy, and `drift-check.sh` reports it
+as target-owned rather than as content drift. On a version bump your obligation
+is to run `bash scripts/spawn-policy/spawn-policy.sh check` and add any newly
+required row. The drift detector's D6 leg runs that same `check` over the
+scaffold, and names any row the clone's sample carries that the scaffold lacks,
+everywhere drift-check runs — `/autoflow:install` before and after a stamp, and
+PREFLIGHT; a stale scaffold is a `FAIL: D6` stop with the rows to fix listed.
+`check` validates the config's agent types
 against the agent definitions the session actually loads: `.claude/agents/` when
 that directory holds `autoflow-*.md` files (the framework repository, or a target
 carrying its own copies), otherwise the installed plugin's `agents/` — resolved
@@ -193,10 +166,10 @@ sh .claude/autoflow/drift-check.sh
 | D1 | every installed artifact vs the installed manifest (content hashes, the shim managed region, the settings-pin keys; a scaffold is presence-only) | FAIL — repair the installed file |
 | D2 | installed manifest `version` vs the installed plugin's `plugin.json` | FAIL — re-stamp |
 | D3 | settings wiring never binds `.autoflow` state to the plugin root | FAIL — fix the wiring |
-| D4 | installed manifest vs the **marketplace clone's** `setup/manifest.json`, per artifact by sha256 — a bundle that is self-consistent (D1 PASS) but older than what the clone would stamp today, including upstream changes merged without a version bump | FAIL — re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`); a changed `scaffold` sample is a `WARN` you dispose of by hand; an artifact upstream no longer ships is a `WARN` that says what the re-stamp will do with it (issue #236) — remove a `copy` whose on-disk sha256 still equals the installed manifest's, keep and report a modified `copy` or any other kind |
-| D5 | the installed plugin's files vs the clone's `plugin/<name>/` source — the hooks a session runs and the docs it reads must come from the same source | FAIL — `/plugin update autoflow@autoflow` |
-| D6 | the target-owned `.claude/autoflow/spawn-policy.json` scaffold vs the agent definitions the session loads (issue #185): `scripts/spawn-policy/spawn-policy.sh check` over the scaffold — a `phases` row's effort must equal the loaded definition's `effort:` frontmatter and every `agent_type` must be shipped — plus the row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed. Model values and `workflow_sites` effort are yours and are not compared | FAIL — edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values, add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` |
-| D7 | **only where you opted into AutoFlow's suite plane** (`.claude/autoflow.local.json` > `tests` > `suite_plane: true` — ADR-0024 D3, issues #228 / #229; resolved through the shipped `scripts/test/suite-manifest.sh`, the plane's single resolver): every executable spec under your `tests/**` declares the `# ci-subject:` header `scripts/test/select-suites.sh` requires (issue #213): a suite that predates the header contract BLOCKs every selection, starting with RED's suite derivation. The check is the selector's own `--check-headers` stage, one FAIL per header-less suite. A target that has not opted in **passes without consulting the selector** — no header is owed and your tests run the way you run them (AutoFlow asks for no test command — its roles find your practice at run time); if your `.claude/autoflow.local.json` predates the `tests` object (stamped at 0.2.2 or earlier), the PASS carries a `HINT` naming it | FAIL (opted in) — back-fill each named suite's header per `docs/autoflow-guide.md` > RED > Header contract > *Adopting the contract over existing suites* (a re-stamp never touches `tests/**`); a sourced helper moves under `tests/lib/` instead. FAIL (declaration present but unreadable) — repair `.claude/autoflow.local.json`; an unreadable declaration is never read as "not opted in". HINT (no `tests` object) — add it by hand from `<clone>/.claude/autoflow.local.json.example`; a re-stamp never overwrites the scaffold |
+| D4 | installed manifest vs the **marketplace clone's** `setup/manifest.json`, per artifact by sha256 — a bundle that is self-consistent (D1 PASS) but older than what the clone would stamp today, including upstream changes merged without a version bump | FAIL — re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`); a changed `scaffold` sample is a `WARN` you dispose of by hand; an artifact upstream no longer ships is a `WARN` that says what the re-stamp will do with it — remove a `copy` whose on-disk sha256 still equals the installed manifest's, keep and report a modified `copy` or any other kind |
+| D5 | the installed plugin's files vs the clone's `plugin/<name>/` source | FAIL — `/plugin update autoflow@autoflow` |
+| D6 | the target-owned `.claude/autoflow/spawn-policy.json` scaffold vs the agent definitions the session loads: `scripts/spawn-policy/spawn-policy.sh check` over the scaffold — a `phases` row's effort must equal the loaded definition's `effort:` frontmatter and every `agent_type` must be shipped — plus the row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed. Model values and `workflow_sites` effort are yours and are not compared | FAIL — edit the scaffold by hand: set each named row to the loaded definition's values, add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` |
+| D7 | **only where you opted into AutoFlow's suite plane** (`.claude/autoflow.local.json` > `tests` > `suite_plane: true`, resolved through the shipped `scripts/test/suite-manifest.sh`, the plane's single resolver): every executable spec under your `tests/**` declares the `# ci-subject:` header `scripts/test/select-suites.sh` requires. The check is the selector's own `--check-headers` stage, one FAIL per header-less suite. A target that has not opted in **passes without consulting the selector** — no header is owed and your tests run the way you run them; if your `.claude/autoflow.local.json` has no `tests` object, the PASS carries a `HINT` naming it | FAIL (opted in) — back-fill each named suite's header per `docs/autoflow-guide.md` > RED > Header contract > *Adopting the contract over existing suites*; a sourced helper moves under `tests/lib/` instead. FAIL (declaration present but unreadable) — repair `.claude/autoflow.local.json`; an unreadable declaration is never read as "not opted in". HINT (no `tests` object) — add it by hand from `<clone>/.claude/autoflow.local.json.example` |
 
 A non-zero exit is a **PREFLIGHT stop condition** — resolve the reported drift
 before starting a new AutoFlow cycle. D2, D4, D5 and D6 do **not** need the
@@ -208,29 +181,25 @@ the same result is produced from a plain shell, which is where PREFLIGHT runs it
 Each of the four reports `SKIP`, not a failure, when its side is not locally
 resolvable (no plugin installed, no clone), naming the locations it consulted.
 If the clone itself is behind upstream, refresh it first
-(`/plugin marketplace update autoflow`) — D4 compares against the clone you have,
-which is also what a re-stamp would deliver.
+(`/plugin marketplace update autoflow`).
 
 ---
 
 ## Prerequisites
 
-- No Agent Teams enablement: the methodology no longer uses Claude Code's
-  experimental Agent Teams (the channel is retired — every role is an
-  anonymous direct `Agent` spawn), so the settings pin ships no
-  `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`. A target stamped by a pin older
-  than this change still carries `"env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }`
-  in `.claude/settings.json`: the stamp is a deep-merge and cannot delete a key,
-  so remove that entry by hand if you do not want the experimental feature
-  enabled. `drift-check.sh` does not flag the leftover (its D1 check is a
-  pin-subset test).
+- No Agent Teams enablement: the methodology does not use Claude Code's
+  experimental Agent Teams, and the settings pin ships no
+  `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`. A re-stamp leaves an existing
+  `"env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }` entry in
+  `.claude/settings.json` in place; remove it by hand if you do not want the
+  experimental feature enabled. `drift-check.sh` does not flag it.
 - Plugin enablement is **user scope**, and the per-repository opt-out is yours:
   `/plugin install autoflow@autoflow` (steps 1–2 above) enables AutoFlow in every
   project you open, and a stamp adds no enablement key to any repository (see
   *A stamped repository declares no enablement*). To keep AutoFlow **off** in one
   repository, write `"enabledPlugins": {"autoflow@autoflow": false}` into that
   repository's `.claude/settings.json` by hand: a re-stamp preserves any value
-  other than the literal `true` an old stamp wrote, and names on stdout what it
+  other than the literal `true`, and names on stdout what it
   removed (`REMOVED:`) or declined to interpret (`KEPT:`, with the value found).
 - A GitHub repository (or multiple repos for multi-sub-repo setup).
 - For a private host repo and/or private submodule: an SSH key (or a
@@ -254,7 +223,7 @@ which is also what a re-stamp would deliver.
   pins govern only the **isolated reviewer subprocess**, never the orchestrating
   Claude session. See [`../docs/reviewer-backend.md`](../docs/reviewer-backend.md)
   > *Model and effort*.
-- Target-declared local checks (PREFLIGHT, issue #181): if this repository has a
+- Target-declared local checks (PREFLIGHT): if this repository has a
   per-clone setup step of its own — a commit-hook installer, a generated config,
   a toolchain probe — declare it in the same scaffold under
   `preflight.local_checks[]`
@@ -262,9 +231,9 @@ which is also what a re-stamp would deliver.
   PREFLIGHT runs each `check` before DIAGNOSE, runs the optional `repair` once on
   a failure and re-checks, and stops **fail-closed** when a check still does not
   pass (`scripts/preflight/local-checks.sh`). Nothing declared is a recorded
-  no-op; the framework knows no specific tool. The outcome lands in the issue
+  no-op. The outcome lands in the issue
   ledger only, never in the state file.
-- Security checklist (AUDIT, issue #281): AUDIT scores a change against **your**
+- Security checklist (AUDIT): AUDIT scores a change against **your**
   security checklist — AutoFlow ships none and names no item. Declare its
   repository-relative path in the same scaffold under `audit.security_checklist`
   (`{"audit":{"security_checklist":"docs/security-checklist.md"}}`). With none
@@ -275,8 +244,7 @@ which is also what a re-stamp would deliver.
   (`scripts/gate/security-checklist.sh`; `docs/autoflow-guide.md` > AUDIT). A
   change you commit outside a cycle is simply the checklist the next cycle reads.
   **Upgrading from a stamp that shipped `.claude/autoflow/docs/security-checklist.md`**:
-  that file was AutoFlow's reference-deployment checklist, and a re-stamp removes
-  it when you have not modified it (`drift-check.sh` D4 forecasts the removal as
+  a re-stamp removes that file when you have not modified it (`drift-check.sh` D4 forecasts the removal as
   a WARN; a modified copy is kept and reported for you to dispose of by hand). If
   your AUDIT relied on it, copy it to a path you own before re-stamping —
   `cp .claude/autoflow/docs/security-checklist.md docs/security-checklist.md` —
