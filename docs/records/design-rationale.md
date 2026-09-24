@@ -573,7 +573,7 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Not changed.** `.codex/review.md`: the reviewer reads the comments since the previous change, so a rebuttal posted on the PR reaches it. The pause criteria (a)–(d), the cap of 7 and the label authority.
 
-**Why the device changes here.** The rule and its device change together (principle 4): the home in step 6.5 and the step's route line, the recommendation triage, the re-score contract ([`docs/role-contracts.md`](../role-contracts.md) > *Re-entry form*; [`docs/evaluation-system.md`](../evaluation-system.md) `rescore`), the analyzer definition with its plugin copy, and three `CLAUDE.md` Flow Control rows. No hook, script, threshold or state field changes.
+**Why the device changes here.** The rule and its device change together (principle 4): the home in step 6.5 and the step's route line, the recommendation triage, the re-score contract ([`docs/role-contracts.md`](../role-contracts.md) > *Re-entry form*; [`docs/evaluation-system.md`](../evaluation-system.md) `rescore`), PREFLIGHT's Resume procedure step 3 (a gate whose rebuttal awaits its re-score is not resumed past; the rebuttal's `[rebuttal]` ledger entry is what it reads), the analyzer definition with its plugin copy, and three `CLAUDE.md` Flow Control rows. No hook, script, threshold or state field changes.
 
 **Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 26–30 (trigger area: evaluation policy).
 

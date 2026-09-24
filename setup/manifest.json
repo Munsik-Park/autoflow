@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4fa47dc9cdc08ba4b042f320a9333fb9e0b60d4574593bd30eabb44d6e970ba8"
+      "sha256": "a57ebc71aaaaa0934d194e48fd86fa0ed9a8d733d753e7fabb0720834ccbebdb"
     },
     {
       "source": "docs/development-guideline.md",
