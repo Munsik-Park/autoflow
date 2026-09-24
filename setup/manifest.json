@@ -293,7 +293,7 @@
       "dest": "scripts/gate/remedy-route.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "5296250b99f49e07ffcad22ec6d405198ce208487bfd0382aee52bd8c41b9c34"
+      "sha256": "f669ab7abec99ca65f6d56b1c0e63442bc01c80efee44263675395b52c0245b6"
     },
     {
       "source": "scripts/gate/security-checklist.sh",

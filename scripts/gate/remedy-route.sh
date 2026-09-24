@@ -30,9 +30,8 @@
 #     records where the re-entry starts (a cycle from DIAGNOSE, or ARCHITECT
 #     on a brief — #227); `RED` / `GREEN` / `DOC_COMMIT` are the thin path
 #     (one owning role + execution verification + reviewer re-review).
-#   - Recommendation triage after a PASS at AUDIT and GATE:QUALITY (#275);
-#     GATE:HYPOTHESIS and GATE:PLAN do not call this script
-#     (docs/autoflow-guide.md > GATE:QUALITY > Recommendation triage).
+#   - Recommendation triage after a PASS at AUDIT and GATE:QUALITY;
+#     GATE:HYPOTHESIS and GATE:PLAN do not call this script.
 #
 # Subcommands
 #   route <class>...          print the re-entry target for the class set

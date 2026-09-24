@@ -1079,10 +1079,9 @@ if [ "$TOOL_NAME" = "Agent" ]; then
   esac
 fi
 
-# An open re-entry is not pushed past (issue #275): while a gate's latest record
-# carries `remedy_class`, a re-entry is open — a recommendation attempt not yet
-# re-scored clean (what opens and closes one: docs/autoflow-guide.md >
-# GATE:QUALITY > Recommendation triage).
+# An open re-entry is not pushed past: while a gate's latest record carries
+# `remedy_class`, a re-entry is open — a recommendation attempt not yet
+# re-scored clean.
 # The value is read at the same most-recent-cycle location as check_scores reads
 # scores; a FAIL's class is already behind its failing scores, so this branch
 # only ever adds the PASS-with-open-attempt case. The validator above closes
