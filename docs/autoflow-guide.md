@@ -1650,11 +1650,8 @@ No separate disposition system exists for gate recommendations
   fixed and re-scored clean, separated as not directly related, or decided by the operator, and any
   `Low` fixed now re-scored.
 
-**This section is the rule's only home.** Every other site that needs the triage carries only what
-it acts on itself — a transition condition, the check its device makes, a cap's number — and cites
-this section ([`development-guideline.md`](development-guideline.md) > Documentation Policy). A
-change to the rule is checked, before it is committed, against every hit of these search terms,
-read as one set:
+**This section is the rule's only home** ([`development-guideline.md`](development-guideline.md) >
+Documentation Policy). Its search terms:
 
 ```
 git grep -n -i -E 'recommendation triage|recommendations triaged|recommendation attempt|gate-autofix|attempt (is left )?open|no attempt|fixed now|fix-now|fix now|open re-entry|reviewer-finding procedure|recommendations.{0,40}(Medium|remedy_class)'

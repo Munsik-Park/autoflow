@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "710a7fe20d8a01d95163594b5c94f95e4a925c08bd727252b4dff1da660cfa65"
+      "sha256": "6a15698ac97901cc3e6c0bf2a86ab06b4230e96502f90462867852f746ac8f43"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,14 +27,14 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b92f3c976a9636ca37ea990d767bfbc33f9c165f5682fe0019c27cf22dd00a51"
+      "sha256": "aea212aa0b88d176d374db3092fcdbd49685adaad1d987434d83780ebe2782b6"
     },
     {
       "source": "docs/development-guideline.md",
       "dest": ".claude/autoflow/docs/development-guideline.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4300f7acf42af6afb55e319221dd790978bcea804f142078ddee54d53d4b1a0f"
+      "sha256": "90362aeca7ef3c740d33dce4b1b76baa5a221ecbf4aff279a9a8e4fe903de0d5"
     },
     {
       "source": "docs/evaluation-system.md",
