@@ -218,7 +218,7 @@ above are the in-repo defense; this is a fallback.
 - **Intake readiness triage FAIL** (`mode = new-issue`; a planning/design/ADR prerequisite is clearly required) → pause for the user (`awaiting-user`); the user's explicit request starts any prerequisite work as a separate cycle. Structure fan-out is not run.
 - **Bug / incident issue** (structure PASS, code change required) → **GATE:HYPOTHESIS**
   (cause analysis evaluation) — see [`gate-hypothesis.md`](gate-hypothesis.md).
-- **Feat issue** (structure PASS) → **ARCHITECT** directly (GATE:HYPOTHESIS cause is skipped).
+- **Non-bug issue** (feat, chore, docs, refactor, …; structure PASS) → **ARCHITECT** directly (GATE:HYPOTHESIS cause is skipped; `verdict` is set to `"skipped (non-bug issue)"` — [`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking > `verdict` rule).
 - **Structure FAIL** → disposition above (close / reply on PR / report to user + pause), driven
   by the cycle `mode`.
 - **Review-response loop check match** → reply on PR + pause for the user (`awaiting-user`); the

@@ -279,7 +279,7 @@ a research or `autoflow-*` type**. A contradictory declaration is blocked rather
 than arbitrated, with the `name` side carrying no role at all.
 
 Mapping (hook-owned — a spawn never selects its own gate): `planning` →
-GATE:HYPOTHESIS (skip-verdict bypass for feat issues); `implementation` /
+GATE:HYPOTHESIS (skip-verdict bypass for non-bug issues); `implementation` /
 `testing` → GATE:PLAN; `analysis` / `evaluation` / research → pass. An
 **undeclared** spawn while a cycle is active is denied with a
 self-describing message. Outside an active cycle (no state file, or

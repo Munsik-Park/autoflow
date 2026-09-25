@@ -169,7 +169,7 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | review-response loop check → user | the trigger comment repeats the immediately-prior review-response attempt's complaint class with a new witness case → reply on PR + await the user's re-entry decision (`phase: awaiting-user`). Runs once per review-response attempt, on every route (`docs/phases/analysis.md` > *Review-response loop check*) |
 | DIAGNOSE (structure eval) → DIAGNOSE (cause) | GATE:HYPOTHESIS structure PASS (code change required) + its recommendations triaged (no attempt open) |
 | DIAGNOSE → GATE:HYPOTHESIS (cause) | hypothesis classification + lightweight verification done (bug/incident issues) |
-| DIAGNOSE → ARCHITECT | affected scope identified (feat issues — skip GATE:HYPOTHESIS cause) |
+| DIAGNOSE → ARCHITECT | affected scope identified (non-bug issues — skip GATE:HYPOTHESIS cause) |
 | GATE:HYPOTHESIS → ARCHITECT | cause analysis PASS + code change required + its recommendations triaged (no attempt open) |
 | GATE:HYPOTHESIS → user | non-code root cause confirmed → report to user |
 | ARCHITECT → GATE:PLAN | the deliberation's report carries no un-agreed point, no agreed conclusion changes an acceptance criterion's content (a reduced verification disposition carrying a stated reason is not one — `docs/phases/architect.md` > *Report routing*), and the verification design's `## Tools` section carries no `operator` item |
@@ -295,9 +295,9 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
 |------------|------|-----------------|
 | Bug / incident | Created at PREFLIGHT | `"pending"` |
 | Bug / incident | After GATE:HYPOTHESIS evaluation | `"evaluated"` |
-| Feat | Set at DIAGNOSE | `"skipped (feat issue)"` |
+| Non-bug (feat, chore, docs, refactor, …) | Set at DIAGNOSE | `"skipped (non-bug issue)"` |
 
-If `verdict` is empty or contains `skip`, the gate is not triggered for the cause-analysis form. Bug issues must be initialised as `"pending"`.
+The hook's state-file validator admits exactly these values, an empty or absent `verdict`, and `"skipped (feat issue)"` — the value a non-bug cycle recorded before `"skipped (non-bug issue)"`, admitted so such a state file stays valid and never written by a new cycle. Any other value makes the state file malformed, and every score-gated `git push` / `gh pr create` / gated `Agent` spawn fails closed until it is repaired. If `verdict` is empty or one of the two `skipped` values, the gate is not triggered for the cause-analysis form. Bug issues must be initialised as `"pending"`.
 
 **Score recording**: write the Evaluation AI's `scores` verbatim, in the shape the hook validates — shown below. Each item's score is a number in `0`–`10`; the two shapes may be mixed within one gate. A prose string such as `"9 - reason"` is **not** a score: the hook's state-file validator rejects it, and every score-gated `git push` / `gh pr create` / gated `Agent` spawn fails closed until the file is repaired. Format source: [`docs/evaluation-system.md`](docs/evaluation-system.md) > Evaluation Output Format.
 
@@ -314,7 +314,7 @@ This object is the value of `phases.<gate>.scores` in `.autoflow/issue-{N}.json`
 
 - `Agent` (any spawn) → explicit `model` parameter required (state-independent — see [Spawn Model](#spawn-model--phase-by-phase)).
 - `Agent` (any spawn, active cycle) → **declared role** required (`autoflow-*` subagent_type or a research type); an undeclared spawn is denied. The gate class comes from the declaration, never from prompt keywords — see [Spawn Model](#spawn-model--phase-by-phase) > Spawn role declaration.
-- `Agent` (role `planning`) → GATE:HYPOTHESIS pass required (bug issue) or `verdict` contains `skip` (feat).
+- `Agent` (role `planning`) → GATE:HYPOTHESIS pass required (bug issue) or `verdict` is a `skipped` value (non-bug issue).
 - `Agent` (role `testing`) → GATE:PLAN pass required.
 - `Agent` (role `implementation`) → GATE:PLAN pass required.
 - `Agent` (role `analysis` / `evaluation` / research types) → not score-gated.

@@ -4,7 +4,7 @@
 > Contract routes to this file; the other phases are listed in
 > [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
 
-Feat issues skip this gate.
+Non-bug issues (feat, chore, docs, refactor, …) skip this gate.
 
 **Evaluator**: independent Evaluation AI, fresh-spawned per call.
 **Input**: hypothesis list + lightweight-verification results + verdict notes.

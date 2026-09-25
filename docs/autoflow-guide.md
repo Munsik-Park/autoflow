@@ -81,7 +81,7 @@ flowchart TD
     HYPS -->|FAIL · gap-low · new-issue| CLOSE
     HYPS -->|FAIL · gap-low · review-response| REVW
     HYPS -.->|FAIL · non-code lever| HUMAN
-    HYPS -->|PASS<br/>feat issue| ARC
+    HYPS -->|PASS<br/>non-bug issue| ARC
     HYPS -->|PASS<br/>bug issue| HYPC
     HYPC -->|PASS| ARC
     HYPC -->|FAIL ≤2×| DIA

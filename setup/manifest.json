@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a2a36cdd933fb5d30e9bc1f2f0f703a1768d2ffc0ba52b4b16c39544a5bfc96b"
+      "sha256": "6a463b42adba9cc33cdbf555bd0a20364c32d32cf84bff8100a695be80874905"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "aeca2f5be47a4740d6d31dbc6e26ffc54ed68e52b80bba979e9a50bcef58b87e"
+      "sha256": "26a1e4745ef4d61c5377ce3de98176b3fa14a76de3da87810c68234ec0f81623"
     },
     {
       "source": "docs/decision-ledger.md",
@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3dc1efb9c4f20d4aeaa5300a49869ed6372514a84252a49a54b6e0710c38be1d"
+      "sha256": "cafad91d47fea39f4b8c9c428092b9b39fc609f8abca4c68a87a15e909e2b0db"
     },
     {
       "source": "docs/phases/architect.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/phases/gate-hypothesis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6d0dc0e27954844559a73378edec5e30de44f8a2e1b5286520513a1f9622804e"
+      "sha256": "1fc836f735621874214e1e508e7193c90d732289736707f896825da4cb24b396"
     },
     {
       "source": "docs/phases/gate-plan.md",
