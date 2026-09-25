@@ -1050,7 +1050,6 @@ if [ "$TOOL_NAME" = "Agent" ]; then
     planning)
       # Gate 1: planning spawn → GATE:HYPOTHESIS pass required (bug issues only).
       # If gate_hypothesis_cause.verdict does not contain "skip", treat as bug issue.
-      # The validator above admits only the two "skipped (...)" values that contain it.
       # Fail closed if the verdict cannot be read — a JSON-valid but schema-corrupt
       # state (e.g. `.phases` is not an object) makes this jq error and would
       # otherwise exit 5, a NON-blocking PreToolUse code (PR #242 review). The
