@@ -95,7 +95,7 @@ bash scripts/spawn-policy/spawn-policy.sh check                # validate the co
 
 Communication with a role spawn is the `Agent` call itself:
 the orchestrator spawns each role with a `subagent_type`, and the spawn's **return value is its
-report**. There is no team to create, no mailbox, and no persistent teammate.
+report**.
 
 - The orchestrator spawns each role via `Agent` with `subagent_type: autoflow-<role>` and an explicit `model`.
 - A spawn writes any body to `.autoflow/*` and returns an anchor + one-line summary ([`docs/submodule-common-rules.md`](docs/submodule-common-rules.md) > Reporting Format).

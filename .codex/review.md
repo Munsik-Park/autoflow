@@ -105,12 +105,3 @@ List specific test gaps only when they materially affect confidence in the chang
 Potential issues that need maintainer confirmation or more context.
 
 If there are no findings in a section, say `None`.
-
-## Legacy Mapping
-
-If another workflow asks for the older local categories, map them as follows:
-
-- `Must Fix`: `Critical` and `High` confirmed findings
-- `Should Fix`: `Medium` and `Low` confirmed findings
-- `Missing Tests`: same as above
-- `Low Confidence`: same as above

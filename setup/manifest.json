@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6a463b42adba9cc33cdbf555bd0a20364c32d32cf84bff8100a695be80874905"
+      "sha256": "e87046cc1785fa1c9a05af5398faf600760bd5f1283f79814a2dcec9229b3487"
     },
     {
       "source": "docs/INDEX.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3c1d7ecc5ee946d0170e5866173fe42eef6471fa2409c1426a88291d45c099b8"
+      "sha256": "001ea0e129e99894a9f7b105472a770f4c93be5ce5215c7f81bd25434e16ebba"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -342,7 +342,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ade0f6574a88038630da27bea996c4e852beda7b991cd61de934292e37865410"
+      "sha256": "69d4f168c2b20f13f3578172075bd2249082787b68eea15a817b088adbd9d83f"
     },
     {
       "source": "AGENTS.md",
