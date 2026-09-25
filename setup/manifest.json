@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e0dd470b50e76b1c1affab638e588d7927a89298997d902d5a1209a716201549"
+      "sha256": "a2b8d5905d3da1ebec6bb5683c270923e4bebbacf90b621a3a0e82c05288cd47"
     },
     {
       "source": "docs/issue-proposal.md",
@@ -153,7 +153,7 @@
       "dest": ".claude/autoflow/docs/phases/preflight.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "82696df22b3db152a40dabab798bc68032f16c9038e1e0fdf12cc8c7b75e0636"
+      "sha256": "114adc96ac600e0e51f9870d15a2a24075c04df616cbd112e33e5b27e353e53c"
     },
     {
       "source": "docs/phases/red.md",
@@ -223,7 +223,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cacaa14b76da082606c710b5511dadbec5e7a2547a65ddf8cbe09fed627a6eb8"
+      "sha256": "3c1d7ecc5ee946d0170e5866173fe42eef6471fa2409c1426a88291d45c099b8"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -377,7 +377,7 @@
       "dest": "scripts/cleanup/cleanup-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "21913fe272f6fbb9a04a497ce7405ae8b0e31aa80432412eb238e3ecdef67ebe"
+      "sha256": "58c0458eb0bc68b3fc53c8662593b6943da25a37ecc1c57c6a3a68a21fc0ff1c"
     },
     {
       "source": "scripts/ledger/ledger-entry-id.sh",

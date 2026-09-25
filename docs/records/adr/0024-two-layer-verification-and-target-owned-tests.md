@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293))
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293)); D2's archival narrowed by issue #316 — the store's reserved path `disposable/` is deleted at cleanup, not archived (see Amendment note (issue #316))
 
 ## Context
 
@@ -1120,3 +1120,38 @@ purity baseline, the C7 pilot fixtures ADR-0021 cites and the shipped `tests/lib
 
 **Effective from.** This revision binds verification designs authored after it lands. The change
 that writes it was verified by one local run of each kept check, recorded in its PR body.
+
+## Amendment note (issue #316)
+
+D2 archived the whole store with the issue's other artifacts. One path in it is now deleted at
+cleanup instead: `.autoflow/issue-{N}-local/disposable/`, a direct child of the store and its only
+reserved path. A cycle asset writes its reproducible output there — a build result, a copy of a
+source tree or of another original, re-creatable from inputs its record already names — and never
+anything a run record, an observation record or a cycle report cites: a log, a record file, the
+artifacts an observation left, or the asset itself, whose path the recorded command names. Cleanup
+removes the entry at that path, whatever its type and without following a symbolic link, before it
+allocates the issue's archive directory, and archives the rest as before. A failed deletion leaves
+the issue in place, unarchived, and exits non-zero; a store that is itself a symbolic link is
+archived as the link, and nothing under its target is deleted. Nothing outside the reserved path is
+deleted, and cleanup infers nothing from a name, a size or a shape: reproducible output a writer
+leaves elsewhere is archived.
+
+**Grounds.** `connev-llm/llmroute#592`'s archive held 830MB, of which 813MB were production build
+outputs and a checkout of the base commit's source tree — re-creatable, and cited by no record —
+beside the logs and records that carried every verdict. The name states the consequence, not the
+property: asked whether an output can be thrown away at cleanup, a writer answers no for a log,
+which a deterministic run could produce again. None of the 30 archived stores checked carried
+`disposable` at any depth, so a store written before this amendment archives as it did.
+
+**What stands.** D2's single declared prefix, its never-in-the-merged-tree property, its cross-cycle
+disposition and AC3's predicate. D2's "What outlives the cycle is the run's **record**" is the
+reserved path's "never goes in" side. D1's rows describe assets, and assets are still archived. The
+writer rule carries no `[MUST]` — no gate, hook or role contract checks where an asset writes — and
+no enforcement device: evidence a writer places inside the reserved path is lost with it, a residual
+accepted with the "never goes in" side as its only control. Rejected: a declared exclusion list, a
+name matched at any depth, several reserved names and a marker file — each a declaration or an
+inference the issue rules out — and moving first to delete inside the archive, which copies the bulk
+across filesystems only to delete it. Rule home:
+[`submodule-common-rules.md`](../../submodule-common-rules.md) > Verification and Tools > *How a
+test is run is the target's practice*; cleanup contract: [`git-workflow.md`](../../git-workflow.md) >
+Post-Merge Cleanup.

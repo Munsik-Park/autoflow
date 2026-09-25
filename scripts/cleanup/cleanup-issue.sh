@@ -3,14 +3,17 @@
 # SPDX-License-Identifier: Elastic-2.0
 # scripts/cleanup/cleanup-issue.sh
 #
-# AutoFlow Post-Merge Cleanup helper — ARCHIVES (moves, never deletes) a
-# resolved issue's `.autoflow/issue-<N>.*` + `.autoflow/issue-<N>-*` management
-# files (state JSON, decision ledger, design docs, phase/eval reports) and its
-# cycle-layer store `.autoflow/issue-<N>-local/` (the cycle's uncommitted
-# `automated` / `delivery-check` / `manual` assets — ADR-0024 D2, issue #229;
-# the directory moves whole, name preserved) out of
+# AutoFlow Post-Merge Cleanup helper — ARCHIVES (moves) a resolved issue's
+# `.autoflow/issue-<N>.*` + `.autoflow/issue-<N>-*` management files (state
+# JSON, decision ledger, design docs, phase/eval reports) and its cycle-layer
+# store `.autoflow/issue-<N>-local/` (the cycle's uncommitted `automated` /
+# `delivery-check` / `manual` assets — ADR-0024 D2; the directory moves with its
+# name preserved) out of
 # the repo tree into an external, repo-identity-keyed store
-# `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/<repo-key>/issue-<N>-<date>/`. Run
+# `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/<repo-key>/issue-<N>-<date>/`.
+# It DELETES exactly one path, the store's reserved top-level entry
+# `issue-<N>-local/disposable` (reproducible output), before the move; nothing
+# else is deleted. Run
 # at PREFLIGHT prior-cycle resolution once the issue's PR is observed merged or
 # closed (see docs/git-workflow.md > Post-Merge Cleanup). The live `.autoflow/`
 # location, `.gitignore`, and the hook gate are untouched — only the resolved
@@ -22,8 +25,9 @@
 # allow-exception (e.g. `Bash(rm -f .autoflow/issue-*)`) CANNOT override a broad
 # `rm` deny (e.g. `Bash(rm:*)`) — the deny always wins. A non-`rm` wrapper is
 # never matched by an rm deny, so this lets a broad rm deny coexist with
-# AutoFlow cleanup. Internally the terminal action is a scoped `mv` (no `rm` and
-# no destruction at all), confined to `.autoflow/` (maxdepth 1).
+# AutoFlow cleanup. Internally the terminal action is a scoped `mv`, confined to
+# `.autoflow/` (maxdepth 1); the one internal `rm` removes only the reserved
+# path above, and a permission rule matches the invoked command, not it.
 #
 # NUMBER-BOUNDARY MATCH: the issue's files are `issue-<N>.json` (state) and
 # `issue-<N>-*` (companions) — i.e. the char after <N> is always `.` or `-`,
@@ -242,14 +246,14 @@ for N in "$@"; do
   # a fixture cannot overwrite a top-level file that happens to share its name.
   fixtures="$(find "$AUTOFLOW_DIR/fixtures" -maxdepth 1 -type f \( -name "issue-${N}.*" -o -name "issue-${N}-*" \) 2>/dev/null || true)"
 
-  # The CYCLE-LAYER STORE `.autoflow/issue-<N>-local/` (ADR-0024 D2; issue
-  # #229). A default `automated` row's test, a `delivery-check` and a `manual`
-  # checklist are authored there, executed once by path, never committed, and
-  # "archived with the cycle's artifacts" — so the directory moves WHOLE, with
-  # its name, into the same landing dir. It is one `maxdepth 1` entry matched
+  # The CYCLE-LAYER STORE `.autoflow/issue-<N>-local/` (ADR-0024 D2). A default
+  # `automated` row's test, a `delivery-check` and a `manual` checklist are
+  # authored there, executed once by path and never committed; the directory
+  # moves with its name into the same landing dir, less its reserved path,
+  # which is deleted first. It is one `maxdepth 1` entry matched
   # by its exact name (never `issue-<N>*`), so the number boundary above holds
   # for it too. The `-type f` walks above cannot see it; without this arm the
-  # store outlived the cycle (issue #228 moved it by hand).
+  # store would outlive the cycle.
   local_store=""
   [ -d "$AUTOFLOW_DIR/issue-${N}-local" ] && local_store="$AUTOFLOW_DIR/issue-${N}-local"
 
@@ -260,6 +264,28 @@ for N in "$@"; do
   # `grep -c` exits 1 on zero matches, which `set -e` would turn into an abort
   # on a store-only issue (both file lists empty) — the count is data here.
   count="$( { printf '%s\n' "$matches"; printf '%s\n' "$fixtures"; } | grep -c . || true )"
+
+  # The reserved path is deleted before the archive dir is allocated: a failed
+  # deletion then leaves the issue wholly in place, and its re-run lands in one
+  # archive dir rather than a `-2` sibling. `-e` alone misses a dangling link.
+  # `rm -r` removes a link at or under the operand without following it, as long
+  # as the operand carries no trailing slash. A store that is itself a link
+  # moves as the link and carries nothing from its target, so nothing is
+  # deleted there.
+  reserved_note=""
+  if [ -n "$local_store" ]; then
+    reserved="$local_store/disposable"
+    if [ -L "$local_store" ]; then
+      reserved_note="skipped deleting issue-${N}-local/disposable (the store is a symbolic link); "
+    elif [ -e "$reserved" ] || [ -L "$reserved" ]; then
+      if ! rm -rf "$reserved"; then
+        echo "issue #${N}: could not delete issue-${N}-local/disposable — nothing archived for this issue" >&2
+        status=1
+        continue
+      fi
+      reserved_note="deleted issue-${N}-local/disposable; "
+    fi
+  fi
 
   # Non-destructive archive move: a `-2`, `-3`, … conflict suffix rather than
   # overwriting a prior same-day archive (issue re-opened + re-closed).
@@ -305,7 +331,7 @@ for N in "$@"; do
     fi
     store_note=" + issue-${N}-local/ (${store_files} file(s))"
   fi
-  echo "issue #${N}: archived ${count} file(s)${store_note} → ${dest}"
+  echo "issue #${N}: ${reserved_note}archived ${count} file(s)${store_note} → ${dest}"
 done
 
 exit "$status"
