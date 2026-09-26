@@ -82,7 +82,7 @@ emerge, humans adjust the criteria.
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
-  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | AC id, for a criterion defect>", "item": "<rubric item>", "severity": "Critical | High | Medium | Low | Low Confidence", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
+  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | AC id, for a criterion defect>", "item": "<rubric item>", "severity": "<level — .codex/review.md > Severity>", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
 }
 ```
 
@@ -123,8 +123,7 @@ GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY — or, for an acceptanc
 observes defective as a matter of fact ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion
 decisions*), the criterion's row in `.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`, whose
 `remedy_class` on `Medium`+ is `operator`; `item` — the rubric item it was found under;
-`severity` — the reviewer's vocabulary (`Critical` / `High` / `Medium` / `Low`, or `Low Confidence`
-for a finding the evaluator could not confirm); `finding`; and, on `Medium` and above,
+`severity` — a level of `.codex/review.md` > Severity; `finding`; and, on `Medium` and above,
 `remedy_class` from the same enum as the failed-item field, by the same classifying question HANDOFF
 step 6.5 asks of a reviewer finding. After the PASS of any rubric-scored gate the orchestrator
 triages the list ([`phases/gate-quality.md`](phases/gate-quality.md) > *Recommendation

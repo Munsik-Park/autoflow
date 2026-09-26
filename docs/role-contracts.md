@@ -92,8 +92,7 @@ not re-classify.
 - **[MUST]** Tag every `recommendations` item of severity `Medium` or above with a `remedy_class`
   from the same vocabulary, at every rubric-scored gate, by the question HANDOFF step 6.5 asks of a
   reviewer finding — *does clearing this discard or change a decision the deliberation settled?*
-  Yes → `design`; no → the kind of change that clears it. A `Low` or `Low Confidence` item carries
-  none.
+  Yes → `design`; no → the kind of change that clears it. An item below `Medium` carries none.
 - **[MUST]** Write `operator` when the class cannot be stated with confidence. Do not guess: an
   `operator` entry pauses the cycle for the operator's decision.
 - **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: the
