@@ -120,30 +120,6 @@ All exceptions must be:
    └──────────────────────┘  └──────────────────────┘
 ```
 
-### Cross-Scope Communication
-
-Roles do not message each other. The orchestrator spawns each scope's AI directly, states
-the task in the spawn prompt, and reads the spawn's returned report; anything one scope
-needs from another is carried by the orchestrator into the next spawn's prompt:
-
-```
-Orchestrator spawns Submodule AI (repo-backend):
-  prompt: "Implement the /users endpoint in repo-backend.
-           Inputs: <.autoflow/ document paths for this task>.
-           Write your report under .autoflow/; return its path and a one-line
-           summary as your final message."
-
-Submodule AI (repo-backend) returns:
-  "<report path> — GET /api/v1/users added. Commit: <40-char SHA>"
-
-Orchestrator verifies the anchor, then spawns Submodule AI (repo-frontend):
-  prompt: "Implement the user list page in repo-frontend.
-           Inputs: <.autoflow/ document paths for this task> and the repo-backend
-           report <report path>.
-           Write your report under .autoflow/; return its path and a one-line
-           summary as your final message."
-```
-
 ---
 
 ## Conflict Resolution
