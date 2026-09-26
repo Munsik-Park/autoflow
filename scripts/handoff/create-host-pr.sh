@@ -6,8 +6,8 @@
 # HANDOFF step 4 — host PR creation entrypoint.
 # Always creates the host PR as `--draft` and applies the `blocked-by-review`
 # gate label to EVERY host PR (regardless of `--no-subrepo-dep`); that label is
-# cleared by the Codex review in step 6 only when the review finds zero
-# Critical/High/Medium findings. Additionally applies the `blocked-by-subrepo`
+# cleared by the Codex review in step 6 only when the review finds no
+# Medium+ finding. Additionally applies the `blocked-by-subrepo`
 # label by default; `--no-subrepo-dep` omits ONLY that label for host-only PRs.
 # Merge-order clearance is the operator's `blocked-by-subrepo` label removal,
 # performed after the operator confirms the sub-repo merge + pointer reconcile

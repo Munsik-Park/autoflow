@@ -20,9 +20,9 @@ Contract: reviewer-backend
     3. Post the review as a PR comment (`gh pr comment`) — the comment is the
        artifact, not the subprocess stdout.
     4. The gate-label obligation is DIRECTIONAL (per .codex/review.md):
-       - clean state (no confirmed Critical/High/Medium) ⇒ REMOVE
+       - clean state (no Medium+ finding) ⇒ REMOVE
          `blocked-by-review` (gh pr edit → gh issue edit fallback → verify);
-       - a confirmed Critical/High/Medium finding while the label is absent
+       - a Medium+ finding while the label is absent
          ⇒ attach `blocked-by-review` (gh pr edit → gh issue edit fallback →
          verify present);
        - any other state ⇒ leave the label unchanged.

@@ -196,9 +196,10 @@ cmd_entry() {
     if [ "$count" -ne 1 ]; then
       notes="${notes:+$notes; }$name max_severity lines: $count"; defect=1; continue
     fi
-    sev=$(sed -nE 's/^[[:space:]]*max_severity([[:space:]]*[:=][[:space:]]*|[[:space:]]+)([A-Za-z]+)[[:space:]]*$/\2/p' "$f")
+    sev=$(sed -nE 's/^[[:space:]]*max_severity([[:space:]]*[:=][[:space:]]*|[[:space:]]+)([A-Za-z]+( [A-Za-z]+)?)[[:space:]]*$/\2/p' "$f")
+    # The levels are .codex/review.md > Severity; None is a review with no finding.
     case "$sev" in
-      None|Low) continue ;;
+      None|Low|"Low Confidence") continue ;;
       Medium|High|Critical) medium=$((medium + 1)) ;;
       *) notes="${notes:+$notes; }$name max_severity unparseable: $(grep -m 1 -E '^[[:space:]]*max_severity' "$f" | sed -E 's/^[[:space:]]+//')"; defect=1; continue ;;
     esac

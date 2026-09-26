@@ -154,7 +154,7 @@ No separate disposition system exists for gate recommendations.
 
 | Step 6.5 | Gate recommendation |
 |---|---|
-| Classification: the reviewer's severity (`Critical` / `High` / `Medium` / `Low`, `Low Confidence`) | the evaluator's, per item, in the same vocabulary |
+| Classification: the reviewer's severity level (`.codex/review.md` > Severity) | the evaluator's, per item, on the same levels |
 | `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the deliberation settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
 | Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(d) | the same four, read for a gate (below) |

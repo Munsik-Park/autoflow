@@ -48,14 +48,14 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e68f3efdc6508e28e46fa6201dc850ac9ed87e123b10ee3faea76d8e343e5dd3"
+      "sha256": "d69b24cce33d0370b890a72ce24a2bbd8e28a8933125a0d490532f879be74096"
     },
     {
       "source": "docs/external-review-sequencing.md",
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4931808b922675b1a12ae084517494cc2edd8cfaa44d489a51a41ef46bd6aa39"
+      "sha256": "1e4523d9bed481c67903aaf1cc65048f9ecb72d9d5abeae0ab213d530019bfbd"
     },
     {
       "source": "docs/git-workflow.md",
@@ -125,7 +125,7 @@
       "dest": ".claude/autoflow/docs/phases/gate-quality.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0a38f261afc67bd13ca91cb255af5b47e6d52899a45e67afb49f151ddb8a78d2"
+      "sha256": "3de36cd02d4f3b725c1bdb0e20151b5d82b9a1d7b5a8fbba79520b8af555b9f4"
     },
     {
       "source": "docs/phases/green.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "43b0a0e951cf0215c1626a123af04c0fc66dbb71622678c66dc8522149e6f070"
+      "sha256": "147a64e1297e0aaa0787f9053c1cf18f6f8c0ef69744382ca333d68f4ec49c26"
     },
     {
       "source": "docs/phases/integrate.md",
@@ -202,7 +202,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "75aeb91115f98d49e36d8f9e683cd3f2fd44314b8d1c473b04c5f45a206a9361"
+      "sha256": "828ec885403a429c84a26d149ab44f8c15c1d5b549244489c1fa5ae7a779017b"
     },
     {
       "source": "docs/role-common-rules.md",
@@ -216,7 +216,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0f4dcb19755cb6c8cebc0056828fd0219cb93f5e01d6dfd8a351f768ff442bf5"
+      "sha256": "84f195ff1daede165f760466d068ae96832f86d6e50620432c7675541e74cbf5"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -342,7 +342,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "0d78bd7d21dec681d5d237e97546872c6a94332360b2ed0cc0919f942795bbad"
+      "sha256": "e6ea1a17e78977ba4fc713ae5dde6458e75781faadee6511e9bae22c18e34d49"
     },
     {
       "source": "AGENTS.md",
@@ -363,7 +363,7 @@
       "dest": "scripts/handoff/create-host-pr.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "51ab937a11d3240fc81df55a4519d2653f9dce9aa1abd92801586168a60d05f4"
+      "sha256": "2fd48b8ca7b346f5865533aac0c16857f50b229aaf3ced75a074f54be30996d7"
     },
     {
       "source": "scripts/handoff/confirm-ci-green.sh",
@@ -419,7 +419,7 @@
       "dest": "scripts/review/scope-bounded.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "a0066955fbf434b7b14c071033c6c733419d890882f446afbccadfc26c8743e0"
+      "sha256": "9c817eec564fc616007bc900b7fd322f824b393e961530cc5e705d61da9c7c24"
     },
     {
       "source": "scripts/test/suite-manifest.sh",
