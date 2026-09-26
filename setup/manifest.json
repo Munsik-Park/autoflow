@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d38ef3f2ca73cdb3b487bdad7dd166c8f37ac3d718607f85f1613b0e544cf94d"
+      "sha256": "66cb3a967bfb0b2e9f11fffd85f7bc2df6d29f365d3414087349d65a72097584"
     },
     {
       "source": "docs/phases/integrate.md",
@@ -342,7 +342,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "69d4f168c2b20f13f3578172075bd2249082787b68eea15a817b088adbd9d83f"
+      "sha256": "0d78bd7d21dec681d5d237e97546872c6a94332360b2ed0cc0919f942795bbad"
     },
     {
       "source": "AGENTS.md",

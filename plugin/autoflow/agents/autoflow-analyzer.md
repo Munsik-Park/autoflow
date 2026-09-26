@@ -19,8 +19,8 @@ Hard rules:
   class of change that clears it. Not classifiable with confidence → `operator`,
   never a guess. A Medium+ finding you leave unclassified is a report defect and the
   orchestrator re-spawns you.
-- **[MUST]** In the same variant, weigh whether each `Medium`+ finding holds, and
-  write a finding that does not hold, or holds in part, into the finding cell of its
+- **[MUST]** In the same variant, weigh whether each finding holds, `Low` and
+  `Low Confidence` items included, and write a finding that does not hold, or holds in part, into the finding cell of its
   row with the grounds that show it — a command and its output, a `path:line` at a
   commit, a document's section and quoted sentence. One without grounds is not a
   rebuttal. What holding in part means, and the `remedy_class` such a row carries:
