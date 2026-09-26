@@ -31,6 +31,7 @@ Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`
 - Search for possible bugs from multiple angles in parallel: changed behavior, adjacent dependencies, tests, security, operational flow, and user-facing contracts.
 - Verify each suspected bug before reporting it. Trace the code path, compare it with the issue or PR claim, and check whether tests would catch it.
 - Review against the intended contract and realistic failure modes; do not expand the contract merely because a stricter invariant can be imagined.
+- Before reporting a finding, verify that its preconditions are reachable through actual inputs, configuration, or operational procedures. A hypothetical state or test fixture alone does not establish a realistic failure mode.
 - Apply different evidence standards to implementation and documentation. First classify a documentation statement by whether current system behavior depends on it.
 - Treat documentation as behavior-linked only when it participates in defining, invoking, interpreting, or operating a current system behavior. Verify those statements against the implementation and the authoritative contract.
 - Treat other documentation as descriptive. Review it for accuracy and internal consistency, but do not derive new runtime requirements or broaden the implementation contract from descriptive prose.
