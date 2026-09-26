@@ -76,17 +76,16 @@ stamp_shim() {
 AUTOFLOW_ENABLE_KEY="autoflow@autoflow"
 
 # merge_settings <target> <pin-src> <dest-rel> — jq deep-merge (R1 pin delivery)
-# plus the issue #245 re-stamp migration, in one pass over the target's file.
+# plus the re-stamp migration, in one pass over the target's file.
 #
 # Merge: a recursive object merge preserves the target's pre-existing keys; the
 # pin's marketplace key is added.
 #
 # Migration: `enabledPlugins["autoflow@autoflow"]` is deleted iff its value is
-# exactly `true` — the literal the old stamp itself wrote — and the
-# `enabledPlugins` container is pruned iff THAT deletion left it empty. Any
-# other value is the target's own edit and is not ours to interpret: `false` is
-# a working per-repo opt-out (documented in setup/SETUP-GUIDE.md), and deleting
-# it would let the user-scope enable silently turn the plugin back on there. A
+# exactly `true`, and the `enabledPlugins` container is pruned iff THAT
+# deletion left it empty. Any other value is the target's own edit and is not
+# ours to interpret: `false` is a working per-repo opt-out, and deleting it
+# would let the user-scope enable silently turn the plugin back on there. A
 # container still holding a foreign entry is left exactly as found.
 #
 # Disclosure: the deletion is a write to a target-owned file the operator
@@ -123,7 +122,7 @@ merge_settings() {
   case "$prior" in
     absent) ;;
     true)
-      echo "REMOVED: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value true — a stale pre-#245 stamp key; see setup/SETUP-GUIDE.md > A stamped repository declares no enablement)"
+      echo "REMOVED: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value true — the stamp writes no enabledPlugins key; see setup/SETUP-GUIDE.md > A stamped repository declares no enablement)"
       ;;
     *)
       echo "KEPT: $dest enabledPlugins[\"$AUTOFLOW_ENABLE_KEY\"] (value $prior — your own declaration, left untouched; see setup/SETUP-GUIDE.md > Prerequisites for the supported per-repo opt-out)"
