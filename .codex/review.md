@@ -31,7 +31,7 @@
 - Treat documentation as behavior-linked only when it participates in defining, invoking, interpreting, or operating a current system behavior. Verify those statements against the implementation and the authoritative contract.
 - Treat other documentation as descriptive. Review it for accuracy and internal consistency, but do not derive new runtime requirements or broaden the implementation contract from descriptive prose.
 - When documentation and implementation differ, establish authority from the linked acceptance criteria, explicit schema or API contracts, or normative operational instructions before deciding whether the defect is in the implementation or the documentation.
-- Filter false positives aggressively. If the evidence is weak, move the item to `Low Confidence` or omit it.
+- Report a suspected issue whose evidence stays weak after tracing under `Low Confidence`, with what would confirm it, rather than dropping it. Only confirmed findings go under `Findings`, and only they drive the `blocked-by-review` label step.
 - Rank confirmed findings by severity and user impact.
 - Produce one high-signal overview instead of many scattered observations.
 - Add inline-comment candidates only when a finding maps to a specific changed line.
