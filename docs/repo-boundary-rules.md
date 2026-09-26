@@ -128,17 +128,20 @@ needs from another is carried by the orchestrator into the next spawn's prompt:
 
 ```
 Orchestrator spawns Submodule AI (repo-backend):
-  prompt: "Implement new /users endpoint per issue #42.
-           See requirements in the orchestrator's plan for issue #42."
+  prompt: "Implement the /users endpoint in repo-backend.
+           Inputs: <.autoflow/ document paths for this task>.
+           Write your report under .autoflow/; return its path and a one-line
+           summary as your final message."
 
 Submodule AI (repo-backend) returns:
-  "Implementation complete. New endpoint: GET /api/v1/users.
-   Response schema documented in docs/api.md"
+  "<report path> — GET /api/v1/users added. Commit: <40-char SHA>"
 
-Orchestrator spawns Submodule AI (repo-frontend):
-  prompt: "New backend endpoint available: GET /api/v1/users.
-           Implement user list page per issue #43.
-           Submodule PR: repo-backend#15"
+Orchestrator verifies the anchor, then spawns Submodule AI (repo-frontend):
+  prompt: "Implement the user list page in repo-frontend.
+           Inputs: <.autoflow/ document paths for this task> and the repo-backend
+           report <report path>.
+           Write your report under .autoflow/; return its path and a one-line
+           summary as your final message."
 ```
 
 ---

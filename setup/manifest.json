@@ -195,7 +195,7 @@
       "dest": ".claude/autoflow/docs/repo-boundary-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7ace5624cc0c1543fcab2d713e168c577e1d44edd6616a8402c6d21543c304ef"
+      "sha256": "ae4fc7777b0b7fb4cecb85a02eab0106a6ee442d113d53a13788664f34fe7651"
     },
     {
       "source": "docs/reviewer-backend.md",
