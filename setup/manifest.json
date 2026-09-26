@@ -230,7 +230,7 @@
       "dest": ".claude/autoflow/docs/thin-root-layer.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a3ca8012fcf59265b4f4e618ff903eb644221b2777abdbfbf6ec74fcd61f67c1"
+      "sha256": "6bcbdfa2f2211b464fdbee7b87be1cd2d6bad8786797a54d2a0f8a4308d00b53"
     },
     {
       "source": "docs/title-guide.md",

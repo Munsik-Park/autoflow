@@ -3,7 +3,7 @@
 The AutoFlow methodology engine packaged as a Claude Code plugin: the phase-gate
 hooks (`check-autoflow-gate.sh`, `check-read-dedup.sh`), the five role subagents
 (`autoflow-analyzer` / `-planner` / `-implementer` / `-tester` / `-evaluator`),
-and the `install` and `epic-dash` skills.
+and the `install` skill.
 
 This plugin ships the **engine** only. The methodology prose (`CLAUDE.md`, `docs/`)
 is delivered separately as the thin root layer; per-issue runtime state lives in the
@@ -17,7 +17,6 @@ under the plugin root.
 | PreToolUse gate | `hooks/check-autoflow-gate.sh` (via `hooks/hooks.json`, `${CLAUDE_PLUGIN_ROOT}`-anchored) | reads state at `${CLAUDE_PROJECT_DIR}/.autoflow` |
 | PostToolUse read-dedup guard | `hooks/check-read-dedup.sh` | — |
 | Role subagents | `agents/*.md` | invoked as `autoflow-*` subagent types |
-| Epic dashboard skill | `skills/epic-dash/` | invoked as `/autoflow:epic-dash` |
 
 The hook **scripts** are located by the harness through `${CLAUDE_PLUGIN_ROOT}`, while
 the per-project **state** they read and write is always rooted at `${CLAUDE_PROJECT_DIR}`.
