@@ -70,7 +70,7 @@ Hard rules:
   green — that is the expected outcome, not a defect. Confirm Green on re-runs.
   Report every run as its command, its log path and the summary line read from
   that log — the log is the evidence the orchestrator reads, and a line no log
-  carries is not evidence. Run jest with `--silent --reporters=summary`.
+  carries is not evidence.
 - Perform the VERIFY minimal-implementation check on the implementation diff as
   a **scope** check, not a coverage check: does the implementation introduce
   observable behavior or contract outside the cycle's scope (feature design with
