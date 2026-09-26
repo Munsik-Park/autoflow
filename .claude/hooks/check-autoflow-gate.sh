@@ -338,21 +338,19 @@ $_shb_buf"; fi
 # terminal phase setting active:false (or a removed state file) cannot
 # disable the prohibition. Merging is performed by external review.
 
-# ── Blocking-wait deny: TaskOutput (issue #165; state-independent — P2) ──
+# ── Blocking-wait deny: TaskOutput (state-independent — P2) ──
 # The harness re-invokes the session with a task notification when a subagent,
-# a Workflow or a backgrounded Bash task completes — that is the wait primitive
-# (CLAUDE.md > Execution Principles > Wait discipline). The deprecated
-# TaskOutput tool instead blocks the turn on ONE task until it ends or its
-# timeout fires: every other task's completion notification and every user
-# prompt queue behind the block, and a timed-out agent wait dumps the agent's
-# transcript tail into the orchestrator's context (#165 measurement: 77 blocks,
-# 6h33m of an 8h01m session inside the block, a user prompt never delivered,
-# two 16-27K-token transcript dumps). No actor has a legitimate use of it in a
-# governed repo, so the deny is tool-name-keyed and carries no state or
-# argument condition. Denied here, before the activity check, so an inactive
-# or absent state file cannot re-admit it.
+# a Workflow or a backgrounded Bash task completes — that is the wait
+# primitive. The deprecated TaskOutput tool instead blocks the turn on ONE task
+# until it ends or its timeout fires: every other task's completion
+# notification and every user prompt queue behind the block, and a timed-out
+# agent wait dumps the agent's transcript tail into the orchestrator's context.
+# No actor has a legitimate use of it in a governed repo, so the deny is
+# tool-name-keyed and carries no state or argument condition. Denied here,
+# before the activity check, so an inactive or absent state file cannot
+# re-admit it.
 if [ "$TOOL_NAME" = "TaskOutput" ]; then
-  echo "BLOCKED: 'TaskOutput' blocking wait is denied (CLAUDE.md > Execution Principles > Wait discipline; issue #165)." >&2
+  echo "BLOCKED: 'TaskOutput' blocking wait is denied (CLAUDE.md > Execution Principles > Wait discipline)." >&2
   echo "A subagent, Workflow or background task re-invokes this session with a task notification when it completes — end the turn and take the result from that notification. TaskOutput blocks every other notification and the user's input until its one target ends or times out." >&2
   exit 2
 fi
@@ -1099,7 +1097,7 @@ block_if_open_reentry() {
   fi
   if [ -n "$_open" ]; then
     echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
-    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/phases/gate-quality.md > Recommendation triage, issue #275)." >&2
+    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/phases/gate-quality.md > Recommendation triage)." >&2
     echo "State file: $STATE_FILE" >&2
     exit 2
   fi
@@ -1121,14 +1119,13 @@ if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}g
   block_if_open_reentry "gh pr create" "gate_quality"
 fi
 
-# ── Gate 5: git commit under a `doc` GATE:QUALITY remedy → sweep record required (issue #140) ──
+# ── Gate 5: git commit under a `doc` GATE:QUALITY remedy → sweep record required ──
 # A GATE:QUALITY FAIL whose remedy_class is `doc` re-enters at an orchestrator
 # doc commit instead of RED. The remedy obligation for that class is
 # class-level, not site-level: the fix anchors on a repo-wide sweep (command +
-# output), not on the evaluator's listed sites (docs/phases/gate-quality.md >
-# FAIL routing). The gate checks the sweep RECORD FILE — its
-# presence and its two sections — never the wording of any instruction or
-# prompt (docs/gate-matching-standard.md > P3 rejects content inference).
+# output), not on the evaluator's listed sites. The gate checks the sweep
+# RECORD FILE — its presence and its two sections — never the wording of any
+# instruction or prompt.
 # `remedy_class` is read from the same most-recent-cycle location as
 # check_scores reads scores; an absent or non-`doc` value leaves commits
 # ungated. Fail closed only on the jq read erroring, as the score gates do.
@@ -1147,7 +1144,7 @@ if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}$
     fi
     if [ "$_sweep_ok" -ne 1 ]; then
       echo "BLOCKED: git commit under a GATE:QUALITY remedy_class=doc re-entry requires the sweep record." >&2
-      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy (docs/phases/gate-quality.md > FAIL routing, issue #140)." >&2
+      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy (docs/phases/gate-quality.md > FAIL routing)." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
     fi

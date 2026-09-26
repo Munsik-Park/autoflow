@@ -417,7 +417,7 @@ cmd_check() {
       Explore|Plan|claude-code-guide)
         # A harness research type ships no definition, so nothing carries an
         # effort line to the spawn: its rows admit the inherit sentinel only.
-        [ "$_exp" = "$inherit_sentinel" ] || _err "phases rows for the harness research type '$t' declare effort '$_exp', but that type ships no agent definition, so a direct spawn of it inherits the session effort — only the inherit sentinel is deliverable there; a governed phase that needs a fixed effort uses a shipped definition (issue #180: diagnose-loopcheck moved to autoflow-loopcheck for this reason)"
+        [ "$_exp" = "$inherit_sentinel" ] || _err "phases rows for the harness research type '$t' declare effort '$_exp', but that type ships no agent definition, so a direct spawn of it inherits the session effort — only the inherit sentinel is deliverable there; a governed phase that needs a fixed effort uses a shipped definition (.claude/autoflow/spawn-policy.json > effort_contract.phase_effort_ownership)"
         continue ;;
     esac
     [ -f "$AGENTS_DIR/$t.md" ] || continue   # absence is the membership error above, not a projection error

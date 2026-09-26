@@ -391,7 +391,7 @@
       "dest": "scripts/architect/relay-state.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b7704a960c9f03cde1e087f398d7f3a0e34396d902106020c77327e912f467f0"
+      "sha256": "cb0910edb228bdb8765c52d519866ce2d8911af5507ee15fb6205d2118d61f80"
     },
     {
       "source": "scripts/architect/composition-oracle.sh",
@@ -496,7 +496,7 @@
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "02c6b9e7fa3c125a89c352b1d3e3d10a0459f556c14abc188763b27d99e03ee4"
+      "sha256": "6309f093365f7e4d8088fc11f5f621848aa3a01073a8bca3c654b5bbdfb99d0c"
     },
     {
       "source": "scripts/lib/plugin-root.sh",
