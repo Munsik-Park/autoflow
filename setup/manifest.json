@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "66cb3a967bfb0b2e9f11fffd85f7bc2df6d29f365d3414087349d65a72097584"
+      "sha256": "2b6359ff886189cc6162d19a96beba0586fab0e005dd79eea8e6640c00cdad1c"
     },
     {
       "source": "docs/phases/integrate.md",
