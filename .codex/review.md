@@ -95,6 +95,7 @@ List confirmed findings, ranked by severity. For each finding include:
 - File and line reference
 - What breaks
 - Why it breaks, with code-path evidence
+- Evidence for each failure precondition
 - Suggested fix direction
 
 # Inline Comment Candidates
