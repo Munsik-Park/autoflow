@@ -17,10 +17,8 @@
 #          oracle, with its fixture specimens AC-R2d/e/g)
 #   AC3    hooks/hooks.json commands are ${CLAUDE_PLUGIN_ROOT}/hooks/-anchored
 #   AC3 8a the packaged gate hook, invoked once, returns a decision (allow)
-#   AC5    byte-copy parity host <-> package (hooks, agents, epic-dash skill);
+#   AC5    byte-copy parity host <-> package (hooks, agents);
 #          no component directory inside any .claude-plugin/
-#   AC-R1/AC-R2  the packaged epic-dash skill locates its scripts
-#          ${CLAUDE_PLUGIN_ROOT}-first, never by the bare host-only path
 #   AC-R1a claude plugin validate (gating when the CLI is present)
 # manifest:
 #   AC1    plugin.json parses; `name` (the only spec-required field) is
@@ -43,7 +41,6 @@ DEDUP_SH="$PLUGIN_DIR/hooks/check-read-dedup.sh"
 ORIG_GATE="$REPO_ROOT/.claude/hooks/check-autoflow-gate.sh"
 ORIG_DEDUP="$REPO_ROOT/.claude/hooks/check-read-dedup.sh"
 ORIG_AGENTS="$REPO_ROOT/.claude/agents"
-ORIG_SKILL="$REPO_ROOT/.claude/skills/epic-dash"
 
 # Install skill (plugin-only, no .claude/skills/install host twin)
 INSTALL_SKILL_DIR="$PLUGIN_DIR/skills/install"
@@ -134,9 +131,8 @@ fi
 
 # ── AC1a/AC1b: install skill presence + component resolution ────────────
 # The install skill is plugin-only -- it has no `.claude/skills/install` host
-# twin, so it is outside the AC5 byte-parity loop below (which stays
-# hardcoded to `skills/epic-dash`). AC1a presence + AC1b component-resolution
-# are therefore this skill's sole packaging guard: both SKILL.md and every
+# twin, so it is outside the AC5 byte-parity checks below. AC1a presence +
+# AC1b component-resolution are therefore this skill's sole packaging guard: both SKILL.md and every
 # shipped scripts/*.sh must resolve inside the PACKAGED plugin tree.
 echo "== AC1a (#943): install skill SKILL.md presence + frontmatter =="
 if [ -f "$INSTALL_SKILL_MD" ]; then
@@ -425,69 +421,6 @@ if [ -d "$ORIG_AGENTS" ]; then
   done
 else
   failc "AC5 parity" "reference directory missing: $ORIG_AGENTS"
-fi
-
-if [ -d "$PLUGIN_DIR/skills/epic-dash" ] && [ -d "$ORIG_SKILL" ]; then
-  DIFF_TMP=$(mktemp)
-  if diff -rq "$PLUGIN_DIR/skills/epic-dash" "$ORIG_SKILL" >"$DIFF_TMP" 2>&1; then
-    pass "AC5 parity: skills/epic-dash byte-identical (diff -r)"
-  else
-    failc "AC5 parity" "skills/epic-dash differs: $(cat "$DIFF_TMP")"
-  fi
-  rm -f "$DIFF_TMP"
-else
-  failc "AC5 parity" "skills/epic-dash — missing directory at $PLUGIN_DIR/skills/epic-dash or $ORIG_SKILL"
-fi
-
-# ── AC-R1/AC-R2: packaged skill resolves scripts portably ───────────────
-# A packaged SKILL.md that hardcodes a host-only script path resolves only on
-# the host, which whole-directory byte-parity cannot detect. Do NOT assert
-# absence of the whole substring '.claude/skills/epic-dash' -- the body
-# legitimately retains it inside the quoted fallback candidate
-# "$PWD/.claude/skills/epic-dash/scripts".
-echo "== AC-R1/AC-R2: packaged skill resolves scripts portably (host-only-ref detector) =="
-PKG_SKILL_MD="$PLUGIN_DIR/skills/epic-dash/SKILL.md"
-if [ -f "$PKG_SKILL_MD" ]; then
-  BARE_ASSIGN_FOUND=0
-  if grep -qF 'S=.claude/skills/epic-dash/scripts' "$PKG_SKILL_MD"; then
-    BARE_ASSIGN_FOUND=1
-  fi
-  if grep -qF 'S=".claude/skills/epic-dash/scripts"' "$PKG_SKILL_MD"; then
-    BARE_ASSIGN_FOUND=1
-  fi
-  if grep -qF "S='.claude/skills/epic-dash/scripts'" "$PKG_SKILL_MD"; then
-    BARE_ASSIGN_FOUND=1
-  fi
-  if [ "$BARE_ASSIGN_FOUND" -eq 0 ]; then
-    pass "AC-R1(a)/AC-R2: bare host-only assignment 'S=.claude/skills/epic-dash/scripts' is absent"
-  else
-    failc "AC-R1(a)/AC-R2" "bare host-only assignment 'S=.claude/skills/epic-dash/scripts' still present in $PKG_SKILL_MD"
-  fi
-
-  # Line-structure-agnostic: the 'for S in' loop's candidate list may be
-  # written on one line or continued across several with trailing '\'.
-  # Extract the loop header block (from 'for S in' through the line that
-  # opens the loop body with a trailing 'do') and compare the two
-  # candidates' character offsets within it, rather than requiring them on a
-  # single physical line.
-  LOOP_BLOCK=$(awk '
-    /for S in/{flag=1}
-    flag{print}
-    flag && /do[[:space:]]*$/{exit}
-  ' "$PKG_SKILL_MD")
-  if [ -z "$LOOP_BLOCK" ]; then
-    failc "AC-R1(b)/AC-R2" "no 'for S in' loop found in $PKG_SKILL_MD"
-  else
-    PLUGIN_POS=$(awk -v s="$LOOP_BLOCK" -v t='${CLAUDE_PLUGIN_ROOT}/skills/epic-dash/scripts' 'BEGIN{print index(s,t)}')
-    FALLBACK_POS=$(awk -v s="$LOOP_BLOCK" -v t='.claude/skills/epic-dash/scripts' 'BEGIN{print index(s,t)}')
-    if [ "$PLUGIN_POS" -gt 0 ] && [ "$FALLBACK_POS" -gt 0 ] && [ "$PLUGIN_POS" -lt "$FALLBACK_POS" ]; then
-      pass "AC-R1(b)/AC-R2: \${CLAUDE_PLUGIN_ROOT}/skills/epic-dash/scripts is the FIRST 'for S in' loop candidate"
-    else
-      failc "AC-R1(b)/AC-R2" "\${CLAUDE_PLUGIN_ROOT}/skills/epic-dash/scripts is not the first 'for S in' loop candidate in $PKG_SKILL_MD (plugin-root pos=$PLUGIN_POS, fallback pos=$FALLBACK_POS)"
-    fi
-  fi
-else
-  failc "AC-R1/AC-R2" "packaged SKILL.md missing at $PKG_SKILL_MD"
 fi
 
 # ── AC5: structure conformance (spec Warning) ────────────────────────────
