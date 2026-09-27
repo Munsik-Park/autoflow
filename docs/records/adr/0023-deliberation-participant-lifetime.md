@@ -11,7 +11,11 @@ and the effect record are in *Implementation record* below. **Amended by issue #
 (2026-09-16)**: D2's "once per ARCHITECT discussion" is one cycle's ARCHITECT entry, its
 same-cycle re-discussions included; a new cycle's re-deliberation spawns both sides fresh and
 never resumes the previous cycle's participants by ID (the amendment note under D2 and the
-D3 row for CLAUDE.md > *Spawn mode by role lifetime*).
+D3 row for CLAUDE.md > *Spawn mode by role lifetime*). **Amended by issue #351
+(2026-09-27)**: constraint 2 holds on the named path only — on the anonymous agent-ID path a relaying
+sub-agent receives the replies — and the ARCHITECT relay moves to a facilitator sub-agent
+(realization A3) under the conditions of D5, implemented by a follow-on issue; until that issue
+lands, A2 stands (D5 and *Measurement record (issue #351)* below).
 
 ## Context
 
@@ -97,6 +101,58 @@ per arm by a fresh evaluator and the isolation check on the orchestrator's trans
 FAIL or turn text found in the orchestrator's transcript is a defect to fix in the relay, not an
 adoption gate. The record is appended to this ADR.
 
+**D5 — Realization A3: a facilitator sub-agent relays the participants (issue #351; operator
+decisions of 2026-09-27).** Measured on Claude Code 2.1.283 (*Measurement record (issue #351)*): a
+sub-agent that spawns an anonymous participant and resumes it by agent ID receives every reply, and
+none reaches the orchestrator. Constraint 2 was measured on the named path, which under this
+repository's `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is an in-process teammate. The orchestrator
+therefore spawns one facilitator and receives only its final result and the Record workflow's; the
+facilitator spawns the two participants, relays the turns by `scripts/architect/relay-state.sh`, and
+collects the reports. The end condition, the Record workflow and the #244 lifetime rule are
+unchanged. Each condition below answers a failure the measurement produced:
+
+1. **Process only.** Every branch the facilitator takes is decided by `relay-state.sh` output or by a
+   notification arriving. Its wakes are five fixed texts — `Write Turn <n>.` / `Your Turn <n> was not
+   appended. Write Turn <n>.` / `Your block was voided (<cause>). Re-append Turn <n> correctly.` / `The
+   discussion has ended — append your report.` / `Re-discussion round <r> (a Brief was appended).
+   Write Turn <n>.` — the last one on the first wake of *each* side after a brief. A reply outside the
+   one-line forms is never answered; it counts as a turn not appended. (A haiku facilitator read turn
+   bodies in 3 of 5 runs and once answered a participant with its own text; a sonnet facilitator once
+   woke a participant with `Agent` instead of `SendMessage`; a participant woken after a brief
+   without the re-discussion text declined once.)
+2. **Enforced before the call.** The facilitator is a dedicated `subagent_type`. The gate hook
+   identifies its calls by the hook input's `agent_type` / `agent_id` (Claude Code CHANGELOG — "Added
+   `agent_id` (for subagents) and `agent_type` (for subagents and `--agent`) to hook events") and
+   denies a read of the transcript's bodies, a `SendMessage` outside the fixed texts or to an agent it
+   did not spawn, an `Agent` spawn other than `autoflow-planner`, and any command other than
+   `relay-state.sh` and its own log. A participant must read the transcript, so the facilitator cannot
+   share its type. The implementation first confirms that the field reaches `PreToolUse`.
+3. **Background spawn.** A foreground facilitator's turn end returns to its caller as the result and
+   ends the relay.
+4. **Participants are `autoflow-planner` spawns.** Under an active cycle the hook applies the role
+   declaration and the planning gate to the facilitator's nested spawns exactly as to the
+   orchestrator's.
+5. **A replaced facilitator spawns fresh participants.** A participant keeps to the first facilitator
+   that woke it and declines another sender (it knows neither its own nor its parent's agent ID; it
+   compares `from=` against the first wake). Otherwise the #244 rule maps directly: a same-cycle
+   re-discussion — the orchestrator resumes the facilitator by ID, which re-wakes the same
+   participants (measured after a 7-minute idle and after a process restart); a return from a later
+   phase — a fresh facilitator with fresh participants on the same transcript; a new cycle — all fresh
+   on a new transcript.
+6. **Interactive session.** In headless `claude -p` the chain ends about 600 s after the facilitator
+   parks, independent of `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS`. AutoFlow runs ARCHITECT in the
+   operator's interactive session; its headless use is the HANDOFF reviewer backend. A facilitator
+   relay that stops falls back to A2 on the same transcript — the orchestrator's own wake reaches the
+   participants as the coordinator's and they follow it. An interactive session at the default stall
+   timeout is not measured; the operator confirms it in use.
+
+The follow-on issue changes, in one change (`CLAUDE.md` > Rule Scope, principle 4): `CLAUDE.md` >
+Deliberation Isolation and > Communication (the uses of `SendMessage`), `docs/role-contracts.md` >
+Facilitator, `docs/phases/architect.md` > *Relay procedure*, `docs/role-common-rules.md` > Bash
+Execution Mode (the background wait is the orchestrator's and the facilitator's) and > Result
+delivery path, `.claude/agents/` (the facilitator type; the participant's "woken by the
+orchestrator"), a spawn-policy row for the facilitator, and the gate hook.
+
 ## Alternatives Considered
 
 - **A1 — named participants.** Rejected (D2). Same call-count effect as A2 at the price of the
@@ -115,6 +171,9 @@ adoption gate. The record is appended to this ADR.
 - **A peer-teammate facilitator, or a facilitator sub-agent relaying persistent participants.**
   Not executable: constraint 2 (the woken agent's reply reaches only the session's main loop)
   and the standing Agent Teams limitation that a teammate cannot spawn teammates.
+  *Amended by issue #351:* the facilitator sub-agent is executable — constraint 2 was measured on the
+  named path, and on the anonymous agent-ID path the relaying sub-agent receives the replies; D5
+  adopts it. The peer-teammate form stays not executable.
 - **Do nothing.** Rejected on the measurement: the deliberation costs 200–575 calls and 45–136
   minutes per run at `xhigh` (review §1), roughly ten times the implementation phases of the
   same cycle (issue #166's #595 record), with no correctness defect that the cost buys.
@@ -264,3 +323,21 @@ Record call), as the ADR's Consequences anticipated. (4) Arm 0's tree (`f6aef75`
 (`1eb97b9`) differ by this issue's change; the participants' design surface (the gate hook's
 state resolution, worktrees, cleanup) does not intersect it except for the hook's comment block
 and CLAUDE.md's Deliberation Isolation section.
+
+## Measurement record (issue #351)
+
+Claude Code 2.1.283, 2026-09-27, outside any cycle unless stated; the full tables are the two
+measurement comments on issue #351
+(<https://github.com/Munsik-Park/autoflow/issues/351#issuecomment-5855479001>,
+<https://github.com/Munsik-Park/autoflow/issues/351#issuecomment-5856659482>).
+
+| Question | Result |
+|---|---|
+| Does a relaying sub-agent receive the replies? | Yes on every run: 3/3 at step-0 form; across the scenario runs 0 participant messages reached the orchestrator except one wake the orchestrator sent itself |
+| Scenarios (relay, re-discussion, return from a later phase, new cycle, replacing one side) | All completed; the resumed facilitator recalled both participant IDs from memory, also after a process restart |
+| Sender | A participant declined a correctly formed turn from a sibling agent ("two different senders can't both be that agent") and from a replacement facilitator |
+| Long turns | Interactive: a real ARCHITECT discussion on issue #356 (6 turns, longest 8:52) and an 18-minute participant turn both completed. Headless `-p`: the chain ended ≈600 s after the facilitator parked, twice |
+| Active-cycle hook on nested spawns | `general-purpose` denied (undeclared role); `autoflow-planner` admitted with the verdict skipped and denied with it pending; `autoflow-tester` denied (GATE:PLAN) |
+| Process-only facilitator (haiku, 5 runs × 2 rounds) | Relay completed 5/5; turn-body reads in 3 runs; one invented answer, traced to the re-discussion text reaching only one side — fixed in the procedure's second version, which ran clean once |
+| Orchestrator calls for one discussion | Spawn 1 plus its own bookkeeping, against up to 43 in D4's A2 record |
+
