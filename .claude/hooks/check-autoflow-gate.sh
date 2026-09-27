@@ -160,14 +160,23 @@ if is_facilitator_type "$CALLER_TYPE"; then
   is_agent_id "$CALLER_ID" || facilitator_deny "a facilitator call without a usable agent_id"
   case "$TOOL_NAME" in
     Bash)
-      _fac_tx='([A-Za-z0-9_./-]*/)?\.autoflow/issue-[0-9]+-architect-transcript\.md'
-      _fac_rs='^(bash[[:space:]]+)?([A-Za-z0-9_./-]*/)?scripts/architect/relay-state\.sh[[:space:]]+'
+      # Both paths are this project's: relative to the project root, or
+      # absolute under CLAUDE_PROJECT_DIR — never a same-named file elsewhere.
+      # The project prefix is removed as a literal string, so an absolute path
+      # outside the project keeps its leading `/` and fails the anchored match.
+      _fac_cmd="$COMMAND"
+      _fac_root="${CLAUDE_PROJECT_DIR%/}"
+      if [ -n "$_fac_root" ]; then
+        _fac_cmd="${_fac_cmd//"$_fac_root/"/}"
+      fi
+      _fac_tx='(\./)?\.autoflow/issue-[0-9]+-architect-transcript\.md'
+      _fac_rs='^(bash[[:space:]]+)?(\./)?scripts/architect/relay-state\.sh[[:space:]]+'
       _fac_ok=0
       case "$COMMAND" in
         *$'\n'*|*$'\r'*|*..*) ;;
         *)
-          if [[ "$COMMAND" =~ ${_fac_rs}(state|void)[[:space:]]+${_fac_tx}[[:space:]]*$ ]] \
-            || [[ "$COMMAND" =~ ${_fac_rs}log[[:space:]]+${_fac_tx}[[:space:]]+\'[^\']+\'[[:space:]]*$ ]]; then
+          if [[ "$_fac_cmd" =~ ${_fac_rs}(state|void)[[:space:]]+${_fac_tx}[[:space:]]*$ ]] \
+            || [[ "$_fac_cmd" =~ ${_fac_rs}log[[:space:]]+${_fac_tx}[[:space:]]+\'[^\']+\'[[:space:]]*$ ]]; then
             _fac_ok=1
           fi
           ;;
@@ -186,9 +195,12 @@ if is_facilitator_type "$CALLER_TYPE"; then
       _reg="$FACILITATOR_DIR/$CALLER_ID.participants"
       { [ -f "$_reg" ] && grep -qxF -- "$_to" "$_reg"; } \
         || facilitator_deny "a wake to '$_to', which is not a participant this facilitator spawned"
+      # A command substitution strips trailing newlines, so a line break is
+      # tested on the raw JSON value, not on $_msg.
+      _msg_multiline=$(echo "$INPUT" | jq -r '(.tool_input.message | type) == "string" and (.tool_input.message | test("[\r\n]"))' 2>/dev/null || echo true)
+      [ "$_msg_multiline" = "false" ] || facilitator_deny "a wake outside the five fixed texts (a line break)"
       _fac_msg_ok=0
       case "$_msg" in
-        *$'\n'*|*$'\r'*) ;;
         'The discussion has ended — append your report.') _fac_msg_ok=1 ;;
         *)
           if [[ "$_msg" =~ ^Write\ Turn\ [0-9]+\.$ ]] \
