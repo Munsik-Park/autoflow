@@ -188,7 +188,7 @@ HANDOFF         : PR + Hand-off     — push dev branch → sub-repo PRs → hos
 | VERIFY → Evaluation AI | deadlock (both claim "no problem") → Evaluation AI arbitrates; its verdict routes to RED (test misreads an AC), GREEN (implementation misses an AC), or human (undecidable), and hands off to ARCHITECT when it finds the acceptance criteria themselves mutually unsatisfiable (design contradiction — row below) |
 | VERIFY → ARCHITECT | design contradiction — implementation and test each faithful to the design while the acceptance criteria are mutually unsatisfiable, reproduced by measurement and recorded in `.autoflow/issue-{N}-*-green-blocker.md` → ARCHITECT re-deliberation → GATE:PLAN re-evaluation → RED re-entry (cap: Regressions below) |
 | VALIDATE → AUDIT | automated tests all PASS + manual checklist itemized |
-| VALIDATE → user | lint-chain check: a discovered chain covering a staged file is `not-run (unexecuted)` and is neither executable in this checkout nor covered by a nameable pull-request CI job → report situation-first + pause (`active:false`, `phase:"awaiting-user"`) |
+| VALIDATE → user | lint-chain check: a lint chain covering a staged file is `not-run (unexecuted)` and is neither executable in this checkout nor covered by a nameable pull-request CI job → report situation-first + pause (`active:false`, `phase:"awaiting-user"`) |
 | AUDIT entry (security-checklist change) → user | `scripts/gate/security-checklist.sh status` exits `3` (the cycle changed the target's declared security checklist and no `[checklist-decision]` entry covers the committed version) → report situation-first, `active:false`, `phase:"awaiting-user"`; AUDIT is **not** spawned; consumes no re-entry budget (`docs/phases/audit.md`) |
 | AUDIT → GATE:QUALITY | security audit PASS + its recommendations triaged (no attempt open) |
 | GATE:QUALITY → DELIVER | completion evaluation PASS + its recommendations triaged (no attempt open) |
@@ -357,7 +357,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - No direct commits to main — always branch + PR.
 - No `feat`/`fix` commit while tests fail → use `wip`.
 - `git status` before every commit.
-- **[MUST]** Before committing, the committing role — every role that commits, the orchestrator included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. Elaboration (chain discovery, conversion limit, scoping, outcome vocabulary, evidence anchor): [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
+- **[MUST]** Before committing, the committing role — every role that commits, the orchestrator included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. Elaboration (identifying the chains, execution trust boundary, scoping, outcome vocabulary, evidence anchor): [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
 
 ### Commit Ownership
 
