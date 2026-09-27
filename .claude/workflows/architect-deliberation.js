@@ -13,7 +13,7 @@
 // the turns (Decision 8). Requires Claude Code v2.1.154+ (Workflow runtime).
 export const meta = {
   name: 'architect-deliberation',
-  description: 'ARCHITECT Record phase: after the orchestrator-relayed discussion has ended, a scribe writes the two design documents and the deliberation report from the relay transcript file (.autoflow/issue-N-architect-transcript.md — turns plus both participants\' reports), and the ledger records the agreed conclusions. Invoke with args {issue: "N"} (issue number required).',
+  description: 'ARCHITECT Record phase: after the facilitator-relayed discussion has ended, a scribe writes the two design documents and the deliberation report from the relay transcript file (.autoflow/issue-N-architect-transcript.md — turns plus both participants\' reports), and the ledger records the agreed conclusions. Invoke with args {issue: "N"} (issue number required).',
   phases: [
     { title: 'Record', detail: 'the scribe writes the feature design, the verification design and the report from the transcript file; the ledger records the agreed conclusions' },
   ],

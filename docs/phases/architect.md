@@ -4,14 +4,15 @@
 > Contract routes to this file; the other phases are listed in
 > [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
 
-Both perspectives participate. The discussion is a **relay the orchestrator runs between two
+Both perspectives participate. The discussion is a **relay a facilitator sub-agent runs between two
 persistent participants** — the Developer AI and the Test AI, each spawned once for the discussion
-and woken by agent ID for each of its turns — and its whole record is one
+by the facilitator and woken by agent ID for each of its turns — and its whole record is one
 file, `.autoflow/issue-{N}-architect-transcript.md`, which every turn is appended to. The discussion
 has three phases: **Discuss** and **Report** are the relay; **Record** is the
 `Workflow` named `architect-deliberation`, which reads the transcript file and writes the artifacts.
-The orchestrator relays but does not deliberate: it reads one line per turn and the transcript's
-decidable state, never a turn body (Deliberation Isolation).
+The facilitator relays but does not deliberate: it acts on the transcript's decidable state and
+never reads a turn body. The orchestrator spawns the facilitator and receives only its one-line
+result and the Record workflow's (Deliberation Isolation).
 
 **Discuss** is the relay. The Developer AI opens with a design proposal, the Test AI answers it, and
 the two alternate. Each participant holds one fixed prompt for its role
@@ -20,7 +21,7 @@ the transcript file's `## Topic` section; its context is its memory across turns
 the record the other side reads. The design documents are written after the discussion. Each turn's heading carries whether the author has anything further to
 raise (`[further: yes|none]`), and the discussion ends when two consecutive turns both say
 `none` — the participants' own conclusion ends it; `scripts/architect/relay-state.sh state`
-computes that condition and the next side, and the orchestrator obeys it. The Discussion
+computes that condition and the next side, and the facilitator obeys it. The Discussion
 Protocol's VERIFY step applies over the transcript: a fact the transcript cites with
 a `path:line` (read at the cycle's commit) or a document's section and quoted sentence is verified for both participants, and a participant reads a file to ground a claim
 of its own or to dispute a cited one.
@@ -40,51 +41,91 @@ artifact excerpts against re-derived facts — the full read-and-score is GATE:P
 [`CLAUDE.md`](../../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation;
 contract: [`role-contracts.md`](../role-contracts.md) > Facilitator.
 
-### Relay procedure (orchestrator)
+### Relay procedure
 
-Every spawn below declares `subagent_type: autoflow-planner` and the model the readout names
-(`bash scripts/spawn-policy/spawn-policy.sh model architect-dev-participant` /
-`… architect-test-participant`), and every wait is a **turn end** ([`CLAUDE.md`](../../CLAUDE.md) >
-Execution Principles > *Wait discipline*): the participant's one-line answer is the report of that
-resumed spawn, arriving with its task notification ([`role-common-rules.md`](../role-common-rules.md) >
-Result delivery path by spawn mode), and nothing is polled (a cache keep-alive wake, which the same
-principle admits, is not a poll).
+The relay runs in a **facilitator** sub-agent (`subagent_type: autoflow-facilitator`,
+`.claude/agents/autoflow-facilitator.md`), not in the orchestrator's turn stream (ADR-0023 D5). The
+orchestrator prepares the transcript, spawns the facilitator, and takes back one line; the facilitator
+spawns the participants, wakes them, and acts on `relay-state.sh` alone. Every wait, on either side,
+is a **turn end** ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Wait discipline*): a
+spawn's one line is its report, arriving with its task notification
+([`role-common-rules.md`](../role-common-rules.md) > Result delivery path by spawn mode), and nothing
+is polled (a cache keep-alive wake, which the same principle admits, is not a poll).
+
+**Orchestrator.**
 
 1. **Transcript.** `bash scripts/architect/relay-state.sh init .autoflow/issue-{N}-architect-transcript.md {N} ["<brief>"]`
    writes the header — the topic stated once, naming the issue's inputs and the ledger's settled
    authorities; a brief given here is carried into the topic. The file is append-only from this
    point: `init` refuses an existing file.
-2. **Spawn the Developer AI** (`Agent`, anonymous, no `name`) with a prompt that names it *the
-   Developer AI participant of the ARCHITECT relay for issue #{N}*, the transcript path, and
-   *write Turn 1*. Keep the agent ID the spawn result returns. End the turn.
-3. **On the task notification** — the step's only trigger — run
-   `bash scripts/architect/relay-state.sh state <transcript>` and act on `next`, whether or not the
-   participant's one line has arrived. The line is read when present and gates no step: in auto mode
-   it comes in a hand-back frame that arrives before or after the notification, and a turn that frame
-   alone starts is not a relay step — take no relay action and end the turn; a turn that carries both
-   acts once. On `next`:
-   `test` → spawn the Test AI the same way on its first turn (*write Turn 2*; keep its ID) or, on a
-   later turn, `SendMessage` to its ID with *write Turn n*; `dev` → `SendMessage` to the Developer
-   AI's ID with *write Turn n*; end the turn after each wake. A `state` exit 1 (a malformed heading,
-   a mis-numbered turn) is a transcript defect. The file stays append-only, so the defect is voided,
-   not removed: run `bash scripts/architect/relay-state.sh void <transcript>`, which appends a
+2. **Spawn the facilitator** (`Agent`, anonymous, no `name`, `run_in_background: true`,
+   `subagent_type: autoflow-facilitator`, the model `bash scripts/spawn-policy/spawn-policy.sh model
+   architect-facilitator` names) with a prompt that names the issue `{N}`, the transcript path, and
+   each side's model (`… model architect-dev-participant` / `… architect-test-participant`). Keep
+   its agent ID. End the turn. The spawn is in the background because a foreground facilitator's
+   turn end returns to its caller as its result, and the relay ends with it.
+3. **On the facilitator's report.** `relay — next=record …`: run `relay-state.sh state` and, on
+   `next=record`, invoke the Record workflow; on its return, run the artifact-existence check below
+   and route the report (*Report routing*). `relay stopped — <cause>`, or any other outcome that
+   leaves `next` short of `record`: take the relay over (*Fallback* below).
+4. **Isolation and lifetime.** The facilitator and the participants are not woken again after the
+   Record workflow returns, except for a re-discussion (*Re-discussion* below). The orchestrator
+   never reads the transcript's turn bodies.
+
+**Facilitator.** Every branch it takes is decided by `relay-state.sh` output or by a notification
+arriving, and its wakes are five fixed texts:
+
+| Text | When |
+|---|---|
+| `Write Turn <n>.` | the side `next` names |
+| `Your Turn <n> was not appended. Write Turn <n>.` | a notification arrived with `turns` unchanged — a **missing turn**; once |
+| `Your block was voided (<cause>). Re-append Turn <n> correctly.` | `state` exit 1 — the defect voided (below) |
+| `The discussion has ended — append your report.` | `next=report`; a side in `reports_missing`, once more; a voided report section |
+| `Re-discussion round <r> (a Brief was appended). Write Turn <n>.` | in place of the first text, for a side `state` lists in `fresh` — its first wake after a brief |
+
+1. It runs `state` and acts on `next`: `dev` / `test` — spawns that side (`subagent_type:
+   autoflow-planner`, background, the model its prompt names; the spawn prompt names the side, the
+   issue, the transcript and the wake text) when it has no agent ID for it yet, otherwise wakes it by
+   `SendMessage` to that ID; then ends its turn.
+2. On each participant's notification — the step's only trigger; the participant's one line, which in
+   auto mode comes in a hand-back frame before or after the notification, gates nothing — it runs
+   `state` again. A `state` exit 1 (a malformed heading, a mis-numbered turn) is a transcript defect.
+   The file stays append-only, so the defect is voided, not removed: `relay-state.sh void` appends a
    `### Void — line <k>` block for the first defect `state` reports (a heading `state` accepts is
-   never voidable); run `state` again, voiding each further exit 1 the same way until it exits 0,
-   then act on `next` (and, at step 4, on `reports_missing`): the wake carries the voided block's
-   cause and reads *re-append Turn n correctly* (a voided report section: *re-append your
-   report*). A task notification that arrives with `turns` unchanged is a **missing
-   turn**: re-wake that side once with *your Turn n was not appended*; a second miss is the
-   infrastructure state `participant missing` — repair (a fresh spawn of that side, pointed at the
-   transcript) and continue.
-4. **`next=report`.** Wake both participants (in one turn) with *the discussion has ended — append
-   your report*; end the turn; when both notifications are in, run `state` again. A side named in
-   `reports_missing` is re-woken once; if it is still missing, continue — the scribe records that
-   side's positions from its turns.
-5. **`next=record`.** Invoke the Record workflow. On its return, run the artifact-existence check
-   below and route the report (*Report routing*).
-6. **Isolation and lifetime.** The participants are not woken again after the Record workflow
-   returns, except for a re-discussion (*Re-discussion* below). The orchestrator never reads the
-   transcript's turn bodies.
+   never voidable), and `state` is run again, voiding each further exit 1 the same way until it exits
+   0; the defect's author is woken with the voided-block text. A second missing turn for the same
+   turn is the infrastructure state `participant missing`: that side is spawned fresh, pointed at the
+   transcript, and the relay continues.
+3. `next=report`: both sides are woken in one turn; when both notifications are in, `state` runs
+   again, a side named in `reports_missing` is woken once more, and if it is still missing the relay
+   continues — the scribe records that side's positions from its turns.
+4. `next=record`: it reports `relay — next=record turns=<n> round=<r>` and stops. It cannot proceed
+   — a call denied twice, a `state` exit 2, a failed spawn: it reports `relay stopped — <cause>` and
+   stops.
+
+It records each action with `relay-state.sh log <transcript> '<line>'` —
+`issue-{N}-architect-relay-log.md` beside the transcript, including each spawn's side and agent ID —
+the record the operator reads to observe the relay.
+
+**Confinement.** The gate hook identifies the facilitator's calls by the hook input's `agent_type` /
+`agent_id` and denies, before the call runs: any Bash command other than `relay-state.sh state` /
+`void` / `log` on an ARCHITECT transcript; a `SendMessage` whose text is not one of the five, or whose
+recipient is not a participant it spawned — the hook records each participant from the response to
+the facilitator's `Agent` call, in `.autoflow/facilitator/<facilitator agent ID>.participants`; an
+`Agent` spawn other than an anonymous `autoflow-planner`; and every other tool the hook sees (`Read`,
+`Grep`, `Glob`, `Write`, `Edit`). The facilitator's own definition grants only `Bash`, `SendMessage`
+and `Agent`. The participants and the orchestrator carry another type, or none, and are unaffected.
+Under an active cycle the facilitator's spawn and its participants' spawns take the role declaration
+and the planning gate like any `autoflow-planner` spawn.
+
+**Fallback — the orchestrator takes the relay over.** A facilitator that stops — its `relay
+stopped` report, a notification with no relay line, or the operator observing that it no longer
+advances the relay log — hands the relay to the orchestrator on the **same** transcript: the
+orchestrator runs `state` and continues the facilitator's steps itself, waking each participant by
+the agent ID the relay log records for it (a side with no recorded ID is spawned fresh, pointed at the
+transcript) with the same five texts, and ending its turn after each wake. A participant follows
+the orchestrator's wake as the coordinator's. The orchestrator still reads no turn body: it reads the
+one-line reports, `state`, and the relay log's spawn lines.
 
 **Artifact-existence check (orchestrator-side).** Before GATE:PLAN the orchestrator confirms the
 three artifacts the scribe writes exist and are non-empty — `.autoflow/issue-{N}-feature-design.md`,
@@ -92,7 +133,7 @@ three artifacts the scribe writes exist and are non-empty — `.autoflow/issue-{
 treats a missing or empty one — or a verification design without its `## Tools` section
 (*Tools* below) — as an infrastructure cause to repair and re-run, rather than proceeding.
 
-**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation does not apply. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the spawn prompt names each participant only the documents its design task needs (e.g. the relevant `docs/records/adr/*`, `docs/records/design-rationale.md`), and the participant reads them once. **Deliberation Isolation is unchanged** — the turns live in the transcript file and only the Record workflow's report returns to the orchestrator.
+**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation does not apply. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the orchestrator's facilitator prompt gives, for each side, a documents line naming only the documents its design task needs (e.g. the relevant `docs/records/adr/*`, `docs/records/design-rationale.md`); the facilitator copies it verbatim into that participant's spawn prompt, and the participant reads them once. **Deliberation Isolation is unchanged** — the turns live in the transcript file and only the facilitator's one line and the Record workflow's report return to the orchestrator.
 
 **Roles**:
 - **Developer AI**: feature design (changed files, API interface, data structures).
@@ -471,15 +512,19 @@ to GATE:PLAN `Test plan` and to GATE:QUALITY's assertion-claim alignment.
 A re-discussion continues the same transcript: the orchestrator appends its preparation with
 `bash scripts/architect/relay-state.sh brief <transcript> "<preparation>"` — a `### Brief` block,
 which re-opens the end condition and starts a new round (`relay-state.sh state` reports `round`,
-and counts report sections per round) — and resumes the relay at step 3 of the *Relay procedure*:
-the turn numbering and the alternation continue, and the participants answer the brief as they
-would a turn. The brief may follow the previous round's two report sections: a GATE:PLAN FAIL
-re-entry and an un-agreed re-discussion both continue the same file after a Record. Both are
-re-discussions **inside the cycle that spawned the participants**, and only there are the
-participants re-woken: when they are still resumable (the same session), they are re-woken by
-their IDs and keep everything they read; when they are not (a session restart), each side is
-spawned fresh with the transcript path and the relay continues from there. The Record workflow is invoked again at the end, and the scribe reads the brief where it
-sits.
+counts report sections per round, and lists in `fresh` the sides that have not yet written a turn
+in it) — and resumes the facilitator by its agent ID with `SendMessage`: the facilitator continues
+at its first step, the turn numbering and the alternation continue, each side's first wake of the
+round is the re-discussion text, and the participants answer the brief as they would a turn. The
+brief may follow the previous round's two report sections: a GATE:PLAN FAIL re-entry and an
+un-agreed re-discussion both continue the same file after a Record. Both are re-discussions
+**inside the cycle that spawned the participants**, and only there are the facilitator and the
+participants re-woken: when the facilitator is still resumable (the same session), it re-wakes the
+same participants by their IDs and they keep everything they read; when it is not (a session
+restart), a fresh facilitator is spawned by step 2 of the *Relay procedure* and spawns fresh
+participants — a participant keeps to the first facilitator that woke it, so a replaced facilitator
+never wakes the previous one's participants. The Record workflow is invoked again at the end, and
+the scribe reads the brief where it sits.
 
 **A return from a later phase of the same cycle spawns the participants fresh on the same
 transcript.** A return to ARCHITECT after DISPATCH — a VERIFY design contradiction, a `design`
@@ -488,8 +533,8 @@ after ARCHITECT (*Report routing*), or a `design`-class gate recommendation at A
 GATE:QUALITY ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) — never re-wakes the participants
 ([`role-contracts.md`](../role-contracts.md) > Spawn mode by role lifetime). The orchestrator appends the `brief` to the **same** transcript —
 naming what the return is for: the blocker report, the failed items and their findings, the
-`[ac-decision]` entries, or the recommendation's subject and finding — and spawns each side fresh by step 2 of the
-*Relay procedure*, pointed at the transcript; the turn numbering continues. The Record appends a delta section whose origin names the trigger (`VERIFY design
+`[ac-decision]` entries, or the recommendation's subject and finding — and spawns a fresh facilitator by step 2 of the
+*Relay procedure*, which spawns each side fresh, pointed at the transcript; the turn numbering continues. The Record appends a delta section whose origin names the trigger (`VERIFY design
 contradiction`, `design re-entry`, `acceptance-criterion decision`, `gate recommendation`), GATE:PLAN
 re-scores that delta ([GATE:PLAN](gate-plan.md) > *Re-entry re-score*), and the cycle re-enters RED. The counter is the
 trigger's: every one of them consumes the ARCHITECT re-entry counter except an acceptance-criterion
@@ -502,7 +547,8 @@ their IDs, whether or not the session is the same. It starts a new transcript (t
 cycle's is preserved as `issue-{N}-c{C}-architect-transcript.md` at PREFLIGHT with the other
 artifacts) whose `init` brief names, next to what the re-discussion is for, the previous cycle's
 transcript and report paths (`issue-{N}-c{C}-architect-transcript.md`,
-`issue-{N}-c{C}-architect-report.md`), and spawns each side by step 2 of the *Relay procedure*.
+`issue-{N}-c{C}-architect-report.md`), and spawns a fresh facilitator by step 2 of the *Relay procedure*, which
+spawns each side fresh.
 The prior discussion reaches the participants as a file they read, not as a context they carry. The brief
 in the new transcript's header is the record of the handover.
 

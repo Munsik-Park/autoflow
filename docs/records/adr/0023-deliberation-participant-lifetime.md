@@ -14,8 +14,8 @@ never resumes the previous cycle's participants by ID (the amendment note under 
 D3 row for CLAUDE.md > *Spawn mode by role lifetime*). **Amended by issue #351
 (2026-09-27)**: constraint 2 holds on the named path only — on the anonymous agent-ID path a relaying
 sub-agent receives the replies — and the ARCHITECT relay moves to a facilitator sub-agent
-(realization A3) under the conditions of D5, implemented by a follow-on issue; until that issue
-lands, A2 stands (D5 and *Measurement record (issue #351)* below).
+(realization A3) under the conditions of D5, implemented by issue #360 (D5 and *Measurement
+record (issue #351)* below); A2 remains the fallback when a facilitator relay stops (D5 condition 6).
 
 ## Context
 
@@ -227,6 +227,10 @@ orchestrator"), a spawn-policy row for the facilitator, and the gate hook.
   `.claude/agents/autoflow-planner.md`, the `architect-dev-participant` /
   `architect-test-participant` policy rows, the procedure at `docs/autoflow-guide.md` > ARCHITECT
   > *Relay procedure*, and `tests/test-issue-179-relay-state.sh`.
+- Follow-on issue: #360 (D5 implementation) — the `autoflow-facilitator` definition and its
+  `architect-facilitator` policy row, the gate hook's facilitator confinement (with its
+  `SendMessage` / `Read` / `Grep` / `Glob` PreToolUse and `Agent` PostToolUse matchers), and the
+  `fresh` / `log` additions to `scripts/architect/relay-state.sh`.
 
 ## Notes
 
