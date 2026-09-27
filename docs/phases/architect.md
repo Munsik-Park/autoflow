@@ -46,7 +46,8 @@ Every spawn below declares `subagent_type: autoflow-planner` and the model the r
 (`bash scripts/spawn-policy/spawn-policy.sh model architect-dev-participant` /
 `… architect-test-participant`), and every wait is a **turn end** ([`CLAUDE.md`](../../CLAUDE.md) >
 Execution Principles > *Wait discipline*): the participant's one-line answer arrives as the task
-notification of that resumed spawn, and nothing is polled.
+notification of that resumed spawn, and nothing is polled (a cache keep-alive wake, which the same
+principle admits, is not a poll).
 
 1. **Transcript.** `bash scripts/architect/relay-state.sh init .autoflow/issue-{N}-architect-transcript.md {N} ["<brief>"]`
    writes the header — the topic stated once, naming the issue's inputs and the ledger's settled
