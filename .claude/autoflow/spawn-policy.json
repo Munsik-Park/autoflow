@@ -56,17 +56,23 @@
       "effort": "xhigh",
       "work_type": "rubric, 3 items × 10 points"
     },
+    "architect-facilitator": {
+      "agent_type": "autoflow-facilitator",
+      "model": "sonnet",
+      "effort": "medium",
+      "work_type": "ARCHITECT relay facilitator — one background spawn per discussion, resumed by agent ID for a same-cycle re-discussion; spawns and wakes the two participants by relay-state.sh output with five fixed texts, reads no body; process only, confined by the gate hook (ADR-0023 D5)"
+    },
     "architect-dev-participant": {
       "agent_type": "autoflow-planner",
       "model": "opus",
       "effort": "xhigh",
-      "work_type": "ARCHITECT relay participant, Developer AI side — one persistent spawn per discussion, woken by agent ID for each of its turns; feature design under the Discussion Protocol"
+      "work_type": "ARCHITECT relay participant, Developer AI side — one persistent spawn per discussion, spawned and woken by the facilitator for each of its turns; feature design under the Discussion Protocol"
     },
     "architect-test-participant": {
       "agent_type": "autoflow-planner",
       "model": "opus",
       "effort": "xhigh",
-      "work_type": "ARCHITECT relay participant, Test AI side — one persistent spawn per discussion, woken by agent ID for each of its turns; verification design under the Discussion Protocol"
+      "work_type": "ARCHITECT relay participant, Test AI side — one persistent spawn per discussion, spawned and woken by the facilitator for each of its turns; verification design under the Discussion Protocol"
     },
     "gate-plan": {
       "agent_type": "autoflow-evaluator",

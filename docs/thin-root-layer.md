@@ -80,13 +80,15 @@ in AutoFlow's methodology. Artifact: `setup/thin-root-layer/claude-md-shim.md`.
 
 `.claude/workflows/architect-deliberation.js` and
 `.claude/workflows/verify-cause-branch.js` are thin-root-layer artifacts.
-The ARCHITECT discussion itself is an orchestrator relay of two persistent
-participants over `.autoflow/issue-{N}-architect-transcript.md`, and
+The ARCHITECT discussion itself is a facilitator sub-agent's relay of two
+persistent participants over `.autoflow/issue-{N}-architect-transcript.md`, and
 `architect-deliberation.js` is its Record phase; the workflow is REQUIRED for
 that phase, `scripts/architect/relay-state.sh` ships beside it as a root-layer
 copy — as does `scripts/architect/composition-oracle.sh`, the classifier the Record
-phase runs over the verification design it writes — and the participants' prompt
-rides the plugin channel in `agents/autoflow-planner.md`.
+phase runs over the verification design it writes — and the facilitator's and the participants' prompts
+ride the plugin channel in `agents/autoflow-facilitator.md` and
+`agents/autoflow-planner.md`; the gate hook that confines the facilitator rides
+it in `hooks/`.
 `CLAUDE_CODE_DISABLE_WORKFLOWS` is a load-bearing env constraint (Item 3).
 
 ---

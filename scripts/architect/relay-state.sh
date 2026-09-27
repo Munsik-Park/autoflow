@@ -4,13 +4,13 @@
 # =============================================================================
 # ARCHITECT relay transcript — header, brief, and decidable state (issue #179)
 # =============================================================================
-# The ARCHITECT deliberation is relayed by the orchestrator between two
-# persistent participants (ADR-0023 D2): the Developer AI and the Test AI are
-# spawned once per discussion and woken in alternation, and every turn is
-# appended by its author to `.autoflow/issue-{N}-architect-transcript.md`.
-# That file is the discussion's single record and the participants' shared
-# memory. This script reads it and prints the state the orchestrator's
-# procedure (docs/phases/architect.md) consumes: how many turns
+# The ARCHITECT deliberation is relayed between two persistent participants
+# (ADR-0023 D2, realized by a facilitator sub-agent under D5): the Developer AI
+# and the Test AI are spawned once per discussion and woken in alternation, and
+# every turn is appended by its author to
+# `.autoflow/issue-{N}-architect-transcript.md`. That file is the discussion's
+# single record and the participants' shared memory. This script reads it and
+# prints the state the relay procedure (docs/phases/architect.md) consumes: how many turns
 # exist, whose turn is next, whether the discussion has ended — two
 # consecutive turns marked `further: none` (issue #166, unchanged) — and which
 # reports are present. It computes and never judges: no turn is read for its
@@ -21,6 +21,7 @@
 #   relay-state.sh brief <transcript> <brief>            -> appends a Brief block
 #   relay-state.sh void  <transcript>                    -> appends a Void block
 #   relay-state.sh state <transcript>                    -> prints key=value lines
+#   relay-state.sh log   <transcript> <line>             -> appends one line to the relayer's log
 #
 # Transcript grammar. One block per turn, appended by the participant that
 # wrote it, in this exact heading form (the marker is on the heading so a body
@@ -61,9 +62,16 @@
 #   ended=<true|false>               the last two turns of the current round both `further: none`
 #   reports=<dev,test|dev|test|->    report sections present in the current round
 #   reports_missing=<...|->          the complement of `reports` once ended, else `-`
+#   fresh=<dev,test|dev|test|->      round > 1: the sides that have written no turn
+#                                    since the last brief (their next wake is the
+#                                    re-discussion form); round 1: `-`
 #   next=<dev|test|report|record>    dev / test: the side that writes the next turn;
 #                                    report: ended and no report yet in this round;
 #                                    record: ended and at least one report present in this round
+#
+# `log` appends `<UTC time> <line>` to the relayer's log beside the transcript
+# (`issue-{N}-architect-transcript.md` -> `issue-{N}-architect-relay-log.md`):
+# the record an operator reads to observe the relay. The line is one line.
 #
 # Exit: 0 state printed | 1 transcript malformed (cause on stderr) | 2 usage
 #       (`void`: 0 block appended | 1 nothing voidable, cause on stderr | 2 usage)
@@ -78,6 +86,7 @@ Usage:
   relay-state.sh brief <transcript> <brief>
   relay-state.sh void  <transcript>
   relay-state.sh state <transcript>
+  relay-state.sh log   <transcript> <line>
 USAGE
   exit 2
 }
@@ -131,7 +140,7 @@ cmd_state() {
   [ -f "$t" ] || { echo "relay-state: $t not found" >&2; exit 2; }
   LC_ALL=C awk '
     function fail(msg) { printf("relay-state: line %d: %s\n", FNR, msg) > "/dev/stderr"; bad = 1; exit 1 }
-    BEGIN { turns = 0; last = "-"; pair = 0; ended = 0; rdev = 0; rtest = 0; intx = 0; inrep = 0; round = 1 }
+    BEGIN { turns = 0; last = "-"; pair = 0; ended = 0; rdev = 0; rtest = 0; intx = 0; inrep = 0; round = 1; tdev = 0; ttest = 0 }
     # First pass: Void blocks. The target is a heading line above the block,
     # voided once.
     NR == FNR {
@@ -163,6 +172,7 @@ cmd_state() {
       expect = (n % 2 == 1) ? "dev" : "test"
       if (side != expect) fail("turn " n " is written by the " (side == "dev" ? "Developer AI" : "Test AI") " but that turn belongs to the " (expect == "dev" ? "Developer AI" : "Test AI"))
       turns = n; last = side
+      if (side == "dev") tdev = 1; else ttest = 1
       if (further == "none") { pair++ } else { pair = 0 }
       ended = (pair >= 2) ? 1 : 0
       next
@@ -172,7 +182,7 @@ cmd_state() {
       # A new round: the end condition re-opens, and a round that follows a
       # Record starts with no report of its own (the previous reports stay on
       # the record; the scribe reads the last round).
-      round++; pair = 0; ended = 0; inrep = 0; rdev = 0; rtest = 0
+      round++; pair = 0; ended = 0; inrep = 0; rdev = 0; rtest = 0; tdev = 0; ttest = 0
       next
     }
     /^## Report / {
@@ -195,10 +205,16 @@ cmd_state() {
         else if (!rdev) missing = "dev"
         else if (!rtest) missing = "test"
       }
+      fresh = "-"
+      if (round > 1) {
+        if (!tdev && !ttest) fresh = "dev,test"
+        else if (!tdev) fresh = "dev"
+        else if (!ttest) fresh = "test"
+      }
       if (!ended) nxt = (turns % 2 == 0) ? "dev" : "test"
       else if (!rdev && !rtest) nxt = "report"
       else nxt = "record"
-      printf("turns=%d\nround=%d\nlast=%s\nended=%s\nreports=%s\nreports_missing=%s\nnext=%s\n", turns, round, last, ended ? "true" : "false", reports, missing, nxt)
+      printf("turns=%d\nround=%d\nlast=%s\nended=%s\nreports=%s\nreports_missing=%s\nfresh=%s\nnext=%s\n", turns, round, last, ended ? "true" : "false", reports, missing, fresh, nxt)
     }
   ' "$t" "$t"
 }
@@ -229,11 +245,26 @@ cmd_void() {
   return 0
 }
 
+cmd_log() {
+  local t="$1" line="$2" log
+  [ -f "$t" ] || { echo "relay-state: $t not found" >&2; exit 2; }
+  case "$t" in
+    *-architect-transcript.md) log="${t%-architect-transcript.md}-architect-relay-log.md" ;;
+    *) echo "relay-state: $t is not an architect transcript" >&2; exit 2 ;;
+  esac
+  [ -n "$line" ] || { echo "relay-state: log line is empty" >&2; exit 2; }
+  case "$line" in *$'\n'*|*$'\r'*) echo "relay-state: log line must be one line" >&2; exit 2 ;; esac
+  printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$line" >> "$log" \
+    || { echo "relay-state: cannot append to $log" >&2; exit 1; }
+  return 0
+}
+
 [ $# -ge 1 ] || usage
 case "$1" in
   init)  { [ $# -eq 3 ] || [ $# -eq 4 ]; } || usage; cmd_init "$2" "$3" "${4:-}" ;;
   brief) [ $# -eq 3 ] || usage; cmd_brief "$2" "$3" ;;
   void)  [ $# -eq 2 ] || usage; cmd_void "$2" ;;
   state) [ $# -eq 2 ] || usage; cmd_state "$2" ;;
+  log)   [ $# -eq 3 ] || usage; cmd_log "$2" "$3" ;;
   *) usage ;;
 esac

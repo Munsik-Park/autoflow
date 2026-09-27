@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "da1dd33fdd3d1008637fa27f07e6a5be8043d2a07528a118a8ec47a9e0a83e47"
+      "sha256": "3061ce5be0bc03a046a94aea85aebef157fe5aed0e029de2aebe7174bf50f026"
     },
     {
       "source": "docs/INDEX.md",
@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/phases/architect.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "74225dbe3c39e1d0157ea08060aa69434914569c59726a5c5de7cfc03c4b2cde"
+      "sha256": "f5d96954fd56c1ad3b5cf62f0062bce7cab000cc7b9dad2151a9ea2e94f4408a"
     },
     {
       "source": "docs/phases/audit.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/phases/dispatch.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6a8e014e8aa031a31faa10a21e0ae65de49c008bcb1ba73b3ce276723b2e4726"
+      "sha256": "0011718615b49959e8faceef59cbd62a486580add4eac325662e3dbfeac5d005"
     },
     {
       "source": "docs/phases/gate-hypothesis.md",
@@ -209,14 +209,14 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "12d4537409fc554766ca07608acca7e6ee26ec30169965c2eb2c81fbc2d97f14"
+      "sha256": "7f1026eafd5c1f825692de418d1df79fb2233dac690dd3c772380fcab3a4eca7"
     },
     {
       "source": "docs/role-contracts.md",
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ca8b908cd599014ffd3b8e1aa78296af260b4d65cb134ff1c86f020bfb62b7cb"
+      "sha256": "9815544d1f0c0356e116851ad848f55195e2a6d8134b2363e66b40693daa4f6c"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/autoflow/docs/thin-root-layer.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6bcbdfa2f2211b464fdbee7b87be1cd2d6bad8786797a54d2a0f8a4308d00b53"
+      "sha256": "a41cb660bc786409388f1f7382e88634b13f07d6943411ec4573e928a6e9e765"
     },
     {
       "source": "docs/title-guide.md",
@@ -251,7 +251,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e02cbb6c08af4dae77247bd18ce191ca9d9fadf44aa77b929bf35924537eb0a1"
+      "sha256": "46548d42dd5ad12a4fe9a9c51e8931ad6f640a5529e4615fdf7a6cddca5d457a"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -391,7 +391,7 @@
       "dest": "scripts/architect/relay-state.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "50ef5bd041a4618347ebba8fc4c0c7051b1169b9010e35d523910994d04b0917"
+      "sha256": "c615eab4b0f96d125e8939f232295da90d2c6e83c4e0bcf9418e34807d8ca3b2"
     },
     {
       "source": "scripts/architect/composition-oracle.sh",
@@ -489,7 +489,7 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "04d2f87abad3cd04b34ac643f62491657211e4bfa433dd025572308baee01d32"
+      "sha256": "6370b80815e8dfe65af00e285820f29c655efd5e24b16813e4262167a81990f3"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
