@@ -1155,3 +1155,21 @@ across filesystems only to delete it. Rule home:
 [`submodule-common-rules.md`](../../submodule-common-rules.md) > Verification and Tools > *How a
 test is run is the target's practice*; cleanup contract: [`git-workflow.md`](../../git-workflow.md) >
 Post-Merge Cleanup.
+
+## Amendment note (issue #341)
+
+The lint rule this ADR cites as its precedent — in *Context* ("the target repo's `CLAUDE.md` >
+Development Commands `Lint` / `Format` entries"), in D1 ("discovery found no lint chain by either
+route"), in D2 ("a covered file was staged and a chain was discovered, but the chain did not
+execute") and in D3 ("the report carries one word per discovered chain") — no longer has a discovery
+order. Which lint chains a target has, the command and file set of each, and which CI lint steps
+gate the pull request are now the committing role's recorded judgment from the target's documents,
+scripts and CI, the same move D3 made for tests. The quoted sentences are the rule as it stood when
+this ADR was written. Their current form: `not-applicable` is "the committing role found no lint
+chain in the target", `not-run` is "the chain covers a staged file but did not execute", and the
+report carries "one word per chain the committing role identified", with `not-covered` added for a
+chain that covers no staged file. What D1, D2 and D3 took from the rule — `not-run` is never
+`clean`, `not-applicable` is not clean, a vocabulary total over reachable states — stands. Rule
+home: [`submodule-common-rules.md`](../../submodule-common-rules.md) > Change Surface Rules >
+*Lint chain on the staged surface*; decision: [`../design-rationale.md`](../design-rationale.md) >
+Decision 32.
