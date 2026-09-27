@@ -19,6 +19,7 @@
 # Usage:
 #   relay-state.sh init  <transcript> <issue> [<brief>]  -> writes the header
 #   relay-state.sh brief <transcript> <brief>            -> appends a Brief block
+#   relay-state.sh void  <transcript>                    -> appends a Void block
 #   relay-state.sh state <transcript>                    -> prints key=value lines
 #
 # Transcript grammar. One block per turn, appended by the participant that
@@ -42,6 +43,17 @@
 # and the report sections are counted per round, so a round that follows a
 # Record owes its own two reports (the scribe reads the last round's).
 #
+# A `### Void — line <k>` block voids the heading on line k and the block that
+# heading opens (up to the next `### Turn`, `### Brief`, `### Void` or
+# `## Report` heading): `state` skips it and the scribe does not read it.
+# The file stays append-only, so a defective heading is never removed; it is
+# voided instead, and its author then re-appends the block correctly (issue
+# #354). Only `void` writes the block, and it voids exactly the line `state`
+# reports as the first defect — a heading `state` accepts is never voidable.
+# A `### Turn` heading with no space before the number (`### Turn3 …`) and a
+# `## Report ` heading with another dash (`## Report - Test AI`) are malformed
+# headings, not body text, so they take this path too.
+#
 # `state` prints, one per line:
 #   turns=<n>                        turn blocks found (across every round)
 #   round=<r>                        1 + the number of Brief blocks
@@ -54,6 +66,7 @@
 #                                    record: ended and at least one report present in this round
 #
 # Exit: 0 state printed | 1 transcript malformed (cause on stderr) | 2 usage
+#       (`void`: 0 block appended | 1 nothing voidable, cause on stderr | 2 usage)
 # =============================================================================
 
 set -uo pipefail
@@ -63,6 +76,7 @@ usage() {
 Usage:
   relay-state.sh init  <transcript> <issue> [<brief>]
   relay-state.sh brief <transcript> <brief>
+  relay-state.sh void  <transcript>
   relay-state.sh state <transcript>
 USAGE
   exit 2
@@ -108,16 +122,33 @@ cmd_brief() {
 
 # The parser. Plain awk over the heading lines only; bodies are skipped. Every
 # defect is reported with its line number and fails the call, so the
-# orchestrator repairs the transcript (re-wakes the author) instead of relaying
-# on a mis-numbered record.
+# orchestrator repairs the transcript (voids the defect, re-wakes the author)
+# instead of relaying on a mis-numbered record. The file is read twice: the
+# first pass collects the Void blocks, so the second pass skips a voided
+# heading that precedes the block voiding it.
 cmd_state() {
   local t="$1"
   [ -f "$t" ] || { echo "relay-state: $t not found" >&2; exit 2; }
   LC_ALL=C awk '
-    function fail(msg) { printf("relay-state: line %d: %s\n", NR, msg) > "/dev/stderr"; bad = 1; exit 1 }
+    function fail(msg) { printf("relay-state: line %d: %s\n", FNR, msg) > "/dev/stderr"; bad = 1; exit 1 }
     BEGIN { turns = 0; last = "-"; pair = 0; ended = 0; rdev = 0; rtest = 0; intx = 0; inrep = 0; round = 1 }
+    # First pass: Void blocks. The target is a heading line above the block,
+    # voided once.
+    NR == FNR {
+      if ($0 ~ /^### (Turn( |[0-9])|Brief$)/ || $0 ~ /^## Report /) head[FNR] = 1
+      if ($0 ~ /^### Void/) {
+        if ($0 !~ /^### Void \xe2\x80\x94 line [0-9]+$/) fail("malformed void heading: " $0)
+        k = $0; sub(/^.* line /, "", k); k = k + 0
+        if (!(k in head)) fail("void names line " k ", which is not a heading line above it")
+        if (k in voided) fail("line " k " is already voided")
+        voided[k] = 1
+      }
+      next
+    }
+    FNR in voided { next }
+    /^### Void / { next }
     /^## Transcript$/ { intx = 1; next }
-    /^### Turn / {
+    /^### Turn( |[0-9])/ {
       if (!intx) fail("turn heading before the \"## Transcript\" header")
       if (inrep) fail("turn heading after a report section (a re-discussion opens with a \"### Brief\" block)")
       line = $0
@@ -144,7 +175,7 @@ cmd_state() {
       round++; pair = 0; ended = 0; inrep = 0; rdev = 0; rtest = 0
       next
     }
-    /^## Report \xe2\x80\x94 / {
+    /^## Report / {
       if (!ended) fail("report section before the discussion has ended")
       if ($0 ~ /^## Report \xe2\x80\x94 Developer AI$/) { if (rdev) fail("duplicate Developer AI report in round " round); rdev = 1 }
       else if ($0 ~ /^## Report \xe2\x80\x94 Test AI$/) { if (rtest) fail("duplicate Test AI report in round " round); rtest = 1 }
@@ -169,13 +200,40 @@ cmd_state() {
       else nxt = "record"
       printf("turns=%d\nround=%d\nlast=%s\nended=%s\nreports=%s\nreports_missing=%s\nnext=%s\n", turns, round, last, ended ? "true" : "false", reports, missing, nxt)
     }
-  ' "$t"
+  ' "$t" "$t"
+}
+
+# Void the first defect `state` reports: append a Void block naming its line,
+# with the voided heading and the cause as the block body. The author is then
+# re-woken to re-append the block correctly; the orchestrator never writes a
+# turn or a report itself.
+cmd_void() {
+  local t="$1" err k text
+  [ -f "$t" ] || { echo "relay-state: $t not found" >&2; exit 2; }
+  if err="$(cmd_state "$t" 2>&1 >/dev/null)"; then
+    echo "relay-state: $t parses without a defect — nothing to void" >&2
+    exit 1
+  fi
+  k="$(printf '%s\n' "$err" | sed -n 's/^relay-state: line \([0-9][0-9]*\): .*/\1/p' | head -n 1)"
+  if [ -z "$k" ]; then
+    echo "relay-state: the defect names no line and is not voidable: $err" >&2
+    exit 1
+  fi
+  text="$(sed -n "${k}p" "$t")"
+  if ! printf '%s\n' "$text" | LC_ALL=C grep -Eq '^(### (Turn( |[0-9])|Brief$)|## Report )'; then
+    echo "relay-state: line $k is not a heading and is not voidable: $err" >&2
+    exit 1
+  fi
+  printf '\n### Void \xe2\x80\x94 line %s\nvoids: %s\ncause: %s\n' "$k" "$text" "${err#relay-state: line "$k": }" >> "$t" \
+    || { echo "relay-state: cannot append to $t" >&2; exit 1; }
+  return 0
 }
 
 [ $# -ge 1 ] || usage
 case "$1" in
   init)  { [ $# -eq 3 ] || [ $# -eq 4 ]; } || usage; cmd_init "$2" "$3" "${4:-}" ;;
   brief) [ $# -eq 3 ] || usage; cmd_brief "$2" "$3" ;;
+  void)  [ $# -eq 2 ] || usage; cmd_void "$2" ;;
   state) [ $# -eq 2 ] || usage; cmd_state "$2" ;;
   *) usage ;;
 esac
