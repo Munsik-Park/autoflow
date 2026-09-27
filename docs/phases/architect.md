@@ -45,8 +45,9 @@ contract: [`role-contracts.md`](../role-contracts.md) > Facilitator.
 Every spawn below declares `subagent_type: autoflow-planner` and the model the readout names
 (`bash scripts/spawn-policy/spawn-policy.sh model architect-dev-participant` /
 `… architect-test-participant`), and every wait is a **turn end** ([`CLAUDE.md`](../../CLAUDE.md) >
-Execution Principles > *Wait discipline*): the participant's one-line answer arrives as the task
-notification of that resumed spawn, and nothing is polled (a cache keep-alive wake, which the same
+Execution Principles > *Wait discipline*): the participant's one-line answer is the report of that
+resumed spawn, arriving with its task notification ([`role-common-rules.md`](../role-common-rules.md) >
+Result delivery path by spawn mode), and nothing is polled (a cache keep-alive wake, which the same
 principle admits, is not a poll).
 
 1. **Transcript.** `bash scripts/architect/relay-state.sh init .autoflow/issue-{N}-architect-transcript.md {N} ["<brief>"]`
@@ -56,8 +57,12 @@ principle admits, is not a poll).
 2. **Spawn the Developer AI** (`Agent`, anonymous, no `name`) with a prompt that names it *the
    Developer AI participant of the ARCHITECT relay for issue #{N}*, the transcript path, and
    *write Turn 1*. Keep the agent ID the spawn result returns. End the turn.
-3. **On the notification**, read only the one line it carries, then run
-   `bash scripts/architect/relay-state.sh state <transcript>` and act on `next`:
+3. **On the task notification** — the step's only trigger — run
+   `bash scripts/architect/relay-state.sh state <transcript>` and act on `next`, whether or not the
+   participant's one line has arrived. The line is read when present and gates no step: in auto mode
+   it comes in a hand-back frame that arrives before or after the notification, and a turn that frame
+   alone starts is not a relay step — take no relay action and end the turn; a turn that carries both
+   acts once. On `next`:
    `test` → spawn the Test AI the same way on its first turn (*write Turn 2*; keep its ID) or, on a
    later turn, `SendMessage` to its ID with *write Turn n*; `dev` → `SendMessage` to the Developer
    AI's ID with *write Turn n*; end the turn after each wake. A `state` exit 1 (a malformed heading,
@@ -67,7 +72,7 @@ principle admits, is not a poll).
    never voidable); run `state` again, voiding each further exit 1 the same way until it exits 0,
    then act on `next` (and, at step 4, on `reports_missing`): the wake carries the voided block's
    cause and reads *re-append Turn n correctly* (a voided report section: *re-append your
-   report*). A wake whose notification arrives with `turns` unchanged is a **missing
+   report*). A task notification that arrives with `turns` unchanged is a **missing
    turn**: re-wake that side once with *your Turn n was not appended*; a second miss is the
    infrastructure state `participant missing` — repair (a fresh spawn of that side, pointed at the
    transcript) and continue.
