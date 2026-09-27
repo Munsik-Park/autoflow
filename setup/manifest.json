@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/phases/architect.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "654fc8781a1e995731c5221d2aa09d69c4573e891ba7d382d8fd0b5cdeeb5d1d"
+      "sha256": "b3b3eeae2e06838628aa2aaef380540ca36b30acfe2008abbafa0b5bb78c3a2c"
     },
     {
       "source": "docs/phases/audit.md",
@@ -216,7 +216,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "afb7c1ba4276c1dd1f3b4474f486b512d6502609b55084ba5791c01f6a3d4e3f"
+      "sha256": "ca8b908cd599014ffd3b8e1aa78296af260b4d65cb134ff1c86f020bfb62b7cb"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -251,7 +251,7 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "50306bffe6441acfdbaff189c060d8dd4442a354529cc7c0701c02a56ecb83a0"
+      "sha256": "e02cbb6c08af4dae77247bd18ce191ca9d9fadf44aa77b929bf35924537eb0a1"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
@@ -391,7 +391,7 @@
       "dest": "scripts/architect/relay-state.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "cb0910edb228bdb8765c52d519866ce2d8911af5507ee15fb6205d2118d61f80"
+      "sha256": "50ef5bd041a4618347ebba8fc4c0c7051b1169b9010e35d523910994d04b0917"
     },
     {
       "source": "scripts/architect/composition-oracle.sh",

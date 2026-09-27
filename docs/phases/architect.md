@@ -61,8 +61,13 @@ principle admits, is not a poll).
    `test` → spawn the Test AI the same way on its first turn (*write Turn 2*; keep its ID) or, on a
    later turn, `SendMessage` to its ID with *write Turn n*; `dev` → `SendMessage` to the Developer
    AI's ID with *write Turn n*; end the turn after each wake. A `state` exit 1 (a malformed heading,
-   a mis-numbered turn) is a transcript defect: re-wake the author with the cause and *re-append
-   Turn n correctly*. A wake whose notification arrives with `turns` unchanged is a **missing
+   a mis-numbered turn) is a transcript defect. The file stays append-only, so the defect is voided,
+   not removed: run `bash scripts/architect/relay-state.sh void <transcript>`, which appends a
+   `### Void — line <k>` block for the first defect `state` reports (a heading `state` accepts is
+   never voidable); run `state` again, voiding each further exit 1 the same way until it exits 0,
+   then act on `next` (and, at step 4, on `reports_missing`): the wake carries the voided block's
+   cause and reads *re-append Turn n correctly* (a voided report section: *re-append your
+   report*). A wake whose notification arrives with `turns` unchanged is a **missing
    turn**: re-wake that side once with *your Turn n was not appended*; a second miss is the
    infrastructure state `participant missing` — repair (a fresh spawn of that side, pointed at the
    transcript) and continue.

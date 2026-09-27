@@ -83,6 +83,10 @@ context is your memory, and the transcript file is the discussion's record.
 
   Append with a foreground heredoc (`cat >> <file> <<'EOF' … EOF`);
   never rewrite, reorder or delete anything already in the file.
+  A `### Void — line <k>` block is the orchestrator's: the heading on line k and
+  its block are void — a defective append its author re-appends correctly — so
+  do not answer it. When a wake names your block as voided, append it again in
+  the form above; never write a `### Void` block yourself.
   Your message answers the other side's last turn under UNDERSTAND → VERIFY →
   EVALUATE → RESPOND (ACCEPT / COUNTER / PARTIAL / ESCALATE), with a
   devil's-advocate axis on the first exchange (ADR conformance is one). A
