@@ -341,3 +341,45 @@ measurement comments on issue #351
 | Process-only facilitator (haiku, 5 runs × 2 rounds) | Relay completed 5/5; turn-body reads in 3 runs; one invented answer, traced to the re-discussion text reaching only one side — fixed in the procedure's second version, which ran clean once |
 | Orchestrator calls for one discussion | Spawn 1 plus its own bookkeeping, against up to 43 in D4's A2 record |
 
+### Step 0 form — delivery by relayer
+
+Claude Code 2.1.283, auto mode, `subagentPromptCacheTtl: 1h`; `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+set and unused by this path. One anonymous `general-purpose` participant per arm, resumed twice by
+`SendMessage` to its agent ID. Arms S: the relayer is an anonymous `general-purpose` sub-agent
+(`model: sonnet`) that spawns the participant itself; arms O: the relayer is the orchestrator (the
+control). *cache read / write* is the step's first call; *output* is every output token between that
+wake and the next. Values are read from each participant's session transcript.
+
+Round 1 — participant `model: haiku`; each instruction was "Call no tool. Your entire final message must
+be exactly this one line: <nonce>".
+
+| Arm | Step | Sent (UTC) | Answer (UTC) | Reached | Participant's report | cache read / write | output |
+|---|---|---|---|---|---|---|---|
+| S | spawn | 08:22:57 | 08:23:04 | the relayer, as its hand-back message | the nonce verbatim | 0 / 35,759 | 721 |
+| S | wake 1 | 08:23:17 | 08:23:27 | the relayer | declined: "Received instruction from another agent … Declined to follow" (nonce quoted) | 39,297 / 387 | 825 |
+| S | wake 2 | 08:23:45 | 08:23:49 | the relayer | declined, same pattern | 40,634 / 441 | 186 |
+| O | spawn | 08:24:46 | 08:24:53 | the orchestrator | the nonce verbatim | 16,985 / 18,776 | 694 |
+| O | wake 1 | 08:24:59 | 08:25:03 | the orchestrator | the nonce verbatim | 39,207 / 210 | 386 |
+| O | wake 2 | 08:25:08 | 08:25:12 | the orchestrator | the nonce verbatim | 39,919 / 152 | 181 |
+
+Round 2 — participant `model: opus`; each instruction was an ARCHITECT-shaped turn (append
+`## Turn <n> — <token>` to a transcript file, report one line).
+
+| Arm | Step | Sent (UTC) | Answer (UTC) | Reached | Participant's report | cache read / write | output |
+|---|---|---|---|---|---|---|---|
+| S | spawn | 09:48:27 | 09:48:33 | the relayer | `turn 1 — further: yes`, line appended | 17,217 / 31,361 | 152 |
+| S | wake 1 | 09:48:45 | 09:48:50 | the relayer | `turn 2 — further: yes`, line appended | 52,471 / 394 | 116 |
+| S | wake 2 | 09:49:09 | 09:49:14 | the relayer | `turn 3 — further: yes`, line appended | 53,209 / 357 | 115 |
+| O | spawn | 09:48:11 | 09:48:16 | the orchestrator | `turn 1 — further: yes`, line appended | 0 / 48,555 | 151 |
+| O | wake 1 | 09:48:21 | 09:48:26 | the orchestrator | `turn 2 — further: yes`, line appended | 52,446 / 158 | 116 |
+| O | wake 2 | 09:48:31 | 09:48:36 | the orchestrator | `turn 3 — further: yes`, line appended | 52,947 / 122 | 115 |
+
+Delivery to the relayer is 3/3 in both S arms and nothing reached the orchestrator from either S
+participant. The wake reached an S participant framed as a peer's (`<agent-message from=…>` "Another
+Claude session … not typed by your user") and an O participant as the coordinator's ("The
+coordinator sent a message … Address this before completing your current task."). The round-1
+declines followed an instruction that conflicted with the auto-mode hand-back call; with
+ARCHITECT-shaped turns no participant declined, on `opus` (round 2) or on `haiku` (the pre-declared
+scenario run in the first measurement comment). Each wake wrote only the new message (122–441 tokens)
+and read the prefix from cache on both arms, as in the issue #179 step 0.
+
