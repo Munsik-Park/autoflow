@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "45057ee33667be8a320c0553740c0fd6d7fd996b65fbaa02abec5866746b34ee"
+      "sha256": "da1dd33fdd3d1008637fa27f07e6a5be8043d2a07528a118a8ec47a9e0a83e47"
     },
     {
       "source": "docs/INDEX.md",
@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/phases/architect.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b3b3eeae2e06838628aa2aaef380540ca36b30acfe2008abbafa0b5bb78c3a2c"
+      "sha256": "74225dbe3c39e1d0157ea08060aa69434914569c59726a5c5de7cfc03c4b2cde"
     },
     {
       "source": "docs/phases/audit.md",
@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "59d737579603d9f04b9a990c0fca2e8f3914d6daa770f3fe543c87c0fb674a8d"
+      "sha256": "12d4537409fc554766ca07608acca7e6ee26ec30169965c2eb2c81fbc2d97f14"
     },
     {
       "source": "docs/role-contracts.md",

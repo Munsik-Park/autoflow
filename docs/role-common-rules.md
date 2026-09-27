@@ -165,12 +165,17 @@ Deliberation Isolation.
 
 ### Result delivery path by spawn mode
 
-Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's final text — whether the spawn is answering its prompt or a later wake.
+Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's report to its caller, which these rules call its return value — whether the spawn is answering its prompt or a later wake. What carries the report is the harness's, and it depends on the session's permission mode (Claude Code CHANGELOG, 2.1.271: "Changed auto mode so a subagent reports back to its caller through a dedicated hand-back call …"):
 
-| Spawn mode | Where the final turn text goes | Required delivery action |
+- **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
+- **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
+
+The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary, or a relay participant's one line — never the body, whatever the harness's own tool description says of a "full report" ([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Orchestrator context discipline*, row 2).
+
+| Spawn mode | Where the report arrives | Required delivery action |
 |---|---|---|
-| anonymous direct (`subagent_type`) — the only mode | the spawn's return value (sync) or a task notification (background) | none — the final text is the report; write the body to `.autoflow/*` and return an anchor + one-line summary |
-| the same spawn **resumed by agent ID** (`SendMessage`, no `name`) — the ARCHITECT relay participants only | a task notification of the resumed spawn, its final text verbatim in the `result` field | none — the final text is one line (`turn <n> — further: <yes|none>`); the turn body goes to the transcript file, never to the return |
+| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to `.autoflow/*` and report an anchor + one-line summary |
+| the same spawn **resumed by agent ID** (`SendMessage`, no `name`) — the ARCHITECT relay participants only | the resumed spawn's task notification, with the one line in its `result` (not auto) or in the hand-back frame that arrives before or after it (auto) | as above; the report is one line (`turn <n> — further: <yes|none>`) and the turn body goes to the transcript file, never to the report |
 
 A spawn carries no `name`: the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle.
 

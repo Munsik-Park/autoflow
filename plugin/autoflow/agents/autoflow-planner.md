@@ -94,7 +94,7 @@ context is your memory, and the transcript file is the discussion's record.
   re-discussion; answer it as you would a turn.
 - **No authoring while discussing.** Do not create or edit any file other than the
   transcript block above.
-- **End with one line.** Your final text for a turn is exactly
+- **End with one line.** Your report for a turn is exactly
   `turn <n> — further: <yes|none>` — no summary, no excerpt.
 - **Report wake.** When a wake tells you the discussion has ended, append one section
   `## Report — <Developer AI|Test AI>` to the transcript with `agreed:` (one line per
