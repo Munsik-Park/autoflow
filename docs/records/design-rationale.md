@@ -594,6 +594,18 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Route.** Operator decision recorded here per [`development-guideline.md`](../development-guideline.md) > ADR Policy, on the precedent of Decisions 21 and 26 (trigger area: agent workflow gates). ADR-0024, which cites the discovery order and the vocabulary, carries an amendment note.
 
+### Decision 33: The Orchestrator May Wake on a Timer Shorter Than the Prompt-Cache TTL While a Tracked Task Runs; the Wake Is Not a Poll
+
+**Problem.** *Wait discipline* has the orchestrator wait for a tracked task by ending its turn, and a running task keeps its own prompt cache warm through its own requests; the orchestrator sends none while it waits. A wait longer than the prompt-cache TTL therefore expires the orchestrator's cached context, and the first turn after the notification re-writes all of it. Observation (`connev-llm/llmroute#283`, orchestrator `claude-opus-5-5`, 1-hour TTL): the re-entry 55.8 minutes after the previous request read 237,049 tokens from cache and wrote 2,316; the re-entry 73.3 minutes after it, during a GREEN spawn past one hour, read 0 and wrote 246,216 — 52% of the session's cache writes over 124 turns. ADR-0023 records the same mechanism on a participant wake (≈ 288K and ≈ 298K re-written). The rule's text — "a task the harness tracks is never polled" — left open whether a timer wake during such a wait was admitted.
+
+**Decision.** Operator decision (issue #348), executed as orchestrator work outside an AutoFlow cycle. While a tracked task runs, the orchestrator may arm one backgrounded `sleep` shorter than the TTL (50 minutes at the 1-hour TTL) and end its turn. The turn the timer wakes reads no transcript or output file of the task — only a cheap anchor-check, a log's modification time or `git log -1` — re-arms the timer and ends; the timer is stopped when the notification arrives. What the wake observes about the task's progress, and any decision drawn from it, is the orchestrator's judgment recorded with its grounds (Rule Scope, principle 2); no automatic stop rule is added.
+
+**Why it is not a poll.** A poll waits for a result; the wake takes no result and reads nothing the task produced, which is what keeps issue #165's transcript intake out. It blocks no notification and no user prompt, since the timer is itself a backgrounded task awaited by a turn end.
+
+**Why the device is unchanged.** The hook denies `TaskOutput` and a backgrounded `scripts/test/run-suites.sh`, not a backgrounded `sleep`, so the wake is admitted as the hook stands (principle 4); the hook's `TaskOutput` comment now records that the omission is deliberate.
+
+**Not changed.** The `TaskOutput` deny, the foreground `sleep` loop exclusion, and a role spawn's foreground-only execution.
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:
