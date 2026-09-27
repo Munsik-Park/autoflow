@@ -15,8 +15,9 @@ below describe the contract every role spawn honours.
 - The role spawn may **read** any file in the repository.
 - The role spawn **may not modify** files outside the scope assigned by the dispatch
   instructions for the current issue.
-- PR creation is the orchestrator's responsibility — the role spawn's git work
-  finishes at `git push` of its branch.
+- Push and PR creation are the orchestrator's responsibility — the role spawn's git
+  work finishes at `git commit` on its branch; the orchestrator pushes at DELIVER
+  ([`phases/deliver.md`](phases/deliver.md)).
 
 ---
 
@@ -29,8 +30,7 @@ git log --oneline -5        # confirm the recent history
 
 # After completing the assigned work
 git add <files> && git commit
-git push -u origin <branch-name>
-# The orchestrator opens the PR — report completion in the spawn's return value.
+# The orchestrator pushes (DELIVER) and opens the PR — report completion in the spawn's return value.
 ```
 
 **Absolute rules**:
@@ -124,7 +124,7 @@ git status                  # any uncommitted work?
 ## Work Completion Process
 
 ```
-Implement → /simplify as judged and the comment check (REFINE step 1) → tests pass → push branch → return the report
+Implement → /simplify as judged and the comment check (REFINE step 1) → tests pass → commit → return the report
 ```
 
 **Required content of the completion report** (the spawn's return value — write any
