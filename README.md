@@ -37,7 +37,7 @@ REFINE          Refactor          — Code cleanup, Green re-confirmation
 VALIDATE        Verification Done — automated + manual checks
 AUDIT           Security Audit    — Independent project-specific security audit
 GATE:QUALITY    Completion Eval   — Scored quality assessment (gate)
-DELIVER         Sub-Repo Push     — each Submodule AI pushes its fork branch; Submodule AI shutdown
+DELIVER         Sub-Repo Push     — orchestrator pushes each sub-repo branch to its fork
 INTEGRATE       Integration Test  — system build, health check, functional test
 HANDOFF         PR + Hand-off     — sub-repo PRs → host PR (`Closes #N`) → CI green; external review merges out of band (AutoFlow does not merge)
 ```

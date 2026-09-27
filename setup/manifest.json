@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "926283fb110f2f091bfa66e54838410900a536c7a3a741181400e6dcabe0b37c"
+      "sha256": "373c25857c7b5a339b2413980df4c5892c7065724477798f4dcdedf660b98d90"
     },
     {
       "source": "docs/INDEX.md",
@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/phases/deliver.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "00047f243b1361fdc54b1d34ecb3921234451672199c9ffec366ab53e6b3843b"
+      "sha256": "68ec4ab76601809975845ce37b4a85962982f5ad7f13b84eed8dd1d87d219ea5"
     },
     {
       "source": "docs/phases/dispatch.md",
@@ -209,14 +209,14 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0c3e859925bc2c70ea39bc40369f3a61d5a6389bd9574d71d75474cf5be21417"
+      "sha256": "2d92c19750f52c50195778f02b70de4128e76bdd864793e7dd4ca6d773768c9c"
     },
     {
       "source": "docs/role-contracts.md",
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "84f195ff1daede165f760466d068ae96832f86d6e50620432c7675541e74cbf5"
+      "sha256": "4b47d6b6cf3765d71484442079c9b89c3527667947b2f205383f32124136bf54"
     },
     {
       "source": "docs/submodule-common-rules.md",

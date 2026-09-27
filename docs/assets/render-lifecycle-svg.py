@@ -55,7 +55,7 @@ STAGES = [
         ("GATE:QUALITY", "fresh eval AI · 10×10", "gate", False),
     ]),
     ("05", "DELIVERY", [
-        ("DELIVER", "branch push · shutdown", "phase", False),
+        ("DELIVER", "branch push", "phase", False),
         ("INTEGRATE", "build · health · e2e", "phase", False),
         ("HANDOFF", "PR · CI · review triage", "end", False),
     ]),
