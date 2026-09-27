@@ -616,6 +616,16 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Not changed.** *Wait discipline* itself — a tracked task is awaited by ending the turn, a foreground `sleep` loop polling for a result is not used — and the cache keep-alive wake (Decision 33).
 
+### Decision 35: The Parallel-Bash Cancellation Premise Is Retired; `git -C` Stays, Grounded on the Permission Prompt
+
+**Problem.** `CLAUDE.md` > *Incomplete output is never ground truth* and [`phases/analysis.md`](../phases/analysis.md) > Spot-check & escalation discipline assumed that a failed Bash call in a parallel batch cancels its siblings, each returning a 1-line `Cancelled: parallel tool call … errored` that could be read as empty output, and forbade a parallel batch of `cd`-prefixed Bash on that ground. Upstream removed the propagation in 2.1.161 (`anthropics/claude-code` CHANGELOG `## 2.1.161`: "a failed Bash command no longer cancels other calls in the same batch — each tool returns its own result independently"), and the minimum runtime is v2.1.277 (Decision 34), so no supported runtime produces it.
+
+**Decision.** Operator decision (issue #353), executed as orchestrator work outside an AutoFlow cycle. The cancellation premise, its `Cancelled` example and the parallel-`cd` prohibition leave both documents. The `git -C <path>` + absolute-path guidance stays, grounded instead on the permission prompt a `cd`-prefixed compound can raise (CHANGELOG `## 2.1.113`: a `cd <current-directory> && git …` no longer prompts only when the `cd` is a no-op; `## 2.1.207`: compound commands with `cd` prompting when the only redirect was to `/dev/null`; `## 2.1.271`: a `cd`+`git` chain now prompts under `permissions.blockReadsOutsideWorkingDirectories`).
+
+**Why no device changes.** The rule had no hook or script; the rule text was its only home (principle 4 is met by the text change alone).
+
+**Not changed.** The read-dedup `[DENY]` and `.claude/hooks/check-read-dedup.sh` — their upstream cause, `anthropics/claude-code#42264`, is open — and the `[MUST]` that spot-checks run sequentially after the Phase A/B/3 fan-out returns, whose ground is keeping the check apart from the fan-out, not the cancellation.
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:

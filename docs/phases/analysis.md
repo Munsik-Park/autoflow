@@ -184,17 +184,13 @@ Spawn channel: all five DIAGNOSE spawns — intake readiness triage, Phase A, Ph
 ## Spot-check & escalation discipline (incomplete-output guard)
 
 A DIAGNOSE spot-check is an orchestrator read that confirms a Phase A/B/3 finding
-before it feeds a structure-gate score, a blocker, or a user escalation. Two Claude
-Code behaviors produce a **false "absent / stub" reading**:
+before it feeds a structure-gate score, a blocker, or a user escalation. A Claude
+Code behavior produces a **false "absent / stub" reading**:
 
 - **Read-dedup stub.** A re-read of an unchanged file returns a 1-line stub ("file
   unchanged … refer to that earlier tool_result"), and the dedup ledger is not reset on
   compaction. The `Read` PostToolUse hook (`.claude/hooks/check-read-dedup.sh`) flags this
   at runtime — these rules are the procedure it points to.
-- **Parallel `cd`-prefixed Bash cancellation.** A parallel batch of
-  `cd <path> && git …` calls where one sibling errors at the tool layer returns
-  a 1-line `Cancelled: parallel tool call … errored` for the rest, read as the
-  command's (empty) output.
 
 - **[MUST]** A blocker / "absent" / "dependency missing" finding is
   **reproduced with a fresh read before it feeds a structure-gate score or a
@@ -202,11 +198,12 @@ Code behaviors produce a **false "absent / stub" reading**:
 - **[MUST]** A blocker/escalation-feeding spot-check reads via **shell**
   (`sed -n 'N,Mp' <file>`, `grep -n`, `wc -l`), not the Read tool.
 - **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
-  1-line result (`Wasted call` / `file unchanged` / `Cancelled`). It is a
-  harness stub, not data — re-run the single command sequentially first.
+  1-line result (`Wasted call` / `file unchanged`). It is a harness stub, not
+  data — re-run the single command sequentially first.
 - **[MUST]** Spot-checks run **after all Phase A/B/3 sub-agents have returned**,
-  as single sequential commands with `git -C <path>` + absolute paths — never
-  interleaved with the fan-out and never a parallel batch of `cd`-prefixed Bash.
+  as single sequential commands, never interleaved with the fan-out. Another
+  directory is addressed with `git -C <path>` + absolute paths rather than a
+  `cd`-prefixed compound, which can raise a permission prompt.
 
 **Operator-level mitigation (optional, session-global):** a long session that
 has compacted is also prone to holding stale context with high confidence —
