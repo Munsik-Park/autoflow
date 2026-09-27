@@ -48,8 +48,6 @@ git push -u origin <branch-name>
 <type>(#<issue>): <description>
 
 Next: <what comes next>
-
-Co-Authored-By: Claude <model> <noreply@anthropic.com>
 ```
 
 `type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.

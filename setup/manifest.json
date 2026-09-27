@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e87046cc1785fa1c9a05af5398faf600760bd5f1283f79814a2dcec9229b3487"
+      "sha256": "926283fb110f2f091bfa66e54838410900a536c7a3a741181400e6dcabe0b37c"
     },
     {
       "source": "docs/INDEX.md",
@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a2b8d5905d3da1ebec6bb5683c270923e4bebbacf90b621a3a0e82c05288cd47"
+      "sha256": "bdbc9132b59ea211a5ee5b0b389ebe3b9e465e5fb599d2f9372400384850465f"
     },
     {
       "source": "docs/issue-proposal.md",
@@ -209,7 +209,7 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e10020db5760ac810cb398982e52e93ad28b84c2dbdfdb7ca7af34c0b1c2030b"
+      "sha256": "0c3e859925bc2c70ea39bc40369f3a61d5a6389bd9574d71d75474cf5be21417"
     },
     {
       "source": "docs/role-contracts.md",

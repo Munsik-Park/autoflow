@@ -32,8 +32,6 @@ docs/55-update-api-reference
 <type>(#<issue>): <description>
 
 Next: <next action>
-
-Co-Authored-By: Claude <model> <noreply@anthropic.com>
 ```
 
 `type`: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`.

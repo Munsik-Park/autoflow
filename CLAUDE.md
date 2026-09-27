@@ -348,11 +348,11 @@ These gates are wired via PreToolUse on both `Bash` (git / gh commands) and `Wri
 <type>(#<issue>): <description>
 
 Next: <next action>
-
-Co-Authored-By: Claude <model> <noreply@anthropic.com>
 ```
 
 `type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
+
+Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
 
 - No direct commits to main — always branch + PR.
 - No `feat`/`fix` commit while tests fail → use `wip`.
