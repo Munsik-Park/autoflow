@@ -10,7 +10,7 @@
 // sub-agents and records the outcome: a scribe writes the feature design, the verification design
 // and the deliberation report from the transcript and the two reports, and a ledger call appends
 // the agreed conclusions. The orchestrator receives only the returned object — it never receives
-// the turns (Decision 8). Requires Claude Code v2.1.154+ (Workflow runtime).
+// the turns (Decision 8). Requires Claude Code v2.1.277+ (AutoFlow's minimum runtime).
 export const meta = {
   name: 'architect-deliberation',
   description: 'ARCHITECT Record phase: after the facilitator-relayed discussion has ended, a scribe writes the two design documents and the deliberation report from the relay transcript file (.autoflow/issue-N-architect-transcript.md — turns plus both participants\' reports), and the ledger records the agreed conclusions. Invoke with args {issue: "N"} (issue number required).',

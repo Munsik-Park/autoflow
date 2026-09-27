@@ -606,6 +606,16 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Not changed.** The `TaskOutput` deny, the foreground `sleep` loop exclusion, and a role spawn's foreground-only execution.
 
+### Decision 34: The Minimum Runtime Is Claude Code v2.1.277, and the `TaskOutput` Deny Is Retired With It
+
+**Problem.** The hook denied `TaskOutput` state-independently (issue #165): the tool blocked the turn on one task while every other notification and the user's input queued behind it. Upstream removed the tool in 2.1.277 (`anthropics/claude-code` CHANGELOG `## 2.1.277`: "Removed the deprecated TaskOutput tool"), so on that version the deny branch is unreachable and the always-loaded `CLAUDE.md` forbids a tool that does not exist. The declared minimum runtime was v2.1.154, where the tool still exists, so dropping the deny alone would re-admit the blocking wait on 2.1.154–2.1.276.
+
+**Decision.** Operator decision (issue #352), executed as orchestrator work outside an AutoFlow cycle; the operator's runtime was already on 2.1.277 or later. The minimum runtime becomes v2.1.277 ([`thin-root-layer.md`](../thin-root-layer.md) > Runtime prerequisite, [`role-contracts.md`](../role-contracts.md) > Realization > Invocation / version / config, the two workflow scripts' headers, `CLAUDE.md` > Deliberation Isolation). In the same change (principle 4) the deny branch and its header entry leave `check-autoflow-gate.sh` (both copies), `TaskOutput` leaves the PreToolUse matcher in `plugin/autoflow/hooks/hooks.json`, and the rule text drops it from `CLAUDE.md` > *Wait discipline* and Hook gates, [`gate-matching-standard.md`](../gate-matching-standard.md) > Rule P2 and [`role-common-rules.md`](../role-common-rules.md) > Bash Execution Mode.
+
+**Why no device replaces it.** The runtime no longer offers the blocking primitive, so the minimum-version statement is the whole guarantee. No script reads the Claude Code version, so the statement is a documented prerequisite and not an enforced check.
+
+**Not changed.** *Wait discipline* itself — a tracked task is awaited by ending the turn, a foreground `sleep` loop polling for a result is not used — and the cache keep-alive wake (Decision 33).
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:

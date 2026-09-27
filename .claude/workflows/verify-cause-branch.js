@@ -6,7 +6,7 @@
 // tool, the row's observation record whose result line reads `observation: mismatch`.
 // The Test-AI and Developer-AI self-checks run INSIDE this workflow; only the
 // canonical next action crosses back to the orchestrator. The orchestrator routes
-// strictly on `next_action`. Requires Claude Code v2.1.154+ (Workflow runtime).
+// strictly on `next_action`. Requires Claude Code v2.1.277+ (AutoFlow's minimum runtime).
 //
 // Termination (Decision 7): a single self-check round — each side answers once and
 // the next action is derived deterministically. There is no internal loop. Repeated

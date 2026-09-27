@@ -105,5 +105,7 @@ The thin-root layer's env dependencies.
 | `CLAUDE_CODE_DISABLE_WORKFLOWS` | operator / managed settings | **MUST remain unset / not be `1`**. |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | **nobody** — not provisioned | The settings pin does not ship it and the thin root layer neither requires nor reads it. A `"1"` value in a target's settings is outside the contract (`setup/SETUP-GUIDE.md` > Prerequisites). |
 
-**Runtime prerequisite**: Claude Code **v2.1.154+** — the `Workflow` runtime the
-deliberation scripts depend on.
+**Runtime prerequisite**: Claude Code **v2.1.277+** — the `Workflow` runtime the
+deliberation scripts depend on (v2.1.154), and the release that removed the
+blocking `TaskOutput` tool, whose removal *Wait discipline* relies on in place of
+a hook deny (v2.1.277; `docs/records/design-rationale.md` > Decision 34).

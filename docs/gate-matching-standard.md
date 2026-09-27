@@ -241,8 +241,7 @@ A hook has two classes of gate:
 
 1. **Absolute prohibitions** — actions AutoFlow must never perform via the
    agent's tools regardless of state (e.g. `gh pr merge`, push to the
-   default branch, and — keyed on the tool name rather than a command
-   token — the `TaskOutput` blocking wait). These MUST be placed in an unconditional block that
+   default branch). These MUST be placed in an unconditional block that
    executes **before** any active-issue / state lookup.
 2. **Conditional gates** — score- or phase-dependent checks (e.g. push only
    after AUDIT + GATE:QUALITY pass). These run **after** the activity check.
@@ -252,8 +251,7 @@ A hook orders its sections `1. Unconditional blocks` → then
 
 Behavioural consequence: the agent's Bash
 tool can never run `gh pr merge` or a default-branch push in a governed
-repo, even outside an active flow, and `TaskOutput` is never callable there
-(the hook matcher must list `TaskOutput`). Merging is performed by humans /
+repo, even outside an active flow. Merging is performed by humans /
 external review through GitHub, not through the agent.
 
 ## Rule P3 — Declared-Role Spawn Classification

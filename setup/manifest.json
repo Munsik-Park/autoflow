@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3061ce5be0bc03a046a94aea85aebef157fe5aed0e029de2aebe7174bf50f026"
+      "sha256": "9ecdcf6dfd00a9087ebfec140c72e296a4b4a035a7e7506ab92127e637f69ffb"
     },
     {
       "source": "docs/INDEX.md",
@@ -209,14 +209,14 @@
       "dest": ".claude/autoflow/docs/role-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7f1026eafd5c1f825692de418d1df79fb2233dac690dd3c772380fcab3a4eca7"
+      "sha256": "81b35c6d50baa86e8c283caa54157b9bc65b24717291338ef0e78ccbffe14dfd"
     },
     {
       "source": "docs/role-contracts.md",
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9815544d1f0c0356e116851ad848f55195e2a6d8134b2363e66b40693daa4f6c"
+      "sha256": "0fbdd6737bf990a993d1a48b122aef95b30cc51246ec1d10e32d962cd68d60c1"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -230,7 +230,7 @@
       "dest": ".claude/autoflow/docs/thin-root-layer.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a41cb660bc786409388f1f7382e88634b13f07d6943411ec4573e928a6e9e765"
+      "sha256": "23f14bd238ded55ac2bd804971671820ea61da3e958e4d070f8dc8a72d4c255f"
     },
     {
       "source": "docs/title-guide.md",
@@ -251,14 +251,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "46548d42dd5ad12a4fe9a9c51e8931ad6f640a5529e4615fdf7a6cddca5d457a"
+      "sha256": "ba4686db0a75e08012eea4a3ad19df95e92fb9fd8d71d23b29647411bbd648ac"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "a9f854d284d411cff31208ae12b1e205efc4609981d3692f572fd44e1b76adca"
+      "sha256": "9b25805c1d0844578936d0f9c019b3caeaecfe9abeb0a68788cf258cf62d6a72"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
