@@ -349,9 +349,6 @@ $_shb_buf"; fi
 # tool-name-keyed and carries no state or argument condition. Denied here,
 # before the activity check, so an inactive or absent state file cannot
 # re-admit it.
-# A backgrounded `sleep` timer is deliberately NOT denied: it is the cache
-# keep-alive wake the same principle admits (issue #348) — it blocks nothing,
-# and the turn it wakes makes only a cheap anchor-check and ends.
 if [ "$TOOL_NAME" = "TaskOutput" ]; then
   echo "BLOCKED: 'TaskOutput' blocking wait is denied (CLAUDE.md > Execution Principles > Wait discipline)." >&2
   echo "A subagent, Workflow or background task re-invokes this session with a task notification when it completes — end the turn and take the result from that notification. TaskOutput blocks every other notification and the user's input until its one target ends or times out." >&2

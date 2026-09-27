@@ -602,7 +602,7 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Why it is not a poll.** A poll waits for a result; the wake takes no result and reads nothing the task produced, which is what keeps issue #165's transcript intake out. It blocks no notification and no user prompt, since the timer is itself a backgrounded task awaited by a turn end.
 
-**Why the device is unchanged.** The hook denies `TaskOutput` and a backgrounded `scripts/test/run-suites.sh`, not a backgrounded `sleep`, so the wake is admitted as the hook stands (principle 4); the hook's `TaskOutput` comment now records that the omission is deliberate.
+**Why the device is unchanged.** The hook denies `TaskOutput` and a backgrounded `scripts/test/run-suites.sh`, not a backgrounded `sleep`, so the wake is admitted as the hook stands and no device changes with the rule (principle 4).
 
 **Not changed.** The `TaskOutput` deny, the foreground `sleep` loop exclusion, and a role spawn's foreground-only execution.
 
