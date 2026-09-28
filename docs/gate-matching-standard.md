@@ -263,10 +263,14 @@ the hook owns the role→gate mapping:
 
 | Channel | Declaration |
 |---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-loopcheck` / `autoflow-planner` / `autoflow-facilitator` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
+| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-loopcheck` / `autoflow-planner` / `autoflow-facilitator` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
+| Unit-agent caller | the hook input's caller `agent_type` is `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` — the spawn needs no declaration of its own |
 
-`subagent_type` is the **sole** declaration channel.
+`subagent_type` is the **sole** declaration channel for a spawn the orchestrator
+or a role makes. A spawn a functional-unit agent makes is classified by its
+caller instead (ADR-0025 D5): the caller is a structural field the harness sets
+on a sub-agent's calls, never the prompt, so the rule against inference holds.
 
 The `<plugin>:<agent>` prefix is accepted for the `autoflow-*` types only —
 the built-in research types stay bare (no namespace).
@@ -276,13 +280,41 @@ is undeclared → denied during an active cycle, **even when `subagent_type` nam
 a research or `autoflow-*` type**. A contradictory declaration is blocked rather
 than arbitrated, with the `name` side carrying no role at all.
 
-Mapping (hook-owned — a spawn never selects its own gate): `planning` →
-GATE:HYPOTHESIS (skip-verdict bypass for non-bug issues); `implementation` /
-`testing` → GATE:PLAN; `analysis` / `evaluation` / research → pass. An
+Mapping (hook-owned — a spawn never selects its own gate): `planning` —
+`autoflow-planner`, `autoflow-facilitator`, `autoflow-unit-design` →
+GATE:HYPOTHESIS (skip-verdict bypass for non-bug issues); `implementation` —
+`autoflow-implementer`, `autoflow-unit-build` — / `testing` → GATE:PLAN;
+`analysis` — `autoflow-analyzer`, `autoflow-loopcheck`,
+`autoflow-unit-analysis` — / `evaluation` / `advisor` / research → pass.
+
+**Unit-agent caller inheritance**: a spawn whose caller is a unit agent is
+admitted without a declaration — a teammate `name` included — and judged by
+the caller's class (`unit-analysis` → analysis, `unit-design` → planning,
+`unit-build` → implementation). When the spawn also declares a role that has a
+gate of its own, that gate applies too, so an existing role type is never judged
+more loosely because a unit spawned it. The caller is the immediate one: the
+hook sees no ancestry, so a helper's own spawn is classified by its own
+declaration. On a malformed or multi-active state a unit caller's spawn is on the
+score-gated surface and fails closed. The explicit-`model` rule is unchanged. An
 **undeclared** spawn while a cycle is active is denied with a
 self-describing message. Outside an active cycle (no state file, or
 `active:false`) undeclared spawns are not gated; on a malformed state only
 research and evaluation roles are admitted (fail-closed).
+
+**Decision-ledger integrity** (state-independent, ADR-0025 D7), on a write into
+an `issue-*-ledger.md`:
+
+- *Append-only.* A `Write` / `Edit` / `MultiEdit` is applied to the file on
+  disk (a literal replacement portable to `/bin/bash` 3.2) and must keep the
+  whole prior content as its prefix.
+- *Authorship of the added text.* A `- Authority: advisor decision` line or an
+  `## A<n> ` heading only from caller `autoflow-advisor`; a
+  `- Authority: operator decision` line or an `## O<n> ` heading only from the
+  main session (no caller `agent_type`); the advisor adds no `operator decision`
+  and no `O` / `F` / `E` heading.
+
+A shell write to a ledger and text that only imitates an entry are outside the
+matched surface: the threat is routine overstepping, not a determined evasion.
 
 The hook classifies the declaration channel only; it does not enforce spawn mode. A payload carrying a teammate `name` is not admitted by the mapping above: it is denied as undeclared, and [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase names the anonymous direct spawn as every role's only mode. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): the contract binds the caller and the hook stays permissive.
 

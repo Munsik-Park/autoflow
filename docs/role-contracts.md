@@ -20,6 +20,8 @@ Every role is an anonymous direct spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn Mod
 | Test AI (RED, VERIFY self-check, REFINE Green re-confirmation) | anonymous direct | one spawn per phase entry; continuity across RED → VERIFY → REFINE is carried by the `.autoflow/*` artifacts, not by a retained context |
 | Developer AI (GREEN, VERIFY self-check, REFINE) | anonymous direct | one spawn per phase entry; the same artifact-carried continuity, and each entry resolves its own model from the config |
 | ARCHITECT relay facilitator (ARCHITECT Discuss + Report) | anonymous direct, **background**, **resumed by agent ID** (`subagent_type: autoflow-facilitator`, no `name`) | one spawn per discussion by the orchestrator; spawns and wakes the two participants by `relay-state.sh` output, reads no body, and returns one line (`relay — next=record …` / `relay stopped — <cause>`). The orchestrator resumes it for a same-cycle re-discussion; a session restart, a return from a later phase and a new cycle each spawn a fresh facilitator, which spawns fresh participants (a participant keeps to the first facilitator that woke it). Every call it makes is confined by the gate hook (`docs/phases/architect.md` > *Relay procedure*) |
+| Advisor (a decision point in any phase — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its `A`-namespace ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
+| Functional-unit agents U2 / U3 / U4 (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per unit entry, prescribed by the unit's goal, artifact contract and verification (ADR-0025 D2); a FAIL returns its findings and the previous artifacts to a fresh unit spawn. Defined in the common frame (#372) and wired into the lifecycle by each unit's migration step (ADR-0025 D9) — until then the phase roles above run the lifecycle |
 | ARCHITECT relay participant — Developer AI side and Test AI side (ARCHITECT Discuss + Report) | anonymous direct, **resumed by agent ID** (`subagent_type: autoflow-planner`, no `name`) | one spawn per discussion by the facilitator, woken by `SendMessage` for each of its turns and once for its report; every turn is appended to `.autoflow/issue-{N}-architect-transcript.md` and the return is one line. The lifetime is one cycle's ARCHITECT entry, its same-cycle re-discussions included (a GATE:PLAN FAIL re-entry, an un-agreed re-discussion); a return from a later phase of the same cycle — a VERIFY design contradiction, a `design` re-entry, an acceptance-criterion decision or a gate recommendation raised after DISPATCH — spawns both sides fresh on the same transcript; a new cycle's ARCHITECT — a review-response cycle, or a HANDOFF step 6.5 shape (b) re-deliberation — spawns both sides fresh on a new transcript whose brief names the previous cycle's transcript and report paths, and never re-wakes the previous cycle's participants (`docs/phases/architect.md` > Re-discussion). No role's lifetime spans a phase boundary or a cycle boundary |
 
 Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (orchestrator; each task travels in the RED / GREEN spawn prompt), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier (step 5) — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
@@ -95,7 +97,7 @@ not re-classify.
   reviewer finding — *does clearing this discard or change a decision the deliberation settled?*
   Yes → `design`; no → the kind of change that clears it. An item below `Medium` carries none.
 - **[MUST]** Write `operator` when the class cannot be stated with confidence. Do not guess: an
-  `operator` entry pauses the cycle for the operator's decision.
+  `operator` entry stops routing and the advisor decides the class (*Advisor* below).
 - **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: the
   orchestrator rejects it and re-spawns a fresh Evaluation AI, with the same cap (max 2) and the same
   escalation as an empty `fail_hypothesis`.
@@ -184,7 +186,7 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 ## Submodule AI (per sub-repo, Developer AI)
 - Understands and implements the assigned sub-repo's code.
 - Writes the minimum code that satisfies the issue acceptance criteria within the cycle's scope and passes the `automated` tests written by the Test AI (does not implement behavior outside that scope; an AC with a non-automated disposition is still implemented — see [`phases/green.md`](phases/green.md)).
-- **[MUST]** Judges a problem it meets that the scope does not name under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* and records the judgment in its report: a directly related problem desirable to fix here is fixed in the cycle, one that is not is left with its separation reason, and one showing that an acceptance criterion must change is raised for the operator ([`phases/green.md`](phases/green.md) > step 2).
+- **[MUST]** Judges a problem it meets that the scope does not name under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* and records the judgment in its report: a directly related problem desirable to fix here is fixed in the cycle, one that is not is left with its separation reason, and one showing that an acceptance criterion must change is raised for the advisor ([`phases/green.md`](phases/green.md) > step 2).
 - Has read access to other sub-repos; modifications stay within the assigned sub-repo.
 - Uses the tools its work needs — the ones the verification design's `## Tools` section records, and any the implementation itself needs — and, for a row verified with a tool, looks at its result with that tool while implementing; the row's evidence is the Test AI's observation record at VERIFY. A tool that neither this environment nor the target's procedures provide is reported to the orchestrator, never acquired ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; [`phases/green.md`](phases/green.md) > step 2).
 - Works directly in the target repo and commits to the cycle's branch. It does not push: the push is the orchestrator's, at DELIVER ([`phases/deliver.md`](phases/deliver.md)), as is PR creation.
@@ -252,7 +254,7 @@ The workflow's only output to the orchestrator is one structured result, **speci
 }
 ```
 
-- **Orchestrator routing** (procedure: [`phases/architect.md`](phases/architect.md) > *Report routing*): an empty `unagreed` goes to GATE:PLAN after the artifact-existence check; a non-empty `unagreed` is one orchestrator judgment — discuss further with a `brief` appended to the transcript, or stop and ask the user; an agreed conclusion that changes an acceptance criterion's content goes to the operator before GATE:PLAN. A non-null `stopped` is repaired and re-run.
+- **Orchestrator routing** (procedure: [`phases/architect.md`](phases/architect.md) > *Report routing*): an empty `unagreed` goes to GATE:PLAN after the artifact-existence check; a non-empty `unagreed` is one orchestrator judgment — discuss further with a `brief` appended to the transcript, or hand the point to the advisor; an agreed conclusion that changes an acceptance criterion's content goes to the advisor before GATE:PLAN. A non-null `stopped` is repaired and re-run.
 - **Turn order (the relay, outside this workflow)**: the Developer AI opens on turn 1 and the Test AI answers on turn 2, alternating; each turn is one block `### Turn n — <side> [further: yes|none]` appended to the transcript file by its author, and the discussion ends when two consecutive turns both carry `further: none`. `scripts/architect/relay-state.sh state` prints `turns`, `next` and `ended` from the file — the turn count lives there, not in this return. Each participant's report is a `## Report — <side>` section of the same file; the scribe reads both. A heading `state` rejects is voided by a `### Void — line <k>` block (`relay-state.sh void`), never removed, and its author re-appends it; the scribe skips a voided block.
 - **`stopped` is infrastructure state, never a design outcome.** Its sentinels are `scribe missing` and the spawn-policy load sentinels `spawn policy load agent missing` / `spawn policy absent` / `spawn policy malformed` / `spawn policy row incomplete (<keys>)` / `spawn policy effort contract unusable (<field>)`. A run that stopped returns `report: null` and writes no artifact; a completed record returns `stopped: null` whatever its report says. The relay's own infrastructure states — a participant that appends no turn after one re-wake, a report section still missing after one re-wake — are handled by the facilitator's procedure before this workflow is invoked ([`phases/architect.md`](phases/architect.md) > *Relay procedure*).
 - **Ledger rule**: one entry per **agreed** conclusion, under the authority `ARCHITECT agreed`, appended after the report is settled. An un-agreed point is not a decision and gets no entry — it lives in the report the orchestrator routes. The append is absorbed on failure and never alters the returned report.
@@ -296,6 +298,138 @@ After the result returns, the orchestrator **verifies** it before accepting:
 
 ---
 
+## Advisor (first judgment at a decision point)
+
+ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor, and
+the operator's judgment from the forward path to the retry stage. This section is the procedure's
+single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the playbooks cite it.
+
+### Decision points and harness-level blocks
+
+- **A decision point** is any point that pauses for a decision the working AI is not the one to make:
+  an acceptance-criterion change (`[ac-decision]`), a security-checklist change
+  (`[checklist-decision]`), a non-code root cause or a non-code lever, an intake-triage prerequisite,
+  a review-response loop-check match, an un-agreed design point, a `remedy_class: operator`, a
+  recommendation or finding the orchestrator cannot route with confidence (a pause criterion, a
+  rebuttal the re-score or the reviewer keeps while the two sides still disagree), and a VERIFY
+  deadlock the Evaluation AI's arbitration leaves undecided. Each is answered by the advisor first.
+- **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
+  denial), or a tool, credential, installation or material the environment does not provide. Only
+  such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
+  `phase:"awaiting-user"` ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision
+  presentation). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision
+  points and are unchanged ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 1).
+
+### Procedure
+
+1. **Request.** The orchestrator writes `.autoflow/issue-{N}-advisor-request-<k>.md` situation-first:
+   the situation in domain terms, the decision asked with each option and what it changes, and the
+   anchors (the artifact paths, the report or finding the decision surfaced in). It is the body the
+   operator would have been shown; the orchestrator does not weigh the options itself.
+2. **Spawn.** One fresh `autoflow-advisor` per decision, anonymous, model from
+   `bash scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
+   `effort:` line). The prompt names the request file, the ledger, the issue, the cycle and the
+   phase. The spawn is never score-gated.
+3. **Answer and record.** The advisor weighs the material itself, writes its answer to
+   `.autoflow/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
+   `A`-namespace entry per decision to the ledger under the authority `advisor decision`, carrying a
+   `- Record:` line to the answer file and the marker and fields the decision's kind requires
+   ([`decision-ledger.md`](decision-ledger.md)). It returns the identifier and the answer in one line.
+4. **Apply.** The orchestrator verifies the anchor — the ledger heading and the record file exist —
+   and routes the cycle as the operator's answer to that point would have been routed: the
+   Flow Control row the point sits on names the route. The cycle does not pause. An advisor that
+   reports the decision blocked at the harness level turns it into a harness-level block.
+
+### Independence
+
+The advisor is never the author of what it judges: it is a fresh spawn per decision, not the unit
+agent, role spawn or orchestrator whose work raised the point, and its record carries its own grounds.
+Its authority is worth only that separation, and the operator's override only its own — so each
+is written by its own writer alone and stays as written. Three locks:
+
+- **Authorship — the gate hook** (`.claude/hooks/check-autoflow-gate.sh`, *Section 1e*,
+  state-independent): text a `Write` / `Edit` / `MultiEdit` adds to an `issue-*-ledger.md` that carries an `advisor decision`
+  authority or an `A<n>` heading is denied unless the caller's `agent_type` is `autoflow-advisor`;
+  text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
+  the main session (no `agent_type` — the orchestrator recording the operator's answer); the advisor
+  adds no `operator decision` and no `O` / `F` / `E` heading.
+- **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
+  on disk and must keep the whole prior content as its prefix, so no entry is rewritten or removed.
+  A decision changes only by a new entry that names the one it replaces
+  (`docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
+- **The record convention**: a consumer counts `advisor decision` only on an `A<n>` entry and
+  `operator decision` only on an `O<n>` entry, and lets an entry replace another only by an explicit
+  `- Supersedes:` / `- Overrides:` line (`scripts/gate/security-checklist.sh`; the gate backstops
+  match the `[ac-decision]` marker and read the authority as recorded).
+
+The threat these locks answer is an agent overstepping in routine work — rewriting a ledger it
+meant to append to, or writing an authority that is not its own — not a determined evasion (the
+same model as `docs/issue-proposal.md`). Outside the hook's surface: a shell write to a ledger
+(redirect, `tee`, `sed -i`, a script), and text that only imitates an entry (a heading-less field
+line, a malformed heading, a variant spelling of an authority).
+
+### Operator review at the retry stage
+
+The operator's judgment joins at the retry stage — a unit loop or gate FAIL, a re-entry opening, a
+cap reached:
+
+- **At a FAIL or a re-entry** the orchestrator's report of that event lists the `advisor decision`
+  entries recorded since its previous such report — identifier, the one-line answer, the record path.
+  The cycle continues; the operator's prompts reach the orchestrator between turns, and an override
+  given there is applied at once.
+- **At a cap reached** the cycle stops for the operator as before ([`CLAUDE.md`](../CLAUDE.md) >
+  Flow Control > *Human escalation*), and the escalation report carries the same list.
+- **An override** is recorded by the orchestrator as an `O` entry under the authority
+  `operator decision`, with the marker of the entry it overrides and a line naming that `A`
+  identifier. It supersedes the advisor's entry without a new verified fact — the override is the
+  authority ([`decision-ledger.md`](decision-ledger.md) > *Advisor decisions and operator
+  overrides*) — and the cycle re-enters where the overridden answer's route reaches, consuming no
+  re-entry budget.
+
+### Claude Code's advisor tool (`advisorModel`)
+
+Distinct from the advisor sub-agent above: Claude Code's advisor tool
+(<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
+mid-task. It is enabled for in-task consultation, and it is set in the **operator's user settings**
+(`~/.claude/settings.json`, `advisorModel`), not in the repository — the grounds and the setting are
+`setup/SETUP-GUIDE.md` > *Advisor tool (`advisorModel`)*. It cannot carry a
+decision point: its model is configurable and its effort is not, and Claude decides when to call it,
+which is why the first judgment is the sub-agent's (ADR-0025 D7).
+
+---
+
+## Functional-unit agents (U2 / U3 / U4)
+
+ADR-0025 D1 replaces the sixteen phases with six functional units as the unit of prescription; D2
+prescribes a unit by its goal, its artifact contract, its verification and its loop cap only. The
+three unit agents that run a unit's work are defined here; U1, U5 and U6 have none (U1 and U6 become
+scripts the orchestrator runs, D8; U5 is the gate itself).
+
+| Unit agent (`subagent_type`) | Unit | Gate class (hook) | Exit |
+|---|---|---|---|
+| `autoflow-unit-analysis` | U2 Analysis (DIAGNOSE, GATE:HYPOTHESIS) | analysis — no score gate | `gate_hypothesis_cause`, or the `skipped (non-bug issue)` verdict |
+| `autoflow-unit-design` | U3 Design (ARCHITECT, GATE:PLAN) | planning — GATE:HYPOTHESIS pass, or a `skipped` verdict | `gate_plan` |
+| `autoflow-unit-build` | U4 Build and verify (DISPATCH..VALIDATE, AUDIT) | implementation — GATE:PLAN pass | the deterministic exit checks and `audit` |
+
+- **Method is the unit's.** How the unit reaches its goal — what it reads, whether it spawns helpers
+  or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
+  with its grounds in the unit's artifact ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2).
+  The definitions (`.claude/agents/autoflow-unit-*.md`) name the goal, the artifact contract and the
+  verification, and nothing else.
+- **A unit agent's spawns inherit its gate class.** The hook admits a spawn whose caller
+  (`agent_type`) is a unit agent without a role declaration and judges it by the unit's class; a
+  declared role that has a gate of its own keeps that gate too, so an existing role type is never
+  judged more loosely because a unit spawned it (`docs/gate-matching-standard.md`
+  > P3). The caller is the immediate one: a helper's own spawn is judged by its own declaration.
+- **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never writes
+  the state file or the ledger, never pushes, merges or files an issue, and a decision point it meets
+  goes to the advisor.
+- **Model and effort** come from the policy rows `unit-analysis`, `unit-design` and `unit-build`,
+  held at the values of the phase rows each unit replaces (DIAGNOSE; the ARCHITECT participants; RED /
+  GREEN), so each migration step's measurement against the baseline isolates the method change.
+
+---
+
 ## Evaluation System
 
 ### Scoring (10-point scale)
@@ -318,7 +452,7 @@ After the result returns, the orchestrator **verifies** it before accepting:
 
 | Type | Items | Retry |
 |------|-------|-------|
-| Structure evaluation | Type 1: Behavior gap, Code-change necessity (2) — Type 2: Content gap, Consistency impact, Propagation scope (3) | none (PASS/FAIL single verdict; reuse-neutral; gap-low → close/reply, non-code lever → report to user; no retry. Canonical: [`phases/analysis.md`](phases/analysis.md)) |
+| Structure evaluation | Type 1: Behavior gap, Code-change necessity (2) — Type 2: Content gap, Consistency impact, Propagation scope (3) | none (PASS/FAIL single verdict; reuse-neutral; gap-low → close/reply, non-code lever → the advisor decides; no retry. Canonical: [`phases/analysis.md`](phases/analysis.md)) |
 | Hypothesis evaluation | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× |
 | Plan evaluation | Feasibility, Scope, Security, Test plan (4) — affected files / side effects are derived at RED/GREEN, not scored here; Feasibility/Scope carry structural-fit & over-engineering across the plan and its verification design (not scored at DIAGNOSE; interpretation and embedded checks: [`phases/gate-plan.md`](phases/gate-plan.md)); a re-entry re-scores the decision document's delta only | max 3× |
 | Security audit | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |

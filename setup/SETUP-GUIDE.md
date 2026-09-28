@@ -239,9 +239,12 @@ If the clone itself is behind upstream, refresh it first
   (`{"audit":{"security_checklist":"docs/security-checklist.md"}}`). With none
   declared, AUDIT scores its five rubric items from the change alone and records
   that no checklist was declared. A cycle's AUDIT reads the checklist as of the
-  cycle's base commit, so a change a cycle makes to it applies only once you
-  accept it, recorded as a `[checklist-decision]` ledger entry
-  (`scripts/gate/security-checklist.sh`; `docs/phases/audit.md`). A
+  cycle's base commit, so a change a cycle makes to it applies only once it is
+  accepted — by the advisor first, recorded as a `[checklist-decision]` ledger
+  entry, and by your override when you give one, recorded as an entry that
+  names the advisor's and replaces it
+  (`scripts/gate/security-checklist.sh`; `docs/phases/audit.md`;
+  `docs/role-contracts.md` > Advisor). A
   change you commit outside a cycle is simply the checklist the next cycle reads.
   **Upgrading from a stamp that shipped `.claude/autoflow/docs/security-checklist.md`**:
   a re-stamp removes that file when you have not modified it (`drift-check.sh` D4 forecasts the removal as
@@ -249,8 +252,53 @@ If the clone itself is behind upstream, refresh it first
   your AUDIT relied on it, copy it to a path you own before re-stamping —
   `cp .claude/autoflow/docs/security-checklist.md docs/security-checklist.md` —
   adapt it to your service, declare that path, and commit both.
+- Advisor sub-agent (ADR-0025 D7): the first judgment at a decision point is a
+  fresh `autoflow-advisor` spawn on the model the policy row `advisor` names
+  (`bash scripts/spawn-policy/spawn-policy.sh model advisor`; shipped as
+  `fable`) at the effort its definition carries (`max`). Fable needs Fable
+  access on the account, and on some plans a one-time consent to bill Fable to
+  usage credits (`/model fable`). Without it, change the row's `model` in your
+  `.claude/autoflow/spawn-policy.json` — the model is yours to configure there;
+  the effort is the shipped definition's and is not.
 - Basic familiarity with the AutoFlow methodology
   (see [`docs/autoflow-guide.md`](../docs/autoflow-guide.md)).
+
+### Advisor tool (`advisorModel`)
+
+Claude Code's advisor tool (<https://code.claude.com/docs/en/advisor>) lets the
+session's model consult a stronger model mid-task; AutoFlow enables it for
+in-task consultation beside the advisor sub-agent above, which alone answers a
+decision point (`docs/role-contracts.md` > Advisor). **Set it in your user
+settings, `~/.claude/settings.json`** — or with `/advisor <model>`, which saves
+it there — not in the repository's `.claude/settings.json`:
+
+```json
+{ "advisorModel": "fable" }
+```
+
+Why user settings (the setting itself is accepted in any settings file):
+
+- **The valid value depends on your main model, which is yours.** The
+  orchestrator's model follows your session settings (`CLAUDE.md` > Spawn
+  Model), and the advisor must be at least as capable as the main model: under
+  an Opus 5.5 main model the accepted advisors are Fable and Opus 5 or later,
+  under Fable 5.1 only Fable 5.1 — a Sonnet or Opus value is rejected. A value
+  pinned in the repository would be wrong for an operator on another main model.
+- **Fable is an account condition.** A Fable advisor needs Fable access and, on
+  some plans, the usage-credits consent; until then Claude Code sends requests
+  without the advisor. The advisor tool is also Anthropic-API only (not
+  Bedrock, Vertex or Foundry). A repository cannot satisfy either condition.
+- **A repository value would reach every target.** A stamp json-merges
+  `setup/thin-root-layer/settings-pin.json` into the target's
+  `.claude/settings.json` (`setup/manifest.json`, kind `json-merge`), so a
+  shipped `advisorModel` would choose the model — and its billing — for every
+  target and clone.
+- **One user value covers every spawn.** Subagents inherit the configured
+  advisor and apply the pairing check against their own model.
+
+Use `fable` when your account has Fable access, else `opus` (accepted under an
+Opus or Sonnet 5 main model). `CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1` turns the
+tool off.
 
 ---
 

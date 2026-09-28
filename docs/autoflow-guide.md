@@ -75,18 +75,19 @@ flowchart TD
     REVW([Reply on PR<br/>await external review]):::terminal
     DONE([Done]):::terminal
     HUMAN([Human Decision]):::terminal
+    ADV([Advisor decision<br/>recorded, applied]):::terminal
 
     PRE --> DIA
     DIA -->|structure eval| HYPS
     HYPS -->|FAIL · gap-low · new-issue| CLOSE
     HYPS -->|FAIL · gap-low · review-response| REVW
-    HYPS -.->|FAIL · non-code lever| HUMAN
+    HYPS -.->|FAIL · non-code lever| ADV
     HYPS -->|PASS<br/>non-bug issue| ARC
     HYPS -->|PASS<br/>bug issue| HYPC
     HYPC -->|PASS| ARC
     HYPC -->|FAIL ≤2×| DIA
     HYPC -->|FAIL ×3| HUMAN
-    HYPC -.->|non-code root cause| HUMAN
+    HYPC -.->|non-code root cause| ADV
     ARC --> PLAN
     PLAN -->|PASS| DIS
     PLAN -->|FAIL ≤3×| ARC
@@ -96,7 +97,7 @@ flowchart TD
     GREEN --> VER
     VER -->|test issue| RED
     VER -->|impl issue| GREEN
-    VER -->|deadlock other than a design contradiction| HUMAN
+    VER -->|deadlock other than a design contradiction| ADV
     VER -.->|design contradiction<br/>AC set unsatisfiable| ARC
     VER -->|PASS| REF
     REF --> VAL
@@ -128,7 +129,7 @@ PREFLIGHT
     ▼
 DIAGNOSE ─── structure eval ──► [FAIL]
                 ├─ gap-item low (already satisfied) ─► new-issue: Issue Auto-Closed │ review-response: Reply on PR + await review
-                └─ gap real, non-code lever ────────► report to user + pause
+                └─ gap real, non-code lever ────────► advisor decides (code owed → continue │ non-code → end)
     │
     ▼
 GATE:HYPOTHESIS (cause, bug only) ◄── retry ≤2×
@@ -205,7 +206,7 @@ area excerpts only; intake triage = issue body + readiness/work-type docs; Phase
 body only, plus the materials the issue itself references, which Phase B opens and records)**, the issue-type classification (Type 1 code / Type 2 docs), the per-type scoring rubric and
 PASS/FAIL thresholds (Type 1: each ≥ 7, two items; Type 2: each ≥ 7 and avg ≥ 7.5, three
 items), the FAIL disposition by failing item and cycle `mode` (gap-low → new-issue close /
-review-response reply on PR; non-code lever → report to user + pause), the review-response loop check (trigger repeats the prior cycle's complaint class with a new witness case → reply on PR + pause for the user), cause hypotheses
+review-response reply on PR; non-code lever → the advisor decides), the review-response loop check (trigger repeats the prior cycle's complaint class with a new witness case → reply on PR + the advisor decides the re-entry), cause hypotheses
 (≥ 3, "not a code bug" must be one), lightweight verification, hypothesis verdict notes,
 task decomposition with the scope judgments the confirmed cause calls for, affected-docs identification, and the structure- and confirmation-bias
 safeguards.

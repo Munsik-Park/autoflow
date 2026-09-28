@@ -56,7 +56,8 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 - 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: deliberation이 검증
   방법의 축소를 결정하고, external reviewer가 그 reason의 타당성을 판단하며,
-  operator는 criterion의 **내용**이 바뀔 때만 개입한다. 규칙 본문은 [`phases/architect.md`](phases/architect.md) >
+  advisor는 criterion의 **내용**이 바뀔 때만 1차 판단하고 운영자는 재시도 단계에서 그 판단을 번복할 수 있다
+  ([`role-contracts.md`](role-contracts.md) > Advisor). 규칙 본문은 [`phases/architect.md`](phases/architect.md) >
   Output artifacts > *Test necessity* 와 *Report routing*.
 - 형식은 AC id + disposition + reason 한 줄. reason은 verification design의 셀을
   옮겨 적고 새로 쓰지 않는다.

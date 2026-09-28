@@ -26,15 +26,19 @@ its one record line:
 | 0 | `none-declared` | no checklist — the five items are scored from the change alone, and the report records that none was declared |
 | 0 | `unchanged` | the checklist as of the cycle's base commit (`score=<base>:<path>`) |
 | 0 | `changed-decided` | the changed version a `[checklist-decision]` entry accepted (`score=HEAD:<path>`, or `none` for a dropped declaration) |
-| 3 | `changed-undecided` | nothing yet — **[MUST]** AUDIT is not spawned: the orchestrator presents the change to the operator situation-first and pauses (`active:false`, `phase:"awaiting-user"`) |
+| 3 | `changed-undecided` | nothing yet — **[MUST]** AUDIT is not spawned: the orchestrator hands the change to the advisor with a request written situation-first ([`role-contracts.md`](../role-contracts.md) > Advisor) and re-runs the status on its answer |
 | 2 | — | nothing — a malformed declaration, a declared file not committed, an uncommitted edit to the declaration or the checklist, or no resolvable base; repair it and re-run |
 
 - **A change the cycle makes to its checklist.** A change to the file, or to the declaration that
-  points at it, has no effect on that cycle's AUDIT until the operator accepts it. The answer is a `[checklist-decision]`
+  points at it, has no effect on that cycle's AUDIT until it is accepted — by the advisor first, and
+  by the operator's override, recorded as an entry that names the advisor's (`- Overrides: A<n>`).
+  Standing entries that disagree with neither naming the other are a conflict: the record is
+  undecided with `conflict=<ids>`, and a new entry resolves it. The answer is a `[checklist-decision]`
   ledger entry ([`decision-ledger.md`](../decision-ledger.md) > *Security-checklist decisions*):
   `accepted`, carrying the committed version's blob and non-empty Decision and Grounds lines under
-  the authority `operator decision` → the status re-run reports `changed-decided`;
-  `rejected` → the change is reverted and the status re-run. The pause consumes no re-entry budget.
+  the authority `advisor decision` on an `A<n>` entry (an override: `operator decision` on an `O<n>`
+  entry) → the status re-run reports `changed-decided`;
+  `rejected` → the change is reverted and the status re-run. The decision consumes no re-entry budget.
 - **The evaluator reads the named version.** The spawn prompt carries the record line; the evaluator
   re-runs the same status (it only reads), reads the checklist at the `score=` spec with `git show`,
   never the working-tree file, and copies the line into its report. A report whose line differs from

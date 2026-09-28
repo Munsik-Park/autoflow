@@ -456,50 +456,54 @@ the gated one.
   item is the tool request pause (*Tools* above) — then GATE:PLAN (a fresh Evaluation AI on the 5-item rubric of [GATE:PLAN](gate-plan.md)). A
   GATE:PLAN FAIL re-enters the deliberation with a brief (*Re-discussion* below); that is the
   existing `GATE:PLAN FAIL → ARCHITECT (max 3×)` re-entry.
-- **An un-agreed point.** One judgment, and it is the orchestrator's: discuss further, or stop.
+- **An un-agreed point.** One judgment, and it is the orchestrator's: discuss further, or hand the
+  point to the advisor.
   - **Discuss further** — prepare what the next discussion needs and append it as the `brief`
     (*Re-discussion* below). A preparation may carry the un-agreed points as a narrowed topic, a
     fact the orchestrator verified in the meantime (`path:line` at a commit SHA, command output), the prior
     report's path, or a different perspective for a participant to take. Record the judgment as an
     `O` ledger entry — decision and grounds, authority `orchestrator judgment`. A re-discussion
     after an un-agreed report is not a GATE:PLAN re-entry and consumes no re-entry counter.
-  - **Stop** — report situation-first ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles >
-    Human-decision presentation), set `active: false`, `phase: "awaiting-user"`. The user's
-    decision drives re-entry.
+  - **Advisor** — write the un-agreed point as an advisor request, situation-first
+    ([`role-contracts.md`](../role-contracts.md) > Advisor). The advisor's answer is appended as the next `brief`, naming its `A` entry
+    as settled, and the deliberation adopts it — a re-discussion, consuming no re-entry counter.
 - **An agreed conclusion changes an acceptance criterion's content.** Excluding, revising or
-  splitting an issue acceptance criterion, or adding one, is the operator's authority. Report
-  situation-first naming the affected criteria and what the design proposes for each, set
-  `active: false`, `phase: "awaiting-user"`, and do not spawn GATE:PLAN. Record the answer as one
-  `[ac-decision]` ledger entry per decided AC in the grammar at [`decision-ledger.md`](../decision-ledger.md) >
-  *Acceptance-criterion decisions*; on `revised`, `split` or `added`, edit the
-  Phase B acceptance-criterion table to match; then continue to GATE:PLAN. The pause consumes no
-  ARCHITECT re-entry budget.
+  splitting an issue acceptance criterion, or adding one, is never the deliberation's: the advisor
+  decides first and the operator may override at the retry stage ([`role-contracts.md`](../role-contracts.md) > Advisor). Write the
+  advisor request situation-first naming the affected criteria and what the design proposes for
+  each, and do not spawn GATE:PLAN until the advisor's `[ac-decision]` entries — one per decided AC
+  in the grammar at [`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion
+  decisions* — are recorded; on `revised`, `split` or `added`, edit the Phase B
+  acceptance-criterion table to match; then continue to GATE:PLAN, or to a re-discussion on a
+  `brief` where the answer differs from the design's proposal. Neither consumes ARCHITECT re-entry
+  budget.
 - **An acceptance-criterion change raised later in the cycle.** A role at GREEN, VERIFY or REFINE whose work shows a
   criterion defective — a fact it presumes that does not hold, or a scope too narrow or too wide for
   the problem ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*) —
   raises it in its report with the criterion, the proposed change and the fact that shows the need
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
   judgment*); a gate recommendation reaches the same point through the triage
-  ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*). The orchestrator reports it situation-first, sets
-  `active: false`, `phase: "awaiting-user"`, and records the answer in the same grammar with the
-  phase the change surfaced in, editing the Phase B table on `revised`, `split` or `added`. Where
-  the cycle then re-enters is its judgment, recorded with its grounds in an `O` ledger entry: at
-  ARCHITECT, on a `brief` naming the `[ac-decision]` entries, when a verification-design row must be
-  added or rewritten — then GATE:PLAN's re-entry re-score and RED; at GREEN when only the
-  implementation changes; otherwise at the point it paused. A return to ARCHITECT on this ground
+  ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*). The orchestrator hands it to the
+  advisor situation-first; the advisor's entries use the same grammar with the phase the change
+  surfaced in, and the orchestrator edits the Phase B table on `revised`, `split` or `added`. Where
+  the cycle then re-enters is the orchestrator's judgment, recorded with its grounds in an `O`
+  ledger entry: at ARCHITECT, on a `brief` naming the `[ac-decision]` entries, when a
+  verification-design row must be added or rewritten — then GATE:PLAN's re-entry re-score and RED;
+  at GREEN when only the implementation changes; otherwise at the point the question arose. A return to ARCHITECT on this ground
   consumes no re-entry budget.
 
-**What the operator is asked, and what they are not.** A reduction in *verification method* — an AC
+**What the advisor is asked, and what it is not.** A reduction in *verification method* — an AC
 verified by an existing mechanism, a manual scenario, a delivery check, or by nothing at all — is a
 verification-method choice, not a change to the criterion. It passes three tiers, and only the third
-is the operator:
+is the advisor (the operator by override at the retry stage):
 
 1. **Deliberation (ARCHITECT).** The deliberation chooses any disposition in the *Test necessity*
    vocabulary for an issue AC, **with its reason stated in that row**. A weak reason is argued down
    here and never leaves the deliberation.
 2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
    PR body (HANDOFF step 4), so the reviewer judges each one on its stated reason.
-3. **Operator.** Asked when the AC's **content** must change — at ARCHITECT or later in the cycle
+3. **Advisor, then operator.** The advisor is asked when the AC's **content** must change — at
+   ARCHITECT or later in the cycle
    (*An acceptance-criterion change raised later in the cycle* above). The options offered are
    exactly these: exclude the criterion, revise it in the proposed form, split it into a separate
    issue, or add a criterion the issue did not state.

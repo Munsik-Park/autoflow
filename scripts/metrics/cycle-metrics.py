@@ -103,6 +103,43 @@ def role_of(agent_type):
     return (agent_type or '').split(':')[-1]
 
 
+# The unit agent types and the unit each runs. An agent whose `parent` chain reaches a unit agent is
+# charged to that unit; the advisor is kept apart as `advisor`.
+UNIT_OF_ROLE = {'autoflow-unit-analysis': 'U2', 'autoflow-unit-design': 'U3', 'autoflow-unit-build': 'U4'}
+ADVISOR_ROLE = 'autoflow-advisor'
+# The unit each recovered phase key belongs to (a workflow site keys by its workflow name), for an
+# agent no unit agent spawned.
+UNIT_OF_PHASE = {
+    'diagnose-intake-triage': 'U2', 'diagnose-loopcheck': 'U2', 'diagnose-phase-a': 'U2',
+    'diagnose-phase-b': 'U2', 'diagnose-phase-3': 'U2', 'gate-hypothesis': 'U2',
+    'architect-facilitator': 'U3', 'architect-dev-participant': 'U3', 'architect-test-participant': 'U3',
+    'gate-plan': 'U3', 'architect-deliberation': 'U3',
+    'red': 'U4', 'green': 'U4', 'verify-arbitration': 'U4', 'refine-impl': 'U4',
+    'refine-test-reconfirm': 'U4', 'audit': 'U4', 'verify-cause-branch': 'U4',
+    'gate-quality': 'U5', 'handoff-review-triage': 'U6',
+}
+
+
+def assign_units(agents):
+    """Set each agent's `unit` and `unit_method` (`role`, `phase-key`, `parent`, or None for no unit)."""
+    by_id = {a['id']: a for a in agents}
+
+    def own(a):
+        r = role_of(a.get('role'))
+        return UNIT_OF_ROLE.get(r) or ('advisor' if r == ADVISOR_ROLE else None)
+
+    for a in agents:
+        unit, method = own(a), 'role'
+        parent, seen = a.get('parent'), set()
+        while unit is None and parent in by_id and parent not in seen:
+            seen.add(parent)
+            unit, method = own(by_id[parent]), 'parent'
+            parent = by_id[parent].get('parent')
+        if unit is None and a.get('phase_key'):
+            unit, method = UNIT_OF_PHASE.get(a['phase_key'].split('/')[0]), 'phase-key'
+        a['unit'], a['unit_method'] = (unit, method) if unit else (None, None)
+
+
 def tokens(s):
     return set(re.findall(r'[a-z0-9]+', (s or '').lower()))
 
@@ -896,11 +933,15 @@ def derive(args):
             orch['input'] += c[5]
         ag = dict.fromkeys(USAGE_KEYS, 0)
         gate = 0
+        assign_units(it['agents'])
+        units = {}
         for a in it['agents']:
             for k in USAGE_KEYS:
                 ag[k] += a['usage'][k]
             if a['role'] == 'autoflow-evaluator':
                 gate += sum(a['usage'].values())
+            if a['unit']:
+                units[a['unit']] = units.get(a['unit'], 0) + sum(a['usage'].values())
         total = sum(orch.values()) + sum(ag.values())
         wall = sum((parse_ts(s['end']) - parse_ts(s['start'])).total_seconds() for s in it['segments']
                    if parse_ts(s['end']) and parse_ts(s['start']))
@@ -915,6 +956,7 @@ def derive(args):
             'rewrites': sum(c[6] for c in it['orch_calls']) + sum(a['rewrites'] for a in it['agents']),
             'spawns': len(top),
             'phase_keys_recovered': sum(1 for a in top if a['phase_key']),
+            'units': dict(sorted(units.items())),
         }
         # A session that only read or wrote an issue's .autoflow files three times — drafting the issue,
         # analysing it afterwards — becomes a row like any other, all orchestrator and no outcome. It
@@ -950,7 +992,7 @@ def derive(args):
             o.get('gate_quality_evals'), o.get('review_autofix'), o.get('gate_autofix'), o.get('reviewer_rounds'),
             o.get('ci_rounds'), o.get('ci_fail_rounds'), o.get('ci_other_rounds'), o.get('ci_undetermined'),
             ' '.join(it['prs']), ' '.join('%s=%s' % kv for kv in sorted(it['pr_states'].items()) if kv[1]),
-            it['note'],
+            it['note'], ' '.join('%s=%d' % kv for kv in t['units'].items()),
         ])
     header = [
         'repo', 'issue', 'arm', 'kind', 'sessions', 'stale_schema_sessions', 'start', 'end', 'wall_h', 'operator_prompts', 'operator_minutes',
@@ -960,7 +1002,7 @@ def derive(args):
         'cycle', 'state_phase', 'gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit',
         'gate_quality', 'architect_turns', 'architect_rounds', 'gate_plan_evals', 'audit_evals',
         'gate_quality_evals', 'review_autofix', 'gate_autofix', 'reviewer_rounds', 'ci_rounds', 'ci_fail_rounds', 'ci_other_rounds', 'ci_undetermined',
-        'prs', 'pr_states', 'note',
+        'prs', 'pr_states', 'note', 'unit_tokens',
     ]
     tmp = os.path.join(args.root, 'issues.tsv.tmp')
     with open(tmp, 'w', encoding='utf-8') as f:

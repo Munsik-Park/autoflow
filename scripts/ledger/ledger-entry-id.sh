@@ -5,9 +5,9 @@
 # Decision-ledger entry identifier: allocation (`next`) and detection (`check`)
 # =============================================================================
 # The decision ledger (.autoflow/issue-{N}-ledger.md, CLAUDE.md > Decision
-# Ledger) is append-only and written by two writers that cannot see each
-# other's in-flight state — the orchestrator and its facilitator delegate.
-# Without an issuance protocol both writers pick the "next" serial from their
+# Ledger) is append-only and written by writers that cannot see each
+# other's in-flight state — the orchestrator, its facilitator delegate and the advisor.
+# Without an issuance protocol each writer picks the "next" serial from its
 # own memory of the file, so two entries collide on one identifier and every
 # later citation of that identifier is ambiguous.
 #
@@ -21,7 +21,8 @@
 #   ledger-entry-id.sh check <ledger-path>               -> reports defects
 #
 # Namespaces (docs/decision-ledger.md > Entry identifier — the single documentary
-# home of the writer -> namespace mapping): `O` = orchestrator, `F` = facilitator delegate.
+# home of the writer -> namespace mapping): `O` = orchestrator, `F` = facilitator delegate,
+# `A` = advisor.
 # `E` is the pre-protocol legacy namespace: readable, never issuable.
 #
 # Exit codes:
@@ -33,7 +34,7 @@
 
 set -uo pipefail
 
-ISSUABLE_NAMESPACES="O F"
+ISSUABLE_NAMESPACES="O F A"
 
 usage() {
   cat >&2 <<'EOF'
@@ -41,7 +42,7 @@ Usage:
   ledger-entry-id.sh next  <ledger-path> <namespace>
   ledger-entry-id.sh check <ledger-path>
 
-Namespaces issuable by `next`: O (orchestrator), F (facilitator delegate).
+Namespaces issuable by `next`: O (orchestrator), F (facilitator delegate), A (advisor).
 E is legacy — readable by `check`, never issued.
 EOF
 }
@@ -75,7 +76,7 @@ cmd_next() {
   fi
 
   # Highest serial ALREADY IN THE FILE, within this namespace only. Namespace
-  # isolation is what lets the two writers allocate concurrently: an F append
+  # isolation is what lets the writers allocate concurrently: an F append
   # never moves O's counter, so neither writer's allocation depends on the
   # other's timing.
   max=$(awk -v ns="$ns" '
@@ -103,7 +104,7 @@ check_one() {
       return s
     }
     /^## / {
-      if (match($0 " ", /^## [EOF][0-9]+ /)) {
+      if (match($0 " ", /^## [EOFA][0-9]+ /)) {
         id = substr($0, 4); sub(/ .*$/, "", id)
         if (id in lines) { lines[id] = lines[id] "," NR }
         else { lines[id] = NR; order[++n] = id }
