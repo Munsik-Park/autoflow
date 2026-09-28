@@ -131,13 +131,13 @@ def assign_units(agents):
 
     for a in agents:
         unit, method = own(a), 'role'
-        if unit is None and a.get('phase_key'):
-            unit, method = UNIT_OF_PHASE.get(a['phase_key'].split('/')[0]), 'phase-key'
         parent, seen = a.get('parent'), set()
         while unit is None and parent in by_id and parent not in seen:
             seen.add(parent)
             unit, method = own(by_id[parent]), 'parent'
             parent = by_id[parent].get('parent')
+        if unit is None and a.get('phase_key'):
+            unit, method = UNIT_OF_PHASE.get(a['phase_key'].split('/')[0]), 'phase-key'
         a['unit'], a['unit_method'] = (unit, method) if unit else (None, None)
 
 

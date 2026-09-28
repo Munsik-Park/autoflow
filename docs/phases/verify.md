@@ -56,8 +56,8 @@ Run the tests; on failure, branch by cause.
      │    ├─ directly related but not desirable, or not directly related → ask the Developer AI
      │    │  to remove it, stating the separation reason or the condition that fails
      │    ├─ the Test AI's judgment differs from the GREEN report's → one orchestrator judgment
-     │    │  between the two recorded grounds, in an `O` ledger entry (the advisor's when the
-     │    │  orchestrator is not confident) — not an ARCHITECT round
+     │    │  between the two recorded grounds, in an `O` ledger entry (an advisor `A` entry
+     │    │  when the orchestrator is not confident) — not an ARCHITECT round
      │    └─ keeping it would change a design decision → a scope question to ARCHITECT
      ├─ What the diff shows — in scope or out — reveals an acceptance criterion defective
      │  ([`decision-ledger.md`](../decision-ledger.md) > Acceptance-criterion decisions) → raised for the advisor,

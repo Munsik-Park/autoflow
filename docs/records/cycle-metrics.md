@@ -124,11 +124,11 @@ into no phase today) its markers are joined as `phase_marker`.
 
 **Functional units (ADR-0025).** Each issue's agents are charged to a unit at derive time, so a
 session collected before this rule is attributed too: a unit agent by its role
-(`autoflow-unit-analysis` → U2, `autoflow-unit-design` → U3, `autoflow-unit-build` → U4); a phase-role
-spawn by its recovered phase key, per ADR-0025 D1's table (`gate-plan` → U3, `audit` → U4, …); and a
-spawn a unit agent made — its `parent`, transitively — by that unit. The advisor (`autoflow-advisor`)
-is kept apart as `advisor`. Each agent records `unit` and `unit_method` (`role`, `phase-key`,
-`parent`), and `issues.json` > `totals.units` / the `unit_tokens` column sum the agents' tokens per
+(`autoflow-unit-analysis` → U2, `autoflow-unit-design` → U3, `autoflow-unit-build` → U4); a spawn a
+unit agent made — its `parent`, transitively — by that unit; and otherwise a phase-role spawn by its
+recovered phase key, per ADR-0025 D1's table (`gate-plan` → U3, `audit` → U4, …). The advisor (`autoflow-advisor`)
+is kept apart as `advisor`. Each agent records `unit` and `unit_method` (`role`, `parent`,
+`phase-key`), and `issues.json` > `totals.units` / the `unit_tokens` column sum the agents' tokens per
 unit. Orchestrator calls are not charged to a unit.
 
 ## How an issue row is derived

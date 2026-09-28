@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "52f9d9d5ef0daf8e9eed979dec0dc81f2946c59b82a77e40814cb75455abdabe"
+      "sha256": "229e62294b2887b56801334edea3e9aba6af1741afd0b7abffe59914212acbf5"
     },
     {
       "source": "docs/INDEX.md",
@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ee67836960a2965751ec655473f756e3627310bc9b014e7c62af8e7610539924"
+      "sha256": "9d0ef766c7e89772869d01fae920d552560bfd85c28605abb2a88c08fbada26d"
     },
     {
       "source": "docs/development-guideline.md",
@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/phases/audit.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "dea979b336533db22a4b511a7a2b0ded350dd1bf6b75ed415443aba924c2e151"
+      "sha256": "892f90da61ebe81aed4adbac55ea0ec86e912758ea12e06bb5bf4cb2c6d14ecd"
     },
     {
       "source": "docs/phases/deliver.md",
@@ -181,7 +181,7 @@
       "dest": ".claude/autoflow/docs/phases/verify.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "34a162e194f9247784df16f966fadc90c6a81a2aaeaa2fd9d8233973909055df"
+      "sha256": "4da8148c89fa605de920b8d5e06fafe237c37024034e411f99ac4284a08bbcef"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -216,7 +216,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8ced9cdece669a6fe3a05582b764ba9d49216229f77c64c046a4c89cc0dc2616"
+      "sha256": "e89aa41ceb5e8b18e6d46da5c9b69348bb69cb707429547070cf93b45e965702"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -412,7 +412,7 @@
       "dest": "scripts/gate/security-checklist.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e519ad59f81d8a8b61a0a5826705f0b5b5861394b78a6400d5beedd8bf5df851"
+      "sha256": "7f41597fd43ad71036edbe37e3bc0072a435fd97fa97f051420b66656f9c093c"
     },
     {
       "source": "scripts/review/scope-bounded.sh",

@@ -344,20 +344,30 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the pla
 
 The advisor is never the author of what it judges: it is a fresh spawn per decision, not the unit
 agent, role spawn or orchestrator whose work raised the point, and its record carries its own grounds.
-Its authority is worth only that separation, so it is written by the advisor alone — held by two
-locks:
+Its authority is worth only that separation, and the operator's override only its own — so each
+is written by its own writer alone and stays as written. Three locks:
 
-- **The gate hook** (`.claude/hooks/check-autoflow-gate.sh`, *Section 1e*, state-independent): a
-  `Write` / `Edit` / `MultiEdit`, or a Bash redirect or `tee`, that adds an `advisor decision`
-  authority or an `A<n>` entry heading to an `issue-*-ledger.md` is denied unless the caller's
-  `agent_type` is `autoflow-advisor`; the advisor, in turn, is denied adding an `operator decision`
-  authority or an `O` / `F` / `E` heading. "Adds" compares the text before and after the write, so
-  re-writing or quoting an existing entry is not a new authority. An in-place editor (`sed -i`, a
-  script) or a file copied onto the ledger is outside the hook's surface — the same naive-path threat
-  model as `docs/gate-matching-standard.md` > P1.
+- **Authorship — the gate hook** (`.claude/hooks/check-autoflow-gate.sh`, *Section 1e*,
+  state-independent): text added to an `issue-*-ledger.md` that carries an `advisor decision`
+  authority or an `A<n>` heading is denied unless the caller's `agent_type` is `autoflow-advisor`;
+  text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
+  the main session (no `agent_type` — the orchestrator recording the operator's answer); the advisor
+  adds no `operator decision` and no `O` / `F` / `E` heading.
+- **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
+  on disk and must keep the whole prior content as its prefix, and the added text must open with a
+  heading, so no entry is edited, deleted or extended by a line appended under it; a Bash
+  overwrite (`>`, `tee` without `-a`) or in-place edit (`sed -i`, `perl -i`) naming a ledger is
+  denied. A decision changes only by a new entry that names the one it replaces
+  (`docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
 - **The record convention**: a consumer counts `advisor decision` only on an `A<n>` entry and
-  `operator decision` only on an `O<n>` entry (`scripts/gate/security-checklist.sh`; the gate
-  backstops match the `[ac-decision]` marker and read the authority as recorded).
+  `operator decision` only on an `O<n>` entry, and lets an entry replace another only by an explicit
+  `- Supersedes:` / `- Overrides:` line (`scripts/gate/security-checklist.sh`; the gate backstops
+  match the `[ac-decision]` marker and read the authority as recorded).
+
+Outside the hook's surface — the same naive-path threat model as `docs/gate-matching-standard.md` >
+P1: a ledger path held in a shell variable, a script that writes the file, a file copied or moved
+onto it. A Bash append is judged on the whole command, heredoc body included, so a body that quotes
+a protected authority is refused even when it is only cited.
 
 ### Operator review at the retry stage
 

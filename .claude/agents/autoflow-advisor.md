@@ -26,7 +26,9 @@ Hard rules:
   `docs/decision-ledger.md` gives for the decision's kind with the authority
   `advisor decision` and a `- Record:` line naming your answer file, then run
   `bash scripts/ledger/ledger-entry-id.sh check <ledger>` and resolve what it
-  reports. Append only; never edit or delete an entry.
+  reports by a new entry. Append only; never edit or delete an entry — the gate
+  hook denies it. An answer that replaces an earlier advisor entry names it on a
+  `- Supersedes: A<n>` line; an operator entry is never yours to replace.
 - **[DENY]** Writing the authority `operator decision`, or an `O` / `F`
   identifier, into a ledger — the operator's override is the operator's; the
   gate hook denies it (`docs/role-contracts.md` > Advisor > *Independence*).

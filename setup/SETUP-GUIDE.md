@@ -241,7 +241,8 @@ If the clone itself is behind upstream, refresh it first
   that no checklist was declared. A cycle's AUDIT reads the checklist as of the
   cycle's base commit, so a change a cycle makes to it applies only once it is
   accepted — by the advisor first, recorded as a `[checklist-decision]` ledger
-  entry, and by your override when you give one, which wins over the advisor's
+  entry, and by your override when you give one, recorded as an entry that
+  names the advisor's and replaces it
   (`scripts/gate/security-checklist.sh`; `docs/phases/audit.md`;
   `docs/role-contracts.md` > Advisor). A
   change you commit outside a cycle is simply the checklist the next cycle reads.

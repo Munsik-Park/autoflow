@@ -37,11 +37,23 @@ This table is the mapping's only documentary home; other documents cite it rathe
 advisor writes that authority or an `A` heading, and the advisor never writes `operator decision` or
 an `O` / `F` / `E` heading — the gate hook denies both
 ([`role-contracts.md`](role-contracts.md) > Advisor > *Independence*). The operator reviews the
-advisor's entries at the retry stage and may override one: the orchestrator records the override as an
-`O<n>` entry under the authority `operator decision`, with the same marker and fields and an
-`- Overrides: A<n>` line. An override supersedes the advisor's entry without a new verified fact —
-the operator's authority is the ground, the one supersession the no-re-litigation rule admits besides
-the verified-error exception; an advisor never supersedes an operator entry.
+advisor's entries at the retry stage and may override one: the orchestrator — the main session, the
+only writer the gate hook admits for an `O` entry or the `operator decision` authority — records the
+override as an `O<n>` entry under the authority `operator decision`, with the same marker and fields
+and an `- Overrides: A<n>` line. An override supersedes the advisor's entry without a new verified
+fact — the operator's authority is the ground, the one supersession the no-re-litigation rule admits
+besides the verified-error exception; an advisor never supersedes an operator entry.
+
+**Replacement is explicit.** An entry is never edited to change a decision — the gate hook keeps the
+ledger append-only ([`role-contracts.md`](role-contracts.md) > Advisor > *Independence*). A later
+entry replaces an earlier one only by naming it: `- Supersedes: <id>` (the same authority, on a new
+verified fact or the verified-error exception) or `- Overrides: A<n>` (the operator over the
+advisor). Two standing entries on the same subject whose conclusions disagree, with neither naming
+the other, are a **conflict**: nothing is settled by recency, and the conflict is resolved by a new
+entry — the advisor's, naming the entries it resolves, unless an operator entry is among them, which
+only the operator replaces. The same conclusion recorded twice is not a conflict. A `check` defect in
+an entry already appended (a duplicate identifier) is likewise resolved by a new entry naming the
+defective one, never by editing it.
 
 **Acceptance-criterion decisions** (`[ac-decision]`). Changing an issue's acceptance **content** is
 never a deliberation's or a working role's: the **advisor** decides it first and the **operator** may
@@ -97,10 +109,12 @@ override: `## O<n> — …`), followed by a `- Checklist:` line (the declared pa
 the declaration is dropped), a `- Blob:` line (the `git rev-parse HEAD:<path>` of the approved
 version, or `none`), a `- Disposition:` line valued `accepted` / `rejected`, and the ordinary
 Decision / Grounds / Authority lines with the authority value `advisor decision` (an override:
-`operator decision`). The script counts an entry only when its Decision and Grounds lines are
-non-empty and its Authority matches its namespace (`advisor decision` on `A<n>`, `operator decision`
-on `O<n>`), and only while its Checklist and Blob equal HEAD's, so a later edit to the checklist is a
-new change owed its own decision. The override wins: when any operator entry covers HEAD's checklist,
-the operator entries alone decide — the last `accepted` one covers the change, and an operator
-`rejected` leaves it uncovered whatever the advisor answered; otherwise the last `accepted` advisor
-entry covers it. A `rejected` answer that stands is followed by reverting the change before AUDIT.
+`operator decision`), plus the `- Supersedes:` / `- Overrides:` line when it replaces an entry. The
+script counts an entry only when its Decision and Grounds lines are non-empty, its Disposition is
+`accepted` or `rejected`, and its Authority matches its namespace (`advisor decision` on `A<n>`,
+`operator decision` on `O<n>`), and only while its Checklist and Blob equal HEAD's, so a later edit to
+the checklist is a new change owed its own decision. An entry stands unless a later counted entry
+replaces it by name (*Replacement is explicit* above; an advisor entry never replaces an operator
+entry). The standing entries decide only when they agree: all `accepted` → the change is covered; all
+`rejected` → it is not, and the change is reverted before AUDIT; both → a conflict, reported as
+`conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency.

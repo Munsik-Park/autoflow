@@ -31,7 +31,9 @@ its one record line:
 
 - **A change the cycle makes to its checklist.** A change to the file, or to the declaration that
   points at it, has no effect on that cycle's AUDIT until it is accepted — by the advisor first, and
-  by the operator's override, which wins. The answer is a `[checklist-decision]`
+  by the operator's override, recorded as an entry that names the advisor's (`- Overrides: A<n>`).
+  Standing entries that disagree with neither naming the other are a conflict: the record is
+  undecided with `conflict=<ids>`, and a new entry resolves it. The answer is a `[checklist-decision]`
   ledger entry ([`decision-ledger.md`](../decision-ledger.md) > *Security-checklist decisions*):
   `accepted`, carrying the committed version's blob and non-empty Decision and Grounds lines under
   the authority `advisor decision` on an `A<n>` entry (an override: `operator decision` on an `O<n>`

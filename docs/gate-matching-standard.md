@@ -301,14 +301,24 @@ self-describing message. Outside an active cycle (no state file, or
 `active:false`) undeclared spawns are not gated; on a malformed state only
 research and evaluation roles are admitted (fail-closed).
 
-**Decision-ledger authority authorship** (state-independent, ADR-0025 D7): a
-write into an `issue-*-ledger.md` — `Write` / `Edit` / `MultiEdit`, or a Bash
-redirect or `tee` naming the ledger — that ADDS an `advisor decision` authority or
-an `A<n>` entry heading is denied unless the caller `agent_type` is
-`autoflow-advisor`, and the advisor ADDING an `operator decision` authority or an
-`O` / `F` / `E` heading is denied. "Adds" compares the marks in the text before
-and after the write. An in-place editor or a copied file is outside the matched
-surface (P1's threat model).
+**Decision-ledger integrity** (state-independent, ADR-0025 D7), on a write into
+an `issue-*-ledger.md`:
+
+- *Append-only.* A `Write` / `Edit` / `MultiEdit` is applied to the file on
+  disk and must keep the whole prior content as its prefix, with the added text
+  opening on a heading; a Bash overwrite (`>`, `tee` without `-a`) or in-place
+  edit (`sed -i`, `perl -i`) naming a ledger is denied.
+- *Authorship of the added text.* An `advisor decision` authority or an `A<n>`
+  heading only from caller `autoflow-advisor`; an `operator decision` authority
+  or an `O<n>` heading only from the main session (no caller `agent_type`); the
+  advisor adds no `operator decision` and no `O` / `F` / `E` heading. For a
+  `Write` / `Edit` / `MultiEdit` the added text is exact and read line-anchored;
+  for a Bash append (`>>`, `tee -a`) it is the whole command, heredoc body
+  included, read anywhere (over-inclusive: a cited authority in a body is
+  refused).
+
+A ledger path held in a variable, a script that writes the file, or a copy
+onto it is outside the matched surface (P1's threat model).
 
 The hook classifies the declaration channel only; it does not enforce spawn mode. A payload carrying a teammate `name` is not admitted by the mapping above: it is denied as undeclared, and [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase names the anonymous direct spawn as every role's only mode. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): the contract binds the caller and the hook stays permissive.
 
