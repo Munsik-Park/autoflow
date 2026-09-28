@@ -6,23 +6,19 @@
 # A review-response cycle (re-entered on a Medium+ reviewer finding) is `scope-bounded` when the
 # judgment below holds. The judgment is a set relation, never an agent's "this is small":
 #
-#   triage   every Medium+ finding names a file, and each file is in the diff of the PR the
-#            finding's owner cell names (the reviewed PR when the row has none);
+#   triage   every Medium+ finding names a file, and each file is in the reviewed PR's diff;
 #   entry    every findings file whose max_severity is Medium+ carries `scope-bounded: true`;
 #   fix      the fix adds no new file (a new script / workflow / hook / test file is a new
 #            mechanism and leaves the bounded path).
 #
 # Subcommands
 #   triage --findings <file> (--pr <N> [--repo <owner/name>] | --diff-files <file>)
-#          [--owner-diff <owner/name>#<N>=<file>]...
-#         Judges one reviewed PR's findings file. A Medium+ row whose owner cell is empty, is
-#         not a PR reference, or is the file's own `pr:` line is compared against the reviewed PR's diff
-#         (`gh pr diff <N> [--repo]`, or --diff-files); a row owned by another PR against that
-#         PR's diff (--owner-diff, else `gh pr diff <N> --repo <owner/name>`). A --pr / --repo
+#         Judges one reviewed PR's findings file: every Medium+ row is compared against the
+#         reviewed PR's diff (`gh pr diff <N> [--repo]`, or --diff-files). A --pr / --repo
 #         that disagrees with the file's `pr:` line is a usage error. Prints three lines for
 #         the orchestrator to append to the findings file:
 #           scope-bounded: true|false
-#           scope-bounded-finding-files: <space-separated; another owner's as <owner/name>#<N>:<path>>
+#           scope-bounded-finding-files: <space-separated>
 #           scope-bounded-grounds: <reason>
 #         Exit 0 when bounded, 1 when not, 2 on usage / unreadable input / unreadable diff.
 #   entry --issue <N> [--dir <dir>]
@@ -61,9 +57,7 @@ finding_rows() {
       loc = c[3]; gsub(/`/, "", loc); gsub(/^[ \t]+|[ \t]+$/, "", loc)
       sub(/:[0-9].*$/, "", loc); sub(/[ \t].*$/, "", loc)
       if (loc == "" || loc == "—" || loc == "-") loc = "<nofile>"
-      owner = c[5]; gsub(/`/, "", owner); gsub(/^[ \t]+|[ \t]+$/, "", owner)
-      if (owner !~ /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#[0-9]+$/) owner = ""
-      print owner "\t" loc
+      print loc
     }' "$1" | sort -u
 }
 
@@ -71,21 +65,14 @@ file_pr() {
   awk '/^[ \t]*pr:/ { v = $0; sub(/^[ \t]*pr:[ \t]*/, "", v); gsub(/`/, "", v); sub(/[ \t]+$/, "", v); print v; exit }' "$1"
 }
 
-pr_diff() {
-  local out
-  out=$(gh pr diff "${1##*#}" --repo "${1%#*}" --name-only) || die "could not read the diff of $1"
-  printf '%s\n' "$out" | sort -u
-}
-
 cmd_triage() {
-  local findings="" pr="" repo="" difffile="" owner_diffs=""
+  local findings="" pr="" repo="" difffile=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --findings) findings="${2:-}"; shift 2 ;;
       --pr) pr="${2:-}"; shift 2 ;;
       --repo) repo="${2:-}"; shift 2 ;;
       --diff-files) difffile="${2:-}"; shift 2 ;;
-      --owner-diff) owner_diffs="${owner_diffs}${2:-}"$'\n'; shift 2 ;;
       *) usage ;;
     esac
   done
@@ -100,54 +87,37 @@ cmd_triage() {
     [[ "$own_ref" =~ $REF_RE ]] || die "$findings: pr: line is not <owner/name>#<N>: $own_ref"
     [ -z "$pr" ] || [ "${own_ref##*#}" = "$pr" ] || die "$findings is for $own_ref, --pr names #$pr"
     [ -z "$repo" ] || [ "${own_ref%#*}" = "$repo" ] || die "$findings is for $own_ref, --repo names $repo"
-  elif [ -n "$repo" ] && [ -n "$pr" ]; then
-    own_ref="$repo#$pr"
   fi
 
   local rows
-  rows=$(finding_rows "$findings" | awk -F'\t' -v own="$own_ref" '{ print (($1 == own) ? "" : $1) "\t" $2 }' | sort -u)
+  rows=$(finding_rows "$findings")
   local files_line
-  files_line=$(printf '%s\n' "$rows" | awk -F'\t' 'NF { printf "%s%s", sep, (($1 == "") ? $2 : $1 ":" $2); sep = " " }')
+  files_line=$(printf '%s\n' "$rows" | awk 'NF { printf "%s%s", sep, $0; sep = " " }')
   if [ -z "$rows" ]; then
     printf 'scope-bounded: false\nscope-bounded-finding-files:\nscope-bounded-grounds: no Medium+ finding row — nothing to bound\n'
     return 1
   fi
-  if printf '%s\n' "$rows" | cut -f2 | grep -qx '<nofile>'; then
+  if printf '%s\n' "$rows" | grep -qx '<nofile>'; then
     printf 'scope-bounded: false\nscope-bounded-finding-files: %s\nscope-bounded-grounds: a Medium+ finding names no file — set relation not evaluable, full path\n' "$files_line"
     return 1
   fi
 
-  local outside="" sizes="" owner diff_set paths out mapped
-  while IFS= read -r owner; do
-    if [ -z "$owner" ]; then
-      if [ -n "$difffile" ]; then
-        diff_set=$(sort -u "$difffile")
-      elif [ -n "$repo" ]; then
-        diff_set=$(gh pr diff "$pr" --repo "$repo" --name-only) || die "could not read the diff of $repo#$pr"
-      else
-        diff_set=$(gh pr diff "$pr" --name-only) || die "could not read the diff of #$pr"
-      fi
-      diff_set=$(printf '%s\n' "$diff_set" | sort -u)
-    else
-      mapped=$(printf '%s' "$owner_diffs" | awk -v r="$owner" 'index($0, r "=") == 1 { print substr($0, length(r) + 2); exit }')
-      if [ -n "$mapped" ]; then
-        [ -r "$mapped" ] || die "--owner-diff file unreadable: $mapped"
-        diff_set=$(sort -u "$mapped")
-      else
-        diff_set=$(pr_diff "$owner")
-      fi
-    fi
-    paths=$(printf '%s\n' "$rows" | awk -F'\t' -v o="$owner" '$1 == o { print $2 }' | sort -u)
-    out=$(comm -23 <(printf '%s\n' "$paths") <(printf '%s\n' "$diff_set") | awk -v o="$owner" 'NF { printf "%s%s", sep, ((o == "") ? $0 : o ":" $0); sep = " " }')
-    [ -z "$out" ] || outside="${outside:+$outside }$out"
-    sizes="${sizes:+$sizes; }${owner:-reviewed PR} $(printf '%s\n' "$diff_set" | grep -c . || true) files"
-  done <<< "$(printf '%s\n' "$rows" | cut -f1 | sort -u)"
+  local diff_set outside
+  if [ -n "$difffile" ]; then
+    diff_set=$(sort -u "$difffile")
+  elif [ -n "$repo" ]; then
+    diff_set=$(gh pr diff "$pr" --repo "$repo" --name-only) || die "could not read the diff of $repo#$pr"
+  else
+    diff_set=$(gh pr diff "$pr" --name-only) || die "could not read the diff of #$pr"
+  fi
+  diff_set=$(printf '%s\n' "$diff_set" | sort -u)
+  outside=$(comm -23 <(printf '%s\n' "$rows") <(printf '%s\n' "$diff_set") | awk 'NF { printf "%s%s", sep, $0; sep = " " }')
 
   if [ -n "$outside" ]; then
-    printf 'scope-bounded: false\nscope-bounded-finding-files: %s\nscope-bounded-grounds: outside the owning PR diff: %s\n' "$files_line" "$outside"
+    printf 'scope-bounded: false\nscope-bounded-finding-files: %s\nscope-bounded-grounds: outside the PR diff: %s\n' "$files_line" "$outside"
     return 1
   fi
-  printf 'scope-bounded: true\nscope-bounded-finding-files: %s\nscope-bounded-grounds: finding files ⊆ owning PR diff files (%s in diff)\n' "$files_line" "$sizes"
+  printf 'scope-bounded: true\nscope-bounded-finding-files: %s\nscope-bounded-grounds: finding files ⊆ PR diff files (%s files in diff)\n' "$files_line" "$(printf '%s\n' "$diff_set" | grep -c . || true)"
   return 0
 }
 

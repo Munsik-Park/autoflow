@@ -29,10 +29,12 @@
 #
 # Per-PR review gate (Model A): every PR — the host PR AND each sub-repo PR —
 # is reviewed on its OWN diff, and its OWN `blocked-by-review` label is cleared
-# by its OWN review. Pass `--repo owner/name` to review a sub-repo PR (the
-# wrapper then tells Codex to pass `--repo` to every gh command, so fetch /
-# comment / label-clear all target that repo); omit `--repo` to review the host
-# PR (the current repository). See docs/external-review-sequencing.md.
+# by its OWN review. Each review's target is its OWN repository's tree — a
+# submodule's contents belong to the submodule PR's review, never the host's
+# (.codex/review.md > Before Reviewing). Pass `--repo owner/name` to review a
+# sub-repo PR (the wrapper then tells Codex to pass `--repo` to every gh command,
+# so fetch / comment / label-clear all target that repo); omit `--repo` to review
+# the host PR (the current repository). See docs/external-review-sequencing.md.
 #
 # Posting account: inherited from the local `gh` authentication. It is NOT
 # hardcoded.

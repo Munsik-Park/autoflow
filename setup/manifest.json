@@ -55,7 +55,7 @@
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1e4523d9bed481c67903aaf1cc65048f9ecb72d9d5abeae0ab213d530019bfbd"
+      "sha256": "cb2d9bcfa759f77a334f2a5de2d02523aee2b65f3e66187672043253b175b4b7"
     },
     {
       "source": "docs/git-workflow.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "147a64e1297e0aaa0787f9053c1cf18f6f8c0ef69744382ca333d68f4ec49c26"
+      "sha256": "3fef799a1b5f73db05d991fe9efce2ffefb850039f82ef55293ba440c118703f"
     },
     {
       "source": "docs/phases/integrate.md",
@@ -307,7 +307,7 @@
       "dest": "scripts/review/codex-review-pr.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "47932854c4ee1fafadc581230fa0d86e25b13a06592b8c6c3f4239be052133b8"
+      "sha256": "1c572e464cff9cc14f865cdaa647f5a2e6e78044bdb5115e2caa1be151f762c8"
     },
     {
       "source": "scripts/review/lib/claude-isolation.sh",
@@ -342,7 +342,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "2ba20bc63f70d84c313a933b8af647a59cfcb076ef95b30a264c91a77cd1cd96"
+      "sha256": "54a7405d36df0458fdb425b6152d1928e69633d74de6d98a89d82a24ffa2bbaa"
     },
     {
       "source": "AGENTS.md",
@@ -419,7 +419,7 @@
       "dest": "scripts/review/scope-bounded.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "9c817eec564fc616007bc900b7fd322f824b393e961530cc5e705d61da9c7c24"
+      "sha256": "dfd8ca365bd79a196d5bc8901b3f27df7d91045c3ac2404897084d447e69623b"
     },
     {
       "source": "scripts/test/suite-manifest.sh",
