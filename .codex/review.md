@@ -4,7 +4,8 @@
 
 - Read the issue summary, acceptance criteria, PR description, and full PR diff.
 - For GitHub PRs or issues, use the local `gh` CLI for metadata, comments, checks, and diffs. Do not rely on public web access for private or permission-restricted repositories.
-- Identify the changed surfaces, adjacent code that the diff depends on, and any external contracts affected by the change.
+- The review target is what the PR's own repository tracks directly: every file in its tree, a submodule's pointer (gitlink) included. A submodule's contents are not part of it — they are tracked by the submodule's own repository and judged by the review of that repository's PR. Do not report a finding located inside a submodule, and do not count one toward `Medium`+ for the label step below. A PR whose only change is a submodule pointer is reviewed like any other PR, over its own repository.
+- Identify the changed surfaces, adjacent code within the review target that the diff depends on, and any external contracts affected by the change.
 - If the PR crosses a repo boundary — files inside a submodule, submodule pointers, dispatch workflows, or merge sequencing — also check the relevant repo-boundary and external-review docs.
 - Use repository documents as review evidence **only** when the PR links or names the relevant document/section, or when you independently discover directly relevant repo context while tracing the changed surface. Do not infer hidden design intent from unrelated repository documents, and do not treat a linked design doc as a reason to pass a change you cannot verify from the diff.
 - Read the **linked issue's acceptance criteria** before judging correctness; a "does not satisfy the contract" finding must be checked against the actual AC reachable from the PR, not an assumed contract.
