@@ -304,18 +304,20 @@ research and evaluation roles are admitted (fail-closed).
 **Decision-ledger integrity** (state-independent, ADR-0025 D7), on a write into
 an `issue-*-ledger.md`:
 
+- *Written through the file tools only.* A Bash redirect or `tee` onto a
+  ledger, or an in-place edit (`sed -i`, `perl -i`) naming one, is denied; the
+  ledger name is matched case-insensitively.
 - *Append-only.* A `Write` / `Edit` / `MultiEdit` is applied to the file on
-  disk and must keep the whole prior content as its prefix, with the added text
-  opening on a heading; a Bash overwrite (`>`, `tee` without `-a`) or in-place
-  edit (`sed -i`, `perl -i`) naming a ledger is denied.
+  disk (a literal replacement portable to `/bin/bash` 3.2) and must keep the
+  whole prior content, ending in a newline, as its prefix; every added line that
+  starts with `#` must be an entry heading (`## <ID> — ` or `### <record>`), the
+  first non-blank added line must be one, and a carriage return is refused.
 - *Authorship of the added text.* An `advisor decision` authority or an `A<n>`
   heading only from caller `autoflow-advisor`; an `operator decision` authority
   or an `O<n>` heading only from the main session (no caller `agent_type`); the
-  advisor adds no `operator decision` and no `O` / `F` / `E` heading. For a
-  `Write` / `Edit` / `MultiEdit` the added text is exact and read line-anchored;
-  for a Bash append (`>>`, `tee -a`) it is the whole command, heredoc body
-  included, read anywhere (over-inclusive: a cited authority in a body is
-  refused).
+  advisor adds no `operator decision` and no `O` / `F` / `E` heading. The
+  added text is exact and read line-anchored, with any run of non-alphanumerics
+  between `authority` and the authority value.
 
 A ledger path held in a variable, a script that writes the file, or a copy
 onto it is outside the matched surface (P1's threat model).

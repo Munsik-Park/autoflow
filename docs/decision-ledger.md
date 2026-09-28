@@ -44,6 +44,11 @@ and an `- Overrides: A<n>` line. An override supersedes the advisor's entry with
 fact — the operator's authority is the ground, the one supersession the no-re-litigation rule admits
 besides the verified-error exception; an advisor never supersedes an operator entry.
 
+**Writing an entry.** An entry is appended with the `Write` or `Edit` tool — a shell redirect or `tee`
+onto a ledger is denied — and opens with its heading, `## <ID> — <title> (cycle <C>, <PHASE>)` or a
+level-3 record heading; no other line of an entry starts with `#`, and a field line appears once per
+entry (a list goes on one line, comma-separated).
+
 **Replacement is explicit.** An entry is never edited to change a decision — the gate hook keeps the
 ledger append-only ([`role-contracts.md`](role-contracts.md) > Advisor > *Independence*). A later
 entry replaces an earlier one only by naming it: `- Supersedes: <id>` (the same authority, on a new
@@ -117,4 +122,6 @@ the checklist is a new change owed its own decision. An entry stands unless a la
 replaces it by name (*Replacement is explicit* above; an advisor entry never replaces an operator
 entry). The standing entries decide only when they agree: all `accepted` → the change is covered; all
 `rejected` → it is not, and the change is reverted before AUDIT; both → a conflict, reported as
-`conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency.
+`conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency. An
+entry for HEAD's checklist that carries a field twice is void and reported as `invalid=<ids>` on an
+undecided record.

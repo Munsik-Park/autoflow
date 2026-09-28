@@ -103,13 +103,12 @@ def role_of(agent_type):
     return (agent_type or '').split(':')[-1]
 
 
-# Functional units (ADR-0025 D1): the unit agent types and the unit each runs. A spawn a unit agent makes
-# — its `parent`, transitively — is charged to that unit (the gate hook judges it by the unit's class, too);
-# the advisor answers decision points in any unit and is kept apart as `advisor`.
+# The unit agent types and the unit each runs. An agent whose `parent` chain reaches a unit agent is
+# charged to that unit; the advisor is kept apart as `advisor`.
 UNIT_OF_ROLE = {'autoflow-unit-analysis': 'U2', 'autoflow-unit-design': 'U3', 'autoflow-unit-build': 'U4'}
 ADVISOR_ROLE = 'autoflow-advisor'
-# A phase-role spawn is charged to the unit its phase belongs to (ADR-0025 D1 table), so a unit's figure
-# is comparable before and after the migration — the unit's exit-gate evaluator included.
+# The unit each recovered phase key belongs to (a workflow site keys by its workflow name), for an
+# agent no unit agent spawned.
 UNIT_OF_PHASE = {
     'diagnose-intake-triage': 'U2', 'diagnose-loopcheck': 'U2', 'diagnose-phase-a': 'U2',
     'diagnose-phase-b': 'U2', 'diagnose-phase-3': 'U2', 'gate-hypothesis': 'U2',

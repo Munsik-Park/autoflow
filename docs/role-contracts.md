@@ -353,21 +353,28 @@ is written by its own writer alone and stays as written. Three locks:
   text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
   the main session (no `agent_type` — the orchestrator recording the operator's answer); the advisor
   adds no `operator decision` and no `O` / `F` / `E` heading.
-- **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
-  on disk and must keep the whole prior content as its prefix, and the added text must open with a
-  heading, so no entry is edited, deleted or extended by a line appended under it; a Bash
-  overwrite (`>`, `tee` without `-a`) or in-place edit (`sed -i`, `perl -i`) naming a ledger is
-  denied. A decision changes only by a new entry that names the one it replaces
-  (`docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
+- **Append-only — the same hook section**: a ledger is written with `Write` / `Edit` /
+  `MultiEdit` only — a Bash redirect, `tee` or in-place edit (`sed -i`, `perl -i`) naming a ledger is
+  denied, since a shell command's written text cannot be read exactly. The write is applied to the
+  file on disk and must keep the whole prior content, ending in a newline, as its prefix; every added
+  line that starts with `#` must be an entry heading (`## <ID> — ` or a level-3 record heading), the
+  first non-blank added line must be one, and a carriage return is refused — so no entry is edited,
+  deleted or extended by a line appended under it (the ledger path is matched case-insensitively). A
+  decision changes only by a new entry that names the one it replaces (`docs/decision-ledger.md` >
+  *Advisor decisions and operator overrides*).
 - **The record convention**: a consumer counts `advisor decision` only on an `A<n>` entry and
-  `operator decision` only on an `O<n>` entry, and lets an entry replace another only by an explicit
-  `- Supersedes:` / `- Overrides:` line (`scripts/gate/security-checklist.sh`; the gate backstops
-  match the `[ac-decision]` marker and read the authority as recorded).
+  `operator decision` only on an `O<n>` entry, lets an entry replace another only by an explicit
+  `- Supersedes:` / `- Overrides:` line, ends an entry at any line starting with `#`, and treats an
+  entry that carries one of its fields twice as void and reports it
+  (`scripts/gate/security-checklist.sh`; the gate backstops match the `[ac-decision]` marker and read
+  the authority as recorded).
 
 Outside the hook's surface — the same naive-path threat model as `docs/gate-matching-standard.md` >
-P1: a ledger path held in a shell variable, a script that writes the file, a file copied or moved
-onto it. A Bash append is judged on the whole command, heredoc body included, so a body that quotes
-a protected authority is refused even when it is only cited.
+P1: a ledger path held in a shell variable, a script that writes the file (the shipped
+`scripts/preflight/local-checks.sh --ledger` appends its level-3 record this way), a file copied or
+moved onto it. The consumer's void-on-repeated-field rule covers a bare field line appended through
+that residual; a `- Supersedes:` line appended to an entry that has none is not covered. A Bash
+command that names a ledger after `>` is refused even inside a quoted or heredoc body.
 
 ### Operator review at the retry stage
 

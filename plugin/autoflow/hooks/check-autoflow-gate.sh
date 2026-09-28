@@ -45,8 +45,9 @@
 #   - Agent (spawn BY a unit agent) → no declaration needed; judged by the
 #                                     caller's class (a declared role's own gate
 #                                     also applies, a `name` notwithstanding)
-#   - Write/Edit/MultiEdit/Bash on a ledger → append-only (existing text kept,
-#                                     added text opens an entry); only
+#   - Write/Edit/MultiEdit/Bash on a ledger → Bash writes denied; append-only
+#                                     (existing text kept, added text opens an
+#                                     entry, only headings start with #); only
 #                                     autoflow-advisor adds `advisor decision` /
 #                                     A<n>; only the main session adds `operator
 #                                     decision` / O<n>; the advisor adds no
@@ -722,52 +723,67 @@ fi
 # ── Section 1e: decision-ledger integrity (state-independent — ADR-0025 D7) ──
 # The ledger carries two authorities at a decision point — the advisor's first
 # judgment and the operator's override — and each is worth only its writer and
-# its record staying as written. So, on every write into an issue-*-ledger.md:
-#   1. Append-only. A Write / Edit / MultiEdit is applied to the file on disk
-#      here, and the result must keep the whole prior content as its prefix;
-#      the added text must open with a heading, so it cannot extend the entry
-#      above it (a trailing `- Disposition:` line would re-decide that entry).
-#      A Bash overwrite (`>` or `tee` without -a) or in-place edit (`sed -i`,
-#      `perl -i`) naming a ledger is denied. A decision changes only by a new
-#      entry naming the one it replaces (docs/decision-ledger.md).
-#   2. Authorship of what is added:
+# its record staying as written. The hook therefore sees every write into an
+# issue-*-ledger.md (the name matched case-insensitively) as exact text:
+#   1. Through Write / Edit / MultiEdit only. A Bash redirect or `tee` onto a
+#      ledger, or an in-place edit (`sed -i`, `perl -i`) naming one, is denied —
+#      a shell command's written text cannot be read exactly here.
+#   2. Append-only. The Write / Edit / MultiEdit is applied to the file on disk
+#      here, and the result must keep the whole prior content as its prefix,
+#      that content ending in a newline. Every line of the added text that
+#      starts with `#` must be an entry heading — `## <ID> — ` (level 2) or a
+#      level-3 record heading `### <word>` — and the first non-blank added line
+#      must be one, so nothing extends the entry above it (a trailing
+#      `- Disposition:` or `- Supersedes:` line would re-decide it). A carriage
+#      return in the added text is denied. A new ledger may open with a `# `
+#      title line.
+#   3. Authorship of what is added:
 #      - an `advisor decision` authority or an `A<n>` heading — only the
 #        advisor (caller agent_type autoflow-advisor);
 #      - an `operator decision` authority or an `O<n>` heading — only the main
 #        session (no caller agent_type): the orchestrator, recording the
 #        operator's answer;
 #      - the advisor adds no `operator decision`, no `O` / `F` / `E` heading.
-# For Write / Edit / MultiEdit the added text is exact and read line-anchored;
-# for a Bash append it is the whole command, heredoc body included, read
-# anywhere in the text (over-inclusive). Not covered (accepted residual, P1's
-# naive-path threat model): a ledger path held in a variable, a script that
-# writes the file, a copy or move onto it.
+# Not covered (accepted residual, P1's naive-path threat model): a ledger path
+# held in a variable, a script that writes the file, a copy or move onto it.
+# scripts/gate/security-checklist.sh closes the scalar-field half of that
+# residual on its own side: an entry carrying a decision field twice is void.
 is_advisor_type() {
   case "$1" in autoflow-advisor|*:autoflow-advisor) return 0 ;; esac
   return 1
 }
 ledger_deny() {
   echo "BLOCKED: decision ledger — $1 (ADR-0025 D7; docs/role-contracts.md > Advisor > Independence; docs/decision-ledger.md)." >&2
-  echo "The ledger is append-only: add a new entry that names the entry it supersedes or overrides. The advisor writes A entries only; O entries and the operator's authority are the main session's." >&2
+  echo "Append a new entry with the Write or Edit tool, opening with its '## <ID> — ' heading; a decision changes only by a new entry that names the one it supersedes or overrides. The advisor writes A entries only; O entries and the operator's authority are the main session's." >&2
   exit 2
 }
-# _ledger_has <adv|opr|oh|nonadv> <anchored 0|1>: stdin text; true when a mark is present.
+# _ledger_has <adv|opr|nonadv>: stdin text; true when a line carries the mark.
 _ledger_has() {
-  local _p='' _re
-  [ "$2" = 1 ] && _p='^[^a-z0-9]*'
+  local _re
   case "$1" in
-    adv)    _re="${_p}authority[^a-z0-9]{0,8}advisor[[:space:]]+decision|##[[:space:]]+A[0-9]+([[:space:]]|$)" ;;
-    opr)    _re="${_p}authority[^a-z0-9]{0,8}operator[[:space:]]+decision|##[[:space:]]+O[0-9]+([[:space:]]|$)" ;;
-    nonadv) _re="${_p}authority[^a-z0-9]{0,8}operator[[:space:]]+decision|##[[:space:]]+[OFE][0-9]+([[:space:]]|$)" ;;
+    adv)    _re='^[^a-z0-9]*authority[^a-z0-9]*advisor[^a-z0-9]+decision|^[^a-z0-9]*##[[:space:]]*A[0-9]+([^0-9]|$)' ;;
+    opr)    _re='^[^a-z0-9]*authority[^a-z0-9]*operator[^a-z0-9]+decision|^[^a-z0-9]*##[[:space:]]*O[0-9]+([^0-9]|$)' ;;
+    nonadv) _re='^[^a-z0-9]*authority[^a-z0-9]*operator[^a-z0-9]+decision|^[^a-z0-9]*##[[:space:]]*[OFE][0-9]+([^0-9]|$)' ;;
   esac
   grep -qiE -- "$_re"
 }
-_LEDGER_RE='(^|/)issue-[0-9]+-ledger\.md$'
-_ledger_added=""; _ledger_hit=0; _ledger_anch=1
+# _lit_replace <text> <old> <new> <all>: literal replacement, portable to
+# /bin/bash 3.2 (whose ${v/"$o"/"$n"} keeps the quotes of the replacement).
+_lit_replace() {
+  local _t=$1 _o=$2 _n=$3 _out=''
+  while [[ "$_t" == *"$_o"* ]]; do
+    _out="$_out${_t%%"$_o"*}$_n"
+    _t="${_t#*"$_o"}"
+    [ "$4" = true ] || break
+  done
+  printf '%s' "$_out$_t"
+}
+_ledger_added=""; _ledger_hit=0
 case "$TOOL_NAME" in
   Write|Edit|MultiEdit)
     _lp=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)
-    if [[ "$_lp" =~ $_LEDGER_RE ]]; then
+    _lpl=$(printf '%s' "$_lp" | tr '[:upper:]' '[:lower:]')
+    if [[ "$_lpl" =~ (^|/)issue-[0-9]+-ledger\.md$ ]]; then
       _ledger_hit=1
       _cur=""
       if [ -f "$_lp" ]; then _cur=$(cat "$_lp" 2>/dev/null; printf X); _cur="${_cur%X}"; fi
@@ -785,10 +801,8 @@ case "$TOOL_NAME" in
             _all=$(echo "$INPUT" | jq -r "$_sel.replace_all // false" 2>/dev/null || echo false)
             if [ -z "$_o" ]; then
               _res="$_nw"                     # an empty old_string writes the file whole
-            elif [ "$_all" = true ]; then
-              _res="${_res//"$_o"/"$_nw"}"
             else
-              _res="${_res/"$_o"/"$_nw"}"
+              _res=$(_lit_replace "$_res" "$_o" "$_nw" "$_all"; printf X); _res="${_res%X}"
             fi
             _i=$((_i + 1))
           done
@@ -796,41 +810,45 @@ case "$TOOL_NAME" in
       esac
       [[ "$_res" == "$_cur"* ]] || ledger_deny "a write that changes or removes text already in the ledger"
       _ledger_added="${_res#"$_cur"}"
-      if [ -n "$_cur" ] && [ -n "$_ledger_added" ]; then
-        _first=$(printf '%s\n' "$_ledger_added" | awk 'NF { print; exit }')
-        case "$_first" in
-          '#'*) ;;
-          *) ledger_deny "appended text that does not open a new entry with a heading, so it would extend the entry above it" ;;
+      if [ -n "$_ledger_added" ]; then
+        case "$_ledger_added" in *$'\r'*) ledger_deny "a carriage return in the added text" ;; esac
+        if [ -n "$_cur" ]; then
+          case "$_cur" in *$'\n') ;; *) ledger_deny "an append to a ledger whose last line has no newline — it would join the entry above" ;; esac
+        fi
+        _bad=$(printf '%s\n' "$_ledger_added" | LC_ALL=C awk -v newfile="$([ -z "$_cur" ] && echo 1 || echo 0)" '
+          /^#/ {
+            if ($0 ~ /^## [A-Z][0-9]+ — / || $0 ~ /^### [^ \t]/) { seen = 1; next }
+            if (newfile == 1 && !seen && $0 ~ /^# [^ \t]/) { next }
+            print "heading"; exit
+          }
+          NF && !seen && !(newfile == 1) { print "first"; exit }')
+        case "$_bad" in
+          heading) ledger_deny "a line starting with '#' that is not an entry heading ('## <ID> — ' or '### <record>')" ;;
+          first)   ledger_deny "appended text that does not open with an entry heading, so it would extend the entry above it" ;;
         esac
       fi
     fi
     ;;
   Bash)
-    if printf '%s' "$COMMAND" | grep -qE "[^[:space:]]*issue-[0-9]+-ledger\.md"; then
-      _lt="[\"']?[^[:space:];&|<>\"']*issue-[0-9]+-ledger\.md"
-      if printf '%s' "$COMMAND" | grep -qE "(^|[^>&0-9])[0-9]?>[[:space:]]*${_lt}|tee([[:space:]]+-[^a[:space:]][^[:space:]]*)*[[:space:]]+${_lt}" \
-         && ! printf '%s' "$COMMAND" | grep -qE "tee[[:space:]]+(-[^[:space:]]*[[:space:]]+)*-[a-z]*a[a-z]*[[:space:]]+(-[^[:space:]]*[[:space:]]+)*${_lt}"; then
-        ledger_deny "an overwrite of a ledger (\`>\` or \`tee\` without -a)"
-      fi
-      if printf '%s' "$COMMAND" | grep -qE "(sed|perl)[[:space:]][^;&|]*-[a-zA-Z]*i[^;&|]*issue-[0-9]+-ledger\.md"; then
-        ledger_deny "an in-place edit of a ledger"
-      fi
-      if printf '%s' "$COMMAND" | grep -qE "(>>|tee[[:space:]]+(-[^[:space:]]*[[:space:]]+)*-[a-z]*a)[[:space:]]*${_lt}"; then
-        _ledger_hit=1; _ledger_anch=0
-        _ledger_added="$COMMAND"
-      fi
+    _lcmd=$(printf '%s' "$COMMAND" | tr '[:upper:]' '[:lower:]')
+    _lt="[\"']?[^[:space:];&|<>\"']*issue-[0-9]+-ledger\.md"
+    if printf '%s' "$_lcmd" | grep -qE ">[[:space:]]*${_lt}|tee([[:space:]]+-[^[:space:]]*)*[[:space:]]+${_lt}"; then
+      ledger_deny "a shell redirect or tee onto a ledger — append with the Write or Edit tool, whose text the hook reads exactly"
+    fi
+    if printf '%s' "$_lcmd" | grep -qE "(sed|perl)[[:space:]][^;&|]*-[a-z]*i[^;&|]*issue-[0-9]+-ledger\.md"; then
+      ledger_deny "an in-place edit of a ledger"
     fi
     ;;
 esac
 if [ "$_ledger_hit" = 1 ] && [ -n "$_ledger_added" ]; then
   if is_advisor_type "$CALLER_TYPE"; then
-    printf '%s\n' "$_ledger_added" | _ledger_has nonadv "$_ledger_anch" \
+    printf '%s\n' "$_ledger_added" | _ledger_has nonadv \
       && ledger_deny "the advisor adds no 'operator decision' authority and no O / F / E entry"
   else
-    printf '%s\n' "$_ledger_added" | _ledger_has adv "$_ledger_anch" \
+    printf '%s\n' "$_ledger_added" | _ledger_has adv \
       && ledger_deny "only the advisor (subagent_type autoflow-advisor) adds an 'advisor decision' authority or an A entry"
     if [ -n "$CALLER_TYPE" ]; then
-      printf '%s\n' "$_ledger_added" | _ledger_has opr "$_ledger_anch" \
+      printf '%s\n' "$_ledger_added" | _ledger_has opr \
         && ledger_deny "only the main session adds an 'operator decision' authority or an O entry — caller '$CALLER_TYPE' is a sub-agent"
     fi
   fi
