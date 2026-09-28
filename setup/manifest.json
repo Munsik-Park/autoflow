@@ -188,7 +188,7 @@
       "dest": ".claude/autoflow/docs/pr-body-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7b95faabfe3a6dbd152208ff4005e5e47d7f464945a4661852fadb0b333a56d5"
+      "sha256": "ebaadb4bcbd36d13c2171b83f86469e872574f7fc464939bc52db6e9c6d3ca88"
     },
     {
       "source": "docs/repo-boundary-rules.md",
