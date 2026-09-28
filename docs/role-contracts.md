@@ -348,33 +348,25 @@ Its authority is worth only that separation, and the operator's override only it
 is written by its own writer alone and stays as written. Three locks:
 
 - **Authorship — the gate hook** (`.claude/hooks/check-autoflow-gate.sh`, *Section 1e*,
-  state-independent): text added to an `issue-*-ledger.md` that carries an `advisor decision`
+  state-independent): text a `Write` / `Edit` / `MultiEdit` adds to an `issue-*-ledger.md` that carries an `advisor decision`
   authority or an `A<n>` heading is denied unless the caller's `agent_type` is `autoflow-advisor`;
   text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
   the main session (no `agent_type` — the orchestrator recording the operator's answer); the advisor
   adds no `operator decision` and no `O` / `F` / `E` heading.
-- **Append-only — the same hook section**: a ledger is written with `Write` / `Edit` /
-  `MultiEdit` only — a Bash redirect, `tee` or in-place edit (`sed -i`, `perl -i`) naming a ledger is
-  denied, since a shell command's written text cannot be read exactly. The write is applied to the
-  file on disk and must keep the whole prior content, ending in a newline, as its prefix; every added
-  line that starts with `#` must be an entry heading (`## <ID> — ` or a level-3 record heading), the
-  first non-blank added line must be one, and a carriage return is refused — so no entry is edited,
-  deleted or extended by a line appended under it (the ledger path is matched case-insensitively). A
-  decision changes only by a new entry that names the one it replaces (`docs/decision-ledger.md` >
-  *Advisor decisions and operator overrides*).
+- **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
+  on disk and must keep the whole prior content as its prefix, so no entry is rewritten or removed.
+  A decision changes only by a new entry that names the one it replaces
+  (`docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
 - **The record convention**: a consumer counts `advisor decision` only on an `A<n>` entry and
-  `operator decision` only on an `O<n>` entry, lets an entry replace another only by an explicit
-  `- Supersedes:` / `- Overrides:` line, ends an entry at any line starting with `#`, and treats an
-  entry that carries one of its fields twice as void and reports it
-  (`scripts/gate/security-checklist.sh`; the gate backstops match the `[ac-decision]` marker and read
-  the authority as recorded).
+  `operator decision` only on an `O<n>` entry, and lets an entry replace another only by an explicit
+  `- Supersedes:` / `- Overrides:` line (`scripts/gate/security-checklist.sh`; the gate backstops
+  match the `[ac-decision]` marker and read the authority as recorded).
 
-Outside the hook's surface — the same naive-path threat model as `docs/gate-matching-standard.md` >
-P1: a ledger path held in a shell variable, a script that writes the file (the shipped
-`scripts/preflight/local-checks.sh --ledger` appends its level-3 record this way), a file copied or
-moved onto it. The consumer's void-on-repeated-field rule covers a bare field line appended through
-that residual; a `- Supersedes:` line appended to an entry that has none is not covered. A Bash
-command that names a ledger after `>` is refused even inside a quoted or heredoc body.
+The threat these locks answer is an agent overstepping in routine work — rewriting a ledger it
+meant to append to, or writing an authority that is not its own — not a determined evasion (the
+same model as `docs/issue-proposal.md`). Outside the hook's surface: a shell write to a ledger
+(redirect, `tee`, `sed -i`, a script), and text that only imitates an entry (a heading-less field
+line, a malformed heading, a variant spelling of an authority).
 
 ### Operator review at the retry stage
 

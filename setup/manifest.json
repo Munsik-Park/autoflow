@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "531b3e811e4b96f75549fac7c0502e069c77d585abc6dd27d52446eec8e5c313"
+      "sha256": "52cd07b216609717068b6e288076e957cc6a5460ae2953fa318f0337f97e1860"
     },
     {
       "source": "docs/INDEX.md",
@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "5947754736207879abfa0b793ab415d5c7320f5b71d0cecd7d12a87a0f7a93db"
+      "sha256": "9d0ef766c7e89772869d01fae920d552560bfd85c28605abb2a88c08fbada26d"
     },
     {
       "source": "docs/development-guideline.md",
@@ -55,7 +55,7 @@
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cb2d9bcfa759f77a334f2a5de2d02523aee2b65f3e66187672043253b175b4b7"
+      "sha256": "2f490789e56bcfa6b003c8fdb04fc1127a7c822851cdc699606f99b105b06b2b"
     },
     {
       "source": "docs/git-workflow.md",
@@ -216,7 +216,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a0ef436602ff4712c8fd934fa5665d81c85a046ffae5538b8b6106fcde376dda"
+      "sha256": "64b33a3bdd85b61524a289c5c19a8f4812eaf1b755f9783ff4660b1fbbf84221"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -251,14 +251,14 @@
       "dest": ".claude/workflows/architect-deliberation.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "dced8164770fb8d58023f6082c94f37e307de0dab7323cc46cea9617be4f16f7"
+      "sha256": "ba4686db0a75e08012eea4a3ad19df95e92fb9fd8d71d23b29647411bbd648ac"
     },
     {
       "source": ".claude/workflows/verify-cause-branch.js",
       "dest": ".claude/workflows/verify-cause-branch.js",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "f24e2368aff965d593bd6c8848e3f7eeec27b017bd81970c8064e12c0004d491"
+      "sha256": "9b25805c1d0844578936d0f9c019b3caeaecfe9abeb0a68788cf258cf62d6a72"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -412,7 +412,7 @@
       "dest": "scripts/gate/security-checklist.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "0b714aaf5500f2dd6aed88e28f9141ebe2861479a953051255fb24d824bcc57c"
+      "sha256": "7f41597fd43ad71036edbe37e3bc0072a435fd97fa97f051420b66656f9c093c"
     },
     {
       "source": "scripts/review/scope-bounded.sh",

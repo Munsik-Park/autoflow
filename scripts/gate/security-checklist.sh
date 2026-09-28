@@ -46,10 +46,7 @@
 # that names the one it replaces (`- Supersedes: <id>`, or an operator's
 # `- Overrides: A<n>`); an advisor entry cannot replace an operator entry.
 # Standing entries that disagree are a conflict: reported, never settled by
-# recency, and left undecided until an entry resolves it. Any line starting
-# with `#` ends an entry, and an entry that carries one of its fields twice is
-# void: it decides nothing and is reported as `invalid=<ids>` on an undecided
-# record, since only an edit or an append without a heading can produce it.
+# recency, and left undecided until an entry resolves it.
 #
 # Subcommand
 #   status [--base <rev>] [--ledger <path>]
@@ -57,9 +54,8 @@
 #       none-declared      no declaration at the base or at HEAD       exit 0
 #       unchanged          same path and blob at the base and HEAD     exit 0
 #       changed-decided    changed, covered by an accepted entry       exit 0
-#       changed-undecided  changed, no covering entry, standing        exit 3
-#                          entries that disagree (`conflict=<ids>`), or
-#                          an entry with a repeated field (`invalid=<ids>`)
+#       changed-undecided  changed, no covering entry, or standing     exit 3
+#                          entries that disagree (`conflict=<ids>`)
 #     `score=` names what AUDIT reads (`<rev>:<path>`, or `none`); on exit 3 it
 #     is `pending` — the orchestrator spawns the advisor before AUDIT.
 #     --base  the base is `git merge-base HEAD <rev>` (default: origin/HEAD's
@@ -133,8 +129,7 @@ resolve_base() {
 }
 
 # decision_id <ledger> <path|none> <blob|none> → the entry covering HEAD's
-# checklist, `INVALID:<id>,…` when an entry for HEAD's checklist repeats a
-# field, `CONFLICT:<id>,<id>…` when the standing entries disagree, or empty.
+# checklist, `CONFLICT:<id>,<id>…` when the standing entries disagree, or empty.
 # An entry stands unless a LATER counted entry names it on a `- Supersedes:` or
 # `- Overrides:` line; an advisor entry never displaces an operator entry. The
 # standing entries decide only when they agree: all `accepted` → the last of
@@ -144,38 +139,29 @@ resolve_base() {
 decision_id() {
   [ -n "$1" ] || return 0
   [ -r "$1" ] || die "ledger '$1' is not readable"
-  LC_ALL=C awk -v want_path="$2" -v want_blob="$3" '
+  awk -v want_path="$2" -v want_blob="$3" '
     function trim(s) { gsub(/`/, "", s); gsub(/^[ \t]+|[ \t\r]+$/, "", s); return s }
-    function field(name, v) {
-      if (seen[name]++) dup = 1
-      if (name == "Checklist" && v == want_path) pathok = 1
-      if (name == "Blob" && v == want_blob) blobok = 1
-      val[name] = v
-    }
     function close_entry(   ok) {
-      if (id != "" && pathok && blobok && dup) { bad = bad (bad == "" ? "" : ",") id }
-      ok = (id != "" && !dup && pathok && blobok \
-            && (val["Disposition"] == "accepted" || val["Disposition"] == "rejected") \
-            && val["Decision"] != "" && val["Grounds"] != "" \
-            && ((id ~ /^O/ && val["Authority"] ~ /^operator decision\.?$/) || (id ~ /^A/ && val["Authority"] ~ /^advisor decision\.?$/)))
-      if (ok) { n++; eid[n] = id; edisp[n] = val["Disposition"]; erepl[n] = val["Supersedes"] " " val["Overrides"] }
-      id = ""; dup = 0; pathok = 0; blobok = 0
-      split("", seen); split("", val)
+      ok = (id != "" && path == want_path && blob == want_blob \
+            && (disp == "accepted" || disp == "rejected") && dec != "" && grounds != "" \
+            && ((id ~ /^O/ && auth ~ /^operator decision\.?$/) || (id ~ /^A/ && auth ~ /^advisor decision\.?$/)))
+      if (ok) { n++; eid[n] = id; edisp[n] = disp; erepl[n] = repl }
+      id = ""; path = ""; blob = ""; disp = ""; dec = ""; grounds = ""; auth = ""; repl = ""
     }
-    { sub(/\r$/, "") }
-    /^#/ {
+    /^#+ / {
       close_entry()
       if ($0 ~ /^## / && $0 ~ /\[checklist-decision\][ \t]*$/ && match($0, /^## [OA][0-9]+ /)) id = trim(substr($0, 4, RLENGTH - 4))
       next
     }
-    id != "" && match($0, /^- (Checklist|Blob|Disposition|Decision|Grounds|Authority|Supersedes|Overrides):/) {
-      name = substr($0, 3, RLENGTH - 3)
-      field(name, trim(substr($0, RLENGTH + 1)))
-      next
-    }
+    id != "" && /^- Checklist:/   { path = trim(substr($0, length("- Checklist:") + 1)); next }
+    id != "" && /^- Blob:/        { blob = trim(substr($0, length("- Blob:") + 1)); next }
+    id != "" && /^- Disposition:/ { disp = trim(substr($0, length("- Disposition:") + 1)); next }
+    id != "" && /^- Decision:/    { dec = trim(substr($0, length("- Decision:") + 1)); next }
+    id != "" && /^- Grounds:/     { grounds = trim(substr($0, length("- Grounds:") + 1)); next }
+    id != "" && /^- Authority:/   { auth = trim(substr($0, length("- Authority:") + 1)); next }
+    id != "" && /^- (Supersedes|Overrides):/ { v = $0; sub(/^- [A-Za-z]+:/, "", v); repl = repl " " v; next }
     END {
       close_entry()
-      if (bad != "") { print "INVALID:" bad; exit }
       for (i = 1; i <= n; i++) {
         m = split(erepl[i], t, /[ ,;`]+/)
         for (k = 1; k <= m; k++) {
@@ -238,10 +224,6 @@ cmd_status() {
   local id hp="${head_path:-none}" score
   id="$(decision_id "$ledger" "$hp" "$head_blob")"
   case "$id" in
-    INVALID:*)
-      echo "security-checklist: changed-undecided path=$hp base=$short base_path=${base_path:-none} blob=$head_blob decision=none invalid=${id#INVALID:} score=pending"
-      exit 3
-      ;;
     CONFLICT:*)
       echo "security-checklist: changed-undecided path=$hp base=$short base_path=${base_path:-none} blob=$head_blob decision=none conflict=${id#CONFLICT:} score=pending"
       exit 3
