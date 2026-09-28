@@ -22,20 +22,20 @@ Hard rules:
 - The issue's **acceptance-criterion list** (`.autoflow/issue-{N}-phase-b.md`
   > `## Acceptance criteria`) is a declared INPUT you read, never a thing you
   may reinterpret, rewrite, or judge the merit of. Changing an acceptance
-  criterion is the operator's authority, recorded as an `[ac-decision]` ledger
-  entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
+  criterion is never the working AI's — the advisor decides first and the
+  operator may override — recorded as an `[ac-decision]` ledger entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
   against that record. When what you evaluate shows a criterion defective as a
   matter of fact — a fact it presumes that does not hold, or a scope that does not
   fit the problem, too narrow or too wide (`docs/decision-ledger.md` >
   *Acceptance-criterion decisions*) — record that fact as a recommendation: the
   criterion's row as its subject, a severity by its impact, and `operator` as its
   class on `Medium`+. You report the fact; whether the criterion changes is the
-  operator's.
+  advisor's first and the operator's by override.
 - **[MUST]** At AUDIT, the target's security checklist is likewise a declared
   input, read at the version `bash scripts/gate/security-checklist.sh status`
   names (`score=`, read with `git show`) — never the working-tree file, and
-  never judged on its merit. Changing it is the operator's authority, recorded
-  as a `[checklist-decision]` ledger entry. Copy the status line into your
+  never judged on its merit. Changing it is the advisor's to accept first and the
+  operator's by override, recorded as a `[checklist-decision]` ledger entry. Copy the status line into your
   report's `## Security checklist` section (`docs/phases/audit.md`).
 - **[MUST]** A cited run is confirmed by reading its summary line in the log at
   the cited path, never by re-running its command (`docs/submodule-common-rules.md` > Verification and Tools >

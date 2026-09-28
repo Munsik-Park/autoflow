@@ -20,4 +20,4 @@ Non-bug issues (feat, chore, docs, refactor, …) skip this gate.
 - **PASS** → recommendation triage ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) → ARCHITECT. The
   structure form's PASS is triaged the same way before DIAGNOSE continues.
 - **FAIL** → DIAGNOSE (max 2×). Third FAIL → human decision.
-- **Non-code root cause confirmed** → report to user (situation-first — [`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation), pause AutoFlow.
+- **Non-code root cause confirmed** → the advisor decides ([`role-contracts.md`](../role-contracts.md) > Advisor): a code change is still owed → ARCHITECT; the cause is non-code → report it (situation-first — [`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation) and end the cycle (`active: false`, `phase: "awaiting-user"`).

@@ -127,6 +127,30 @@
       "model": "sonnet",
       "effort": "high",
       "work_type": "reviewer-comment ingestion (severity classification) + Low-finding impact judgment"
+    },
+    "unit-analysis": {
+      "agent_type": "autoflow-unit-analysis",
+      "model": "sonnet",
+      "effort": "high",
+      "work_type": "U2 Analysis unit (DIAGNOSE + GATE:HYPOTHESIS span) as one spawn — goal, artifact contract and verification prescribed, method its own (ADR-0025 D2); model and effort held at the DIAGNOSE rows' values so the migration step's measurement isolates the method change"
+    },
+    "unit-design": {
+      "agent_type": "autoflow-unit-design",
+      "model": "opus",
+      "effort": "xhigh",
+      "work_type": "U3 Design unit (ARCHITECT + GATE:PLAN span) as one spawn — goal, artifact contract and verification prescribed, method its own (ADR-0025 D2); model and effort held at the ARCHITECT participant rows' values"
+    },
+    "unit-build": {
+      "agent_type": "autoflow-unit-build",
+      "model": "opus",
+      "effort": "xhigh",
+      "work_type": "U4 Build-and-verify unit (DISPATCH..VALIDATE + AUDIT span) as one spawn — goal, artifact contract and verification prescribed, method its own (ADR-0025 D2); model and effort held at the RED / GREEN rows' values"
+    },
+    "advisor": {
+      "agent_type": "autoflow-advisor",
+      "model": "fable",
+      "effort": "max",
+      "work_type": "first judgment at a decision point, recorded as an advisor-decision ledger entry (ADR-0025 D7) — highest-capability model at the highest effort; the effort is delivered by the definition's effort: line"
     }
   },
   "workflow_sites": {

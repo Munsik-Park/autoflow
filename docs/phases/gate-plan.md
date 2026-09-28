@@ -51,7 +51,8 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
   scored by `Scope` under the existing verification-depth clause ([ARCHITECT](architect.md) > *Verification depth*), adding no scored item.
 - **Trigger → cap**: any difference **not** covered by a `[ac-decision]`-marked ledger entry whose
   `- AC:` line names that same id caps `Scope` at 6. The marker is what the gate matches on;
-  `operator decision` is that entry's authority **value** and is not itself the match key. An entry
+  `advisor decision` or `operator decision` is that entry's authority **value** and is not itself the
+  match key. An entry
   whose `- Disposition:` is `added` covers nothing: the criterion it adds is owed its row like any
   other ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*).
 - **An unresolvable check also caps.** An absent, empty or unparseable `## Acceptance criteria`

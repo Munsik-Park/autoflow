@@ -24,7 +24,7 @@ These documents are the operating source of truth.
 | [CLAUDE.md](../CLAUDE.md) | AutoFlow operating manual and phase router. |
 | [AutoFlow Guide](autoflow-guide.md) | Lifecycle overview and diagram; index of the per-phase playbooks under `phases/`. |
 | [DIAGNOSE Analysis Playbook](phases/analysis.md) | Issue analysis and necessity-evaluation procedure. |
-| [Decision Ledger](decision-ledger.md) | The per-issue decision ledger's entry grammar, identifiers, and operator-decision entries (`[ac-decision]`, `[checklist-decision]`). |
+| [Decision Ledger](decision-ledger.md) | The per-issue decision ledger's entry grammar, identifiers, and decision-point entries — the advisor's first judgment and the operator's override (`[ac-decision]`, `[checklist-decision]`). |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool. |

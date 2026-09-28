@@ -20,23 +20,30 @@
 # reads. A target-owned checklist could be loosened by the cycle it grades —
 # self-certification (CLAUDE.md > Rule Scope, principle 1). So AUDIT reads the
 # checklist as of the cycle's base commit, and a change the cycle makes to it —
-# the file, or the declaration that points at it — is read only on an operator
-# decision recorded in the issue ledger (docs/decision-ledger.md >
-# *Security-checklist decisions*):
+# the file, or the declaration that points at it — is read only on a decision
+# recorded in the issue ledger (docs/decision-ledger.md > *Security-checklist
+# decisions*): the advisor's first judgment, or the operator's override
+# (ADR-0025 D7):
 #
-#   ## O<n> — <title> (cycle <C>, AUDIT) [checklist-decision]
+#   ## A<n> — <title> (cycle <C>, AUDIT) [checklist-decision]   (advisor)
+#   ## O<n> — <title> (cycle <C>, AUDIT) [checklist-decision]   (operator)
 #   - Checklist: <the declared path at HEAD, or none>
 #   - Blob: <git rev-parse HEAD:<path>, or none>
-#   - Disposition: accepted
+#   - Disposition: accepted | rejected
 #   - Decision: <the decision, one line>
 #   - Grounds: <why, one line>
-#   - Authority: operator decision
+#   - Authority: advisor decision | operator decision
 #
-# An entry covers the change only when its Decision and Grounds lines are
-# non-empty and its Authority is `operator decision` — the decider and the
-# grounds are what makes it an operator decision (PR #297 review, Medium 1) —
-# and only while its Checklist and Blob equal HEAD's, so a later edit to the
-# checklist is a new change that needs its own decision.
+# An entry counts only when its Decision and Grounds lines are non-empty and
+# its Authority matches its namespace — `advisor decision` on an `A<n>` entry,
+# `operator decision` on an `O<n>` entry; the decider and the grounds are what
+# make it a decision (PR #297 review, Medium 1), and only the advisor writes an
+# `A<n>` entry (the gate hook's ledger-authorship guard) — and only while its
+# Checklist and Blob equal HEAD's, so a later edit to the checklist is a new
+# change that needs its own decision. The operator's override wins: when any
+# operator entry covers HEAD's checklist, the operator entries alone decide and
+# the advisor's are not read; otherwise the advisor's decide. Within one
+# authority the last `accepted` entry covers the change.
 #
 # Subcommand
 #   status [--base <rev>] [--ledger <path>]
@@ -46,12 +53,12 @@
 #       changed-decided    changed, covered by an accepted entry       exit 0
 #       changed-undecided  changed, no covering entry                  exit 3
 #     `score=` names what AUDIT reads (`<rev>:<path>`, or `none`); on exit 3 it
-#     is `pending` — the orchestrator pauses for the operator before AUDIT.
+#     is `pending` — the orchestrator spawns the advisor before AUDIT.
 #     --base  the base is `git merge-base HEAD <rev>` (default: origin/HEAD's
 #             branch, then origin/main, then main).
 #     --ledger  the issue ledger; without it no change is covered.
 #
-# Exit codes: 0 = resolved; 3 = a change needs an operator decision;
+# Exit codes: 0 = resolved; 3 = a change needs a decision (the advisor's first);
 #   2 = usage, or a state the record cannot be made from (a malformed
 #   declaration, a declared file not committed at that commit, an uncommitted
 #   edit to the declaration or the checklist, an unresolvable base, jq absent).
@@ -117,20 +124,29 @@ resolve_base() {
   die "cannot resolve a base (no origin/HEAD, origin/main or main); pass --base <rev>"
 }
 
-# decision_id <ledger> <path|none> <blob|none> → the last accepted entry covering HEAD, or empty.
+# decision_id <ledger> <path|none> <blob|none> → the entry covering HEAD, or empty:
+# the last accepted operator entry when any operator entry covers HEAD's
+# checklist (the override wins), else the last accepted advisor entry.
 decision_id() {
   [ -n "$1" ] || return 0
   [ -r "$1" ] || die "ledger '$1' is not readable"
   awk -v want_path="$2" -v want_blob="$3" '
     function trim(s) { gsub(/`/, "", s); gsub(/^[ \t]+|[ \t\r]+$/, "", s); return s }
     function close_entry() {
-      if (id != "" && path == want_path && blob == want_blob && disp == "accepted" \
-          && dec != "" && grounds != "" && auth ~ /^operator decision\.?$/) hit = id
+      if (id != "" && path == want_path && blob == want_blob \
+          && (disp == "accepted" || disp == "rejected") && dec != "" && grounds != "") {
+        if (id ~ /^O/ && auth ~ /^operator decision\.?$/) {
+          op_seen = 1
+          if (disp == "accepted") op_hit = id
+        } else if (id ~ /^A/ && auth ~ /^advisor decision\.?$/) {
+          if (disp == "accepted") adv_hit = id
+        }
+      }
       id = ""; path = ""; blob = ""; disp = ""; dec = ""; grounds = ""; auth = ""
     }
     /^## / {
       close_entry()
-      if ($0 ~ /\[checklist-decision\][ \t]*$/ && match($0, /^## O[0-9]+ /)) id = trim(substr($0, 4, RLENGTH - 4))
+      if ($0 ~ /\[checklist-decision\][ \t]*$/ && match($0, /^## [OA][0-9]+ /)) id = trim(substr($0, 4, RLENGTH - 4))
       next
     }
     id != "" && /^- Checklist:/   { path = trim(substr($0, length("- Checklist:") + 1)); next }
@@ -139,7 +155,7 @@ decision_id() {
     id != "" && /^- Decision:/    { dec = trim(substr($0, length("- Decision:") + 1)); next }
     id != "" && /^- Grounds:/     { grounds = trim(substr($0, length("- Grounds:") + 1)); next }
     id != "" && /^- Authority:/   { auth = trim(substr($0, length("- Authority:") + 1)); next }
-    END { close_entry(); print hit }' "$1"
+    END { close_entry(); print (op_seen ? op_hit : adv_hit) }' "$1"
 }
 
 cmd_status() {

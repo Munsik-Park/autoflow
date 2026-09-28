@@ -38,7 +38,17 @@
 #                                     planning → GATE:HYPOTHESIS pass (bug issue;
 #                                     verdict containing "skip" → bypass, non-bug),
 #                                     implementation / testing → GATE:PLAN pass,
-#                                     analysis / evaluation / research → pass.
+#                                     analysis / evaluation / research / advisor
+#                                     → pass. Unit agents (ADR-0025): unit-analysis
+#                                     → analysis, unit-design → planning,
+#                                     unit-build → implementation
+#   - Agent (spawn BY a unit agent) → no declaration needed; judged by the
+#                                     caller's class (a declared role's own gate
+#                                     also applies)
+#   - Write/Edit/MultiEdit/Bash on a ledger → only autoflow-advisor adds an
+#                                     `advisor decision` authority / A<n> entry;
+#                                     the advisor never adds `operator decision`
+#                                     / O,F,E entries (state-independent, D7)
 #   - facilitator calls             → confined state-independently (Section 0,
 #                                     ADR-0023 D5): relay-state.sh only, the
 #                                     five fixed wakes to its own participants,
@@ -707,6 +717,80 @@ if [ "$TOOL_NAME" = "Agent" ]; then
   fi
 fi
 
+# ── Section 1e: decision-ledger authority authorship (state-independent — ADR-0025 D7) ──
+# The advisor's first judgment and the operator's override are two authorities
+# on one ledger, and each is worth only what its writer is: an `advisor
+# decision` entry written by the orchestrator or a unit agent would be the
+# producer certifying itself under the advisor's name, and an advisor writing
+# `operator decision` would pre-empt the override the operator holds. So:
+#   - only the advisor (caller agent_type autoflow-advisor) ADDS an `advisor
+#     decision` authority or an `A<n>` entry heading to a ledger;
+#   - the advisor never ADDS an `operator decision` authority or an `O` / `F` /
+#     `E` entry heading.
+# "Adds" compares the marks before and after the write — Edit: old_string vs
+# new_string; MultiEdit: summed over its edits; Write: the file on disk vs the
+# new content; Bash: a redirect / tee into a ledger path, whose whole command
+# (heredoc body included) is the new text — so rewriting or quoting an existing
+# entry is not a new authority. Surfaces NOT covered (accepted residual, the
+# same naive-path threat model as P1): an in-place editor (`sed -i`, a script)
+# or a copy of a prepared file onto the ledger. The second lock is the record
+# convention: a consumer counts `advisor decision` only on an `A<n>` entry
+# (scripts/gate/security-checklist.sh; docs/decision-ledger.md).
+is_advisor_type() {
+  case "$1" in autoflow-advisor|*:autoflow-advisor) return 0 ;; esac
+  return 1
+}
+# _ledger_marks <adv|opr>: on stdin the text; prints how many lines carry the mark.
+_ledger_marks() {
+  local _re
+  if [ "$1" = adv ]; then
+    _re='authority[^a-z0-9]{0,8}advisor[[:space:]]+decision|##[[:space:]]+A[0-9]+[[:space:]]'
+  else
+    _re='authority[^a-z0-9]{0,8}operator[[:space:]]+decision|##[[:space:]]+[OFE][0-9]+[[:space:]]'
+  fi
+  grep -ciE -- "$_re" || true
+}
+_LEDGER_RE='(^|/)issue-[0-9]+-ledger\.md$'
+_ledger_old=""; _ledger_new=""; _ledger_hit=0
+case "$TOOL_NAME" in
+  Write|Edit|MultiEdit)
+    _lp=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)
+    if [[ "$_lp" =~ $_LEDGER_RE ]]; then
+      _ledger_hit=1
+      case "$TOOL_NAME" in
+        Write)
+          [ -f "$_lp" ] && _ledger_old=$(cat "$_lp" 2>/dev/null || true)
+          _ledger_new=$(echo "$INPUT" | jq -r '.tool_input.content // empty' 2>/dev/null || true) ;;
+        Edit)
+          _ledger_old=$(echo "$INPUT" | jq -r '.tool_input.old_string // empty' 2>/dev/null || true)
+          _ledger_new=$(echo "$INPUT" | jq -r '.tool_input.new_string // empty' 2>/dev/null || true) ;;
+        MultiEdit)
+          _ledger_old=$(echo "$INPUT" | jq -r '[.tool_input.edits[]?.old_string // empty] | join("\n")' 2>/dev/null || true)
+          _ledger_new=$(echo "$INPUT" | jq -r '[.tool_input.edits[]?.new_string // empty] | join("\n")' 2>/dev/null || true) ;;
+      esac
+    fi
+    ;;
+  Bash)
+    if printf '%s' "$COMMAND" | grep -qE "(>|tee([[:space:]]+-[a-z]+)*)[[:space:]]*[\"']?[^[:space:];&|<>\"']*issue-[0-9]+-ledger\.md"; then
+      _ledger_hit=1
+      _ledger_new="$COMMAND"
+    fi
+    ;;
+esac
+if [ "$_ledger_hit" = 1 ]; then
+  if is_advisor_type "$CALLER_TYPE"; then
+    if [ "$(printf '%s\n' "$_ledger_new" | _ledger_marks opr)" -gt "$(printf '%s\n' "$_ledger_old" | _ledger_marks opr)" ]; then
+      echo "BLOCKED: the advisor does not write the operator's authority — no 'operator decision' authority and no O / F / E entry heading (ADR-0025 D7; docs/role-contracts.md > Advisor > Independence)." >&2
+      echo "Write your answer as an A-namespace entry under the authority 'advisor decision'; the operator's override is recorded by the orchestrator on the operator's answer." >&2
+      exit 2
+    fi
+  elif [ "$(printf '%s\n' "$_ledger_new" | _ledger_marks adv)" -gt "$(printf '%s\n' "$_ledger_old" | _ledger_marks adv)" ]; then
+    echo "BLOCKED: only the advisor (subagent_type autoflow-advisor) writes an 'advisor decision' authority or an A-namespace entry into a decision ledger (ADR-0025 D7; docs/role-contracts.md > Advisor > Independence)." >&2
+    echo "Spawn a fresh autoflow-advisor with the decision request; it records its own answer." >&2
+    exit 2
+  fi
+fi
+
 # ── Spawn role resolution (declaration, not inference) ──
 # A spawn's gate class comes from a STRUCTURAL declaration, never from prompt
 # keywords. Keyword inference failed in both directions in live cycles: benign
@@ -723,8 +807,8 @@ fi
 # C7/C8; the removal itself is ADR-0017 Q3): with every role spawned anonymously
 # and directly, retaining the prefix branch would leave an unreachable path that
 # still name-prefix-overrode `subagent_type`.
-# Prints: research|analysis|planning|implementation|testing|evaluation, or ""
-# (undeclared). The role→gate mapping below is owned by this hook — a spawn
+# Prints: research|analysis|planning|implementation|testing|evaluation|advisor,
+# or "" (undeclared). A unit agent type prints the class unit_role_of gives it. The role→gate mapping below is owned by this hook — a spawn
 # declares WHO it is; it never declares which gate applies to it.
 resolve_spawn_role() {
   local _subtype _name _role=""
@@ -770,9 +854,31 @@ resolve_spawn_role() {
     autoflow-implementer|*:autoflow-implementer) _role="implementation" ;;
     autoflow-tester|*:autoflow-tester)           _role="testing" ;;
     autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
+    autoflow-advisor|*:autoflow-advisor)         _role="advisor" ;;
+    *)
+      _role=$(unit_role_of "$_subtype")
+      ;;
   esac
   printf '%s' "$_role"
 }
+
+# Functional-unit agents (ADR-0025 D1/D5) and the gate class each carries —
+# U2 Analysis → analysis, U3 Design → planning, U4 Build → implementation.
+# Prints the class for a unit agent type, or "" for any other type.
+unit_role_of() {
+  case "$1" in
+    autoflow-unit-analysis|*:autoflow-unit-analysis) printf 'analysis' ;;
+    autoflow-unit-design|*:autoflow-unit-design)     printf 'planning' ;;
+    autoflow-unit-build|*:autoflow-unit-build)       printf 'implementation' ;;
+  esac
+}
+
+# A spawn made BY a unit agent (the hook input's caller `agent_type`) needs no
+# role declaration: the unit chooses its own method, helpers included, and the
+# spawn inherits the unit's gate class (ADR-0025 D5). The caller is the
+# immediate one only — a helper's own spawn is classified by its own
+# declaration, since the hook sees no ancestry.
+CALLER_UNIT_ROLE=$(unit_role_of "$CALLER_TYPE")
 
 # Shared by the corrupt-state and multi-active fail-closed branches below: both
 # need the identical "does this call hit the score-gated surface?" test (git
@@ -785,7 +891,9 @@ is_score_gated_surface() {
   elif [ "$TOOL_NAME" = "Agent" ]; then
     # Research is read-only and evaluation must stay spawnable (it produces the
     # scores a repaired state needs); every other role — and an undeclared
-    # spawn — fails closed.
+    # spawn — fails closed. A unit agent's spawn carries the unit's class,
+    # which is never research or evaluation.
+    [ -z "$CALLER_UNIT_ROLE" ] || return 0
     local _role
     _role=$(resolve_spawn_role)
     [ "$_role" != "research" ] && [ "$_role" != "evaluation" ]
@@ -1155,14 +1263,17 @@ block_with_scores() {
 }
 
 # ── Gate: Agent spawn (declared role → gate; the hook owns the mapping) ──
-if [ "$TOOL_NAME" = "Agent" ]; then
-  ROLE=$(resolve_spawn_role)
+# apply_role_gate <role> <label>: returns when the role's gate admits the spawn,
+# exits 2 when it does not. <label> names what the class was read from.
+apply_role_gate() {
+  local ROLE=$1 _label=$2
   case "$ROLE" in
-    research|analysis|evaluation)
+    research|analysis|evaluation|advisor)
       # research: read-only, never gates. evaluation: must stay spawnable —
       # blocking it would deadlock the very gate it produces scores for.
       # analysis: DIAGNOSE precedes every gate, so it has no prerequisite.
-      exit 0
+      # advisor: answers a decision point in any phase (ADR-0025 D7).
+      return 0
       ;;
     planning)
       # Gate 1: planning spawn → GATE:HYPOTHESIS pass required (bug issues only).
@@ -1177,23 +1288,41 @@ if [ "$TOOL_NAME" = "Agent" ]; then
         exit 2
       fi
       if [ -n "$VERDICT" ] && ! echo "$VERDICT" | grep -qi "skip"; then
-        block_with_scores "planning agent spawn requires GATE:HYPOTHESIS pass" "gate_hypothesis_cause"
+        block_with_scores "planning agent spawn${_label} requires GATE:HYPOTHESIS pass" "gate_hypothesis_cause"
       fi
       ;;
     implementation|testing)
       # Gate 2: implementation / test-writing spawn → GATE:PLAN pass required.
-      block_with_scores "${ROLE} agent spawn requires GATE:PLAN pass" "gate_plan"
+      block_with_scores "${ROLE} agent spawn${_label} requires GATE:PLAN pass" "gate_plan"
       ;;
     *)
       # Undeclared spawn while a cycle is active: deny LOUDLY. Inference from
       # prompt text is deliberately not attempted — a silent misclassification
       # (either direction) is worse than this explicit, self-describing stop.
       echo "BLOCKED: Agent spawn without a declared AutoFlow role while a cycle is active." >&2
-      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|loopcheck|planner|facilitator|implementer|tester|evaluator}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
+      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|loopcheck|planner|facilitator|implementer|tester|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
       ;;
   esac
+}
+
+if [ "$TOOL_NAME" = "Agent" ]; then
+  ROLE=$(resolve_spawn_role)
+  if [ -n "$CALLER_UNIT_ROLE" ]; then
+    # A unit agent's spawn: admitted without a declaration and judged by the
+    # caller's class (ADR-0025 D5). A declared role that has a gate of its own
+    # keeps it as well, so an existing role type is never judged more loosely
+    # because a unit spawned it.
+    apply_role_gate "$CALLER_UNIT_ROLE" " (inherited from caller $CALLER_TYPE)"
+    case "$ROLE" in
+      ''|research) ;;
+      *) apply_role_gate "$ROLE" "" ;;
+    esac
+  else
+    apply_role_gate "$ROLE" ""
+  fi
+  exit 0
 fi
 
 # An open re-entry is not pushed past: while a gate's latest record carries

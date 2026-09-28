@@ -168,18 +168,18 @@ No separate disposition system exists for gate recommendations.
   `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
   severity, finding), is a report defect:
   reject and re-spawn the evaluator, as for a missing `fail_hypothesis`.
-- **A criterion defect goes to the operator, at any severity.** A recommendation that records an
+- **A criterion defect goes to the advisor, at any severity.** A recommendation that records an
   acceptance criterion defective — the evaluator records one as a fact, the criterion as its subject
   ([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format) — or one whose fix
   could keep a criterion's letter only by adding a rule the criterion did not state
   ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), is neither
-  routed, separated nor deferred as a `Low`: it is put to the operator and the answer recorded as
-  `[ac-decision]` entries ([ARCHITECT](architect.md) > *Report routing* > *An acceptance-criterion change raised
+  routed, separated nor deferred as a `Low`: it is put to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) and the
+  answer recorded as its `[ac-decision]` entries ([ARCHITECT](architect.md) > *Report routing* > *An acceptance-criterion change raised
   later in the cycle*).
 - **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
   the change:
   - **A gate after execution** — AUDIT and GATE:QUALITY — routes by `scripts/gate/remedy-route.sh
-    route` over the `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere pauses)
+    route` over the `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere stops routing and goes to the advisor)
     and re-enters the phase it prints (`DOC_COMMIT` / `RED` / `GREEN` / `ARCHITECT`, exactly as at
     *FAIL routing*, the `doc` route's sweep record included); the routed work flows forward, and the
     recommending gate re-scores on the narrowed input its re-entry already uses.
@@ -199,17 +199,17 @@ No separate disposition system exists for gate recommendations.
     and no `remedy_class` in state.
   - **Not directly related** — none of question 1's three conditions holds — is separated as *Scope
     judgment*'s table says, recorded with its ground and a separate issue the follow-up path. A
-    `Medium`+ recommendation that **is** directly related is fixed on its route or paused for the
-    operator; the orchestrator never separates one on its own judgment (pause criterion (b)).
-- **Pause for the user** (`AskUserQuestion`, situation-first; `active:false`,
-  `phase:"awaiting-user"`) when the attempt hits any of: (a) the fix needs a contract /
-  acceptance-criterion change — recorded on the operator's answer as an `[ac-decision]` entry
+    `Medium`+ recommendation that **is** directly related is fixed on its route or put to the
+    advisor; the orchestrator never separates one on its own judgment (advisor criterion (b)).
+- **Put to the advisor** (a request written situation-first — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not
+  pause) when the attempt hits any of: (a) the fix needs a contract /
+  acceptance-criterion change — recorded as the advisor's `[ac-decision]` entry
   ([ARCHITECT](architect.md) > *Report routing* > *An acceptance-criterion change raised later in the cycle*);
   (b) the fix direction is ambiguous, or the orchestrator judges a directly related recommendation
   undesirable to fix in this cycle (question 2) and would separate it; (c) the item is
   `Low Confidence`; (d) the re-score dispositions the previous attempt's finding `remains` after its
-  fix (`rescore.prior_findings`) — the same complaint answered twice. The user's answer is appended to the ledger and selects
-  re-entry.
+  fix (`rescore.prior_findings`) — the same complaint answered twice. The advisor's `A` entry
+  selects re-entry; the operator may override it at the retry stage.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
   gate's verdict entry: fix now, or defer — to the PR body's known-gaps line
   ([`pr-body-guide.md`](../pr-body-guide.md) > *한계와 known gaps*), or, for a `Low` below the decision
@@ -242,7 +242,7 @@ No separate disposition system exists for gate recommendations.
   and counted by the gate's own rule, and a route through ARCHITECT consumes the ARCHITECT re-entry
   counter. The transition opens when the PASS stands and no attempt is open — every `Medium`+
   fixed and re-scored clean, withdrawn by the re-score on its rebuttal, separated as not directly
-  related, or decided by the operator, and any
+  related, or decided by the advisor or the operator, and any
   `Low` fixed now re-scored.
 
 **This section is the rule's only home** ([`development-guideline.md`](../development-guideline.md) >
@@ -265,7 +265,7 @@ Test AI do not re-classify.
 | `test` | the item clears by changing test assets | RED |
 | `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
 | `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
-| `operator` | the evaluator cannot classify with confidence | report situation-first, `active:false`, `phase:"awaiting-user"`; the operator's answer fixes the class |
+| `operator` | the evaluator cannot classify with confidence | the advisor's answer fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor); the cycle re-enters on that class's route |
 
 - **Default class per item** — the evaluator's starting point, overridable with a stated reason:
   `Doc updates` → `doc`; `Test coverage`, `Test quality` → `test`; `Fit` → `design`; every other
@@ -274,7 +274,7 @@ Test AI do not re-classify.
   `doc`. When the evaluator is not confident, it writes `operator` rather than guessing: an
   unclassifiable item is never carried along a route chosen for its neighbours.
 - **Mixed classes go to the farthest point**: `design` > `impl` > `test` > `doc`; `operator` anywhere
-  pauses. `scripts/gate/remedy-route.sh route <class>...` is the single owner of this rule; the
+  stops routing and goes to the advisor. `scripts/gate/remedy-route.sh route <class>...` is the single owner of this rule; the
   orchestrator records the routed class as `phases.gate_quality.remedy_class` in the state file
   ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking > Remedy class recording).
 - **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: reject

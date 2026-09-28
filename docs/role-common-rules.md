@@ -214,7 +214,7 @@ above).
    - **ACCEPT** — name the dimensions verified and why each passed.
    - **COUNTER** — state the problem + a concrete alternative + evidence.
    - **PARTIAL** — accept the parts that pass; counter the parts that don't.
-   - **ESCALATE** — fundamental disagreement → present both sides to the user.
+   - **ESCALATE** — fundamental disagreement → present both sides as an un-agreed point; the orchestrator routes it (a further round, or the advisor — `role-contracts.md` > Advisor).
 
 **Anti-patterns (forbidden)**:
 

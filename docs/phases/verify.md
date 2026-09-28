@@ -56,11 +56,11 @@ Run the tests; on failure, branch by cause.
      │    ├─ directly related but not desirable, or not directly related → ask the Developer AI
      │    │  to remove it, stating the separation reason or the condition that fails
      │    ├─ the Test AI's judgment differs from the GREEN report's → one orchestrator judgment
-     │    │  between the two recorded grounds, in an `O` ledger entry (the operator's when the
+     │    │  between the two recorded grounds, in an `O` ledger entry (the advisor's when the
      │    │  orchestrator is not confident) — not an ARCHITECT round
      │    └─ keeping it would change a design decision → a scope question to ARCHITECT
      ├─ What the diff shows — in scope or out — reveals an acceptance criterion defective
-     │  ([`decision-ledger.md`](../decision-ledger.md) > Acceptance-criterion decisions) → raised for the operator,
+     │  ([`decision-ledger.md`](../decision-ledger.md) > Acceptance-criterion decisions) → raised for the advisor,
      │  not resolved by keeping the criterion's letter ([ARCHITECT](architect.md) > Report routing > An
      │  acceptance-criterion change raised later in the cycle)
      └─ A helper, private branch or internal abstraction whose required behavior is already
@@ -109,7 +109,8 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
   the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit. The re-deliberation
   returns through GATE:PLAN and re-enters RED, and consumes the existing GATE:PLAN → ARCHITECT cap
   (max 3× per cycle; the 4th → human);
-- undecidable → human.
+- undecidable → the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor), whose answer
+  routes to RED or GREEN.
 
 **Max round-trips**: GREEN ↔ VERIFY max 3. After 3 unresolved → human.
 

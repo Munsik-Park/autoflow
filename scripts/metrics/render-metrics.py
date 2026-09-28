@@ -34,7 +34,7 @@ import os
 import sys
 
 AGENT_FIELDS = ('id', 'role', 'model', 'description', 'phase_key', 'phase_key_method', 'phase_marker',
-                'workflow', 'parent', 'start', 'end', 'calls', 'usage', 'first_in', 'max_context', 'rewrites')
+                'unit', 'unit_method', 'workflow', 'parent', 'start', 'end', 'calls', 'usage', 'first_in', 'max_context', 'rewrites')
 ISSUE_FIELDS = ('key', 'repo', 'issue', 'arm', 'kind', 'operator_minutes', 'note', 'operator_prompts',
                 'operator_prompts_known', 'segments', 'prs', 'pr_states', 'outcome', 'totals')
 

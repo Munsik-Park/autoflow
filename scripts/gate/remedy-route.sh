@@ -15,10 +15,11 @@
 #   impl     → GREEN       (→ VERIFY step 1 → REFINE → VALIDATE)
 #   design   → ARCHITECT   (shares the GATE:PLAN → ARCHITECT re-entry cap)
 #   operator → PAUSE       (the evaluator could not classify with confidence;
-#                           the operator decides — active:false, phase:awaiting-user)
+#                           routing stops and the advisor fixes the class —
+#                           docs/role-contracts.md > Advisor, ADR-0025 D7)
 #
 # Mixed classes go to the farthest point: design > impl > test > doc. An
-# `operator` class anywhere in the set pauses regardless of the others — an
+# `operator` class anywhere in the set stops routing regardless of the others — an
 # unclassifiable item must not be carried along a route chosen for its
 # neighbours.
 #
