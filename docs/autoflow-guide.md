@@ -24,7 +24,7 @@ Key principles:
 - **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` and never restated in prose; the rule that governs it is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase.
 
 The phase names generalize upstream's numeric `STEP 0~9` identifiers; the
-mapping is preserved 1:1 below.
+mapping is preserved below, with upstream's STEP 4–5.5 merged into one BUILD unit (ADR-0025).
 
 | upstream | this guide |
 |----------|------------|
@@ -33,12 +33,7 @@ mapping is preserved 1:1 below.
 | STEP 1.5 | GATE:HYPOTHESIS |
 | STEP 2 | ARCHITECT |
 | STEP 3 | GATE:PLAN |
-| STEP 4 | DISPATCH |
-| STEP 5a | RED |
-| STEP 5b | GREEN |
-| STEP 5c | VERIFY |
-| STEP 5d | REFINE |
-| STEP 5.5 | VALIDATE |
+| STEP 4, 5a–5d, 5.5 | BUILD |
 | STEP 5.7 | AUDIT |
 | STEP 6 | GATE:QUALITY |
 | STEP 7 | DELIVER |
@@ -60,12 +55,8 @@ flowchart TD
     HYPC{{GATE:HYPOTHESIS<br/>cause}}:::gate
     ARC[ARCHITECT<br/>Design unit]:::phase
     PLAN{{GATE:PLAN}}:::gate
-    DIS[DISPATCH]:::phase
-    RED[RED<br/>Test Writing]:::phase
-    GREEN[GREEN<br/>Implementation]:::phase
-    VER[VERIFY]:::phase
-    REF[REFINE]:::phase
-    VAL[VALIDATE]:::phase
+    BLD[BUILD<br/>Build unit]:::phase
+    EXIT{{exit check}}:::gate
     AUD{{AUDIT}}:::gate
     QUAL{{GATE:QUALITY}}:::gate
     DEL[DELIVER<br/>Sub-Repo Push]:::phase
@@ -89,30 +80,25 @@ flowchart TD
     HYPC -->|FAIL ×3| HUMAN
     HYPC -.->|non-code root cause| ADV
     ARC --> PLAN
-    PLAN -->|PASS| DIS
+    PLAN -->|PASS| BLD
     PLAN -->|FAIL ≤3×| ARC
     PLAN -->|FAIL ×4| HUMAN
-    DIS --> RED
-    RED --> GREEN
-    GREEN --> VER
-    VER -->|test issue| RED
-    VER -->|impl issue| GREEN
-    VER -->|deadlock other than a design contradiction| ADV
-    VER -.->|design contradiction<br/>AC set unsatisfiable| ARC
-    VER -->|PASS| REF
-    REF --> VAL
-    VAL --> AUD
-    AUD -->|FAIL ≤2×| GREEN
+    BLD --> EXIT
+    BLD -.->|design contradiction<br/>AC set unsatisfiable| ARC
+    EXIT -->|omission · fill in place| BLD
+    EXIT -->|defect · shares AUDIT ≤2×| BLD
+    EXIT -->|pass| AUD
+    AUD -->|FAIL ≤2×| BLD
     AUD -->|FAIL ×3| HUMAN
     AUD -->|PASS| QUAL
     QUAL -->|PASS| DEL
-    QUAL -->|FAIL ≤3× · re-entry by remedy_class<br/>doc commit / RED / GREEN / ARCHITECT| RED
+    QUAL -->|FAIL ≤3× · re-entry by remedy_class<br/>doc commit / BUILD / ARCHITECT| BLD
     QUAL -->|FAIL ×4| HUMAN
     DEL --> INT
-    INT -->|FAIL| RED
+    INT -->|FAIL| BLD
     INT -->|PASS| HAND
     HAND -.->|env / push rejection ≤2×| HAND
-    HAND -->|CI failure · re-entry by remedy_class<br/>doc commit / RED / GREEN / ARCHITECT| RED
+    HAND -->|CI failure · re-entry by remedy_class<br/>doc commit / BUILD / ARCHITECT| BLD
     HAND -->|retry exhausted| HUMAN
     HAND -->|PR created, CI green| DONE
 
@@ -141,23 +127,20 @@ ARCHITECT ◄── retry ≤3×
 GATE:PLAN
     │
     ▼
-DISPATCH → RED → GREEN ⇄ VERIFY (≤3 round-trips) → REFINE
-                          └─ design contradiction (AC set unsatisfiable) ─► ARCHITECT (≤3×) → GATE:PLAN → RED
+BUILD (one unit spawn) → exit check
+  └─ design contradiction (AC set unsatisfiable) ─► ARCHITECT (≤3×) → GATE:PLAN → BUILD
                                                        │
                                                        ▼
-                                                   VALIDATE
+                                                    AUDIT  ◄── retry ≤2× (shared with exit-check defects)
                                                        │
                                                        ▼
-                                                    AUDIT  ◄── retry ≤2×
-                                                       │
-                                                       ▼
-                                                GATE:QUALITY ◄── retry ≤3× → by remedy_class (doc commit / RED / GREEN / ARCHITECT)
+                                                GATE:QUALITY ◄── retry ≤3× → by remedy_class (doc commit / BUILD / ARCHITECT)
                                                        │
                                                        ▼
                                                     DELIVER
                                                        │
                                                        ▼
-                                                   INTEGRATE → [FAIL] → GREEN (impl)
+                                                   INTEGRATE → [FAIL] → BUILD (impl)
                                                        │
                                                        ▼
                                                    HANDOFF ◄── retry ≤2×
@@ -180,12 +163,7 @@ Loading Contract routes to the same files.
 | GATE:HYPOTHESIS | [`phases/gate-hypothesis.md`](phases/gate-hypothesis.md) |
 | ARCHITECT | [`phases/architect.md`](phases/architect.md) |
 | GATE:PLAN | [`phases/gate-plan.md`](phases/gate-plan.md) |
-| DISPATCH | [`phases/dispatch.md`](phases/dispatch.md) |
-| RED | [`phases/red.md`](phases/red.md) |
-| GREEN | [`phases/green.md`](phases/green.md) |
-| VERIFY | [`phases/verify.md`](phases/verify.md) |
-| REFINE | [`phases/refine.md`](phases/refine.md) |
-| VALIDATE | [`phases/validate.md`](phases/validate.md) |
+| BUILD | [`phases/build.md`](phases/build.md) |
 | AUDIT | [`phases/audit.md`](phases/audit.md) |
 | GATE:QUALITY | [`phases/gate-quality.md`](phases/gate-quality.md) |
 | DELIVER | [`phases/deliver.md`](phases/deliver.md) |
@@ -229,6 +207,6 @@ error.
 - [`CLAUDE.md`](../CLAUDE.md) — cross-phase invariants, the router (phase list + Flow Control), regression caps, Execution Principles, state schema.
 - [`phases/analysis.md`](phases/analysis.md) — DIAGNOSE analysis procedure (3-Phase A/B/3, scoring rubric, bias prevention).
 - [`evaluation-system.md`](evaluation-system.md) — scoring and PASS thresholds.
-- [`submodule-common-rules.md`](submodule-common-rules.md) — Discussion Protocol, sub-repo rules.
+- [`submodule-common-rules.md`](submodule-common-rules.md) — sub-repo rules, verification and reporting.
 - [`repo-boundary-rules.md`](repo-boundary-rules.md) — cross-repo coordination.
 - [`git-workflow.md`](git-workflow.md) — bash procedures, branch structure.

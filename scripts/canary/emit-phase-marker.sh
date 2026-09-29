@@ -20,7 +20,7 @@
 #   scripts/canary/emit-phase-marker.sh --issue <N> --cycle <C> --phase <NAME> --event <enter|exit>
 #     --issue <N>     issue number, canonical positive integer (no leading zeros)
 #     --cycle <C>     cycle number, canonical positive integer
-#     --phase <NAME>  free-form non-empty phase label (e.g. RED, GATE:PLAN)
+#     --phase <NAME>  free-form non-empty phase label (e.g. BUILD, GATE:PLAN)
 #     --event <E>     exactly one of: enter exit
 
 set -euo pipefail

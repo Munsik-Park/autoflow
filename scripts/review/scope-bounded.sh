@@ -34,7 +34,7 @@
 #           scope-bounded-grounds: <reason>
 #         Exit 0 when bounded, 1 when not, 2 on usage.
 #   check-fix --base <rev> --head <rev>
-#         Re-evaluates the fix condition after GREEN. Prints
+#         Re-evaluates the fix condition after the fix. Prints
 #           scope-bounded-fix: true|false
 #           scope-bounded-fix-grounds: <reason>
 #         Exit 0 when the bounded path holds, 1 when it must be left, 2 on usage.

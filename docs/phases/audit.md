@@ -4,12 +4,19 @@
 > Contract routes to this file; the other phases are listed in
 > [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
 
-After VALIDATE, run a project-specific security audit on the change. Complements
-GATE:QUALITY's `Security` item with 5 dedicated, project-specific items.
+AUDIT is the scored exit of the U4 Build and verify unit ([BUILD](build.md)): once the BUILD exit
+check passes, run a project-specific security audit on the change. Complements GATE:QUALITY's
+`Security` item with 5 dedicated, project-specific items.
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: change diff + the target's security checklist at the version the checklist status names
-(*Security checklist* below), or none when none is declared. In a **review-response cycle**,
+**Input**: the U4 artifact set — the change diff, the build report
+(`.autoflow/issue-{N}-build-report.md`) and the exit-check log
+(`.autoflow/issue-{N}-build-exit-check.log`) — + the target's security checklist at the version the
+checklist status names (*Security checklist* below), or none when none is declared. The evaluator
+re-runs `bash scripts/gate/build-exit-check.sh --issue {N}` itself and attaches its verdict line to
+its report; on a verdict other than `pass` it scores nothing and returns that line. That return is
+a routed result, not a report defect: the orchestrator does not re-spawn the evaluator and routes it
+as the exit check's verdict ([BUILD](build.md) > *Exit check*). In a **review-response cycle**,
 additionally the previous cycle's AUDIT report (`.autoflow/issue-{N}-c{C-1}-audit.md`, preserved at
 PREFLIGHT) — its `## Low findings` list is the re-score's starting set.
 
@@ -70,6 +77,8 @@ item is judged by; with none declared, the criteria below are the whole of it.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → immediate block) → recommendation triage
   ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) → GATE:QUALITY.
-- **FAIL** → fix, re-evaluate (max 2×). Third FAIL → human.
+- **FAIL** → a BUILD unit re-run with the report's failed items ([BUILD](build.md) > *Re-entry*),
+  then the exit check and a re-evaluation (max 2×, the counter shared with exit-check defects).
+  Third FAIL → human.
 
 GATE:QUALITY's `Security` item references the AUDIT result.

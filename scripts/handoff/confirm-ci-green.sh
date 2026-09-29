@@ -485,14 +485,14 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   total="${total:-0}"; fail="${fail:-0}"; green="${green:-0}"
 
   if [ "$fail" -gt 0 ]; then
-    echo "a check concluded failure/error/cancelled/timed_out — red CI (route to RED)" >&2
+    echo "a check concluded failure/error/cancelled/timed_out — red CI (route by remedy_class)" >&2
     exit 12
   fi
   # An undetermined read withholds the GREEN verdict only: exit 0 is contracted
   # as "CI green on a PR whose mergeable state was confirmed". The fail>0 branch
   # above and the saw_checks accounting below still run — a concluded failure is
   # true of the read however mergeability resolves, and masking it would sleep a
-  # red build to a deadline code that never routes to RED.
+  # red build to a deadline code that never routes a re-entry.
   # An unresolved superseded-run lookup withholds the GREEN verdict the same way.
   if [ "$undetermined" -eq 0 ] && [ "$RUN_WF_COMPLETE" -eq 1 ] \
      && [ "$total" -gt 0 ] && [ "$green" -eq "$total" ]; then

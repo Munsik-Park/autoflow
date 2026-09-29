@@ -123,10 +123,6 @@ build_rows() {
     fi
   done
 
-  # Root-layer tier: deliberation workflow.
-  emit_row ".claude/workflows/verify-cause-branch.js" \
-           ".claude/workflows/verify-cause-branch.js" "root-layer" "copy" "file"
-
   # Root-layer tier: drift detector + canonical drift-reference copies.
   emit_row "setup/thin-root-layer/drift-check.sh" \
            ".claude/autoflow/drift-check.sh" "root-layer" "copy" "file"
@@ -203,7 +199,7 @@ build_rows() {
   emit_row "scripts/ledger/ledger-entry-id.sh" \
            "scripts/ledger/ledger-entry-id.sh" "root-layer" "copy" "file"
   # Class-routed re-entry (issues #140, #192). The stamped phase playbooks
-  # (docs/phases/) route every GATE:QUALITY / VALIDATE / INTEGRATE FAIL and every Medium+
+  # (docs/phases/) route every GATE:QUALITY / INTEGRATE / CI FAIL and every Medium+
   # reviewer finding through it, and it is the single owner of that mapping — a
   # target without it must re-derive the routing by hand, which is the judgment
   # the script exists to replace.
@@ -215,6 +211,11 @@ build_rows() {
   # cycle cannot loosen the checklist its own AUDIT scores against.
   emit_row "scripts/gate/security-checklist.sh" \
            "scripts/gate/security-checklist.sh" "root-layer" "copy" "file"
+  # BUILD exit check. The stamped docs/phases/build.md has the orchestrator run
+  # it before AUDIT and the AUDIT evaluator re-run it; it is the deterministic
+  # half of the U4 unit's exit, so a target without it has no exit check.
+  emit_row "scripts/gate/build-exit-check.sh" \
+           "scripts/gate/build-exit-check.sh" "root-layer" "copy" "file"
   # Mechanical scope judgment (issue #135). HANDOFF step 6.5 runs it on every
   # Medium+ verdict as a [MUST], and PREFLIGHT reads its `scope-bounded:` line to
   # pick the bounded or full review-response path. Its whole point is that the
@@ -222,9 +223,8 @@ build_rows() {
   # without it falls back to exactly the estimate it replaces (llmroute #280).
   emit_row "scripts/review/scope-bounded.sh" \
            "scripts/review/scope-bounded.sh" "root-layer" "copy" "file"
-  # Suite selection and execution (the RED / VERIFY / VALIDATE test plane,
-  # opt-in per ADR-0024 D3). The stamped guide runs `run-suites.sh --all` at
-  # VALIDATE step 1 and RED derives its affected suite set with
+  # Suite selection and execution (the BUILD test plane, opt-in per
+  # ADR-0024 D3). BUILD derives its affected suite set with
   # `select-suites.sh` (issue #192); the gate hook that ships with the bundle
   # even denies a backgrounded run-suites invocation, so the bundle already
   # assumes the target has it. `suite-manifest.sh` is the sourced library the
@@ -266,15 +266,14 @@ build_rows() {
   # Single-source spawn policy (issue #150). The config is source-path-preserved
   # so one path serves the host repo and a stamped target alike, and the readout
   # ships for the same reason ledger-entry-id.sh does: the stamped CLAUDE.md >
-  # Spawn Model instructs a consumer to run it before every direct spawn, and
-  # the deliberation workflow above reads the config at run time. The
+  # Spawn Model instructs a consumer to run it before every direct spawn. The
   # doc-closure BFS follows only .md links, so neither file enters on its own.
   # SCAFFOLD, not copy (issue #150, cycle 2): the config is a sample the target
   # configures at stamp time, so a re-stamp must never overwrite a configured
   # policy (init.sh's scaffold arm is create-only, even under --force, and
   # drift-check reports it target-owned rather than as content drift). The
   # cost — a target stamped before a new row existed keeps a config missing it —
-  # is the state the workflow script and `spawn-policy.sh check` now report
+  # is the state `spawn-policy.sh check` now reports
   # loudly rather than swallow, which is what makes the trade payable.
   emit_row ".claude/autoflow/spawn-policy.json" \
            ".claude/autoflow/spawn-policy.json" "root-layer" "scaffold" "file"

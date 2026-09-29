@@ -7,15 +7,16 @@
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: full change set + test results + AUDIT result, plus the issue's acceptance-criterion list
 (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the verification design,
-the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the REFINE report
-(`.autoflow/issue-{N}-refine-report.md`, section `## Out-of-scope observations — guard / boundary
-logic touched`, and — on a target — section `## Comment check`), and the cycle's scope records —
+the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the build report
+(`.autoflow/issue-{N}-build-report.md` — [BUILD](build.md) > Build report — its run records, section
+`## Out-of-scope observations — guard / boundary logic touched`, and — on a target — section
+`## Comment check`), and the cycle's scope records —
 the feature design's `## Scope` section, every `## Scope judgments` section in the cycle's
 `.autoflow/issue-{N}-*.md` reports, and the `[gate-autofix]` ledger entries and gate verdict entries that
 record how earlier gates' recommendations were triaged
 ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-**[MUST] REFINE observations are scoring input**: the evaluator reads the REFINE
+**[MUST] Build observations are scoring input**: the evaluator reads the build
 report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
 `not a defect — reason`), and records the dispositions in the `refine_observations` output field
 ([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format). An entry dispositioned
@@ -32,7 +33,7 @@ The `Minimal implementation` item is scored against [`submodule-common-rules.md`
 Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope — the acceptance criteria, the confirmed cause, and the problems the cycle's recorded scope judgments include.
 A hunk tracing to none of them fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
 `Impact scope` is scored against the same section and the same scope from the other side: a directly related problem the cycle's records show, left out with no recorded separation reason, lowers it.
-On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the REFINE report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
+On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the build report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
 
 ## Known blind-spot checks (scored within existing items)
 
@@ -95,8 +96,8 @@ each-item ≥ 7 criterion:
   run there: on a target, a test file the cycle added is judged by the reviewer against the target's
   convention from the PR body's listing (HANDOFF step 4), not by a token ([`submodule-common-rules.md`](../submodule-common-rules.md)
   > Verification and Tools > *What a cycle leaves in the target's tree*); under this item the evaluator confirms
-  that every test file the cycle added to the target's tree carries, in the Test AI's RED report,
-  the reason it is kept and the CI job expected to run it — the record HANDOFF step 4 copies into
+  that every test file the cycle added to the target's tree carries, in the build report's
+  `## Test files kept` section, the reason it is kept and the CI job expected to run it — the record HANDOFF step 4 copies into
   the PR body — and an added file with no such record caps
   `Test quality` at 6.
 - **Test coverage — the run record is the subject**: the item's subject is not a CI result. For
@@ -105,7 +106,7 @@ each-item ≥ 7 criterion:
   by reading the line at the cited log path rather than by re-running; in this repository a
   `standing` row's subject is additionally the committed asset's realisability — the file exists,
   runs, and is CI-registered. For a `manual` row executed by the AI it is the row's observation
-  record (VERIFY step 1), confirmed by reading the record and opening the artifacts it cites — a
+  record ([BUILD](build.md) > Build report > `## Manual checklist`), confirmed by reading the record and opening the artifacts it cites — a
   screenshot is read as an image — never by observing again; a row with no record, or
   a record whose artifacts are absent, takes the omission path below.
   - **Execution omission is not a defect** ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *A missing run
@@ -114,8 +115,8 @@ each-item ≥ 7 criterion:
     `not-run: <rows>` and withholds that item's score. Such a report is not a verdict — it is not
     recorded in the state file, consumes no FAIL of the `max 3×` cap, and carries no `remedy_class`
     for the omission. The orchestrator has each named row run in place — a cycle-layer asset by its
-    path (the orchestrator itself may run it), a test in the target's tree by the owning role the
-    way the target runs its tests — and its record filled in, then spawns a fresh evaluator that
+    path (the orchestrator itself may run it), a test in the target's tree by a BUILD unit re-run
+    the way the target runs its tests — and its record filled in, then spawns a fresh evaluator that
     re-scores `Test coverage` only, in the *Re-entry re-score* form below with the withheld report
     as the inheritance source. A recorded run that **fails** is a defect, scored and classed like
     any other.
@@ -124,16 +125,16 @@ each-item ≥ 7 criterion:
   trigger areas are `docs/development-guideline.md` > ADR Policy > *When to create an ADR*). A
   divergence from a governing ADR, or an architecture-impacting change with no governing
   ADR/owner decision, caps Fit at 6.
-- **Completeness — AC-authority check**: the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a VERIFY → RED test
-  edit, or the satisfiable-subset GREEN implementation the GREEN playbook explicitly permits.
+- **Completeness — AC-authority check**: the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a test the
+  build rewrote after its first run, or the satisfiable-subset implementation [BUILD](build.md) permits on a design contradiction.
   The check is a **name-the-site obligation**, not the GATE:PLAN key join: for each
   verification-design row whose `Issue AC` is not `—`, the evaluator names the test file and
   assertion, or the implementation site, that discharges it. A row for which no
   site can be named, and which no `[ac-decision]`-marked ledger entry covers, caps `Completeness`
   at 6 (an `added` entry covers nothing: the criterion it adds is owed its row and its site).
   **Derivation is not drift**: a file row, suite disposition or oracle condition clause
-  RED or GREEN derived under the ARCHITECT layer split ([ARCHITECT](architect.md) > *Output artifacts* item 1;
-  [RED](red.md) > *Derivation on entry*) is the designed division of labour, never a post-ARCHITECT AC change.
+  BUILD derived under the ARCHITECT layer split ([ARCHITECT](architect.md) > *Output artifacts* item 1)
+  is the designed division of labour, never a post-ARCHITECT AC change.
   The check binds a verification-design row whose `Issue AC` is not `—` and for which no
   discharging site can be named.
 
@@ -158,7 +159,7 @@ No separate disposition system exists for gate recommendations.
 | `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
 | Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(d) | the same four, read for a gate (below) |
-| `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to DISPATCH (below) |
+| `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to BUILD (below) |
 | Verification of the fix: the reviewer re-review (step 6) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [GATE:PLAN](gate-plan.md) > *Re-entry re-score*; [AUDIT](audit.md) > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
 | Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
 
@@ -180,7 +181,7 @@ No separate disposition system exists for gate recommendations.
   the change:
   - **A gate after execution** — AUDIT and GATE:QUALITY — routes by `scripts/gate/remedy-route.sh
     route` over the `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere stops routing and goes to the advisor)
-    and re-enters the phase it prints (`DOC_COMMIT` / `RED` / `GREEN` / `ARCHITECT`, exactly as at
+    and re-enters where it prints (`DOC_COMMIT` / `BUILD` / `ARCHITECT`, exactly as at
     *FAIL routing*, the `doc` route's sweep record included); the routed work flows forward, and the
     recommending gate re-scores on the narrowed input its re-entry already uses.
   - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — does not call the script: every `Medium`+ recommendation is resolved on the artifact the gate scores,
@@ -190,11 +191,11 @@ No separate disposition system exists for gate recommendations.
     problem the confirmed cause carries enters its `## Scope judgments` — then the same form
     re-scores. The class such a recommendation carries (`doc` / `test` / `impl` / `design`) names the
     change the problem will need once the design or analysis carries it; it rides on the amended
-    artifact as the ground ARCHITECT or DISPATCH then reads, and it never sends the cycle forward
+    artifact as the ground ARCHITECT or BUILD then reads, and it never sends the cycle forward
     past the gate unre-scored. A fact below the decision layer ([ARCHITECT](architect.md) > *Output artifacts*
     item 1) is not a defect of the artifact these gates score, so the evaluator records it at `Low`, and the orchestrator's `Low` judgment **defers**
-    it: to the executing role — recorded in the gate's verdict entry as deferred to DISPATCH, carried
-    in the RED / GREEN spawn prompt, and judged with that work at GATE:QUALITY — or to the known-gaps
+    it: to the build — recorded in the gate's verdict entry as deferred to BUILD, carried
+    in the BUILD spawn prompt, and judged with that work at GATE:QUALITY — or to the known-gaps
     line. It is never a fix-now attempt: it takes no re-score by this gate, no `[gate-autofix]` entry
     and no `remedy_class` in state.
   - **Not directly related** — none of question 1's three conditions holds — is separated as *Scope
@@ -213,7 +214,7 @@ No separate disposition system exists for gate recommendations.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
   gate's verdict entry: fix now, or defer — to the PR body's known-gaps line
   ([`pr-body-guide.md`](../pr-body-guide.md) > *한계와 known gaps*), or, for a `Low` below the decision
-  layer at a gate before execution, to the executing role at DISPATCH (above). A `Low`
+  layer at a gate before execution, to the build at BUILD (above). A `Low`
   fixed now **enters the procedure above as an attempt from that point**: the orchestrator judges
   its `remedy_class` (the evaluator tags none on a `Low`), and the fix is routed, recorded as a
   `[gate-autofix]` entry, marked in `phases.<gate>.remedy_class`, re-scored by the same gate and
@@ -256,15 +257,15 @@ git grep -n -i -E 'recommendation triage|recommendations triaged|recommendation 
 
 The evaluator tags **every failed item** (score < 7) with a
 `remedy_class` — the kind of change that clears it — and the orchestrator re-enters the cycle at the
-nearest phase that can make that change. The evaluator is the classifying authority: the Developer AI /
-Test AI do not re-classify.
+nearest phase that can make that change. The evaluator is the classifying authority: the BUILD unit does not
+re-classify.
 
 | `remedy_class` | Meaning | Re-entry |
 |---|---|---|
 | `doc` | the item clears by editing documentation with no behavior change — in this repository comment text too; a target comment's divergence or disallowed content is never a failed item, while a defect a comment carries on its own ground is classed like any other (*Code comments in a target* below) | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
-| `test` | the item clears by changing test assets | RED |
-| `impl` | the item clears by changing implementation | GREEN → VERIFY step 1 → REFINE → VALIDATE |
-| `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the VERIFY design-contradiction row does) |
+| `test` | the item clears by changing test assets | a BUILD unit re-run with the failed items → exit check → AUDIT ([BUILD](build.md) > *Re-entry*) |
+| `impl` | the item clears by changing implementation | the same BUILD re-run |
+| `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the BUILD design-contradiction row does) |
 | `operator` | the evaluator cannot classify with confidence | the advisor's answer fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor); the cycle re-enters on that class's route |
 
 - **Default class per item** — the evaluator's starting point, overridable with a stated reason:
@@ -297,7 +298,9 @@ in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
    followed by no one). The judgment and its grounds are
    prose in the same file; the hook reads only the two sections.
 2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../../CLAUDE.md) > Team Structure /
-   Commit Ownership). **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
+   Commit Ownership); its lint outcome is added as that commit's rows in the build report's `## Lint`
+   table ([BUILD](build.md) > Build report), which the exit check reads on any later BUILD re-entry.
+   **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
    record exists with both sections non-empty** — it checks the record file, never the wording of an
    instruction. On a second `doc` FAIL of the same class, the orchestrator re-examines its scope
    judgment against the grounds the new report records — the previously flagged defect that
@@ -345,7 +348,7 @@ carry, never routes the cycle.
   finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
   personal data, for example — takes the severity and the route its impact sets, as any finding does.
 - **Fix — the orchestrator's direct commit.** Whether a comment surfaced by this gate's
-  `recommendations`, the REFINE report's `## Comment check` or the reviewer's `Low` findings (HANDOFF
+  `recommendations`, the build report's `## Comment check` or the reviewer's `Low` findings (HANDOFF
   step 6.5) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
   ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
   deletes comment lines or corrects their sentences and changes nothing else, and it ends there: no
@@ -361,5 +364,5 @@ carry, never routes the cycle.
 - **This repository is excluded.** Here a comment takes the reviewer's severity as judged, the
   `doc` class, and the `doc` re-entry's sweep record.
 - *Secondary (multi-repo):* a comment in a sub-repo is outside the orchestrator's scope
-  ([`CLAUDE.md`](../../CLAUDE.md) > Cross-Project Boundary Rules); the Developer AI of that scope makes
+  ([`CLAUDE.md`](../../CLAUDE.md) > Cross-Project Boundary Rules); the build unit of that scope makes
   the same single commit on the same terms.

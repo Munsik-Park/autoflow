@@ -1,12 +1,12 @@
 # Role Contracts
 
-> This document defines the role contracts for the role spawns that the AI Orchestrator dispatches in AutoFlow: **Evaluation AI**, **Test AI**, and **Submodule AI (Developer AI)**. The Orchestrator's own coordination responsibilities remain in [`CLAUDE.md`](../CLAUDE.md) > Team Structure. Per-phase spawn model policy: see [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase.
+> This document defines the role contracts for the role spawns that the AI Orchestrator dispatches in AutoFlow: **Evaluation AI**, the **advisor**, the **functional-unit agents**, and the **build unit in a target scope**. The Orchestrator's own coordination responsibilities remain in [`CLAUDE.md`](../CLAUDE.md) > Team Structure. Per-phase spawn model policy: see [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase.
 
 ---
 
 ## Role Vocabulary and Spawn Mode
 
-**Role vocabulary.** The usage documents (`CLAUDE.md`, `docs/*.md`, `docs/phases/*.md`, `.claude/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, Test AI, Developer AI (Submodule AI), and the DIAGNOSE / HANDOFF analysis and loop-check spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
+**Role vocabulary.** The usage documents (`CLAUDE.md`, `docs/*.md`, `docs/phases/*.md`, `.claude/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the DIAGNOSE / HANDOFF analysis and loop-check spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
 
 ### Spawn mode by role lifetime
 
@@ -14,19 +14,17 @@ Every role is an anonymous direct spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn Mod
 
 | Role (where it occurs) | Spawn mode | Per-call scope |
 |---|---|---|
-| Evaluation AI (GATE:HYPOTHESIS structure/cause, GATE:PLAN, AUDIT, GATE:QUALITY, VERIFY arbitration) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
+| Evaluation AI (GATE:HYPOTHESIS structure/cause, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
 | DIAGNOSE (intake readiness triage, Phase A, Phase B, Phase 3, review-response loop check) | anonymous direct | single-shot — writes its body to `.autoflow/issue-{N}-*.md` and returns an anchor + one-line summary |
-| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5) and CI-failure classifier (step 5) | anonymous direct | single-shot — ingests the reviewer comment or the failing check's output, records the class and its grounds, and returns; the re-entry it feeds runs through the Test AI / Developer AI rows |
-| Test AI (RED, VERIFY self-check, REFINE Green re-confirmation) | anonymous direct | one spawn per phase entry; continuity across RED → VERIFY → REFINE is carried by the `.autoflow/*` artifacts, not by a retained context |
-| Developer AI (GREEN, VERIFY self-check, REFINE) | anonymous direct | one spawn per phase entry; the same artifact-carried continuity, and each entry resolves its own model from the config |
+| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5) and CI-failure classifier (step 5) | anonymous direct | single-shot — ingests the reviewer comment or the failing check's output, records the class and its grounds, and returns; the re-entry it feeds runs through the unit rows |
 | Advisor (a decision point in any phase — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its `A`-namespace ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
-| Functional-unit agents U2 / U3 / U4 (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per unit entry, prescribed by the unit's goal, artifact contract and verification (ADR-0025 D2); a FAIL returns its findings and the previous artifacts to a fresh unit spawn. Defined in the common frame (#372) and wired into the lifecycle by each unit's migration step (ADR-0025 D9): U3 runs ARCHITECT; until their step, U2 and U4 are run by the phase roles above |
+| Functional-unit agents U2 / U3 / U4 (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per unit entry, prescribed by the unit's goal, artifact contract and verification (ADR-0025 D2); a FAIL returns its findings and the previous artifacts to a fresh unit spawn. Defined in the common frame (#372) and wired into the lifecycle by each unit's migration step (ADR-0025 D9): U3 runs ARCHITECT and U4 runs BUILD; until its step, U2 is run by the DIAGNOSE row above |
 
-Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DISPATCH (orchestrator; each task travels in the RED / GREEN spawn prompt), VALIDATE (automatic gate), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier (step 5) — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
+Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), BUILD's exit check (orchestrator, `scripts/gate/build-exit-check.sh`), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier (step 5) — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
 
 ### Model tier revert
 
-**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through a VERIFY failure, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. A lower-tier **role spawn** is covered on the same terms: the phase-exit claim it returns — RED's Red confirmation, GREEN's implementation-done — stands where a gate's PASS stands, and the contradicting signal is the VERIFY cause-branch verdict that attributes the failure to that role in the same cycle (`fix_test` for the Test AI, `fix_impl` for the Developer AI), or a reviewer-review Medium+ finding on the artifact that role produced. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
+**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through a BUILD exit-check defect, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. A lower-tier **role spawn** is covered on the same terms: the exit claim it returns — a unit's artifacts done — stands where a gate's PASS stands, and the contradicting signal is the next check's finding on what it produced in the same cycle (the BUILD exit check, AUDIT, GATE:QUALITY), or a reviewer-review Medium+ finding on that artifact. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
 
 A change to the per-phase assignment follows the revert rule above.
 
@@ -35,7 +33,7 @@ A change to the per-phase assignment follows the revert rule above.
 ## Evaluation AI (subagent)
 - Independent evaluator that does not participate in planning or implementation.
 - A fresh agent is spawned every call.
-- Spawn model: resolved from the spawn policy, never restated here — `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`) and for `verify-arbitration`. Source: `.claude/autoflow/spawn-policy.json`; revert conditions: *Model tier revert* above.
+- Spawn model: resolved from the spawn policy, never restated here — `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`; revert conditions: *Model tier revert* above.
 - Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
 
 ### Evaluation AI Prompt Rules
@@ -59,11 +57,11 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`phases/handoff.md`](phases/handoff.md) > step 6.5 > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
 - **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less role-spawn report (`CLAUDE.md` > Execution Principles > *Verify role-spawn claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
 
-### REFINE observations (GATE:QUALITY input)
+### Build observations (GATE:QUALITY input)
 
 Binds the GATE:QUALITY form only.
 
-- **[MUST]** Read the REFINE report's `## Out-of-scope observations — guard / boundary logic touched` section, disposition every entry (`defect — scored under <item>` or `not a defect — <reason>`), and record the dispositions in the `refine_observations` output field. A `defect` entry is scored under `Quality` or `Impact scope`. The author's rejection reason is context, not the disposition.
+- **[MUST]** Read the build report's (`.autoflow/issue-{N}-build-report.md`) `## Out-of-scope observations — guard / boundary logic touched` section, disposition every entry (`defect — scored under <item>` or `not a defect — <reason>`), and record the dispositions in the `refine_observations` output field. A `defect` entry is scored under `Quality` or `Impact scope`. The author's rejection reason is context, not the disposition.
 - **[MUST]** A report whose `refine_observations` is absent, or that does not account for every entry in the section, is rejected and the evaluator re-spawned, with the same cap (max 2) and escalation as an empty `fail_hypothesis`.
 
 ### Scope judgments (GATE:PLAN / GATE:QUALITY)
@@ -125,7 +123,7 @@ scored under the ordinary items, the `doc` class included.
 - A line a tool reads to change its behavior — a lint suppression, a type-checker directive — is
   code even in comment syntax: a defect in it is scored under the item its behavior belongs to, not
   by this rule. An explanation written beside it is a comment.
-- `Minimal implementation` weighs the comments the change adds by content and by volume — the REFINE
+- `Minimal implementation` weighs the comments the change adds by content and by volume — the build
   report's `## Comment check` section, its `comment-ratio` line included, with the comments in the
   diff — and records a content or volume finding in its `reason` and in `recommendations` without
   lowering its score ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
@@ -160,99 +158,37 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 
 ---
 
-## Test AI (testing role)
-- **[MUST]** Applies **Test necessity** to existence: a test exists only when it is needed — the burden of proof lies on the test, and the default under uncertainty is `none`. Retention is a separate question: `cycle` by default (uncommitted, run once from `.autoflow/issue-{N}-local/`), and a file added to the target's tree is the listed exception the reviewer judges — in the AutoFlow repository itself, a `standing` row under one of ADR-0024 D1's closed tokens (`automated / standing: <token>`). Rule body: [`phases/architect.md`](phases/architect.md) > Output artifacts > *Test necessity*.
-- Writes test code before implementation (Test First) and confirms Red — every `driving` and `regression` test fails; a `characterization` test may start green. Finds how the target runs its tests at the location it executes in, and how its CI selects tests for a change, judges which of the target's tests the change requires, runs them that way and records each run's command, log and summary line with the grounds; runs nothing tree-wide ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *How a test is run is the target's practice*, *Local verification*).
-- **[MUST]** Writes comments in test files under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Code comments*: a test's intent is stated in its name and its assertion messages, and a comment in a test file carries only the reason for a fixture that the fixture does not make evident. Before committing a test file it runs the comment check over the lines it adds and disposes of every hit, recording each in its report ([`phases/red.md`](phases/red.md) > step 1; the check is REFINE step 1's).
-- **[MUST]** At VERIFY step 1, performs each `manual` row whose executor is `AI: <tool>` with that tool and writes the row's observation record under `.autoflow/issue-{N}-local/` — what was looked at, how, the artifacts it left, the comparison against the referenced material, and the result line; the implementer does not certify its own result. A tool that neither this environment nor the target's procedures provide is reported to the orchestrator, never acquired. Rule body: [`phases/verify.md`](phases/verify.md) > step 1.
-- Performs minimal-implementation verification after implementation: detects observable behavior or contract the implementation introduces outside the cycle's scope (feature design with its `## Scope` section + verification design), not code outside test coverage, and judges each such behavior under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*, recording the judgment in its report — a directly related behavior desirable to fix here is in scope; one that is not is removed with its separation reason. Rule body: [`phases/verify.md`](phases/verify.md) > step 3.
-- **[MUST]** Performs the mock-boundary fidelity check after implementation: re-enumerates the iteration set from the test tree at HEAD (every double in scope and the real interface each stands for), re-derives each real interface at HEAD, and cites its `file:line`. Rule body: [`phases/verify.md`](phases/verify.md) > step 4.
-- **[MUST]** States, per check, the **detection outcome** — `detected` / `clean` / `not-run` — in the VERIFY report, together with the iteration set as named doubles; a check that did not execute is reported `not-run`, never `clean`. The orchestrator appends these outcomes to the decision ledger; see [`phases/verify.md`](phases/verify.md) > *Detection record*.
-- **[MUST]** Runs the target repository's lint chain over the staged files before committing, confirms zero errors attributable to them, and reports one outcome word per chain it identified, with the grounds of the identification, as the commit's lint-outcome evidence anchor. Rule body: [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
-- Operates independently from the Developer AI — tests are written from acceptance criteria, not from the developer's intended implementation.
-- Spawn model: resolved from the spawn policy, never restated here — `bash scripts/spawn-policy/spawn-policy.sh model red` (and `refine-test-reconfirm` at REFINE). The row's tier moves only under the revert rule (*Model tier revert* above). Source: `.claude/autoflow/spawn-policy.json`.
-- **[MUST]** Runs verification in the **foreground**; never uses `run_in_background`. See [`role-common-rules.md`](role-common-rules.md) > Bash Execution Mode.
-- **[MUST]** Reports to the orchestrator through the spawn's **return value**. This role is spawned as an **anonymous direct subagent** (`subagent_type: autoflow-tester`), so no mailbox exists and the return value is the report — the body goes to `.autoflow/*` and the return carries an anchor plus a one-line summary. See [`role-common-rules.md`](role-common-rules.md) > Result delivery path by spawn mode. The role's spawn mode is fixed by *Spawn mode by role lifetime* above.
+## Build unit in a target scope
 
----
+The U4 build unit (`autoflow-unit-build`; *Functional-unit agents* below) works in the target scope the
+orchestrator assigns it — the target repository, or in a multi-repo host one sub-repo's directory
+([`CLAUDE.md`](../CLAUDE.md) > Cross-Project Boundary Rules). What it owes the build is
+[`phases/build.md`](phases/build.md) > *What the build owes*; what it owes the scope is below.
 
-## Submodule AI (per sub-repo, Developer AI)
-- Understands and implements the assigned sub-repo's code.
-- Writes the minimum code that satisfies the issue acceptance criteria within the cycle's scope and passes the `automated` tests written by the Test AI (does not implement behavior outside that scope; an AC with a non-automated disposition is still implemented — see [`phases/green.md`](phases/green.md)).
-- **[MUST]** Judges a problem it meets that the scope does not name under [`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment* and records the judgment in its report: a directly related problem desirable to fix here is fixed in the cycle, one that is not is left with its separation reason, and one showing that an acceptance criterion must change is raised for the advisor ([`phases/green.md`](phases/green.md) > step 2).
-- Has read access to other sub-repos; modifications stay within the assigned sub-repo.
-- Uses the tools its work needs — the ones the verification design's `## Tools` section records, and any the implementation itself needs — and, for a row verified with a tool, looks at its result with that tool while implementing; the row's evidence is the Test AI's observation record at VERIFY. A tool that neither this environment nor the target's procedures provide is reported to the orchestrator, never acquired ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; [`phases/green.md`](phases/green.md) > step 2).
-- Works directly in the target repo and commits to the cycle's branch. It does not push: the push is the orchestrator's, at DELIVER ([`phases/deliver.md`](phases/deliver.md)), as is PR creation.
-- *Secondary (multi-repo):* when the target is a sub-repo, the branch is the AI's fork branch (in the fork-and-PR model), which the orchestrator pushes to the fork at DELIVER.
-- Runs the RED tests first and confirms that every `driving` and `regression` test fails before implementing — a `characterization` test may already pass ([`phases/green.md`](phases/green.md) > step 1); then runs locally, once, the tests the change requires, the way the target runs its tests and with its CI's selection as guidance, and reports each command with its log and summary line; never a whole-tree run ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *How a test is run is the target's practice*, *Local verification*).
-- **[MUST]** Runs the target repository's lint chain over the staged files before committing, confirms zero errors attributable to them, and reports one outcome word per chain it identified, with the grounds of the identification, as the commit's lint-outcome evidence anchor. Rule body: [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
-- **[MUST]** At REFINE, writes `.autoflow/issue-{N}-refine-report.md` — opening with the `simplify:` / `simplify-grounds:` lines that record whether /simplify ran, over what, and why (the Developer AI's judgment on the diff) — with its four sections — `## Applied`, `## Rejected / deferred`, `## Out-of-scope observations — guard / boundary logic touched`, `## Comment check` — each present, `none` when empty. A /simplify suggestion rejected as behavior-changing that touches validation, a guard, path / root resolution, an input or output boundary, or error handling — or that it judges directly related to the issue, whatever its subject — goes into the third section with its `path:line` and the behavior it would change (`docs/phases/refine.md` > REFINE report). The fourth section records the comment check over the cycle's diff — the comment-line ratio as an observation and each hit's disposition (`docs/phases/refine.md` > step 1).
-- **[MUST]** Writes and changes comments under [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Code comments* — a comment attached to code it modifies is updated or deleted in the same commit, and deleted when it is uncertain whether it is still true — and at REFINE runs the comment check over the cycle's diff ([`phases/refine.md`](phases/refine.md) > step 1).
-- Common rules: see [`docs/submodule-common-rules.md`](submodule-common-rules.md).
-- Spawn model: resolved from the spawn policy, never restated here — `bash scripts/spawn-policy/spawn-policy.sh model green` and `… model refine-impl`. REFINE is spawned fresh at REFINE entry. Source: `.claude/autoflow/spawn-policy.json`.
-- **[MUST]** Runs verification in the **foreground**; never uses `run_in_background`. See [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Testing Standards > Bash execution mode.
-- **[MUST]** Reports to the orchestrator through the spawn's **return value**. This role is spawned as an **anonymous direct subagent** (`subagent_type: autoflow-implementer`), so no mailbox exists and the return value is the report — the body goes to `.autoflow/*` and the return carries an anchor plus a one-line summary. See [`role-common-rules.md`](role-common-rules.md) > Result delivery path by spawn mode. The role's spawn mode is fixed by *Spawn mode by role lifetime* above.
+- Works directly in the target repository and commits to the cycle's branch. It does not push: the
+  push is the orchestrator's, at DELIVER ([`phases/deliver.md`](phases/deliver.md)), as is PR
+  creation.
+- Has read access to other sub-repos; modifications stay within the assigned scope.
+- **[MUST]** Runs the target repository's lint chain over the staged files before each commit,
+  confirms zero errors attributable to them, and records one outcome word per chain it identified,
+  with the grounds of the identification, as the commit's lint-outcome evidence anchor
+  ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on
+  the staged surface*); the build report's `## Lint` table carries it.
+- **[MUST]** Writes and changes comments under [`submodule-common-rules.md`](submodule-common-rules.md)
+  > Change Surface Rules > *Code comments* — a comment attached to code it modifies is updated or
+  deleted in the same commit, and deleted when it is uncertain whether it is still true.
+- **[MUST]** Runs every Bash command in the **foreground**; never uses `run_in_background`
+  ([`role-common-rules.md`](role-common-rules.md) > Bash Execution Mode).
+- Uses the tools its work needs; a tool that neither this environment nor the target's procedures
+  provide is reported to the orchestrator, never acquired
+  ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the
+  work needs*).
+- Common rules: [`submodule-common-rules.md`](submodule-common-rules.md).
 
-The Submodule AI operates as the Developer AI directly in the target repo. *Secondary (multi-repo):* when the host contains submodules (see [`CLAUDE.md`](../CLAUDE.md#deployment-topology) > Deployment Topology), the target repo is the AI's assigned sub-repo, the fork/upstream procedure above applies, and PR creation remains the orchestrator's. The role contract is otherwise unchanged.
-
----
-
-## Facilitator (deliberation sub-context)
-
-The Facilitator runs a multi-participant deliberation. One phase runs a Developer-AI ↔ Test-AI deliberation: the **VERIFY** cause-branch, an isolated `Workflow`. The structural rule: [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation. ARCHITECT is not a deliberation phase: it is the U3 Design unit (*Functional-unit agents* below; [`phases/architect.md`](phases/architect.md)).
-
-### Realization — VERIFY: `Workflow`
-
-It is not a nested Agent Team, and it does not run in the orchestrator's own turn stream: the `verify-cause-branch` workflow runs both self-checks in-script.
-
-**Invocation / version / config**:
-- Prerequisites — both must hold (Workflows: <https://code.claude.com/docs/en/workflows>): (i) Claude Code **v2.1.277+** — AutoFlow's minimum runtime (the `Workflow` runtime itself is v2.1.154+); (ii) Dynamic workflows **enabled** — they can be off by default (Pro requires turning on the Dynamic workflows row in `/config`) and are disabled by any of `disableWorkflows: true` in `~/.claude/settings.json` (or managed settings), or `CLAUDE_CODE_DISABLE_WORKFLOWS=1`.
-- If the prerequisites do not hold, the orchestrator escalates with the **specific** cause — version gap vs. local `/config`/`settings.json` disable vs. env var vs. managed-policy disable — rather than a generic "unavailable", and proposes the matching enable step. It does **not** fall back to running the deliberation in its own turn stream.
-- The orchestrator invokes `Workflow({ name: "verify-cause-branch", args: { issue: "N", failLog: "<path>" } })` at VERIFY — `failLog` is the failing run's log, or the observation record of a `manual` row verified with a tool ([`phases/verify.md`](phases/verify.md) > step 1). Reference script: [`.claude/workflows/verify-cause-branch.js`](../.claude/workflows/verify-cause-branch.js).
-- Skill-channel invocation: the script's `meta.description` states the required `args` contract, and it tolerates a prose-string `args` by salvaging `issue` inside the `JSON.parse` catch path via a three-tier rule (first hit wins): tier 1 a `#N` token, tier 2 an `issue N`-anchored number, tier 3 a bare digit run **only when exactly one is present** (two-or-more bare runs is ambiguous → fail loud rather than silently adopting the first). `issue` is the only key the salvage recovers. `failLog` has **no** prose fallback — a prose invocation still fails loudly on the `failLog` guard. The object-form example above is the canonical orchestrator path.
-- The workflow's internal sub-agents carry no model literal: each call site spreads its opts from the `workflow_sites` row the script loads at run time (`.claude/autoflow/spawn-policy.json`) — the VERIFY self-check and ledger sites. See [`CLAUDE.md`](../CLAUDE.md) > Spawn Model.
-
-### Responsibilities
-
-- **Keeps the deliberation out of the orchestrator's context**: the self-checks run inside the workflow and their exchange stays in script variables.
-- **[MUST]** The in-script sub-agents run all Bash **foreground**-only (`run_in_background` is orchestrator-only). See [`role-common-rules.md`](role-common-rules.md) > Bash Execution Mode.
-- **Appends to the decision ledger** (`.autoflow/issue-{N}-ledger.md`): one VERIFY cause-branch entry under the authority `VERIFY self-check` (append-only).
-- **[MUST]** Every ledger append allocates its entry identifier per [`decision-ledger.md`](decision-ledger.md) > *Entry identifier* — one `ledger-entry-id.sh next` call in the facilitator's own namespace immediately before that entry's append, then `check` after the appends. That section is the single documentary home of the writer→namespace mapping.
-- **Returns one structured result** to the orchestrator (see Return Contract). It does not forward the exchange.
-
-### Return Contract
-
-The workflow's only output to the orchestrator is one structured result:
-
-```json
-{
-  "phase": "verify",
-  "test_self_check": "fix_test | no_problem | missing",
-  "impl_self_check": "fix_impl | no_problem | missing",
-  "next_action": "RED | GREEN | SEQUENTIAL_FIX | EVALUATION_AI",
-  "ledger": ".autoflow/issue-N-ledger.md",
-  "summary": "one-line outcome"
-}
-```
-
-- `next_action` is derived from the two self-checks (the VERIFY branch table): `fix_test` + `no_problem` → `RED`; `no_problem` + `fix_impl` → `GREEN`; `fix_test` + `fix_impl` → `SEQUENTIAL_FIX` (fix test → Red → fix impl → Green); `no_problem` + `no_problem` → `EVALUATION_AI` (deadlock arbitration). The orchestrator routes strictly on `next_action`.
-- **Missing self-check**: a sub-agent that did not return a verdict (skipped/errored) is recorded **truthfully** as `"missing"` — never substituted with `no_problem`. Any `missing` routes to `EVALUATION_AI`, and the ledger grounds record `missing` as fact.
-- **Termination**: a single self-check round — each side answers once and `next_action` follows deterministically; there is no internal loop. Repeated VERIFY entries are bounded by the GREEN↔VERIFY round-trip cap (max 3) in [`CLAUDE.md`](../CLAUDE.md) > Flow Control.
-
-**[MUST]** The return carries no turn, no duplicate dual report and no artifact body — `next_action`, the ledger path and one line only (mirrors [`docs/submodule-common-rules.md`](submodule-common-rules.md) > Reporting Format).
-
-### Orchestrator-side verification
-
-After the result returns, the orchestrator **verifies** it before accepting: it **spot-checks targeted excerpts** — it pulls the specific `path:line` a returned verdict rests on and re-derives the cited fact (`git show`, the summary line read in a cited log, `git show HEAD:<file>`). A wider read is the orchestrator's judgment, recorded with its grounds ([`CLAUDE.md`](../CLAUDE.md#cost-control) > Orchestrator context discipline).
-
-### Verification scenarios (manual)
-
-**Automated** — none committed. A change to the workflow's control flow (VERIFY `next_action` incl. `missing`; the spawn-policy fail-closed guards; the arg guards) is verified by the one-shot run of the cycle that changes it, and that run's record goes into the PR body ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *Local verification*).
-
-**Manual (live runtime)** — these need an actual session and confirm routing end-to-end; run once on a prerequisite-satisfying session (see Invocation / version / config) and record in the cycle notes:
-
-- **Smoke**: invoke the workflow with `Workflow({ name: ... })` and confirm it reaches the first `agent()` without a runtime error.
-- **VERIFY routing**: exercise all four self-check combinations; confirm each maps to `RED` / `GREEN` / `SEQUENTIAL_FIX` / `EVALUATION_AI`.
+*Secondary (multi-repo):* when the host contains submodules (see
+[`CLAUDE.md`](../CLAUDE.md#deployment-topology) > Deployment Topology), each affected sub-repo gets
+its own build unit, the branch is that sub-repo's fork branch (in the fork-and-PR model), which the
+orchestrator pushes to the fork at DELIVER, and PR creation remains the orchestrator's.
 
 ---
 
@@ -267,10 +203,10 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the pla
 - **A decision point** is any point that pauses for a decision the working AI is not the one to make:
   an acceptance-criterion change (`[ac-decision]`), a security-checklist change
   (`[checklist-decision]`), a non-code root cause or a non-code lever, an intake-triage prerequisite,
-  a review-response loop-check match, an un-agreed design point, a `remedy_class: operator`, a
+  a review-response loop-check match, an un-agreed design point, a `remedy_class: operator`, and a
   recommendation or finding the orchestrator cannot route with confidence (a pause criterion, a
-  rebuttal the re-score or the reviewer keeps while the two sides still disagree), and a VERIFY
-  deadlock the Evaluation AI's arbitration leaves undecided. Each is answered by the advisor first.
+  rebuttal the re-score or the reviewer keeps while the two sides still disagree). Each is answered
+  by the advisor first.
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
   denial), or a tool, credential, installation or material the environment does not provide. Only
   such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
@@ -367,7 +303,7 @@ scripts the orchestrator runs, D8; U5 is the gate itself).
 |---|---|---|---|
 | `autoflow-unit-analysis` | U2 Analysis (DIAGNOSE, GATE:HYPOTHESIS) | analysis — no score gate | `gate_hypothesis_cause`, or the `skipped (non-bug issue)` verdict |
 | `autoflow-unit-design` | U3 Design (ARCHITECT, GATE:PLAN) | planning — GATE:HYPOTHESIS pass, or a `skipped` verdict | `gate_plan` |
-| `autoflow-unit-build` | U4 Build and verify (DISPATCH..VALIDATE, AUDIT) | implementation — GATE:PLAN pass | the deterministic exit checks and `audit` |
+| `autoflow-unit-build` | U4 Build and verify (BUILD, AUDIT) | implementation — GATE:PLAN pass | `scripts/gate/build-exit-check.sh` and `audit` |
 
 - **Method is the unit's.** How the unit reaches its goal — what it reads, whether it spawns helpers
   or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
@@ -412,7 +348,7 @@ scripts the orchestrator runs, D8; U5 is the gate itself).
 |------|-------|-------|
 | Structure evaluation | Type 1: Behavior gap, Code-change necessity (2) — Type 2: Content gap, Consistency impact, Propagation scope (3) | none (PASS/FAIL single verdict; reuse-neutral; gap-low → close/reply, non-code lever → the advisor decides; no retry. Canonical: [`phases/analysis.md`](phases/analysis.md)) |
 | Hypothesis evaluation | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× |
-| Plan evaluation | Decision grounds, Verification fit, Scope, Tools, Security (5) — the design's intent, never its method; affected files / side effects are derived at RED/GREEN, not scored here; Decision grounds/Scope carry structural-fit & over-engineering across the plan and its verification design (not scored at DIAGNOSE; interpretation and embedded checks: [`phases/gate-plan.md`](phases/gate-plan.md)); a re-entry re-scores the design documents' delta only | max 3× |
+| Plan evaluation | Decision grounds, Verification fit, Scope, Tools, Security (5) — the design's intent, never its method; affected files / side effects are derived at BUILD, not scored here; Decision grounds/Scope carry structural-fit & over-engineering across the plan and its verification design (not scored at DIAGNOSE; interpretation and embedded checks: [`phases/gate-plan.md`](phases/gate-plan.md)); a re-entry re-scores the design documents' delta only | max 3× |
 | Security audit | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
 | Quality evaluation | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) | max 3× |
 | Doc evaluation | Accuracy, Completeness, Clarity, Format compliance (4) | one revision |

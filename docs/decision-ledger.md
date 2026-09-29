@@ -8,21 +8,21 @@ allocation and check — are [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger.
 
 ## Entries
 
-- Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `advisor decision`, `GATE:PLAN PASS (avg 8.2)`, `VERIFY Evaluation-AI arbitration`), and the cycle/phase.
+- Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `advisor decision`, `GATE:PLAN PASS (avg 8.2)`, `operator decision`), and the cycle/phase.
 - **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the re-opening is **judged by the decision's original authority** — a gate verdict by a fresh Evaluation AI re-scoring that item, an ARCHITECT design decision — recorded in the feature design, not the ledger — by a U3 Design unit re-run naming its heading there (an ARCHITECT re-entry, consuming that counter, unless the design has not yet reached GATE:PLAN), an advisor decision by a fresh advisor, an operator decision by the operator — and when that authority cannot say with confidence that the error changes the decision, it asks the advisor ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3); (3) the correction records the reproducing command and its summary line in the grounds form above and names what it supersedes — for a ledger entry, in the superseding entry's grounds, by the superseded entry's identifier; for a feature-design decision, in the U3 re-run's delta item, as `supersedes <heading>` ([`phases/architect.md`](phases/architect.md) > *Re-entry*). A change of preference or a re-interpretation of the same material is not an error and stays barred.
 
-**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the facilitator delegate (the VERIFY cause-branch workflow) appends its cause-branch entry under the authority `VERIFY self-check`; the ARCHITECT design unit appends nothing — its decisions and their grounds are its design documents ([`phases/architect.md`](phases/architect.md)); the orchestrator appends each gate's verdict after the gate, records a loop-check observation (complaint class, witness, prior-change shape, cycle) on **every** review-response attempt — at DIAGNOSE entry, or at HANDOFF step 6.5 for a thin route that runs no DIAGNOSE — appends the VERIFY detection record (the steps 3/4 outcomes, `verify-detection`-marked — a record, not a decision; see [`phases/verify.md`](phases/verify.md) > *Detection record*) at VERIFY exit, and appends an operator override of an advisor decision when the operator gives one.
+**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`phases/architect.md`](phases/architect.md), [`phases/build.md`](phases/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, records a loop-check observation (complaint class, witness, prior-change shape, cycle) on **every** review-response attempt — at DIAGNOSE entry, or at HANDOFF step 6.5 for a thin route that runs no DIAGNOSE — and appends an operator override of an advisor decision when the operator gives one.
 
 ## Entry identifier
 
-A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its HANDOFF marker in the same grammar: `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` — the marker stays at the end of the heading. Record entries (`verify-detection`, `preflight-local-checks`) are level-3 headings and carry no identifier.
+A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its HANDOFF marker in the same grammar: `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` — the marker stays at the end of the heading. Record entries (`preflight-local-checks`) are level-3 headings and carry no identifier.
 
 | Writer | Namespace |
 |---|---|
 | Orchestrator | `O` |
-| Facilitator delegate | `F` |
 | Advisor | `A` |
 | Pre-protocol legacy entries (readable, never issued) | `E` |
+| Legacy facilitator-delegate entries (readable, never issued) | `F` |
 
 This table is the mapping's only documentary home; other documents cite it rather than restate it.
 
@@ -61,8 +61,8 @@ override at the retry stage ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle
 criterion is *verified* is the design's, provided the row states its reason, which the external
 reviewer then judges at HANDOFF (the three-tier guard — [`phases/architect.md`](phases/architect.md) >
 *Report routing*). A content change reaches the advisor from wherever it surfaces: the ARCHITECT design
-unit's `## Decision requests` section, before GATE:PLAN; a problem a role meets during GREEN, VERIFY or
-REFINE and raises in its report; or a gate recommendation that records a criterion defect, or whose
+unit's `## Decision requests` section, before GATE:PLAN; a problem the BUILD unit meets and raises in
+its report; or a gate recommendation that records a criterion defect, or whose
 triage hits the acceptance-criterion pause criterion ([`phases/architect.md`](phases/architect.md) > *Report routing*,
 [`phases/gate-quality.md`](phases/gate-quality.md) > *Recommendation triage*). The change excludes, revises or splits a criterion, or adds one. The
 answer is recorded as one entry per decided AC, in the same trailing-marker grammar:
@@ -75,8 +75,8 @@ an added criterion, the id it takes), a `- Disposition:` line valued `excluded` 
 **A criterion can be wrong; from ARCHITECT on, the work tests it**. DIAGNOSE takes the criteria as written — it
 analyzes the problem as the issue states it and runs no test of the criteria of its own. That says how
 DIAGNOSE works, not when a defect may be raised: a defect observed as a fact is raised wherever it is
-observed, a gate before ARCHITECT included. From ARCHITECT on — the design, GREEN,
-VERIFY, REFINE and every gate after them — a criterion is a hypothesis the work tests, not a truth the
+observed, a gate before ARCHITECT included. From ARCHITECT on — the design, the build
+and every gate after them — a criterion is a hypothesis the work tests, not a truth the
 work is bent to fit: wherever the work and a criterion disagree, *is the criterion wrong?* is one of the
 answers the judgment weighs, beside *how is it satisfied?* A criterion is **defective** when (a) a fact
 it presumes does not hold — a device, a phase or a state it takes for granted; or (b) the scope it draws does not fit the problem — too

@@ -6,7 +6,7 @@
 # =============================================================================
 # The decision ledger (.autoflow/issue-{N}-ledger.md, CLAUDE.md > Decision
 # Ledger) is append-only and written by writers that cannot see each
-# other's in-flight state — the orchestrator, its facilitator delegate and the advisor.
+# other's in-flight state — the orchestrator and the advisor.
 # Without an issuance protocol each writer picks the "next" serial from its
 # own memory of the file, so two entries collide on one identifier and every
 # later citation of that identifier is ambiguous.
@@ -21,9 +21,8 @@
 #   ledger-entry-id.sh check <ledger-path>               -> reports defects
 #
 # Namespaces (docs/decision-ledger.md > Entry identifier — the single documentary
-# home of the writer -> namespace mapping): `O` = orchestrator, `F` = facilitator delegate,
-# `A` = advisor.
-# `E` is the pre-protocol legacy namespace: readable, never issuable.
+# home of the writer -> namespace mapping): `O` = orchestrator, `A` = advisor.
+# `E` and `F` are legacy namespaces: readable, never issuable.
 #
 # Exit codes:
 #   next   0 = identifier printed on stdout | 2 = usage / unissuable namespace
@@ -34,7 +33,7 @@
 
 set -uo pipefail
 
-ISSUABLE_NAMESPACES="O F A"
+ISSUABLE_NAMESPACES="O A"
 
 usage() {
   cat >&2 <<'EOF'
@@ -42,14 +41,14 @@ Usage:
   ledger-entry-id.sh next  <ledger-path> <namespace>
   ledger-entry-id.sh check <ledger-path>
 
-Namespaces issuable by `next`: O (orchestrator), F (facilitator delegate), A (advisor).
-E is legacy — readable by `check`, never issued.
+Namespaces issuable by `next`: O (orchestrator), A (advisor).
+E and F are legacy — readable by `check`, never issued.
 EOF
 }
 
 # Heading grammar shared by both subcommands: a settled-decision entry is a
 # LEVEL-2 heading `## <NS><serial> — <title> (cycle <C>, <PHASE>)`. Level-3
-# headings are record entries (verify-detection, preflight-local-checks)
+# headings are record entries (preflight-local-checks)
 # and carry no identifier by design, so both subcommands ignore them.
 
 # next <ledger-path> <namespace>
@@ -76,7 +75,7 @@ cmd_next() {
   fi
 
   # Highest serial ALREADY IN THE FILE, within this namespace only. Namespace
-  # isolation is what lets the writers allocate concurrently: an F append
+  # isolation is what lets the writers allocate concurrently: an A append
   # never moves O's counter, so neither writer's allocation depends on the
   # other's timing.
   max=$(awk -v ns="$ns" '
@@ -130,7 +129,7 @@ check_one() {
 cmd_check() {
   local file="${1:-}"
   # Exactly one ledger, by design. Every caller — the hook's advisory step and
-  # the facilitator prompts — passes a single path, and an aggregate scan would
+  # the writers after their appends — passes a single path, and an aggregate scan would
   # blur which ledger a defect line belongs to, since the line names a number
   # inside a file it does not identify. A second argument is therefore a usage
   # error with the same disposition as none at all, not a wider scan.

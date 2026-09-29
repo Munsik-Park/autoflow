@@ -27,9 +27,9 @@ dialogue was held, or in what order the documents were written (ADR-0025 D2).
 
 **Affected files and side effects are not scored here**. The gate scores the
 *decision* layer; which files a change touches and which tests it requires are **derived**, not
-predicted — by the execution roles at RED/GREEN entry, from the change delta and the way the
-target runs its tests, and from the files they open anyway. A dependency miss surfaces at RED,
-VERIFY step 1 or HANDOFF's CI and routes by the class rules, consuming no ARCHITECT re-entry.
+predicted — by the build unit at BUILD, from the change delta and the way the
+target runs its tests, and from the files it opens anyway. A dependency miss surfaces at BUILD
+or HANDOFF's CI and routes by the class rules, consuming no ARCHITECT re-entry.
 
 `Decision grounds` and `Scope` absorb the structural-fit concern that the DIAGNOSE structure gate deliberately does not score: a plan not grounded in the actual structure fails Decision grounds; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that carries no unique failure mode fails Scope on the same clause. On a row that owes the `Failure mode` cell ([ARCHITECT](architect.md) > Output artifacts, the column's bullet), the cell fails Scope when it is empty — `—` on such a row counts as empty — or when it cannot be told apart from the cell of another distinct verification anywhere in the design, or from a named existing mechanism; rows that share a `Method` label are one verification and are not compared with each other. The deduction rides this clause and adds no scored item, cap or `scores` key.
 
@@ -68,7 +68,7 @@ violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 ru
   readable AC table → no cap, the item scores normally.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7) → recommendation triage ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*)
-  → DISPATCH.
+  → BUILD.
 - **FAIL** → ARCHITECT (max 3×): a fresh U3 Design unit receives this report and the previous
   documents ([ARCHITECT](architect.md) > *Re-entry*).
 

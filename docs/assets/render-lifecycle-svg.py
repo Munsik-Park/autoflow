@@ -23,7 +23,7 @@ Beyond the happy path, the diagram encodes the design decisions of
 - D7  every FAIL loop is bounded, cap -> human escalation (dashed red
       return edges with their caps from CLAUDE.md > Regressions)
 - D8  deliberation runs in isolated sub-contexts (isolation glyph)
-- D9  HANDOFF review auto-resolution re-enters RED, bounded at 7 (top bus)
+- D9  HANDOFF review auto-resolution re-enters BUILD, bounded at 7 (top bus)
 """
 
 from pathlib import Path
@@ -41,17 +41,13 @@ STAGES = [
     ("02", "PLANNING", [
         ("ARCHITECT", "design unit · one spawn", "phase", True),
         ("GATE:PLAN", "fresh eval AI · 5×10", "gate", False),
-        ("DISPATCH", "fresh test/dev spawn", "phase", False),
     ]),
-    ("03", "TDD", [
-        ("RED", "test AI · failing first", "red", False),
-        ("GREEN", "developer AI · min code", "green", False),
-        ("VERIFY", "cause-branch check", "phase", True),
-        ("REFINE", "fresh respawn", "phase", True),
+    ("03", "BUILD", [
+        ("BUILD", "build unit · test-first", "phase", True),
+        ("EXIT CHECK", "deterministic script", "gate", False),
+        ("AUDIT", "independent eval AI", "gate", False),
     ]),
     ("04", "QUALITY", [
-        ("VALIDATE", "auto + manual + docs", "phase", False),
-        ("AUDIT", "independent eval AI", "gate", False),
         ("GATE:QUALITY", "fresh eval AI · 10×10", "gate", False),
     ]),
     ("05", "DELIVERY", [
@@ -66,10 +62,8 @@ STAGES = [
 FAIL_CAPS = {
     "GATE:HYPOTHESIS": "↩ ≤2×",
     "GATE:PLAN": "↩ ≤3×",
-    "VERIFY": "↩ ≤3×",
     "GATE:QUALITY": "↩ ≤3×",
-    "AUDIT": "↻ ≤2×",
-    "REFINE": "↻ ≤2×",
+    "AUDIT": "↩ ≤2×",
 }
 
 # ---------------------------------------------------------------- themes
@@ -122,7 +116,7 @@ def node_y(j):
 def col_h(n):
     return LABEL_H + n * NODE_H + (n - 1) * V_GAP + COL_PAD_B
 
-MAX_H = max(col_h(len(s[2])) for s in STAGES)
+MAX_H = max([col_h(len(s[2])) for s in STAGES] + [col_h(3) + 16 + NODE_H])  # the STOP node sits below column 01
 LEGEND_Y = TOP + MAX_H + 28
 HEIGHT = LEGEND_Y + 40
 
@@ -152,7 +146,7 @@ def render(theme):
     s.append(
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" '
         f'viewBox="0 0 {WIDTH} {HEIGHT}" role="img" '
-        f'aria-label="AutoFlow 16-phase lifecycle with bounded fail loops and isolated sub-contexts">'
+        f'aria-label="AutoFlow lifecycle with bounded fail loops and isolated sub-contexts">'
     )
     # REUSE-IgnoreStart — SPDX literals below are emitted INTO the SVGs;
     # without the ignore markers `reuse lint` parses them as this .py file's
@@ -175,7 +169,7 @@ def render(theme):
     # header row
     s.append(
         f'<text x="{MARGIN + 2}" y="34" font-family="{SANS}" font-size="11" font-weight="700" '
-        f'letter-spacing="2.2" fill="{t["muted"]}">AUTOFLOW · 16-PHASE LIFECYCLE</text>'
+        f'letter-spacing="2.2" fill="{t["muted"]}">AUTOFLOW · LIFECYCLE</text>'
     )
     s.append(
         f'<text x="{WIDTH - MARGIN}" y="34" text-anchor="end" font-family="{SANS}" '
@@ -264,12 +258,12 @@ def render(theme):
 
     fail_loop("GATE:HYPOTHESIS", "DIAGNOSE", 1)   # cause FAIL -> DIAGNOSE (max 2x)
     fail_loop("GATE:PLAN", "ARCHITECT", 1)        # plan FAIL -> ARCHITECT (max 3x)
-    fail_loop("VERIFY", "RED", 2)                 # cause-branched fix (max 3 round-trips)
+    fail_loop("AUDIT", "BUILD", 2)                # exit-check defect / AUDIT FAIL -> BUILD (max 2x)
 
-    # GATE:QUALITY FAIL (max 3x) re-entry, drawn to RED — the farthest common
-    # point of the remedy_class routes (doc commit / RED / GREEN / ARCHITECT,
-    # issue #140); dashed edge through the col3/col4 gap
-    (qx, qy), (rx_, ry_) = origin["GATE:QUALITY"], origin["RED"]
+    # GATE:QUALITY FAIL (max 3x) re-entry, drawn to BUILD — the common point
+    # of the remedy_class routes (doc commit / BUILD / ARCHITECT); dashed edge
+    # through the col3/col4 gap
+    (qx, qy), (rx_, ry_) = origin["GATE:QUALITY"], origin["BUILD"]
     x1, y1 = qx - 4, qy + NODE_H / 2
     x2, y2 = rx_ + NODE_W + 2, ry_ + 11
     s.append(
@@ -277,8 +271,8 @@ def render(theme):
         f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9" marker-end="url(#arrf)"/>'
     )
 
-    # HANDOFF review/CI fail bus -> RED (D9: bounded auto-resolution, max 7x)
-    (hx, hy), (rx_, ry_) = origin["HANDOFF"], origin["RED"]
+    # HANDOFF review/CI fail bus -> BUILD (D9: bounded auto-resolution, max 7x)
+    (hx, hy), (rx_, ry_) = origin["HANDOFF"], origin["BUILD"]
     bx, ex = hx + NODE_W - 24, rx_ + 103
     s.append(
         f'<path d="M{bx},{hy - 2} L{bx},{BUS_Y + 8} Q{bx},{BUS_Y} {bx - 8},{BUS_Y} '
@@ -287,7 +281,7 @@ def render(theme):
     )
     s.append(
         f'<text x="{(bx + ex) / 2}" y="{BUS_Y - 8}" text-anchor="middle" font-family="{SANS}" '
-        f'font-size="10" fill="{t["fail"]}">CI fail / review Medium+ → back to RED · review-response ≤7×</text>'
+        f'font-size="10" fill="{t["fail"]}">CI fail / review Medium+ → back to BUILD · review-response ≤7×</text>'
     )
 
     # ---- STOP node (D6: structure FAIL = no code change -> close/report)
@@ -320,11 +314,8 @@ def render(theme):
     s.append(iso_glyph(560, y1 - 10, t))
     s.append(
         f'<text x="{560 + 16}" y="{y1}" font-family="{SANS}" font-size="11" fill="{t["muted"]}">'
-        f'isolated sub-context (Workflow / fresh spawn)</text>'
+        f'isolated sub-context (fresh unit spawn)</text>'
     )
-    s.append(f'<circle cx="{830 + 5}" cy="{y1 - 4}" r="4" fill="{t["red"]}"/>')
-    s.append(f'<circle cx="{830 + 16}" cy="{y1 - 4}" r="4" fill="{t["green"]}"/>')
-    s.append(f'<text x="{830 + 27}" y="{y1}" font-family="{SANS}" font-size="11" fill="{t["muted"]}">red / green TDD</text>')
 
     s.append(
         f'<line x1="{MARGIN + 2}" y1="{y2 - 4}" x2="{MARGIN + 26}" y2="{y2 - 4}" '

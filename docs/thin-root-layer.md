@@ -36,7 +36,6 @@ The artifact set a target receives at its project root:
 |---|---|---|---|
 | Methodology prose | target's own `CLAUDE.md` imports it | this repo's `CLAUDE.md` + the `docs/` usage documents (the link closure of `CLAUDE.md` + `docs/INDEX.md`, minus `docs/records/`) | reference |
 | Always-on import shim | target `CLAUDE.md` managed block | `setup/thin-root-layer/claude-md-shim.md` | shim (Item 1) |
-| Deliberation workflow | `.claude/workflows/*.js` | `.claude/workflows/verify-cause-branch.js` | copied file (Item 2) |
 | Settings pin | `.claude/settings.json` merge | `setup/thin-root-layer/settings-pin.json` | JSON merge (Item 3 env is §Item 3; jq-canonically equal to the `plugin/autoflow/README.md` fence) |
 | Env contract | operator env / harness | this doc, Item 3 | documented requirement |
 
@@ -78,11 +77,9 @@ in AutoFlow's methodology. Artifact: `setup/thin-root-layer/claude-md-shim.md`.
 
 ## Item 2 — `.claude/workflows` residence
 
-`.claude/workflows/verify-cause-branch.js` is a thin-root-layer artifact: the
-VERIFY cause-branch requires it. ARCHITECT ships no workflow and no script: it is
-one U3 Design unit spawn whose definition rides the plugin channel in
-`agents/autoflow-unit-design.md`.
-`CLAUDE_CODE_DISABLE_WORKFLOWS` is a load-bearing env constraint (Item 3).
+AutoFlow ships no workflow: ARCHITECT and BUILD are one unit spawn each, whose definitions ride the
+plugin channel in `agents/autoflow-unit-design.md` and `agents/autoflow-unit-build.md`. A re-stamp
+removes a workflow an earlier version stamped (`setup/SETUP-GUIDE.md` > re-stamp).
 
 ---
 
@@ -95,10 +92,8 @@ The thin-root layer's env dependencies.
 | `CLAUDE_PROJECT_DIR` | Claude Code **harness** (project root) | consumed by hooks & workflows; the target must run Claude Code from the project root — the **harness** sets it, it is not a user var. |
 | `CLAUDE_PLUGIN_ROOT` | plugin **loader** (substituted in the plugin channel) | consumed only by the plugin channel (`hooks.json`, install `SKILL.md`); it never resolves `.autoflow`. **Loader**-provisioned, not host-required. |
 | `CLAUDE_CONFIG_DIR` | Claude Code **harness** (its config-directory override; default `~/.claude`) | read, never required, by the shipped `scripts/lib/plugin-root.sh`: `drift-check.sh` D2/D4/D5/D6, `spawn-policy.sh check` and `/autoflow:install` Step 0 (the skill runs its own byte-identical copy of the resolver, shipped inside the plugin) locate the installed plugin and the marketplace clone through the harness's own registries under `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/` when `CLAUDE_PLUGIN_ROOT` is unset (every plain-shell run — PREFLIGHT, the operator). Unset means the default; a value the harness would not itself use only makes those checks `SKIP` (or `check` fail closed naming the location), never mis-resolve. |
-| `CLAUDE_CODE_DISABLE_WORKFLOWS` | operator / managed settings | **MUST remain unset / not be `1`**. |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | **nobody** — not provisioned | The settings pin does not ship it and the thin root layer neither requires nor reads it. A `"1"` value in a target's settings is outside the contract (`setup/SETUP-GUIDE.md` > Prerequisites). |
 
-**Runtime prerequisite**: Claude Code **v2.1.277+** — the `Workflow` runtime the
-deliberation scripts depend on (v2.1.154), and the release that removed the
+**Runtime prerequisite**: Claude Code **v2.1.277+** — the release that removed the
 blocking `TaskOutput` tool, whose removal *Wait discipline* relies on in place of
 a hook deny (v2.1.277; `docs/records/design-rationale.md` > Decision 34).

@@ -107,6 +107,11 @@ RETIRED_PHASE_KEYS = {
     'architect-facilitator': 'autoflow-facilitator',
     'architect-dev-participant': 'autoflow-planner',
     'architect-test-participant': 'autoflow-planner',
+    'red': 'autoflow-tester',
+    'green': 'autoflow-implementer',
+    'verify-arbitration': 'autoflow-evaluator',
+    'refine-impl': 'autoflow-implementer',
+    'refine-test-reconfirm': 'autoflow-tester',
 }
 
 
