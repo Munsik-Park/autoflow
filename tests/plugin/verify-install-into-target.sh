@@ -352,21 +352,20 @@ else
   failc "AC1c append" "init.sh missing"
 fi
 
-# ── AC1d: workflow files byte-identical ───────────────────────────────────────
-echo "== AC1d: workflow files byte-identical to source =="
-for _wf in "architect-deliberation.js" "verify-cause-branch.js"; do
-  _installed="$TARGET/.claude/workflows/$_wf"
-  _source="$REPO_ROOT/.claude/workflows/$_wf"
-  if [ -f "$_installed" ] && [ -f "$_source" ]; then
-    if cmp -s "$_installed" "$_source"; then
-      pass "AC1d: $_wf byte-identical (cmp -s)"
-    else
-      failc "AC1d" "$_wf differs from source (not a verbatim copy)"
-    fi
+# ── AC1d: workflow file byte-identical ────────────────────────────────────────
+echo "== AC1d: workflow file byte-identical to source =="
+_wf="verify-cause-branch.js"
+_installed="$TARGET/.claude/workflows/$_wf"
+_source="$REPO_ROOT/.claude/workflows/$_wf"
+if [ -f "$_installed" ] && [ -f "$_source" ]; then
+  if cmp -s "$_installed" "$_source"; then
+    pass "AC1d: $_wf byte-identical (cmp -s)"
   else
-    failc "AC1d" "$_wf missing in target or source (target=$_installed source=$_source)"
+    failc "AC1d" "$_wf differs from source (not a verbatim copy)"
   fi
-done
+else
+  failc "AC1d" "$_wf missing in target or source (target=$_installed source=$_source)"
+fi
 
 # ── AC1e: settings.json deep-merge ────────────────────────────────────────────
 echo "== AC1e: settings.json merge (marketplace key lands, pre-existing key preserved) =="
@@ -607,14 +606,9 @@ fi
 echo "== AC-1 (issue #10): methodology-step scripts registered as root-layer/copy =="
 if [ -f "$MANIFEST" ]; then
   _ac1_bad=""
-  # issue #206 (D7): scripts/architect/composition-oracle.sh is the classifier
-  # the stamped guide tells every target's Record step to run. It is held here
-  # permanently because #206's real-stamp delivery check is cycle-scoped and
-  # retires with that issue.
   for _ac1_src in \
     "scripts/handoff/create-host-pr.sh" \
-    "scripts/cleanup/cleanup-issue.sh" \
-    "scripts/architect/composition-oracle.sh"
+    "scripts/cleanup/cleanup-issue.sh"
   do
     _ac1_match=$(jq -r --arg s "$_ac1_src" \
       '.artifacts[] | select(.source == $s)' "$MANIFEST" 2>/dev/null)
@@ -647,7 +641,7 @@ if [ -f "$MANIFEST" ]; then
   _ac1_total=$(jq -r '.artifacts | length' "$MANIFEST" 2>/dev/null)
   echo "  (info) AC-1: setup/manifest.json artifact count is currently ${_ac1_total:-unknown} (informational — not asserted; see note above)"
   if [ -z "$_ac1_bad" ]; then
-    pass "AC-1 (issue #10): all 3 scripts registered (source==dest, root-layer/copy, exactly one row each)"
+    pass "AC-1 (issue #10): all 2 scripts registered (source==dest, root-layer/copy, exactly one row each)"
   else
     failc "AC-1 (issue #10)" "registration gap or field mismatch:$_ac1_bad"
   fi

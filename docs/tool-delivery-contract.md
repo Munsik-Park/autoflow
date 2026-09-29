@@ -174,8 +174,8 @@ vocabulary is accommodated by editing that contract, never by patching the check
 `effort` readout prints the inherit sentinel that contract declares rather than a fixed literal. On
 a version bump the operator's obligation is to run `check` and add any newly required row.
 
-The same file carries the two Workflow facilitations' per-site values (`workflow_sites`), which the
-deliberation scripts load at run time — `.claude/workflows/*.js` carries no `model:` literal. It
+The same file carries the Workflow facilitation's per-site values (`workflow_sites`), which the
+deliberation script loads at run time — `.claude/workflows/*.js` carries no `model:` literal. It
 also documents its own inheritance rule (`effort_contract`) and declares any shipped agent type the
 policy governs no row for (`policy_unmapped_agent_types`).
 

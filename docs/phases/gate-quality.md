@@ -155,7 +155,7 @@ No separate disposition system exists for gate recommendations.
 | Step 6.5 | Gate recommendation |
 |---|---|
 | Classification: the reviewer's severity level (`.codex/review.md` > Severity) | the evaluator's, per item, on the same levels |
-| `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the deliberation settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
+| `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
 | Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(d) | the same four, read for a gate (below) |
 | `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to DISPATCH (below) |
@@ -184,8 +184,8 @@ No separate disposition system exists for gate recommendations.
     *FAIL routing*, the `doc` route's sweep record included); the routed work flows forward, and the
     recommending gate re-scores on the narrowed input its re-entry already uses.
   - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — does not call the script: every `Medium`+ recommendation is resolved on the artifact the gate scores,
-    by the gate's own FAIL route narrowed to the item, and re-scored by the same form: at GATE:PLAN an ARCHITECT re-discussion on a `brief` naming the
-    recommendation ([ARCHITECT](architect.md) > *Re-discussion*), then [GATE:PLAN](gate-plan.md)'s *Re-entry re-score* over the
+    by the gate's own FAIL route narrowed to the item, and re-scored by the same form: at GATE:PLAN an ARCHITECT unit re-run naming the
+    recommendation ([ARCHITECT](architect.md) > *Re-entry*), then [GATE:PLAN](gate-plan.md)'s *Re-entry re-score* over the
     delta; at GATE:HYPOTHESIS the role that wrote the analysis it names amends that artifact — a
     problem the confirmed cause carries enters its `## Scope judgments` — then the same form
     re-scores. The class such a recommendation carries (`doc` / `test` / `impl` / `design`) names the

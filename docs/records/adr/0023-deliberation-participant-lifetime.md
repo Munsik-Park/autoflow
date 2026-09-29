@@ -16,6 +16,10 @@ D3 row for CLAUDE.md > *Spawn mode by role lifetime*). **Amended by issue #351
 sub-agent receives the replies — and the ARCHITECT relay moves to a facilitator sub-agent
 (realization A3) under the conditions of D5, implemented by issue #360 (D5 and *Measurement
 record (issue #351)* below); A2 remains the fallback when a facilitator relay stops (D5 condition 6).
+**Superseded for ARCHITECT by ADR-0025 D2 (issue #375, 2026-09-29)**: ARCHITECT is one U3 Design
+unit spawn whose method is its own; the relay, its participants and facilitator (A2 and A3), the
+transcript, the Record workflow and the facilitator confinement in the gate hook are retired. The
+Discussion Protocol's VERIFY-step scope (D1) is not affected by this supersession.
 
 ## Context
 

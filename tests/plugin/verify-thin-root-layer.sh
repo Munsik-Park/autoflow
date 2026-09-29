@@ -11,8 +11,8 @@
 #
 #   AC1a/AC1b  packaging  the shim carries exactly one pinned import line, inside
 #                         the AUTOFLOW-IMPORT fence setup/init.sh re-stamps by
-#   AC2b       packaging  both root-layer workflow scripts exist at their
-#                         manifest source paths
+#   AC2b       packaging  the root-layer workflow script exists at its
+#                         manifest source path
 #   AC4a       packaging  settings-pin.json is valid JSON and registers the
 #                         autoflow marketplace
 #              manifest   the pin's marketplace name matches marketplace.json .name
@@ -82,12 +82,12 @@ else
   failc "AC1b" "shim artifact missing at $SHIM"
 fi
 
-# ── AC2b: both root-layer workflow scripts exist ───────────────────────────
-echo "== AC2b: root-layer workflow scripts present at their manifest source paths =="
-if [ -f "$REPO_ROOT/.claude/workflows/architect-deliberation.js" ] && [ -f "$REPO_ROOT/.claude/workflows/verify-cause-branch.js" ]; then
-  pass "AC2b: both source workflow scripts exist at .claude/workflows/"
+# ── AC2b: the root-layer workflow script exists ────────────────────────────
+echo "== AC2b: root-layer workflow script present at its manifest source path =="
+if [ -f "$REPO_ROOT/.claude/workflows/verify-cause-branch.js" ]; then
+  pass "AC2b: source workflow script exists at .claude/workflows/"
 else
-  failc "AC2b" "one or both source workflow scripts missing under .claude/workflows/"
+  failc "AC2b" "source workflow script missing under .claude/workflows/"
 fi
 
 # ── AC4a: settings-pin artifact + no-skew cross-check ──────────────────────

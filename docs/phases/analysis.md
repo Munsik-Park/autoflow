@@ -93,7 +93,7 @@ A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion 
 
    Scoring (10 points per item, by issue type — Type 1: 2 items; Type 2: 3 items):
 
-   Type 1 (code change) — a *necessity* gate (DRY-triage), reuse-neutral, **two items only**. The gate answers exactly one question — "is a code change genuinely needed?" — and nothing else: plan feasibility / structural grounding → GATE:PLAN (Feasibility, Scope); structural-fit and over-engineering → GATE:PLAN (Scope) + GATE:QUALITY (Minimal implementation / Fit); "where / how to change" → DIAGNOSE task decomposition (step 6) + ARCHITECT feature design. A fix that reuses existing code scores high, not low.
+   Type 1 (code change) — a *necessity* gate (DRY-triage), reuse-neutral, **two items only**. The gate answers exactly one question — "is a code change genuinely needed?" — and nothing else: plan feasibility / structural grounding → GATE:PLAN (Decision grounds, Scope); structural-fit and over-engineering → GATE:PLAN (Scope) + GATE:QUALITY (Minimal implementation / Fit); "where / how to change" → DIAGNOSE task decomposition (step 6) + ARCHITECT feature design. A fix that reuses existing code scores high, not low.
 
    | Item | Criterion |
    |------|-----------|

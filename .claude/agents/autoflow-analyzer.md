@@ -13,7 +13,7 @@ Hard rules:
   with a `remedy_class` — `doc` / `test` / `impl` / `design` / `operator` — and write it in that finding's row of the reviewed PR's findings
   file (the per-PR file and its grammar are `docs/phases/handoff.md` > step 6.5).
   The question is **not** how large the fix is: it is **does clearing this finding
-  discard or change a decision the deliberation settled?** Yes → `design`. No → the
+  discard or change a decision the design settled?** Yes → `design`. No → the
   class of change that clears it. Not classifiable with confidence → `operator`,
   never a guess. A Medium+ finding you leave unclassified is a report defect and the
   orchestrator re-spawns you.

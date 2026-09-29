@@ -92,21 +92,20 @@ Evidence anchor; `authority` — `VERIFY step 3/4 record`.
 - **Non-interference with HANDOFF's auto-resolution cap**: a `verify-detection` entry is a **record, not
   a decision** — its marker is distinct from `review-autofix`, it is not an auto-resolution attempt, and it
   neither increments nor resets that cap's count window (step 6.5).
-- **Non-interference with the ARCHITECT ledger seed**: the entry's `authority` is `VERIFY step 3/4 record`,
-  outside the settled-decision set the seed rule selects (`ARCHITECT agreed` / `ARCHITECT mutual ACCEPT` / `ARCHITECT rejected`),
-  so a detection record is never seeded into a later deliberation as a settled decision. The ledger's
+- **Not a settled decision**: the entry's `authority` is `VERIFY step 3/4 record`, so a later
+  ARCHITECT unit never reads a detection record as a settled decision. The ledger's
   no-re-litigation rule binds decisions, so a later cycle's detection outcome neither supersedes nor is
   blocked by an earlier one.
 
-**Deadlock resolution**: Evaluation AI judges against the acceptance criteria as the objective baseline — except on a design contradiction, where the verdict is ARCHITECT re-deliberation. Its verdict is one of four:
+**Deadlock resolution**: Evaluation AI judges against the acceptance criteria as the objective baseline — except on a design contradiction, where the verdict is an ARCHITECT unit re-run. Its verdict is one of four:
 
 - the test misreads an acceptance criterion → RED;
 - the implementation misses an acceptance criterion → GREEN;
 - **design contradiction** — implementation and test are each faithful to the design and the
   acceptance criteria are mutually unsatisfiable, reproduced by measurement → **ARCHITECT
-  re-deliberation**. The Developer AI has already recorded the contradiction in
+  unit re-run**. The Developer AI has already recorded the contradiction in
   `.autoflow/issue-{N}-*-green-blocker.md` at GREEN (see GREEN step 2): the conflicting AC IDs,
-  the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit. The re-deliberation
+  the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit. The re-run
   returns through GATE:PLAN and re-enters RED, and consumes the existing GATE:PLAN → ARCHITECT cap
   (max 3× per cycle; the 4th → human);
 - undecidable → the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor), whose answer

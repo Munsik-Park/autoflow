@@ -2,7 +2,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|Bash|Agent|SendMessage|Read|Grep|Glob",
+        "matcher": "Write|Edit|MultiEdit|Bash|Agent",
         "hooks": [
           {
             "type": "command",
@@ -18,15 +18,6 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-read-dedup.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-autoflow-gate.sh"
           }
         ]
       }

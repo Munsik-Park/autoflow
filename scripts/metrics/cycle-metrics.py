@@ -96,7 +96,18 @@ def load_policy(path):
         return {}, {}
     phases = cfg.get('phases') or {}
     keys = {k: (v or {}).get('agent_type') for k, v in phases.items()} if isinstance(phases, dict) else {}
+    for k, t in RETIRED_PHASE_KEYS.items():
+        keys.setdefault(k, t)
     return keys, cfg.get('workflow_sites') or {}
+
+
+# Phase keys the policy no longer carries, with the agent type each named. Sessions recorded before
+# their retirement still read them out, so recovery keeps them and the baseline stays comparable.
+RETIRED_PHASE_KEYS = {
+    'architect-facilitator': 'autoflow-facilitator',
+    'architect-dev-participant': 'autoflow-planner',
+    'architect-test-participant': 'autoflow-planner',
+}
 
 
 def role_of(agent_type):

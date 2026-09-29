@@ -72,8 +72,8 @@ git status                  # any uncommitted work?
 
 ## Bash Execution Mode
 
-- **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, planner, facilitator, implementer, tester, evaluator) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
-- The background + completion-notification pattern is **orchestrator-only**, with one exception: the ARCHITECT facilitator spawns its two participants with `Agent` `run_in_background: true` and waits for each by ending its turn — a foreground wait would return its turn end to the orchestrator as its result and end the relay. Its Bash stays foreground.
+- **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, loopcheck, implementer, tester, evaluator, advisor, the unit agents) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
+- The background + completion-notification pattern is **orchestrator-only**.
 - **[MUST] A foreground command ends on its own.** This binds the same actors as the first bullet, in three forms:
   - **The session shell may not be bash.** The Bash tool's shell is initialized from the user's profile, and a stock macOS profile is zsh, whose expansion differs from bash's: an unquoted `$VAR` is not word-split, an unmatched glob is an error (`no matches found`) instead of the literal word, and a word beginning with `=` is replaced by a command's path. A list — PIDs, file names, arguments — is held in an array and expanded quoted, `"${pids[@]}"`; a glob meant as an argument is quoted (`--include='*.sh'`); a procedure written for bash runs under bash — `bash -c '…'`, or a file run with `bash <path>`.
   - **No bare `wait`.** `wait "$pid"` names its process and is for a process that ends by itself; a process that must be stopped — a load generator, a server — is waited out by a bounded poll: `kill -0 "$pid"` against a counter, then `kill -KILL`, then a report of any PID that is still alive. The bound does not depend on `timeout`.
@@ -149,18 +149,11 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 | Receive instruction from orchestrator | the spawn prompt | delivered once, at spawn |
 | Report to orchestrator | the spawn's return value | completion, escalation — body to `.autoflow/*`, return an anchor + one-line summary |
 | Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
-| Discuss with another role | not available | a deliberation is delegated (below): at ARCHITECT to a facilitator's relay of two persistent participants over a transcript file, at VERIFY to a facilitator `Workflow` — never held between ordinary spawns |
+| Discuss with another role | not available | the VERIFY cause-branch is delegated to a facilitator `Workflow` (below) — never held between ordinary spawns; a functional-unit agent's dialogue with its own helpers is its method |
 
-**Facilitated deliberation phases** (ARCHITECT, VERIFY cause-branch): the orchestrator
-never receives the round-by-round exchange. At **ARCHITECT** the Developer AI and the
-Test AI are two persistent participants (anonymous direct spawns of `autoflow-planner`)
-that a facilitator (`autoflow-facilitator`, spawned by the orchestrator) spawns and wakes
-in alternation by agent ID; every turn and each report is appended to
-`.autoflow/issue-{N}-architect-transcript.md` and the participant returns one line to the
-facilitator, which returns one line to the orchestrator, and a Record **`Workflow`** then
-writes the artifacts from that file. At
-**VERIFY** the self-checks run as in-script sub-agents of an isolated `Workflow`. In
-both, only a single structured result returns to the orchestrator. See
+**Facilitated deliberation phase** (VERIFY cause-branch): the orchestrator never receives
+the exchange. The self-checks run as in-script sub-agents of an isolated `Workflow`, and
+only a single structured result returns to the orchestrator. See
 [`role-contracts.md`](role-contracts.md) > Facilitator
 and [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) >
 Deliberation Isolation.
@@ -172,12 +165,11 @@ Every role is an anonymous direct spawn, so there is exactly one delivery path �
 - **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
 - **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
 
-The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary, or a relay participant's or the facilitator's one line — never the body, whatever the harness's own tool description says of a "full report" ([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Orchestrator context discipline*, row 2).
+The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Orchestrator context discipline*, row 2).
 
 | Spawn mode | Where the report arrives | Required delivery action |
 |---|---|---|
 | anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to `.autoflow/*` and report an anchor + one-line summary |
-| the same spawn **resumed by agent ID** (`SendMessage`, no `name`) — the ARCHITECT relay participants (resumed by the facilitator, or by the orchestrator after it takes a stopped relay over) and the facilitator (resumed by the orchestrator for a same-cycle re-discussion) only | the resumed spawn's task notification, with the one line in its `result` (not auto) or in the hand-back frame that arrives before or after it (auto) | as above; the report is one line (a participant: `turn <n> — further: <yes|none>`; the facilitator: `relay — next=record …` / `relay stopped — <cause>`) and the turn body goes to the transcript file, never to the report |
 
 A spawn carries no `name`: the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle.
 
@@ -188,11 +180,10 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 ## Discussion Protocol (Single Source of Truth)
 
 The rules below govern every multi-AI discussion. The orchestrator's `CLAUDE.md` references this section
-as the canonical Discussion Protocol. In facilitated deliberation phases (ARCHITECT,
-VERIFY cause-branch) this protocol is driven outside the orchestrator's context — at
-ARCHITECT between two persistent participants over a transcript file the orchestrator
-relays, at VERIFY inside an isolated `Workflow` — and only a single result returns to
-the orchestrator; the Developer AI and the Test AI are role spawns, not members of an orchestrator team (see Communication
+as the canonical Discussion Protocol. In the facilitated deliberation phase (VERIFY
+cause-branch) this protocol is driven outside the orchestrator's context, inside an isolated
+`Workflow`, and only a single result returns to the orchestrator. ARCHITECT is not bound by it:
+the U3 Design unit's method, a dialogue included, is its own (ADR-0025 D2); the Developer AI and the Test AI are role spawns, not members of an orchestrator team (see Communication
 above).
 
 **Response process**:

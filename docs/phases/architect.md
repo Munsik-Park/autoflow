@@ -1,159 +1,78 @@
-# ARCHITECT — Plan Synthesis (Developer AI + Test AI)
+# ARCHITECT — U3 Design unit
 
 > Phase playbook for ARCHITECT. [`CLAUDE.md`](../../CLAUDE.md) > Phase Playbook Loading
 > Contract routes to this file; the other phases are listed in
 > [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
 
-Both perspectives participate. The discussion is a **relay a facilitator sub-agent runs between two
-persistent participants** — the Developer AI and the Test AI, each spawned once for the discussion
-by the facilitator and woken by agent ID for each of its turns — and its whole record is one
-file, `.autoflow/issue-{N}-architect-transcript.md`, which every turn is appended to. The discussion
-has three phases: **Discuss** and **Report** are the relay; **Record** is the
-`Workflow` named `architect-deliberation`, which reads the transcript file and writes the artifacts.
-The facilitator relays but does not deliberate: it acts on the transcript's decidable state and
-never reads a turn body. The orchestrator spawns the facilitator and receives only its one-line
-result and the Record workflow's (Deliberation Isolation).
+ARCHITECT and GATE:PLAN are one functional unit, U3 Design
+([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed
+by four things only — its goal, its artifact contract, its verification and its loop cap (D2) —
+and this file states them. How the unit reaches the goal — what it reads, whether it spawns
+helpers, whether it asks a critic to challenge a draft or holds a dialogue at all, how it designs
+this issue's own verification — is the unit agent's, recorded with its grounds in its artifact
+([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
 
-**Discuss** is the relay. The Developer AI opens with a design proposal, the Test AI answers it, and
-the two alternate. Each participant holds one fixed prompt for its role
-(`.claude/agents/autoflow-planner.md` > *ARCHITECT relay participant*) and reads the topic once from
-the transcript file's `## Topic` section; its context is its memory across turns, and the file is
-the record the other side reads. The design documents are written after the discussion. Each turn's heading carries whether the author has anything further to
-raise (`[further: yes|none]`), and the discussion ends when two consecutive turns both say
-`none` — the participants' own conclusion ends it; `scripts/architect/relay-state.sh state`
-computes that condition and the next side, and the facilitator obeys it. The Discussion
-Protocol's VERIFY step applies over the transcript: a fact the transcript cites with
-a `path:line` (read at the cycle's commit) or a document's section and quoted sentence is verified for both participants, and a participant reads a file to ground a claim
-of its own or to dispute a cited one.
+- **Goal**: a design the build roles can implement and verify — the architecture decisions with
+  the constraints they hold under and the alternatives rejected, and a verification design that
+  says how each acceptance criterion is verified and which failure mode each verification catches.
+- **Artifact contract**: the two documents under *Output artifacts* below.
+- **Verification**: GATE:PLAN — a fresh Evaluation AI scores the two documents
+  ([GATE:PLAN](gate-plan.md)); the unit never scores its own artifact.
+- **Loop cap**: a GATE:PLAN FAIL re-runs the unit with the evaluator's findings and the previous
+  documents (*Re-entry* below), max 3× (`CLAUDE.md` > Flow Control > Regressions).
 
-**Report** is one more wake per participant: each appends its reading of the discussion to the
-transcript under `## Report — <side>` — the design conclusions both accepted, and each point it
-considers worth raising to the orchestrator, with both positions and why it is worth raising.
-**Record** is the `Workflow`: one scribe reads the transcript file — topic, turns, any brief, both
-reports — and writes the feature design, the verification design and the report from those
-conclusions, followed by a ledger call that appends the agreed conclusions under the authority
-`ARCHITECT agreed`. Invocation: `Workflow({ name: "architect-deliberation", args: { issue: "N" } })`.
+## Unit spawn
 
-The run returns `{ report: { agreed, unagreed[] }, artifacts, transcript, ledger, summary, stopped }`.
-The orchestrator receives that object and routes it (*Report routing* below); it does not receive
-the turns or the reports' bodies. It **verifies** what the report rests on by spot-checking targeted
-artifact excerpts against re-derived facts — the full read-and-score is GATE:PLAN's. Isolation rule:
-[`CLAUDE.md`](../../CLAUDE.md#deliberation-isolation-delegated-facilitation) > Deliberation Isolation;
-contract: [`role-contracts.md`](../role-contracts.md) > Facilitator.
-
-### Relay procedure
-
-The relay runs in a **facilitator** sub-agent (`subagent_type: autoflow-facilitator`,
-`.claude/agents/autoflow-facilitator.md`), not in the orchestrator's turn stream (ADR-0023 D5). The
-orchestrator prepares the transcript, spawns the facilitator, and takes back one line; the facilitator
-spawns the participants, wakes them, and acts on `relay-state.sh` alone. Every wait, on either side,
-is a **turn end** ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Wait discipline*): a
-spawn's one line is its report, arriving with its task notification
-([`role-common-rules.md`](../role-common-rules.md) > Result delivery path by spawn mode), and nothing
-is polled (a cache keep-alive wake, which the same principle admits, is not a poll).
-
-**Orchestrator.**
-
-1. **Transcript.** `bash scripts/architect/relay-state.sh init .autoflow/issue-{N}-architect-transcript.md {N} ["<brief>"]`
-   writes the header — the topic stated once, naming the issue's inputs and the ledger's settled
-   authorities; a brief given here is carried into the topic. The file is append-only from this
-   point: `init` refuses an existing file.
-2. **Spawn the facilitator** (`Agent`, anonymous, no `name`, `run_in_background: true`,
-   `subagent_type: autoflow-facilitator`, the model `bash scripts/spawn-policy/spawn-policy.sh model
-   architect-facilitator` names) with a prompt that names the issue `{N}`, the transcript path, and
-   each side's model (`… model architect-dev-participant` / `… architect-test-participant`). Keep
-   its agent ID. End the turn. The spawn is in the background because a foreground facilitator's
-   turn end returns to its caller as its result, and the relay ends with it.
-3. **On the facilitator's report.** `relay — next=record …`: run `relay-state.sh state` and, on
-   `next=record`, invoke the Record workflow; on its return, run the artifact-existence check below
-   and route the report (*Report routing*). `relay stopped — <cause>`, or any other outcome that
-   leaves `next` short of `record`: take the relay over (*Fallback* below).
-4. **Isolation and lifetime.** The facilitator and the participants are not woken again after the
-   Record workflow returns, except for a re-discussion (*Re-discussion* below). The orchestrator
-   never reads the transcript's turn bodies.
-
-**Facilitator.** Every branch it takes is decided by `relay-state.sh` output or by a notification
-arriving, and its wakes are five fixed texts:
-
-| Text | When |
-|---|---|
-| `Write Turn <n>.` | the side `next` names |
-| `Your Turn <n> was not appended. Write Turn <n>.` | a notification arrived with `turns` unchanged — a **missing turn**; once |
-| `Your block was voided (<cause>). Re-append Turn <n> correctly.` | `state` exit 1 — the defect voided (below) |
-| `The discussion has ended — append your report.` | `next=report`; a side in `reports_missing`, once more; a voided report section |
-| `Re-discussion round <r> (a Brief was appended). Write Turn <n>.` | in place of the first text, for a side `state` lists in `fresh` — its first wake after a brief |
-
-1. It runs `state` and acts on `next`: `dev` / `test` — spawns that side (`subagent_type:
-   autoflow-planner`, background, the model its prompt names; the spawn prompt names the side, the
-   issue, the transcript and the wake text) when it has no agent ID for it yet, otherwise wakes it by
-   `SendMessage` to that ID; then ends its turn.
-2. On each participant's notification — the step's only trigger; the participant's one line, which in
-   auto mode comes in a hand-back frame before or after the notification, gates nothing — it runs
-   `state` again. A `state` exit 1 (a malformed heading, a mis-numbered turn) is a transcript defect.
-   The file stays append-only, so the defect is voided, not removed: `relay-state.sh void` appends a
-   `### Void — line <k>` block for the first defect `state` reports (a heading `state` accepts is
-   never voidable), and `state` is run again, voiding each further exit 1 the same way until it exits
-   0; the defect's author is woken with the voided-block text. A second missing turn for the same
-   turn is the infrastructure state `participant missing`: that side is spawned fresh, pointed at the
-   transcript, and the relay continues.
-3. `next=report`: both sides are woken in one turn; when both notifications are in, `state` runs
-   again, a side named in `reports_missing` is woken once more, and if it is still missing the relay
-   continues — the scribe records that side's positions from its turns.
-4. `next=record`: it reports `relay — next=record turns=<n> round=<r>` and stops. It cannot proceed
-   — a call denied twice, a `state` exit 2, a failed spawn: it reports `relay stopped — <cause>` and
-   stops.
-
-It records each action with `relay-state.sh log <transcript> '<line>'` —
-`issue-{N}-architect-relay-log.md` beside the transcript, including each spawn's side and agent ID —
-the record the operator reads to observe the relay.
-
-**Confinement.** The gate hook identifies the facilitator's calls by the hook input's `agent_type` /
-`agent_id` and denies, before the call runs: any Bash command other than `relay-state.sh state` /
-`void` / `log` on an ARCHITECT transcript; a `SendMessage` whose text is not one of the five, or whose
-recipient is not a participant it spawned — the hook records each participant from the response to
-the facilitator's `Agent` call, in `.autoflow/facilitator/<facilitator agent ID>.participants`; an
-`Agent` spawn other than an anonymous `autoflow-planner`; and every other tool the hook sees (`Read`,
-`Grep`, `Glob`, `Write`, `Edit`). The facilitator's own definition grants only `Bash`, `SendMessage`
-and `Agent`. The participants and the orchestrator carry another type, or none, and are unaffected.
-Under an active cycle the facilitator's spawn and its participants' spawns take the role declaration
-and the planning gate like any `autoflow-planner` spawn.
-
-**Fallback — the orchestrator takes the relay over.** A facilitator that stops — its `relay
-stopped` report, a notification with no relay line, or the operator observing that it no longer
-advances the relay log — hands the relay to the orchestrator on the **same** transcript: the
-orchestrator runs `state` and continues the facilitator's steps itself, waking each participant by
-the agent ID the relay log records for it (a side with no recorded ID is spawned fresh, pointed at the
-transcript) with the same five texts, and ending its turn after each wake. A participant follows
-the orchestrator's wake as the coordinator's. The orchestrator still reads no turn body: it reads the
-one-line reports, `state`, and the relay log's spawn lines.
-
-**Artifact-existence check (orchestrator-side).** Before GATE:PLAN the orchestrator confirms the
-three artifacts the scribe writes exist and are non-empty — `.autoflow/issue-{N}-feature-design.md`,
-`.autoflow/issue-{N}-verification-design.md` and `.autoflow/issue-{N}-architect-report.md` — and
-treats a missing or empty one — or a verification design without its `## Tools` section
-(*Tools* below) — as an infrastructure cause to repair and re-run, rather than proceeding.
-
-**Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation does not apply. Injection is still **role-minimal and routed via `docs/INDEX.md`**, never wholesale: the orchestrator's facilitator prompt gives, for each side, a documents line naming only the documents its design task needs (e.g. the relevant `docs/records/adr/*`, `docs/records/design-rationale.md`); the facilitator copies it verbatim into that participant's spawn prompt, and the participant reads them once. **Deliberation Isolation is unchanged** — the turns live in the transcript file and only the facilitator's one line and the Record workflow's report return to the orchestrator.
-
-**Roles**:
-- **Developer AI**: feature design (changed files, API interface, data structures).
-- **Test AI**: verification design (acceptance criteria → verification method, testability assessment, and the tools each criterion needs — *Tools* below).
+1. **Spawn** one `autoflow-unit-design` (`Agent`, anonymous, no `name`, the model
+   `bash scripts/spawn-policy/spawn-policy.sh model unit-design` names). The prompt states the goal
+   and names the inputs by path — the acceptance-criterion list
+   (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the decision ledger
+   (`.autoflow/issue-{N}-ledger.md`), the DIAGNOSE artifacts (`.autoflow/issue-{N}-phase-*.md`, the
+   GATE:HYPOTHESIS reports) — and the two output paths. On a re-entry it also names what the
+   re-entry is for and the previous documents (*Re-entry* below).
+2. **Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation does
+   not apply. Injection is still role-minimal and routed via `docs/INDEX.md`, never wholesale: the
+   prompt carries a documents line naming the documents the design needs (e.g. the relevant
+   `docs/records/adr/*`, `docs/records/design-rationale.md`); the unit reads anything further its
+   design needs, by its own judgment.
+3. **Return.** The unit returns its two artifact paths and a one-line summary
+   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
+   orchestrator does not receive the design's body.
+4. **Artifact-existence check (orchestrator-side).** Before GATE:PLAN the orchestrator confirms
+   `.autoflow/issue-{N}-feature-design.md` and `.autoflow/issue-{N}-verification-design.md` exist
+   and are non-empty, the feature design carries its `## Decision requests` section and the
+   verification design its `## Tools` section. A missing or empty one is an infrastructure cause:
+   the unit is spawned again with the same inputs, consuming no counter.
+5. **Route** the return (*Report routing* below).
 
 ## Output artifacts
 
-1. **Feature Design Document** (Developer-AI-led) — `.autoflow/issue-{N}-feature-design.md`, the
+1. **Feature Design Document** — `.autoflow/issue-{N}-feature-design.md`, the
    **architecture decision layer** and nothing below it: the decisions, the constraints
    they hold under, and the alternatives considered and rejected with the ground for each rejection.
    It cites the verification design's `Failure mode` column (below) for the failure mode each
-   verification exists to catch, rather than stating it. The deliberation stops here.
+   verification exists to catch, rather than stating it.
 
    **[MUST]** The document carries a `## Scope` section: the cycle's scope beyond the acceptance
-   criteria. Each problem the deliberation judged under
+   criteria. Each problem judged under
    [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
-   judgment* — DIAGNOSE's `## Scope judgments` and any the participants found — is listed as
+   judgment* — DIAGNOSE's `## Scope judgments` and any the design found — is listed as
    included or separated, with the conditions it meets and, for a directly related problem left
    out, its separation reason. A section with nothing beyond the criteria says `none`. Scope is a
    decision, settled here, not derived below.
+
+   **[MUST]** The document carries a `## Decision requests` section: each decision the design
+   needs that is not the unit's to make, one entry each, written situation-first
+   ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Human-decision presentation*) —
+   - an **acceptance-criterion content change** — excluding, revising or splitting an issue
+     acceptance criterion, or adding one: the criterion, the proposed change and the fact that
+     shows the need ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion
+     decisions*);
+   - a **design point** the unit is not confident to settle, or whose choice is not its own
+     ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 3): the options and what each changes.
+
+   A design with no such request says `none`. The unit designs on its proposal and states the
+   proposal as pending; it never applies an acceptance-criterion change itself.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
@@ -161,13 +80,17 @@ treats a missing or empty one — or a verification design without its `## Tools
    Verification and Tools > *How a test is run is the target's practice*; on an opted-in target the selector
    answers which committed suites the delta reaches), and from the files those roles open to change anyway. The dividing line is one question: **would this
    sentence being wrong mean the design has to be revisited, or would it just be fixed where it is
-   found?** The first belongs to the deliberation; the second does not. A derivation RED produces
+   found?** The first belongs to the design; the second does not. A derivation RED produces
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
    that exemption explicitly.
 
-2. **Verification Design Document** (Test-AI-led) — the `Issue AC` join key is **not** reduced by
-   the layer split above: the per-criterion disposition is a deliberation output. What the split removes from it is depth, not rows: `Method` names the **kind** of oracle
-   a row gets, and the condition clause that implements it is RED's.
+2. **Verification Design Document** — `.autoflow/issue-{N}-verification-design.md`. The
+   `Issue AC` join key is **not** reduced by the layer split above: the per-criterion disposition is
+   a design output. What the split removes from it is depth, not rows: `Method` names the **kind**
+   of oracle a row gets, and the condition clause that implements it is RED's. The table's columns
+   are what the downstream readers need — GATE:PLAN's AC-authority check joins on `Issue AC`, RED
+   reads `Kind`, GATE:QUALITY reads `Type`, and HANDOFF carries each reduced disposition and its
+   `Reason` into the PR body; how each row is reached is the unit's.
 
 | Issue AC | Acceptance criterion | Type | Kind | Method | Failure mode | Reason |
 |----------|----------------------|------|------|--------|--------------|--------|
@@ -175,7 +98,7 @@ treats a missing or empty one — or a verification design without its `## Tools
 | AC2 | (criterion 2) | existing-coverage | — | the schema check that already rejects this shape | a value of the shape this criterion forbids | the check runs on every build |
 | AC3 | (criterion 3) | manual | — | AI: `<tool in ## Tools>` — scenario doc; the result compared against the referenced material | the behavior the scenario observes breaking | no executable assertion states it; the AI observes it with the tool `## Tools` records |
 | AC4 | (criterion 4) | none | — | — | — | absence costs nothing: the value is read from a sample file the user edits |
-| — | (criterion 5) | environment-dependent | — | introduce mock or propose design change (except where the composition-oracle clause applies) | the failure the mock itself can catch (`—` on a design-change request) | — |
+| — | (criterion 5) | environment-dependent | — | introduce mock or propose design change | the failure the mock itself can catch (`—` on a design-change request) | — |
 
 - **`Type` is the per-criterion verification disposition**, one of
   `automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
@@ -202,9 +125,7 @@ treats a missing or empty one — or a verification design without its `## Tools
   fail and that no other verification catches. On an `existing-coverage` row it names what the
   named mechanism fails on, and `Reason` says why no new layer is owed without restating that
   failure. On an `environment-dependent` row resolved to a mock, it names the failure the mock
-  itself can catch, not the environment behavior the mock stands in for. On a composition-oracle
-  row, it names the composition-time behavior at the traced identifier that the mock-boundary check
-  does not catch (*Composition oracle* below).
+  itself can catch, not the environment behavior the mock stands in for.
   - **Row grain** — one row per verification: a criterion verified more than one way carries one
     row per verification under the same `Issue AC`, and every other criterion keeps its one row. A
     verification that spans rows carries the same label in `Method` on each of them.
@@ -212,52 +133,19 @@ treats a missing or empty one — or a verification design without its `## Tools
     mechanism that fails on the same defect: an existing test, a lint rule, a schema, a compiler or
     type check, a build or packaging check. Naming such a mechanism is the `existing-coverage`
     disposition (*Test necessity* below).
-  - **[MUST] Owed** on `automated`, `existing-coverage`, `delivery-check` and `manual` rows, on
-    `environment-dependent` rows resolved to a mock or a manual delegation, and on composition-oracle
-    rows. `none` and design-change-request rows carry `—`.
+  - **[MUST] Owed** on `automated`, `existing-coverage`, `delivery-check` and `manual` rows, and on
+    `environment-dependent` rows resolved to a mock or a manual delegation. `none` and
+    design-change-request rows carry `—`.
   - **A cell that cannot be filled** — the verification names no defect that another verification
-    or mechanism does not already catch — removes that verification from the agreement rather than
-    being argued down. A composition oracle is a floor and is never removed on
-    this ground.
+    or mechanism does not already catch — removes that verification from the design.
 
-- For untestable items: first find the tool that verifies the item directly (*Tools* below); only when none can be secured, state the reason and the alternative (design change / a `manual` row executed by a person (except where the composition-oracle clause applies) / mock (same exception)).
+- For untestable items: first find the tool that verifies the item directly (*Tools* below); only when none can be secured, state the reason and the alternative (design change / a `manual` row executed by a person / mock). When an item is not automatable, consider first whether a feature-design change makes it testable.
 - Design-change request: parts of the feature design that should be revised so they become testable.
 - Committed-surface allow-list: a manifest-registered source in the change surface pulls
   `setup/manifest.json` in as a derived member of the allow-list (Change Surface Rules > Derived
   artifacts). Under the layer split above this is **derived at GREEN**, from the actual staged
   surface, not predicted here — but it is still derived *before* the commit, never left to a
   test/CI failure to admit.
-
-3. **Deliberation report** (scribe-written): `.autoflow/issue-{N}-architect-report.md`, under the
-   headings `## Agreed` — one line per conclusion both participants accepted — and `## Unagreed` —
-   per point, the point, the Developer AI's position, the Test AI's position, and why it was
-   raised. This is the artifact the orchestrator routes (*Report routing* below).
-
-### Record
-
-The scribe writes the three artifacts after the discussion, from the transcript file and the two
-reports of its last round (a re-discussion opens a new round with a `### Brief` block and ends with
-its own two reports; the earlier round's reports stay on the record). The two design documents state the design and the conclusions the participants
-reached, in the form each is defined above; the report states what was agreed and what was not.
-
-**[MUST] A re-discussion's Record is a delta, never a rewrite**. On the **first**
-Record of a cycle the scribe writes the documents whole. On every Record after that it reads the
-existing documents plus **only the turns appended since the previous Record** and both reports of
-this round — not the accumulated transcript — and **appends** a delta section rather than
-re-authoring the body:
-
-```
-## Delta — round <n> (<brief origin: GATE:PLAN FAIL | un-agreed re-discussion | VERIFY design contradiction | design re-entry | acceptance-criterion decision | gate recommendation>)
-
-- <what changed>: <the decision as it now stands> — supersedes <the section or decision it replaces>
-- <what was added>: <the decision> — <ground>
-```
-
-Text a round did not change is **left exactly as it stands**. The delta section is also GATE:PLAN's
-narrowed input on re-entry ([GATE:PLAN](gate-plan.md) > *Re-entry re-score*).
-The transcript file is the discussion's own record and is read only by the participants and the
-scribe; the Record workflow's report is what reaches the orchestrator. See
-[`role-contracts.md`](../role-contracts.md) > Facilitator > Return Contract.
 
 ### Test necessity
 
@@ -287,7 +175,7 @@ the policy body; every other document references it rather than restating it.
 | `existing-coverage` | already detected by an existing test, lint rule, schema, compiler/type check, build or packaging check — the row names which |
 | `delivery-check` | a one-shot check that the change was wired / generated / delivered — a `cycle` artifact under `.autoflow/issue-{N}-local/`, never committed; RED/GREEN semantics do not apply to it |
 | `manual` | a scenario verified by observation, not by an executable assertion; `Method` names its executor — `AI: <tool>`, the tool the `## Tools` section records, or `person` only when no tool can be secured, the `Reason` saying why (*Tools* below); the row names the checklist — a `cycle` artifact unless the cell carries a D1 token |
-| `environment-dependent` | verifiable only against an environment this cycle cannot drive with the tools the `## Tools` section records (except where the composition-oracle clause applies) |
+| `environment-dependent` | verifiable only against an environment this cycle cannot drive with the tools the `## Tools` section records |
 | `none` | no persistent verification has positive value — the row states why absence costs nothing |
 
 - **[MUST]** Every disposition other than `automated` on an **issue** AC row carries a one-line
@@ -311,9 +199,6 @@ two judgments above, not by the subject being data.
 is not a required behavior. Production code gains no interface, indirection or dependency injection solely to fit
 a test shape.
 
-- The dispositions and reasons are the Test AI's to author, and the ARCHITECT facilitator may
-  record them on the Test AI's behalf when it writes the verification design.
-
 ### Verification depth
 
 - **[MUST]** The verification design opens with a **risk line** — one line naming
@@ -323,94 +208,21 @@ a test shape.
 - **Per-verification failure mode** — carried by the acceptance-criteria table's `Failure mode`
   column. The column's bullet under *Output artifacts* above defines what the cell names, what it
   is compared against and what a cell that cannot be filled means.
-- **Amendment** — a risk discovered mid-deliberation may raise depth, provided the reason is
-  stated in the discussion and carried into the verification design. Depth is revisable, not
-  capped, and the amendment adds no artifact (*Record* above).
 - **[MUST]** State the determination once in the verification design, and restate no
   verification's failure mode anywhere outside the `Failure mode` column; narrative that states no
   per-layer failure mode (a layer removed, depth added) may stay. The obligation is
   unconditional — every verification design has at least one layer — so an absent statement is a
-  missing obligation, not a "not applicable".
-- The determination is the Test AI's to author, and the ARCHITECT facilitator may record it on the
-  Test AI's behalf when it writes the verification design.
-
-### Composition oracle
-
-- **[MUST]** When the design's change surface names shared state that a **settled decision** also
-  names, the verification design must assign at least one oracle that drives that contact point
-  through the **real execution environment** — no mock, stub, fake, or simulation may stand in for the shared state.
-- **Trigger** — a set intersection, not a judgment. Let `T` be the set of shared-state identifiers named by the design's change surface,
-  and `S` the set of shared-state identifiers referenced by the governing settled decisions; the clause
-  fires when `T ∩ S ≠ ∅`. One oracle is owed **per element** of `T ∩ S`. A single oracle may discharge
-  several elements, provided every element is traced by some oracle — each oracle's row carries the
-  intersecting identifier(s) as its trace.
-- **Settled decision** — an accepted or proposed ADR under `docs/records/adr/`, a prior issue's agreed
-  design, or an entry in this issue's decision ledger (`.autoflow/issue-{N}-ledger.md`).
-- **Shared state** — state that outlives a single call and that more than one decision reads or
-  writes. The obligation binds to no concrete realization; the following are examples only: e.g. a
-  datastore collection or field and the query layer over it, a hardware register or firmware
-  setting, a file-format field, a wire-protocol field, a shared memory region.
-- **[MUST]** Record the determination once in the verification design, as one `composition-oracle`
-  block, and attach the output of `scripts/architect/composition-oracle.sh` run over the written
-  file — its stdout and its exit status, both exactly as the shell produced them, never re-typed.
-  The Test AI identifies `T` and `S`; the scribe records the block at Record, runs the
-  script over the verification design it has just written, and runs it again in a delta round that
-  restates the block. This clause is the grammar's only definition — the script and the Record
-  prompt cite it:
-
-  ```composition-oracle
-  T:
-  - <identifier> | <source>
-  S: none | <one-line ground>
-  ```
-
-  - **Lists** — the label `T:` once and `S:` once, each followed by its entries, one per line:
-    `- <identifier> | <source>`. The identifier is one whitespace-free token and matches exactly —
-    whether two spellings name one item is the author's call, made by using one identifier for it in
-    both lists. A `T` entry's source is the design decision that names the shared state; an `S`
-    entry's source is the settled decision, as an ADR path, a prior issue id or a ledger entry id.
-  - **An empty list is declared, never implied** — `T: none | <one-line ground>`. A label with
-    neither entries nor that declaration, a declaration without its ground, and a declaration
-    together with entries each leave the list unestablished.
-  - **Delta rounds** — a round that changes `T` or `S` restates the whole block as the payload of
-    one `supersedes` bullet in its delta section (*Record* above). The script evaluates the
-    **latest** block in document order, never falls back to an earlier one, and names the block it
-    evaluated: `evaluated: base`, or `evaluated: round <n>` for the delta round the block sits in.
-  - **Outcomes** — `intersection`: exit status `10` with `result: intersection`, the intersecting
-    identifiers (the traces the oracle rows carry) on the `intersecting:` line; `empty`: exit
-    status `11` with `result: empty`; and `unknown/error` with its `cause:`. An outcome holds only
-    when the exit status and the `result:` line agree — any other status, a missing `result:` line,
-    or a line and status that disagree is `unknown/error`. An absent or unreadable file, a missing
-    block or list, an unestablished list, an entry without an identifier or a source, and a
-    malformed latest block are `unknown/error`, never `empty`.
-  - **Reading** — an absent statement is not read as "not triggered", and neither is an absent
-    output, an `unknown/error` output, or an attached `result:` line and exit status that disagree:
-    each is a missing determination. When a delta round attaches a new output, the latest attached
-    output governs; an earlier attachment stays as settled text and no longer reproduces on a
-    re-run. `empty` establishes that the recorded sets do not meet, not that the lists are complete.
-  - **Residual** — two cases rest on the reader alone. No layer verifies that a reader applies the
-    rule above to a disagreeing line and status. And a restated block whose fence or delta heading
-    the script does not recognise leaves an earlier block evaluated with no error: a stale `empty`
-    is then visible only as an `evaluated:` field naming an earlier block than the round that
-    restated it, so the reader compares the two.
-- When no such oracle can be built, that is a **design-change request** (the bullet above), not a
-  manual-scenario fallback and not a mock. This clause narrows the untestable-items bullet and the
-  table's environment-dependent row above for triggered composition contact points; both keep
-  offering mock or manual delegation for every other untestable item.
-- **Complements, does not replace, the VERIFY mock-boundary check.** Step 4's
-  `Mock-boundary fidelity check (Test AI)` compares a double's *shape* against the real interface;
-  this clause covers **composition-time behavior** — what the change does when it meets the real
-  state a settled decision contracted over.
+  missing obligation, not a "not applicable". A risk found later raises depth at a re-entry, with
+  its reason stated in the delta (*Re-entry* below).
 
 ### Tools
 
 The rule is [`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *The tools the work needs*;
-this clause is where the verification design applies it. The participants open the materials
+this clause is where the verification design applies it. The design opens the materials
 Phase B's `## Referenced materials` section lists ([`phases/analysis.md`](analysis.md) >
 per-role injection whitelist) — the material, not the issue body's abbreviated example, is the
-design's input — and the Test AI finds, for each criterion, the tool that verifies it directly
-**before** settling it as a `manual` row executed by a person, as `environment-dependent`, or on a
-mock.
+design's input — and finds, for each criterion, the tool that verifies it directly **before**
+settling it as a `manual` row executed by a person, as `environment-dependent`, or on a mock.
 
 - **[MUST]** The verification design carries a `## Tools` section: one line per tool — the tool,
   the rows it verifies (or the design question it serves), its availability, and the ground the
@@ -419,9 +231,9 @@ mock.
   starts it), or `operator: <what is needed>` (an installation, a credential, a permission setting,
   enabling an MCP server or a browser extension, access to a material). A design that needs no
   tool says `none`, with its ground in one line. AutoFlow names no tool here: which tool, and how
-  it is used, is the participants' judgment in the target.
-- **Availability is settled here, not at VERIFY.** After the Record workflow returns, the
-  orchestrator reads this section — a targeted excerpt, not a full read ([`CLAUDE.md`](../../CLAUDE.md)
+  it is used, is the design's judgment in the target.
+- **Availability is settled here, not at VERIFY.** After the unit returns, the orchestrator reads
+  this section — a targeted excerpt, not a full read ([`CLAUDE.md`](../../CLAUDE.md)
   > Cost Control > *Orchestrator context discipline*) — before GATE:PLAN. An `operator` item is the
   tool request pause ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control > *tool or referenced material →
   user*), presented situation-first, and GATE:PLAN is not spawned until the operator answers. A
@@ -430,53 +242,35 @@ mock.
   the same pause.
 - A criterion no tool can reach after this search keeps the fallbacks of the untestable-items
   bullet above — a `manual` row executed by a person, or a mock — and its `Reason` states why no
-  tool could be secured; GATE:PLAN's `Test plan` reads that reason.
+  tool could be secured; GATE:PLAN's `Verification fit` reads that reason.
 - The row verified with a tool is looked at with it once implemented: the Developer AI looks at its
   own result while implementing (GREEN step 2), and the evidence — the row's observation record —
   is the Test AI's, written at VERIFY step 1.
 
-## Testability-driven design
-
-When the Test AI flags an item as "not automatable", the team discusses whether a feature-design change makes it testable. If not, the item stays as a manual scenario with a stated reason — executed by the AI with the tool the `## Tools` section records, or by a person only when no tool can be secured (*Tools* above) — except where the composition-oracle clause applies.
-
 ## Report routing
 
-The orchestrator receives the report and routes it. The discussion itself runs under the Discussion
-Protocol ([`role-common-rules.md`](../role-common-rules.md) > Discussion Protocol), whose
-first-exchange devil's advocate carries ADR conformance as one of its axes: the resolution is
-checked against any governing ADR. That is the first, non-gated approach check, and GATE:PLAN is
-the gated one.
+The orchestrator routes the unit's return. It reads two targeted excerpts — the verification
+design's `## Tools` section and the feature design's `## Decision requests` section — and never
+reads the design to judge it: the full read-and-score is GATE:PLAN's.
 
-- **`stopped` is non-null.** The record could not be carried out — the scribe was missing, or the
-  spawn policy would not load. Repair the cause and re-run the Record workflow. This is infrastructure state, never a design outcome, and it consumes no counter; its
-  relay-side counterpart is a participant that appends no turn after one re-wake (*Relay
-  procedure* step 3).
-- **No un-agreed point.** The design is the participants' joint conclusion. Run the
-  artifact-existence check and read the verification design's `## Tools` section — an `operator`
-  item is the tool request pause (*Tools* above) — then GATE:PLAN (a fresh Evaluation AI on the 5-item rubric of [GATE:PLAN](gate-plan.md)). A
-  GATE:PLAN FAIL re-enters the deliberation with a brief (*Re-discussion* below); that is the
+- **An `operator` item in `## Tools`** — the tool request pause (*Tools* above).
+- **`## Decision requests` says `none`** — GATE:PLAN (a fresh Evaluation AI on the rubric of
+  [GATE:PLAN](gate-plan.md)). A GATE:PLAN FAIL re-runs the unit (*Re-entry* below); that is the
   existing `GATE:PLAN FAIL → ARCHITECT (max 3×)` re-entry.
-- **An un-agreed point.** One judgment, and it is the orchestrator's: discuss further, or hand the
-  point to the advisor.
-  - **Discuss further** — prepare what the next discussion needs and append it as the `brief`
-    (*Re-discussion* below). A preparation may carry the un-agreed points as a narrowed topic, a
-    fact the orchestrator verified in the meantime (`path:line` at a commit SHA, command output), the prior
-    report's path, or a different perspective for a participant to take. Record the judgment as an
-    `O` ledger entry — decision and grounds, authority `orchestrator judgment`. A re-discussion
-    after an un-agreed report is not a GATE:PLAN re-entry and consumes no re-entry counter.
-  - **Advisor** — write the un-agreed point as an advisor request, situation-first
-    ([`role-contracts.md`](../role-contracts.md) > Advisor). The advisor's answer is appended as the next `brief`, naming its `A` entry
-    as settled, and the deliberation adopts it — a re-discussion, consuming no re-entry counter.
-- **An agreed conclusion changes an acceptance criterion's content.** Excluding, revising or
-  splitting an issue acceptance criterion, or adding one, is never the deliberation's: the advisor
-  decides first and the operator may override at the retry stage ([`role-contracts.md`](../role-contracts.md) > Advisor). Write the
-  advisor request situation-first naming the affected criteria and what the design proposes for
-  each, and do not spawn GATE:PLAN until the advisor's `[ac-decision]` entries — one per decided AC
-  in the grammar at [`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion
-  decisions* — are recorded; on `revised`, `split` or `added`, edit the Phase B
-  acceptance-criterion table to match; then continue to GATE:PLAN, or to a re-discussion on a
-  `brief` where the answer differs from the design's proposal. Neither consumes ARCHITECT re-entry
+- **An acceptance-criterion content change is requested.** Excluding, revising or splitting an
+  issue acceptance criterion, or adding one, is never the design's: the advisor decides first and
+  the operator may override at the retry stage ([`role-contracts.md`](../role-contracts.md) >
+  Advisor). The orchestrator writes the advisor request situation-first from the section's entry,
+  naming the affected criteria and what the design proposes for each, and does not spawn GATE:PLAN
+  until the advisor's `[ac-decision]` entries — one per decided AC in the grammar at
+  [`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions* — are recorded;
+  on `revised`, `split` or `added`, it edits the Phase B acceptance-criterion table to match. It then
+  continues to GATE:PLAN where the answer is the design's proposal, or re-runs the unit on the
+  `[ac-decision]` entries where it differs (*Re-entry* below). Neither consumes ARCHITECT re-entry
   budget.
+- **A design point is requested.** The orchestrator hands it to the advisor situation-first; the
+  answer is an `A` ledger entry. Where the answer is the option the design took, GATE:PLAN follows;
+  otherwise the unit re-runs on the answer (*Re-entry* below). Neither consumes a counter.
 - **An acceptance-criterion change raised later in the cycle.** A role at GREEN, VERIFY or REFINE whose work shows a
   criterion defective — a fact it presumes that does not hold, or a scope too narrow or too wide for
   the problem ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*) —
@@ -487,7 +281,7 @@ the gated one.
   advisor situation-first; the advisor's entries use the same grammar with the phase the change
   surfaced in, and the orchestrator edits the Phase B table on `revised`, `split` or `added`. Where
   the cycle then re-enters is the orchestrator's judgment, recorded with its grounds in an `O`
-  ledger entry: at ARCHITECT, on a `brief` naming the `[ac-decision]` entries, when a
+  ledger entry: at ARCHITECT, a unit re-run naming the `[ac-decision]` entries, when a
   verification-design row must be added or rewritten — then GATE:PLAN's re-entry re-score and RED;
   at GREEN when only the implementation changes; otherwise at the point the question arose. A return to ARCHITECT on this ground
   consumes no re-entry budget.
@@ -497,9 +291,8 @@ verified by an existing mechanism, a manual scenario, a delivery check, or by no
 verification-method choice, not a change to the criterion. It passes three tiers, and only the third
 is the advisor (the operator by override at the retry stage):
 
-1. **Deliberation (ARCHITECT).** The deliberation chooses any disposition in the *Test necessity*
-   vocabulary for an issue AC, **with its reason stated in that row**. A weak reason is argued down
-   here and never leaves the deliberation.
+1. **Design (ARCHITECT).** The design unit chooses any disposition in the *Test necessity*
+   vocabulary for an issue AC, **with its reason stated in that row**; GATE:PLAN scores the reason.
 2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
    PR body (HANDOFF step 4), so the reviewer judges each one on its stated reason.
 3. **Advisor, then operator.** The advisor is asked when the AC's **content** must change — at
@@ -509,62 +302,46 @@ is the advisor (the operator by override at the retry stage):
    issue, or add a criterion the issue did not state.
 
 Whether a row verifies the property its AC states is not a tier-3 question — that judgment belongs
-to GATE:PLAN `Test plan` and to GATE:QUALITY's assertion-claim alignment.
+to GATE:PLAN `Verification fit` and to GATE:QUALITY's assertion-claim alignment.
 
-## Re-discussion
+## Re-entry
 
-A re-discussion continues the same transcript: the orchestrator appends its preparation with
-`bash scripts/architect/relay-state.sh brief <transcript> "<preparation>"` — a `### Brief` block,
-which re-opens the end condition and starts a new round (`relay-state.sh state` reports `round`,
-counts report sections per round, and lists in `fresh` the sides that have not yet written a turn
-in it) — and resumes the facilitator by its agent ID with `SendMessage`: the facilitator continues
-at its first step, the turn numbering and the alternation continue, each side's first wake of the
-round is the re-discussion text, and the participants answer the brief as they would a turn. The
-brief may follow the previous round's two report sections: a GATE:PLAN FAIL re-entry and an
-un-agreed re-discussion both continue the same file after a Record. Both are re-discussions
-**inside the cycle that spawned the participants**, and only there are the facilitator and the
-participants re-woken: when the facilitator is still resumable (the same session), it re-wakes the
-same participants by their IDs and they keep everything they read; when it is not (a session
-restart), a fresh facilitator is spawned by step 2 of the *Relay procedure* and spawns fresh
-participants — a participant keeps to the first facilitator that woke it, so a replaced facilitator
-never wakes the previous one's participants. The Record workflow is invoked again at the end, and
-the scribe reads the brief where it sits.
+No unit agent's lifetime spans a spawn: every re-entry spawns a fresh `autoflow-unit-design` by
+*Unit spawn* above, whose prompt names what the re-entry is for, the material that carries it, and
+the previous documents.
 
-**A return from a later phase of the same cycle spawns the participants fresh on the same
-transcript.** A return to ARCHITECT after DISPATCH — a VERIFY design contradiction, a `design`
-re-entry from GATE:QUALITY or from HANDOFF's CI failure, an acceptance-criterion decision raised
-after ARCHITECT (*Report routing*), or a `design`-class gate recommendation at AUDIT or
-GATE:QUALITY ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) — never re-wakes the participants
-([`role-contracts.md`](../role-contracts.md) > Spawn mode by role lifetime). The orchestrator appends the `brief` to the **same** transcript —
-naming what the return is for: the blocker report, the failed items and their findings, the
-`[ac-decision]` entries, or the recommendation's subject and finding — and spawns a fresh facilitator by step 2 of the
-*Relay procedure*, which spawns each side fresh, pointed at the transcript; the turn numbering continues. The Record appends a delta section whose origin names the trigger (`VERIFY design
-contradiction`, `design re-entry`, `acceptance-criterion decision`, `gate recommendation`), GATE:PLAN
-re-scores that delta ([GATE:PLAN](gate-plan.md) > *Re-entry re-score*), and the cycle re-enters RED. The counter is the
-trigger's: every one of them consumes the ARCHITECT re-entry counter except an acceptance-criterion
-decision.
+| Re-entry | Material named | Counter |
+|---|---|---|
+| GATE:PLAN FAIL | the evaluation report and its failed items | ARCHITECT re-entry (max 3×) |
+| advisor answer that differs from the design (*Report routing*) | the `[ac-decision]` or `A` entries | none |
+| VERIFY design contradiction | `.autoflow/issue-{N}-*-green-blocker.md` | ARCHITECT re-entry |
+| `design` re-entry from GATE:QUALITY or HANDOFF's CI failure | the failed items and their findings | ARCHITECT re-entry |
+| acceptance-criterion decision raised after ARCHITECT | the `[ac-decision]` entries | none |
+| `design`-class gate recommendation at AUDIT or GATE:QUALITY ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) | the recommendation's subject and finding | ARCHITECT re-entry |
 
-**A new cycle's re-discussion spawns the participants fresh.** A participant's lifetime is one
-cycle's ARCHITECT entry ([`role-contracts.md`](../role-contracts.md) > Spawn mode by role lifetime), so a re-discussion in a new cycle — a review-response cycle entered at PREFLIGHT, or a
-HANDOFF step 6.5 shape (b) re-deliberation — never wakes the previous cycle's participants by
-their IDs, whether or not the session is the same. It starts a new transcript (the previous
-cycle's is preserved as `issue-{N}-c{C}-architect-transcript.md` at PREFLIGHT with the other
-artifacts) whose `init` brief names, next to what the re-discussion is for, the previous cycle's
-transcript and report paths (`issue-{N}-c{C}-architect-transcript.md`,
-`issue-{N}-c{C}-architect-report.md`), and spawns a fresh facilitator by step 2 of the *Relay procedure*, which
-spawns each side fresh.
-The prior discussion reaches the participants as a file they read, not as a context they carry. The brief
-in the new transcript's header is the record of the handover.
+- **[MUST] A re-entry's output is a delta, never a rewrite.** The first unit run of a cycle writes
+  the two documents whole. A re-entry within the cycle **appends** to each document it changes a
+  section
 
-A brief carries what the next discussion needs — for instance a narrowed topic, facts the
-orchestrator verified since the prior run, the prior report's path, a perspective for a participant
-to take, or an evaluation to answer. On a GATE:PLAN FAIL re-entry the brief names the two design
-documents and the evaluation's failed items. On a scope-bounded review-response cycle ([PREFLIGHT](preflight.md) > *Scope-bounded
-entry*) the brief is given at `init` (it enters the topic) and states the bounded scope: the Medium+
-finding and the PR diff file set; a fix that adds a file leaves the bounded path, and the
-re-discussion runs on the full topic. Either way the cycle's brief sits on its own new transcript
-(the new-cycle rule above).
+  ```
+  ## Delta — round <n> (<origin: GATE:PLAN FAIL | advisor answer | VERIFY design contradiction | design re-entry | acceptance-criterion decision | gate recommendation>)
 
-Neither the relay scripts nor the workflow read or write the `.autoflow/issue-{N}.json` state file,
-so the ARCHITECT re-entry counter is the orchestrator's own accounting (Regressions,
-[`CLAUDE.md`](../../CLAUDE.md) > Development Lifecycle).
+  - <what changed>: <the decision as it now stands> — supersedes <the section or decision it replaces>
+  - <what was added>: <the decision> — <ground>
+  ```
+
+  and leaves text the round did not change exactly as it stands. The delta section is GATE:PLAN's
+  narrowed input on re-entry ([GATE:PLAN](gate-plan.md) > *Re-entry re-score*); a re-entry after
+  DISPATCH re-scores that delta and the cycle re-enters RED.
+- **A new cycle writes new documents.** A review-response cycle entered at PREFLIGHT, or a HANDOFF
+  step 6.5 `design` re-entry judged to start at ARCHITECT, finds the previous cycle's documents
+  preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md`
+  ([PREFLIGHT](preflight.md) > *Preserve the previous cycle's artifacts*); the prompt names them and
+  what the new cycle is for, and the unit writes the new cycle's documents whole. On a
+  scope-bounded review-response cycle ([PREFLIGHT](preflight.md) > *Scope-bounded entry*) the
+  prompt states the bounded scope — the Medium+ finding and the PR diff file set; a fix that adds a
+  file leaves the bounded path, and the design runs on the full issue.
+
+The unit reads and writes no `.autoflow/issue-{N}.json` state file, so the ARCHITECT re-entry
+counter is the orchestrator's own accounting (Regressions, [`CLAUDE.md`](../../CLAUDE.md) >
+Development Lifecycle).

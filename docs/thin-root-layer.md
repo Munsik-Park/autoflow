@@ -36,7 +36,7 @@ The artifact set a target receives at its project root:
 |---|---|---|---|
 | Methodology prose | target's own `CLAUDE.md` imports it | this repo's `CLAUDE.md` + the `docs/` usage documents (the link closure of `CLAUDE.md` + `docs/INDEX.md`, minus `docs/records/`) | reference |
 | Always-on import shim | target `CLAUDE.md` managed block | `setup/thin-root-layer/claude-md-shim.md` | shim (Item 1) |
-| Deliberation workflows | `.claude/workflows/*.js` | `.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js` | copied file (Item 2) |
+| Deliberation workflow | `.claude/workflows/*.js` | `.claude/workflows/verify-cause-branch.js` | copied file (Item 2) |
 | Settings pin | `.claude/settings.json` merge | `setup/thin-root-layer/settings-pin.json` | JSON merge (Item 3 env is §Item 3; jq-canonically equal to the `plugin/autoflow/README.md` fence) |
 | Env contract | operator env / harness | this doc, Item 3 | documented requirement |
 
@@ -78,17 +78,10 @@ in AutoFlow's methodology. Artifact: `setup/thin-root-layer/claude-md-shim.md`.
 
 ## Item 2 — `.claude/workflows` residence
 
-`.claude/workflows/architect-deliberation.js` and
-`.claude/workflows/verify-cause-branch.js` are thin-root-layer artifacts.
-The ARCHITECT discussion itself is a facilitator sub-agent's relay of two
-persistent participants over `.autoflow/issue-{N}-architect-transcript.md`, and
-`architect-deliberation.js` is its Record phase; the workflow is REQUIRED for
-that phase, `scripts/architect/relay-state.sh` ships beside it as a root-layer
-copy — as does `scripts/architect/composition-oracle.sh`, the classifier the Record
-phase runs over the verification design it writes — and the facilitator's and the participants' prompts
-ride the plugin channel in `agents/autoflow-facilitator.md` and
-`agents/autoflow-planner.md`; the gate hook that confines the facilitator rides
-it in `hooks/`.
+`.claude/workflows/verify-cause-branch.js` is a thin-root-layer artifact: the
+VERIFY cause-branch requires it. ARCHITECT ships no workflow and no script: it is
+one U3 Design unit spawn whose definition rides the plugin channel in
+`agents/autoflow-unit-design.md`.
 `CLAUDE_CODE_DISABLE_WORKFLOWS` is a load-bearing env constraint (Item 3).
 
 ---

@@ -27,7 +27,7 @@ AutoFlow structures every code change through a defined lifecycle:
 PREFLIGHT       Pre-Work          — Git clean check, branch creation
 DIAGNOSE        3-Phase Analysis  — Independent bias-free analysis
 GATE:HYPOTHESIS Hypothesis Eval   — Scored hypothesis assessment (gate, bug issues only)
-ARCHITECT       Plan Synthesis    — Feature design + verification design
+ARCHITECT       Design unit (U3)  — Feature design + verification design
 GATE:PLAN       Plan Evaluation   — Scored plan assessment (gate)
 DISPATCH        Task Assignment   — Delegate to Test AI and Developer AI
 RED             Test Writing      — Tests from acceptance criteria (Red)

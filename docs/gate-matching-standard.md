@@ -263,7 +263,7 @@ the hook owns the role→gate mapping:
 
 | Channel | Declaration |
 |---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-loopcheck` / `autoflow-planner` / `autoflow-facilitator` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
+| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-loopcheck` / `autoflow-implementer` / `autoflow-tester` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
 | Unit-agent caller | the hook input's caller `agent_type` is `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` — the spawn needs no declaration of its own |
 
@@ -281,7 +281,7 @@ a research or `autoflow-*` type**. A contradictory declaration is blocked rather
 than arbitrated, with the `name` side carrying no role at all.
 
 Mapping (hook-owned — a spawn never selects its own gate): `planning` —
-`autoflow-planner`, `autoflow-facilitator`, `autoflow-unit-design` →
+`autoflow-unit-design` →
 GATE:HYPOTHESIS (skip-verdict bypass for non-bug issues); `implementation` —
 `autoflow-implementer`, `autoflow-unit-build` — / `testing` → GATE:PLAN;
 `analysis` — `autoflow-analyzer`, `autoflow-loopcheck`,

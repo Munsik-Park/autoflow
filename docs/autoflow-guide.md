@@ -58,7 +58,7 @@ flowchart TD
     DIA[DIAGNOSE<br/>3-Phase Analysis]:::phase
     HYPS{{GATE:HYPOTHESIS<br/>structure}}:::gate
     HYPC{{GATE:HYPOTHESIS<br/>cause}}:::gate
-    ARC[ARCHITECT<br/>Plan Synthesis]:::phase
+    ARC[ARCHITECT<br/>Design unit]:::phase
     PLAN{{GATE:PLAN}}:::gate
     DIS[DISPATCH]:::phase
     RED[RED<br/>Test Writing]:::phase

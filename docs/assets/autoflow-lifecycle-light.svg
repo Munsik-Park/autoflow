@@ -29,7 +29,7 @@
 <text x="252" y="105" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#59636e"><tspan opacity="0.55">02</tspan>  PLANNING</text>
 <rect x="252" y="120" width="166" height="46" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.2"/>
 <text x="264" y="139" font-family="ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,monospace" font-size="12" font-weight="600" fill="#1f2328">ARCHITECT</text>
-<text x="264" y="155" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif" font-size="10" fill="#59636e">dev + test deliberation</text>
+<text x="264" y="155" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif" font-size="10" fill="#59636e">design unit · one spawn</text>
 <g stroke="#1b7c83" fill="none" stroke-width="1.3"><rect x="398" y="131" width="7" height="7" rx="1.5"/><rect x="401" y="128" width="7" height="7" rx="1.5"/></g>
 <line x1="335.0" y1="168" x2="335.0" y2="180" stroke="#8c959f" stroke-width="1.5" marker-end="url(#arr)"/>
 <rect x="252" y="184" width="166" height="46" rx="8" fill="#fff8c5" stroke="#d4a72c" stroke-width="1.2"/>
