@@ -9,9 +9,11 @@ what the analysis report shows, never the method the unit took to produce it (AD
 
 **Evaluator**: one independent Evaluation AI, fresh-spawned per entry (the model
 `bash scripts/spawn-policy/spawn-policy.sh model gate-hypothesis` names). It scores the structure
-form for every issue and, for a bug / incident issue, the cause form, and reports both score sets;
-the orchestrator records them under `phases.gate_hypothesis_structure` and
-`phases.gate_hypothesis_cause` in `.autoflow/issue-{N}.json`.
+form for every issue and, for a bug / incident issue, the cause form. Each form's result is written
+separately — one output object per form ([`evaluation-system.md`](../evaluation-system.md) >
+Evaluation Output Format) — and the orchestrator records each under its own key,
+`phases.gate_hypothesis_structure` and `phases.gate_hypothesis_cause` in `.autoflow/issue-{N}.json`;
+the two are never nested under one key.
 **Input**: the analysis report (`.autoflow/issue-{N}-analysis.md`), the trigger target (the issue,
 or the reviewer comment / thread of a review-response cycle) and the decision ledger.
 

@@ -263,13 +263,12 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
 
 **`phase` field**: coarse, non-exhaustive lifecycle marker (the hook does not read it; additive field) — `"in-progress"` during a cycle; `"review-triage"` while HANDOFF triages the configured-reviewer review result; `"awaiting-external-review"` at HANDOFF (set only once the review is clean — no `blocked-by-review` label remains) and at a structure-gate no-work review-response exit; `"awaiting-user"` at every pause for a human decision (the Flow Control rows that set it). A terminal or escalation state this list does not name leaves `phase` at its last value; `active` is the authoritative run flag.
 
-**`verdict` rule** (gate_hypothesis_cause only):
+**`verdict` rule** (gate_hypothesis_cause only; when each value is set follows the Flow Control table):
 
-| Issue type | When | `verdict` value |
-|------------|------|-----------------|
-| Bug / incident | Created at PREFLIGHT | `"pending"` |
-| Bug / incident | After GATE:HYPOTHESIS evaluation | `"evaluated"` |
-| Non-bug (feat, chore, docs, refactor, …) | Set at DIAGNOSE | `"skipped (non-bug issue)"` |
+| Issue type | `verdict` value |
+|------------|-----------------|
+| Bug / incident | `"pending"`, then `"evaluated"` once the cause form is scored |
+| Non-bug (feat, chore, docs, refactor, …) | `"skipped (non-bug issue)"` |
 
 The hook's state-file validator admits exactly these values, an empty or absent `verdict`, and `"skipped (feat issue)"` — the value a non-bug cycle recorded before `"skipped (non-bug issue)"`, admitted so such a state file stays valid and never written by a new cycle. Any other value makes the state file malformed, and every score-gated `git push` / `gh pr create` / gated `Agent` spawn fails closed until it is repaired. If `verdict` is empty or one of the two `skipped` values, the gate is not triggered for the cause-analysis form. Bug issues must be initialised as `"pending"`.
 

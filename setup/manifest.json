@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "752acabd62b363b79ac3bd864cca86b4a8b6962b5d19fa9223db22b348fb85ed"
+      "sha256": "9f9f486eea967f21caa4b3490f927ce9bb5dffd75c6c1b4ecf228adcadf75c1c"
     },
     {
       "source": "docs/INDEX.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/phases/gate-hypothesis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1e043cccf38ecd8487bf5d85c9230fbb6006828ac4529ac080eaa532bd360bdd"
+      "sha256": "ea1ea64cbe6ea5a28ff442cc4ac51476fe538d324bc1014b3039fad61efb7bd0"
     },
     {
       "source": "docs/phases/gate-plan.md",
