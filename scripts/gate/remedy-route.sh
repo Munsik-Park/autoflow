@@ -27,9 +27,9 @@
 # target in its own playbook, and none reimplements the ranking):
 #   - GATE:QUALITY FAIL, VALIDATE step-1 sweep FAIL, INTEGRATE FAIL (#140)
 #   - HANDOFF step 6.5 review triage (#192) — there `ARCHITECT` means the
-#     deliberation owns the moved decision and the orchestrator judges and
-#     records where the re-entry starts (a cycle from DIAGNOSE, or ARCHITECT
-#     on a brief — #227); `RED` / `GREEN` / `DOC_COMMIT` are the thin path
+#     design owns the moved decision and the orchestrator judges and
+#     records where the re-entry starts (a cycle from DIAGNOSE, or an
+#     ARCHITECT unit re-run — #227); `RED` / `GREEN` / `DOC_COMMIT` are the thin path
 #     (one owning role + execution verification + reviewer re-review).
 #   - Recommendation triage after a PASS at AUDIT and GATE:QUALITY;
 #     GATE:HYPOTHESIS and GATE:PLAN do not call this script.

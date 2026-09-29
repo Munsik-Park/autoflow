@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Single source of truth for AutoFlow's per-phase spawn policy (model + effort). Read it with scripts/spawn-policy/spawn-policy.sh; never restate its values in prose (CLAUDE.md > Spawn Model — Phase-by-Phase).",
-  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — the drift detector's D6 leg runs that check and the required-row comparison against the clone's sample at /autoflow:install and PREFLIGHT, so a stale scaffold is reported there with the rows to fix; both deliberation workflows fail closed on a missing required workflow_sites row. `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly. A phases[].effort is not a target-side lever: it must equal the `effort:` frontmatter line of the definition the target actually loads (the plugin's, on a thin-root target) and `check` fails closed otherwise — see effort_contract.phase_effort_ownership; a target that needs a different direct-spawn effort changes the shipped definition, not this row. workflow_sites effort stays target-configurable.",
+  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — the drift detector's D6 leg runs that check and the required-row comparison against the clone's sample at /autoflow:install and PREFLIGHT, so a stale scaffold is reported there with the rows to fix; the deliberation workflow fails closed on a missing required workflow_sites row. `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly. A phases[].effort is not a target-side lever: it must equal the `effort:` frontmatter line of the definition the target actually loads (the plugin's, on a thin-root target) and `check` fails closed otherwise — see effort_contract.phase_effort_ownership; a target that needs a different direct-spawn effort changes the shipped definition, not this row. workflow_sites effort stays target-configurable.",
   "effort_contract": {
     "is_the_vocabulary_check_applies": "`scripts/spawn-policy/spawn-policy.sh check` reads its admitted effort vocabulary and its inherit sentinel from THIS object. A runtime with a different effort vocabulary is accommodated by editing this contract, never by patching the checker; model values are not validated beyond presence and shape",
     "admitted_values": [
@@ -56,29 +56,11 @@
       "effort": "xhigh",
       "work_type": "rubric, 3 items × 10 points"
     },
-    "architect-facilitator": {
-      "agent_type": "autoflow-facilitator",
-      "model": "sonnet",
-      "effort": "medium",
-      "work_type": "ARCHITECT relay facilitator — one background spawn per discussion, resumed by agent ID for a same-cycle re-discussion; spawns and wakes the two participants by relay-state.sh output with five fixed texts, reads no body; process only, confined by the gate hook (ADR-0023 D5)"
-    },
-    "architect-dev-participant": {
-      "agent_type": "autoflow-planner",
-      "model": "opus",
-      "effort": "xhigh",
-      "work_type": "ARCHITECT relay participant, Developer AI side — one persistent spawn per discussion, spawned and woken by the facilitator for each of its turns; feature design under the Discussion Protocol"
-    },
-    "architect-test-participant": {
-      "agent_type": "autoflow-planner",
-      "model": "opus",
-      "effort": "xhigh",
-      "work_type": "ARCHITECT relay participant, Test AI side — one persistent spawn per discussion, spawned and woken by the facilitator for each of its turns; verification design under the Discussion Protocol"
-    },
     "gate-plan": {
       "agent_type": "autoflow-evaluator",
       "model": "opus",
       "effort": "xhigh",
-      "work_type": "rubric, 5 items × 10 points"
+      "work_type": "rubric, 5 items × 10 points (intent: decision grounds, verification fit, scope, tools, security)"
     },
     "red": {
       "agent_type": "autoflow-tester",
@@ -138,7 +120,7 @@
       "agent_type": "autoflow-unit-design",
       "model": "opus",
       "effort": "xhigh",
-      "work_type": "U3 Design unit (ARCHITECT + GATE:PLAN span) as one spawn — goal, artifact contract and verification prescribed, method its own (ADR-0025 D2); model and effort held at the ARCHITECT participant rows' values"
+      "work_type": "U3 Design unit (ARCHITECT + GATE:PLAN span) as one spawn — goal, artifact contract and verification prescribed, method its own (ADR-0025 D2); model and effort held at the ARCHITECT design tier, so the migration step's measurement isolates the method change"
     },
     "unit-build": {
       "agent_type": "autoflow-unit-build",
@@ -154,16 +136,6 @@
     }
   },
   "workflow_sites": {
-    "architect-deliberation": {
-      "scribe": {
-        "model": "opus",
-        "effort": "inherit"
-      },
-      "ledger": {
-        "model": "sonnet",
-        "effort": "low"
-      }
-    },
     "verify-cause-branch": {
       "test-self-check": {
         "model": "opus",

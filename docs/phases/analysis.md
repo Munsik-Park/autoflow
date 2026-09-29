@@ -93,7 +93,7 @@ A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion 
 
    Scoring (10 points per item, by issue type — Type 1: 2 items; Type 2: 3 items):
 
-   Type 1 (code change) — a *necessity* gate (DRY-triage), reuse-neutral, **two items only**. The gate answers exactly one question — "is a code change genuinely needed?" — and nothing else: plan feasibility / structural grounding → GATE:PLAN (Feasibility, Scope); structural-fit and over-engineering → GATE:PLAN (Scope) + GATE:QUALITY (Minimal implementation / Fit); "where / how to change" → DIAGNOSE task decomposition (step 6) + ARCHITECT feature design. A fix that reuses existing code scores high, not low.
+   Type 1 (code change) — a *necessity* gate (DRY-triage), reuse-neutral, **two items only**. The gate answers exactly one question — "is a code change genuinely needed?" — and nothing else: plan feasibility / structural grounding → GATE:PLAN (Decision grounds, Scope); structural-fit and over-engineering → GATE:PLAN (Scope) + GATE:QUALITY (Minimal implementation / Fit); "where / how to change" → DIAGNOSE task decomposition (step 6) + ARCHITECT feature design. A fix that reuses existing code scores high, not low.
 
    | Item | Criterion |
    |------|-----------|
@@ -163,7 +163,7 @@ A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion 
 - **[MUST]** Phase A excerpt selection uses the **functional-area coordinate** Phase A already receives (e.g. "host deployment structure", "submodule boundary"), not the issue's problem statement. Inject the matching excerpt, never the whole file.
 - **[DENY]** Injecting `docs/INDEX.md` itself, or any of the sub-repo's "improvement / risk / priority" docs (ADR-candidate / risk / tech-debt / refactoring-queue), into any of the three roles.
 
-**Structure-analysis bias prevention**: The structure gate scores *necessity only* and is reuse-neutral — leveraging existing code is a high-quality outcome, not a fail reason; structural-fit quality is judged later at GATE:PLAN (Feasibility, Scope) and GATE:QUALITY (Minimal implementation / Fit).
+**Structure-analysis bias prevention**: The structure gate scores *necessity only* and is reuse-neutral — leveraging existing code is a high-quality outcome, not a fail reason; structural-fit quality is judged later at GATE:PLAN (Decision grounds, Scope) and GATE:QUALITY (Minimal implementation / Fit).
 
 **Confirmation-bias prevention**: "the code may not be buggy" must be one hypothesis. Concluding that code change is required requires evidence that other causes have been ruled out.
 

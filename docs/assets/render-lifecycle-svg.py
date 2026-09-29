@@ -39,7 +39,7 @@ STAGES = [
         ("GATE:HYPOTHESIS", "fresh eval · bug only", "gate", False),
     ]),
     ("02", "PLANNING", [
-        ("ARCHITECT", "dev + test deliberation", "phase", True),
+        ("ARCHITECT", "design unit · one spawn", "phase", True),
         ("GATE:PLAN", "fresh eval AI · 5×10", "gate", False),
         ("DISPATCH", "fresh test/dev spawn", "phase", False),
     ]),

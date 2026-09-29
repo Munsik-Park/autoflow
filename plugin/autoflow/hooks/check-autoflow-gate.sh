@@ -50,10 +50,6 @@
 #                                     A<n>; only the main session adds `operator
 #                                     decision` / O<n>; the advisor adds no
 #                                     O,F,E (state-independent, Section 1e, D7)
-#   - facilitator calls             → confined state-independently (Section 0,
-#                                     ADR-0023 D5): relay-state.sh only, the
-#                                     five fixed wakes to its own participants,
-#                                     autoflow-planner spawns only
 #   - Agent (undeclared spawn)      → DENIED while a cycle is active (declare the
 #                                     role via subagent_type autoflow-<role> —
 #                                     see resolve_spawn_role)
@@ -104,139 +100,13 @@ SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
 GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b'
 
-# ── Section 0: ARCHITECT facilitator confinement (state-independent — ADR-0023 D5) ──
-# The ARCHITECT relay runs in a facilitator sub-agent (subagent_type
-# autoflow-facilitator). Its work is process only — every branch it takes is
-# decided by relay-state.sh output or a notification arriving — so the calls it
-# may make are fixed, and this section denies every other call BEFORE it runs.
-# The caller is identified by the hook input's `agent_type` / `agent_id`, which
-# the harness sets on a sub-agent's calls and omits on the main loop's (Claude
+# ── Caller identity ──
+# The hook input's `agent_type` names the sub-agent that made the call; the
+# harness sets it on a sub-agent's calls and omits it on the main loop's (Claude
 # Code CHANGELOG 2.1.69: "Added `agent_id` (for subagents) and `agent_type` …
-# to hook events"). A participant (autoflow-planner) and the orchestrator carry
-# another type or none, and none of this applies to them.
-#   - Bash:        only `relay-state.sh state|void <transcript>` and
-#                  `relay-state.sh log <transcript> '<line>'` — never a read of
-#                  the transcript's bodies, never another command;
-#   - SendMessage: only one of the five fixed wake texts, and only to a
-#                  participant this facilitator spawned;
-#   - Agent:       only an anonymous autoflow-planner spawn (the rest of this
-#                  hook then applies the model rule and the planning gate);
-#   - any other tool this hook sees (Read, Grep, Glob, Write, Edit, …): denied.
-# The hook holds no state of its own, so "a participant this facilitator
-# spawned" is recorded on the PostToolUse event of the facilitator's Agent call,
-# whose response carries the spawned agent's ID: one line per participant in
-# .autoflow/facilitator/<facilitator agent_id>.participants. A resumed
-# facilitator keeps its agent_id, so the record survives a re-discussion.
-HOOK_EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || true)
+# to hook events"). Section 1e (ledger authorship) and the unit-caller class
+# below read it.
 CALLER_TYPE=$(echo "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null || true)
-CALLER_ID=$(echo "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null || true)
-FACILITATOR_DIR="$AUTOFLOW_DIR/facilitator"
-
-is_facilitator_type() {
-  case "$1" in autoflow-facilitator|*:autoflow-facilitator) return 0 ;; esac
-  return 1
-}
-is_planner_type() {
-  case "$1" in autoflow-planner|*:autoflow-planner) return 0 ;; esac
-  return 1
-}
-is_agent_id() {
-  [[ "$1" =~ ^[A-Za-z0-9_-]{1,64}$ ]]
-}
-facilitator_deny() {
-  echo "BLOCKED: ARCHITECT facilitator — $1 (ADR-0023 D5; docs/phases/architect.md > Relay procedure)." >&2
-  echo "The facilitator runs relay-state.sh (state / void / log), wakes the participants it spawned with the five fixed texts, and spawns autoflow-planner only." >&2
-  exit 2
-}
-
-# PostToolUse is registered for Agent only, and only records; it never gates.
-if [ "$HOOK_EVENT" = "PostToolUse" ]; then
-  if [ "$TOOL_NAME" = "Agent" ] && is_facilitator_type "$CALLER_TYPE" && is_agent_id "$CALLER_ID"; then
-    _spawned=$(echo "$INPUT" | jq -r '.tool_response.agentId // empty' 2>/dev/null || true)
-    _spawned_type=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null || true)
-    if is_agent_id "$_spawned" && is_planner_type "$_spawned_type"; then
-      { mkdir -p "$FACILITATOR_DIR" && printf '%s\n' "$_spawned" >> "$FACILITATOR_DIR/$CALLER_ID.participants"; } 2>/dev/null \
-        || echo "WARNING: could not record participant $_spawned of facilitator $CALLER_ID under $FACILITATOR_DIR — its wakes will be denied." >&2
-    fi
-  fi
-  exit 0
-fi
-
-if is_facilitator_type "$CALLER_TYPE"; then
-  is_agent_id "$CALLER_ID" || facilitator_deny "a facilitator call without a usable agent_id"
-  case "$TOOL_NAME" in
-    Bash)
-      # Both paths are this project's: relative to the project root, or
-      # absolute under CLAUDE_PROJECT_DIR — never a same-named file elsewhere.
-      # The project prefix is removed as a literal string, so an absolute path
-      # outside the project keeps its leading `/` and fails the anchored match.
-      _fac_cmd="$COMMAND"
-      _fac_root="${CLAUDE_PROJECT_DIR%/}"
-      if [ -n "$_fac_root" ]; then
-        _fac_cmd="${_fac_cmd//"$_fac_root/"/}"
-      fi
-      _fac_tx='(\./)?\.autoflow/issue-[0-9]+-architect-transcript\.md'
-      _fac_rs='^(bash[[:space:]]+)?(\./)?scripts/architect/relay-state\.sh[[:space:]]+'
-      _fac_ok=0
-      case "$COMMAND" in
-        *$'\n'*|*$'\r'*|*..*) ;;
-        *)
-          if [[ "$_fac_cmd" =~ ${_fac_rs}(state|void)[[:space:]]+${_fac_tx}[[:space:]]*$ ]] \
-            || [[ "$_fac_cmd" =~ ${_fac_rs}log[[:space:]]+${_fac_tx}[[:space:]]+\'[^\']+\'[[:space:]]*$ ]]; then
-            _fac_ok=1
-          fi
-          ;;
-      esac
-      [ "$_fac_ok" -eq 1 ] || facilitator_deny "command not admitted: only 'bash scripts/architect/relay-state.sh state|void <transcript>' or '… log <transcript> '\''<one line>'\''' runs"
-      ;;
-    SendMessage)
-      _to=$(echo "$INPUT" | jq -r '.tool_input.to // empty' 2>/dev/null || true)
-      _recipient=$(echo "$INPUT" | jq -r '.tool_input.recipient // empty' 2>/dev/null || true)
-      _msg=$(echo "$INPUT" | jq -r 'if (.tool_input.message | type) == "string" then .tool_input.message else empty end' 2>/dev/null || true)
-      [ -n "$_to" ] || facilitator_deny "a wake without a recipient"
-      { [ -z "$_recipient" ] || [ "$_recipient" = "$_to" ]; } || facilitator_deny "recipient and to disagree"
-      # `recipient` / `content` are harness-derived copies of `to` / `message`
-      # (content is a truncated preview); the tool's schema admits neither, and
-      # what reaches the participant is `message`.
-      _reg="$FACILITATOR_DIR/$CALLER_ID.participants"
-      { [ -f "$_reg" ] && grep -qxF -- "$_to" "$_reg"; } \
-        || facilitator_deny "a wake to '$_to', which is not a participant this facilitator spawned"
-      # A command substitution strips trailing newlines, so a line break is
-      # tested on the raw JSON value, not on $_msg.
-      _msg_multiline=$(echo "$INPUT" | jq -r '(.tool_input.message | type) == "string" and (.tool_input.message | test("[\r\n]"))' 2>/dev/null || echo true)
-      [ "$_msg_multiline" = "false" ] || facilitator_deny "a wake outside the five fixed texts (a line break)"
-      _fac_msg_ok=0
-      case "$_msg" in
-        'The discussion has ended — append your report.') _fac_msg_ok=1 ;;
-        *)
-          if [[ "$_msg" =~ ^Write\ Turn\ [0-9]+\.$ ]] \
-            || [[ "$_msg" =~ ^Your\ Turn\ [0-9]+\ was\ not\ appended\.\ Write\ Turn\ [0-9]+\.$ ]] \
-            || [[ "$_msg" =~ ^Your\ block\ was\ voided\ \(.+\)\.\ Re-append\ Turn\ [0-9]+\ correctly\.$ ]] \
-            || [[ "$_msg" =~ ^Re-discussion\ round\ [0-9]+\ \(a\ Brief\ was\ appended\)\.\ Write\ Turn\ [0-9]+\.$ ]]; then
-            _fac_msg_ok=1
-          fi
-          ;;
-      esac
-      [ "$_fac_msg_ok" -eq 1 ] || facilitator_deny "a wake outside the five fixed texts"
-      exit 0
-      ;;
-    Agent)
-      _fac_subtype=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null || true)
-      _fac_name=$(echo "$INPUT" | jq -r '.tool_input.name // empty' 2>/dev/null || true)
-      is_planner_type "$_fac_subtype" || facilitator_deny "spawn of '$_fac_subtype': a facilitator spawns autoflow-planner only"
-      [ -z "$_fac_name" ] || facilitator_deny "a named spawn: participants are anonymous"
-      ;;
-    *)
-      facilitator_deny "tool '$TOOL_NAME' is not admitted"
-      ;;
-  esac
-fi
-
-# Read / Grep / Glob / SendMessage reach this hook only for the section above;
-# every other caller's call is admitted unchanged.
-case "$TOOL_NAME" in
-  Read|Grep|Glob|SendMessage) exit 0 ;;
-esac
 
 # ── _fold_continuations (issue #134 c2) ────────────────────────────────────
 # Backslash-newline line-continuation fold, defined at GLOBAL SCOPE beside
@@ -816,9 +686,7 @@ esac
 # then re-spawned with sanitized wording (training the orchestrator to phrase
 # around the regex), while a keyword-free implementation prompt slipped past
 # GATE:PLAN entirely. Declaration channel (docs/gate-matching-standard.md P3):
-#   - direct spawn: subagent_type = autoflow-<role> (defined in .claude/agents/);
-#                   autoflow-facilitator is ARCHITECT's relayer and is gated as
-#                   planning, like the participants it spawns
+#   - direct spawn: subagent_type = autoflow-<role> (defined in .claude/agents/)
 #   - research:     built-in read-only types Explore / Plan / claude-code-guide
 # `subagent_type` is the SOLE channel. The teammate-name-prefix channel was
 # removed jointly with the spawn-mode migration (ADR-0021, discharging ADR-0017
@@ -873,8 +741,6 @@ role_of_type() {
     Explore|Plan|claude-code-guide)              _role="research" ;;
     autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
     autoflow-loopcheck|*:autoflow-loopcheck)     _role="analysis" ;;
-    autoflow-planner|*:autoflow-planner)         _role="planning" ;;
-    autoflow-facilitator|*:autoflow-facilitator) _role="planning" ;;
     autoflow-implementer|*:autoflow-implementer) _role="implementation" ;;
     autoflow-tester|*:autoflow-tester)           _role="testing" ;;
     autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
@@ -1021,10 +887,7 @@ ledger_advisory_check || true
 # into frontmatter); Explore now yields an empty set like the other research
 # types and draws no advice, while `autoflow-loopcheck` draws it exactly as
 # every `autoflow-*` type does — a provenance-keyed rule would get both
-# wrong. `autoflow-planner` was the unmapped type until issue #179 gave it
-# the two ARCHITECT relay-participant rows, so it now draws advice like every
-# other `autoflow-*` type — nothing here changed for that, which is the point of
-# keying on the set. The case where the policy SHOULD have governed a type is
+# wrong. The case where the policy SHOULD have governed a type is
 # caught in the tree by `spawn-policy.sh check`'s partition rule, not by a
 # runtime warning.
 #
@@ -1324,7 +1187,7 @@ apply_role_gate() {
       # prompt text is deliberately not attempted — a silent misclassification
       # (either direction) is worse than this explicit, self-describing stop.
       echo "BLOCKED: Agent spawn without a declared AutoFlow role while a cycle is active." >&2
-      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|loopcheck|planner|facilitator|implementer|tester|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
+      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|loopcheck|implementer|tester|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
       ;;

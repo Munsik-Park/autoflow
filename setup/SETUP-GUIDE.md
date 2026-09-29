@@ -107,7 +107,7 @@ itself copied into the target (`.claude/autoflow/manifest.json`).
 |----------|----------------------|------|
 | Import shim (managed `AUTOFLOW-IMPORT` block in your `CLAUDE.md`) | `CLAUDE.md` | shim-stamp |
 | Methodology entrypoint + framework prose | `.claude/autoflow/METHODOLOGY.md`, `.claude/autoflow/CLAUDE.md`, `.claude/autoflow/docs/**` | copy |
-| Deliberation workflows | `.claude/workflows/architect-deliberation.js`, `.claude/workflows/verify-cause-branch.js` | copy |
+| Deliberation workflow | `.claude/workflows/verify-cause-branch.js` | copy |
 | Settings pin (`extraKnownMarketplaces` — the marketplace this target's AutoFlow comes from; no enablement key) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
 | Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`; `/autoflow:install` Step 0 runs a byte-identical copy shipped inside the plugin) | `scripts/lib/plugin-root.sh` | copy |

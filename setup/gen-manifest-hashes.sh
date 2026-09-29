@@ -123,9 +123,7 @@ build_rows() {
     fi
   done
 
-  # Root-layer tier: deliberation workflows.
-  emit_row ".claude/workflows/architect-deliberation.js" \
-           ".claude/workflows/architect-deliberation.js" "root-layer" "copy" "file"
+  # Root-layer tier: deliberation workflow.
   emit_row ".claude/workflows/verify-cause-branch.js" \
            ".claude/workflows/verify-cause-branch.js" "root-layer" "copy" "file"
 
@@ -204,21 +202,6 @@ build_rows() {
   # satisfy the rule it is stamped with.
   emit_row "scripts/ledger/ledger-entry-id.sh" \
            "scripts/ledger/ledger-entry-id.sh" "root-layer" "copy" "file"
-  # ARCHITECT relay state (issue #179, ADR-0023 D2). The stamped
-  # phases/architect.md > Relay procedure instructs the orchestrator to
-  # run it at every turn (init / state / brief), so a target that never
-  # receives it cannot run the relay it is stamped with. The measurement tool
-  # beside it (deliberation-metrics.py) is effect-record tooling and stays
-  # unshipped.
-  emit_row "scripts/architect/relay-state.sh" \
-           "scripts/architect/relay-state.sh" "root-layer" "copy" "file"
-  # Composition-oracle classifier (issue #206, D7). The stamped
-  # phases/architect.md > Output artifacts > Composition oracle tells
-  # every target's Record step to run it and attach its output, so a target
-  # that never receives it attaches an absent determination (exit 127, empty
-  # stdout) instead of a classified one.
-  emit_row "scripts/architect/composition-oracle.sh" \
-           "scripts/architect/composition-oracle.sh" "root-layer" "copy" "file"
   # Class-routed re-entry (issues #140, #192). The stamped phase playbooks
   # (docs/phases/) route every GATE:QUALITY / VALIDATE / INTEGRATE FAIL and every Medium+
   # reviewer finding through it, and it is the single owner of that mapping — a
@@ -284,14 +267,14 @@ build_rows() {
   # so one path serves the host repo and a stamped target alike, and the readout
   # ships for the same reason ledger-entry-id.sh does: the stamped CLAUDE.md >
   # Spawn Model instructs a consumer to run it before every direct spawn, and
-  # the two deliberation workflows above read the config at run time. The
+  # the deliberation workflow above reads the config at run time. The
   # doc-closure BFS follows only .md links, so neither file enters on its own.
   # SCAFFOLD, not copy (issue #150, cycle 2): the config is a sample the target
   # configures at stamp time, so a re-stamp must never overwrite a configured
   # policy (init.sh's scaffold arm is create-only, even under --force, and
   # drift-check reports it target-owned rather than as content drift). The
   # cost — a target stamped before a new row existed keeps a config missing it —
-  # is the state both workflow scripts and `spawn-policy.sh check` now report
+  # is the state the workflow script and `spawn-policy.sh check` now report
   # loudly rather than swallow, which is what makes the trade payable.
   emit_row ".claude/autoflow/spawn-policy.json" \
            ".claude/autoflow/spawn-policy.json" "root-layer" "scaffold" "file"
