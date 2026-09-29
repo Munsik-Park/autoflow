@@ -259,7 +259,7 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
 
 **`cycle` field**: starts at `1` on Creation. It is incremented on review-response entry and on a HANDOFF step 6.5 `design` re-entry that starts at ARCHITECT; what each resets is `docs/phases/preflight.md` > *Review-response mode setup* and `docs/phases/handoff.md` > step 6.5. The hook gates read from the current `phases`; the durable cycle record lives in the GitHub PR/issue thread and commit log.
 
-**`mode` field**: `"new-issue"` on Creation; PREFLIGHT sets `"review-response"` on review-response entry (target issue's PR is open). The DIAGNOSE structure-gate disposition reads `mode` rather than re-deriving the PR state. The hook does not read it (additive field).
+**`mode` field**: `"new-issue"` on Creation; PREFLIGHT sets `"review-response"` on review-response entry (target issue's PR is open). The GATE:HYPOTHESIS structure-form disposition reads `mode` rather than re-deriving the PR state. The hook does not read it (additive field).
 
 **`phase` field**: coarse, non-exhaustive lifecycle marker (the hook does not read it; additive field) — `"in-progress"` during a cycle; `"review-triage"` while HANDOFF triages the configured-reviewer review result; `"awaiting-external-review"` at HANDOFF (set only once the review is clean — no `blocked-by-review` label remains) and at a structure-gate no-work review-response exit; `"awaiting-user"` at every pause for a human decision (the Flow Control rows that set it). A terminal or escalation state this list does not name leaves `phase` at its last value; `active` is the authoritative run flag.
 

@@ -87,7 +87,9 @@ Non-bug issues (feat, chore, docs, refactor, …) skip this form. The form reads
 
 ## Re-entry re-score
 
-After a U2 re-run the gate re-scores the cause form, and the structure form only where the re-run
-changed a section it reads (`## Current structure`, `## Request`, `## Necessity`); the rest is
-inherited and reported in `rescore` ([`evaluation-system.md`](../evaluation-system.md) > Evaluation
+After a U2 re-run the gate re-scores the form that sent the cycle back — the cause form after a
+cause-form FAIL, the recommending form after a recommendation attempt — and the other form only
+where the re-run changed a section it reads (the structure form: `## Current structure`,
+`## Request`, `## Necessity`; the cause form: `## Hypotheses`); the rest is inherited and reported
+in `rescore` ([`evaluation-system.md`](../evaluation-system.md) > Evaluation
 Output Format).
