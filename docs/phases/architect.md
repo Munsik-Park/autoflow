@@ -330,7 +330,11 @@ the previous documents.
   - <what was added>: <the decision> — <ground>
   ```
 
-  and leaves text the round did not change exactly as it stands. The delta section is GATE:PLAN's
+  and leaves text the round did not change exactly as it stands. Two sections are the exception:
+  the feature design's `## Decision requests` and the verification design's `## Tools` are the
+  orchestrator's routing inputs, not decisions, so a re-entry rewrites each in place to its current
+  state — a request the advisor has answered is removed (its answer is the ledger entry), a new one
+  is added, and `none` means none is open. The delta section is GATE:PLAN's
   narrowed input on re-entry ([GATE:PLAN](gate-plan.md) > *Re-entry re-score*); a re-entry after
   DISPATCH re-scores that delta and the cycle re-enters RED.
 - **A new cycle writes new documents.** A review-response cycle entered at PREFLIGHT, or a HANDOFF

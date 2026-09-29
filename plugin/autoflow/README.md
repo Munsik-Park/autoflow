@@ -1,8 +1,9 @@
 # AutoFlow plugin
 
 The AutoFlow methodology engine packaged as a Claude Code plugin: the phase-gate
-hooks (`check-autoflow-gate.sh`, `check-read-dedup.sh`), the five role subagents
-(`autoflow-analyzer` / `-planner` / `-implementer` / `-tester` / `-evaluator`),
+hooks (`check-autoflow-gate.sh`, `check-read-dedup.sh`), the role subagents
+(`autoflow-analyzer` / `-loopcheck` / `-implementer` / `-tester` / `-evaluator` / `-advisor`),
+the functional-unit agents (`autoflow-unit-analysis` / `-unit-design` / `-unit-build`),
 and the `install` skill.
 
 This plugin ships the **engine** only. The methodology prose (`CLAUDE.md`, `docs/`)

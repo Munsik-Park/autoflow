@@ -163,7 +163,7 @@ A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion 
 - **[MUST]** Phase A excerpt selection uses the **functional-area coordinate** Phase A already receives (e.g. "host deployment structure", "submodule boundary"), not the issue's problem statement. Inject the matching excerpt, never the whole file.
 - **[DENY]** Injecting `docs/INDEX.md` itself, or any of the sub-repo's "improvement / risk / priority" docs (ADR-candidate / risk / tech-debt / refactoring-queue), into any of the three roles.
 
-**Structure-analysis bias prevention**: The structure gate scores *necessity only* and is reuse-neutral — leveraging existing code is a high-quality outcome, not a fail reason; structural-fit quality is judged later at GATE:PLAN (Feasibility, Scope) and GATE:QUALITY (Minimal implementation / Fit).
+**Structure-analysis bias prevention**: The structure gate scores *necessity only* and is reuse-neutral — leveraging existing code is a high-quality outcome, not a fail reason; structural-fit quality is judged later at GATE:PLAN (Decision grounds, Scope) and GATE:QUALITY (Minimal implementation / Fit).
 
 **Confirmation-bias prevention**: "the code may not be buggy" must be one hypothesis. Concluding that code change is required requires evidence that other causes have been ruled out.
 

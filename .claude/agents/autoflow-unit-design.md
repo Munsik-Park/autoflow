@@ -18,7 +18,8 @@ your artifact (`CLAUDE.md` > Rule Scope, principle 2).
 - **Artifact contract**: the feature design and the verification design at the
   `.autoflow/issue-{N}-*.md` paths your spawn prompt names, with the sections
   `docs/phases/architect.md` > Output artifacts requires; on a re-entry, a delta
-  section appended to each document you change (`docs/phases/architect.md` >
+  section appended to each document you change, with `## Decision requests` and
+  `## Tools` rewritten in place to their current state (`docs/phases/architect.md` >
   Re-entry). Nothing beyond what the verification needs.
 - **Verification**: the unit's exit is `gate_plan` — a fresh Evaluation AI's
   GATE:PLAN score on the rubric of `docs/phases/gate-plan.md` (ADR-0025 D1). A

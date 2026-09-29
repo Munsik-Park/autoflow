@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c3c019e01d4e4a7871f75e11f4af619173cc5e84e0116e18c92c712cbc75f2f2"
+      "sha256": "a0cae0ce76a03fc250366830975578c1a8a864f7a0c39d37586554fed9052a5c"
     },
     {
       "source": "docs/development-guideline.md",
@@ -76,14 +76,14 @@
       "dest": ".claude/autoflow/docs/phases/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b74ef6d3f906166eedc30d4c13f52bf482f22adfdb6ccd87c4a67bfce20f0939"
+      "sha256": "e875ea74a6676f7ead1d00bd77357b61b4b8b9aba775b99024797ece898a9004"
     },
     {
       "source": "docs/phases/architect.md",
       "dest": ".claude/autoflow/docs/phases/architect.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "16c6c886997762431e49ba1bf8da6209bc432a522a63f482b53fef1abe183b54"
+      "sha256": "42799ba1fd27d02ec189b141f6c1e5a7af5f5b36bbe95a5ab567f5908cea6816"
     },
     {
       "source": "docs/phases/audit.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "788abcabf5d443784bc18b7460c6368814198cf6eddd1465c75fb8d915a48108"
+      "sha256": "06e304a5f449d85137289ac78b11e00980b0213fc3f4a00b3af442ba5b12ab3a"
     },
     {
       "source": "docs/phases/integrate.md",
