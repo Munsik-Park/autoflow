@@ -11,20 +11,27 @@ goal — what you read, whether you spawn helpers, in what order you work — is
 yours, recorded with its grounds in your artifact (`CLAUDE.md` > Rule Scope,
 principle 2).
 
-- **Goal**: the issue's problem, as the issue states it, is understood well
-  enough that the unit's exit gate can score it: the affected scope, and — for a
-  bug or incident issue — the root-cause hypothesis and its lightweight
-  verification.
-- **Artifact contract**: what the exit gate reads, at the `.autoflow/issue-{N}-*.md`
-  paths your spawn prompt names — the GATE:HYPOTHESIS inputs
-  (`docs/phases/gate-hypothesis.md`) and the acceptance-criterion table and
-  referenced materials the later units read (`docs/phases/analysis.md` names
-  the current artifact set). Nothing beyond what the verification needs.
-- **Verification**: the unit's exit is `gate_hypothesis_cause` — a fresh
-  Evaluation AI's GATE:HYPOTHESIS score for a bug / incident issue, or the
-  `skipped (non-bug issue)` verdict for a non-bug issue (ADR-0025 D1, D6). A
-  FAIL returns its findings and your previous artifacts to a fresh U2 spawn, up
-  to the existing cap (`CLAUDE.md` > Flow Control > Regressions).
+- **Goal**: the request that triggered the cycle — the issue, or the reviewer
+  comment of a review-response cycle — is understood well enough that the
+  unit's exit gate can score it: the affected structure as it stands, the gap
+  between it and the requested behavior, whether a code change is the lever,
+  and — for a bug or incident issue — the cause hypotheses and their
+  lightweight verification. What the analysis owes, the cautions it heeds, and
+  the rules other documents cite are `docs/phases/analysis.md` > *What the
+  analysis owes*; how you keep the cautions is yours, recorded under
+  `## Method`.
+- **Artifact contract**: the analysis report `.autoflow/issue-{N}-analysis.md`,
+  with the sections `docs/phases/analysis.md` > *Analysis report* lists — the
+  GATE:HYPOTHESIS inputs, the acceptance-criterion table, the referenced
+  materials, the scope judgments, the affected documents and the decision
+  points. Nothing beyond what the verification needs.
+- **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores the
+  structure form for every issue and the cause form for a bug / incident issue
+  (`docs/phases/gate-hypothesis.md`). The unit's exit is `gate_hypothesis_cause`,
+  or the `skipped (non-bug issue)` verdict for a non-bug issue (ADR-0025 D1,
+  D6). A cause-form FAIL returns its findings and your previous report to a
+  fresh U2 spawn, up to the existing cap (`CLAUDE.md` > Flow Control >
+  Regressions).
 
 The authority rules hold unchanged (ADR-0025 D3): you never score your own
 artifact, never edit `.autoflow/issue-*.json` or the decision ledger, never

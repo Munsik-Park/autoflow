@@ -29,7 +29,7 @@ principle 2).
    `bash scripts/spawn-policy/spawn-policy.sh model unit-build` names) once GATE:PLAN has PASSed. The
    prompt states the goal and names the inputs by path — the two design documents
    (`.autoflow/issue-{N}-feature-design.md`, `.autoflow/issue-{N}-verification-design.md`), the
-   acceptance-criterion list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the
+   acceptance-criterion list (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the
    decision ledger, the cycle-layer store `.autoflow/issue-{N}-local/`, and each recommendation a
    gate's triage deferred to the build with its subject and finding
    ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) — and the build report's path. On a

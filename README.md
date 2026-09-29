@@ -26,8 +26,8 @@ AutoFlow structures every code change through a defined lifecycle:
 
 ```
 PREFLIGHT       Pre-Work          — Git clean check, branch creation
-DIAGNOSE        3-Phase Analysis  — Independent bias-free analysis
-GATE:HYPOTHESIS Hypothesis Eval   — Scored hypothesis assessment (gate, bug issues only)
+DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, cause hypotheses
+GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (gate: structure form; cause form for bug issues)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
 GATE:PLAN       Plan Evaluation   — Scored plan assessment (gate)
 BUILD           Build unit (U4)   — Test-first implementation and verification + deterministic exit check
@@ -75,8 +75,8 @@ flowchart LR
 
 ### Key Features
 
-- **Multi-Agent Roles** — Orchestrator, functional-unit agents (design, build), Evaluation AI and advisor with separated responsibilities.
-- **3-Phase Independent Analysis** — Structure / Issue / Cross-Verification analyses.
+- **Multi-Agent Roles** — Orchestrator, functional-unit agents (analysis, design, build), Evaluation AI and advisor with separated responsibilities.
+- **Analysis unit** — one analysis spawn states the current structure as fact, the gap to the request and whether code is the lever, heeding stated bias cautions; a fresh evaluator scores it.
 - **Evaluation Gates** — 10-point scoring system with a defined PASS threshold (≥ 7.5, each ≥ 7, security ≤ 3 → block).
 - **Hook Enforcement** — A shell hook validates AutoFlow state before allowing Agent spawns, `git push`, or `gh pr create`.
 - **Multi-Sub-Repo Support** — orchestrator pattern for coordinating work across submodules; single-repo is the degenerate case.

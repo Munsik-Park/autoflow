@@ -16,7 +16,7 @@ issue-952 G4 preservation guards assert on.
 Beyond the happy path, the diagram encodes the design decisions of
 ``docs/records/design-rationale.md``:
 
-- D1  DIAGNOSE structure analysis is issue-isolated (node subtitle)
+- DIAGNOSE, ARCHITECT and BUILD each run as one unit spawn (node subtitles)
 - D2  every gate is a fresh-spawned Evaluation AI (gate subtitles, legend)
 - D3  the hook computes PASS from raw scores (legend)
 - D6  structure FAIL = no code change -> stop/close (dashed STOP node)
@@ -35,8 +35,8 @@ from pathlib import Path
 STAGES = [
     ("01", "ANALYSIS", [
         ("PREFLIGHT", "git clean · prior-cycle check", "start", False),
-        ("DIAGNOSE", "3-phase · issue-isolated", "phase", True),
-        ("GATE:HYPOTHESIS", "fresh eval · bug only", "gate", False),
+        ("DIAGNOSE", "analysis unit · one spawn", "phase", True),
+        ("GATE:HYPOTHESIS", "fresh eval · structure + cause", "gate", False),
     ]),
     ("02", "PLANNING", [
         ("ARCHITECT", "design unit · one spawn", "phase", True),

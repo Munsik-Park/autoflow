@@ -6,7 +6,7 @@
 
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: full change set + test results + AUDIT result, plus the issue's acceptance-criterion list
-(`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the verification design,
+(`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the verification design,
 the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the build report
 (`.autoflow/issue-{N}-build-report.md` — [BUILD](build.md) > Build report — its run records, section
 `## Out-of-scope observations — guard / boundary logic touched`, and — on a target — section
@@ -150,7 +150,7 @@ judgment, ledger record and attempt cap — after the PASS of every rubric-score
 (GATE:HYPOTHESIS in both forms, GATE:PLAN, AUDIT, GATE:QUALITY) and before the transition it opens.
 The one thing added is the evaluator's output contract for `recommendations`
 ([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format): each item names its
-subject — a `path:line` of the evaluated artifact at the evaluated commit, or a section of the evaluated artifact (a design document, a DIAGNOSE analysis file) — its severity in the reviewer's vocabulary, and — on `Medium` and above — its `remedy_class`.
+subject — a `path:line` of the evaluated artifact at the evaluated commit, or a section of the evaluated artifact (a design document, the DIAGNOSE analysis report) — its severity in the reviewer's vocabulary, and — on `Medium` and above — its `remedy_class`.
 No separate disposition system exists for gate recommendations.
 
 | Step 6.5 | Gate recommendation |
@@ -187,9 +187,9 @@ No separate disposition system exists for gate recommendations.
   - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — does not call the script: every `Medium`+ recommendation is resolved on the artifact the gate scores,
     by the gate's own FAIL route narrowed to the item, and re-scored by the same form: at GATE:PLAN an ARCHITECT unit re-run naming the
     recommendation ([ARCHITECT](architect.md) > *Re-entry*), then [GATE:PLAN](gate-plan.md)'s *Re-entry re-score* over the
-    delta; at GATE:HYPOTHESIS the role that wrote the analysis it names amends that artifact — a
-    problem the confirmed cause carries enters its `## Scope judgments` — then the same form
-    re-scores. The class such a recommendation carries (`doc` / `test` / `impl` / `design`) names the
+    delta; at GATE:HYPOTHESIS a U2 unit re-run naming the recommendation amends the analysis
+    report ([DIAGNOSE](analysis.md) > *Re-entry*) — a problem the confirmed cause carries enters its
+    `## Scope judgments` — then the same form re-scores. The class such a recommendation carries (`doc` / `test` / `impl` / `design`) names the
     change the problem will need once the design or analysis carries it; it rides on the amended
     artifact as the ground ARCHITECT or BUILD then reads, and it never sends the cycle forward
     past the gate unre-scored. A fact below the decision layer ([ARCHITECT](architect.md) > *Output artifacts*

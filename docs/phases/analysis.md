@@ -1,190 +1,197 @@
-# DIAGNOSE — Issue Analysis Playbook
+# DIAGNOSE — U2 Analysis unit
 
-> **Phase playbook (single source of truth for the DIAGNOSE analysis procedure).**
-> [`CLAUDE.md`](../../CLAUDE.md) routes to this file from its Phase Playbook Loading
-> Contract; read it on entering DIAGNOSE. The cross-phase invariants, the router
-> (phase list + Flow Control), the regression caps, and the state schema remain in
-> `CLAUDE.md`. The structure-gate scores are recorded in the `.autoflow/issue-{N}.json`
-> state file under `phases.gate_hypothesis_structure`, but the hook **does not gate**
-> `gate_hypothesis_structure` — the orchestrator judges the structure pass/fail against
-> the CLAUDE.md thresholds (each ≥ 7; the 3-item Type 2 rubric also avg ≥ 7.5) and records
-> the fresh-spawn Evaluation AI's scores; the hook enforces only the four gated phases
-> (`gate_hypothesis_cause`, `gate_plan`, `audit`, `gate_quality` — see `CLAUDE.md` >
-> AutoFlow State Tracking).
+> Phase playbook for DIAGNOSE. [`CLAUDE.md`](../../CLAUDE.md) > Phase Playbook Loading
+> Contract routes to this file; the other phases are listed in
+> [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
 
-When an issue arrives, classify cause hypotheses **before** code analysis.
+DIAGNOSE and GATE:HYPOTHESIS are one functional unit, U2 Analysis
+([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed by
+four things only — its goal, its artifact contract, its verification and its loop cap (D2) — and
+this file states them, with the cautions the analysis is asked to heed. How the unit reaches the
+goal — what it reads and in what order, whether it spawns helpers and what it gives each, how it
+keeps the cautions — is the unit agent's, recorded with its grounds in its artifact
+([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
 
-**Review-response loop check** (`mode = review-response` only). It runs **once per review-response attempt**, at whichever point that attempt begins: at DIAGNOSE entry, ahead of the structure analysis below, for an attempt that runs DIAGNOSE; and at HANDOFF step 6.5 before the routed work, for a route that does not — a thin route, or a `design` re-entry judged to start at ARCHITECT ([`handoff.md`](handoff.md)). Steps 1 and 2 below are what the step-6.5 call site executes; step 3 applies unchanged at either call site. This section is the contract's only documentary home — the call sites cite it rather than restate it. An `autoflow-loopcheck` sub-agent (a shipped read-only definition), on the model the policy names for `diagnose-loopcheck` (clears the pre-GATE hook like Phase A/3), writes `.autoflow/issue-{N}-loopcheck.md` and returns a one-line summary. The contract has three separated steps:
+- **Goal**: the request that triggered the cycle is understood well enough for GATE:HYPOTHESIS to
+  score it — the affected structure as it stands, the gap between it and the requested behavior,
+  whether a code change is the lever, and, for a bug or incident issue, the cause hypotheses and
+  their lightweight verification.
+- **Artifact contract**: the analysis report (*Analysis report* below).
+- **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores the report's structure form for
+  every issue and its cause form for a bug / incident issue ([GATE:HYPOTHESIS](gate-hypothesis.md));
+  the unit never scores its own artifact. U2 ends at a `gate_hypothesis_cause` PASS, or at the
+  structure-form PASS of a non-bug issue, whose verdict is `skipped (non-bug issue)` (D6).
+- **Loop cap**: a cause-form FAIL re-runs the unit with the evaluator's findings and the previous
+  report (*Re-entry* below), max 2× (`CLAUDE.md` > Flow Control > Regressions). The structure form
+  has no retry loop: its FAIL is a disposition ([GATE:HYPOTHESIS](gate-hypothesis.md) > *Structure
+  form*).
+
+## Review-response loop check
+
+`mode = review-response` only. The check runs **once per review-response attempt**, at whichever point that attempt begins: at DIAGNOSE entry, ahead of the unit spawn below, for an attempt that runs DIAGNOSE; and at HANDOFF step 6.5 before the routed work, for a route that does not — a thin route, or a `design` re-entry judged to start at ARCHITECT ([`handoff.md`](handoff.md)). Steps 1 and 2 below are what the step-6.5 call site executes; step 3 applies unchanged at either call site. This section is the contract's only documentary home — the call sites cite it rather than restate it. An `autoflow-loopcheck` sub-agent (a shipped read-only definition), on the model the policy names for `diagnose-loopcheck` (an analysis-class spawn, never score-gated), writes `.autoflow/issue-{N}-loopcheck.md` and returns a one-line summary. The contract has three separated steps:
 
 1. **Record the observation — on every review-response DIAGNOSE entry, before comparing.** Append a ledger observation for this cycle: the **complaint class** (the property the reviewer asserts, e.g. "duplicate-member detection is incomplete"), the **witness case** (e.g. two identical entries, then three identical entries), the **shape of the prior change** (a check for the named case, or a rule over the whole property), and the cycle number. Recording is unconditional (not only on a match): the first review-response cycle records its observation too, with no prior to compare against.
-2. **Compare against the immediately-prior review-response observation.** When the class matches and only the witness case differs, first check the ledger for an **active *case-specific* suppression** on this class — a *case-specific* decision recorded for this class with no different class observed in any later cycle. If one is active, the class is suppressed: continue the normal flow without pausing. Otherwise reply on the PR with the comparison, append a ledger entry marking the match, and hand the decision to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) with a request written **situation-first** — for example restating the acceptance criterion as one rule over the whole input, or a further case-specific change. Do **not** record a decision in the match entry: the advisor's entry is the decision. When the class **and** witness are both the same (a fix that did not take), this check does not apply — continue to the structure analysis (scope-split applies); a different class also continues normally and, by appearing, releases any earlier suppression on other classes.
+2. **Compare against the immediately-prior review-response observation.** When the class matches and only the witness case differs, first check the ledger for an **active *case-specific* suppression** on this class — a *case-specific* decision recorded for this class with no different class observed in any later cycle. If one is active, the class is suppressed: continue the normal flow without pausing. Otherwise reply on the PR with the comparison, append a ledger entry marking the match, and hand the decision to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) with a request written **situation-first** — for example restating the acceptance criterion as one rule over the whole input, or a further case-specific change. Do **not** record a decision in the match entry: the advisor's entry is the decision. When the class **and** witness are both the same (a fix that did not take), this check does not apply — continue to the unit spawn (scope-split applies); a different class also continues normally and, by appearing, releases any earlier suppression on other classes.
 3. **Re-enter on the advisor's answer.** The advisor's `A` entry records the decision, and the *same* cycle continues with no pause. A *redefine-AC* answer restarts DIAGNOSE in this cycle from the new acceptance criterion (recorded as `[ac-decision]` entries); a *case-specific* answer continues the normal flow and suppresses re-surfacing of that class until a new class appears. An operator override of that answer at the retry stage re-enters the same way ([`role-contracts.md`](../role-contracts.md) > Advisor > *Operator review at the retry stage*).
 
-**Intake readiness triage** (`mode = new-issue` only; runs at DIAGNOSE entry, ahead of the structure fan-out below — the new-issue counterpart to the review-response loop check above). A sub-agent on the model the policy names for `diagnose-intake-triage` — a **separate role from Phase B** (it shares Phase B's no-code rule but has its own input set: the issue body + the host `docs/development-guideline.md` (work-type classification) and the target sub-repo's work-type / workflow-audit doc if it provides one, plus the sub-repo's product / actor context doc only if a readiness call genuinely needs it; **[MUST] no code search/read tools**; clears the pre-GATE hook like Phase A/B) — answers exactly one question: **is a planning / design / ADR prerequisite clearly required before this issue can be implemented?** It is a pre-filter, **not** a final implementability verdict — necessity is Phase 3's job and plan-fit is GATE:PLAN's; when in doubt it PASSes.
+## Unit spawn
 
-- **PASS** (no clear prerequisite) → proceed to the structure fan-out (step 2). **Only after PASS do Phase A/B run**.
-- **FAIL** (a planning/design/ADR prerequisite is clearly needed) → **no auto issue creation**. Write the reason + a suggested issue-split draft to `.autoflow/issue-{N}-triage.md` **situation-first** — the user-visible problem and the suggested split in domain terms ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation) — and hand the decision to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor), the triage file as its request's anchor. Orchestrator context discipline bounds what the triage spawn *returns* (anchor + summary). The advisor's answer applies: **proceed** → the structure fan-out; **the prerequisite comes first** → the cycle ends with `active: false`, `phase: "awaiting-user"`, the triage file and the advisor's record as the report — later, on the operator's explicit request, the planning/design/ADR work starts as a separate cycle.
+1. **Spawn** one `autoflow-unit-analysis` (`Agent`, anonymous, no `name`, the model
+   `bash scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) at DIAGNOSE entry — in a
+   review-response cycle, after the loop check. The prompt states the goal, the cycle's `mode` and
+   the report's path, and names the inputs by path: the issue (new-issue) or the reviewer comment /
+   thread PREFLIGHT identified (review-response), and the decision ledger
+   (`.autoflow/issue-{N}-ledger.md`). In a review-response cycle it also names every artifact the
+   previous cycle left (`.autoflow/issue-{N}-c{C}-*.md`) and, when
+   `scripts/review/scope-bounded.sh entry` printed `scope-bounded: true`, that the path is bounded
+   ([PREFLIGHT](preflight.md) > *Scope-bounded entry*) — how the unit reuses the previous analysis
+   on that path is its own. On a re-entry it names what the re-entry is for and the material that
+   carries it (*Re-entry* below).
+2. **Documents.** Injection stays role-minimal and routed via `docs/INDEX.md`, never wholesale: the
+   prompt carries a documents line naming the documents the analysis needs (this file,
+   [GATE:HYPOTHESIS](gate-hypothesis.md)); the unit reads anything further by its own judgment.
+3. **Return.** The unit returns the report's path and a one-line summary that names any decision
+   point it recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting
+   Format). The orchestrator does not receive the report's body.
+4. **Artifact-existence check (orchestrator-side).** Before GATE:HYPOTHESIS the orchestrator confirms
+   the report exists, is non-empty and carries every section *Analysis report* lists. A missing one
+   is an infrastructure cause: the unit is spawned again with the same inputs, consuming no counter.
+5. **Route** the return (*Report routing* below).
 
-The triage sub-agent and the Phase B sub-agent use **separate agent lifetimes** (no reuse).
+## What the analysis owes
 
-A suggested split written to `.autoflow/issue-{N}-triage.md` stays a suggestion until the user acts on it: the triage step does not file it, whatever it concludes, and it is filed only through a draft plus `scripts/issue/create-issue.sh` ([`docs/issue-proposal.md`](../issue-proposal.md)).
+The analysis is asked for four things:
 
-```
-1. Identify affected sub-repos.
-2. Independent structure analysis (3-Phase).
+- the affected structure as it currently is, stated as fact;
+- the gap between that structure and the behavior the request asks for;
+- whether a code change is the lever that closes the gap, or data, configuration or operations are;
+- for a bug or incident issue, the cause hypotheses, the lightweight verification of each, and a
+  verdict per hypothesis.
 
-   Structure analysis is isolated from issue analysis, and the structure-analysis
-   AI scores the necessity of each proposed resolution (a DRY-triage — is a code
-   change genuinely needed — reuse-neutral, not a structural-fit judgment).
+The request is the trigger target — the issue body in a new-issue cycle, the reviewer comment or
+thread PREFLIGHT identified in a review-response cycle — and the as-is is the dev branch's HEAD
+(`main` in a new-issue cycle, the change under review in a review-response cycle). The question is
+whether the as-is already satisfies the request.
 
-   Phase A + Phase B: run in parallel — except on the bounded path of a review-response cycle
-   (`scripts/review/scope-bounded.sh entry` prints `scope-bounded: true` over the per-PR findings
-   files; `docs/phases/preflight.md` > Scope-bounded
-   entry), where Phase A is NOT re-authored: the previous cycle's preserved
-   `.autoflow/issue-{N}-c{C}-phase-a.md` is Phase 3's structure input. Phase B, Phase 3 and the loop
-   check run as usual.
+**Cautions.** Each names a bias the analysis is to avoid:
 
-   AI-A (structure analysis): is NOT given the issue content
-     - Input: affected sub-repo + functional area (e.g., "the API's request-normalization pipeline").
-     - Instruction: "Analyze how this area currently works — pipeline structure, design intent, data flow."
-     - Output: factual description of the area as it stands.
-     - [MUST] Do NOT include the issue number, title, or problem description in the prompt.
-     - [MUST] The prompt describes the current structure and does not convey the issue's defect hypothesis.
+- Describe the current structure as fact, apart from the issue's defect hypothesis — do not read the
+  structure to fit the hypothesis.
+- "Not a code defect" — data, configuration, environment, already fixed — is one of the hypotheses.
+  A conclusion that a code change is required rests on evidence that rules the others out.
+- The necessity judgment is reuse-neutral: a resolution that uses existing code is not marked down
+  for it. Structural fit and over-engineering are GATE:PLAN's and GATE:QUALITY's.
+- Open every material the issue body or an acceptance criterion references — a design mockup, an
+  asset, an external document — yourself; one that cannot be opened is recorded with the reason.
 
-   AI-B (issue analysis): does NOT see the code
-     - Input: issue body.
-     - Instruction:
-       1. List the concrete cases mentioned in the issue.
-       2. Identify the higher-level problem type these cases share.
-       3. Propose resolution approaches (what mechanism is needed).
-       4. Open each material the issue body or an acceptance criterion references — a design
-          mockup, an asset, an external document — and record it under `## Referenced materials`:
-          what it is, where it is, how it was opened, and what it shows for the criterion that
-          names it. The material, not an abbreviated example in the body, is what the criterion
-          means; a material that cannot be opened is recorded `not opened: <reason>`
-          ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *The tools the work needs*).
-     - Output: cases + problem types + resolution approaches + `## Referenced materials` (`none`
-       when the issue references no material), plus a required
-       `## Acceptance criteria` section — a table with the fixed columns
-       `AC id | criterion | source`, where `AC id` is a short readable name unique within the
-       issue, `criterion` restates the issue's criterion faithfully, and `source` locates it in the
-       issue body artifact. **[MUST]** This section is the issue's single machine-addressable
-       acceptance-criterion list; an absent or unparseable table is itself a finding downstream
-       (`docs/phases/architect.md` > *Report routing*; `docs/phases/gate-plan.md` >
-       *AC-authority check*). It is authored **once per issue**, in the `mode = new-issue` cycle.
-     - **[MUST]** A review-response cycle's Phase B targets the reviewer comment, not the issue
-       body, so it **carries the existing table forward unchanged** rather than re-deriving it — a
-       reviewer comment never edits the acceptance-criterion list; only an `[ac-decision]` ledger
-       entry does — the advisor's, or the operator's override (`CLAUDE.md` > Decision Ledger).
-     - [MUST] Do NOT use code search/read tools. Opening a material the issue itself references
-       (step 4 above) is not a code read.
+How the unit guards against these biases — whether it separates the structure reading from the
+issue reading, in what order it reads, what it gives or withholds from a helper — is its own,
+recorded with its grounds under `## Method`.
 
-   Phase 3: AI-A evaluates the necessity of AI-B's resolution approaches against the actual structure (reuse-neutral — not a structural-fit judgment).
+The rules below are the ones other documents cite; everything else about the work is the unit's.
 
-   The orchestrator re-spawns AI-A:
-     - Input: Phase A structure analysis + AI-B's resolution list.
-     - Instruction: "For each proposed resolution, score two necessity items against the current code (as-is): (1) Behavior gap — does as-is NOT yet produce the required behavior? (2) Code-change necessity — is a code change the lever, not data/config/ops? Score necessity only — a resolution that reuses existing code is not a failure; do not judge plan quality or structural fit (that is GATE:PLAN's job)."
-     - [MUST] Do NOT include the issue body (only AI-B's resolution list).
+- **Acceptance criteria.** The report's `## Acceptance criteria` table is the issue's single
+  machine-addressable acceptance-criterion list; an absent or unparseable table is itself a finding
+  downstream ([ARCHITECT](architect.md) > *Report routing*; [GATE:PLAN](gate-plan.md) >
+  *AC-authority check*). **[MUST]** It is authored once per issue, in the `mode = new-issue` cycle;
+  a review-response cycle carries the previous cycle's table forward unchanged — a reviewer comment
+  never edits the list; only an `[ac-decision]` ledger entry does, the advisor's or the operator's
+  override (`CLAUDE.md` > Decision Ledger).
+- **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,
+  where it is, how it was opened, and what it shows for the criterion that names it; the material,
+  not an abbreviated example in the body, is what the criterion means. **[MUST]** A material
+  recorded `not opened: <reason>` is raised to the operator before the cycle leaves DIAGNOSE
+  (`CLAUDE.md` > Flow Control > *tool or referenced material → user*;
+  [`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *The tools
+  the work needs*).
+- **Lightweight verification.** A hypothesis is checked with what the environment and the target's
+  documents and scripts provide — API calls, queries, service status, logs — and those tools are
+  looked for before an item is marked `unverified`; a tool that is off is started by the target's
+  own procedure, and one that needs the operator is requested (*The tools the work needs*). The
+  verdict notes record each tool, whether it was usable and how it was secured; an `unverified` item
+  names the tool it needed.
+- **Scope judgments.** Beyond the acceptance criteria, the analysis names the problems the confirmed
+  cause carries — its other sites, and what fixing it will expose — with the scope judgment for each
+  and its grounds ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface
+  Rules > *Scope judgment*). ARCHITECT reads them and settles the cycle's scope in the feature
+  design's `## Scope` section; the analysis does not decide it alone.
+- **Decision points.** A judgment the working AI is not the one to make is recorded under
+  `## Decision points` with its grounds, and the orchestrator routes it (*Report routing*): a
+  planning, design or ADR prerequisite clearly required before the issue can be implemented
+  (`mode = new-issue`; when in doubt, none); a request the as-is already satisfies; a gap or a cause
+  whose lever is not code. A suggested split of the issue stays a suggestion: it is filed only on
+  the operator's request, through a draft and `scripts/issue/create-issue.sh`
+  ([`issue-proposal.md`](../issue-proposal.md)).
 
-   Issue type classification:
-     - Type 1 (code change): bug fix, new feature, script change, pattern extension, hook change.
-     - Type 2 (documentation/consistency): content sync, doc update, cross-file consistency.
-     - Mixed/unclear → default to Type 1.
+## Analysis report
 
-   Scoring (10 points per item, by issue type — Type 1: 2 items; Type 2: 3 items):
+`.autoflow/issue-{N}-analysis.md`. The unit writes it whole on its first run and brings it up to
+date on a re-entry. Every section below is present; a section with nothing to record says `none`.
 
-   Type 1 (code change) — a *necessity* gate (DRY-triage), reuse-neutral, **two items only**. The gate answers exactly one question — "is a code change genuinely needed?" — and nothing else: plan feasibility / structural grounding → GATE:PLAN (Decision grounds, Scope); structural-fit and over-engineering → GATE:PLAN (Scope) + GATE:QUALITY (Minimal implementation / Fit); "where / how to change" → DIAGNOSE task decomposition (step 6) + ARCHITECT feature design. A fix that reuses existing code scores high, not low.
+| Section | Holds | Read by |
+|---|---|---|
+| `## Method` | how the analysis was done — the reading order, any helper spawn and what it was given — and how each caution was kept, with grounds | GATE:HYPOTHESIS |
+| `## Current structure` | the affected area as it stands — its structure, design intent and data flow — stated as fact | structure form |
+| `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | structure form |
+| `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | ARCHITECT, GATE:PLAN, BUILD, GATE:QUALITY |
+| `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | ARCHITECT (*Tools*) |
+| `## Necessity` | the issue type — Type 1 or Type 2 ([GATE:HYPOTHESIS](gate-hypothesis.md) > *Structure form*), and bug / incident or not — and, per resolution approach, the behavior gap and whether code is the lever, with grounds | structure form |
+| `## Hypotheses` | for a bug / incident issue, at least three cause hypotheses, "not a code defect" among them, each with its lightweight verification, the tools it used and its verdict — eliminated, likely or unverified — with evidence; for a non-bug issue, `none — non-bug issue` | cause form |
+| `## Scope judgments` | each scope judgment, as *What the analysis owes* says | ARCHITECT; GATE:QUALITY `Minimal implementation`, `Impact scope` |
+| `## Affected documents` | the documents the change is expected to update | ARCHITECT; BUILD (documents line) |
+| `## Decision points` | each decision point with its grounds, or `none` | the orchestrator (*Report routing*) |
 
-   | Item | Criterion |
-   |------|-----------|
-   | Behavior gap          | Per Phase A, does the current structure NOT yet produce the required behavior? (high = real gap → change needed; already-produced / already-fixed → low) |
-   | Code-change necessity | Is a *code* change the lever, not data/config/ops? (high = code change needed; resolvable by config / data / ops → low) |
+Anything else the unit records is its own, written where it judges useful.
 
-   Type 2 (documentation/consistency):
+## Report routing
 
-   | Item | Criterion |
-   |------|-----------|
-   | Content gap        | Is there an actual content gap or inconsistency? (high = gap exists) |
-   | Consistency impact | Does the inconsistency affect users or AI behavior? (high = significant impact) |
-   | Propagation scope  | Is the change scope appropriate — not too broad, not missing targets? (high = appropriate scope) |
+- **A prerequisite** (`mode = new-issue`) → the advisor ([`role-contracts.md`](../role-contracts.md) >
+  Advisor), the report as the request's anchor, written situation-first
+  ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Human-decision presentation*).
+  **Proceed** → GATE:HYPOTHESIS, after a unit re-run naming the advisor's entry where the analysis
+  stopped at the prerequisite; **the prerequisite comes first** → the cycle ends with `active:
+  false`, `phase: "awaiting-user"`, the report and the advisor's record as its report. No counter.
+- **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the structure form and, for a bug
+  / incident issue, the cause form. The dispositions — an already-satisfied request, a non-code
+  lever or cause, a non-bug issue's `skipped (non-bug issue)` verdict, a cause-form FAIL — are
+  [GATE:HYPOTHESIS](gate-hypothesis.md)'s; a decision point the report records is confirmed by the
+  gate's scores before any close or end.
+- **A material not opened, or a tool the analysis needs that neither this environment nor the
+  target's procedures provide** — a harness-level block → the operator, situation-first
+  (`awaiting-user`; `CLAUDE.md` > Flow Control > *tool or referenced material → user*).
 
-   Evaluation target & baseline:
-     - Target  = the request that triggered this cycle. New-issue cycle: the issue body. Review-response cycle: the specific reviewer comment/thread identified at PREFLIGHT (if it carries inline code, Phase B receives its behavioral intent, not the snippet — Phase B's no-code-tools rule forbids investigating the repo, not reading a quoted line).
-     - as-is   = the current dev-branch HEAD. In a new-issue cycle this equals `main`; in a review-response cycle it is the change already under review.
-     - Question = "Does as-is already satisfy the target request?"
+## Re-entry
 
-   PASS criteria: each ≥ 7 — and, for the 3-item Type 2 rubric, also avg ≥ 7.5.
-     - PASS (gap real + code is the lever) → code change required → continue to step 3.
-     - FAIL → disposition by the failing item (never a bare composite — a real code gap is never auto-closed):
-       - **Gap item low** (as-is already satisfies the target — no behavior/content gap) → no change needed. Branch on the cycle's `mode` recorded at PREFLIGHT (`mode` is the cycle-entry classification; a PR state change mid-cycle is re-classified at the next PREFLIGHT, not re-derived here):
-         - `mode = review-response` (target issue has an open PR) → reply on the PR with the finding; do NOT close the issue or PR; set `active: false`, `phase: "awaiting-external-review"`. A defined terminus, not an open intermediate state.
-         - `mode = new-issue` (no open PR) → issue auto-closed via `gh issue close` + AutoFlow terminated (`active: false`). **Pre-close verification** (the hook does not gate `gh issue close` — this is orchestrator discipline): before running the destructive `gh issue close`, the orchestrator confirms the recorded `phases.gate_hypothesis_structure` scores actually meet the FAIL condition per the CLAUDE.md thresholds (gap item < 7 — as-is already satisfies the target). The close comment records those structure-evaluation scores + the existing-mechanism summary. Re-filing as a new issue — or reopening — is the natural re-entry path.
-       - **Gap item high, but Code-change necessity low** (a real gap, but the lever is data / config / ops — not a code change) → not a Type 1 code issue → the same non-code exit as GATE:HYPOTHESIS (see GATE:HYPOTHESIS > "non-code root cause confirmed"): the advisor decides ([`role-contracts.md`](../role-contracts.md) > Advisor). **A code change is still owed** → continue to the cause analysis; **the lever is non-code** → report the finding **situation-first** ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation) (in a `mode = review-response` cycle, post it as the PR reply) and end the cycle with `active: false`, `phase: "awaiting-user"`. Reclassification (Type 2 / non-code) is the re-entry. No retry loop — the structure gate does not re-DIAGNOSE.
+No unit agent's lifetime spans a spawn: every re-entry spawns a fresh `autoflow-unit-analysis` by
+*Unit spawn* above, whose prompt names what the re-entry is for, the material that carries it, and
+the report so far. The report is brought up to date, not rewritten; its `## Acceptance criteria`
+table changes only by an `[ac-decision]` entry, which the orchestrator applies.
 
-3. Cause hypotheses (at least 3; "not a code bug" must be one).
-   - Code bug: logic error, missing exception handling.
-   - Missing data: required data is not in the data store.
-   - Environment / configuration: env var missing, service not running, network.
-   - External dependency: external API outage.
-   - Already fixed: resolved in a recent commit.
-4. Lightweight verification:
-   - API calls, queries, service status, log inspection.
-   - Find the tools the verification needs — in this environment and in the target's documents
-     and scripts — before marking an item "unverified"; a tool that is off is started by the
-     target's own procedure, and one that needs the operator is requested ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools
-     > *The tools the work needs*). Record with the verdict notes each tool, whether it was usable,
-     and how it was secured.
-   - Items that cannot be verified are marked "unverified", naming the tool they needed.
-5. Hypothesis verdict notes: per hypothesis, eliminated / likely / unverified, with evidence.
-6. Task decomposition (only if code change is required).
-   - Beyond the acceptance criteria, name the problems the confirmed cause carries — its other
-     sites, and what fixing it will expose — and record the scope judgment for each
-     ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules >
-     *Scope judgment*) with its grounds, under `## Scope judgments` in the DIAGNOSE artifact that
-     carries the task decomposition. ARCHITECT reads it as an input and settles the cycle's scope
-     in the feature design's `## Scope` section; DIAGNOSE does not decide it alone.
-7. Identify affected docs.
-```
+| Re-entry | Material named | Counter |
+|---|---|---|
+| GATE:HYPOTHESIS cause-form FAIL | the evaluation report and its failed items | GATE:HYPOTHESIS cause FAIL (max 2×) |
+| a recommendation attempt at GATE:HYPOTHESIS routed to the analysis | the recommendation's subject and finding | the attempt window (max 7×) |
+| the bounded path left ([PREFLIGHT](preflight.md) > *Scope-bounded entry*) | the full topic and the PR diff | none |
+| an advisor answer or operator override that reaches the analysis | the `A` / `O` entries | none |
 
-**Per-role document injection whitelist** (the orchestrator selects documents per role via `docs/INDEX.md` as a router and never injects it wholesale). The three roles are **distinct columns** — `Intake triage` and `Phase B` are NOT the same role:
+A re-entry passes through GATE:HYPOTHESIS again on its re-score
+([GATE:HYPOTHESIS](gate-hypothesis.md) > *Re-entry re-score*). The unit reads and writes no
+`.autoflow/issue-{N}.json` state file, so every counter above is the orchestrator's own accounting.
 
-| Document | Phase A (structure — issue-isolated) | Intake triage (readiness — no code) | Phase B (issue — no code) |
-|----------|--------------------------------------|--------------------------------------|----------------------------|
-| the target sub-repo's current-state / architecture baseline doc(s) (area-scoped excerpt) | allowed — **current-state, area-scoped excerpt only** | denied | denied |
-| issue body | denied | allowed | allowed |
-| host `development-guideline.md` + the sub-repo's work-type / workflow-audit doc (work-type) | denied | allowed | **denied** |
-| the sub-repo's product / actor context doc (product / actor) | denied | optional / limited if a readiness call needs it | **denied** |
-| the sub-repo's problem / risk / improvement / priority docs (ADR candidates, risk analysis, tech-debt, refactoring queue) | denied | denied | denied |
-| a material the issue body or an acceptance criterion references (a design mockup, an asset, an external document) | denied | denied | allowed — **opened by Phase B itself** and recorded under `## Referenced materials` |
+## Spawn model
 
-- **[MUST] Phase B is issue-body only.** **No baseline, work-type, or product-background doc is injected into Phase B — `denied`, with no exception.** A material the issue itself references is part of the issue, not an injected document: Phase B opens it and records it (AI-B step 4), and Phase A never receives it. A material recorded `not opened` is raised to the operator before the cycle leaves DIAGNOSE (`CLAUDE.md` > Flow Control > *tool or referenced material → user*). Work-type classification is the intake triage's job, not Phase B's, so a "classification need" is never grounds to inject the work-type or product-background docs into Phase B.
-- **[MUST] Intake triage** receives the issue body + the readiness/work-type docs (host `development-guideline.md` + the sub-repo's work-type / workflow-audit doc, if any); the sub-repo's product / actor context doc only if a readiness call genuinely needs it. It shares Phase B's no-code rule but is a **separate role with a separate input set**.
-- **[MUST]** Phase A receives **current-state / observed-structure excerpts only**. Exclude problem, risk, recommended-direction, ADR-priority, issue-intent, and prerequisite-necessity wording.
-- **[MUST]** Phase A excerpt selection uses the **functional-area coordinate** Phase A already receives (e.g. "host deployment structure", "submodule boundary"), not the issue's problem statement. Inject the matching excerpt, never the whole file.
-- **[DENY]** Injecting `docs/INDEX.md` itself, or any of the sub-repo's "improvement / risk / priority" docs (ADR-candidate / risk / tech-debt / refactoring-queue), into any of the three roles.
-
-**Structure-analysis bias prevention**: The structure gate scores *necessity only* and is reuse-neutral — leveraging existing code is a high-quality outcome, not a fail reason; structural-fit quality is judged later at GATE:PLAN (Decision grounds, Scope) and GATE:QUALITY (Minimal implementation / Fit).
-
-**Confirmation-bias prevention**: "the code may not be buggy" must be one hypothesis. Concluding that code change is required requires evidence that other causes have been ruled out.
-
-## Spawn model (per-phase policy)
-
-Every DIAGNOSE spawn's model is resolved from the single-source spawn policy, never restated
-here: `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` over
-`.claude/autoflow/spawn-policy.json`, with one row per DIAGNOSE direct spawn
-(`diagnose-intake-triage`, `diagnose-loopcheck`, `diagnose-phase-a`, `diagnose-phase-b`,
-`diagnose-phase-3`). Each `Agent` spawn declares `model` explicitly —
-see [`CLAUDE.md`](../../CLAUDE.md) > Spawn Model — Phase-by-Phase. The orchestrator's own
-context discipline applies: Phase A/B/3 write their bodies to `.autoflow/issue-{N}-phase-*.md`
-and return only an anchor + one-line summary (`CLAUDE.md` > Cost Control > Orchestrator
-context discipline).
-
-Spawn channel: all five DIAGNOSE spawns — intake readiness triage, Phase A, Phase B, Phase 3, and the review-response loop check — are anonymous direct spawns (a `subagent_type` only, with no `team_name`/`name` pair), so each one's anchor + summary reaches the orchestrator as the spawn's own return value. See [`role-contracts.md`](../role-contracts.md) > Spawn mode by role lifetime.
+Every DIAGNOSE spawn's model is resolved from the spawn policy, never restated here:
+`bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` over
+`.claude/autoflow/spawn-policy.json` — `diagnose-loopcheck` for the loop check, `unit-analysis`
+for the unit, `gate-hypothesis` for the evaluator. Each `Agent` spawn declares `model` explicitly
+([`CLAUDE.md`](../../CLAUDE.md) > Spawn Model — Phase-by-Phase), and each is an anonymous direct
+spawn ([`role-contracts.md`](../role-contracts.md) > Spawn mode by role lifetime); a spawn the unit
+makes inherits its analysis class.
 
 ## Spot-check & escalation discipline (incomplete-output guard)
 
-A DIAGNOSE spot-check is an orchestrator read that confirms a Phase A/B/3 finding
-before it feeds a structure-gate score, a blocker, or a user escalation. A Claude
+A DIAGNOSE spot-check is an orchestrator read that confirms a finding of the
+analysis report before it feeds a routing decision, a blocker, or a user escalation. A Claude
 Code behavior produces a **false "absent / stub" reading**:
 
 - **Read-dedup stub.** A re-read of an unchanged file returns a 1-line stub ("file
@@ -193,15 +200,15 @@ Code behavior produces a **false "absent / stub" reading**:
   at runtime — these rules are the procedure it points to.
 
 - **[MUST]** A blocker / "absent" / "dependency missing" finding is
-  **reproduced with a fresh read before it feeds a structure-gate score or a
+  **reproduced with a fresh read before it feeds a routing decision or a
   user escalation**. A single read is never sufficient grounds.
 - **[MUST]** A blocker/escalation-feeding spot-check reads via **shell**
   (`sed -n 'N,Mp' <file>`, `grep -n`, `wc -l`), not the Read tool.
 - **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
   1-line result (`Wasted call` / `file unchanged`). It is a harness stub, not
   data — re-run the single command sequentially first.
-- **[MUST]** Spot-checks run **after all Phase A/B/3 sub-agents have returned**,
-  as single sequential commands, never interleaved with the fan-out. Another
+- **[MUST]** Spot-checks run **after the unit has returned**, as single
+  sequential commands. Another
   directory is addressed with `git -C <path>` + absolute paths rather than a
   `cd`-prefixed compound, which can raise a permission prompt.
 
@@ -209,17 +216,3 @@ Code behavior produces a **false "absent / stub" reading**:
 has compacted is also prone to holding stale context with high confidence —
 `--no-compaction` avoids it at the cost of context headroom. The hook + rules
 above are the in-repo defense; this is a fallback.
-
-## After this phase
-
-- **Intake readiness triage FAIL** (`mode = new-issue`; a planning/design/ADR prerequisite is clearly required) → the advisor decides: proceed → structure fan-out; the prerequisite first → the cycle ends (`awaiting-user`), and the operator's explicit request starts any prerequisite work as a separate cycle.
-- **Bug / incident issue** (structure PASS, code change required) → **GATE:HYPOTHESIS**
-  (cause analysis evaluation) — see [`gate-hypothesis.md`](gate-hypothesis.md).
-- **Non-bug issue** (feat, chore, docs, refactor, …; structure PASS) → **ARCHITECT** directly (GATE:HYPOTHESIS cause is skipped; `verdict` is set to `"skipped (non-bug issue)"` — [`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking > `verdict` rule).
-- **Structure FAIL** → disposition above (close / reply on PR / the advisor's non-code decision),
-  driven by the cycle `mode`.
-- **Review-response loop check match** → reply on PR + the advisor's decision selects the
-  re-entry.
-- **A referenced material not opened, or a tool the analysis needs and the target's procedures
-  cannot provide** — a harness-level block → request it from the operator, situation-first
-  (`awaiting-user`; `CLAUDE.md` > Flow Control > *tool or referenced material → user*).

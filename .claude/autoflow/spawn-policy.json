@@ -20,35 +20,11 @@
   },
   "policy_unmapped_agent_types": {},
   "phases": {
-    "diagnose-intake-triage": {
-      "agent_type": "autoflow-analyzer",
-      "model": "sonnet",
-      "effort": "high",
-      "work_type": "new-issue readiness pre-filter (planning/design/ADR prerequisite), no code tools"
-    },
     "diagnose-loopcheck": {
       "agent_type": "autoflow-loopcheck",
       "model": "sonnet",
       "effort": "high",
       "work_type": "review-response loop check — prior-cycle complaint-class comparison"
-    },
-    "diagnose-phase-a": {
-      "agent_type": "autoflow-analyzer",
-      "model": "sonnet",
-      "effort": "high",
-      "work_type": "factual code-structure description (issue-isolated)"
-    },
-    "diagnose-phase-b": {
-      "agent_type": "autoflow-analyzer",
-      "model": "sonnet",
-      "effort": "high",
-      "work_type": "text classification + logical inference (no code)"
-    },
-    "diagnose-phase-3": {
-      "agent_type": "autoflow-analyzer",
-      "model": "sonnet",
-      "effort": "high",
-      "work_type": "necessity scoring (Behavior gap + Code-change lever; reuse-neutral)"
     },
     "gate-hypothesis": {
       "agent_type": "autoflow-evaluator",
