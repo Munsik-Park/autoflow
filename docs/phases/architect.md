@@ -330,7 +330,9 @@ the previous documents.
   - <what was added>: <the decision> — <ground>
   ```
 
-  and leaves text the round did not change exactly as it stands. Two sections are the exception:
+  and leaves text the round did not change exactly as it stands. A delta item that corrects a
+  decision under the verified-error exception ([`decision-ledger.md`](../decision-ledger.md) >
+  Entries) also carries the reproducing command and its summary line. Two sections are the exception:
   the feature design's `## Decision requests` and the verification design's `## Tools` are the
   orchestrator's routing inputs, not decisions, so a re-entry rewrites each in place to its current
   state — a request the advisor has answered is removed (its answer is the ledger entry), a new one

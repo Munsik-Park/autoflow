@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a0cae0ce76a03fc250366830975578c1a8a864f7a0c39d37586554fed9052a5c"
+      "sha256": "649c10e322ff0651bf959a1bfc40452398df65c8e183318aee978fbecc2a10ea"
     },
     {
       "source": "docs/development-guideline.md",
@@ -83,7 +83,7 @@
       "dest": ".claude/autoflow/docs/phases/architect.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "42799ba1fd27d02ec189b141f6c1e5a7af5f5b36bbe95a5ab567f5908cea6816"
+      "sha256": "25b56bac901b89285f43f86d52b1f9e80b77a80554853f50cd9d61722d69c628"
     },
     {
       "source": "docs/phases/audit.md",
