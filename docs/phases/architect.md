@@ -12,7 +12,7 @@ helpers, whether it asks a critic to challenge a draft or holds a dialogue at al
 this issue's own verification — is the unit agent's, recorded with its grounds in its artifact
 ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
 
-- **Goal**: a design the build roles can implement and verify — the architecture decisions with
+- **Goal**: a design the build unit can implement and verify — the architecture decisions with
   the constraints they hold under and the alternatives rejected, and a verification design that
   says how each acceptance criterion is verified and which failure mode each verification catches.
 - **Artifact contract**: the two documents under *Output artifacts* below.
@@ -75,21 +75,21 @@ this issue's own verification — is the unit agent's, recorded with its grounds
    proposal as pending; it never applies an acceptance-criterion change itself.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
-   oracle's condition clause. Those are **derived at RED/GREEN entry** by the execution roles — from
+   oracle's condition clause. Those are **derived at BUILD** by the build unit — from
    the change delta, run the way the target runs its tests ([`submodule-common-rules.md`](../submodule-common-rules.md) >
    Verification and Tools > *How a test is run is the target's practice*; on an opted-in target the selector
-   answers which committed suites the delta reaches), and from the files those roles open to change anyway. The dividing line is one question: **would this
+   answers which committed suites the delta reaches), and from the files the build opens to change anyway. The dividing line is one question: **would this
    sentence being wrong mean the design has to be revisited, or would it just be fixed where it is
-   found?** The first belongs to the design; the second does not. A derivation RED produces
+   found?** The first belongs to the design; the second does not. A derivation BUILD produces
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
    that exemption explicitly.
 
 2. **Verification Design Document** — `.autoflow/issue-{N}-verification-design.md`. The
    `Issue AC` join key is **not** reduced by the layer split above: the per-criterion disposition is
    a design output. What the split removes from it is depth, not rows: `Method` names the **kind**
-   of oracle a row gets, and the condition clause that implements it is RED's. The table's columns
-   are what the downstream readers need — GATE:PLAN's AC-authority check joins on `Issue AC`, RED
-   reads `Kind`, GATE:QUALITY reads `Type`, and HANDOFF carries each reduced disposition and its
+   of oracle a row gets, and the condition clause that implements it is BUILD's. The table's columns
+   are what the downstream readers need — GATE:PLAN's AC-authority check joins on `Issue AC`, the
+   BUILD exit check reads `Type` and `Kind`, GATE:QUALITY reads `Type`, and HANDOFF carries each reduced disposition and its
    `Reason` into the PR body; how each row is reached is the unit's.
 
 | Issue AC | Acceptance criterion | Type | Kind | Method | Failure mode | Reason |
@@ -143,7 +143,7 @@ this issue's own verification — is the unit agent's, recorded with its grounds
 - Design-change request: parts of the feature design that should be revised so they become testable.
 - Committed-surface allow-list: a manifest-registered source in the change surface pulls
   `setup/manifest.json` in as a derived member of the allow-list (Change Surface Rules > Derived
-  artifacts). Under the layer split above this is **derived at GREEN**, from the actual staged
+  artifacts). Under the layer split above this is **derived at BUILD**, from the actual staged
   surface, not predicted here — but it is still derived *before* the commit, never left to a
   test/CI failure to admit.
 
@@ -173,7 +173,7 @@ the policy body; every other document references it rather than restating it.
 |---|---|
 | `automated` | an executable test — `cycle` by default (run once from `.autoflow/issue-{N}-local/`, its run recorded), `standing` only with a D1 token in the cell |
 | `existing-coverage` | already detected by an existing test, lint rule, schema, compiler/type check, build or packaging check — the row names which |
-| `delivery-check` | a one-shot check that the change was wired / generated / delivered — a `cycle` artifact under `.autoflow/issue-{N}-local/`, never committed; RED/GREEN semantics do not apply to it |
+| `delivery-check` | a one-shot check that the change was wired / generated / delivered — a `cycle` artifact under `.autoflow/issue-{N}-local/`, never committed; the test-first rule does not apply to it |
 | `manual` | a scenario verified by observation, not by an executable assertion; `Method` names its executor — `AI: <tool>`, the tool the `## Tools` section records, or `person` only when no tool can be secured, the `Reason` saying why (*Tools* below); the row names the checklist — a `cycle` artifact unless the cell carries a D1 token |
 | `environment-dependent` | verifiable only against an environment this cycle cannot drive with the tools the `## Tools` section records |
 | `none` | no persistent verification has positive value — the row states why absence costs nothing |
@@ -182,11 +182,12 @@ the policy body; every other document references it rather than restating it.
   `Reason`. A row for a design-added criterion (`Issue AC` = `—`) is never a finding and needs no
   reason.
 
-**Test kind** (the `Kind` of each `automated` row, and the RED expectation for it):
+**Test kind** (the `Kind` of each `automated` row, and the test-first expectation for it —
+[BUILD](build.md) > *What the build owes*):
 
-| Kind | Meaning | RED |
+| Kind | Meaning | Before the implementation |
 |---|---|---|
-| `driving` | a required behavior not yet implemented | must FAIL before GREEN |
+| `driving` | a required behavior not yet implemented | must FAIL before the implementation |
 | `regression` | reproduces a known defect | must FAIL before the fix |
 | `characterization` | records existing behavior the change must preserve | may PASS from the start |
 
@@ -232,20 +233,18 @@ settling it as a `manual` row executed by a person, as `environment-dependent`, 
   enabling an MCP server or a browser extension, access to a material). A design that needs no
   tool says `none`, with its ground in one line. AutoFlow names no tool here: which tool, and how
   it is used, is the design's judgment in the target.
-- **Availability is settled here, not at VERIFY.** After the unit returns, the orchestrator reads
+- **Availability is settled here, not at BUILD.** After the unit returns, the orchestrator reads
   this section — a targeted excerpt, not a full read ([`CLAUDE.md`](../../CLAUDE.md)
   > Cost Control > *Orchestrator context discipline*) — before GATE:PLAN. An `operator` item is the
   tool request pause ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control > *tool or referenced material →
   user*), presented situation-first, and GATE:PLAN is not spawned until the operator answers. A
   `target procedure` item is started when the phase that uses it begins — by the orchestrator when
-  the tool must outlive a role spawn. A tool found missing later, at RED, GREEN or VERIFY, takes
-  the same pause.
+  the tool must outlive a role spawn. A tool found missing later, at BUILD, takes the same pause.
 - A criterion no tool can reach after this search keeps the fallbacks of the untestable-items
   bullet above — a `manual` row executed by a person, or a mock — and its `Reason` states why no
   tool could be secured; GATE:PLAN's `Verification fit` reads that reason.
-- The row verified with a tool is looked at with it once implemented: the Developer AI looks at its
-  own result while implementing (GREEN step 2), and the evidence — the row's observation record —
-  is the Test AI's, written at VERIFY step 1.
+- The row verified with a tool is looked at with it once implemented, and the evidence is the row's
+  observation record, written at BUILD ([BUILD](build.md) > Build report > `## Manual checklist`).
 
 ## Report routing
 
@@ -271,7 +270,7 @@ reads the design to judge it: the full read-and-score is GATE:PLAN's.
 - **A design point is requested.** The orchestrator hands it to the advisor situation-first; the
   answer is an `A` ledger entry. Where the answer is the option the design took, GATE:PLAN follows;
   otherwise the unit re-runs on the answer (*Re-entry* below). Neither consumes a counter.
-- **An acceptance-criterion change raised later in the cycle.** A role at GREEN, VERIFY or REFINE whose work shows a
+- **An acceptance-criterion change raised later in the cycle.** The BUILD unit, when its work shows a
   criterion defective — a fact it presumes that does not hold, or a scope too narrow or too wide for
   the problem ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*) —
   raises it in its report with the criterion, the proposed change and the fact that shows the need
@@ -282,8 +281,8 @@ reads the design to judge it: the full read-and-score is GATE:PLAN's.
   surfaced in, and the orchestrator edits the Phase B table on `revised`, `split` or `added`. Where
   the cycle then re-enters is the orchestrator's judgment, recorded with its grounds in an `O`
   ledger entry: at ARCHITECT, a unit re-run naming the `[ac-decision]` entries, when a
-  verification-design row must be added or rewritten — then GATE:PLAN's re-entry re-score and RED;
-  at GREEN when only the implementation changes; otherwise at the point the question arose. A return to ARCHITECT on this ground
+  verification-design row must be added or rewritten — then GATE:PLAN's re-entry re-score and BUILD;
+  at BUILD when only the implementation changes; otherwise at the point the question arose. A return to ARCHITECT on this ground
   consumes no re-entry budget.
 
 **What the advisor is asked, and what it is not.** A reduction in *verification method* — an AC
@@ -314,7 +313,7 @@ the previous documents.
 |---|---|---|
 | GATE:PLAN FAIL | the evaluation report and its failed items | ARCHITECT re-entry (max 3×) |
 | advisor answer that differs from the design (*Report routing*) | the `[ac-decision]` or `A` entries | none |
-| VERIFY design contradiction | `.autoflow/issue-{N}-*-green-blocker.md` | ARCHITECT re-entry |
+| BUILD design contradiction | `.autoflow/issue-{N}-green-blocker.md` | ARCHITECT re-entry |
 | `design` re-entry from GATE:QUALITY or HANDOFF's CI failure | the failed items and their findings | ARCHITECT re-entry |
 | acceptance-criterion decision raised after ARCHITECT | the `[ac-decision]` entries | none |
 | `design`-class gate recommendation at AUDIT or GATE:QUALITY ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) | the recommendation's subject and finding | ARCHITECT re-entry |
@@ -324,7 +323,7 @@ the previous documents.
   section
 
   ```
-  ## Delta — round <n> (<origin: GATE:PLAN FAIL | advisor answer | VERIFY design contradiction | design re-entry | acceptance-criterion decision | gate recommendation>)
+  ## Delta — round <n> (<origin: GATE:PLAN FAIL | advisor answer | BUILD design contradiction | design re-entry | acceptance-criterion decision | gate recommendation>)
 
   - <what changed>: <the decision as it now stands> — supersedes <the section or decision it replaces>
   - <what was added>: <the decision> — <ground>
@@ -338,7 +337,7 @@ the previous documents.
   state — a request the advisor has answered is removed (its answer is the ledger entry), a new one
   is added, and `none` means none is open. The delta section is GATE:PLAN's
   narrowed input on re-entry ([GATE:PLAN](gate-plan.md) > *Re-entry re-score*); a re-entry after
-  DISPATCH re-scores that delta and the cycle re-enters RED.
+  BUILD began re-scores that delta and the cycle re-enters BUILD.
 - **A new cycle writes new documents.** A review-response cycle entered at PREFLIGHT, or a HANDOFF
   step 6.5 `design` re-entry judged to start at ARCHITECT, finds the previous cycle's documents
   preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md`

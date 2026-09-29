@@ -11,7 +11,8 @@ deployment orchestrator. The only changes from upstream are:
 1. **Name generalization** — numeric `STEP 0~9` (and `5a/5b/5c/5d/5.5/5.7`) identifiers replaced by semantic phase names.
 2. **Identifier placeholders** — service-specific names (`ontology-api`, `saiso`, etc.) replaced by `{{REPO_*}}`/`{{GITHUB_ORG}}` placeholders.
 3. **Terminal scope** — AutoFlow ends at PR creation (`HANDOFF`) instead of upstream's merge-and-close terminal step; an external review process performs the merge. **AutoFlow never merges.**
-4. **Late-gate re-entry** — a late-gate FAIL (GATE:QUALITY, VALIDATE, INTEGRATE) re-enters the cycle at the phase its cause names (`remedy_class`: doc commit / RED / GREEN / ARCHITECT) instead of upstream's unconditional return to RED; the caps are unchanged.
+4. **Late-gate re-entry** — a late-gate FAIL (GATE:QUALITY, INTEGRATE, HANDOFF CI) re-enters the cycle at the point its cause names (`remedy_class`: doc commit / BUILD / ARCHITECT) instead of upstream's unconditional return to RED.
+5. **Functional units** — ARCHITECT and the build span (upstream's DISPATCH..VALIDATE) each run as one unit agent prescribed by its goal, artifacts and verification (ADR-0025); the VERIFY round-trip and REFINE retry caps are retired with the phases.
 
 Aside from these divergences, every rule, retry cap, evaluation category, and pass
 threshold is preserved from upstream. Single-repo projects are supported as the degenerate case
@@ -29,12 +30,7 @@ DIAGNOSE        3-Phase Analysis  — Independent bias-free analysis
 GATE:HYPOTHESIS Hypothesis Eval   — Scored hypothesis assessment (gate, bug issues only)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
 GATE:PLAN       Plan Evaluation   — Scored plan assessment (gate)
-DISPATCH        Task Assignment   — Delegate to Test AI and Developer AI
-RED             Test Writing      — Tests from acceptance criteria (Red)
-GREEN           Implementation    — Minimum code to pass tests
-VERIFY          Test Run + Check  — All tests pass + minimal-implementation check
-REFINE          Refactor          — Code cleanup, Green re-confirmation
-VALIDATE        Verification Done — automated + manual checks
+BUILD           Build unit (U4)   — Test-first implementation and verification + deterministic exit check
 AUDIT           Security Audit    — Independent project-specific security audit
 GATE:QUALITY    Completion Eval   — Scored quality assessment (gate)
 DELIVER         Sub-Repo Push     — orchestrator pushes each sub-repo branch to its fork
@@ -60,13 +56,8 @@ flowchart LR
     DIA --> HYP{{GATE:HYPOTHESIS}}
     HYP --> ARC[ARCHITECT]
     ARC --> PLAN{{GATE:PLAN}}
-    PLAN --> DIS[DISPATCH]
-    DIS --> RED[RED]
-    RED --> GREEN[GREEN]
-    GREEN --> VER[VERIFY]
-    VER --> REF[REFINE]
-    REF --> VAL[VALIDATE]
-    VAL --> AUD{{AUDIT}}
+    PLAN --> BLD[BUILD]
+    BLD --> AUD{{AUDIT}}
     AUD --> QUAL{{GATE:QUALITY}}
     QUAL --> DEL[DELIVER]
     DEL --> INT[INTEGRATE]
@@ -84,7 +75,7 @@ flowchart LR
 
 ### Key Features
 
-- **Multi-Agent Roles** — Orchestrator, Submodule AI (Developer), Test AI, Evaluation AI with separated responsibilities.
+- **Multi-Agent Roles** — Orchestrator, functional-unit agents (design, build), Evaluation AI and advisor with separated responsibilities.
 - **3-Phase Independent Analysis** — Structure / Issue / Cross-Verification analyses.
 - **Evaluation Gates** — 10-point scoring system with a defined PASS threshold (≥ 7.5, each ≥ 7, security ≤ 3 → block).
 - **Hook Enforcement** — A shell hook validates AutoFlow state before allowing Agent spawns, `git push`, or `gh pr create`.
@@ -171,9 +162,8 @@ claude-autoflow/
 │
 ├── .claude/
 │   ├── agents/                        # AutoFlow role subagent definitions (.claude/agents/)
-│   ├── hooks/
-│   │   └── check-autoflow-gate.sh     # AutoFlow gate hook
-│   └── workflows/                     # Deliberation workflow scripts (.claude/workflows/)
+│   └── hooks/
+│       └── check-autoflow-gate.sh     # AutoFlow gate hook
 │
 ├── .github/
 │   └── workflows/                     # Advisory CI guards (.github/workflows/)
@@ -184,7 +174,7 @@ claude-autoflow/
 │   ├── evaluation-system.md           # Evaluation scoring details
 │   ├── git-workflow.md                # Git procedures
 │   ├── repo-boundary-rules.md         # Cross-repo coordination rules
-│   ├── submodule-common-rules.md      # Sub-repo shared rules + Discussion Protocol
+│   ├── submodule-common-rules.md      # Sub-repo shared rules
 │   ├── role-common-rules.md       # Shared role-spawn behavior rules
 │   ├── security-checklist.md          # This repository's own security checklist (declared in .claude/autoflow.local.json; not stamped to targets)
 │   ├── phases/                        # Per-phase playbooks (docs/phases/)
@@ -219,8 +209,7 @@ Git workflow.
 | Agent | Role | Can Write To |
 |-------|------|--------------|
 | **Orchestrator** | Coordinates, delegates | Host repo (rules, config, infra, bulk docs) |
-| **Submodule AI (Developer)** | Implements features per sub-repo | Files within the assigned sub-repo |
-| **Test AI** | Writes and runs tests | Test files within the assigned sub-repo |
+| **Build unit (U4)** | Implements and verifies the design per target scope, test-first | Files within the assigned scope |
 | **Evaluation AI** | Scores quality | Nothing (read-only) |
 
 ### 3. Evaluation Gates
@@ -247,7 +236,7 @@ Topology is classified by **submodule count** (see `CLAUDE.md` > Deployment
 Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
 
 - **Single-repo** = the host repository contains **zero submodules**. The
-  Developer AI works directly in the host repo, and the DELIVER / INTEGRATE /
+  build unit works directly in the host repo, and the DELIVER / INTEGRATE /
   HANDOFF phases collapse to a single-PR flow. `claude-autoflow` itself is
   single-repo.
 - **Multi-repo** = the host repository contains **one or more submodules**. Each
@@ -271,7 +260,7 @@ Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
 | [Evaluation System](docs/evaluation-system.md) | Scoring, PASS criteria, output format |
 | [Git Workflow](docs/git-workflow.md) | Branch naming, commits, PR process |
 | [Repo Boundary Rules](docs/repo-boundary-rules.md) | Cross-repo coordination |
-| [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Discussion Protocol, sub-repo rules |
+| [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Sub-repo rules, verification and reporting |
 | [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/phases/audit.md`) |
 | [Setup Guide](setup/SETUP-GUIDE.md) | Manual setup instructions |
 

@@ -13,18 +13,24 @@ implementation work — is yours, recorded with its grounds in your artifact
 
 - **Goal**: the design that passed GATE:PLAN, implemented in the cycle's scope,
   with every acceptance criterion verified as the verification design says.
-- **Artifact contract**: the commits on the dev branch, and at the
-  `.autoflow/issue-{N}-*.md` paths your spawn prompt names, the records the exit
-  checks and the AUDIT gate read — each run's command, log path and summary line
-  (`docs/submodule-common-rules.md` > Verification and Tools), the manual
-  checklist (`docs/phases/validate.md`) and the maintained documents updated.
+- **Artifact contract**: the commits on the dev branch and the build report at
+  the path your spawn prompt names, with the sections `docs/phases/build.md` >
+  Build report requires — the test-first, run, manual-checklist,
+  maintained-document and lint records the exit check reads, and the scope,
+  observation, comment-check and kept-test-file sections GATE:QUALITY and
+  HANDOFF read. On a re-entry the report is brought up to date, not rewritten.
   Nothing beyond what the verification needs.
-- **Verification**: the unit's exit is its deterministic exit checks and
-  `audit` — a fresh Evaluation AI's AUDIT score (ADR-0025 D1, D3). Test-first is
-  an exit check, not a split of roles: the test commit precedes the
-  implementation commit and its failing log exists. A FAIL returns its findings
-  and your previous artifacts to a fresh U4 spawn, up to the existing caps
-  (`CLAUDE.md` > Flow Control > Regressions).
+- **Verification**: the unit's exit is `scripts/gate/build-exit-check.sh`, run
+  by the orchestrator on your return, and `audit` — a fresh Evaluation AI's
+  AUDIT score (ADR-0025 D1, D3). Test-first is an exit check, not a split of
+  roles: each driving / regression test's failing run precedes the
+  implementation commit and its log exists. A defect or a FAIL returns its
+  findings and your previous artifacts to a fresh U4 spawn, up to the AUDIT
+  FAIL cap (`CLAUDE.md` > Flow Control > Regressions). How you iterate inside
+  the unit, and when you stop, is yours, recorded in the report.
+- **What the build owes**: `docs/phases/build.md` > What the build owes — scope,
+  test-first, where a test lives, how tests are run, the comment check, a
+  design contradiction, an acceptance-criterion change, and the commit rules.
 
 The authority rules hold unchanged (ADR-0025 D3): you never score your own
 artifact, never edit `.autoflow/issue-*.json` or the decision ledger, never

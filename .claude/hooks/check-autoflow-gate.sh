@@ -37,7 +37,7 @@
 #                                     keywords (docs/gate-matching-standard.md P3):
 #                                     planning → GATE:HYPOTHESIS pass (bug issue;
 #                                     verdict containing "skip" → bypass, non-bug),
-#                                     implementation / testing → GATE:PLAN pass,
+#                                     implementation → GATE:PLAN pass,
 #                                     analysis / evaluation / research / advisor
 #                                     → pass. Unit agents (ADR-0025): unit-analysis
 #                                     → analysis, unit-design → planning,
@@ -393,9 +393,8 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   fi
 
   # ── Backgrounded suite-run deny (issue #134; state-independent — P2) ──
-  # docs/phases/verify.md > Green-tree register: a suite run's result is
-  # evidence only if the tree stood still under it, and a backgrounded run outlives
-  # the turn that started it. The foreground obligation was prose only
+  # A suite run's result is evidence only if the tree stood still under it, and a
+  # backgrounded run outlives the turn that started it. The foreground obligation was prose only
   # (docs/role-common-rules.md > Bash Execution Mode); it moves to the tool
   # boundary here. Three surfaces, all reading BG_SCAN (below):
   #   (a) payload   — .tool_input.run_in_background is true AND the command carries
@@ -461,7 +460,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     _bg_deny=1
   fi
   if [ "$_bg_deny" = 1 ]; then
-    echo "BLOCKED: a backgrounded run of scripts/test/run-suites.sh is denied — run it in the foreground (docs/role-common-rules.md > Bash Execution Mode; docs/phases/verify.md > Green-tree register)." >&2
+    echo "BLOCKED: a backgrounded run of scripts/test/run-suites.sh is denied — run it in the foreground (docs/role-common-rules.md > Bash Execution Mode)." >&2
     echo "A backgrounded suite run outlives the turn that started it, so its result cannot be keyed to the capture-point tree and starves the foreground verification it is meant to certify." >&2
     exit 2
   fi
@@ -693,7 +692,7 @@ esac
 # C7/C8; the removal itself is ADR-0017 Q3): with every role spawned anonymously
 # and directly, retaining the prefix branch would leave an unreachable path that
 # still name-prefix-overrode `subagent_type`.
-# Prints: research|analysis|planning|implementation|testing|evaluation|advisor,
+# Prints: research|analysis|planning|implementation|evaluation|advisor,
 # or "" (undeclared). A unit agent type prints the class unit_role_of gives it. The role→gate mapping below is owned by this hook — a spawn
 # declares WHO it is; it never declares which gate applies to it.
 resolve_spawn_role() {
@@ -741,8 +740,6 @@ role_of_type() {
     Explore|Plan|claude-code-guide)              _role="research" ;;
     autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
     autoflow-loopcheck|*:autoflow-loopcheck)     _role="analysis" ;;
-    autoflow-implementer|*:autoflow-implementer) _role="implementation" ;;
-    autoflow-tester|*:autoflow-tester)           _role="testing" ;;
     autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
     autoflow-advisor|*:autoflow-advisor)         _role="advisor" ;;
     *)
@@ -799,8 +796,7 @@ is_score_gated_surface() {
 # methodology defect, not a reason to block a tool call, and the ledger is not
 # a gate input. The only observable effect is a warning line on stderr.
 #
-# Placement is load-bearing (CLAUDE.md > Deliberation Isolation > Decision
-# Ledger). The step sits AFTER Section 1b's unconditional denies and BEFORE
+# Placement is load-bearing (CLAUDE.md > Decision Ledger). The step sits AFTER Section 1b's unconditional denies and BEFORE
 # Section 2's activity check, so it still runs on every path the script exits 0
 # early — no state file, `active != true`, and a research/analysis/evaluation
 # spawn. Placed after any one of those, it would silently never run for that
@@ -1081,7 +1077,7 @@ fi
 # Companion invariant (deadlock-safety, not code-enforced): a nested
 # `fix_regression*` object must record ONLY the phases actually re-run in that
 # regression — never a full empty-template reset of all five phase keys. This
-# keeps the GATE:QUALITY→RED regression (which re-runs AUDIT/GATE:QUALITY but
+# keeps the GATE:QUALITY→BUILD regression (which re-runs AUDIT/GATE:QUALITY but
 # not GATE:PLAN) deadlock-free: the regression carries no `phases.gate_plan`
 # key, so `select(.phases | has("gate_plan"))` skips it and the walk resolves
 # the base cycle's gate_plan PASS. Current top-level-reset authoring never
@@ -1178,8 +1174,8 @@ apply_role_gate() {
         block_with_scores "planning agent spawn${_label} requires GATE:HYPOTHESIS pass" "gate_hypothesis_cause"
       fi
       ;;
-    implementation|testing)
-      # Gate 2: implementation / test-writing spawn → GATE:PLAN pass required.
+    implementation)
+      # Gate 2: implementation spawn → GATE:PLAN pass required.
       block_with_scores "${ROLE} agent spawn${_label} requires GATE:PLAN pass" "gate_plan"
       ;;
     *)
@@ -1187,7 +1183,7 @@ apply_role_gate() {
       # prompt text is deliberately not attempted — a silent misclassification
       # (either direction) is worse than this explicit, self-describing stop.
       echo "BLOCKED: Agent spawn without a declared AutoFlow role while a cycle is active." >&2
-      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|loopcheck|implementer|tester|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
+      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|loopcheck|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
       ;;
@@ -1259,7 +1255,7 @@ fi
 
 # ── Gate 5: git commit under a `doc` GATE:QUALITY remedy → sweep record required ──
 # A GATE:QUALITY FAIL whose remedy_class is `doc` re-enters at an orchestrator
-# doc commit instead of RED. The remedy obligation for that class is
+# doc commit instead of BUILD. The remedy obligation for that class is
 # class-level, not site-level: the fix anchors on a repo-wide sweep (command +
 # output), not on the evaluator's listed sites. The gate checks the sweep
 # RECORD FILE — its presence and its two sections — never the wording of any

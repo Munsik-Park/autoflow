@@ -1,6 +1,6 @@
 # Role Common Rules
 
-> Shared rules that apply to every role spawn (Test AI, Developer AI) participating in
+> Shared rules that apply to every role spawn (the unit agents and their helpers) participating in
 > the AutoFlow lifecycle in this repository.
 
 The orchestrator (the main session) coordinates work; role spawns are launched as
@@ -72,7 +72,7 @@ git status                  # any uncommitted work?
 
 ## Bash Execution Mode
 
-- **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, loopcheck, implementer, tester, evaluator, advisor, the unit agents) **and** every in-script Developer-AI / Test-AI sub-agent inside a facilitation `Workflow` (`.claude/workflows/verify-cause-branch.js`). Run the command, wait for its result, then report.
+- **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, loopcheck, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
 - The background + completion-notification pattern is **orchestrator-only**.
 - **[MUST] A foreground command ends on its own.** This binds the same actors as the first bullet, in three forms:
   - **The session shell may not be bash.** The Bash tool's shell is initialized from the user's profile, and a stock macOS profile is zsh, whose expansion differs from bash's: an unquoted `$VAR` is not word-split, an unmatched glob is an error (`no matches found`) instead of the literal word, and a word beginning with `=` is replaced by a command's path. A list — PIDs, file names, arguments — is held in an array and expanded quoted, `"${pids[@]}"`; a glob meant as an argument is quoted (`--include='*.sh'`); a procedure written for bash runs under bash — `bash -c '…'`, or a file run with `bash <path>`.
@@ -124,7 +124,7 @@ git status                  # any uncommitted work?
 ## Work Completion Process
 
 ```
-Implement → /simplify as judged and the comment check (REFINE step 1) → tests pass → commit → return the report
+Implement → the comment check (docs/phases/build.md > What the build owes) → tests pass → commit → return the report
 ```
 
 **Required content of the completion report** (the spawn's return value — write any
@@ -149,14 +149,7 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 | Receive instruction from orchestrator | the spawn prompt | delivered once, at spawn |
 | Report to orchestrator | the spawn's return value | completion, escalation — body to `.autoflow/*`, return an anchor + one-line summary |
 | Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
-| Discuss with another role | not available | the VERIFY cause-branch is delegated to a facilitator `Workflow` (below) — never held between ordinary spawns; a functional-unit agent's dialogue with its own helpers is its method |
-
-**Facilitated deliberation phase** (VERIFY cause-branch): the orchestrator never receives
-the exchange. The self-checks run as in-script sub-agents of an isolated `Workflow`, and
-only a single structured result returns to the orchestrator. See
-[`role-contracts.md`](role-contracts.md) > Facilitator
-and [`CLAUDE.md`](../CLAUDE.md#deliberation-isolation-delegated-facilitation) >
-Deliberation Isolation.
+| Discuss with another role | not available | never held between ordinary spawns; a functional-unit agent's dialogue with its own helpers is its method |
 
 ### Result delivery path by spawn mode
 
@@ -177,52 +170,10 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 
 ---
 
-## Discussion Protocol (Single Source of Truth)
-
-The rules below govern every multi-AI discussion. The orchestrator's `CLAUDE.md` references this section
-as the canonical Discussion Protocol. In the facilitated deliberation phase (VERIFY
-cause-branch) this protocol is driven outside the orchestrator's context, inside an isolated
-`Workflow`, and only a single result returns to the orchestrator. ARCHITECT is not bound by it:
-the U3 Design unit's method, a dialogue included, is its own (ADR-0025 D2); the Developer AI and the Test AI are role spawns, not members of an orchestrator team (see Communication
-above).
-
-**Response process**:
-
-1. **UNDERSTAND** — restate the other party's proposal in concrete terms (a bare
-   "I understand" is not acceptable).
-2. **VERIFY** — actually **read** the relevant source files, schemas, and config.
-   Memory alone is not enough. Scope over a shared transcript: a fact
-   the transcript cites with a `path:line` (or a command and its output) is verified
-   for both participants; a participant reads a file to ground a claim it is making
-   or to dispute a cited one — not to re-verify what either side already anchored.
-3. **EVALUATE** — assess on at least two of:
-   - Feasibility — is this possible with the current code/infrastructure?
-   - Fit — does it follow existing patterns, naming, and layering?
-   - Trade-offs — cost, maintenance, migration complexity?
-   - Alternatives — is there a simpler path?
-   - Scope — is the level of abstraction right?
-4. **RESPOND** — exactly one of:
-   - **ACCEPT** — name the dimensions verified and why each passed.
-   - **COUNTER** — state the problem + a concrete alternative + evidence.
-   - **PARTIAL** — accept the parts that pass; counter the parts that don't.
-   - **ESCALATE** — fundamental disagreement → present both sides as an un-agreed point; the orchestrator routes it (a further round, or the advisor — `role-contracts.md` > Advisor).
-
-**Anti-patterns (forbidden)**:
-
-- "Sounds good" — no agreement without naming the dimension verified and why.
-- Evaluating code/schema/config proposals without reading the file.
-- Stacking new features on top of unverified proposals.
-- Agreeing on the first exchange — at least one dimension must be reviewed as
-  devil's advocate.
-- Letting a raised concern go unanswered — re-raise until resolved.
-
----
-
 ## Quality Standards
 
 - Read and understand the existing code before changing it.
 - Run the relevant tests after each change and confirm they pass.
-- Run `/simplify` after implementation when the diff warrants it — the judgment and its grounds go in the REFINE report (`docs/phases/refine.md` > step 1).
 - Do not add unnecessary refactors or type annotations. A comment carries only what `docs/submodule-common-rules.md` > Change Surface Rules > *Code comments* admits.
 - Do not introduce security vulnerabilities.
 - Do not make changes outside the assigned scope.

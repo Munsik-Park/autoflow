@@ -18,7 +18,7 @@ Throughout these rules, **target** (equivalently **target scope**) means the sco
 
 ### Artifacts (산출물)
 
-Every produced artifact belongs to the scope that owns the files it lives in: code and tests belong to the target scope that owns that source; the decision ledger and AutoFlow state belong to the host; a pull request is opened from the host regardless of which scope produced the commits. *Secondary (multi-repo):* the owning scope is a sub-repo directory, so each sub-repo's Submodule AI commits to its fork and the Orchestrator opens the PR. *See:* the Commit Ownership committer column and the Decision Ledger host-ownership rule (`CLAUDE.md`), and the own-repo Read + Write cells of the Permission Matrix (below).
+Every produced artifact belongs to the scope that owns the files it lives in: code and tests belong to the target scope that owns that source; the decision ledger and AutoFlow state belong to the host; a pull request is opened from the host regardless of which scope produced the commits. *Secondary (multi-repo):* the owning scope is a sub-repo directory, so each sub-repo's build unit commits to its fork and the Orchestrator opens the PR. *See:* the Commit Ownership committer column and the Decision Ledger host-ownership rule (`CLAUDE.md`), and the own-repo Read + Write cells of the Permission Matrix (below).
 
 ### Procedures (절차)
 
@@ -36,8 +36,7 @@ Issue labels: `ai:<agent>` (automation target, e.g. `ai:claude`), sub-repo name,
 
 | Agent | Own Repo | Other Repos | Orchestrator Repo |
 |-------|----------|-------------|-------------------|
-| **Submodule AI** | Read + Write | Read only | Read only |
-| **Test AI** | Read + Write (test files) | Read only | Read only |
+| **Build unit (U4)** | Read + Write | Read only | Read only |
 | **Evaluation AI** | Read only | Read only | Read only |
 | **Orchestrator AI** | — | Read only* | Read + Write |
 
@@ -51,7 +50,7 @@ Issue labels: `ai:<agent>` (automation target, e.g. `ai:claude`), sub-repo name,
 
 An AI agent assigned to `repo-backend` **must not** commit to `repo-frontend`, even if the change is trivial (e.g., updating an API URL constant).
 
-**Instead**: The Orchestrator files a work item in the host repository, labels it with the target repo, and dispatches it to that repo's Submodule AI; the target scope executes the work but hosts no tracker of its own.
+**Instead**: The Orchestrator files a work item in the host repository, labels it with the target repo, and dispatches it to that repo's build unit; the target scope executes the work but hosts no tracker of its own.
 
 ### Rule 2: Read Access Is Allowed
 
@@ -73,9 +72,9 @@ The Orchestrator should **not** write implementation code in sub-repos.
 
 When a change in one repo affects the interface used by another:
 
-1. Submodule AI raises a Discussion with proposed interface change
+1. The build unit reports the proposed interface change to the Orchestrator
 2. Orchestrator evaluates impact across all affected repos
-3. Orchestrator files a work item in the host repository for each affected repo, labels it with that repo, and dispatches it to that repo's Submodule AI; no issue is created in the target repo
+3. Orchestrator files a work item in the host repository for each affected repo, labels it with that repo, and dispatches it to that repo's build unit; no issue is created in the target repo
 4. Changes are implemented repo-by-repo in dependency order
 5. Integration testing validates the change across repos
 
@@ -113,7 +112,7 @@ All exceptions must be:
 └───────┬───────────┬─────────────┘
         │           │
    ┌──────────▼───────────┐  ┌──────────▼───────────┐
-   │     Submodule AI     │  │     Submodule AI     │
+   │      Build unit      │  │      Build unit      │
    │    (repo-backend)    │  │    (repo-frontend)   │
    │──────────────────────│  │──────────────────────│
    │ Read/Write own repo  │  │ Read/Write own repo  │
@@ -128,8 +127,8 @@ When two repos need changes that conflict (e.g., incompatible interface changes)
 
 1. **Detect**: Orchestrator identifies the conflict during coordination
 2. **Pause**: Both repos pause their AutoFlow at current phase
-3. **Resolve**: Orchestrator proposes resolution via Discussion Protocol
-4. **Agree**: Resolution documented and agreed upon
+3. **Resolve**: Orchestrator proposes a resolution; a choice that is not its own to make goes to the advisor (`docs/role-contracts.md` > Advisor)
+4. **Record**: Resolution recorded in the decision ledger
 5. **Resume**: Repos resume with the agreed approach
 
 ---

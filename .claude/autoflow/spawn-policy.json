@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Single source of truth for AutoFlow's per-phase spawn policy (model + effort). Read it with scripts/spawn-policy/spawn-policy.sh; never restate its values in prose (CLAUDE.md > Spawn Model — Phase-by-Phase).",
-  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — the drift detector's D6 leg runs that check and the required-row comparison against the clone's sample at /autoflow:install and PREFLIGHT, so a stale scaffold is reported there with the rows to fix; the deliberation workflow fails closed on a missing required workflow_sites row. `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly. A phases[].effort is not a target-side lever: it must equal the `effort:` frontmatter line of the definition the target actually loads (the plugin's, on a thin-root target) and `check` fails closed otherwise — see effort_contract.phase_effort_ownership; a target that needs a different direct-spawn effort changes the shipped definition, not this row. workflow_sites effort stays target-configurable.",
+  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — the drift detector's D6 leg runs that check and the required-row comparison against the clone's sample at /autoflow:install and PREFLIGHT, so a stale scaffold is reported there with the rows to fix; a workflow that reads a workflow_sites row fails closed on a missing one. `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly. A phases[].effort is not a target-side lever: it must equal the `effort:` frontmatter line of the definition the target actually loads (the plugin's, on a thin-root target) and `check` fails closed otherwise — see effort_contract.phase_effort_ownership; a target that needs a different direct-spawn effort changes the shipped definition, not this row. workflow_sites effort stays target-configurable.",
   "effort_contract": {
     "is_the_vocabulary_check_applies": "`scripts/spawn-policy/spawn-policy.sh check` reads its admitted effort vocabulary and its inherit sentinel from THIS object. A runtime with a different effort vocabulary is accommodated by editing this contract, never by patching the checker; model values are not validated beyond presence and shape",
     "admitted_values": [
@@ -62,36 +62,6 @@
       "effort": "xhigh",
       "work_type": "rubric, 5 items × 10 points (intent: decision grounds, verification fit, scope, tools, security)"
     },
-    "red": {
-      "agent_type": "autoflow-tester",
-      "model": "opus",
-      "effort": "xhigh",
-      "work_type": "acceptance criteria → test code; test doubles re-derived from the real types and response shapes"
-    },
-    "green": {
-      "agent_type": "autoflow-implementer",
-      "model": "opus",
-      "effort": "xhigh",
-      "work_type": "minimum implementation that passes the tests"
-    },
-    "verify-arbitration": {
-      "agent_type": "autoflow-evaluator",
-      "model": "opus",
-      "effort": "xhigh",
-      "work_type": "self-check + arbitration"
-    },
-    "refine-impl": {
-      "agent_type": "autoflow-implementer",
-      "model": "sonnet",
-      "effort": "xhigh",
-      "work_type": "mechanical /simplify application"
-    },
-    "refine-test-reconfirm": {
-      "agent_type": "autoflow-tester",
-      "model": "sonnet",
-      "effort": "xhigh",
-      "work_type": "Green re-confirmation after the refactor"
-    },
     "audit": {
       "agent_type": "autoflow-evaluator",
       "model": "opus",
@@ -126,7 +96,7 @@
       "agent_type": "autoflow-unit-build",
       "model": "opus",
       "effort": "xhigh",
-      "work_type": "U4 Build-and-verify unit (DISPATCH..VALIDATE + AUDIT span) as one spawn — goal, artifact contract and verification prescribed, method its own (ADR-0025 D2); model and effort held at the RED / GREEN rows' values"
+      "work_type": "U4 Build-and-verify unit (DISPATCH..VALIDATE + AUDIT span) as one spawn — goal, artifact contract and verification prescribed, method its own (ADR-0025 D2); model and effort held at the values of the RED / GREEN rows it replaced"
     },
     "advisor": {
       "agent_type": "autoflow-advisor",
@@ -135,20 +105,5 @@
       "work_type": "first judgment at a decision point, recorded as an advisor-decision ledger entry (ADR-0025 D7) — highest-capability model at the highest effort; the effort is delivered by the definition's effort: line"
     }
   },
-  "workflow_sites": {
-    "verify-cause-branch": {
-      "test-self-check": {
-        "model": "opus",
-        "effort": "xhigh"
-      },
-      "impl-self-check": {
-        "model": "opus",
-        "effort": "xhigh"
-      },
-      "ledger": {
-        "model": "sonnet",
-        "effort": "low"
-      }
-    }
-  }
+  "workflow_sites": {}
 }

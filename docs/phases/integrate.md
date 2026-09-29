@@ -15,7 +15,7 @@ In a multi-repo deployment (one or more submodules), INTEGRATE builds the system
 4. Cross-cutting concerns (auth, network ingress, etc.) verified.
 ```
 
-**Failure**: INTEGRATE FAIL → GREEN — fixed `impl` class → VERIFY step 1 → REFINE → VALIDATE; existing GREEN↔VERIFY round-trip rules apply.
+**Failure**: INTEGRATE FAIL → BUILD — fixed `impl` class: a BUILD unit re-run with the failing check → exit check → AUDIT ([BUILD](build.md) > *Re-entry*).
 
 ## Deploy/CI-path conditional verification
 
@@ -47,4 +47,4 @@ Non-empty ⇒ the verification bundle below is a **mandatory PASS/FAIL gate** fo
 
 A bundle item that misses a real breakage on the target where it runs is filed back as an issue.
 
-**Failure**: a bundle item that fails is an **INTEGRATE FAIL → GREEN** (`impl` class; existing GREEN↔VERIFY round-trip rules apply).
+**Failure**: a bundle item that fails is an **INTEGRATE FAIL → BUILD** (`impl` class; the re-run above).

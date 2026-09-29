@@ -41,7 +41,7 @@
 # committed delta, so an empty committed delta still selects the full set; an
 # unresolvable base is still a BLOCK, since the union applies only to a delta
 # that resolved; and under a push event no delta is resolved at all, so the flag
-# is inert there. A caller verifying a working tree (a local RED/GREEN
+# is inert there. A caller verifying a working tree (a local BUILD
 # derivation) passes it; CI, whose checkout is clean, does not.
 #
 # THE SUITE PLANE IS OPT-IN, and the SELECTION PATH is where that binds
@@ -62,7 +62,7 @@
 # target it has not been confirmed to trust. A suite that predates the header
 # contract is the case it exists for (issue #213): the contract binds a suite at
 # creation, the selection below binds every enumerated suite, and a target that
-# held suites before adopting the suite plane meets that gap at its first RED.
+# held suites before adopting the suite plane meets that gap at its first BUILD.
 # `--base`, `--event` and `--include-worktree` are inert under it.
 #
 # Usage:
@@ -215,7 +215,7 @@ select_over() {
     fi
     printf '%s\n' "${headerless[@]}"
     echo "select-suites: ${#headerless[@]} of ${#suites[@]} enumerated suite(s) declare no usable '# ci-subject:' header — every selection BLOCKs until they do" >&2
-    echo "  Migration: docs/phases/red.md > Header contract > Adopting the contract over existing suites." >&2
+    echo "  Migration: docs/phases/build.md > Header contract > Adopting the contract over existing suites." >&2
     return 1
   fi
 
@@ -224,7 +224,7 @@ select_over() {
       echo "BLOCK: select-suites — $suite declares no usable '# ci-subject:' header; refusing to select against an unreadable trigger surface" >&2
     done
     echo "  A suite whose declared subject cannot be read is not correctly narrowed to nothing — it is unjudgeable." >&2
-    echo "  A suite that predates the header contract is migrated once, outside any cycle: docs/phases/red.md > Header contract > Adopting the contract over existing suites. Until then a caller degrades to executing, never to skipping — 'run-suites.sh --all' runs the enumerated set." >&2
+    echo "  A suite that predates the header contract is migrated once, outside any cycle: docs/phases/build.md > Header contract > Adopting the contract over existing suites. Until then a caller degrades to executing, never to skipping — 'run-suites.sh --all' runs the enumerated set." >&2
     return 1
   fi
 

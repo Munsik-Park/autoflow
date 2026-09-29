@@ -41,9 +41,8 @@
 # wrote a declaration meant it to run.
 #
 # Ledger record (`--ledger <path>`, issue #181 requirement 3): appended as a
-# level-3 record entry — no identifier, outside the `O`/`F` namespaces, in the
-# same class as `verify-detection` — so `ledger-entry-id.sh
-# check` ignores it and the gate hook, which reads the ledger advisorily only,
+# level-3 record entry — no identifier, outside every namespace — so
+# `ledger-entry-id.sh check` ignores it and the gate hook, which reads the ledger advisorily only,
 # is unchanged. The state file is never touched.
 #
 #   ### preflight-local-checks | cycle: <C>

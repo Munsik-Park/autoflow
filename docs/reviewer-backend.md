@@ -172,7 +172,7 @@ scrubs **all** `CLAUDE`-prefixed env vars via a dynamic `env -u` list built from
 user-scope plugin (`~/.claude/settings.json` `enabledPlugins`
 `autoflow@autoflow`) from the reviewer session.
 
-VALIDATE carries a **[MUST]** live-manual gate: a real `claude -p` reviewer, run
+A change to this isolation carries a **[MUST]** live-manual row, run at BUILD: a real `claude -p` reviewer, run
 neutral-cwd **with the `CLAUDE*` env scrubbed and `--setting-sources ""`**
 against a clean disposable PR, must actually clear `blocked-by-review` and
 retain it on a seeded Medium+ finding.

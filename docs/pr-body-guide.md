@@ -63,7 +63,7 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   옮겨 적고 새로 쓰지 않는다.
 - issue AC 전부가 `automated` 이면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
 - `cycle` 층의 `automated` row(`Type` 셀에 `standing:` 토큰이 없는 row)는 같은 섹션에 그
-  row의 **run record** — VERIFY step 1이 실행한 command와 summary line — 를 한 줄로 싣는다
+  row의 **run record** — build report의 `## Run record`에 기록된 command와 summary line — 를 한 줄로 싣는다
   (`phases/handoff.md` > step 4).
 - AI가 도구로 실행한 `manual` row는 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
   한 줄로 싣는다. 사람이 실행하는 `manual` row는 reason에 도구를 확보할 수 없었던 이유가 들어

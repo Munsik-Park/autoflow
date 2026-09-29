@@ -3,34 +3,33 @@
 # SPDX-License-Identifier: Elastic-2.0
 # scripts/gate/remedy-route.sh — class-routed re-entry (issues #140, #192)
 #
-# A GATE:QUALITY / VALIDATE / INTEGRATE FAIL no longer routes to RED
-# unconditionally, and since issue #192 neither does a HANDOFF reviewer
-# finding. The classifier tags every failed rubric item — or, at HANDOFF
-# step 6.5, every Medium+ review finding — with a `remedy_class`, and this
-# script is the single owner of the mapping from that class set to the phase
-# the cycle re-enters:
+# The classifier tags every failed rubric item — or, at HANDOFF step 6.5,
+# every Medium+ review finding, or a CI failure — with a `remedy_class`, and
+# this script is the single owner of the mapping from that class set to the
+# point the cycle re-enters:
 #
 #   doc      → DOC_COMMIT  (orchestrator doc commit → selected suites → GATE:QUALITY re-score)
-#   test     → RED
-#   impl     → GREEN       (→ VERIFY step 1 → REFINE → VALIDATE)
+#   test     → BUILD       (a U4 re-run on the test assets → exit check → AUDIT)
+#   impl     → BUILD       (a U4 re-run on the implementation → exit check → AUDIT)
 #   design   → ARCHITECT   (shares the GATE:PLAN → ARCHITECT re-entry cap)
 #   operator → PAUSE       (the evaluator could not classify with confidence;
 #                           routing stops and the advisor fixes the class —
 #                           docs/role-contracts.md > Advisor, ADR-0025 D7)
 #
-# Mixed classes go to the farthest point: design > impl > test > doc. An
-# `operator` class anywhere in the set stops routing regardless of the others — an
-# unclassifiable item must not be carried along a route chosen for its
-# neighbours.
+# Mixed classes go to the farthest point: design > impl > test > doc. `test`
+# and `impl` print the same route and keep their ranks, so the class set still
+# names the farthest change the re-run owes. An `operator` class anywhere in
+# the set stops routing regardless of the others — an unclassifiable item must
+# not be carried along a route chosen for its neighbours.
 #
-# Call sites (all four read the same mapping; each interprets the printed
-# target in its own playbook, and none reimplements the ranking):
-#   - GATE:QUALITY FAIL, VALIDATE step-1 sweep FAIL, INTEGRATE FAIL (#140)
-#   - HANDOFF step 6.5 review triage (#192) — there `ARCHITECT` means the
-#     design owns the moved decision and the orchestrator judges and
-#     records where the re-entry starts (a cycle from DIAGNOSE, or an
-#     ARCHITECT unit re-run — #227); `RED` / `GREEN` / `DOC_COMMIT` are the thin path
-#     (one owning role + execution verification + reviewer re-review).
+# Call sites (all read the same mapping; each interprets the printed target
+# in its own playbook, and none reimplements the ranking):
+#   - GATE:QUALITY FAIL, INTEGRATE FAIL, HANDOFF CI failure
+#   - HANDOFF step 6.5 review triage — there `ARCHITECT` means the design owns
+#     the moved decision and the orchestrator judges and records where the
+#     re-entry starts (a cycle from DIAGNOSE, or an ARCHITECT unit re-run);
+#     `BUILD` / `DOC_COMMIT` are the thin path (a U4 re-run or a doc commit
+#     + execution verification + reviewer re-review).
 #   - Recommendation triage after a PASS at AUDIT and GATE:QUALITY;
 #     GATE:HYPOTHESIS and GATE:PLAN do not call this script.
 #
@@ -68,8 +67,7 @@ rank_of() {
 route_of() {
   case "$1" in
     1) echo DOC_COMMIT ;;
-    2) echo RED ;;
-    3) echo GREEN ;;
+    2|3) echo BUILD ;;
     4) echo ARCHITECT ;;
     9) echo PAUSE ;;
   esac

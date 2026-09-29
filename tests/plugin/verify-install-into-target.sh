@@ -16,7 +16,7 @@
 #     AC1a        shim stamped in target CLAUDE.md (BEGIN/END + import inside)
 #     AC1b        idempotency (one block, byte-identical on 2nd run)
 #     AC1c        marker replace/append (prose preserved, fenced region updated)
-#     AC1d        workflow files byte-identical to source (cmp)
+#     AC1d        BUILD exit-check script byte-identical to source (cmp)
 #     AC1e        settings.json merge (marketplace key lands, pre-existing key kept)
 #     AC1f        .claude/autoflow/METHODOLOGY.md exists post-install
 #     AC1g        @-import graph statically resolvable, max 3 hops from METHODOLOGY.md
@@ -352,19 +352,19 @@ else
   failc "AC1c append" "init.sh missing"
 fi
 
-# ── AC1d: workflow file byte-identical ────────────────────────────────────────
-echo "== AC1d: workflow file byte-identical to source =="
-_wf="verify-cause-branch.js"
-_installed="$TARGET/.claude/workflows/$_wf"
-_source="$REPO_ROOT/.claude/workflows/$_wf"
+# ── AC1d: BUILD exit check byte-identical ─────────────────────────────────────
+echo "== AC1d: BUILD exit-check script byte-identical to source =="
+_ec="scripts/gate/build-exit-check.sh"
+_installed="$TARGET/$_ec"
+_source="$REPO_ROOT/$_ec"
 if [ -f "$_installed" ] && [ -f "$_source" ]; then
   if cmp -s "$_installed" "$_source"; then
-    pass "AC1d: $_wf byte-identical (cmp -s)"
+    pass "AC1d: $_ec byte-identical (cmp -s)"
   else
-    failc "AC1d" "$_wf differs from source (not a verbatim copy)"
+    failc "AC1d" "$_ec differs from source (not a verbatim copy)"
   fi
 else
-  failc "AC1d" "$_wf missing in target or source (target=$_installed source=$_source)"
+  failc "AC1d" "$_ec missing in target or source (target=$_installed source=$_source)"
 fi
 
 # ── AC1e: settings.json deep-merge ────────────────────────────────────────────

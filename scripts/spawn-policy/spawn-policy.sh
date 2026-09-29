@@ -126,7 +126,7 @@ agents_dir_candidates() {
 # which makes `check` a self-consistency check over one source rather than a
 # comparison against a second copy of the same vocabulary.
 
-# Plugin-prefixed spellings (`<plugin>:autoflow-tester`) resolve to the bare
+# Plugin-prefixed spellings (`<plugin>:autoflow-evaluator`) resolve to the bare
 # type, matching what the hook's own role classifier already does — otherwise
 # every plugin-channel spawn would resolve to the empty set and the advisory
 # would read "no models admitted" for a type the policy fully governs.
