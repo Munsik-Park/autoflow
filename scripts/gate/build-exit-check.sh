@@ -20,7 +20,8 @@
 #
 # Two kinds of finding, kept apart because the rules treat them apart:
 #   FAIL:     a defect — the test-first order not shown, a recorded Red line
-#             the Red log does not carry, a run recorded as failing, an
+#             or a non-zero Red exit (`exit: <n>`) the Red log does not
+#             carry, a run recorded as failing, an
 #             observation mismatch, a listed document the diff does not touch,
 #             a lint chain `detected`, a required report section absent.
 #   NOT-RUN:  an omission — a design row with no run record, a record with no
@@ -175,13 +176,13 @@ for h in "Test-first" "Run record" "Manual checklist" "Maintained documents" "Li
 done
 
 # ── (a) test-first ──
-TF=$(report_rows "Issue AC" "Test" "Red at" "Red log" "Red line" "Impl commit")
+TF=$(report_rows "Issue AC" "Test" "Red at" "Red log" "Red line" "Red exit" "Impl commit")
 while IFS=$'\t' read -r ac need; do
   [ -n "$ac" ] || continue
   have=$(count_rows_for "$TF" "$ac")
   [ "$have" -ge "$need" ] || fail "test-first: $ac has $need driving/regression row(s) in the design and $have Test-first row(s)"
 done < <(design_counts redfirst)
-while IFS=$'\t' read -r ac test redat redlog redline impl; do
+while IFS=$'\t' read -r ac test redat redlog redline redexit impl; do
   [ -n "$ac" ] || continue
   r=$(git rev-parse --verify -q "$redat^{commit}" 2>/dev/null) || { fail "test-first: $ac — Red at '$redat' is not a commit"; continue; }
   i=$(git rev-parse --verify -q "$impl^{commit}" 2>/dev/null) || { fail "test-first: $ac — Impl commit '$impl' is not a commit"; continue; }
@@ -193,13 +194,17 @@ while IFS=$'\t' read -r ac test redat redlog redline impl; do
   fi
   case "$test" in
     .autoflow/*) [ -f "$test" ] || fail "test-first: $ac — test $test is absent" ;;
-    *) git cat-file -e "$r:$test" 2>/dev/null || fail "test-first: $ac — test $test is not in the tree at the Red commit ${r:0:12}" ;;
   esac
   if [ ! -s "$redlog" ]; then
     fail "test-first: $ac — Red log $redlog is absent or empty"
   elif [ -z "$redline" ] || ! grep -qF -- "$redline" "$redlog"; then
     fail "test-first: $ac — Red log $redlog does not carry the recorded Red line"
   fi
+  case "$redexit" in
+    ''|*[!0-9]*|0) fail "test-first: $ac — Red exit '$redexit' is not a failing exit status" ;;
+    *) [ -s "$redlog" ] && grep -qxE "exit: ${redexit}[[:space:]]*" "$redlog" \
+         || fail "test-first: $ac — Red log $redlog does not carry 'exit: $redexit'" ;;
+  esac
 done <<< "$TF"
 
 # ── (b) run record ──

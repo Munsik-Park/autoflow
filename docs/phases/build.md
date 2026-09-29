@@ -54,9 +54,19 @@ These are the rules other documents cite; everything else about the work is the 
   [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
   judgment* and recorded under `## Scope judgments`. Tests verify correctness; they do not define the
   solution — no hard-coding to test inputs, no special-casing an assertion.
-- **Test-first.** Every `driving` and `regression` row's test is written and seen failing before the
-  implementation commit that satisfies it; a `characterization` test may pass from the start. The
-  evidence is the Red run's log and the commit it ran at (*Build report* > `## Test-first`).
+- **Test-first (TDD).** Every `driving` and `regression` row's test is written before the
+  implementation it verifies and seen failing; a `characterization` test may pass from the start. The
+  order of the work — a failing run in the working tree first, or a test commit first — is the
+  unit's. The result owed is the Red run's evidence (*Build report* > `## Test-first`). Cautions:
+  - A test that passes from the start is not Red evidence. Look again at whether it checks the
+    required behavior, and record that judgment in the report.
+  - The Red run's failure is readable in its log, the exit status included: the log ends with the
+    line `exit: <status>`.
+  - `## Run record` holds one row per verification row — its latest run. The Red run goes in
+    `## Test-first` only.
+
+  ADR-0025 D3's "the test commit precedes the implementation commit and its failing log exists" is
+  judged as: the Red run precedes the implementation commit, and its failure is shown by its log.
 - **Where a test lives.** A `cycle` row's test, a `delivery-check`, a `manual` scenario document and
   an observation record live under `.autoflow/issue-{N}-local/` and are run by their path
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools). A test file
@@ -96,14 +106,15 @@ These are the rules other documents cite; everything else about the work is the 
 ## Build report
 
 `.autoflow/issue-{N}-build-report.md`. The unit writes it whole on its first run and brings it up to
-date on a re-entry. Every section below is present; a section with nothing to record says `none`.
+date on a re-entry. A new cycle carries over the `## Lint` rows of the previous cycle's report
+(`issue-{N}-c{C}-build-report.md`). Every section below is present; a section with nothing to record says `none`.
 The five machine-read sections are tables located by their header row — the exit check reads them,
 column order is free, and a cell holding `|` wraps it in backticks.
 
 | Section | Holds | Read by |
 |---|---|---|
-| `## Test-first` | one row per `driving` / `regression` test: `Issue AC`, `Test` (its path), `Red at` (the commit the failing run was made at), `Red log`, `Red line` (the summary line read from that log), `Impl commit` (the commit that makes it pass) | exit check (a) |
-| `## Run record` | one row per run of an `automated` or `delivery-check` row: `Issue AC`, `Command`, `Log`, `Summary line`, `Result` (`pass` / `fail`) | exit check (b); GATE:QUALITY `Test coverage`; HANDOFF step 4 |
+| `## Test-first` | one row per `driving` / `regression` test: `Issue AC`, `Test` (its path), `Red at` (the commit the failing run was made at), `Red log`, `Red line` (the summary line read from that log), `Red exit` (the run's non-zero exit status, which the log carries as `exit: <status>`), `Impl commit` (the commit that makes it pass) | exit check (a) |
+| `## Run record` | one row per `automated` or `delivery-check` verification row, its latest run: `Issue AC`, `Command`, `Log`, `Summary line`, `Result` (`pass` / `fail`) | exit check (b); GATE:QUALITY `Test coverage`; HANDOFF step 4 |
 | `## Manual checklist` | one row per `manual` row: `Issue AC`, `Executor` (`AI: <tool>` or `person`), `Record` (the observation record's path, or `delegated to user`) | exit check (c); HANDOFF step 4 |
 | `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | exit check (d) |
 | `## Lint` | one row per chain per commit on the branch: `Commit` (≥ 7 hex), `Chain`, `Outcome` (the lint outcome word, a `not-run` with its reason class in parentheses); a commit another actor makes on the branch adds its own rows | exit check (e) |
@@ -124,7 +135,7 @@ bash scripts/gate/build-exit-check.sh --issue {N} > .autoflow/issue-{N}-build-ex
 ```
 
 It checks (a) each `driving` / `regression` row's Red run precedes its implementation commit and its
-Red log carries the recorded line, (b) each `automated` / `delivery-check` row has a passing run
+Red log carries the recorded line and the non-zero `Red exit`, (b) each `automated` / `delivery-check` row has a passing run
 whose log carries its summary line, (c) the manual checklist is itemized with each AI-executed
 row's observation record, (d) each listed document is in the diff, and (e) each commit on the branch
 has its lint record; and that every section above is present.

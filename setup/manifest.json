@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/phases/build.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c295ccecc774d1231b267f4ed588146aa07cc95565e7d0bfd84157ed5a4515d7"
+      "sha256": "aa7a142c86c619de5719b1fb9e734fa78c728dcf8c7b66bb54e0eba50cd92d49"
     },
     {
       "source": "docs/phases/deliver.md",
@@ -356,7 +356,7 @@
       "dest": "scripts/gate/build-exit-check.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "ddaceee10964a3e004501481e07b852324c3ea84d02701c8603f6dce0ada568d"
+      "sha256": "b4b25c289f27e6f224336b8c4f1de847fa394468bbab2d46ba24816275bdddac"
     },
     {
       "source": "scripts/review/scope-bounded.sh",
