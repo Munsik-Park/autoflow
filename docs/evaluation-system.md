@@ -48,8 +48,8 @@ If any condition fails, the change fails.
 
 | Type | Items (count) | Retry |
 |------|---------------|-------|
-| Structure evaluation (GATE:HYPOTHESIS — structure form, runs in DIAGNOSE 3-Phase) | Behavior gap, Code-change necessity (2) | none — PASS/FAIL single verdict; reuse-neutral 2-item necessity gate. FAIL on gap-low (already satisfied) → review-response: reply + active:false (awaiting-external-review, no close); new-issue: auto-closed + terminated. FAIL on Code-change-necessity-low (non-code lever) → the advisor decides (code owed → continue; non-code → the cycle ends with its report). No retry loop. (Canonical: [`phases/analysis.md`](phases/analysis.md)) |
-| Hypothesis evaluation (GATE:HYPOTHESIS — cause form, bug/incident only) | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× → DIAGNOSE |
+| Structure evaluation (GATE:HYPOTHESIS — structure form, every issue, scored on the DIAGNOSE analysis report) | Behavior gap, Code-change necessity (2) | none — PASS/FAIL single verdict; reuse-neutral 2-item necessity gate. FAIL on gap-low (already satisfied) → review-response: reply + active:false (awaiting-external-review, no close); new-issue: auto-closed + terminated. FAIL on Code-change-necessity-low (non-code lever) → the advisor decides (code owed → continue; non-code → the cycle ends with its report). No retry loop. (Canonical: [`phases/gate-hypothesis.md`](phases/gate-hypothesis.md) > *Structure form*) |
+| Hypothesis evaluation (GATE:HYPOTHESIS — cause form, bug/incident only) | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× → a U2 unit re-run |
 | Plan evaluation (GATE:PLAN) | Decision grounds, Verification fit, Scope, Tools, Security (5) — the design's intent, never its method (ADR-0025 D2); affected files and side effects are derived at BUILD by the build unit, not predicted and scored here. Decision grounds/Scope absorb the structural-fit & over-engineering concern the DIAGNOSE structure gate does not score — over-engineering is scored symmetrically across the plan and its verification design, so an unjustified verification layer fails Scope — and carry the embedded ADR-conformance check (divergence from a governing ADR, or an architecture-impacting change with no governing ADR/owner decision, caps the named item at 6; N/A by default) and the embedded AC-authority check (a verification-design difference against the issue's acceptance-criteria table that no `[ac-decision]` ledger entry covers caps Scope at 6); the interpretive paragraph and both checks are at [`phases/gate-plan.md`](phases/gate-plan.md). Re-entry re-scores the design documents' delta sections plus every inherited item whose anchor it touched, reported in `rescore` | max 3× → ARCHITECT |
 | Security audit (AUDIT) | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
 | Quality evaluation (GATE:QUALITY) | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) — Test coverage's subject is the recorded local run for each `cycle` row and the committed asset for each `standing` row, never a CI result; Test quality carries the layer-violation check (a committed asset on a `cycle` row, an uncommitted one on a `standing` row, or a `standing:` token outside ADR-0024 D1's closed list caps it at 6); Fit also carries the embedded ADR-conformance regression re-confirmation (caps Fit at 6; same trigger as GATE:PLAN), and Completeness carries the embedded AC-authority check for post-ARCHITECT drift (a carried verification-design row for which no test assertion or implementation site can be named, and which no `[ac-decision]` ledger entry covers, caps Completeness at 6) | max 3× → re-entry by `remedy_class` (doc commit / BUILD / ARCHITECT; `operator` → the advisor) |
@@ -118,10 +118,10 @@ a review-response AUDIT uses for its narrowed re-score ([`phases/audit.md`](phas
 
 `recommendations` lists every non-blocking finding as an object: `subject` — a `path:line` of the
 evaluated artifact at the evaluated commit, or a section of the evaluated artifact — the design
-documents at GATE:PLAN, the DIAGNOSE analysis files (`.autoflow/issue-{N}-phase-*.md`) at
+documents at GATE:PLAN, the DIAGNOSE analysis report (`.autoflow/issue-{N}-analysis.md`) at
 GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY — or, for an acceptance criterion the evaluator
 observes defective as a matter of fact ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion
-decisions*), the criterion's row in `.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`, whose
+decisions*), the criterion's row in `.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`, whose
 `remedy_class` on `Medium`+ is `operator`; `item` — the rubric item it was found under;
 `severity` — a level of `.codex/review.md` > Severity; `finding`; and, on `Medium` and above,
 `remedy_class` from the same enum as the failed-item field, by the same classifying question HANDOFF
@@ -152,12 +152,12 @@ Agent spawns and `git push`/`gh pr create` actions.
 
 The phase keys recorded in the state file are below. The hook **gates** only the
 four cause/plan/audit/quality keys; `gate_hypothesis_structure` is recorded in
-state but **not gated** by the hook (DIAGNOSE 3-Phase structure evaluation —
+state but **not gated** by the hook (GATE:HYPOTHESIS structure form —
 orchestrator-judged against the CLAUDE.md thresholds, not enforced at a hook gate
 point), matching the `gated_phase_keys` allow-list in
 `tests/fixtures/gate-schema.json`, which omits it:
 
-- `gate_hypothesis_structure` — DIAGNOSE 3-Phase structure evaluation (recorded in state, **not gated** by the hook — orchestrator-judged)
+- `gate_hypothesis_structure` — GATE:HYPOTHESIS structure form (recorded in state, **not gated** by the hook — orchestrator-judged)
 - `gate_hypothesis_cause` — GATE:HYPOTHESIS cause analysis (hook-gated)
 - `gate_plan` — GATE:PLAN (hook-gated)
 - `audit` — AUDIT (hook-gated)

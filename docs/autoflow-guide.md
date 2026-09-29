@@ -50,7 +50,7 @@ Diamond nodes are evaluation gates; stadium nodes are terminal states.
 ```mermaid
 flowchart TD
     PRE([PREFLIGHT<br/>Pre-Work]):::phase
-    DIA[DIAGNOSE<br/>3-Phase Analysis]:::phase
+    DIA[DIAGNOSE<br/>Analysis unit]:::phase
     HYPS{{GATE:HYPOTHESIS<br/>structure}}:::gate
     HYPC{{GATE:HYPOTHESIS<br/>cause}}:::gate
     ARC[ARCHITECT<br/>Design unit]:::phase
@@ -172,22 +172,20 @@ Loading Contract routes to the same files.
 
 ---
 
-## DIAGNOSE — Issue Analysis
+## DIAGNOSE — Analysis unit (U2)
 
 → **Phase playbook (single source of truth): [`phases/analysis.md`](phases/analysis.md).**
-Read it on entering DIAGNOSE. It carries the full procedure: the **intake readiness triage**
-(`mode=new-issue` only, run ahead of the structure fan-out — a planning/design/ADR pre-req
-filter that pauses for the user on FAIL, no auto issue creation), the 3-Phase independent
-structure analysis (Phase A structure-only, Phase B issue-only, Phase 3 necessity scoring),
-**the per-role document injection whitelist (three distinct roles — Phase A = current-state
-area excerpts only; intake triage = issue body + readiness/work-type docs; Phase B = issue
-body only, plus the materials the issue itself references, which Phase B opens and records)**, the issue-type classification (Type 1 code / Type 2 docs), the per-type scoring rubric and
-PASS/FAIL thresholds (Type 1: each ≥ 7, two items; Type 2: each ≥ 7 and avg ≥ 7.5, three
-items), the FAIL disposition by failing item and cycle `mode` (gap-low → new-issue close /
-review-response reply on PR; non-code lever → the advisor decides), the review-response loop check (trigger repeats the prior cycle's complaint class with a new witness case → reply on PR + the advisor decides the re-entry), cause hypotheses
-(≥ 3, "not a code bug" must be one), lightweight verification, hypothesis verdict notes,
-task decomposition with the scope judgments the confirmed cause calls for, affected-docs identification, and the structure- and confirmation-bias
-safeguards.
+Read it on entering DIAGNOSE. It carries the review-response loop check (trigger repeats the prior
+cycle's complaint class with a new witness case → reply on PR + the advisor decides the
+re-entry), the one `autoflow-unit-analysis` spawn and its inputs, what the analysis owes — the
+current structure as fact, the gap to the request, whether code is the lever, and for a bug /
+incident issue the cause hypotheses (≥ 3, "not a code defect" among them) with lightweight
+verification — the bias cautions the unit heeds by a method of its own, the analysis report
+(`.autoflow/issue-{N}-analysis.md`: acceptance-criterion table, referenced materials, scope
+judgments, affected documents, decision points), and its routing. The structure form's rubric
+(Type 1 code / Type 2 docs), thresholds and FAIL disposition (gap-low → new-issue close /
+review-response reply on PR; non-code lever → the advisor decides) and the cause form are
+[`phases/gate-hypothesis.md`](phases/gate-hypothesis.md).
 
 ---
 
@@ -205,7 +203,7 @@ error.
 ## See Also
 
 - [`CLAUDE.md`](../CLAUDE.md) — cross-phase invariants, the router (phase list + Flow Control), regression caps, Execution Principles, state schema.
-- [`phases/analysis.md`](phases/analysis.md) — DIAGNOSE analysis procedure (3-Phase A/B/3, scoring rubric, bias prevention).
+- [`phases/analysis.md`](phases/analysis.md) — the U2 Analysis unit (goal, cautions, analysis report, routing).
 - [`evaluation-system.md`](evaluation-system.md) — scoring and PASS thresholds.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — sub-repo rules, verification and reporting.
 - [`repo-boundary-rules.md`](repo-boundary-rules.md) — cross-repo coordination.

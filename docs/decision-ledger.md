@@ -92,7 +92,8 @@ The marker sits at the **end** of the heading. The authority over an acceptance 
 these literals and nothing else: the entry's authority **value** is `advisor decision` on an `A<n>`
 entry or `operator decision` on an `O<n>` entry, and the entry is **located** by the `[ac-decision]`
 heading marker. The two gate backstops key on the marker. When the entries for one AC disagree, an operator entry wins. When the
-disposition is `revised`, `split` or `added`, the Phase B acceptance-criterion table is edited to
+disposition is `revised`, `split` or `added`, the analysis report's acceptance-criterion table
+(`.autoflow/issue-{N}-analysis.md`) is edited to
 match before re-entry, and this entry is the record of who authorized the edit. An `added` entry
 covers no difference in either gate backstop: the criterion it adds is owed its verification-design
 row and its discharging site like any other.

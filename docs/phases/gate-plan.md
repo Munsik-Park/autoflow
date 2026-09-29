@@ -7,7 +7,7 @@
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: the two documents the U3 Design unit wrote ([ARCHITECT](architect.md) > Output
 artifacts) — the feature design and the verification design — the issue's acceptance-criterion
-list (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), and the issue decision ledger
+list (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), and the issue decision ledger
 (`.autoflow/issue-{N}-ledger.md`).
 
 The gate scores the design's **intent** — whether each decision is grounded, whether each

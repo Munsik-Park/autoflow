@@ -104,6 +104,10 @@ def load_policy(path):
 # Phase keys the policy no longer carries, with the agent type each named. Sessions recorded before
 # their retirement still read them out, so recovery keeps them and the baseline stays comparable.
 RETIRED_PHASE_KEYS = {
+    'diagnose-intake-triage': 'autoflow-analyzer',
+    'diagnose-phase-a': 'autoflow-analyzer',
+    'diagnose-phase-b': 'autoflow-analyzer',
+    'diagnose-phase-3': 'autoflow-analyzer',
     'architect-facilitator': 'autoflow-facilitator',
     'architect-dev-participant': 'autoflow-planner',
     'architect-test-participant': 'autoflow-planner',

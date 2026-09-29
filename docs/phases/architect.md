@@ -26,13 +26,12 @@ this issue's own verification — is the unit agent's, recorded with its grounds
 1. **Spawn** one `autoflow-unit-design` (`Agent`, anonymous, no `name`, the model
    `bash scripts/spawn-policy/spawn-policy.sh model unit-design` names). The prompt states the goal
    and names the inputs by path — the acceptance-criterion list
-   (`.autoflow/issue-{N}-phase-b.md` > `## Acceptance criteria`), the decision ledger
-   (`.autoflow/issue-{N}-ledger.md`), the DIAGNOSE artifacts (`.autoflow/issue-{N}-phase-*.md`, the
+   (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the decision ledger
+   (`.autoflow/issue-{N}-ledger.md`), the DIAGNOSE artifact (`.autoflow/issue-{N}-analysis.md`, the
    GATE:HYPOTHESIS reports) — and the two output paths. On a re-entry it also names what the
    re-entry is for and the previous documents (*Re-entry* below).
-2. **Document injection (ARCHITECT onward).** Past DIAGNOSE the Phase A ↔ Phase B isolation does
-   not apply. Injection is still role-minimal and routed via `docs/INDEX.md`, never wholesale: the
-   prompt carries a documents line naming the documents the design needs (e.g. the relevant
+2. **Document injection (ARCHITECT onward).** Injection is role-minimal and routed via
+   `docs/INDEX.md`, never wholesale: the prompt carries a documents line naming the documents the design needs (e.g. the relevant
    `docs/records/adr/*`, `docs/records/design-rationale.md`); the unit reads anything further its
    design needs, by its own judgment.
 3. **Return.** The unit returns its two artifact paths and a one-line summary
@@ -114,7 +113,7 @@ this issue's own verification — is the unit agent's, recorded with its grounds
   vocabularies, and when each disposition is the right answer, are defined once at *Test necessity*
   below.
 - **`Issue AC` is the join key.** Each row's value is either an `AC id` from the
-  `## Acceptance criteria` table in `.autoflow/issue-{N}-phase-b.md`, or `—` for a criterion this
+  `## Acceptance criteria` table in `.autoflow/issue-{N}-analysis.md`, or `—` for a criterion this
   verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
   criterion the design verifies by anything other than an automated test keeps its row, states that
   disposition, and states its `Reason` in one line — the row is never deleted. A design-added
@@ -220,8 +219,8 @@ a test shape.
 
 The rule is [`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *The tools the work needs*;
 this clause is where the verification design applies it. The design opens the materials
-Phase B's `## Referenced materials` section lists ([`phases/analysis.md`](analysis.md) >
-per-role injection whitelist) — the material, not the issue body's abbreviated example, is the
+the analysis report's `## Referenced materials` section lists ([`phases/analysis.md`](analysis.md) >
+*What the analysis owes*) — the material, not the issue body's abbreviated example, is the
 design's input — and finds, for each criterion, the tool that verifies it directly **before**
 settling it as a `manual` row executed by a person, as `environment-dependent`, or on a mock.
 
@@ -263,7 +262,7 @@ reads the design to judge it: the full read-and-score is GATE:PLAN's.
   naming the affected criteria and what the design proposes for each, and does not spawn GATE:PLAN
   until the advisor's `[ac-decision]` entries — one per decided AC in the grammar at
   [`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions* — are recorded;
-  on `revised`, `split` or `added`, it edits the Phase B acceptance-criterion table to match. It then
+  on `revised`, `split` or `added`, it edits the analysis report's acceptance-criterion table to match. It then
   continues to GATE:PLAN where the answer is the design's proposal, or re-runs the unit on the
   `[ac-decision]` entries where it differs (*Re-entry* below). Neither consumes ARCHITECT re-entry
   budget.
@@ -278,7 +277,7 @@ reads the design to judge it: the full read-and-score is GATE:PLAN's.
   judgment*); a gate recommendation reaches the same point through the triage
   ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*). The orchestrator hands it to the
   advisor situation-first; the advisor's entries use the same grammar with the phase the change
-  surfaced in, and the orchestrator edits the Phase B table on `revised`, `split` or `added`. Where
+  surfaced in, and the orchestrator edits the analysis report's table on `revised`, `split` or `added`. Where
   the cycle then re-enters is the orchestrator's judgment, recorded with its grounds in an `O`
   ledger entry: at ARCHITECT, a unit re-run naming the `[ac-decision]` entries, when a
   verification-design row must be added or rewritten — then GATE:PLAN's re-entry re-score and BUILD;
