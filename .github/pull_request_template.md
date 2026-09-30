@@ -48,8 +48,8 @@ Reference: docs/git-workflow.md > Issue Auto-Close.
 
 <!--
 For host PRs created at HANDOFF that include sub-repo changes, the
-`blocked-by-subrepo` label is applied automatically by
-scripts/handoff/create-host-pr.sh. The label is removed manually by the
+orchestrator creates the PR with the `blocked-by-subrepo` label
+(docs/phases/handoff.md > Push and pull request). The label is removed manually by the
 operator at merge time (not by the workflow — see
 docs/external-review-sequencing.md > Per-issue procedure).
 -->
@@ -61,7 +61,7 @@ docs/external-review-sequencing.md > Per-issue procedure).
 - [ ] The `blocked-by-subrepo` label has been removed from this PR (removed by the operator at merge time; if still present, remove it manually after confirming the sub-repo merge and the host pointer reconcile are complete).
 - [ ] This PR has been promoted from draft to **ready for review**.
 
-If this PR is **host-only** (no sub-repo change in the dev branch), mark every box above as N/A in the box label (e.g., `- [x] N/A — host-only PR`). The helper script omits the `blocked-by-subrepo` label entirely when `--no-subrepo-dep` is passed, so no label removal is needed.
+If this PR is **host-only** (no sub-repo change in the dev branch), mark every box above as N/A in the box label (e.g., `- [x] N/A — host-only PR`). A host-only PR is created without the `blocked-by-subrepo` label, so no label removal is needed.
 
 ## AutoFlow
 

@@ -5,7 +5,7 @@
 # Test: reviewer-backend bundle delivery + install config scaffold (packaging /
 #       manifest)
 # =============================================================================
-# The manifest ships the artifacts HANDOFF step 6 executes on a target — two
+# The manifest ships the artifacts the HANDOFF reviewer review executes on a target — two
 # `copy` scripts (scripts/review/codex-review-pr.sh,
 # scripts/preflight/check-review-backend.sh), one `copy` for .codex/review.md,
 # two `scaffold` rows (AGENTS.md, .claude/autoflow.local.json) — and a fresh

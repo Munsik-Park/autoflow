@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (operator decisions 2026-09-28 recorded in D5, D6, D7 and D9)
+Proposed (operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01)
 
 ## Context
 
@@ -107,10 +107,24 @@ is why the first-judgment advisor is a sub-agent. `CLAUDE.md` > Rule Scope, prin
 acceptance-criterion content as the operator's; it is amended in the same change as the device
 (Rule Scope, principle 4) to "the operator's by override at the retry stage, the advisor's first".
 
-**D8 — Deterministic steps become scripts.** U1 and U6's fixed steps (git state, drift, local
-checks, push, PR creation, CI confirmation, reviewer launch) run as scripts the orchestrator
-invokes; the committer and PR opener stay the orchestrator. AI judgment in U6 is kept only for
-routing a reviewer finding.
+**D8 — A script reads and reports; every change is the orchestrator's own (amended by operator
+decisions 2026-09-29 and 2026-10-01, issue #385).** The direction of this ADR is to stop fixing the
+AI's method and state only what is asked. A method fixed in a script fits one repository shape and
+misfits the next, and each case added to the script calls for another. So in U1 and U6 a script
+confirms facts and reports them — the cycle's state files against their branches and pull requests,
+CI on the PR head, which CI job ran an added test file, whether the reviewer run began, the review
+triage case and its attempt count — and changes nothing: not git, not GitHub, not the cycle's state
+under `.autoflow/`; it writes only its own report or log. What changes state — fetching and
+syncing, clearing an earlier cycle, creating the dev branch and the state file, the review-response
+setup, pushing, opening the pull request, attaching a label, the state transitions — is done by the
+orchestrator directly, and the playbook gives it as direction: what is asked, the cautions, the
+result owed, with no fixed order or command. `git push` and `gh pr create` in particular are issued
+by the orchestrator as those commands, because the gate hook reads the command it issues. The
+fail-closed checks that existed before stay as they are (`drift-check.sh`,
+`check-review-backend.sh`, `local-checks.sh`, `confirm-ci-green.sh`, `codex-review-pr.sh`). Where an
+interrupted cycle resumes is the orchestrator's judgment over the reported facts. The committer and
+PR opener stay the orchestrator. AI judgment in U6 is kept for routing a reviewer finding and
+classifying a CI failure.
 
 **D9 — Migration (operator decision: operator-led sessions, not AutoFlow cycles).** On `main` in
 small PRs, each released and installed (`/plugin marketplace update` → `/plugin update` →

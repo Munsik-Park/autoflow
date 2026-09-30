@@ -43,7 +43,9 @@ The `Next:` line names the action the next session continues from (see
 
 ## Git Clean Check
 
-Used at PREFLIGHT (entry, including prior-cycle resolution).
+The conditions PREFLIGHT starts from ([`phases/preflight.md`](phases/preflight.md) > *What is asked*).
+`scripts/preflight/cycle-status.sh` reports the working tree and the default branch against its
+remote-tracking ref; bringing them to this state is the orchestrator's.
 
 ```bash
 # 1. Working tree is clean
@@ -53,8 +55,8 @@ git status                       # must report nothing to commit, working tree c
 git fetch origin
 git log HEAD..origin/main --oneline   # must be empty (or handled)
 
-# 3. Branch is from the latest main (PREFLIGHT only)
-git checkout -b <type>/<issue>-<desc> main
+# 3. Branch is from the latest main (a new issue; an AutoFlow cycle's dev branch is dev/<date>-issue-<N>)
+git checkout -b <branch> main
 ```
 
 If any check fails:
@@ -122,7 +124,7 @@ Closes #<issue-number>
 
 In a single-repo deployment (target-centric — the default; zero submodules, see `CLAUDE.md` > Deployment Topology), the cycle produces a single host PR and there is no sub-repo merge-order constraint: the host PR carries no `blocked-by-subrepo` label, and the external reviewer promotes the draft to ready and merges it directly.
 
-In a multi-repo deployment (host PR with sub-repo dependencies), the merge order is sub-repo → pointer bump → host. The host PR is created as a draft with the `blocked-by-subrepo` label at HANDOFF. Merge-order clearance is operator-performed; a machine status check for this signal is advisory-only, never an enforceable required check. Once the sub-repo merge and pointer reconcile are confirmed complete, the operator removes the `blocked-by-subrepo` label at merge time (see `docs/external-review-sequencing.md` > Merge-order clearance). Pointer alignment is checked by the operator's **manual** `git ls-tree HEAD <submodule>` check.
+In a multi-repo deployment (host PR with sub-repo dependencies), the merge order is sub-repo → pointer bump → host. The host PR is created as a draft with the `blocked-by-subrepo` label at HANDOFF ([`phases/handoff.md`](phases/handoff.md) > *Push and pull request*). Merge-order clearance is operator-performed; a machine status check for this signal is advisory-only, never an enforceable required check. Once the sub-repo merge and pointer reconcile are confirmed complete, the operator removes the `blocked-by-subrepo` label at merge time (see `docs/external-review-sequencing.md` > Merge-order clearance). Pointer alignment is checked by the operator's **manual** `git ls-tree HEAD <submodule>` check.
 
 Full reviewer-facing procedure: [`external-review-sequencing.md`](external-review-sequencing.md).
 
@@ -148,7 +150,7 @@ fi
 # MAIN descendant of TARGET OR divergent -> do NOT push; escalate to operator
 ```
 
-Before/after pushing, verify **all three**: (1) `git ls-tree HEAD <submodule>` == `TARGET` (manual pointer-equality check); (2) the generic mergeable + check-rollup confirmation via `scripts/handoff/confirm-ci-green.sh --pr <PR>` (the shared HANDOFF step-5 helper; see [`phases/handoff.md`](phases/handoff.md) > step 5 and [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight — not restated here); (3) the CI checks on the new head commit all `success`, read by commit SHA (`gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs`), never by job or check name. **[MUST]** Read the post-reconcile head's checks, not the PR's latest run. Run the reconcile against a freshly-synced `main` (Post-Merge Cleanup of prior merges first). Full procedure: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
+Before/after pushing, verify **all three**: (1) `git ls-tree HEAD <submodule>` == `TARGET` (manual pointer-equality check); (2) the generic mergeable + check-rollup confirmation via `scripts/handoff/confirm-ci-green.sh --pr <PR>` (the shared HANDOFF CI helper; see [`phases/handoff.md`](phases/handoff.md) > *CI* and [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight — not restated here); (3) the CI checks on the new head commit all `success`, read by commit SHA (`gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs`), never by job or check name. **[MUST]** Read the post-reconcile head's checks, not the PR's latest run. Run the reconcile against a freshly-synced `main` (Post-Merge Cleanup of prior merges first). Full procedure: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
 
 ---
 
@@ -166,6 +168,10 @@ git branch -d <branch>             # local branch
 git push origin --delete <branch>  # remote branch (if not auto-deleted)
 scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/issue-<N>.* + issue-<N>-* files and the rest of its issue-<N>-local/ store to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
 ```
+
+The remote-branch deletion is a push: the hook admits it only while no cycle is
+active, so it comes before the next cycle's state file is created
+([`phases/preflight.md`](phases/preflight.md) > *What is asked*).
 
 **Delete the reserved path, archive the rest.** Cleanup first deletes the resolved issue's reserved
 path `.autoflow/issue-{N}-local/disposable/` — the reproducible output its cycle assets wrote there
@@ -221,5 +227,5 @@ Part of Munsik-Park/autoflow#N
 - Close keywords: `Closes`, `Fixes`, `Resolves` (case-insensitive).
 - Cross-repo references are recognised in PR bodies only (commit messages do not trigger cross-repo close).
 - **[MUST]** Sub-repo PRs do NOT use `Closes`.
-- **[MUST]** Only the host PR uses `Closes #N`.
-- **[MUST]** PR bodies generated from `.github/pull_request_template.md` never inline a plain-text close-keyword token in the template itself. The template uses the marker `<!-- HOST-CLOSE-LINE -->`; the orchestrator's HANDOFF renderer substitutes the marker with the active `Closes #N` line in the rendered host PR body. Templates / docs / design notes that **describe** the close-keyword pattern must wrap the example in backticks or code-fences.
+- The host PR carries `Closes #N`; composing the PR body is the orchestrator's, and nothing checks the line ([`phases/handoff.md`](phases/handoff.md) > *Push and pull request*).
+- **[MUST]** PR bodies generated from `.github/pull_request_template.md` never inline a plain-text close-keyword token in the template itself. The template uses the marker `<!-- HOST-CLOSE-LINE -->`; the orchestrator replaces the marker with the active `Closes #N` line when it writes the host PR body. Templates / docs / design notes that **describe** the close-keyword pattern must wrap the example in backticks or code-fences.

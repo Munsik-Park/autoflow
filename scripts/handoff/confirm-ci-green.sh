@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: Elastic-2.0
 # scripts/handoff/confirm-ci-green.sh
 #
-# HANDOFF step 5 — deterministic "confirm CI is green" helper.
+# HANDOFF CI confirmation — deterministic "confirm CI is green" helper.
 #
-# Promotes the topology-independent step-5 invariant from prose
-# (docs/phases/handoff.md step 5) into a single enforceable invocation so the
+# Promotes the topology-independent CI-confirmation invariant from prose
+# (docs/phases/handoff.md > CI) into a single enforceable invocation so the
 # orchestrator never hand-writes a polling loop again (issue #25). It reads
 # `mergeable`/`mergeStateStatus` FIRST and early-exits on CONFLICTING/DIRTY
 # WITHOUT ever entering a poll (the PR #321 infinite-wait class); only when the

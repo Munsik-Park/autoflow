@@ -94,10 +94,10 @@ each-item ≥ 7 criterion:
   device's second output, the row↔asset pairing report, is input to this check and to
   `Test coverage`, never a verdict. The device is not delivered to targets and the check does not
   run there: on a target, a test file the cycle added is judged by the reviewer against the target's
-  convention from the PR body's listing (HANDOFF step 4), not by a token ([`submodule-common-rules.md`](../submodule-common-rules.md)
+  convention from the PR body's listing ([HANDOFF](handoff.md) > *Push and pull request*), not by a token ([`submodule-common-rules.md`](../submodule-common-rules.md)
   > Verification and Tools > *What a cycle leaves in the target's tree*); under this item the evaluator confirms
   that every test file the cycle added to the target's tree carries, in the build report's
-  `## Test files kept` section, the reason it is kept and the CI job expected to run it — the record HANDOFF step 4 copies into
+  `## Test files kept` section, the reason it is kept and the CI job expected to run it — the record HANDOFF carries into
   the PR body — and an added file with no such record caps
   `Test quality` at 6.
 - **Test coverage — the run record is the subject**: the item's subject is not a CI result. For
@@ -145,7 +145,7 @@ each-item ≥ 7 criterion:
 
 A PASS report's `recommendations` are findings the evaluator recorded without scoring the item down.
 They are triaged by **the procedure the
-reviewer's findings already take** — HANDOFF step 6.5's classification, the weighing of whether a finding holds, route, pause criteria, `Low`
+reviewer's findings already take** — HANDOFF's review-triage classification, the weighing of whether a finding holds, route, pause criteria, `Low`
 judgment, ledger record and attempt cap — after the PASS of every rubric-scored gate
 (GATE:HYPOTHESIS in both forms, GATE:PLAN, AUDIT, GATE:QUALITY) and before the transition it opens.
 The one thing added is the evaluator's output contract for `recommendations`
@@ -153,18 +153,18 @@ The one thing added is the evaluator's output contract for `recommendations`
 subject — a `path:line` of the evaluated artifact at the evaluated commit, or a section of the evaluated artifact (a design document, the DIAGNOSE analysis report) — its severity in the reviewer's vocabulary, and — on `Medium` and above — its `remedy_class`.
 No separate disposition system exists for gate recommendations.
 
-| Step 6.5 | Gate recommendation |
+| Review triage | Gate recommendation |
 |---|---|
 | Classification: the reviewer's severity level (`.codex/review.md` > Severity) | the evaluator's, per item, on the same levels |
 | `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
 | Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(d) | the same four, read for a gate (below) |
 | `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to BUILD (below) |
-| Verification of the fix: the reviewer re-review (step 6) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [GATE:PLAN](gate-plan.md) > *Re-entry re-score*; [AUDIT](audit.md) > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
+| Verification of the fix: the reviewer re-review (*Reviewer review*) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [GATE:PLAN](gate-plan.md) > *Re-entry re-score*; [AUDIT](audit.md) > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
 | Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
 
 - **No ingesting subagent.** The orchestrator reads the evaluator's `recommendations` list
-  directly. It is therefore the orchestrator that weighs whether each item holds ([HANDOFF](handoff.md) step 6.5 > *Whether a
+  directly. It is therefore the orchestrator that weighs whether each item holds ([HANDOFF](handoff.md) > *Whether a
   finding holds*), and the recommending gate's re-score that judges a rebuttal. A
   `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
   severity, finding), is a report defect:
@@ -231,9 +231,9 @@ No separate disposition system exists for gate recommendations.
   once the re-score PASSes and no attempt is left open — a `Medium`+ the re-score itself raises is a
   new attempt; the hook denies `git push` / `gh pr create` while it is present on `audit` or
   `gate_quality`.
-  The Resume procedure reads the same field ([PREFLIGHT](preflight.md) > *Resume procedure* step 3).
-- **Attempt cap = 7**, counted as step 6.5 counts: the consecutive `[gate-autofix]` entries this
-  cycle since the last user re-entry decision. When the triage after the 7th such attempt would open
+  A resume reads the same field ([PREFLIGHT](preflight.md) > *Resume*).
+- **Attempt cap = 7**: the consecutive `[gate-autofix]` entries this cycle since the last user
+  re-entry decision (an entry whose heading ends in `[reentry-decision]`). When the triage after the 7th such attempt would open
   another — a `Medium`+ still open, or a `Low` the orchestrator would fix now — it pauses for the
   user instead; the user's decision resets the window. A re-score's own recommendations enter this
   triage on the same window, so a run of `Low`-only re-scores each fixed now counts like a run of
@@ -349,12 +349,12 @@ carry, never routes the cycle.
   personal data, for example — takes the severity and the route its impact sets, as any finding does.
 - **Fix — the orchestrator's direct commit.** Whether a comment surfaced by this gate's
   `recommendations`, the build report's `## Comment check` or the reviewer's `Low` findings (HANDOFF
-  step 6.5) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
+  review triage) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
   ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
   deletes comment lines or corrects their sentences and changes nothing else, and it ends there: no
   sweep record, no re-entry, no re-score, and no reviewer re-review. The commit still runs the lint chain over its staged files
-  ([`CLAUDE.md`](../../CLAUDE.md) > Commit Rules); one made after HANDOFF's push is pushed, and step 5
-  confirms CI on the new head. A comment whose correct wording is uncertain is deleted, not
+  ([`CLAUDE.md`](../../CLAUDE.md) > Commit Rules); one made after HANDOFF's push is pushed, and the CI
+  confirmation runs on the new head. A comment whose correct wording is uncertain is deleted, not
   rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a
   comment, or that removes a defect of its own ground (above), is not this route.
 - **Directives.** A line a tool reads to change its behavior is code even in comment syntax, and

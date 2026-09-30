@@ -49,7 +49,7 @@ Diamond nodes are evaluation gates; stadium nodes are terminal states.
 
 ```mermaid
 flowchart TD
-    PRE([PREFLIGHT<br/>Pre-Work]):::phase
+    PRE([PREFLIGHT<br/>Preparation]):::phase
     DIA[DIAGNOSE<br/>Analysis unit]:::phase
     HYPS{{GATE:HYPOTHESIS<br/>structure}}:::gate
     HYPC{{GATE:HYPOTHESIS<br/>cause}}:::gate
@@ -59,7 +59,7 @@ flowchart TD
     EXIT{{exit check}}:::gate
     AUD{{AUDIT}}:::gate
     QUAL{{GATE:QUALITY}}:::gate
-    DEL[DELIVER<br/>Sub-Repo Push]:::phase
+    DEL[DELIVER<br/>Push]:::phase
     INT[INTEGRATE]:::phase
     HAND[HANDOFF<br/>PR + Hand-off]:::phase
     CLOSE([Issue Auto-Closed]):::terminal
@@ -175,9 +175,7 @@ Loading Contract routes to the same files.
 ## DIAGNOSE — Analysis unit (U2)
 
 → **Phase playbook (single source of truth): [`phases/analysis.md`](phases/analysis.md).**
-Read it on entering DIAGNOSE. It carries the review-response loop check (trigger repeats the prior
-cycle's complaint class with a new witness case → reply on PR + the advisor decides the
-re-entry), the one `autoflow-unit-analysis` spawn and its inputs, what the analysis owes — the
+Read it on entering DIAGNOSE. It carries the one `autoflow-unit-analysis` spawn and its inputs, what the analysis owes — the
 current structure as fact, the gap to the request, whether code is the lever, and for a bug /
 incident issue the cause hypotheses (≥ 3, "not a code defect" among them) with lightweight
 verification — the bias cautions the unit heeds by a method of its own, the analysis report

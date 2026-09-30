@@ -328,7 +328,7 @@ install_into_target() {
   echo "  2. Self-verify the install:"
   echo "       sh .claude/autoflow/drift-check.sh"
   echo "  3. Fill in target identity in CLAUDE.local.md (never overwritten)."
-  echo "  4. Reviewer backend (HANDOFF step-6 review) defaults to codex in"
+  echo "  4. Reviewer backend (HANDOFF reviewer review) defaults to codex in"
   echo "       .claude/autoflow.local.json; switch to claude there if preferred"
   echo "       (see docs/reviewer-backend.md). PREFLIGHT fail-closes if the"
   echo "       configured backend's CLI is absent."

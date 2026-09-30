@@ -4,7 +4,7 @@
 # =============================================================================
 # PREFLIGHT reviewer-backend availability check (issue #979, D5)
 # =============================================================================
-# Fail-closed availability probe for the configured HANDOFF step-6 review
+# Fail-closed availability probe for the configured HANDOFF reviewer review
 # backend. Resolves the backend (--backend override, else
 # .claude/autoflow.local.json `.review.backend`, else codex) and confirms the
 # backend's CLI is present on PATH.
@@ -18,12 +18,12 @@
 # for both backends (C1): a side-effect-free command whose exit encodes
 # claude/codex auth state does not exist, so auth is NOT a PREFLIGHT oracle. A
 # present-but-unauthenticated backend passes this presence-only path; its auth
-# failure surfaces at HANDOFF step 6 (the review run itself). See
+# failure surfaces at the HANDOFF reviewer review (the review run itself). See
 # docs/reviewer-backend.md.
 #
 # `--probe` is a SEPARATE, on-demand mode (issue #979 cycle 9): it makes one real
 # authenticated round-trip against the configured backend, over the identical
-# auth channel + isolation HANDOFF step 6 uses. It runs on-demand only — at
+# auth channel + isolation the HANDOFF reviewer review uses. It runs on-demand only — at
 # install time (SKILL.md) and at backend-change time — and is NEVER wired into
 # PREFLIGHT and no hook consumes it (the presence-only path above is unchanged).
 # Its exit-code contract extends the presence 0/1/2: 0=authenticated,
@@ -37,7 +37,7 @@
 # Model / effort (issue #184): the backend's configured `.review.<backend>.model`
 # and `.effort` are resolved by the shared scripts/review/lib/review-config.sh —
 # the same resolver the live wrapper uses — and the --probe round-trip passes
-# them exactly as HANDOFF step 6 will (or nothing, when inheriting).
+# them exactly as the HANDOFF reviewer review will (or nothing, when inheriting).
 #
 # Usage: scripts/preflight/check-review-backend.sh [--backend codex|claude] [--probe]
 # =============================================================================
@@ -143,27 +143,27 @@ probe_run_bounded() {
 # Map a bounded run's outcome to the probe exit contract and exit.
 probe_finish() {
   if [ "${PROBE_TIMED_OUT:-0}" -eq 1 ]; then
-    echo "[check-review-backend] --probe: could not verify ${BACKEND} auth within ${1}s (timeout / no-TTY interactive-login) — indeterminate; it will surface at HANDOFF step 6." >&2
+    echo "[check-review-backend] --probe: could not verify ${BACKEND} auth within ${1}s (timeout / no-TTY interactive-login) — indeterminate; it will surface at the HANDOFF reviewer review." >&2
     exit 3
   fi
   if [ "${PROBE_RC:-1}" -eq 0 ]; then
     exit 0
   fi
-  echo "[check-review-backend] --probe: ${BACKEND} is present but the authenticated round-trip failed (exit ${PROBE_RC}) — you will hit this at HANDOFF step 6; fix credentials before your first cycle." >&2
+  echo "[check-review-backend] --probe: ${BACKEND} is present but the authenticated round-trip failed (exit ${PROBE_RC}) — you will hit this at the HANDOFF reviewer review; fix credentials before your first cycle." >&2
   exit 4
 }
 
-# claude probe: mirror codex-review-pr.sh's step-6 isolation triple EXACTLY
+# claude probe: mirror codex-review-pr.sh's isolation triple EXACTLY
 # (shared helper), minimized to a review-content-free round-trip — a trivial
 # prompt, zero tool grants, JSON output (confirms a model reply, not just a
 # zero exit). The isolation fidelity is the crux: same auth channel/isolation
-# as step 6, so a green probe predicts a green step 6.
+# as the reviewer review, so a green probe predicts a green review.
 probe_claude() {
   # shellcheck source=../review/lib/claude-isolation.sh
   . "$SCRIPT_DIR/../review/lib/claude-isolation.sh"
   local bound="${PROBE_TIMEOUT_SECS:-20}"
   if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    echo "[check-review-backend] --probe: ANTHROPIC_API_KEY is set; unsetting it for the claude probe subprocess to exercise the same subscription/OAuth channel HANDOFF step 6 uses." >&2
+    echo "[check-review-backend] --probe: ANTHROPIC_API_KEY is set; unsetting it for the claude probe subprocess to exercise the same subscription/OAuth channel the HANDOFF reviewer review uses." >&2
   fi
   build_claude_isolation
   local _orig; _orig="$(pwd)"

@@ -206,7 +206,7 @@ If the clone itself is behind upstream, refresh it first
   automation context (CI agent, webhook container, developer clone).
   Clone with `git clone --recurse-submodules git@github.com:<org>/<repo>.git`.
 - Claude Code installed and configured.
-- Reviewer backend (HANDOFF step-6 external review): `codex` by default (the
+- Reviewer backend (the HANDOFF reviewer review): `codex` by default (the
   OpenAI Codex CLI), or `claude` as an opt-in fallback (the Claude CLI +
   subscription/OAuth). The choice lives in the target-owned scaffold
   `.claude/autoflow.local.json` (`{"review":{"backend":"codex"}}`; absent ⇒

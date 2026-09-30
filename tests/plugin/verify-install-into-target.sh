@@ -607,7 +607,10 @@ echo "== AC-1 (issue #10): methodology-step scripts registered as root-layer/cop
 if [ -f "$MANIFEST" ]; then
   _ac1_bad=""
   for _ac1_src in \
-    "scripts/handoff/create-host-pr.sh" \
+    "scripts/preflight/cycle-status.sh" \
+    "scripts/handoff/ci-test-file-jobs.sh" \
+    "scripts/handoff/review-gate.sh" \
+    "scripts/review/review-start-check.sh" \
     "scripts/cleanup/cleanup-issue.sh"
   do
     _ac1_match=$(jq -r --arg s "$_ac1_src" \

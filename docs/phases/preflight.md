@@ -1,46 +1,154 @@
-# PREFLIGHT — Pre-Work
+# PREFLIGHT — U1 Preparation
 
 > Phase playbook for PREFLIGHT. [`CLAUDE.md`](../../CLAUDE.md) > Phase Playbook Loading
 > Contract routes to this file; the other phases are listed in
 > [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
 
-**Goal**: ensure a clean Git state before any analysis or coding begins.
+PREFLIGHT is functional unit U1 Preparation
+([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). This file states what it
+is asked for, the cautions and the result owed; the order of the work and the commands are the
+orchestrator's ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2). A script only reads and
+reports (D8): every change — to git, to GitHub, to the cycle's state — is made by the orchestrator
+itself.
 
-| Step | Action |
-|------|--------|
-| 1 | Prior-cycle resolution — reconcile every `.autoflow/issue-*.json` against its GitHub PR: merged or closed → delete its dev branch (local + origin), sync main, **and archive the issue's `.autoflow/issue-{N}*` files** — they are moved out to the external archive at `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<date>/`, outside the repo tree (the one deletion is the store's reserved path `issue-{N}-local/disposable/`, removed before the move — [`git-workflow.md`](../git-workflow.md) > Post-Merge Cleanup; the move fires only on an observed merged/closed PR) (re-filing a rejected issue is a separate, external decision); requested issue with open PR + `active:false` → review-response mode (checkout dev branch; set `mode:review-response`; increment `cycle`); **requested issue's own state `active:true` → resume the in-progress cycle per the Resume procedure below (this is distinct from *another* issue's `active:true`, which is "report and hold")**; another issue `active:true` → report and hold (one-issue-at-a-time); other `active:false` (PR in external review) → cleared, proceed; **any issue `active:false` with `phase:"awaiting-user"` and no PR yet (a pre-PR human-decision pause — a DIAGNOSE prerequisite the advisor put first, structure-gate non-code lever, or GATE:HYPOTHESIS non-code root cause) → preserve its `.autoflow/issue-{N}*` files **in place** and report the pending decision; do NOT archive.** |
-| 1a | **Target-declared local checks** — `bash scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` (the paragraph below). Runs **here**, after prior-cycle resolution and **before** Step 2 and Step 5. Exit 1 (a check failed) → hard stop; exit 3 (checks passed, tree dirty afterwards) → Step 4, then re-run 1a; exit 2 (unreadable declaration) → fix the scaffold, re-run 1a. `<C>` is the cycle the state file will carry once created — `1` on a new issue, the incremented value on review-response entry |
-| 2 | `git status` — confirm no uncommitted changes or untracked files in the working area |
-| 3 | `git fetch origin` — sync with remote |
-| 4 | Resolve any dirty state (stash, commit, or discard with user approval) |
-| 5 | `git checkout -b dev/YYYY-MM-DD-issue-N main` — create a dev branch (new-issue mode); the branch name carries the issue number; the state file is created from the template with `mode: "new-issue"`, `phase: "in-progress"`; add the `status:in-progress` label to the issue: `gh issue edit #N --add-label "status:in-progress"` |
+- **Goal**: the requested issue starts, or continues, on a clean tree synced with the remote, with
+  every earlier cycle whose pull request is merged or closed cleared away.
+- **Verification**: PREFLIGHT has no gate. Its readiness conditions are deterministic — the facts
+  `scripts/preflight/cycle-status.sh` reports and the three *Stop conditions* — and DIAGNOSE does
+  not begin until they hold.
+- **Result owed**: the state file `.autoflow/issue-{N}.json`, the dev branch checked out, and the
+  local-checks record in the ledger. A resume also owes its re-entry point, recorded with grounds
+  in the ledger (*Resume*).
 
-**PR Wait Rule** — the **PREFLIGHT-entry readiness check** that clears the requested issue to start. Its source of truth is AutoFlow's own `.autoflow/issue-*.json` **state files**: read the `active` flag there to decide readiness. It resolves two questions in order — (1) is any **other** issue mid-cycle? (2) at what stage is the **requested** issue's own state? — and proceeds once both are answered. The start signal for (1) is [`CLAUDE.md`](../../CLAUDE.md) > PR Wait Rule.
+## What is asked
 
-- **[MUST]** Read an `active:false` state file (`phase: awaiting-external-review`) as **cleared and handed off**: its PR belongs to external review, which merges on its own schedule. Tie readiness to the `active` flag alone.
-- For the **requested** issue, read its own state file to choose the mode: `active:true` → resume the in-progress cycle (*Resume procedure* below); `active:false` with an open PR → enter review-response mode (PR-review stage); **`active:false` with `phase:"awaiting-user"` and no PR → the cycle is paused on a human decision (not cleared): re-entry is driven by the user's new decision, not an automatic mode — surface the pending decision and its `.autoflow/issue-{N}-*.md` context, and do not silently restart**; absent → start as a new issue.
+```
+bash scripts/preflight/cycle-status.sh --issue {N}
+```
 
-**Git Clean Check** (procedural detail → [`git-workflow.md`](../git-workflow.md) > Git Clean Check): working tree clean; new-issue mode → main synced with origin; review-response mode → existing dev branch fast-forwarded from origin (`git fetch && git pull --ff-only`). The Merged / Closed-unmerged resolution paths above also start the next cycle from a fresh state-file template.
+prints the facts the work is decided from and changes nothing: the working tree, the default branch
+against its remote-tracking ref, and — for every `.autoflow/issue-*.json` — `active`, `phase`,
+`mode`, `cycle`, the issue's dev branch (`dev/<date>-issue-<N>`) on each side and that branch's pull
+request. Exit `3` means a fact could not be read (a `gh` lookup, an unreadable state file); the line
+says which. From those facts the orchestrator brings about the following.
 
-**Review-response mode setup** (requested issue has an open PR + `active:false`): `git checkout dev/<existing-branch>` (the issue's dev branch per the Step-5 naming convention `dev/<date>-issue-{target}`, located with `git branch --list 'dev/*-issue-{target}'`); run Step 1a on that branch with `--cycle` set to the incremented cycle number, and only once it exits 0 set `mode: "review-response"`, `active: true`, `phase: "in-progress"`; identify the triggering reviewer comment/thread (the DIAGNOSE review-response target); increment the state file's `cycle` field and reset `phases` to the empty Creation template (preserving the `verdict` rule); add the `status:in-progress` label: `gh issue edit #N --add-label "status:in-progress"`. Skip dev-branch creation (step 5 is new-issue mode only).
+- **Earlier cycles are resolved.** A cycle whose pull request is merged or closed is cleared: its
+  dev branch is deleted, locally and on the remote, and its `.autoflow/issue-{N}*` files are
+  archived with `scripts/cleanup/cleanup-issue.sh` ([`git-workflow.md`](../git-workflow.md) >
+  Post-Merge Cleanup). A cycle paused with no pull request keeps its files in place, and its
+  pending decision is reported.
+- **One issue runs at a time** (*PR Wait Rule*), and the requested issue takes the mode its own
+  state names (*Modes*).
+- **The tree is clean and synced.** No uncommitted change or untracked file in the working area,
+  and the branch the mode works on — the default branch for a new issue, the issue's dev branch for
+  a review-response — matches the remote ([`git-workflow.md`](../git-workflow.md) > Git Clean
+  Check).
+- **The stop conditions pass** (*Stop conditions*): bundle drift, reviewer-backend availability,
+  the target-declared local checks.
+- **A new issue gets its branch and its state**: the dev branch `dev/YYYY-MM-DD-issue-N` from the
+  default branch, the state file from the Creation template with `mode: "new-issue"` and
+  `phase: "in-progress"` ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking), and the
+  issue's `status:in-progress` label. A review-response gets *Review-response setup*.
 
-**[MUST] Preserve the previous cycle's artifacts**: before any phase of the new cycle writes, rename every `.autoflow/issue-{N}-<artifact>.md` of the previous cycle to `.autoflow/issue-{N}-c{C}-<artifact>.md`, where `C` is the previous cycle number — except the ledger, the state file, the per-PR findings files `issue-{N}-review-findings-*.md` (HANDOFF step 6.5; the single findings file `issue-{N}-review-findings.md` likewise) and the cycle-layer store `issue-{N}-local/`, which are cycle-spanning, and — only on a HANDOFF step 6.5 `design` re-entry judged to start at ARCHITECT — the DIAGNOSE analysis report that shape reuses in place (`analysis.md`; HANDOFF step 6.5, shape (b)) (the store's retained set is reviewed, re-authored and re-executed at the new cycle's BUILD; a check that did not execute is `not-run`, never `passed`).
+Cautions:
 
-**Scope-bounded entry**: when `bash scripts/review/scope-bounded.sh entry --issue {N}` prints `scope-bounded: true`, the cycle takes the **bounded path**. The judgment is read from the per-PR findings files, whose `scope-bounded:` lines HANDOFF step 6.5 wrote from `scripts/review/scope-bounded.sh triage`; `entry` combines them as mixed severities and classes combine — the heavier one wins: every file whose `max_severity` is Medium+ must carry `scope-bounded: true`, and a PR with no Medium+ finding takes no part. A per-PR file is one whose name `issue-{N}-review-findings-<owner>.<name>-<pr>.md` and `pr:` line name the same PR: any other file under that prefix (an improvised round file, say) takes no part, a per-PR name whose `pr:` line disagrees is read as the full path, and the single findings file `issue-{N}-review-findings.md` is read only when no per-PR file exists. On the bounded path, the DIAGNOSE unit's prompt states the bounded path and names the previous cycle's analysis report (`issue-{N}-c{C}-analysis.md`), whose reuse is the unit's own ([DIAGNOSE](analysis.md) > Unit spawn), ARCHITECT runs the same unit with its prompt stating the bounded scope — the Medium+ finding and the PR diff file set ([ARCHITECT](architect.md) > *Re-entry*), and AUDIT takes the previous cycle's Low list as input ([AUDIT](audit.md)). The loop check, GATE:HYPOTHESIS, GATE:PLAN, BUILD, GATE:QUALITY, CI and the reviewer re-review are unchanged. After BUILD returns the orchestrator runs `scripts/review/scope-bounded.sh check-fix --base <PR head at entry> --head HEAD`; if the fix added a file (a new mechanism), the bounded path is left from that point: ARCHITECT is re-discussed on the full topic (this re-entry is a path change, not a GATE:PLAN FAIL, and consumes no ARCHITECT re-entry budget) and a DIAGNOSE unit re-run on the full topic precedes it ([DIAGNOSE](analysis.md) > *Re-entry*). `entry` printing `scope-bounded: false` is the full path — one `false`, a Medium+ file with no line, a file whose `max_severity` line is missing, repeated or unparseable, no Medium+ file at all, or no findings file.
+- **A dirty tree is never resolved without the user.** What is stashed, committed or discarded is
+  the user's to approve; PREFLIGHT does not reach DIAGNOSE on a dirty tree.
+- **A branch that does not fast-forward, a fetch that fails, or a Git state that cannot be made
+  clean is a hard stop**: report to the user. It is not worked around with a reset or a forced
+  update.
+- **A push is gated by the active cycle.** Deleting a remote dev branch is a push, and the hook
+  admits a push only while no cycle is active or once the active one has passed AUDIT and
+  GATE:QUALITY ([`CLAUDE.md`](../../CLAUDE.md) > Hook gates). A branch a cleared cycle left on the
+  remote is therefore deleted before the requested issue's state file is created or reactivated;
+  on a resume it waits until the hook admits a push.
+- **The state file is created last.** A stop condition that fails, a hold or a pause leaves no
+  state file and no dev branch for the requested issue behind.
+- **A cycle is cleared only on an observed merged or closed pull request.** A state file whose dev
+  branch is gone on both sides gives `cycle-status.sh` nothing to look its pull request up by; the
+  orchestrator looks it up another way before it archives anything.
 
-**Resume procedure** (requested issue's own state file reads `active:true` — a mid-cycle session resumed after an abnormal end): resume deterministically, do not restart from PREFLIGHT.
-1. **Read the last confirmed point** from the state file: the highest phase whose gate `scores` are recorded in `phases` (or `verdict` set for `gate_hypothesis_cause`) is the last *passed* gate; `phase` gives the coarse marker.
-2. **Verify the resume prerequisites** before continuing: the issue's dev branch exists and is checked out, the `.autoflow/issue-{N}-*.md` artifacts the next phase consumes are present, and the **last** `### preflight-local-checks | cycle: <C>` record for the **current** cycle in the ledger reads `none declared` or `PASS … worktree=clean` — exactly the two lines an exit-0 run writes. Any other state — no record for this cycle, a last record reading `FAIL …` (exit 1), or one reading `DIRTY …` (exit 3: the checks passed but the tree they left is what a session ended on, between Step 4 and the re-run) — means Step 1a runs now, with the same exit handling (1 → stop and report, 3 → Step 4 then re-run, 2 → fix the scaffold), before any phase is re-entered. The branch is identified by the **documented dev-branch naming convention** (PREFLIGHT Step 5): the issue-scoped dev branch for `#N` is `dev/<date>-issue-<N>`, located with `git branch --list 'dev/*-issue-<N>'`. If it is missing, or matches ambiguously, or a required artifact is absent, treat the cycle as unrecoverable and report to the user (do not fabricate the missing artifact).
-3. **Re-enter at the phase immediately after the last passed gate** — unless that gate's latest
-   record still carries `remedy_class`: a passed gate carrying one has an open recommendation
-   attempt ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*), and the cycle resumes on the route the last
-   `[gate-autofix]` entry names, not past the gate; a failed gate carrying one resumes on its FAIL route. A passed gate whose latest `[rebuttal]` entry has no verdict entry of that gate after it resumes at that gate's re-score ([HANDOFF](handoff.md) step 6.5 > *Whether a finding holds*). If the last confirmed point is indeterminate (no recorded gate `scores`, or artifacts inconsistent), fall back conservatively to **re-running from the phase that follows the most recent gate whose `scores` are present** — never skip a gate that has no recorded PASS. A gate is re-run, not assumed passed, whenever its `scores` are absent.
-4. Resume does **not** increment `cycle` and does **not** reset `phases` (contrast review-response entry, which does both).
+## PR Wait Rule
 
-**Bundle drift (fail-closed stop condition).** Before DIAGNOSE, on a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this step), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`; the leg resolves the opt-in through the shipped `scripts/test/suite-manifest.sh` and a target that has not opted in PASSes without the selector being consulted) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7 — the selector's own `--check-headers` stage); a declaration file that is present but unreadable is a D7 FAIL, and a scaffold with no `tests` object at all is named by a `HINT` beside the PASS (a re-stamp never adds it). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`; a side that is not locally resolvable reports `SKIP`, never a failure. A non-zero exit is a **fail-closed** hard PREFLIGHT stop: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per [BUILD](build.md) > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`), or repair the unreadable `.claude/autoflow.local.json` it names. A `WARN` (a changed scaffold sample, an artifact the current manifest does not ship) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
+The readiness check that clears the requested issue to start. Its source of truth is AutoFlow's own
+`.autoflow/issue-*.json` state files; the start signal is [`CLAUDE.md`](../../CLAUDE.md) > PR Wait
+Rule.
 
-**Reviewer-backend availability (fail-closed stop condition).** Before DIAGNOSE, PREFLIGHT confirms the configured HANDOFF step-6 review **backend** is **available** by running `scripts/preflight/check-review-backend.sh` — it reads the backend from `.claude/autoflow.local.json` (`.review.backend`, default `codex`; absent ⇒ codex) and probes the CLI presence-only (`command -v codex` / `command -v claude`; auth is not probed — a present-but-unauthenticated backend passes here and surfaces its auth failure at HANDOFF step 6). A non-zero exit is a **fail-closed** hard PREFLIGHT stop: the cycle does not begin until the configured backend's CLI is installed or the backend is switched in `.claude/autoflow.local.json`. See [`reviewer-backend.md`](../reviewer-backend.md).
+- **[MUST]** An `active:false` state file (`phase: awaiting-external-review`) is **cleared and
+  handed off**: its PR belongs to external review, which merges on its own schedule. Readiness is
+  tied to the `active` flag alone.
+- Another issue's `active:true` holds the requested one: report and hold, and finish or resolve
+  that cycle first.
 
-**Target-declared local checks (fail-closed stop condition — Step 1a above).** PREFLIGHT runs the target repository's **own** readiness procedure by executing `scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` at Step 1a — after prior-cycle resolution, before the Git clean check and before the state file is created. The target declares that procedure in the target-owned scaffold `.claude/autoflow.local.json` under `preflight.local_checks[]` — one entry per step, each `{ "name", "check", "repair"? }`, where `check` is the command PREFLIGHT runs (exit 0 = ready) and the optional `repair` is run once on a failed `check`, followed by a re-check whose exit is the verdict. A target whose docs name a per-clone setup step (a commit-hook installer, a generated config, a toolchain probe) declares it here; the framework knows **no specific tool** — it runs what is declared and reads only the exit status. **Absent declaration ⇒ no-op**: the script exits 0 and records the single line `PREFLIGHT local checks: none declared`. A declared check that does not pass (after repair, when one is declared) is a **fail-closed** hard PREFLIGHT stop (exit 1): run the declared repair, or fix the declaration, then re-run. A declaration the script cannot read as declared (malformed JSON, wrong types, an entry without a string `check`) is exit 2 and also stops — never a silent no-op. A passing run additionally asserts `git status --porcelain` is empty afterwards: a dirty tree is exit 3 with the paths on stderr — not a failed check, but the Step 2 condition already broken, so the orchestrator disposes of those paths under Step 4 and re-runs Step 1a; Step 2 then confirms the clean tree on its own. The outcome is written **only** as a ledger record — a level-3 heading `### preflight-local-checks | cycle: <C>` with one `- result:` line whose leading token is the terminal verdict (`none declared`; `PASS <name>=PASS[(repaired)] … worktree=clean` for exit 0; `DIRTY <name>=PASS[(repaired)] … worktree=dirty(<n>)` for exit 3; `FAIL <name>=FAIL[(…)] … worktree=n/a` for exit 1 — `PASS` is written only on exit 0) — an identifier-free record entry; the state file is untouched, and the gate hook reads the ledger advisorily only. The commit-time lint-chain obligation (`submodule-common-rules.md` > *Lint chain on the staged surface*) applies on its own: a declared check that installs the lint chain does not replace running it.
+## Modes
 
-**Hard stop**: if the Git state is not clean after resolution attempts (e.g. `--ff-only` fails), **stop and report to the user**. Do NOT proceed to DIAGNOSE.
+The requested issue's mode follows from its own state file; none of these is a judgment:
+
+| The issue's state | Mode |
+|---|---|
+| no state file (or one just cleared because its PR is merged or closed) | `new-issue` |
+| `active:true` | `resume` — the in-progress cycle continues (*Resume*); it is not restarted |
+| `active:false`, `phase` other than `awaiting-user`, with an open PR | `review-response` (*Review-response setup*) |
+| `active:false` at `phase: "awaiting-user"` (a PR open or not), or `active:false` with no open PR | paused: the cycle waits on a human decision and is not cleared. The pending decision and its `.autoflow/issue-{N}-*.md` context are reported. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart: when the user decides to continue, the orchestrator sets `active: true` and continues where the pause was taken |
+
+## Review-response setup
+
+For a cycle entered at PREFLIGHT in `review-response` mode, and for a HANDOFF `design` re-entry
+inside the session ([HANDOFF](handoff.md) > *Routing*). On the issue's existing dev branch:
+
+- **[MUST] The previous cycle's artifacts are preserved** before any phase of the new cycle writes:
+  every `.autoflow/issue-{N}-<artifact>.md` is renamed to `.autoflow/issue-{N}-c{C}-<artifact>.md`,
+  `C` being the previous cycle number. What spans cycles keeps its name — the ledger, the advisor
+  records its entries point at (`issue-{N}-advisor-*.md`), the per-PR findings files
+  (`issue-{N}-review-findings*.md`), the state file and the cycle-layer store `issue-{N}-local/` —
+  and, only on a HANDOFF `design` re-entry judged to start at ARCHITECT, the analysis report that
+  shape reuses in place.
+- **The state file moves to the next cycle**: `mode: "review-response"`, `active: true`,
+  `phase: "in-progress"`, `cycle` incremented, and `phases` reset to the Creation template (the
+  `verdict` rule kept) — on the ARCHITECT re-design shape, only the gates that shape re-runs
+  (GATE:PLAN, AUDIT, GATE:QUALITY).
+- The local checks run with the incremented cycle number, and the state is set only once they pass.
+- The issue carries `status:in-progress`, and the DIAGNOSE unit's prompt names the reviewer comment
+  or thread that triggered the cycle.
+
+How much of the previous cycle's artifacts the new cycle reuses is the analysis and design units'
+own ([DIAGNOSE](analysis.md) > Unit spawn; [ARCHITECT](architect.md) > *Re-entry*). The cycle-layer
+store's retained set is reviewed, re-authored and re-executed at the new cycle's BUILD; a check that
+did not execute is `not-run`, never `passed`.
+
+## Resume
+
+The requested issue's own state reads `active:true`: a cycle a session ended in the middle of.
+`cycle-status.sh --issue {N}` reports what the resume is judged from — each gate's recorded scores,
+`verdict` and `remedy_class`, the artifacts on disk, the ledger's last `[gate-autofix]`,
+`[rebuttal]`, `[review-autofix]` and `[reentry-decision]` entries, and the last local-checks record
+of the current cycle. It names no phase: **where the cycle re-enters is the orchestrator's judgment
+over those facts**, recorded with its grounds in the ledger. Cautions:
+
+- The cycle is continued, not restarted: a resume does not increment `cycle` and does not reset
+  `phases`. It does not require a clean tree either — what the interrupted session left
+  uncommitted belongs to the phase that re-enters.
+- The issue's dev branch is checked out before any phase re-enters. A branch that is missing or
+  matches more than one name, or facts that do not fit together, are reported to the user.
+- A last local-checks record of the current cycle that is not `none declared` or `PASS …
+  worktree=clean` means the local checks run now, before any phase re-enters (*Stop conditions*).
+- A gate with no recorded scores has not passed. It is run, never assumed — the cycle re-enters no
+  later than the phase whose artifact that gate scores.
+- A gate whose record carries `remedy_class` has an open re-entry: a passed gate's open
+  recommendation attempt ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*), which resumes
+  on the route its last `[gate-autofix]` entry names and not past the gate; or a failed gate's FAIL
+  route.
+- A `[rebuttal]` entry with no verdict entry of that gate after it resumes at that gate's re-score
+  ([HANDOFF](handoff.md) > *Whether a finding holds*).
+- An artifact the next phase consumes that is absent is not written by the orchestrator: the phase
+  that produces it runs again.
+
+## Stop conditions
+
+Each is a fail-closed hard stop, run by the orchestrator before the state file is created: DIAGNOSE does not begin until all three pass.
+
+**Bundle drift.** On a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this check), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`; a non-zero exit stops the cycle. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`; the leg resolves the opt-in through the shipped `scripts/test/suite-manifest.sh` and a target that has not opted in PASSes without the selector being consulted) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7 — the selector's own `--check-headers` stage); a declaration file that is present but unreadable is a D7 FAIL, and a scaffold with no `tests` object at all is named by a `HINT` beside the PASS (a re-stamp never adds it). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`; a side that is not locally resolvable reports `SKIP`, never a failure. Remedies: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per [BUILD](build.md) > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`), or repair the unreadable `.claude/autoflow.local.json` it names. A `WARN` (a changed scaffold sample, an artifact the current manifest does not ship) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
+
+**Reviewer-backend availability.** PREFLIGHT runs `scripts/preflight/check-review-backend.sh`, which reads the configured HANDOFF review backend from `.claude/autoflow.local.json` (`.review.backend`, default `codex`; absent ⇒ codex) and probes the CLI presence-only (`command -v codex` / `command -v claude`; auth is not probed — a present-but-unauthenticated backend passes here and surfaces its auth failure at the HANDOFF reviewer review). A non-zero exit stops the cycle: it does not begin until the configured backend's CLI is installed or the backend is switched in `.claude/autoflow.local.json`. See [`reviewer-backend.md`](../reviewer-backend.md).
+
+**Target-declared local checks.** PREFLIGHT runs the target repository's **own** readiness procedure through `scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` — after prior-cycle resolution and before the state file is created; `<C>` is the cycle the state file will carry (`1` on a new issue, the incremented value on review-response entry). The target declares that procedure in the target-owned scaffold `.claude/autoflow.local.json` under `preflight.local_checks[]` — one entry per step, each `{ "name", "check", "repair"? }`, where `check` is the command run (exit 0 = ready) and the optional `repair` is run once on a failed `check`, followed by a re-check whose exit is the verdict. A target whose docs name a per-clone setup step (a commit-hook installer, a generated config, a toolchain probe) declares it here; the framework knows **no specific tool** — it runs what is declared and reads only the exit status. **Absent declaration ⇒ no-op**: the record is the single line `PREFLIGHT local checks: none declared`. A declared check that does not pass (after repair, when one is declared) is exit `1` and stops the cycle: run the declared repair, or fix the declaration, then run PREFLIGHT again. A declaration that cannot be read as declared (malformed JSON, wrong types, an entry without a string `check`) is exit `2` and also stops — never a silent no-op. A passing run additionally asserts `git status --porcelain` is empty afterwards: a dirty tree is exit `3` — not a failed check, but the clean-tree condition already broken — so it is resolved with the user's approval and PREFLIGHT is run again. The outcome is written **only** as a ledger record — a level-3 heading `### preflight-local-checks | cycle: <C>` with one `- result:` line whose verdict token is `none declared`, `PASS <name>=PASS[(repaired)] … worktree=clean`, `DIRTY <name>=PASS[(repaired)] … worktree=dirty(<n>)` or `FAIL <name>=FAIL[(…)] … worktree=n/a` (`PASS` is written only when the run passed and the tree is clean) — an identifier-free record entry; the state file is untouched, and the gate hook reads the ledger advisorily only. The commit-time lint-chain obligation (`submodule-common-rules.md` > *Lint chain on the staged surface*) applies on its own: a declared check that installs the lint chain does not replace running it.

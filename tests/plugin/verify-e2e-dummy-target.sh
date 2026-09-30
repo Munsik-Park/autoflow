@@ -356,7 +356,10 @@ echo "== E3a-x (issue #10): installed exec bit set on the new methodology-step s
 if [ "$DRIVE_PASS" -eq 1 ]; then
   NOT_EXEC=""
   for _xdest in \
-    "scripts/handoff/create-host-pr.sh" \
+    "scripts/preflight/cycle-status.sh" \
+    "scripts/handoff/ci-test-file-jobs.sh" \
+    "scripts/handoff/review-gate.sh" \
+    "scripts/review/review-start-check.sh" \
     "scripts/cleanup/cleanup-issue.sh"
   do
     if [ -f "$DUMMY/$_xdest" ]; then

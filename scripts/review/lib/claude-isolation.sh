@@ -6,7 +6,7 @@
 # =============================================================================
 # SINGLE SOURCE OF TRUTH for the claude reviewer/probe isolation triple, sourced
 # (not executed) by BOTH:
-#   - scripts/review/codex-review-pr.sh   (HANDOFF step-6 review call)
+#   - scripts/review/codex-review-pr.sh   (HANDOFF reviewer review call)
 #   - scripts/preflight/check-review-backend.sh --probe  (on-demand auth check)
 #
 # Two hand-maintained copies of this CLAUDE* env scrub / OAuth carve-out loop is

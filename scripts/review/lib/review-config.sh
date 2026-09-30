@@ -7,7 +7,7 @@
 # SINGLE SOURCE OF TRUTH for reading `.claude/autoflow.local.json`'s `review`
 # section — backend, per-backend model, per-backend effort — and for mapping
 # the resolved values onto each backend CLI's flags. Sourced (not executed) by:
-#   - scripts/review/codex-review-pr.sh                (HANDOFF step-6 review)
+#   - scripts/review/codex-review-pr.sh                (HANDOFF reviewer review)
 #   - scripts/preflight/check-review-backend.sh        (PREFLIGHT presence + --probe)
 # so the live review and the on-demand probe cannot drift on parser, defaults
 # or validation (issue #184 Risk: "reading the same config independently in
