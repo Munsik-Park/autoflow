@@ -84,7 +84,7 @@ if [ ! -f "$FINDINGS" ]; then
   echo "findings-file defect: $FINDINGS does not exist"
   exit 2
 fi
-named="$(sed -nE 's/^pr:[[:space:]]*(.+)[[:space:]]*$/\1/p' "$FINDINGS" | sort -u)"
+named="$(sed -nE 's/^pr:[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p' "$FINDINGS" | sort -u)"
 if [ -n "$named" ] && [ "$named" != "$REPO#$PR" ]; then
   echo "findings-file defect: $FINDINGS names $(printf '%s' "$named" | tr '\n' ' ')on its pr: line, not $REPO#$PR"
   exit 2

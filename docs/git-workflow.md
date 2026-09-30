@@ -160,8 +160,10 @@ Performed at PREFLIGHT of the next cycle once the prior PR is observed merged
 or closed (or by the live session if it observes the decision first), for
 **every** resolved cycle, including ones from earlier cycles.
 `scripts/preflight/preflight.sh enter` does all of it but the remote-branch
-deletion, which it names on a `remote-branch-to-delete:` line: a push is the
-orchestrator's own command ([`phases/handoff.md`](phases/handoff.md) > *Push and pull request*).
+deletion: it names the branch on a `remote-branch-to-delete:` line and stops
+(exit `12`), because a push is the orchestrator's own command
+([`phases/handoff.md`](phases/handoff.md) > *Push and pull request*) and the hook
+admits it only while no cycle is active.
 
 ```bash
 git checkout main

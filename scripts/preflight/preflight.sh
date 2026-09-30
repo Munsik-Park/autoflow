@@ -15,8 +15,10 @@
 #
 # It never pushes and never opens a pull request. A remote dev branch left
 # behind by a merged or closed PR is named on a `remote-branch-to-delete:`
-# line; the orchestrator deletes it with `git push origin --delete <branch>`,
-# a command the gate hook sees.
+# line and the run stops (exit 12) before any state file is active, so the
+# orchestrator deletes it with `git push origin --delete <branch>` — a command
+# the gate hook sees, and admits only while no cycle is active — and runs this
+# again.
 #
 # Subcommands
 #   status [--issue N]
@@ -37,14 +39,19 @@
 #   0   ready — `mode: new-issue | review-response | resume`; the record is
 #       written to `.autoflow/issue-N-preflight.md`
 #   10  hold — another issue's state file reads `active:true`
-#   11  paused — issue N is inactive with no open PR (a pause for a human
-#       decision); nothing was changed
-#   20  the working tree is dirty (the paths are listed); nothing was changed
-#       beyond what the local checks themselves left. A resume does not stop
-#       on a dirty tree — it reports the count
+#   11  paused — issue N is inactive at `phase: awaiting-user`, or inactive
+#       with no open PR (a pause for a human decision); its state is unchanged
+#   12  a cleared cycle left its dev branch on the remote (named on
+#       `remote-branch-to-delete:` lines); the requested issue is untouched —
+#       delete each branch and run again
+#   20  the working tree is dirty (the paths are listed). At entry nothing was
+#       changed; after the local checks (which may leave the tree dirty) the
+#       mode's branch is already checked out and synced. A resume does not
+#       stop on a dirty tree — it reports the count
 #   21  sync failed — `git fetch`, or a fast-forward of the branch the mode
 #       works on
-#   22  the dev branch for an issue is missing or matches more than one name
+#   22  the requested issue's dev branch is missing, matches more than one
+#       name, exists with no state file, or cannot be checked out or created
 #   30  bundle drift (`.claude/autoflow/drift-check.sh`)
 #   31  the configured reviewer backend's CLI is absent
 #   32  a target-declared local check failed
@@ -160,9 +167,9 @@ read_facts() {
   F_CYCLE="$(state_field "$n" '.cycle // 1')"
   F_BRANCH="$(branches_of "$n")"
   F_BRANCH_COUNT="$(printf '%s' "$F_BRANCH" | grep -c . || true)"
-  F_PR=""; F_PR_STATE=""; F_PR_URL=""
+  F_PR=""; F_PR_STATE=""; F_PR_URL=""; F_PR_LOOKUP="ok"
   if [ "$F_BRANCH_COUNT" = "1" ]; then
-    line="$(pr_of "$F_BRANCH")" || return 40
+    line="$(pr_of "$F_BRANCH")" || { F_PR_LOOKUP="failed"; return 40; }
     if [ -n "$line" ]; then
       F_PR="${line%% *}"; line="${line#* }"
       F_PR_STATE="${line%% *}"; F_PR_URL="${line#* }"
@@ -178,7 +185,10 @@ print_facts() {
     1) say "  branch: $F_BRANCH (local=$(has_local "$F_BRANCH" && echo yes || echo no) origin=$(has_remote "$F_BRANCH" && echo yes || echo no))" ;;
     *) say "  branch: ambiguous — $(printf '%s' "$F_BRANCH" | tr '\n' ' ')" ;;
   esac
-  if [ -n "$F_PR" ]; then say "  pr: #$F_PR $F_PR_STATE $F_PR_URL"; else say "  pr: none"; fi
+  if [ "$F_PR_LOOKUP" = "failed" ]; then say "  pr: lookup failed"
+  elif [ -n "$F_PR" ]; then say "  pr: #$F_PR $F_PR_STATE $F_PR_URL"
+  elif [ "$F_BRANCH_COUNT" = "0" ]; then say "  pr: not looked up (no dev branch to look it up by)"
+  else say "  pr: none"; fi
 }
 
 # What a resume is judged from: each gate's record, the artifacts on disk, the
@@ -323,7 +333,6 @@ if [ "$SUB" = "status" ]; then
     read_facts "$n"; rc=$?
     if [ "$rc" -eq 41 ]; then say "issue #$n: state file unreadable"; continue; fi
     print_facts "$n"
-    [ "$rc" -eq 40 ] && say "  pr: lookup failed"
     [ "$n" = "$ISSUE" ] && print_cycle_detail "$n"
   done
   [ "$found" -eq 0 ] && say "state files: none"
@@ -356,6 +365,7 @@ DEFAULT="$(default_branch)"
 
 # Prior-cycle resolution: every state file against its branch and its PR.
 hold=""
+stale_remote=""
 own_state="absent"
 for n in $(state_issues); do
   read_facts "$n"; rc=$?
@@ -369,7 +379,10 @@ for n in $(state_issues); do
     if has_local "$F_BRANCH"; then
       git branch -D "$F_BRANCH" >/dev/null 2>&1 && say "  cleared: local branch $F_BRANCH deleted"
     fi
-    has_remote "$F_BRANCH" && say "  remote-branch-to-delete: $F_BRANCH"
+    if has_remote "$F_BRANCH"; then
+      say "  remote-branch-to-delete: $F_BRANCH"
+      stale_remote="${stale_remote:+$stale_remote }$F_BRANCH"
+    fi
     if out="$(bash "$SCRIPT_DIR/../cleanup/cleanup-issue.sh" "$n" 2>&1)"; then
       say "  cleared: $(printf '%s' "$out" | tail -1)"
     else
@@ -387,6 +400,8 @@ for n in $(state_issues); do
   fi
   if [ "$F_ACTIVE" = "true" ]; then
     hold="${hold:+$hold }#$n"
+  elif [ "$F_BRANCH_COUNT" = "0" ]; then
+    say "  pending: issue #$n has no dev branch on either side, so its pull request cannot be looked up — if it is merged or closed, archive it with scripts/cleanup/cleanup-issue.sh $n"
   elif [ -z "$F_PR" ]; then
     say "  pending: issue #$n is paused with no pull request — its files stay in place"
   fi
@@ -395,6 +410,19 @@ done
 if [ -n "$hold" ]; then
   say "stop: another issue is mid-cycle ($hold) — one issue runs at a time"
   exit 10
+fi
+
+# A push is the orchestrator's own command, and the hook admits it only while
+# no cycle is active — so the run stops here, before this issue's state is
+# created or reactivated. A resume is already active: the deletion waits until
+# the hook admits a push.
+if [ -n "$stale_remote" ]; then
+  if [ "$own_state" = "present" ] && [ "$OWN_ACTIVE" = "true" ]; then
+    say "note: the remote branch(es) above cannot be deleted while this cycle is active (the hook gates every push) — delete them once it admits a push"
+  else
+    say "stop: a cleared cycle left its dev branch on the remote — delete each with 'git push origin --delete <branch>' and run this again"
+    exit 12
+  fi
 fi
 
 sync_default() {
@@ -439,6 +467,12 @@ if [ "$own_state" = "absent" ]; then
   finish_ready
 fi
 
+if [ "$OWN_ACTIVE" != "true" ] && [ "$OWN_PHASE" = "awaiting-user" ]; then
+  say "mode: paused"
+  say "stop: issue #$ISSUE is paused for a human decision (phase=awaiting-user$([ -n "$OWN_PR" ] && echo ", pull request #$OWN_PR $OWN_PR_STATE")) — its .autoflow/issue-$ISSUE-* files carry the pending decision; nothing was changed"
+  exit 11
+fi
+
 if [ "$OWN_BRANCH_COUNT" != "1" ]; then
   say "stop: the dev branch of issue #$ISSUE is $([ "$OWN_BRANCH_COUNT" = "0" ] && echo missing || echo ambiguous) — the cycle cannot be continued from this checkout"
   exit 22
@@ -471,5 +505,5 @@ if [ "$OWN_PR_STATE" = "OPEN" ]; then
 fi
 
 say "mode: paused"
-say "stop: issue #$ISSUE is inactive (phase=${OWN_PHASE:-unset}) with no open pull request — a pause for a human decision; its .autoflow/issue-$ISSUE-* files carry the pending decision"
+say "stop: issue #$ISSUE is inactive (phase=${OWN_PHASE:-unset}) with no open pull request — a pause for a human decision; its .autoflow/issue-$ISSUE-* files carry the pending decision; nothing was changed"
 exit 11

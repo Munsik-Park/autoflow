@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0a2d0938ee6690b0006995eed6416e769fc99f60e27d401b9fc5be9263d4ff63"
+      "sha256": "9fbf4f55a60bae70a028af218b10d9b7a41b370f2ec45aa5a196e8e71645584e"
     },
     {
       "source": "docs/INDEX.md",
@@ -62,7 +62,7 @@
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "93cd227e3017e27b92731cadfe4980226b061ccf1f9d773bf6901c246420ab74"
+      "sha256": "a8d03e5f08f3c42fca2fd14c74edd6d1bcc21970b6441c46cd53dd1e21c5b63f"
     },
     {
       "source": "docs/issue-proposal.md",
@@ -132,7 +132,7 @@
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4ab161eca3ab423a4dae672efb64b434115ff52ee8bdbc040e65a23c5898f558"
+      "sha256": "90ac1da42b9d3752b6fc4f95f6126d09cc8bdd7a0d337c11b5400d518825a530"
     },
     {
       "source": "docs/phases/integrate.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/phases/preflight.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "00ed2fada0ec18155853a0870bfee17c44e15715d2392656f28a1c09d6f04d78"
+      "sha256": "eb8b38d5600d89c880d13761020f61f7bc0ae79f00d4d1e485ece23837154584"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -293,7 +293,7 @@
       "dest": "scripts/preflight/preflight.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "5941577be8753d9587a39dcca35ef07ec4a92ff2e1ba0dbfaf950b7629793012"
+      "sha256": "44fa3dc8c38369b975cae776039b92829ace9f565a16036d9667ebd1406949c3"
     },
     {
       "source": ".codex/review.md",
@@ -342,7 +342,7 @@
       "dest": "scripts/handoff/review-gate.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e84706f990ce20cbebffb85693e18d5cd8daded8901ee8c84e0587bedcd581e2"
+      "sha256": "91504a4de80082c93b5680fc76cf412adc52d93199d93f1019b48abc9456651a"
     },
     {
       "source": "scripts/state/set-phase.sh",

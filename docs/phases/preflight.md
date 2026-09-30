@@ -26,10 +26,13 @@ operator's decision ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
   branch (`dev/<date>-issue-<N>`) and the branch's pull request. A cycle whose PR is merged or
   closed is cleared: its local dev branch is deleted and its `.autoflow/issue-{N}*` files are
   archived by `scripts/cleanup/cleanup-issue.sh` ([`git-workflow.md`](../git-workflow.md) >
-  Post-Merge Cleanup). An issue paused with no PR keeps its files in place and is reported.
+  Post-Merge Cleanup). A dev branch such a cycle left on the remote stops the run (exit `12`)
+  before the requested issue's state is touched. An issue paused with no PR keeps its files in
+  place and is reported.
 - **PR Wait Rule** (below) and the **mode** of the requested issue (*Modes*).
 - **Sync.** `git fetch origin`; the default branch (new issue) or the issue's dev branch
-  (review-response, resume) is checked out and fast-forwarded from the remote.
+  (review-response) is checked out and fast-forwarded from the remote. A resume checks its dev
+  branch out as it stands.
 - **Stop conditions** (below): bundle drift, reviewer-backend availability, target-declared local
   checks.
 - **New issue**: the dev branch `dev/YYYY-MM-DD-issue-N` from the default branch, the state file
@@ -40,21 +43,25 @@ operator's decision ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
 |---|---|---|
 | `0` | ready — the output names `mode: new-issue`, `review-response` or `resume` | DIAGNOSE (new issue, review-response), or *Resume* |
 | `10` | another issue's state reads `active:true` | report and hold — one issue runs at a time |
-| `11` | the requested issue is inactive with no open PR — a pause for a human decision | report the pending decision and its `.autoflow/issue-{N}-*.md` context; re-entry is the user's decision (*Modes*) |
+| `11` | the requested issue is paused for a human decision — inactive at `phase: awaiting-user`, or inactive with no open PR | report the pending decision and its `.autoflow/issue-{N}-*.md` context; re-entry is the user's decision (*Modes*) |
+| `12` | a cleared cycle left its dev branch on the remote, named on `remote-branch-to-delete:` lines; the requested issue is untouched | the orchestrator deletes each with its own `git push origin --delete <branch>` and runs the script again |
 | `20` | the working tree is dirty; the paths are listed | the dirty state is resolved — stash, commit, or discard **with the user's approval** — and the script is run again |
 | `21` | `git fetch` failed, or the branch does not fast-forward from the remote | stop and report to the user |
-| `22` | an issue's dev branch is missing or matches more than one name | the cycle cannot be continued from this checkout: report to the user |
+| `22` | the requested issue's dev branch is missing, matches more than one name, exists with no state file, or cannot be checked out or created | the cycle cannot be continued from this checkout: report to the user |
 | `30` / `31` / `32` / `33` | a stop condition failed — drift / reviewer backend / a local check / an unreadable local-check declaration | *Stop conditions* |
 | `40` / `41` / `42` | a `gh` read failed / a state file is unreadable / archiving failed | fix the named cause and run again; a second failure is reported to the user |
 
 Cautions:
 
-- **The script never pushes.** A remote dev branch a cleared cycle left behind is named on a
-  `remote-branch-to-delete:` line; the orchestrator deletes it with its own
-  `git push origin --delete <branch>`, a command the gate hook sees ([HANDOFF](handoff.md) >
-  *Push and pull request*).
-- **A dirty tree is never resolved without the user.** Exit `20` changes nothing; what is stashed,
-  committed or discarded is the user's to approve.
+- **The script never pushes.** A remote dev branch a cleared cycle left behind is deleted by the
+  orchestrator's own `git push origin --delete <branch>`, a command the gate hook sees
+  ([HANDOFF](handoff.md) > *Push and pull request*). The hook gates every push on the active
+  cycle's AUDIT and GATE:QUALITY, so the run stops at exit `12` while no cycle is active yet; on a
+  resume, where the cycle is already active, the branch is only named and its deletion waits until
+  the hook admits a push.
+- **A dirty tree is never resolved without the user.** A tree dirty at entry changes nothing; when
+  the local checks leave it dirty, the mode's branch is already checked out. Either way what is
+  stashed, committed or discarded is the user's to approve.
 - **An exit other than `0` is a stop, not a step to work around.** The state file and the dev
   branch are created only on exit `0`.
 
@@ -80,8 +87,8 @@ The script selects the requested issue's mode from its own state file; none of t
 |---|---|
 | no state file (or one just cleared because its PR is merged or closed) | `new-issue` |
 | `active:true` | `resume` — the in-progress cycle continues (*Resume*); it is not restarted |
-| `active:false` with an open PR | `review-response` (*Review-response setup*) |
-| `active:false` with no open PR | paused (exit `11`): the cycle waits on a human decision and is not cleared. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart. When the user decides to continue, the orchestrator sets the cycle active again (`bash scripts/state/set-phase.sh --issue {N} --phase in-progress`) and continues where the pause was taken |
+| `active:false`, `phase` other than `awaiting-user`, with an open PR | `review-response` (*Review-response setup*) |
+| `active:false` at `phase: "awaiting-user"` (a PR open or not), or `active:false` with no open PR | paused (exit `11`): the cycle waits on a human decision and is not cleared. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart. When the user decides to continue, the orchestrator sets the cycle active again (`bash scripts/state/set-phase.sh --issue {N} --phase in-progress`) and continues where the pause was taken |
 
 ## Review-response setup
 
