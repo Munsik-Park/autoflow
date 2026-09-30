@@ -232,8 +232,8 @@ No separate disposition system exists for gate recommendations.
   new attempt; the hook denies `git push` / `gh pr create` while it is present on `audit` or
   `gate_quality`.
   A resume reads the same field ([PREFLIGHT](preflight.md) > *Resume*).
-- **Attempt cap = 7**, counted as HANDOFF's review triage counts: the `[gate-autofix]` entries this
-  cycle since the last user re-entry decision (an entry whose heading ends in `[reentry-decision]`). When the triage after the 7th such attempt would open
+- **Attempt cap = 7**: the consecutive `[gate-autofix]` entries this cycle since the last user
+  re-entry decision (an entry whose heading ends in `[reentry-decision]`). When the triage after the 7th such attempt would open
   another — a `Medium`+ still open, or a `Low` the orchestrator would fix now — it pauses for the
   user instead; the user's decision resets the window. A re-score's own recommendations enter this
   triage on the same window, so a run of `Low`-only re-scores each fixed now counts like a run of
