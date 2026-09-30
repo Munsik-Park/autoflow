@@ -1,11 +1,11 @@
 # Reviewer Backend Contract
 
-HANDOFF step 6 (external review) runs through a **backend-neutral reviewer
+HANDOFF's reviewer review (external review) runs through a **backend-neutral reviewer
 contract**. `codex` is the default backend; `claude` is an opt-in fallback. This
 document is the single home for the abstraction — the inputs, obligations,
 output, backend table, config location, and the per-backend start-confirmation
 oracle. It is referenced from [`phases/handoff.md`](phases/handoff.md)
-step 6 and `CLAUDE.md`.
+> *Reviewer review* and `CLAUDE.md`.
 
 ## Contract
 
@@ -144,7 +144,7 @@ credentials, no unrelated variables). `--probe` prints the same summary as
 round-trip, and passes the identical flags.
 
 **Orchestrator vs. reviewer.** These pins govern only the **isolated reviewer
-subprocess** HANDOFF step 6 launches. The orchestrating Claude Code session's
+subprocess** HANDOFF's reviewer review launches. The orchestrating Claude Code session's
 own model and effort follow the user's session settings, and the AutoFlow role
 spawns follow `.claude/autoflow/spawn-policy.json`; neither reads the `review`
 section, and the review pins read neither of them.
@@ -191,7 +191,7 @@ other than `codex`/`claude`): it exits `2` with a stderr diagnostic before
 invoking any reviewer, matching this pre-check's own `exit 2`. On this
 **presence-only** PREFLIGHT path, auth is **not** probed: a
 present-but-unauthenticated backend passes PREFLIGHT and its auth failure
-surfaces at HANDOFF step 6 (the review run itself). An explicit, on-demand
+surfaces at the HANDOFF reviewer review (the review run itself). An explicit, on-demand
 authenticated round-trip is available separately via `--probe` (next section)
 and is never wired into this PREFLIGHT path.
 
@@ -200,7 +200,7 @@ and is never wired into this PREFLIGHT path.
 `scripts/preflight/check-review-backend.sh --probe` is a **separate on-demand
 mode**: it performs **one real authenticated round-trip** against
 the configured backend — not a `command -v` presence check and not a version
-check — over the **identical auth channel and isolation** HANDOFF step 6 uses
+check — over the **identical auth channel and isolation** the HANDOFF reviewer review uses
 (for `claude`: the same neutral cwd + `CLAUDE*` env scrub + OAuth carve-out +
 `--setting-sources ""` isolation triple, sourced from the shared
 `scripts/review/lib/claude-isolation.sh`; for `codex`: the same model-API
@@ -226,18 +226,22 @@ is narrated, never used to abort an install or gate a cycle.
 | `1` | Backend CLI **absent** — short-circuit that reuses the presence exit 1 + remedy (no round-trip is attempted). |
 | `2` | Usage/config error (bad arg, unknown/unresolvable backend, jq-absent/parse). |
 | `3` | **Indeterminate** — the probe could not reach a verdict (timeout / no-TTY interactive-login required). Bounded by `PROBE_TIMEOUT_SECS` (default 20s). |
-| `4` | Backend CLI **present but the round-trip failed** (unauthenticated / rejected) — the condition that surfaces at step 6. |
+| `4` | Backend CLI **present but the round-trip failed** (unauthenticated / rejected) — the condition that surfaces at the HANDOFF reviewer review. |
 
 ## Per-backend start-confirmation oracle
 
-- `codex` — a fresh `~/.codex/sessions/<date>/rollout-*.jsonl` +
-  `pgrep -f "pull request #<N>"` + an advancing rollout `mtime` (the long-run
-  health signal); the review runs in the background to completion. The wrapper
+`scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's output>]`
+reads these signals and reports the first one it finds
+([`phases/handoff.md`](phases/handoff.md) > *Reviewer review*):
+
+- `codex` — a session rollout under `~/.codex/sessions/` written since the launch whose prompt
+  names `pull request #<N>`, or a running process whose prompt does; an advancing rollout `mtime`
+  is the long-run health signal, and the review runs in the background to completion. The wrapper
   closes `codex exec` stdin (`< /dev/null`) and prints completion marker
   `[review] codex completed for PR #<N> (exit=…)` when the subprocess returns.
-- `claude` — the wrapper runs `claude -p` **synchronously** and prints a
-  completion marker `[review] claude completed for PR #<N> (exit=…)` when the
-  subprocess returns. That marker is the start/finish signal; a non-zero exit
+- `claude` — the wrapper runs `claude -p` **synchronously**, so the running process whose prompt
+  names the pull request is the start signal, and the completion marker
+  `[review] claude completed for PR #<N> (exit=…)` the finish signal; a non-zero exit
   means the review run itself failed.
 
 ## Trade-offs

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Elastic-2.0
 # scripts/gate/remedy-route.sh — class-routed re-entry (issues #140, #192)
 #
-# The classifier tags every failed rubric item — or, at HANDOFF step 6.5,
+# The classifier tags every failed rubric item — or, at HANDOFF review triage,
 # every Medium+ review finding, or a CI failure — with a `remedy_class`, and
 # this script is the single owner of the mapping from that class set to the
 # point the cycle re-enters:
@@ -25,7 +25,7 @@
 # Call sites (all read the same mapping; each interprets the printed target
 # in its own playbook, and none reimplements the ranking):
 #   - GATE:QUALITY FAIL, INTEGRATE FAIL, HANDOFF CI failure
-#   - HANDOFF step 6.5 review triage — there `ARCHITECT` means the design owns
+#   - HANDOFF review triage — there `ARCHITECT` means the design owns
 #     the moved decision and the orchestrator judges and records where the
 #     re-entry starts (a cycle from DIAGNOSE, or an ARCHITECT unit re-run);
 #     `BUILD` / `DOC_COMMIT` are the thin path (a U4 re-run or a doc commit

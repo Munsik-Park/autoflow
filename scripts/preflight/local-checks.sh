@@ -57,13 +57,13 @@
 # the root is a git worktree, a passing run additionally asserts that
 # `git status --porcelain` is empty afterwards. A dirty tree is exit 3 — a
 # distinct code, because it is not a failed check: the checks passed and the
-# tree they left behind is what PREFLIGHT Step 4 disposes of (stash / commit /
-# discard with user approval) before the run is repeated. The record carries
+# tree they left behind is disposed of (stash / commit / discard, with the
+# user's approval) before the run is repeated. The record carries
 # `worktree=clean` / `worktree=dirty(<n>)`; the dirty paths go to stderr.
 # `--no-worktree-check` skips the assertion (a non-git root skips it anyway
 # and records `worktree=n/a`). The record's leading verdict token is DIRTY in
 # that case (PR #191 re-review): `PASS` is written only on exit 0, so a later
-# reader — the Resume procedure — judges one token, never `PASS` + a worktree
+# reader — a resume — judges one token, never `PASS` + a worktree
 # field it might overlook.
 #
 #   ### preflight-local-checks | cycle: <C>
@@ -74,8 +74,8 @@
 #       and the worktree is clean afterwards
 #   1 = at least one declared check failed → fail-closed PREFLIGHT stop
 #   2 = usage / declaration error (nothing executed)
-#   3 = every check passed but the worktree is dirty afterwards → PREFLIGHT
-#       Step 4 (resolve the dirty state), then re-run
+#   3 = every check passed but the worktree is dirty afterwards → resolve the
+#       dirty state with the user's approval, then re-run
 #
 # Usage: scripts/preflight/local-checks.sh [--config <path>] [--ledger <path>]
 #                                          [--cycle <C>] [--root <dir>]
@@ -234,7 +234,7 @@ while [ "$i" -lt "$COUNT" ]; do
 done
 
 # Worktree after the run — only meaningful once every check passed; a failed
-# run stops on its own verdict and Step 4 has nothing to dispose of yet.
+# run stops on its own verdict and there is nothing to dispose of yet.
 WORKTREE="n/a"
 if [ "$OVERALL" = "PASS" ] && [ "$NO_WORKTREE_CHECK" -eq 0 ] \
    && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -261,7 +261,7 @@ case "$WORKTREE" in
   dirty*)
     echo "[$TAG] every declared check passed, but the worktree is not clean afterwards — a check or repair left these paths:" >&2
     printf '%s\n' "$DIRTY" | sed 's/^/[preflight-local-checks]   /' >&2
-    echo "[$TAG] PREFLIGHT does not continue on a dirty tree: dispose of them under PREFLIGHT Step 4 (stash / commit / discard with user approval), then re-run this script." >&2
+    echo "[$TAG] PREFLIGHT does not continue on a dirty tree: dispose of them (stash / commit / discard, with the user's approval), then run PREFLIGHT again." >&2
     exit 3
     ;;
 esac

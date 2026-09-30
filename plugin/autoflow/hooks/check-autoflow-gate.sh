@@ -475,7 +475,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # label — `gh pr edit` / `gh issue edit --remove-label blocked-by-review` (a
   # PR's labels are issue labels) and the `gh api … -X DELETE …/labels/
   # blocked-by-review` REST form — while (b) NOT firing on unrelated label edits
-  # such as HANDOFF step 7's `gh issue edit … --remove-label status:in-progress`,
+  # such as HANDOFF's `gh issue edit … --remove-label status:in-progress`,
   # and (c) leaving other labels removable. Residual (accepted; shared by every
   # Section-1 deny): a quoted label value or a `sh -c "…"`/backtick wrapper is
   # stripped by SCAN and slips — the threat model is the naive self-clear, and
@@ -739,7 +739,6 @@ role_of_type() {
   case "$_subtype" in
     Explore|Plan|claude-code-guide)              _role="research" ;;
     autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
-    autoflow-loopcheck|*:autoflow-loopcheck)     _role="analysis" ;;
     autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
     autoflow-advisor|*:autoflow-advisor)         _role="advisor" ;;
     *)
@@ -878,14 +877,11 @@ ledger_advisory_check || true
 # are modelled by no phase row, so warning on them would make the advisory a
 # steady false-positive stream on calls the policy has nothing to say about —
 # and an advisory that cries wolf on correct calls is worse than absent.
-# `Explore` governed the `diagnose-loopcheck` row until issue #180 moved that
-# row to the shipped `autoflow-loopcheck` definition (so its effort projects
-# into frontmatter); Explore now yields an empty set like the other research
-# types and draws no advice, while `autoflow-loopcheck` draws it exactly as
-# every `autoflow-*` type does — a provenance-keyed rule would get both
-# wrong. The case where the policy SHOULD have governed a type is
-# caught in the tree by `spawn-policy.sh check`'s partition rule, not by a
-# runtime warning.
+# `Explore` yields an empty set like the other research types and draws no
+# advice, while every `autoflow-*` type a phase row names draws it — a
+# provenance-keyed rule would get both wrong. The case where the policy SHOULD
+# have governed a type is caught in the tree by `spawn-policy.sh check`'s
+# partition rule, not by a runtime warning.
 #
 # Advisory only: Section 1b's presence-only `model` deny already ran above and
 # is untouched. This step never exits and never denies. Fail-open by
@@ -1183,7 +1179,7 @@ apply_role_gate() {
       # prompt text is deliberately not attempted — a silent misclassification
       # (either direction) is worse than this explicit, self-describing stop.
       echo "BLOCKED: Agent spawn without a declared AutoFlow role while a cycle is active." >&2
-      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|loopcheck|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
+      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
       ;;

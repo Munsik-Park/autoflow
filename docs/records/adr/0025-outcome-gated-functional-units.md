@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (operator decisions 2026-09-28 recorded in D5, D6, D7 and D9)
+Proposed (operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decision 2026-09-29)
 
 ## Context
 
@@ -107,10 +107,20 @@ is why the first-judgment advisor is a sub-agent. `CLAUDE.md` > Rule Scope, prin
 acceptance-criterion content as the operator's; it is amended in the same change as the device
 (Rule Scope, principle 4) to "the operator's by override at the retry stage, the advisor's first".
 
-**D8 — Deterministic steps become scripts.** U1 and U6's fixed steps (git state, drift, local
-checks, push, PR creation, CI confirmation, reviewer launch) run as scripts the orchestrator
-invokes; the committer and PR opener stay the orchestrator. AI judgment in U6 is kept only for
-routing a reviewer finding.
+**D8 — Deterministic steps become scripts; pushing and opening the pull request stay the
+orchestrator's own commands (amended by operator decision 2026-09-29, issue #385).** U1 and U6's
+fixed steps run as scripts the orchestrator invokes: in U1, git state and remote sync, prior-cycle
+resolution, mode selection, drift, reviewer-backend and local checks, the dev branch and the state
+file; in U6, CI confirmation, the added-test-file match against the CI logs, the reviewer launch
+and its start check, the review-triage case with its label backstop and attempt count, and the
+state transition. A script reports facts and an exit code; which point an interrupted cycle
+resumes from is the orchestrator's judgment over those facts. Push and PR creation are not moved
+into a script: they are reversible, no one script covers every case, and the gate hook reads the
+command the orchestrator issues — so the orchestrator issues `git push` and `gh pr create`
+itself, the playbook states only the rules that always hold, the rest is the orchestrator's, and
+no check enforces an item left out; an item observed to be needed every time is added to those
+rules later. The committer and PR opener stay the orchestrator. AI judgment in U6 is kept for
+routing a reviewer finding and classifying a CI failure.
 
 **D9 — Migration (operator decision: operator-led sessions, not AutoFlow cycles).** On `main` in
 small PRs, each released and installed (`/plugin marketplace update` → `/plugin update` →

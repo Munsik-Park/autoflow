@@ -151,7 +151,7 @@ written):
   and `REVIEW_CLAUDE_PRESENT` from the Step-1 report. The install delivers the
   target-owned scaffold `.claude/autoflow.local.json` with its **`codex`
   default** (never overwritten on re-install). **When `REVIEW_CODEX_PRESENT=no`,
-  DISCLOSE** that HANDOFF step-6 external review will **fail-closed at PREFLIGHT**
+  DISCLOSE** that the HANDOFF reviewer review will **fail-closed at PREFLIGHT**
   (`scripts/preflight/check-review-backend.sh`) until either the `codex` CLI is
   installed or the backend is switched to `claude` (requires the `claude` CLI +
   subscription/OAuth; note the vendor-independence trade-off — `claude` loses
@@ -241,7 +241,7 @@ TARGET_ROOT="$TARGET_ROOT" BACKEND=claude sh "$S/set-review-backend.sh"
 <!-- REVIEWER-BACKEND-PROBE -->
 Now that the selection is persisted (step c, or the retained `codex` default),
 run the shipped on-demand `--probe` against the just-persisted backend. This is
-one real authenticated round-trip over the identical channel HANDOFF step 6
+one real authenticated round-trip over the identical channel the HANDOFF reviewer review
 uses. Runs for **both** the `codex` default and an explicit `claude`
 switch:
 
@@ -255,9 +255,9 @@ non-zero exit. Map the exit code:
 - `1` → "the configured backend's CLI is not installed — install it (see the
   presence remedy in the drift-check output)."
 - `3` → "could not verify auth in this environment (timeout / no-TTY) — it will
-  surface at HANDOFF step 6."
+  surface at the HANDOFF reviewer review."
 - `4` → "the configured backend is present but the auth round-trip failed — you
-  will hit this at HANDOFF step 6; fix credentials before your first cycle."
+  will hit this at the HANDOFF reviewer review; fix credentials before your first cycle."
 
 **e. Self-verify** by re-running the shipped drift detector:
 

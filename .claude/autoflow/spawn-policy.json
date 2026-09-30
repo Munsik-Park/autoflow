@@ -20,12 +20,6 @@
   },
   "policy_unmapped_agent_types": {},
   "phases": {
-    "diagnose-loopcheck": {
-      "agent_type": "autoflow-loopcheck",
-      "model": "sonnet",
-      "effort": "high",
-      "work_type": "review-response loop check — prior-cycle complaint-class comparison"
-    },
     "gate-hypothesis": {
       "agent_type": "autoflow-evaluator",
       "model": "sonnet",

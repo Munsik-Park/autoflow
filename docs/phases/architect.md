@@ -292,7 +292,7 @@ is the advisor (the operator by override at the retry stage):
 1. **Design (ARCHITECT).** The design unit chooses any disposition in the *Test necessity*
    vocabulary for an issue AC, **with its reason stated in that row**; GATE:PLAN scores the reason.
 2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
-   PR body (HANDOFF step 4), so the reviewer judges each one on its stated reason.
+   PR body ([HANDOFF](handoff.md) > *Push and pull request*), so the reviewer judges each one on its stated reason.
 3. **Advisor, then operator.** The advisor is asked when the AC's **content** must change — at
    ARCHITECT or later in the cycle
    (*An acceptance-criterion change raised later in the cycle* above). The options offered are
@@ -338,13 +338,11 @@ the previous documents.
   narrowed input on re-entry ([GATE:PLAN](gate-plan.md) > *Re-entry re-score*); a re-entry after
   BUILD began re-scores that delta and the cycle re-enters BUILD.
 - **A new cycle writes new documents.** A review-response cycle entered at PREFLIGHT, or a HANDOFF
-  step 6.5 `design` re-entry judged to start at ARCHITECT, finds the previous cycle's documents
+  `design` re-entry judged to start at ARCHITECT, finds the previous cycle's documents
   preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md`
-  ([PREFLIGHT](preflight.md) > *Preserve the previous cycle's artifacts*); the prompt names them and
-  what the new cycle is for, and the unit writes the new cycle's documents whole. On a
-  scope-bounded review-response cycle ([PREFLIGHT](preflight.md) > *Scope-bounded entry*) the
-  prompt states the bounded scope — the Medium+ finding and the PR diff file set; a fix that adds a
-  file leaves the bounded path, and the design runs on the full issue.
+  ([PREFLIGHT](preflight.md) > *Review-response setup*); the prompt names them and
+  what the new cycle is for, and the unit writes the new cycle's documents whole. How much
+  of the previous cycle's design the new one carries over is the unit's own, recorded in the design.
 
 The unit reads and writes no `.autoflow/issue-{N}.json` state file, so the ARCHITECT re-entry
 counter is the orchestrator's own accounting (Regressions, [`CLAUDE.md`](../../CLAUDE.md) >

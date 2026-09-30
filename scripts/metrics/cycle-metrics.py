@@ -105,6 +105,7 @@ def load_policy(path):
 # their retirement still read them out, so recovery keeps them and the baseline stays comparable.
 RETIRED_PHASE_KEYS = {
     'diagnose-intake-triage': 'autoflow-analyzer',
+    'diagnose-loopcheck': 'autoflow-loopcheck',
     'diagnose-phase-a': 'autoflow-analyzer',
     'diagnose-phase-b': 'autoflow-analyzer',
     'diagnose-phase-3': 'autoflow-analyzer',

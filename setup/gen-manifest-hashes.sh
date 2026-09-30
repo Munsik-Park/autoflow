@@ -140,7 +140,7 @@ build_rows() {
            "CLAUDE.local.md" "root-layer" "scaffold" "file"
 
   # Root-layer tier: reviewer-backend delivery (issue #979) — the HANDOFF
-  # step-6 wrapper, the PREFLIGHT fail-closed availability check, and the shared
+  # reviewer-review wrapper, the PREFLIGHT fail-closed availability check, and the shared
   # review-instruction body ship as source-path-preserved copies; AGENTS.md and
   # the backend-selection scaffold ship as target-owned scaffolds (never
   # overwritten). docs/reviewer-backend.md enters via the doc-closure BFS above.
@@ -167,6 +167,12 @@ build_rows() {
   # `preflight.local_checks[]`; a no-op when none are declared.
   emit_row "scripts/preflight/local-checks.sh" \
            "scripts/preflight/local-checks.sh" "root-layer" "copy" "file"
+  # PREFLIGHT's fixed steps as one call (ADR-0025 D8): prior-cycle resolution,
+  # mode selection, sync, the stop conditions above, the dev branch and the
+  # state file. The stamped docs/phases/preflight.md names it as what runs; it
+  # calls the two checks above and cleanup-issue.sh by their sibling paths.
+  emit_row "scripts/preflight/preflight.sh" \
+           "scripts/preflight/preflight.sh" "root-layer" "copy" "file"
   emit_row ".codex/review.md" \
            ".codex/review.md" "root-layer" "copy" "file"
   emit_row "AGENTS.md" \
@@ -182,14 +188,24 @@ build_rows() {
 
   # Root-layer tier: methodology-step scripts (issue #10). Scripts the
   # stamped docs (phases/handoff.md, git-workflow.md Post-Merge
-  # Cleanup) instruct a consumer to run but which
-  # 0.1.0 never registered, so install_into_target never delivered them.
+  # Cleanup) instruct a consumer to run.
   # Source-path-preserved copies (identity dest), same shape as the reviewer-
-  # backend script rows above; none source a sibling lib (no extra rows).
-  emit_row "scripts/handoff/create-host-pr.sh" \
-           "scripts/handoff/create-host-pr.sh" "root-layer" "copy" "file"
+  # backend script rows above. HANDOFF's fixed steps (ADR-0025 D8): the CI
+  # confirmation, the added-test-file match against the CI job logs, the
+  # reviewer run's start check, the triage case with its label backstop and
+  # attempt count, and the state transition. None of them pushes or opens a
+  # pull request — those are the orchestrator's own commands, which the gate
+  # hook sees.
   emit_row "scripts/handoff/confirm-ci-green.sh" \
            "scripts/handoff/confirm-ci-green.sh" "root-layer" "copy" "file"
+  emit_row "scripts/handoff/ci-test-file-jobs.sh" \
+           "scripts/handoff/ci-test-file-jobs.sh" "root-layer" "copy" "file"
+  emit_row "scripts/review/review-start-check.sh" \
+           "scripts/review/review-start-check.sh" "root-layer" "copy" "file"
+  emit_row "scripts/handoff/review-gate.sh" \
+           "scripts/handoff/review-gate.sh" "root-layer" "copy" "file"
+  emit_row "scripts/state/set-phase.sh" \
+           "scripts/state/set-phase.sh" "root-layer" "copy" "file"
   emit_row "scripts/cleanup/cleanup-issue.sh" \
            "scripts/cleanup/cleanup-issue.sh" "root-layer" "copy" "file"
   # Ledger entry-ID protocol (issue #97). Same shape as the rows above: the
@@ -216,13 +232,6 @@ build_rows() {
   # half of the U4 unit's exit, so a target without it has no exit check.
   emit_row "scripts/gate/build-exit-check.sh" \
            "scripts/gate/build-exit-check.sh" "root-layer" "copy" "file"
-  # Mechanical scope judgment (issue #135). HANDOFF step 6.5 runs it on every
-  # Medium+ verdict as a [MUST], and PREFLIGHT reads its `scope-bounded:` line to
-  # pick the bounded or full review-response path. Its whole point is that the
-  # judgment is a set relation rather than an agent's size estimate, so a target
-  # without it falls back to exactly the estimate it replaces (llmroute #280).
-  emit_row "scripts/review/scope-bounded.sh" \
-           "scripts/review/scope-bounded.sh" "root-layer" "copy" "file"
   # Suite selection and execution (the BUILD test plane, opt-in per
   # ADR-0024 D3). BUILD derives its affected suite set with
   # `select-suites.sh` (issue #192); the gate hook that ships with the bundle

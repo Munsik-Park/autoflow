@@ -26,27 +26,18 @@ keeps the cautions — is the unit agent's, recorded with its grounds in its art
   has no retry loop: its FAIL is a disposition ([GATE:HYPOTHESIS](gate-hypothesis.md) > *Structure
   form*).
 
-## Review-response loop check
-
-`mode = review-response` only. The check runs **once per review-response attempt**, at whichever point that attempt begins: at DIAGNOSE entry, ahead of the unit spawn below, for an attempt that runs DIAGNOSE; and at HANDOFF step 6.5 before the routed work, for a route that does not — a thin route, or a `design` re-entry judged to start at ARCHITECT ([`handoff.md`](handoff.md)). Steps 1 and 2 below are what the step-6.5 call site executes; step 3 applies unchanged at either call site. This section is the contract's only documentary home — the call sites cite it rather than restate it. An `autoflow-loopcheck` sub-agent (a shipped read-only definition), on the model the policy names for `diagnose-loopcheck` (an analysis-class spawn, never score-gated), writes `.autoflow/issue-{N}-loopcheck.md` and returns a one-line summary. The contract has three separated steps:
-
-1. **Record the observation — on every review-response DIAGNOSE entry, before comparing.** Append a ledger observation for this cycle: the **complaint class** (the property the reviewer asserts, e.g. "duplicate-member detection is incomplete"), the **witness case** (e.g. two identical entries, then three identical entries), the **shape of the prior change** (a check for the named case, or a rule over the whole property), and the cycle number. Recording is unconditional (not only on a match): the first review-response cycle records its observation too, with no prior to compare against.
-2. **Compare against the immediately-prior review-response observation.** When the class matches and only the witness case differs, first check the ledger for an **active *case-specific* suppression** on this class — a *case-specific* decision recorded for this class with no different class observed in any later cycle. If one is active, the class is suppressed: continue the normal flow without pausing. Otherwise reply on the PR with the comparison, append a ledger entry marking the match, and hand the decision to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) with a request written **situation-first** — for example restating the acceptance criterion as one rule over the whole input, or a further case-specific change. Do **not** record a decision in the match entry: the advisor's entry is the decision. When the class **and** witness are both the same (a fix that did not take), this check does not apply — continue to the unit spawn (scope-split applies); a different class also continues normally and, by appearing, releases any earlier suppression on other classes.
-3. **Re-enter on the advisor's answer.** The advisor's `A` entry records the decision, and the *same* cycle continues with no pause. A *redefine-AC* answer restarts DIAGNOSE in this cycle from the new acceptance criterion (recorded as `[ac-decision]` entries); a *case-specific* answer continues the normal flow and suppresses re-surfacing of that class until a new class appears. An operator override of that answer at the retry stage re-enters the same way ([`role-contracts.md`](../role-contracts.md) > Advisor > *Operator review at the retry stage*).
-
 ## Unit spawn
 
 1. **Spawn** one `autoflow-unit-analysis` (`Agent`, anonymous, no `name`, the model
-   `bash scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) at DIAGNOSE entry — in a
-   review-response cycle, after the loop check. The prompt states the goal, the cycle's `mode` and
+   `bash scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) at DIAGNOSE entry. The
+   prompt states the goal, the cycle's `mode` and
    the report's path, and names the inputs by path: the issue (new-issue) or the reviewer comment /
    thread PREFLIGHT identified (review-response), and the decision ledger
    (`.autoflow/issue-{N}-ledger.md`). In a review-response cycle it also names every artifact the
-   previous cycle left (`.autoflow/issue-{N}-c{C}-*.md`) and, when
-   `scripts/review/scope-bounded.sh entry` printed `scope-bounded: true`, that the path is bounded
-   ([PREFLIGHT](preflight.md) > *Scope-bounded entry*) — how the unit reuses the previous analysis
-   on that path is its own. On a re-entry it names what the re-entry is for and the material that
-   carries it (*Re-entry* below).
+   previous cycle left (`.autoflow/issue-{N}-c{C}-*.md`) and, where HANDOFF's triage wrote one, the
+   PR's findings file; how much of the previous analysis the unit reuses is its own, recorded under
+   `## Method`. On a re-entry it names what the re-entry is for and the material that carries it
+   (*Re-entry* below).
 2. **Documents.** Injection stays role-minimal and routed via `docs/INDEX.md`, never wholesale: the
    prompt carries a documents line naming the documents the analysis needs (this file,
    [GATE:HYPOTHESIS](gate-hypothesis.md)); the unit reads anything further by its own judgment.
@@ -119,7 +110,9 @@ The rules below are the ones other documents cite; everything else about the wor
   `## Decision points` with its grounds, and the orchestrator routes it (*Report routing*): a
   planning, design or ADR prerequisite clearly required before the issue can be implemented
   (`mode = new-issue`; when in doubt, none); a request the as-is already satisfies; a gap or a cause
-  whose lever is not code. A suggested split of the issue stays a suggestion: it is filed only on
+  whose lever is not code; in a review-response cycle, a reviewer finding that repeats the previous
+  attempt's complaint with a different witness case ([HANDOFF](handoff.md) > *A repeated
+  complaint*). A suggested split of the issue stays a suggestion: it is filed only on
   the operator's request, through a draft and `scripts/issue/create-issue.sh`
   ([`issue-proposal.md`](../issue-proposal.md)).
 
@@ -151,6 +144,9 @@ Anything else the unit records is its own, written where it judges useful.
   **Proceed** → GATE:HYPOTHESIS, after a unit re-run naming the advisor's entry where the analysis
   stopped at the prerequisite; **the prerequisite comes first** → the cycle ends with `active:
   false`, `phase: "awaiting-user"`, the report and the advisor's record as its report. No counter.
+- **A repeated complaint** (`mode = review-response`) → the advisor, which decides the re-entry —
+  its depth, or none ([HANDOFF](handoff.md) > *A repeated complaint*). A redefined criterion comes
+  back as `[ac-decision]` entries and a unit re-run on them. No counter.
 - **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the structure form and, for a bug
   / incident issue, the cause form. The dispositions — an already-satisfied request, a non-code
   lever or cause, a non-bug issue's `skipped (non-bug issue)` verdict, a cause-form FAIL — are
@@ -171,7 +167,6 @@ table changes only by an `[ac-decision]` entry, which the orchestrator applies.
 |---|---|---|
 | GATE:HYPOTHESIS cause-form FAIL | the evaluation report and its failed items | GATE:HYPOTHESIS cause FAIL (max 2×) |
 | a recommendation attempt at GATE:HYPOTHESIS routed to the analysis | the recommendation's subject and finding | the attempt window (max 7×) |
-| the bounded path left ([PREFLIGHT](preflight.md) > *Scope-bounded entry*) | the full topic and the PR diff | none |
 | an advisor answer or operator override that reaches the analysis | the `A` / `O` entries | none |
 
 A re-entry passes through GATE:HYPOTHESIS again on its re-score
@@ -182,8 +177,8 @@ A re-entry passes through GATE:HYPOTHESIS again on its re-score
 
 Every DIAGNOSE spawn's model is resolved from the spawn policy, never restated here:
 `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` over
-`.claude/autoflow/spawn-policy.json` — `diagnose-loopcheck` for the loop check, `unit-analysis`
-for the unit, `gate-hypothesis` for the evaluator. Each `Agent` spawn declares `model` explicitly
+`.claude/autoflow/spawn-policy.json` — `unit-analysis` for the unit, `gate-hypothesis` for the
+evaluator. Each `Agent` spawn declares `model` explicitly
 ([`CLAUDE.md`](../../CLAUDE.md) > Spawn Model — Phase-by-Phase), and each is an anonymous direct
 spawn ([`role-contracts.md`](../role-contracts.md) > Spawn mode by role lifetime); a spawn the unit
 makes inherits its analysis class.

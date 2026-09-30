@@ -64,15 +64,15 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 - issue AC 전부가 `automated` 이면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
 - `cycle` 층의 `automated` row(`Type` 셀에 `standing:` 토큰이 없는 row)는 같은 섹션에 그
   row의 **run record** — build report의 `## Run record`에 기록된 command와 summary line — 를 한 줄로 싣는다
-  (`phases/handoff.md` > step 4).
+  (`phases/handoff.md` > *Push and pull request*).
 - AI가 도구로 실행한 `manual` row는 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
   한 줄로 싣는다. 사람이 실행하는 `manual` row는 reason에 도구를 확보할 수 없었던 이유가 들어
   있다 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; `phases/architect.md` > *Tools*).
 - cycle이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
-  남겨 두는 이유, 그리고 HANDOFF 5단계가 CI 로그에서 확인한 실행 job(target에 CI가 없으면
+  남겨 두는 이유, 그리고 HANDOFF의 CI 확인에서 `scripts/handoff/ci-test-file-jobs.sh`가 CI job 로그에서 찾은 실행 job(target에 CI가 없으면
   `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *What a cycle leaves in the target's tree*;
-  `phases/handoff.md` > step 4·5).
+  `phases/handoff.md` > *CI* > *Added test files*).
 
 예:
 

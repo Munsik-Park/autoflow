@@ -6,7 +6,7 @@
 
 ## Role Vocabulary and Spawn Mode
 
-**Role vocabulary.** The usage documents (`CLAUDE.md`, `docs/*.md`, `docs/phases/*.md`, `.claude/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the DIAGNOSE / HANDOFF analysis and loop-check spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
+**Role vocabulary.** The usage documents (`CLAUDE.md`, `docs/*.md`, `docs/phases/*.md`, `.claude/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the HANDOFF analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
 
 ### Spawn mode by role lifetime
 
@@ -15,12 +15,11 @@ Every role is an anonymous direct spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn Mod
 | Role (where it occurs) | Spawn mode | Per-call scope |
 |---|---|---|
 | Evaluation AI (GATE:HYPOTHESIS structure/cause, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
-| DIAGNOSE review-response loop check | anonymous direct (`subagent_type: autoflow-loopcheck`) | single-shot — writes its body to `.autoflow/issue-{N}-loopcheck.md` and returns an anchor + one-line summary |
-| HANDOFF review-triage subagent (finding ingestion + Low judgment, step 6.5) and CI-failure classifier (step 5) | anonymous direct | single-shot — ingests the reviewer comment or the failing check's output, records the class and its grounds, and returns; the re-entry it feeds runs through the unit rows |
+| HANDOFF review-triage subagent (finding ingestion and weighing — *Review triage*) and CI-failure classifier (*CI-failure re-entry*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — ingests the reviewer comment or the failing check's output, records the class and its grounds, and returns; the re-entry it feeds runs through the unit rows |
 | Advisor (a decision point in any phase — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its `A`-namespace ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
 | Functional-unit agents U2 / U3 / U4 (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per unit entry, prescribed by the unit's goal, artifact contract and verification (ADR-0025 D2); a FAIL returns its findings and the previous artifacts to a fresh unit spawn. Defined in the common frame (#372) and wired into the lifecycle by each unit's migration step (ADR-0025 D9): U2 runs DIAGNOSE, U3 runs ARCHITECT and U4 runs BUILD |
 
-Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), BUILD's exit check (orchestrator, `scripts/gate/build-exit-check.sh`), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier (step 5) — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
+Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator, `scripts/preflight/preflight.sh`), BUILD's exit check (orchestrator, `scripts/gate/build-exit-check.sh`), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
 
 ### Model tier revert
 
@@ -54,7 +53,7 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - **[MUST]** Form the FAIL hypothesis first: adopt the hypothesis **"this deliverable must FAIL"** and search for the strongest evidence supporting it, framed in the terms of this evaluation's own rubric items. The search re-derives the deliverable's cited anchors from the current source (`path:line`, command output, `git show HEAD:<file>`) rather than accepting the deliverable's own account of them.
 - **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations` (or `blocking_issues` when score-blocking). A surviving case may coexist with a score of 7 or higher: the routing obligation is to record it, not to lower the item.
 - **[MUST]** Assign scores only after the FAIL hypothesis has been formed, searched, and dispositioned. Scoring never precedes the search.
-- **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`phases/handoff.md`](phases/handoff.md) > step 6.5 > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
+- **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`phases/handoff.md`](phases/handoff.md) > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
 - **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less role-spawn report (`CLAUDE.md` > Execution Principles > *Verify role-spawn claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
 
 ### Build observations (GATE:QUALITY input)
@@ -89,7 +88,7 @@ not re-classify.
   default-class <item>`) and overriding it with a stated reason when the default misreads the
   defect (a `Doc updates` cap caused by a prompt string or a hook message is `impl`).
 - **[MUST]** Tag every `recommendations` item of severity `Medium` or above with a `remedy_class`
-  from the same vocabulary, at every rubric-scored gate, by the question HANDOFF step 6.5 asks of a
+  from the same vocabulary, at every rubric-scored gate, by the question HANDOFF's review triage asks of a
   reviewer finding — *does clearing this discard or change a decision the design settled?*
   Yes → `design`; no → the kind of change that clears it. An item below `Medium` carries none.
 - **[MUST]** Write `operator` when the class cannot be stated with confidence. Do not guess: an
@@ -203,7 +202,7 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the pla
 - **A decision point** is any point that pauses for a decision the working AI is not the one to make:
   an acceptance-criterion change (`[ac-decision]`), a security-checklist change
   (`[checklist-decision]`), a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the analysis records,
-  a review-response loop-check match, an un-agreed design point, a `remedy_class: operator`, and a
+  a reviewer finding that repeats the previous attempt's complaint, an un-agreed design point, a `remedy_class: operator`, and a
   recommendation or finding the orchestrator cannot route with confidence (a pause criterion, a
   rebuttal the re-score or the reviewer keeps while the two sides still disagree). Each is answered
   by the advisor first.
@@ -296,7 +295,7 @@ which is why the first judgment is the sub-agent's (ADR-0025 D7).
 
 ADR-0025 D1 replaces the sixteen phases with six functional units as the unit of prescription; D2
 prescribes a unit by its goal, its artifact contract, its verification and its loop cap only. The
-three unit agents that run a unit's work are defined here; U1, U5 and U6 have none (U1 and U6 become
+three unit agents that run a unit's work are defined here; U1, U5 and U6 have none (the fixed steps of U1 and U6 are
 scripts the orchestrator runs, D8; U5 is the gate itself).
 
 | Unit agent (`subagent_type`) | Unit | Gate class (hook) | Exit |

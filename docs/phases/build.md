@@ -73,7 +73,8 @@ These are the rules other documents cite; everything else about the work is the 
   goes into the target's tree only as the exception: in this repository a `standing` row
   (`automated / standing: <token>`); on a target, a file the unit judges the target should keep,
   listed under `## Test files kept` with its reason and the CI job expected to run it — HANDOFF
-  step 4 copies that list into the PR body and step 5 matches the job against the CI log. Such a file
+  carries that list into the PR body and matches each file against the CI job logs
+  ([HANDOFF](handoff.md) > *CI* > *Added test files*). Such a file
   is wired into the target's CI discovery in the same commit.
 - **Running tests.** Locally and once, the tests the change requires, the way the target runs them
   (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. A row
@@ -114,14 +115,14 @@ column order is free, and a cell holding `|` wraps it in backticks.
 | Section | Holds | Read by |
 |---|---|---|
 | `## Test-first` | one row per `driving` / `regression` test: `Issue AC`, `Test` (its path), `Red at` (the commit the failing run was made at), `Red log`, `Red line` (the summary line read from that log), `Red exit` (the run's non-zero exit status, which the log carries as `exit: <status>`), `Impl commit` (the commit that makes it pass) | exit check (a) |
-| `## Run record` | one row per `automated` or `delivery-check` verification row, its latest run: `Issue AC`, `Command`, `Log`, `Summary line`, `Result` (`pass` / `fail`) | exit check (b); GATE:QUALITY `Test coverage`; HANDOFF step 4 |
-| `## Manual checklist` | one row per `manual` row: `Issue AC`, `Executor` (`AI: <tool>` or `person`), `Record` (the observation record's path, or `delegated to user`) | exit check (c); HANDOFF step 4 |
+| `## Run record` | one row per `automated` or `delivery-check` verification row, its latest run: `Issue AC`, `Command`, `Log`, `Summary line`, `Result` (`pass` / `fail`) | exit check (b); GATE:QUALITY `Test coverage`; HANDOFF (PR body) |
+| `## Manual checklist` | one row per `manual` row: `Issue AC`, `Executor` (`AI: <tool>` or `person`), `Record` (the observation record's path, or `delegated to user`) | exit check (c); HANDOFF (PR body) |
 | `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | exit check (d) |
 | `## Lint` | one row per chain per commit on the branch: `Commit` (≥ 7 hex), `Chain`, `Outcome` (the lint outcome word, a `not-run` with its reason class in parentheses); a commit another actor makes on the branch adds its own rows | exit check (e) |
 | `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
 | `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the unit rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
 | `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
-| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; HANDOFF steps 4–5 |
+| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; HANDOFF (PR body; *Added test files*) |
 
 Anything else the unit records — how it divided the work, the checks it chose to run and what they
 found — is its own, written where it judges useful.
@@ -180,13 +181,13 @@ state.
 | a `test` / `impl` recommendation attempt at AUDIT or GATE:QUALITY | the recommendation's subject and finding | the attempt window (max 7×) |
 | INTEGRATE FAIL | the failing check and its output | none |
 | HANDOFF CI failure routed `test` / `impl` | `.autoflow/issue-{N}-ci-failure.md` | none |
-| HANDOFF step 6.5 thin route (`test` / `impl`) | the finding row in the PR's findings file | the auto-resolution window (max 7×) |
+| HANDOFF review-triage thin route (`test` / `impl`) | the finding row in the PR's findings file | the auto-resolution window (max 7×) |
 | advisor answer or operator override that reaches the build | the `A` / `O` entries | none |
 
 A re-entry runs the exit check again and passes through AUDIT and GATE:QUALITY on their narrowed
 re-scores ([AUDIT](audit.md) > *Review-response re-score*; [GATE:QUALITY](gate-quality.md) >
 *Re-entry re-score*). On a HANDOFF thin route the fix stays on the finding's own surface and returns
-to the step-6 reviewer re-review.
+to the reviewer re-review.
 
 The unit reads and writes no `.autoflow/issue-{N}.json` state file, so every counter above is the
 orchestrator's own accounting.

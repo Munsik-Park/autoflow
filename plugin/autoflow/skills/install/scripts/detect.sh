@@ -323,7 +323,7 @@ fi
 # ── Reviewer backend (issue #979): configured backend + CLI presence ──────────
 # Read-only. Reports the configured backend (target scaffold, default codex) and
 # each backend CLI's presence, so SKILL.md can DISCLOSE a codex-absent target
-# (its HANDOFF step-6 review would fail-closed at PREFLIGHT) and prompt for an
+# (its HANDOFF reviewer review would fail-closed at PREFLIGHT) and prompt for an
 # explicit backend switch at the single confirmation gate. No write here — the
 # scaffold always ships its codex default; only an explicit operator switch (in
 # SKILL.md, post-confirmation) ever rewrites it to claude.

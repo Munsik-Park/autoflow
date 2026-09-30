@@ -41,7 +41,7 @@ These documents are the operating source of truth.
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Filing a new issue | `docs/issue-proposal.md` |
 | Tool distribution, install/upgrade, or version pinning | `docs/tool-delivery-contract.md`, `docs/thin-root-layer.md` |
-| External review backend (codex/claude), step-6 review mechanics | `docs/reviewer-backend.md`, `docs/external-review-sequencing.md` |
+| External review backend (codex/claude), reviewer-review mechanics | `docs/reviewer-backend.md`, `docs/external-review-sequencing.md` |
 
 ## Design and decision records
 
