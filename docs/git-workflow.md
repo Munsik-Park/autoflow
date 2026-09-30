@@ -43,9 +43,9 @@ The `Next:` line names the action the next session continues from (see
 
 ## Git Clean Check
 
-The conditions PREFLIGHT starts from. `scripts/preflight/preflight.sh enter` checks them and stops
-on the first that does not hold ([`phases/preflight.md`](phases/preflight.md) > *The run*); the
-commands below are what it runs.
+The conditions PREFLIGHT starts from ([`phases/preflight.md`](phases/preflight.md) > *What is asked*).
+`scripts/preflight/cycle-status.sh` reports the working tree and the default branch against its
+remote-tracking ref; bringing them to this state is the orchestrator's.
 
 ```bash
 # 1. Working tree is clean
@@ -157,21 +157,21 @@ Before/after pushing, verify **all three**: (1) `git ls-tree HEAD <submodule>` =
 ## Post-Merge Cleanup
 
 Performed at PREFLIGHT of the next cycle once the prior PR is observed merged
-or closed (or by the live session if it observes the decision first), for
-**every** resolved cycle, including ones from earlier cycles.
-`scripts/preflight/preflight.sh enter` does all of it but the remote-branch
-deletion: it names the branch on a `remote-branch-to-delete:` line and stops
-(exit `12`), because a push is the orchestrator's own command
-([`phases/handoff.md`](phases/handoff.md) > *Push and pull request*) and the hook
-admits it only while no cycle is active.
+or closed (or by the live session if it observes the decision first). Apply it
+to **every** resolved cycle found during prior-cycle resolution, including ones
+from earlier cycles:
 
 ```bash
 git checkout main
 git pull origin main
-git branch -D <branch>             # local branch — preflight.sh
-scripts/cleanup/cleanup-issue.sh <N>  # preflight.sh: delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/issue-<N>.* + issue-<N>-* files and the rest of its issue-<N>-local/ store to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
-git push origin --delete <branch>  # remote branch (if not auto-deleted) — the orchestrator
+git branch -d <branch>             # local branch
+git push origin --delete <branch>  # remote branch (if not auto-deleted)
+scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/issue-<N>.* + issue-<N>-* files and the rest of its issue-<N>-local/ store to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
 ```
+
+The remote-branch deletion is a push: the hook admits it only while no cycle is
+active, so it comes before the next cycle's state file is created
+([`phases/preflight.md`](phases/preflight.md) > *What is asked*).
 
 **Delete the reserved path, archive the rest.** Cleanup first deletes the resolved issue's reserved
 path `.autoflow/issue-{N}-local/disposable/` — the reproducible output its cycle assets wrote there

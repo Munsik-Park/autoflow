@@ -3,13 +3,12 @@
 # SPDX-License-Identifier: Elastic-2.0
 # scripts/handoff/review-gate.sh
 #
-# HANDOFF review triage — the part that is fixed once the findings file
-# exists. For one reviewed pull request it reads the two signals the triage
-# branches on — the verdict (`max_severity`, written to the PR's findings file
-# by the triage subagent) and the `blocked-by-review` label — names the case,
-# re-attaches the label when a Medium+ verdict stands on a PR that lost it (the
-# orchestrator's backstop; it never removes the label), and counts the
-# auto-resolution attempts on record.
+# HANDOFF review triage — what is read once the findings file exists. For one
+# reviewed pull request it reads the two signals the triage branches on — the
+# verdict (`max_severity`, written to the PR's findings file by the triage
+# subagent) and the `blocked-by-review` label — names the case, and counts the
+# auto-resolution attempts on record. It changes nothing: the label, the state
+# file and the ledger are the orchestrator's to write.
 #
 # What it does not decide: whether a finding holds, its class, its route, or
 # whether a Low finding is worth fixing now (docs/phases/handoff.md > Review
@@ -25,12 +24,13 @@
 #   label: present | absent
 #   findings: <n> (Medium+: <m>)
 #   attempts: <k> of 7
-#   backstop: attached | attach failed — <what to report>      (only when tried)
+#   backstop: needed — <why>     (a Medium+ verdict on a PR without the label)
 #   case: clean | low-only | resolve | cap | rerun-review
 #
 # Exit codes:
 #   0   clean — no label, no finding
-#   10  resolve — a Medium+ verdict; route its findings (attempt <k+1>)
+#   10  resolve — a Medium+ verdict; route its findings (attempt <k+1>). With
+#       `backstop: needed`, the orchestrator attaches the label itself first
 #   11  cap — a Medium+ verdict with 7 attempts on record; pause for the operator
 #   12  rerun-review — the label is present on a verdict below Medium (or
 #       `None`): a label-clear failure, not a code finding
@@ -127,14 +127,7 @@ case "$sev" in
       exit 2
     fi
     if [ "$label" = "absent" ]; then
-      gh pr edit "$PR" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --add-label blocked-by-review >/dev/null 2>&1 \
-        || gh issue edit "$PR" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --add-label blocked-by-review >/dev/null 2>&1 || true
-      after="$(gh pr view "$PR" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --json labels -q '.labels[].name' 2>/dev/null)" || after=""
-      if printf '%s\n' "$after" | grep -qx 'blocked-by-review'; then
-        echo "backstop: attached"
-      else
-        echo "backstop: attach failed — the label likely does not exist in $REPO; report it as an operator setup gap"
-      fi
+      echo "backstop: needed — a $sev verdict stands on a pull request without blocked-by-review"
     fi
     if [ "$attempts" -ge "$CAP" ]; then
       echo "case: cap"

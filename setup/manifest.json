@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9fbf4f55a60bae70a028af218b10d9b7a41b370f2ec45aa5a196e8e71645584e"
+      "sha256": "82b3b9a4ee1a677ef4fd0df9938539bc712640fa1d069664c54aac1dbb4866f8"
     },
     {
       "source": "docs/INDEX.md",
@@ -55,14 +55,14 @@
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e023e4c142bbda090dfda73cd7f9c728a0a680fe217b8e0a029663b216a42ee7"
+      "sha256": "dd3b220f690bec3a6c2334270a70fd971ced2d8e99a05f6b1528b3b69aa26a28"
     },
     {
       "source": "docs/git-workflow.md",
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a8d03e5f08f3c42fca2fd14c74edd6d1bcc21970b6441c46cd53dd1e21c5b63f"
+      "sha256": "d8204988eedd148d9be2b113b769e8b60819d42284fc177524f21ec2bf513013"
     },
     {
       "source": "docs/issue-proposal.md",
@@ -132,7 +132,7 @@
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "90ac1da42b9d3752b6fc4f95f6126d09cc8bdd7a0d337c11b5400d518825a530"
+      "sha256": "c78189b2c7e02d5644c42d8dfcea4bc26538294ca294cd8cd0c841ab2619b40c"
     },
     {
       "source": "docs/phases/integrate.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/phases/preflight.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "eb8b38d5600d89c880d13761020f61f7bc0ae79f00d4d1e485ece23837154584"
+      "sha256": "2713cab8ee374720a165eec54868d3183372c05d3b242bc921f5ed725ff53f0c"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -181,7 +181,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "be1dc5245410fe2e4fe8f65511e54b9e27176514ae98804de8a51cacdb2c435b"
+      "sha256": "0ea42c4a53dceca5281a969768c4fb8673c928fafb6dc3c292f3edad5174eeb6"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -289,11 +289,11 @@
       "sha256": "02673a3ea871914cce93990b9403e9f2883a95ece5c177c68e69e871d0726528"
     },
     {
-      "source": "scripts/preflight/preflight.sh",
-      "dest": "scripts/preflight/preflight.sh",
+      "source": "scripts/preflight/cycle-status.sh",
+      "dest": "scripts/preflight/cycle-status.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "44fa3dc8c38369b975cae776039b92829ace9f565a16036d9667ebd1406949c3"
+      "sha256": "4f1ada7e0b5d1c2aaf6b60b170f9d8f6e1eaed71e0cf00a8cfe97fbf0550e364"
     },
     {
       "source": ".codex/review.md",
@@ -342,14 +342,7 @@
       "dest": "scripts/handoff/review-gate.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "91504a4de80082c93b5680fc76cf412adc52d93199d93f1019b48abc9456651a"
-    },
-    {
-      "source": "scripts/state/set-phase.sh",
-      "dest": "scripts/state/set-phase.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "dfa19baad7b86b0815831e33c33f8cfaefebd0d150f21ad6919f057fecf44adc"
+      "sha256": "448b051883fbdd2d56f4f5d565e88896ec2f4cbd25be53423deeb8604d114e04"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",

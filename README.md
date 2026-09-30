@@ -25,7 +25,7 @@ threshold is preserved from upstream. Single-repo projects are supported as the 
 AutoFlow structures every code change through a defined lifecycle:
 
 ```
-PREFLIGHT       Preparation (U1)  — one script call: prior-cycle resolution, Git clean check, sync, branch and state creation
+PREFLIGHT       Preparation (U1)  — prior-cycle resolution, Git clean check, sync, branch and state creation
 DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, cause hypotheses
 GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (gate: structure form; cause form for bug issues)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
@@ -35,7 +35,7 @@ AUDIT           Security Audit    — Independent project-specific security audi
 GATE:QUALITY    Completion Eval   — Scored quality assessment (gate)
 DELIVER         Push              — the orchestrator's own `git push` (multi-repo: each sub-repo branch to its fork)
 INTEGRATE       Integration Test  — system build, health check, functional test
-HANDOFF         PR + Hand-off     — push and PR creation by the orchestrator's own commands → CI green → reviewer review → review triage, each fixed step a script call; external review merges out of band (AutoFlow does not merge)
+HANDOFF         PR + Hand-off     — push and PR creation by the orchestrator's own commands → CI green → reviewer review → review triage; external review merges out of band (AutoFlow does not merge)
 ```
 
 The happy-path flow at a glance (regression edges and human-escalation paths

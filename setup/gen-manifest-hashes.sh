@@ -167,12 +167,11 @@ build_rows() {
   # `preflight.local_checks[]`; a no-op when none are declared.
   emit_row "scripts/preflight/local-checks.sh" \
            "scripts/preflight/local-checks.sh" "root-layer" "copy" "file"
-  # PREFLIGHT's fixed steps as one call (ADR-0025 D8): prior-cycle resolution,
-  # mode selection, sync, the stop conditions above, the dev branch and the
-  # state file. The stamped docs/phases/preflight.md names it as what runs; it
-  # calls the two checks above and cleanup-issue.sh by their sibling paths.
-  emit_row "scripts/preflight/preflight.sh" \
-           "scripts/preflight/preflight.sh" "root-layer" "copy" "file"
+  # The facts PREFLIGHT is decided from (ADR-0025 D8): every state file against
+  # its dev branch and pull request, and what a resume is judged from. It reads
+  # and reports; the stamped docs/phases/preflight.md names it.
+  emit_row "scripts/preflight/cycle-status.sh" \
+           "scripts/preflight/cycle-status.sh" "root-layer" "copy" "file"
   emit_row ".codex/review.md" \
            ".codex/review.md" "root-layer" "copy" "file"
   emit_row "AGENTS.md" \
@@ -190,12 +189,11 @@ build_rows() {
   # stamped docs (phases/handoff.md, git-workflow.md Post-Merge
   # Cleanup) instruct a consumer to run.
   # Source-path-preserved copies (identity dest), same shape as the reviewer-
-  # backend script rows above. HANDOFF's fixed steps (ADR-0025 D8): the CI
-  # confirmation, the added-test-file match against the CI job logs, the
-  # reviewer run's start check, the triage case with its label backstop and
-  # attempt count, and the state transition. None of them pushes or opens a
-  # pull request — those are the orchestrator's own commands, which the gate
-  # hook sees.
+  # backend script rows above. What HANDOFF reads by script (ADR-0025 D8): the
+  # CI confirmation, the added-test-file match against the CI job logs, the
+  # reviewer run's start check, and the triage case with its attempt count.
+  # They read and report: none pushes, opens a pull request, edits a label or
+  # writes the state file — those are the orchestrator's own commands.
   emit_row "scripts/handoff/confirm-ci-green.sh" \
            "scripts/handoff/confirm-ci-green.sh" "root-layer" "copy" "file"
   emit_row "scripts/handoff/ci-test-file-jobs.sh" \
@@ -204,8 +202,6 @@ build_rows() {
            "scripts/review/review-start-check.sh" "root-layer" "copy" "file"
   emit_row "scripts/handoff/review-gate.sh" \
            "scripts/handoff/review-gate.sh" "root-layer" "copy" "file"
-  emit_row "scripts/state/set-phase.sh" \
-           "scripts/state/set-phase.sh" "root-layer" "copy" "file"
   emit_row "scripts/cleanup/cleanup-issue.sh" \
            "scripts/cleanup/cleanup-issue.sh" "root-layer" "copy" "file"
   # Ledger entry-ID protocol (issue #97). Same shape as the rows above: the

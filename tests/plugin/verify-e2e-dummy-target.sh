@@ -234,7 +234,7 @@ else
   failc "E1c" "S5/#792" "prerequisite E1b failed or CLAUDE.md absent"
 fi
 
-echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/state/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, AGENTS.md =="
+echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, AGENTS.md =="
 if [ "$DRIVE_PASS" -eq 1 ]; then
   if cmp -s "$SNAP_DIR/package.json" "$DUMMY/package.json"; then
     pass "E1d: package.json byte-unchanged"
@@ -261,14 +261,14 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # them, so install genuinely creates them here.
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/state/*|./scripts/spawn-policy/*|./scripts/lib/*|./scripts/architect/*|./scripts/gate/*|./scripts/test/*|./tests/lib/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./scripts/architect/*|./scripts/gate/*|./scripts/test/*|./tests/lib/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done
   if [ -z "$BAD_NEW" ]; then
-    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/state/**, scripts/spawn-policy/**, scripts/lib/**, scripts/architect/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, or AGENTS.md"
+    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, scripts/lib/**, scripts/architect/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, or AGENTS.md"
   else
-    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/state//scripts/spawn-policy//scripts/lib//.codex//AGENTS.md:$BAD_NEW"
+    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/spawn-policy//scripts/lib//.codex//AGENTS.md:$BAD_NEW"
   fi
 else
   failc "E1d" "S5/#792" "skipped -- prerequisite E1b failed"
@@ -356,11 +356,10 @@ echo "== E3a-x (issue #10): installed exec bit set on the new methodology-step s
 if [ "$DRIVE_PASS" -eq 1 ]; then
   NOT_EXEC=""
   for _xdest in \
-    "scripts/preflight/preflight.sh" \
+    "scripts/preflight/cycle-status.sh" \
     "scripts/handoff/ci-test-file-jobs.sh" \
     "scripts/handoff/review-gate.sh" \
     "scripts/review/review-start-check.sh" \
-    "scripts/state/set-phase.sh" \
     "scripts/cleanup/cleanup-issue.sh"
   do
     if [ -f "$DUMMY/$_xdest" ]; then

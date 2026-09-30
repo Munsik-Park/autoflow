@@ -19,7 +19,7 @@ Every role is an anonymous direct spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn Mod
 | Advisor (a decision point in any phase — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its `A`-namespace ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
 | Functional-unit agents U2 / U3 / U4 (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per unit entry, prescribed by the unit's goal, artifact contract and verification (ADR-0025 D2); a FAIL returns its findings and the previous artifacts to a fresh unit spawn. Defined in the common frame (#372) and wired into the lifecycle by each unit's migration step (ADR-0025 D9): U2 runs DIAGNOSE, U3 runs ARCHITECT and U4 runs BUILD |
 
-Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator, `scripts/preflight/preflight.sh`), BUILD's exit check (orchestrator, `scripts/gate/build-exit-check.sh`), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
+Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), BUILD's exit check (orchestrator, `scripts/gate/build-exit-check.sh`), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its review-triage finding-ingestion / Low-judgment subagent and its CI-failure classifier — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`.
 
 ### Model tier revert
 
@@ -295,8 +295,8 @@ which is why the first judgment is the sub-agent's (ADR-0025 D7).
 
 ADR-0025 D1 replaces the sixteen phases with six functional units as the unit of prescription; D2
 prescribes a unit by its goal, its artifact contract, its verification and its loop cap only. The
-three unit agents that run a unit's work are defined here; U1, U5 and U6 have none (the fixed steps of U1 and U6 are
-scripts the orchestrator runs, D8; U5 is the gate itself).
+three unit agents that run a unit's work are defined here; U1, U5 and U6 have none (U1 and U6 are the orchestrator's
+own work, with scripts that read and report, D8; U5 is the gate itself).
 
 | Unit agent (`subagent_type`) | Unit | Gate class (hook) | Exit |
 |---|---|---|---|

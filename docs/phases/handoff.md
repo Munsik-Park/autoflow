@@ -7,16 +7,17 @@
 AutoFlow's mission ends by handing off an open PR — after PR creation, CI, the configured-reviewer review, and resolved review triage. Merging, issue close, and deployment are outside AutoFlow's authority, performed entirely by an external review process that AutoFlow does not define or perform.
 
 DELIVER, INTEGRATE and HANDOFF are one functional unit, U6 Delivery
-([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). What is fixed in it runs
-as scripts the orchestrator calls (D8); pushing and opening the pull request are the orchestrator's
-own commands; and the judgment left to AI is two readings, both made by a spawned analysis role —
-what a reviewer finding is and where it routes, and what class a CI failure is.
+([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). This file states what is
+asked, the cautions and the result owed. A script only reads and reports (D8); what changes
+anything — a push, a pull request, a label, the state file, the ledger — is done by the
+orchestrator itself; and the judgment left to AI is two readings, both made by a spawned analysis
+role — what a reviewer finding is and where it routes, and what class a CI failure is.
 
 - **Goal**: every pull request of the cycle is open with CI green on its head and the configured
   reviewer's review posted with no `Medium`+ finding left, and the state file is handed off.
-- **What runs as a script**: CI confirmation and the added-test-file match (*CI*), the reviewer
-  run and its start check (*Reviewer review*), the triage case, label backstop and attempt count
-  (*Review triage*), the state transition (*End*). Each reports by exit code.
+- **What a script reads and reports**: CI confirmation and the added-test-file match (*CI*), the
+  reviewer run's start check (*Reviewer review*; the run itself is the reviewer wrapper), and the
+  triage case with its attempt count (*Review triage*). Each reports by exit code.
 - **Verification**: CI green and the reviewer review clean — both outside the orchestrator's own
   claim.
 - **Caps**: auto-resolution of reviewer findings, 7 attempts; HANDOFF internal retry, 2
@@ -176,7 +177,7 @@ Cautions:
 ## Review triage
 
 Per reviewed PR, after its review completes and before *End*. While it runs the state's marker is
-`review-triage` (`bash scripts/state/set-phase.sh --issue {N} --phase review-triage`).
+`review-triage`, set by the orchestrator.
 
 **1. The findings are read by a spawned analysis role.** The orchestrator does not read the
 reviewer comment body itself (Cost Control). An anonymous direct subagent —
@@ -205,7 +206,7 @@ attempts on record, and names the case:
 |---|---|---|
 | `0` | `clean` — no label, no finding | *End* (once every PR of the cycle is there) |
 | `13` | `low-only` — no label, findings below `Medium` | the orchestrator's judgment, with no fixed rule: a finding that holds and is worth fixing now goes through the same resolution as below (a `Low` alone raises no advisor request unless an advisor criterion is hit); otherwise *End*, optionally with a one-line PR note that the findings were reviewed and deferred. A `Low` on a target comment's divergence or disallowed content is the orchestrator's direct commit or it is left ([GATE:QUALITY](gate-quality.md) > *Code comments in a target*) |
-| `10` | `resolve` — a `Medium`+ verdict | *Routing* below. When the label was absent — a previous clean round cleared it and the reviewer's own attach did not land — the script has attached it as the orchestrator's backstop (`backstop: attached`); `backstop: attach failed` means the label likely does not exist in that repository, reported as an operator setup gap ([`external-review-sequencing.md`](../external-review-sequencing.md) > Operator prerequisites) without blocking the resolution |
+| `10` | `resolve` — a `Medium`+ verdict | *Routing* below. With `backstop: needed` — the label is absent, because a previous clean round cleared it and the reviewer's own attach did not land — the orchestrator attaches it first as its backstop (`gh pr edit <N> --add-label blocked-by-review`, on failure the `gh issue edit` form) and confirms it is on the PR. An attach that does not land likely means the label does not exist in that repository: it is reported as an operator setup gap ([`external-review-sequencing.md`](../external-review-sequencing.md) > Operator prerequisites) and does not block the resolution. The orchestrator attaches this label and never removes it |
 | `11` | `cap` — a `Medium`+ verdict with 7 attempts on record | pause for the operator (*Attempt cap*) |
 | `12` | `rerun-review` — the label is present on a verdict below `Medium` | not a code finding: the review was clean and the label stuck (`.codex/review.md` > label-removal-failure clause), or a backstop attached in error. Run *Reviewer review* on that PR again so the re-review clears the label; still there → a harness-level block for the operator. Consumes no attempt |
 | `2` | the findings file is absent or breaks its contract | the triage subagent is spawned again |
@@ -252,32 +253,35 @@ A `Medium`+ verdict does not end the cycle. Route by `bash scripts/gate/remedy-r
 | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | *Reviewer review*, per-PR |
 | `PAUSE` (from `operator`) | the advisor fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor), and the cycle takes that class's route | that route's |
 
-The `ARCHITECT` route is the one whose depth is judged. **Where the re-entry starts is the orchestrator's judgment** ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — entered in-session with `bash scripts/preflight/preflight.sh review-response --issue {N}` ([PREFLIGHT](preflight.md) > *Review-response setup*) and the reviewer comment as the DIAGNOSE trigger target, flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a fact of the analysis the decision rested on; (b) an **ARCHITECT re-design** — the same setup with `--keep-analysis`, whose two differences follow from the analysis standing: `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), and the **DIAGNOSE analysis report is not renamed** — `issue-{N}-analysis.md` stays in place under its flat name as this cycle's analysis input. A fresh U3 Design unit is spawned with a prompt naming the finding, the decision it moves — its heading in the previous cycle's `issue-{N}-c{C}-feature-design.md` — and the previous cycle's design documents, preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md` like the other renamed artifacts ([ARCHITECT](architect.md) > *Re-entry*, the new-cycle rule), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision it moves, by its heading in `issue-{N}-c{C}-feature-design.md`), why the analysis stands, and the **provenance of the reused analysis report** — its path, the cycle that authored it and its `shasum -a 256`. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT unit on the recorded GATE:HYPOTHESIS verdict and the BUILD unit on the GATE:PLAN that re-scores the re-design. The other routes are **thin**: one BUILD unit re-run or one doc commit, execution verification, a delta recorded in the ledger, and the same reviewer re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. **Every independent check is retained on every route and shape** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), CI still gates, and the attempt cap below applies unchanged.
+The `ARCHITECT` route is the one whose depth is judged. **Where the re-entry starts is the orchestrator's judgment** ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — entered in-session with the setup PREFLIGHT gives a review-response ([PREFLIGHT](preflight.md) > *Review-response setup*) and the reviewer comment as the DIAGNOSE trigger target, flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a fact of the analysis the decision rested on; (b) an **ARCHITECT re-design** — the same setup with two differences that follow from the analysis standing: `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), and the **DIAGNOSE analysis report is not renamed** — `issue-{N}-analysis.md` stays in place under its flat name as this cycle's analysis input. A fresh U3 Design unit is spawned with a prompt naming the finding, the decision it moves — its heading in the previous cycle's `issue-{N}-c{C}-feature-design.md` — and the previous cycle's design documents, preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md` like the other renamed artifacts ([ARCHITECT](architect.md) > *Re-entry*, the new-cycle rule), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision it moves, by its heading in `issue-{N}-c{C}-feature-design.md`), why the analysis stands, and the **provenance of the reused analysis report** — its path, the cycle that authored it and its `shasum -a 256`. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT unit on the recorded GATE:HYPOTHESIS verdict and the BUILD unit on the GATE:PLAN that re-scores the re-design. The other routes are **thin**: one BUILD unit re-run or one doc commit, execution verification, a delta recorded in the ledger, and the same reviewer re-review — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. **Every independent check is retained on every route and shape** — the label is cleared **only** by the reviewer re-review, the orchestrator never removes it (hook deny), CI still gates, and the attempt cap below applies unchanged.
 
 Every route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker — a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` ([`decision-ledger.md`](../decision-ledger.md) > *Entry identifier*) — and the entry names the routed class and, on the `ARCHITECT` route, the judged shape with its grounds. The advisor criteria below take precedence over any route.
 
 - **Put to the advisor** (a request written situation-first per [`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not pause) when the attempt hits **any** of: (a) the fix needs a contract / acceptance-criterion change, or the finding shows a criterion defective ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), (b) the fix direction is ambiguous, (c) the finding is a `Low Confidence` item, (d) the finding repeats the previous attempt's complaint (*A repeated complaint* above). The advisor's `A` entry selects re-entry; the operator may override it at the retry stage. A rebutted finding kept while the two sides still disagree reaches the advisor by the orchestrator's judgment (*Whether a finding holds* above), not by a criterion here.
-- **Attempt cap = 7.** The count is the number of auto-resolution attempts not yet checked with the user: the `[review-autofix]` entries in the ledger after the last entry whose heading ends in `[reentry-decision]`, or all of them when there is none. `review-gate.sh` prints it (`attempts: <k> of 7`) and exits `11` when a `Medium`+ verdict meets 7 on record: the orchestrator stops auto-resolving and pauses for the user (`bash scripts/state/set-phase.sh --issue {N} --phase awaiting-user`). A gate's recommendation attempt carries its own marker, `[gate-autofix]`, on its own window ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*), and a `[rebuttal]` round is not an attempt, so neither is counted here. The user approving continuation at that pause is the **re-entry decision**: the orchestrator records it as an `O` entry under `operator decision` whose heading ends in `[reentry-decision]` and sets the cycle active again (`set-phase.sh --phase review-triage`); the entry resets the window — the next auto-entry starts a fresh budget of 7. Nothing else resets it.
+- **Attempt cap = 7.** The count is the number of auto-resolution attempts not yet checked with the user: the `[review-autofix]` entries in the ledger after the last entry whose heading ends in `[reentry-decision]`, or all of them when there is none. `review-gate.sh` prints it (`attempts: <k> of 7`) and exits `11` when a `Medium`+ verdict meets 7 on record: the orchestrator stops auto-resolving and pauses for the user (`active:false`, `phase:"awaiting-user"`). A gate's recommendation attempt carries its own marker, `[gate-autofix]`, on its own window ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*), and a `[rebuttal]` round is not an attempt, so neither is counted here. The user approving continuation at that pause is the **re-entry decision**: the orchestrator records it as an `O` entry under `operator decision` whose heading ends in `[reentry-decision]` and sets the cycle active again; the entry resets the window — the next auto-entry starts a fresh budget of 7. Nothing else resets it.
 - **Durable record (host PR).** Post a one-line comment on the **host PR** via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event).
 
 ## End
 
-Once every pull request of the cycle is clean — no `blocked-by-review` label left, Low findings
-triaged — and CI is green:
+Once every pull request of the cycle is clean — `review-gate.sh` reports no `blocked-by-review`
+label on any of them and the Low findings are triaged — and CI is green, the orchestrator hands the
+cycle off:
 
-```
-bash scripts/state/set-phase.sh --issue {N} --phase awaiting-external-review --pr <[owner/name#]P>...
-```
+- the state file reads `active: false`, `phase: "awaiting-external-review"`, with nothing else in
+  it changed;
+- the issue no longer carries `status:in-progress`.
 
-It names every PR the cycle opened, refuses (exit `1`, state unchanged) while one of them still
-carries `blocked-by-review`, sets `active:false` with `phase: "awaiting-external-review"`, and
-removes the issue's `status:in-progress` label. The same script makes every other `active:false`
-transition (`--phase awaiting-user`, at a pause).
+Cautions:
+
+- The hand-off is not made while a pull request of the cycle still carries `blocked-by-review`, and
+  the orchestrator does not remove that label to get there — the reviewer's re-review clears it.
+- A pause for the user is the other `active:false` transition (`phase: "awaiting-user"`); the issue
+  keeps `status:in-progress` through it.
 
 Report: "PR #N open (draft) — configured-reviewer review posted — handed to external review." with
 each PR's URL and head commit. AutoFlow ends; the session may terminate.
 
-The cleanup that follows an external merge or rejection runs at PREFLIGHT of the next cycle (or in the live session if it observes the decision before terminating) — dev-branch deletion plus archival (move to the external `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/` store) of the resolved issue's `.autoflow/issue-{N}*` management files; see [PREFLIGHT](preflight.md) > *The run*.
+The cleanup that follows an external merge or rejection runs at PREFLIGHT of the next cycle (or in the live session if it observes the decision before terminating) — dev-branch deletion plus archival (move to the external `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/` store) of the resolved issue's `.autoflow/issue-{N}*` management files; see [PREFLIGHT](preflight.md) > *What is asked*.
 
 ## Failure and retry
 
