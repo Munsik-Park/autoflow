@@ -62,8 +62,8 @@ in AutoFlow's methodology. Artifact: `setup/thin-root-layer/claude-md-shim.md`.
   **entrypoint**. The methodology lives under `.claude/autoflow/` (not the target
   root); the shim is the only AutoFlow-managed region in the target's `CLAUDE.md`.
   The methodology is not one file — it is this repo's `CLAUDE.md` prose *plus* the
-  `docs/` playbooks routed by `docs/INDEX.md`; the single `@import` targets an
-  entrypoint (`METHODOLOGY.md`) that itself re-imports the installed playbook tree.
+  `docs/` usage documents routed by `docs/INDEX.md`; the single `@import` targets an
+  entrypoint (`METHODOLOGY.md`) that itself re-imports the installed document tree.
   This contract fixes only the convention path + the one import line; the tree
   layout under `.claude/autoflow/` and what `METHODOLOGY.md` re-imports are the
   installer manifest's decision.

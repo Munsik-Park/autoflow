@@ -43,7 +43,7 @@ The `Next:` line names the action the next session continues from (see
 
 ## Git Clean Check
 
-The conditions PREFLIGHT starts from ([`phases/preflight.md`](phases/preflight.md) > *What is asked*).
+The conditions PREFLIGHT starts from ([`units/preparation.md`](units/preparation.md) > *What is asked*).
 `scripts/preflight/cycle-status.sh` reports the working tree and the default branch against its
 remote-tracking ref; bringing them to this state is the orchestrator's.
 
@@ -128,7 +128,7 @@ A host PR with no sub-repo dependency is promoted and merged by the external rev
 host PR that depends on a sub-repo PR carries `blocked-by-subrepo` and merges after it: the sub-repo
 PR merges, the host is reconciled to its merge commit, the operator confirms the host pointer equals
 that merge commit and removes the label, and the host PR is then promoted and merged. The rule AutoFlow
-keeps for the host's pointer, and its cautions, are [`phases/handoff.md`](phases/handoff.md) >
+keeps for the host's pointer, and its cautions, are [`units/delivery.md`](units/delivery.md) >
 *Multi-repo delivery*; the reviewer- and operator-facing guide is
 [`external-review-sequencing.md`](external-review-sequencing.md).
 
@@ -151,7 +151,7 @@ scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-lo
 
 The remote-branch deletion is a push: the hook admits it only while no cycle is
 active, so it comes before the next cycle's state file is created
-([`phases/preflight.md`](phases/preflight.md) > *What is asked*).
+([`units/preparation.md`](units/preparation.md) > *What is asked*).
 
 **Delete the reserved path, archive the rest.** Cleanup first deletes the resolved issue's reserved
 path `.autoflow/issue-{N}-local/disposable/` — the reproducible output its cycle assets wrote there
@@ -207,5 +207,5 @@ Part of <host-owner>/<host-name>#N
 - Close keywords: `Closes`, `Fixes`, `Resolves` (case-insensitive).
 - Cross-repo references are recognised in PR bodies only (commit messages do not trigger cross-repo close).
 - **[MUST]** Sub-repo PRs do NOT use `Closes`.
-- The host PR carries `Closes #N`; composing the PR body is the orchestrator's, and nothing checks the line ([`phases/handoff.md`](phases/handoff.md) > *Push and pull request*).
+- The host PR carries `Closes #N`; composing the PR body is the orchestrator's, and nothing checks the line ([`units/delivery.md`](units/delivery.md) > *Push and pull request*).
 - **[MUST]** PR bodies generated from `.github/pull_request_template.md` never inline a plain-text close-keyword token in the template itself. The template uses the marker `<!-- HOST-CLOSE-LINE -->`; the orchestrator replaces the marker with the active `Closes #N` line when it writes the host PR body. Templates / docs / design notes that **describe** the close-keyword pattern must wrap the example in backticks or code-fences.

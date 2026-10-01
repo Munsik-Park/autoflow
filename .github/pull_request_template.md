@@ -24,9 +24,16 @@ Check exactly one:
 
 ## Acceptance criteria
 
-<!-- The reviewer must be able to reach the AC from this PR. -->
+<!-- The reviewer must be able to reach the AC from this PR. One line per
+     criterion: met or not, the commit it was confirmed at, where the evidence
+     is; the head names the commit the results stand at
+     (docs/pr-body-guide.md > 수용 기준 대조). -->
 
 - AC: linked issue #N > Acceptance Criteria  (or stated inline in the PR body)
+
+`<sha>` 시점의 결과.
+
+- <criterion> — <met / not met> · `<sha>` · <evidence location>
 
 ## Issue link
 
@@ -48,7 +55,7 @@ Reference: docs/git-workflow.md > Issue Auto-Close.
 
 <!--
 A host PR whose sub-repo pointer depends on an unmerged sub-repo PR is created
-with the `blocked-by-subrepo` label (docs/phases/handoff.md > Multi-repo
+with the `blocked-by-subrepo` label (docs/units/delivery.md > Multi-repo
 delivery). The operator removes it once the sub-repo PR has merged and the host
 pointer equals its merge commit (docs/external-review-sequencing.md >
 Merge-order clearance).

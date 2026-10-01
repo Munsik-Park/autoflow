@@ -1,24 +1,27 @@
-# PREFLIGHT — U1 Preparation
+# U1 Preparation — PREFLIGHT
 
-> Phase playbook for PREFLIGHT. [`CLAUDE.md`](../../CLAUDE.md) > Phase Playbook Loading
-> Contract routes to this file; the other phases are listed in
-> [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
+> Unit document for U1. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
+> Documents.
 
 PREFLIGHT is functional unit U1 Preparation
-([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). This file states what it
-is asked for, the cautions and the result owed; the order of the work and the commands are the
-orchestrator's ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2). A script only reads and
-reports (D8): every change — to git, to GitHub, to the cycle's state — is made by the orchestrator
-itself.
+([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). U1 has no unit agent: it
+is the orchestrator's own work. This file states what it is asked for, the cautions and the result
+owed; the order of the work and the commands are the orchestrator's
+([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2). A script only reads and reports (D8):
+every change — to git, to GitHub, to the cycle's state — is made by the orchestrator itself.
 
 - **Goal**: the requested issue starts, or continues, on a clean tree synced with the remote, with
   every earlier cycle whose pull request is merged or closed cleared away.
+- **Artifact contract**: the state file `.autoflow/issue-{N}.json` and the dev branch checked out
+  (*What is asked*), and the local-checks record in the ledger (*Stop conditions*).
 - **Verification**: PREFLIGHT has no gate. Its readiness conditions are deterministic — the facts
   `scripts/preflight/cycle-status.sh` reports and the three *Stop conditions* — and DIAGNOSE does
   not begin until they hold.
-- **Result owed**: the state file `.autoflow/issue-{N}.json`, the dev branch checked out, and the
-  local-checks record in the ledger. A resume also owes its re-entry point, recorded with grounds
-  in the ledger (*Resume*).
+- **Loop cap**: none. A condition that does not hold stops the cycle and is reported; PREFLIGHT
+  runs again once it is resolved.
+- **Result owed**: the state file, the dev branch and the local-checks record above. A resume also
+  owes its re-entry point, recorded with grounds in the ledger (*Resume*).
 
 ## What is asked
 
@@ -95,7 +98,7 @@ The requested issue's mode follows from its own state file; none of these is a j
 ## Review-response setup
 
 For a cycle entered at PREFLIGHT in `review-response` mode, and for a HANDOFF `design` re-entry
-inside the session ([HANDOFF](handoff.md) > *Routing*). On the issue's existing dev branch:
+inside the session ([U6 Delivery](delivery.md) > *Routing*). On the issue's existing dev branch:
 
 - **[MUST] The previous cycle's artifacts are preserved** before any phase of the new cycle writes:
   every `.autoflow/issue-{N}-<artifact>.md` is renamed to `.autoflow/issue-{N}-c{C}-<artifact>.md`,
@@ -113,7 +116,7 @@ inside the session ([HANDOFF](handoff.md) > *Routing*). On the issue's existing 
   or thread that triggered the cycle.
 
 How much of the previous cycle's artifacts the new cycle reuses is the analysis and design units'
-own ([DIAGNOSE](analysis.md) > Unit spawn; [ARCHITECT](architect.md) > *Re-entry*). The cycle-layer
+own ([U2 Analysis](analysis.md) > Unit spawn; [U3 Design](design.md) > *Re-entry*). The cycle-layer
 store's retained set is reviewed, re-authored and re-executed at the new cycle's BUILD; a check that
 did not execute is `not-run`, never `passed`.
 
@@ -136,11 +139,11 @@ over those facts**, recorded with its grounds in the ledger. Cautions:
 - A gate with no recorded scores has not passed. It is run, never assumed — the cycle re-enters no
   later than the phase whose artifact that gate scores.
 - A gate whose record carries `remedy_class` has an open re-entry: a passed gate's open
-  recommendation attempt ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*), which resumes
+  recommendation attempt ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*), which resumes
   on the route its last `[gate-autofix]` entry names and not past the gate; or a failed gate's FAIL
   route.
 - A `[rebuttal]` entry with no verdict entry of that gate after it resumes at that gate's re-score
-  ([HANDOFF](handoff.md) > *Whether a finding holds*).
+  ([U6 Delivery](delivery.md) > *Whether a finding holds*).
 - An artifact the next phase consumes that is absent is not written by the orchestrator: the phase
   that produces it runs again.
 
@@ -148,7 +151,7 @@ over those facts**, recorded with its grounds in the ledger. Cautions:
 
 Each is a fail-closed hard stop, run by the orchestrator before the state file is created: DIAGNOSE does not begin until all three pass.
 
-**Bundle drift.** On a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this check), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`; a non-zero exit stops the cycle. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`; the leg resolves the opt-in through the shipped `scripts/test/suite-manifest.sh` and a target that has not opted in PASSes without the selector being consulted) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7 — the selector's own `--check-headers` stage); a declaration file that is present but unreadable is a D7 FAIL, and a scaffold with no `tests` object at all is named by a `HINT` beside the PASS (a re-stamp never adds it). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`; a side that is not locally resolvable reports `SKIP`, never a failure. Remedies: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per [BUILD](build.md) > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`), or repair the unreadable `.claude/autoflow.local.json` it names. A `WARN` (a changed scaffold sample, an artifact the current manifest does not ship) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
+**Bundle drift.** On a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this check), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`; a non-zero exit stops the cycle. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6 — `scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`; the leg resolves the opt-in through the shipped `scripts/test/suite-manifest.sh` and a target that has not opted in PASSes without the selector being consulted) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7 — the selector's own `--check-headers` stage); a declaration file that is present but unreadable is a D7 FAIL, and a scaffold with no `tests` object at all is named by a `HINT` beside the PASS (a re-stamp never adds it). The plugin and the clone are resolved from the harness's local registries by the shipped `scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`; a side that is not locally resolvable reports `SKIP`, never a failure. Remedies: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per [U4 Build and verify](build.md) > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`), or repair the unreadable `.claude/autoflow.local.json` it names. A `WARN` (a changed scaffold sample, an artifact the current manifest does not ship) does not stop the cycle; the orchestrator reports it. See `setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
 
 **Reviewer-backend availability.** PREFLIGHT runs `scripts/preflight/check-review-backend.sh`, which reads the configured HANDOFF review backend from `.claude/autoflow.local.json` (`.review.backend`, default `codex`; absent ⇒ codex) and probes the CLI presence-only (`command -v codex` / `command -v claude`; auth is not probed — a present-but-unauthenticated backend passes here and surfaces its auth failure at the HANDOFF reviewer review). A non-zero exit stops the cycle: it does not begin until the configured backend's CLI is installed or the backend is switched in `.claude/autoflow.local.json`. See [`reviewer-backend.md`](../reviewer-backend.md).
 

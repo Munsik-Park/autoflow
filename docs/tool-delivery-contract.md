@@ -21,7 +21,7 @@ mechanisms conform to these rules.
 Terminology: the **plugin package** is the
 marketplace-distributed, versioned component (`agents/`, `hooks/`, `skills/`);
 the **thin root layer** is what the installer stamps into the target's project
-root (`CLAUDE.md` methodology prose, framework playbooks under `docs/`,
+root (`CLAUDE.md` methodology prose, framework usage documents under `docs/`,
 the shipped scripts, the committed settings pin). "Delivered surface"
 below means both tiers together.
 

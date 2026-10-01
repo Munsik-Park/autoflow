@@ -10,7 +10,7 @@
 # each job's log, and searches it for every file path given. The criterion is
 # the path appearing in a job's log, not the file being registered in a
 # workflow. It reports; whether a file no job ran is then wired into the
-# target's CI is the orchestrator's judgment (docs/phases/handoff.md > CI).
+# target's CI is the orchestrator's judgment (docs/units/delivery.md > CI).
 #
 # Output, one line per file and job:
 #   <file>: <job name> — <the first log line naming the file>

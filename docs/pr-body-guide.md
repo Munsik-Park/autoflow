@@ -49,30 +49,32 @@ reviewers to infer hidden design intent from unrelated repository documents.
 
 ### 5. Verification dispositions (검증 처분의 노출)
 
-host PR body는 `## Verification dispositions` 섹션을 싣는다 — issue의 acceptance
+AutoFlow cycle의 host PR body는 `## Verification dispositions` 섹션을 싣는다 — issue의 acceptance
 criterion 중 automated test로 검증되지 않는 모든 항목을, 그 disposition
 (`existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
 `none`) 과 verification design row에 적힌 한 줄 reason과 함께 나열한다.
 
+- 운영자 주도 PR(AutoFlow cycle 밖에서 운영자가 진행한 작업의 PR)에는 이 섹션을 요구하지 않는다.
+  verification design이 없기 때문이다. 수용 기준의 충족은 *6. 수용 기준 대조*로 보인다.
 - 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: design unit이 검증
   방법의 축소를 결정하고, external reviewer가 그 reason의 타당성을 판단하며,
   advisor는 criterion의 **내용**이 바뀔 때만 1차 판단하고 운영자는 재시도 단계에서 그 판단을 번복할 수 있다
-  ([`role-contracts.md`](role-contracts.md) > Advisor). 규칙 본문은 [`phases/architect.md`](phases/architect.md) >
+  ([`role-contracts.md`](role-contracts.md) > Advisor). 규칙 본문은 [U3 Design](units/design.md) >
   Output artifacts > *Test necessity* 와 *Report routing*.
 - 형식은 AC id + disposition + reason 한 줄. reason은 verification design의 셀을
   옮겨 적고 새로 쓰지 않는다.
 - issue AC 전부가 `automated` 이면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
 - `cycle` 층의 `automated` row(`Type` 셀에 `standing:` 토큰이 없는 row)는 같은 섹션에 그
   row의 **run record** — build report의 `## Run record`에 기록된 command와 summary line — 를 한 줄로 싣는다
-  (`phases/handoff.md` > *Push and pull request*).
+  ([U6 Delivery](units/delivery.md) > *Push and pull request*).
 - AI가 도구로 실행한 `manual` row는 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
   한 줄로 싣는다. 사람이 실행하는 `manual` row는 reason에 도구를 확보할 수 없었던 이유가 들어
-  있다 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; `phases/architect.md` > *Tools*).
+  있다 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; [U3 Design](units/design.md) > *Tools*).
 - cycle이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
   남겨 두는 이유, 그리고 HANDOFF의 CI 확인에서 `scripts/handoff/ci-test-file-jobs.sh`가 CI job 로그에서 찾은 실행 job(target에 CI가 없으면
   `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *What a cycle leaves in the target's tree*;
-  `phases/handoff.md` > *CI* > *Added test files*).
+  [U6 Delivery](units/delivery.md) > *CI* > *Added test files*).
 
 예:
 
@@ -90,13 +92,39 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   따라 달라지므로 target의 회귀 대상; CI job `unit (ubuntu-latest)`에서 실행 확인.
 ```
 
+### 6. 수용 기준 대조
+
+운영자 주도 PR과 AutoFlow cycle PR 모두, PR body에 linked issue의 수용 기준을 대조하는 절을
+싣는다.
+
+- 절 머리에 결과가 어느 commit 기준인지 밝힌다: "`<sha>` 시점의 결과".
+- 기준마다 한 줄로 쓴다: 기준 번호(cycle PR은 분석 report `## Acceptance criteria`의 AC id),
+  충족 여부, 확인한 commit, 근거 위치(`path` > section, `path:line`, 실행 기록의 summary line 등).
+- 충족하지 못했거나 일부만 충족한 기준은 그렇게 적고 사유를 같은 줄에 붙인다. 후속 처리는
+  *3. 한계와 known gaps*에 적는다.
+- 이 절은 cycle PR의 *5. Verification dispositions*를 대신하지 않는다. dispositions는 검증 방법의
+  처분이고, 이 절은 기준의 충족 여부다.
+- 항목은 제시만 한다. 이 형식을 검사하는 장치는 없다.
+
+예:
+
+```
+## 수용 기준 대조 (#42)
+
+`a1b2c3d` 시점의 결과.
+
+- 1 — 충족 · `a1b2c3d` · `src/retry.ts:40-58`, `.autoflow/issue-42-local/ac1-retry.log` → `PASS 3/3`
+- 2 — 충족 · `9f8e7d6` · `docs/retry.md` > Backoff
+- 3 — 일부 충족: 설정 파일 경로만 반영, 환경변수 경로는 후속 #43 · `a1b2c3d` · `src/config.ts:12`
+```
+
 ---
 
 ## 적용
 
 본 가이드는 권고. PR 유형에 따라 일부 섹션은 적용되지 않을 수 있다.
 
-- [`phases/handoff.md`](phases/handoff.md) 가 본 가이드를 cross-reference (AI orchestrator).
+- [U6 Delivery](units/delivery.md) > *Push and pull request* 가 본 가이드를 cross-reference (AI orchestrator).
 - 수동 PR 작성 시도 동일하게 참조.
 
 새 principle 추가 시 형식 유지 (이름 + 본문 + 예시 1-2건).

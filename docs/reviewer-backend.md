@@ -4,7 +4,7 @@ HANDOFF's reviewer review (external review) runs through a **backend-neutral rev
 contract**. `codex` is the default backend; `claude` is an opt-in fallback. This
 document is the single home for the abstraction — the inputs, obligations,
 output, backend table, config location, and the per-backend start-confirmation
-oracle. It is referenced from [`phases/handoff.md`](phases/handoff.md)
+oracle. It is referenced from [`units/delivery.md`](units/delivery.md)
 > *Reviewer review* and `CLAUDE.md`.
 
 ## Contract
@@ -232,7 +232,7 @@ is narrated, never used to abort an install or gate a cycle.
 
 `scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's output>]`
 reads these signals and reports the first one it finds
-([`phases/handoff.md`](phases/handoff.md) > *Reviewer review*):
+([`units/delivery.md`](units/delivery.md) > *Reviewer review*):
 
 - `codex` — a session rollout under `~/.codex/sessions/` written since the launch whose prompt
   names `pull request #<N>`, or a running process whose prompt does; an advancing rollout `mtime`
