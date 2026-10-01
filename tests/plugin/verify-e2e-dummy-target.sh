@@ -72,8 +72,8 @@ sha256_of() {
 # make_dummy_target <dir> — byte-reproducible generator (EA-FIX-a) of a
 # structurally-real, zero-submodule dummy JS-style library: its own git
 # history, a foreign package.json/src/ payload, README.md, and a pre-existing
-# CLAUDE.md with prose OUTSIDE any AUTOFLOW fence. No .gitmodules (zero
-# submodules -> single-repo topology per CLAUDE.md > Deployment Topology).
+# CLAUDE.md with prose OUTSIDE any AUTOFLOW fence. No .gitmodules (a
+# repository with no sub-repos).
 make_dummy_target() {
   _dir="$1"
   mkdir -p "$_dir/src"
@@ -183,7 +183,7 @@ else
   failc "E1a" "S5/#792" "CLAUDE.md missing, empty, or already fenced pre-install"
 fi
 if [ ! -e "$DUMMY/.gitmodules" ]; then
-  pass "E1a: no .gitmodules (zero-submodule -> single-repo topology)"
+  pass "E1a: no .gitmodules (no sub-repos)"
 else
   failc "E1a" "S5/#792" ".gitmodules present in generated fixture (not zero-submodule)"
 fi
@@ -234,7 +234,7 @@ else
   failc "E1c" "S5/#792" "prerequisite E1b failed or CLAUDE.md absent"
 fi
 
-echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, AGENTS.md =="
+echo "== E1d: installer disturbs only .claude/**, CLAUDE.md fence, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, AGENTS.md =="
 if [ "$DRIVE_PASS" -eq 1 ]; then
   if cmp -s "$SNAP_DIR/package.json" "$DUMMY/package.json"; then
     pass "E1d: package.json byte-unchanged"
@@ -261,14 +261,14 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   # them, so install genuinely creates them here.
   for _nf in $NEW_FILES; do
     case "$_nf" in
-      ./.claude/*|./CLAUDE.local.md|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./scripts/architect/*|./scripts/gate/*|./scripts/test/*|./tests/lib/*|./.codex/*|./AGENTS.md) : ;;
+      ./.claude/*|./scripts/review/*|./scripts/preflight/*|./scripts/handoff/*|./scripts/cleanup/*|./scripts/issue/*|./scripts/ledger/*|./scripts/spawn-policy/*|./scripts/lib/*|./scripts/architect/*|./scripts/gate/*|./scripts/test/*|./tests/lib/*|./.codex/*|./AGENTS.md) : ;;
       *) BAD_NEW="$BAD_NEW $_nf" ;;
     esac
   done
   if [ -z "$BAD_NEW" ]; then
-    pass "E1d: every newly-created path is under .claude/**, CLAUDE.local.md, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, scripts/lib/**, scripts/architect/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, or AGENTS.md"
+    pass "E1d: every newly-created path is under .claude/**, scripts/review/**, scripts/preflight/**, scripts/handoff/**, scripts/cleanup/**, scripts/issue/**, scripts/ledger/**, scripts/spawn-policy/**, scripts/lib/**, scripts/architect/**, scripts/gate/**, scripts/test/**, tests/lib/**, .codex/**, or AGENTS.md"
   else
-    failc "E1d" "S5/#792" "install created file(s) outside .claude//CLAUDE.local.md/scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/spawn-policy//scripts/lib//.codex//AGENTS.md:$BAD_NEW"
+    failc "E1d" "S5/#792" "install created file(s) outside .claude//scripts/review//scripts/preflight//scripts/handoff//scripts/cleanup//scripts/issue//scripts/ledger//scripts/spawn-policy//scripts/lib//.codex//AGENTS.md:$BAD_NEW"
   fi
 else
   failc "E1d" "S5/#792" "skipped -- prerequisite E1b failed"
@@ -423,7 +423,7 @@ echo "== E4w: post-init.sh target settings.json landed the marketplace wiring ==
 if [ "$DRIVE_PASS" -eq 1 ] && assert_marketplace_wiring "$DUMMY_SETTINGS"; then
   pass "E4w: \$DUMMY/.claude/settings.json carries extraKnownMarketplaces for autoflow (install-time marketplace wiring landed; enablement is user-scope and is not asserted here)"
 else
-  failc "E4w" "single-repo-HANDOFF" "assert_marketplace_wiring failed on $DUMMY_SETTINGS -- settings-pin merge wiring did not land"
+  failc "E4w" "HANDOFF" "assert_marketplace_wiring failed on $DUMMY_SETTINGS -- settings-pin merge wiring did not land"
 fi
 
 echo "== E4w-nv: negative self-test -- assert_marketplace_wiring() FAILs on a tampered settings copy =="
@@ -432,10 +432,10 @@ if [ -f "$DUMMY_SETTINGS" ]; then
   if ! assert_marketplace_wiring "$SETTINGS_NV"; then
     pass "E4w-nv: assert_marketplace_wiring() rejects a settings copy with extraKnownMarketplaces dropped (E4w's predicate discriminates)"
   else
-    failc "E4w-nv" "single-repo-HANDOFF" "assert_marketplace_wiring() wrongly accepted a settings copy with extraKnownMarketplaces dropped -- E4w would be vacuous"
+    failc "E4w-nv" "HANDOFF" "assert_marketplace_wiring() wrongly accepted a settings copy with extraKnownMarketplaces dropped -- E4w would be vacuous"
   fi
 else
-  failc "E4w-nv" "single-repo-HANDOFF" "$DUMMY_SETTINGS missing -- cannot build the tampered scratch copy"
+  failc "E4w-nv" "HANDOFF" "$DUMMY_SETTINGS missing -- cannot build the tampered scratch copy"
 fi
 
 # The allow case is the smoke: exit 0 cannot come from a script bash fails to
@@ -447,10 +447,10 @@ if [ -f "$HOOK" ]; then
   if [ "$E4B_CODE" -eq 0 ]; then
     pass "E4b: installed gate hook runs and allows a benign command (exit 0)"
   else
-    failc "E4b" "single-repo-HANDOFF" "installed gate hook did not return allow for a benign command (exit $E4B_CODE): $E4B_OUT"
+    failc "E4b" "HANDOFF" "installed gate hook did not return allow for a benign command (exit $E4B_CODE): $E4B_OUT"
   fi
 else
-  failc "E4b" "single-repo-HANDOFF" "gate hook missing at $HOOK"
+  failc "E4b" "HANDOFF" "gate hook missing at $HOOK"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────

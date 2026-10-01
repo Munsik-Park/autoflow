@@ -13,7 +13,8 @@ check passes, run a project-specific security audit on the change. Complements G
 (`.autoflow/issue-{N}-build-report.md`) and the exit-check log
 (`.autoflow/issue-{N}-build-exit-check.log`) — + the target's security checklist at the version the
 checklist status names (*Security checklist* below), or none when none is declared. The evaluator
-re-runs `bash scripts/gate/build-exit-check.sh --issue {N}` itself and attaches its verdict line to
+re-runs the exit check itself, the way it was run — `bash scripts/gate/build-exit-check.sh --issue {N}`
+with the location and arguments the AUDIT prompt passes beside the exit-check log — and attaches its verdict line to
 its report; on a verdict other than `pass` it scores nothing and returns that line. That return is
 a routed result, not a report defect: the orchestrator does not re-spawn the evaluator and routes it
 as the exit check's verdict ([BUILD](build.md) > *Exit check*). In a **review-response cycle**,

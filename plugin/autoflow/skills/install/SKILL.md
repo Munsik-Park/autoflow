@@ -15,8 +15,7 @@ current project from the marketplace cache. It carries **no install logic of its
 reports, gates on a single confirmation, then delegates the write to the existing
 `setup/init.sh --target` installer and re-runs the shipped `drift-check.sh`.
 
-**Opt-in boundary.** Steps 0–2 are read-only (git queries, hash reads, a
-`gh` existence probe). There is exactly **one** confirmation point (Step 3). No
+**Opt-in boundary.** Steps 0–2 are read-only (git queries, hash reads). There is exactly **one** confirmation point (Step 3). No
 filesystem write to the target happens before it. Declining leaves the target
 byte-unchanged. This skill never commits — it guides the user to commit.
 
@@ -141,9 +140,6 @@ written):
   reason. This is disclosed here, before Step 3; nothing is removed until the
   stamp runs. When the
   installed manifest is unreadable the stamp removes nothing and says so.
-- **Derived identity** (display-only): `ORG` / `REPO` / `DEFAULT_BRANCH` /
-  `TOPOLOGY`. Empty fields were omitted on purpose (non-GitHub / no remote) —
-  do not ask the user for them.
 
 <!-- REVIEWER-BACKEND-DISCLOSURE -->
 - **Reviewer backend (disclose before confirming).** Read
@@ -182,35 +178,30 @@ written):
   [`docs/reviewer-backend.md`](../../../../docs/reviewer-backend.md) > *Model
   and effort*.
 
-## Step 2: [multi-repo only] fork-URL proposal (display-only)
+## Step 2: project information (a recommendation)
 
-If `TOPOLOGY=multi`, include the derived `FORK_PROPOSAL` and `FORK_EXISTS`
-(`yes` / `no` / `unknown`) **inside the Step 1 report** — as information, not a
-separate prompt.
+AutoFlow does not classify the target's repository structure and writes no
+project information file. Later work reads the project's own information and
+rule files where they exist (`.claude/autoflow/CLAUDE.md` > Project
+Information). Include in the Step 1 report, as a recommendation: if you look at
+the repository's structure and describe the project's information, later work
+can use it. What to write, and where, is yours to decide. Nothing is written
+at this step: a file you choose to write comes after the Step 3 confirmation.
 
 ## Step 3: confirm — the single opt-in gate
 
-Ask the user **once** whether to stamp (in multi-repo, this same prompt also
-confirms the fork-URL shown above; when Step 1 listed `STALE_UPSTREAM=` lines,
-the same prompt names the artifacts the stamp will remove). This is the only
-confirmation across both topologies. **If the user declines, STOP here — perform zero writes** (the fork
-proposal and the stamp are both abandoned; the target stays byte-unchanged).
+Ask the user **once** whether to stamp (when Step 1 listed `STALE_UPSTREAM=`
+lines, the same prompt names the artifacts the stamp will remove; when you mean
+to write project information, the same prompt names each file you will write
+or change). This is the
+only confirmation. **If the user declines, STOP here — perform zero writes** (the
+stamp is abandoned; the target stays byte-unchanged).
 
 ## Step 4: on confirmation — stamp (writes begin here)
 
 Only after the user confirms at Step 3:
 
-**a. Scaffold the identity draft (if absent).** Write a derived
-`CLAUDE.local.md` draft *before* the stamp. When
-`CLAUDE.local.md` already exists this is a no-op (R3 — never overwrite):
-
-```bash
-TARGET_ROOT="$TARGET_ROOT" ORG="$ORG" REPO="$REPO" \
-  DEFAULT_BRANCH="$DEFAULT_BRANCH" TOPOLOGY="$TOPOLOGY" \
-  sh "$S/scaffold-identity.sh"
-```
-
-**b. Stamp the bundle** by delegating to the reused installer:
+**a. Stamp the bundle** by delegating to the reused installer:
 
 ```bash
 bash "$PLUGIN_CACHE_ROOT/setup/init.sh" --target "$TARGET_ROOT"
@@ -222,12 +213,12 @@ one does not — `REMOVED: <dest> (...)` for a `copy` whose content was still
 what AutoFlow shipped, `KEPT: <dest> (<reason>)` for a modified `copy` or a
 `scaffold` / `shim-stamp` / `json-merge` artifact, `ABSENT: <dest>` for a
 `copy` already gone — followed by a one-line count. Keep these lines for
-step f. A first stamp prints that there was nothing to reconcile; an
+step e. A first stamp prints that there was nothing to reconcile; an
 unreadable previous manifest prints a `[WARN]` and removes nothing.
 
-**c. Persist the reviewer-backend selection (only on an explicit switch).**
+**b. Persist the reviewer-backend selection (only on an explicit switch).**
 <!-- REVIEWER-BACKEND-PERSIST -->
-The stamp (step b) shipped `.claude/autoflow.local.json` with its `codex`
+The stamp (step a) shipped `.claude/autoflow.local.json` with its `codex`
 default. If — and only if — the operator **explicitly** chose `claude` at the
 Step-3 confirmation (the disclosed switch, `REVIEW_CODEX_PRESENT=no` path),
 record that choice now into `.claude/autoflow.local.json`; otherwise skip this
@@ -237,9 +228,9 @@ sub-step and leave the `codex` default in place (no silent downgrade):
 TARGET_ROOT="$TARGET_ROOT" BACKEND=claude sh "$S/set-review-backend.sh"
 ```
 
-**d. Probe the configured reviewer backend's auth (advisory).**
+**c. Probe the configured reviewer backend's auth (advisory).**
 <!-- REVIEWER-BACKEND-PROBE -->
-Now that the selection is persisted (step c, or the retained `codex` default),
+Now that the selection is persisted (step b, or the retained `codex` default),
 run the shipped on-demand `--probe` against the just-persisted backend. This is
 one real authenticated round-trip over the identical channel the HANDOFF reviewer review
 uses. Runs for **both** the `codex` default and an explicit `claude`
@@ -259,13 +250,13 @@ non-zero exit. Map the exit code:
 - `4` → "the configured backend is present but the auth round-trip failed — you
   will hit this at the HANDOFF reviewer review; fix credentials before your first cycle."
 
-**e. Self-verify** by re-running the shipped drift detector:
+**d. Self-verify** by re-running the shipped drift detector:
 
 ```bash
 CLAUDE_PROJECT_DIR="$TARGET_ROOT" sh "$TARGET_ROOT/.claude/autoflow/drift-check.sh"
 ```
 
-**f. Report the drift-check result and guide the user to commit.** Report the
+**e. Report the drift-check result and guide the user to commit.** Report the
 `RESULT:` line and every `FAIL:` / `WARN:` line. Include the **D6** verdict
 explicitly (the `PASS: D6` / `FAIL: D6` / `SKIP: D6` lines): a `FAIL: D6`
 after a stamp is expected whenever the scaffold pre-dated this plugin version —
@@ -285,7 +276,7 @@ scaffold's missing `tests` object and its hand edit (Step 1). A D7 FAIL is
 likewise a PREFLIGHT stop condition and not a reason to re-stamp.
 
 **Reconciled artifacts.** Report every artifact-dest `REMOVED:` /
-`KEPT:` / `ABSENT:` line from step b verbatim, dest by dest, and the count
+`KEPT:` / `ABSENT:` line from step a verbatim, dest by dest, and the count
 line — an artifact-dest line carries a `(copy; ...)` / `(<kind>; ...)`
 parenthetical right after `<dest>`. (The settings-key lines are a different
 class — see below.) For each `REMOVED:` dest in this class, run one read-only
@@ -302,7 +293,7 @@ line's dest is the operator's to dispose of by hand — for a modified `copy`,
 by diffing it against the previous version before deleting it. Do NOT commit
 on their behalf (R1).
 
-**The settings-key lines are a different class — never probe them.** `merge_settings` (also step b, the same stamp invocation) prints
+**The settings-key lines are a different class — never probe them.** `merge_settings` (also step a, the same stamp invocation) prints
 `REMOVED: <dest> enabledPlugins["autoflow@autoflow"] (...)` / `KEPT: <dest>
 enabledPlugins["autoflow@autoflow"] (...)` — recognizable by `enabledPlugins[`
 immediately after `<dest>`, unlike the artifact-dest form above. This is a

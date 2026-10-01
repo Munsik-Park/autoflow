@@ -54,6 +54,8 @@ git status                       # must report nothing to commit, working tree c
 # 2. Synced with remote
 git fetch origin
 git log HEAD..origin/main --oneline   # must be empty (or handled)
+# In a project with sub-repos, each submodule is at the commit the host's pointer names
+# after the host is synced (the orchestrator's work item; nothing checks it).
 
 # 3. Branch is from the latest main (a new issue; an AutoFlow cycle's dev branch is dev/<date>-issue-<N>)
 git checkout -b <branch> main
@@ -122,35 +124,13 @@ Closes #<issue-number>
 
 ### Merge Sequencing (external review)
 
-In a single-repo deployment (target-centric — the default; zero submodules, see `CLAUDE.md` > Deployment Topology), the cycle produces a single host PR and there is no sub-repo merge-order constraint: the host PR carries no `blocked-by-subrepo` label, and the external reviewer promotes the draft to ready and merges it directly.
-
-In a multi-repo deployment (host PR with sub-repo dependencies), the merge order is sub-repo → pointer bump → host. The host PR is created as a draft with the `blocked-by-subrepo` label at HANDOFF ([`phases/handoff.md`](phases/handoff.md) > *Push and pull request*). Merge-order clearance is operator-performed; a machine status check for this signal is advisory-only, never an enforceable required check. Once the sub-repo merge and pointer reconcile are confirmed complete, the operator removes the `blocked-by-subrepo` label at merge time (see `docs/external-review-sequencing.md` > Merge-order clearance). Pointer alignment is checked by the operator's **manual** `git ls-tree HEAD <submodule>` check.
-
-Full reviewer-facing procedure: [`external-review-sequencing.md`](external-review-sequencing.md).
-
-See also: [`phases/handoff.md`](phases/handoff.md) > Merge Sequencing (external review).
-
-### Pointer reconciliation — concurrent-cycle gitlink guard
-
-In a single-repo deployment (target-centric — the default; zero submodules), this step does not exist. This is an active N/A — the guard below applies **only** to a multi-repo deployment, and a single-repo instance skips it entirely rather than silently omitting it.
-
-When a **reconcile request** (pointer bump after the sub-repo PR merges) is delegated to AutoFlow and several cycles are in external review at once, the dev branch may have forked before another cycle's host PR merged and reconciled the submodule pointer. Before bumping, compare `BASE` (dev's merge-base pointer), `MAIN` (current `origin/main` pointer), and `TARGET` (this issue's sub-repo PR `merge_commit_sha`); if `MAIN != BASE`, resolve by fork ancestry:
-
-```bash
-git fetch origin main && git -C <submodule> fetch origin main
-# TARGET descendant of MAIN: put TARGET on the dev gitlink FIRST, then merge main.
-# A bare `git merge origin/main` with the dev pointer still at BASE resolves the
-# gitlink to MAIN, NOT TARGET.
-if git -C <submodule> merge-base --is-ancestor <MAIN> <TARGET>; then
-  git -C <submodule> checkout <TARGET>
-  git add <submodule> && git commit -m "chore(#<N>): reconcile <submodule> pointer to <TARGET>"
-  git merge --no-edit origin/main          # dev gitlink TARGET ⊇ MAIN -> submodule stays at TARGET
-  test "$(git ls-tree HEAD <submodule> | awk '{print $3}')" = "<TARGET>" || echo "POINTER != TARGET — fix before push"
-fi
-# MAIN descendant of TARGET OR divergent -> do NOT push; escalate to operator
-```
-
-Before/after pushing, verify **all three**: (1) `git ls-tree HEAD <submodule>` == `TARGET` (manual pointer-equality check); (2) the generic mergeable + check-rollup confirmation via `scripts/handoff/confirm-ci-green.sh --pr <PR>` (the shared HANDOFF CI helper; see [`phases/handoff.md`](phases/handoff.md) > *CI* and [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight — not restated here); (3) the CI checks on the new head commit all `success`, read by commit SHA (`gh api repos/{owner}/{repo}/commits/<head-sha>/check-runs`), never by job or check name. **[MUST]** Read the post-reconcile head's checks, not the PR's latest run. Run the reconcile against a freshly-synced `main` (Post-Merge Cleanup of prior merges first). Full procedure: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
+A host PR with no sub-repo dependency is promoted and merged by the external reviewer directly. A
+host PR that depends on a sub-repo PR carries `blocked-by-subrepo` and merges after it: the sub-repo
+PR merges, the host is reconciled to its merge commit, the operator confirms the host pointer equals
+that merge commit and removes the label, and the host PR is then promoted and merged. The rule AutoFlow
+keeps for the host's pointer, and its cautions, are [`phases/handoff.md`](phases/handoff.md) >
+*Multi-repo delivery*; the reviewer- and operator-facing guide is
+[`external-review-sequencing.md`](external-review-sequencing.md).
 
 ---
 
@@ -163,7 +143,7 @@ from earlier cycles:
 
 ```bash
 git checkout main
-git pull origin main
+git pull origin main                # with sub-repos: each submodule follows the host's pointer
 git branch -d <branch>             # local branch
 git push origin --delete <branch>  # remote branch (if not auto-deleted)
 scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/issue-<N>.* + issue-<N>-* files and the rest of its issue-<N>-local/ store to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
@@ -212,16 +192,16 @@ reserved path, `issue-<N>-local/disposable`, removed without following a symboli
 
 ## Issue Auto-Close
 
-In the target-centric default, the cycle's single (host) PR carries `Closes #N` directly.
+A cycle that changes no sub-repo opens one PR, and that PR carries `Closes #N`.
 
-*Secondary (multi-repo):* when the host contains a submodule, the cycle splits into two PRs — the host PR carries the close keyword and merges last, each sub-repo PR references only and merges first:
+*Secondary (multi-repo):* when the cycle changes a sub-repo, it opens a PR there too — the host PR carries the close keyword and merges last, each sub-repo PR references only and merges first:
 
 ```
 # Host PR (merges last — closes the issue)
 Closes #N
 
 # Sub-repo PR (merges first — references only, does NOT close)
-Part of Munsik-Park/autoflow#N
+Part of <host-owner>/<host-name>#N
 ```
 
 - Close keywords: `Closes`, `Fixes`, `Resolves` (case-insensitive).

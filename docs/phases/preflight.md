@@ -42,7 +42,8 @@ says which. From those facts the orchestrator brings about the following.
 - **The tree is clean and synced.** No uncommitted change or untracked file in the working area,
   and the branch the mode works on — the default branch for a new issue, the issue's dev branch for
   a review-response — matches the remote ([`git-workflow.md`](../git-workflow.md) > Git Clean
-  Check).
+  Check). In a project with sub-repos, syncing the host also brings each submodule to the commit
+  the host's pointer names; this is the orchestrator's work item, and no script checks it.
 - **The stop conditions pass** (*Stop conditions*): bundle drift, reviewer-backend availability,
   the target-declared local checks.
 - **A new issue gets its branch and its state**: the dev branch `dev/YYYY-MM-DD-issue-N` from the

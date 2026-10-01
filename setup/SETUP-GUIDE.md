@@ -35,7 +35,7 @@ The three commands are two different things:
   re-stamp each target (`/autoflow:install`).
 
 Step 3 is the `/autoflow:install` skill. It detects root-layer absence or drift
-and reports the derived org/repo/branch/topology (read-only), asks for a
+and reports it (read-only), asks for a
 **single** confirmation, then stamps the thin-root bundle from the marketplace
 cache and runs `drift-check.sh` automatically. Nothing is written to your
 project before you confirm, and the skill never commits — you own the version
@@ -110,7 +110,6 @@ itself copied into the target (`.claude/autoflow/manifest.json`).
 | Settings pin (`extraKnownMarketplaces` — the marketplace this target's AutoFlow comes from; no enablement key) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
 | Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`; `/autoflow:install` Step 0 runs a byte-identical copy shipped inside the plugin) | `scripts/lib/plugin-root.sh` | copy |
-| Local overrides scaffold (never overwritten) | `CLAUDE.local.md` | scaffold |
 | Spawn policy sample (target-configured, never overwritten) | `.claude/autoflow/spawn-policy.json` | scaffold |
 
 The shim stamp is idempotent and only touches the `AUTOFLOW-IMPORT:BEGIN/END`
@@ -122,8 +121,9 @@ re-stamp deletes (`"autoflow@autoflow": true`) and the one it preserves (`false`
 your per-repo opt-out); both outcomes are named on stdout, one line per key. The
 pin carries no `env` block either (see Prerequisites for an existing
 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` entry).
-`CLAUDE.local.md` holds your target identity (R3) and is never overwritten, even
-with `--force`. `.claude/autoflow/spawn-policy.json` is a scaffold too: a sample
+The stamp writes no project information file: your project's identity and
+structure stay in your own files (R3), which the stamp never creates or
+overwrites, even with `--force`. `.claude/autoflow/spawn-policy.json` is a scaffold: a sample
 carrying the values currently applied, which you configure for your own runtime —
 the model rows and the `workflow_sites` effort; a `phases[]` row's effort is fixed
 by the plugin's agent definitions and `check` fails closed if you change it. A
@@ -200,7 +200,7 @@ If the clone itself is behind upstream, refresh it first
   repository's `.claude/settings.json` by hand: a re-stamp preserves any value
   other than the literal `true`, and names on stdout what it
   removed (`REMOVED:`) or declined to interpret (`KEPT:`, with the value found).
-- A GitHub repository (or multiple repos for multi-sub-repo setup).
+- A GitHub repository (and one per sub-repo, for a project with sub-repos).
 - For a private host repo and/or private submodule: an SSH key (or a
   per-repo deploy key) registered with GitHub and available to every
   automation context (CI agent, webhook container, developer clone).

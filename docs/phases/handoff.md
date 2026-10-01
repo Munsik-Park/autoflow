@@ -81,7 +81,7 @@ header carries the full contract; the exit codes route as follows.
 | Exit | Meaning | What follows |
 |---|---|---|
 | `0` | green — at least one check present, every one green, on a PR whose mergeable state was confirmed | *Added test files*, then *Reviewer review* |
-| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: resolve against `origin/main` (rebase or merge) and push again (internal retry); a conflict on a `<submodule>` gitlink another cycle advanced → [`external-review-sequencing.md`](../external-review-sequencing.md) > Reconcile preflight |
+| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: resolve against `origin/main` (rebase or merge) and push again (internal retry); a conflict on a sub-repo pointer another cycle advanced → *Multi-repo delivery* below |
 | `11` | mergeable, and no check was published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900) | not green: look at the CI trigger (webhook delivery, workflow trigger conditions), or push again to force a `synchronize` event, before escalating |
 | `12` | a check concluded failure | *CI-failure re-entry* below |
 | `13` | checks present, no green verdict at the deadline — still pending, mergeability not re-settled, or a superseded run's workflow unresolved (named on its own stderr line; check the token's `actions: read`) | raise `CI_POLL_TIMEOUT_SECS` or run again (internal retry), or escalate |
@@ -291,7 +291,7 @@ Classify the cause and regress along the matching path.
 CI failure (a check concluded failure, exit 12) → by remedy_class (CI-failure re-entry above)
 CI failure (env / transient)                   → CI retry, then the CI confirmation again (max 2)
 PR CONFLICTING (no checks,                     → resolve vs origin/main (rebase/merge) + push again, OR
- build silently skipped)                          concurrent-cycle gitlink → Reconcile preflight;
+ build silently skipped)                          a sub-repo pointer → Multi-repo delivery;
                                                   then the CI confirmation again (max 2) — never wait on CI green
 Push rejected (branch state)                   → dev branch rebase on main → push again (max 2)
 ```
@@ -301,28 +301,60 @@ Push rejected (branch state)                   → dev branch rebase on main →
 
 ## Multi-repo delivery
 
-Topology decides which PRs HANDOFF creates (see [`CLAUDE.md`](../../CLAUDE.md) > Deployment Topology): in a single-repo deployment (target-centric — the default; zero submodules), HANDOFF creates one host PR. In a multi-repo deployment (one or more submodules), HANDOFF creates each affected sub-repo PR plus the host PR; change scope determines which sub-repo PRs exist.
+Where the project's information names sub-repos — a directory whose source is its own repository,
+tracked by the host as a submodule pointer (gitlink) — and the cycle changes one, the sub-repo's
+change is delivered on its own pull request and the host follows it by its pointer. AutoFlow does
+not classify the project; what the sub-repos are, where each one's pull request goes (a fork, the
+upstream) and where issues are filed are read from the project's own information
+([`CLAUDE.md`](../../CLAUDE.md) > Project Information).
 
-*Secondary (multi-repo):* Sub-repo changes present:
+**The rule.** After a sub-repo pull request merges, the host keeps a clean state by a reconcile
+merge: the host branch that depends on it points at that pull request's merge commit, and stays
+mergeable with the default branch. Merging is the operator's, so the request to reconcile after a
+sub-repo merge is the operator's too; the orchestrator reconciles when it is asked. When the
+pointer moves before that point, and how a reconcile is carried out, are the orchestrator's,
+derived from this rule and recorded with their grounds in the ledger.
 
-- **Sub-repo PRs.** Each sub-repo PR (fork → upstream) is created as a draft **with `--label "blocked-by-review"`**, body `Part of Munsik-Park/autoflow#N` (no close keyword; only the host PR closes the issue). The review gate is **per-PR**: **every** PR created for this cycle — the host PR *and* each sub-repo PR — carries `blocked-by-review` and is reviewed on its **own diff**. The `blocked-by-review` label must exist in each sub-repo (one-time operator setup — see [`external-review-sequencing.md`](../external-review-sequencing.md)). `blocked-by-subrepo` is a separate, host-only merge-order gate, not a review gate.
-- **Pointer bump before the host PR.** **Before** creating the host PR, the **orchestrator** aligns the host dev branch's `<submodule>` gitlink to this cycle's sub-repo PR head — this is the **single source** of the pointer-bump commit format: run `git -C <submodule> checkout <sub-repo-PR-head>`, then `git add <submodule>`, then commit with the message `chore(#N): bump <submodule> pointer to <short-sha>` (the same `chore(#N): …` convention as the `git-workflow.md` reconcile snippet; DELIVER and the review-response re-bump below forward-ref this format rather than restating it). The host PR is then created as a draft carrying `blocked-by-review` and `blocked-by-subrepo` (*Push and pull request* above). The body is the template-rendered host PR body (see `.github/pull_request_template.md` and Issue Auto-Close in [`git-workflow.md`](../git-workflow.md)).
-- **[MUST] Review-response re-bump.** Once the sub-repo fix has landed and that sub-repo PR has reached its clean point (the propagation-batching condition below), and **before** the push that updates the host PR, re-bump the host `<submodule>` pointer to that sub-repo PR's new head **once**, then confirm `git ls-tree HEAD <submodule> | awk '{print $3}'` equals that head. This manual pointer-equality check fires once at the clean point, not for a fix push in isolation.
-- **Propagation batching.** When a sub-repo fix would bump the host `<submodule>` pointer, **defer** the host pointer bump until that sub-repo PR reaches its **clean point**: its `blocked-by-review` label has cleared (its reviewer re-review is clean), or every `Medium`+ finding its latest review keeps is accepted by the advisor or the operator — an `A` ledger entry under `advisor decision`, or an `O` entry under `operator decision`, appended after that review ([`decision-ledger.md`](../decision-ledger.md) > *Decision-point entries*). At that clean point bump **once** — the same re-bump point as the `[MUST]` above. A bump at an acceptance is a clean-point bump, not an interim one: it takes the ordinary commit format, and the acceptance entry is its record. This holds for the general parent-pointer / sub-repo-PR relation, independent of how many repos deep the change sits. If an intervening host-CI check makes an exceptional interim bump unavoidable, record the reason in the commit message (`chore(#N): interim <submodule> bump: <reason>`). This bullet is the source of truth for the batching norm; [`external-review-sequencing.md`](../external-review-sequencing.md) carries a one-line cross-ref for reviewers.
-- Submodule pointer reconciliation after the sub-repo PR is merged upstream defaults to the operator but may be delegated to AutoFlow on explicit request.
+What is asked:
+
+- Each changed sub-repo has its branch pushed and its pull request opened by the orchestrator's own
+  commands — `git -C <sub-repo> push …`, `gh pr create --repo <owner/name> …` — gated like the
+  host's, draft and carrying `blocked-by-review` (*Push and pull request*). A sub-repo pull request
+  references the host issue (`Part of <host-owner>/<host-name>#N`) and carries no close keyword; the
+  host pull request is the one that closes the issue.
+- A host pull request whose pointer depends on an unmerged sub-repo pull request carries
+  `blocked-by-subrepo`, which the operator clears.
+- The host pull request's pointer names the sub-repo commit the cycle delivers, so the host review
+  reads the pointer and the sub-repo review reads the code behind it (*Review triage*).
+
+Cautions:
+
+- A merge of the default branch into a host branch whose pointer still sits where the branch forked
+  resolves the pointer to the default branch's, not to the sub-repo merge commit. The pointer is set
+  and read back (`git ls-tree HEAD <sub-repo>`) before the push.
+- Another cycle may have moved the default branch's pointer since this branch forked. When the
+  sub-repo merge commit does not contain that pointer — the default branch is ahead of it, or the
+  two have diverged — reconciling would move the host's pointer backwards or across histories: the
+  orchestrator does not push, and reports to the operator.
+- Every pointer move is a host commit the host review reads again; a pointer moved while the
+  sub-repo pull request is still changing under review costs a host re-review per move.
+- A sub-repo nested inside a sub-repo is that sub-repo's own delivery.
+- The gate labels must exist in each repository a pull request is opened in
+  ([`external-review-sequencing.md`](../external-review-sequencing.md) > Operator prerequisites).
+
+Result owed: each pull request's URL and head commit; for the host pull request, the commit each
+changed sub-repo's pointer names. After a reconcile: the pointer read back equal to the merge
+commit, and the CI confirmation on the new head (*CI*).
 
 ## Merge Sequencing (external review)
 
-In a single-repo deployment (target-centric — the default; zero submodules), the cycle produces a single host PR and there is no sub-repo merge-order step at all: HANDOFF opens one host PR with no `blocked-by-subrepo` label, and the external reviewer promotes the draft to ready and merges it directly. The merge-order sequence below governs only a multi-repo deployment.
+Merging is outside AutoFlow ([`external-review-sequencing.md`](../external-review-sequencing.md)).
+A host pull request with no sub-repo dependency is promoted and merged by the external reviewer
+directly. One carrying `blocked-by-subrepo` merges after its sub-repo pull request: the sub-repo
+pull request merges first, the host is reconciled to its merge commit (*Multi-repo delivery*), the
+operator confirms the host pointer equals that merge commit and removes `blocked-by-subrepo`, and
+the host pull request is then promoted and merged.
 
-*Secondary (multi-repo):* AutoFlow opens the host PR as a draft with the `blocked-by-subrepo` label; merging is performed by the external reviewer in this order (see [`external-review-sequencing.md`](../external-review-sequencing.md) for the full reviewer-facing procedure, and [`submodule-common-rules.md`](../submodule-common-rules.md) > **Submodule URL & Pointer Policy**):
-
-1. **Sub-repo PR merged first.** The reviewer merges the host's direct sub-repo PR into `{{REPO_SERVICE_HOST}}:main` (the PR of a submodule nested inside the sub-repo is merged by that sub-repo's own procedure first, outside host handoff scope). The host PR carries the `blocked-by-subrepo` label through this step; the operator removes the label once the sub-repo merge and pointer reconcile are confirmed complete, which clears the host PR for merge (see [`external-review-sequencing.md`](../external-review-sequencing.md) > Merge-order clearance).
-2. **Pointer reconciliation in the host dev branch.** The reviewer updates the submodule pointer in the host PR's dev branch to the sub-repo PR's merge commit, then pushes (or asks the original branch owner to push, which may be AutoFlow on explicit request). When delegated to AutoFlow, this step follows the **Reconcile preflight** (concurrent-cycle gitlink guard + post-reconcile mergeable/head-commit check gate) in [`external-review-sequencing.md`](../external-review-sequencing.md) > Reconcile preflight.
-3. **Operator confirms the sub-repo merge and pointer reconcile.** Before the merge-order gate is cleared, the operator manually verifies that (i) the host PR is open and carries `blocked-by-subrepo`, (ii) the upstream sub-repo PR is `merged`, and (iii) the host PR's submodule pointer equals that sub-repo PR's merge commit (the pointer reconcile of a submodule nested inside the sub-repo is the sub-repo's own concern). This pointer-equality confirmation is the operator's manual check (see [`external-review-sequencing.md`](../external-review-sequencing.md) > Merge-order clearance). Once confirmed, the operator removes `blocked-by-subrepo`. See [`external-review-sequencing.md`](../external-review-sequencing.md) for the full operator + reviewer guide.
-4. **Promote the host PR draft → ready.** The reviewer manually clicks "Ready for review" once their internal review checklist is satisfied. AutoFlow does not auto-promote.
-5. **Merge the host PR.** With the `blocked-by-subrepo` label removed and the PR ready, the reviewer merges. The host PR body's literal close-keyword line closes the issue.
-
-**Host-only case**: items 1–3 are skipped. The reviewer still performs items 4 and 5 manually.
-
-**[MUST]** AutoFlow does not perform items 1, 4, or 5. Item 2 may be delegated to AutoFlow on explicit request. AutoFlow only creates the draft PR(s). The hook continues to deny `gh pr merge` and pushes to `main` while a state file has `active:true`.
+**[MUST]** AutoFlow merges nothing, promotes no draft and removes neither gate label; of this
+sequence it performs only the reconcile, on the operator's request. The hook denies `gh pr merge`
+and a push to the default branch while a state file has `active:true`.

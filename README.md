@@ -15,8 +15,8 @@ deployment orchestrator. The only changes from upstream are:
 5. **Functional units** — ARCHITECT and the build span (upstream's DISPATCH..VALIDATE) each run as one unit agent prescribed by its goal, artifacts and verification (ADR-0025); the VERIFY round-trip and REFINE retry caps are retired with the phases.
 
 Aside from these divergences, every rule, retry cap, evaluation category, and pass
-threshold is preserved from upstream. Single-repo projects are supported as the degenerate case
-(DELIVER pushes one branch, INTEGRATE / HANDOFF collapse to a single PR flow).
+threshold is preserved from upstream. A project without sub-repos is the plain case (DELIVER
+pushes one branch, HANDOFF opens one PR).
 
 ---
 
@@ -33,8 +33,8 @@ GATE:PLAN       Plan Evaluation   — Scored plan assessment (gate)
 BUILD           Build unit (U4)   — Test-first implementation and verification + deterministic exit check
 AUDIT           Security Audit    — Independent project-specific security audit
 GATE:QUALITY    Completion Eval   — Scored quality assessment (gate)
-DELIVER         Push              — the orchestrator's own `git push` (multi-repo: each sub-repo branch to its fork)
-INTEGRATE       Integration Test  — system build, health check, functional test
+DELIVER         Push              — the orchestrator's own `git push` (a changed sub-repo's branch too)
+INTEGRATE       Integration Test  — the change shown working above its own tests: the system build, health check and functional test, or the project's integration suite
 HANDOFF         PR + Hand-off     — push and PR creation by the orchestrator's own commands → CI green → reviewer review → review triage; external review merges out of band (AutoFlow does not merge)
 ```
 
@@ -79,7 +79,7 @@ flowchart LR
 - **Analysis unit** — one analysis spawn states the current structure as fact, the gap to the request and whether code is the lever, heeding stated bias cautions; a fresh evaluator scores it.
 - **Evaluation Gates** — 10-point scoring system with a defined PASS threshold (≥ 7.5, each ≥ 7, security ≤ 3 → block).
 - **Hook Enforcement** — A shell hook validates AutoFlow state before allowing Agent spawns, `git push`, or `gh pr create`.
-- **Multi-Sub-Repo Support** — orchestrator pattern for coordinating work across submodules; single-repo is the degenerate case.
+- **Sub-Repo Support** — a changed sub-repo is delivered on its own PR and the host follows it by its pointer; the project's structure is read from its own information, not classified.
 
 ---
 
@@ -111,7 +111,7 @@ stamped repository declares no enablement*, which also documents the per-repo
 `false` opt-out).
 
 Step 3 runs the `/autoflow:install` skill: it detects root-layer absence or
-drift and reports the derived org/repo/branch/topology (read-only), asks for a
+drift and reports it (read-only), asks for a
 **single** confirmation, then stamps the thin-root bundle from the marketplace
 cache (via `init.sh` under the hood) and runs the drift detector automatically.
 No file is written to your project before you confirm, and it never commits for
@@ -158,7 +158,6 @@ claude-autoflow/
 │
 ├── README.md
 ├── CLAUDE.md                          # Core operating manual
-├── CLAUDE.local.md.example            # Local override example
 │
 ├── .claude/
 │   ├── agents/                        # AutoFlow role subagent definitions (.claude/agents/)
@@ -230,18 +229,15 @@ never trusts an AI-supplied `pass` field.
 
 ## Customization
 
-### Single-Repo vs. Multi-Repo
+### Repository Structure
 
-Topology is classified by **submodule count** (see `CLAUDE.md` > Deployment
-Topology), re-evaluated per project at PREFLIGHT and re-confirmed at HANDOFF:
-
-- **Single-repo** = the host repository contains **zero submodules**. The
-  build unit works directly in the host repo, and the DELIVER / INTEGRATE /
-  HANDOFF phases collapse to a single-PR flow. `claude-autoflow` itself is
-  single-repo.
-- **Multi-repo** = the host repository contains **one or more submodules**. Each
-  sub-repo carries its own `CLAUDE.md`, sub-repo AIs own their directories, and
-  the orchestrator coordinates and opens the split PRs.
+AutoFlow does not classify a project's repository structure. The AI reads the
+project's own information and rule files where they exist — a `README.md`, a
+`CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs
+(see `CLAUDE.md` > Project Information), and asks the operator for a fact no
+file states. A project with sub-repos delivers each changed sub-repo on its own
+PR and keeps the host's pointer clean by a reconcile merge after the sub-repo PR
+merges (`docs/phases/handoff.md` > *Multi-repo delivery*).
 
 ### Evaluation Tuning
 
@@ -275,9 +271,7 @@ After running `setup/init.sh --target <path>`:
 - [ ] `.claude/settings.json` declares the AutoFlow marketplace
       (`extraKnownMarketplaces`) — and **no** `enabledPlugins` key: the plugin is
       enabled once at user scope by `/plugin install autoflow@autoflow`.
-- [ ] `CLAUDE.local.md` holds your target identity (never overwritten by `--force`).
-- [ ] `.gitignore` includes `.autoflow/issue-*.json` and `CLAUDE.local.md`.
-- [ ] Each sub-repo carries its own `CLAUDE.md` (multi-repo instances only).
+- [ ] `.gitignore` includes `.autoflow/issue-*.json`.
 
 ---
 

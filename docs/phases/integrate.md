@@ -9,8 +9,7 @@ INTEGRATE is the part of U6 Delivery
 as the system runs it, beyond what BUILD verified per acceptance criterion.
 
 - **What is asked**: the delivered change is shown to work at the level above its own tests — the
-  project's integration suite or a smoke test in a single-repo deployment; the built system in a
-  multi-repo one. Which checks that takes, and how they are run, is the orchestrator's, the way
+  project's integration suite, a smoke test, or the built system across its sub-repos. Which checks that takes, and how they are run, is the orchestrator's, the way
   the target runs them ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification
   and Tools).
 - **Result owed**: one line per check — its command and the summary line read from its log, the
@@ -21,17 +20,17 @@ as the system runs it, beyond what BUILD verified per acceptance criterion.
 
 Cautions:
 
-- A project with no integration layer records `INTEGRATE: no-op (single-repo / no integration
-  suite)`. That is a stated no-op, not a skipped check.
-- In a multi-repo deployment (one or more submodules) the system is built in the dev environment
-  and what crosses sub-repos is what is verified: each affected sub-repo builds (for example
+- A project with no integration layer records `INTEGRATE: no-op (no integration suite)`. That is
+  a stated no-op, not a skipped check.
+- In a project with sub-repos the system is built in the dev environment and what crosses sub-repos
+  is what is verified: each affected sub-repo builds (for example
   `docker compose -f docker-compose.dev.yml up -d --build <services>`), each service's health check
   passes, the functional integration tests pass, and the cross-cutting concerns the change touches
   (auth, network ingress) are looked at.
 
 ## Deploy/CI-path conditional verification
 
-A **diff-path-conditional** requirement keyed on the class of surface being integrated. It is topology-independent — it applies in a single-repo and a multi-repo deployment alike; in a single-repo target the submodule / deploy classes resolve to a defined no-op.
+A **diff-path-conditional** requirement keyed on the class of surface being integrated. It applies to every project; a class the project does not ship resolves to a defined no-op.
 
 **Trigger predicate (deterministic).** Let the diff be `git diff --name-only <base>...HEAD` (base = `git merge-base HEAD main`). The condition **fires** iff any changed path matches the trigger glob set:
 

@@ -163,11 +163,6 @@ if [ -d "$INSTALL_SKILL_SCRIPTS" ]; then
   else
     failc "AC1b" "detect.sh missing at $INSTALL_SKILL_SCRIPTS/detect.sh"
   fi
-  if [ -f "$INSTALL_SKILL_SCRIPTS/scaffold-identity.sh" ]; then
-    pass "AC1b: scaffold-identity.sh resolves in the packaged tree"
-  else
-    failc "AC1b" "scaffold-identity.sh missing at $INSTALL_SKILL_SCRIPTS/scaffold-identity.sh"
-  fi
 else
   failc "AC1b" "install skill scripts/ directory missing at $INSTALL_SKILL_SCRIPTS"
 fi

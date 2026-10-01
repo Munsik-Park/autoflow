@@ -15,7 +15,7 @@
 # orchestrator or the operator from a plain shell, where the variable is unset;
 # both therefore degraded (D2 SKIP; `check` exit 1) on every thin-root target,
 # which is how a 0.1.8 workflow bundle ran three weeks past eight upstream
-# fixes with a passing drift-check (connev-llm/llmroute #595, #614).
+# fixes with a passing drift-check (a target's issues #595, #614).
 #
 # Every resolution below reads only local files under the Claude Code config
 # directory (`$CLAUDE_CONFIG_DIR`, default `~/.claude` — the harness's own
