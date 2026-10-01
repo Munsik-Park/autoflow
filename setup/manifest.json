@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6e732ef33d7326167422bd96b22f85d272a083eb747b6a84c1d66cd61c1d8324"
+      "sha256": "32e48dfc5b45c90e773d128dbae73762e7eb143fcc21cb44ab56964b9e400d75"
     },
     {
       "source": "docs/INDEX.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/units/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a051b6c81121cb9c1fa3659d28408a038b3eb85bc334a8ea2db08488915a5c59"
+      "sha256": "34d2e6c107d2b79c44e43b3299f727f39ea37b70e3e6e4c61ac6111c8bd8806b"
     },
     {
       "source": "docs/units/build.md",
@@ -153,7 +153,7 @@
       "dest": ".claude/autoflow/docs/units/completion-evaluation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "66710944587c002bf2f24b306d619206382da7b6b3c03de625dc2f5d03bdb1ff"
+      "sha256": "dc372180da6bcebb49cf69e0a18de7d5d17fae3467f268ccc023a927841064c1"
     },
     {
       "source": "docs/units/delivery.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/units/preparation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f65d84ee79cad21bf55fd5ba390027ecc4bd0c9d3f3054166679110c95e0704e"
+      "sha256": "31cf5cb8e488548f19f255b8728c735431b130fdd918242f119e4c7b24df2dfa"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",

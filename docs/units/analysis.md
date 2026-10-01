@@ -168,7 +168,8 @@ names its contract and that rubric, not this file. The orchestrator records each
 under its own key, `phases.gate_hypothesis_structure` and `phases.gate_hypothesis_cause`.
 
 **Structure form.** The hook records but does not gate `gate_hypothesis_structure`; the
-orchestrator judges it against the form's PASS line.
+orchestrator judges it against the form's PASS line: each ≥ 7 — and, for the 3-item Type 2
+rubric, also avg ≥ 7.5.
 
 - **PASS** → recommendation triage ([U5 Completion evaluation](completion-evaluation.md) >
   *Recommendation triage*) → the cause form (bug / incident), or ARCHITECT with the verdict

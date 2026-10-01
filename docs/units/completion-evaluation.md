@@ -34,8 +34,7 @@ routing, and, for every rubric-scored gate, the triage of a PASS report's recomm
 **Evaluator**: fresh-spawned Evaluation AI. Its documents line names its contract
 ([`role-contracts.md`](../role-contracts.md) > Evaluation AI, [`evaluation-system.md`](../evaluation-system.md))
 and this file.
-**Input**: the change set — the cycle's commits on its branch (`git diff <base>...HEAD`) — and the
-cycle's artifacts:
+**Input**: the change set — the cycle's commits — and the cycle's artifacts:
 
 - the analysis report (`.autoflow/issue-{N}-analysis.md`): its `## Acceptance criteria` table, the
   issue's acceptance-criterion list, and its `## Scope judgments`;
@@ -89,8 +88,8 @@ The evaluator applies the checks below **inside the existing 10 items** — they
 PASS threshold. Each violation caps the named item at 6, which fails the gate via the
 each-item ≥ 7 criterion:
 
-- **Test quality — mock-boundary fidelity**: sample the test doubles in the tests the build report's
-  `## Run record` names and verify each against the real interface at HEAD (signature, argument count, return shape).
+- **Test quality — mock-boundary fidelity**: sample the suite's test doubles and verify
+  each against the real interface at HEAD (signature, argument count, return shape).
   A double that diverges from the real interface caps `Test quality` at 6.
 - **Test quality / Completeness — assertion-claim alignment**: for each AC, confirm the
   test asserts the behavior the AC states, not a weaker proxy (e.g. "the function was

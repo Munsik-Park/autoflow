@@ -2,7 +2,7 @@
 
 A reusable template for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-AutoFlow is a 16-phase development lifecycle (PREFLIGHT → HANDOFF) built on
+AutoFlow is a development lifecycle of six functional units (PREFLIGHT → HANDOFF) built on
 multi-agent role separation, independent analysis, and quantified evaluation
 gates. This template is the **generalized form** of the
 methodology originally implemented in `ontology-platform` — a multi-sub-repo

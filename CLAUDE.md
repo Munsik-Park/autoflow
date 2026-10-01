@@ -87,7 +87,7 @@ bash scripts/spawn-policy/spawn-policy.sh check                # validate the co
 
 **[MUST]** Subagent document injection is role-scoped, not shared context. `docs/INDEX.md` is the orchestrator's **router** for selecting which documents each role receives — it is never injected wholesale as common context to every spawn.
 
-Each unit spawn's documents line is set by its unit document — [`docs/units/analysis.md`](docs/units/analysis.md) > Unit spawn, [`docs/units/design.md`](docs/units/design.md) > Unit spawn, [`docs/units/build.md`](docs/units/build.md) > Unit spawn — and preserves role-minimal injection; what a unit reads beyond it is its own judgment. An Evaluation AI's documents line names its contract — `docs/role-contracts.md` > Evaluation AI and [`docs/evaluation-system.md`](docs/evaluation-system.md), which holds the rubrics of GATE:HYPOTHESIS, GATE:PLAN and AUDIT — and, at GATE:QUALITY, the U5 unit document; it names no U2, U3 or U4 unit document, so the evaluator does not receive the unit agent's instructions.
+Each unit spawn's documents line is set by its unit document — [`docs/units/analysis.md`](docs/units/analysis.md) > Unit spawn, [`docs/units/design.md`](docs/units/design.md) > Unit spawn, [`docs/units/build.md`](docs/units/build.md) > Unit spawn — and preserves role-minimal injection; what a unit reads beyond it is its own judgment. An Evaluation AI's documents line names its contract — `docs/role-contracts.md` > Evaluation AI and [`docs/evaluation-system.md`](docs/evaluation-system.md), which holds the rubrics of GATE:HYPOTHESIS, GATE:PLAN and AUDIT — and, at GATE:QUALITY, the U5 unit document; it names no U2, U3 or U4 unit document.
 
 ## Communication
 

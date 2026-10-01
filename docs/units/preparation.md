@@ -18,7 +18,7 @@ every change — to git, to GitHub, to the cycle's state — is made by the orch
 - **Verification**: PREFLIGHT has no gate. Its readiness conditions are deterministic — the facts
   `scripts/preflight/cycle-status.sh` reports and the three *Stop conditions* — and DIAGNOSE does
   not begin until they hold.
-- **Loop cap**: none. A condition that does not hold stops the cycle and is reported; PREFLIGHT
+- **Loop cap**: A condition that does not hold stops the cycle and is reported; PREFLIGHT
   runs again once it is resolved.
 - **Result owed**: the state file, the dev branch and the local-checks record above. A resume also
   owes its re-entry point, recorded with grounds in the ledger (*Resume*).
