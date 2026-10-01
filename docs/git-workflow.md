@@ -192,7 +192,7 @@ reserved path, `issue-<N>-local/disposable`, removed without following a symboli
 
 ## Issue Auto-Close
 
-In the target-centric default, the cycle's single (host) PR carries `Closes #N` directly.
+A cycle that changes no sub-repo opens one PR, and that PR carries `Closes #N`.
 
 *Secondary (multi-repo):* when the cycle changes a sub-repo, it opens a PR there too — the host PR carries the close keyword and merges last, each sub-repo PR references only and merges first:
 

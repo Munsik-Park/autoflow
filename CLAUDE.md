@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-AutoFlow is a reusable framework for an evaluation-gated, role-separated development lifecycle (`PREFLIGHT` → `HANDOFF`) whose terminal phase hands off an open PR; merge, close and deploy stay outside AutoFlow's authority. In the methodology documents, `{{REPO_*}}`/`{{GITHUB_ORG}}` are generalized identifiers the operator reads as its own service's value (derived at session time from the target's Git remote, `origin/HEAD`), not tokens an installer substitutes.
+AutoFlow is a reusable framework for an evaluation-gated, role-separated development lifecycle (`PREFLIGHT` → `HANDOFF`) whose terminal phase hands off an open PR; merge, close and deploy stay outside AutoFlow's authority.
 
 ## Instruction Conventions
 

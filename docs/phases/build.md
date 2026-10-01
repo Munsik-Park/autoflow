@@ -135,9 +135,8 @@ On the unit's return the orchestrator runs, before AUDIT,
 bash scripts/gate/build-exit-check.sh --issue {N} > .autoflow/issue-{N}-build-exit-check.log 2>&1
 ```
 
-The check reads git where it runs: it runs in the repository that holds the cycle's implementation
-commits, with `--dir` naming the host's `.autoflow` when that is another repository. Where and how
-it is run for a sub-repo change is the orchestrator's.
+The check is run against the repository that holds the cycle's implementation commits. Where and
+how it is run is the orchestrator's.
 
 It checks (a) each `driving` / `regression` row's Red run precedes its implementation commit and its
 Red log carries the recorded line and the non-zero `Red exit`, (b) each `automated` / `delivery-check` row has a passing run
@@ -147,7 +146,7 @@ has its lint record; and that every section above is present.
 
 | Exit | Verdict | Route |
 |---|---|---|
-| 0 | `pass` | AUDIT, its prompt naming the log |
+| 0 | `pass` | AUDIT, its prompt naming the log and how the check was run (location and arguments) |
 | 3 | `omission` — `NOT-RUN:` lines only | filled where found: the orchestrator runs a cycle-layer asset itself, or re-spawns the unit naming the rows; the check re-runs. No counter ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *A missing run is filled where it is found*) |
 | 1 | `defect` — a `FAIL:` line | the unit re-runs with the log (*Re-entry*); consumes the AUDIT FAIL counter |
 | 2 | — | an input missing: an artifact defect — the unit is spawned again with the same inputs, no counter; the base unresolvable: the orchestrator re-runs the check with `--base <the cycle's base commit>` |

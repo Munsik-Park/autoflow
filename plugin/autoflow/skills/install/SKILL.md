@@ -191,7 +191,9 @@ at this step: a file you choose to write comes after the Step 3 confirmation.
 ## Step 3: confirm — the single opt-in gate
 
 Ask the user **once** whether to stamp (when Step 1 listed `STALE_UPSTREAM=`
-lines, the same prompt names the artifacts the stamp will remove). This is the
+lines, the same prompt names the artifacts the stamp will remove; when you mean
+to write project information, the same prompt names each file you will write
+or change). This is the
 only confirmation. **If the user declines, STOP here — perform zero writes** (the
 stamp is abandoned; the target stays byte-unchanged).
 
