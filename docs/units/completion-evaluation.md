@@ -1,20 +1,56 @@
-# GATE:QUALITY — Completion Evaluation
+# U5 Completion evaluation — GATE:QUALITY
 
-> Phase playbook for GATE:QUALITY. [`CLAUDE.md`](../../CLAUDE.md) > Phase Playbook Loading
-> Contract routes to this file; the other phases are listed in
-> [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
+> Unit document for U5. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
+> Documents.
 
-**Evaluator**: fresh-spawned Evaluation AI.
-**Input**: full change set + test results + AUDIT result, plus the issue's acceptance-criterion list
-(`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the verification design,
-the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the build report
-(`.autoflow/issue-{N}-build-report.md` — [BUILD](build.md) > Build report — its run records, manual
-checklist, maintained documents and lint record, section
-`## Out-of-scope observations — guard / boundary logic touched`, and — on a target — section
-`## Comment check`), and the cycle's scope records —
-the feature design's `## Scope` section, every `## Scope judgments` section in the cycle's
-`.autoflow/issue-{N}-*.md` reports, and the `[gate-autofix]` ledger entries and gate verdict entries that
-record how earlier gates' recommendations were triaged
+GATE:QUALITY is functional unit U5 Completion evaluation
+([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). U5 has no unit agent: the
+gate is the unit, and its work is the evaluator's. This file states the unit's four items (D2), the
+rubric the evaluator scores on, and the rules the orchestrator applies to the result — the FAIL
+routing, and, for every rubric-scored gate, the triage of a PASS report's recommendations.
+
+- **Goal**: the change the cycle built, judged against the acceptance criteria, the design and the
+  build's own records before it is delivered — complete, correct, verified, within the cycle's
+  scope, and committed and documented as the rules ask.
+- **Artifact contract**: the evaluation report in the shape
+  [`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format defines — ten scores
+  with their reasons, `fail_hypothesis`, `remedy_class` on every failed item, `refine_observations`,
+  `recommendations`, and `rescore` on a re-entry — whose `scores` the orchestrator records verbatim
+  as `phases.gate_quality`.
+- **Verification**: the evaluator's independence — a fresh Evaluation AI (`autoflow-evaluator`,
+  the model `bash scripts/spawn-policy/spawn-policy.sh model gate-quality` names) for every
+  evaluation, never the author of what it scores, read-only
+  ([`role-contracts.md`](../role-contracts.md) > Evaluation AI); the orchestrator's acceptance of its
+  report, which rejects and re-spawns a report missing what the contract requires; and the hook,
+  which computes PASS from the recorded scores before it admits `git push` / `gh pr create`.
+  Beyond U5, CI and the configured reviewer verify the delivered change (ADR-0025 D4).
+- **Loop cap**: a FAIL re-enters by `remedy_class` (*FAIL routing* below), max 3× — the cap counts
+  FAILs, not the distance re-entered; a recommendation attempt is not a FAIL and counts on its own
+  window, max 7 (*Recommendation triage* below).
+- **Result owed**: the report, returned as the spawn's report, with its scores recorded; on a PASS
+  with no attempt open, the cycle moves to DELIVER.
+
+**Evaluator**: fresh-spawned Evaluation AI. Its documents line names its contract
+([`role-contracts.md`](../role-contracts.md) > Evaluation AI, [`evaluation-system.md`](../evaluation-system.md))
+and this file.
+**Input**: the change set — the cycle's commits — and the cycle's artifacts:
+
+- the analysis report (`.autoflow/issue-{N}-analysis.md`): its `## Acceptance criteria` table, the
+  issue's acceptance-criterion list, and its `## Scope judgments`;
+- the two design documents: the feature design (`.autoflow/issue-{N}-feature-design.md`) — the
+  decisions the change is checked against, and its `## Scope` section — and the verification
+  design (`.autoflow/issue-{N}-verification-design.md`);
+- the build report (`.autoflow/issue-{N}-build-report.md` — [U4 Build and verify](build.md) >
+  Build report): its run record, manual checklist, maintained documents and lint record, its
+  `## Scope judgments`, section `## Out-of-scope observations — guard / boundary logic touched`,
+  and — on a target — section `## Comment check`;
+- the AUDIT result: its scores and its report (`.autoflow/issue-{N}-audit.md`);
+- the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), with the `[gate-autofix]` entries
+  and gate verdict entries that record how earlier gates' recommendations were triaged.
+
+The cycle's scope records are the feature design's `## Scope` section, every `## Scope judgments`
+section in the cycle's `.autoflow/issue-{N}-*.md` reports, and those ledger entries
 ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
 **[MUST] Build observations are scoring input**: the evaluator reads the build
@@ -75,8 +111,8 @@ each-item ≥ 7 criterion:
   evaluator's judgment.
   - *Normative documents* — the one definition, cited from everywhere else — are what an agent
     or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
-    rules, playbooks, role contracts, evaluation criteria and agent definitions a phase loads
-    (`CLAUDE.md`, `docs/autoflow-guide.md`, `docs/phases/*`, `docs/role-contracts.md`,
+    rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
+    (`CLAUDE.md`, `docs/autoflow-guide.md`, `docs/units/*`, `docs/role-contracts.md`,
     `docs/role-common-rules.md`, `docs/submodule-common-rules.md`, `docs/evaluation-system.md`,
     `.claude/agents/*`, and the sections of an ADR that state a decision still in force);
     (b) the scripts, hooks and workflows that run; (c) every document delivered to a target — the
@@ -105,7 +141,7 @@ each-item ≥ 7 criterion:
   device's second output, the row↔asset pairing report, is input to this check and to
   `Test coverage`, never a verdict. The device is not delivered to targets and the check does not
   run there: on a target, a test file the cycle added is judged by the reviewer against the target's
-  convention from the PR body's listing ([HANDOFF](handoff.md) > *Push and pull request*), not by a token ([`submodule-common-rules.md`](../submodule-common-rules.md)
+  convention from the PR body's listing ([U6 Delivery](delivery.md) > *Push and pull request*), not by a token ([`submodule-common-rules.md`](../submodule-common-rules.md)
   > Verification and Tools > *What a cycle leaves in the target's tree*); under this item the evaluator confirms
   that every test file the cycle added to the target's tree carries, in the build report's
   `## Test files kept` section, the reason it is kept and the CI job expected to run it — the record HANDOFF carries into
@@ -117,7 +153,7 @@ each-item ≥ 7 criterion:
   by reading the line at the cited log path rather than by re-running; in this repository a
   `standing` row's subject is additionally the committed asset's realisability — the file exists,
   runs, and is CI-registered. For a `manual` row executed by the AI it is the row's observation
-  record ([BUILD](build.md) > Build report > `## Manual checklist`), confirmed by reading the record and opening the artifacts it cites — a
+  record ([U4 Build and verify](build.md) > Build report > `## Manual checklist`), confirmed by reading the record and opening the artifacts it cites — a
   screenshot is read as an image — never by observing again; a row with no record, or
   a record whose artifacts are absent, takes the omission path below.
   - **Execution omission is not a defect** ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *A missing run
@@ -131,7 +167,7 @@ each-item ≥ 7 criterion:
     the way the target runs its tests — and its record filled in, then spawns a fresh evaluator that
     re-scores the withheld item only, in the *Re-entry re-score* form below with the withheld report
     as the inheritance source. A lint chain that still cannot be run, and that no pull-request CI job
-    covers, is the harness-level block of [BUILD](build.md) > *Report routing*. A recorded run that
+    covers, is the harness-level block of [U4 Build and verify](build.md) > *Report routing*. A recorded run that
     **fails** is a defect, scored and classed like any other.
 - **Fit — ADR conformance**: on the final change set, re-confirm the shipped change conforms to any governing ADR (same
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check; the
@@ -139,14 +175,14 @@ each-item ≥ 7 criterion:
   divergence from a governing ADR, or an architecture-impacting change with no governing
   ADR/owner decision, caps Fit at 6.
 - **Completeness — AC-authority check**: the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a test the
-  build rewrote after its first run, or the satisfiable-subset implementation [BUILD](build.md) permits on a design contradiction.
+  build rewrote after its first run, or the satisfiable-subset implementation [U4 Build and verify](build.md) permits on a design contradiction.
   The check is a **name-the-site obligation**, not the GATE:PLAN key join: for each
   verification-design row whose `Issue AC` is not `—`, the evaluator names the test file and
   assertion, or the implementation site, that discharges it. A row for which no
   site can be named, and which no `[ac-decision]`-marked ledger entry covers, caps `Completeness`
   at 6 (an `added` entry covers nothing: the criterion it adds is owed its row and its site).
   **Derivation is not drift**: a file row, suite disposition or oracle condition clause
-  BUILD derived under the ARCHITECT layer split ([ARCHITECT](architect.md) > *Output artifacts* item 1)
+  BUILD derived under the ARCHITECT layer split ([U3 Design](design.md) > *Output artifacts* item 1)
   is the designed division of labour, never a post-ARCHITECT AC change.
   The check binds a verification-design row whose `Issue AC` is not `—` and for which no
   discharging site can be named.
@@ -173,11 +209,11 @@ No separate disposition system exists for gate recommendations.
 | Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(d) | the same four, read for a gate (below) |
 | `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to BUILD (below) |
-| Verification of the fix: the reviewer re-review (*Reviewer review*) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [GATE:PLAN](gate-plan.md) > *Re-entry re-score*; [AUDIT](audit.md) > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
+| Verification of the fix: the reviewer re-review (*Reviewer review*) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *Re-entry re-score*, > AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
 | Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
 
 - **No ingesting subagent.** The orchestrator reads the evaluator's `recommendations` list
-  directly. It is therefore the orchestrator that weighs whether each item holds ([HANDOFF](handoff.md) > *Whether a
+  directly. It is therefore the orchestrator that weighs whether each item holds ([U6 Delivery](delivery.md) > *Whether a
   finding holds*), and the recommending gate's re-score that judges a rebuttal. A
   `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
   severity, finding), is a report defect:
@@ -188,7 +224,7 @@ No separate disposition system exists for gate recommendations.
   could keep a criterion's letter only by adding a rule the criterion did not state
   ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), is neither
   routed, separated nor deferred as a `Low`: it is put to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) and the
-  answer recorded as its `[ac-decision]` entries ([ARCHITECT](architect.md) > *Report routing* > *An acceptance-criterion change raised
+  answer recorded as its `[ac-decision]` entries ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised
   later in the cycle*).
 - **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
   the change:
@@ -199,13 +235,13 @@ No separate disposition system exists for gate recommendations.
     recommending gate re-scores on the narrowed input its re-entry already uses.
   - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — does not call the script: every `Medium`+ recommendation is resolved on the artifact the gate scores,
     by the gate's own FAIL route narrowed to the item, and re-scored by the same form: at GATE:PLAN an ARCHITECT unit re-run naming the
-    recommendation ([ARCHITECT](architect.md) > *Re-entry*), then [GATE:PLAN](gate-plan.md)'s *Re-entry re-score* over the
+    recommendation ([U3 Design](design.md) > *Re-entry*), then GATE:PLAN's *Re-entry re-score* ([`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN) over the
     delta; at GATE:HYPOTHESIS a U2 unit re-run naming the recommendation amends the analysis
-    report ([DIAGNOSE](analysis.md) > *Re-entry*) — a problem the confirmed cause carries enters its
+    report ([U2 Analysis](analysis.md) > *Re-entry*) — a problem the confirmed cause carries enters its
     `## Scope judgments` — then the same form re-scores. The class such a recommendation carries (`doc` / `test` / `impl` / `design`) names the
     change the problem will need once the design or analysis carries it; it rides on the amended
     artifact as the ground ARCHITECT or BUILD then reads, and it never sends the cycle forward
-    past the gate unre-scored. A fact below the decision layer ([ARCHITECT](architect.md) > *Output artifacts*
+    past the gate unre-scored. A fact below the decision layer ([U3 Design](design.md) > *Output artifacts*
     item 1) is not a defect of the artifact these gates score, so the evaluator records it at `Low`, and the orchestrator's `Low` judgment **defers**
     it: to the build — recorded in the gate's verdict entry as deferred to BUILD, carried
     in the BUILD spawn prompt, and judged with that work at GATE:QUALITY — or to the known-gaps
@@ -218,7 +254,7 @@ No separate disposition system exists for gate recommendations.
 - **Put to the advisor** (a request written situation-first — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not
   pause) when the attempt hits any of: (a) the fix needs a contract /
   acceptance-criterion change — recorded as the advisor's `[ac-decision]` entry
-  ([ARCHITECT](architect.md) > *Report routing* > *An acceptance-criterion change raised later in the cycle*);
+  ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the cycle*);
   (b) the fix direction is ambiguous, or the orchestrator judges a directly related recommendation
   undesirable to fix in this cycle (question 2) and would separate it; (c) the item is
   `Low Confidence`; (d) the re-score dispositions the previous attempt's finding `remains` after its
@@ -244,7 +280,7 @@ No separate disposition system exists for gate recommendations.
   once the re-score PASSes and no attempt is left open — a `Medium`+ the re-score itself raises is a
   new attempt; the hook denies `git push` / `gh pr create` while it is present on `audit` or
   `gate_quality`.
-  A resume reads the same field ([PREFLIGHT](preflight.md) > *Resume*).
+  A resume reads the same field ([U1 Preparation](preparation.md) > *Resume*).
 - **Attempt cap = 7**: the consecutive `[gate-autofix]` entries this cycle since the last user
   re-entry decision (an entry whose heading ends in `[reentry-decision]`). When the triage after the 7th such attempt would open
   another — a `Medium`+ still open, or a `Low` the orchestrator would fix now — it pauses for the
@@ -276,7 +312,7 @@ re-classify.
 | `remedy_class` | Meaning | Re-entry |
 |---|---|---|
 | `doc` | the item clears by editing documentation with no behavior change — in this repository comment text too; a target comment's divergence or disallowed content is never a failed item, while a defect a comment carries on its own ground is classed like any other (*Code comments in a target* below) | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
-| `test` | the item clears by changing test assets | a BUILD unit re-run with the failed items → AUDIT ([BUILD](build.md) > *Re-entry*) |
+| `test` | the item clears by changing test assets | a BUILD unit re-run with the failed items → AUDIT ([U4 Build and verify](build.md) > *Re-entry*) |
 | `impl` | the item clears by changing implementation | the same BUILD re-run |
 | `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the BUILD design-contradiction row does) |
 | `operator` | the evaluator cannot classify with confidence | the advisor's answer fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor); the cycle re-enters on that class's route |
@@ -312,7 +348,7 @@ in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
    prose in the same file; the hook reads only the two sections.
 2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../../CLAUDE.md) > Team Structure /
    Commit Ownership); its lint outcome is added as that commit's rows in the build report's `## Lint`
-   table ([BUILD](build.md) > Build report).
+   table ([U4 Build and verify](build.md) > Build report).
    **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
    record exists with both sections non-empty** — it checks the record file, never the wording of an
    instruction. On a second `doc` FAIL of the same class, the orchestrator re-examines its scope

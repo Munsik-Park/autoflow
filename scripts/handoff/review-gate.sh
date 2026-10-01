@@ -11,7 +11,7 @@
 # file and the ledger are the orchestrator's to write.
 #
 # What it does not decide: whether a finding holds, its class, its route, or
-# whether a Low finding is worth fixing now (docs/phases/handoff.md > Review
+# whether a Low finding is worth fixing now (docs/units/delivery.md > Review
 # triage).
 #
 # Attempt count: the level-2 ledger headings ending in `[review-autofix]` after

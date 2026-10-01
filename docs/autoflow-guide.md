@@ -1,10 +1,11 @@
 # AutoFlow Guide — Phase-by-Phase Development Lifecycle
 
 > AutoFlow is a structured, evaluation-gated development lifecycle for AI-assisted
-> software engineering with Claude Code. This guide is the **index of the phase
-> playbooks**: each phase's step-by-step procedure, scoring rubric, and `[MUST]`/`[DENY]`
-> constraints live in that phase's own file under `phases/` (*Phase Playbooks* below).
-> The cross-phase invariants, the router (phase list + Flow Control table), the
+> software engineering with Claude Code. This guide is the **index of the unit
+> documents**: each functional unit's goal, artifact contract, verification, loop cap,
+> cautions and `[MUST]`/`[DENY]` constraints live in that unit's own file under `units/`
+> (*Unit Documents* below).
+> The cross-unit invariants, the router (unit and phase list + Flow Control table), the
 > regression / escalation caps, the Execution Principles, and the state schema live in
 > [`CLAUDE.md`](../CLAUDE.md).
 
@@ -12,8 +13,9 @@
 
 ## Overview
 
-AutoFlow defines 16 phases (`PREFLIGHT` → `HANDOFF`) that guide every code change
-from issue analysis to PR hand-off. Each phase has explicit entry/exit criteria. Merging is performed
+AutoFlow runs eleven phases and gates (`PREFLIGHT` → `HANDOFF`), carried by six functional
+units, that guide every code change from issue analysis to PR hand-off. Each phase has explicit
+entry/exit criteria. Merging is performed
 by an external review process; AutoFlow does not merge.
 
 Key principles:
@@ -147,39 +149,24 @@ BUILD (one unit spawn)
 
 ---
 
-## Phase Playbooks
+## Unit Documents
 
-Each phase's procedure lives in its own file; [`CLAUDE.md`](../CLAUDE.md) > Phase Playbook
-Loading Contract routes to the same files.
+Each functional unit's body lives in its own file
+([`ADR-0025`](records/adr/0025-outcome-gated-functional-units.md) D1, D2);
+[`CLAUDE.md`](../CLAUDE.md) > Unit Document Loading Contract routes to the same files.
 
-| Phase | Playbook |
-|-------|----------|
-| PREFLIGHT | [`phases/preflight.md`](phases/preflight.md) |
-| DIAGNOSE | [`phases/analysis.md`](phases/analysis.md) |
-| GATE:HYPOTHESIS | [`phases/gate-hypothesis.md`](phases/gate-hypothesis.md) |
-| ARCHITECT | [`phases/architect.md`](phases/architect.md) |
-| GATE:PLAN | [`phases/gate-plan.md`](phases/gate-plan.md) |
-| BUILD | [`phases/build.md`](phases/build.md) |
-| AUDIT | [`phases/audit.md`](phases/audit.md) |
-| GATE:QUALITY | [`phases/gate-quality.md`](phases/gate-quality.md) |
-| DELIVER | [`phases/deliver.md`](phases/deliver.md) |
-| INTEGRATE | [`phases/integrate.md`](phases/integrate.md) |
-| HANDOFF | [`phases/handoff.md`](phases/handoff.md) |
+| Unit | Phases | Unit document |
+|------|--------|---------------|
+| U1 Preparation | PREFLIGHT | [`units/preparation.md`](units/preparation.md) |
+| U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | [`units/analysis.md`](units/analysis.md) |
+| U3 Design | ARCHITECT, GATE:PLAN | [`units/design.md`](units/design.md) |
+| U4 Build and verify | BUILD, AUDIT | [`units/build.md`](units/build.md) |
+| U5 Completion evaluation | GATE:QUALITY | [`units/completion-evaluation.md`](units/completion-evaluation.md) |
+| U6 Delivery | DELIVER, INTEGRATE, HANDOFF | [`units/delivery.md`](units/delivery.md) |
 
----
-
-## DIAGNOSE — Analysis unit (U2)
-
-→ **Phase playbook (single source of truth): [`phases/analysis.md`](phases/analysis.md).**
-Read it on entering DIAGNOSE. It carries the one `autoflow-unit-analysis` spawn and its inputs, what the analysis owes — the
-current structure as fact, the gap to the request, whether code is the lever, and for a bug /
-incident issue the cause hypotheses (≥ 3, "not a code defect" among them) with lightweight
-verification — the bias cautions the unit heeds by a method of its own, the analysis report
-(`.autoflow/issue-{N}-analysis.md`: acceptance-criterion table, referenced materials, scope
-judgments, affected documents, decision points), and its routing. The structure form's rubric
-(Type 1 code / Type 2 docs), thresholds and FAIL disposition (gap-low → new-issue close /
-review-response reply on PR; non-code lever → the advisor decides) and the cause form are
-[`phases/gate-hypothesis.md`](phases/gate-hypothesis.md).
+The rubrics of GATE:HYPOTHESIS, GATE:PLAN and AUDIT are the evaluator's and live in
+[`evaluation-system.md`](evaluation-system.md) > *Gate rubrics*; the unit document routes each
+gate's result. GATE:QUALITY is the gate that is itself a unit, so its rubric is the U5 document.
 
 ---
 
@@ -196,9 +183,9 @@ error.
 
 ## See Also
 
-- [`CLAUDE.md`](../CLAUDE.md) — cross-phase invariants, the router (phase list + Flow Control), regression caps, Execution Principles, state schema.
-- [`phases/analysis.md`](phases/analysis.md) — the U2 Analysis unit (goal, cautions, analysis report, routing).
-- [`evaluation-system.md`](evaluation-system.md) — scoring and PASS thresholds.
+- [`CLAUDE.md`](../CLAUDE.md) — cross-unit invariants, the router (unit and phase list + Flow Control), regression caps, Execution Principles, state schema.
+- *Unit Documents* above — the six unit documents.
+- [`evaluation-system.md`](evaluation-system.md) — scoring, PASS thresholds and the gate rubrics of U2–U4.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — sub-repo rules, verification and reporting.
 - [`repo-boundary-rules.md`](repo-boundary-rules.md) — cross-repo coordination.
 - [`git-workflow.md`](git-workflow.md) — bash procedures, branch structure.

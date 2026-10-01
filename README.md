@@ -2,7 +2,7 @@
 
 A reusable template for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-AutoFlow is a 16-phase development lifecycle (PREFLIGHT → HANDOFF) built on
+AutoFlow is a development lifecycle of six functional units (PREFLIGHT → HANDOFF) built on
 multi-agent role separation, independent analysis, and quantified evaluation
 gates. This template is the **generalized form** of the
 methodology originally implemented in `ontology-platform` — a multi-sub-repo
@@ -169,14 +169,14 @@ claude-autoflow/
 │
 ├── docs/                              # Usage documents — stamped to targets
 │   ├── INDEX.md                       # Router: usage documents vs records
-│   ├── autoflow-guide.md              # Lifecycle overview + index of the phase playbooks
+│   ├── autoflow-guide.md              # Lifecycle overview + index of the unit documents
 │   ├── evaluation-system.md           # Evaluation scoring details
 │   ├── git-workflow.md                # Git procedures
 │   ├── repo-boundary-rules.md         # Cross-repo coordination rules
 │   ├── submodule-common-rules.md      # Sub-repo shared rules
 │   ├── role-common-rules.md       # Shared role-spawn behavior rules
 │   ├── security-checklist.md          # This repository's own security checklist (declared in .claude/autoflow.local.json; not stamped to targets)
-│   ├── phases/                        # Per-phase playbooks (docs/phases/)
+│   ├── units/                         # Functional-unit documents, U1–U6 (docs/units/)
 │   └── records/                       # Design & decision records — not stamped to targets
 │       ├── design-rationale.md        # Why every rule exists — read for a decision's grounds, routed per role
 │       ├── adr/                       # Architecture Decision Records
@@ -237,7 +237,7 @@ project's own information and rule files where they exist — a `README.md`, a
 (see `CLAUDE.md` > Project Information), and asks the operator for a fact no
 file states. A project with sub-repos delivers each changed sub-repo on its own
 PR and keeps the host's pointer clean by a reconcile merge after the sub-repo PR
-merges (`docs/phases/handoff.md` > *Multi-repo delivery*).
+merges (`docs/units/delivery.md` > *Multi-repo delivery*).
 
 ### Evaluation Tuning
 
@@ -252,12 +252,12 @@ merges (`docs/phases/handoff.md` > *Multi-repo delivery*).
 | Document | Description |
 |----------|-------------|
 | [**Design Rationale**](docs/records/design-rationale.md) | Why every design decision was made — a record read for a decision's grounds; which documents a role receives is routed per role (`CLAUDE.md` > Context Injection — Role-Scoped Document Routing) |
-| [AutoFlow Guide](docs/autoflow-guide.md) | Lifecycle overview and diagram; index of the per-phase playbooks (`docs/phases/`) |
+| [AutoFlow Guide](docs/autoflow-guide.md) | Lifecycle overview and diagram; index of the functional-unit documents (`docs/units/`) |
 | [Evaluation System](docs/evaluation-system.md) | Scoring, PASS criteria, output format |
 | [Git Workflow](docs/git-workflow.md) | Branch naming, commits, PR process |
 | [Repo Boundary Rules](docs/repo-boundary-rules.md) | Cross-repo coordination |
 | [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Sub-repo rules, verification and reporting |
-| [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/phases/audit.md`) |
+| [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/units/build.md` > *Security checklist*) |
 | [Setup Guide](setup/SETUP-GUIDE.md) | Manual setup instructions |
 
 ---

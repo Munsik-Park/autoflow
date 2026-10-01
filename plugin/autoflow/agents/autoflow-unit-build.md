@@ -14,11 +14,11 @@ implementation work — is yours, recorded with its grounds in your artifact
 - **Goal**: the design that passed GATE:PLAN, implemented in the cycle's scope,
   with every acceptance criterion verified as the verification design says.
 - **Artifact contract**: the commits on the dev branch and the build report at
-  the path your spawn prompt names, with the sections `docs/phases/build.md` >
+  the path your spawn prompt names, with the sections `docs/units/build.md` >
   Build report requires — the test-first record AUDIT reads, the run,
   manual-checklist, maintained-document, lint, scope, observation,
   comment-check and kept-test-file sections GATE:QUALITY and HANDOFF read.
-  A re-entry brings the report up to date as `docs/phases/build.md` >
+  A re-entry brings the report up to date as `docs/units/build.md` >
   Re-entry says. Nothing beyond what the verification needs.
 - **Verification**: the unit's exit is `audit` — a fresh Evaluation AI that
   judges test-first from your build report and git, then scores the change
@@ -33,7 +33,7 @@ implementation work — is yours, recorded with its grounds in your artifact
   FAIL returns its findings and your previous artifacts to a fresh U4 spawn,
   up to the AUDIT FAIL cap (`CLAUDE.md` > Flow Control > Regressions). How you
   iterate inside the unit, and when you stop, is yours, recorded in the report.
-- **What the build owes**: `docs/phases/build.md` > What the build owes — scope,
+- **What the build owes**: `docs/units/build.md` > What the build owes — scope,
   test-first, where a test lives, how tests are run, the comment check, a
   design contradiction, an acceptance-criterion change, and the commit rules.
 

@@ -17,7 +17,7 @@ below describe the contract every role spawn honours.
   instructions for the current issue.
 - Push and PR creation are the orchestrator's responsibility — the role spawn's git
   work finishes at `git commit` on its branch; the orchestrator pushes at DELIVER
-  ([`phases/deliver.md`](phases/deliver.md)).
+  ([`units/delivery.md`](units/delivery.md) > *Push and pull request*).
 
 ---
 
@@ -124,7 +124,7 @@ git status                  # any uncommitted work?
 ## Work Completion Process
 
 ```
-Implement → the comment check (docs/phases/build.md > What the build owes) → tests pass → commit → return the report
+Implement → the comment check (docs/units/build.md > What the build owes) → tests pass → commit → return the report
 ```
 
 **Required content of the completion report** (the spawn's return value — write any

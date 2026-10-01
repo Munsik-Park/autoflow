@@ -8,7 +8,7 @@
 # file is created, moved or deleted, no state file is written, and nothing is
 # sent to GitHub but reads. What is done with a fact — which cycle is cleared,
 # which mode the requested issue takes, where an interrupted cycle resumes —
-# is the orchestrator's (docs/phases/preflight.md).
+# is the orchestrator's (docs/units/preparation.md).
 #
 # Reported:
 #   - the working tree: the checked-out branch and its dirty paths

@@ -1,48 +1,50 @@
-# ARCHITECT — U3 Design unit
+# U3 Design — ARCHITECT and GATE:PLAN
 
-> Phase playbook for ARCHITECT. [`CLAUDE.md`](../../CLAUDE.md) > Phase Playbook Loading
-> Contract routes to this file; the other phases are listed in
-> [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
+> Unit document for U3. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
+> Documents.
 
 ARCHITECT and GATE:PLAN are one functional unit, U3 Design
 ([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed
 by four things only — its goal, its artifact contract, its verification and its loop cap (D2) —
-and this file states them. How the unit reaches the goal — what it reads, whether it spawns
-helpers, whether it asks a critic to challenge a draft or holds a dialogue at all, how it designs
-this issue's own verification — is the unit agent's, recorded with its grounds in its artifact
-([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
+and this file states them, with the cautions the design is asked to heed and the result it owes.
+How the unit reaches the goal — what it reads, whether it spawns helpers, whether it asks a critic
+to challenge a draft or holds a dialogue at all, how it designs this issue's own verification — is
+the unit agent's, recorded with its grounds in its artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule
+Scope, principle 2).
 
 - **Goal**: a design the build unit can implement and verify — the architecture decisions with
   the constraints they hold under and the alternatives rejected, and a verification design that
   says how each acceptance criterion is verified and which failure mode each verification catches.
 - **Artifact contract**: the two documents under *Output artifacts* below.
-- **Verification**: GATE:PLAN — a fresh Evaluation AI scores the two documents
-  ([GATE:PLAN](gate-plan.md)); the unit never scores its own artifact.
+- **Verification**: GATE:PLAN — a fresh Evaluation AI scores the two documents on the rubric of
+  [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN; the unit never
+  scores its own artifact (*Verification — GATE:PLAN* below).
 - **Loop cap**: a GATE:PLAN FAIL re-runs the unit with the evaluator's findings and the previous
   documents (*Re-entry* below), max 3× (`CLAUDE.md` > Flow Control > Regressions).
+- **Result owed**: the two artifact paths and a one-line summary
+  ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
+  orchestrator does not receive the design's body.
 
 ## Unit spawn
 
-1. **Spawn** one `autoflow-unit-design` (`Agent`, anonymous, no `name`, the model
-   `bash scripts/spawn-policy/spawn-policy.sh model unit-design` names). The prompt states the goal
-   and names the inputs by path — the acceptance-criterion list
-   (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the decision ledger
-   (`.autoflow/issue-{N}-ledger.md`), the DIAGNOSE artifact (`.autoflow/issue-{N}-analysis.md`, the
-   GATE:HYPOTHESIS reports) — and the two output paths. On a re-entry it also names what the
-   re-entry is for and the previous documents (*Re-entry* below).
-2. **Document injection (ARCHITECT onward).** Injection is role-minimal and routed via
-   `docs/INDEX.md`, never wholesale: the prompt carries a documents line naming the documents the design needs (e.g. the relevant
-   `docs/records/adr/*`, `docs/records/design-rationale.md`); the unit reads anything further its
-   design needs, by its own judgment.
-3. **Return.** The unit returns its two artifact paths and a one-line summary
-   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
-   orchestrator does not receive the design's body.
-4. **Artifact-existence check (orchestrator-side).** Before GATE:PLAN the orchestrator confirms
-   `.autoflow/issue-{N}-feature-design.md` and `.autoflow/issue-{N}-verification-design.md` exist
-   and are non-empty, the feature design carries its `## Decision requests` section and the
-   verification design its `## Tools` section. A missing or empty one is an infrastructure cause:
-   the unit is spawned again with the same inputs, consuming no counter.
-5. **Route** the return (*Report routing* below).
+- **The spawn.** One `autoflow-unit-design` (`Agent`, anonymous, no `name`, the model
+  `bash scripts/spawn-policy/spawn-policy.sh model unit-design` names). The prompt states the goal
+  and names the inputs by path — the acceptance-criterion list
+  (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the decision ledger
+  (`.autoflow/issue-{N}-ledger.md`), the DIAGNOSE artifact (`.autoflow/issue-{N}-analysis.md`, the
+  GATE:HYPOTHESIS reports) — and the two output paths. On a re-entry it also names what the
+  re-entry is for and the previous documents (*Re-entry* below).
+- **Documents.** Injection is role-minimal and routed via
+  `docs/INDEX.md`, never wholesale: the prompt carries a documents line naming the documents the design needs (e.g. the relevant
+  `docs/records/adr/*`, `docs/records/design-rationale.md`); the unit reads anything further its
+  design needs, by its own judgment.
+- **Before the gate (orchestrator-side).** The orchestrator confirms
+  `.autoflow/issue-{N}-feature-design.md` and `.autoflow/issue-{N}-verification-design.md` exist
+  and are non-empty, the feature design carries its `## Decision requests` section and the
+  verification design its `## Tools` section. A missing or empty one is an infrastructure cause:
+  the unit is spawned again with the same inputs, consuming no counter. The return is then routed
+  (*Report routing* below).
 
 ## Output artifacts
 
@@ -106,7 +108,7 @@ this issue's own verification — is the unit agent's, recorded with its grounds
   carries the row's **layer**: a row is `standing` (committed; CI-registered) when the
   cell names one of D1's closed tokens in the form `automated / standing: <token>`
   (`manual / standing: <token>`); the token list is ADR-0024 D1's and is not copied here, and a
-  token outside it is a layer violation ([GATE:QUALITY](gate-quality.md) > *Test quality — layer violation*). On a
+  token outside it is a layer violation ([U5 Completion evaluation](completion-evaluation.md) > *Test quality — layer violation*). On a
   target the cell carries no layer token ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *What a cycle
   leaves in the target's tree*). `Kind`
   applies to `automated` rows only (`driving` / `regression` / `characterization`). Both
@@ -182,7 +184,7 @@ the policy body; every other document references it rather than restating it.
   reason.
 
 **Test kind** (the `Kind` of each `automated` row, and the test-first expectation for it —
-[BUILD](build.md) > *What the build owes*):
+[U4 Build and verify](build.md) > *What the build owes*):
 
 | Kind | Meaning | Before the implementation |
 |---|---|---|
@@ -219,7 +221,7 @@ a test shape.
 
 The rule is [`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *The tools the work needs*;
 this clause is where the verification design applies it. The design opens the materials
-the analysis report's `## Referenced materials` section lists ([`phases/analysis.md`](analysis.md) >
+the analysis report's `## Referenced materials` section lists ([U2 Analysis](analysis.md) >
 *What the analysis owes*) — the material, not the issue body's abbreviated example, is the
 design's input — and finds, for each criterion, the tool that verifies it directly **before**
 settling it as a `manual` row executed by a person, as `environment-dependent`, or on a mock.
@@ -243,7 +245,7 @@ settling it as a `manual` row executed by a person, as `environment-dependent`, 
   bullet above — a `manual` row executed by a person, or a mock — and its `Reason` states why no
   tool could be secured; GATE:PLAN's `Verification fit` reads that reason.
 - The row verified with a tool is looked at with it once implemented, and the evidence is the row's
-  observation record, written at BUILD ([BUILD](build.md) > Build report > `## Manual checklist`).
+  observation record, written at BUILD ([U4 Build and verify](build.md) > Build report > `## Manual checklist`).
 
 ## Report routing
 
@@ -252,9 +254,9 @@ design's `## Tools` section and the feature design's `## Decision requests` sect
 reads the design to judge it: the full read-and-score is GATE:PLAN's.
 
 - **An `operator` item in `## Tools`** — the tool request pause (*Tools* above).
-- **`## Decision requests` says `none`** — GATE:PLAN (a fresh Evaluation AI on the rubric of
-  [GATE:PLAN](gate-plan.md)). A GATE:PLAN FAIL re-runs the unit (*Re-entry* below); that is the
-  existing `GATE:PLAN FAIL → ARCHITECT (max 3×)` re-entry.
+- **`## Decision requests` says `none`** — GATE:PLAN (*Verification — GATE:PLAN* below). A
+  GATE:PLAN FAIL re-runs the unit (*Re-entry* below); that is the existing
+  `GATE:PLAN FAIL → ARCHITECT (max 3×)` re-entry.
 - **An acceptance-criterion content change is requested.** Excluding, revising or splitting an
   issue acceptance criterion, or adding one, is never the design's: the advisor decides first and
   the operator may override at the retry stage ([`role-contracts.md`](../role-contracts.md) >
@@ -275,7 +277,7 @@ reads the design to judge it: the full read-and-score is GATE:PLAN's.
   raises it in its report with the criterion, the proposed change and the fact that shows the need
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
   judgment*); a gate recommendation reaches the same point through the triage
-  ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*). The orchestrator hands it to the
+  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*). The orchestrator hands it to the
   advisor situation-first; the advisor's entries use the same grammar with the phase the change
   surfaced in, and the orchestrator edits the analysis report's table on `revised`, `split` or `added`. Where
   the cycle then re-enters is the orchestrator's judgment, recorded with its grounds in an `O`
@@ -292,7 +294,7 @@ is the advisor (the operator by override at the retry stage):
 1. **Design (ARCHITECT).** The design unit chooses any disposition in the *Test necessity*
    vocabulary for an issue AC, **with its reason stated in that row**; GATE:PLAN scores the reason.
 2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
-   PR body ([HANDOFF](handoff.md) > *Push and pull request*), so the reviewer judges each one on its stated reason.
+   PR body ([U6 Delivery](delivery.md) > *Push and pull request*), so the reviewer judges each one on its stated reason.
 3. **Advisor, then operator.** The advisor is asked when the AC's **content** must change — at
    ARCHITECT or later in the cycle
    (*An acceptance-criterion change raised later in the cycle* above). The options offered are
@@ -301,6 +303,19 @@ is the advisor (the operator by override at the retry stage):
 
 Whether a row verifies the property its AC states is not a tier-3 question — that judgment belongs
 to GATE:PLAN `Verification fit` and to GATE:QUALITY's assertion-claim alignment.
+
+## Verification — GATE:PLAN
+
+One fresh Evaluation AI (`autoflow-evaluator`, the model
+`bash scripts/spawn-policy/spawn-policy.sh model gate-plan` names) scores the two documents on the
+rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN. Its
+documents line names its contract and that rubric, not this file; the sections of this file the
+rubric cites — *Output artifacts* and its clauses — it reads by its own judgment.
+
+- **PASS** (avg ≥ 7.5, each ≥ 7) → recommendation triage
+  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) → BUILD.
+- **FAIL** → ARCHITECT (max 3×): a fresh U3 Design unit receives this report and the previous
+  documents (*Re-entry* below).
 
 ## Re-entry
 
@@ -315,7 +330,7 @@ the previous documents.
 | BUILD design contradiction | `.autoflow/issue-{N}-green-blocker.md` | ARCHITECT re-entry |
 | `design` re-entry from GATE:QUALITY or HANDOFF's CI failure | the failed items and their findings | ARCHITECT re-entry |
 | acceptance-criterion decision raised after ARCHITECT | the `[ac-decision]` entries | none |
-| `design`-class gate recommendation at AUDIT or GATE:QUALITY ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) | the recommendation's subject and finding | ARCHITECT re-entry |
+| `design`-class gate recommendation at AUDIT or GATE:QUALITY ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) | the recommendation's subject and finding | ARCHITECT re-entry |
 
 - **[MUST] A re-entry's output is a delta, never a rewrite.** The first unit run of a cycle writes
   the two documents whole. A re-entry within the cycle **appends** to each document it changes a
@@ -335,12 +350,13 @@ the previous documents.
   orchestrator's routing inputs, not decisions, so a re-entry rewrites each in place to its current
   state — a request the advisor has answered is removed (its answer is the ledger entry), a new one
   is added, and `none` means none is open. The delta section is GATE:PLAN's
-  narrowed input on re-entry ([GATE:PLAN](gate-plan.md) > *Re-entry re-score*); a re-entry after
+  narrowed input on re-entry ([`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN >
+  *Re-entry re-score*); a re-entry after
   BUILD began re-scores that delta and the cycle re-enters BUILD.
 - **A new cycle writes new documents.** A review-response cycle entered at PREFLIGHT, or a HANDOFF
   `design` re-entry judged to start at ARCHITECT, finds the previous cycle's documents
   preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md`
-  ([PREFLIGHT](preflight.md) > *Review-response setup*); the prompt names them and
+  ([U1 Preparation](preparation.md) > *Review-response setup*); the prompt names them and
   what the new cycle is for, and the unit writes the new cycle's documents whole. How much
   of the previous cycle's design the new one carries over is the unit's own, recorded in the design.
 

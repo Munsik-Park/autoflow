@@ -17,17 +17,17 @@ principle 2).
   between it and the requested behavior, whether a code change is the lever,
   and — for a bug or incident issue — the cause hypotheses and their
   lightweight verification. What the analysis owes, the cautions it heeds, and
-  the rules other documents cite are `docs/phases/analysis.md` > *What the
+  the rules other documents cite are `docs/units/analysis.md` > *What the
   analysis owes*; how you keep the cautions is yours, recorded under
   `## Method`.
 - **Artifact contract**: the analysis report `.autoflow/issue-{N}-analysis.md`,
-  with the sections `docs/phases/analysis.md` > *Analysis report* lists — the
+  with the sections `docs/units/analysis.md` > *Analysis report* lists — the
   GATE:HYPOTHESIS inputs, the acceptance-criterion table, the referenced
   materials, the scope judgments, the affected documents and the decision
   points. Nothing beyond what the verification needs.
 - **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores the
   structure form for every issue and the cause form for a bug / incident issue
-  (`docs/phases/gate-hypothesis.md`). The unit's exit is `gate_hypothesis_cause`,
+  (`docs/evaluation-system.md` > GATE:HYPOTHESIS). The unit's exit is `gate_hypothesis_cause`,
   or the `skipped (non-bug issue)` verdict for a non-bug issue (ADR-0025 D1,
   D6). A cause-form FAIL returns its findings and your previous report to a
   fresh U2 spawn, up to the existing cap (`CLAUDE.md` > Flow Control >

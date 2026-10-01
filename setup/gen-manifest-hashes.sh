@@ -7,7 +7,7 @@
 # Dev-time helper. Regenerates setup/manifest.json:
 #   - version  := plugin/autoflow/.claude-plugin/plugin.json .version (R2 stamp)
 #   - artifacts[] := the fixed thin-root/root-layer set PLUS the transitive
-#     markdown-link closure of CLAUDE.md + docs/INDEX.md (the Phase Playbook
+#     markdown-link closure of CLAUDE.md + docs/INDEX.md (the Unit Document
 #     Loading Contract's on-demand Read set — DCR-7 / feature §3.1 O1), each a
 #     `copy` row whose dest mirrors the repo-relative layout under
 #     .claude/autoflow/.
@@ -167,7 +167,7 @@ build_rows() {
            "scripts/preflight/local-checks.sh" "root-layer" "copy" "file"
   # The facts PREFLIGHT is decided from (ADR-0025 D8): every state file against
   # its dev branch and pull request, and what a resume is judged from. It reads
-  # and reports; the stamped docs/phases/preflight.md names it.
+  # and reports; the stamped docs/units/preparation.md names it.
   emit_row "scripts/preflight/cycle-status.sh" \
            "scripts/preflight/cycle-status.sh" "root-layer" "copy" "file"
   emit_row ".codex/review.md" \
@@ -183,7 +183,7 @@ build_rows() {
            ".claude/autoflow.local.json" "root-layer" "scaffold" "file"
 
   # Root-layer tier: methodology-step scripts (issue #10). Scripts the
-  # stamped docs (phases/handoff.md, git-workflow.md Post-Merge
+  # stamped docs (units/delivery.md, git-workflow.md Post-Merge
   # Cleanup) instruct a consumer to run.
   # Source-path-preserved copies (identity dest), same shape as the reviewer-
   # backend script rows above. What HANDOFF reads by script (ADR-0025 D8): the
@@ -207,8 +207,8 @@ build_rows() {
   # satisfy the rule it is stamped with.
   emit_row "scripts/ledger/ledger-entry-id.sh" \
            "scripts/ledger/ledger-entry-id.sh" "root-layer" "copy" "file"
-  # Class-routed re-entry (issues #140, #192). The stamped phase playbooks
-  # (docs/phases/) route every GATE:QUALITY / INTEGRATE / CI FAIL and every Medium+
+  # Class-routed re-entry (issues #140, #192). The stamped unit documents
+  # (docs/units/) route every GATE:QUALITY / INTEGRATE / CI FAIL and every Medium+
   # reviewer finding through it, and it is the single owner of that mapping — a
   # target without it must re-derive the routing by hand, which is the judgment
   # the script exists to replace.
@@ -216,7 +216,7 @@ build_rows() {
            "scripts/gate/remedy-route.sh" "root-layer" "copy" "file"
   # AUDIT security-checklist resolver (issue #281). The checklist is the
   # target's own, declared under the scaffold's `audit.security_checklist`; the
-  # stamped docs/phases/audit.md has AUDIT read the version this script names, so a
+  # stamped docs/units/build.md has AUDIT read the version this script names, so a
   # cycle cannot loosen the checklist its own AUDIT scores against.
   emit_row "scripts/gate/security-checklist.sh" \
            "scripts/gate/security-checklist.sh" "root-layer" "copy" "file"

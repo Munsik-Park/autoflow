@@ -1,16 +1,16 @@
-# DIAGNOSE — U2 Analysis unit
+# U2 Analysis — DIAGNOSE and GATE:HYPOTHESIS
 
-> Phase playbook for DIAGNOSE. [`CLAUDE.md`](../../CLAUDE.md) > Phase Playbook Loading
-> Contract routes to this file; the other phases are listed in
-> [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
+> Unit document for U2. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
+> Documents.
 
 DIAGNOSE and GATE:HYPOTHESIS are one functional unit, U2 Analysis
 ([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed by
 four things only — its goal, its artifact contract, its verification and its loop cap (D2) — and
-this file states them, with the cautions the analysis is asked to heed. How the unit reaches the
-goal — what it reads and in what order, whether it spawns helpers and what it gives each, how it
-keeps the cautions — is the unit agent's, recorded with its grounds in its artifact
-([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
+this file states them, with the cautions the analysis is asked to heed and the result it owes. How
+the unit reaches the goal — what it reads and in what order, whether it spawns helpers and what it
+gives each, how it keeps the cautions — is the unit agent's, recorded with its grounds in its
+artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
 
 - **Goal**: the request that triggered the cycle is understood well enough for GATE:HYPOTHESIS to
   score it — the affected structure as it stands, the gap between it and the requested behavior,
@@ -18,36 +18,38 @@ keeps the cautions — is the unit agent's, recorded with its grounds in its art
   their lightweight verification.
 - **Artifact contract**: the analysis report (*Analysis report* below).
 - **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores the report's structure form for
-  every issue and its cause form for a bug / incident issue ([GATE:HYPOTHESIS](gate-hypothesis.md));
-  the unit never scores its own artifact. U2 ends at a `gate_hypothesis_cause` PASS, or at the
-  structure-form PASS of a non-bug issue, whose verdict is `skipped (non-bug issue)` (D6).
+  every issue and its cause form for a bug / incident issue, on the rubric of
+  [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS; the unit
+  never scores its own artifact. U2 ends at a `gate_hypothesis_cause` PASS, or at the
+  structure-form PASS of a non-bug issue, whose verdict is `skipped (non-bug issue)` (D6)
+  (*Verification — GATE:HYPOTHESIS* below).
 - **Loop cap**: a cause-form FAIL re-runs the unit with the evaluator's findings and the previous
   report (*Re-entry* below), max 2× (`CLAUDE.md` > Flow Control > Regressions). The structure form
-  has no retry loop: its FAIL is a disposition ([GATE:HYPOTHESIS](gate-hypothesis.md) > *Structure
-  form*).
+  has no retry loop: its FAIL is a disposition (*Verification — GATE:HYPOTHESIS* below).
+- **Result owed**: the report's path and a one-line summary that names any decision point it
+  recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
+  orchestrator does not receive the report's body.
 
 ## Unit spawn
 
-1. **Spawn** one `autoflow-unit-analysis` (`Agent`, anonymous, no `name`, the model
-   `bash scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) at DIAGNOSE entry. The
-   prompt states the goal, the cycle's `mode` and
-   the report's path, and names the inputs by path: the issue (new-issue) or the reviewer comment /
-   thread PREFLIGHT identified (review-response), and the decision ledger
-   (`.autoflow/issue-{N}-ledger.md`). In a review-response cycle it also names every artifact the
-   previous cycle left (`.autoflow/issue-{N}-c{C}-*.md`) and, where HANDOFF's triage wrote one, the
-   PR's findings file; how much of the previous analysis the unit reuses is its own, recorded under
-   `## Method`. On a re-entry it names what the re-entry is for and the material that carries it
-   (*Re-entry* below).
-2. **Documents.** Injection stays role-minimal and routed via `docs/INDEX.md`, never wholesale: the
-   prompt carries a documents line naming the documents the analysis needs (this file,
-   [GATE:HYPOTHESIS](gate-hypothesis.md)); the unit reads anything further by its own judgment.
-3. **Return.** The unit returns the report's path and a one-line summary that names any decision
-   point it recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting
-   Format). The orchestrator does not receive the report's body.
-4. **Artifact-existence check (orchestrator-side).** Before GATE:HYPOTHESIS the orchestrator confirms
-   the report exists, is non-empty and carries every section *Analysis report* lists. A missing one
-   is an infrastructure cause: the unit is spawned again with the same inputs, consuming no counter.
-5. **Route** the return (*Report routing* below).
+- **The spawn.** One `autoflow-unit-analysis` (`Agent`, anonymous, no `name`, the model
+  `bash scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) at DIAGNOSE entry. The
+  prompt states the goal, the cycle's `mode` and
+  the report's path, and names the inputs by path: the issue (new-issue) or the reviewer comment /
+  thread PREFLIGHT identified (review-response), and the decision ledger
+  (`.autoflow/issue-{N}-ledger.md`). In a review-response cycle it also names every artifact the
+  previous cycle left (`.autoflow/issue-{N}-c{C}-*.md`) and, where HANDOFF's triage wrote one, the
+  PR's findings file; how much of the previous analysis the unit reuses is its own, recorded under
+  `## Method`. On a re-entry it names what the re-entry is for and the material that carries it
+  (*Re-entry* below).
+- **Documents.** Injection stays role-minimal and routed via `docs/INDEX.md`, never wholesale: the
+  prompt carries a documents line naming the documents the analysis needs (this file, and the
+  rubric it is scored on, [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* >
+  GATE:HYPOTHESIS); the unit reads anything further by its own judgment.
+- **Before the gate (orchestrator-side).** The orchestrator confirms the report exists, is
+  non-empty and carries every section *Analysis report* lists. A missing one is an infrastructure
+  cause: the unit is spawned again with the same inputs, consuming no counter. The return is then
+  routed (*Report routing* below).
 
 ## What the analysis owes
 
@@ -83,8 +85,8 @@ The rules below are the ones other documents cite; everything else about the wor
 
 - **Acceptance criteria.** The report's `## Acceptance criteria` table is the issue's single
   machine-addressable acceptance-criterion list; an absent or unparseable table is itself a finding
-  downstream ([ARCHITECT](architect.md) > *Report routing*; [GATE:PLAN](gate-plan.md) >
-  *AC-authority check*). **[MUST]** It is authored once per issue, in the `mode = new-issue` cycle;
+  downstream ([U3 Design](design.md) > *Report routing*;
+  [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *AC-authority check*). **[MUST]** It is authored once per issue, in the `mode = new-issue` cycle;
   a review-response cycle carries the previous cycle's table forward unchanged — a reviewer comment
   never edits the list; only an `[ac-decision]` ledger entry does, the advisor's or the operator's
   override (`CLAUDE.md` > Decision Ledger).
@@ -111,7 +113,7 @@ The rules below are the ones other documents cite; everything else about the wor
   planning, design or ADR prerequisite clearly required before the issue can be implemented
   (`mode = new-issue`; when in doubt, none); a request the as-is already satisfies; a gap or a cause
   whose lever is not code; in a review-response cycle, a reviewer finding that repeats the previous
-  attempt's complaint with a different witness case ([HANDOFF](handoff.md) > *A repeated
+  attempt's complaint with a different witness case ([U6 Delivery](delivery.md) > *A repeated
   complaint*). A suggested split of the issue stays a suggestion: it is filed only on
   the operator's request, through a draft and `scripts/issue/create-issue.sh`
   ([`issue-proposal.md`](../issue-proposal.md)).
@@ -128,7 +130,7 @@ date on a re-entry. Every section below is present; a section with nothing to re
 | `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | structure form |
 | `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | ARCHITECT, GATE:PLAN, BUILD, GATE:QUALITY |
 | `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | ARCHITECT (*Tools*) |
-| `## Necessity` | the issue type — Type 1 or Type 2 ([GATE:HYPOTHESIS](gate-hypothesis.md) > *Structure form*), and bug / incident or not — and, per resolution approach, the behavior gap and whether code is the lever, with grounds | structure form |
+| `## Necessity` | the issue type — Type 1 or Type 2 ([`evaluation-system.md`](../evaluation-system.md) > GATE:HYPOTHESIS > *Structure form*), and bug / incident or not — and, per resolution approach, the behavior gap and whether code is the lever, with grounds | structure form |
 | `## Hypotheses` | for a bug / incident issue, at least three cause hypotheses, "not a code defect" among them, each with its lightweight verification, the tools it used and its verdict — eliminated, likely or unverified — with evidence; for a non-bug issue, `none — non-bug issue` | cause form |
 | `## Scope judgments` | each scope judgment, as *What the analysis owes* says | ARCHITECT; GATE:QUALITY `Minimal implementation`, `Impact scope` |
 | `## Affected documents` | the documents the change is expected to update | ARCHITECT; BUILD (documents line) |
@@ -145,16 +147,59 @@ Anything else the unit records is its own, written where it judges useful.
   stopped at the prerequisite; **the prerequisite comes first** → the cycle ends with `active:
   false`, `phase: "awaiting-user"`, the report and the advisor's record as its report. No counter.
 - **A repeated complaint** (`mode = review-response`) → the advisor, which decides the re-entry —
-  its depth, or none ([HANDOFF](handoff.md) > *A repeated complaint*). A redefined criterion comes
+  its depth, or none ([U6 Delivery](delivery.md) > *A repeated complaint*). A redefined criterion comes
   back as `[ac-decision]` entries and a unit re-run on them. No counter.
 - **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the structure form and, for a bug
   / incident issue, the cause form. The dispositions — an already-satisfied request, a non-code
   lever or cause, a non-bug issue's `skipped (non-bug issue)` verdict, a cause-form FAIL — are
-  [GATE:HYPOTHESIS](gate-hypothesis.md)'s; a decision point the report records is confirmed by the
+  *Verification — GATE:HYPOTHESIS*'s (below); a decision point the report records is confirmed by the
   gate's scores before any close or end.
 - **A material not opened, or a tool the analysis needs that neither this environment nor the
   target's procedures provide** — a harness-level block → the operator, situation-first
   (`awaiting-user`; `CLAUDE.md` > Flow Control > *tool or referenced material → user*).
+
+## Verification — GATE:HYPOTHESIS
+
+One independent Evaluation AI (`autoflow-evaluator`), fresh-spawned per entry on the model
+`bash scripts/spawn-policy/spawn-policy.sh model gate-hypothesis` names, scores the report on the
+rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS: the
+structure form for every issue and, for a bug / incident issue, the cause form. Its documents line
+names its contract and that rubric, not this file. The orchestrator records each form's scores
+under its own key, `phases.gate_hypothesis_structure` and `phases.gate_hypothesis_cause`.
+
+**Structure form.** The hook records but does not gate `gate_hypothesis_structure`; the
+orchestrator judges it against the form's PASS line: each ≥ 7 — and, for the 3-item Type 2
+rubric, also avg ≥ 7.5.
+
+- **PASS** → recommendation triage ([U5 Completion evaluation](completion-evaluation.md) >
+  *Recommendation triage*) → the cause form (bug / incident), or ARCHITECT with the verdict
+  `skipped (non-bug issue)` (non-bug).
+- **FAIL** → disposition by the failing item — never a bare composite; a real code gap is never
+  auto-closed. No retry loop.
+  - **Gap item low** (the as-is already satisfies the request) → no change needed. Branch on the
+    cycle's `mode` recorded at PREFLIGHT (a PR state change mid-cycle is re-classified at the next
+    PREFLIGHT, not re-derived here):
+    - `mode = review-response` → reply on the PR with the finding; do not close the issue or the PR;
+      set `active: false`, `phase: "awaiting-external-review"`.
+    - `mode = new-issue` → the issue is closed with `gh issue close` and the cycle ends
+      (`active: false`). **Pre-close verification** (the hook does not gate `gh issue close`): the
+      orchestrator first confirms the recorded `phases.gate_hypothesis_structure` scores meet this
+      FAIL condition (gap item < 7). The close comment records those scores and a summary of the
+      existing mechanism. Re-filing or reopening is the re-entry path.
+  - **Gap item high, Code-change necessity low** (a real gap whose lever is data / config / ops) →
+    the advisor decides ([`role-contracts.md`](../role-contracts.md) > Advisor). **A code change is
+    still owed** → the cycle continues as on a PASS; **the lever is non-code** → report the finding
+    situation-first ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision
+    presentation) — in a `mode = review-response` cycle, as the PR reply — and end the cycle with
+    `active: false`, `phase: "awaiting-user"`.
+
+**Cause form** (bug / incident issues only).
+
+- **PASS** → recommendation triage ([U5 Completion evaluation](completion-evaluation.md) >
+  *Recommendation triage*) → ARCHITECT.
+- **FAIL** → a U2 unit re-run with this report's findings and the previous analysis report
+  (*Re-entry* below), max 2×. Third FAIL → human decision.
+- **Non-code root cause confirmed** → the advisor decides ([`role-contracts.md`](../role-contracts.md) > Advisor): a code change is still owed → ARCHITECT; the cause is non-code → report it (situation-first — [`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation) and end the cycle (`active: false`, `phase: "awaiting-user"`).
 
 ## Re-entry
 
@@ -170,18 +215,8 @@ table changes only by an `[ac-decision]` entry, which the orchestrator applies.
 | an advisor answer or operator override that reaches the analysis | the `A` / `O` entries | none |
 
 A re-entry passes through GATE:HYPOTHESIS again on its re-score
-([GATE:HYPOTHESIS](gate-hypothesis.md) > *Re-entry re-score*). The unit reads and writes no
+([`evaluation-system.md`](../evaluation-system.md) > GATE:HYPOTHESIS > *Re-entry re-score*). The unit reads and writes no
 `.autoflow/issue-{N}.json` state file, so every counter above is the orchestrator's own accounting.
-
-## Spawn model
-
-Every DIAGNOSE spawn's model is resolved from the spawn policy, never restated here:
-`bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` over
-`.claude/autoflow/spawn-policy.json` — `unit-analysis` for the unit, `gate-hypothesis` for the
-evaluator. Each `Agent` spawn declares `model` explicitly
-([`CLAUDE.md`](../../CLAUDE.md) > Spawn Model — Phase-by-Phase), and each is an anonymous direct
-spawn ([`role-contracts.md`](../role-contracts.md) > Spawn mode by role lifetime); a spawn the unit
-makes inherits its analysis class.
 
 ## Spot-check & escalation discipline (incomplete-output guard)
 
@@ -206,8 +241,3 @@ Code behavior produces a **false "absent / stub" reading**:
   sequential commands. Another
   directory is addressed with `git -C <path>` + absolute paths rather than a
   `cd`-prefixed compound, which can raise a permission prompt.
-
-**Operator-level mitigation (optional, session-global):** a long session that
-has compacted is also prone to holding stale context with high confidence —
-`--no-compaction` avoids it at the cost of context headroom. The hook + rules
-above are the in-repo defense; this is a fallback.

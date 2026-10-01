@@ -23,7 +23,7 @@
 # not be carried along a route chosen for its neighbours.
 #
 # Call sites (all read the same mapping; each interprets the printed target
-# in its own playbook, and none reimplements the ranking):
+# in its own unit document, and none reimplements the ranking):
 #   - GATE:QUALITY FAIL, INTEGRATE FAIL, HANDOFF CI failure
 #   - HANDOFF review triage — there `ARCHITECT` means the design owns
 #     the moved decision and the orchestrator judges and records where the

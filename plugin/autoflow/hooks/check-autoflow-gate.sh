@@ -1227,7 +1227,7 @@ block_if_open_reentry() {
   fi
   if [ -n "$_open" ]; then
     echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
-    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/phases/gate-quality.md > Recommendation triage)." >&2
+    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/units/completion-evaluation.md > Recommendation triage)." >&2
     echo "State file: $STATE_FILE" >&2
     exit 2
   fi
@@ -1274,7 +1274,7 @@ if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}$
     fi
     if [ "$_sweep_ok" -ne 1 ]; then
       echo "BLOCKED: git commit under a GATE:QUALITY remedy_class=doc re-entry requires the sweep record." >&2
-      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy (docs/phases/gate-quality.md > FAIL routing)." >&2
+      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy (docs/units/completion-evaluation.md > FAIL routing)." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
     fi

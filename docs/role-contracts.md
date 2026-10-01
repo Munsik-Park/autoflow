@@ -6,7 +6,7 @@
 
 ## Role Vocabulary and Spawn Mode
 
-**Role vocabulary.** The usage documents (`CLAUDE.md`, `docs/*.md`, `docs/phases/*.md`, `.claude/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the HANDOFF analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
+**Role vocabulary.** The usage documents (`CLAUDE.md`, `docs/*.md`, `docs/units/*.md`, `.claude/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the HANDOFF analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
 
 ### Spawn mode by role lifetime
 
@@ -43,7 +43,7 @@ A change to the per-phase assignment follows the revert rule above.
 
 ### Finding coverage (model-recall guard)
 - **[MUST]** Surface every issue found, including low-severity and uncertain ones — list them in `recommendations` (or `blocking_issues` when score-blocking). Each finding states its severity and confidence on its own item (the next bullet) and is reflected in the `score` and `reason`; a finding is never expressed by silently omitting it. The rubric score is the filter; the finding stage prioritizes coverage.
-- **[MUST]** Write each `recommendations` item as the object [`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format defines, which also says what an item missing a field costs; a `Medium`+ item's `remedy_class` follows *Remedy class* below. After a PASS the orchestrator triages the list ([`phases/gate-quality.md`](phases/gate-quality.md) > *Recommendation triage*).
+- **[MUST]** Write each `recommendations` item as the object [`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format defines, which also says what an item missing a field costs; a `Medium`+ item's `remedy_class` follows *Remedy class* below. After a PASS the orchestrator triages the list ([`units/completion-evaluation.md`](units/completion-evaluation.md) > *Recommendation triage*).
 - **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them.
 
 ### Pre-scoring FAIL hypothesis (consider-the-opposite)
@@ -53,7 +53,7 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the
 - **[MUST]** Form the FAIL hypothesis first: adopt the hypothesis **"this deliverable must FAIL"** and search for the strongest evidence supporting it, framed in the terms of this evaluation's own rubric items. The search re-derives the deliverable's cited anchors from the current source (`path:line`, command output, `git show HEAD:<file>`) rather than accepting the deliverable's own account of them.
 - **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations` (or `blocking_issues` when score-blocking). A surviving case may coexist with a score of 7 or higher: the routing obligation is to record it, not to lower the item.
 - **[MUST]** Assign scores only after the FAIL hypothesis has been formed, searched, and dispositioned. Scoring never precedes the search.
-- **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`phases/handoff.md`](phases/handoff.md) > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
+- **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`units/delivery.md`](units/delivery.md) > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
 - **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less role-spawn report (`CLAUDE.md` > Execution Principles > *Verify role-spawn claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
 
 ### Build observations (GATE:QUALITY input)
@@ -75,7 +75,7 @@ The cycle's scope is its acceptance criteria, its confirmed cause, and the probl
 
 The failed-item rule binds the GATE:QUALITY form only; the recommendation rule binds every
 rubric-scored gate. The orchestrator routes a FAIL's re-entry and a `Medium`+ recommendation's fix
-from this field ([`phases/gate-quality.md`](phases/gate-quality.md) > FAIL routing, >
+from this field ([`units/completion-evaluation.md`](units/completion-evaluation.md) > FAIL routing, >
 *Recommendation triage*); the evaluator is the classifying authority and the implementing roles do
 not re-classify.
 
@@ -101,7 +101,7 @@ not re-classify.
   copy the rest from the cited prior report (`rescore.source`). The fresh-spawn rule is unchanged;
   the input is narrowed, not the independence. The re-score's subject is the flagged defect: the
   FAIL hypothesis takes its *re-entry form* (above), and `rescore.prior_findings` /
-  `rescore.new_findings` carry the dispositions ([`phases/gate-quality.md`](phases/gate-quality.md) >
+  `rescore.new_findings` carry the dispositions ([`units/completion-evaluation.md`](units/completion-evaluation.md) >
   Re-entry re-score).
 
 ### Code comments in a target (GATE:QUALITY)
@@ -115,7 +115,7 @@ scored under the ordinary items, the `doc` class included.
   issue or PR reference, another file's path or contract, or a change history. Record it in
   `recommendations` with its `path:line` and the severity `Low`; it lowers no item's score, so it is
   never a failed item and carries no `remedy_class`; whether it is fixed is the orchestrator's
-  judgment, and the fix is its direct commit ([`phases/gate-quality.md`](phases/gate-quality.md) > *Code comments in a target*).
+  judgment, and the fix is its direct commit ([`units/completion-evaluation.md`](units/completion-evaluation.md) > *Code comments in a target*).
   Only that finding is `Low`: a defect a comment carries on its own ground — an exposed credential,
   token or personal data, for example — is scored under the item its impact belongs to, with that
   item's usual cap and class.
@@ -138,7 +138,7 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
   verdict**, the anchor is the recorded local run — the command, the log it wrote and the summary
   line read from it (Reporting Format item 5) — and the evaluator confirms it by reading that line
   at the cited log path, never by re-running the command; a log absent at its path makes the row
-  `not-run` ([`phases/gate-quality.md`](phases/gate-quality.md) > *Test coverage* > *Execution
+  `not-run` ([`units/completion-evaluation.md`](units/completion-evaluation.md) > *Test coverage* > *Execution
   omission is not a defect*), and a log that does not carry the line is evidence authored without a
   run (*Test quality / Completeness*). An unresolved anchor is a report defect, not an input.
   Nothing is cited from a host record in place of a run's log.
@@ -162,10 +162,10 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 The U4 build unit (`autoflow-unit-build`; *Functional-unit agents* below) works in the target scope the
 orchestrator assigns it — the target repository, or in a project with sub-repos one sub-repo's directory
 ([`CLAUDE.md`](../CLAUDE.md) > Cross-Project Boundary Rules). What it owes the build is
-[`phases/build.md`](phases/build.md) > *What the build owes*; what it owes the scope is below.
+[`units/build.md`](units/build.md) > *What the build owes*; what it owes the scope is below.
 
 - Works directly in the target repository and commits to the cycle's branch. It does not push: the
-  push is the orchestrator's, at DELIVER ([`phases/deliver.md`](phases/deliver.md)), as is PR
+  push is the orchestrator's, at DELIVER ([`units/delivery.md`](units/delivery.md) > *Push and pull request*), as is PR
   creation.
 - Has read access to other sub-repos; modifications stay within the assigned scope.
 - **[MUST]** Runs the target repository's lint chain over the staged files before each commit,
@@ -187,7 +187,7 @@ orchestrator assigns it — the target repository, or in a project with sub-repo
 *Secondary (multi-repo):* in a project with sub-repos (see [`CLAUDE.md`](../CLAUDE.md) > Project
 Information), a changed sub-repo is a target scope of its own: the unit commits there on that
 sub-repo's branch, which the orchestrator pushes at DELIVER, and PR creation remains the
-orchestrator's ([`phases/handoff.md`](phases/handoff.md) > *Multi-repo delivery*).
+orchestrator's ([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*).
 
 ---
 
@@ -195,7 +195,7 @@ orchestrator's ([`phases/handoff.md`](phases/handoff.md) > *Multi-repo delivery*
 
 ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor, and
 the operator's judgment from the forward path to the retry stage. This section is the procedure's
-single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the playbooks cite it.
+single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the unit documents cite it.
 
 ### Decision points and harness-level blocks
 
@@ -345,9 +345,9 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
 
 | Type | Items | Retry |
 |------|-------|-------|
-| Structure evaluation | Type 1: Behavior gap, Code-change necessity (2) — Type 2: Content gap, Consistency impact, Propagation scope (3) | none (PASS/FAIL single verdict; reuse-neutral; gap-low → close/reply, non-code lever → the advisor decides; no retry. Canonical: [`phases/gate-hypothesis.md`](phases/gate-hypothesis.md) > *Structure form*) |
+| Structure evaluation | Type 1: Behavior gap, Code-change necessity (2) — Type 2: Content gap, Consistency impact, Propagation scope (3) | none (PASS/FAIL single verdict; reuse-neutral; gap-low → close/reply, non-code lever → the advisor decides; no retry. Canonical: [`evaluation-system.md`](evaluation-system.md) > GATE:HYPOTHESIS > *Structure form*; dispositions: [`units/analysis.md`](units/analysis.md) > *Verification — GATE:HYPOTHESIS*) |
 | Hypothesis evaluation | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× |
-| Plan evaluation | Decision grounds, Verification fit, Scope, Tools, Security (5) — the design's intent, never its method; affected files / side effects are derived at BUILD, not scored here; Decision grounds/Scope carry structural-fit & over-engineering across the plan and its verification design (not scored at DIAGNOSE; interpretation and embedded checks: [`phases/gate-plan.md`](phases/gate-plan.md)); a re-entry re-scores the design documents' delta only | max 3× |
+| Plan evaluation | Decision grounds, Verification fit, Scope, Tools, Security (5) — the design's intent, never its method; affected files / side effects are derived at BUILD, not scored here; Decision grounds/Scope carry structural-fit & over-engineering across the plan and its verification design (not scored at DIAGNOSE; interpretation and embedded checks: [`evaluation-system.md`](evaluation-system.md) > GATE:PLAN); a re-entry re-scores the design documents' delta only | max 3× |
 | Security audit | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
 | Quality evaluation | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) | max 3× |
 | Doc evaluation | Accuracy, Completeness, Clarity, Format compliance (4) | one revision |
