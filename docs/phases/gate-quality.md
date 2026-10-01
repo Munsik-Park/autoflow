@@ -39,9 +39,9 @@ On a target the item also weighs the comments the change adds, by content and by
 The build report's records are the subject of three items. `Test coverage` reads `## Run record` and
 `## Manual checklist` (*Test coverage — the run record is the subject* below). `Doc updates` reads
 `## Maintained documents` against the diff: a listed document the diff does not touch is a finding
-of the item. `Commit conventions` reads `## Lint` for every commit on the branch against the outcome
-vocabulary and its reason classes ([`submodule-common-rules.md`](../submodule-common-rules.md) >
-Change Surface Rules > *Lint chain on the staged surface*): a chain `detected` is a finding of the
+of the item. `Commit conventions` reads `## Lint` for every commit this cycle made against the
+outcome vocabulary and its reason classes ([`submodule-common-rules.md`](../submodule-common-rules.md)
+> Change Surface Rules > *Lint chain on the staged surface*): a chain `detected` is a finding of the
 item, a `not-run (ci-deferred)` chain is cleared as a deferral, and a commit with no lint record or a
 chain `not-run (unexecuted)` is an omission that takes the omission path under `Test coverage` below.
 
