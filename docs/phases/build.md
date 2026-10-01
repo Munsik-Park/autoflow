@@ -16,10 +16,10 @@ principle 2).
   acceptance criterion verified as the verification design says.
 - **Artifact contract**: the commits on the cycle's branch and the build report (*Build report*
   below).
-- **Verification**: the exit check (*Exit check* below), then AUDIT — a fresh Evaluation AI
-  ([AUDIT](audit.md)); the unit never scores its own artifact. U4 ends when the exit check passes and
-  `audit` PASSes.
-- **Loop cap**: an exit-check defect or an AUDIT FAIL re-runs the unit with its findings and the
+- **Verification**: AUDIT — a fresh Evaluation AI ([AUDIT](audit.md)) that judges test-first from
+  the build report and git, then scores the change; the unit never scores its own artifact. U4 ends
+  when `audit` PASSes.
+- **Loop cap**: a test-first finding or an AUDIT FAIL re-runs the unit with its findings and the
   previous artifacts (*Re-entry* below), max 2× together — the AUDIT FAIL cap
   (`CLAUDE.md` > Flow Control > Regressions).
 
@@ -41,7 +41,7 @@ principle 2).
 3. **Return.** The unit returns the build report's path, the commit SHAs and a one-line summary
    ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The orchestrator
    does not receive the report's body.
-4. **Exit check**, then **route** the return (below).
+4. **Route** the return (*Report routing* below).
 
 ## What the build owes
 
@@ -60,13 +60,13 @@ These are the rules other documents cite; everything else about the work is the 
   unit's. The result owed is the Red run's evidence (*Build report* > `## Test-first`). Cautions:
   - A test that passes from the start is not Red evidence. Look again at whether it checks the
     required behavior, and record that judgment in the report.
-  - The Red run's failure is readable in its log, the exit status included: the log ends with the
-    line `exit: <status>`.
+  - The Red run's failure is readable in its log, the exit status included.
   - `## Run record` holds one row per verification row — its latest run. The Red run goes in
     `## Test-first` only.
 
-  ADR-0025 D3's "the test commit precedes the implementation commit and its failing log exists" is
-  judged as: the Red run precedes the implementation commit, and its failure is shown by its log.
+  ADR-0025 D3's test-first rule is judged by the AUDIT evaluator from this report and git: the Red
+  run precedes the implementation commit, and its failure is shown by its log ([AUDIT](audit.md) >
+  *Test-first*).
 - **Where a test lives.** A `cycle` row's test, a `delivery-check`, a `manual` scenario document and
   an observation record live under `.autoflow/issue-{N}-local/` and are run by their path
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools). A test file
@@ -107,18 +107,18 @@ These are the rules other documents cite; everything else about the work is the 
 ## Build report
 
 `.autoflow/issue-{N}-build-report.md`. The unit writes it whole on its first run and brings it up to
-date on a re-entry. A new cycle carries over the `## Lint` rows of the previous cycle's report
-(`issue-{N}-c{C}-build-report.md`). Every section below is present; a section with nothing to record says `none`.
-The five machine-read sections are tables located by their header row — the exit check reads them,
-column order is free, and a cell holding `|` wraps it in backticks.
+date on a re-entry that passes through AUDIT and GATE:QUALITY (*Re-entry* below). Every section
+below is present; a section with nothing to record says `none`.
+The five record sections are tables, one row per item, in any column order; the column a reader
+needs is named below.
 
 | Section | Holds | Read by |
 |---|---|---|
-| `## Test-first` | one row per `driving` / `regression` test: `Issue AC`, `Test` (its path), `Red at` (the commit the failing run was made at), `Red log`, `Red line` (the summary line read from that log), `Red exit` (the run's non-zero exit status, which the log carries as `exit: <status>`), `Impl commit` (the commit that makes it pass) | exit check (a) |
-| `## Run record` | one row per `automated` or `delivery-check` verification row, its latest run: `Issue AC`, `Command`, `Log`, `Summary line`, `Result` (`pass` / `fail`) | exit check (b); GATE:QUALITY `Test coverage`; HANDOFF (PR body) |
-| `## Manual checklist` | one row per `manual` row: `Issue AC`, `Executor` (`AI: <tool>` or `person`), `Record` (the observation record's path, or `delegated to user`) | exit check (c); HANDOFF (PR body) |
-| `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | exit check (d) |
-| `## Lint` | one row per chain per commit on the branch: `Commit` (≥ 7 hex), `Chain`, `Outcome` (the lint outcome word, a `not-run` with its reason class in parentheses); a commit another actor makes on the branch adds its own rows | exit check (e) |
+| `## Test-first` | one row per `driving` / `regression` test: `Issue AC`, `Test` (its path), `Red at` (the commit the failing run was made at), `Red log`, `Red line` (the summary line read from that log), `Red exit` (the run's non-zero exit status, shown in its log), `Impl commit` (the commit that makes it pass) | AUDIT (*Test-first*) |
+| `## Run record` | one row per `automated` or `delivery-check` verification row, its latest run: `Issue AC`, `Command`, `Log`, `Summary line`, `Result` (`pass` / `fail`) | GATE:QUALITY `Test coverage`; HANDOFF (PR body) |
+| `## Manual checklist` | one row per `manual` row: `Issue AC`, `Executor` (`AI: <tool>` or `person`), `Record` (the observation record's path, or `delegated to user`) | GATE:QUALITY `Test coverage`; HANDOFF (PR body) |
+| `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
+| `## Lint` | one row per chain per commit this cycle makes on the branch: `Commit` (≥ 7 hex), `Chain`, `Outcome` (the lint outcome word, a `not-run` with its reason class in parentheses); a commit another actor makes on the branch adds its own rows | GATE:QUALITY `Commit conventions` |
 | `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
 | `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the unit rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
 | `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
@@ -127,39 +127,10 @@ column order is free, and a cell holding `|` wraps it in backticks.
 Anything else the unit records — how it divided the work, the checks it chose to run and what they
 found — is its own, written where it judges useful.
 
-## Exit check
-
-On the unit's return the orchestrator runs, before AUDIT,
-
-```
-bash scripts/gate/build-exit-check.sh --issue {N} > .autoflow/issue-{N}-build-exit-check.log 2>&1
-```
-
-The check is run against the repository that holds the cycle's implementation commits. Where and
-how it is run is the orchestrator's.
-
-It checks (a) each `driving` / `regression` row's Red run precedes its implementation commit and its
-Red log carries the recorded line and the non-zero `Red exit`, (b) each `automated` / `delivery-check` row has a passing run
-whose log carries its summary line, (c) the manual checklist is itemized with each AI-executed
-row's observation record, (d) each listed document is in the diff, and (e) each commit on the branch
-has its lint record; and that every section above is present.
-
-| Exit | Verdict | Route |
-|---|---|---|
-| 0 | `pass` | AUDIT, its prompt naming the log and how the check was run (location and arguments) |
-| 3 | `omission` — `NOT-RUN:` lines only | filled where found: the orchestrator runs a cycle-layer asset itself, or re-spawns the unit naming the rows; the check re-runs. No counter ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *A missing run is filled where it is found*) |
-| 1 | `defect` — a `FAIL:` line | the unit re-runs with the log (*Re-entry*); consumes the AUDIT FAIL counter |
-| 2 | — | an input missing: an artifact defect — the unit is spawned again with the same inputs, no counter; the base unresolvable: the orchestrator re-runs the check with `--base <the cycle's base commit>` |
-
-A lint chain still `not-run (unexecuted)` once filled, because it is not executable in this checkout
-and no pull-request CI job covering it can be named, is a harness-level block: the cycle pauses for
-the operator (`active:false`, `phase:"awaiting-user"`), presented situation-first
-([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Human-decision presentation*).
-
 ## Report routing
 
-- **Exit check `pass`** → AUDIT ([AUDIT](audit.md)); the AUDIT evaluator re-runs the check itself and
-  attaches its output.
+- **The unit's return** → AUDIT ([AUDIT](audit.md)), whose evaluator judges test-first before it
+  scores.
 - **A `green-blocker` record** → an ARCHITECT unit re-run naming it ([ARCHITECT](architect.md) >
   *Re-entry*), then GATE:PLAN's re-entry re-score and a U4 re-run; consumes the ARCHITECT re-entry
   counter.
@@ -167,30 +138,36 @@ the operator (`active:false`, `phase:"awaiting-user"`), presented situation-firs
   Advisor); where the cycle re-enters on its `[ac-decision]` entries is the orchestrator's judgment
   ([ARCHITECT](architect.md) > *Report routing*). No counter.
 - **A tool reported missing** → the tool request pause ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control).
+- **A lint chain reported `not-run (unexecuted)`** because it is not executable in this checkout and
+  no pull-request CI job covering it can be named → a harness-level block: the cycle pauses for the
+  operator (`active:false`, `phase:"awaiting-user"`), presented situation-first
+  ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Human-decision presentation*).
 
 ## Re-entry
 
 No unit agent's lifetime spans a spawn: every re-entry spawns a fresh `autoflow-unit-build` by *Unit
 spawn* above, whose prompt names what the re-entry is for, the material that carries it, and the
-build report so far. The report is brought up to date, not rewritten: a row a re-entry supersedes is
-replaced, a new commit adds its lint rows, and the sections GATE:QUALITY reads carry the current
-state.
+build report so far. On a re-entry that passes through AUDIT and GATE:QUALITY, the report is
+brought up to date, not rewritten: a row a re-entry supersedes is replaced, a new commit adds its lint
+rows, and the sections GATE:QUALITY reads carry the current state.
 
 | Re-entry | Material named | Counter |
 |---|---|---|
-| exit check `defect` | `.autoflow/issue-{N}-build-exit-check.log` | AUDIT FAIL (max 2×, shared) |
+| AUDIT test-first finding | the AUDIT report's `## Test-first` section | AUDIT FAIL (max 2×, shared) |
 | AUDIT FAIL | the AUDIT report and its failed items | AUDIT FAIL (max 2×, shared) |
 | GATE:QUALITY FAIL routed `test` / `impl` | the evaluation report and its failed items | GATE:QUALITY FAIL (max 3×) |
 | a `test` / `impl` recommendation attempt at AUDIT or GATE:QUALITY | the recommendation's subject and finding | the attempt window (max 7×) |
-| INTEGRATE FAIL | the failing check and its output | none |
-| HANDOFF CI failure routed `test` / `impl` | `.autoflow/issue-{N}-ci-failure.md` | none |
 | HANDOFF review-triage thin route (`test` / `impl`) | the finding row in the PR's findings file | the auto-resolution window (max 7×) |
 | advisor answer or operator override that reaches the build | the `A` / `O` entries | none |
 
-A re-entry runs the exit check again and passes through AUDIT and GATE:QUALITY on their narrowed
-re-scores ([AUDIT](audit.md) > *Review-response re-score*; [GATE:QUALITY](gate-quality.md) >
-*Re-entry re-score*). On a HANDOFF thin route the fix stays on the finding's own surface and returns
-to the reviewer re-review.
+An INTEGRATE failure names the failing check and its output; a HANDOFF CI failure routed `test` /
+`impl` names `.autoflow/issue-{N}-ci-failure.md`. The unit fixes what failed, and the cycle runs
+forward again to the INTEGRATE check or the CI that failed.
+
+A re-entry passes through AUDIT and GATE:QUALITY on their narrowed re-scores
+([AUDIT](audit.md) > *Review-response re-score*; [GATE:QUALITY](gate-quality.md) > *Re-entry
+re-score*). A HANDOFF thin route fixes the finding on its own surface and returns to the reviewer
+re-review; it does not bring the build report up to date.
 
 The unit reads and writes no `.autoflow/issue-{N}.json` state file, so every counter above is the
 orchestrator's own accounting.

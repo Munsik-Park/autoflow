@@ -4,22 +4,28 @@
 > Contract routes to this file; the other phases are listed in
 > [`autoflow-guide.md`](../autoflow-guide.md) > Phase Playbooks.
 
-AUDIT is the scored exit of the U4 Build and verify unit ([BUILD](build.md)): once the BUILD exit
-check passes, run a project-specific security audit on the change. Complements GATE:QUALITY's
-`Security` item with 5 dedicated, project-specific items.
+AUDIT is the scored exit of the U4 Build and verify unit ([BUILD](build.md)): once the BUILD unit
+returns, judge its test-first evidence and run a project-specific security audit on the change.
+Complements GATE:QUALITY's `Security` item with 5 dedicated, project-specific items.
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: the U4 artifact set — the change diff, the build report
-(`.autoflow/issue-{N}-build-report.md`) and the exit-check log
-(`.autoflow/issue-{N}-build-exit-check.log`) — + the target's security checklist at the version the
-checklist status names (*Security checklist* below), or none when none is declared. The evaluator
-re-runs the exit check itself, the way it was run — `bash scripts/gate/build-exit-check.sh --issue {N}`
-with the location and arguments the AUDIT prompt passes beside the exit-check log — and attaches its verdict line to
-its report; on a verdict other than `pass` it scores nothing and returns that line. That return is
-a routed result, not a report defect: the orchestrator does not re-spawn the evaluator and routes it
-as the exit check's verdict ([BUILD](build.md) > *Exit check*). In a **review-response cycle**,
+**Input**: the U4 artifact set — the change diff with the cycle's commits, the build report
+(`.autoflow/issue-{N}-build-report.md`) and the verification design
+(`.autoflow/issue-{N}-verification-design.md`) — + the target's security checklist at the version the
+checklist status names (*Security checklist* below), or none when none is declared. In a **review-response cycle**,
 additionally the previous cycle's AUDIT report (`.autoflow/issue-{N}-c{C-1}-audit.md`, preserved at
 PREFLIGHT) — its `## Low findings` list is the re-score's starting set.
+
+**Test-first** — judged before scoring. For each `driving` / `regression` row of the verification
+design, the evaluator reads the build report's `## Test-first` row and the evidence it cites, and
+judges whether the Red run precedes the implementation commit and its failure is shown by its log
+([BUILD](build.md) > *What the build owes* > *Test-first*). It finds that evidence where this
+project's composition puts it, and records in its report, under `## Test-first`, what it read for
+each row and its verdict — `confirmed`, or `not confirmed` with what is missing or contradicts the
+record. On any `not confirmed` row it scores nothing and returns that section. That return is a
+routed result, not a report defect: the orchestrator does not re-spawn the evaluator, and the cycle
+re-runs the BUILD unit with the section ([BUILD](build.md) > *Re-entry*), consuming the AUDIT FAIL
+counter.
 
 **Security checklist — the target's own**. AutoFlow ships no checklist and names no item: AutoFlow owns how
 AUDIT scores — the fresh evaluator, the five items below, the PASS thresholds — and the target owns
@@ -53,12 +59,14 @@ its one record line:
   the one the orchestrator recorded is a report defect: reject and re-spawn.
 
 **Report file**: the evaluator's report is written to `.autoflow/issue-{N}-audit.md` and carries a
-`## Security checklist` section (the status record line) and a
+`## Test-first` section (*Test-first* above), a `## Security checklist` section (the status record
+line) and a
 `## Low findings` section (each Low item with `path:line` at the audited commit and a one-line claim; `none` when empty).
 The state file keeps only the scores.
 
 **Review-response re-score**: the fresh evaluator does not re-derive the whole audit.
-It re-scores **the change surface of this cycle** (the review-response diff) against the checklist,
+It judges test-first for the rows this cycle added or rewrote, re-scores **the change surface of this
+cycle** (the review-response diff) against the checklist,
 re-checks each prior Low finding only where that diff touches its file, and inherits the rest by
 citation — the same narrowed-input rule as GATE:QUALITY's re-entry re-score, using the same
 `rescore` output field. Fresh spawn is unchanged; the input is.
@@ -79,7 +87,6 @@ item is judged by; with none declared, the criteria below are the whole of it.
 - **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → immediate block) → recommendation triage
   ([GATE:QUALITY](gate-quality.md) > *Recommendation triage*) → GATE:QUALITY.
 - **FAIL** → a BUILD unit re-run with the report's failed items ([BUILD](build.md) > *Re-entry*),
-  then the exit check and a re-evaluation (max 2×, the counter shared with exit-check defects).
-  Third FAIL → human.
+  then a re-evaluation (max 2×, the counter shared with test-first findings). Third FAIL → human.
 
 GATE:QUALITY's `Security` item references the AUDIT result.

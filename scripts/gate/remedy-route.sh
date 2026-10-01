@@ -9,8 +9,8 @@
 # point the cycle re-enters:
 #
 #   doc      → DOC_COMMIT  (orchestrator doc commit → selected suites → GATE:QUALITY re-score)
-#   test     → BUILD       (a U4 re-run on the test assets → exit check → AUDIT)
-#   impl     → BUILD       (a U4 re-run on the implementation → exit check → AUDIT)
+#   test     → BUILD       (a U4 re-run on the test assets → AUDIT)
+#   impl     → BUILD       (a U4 re-run on the implementation → AUDIT)
 #   design   → ARCHITECT   (shares the GATE:PLAN → ARCHITECT re-entry cap)
 #   operator → PAUSE       (the evaluator could not classify with confidence;
 #                           routing stops and the advisor fixes the class —

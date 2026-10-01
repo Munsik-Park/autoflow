@@ -16,7 +16,8 @@ as the system runs it, beyond what BUILD verified per acceptance criterion.
   log kept under `.autoflow/issue-{N}-local/` — or the no-op line below. A check that was not run
   is `not-run`, never `passed`.
 - **Failure**: INTEGRATE FAIL → BUILD — fixed `impl` class: a BUILD unit re-run with the failing
-  check → exit check → AUDIT ([BUILD](build.md) > *Re-entry*).
+  check fixes it, and the cycle runs forward through AUDIT to INTEGRATE again ([BUILD](build.md) >
+  *Re-entry*).
 
 Cautions:
 

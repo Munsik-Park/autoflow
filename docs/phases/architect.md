@@ -88,7 +88,7 @@ this issue's own verification — is the unit agent's, recorded with its grounds
    a design output. What the split removes from it is depth, not rows: `Method` names the **kind**
    of oracle a row gets, and the condition clause that implements it is BUILD's. The table's columns
    are what the downstream readers need — GATE:PLAN's AC-authority check joins on `Issue AC`, the
-   BUILD exit check reads `Type` and `Kind`, GATE:QUALITY reads `Type`, and HANDOFF carries each reduced disposition and its
+   AUDIT evaluator reads `Kind` for its test-first judgment, GATE:QUALITY reads `Type`, and HANDOFF carries each reduced disposition and its
    `Reason` into the PR body; how each row is reached is the unit's.
 
 | Issue AC | Acceptance criterion | Type | Kind | Method | Failure mode | Reason |

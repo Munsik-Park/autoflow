@@ -5,14 +5,11 @@
 # Test: thin-root-layer acceptance suite
 # =============================================================================
 # Packaging and manifest checks over the thin-root layer's shipped sources:
-# the CLAUDE.md @import shim, the BUILD exit-check script, and the committed
-# settings pin. Plain POSIX sh + jq/grep/awk/shasum only -- no bats, no new
-# runtime dependency.
+# the CLAUDE.md @import shim and the committed settings pin. Plain POSIX sh +
+# jq/grep/awk/shasum only -- no bats, no new runtime dependency.
 #
 #   AC1a/AC1b  packaging  the shim carries exactly one pinned import line, inside
 #                         the AUTOFLOW-IMPORT fence setup/init.sh re-stamps by
-#   AC2b       packaging  the root-layer BUILD exit-check script exists at its
-#                         manifest source path
 #   AC4a       packaging  settings-pin.json is valid JSON and registers the
 #                         autoflow marketplace
 #              manifest   the pin's marketplace name matches marketplace.json .name
@@ -80,14 +77,6 @@ if [ -f "$SHIM" ]; then
   fi
 else
   failc "AC1b" "shim artifact missing at $SHIM"
-fi
-
-# ── AC2b: the root-layer BUILD exit-check script exists ───────────────────
-echo "== AC2b: root-layer BUILD exit-check script present at its manifest source path =="
-if [ -f "$REPO_ROOT/scripts/gate/build-exit-check.sh" ]; then
-  pass "AC2b: source exit-check script exists at scripts/gate/"
-else
-  failc "AC2b" "source exit-check script missing under scripts/gate/"
 fi
 
 # ── AC4a: settings-pin artifact + no-skew cross-check ──────────────────────

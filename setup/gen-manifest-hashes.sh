@@ -220,11 +220,6 @@ build_rows() {
   # cycle cannot loosen the checklist its own AUDIT scores against.
   emit_row "scripts/gate/security-checklist.sh" \
            "scripts/gate/security-checklist.sh" "root-layer" "copy" "file"
-  # BUILD exit check. The stamped docs/phases/build.md has the orchestrator run
-  # it before AUDIT and the AUDIT evaluator re-run it; it is the deterministic
-  # half of the U4 unit's exit, so a target without it has no exit check.
-  emit_row "scripts/gate/build-exit-check.sh" \
-           "scripts/gate/build-exit-check.sh" "root-layer" "copy" "file"
   # Suite selection and execution (the BUILD test plane, opt-in per
   # ADR-0024 D3). BUILD derives its affected suite set with
   # `select-suites.sh` (issue #192); the gate hook that ships with the bundle

@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "76532209d68432f6d00b94211a77a6d06bb19de072d5d273054cb6374c0fdf1b"
+      "sha256": "d5ec3ca7bee49991265a6a8c1ca32e66db44f933ef4473ad6133e5d909a2eb0e"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "13fd7f86227b81c3effe6ccf74cecc4345f78e3f851fae7c22b9f27ad3ff813b"
+      "sha256": "ac9c1054f727879f9aafaae9dc71cc8b9f03eb33176eda5dc27e5d144c945b71"
     },
     {
       "source": "docs/decision-ledger.md",
@@ -83,21 +83,21 @@
       "dest": ".claude/autoflow/docs/phases/architect.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f2480e26773e4d621a296aa212278af386dcfe1dd460d16a3971bffe12a7b1a4"
+      "sha256": "fefc279ca7125d7cf24b81ae6b89939f12e53ddfdd3db59aebb35496067b9b93"
     },
     {
       "source": "docs/phases/audit.md",
       "dest": ".claude/autoflow/docs/phases/audit.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "574b9ed7277659efc82e24d640871af37a695b954698a5485dba3a11d328f1da"
+      "sha256": "eb4c98f4d4002437161a0b33814b338f7403c06e26a2b3f56e98aa375778206d"
     },
     {
       "source": "docs/phases/build.md",
       "dest": ".claude/autoflow/docs/phases/build.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1fcd52d23ac4ddd7a7b8e15f9bd81e9ff6fe648526b4f82ade3e4f28c627cd60"
+      "sha256": "222df80239a62edb7dd5d0a9e40d36c15c11f18b09d1f8f685a711ddb712175a"
     },
     {
       "source": "docs/phases/deliver.md",
@@ -125,21 +125,21 @@
       "dest": ".claude/autoflow/docs/phases/gate-quality.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6ff44d03ec827a95170b1aac83b5f0283e3bfe6c337187b7a6a1179d78438266"
+      "sha256": "738c0a1fe8f83f8d5d132bed4b80a4c02ddbd3475c8c6ac151f6cd1d220b7686"
     },
     {
       "source": "docs/phases/handoff.md",
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8ee7634f5e71196edb74c09fb0a8e5c799558dede1450b1608c87aec9e52d967"
+      "sha256": "541c96c939db0b6e4fa7bcbf12ca612132f49567d403c6d4da53b405b90f1aec"
     },
     {
       "source": "docs/phases/integrate.md",
       "dest": ".claude/autoflow/docs/phases/integrate.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "def6fbc67e768680a28d3e7fefa94f1606fde14556b6e736ae8befd9b22f52f7"
+      "sha256": "4f4822409142741d64168ea142b0cf0fa1f62fc9f383401eb99d5313353d7cab"
     },
     {
       "source": "docs/phases/preflight.md",
@@ -181,14 +181,14 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4e2e7d4ca7349d81d6f5dfbaf8525d55e3a14a26d2f236fee08eca4f2a71b6b8"
+      "sha256": "f9263a946ae2225b20fe26368ca48298cfff45be8eacd339637eae794f5905cb"
     },
     {
       "source": "docs/submodule-common-rules.md",
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f6e528ee0038531ce672f2e484cb3dbcf6e4ad42080af87ff69e7834c1beda8d"
+      "sha256": "ab0883ab3e2032f442785ae26bd9272705480938ea072f5eeb248d4705ca08df"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -356,7 +356,7 @@
       "dest": "scripts/gate/remedy-route.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "f733a515b2433df77eb5b72154fd66ef43ebb4f67ed12b92e5dded51aaf6d574"
+      "sha256": "ea322da5a7c79590dac2208fb59b366fcbdf7fe165946e626d24eddd623e8bc7"
     },
     {
       "source": "scripts/gate/security-checklist.sh",
@@ -364,13 +364,6 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "7f41597fd43ad71036edbe37e3bc0072a435fd97fa97f051420b66656f9c093c"
-    },
-    {
-      "source": "scripts/gate/build-exit-check.sh",
-      "dest": "scripts/gate/build-exit-check.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "b4b25c289f27e6f224336b8c4f1de847fa394468bbab2d46ba24816275bdddac"
     },
     {
       "source": "scripts/test/suite-manifest.sh",

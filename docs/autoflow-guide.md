@@ -56,7 +56,6 @@ flowchart TD
     ARC[ARCHITECT<br/>Design unit]:::phase
     PLAN{{GATE:PLAN}}:::gate
     BLD[BUILD<br/>Build unit]:::phase
-    EXIT{{exit check}}:::gate
     AUD{{AUDIT}}:::gate
     QUAL{{GATE:QUALITY}}:::gate
     DEL[DELIVER<br/>Push]:::phase
@@ -83,12 +82,9 @@ flowchart TD
     PLAN -->|PASS| BLD
     PLAN -->|FAIL ≤3×| ARC
     PLAN -->|FAIL ×4| HUMAN
-    BLD --> EXIT
+    BLD --> AUD
     BLD -.->|design contradiction<br/>AC set unsatisfiable| ARC
-    EXIT -->|omission · fill in place| BLD
-    EXIT -->|defect · shares AUDIT ≤2×| BLD
-    EXIT -->|pass| AUD
-    AUD -->|FAIL ≤2×| BLD
+    AUD -->|test-first not confirmed / FAIL ≤2×| BLD
     AUD -->|FAIL ×3| HUMAN
     AUD -->|PASS| QUAL
     QUAL -->|PASS| DEL
@@ -127,11 +123,11 @@ ARCHITECT ◄── retry ≤3×
 GATE:PLAN
     │
     ▼
-BUILD (one unit spawn) → exit check
+BUILD (one unit spawn)
   └─ design contradiction (AC set unsatisfiable) ─► ARCHITECT (≤3×) → GATE:PLAN → BUILD
                                                        │
                                                        ▼
-                                                    AUDIT  ◄── retry ≤2× (shared with exit-check defects)
+                                                    AUDIT  ◄── retry ≤2× (test-first findings included)
                                                        │
                                                        ▼
                                                 GATE:QUALITY ◄── retry ≤3× → by remedy_class (doc commit / BUILD / ARCHITECT)
