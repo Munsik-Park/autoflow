@@ -107,7 +107,8 @@ These are the rules other documents cite; everything else about the work is the 
 ## Build report
 
 `.autoflow/issue-{N}-build-report.md`. The unit writes it whole on its first run and brings it up to
-date on a re-entry. Every section below is present; a section with nothing to record says `none`.
+date on a re-entry that passes through AUDIT and GATE:QUALITY (*Re-entry* below). Every section
+below is present; a section with nothing to record says `none`.
 The five record sections are tables, one row per item, in any column order; the column a reader
 needs is named below.
 

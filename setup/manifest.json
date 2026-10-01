@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/phases/build.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7a2eb815a1b7562ea1de7e8a9f4520235a676c8526b83ff4ea5fd2eb065fa393"
+      "sha256": "222df80239a62edb7dd5d0a9e40d36c15c11f18b09d1f8f685a711ddb712175a"
     },
     {
       "source": "docs/phases/deliver.md",
