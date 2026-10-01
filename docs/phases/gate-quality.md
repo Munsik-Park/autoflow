@@ -311,7 +311,7 @@ in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
    prose in the same file; the hook reads only the two sections.
 2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../../CLAUDE.md) > Team Structure /
    Commit Ownership); its lint outcome is added as that commit's rows in the build report's `## Lint`
-   table ([BUILD](build.md) > Build report), which `Commit conventions` reads at the re-score.
+   table ([BUILD](build.md) > Build report).
    **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
    record exists with both sections non-empty** — it checks the record file, never the wording of an
    instruction. On a second `doc` FAIL of the same class, the orchestrator re-examines its scope

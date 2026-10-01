@@ -147,9 +147,9 @@ found — is its own, written where it judges useful.
 
 No unit agent's lifetime spans a spawn: every re-entry spawns a fresh `autoflow-unit-build` by *Unit
 spawn* above, whose prompt names what the re-entry is for, the material that carries it, and the
-build report so far. The report is brought up to date, not rewritten: a row a re-entry supersedes is
-replaced, a new commit adds its lint rows, and the sections GATE:QUALITY reads carry the current
-state.
+build report so far. On a re-entry that passes through AUDIT and GATE:QUALITY, the report is
+brought up to date, not rewritten: a row a re-entry supersedes is replaced, a new commit adds its lint
+rows, and the sections GATE:QUALITY reads carry the current state.
 
 | Re-entry | Material named | Counter |
 |---|---|---|
@@ -166,8 +166,8 @@ forward again to the INTEGRATE check or the CI that failed.
 
 A re-entry passes through AUDIT and GATE:QUALITY on their narrowed re-scores
 ([AUDIT](audit.md) > *Review-response re-score*; [GATE:QUALITY](gate-quality.md) > *Re-entry
-re-score*). On a HANDOFF thin route the fix stays on the finding's own surface and returns to the
-reviewer re-review.
+re-score*). A HANDOFF thin route fixes the finding on its own surface and returns to the reviewer
+re-review; it does not bring the build report up to date.
 
 The unit reads and writes no `.autoflow/issue-{N}.json` state file, so every counter above is the
 orchestrator's own accounting.

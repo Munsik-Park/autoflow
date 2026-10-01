@@ -247,7 +247,7 @@ A `Medium`+ verdict does not end the cycle. Route by `bash scripts/gate/remedy-r
 | Route | What the orchestrator runs | Re-review |
 |---|---|---|
 | `ARCHITECT` (from `design`) | the design owns the moved decision; the re-entry point is the orchestrator's recorded judgment (below) — a review-response cycle from DIAGNOSE, or an ARCHITECT re-design | *Reviewer review*, per-PR |
-| `BUILD` (from `impl` / `test`) | a BUILD unit re-run naming the finding fixes it on the finding's own surface — the implementation, or the test asset (a rewritten `driving` / `regression` test shown failing again first) ([BUILD](build.md) > *Re-entry*) | *Reviewer review*, per-PR |
+| `BUILD` (from `impl` / `test`) | a BUILD unit re-run naming the finding fixes it on the finding's own surface — the implementation, or the test asset ([BUILD](build.md) > *Re-entry*) | *Reviewer review*, per-PR |
 | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | *Reviewer review*, per-PR |
 | `PAUSE` (from `operator`) | the advisor fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor), and the cycle takes that class's route | that route's |
 

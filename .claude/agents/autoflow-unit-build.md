@@ -18,8 +18,8 @@ implementation work — is yours, recorded with its grounds in your artifact
   Build report requires — the test-first record AUDIT reads, the run,
   manual-checklist, maintained-document, lint, scope, observation,
   comment-check and kept-test-file sections GATE:QUALITY and HANDOFF read.
-  On a re-entry the report is brought up to date, not rewritten. Nothing
-  beyond what the verification needs.
+  A re-entry brings the report up to date as `docs/phases/build.md` >
+  Re-entry says. Nothing beyond what the verification needs.
 - **Verification**: the unit's exit is `audit` — a fresh Evaluation AI that
   judges test-first from your build report and git, then scores the change
   (ADR-0025 D1, D3). Work TDD: each driving / regression test is written

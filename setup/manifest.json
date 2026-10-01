@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/phases/build.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "30c6d5b4c93702b7cc46c7f3104ab61f47021ae0f8cf4f1547e7dd352b3df914"
+      "sha256": "62790c2e505eba40b0a3dcbb3ce1afbed6571879fdb72b941f8f7ab5bd3e9442"
     },
     {
       "source": "docs/phases/deliver.md",
@@ -125,14 +125,14 @@
       "dest": ".claude/autoflow/docs/phases/gate-quality.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d8bf97ce3c217ea374054c997c20759d014ebb172fd671cdeb6096464d2c2314"
+      "sha256": "b14c0d42d764a18b7965b4423c7175a835b5ae6f223d2217dbe6b2c58b600372"
     },
     {
       "source": "docs/phases/handoff.md",
       "dest": ".claude/autoflow/docs/phases/handoff.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "932ebc3abbd872108aa5e32d545048b507b44f218d32fc257195816f35dc81ac"
+      "sha256": "541c96c939db0b6e4fa7bcbf12ca612132f49567d403c6d4da53b405b90f1aec"
     },
     {
       "source": "docs/phases/integrate.md",
