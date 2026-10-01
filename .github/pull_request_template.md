@@ -37,7 +37,7 @@ Host PR (HANDOFF): the orchestrator replaces the line above with the literal
 close-keyword reference (e.g., the GitHub-recognised `Closes` pattern + issue
 number).
 
-Sub-repo PR: use `Part of Munsik-Park/autoflow#N` (no close keyword).
+Sub-repo PR: use `Part of <host-owner>/<host-name>#N` (no close keyword).
 
 Rules / infra PR: write `N/A` if there is no tracking issue.
 
@@ -47,21 +47,18 @@ Reference: docs/git-workflow.md > Issue Auto-Close.
 ## Sub-repo merge dependency
 
 <!--
-For host PRs created at HANDOFF that include sub-repo changes, the
-orchestrator creates the PR with the `blocked-by-subrepo` label
-(docs/phases/handoff.md > Push and pull request). The label is removed manually by the
-operator at merge time (not by the workflow — see
-docs/external-review-sequencing.md > Per-issue procedure).
+A host PR whose sub-repo pointer depends on an unmerged sub-repo PR is created
+with the `blocked-by-subrepo` label (docs/phases/handoff.md > Multi-repo
+delivery). The operator removes it once the sub-repo PR has merged and the host
+pointer equals its merge commit (docs/external-review-sequencing.md >
+Merge-order clearance).
 -->
 
-- [ ] This PR is **draft** until the sub-repo dependency is merged (host PRs at HANDOFF are created with `--draft`).
-- [ ] Sub-repo PR (if any): _link the host's direct sub-repo PR here_ (e.g., `{{REPO_SERVICE_HOST}}#NNNN`; a PR nested below that sub-repo is the sub-repo's own concern).
-- [ ] Sub-repo PR has been merged into `{{REPO_SERVICE_HOST}}:main`.
-- [ ] Submodule pointer in this branch matches the sub-repo merge commit. **External reviewer**: see `docs/external-review-sequencing.md` for the pointer-bump procedure.
-- [ ] The `blocked-by-subrepo` label has been removed from this PR (removed by the operator at merge time; if still present, remove it manually after confirming the sub-repo merge and the host pointer reconcile are complete).
-- [ ] This PR has been promoted from draft to **ready for review**.
+- [ ] Sub-repo PR (if any): _link the host's direct sub-repo PR here_.
+- [ ] Sub-repo PR merged, and this branch's pointer equals its merge commit (`git ls-tree HEAD <sub-repo>`).
+- [ ] `blocked-by-subrepo` removed by the operator.
 
-If this PR is **host-only** (no sub-repo change in the dev branch), mark every box above as N/A in the box label (e.g., `- [x] N/A — host-only PR`). A host-only PR is created without the `blocked-by-subrepo` label, so no label removal is needed.
+If this PR has no sub-repo dependency, mark the boxes above N/A (e.g., `- [x] N/A — no sub-repo dependency`).
 
 ## AutoFlow
 

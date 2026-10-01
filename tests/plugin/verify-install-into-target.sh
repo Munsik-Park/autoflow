@@ -20,7 +20,7 @@
 #     AC1e        settings.json merge (marketplace key lands, pre-existing key kept)
 #     AC1f        .claude/autoflow/METHODOLOGY.md exists post-install
 #     AC1g        @-import graph statically resolvable, max 3 hops from METHODOLOGY.md
-#     AC1j        CLAUDE.local.md scaffolded (absent->create), never overwritten
+#     AC1j        CLAUDE.local.md never written: not created when absent, never overwritten
 #     AC1k        markdown-link closure of installed CLAUDE.md + INDEX.md complete
 #
 #   W2 manifest [manifest; AC2c packaging]:
@@ -43,7 +43,6 @@ REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 
 INIT_SH="$REPO_ROOT/setup/init.sh"
 MANIFEST="$REPO_ROOT/setup/manifest.json"
-EXAMPLE_LOCAL="$REPO_ROOT/CLAUDE.local.md.example"
 IMPORT_LINE='@./.claude/autoflow/METHODOLOGY.md'
 
 PASS_COUNT=0
@@ -58,7 +57,7 @@ skipc() { SKIP_COUNT=$((SKIP_COUNT + 1));  printf 'SKIP: %s -- %s\n' "$1" "$2"; 
 TARGET=$(mktemp -d)          # primary: AC1-drive → AC1g, AC1k, AC2b, AC2c, AC3a, AC3b
 COMPLEX_TARGET=$(mktemp -d)  # AC1c replace arm
 SETTINGS_TARGET=$(mktemp -d) # AC1e settings merge
-LOCAL_TARGET_A=$(mktemp -d)  # AC1j arm (a): absent -> scaffold
+LOCAL_TARGET_A=$(mktemp -d)  # AC1j arm (a): absent -> stays absent
 LOCAL_TARGET_B=$(mktemp -d)  # AC1j arm (b): existing -> never overwrite
 RELOC_TARGET=$(mktemp -d)    # AC3e relocated-install arm
 
@@ -420,24 +419,20 @@ else
   failc "AC1g" "METHODOLOGY.md absent ($ADIR/METHODOLOGY.md) — cannot walk graph"
 fi
 
-# ── AC1j: CLAUDE.local.md scaffolded when absent, never overwritten ───────────
-echo "== AC1j arm (a): absent CLAUDE.local.md -> scaffolded from example =="
-if [ -f "$EXAMPLE_LOCAL" ] && [ -f "$INIT_SH" ]; then
+# ── AC1j: CLAUDE.local.md is the project's own file — never written (#386) ──
+echo "== AC1j arm (a): absent CLAUDE.local.md -> the install does not create it =="
+if [ -f "$INIT_SH" ]; then
   run_install "$LOCAL_TARGET_A" >/dev/null 2>&1
   _code=$?
-  if [ "$_code" -eq 0 ] && [ -f "$LOCAL_TARGET_A/CLAUDE.local.md" ]; then
-    if cmp -s "$LOCAL_TARGET_A/CLAUDE.local.md" "$EXAMPLE_LOCAL"; then
-      pass "AC1j (a): CLAUDE.local.md scaffolded from example (byte-identical)"
-    else
-      failc "AC1j (a)" "CLAUDE.local.md created but differs from example"
-    fi
-  elif [ "$_code" -ne 0 ]; then
+  if [ "$_code" -ne 0 ]; then
     failc "AC1j (a)" "install exited $_code on empty target"
+  elif [ -e "$LOCAL_TARGET_A/CLAUDE.local.md" ]; then
+    failc "AC1j (a)" "install created CLAUDE.local.md (AutoFlow writes no project information file)"
   else
-    failc "AC1j (a)" "CLAUDE.local.md not created in target (scaffold step missing)"
+    pass "AC1j (a): CLAUDE.local.md not created"
   fi
 else
-  failc "AC1j (a)" "CLAUDE.local.md.example missing or init.sh missing"
+  failc "AC1j (a)" "init.sh missing"
 fi
 
 echo "== AC1j arm (b): existing CLAUDE.local.md never overwritten (with and without --force) =="

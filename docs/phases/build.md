@@ -135,6 +135,10 @@ On the unit's return the orchestrator runs, before AUDIT,
 bash scripts/gate/build-exit-check.sh --issue {N} > .autoflow/issue-{N}-build-exit-check.log 2>&1
 ```
 
+The check reads git where it runs: it runs in the repository that holds the cycle's implementation
+commits, with `--dir` naming the host's `.autoflow` when that is another repository. Where and how
+it is run for a sub-repo change is the orchestrator's.
+
 It checks (a) each `driving` / `regression` row's Red run precedes its implementation commit and its
 Red log carries the recorded line and the non-zero `Red exit`, (b) each `automated` / `delivery-check` row has a passing run
 whose log carries its summary line, (c) the manual checklist is itemized with each AI-executed

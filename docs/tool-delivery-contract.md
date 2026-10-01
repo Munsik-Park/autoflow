@@ -15,7 +15,7 @@ mechanisms conform to these rules.
 |------|-------------|
 | R1 — Tool version pin | plugin packaging, settings pin |
 | R2 — CLAUDE.md delivery + version-skew re-stamp | root layer, installer |
-| R3 — Target-identity separation (`CLAUDE.local.md`) | root layer, installer |
+| R3 — Target-identity separation (the project's own files) | root layer, installer |
 | R4 — Install artifact manifest + drift test | installer |
 
 Terminology: the **plugin package** is the
@@ -69,23 +69,22 @@ below means both tiers together.
 - **[DENY]** Hand-editing the delivered prose in place to diverge from the
   pinned tool version. A framework change goes upstream to the tool
   repository (and arrives via a pin upgrade); target-local behavior goes to
-  the target-identity overlay (R3).
+  the project's own files (R3).
 
-## R3 — Target-Identity Separation via `CLAUDE.local.md` [MUST]
+## R3 — Target-Identity Separation [MUST]
 
 - **[MUST]** Target identity — organization and repository names, default
-  branch, stack and deployment specifics, service names, and any
-  target-local operating rules — never lives in the delivered `CLAUDE.md`.
-  It lives in **`CLAUDE.local.md`** (Claude Code's native project-root
-  overlay, loaded alongside `CLAUDE.md`), or in target-owned documents that
-  `CLAUDE.local.md` references.
-- **[MUST]** The tool never ships, stamps, or overwrites `CLAUDE.local.md`.
-  It is outside the delivered surface and outside the manifest (R4); the
-  installer may scaffold it from `CLAUDE.local.md.example` only when it does
-  not exist.
-- Whether the target commits `CLAUDE.local.md` or keeps it ignored is the
-  target's own policy; this contract fixes only the boundary — identity
-  content sits outside the tool-delivered surface.
+  branch, repository structure, stack and deployment specifics, service names,
+  and any target-local operating rules — never lives in the delivered
+  `CLAUDE.md`. It lives in the project's own information and rule files
+  (`CLAUDE.md` > Project Information); which files, and what they say, are the
+  project's.
+- **[MUST]** The tool never ships, stamps, scaffolds, or overwrites a project
+  information file. Such a file is outside the delivered surface and outside
+  the manifest (R4).
+- Whether the target commits such a file or keeps it ignored is the target's
+  own policy; this contract fixes only the boundary — identity content sits
+  outside the tool-delivered surface.
 
 ## R4 — Install Artifact Manifest (exhaustive) + Drift Test
 
@@ -178,8 +177,3 @@ The same file carries per-site values for a shipped workflow (`workflow_sites`; 
 AutoFlow ships none). It also documents its own inheritance rule (`effort_contract`) and declares any shipped agent type the
 policy governs no row for (`policy_unmapped_agent_types`).
 
----
-
-## Related
-
-- Local overlay example: `CLAUDE.local.md.example` (R3 scaffold source).

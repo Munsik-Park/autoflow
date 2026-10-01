@@ -160,7 +160,7 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 ## Build unit in a target scope
 
 The U4 build unit (`autoflow-unit-build`; *Functional-unit agents* below) works in the target scope the
-orchestrator assigns it — the target repository, or in a multi-repo host one sub-repo's directory
+orchestrator assigns it — the target repository, or in a project with sub-repos one sub-repo's directory
 ([`CLAUDE.md`](../CLAUDE.md) > Cross-Project Boundary Rules). What it owes the build is
 [`phases/build.md`](phases/build.md) > *What the build owes*; what it owes the scope is below.
 
@@ -184,10 +184,10 @@ orchestrator assigns it — the target repository, or in a multi-repo host one s
   work needs*).
 - Common rules: [`submodule-common-rules.md`](submodule-common-rules.md).
 
-*Secondary (multi-repo):* when the host contains submodules (see
-[`CLAUDE.md`](../CLAUDE.md#deployment-topology) > Deployment Topology), each affected sub-repo gets
-its own build unit, the branch is that sub-repo's fork branch (in the fork-and-PR model), which the
-orchestrator pushes to the fork at DELIVER, and PR creation remains the orchestrator's.
+*Secondary (multi-repo):* in a project with sub-repos (see [`CLAUDE.md`](../CLAUDE.md) > Project
+Information), a changed sub-repo is a target scope of its own: the unit commits there on that
+sub-repo's branch, which the orchestrator pushes at DELIVER, and PR creation remains the
+orchestrator's ([`phases/handoff.md`](phases/handoff.md) > *Multi-repo delivery*).
 
 ---
 

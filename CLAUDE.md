@@ -29,23 +29,18 @@ The rules that apply these principles to running and confirming tests and to sec
 
 ## Cross-Project Boundary Rules
 
-- **[MUST]** All AIs: modifications outside the assigned scope are not allowed. *Secondary (multi-repo):* when the host contains submodules, all AIs additionally have read access to the other sub-repositories.
+- **[MUST]** All AIs: modifications outside the assigned scope are not allowed. *Secondary (multi-repo):* in a project with sub-repos, all AIs additionally have read access to the other sub-repositories.
 - The orchestrator's "own scope" is the host repository — typically `docker-compose.*`, `platform.sh` (or its analogue), `scripts/`, `.env.*`, `docs/`, `CLAUDE.md`.
-- A role spawn's "own scope" is the **target scope** it is assigned (the target repo/directory that owns the source). *Secondary (multi-repo):* when the host contains submodules, that target scope is the sub-repo's directory.
+- A role spawn's "own scope" is the **target scope** it is assigned (the target repo/directory that owns the source). *Secondary (multi-repo):* in a project with sub-repos, that target scope is the sub-repo's directory.
 - Cross-service changes are coordinated by the orchestrator, which spawns each scope's role directly and reconciles their returned reports.
 
 For details, see [`docs/repo-boundary-rules.md`](docs/repo-boundary-rules.md).
 
-## Deployment Topology
+## Project Information
 
-"Single-repo" and "multi-repo" classify a project by **submodule count**, independent of repository count or the scope of any individual change.
+AutoFlow does not classify a project's repository structure and keeps no file of project facts. When work on a repository starts, the AI reads the project's own information and rule files where they exist — a `README.md`, a `CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs, such as how the repositories are composed (a host and its sub-repos, forks and upstreams) and where issues are filed. The operator writes those files while setting up the project, and they may already exist. A fact the work needs that no such file states is asked of the operator in conversation, with the request that the operator create the file or record the fact in it.
 
-- **single-repo** = the host repository contains **zero submodules**. The build unit (U4) works in the orchestrator's own repository, fork/upstream handling is omitted, and the orchestrator commits code changes directly.
-- **multi-repo** = the host repository contains **one or more submodules**. One submodule and N submodules follow the identical contract: full fork-and-PR mechanics apply, sub-repo AIs own their directories, and the orchestrator coordinates and opens PRs.
-
-Classification is determined solely by submodule count, evaluated at PREFLIGHT and re-confirmed at HANDOFF. A multi-repo project applies the multi-repo procedure to every issue, including issues whose changes land only in host files: change scope decides which steps execute, while topology decides which procedure governs them.
-
-This project: host repository with **zero submodules** → **single-repo**.
+A project whose information names sub-repos delivers each changed sub-repo on its own pull request and keeps the host clean by its pointer: [`docs/phases/handoff.md`](docs/phases/handoff.md) > *Multi-repo delivery*.
 
 ## Team Structure
 
@@ -102,7 +97,7 @@ report**.
 
 - The orchestrator spawns each role via `Agent` with `subagent_type: autoflow-<role>` and an explicit `model`; at ARCHITECT that is one `autoflow-unit-design` spawn.
 - A spawn writes any body to `.autoflow/*` and returns an anchor + one-line summary ([`docs/submodule-common-rules.md`](docs/submodule-common-rules.md) > Reporting Format).
-- No team is created and no spawn carries `team_name` or `name` — a functional-unit agent's own helper spawns excepted, which are its method (ADR-0025 D2; `docs/role-contracts.md` > Functional-unit agents). `SendMessage` is not an orchestrator channel — the orchestrator resumes no role by its agent ID (a functional-unit agent's use of it with its own helpers is its method), and it is never a report channel (a spawn's carrier: `docs/role-common-rules.md` > Result delivery path by spawn mode). A multi-repo topology that needs another cross-service coordination takes it up through a new ADR, not through `SendMessage`.
+- No team is created and no spawn carries `team_name` or `name` — a functional-unit agent's own helper spawns excepted, which are its method (ADR-0025 D2; `docs/role-contracts.md` > Functional-unit agents). `SendMessage` is not an orchestrator channel — the orchestrator resumes no role by its agent ID (a functional-unit agent's use of it with its own helpers is its method), and it is never a report channel (a spawn's carrier: `docs/role-common-rules.md` > Result delivery path by spawn mode). A project with sub-repos that needs another cross-service coordination takes it up through a new ADR, not through `SendMessage`.
 - MCP coord is auxiliary, used for asynchronous logging and handoff.
 
 ### Cost Control
@@ -137,8 +132,8 @@ GATE:PLAN       : Plan Evaluation   — Evaluation AI (5 items × 10 points)
 BUILD           : Build unit (U4)   — one `autoflow-unit-build` spawn implements and verifies the design (test-first, run records, manual checklist, maintained docs, lint), its method its own; the orchestrator's exit check (`scripts/gate/build-exit-check.sh`) then AUDIT
 AUDIT           : Security Audit    — independent Evaluation AI (5 items × 10 points), the target's own security checklist at the version `scripts/gate/security-checklist.sh` names (none declared → the rubric alone)
 GATE:QUALITY    : Completion Eval   — Evaluation AI (10 items × 10 points)
-DELIVER         : Push              — the orchestrator's own `git push`, a command the hook gates (multi-repo: each sub-repo branch to its fork)
-INTEGRATE       : Integration Test  — system build, health check, functional test (single-repo: project-level integration test)
+DELIVER         : Push              — the orchestrator's own `git push`, a command the hook gates (a changed sub-repo's branch too)
+INTEGRATE       : Integration Test  — the change shown working above its own tests: the system build, health check and functional test, or the project's integration suite
 HANDOFF         : PR + Hand-off     — push and PR creation by the orchestrator's own commands → CI green → configured-reviewer review → review-triage (auto-resolve Medium+ / judge Low) → state inactive once review is clean; scripts read and report (CI, reviewer start, triage case), the orchestrator makes every change; external review merges out of band
 ```
 
@@ -173,7 +168,7 @@ HANDOFF         : PR + Hand-off     — push and PR creation by the orchestrator
 | GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY (PASS, a recommendation attempt) → doc commit / BUILD / ARCHITECT / DIAGNOSE → that gate's re-score, or → advisor / user | the PASS report's recommendation triage opens an attempt → the transition out of the gate waits until no attempt is open and no rebuttal awaits its re-score; a pause criterion, or a rebutted recommendation the re-score keeps while the two sides still disagree → the advisor decides; the attempt cap → user (`active:false`, `phase:"awaiting-user"`) (`docs/phases/gate-quality.md` > *Recommendation triage*) |
 | GATE:QUALITY (FAIL) → doc commit / BUILD / ARCHITECT | FAIL routed by each failed item's `remedy_class` (mixed → farthest: `design` > `impl` > `test` > `doc` — `scripts/gate/remedy-route.sh route`): `doc` → orchestrator doc commit → GATE:QUALITY re-score; `test` / `impl` → a BUILD unit re-run with the failed items → exit check → AUDIT; `design` → ARCHITECT (consumes the ARCHITECT re-entry counter). The doc route's sweep record and the re-score scope: `docs/phases/gate-quality.md` > *FAIL routing* / *Re-entry re-score* |
 | GATE:QUALITY (FAIL) → advisor | any failed item carries `remedy_class: operator` (the evaluator could not classify it with confidence) → the advisor's answer fixes the class and the cycle re-enters on that class's route. A FAIL report missing `remedy_class` on a failed item is rejected and the evaluator re-spawned (same disposition as a missing `fail_hypothesis`) |
-| DELIVER → INTEGRATE | sub-repo push done |
+| DELIVER → INTEGRATE | the cycle's branches pushed, a changed sub-repo's included |
 | INTEGRATE → HANDOFF | integration tests pass |
 | INTEGRATE → BUILD | integration / bundle failure — fixed `impl` class → a BUILD unit re-run with the failing check → exit check → AUDIT |
 | HANDOFF (review-triage) → thin route / review-response (auto) | the configured-reviewer verdict is `max_severity ≥ Medium` → each Medium+ finding is routed by its `remedy_class` (`scripts/gate/remedy-route.sh route`): `design` → a re-entry from DIAGNOSE or from ARCHITECT, the orchestrator's judgment recorded in the attempt's `[review-autofix]` ledger entry; `impl` / `test` / `doc` → the thin route; `operator` → the advisor fixes the class. A finding that does not hold is rebutted, not routed. The orchestrator never removes the label — the reviewer re-review clears it (`docs/phases/handoff.md` > *Review triage*; the case is `scripts/handoff/review-gate.sh` exit `10`) |
@@ -339,7 +334,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 | Feature (implementation and tests, sub-repo) | Build unit (U4) of that scope | Orchestrator |
 | Rules / config / infra / bulk docs | Orchestrator                      | Orchestrator |
 | Comment divergence fix (target code) | Orchestrator (sub-repo: the build unit of that scope) | Orchestrator |
-| Submodule pointer bump (gitlink)            | Orchestrator               | Orchestrator |
+| Sub-repo pointer (gitlink) commit or reconcile merge | Orchestrator  | Orchestrator |
 
 ## Reference Documents
 

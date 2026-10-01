@@ -2,13 +2,13 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # =============================================================================
-# /autoflow:install — detection + git-state derivation (deterministic seam)
+# /autoflow:install — detection (deterministic seam)
 # Issue #943 — marketplace-cache-based root-layer stamp
 # =============================================================================
 # Read-only. Emits a machine-parseable `key=value` report to stdout that the
 # install SKILL.md (and tests/plugin/verify-install-skill-scripts.sh) consume.
 # Writes nothing to the target — the opt-in confirmation gate + all writes live
-# in SKILL.md / scaffold-identity.sh / init.sh, strictly after confirmation.
+# in SKILL.md / init.sh, strictly after confirmation.
 #
 # Env contract (feature-design §3.2):
 #   TARGET_ROOT        consuming project root (default ${CLAUDE_PROJECT_DIR:-$PWD})
@@ -264,62 +264,6 @@ else
   VERSION_SKEW=no
 fi
 
-# ── Git-state derivation (display-only; graceful omission, never an error) ─────
-ORG=
-REPO=
-DEFAULT_BRANCH=
-TOPOLOGY=single
-FORK_PROPOSAL=
-FORK_EXISTS=
-LOCAL_MD_EXISTS=no
-
-[ -f "$TARGET_ROOT/CLAUDE.local.md" ] && LOCAL_MD_EXISTS=yes
-
-_have_git=0
-command -v git >/dev/null 2>&1 && _have_git=1
-
-if [ "$_have_git" = 1 ] && git -C "$TARGET_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
-  _url=$(git -C "$TARGET_ROOT" remote get-url origin 2>/dev/null)
-  case "$_url" in
-    *github.com[:/]*)
-      _p="${_url#*github.com}"   # ":org/repo.git" or "/org/repo.git"
-      _p="${_p#[:/]}"            # strip the leading : or /
-      _p="${_p%.git}"           # strip trailing .git
-      ORG="${_p%%/*}"
-      REPO="${_p##*/}"
-      ;;
-    git@github.com[-_]*:*/*)     # GitHub SSH host-alias (~/.ssh/config), e.g. github.com-work/github.com_personal — the [-_] separator excludes github.com-prefixed foreign hosts (github.com.evil…); the exact git@github.com: form is caught by the preceding *github.com[:/]* arm
-      _p="${_url#*:}"           # "org/repo.git" — path after the first colon
-      _p="${_p%.git}"
-      ORG="${_p%%/*}"
-      REPO="${_p##*/}"
-      ;;
-  esac
-  _head=$(git -C "$TARGET_ROOT" symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null)
-  [ -n "$_head" ] && DEFAULT_BRANCH="${_head#refs/remotes/origin/}"
-fi
-
-# Topology: a .gitmodules entry (or a non-empty `git submodule status`) => multi.
-if [ -f "$TARGET_ROOT/.gitmodules" ]; then
-  TOPOLOGY=multi
-elif [ "$_have_git" = 1 ] && [ -n "$(git -C "$TARGET_ROOT" submodule status 2>/dev/null)" ]; then
-  TOPOLOGY=multi
-fi
-
-# Fork-URL proposal + existence probe — multi-repo only (gate dormant on single).
-if [ "$TOPOLOGY" = multi ]; then
-  if [ -n "$ORG" ] && [ -n "$REPO" ]; then
-    FORK_PROPOSAL="$ORG/$REPO"
-  fi
-  if ! command -v gh >/dev/null 2>&1 || [ -z "$FORK_PROPOSAL" ]; then
-    FORK_EXISTS=unknown
-  elif gh repo view "$FORK_PROPOSAL" >/dev/null 2>&1; then
-    FORK_EXISTS=yes
-  else
-    FORK_EXISTS=no
-  fi
-fi
-
 # ── Reviewer backend (issue #979): configured backend + CLI presence ──────────
 # Read-only. Reports the configured backend (target scaffold, default codex) and
 # each backend CLI's presence, so SKILL.md can DISCLOSE a codex-absent target
@@ -442,13 +386,6 @@ fi
 printf 'VERSION_INSTALLED=%s\n' "$VERSION_INSTALLED"
 printf 'VERSION_CACHE=%s\n'     "$VERSION_CACHE"
 printf 'VERSION_SKEW=%s\n'      "$VERSION_SKEW"
-printf 'ORG=%s\n'               "$ORG"
-printf 'REPO=%s\n'              "$REPO"
-printf 'DEFAULT_BRANCH=%s\n'    "$DEFAULT_BRANCH"
-printf 'TOPOLOGY=%s\n'          "$TOPOLOGY"
-printf 'FORK_PROPOSAL=%s\n'     "$FORK_PROPOSAL"
-printf 'FORK_EXISTS=%s\n'       "$FORK_EXISTS"
-printf 'LOCAL_MD_EXISTS=%s\n'   "$LOCAL_MD_EXISTS"
 printf 'REVIEW_BACKEND=%s\n'        "$REVIEW_BACKEND"
 printf 'REVIEW_CODEX_PRESENT=%s\n'  "$REVIEW_CODEX_PRESENT"
 printf 'REVIEW_CLAUDE_PRESENT=%s\n' "$REVIEW_CLAUDE_PRESENT"

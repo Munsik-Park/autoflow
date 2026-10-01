@@ -1,24 +1,19 @@
 # Sub-Repository Common Rules
 
-> Shared rules that apply to all sub-repositories in a multi-repo AutoFlow project.
+> Shared rules for every target scope a role works in — the target repository, or a sub-repo of a
+> project that has them.
 
 ---
 
 ## Applicability
 
-These rules apply to every sub-repository (e.g., backend, frontend, infra, docs) that participates in the AutoFlow lifecycle under a central orchestrator.
+These rules apply to every target scope (e.g., backend, frontend, infra, docs) that participates in the AutoFlow lifecycle under a central orchestrator.
 
 ---
 
-## Required Files
+## Project information
 
-Every sub-repository **must** contain:
-
-| File | Purpose |
-|------|---------|
-| `CLAUDE.md` | Sub-repo operating manual |
-| `.gitignore` | Must include `.autoflow/issue-*.json` |
-| `README.md` | Project-specific documentation |
+A target's own documents — its `CLAUDE.md`, `README.md`, contributing guide or whatever it keeps — are read as the project's information ([`CLAUDE.md`](../CLAUDE.md) > Project Information). AutoFlow prescribes none of them: which files a target or a sub-repo carries, and what they say, is the project's.
 
 ---
 
@@ -30,86 +25,14 @@ The host's hook (`.claude/hooks/check-autoflow-gate.sh`) reads the state file an
 
 ---
 
-## Submodule URL & Pointer Policy
+## Sub-repo pointer
 
-Applies to host repositories that operate a **host-private fork** as the submodule source — i.e., the fork carries host-private changes that are **not** bound for the upstream repository. The host repo's submodule pointer therefore lives in fork commits, not upstream commits.
-
-### URL — `.gitmodules` fixed to the host-operated fork
-
-```
-.gitmodules submodule.<name>.url → <host-operated fork URL>   (e.g., <org>/<service-host>)
-```
-
-- `.gitmodules` is **never modified** in a PR. PR diffs must not touch `.gitmodules`.
-- Local fork URL override is unnecessary.
-- `setup/init.sh` substitutes the URL when the framework is propagated to another project.
-
-### Pointer SHA — host main reachability
-
-```
-host main HEAD's submodule pointer SHA  →  reachable in the host-operated fork
-```
-
-- A commit that exists only on a fork **feature branch** (not yet merged into the fork's `main`) **must not** appear as the submodule pointer on host `main`.
-- **Dev branch exception**: while a host PR's dev branch is open, the submodule pointer may temporarily reference a fork feature-branch SHA. Reachability against fork `main` is enforced at host-`main`-merge time.
-
-### Multi-developer concurrent work
-
-- `.gitmodules` is **never** modified — URL stays fixed.
-- Each developer commits **only the submodule pointer** for their issue's dev branch.
-  - The "developer" who commits that pointer on the host dev branch is the **orchestrator** (see [`CLAUDE.md`](../CLAUDE.md) > Commit Ownership > Submodule pointer bump); the two rules name the same actor, not two.
-- No per-developer local URL override is required.
-
-### Sub-repo cycle close-out
-
-When a sub-repo work cycle is complete:
-
-1. Merge the fork feature branch (e.g., `feat/<issue>-<topic>`) into the fork's `main`.
-2. Reconcile the host's submodule pointer to this cycle's sub-repo merge commit on fork `main` (in the host PR's dev branch, before host PR merge). **[MUST]** When several cycles are in external review at once, reconcile **against the current `origin/main`**, not the branch's stale fork point. Resolve by fork ancestry — if this cycle's merge commit (`TARGET`, the sub-repo PR's merge commit; a submodule nested inside the sub-repo is reconciled by the sub-repo itself) is a **descendant** of the current `main` pointer, set the dev gitlink to `TARGET` first (`git -C <submodule> checkout <TARGET>; git add <submodule>; git commit`) **then** merge `origin/main`; if `main`'s pointer is a descendant (a regression) or the two diverge, **escalate to the operator**. **[MUST]** The end-state pointer must equal `TARGET` — verify `git ls-tree HEAD <submodule> == TARGET` before pushing. Full procedure + the post-reconcile mergeable/head-commit check gate: [`external-review-sequencing.md`](external-review-sequencing.md) > Reconcile preflight.
-3. The fork feature branch may then be deleted.
-
-### Framework propagation
-
-Operators initializing this framework on a different project run `setup/init.sh`, which substitutes the submodule URL to point at the operator's own fork (same model — host-operated fork, host-private changes allowed). The Pointer SHA rule holds there: host `main` always points at a commit reachable in the operator's fork.
-
----
-
-## CLAUDE.md Requirements
-
-Each sub-repo's `CLAUDE.md` must define:
-
-### 1. Repo Identity
-```markdown
-## This Repository
-- **Name**: <repo-name>
-- **Role**: [backend / frontend / infra / docs / ...]
-- **Orchestrator**: <org>/<host-repo>
-```
-
-### 2. Tech Stack & Commands
-```markdown
-## Development Commands
-- **Build**: `<build command>`
-- **Test**: `<test command>`
-- **Lint**: `<lint command>`
-- **Format**: `<format command>`
-```
-
-### 3. Scope Boundaries
-```markdown
-## Scope
-This AI agent may only modify files within this repository.
-For cross-repo changes, report the need to the Orchestrator.
-```
-
-### 4. AutoFlow Reference
-```markdown
-## AutoFlow
-This repository follows the AutoFlow lifecycle defined in:
-<org>/<host-repo>/CLAUDE.md
-
-All AutoFlow phases, evaluation criteria, and gate rules apply.
-```
+The host's default branch points only at sub-repo commits that are on the sub-repo's default
+branch; while a host pull request is open, its branch may point at the head of the sub-repo pull
+request it depends on. The host reaches that state by the reconcile rule of
+[`phases/handoff.md`](phases/handoff.md) > *Multi-repo delivery*. The pointer is committed on the
+host branch by the orchestrator ([`CLAUDE.md`](../CLAUDE.md) > Commit Ownership). Whether a sub-repo's
+source is a fork or the upstream, and its URL, are the project's information.
 
 ---
 

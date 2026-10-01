@@ -37,7 +37,7 @@ These documents are the operating source of truth.
 | If the issue touches... | Read first |
 | --- | --- |
 | AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/autoflow-guide.md`, `docs/phases/*.md` |
-| Sub-repo implementation (multi-repo instances) | `docs/repo-boundary-rules.md` |
+| Sub-repo implementation (a project with sub-repos) | `docs/repo-boundary-rules.md` |
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Filing a new issue | `docs/issue-proposal.md` |
 | Tool distribution, install/upgrade, or version pinning | `docs/tool-delivery-contract.md`, `docs/thin-root-layer.md` |
