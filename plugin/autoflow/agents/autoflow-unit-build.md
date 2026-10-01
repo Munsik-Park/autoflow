@@ -15,24 +15,24 @@ implementation work — is yours, recorded with its grounds in your artifact
   with every acceptance criterion verified as the verification design says.
 - **Artifact contract**: the commits on the dev branch and the build report at
   the path your spawn prompt names, with the sections `docs/phases/build.md` >
-  Build report requires — the test-first, run, manual-checklist,
-  maintained-document and lint records the exit check reads, and the scope,
-  observation, comment-check and kept-test-file sections GATE:QUALITY and
-  HANDOFF read. On a re-entry the report is brought up to date, not rewritten.
-  Nothing beyond what the verification needs.
-- **Verification**: the unit's exit is `scripts/gate/build-exit-check.sh`, run
-  by the orchestrator on your return, and `audit` — a fresh Evaluation AI's
-  AUDIT score (ADR-0025 D1, D3). Work TDD: each driving / regression test is
-  written before the implementation it verifies and seen failing; the order
-  of the work is yours. Test-first is an exit check, not a split of roles:
-  the Red run precedes the implementation commit and its failure — the exit
-  status included — is readable in its log. Cautions: a test that passes from
-  the start is not Red evidence (look again at what it checks and record the
-  judgment); `## Run record` holds each row's latest run, and the Red run goes
-  in `## Test-first` only. A defect or a FAIL returns its
-  findings and your previous artifacts to a fresh U4 spawn, up to the AUDIT
-  FAIL cap (`CLAUDE.md` > Flow Control > Regressions). How you iterate inside
-  the unit, and when you stop, is yours, recorded in the report.
+  Build report requires — the test-first record AUDIT reads, the run,
+  manual-checklist, maintained-document, lint, scope, observation,
+  comment-check and kept-test-file sections GATE:QUALITY and HANDOFF read.
+  On a re-entry the report is brought up to date, not rewritten. Nothing
+  beyond what the verification needs.
+- **Verification**: the unit's exit is `audit` — a fresh Evaluation AI that
+  judges test-first from your build report and git, then scores the change
+  (ADR-0025 D1, D3). Work TDD: each driving / regression test is written
+  before the implementation it verifies and seen failing; the order of the
+  work is yours. Test-first is judged by that evaluator, not enforced by a
+  split of roles: the Red run precedes the implementation commit and its
+  failure — the exit status included — is readable in its log. Cautions: a
+  test that passes from the start is not Red evidence (look again at what it
+  checks and record the judgment); `## Run record` holds each row's latest
+  run, and the Red run goes in `## Test-first` only. A test-first finding or a
+  FAIL returns its findings and your previous artifacts to a fresh U4 spawn,
+  up to the AUDIT FAIL cap (`CLAUDE.md` > Flow Control > Regressions). How you
+  iterate inside the unit, and when you stop, is yours, recorded in the report.
 - **What the build owes**: `docs/phases/build.md` > What the build owes — scope,
   test-first, where a test lives, how tests are run, the comment check, a
   design contradiction, an acceptance-criterion change, and the commit rules.

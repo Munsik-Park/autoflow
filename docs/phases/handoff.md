@@ -129,9 +129,7 @@ decision the design settled — and returns the class plus a one-line summary.
 Not classifiable with confidence, or the failure output unobtainable → `operator`, never a guess
 ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
 report defect: reject and re-spawn the subagent, as for a missing `fail_hypothesis`. The orchestrator
-records the route as an `O` ledger entry naming the check and the class. It has no cap of its own: a
-`design` route consumes the ARCHITECT re-entry counter, and a `BUILD` route passes through the exit
-check and AUDIT on the way back.
+records the route as an `O` ledger entry naming the check and the class.
 
 ## Reviewer review
 
@@ -249,7 +247,7 @@ A `Medium`+ verdict does not end the cycle. Route by `bash scripts/gate/remedy-r
 | Route | What the orchestrator runs | Re-review |
 |---|---|---|
 | `ARCHITECT` (from `design`) | the design owns the moved decision; the re-entry point is the orchestrator's recorded judgment (below) — a review-response cycle from DIAGNOSE, or an ARCHITECT re-design | *Reviewer review*, per-PR |
-| `BUILD` (from `impl` / `test`) | a BUILD unit re-run naming the finding fixes it on the finding's own surface — the implementation, or the test asset (a rewritten `driving` / `regression` test shown failing again first) → exit check ([BUILD](build.md) > *Re-entry*) | *Reviewer review*, per-PR |
+| `BUILD` (from `impl` / `test`) | a BUILD unit re-run naming the finding fixes it on the finding's own surface — the implementation, or the test asset (a rewritten `driving` / `regression` test shown failing again first) ([BUILD](build.md) > *Re-entry*) | *Reviewer review*, per-PR |
 | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | *Reviewer review*, per-PR |
 | `PAUSE` (from `operator`) | the advisor fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor), and the cycle takes that class's route | that route's |
 
@@ -297,7 +295,7 @@ Push rejected (branch state)                   → dev branch rebase on main →
 ```
 
 **Max retries**: HANDOFF internal retry max 2. Two failures → human.
-**Re-entry regression**: the ARCHITECT re-entry (max 3) rule applies to a `design` route; a `BUILD` route passes through the exit check and AUDIT ([BUILD](build.md) > *Re-entry*).
+**Re-entry**: a CI failure is fixed by the unit its class routes to, and the cycle runs forward to *CI* again (*CI-failure re-entry* above); a `design` route consumes the ARCHITECT re-entry counter.
 
 ## Multi-repo delivery
 

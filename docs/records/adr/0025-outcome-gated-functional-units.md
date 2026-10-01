@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01)
+Proposed (operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392)
 
 ## Context
 
@@ -45,14 +45,15 @@ the second kind written as rules of the first.
 
 ## Decision
 
-**D1 — Six functional units replace the sixteen phases as the unit of prescription.**
+**D1 — Six functional units replace the sixteen phases as the unit of prescription (U4 Exit
+amended by operator decision 2026-10-01, issue #392).**
 
 | Unit | Former phases | Exit |
 |---|---|---|
 | U1 Preparation | PREFLIGHT | deterministic checks |
 | U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | `gate_hypothesis_cause` (bug) / `skipped` verdict (non-bug) |
 | U3 Design | ARCHITECT, GATE:PLAN | `gate_plan` |
-| U4 Build and verify | DISPATCH, RED, GREEN, VERIFY, REFINE, VALIDATE, AUDIT | deterministic exit checks + `audit` |
+| U4 Build and verify | DISPATCH, RED, GREEN, VERIFY, REFINE, VALIDATE, AUDIT | `audit` (its evaluator judges test-first) |
 | U5 Completion evaluation | GATE:QUALITY | `gate_quality` |
 | U6 Delivery | DELIVER, INTEGRATE, HANDOFF | CI green + configured-reviewer review clean |
 
@@ -66,12 +67,16 @@ artifact contract names only what the verification needs. Relay, transcript gram
 reports, the Discussion Protocol as a required form, the per-phase fresh spawn, RED's derivation
 steps and HANDOFF's step-by-step orchestrator execution are retired as prescriptions.
 
-**D3 — The authority rules stay as they are.** The push / `gh pr create` gate, the merge
-prohibition, the gate score thresholds, the re-entry caps, evaluator independence (fresh spawn,
-never the author), the evidence rule (a run's evidence is its log) and the lint-chain obligation
-at commit. A rule that existed to prevent self-certification through a method becomes a
-verifiable exit check: the test-first rule is checked as "the test commit precedes the
-implementation commit and its failing log exists", not enforced by splitting two roles.
+**D3 — The authority rules stay as they are (amended by operator decision 2026-10-01, issue
+#392).** The push / `gh pr create` gate, the merge prohibition, the gate score thresholds, the
+re-entry caps, evaluator independence (fresh spawn, never the author), the evidence rule (a run's
+evidence is its log) and the lint-chain obligation at commit. A rule that existed to prevent
+self-certification through a method is judged by the unit's independent evaluator, not enforced by
+splitting two roles: the AUDIT evaluator judges the test-first rule from the build report and git as
+"the Red run precedes the implementation commit and its failure is shown by its log", and a test
+not so confirmed re-runs the unit on the AUDIT FAIL counter. No script reads the evidence in its place:
+how a repository records it differs from one repository to the next, and the evaluator reads it
+where the repository keeps it.
 
 **D4 — AI imperfection is covered by three layers of verification, not by method.**
 (1) The unit loop: a fresh evaluator scores the unit's artifacts; a FAIL returns its findings and

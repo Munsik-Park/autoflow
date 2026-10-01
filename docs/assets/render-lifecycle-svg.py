@@ -44,8 +44,7 @@ STAGES = [
     ]),
     ("03", "BUILD", [
         ("BUILD", "build unit · test-first", "phase", True),
-        ("EXIT CHECK", "deterministic script", "gate", False),
-        ("AUDIT", "independent eval AI", "gate", False),
+        ("AUDIT", "eval AI · test-first", "gate", False),
     ]),
     ("04", "QUALITY", [
         ("GATE:QUALITY", "fresh eval AI · 10×10", "gate", False),
@@ -258,7 +257,7 @@ def render(theme):
 
     fail_loop("GATE:HYPOTHESIS", "DIAGNOSE", 1)   # cause FAIL -> DIAGNOSE (max 2x)
     fail_loop("GATE:PLAN", "ARCHITECT", 1)        # plan FAIL -> ARCHITECT (max 3x)
-    fail_loop("AUDIT", "BUILD", 2)                # exit-check defect / AUDIT FAIL -> BUILD (max 2x)
+    fail_loop("AUDIT", "BUILD", 1)                # test-first finding / AUDIT FAIL -> BUILD (max 2x)
 
     # GATE:QUALITY FAIL (max 3x) re-entry, drawn to BUILD — the common point
     # of the remedy_class routes (doc commit / BUILD / ARCHITECT); dashed edge

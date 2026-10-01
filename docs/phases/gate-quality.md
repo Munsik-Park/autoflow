@@ -8,7 +8,8 @@
 **Input**: full change set + test results + AUDIT result, plus the issue's acceptance-criterion list
 (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the verification design,
 the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), and the build report
-(`.autoflow/issue-{N}-build-report.md` — [BUILD](build.md) > Build report — its run records, section
+(`.autoflow/issue-{N}-build-report.md` — [BUILD](build.md) > Build report — its run records, manual
+checklist, maintained documents and lint record, section
 `## Out-of-scope observations — guard / boundary logic touched`, and — on a target — section
 `## Comment check`), and the cycle's scope records —
 the feature design's `## Scope` section, every `## Scope judgments` section in the cycle's
@@ -34,6 +35,15 @@ Guiding rule: prefer the smallest sufficient change that resolves the confirmed 
 A hunk tracing to none of them fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
 `Impact scope` is scored against the same section and the same scope from the other side: a directly related problem the cycle's records show, left out with no recorded separation reason, lowers it.
 On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the build report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
+
+The build report's records are the subject of three items. `Test coverage` reads `## Run record` and
+`## Manual checklist` (*Test coverage — the run record is the subject* below). `Doc updates` reads
+`## Maintained documents` against the diff: a listed document the diff does not touch is a finding
+of the item. `Commit conventions` reads `## Lint` for every commit on the branch against the outcome
+vocabulary and its reason classes ([`submodule-common-rules.md`](../submodule-common-rules.md) >
+Change Surface Rules > *Lint chain on the staged surface*): a chain `detected` is a finding of the
+item, a `not-run (ci-deferred)` chain is cleared as a deferral, and a commit with no lint record or a
+chain `not-run (unexecuted)` is an omission that takes the omission path under `Test coverage` below.
 
 ## Known blind-spot checks (scored within existing items)
 
@@ -112,14 +122,16 @@ each-item ≥ 7 criterion:
   - **Execution omission is not a defect** ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *A missing run
     is filled where it is found*). A row with no run record — or with no log behind it — is `not-run`, and the evaluator does
     **not** score `Test coverage` over it: the report names each such row under `Test coverage` as
-    `not-run: <rows>` and withholds that item's score. Such a report is not a verdict — it is not
+    `not-run: <rows>` and withholds that item's score (a lint omission under `Commit conventions`
+    is named and withheld the same way). Such a report is not a verdict — it is not
     recorded in the state file, consumes no FAIL of the `max 3×` cap, and carries no `remedy_class`
     for the omission. The orchestrator has each named row run in place — a cycle-layer asset by its
     path (the orchestrator itself may run it), a test in the target's tree by a BUILD unit re-run
     the way the target runs its tests — and its record filled in, then spawns a fresh evaluator that
-    re-scores `Test coverage` only, in the *Re-entry re-score* form below with the withheld report
-    as the inheritance source. A recorded run that **fails** is a defect, scored and classed like
-    any other.
+    re-scores the withheld item only, in the *Re-entry re-score* form below with the withheld report
+    as the inheritance source. A lint chain that still cannot be run, and that no pull-request CI job
+    covers, is the harness-level block of [BUILD](build.md) > *Report routing*. A recorded run that
+    **fails** is a defect, scored and classed like any other.
 - **Fit — ADR conformance**: on the final change set, re-confirm the shipped change conforms to any governing ADR (same
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check; the
   trigger areas are `docs/development-guideline.md` > ADR Policy > *When to create an ADR*). A
@@ -263,7 +275,7 @@ re-classify.
 | `remedy_class` | Meaning | Re-entry |
 |---|---|---|
 | `doc` | the item clears by editing documentation with no behavior change — in this repository comment text too; a target comment's divergence or disallowed content is never a failed item, while a defect a comment carries on its own ground is classed like any other (*Code comments in a target* below) | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
-| `test` | the item clears by changing test assets | a BUILD unit re-run with the failed items → exit check → AUDIT ([BUILD](build.md) > *Re-entry*) |
+| `test` | the item clears by changing test assets | a BUILD unit re-run with the failed items → AUDIT ([BUILD](build.md) > *Re-entry*) |
 | `impl` | the item clears by changing implementation | the same BUILD re-run |
 | `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the BUILD design-contradiction row does) |
 | `operator` | the evaluator cannot classify with confidence | the advisor's answer fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor); the cycle re-enters on that class's route |
@@ -299,7 +311,7 @@ in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
    prose in the same file; the hook reads only the two sections.
 2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../../CLAUDE.md) > Team Structure /
    Commit Ownership); its lint outcome is added as that commit's rows in the build report's `## Lint`
-   table ([BUILD](build.md) > Build report), which the exit check reads on any later BUILD re-entry.
+   table ([BUILD](build.md) > Build report), which `Commit conventions` reads at the re-score.
    **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
    record exists with both sections non-empty** — it checks the record file, never the wording of an
    instruction. On a second `doc` FAIL of the same class, the orchestrator re-examines its scope

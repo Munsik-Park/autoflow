@@ -30,8 +30,8 @@ DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, cause 
 GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (gate: structure form; cause form for bug issues)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
 GATE:PLAN       Plan Evaluation   — Scored plan assessment (gate)
-BUILD           Build unit (U4)   — Test-first implementation and verification + deterministic exit check
-AUDIT           Security Audit    — Independent project-specific security audit
+BUILD           Build unit (U4)   — Test-first implementation and verification
+AUDIT           Security Audit    — Independent test-first judgment and project-specific security audit
 GATE:QUALITY    Completion Eval   — Scored quality assessment (gate)
 DELIVER         Push              — the orchestrator's own `git push` (a changed sub-repo's branch too)
 INTEGRATE       Integration Test  — the change shown working above its own tests: the system build, health check and functional test, or the project's integration suite
