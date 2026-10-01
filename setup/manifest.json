@@ -125,7 +125,7 @@
       "dest": ".claude/autoflow/docs/phases/gate-quality.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "869a423b1e93e7f631acd33c3b8d1d51cf933b6b4c8db324bdb190b9bcaaf001"
+      "sha256": "738c0a1fe8f83f8d5d132bed4b80a4c02ddbd3475c8c6ac151f6cd1d220b7686"
     },
     {
       "source": "docs/phases/handoff.md",
