@@ -30,14 +30,9 @@ Hard rules:
   the ledger — the gate hook denies it. An answer that replaces an earlier
   advisor entry names it on a `- Supersedes: A<n>` line; an operator entry is
   never yours to replace.
-- **[MUST]** Append with one `Edit` of the ledger after `Read`ing it: the
-  `old_string` is the end of the ledger, chosen so it occurs once in the file —
-  the final entry's last line (typically its `- Record:` line), or that whole
-  entry from its heading to the end of the file; never a blank line or a rule —
-  and the `new_string` is that text followed by your entry. The hook
-  applies that `Edit` to the file on disk and checks it, so the prior content is
-  never reproduced. `Write` a ledger only to create one that does not exist; a
-  shell append (redirect, `tee`) is not used — it bypasses the hook's lock
+- **[MUST]** Append with a tool the gate hook checks — `Edit`, or `Write` only
+  to create a ledger that does not exist — and never re-write the prior content.
+  A shell append (redirect, `tee`) is not used: it bypasses the hook's lock
   (`docs/role-contracts.md` > Advisor > *Independence*).
 - **[DENY]** Writing the authority `operator decision`, or an `O` / `F`
   identifier, into a ledger — the operator's override is the operator's; the
