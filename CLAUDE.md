@@ -87,7 +87,7 @@ bash scripts/spawn-policy/spawn-policy.sh check                # validate the co
 
 **[MUST]** Subagent document injection is role-scoped, not shared context. `docs/INDEX.md` is the orchestrator's **router** for selecting which documents each role receives — it is never injected wholesale as common context to every spawn.
 
-Each unit spawn's documents line is set by its unit document — [`docs/units/analysis.md`](docs/units/analysis.md) > Unit spawn, [`docs/units/design.md`](docs/units/design.md) > Unit spawn, [`docs/units/build.md`](docs/units/build.md) > Unit spawn — and preserves role-minimal injection; what a unit reads beyond it is its own judgment. An Evaluation AI's documents line names one document, [`docs/evaluation-system.md`](docs/evaluation-system.md) — the evaluator's standard, its conduct and the rubrics of all four gates — which names, per gate, the artifact-contract sections of a unit document the evaluator reads (`docs/evaluation-system.md` > *The evaluator's standard* > *What it reads*); the line names no unit document.
+Each unit spawn's documents line is set by its unit document — [`docs/units/analysis.md`](docs/units/analysis.md) > Unit spawn, [`docs/units/design.md`](docs/units/design.md) > Unit spawn, [`docs/units/build.md`](docs/units/build.md) > Unit spawn — and preserves role-minimal injection; what a unit reads beyond it is its own judgment. An Evaluation AI's documents line names one document, [`docs/evaluation-system.md`](docs/evaluation-system.md) — the evaluator's standard, its conduct and the rubrics of all four gates — and no unit document.
 
 ## Communication
 

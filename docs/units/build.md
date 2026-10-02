@@ -150,8 +150,7 @@ found — is its own, written where it judges useful.
 One fresh Evaluation AI (`autoflow-evaluator`, the model
 `bash scripts/spawn-policy/spawn-policy.sh model audit` names) judges test-first and scores the
 change on the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT.
-Its documents line names that document alone; of this file it reads the sections that document's
-*What it reads* names for the gate. Its spawn prompt carries the security-checklist record
+Its documents line names that document alone. Its spawn prompt carries the security-checklist record
 line (*Security checklist* below).
 
 - **Test-first not confirmed** → the evaluator scores nothing and returns its `## Test-first`

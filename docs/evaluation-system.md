@@ -32,7 +32,7 @@ git grep -n -i -E "evaluator's standard|\*What it reads\*|proportional depth|con
 
 A functional unit is prescribed by its goal, its artifact contract, its verification and its loop
 cap, and how it reaches the goal is its own ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2).
-The evaluator is not a unit, and that latitude does not extend to it: what it confirms, the
+That latitude does not extend to the evaluator: what it confirms, the
 evidence a confirmation rests on and how far it goes are set here, and the evaluator applies them.
 
 ### What it reads
@@ -80,8 +80,9 @@ evidence a confirmation rests on and how far it goes are set here, and the evalu
 ### Depth
 
 - An item is **confirmed enough** when its score's reason rests on an anchor read under *Evidence*
-  and its FAIL hypothesis has been searched and dispositioned. Further search on a confirmed item
-  changes no score.
+  and its FAIL hypothesis has been searched and dispositioned; the search on that item stops there.
+  A defect on it that the evaluator sees afterwards is still reported and scored (*Finding
+  coverage* below).
 - A repeated surface is sampled, and the whole evaluation runs under a time cap (*Execution
   discipline* below).
 

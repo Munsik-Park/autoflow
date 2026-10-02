@@ -185,7 +185,7 @@ error.
 
 - [`CLAUDE.md`](../CLAUDE.md) — cross-unit invariants, the router (unit and phase list + Flow Control), regression caps, Execution Principles, state schema.
 - *Unit Documents* above — the six unit documents.
-- [`evaluation-system.md`](evaluation-system.md) — scoring, PASS thresholds and the gate rubrics of U2–U4.
+- [`evaluation-system.md`](evaluation-system.md) — the evaluator's standard, scoring, PASS thresholds and the rubrics of all four gates.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — sub-repo rules, verification and reporting.
 - [`repo-boundary-rules.md`](repo-boundary-rules.md) — cross-repo coordination.
 - [`git-workflow.md`](git-workflow.md) — bash procedures, branch structure.

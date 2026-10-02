@@ -34,8 +34,8 @@ the triage of a PASS report's recommendations. The rubric the evaluator scores o
 
 **Evaluator**: a fresh-spawned Evaluation AI scores the change on the rubric of
 [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:QUALITY — its input, its ten
-items, its known blind-spot checks and its re-entry re-score. Its documents line names that document;
-the sections of this file are the orchestrator's and the evaluator does not read them.
+items, its known blind-spot checks and its re-entry re-score. Its documents line names that document
+alone.
 
 ## Verification result
 

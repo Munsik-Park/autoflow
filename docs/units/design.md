@@ -309,8 +309,7 @@ to GATE:PLAN `Verification fit` and to GATE:QUALITY's assertion-claim alignment.
 One fresh Evaluation AI (`autoflow-evaluator`, the model
 `bash scripts/spawn-policy/spawn-policy.sh model gate-plan` names) scores the two documents on the
 rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN. Its
-documents line names that document alone; of this file it reads the sections that document's
-*What it reads* names for the gate — *Output artifacts* and its clauses.
+documents line names that document alone.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7) → recommendation triage
   ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) → BUILD.
