@@ -108,7 +108,7 @@ Scope, principle 2).
   carries the row's **layer**: a row is `standing` (committed; CI-registered) when the
   cell names one of D1's closed tokens in the form `automated / standing: <token>`
   (`manual / standing: <token>`); the token list is ADR-0024 D1's and is not copied here, and a
-  token outside it is a layer violation ([U5 Completion evaluation](completion-evaluation.md) > *Test quality — layer violation*). On a
+  token outside it is a layer violation ([`evaluation-system.md`](../evaluation-system.md) > GATE:QUALITY > *Test quality — layer violation*). On a
   target the cell carries no layer token ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *What a cycle
   leaves in the target's tree*). `Kind`
   applies to `automated` rows only (`driving` / `regression` / `characterization`). Both
@@ -309,8 +309,8 @@ to GATE:PLAN `Verification fit` and to GATE:QUALITY's assertion-claim alignment.
 One fresh Evaluation AI (`autoflow-evaluator`, the model
 `bash scripts/spawn-policy/spawn-policy.sh model gate-plan` names) scores the two documents on the
 rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN. Its
-documents line names its contract and that rubric, not this file; the sections of this file the
-rubric cites — *Output artifacts* and its clauses — it reads by its own judgment.
+documents line names that document alone; of this file it reads the sections that document's
+*What it reads* names for the gate — *Output artifacts* and its clauses.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7) → recommendation triage
   ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) → BUILD.

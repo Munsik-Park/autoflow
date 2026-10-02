@@ -51,7 +51,7 @@ A project whose information names sub-repos delivers each changed sub-repo on it
 - Issue analysis, plan synthesis, role assignment, PR management, integration verification.
 - Exception: project rules/configuration, infrastructure, and bulk documentation updates may be committed by the orchestrator directly, as may the fix of a comment's divergence or disallowed content in a target's code (`docs/units/completion-evaluation.md` > *Code comments in a target*).
 
-### Evaluation AI — contract: `docs/role-contracts.md` > Evaluation AI
+### Evaluation AI — contract: `docs/evaluation-system.md`; spawn and prompt: `docs/role-contracts.md` > Evaluation AI
 ### Build unit (U4) — contract: `docs/role-contracts.md` > Functional-unit agents; in a target scope: `docs/role-contracts.md` > Build unit in a target scope
 ### Advisor — contract: `docs/role-contracts.md` > Advisor
 ### Functional-unit agents (U2 / U3 / U4) — contract: `docs/role-contracts.md` > Functional-unit agents
@@ -87,7 +87,7 @@ bash scripts/spawn-policy/spawn-policy.sh check                # validate the co
 
 **[MUST]** Subagent document injection is role-scoped, not shared context. `docs/INDEX.md` is the orchestrator's **router** for selecting which documents each role receives — it is never injected wholesale as common context to every spawn.
 
-Each unit spawn's documents line is set by its unit document — [`docs/units/analysis.md`](docs/units/analysis.md) > Unit spawn, [`docs/units/design.md`](docs/units/design.md) > Unit spawn, [`docs/units/build.md`](docs/units/build.md) > Unit spawn — and preserves role-minimal injection; what a unit reads beyond it is its own judgment. An Evaluation AI's documents line names its contract — `docs/role-contracts.md` > Evaluation AI and [`docs/evaluation-system.md`](docs/evaluation-system.md), which holds the rubrics of GATE:HYPOTHESIS, GATE:PLAN and AUDIT — and, at GATE:QUALITY, the U5 unit document; it names no U2, U3 or U4 unit document.
+Each unit spawn's documents line is set by its unit document — [`docs/units/analysis.md`](docs/units/analysis.md) > Unit spawn, [`docs/units/design.md`](docs/units/design.md) > Unit spawn, [`docs/units/build.md`](docs/units/build.md) > Unit spawn — and preserves role-minimal injection; what a unit reads beyond it is its own judgment. An Evaluation AI's documents line names one document, [`docs/evaluation-system.md`](docs/evaluation-system.md) — the evaluator's standard, its conduct and the rubrics of all four gates — which names, per gate, the artifact-contract sections of a unit document the evaluator reads (`docs/evaluation-system.md` > *The evaluator's standard* > *What it reads*); the line names no unit document.
 
 ## Communication
 
@@ -235,9 +235,9 @@ Each unit's body — what it is asked, its artifact contract, its cautions, its 
 | U5 Completion evaluation | GATE:QUALITY | [`docs/units/completion-evaluation.md`](docs/units/completion-evaluation.md) |
 | U6 Delivery | DELIVER, INTEGRATE, HANDOFF | [`docs/units/delivery.md`](docs/units/delivery.md) (incl. Merge Sequencing); reviewer/operator guide: [`docs/external-review-sequencing.md`](docs/external-review-sequencing.md); PR body: [`docs/pr-body-guide.md`](docs/pr-body-guide.md) |
 
-The rubric of GATE:HYPOTHESIS, GATE:PLAN and AUDIT is the evaluator's, not the unit's: it lives in [`docs/evaluation-system.md`](docs/evaluation-system.md) > *Gate rubrics*, and the unit document routes the gate's result. GATE:QUALITY's rubric is the U5 unit document.
+The rubric of every gate — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — is the evaluator's, not the unit's: it lives in [`docs/evaluation-system.md`](docs/evaluation-system.md) > *Gate rubrics*, and the unit document routes the gate's result.
 
-The gate **PASS thresholds** (each ≥ 7, avg ≥ 7.5, security ≤ 3 → immediate block) and the **regression / retry caps** are fixed invariants: they live in the Flow Control table and the **Regressions** line above, and the unit documents and rubrics apply them. Who enforces what: the hook (`.claude/hooks/check-autoflow-gate.sh`) computes PASS from the recorded `scores` — for the score-gated role spawns, `git push` and `gh pr create` — and denies `git push` / `gh pr create` while the `audit` or `gate_quality` record carries `remedy_class`; it counts no FAIL. The FAIL and re-entry counts are the orchestrator's own accounting, and the HANDOFF auto-resolution count is `scripts/handoff/review-gate.sh`'s (exit `11` at 7). The evaluation contract (fresh-spawn Evaluation AI, the 10-point scale, the output format) lives in [`docs/role-contracts.md`](docs/role-contracts.md) > Evaluation System and [`docs/evaluation-system.md`](docs/evaluation-system.md).
+The gate **PASS thresholds** (each ≥ 7, avg ≥ 7.5, security ≤ 3 → immediate block) and the **regression / retry caps** are fixed invariants: they live in the Flow Control table and the **Regressions** line above, and the unit documents and rubrics apply them. Who enforces what: the hook (`.claude/hooks/check-autoflow-gate.sh`) computes PASS from the recorded `scores` — for the score-gated role spawns, `git push` and `gh pr create` — and denies `git push` / `gh pr create` while the `audit` or `gate_quality` record carries `remedy_class`; it counts no FAIL. The FAIL and re-entry counts are the orchestrator's own accounting, and the HANDOFF auto-resolution count is `scripts/handoff/review-gate.sh`'s (exit `11` at 7). The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, the 10-point scale, the output format) lives in [`docs/evaluation-system.md`](docs/evaluation-system.md); how the orchestrator spawns and prompts the evaluator is [`docs/role-contracts.md`](docs/role-contracts.md) > Evaluation AI.
 
 ### Execution Principles
 
@@ -333,7 +333,7 @@ These gates are wired via PreToolUse on `Bash` (git / gh commands), `Write|Edit|
 **Forced termination**: also set `active` to `false`.
 
 ## Evaluation System
-→ [`docs/role-contracts.md`](docs/role-contracts.md) > Evaluation System
+→ [`docs/evaluation-system.md`](docs/evaluation-system.md)
 
 ## Git Workflow — Rules
 

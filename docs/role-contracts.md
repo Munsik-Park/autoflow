@@ -30,130 +30,43 @@ A change to the per-phase assignment follows the revert rule above.
 ---
 
 ## Evaluation AI (subagent)
+
+This section is the orchestrator's side of the Evaluation AI: how it is spawned, prompted and its
+result recorded. What the evaluator does — its standard, its conduct, every gate's rubric and its
+output — is [`evaluation-system.md`](evaluation-system.md), the one document its spawn names.
+
 - Independent evaluator that does not participate in planning or implementation.
 - A fresh agent is spawned every call.
 - Spawn model: resolved from the spawn policy, never restated here — `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`; revert conditions: *Model tier revert* above.
 - Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
 
 ### Evaluation AI Prompt Rules
-1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `docs/role-contracts.md`, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`.autoflow/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
-2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — instruct the AI to read `docs/role-contracts.md > [section]` or `.autoflow/*` file paths directly. The same principle (file-path-only references) applies to every role spawn; see [`CLAUDE.md`](../CLAUDE.md#cost-control) > Cost Control.
+1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `docs/evaluation-system.md`, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`.autoflow/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
+2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — instruct the AI to read `docs/evaluation-system.md > [section]` or `.autoflow/*` file paths directly. The same principle (file-path-only references) applies to every role spawn; see [`CLAUDE.md`](../CLAUDE.md#cost-control) > Cost Control.
 3. **[MUST]** The orchestrator-authored portion is 5 lines or fewer (excluding target file contents).
 4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
+5. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](evaluation-system.md) > *Finding coverage*).
 
-### Finding coverage (model-recall guard)
-- **[MUST]** Surface every issue found, including low-severity and uncertain ones — list them in `recommendations` (or `blocking_issues` when score-blocking). Each finding states its severity and confidence on its own item (the next bullet) and is reflected in the `score` and `reason`; a finding is never expressed by silently omitting it. The rubric score is the filter; the finding stage prioritizes coverage.
-- **[MUST]** Write each `recommendations` item as the object [`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format defines, which also says what an item missing a field costs; a `Medium`+ item's `remedy_class` follows *Remedy class* below. After a PASS the orchestrator triages the list ([`units/completion-evaluation.md`](units/completion-evaluation.md) > *Recommendation triage*).
-- **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them.
+### Recording the result
 
-### Pre-scoring FAIL hypothesis (consider-the-opposite)
+The hook does **not** read the evaluator's `pass`, `avg` or `min` fields: it computes them from the raw
+`scores` the orchestrator records. The phase keys recorded in `.autoflow/issue-{N}.json` are below.
+The hook **gates** only the four cause/plan/audit/quality keys; `gate_hypothesis_structure` is
+recorded in state but **not gated** by the hook (GATE:HYPOTHESIS structure form — orchestrator-judged
+against the structure form's PASS line, [`evaluation-system.md`](evaluation-system.md) > *Gate
+rubrics* > GATE:HYPOTHESIS > *Structure form*), matching the `gated_phase_keys` allow-list in
+`tests/fixtures/gate-schema.json`, which omits it:
 
-This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the structure and cause forms), GATE:PLAN, AUDIT, GATE:QUALITY — and the doc-evaluation form when one is run, as a shared Evaluation AI contract. No gate opts out.
+- `gate_hypothesis_structure` — GATE:HYPOTHESIS structure form (recorded in state, **not gated** by the hook — orchestrator-judged)
+- `gate_hypothesis_cause` — GATE:HYPOTHESIS cause analysis (hook-gated)
+- `gate_plan` — GATE:PLAN (hook-gated)
+- `audit` — AUDIT (hook-gated)
+- `gate_quality` — GATE:QUALITY (hook-gated)
 
-- **[MUST]** Form the FAIL hypothesis first: adopt the hypothesis **"this deliverable must FAIL"** and search for the strongest evidence supporting it, framed in the terms of this evaluation's own rubric items. The search re-derives the deliverable's cited anchors from the current source (`path:line`, command output, `git show HEAD:<file>`) rather than accepting the deliverable's own account of them.
-- **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations` (or `blocking_issues` when score-blocking). A surviving case may coexist with a score of 7 or higher: the routing obligation is to record it, not to lower the item.
-- **[MUST]** Assign scores only after the FAIL hypothesis has been formed, searched, and dispositioned. Scoring never precedes the search.
-- **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`units/delivery.md`](units/delivery.md) > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
-- **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less role-spawn report (`CLAUDE.md` > Execution Principles > *Verify role-spawn claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
+- **[MUST]** When an evaluation's `fail_hypothesis` is recorded in state, it is written at `phases.<phase_key>.fail_hypothesis` — a sibling of `evaluator` and `scores` inside the phase object. **[DENY]** Never at the state file's top level and never as an entry inside `scores`. Recording is permitted, not required.
 
-### Build observations (GATE:QUALITY input)
+See [`CLAUDE.md`](../CLAUDE.md#autoflow-state-tracking-hook-integration) for the full schema.
 
-Binds the GATE:QUALITY form only.
-
-- **[MUST]** Read the build report's (`.autoflow/issue-{N}-build-report.md`) `## Out-of-scope observations — guard / boundary logic touched` section, disposition every entry (`defect — scored under <item>` or `not a defect — <reason>`), and record the dispositions in the `refine_observations` output field. A `defect` entry is scored under `Quality` or `Impact scope`. The author's rejection reason is context, not the disposition.
-- **[MUST]** A report whose `refine_observations` is absent, or that does not account for every entry in the section, is rejected and the evaluator re-spawned, with the same cap (max 2) and escalation as an empty `fail_hypothesis`.
-
-### Scope judgments (GATE:PLAN / GATE:QUALITY)
-
-The cycle's scope is its acceptance criteria, its confirmed cause, and the problems its recorded scope judgments include ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
-
-- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the feature design's `## Scope` section. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read the `## Scope` section, every `## Scope judgments` section in the cycle's `.autoflow/issue-{N}-*.md` reports, and the ledger's `[gate-autofix]` entries and gate verdict entries recording how earlier gates' recommendations were triaged (Change Surface Rules > GATE:QUALITY linkage).
-- A hunk that rests on a recorded judgment is in scope when the judgment meets one of question 1's three conditions; a judgment that meets none is scored under `Minimal implementation`. A directly related problem the records show, left out with no separation reason or with one that answers neither half of question 2, is scored under `Impact scope` (GATE:PLAN: `Scope`).
-- A separation reason is judged for whether it answers question 2, not for whether the evaluator would have separated the problem.
-
-### Remedy class (GATE:QUALITY FAIL routing; `Medium`+ recommendations at every gate)
-
-The failed-item rule binds the GATE:QUALITY form only; the recommendation rule binds every
-rubric-scored gate. The orchestrator routes a FAIL's re-entry and a `Medium`+ recommendation's fix
-from this field ([`units/completion-evaluation.md`](units/completion-evaluation.md) > FAIL routing, >
-*Recommendation triage*); the evaluator is the classifying authority and the implementing roles do
-not re-classify.
-
-- **[MUST]** On a FAIL, tag every item scored below 7 with a `remedy_class` — `doc` (documentation,
-  no behavior change; in this repository comment text too — a target comment's divergence or
-  disallowed content is never a failed item, while a defect a comment carries on its own ground is
-  classed like any other, *Code comments in a target* below), `test` (test assets), `impl`
-  (implementation), `design` (the
-  agreed design itself) — starting from the default per item (`scripts/gate/remedy-route.sh
-  default-class <item>`) and overriding it with a stated reason when the default misreads the
-  defect (a `Doc updates` cap caused by a prompt string or a hook message is `impl`).
-- **[MUST]** Tag every `recommendations` item of severity `Medium` or above with a `remedy_class`
-  from the same vocabulary, at every rubric-scored gate, by the question HANDOFF's review triage asks of a
-  reviewer finding — *does clearing this discard or change a decision the design settled?*
-  Yes → `design`; no → the kind of change that clears it. An item below `Medium` carries none.
-- **[MUST]** Write `operator` when the class cannot be stated with confidence. Do not guess: an
-  `operator` entry stops routing and the advisor decides the class (*Advisor* below).
-- **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: the
-  orchestrator rejects it and re-spawns a fresh Evaluation AI, with the same cap (max 2) and the same
-  escalation as an empty `fail_hypothesis`.
-- **[MUST]** On a re-entry evaluation, score afresh only the items listed in `rescore.rescored` — the
-  previously failed items plus any inherited item whose anchor files the re-entry diff touched — and
-  copy the rest from the cited prior report (`rescore.source`). The fresh-spawn rule is unchanged;
-  the input is narrowed, not the independence. The re-score's subject is the flagged defect: the
-  FAIL hypothesis takes its *re-entry form* (above), and `rescore.prior_findings` /
-  `rescore.new_findings` carry the dispositions ([`units/completion-evaluation.md`](units/completion-evaluation.md) >
-  Re-entry re-score).
-
-### Code comments in a target (GATE:QUALITY)
-
-Binds the GATE:QUALITY form over a target's code. This repository is excluded: a comment here is
-scored under the ordinary items, the `doc` class included.
-
-- **[MUST]** A code comment carries only a sentence that stays true for as long as the code it sits
-  on is unchanged. **A comment that diverges from its code, or that carries what a comment does not
-  carry, is a `Low` finding** — a restatement of the code, a design ground, an acceptance-criterion,
-  issue or PR reference, another file's path or contract, or a change history. Record it in
-  `recommendations` with its `path:line` and the severity `Low`; it lowers no item's score, so it is
-  never a failed item and carries no `remedy_class`; whether it is fixed is the orchestrator's
-  judgment, and the fix is its direct commit ([`units/completion-evaluation.md`](units/completion-evaluation.md) > *Code comments in a target*).
-  Only that finding is `Low`: a defect a comment carries on its own ground — an exposed credential,
-  token or personal data, for example — is scored under the item its impact belongs to, with that
-  item's usual cap and class.
-- A line a tool reads to change its behavior — a lint suppression, a type-checker directive — is
-  code even in comment syntax: a defect in it is scored under the item its behavior belongs to, not
-  by this rule. An explanation written beside it is a comment.
-- `Minimal implementation` weighs the comments the change adds by content and by volume — the build
-  report's `## Comment check` section, its `comment-ratio` line included, with the comments in the
-  diff — and records a content or volume finding in its `reason` and in `recommendations` without
-  lowering its score ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
-  Rules > GATE:QUALITY linkage).
-
-### Execution discipline (scope, sampling, time)
-
-This subsection **constrains** the pre-scoring FAIL hypothesis above; it does not replace it. The
-evaluator still forms the hypothesis first, still re-derives anchors, still records the search in
-`fail_hypothesis`.
-
-- **[MUST] Resolve the anchor before executing.** Where the anchor being re-derived is a **suite
-  verdict**, the anchor is the recorded local run — the command, the log it wrote and the summary
-  line read from it (Reporting Format item 5) — and the evaluator confirms it by reading that line
-  at the cited log path, never by re-running the command; a log absent at its path makes the row
-  `not-run` ([`units/completion-evaluation.md`](units/completion-evaluation.md) > *Test coverage* > *Execution
-  omission is not a defect*), and a log that does not carry the line is evidence authored without a
-  run (*Test quality / Completeness*). An unresolved anchor is a report defect, not an input.
-  Nothing is cited from a host record in place of a run's log.
-- **[MUST] Sampling default.** A blind-spot search over a **repeated surface** takes a
-  representative sample per rubric item by default (one or two instances), and states the sample
-  basis in `fail_hypothesis`. Exhaustive enumeration is entered only when a sampled instance yields
-  a FAIL case that survives refutation — escalate on a hit, rather than enumerate by default.
-  Coverage of *finding types* is unaffected: the finding-coverage rule above still forbids dropping
-  a found issue.
-- **[MUST] Time cap.** An evaluation declares a **wall-clock cap** and reports against it. The cap
-  is **30 minutes** unless the spawning orchestrator declares a different value in the spawn prompt,
-  in which case the declared value governs and is reported. On reaching the cap the evaluator stops
-  searching, scores what it searched, and records every unsearched item as `not-searched` in
-  `fail_hypothesis` — **never as clean**. A cap reached with unsearched items is a
-  signal to the orchestrator that the rubric item's evidence is thin, not a pass.
 
 ---
 
@@ -325,37 +238,6 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
 
 ## Evaluation System
 
-### Scoring (10-point scale)
-
-| Score | Meaning | Action |
-|------|------|------|
-| 9-10 | Excellent | Proceed |
-| 7-8  | Good      | Proceed |
-| 5-6  | Insufficient | Rework recommended |
-| 3-4  | Poor      | Rework required |
-| 1-2  | Failing   | Redesign or human decision |
-
-### PASS Criteria
-
-- **[MUST]** Average ≥ 7.5
-- **[MUST]** Each item ≥ 7
-- **[MUST]** Security ≤ 3 → automatic rework
-
-### Evaluation Types
-
-| Type | Items | Retry |
-|------|-------|-------|
-| Structure evaluation | Type 1: Behavior gap, Code-change necessity (2) — Type 2: Content gap, Consistency impact, Propagation scope (3) | none (PASS/FAIL single verdict; reuse-neutral; gap-low → close/reply, non-code lever → the advisor decides; no retry. Canonical: [`evaluation-system.md`](evaluation-system.md) > GATE:HYPOTHESIS > *Structure form*; dispositions: [`units/analysis.md`](units/analysis.md) > *Verification — GATE:HYPOTHESIS*) |
-| Hypothesis evaluation | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× |
-| Plan evaluation | Decision grounds, Verification fit, Scope, Tools, Security (5) — the design's intent, never its method; affected files / side effects are derived at BUILD, not scored here; Decision grounds/Scope carry structural-fit & over-engineering across the plan and its verification design (not scored at DIAGNOSE; interpretation and embedded checks: [`evaluation-system.md`](evaluation-system.md) > GATE:PLAN); a re-entry re-scores the design documents' delta only | max 3× |
-| Security audit | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
-| Quality evaluation | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) | max 3× |
-| Doc evaluation | Accuracy, Completeness, Clarity, Format compliance (4) | one revision |
-
-### Evaluation Output Format
-
-The format has one home — [`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format —
-and is not copied here: `fail_hypothesis` before `scores`, `remedy_class` per failed item, `rescore`
-on a re-entry, `refine_observations` at GATE:QUALITY, and `recommendations` as a list of objects
-(subject, item, severity, finding, `remedy_class` on `Medium` and above — *Finding coverage* above).
-A report in any other shape is rejected and the evaluator re-spawned, as that section says.
+The 10-point scale, the PASS criteria, the evaluation types and the output format have one home —
+[`evaluation-system.md`](evaluation-system.md) — and are not copied here. A report in any other shape
+than its *Evaluation Output Format* is rejected and the evaluator re-spawned, as that section says.

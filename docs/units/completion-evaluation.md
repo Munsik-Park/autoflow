@@ -6,9 +6,10 @@
 
 GATE:QUALITY is functional unit U5 Completion evaluation
 ([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). U5 has no unit agent: the
-gate is the unit, and its work is the evaluator's. This file states the unit's four items (D2), the
-rubric the evaluator scores on, and the rules the orchestrator applies to the result — the FAIL
-routing, and, for every rubric-scored gate, the triage of a PASS report's recommendations.
+gate is the unit, and its work is the evaluator's. This file states the unit's four items (D2) and the
+rules the orchestrator applies to the result — the FAIL routing, and, for every rubric-scored gate,
+the triage of a PASS report's recommendations. The rubric the evaluator scores on is
+[`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:QUALITY.
 
 - **Goal**: the change the cycle built, judged against the acceptance criteria, the design and the
   build's own records before it is delivered — complete, correct, verified, within the cycle's
@@ -31,161 +32,12 @@ routing, and, for every rubric-scored gate, the triage of a PASS report's recomm
 - **Result owed**: the report, returned as the spawn's report, with its scores recorded; on a PASS
   with no attempt open, the cycle moves to DELIVER.
 
-**Evaluator**: fresh-spawned Evaluation AI. Its documents line names its contract
-([`role-contracts.md`](../role-contracts.md) > Evaluation AI, [`evaluation-system.md`](../evaluation-system.md))
-and this file.
-**Input**: the change set — the cycle's commits — and the cycle's artifacts:
+**Evaluator**: a fresh-spawned Evaluation AI scores the change on the rubric of
+[`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:QUALITY — its input, its ten
+items, its known blind-spot checks and its re-entry re-score. Its documents line names that document;
+the sections of this file are the orchestrator's and the evaluator does not read them.
 
-- the analysis report (`.autoflow/issue-{N}-analysis.md`): its `## Acceptance criteria` table, the
-  issue's acceptance-criterion list, and its `## Scope judgments`;
-- the two design documents: the feature design (`.autoflow/issue-{N}-feature-design.md`) — the
-  decisions the change is checked against, and its `## Scope` section — and the verification
-  design (`.autoflow/issue-{N}-verification-design.md`);
-- the build report (`.autoflow/issue-{N}-build-report.md` — [U4 Build and verify](build.md) >
-  Build report): its run record, manual checklist, maintained documents and lint record, its
-  `## Scope judgments`, section `## Out-of-scope observations — guard / boundary logic touched`,
-  and — on a target — section `## Comment check`;
-- the AUDIT result: its scores and its report (`.autoflow/issue-{N}-audit.md`);
-- the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), with the `[gate-autofix]` entries
-  and gate verdict entries that record how earlier gates' recommendations were triaged.
-
-The cycle's scope records are the feature design's `## Scope` section, every `## Scope judgments`
-section in the cycle's `.autoflow/issue-{N}-*.md` reports, and those ledger entries
-([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
-
-**[MUST] Build observations are scoring input**: the evaluator reads the build
-report's out-of-scope-observations section, dispositions every entry (`defect — scored` /
-`not a defect — reason`), and records the dispositions in the `refine_observations` output field
-([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format). An entry dispositioned
-`defect` is scored under `Quality` or `Impact scope` like any other finding. An absent
-`refine_observations` field, or one that does not account for every entry in the section, is a
-report defect: reject and re-spawn, as for a missing `fail_hypothesis`.
-
-## Scoring (10 items × 10 points)
-
-Completeness, Quality, Test coverage, Test quality, Security (references AUDIT),
-Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates.
-
-The `Minimal implementation` item is scored against [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > GATE:QUALITY linkage, which holds the criterion body and the positive criteria the item is scored by.
-Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope — the acceptance criteria, the confirmed cause, and the problems the cycle's recorded scope judgments include.
-A hunk tracing to none of them fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
-`Impact scope` is scored against the same section and the same scope from the other side: a directly related problem the cycle's records show, left out with no recorded separation reason, lowers it.
-On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the build report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Code comments in a target* below).
-
-The build report's records are the subject of three items. `Test coverage` reads `## Run record` and
-`## Manual checklist` (*Test coverage — the run record is the subject* below). `Doc updates` reads
-`## Maintained documents` against the diff: a listed document the diff does not touch is a finding
-of the item. `Commit conventions` reads `## Lint` for every commit this cycle made against the
-outcome vocabulary and its reason classes
-([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Lint chain on
-the staged surface*): a chain `detected` is a finding of the
-item, a `not-run (ci-deferred)` chain is cleared as a deferral, and a commit with no lint record or a
-chain `not-run (unexecuted)` is an omission that takes the omission path under `Test coverage` below.
-
-## Known blind-spot checks (scored within existing items)
-
-The evaluator applies the checks below **inside the existing 10 items** — they add no scored items and change no
-PASS threshold. Each violation caps the named item at 6, which fails the gate via the
-each-item ≥ 7 criterion:
-
-- **Test quality — mock-boundary fidelity**: sample the suite's test doubles and verify
-  each against the real interface at HEAD (signature, argument count, return shape).
-  A double that diverges from the real interface caps `Test quality` at 6.
-- **Test quality / Completeness — assertion-claim alignment**: for each AC, confirm the
-  test asserts the behavior the AC states, not a weaker proxy (e.g. "the function was
-  called" where the AC requires a result shape) and not a different property than the
-  one the AC it names states. Confirm every cited evidence line
-  (test summary, log excerpt) against the log the cited run left, read at the cited path —
-  never by re-running the command; a recorded line the log does not carry was authored, not
-  produced by a run, and caps the citing item at 6. A record with no log behind it is not a
-  fabricated line but a missing run: it takes the `Test coverage` omission path below, not this
-  cap ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *A run's evidence is the log it left*). For an
-  observation record, confirm that the result was compared against the material the AC names — the
-  referenced mockup, asset or document itself; a comparison against the issue body's abbreviated
-  example, or a check that the result merely renders, is a weaker proxy.
-- **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
-  or renames files, sections, or identifiers, require evidence of a repo-wide
-  inbound-reference sweep (direct references, test-harness expectations, paraphrased
-  mentions). A dangling reference in a **normative document** caps the affected item at 6.
-  The cap binds normative documents only; a stale name in a **historical record** is the
-  evaluator's judgment.
-  - *Normative documents* — the one definition, cited from everywhere else — are what an agent
-    or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
-    rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
-    (`CLAUDE.md`, `docs/autoflow-guide.md`, `docs/units/*`, `docs/role-contracts.md`,
-    `docs/role-common-rules.md`, `docs/submodule-common-rules.md`, `docs/evaluation-system.md`,
-    `.claude/agents/*`, and the sections of an ADR that state a decision still in force);
-    (b) the scripts, hooks and workflows that run; (c) every document delivered to a target — the
-    boundary of (c) is the manifest generator's markdown-link closure of `CLAUDE.md` +
-    `docs/INDEX.md` plus its other artifact rows (`setup/gen-manifest-hashes.sh` >
-    `compute_doc_closure`).
-  - *Historical records* are what is kept as a record of a past state and followed by no one:
-    per-issue manual-verification records, report-excerpt fixtures
-    (`tests/fixtures/*`), an ADR's change-history and superseded sections, and archived cycle
-    artifacts. A fixture that an executing test reads is still a historical record for this check,
-    while the test that reads it is normative.
-  - For a stale name in a historical record the evaluator judges whether a reader following the
-    normative documents would be misled by it, and records the judgment with its grounds in the
-    item's `reason` (and in `recommendations` when it does not lower the score). A score reduction
-    rests on that recorded ground alone, never on the name's presence; a record whose stale names
-    mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for.
-- **Test quality — layer violation** (**this repository only**): for each
-  verification-design row, the asset matches the layer its `Type` cell declares — a `cycle` row
-  (no `standing:` token) has no committed test file; a `standing` row has its committed file,
-  CI-registered; and every `standing:` token is one of ADR-0024 D1's closed list. A committed asset
-  on a `cycle` row, an uncommitted asset on a `standing` row, or a token outside the list caps
-  `Test quality` at 6. The token check is a set relation, not a judgment, and it is performed
-  **by the device**: the evaluator runs
-  `bash scripts/gate/verification-layer-check.sh .autoflow/issue-{N}-verification-design.md` and
-  attaches its output — a non-zero exit is a token outside D1's closed list and caps the item; the
-  device's second output, the row↔asset pairing report, is input to this check and to
-  `Test coverage`, never a verdict. The device is not delivered to targets and the check does not
-  run there: on a target, a test file the cycle added is judged by the reviewer against the target's
-  convention from the PR body's listing ([U6 Delivery](delivery.md) > *Push and pull request*), not by a token ([`submodule-common-rules.md`](../submodule-common-rules.md)
-  > Verification and Tools > *What a cycle leaves in the target's tree*); under this item the evaluator confirms
-  that every test file the cycle added to the target's tree carries, in the build report's
-  `## Test files kept` section, the reason it is kept and the CI job expected to run it — the record HANDOFF carries into
-  the PR body — and an added file with no such record caps
-  `Test quality` at 6.
-- **Test coverage — the run record is the subject**: the item's subject is not a CI result. For
-  each `automated` / `delivery-check` row
-  it is the row's recorded run — the command, the log and the summary line read from it, confirmed
-  by reading the line at the cited log path rather than by re-running; in this repository a
-  `standing` row's subject is additionally the committed asset's realisability — the file exists,
-  runs, and is CI-registered. For a `manual` row executed by the AI it is the row's observation
-  record ([U4 Build and verify](build.md) > Build report > `## Manual checklist`), confirmed by reading the record and opening the artifacts it cites — a
-  screenshot is read as an image — never by observing again; a row with no record, or
-  a record whose artifacts are absent, takes the omission path below.
-  - **Execution omission is not a defect** ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *A missing run
-    is filled where it is found*). A row with no run record — or with no log behind it — is `not-run`, and the evaluator does
-    **not** score `Test coverage` over it: the report names each such row under `Test coverage` as
-    `not-run: <rows>` and withholds that item's score (a lint omission under `Commit conventions`
-    is named and withheld the same way). Such a report is not a verdict — it is not
-    recorded in the state file, consumes no FAIL of the `max 3×` cap, and carries no `remedy_class`
-    for the omission. The orchestrator has each named row run in place — a cycle-layer asset by its
-    path (the orchestrator itself may run it), a test in the target's tree by a BUILD unit re-run
-    the way the target runs its tests — and its record filled in, then spawns a fresh evaluator that
-    re-scores the withheld item only, in the *Re-entry re-score* form below with the withheld report
-    as the inheritance source. A lint chain that still cannot be run, and that no pull-request CI job
-    covers, is the harness-level block of [U4 Build and verify](build.md) > *Report routing*. A recorded run that
-    **fails** is a defect, scored and classed like any other.
-- **Fit — ADR conformance**: on the final change set, re-confirm the shipped change conforms to any governing ADR (same
-  governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check; the
-  trigger areas are `docs/development-guideline.md` > ADR Policy > *When to create an ADR*). A
-  divergence from a governing ADR, or an architecture-impacting change with no governing
-  ADR/owner decision, caps Fit at 6.
-- **Completeness — AC-authority check**: the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a test the
-  build rewrote after its first run, or the satisfiable-subset implementation [U4 Build and verify](build.md) permits on a design contradiction.
-  The check is a **name-the-site obligation**, not the GATE:PLAN key join: for each
-  verification-design row whose `Issue AC` is not `—`, the evaluator names the test file and
-  assertion, or the implementation site, that discharges it. A row for which no
-  site can be named, and which no `[ac-decision]`-marked ledger entry covers, caps `Completeness`
-  at 6 (an `added` entry covers nothing: the criterion it adds is owed its row and its site).
-  **Derivation is not drift**: a file row, suite disposition or oracle condition clause
-  BUILD derived under the ARCHITECT layer split ([U3 Design](design.md) > *Output artifacts* item 1)
-  is the designed division of labour, never a post-ARCHITECT AC change.
-  The check binds a verification-design row whose `Issue AC` is not `—` and for which no
-  discharging site can be named.
+## Verification result
 
 - **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → block) → *Recommendation triage* (below) → DELIVER.
 - **FAIL** → routed by `remedy_class` (below; max 3× — the cap counts FAILs, not the distance re-entered).
@@ -329,7 +181,7 @@ re-classify.
   ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking > Remedy class recording).
 - **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: reject
   it and re-spawn a fresh Evaluation AI, exactly as for a missing `fail_hypothesis`
-  ([`role-contracts.md`](../role-contracts.md) > Evaluation AI > Remedy class).
+  ([`evaluation-system.md`](../evaluation-system.md) > *Remedy class*).
 
 ### `doc` re-entry — class-level remedy
 
@@ -340,7 +192,7 @@ in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
 
 1. Write `.autoflow/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
    command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
-   remedy fixes every hit in a normative document (*Known blind-spot checks* > reference integrity —
+   remedy fixes every hit in a normative document ([`evaluation-system.md`](../evaluation-system.md) > GATE:QUALITY > *Known blind-spot checks* > reference integrity —
    the one definition of the boundary) and records, beside the two sections, the scope judgment for
    the rest: a hit in a historical record is fixed only where the evaluator's recorded judgment
    named it as misleading, and is otherwise recorded as exempt with the ground (the record is
@@ -364,24 +216,10 @@ in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
 
 ## Re-entry re-score
 
-After any class's re-entry, GATE:QUALITY runs again as a **fresh spawn with a narrowed input**: it
-re-scores the items that failed plus every previously-passing item whose anchor files the re-entry
-diff touched; the remaining items inherit their prior score by citation. The report states the
-re-scored item list and the inheritance source (the prior report's path) in its `rescore` field
-([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format). The state file still
-receives all ten scores, inherited ones copied
-verbatim from the cited report. An inherited item whose anchor file appears in the re-entry diff
-and is missing from the re-scored list is a report defect: reject and re-spawn.
-
-**The re-score's subject is the previously flagged defect**. The fresh evaluator's FAIL hypothesis
-on a re-scored item is *"the flagged defect still remains"*, searched against the re-entry diff
-([`role-contracts.md`](../role-contracts.md) > Evaluation AI > Pre-scoring FAIL hypothesis >
-*re-entry form*); each prior finding is dispositioned `cleared` / `remains` in
-`rescore.prior_findings`. A defect the evaluator newly sees on a re-scored item — including one in
-the sentences the remedy itself wrote — is recorded per *Finding coverage*, and the evaluator
-judges whether it blocks: a blocking finding is scored under its item and listed in
-`rescore.new_findings` with its ground; one that does not block goes to `recommendations` and does
-not lower the item.
+After any class's re-entry, a fresh evaluator re-scores on the narrowed input
+[`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:QUALITY > *Re-entry re-score*
+defines; the state file still receives all ten scores, inherited ones copied verbatim from the cited
+report.
 
 ## Code comments in a target
 
@@ -392,7 +230,7 @@ carry, never routes the cycle.
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Code comments*),
   is a `Low` finding. The reviewer never keeps or attaches `blocked-by-review` for it
   (`.codex/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
-  it ([`role-contracts.md`](../role-contracts.md) > Evaluation AI > *Code comments in a target*). It is
+  it ([`evaluation-system.md`](../evaluation-system.md) > *Code comments in a target*). It is
   therefore never a failed item, never the cause of a FAIL on the average, carries no `remedy_class`, and is not a `doc` item. Only that
   finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
   personal data, for example — takes the severity and the route its impact sets, as any finding does.

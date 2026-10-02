@@ -164,7 +164,8 @@ One independent Evaluation AI (`autoflow-evaluator`), fresh-spawned per entry on
 `bash scripts/spawn-policy/spawn-policy.sh model gate-hypothesis` names, scores the report on the
 rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS: the
 structure form for every issue and, for a bug / incident issue, the cause form. Its documents line
-names its contract and that rubric, not this file. The orchestrator records each form's scores
+names that document alone; of this file it reads the sections that document's *What it reads*
+names for the gate. The orchestrator records each form's scores
 under its own key, `phases.gate_hypothesis_structure` and `phases.gate_hypothesis_cause`.
 
 **Structure form.** The hook records but does not gate `gate_hypothesis_structure`; the

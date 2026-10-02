@@ -164,9 +164,9 @@ Each functional unit's body lives in its own file
 | U5 Completion evaluation | GATE:QUALITY | [`units/completion-evaluation.md`](units/completion-evaluation.md) |
 | U6 Delivery | DELIVER, INTEGRATE, HANDOFF | [`units/delivery.md`](units/delivery.md) |
 
-The rubrics of GATE:HYPOTHESIS, GATE:PLAN and AUDIT are the evaluator's and live in
-[`evaluation-system.md`](evaluation-system.md) > *Gate rubrics*; the unit document routes each
-gate's result. GATE:QUALITY is the gate that is itself a unit, so its rubric is the U5 document.
+The rubrics of all four gates — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — are the
+evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate rubrics*; the unit
+document routes each gate's result.
 
 ---
 

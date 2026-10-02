@@ -150,8 +150,8 @@ found — is its own, written where it judges useful.
 One fresh Evaluation AI (`autoflow-evaluator`, the model
 `bash scripts/spawn-policy/spawn-policy.sh model audit` names) judges test-first and scores the
 change on the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT.
-Its documents line names its contract and that rubric, not this file; the sections of this file the
-rubric cites it reads by its own judgment. Its spawn prompt carries the security-checklist record
+Its documents line names that document alone; of this file it reads the sections that document's
+*What it reads* names for the gate. Its spawn prompt carries the security-checklist record
 line (*Security checklist* below).
 
 - **Test-first not confirmed** → the evaluator scores nothing and returns its `## Test-first`
@@ -211,8 +211,7 @@ An INTEGRATE failure names the failing check and its output; a HANDOFF CI failur
 forward again to the INTEGRATE check or the CI that failed.
 
 A re-entry passes through AUDIT and GATE:QUALITY on their narrowed re-scores
-([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Review-response re-score*; [U5 Completion evaluation](completion-evaluation.md) > *Re-entry
-re-score*). A HANDOFF thin route fixes the finding on its own surface and returns to the reviewer
+([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Review-response re-score*; > GATE:QUALITY > *Re-entry re-score*). A HANDOFF thin route fixes the finding on its own surface and returns to the reviewer
 re-review; it does not bring the build report up to date.
 
 The unit reads and writes no `.autoflow/issue-{N}.json` state file, so every counter above is the
