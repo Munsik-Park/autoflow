@@ -117,10 +117,10 @@ whole `SCAN`. Reference: the default-branch push deny in
 `.claude/hooks/check-autoflow-gate.sh`.
 
 **Second consumer — the label-gate deny.** The
-`blocked-by-(review|subrepo)` gate-label deny has two forms: the
-`--remove-label blocked-by-(review|subrepo)` form is a **single pattern**
+`blocked-by-subrepo` gate-label deny has two forms: the
+`--remove-label blocked-by-subrepo` form is a **single pattern**
 (unaffected, matched over the whole `SCAN`), while the `gh api … -X DELETE
-…/labels/blocked-by-(review|subrepo)` REST form is an **AND** of the label
+…/labels/blocked-by-subrepo` REST form is an **AND** of the label
 path and the `-X DELETE` method. That REST form must co-occur in **one
 segment**. Both denies share the single `_SEGMENTS` split computed once from
 `SCAN`.
@@ -263,7 +263,7 @@ the hook owns the role→gate mapping:
 
 | Channel | Declaration |
 |---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
+| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-reviewer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
 | Unit-agent caller | the hook input's caller `agent_type` is `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` — the spawn needs no declaration of its own |
 
@@ -284,7 +284,7 @@ Mapping (hook-owned — a spawn never selects its own gate): `planning` —
 `autoflow-unit-design` →
 GATE:HYPOTHESIS (skip-verdict bypass for non-bug issues); `implementation` —
 `autoflow-unit-build` → GATE:PLAN;
-`analysis` — `autoflow-analyzer`,
+`analysis` — `autoflow-analyzer`, `autoflow-reviewer`,
 `autoflow-unit-analysis` — / `evaluation` / `advisor` / research → pass.
 
 **Unit-agent caller inheritance**: a spawn whose caller is a unit agent is

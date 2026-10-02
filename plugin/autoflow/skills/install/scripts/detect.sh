@@ -264,82 +264,81 @@ else
   VERSION_SKEW=no
 fi
 
-# ── Reviewer backend (issue #979): configured backend + CLI presence ──────────
-# Read-only. Reports the configured backend (target scaffold, default codex) and
-# each backend CLI's presence, so SKILL.md can DISCLOSE a codex-absent target
-# (its HANDOFF reviewer review would fail-closed at PREFLIGHT) and prompt for an
-# explicit backend switch at the single confirmation gate. No write here — the
-# scaffold always ships its codex default; only an explicit operator switch (in
-# SKILL.md, post-confirmation) ever rewrites it to claude.
-REVIEW_BACKEND=codex
+# ── External reviewers (issues #979, #411): configured reviewers + CLI presence ─
+# Read-only. Reports the external reviewers the target configures beside the
+# built-in Claude review (`.review.reviewers`, or the earlier `.review.backend`;
+# `none` when both are absent) and the codex CLI's presence, so SKILL.md can
+# DISCLOSE a configured reviewer whose CLI is absent (HANDOFF then runs the
+# built-in review without it). No write here. Read-side symmetry with
+# scripts/review/lib/review-config.sh: what the resolver would reject reports
+# `invalid`, never a default. detect.sh only REPORTS; it never exits.
+REVIEW_REVIEWERS=none
 _bcfg="$TARGET_ROOT/.claude/autoflow.local.json"
 if [ -f "$_bcfg" ]; then
   if ! command -v jq >/dev/null 2>&1; then
-    # File present but jq absent: the configured backend cannot be read. Report
-    # `invalid` (never the codex default) so the disclosure gate surfaces an
-    # unreadable config rather than masking it as a clean zero-config target —
-    # read-side symmetry with check-review-backend.sh's fail-closed jq-absent
-    # arm (issue #979 cycle 5b). detect.sh only REPORTS; it never exits.
-    REVIEW_BACKEND=invalid
-  elif _rbk=$(jq -r 'try (.review.backend | type) catch "unindexable"' "$_bcfg" 2>/dev/null); then
-    # File present + jq available: type-aware read (PR #188 review, Medium —
-    # jq's `//` also substitutes for `false`, which would mask a boolean as the
-    # codex default). Absent/null key -> codex; a non-empty string -> verbatim;
-    # anything else (boolean, number, object, empty string, non-object .review)
-    # -> `invalid`, read-side symmetry with scripts/review/lib/review-config.sh.
-    case "$_rbk" in
-      null) REVIEW_BACKEND=codex ;;
-      string)
-        _rb=$(jq -r '.review.backend' "$_bcfg" 2>/dev/null)
-        if [ -n "$_rb" ]; then REVIEW_BACKEND=$_rb; else REVIEW_BACKEND=invalid; fi ;;
-      *) REVIEW_BACKEND=invalid ;;
+    REVIEW_REVIEWERS=invalid
+  elif _rrk=$(jq -r 'try (.review.reviewers | type) catch "unindexable"' "$_bcfg" 2>/dev/null); then
+    case "$_rrk" in
+      array)
+        if jq -e '.review.reviewers | all(. == "codex")' "$_bcfg" >/dev/null 2>&1; then
+          _rr=$(jq -r '.review.reviewers | unique | join(",")' "$_bcfg" 2>/dev/null)
+          if [ -n "$_rr" ]; then REVIEW_REVIEWERS=$_rr; fi
+        else
+          REVIEW_REVIEWERS=invalid
+        fi ;;
+      null)
+        case "$(jq -r '.review.backend | type' "$_bcfg" 2>/dev/null)" in
+          null) ;;
+          string)
+            if [ "$(jq -r '.review.backend' "$_bcfg" 2>/dev/null)" = codex ]; then
+              REVIEW_REVIEWERS=codex
+            else
+              REVIEW_REVIEWERS=invalid
+            fi ;;
+          *) REVIEW_REVIEWERS=invalid ;;
+        esac ;;
+      *) REVIEW_REVIEWERS=invalid ;;
     esac
   else
-    # File present + jq available but parse fails: report a PARSE FAILURE as
-    # `invalid`, never masked as the codex default (AC-2/AC-3).
-    REVIEW_BACKEND=invalid
+    REVIEW_REVIEWERS=invalid
   fi
 fi
 REVIEW_CODEX_PRESENT=no
-REVIEW_CLAUDE_PRESENT=no
 command -v codex  >/dev/null 2>&1 && REVIEW_CODEX_PRESENT=yes
-command -v claude >/dev/null 2>&1 && REVIEW_CLAUDE_PRESENT=yes
 
-# ── Reviewer model / effort (issue #184): the configured backend's pins ───────
-# Read-only report of `.review.<backend>.model` / `.effort` for the CONFIGURED
-# backend: `inherit` when the key is absent/null (the CLI's own default
-# applies — the never-overwrite scaffold pins nothing), the verbatim string
-# when set, `invalid` when the key is present but empty or not a string. The
-# effort VOCABULARY is deliberately not re-checked here: its single source is
-# scripts/review/lib/review-config.sh, which the live wrapper and the --probe
-# both run and which fails closed on an unsupported value — SKILL.md's advisory
-# probe surfaces that, so detect.sh does not carry a second copy of the list.
-REVIEW_MODEL=inherit
-REVIEW_EFFORT=inherit
-if [ "$REVIEW_BACKEND" = codex ] || [ "$REVIEW_BACKEND" = claude ]; then
-  # Nested (not compound) guards, matching the backend block above: a readable
-  # backend value already implies jq was present when the file exists.
-  if [ -f "$_bcfg" ]; then
-    for _rk in model effort; do
-      _rkind=$(jq -r --arg b "$REVIEW_BACKEND" --arg k "$_rk" '.review[$b][$k] | type' "$_bcfg" 2>/dev/null) || _rkind=invalid
-      case "$_rkind" in
-        null) _rval=inherit ;;
-        string)
-          _rval=$(jq -r --arg b "$REVIEW_BACKEND" --arg k "$_rk" '.review[$b][$k]' "$_bcfg" 2>/dev/null)
-          [ -n "$_rval" ] || _rval=invalid ;;
-        *) _rval=invalid ;;
-      esac
-      case "$_rk" in
-        model)  REVIEW_MODEL=$_rval ;;
-        effort) REVIEW_EFFORT=$_rval ;;
-      esac
-    done
-  fi
-else
-  # Unreadable/unknown backend: its section cannot be attributed.
-  REVIEW_MODEL=invalid
-  REVIEW_EFFORT=invalid
-fi
+# ── codex model / effort (issues #184, #411) ──────────────────────────────────
+# Read-only report of `.review.codex.model` / `.effort` when codex is a
+# configured reviewer: `default` / `inherit` when the key is absent/null (the
+# resolver's codex model default, the CLI's own effort), the verbatim string
+# when set, `invalid` when the key is present but empty or not a string; `n/a`
+# when codex is not configured. The effort VOCABULARY is deliberately not
+# re-checked here: its single source is scripts/review/lib/review-config.sh.
+REVIEW_MODEL=n/a
+REVIEW_EFFORT=n/a
+case "$REVIEW_REVIEWERS" in
+  *codex*)
+    REVIEW_MODEL=default
+    REVIEW_EFFORT=inherit
+    if [ -f "$_bcfg" ]; then
+      for _rk in model effort; do
+        _rkind=$(jq -r --arg k "$_rk" '.review.codex[$k] | type' "$_bcfg" 2>/dev/null) || _rkind=invalid
+        case "$_rkind" in
+          null) continue ;;
+          string)
+            _rval=$(jq -r --arg k "$_rk" '.review.codex[$k]' "$_bcfg" 2>/dev/null)
+            [ -n "$_rval" ] || _rval=invalid ;;
+          *) _rval=invalid ;;
+        esac
+        case "$_rk" in
+          model)  REVIEW_MODEL=$_rval ;;
+          effort) REVIEW_EFFORT=$_rval ;;
+        esac
+      done
+    fi ;;
+  invalid)
+    REVIEW_MODEL=invalid
+    REVIEW_EFFORT=invalid ;;
+esac
 
 # ── Report (printf: bash builtin, so this still emits under a stripped PATH) ───
 printf 'INSTALL_STATE=%s\n'     "$INSTALL_STATE"
@@ -386,9 +385,8 @@ fi
 printf 'VERSION_INSTALLED=%s\n' "$VERSION_INSTALLED"
 printf 'VERSION_CACHE=%s\n'     "$VERSION_CACHE"
 printf 'VERSION_SKEW=%s\n'      "$VERSION_SKEW"
-printf 'REVIEW_BACKEND=%s\n'        "$REVIEW_BACKEND"
+printf 'REVIEW_REVIEWERS=%s\n'      "$REVIEW_REVIEWERS"
 printf 'REVIEW_CODEX_PRESENT=%s\n'  "$REVIEW_CODEX_PRESENT"
-printf 'REVIEW_CLAUDE_PRESENT=%s\n' "$REVIEW_CLAUDE_PRESENT"
 printf 'REVIEW_MODEL=%s\n'          "$REVIEW_MODEL"
 printf 'REVIEW_EFFORT=%s\n'         "$REVIEW_EFFORT"
 

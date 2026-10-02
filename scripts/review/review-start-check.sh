@@ -3,15 +3,15 @@
 # SPDX-License-Identifier: Elastic-2.0
 # scripts/review/review-start-check.sh
 #
-# HANDOFF — did the reviewer run for one pull request begin? Run right after
-# `scripts/review/codex-review-pr.sh` is launched in the background, once per
-# reviewed PR. It waits at most the window for a signal scoped to that PR and
+# HANDOFF — did the external reviewer run for one pull request begin? Run right
+# after `scripts/review/codex-review-pr.sh` is launched in the background, once
+# per reviewed PR and round. It waits at most the window for a signal scoped to that PR and
 # reports the first one it finds:
 #
 #   completed  the wrapper's output (--log) already carries its completion
-#              marker `[review] <backend> completed for PR #<N> (exit=<K>)`
+#              marker `[review] <reviewer> completed for PR #<N> (exit=<K>)`
 #   process    a reviewer process whose prompt names `pull request #<N>` is
-#              running (both backends pass the prompt as an argument)
+#              running (the wrapper passes the prompt as an argument)
 #   rollout    codex only: a session rollout written within the window's reach
 #              whose prompt names `pull request #<N>`
 #
@@ -24,7 +24,7 @@
 #   1   no signal within the window — launch the review again once; a second
 #       miss goes to the operator
 #   3   the wrapper completed with a non-zero exit — the review run itself
-#       failed
+#       failed, or left no review record
 #   64  usage
 #
 # Usage: scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>]

@@ -1,6 +1,6 @@
 {
   "review": {
-    "backend": "codex"
+    "reviewers": ["codex"]
   },
   "tests": {
     "suite_plane": false

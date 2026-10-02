@@ -137,7 +137,7 @@ UNIT_OF_PHASE = {
     'gate-plan': 'U3', 'architect-deliberation': 'U3',
     'red': 'U4', 'green': 'U4', 'verify-arbitration': 'U4', 'refine-impl': 'U4',
     'refine-test-reconfirm': 'U4', 'audit': 'U4', 'verify-cause-branch': 'U4',
-    'gate-quality': 'U5', 'handoff-review-triage': 'U6',
+    'gate-quality': 'U5', 'handoff-review': 'U6', 'handoff-review-triage': 'U6',
 }
 
 

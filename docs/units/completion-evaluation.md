@@ -25,7 +25,7 @@ the triage of a PASS report's recommendations. The rubric the evaluator scores o
   ([`role-contracts.md`](../role-contracts.md) > Evaluation AI); the orchestrator's acceptance of its
   report, which rejects and re-spawns a report missing what the contract requires; and the hook,
   which computes PASS from the recorded scores before it admits `git push` / `gh pr create`.
-  Beyond U5, CI and the configured reviewer verify the delivered change (ADR-0025 D4).
+  Beyond U5, CI and the review verify the delivered change (ADR-0025 D4).
 - **Loop cap**: a FAIL re-enters by `remedy_class` (*FAIL routing* below), max 3× — the cap counts
   FAILs, not the distance re-entered; a recommendation attempt is not a FAIL and counts on its own
   window, max 7 (*Recommendation triage* below).
@@ -57,14 +57,14 @@ No separate disposition system exists for gate recommendations.
 | Review triage | Gate recommendation |
 |---|---|
 | Classification: the reviewer's severity level (`.codex/review.md` > Severity) | the evaluator's, per item, on the same levels |
-| `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
+| `remedy_class` on every `Medium`+ finding, by the aggregator — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
 | Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(c) | the same three, read for a gate (below) |
 | `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to BUILD (below) |
-| Verification of the fix: the reviewer re-review (*Reviewer review*) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *Re-entry re-score*, > AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
+| Verification of the fix: the next review round (*Reviewer review*) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *Re-entry re-score*, > AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
 | Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
 
-- **No ingesting subagent.** The orchestrator reads the evaluator's `recommendations` list
+- **No aggregator.** The orchestrator reads the evaluator's `recommendations` list
   directly. It is therefore the orchestrator that weighs whether each item holds ([U6 Delivery](delivery.md) > *Whether a
   finding holds*), and the recommending gate's re-score that judges a rebuttal. A
   `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
@@ -228,7 +228,7 @@ carry, never routes the cycle.
 
 - **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Code comments*),
-  is a `Low` finding. The reviewer never keeps or attaches `blocked-by-review` for it
+  is a `Low` finding. It never counts toward the review verdict that keeps `blocked-by-review`
   (`.codex/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
   it ([`evaluation-system.md`](../evaluation-system.md) > *Code comments in a target*). It is
   therefore never a failed item, never the cause of a FAIL on the average, carries no `remedy_class`, and is not a `doc` item. Only that
@@ -239,7 +239,7 @@ carry, never routes the cycle.
   review triage) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
   ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
   deletes comment lines or corrects their sentences and changes nothing else, and it ends there: no
-  sweep record, no re-entry, no re-score, and no reviewer re-review. The commit still runs the lint chain over its staged files
+  sweep record, no re-entry, no re-score, and no review round. The commit still runs the lint chain over its staged files
   ([`CLAUDE.md`](../../CLAUDE.md) > Commit Rules); one made after HANDOFF's push is pushed, and the CI
   confirmation runs on the new head. A comment whose correct wording is uncertain is deleted, not
   rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a

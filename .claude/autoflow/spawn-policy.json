@@ -44,11 +44,17 @@
       "effort": "xhigh",
       "work_type": "rubric, 10 items × 10 points"
     },
+    "handoff-review": {
+      "agent_type": "autoflow-reviewer",
+      "model": "opus",
+      "effort": "high",
+      "work_type": "built-in pull-request review with the cycle's design artifacts as input (issue #411) — the measurement behind it reviewed on Opus"
+    },
     "handoff-review-triage": {
       "agent_type": "autoflow-analyzer",
       "model": "sonnet",
       "effort": "high",
-      "work_type": "reviewer-comment ingestion (severity classification) + Low-finding impact judgment"
+      "work_type": "review aggregation — the review records of a pull request into one comment, its findings file (source and disposition per finding) and its blocked-by-review label — + Low-finding impact judgment"
     },
     "unit-analysis": {
       "agent_type": "autoflow-unit-analysis",

@@ -113,10 +113,10 @@ A change passes two independent quality procedures, and neither stands in for th
   the analysis, the design and its verification, test-first and the build's records, the completed
   change against the acceptance criteria and the cycle's scope — and holds the gate's authority:
   its scores decide PASS, and a FAIL routes the re-entry.
-- **The configured reviewer** (`.codex/review.md`; [U6 Delivery](units/delivery.md) >
-  *Reviewer review*) reviews each pull request the cycle opened — its diff against the linked
-  acceptance criteria — for defects in the result, and is the sole authority to clear the
-  `blocked-by-review` label.
+- **The reviewers** (`.codex/review.md`; [U6 Delivery](units/delivery.md) > *Reviewer review*)
+  review each pull request the cycle opened — its diff against the linked acceptance criteria —
+  for defects in the result, and the aggregation of their reviews alone sets the
+  `blocked-by-review` label at its verdict.
 - A gate PASS does not clear a reviewer finding, and a clean review does not stand in for a gate.
   Each procedure's findings are routed by its own triage ([U5 Completion
   evaluation](units/completion-evaluation.md) > *Recommendation triage*; [U6
@@ -306,7 +306,7 @@ records each under its own key, `phases.gate_hypothesis_structure` and
 `phases.gate_hypothesis_cause` in `.autoflow/issue-{N}.json`; the two are never nested under one
 key.
 **Input**: the analysis report (`.autoflow/issue-{N}-analysis.md`), the trigger target (the issue,
-or the reviewer comment / thread of a review-response cycle) and the decision ledger.
+or the review comment / thread of a review-response cycle) and the decision ledger.
 
 #### Structure form (every issue)
 

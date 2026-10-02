@@ -2,15 +2,15 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # =============================================================================
-# Test: reviewer-backend bundle delivery + install config scaffold (packaging /
+# Test: external-reviewer bundle delivery + install config scaffold (packaging /
 #       manifest)
 # =============================================================================
 # The manifest ships the artifacts the HANDOFF reviewer review executes on a target — two
 # `copy` scripts (scripts/review/codex-review-pr.sh,
 # scripts/preflight/check-review-backend.sh), one `copy` for .codex/review.md,
 # two `scaffold` rows (AGENTS.md, .claude/autoflow.local.json) — and a fresh
-# mktemp install materializes all five. The scaffold ships its codex default and
-# is never overwritten by a re-install.
+# mktemp install materializes all five. The scaffold ships codex as its external
+# reviewer and is never overwritten by a re-install.
 # =============================================================================
 
 set -uo pipefail
@@ -33,7 +33,7 @@ assert_true() {
 }
 
 echo "=============================================="
-echo "reviewer-backend bundle delivery (AC-3a / AC-4)"
+echo "external-reviewer bundle delivery (AC-3a / AC-4)"
 echo "=============================================="
 
 echo "=== manifest rows (AC-4) ==="
@@ -68,20 +68,21 @@ assert_true "AC-4: installed target has .codex/review.md" \
   "[ -f '$TARGET/.codex/review.md' ]"
 assert_true "AC-4: installed target has AGENTS.md (scaffold)" \
   "[ -f '$TARGET/AGENTS.md' ]"
-assert_true "AC-3a: installed target has .claude/autoflow.local.json (scaffold) shipping the codex default" \
-  "[ -f '$TARGET/.claude/autoflow.local.json' ] && jq -e '.review.backend == \"codex\"' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
+assert_true "AC-3a / #411: installed target has .claude/autoflow.local.json (scaffold) naming codex as its external reviewer" \
+  "[ -f '$TARGET/.claude/autoflow.local.json' ] && jq -e '.review.reviewers == [\"codex\"]' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
 assert_true "#229 / #238 (ADR-0024 D3/S4): the stamped scaffold carries the tests declaration site with no suite-plane opt-in and no test-command key, as the shipped resolver reads it — AutoFlow asks the target for no test command" \
   "( . '$PROJECT_ROOT/scripts/test/suite-manifest.sh'; suite_plane_declared '$TARGET' && ! suite_plane_opted_in '$TARGET' ) && jq -e '.tests | has(\"command\") | not' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
 
 # Never-overwrite arm (C3 RESOLVED — mirror CLAUDE.local.md/AC1j): a target
-# operator's explicit backend=claude selection survives a second install.
+# operator's explicit reviewer selection (no external reviewer) survives a
+# second install.
 if [ -f "$TARGET/.claude/autoflow.local.json" ]; then
   cat > "$TARGET/.claude/autoflow.local.json" <<'EOF'
-{ "review": { "backend": "claude" } }
+{ "review": { "reviewers": [] } }
 EOF
   ( bash "$INIT_SH" --target "$TARGET" </dev/null >/tmp/init-979-reinstall.log 2>&1 )
-  assert_true "AC-3a (no silent downgrade): a re-install does NOT overwrite an operator's explicit backend=claude selection" \
-    "jq -e '.review.backend == \"claude\"' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
+  assert_true "AC-3a (no silent change): a re-install does NOT overwrite an operator's explicit reviewers=[] selection" \
+    "jq -e '.review.reviewers == []' '$TARGET/.claude/autoflow.local.json' >/dev/null 2>&1"
 else
   assert_true "AC-3a (no silent downgrade): scaffold present to test never-overwrite arm" "false"
 fi

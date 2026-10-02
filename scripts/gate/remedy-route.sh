@@ -29,7 +29,7 @@
 #     the moved decision and the orchestrator judges and records where the
 #     re-entry starts (a cycle from DIAGNOSE, or an ARCHITECT unit re-run);
 #     `BUILD` / `DOC_COMMIT` are the thin path (a U4 re-run or a doc commit
-#     + execution verification + reviewer re-review).
+#     + execution verification + the next review round).
 #   - Recommendation triage after a PASS at AUDIT and GATE:QUALITY;
 #     GATE:HYPOTHESIS and GATE:PLAN do not call this script.
 #
