@@ -179,7 +179,7 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 ### Decision 9: HANDOFF Acts on Its Own Configured-Reviewer Review Before Handing Off (Bounded Auto-Resolution)
 
-> Superseded in part by [ADR-0026](adr/0026-aggregated-review.md) (issue #411): the review is now several reviews aggregated into one verdict, and the aggregator — not an isolated reviewer subprocess — sets `blocked-by-review`; the hook no longer denies its removal. The bounded auto-resolution below stands.
+> Superseded in part by [ADR-0026](adr/0026-aggregated-review.md) (issue #411): the review is now several reviews aggregated into one verdict; the orchestrator puts `blocked-by-review` on when it runs a round and the aggregator — not an isolated reviewer subprocess — takes it off when the round is clean; the hook no longer denies its removal. The bounded auto-resolution below stands.
 
 **Problem.** AutoFlow's terminal phase originally ran the per-PR reviewer review and then ended unconditionally, leaving any `blocked-by-review` label (Critical/High/Medium findings) for a human to notice and re-trigger. The findings the methodology itself produced sat idle until someone re-invoked the issue.
 
