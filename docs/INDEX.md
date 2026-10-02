@@ -28,7 +28,7 @@ These documents are the operating source of truth.
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool. |
-| [Reviewer Backend Contract](reviewer-backend.md) | HANDOFF external-reviewer backend abstraction: inputs/obligations, codex default + `claude -p` opt-in table, config location, per-backend oracle, isolation basis. |
+| [Reviewer Contract](reviewer-backend.md) | HANDOFF reviewers: the built-in review and the configured external reviewers, their inputs and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
 | [Thin Root Layer Contract](thin-root-layer.md) | The artifacts that must live at a consuming target's project root and the `CLAUDE_CODE_*` env contract. |
 
@@ -41,7 +41,7 @@ These documents are the operating source of truth.
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Filing a new issue | `docs/issue-proposal.md` |
 | Tool distribution, install/upgrade, or version pinning | `docs/tool-delivery-contract.md`, `docs/thin-root-layer.md` |
-| External review backend (codex/claude), reviewer-review mechanics | `docs/reviewer-backend.md`, `docs/external-review-sequencing.md` |
+| Reviewers (built-in + external), review aggregation | `docs/reviewer-backend.md`, `docs/external-review-sequencing.md` |
 
 ## Design and decision records
 

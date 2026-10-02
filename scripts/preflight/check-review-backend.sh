@@ -2,96 +2,78 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # =============================================================================
-# PREFLIGHT reviewer-backend availability check (issue #979, D5)
+# PREFLIGHT external-reviewer availability report (issue #979, D5; #411)
 # =============================================================================
-# Fail-closed availability probe for the configured HANDOFF reviewer review
-# backend. Resolves the backend (--backend override, else
-# .claude/autoflow.local.json `.review.backend`, else codex) and confirms the
-# backend's CLI is present on PATH.
+# Reports whether each external reviewer named in .claude/autoflow.local.json
+# (`.review.reviewers`, or the earlier `.review.backend`; none when both are
+# absent) has its CLI on PATH. The built-in Claude review needs no CLI and is
+# not checked here.
 #
-#   exit 0   → the configured backend CLI is present (available).
-#   exit ≠0  → the CLI is absent; a reason on stderr names the backend, that its
-#              CLI is missing, and the two remedies (install the CLI, or switch
-#              the backend in .claude/autoflow.local.json).
+#   exit 0   → every configured external reviewer's CLI is present, or none is
+#              configured.
+#   exit 1   → a configured reviewer's CLI is absent; a reason on stderr names
+#              it and the two remedies (install the CLI, or drop the reviewer
+#              from .claude/autoflow.local.json). Advisory: HANDOFF runs the
+#              built-in review alone and the aggregated comment records the
+#              missing reviewer (docs/units/delivery.md > Reviewer review).
+#   exit 2   → the review configuration cannot be read as configured.
 #
-# The per-cycle PREFLIGHT invocation (no `--probe`) is presence-only, symmetric
-# for both backends (C1): a side-effect-free command whose exit encodes
-# claude/codex auth state does not exist, so auth is NOT a PREFLIGHT oracle. A
-# present-but-unauthenticated backend passes this presence-only path; its auth
-# failure surfaces at the HANDOFF reviewer review (the review run itself). See
-# docs/reviewer-backend.md.
+# The per-cycle PREFLIGHT invocation (no `--probe`) is presence-only: a
+# side-effect-free command whose exit encodes codex auth state does not exist,
+# so auth is NOT a PREFLIGHT oracle. A present-but-unauthenticated reviewer
+# passes here; its auth failure surfaces at the HANDOFF review run.
 #
-# `--probe` is a SEPARATE, on-demand mode (issue #979 cycle 9): it makes one real
-# authenticated round-trip against the configured backend, over the identical
-# auth channel + isolation the HANDOFF reviewer review uses. It runs on-demand only — at
-# install time (SKILL.md) and at backend-change time — and is NEVER wired into
-# PREFLIGHT and no hook consumes it (the presence-only path above is unchanged).
-# Its exit-code contract extends the presence 0/1/2: 0=authenticated,
-# 1=CLI absent (short-circuit, reuses the presence exit), 2=usage/config error,
-# 3=indeterminate (timeout / no-TTY), 4=present-but-round-trip-failed. See §4.2
-# of the feature design and docs/reviewer-backend.md.
+# `--probe` is a SEPARATE, on-demand mode: it makes one real authenticated
+# round-trip against each configured external reviewer, over the same channel
+# the HANDOFF review uses. It runs on-demand only — at install time (SKILL.md)
+# and when the reviewer configuration changes — and is NEVER wired into
+# PREFLIGHT and no hook consumes it. Its exit-code contract extends the
+# presence 0/1/2: 0=authenticated (or none configured), 1=CLI absent
+# (short-circuit, reuses the presence exit), 2=usage/config error,
+# 3=indeterminate (timeout / no-TTY), 4=present-but-round-trip-failed.
 #
-# Wired into PREFLIGHT (presence-only path) as a drift-check-style stop
-# condition: a non-zero exit stops the cycle before DIAGNOSE.
+# Model / effort: each reviewer's `.review.<name>.model` and `.effort` are
+# resolved by the shared scripts/review/lib/review-config.sh — the same
+# resolver the live wrapper uses — and the --probe round-trip passes them
+# exactly as the HANDOFF review will.
 #
-# Model / effort (issue #184): the backend's configured `.review.<backend>.model`
-# and `.effort` are resolved by the shared scripts/review/lib/review-config.sh —
-# the same resolver the live wrapper uses — and the --probe round-trip passes
-# them exactly as the HANDOFF reviewer review will (or nothing, when inheriting).
-#
-# Usage: scripts/preflight/check-review-backend.sh [--backend codex|claude] [--probe]
+# Usage: scripts/preflight/check-review-backend.sh [--probe]
 # =============================================================================
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-BACKEND_OVERRIDE=""
 PROBE=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --backend)
-      [ $# -ge 2 ] || { echo "[check-review-backend] --backend requires a value (codex|claude)." >&2; exit 2; }
-      BACKEND_OVERRIDE="$2"; shift 2 ;;
     --probe)
       PROBE=1; shift ;;
     -h|--help)
-      echo "Usage: $0 [--backend codex|claude] [--probe]"
+      echo "Usage: $0 [--probe]"
       exit 0
       ;;
     *)
       echo "unknown argument: $1" >&2
-      echo "Usage: $0 [--backend codex|claude] [--probe]" >&2
+      echo "Usage: $0 [--probe]" >&2
       exit 2
       ;;
   esac
 done
 
-# Resolve the effective backend + model/effort through the SHARED resolver
-# (scripts/review/lib/review-config.sh, issue #184): explicit --backend override
-# wins; else the target-owned scaffold; else the codex default. Model / effort
-# come from `.review.<backend>` and default to inherit. The same parser,
-# defaults and validation the live wrapper (codex-review-pr.sh) applies run
-# here, so a config the review would reject is rejected at PREFLIGHT / probe
-# time with the same exit 2 (jq absent, malformed JSON, empty/unknown backend,
-# empty model/effort, effort outside the backend's vocabulary) — never a
-# silent codex/inherit downgrade (issue #979 AC-2/AC-3, cycle 5b).
+# Resolve the configured external reviewers through the SHARED resolver
+# (scripts/review/lib/review-config.sh): a config the review would reject is
+# rejected here with the same exit 2.
 # shellcheck source=../review/lib/review-config.sh
 . "$SCRIPT_DIR/../review/lib/review-config.sh"
-resolve_review_config check-review-backend "$BACKEND_OVERRIDE"
-BACKEND="$REVIEW_BACKEND"
-build_review_backend_args
-
-case "$BACKEND" in
-  codex) CLI="codex" ;;
-  claude) CLI="claude" ;;
-esac
+resolve_review_config check-review-backend
 
 # --------------------------------------------------------------------------
 # --probe helpers (issue #979 cycle 9). Only reached when PROBE=1 AND the CLI
 # is present (an absent CLI short-circuits to the existing presence exit 1
-# below). Each dispatches a bounded, minimal, real round-trip and exits with
-# the §4.2 probe contract (0 ok / 3 indeterminate / 4 round-trip-failed).
+# below). Each dispatches a bounded, minimal, real round-trip; a success returns
+# to the next reviewer, a failure exits with the probe contract
+# (3 indeterminate / 4 round-trip-failed).
 # --------------------------------------------------------------------------
 
 # Bounded execution (DCR-5): prefer timeout/gtimeout; else a sleep+kill
@@ -140,56 +122,27 @@ probe_run_bounded() {
   return 0
 }
 
-# Map a bounded run's outcome to the probe exit contract and exit.
+# Map a bounded run's outcome to the probe exit contract: return on success,
+# exit otherwise.
 probe_finish() {
   if [ "${PROBE_TIMED_OUT:-0}" -eq 1 ]; then
     echo "[check-review-backend] --probe: could not verify ${BACKEND} auth within ${1}s (timeout / no-TTY interactive-login) — indeterminate; it will surface at the HANDOFF reviewer review." >&2
     exit 3
   fi
   if [ "${PROBE_RC:-1}" -eq 0 ]; then
-    exit 0
+    return 0
   fi
   echo "[check-review-backend] --probe: ${BACKEND} is present but the authenticated round-trip failed (exit ${PROBE_RC}) — you will hit this at the HANDOFF reviewer review; fix credentials before your first cycle." >&2
   exit 4
 }
 
-# claude probe: mirror codex-review-pr.sh's isolation triple EXACTLY
-# (shared helper), minimized to a review-content-free round-trip — a trivial
-# prompt, zero tool grants, JSON output (confirms a model reply, not just a
-# zero exit). The isolation fidelity is the crux: same auth channel/isolation
-# as the reviewer review, so a green probe predicts a green review.
-probe_claude() {
-  # shellcheck source=../review/lib/claude-isolation.sh
-  . "$SCRIPT_DIR/../review/lib/claude-isolation.sh"
-  local bound="${PROBE_TIMEOUT_SECS:-20}"
-  if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    echo "[check-review-backend] --probe: ANTHROPIC_API_KEY is set; unsetting it for the claude probe subprocess to exercise the same subscription/OAuth channel the HANDOFF reviewer review uses." >&2
-  fi
-  build_claude_isolation
-  local _orig; _orig="$(pwd)"
-  cd "$NEUTRAL_CWD" 2>/dev/null || { cleanup_claude_isolation; PROBE_TIMED_OUT=1; probe_finish "$bound"; }
-  # REVIEW_BACKEND_ARGS (--model / --effort, or nothing = inherit) is the same
-  # array the live review passes, from the same resolver (issue #184).
-  probe_run_bounded "$bound" \
-    env "${CLAUDE_ISOLATION_UNSET[@]}" claude -p "Reply with the single token READY." \
-      --setting-sources "" \
-      --disallowedTools "Edit,Write,MultiEdit,Bash" \
-      --output-format json \
-      ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"}
-  cd "$_orig" 2>/dev/null || cd /
-  cleanup_claude_isolation
-  probe_finish "$bound"
-}
-
-# codex probe: codex is a separate subprocess (no isolation triple needed) — a
-# trivial-prompt `codex exec` with approval_policy="never" still opens codex's
+# codex probe: a trivial-prompt `codex exec` with approval_policy="never" still opens codex's
 # own model-API connection where auth happens (the dropped -s workspace-write /
 # network_access flags govern the orthogonal command-execution sandbox).
 probe_codex() {
   local bound="${PROBE_TIMEOUT_SECS:-20}"
-  # REVIEW_BACKEND_ARGS (--model / -c model_reasoning_effort=…, or nothing =
-  # inherit ~/.codex/config.toml) is the same array the live review passes
-  # (issue #184).
+  # REVIEW_BACKEND_ARGS (--model, and -c model_reasoning_effort=… when an
+  # effort is configured) is the same array the live review passes.
   probe_run_bounded "$bound" \
     codex exec -c approval_policy="never" \
       ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} \
@@ -197,23 +150,31 @@ probe_codex() {
   probe_finish "$bound"
 }
 
-if command -v "$CLI" >/dev/null 2>&1; then
-  if [ "$PROBE" -eq 1 ]; then
-    # Probe marker: the backend and the effective explicitly configured
-    # model/effort (`inherit` = the CLI's own default), nothing else from the
-    # environment — mirrors the live wrapper's start marker (issue #184).
-    echo "[check-review-backend] --probe: ${BACKEND} ($(review_config_summary))"
-    case "$CLI" in
-      claude) probe_claude ;;
-      codex)  probe_codex  ;;
-    esac
-    # Unreachable: each probe_* function exits via probe_finish.
-    exit 3
-  fi
+if [ -z "$REVIEW_REVIEWERS" ]; then
+  echo "[check-review-backend] no external reviewer configured — the built-in Claude review runs alone."
   exit 0
 fi
 
-echo "[check-review-backend] configured review backend '${BACKEND}' is unavailable: its CLI '${CLI}' is not on PATH." >&2
-echo "[check-review-backend] remedy 1 — install the ${CLI} CLI (see docs/reviewer-backend.md)." >&2
-echo "[check-review-backend] remedy 2 — switch the backend in .claude/autoflow.local.json (\`.review.backend\`)." >&2
-exit 1
+missing=0
+for name in $REVIEW_REVIEWERS; do
+  resolve_reviewer_settings check-review-backend "$name"
+  build_review_backend_args
+  BACKEND="$name"
+  if ! command -v "$name" >/dev/null 2>&1; then
+    echo "[check-review-backend] external reviewer '${name}' is unavailable: its CLI '${name}' is not on PATH." >&2
+    echo "[check-review-backend] remedy 1 — install the ${name} CLI (see docs/reviewer-backend.md)." >&2
+    echo "[check-review-backend] remedy 2 — drop '${name}' from .review.reviewers in .claude/autoflow.local.json." >&2
+    echo "[check-review-backend] until then HANDOFF runs the built-in review without it, and the aggregated review comment records the omission." >&2
+    missing=1
+    continue
+  fi
+  if [ "$PROBE" -eq 1 ]; then
+    # Probe marker: the reviewer and its effective model/effort, nothing else
+    # from the environment — mirrors the live wrapper's start marker.
+    echo "[check-review-backend] --probe: ${name} ($(review_config_summary))"
+    case "$name" in
+      codex) probe_codex ;;
+    esac
+  fi
+done
+exit "$missing"

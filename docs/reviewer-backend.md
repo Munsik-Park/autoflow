@@ -1,85 +1,88 @@
-# Reviewer Backend Contract
+# Reviewer Contract
 
-HANDOFF's reviewer review (external review) runs through a **backend-neutral reviewer
-contract**. `codex` is the default backend; `claude` is an opt-in fallback. This
-document is the single home for the abstraction — the inputs, obligations,
-output, backend table, config location, and the per-backend start-confirmation
-oracle. It is referenced from [`units/delivery.md`](units/delivery.md)
-> *Reviewer review* and `CLAUDE.md`.
+HANDOFF reviews every pull request a cycle opens with more than one reviewer and
+aggregates their reviews into one verdict
+([ADR-0026](records/adr/0026-aggregated-review.md)). This document is the single
+home for the reviewers — who reviews, on what input, what each one leaves, the
+external reviewers' configuration, and their start-confirmation oracle. How a
+round runs and how its reviews are aggregated is
+[`units/delivery.md`](units/delivery.md) > *Reviewer review* and *Review
+aggregation*.
+
+## Reviewers
+
+| Reviewer | Runs | Input | Runtime |
+|----------|------|-------|---------|
+| built-in (`claude`) | every pull request | the PR (diff, body, linked issue), `.codex/review.md`, the cycle's design artifacts — analysis report, feature design, verification design, decision ledger, build report | a fresh `autoflow-reviewer` spawn (`.claude/agents/autoflow-reviewer.md`), on the model `.claude/autoflow/spawn-policy.json` names for `handoff-review` |
+| external (`codex`) | when `.claude/autoflow.local.json` names it | the PR (diff, body, linked issue), `.codex/review.md` | `scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, loading `AGENTS.md` → `.codex/review.md` |
+
+An external reviewer is another vendor's model reviewing the same pull request;
+the same model is not run twice under two settings. A new external reviewer is a
+name the resolver supports (`scripts/review/lib/review-config.sh`) plus its
+runtime.
 
 ## Contract
 
 ```
-Contract: reviewer-backend
-  Inputs : --pr <N>  [--repo <owner/name>]  [--expected-head <branch>]
-  Obligations (in an ISOLATED session, no orchestrator/implementer context):
-    1. Fetch the PR diff + metadata via `gh` (every gh call carries --repo when
-       the backend runs outside the repo working dir).
-    2. Review the diff per the shared instruction body (.codex/review.md):
-       Korean, severity-ranked, verified findings, one high-signal overview.
-    3. Post the review as a PR comment (`gh pr comment`) — the comment is the
-       artifact, not the subprocess stdout.
-    4. The gate-label obligation is DIRECTIONAL (per .codex/review.md):
-       - clean state (no Medium+ finding) ⇒ REMOVE
-         `blocked-by-review` (gh pr edit → gh issue edit fallback → verify);
-       - a Medium+ finding while the label is absent
-         ⇒ attach `blocked-by-review` (gh pr edit → gh issue edit fallback →
-         verify present);
-       - any other state ⇒ leave the label unchanged.
-       A review only ever performs one of these three actions.
-  Authority: the configured isolated reviewer subprocess is the SOLE clearer of
-             `blocked-by-review`. The orchestrator is hook-denied.
-  Output   : the posted PR comment + label state. NOT the subprocess stdout.
+Contract: reviewer
+  Output : one review record per reviewer, PR and round —
+           .autoflow/issue-{N}-review-raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
+           in the .codex/review.md Output Format, in Korean.
+  A reviewer posts no PR comment and changes no label.
+
+Contract: aggregator  (docs/units/delivery.md > Review aggregation)
+  Input  : every review record of the PR and round.
+  Output : one PR comment; the PR's findings file (source and disposition per
+           finding); the `blocked-by-review` label at the aggregated verdict.
+  Authority: the aggregated verdict alone sets `blocked-by-review`. A finding
+             the aggregator rejects is recorded with its grounds and counts
+             toward no verdict.
 ```
 
-## Backends
+The external wrapper takes the record path:
 
-| Backend | Default | Runtime |
-|---------|---------|---------|
-| `codex` | yes | `codex exec` in the repo working dir; loads `AGENTS.md` → `.codex/review.md` automatically. |
-| `claude` | opt-in | `claude -p` in a **neutral cwd** with the parent session's **`CLAUDE*` env scrubbed** and **`--setting-sources ""`** (no user-scope plugin hooks), `--system-prompt-file .codex/review.md`, `--repo` on every `gh` call, tool-sealed to `Bash(gh *)`, `ANTHROPIC_API_KEY` unset. |
+```
+scripts/review/codex-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>]
+```
 
-The single wrapper `scripts/review/codex-review-pr.sh` implements both branches;
-the CLI signature is the same for both backends (the backend is not a flag).
-Either backend additionally receives the configured **model / effort** flags
-from the shared resolver (see *Model and effort* below), or none when
-inheriting.
+It stops (exit `3`) when the PR is not that OPEN PR on that head branch, and
+treats a run that leaves no record as failed (exit `5`).
 
 ## Config location
 
-The backend is recorded in the target-owned scaffold
+The external reviewers are recorded in the target-owned scaffold
 `.claude/autoflow.local.json`:
 
 ```json
-{ "review": { "backend": "codex" } }
+{ "review": { "reviewers": ["codex"] } }
 ```
 
 Read type-aware by `scripts/review/lib/review-config.sh` (the key's JSON type
-first, then its value — not `jq`'s `//`). **Absent file or absent key ⇒
-`codex`**. The scaffold is delivered by `init.sh` and **never overwritten** on
-re-install.
+first, then its value). `.review.reviewers` lists the external reviewers run
+beside the built-in review; `[]` names none. When it is absent, the earlier
+single-reviewer key is read: `.review.backend: "codex"` reads as `["codex"]`.
+**Both absent ⇒ no external reviewer** — the built-in review runs alone. The
+scaffold, shipped with `codex`, is delivered by `init.sh` and **never
+overwritten** on re-install.
 
-A **present-but-unparseable** file (invalid JSON), **a present file that cannot
-be read because `jq` is not on PATH**, **or a present file whose
-`.review.backend` is empty (`""`), not a string (e.g. a boolean `false` — an
-explicit value, not an absent one), or otherwise not `codex`/`claude`**, does
-**not** default to `codex`: the consumers (`codex-review-pr.sh`,
-`check-review-backend.sh`) fail closed (**exit 2**) and the install-time reporter
-(`detect.sh`) reports `REVIEW_BACKEND=invalid`. Only an **absent file, an
-absent `.review.backend` key, or an explicit `null`** resolves to the `codex`
-default.
+A present file that cannot be read as configured **fails closed** (exit `2`) in
+the consumers (`codex-review-pr.sh`, `check-review-backend.sh`), and the
+install-time reporter (`detect.sh`) reports `REVIEW_REVIEWERS=invalid`: invalid
+JSON, a file present while `jq` is not on PATH, a non-object `.review`, a
+`reviewers` value that is not an array of supported names, or a `backend` value
+other than `codex`. `.review.backend: "claude"` is among them — the `claude`
+backend was removed, since the built-in review is Claude's.
 
 ## Model and effort
 
-The reviewer's model and reasoning effort can be pinned **per backend** in the
-same target-owned scaffold. Every key is optional:
+Each external reviewer's model and reasoning effort can be pinned in the same
+scaffold. Every key is optional:
 
 ```json
 {
   "review": {
-    "backend": "codex",
-    "codex":  { "model": "gpt-5.6-sol", "effort": "high" },
-    "claude": { "model": "opus",        "effort": "high" }
+    "reviewers": ["codex"],
+    "codex": { "model": "sol-6-sol", "effort": "high" }
   }
 }
 ```
@@ -88,168 +91,122 @@ same target-owned scaffold. Every key is optional:
 parser, validator and flag-mapper for the whole `review` section. It is
 **sourced** by both the live wrapper (`codex-review-pr.sh`) and
 `check-review-backend.sh` (presence path and `--probe`), and it ships to targets
-as a `copy` artifact next to `claude-isolation.sh`. Neither consumer reads
-`.claude/autoflow.local.json` on its own.
+as a `copy` artifact. Neither consumer reads `.claude/autoflow.local.json` on
+its own.
 
 **Flag mapping** (`build_review_backend_args`, the only place it is written):
 
-| Backend | model | effort |
-|---------|-------|--------|
+| Reviewer | model | effort |
+|----------|-------|--------|
 | `codex` | `codex exec --model <model>` | `codex exec -c model_reasoning_effort=<effort>` |
-| `claude` | `claude -p --model <model>` | `claude -p --effort <effort>` |
-
-Values travel as a bash array, one argv element per token.
 
 **Precedence** (per value, most specific first):
 
 | Value | Order |
 |-------|-------|
-| backend | `--backend` override (`check-review-backend.sh` only) → `.review.backend` → `codex` |
-| model | `.review.<backend>.model` → `MODEL` env (**claude only**) → **inherit** |
-| effort | `.review.<backend>.effort` → **inherit** |
+| model | `.review.<reviewer>.model` → the reviewer's default (`codex`: `sol-6-sol`) |
+| effort | `.review.<reviewer>.effort` → **inherit** |
 
-**Inherit means no flag.** When a key is absent (or JSON `null`) the wrapper
-passes nothing, and the CLI applies its own configuration:
-`~/.codex/config.toml` (`model`, `model_reasoning_effort`) for `codex`, the
-claude CLI's user/default model and effort for `claude`. The scaffold delivered
-by `init.sh` pins **nothing** and is never overwritten; review-only pinning is an
-explicit hand-edit of the target's file.
+**Inherit means no flag.** When the effort key is absent (or JSON `null`) the
+wrapper passes none, and the CLI applies its own configuration
+(`~/.codex/config.toml`, `model_reasoning_effort`). The model default lives in
+the resolver so that a target whose never-overwritten scaffold pins nothing
+still reviews on it; the scaffold delivered by `init.sh` pins nothing.
 
 **Supported effort values** (the vocabulary lives in `review-config.sh` and is
 edited there when a CLI's set evolves — model identifiers are not validated):
 
-| Backend | Accepted `effort` | Source |
-|---------|-------------------|--------|
+| Reviewer | Accepted `effort` | Source |
+|----------|-------------------|--------|
 | `codex` | `none` `minimal` `low` `medium` `high` `xhigh` `max` `ultra` `persistent` | the named variants of `enum ReasoningEffort`, `codex-rs/protocol/src/openai_models.rs`. |
-| `claude` | `low` `medium` `high` `xhigh` `max` | `claude --help` → `--effort <level>` |
 
-**Fail-closed** (exit `2`, diagnostic on stderr, **before any reviewer
+**Fail-closed** (exit `2`, diagnostic on stderr, **before the reviewer
 launches** — in both the wrapper and `check-review-backend.sh`):
 
-- the file is present but `jq` is not on PATH, or the file is not valid JSON
-  (the backend rule under *Config location* above);
-- `.review.<backend>.model` or `.effort` is present but empty (`""`) or not a
+- a `review` section that cannot be read as configured (*Config location*
+  above);
+- `.review.<reviewer>.model` or `.effort` is present but empty (`""`) or not a
   string;
-- `.review.<backend>.effort` is a string outside that backend's vocabulary.
+- `.review.<reviewer>.effort` is a string outside that reviewer's vocabulary.
 
-Only the **configured** backend's section is validated; the other backend's
-section is not read. An absent key is inheritance, never an error.
-
-**Start marker.** The wrapper's marker names the backend and the effective
-explicitly configured values — `[codex-review] starting codex for PR #<N>
-(model=gpt-5.6-sol effort=high) at …`, or `model=inherit effort=inherit` when
-nothing is pinned — and prints nothing else from the environment (no
-credentials, no unrelated variables). `--probe` prints the same summary as
-`[check-review-backend] --probe: <backend> (model=… effort=…)` before its
+**Start marker.** The wrapper's marker names the reviewer and the effective
+model and effort — `[codex-review] starting codex for PR #<N>
+(model=sol-6-sol effort=high) at …`, or `effort=inherit` when none is pinned —
+and prints nothing else from the environment (no credentials, no unrelated
+variables). `--probe` prints the same summary as
+`[check-review-backend] --probe: <reviewer> (model=… effort=…)` before its
 round-trip, and passes the identical flags.
 
-**Orchestrator vs. reviewer.** These pins govern only the **isolated reviewer
-subprocess** HANDOFF's reviewer review launches. The orchestrating Claude Code session's
-own model and effort follow the user's session settings, and the AutoFlow role
-spawns follow `.claude/autoflow/spawn-policy.json`; neither reads the `review`
-section, and the review pins read neither of them.
+**Orchestrator vs. reviewer.** These pins govern only the external reviewer
+subprocess. The built-in review's model is the `handoff-review` row of
+`.claude/autoflow/spawn-policy.json`; the orchestrating session's own model and
+effort follow the user's session settings. None of them reads another.
 
-## Claude isolation basis
+## Availability (PREFLIGHT, advisory)
 
-**[MUST]** The `claude` branch enforces **three-layer isolation**: it runs in a
-**neutral cwd**, **scrubs every `CLAUDE`-prefixed env var** from the subprocess,
-and passes **`--setting-sources ""`**. It also passes `--repo` on every `gh`
-call. The reviewer subprocess loads **none** of the settings sources that carry
-the AutoFlow gate hook; the hook reaches a claude session by three distinct
-paths, each closed by one layer below.
+`scripts/preflight/check-review-backend.sh` resolves the `review` section
+through the shared resolver and probes each configured external reviewer's CLI
+**presence only** (`command -v`):
 
-**Layer 1 — project settings (neutral cwd).** The reviewer runs in a neutral cwd
-(e.g. a fresh `mktemp -d`), which omits the target's project settings —
-including the gate hook.
+| Exit | Meaning |
+|------|---------|
+| `0` | every configured external reviewer's CLI is present, or none is configured |
+| `1` | a configured reviewer's CLI is absent — named on stderr with its remedies (install it, or drop it from `.review.reviewers`) |
+| `2` | the `review` section cannot be read as configured |
 
-**Layer 2 — parent-session re-attach (`CLAUDE*` env scrub).** The wrapper
-scrubs **all** `CLAUDE`-prefixed env vars via a dynamic `env -u` list built from
-`${!CLAUDE@}`, not a hardcoded name list. The scrub excepts `CLAUDE_CODE_OAUTH_TOKEN`.
-`PATH` and `HOME` are preserved.
-
-**Layer 3 — user-scope plugin hook (`--setting-sources ""`).** Passing
-`--setting-sources ""` (an empty value — load no settings sources) excludes the
-user-scope plugin (`~/.claude/settings.json` `enabledPlugins`
-`autoflow@autoflow`) from the reviewer session.
-
-A change to this isolation carries a **[MUST]** live-manual row, run at BUILD: a real `claude -p` reviewer, run
-neutral-cwd **with the `CLAUDE*` env scrubbed and `--setting-sources ""`**
-against a clean disposable PR, must actually clear `blocked-by-review` and
-retain it on a seeded Medium+ finding.
-
-## Availability (PREFLIGHT, fail-closed)
-
-`scripts/preflight/check-review-backend.sh [--backend codex|claude]` resolves
-the `review` section through the shared resolver (so an invalid model/effort
-pin fails closed here too — *Model and effort* above) and probes the
-configured backend's CLI **presence only** (`command -v`), exiting non-zero
-with a reason when absent. PREFLIGHT wires it as a drift-check-style **stop
-condition**: the cycle does not begin until the CLI is installed or the backend
-is switched. Symmetrically, the live wrapper `scripts/review/codex-review-pr.sh`
-also fail-closes on an **unknown** `.review.backend` value (any non-empty string
-other than `codex`/`claude`): it exits `2` with a stderr diagnostic before
-invoking any reviewer, matching this pre-check's own `exit 2`. On this
-**presence-only** PREFLIGHT path, auth is **not** probed: a
-present-but-unauthenticated backend passes PREFLIGHT and its auth failure
-surfaces at the HANDOFF reviewer review (the review run itself). An explicit, on-demand
-authenticated round-trip is available separately via `--probe` (next section)
-and is never wired into this PREFLIGHT path.
+PREFLIGHT records the result. An absent CLI does **not** stop the cycle: HANDOFF
+runs the built-in review without that reviewer and the aggregated comment names
+the omission ([`units/delivery.md`](units/delivery.md) > *Reviewer review*). A
+configuration that cannot be read (exit `2`) stops it
+([`units/preparation.md`](units/preparation.md) > *Stop conditions*). Auth is
+**not** probed here: a present-but-unauthenticated reviewer passes and its auth
+failure surfaces at the HANDOFF run, where it counts as a failed run.
 
 ## On-demand auth probe (`--probe`)
 
 `scripts/preflight/check-review-backend.sh --probe` is a **separate on-demand
-mode**: it performs **one real authenticated round-trip** against
-the configured backend — not a `command -v` presence check and not a version
-check — over the **identical auth channel and isolation** the HANDOFF reviewer review uses
-(for `claude`: the same neutral cwd + `CLAUDE*` env scrub + OAuth carve-out +
-`--setting-sources ""` isolation triple, sourced from the shared
-`scripts/review/lib/claude-isolation.sh`; for `codex`: the same model-API
-connection a `codex exec` opens).
+mode**: it performs **one real authenticated round-trip** against each
+configured external reviewer — for `codex`, the same model-API connection a
+`codex exec` opens. With no external reviewer configured it reports so and exits
+`0`.
 
-**Triggers — on-demand only, at two moments:**
-
-- **install time** — `/autoflow:install` auto-runs the probe (advisory) right
-  after it persists the backend selection.
-- **backend-change time** — `set-review-backend.sh` prints a reminder to run
-  the probe after a successful switch; the operator runs it on-demand.
-
-It is **not** run per-cycle, is **not** wired into PREFLIGHT, and **no hook
-consumes it** — the exit code is for the install skill's advisory narration and
-the operator's manual backend-change run only. A probe failure is advisory: it
-is narrated, never used to abort an install or gate a cycle.
+**Triggers — on-demand only:** `/autoflow:install` auto-runs the probe
+(advisory) after the stamp, and the operator runs it after changing the
+reviewer configuration. It is **not** run per-cycle, is **not** wired into
+PREFLIGHT, and **no hook consumes it** — a probe failure is narrated, never used
+to abort an install or gate a cycle.
 
 **Exit-code contract** (extends the presence `0/1/2`):
 
 | Exit | Meaning |
 |------|---------|
-| `0` | Round-trip succeeded — backend authenticated & responsive. |
-| `1` | Backend CLI **absent** — short-circuit that reuses the presence exit 1 + remedy (no round-trip is attempted). |
-| `2` | Usage/config error (bad arg, unknown/unresolvable backend, jq-absent/parse). |
+| `0` | Round-trip succeeded for every configured reviewer, or none is configured. |
+| `1` | A configured reviewer's CLI is **absent** (no round-trip is attempted for it). |
+| `2` | Usage/config error. |
 | `3` | **Indeterminate** — the probe could not reach a verdict (timeout / no-TTY interactive-login required). Bounded by `PROBE_TIMEOUT_SECS` (default 20s). |
-| `4` | Backend CLI **present but the round-trip failed** (unauthenticated / rejected) — the condition that surfaces at the HANDOFF reviewer review. |
+| `4` | A reviewer's CLI is **present but the round-trip failed** (unauthenticated / rejected) — the condition that surfaces at the HANDOFF run. |
 
-## Per-backend start-confirmation oracle
+## Start-confirmation oracle
 
 `scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's output>]`
-reads these signals and reports the first one it finds
-([`units/delivery.md`](units/delivery.md) > *Reviewer review*):
+reads these signals for an external run and reports the first one it finds
+([`units/delivery.md`](units/delivery.md) > *Reviewer review*): a session
+rollout under `~/.codex/sessions/` written since the launch whose prompt names
+`pull request #<N>`, or a running process whose prompt does; an advancing
+rollout `mtime` is the long-run health signal, and the review runs in the
+background to completion. The wrapper closes `codex exec` stdin (`< /dev/null`)
+and prints completion marker `[review] codex completed for PR #<N> (exit=…)`
+when the subprocess returns; a non-zero exit means the run failed or left no
+record.
 
-- `codex` — a session rollout under `~/.codex/sessions/` written since the launch whose prompt
-  names `pull request #<N>`, or a running process whose prompt does; an advancing rollout `mtime`
-  is the long-run health signal, and the review runs in the background to completion. The wrapper
-  closes `codex exec` stdin (`< /dev/null`) and prints completion marker
-  `[review] codex completed for PR #<N> (exit=…)` when the subprocess returns.
-- `claude` — the wrapper runs `claude -p` **synchronously**, so the running process whose prompt
-  names the pull request is the start signal, and the completion marker
-  `[review] claude completed for PR #<N> (exit=…)` the finish signal; a non-zero exit
-  means the review run itself failed.
+The built-in review is a spawn the harness tracks: its return value is its
+report, and no start check applies.
 
 ## Trade-offs
 
-- **Vendor independence.** The `claude` backend loses cross-vendor blind-spot
-  coverage; switching to `claude` is an explicit, disclosed opt-in.
-- **Account allowance.** The `claude` backend consumes the same account
-  allowance as the orchestrator, so a long cycle's terminal review may hit a
-  session limit. It uses `CLAUDE_CODE_OAUTH_TOKEN` (automation) or a logged-in
-  subscription; it must **not** inherit `ANTHROPIC_API_KEY` (the wrapper unsets
-  it).
+- **Two vendors, two inputs.** The built-in review reads the cycle's design
+  artifacts; the external reviewer reads only the pull request. The measurement
+  behind issue #411 found their findings largely disjoint, so the aggregation
+  keeps a finding only one of them raised.
+- **Account allowance.** The built-in review runs on the same account allowance
+  as the orchestrator, once per pull request and round.

@@ -141,42 +141,35 @@ written):
   stamp runs. When the
   installed manifest is unreadable the stamp removes nothing and says so.
 
-<!-- REVIEWER-BACKEND-DISCLOSURE -->
-- **Reviewer backend (disclose before confirming).** Read
-  `REVIEW_BACKEND` (configured backend, default `codex`), `REVIEW_CODEX_PRESENT`,
-  and `REVIEW_CLAUDE_PRESENT` from the Step-1 report. The install delivers the
-  target-owned scaffold `.claude/autoflow.local.json` with its **`codex`
-  default** (never overwritten on re-install). **When `REVIEW_CODEX_PRESENT=no`,
-  DISCLOSE** that the HANDOFF reviewer review will **fail-closed at PREFLIGHT**
-  (`scripts/preflight/check-review-backend.sh`) until either the `codex` CLI is
-  installed or the backend is switched to `claude` (requires the `claude` CLI +
-  subscription/OAuth; note the vendor-independence trade-off — `claude` loses
-  cross-vendor blind-spot coverage). Offer the backend choice at the single
-  Step-3 confirmation. **No silent downgrade:** never auto-write
-  `backend:claude`; only rewrite the scaffold to `claude` on the operator's
-  **explicit** selection. Declining a switch **leaves the scaffold at `codex`**
-  (it then fails closed on codex-CLI absence, never a silent switch). **When
-  `REVIEW_BACKEND` is neither `codex` nor `claude` (e.g. `invalid`), DISCLOSE**
-  that `.claude/autoflow.local.json` is present but **unparseable or has an empty
-  `.review.backend`** — it must be hand-fixed before HANDOFF review (the
-  consumers fail closed on it), not silently downgraded. **After** the selection is persisted, the
-  install runs an advisory on-demand `--probe` auth check (one real
-  authenticated round-trip against the configured backend); it narrates the
-  result but never aborts the install, and PREFLIGHT itself stays
-  presence-only. See
+<!-- REVIEWER-DISCLOSURE -->
+- **External reviewers (disclose before confirming).** Read
+  `REVIEW_REVIEWERS` (the external reviewers configured beside the built-in
+  Claude review: a comma list, or `none`) and `REVIEW_CODEX_PRESENT` from the
+  Step-1 report. The built-in Claude review runs on every pull request and
+  needs no CLI. The install delivers the target-owned scaffold
+  `.claude/autoflow.local.json` with `codex` as its external reviewer (never
+  overwritten on re-install). **When `codex` is configured and
+  `REVIEW_CODEX_PRESENT=no`, DISCLOSE** that HANDOFF will run the built-in
+  review without codex and record the omission on the aggregated review
+  comment until the `codex` CLI is installed or `codex` is dropped from
+  `.review.reviewers`. **When `REVIEW_REVIEWERS=invalid`, DISCLOSE** that
+  `.claude/autoflow.local.json` is present but unreadable or names a reviewer
+  the resolver rejects — among them the removed `.review.backend: "claude"` —
+  and must be hand-fixed (the consumers fail closed on it). The install never
+  writes the reviewer list. **After** the stamp, the install runs an advisory
+  on-demand `--probe` auth check against each configured external reviewer; it
+  narrates the result but never aborts the install. See
   [`docs/reviewer-backend.md`](../../../../docs/reviewer-backend.md).
-- **Reviewer model / effort (display-only).** Read `REVIEW_MODEL`
-  and `REVIEW_EFFORT` from the Step-1 report — the configured backend's
-  `.review.<backend>.model` / `.effort` pins (`inherit` = the key is absent and
-  the CLI's own default applies; `invalid` = present but empty / not a string).
-  Report them as information: the install **never writes** these keys, and an
-  operator who wants review-only pinning hand-edits the file. On `invalid`,
-  DISCLOSE that the live review and the probe will fail closed on that key
-  until it is fixed or removed. The Step-4 `--probe` applies the same resolver
-  (and the per-backend effort vocabulary) the live review uses, so a value the
-  review would reject is reported there. Supported values and precedence:
-  [`docs/reviewer-backend.md`](../../../../docs/reviewer-backend.md) > *Model
-  and effort*.
+- **codex model / effort (display-only).** Read `REVIEW_MODEL` and
+  `REVIEW_EFFORT` from the Step-1 report — `.review.codex.model` / `.effort`
+  (`default` = the resolver's codex model default applies; `inherit` = the CLI's
+  own effort applies; `invalid` = present but empty / not a string; `n/a` =
+  codex is not configured). Report them as information: the install **never
+  writes** these keys, and an operator who wants to pin them hand-edits the
+  file. On `invalid`, DISCLOSE that the live review and the probe will fail
+  closed on that key until it is fixed or removed. Supported values and
+  precedence: [`docs/reviewer-backend.md`](../../../../docs/reviewer-backend.md)
+  > *Model and effort*.
 
 ## Step 2: project information (a recommendation)
 
@@ -213,28 +206,14 @@ one does not — `REMOVED: <dest> (...)` for a `copy` whose content was still
 what AutoFlow shipped, `KEPT: <dest> (<reason>)` for a modified `copy` or a
 `scaffold` / `shim-stamp` / `json-merge` artifact, `ABSENT: <dest>` for a
 `copy` already gone — followed by a one-line count. Keep these lines for
-step e. A first stamp prints that there was nothing to reconcile; an
+step d. A first stamp prints that there was nothing to reconcile; an
 unreadable previous manifest prints a `[WARN]` and removes nothing.
 
-**b. Persist the reviewer-backend selection (only on an explicit switch).**
-<!-- REVIEWER-BACKEND-PERSIST -->
-The stamp (step a) shipped `.claude/autoflow.local.json` with its `codex`
-default. If — and only if — the operator **explicitly** chose `claude` at the
-Step-3 confirmation (the disclosed switch, `REVIEW_CODEX_PRESENT=no` path),
-record that choice now into `.claude/autoflow.local.json`; otherwise skip this
-sub-step and leave the `codex` default in place (no silent downgrade):
-
-```bash
-TARGET_ROOT="$TARGET_ROOT" BACKEND=claude sh "$S/set-review-backend.sh"
-```
-
-**c. Probe the configured reviewer backend's auth (advisory).**
-<!-- REVIEWER-BACKEND-PROBE -->
-Now that the selection is persisted (step b, or the retained `codex` default),
-run the shipped on-demand `--probe` against the just-persisted backend. This is
-one real authenticated round-trip over the identical channel the HANDOFF reviewer review
-uses. Runs for **both** the `codex` default and an explicit `claude`
-switch:
+**b. Probe the configured external reviewers' auth (advisory).**
+<!-- REVIEWER-PROBE -->
+Run the shipped on-demand `--probe`: one real authenticated round-trip per
+configured external reviewer, over the same channel the HANDOFF review uses.
+With no external reviewer configured it reports so and exits `0`:
 
 ```bash
 bash "$TARGET_ROOT/scripts/preflight/check-review-backend.sh" --probe
@@ -242,21 +221,25 @@ bash "$TARGET_ROOT/scripts/preflight/check-review-backend.sh" --probe
 
 **Advisory only — narrate the outcome, never abort the install** on a
 non-zero exit. Map the exit code:
-- `0` → "auth verified — the configured backend is authenticated and responsive."
-- `1` → "the configured backend's CLI is not installed — install it (see the
-  presence remedy in the drift-check output)."
+- `0` → "auth verified — each configured external reviewer is authenticated and
+  responsive (or none is configured)."
+- `1` → "a configured reviewer's CLI is not installed — HANDOFF runs the
+  built-in review without it until it is installed or dropped from
+  `.review.reviewers`."
+- `2` → "the review configuration is invalid — fix `.claude/autoflow.local.json`
+  as the message names."
 - `3` → "could not verify auth in this environment (timeout / no-TTY) — it will
-  surface at the HANDOFF reviewer review."
-- `4` → "the configured backend is present but the auth round-trip failed — you
-  will hit this at the HANDOFF reviewer review; fix credentials before your first cycle."
+  surface at the HANDOFF review."
+- `4` → "a configured reviewer is present but the auth round-trip failed — you
+  will hit this at the HANDOFF review; fix credentials before your first cycle."
 
-**d. Self-verify** by re-running the shipped drift detector:
+**c. Self-verify** by re-running the shipped drift detector:
 
 ```bash
 CLAUDE_PROJECT_DIR="$TARGET_ROOT" sh "$TARGET_ROOT/.claude/autoflow/drift-check.sh"
 ```
 
-**e. Report the drift-check result and guide the user to commit.** Report the
+**d. Report the drift-check result and guide the user to commit.** Report the
 `RESULT:` line and every `FAIL:` / `WARN:` line. Include the **D6** verdict
 explicitly (the `PASS: D6` / `FAIL: D6` / `SKIP: D6` lines): a `FAIL: D6`
 after a stamp is expected whenever the scaffold pre-dated this plugin version —

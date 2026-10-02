@@ -10,7 +10,7 @@
 #   - P1: gates match with the shared CMD_BOUNDARY prefix + word boundary,
 #         never a bare `^` (which `cd x && git push` would bypass).
 #   - P2: unconditional denies (gh pr merge / default-branch push /
-#         blocked-by-review label removal) run in Section 1, BEFORE the
+#         blocked-by-subrepo label removal) run in Section 1, BEFORE the
 #         activity check, so an inactive/absent state file cannot nullify them.
 #
 # PASS criteria (defined in CLAUDE.md):
@@ -27,10 +27,12 @@
 #                                     through scripts/issue/create-issue.sh, which
 #                                     re-runs the duplicate search from a draft
 #                                     (docs/issue-proposal.md)
-#   - Bash(remove blocked-by-review label) → DENIED unconditionally; matches the
+#   - Bash(remove blocked-by-subrepo label) → DENIED unconditionally; matches the
 #                                     label name across gh pr edit / gh issue edit
 #                                     --remove-label and gh api DELETE .../labels/…
-#                                     (gate-label clearing is the reviewer's job)
+#                                     (merge-order clearance is the operator's job;
+#                                     blocked-by-review follows the review
+#                                     aggregator's verdict and is not gated here)
 #   - Agent (any spawn)             → explicit `model` parameter required
 #                                     (state-independent — CLAUDE.md > Spawn Model)
 #   - Agent (role-declared spawn)   → gate by DECLARED role, never by prompt
@@ -465,18 +467,18 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     exit 2
   fi
 
-  # The orchestrator must never clear the `blocked-by-review` gate label — that
-  # would let the producer self-open its own gate. AutoFlow owns neither label:
-  # `blocked-by-review` is the independent Codex reviewer's step, run inside the
-  # isolated `codex exec` session (a subprocess this hook does not intercept),
-  # and `blocked-by-subrepo` is the operator's step at merge (the workflow no
-  # longer auto-removes it — not viable for N sub-repos). Match the LABEL NAME in
-  # a removal context so the deny (a) covers every natural surface that drops the
-  # label — `gh pr edit` / `gh issue edit --remove-label blocked-by-review` (a
-  # PR's labels are issue labels) and the `gh api … -X DELETE …/labels/
-  # blocked-by-review` REST form — while (b) NOT firing on unrelated label edits
-  # such as HANDOFF's `gh issue edit … --remove-label status:in-progress`,
-  # and (c) leaving other labels removable. Residual (accepted; shared by every
+  # AutoFlow never clears the `blocked-by-subrepo` merge-order label — that is
+  # the operator's step at merge (the workflow no longer auto-removes it — not
+  # viable for N sub-repos). `blocked-by-review` is not gated: it follows the
+  # verdict the HANDOFF review aggregator reaches over every review of the PR,
+  # and the aggregator sets it (ADR-0026). Match the LABEL NAME in a removal
+  # context so the deny (a) covers every natural surface that drops the label —
+  # `gh pr edit` / `gh issue edit --remove-label blocked-by-subrepo` (a PR's
+  # labels are issue labels) and the `gh api … -X DELETE …/labels/
+  # blocked-by-subrepo` REST form — while (b) NOT firing on unrelated label
+  # edits such as HANDOFF's `gh issue edit … --remove-label status:in-progress`
+  # or the aggregator's `--remove-label blocked-by-review`, and (c) leaving
+  # other labels removable. Residual (accepted; shared by every
   # Section-1 deny): a quoted label value or a `sh -c "…"`/backtick wrapper is
   # stripped by SCAN and slips — the threat model is the naive self-clear, and
   # the bare form is what callers write.
@@ -484,22 +486,22 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # segment scoping (one pattern has no co-occurrence to mis-scope).
   # (B) the `gh api … -X DELETE …/labels/<gate label>` REST form is an AND of
   # two patterns; require them to co-occur in ONE segment so unrelated
-  # sub-commands (…/labels/blocked-by-review GET ; curl -X DELETE …/other)
+  # sub-commands (…/labels/blocked-by-subrepo GET ; curl -X DELETE …/other)
   # no longer false-positive over the whole buffer (issue #13; P1 refinement).
   _label_deny=0
-  if printf '%s' "$SCAN" | grep -qE "[[:space:]]--remove-label[[:space:]=]+blocked-by-(review|subrepo)\b"; then
+  if printf '%s' "$SCAN" | grep -qE "[[:space:]]--remove-label[[:space:]=]+blocked-by-subrepo\b"; then
     _label_deny=1
   else
     while IFS= read -r _seg; do
-      if printf '%s' "$_seg" | grep -qE "/labels/blocked-by-(review|subrepo)\b" \
+      if printf '%s' "$_seg" | grep -qE "/labels/blocked-by-subrepo\b" \
          && printf '%s' "$_seg" | grep -qE "(-X[[:space:]]*|--method[[:space:]=]+)DELETE\b"; then
         _label_deny=1; break
       fi
     done <<< "$_SEGMENTS"
   fi
   if [ "$_label_deny" = 1 ]; then
-    echo "BLOCKED: AutoFlow does not clear the 'blocked-by-review' / 'blocked-by-subrepo' gate labels." >&2
-    echo "blocked-by-review is the Codex reviewer's step (.codex/review.md); blocked-by-subrepo is the operator's step at merge — AutoFlow owns neither." >&2
+    echo "BLOCKED: AutoFlow does not clear the 'blocked-by-subrepo' merge-order label." >&2
+    echo "blocked-by-subrepo is the operator's step at merge (docs/external-review-sequencing.md > Merge-order clearance)." >&2
     exit 2
   fi
 
@@ -739,6 +741,7 @@ role_of_type() {
   case "$_subtype" in
     Explore|Plan|claude-code-guide)              _role="research" ;;
     autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
+    autoflow-reviewer|*:autoflow-reviewer)       _role="analysis" ;;
     autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
     autoflow-advisor|*:autoflow-advisor)         _role="advisor" ;;
     *)

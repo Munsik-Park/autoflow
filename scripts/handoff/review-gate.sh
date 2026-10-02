@@ -5,10 +5,10 @@
 #
 # HANDOFF review triage — what is read once the findings file exists. For one
 # reviewed pull request it reads the two signals the triage branches on — the
-# verdict (`max_severity`, written to the PR's findings file by the triage
-# subagent) and the `blocked-by-review` label — names the case, and counts the
-# auto-resolution attempts on record. It changes nothing: the label, the state
-# file and the ledger are the orchestrator's to write.
+# verdict (`max_severity`, written to the PR's findings file by the review
+# aggregator) and the `blocked-by-review` label — names the case, and counts
+# the auto-resolution attempts on record. It changes nothing: the label is the
+# aggregator's to set, the state file and the ledger the orchestrator's.
 #
 # What it does not decide: whether a finding holds, its class, its route, or
 # whether a Low finding is worth fixing now (docs/units/delivery.md > Review
@@ -25,19 +25,23 @@
 #   findings: <n> (Medium+: <m>)
 #   attempts: <k> of 7
 #   backstop: needed — <why>     (a Medium+ verdict on a PR without the label)
-#   case: clean | low-only | resolve | cap | rerun-review
+#   case: clean | low-only | resolve | cap | relabel
 #
 # Exit codes:
 #   0   clean — no label, no finding
 #   10  resolve — a Medium+ verdict; route its findings (attempt <k+1>). With
 #       `backstop: needed`, the orchestrator attaches the label itself first
 #   11  cap — a Medium+ verdict with 7 attempts on record; pause for the operator
-#   12  rerun-review — the label is present on a verdict below Medium (or
-#       `None`): a label-clear failure, not a code finding
+#   12  relabel — the label is present on a verdict below Medium (or `None`):
+#       the aggregator's label removal did not land, not a code finding
 #   13  low-only — no label, findings below Medium
 #   2   the findings file is absent or does not keep its contract (no single
 #       readable `max_severity:` line, a `pr:` line naming another PR, or a
-#       Medium+ row without a `remedy_class`) — the triage subagent runs again
+#       Medium+ row without a `remedy_class`) — the aggregator runs again
+#
+# A row whose disposition cell reads `rejected` — a finding the aggregator
+# found does not hold — is a record, not a finding: it is counted in neither
+# the findings nor the Medium+ total.
 #   3   a `gh` read failed
 #   64  usage
 #
@@ -95,9 +99,12 @@ if [ "$(printf '%s' "$sev" | grep -c .)" != "1" ]; then
   exit 2
 fi
 
-# A finding row: `| <Severity> | <path>:<line> | <remedy_class> | <finding> |`.
+# A finding row: `| <Severity> | <path>:<line> | <remedy_class> | <finding> |
+# <source> | <disposition> |`; a `rejected` disposition drops the row.
 rows="$(awk -F'|' '
-  { s = $2; gsub(/^[[:space:]`*]+|[[:space:]`*]+$/, "", s) }
+  { s = $2; gsub(/^[[:space:]`*]+|[[:space:]`*]+$/, "", s)
+    d = $7; gsub(/^[[:space:]`*]+|[[:space:]`*]+$/, "", d) }
+  d == "rejected" { next }
   s ~ /^(Critical|High|Medium|Low|Low Confidence)$/ {
     c = $4; gsub(/^[[:space:]`]+|[[:space:]`]+$/, "", c)
     print s "\t" c }' "$FINDINGS")"
@@ -139,7 +146,7 @@ case "$sev" in
 esac
 
 if [ "$label" = "present" ]; then
-  echo "case: rerun-review"
+  echo "case: relabel"
   exit 12
 fi
 if [ "$total" -gt 0 ]; then

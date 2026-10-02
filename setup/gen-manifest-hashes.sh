@@ -137,25 +137,21 @@ build_rows() {
   emit_row "setup/thin-root-layer/settings-pin.json" \
            ".claude/settings.json" "root-layer" "json-merge" "file"
 
-  # Root-layer tier: reviewer-backend delivery (issue #979) — the HANDOFF
-  # reviewer-review wrapper, the PREFLIGHT fail-closed availability check, and the shared
-  # review-instruction body ship as source-path-preserved copies; AGENTS.md and
-  # the backend-selection scaffold ship as target-owned scaffolds (never
-  # overwritten). docs/reviewer-backend.md enters via the doc-closure BFS above.
+  # Root-layer tier: external-reviewer delivery (issues #979, #411) — the
+  # HANDOFF external-review wrapper, the PREFLIGHT availability report, and the
+  # shared review-instruction body ship as source-path-preserved copies;
+  # AGENTS.md and the reviewer-selection scaffold ship as target-owned
+  # scaffolds (never overwritten). docs/reviewer-backend.md enters via the doc-closure BFS above.
   # Since issue #229 the same scaffold also carries the `tests` declaration
   # site (`suite_plane`: the suite-plane opt-in, shipped `false`; no test
   # command — AutoFlow asks the target for none, issue #238) — a re-stamp never
   # adds it to an existing target; drift-check D7 names its absence as a HINT.
   emit_row "scripts/review/codex-review-pr.sh" \
            "scripts/review/codex-review-pr.sh" "root-layer" "copy" "file"
-  # Shared claude-isolation helper (issue #979 cycle 9 §3.2): sourced by BOTH
-  # codex-review-pr.sh and check-review-backend.sh --probe, so it MUST ship to
+  # Shared reviewer-config resolver (issues #184, #411): external reviewers +
+  # per-reviewer model/effort parsing, validation and flag mapping, sourced by
+  # BOTH codex-review-pr.sh and check-review-backend.sh, so it MUST ship to
   # targets alongside them (a missing sibling breaks the source line).
-  emit_row "scripts/review/lib/claude-isolation.sh" \
-           "scripts/review/lib/claude-isolation.sh" "root-layer" "copy" "file"
-  # Shared reviewer-config resolver (issue #184): backend + per-backend
-  # model/effort parsing, validation and flag mapping, sourced by BOTH
-  # codex-review-pr.sh and check-review-backend.sh — same sibling obligation.
   emit_row "scripts/review/lib/review-config.sh" \
            "scripts/review/lib/review-config.sh" "root-layer" "copy" "file"
   emit_row "scripts/preflight/check-review-backend.sh" \
@@ -278,7 +274,7 @@ build_rows() {
   # drift-check.sh (D2/D4/D5, and D6 which runs spawn-policy.sh — issue #185)
   # and spawn-policy.sh (`check`'s agent-definition
   # lookup on a thin-root target, which ships no .claude/agents), so it ships
-  # beside them — the same sibling-lib reasoning as claude-isolation.sh above.
+  # beside them — the same sibling-lib reasoning as review-config.sh above.
   emit_row "scripts/lib/plugin-root.sh" \
            "scripts/lib/plugin-root.sh" "root-layer" "copy" "file"
 

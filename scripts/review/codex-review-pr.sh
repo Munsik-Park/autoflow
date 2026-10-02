@@ -1,67 +1,49 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
-# Post a configured-reviewer Korean review comment to a pull request.
+# Run the codex external review of a pull request and keep it as a review record.
 #
-# The review protocol (Korean output, severity ranking, output format,
-# gate-label clearing on a clean review, comment posture otherwise) lives in
-# AGENTS.md
-# and .codex/review.md and is loaded automatically because Codex runs in the
-# repository working directory. This wrapper supplies the target PR number, the
-# optional sub-repo selector, and the fixed sandbox / approval flags. The
-# prompt's sentinel names the `blocked-by-review` label step so a "comment only"
-# reading cannot drop it, but the label is still cleared SOLELY inside this
-# isolated reviewer subprocess — the orchestrator (Claude / AutoFlow)
-# never removes it, and the gate hook denies any orchestrator attempt.
+# The review protocol (Korean output, severity ranking, output format) lives in
+# AGENTS.md and .codex/review.md and is loaded automatically because Codex runs
+# in the repository working directory. This wrapper supplies the target PR
+# number, the optional sub-repo selector, the record file, and the fixed
+# sandbox / approval flags. The review is written to the record file only: it
+# posts no PR comment and changes no label — the aggregation of every review of
+# the PR posts the one comment and sets `blocked-by-review`
+# (docs/units/delivery.md > Review aggregation).
 #
-# Reviewer backend (issue #979): the backend is read from
-# .claude/autoflow.local.json (`.review.backend`, default `codex`; absent =>
-# codex). `codex` runs `codex exec` in the repo working dir (unchanged). `claude`
-# runs `claude -p` in a NEUTRAL cwd AND with every CLAUDE-prefixed env var
-# scrubbed from the subprocess — both are required to isolate the reviewer as the
-# sole authorized label clearer: a nested Claude Code session otherwise attaches
-# the child to the parent session's project context (via inherited
-# CLAUDECODE / CLAUDE_CODE_*) and loads its .claude gate hooks despite the neutral
-# cwd (witnessed on PR #981). It also injects .codex/review.md via
-# --system-prompt-file, seals tools to `Bash(gh *)`, passes `--repo` on every gh
-# call, and unsets ANTHROPIC_API_KEY to force subscription/OAuth billing. See
-# docs/reviewer-backend.md.
+# codex runs only when `.claude/autoflow.local.json` names it as an external
+# reviewer (docs/reviewer-backend.md); the orchestrator launches this wrapper
+# once per pull request and round for it. Model and effort come from the shared
+# resolver (scripts/review/lib/review-config.sh).
 #
-# Per-PR review gate (Model A): every PR — the host PR AND each sub-repo PR —
-# is reviewed on its OWN diff, and its OWN `blocked-by-review` label is cleared
-# by its OWN review. Each review's target is its OWN repository's tree — a
-# submodule's contents belong to the submodule PR's review, never the host's
+# Per-PR review (Model A): every PR — the host PR AND each sub-repo PR — is
+# reviewed on its OWN diff, over its OWN repository's tree — a submodule's
+# contents belong to the submodule PR's review, never the host's
 # (.codex/review.md > Before Reviewing). Pass `--repo owner/name` to review a
-# sub-repo PR (the wrapper then tells Codex to pass `--repo` to every gh command,
-# so fetch / comment / label-clear all target that repo); omit `--repo` to review
-# the host PR (the current repository). See docs/external-review-sequencing.md.
+# sub-repo PR (the wrapper then tells Codex to pass `--repo` to every gh
+# command); omit `--repo` to review the host PR (the current repository).
 #
-# Posting account: inherited from the local `gh` authentication. It is NOT
-# hardcoded.
-#
-# Usage: scripts/review/codex-review-pr.sh --pr <number> [--repo <owner/name>] [--expected-head <branch>]
+# Usage: scripts/review/codex-review-pr.sh --pr <number> --out <record file>
+#                                          [--repo <owner/name>] [--expected-head <branch>]
 set -euo pipefail
 
-# Shared claude-backend isolation preamble (issue #979 cycle 9 §3.2): the
-# CLAUDE* env scrub + OAuth carve-out live in ONE place, sourced by both this
-# wrapper and check-review-backend.sh --probe, so the Round-7 drift class cannot
-# recur. Resolve relative to this script's own directory (cwd is neutralized
-# below for the claude call).
 _CRP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$_CRP_DIR/lib/claude-isolation.sh"
-# Shared reviewer-config resolver (issue #184): backend + per-backend model /
-# effort are read, validated and mapped onto CLI flags in ONE place, sourced by
-# this wrapper and by check-review-backend.sh --probe, so the probe and the live
-# review cannot drift on parser, defaults or validation.
 . "$_CRP_DIR/lib/review-config.sh"
 
+USAGE="Usage: $0 --pr <number> --out <record file> [--repo <owner/name>] [--expected-head <branch>]"
 PR=""
+OUT=""
 REPO=""
 EXPECTED_HEAD=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --pr)
       PR="${2:-}"
+      shift 2
+      ;;
+    --out)
+      OUT="${2:-}"
       shift 2
       ;;
     --repo)
@@ -73,52 +55,43 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -h|--help)
-      echo "Usage: $0 --pr <number> [--repo <owner/name>] [--expected-head <branch>]"
+      echo "$USAGE"
       exit 0
       ;;
     *)
       echo "unknown argument: $1" >&2
-      echo "Usage: $0 --pr <number> [--repo <owner/name>] [--expected-head <branch>]" >&2
+      echo "$USAGE" >&2
       exit 2
       ;;
   esac
 done
 
-if [[ -z "$PR" ]]; then
-  echo "Usage: $0 --pr <number> [--repo <owner/name>] [--expected-head <branch>]" >&2
+if [[ -z "$PR" || -z "$OUT" ]]; then
+  echo "$USAGE" >&2
   exit 2
 fi
 
 cd "$(git rev-parse --show-toplevel)"
 
-# Reviewer backend + model/effort resolution (issue #979, #184). Read from the
-# target-owned scaffold .claude/autoflow.local.json through the shared resolver:
-# backend defaults to codex when the file or key is absent; model / effort
-# default to INHERIT (no flag passed, the CLI's own user/default config
-# applies). A present-but-unreadable file (jq absent, malformed JSON), an empty
-# or unknown backend, an empty model/effort, or an effort outside the backend's
-# vocabulary fails closed here (exit 2) — a configured value is never silently
-# downgraded or dropped, and no reviewer launches on a rejected config.
-resolve_review_config codex-review
-BACKEND="$REVIEW_BACKEND"
+# The record lands inside the working directory codex's workspace-write sandbox
+# may write to.
+case "$OUT" in
+  /*|*..*)
+    echo "[codex-review] --out takes a path relative to the repository root, without '..': $OUT" >&2
+    exit 2
+    ;;
+esac
+mkdir -p "$(dirname "$OUT")"
+rm -f "$OUT"
+
+# Model / effort resolution: a present-but-unreadable file, an empty model or
+# effort, or an effort outside codex's vocabulary fails closed here (exit 2) —
+# no reviewer launches on a rejected config.
+resolve_reviewer_settings codex-review codex
 build_review_backend_args
 
-if [[ "$BACKEND" == "claude" ]]; then
-  # claude runs neutral-cwd → it cannot resolve the repo from `.`, so resolve the
-  # effective repo up front and pass --repo on EVERY gh call (host and sub-repo
-  # alike).
-  EFFECTIVE_REPO="$REPO"
-  if [[ -z "$EFFECTIVE_REPO" ]]; then
-    EFFECTIVE_REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)" || true
-  fi
-  if [[ -z "$EFFECTIVE_REPO" ]]; then
-    echo "[codex-review] could not resolve the repository for the claude backend (gh repo view failed)." >&2
-    exit 3
-  fi
-  repo_clause=" The PR is in the ${EFFECTIVE_REPO} repository: pass '--repo ${EFFECTIVE_REPO}' to EVERY gh command — diff, view, comment, and the label step defined in .codex/review.md."
-  gh_suffix=" --repo ${EFFECTIVE_REPO}"
-elif [[ -n "$REPO" ]]; then
-  repo_clause=" The PR is in the ${REPO} repository (a sub-repo, NOT this one): pass '--repo ${REPO}' to EVERY gh command — diff, view, comment, and the label step defined in .codex/review.md."
+if [[ -n "$REPO" ]]; then
+  repo_clause=" The PR is in the ${REPO} repository (a sub-repo, NOT this one): pass '--repo ${REPO}' to EVERY gh command."
   gh_suffix=" --repo ${REPO}"
 else
   repo_clause=""
@@ -146,13 +119,12 @@ if [[ -n "$EXPECTED_HEAD" && "$pr_head" != "$EXPECTED_HEAD" ]]; then
 fi
 
 # Build the review prompt as one value, ending with a fixed sentinel line. The
-# sentinel enumerates the two permitted review-state actions — the comment and
-# the .codex/review.md blocked-by-review label step — so a "comment only"
-# reading cannot drop the label step; the step's conditions stay in
-# .codex/review.md. (No backticks: in this double-quoted string they would be
-# command substitution.)
-SENTINEL="Limit review-state actions to posting the review comment and performing the .codex/review.md blocked-by-review label step; leave approve, request-changes, merge, and close to the reviewer."
-PROMPT="Review pull request #${PR}. Follow AGENTS.md and .codex/review.md.${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Post the review as a PR comment with 'gh pr comment ${PR}${gh_suffix}'. ${SENTINEL}"
+# sentinel names the one permitted action — writing the record file — so the
+# AGENTS.md / .codex/review.md defaults cannot add a comment or a label change.
+# (No backticks: in this double-quoted string they would be command
+# substitution.)
+SENTINEL="Limit your actions to writing that review file; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
+PROMPT="Review pull request #${PR}. Follow AGENTS.md and .codex/review.md.${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the .codex/review.md Output Format, to the file ${OUT} (relative to the repository root). ${SENTINEL}"
 
 # Start check 2 — whole prompt: the prompt keeps its sentinel tail, so an
 # edited or clipped prompt stays here instead of reaching codex partial.
@@ -162,61 +134,10 @@ if [[ "$PROMPT" != *"$SENTINEL" ]]; then
 fi
 
 # Start marker — lands in the captured output at once, so a watcher confirms
-# this wrapper reached the reviewer call.
-# It also names the effective EXPLICITLY configured model/effort (`inherit`
-# when the CLI's own default applies) — and nothing else from the environment,
-# so the log stays free of credentials (issue #184).
-echo "[codex-review] starting ${BACKEND} for PR #${PR}${REPO:+ (${REPO})} ($(review_config_summary)) at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# this wrapper reached the reviewer call. It names the effective model/effort
+# and nothing else from the environment, so the log stays free of credentials.
+echo "[codex-review] starting codex for PR #${PR}${REPO:+ (${REPO})} ($(review_config_summary)) at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-if [[ "$BACKEND" == "claude" ]]; then
-  # claude backend (issue #979, D3/D4/§5.2): run headless `claude -p`
-  # synchronously in a NEUTRAL cwd AND with the parent session's CLAUDE* env
-  # scrubbed, so the target's project .claude gate hooks are not loaded (the
-  # reviewer stays the sole label clearer). Neutral cwd alone is insufficient:
-  # a nested Claude Code session re-attaches the child to the parent project via
-  # inherited CLAUDECODE / CLAUDE_CODE_* env and loads the gate hook anyway
-  # (witnessed on PR #981). Inject the shared instruction body via
-  # --system-prompt-file (absolute path, since the cwd is neutral); seal tools to
-  # `Bash(gh *)` and block edits; force subscription/OAuth billing by unsetting
-  # ANTHROPIC_API_KEY.
-  INSTRUCTIONS="$(git rev-parse --show-toplevel)/.codex/review.md"
-  if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-    echo "[codex-review] WARNING: ANTHROPIC_API_KEY is set; unsetting it for the claude reviewer subprocess to force subscription/OAuth billing (avoids metered API charges)." >&2
-  fi
-  # Isolation triple (issue #979 §3.2): the neutral cwd + CLAUDE* env scrub +
-  # OAuth carve-out are established by the shared helper (single source of truth
-  # sourced above), which sets NEUTRAL_CWD and the CLAUDE_ISOLATION_UNSET
-  # `env -u …` array. Neutral cwd alone does NOT isolate the child: a nested
-  # `claude -p` inherits CLAUDECODE / CLAUDE_CODE_* and re-attaches to the parent
-  # project's gate hooks despite the neutral cwd (witnessed on PR #981). The
-  # third layer, `--setting-sources ""` (load no settings sources), is composed
-  # below: it excludes the user-scope plugin gate hook that loads in EVERY claude
-  # session regardless of cwd or env (also witnessed on PR #981). This wrapper
-  # appends its review-specific flags (--system-prompt-file, the `Bash(gh *)`
-  # grant) and the resolved model/effort flags (REVIEW_BACKEND_ARGS: --model /
-  # --effort, or nothing when inheriting — issue #184).
-  build_claude_isolation
-  if ( cd "$NEUTRAL_CWD" && env "${CLAUDE_ISOLATION_UNSET[@]}" claude -p "$PROMPT" \
-         --system-prompt-file "$INSTRUCTIONS" \
-         --setting-sources "" \
-         --allowedTools "Bash(gh *)" \
-         --disallowedTools "Edit,Write,MultiEdit" \
-         --output-format json \
-         ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} ); then
-    claude_rc=0
-  else
-    claude_rc=$?
-  fi
-  cleanup_claude_isolation
-  # Completion marker (D3): the claude oracle is this wrapper's synchronous
-  # return, not a ~/.codex/sessions rollout probe.
-  echo "[review] claude completed for PR #${PR} (exit=${claude_rc})"
-  exit "$claude_rc"
-fi
-
-# codex backend: REVIEW_BACKEND_ARGS carries `--model <m>` and
-# `-c model_reasoning_effort=<e>` when configured, or nothing — then codex
-# inherits ~/.codex/config.toml exactly as before issue #184.
 if codex exec \
      -s workspace-write \
      -c sandbox_workspace_write.network_access=true \
@@ -226,6 +147,12 @@ if codex exec \
   codex_rc=0
 else
   codex_rc=$?
+fi
+
+# The record is the review's output: a run that left no record failed.
+if [[ "$codex_rc" -eq 0 && ! -s "$OUT" ]]; then
+  echo "[codex-review] codex exited 0 but left no review record at ${OUT}." >&2
+  codex_rc=5
 fi
 
 echo "[review] codex completed for PR #${PR} (exit=${codex_rc})"

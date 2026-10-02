@@ -35,7 +35,7 @@ artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
 - **The spawn.** One `autoflow-unit-analysis` (`Agent`, anonymous, no `name`, the model
   `bash scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) at DIAGNOSE entry. The
   prompt states the goal, the cycle's `mode` and
-  the report's path, and names the inputs by path: the issue (new-issue) or the reviewer comment /
+  the report's path, and names the inputs by path: the issue (new-issue) or the review comment /
   thread PREFLIGHT identified (review-response), and the decision ledger
   (`.autoflow/issue-{N}-ledger.md`). In a review-response cycle it also names every artifact the
   previous cycle left (`.autoflow/issue-{N}-c{C}-*.md`) and, where HANDOFF's triage wrote one, the
@@ -61,7 +61,7 @@ The analysis is asked for four things:
 - for a bug or incident issue, the cause hypotheses, the lightweight verification of each, and a
   verdict per hypothesis.
 
-The request is the trigger target — the issue body in a new-issue cycle, the reviewer comment or
+The request is the trigger target — the issue body in a new-issue cycle, the review comment or
 thread PREFLIGHT identified in a review-response cycle — and the as-is is the dev branch's HEAD
 (`main` in a new-issue cycle, the change under review in a review-response cycle). The question is
 whether the as-is already satisfies the request.
@@ -87,7 +87,7 @@ The rules below are the ones other documents cite; everything else about the wor
   machine-addressable acceptance-criterion list; an absent or unparseable table is itself a finding
   downstream ([U3 Design](design.md) > *Report routing*;
   [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *AC-authority check*). **[MUST]** It is authored once per issue, in the `mode = new-issue` cycle;
-  a review-response cycle carries the previous cycle's table forward unchanged — a reviewer comment
+  a review-response cycle carries the previous cycle's table forward unchanged — a review comment
   never edits the list; only an `[ac-decision]` ledger entry does, the advisor's or the operator's
   override (`CLAUDE.md` > Decision Ledger).
 - **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,

@@ -330,14 +330,14 @@ install_into_target() {
   echo "  3. Optionally have the AI look at the repository and describe the"
   echo "       project's information where later work can use it (the stamp"
   echo "       writes no such file; what and where is the AI's to decide)."
-  echo "  4. Reviewer backend (HANDOFF reviewer review) defaults to codex in"
-  echo "       .claude/autoflow.local.json; switch to claude there if preferred"
-  echo "       (see docs/reviewer-backend.md). PREFLIGHT fail-closes if the"
-  echo "       configured backend's CLI is absent."
-  echo "  5. Optionally pin the reviewer's model/effort per backend there"
-  echo "       (.review.codex / .review.claude -> {model, effort}); absent keys"
-  echo "       inherit the CLI's own defaults. Verify with"
-  echo "       scripts/preflight/check-review-backend.sh --probe."
+  echo "  4. HANDOFF runs a built-in Claude review on every pull request, plus"
+  echo "       the external reviewers .claude/autoflow.local.json names"
+  echo "       (.review.reviewers; the scaffold ships codex — see"
+  echo "       docs/reviewer-backend.md). A configured reviewer whose CLI is"
+  echo "       absent is skipped and the omission recorded."
+  echo "  5. Optionally pin codex's model/effort there (.review.codex ->"
+  echo "       {model, effort}); an absent model takes the resolver's default."
+  echo "       Verify with scripts/preflight/check-review-backend.sh --probe."
 }
 
 # Dispatch: --target selects install mode; otherwise print usage and exit 1.

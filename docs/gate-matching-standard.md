@@ -117,10 +117,10 @@ whole `SCAN`. Reference: the default-branch push deny in
 `.claude/hooks/check-autoflow-gate.sh`.
 
 **Second consumer — the label-gate deny.** The
-`blocked-by-(review|subrepo)` gate-label deny has two forms: the
-`--remove-label blocked-by-(review|subrepo)` form is a **single pattern**
+`blocked-by-subrepo` gate-label deny has two forms: the
+`--remove-label blocked-by-subrepo` form is a **single pattern**
 (unaffected, matched over the whole `SCAN`), while the `gh api … -X DELETE
-…/labels/blocked-by-(review|subrepo)` REST form is an **AND** of the label
+…/labels/blocked-by-subrepo` REST form is an **AND** of the label
 path and the `-X DELETE` method. That REST form must co-occur in **one
 segment**. Both denies share the single `_SEGMENTS` split computed once from
 `SCAN`.

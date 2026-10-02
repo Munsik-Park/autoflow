@@ -206,22 +206,24 @@ If the clone itself is behind upstream, refresh it first
   automation context (CI agent, webhook container, developer clone).
   Clone with `git clone --recurse-submodules git@github.com:<org>/<repo>.git`.
 - Claude Code installed and configured.
-- Reviewer backend (the HANDOFF reviewer review): `codex` by default (the
-  OpenAI Codex CLI), or `claude` as an opt-in fallback (the Claude CLI +
-  subscription/OAuth). The choice lives in the target-owned scaffold
-  `.claude/autoflow.local.json` (`{"review":{"backend":"codex"}}`; absent ⇒
-  `codex`), delivered by `init.sh` and never overwritten on re-install.
-  Install (and any later backend switch) runs an advisory on-demand `--probe`
-  auth check (one real round-trip); **PREFLIGHT itself stays presence-only**.
-  PREFLIGHT is **fail-closed** on the configured backend: if its CLI is absent,
-  `scripts/preflight/check-review-backend.sh` stops the cycle before DIAGNOSE.
-  The same file may pin the reviewer's **model and effort per backend**
-  (`{"review":{"backend":"codex","codex":{"model":"…","effort":"high"},"claude":{"model":"…","effort":"high"}}}`);
-  an absent key inherits the CLI's own default, and an unsupported effort, an
-  empty value or malformed JSON fails closed before any reviewer launches. These
-  pins govern only the **isolated reviewer subprocess**, never the orchestrating
-  Claude session. See [`../docs/reviewer-backend.md`](../docs/reviewer-backend.md)
-  > *Model and effort*.
+- Reviewers (the HANDOFF review): a built-in Claude review runs on every pull
+  request and needs nothing installed. External reviewers run beside it when
+  the target-owned scaffold `.claude/autoflow.local.json` names them
+  (`{"review":{"reviewers":["codex"]}}` — `codex`, the OpenAI Codex CLI, is the
+  one supported; the earlier `{"review":{"backend":"codex"}}` reads the same;
+  absent ⇒ the built-in review alone). The scaffold ships `codex`, delivered by
+  `init.sh` and never overwritten on re-install. Install runs an advisory
+  on-demand `--probe` auth check (one real round-trip per external reviewer).
+  PREFLIGHT reports a configured reviewer whose CLI is absent without stopping
+  the cycle: HANDOFF then runs the built-in review without it and records the
+  omission. The same file may pin codex's **model and effort**
+  (`{"review":{"reviewers":["codex"],"codex":{"model":"…","effort":"high"}}}`);
+  an absent model takes the resolver's codex default, an absent effort the
+  CLI's own, and an unsupported effort, an empty value or malformed JSON fails
+  closed before the reviewer launches. These pins govern only the codex
+  subprocess, never the orchestrating Claude session. See
+  [`../docs/reviewer-backend.md`](../docs/reviewer-backend.md) > *Model and
+  effort*.
 - Target-declared local checks (PREFLIGHT): if this repository has a
   per-clone setup step of its own — a commit-hook installer, a generated config,
   a toolchain probe — declare it in the same scaffold under
