@@ -82,7 +82,7 @@ scaffold. Every key is optional:
 {
   "review": {
     "reviewers": ["codex"],
-    "codex": { "model": "sol-6-sol", "effort": "high" }
+    "codex": { "model": "gpt-6-sol", "effort": "high" }
   }
 }
 ```
@@ -104,7 +104,7 @@ its own.
 
 | Value | Order |
 |-------|-------|
-| model | `.review.<reviewer>.model` → the reviewer's default (`codex`: `sol-6-sol`) |
+| model | `.review.<reviewer>.model` → the reviewer's default (`codex`: `gpt-6-sol`) |
 | effort | `.review.<reviewer>.effort` → **inherit** |
 
 **Inherit means no flag.** When the effort key is absent (or JSON `null`) the
@@ -131,7 +131,7 @@ launches** — in both the wrapper and `check-review-backend.sh`):
 
 **Start marker.** The wrapper's marker names the reviewer and the effective
 model and effort — `[codex-review] starting codex for PR #<N>
-(model=sol-6-sol effort=high) at …`, or `effort=inherit` when none is pinned —
+(model=gpt-6-sol effort=high) at …`, or `effort=inherit` when none is pinned —
 and prints nothing else from the environment (no credentials, no unrelated
 variables). `--probe` prints the same summary as
 `[check-review-backend] --probe: <reviewer> (model=… effort=…)` before its

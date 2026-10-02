@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6aca6f58339e1a85b308528aa74bb6e7b66c2989dd21bb34e5c61961933b2b0c"
+      "sha256": "1fc6ccc860b0ba278281042d5ce6f32d513bc48522d85a1f0bc97ffdb0d2a581"
     },
     {
       "source": "docs/role-common-rules.md",
@@ -223,7 +223,7 @@
       "dest": "scripts/review/lib/review-config.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "8408d43e18dfd855c359aa4919d83cb7824bb87cf04759227209a3edb2253635"
+      "sha256": "6e2cc76abfc2ca383210d4c0aa3d6a603432e988a35d9ab59dce03df44443950"
     },
     {
       "source": "scripts/preflight/check-review-backend.sh",

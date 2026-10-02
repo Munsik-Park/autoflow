@@ -57,7 +57,7 @@ PREFLIGHT reports an absent CLI without stopping; an unreadable review configura
 
 **D6 — Every round, every PR.** Every round runs every reviewer on every pull request whose head
 advanced. Models: the built-in review `opus` (`spawn-policy.json` key `handoff-review`), the
-aggregator `sonnet` (key `handoff-review-triage`), codex `sol-6-sol` as the resolver's default when
+aggregator `sonnet` (key `handoff-review-triage`), codex `gpt-6-sol` as the resolver's default when
 the target pins none.
 
 ## Alternatives Considered

@@ -16,7 +16,7 @@
 # Config shape (target-owned scaffold, never overwritten; every key optional):
 #
 #   { "review": { "reviewers": ["codex"],
-#                 "codex": { "model": "sol-6-sol", "effort": "high" } } }
+#                 "codex": { "model": "gpt-6-sol", "effort": "high" } } }
 #
 # External reviewers:
 #   .review.reviewers  : an array of reviewer names — the external reviewers
@@ -28,7 +28,7 @@
 # Supported names: codex.
 #
 # Per reviewer, most specific first:
-#   model  : .review.<name>.model > the reviewer's default (codex: sol-6-sol)
+#   model  : .review.<name>.model > the reviewer's default (codex: gpt-6-sol)
 #   effort : .review.<name>.effort > inherit
 # "inherit" means NO flag is passed, so the CLI applies its own configuration.
 # The codex model default is the operator's choice (issue #411): a target whose
@@ -74,7 +74,7 @@
 REVIEW_CONFIG_DEFAULT_PATH=".claude/autoflow.local.json"
 REVIEW_SUPPORTED_REVIEWERS="codex"
 REVIEW_EFFORT_VOCAB_CODEX="none minimal low medium high xhigh max ultra persistent"
-REVIEW_DEFAULT_MODEL_CODEX="sol-6-sol"
+REVIEW_DEFAULT_MODEL_CODEX="gpt-6-sol"
 
 # Print the effort vocabulary for a reviewer (space-separated).
 review_effort_vocab() {
