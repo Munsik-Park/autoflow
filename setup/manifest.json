@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ddccf2e3530c5b07d919c59088d2fb473707545c0d2e5752dbe88e7130240f32"
+      "sha256": "914e11cfc13f12cd2ea1f5169a8d5e999390c88fea89447f951ecb7cfdc370e3"
     },
     {
       "source": "docs/INDEX.md",
@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "eb1c5504f4e5ecb3912103eb6d85ad1117fd79710a580719fa8cf2207646be4d"
+      "sha256": "6aca6f58339e1a85b308528aa74bb6e7b66c2989dd21bb34e5c61961933b2b0c"
     },
     {
       "source": "docs/role-common-rules.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "efeff4351bb848789c24ab1550a8f566e73a0bde20dcbb67338db9ef12cfe40d"
+      "sha256": "eb2c27a1553e0e615e65b1015ad1e4f742b9a6cca7fed88cf3014c2e38eb59c7"
     },
     {
       "source": "docs/units/design.md",
@@ -230,7 +230,7 @@
       "dest": "scripts/preflight/check-review-backend.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "3a621379fa197f37498b1a37ebdebaba4703b9b0317a62d06237aef3444d616d"
+      "sha256": "4fcf26b9ec18c9bc9b69528e8f2eb355a96451ae8075cf0c4b585af432d58c55"
     },
     {
       "source": "scripts/preflight/local-checks.sh",

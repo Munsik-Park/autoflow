@@ -145,8 +145,10 @@ effort follow the user's session settings. None of them reads another.
 ## Availability (PREFLIGHT, advisory)
 
 `scripts/preflight/check-review-backend.sh` resolves the `review` section
-through the shared resolver and probes each configured external reviewer's CLI
-**presence only** (`command -v`):
+through the shared resolver, prints the configured external reviewers as one
+`reviewers: <names|none>` line on stdout — the readout HANDOFF runs them from
+([`units/delivery.md`](units/delivery.md) > *Reviewer review*) — and probes each
+one's CLI **presence only** (`command -v`):
 
 | Exit | Meaning |
 |------|---------|

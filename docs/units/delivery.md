@@ -212,8 +212,9 @@ the PR and sets its `blocked-by-review` label; no reviewer does either
   and what it writes are its definition's (`.claude/agents/autoflow-reviewer.md`); the prompt adds no
   direction of its own.
 - **Each external reviewer** the target configures (`.claude/autoflow.local.json` >
-  `.review.reviewers`; [`reviewer-backend.md`](../reviewer-backend.md)) runs beside it — today
-  `codex`, launched in the background:
+  `.review.reviewers`; [`reviewer-backend.md`](../reviewer-backend.md)) runs beside it — the
+  `reviewers:` line `bash scripts/preflight/check-review-backend.sh` prints names them, read rather
+  than recalled. Today that is `codex`, launched in the background:
 
 ```
 bash scripts/review/codex-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>]

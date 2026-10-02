@@ -4,9 +4,10 @@
 # =============================================================================
 # PREFLIGHT external-reviewer availability report (issue #979, D5; #411)
 # =============================================================================
-# Reports whether each external reviewer named in .claude/autoflow.local.json
+# Prints the external reviewers named in .claude/autoflow.local.json
 # (`.review.reviewers`, or the earlier `.review.backend`; none when both are
-# absent) has its CLI on PATH. The built-in Claude review needs no CLI and is
+# absent) as one `reviewers: <names|none>` line on stdout — the readout HANDOFF
+# runs them from — and reports whether each one has its CLI on PATH. The built-in Claude review needs no CLI and is
 # not checked here.
 #
 #   exit 0   → every configured external reviewer's CLI is present, or none is
@@ -67,6 +68,8 @@ done
 # shellcheck source=../review/lib/review-config.sh
 . "$SCRIPT_DIR/../review/lib/review-config.sh"
 resolve_review_config check-review-backend
+# The readout HANDOFF reads for which external reviewers to run.
+echo "reviewers: ${REVIEW_REVIEWERS:-none}"
 
 # --------------------------------------------------------------------------
 # --probe helpers (issue #979 cycle 9). Only reached when PROBE=1 AND the CLI
