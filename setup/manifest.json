@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "914e11cfc13f12cd2ea1f5169a8d5e999390c88fea89447f951ecb7cfdc370e3"
+      "sha256": "7906743416c442fe201b67fcaa3f91ad351847c807603b3ad95d014037e2823f"
     },
     {
       "source": "docs/INDEX.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "eb2c27a1553e0e615e65b1015ad1e4f742b9a6cca7fed88cf3014c2e38eb59c7"
+      "sha256": "fb778d5f91d9f2a1c9b06e9aa909ba19e4e04ed7656381aad68ceb226ab267e5"
     },
     {
       "source": "docs/units/design.md",
@@ -286,7 +286,7 @@
       "dest": "scripts/handoff/review-gate.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "485021e2734a2213741aad9e1baa3844ab6da9046d64d7b0769f412544be961d"
+      "sha256": "611844c5246c47e8c594602f925893f3082bd54589b85c2a61b13261161354a1"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",

@@ -36,8 +36,10 @@
 #       the aggregator's label removal did not land, not a code finding
 #   13  low-only — no label, findings below Medium
 #   2   the findings file is absent or does not keep its contract (no single
-#       readable `max_severity:` line, a `pr:` line naming another PR, or a
-#       Medium+ row without a `remedy_class`) — the aggregator runs again
+#       readable `max_severity:` line, a `max_severity:` other than the highest
+#       level among the rows that hold, a `pr:` line naming another PR, or a
+#       Medium+ row that holds without a `remedy_class`) — the aggregator runs
+#       again
 #
 # A row whose disposition cell reads `rejected` — a finding the aggregator
 # found does not hold — is a record, not a finding: it is counted in neither
@@ -100,10 +102,13 @@ if [ "$(printf '%s' "$sev" | grep -c .)" != "1" ]; then
 fi
 
 # A finding row: `| <Severity> | <path>:<line> | <remedy_class> | <finding> |
-# <source> | <disposition> |`; a `rejected` disposition drops the row.
+# <source> | <disposition> |`; a `rejected` disposition drops the row. The
+# disposition is the row's LAST cell, so a `|` written inside the finding cell
+# (a quoted command, say) shifts no column this script reads.
 rows="$(awk -F'|' '
   { s = $2; gsub(/^[[:space:]`*]+|[[:space:]`*]+$/, "", s)
-    d = $7; gsub(/^[[:space:]`*]+|[[:space:]`*]+$/, "", d) }
+    d = ""; last = NF; if (NF > 1 && $NF ~ /^[[:space:]]*$/) last = NF - 1
+    if (last > 0) d = $last; gsub(/^[[:space:]`*]+|[[:space:]`*]+$/, "", d) }
   d == "rejected" { next }
   s ~ /^(Critical|High|Medium|Low|Low Confidence)$/ {
     c = $4; gsub(/^[[:space:]`]+|[[:space:]`]+$/, "", c)
@@ -111,6 +116,25 @@ rows="$(awk -F'|' '
 total="$(printf '%s' "$rows" | grep -c . || true)"
 blocking="$(printf '%s\n' "$rows" | grep -c -E '^(Critical|High|Medium)	' || true)"
 unclassed="$(printf '%s\n' "$rows" | grep -E '^(Critical|High|Medium)	' | grep -v -c -E '	(doc|test|impl|design|operator)$' || true)"
+
+# The verdict line must name the highest level among the rows that hold — a
+# `max_severity` a rejected row alone supports would route a finding that is
+# not there.
+sev_rank() {
+  case "$1" in
+    Critical) echo 5 ;; High) echo 4 ;; Medium) echo 3 ;;
+    Low) echo 2 ;; "Low Confidence") echo 1 ;; *) echo 0 ;;
+  esac
+}
+top=None
+while IFS=$'\t' read -r rs _; do
+  [ -n "$rs" ] || continue
+  [ "$(sev_rank "$rs")" -gt "$(sev_rank "$top")" ] && top="$rs"
+done <<< "$rows"
+if [ "$top" != "$sev" ]; then
+  echo "findings-file defect: max_severity: $sev, but the highest row that holds is $top"
+  exit 2
+fi
 echo "max_severity: $sev"
 
 labels="$(gh pr view "$PR" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --json labels -q '.labels[].name' 2>/dev/null)" || { echo "[$TAG] cannot read the labels of $REPO#$PR" >&2; exit 3; }

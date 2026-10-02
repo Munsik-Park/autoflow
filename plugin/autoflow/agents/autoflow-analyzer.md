@@ -14,7 +14,7 @@ Hard rules:
   attaches it, and none removes it. A finding you reject is recorded with its
   grounds and counts toward no verdict (`docs/units/delivery.md` > *Review
   aggregation*).
-- **[MUST]** In the same variant, tag **every** `Medium`+ finding with a
+- **[MUST]** In the same variant, tag **every** `Medium`+ finding that holds with a
   `remedy_class` — `doc` / `test` / `impl` / `design` / `operator` — and write it in
   that finding's row of the reviewed PR's findings file (the per-PR file and its
   grammar are `docs/units/delivery.md` > *Review aggregation*).

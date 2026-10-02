@@ -136,7 +136,7 @@ U4 Build and verify    BUILD           — one `autoflow-unit-build` spawn imple
 U5 Completion eval.    GATE:QUALITY    — Evaluation AI (10 items × 10 points); the gate is the unit
 U6 Delivery            DELIVER         — the orchestrator's own `git push`, a command the hook gates (a changed sub-repo's branch too)
                        INTEGRATE       — the change shown working above its own tests: the system build, health check and functional test, or the project's integration suite
-                       HANDOFF         — push and PR creation by the orchestrator's own commands → CI green → the reviews (built-in + configured external) aggregated into one verdict → review-triage (auto-resolve Medium+ / judge Low) → state inactive once review is clean; scripts read and report (CI, reviewer start, triage case), the orchestrator makes every change; external review merges out of band
+                       HANDOFF         — push and PR creation by the orchestrator's own commands → CI green → the reviews (built-in + configured external) aggregated into one verdict → review-triage (auto-resolve Medium+ / judge Low) → state inactive once review is clean; scripts read and report (CI, reviewer start, triage case), the orchestrator makes every change but the review comment and `blocked-by-review` label, which the aggregator sets; external review merges out of band
 ```
 
 ### Flow Control
