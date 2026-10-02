@@ -76,7 +76,7 @@ What a pull request of a cycle usually carries — offered as what to weigh, not
   disposition and one-line reason from its verification-design row; the run record of each
   cycle-layer `automated` row and the observation record of each AI-executed `manual` row, from the
   build report; and each test file the cycle added to the target's tree, with its reason and the CI
-  job that ran it (*CI* > *Added test files*). Form:
+  job that ran it, or that none did and its disposition (*CI* > *Added test files*). Form:
   [`pr-body-guide.md`](../pr-body-guide.md) > *Verification dispositions*;
 - the known gaps ([`pr-body-guide.md`](../pr-body-guide.md) > *한계와 known gaps*): each directly
   related problem the cycle separated, with its separation reason
@@ -168,24 +168,14 @@ Cautions:
   `CONFLICTING` PR may receive no check at all; that is exit `10`, not a missed webhook.
 - Exits `10` and `14` carry the reserved `HANDOFF-INTERNAL-RETRY` token on stderr.
 
-**Added test files.** On exit `0`, for the test files this cycle added to the target's tree (the
-build report's `## Test files kept`):
-
-```
-bash scripts/handoff/ci-test-file-jobs.sh --pr <N> [--repo <owner/name>] <file>...
-```
-
-It searches each GitHub Actions job log of the PR head for each path and prints the job that ran
-it, or `none`. The criterion is execution visible in a log, not registration in a workflow.
-
-| Exit | Meaning | What follows |
-|---|---|---|
-| `0` | every file appears in a job's log | the job is recorded beside the file in the PR body's `## Verification dispositions` |
-| `1` | a file appears in no job's log | the orchestrator's judgment: wire the file into the target's CI — committed and pushed as an internal retry, then *CI* again — or list it for the reviewer as not run by CI |
-| `3` | the head has no GitHub Actions job | `no CI; local run only` is recorded beside each file |
-| `2` | a `gh` read failed | run again |
-
-A cycle that added no test file skips this call.
+**Added test files.** On exit `0`, each test file this cycle added to the target's tree (the build
+report's `## Test files kept`) is confirmed to have actually run in the PR head's CI. The criterion
+is execution visible in a job's log: a workflow that only registers the file, or a job that only
+prints its path, did not run it, and a log that could not be read shows neither. Beside each file the
+PR body's `## Verification dispositions` records the job that ran it, or that no job ran it and what
+was done — the file wired into the target's CI and pushed again (internal retry, then *CI* again), or
+listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI. How it
+is confirmed is the orchestrator's judgment. A cycle that added no test file has nothing to confirm.
 
 ### CI-failure re-entry
 

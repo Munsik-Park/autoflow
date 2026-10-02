@@ -357,7 +357,6 @@ if [ "$DRIVE_PASS" -eq 1 ]; then
   NOT_EXEC=""
   for _xdest in \
     "scripts/preflight/cycle-status.sh" \
-    "scripts/handoff/ci-test-file-jobs.sh" \
     "scripts/handoff/review-gate.sh" \
     "scripts/review/review-start-check.sh" \
     "scripts/cleanup/cleanup-issue.sh"

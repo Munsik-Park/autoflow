@@ -76,7 +76,7 @@
       "dest": ".claude/autoflow/docs/pr-body-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "a6bada013952431a34b3deaf5612349abf885304646527bd531582dc52755566"
+      "sha256": "e4f68e89da819ec6d18e7548eaf882b973a1a65ee89b9970e732136269dc46cf"
     },
     {
       "source": "docs/repo-boundary-rules.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/units/build.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "62c47275466ca07b4504dd85b1fb2c76270362e748b250385126e9cbaed1ae9c"
+      "sha256": "c97b08d6c5fd35e57672845f4b3b52824789810905db0d5b0cd3a59431e4c9e2"
     },
     {
       "source": "docs/units/completion-evaluation.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "dedac6ce1ff8ca609de8b17f41972ffbf40fbbb30cea520fe325f3a189cdd764"
+      "sha256": "2d325f32c95e8dc5272b5c4ebda1aa4eaa2b58aaedaee35c90f54c33d297d6a1"
     },
     {
       "source": "docs/units/design.md",
@@ -280,13 +280,6 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "91df515d8688ef8ef583392aff60a7f8e4b27448764c62ec5ea07a362fe9f59f"
-    },
-    {
-      "source": "scripts/handoff/ci-test-file-jobs.sh",
-      "dest": "scripts/handoff/ci-test-file-jobs.sh",
-      "tier": "root-layer",
-      "kind": "copy",
-      "sha256": "e87668335effc1e79aa4572e0539aa35f877fb5fe7bf012d6fed046c203af31a"
     },
     {
       "source": "scripts/review/review-start-check.sh",
