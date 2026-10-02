@@ -153,14 +153,14 @@
       "dest": ".claude/autoflow/docs/units/completion-evaluation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "dc372180da6bcebb49cf69e0a18de7d5d17fae3467f268ccc023a927841064c1"
+      "sha256": "5ecd67779f06fb353e24b497ff896c95c723a3989583147fab6d7a6d951f32b3"
     },
     {
       "source": "docs/units/delivery.md",
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "695cdc626661137f55f2aa24da7101b490df52779f7c5abcaf5b5e5eafafe925"
+      "sha256": "dedac6ce1ff8ca609de8b17f41972ffbf40fbbb30cea520fe325f3a189cdd764"
     },
     {
       "source": "docs/units/design.md",

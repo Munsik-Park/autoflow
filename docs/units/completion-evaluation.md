@@ -207,7 +207,7 @@ No separate disposition system exists for gate recommendations.
 | Classification: the reviewer's severity level (`.codex/review.md` > Severity) | the evaluator's, per item, on the same levels |
 | `remedy_class` on every `Medium`+ finding, by the ingesting subagent — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
 | Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
-| Pause criteria (a)–(d) | the same four, read for a gate (below) |
+| Pause criteria (a)–(c) | the same three, read for a gate (below) |
 | `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to BUILD (below) |
 | Verification of the fix: the reviewer re-review (*Reviewer review*) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *Re-entry re-score*, > AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
 | Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
@@ -256,9 +256,9 @@ No separate disposition system exists for gate recommendations.
   acceptance-criterion change — recorded as the advisor's `[ac-decision]` entry
   ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the cycle*);
   (b) the fix direction is ambiguous, or the orchestrator judges a directly related recommendation
-  undesirable to fix in this cycle (question 2) and would separate it; (c) the item is
-  `Low Confidence`; (d) the re-score dispositions the previous attempt's finding `remains` after its
-  fix (`rescore.prior_findings`) — the same complaint answered twice. The advisor's `A` entry
+  undesirable to fix in this cycle (question 2) and would separate it; (c) the re-score
+  dispositions the previous attempt's finding `remains` after its fix (`rescore.prior_findings`)
+  — the same complaint answered twice. The advisor's `A` entry
   selects re-entry; the operator may override it at the retry stage.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
   gate's verdict entry: fix now, or defer — to the PR body's known-gaps line
