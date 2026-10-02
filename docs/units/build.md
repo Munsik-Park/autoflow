@@ -75,7 +75,7 @@ These are the rules other documents cite; everything else about the work is the 
   goes into the target's tree only as the exception: in this repository a `standing` row
   (`automated / standing: <token>`); on a target, a file the unit judges the target should keep,
   listed under `## Test files kept` with its reason and the CI job expected to run it — HANDOFF
-  carries that list into the PR body and matches each file against the CI job logs
+  carries that list into the PR body with the CI job that actually ran each file
   ([U6 Delivery](delivery.md) > *CI* > *Added test files*). Such a file
   is wired into the target's CI discovery in the same commit.
 - **Running tests.** Locally and once, the tests the change requires, the way the target runs them

@@ -187,14 +187,12 @@ build_rows() {
   # Cleanup) instruct a consumer to run.
   # Source-path-preserved copies (identity dest), same shape as the reviewer-
   # backend script rows above. What HANDOFF reads by script (ADR-0025 D8): the
-  # CI confirmation, the added-test-file match against the CI job logs, the
-  # reviewer run's start check, and the triage case with its attempt count.
+  # CI confirmation, the reviewer run's start check, and the triage case with
+  # its attempt count.
   # They read and report: none pushes, opens a pull request, edits a label or
   # writes the state file — those are the orchestrator's own commands.
   emit_row "scripts/handoff/confirm-ci-green.sh" \
            "scripts/handoff/confirm-ci-green.sh" "root-layer" "copy" "file"
-  emit_row "scripts/handoff/ci-test-file-jobs.sh" \
-           "scripts/handoff/ci-test-file-jobs.sh" "root-layer" "copy" "file"
   emit_row "scripts/review/review-start-check.sh" \
            "scripts/review/review-start-check.sh" "root-layer" "copy" "file"
   emit_row "scripts/handoff/review-gate.sh" \
