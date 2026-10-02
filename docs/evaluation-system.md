@@ -322,8 +322,9 @@ item is judged by; with none declared, the criteria below are the whole of it.
 }
 ```
 
-The `scores` object is what the gate hook reads. Each item is either a number
-(`8`) or an object (`{"score": 8, "reason": "..."}`). The hook accepts both.
+`scores` holds one entry per rubric item of the evaluated gate, keyed by the item's
+name. Each value is either a number (`8`) or an object (`{"score": 8, "reason": "..."}`),
+the score on the 10-point scale.
 
 `fail_hypothesis` records the pre-scoring consider-the-opposite search required by
 [`role-contracts.md`](role-contracts.md) > Evaluation AI > Pre-scoring FAIL

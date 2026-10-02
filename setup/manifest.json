@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "32e48dfc5b45c90e773d128dbae73762e7eb143fcc21cb44ab56964b9e400d75"
+      "sha256": "9e6b556fcc9b86fa27fe08c01ff20dfc7242542ca8c9be21a869ccef6f832ecc"
     },
     {
       "source": "docs/INDEX.md",
@@ -48,7 +48,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f638e1ed65aefed0e7d51ed3987a6cc883f59040b7a818efe3611429f2bc0177"
+      "sha256": "76b683b907b458d0a7a3b2f2903cb688976d7caa1d3252d623aea1986e75f335"
     },
     {
       "source": "docs/external-review-sequencing.md",
