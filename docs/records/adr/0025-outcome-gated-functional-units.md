@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392)
+Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392.
 
 ## Context
 
