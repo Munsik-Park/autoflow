@@ -230,12 +230,9 @@ The wrapper stops when the PR it is given is not that OPEN PR on that head branc
 over the PR with `.codex/review.md` (its model and effort per *Model and effort* there); codex
 writes its review to the record and nothing else.
 
-Each review lands in a **review record**. Everything a review leaves for an issue — the records, the
-aggregated comment bodies and the findings files of all its pull requests — is kept in the issue's
-**review store** `.autoflow/issue-{N}-review/`; a record is `raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md`
-there — `<reviewer>` the reviewer's name (`claude` for the built-in review, `codex`), `<k>` the PR's
-review round from `1`, counted on across cycles. The store keeps its name across cycles and is
-archived with the issue's other files ([U1 Preparation](preparation.md) > *What is asked*).
+Each review lands in a **review record**,
+`.autoflow/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md` — `<reviewer>` the
+reviewer's name (`claude` for the built-in review, `codex`), `<k>` the PR's review round from `1`.
 
 `review-start-check.sh` confirms an external run began with a signal scoped to its own PR — a
 reviewer process or a codex session rollout whose prompt names that pull request, or the wrapper's
@@ -282,14 +279,14 @@ it leaves behind is fixed:
 
 - **One PR comment**, in Korean, per round: each finding once, with the reviewers that raised it;
   a finding only one reviewer raised kept like any other; each rejected finding listed apart with the
-  grounds it does not hold; a reviewer unavailable for the round named. Its body is kept in the
-  review store as `comment-<owner>.<name>-<pr>-r<k>.md`.
+  grounds it does not hold; a reviewer unavailable for the round named. Its body is kept as
+  `.autoflow/issue-{N}-local/review/comment-<owner>.<name>-<pr>-r<k>.md`.
 - **The findings file** (below).
 - **`blocked-by-review` taken off when the round is clean** — no `Medium`+ finding holds.
 
 It returns `{max_severity, findings}`.
 
-- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `findings-<owner>.<name>-<pr>.md` in the review store for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
+- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `.autoflow/issue-{N}-local/review/findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
 - **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`.codex/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` and `blocked-by-review` label rest on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold. What keeps a host PR from merging ahead of its sub-repo PR is `blocked-by-subrepo`, not the host PR's review label ([`external-review-sequencing.md`](../external-review-sequencing.md) > *Review gate and merge-order gate*).
 - **[MUST] `remedy_class` per Medium+ finding.** The aggregator tags **every** `Medium`+ finding that holds with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at [U5 Completion evaluation](completion-evaluation.md) > *FAIL routing*) and writes it in that finding's row. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the design settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess.
 

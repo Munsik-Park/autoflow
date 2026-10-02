@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "db23b89eb5edfa55d8db81634236d756bb57fea9da98a3a34a32d9382589be93"
+      "sha256": "eaf36422eddf2feeca86d1d80f3ffad8b749b4c6e5edad478179ac81754e3812"
     },
     {
       "source": "docs/role-common-rules.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d87d3396637f35ba7717715b392f483e584d8285ebb276676d40f4ae6fc036a4"
+      "sha256": "80984e2a9c19ac999064218ff9f21bfd36b24a3c1077034b4d7b9a7dc2551985"
     },
     {
       "source": "docs/units/design.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/units/preparation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "96750c4dc8965e1af3bfbd708b4f9ead2db10cd6e1f11573f35389bd64d6ab06"
+      "sha256": "4093b55e5a3d0c8a9d2fbd74ba9dd945ddac5700772d5f2976880c0a4be71880"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -286,14 +286,14 @@
       "dest": "scripts/handoff/review-gate.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "9ad575a022d25fbaac3eb1f5088ad40924077d165566c1a92093ba5199c34420"
+      "sha256": "56a6194cf555c7ac40b938fc52524733ca7d7a86e6a6a2ecfa8b05caa99b7bea"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",
       "dest": "scripts/cleanup/cleanup-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "29dd225e8be96e79a2ce6f4069d1794a8ed35a98a032f14c6a035e89088fcf6d"
+      "sha256": "58c0458eb0bc68b3fc53c8662593b6943da25a37ecc1c57c6a3a68a21fc0ff1c"
     },
     {
       "source": "scripts/ledger/ledger-entry-id.sh",
@@ -370,7 +370,7 @@
       "dest": "scripts/test/check-cycle-layer-index.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "4c40e52a0842866df67fddcace022656af4841a153810fc151480668802c0391"
+      "sha256": "124f087af0c0c9347200f987c1ef23d4221ab5970d8e323ccd1af349d1b6744f"
     },
     {
       "source": "scripts/issue/create-issue.sh",

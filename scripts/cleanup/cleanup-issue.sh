@@ -8,8 +8,7 @@
 # JSON, decision ledger, design docs, phase/eval reports) and its cycle-layer
 # store `.autoflow/issue-<N>-local/` (the cycle's uncommitted `automated` /
 # `delivery-check` / `manual` assets — ADR-0024 D2; the directory moves with its
-# name preserved) and its review store `.autoflow/issue-<N>-review/` (the
-# HANDOFF review records, comment bodies and findings files) out of
+# name preserved) out of
 # the repo tree into an external, repo-identity-keyed store
 # `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/<repo-key>/issue-<N>-<date>/`.
 # It DELETES exactly one path, the store's reserved top-level entry
@@ -35,8 +34,8 @@
 # never a digit. Matching `\( -name "issue-${N}.*" -o -name "issue-${N}-*" \)`
 # (NOT a bare `issue-${N}*` glob) archives only issue <N> and never a
 # prefix-collision sibling — `12` must not match `123`/`120` (review finding).
-# The store directories are matched by their exact names `issue-${N}-local` and
-# `issue-${N}-review`, so `issue-2` never takes `issue-22-local` (issue #229 AC6).
+# The store directory is matched by its exact name `issue-${N}-local`, so
+# `issue-2` never takes `issue-22-local` (issue #229 AC6).
 # The digits-only guard on N additionally blocks globs / path traversal / slashes.
 #
 # REPO-KEY: `--print-repo-key [<url>|--no-origin]` prints the derived archive
@@ -257,15 +256,9 @@ for N in "$@"; do
   # store would outlive the cycle.
   local_store=""
   [ -d "$AUTOFLOW_DIR/issue-${N}-local" ] && local_store="$AUTOFLOW_DIR/issue-${N}-local"
-  # The REVIEW STORE `.autoflow/issue-<N>-review/` — the HANDOFF review records,
-  # aggregated comment bodies and findings files of the issue's pull requests
-  # (docs/units/delivery.md > Reviewer review). Matched and moved like the
-  # cycle-layer store, by its exact name.
-  review_store=""
-  [ -d "$AUTOFLOW_DIR/issue-${N}-review" ] && review_store="$AUTOFLOW_DIR/issue-${N}-review"
 
-  if [ -z "$matches" ] && [ -z "$fixtures" ] && [ -z "$local_store" ] && [ -z "$review_store" ]; then
-    echo "issue #${N}: no .autoflow/issue-${N}.* or issue-${N}-* files and no issue-${N}-local/ or issue-${N}-review/ store — nothing to archive"
+  if [ -z "$matches" ] && [ -z "$fixtures" ] && [ -z "$local_store" ]; then
+    echo "issue #${N}: no .autoflow/issue-${N}.* or issue-${N}-* files and no issue-${N}-local/ store — nothing to archive"
     continue
   fi
   # `grep -c` exits 1 on zero matches, which `set -e` would turn into an abort
@@ -337,16 +330,6 @@ for N in "$@"; do
       store_files="?"
     fi
     store_note=" + issue-${N}-local/ (${store_files} file(s))"
-  fi
-  if [ -n "$review_store" ]; then
-    mv "$review_store" "$dest/issue-${N}-review"
-    if store_list="$(find "$dest/issue-${N}-review" -type f 2>/dev/null)"; then
-      store_files="$(printf '%s\n' "$store_list" | grep -c . || true)"
-    else
-      echo "issue #${N}: warning — could not enumerate ${dest}/issue-${N}-review after the move" >&2
-      store_files="?"
-    fi
-    store_note="${store_note} + issue-${N}-review/ (${store_files} file(s))"
   fi
   echo "issue #${N}: ${reserved_note}archived ${count} file(s)${store_note} → ${dest}"
 done

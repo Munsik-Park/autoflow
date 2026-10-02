@@ -775,9 +775,9 @@ def outcome(adir, issue):
     o['gate_plan_evals'] = count(pre + r'gate-plan(?:-\d+)?\.md')
     o['audit_evals'] = count(pre + r'audit(?:-\d+)?\.md')
     o['gate_quality_evals'] = count(pre + r'gate-quality(?:-\d+)?\.md')
-    # A round leaves one aggregated comment body: in the review store `issue-N-review/` since issue
+    # A round leaves one aggregated comment body: in `issue-N-local/review/` since issue
     # #411, as a top-level `review-comment-*` file before it.
-    rstore = os.path.join(adir, 'issue-%s-review' % issue)
+    rstore = os.path.join(adir, 'issue-%s-local' % issue, 'review')
     stored = sum(1 for n in os.listdir(rstore) if re.fullmatch(r'comment-.*\.md', n)) if os.path.isdir(rstore) else 0
     o['reviewer_rounds'] = ((count(pre + r'review-comment-.*\.md') or 0) + stored) or None
     # One transcript per cycle's ARCHITECT entry (a later cycle's is preserved as issue-N-cC-*): each

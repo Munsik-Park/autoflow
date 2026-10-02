@@ -25,8 +25,8 @@ runtime.
 
 ```
 Contract: reviewer
-  Output : one review record per reviewer, PR and round, in the issue's review
-           store — .autoflow/issue-{N}-review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
+  Output : one review record per reviewer, PR and round —
+           .autoflow/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
            in the .codex/review.md Output Format, in Korean.
   A reviewer posts no PR comment and changes no label.
 

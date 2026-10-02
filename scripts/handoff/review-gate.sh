@@ -74,7 +74,7 @@ cd "$ROOT" || exit 64
 if [ -z "$REPO" ]; then
   REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)" || { echo "[$TAG] cannot resolve the repository (gh repo view)" >&2; exit 3; }
 fi
-[ -n "$FINDINGS" ] || FINDINGS=".autoflow/issue-$ISSUE-review/findings-${REPO%%/*}.${REPO#*/}-$PR.md"
+[ -n "$FINDINGS" ] || FINDINGS=".autoflow/issue-$ISSUE-local/review/findings-${REPO%%/*}.${REPO#*/}-$PR.md"
 [ -n "$LEDGER" ] || LEDGER=".autoflow/issue-$ISSUE-ledger.md"
 
 echo "pr: $REPO#$PR"
