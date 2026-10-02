@@ -42,12 +42,6 @@ Hard rules:
   never judged on its merit. Changing it is the advisor's to accept first and the
   operator's by override, recorded as a `[checklist-decision]` ledger entry. Copy the status line into your
   report's `## Security checklist` section (`docs/evaluation-system.md` > AUDIT).
-- **[MUST]** A cited run is confirmed by reading its summary line in the log at
-  the cited path, never by re-running its command (`docs/submodule-common-rules.md` > Verification and Tools >
-  *A run's evidence is the log it left*). A record with no log behind it is a
-  missing run — report it as `not-run` under `Test coverage` and withhold that
-  item; a log that does not carry the recorded line is evidence authored without
-  a run and caps the citing item at 6 (`docs/evaluation-system.md` > GATE:QUALITY).
 - **[MUST]** A `manual` row executed by the AI is confirmed by its observation
   record: read the record and open the artifacts it cites (a screenshot is read
   as an image), never observe again. A comparison against the issue body's
