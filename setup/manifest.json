@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2d325f32c95e8dc5272b5c4ebda1aa4eaa2b58aaedaee35c90f54c33d297d6a1"
+      "sha256": "8968567a0323c33b4072e097e6442f16fbe6bff8fd9e2eaed80b6f1b65ecb26c"
     },
     {
       "source": "docs/units/design.md",

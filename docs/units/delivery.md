@@ -12,8 +12,9 @@ is the orchestrator's own work ([`role-contracts.md`](../role-contracts.md) > Sp
 lifetime) — every unit agent has already ended by returning its report. This file states what is
 asked, the cautions and the result owed. A script only reads and reports (D8); what changes
 anything — a push, a pull request, a label, the state file, the ledger — is done by the
-orchestrator itself; and the judgment left to AI is two readings, both made by a spawned analysis
-role — what a reviewer finding is and where it routes, and what class a CI failure is.
+orchestrator itself, and so is confirming that each added test file ran in CI (*CI* > *Added test
+files*); two readings are made by a spawned analysis role — what a reviewer finding is and where it
+routes, and what class a CI failure is.
 
 - **Goal**: the cycle's branch is on the remote at the commit GATE:QUALITY passed, the change is
   shown working above its own tests, every pull request of the cycle is open with CI green on its
@@ -22,7 +23,7 @@ role — what a reviewer finding is and where it routes, and what class a CI fai
 - **Artifact contract**: the pushed branches and the pull requests (*Push and pull request*), the
   integration record (*Integration*), each reviewed PR's findings file (*Review triage*), and the
   ledger entries the routes record.
-- **What a script reads and reports**: CI confirmation and the added-test-file match (*CI*), the
+- **What a script reads and reports**: CI confirmation (*CI*), the
   reviewer run's start check (*Reviewer review*; the run itself is the reviewer wrapper), and the
   triage case with its attempt count (*Review triage*). Each reports by exit code.
 - **Verification**: the integration checks, CI green and the reviewer review clean — all outside
