@@ -140,7 +140,9 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
    `.autoflow/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
    `A`-namespace entry per decision to the ledger under the authority `advisor decision`, carrying a
    `- Record:` line to the answer file and the marker and fields the decision's kind requires
-   ([`decision-ledger.md`](decision-ledger.md)). It returns the identifier and the answer in one line.
+   ([`decision-ledger.md`](decision-ledger.md)). It appends with an `Edit` anchored on the ledger's
+   last lines, which the gate hook applies to the file on disk and checks (*Independence* below), so
+   the prior content is never reproduced. It returns the identifier and the answer in one line.
 4. **Apply.** The orchestrator verifies the anchor — the ledger heading and the record file exist —
    and routes the cycle as the operator's answer to that point would have been routed: the
    Flow Control row the point sits on names the route. The cycle does not pause. An advisor that
