@@ -164,9 +164,9 @@ Each functional unit's body lives in its own file
 | U5 Completion evaluation | GATE:QUALITY | [`units/completion-evaluation.md`](units/completion-evaluation.md) |
 | U6 Delivery | DELIVER, INTEGRATE, HANDOFF | [`units/delivery.md`](units/delivery.md) |
 
-The rubrics of GATE:HYPOTHESIS, GATE:PLAN and AUDIT are the evaluator's and live in
-[`evaluation-system.md`](evaluation-system.md) > *Gate rubrics*; the unit document routes each
-gate's result. GATE:QUALITY is the gate that is itself a unit, so its rubric is the U5 document.
+The rubrics of all four gates — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — are the
+evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate rubrics*; the unit
+document routes each gate's result.
 
 ---
 
@@ -185,7 +185,7 @@ error.
 
 - [`CLAUDE.md`](../CLAUDE.md) — cross-unit invariants, the router (unit and phase list + Flow Control), regression caps, Execution Principles, state schema.
 - *Unit Documents* above — the six unit documents.
-- [`evaluation-system.md`](evaluation-system.md) — scoring, PASS thresholds and the gate rubrics of U2–U4.
+- [`evaluation-system.md`](evaluation-system.md) — the evaluator's standard, scoring, PASS thresholds and the rubrics of all four gates.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — sub-repo rules, verification and reporting.
 - [`repo-boundary-rules.md`](repo-boundary-rules.md) — cross-repo coordination.
 - [`git-workflow.md`](git-workflow.md) — bash procedures, branch structure.

@@ -1012,7 +1012,7 @@ fi
 
 # Fail closed on corrupt state: no readable active file, but a malformed state
 # file exists whose active flag we cannot determine. The state file gates BOTH
-# git push / gh pr create AND score-gated Agent spawns (docs/evaluation-system.md),
+# git push / gh pr create AND score-gated Agent spawns,
 # so refuse all of those on corrupt state — while leaving read-only commands and
 # the writes needed to repair the file unblocked (no recovery deadlock). Research
 # (Explore / Plan / claude-code-guide) and evaluation agents never gate, so they

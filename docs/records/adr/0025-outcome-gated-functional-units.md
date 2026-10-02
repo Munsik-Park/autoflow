@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392.
+Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399.
 
 ## Context
 
@@ -60,12 +60,21 @@ amended by operator decision 2026-10-01, issue #392).**
 A unit ends at a recorded gate, so a unit boundary is the point a new session resumes from.
 
 **D2 — A unit is prescribed by four things only: its goal, its artifact contract, its
-verification and its loop cap.** How the unit reaches the goal — what it reads, whether it
+verification and its loop cap (evaluator clause added by operator decision 2026-10-02, issue
+#399).** How the unit reaches the goal — what it reads, whether it
 spawns helpers, whether it holds a dialogue, how it designs the issue's own verification — is the
 unit agent's, recorded with its grounds in the unit's artifact (Rule Scope, principle 2). The
 artifact contract names only what the verification needs. Relay, transcript grammar, per-round
 reports, the Discussion Protocol as a required form, the per-phase fresh spawn, RED's derivation
 steps and HANDOFF's step-by-step orchestrator execution are retired as prescriptions.
+
+The latitude over method is the unit's and does not extend to the evaluator that verifies it: what
+the evaluator confirms, the evidence a confirmation rests on and how far it goes, scaled to the size
+and risk of the change, are prescribed in the evaluator's own document, which holds every gate's
+rubric (`docs/evaluation-system.md` > *The evaluator's standard*). The gate evaluator and the
+configured reviewer stay two quality procedures, neither replacing the other: the evaluator judges
+the units' artifacts and holds the gate authority; the reviewer reviews each delivered pull
+request's result.
 
 **D3 — The authority rules stay as they are (amended by operator decision 2026-10-01, issue
 #392).** The push / `gh pr create` gate, the merge prohibition, the gate score thresholds, the
