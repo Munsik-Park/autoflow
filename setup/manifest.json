@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "914e11cfc13f12cd2ea1f5169a8d5e999390c88fea89447f951ecb7cfdc370e3"
+      "sha256": "da6566ba943921ae226d38a4d885b25b16c2eb5e93988391ea97e2f794242f8c"
     },
     {
       "source": "docs/INDEX.md",
@@ -48,14 +48,14 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4676426fba7875f58dbd7ae608faaa5fae13a73545c757c52c3f7a26d95ae4c8"
+      "sha256": "b534aa464040b164d780d49f853ac23d5544abf5997127d9ec7e50bab82ea117"
     },
     {
       "source": "docs/external-review-sequencing.md",
       "dest": ".claude/autoflow/docs/external-review-sequencing.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "33771136faa7324dbd667becd6465daf7487d7b1b6e40ce1f9336aeae0e399eb"
+      "sha256": "3b414084dba8a0f07f590f31fba67ff3aef1663e668e0cf1259432c6bafa272f"
     },
     {
       "source": "docs/git-workflow.md",
@@ -90,7 +90,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "1fc6ccc860b0ba278281042d5ce6f32d513bc48522d85a1f0bc97ffdb0d2a581"
+      "sha256": "eaf36422eddf2feeca86d1d80f3ffad8b749b4c6e5edad478179ac81754e3812"
     },
     {
       "source": "docs/role-common-rules.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "eb2c27a1553e0e615e65b1015ad1e4f742b9a6cca7fed88cf3014c2e38eb59c7"
+      "sha256": "80984e2a9c19ac999064218ff9f21bfd36b24a3c1077034b4d7b9a7dc2551985"
     },
     {
       "source": "docs/units/design.md",
@@ -174,7 +174,7 @@
       "dest": ".claude/autoflow/docs/units/preparation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9b3dc1a759a8c4b99ef251eeeea92b6ceebcca61eb9d15f5d34b4f68ae846ecf"
+      "sha256": "4093b55e5a3d0c8a9d2fbd74ba9dd945ddac5700772d5f2976880c0a4be71880"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -216,7 +216,7 @@
       "dest": "scripts/review/codex-review-pr.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "e7be8f3186cc86d8ba2241668fb7b5913eca0fa33e865a7ced4cdc09dd8b5ef3"
+      "sha256": "714d13578c9f7cba3cfe5e28fa22aa61d00b42edd8cede648c751236158ef1c6"
     },
     {
       "source": "scripts/review/lib/review-config.sh",
@@ -251,7 +251,7 @@
       "dest": ".codex/review.md",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "4568a5c79a051860ef702d8d29d78c55a70035a03fab3887b91b52c3d857ebad"
+      "sha256": "74d8a8ee94319aa0740c09a12e3d80972125b9e8b9ccdcae46a325bda22f90ff"
     },
     {
       "source": "AGENTS.md",
@@ -286,7 +286,7 @@
       "dest": "scripts/handoff/review-gate.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "485021e2734a2213741aad9e1baa3844ab6da9046d64d7b0769f412544be961d"
+      "sha256": "56a6194cf555c7ac40b938fc52524733ca7d7a86e6a6a2ecfa8b05caa99b7bea"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",
@@ -370,7 +370,7 @@
       "dest": "scripts/test/check-cycle-layer-index.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "00342ee703025e72fc96bfc20d86220c1071246221f3fc6e6ca0e1b0ffd9a1e3"
+      "sha256": "124f087af0c0c9347200f987c1ef23d4221ab5970d8e323ccd1af349d1b6744f"
     },
     {
       "source": "scripts/issue/create-issue.sh",

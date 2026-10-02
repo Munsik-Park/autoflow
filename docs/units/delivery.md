@@ -10,10 +10,10 @@ DELIVER, INTEGRATE and HANDOFF are one functional unit, U6 Delivery
 ([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). U6 has no unit agent: it
 is the orchestrator's own work ([`role-contracts.md`](../role-contracts.md) > Spawn mode by role
 lifetime) — every unit agent has already ended by returning its report. This file states what is
-asked, the cautions and the result owed. A script only reads and reports (D8); what changes
-anything — a push, a pull request, a label, the state file, the ledger — is done by the
-orchestrator itself, and so is confirming that each added test file ran in CI (*CI* > *Added test
-files*); the reviews and two readings are made by spawned roles — the built-in review of each pull
+asked, the cautions and the result owed. A script only reads and reports (D8). The orchestrator
+pushes, opens the pull requests, runs the reviews, writes the state file and the ledger, and
+confirms that each added test file ran in CI (*CI* > *Added test files*). The reviews and two
+readings are made by spawned roles — the built-in review of each pull
 request, the aggregation of a pull request's reviews into one verdict, and what class a CI failure
 is.
 
@@ -57,8 +57,8 @@ orchestrator's, and nothing checks for an item left out.
   denies both. Merging — including, for multi-repo changes, the sub-repo → pointer → host
   sequencing — is owned entirely by the external review process.
 - **Every pull request the cycle opens is a draft carrying `blocked-by-review`**
-  (`gh pr create --draft --label blocked-by-review …`): the review gate is per-PR, and the label
-  follows the aggregated verdict of that PR's reviews (*Review aggregation*). A host PR that depends on a sub-repo PR also carries
+  (`gh pr create --draft --label blocked-by-review …`): the review gate is per-PR (*Reviewer
+  review*). A host PR that depends on a sub-repo PR also carries
   `blocked-by-subrepo`, the merge-order gate (`--label blocked-by-subrepo`; *Merge Sequencing*
   below).
 - **[MUST]** The orchestrator never removes `blocked-by-subrepo`; the hook denies it. The operator
@@ -201,9 +201,14 @@ records the route as an `O` ledger entry naming the check and the class.
 
 Every pull request the cycle opened is reviewed on its own diff — the host PR and each sub-repo PR
 alike; a sub-repo PR's review is required, not optional. A round of a PR's review runs every
-reviewer, and their records go to one aggregation (*Review aggregation* below), which alone posts to
-the PR and sets its `blocked-by-review` label; no reviewer does either
-([ADR-0026](../records/adr/0026-aggregated-review.md)).
+reviewer, and their records go to one aggregation (*Review aggregation* below), which posts the
+round's comment ([ADR-0026](../records/adr/0026-aggregated-review.md)).
+
+The `blocked-by-review` label is the review's signal to the merge actor
+([`external-review-sequencing.md`](../external-review-sequencing.md)): the orchestrator puts it on
+the PR when it runs a round (at PR creation, and `gh pr edit <N> --add-label blocked-by-review` before
+a later round), and the aggregator takes it off when the round is clean. AutoFlow's own
+routing reads the verdict in the findings file (*The case*).
 
 - **The built-in review** runs on every pull request: a fresh `autoflow-reviewer` spawn, on the
   model the policy names for `handoff-review`. Its prompt names the PR as `<owner>/<name>#<N>`, the
@@ -225,10 +230,9 @@ The wrapper stops when the PR it is given is not that OPEN PR on that head branc
 over the PR with `.codex/review.md` (its model and effort per *Model and effort* there); codex
 writes its review to the record and nothing else.
 
-Each review lands in a **review record**, `.autoflow/issue-{N}-review-raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md`
-— `<reviewer>` the reviewer's name (`claude` for the built-in review, `codex`), `<k>` the PR's review
-round from `1`. Records are kept per round; they are archived with the issue's other files
-([U1 Preparation](preparation.md) > *What is asked*).
+Each review lands in a **review record**,
+`.autoflow/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md` — `<reviewer>` the
+reviewer's name (`claude` for the built-in review, `codex`), `<k>` the PR's review round from `1`.
 
 `review-start-check.sh` confirms an external run began with a signal scoped to its own PR — a
 reviewer process or a codex session rollout whose prompt names that pull request, or the wrapper's
@@ -250,7 +254,7 @@ Cautions:
 - A review that started is left to finish on its own clock, however long that takes; it is not
   relaunched because it is slow.
 - Every round runs every reviewer again on each PR of the cycle whose head this cycle advanced
-  (`gh pr view <N> --json headRefOid`), whatever its label state.
+  (`gh pr view <N> --json headRefOid`).
 - Several reviews may run at once (the host PR plus each sub-repo PR, each with its reviewers);
   each external run is confirmed with its own `--pr` and, for a sub-repo PR, `--repo`, and the
   in-flight spawn limit holds ([`CLAUDE.md`](../../CLAUDE.md) > Cost Control).
@@ -276,16 +280,13 @@ it leaves behind is fixed:
 - **One PR comment**, in Korean, per round: each finding once, with the reviewers that raised it;
   a finding only one reviewer raised kept like any other; each rejected finding listed apart with the
   grounds it does not hold; a reviewer unavailable for the round named. Its body is kept as
-  `.autoflow/issue-{N}-review-comment-<owner>.<name>-<pr>-r<k>.md`.
+  `.autoflow/issue-{N}-local/review/comment-<owner>.<name>-<pr>-r<k>.md`.
 - **The findings file** (below).
-- **The `blocked-by-review` label at the verdict**: present when a `Medium`+ finding that holds
-  remains, absent otherwise — attached or removed by the aggregator, confirmed with
-  `gh pr view <N> --json labels` (`--repo` for a sub-repo PR). A label it could not set is reported
-  in its return, not claimed.
+- **`blocked-by-review` taken off when the round is clean** — no `Medium`+ finding holds.
 
 It returns `{max_severity, findings}`.
 
-- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `.autoflow/issue-{N}-review-findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`), and `<disposition>` empty, or `rejected` for a finding that does not hold. A `rejected` row is a record: it counts toward neither `max_severity` nor the label. `scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
+- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `.autoflow/issue-{N}-local/review/findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
 - **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`.codex/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` and `blocked-by-review` label rest on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold. What keeps a host PR from merging ahead of its sub-repo PR is `blocked-by-subrepo`, not the host PR's review label ([`external-review-sequencing.md`](../external-review-sequencing.md) > *Review gate and merge-order gate*).
 - **[MUST] `remedy_class` per Medium+ finding.** The aggregator tags **every** `Medium`+ finding that holds with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at [U5 Completion evaluation](completion-evaluation.md) > *FAIL routing*) and writes it in that finding's row. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the design settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess.
 
@@ -297,17 +298,15 @@ It returns `{max_severity, findings}`.
 bash scripts/handoff/review-gate.sh --issue {N} --pr <P> [--repo <owner/name>]
 ```
 
-It reads the two signals — the verdict (`max_severity`, the primary signal) and the
-`blocked-by-review` label (a derived signal that can disagree with it, when the aggregator's label
-step did not land) — and the auto-resolution attempts on record, and names the case:
+It reads the verdict (`max_severity`) and the auto-resolution attempts on record, and names the
+case:
 
 | Exit | Case | What follows |
 |---|---|---|
-| `0` | `clean` — no label, no finding | *End* (once every PR of the cycle is there) |
-| `13` | `low-only` — no label, findings below `Medium` | the orchestrator's judgment, with no fixed rule: a finding that holds and is worth fixing now goes through the same resolution as below (a `Low` alone raises no advisor request unless an advisor criterion is hit); otherwise *End*, optionally with a one-line PR note that the findings were reviewed and deferred. A `Low` on a target comment's divergence or disallowed content is the orchestrator's direct commit or it is left ([U5 Completion evaluation](completion-evaluation.md) > *Code comments in a target*) |
-| `10` | `resolve` — a `Medium`+ verdict | *Routing* below. With `backstop: needed` — the label is absent, because a previous clean round cleared it and the aggregator's attach did not land — the orchestrator attaches it first as its backstop (`gh pr edit <N> --add-label blocked-by-review`, on failure the `gh issue edit` form) and confirms it is on the PR. An attach that does not land likely means the label does not exist in that repository: it is reported as an operator setup gap ([`external-review-sequencing.md`](../external-review-sequencing.md) > Operator prerequisites) and does not block the resolution |
+| `0` | `clean` — no finding | *End* (once every PR of the cycle is there) |
+| `13` | `low-only` — findings below `Medium` | the orchestrator's judgment, with no fixed rule: a finding that holds and is worth fixing now goes through the same resolution as below (a `Low` alone raises no advisor request unless an advisor criterion is hit); otherwise *End*, optionally with a one-line PR note that the findings were reviewed and deferred. A `Low` on a target comment's divergence or disallowed content is the orchestrator's direct commit or it is left ([U5 Completion evaluation](completion-evaluation.md) > *Code comments in a target*) |
+| `10` | `resolve` — a `Medium`+ verdict | *Routing* below |
 | `11` | `cap` — a `Medium`+ verdict with 7 attempts on record | pause for the operator (*Attempt cap*) |
-| `12` | `relabel` — the label is present on a verdict below `Medium` | not a code finding: the aggregator's removal did not land, or a backstop attached in error. The aggregator is spawned again on that PR's findings file for its label step alone, so the label meets the verdict on record; still there → a harness-level block for the operator. Consumes no attempt |
 | `2` | the findings file is absent or breaks its contract | the aggregator is spawned again |
 | `3` | a `gh` read failed | run again (internal retry) |
 
@@ -315,7 +314,7 @@ step did not land) — and the auto-resolution attempts on record, and names the
 
 Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A role the route hands a finding to that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A finding that a role the route hands it to finds does not hold is a rebuttal: the orchestrator posts it with its grounds on the PR, and the next round's reviews and aggregation judge it. A gate recommendation's rebuttal is judged by the recommending gate's re-score. A finding that does not hold is not routed — its row keeps the class its own fix would take — and one that holds in part is routed by the class its real problem needs. Each rebuttal is recorded with its grounds in the ledger entry of its round: the attempt's `[review-autofix]` entry, or, for a round that only rebuts and so routes nothing, an `O` entry whose heading ends in `[rebuttal]`, which no cap counts. At a gate that entry is also what an interrupted session resumes from ([U1 Preparation](preparation.md) > *Resume*). When a rebutted finding is kept and the two sides still disagree, the orchestrator asks the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor; [`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 3). When to ask is its judgment and no count decides it.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A finding that a role the route hands it to finds does not hold is a rebuttal: the orchestrator posts it with its grounds on the PR and runs *Reviewer review* on that PR again — a new round, also when the round only rebuts and changes no code — and that round's reviews and aggregation judge it. A gate recommendation's rebuttal is judged by the recommending gate's re-score. A finding that does not hold is not routed and its `rejected` row needs no `remedy_class` — nothing reads one there — and one that holds in part is routed by the class its real problem needs. Each rebuttal is recorded with its grounds in the ledger entry of its round: the attempt's `[review-autofix]` entry, or, for a round that only rebuts and so routes nothing, an `O` entry whose heading ends in `[rebuttal]`, which no cap counts. At a gate that entry is also what an interrupted session resumes from ([U1 Preparation](preparation.md) > *Resume*). When a rebutted finding is kept and the two sides still disagree, the orchestrator asks the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor; [`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 3). When to ask is its judgment and no count decides it.
 
 **This section is the rule's only home** ([`development-guideline.md`](../development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -352,7 +351,7 @@ A `Medium`+ verdict does not end the cycle. Route by `bash scripts/gate/remedy-r
 | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | *Reviewer review*, per-PR |
 | `PAUSE` (from `operator`) | the advisor fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor), and the cycle takes that class's route | that route's |
 
-The `ARCHITECT` route is the one whose depth is judged. **Where the re-entry starts is the orchestrator's judgment** ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — entered in-session with the setup PREFLIGHT gives a review-response ([U1 Preparation](preparation.md) > *Review-response setup*) and the aggregated review comment as the DIAGNOSE trigger target, flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a fact of the analysis the decision rested on; (b) an **ARCHITECT re-design** — the same setup with two differences that follow from the analysis standing: `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), and the **DIAGNOSE analysis report is not renamed** — `issue-{N}-analysis.md` stays in place under its flat name as this cycle's analysis input. A fresh U3 Design unit is spawned with a prompt naming the finding, the decision it moves — its heading in the previous cycle's `issue-{N}-c{C}-feature-design.md` — and the previous cycle's design documents, preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md` like the other renamed artifacts ([U3 Design](design.md) > *Re-entry*, the new-cycle rule), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision it moves, by its heading in `issue-{N}-c{C}-feature-design.md`), why the analysis stands, and the **provenance of the reused analysis report** — its path, the cycle that authored it and its `shasum -a 256`. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT unit on the recorded GATE:HYPOTHESIS verdict and the BUILD unit on the GATE:PLAN that re-scores the re-design. The other routes are **thin**: one BUILD unit re-run or one doc commit, execution verification, a delta recorded in the ledger, and the next review round — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. **Every independent check is retained on every route and shape** — the label clears **only** at a later round's aggregated verdict, CI still gates, and the attempt cap below applies unchanged.
+The `ARCHITECT` route is the one whose depth is judged. **Where the re-entry starts is the orchestrator's judgment** ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. The two shapes: (a) a **review-response cycle from DIAGNOSE** — entered in-session with the setup PREFLIGHT gives a review-response ([U1 Preparation](preparation.md) > *Review-response setup*) and the aggregated review comment as the DIAGNOSE trigger target, flowing DIAGNOSE → … → HANDOFF — when the finding contradicts what the problem or the affected structure is, a fact of the analysis the decision rested on; (b) an **ARCHITECT re-design** — the same setup with two differences that follow from the analysis standing: `phases` is reset only for the gates this shape re-runs (GATE:PLAN, AUDIT, GATE:QUALITY; the GATE:HYPOTHESIS record stays), and the **DIAGNOSE analysis report is not renamed** — `issue-{N}-analysis.md` stays in place under its flat name as this cycle's analysis input. A fresh U3 Design unit is spawned with a prompt naming the finding, the decision it moves — its heading in the previous cycle's `issue-{N}-c{C}-feature-design.md` — and the previous cycle's design documents, preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md` like the other renamed artifacts ([U3 Design](design.md) > *Re-entry*, the new-cycle rule), flowing ARCHITECT → GATE:PLAN → … → HANDOFF — when the finding moves a design decision on a problem whose analysis still stands. The ledger entry names the shape, the fact it rests on (the finding's `path:line` and the decision it moves, by its heading in `issue-{N}-c{C}-feature-design.md`), why the analysis stands, and the **provenance of the reused analysis report** — its path, the cycle that authored it and its `shasum -a 256`. The gate records a shape keeps are what admit its spawns — the hook admits the ARCHITECT unit on the recorded GATE:HYPOTHESIS verdict and the BUILD unit on the GATE:PLAN that re-scores the re-design. The other routes are **thin**: one BUILD unit re-run or one doc commit, execution verification, a delta recorded in the ledger, and the next review round — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. **Every independent check is retained on every route and shape** — the next review round judges the fix, CI still gates, and the attempt cap below applies unchanged.
 
 Every route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofix` marker — a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` ([`decision-ledger.md`](../decision-ledger.md) > *Entry identifier*) — and the entry names the routed class and, on the `ARCHITECT` route, the judged shape with its grounds. The advisor criteria below take precedence over any route.
 
@@ -362,8 +361,8 @@ Every route is recorded in `.autoflow/issue-{N}-ledger.md` with a `review-autofi
 
 ## End
 
-Once every pull request of the cycle is clean — `review-gate.sh` reports no `blocked-by-review`
-label on any of them and the Low findings are triaged — and CI is green, the orchestrator hands the
+Once every pull request of the cycle is clean — `review-gate.sh` reports `clean` or `low-only` on
+each of them and the Low findings are triaged — and CI is green, the orchestrator hands the
 cycle off:
 
 - the state file reads `active: false`, `phase: "awaiting-external-review"`, with nothing else in
@@ -372,8 +371,7 @@ cycle off:
 
 Cautions:
 
-- The hand-off is not made while a pull request of the cycle still carries `blocked-by-review`, and
-  the label clears only at a round whose aggregated verdict leaves no `Medium`+ finding that holds.
+- The hand-off is not made while a pull request of the cycle has a `Medium`+ verdict.
 - A pause for the user is the other `active:false` transition (`phase: "awaiting-user"`); the issue
   keeps `status:in-progress` through it.
 
@@ -454,6 +452,6 @@ pull request merges first, the host is reconciled to its merge commit (*Multi-re
 operator confirms the host pointer equals that merge commit and removes `blocked-by-subrepo`, and
 the host pull request is then promoted and merged.
 
-**[MUST]** AutoFlow merges nothing, promotes no draft and removes neither gate label; of this
+**[MUST]** AutoFlow merges nothing, promotes no draft and removes no `blocked-by-subrepo`; of this
 sequence it performs only the reconcile, on the operator's request. The hook denies `gh pr merge`
 and a push to the default branch while a state file has `active:true`.

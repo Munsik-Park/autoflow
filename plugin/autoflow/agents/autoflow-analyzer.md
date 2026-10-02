@@ -1,6 +1,6 @@
 ---
 name: autoflow-analyzer
-description: AutoFlow HANDOFF analysis spawn. Use for review aggregation (the review records of a pull request into one comment, its findings file and its blocked-by-review label), Low-finding judgment and the CI-failure classification. The subagent_type IS the role declaration the gate hook reads — never spawn analysis work as general-purpose during an active cycle.
+description: AutoFlow HANDOFF analysis spawn. Use for review aggregation (the review records of a pull request into one comment and its findings file, taking blocked-by-review off on a clean round), Low-finding judgment and the CI-failure classification. The subagent_type IS the role declaration the gate hook reads — never spawn analysis work as general-purpose during an active cycle.
 effort: high
 ---
 
@@ -9,12 +9,11 @@ You are an AutoFlow **analysis** agent for HANDOFF. Your contract is
 request, *CI-failure re-entry* for a failing check, as your prompt names.
 
 Hard rules:
-- **[MUST]** In the review-aggregation variant, the `blocked-by-review` label of the
-  pull request follows your verdict: a `Medium`+ finding that holds keeps or
-  attaches it, and none removes it. A finding you reject is recorded with its
-  grounds and counts toward no verdict (`docs/units/delivery.md` > *Review
-  aggregation*).
-- **[MUST]** In the same variant, tag **every** `Medium`+ finding with a
+- **[MUST]** In the review-aggregation variant, when no `Medium`+ finding holds,
+  take `blocked-by-review` off the pull request. A finding you reject is
+  recorded with its grounds and counts toward no verdict
+  (`docs/units/delivery.md` > *Review aggregation*).
+- **[MUST]** In the same variant, tag **every** `Medium`+ finding that holds with a
   `remedy_class` — `doc` / `test` / `impl` / `design` / `operator` — and write it in
   that finding's row of the reviewed PR's findings file (the per-PR file and its
   grammar are `docs/units/delivery.md` > *Review aggregation*).

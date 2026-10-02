@@ -103,8 +103,8 @@ inside the session ([U6 Delivery](delivery.md) > *Routing*). On the issue's exis
 - **[MUST] The previous cycle's artifacts are preserved** before any phase of the new cycle writes:
   every `.autoflow/issue-{N}-<artifact>.md` is renamed to `.autoflow/issue-{N}-c{C}-<artifact>.md`,
   `C` being the previous cycle number. What spans cycles keeps its name — the ledger, the advisor
-  records its entries point at (`issue-{N}-advisor-*.md`), the per-PR findings files
-  (`issue-{N}-review-findings*.md`), the state file and the cycle-layer store `issue-{N}-local/` —
+  records its entries point at (`issue-{N}-advisor-*.md`), the state file and
+  the cycle-layer store `issue-{N}-local/` —
   and, only on a HANDOFF `design` re-entry judged to start at ARCHITECT, the analysis report that
   shape reuses in place.
 - **The state file moves to the next cycle**: `mode: "review-response"`, `active: true`,

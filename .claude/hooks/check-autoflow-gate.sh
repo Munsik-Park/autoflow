@@ -31,8 +31,7 @@
 #                                     label name across gh pr edit / gh issue edit
 #                                     --remove-label and gh api DELETE .../labels/…
 #                                     (merge-order clearance is the operator's job;
-#                                     blocked-by-review follows the review
-#                                     aggregator's verdict and is not gated here)
+#                                     blocked-by-review is not gated here)
 #   - Agent (any spawn)             → explicit `model` parameter required
 #                                     (state-independent — CLAUDE.md > Spawn Model)
 #   - Agent (role-declared spawn)   → gate by DECLARED role, never by prompt
@@ -469,9 +468,8 @@ if [ "$TOOL_NAME" = "Bash" ]; then
 
   # AutoFlow never clears the `blocked-by-subrepo` merge-order label — that is
   # the operator's step at merge (the workflow no longer auto-removes it — not
-  # viable for N sub-repos). `blocked-by-review` is not gated: it follows the
-  # verdict the HANDOFF review aggregator reaches over every review of the PR,
-  # and the aggregator sets it (ADR-0026). Match the LABEL NAME in a removal
+  # viable for N sub-repos). `blocked-by-review` is not gated: the HANDOFF
+  # review aggregator takes it off on a clean round (ADR-0026). Match the LABEL NAME in a removal
   # context so the deny (a) covers every natural surface that drops the label —
   # `gh pr edit` / `gh issue edit --remove-label blocked-by-subrepo` (a PR's
   # labels are issue labels) and the `gh api … -X DELETE …/labels/

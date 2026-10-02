@@ -42,14 +42,16 @@ archived with the issue's other files. No reviewer posts to the pull request or 
 codex included and outside HANDOFF as well; a review is posted only when the operator asks.
 
 **D3 — Aggregation.** One aggregator per pull request and round — the HANDOFF analysis spawn —
-reads every record and leaves one pull-request comment, the PR's findings file and the label. Each
+reads every record and leaves one pull-request comment and the PR's findings file. Each
 finding shows the reviewers that raised it, by name; a finding one reviewer raised is kept. A
 finding the aggregator finds does not hold is rejected: it stays on the record with its grounds,
 in a disposition column of the findings file and on the comment, and counts toward no verdict.
 
-**D4 — Label authority.** `blocked-by-review` follows the aggregated verdict, and the aggregator
-attaches or removes it. The hook's deny of `blocked-by-review` removal is deleted; the deny of
-`blocked-by-subrepo` removal stays, since merge-order clearance remains the operator's.
+**D4 — Label.** The orchestrator puts `blocked-by-review` on the pull request when it runs a review
+round, and the aggregator takes it off when the round is clean. The label is the review's signal to
+the merge actor; AutoFlow's own routing reads the verdict in the findings file. The hook's deny of
+`blocked-by-review` removal is deleted; the deny of `blocked-by-subrepo` removal stays, since
+merge-order clearance remains the operator's.
 
 **D5 — Unavailability.** An external reviewer whose CLI is absent, or whose run fails, does not
 hold the round: the aggregation runs on the records that exist and names the missing reviewer.
@@ -63,9 +65,9 @@ the target pins none.
 ## Alternatives Considered
 
 - **The second review as advice only** — the configured reviewer keeps sole label authority and the
-  second review's `Medium`+ findings only feed triage. Rejected: the HANDOFF backstop re-attaches
-  the label on any `Medium`+ verdict in the findings file, so the second review would gate in effect
-  while nothing verified its findings' resolution.
+  second review's `Medium`+ findings only feed triage. Rejected: triage routes every `Medium`+
+  finding in the findings file, so the second review would gate in effect while nothing verified its
+  findings' resolution.
 - **Both reviews as gates, each setting the label** — each reviewer keeps its own label step.
   Rejected: two reviewers acting on one label flap it by finishing order.
 - **Each review posted as its own comment** — rejected for one comment per round carrying every

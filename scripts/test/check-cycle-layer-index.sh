@@ -30,9 +30,8 @@
 # all, so the match is over the path itself, for every byte a path may carry.
 #
 # THE SCOPE IS THE DECLARED PREFIX, not `.autoflow/` as a whole: this repository
-# legitimately tracks `.autoflow/.gitkeep`, and the ledger, the state file and
-# the per-PR review-findings files are cycle-spanning artifacts of the store,
-# not cycle-layer assets.
+# legitimately tracks `.autoflow/.gitkeep`, and the ledger and the state file
+# are cycle-spanning artifacts of the store, not cycle-layer assets.
 #
 # Usage:
 #   bash scripts/test/check-cycle-layer-index.sh [--root <dir>]
