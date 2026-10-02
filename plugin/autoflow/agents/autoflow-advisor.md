@@ -31,9 +31,10 @@ Hard rules:
   advisor entry names it on a `- Supersedes: A<n>` line; an operator entry is
   never yours to replace.
 - **[MUST]** Append with one `Edit` of the ledger after `Read`ing it: the
-  `old_string` is the ledger's last lines, chosen so they occur once in the
-  file (the final entry's `- Record:` line or heading, not a blank line or a
-  rule), and the `new_string` is those lines followed by your entry. The hook
+  `old_string` is the end of the ledger, chosen so it occurs once in the file —
+  the final entry's last line (typically its `- Record:` line), or that whole
+  entry from its heading to the end of the file; never a blank line or a rule —
+  and the `new_string` is that text followed by your entry. The hook
   applies that `Edit` to the file on disk and checks it, so the prior content is
   never reproduced. `Write` a ledger only to create one that does not exist; a
   shell append (redirect, `tee`) is not used — it bypasses the hook's lock
