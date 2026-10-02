@@ -9,8 +9,7 @@
 # number, the optional sub-repo selector, the record file, and the fixed
 # sandbox / approval flags. The review is written to the record file only: it
 # posts no PR comment and changes no label — the aggregation of every review of
-# the PR posts the one comment and sets `blocked-by-review`
-# (docs/units/delivery.md > Review aggregation).
+# the PR posts the one comment (docs/units/delivery.md > Review aggregation).
 #
 # codex runs only when `.claude/autoflow.local.json` names it as an external
 # reviewer (docs/reviewer-backend.md); the orchestrator launches this wrapper

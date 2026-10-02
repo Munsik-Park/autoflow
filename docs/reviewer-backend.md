@@ -25,18 +25,20 @@ runtime.
 
 ```
 Contract: reviewer
-  Output : one review record per reviewer, PR and round —
-           .autoflow/issue-{N}-review-raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
+  Output : one review record per reviewer, PR and round, in the issue's review
+           store — .autoflow/issue-{N}-review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
            in the .codex/review.md Output Format, in Korean.
   A reviewer posts no PR comment and changes no label.
 
 Contract: aggregator  (docs/units/delivery.md > Review aggregation)
   Input  : every review record of the PR and round.
   Output : one PR comment; the PR's findings file (source and disposition per
-           finding); the `blocked-by-review` label at the aggregated verdict.
-  Authority: the aggregated verdict alone sets `blocked-by-review`. A finding
-             the aggregator rejects is recorded with its grounds and counts
-             toward no verdict.
+           finding); `blocked-by-review` taken off the PR when the round is
+           clean. A finding the aggregator rejects is recorded with its
+           grounds and counts toward no verdict.
+
+Label  : the orchestrator puts `blocked-by-review` on the PR when it runs a
+         round; the aggregator takes it off when the round is clean.
 ```
 
 The external wrapper takes the record path:

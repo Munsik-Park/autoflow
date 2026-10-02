@@ -152,7 +152,7 @@ every past issue.
   another arm's row leaves them empty rather than borrowing them. They come from the issue's `.autoflow` artifacts — the archive copy, else the live
   directory: `cycle`, gate averages, ARCHITECT turns and rounds (per transcript file, `### Brief` blocks + 1 where it holds a turn, summed over the cycles' transcripts), the number
   of GATE:PLAN / AUDIT / GATE:QUALITY evaluation reports, `[review-autofix]` ledger headings,
-  reviewer rounds (`review-comment-*` files), CI rounds (`issue-{N}-local/handoff-ci-*.log`). A CI
+  reviewer rounds (aggregated comment bodies — `issue-{N}-review/comment-*.md`, or a top-level `review-comment-*` file before issue #411), CI rounds (`issue-{N}-local/handoff-ci-*.log`). A CI
   round is judged by the `exit=<n>` line in its log, never by its position — a later log is often a
   green re-confirmation: `exit=12` (red build) is a failed round, any other non-zero exit
   (`confirm-ci-green.sh`: not mergeable, no check published, no verdict) is counted apart as
@@ -166,7 +166,7 @@ every past issue.
   | Columns | Source artifact | Without it |
   |---|---|---|
   | `architect_turns`, `architect_rounds` | an `architect-transcript.md` (the relay transcript) | empty |
-  | `reviewer_rounds` | a `review-comment-*.md` | empty |
+  | `reviewer_rounds` | an `issue-{N}-review/comment-*.md` or a `review-comment-*.md` | empty |
   | `ci_rounds`, `ci_fail_rounds`, `ci_other_rounds`, `ci_undetermined` | a `issue-{N}-local/handoff-ci-*.log` | empty |
   | `gate_plan_evals`, `audit_evals`, `gate_quality_evals` | that gate's evaluation report | empty |
   | `review_autofix`, `ac_decisions`, `ledger_entries` | the ledger | empty — and **with a ledger, 0 is a value**: the cycle recorded its decisions and none was an auto-fix |

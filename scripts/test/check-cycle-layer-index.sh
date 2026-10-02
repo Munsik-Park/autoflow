@@ -31,7 +31,7 @@
 #
 # THE SCOPE IS THE DECLARED PREFIX, not `.autoflow/` as a whole: this repository
 # legitimately tracks `.autoflow/.gitkeep`, and the ledger, the state file and
-# the per-PR review-findings files are cycle-spanning artifacts of the store,
+# the review store `issue-N-review/` are cycle-spanning artifacts of the store,
 # not cycle-layer assets.
 #
 # Usage:
