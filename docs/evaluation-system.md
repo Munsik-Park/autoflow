@@ -67,9 +67,8 @@ evidence a confirmation rests on and how far it goes are set here, and the evalu
 ### Evidence
 
 - **[MUST]** A confirmation is an anchor the evaluator read itself: a `path:line` read at the
-  evaluated commit, a commit read with `git show`, a run's summary line read in the log the run left
-  (never by re-running its command — *Execution discipline* below), an observation record and the
-  artifacts it cites.
+  evaluated commit, a commit read with `git show`, a suite verdict resolved as *Execution
+  discipline* below sets, an observation record and the artifacts it cites.
 - **[MUST]** A finding states its failure precondition and the evidence that the precondition is
   reachable: an input the system accepts, a configuration it supports, a procedure the rules
   prescribe. A case that needs an input the rules forbid, a state no accepted path produces, or a
@@ -91,9 +90,9 @@ evidence a confirmation rests on and how far it goes are set here, and the evalu
 Depth scales with the size and the risk of the change under evaluation.
 
 - **Fixed at every size**: every rubric item scored with its reason, the FAIL hypothesis formed and
-  recorded, every found issue reported (*Finding coverage*), the evidence read of every cited run,
-  and the gate's named checks — test-first at AUDIT, the ADR-conformance and AC-authority checks,
-  GATE:QUALITY's known blind-spot checks.
+  recorded, every found issue reported (*Finding coverage*), every suite-verdict anchor resolved
+  (*Execution discipline*), and the gate's named checks — test-first at AUDIT, the ADR-conformance
+  and AC-authority checks, GATE:QUALITY's known blind-spot checks.
 - **Scaled**: how far beyond the anchors the items rest on the evaluator re-derives, how far it
   traces adjacent code and documents, and how large a sample it takes.
   - A small, local change — a few lines in a few files, touching no state another component reads,
@@ -262,8 +261,8 @@ evaluator still forms the hypothesis first, still re-derives anchors, still reco
 `fail_hypothesis`.
 
 - **[MUST] Resolve the anchor before executing.** Where the anchor being re-derived is a **suite
-  verdict**, the anchor is the recorded local run — the command, the log it wrote and the summary
-  line read from it (Reporting Format item 5) — and the evaluator confirms it by reading that line
+  verdict** (a test run's pass or fail), the anchor is the recorded local run — the command, the
+  log it wrote and the summary line read from it (Reporting Format item 5) — and the evaluator confirms it by reading that line
   at the cited log path, never by re-running the command; a log absent at its path makes the row
   `not-run` (GATE:QUALITY > *Known blind-spot checks* > *Test coverage* > *Execution omission is
   not a defect* below), and a log that does not carry the line is evidence authored without a
@@ -575,8 +574,8 @@ each-item ≥ 7 criterion:
   test asserts the behavior the AC states, not a weaker proxy (e.g. "the function was
   called" where the AC requires a result shape) and not a different property than the
   one the AC it names states. Confirm every cited evidence line
-  (test summary, log excerpt) against the log the cited run left, read at the cited path —
-  never by re-running the command; a recorded line the log does not carry was authored, not
+  (test summary, log excerpt) against the log the cited run left, resolved as *Execution
+  discipline* above sets; a recorded line the log does not carry was authored, not
   produced by a run, and caps the citing item at 6. A record with no log behind it is not a
   fabricated line but a missing run: it takes the `Test coverage` omission path below, not this
   cap ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *A run's evidence is the log it left*). For an
@@ -629,8 +628,8 @@ each-item ≥ 7 criterion:
   `Test quality` at 6.
 - **Test coverage — the run record is the subject**: the item's subject is not a CI result. For
   each `automated` / `delivery-check` row
-  it is the row's recorded run — the command, the log and the summary line read from it, confirmed
-  by reading the line at the cited log path rather than by re-running; in this repository a
+  it is the row's recorded run — the command, the log and the summary line read from it, resolved
+  as *Execution discipline* above sets; in this repository a
   `standing` row's subject is additionally the committed asset's realisability — the file exists,
   runs, and is CI-registered. For a `manual` row executed by the AI it is the row's observation
   record ([U4 Build and verify](units/build.md) > Build report > `## Manual checklist`), confirmed by reading the record and opening the artifacts it cites — a
@@ -760,6 +759,3 @@ triage*). The hook reads none of the list; it reads the routed class the
 orchestrator records in state while an attempt is open. A `Medium`+ item with no `remedy_class`, or
 any item missing a field, is a contract violation — reject + re-spawn, as for a missing
 `fail_hypothesis`.
-
-A suite verdict the evaluator re-derives is the recorded local run — its summary line read in the
-log the run left, the command re-run only when that log is absent (the row is then `not-run`).

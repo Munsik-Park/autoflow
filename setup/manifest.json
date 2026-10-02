@@ -48,7 +48,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "81333a65059f9c583c2ac7e98ea9ee990fca7920f1aa42ef5908a26245d9669f"
+      "sha256": "3256f3f41791faca70224a53fc22b455b1ddbbc1d2c499774342d2e823bced2a"
     },
     {
       "source": "docs/external-review-sequencing.md",
