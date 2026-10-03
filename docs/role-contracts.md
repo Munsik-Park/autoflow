@@ -121,7 +121,8 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
   rebuttal the re-score or the reviewer keeps while the two sides still disagree). Each is answered
   by the advisor first.
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
-  denial), or a tool, credential, installation or material the environment does not provide. Only
+  denial), or a tool, credential, installation or material the environment does not provide — for a
+  tool it has, what using it lacks (access, a purpose and permitted scope, a permission setting). Only
   such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
   `phase:"awaiting-user"` ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision
   presentation). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision
