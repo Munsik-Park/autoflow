@@ -83,7 +83,8 @@ These are the rules other documents cite; everything else about the work is the 
   verified with a tool (`manual`, executor `AI: <tool>`) is looked at with that tool and its
   observation record written under the store, ending in one result line — `observation: match` or
   `observation: mismatch — <what differs>` (*The tools the work needs*). A tool neither this
-  environment nor the target's procedures provide is reported, never acquired.
+  environment nor the target's procedures provide, or what using a tool the environment has lacks, is
+  reported — naming what is missing, not the output the tool would give — and never acquired.
 - **Comment check.** Before the unit's last commit it reads the comment lines the cycle's diff adds
   (`git diff <base>...HEAD`) against [`submodule-common-rules.md`](../submodule-common-rules.md) >
   Change Surface Rules > *Code comments* — the classes a pattern finds (an issue / PR reference, a

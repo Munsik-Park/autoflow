@@ -155,7 +155,7 @@ Anything else the unit records is its own, written where it judges useful.
   *Verification — GATE:HYPOTHESIS*'s (below); a decision point the report records is confirmed by the
   gate's scores before any close or end.
 - **A material not opened, or a tool the analysis needs that neither this environment nor the
-  target's procedures provide** — a harness-level block → the operator, situation-first
+  target's procedures provide, or what using a tool the environment has lacks** — a harness-level block → the operator, situation-first
   (`awaiting-user`; `CLAUDE.md` > Flow Control > *tool or referenced material → user*).
 
 ## Verification — GATE:HYPOTHESIS

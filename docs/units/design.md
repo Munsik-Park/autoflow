@@ -230,8 +230,12 @@ settling it as a `manual` row executed by a person, as `environment-dependent`, 
   the rows it verifies (or the design question it serves), its availability, and the ground the
   availability rests on. Availability is one of `available` (usable in this environment now),
   `target procedure: <document section or script>` (off, and the target carries the procedure that
-  starts it), or `operator: <what is needed>` (an installation, a credential, a permission setting,
-  enabling an MCP server or a browser extension, access to a material). A design that needs no
+  starts it), or `operator: <what is needed>` — what is missing for the tool to be used: the tool
+  itself when this environment does not have it (an installation, enabling an MCP server or a
+  browser extension), what using a tool the environment has lacks (access, the purpose and
+  permitted scope of the host or service it reaches, a credential, a permission setting), or access
+  to a material. The item names what is missing, never the output the tool would give; a tool the
+  environment has, whose use lacks nothing, is `available`. A design that needs no
   tool says `none`, with its ground in one line. AutoFlow names no tool here: which tool, and how
   it is used, is the design's judgment in the target.
 - **Availability is settled here, not at BUILD.** After the unit returns, the orchestrator reads
@@ -241,7 +245,8 @@ settling it as a `manual` row executed by a person, as `environment-dependent`, 
   user*), presented situation-first, and GATE:PLAN is not spawned until the operator answers. A
   `target procedure` item is started when the phase that uses it begins — by the orchestrator when
   the tool must outlive a role spawn. A tool found missing later, at BUILD, takes the same pause.
-- A criterion no tool can reach after this search keeps the fallbacks of the untestable-items
+- A criterion no tool can reach after this search — or whose tool the operator answers cannot be
+  provided — keeps the fallbacks of the untestable-items
   bullet above — a `manual` row executed by a person, or a mock — and its `Reason` states why no
   tool could be secured; GATE:PLAN's `Verification fit` reads that reason.
 - The row verified with a tool is looked at with it once implemented, and the evidence is the row's

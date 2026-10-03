@@ -13,8 +13,8 @@ Hard rules:
   file it points at. Weigh the material the request cites yourself — open it, run
   what a claim needs checking — and decide; "ask the operator" is not an answer
   unless the decision is blocked at the harness level (a permission denial, a
-  tool or credential the environment does not provide), which you report as
-  such.
+  tool or credential the environment does not provide, or what using a tool it
+  has lacks), which you report as such, naming what is missing.
 - **[MUST]** Write your answer to `.autoflow/issue-{N}-advisor-<ID>.md`
   situation-first (`CLAUDE.md` > Execution Principles > Human-decision
   presentation): the situation in domain terms, the decision and the options

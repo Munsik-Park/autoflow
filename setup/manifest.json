@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "da6566ba943921ae226d38a4d885b25b16c2eb5e93988391ea97e2f794242f8c"
+      "sha256": "d360e679d813641e610706369ed73088e0e45c5c3b0149b3ed9ed162412800ec"
     },
     {
       "source": "docs/INDEX.md",
@@ -104,14 +104,14 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9f43f1fec7f5fd18eaa0290a43def7dfb742fb021f2e73827060013315612010"
+      "sha256": "e8ec59824e0590c927100bfc93808d7470fa7a27bcdf8cf62f6f2ac3ff51c8dc"
     },
     {
       "source": "docs/submodule-common-rules.md",
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bcf48c33a0a8e76cbf2e3f4a40083c0d11acb95722e82447c0ece5580165b1c4"
+      "sha256": "7f98611e96e07b84d36204cba41eb2affe1123b9543d52b3d3cf01bcd05bf3dd"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -139,14 +139,14 @@
       "dest": ".claude/autoflow/docs/units/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "35061a28d2b4e35ff920a507b2cf9b33a2179a04691d210b55980d846a8ed63e"
+      "sha256": "f54fd3a532522cdaa5a011b829a574e2fc0e5b3db84596ebf49755d49803dd27"
     },
     {
       "source": "docs/units/build.md",
       "dest": ".claude/autoflow/docs/units/build.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c97b08d6c5fd35e57672845f4b3b52824789810905db0d5b0cd3a59431e4c9e2"
+      "sha256": "010f90dd5d0af62c1aed054708398c656ac56548f9e2db1db46b3d67439715cd"
     },
     {
       "source": "docs/units/completion-evaluation.md",
@@ -167,7 +167,7 @@
       "dest": ".claude/autoflow/docs/units/design.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "989fb247a6a4b2110e7fae0156004f79e017dfe9f4da66cc76a95ebee0ccc06a"
+      "sha256": "c50e44afbf95071d9d9a119a32b43e8568b93f962a6b8de1182d33657e9a23ba"
     },
     {
       "source": "docs/units/preparation.md",
