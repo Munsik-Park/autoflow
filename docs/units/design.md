@@ -245,9 +245,9 @@ settling it as a `manual` row executed by a person, as `environment-dependent`, 
   user*), presented situation-first, and GATE:PLAN is not spawned until the operator answers. A
   `target procedure` item is started when the phase that uses it begins — by the orchestrator when
   the tool must outlive a role spawn. A tool found missing later, at BUILD, takes the same pause.
-- A criterion no tool can reach after this search — or whose tool the operator answers cannot be
-  provided — keeps the fallbacks of the untestable-items
-  bullet above — a `manual` row executed by a person, or a mock — and its `Reason` states why no
+- A criterion for which no tool can be secured — what is missing (the tool, or what using it
+  lacks) was requested and the operator answers that it cannot be provided, or no tool exists that
+  verifies the criterion — keeps the fallbacks of the untestable-items bullet above — a `manual` row executed by a person, or a mock — and its `Reason` states why no
   tool could be secured; GATE:PLAN's `Verification fit` reads that reason.
 - The row verified with a tool is looked at with it once implemented, and the evidence is the row's
   observation record, written at BUILD ([U4 Build and verify](build.md) > Build report > `## Manual checklist`).

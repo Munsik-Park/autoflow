@@ -140,7 +140,7 @@ found — is its own, written where it judges useful.
 - **An acceptance-criterion change** → the advisor ([`role-contracts.md`](../role-contracts.md) >
   Advisor); where the cycle re-enters on its `[ac-decision]` entries is the orchestrator's judgment
   ([U3 Design](design.md) > *Report routing*). No counter.
-- **A tool reported missing** → the tool request pause ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control).
+- **A tool, or what using one lacks, reported missing** → the tool request pause ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control).
 - **A lint chain reported `not-run (unexecuted)`** because it is not executable in this checkout and
   no pull-request CI job covering it can be named → a harness-level block: the cycle pauses for the
   operator (`active:false`, `phase:"awaiting-user"`), presented situation-first

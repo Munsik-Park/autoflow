@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/submodule-common-rules.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7f98611e96e07b84d36204cba41eb2affe1123b9543d52b3d3cf01bcd05bf3dd"
+      "sha256": "e2fda0c7cd01f53a3de727190dab4354295a368c452a3ea06c6f33ef917802ae"
     },
     {
       "source": "docs/thin-root-layer.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/units/build.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "010f90dd5d0af62c1aed054708398c656ac56548f9e2db1db46b3d67439715cd"
+      "sha256": "19265819f3a96362fefb84c7d612dbe4e5315a223f050d188186a21d6b7a0ee4"
     },
     {
       "source": "docs/units/completion-evaluation.md",
@@ -167,7 +167,7 @@
       "dest": ".claude/autoflow/docs/units/design.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c50e44afbf95071d9d9a119a32b43e8568b93f962a6b8de1182d33657e9a23ba"
+      "sha256": "6274007ddad832205d429c4a45a5ef82a512d8f9dc1dc2bdfc40b3eb759f28a9"
     },
     {
       "source": "docs/units/preparation.md",
