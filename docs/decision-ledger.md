@@ -4,7 +4,7 @@ The per-issue decision ledger, `.autoflow/issue-{N}-ledger.md`: what an entry re
 identified, and the grammar of the entries a decision point produces — the advisor's first judgment
 and the operator's override. The ledger's standing constraints —
 append-only, no re-litigation without a new verified fact, host ownership, and identifier
-allocation and check — are [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger.
+allocation — are [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger.
 
 ## Entries
 
@@ -26,7 +26,7 @@ A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, w
 
 This table is the mapping's only documentary home; other documents cite it rather than restate it.
 
-- **Legacy ambiguity**. Entries written before this protocol may already share an identifier; they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair.
+- **Identifier collision**. Two entries can share an identifier — entries written before this protocol, or a heading appended in error; they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair. A reader that resolves a supersession by identifier (`scripts/gate/security-checklist.sh`) displaces every earlier entry the named identifier matches, so the re-deriving entry is the one that stands.
 
 ## Decision-point entries
 
@@ -51,9 +51,8 @@ verified fact or the verified-error exception) or `- Overrides: A<n>` (the opera
 advisor). Two standing entries on the same subject whose conclusions disagree, with neither naming
 the other, are a **conflict**: nothing is settled by recency, and the conflict is resolved by a new
 entry — the advisor's, naming the entries it resolves, unless an operator entry is among them, which
-only the operator replaces. The same conclusion recorded twice is not a conflict. A `check` defect in
-an entry already appended (a duplicate identifier) is likewise resolved by a new entry naming the
-defective one, never by editing it.
+only the operator replaces. The same conclusion recorded twice is not a conflict. An identifier two entries
+already share is read as *Identifier collision* above says, never repaired by editing either entry.
 
 **Acceptance-criterion decisions** (`[ac-decision]`). Changing an issue's acceptance **content** is
 never the design's or a working role's: the **advisor** decides it first and the **operator** may

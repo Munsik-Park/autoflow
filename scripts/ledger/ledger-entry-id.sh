@@ -128,8 +128,8 @@ check_one() {
 # check <ledger-path>
 cmd_check() {
   local file="${1:-}"
-  # Exactly one ledger, by design. Every caller — the hook's advisory step and
-  # the writers after their appends — passes a single path, and an aggregate scan would
+  # Exactly one ledger, by design. Every caller — the hook's advisory step, or
+  # a writer that runs it by hand — passes a single path, and an aggregate scan would
   # blur which ledger a defect line belongs to, since the line names a number
   # inside a file it does not identify. A second argument is therefore a usage
   # error with the same disposition as none at all, not a wider scan.

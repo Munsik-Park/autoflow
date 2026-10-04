@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d360e679d813641e610706369ed73088e0e45c5c3b0149b3ed9ed162412800ec"
+      "sha256": "3f4fc06cde8c9570ab6f67839ca4f7e7739d8ebc0202c4c0aae8cb2feba9f381"
     },
     {
       "source": "docs/INDEX.md",
@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d79de209ab4f3a6f3ec5495ac526fb3a9af481445c8bc8a35618f63f18926bc5"
+      "sha256": "cd943cb6bbb2cb002b1b54997cbe53f2112b4fcb6aeef5686e505cb2ff2cbc0a"
     },
     {
       "source": "docs/development-guideline.md",
@@ -300,7 +300,7 @@
       "dest": "scripts/ledger/ledger-entry-id.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "46e41cc753864af187624cbce2d15c3c20ea8615cb3f6dfa990999eff880e266"
+      "sha256": "654b1fdca30eec46cbc8123266c56f3f1ac98acad4c6d6d21c34e88c19d793c4"
     },
     {
       "source": "scripts/gate/remedy-route.sh",

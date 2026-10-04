@@ -646,6 +646,16 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Not changed.** The pause itself (`awaiting-user`, an `O` entry on the answer), the `target procedure` starting rule, and the `manual` row executed by a person with its stated `Reason`.
 
+### Decision 38: A Ledger Identifier Is Allocated, Not Policed — the Writer's `check` and Resolve-Before-Return Duties Leave; Any Shared Identifier Is Read as a Collision
+
+**Problem.** The identifier protocol (issue #97) answered two writers that did not read each other's entries — the facilitator workflow and the orchestrator — appending serials from memory: 15 of 61 llmroute ledgers carried a duplicated identifier, and artifacts cited "ledger E6(a)" without a single referent. The facilitator is gone (`F` is read, never issued); the two writers left hold separate namespaces (`O`, `A`), so a collision between writers no longer arises. One remains: a writer's own erroneous append. Observation (connev-llm/llmroute#706): the orchestrator appended a body-less `## O2` heading twice and recorded the next entry, O3, voiding it; `check` kept reporting the duplicate after the cycle ended. `CLAUDE.md` > Decision Ledger required every reported defect to be resolved before the writer returned — unsatisfiable under the append-only rule — and *Legacy ambiguity*, the rule for reading a shared identifier, covered only entries written before the protocol.
+
+**Decision.** Operator decision (issue #422), executed as orchestrator work outside an AutoFlow cycle. The identifier stays the citation key: `scripts/gate/security-checklist.sh` resolves `- Supersedes:` / `- Overrides:` by exact identifier and matches the authority to the namespace, so a `[checklist-decision]` depends on it. `next` stays the one writer duty. The writer's `check` run and the resolve-before-return duty leave `CLAUDE.md` and the advisor agent (both copies); they bind no authority and prevent no self-certification (principle 1), and a defect the append-only ledger cannot shed is the writer's judgment, recorded as a new entry (principle 2). The reading rule is renamed *Identifier collision* and covers any shared identifier; it records that the checklist reader displaces every earlier entry a named identifier matches, so the re-deriving entry stands.
+
+**Why no device changes.** The gate hook's Section 1c advisory already runs `check` on every changed ledger and never denies; it stays the detector. `ledger-entry-id.sh` keeps both subcommands — only its comment naming the writers as callers changes. `security-checklist.sh` already treats a supersession of a shared identifier as displacing each match, which is what *Identifier collision* asks of a reader.
+
+**Not changed.** The append-only rule, the `A`/`O` authorship checks (Section 1e), the namespace table and `next`'s allocation duty.
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:
