@@ -377,7 +377,7 @@
       "dest": "scripts/issue/create-issue.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "f7eb9b1aace4af1b4586849553fbb3819e51d90b1cfea6be2154bf5cf2ec589d"
+      "sha256": "ad4e6c19ceed446c5632843fe5cbe8513dc01058a5e00ee5d702b70790dba9af"
     },
     {
       "source": ".claude/autoflow/spawn-policy.json",

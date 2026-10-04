@@ -115,6 +115,10 @@ if ! ROOT_PHYS="$(cd -P "$ROOT" 2>/dev/null && pwd)"; then
   exit 64
 fi
 AUTOFLOW_DIR="$ROOT_PHYS/.autoflow"
+# The issue directory's key (issue #423) is derived after the create, but the
+# library is loaded here so a missing one refuses before anything is filed.
+# shellcheck source=scripts/lib/issue-dir.sh
+. "$(dirname "$0")/../lib/issue-dir.sh" || { echo "refuse: scripts/lib/issue-dir.sh cannot be loaded" >&2; exit 64; }
 
 # The directory's absence is diagnosed separately from a misplaced draft
 # (feature design §5): a target that has never run PREFLIGHT arrives here with no
@@ -426,8 +430,6 @@ case "$NUMBER" in
     exit 70 ;;
 esac
 
-# shellcheck source=scripts/lib/issue-dir.sh
-. "$(dirname "$0")/../lib/issue-dir.sh"
 if [ -n "$REPO" ]; then KEY="$(derive_repo_key "$REPO" "")"; else KEY="$(autoflow_repo_key "$ROOT")"; fi
 RECORD_DIR="$AUTOFLOW_DIR/$KEY-issue-${NUMBER}"
 RECORD="$RECORD_DIR/issue-${NUMBER}-proposal.md"
