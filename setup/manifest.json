@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3f4fc06cde8c9570ab6f67839ca4f7e7739d8ebc0202c4c0aae8cb2feba9f381"
+      "sha256": "df54a14026ea04c86b77d2920285c30b141c194d9318326a671219ffd9fb99a3"
     },
     {
       "source": "docs/INDEX.md",
@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cd943cb6bbb2cb002b1b54997cbe53f2112b4fcb6aeef5686e505cb2ff2cbc0a"
+      "sha256": "804d5b7b4ecb8e60f05a2fddab8fcc7c9dac1493d1cb9fd289aa5d13de0105d2"
     },
     {
       "source": "docs/development-guideline.md",
