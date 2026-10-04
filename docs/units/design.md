@@ -357,9 +357,8 @@ the previous documents.
   narrowed input on re-entry ([`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN >
   *Re-entry re-score*); a re-entry after
   BUILD began re-scores that delta and the cycle re-enters BUILD.
-- **A new cycle writes new documents.** A review-response cycle entered at PREFLIGHT, or a HANDOFF
-  `design` re-entry judged to start at ARCHITECT, finds the previous cycle's documents
-  preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md`
+- **A new cycle writes new documents.** A review-response cycle entered at PREFLIGHT finds the
+  previous cycle's documents preserved as `issue-{N}-c{C}-feature-design.md` / `issue-{N}-c{C}-verification-design.md`
   ([U1 Preparation](preparation.md) > *Review-response setup*); the prompt names them and
   what the new cycle is for, and the unit writes the new cycle's documents whole. How much
   of the previous cycle's design the new one carries over is the unit's own, recorded in the design.

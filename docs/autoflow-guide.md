@@ -62,16 +62,14 @@ flowchart TD
     DEL[DELIVER<br/>Push]:::phase
     INT[INTEGRATE]:::phase
     HAND[HANDOFF<br/>PR + Hand-off]:::phase
-    CLOSE([Issue Closed<br/>resolved, no PR]):::terminal
-    REVW([Reply on PR<br/>await external review]):::terminal
+    ANS[Answer judged<br/>close · reply · rebuttal → review round]:::phase
     DONE([Done]):::terminal
     HUMAN([Human Decision]):::terminal
     ADV([Advisor decision<br/>recorded, applied]):::terminal
 
     PRE --> DIA
     DIA --> HYP
-    HYP -->|PASS · no change needed · new-issue| CLOSE
-    HYP -->|PASS · no change needed · review-response| REVW
+    HYP -->|PASS · no change needed| ANS
     HYP -.->|PASS · non-code lever| ADV
     HYP -->|PASS · code change| ARC
     HYP -->|FAIL · re-entry judged, no count cap| DIA
@@ -111,7 +109,7 @@ DIAGNOSE
     │
     ▼
 GATE:HYPOTHESIS (one form) ◄── FAIL: re-entry judged, no count cap; PASS judged unreachable → advisor → operator confirms close
-    ├─ PASS · no change needed ─► new-issue: Issue Closed (resolved, no PR) │ review-response: Reply on PR + await review
+    ├─ PASS · no change needed ─► answer judged: Issue Closed (no PR) │ Reply on PR / rebuttal
     ├─ PASS · non-code lever ───► advisor decides (code owed → continue │ non-code → end)
     │  PASS · code change
     │

@@ -97,20 +97,16 @@ The requested issue's mode follows from its own state file; none of these is a j
 
 ## Review-response setup
 
-For a cycle entered at PREFLIGHT in `review-response` mode, and for a HANDOFF `design` re-entry
-inside the session ([U6 Delivery](delivery.md) > *Routing*). On the issue's existing dev branch:
+For a cycle entered at PREFLIGHT in `review-response` mode. On the issue's existing dev branch:
 
 - **[MUST] The previous cycle's artifacts are preserved** before any phase of the new cycle writes:
   every `.autoflow/issue-{N}-<artifact>.md` is renamed to `.autoflow/issue-{N}-c{C}-<artifact>.md`,
   `C` being the previous cycle number. What spans cycles keeps its name — the ledger, the advisor
   records its entries point at (`issue-{N}-advisor-*.md`), the state file and
-  the cycle-layer store `issue-{N}-local/` —
-  and, only on a HANDOFF `design` re-entry judged to start at ARCHITECT, the analysis report that
-  shape reuses in place.
+  the cycle-layer store `issue-{N}-local/`.
 - **The state file moves to the next cycle**: `mode: "review-response"`, `active: true`,
   `phase: "in-progress"`, `cycle` incremented, and `phases` reset to the Creation template (the
-  `verdict` rule kept) — on the ARCHITECT re-design shape, only the gates that shape re-runs
-  (GATE:PLAN, AUDIT, GATE:QUALITY).
+  `verdict` rule kept).
 - The local checks run with the incremented cycle number, and the state is set only once they pass.
 - The issue carries `status:in-progress`, and the DIAGNOSE unit's prompt names the review comment
   or thread that triggered the cycle.
