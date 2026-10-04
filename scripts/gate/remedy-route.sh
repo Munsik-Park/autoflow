@@ -27,7 +27,7 @@
 #   - GATE:QUALITY FAIL, INTEGRATE FAIL, HANDOFF CI failure
 #   - HANDOFF review triage — there `ARCHITECT` means the design owns
 #     the moved decision and the orchestrator judges and records where the
-#     re-entry starts (a cycle from DIAGNOSE, or an ARCHITECT unit re-run);
+#     re-entry starts within the cycle (from DIAGNOSE or from ARCHITECT);
 #     `BUILD` / `DOC_COMMIT` are the thin path (a U4 re-run or a doc commit
 #     + execution verification + the next review round).
 #   - Recommendation triage after a PASS at AUDIT and GATE:QUALITY;

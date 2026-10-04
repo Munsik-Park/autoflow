@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "aa267119a69711375fd0fe0f2229b722ab8e8128465d13528e6fa062ed983105"
+      "sha256": "76419cc984e9b5a8b1d16f1fe293bd196121200edbcf0ab8fb7b074da0a8818d"
     },
     {
       "source": "docs/INDEX.md",
@@ -160,21 +160,21 @@
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "80984e2a9c19ac999064218ff9f21bfd36b24a3c1077034b4d7b9a7dc2551985"
+      "sha256": "98cae03c3d731dd50921a95fdb1674629cf426525382ac58d71f28020fe1d4d4"
     },
     {
       "source": "docs/units/design.md",
       "dest": ".claude/autoflow/docs/units/design.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6274007ddad832205d429c4a45a5ef82a512d8f9dc1dc2bdfc40b3eb759f28a9"
+      "sha256": "69d2ca4317bc450b431fbf667398a1b7d38b822951a7cea3488399f4b14c0aef"
     },
     {
       "source": "docs/units/preparation.md",
       "dest": ".claude/autoflow/docs/units/preparation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "4093b55e5a3d0c8a9d2fbd74ba9dd945ddac5700772d5f2976880c0a4be71880"
+      "sha256": "767936fe4abf280eb7b1e7451939d5cf0f00ab94db22ad99fd40b1e6d217f0fc"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -307,7 +307,7 @@
       "dest": "scripts/gate/remedy-route.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "c08351fc8ee7c96396075797db71b536e121df7dd8ff92146b2239afd04f6b52"
+      "sha256": "04566bb390bbd775a22e1ce118647df49e61bdb877b5d96ebe1731bacb20a5ba"
     },
     {
       "source": "scripts/gate/security-checklist.sh",

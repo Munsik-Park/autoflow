@@ -666,6 +666,16 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Not changed.** The PASS line, the hook's gating of the ARCHITECT spawn for a bug issue, the close path for a request needing no change, the advisor's decision on a non-code lever, and the recommendation triage.
 
+### Decision 40: A Review `design` Finding Re-enters Within the Cycle; the Rule That Made It a New Cycle Leaves
+
+**Problem.** A `design`-class finding at HANDOFF's review triage was the one `design` re-entry fixed as a new cycle: artifacts renamed `c{C}`, `cycle` incremented, gate records reset, design documents written whole — while the cycle's other `design` re-entries (GATE:QUALITY FAIL, HANDOFF's CI failure, a gate recommendation) append a delta and re-score on the narrowed input. Observation (connev-llm/llmroute#708): two review `design` findings were cleared by 1 file +39/−8 and 1 file +2/−0, yet each re-entry rewrote the feature design and re-scored every gate — 165.0 and 113.6 minutes against the first cycle's 221.5. The rule prescribed a method ADR-0025 D2 leaves to the unit and a reach principle 2 leaves to the working AI.
+
+**Decision.** Operator decision (issue #420), executed as orchestrator work outside an AutoFlow cycle. The new-cycle rule for this route is removed. The route re-enters within the cycle as the other `design` re-entries do; where it starts and what it re-derives and re-scores is the orchestrator's judgment, recorded in the attempt's `[review-autofix]` entry. A review-response cycle entered at PREFLIGHT is unchanged.
+
+**Device (principle 4).** The authority rule — a changed decision is not pushed on the previous round's evaluation (principle 1) — uses the existing open-attempt marker: `design` is recorded as `phases.gate_quality.remedy_class` while the attempt is open, and the hook denies the push until GATE:QUALITY's re-score removes it, as it does for the GATE:QUALITY `design` route. The hook is unchanged.
+
+**Rejected after review (PR #426, rounds 1–3).** A first version replaced the removed rule with a prescribed procedure — emptied gate records, a `mode` switch, a rebuttal special case, counter notes. Each review round found a gap the procedure itself had opened, and each fix added another rule that conflicted with prose already in place. Areas the working AI can judge were fixed as rules; only the authority rule is kept.
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:
