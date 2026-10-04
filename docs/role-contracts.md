@@ -14,7 +14,7 @@ Every role is an anonymous direct spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn Mod
 
 | Role (where it occurs) | Spawn mode | Per-call scope |
 |---|---|---|
-| Evaluation AI (GATE:HYPOTHESIS structure/cause, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
+| Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
 | HANDOFF built-in reviewer (*Reviewer review*) | anonymous direct (`subagent_type: autoflow-reviewer`) | single-shot — reviews one pull request for one round, writes its review record, and returns; a fresh reviewer is spawned for every pull request and round |
 | HANDOFF review aggregator (*Review aggregation*) and CI-failure classifier (*CI-failure re-entry*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's review records into one comment, its findings file and its label, or reads the failing check's output, records the class and its grounds, and returns; the re-entry it feeds runs through the unit rows |
 | Advisor (a decision point in any phase — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its `A`-namespace ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
@@ -52,14 +52,9 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 
 The hook does **not** read the evaluator's `pass`, `avg` or `min` fields: it computes them from the raw
 `scores` the orchestrator records. The phase keys recorded in `.autoflow/issue-{N}.json` are below.
-The hook **gates** only the four cause/plan/audit/quality keys; `gate_hypothesis_structure` is
-recorded in state but **not gated** by the hook (GATE:HYPOTHESIS structure form — orchestrator-judged
-against the structure form's PASS line, [`evaluation-system.md`](evaluation-system.md) > *Gate
-rubrics* > GATE:HYPOTHESIS > *Structure form*), matching the `gated_phase_keys` allow-list in
-`tests/fixtures/gate-schema.json`, which omits it:
+The four keys match the `gated_phase_keys` allow-list in `tests/fixtures/gate-schema.json`:
 
-- `gate_hypothesis_structure` — GATE:HYPOTHESIS structure form (recorded in state, **not gated** by the hook — orchestrator-judged)
-- `gate_hypothesis_cause` — GATE:HYPOTHESIS cause analysis (hook-gated)
+- `gate_hypothesis` — GATE:HYPOTHESIS, one form for every issue (hook-gated for a bug / incident issue; its `verdict` `skipped (non-bug issue)` lets the hook admit the ARCHITECT spawn without reading the scores, and the orchestrator judges the PASS)
 - `gate_plan` — GATE:PLAN (hook-gated)
 - `audit` — AUDIT (hook-gated)
 - `gate_quality` — GATE:QUALITY (hook-gated)
@@ -217,7 +212,7 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
 
 | Unit agent (`subagent_type`) | Unit | Gate class (hook) | Exit |
 |---|---|---|---|
-| `autoflow-unit-analysis` | U2 Analysis (DIAGNOSE, GATE:HYPOTHESIS) | analysis — no score gate | `gate_hypothesis_cause`, or the `skipped (non-bug issue)` verdict |
+| `autoflow-unit-analysis` | U2 Analysis (DIAGNOSE, GATE:HYPOTHESIS) | analysis — no score gate | `gate_hypothesis` |
 | `autoflow-unit-design` | U3 Design (ARCHITECT, GATE:PLAN) | planning — GATE:HYPOTHESIS pass, or a `skipped` verdict | `gate_plan` |
 | `autoflow-unit-build` | U4 Build and verify (BUILD, AUDIT) | implementation — GATE:PLAN pass | `audit`, test-first judged by its evaluator |
 

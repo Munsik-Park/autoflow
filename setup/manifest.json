@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "df54a14026ea04c86b77d2920285c30b141c194d9318326a671219ffd9fb99a3"
+      "sha256": "88433bd66c4aa6cca3301aeb8d8788362dcb18adf9498c098b02e2d4485300b3"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0abf15156384145aeeb0afb6d614c944b2e8efce067179b4c09ff39bcda64a1a"
+      "sha256": "be9075d132a90b5f3dbea17da27985bdae98ddb3876ee1d05cb95e968d79fe03"
     },
     {
       "source": "docs/decision-ledger.md",
@@ -48,7 +48,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b534aa464040b164d780d49f853ac23d5544abf5997127d9ec7e50bab82ea117"
+      "sha256": "98aba391a6441bc3d0c69845971c177a1998faa13b030d4d976cf415234ce310"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -104,7 +104,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e8ec59824e0590c927100bfc93808d7470fa7a27bcdf8cf62f6f2ac3ff51c8dc"
+      "sha256": "d780b35529c0e173de15a55231d6be22ac7cc62c7111e781f668843efc7a25ce"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/units/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f54fd3a532522cdaa5a011b829a574e2fc0e5b3db84596ebf49755d49803dd27"
+      "sha256": "eed3d748e7fb9c823eaf06290cce918bfea7341c6cb61e2adf062da2a35dab55"
     },
     {
       "source": "docs/units/build.md",
@@ -153,7 +153,7 @@
       "dest": ".claude/autoflow/docs/units/completion-evaluation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "da8519a3164d64c894fd18cc9ea395f091f2afd27e53e4b2da6d51b7d1f21e2d"
+      "sha256": "85893f69b0b56655ec556f04a9cac9a6a978c503bc016f69fea58c9b1fdfc4ad"
     },
     {
       "source": "docs/units/delivery.md",

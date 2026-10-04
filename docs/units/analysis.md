@@ -14,18 +14,17 @@ artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
 
 - **Goal**: the request that triggered the cycle is understood well enough for GATE:HYPOTHESIS to
   score it — the affected structure as it stands, the gap between it and the requested behavior,
-  whether a code change is the lever, and, for a bug or incident issue, the cause hypotheses and
-  their lightweight verification.
+  whether a change is owed and whether code is the lever, and the decision points, each conclusion
+  with its grounds.
 - **Artifact contract**: the analysis report (*Analysis report* below).
-- **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores the report's structure form for
-  every issue and its cause form for a bug / incident issue, on the rubric of
-  [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS; the unit
-  never scores its own artifact. U2 ends at a `gate_hypothesis_cause` PASS, or at the
-  structure-form PASS of a non-bug issue, whose verdict is `skipped (non-bug issue)` (D6)
-  (*Verification — GATE:HYPOTHESIS* below).
-- **Loop cap**: a cause-form FAIL re-runs the unit with the evaluator's findings and the previous
-  report (*Re-entry* below), max 2× (`CLAUDE.md` > Flow Control > Regressions). The structure form
-  has no retry loop: its FAIL is a disposition (*Verification — GATE:HYPOTHESIS* below).
+- **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores the report on one form for
+  every issue, the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* >
+  GATE:HYPOTHESIS: whether the report's conclusion is supported by its grounds and whether the
+  analysis met its goal. The unit never scores its own artifact. U2 ends at a `gate_hypothesis`
+  PASS (*Verification — GATE:HYPOTHESIS* below).
+- **Loop cap**: none counted (issue #421). After a FAIL, what follows is the orchestrator's
+  judgment, and the cycle leaves GATE:HYPOTHESIS only on a PASS; a PASS judged unreachable goes to
+  the advisor and, on its judgment, to the operator (*Verification — GATE:HYPOTHESIS* below).
 - **Result owed**: the report's path and a one-line summary that names any decision point it
   recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
   orchestrator does not receive the report's body.
@@ -53,13 +52,18 @@ artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
 
 ## What the analysis owes
 
-The analysis is asked for four things:
+The analysis is asked for four things, each conclusion with its grounds:
 
 - the affected structure as it currently is, stated as fact;
-- the gap between that structure and the behavior the request asks for;
-- whether a code change is the lever that closes the gap, or data, configuration or operations are;
-- for a bug or incident issue, the cause hypotheses, the lightweight verification of each, and a
-  verdict per hypothesis.
+- the gap between that structure and the behavior the request asks for — and, where the request
+  reports a defect, the cause the gap comes from;
+- whether a change is owed and, if so, whether a code change is the lever that closes the gap, or
+  data, configuration or operations are;
+- the decision points — the judgments the working AI is not the one to make.
+
+How far the analysis pursues a cause, and by what means — how many explanations it weighs, which
+ones, what it checks and with which tool — is the unit's judgment, recorded with its grounds under
+`## Method` and `## Cause`.
 
 The request is the trigger target — the issue body in a new-issue cycle, the review comment or
 thread PREFLIGHT identified in a review-response cycle — and the as-is is the dev branch's HEAD
@@ -70,8 +74,9 @@ whether the as-is already satisfies the request.
 
 - Describe the current structure as fact, apart from the issue's defect hypothesis — do not read the
   structure to fit the hypothesis.
-- "Not a code defect" — data, configuration, environment, already fixed — is one of the hypotheses.
-  A conclusion that a code change is required rests on evidence that rules the others out.
+- A conclusion that a code change is required rests on evidence that the gap is not closed by
+  data, configuration, the environment or an earlier fix; a cause that was not established is not
+  presented as one.
 - The necessity judgment is reuse-neutral: a resolution that uses existing code is not marked down
   for it. Structural fit and over-engineering are GATE:PLAN's and GATE:QUALITY's.
 - Open every material the issue body or an acceptance criterion references — a design mockup, an
@@ -97,11 +102,11 @@ The rules below are the ones other documents cite; everything else about the wor
   (`CLAUDE.md` > Flow Control > *tool or referenced material → user*;
   [`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *The tools
   the work needs*).
-- **Lightweight verification.** A hypothesis is checked with what the environment and the target's
-  documents and scripts provide — API calls, queries, service status, logs — and those tools are
-  looked for before an item is marked `unverified`; a tool that is off is started by the target's
+- **Checking a finding.** A finding the analysis checks is checked with what the environment and the
+  target's documents and scripts provide — API calls, queries, service status, logs — and those tools
+  are looked for before a finding is left unchecked; a tool that is off is started by the target's
   own procedure, and one that needs the operator is requested (*The tools the work needs*). The
-  verdict notes record each tool, whether it was usable and how it was secured; an `unverified` item
+  report records each tool a conclusion rests on and whether it was usable; a finding left unchecked
   names the tool it needed.
 - **Scope judgments.** Beyond the acceptance criteria, the analysis names the problems the confirmed
   cause carries — its other sites, and what fixing it will expose — with the scope judgment for each
@@ -126,12 +131,12 @@ date on a re-entry. Every section below is present; a section with nothing to re
 | Section | Holds | Read by |
 |---|---|---|
 | `## Method` | how the analysis was done — the reading order, any helper spawn and what it was given — and how each caution was kept, with grounds | GATE:HYPOTHESIS |
-| `## Current structure` | the affected area as it stands — its structure, design intent and data flow — stated as fact | structure form |
-| `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | structure form |
+| `## Current structure` | the affected area as it stands — its structure, design intent and data flow — stated as fact | GATE:HYPOTHESIS |
+| `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | GATE:HYPOTHESIS |
 | `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | ARCHITECT, GATE:PLAN, BUILD, GATE:QUALITY |
 | `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | ARCHITECT (*Tools*) |
-| `## Necessity` | the issue type — Type 1 or Type 2 ([`evaluation-system.md`](../evaluation-system.md) > GATE:HYPOTHESIS > *Structure form*), and bug / incident or not — and, per resolution approach, the behavior gap and whether code is the lever, with grounds | structure form |
-| `## Hypotheses` | for a bug / incident issue, at least three cause hypotheses, "not a code defect" among them, each with its lightweight verification, the tools it used and its verdict — eliminated, likely or unverified — with evidence; for a non-bug issue, `none — non-bug issue` | cause form |
+| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS; the orchestrator (*Verification — GATE:HYPOTHESIS*) |
+| `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
 | `## Scope judgments` | each scope judgment, as *What the analysis owes* says | ARCHITECT; GATE:QUALITY `Minimal implementation`, `Impact scope` |
 | `## Affected documents` | the documents the change is expected to update | ARCHITECT; BUILD (documents line) |
 | `## Decision points` | each decision point with its grounds, or `none` | the orchestrator (*Report routing*) |
@@ -149,11 +154,10 @@ Anything else the unit records is its own, written where it judges useful.
 - **A repeated complaint** (`mode = review-response`) → the advisor, which decides the re-entry —
   its depth, or none ([U6 Delivery](delivery.md) > *A repeated complaint*). A redefined criterion comes
   back as `[ac-decision]` entries and a unit re-run on them. No counter.
-- **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the structure form and, for a bug
-  / incident issue, the cause form. The dispositions — an already-satisfied request, a non-code
-  lever or cause, a non-bug issue's `skipped (non-bug issue)` verdict, a cause-form FAIL — are
+- **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the report. The dispositions — a
+  request needing no change, a non-code lever, a FAIL, a PASS judged unreachable — are
   *Verification — GATE:HYPOTHESIS*'s (below); a decision point the report records is confirmed by the
-  gate's scores before any close or end.
+  gate's PASS before any close or end.
 - **A material not opened, or a tool the analysis needs that neither this environment nor the
   target's procedures provide, or what using a tool the environment has lacks** — a harness-level block → the operator, situation-first
   (`awaiting-user`; `CLAUDE.md` > Flow Control > *tool or referenced material → user*).
@@ -162,44 +166,45 @@ Anything else the unit records is its own, written where it judges useful.
 
 One independent Evaluation AI (`autoflow-evaluator`), fresh-spawned per entry on the model
 `bash scripts/spawn-policy/spawn-policy.sh model gate-hypothesis` names, scores the report on the
-rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS: the
-structure form for every issue and, for a bug / incident issue, the cause form. Its documents line
-names that document alone. The orchestrator records each form's scores
-under its own key, `phases.gate_hypothesis_structure` and `phases.gate_hypothesis_cause`.
+rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS — one
+form for every issue. Its documents line names that document alone. The orchestrator records the
+scores under `phases.gate_hypothesis`, with the `verdict` `pending` → `evaluated` for a bug /
+incident issue and `skipped (non-bug issue)` otherwise ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow
+State Tracking > `verdict` rule). The hook gates the ARCHITECT spawn on the recorded PASS for a bug
+/ incident issue only; for any other issue the orchestrator judges the PASS line itself: each ≥ 7,
+avg ≥ 7.5.
 
-**Structure form.** The hook records but does not gate `gate_hypothesis_structure`; the
-orchestrator judges it against the form's PASS line: each ≥ 7 — and, for the 3-item Type 2
-rubric, also avg ≥ 7.5.
+**PASS** → recommendation triage ([U5 Completion evaluation](completion-evaluation.md) >
+*Recommendation triage*) → the route the report's `## Necessity` conclusion names:
 
-- **PASS** → recommendation triage ([U5 Completion evaluation](completion-evaluation.md) >
-  *Recommendation triage*) → the cause form (bug / incident), or ARCHITECT with the verdict
-  `skipped (non-bug issue)` (non-bug).
-- **FAIL** → disposition by the failing item — never a bare composite; a real code gap is never
-  auto-closed. No retry loop.
-  - **Gap item low** (the as-is already satisfies the request) → no change needed. Branch on the
-    cycle's `mode` recorded at PREFLIGHT (a PR state change mid-cycle is re-classified at the next
-    PREFLIGHT, not re-derived here):
-    - `mode = review-response` → reply on the PR with the finding; do not close the issue or the PR;
-      set `active: false`, `phase: "awaiting-external-review"`.
-    - `mode = new-issue` → the issue is closed with `gh issue close` and the cycle ends
-      (`active: false`). **Pre-close verification** (the hook does not gate `gh issue close`): the
-      orchestrator first confirms the recorded `phases.gate_hypothesis_structure` scores meet this
-      FAIL condition (gap item < 7). The close comment records those scores and a summary of the
-      existing mechanism. Re-filing or reopening is the re-entry path.
-  - **Gap item high, Code-change necessity low** (a real gap whose lever is data / config / ops) →
-    the advisor decides ([`role-contracts.md`](../role-contracts.md) > Advisor). **A code change is
-    still owed** → the cycle continues as on a PASS; **the lever is non-code** → report the finding
-    situation-first ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision
-    presentation) — in a `mode = review-response` cycle, as the PR reply — and end the cycle with
-    `active: false`, `phase: "awaiting-user"`.
+- **`no change needed`** → no change is made, no PR. Branch on the cycle's `mode` recorded at
+  PREFLIGHT (a PR state change mid-cycle is re-classified at the next PREFLIGHT, not re-derived
+  here):
+  - `mode = review-response` → reply on the PR with the finding; do not close the issue or the PR;
+    set `active: false`, `phase: "awaiting-external-review"`.
+  - `mode = new-issue` → the issue is closed with `gh issue close` as resolved and the cycle ends
+    (`active: false`). **Pre-close verification** (the hook does not gate `gh issue close`): the
+    orchestrator first confirms the recorded `phases.gate_hypothesis` scores meet the PASS line and
+    the report's conclusion is `no change needed`. The close comment records those scores and a
+    summary of the existing mechanism. Re-filing or reopening is the re-entry path.
+- **`non-code lever`** → the advisor decides ([`role-contracts.md`](../role-contracts.md) >
+  Advisor). **A code change is still owed** → ARCHITECT; **the lever is non-code** → report the
+  finding situation-first ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision
+  presentation) — in a `mode = review-response` cycle, as the PR reply — and end the cycle with
+  `active: false`, `phase: "awaiting-user"`.
+- **`code change`** → ARCHITECT.
 
-**Cause form** (bug / incident issues only).
+**FAIL** → what follows is the orchestrator's judgment over the evaluator's findings, recorded with
+its grounds in the ledger — a U2 unit re-run naming the findings and the previous report (*Re-entry*
+below) is the usual route. No count caps it: the cycle leaves GATE:HYPOTHESIS only on a PASS.
 
-- **PASS** → recommendation triage ([U5 Completion evaluation](completion-evaluation.md) >
-  *Recommendation triage*) → ARCHITECT.
-- **FAIL** → a U2 unit re-run with this report's findings and the previous analysis report
-  (*Re-entry* below), max 2×. Third FAIL → human decision.
-- **Non-code root cause confirmed** → the advisor decides ([`role-contracts.md`](../role-contracts.md) > Advisor): a code change is still owed → ARCHITECT; the cause is non-code → report it (situation-first — [`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation) and end the cycle (`active: false`, `phase: "awaiting-user"`).
+**A PASS judged unreachable** → when the orchestrator judges that no re-run will bring the report
+to a PASS — the re-runs do not converge, or the request cannot be brought to a supported conclusion
+— it asks the advisor. **Reachable** → the advisor's answer is applied, a re-run on it. **Not
+reachable** → the issue is not closed by the cycle: the operator is asked to confirm closing it,
+situation-first, with the advisor's judgment as the direction (`active: false`,
+`phase: "awaiting-user"`). This differs from `no change needed`, which closes a resolved issue
+without asking.
 
 ## Re-entry
 
@@ -210,13 +215,13 @@ table changes only by an `[ac-decision]` entry, which the orchestrator applies.
 
 | Re-entry | Material named | Counter |
 |---|---|---|
-| GATE:HYPOTHESIS cause-form FAIL | the evaluation report and its failed items | GATE:HYPOTHESIS cause FAIL (max 2×) |
+| GATE:HYPOTHESIS FAIL | the evaluation report and its failed items | none — the orchestrator's judgment (*Verification — GATE:HYPOTHESIS* above) |
 | a recommendation attempt at GATE:HYPOTHESIS routed to the analysis | the recommendation's subject and finding | the attempt window (max 7×) |
 | an advisor answer or operator override that reaches the analysis | the `A` / `O` entries | none |
 
 A re-entry passes through GATE:HYPOTHESIS again on its re-score
 ([`evaluation-system.md`](../evaluation-system.md) > GATE:HYPOTHESIS > *Re-entry re-score*). The unit reads and writes no
-`.autoflow/issue-{N}.json` state file, so every counter above is the orchestrator's own accounting.
+`.autoflow/issue-{N}.json` state file, so the counter above is the orchestrator's own accounting.
 
 ## Spot-check & escalation discipline (incomplete-output guard)
 

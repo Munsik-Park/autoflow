@@ -48,7 +48,7 @@ A PASS report's `recommendations` are findings the evaluator recorded without sc
 They are triaged by **the procedure the
 reviewer's findings already take** — HANDOFF's review-triage classification, the weighing of whether a finding holds, route, pause criteria, `Low`
 judgment, ledger record and attempt cap — after the PASS of every rubric-scored gate
-(GATE:HYPOTHESIS in both forms, GATE:PLAN, AUDIT, GATE:QUALITY) and before the transition it opens.
+(GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) and before the transition it opens.
 The one thing added is the evaluator's output contract for `recommendations`
 ([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format): each item names its
 subject — a `path:line` of the evaluated artifact at the evaluated commit, or a section of the evaluated artifact (a design document, the DIAGNOSE analysis report) — its severity in the reviewer's vocabulary, and — on `Medium` and above — its `remedy_class`.

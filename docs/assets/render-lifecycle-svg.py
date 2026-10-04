@@ -36,7 +36,7 @@ STAGES = [
     ("01", "ANALYSIS", [
         ("PREFLIGHT", "git clean · prior-cycle check", "start", False),
         ("DIAGNOSE", "analysis unit · one spawn", "phase", True),
-        ("GATE:HYPOTHESIS", "fresh eval · structure + cause", "gate", False),
+        ("GATE:HYPOTHESIS", "fresh eval · one form", "gate", False),
     ]),
     ("02", "PLANNING", [
         ("ARCHITECT", "design unit · one spawn", "phase", True),
@@ -59,7 +59,7 @@ STAGES = [
 # Per-phase FAIL caps rendered inside the node, bottom-right (CLAUDE.md >
 # Regressions). ↩ = bounded return edge drawn dashed; ↻ = in-place fix cycle.
 FAIL_CAPS = {
-    "GATE:HYPOTHESIS": "↩ ≤2×",
+    "GATE:HYPOTHESIS": "↩ judged",
     "GATE:PLAN": "↩ ≤3×",
     "GATE:QUALITY": "↩ ≤3×",
     "AUDIT": "↩ ≤2×",
@@ -255,7 +255,7 @@ def render(theme):
             f'marker-end="url(#arrf)"/>'
         )
 
-    fail_loop("GATE:HYPOTHESIS", "DIAGNOSE", 1)   # cause FAIL -> DIAGNOSE (max 2x)
+    fail_loop("GATE:HYPOTHESIS", "DIAGNOSE", 1)   # FAIL -> DIAGNOSE (judged, no count cap)
     fail_loop("GATE:PLAN", "ARCHITECT", 1)        # plan FAIL -> ARCHITECT (max 3x)
     fail_loop("AUDIT", "BUILD", 1)                # test-first finding / AUDIT FAIL -> BUILD (max 2x)
 
@@ -322,7 +322,7 @@ def render(theme):
     )
     s.append(
         f'<text x="{MARGIN + 32}" y="{y2}" font-family="{SANS}" font-size="11" fill="{t["muted"]}">'
-        f'bounded FAIL loop (≤N×) — cap exhausted → human escalation, never unbounded</text>'
+        f'FAIL loop (≤N×, or judged) — cap exhausted / judged unreachable → human</text>'
     )
     s.append(
         f'<rect x="560" y="{y2 - 12}" width="14" height="10" rx="3" fill="none" '

@@ -14,24 +14,25 @@ principle 2).
 - **Goal**: the request that triggered the cycle — the issue, or the reviewer
   comment of a review-response cycle — is understood well enough that the
   unit's exit gate can score it: the affected structure as it stands, the gap
-  between it and the requested behavior, whether a code change is the lever,
-  and — for a bug or incident issue — the cause hypotheses and their
-  lightweight verification. What the analysis owes, the cautions it heeds, and
-  the rules other documents cite are `docs/units/analysis.md` > *What the
-  analysis owes*; how you keep the cautions is yours, recorded under
-  `## Method`.
+  between it and the requested behavior — and, where a defect is reported, its
+  cause — whether a change is owed and whether code is the lever, and the
+  decision points, each conclusion with its grounds. What the analysis owes,
+  the cautions it heeds, and the rules other documents cite are
+  `docs/units/analysis.md` > *What the analysis owes*; how far and by what
+  means you pursue a cause, and how you keep the cautions, are yours, recorded
+  under `## Method` and `## Cause`.
 - **Artifact contract**: the analysis report `.autoflow/issue-{N}-analysis.md`,
   with the sections `docs/units/analysis.md` > *Analysis report* lists — the
   GATE:HYPOTHESIS inputs, the acceptance-criterion table, the referenced
   materials, the scope judgments, the affected documents and the decision
   points. Nothing beyond what the verification needs.
-- **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores the
-  structure form for every issue and the cause form for a bug / incident issue
-  (`docs/evaluation-system.md` > GATE:HYPOTHESIS). The unit's exit is `gate_hypothesis_cause`,
-  or the `skipped (non-bug issue)` verdict for a non-bug issue (ADR-0025 D1,
-  D6). A cause-form FAIL returns its findings and your previous report to a
-  fresh U2 spawn, up to the existing cap (`CLAUDE.md` > Flow Control >
-  Regressions).
+- **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores one form
+  for every issue: whether your conclusion is supported by its grounds and
+  whether the analysis met its goal (`docs/evaluation-system.md` >
+  GATE:HYPOTHESIS). The unit's exit is a `gate_hypothesis` PASS (ADR-0025 D1,
+  D6). A FAIL may return its findings and your previous report to a fresh U2
+  spawn; no count caps it (`docs/units/analysis.md` > *Verification —
+  GATE:HYPOTHESIS*).
 
 The authority rules hold unchanged (ADR-0025 D3): you never score your own
 artifact, never edit `.autoflow/issue-*.json` or the decision ledger, never

@@ -26,8 +26,8 @@ AutoFlow structures every code change through a defined lifecycle:
 
 ```
 PREFLIGHT       Preparation (U1)  — prior-cycle resolution, Git clean check, sync, branch and state creation
-DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, cause hypotheses
-GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (gate: structure form; cause form for bug issues)
+DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, conclusion with its grounds
+GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (one form: conclusion grounds, goal coverage)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
 GATE:PLAN       Plan Evaluation   — Scored plan assessment (gate)
 BUILD           Build unit (U4)   — Test-first implementation and verification
