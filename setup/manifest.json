@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ce9a45e904144fd8ceaea50ce8cc3413086e64fac68e9dd1721d49c4cbaa6c25"
+      "sha256": "b61780062f3c044425be9a7f2e6e599d046dd18aa7affc16547e282aee9358e9"
     },
     {
       "source": "docs/decision-ledger.md",
@@ -48,7 +48,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "db90d104e8c78c4d7a56342108733f2943762d0c449b87898802ff3ca875d5e9"
+      "sha256": "89124170f884fe0aa1e1df7e124558d1ec4a389b8c29c7b2bfbcfc9e21a8f47a"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -160,7 +160,7 @@
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "98cae03c3d731dd50921a95fdb1674629cf426525382ac58d71f28020fe1d4d4"
+      "sha256": "68c5f0b5240d6a85717360fe6ad7f9c4aac4cfd8643daa07799373ab84ee5482"
     },
     {
       "source": "docs/units/design.md",

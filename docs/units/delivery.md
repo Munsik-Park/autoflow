@@ -326,8 +326,7 @@ git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|
 
 A review-response can loop: each fix answers the case the reviewer named while the property the
 reviewer asserts stays unmet, and the next review names another case. No spawn checks for this on
-every attempt. Whoever reads the finding — the aggregator here, or the DIAGNOSE unit in a
-review-response cycle entered at PREFLIGHT — and sees that it repeats the complaint of the previous
+every attempt. Whoever reads the finding — the aggregator here, or the DIAGNOSE unit — and sees that it repeats the complaint of the previous
 attempt (the same property asserted, a different witness case; the previous attempt's
 `[review-autofix]` entry and the previous cycle's artifacts are what it compares against) says so
 where it writes the finding: in the finding's cell of the findings file, or under the analysis

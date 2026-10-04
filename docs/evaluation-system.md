@@ -302,12 +302,11 @@ D2).
 every issue — bug / incident or not, code or documentation — and returns one output object
 (*Evaluation Output Format* below), which the orchestrator records under `phases.gate_hypothesis`
 in `.autoflow/issue-{N}.json`.
-**Input**: the analysis report (`.autoflow/issue-{N}-analysis.md`), the trigger target (the issue,
-or the review comment / thread of a review-response cycle) and the decision ledger.
+**Input**: the analysis report (`.autoflow/issue-{N}-analysis.md`), the trigger target and the decision ledger.
 
 The form answers one question: **is the report's conclusion supported by its grounds, and did the
-analysis reach its goal?** The request is the cycle's trigger target and the as-is the dev branch's
-HEAD ([U2 Analysis](units/analysis.md) > *What the analysis owes*). The form scores whether the
+analysis reach its goal?** The request and the as-is are the ones the report states
+([U2 Analysis](units/analysis.md) > *What the analysis owes*). The form scores whether the
 conclusion holds, never which way it points: a well-grounded `no change needed` or `non-code lever`
 scores as high as a well-grounded `code change`, and the conclusion — not a low item — routes the
 cycle ([U2 Analysis](units/analysis.md) > *Verification — GATE:HYPOTHESIS*). Nor does it score how

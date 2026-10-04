@@ -62,16 +62,14 @@ flowchart TD
     DEL[DELIVER<br/>Push]:::phase
     INT[INTEGRATE]:::phase
     HAND[HANDOFF<br/>PR + Hand-off]:::phase
-    CLOSE([Issue Closed<br/>resolved, no PR]):::terminal
-    REVW([Reply on PR<br/>await external review]):::terminal
+    ANS([Answer judged<br/>close · reply · rebuttal]):::terminal
     DONE([Done]):::terminal
     HUMAN([Human Decision]):::terminal
     ADV([Advisor decision<br/>recorded, applied]):::terminal
 
     PRE --> DIA
     DIA --> HYP
-    HYP -->|PASS · no change needed · no PR| CLOSE
-    HYP -->|PASS · no change needed · PR open| REVW
+    HYP -->|PASS · no change needed| ANS
     HYP -.->|PASS · non-code lever| ADV
     HYP -->|PASS · code change| ARC
     HYP -->|FAIL · re-entry judged, no count cap| DIA
