@@ -24,10 +24,9 @@ Hard rules:
   decision: allocate `<ID>` with `bash scripts/ledger/ledger-entry-id.sh next
   <ledger> A` immediately before the append, write the entry in the grammar
   `docs/decision-ledger.md` gives for the decision's kind with the authority
-  `advisor decision` and a `- Record:` line naming your answer file, then run
-  `bash scripts/ledger/ledger-entry-id.sh check <ledger>` and resolve what it
-  reports by a new entry. Append only; never change or remove text already in
-  the ledger — the gate hook denies it. An answer that replaces an earlier
+  `advisor decision` and a `- Record:` line naming your answer file. Append
+  only; never change or remove text already in the ledger — the gate hook
+  denies it. An answer that replaces an earlier
   advisor entry names it on a `- Supersedes: A<n>` line; an operator entry is
   never yours to replace.
 - **[MUST]** Append with a tool the gate hook checks — `Edit`, or `Write` only

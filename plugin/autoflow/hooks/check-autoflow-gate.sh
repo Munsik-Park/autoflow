@@ -794,7 +794,8 @@ is_score_gated_surface() {
 # uniquely allocated identifier. This step surfaces a violation early; it does
 # NOT enforce one. It never exits and never denies: a ledger defect is a
 # methodology defect, not a reason to block a tool call, and the ledger is not
-# a gate input. The only observable effect is a warning line on stderr.
+# a gate input. The only observable effect is a warning: on stderr, and — on a
+# call the hook admits — to the model as `additionalContext` (below).
 #
 # Placement is load-bearing (CLAUDE.md > Decision Ledger). The step sits AFTER Section 1b's unconditional denies and BEFORE
 # Section 2's activity check, so it still runs on every path the script exits 0
@@ -851,6 +852,10 @@ ledger_advisory_check() {
       # echoes; this caps how many defect lines one warning can emit.
       printf '%s\n' "$_out" | head -20 >&2
       echo "  Allocate identifiers with scripts/ledger/ledger-entry-id.sh next (CLAUDE.md > Decision Ledger)." >&2
+      LEDGER_ADVISORY="${LEDGER_ADVISORY}decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):
+$(printf '%s\n' "$_out" | head -20)
+A defect cannot be removed from an append-only ledger; what you do about it is your judgment, recorded as a new entry. A citation of a shared identifier is read as docs/decision-ledger.md > Entry identifier > Identifier collision says.
+"
     fi
 
     # Drop this ledger's prior row by the same fixed-offset path comparison
@@ -862,7 +867,26 @@ ledger_advisory_check() {
   done
   return 0
 }
+# Model-visible delivery (issue #422). Stderr of a PreToolUse hook that exits 0
+# is not the model's channel; `hookSpecificOutput.additionalContext` is
+# (anthropics/claude-code CHANGELOG `## 2.1.9`: "Added support for `PreToolUse`
+# hooks to return `additionalContext` to the model"; the minimum runtime is
+# 2.1.277). The writer no longer runs `check` itself, so this warning is the
+# only signal of a defect. It reaches whichever actor makes the next hooked call
+# after the ledger changes — once per ledger content, project-wide (the cache
+# above) — not necessarily the writer (PR #424 review). An EXIT trap emits it only when the hook exits 0 — a deny
+# (exit 2) already carries stderr to the model — and nothing else in this hook
+# writes stdout, so the JSON object is the whole of it.
+# shellcheck disable=SC2329  # invoked by the EXIT trap below
+_ledger_advisory_emit() {
+  [ "$1" -eq 0 ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -cn --arg ctx "$LEDGER_ADVISORY" \
+    '{hookSpecificOutput: {hookEventName: "PreToolUse", additionalContext: $ctx}}' 2>/dev/null || true
+}
+LEDGER_ADVISORY=""
 ledger_advisory_check || true
+[ -z "$LEDGER_ADVISORY" ] || trap '_ledger_advisory_emit $?' EXIT
 
 # ── Section 1d: spawn-policy model advisory (NON-GATING, issue #150) ──────────
 # CLAUDE.md > Spawn Model routes every per-phase model value through
