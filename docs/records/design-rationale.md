@@ -676,6 +676,8 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Rejected after review (PR #426, rounds 1–3).** A first version replaced the removed rule with a prescribed procedure — emptied gate records, a `mode` switch, a rebuttal special case, counter notes. Each review round found a gap the procedure itself had opened, and each fix added another rule that conflicted with prose already in place. Areas the working AI can judge were fixed as rules; only the authority rule is kept.
 
+**A fixed branch the removal exposed (round 4).** U2's `no change needed` disposition branched on the `mode` recorded at PREFLIGHT and forbade re-deriving the situation, and fixed the as-is to `main` in a new-issue cycle — written when DIAGNOSE ran only at a cycle's start. An in-cycle DIAGNOSE start could then close an issue with its PR open. The prohibition is removed rather than worked around: how a `no change needed` conclusion is answered — closing an already-resolved issue, replying on an open PR, rebutting a reviewer finding — and what the as-is is, are judged from the situation and recorded; the pre-close check stays. Prose that forbids a judgment under named conditions breaks whenever the conditions change; a judgment the AI cannot make with confidence goes to the advisor, then to the operator (principle 3).
+
 ## Generalization Rationale
 
 This repository is the **generalized form** of the AutoFlow methodology that originated in `ontology-platform`. The generalization is intentionally narrow:

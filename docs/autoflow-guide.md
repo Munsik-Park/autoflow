@@ -70,8 +70,8 @@ flowchart TD
 
     PRE --> DIA
     DIA --> HYP
-    HYP -->|PASS · no change needed · new-issue| CLOSE
-    HYP -->|PASS · no change needed · review-response| REVW
+    HYP -->|PASS · no change needed · no PR| CLOSE
+    HYP -->|PASS · no change needed · PR open| REVW
     HYP -.->|PASS · non-code lever| ADV
     HYP -->|PASS · code change| ARC
     HYP -->|FAIL · re-entry judged, no count cap| DIA
@@ -111,7 +111,7 @@ DIAGNOSE
     │
     ▼
 GATE:HYPOTHESIS (one form) ◄── FAIL: re-entry judged, no count cap; PASS judged unreachable → advisor → operator confirms close
-    ├─ PASS · no change needed ─► new-issue: Issue Closed (resolved, no PR) │ review-response: Reply on PR + await review
+    ├─ PASS · no change needed ─► answer judged: Issue Closed (no PR) │ Reply on PR / rebuttal
     ├─ PASS · non-code lever ───► advisor decides (code owed → continue │ non-code → end)
     │  PASS · code change
     │

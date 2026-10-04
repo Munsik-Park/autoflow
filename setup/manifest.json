@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "76419cc984e9b5a8b1d16f1fe293bd196121200edbcf0ab8fb7b074da0a8818d"
+      "sha256": "055c63ec3c9a044ed20fb3f78adc074198724c0b8752f24e32b43719af270245"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "be9075d132a90b5f3dbea17da27985bdae98ddb3876ee1d05cb95e968d79fe03"
+      "sha256": "ce9a45e904144fd8ceaea50ce8cc3413086e64fac68e9dd1721d49c4cbaa6c25"
     },
     {
       "source": "docs/decision-ledger.md",
@@ -48,7 +48,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "faa91213c2b3d1f38ab271a8445a1d824659d81cf39dc37f2efac4e7866a34d5"
+      "sha256": "db90d104e8c78c4d7a56342108733f2943762d0c449b87898802ff3ca875d5e9"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/units/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "eed3d748e7fb9c823eaf06290cce918bfea7341c6cb61e2adf062da2a35dab55"
+      "sha256": "3b61cbda04db727c1e05a2168b2577b7a83d23bf00af5b7c20331550b3e325b2"
     },
     {
       "source": "docs/units/build.md",

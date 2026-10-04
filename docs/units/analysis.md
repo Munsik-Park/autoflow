@@ -65,10 +65,10 @@ How far the analysis pursues a cause, and by what means — how many explanation
 ones, what it checks and with which tool — is the unit's judgment, recorded with its grounds under
 `## Method` and `## Cause`.
 
-The request is the trigger target — the issue body in a new-issue cycle, the review comment or
-thread PREFLIGHT identified in a review-response cycle — and the as-is is the dev branch's HEAD
-(`main` in a new-issue cycle, the change under review in a review-response cycle). The question is
-whether the as-is already satisfies the request.
+The request is the trigger target — the issue, a review comment or thread, or the finding a
+re-entry is for — and the as-is is the state it is measured against, which the unit judges from
+what it was spawned for and records under `## Method`. The question is whether the as-is already
+satisfies the request.
 
 **Cautions.** Each names a bias the analysis is to avoid:
 
@@ -117,7 +117,7 @@ The rules below are the ones other documents cite; everything else about the wor
   `## Decision points` with its grounds, and the orchestrator routes it (*Report routing*): a
   planning, design or ADR prerequisite clearly required before the issue can be implemented
   (`mode = new-issue`; when in doubt, none); a request the as-is already satisfies; a gap or a cause
-  whose lever is not code; in a review-response cycle, a reviewer finding that repeats the previous
+  whose lever is not code; on a reviewer finding, one that repeats the previous
   attempt's complaint with a different witness case ([U6 Delivery](delivery.md) > *A repeated
   complaint*). A suggested split of the issue stays a suggestion: it is filed only on
   the operator's request, through a draft and `scripts/issue/create-issue.sh`
@@ -151,7 +151,7 @@ Anything else the unit records is its own, written where it judges useful.
   **Proceed** → GATE:HYPOTHESIS, after a unit re-run naming the advisor's entry where the analysis
   stopped at the prerequisite; **the prerequisite comes first** → the cycle ends with `active:
   false`, `phase: "awaiting-user"`, the report and the advisor's record as its report. No counter.
-- **A repeated complaint** (`mode = review-response`) → the advisor, which decides the re-entry —
+- **A repeated complaint** (a reviewer finding) → the advisor, which decides the re-entry —
   its depth, or none ([U6 Delivery](delivery.md) > *A repeated complaint*). A redefined criterion comes
   back as `[ac-decision]` entries and a unit re-run on them. No counter.
 - **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the report. The dispositions — a
@@ -177,20 +177,17 @@ avg ≥ 7.5.
 **PASS** → recommendation triage ([U5 Completion evaluation](completion-evaluation.md) >
 *Recommendation triage*) → the route the report's `## Necessity` conclusion names:
 
-- **`no change needed`** → no change is made, no PR. Branch on the cycle's `mode` recorded at
-  PREFLIGHT (a PR state change mid-cycle is re-classified at the next PREFLIGHT, not re-derived
-  here):
-  - `mode = review-response` → reply on the PR with the finding; do not close the issue or the PR;
-    set `active: false`, `phase: "awaiting-external-review"`.
-  - `mode = new-issue` → the issue is closed with `gh issue close` as resolved and the cycle ends
-    (`active: false`). **Pre-close verification** (the hook does not gate `gh issue close`): the
-    orchestrator first confirms the recorded `phases.gate_hypothesis` scores meet the PASS line and
-    the report's conclusion is `no change needed`. The close comment records those scores and a
-    summary of the existing mechanism. Re-filing or reopening is the re-entry path.
+- **`no change needed`** → no change is made. How the cycle answers the conclusion — closing an
+  issue that was already resolved, replying on an open PR, rebutting a reviewer finding a re-entry
+  examined ([U6 Delivery](delivery.md) > *Whether a finding holds*) — is the orchestrator's judgment
+  over the situation, recorded with its grounds in the ledger ([`CLAUDE.md`](../../CLAUDE.md) > Rule
+  Scope, principles 2–3). Before it closes an issue, the orchestrator confirms the recorded
+  `phases.gate_hypothesis` scores meet the PASS line and the report's conclusion is `no change
+  needed`; the close comment records those scores and a summary of the existing mechanism.
 - **`non-code lever`** → the advisor decides ([`role-contracts.md`](../role-contracts.md) >
   Advisor). **A code change is still owed** → ARCHITECT; **the lever is non-code** → report the
   finding situation-first ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision
-  presentation) — in a `mode = review-response` cycle, as the PR reply — and end the cycle with
+  presentation) — where a PR is open, as the PR reply — and end the cycle with
   `active: false`, `phase: "awaiting-user"`.
 - **`code change`** → ARCHITECT.
 
@@ -203,8 +200,8 @@ to a PASS — the re-runs do not converge, or the request cannot be brought to a
 — it asks the advisor. **Reachable** → the advisor's answer is applied, a re-run on it. **Not
 reachable** → the issue is not closed by the cycle: the operator is asked to confirm closing it,
 situation-first, with the advisor's judgment as the direction (`active: false`,
-`phase: "awaiting-user"`). This differs from `no change needed`, which closes a resolved issue
-without asking.
+`phase: "awaiting-user"`). This differs from `no change needed`, whose answer the orchestrator
+judges without asking.
 
 ## Re-entry
 
