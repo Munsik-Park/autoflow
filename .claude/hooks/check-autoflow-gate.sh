@@ -871,8 +871,10 @@ A defect cannot be removed from an append-only ledger; what you do about it is y
 # is not the model's channel; `hookSpecificOutput.additionalContext` is
 # (anthropics/claude-code CHANGELOG `## 2.1.9`: "Added support for `PreToolUse`
 # hooks to return `additionalContext` to the model"; the minimum runtime is
-# 2.1.277). The writer no longer runs `check` itself, so this warning is how it
-# learns of a defect. An EXIT trap emits it only when the hook exits 0 — a deny
+# 2.1.277). The writer no longer runs `check` itself, so this warning is the
+# only signal of a defect. It reaches whichever actor makes the next hooked call
+# after the ledger changes — once per ledger content, project-wide (the cache
+# above) — not necessarily the writer (PR #424 review). An EXIT trap emits it only when the hook exits 0 — a deny
 # (exit 2) already carries stderr to the model — and nothing else in this hook
 # writes stdout, so the JSON object is the whole of it.
 # shellcheck disable=SC2329  # invoked by the EXIT trap below
