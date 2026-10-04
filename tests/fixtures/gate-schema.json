@@ -6,10 +6,10 @@
     "security_block_max": 3
   },
   "security_keys": ["security", "보안"],
-  "gated_phase_keys": ["gate_hypothesis_cause", "gate_plan", "audit", "gate_quality"],
+  "gated_phase_keys": ["gate_hypothesis", "gate_plan", "audit", "gate_quality"],
   "paths": {
     "active": ".active",
-    "verdict": ".phases.gate_hypothesis_cause.verdict"
+    "verdict": ".phases.gate_hypothesis.verdict"
   },
   "$comment_closed_world": "Issue #245 cycle-2 closed-world vocabulary. The hook validator (AUTOFLOW-SCHEMA-VALIDATION) accepts ONLY these top-level keys (or a fix_regression_cycle_N matching cycle_key_grammar), verdicts in verdict_enum (or empty/absent — gate-not-triggered, CLAUDE.md verdict rule), and scores in score_range; every other shape → MALFORMED → fail-closed. Mirror the hook EXACTLY (drift = contract-test failure).",
   "top_level_keys": ["active", "issue", "title", "date", "cycle", "mode", "phase", "phases", "fix_regression"],
@@ -20,6 +20,6 @@
   "score_shapes": [ 8, { "score": 8, "reason": "evidence" } ],
   "$comment_remedy_class": "Issue #275: an optional phases.<gate>.remedy_class is closed to this enum as a non-empty string (an open re-entry — a GATE:QUALITY FAIL's routed class, or a recommendation attempt not yet re-scored clean); any other value — an explicit null included; only the field's absence is 'no open re-entry' — → MALFORMED → fail-closed, so the push / pr-create open-re-entry deny cannot fail open on a malformed value.",
   "remedy_class_enum": ["doc", "test", "impl", "design", "operator"],
-  "$comment_remedy_class_phase_keys": "The known phase keys whose optional remedy_class the validator closes to remedy_class_enum — every phase recommendation triage can leave an open attempt on, the un-score-gated structure form included. Distinct from gated_phase_keys, which decides which phases the score gates read.",
-  "remedy_class_phase_keys": ["gate_hypothesis_structure", "gate_hypothesis_cause", "gate_plan", "audit", "gate_quality"]
+  "$comment_remedy_class_phase_keys": "The known phase keys whose optional remedy_class the validator closes to remedy_class_enum — every phase recommendation triage can leave an open attempt on. Distinct from gated_phase_keys, which decides which phases the score gates read.",
+  "remedy_class_phase_keys": ["gate_hypothesis", "gate_plan", "audit", "gate_quality"]
 }

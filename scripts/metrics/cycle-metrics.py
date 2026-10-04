@@ -760,7 +760,9 @@ def outcome(adir, issue):
     o['state_date'] = st.get('date')
     o['state_phase'] = st.get('phase')
     o['mode'] = st.get('mode')
-    for gate in ('gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit', 'gate_quality'):
+    # gate_hypothesis is the one GATE:HYPOTHESIS form since issue #421; archives written before it carry the
+    # two former keys, read here as recorded.
+    for gate in ('gate_hypothesis', 'gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit', 'gate_quality'):
         o[gate] = score_avg(((st.get('phases') or {}).get(gate) or {}).get('scores'))
 
     # A number means "counted from its source"; None means "no source to count from". The artifacts
@@ -1011,8 +1013,8 @@ def derive(args):
             len(it['agents']), ag['cache_read'], ag['cache_creation'], ag['output'],
             t['tokens'], t['orch_share'], t['gate_share'], t['max_orch_context'], t['rewrites'],
             t['spawns'], t['phase_keys_recovered'],
-            o.get('cycle'), o.get('state_phase'), o.get('gate_hypothesis_structure'), o.get('gate_hypothesis_cause'),
-            o.get('gate_plan'), o.get('audit'), o.get('gate_quality'),
+            o.get('cycle'), o.get('state_phase'), o.get('gate_hypothesis'), o.get('gate_hypothesis_structure'),
+            o.get('gate_hypothesis_cause'), o.get('gate_plan'), o.get('audit'), o.get('gate_quality'),
             o.get('architect_turns'), o.get('architect_rounds'), o.get('gate_plan_evals'), o.get('audit_evals'),
             o.get('gate_quality_evals'), o.get('review_autofix'), o.get('gate_autofix'), o.get('reviewer_rounds'),
             o.get('ci_rounds'), o.get('ci_fail_rounds'), o.get('ci_other_rounds'), o.get('ci_undetermined'),
@@ -1024,7 +1026,7 @@ def derive(args):
         'orch_calls', 'orch_cache_read', 'orch_cache_creation', 'orch_output',
         'agents', 'agent_cache_read', 'agent_cache_creation', 'agent_output',
         'tokens', 'orch_share', 'gate_share', 'max_orch_context', 'rewrites', 'spawns', 'phase_keys_recovered',
-        'cycle', 'state_phase', 'gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit',
+        'cycle', 'state_phase', 'gate_hypothesis', 'gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit',
         'gate_quality', 'architect_turns', 'architect_rounds', 'gate_plan_evals', 'audit_evals',
         'gate_quality_evals', 'review_autofix', 'gate_autofix', 'reviewer_rounds', 'ci_rounds', 'ci_fail_rounds', 'ci_other_rounds', 'ci_undetermined',
         'prs', 'pr_states', 'note', 'unit_tokens',
