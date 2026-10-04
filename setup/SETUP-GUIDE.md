@@ -110,6 +110,7 @@ itself copied into the target (`.claude/autoflow/manifest.json`).
 | Settings pin (`extraKnownMarketplaces` — the marketplace this target's AutoFlow comes from; no enablement key) | `.claude/settings.json` | json-merge |
 | Drift detector + drift references | `.claude/autoflow/drift-check.sh` | copy |
 | Plugin / marketplace-clone resolver (used by the drift detector and by `spawn-policy.sh check`; `/autoflow:install` Step 0 runs a byte-identical copy shipped inside the plugin) | `scripts/lib/plugin-root.sh` | copy |
+| Repository key and issue directory `.autoflow/<repo-key>-issue-<N>/` (sourced by `cycle-status.sh`, `cleanup-issue.sh`, `create-issue.sh` and `review-gate.sh`) | `scripts/lib/issue-dir.sh` | copy |
 | Spawn policy sample (target-configured, never overwritten) | `.claude/autoflow/spawn-policy.json` | scaffold |
 
 The shim stamp is idempotent and only touches the `AUTOFLOW-IMPORT:BEGIN/END`
@@ -310,6 +311,6 @@ tool off.
 - Confirm `CLAUDE_PROJECT_DIR` is set by Claude Code.
 
 ### Evaluation not working
-- Confirm `.autoflow/issue-{N}.json` exists and `active` is `true`.
+- Confirm `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` exists and `active` is `true`.
 - Confirm the evaluation JSON follows the schema in `docs/evaluation-system.md`.
 - Confirm the PASS thresholds in `CLAUDE.md` and `check-autoflow-gate.sh` agree.

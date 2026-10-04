@@ -240,7 +240,7 @@ build_rows() {
            "tests/lib/base-ref.sh" "root-layer" "copy" "file"
   # Cycle-layer device (ADR-0024 D2; built in issue #228, shipped by issue
   # #229 — S4). check-cycle-layer-index.sh is the standing predicate that no
-  # `.autoflow/issue-{N}-local/` asset entered the merged tree — the D2
+  # `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/` asset entered the merged tree — the D2
   # invariant every target inherits with the prefix. The layer-token device
   # (scripts/gate/verification-layer-check.sh, ADR-0024 D1) is NOT shipped: the
   # closed standing-category list is this repository's own convention, and a
@@ -277,6 +277,12 @@ build_rows() {
   # beside them — the same sibling-lib reasoning as review-config.sh above.
   emit_row "scripts/lib/plugin-root.sh" \
            "scripts/lib/plugin-root.sh" "root-layer" "copy" "file"
+
+  # The repository key and the issue directory (issue #423): cycle-status,
+  # cleanup-issue, create-issue and review-gate source it from beside them, so
+  # it ships with them — the same sibling-lib reasoning as plugin-root.sh.
+  emit_row "scripts/lib/issue-dir.sh" \
+           "scripts/lib/issue-dir.sh" "root-layer" "copy" "file"
 
   # Manifest self-entry (copied last; cannot hash itself pre-write).
   emit_row "setup/manifest.json" \

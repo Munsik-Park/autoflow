@@ -61,7 +61,8 @@
 #   - Bash(gh pr create)            → the same two conditions
 #   - Bash(git commit)              → while the latest GATE:QUALITY record carries
 #                                     remedy_class "doc": the doc re-entry's sweep
-#                                     record .autoflow/issue-N-remedy-sweep.md must
+#                                     record issue-N-remedy-sweep.md (beside the
+#                                     state file) must
 #                                     exist with non-empty `## Command` and
 #                                     `## Output` sections (issue #140, Gate 5)
 
@@ -826,10 +827,10 @@ ledger_advisory_check() {
   # Content-hash cache: re-check a ledger only when its bytes changed since the
   # last observation, so an unchanged defective ledger does not repeat the same
   # warning on every tool call of a session. Keyed by path, scoped to this
-  # project's .autoflow (gitignored scratch), and named outside the issue-*
-  # glob so state-file discovery never picks it up.
+  # project's .autoflow (gitignored scratch), and named outside the issue
+  # directories so state-file discovery never picks it up.
   _cache="$AUTOFLOW_DIR/.ledger-check-cache"
-  for _ledger in "$AUTOFLOW_DIR"/issue-*-ledger.md; do
+  for _ledger in "$AUTOFLOW_DIR"/*-issue-*/issue-*-ledger.md; do
     [ -f "$_ledger" ] || continue
     _hash=$(shasum -a 256 "$_ledger" 2>/dev/null | cut -d' ' -f1)
     [ -n "$_hash" ] || continue
@@ -979,17 +980,25 @@ MALFORMED_STATE=""
 ACTIVE_COUNT=0
 ACTIVE_FILES=""
 if [ -d "$AUTOFLOW_DIR" ]; then
-  for _sf in "$AUTOFLOW_DIR"/*.json; do
+  # AUTOFLOW-ISSUE-DIR (issue #423): an issue's files live in its own directory
+  # .autoflow/<repo-key>-issue-<N>/, so the state file is
+  # .autoflow/<repo-key>-issue-<N>/issue-<N>.json. Every such file counts,
+  # whatever the key — the hook computes no repository key — so the PR Wait
+  # Rule holds across every issue directory in this .autoflow/.
+  for _sf in "$AUTOFLOW_DIR"/*-issue-*/issue-*.json; do
     [ -e "$_sf" ] || continue   # glob had no match → literal path → skip
     # AUTOFLOW-STATE-FILENAME (issue #64): state files are named issue-<digits>.json
-    # (CLAUDE.md > AutoFlow State Tracking). Any other .autoflow/*.json — e.g. a
-    # VALIDATE launch record (issue-{N}-runtime-launch.json) — is not a state-file
-    # candidate: skip it BEFORE the cat+jq validator so a non-state JSON can never
-    # take the MALFORMED path and fail-closed block push-class commands (#64).
+    # (CLAUDE.md > AutoFlow State Tracking). Any other JSON in an issue directory
+    # — e.g. a VALIDATE launch record (issue-{N}-runtime-launch.json) — is not a
+    # state-file candidate: skip it BEFORE the cat+jq validator so a non-state JSON
+    # can never take the MALFORMED path and fail-closed block push-class commands
+    # (#64). The file's number must also be its directory's.
     _base=${_sf##*/}
     case "$_base" in issue-*.json) ;; *) continue ;; esac
     _num=${_base#issue-}; _num=${_num%.json}
     case "$_num" in ''|*[!0-9]*) continue ;; esac
+    _dir=${_sf%/*}; _dir=${_dir##*/}
+    case "$_dir" in *-issue-"$_num") ;; *) continue ;; esac
     # Read the file ONCE into memory and decide parse-validity + active on that
     # single snapshot. Every downstream consumer (ACTIVE, VERDICT, check_scores)
     # reads STATE_JSON, never the file again — so a partial write occurring after
@@ -1045,7 +1054,7 @@ fi
 if [ -z "$STATE_FILE" ] && [ -n "$MALFORMED_STATE" ]; then
   if is_score_gated_surface; then
     echo "BLOCKED: malformed AutoFlow state file: $MALFORMED_STATE" >&2
-    echo "A .autoflow/*.json state file is malformed (invalid JSON or schema) — refusing score-gated work on corrupt state. Fix or remove it." >&2
+    echo "A .autoflow/<repo-key>-issue-<N>/issue-<N>.json state file is malformed (invalid JSON or schema) — refusing score-gated work on corrupt state. Fix or remove it." >&2
     echo 'Accepted score shapes: a number 0-10, or {"score": <number 0-10>, "reason": "..."} — a prose string is rejected.' >&2
     exit 2
   fi

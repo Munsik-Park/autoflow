@@ -31,8 +31,8 @@ Scope, principle 2).
 - **The spawn.** One `autoflow-unit-design` (`Agent`, anonymous, no `name`, the model
   `bash scripts/spawn-policy/spawn-policy.sh model unit-design` names). The prompt states the goal
   and names the inputs by path — the acceptance-criterion list
-  (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the decision ledger
-  (`.autoflow/issue-{N}-ledger.md`), the DIAGNOSE artifact (`.autoflow/issue-{N}-analysis.md`, the
+  (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`), the decision ledger
+  (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`), the DIAGNOSE artifact (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`, the
   GATE:HYPOTHESIS reports) — and the two output paths. On a re-entry it also names what the
   re-entry is for and the previous documents (*Re-entry* below).
 - **Documents.** Injection is role-minimal and routed via
@@ -40,7 +40,7 @@ Scope, principle 2).
   `docs/records/adr/*`, `docs/records/design-rationale.md`); the unit reads anything further its
   design needs, by its own judgment.
 - **Before the gate (orchestrator-side).** The orchestrator confirms
-  `.autoflow/issue-{N}-feature-design.md` and `.autoflow/issue-{N}-verification-design.md` exist
+  `.autoflow/{repo-key}-issue-{N}/issue-{N}-feature-design.md` and `.autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md` exist
   and are non-empty, the feature design carries its `## Decision requests` section and the
   verification design its `## Tools` section. A missing or empty one is an infrastructure cause:
   the unit is spawned again with the same inputs, consuming no counter. The return is then routed
@@ -48,7 +48,7 @@ Scope, principle 2).
 
 ## Output artifacts
 
-1. **Feature Design Document** — `.autoflow/issue-{N}-feature-design.md`, the
+1. **Feature Design Document** — `.autoflow/{repo-key}-issue-{N}/issue-{N}-feature-design.md`, the
    **architecture decision layer** and nothing below it: the decisions, the constraints
    they hold under, and the alternatives considered and rejected with the ground for each rejection.
    It cites the verification design's `Failure mode` column (below) for the failure mode each
@@ -85,7 +85,7 @@ Scope, principle 2).
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
    that exemption explicitly.
 
-2. **Verification Design Document** — `.autoflow/issue-{N}-verification-design.md`. The
+2. **Verification Design Document** — `.autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md`. The
    `Issue AC` join key is **not** reduced by the layer split above: the per-criterion disposition is
    a design output. What the split removes from it is depth, not rows: `Method` names the **kind**
    of oracle a row gets, and the condition clause that implements it is BUILD's. The table's columns
@@ -104,7 +104,7 @@ Scope, principle 2).
 - **`Type` is the per-criterion verification disposition**, one of
   `automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
   `none`. An `automated` or `manual` row is `cycle` — executed once, uncommitted under
-  `.autoflow/issue-{N}-local/`, its run recorded. **In this repository only**, the same cell also
+  `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, its run recorded. **In this repository only**, the same cell also
   carries the row's **layer**: a row is `standing` (committed; CI-registered) when the
   cell names one of D1's closed tokens in the form `automated / standing: <token>`
   (`manual / standing: <token>`); the token list is ADR-0024 D1's and is not copied here, and a
@@ -115,7 +115,7 @@ Scope, principle 2).
   vocabularies, and when each disposition is the right answer, are defined once at *Test necessity*
   below.
 - **`Issue AC` is the join key.** Each row's value is either an `AC id` from the
-  `## Acceptance criteria` table in `.autoflow/issue-{N}-analysis.md`, or `—` for a criterion this
+  `## Acceptance criteria` table in `.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`, or `—` for a criterion this
   verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
   criterion the design verifies by anything other than an automated test keeps its row, states that
   disposition, and states its `Reason` in one line — the row is never deleted. A design-added
@@ -172,9 +172,9 @@ the policy body; every other document references it rather than restating it.
 
 | Disposition | Meaning |
 |---|---|
-| `automated` | an executable test — `cycle` by default (run once from `.autoflow/issue-{N}-local/`, its run recorded), `standing` only with a D1 token in the cell |
+| `automated` | an executable test — `cycle` by default (run once from `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, its run recorded), `standing` only with a D1 token in the cell |
 | `existing-coverage` | already detected by an existing test, lint rule, schema, compiler/type check, build or packaging check — the row names which |
-| `delivery-check` | a one-shot check that the change was wired / generated / delivered — a `cycle` artifact under `.autoflow/issue-{N}-local/`, never committed; the test-first rule does not apply to it |
+| `delivery-check` | a one-shot check that the change was wired / generated / delivered — a `cycle` artifact under `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, never committed; the test-first rule does not apply to it |
 | `manual` | a scenario verified by observation, not by an executable assertion; `Method` names its executor — `AI: <tool>`, the tool the `## Tools` section records, or `person` only when no tool can be secured, the `Reason` saying why (*Tools* below); the row names the checklist — a `cycle` artifact unless the cell carries a D1 token |
 | `environment-dependent` | verifiable only against an environment this cycle cannot drive with the tools the `## Tools` section records |
 | `none` | no persistent verification has positive value — the row states why absence costs nothing |
@@ -331,7 +331,7 @@ the previous documents.
 |---|---|---|
 | GATE:PLAN FAIL | the evaluation report and its failed items | ARCHITECT re-entry (max 3×) |
 | advisor answer that differs from the design (*Report routing*) | the `[ac-decision]` or `A` entries | none |
-| BUILD design contradiction | `.autoflow/issue-{N}-green-blocker.md` | ARCHITECT re-entry |
+| BUILD design contradiction | `.autoflow/{repo-key}-issue-{N}/issue-{N}-green-blocker.md` | ARCHITECT re-entry |
 | `design` re-entry from GATE:QUALITY or HANDOFF's CI failure | the failed items and their findings | ARCHITECT re-entry |
 | acceptance-criterion decision raised after ARCHITECT | the `[ac-decision]` entries | none |
 | `design`-class gate recommendation at AUDIT or GATE:QUALITY ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) | the recommendation's subject and finding | ARCHITECT re-entry |
@@ -363,6 +363,6 @@ the previous documents.
   what the new cycle is for, and the unit writes the new cycle's documents whole. How much
   of the previous cycle's design the new one carries over is the unit's own, recorded in the design.
 
-The unit reads and writes no `.autoflow/issue-{N}.json` state file, so the ARCHITECT re-entry
+The unit reads and writes no `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` state file, so the ARCHITECT re-entry
 counter is the orchestrator's own accounting (Regressions, [`CLAUDE.md`](../../CLAUDE.md) >
 Development Lifecycle).

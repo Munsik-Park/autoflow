@@ -6,7 +6,7 @@
 # Issue #35 — per-phase-transition marker emitter.
 # Serializes ONE JSON record per phase transition (feature design §4.2) and
 # APPENDS it (append-only, never truncates) to the per-issue, gitignored file
-# .autoflow/issue-<N>-phases.jsonl. Prints a repo-relative path:line anchor on
+# .autoflow/<repo-key>-issue-<N>/issue-<N>-phases.jsonl (issue #423). Prints a repo-relative path:line anchor on
 # stdout; the record body is never printed.
 #
 # Out of scope (issue #35): wiring this emitter into any phase transition. It is
@@ -82,10 +82,13 @@ LINE="$(jq -c -n \
   --arg phase "$PHASE" --arg event "$EVENT" --arg ts "$TS" \
   '{schema_version:$sv, issue:$issue, cycle:$cycle, phase:$phase, event:$event, ts:$ts}')"
 
-TARGET="$REPO_ROOT/.autoflow/issue-${ISSUE}-phases.jsonl"
+# shellcheck source=scripts/lib/issue-dir.sh
+. "$SCRIPT_DIR/../lib/issue-dir.sh"
+REL=".autoflow/$(autoflow_repo_key "$REPO_ROOT")-issue-${ISSUE}/issue-${ISSUE}-phases.jsonl"
+TARGET="$REPO_ROOT/$REL"
 
 # Append-only write (never a truncating redirect).
 mkdir -p "$(dirname "$TARGET")"
 printf '%s\n' "$LINE" >> "$TARGET"
 
-echo ".autoflow/issue-${ISSUE}-phases.jsonl:$(wc -l < "$TARGET" | tr -d ' ')"
+echo "$REL:$(wc -l < "$TARGET" | tr -d ' ')"

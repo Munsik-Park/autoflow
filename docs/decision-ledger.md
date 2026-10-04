@@ -1,6 +1,6 @@
 # Decision Ledger
 
-The per-issue decision ledger, `.autoflow/issue-{N}-ledger.md`: what an entry records, how it is
+The per-issue decision ledger, `.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`: what an entry records, how it is
 identified, and the grammar of the entries a decision point produces — the advisor's first judgment
 and the operator's override. The ledger's standing constraints —
 append-only, no re-litigation without a new verified fact, host ownership, and identifier
@@ -33,7 +33,7 @@ This table is the mapping's only documentary home; other documents cite it rathe
 **Advisor decisions and operator overrides.** A decision point is answered first by the advisor
 ([`role-contracts.md`](role-contracts.md) > Advisor): an `A<n>` entry under the authority
 `advisor decision`, carrying a `- Record:` line to the advisor's answer file
-(`.autoflow/issue-{N}-advisor-<ID>.md`) and the marker and fields its kind requires below. Only the
+(`.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-<ID>.md`) and the marker and fields its kind requires below. Only the
 advisor writes that authority or an `A` heading, and the advisor never writes `operator decision` or
 an `O` / `F` / `E` heading — the gate hook denies both
 ([`role-contracts.md`](role-contracts.md) > Advisor > *Independence*). The operator reviews the
@@ -92,7 +92,7 @@ these literals and nothing else: the entry's authority **value** is `advisor dec
 entry or `operator decision` on an `O<n>` entry, and the entry is **located** by the `[ac-decision]`
 heading marker. The two gate backstops key on the marker. When the entries for one AC disagree, an operator entry wins. When the
 disposition is `revised`, `split` or `added`, the analysis report's acceptance-criterion table
-(`.autoflow/issue-{N}-analysis.md`) is edited to
+(`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`) is edited to
 match before re-entry, and this entry is the record of who authorized the edit. An `added` entry
 covers no difference in either gate backstop: the criterion it adds is owed its verification-design
 row and its discharging site like any other.

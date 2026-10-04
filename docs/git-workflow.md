@@ -146,7 +146,7 @@ git checkout main
 git pull origin main                # with sub-repos: each submodule follows the host's pointer
 git branch -d <branch>             # local branch
 git push origin --delete <branch>  # remote branch (if not auto-deleted)
-scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/issue-<N>.* + issue-<N>-* files and the rest of its issue-<N>-local/ store to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
+scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/<repo-key>-issue-<N>/ directory to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
 ```
 
 The remote-branch deletion is a push: the hook admits it only while no cycle is
@@ -154,12 +154,12 @@ active, so it comes before the next cycle's state file is created
 ([`units/preparation.md`](units/preparation.md) > *What is asked*).
 
 **Delete the reserved path, archive the rest.** Cleanup first deletes the resolved issue's reserved
-path `.autoflow/issue-{N}-local/disposable/` — the reproducible output its cycle assets wrote there
+path `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/disposable/` — the reproducible output its cycle assets wrote there
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *How a test is
-run is the target's practice*) — and then **archives** (moves) its `.autoflow/issue-{N}*` management
-files (state JSON, decision ledger, design docs, reports) **and the rest of its cycle-layer store
-`.autoflow/issue-{N}-local/`** (the uncommitted `automated` / `delivery-check` / `manual` assets of
-that cycle; the directory moves with its name preserved) to
+run is the target's practice*) — and then **archives** (moves) its issue directory
+`.autoflow/{repo-key}-issue-{N}/` — management files (state JSON, decision ledger, design docs,
+reports, proposal record) **and the rest of its cycle-layer store `issue-{N}-local/`** (the
+uncommitted `automated` / `delivery-check` / `manual` assets of that cycle) — to
 `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<date>/` at cleanup via
 `scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`). Nothing outside the reserved path is
 deleted: whatever lies outside it is archived, whatever its name or size. The report line states the
@@ -168,12 +168,12 @@ nothing archived, and exits non-zero; re-run cleanup once the path is removable.
 itself a symbolic link is archived as the link, and nothing under its target is deleted.
 
 **[MUST] Use the wrapper, not a bare `rm`.** `cleanup-issue.sh` is invoked by
-path and archives only the resolved issue's files and store on an **exact number boundary** —
-`issue-<N>.*`, `issue-<N>-*` and the directory `issue-<N>-local` (NOT a bare `issue-<N>*` glob) — with a
-digits-only `N` guard, a scoped `mv` to
-`$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<date>/` (default `~/.autoflow`;
-repo-key = `<org>__<repo>` derived from `origin`) within `.autoflow/` at
-`maxdepth 1` (the store is one such entry, moved less its reserved path). Its one deletion is that
+path and archives only the resolved issue's directory, matched by its **exact name**
+`.autoflow/<repo-key>-issue-<N>/` (NOT a `*-issue-<N>*` glob, so neither `issue-<N>3` nor another
+repository's issue `<N>` is taken) — with a digits-only `N` guard and one scoped `mv` of that
+directory to `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<date>/` (default `~/.autoflow`;
+repo-key = `<org>__<repo>` derived from `origin`, the same key the live directory carries —
+`scripts/lib/issue-dir.sh`), moved less its store's reserved path. Its one deletion is that
 reserved path, `issue-<N>-local/disposable`, removed without following a symbolic link. Allow-list the wrapper
 (`Bash(./scripts/cleanup/cleanup-issue.sh:*)`).
 

@@ -69,13 +69,19 @@ done
 case "$ISSUE" in ''|*[!0-9]*) usage >&2; exit 64 ;; esac
 case "$PR" in ''|*[!0-9]*) usage >&2; exit 64 ;; esac
 
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "[$TAG] not inside a git repository" >&2; exit 64; }
 cd "$ROOT" || exit 64
+# The issue's directory is keyed by THIS repository — the one the cycle runs in
+# (issue #423) — while --repo names the pull request's, a sub-repo's included.
+# shellcheck source=scripts/lib/issue-dir.sh
+. "$SELF_DIR/../lib/issue-dir.sh"
+ISSUE_DIR=".autoflow/$(autoflow_repo_key "$ROOT")-issue-$ISSUE"
 if [ -z "$REPO" ]; then
   REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)" || { echo "[$TAG] cannot resolve the repository (gh repo view)" >&2; exit 3; }
 fi
-[ -n "$FINDINGS" ] || FINDINGS=".autoflow/issue-$ISSUE-local/review/findings-${REPO%%/*}.${REPO#*/}-$PR.md"
-[ -n "$LEDGER" ] || LEDGER=".autoflow/issue-$ISSUE-ledger.md"
+[ -n "$FINDINGS" ] || FINDINGS="$ISSUE_DIR/issue-$ISSUE-local/review/findings-${REPO%%/*}.${REPO#*/}-$PR.md"
+[ -n "$LEDGER" ] || LEDGER="$ISSUE_DIR/issue-$ISSUE-ledger.md"
 
 echo "pr: $REPO#$PR"
 if [ ! -f "$FINDINGS" ]; then

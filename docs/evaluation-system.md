@@ -185,14 +185,14 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLA
 
 Binds the GATE:QUALITY form only.
 
-- **[MUST]** Read the build report's (`.autoflow/issue-{N}-build-report.md`) `## Out-of-scope observations — guard / boundary logic touched` section, disposition every entry (`defect — scored under <item>` or `not a defect — <reason>`), and record the dispositions in the `refine_observations` output field. A `defect` entry is scored under `Quality` or `Impact scope`. The author's rejection reason is context, not the disposition.
+- **[MUST]** Read the build report's (`.autoflow/{repo-key}-issue-{N}/issue-{N}-build-report.md`) `## Out-of-scope observations — guard / boundary logic touched` section, disposition every entry (`defect — scored under <item>` or `not a defect — <reason>`), and record the dispositions in the `refine_observations` output field. A `defect` entry is scored under `Quality` or `Impact scope`. The author's rejection reason is context, not the disposition.
 - **[MUST]** A report whose `refine_observations` is absent, or that does not account for every entry in the section, is rejected and the evaluator re-spawned, with the same cap (max 2) and escalation as an empty `fail_hypothesis`.
 
 ### Scope judgments (GATE:PLAN / GATE:QUALITY)
 
 The cycle's scope is its acceptance criteria, its confirmed cause, and the problems its recorded scope judgments include ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the feature design's `## Scope` section. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read the `## Scope` section, every `## Scope judgments` section in the cycle's `.autoflow/issue-{N}-*.md` reports, and the ledger's `[gate-autofix]` entries and gate verdict entries recording how earlier gates' recommendations were triaged (Change Surface Rules > GATE:QUALITY linkage).
+- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the feature design's `## Scope` section. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read the `## Scope` section, every `## Scope judgments` section in the cycle's `.autoflow/{repo-key}-issue-{N}/issue-{N}-*.md` reports, and the ledger's `[gate-autofix]` entries and gate verdict entries recording how earlier gates' recommendations were triaged (Change Surface Rules > GATE:QUALITY linkage).
 - A hunk that rests on a recorded judgment is in scope when the judgment meets one of question 1's three conditions; a judgment that meets none is scored under `Minimal implementation`. A directly related problem the records show, left out with no separation reason or with one that answers neither half of question 2, is scored under `Impact scope` (GATE:PLAN: `Scope`).
 - A separation reason is judged for whether it answers question 2, not for whether the evaluator would have separated the problem.
 
@@ -301,8 +301,8 @@ D2).
 **Evaluator**: one independent Evaluation AI, fresh-spawned per entry. It scores one form for
 every issue — bug / incident or not, code or documentation — and returns one output object
 (*Evaluation Output Format* below), which the orchestrator records under `phases.gate_hypothesis`
-in `.autoflow/issue-{N}.json`.
-**Input**: the analysis report (`.autoflow/issue-{N}-analysis.md`), the trigger target and the decision ledger.
+in `.autoflow/{repo-key}-issue-{N}/issue-{N}.json`.
+**Input**: the analysis report (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`), the trigger target and the decision ledger.
 
 The form answers one question: **is the report's conclusion supported by its grounds, and did the
 analysis reach its goal?** The request and the as-is are the ones the report states
@@ -335,8 +335,8 @@ rest is inherited and reported in `rescore` (*Evaluation Output Format* below).
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: the two documents the U3 Design unit wrote ([U3 Design](units/design.md) > *Output
 artifacts*) — the feature design and the verification design — the issue's acceptance-criterion
-list (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), and the issue decision ledger
-(`.autoflow/issue-{N}-ledger.md`).
+list (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`), and the issue decision ledger
+(`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`).
 
 The gate scores the design's **intent** — whether each decision is grounded, whether each
 criterion's verification fits it, whether the scope is right and whether the tools are secured —
@@ -418,10 +418,10 @@ project-specific items; GATE:QUALITY's `Security` item references the AUDIT resu
 
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: the U4 artifact set — the change diff with the cycle's commits, the build report
-(`.autoflow/issue-{N}-build-report.md`) and the verification design
-(`.autoflow/issue-{N}-verification-design.md`) — + the target's security checklist at the version the
+(`.autoflow/{repo-key}-issue-{N}/issue-{N}-build-report.md`) and the verification design
+(`.autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md`) — + the target's security checklist at the version the
 checklist status names (*Security checklist* below), or none when none is declared. In a **review-response cycle**,
-additionally the previous cycle's AUDIT report (`.autoflow/issue-{N}-c{C-1}-audit.md`, preserved at
+additionally the previous cycle's AUDIT report (`.autoflow/{repo-key}-issue-{N}/issue-{N}-c{C-1}-audit.md`, preserved at
 PREFLIGHT) — its `## Low findings` list is the re-score's starting set.
 
 #### Test-first
@@ -441,7 +441,7 @@ AUDIT*).
 AutoFlow ships no checklist and names no item: AutoFlow owns how AUDIT scores — the fresh
 evaluator, the five items below, the PASS thresholds — and the target owns what each item is judged
 by. Which version AUDIT reads is the record line of
-`bash scripts/gate/security-checklist.sh status --ledger .autoflow/issue-{N}-ledger.md`, which the
+`bash scripts/gate/security-checklist.sh status --ledger .autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`, which the
 orchestrator runs at AUDIT entry ([U4 Build and verify](units/build.md) > *Security checklist*):
 
 - `none-declared` → no checklist: the five items are scored from the change alone, and the report
@@ -457,7 +457,7 @@ the one the orchestrator recorded is a report defect: reject and re-spawn.
 
 #### Report
 
-The evaluator's report is written to `.autoflow/issue-{N}-audit.md` and carries a
+The evaluator's report is written to `.autoflow/{repo-key}-issue-{N}/issue-{N}-audit.md` and carries a
 `## Test-first` section (*Test-first* above), a `## Security checklist` section (the status record
 line) and a
 `## Low findings` section (each Low item with `path:line` at the audited commit and a one-line claim; `none` when empty).
@@ -490,21 +490,21 @@ item is judged by; with none declared, the criteria below are the whole of it.
 **Evaluator**: fresh-spawned Evaluation AI.
 **Input**: the change set — the cycle's commits — and the cycle's artifacts:
 
-- the analysis report (`.autoflow/issue-{N}-analysis.md`): its `## Acceptance criteria` table, the
+- the analysis report (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`): its `## Acceptance criteria` table, the
   issue's acceptance-criterion list, and its `## Scope judgments`;
-- the two design documents: the feature design (`.autoflow/issue-{N}-feature-design.md`) — the
+- the two design documents: the feature design (`.autoflow/{repo-key}-issue-{N}/issue-{N}-feature-design.md`) — the
   decisions the change is checked against, and its `## Scope` section — and the verification
-  design (`.autoflow/issue-{N}-verification-design.md`);
-- the build report (`.autoflow/issue-{N}-build-report.md` — [U4 Build and verify](units/build.md) >
+  design (`.autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md`);
+- the build report (`.autoflow/{repo-key}-issue-{N}/issue-{N}-build-report.md` — [U4 Build and verify](units/build.md) >
   Build report): its run record, manual checklist, maintained documents and lint record, its
   `## Scope judgments`, section `## Out-of-scope observations — guard / boundary logic touched`,
   and — on a target — section `## Comment check`;
-- the AUDIT result: its scores and its report (`.autoflow/issue-{N}-audit.md`);
-- the issue decision ledger (`.autoflow/issue-{N}-ledger.md`), with the `[gate-autofix]` entries
+- the AUDIT result: its scores and its report (`.autoflow/{repo-key}-issue-{N}/issue-{N}-audit.md`);
+- the issue decision ledger (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`), with the `[gate-autofix]` entries
   and gate verdict entries that record how earlier gates' recommendations were triaged.
 
 The cycle's scope records are the feature design's `## Scope` section, every `## Scope judgments`
-section in the cycle's `.autoflow/issue-{N}-*.md` reports, and those ledger entries
+section in the cycle's `.autoflow/{repo-key}-issue-{N}/issue-{N}-*.md` reports, and those ledger entries
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
 The build report's out-of-scope-observations section is scoring input (*Evaluator conduct* >
@@ -585,7 +585,7 @@ each-item ≥ 7 criterion:
   on a `cycle` row, an uncommitted asset on a `standing` row, or a token outside the list caps
   `Test quality` at 6. The token check is a set relation, not a judgment, and it is performed
   **by the device**: the evaluator runs
-  `bash scripts/gate/verification-layer-check.sh .autoflow/issue-{N}-verification-design.md` and
+  `bash scripts/gate/verification-layer-check.sh .autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md` and
   attaches its output — a non-zero exit is a token outside D1's closed list and caps the item; the
   device's second output, the row↔asset pairing report, is input to this check and to
   `Test coverage`, never a verdict. The device is not delivered to targets and the check does not
@@ -709,17 +709,17 @@ read it from the report (it reads the routed class the orchestrator records in s
 | `rescore` | object | **on a re-entry evaluation** — after a FAIL's re-entry, or after a recommendation attempt or rebuttal ([U5 Completion evaluation](units/completion-evaluation.md) > *Recommendation triage*; [U6 Delivery](units/delivery.md) > *Whether a finding holds*) (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items — after a recommendation fix or rebuttal, the items the routed or rebutted recommendations were listed under — plus any inherited item whose anchor the re-entry touched — the re-entry diff at GATE:QUALITY / AUDIT, the decision document's delta section at GATE:PLAN, the amended DIAGNOSE artifact at GATE:HYPOTHESIS); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding the prior report recorded on a re-scored item, with `status` `cleared` or `remains` and the ground re-derived from the re-entry diff — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (the re-score's FAIL hypothesis is "the flagged defect still remains", *Evaluator conduct* > *Pre-scoring FAIL hypothesis* > *Re-entry form* above); a prior finding with no entry is a report defect — reject + re-spawn, as for a missing `fail_hypothesis`. `new_findings` — one entry per defect newly seen on a re-scored item (`[]` when none), each with the evaluator's `disposition` — `blocking — scored under <item>`, or `recommendation` (also listed in `recommendations`, and the item's score is not lowered for it) — and its ground. Both lists are report material the orchestrator reads; the hook reads neither. |
 
 `refine_observations` (GATE:QUALITY only) records the evaluator's disposition of every
-entry in the build report's (`.autoflow/issue-{N}-build-report.md`) `## Out-of-scope observations — guard / boundary logic touched`
+entry in the build report's (`.autoflow/{repo-key}-issue-{N}/issue-{N}-build-report.md`) `## Out-of-scope observations — guard / boundary logic touched`
 section. Always present on a GATE:QUALITY report (`[]` when the section says `none`); a report that
 omits it or leaves an entry undispositioned is rejected and re-spawned. `rescore` is also the field
 a review-response AUDIT uses for its narrowed re-score (*Gate rubrics* > AUDIT > *Review-response re-score* above).
 
 `recommendations` lists every non-blocking finding as an object: `subject` — a `path:line` of the
 evaluated artifact at the evaluated commit, or a section of the evaluated artifact — the design
-documents at GATE:PLAN, the DIAGNOSE analysis report (`.autoflow/issue-{N}-analysis.md`) at
+documents at GATE:PLAN, the DIAGNOSE analysis report (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`) at
 GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY — or, for an acceptance criterion the evaluator
 observes defective as a matter of fact ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion
-decisions*), the criterion's row in `.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`, whose
+decisions*), the criterion's row in `.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`, whose
 `remedy_class` on `Medium`+ is `operator`; `item` — the rubric item it was found under;
 `severity` — a level of `.codex/review.md` > Severity; `finding`; and, on `Medium` and above,
 `remedy_class` from the same enum as the failed-item field, by the same classifying question HANDOFF

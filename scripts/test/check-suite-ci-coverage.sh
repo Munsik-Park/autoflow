@@ -28,7 +28,7 @@
 # retired the doc-invariant registry). An unreachable suite is either wired or
 # deleted — and under ADR-0024 D2 a check that only one cycle needs is not a
 # committed suite at all: it lives uncommitted under
-# `.autoflow/issue-{N}-local/`, so it never reaches this lint's subject set.
+# `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, so it never reaches this lint's subject set.
 #
 # REACHABLE — a `run:` step in any workflow invokes it. DIRECT ONLY: the former
 # transitive-closure clause (a reachable suite invoking it as a subprocess) is

@@ -190,7 +190,7 @@ for the pattern the evaluator named**, not on the list of sites it happened to f
 enumerates; **which hits the remedy fixes is the orchestrator's judgment**, recorded with its grounds
 in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
 
-1. Write `.autoflow/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
+1. Write `.autoflow/{repo-key}-issue-{N}/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
    command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
    remedy fixes every hit in a normative document ([`evaluation-system.md`](../evaluation-system.md) > GATE:QUALITY > *Known blind-spot checks* > reference integrity —
    the one definition of the boundary) and records, beside the two sections, the scope judgment for

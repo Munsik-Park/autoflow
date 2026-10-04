@@ -69,7 +69,7 @@ it.
 | Stage | Path | Swept by the cleanup archive matcher? |
 |-------|------|---------------------------------------|
 | Before creation (draft) | `.autoflow/issue-proposal-<slug>.md` | **no** |
-| After creation | `.autoflow/issue-<N>-proposal.md` | **yes**, with issue `<N>`'s cycle |
+| After creation | `.autoflow/<repo-key>-issue-<N>/issue-<N>-proposal.md` | **yes**, with issue `<N>`'s cycle |
 
 An unfiled draft outlives any other issue's cleanup, and only its author abandons
 it. Once the issue exists the artifact belongs to a cycle, and the wrapper's
@@ -98,8 +98,10 @@ rename puts it in the `issue-<N>-*` companion form the matcher sweeps.
 7. Refuses if any returned issue number is not already dispositioned in the
    draft, listing the undispositioned numbers.
 8. On success — and only then — renames the draft to
-   `.autoflow/issue-<N>-proposal.md`, with `<N>` parsed from the URL `gh`
-   returned. A URL with no parsable trailing number is a failed bind: the draft
+   `.autoflow/<repo-key>-issue-<N>/issue-<N>-proposal.md`, with `<N>` parsed from the URL `gh`
+   returned and `<repo-key>` the repository the issue was filed in — the `--repo` value when one is
+   named, the current origin otherwise — so a record for another repository's issue never shares a
+   name with this repository's issue of the same number. A URL with no parsable trailing number is a failed bind: the draft
    stays put.
 
 `--dry-run` runs every check and creates nothing, leaving the draft in place.

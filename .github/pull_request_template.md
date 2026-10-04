@@ -71,7 +71,7 @@ If this PR has no sub-repo dependency, mark the boxes above N/A (e.g., `- [x] N/
 
 - Issue: <!-- #N or N/A -->
 - Phase: `awaiting-external-review`
-- Evaluation summary: _link to `.autoflow/issue-N.json` or paste GATE:QUALITY summary line_
+- Evaluation summary: _link to `.autoflow/<repo-key>-issue-N/issue-N.json` or paste GATE:QUALITY summary line_
 
 ## Testing
 

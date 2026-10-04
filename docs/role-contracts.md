@@ -42,7 +42,7 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 - Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
 
 ### Evaluation AI Prompt Rules
-1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `docs/evaluation-system.md`, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`.autoflow/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
+1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `docs/evaluation-system.md`, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
 2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — instruct the AI to read `docs/evaluation-system.md > [section]` or `.autoflow/*` file paths directly. The same principle (file-path-only references) applies to every role spawn; see [`CLAUDE.md`](../CLAUDE.md#cost-control) > Cost Control.
 3. **[MUST]** The orchestrator-authored portion is 5 lines or fewer (excluding target file contents).
 4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
@@ -51,7 +51,7 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 ### Recording the result
 
 The hook does **not** read the evaluator's `pass`, `avg` or `min` fields: it computes them from the raw
-`scores` the orchestrator records. The phase keys recorded in `.autoflow/issue-{N}.json` are below.
+`scores` the orchestrator records. The phase keys recorded in `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` are below.
 The four keys match the `gated_phase_keys` allow-list in `tests/fixtures/gate-schema.json`:
 
 - `gate_hypothesis` — GATE:HYPOTHESIS, one form for every issue (hook-gated for a bug / incident issue; its `verdict` `skipped (non-bug issue)` lets the hook admit the ARCHITECT spawn without reading the scores, and the orchestrator judges the PASS)
@@ -129,7 +129,7 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
 
 ### Procedure
 
-1. **Request.** The orchestrator writes `.autoflow/issue-{N}-advisor-request-<k>.md` situation-first:
+1. **Request.** The orchestrator writes `.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-request-<k>.md` situation-first:
    the situation in domain terms, the decision asked with each option and what it changes, and the
    anchors (the artifact paths, the report or finding the decision surfaced in). It is the body the
    operator would have been shown; the orchestrator does not weigh the options itself.
@@ -138,7 +138,7 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
    `effort:` line). The prompt names the request file, the ledger, the issue, the cycle and the
    phase. The spawn is never score-gated.
 3. **Answer and record.** The advisor weighs the material itself, writes its answer to
-   `.autoflow/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
+   `.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
    `A`-namespace entry per decision to the ledger under the authority `advisor decision`, carrying a
    `- Record:` line to the answer file and the marker and fields the decision's kind requires
    ([`decision-ledger.md`](decision-ledger.md)). It appends with `Edit`, which the gate hook applies to

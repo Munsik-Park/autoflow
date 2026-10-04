@@ -33,9 +33,9 @@ principle 2).
 - **The spawn.** One `autoflow-unit-build` (`Agent`, anonymous, no `name`, the model
   `bash scripts/spawn-policy/spawn-policy.sh model unit-build` names) once GATE:PLAN has PASSed. The
   prompt states the goal and names the inputs by path — the two design documents
-  (`.autoflow/issue-{N}-feature-design.md`, `.autoflow/issue-{N}-verification-design.md`), the
-  acceptance-criterion list (`.autoflow/issue-{N}-analysis.md` > `## Acceptance criteria`), the
-  decision ledger, the cycle-layer store `.autoflow/issue-{N}-local/`, and each recommendation a
+  (`.autoflow/{repo-key}-issue-{N}/issue-{N}-feature-design.md`, `.autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md`), the
+  acceptance-criterion list (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`), the
+  decision ledger, the cycle-layer store `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, and each recommendation a
   gate's triage deferred to the build with its subject and finding
   ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) — and the build report's path. On a
   re-entry it also names what the re-entry is for and the material that carries it (*Re-entry*
@@ -70,7 +70,7 @@ These are the rules other documents cite; everything else about the work is the 
   run precedes the implementation commit, and its failure is shown by its log
   ([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Test-first*).
 - **Where a test lives.** A `cycle` row's test, a `delivery-check`, a `manual` scenario document and
-  an observation record live under `.autoflow/issue-{N}-local/` and are run by their path
+  an observation record live under `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/` and are run by their path
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools). A test file
   goes into the target's tree only as the exception: in this repository a `standing` row
   (`automated / standing: <token>`); on a target, a file the unit judges the target should keep,
@@ -95,7 +95,7 @@ These are the rules other documents cite; everything else about the work is the 
   gate.
 - **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
   implementation and the tests each faithful to the design — the unit implements the satisfiable
-  subset and records the contradiction in `.autoflow/issue-{N}-green-blocker.md`: the conflicting AC
+  subset and records the contradiction in `.autoflow/{repo-key}-issue-{N}/issue-{N}-green-blocker.md`: the conflicting AC
   IDs, the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit.
 - **Acceptance-criterion change.** Work that shows a criterion defective ([`decision-ledger.md`](../decision-ledger.md)
   > *Acceptance-criterion decisions*) is raised in the report with the criterion, the proposed change
@@ -109,7 +109,7 @@ These are the rules other documents cite; everything else about the work is the 
 
 ## Build report
 
-`.autoflow/issue-{N}-build-report.md`. The unit writes it whole on its first run and brings it up to
+`.autoflow/{repo-key}-issue-{N}/issue-{N}-build-report.md`. The unit writes it whole on its first run and brings it up to
 date on a re-entry that passes through AUDIT and GATE:QUALITY (*Re-entry* below). Every section
 below is present; a section with nothing to record says `none`.
 The five record sections are tables, one row per item, in any column order; the column a reader
@@ -167,7 +167,7 @@ line (*Security checklist* below).
 The target's own: AutoFlow ships no checklist and names no item. A target declares its checklist
 in the target-owned scaffold `.claude/autoflow.local.json`
 (`{"audit":{"security_checklist":"<repository-relative path>"}}`). At AUDIT entry the orchestrator
-runs `bash scripts/gate/security-checklist.sh status --ledger .autoflow/issue-{N}-ledger.md` and
+runs `bash scripts/gate/security-checklist.sh status --ledger .autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` and
 acts on its one record line:
 
 | Exit | Verdict | What follows |
@@ -207,14 +207,14 @@ rows, and the sections GATE:QUALITY reads carry the current state.
 | advisor answer or operator override that reaches the build | the `A` / `O` entries | none |
 
 An INTEGRATE failure names the failing check and its output; a HANDOFF CI failure routed `test` /
-`impl` names `.autoflow/issue-{N}-ci-failure.md`. The unit fixes what failed, and the cycle runs
+`impl` names `.autoflow/{repo-key}-issue-{N}/issue-{N}-ci-failure.md`. The unit fixes what failed, and the cycle runs
 forward again to the INTEGRATE check or the CI that failed.
 
 A re-entry passes through AUDIT and GATE:QUALITY on their narrowed re-scores
 ([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Review-response re-score*; > GATE:QUALITY > *Re-entry re-score*). A HANDOFF thin route fixes the finding on its own surface and returns to the reviewer
 re-review; it does not bring the build report up to date.
 
-The unit reads and writes no `.autoflow/issue-{N}.json` state file, so every counter above is the
+The unit reads and writes no `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` state file, so every counter above is the
 orchestrator's own accounting.
 
 ## Header contract
@@ -249,4 +249,4 @@ The fields go in the file's leading comment block at column 1, before its first 
 **Admission**: before creating a suite file at all, answer these two questions.
 
 - Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
-- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (in this repository the `standing` categories are ADR-0024 D1's closed list, and on a target the default is to add no file at all).
+- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (in this repository the `standing` categories are ADR-0024 D1's closed list, and on a target the default is to add no file at all).

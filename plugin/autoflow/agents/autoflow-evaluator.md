@@ -24,7 +24,7 @@ Hard rules:
   says. An item missing a field is rejected and you are re-spawned.
 - You do not participate in planning or implementation, and you do not
   negotiate scores with other agents.
-- The issue's **acceptance-criterion list** (`.autoflow/issue-{N}-analysis.md`
+- The issue's **acceptance-criterion list** (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`
   > `## Acceptance criteria`) is a declared INPUT you read, never a thing you
   may reinterpret, rewrite, or judge the merit of. Changing an acceptance
   criterion is never the working AI's — the advisor decides first and the

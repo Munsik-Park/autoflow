@@ -13,7 +13,7 @@ every change — to git, to GitHub, to the cycle's state — is made by the orch
 
 - **Goal**: the requested issue starts, or continues, on a clean tree synced with the remote, with
   every earlier cycle whose pull request is merged or closed cleared away.
-- **Artifact contract**: the state file `.autoflow/issue-{N}.json` and the dev branch checked out
+- **Artifact contract**: the state file `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` and the dev branch checked out
   (*What is asked*), and the local-checks record in the ledger (*Stop conditions*).
 - **Verification**: PREFLIGHT has no gate. Its readiness conditions are deterministic — the facts
   `scripts/preflight/cycle-status.sh` reports and the three *Stop conditions* — and DIAGNOSE does
@@ -30,13 +30,13 @@ bash scripts/preflight/cycle-status.sh --issue {N}
 ```
 
 prints the facts the work is decided from and changes nothing: the working tree, the default branch
-against its remote-tracking ref, and — for every `.autoflow/issue-*.json` — `active`, `phase`,
+against its remote-tracking ref, and — for every state file `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` — `active`, `phase`,
 `mode`, `cycle`, the issue's dev branch (`dev/<date>-issue-<N>`) on each side and that branch's pull
 request. Exit `3` means a fact could not be read (a `gh` lookup, an unreadable state file); the line
 says which. From those facts the orchestrator brings about the following.
 
 - **Earlier cycles are resolved.** A cycle whose pull request is merged or closed is cleared: its
-  dev branch is deleted, locally and on the remote, and its `.autoflow/issue-{N}*` files are
+  dev branch is deleted, locally and on the remote, and its directory `.autoflow/{repo-key}-issue-{N}/` is
   archived with `scripts/cleanup/cleanup-issue.sh` ([`git-workflow.md`](../git-workflow.md) >
   Post-Merge Cleanup). A cycle paused with no pull request keeps its files in place, and its
   pending decision is reported.
@@ -75,7 +75,7 @@ Cautions:
 ## PR Wait Rule
 
 The readiness check that clears the requested issue to start. Its source of truth is AutoFlow's own
-`.autoflow/issue-*.json` state files; the start signal is [`CLAUDE.md`](../../CLAUDE.md) > PR Wait
+`.autoflow/{repo-key}-issue-{N}/issue-{N}.json` state files; the start signal is [`CLAUDE.md`](../../CLAUDE.md) > PR Wait
 Rule.
 
 - **[MUST]** An `active:false` state file (`phase: awaiting-external-review`) is **cleared and
@@ -93,14 +93,14 @@ The requested issue's mode follows from its own state file; none of these is a j
 | no state file (or one just cleared because its PR is merged or closed) | `new-issue` |
 | `active:true` | `resume` — the in-progress cycle continues (*Resume*); it is not restarted |
 | `active:false`, `phase` other than `awaiting-user`, with an open PR | `review-response` (*Review-response setup*) |
-| `active:false` at `phase: "awaiting-user"` (a PR open or not), or `active:false` with no open PR | paused: the cycle waits on a human decision and is not cleared. The pending decision and its `.autoflow/issue-{N}-*.md` context are reported. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart: when the user decides to continue, the orchestrator sets `active: true` and continues where the pause was taken |
+| `active:false` at `phase: "awaiting-user"` (a PR open or not), or `active:false` with no open PR | paused: the cycle waits on a human decision and is not cleared. The pending decision and its `.autoflow/{repo-key}-issue-{N}/issue-{N}-*.md` context are reported. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart: when the user decides to continue, the orchestrator sets `active: true` and continues where the pause was taken |
 
 ## Review-response setup
 
 For a cycle entered at PREFLIGHT in `review-response` mode. On the issue's existing dev branch:
 
 - **[MUST] The previous cycle's artifacts are preserved** before any phase of the new cycle writes:
-  every `.autoflow/issue-{N}-<artifact>.md` is renamed to `.autoflow/issue-{N}-c{C}-<artifact>.md`,
+  every `.autoflow/{repo-key}-issue-{N}/issue-{N}-<artifact>.md` is renamed to `.autoflow/{repo-key}-issue-{N}/issue-{N}-c{C}-<artifact>.md`,
   `C` being the previous cycle number. What spans cycles keeps its name — the ledger, the advisor
   records its entries point at (`issue-{N}-advisor-*.md`), the state file and
   the cycle-layer store `issue-{N}-local/`.
@@ -151,4 +151,4 @@ Each is a fail-closed hard stop, run by the orchestrator before the state file i
 
 **Reviewer configuration.** PREFLIGHT runs `scripts/preflight/check-review-backend.sh`, which reads the external reviewers HANDOFF runs beside the built-in review from `.claude/autoflow.local.json` (`.review.reviewers`, or the earlier `.review.backend`; none when both are absent) and probes each one's CLI presence-only (`command -v`; auth is not probed). Exit `2` — a review configuration that cannot be read as configured — stops the cycle until it is fixed. Exit `1` — a configured reviewer's CLI absent — does not: the orchestrator records it in the ledger's PREFLIGHT entry, and HANDOFF runs the built-in review without that reviewer and names it on the aggregated comment. See [`reviewer-backend.md`](../reviewer-backend.md) > *Availability*.
 
-**Target-declared local checks.** PREFLIGHT runs the target repository's **own** readiness procedure through `scripts/preflight/local-checks.sh --ledger .autoflow/issue-{N}-ledger.md --cycle <C>` — after prior-cycle resolution and before the state file is created; `<C>` is the cycle the state file will carry (`1` on a new issue, the incremented value on review-response entry). The target declares that procedure in the target-owned scaffold `.claude/autoflow.local.json` under `preflight.local_checks[]` — one entry per step, each `{ "name", "check", "repair"? }`, where `check` is the command run (exit 0 = ready) and the optional `repair` is run once on a failed `check`, followed by a re-check whose exit is the verdict. A target whose docs name a per-clone setup step (a commit-hook installer, a generated config, a toolchain probe) declares it here; the framework knows **no specific tool** — it runs what is declared and reads only the exit status. **Absent declaration ⇒ no-op**: the record is the single line `PREFLIGHT local checks: none declared`. A declared check that does not pass (after repair, when one is declared) is exit `1` and stops the cycle: run the declared repair, or fix the declaration, then run PREFLIGHT again. A declaration that cannot be read as declared (malformed JSON, wrong types, an entry without a string `check`) is exit `2` and also stops — never a silent no-op. A passing run additionally asserts `git status --porcelain` is empty afterwards: a dirty tree is exit `3` — not a failed check, but the clean-tree condition already broken — so it is resolved with the user's approval and PREFLIGHT is run again. The outcome is written **only** as a ledger record — a level-3 heading `### preflight-local-checks | cycle: <C>` with one `- result:` line whose verdict token is `none declared`, `PASS <name>=PASS[(repaired)] … worktree=clean`, `DIRTY <name>=PASS[(repaired)] … worktree=dirty(<n>)` or `FAIL <name>=FAIL[(…)] … worktree=n/a` (`PASS` is written only when the run passed and the tree is clean) — an identifier-free record entry; the state file is untouched, and the gate hook reads the ledger advisorily only. The commit-time lint-chain obligation (`submodule-common-rules.md` > *Lint chain on the staged surface*) applies on its own: a declared check that installs the lint chain does not replace running it.
+**Target-declared local checks.** PREFLIGHT runs the target repository's **own** readiness procedure through `scripts/preflight/local-checks.sh --ledger .autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md --cycle <C>` — after prior-cycle resolution and before the state file is created; `<C>` is the cycle the state file will carry (`1` on a new issue, the incremented value on review-response entry). The target declares that procedure in the target-owned scaffold `.claude/autoflow.local.json` under `preflight.local_checks[]` — one entry per step, each `{ "name", "check", "repair"? }`, where `check` is the command run (exit 0 = ready) and the optional `repair` is run once on a failed `check`, followed by a re-check whose exit is the verdict. A target whose docs name a per-clone setup step (a commit-hook installer, a generated config, a toolchain probe) declares it here; the framework knows **no specific tool** — it runs what is declared and reads only the exit status. **Absent declaration ⇒ no-op**: the record is the single line `PREFLIGHT local checks: none declared`. A declared check that does not pass (after repair, when one is declared) is exit `1` and stops the cycle: run the declared repair, or fix the declaration, then run PREFLIGHT again. A declaration that cannot be read as declared (malformed JSON, wrong types, an entry without a string `check`) is exit `2` and also stops — never a silent no-op. A passing run additionally asserts `git status --porcelain` is empty afterwards: a dirty tree is exit `3` — not a failed check, but the clean-tree condition already broken — so it is resolved with the user's approval and PREFLIGHT is run again. The outcome is written **only** as a ledger record — a level-3 heading `### preflight-local-checks | cycle: <C>` with one `- result:` line whose verdict token is `none declared`, `PASS <name>=PASS[(repaired)] … worktree=clean`, `DIRTY <name>=PASS[(repaired)] … worktree=dirty(<n>)` or `FAIL <name>=FAIL[(…)] … worktree=n/a` (`PASS` is written only when the run passed and the tree is clean) — an identifier-free record entry; the state file is untouched, and the gate hook reads the ledger advisorily only. The commit-time lint-chain obligation (`submodule-common-rules.md` > *Lint chain on the staged surface*) applies on its own: a declared check that installs the lint chain does not replace running it.

@@ -8,7 +8,7 @@
 # =============================================================================
 # STANDING suite (`automated / standing: packaging`), subject-named.
 #
-# ADR-0024 D2's standing predicate that no `.autoflow/issue-{N}-local/` asset
+# ADR-0024 D2's standing predicate that no `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/` asset
 # entered the merged tree (scripts/test/check-cycle-layer-index.sh) is every
 # target's, delivered by S4 (issue #229): "installed on a newly stamped target
 # and matching the manifest hash". The closed-list token check GATE:QUALITY runs
