@@ -19,9 +19,10 @@ Beyond the happy path, the diagram encodes the design decisions of
 - DIAGNOSE, ARCHITECT and BUILD each run as one unit spawn (node subtitles)
 - D2  every gate is a fresh-spawned Evaluation AI (gate subtitles, legend)
 - D3  the hook computes PASS from raw scores (legend)
-- D6  structure FAIL = no code change -> stop/close (dashed STOP node)
-- D7  every FAIL loop is bounded, cap -> human escalation (dashed red
-      return edges with their caps from CLAUDE.md > Regressions)
+- D6  GATE:HYPOTHESIS concludes no code change -> stop/close (dashed STOP node)
+- D7  every FAIL loop ends at its cap or, at GATE:HYPOTHESIS, at a judged
+      stop -> human escalation (dashed red return edges with their caps from
+      CLAUDE.md > Regressions)
 - D8  deliberation runs in isolated sub-contexts (isolation glyph)
 - D9  HANDOFF review auto-resolution re-enters BUILD, bounded at 7 (top bus)
 """
@@ -36,7 +37,7 @@ STAGES = [
     ("01", "ANALYSIS", [
         ("PREFLIGHT", "git clean · prior-cycle check", "start", False),
         ("DIAGNOSE", "analysis unit · one spawn", "phase", True),
-        ("GATE:HYPOTHESIS", "fresh eval · structure + cause", "gate", False),
+        ("GATE:HYPOTHESIS", "fresh eval · one form", "gate", False),
     ]),
     ("02", "PLANNING", [
         ("ARCHITECT", "design unit · one spawn", "phase", True),
@@ -59,7 +60,7 @@ STAGES = [
 # Per-phase FAIL caps rendered inside the node, bottom-right (CLAUDE.md >
 # Regressions). ↩ = bounded return edge drawn dashed; ↻ = in-place fix cycle.
 FAIL_CAPS = {
-    "GATE:HYPOTHESIS": "↩ ≤2×",
+    "GATE:HYPOTHESIS": "↩ judged",
     "GATE:PLAN": "↩ ≤3×",
     "GATE:QUALITY": "↩ ≤3×",
     "AUDIT": "↩ ≤2×",
@@ -255,7 +256,7 @@ def render(theme):
             f'marker-end="url(#arrf)"/>'
         )
 
-    fail_loop("GATE:HYPOTHESIS", "DIAGNOSE", 1)   # cause FAIL -> DIAGNOSE (max 2x)
+    fail_loop("GATE:HYPOTHESIS", "DIAGNOSE", 1)
     fail_loop("GATE:PLAN", "ARCHITECT", 1)        # plan FAIL -> ARCHITECT (max 3x)
     fail_loop("AUDIT", "BUILD", 1)                # test-first finding / AUDIT FAIL -> BUILD (max 2x)
 
@@ -283,7 +284,7 @@ def render(theme):
         f'font-size="10" fill="{t["fail"]}">CI fail / review Medium+ → back to BUILD · review-response ≤7×</text>'
     )
 
-    # ---- STOP node (D6: structure FAIL = no code change -> close/report)
+    # ---- STOP node (D6: no code change -> close/report)
     (gx, gy) = origin["GATE:HYPOTHESIS"]
     sx, sy = gx, TOP + col_h(3) + 16
     s.append(
@@ -322,7 +323,7 @@ def render(theme):
     )
     s.append(
         f'<text x="{MARGIN + 32}" y="{y2}" font-family="{SANS}" font-size="11" fill="{t["muted"]}">'
-        f'bounded FAIL loop (≤N×) — cap exhausted → human escalation, never unbounded</text>'
+        f'FAIL loop (≤N×, or judged) — cap exhausted / judged unreachable → human</text>'
     )
     s.append(
         f'<rect x="560" y="{y2 - 12}" width="14" height="10" rx="3" fill="none" '

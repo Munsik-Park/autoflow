@@ -26,8 +26,8 @@ AutoFlow structures every code change through a defined lifecycle:
 
 ```
 PREFLIGHT       Preparation (U1)  — prior-cycle resolution, Git clean check, sync, branch and state creation
-DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, cause hypotheses
-GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (gate: structure form; cause form for bug issues)
+DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, conclusion with its grounds
+GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (one form: conclusion grounds, goal coverage)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
 GATE:PLAN       Plan Evaluation   — Scored plan assessment (gate)
 BUILD           Build unit (U4)   — Test-first implementation and verification
@@ -44,7 +44,7 @@ full diagram):
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/autoflow-lifecycle-dark.svg">
-  <img alt="AutoFlow 16-phase lifecycle — Analysis → Planning → TDD → Quality → Delivery. Amber evaluation gates are fresh-spawned Evaluation AIs enforced by the gate hook; dashed red edges are the bounded FAIL retry loops (≤N×, cap exhausted escalates to a human); the isolation glyph marks phases running in isolated sub-contexts; the dashed STOP node is the no-code-change analysis exit." src="docs/assets/autoflow-lifecycle-light.svg" width="100%">
+  <img alt="AutoFlow 16-phase lifecycle — Analysis → Planning → TDD → Quality → Delivery. Amber evaluation gates are fresh-spawned Evaluation AIs enforced by the gate hook; dashed red edges are the FAIL retry loops (≤N×, or judged at GATE:HYPOTHESIS; a cap exhausted or a pass judged unreachable escalates to a human); the isolation glyph marks phases running in isolated sub-contexts; the dashed STOP node is the no-code-change analysis exit." src="docs/assets/autoflow-lifecycle-light.svg" width="100%">
 </picture>
 
 <details>

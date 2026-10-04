@@ -24,7 +24,7 @@
       "agent_type": "autoflow-evaluator",
       "model": "sonnet",
       "effort": "xhigh",
-      "work_type": "rubric, 3 items × 10 points"
+      "work_type": "rubric, 2 items × 10 points"
     },
     "gate-plan": {
       "agent_type": "autoflow-evaluator",

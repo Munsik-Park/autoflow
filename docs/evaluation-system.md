@@ -152,9 +152,8 @@ If any condition fails, the change fails.
 
 | Type | Items (count) | Retry |
 |------|---------------|-------|
-| Structure evaluation (GATE:HYPOTHESIS — structure form, every issue, scored on the DIAGNOSE analysis report) | Behavior gap, Code-change necessity (2) | none — PASS/FAIL single verdict; reuse-neutral 2-item necessity gate. FAIL on gap-low (already satisfied) → review-response: reply + active:false (awaiting-external-review, no close); new-issue: auto-closed + terminated. FAIL on Code-change-necessity-low (non-code lever) → the advisor decides (code owed → continue; non-code → the cycle ends with its report). No retry loop. (Canonical: *Gate rubrics* > GATE:HYPOTHESIS > *Structure form* below; the dispositions: [U2 Analysis](units/analysis.md) > *Verification — GATE:HYPOTHESIS*) |
-| Hypothesis evaluation (GATE:HYPOTHESIS — cause form, bug/incident only) | Hypothesis diversity, Verification sufficiency, Verdict evidence (3) | max 2× → a U2 unit re-run |
-| Plan evaluation (GATE:PLAN) | Decision grounds, Verification fit, Scope, Tools, Security (5) — the design's intent, never its method (ADR-0025 D2); affected files and side effects are derived at BUILD by the build unit, not predicted and scored here. Decision grounds/Scope absorb the structural-fit & over-engineering concern the DIAGNOSE structure gate does not score — over-engineering is scored symmetrically across the plan and its verification design, so an unjustified verification layer fails Scope — and carry the embedded ADR-conformance check (divergence from a governing ADR, or an architecture-impacting change with no governing ADR/owner decision, caps the named item at 6; N/A by default) and the embedded AC-authority check (a verification-design difference against the issue's acceptance-criteria table that no `[ac-decision]` ledger entry covers caps Scope at 6); the interpretive paragraph and both checks are at *Gate rubrics* > GATE:PLAN below. Re-entry re-scores the design documents' delta sections plus every inherited item whose anchor it touched, reported in `rescore` | max 3× → ARCHITECT |
+| Analysis evaluation (GATE:HYPOTHESIS — one form, every issue, scored on the DIAGNOSE analysis report) | Conclusion grounds, Goal coverage (2) | no count cap — a FAIL's re-entry is the orchestrator's judgment and the cycle leaves only on a PASS; a PASS judged unreachable → the advisor → not reachable: the operator confirms the close (issue #421). On a PASS the report's conclusion routes: `no change needed` → review-response: reply + active:false (awaiting-external-review, no close); new-issue: closed as resolved; `non-code lever` → the advisor decides; `code change` → ARCHITECT. (Canonical: *Gate rubrics* > GATE:HYPOTHESIS below; the dispositions: [U2 Analysis](units/analysis.md) > *Verification — GATE:HYPOTHESIS*) |
+| Plan evaluation (GATE:PLAN) | Decision grounds, Verification fit, Scope, Tools, Security (5) — the design's intent, never its method (ADR-0025 D2); affected files and side effects are derived at BUILD by the build unit, not predicted and scored here. Decision grounds/Scope absorb the structural-fit & over-engineering concern GATE:HYPOTHESIS does not score — over-engineering is scored symmetrically across the plan and its verification design, so an unjustified verification layer fails Scope — and carry the embedded ADR-conformance check (divergence from a governing ADR, or an architecture-impacting change with no governing ADR/owner decision, caps the named item at 6; N/A by default) and the embedded AC-authority check (a verification-design difference against the issue's acceptance-criteria table that no `[ac-decision]` ledger entry covers caps Scope at 6); the interpretive paragraph and both checks are at *Gate rubrics* > GATE:PLAN below. Re-entry re-scores the design documents' delta sections plus every inherited item whose anchor it touched, reported in `rescore` | max 3× → ARCHITECT |
 | Security audit (AUDIT) | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies (5) | max 2× |
 | Quality evaluation (GATE:QUALITY) | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates (10) — Test coverage's subject is the recorded local run for each `cycle` row and the committed asset for each `standing` row, never a CI result; Test quality carries the layer-violation check (a committed asset on a `cycle` row, an uncommitted one on a `standing` row, or a `standing:` token outside ADR-0024 D1's closed list caps it at 6); Fit also carries the embedded ADR-conformance regression re-confirmation (caps Fit at 6; same trigger as GATE:PLAN), and Completeness carries the embedded AC-authority check for post-ARCHITECT drift (a carried verification-design row for which no test assertion or implementation site can be named, and which no `[ac-decision]` ledger entry covers, caps Completeness at 6) | max 3× → re-entry by `remedy_class` (doc commit / BUILD / ARCHITECT; `operator` → the advisor) |
 | Doc evaluation | Accuracy, Completeness, Clarity, Format compliance (4) | one revision |
@@ -174,7 +173,7 @@ These subsections bind every rubric-scored gate unless one names its gate.
 
 ### Pre-scoring FAIL hypothesis (consider-the-opposite)
 
-This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS (both the structure and cause forms), GATE:PLAN, AUDIT, GATE:QUALITY — and the doc-evaluation form when one is run, as a shared Evaluation AI contract. No gate opts out.
+This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY — and the doc-evaluation form when one is run, as a shared Evaluation AI contract. No gate opts out.
 
 - **[MUST]** Form the FAIL hypothesis first: adopt the hypothesis **"this deliverable must FAIL"** and search for the strongest evidence supporting it, framed in the terms of this evaluation's own rubric items. The search re-derives the deliverable's cited anchors from the current source (`path:line`, command output, `git show HEAD:<file>`) rather than accepting the deliverable's own account of them.
 - **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations` (or `blocking_issues` when score-blocking). A surviving case may coexist with a score of 7 or higher: the routing obligation is to record it, not to lower the item.
@@ -299,66 +298,37 @@ document's: [U2 Analysis](units/analysis.md), [U3 Design](units/design.md),
 It scores what the analysis report shows, never the method the unit took to produce it (ADR-0025
 D2).
 
-**Evaluator**: one independent Evaluation AI, fresh-spawned per entry. It scores the structure
-form for every issue and, for a bug / incident issue, the cause form. Each form's result is written
-separately — one output object per form (*Evaluation Output Format* below) — and the orchestrator
-records each under its own key, `phases.gate_hypothesis_structure` and
-`phases.gate_hypothesis_cause` in `.autoflow/issue-{N}.json`; the two are never nested under one
-key.
+**Evaluator**: one independent Evaluation AI, fresh-spawned per entry. It scores one form for
+every issue — bug / incident or not, code or documentation — and returns one output object
+(*Evaluation Output Format* below), which the orchestrator records under `phases.gate_hypothesis`
+in `.autoflow/issue-{N}.json`.
 **Input**: the analysis report (`.autoflow/issue-{N}-analysis.md`), the trigger target (the issue,
 or the review comment / thread of a review-response cycle) and the decision ledger.
 
-#### Structure form (every issue)
-
-The form answers one question: **does the as-is already satisfy the request, and if not, is a code
-change the lever?** The request is the cycle's trigger target and the as-is the dev branch's HEAD
-([U2 Analysis](units/analysis.md) > *What the analysis owes*). It is a necessity gate and
-reuse-neutral: a resolution that reuses existing code scores high, not low. Plan feasibility,
-structural fit and over-engineering are GATE:PLAN's (Decision grounds, Scope) and GATE:QUALITY's
-(Minimal implementation, Fit).
-
-The rubric follows the issue type the report records under `## Necessity`: Type 1 (code change —
-bug fix, new feature, script change, pattern extension, hook change) or Type 2 (documentation /
-consistency — content sync, doc update, cross-file consistency); mixed or unclear is Type 1.
-
-Type 1 (2 items × 10 points):
+The form answers one question: **is the report's conclusion supported by its grounds, and did the
+analysis reach its goal?** The request is the cycle's trigger target and the as-is the dev branch's
+HEAD ([U2 Analysis](units/analysis.md) > *What the analysis owes*). The form scores whether the
+conclusion holds, never which way it points: a well-grounded `no change needed` or `non-code lever`
+scores as high as a well-grounded `code change`, and the conclusion — not a low item — routes the
+cycle ([U2 Analysis](units/analysis.md) > *Verification — GATE:HYPOTHESIS*). Nor does it score how
+the analysis was done — how many explanations it weighed or which checks it ran — only whether what
+the report concludes is shown. It is reuse-neutral: a resolution that reuses existing code is not
+marked down. Plan feasibility, structural fit and over-engineering are GATE:PLAN's (Decision
+grounds, Scope) and GATE:QUALITY's (Minimal implementation, Fit).
 
 | Item | Criterion |
 |------|-----------|
-| Behavior gap          | Per the report's `## Current structure`, does the as-is NOT yet produce the required behavior? (high = real gap → change needed; already produced / already fixed → low) |
-| Code-change necessity | Is a *code* change the lever, not data / config / ops? (high = code change needed; resolvable by config / data / ops → low) |
+| Conclusion grounds | Does the evidence the report cites — re-derived from the source, not taken from the report's account — support its conclusion: the current structure as stated, the gap, whether a change is owed and whether code is the lever, and, where the request reports a defect, the cause? A conclusion that a code change is required where the cause it rests on is not established, or where data, configuration, the environment or an earlier fix is not ruled out on evidence, scores low here. |
+| Goal coverage | Does the report answer everything the analysis owes ([U2 Analysis](units/analysis.md) > *What the analysis owes*, *Analysis report*) — the gap per resolution approach, the lever, the conclusion, the acceptance-criterion table, the referenced materials, the scope judgments and the decision points — for the whole request, not a part of it? |
 
-Type 2 (3 items × 10 points):
-
-| Item | Criterion |
-|------|-----------|
-| Content gap        | Is there an actual content gap or inconsistency? (high = gap exists) |
-| Consistency impact | Does the inconsistency affect users or AI behavior? (high = significant impact) |
-| Propagation scope  | Is the change scope appropriate — not too broad, not missing targets? (high = appropriate scope) |
-
-**PASS**: each ≥ 7 — and, for the 3-item Type 2 rubric, also avg ≥ 7.5. The hook records but
-**does not gate** `gate_hypothesis_structure`; the orchestrator judges it against these thresholds,
-and a FAIL is disposed of by its failing item, never by a bare composite
-([U2 Analysis](units/analysis.md) > *Verification — GATE:HYPOTHESIS*).
-
-#### Cause form (bug / incident issues only)
-
-Non-bug issues (feat, chore, docs, refactor, …) skip this form. The form reads the report's
-`## Hypotheses`.
-
-| Item | Criterion |
-|------|-----------|
-| Hypothesis diversity | Are non-code causes (data, environment, already fixed) sufficiently considered? |
-| Verification sufficiency | Was lightweight verification actually performed? Are unverified items justified? |
-| Verdict evidence | Is the conclusion (code change required / not required) logically supported? |
+**PASS**: each ≥ 7, avg ≥ 7.5. The hook gates the ARCHITECT spawn on this PASS for a bug /
+incident issue; for any other issue the orchestrator judges it against the same line.
 
 #### Re-entry re-score
 
-After a U2 re-run the gate re-scores the form that sent the cycle back — the cause form after a
-cause-form FAIL, the recommending form after a recommendation attempt — and the other form only
-where the re-run changed a section it reads (the structure form: `## Current structure`,
-`## Request`, `## Necessity`; the cause form: `## Hypotheses`); the rest is inherited and reported
-in `rescore` (*Evaluation Output Format* below).
+After a U2 re-run the gate re-scores the failed items — after a recommendation attempt, the items
+the recommendation was listed under — and any other item whose sections the re-run changed; the
+rest is inherited and reported in `rescore` (*Evaluation Output Format* below).
 
 ### GATE:PLAN
 
@@ -389,7 +359,7 @@ predicted — by the build unit at BUILD, from the change delta and the way the
 target runs its tests, and from the files it opens anyway. A dependency miss surfaces at BUILD
 or HANDOFF's CI and routes by the class rules, consuming no ARCHITECT re-entry.
 
-`Decision grounds` and `Scope` absorb the structural-fit concern that the GATE:HYPOTHESIS structure form deliberately does not score: a plan not grounded in the actual structure fails Decision grounds; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that carries no unique failure mode fails Scope on the same clause. On a row that owes the `Failure mode` cell ([U3 Design](units/design.md) > *Output artifacts*, the column's bullet), the cell fails Scope when it is empty — `—` on such a row counts as empty — or when it cannot be told apart from the cell of another distinct verification anywhere in the design, or from a named existing mechanism; rows that share a `Method` label are one verification and are not compared with each other. The deduction rides this clause and adds no scored item, cap or `scores` key.
+`Decision grounds` and `Scope` absorb the structural-fit concern that GATE:HYPOTHESIS deliberately does not score: a plan not grounded in the actual structure fails Decision grounds; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that carries no unique failure mode fails Scope on the same clause. On a row that owes the `Failure mode` cell ([U3 Design](units/design.md) > *Output artifacts*, the column's bullet), the cell fails Scope when it is empty — `—` on such a row counts as empty — or when it cannot be told apart from the cell of another distinct verification anywhere in the design, or from a named existing mechanism; rows that share a `Method` label are one verification and are not compared with each other. The deduction rides this clause and adds no scored item, cap or `scores` key.
 
 #### ADR-conformance check (scored within Decision grounds / Scope)
 

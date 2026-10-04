@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399.
+Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399; D1, D3, D4, D6 and D7 amended by operator decision 2026-10-04, issue #421.
 
 ## Context
 
@@ -51,7 +51,7 @@ amended by operator decision 2026-10-01, issue #392).**
 | Unit | Former phases | Exit |
 |---|---|---|
 | U1 Preparation | PREFLIGHT | deterministic checks |
-| U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | `gate_hypothesis_cause` (bug) / `skipped` verdict (non-bug) |
+| U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | `gate_hypothesis` — one form for every issue, hook-gated for a bug issue (amended, issue #421) |
 | U3 Design | ARCHITECT, GATE:PLAN | `gate_plan` |
 | U4 Build and verify | DISPATCH, RED, GREEN, VERIFY, REFINE, VALIDATE, AUDIT | `audit` (its evaluator judges test-first) |
 | U5 Completion evaluation | GATE:QUALITY | `gate_quality` |
@@ -76,9 +76,11 @@ configured reviewer stay two quality procedures, neither replacing the other: th
 the units' artifacts and holds the gate authority; the reviewer reviews each delivered pull
 request's result.
 
-**D3 — The authority rules stay as they are (amended by operator decision 2026-10-01, issue
-#392).** The push / `gh pr create` gate, the merge prohibition, the gate score thresholds, the
-re-entry caps, evaluator independence (fresh spawn, never the author), the evidence rule (a run's
+**D3 — The authority rules stay as they are (amended by operator decisions 2026-10-01, issue
+#392, and 2026-10-04, issue #421).** The push / `gh pr create` gate, the merge prohibition, the gate
+score thresholds, the re-entry caps — GATE:HYPOTHESIS's excepted (issue #421): its FAIL re-entry is
+the orchestrator's judgment with no count, and a PASS judged unreachable goes to the advisor and, on
+its judgment, to the operator to confirm the close — evaluator independence (fresh spawn, never the author), the evidence rule (a run's
 evidence is its log) and the lint-chain obligation at commit. A rule that existed to prevent
 self-certification through a method is judged by the unit's independent evaluator, not enforced by
 splitting two roles: the AUDIT evaluator judges the test-first rule from the build report and git as
@@ -89,7 +91,7 @@ where the repository keeps it.
 
 **D4 — AI imperfection is covered by three layers of verification, not by method.**
 (1) The unit loop: a fresh evaluator scores the unit's artifacts; a FAIL returns its findings and
-the previous artifacts to the unit agent, up to the existing caps. (2) External verification: CI
+the previous artifacts to the unit agent, up to the existing caps — at GATE:HYPOTHESIS, until a PASS or the advisor's judgment that none is reachable (issue #421). (2) External verification: CI
 and the configured reviewer. (3) Human verification at the pause points, as D7 routes them.
 
 **D5 — The orchestrator sequences units and runs on Opus (operator decision).** It spawns one
@@ -97,14 +99,19 @@ fresh unit agent per unit with the goal and artifact paths, spawns the evaluator
 records the score and routes. It does not execute unit work, so its context stays small. A spawn
 made by a unit agent is not restricted: it inherits the unit's gate class (operator decision 1).
 
-**D6 — State (operator decisions 2 and 4).** The four gated keys are kept as the unit exit gates
-(`gate_hypothesis_cause`, `gate_plan`, `audit`, `gate_quality`), so the hook's validator and the
-Resume procedure ("re-enter after the last passed gate") carry over. A non-bug issue keeps the
-`skipped (non-bug issue)` verdict for U2.
+**D6 — State (operator decisions 2 and 4; amended by operator decision 2026-10-04, issue #421).**
+The four gated keys are kept as the unit exit gates (`gate_hypothesis`, `gate_plan`, `audit`,
+`gate_quality`), so the hook's validator and the Resume procedure ("re-enter after the last passed
+gate") carry over. GATE:HYPOTHESIS is one form for every issue, recorded under `gate_hypothesis`,
+which replaces `gate_hypothesis_structure` and `gate_hypothesis_cause` (issue #421). A non-bug issue
+keeps the `skipped (non-bug issue)` verdict for U2: the hook admits its ARCHITECT spawn without
+reading the scores, and the orchestrator judges the PASS.
 
 **D7 — An advisor makes the first judgment; the operator joins at the retry stage (operator
-decision 3).** Every point that today pauses for an operator decision — an acceptance-criterion
-change, a non-code root cause, an un-agreed design point, a `remedy_class: operator`, a
+decision 3; amended by operator decision 2026-10-04, issue #421).** Every point that today pauses
+for an operator decision — an acceptance-criterion change, a non-code root cause, a GATE:HYPOTHESIS
+PASS judged unreachable (whose "not reachable" answer asks the operator to confirm the close, issue
+#421), an un-agreed design point, a `remedy_class: operator`, a
 recommendation or finding the orchestrator cannot route with confidence — is answered first by a
 dedicated advisor sub-agent: the highest-capability model at the highest effort, the effort
 delivered by its agent definition's `effort:` line. Its answer is applied and recorded as a

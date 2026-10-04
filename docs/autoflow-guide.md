@@ -53,8 +53,7 @@ Diamond nodes are evaluation gates; stadium nodes are terminal states.
 flowchart TD
     PRE([PREFLIGHT<br/>Preparation]):::phase
     DIA[DIAGNOSE<br/>Analysis unit]:::phase
-    HYPS{{GATE:HYPOTHESIS<br/>structure}}:::gate
-    HYPC{{GATE:HYPOTHESIS<br/>cause}}:::gate
+    HYP{{GATE:HYPOTHESIS}}:::gate
     ARC[ARCHITECT<br/>Design unit]:::phase
     PLAN{{GATE:PLAN}}:::gate
     BLD[BUILD<br/>Build unit]:::phase
@@ -63,23 +62,20 @@ flowchart TD
     DEL[DELIVER<br/>Push]:::phase
     INT[INTEGRATE]:::phase
     HAND[HANDOFF<br/>PR + Hand-off]:::phase
-    CLOSE([Issue Auto-Closed]):::terminal
+    CLOSE([Issue Closed<br/>resolved, no PR]):::terminal
     REVW([Reply on PR<br/>await external review]):::terminal
     DONE([Done]):::terminal
     HUMAN([Human Decision]):::terminal
     ADV([Advisor decision<br/>recorded, applied]):::terminal
 
     PRE --> DIA
-    DIA -->|structure eval| HYPS
-    HYPS -->|FAIL · gap-low · new-issue| CLOSE
-    HYPS -->|FAIL · gap-low · review-response| REVW
-    HYPS -.->|FAIL · non-code lever| ADV
-    HYPS -->|PASS<br/>non-bug issue| ARC
-    HYPS -->|PASS<br/>bug issue| HYPC
-    HYPC -->|PASS| ARC
-    HYPC -->|FAIL ≤2×| DIA
-    HYPC -->|FAIL ×3| HUMAN
-    HYPC -.->|non-code root cause| ADV
+    DIA --> HYP
+    HYP -->|PASS · no change needed · new-issue| CLOSE
+    HYP -->|PASS · no change needed · review-response| REVW
+    HYP -.->|PASS · non-code lever| ADV
+    HYP -->|PASS · code change| ARC
+    HYP -->|FAIL · re-entry judged, no count cap| DIA
+    HYP -.->|PASS judged unreachable<br/>advisor: not reachable → operator confirms close| HUMAN
     ARC --> PLAN
     PLAN -->|PASS| BLD
     PLAN -->|FAIL ≤3×| ARC
@@ -111,12 +107,13 @@ The same diagram in plain text, for environments without mermaid rendering:
 PREFLIGHT
     │
     ▼
-DIAGNOSE ─── structure eval ──► [FAIL]
-                ├─ gap-item low (already satisfied) ─► new-issue: Issue Auto-Closed │ review-response: Reply on PR + await review
-                └─ gap real, non-code lever ────────► advisor decides (code owed → continue │ non-code → end)
+DIAGNOSE
     │
     ▼
-GATE:HYPOTHESIS (cause, bug only) ◄── retry ≤2×
+GATE:HYPOTHESIS (one form) ◄── FAIL: re-entry judged, no count cap; PASS judged unreachable → advisor → operator confirms close
+    ├─ PASS · no change needed ─► new-issue: Issue Closed (resolved, no PR) │ review-response: Reply on PR + await review
+    ├─ PASS · non-code lever ───► advisor decides (code owed → continue │ non-code → end)
+    │  PASS · code change
     │
     ▼
 ARCHITECT ◄── retry ≤3×
