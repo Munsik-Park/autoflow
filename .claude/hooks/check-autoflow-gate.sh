@@ -1181,8 +1181,7 @@ apply_role_gate() {
       ;;
     planning)
       # Gate 1: planning spawn → GATE:HYPOTHESIS pass required (bug issues only).
-      # GATE:HYPOTHESIS is one form for every issue (issue #421); its verdict carries
-      # the bug signal. If gate_hypothesis.verdict does not contain "skip", treat as bug issue.
+      # gate_hypothesis.verdict carries the bug signal: a value without "skip" is a bug issue.
       # Fail closed if the verdict cannot be read — a JSON-valid but schema-corrupt
       # state (e.g. `.phases` is not an object) makes this jq error and would
       # otherwise exit 5, a NON-blocking PreToolUse code (PR #242 review). The

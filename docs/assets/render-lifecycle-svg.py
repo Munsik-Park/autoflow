@@ -19,9 +19,10 @@ Beyond the happy path, the diagram encodes the design decisions of
 - DIAGNOSE, ARCHITECT and BUILD each run as one unit spawn (node subtitles)
 - D2  every gate is a fresh-spawned Evaluation AI (gate subtitles, legend)
 - D3  the hook computes PASS from raw scores (legend)
-- D6  structure FAIL = no code change -> stop/close (dashed STOP node)
-- D7  every FAIL loop is bounded, cap -> human escalation (dashed red
-      return edges with their caps from CLAUDE.md > Regressions)
+- D6  GATE:HYPOTHESIS concludes no code change -> stop/close (dashed STOP node)
+- D7  every FAIL loop ends at its cap or, at GATE:HYPOTHESIS, at a judged
+      stop -> human escalation (dashed red return edges with their caps from
+      CLAUDE.md > Regressions)
 - D8  deliberation runs in isolated sub-contexts (isolation glyph)
 - D9  HANDOFF review auto-resolution re-enters BUILD, bounded at 7 (top bus)
 """
@@ -255,7 +256,7 @@ def render(theme):
             f'marker-end="url(#arrf)"/>'
         )
 
-    fail_loop("GATE:HYPOTHESIS", "DIAGNOSE", 1)   # FAIL -> DIAGNOSE (judged, no count cap)
+    fail_loop("GATE:HYPOTHESIS", "DIAGNOSE", 1)
     fail_loop("GATE:PLAN", "ARCHITECT", 1)        # plan FAIL -> ARCHITECT (max 3x)
     fail_loop("AUDIT", "BUILD", 1)                # test-first finding / AUDIT FAIL -> BUILD (max 2x)
 
@@ -283,7 +284,7 @@ def render(theme):
         f'font-size="10" fill="{t["fail"]}">CI fail / review Medium+ → back to BUILD · review-response ≤7×</text>'
     )
 
-    # ---- STOP node (D6: structure FAIL = no code change -> close/report)
+    # ---- STOP node (D6: no code change -> close/report)
     (gx, gy) = origin["GATE:HYPOTHESIS"]
     sx, sy = gx, TOP + col_h(3) + 16
     s.append(

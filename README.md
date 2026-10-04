@@ -44,7 +44,7 @@ full diagram):
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/autoflow-lifecycle-dark.svg">
-  <img alt="AutoFlow 16-phase lifecycle — Analysis → Planning → TDD → Quality → Delivery. Amber evaluation gates are fresh-spawned Evaluation AIs enforced by the gate hook; dashed red edges are the bounded FAIL retry loops (≤N×, cap exhausted escalates to a human); the isolation glyph marks phases running in isolated sub-contexts; the dashed STOP node is the no-code-change analysis exit." src="docs/assets/autoflow-lifecycle-light.svg" width="100%">
+  <img alt="AutoFlow 16-phase lifecycle — Analysis → Planning → TDD → Quality → Delivery. Amber evaluation gates are fresh-spawned Evaluation AIs enforced by the gate hook; dashed red edges are the FAIL retry loops (≤N×, or judged at GATE:HYPOTHESIS; a cap exhausted or a pass judged unreachable escalates to a human); the isolation glyph marks phases running in isolated sub-contexts; the dashed STOP node is the no-code-change analysis exit." src="docs/assets/autoflow-lifecycle-light.svg" width="100%">
 </picture>
 
 <details>

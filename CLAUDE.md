@@ -288,7 +288,7 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
 
 **`mode` field**: `"new-issue"` on Creation; the review-response setup sets `"review-response"` (target issue's PR is open). The GATE:HYPOTHESIS `no change needed` disposition reads `mode` rather than re-deriving the PR state. The hook does not read it (additive field).
 
-**`phase` field**: coarse, non-exhaustive lifecycle marker (the hook does not read it; additive field) — `"in-progress"` during a cycle; `"review-triage"` while HANDOFF aggregates and triages the review result; `"awaiting-external-review"` at HANDOFF (set only once the review is clean — no PR's verdict is Medium+) and at a structure-gate no-work review-response exit; `"awaiting-user"` at every pause for a human decision (the Flow Control rows that set it). A terminal or escalation state this list does not name leaves `phase` at its last value; `active` is the authoritative run flag.
+**`phase` field**: coarse, non-exhaustive lifecycle marker (the hook does not read it; additive field) — `"in-progress"` during a cycle; `"review-triage"` while HANDOFF aggregates and triages the review result; `"awaiting-external-review"` at HANDOFF (set only once the review is clean — no PR's verdict is Medium+) and at a GATE:HYPOTHESIS `no change needed` review-response exit; `"awaiting-user"` at every pause for a human decision (the Flow Control rows that set it). A terminal or escalation state this list does not name leaves `phase` at its last value; `active` is the authoritative run flag.
 
 **`verdict` rule** (gate_hypothesis only; it carries the bug signal the hook reads — the form itself is the same for every issue; when each value is set follows the Flow Control table):
 

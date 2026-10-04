@@ -111,7 +111,8 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
 - **A decision point** is any point that pauses for a decision the working AI is not the one to make:
   an acceptance-criterion change (`[ac-decision]`), a security-checklist change
   (`[checklist-decision]`), a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the analysis records,
-  a reviewer finding that repeats the previous attempt's complaint, an un-agreed design point, a `remedy_class: operator`, and a
+  a reviewer finding that repeats the previous attempt's complaint, a GATE:HYPOTHESIS PASS the
+  orchestrator judges unreachable, an un-agreed design point, a `remedy_class: operator`, and a
   recommendation or finding the orchestrator cannot route with confidence (a pause criterion, a
   rebuttal the re-score or the reviewer keeps while the two sides still disagree). Each is answered
   by the advisor first.
@@ -120,7 +121,10 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
   tool it has, what using it lacks (access, a purpose and permitted scope, a permission setting). Only
   such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
   `phase:"awaiting-user"` ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision
-  presentation). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision
+  presentation). An advisor answer can end the cycle instead — a non-code lever or cause, a
+  prerequisite that comes first, a GATE:HYPOTHESIS PASS not reachable; the last asks the operator to
+  confirm closing the issue, the cycle not closing it itself ([U2 Analysis](units/analysis.md) >
+  *Verification — GATE:HYPOTHESIS*). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision
   points and are unchanged ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 1).
 
 ### Procedure

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399; D1, D3, D4 and D6 amended by operator decision 2026-10-04, issue #421.
+Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399; D1, D3, D4, D6 and D7 amended by operator decision 2026-10-04, issue #421.
 
 ## Context
 
@@ -108,8 +108,10 @@ keeps the `skipped (non-bug issue)` verdict for U2: the hook admits its ARCHITEC
 reading the scores, and the orchestrator judges the PASS.
 
 **D7 — An advisor makes the first judgment; the operator joins at the retry stage (operator
-decision 3).** Every point that today pauses for an operator decision — an acceptance-criterion
-change, a non-code root cause, an un-agreed design point, a `remedy_class: operator`, a
+decision 3; amended by operator decision 2026-10-04, issue #421).** Every point that today pauses
+for an operator decision — an acceptance-criterion change, a non-code root cause, a GATE:HYPOTHESIS
+PASS judged unreachable (whose "not reachable" answer asks the operator to confirm the close, issue
+#421), an un-agreed design point, a `remedy_class: operator`, a
 recommendation or finding the orchestrator cannot route with confidence — is answered first by a
 dedicated advisor sub-agent: the highest-capability model at the highest effort, the effort
 delivered by its agent definition's `effort:` line. Its answer is applied and recorded as a

@@ -760,8 +760,8 @@ def outcome(adir, issue):
     o['state_date'] = st.get('date')
     o['state_phase'] = st.get('phase')
     o['mode'] = st.get('mode')
-    # gate_hypothesis is the one GATE:HYPOTHESIS form since issue #421; archives written before it carry the
-    # two former keys, read here as recorded.
+    # An archived state file carries either gate_hypothesis or gate_hypothesis_structure /
+    # gate_hypothesis_cause.
     for gate in ('gate_hypothesis', 'gate_hypothesis_structure', 'gate_hypothesis_cause', 'gate_plan', 'audit', 'gate_quality'):
         o[gate] = score_avg(((st.get('phases') or {}).get(gate) or {}).get('scores'))
 

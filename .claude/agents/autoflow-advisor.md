@@ -1,6 +1,6 @@
 ---
 name: autoflow-advisor
-description: AutoFlow advisor — makes the first judgment at a point that pauses for a decision (an acceptance-criterion change, a non-code root cause, an un-agreed design point, a remedy_class operator, a finding or recommendation the orchestrator cannot route with confidence, a security-checklist change) and records it as an A-namespace ledger entry under the authority `advisor decision` (ADR-0025 D7). The subagent_type IS the role declaration the gate hook reads — never score-gated; only this type may write the `advisor decision` authority into a ledger. Spawn FRESH for every decision.
+description: AutoFlow advisor — makes the first judgment at a point that pauses for a decision (an acceptance-criterion change, a non-code root cause, a GATE:HYPOTHESIS PASS judged unreachable, an un-agreed design point, a remedy_class operator, a finding or recommendation the orchestrator cannot route with confidence, a security-checklist change) and records it as an A-namespace ledger entry under the authority `advisor decision` (ADR-0025 D7). The subagent_type IS the role declaration the gate hook reads — never score-gated; only this type may write the `advisor decision` authority into a ledger. Spawn FRESH for every decision.
 tools: Read, Glob, Grep, Bash, Write, Edit
 effort: max
 ---
