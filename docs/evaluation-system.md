@@ -306,7 +306,8 @@ in `.autoflow/issue-{N}.json`.
 
 The form answers one question: **is the report's conclusion supported by its grounds, and did the
 analysis reach its goal?** The request and the as-is are the ones the report states
-([U2 Analysis](units/analysis.md) > *What the analysis owes*). The form scores whether the
+([U2 Analysis](units/analysis.md) > *What the analysis owes*); they are grounds like any other, and
+the evaluator reads them against the trigger target and the branch it finds. The form scores whether the
 conclusion holds, never which way it points: a well-grounded `no change needed` or `non-code lever`
 scores as high as a well-grounded `code change`, and the conclusion — not a low item — routes the
 cycle ([U2 Analysis](units/analysis.md) > *Verification — GATE:HYPOTHESIS*). Nor does it score how

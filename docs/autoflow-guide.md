@@ -62,7 +62,7 @@ flowchart TD
     DEL[DELIVER<br/>Push]:::phase
     INT[INTEGRATE]:::phase
     HAND[HANDOFF<br/>PR + Hand-off]:::phase
-    ANS([Answer judged<br/>close · reply · rebuttal]):::terminal
+    ANS[Answer judged<br/>close · reply · rebuttal → review round]:::phase
     DONE([Done]):::terminal
     HUMAN([Human Decision]):::terminal
     ADV([Advisor decision<br/>recorded, applied]):::terminal
