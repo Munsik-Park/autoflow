@@ -4,7 +4,7 @@
 # =============================================================================
 # Decision-ledger entry identifier: allocation (`next`) and detection (`check`)
 # =============================================================================
-# The decision ledger (.autoflow/issue-{N}-ledger.md, CLAUDE.md > Decision
+# The decision ledger (.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md, CLAUDE.md > Decision
 # Ledger) is append-only and written by writers that cannot see each
 # other's in-flight state — the orchestrator and the advisor.
 # Without an issuance protocol each writer picks the "next" serial from its

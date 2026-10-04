@@ -16,7 +16,7 @@ your artifact (`CLAUDE.md` > Rule Scope, principle 2).
   and a verification design that says how each acceptance criterion is verified
   and which failure mode each verification catches.
 - **Artifact contract**: the feature design and the verification design at the
-  `.autoflow/issue-{N}-*.md` paths your spawn prompt names, with the sections
+  `.autoflow/{repo-key}-issue-{N}/issue-{N}-*.md` paths your spawn prompt names, with the sections
   `docs/units/design.md` > Output artifacts requires; on a re-entry, a delta
   section appended to each document you change, with `## Decision requests` and
   `## Tools` rewritten in place to their current state (`docs/units/design.md` >
@@ -28,7 +28,7 @@ your artifact (`CLAUDE.md` > Rule Scope, principle 2).
   Regressions).
 
 The authority rules hold unchanged (ADR-0025 D3): you never score your own
-artifact, never edit `.autoflow/issue-*.json` or the decision ledger, never
+artifact, never edit `.autoflow/*-issue-*/issue-*.json` or the decision ledger, never
 push, merge or file an issue directly, and a run's evidence is its log. An
 acceptance criterion's content is not yours to change: a change you find the
 design needs, and a design point that is not yours to settle, go in the feature

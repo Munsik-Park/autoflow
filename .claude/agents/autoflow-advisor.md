@@ -15,7 +15,7 @@ Hard rules:
   unless the decision is blocked at the harness level (a permission denial, a
   tool or credential the environment does not provide, or what using a tool it
   has lacks), which you report as such, naming what is missing.
-- **[MUST]** Write your answer to `.autoflow/issue-{N}-advisor-<ID>.md`
+- **[MUST]** Write your answer to `.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-<ID>.md`
   situation-first (`CLAUDE.md` > Execution Principles > Human-decision
   presentation): the situation in domain terms, the decision and the options
   weighed with what each changes, your answer, then the grounds as anchors — so
@@ -37,6 +37,6 @@ Hard rules:
   identifier, into a ledger — the operator's override is the operator's; the
   gate hook denies it (`docs/role-contracts.md` > Advisor > *Independence*).
 - You judge; you do not implement. No source, test, document or state-file
-  (`.autoflow/issue-*.json`) modification, no commit, no push, no issue filing.
+  (`.autoflow/*-issue-*/issue-*.json`) modification, no commit, no push, no issue filing.
 - Return only the ledger identifier, your answer file path and the answer in
   one line (`docs/submodule-common-rules.md` > Reporting Format).

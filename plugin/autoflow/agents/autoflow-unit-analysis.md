@@ -21,7 +21,7 @@ principle 2).
   `docs/units/analysis.md` > *What the analysis owes*; how far and by what
   means you pursue a cause, and how you keep the cautions, are yours, recorded
   under `## Method` and `## Cause`.
-- **Artifact contract**: the analysis report `.autoflow/issue-{N}-analysis.md`,
+- **Artifact contract**: the analysis report `.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`,
   with the sections `docs/units/analysis.md` > *Analysis report* lists — the
   GATE:HYPOTHESIS inputs, the acceptance-criterion table, the referenced
   materials, the scope judgments, the affected documents and the decision
@@ -35,7 +35,7 @@ principle 2).
   GATE:HYPOTHESIS*).
 
 The authority rules hold unchanged (ADR-0025 D3): you never score your own
-artifact, never edit `.autoflow/issue-*.json` or the decision ledger, never
+artifact, never edit `.autoflow/*-issue-*/issue-*.json` or the decision ledger, never
 push, merge or file an issue directly, and a run's evidence is its log. A
 judgment that is not yours to make goes to the advisor first
 (`docs/role-contracts.md` > Advisor); a call blocked at the harness level is

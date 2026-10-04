@@ -33,7 +33,7 @@ Hard rules:
   witness case — say so in the finding's cell; the orchestrator then asks the advisor
   (`docs/units/delivery.md` > *A repeated complaint*). Do not decide the re-entry.
 - Read-only with respect to source code: you analyze, you do not modify code.
-- Write your full analysis body to the `.autoflow/issue-{N}-*.md` artifact path
+- Write your full analysis body to the `.autoflow/{repo-key}-issue-{N}/issue-{N}-*.md` artifact path
   given in your prompt; return only the artifact path + a one-line summary.
 - **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
   (test/build runs included). Wait for the result, then report. See

@@ -220,7 +220,7 @@ project.
 
 ### 4. Hook Enforcement
 
-`check-autoflow-gate.sh` reads `.autoflow/issue-{N}.json` to prevent Agent
+`check-autoflow-gate.sh` reads `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` to prevent Agent
 spawns, `git push`, and `gh pr create` from running before the corresponding
 gate has passed. The hook computes verdicts directly from raw `scores` — it
 never trusts an AI-supplied `pass` field.
@@ -271,7 +271,7 @@ After running `setup/init.sh --target <path>`:
 - [ ] `.claude/settings.json` declares the AutoFlow marketplace
       (`extraKnownMarketplaces`) — and **no** `enabledPlugins` key: the plugin is
       enabled once at user scope by `/plugin install autoflow@autoflow`.
-- [ ] `.gitignore` includes `.autoflow/issue-*.json`.
+- [ ] `.gitignore` excludes `.autoflow/` (`.autoflow/*`), which holds the per-issue directories `.autoflow/{repo-key}-issue-{N}/`.
 
 ---
 

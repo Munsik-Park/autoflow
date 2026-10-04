@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293)); D2's archival narrowed by issue #316 — the store's reserved path `disposable/` is deleted at cleanup, not archived (see Amendment note (issue #316))
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293)); D2's archival narrowed by issue #316 — the store's reserved path `disposable/` is deleted at cleanup, not archived (see Amendment note (issue #316)); D2's declared prefix moved into the issue's directory by issue #423 (see Amendment note (issue #423))
 
 ## Context
 
@@ -1173,3 +1173,24 @@ chain that covers no staged file. What D1, D2 and D3 took from the rule — `not
 home: [`submodule-common-rules.md`](../../submodule-common-rules.md) > Change Surface Rules >
 *Lint chain on the staged surface*; decision: [`../design-rationale.md`](../design-rationale.md) >
 Decision 32.
+
+## Amendment note (issue #423)
+
+D2's single declared prefix `.autoflow/issue-{N}-local/` moves into the issue's own directory:
+`.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`. Every file of one issue — the state file, the
+ledger, the unit and gate reports, the proposal record and this store — now lives in
+`.autoflow/{repo-key}-issue-{N}/`, `{repo-key}` being the `<owner>__<name>` key the archive already
+used, and cleanup archives that directory whole to the same
+`$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<date>/` landing, the store's reserved path deleted
+first as the amendment for issue #316 sets. `scripts/test/check-cycle-layer-index.sh` matches the new
+prefix.
+
+**Grounds.** ADR-0025 D1 makes a unit boundary the point a new session resumes from, which needs an
+issue's files to be found as one set. The flat names carried the issue number but no repository, so
+a record of another repository's issue of the same number shared a name in one `.autoflow/`
+(issue #423, its situation: autoflow #419–#422 and llmroute #729–#730 proposal records in one directory).
+
+**What stands.** D2's single declared prefix, its never-in-the-merged-tree property, its archival
+and its reserved path; only the prefix's location changes. A store at the former flat prefix is not
+read: the layout is adopted with no cycle active ([`CLAUDE.md`](../../../CLAUDE.md) > AutoFlow State
+Tracking > *File naming*).

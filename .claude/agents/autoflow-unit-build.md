@@ -38,7 +38,7 @@ implementation work — is yours, recorded with its grounds in your artifact
   design contradiction, an acceptance-criterion change, and the commit rules.
 
 The authority rules hold unchanged (ADR-0025 D3): you never score your own
-artifact, never edit `.autoflow/issue-*.json` or the decision ledger, never
+artifact, never edit `.autoflow/*-issue-*/issue-*.json` or the decision ledger, never
 push, merge or file an issue directly; a run's evidence is its log; before
 every commit the target's lint chain runs over the staged files (`CLAUDE.md` >
 Commit Rules). An acceptance criterion's content is not yours to change: a

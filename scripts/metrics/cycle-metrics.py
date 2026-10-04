@@ -37,7 +37,7 @@ What a session record holds is aggregate only — per agent: role (the declared
 model, the spawn's short `description` label, phase-key, call count, cache
 read / write / output, peak context, start / end, per-wake figures; for the
 orchestrator: one row per API call (timestamp, context, cache read / write,
-output, re-write flag); the `.autoflow/issue-{N}` reference runs; operator
+output, re-write flag); the `.autoflow/<repo-key>-issue-{N}/` reference runs; operator
 prompt timestamps. No transcript text, tool output or prompt body is stored.
 
 Phase-key recovery. Every spawn is preceded (a `[MUST]`) by a
@@ -77,7 +77,8 @@ from transcript_stats import (  # noqa: E402
 SCHEMA = 2            # 2: an agent's role is the orchestrator's declared subagent_type, not the meta file's agentType
 PK_RE = re.compile(r'spawn-policy\.sh["\']?\s+(?:model|effort)\s+([A-Za-z0-9][A-Za-z0-9_-]*)')
 PK_LOOP_RE = re.compile(r'\bfor\s+\w+\s+in\s+([^;\n]+?)\s*;\s*do\b')
-ISSUE_RE = re.compile(r'\.autoflow/issue-(\d+)(?=[-./\s"\'`)\\]|$)')   # not a truncated preview (`issue-5…`)
+# `.autoflow/<repo-key>-issue-{N}/` (issue #423) or the flat `.autoflow/issue-{N}` of earlier transcripts
+ISSUE_RE = re.compile(r'\.autoflow/(?:[A-Za-z0-9._-]+-)?issue-(\d+)(?=[-./\s"\'`)\\]|$)')   # not a truncated preview (`issue-5…`)
 WF_ISSUE_RE = re.compile(r'''["']?issue["']?\s*[:=]\s*["']?#?(\d+)''')
 SWITCH_REFS = 3       # consecutive references that move the session to another issue
 TAIL_S = 1800         # a segment reaches this far past its last reference, no further
@@ -446,7 +447,7 @@ def collect_session(main, policy_keys):
                 else:
                     refs.append([n, ts, ts, 1])
                 fp = inp.get('file_path') or ''
-                if name == 'Write' and re.search(r'\.autoflow/issue-%d\.json$' % n, fp):
+                if name == 'Write' and re.search(r'\.autoflow/(?:[^/]+-issue-%d/)?issue-%d\.json$' % (n, n), fp):
                     state_writes.append([ts, n])
 
     prompts = []
@@ -732,9 +733,10 @@ def find_artifacts(archive_root, repo, issue, cwds):
     if hits:
         return os.path.dirname(sorted(hits)[-1]), 'archive'
     for cwd in cwds:
-        p = os.path.join(cwd, '.autoflow', 'issue-%s.json' % issue)
-        if os.path.exists(p):
-            return os.path.dirname(p), 'live'
+        for pat in ('*__%s-issue-%s' % (repo, issue), '%s-issue-%s' % (repo, issue)):
+            live = glob.glob(os.path.join(cwd, '.autoflow', pat, 'issue-%s.json' % issue))
+            if live:
+                return os.path.dirname(sorted(live)[-1]), 'live'
     return None, None
 
 

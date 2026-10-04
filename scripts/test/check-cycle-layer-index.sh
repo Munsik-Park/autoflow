@@ -7,7 +7,7 @@
 # =============================================================================
 # A `cycle`-layer asset — a `delivery-check`, a default `automated` row's test,
 # a default `manual` checklist — lives under the single declared prefix
-# `.autoflow/issue-{N}-local/`, is executed once, and is archived with the
+# `.autoflow/<repo-key>-issue-{N}/issue-{N}-local/` (issue #423), is executed once, and is archived with the
 # issue's other artifacts. It never enters the merged tree (ADR-0024 D2).
 #
 # THE SUBJECT IS THE INDEX, NOT THE WORKTREE. `.gitignore` already keeps the
@@ -22,8 +22,8 @@
 # THE READ FORM IS `-z`, NOT THE DEFAULT. `git ls-files`'s default output is not
 # the path: `core.quotePath` (default `true`) wraps any path carrying non-ASCII
 # or control bytes in double quotes and octal-escapes the bytes, so a tracked
-# `.autoflow/issue-9-local/검증.sh` is printed as
-# `".autoflow/issue-9-local/\352\262\200\354\246\235.sh"` — which no longer
+# `.autoflow/o__r-issue-9/issue-9-local/검증.sh` is printed as
+# `".autoflow/o__r-issue-9/issue-9-local/\352\262\200\354\246\235.sh"` — which no longer
 # starts with `.autoflow/` textually, so the prefix match misses it and the
 # predicate answers OK. That is a false pass of exactly the disagreement this
 # check exists to catch. `-z` emits raw NUL-terminated paths with no quoting at
@@ -55,8 +55,8 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # The prefix, as one literal and one pattern derived from it. Both are here
 # rather than in two callers: the declared prefix is ADR-0024 D2's, and a second
 # spelling of it is a second declaration.
-CYCLE_LAYER_PREFIX='.autoflow/issue-{N}-local/'
-CYCLE_LAYER_RE='^\.autoflow/issue-[^/]+-local/'
+CYCLE_LAYER_PREFIX='.autoflow/<repo-key>-issue-{N}/issue-{N}-local/'
+CYCLE_LAYER_RE='^\.autoflow/[^/]+-issue-[0-9]+/issue-[0-9]+-local/'
 
 ROOT=""
 while [ $# -gt 0 ]; do

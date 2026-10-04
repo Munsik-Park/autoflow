@@ -13,12 +13,13 @@
 # Reported:
 #   - the working tree: the checked-out branch and its dirty paths
 #   - the default branch against its remote-tracking ref, as of the last fetch
-#   - per `.autoflow/issue-*.json`: `active`, `phase`, `mode`, `cycle`; the
-#     issue's dev branch (`dev/<date>-issue-<N>`) on each side; the branch's
+#   - per state file `.autoflow/<repo-key>-issue-<N>/issue-<N>.json` (issue
+#     #423) — every one the gate hook counts: `active`, `phase`, `mode`,
+#     `cycle`; for this repository's own key, the issue's dev branch (`dev/<date>-issue-<N>`) on each side; the branch's
 #     pull request and its state
 #   - with --issue N: for a state file of that issue, each gate's recorded
-#     scores (count, min, avg), `verdict` and `remedy_class`, the artifacts on
-#     disk, the ledger's last attempt markers and the last local-checks record
+#     scores (count, min, avg), `verdict` and `remedy_class`, the artifacts in
+#     its directory, the ledger's last attempt markers and the last local-checks record
 #     of the current cycle; without a state file, any dev branch that already
 #     carries the issue's number
 #
@@ -46,9 +47,13 @@ case "$ISSUE" in
   *[!0-9]*) echo "[$TAG] --issue takes an issue number: $ISSUE" >&2; exit 64 ;;
 esac
 
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "[$TAG] not inside a git repository" >&2; exit 64; }
 cd "$ROOT" || exit 64
 AF=".autoflow"
+# shellcheck source=scripts/lib/issue-dir.sh
+. "$SELF_DIR/../lib/issue-dir.sh"
+KEY="$(autoflow_repo_key "$ROOT")"
 incomplete=0
 
 # The issue-scoped dev branch is named `dev/<date>-issue-<N>`; both the local
@@ -97,7 +102,8 @@ last_local_checks() {
 }
 
 report_detail() {  # <issue> <cycle> — what a resume is judged from
-  local n="$1" led="$AF/issue-$1-ledger.md" f m
+  local n="$1" d="$AF/$KEY-issue-$1" f m
+  local led="$d/issue-$n-ledger.md"
   echo "  gates:"
   jq -r '
     def num: if type == "object" then .score else . end;
@@ -108,9 +114,9 @@ report_detail() {  # <issue> <cycle> — what a resume is judged from
         else ([$s[] | num]) as $v | "scores=\($v | length) min=\($v | min) avg=\(($v | add) / ($v | length) * 100 | round / 100)" end )
     + (if .value.verdict != null and .value.verdict != "" then " verdict=\"\(.value.verdict)\"" else "" end)
     + (if .value.remedy_class != null then " remedy_class=\(.value.remedy_class)" else "" end)
-  ' "$AF/issue-$n.json" 2>/dev/null
+  ' "$d/issue-$n.json" 2>/dev/null
   echo "  artifacts:"
-  for f in "$AF"/issue-"$n"-*; do
+  for f in "$d"/issue-"$n"-*; do
     [ -e "$f" ] || continue
     case "${f##*/}" in issue-"$n"-c[0-9]*-*) continue ;; esac
     echo "    ${f##*/}"
@@ -140,11 +146,20 @@ fi
 
 own_seen=0
 found=0
-for f in "$AF"/issue-*.json; do
+for f in "$AF"/*-issue-*/issue-*.json; do
   [ -f "$f" ] || continue
   n="${f##*/issue-}"; n="${n%.json}"
   case "$n" in ''|*[!0-9]*) continue ;; esac
+  dn="${f%/*}"; dn="${dn##*/}"
+  case "$dn" in *-issue-"$n") ;; *) continue ;; esac
   found=1
+  # A state file under another repository's key is counted by the gate hook
+  # too, so it is reported; its branches and pull request are that
+  # repository's, which this one's lookups would not find.
+  if [ "${dn%-issue-"$n"}" != "$KEY" ]; then
+    echo "issue #$n ($dn): active=$(jq -r '.active // false' "$f" 2>/dev/null || echo unreadable) — another repository's key"
+    continue
+  fi
   if ! jq -e . "$f" >/dev/null 2>&1; then
     echo "issue #$n: state file unreadable ($f)"; incomplete=1
     [ "$n" = "$ISSUE" ] && own_seen=1

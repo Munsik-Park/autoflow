@@ -34,7 +34,7 @@
 #
 #   `lane`, `retire-with`   under D2 every committed suite is standing and a
 #                           one-shot check lives uncommitted under
-#                           `.autoflow/issue-{N}-local/`, so a two-value field
+#                           `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, so a two-value field
 #                           with one reachable value is not a declaration
 #   `cycle-arm`             zero live instances of the case its own rationale
 #                           named

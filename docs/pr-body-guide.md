@@ -85,8 +85,8 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   build마다 검사한다.
 - AC4 — none: 값이 사용자가 편집하는 sample 파일에 있어, 첫 편집에서 검증 대상이
   사라진다. 부재 비용 0.
-- AC1 — automated (cycle): `bash .autoflow/issue-42-local/ac1-retry.sh` → `PASS 3/3`
-- AC3 — manual (AI: browser): `.autoflow/issue-42-local/ac3-observation.md` →
+- AC1 — automated (cycle): `bash .autoflow/<repo-key>-issue-42/issue-42-local/ac1-retry.sh` → `PASS 3/3`
+- AC3 — manual (AI: browser): `.autoflow/<repo-key>-issue-42/issue-42-local/ac3-observation.md` →
   `observation: match` — 렌더링된 목록 화면을 이슈가 링크한 시안과 대조.
 - Added test files: `tests/retry-backoff.test.ts` — 재시도 간격은 배포 후 설정값에
   따라 달라지므로 target의 회귀 대상; CI job `unit (ubuntu-latest)`에서 실행 확인.
@@ -113,7 +113,7 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 `a1b2c3d` 시점의 결과.
 
-- 1 — 충족 · `a1b2c3d` · `src/retry.ts:40-58`, `.autoflow/issue-42-local/ac1-retry.log` → `PASS 3/3`
+- 1 — 충족 · `a1b2c3d` · `src/retry.ts:40-58`, `.autoflow/<repo-key>-issue-42/issue-42-local/ac1-retry.log` → `PASS 3/3`
 - 2 — 충족 · `9f8e7d6` · `docs/retry.md` > Backoff
 - 3 — 일부 충족: 설정 파일 경로만 반영, 환경변수 경로는 후속 #43 · `a1b2c3d` · `src/config.ts:12`
 ```

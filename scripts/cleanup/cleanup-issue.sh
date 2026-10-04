@@ -4,12 +4,11 @@
 # scripts/cleanup/cleanup-issue.sh
 #
 # AutoFlow Post-Merge Cleanup helper — ARCHIVES (moves) a resolved issue's
-# `.autoflow/issue-<N>.*` + `.autoflow/issue-<N>-*` management files (state
-# JSON, decision ledger, design docs, phase/eval reports) and its cycle-layer
-# store `.autoflow/issue-<N>-local/` (the cycle's uncommitted `automated` /
-# `delivery-check` / `manual` assets — ADR-0024 D2; the directory moves with its
-# name preserved) out of
-# the repo tree into an external, repo-identity-keyed store
+# directory `.autoflow/<repo-key>-issue-<N>/` (issue #423) — its state JSON,
+# decision ledger, design docs, phase/eval reports, proposal record and its
+# cycle-layer store `issue-<N>-local/` (the cycle's uncommitted `automated` /
+# `delivery-check` / `manual` assets — ADR-0024 D2) — out of the repo tree into
+# an external, repo-identity-keyed store
 # `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/<repo-key>/issue-<N>-<date>/`.
 # It DELETES exactly one path, the store's reserved top-level entry
 # `issue-<N>-local/disposable` (reproducible output), before the move; nothing
@@ -17,7 +16,7 @@
 # at PREFLIGHT prior-cycle resolution once the issue's PR is observed merged or
 # closed (see docs/git-workflow.md > Post-Merge Cleanup). The live `.autoflow/`
 # location, `.gitignore`, and the hook gate are untouched — only the resolved
-# issue's file set migrates out at the cycle's mutation-freeze point.
+# issue's directory migrates out at the cycle's mutation-freeze point.
 #
 # WHY A SCRIPT (not a bare `rm`): the cleanup is invoked by PATH
 # (`scripts/cleanup/cleanup-issue.sh <N>`), so the Bash command carries no `rm`
@@ -26,17 +25,15 @@
 # `rm` deny (e.g. `Bash(rm:*)`) — the deny always wins. A non-`rm` wrapper is
 # never matched by an rm deny, so this lets a broad rm deny coexist with
 # AutoFlow cleanup. Internally the terminal action is a scoped `mv`, confined to
-# `.autoflow/` (maxdepth 1); the one internal `rm` removes only the reserved
-# path above, and a permission rule matches the invoked command, not it.
+# `.autoflow/` (one directory, matched by its exact name); the one internal
+# `rm` removes only the reserved path above, and a permission rule matches the
+# invoked command, not it.
 #
-# NUMBER-BOUNDARY MATCH: the issue's files are `issue-<N>.json` (state) and
-# `issue-<N>-*` (companions) — i.e. the char after <N> is always `.` or `-`,
-# never a digit. Matching `\( -name "issue-${N}.*" -o -name "issue-${N}-*" \)`
-# (NOT a bare `issue-${N}*` glob) archives only issue <N> and never a
-# prefix-collision sibling — `12` must not match `123`/`120` (review finding).
-# The store directory is matched by its exact name `issue-${N}-local`, so
-# `issue-2` never takes `issue-22-local` (issue #229 AC6).
-# The digits-only guard on N additionally blocks globs / path traversal / slashes.
+# NUMBER BOUNDARY: the issue's directory is matched by its exact name
+# `<repo-key>-issue-<N>` (never a `*-issue-<N>*` glob), so `12` never takes
+# `123`/`120`, and another repository's issue of the same number — a different
+# <repo-key> — is never taken. The digits-only guard on N additionally blocks
+# globs / path traversal / slashes.
 #
 # REPO-KEY: `--print-repo-key [<url>|--no-origin]` prints the derived archive
 # key (`<org>__<repo>` from the origin URL, or a path-encoding fallback) and
@@ -73,38 +70,10 @@
 #   scripts/cleanup/cleanup-issue.sh --check-archive-root   (prints the accepted absolute archive root)
 set -euo pipefail
 
-# derive_repo_key <url> <root> — PURE normalization of an origin URL to a
-# filesystem-safe archive key. $1 = origin URL ('' → path-encoding fallback over
-# $2 = repo root, mirroring Claude Code's ~/.claude/projects/<key> scheme). The
-# URL is an argument (not a live `git` call inside the function) so AC-2
-# unit-tests the normalization table-driven and hermetic.
-derive_repo_key() {
-  url="$1"
-  if [ -n "$url" ]; then
-    # Strip any run of trailing ".git"/"/" suffixes in any order until stable, so
-    # a repo's key is independent of how its origin URL happens to be spelled
-    # (".git", trailing "/", or the compound ".git/"). A single fixed-order pass
-    # left ".git" attached on the ".git/" shape (issue #978 cycle-2 / Codex
-    # Finding 1). The loop strictly shrinks $url each pass → it always terminates.
-    while :; do
-      case "$url" in
-        *.git) url="${url%.git}" ;;
-        */)    url="${url%/}"    ;;
-        *)     break ;;
-      esac
-    done
-    repo="${url##*/}"                 # last path segment          → claude-autoflow
-    rest="${url%/*}"                  # everything before it
-    org="${rest##*[:/]}"              # last segment bounded by ':' or '/' → my-org
-    # Sanitize chain: control chars (NUL..US, DEL) are DELETED first — sed is
-    # line-based and never sees an embedded newline as data (AUDIT r1, ledger
-    # E15) — then remaining non-slug bytes are replaced. The emitted key is
-    # always a single line over [A-Za-z0-9._-].
-    printf '%s' "${org}__${repo}" | LC_ALL=C tr -d '\000-\037\177' | LC_ALL=C sed 's/[^A-Za-z0-9._-]/_/g'
-  else
-    printf '%s' "$2" | LC_ALL=C tr -d '\000-\037\177' | LC_ALL=C sed 's/[^A-Za-z0-9._-]/-/g'
-  fi
-}
+# derive_repo_key and the issue-directory layout live in the shared library
+# (issue #423): the archive key and the live issue directory are one key.
+# shellcheck source=scripts/lib/issue-dir.sh
+. "$(dirname "$0")/../lib/issue-dir.sh"
 
 # absolute_path <path> — absolutize against $PWD WITHOUT touching symlinks or
 # `..`: a path already beginning with `/` is returned verbatim, anything else is
@@ -218,7 +187,7 @@ fi
 # re-typed. It sets $ARCHIVE_ROOT, used as the destination prefix below.
 gate_archive_root "$ROOT"
 
-KEY="$(derive_repo_key "$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)" "$ROOT")"
+KEY="$(autoflow_repo_key "$ROOT")"
 DATE="$(date +%F)"
 
 status=0
@@ -232,38 +201,12 @@ for N in "$@"; do
       ;;
   esac
 
-  # Number-boundary match: `issue-<N>.*` (state json) OR `issue-<N>-*` (companions).
-  # A bare `issue-<N>*` would also match `issue-<N>3` etc. — see review finding.
-  matches="$(find "$AUTOFLOW_DIR" -maxdepth 1 -type f \( -name "issue-${N}.*" -o -name "issue-${N}-*" \) 2>/dev/null || true)"
-
-  # Per-issue scratch FIXTURES live one level down, in `.autoflow/fixtures/`:
-  # the gate hook's discovery glob is single-level (`"$AUTOFLOW_DIR"/*.json`),
-  # so a non-state JSON parked at the top level fail-closed-blocks every
-  # score-gated command until removed — issue #18 moved such fixtures into the
-  # subdir to stay off that glob. They are the same issue's scratch and are
-  # archived with it, under the same digits-only guard and the same
-  # number-boundary match. The `fixtures/` prefix is preserved in the archive so
-  # a fixture cannot overwrite a top-level file that happens to share its name.
-  fixtures="$(find "$AUTOFLOW_DIR/fixtures" -maxdepth 1 -type f \( -name "issue-${N}.*" -o -name "issue-${N}-*" \) 2>/dev/null || true)"
-
-  # The CYCLE-LAYER STORE `.autoflow/issue-<N>-local/` (ADR-0024 D2). A default
-  # `automated` row's test, a `delivery-check` and a `manual` checklist are
-  # authored there, executed once by path and never committed; the directory
-  # moves with its name into the same landing dir, less its reserved path,
-  # which is deleted first. It is one `maxdepth 1` entry matched
-  # by its exact name (never `issue-<N>*`), so the number boundary above holds
-  # for it too. The `-type f` walks above cannot see it; without this arm the
-  # store would outlive the cycle.
-  local_store=""
-  [ -d "$AUTOFLOW_DIR/issue-${N}-local" ] && local_store="$AUTOFLOW_DIR/issue-${N}-local"
-
-  if [ -z "$matches" ] && [ -z "$fixtures" ] && [ -z "$local_store" ]; then
-    echo "issue #${N}: no .autoflow/issue-${N}.* or issue-${N}-* files and no issue-${N}-local/ store — nothing to archive"
+  issue_dir="$(autoflow_issue_dir "$ROOT" "$N" "$KEY")"
+  if [ ! -d "$issue_dir" ]; then
+    echo "issue #${N}: no ${issue_dir#"$ROOT"/}/ directory — nothing to archive"
     continue
   fi
-  # `grep -c` exits 1 on zero matches, which `set -e` would turn into an abort
-  # on a store-only issue (both file lists empty) — the count is data here.
-  count="$( { printf '%s\n' "$matches"; printf '%s\n' "$fixtures"; } | grep -c . || true )"
+  local_store="$issue_dir/issue-${N}-local"
 
   # The reserved path is deleted before the archive dir is allocated: a failed
   # deletion then leaves the issue wholly in place, and its re-run lands in one
@@ -273,11 +216,11 @@ for N in "$@"; do
   # moves as the link and carries nothing from its target, so nothing is
   # deleted there.
   reserved_note=""
-  if [ -n "$local_store" ]; then
+  if [ -L "$local_store" ]; then
+    reserved_note="skipped deleting issue-${N}-local/disposable (the store is a symbolic link); "
+  elif [ -d "$local_store" ]; then
     reserved="$local_store/disposable"
-    if [ -L "$local_store" ]; then
-      reserved_note="skipped deleting issue-${N}-local/disposable (the store is a symbolic link); "
-    elif [ -e "$reserved" ] || [ -L "$reserved" ]; then
+    if [ -e "$reserved" ] || [ -L "$reserved" ]; then
       if ! rm -rf "$reserved"; then
         echo "issue #${N}: could not delete issue-${N}-local/disposable — nothing archived for this issue" >&2
         status=1
@@ -288,50 +231,27 @@ for N in "$@"; do
   fi
 
   # Non-destructive archive move: a `-2`, `-3`, … conflict suffix rather than
-  # overwriting a prior same-day archive (issue re-opened + re-closed).
+  # overwriting a prior same-day archive (issue re-opened + re-closed). A fresh
+  # `$dest` never exists, so the move is a rename of the whole directory, not a
+  # merge: `mv` = atomic within a filesystem, copy+unlink across filesystems;
+  # byte content is preserved either way.
   base="$ARCHIVE_ROOT/$KEY/issue-${N}-${DATE}"
   dest="$base"; s=2
   while [ -e "$dest" ]; do dest="${base}-${s}"; s=$((s + 1)); done
-  mkdir -p "$dest"
+  mkdir -p "${dest%/*}"
+  mv "$issue_dir" "$dest"
 
-  # Portable per-file move (BSD/macOS + GNU/Linux CI); filenames never contain
-  # newlines. `mv` = atomic within a filesystem, copy+unlink across filesystems;
-  # byte content is preserved either way.
-  # Each loop is guarded: with an empty list the `while` body's last command is
-  # a false `[ -n "" ]`, so the pipeline exits 1 and `set -e` would abort the
-  # run mid-issue. Reachable since the early-continue now only fires when BOTH
-  # lists are empty — a fixtures-only issue leaves `$matches` empty.
-  if [ -n "$matches" ]; then
-    printf '%s\n' "$matches" | while IFS= read -r f; do
-      [ -n "$f" ] && mv "$f" "$dest/"
-    done
+  # The archived file count is reported so the line is checkable against the
+  # archive; `grep -c` exits 1 on 0, so the count is taken as data, not a
+  # status. A failed enumeration is kept distinct from 0: it is reported as
+  # `?` on stderr, never as a count (PR #233 review, Medium).
+  if file_list="$(find "$dest" -type f 2>/dev/null)"; then
+    count="$(printf '%s\n' "$file_list" | grep -c . || true)"
+  else
+    echo "issue #${N}: warning — could not enumerate ${dest} after the move" >&2
+    count="?"
   fi
-  if [ -n "$fixtures" ]; then
-    mkdir -p "$dest/fixtures"
-    printf '%s\n' "$fixtures" | while IFS= read -r f; do
-      [ -n "$f" ] && mv "$f" "$dest/fixtures/"
-    done
-  fi
-  store_note=""
-  if [ -n "$local_store" ]; then
-    # A fresh `$dest` never holds the name, so this is a rename into it, not a
-    # merge; the store's own file count is reported so the line is checkable
-    # against the archive. The count is data: an EMPTY store (created, no
-    # asset written yet) is a legitimate 0, and `grep -c .` exits 1 on 0 —
-    # under `set -e` that aborted the run after the `mv`, with no report and
-    # every later N unprocessed (PR #233 review, Medium). A failed enumeration
-    # is kept distinct from 0: it is reported as `?` on stderr, never as a
-    # count.
-    mv "$local_store" "$dest/issue-${N}-local"
-    if store_list="$(find "$dest/issue-${N}-local" -type f 2>/dev/null)"; then
-      store_files="$(printf '%s\n' "$store_list" | grep -c . || true)"
-    else
-      echo "issue #${N}: warning — could not enumerate ${dest}/issue-${N}-local after the move" >&2
-      store_files="?"
-    fi
-    store_note=" + issue-${N}-local/ (${store_files} file(s))"
-  fi
-  echo "issue #${N}: ${reserved_note}archived ${count} file(s)${store_note} → ${dest}"
+  echo "issue #${N}: ${reserved_note}archived ${count} file(s) → ${dest}"
 done
 
 exit "$status"

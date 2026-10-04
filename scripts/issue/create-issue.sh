@@ -18,10 +18,13 @@
 # whether a disposition is correct (that is the operator's job at layer three);
 # it refuses when the draft disposes of nothing the wrapper found.
 #
-# The draft must sit directly inside the derived `.autoflow/`, which is the
-# directory the cleanup archive matcher searches at maxdepth 1. On a successful
-# create the draft is renamed to `.autoflow/issue-<N>-proposal.md`, binding the
-# record to the number GitHub actually assigned rather than to a guess.
+# The draft must sit directly inside the derived `.autoflow/`. On a successful
+# create the draft is renamed to `.autoflow/<repo-key>-issue-<N>/issue-<N>-proposal.md`,
+# binding the record to the number GitHub actually assigned rather than to a
+# guess, inside the issue's own directory (issue #423). <repo-key> is the
+# repository the issue was filed in — the --repo value when one is named, the
+# current origin otherwise — so a record for another repository's issue never
+# shares a name with this repository's issue of the same number.
 #
 # Usage:
 #   scripts/issue/create-issue.sh --draft <path> [--repo <owner/name>] [--dry-run]
@@ -112,6 +115,10 @@ if ! ROOT_PHYS="$(cd -P "$ROOT" 2>/dev/null && pwd)"; then
   exit 64
 fi
 AUTOFLOW_DIR="$ROOT_PHYS/.autoflow"
+# The issue directory's key (issue #423) is derived after the create, but the
+# library is loaded here so a missing one refuses before anything is filed.
+# shellcheck source=scripts/lib/issue-dir.sh
+. "$(dirname "$0")/../lib/issue-dir.sh" || { echo "refuse: scripts/lib/issue-dir.sh cannot be loaded" >&2; exit 64; }
 
 # The directory's absence is diagnosed separately from a misplaced draft
 # (feature design §5): a target that has never run PREFLIGHT arrives here with no
@@ -129,9 +136,9 @@ if [ ! -f "$DRAFT" ]; then
 fi
 # Symlink resolution (ledger E14 implementation note 4, left to the implementer
 # against the constraint's intent): a symlinked draft is REFUSED, not resolved.
-# The constraint exists so step 6's rename lands in the archive matcher's own
-# maxdepth-1 slot; renaming a link moves the link, leaving the content outside
-# every cycle's archival set — which satisfies the check while defeating what it
+# The constraint exists so step 6's rename lands the draft's own bytes in the
+# issue's directory, which the archive moves whole; renaming a link moves the
+# link, leaving the content outside every cycle's archival set — which satisfies the check while defeating what it
 # is for. Refusing is the reading that preserves the intent.
 if [ -L "$DRAFT" ]; then
   echo "refuse: draft is a symlink: $DRAFT — place the draft itself directly inside $AUTOFLOW_DIR" >&2
@@ -142,7 +149,7 @@ if ! DRAFT_DIR="$(cd -P "$(dirname "$DRAFT")" 2>/dev/null && pwd)"; then
   exit 64
 fi
 if [ "$DRAFT_DIR" != "$AUTOFLOW_DIR" ]; then
-  echo "refuse: draft must sit directly inside $AUTOFLOW_DIR, but it resolved to $DRAFT_DIR — a subdirectory is archived into a different slot or into none" >&2
+  echo "refuse: draft must sit directly inside $AUTOFLOW_DIR, but it resolved to $DRAFT_DIR — the wrapper moves the draft into the issue's directory from .autoflow/ itself" >&2
   exit 64
 fi
 DRAFT_PATH="$DRAFT_DIR/$(basename "$DRAFT")"
@@ -423,8 +430,10 @@ case "$NUMBER" in
     exit 70 ;;
 esac
 
-RECORD="$AUTOFLOW_DIR/issue-${NUMBER}-proposal.md"
-if ! mv "$DRAFT_PATH" "$RECORD"; then
+if [ -n "$REPO" ]; then KEY="$(derive_repo_key "$REPO" "")"; else KEY="$(autoflow_repo_key "$ROOT")"; fi
+RECORD_DIR="$AUTOFLOW_DIR/$KEY-issue-${NUMBER}"
+RECORD="$RECORD_DIR/issue-${NUMBER}-proposal.md"
+if ! mkdir -p "$RECORD_DIR" || ! mv "$DRAFT_PATH" "$RECORD"; then
   echo "warn: issue #$NUMBER was created but $DRAFT_PATH could not be renamed to $RECORD" >&2
   exit 70
 fi
