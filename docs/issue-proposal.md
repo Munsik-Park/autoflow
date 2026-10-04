@@ -66,14 +66,14 @@ it.
 
 ## The two names of the artifact
 
-| Stage | Path | Swept by the cleanup archive matcher? |
+| Stage | Path | Archived by cleanup? |
 |-------|------|---------------------------------------|
 | Before creation (draft) | `.autoflow/issue-proposal-<slug>.md` | **no** |
 | After creation | `.autoflow/<repo-key>-issue-<N>/issue-<N>-proposal.md` | **yes**, with issue `<N>`'s cycle |
 
 An unfiled draft outlives any other issue's cleanup, and only its author abandons
 it. Once the issue exists the artifact belongs to a cycle, and the wrapper's
-rename puts it in the `issue-<N>-*` companion form the matcher sweeps.
+rename moves it into the issue's directory, which cleanup archives whole.
 
 ## What the wrapper does
 

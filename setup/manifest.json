@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "19478af8aefe653b9d50f9220b64c1a14bcd8736bc09cbb4b92de6e79ab62c64"
+      "sha256": "6e801ba16534462912729f96ae373456c8eaa61ae7e8cf74fd9666f5c7eddf57"
     },
     {
       "source": "docs/INDEX.md",
@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/issue-proposal.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "249729496992766253b89727569b545e39a67b53453e8d014b515e72aab0f899"
+      "sha256": "f31f57d29103bdfdf3912573ec8c902151c2b7e2fdb74d3ba511904206c23d61"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -286,7 +286,7 @@
       "dest": "scripts/handoff/review-gate.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "8070f6e47f0a2df42aac0a01f23dfa8f7a1d756b586c36c4bcf324359083b4ca"
+      "sha256": "bf6c77e0f47cb875e3d07c06b723d80758f17546caab9ffc099988ae6e8192a1"
     },
     {
       "source": "scripts/cleanup/cleanup-issue.sh",
