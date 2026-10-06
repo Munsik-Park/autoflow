@@ -36,7 +36,8 @@ artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
   prompt states the goal, the cycle's `mode` and
   the report's path, and names the inputs by path: the issue (new-issue) or the review comment /
   thread PREFLIGHT identified (review-response), and the decision ledger
-  (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`). In a review-response cycle it also names every artifact the
+  (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`). In a new-issue cycle it also names the criterion review record
+  the ledger's last `[criterion-ready]` entry points at (*Criterion review record* below). In a review-response cycle it also names every artifact the
   previous cycle left (`.autoflow/{repo-key}-issue-{N}/issue-{N}-c{C}-*.md`) and, where HANDOFF's triage wrote one, the
   PR's findings file; how much of the previous analysis the unit reuses is its own, recorded under
   `## Method`. On a re-entry it names what the re-entry is for and the material that carries it
@@ -95,6 +96,19 @@ The rules below are the ones other documents cite; everything else about the wor
   a review-response cycle carries the previous cycle's table forward unchanged — a review comment
   never edits the list; only an `[ac-decision]` ledger entry does, the advisor's or the operator's
   override (`CLAUDE.md` > Decision Ledger).
+- **Criterion review record** (`mode = new-issue`). The issue's criteria were reviewed against the
+  code and policy outside the cycle and confirmed by the operator before PREFLIGHT admitted the
+  cycle ([`criterion-review.md`](../criterion-review.md)); the record that review left is an input,
+  not a verdict. The analysis reads its findings as an earlier reading of the code and policy at the
+  commits its `## Inputs` names: a finding the analysis builds on — a confirmed cause, a policy it
+  cites — is checked at the cycle's base, and a difference from the record is recorded with its
+  grounds. The record changes nothing about how the criteria are taken: the `## Acceptance criteria`
+  table restates the issue's criteria as the confirmed body states them, the analysis does not run
+  the review again (issue #291: DIAGNOSE takes the criteria as written), and a defect it observes as
+  a fact is still raised as a decision point on the in-cycle path
+  ([`decision-ledger.md`](../decision-ledger.md) > Decision-point entries > *A criterion can be
+  wrong*). The record's `## Unchecked` items are findings the analysis may close with its own
+  checks (*Checking a finding* below). How the record was used is recorded under `## Method`.
 - **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,
   where it is, how it was opened, and what it shows for the criterion that names it; the material,
   not an abbreviated example in the body, is what the criterion means. **[MUST]** A material

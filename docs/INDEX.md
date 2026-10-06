@@ -29,6 +29,7 @@ These documents are the operating source of truth.
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool. |
 | [Reviewer Contract](reviewer-backend.md) | HANDOFF reviewers: the built-in review and the configured external reviewers, their inputs and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
+| [Criterion Review](criterion-review.md) | The review of a new issue's acceptance criteria against the target's code and policy outside the cycle, the operator's `[criterion-ready]` confirmation, and the readiness fact PREFLIGHT reads. |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
 | [Thin Root Layer Contract](thin-root-layer.md) | The artifacts that must live at a consuming target's project root and the `CLAUDE_CODE_*` env contract. |
 
@@ -40,6 +41,7 @@ These documents are the operating source of truth.
 | Sub-repo implementation (a project with sub-repos) | `docs/repo-boundary-rules.md` |
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Filing a new issue | `docs/issue-proposal.md` |
+| Making a filed issue ready for its first cycle | `docs/criterion-review.md` |
 | Tool distribution, install/upgrade, or version pinning | `docs/tool-delivery-contract.md`, `docs/thin-root-layer.md` |
 | Reviewers (built-in + external), review aggregation | `docs/reviewer-backend.md`, `docs/external-review-sequencing.md` |
 

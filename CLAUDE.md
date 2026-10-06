@@ -123,10 +123,12 @@ When the user files an issue, the flow below executes in order. Each phase auto-
 
 **PREFLIGHT cannot be skipped.** If PREFLIGHT's completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the blocking condition first and report.
 
+**A new issue's criteria are confirmed before its cycle.** Outside the cycle, the issue's acceptance criteria are reviewed against the target's code and policy and the operator confirms them; PREFLIGHT reads only that the confirmation is on record for the current issue body ([`docs/criterion-review.md`](docs/criterion-review.md)).
+
 Six functional units carry the phases ([`ADR-0025`](docs/records/adr/0025-outcome-gated-functional-units.md) D1). A unit is the unit of prescription — its goal, artifact contract, verification and loop cap — and each has one document (*Unit Document Loading Contract* below). The phase and gate names stay: they are the identifiers the state keys, the ledger headings, the spawn-policy keys and the hook messages carry.
 
 ```
-U1 Preparation         PREFLIGHT       — prior-cycle resolution (cleanup after external merge/close), Git clean check, remote sync, mode selection, target-declared local checks (`preflight.local_checks[]`; none declared → recorded no-op), dev branch and state file creation — the orchestrator's own work, decided from the facts `scripts/preflight/cycle-status.sh` reports
+U1 Preparation         PREFLIGHT       — prior-cycle resolution (cleanup after external merge/close), Git clean check, remote sync, mode selection, target-declared local checks (`preflight.local_checks[]`; none declared → recorded no-op), criterion readiness for a new issue (`scripts/preflight/criterion-ready.sh`), dev branch and state file creation — the orchestrator's own work, decided from the facts `scripts/preflight/cycle-status.sh` reports
 U2 Analysis            DIAGNOSE        — one `autoflow-unit-analysis` spawn writes the analysis report: current structure, the gap to the request, whether a change is owed and code is the lever (the conclusion), the cause where a defect is reported, acceptance-criterion table, scope judgments, affected docs, decision points — each conclusion with its grounds, its method (how far and by what means a cause is pursued included) its own
                        GATE:HYPOTHESIS — one Evaluation AI: one form for every issue (2 items × 10 points — the conclusion's grounds and the goal's coverage)
 U3 Design              ARCHITECT       — one `autoflow-unit-design` spawn writes the architecture decision layer + verification design, its method its own (file rows / suite dispositions / oracle clauses are derived at BUILD, not written here)
@@ -148,9 +150,9 @@ procedure a row names; the row keeps the condition and the destination.
 
 | Transition | Condition |
 |------|------|
-| PREFLIGHT → DIAGNOSE | earlier cycles resolved, Git clean, remote synced, the three stop conditions passed, and the state file written for `mode: new-issue` or `mode: review-response` (`docs/units/preparation.md` > *What is asked*, *Modes*) |
+| PREFLIGHT → DIAGNOSE | earlier cycles resolved, Git clean, remote synced, the stop conditions passed (criterion readiness included for `mode: new-issue`), and the state file written for `mode: new-issue` or `mode: review-response` (`docs/units/preparation.md` > *What is asked*, *Modes*) |
 | PREFLIGHT → resume | the requested issue's own state reads `active:true` → the re-entry point is the orchestrator's judgment over the facts `scripts/preflight/cycle-status.sh --issue N` reports, recorded in the ledger; a gate with no recorded scores is run, never assumed passed (`docs/units/preparation.md` > *Resume*) |
-| PREFLIGHT → user | another issue mid-cycle (hold), a pause for a human decision, a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, or a fail-closed stop condition — bundle drift, an unreadable reviewer configuration, a target-declared local check that does not pass after its declared repair → report and stop; DIAGNOSE does not begin (`docs/units/preparation.md`) |
+| PREFLIGHT → user | another issue mid-cycle (hold), a pause for a human decision, a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, or a fail-closed stop condition — bundle drift, an unreadable reviewer configuration, a target-declared local check that does not pass after its declared repair, a new issue with no operator confirmation of its criterion review on record for its current body → report and stop; DIAGNOSE does not begin (`docs/units/preparation.md`) |
 
 #### U2 Analysis — [`docs/units/analysis.md`](docs/units/analysis.md)
 
@@ -373,6 +375,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **AutoFlow phase guide**: [`docs/autoflow-guide.md`](docs/autoflow-guide.md)
 - **Role contracts**: [`docs/role-contracts.md`](docs/role-contracts.md)
 - **Evaluation system**: [`docs/evaluation-system.md`](docs/evaluation-system.md)
+- **Criterion review (before a new-issue cycle)**: [`docs/criterion-review.md`](docs/criterion-review.md)
 - **Git procedures**: [`docs/git-workflow.md`](docs/git-workflow.md)
 - **Repo boundary rules**: [`docs/repo-boundary-rules.md`](docs/repo-boundary-rules.md)
 - **Sub-repo common rules**: [`docs/submodule-common-rules.md`](docs/submodule-common-rules.md)
