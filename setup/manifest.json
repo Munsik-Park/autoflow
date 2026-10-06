@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/criterion-review.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "66455e63dafe87854a95a2b7a52d80e4263b95654282546995f1b34613de5579"
+      "sha256": "84a336a7d7db482ed92eb5ed88e6be2a2214f2e166d1976d7c0d906d0e4db485"
     },
     {
       "source": "docs/decision-ledger.md",
@@ -181,7 +181,7 @@
       "dest": ".claude/autoflow/docs/units/preparation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "515fff572b8e3f01438281920e0697b9c11fde52f3789d49d7954ad6011e32ed"
+      "sha256": "3388b4d7631466dd15256033ecc1deeab2862b1e7849f6935ce55516572aae2e"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -258,7 +258,7 @@
       "dest": "scripts/preflight/criterion-ready.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "6605f70de400b666ce8cb372ff7dda79380d6e88da9b43ee1553c7f11e213430"
+      "sha256": "425fff19322bc04218d52fba24c5fa051a961759b85aaa5e354f92a577a9d6ff"
     },
     {
       "source": ".codex/review.md",

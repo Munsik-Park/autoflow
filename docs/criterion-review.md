@@ -20,6 +20,17 @@ The review makes that premise hold more often; it does not change it.
   after any edit to the issue body, since the confirmation is bound to the body it confirmed
   (*Confirmation* below). Filing an issue ([`issue-proposal.md`](issue-proposal.md)) is not
   confirming it.
+- **After an earlier cycle is cleared, never before.** An issue taken up again after its earlier
+  cycle's pull request was merged or closed still has that cycle's directory
+  `.autoflow/{repo-key}-issue-{N}/` until it is archived, and PREFLIGHT archives it — ledger
+  included — *before* it reads criterion readiness
+  ([U1 Preparation](units/preparation.md) > *What is asked*). A confirmation written into that
+  directory is therefore archived with it, and PREFLIGHT stops `NOT READY`. The order is: (1) clear
+  the earlier cycle — the Post-Merge Cleanup ([`git-workflow.md`](git-workflow.md) > Post-Merge
+  Cleanup, `scripts/cleanup/cleanup-issue.sh <N>` for the directory), or one PREFLIGHT run, which
+  clears it and then stops at criterion readiness; (2) review and confirm, into the fresh directory;
+  (3) run PREFLIGHT. `criterion-ready.sh status` reports `NOT READY` while the directory still holds
+  an earlier cycle's state file, so a confirmation written too early is caught when it is checked.
 - **Reviewer.** The session the operator asks for the review, working with no AutoFlow cycle active
   for the issue. The review is that session's own work; it spawns no AutoFlow role and writes no
   state file. How it reads — the order, how far it follows a cause, which tool checks a fact — is
@@ -44,8 +55,8 @@ The review makes that premise hold more often; it does not change it.
 
 ## Review items
 
-Each criterion is checked on the five items below; an item that does not apply to a criterion says
-so. Each finding carries its grounds: a commit SHA with `path:line` for a fact of the code, or the
+Each criterion is checked on the items below — *Size and separation* once for the issue as a
+whole; an item that does not apply to a criterion says so. Each finding carries its grounds: a commit SHA with `path:line` for a fact of the code, or the
 document, its section heading and a quoted sentence for a provision of a policy document.
 
 | Item | The question |
@@ -53,6 +64,7 @@ document, its section heading and a quoted sentence for a provision of a policy 
 | Code and policy fit | Does the code the criterion names behave as the criterion presumes, and does the criterion agree with the policies in force (an ADR, a rule document)? A criterion narrower than the cause the code shows, or one that a standing policy contradicts, is a finding. |
 | Contradiction | Can every criterion hold at once? Two criteria that cannot both be met, or one that undoes another, is a finding. |
 | Terms and scope | Is every term a test would turn on defined — a threshold ("exceeds"), a surface ("the conversation screen"), a set ("every page")? An undefined term, or a scope with no stated bound, is a finding. |
+| Size and separation | Is the issue one piece of work a single cycle can carry to done, or does it bundle areas that are each complete on their own — separate surfaces, separate causes, criteria that share no code or test? Several independently completable areas in one issue is a finding, recorded with the areas and a proposed split (`split`). |
 | Testability | Can the criterion be shown met or unmet by an observation, and does the environment provide what that observation needs? A criterion no observation can settle is a finding. |
 | Estimates verified | Is each estimate the body states as fact — a cause, a reproduction, an affected path — confirmed by the code or an observation? An estimate left unconfirmed is a finding, recorded as unconfirmed rather than as wrong. |
 
@@ -65,10 +77,11 @@ section with nothing to record says `none`.
 | Section | Holds |
 |---|---|
 | `## Inputs` | the issue body sha256 reviewed, each repository and the commit read, the policy documents read, the materials opened (or not, with the reason), and how the review was done |
-| `## Findings` | per criterion, each of the five items: `holds` or the finding, with its grounds |
+| `## Findings` | per criterion, each review item: `holds` or the finding, with its grounds; and *Size and separation* for the issue as a whole |
 | `## Proposed changes` | per finding that calls for one: the criterion, the disposition (`excluded` / `revised` / `split` / `added`), the proposed text and the grounds — or `none` |
+| `## Open questions` | each question that neither the code nor a policy settles and that only the operator's intent can answer (what a term is meant to cover, which of two readings the issue intends): the question, why the code and policy do not settle it, and each option with what it changes in the criteria and the work — or `none` |
 | `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
-| `## Operator decisions` | written after the operator decides: each proposed change `accepted` / `rejected` / `modified`, and the issue edit that applied it |
+| `## Operator decisions` | written after the operator decides: each proposed change `accepted` / `rejected` / `modified`, each open question's answer (the option taken, or the operator's own), and the issue edit that applied them |
 
 The record is situation-first where the operator reads it to decide
 ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Human-decision presentation*): what each
@@ -81,7 +94,10 @@ principle 1). Inside a cycle the advisor decides it first so that the cycle keep
 operator may override at the retry stage. Outside the cycle there is no forward path to keep
 moving, so the **operator decides directly**: each proposed change is accepted, rejected or
 modified by the operator, and the issue body is edited to match — by the operator, or by the
-session on the operator's instruction. The criteria a cycle starts from are therefore the issue
+session on the operator's instruction. An open question is answered the same way, and its answer
+is written into the criteria it bears on, so the cycle does not meet it again as a decision point;
+the operator confirms once every proposed change and open question has its entry under
+`## Operator decisions`. The criteria a cycle starts from are therefore the issue
 body as the operator confirmed it, and the review record is the evidence it was confirmed on.
 
 ## Confirmation
@@ -127,6 +143,7 @@ No issue is exempt by its filing date, and no bulk back-fill is run: an issue fi
 confirmation is reviewed and confirmed on its turn, when it is next taken up for a `new-issue`
 cycle. PREFLIGHT stops on it and reports the review as the next step. An issue that already has a
 state file — a cycle active, paused, or waiting on external review — is not affected, because those
-modes do not run the check. An issue whose earlier cycle was archived and that is taken up again in
-`new-issue` mode is reviewed again: the archive moves its ledger, and with it the confirmation,
-out of the issue's directory ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup).
+modes do not run the check. An issue taken up again in `new-issue` mode after an earlier cycle is
+reviewed again, once that cycle is cleared: the archive moves its ledger, and with it any earlier
+confirmation, out of the issue's directory (*When and by whom* > *After an earlier cycle is
+cleared, never before*).

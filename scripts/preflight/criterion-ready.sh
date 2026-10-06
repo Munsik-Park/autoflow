@@ -20,6 +20,8 @@
 #   - its `- Record:` line names a review record that exists (repo-relative);
 #   - its `- Issue body sha256:` line equals the sha256 of the issue body read
 #     from GitHub now, so an issue edited after the confirmation is not ready.
+# and only while the issue directory holds no earlier cycle's state file, which
+# PREFLIGHT would archive — with the confirmation — before reading readiness.
 #
 # Subcommands:
 #   hash   --issue N   print the sha256 of the issue body as it stands now —
@@ -28,8 +30,9 @@
 #
 # Exit codes:
 #   0   hash printed | READY
-#   1   NOT READY — no confirmation, a malformed one, a missing record, or an
-#       issue body changed since the confirmation; the line says which
+#   1   NOT READY — no confirmation, a malformed one, a missing record, an
+#       issue body changed since the confirmation, or an earlier cycle's state
+#       file still in the directory; the line says which
 #   3   a fact could not be read — the issue body lookup failed
 #   64  usage
 #
@@ -80,6 +83,11 @@ if [ "$SUB" = hash ]; then
 fi
 
 not_ready() { echo "$TAG: issue #$ISSUE NOT READY — $1"; exit 1; }
+
+# PREFLIGHT archives an earlier cycle's directory before it reads readiness, so
+# a confirmation sitting beside that cycle's state file would go with it
+# (docs/criterion-review.md > When and by whom).
+[ -f "$DIR/issue-$ISSUE.json" ] && not_ready "the issue directory still holds an earlier cycle's state file ($DIR/issue-$ISSUE.json); PREFLIGHT archives it, and any confirmation beside it, before reading readiness — clear that cycle first, then review and confirm"
 
 [ -f "$LEDGER" ] || not_ready "no ledger ($LEDGER), so no [criterion-ready] confirmation"
 
