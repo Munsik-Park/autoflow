@@ -258,7 +258,7 @@
       "dest": "scripts/preflight/criterion-ready.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "425fff19322bc04218d52fba24c5fa051a961759b85aaa5e354f92a577a9d6ff"
+      "sha256": "e3dfdc1303e847e9eec9ed90d50c4c8e86d29994901db2d7d64e184c40d854ca"
     },
     {
       "source": ".codex/review.md",

@@ -116,7 +116,7 @@ EOF
 trim() { local s="$1"; s="${s#"${s%%[![:space:]]*}"}"; printf '%s' "${s%"${s##*[![:space:]]}"}"; }
 auth="$(trim "${auth:-}")"; rec="$(trim "${rec:-}")"; rec="${rec#\`}"; rec="${rec%\`}"; sha="$(trim "${sha:-}")"
 
-case "$id" in O[0-9]*) ;; *) not_ready "entry $id is not an O entry — the confirmation is the operator's" ;; esac
+[[ "$id" =~ ^O[0-9]+$ ]] || not_ready "entry $id is not an O entry (O<digits>) — the confirmation is the operator's"
 [ "$auth" = "operator decision" ] || not_ready "entry $id: '- Authority:' is '$auth', not 'operator decision'"
 [ -n "$rec" ] || not_ready "entry $id: no '- Record:' line"
 [ -f "$rec" ] || not_ready "entry $id: review record '$rec' does not exist"
