@@ -166,6 +166,12 @@ build_rows() {
   # and reports; the stamped docs/units/preparation.md names it.
   emit_row "scripts/preflight/cycle-status.sh" \
            "scripts/preflight/cycle-status.sh" "root-layer" "copy" "file"
+  # The criterion-readiness fact PREFLIGHT reads on a new issue (issue #430):
+  # the operator's [criterion-ready] ledger confirmation against the issue
+  # body's sha256 now. It reads and reports; the stamped
+  # docs/units/preparation.md and docs/criterion-review.md name it.
+  emit_row "scripts/preflight/criterion-ready.sh" \
+           "scripts/preflight/criterion-ready.sh" "root-layer" "copy" "file"
   emit_row ".codex/review.md" \
            ".codex/review.md" "root-layer" "copy" "file"
   emit_row "AGENTS.md" \

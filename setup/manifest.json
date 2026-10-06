@@ -13,28 +13,35 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6e801ba16534462912729f96ae373456c8eaa61ae7e8cf74fd9666f5c7eddf57"
+      "sha256": "4973add6d5e5a72af6f9638cff4ae8abd23493d5a65d3ecf0b31333c690f3ad3"
     },
     {
       "source": "docs/INDEX.md",
       "dest": ".claude/autoflow/docs/INDEX.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fa1db0602abaf4dd325c426fc17bcd978a305adb11975d6d3f365f3cb94e4f50"
+      "sha256": "c9b44457bf40ce82803326a8d732063babb5c6c3fe528abcf69322d6013643d5"
     },
     {
       "source": "docs/autoflow-guide.md",
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "b33e68dfb26cc5a8146ccfde3961e92951db19eaf02b50a2c84cab17e23669fc"
+      "sha256": "fdda337ddd286cd1077b1e17cc5f0f2447e5e04416b477c6c334f39e4088f5d0"
+    },
+    {
+      "source": "docs/criterion-review.md",
+      "dest": ".claude/autoflow/docs/criterion-review.md",
+      "tier": "reference",
+      "kind": "copy",
+      "sha256": "66455e63dafe87854a95a2b7a52d80e4263b95654282546995f1b34613de5579"
     },
     {
       "source": "docs/decision-ledger.md",
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f7aafa25ed40a1a2479d05feee61eceeafcf4a2edb98fc5e222775a2df88dee1"
+      "sha256": "ce9061717a84fede7133fe45905a4414d3be7655651322909d7b0d219ea71d32"
     },
     {
       "source": "docs/development-guideline.md",
@@ -69,7 +76,7 @@
       "dest": ".claude/autoflow/docs/issue-proposal.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "f31f57d29103bdfdf3912573ec8c902151c2b7e2fdb74d3ba511904206c23d61"
+      "sha256": "b5c844086c93252a19aed5a3084ffb03d3b0f564373c271533c43a7fc0d574ce"
     },
     {
       "source": "docs/pr-body-guide.md",
@@ -139,7 +146,7 @@
       "dest": ".claude/autoflow/docs/units/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "47a8329ee3f4db2fe89ae4ccf763ea6b04534e0cc08e9b8f09718e7052b4f22c"
+      "sha256": "cc339d4c438993b174eec6edcdb4a1f58bf18e107e7fc88147b5f7fe50b80637"
     },
     {
       "source": "docs/units/build.md",
@@ -174,7 +181,7 @@
       "dest": ".claude/autoflow/docs/units/preparation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "0e086787976000ed5c5aca336b5901d9e5082ff727989d96dd904c3a8c23ee69"
+      "sha256": "515fff572b8e3f01438281920e0697b9c11fde52f3789d49d7954ad6011e32ed"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -245,6 +252,13 @@
       "tier": "root-layer",
       "kind": "copy",
       "sha256": "da6f1ef3289217da3ba73c420f06487c0d533a0eac488654c2e37e545cb0c8b5"
+    },
+    {
+      "source": "scripts/preflight/criterion-ready.sh",
+      "dest": "scripts/preflight/criterion-ready.sh",
+      "tier": "root-layer",
+      "kind": "copy",
+      "sha256": "6605f70de400b666ce8cb372ff7dda79380d6e88da9b43ee1553c7f11e213430"
     },
     {
       "source": ".codex/review.md",

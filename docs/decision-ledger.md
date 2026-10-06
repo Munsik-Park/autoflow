@@ -11,11 +11,11 @@ allocation — are [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger.
 - Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `advisor decision`, `GATE:PLAN PASS (avg 8.2)`, `operator decision`), and the cycle/phase.
 - **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the re-opening is **judged by the decision's original authority** — a gate verdict by a fresh Evaluation AI re-scoring that item, an ARCHITECT design decision — recorded in the feature design, not the ledger — by a U3 Design unit re-run naming its heading there (an ARCHITECT re-entry, consuming that counter, unless the design has not yet reached GATE:PLAN), an advisor decision by a fresh advisor, an operator decision by the operator — and when that authority cannot say with confidence that the error changes the decision, it asks the advisor ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3); (3) the correction records the reproducing command and its summary line in the grounds form above and names what it supersedes — for a ledger entry, in the superseding entry's grounds, by the superseded entry's identifier; for a feature-design decision, in the U3 re-run's delta item, as `supersedes <heading>` ([`units/design.md`](units/design.md) > *Re-entry*). A change of preference or a re-interpretation of the same material is not an error and stays barred.
 
-**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`units/design.md`](units/design.md), [`units/build.md`](units/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, each auto-resolution attempt and rebuttal round at a gate or at HANDOFF, and an operator override of an advisor decision when the operator gives one.
+**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`units/design.md`](units/design.md), [`units/build.md`](units/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, each auto-resolution attempt and rebuttal round at a gate or at HANDOFF, an operator override of an advisor decision when the operator gives one, and — before the issue's first cycle — the operator's criterion-readiness confirmation (*Criterion-readiness confirmations* below).
 
 ## Entry identifier
 
-A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its HANDOFF marker in the same grammar: `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` — the marker stays at the end of the heading. The operator's decision to continue after an attempt-cap pause is an `O` entry under `operator decision` whose heading ends in `[reentry-decision]`; the attempt count restarts after it ([`units/delivery.md`](units/delivery.md) > *Routing* > Attempt cap). Record entries (`preflight-local-checks`) are level-3 headings and carry no identifier.
+A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its HANDOFF marker in the same grammar: `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` — the marker stays at the end of the heading. The operator's decision to continue after an attempt-cap pause is an `O` entry under `operator decision` whose heading ends in `[reentry-decision]`; the attempt count restarts after it ([`units/delivery.md`](units/delivery.md) > *Routing* > Attempt cap). An entry written before the issue's first cycle — the criterion-readiness confirmation — carries `cycle 0`. Record entries (`preflight-local-checks`) are level-3 headings and carry no identifier.
 
 | Writer | Namespace |
 |---|---|
@@ -117,3 +117,21 @@ replaces it by name (*Replacement is explicit* above; an advisor entry never rep
 entry). The standing entries decide only when they agree: all `accepted` → the change is covered; all
 `rejected` → it is not, and the change is reverted before AUDIT; both → a conflict, reported as
 `conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency.
+
+**Criterion-readiness confirmations** (`[criterion-ready]`). Before an issue's first `new-issue`
+cycle, its acceptance criteria are reviewed outside the cycle and the operator confirms them
+([`criterion-review.md`](criterion-review.md)). Outside a cycle there is no forward path for the
+advisor's first judgment to keep moving, so the confirmation is the **operator's** directly — the
+same authority over acceptance content as an override ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope,
+principle 1). It is recorded in the trailing-marker grammar: the heading
+`## O<n> — <title> (cycle 0, CRITERION-REVIEW) [criterion-ready]`, followed by a `- Decision:`
+line, a `- Record:` line (the repository-relative path of the review record), an
+`- Issue body sha256:` line (the value `scripts/preflight/criterion-ready.sh hash --issue N` prints
+for the body as confirmed), and the ordinary Grounds and Authority lines with the authority value
+`operator decision`. No `A<n>` entry carries the marker. `scripts/preflight/criterion-ready.sh
+status` reads the **last** entry carrying the marker and counts it only when it is an `O` entry
+under `operator decision`, its record exists and its sha256 equals the issue body's now; an edit to
+the body is confirmed by a new entry, never by editing this one. PREFLIGHT reads that status in
+`new-issue` mode ([`units/preparation.md`](units/preparation.md) > Stop conditions > *Criterion
+readiness*); nothing inside a cycle reads the entry, and a criterion change inside a cycle stays an
+`[ac-decision]`.
