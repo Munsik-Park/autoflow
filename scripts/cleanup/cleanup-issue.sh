@@ -9,7 +9,10 @@
 # cycle-layer store `issue-<N>-local/` (the cycle's uncommitted `automated` /
 # `delivery-check` / `manual` assets — ADR-0024 D2) — out of the repo tree into
 # an external, repo-identity-keyed store
-# `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/<repo-key>/issue-<N>-<date>/`.
+# `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/<repo-key>/issue-<N>-<stamp>/`,
+# `<stamp>` being the `<date>-<time>` of the dev branch the state file records
+# in `branch` (issue #433), or the archive date for a state file that records
+# none.
 # It DELETES exactly one path, the store's reserved top-level entry
 # `issue-<N>-local/disposable` (reproducible output), before the move; nothing
 # else is deleted. Run
@@ -230,12 +233,23 @@ for N in "$@"; do
     fi
   fi
 
+  # The archive takes the cycle's name — the date and time of the dev branch its
+  # state file records (issue #433) — so each run of an issue, in this checkout
+  # or another one on this machine, archives under its own name. A state file
+  # that records no branch, or none at all, falls back to the archive date.
+  stamp=""
+  if [ -f "$issue_dir/issue-${N}.json" ] && command -v jq >/dev/null 2>&1; then
+    stamp="$(jq -r '.branch // empty' "$issue_dir/issue-${N}.json" 2>/dev/null \
+      | sed -nE "s#^dev/([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6})-issue-${N}\$#\1#p")"
+  fi
+
   # Non-destructive archive move: a `-2`, `-3`, … conflict suffix rather than
-  # overwriting a prior same-day archive (issue re-opened + re-closed). A fresh
+  # overwriting an archive of the same name (the date fallback's re-opened and
+  # re-closed issue; a guard only for a recorded name). A fresh
   # `$dest` never exists, so the move is a rename of the whole directory, not a
   # merge: `mv` = atomic within a filesystem, copy+unlink across filesystems;
   # byte content is preserved either way.
-  base="$ARCHIVE_ROOT/$KEY/issue-${N}-${DATE}"
+  base="$ARCHIVE_ROOT/$KEY/issue-${N}-${stamp:-$DATE}"
   dest="$base"; s=2
   while [ -e "$dest" ]; do dest="${base}-${s}"; s=$((s + 1)); done
   mkdir -p "${dest%/*}"

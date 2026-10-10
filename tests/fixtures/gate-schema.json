@@ -12,7 +12,7 @@
     "verdict": ".phases.gate_hypothesis.verdict"
   },
   "$comment_closed_world": "Issue #245 cycle-2 closed-world vocabulary. The hook validator (AUTOFLOW-SCHEMA-VALIDATION) accepts ONLY these top-level keys (or a fix_regression_cycle_N matching cycle_key_grammar), verdicts in verdict_enum (or empty/absent — gate-not-triggered, CLAUDE.md verdict rule), and scores in score_range; every other shape → MALFORMED → fail-closed. Mirror the hook EXACTLY (drift = contract-test failure).",
-  "top_level_keys": ["active", "issue", "title", "date", "cycle", "mode", "phase", "phases", "fix_regression"],
+  "top_level_keys": ["active", "issue", "title", "date", "branch", "cycle", "mode", "phase", "phases", "fix_regression"],
   "cycle_key_grammar": "^fix_regression_cycle_[0-9]+$",
   "verdict_enum": ["pending", "evaluated", "skipped (non-bug issue)", "skipped (feat issue)"],
   "score_range": { "min": 0, "max": 10 },
