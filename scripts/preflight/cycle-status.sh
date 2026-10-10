@@ -16,12 +16,14 @@
 #   - per state file `.autoflow/<repo-key>-issue-<N>/issue-<N>.json` (issue
 #     #423) — every one the gate hook counts: `active`, `phase`, `mode`,
 #     `cycle`; for this repository's own key, the issue's dev branch (`dev/<date>-issue-<N>`) on each side; the branch's
-#     pull request and its state
+#     pull request and its state; and the branch's `record` — `state-file`
+#     when this checkout holds the issue's state file, `none` otherwise
+#     (issue #433)
 #   - with --issue N: for a state file of that issue, each gate's recorded
 #     scores (count, min, avg), `verdict` and `remedy_class`, the artifacts in
 #     its directory, the ledger's last attempt markers and the last local-checks record
 #     of the current cycle; without a state file, any dev branch that already
-#     carries the issue's number
+#     carries the issue's number, reported `record=none`
 #
 # Exit codes:
 #   0   every fact was read
@@ -75,20 +77,24 @@ pr_of() {
   printf '%s' "$out" | jq -r 'sort_by(.updatedAt) | ((map(select(.state == "OPEN")) | last) // last) | if . == null then "" else "\(.number) \(.state) \(.url)" end'
 }
 
-report_branches() {  # <issue> — the dev branch on each side, and its pull request
-  local n="$1" b line count
+# The branch's record is whether this checkout holds the issue's state file: a
+# branch found by its number alone, with no state file here, is a cycle this
+# checkout did not run (issue #433). An issue directory without a state file — a
+# proposal record, a criterion-review ledger — is not a cycle's record.
+report_branches() {  # <issue> <record> — the dev branch on each side, its pull request, and its record
+  local n="$1" rec="$2" b line count
   b="$(branches_of "$n")"
   count="$(printf '%s' "$b" | grep -c . || true)"
   case "$count" in
     0) echo "  branch: none"; echo "  pr: not looked up (no dev branch to look it up by)" ;;
     1)
-      echo "  branch: $b (local=$(side "refs/heads/$b") origin=$(side "refs/remotes/origin/$b"))"
+      echo "  branch: $b (local=$(side "refs/heads/$b") origin=$(side "refs/remotes/origin/$b")) record=$rec"
       if line="$(pr_of "$b")"; then
         if [ -n "$line" ]; then echo "  pr: #${line%% *} ${line#* }"; else echo "  pr: none"; fi
       else
         echo "  pr: lookup failed"; incomplete=1
       fi ;;
-    *) echo "  branch: more than one — $(printf '%s' "$b" | tr '\n' ' ')"; echo "  pr: not looked up (the branch is not unique)" ;;
+    *) echo "  branch: more than one — $(printf '%s' "$b" | tr '\n' ' ') record=$rec"; echo "  pr: not looked up (the branch is not unique)" ;;
   esac
 }
 
@@ -167,14 +173,14 @@ for f in "$AF"/*-issue-*/issue-*.json; do
   fi
   cycle="$(jq -r '.cycle // 1' "$f")"
   echo "issue #$n: active=$(jq -r '.active // false' "$f") phase=$(jq -r '.phase // "unset"' "$f") mode=$(jq -r '.mode // "unset"' "$f") cycle=$cycle"
-  report_branches "$n"
+  report_branches "$n" state-file
   if [ "$n" = "$ISSUE" ]; then own_seen=1; report_detail "$n" "$cycle"; fi
 done
 [ "$found" -eq 0 ] && echo "state files: none"
 
 if [ -n "$ISSUE" ] && [ "$own_seen" -eq 0 ]; then
   echo "issue #$ISSUE: no state file"
-  report_branches "$ISSUE"
+  report_branches "$ISSUE" none
 fi
 
 [ "$incomplete" -eq 0 ] || exit 3

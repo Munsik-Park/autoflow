@@ -12,7 +12,7 @@ owed; the order of the work and the commands are the orchestrator's
 every change — to git, to GitHub, to the cycle's state — is made by the orchestrator itself.
 
 - **Goal**: the requested issue starts, or continues, on a clean tree synced with the remote, with
-  every earlier cycle whose pull request is merged or closed cleared away.
+  every earlier cycle of this checkout whose pull request is merged or closed cleared away.
 - **Artifact contract**: the state file `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` and the dev branch checked out
   (*What is asked*), and the local-checks record in the ledger (*Stop conditions*).
 - **Verification**: PREFLIGHT has no gate. Its readiness conditions are deterministic — the facts
@@ -34,14 +34,23 @@ bash scripts/preflight/cycle-status.sh --issue {N}
 prints the facts the work is decided from and changes nothing: the working tree, the default branch
 against its remote-tracking ref, and — for every state file `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` — `active`, `phase`,
 `mode`, `cycle`, the issue's dev branch (`dev/<date>-issue-<N>`) on each side and that branch's pull
-request. Exit `3` means a fact could not be read (a `gh` lookup, an unreadable state file); the line
+request. With `--issue {N}` and no state file of that issue, a dev branch carrying its number is
+reported too. Each branch line carries its `record`: `state-file` when this checkout holds the
+issue's state file, `none` otherwise. Exit `3` means a fact could not be read (a `gh` lookup, an unreadable state file); the line
 says which. From those facts the orchestrator brings about the following.
 
-- **Earlier cycles are resolved.** A cycle whose pull request is merged or closed is cleared: its
-  dev branch is deleted, locally and on the remote, and its directory `.autoflow/{repo-key}-issue-{N}/` is
+- **Earlier cycles are resolved.** A cycle this checkout ran — its state file is in this
+  checkout — whose pull request is merged or closed is cleared: its dev branch is deleted, locally
+  and on the remote, and its directory `.autoflow/{repo-key}-issue-{N}/` is
   archived with `scripts/cleanup/cleanup-issue.sh` ([`git-workflow.md`](../git-workflow.md) >
   Post-Merge Cleanup). A cycle paused with no pull request keeps its files in place, and its
   pending decision is reported.
+- **A dev branch with no record here is reported, not deleted.** A branch reported `record=none`
+  belongs to a cycle this checkout did not run — another checkout of the same repository may run
+  the same issue. Neither side of it is deleted: deleting the remote branch is the cleanup of the
+  checkout that ran the cycle, or the operator's decision. An issue directory without a state
+  file — a proposal record, a criterion-review ledger — is not a cycle's record, and is not
+  archived.
 - **One issue runs at a time** (*PR Wait Rule*), and the requested issue takes the mode its own
   state names (*Modes*).
 - **The tree is clean and synced.** No uncommitted change or untracked file in the working area,

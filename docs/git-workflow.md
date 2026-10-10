@@ -138,8 +138,12 @@ keeps for the host's pointer, and its cautions, are [`units/delivery.md`](units/
 
 Performed at PREFLIGHT of the next cycle once the prior PR is observed merged
 or closed (or by the live session if it observes the decision first). Apply it
-to **every** resolved cycle found during prior-cycle resolution, including ones
-from earlier cycles:
+to **every** resolved cycle of this checkout — one whose state file is in this
+checkout's `.autoflow/` — found during prior-cycle resolution, including ones
+from earlier cycles. A dev branch with no such record (`cycle-status.sh`
+reports it `record=none`) is another checkout's cycle: it is reported and not
+deleted, locally or on the remote
+([`units/preparation.md`](units/preparation.md) > *What is asked*):
 
 ```bash
 git checkout main

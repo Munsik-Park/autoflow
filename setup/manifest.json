@@ -69,7 +69,7 @@
       "dest": ".claude/autoflow/docs/git-workflow.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "9097ed84be4c735522865d2ba835adca1e66f61b9e63a6607f7222b360165c1e"
+      "sha256": "822780071a73e536809653eb9f308fee30d2056f474968e12960ba5916525f00"
     },
     {
       "source": "docs/issue-proposal.md",
@@ -181,7 +181,7 @@
       "dest": ".claude/autoflow/docs/units/preparation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "3388b4d7631466dd15256033ecc1deeab2862b1e7849f6935ce55516572aae2e"
+      "sha256": "ca0957cd8b8ed8706018af074a5e5cfae61dd001c180533d05c16b2933786b0b"
     },
     {
       "source": "setup/thin-root-layer/drift-check.sh",
@@ -251,7 +251,7 @@
       "dest": "scripts/preflight/cycle-status.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "da6f1ef3289217da3ba73c420f06487c0d533a0eac488654c2e37e545cb0c8b5"
+      "sha256": "9a4c47fb5b4b34d7d6ce26287fb9f25e3eed77417358fa18f6f1e1059f34677e"
     },
     {
       "source": "scripts/preflight/criterion-ready.sh",
