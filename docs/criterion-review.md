@@ -33,8 +33,9 @@ The review makes that premise hold more often; it does not change it.
   an earlier cycle's state file, so a confirmation written too early is caught when it is checked.
 - **Reviewer.** The session the operator asks for the review, working with no AutoFlow cycle active
   for the issue. The review is that session's own work; it spawns no AutoFlow role and writes no
-  state file. How it reads — the order, how far it follows a cause, which tool checks a fact — is
-  its own, recorded under the record's `## Inputs` (Rule Scope, principle 2 —
+  state file. What it reads and how — which code, documents and materials, the order, how far it
+  follows a cause or an effect, which tool checks a fact — is its own, recorded under the record's
+  `## Inputs` with what it read and why, and what it left out and why (Rule Scope, principle 2 —
   [`CLAUDE.md`](../CLAUDE.md)).
 - **What the reviewer never does.** It never edits the issue body or any criterion, and it never
   writes the confirmation. It proposes; the operator decides (*Authority* below).
@@ -53,15 +54,33 @@ The review makes that premise hold more often; it does not change it.
   project keeps — [`CLAUDE.md`](../CLAUDE.md) > Project Information), and the documents of the
   sub-repos the issue reaches.
 
+## Purpose and scope
+
+The review's **purpose** is to find, before a cycle commits to the criteria, a criterion that would
+lead the work wrong or short of done: one that presumes a fact that does not hold, conflicts with a
+policy in force, leaves out part of what the change affects or of the behavior the issue reports,
+stops at a direct cause where a root cause produces the defect, leaves a term undefined, or cannot
+be shown met. Its **object** is the issue's acceptance criteria together with the change they call
+for, wherever that change reaches — not only the code a criterion names. The **quality
+characteristics** it evaluates are the review items below: fit with the code and policy, coverage
+of the change's impact and of the reported behavior, depth of cause, consistency, clarity, size,
+testability, and verified premises.
+
+Which code, documents and materials the review reads to judge them, and how far it reads, is the
+reviewer's own (*When and by whom* > *Reviewer*); the record's `## Inputs` states that scope.
+
 ## Review items
 
-Each criterion is checked on the items below — *Size and separation* once for the issue as a
-whole; an item that does not apply to a criterion says so. Each finding carries its grounds: a commit SHA with `path:line` for a fact of the code, or the
+Each criterion is checked on the items below — *Impact*, *Actual and expected behavior* and *Size
+and separation* once for the issue as a whole; an item that does not apply to a criterion says so. Each finding carries its grounds: a commit SHA with `path:line` for a fact of the code, or the
 document, its section heading and a quoted sentence for a provision of a policy document.
 
 | Item | The question |
 |---|---|
-| Code and policy fit | Does the code the criterion names behave as the criterion presumes, and does the criterion agree with the policies in force (an ADR, a rule document)? A criterion narrower than the cause the code shows, or one that a standing policy contradicts, is a finding. |
+| Code and policy fit | Does the code behave as the criterion presumes, and does the criterion agree with the policies in force (an ADR, a rule document)? A criterion that presumes a behavior the code does not have, or one that a standing policy contradicts, is a finding. |
+| Cause | Where the issue reports a defect, does the criterion address only the direct cause — the point where the failure shows — or also the root cause that produces it? A criterion narrower than the cause the code shows is a finding, recorded with which of the two it covers. Establishing the cause is DIAGNOSE's work inside the cycle ([U2 Analysis](units/analysis.md)); the review judges what the criterion covers against the cause the code shows. |
+| Impact | What does the change that meets the criteria do to other functions, to their users, and to operations? Does a criterion address each such effect? An effect no criterion addresses is a finding. |
+| Actual and expected behavior | Set side by side, does the state the criteria describe as done cover the behavior the issue reports as it actually occurs? A criterion set that covers only part of the actual behavior is a finding, recorded with the part left uncovered. |
 | Contradiction | Can every criterion hold at once? Two criteria that cannot both be met, or one that undoes another, is a finding. |
 | Terms and scope | Is every term a test would turn on defined — a threshold ("exceeds"), a surface ("the conversation screen"), a set ("every page")? An undefined term, or a scope with no stated bound, is a finding. |
 | Size and separation | Is the issue one piece of work a single cycle can carry to done, or does it bundle areas that are each complete on their own — separate surfaces, separate causes, criteria that share no code or test? Several independently completable areas in one issue is a finding, recorded with the areas and a proposed split (`split`). |
@@ -76,8 +95,8 @@ section with nothing to record says `none`.
 
 | Section | Holds |
 |---|---|
-| `## Inputs` | the issue body sha256 reviewed, each repository and the commit read, the policy documents read, the materials opened (or not, with the reason), and how the review was done |
-| `## Findings` | per criterion, each review item: `holds` or the finding, with its grounds; and *Size and separation* for the issue as a whole |
+| `## Inputs` | the issue body sha256 reviewed; the scope the reviewer set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; and how the review was done |
+| `## Findings` | per criterion, each review item: `holds` or the finding, with its grounds; and *Impact*, *Actual and expected behavior* and *Size and separation* for the issue as a whole |
 | `## Proposed changes` | per finding that calls for one: the criterion, the disposition (`excluded` / `revised` / `split` / `added`), the proposed text and the grounds — or `none` |
 | `## Open questions` | each question that neither the code nor a policy settles and that only the operator's intent can answer (what a term is meant to cover, which of two readings the issue intends): the question, why the code and policy do not settle it, and each option with what it changes in the criteria and the work — or `none` |
 | `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
