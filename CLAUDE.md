@@ -274,6 +274,7 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
   "issue": "#N",
   "title": "Issue title",
   "date": "YYYY-MM-DD",
+  "branch": "dev/YYYY-MM-DD-HHMMSS-issue-N",
   "cycle": 1,
   "mode": "new-issue",
   "phase": "in-progress",
@@ -285,6 +286,8 @@ While AutoFlow is in progress, an issue-scoped state file lives under `.autoflow
   }
 }
 ```
+
+**`branch` field**: the issue's dev branch, named once at Creation from the time it is created (`dev/YYYY-MM-DD-HHMMSS-issue-N`) and kept unchanged for the life of the state file — a review-response continues on it, and the archive directory takes its name from it. It is what ties a branch and its pull request to this checkout's cycle when another checkout runs the same issue (`docs/units/preparation.md` > *What is asked*). The hook admits it as a string and does not read it.
 
 **`cycle` field**: starts at `1` on Creation. It is incremented on review-response entry; what that resets is `docs/units/preparation.md` > *Review-response setup*. The hook gates read from the current `phases`; the durable cycle record lives in the GitHub PR/issue thread and commit log.
 

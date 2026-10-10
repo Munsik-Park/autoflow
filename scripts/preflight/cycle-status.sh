@@ -15,15 +15,21 @@
 #   - the default branch against its remote-tracking ref, as of the last fetch
 #   - per state file `.autoflow/<repo-key>-issue-<N>/issue-<N>.json` (issue
 #     #423) — every one the gate hook counts: `active`, `phase`, `mode`,
-#     `cycle`; for this repository's own key, the issue's dev branch (`dev/<date>-issue-<N>`) on each side; the branch's
-#     pull request and its state; and the branch's `record` — `state-file`
-#     when this checkout holds the issue's state file, `none` otherwise
-#     (issue #433)
+#     `cycle`; for this repository's own key, every dev branch carrying the
+#     issue's number (`dev/<date>-<time>-issue-<N>`) and the one the state
+#     file's `branch` names, each with its side, its pull request and its
+#     `record` (issue #433)
 #   - with --issue N: for a state file of that issue, each gate's recorded
 #     scores (count, min, avg), `verdict` and `remedy_class`, the artifacts in
 #     its directory, the ledger's last attempt markers and the last local-checks record
 #     of the current cycle; without a state file, any dev branch that already
 #     carries the issue's number, reported `record=none`
+#
+# A branch's record ties it to this checkout's cycle by name: `state-file` for
+# the branch the issue's state file names in `branch`, `none` for any other —
+# another checkout's cycle of the same issue, or no state file here — and
+# `unconfirmed` for every branch of a state file that names none (one written
+# before the field), which no name ties to it.
 #
 # Exit codes:
 #   0   every fact was read
@@ -58,9 +64,9 @@ AF=".autoflow"
 KEY="$(autoflow_repo_key "$ROOT")"
 incomplete=0
 
-# The issue-scoped dev branch is named `dev/<date>-issue-<N>`; both the local
-# and the origin refs are read, so a branch that exists on one side only is
-# still found.
+# The issue-scoped dev branch is named `dev/<date>-<time>-issue-<N>` (before
+# issue #433, `dev/<date>-issue-<N>`); both the local and the origin refs are
+# read, so a branch that exists on one side only is still found.
 branches_of() {
   {
     git for-each-ref --format='%(refname:lstrip=2)' "refs/heads/dev/*-issue-$1"
@@ -77,25 +83,28 @@ pr_of() {
   printf '%s' "$out" | jq -r 'sort_by(.updatedAt) | ((map(select(.state == "OPEN")) | last) // last) | if . == null then "" else "\(.number) \(.state) \(.url)" end'
 }
 
-# The branch's record is whether this checkout holds the issue's state file: a
-# branch found by its number alone, with no state file here, is a cycle this
-# checkout did not run (issue #433). An issue directory without a state file — a
-# proposal record, a criterion-review ledger — is not a cycle's record.
-report_branches() {  # <issue> <record> — the dev branch on each side, its pull request, and its record
-  local n="$1" rec="$2" b line count
-  b="$(branches_of "$n")"
-  count="$(printf '%s' "$b" | grep -c . || true)"
-  case "$count" in
-    0) echo "  branch: none"; echo "  pr: not looked up (no dev branch to look it up by)" ;;
-    1)
-      echo "  branch: $b (local=$(side "refs/heads/$b") origin=$(side "refs/remotes/origin/$b")) record=$rec"
-      if line="$(pr_of "$b")"; then
-        if [ -n "$line" ]; then echo "  pr: #${line%% *} ${line#* }"; else echo "  pr: none"; fi
-      else
-        echo "  pr: lookup failed"; incomplete=1
-      fi ;;
-    *) echo "  branch: more than one — $(printf '%s' "$b" | tr '\n' ' ') record=$rec"; echo "  pr: not looked up (the branch is not unique)" ;;
-  esac
+# The recorded branch is listed even when it is gone on both sides: its pull
+# request is still looked up by its name.
+report_branches() {  # <issue> <state file: yes|no> <recorded branch, or empty>
+  local n="$1" st="$2" rb="$3" list b rec line
+  list="$( { branches_of "$n"; [ -n "$rb" ] && printf '%s\n' "$rb"; } | sort -u | grep .)"
+  if [ -z "$list" ]; then
+    echo "  branch: none"; echo "  pr: not looked up (no dev branch to look it up by)"; return
+  fi
+  while IFS= read -r b; do
+    if [ "$st" = no ]; then rec=none
+    elif [ -z "$rb" ]; then rec=unconfirmed
+    elif [ "$b" = "$rb" ]; then rec=state-file
+    else rec=none; fi
+    echo "  branch: $b (local=$(side "refs/heads/$b") origin=$(side "refs/remotes/origin/$b")) record=$rec"
+    if line="$(pr_of "$b")"; then
+      if [ -n "$line" ]; then echo "    pr: #${line%% *} ${line#* }"; else echo "    pr: none"; fi
+    else
+      echo "    pr: lookup failed"; incomplete=1
+    fi
+  done <<EOF_LIST
+$list
+EOF_LIST
 }
 
 # The result line of the last `### preflight-local-checks | cycle: <C>` record.
@@ -173,14 +182,14 @@ for f in "$AF"/*-issue-*/issue-*.json; do
   fi
   cycle="$(jq -r '.cycle // 1' "$f")"
   echo "issue #$n: active=$(jq -r '.active // false' "$f") phase=$(jq -r '.phase // "unset"' "$f") mode=$(jq -r '.mode // "unset"' "$f") cycle=$cycle"
-  report_branches "$n" state-file
+  report_branches "$n" yes "$(jq -r '.branch // empty' "$f")"
   if [ "$n" = "$ISSUE" ]; then own_seen=1; report_detail "$n" "$cycle"; fi
 done
 [ "$found" -eq 0 ] && echo "state files: none"
 
 if [ -n "$ISSUE" ] && [ "$own_seen" -eq 0 ]; then
   echo "issue #$ISSUE: no state file"
-  report_branches "$ISSUE" none
+  report_branches "$ISSUE" no ""
 fi
 
 [ "$incomplete" -eq 0 ] || exit 3

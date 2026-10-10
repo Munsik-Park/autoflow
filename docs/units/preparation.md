@@ -33,24 +33,27 @@ bash scripts/preflight/cycle-status.sh --issue {N}
 
 prints the facts the work is decided from and changes nothing: the working tree, the default branch
 against its remote-tracking ref, and — for every state file `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` — `active`, `phase`,
-`mode`, `cycle`, the issue's dev branch (`dev/<date>-issue-<N>`) on each side and that branch's pull
-request. With `--issue {N}` and no state file of that issue, a dev branch carrying its number is
-reported too. Each branch line carries its `record`: `state-file` when this checkout holds the
-issue's state file, `none` otherwise. Exit `3` means a fact could not be read (a `gh` lookup, an unreadable state file); the line
+`mode`, `cycle`, and every dev branch carrying the issue's number together with the one the state
+file's `branch` names, each with its side and its pull request. With `--issue {N}` and no state file
+of that issue, a dev branch carrying its number is reported too. Each branch line carries its
+`record`: `state-file` for the branch the issue's state file names, `none` for any other — another
+checkout's cycle of the same issue, or no state file here — and `unconfirmed` for every branch of a
+state file that names none (one written before the `branch` field). Exit `3` means a fact could not be read (a `gh` lookup, an unreadable state file); the line
 says which. From those facts the orchestrator brings about the following.
 
 - **Earlier cycles are resolved.** A cycle this checkout ran — its state file is in this
-  checkout — whose pull request is merged or closed is cleared: its dev branch is deleted, locally
-  and on the remote, and its directory `.autoflow/{repo-key}-issue-{N}/` is
+  checkout — whose pull request is merged or closed is cleared: its dev branch (`record=state-file`)
+  is deleted, locally and on the remote, and its directory `.autoflow/{repo-key}-issue-{N}/` is
   archived with `scripts/cleanup/cleanup-issue.sh` ([`git-workflow.md`](../git-workflow.md) >
   Post-Merge Cleanup). A cycle paused with no pull request keeps its files in place, and its
   pending decision is reported.
 - **A dev branch with no record here is reported, not deleted.** A branch reported `record=none`
   belongs to a cycle this checkout did not run — another checkout of the same repository may run
-  the same issue. Neither side of it is deleted: deleting the remote branch is the cleanup of the
-  checkout that ran the cycle, or the operator's decision. An issue directory without a state
-  file — a proposal record, a criterion-review ledger — is not a cycle's record, and is not
-  archived.
+  the same issue. Neither side of it is deleted, and its pull request clears nothing here: deleting
+  the remote branch is the cleanup of the checkout that ran the cycle, or the operator's decision.
+  A branch reported `record=unconfirmed` is not cleared on its pull request either; it is reported
+  to the user, who decides. An issue directory without a state file — a proposal record, a
+  criterion-review ledger — is not a cycle's record, and is not archived.
 - **One issue runs at a time** (*PR Wait Rule*), and the requested issue takes the mode its own
   state names (*Modes*).
 - **The tree is clean and synced.** No uncommitted change or untracked file in the working area,
@@ -60,10 +63,12 @@ says which. From those facts the orchestrator brings about the following.
   the host's pointer names; this is the orchestrator's work item, and no script checks it.
 - **The stop conditions pass** (*Stop conditions*): bundle drift, a readable reviewer configuration,
   the target-declared local checks, and — for a new issue — criterion readiness.
-- **A new issue gets its branch and its state**: the dev branch `dev/YYYY-MM-DD-issue-N` from the
-  default branch, the state file from the Creation template with `mode: "new-issue"` and
-  `phase: "in-progress"` ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking), and the
-  issue's `status:in-progress` label. A review-response gets *Review-response setup*.
+- **A new issue gets its branch and its state**: the dev branch `dev/YYYY-MM-DD-HHMMSS-issue-N`
+  from the default branch, named from the time it is created, the state file from the Creation
+  template with that name in `branch`, `mode: "new-issue"` and `phase: "in-progress"`
+  ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking), and the issue's
+  `status:in-progress` label. The name is the cycle's for the life of its state file: a
+  review-response continues on it, and the archive takes its name from it. A review-response gets *Review-response setup*.
 
 Cautions:
 
@@ -79,8 +84,9 @@ Cautions:
   on a resume it waits until the hook admits a push.
 - **The state file is created last.** A stop condition that fails, a hold or a pause leaves no
   state file and no dev branch for the requested issue behind.
-- **A cycle is cleared only on an observed merged or closed pull request.** A state file whose dev
-  branch is gone on both sides gives `cycle-status.sh` nothing to look its pull request up by; the
+- **A cycle is cleared only on an observed merged or closed pull request.** The branch a state file
+  names is looked up even when it is gone on both sides. A state file that names none and whose
+  dev branch is gone gives `cycle-status.sh` nothing to look its pull request up by; the
   orchestrator looks it up another way before it archives anything.
 
 ## PR Wait Rule
@@ -139,8 +145,10 @@ over those facts**, recorded with its grounds in the ledger. Cautions:
 - The cycle is continued, not restarted: a resume does not increment `cycle` and does not reset
   `phases`. It does not require a clean tree either — what the interrupted session left
   uncommitted belongs to the phase that re-enters.
-- The issue's dev branch is checked out before any phase re-enters. A branch that is missing or
-  matches more than one name, or facts that do not fit together, are reported to the user.
+- The issue's dev branch — the one its state file's `branch` names — is checked out before any
+  phase re-enters. A named branch that is missing, a state file that names none while more than
+  one branch carries the issue's number, or facts that do not fit together, are reported to the
+  user.
 - A last local-checks record of the current cycle that is not `none declared` or `PASS …
   worktree=clean` means the local checks run now, before any phase re-enters (*Stop conditions*).
 - A gate with no recorded scores has not passed. It is run, never assumed — the cycle re-enters no

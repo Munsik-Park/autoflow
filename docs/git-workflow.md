@@ -57,7 +57,7 @@ git log HEAD..origin/main --oneline   # must be empty (or handled)
 # In a project with sub-repos, each submodule is at the commit the host's pointer names
 # after the host is synced (the orchestrator's work item; nothing checks it).
 
-# 3. Branch is from the latest main (a new issue; an AutoFlow cycle's dev branch is dev/<date>-issue-<N>)
+# 3. Branch is from the latest main (a new issue; an AutoFlow cycle's dev branch is dev/<date>-<time>-issue-<N>)
 git checkout -b <branch> main
 ```
 
@@ -140,10 +140,11 @@ Performed at PREFLIGHT of the next cycle once the prior PR is observed merged
 or closed (or by the live session if it observes the decision first). Apply it
 to **every** resolved cycle of this checkout — one whose state file is in this
 checkout's `.autoflow/` — found during prior-cycle resolution, including ones
-from earlier cycles. A dev branch with no such record (`cycle-status.sh`
-reports it `record=none`) is another checkout's cycle: it is reported and not
-deleted, locally or on the remote
-([`units/preparation.md`](units/preparation.md) > *What is asked*):
+from earlier cycles; `<branch>` is the one its state file names in `branch`
+(`cycle-status.sh` reports it `record=state-file`). Any other dev branch of the
+issue (`record=none`) is another checkout's cycle: it is reported and not
+deleted, locally or on the remote; a `record=unconfirmed` branch is reported to
+the user ([`units/preparation.md`](units/preparation.md) > *What is asked*):
 
 ```bash
 git checkout main
@@ -164,8 +165,11 @@ run is the target's practice*) — and then **archives** (moves) its issue direc
 `.autoflow/{repo-key}-issue-{N}/` — management files (state JSON, decision ledger, design docs,
 reports, proposal record) **and the rest of its cycle-layer store `issue-{N}-local/`** (the
 uncommitted `automated` / `delivery-check` / `manual` assets of that cycle) — to
-`$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<date>/` at cleanup via
-`scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`). Nothing outside the reserved path is
+`$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<stamp>/` at cleanup via
+`scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`). `<stamp>` is the `<date>-<time>` of
+the dev branch the state file names in `branch`, so each cycle archives under its own name; a state
+file that names none falls back to the archive date, and a name already taken gets a `-2`, `-3`, …
+suffix. Nothing outside the reserved path is
 deleted: whatever lies outside it is archived, whatever its name or size. The report line states the
 deletion apart from the archived count. A deletion that fails leaves that issue in place, with
 nothing archived, and exits non-zero; re-run cleanup once the path is removable. A store that is
@@ -175,7 +179,7 @@ itself a symbolic link is archived as the link, and nothing under its target is 
 path and archives only the resolved issue's directory, matched by its **exact name**
 `.autoflow/<repo-key>-issue-<N>/` (NOT a `*-issue-<N>*` glob, so neither `issue-<N>3` nor another
 repository's issue `<N>` is taken) — with a digits-only `N` guard and one scoped `mv` of that
-directory to `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<date>/` (default `~/.autoflow`;
+directory to `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<stamp>/` (default `~/.autoflow`;
 repo-key = `<org>__<repo>` derived from `origin`, the same key the live directory carries —
 `scripts/lib/issue-dir.sh`), moved less its store's reserved path. Its one deletion is that
 reserved path, `issue-<N>-local/disposable`, removed without following a symbolic link. Allow-list the wrapper
