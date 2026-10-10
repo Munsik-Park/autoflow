@@ -199,9 +199,7 @@ cap reached:
 
 Distinct from the advisor sub-agent above: Claude Code's advisor tool
 (<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
-mid-task. It is enabled for in-task consultation, and it is set in the **operator's user settings**
-(`~/.claude/settings.json`, `advisorModel`), not in the repository — the grounds and the setting are
-`setup/SETUP-GUIDE.md` > *Advisor tool (`advisorModel`)*. It cannot carry a
+mid-task. AutoFlow neither enables it nor directs its use. It cannot carry a
 decision point: its model is configurable and its effort is not, and Claude decides when to call it,
 which is why the first judgment is the sub-agent's (ADR-0025 D7).
 

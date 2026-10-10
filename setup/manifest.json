@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6202b49eeeb91651036a3400cbcdcb9be711f8dd8967b14f3a8d021a16a29d9e"
+      "sha256": "ed711a253d23d437227ae91a1edc3b2a913685759304bc8c7430fa7c3b9a8a60"
     },
     {
       "source": "docs/submodule-common-rules.md",

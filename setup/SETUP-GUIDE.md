@@ -265,43 +265,6 @@ If the clone itself is behind upstream, refresh it first
 - Basic familiarity with the AutoFlow methodology
   (see [`docs/autoflow-guide.md`](../docs/autoflow-guide.md)).
 
-### Advisor tool (`advisorModel`)
-
-Claude Code's advisor tool (<https://code.claude.com/docs/en/advisor>) lets the
-session's model consult a stronger model mid-task; AutoFlow enables it for
-in-task consultation beside the advisor sub-agent above, which alone answers a
-decision point (`docs/role-contracts.md` > Advisor). **Set it in your user
-settings, `~/.claude/settings.json`** — or with `/advisor <model>`, which saves
-it there — not in the repository's `.claude/settings.json`:
-
-```json
-{ "advisorModel": "fable" }
-```
-
-Why user settings (the setting itself is accepted in any settings file):
-
-- **The valid value depends on your main model, which is yours.** The
-  orchestrator's model follows your session settings (`CLAUDE.md` > Spawn
-  Model), and the advisor must be at least as capable as the main model: under
-  an Opus 5.5 main model the accepted advisors are Fable and Opus 5 or later,
-  under Fable 5.1 only Fable 5.1 — a Sonnet or Opus value is rejected. A value
-  pinned in the repository would be wrong for an operator on another main model.
-- **Fable is an account condition.** A Fable advisor needs Fable access and, on
-  some plans, the usage-credits consent; until then Claude Code sends requests
-  without the advisor. The advisor tool is also Anthropic-API only (not
-  Bedrock, Vertex or Foundry). A repository cannot satisfy either condition.
-- **A repository value would reach every target.** A stamp json-merges
-  `setup/thin-root-layer/settings-pin.json` into the target's
-  `.claude/settings.json` (`setup/manifest.json`, kind `json-merge`), so a
-  shipped `advisorModel` would choose the model — and its billing — for every
-  target and clone.
-- **One user value covers every spawn.** Subagents inherit the configured
-  advisor and apply the pairing check against their own model.
-
-Use `fable` when your account has Fable access, else `opus` (accepted under an
-Opus or Sonnet 5 main model). `CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1` turns the
-tool off.
-
 ---
 
 ## Troubleshooting

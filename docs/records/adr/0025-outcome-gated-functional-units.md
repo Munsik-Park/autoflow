@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399; D1, D3, D4, D6 and D7 amended by operator decision 2026-10-04, issue #421.
+Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399; D1, D3, D4, D6 and D7 amended by operator decision 2026-10-04, issue #421; D7 amended by operator decision 2026-10-06, issue #429.
 
 ## Context
 
@@ -108,7 +108,7 @@ keeps the `skipped (non-bug issue)` verdict for U2: the hook admits its ARCHITEC
 reading the scores, and the orchestrator judges the PASS.
 
 **D7 — An advisor makes the first judgment; the operator joins at the retry stage (operator
-decision 3; amended by operator decision 2026-10-04, issue #421).** Every point that today pauses
+decision 3; amended by operator decisions 2026-10-04, issue #421, and 2026-10-06, issue #429).** Every point that today pauses
 for an operator decision — an acceptance-criterion change, a non-code root cause, a GATE:HYPOTHESIS
 PASS judged unreachable (whose "not reachable" answer asks the operator to confirm the close, issue
 #421), an un-agreed design point, a `remedy_class: operator`, a
@@ -123,8 +123,11 @@ not provide). Operator judgment moves from the forward path to the retry stage: 
 FAILs, a re-entry opens or a cap is reached, the operator may review the advisor's recorded
 answers and override them, and that override is the authority (an `O` ledger entry, `operator
 decision`). Claude Code's advisor tool (`advisorModel`, https://code.claude.com/docs/en/advisor)
-is also enabled for in-task consultation; its model is configurable and its effort is not, which
-is why the first-judgment advisor is a sub-agent. `CLAUDE.md` > Rule Scope, principle 1 names
+is not the first-judgment advisor: its model is configurable and its effort is not, which is why
+the first-judgment advisor is a sub-agent. As first recorded, this decision also kept the tool
+enabled for consultation during a task; operator decision 2026-10-06 (issue #429) turned the tool
+off, and AutoFlow neither enables it nor directs its use — the harness carries its own instructions
+for it. `CLAUDE.md` > Rule Scope, principle 1 names
 acceptance-criterion content as the operator's; it is amended in the same change as the device
 (Rule Scope, principle 4) to "the operator's by override at the retry stage, the advisor's first".
 
@@ -196,6 +199,7 @@ Medium+ rises above the baseline, or whose unit tokens do not fall, is rolled ba
 - #369 (this ADR's tracking issue).
 - #268 (collector), #273 (A/B), #179 / ADR-0023 (relay), #166 (turn relay), #368 (workflow
   exposure — superseded by D2 if the workflows are retired first).
+- #429 (D7: Claude Code's advisor tool turned off, operator decision 2026-10-06).
 
 ## Notes
 
