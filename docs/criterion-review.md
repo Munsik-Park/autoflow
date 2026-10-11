@@ -106,11 +106,23 @@ document, its section heading and a quoted sentence for a provision of a policy 
 
 ## Resolution approach (stage 1)
 
-After the review items, stage 1 records how the change the criteria call for would be achieved: the
-approach, the method, and the tools the work would need, each with its grounds. The approach is the
-premise stage 2 evaluates; settling it and comparing alternatives belong to the cycle's ARCHITECT
-([U3 Design](units/design.md)). Where the choice between approaches turns on the operator's intent,
-it is recorded as an open question (*Review record* below).
+After the review items, stage 1 records how the change the criteria call for would be achieved,
+each element with its grounds:
+
+| Element | What it records |
+|---|---|
+| Approach | how the change resolves what the criteria require |
+| Change location | the components, modules and layers the change lands in, and the responsibility it places in each |
+| Behavior change | what users, callers and operations observe before and after the change — the intended change and the changes that come with it |
+| Premises and constraints | the rules, contracts and interfaces the approach relies on or touches, and the work, data or configuration it presupposes |
+| Method | how the work would carry the approach out |
+| Tools | the tools the work would need |
+
+The record states the change at the depth of components and their responsibilities; the files a
+change touches are derived at BUILD ([U3 Design](units/design.md) > Output artifacts). The approach
+is the premise stage 2 evaluates; settling it and comparing alternatives belong to the cycle's
+ARCHITECT ([U3 Design](units/design.md)). Where the choice between approaches turns on the
+operator's intent, it is recorded as an open question (*Review record* below).
 
 ## Impact analysis (stage 2)
 
@@ -142,7 +154,7 @@ section with nothing to record says `none`.
 |---|---|
 | `## Inputs` | the issue body sha256 reviewed; the scope the reviewer set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; how the review was done; and the model and effort the session ran on |
 | `## Findings` | stage 1 — per criterion, each review item: `holds` or the finding, with its grounds; and *Actual and expected behavior* and *Size and separation* for the issue as a whole |
-| `## Approach` | stage 1 — the resolution approach, its method and the tools the work would need, each with its grounds |
+| `## Approach` | stage 1 — the resolution approach: approach, change location, behavior change, premises and constraints, method and tools, each with its grounds |
 | `## Impact analysis` | stage 2 — each characteristic: `holds` or the finding, marked `stage 1` or `new`, with its grounds |
 | `## Proposed changes` | per finding that calls for one, from either stage: the criterion, the disposition (`excluded` / `revised` / `split` / `added`), the proposed text, the grounds and the stage the finding came from — or `none` |
 | `## Open questions` | each question that neither the code nor a policy settles and that only the operator's intent can answer (what a term is meant to cover, which of two readings the issue intends): the question, why the code and policy do not settle it, and each option with what it changes in the criteria and the work — or `none` |
