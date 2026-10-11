@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/criterion-review.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7d249e7da05288edcc4488581ccd0f3adf0d878976a19adf3d4c67a5935fea6f"
+      "sha256": "d4ee01f595d9375e62af0c0b34bb83fdc0b5708b6990d787a50baafe6656f03d"
     },
     {
       "source": "docs/decision-ledger.md",
