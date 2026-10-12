@@ -79,6 +79,18 @@
       "model": "fable",
       "effort": "max",
       "work_type": "first judgment at a decision point, recorded as an advisor-decision ledger entry (ADR-0025 D7) — highest-capability model at the highest effort; the effort is delivered by the definition's effort: line"
+    },
+    "criterion-in-depth": {
+      "agent_type": "autoflow-criterion-analyzer",
+      "model": "opus",
+      "effort": "high",
+      "work_type": "criterion review (outside the cycle) — in-depth analysis of one criterion's screened cases in a context that never saw the review's verdicts (issue #442); held at the review session's reference model and effort"
+    },
+    "criterion-reconciliation": {
+      "agent_type": "autoflow-criterion-reconciler",
+      "model": "opus",
+      "effort": "high",
+      "work_type": "criterion review (outside the cycle) — reconciliation of the review record with the in-depth analyses, settled in the code (issue #442); held at the review session's reference model and effort"
     }
   },
   "workflow_sites": {}

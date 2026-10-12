@@ -32,17 +32,21 @@ The review makes that premise hold more often; it does not change it.
   (3) run PREFLIGHT. `criterion-ready.sh status` reports `NOT READY` while the directory still holds
   an earlier cycle's state file, so a confirmation written too early is caught when it is checked.
 - **Reviewer.** The session the operator asks for the review, working with no AutoFlow cycle active
-  for the issue. The review is that session's own work; it spawns no AutoFlow role and writes no
-  state file. What it reads and how — which code, documents and materials, the order, how far it
+  for the issue. The review is that session's own work, and it writes no state file. What it reads and how — which code, documents and materials, the order, how far it
   follows a cause or an effect, which tool checks a fact — is its own, recorded under the record's
   `## Inputs` with what it read and why, and what it left out and why (Rule Scope, principle 2 —
-  [`CLAUDE.md`](../CLAUDE.md)). The session carries both stages of the review (*Two stages in one
-  session* below).
+  [`CLAUDE.md`](../CLAUDE.md)). The session carries stage 1 and stage 2 itself, the screening
+  included; the in-depth analysis and the reconciliation run in fresh contexts it spawns —
+  `autoflow-criterion-analyzer` and `autoflow-criterion-reconciler` (*Stages of the review* and
+  *In-depth analysis and reconciliation* below).
 - **Reference model and effort.** The review session runs on Opus 5.5 (`claude-opus-5-5`) at effort
-  `high`; another model or effort may be used, and the record's `## Inputs` names the one the
-  session ran on. The setting lives here because the review is the session's own work, not an
-  `Agent` spawn: `.claude/autoflow/spawn-policy.json` assigns models to spawns through the agent
-  definitions they load.
+  `high`; another model or effort may be used. The setting for the session lives here because the
+  review is the session's own work, not an `Agent` spawn. Its spawns take theirs from
+  `.claude/autoflow/spawn-policy.json` like every other spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn
+  Model): the model each declares is read with `bash scripts/spawn-policy/spawn-policy.sh model
+  criterion-in-depth` or `… model criterion-reconciliation`, and the effort is the one its agent
+  definition carries. The record's `## Inputs` names the model and effort the session and each
+  spawn ran on.
 - **What the reviewer never does.** It never edits the issue body or any criterion, and it never
   writes the confirmation. It proposes; the operator decides (*Authority* below).
 
@@ -70,21 +74,34 @@ be shown met. Its **object** is the issue's acceptance criteria together with th
 for, wherever that change reaches — not only the code a criterion names. The **quality
 characteristics** it evaluates are, in stage 1, the review items below: fit with the code and
 policy, coverage of the reported behavior, depth of cause, consistency, clarity, size, testability,
-and verified premises; and, in stage 2, those of the impact analysis: the change's impact, reuse,
-consistency with what is in force, and structural balance.
+and verified premises — and, in the screening, whether each criterion holds in every case it
+applies to, judged on the code that decides the behavior; and, in stage 2, those of the impact
+analysis: the change's impact, reuse, consistency with what is in force, and structural balance.
 
 Which code, documents and materials the review reads to judge them, and how far it reads, is the
 reviewer's own (*When and by whom* > *Reviewer*); the record's `## Inputs` states that scope.
 
-## Two stages in one session
+## Stages of the review
 
-The review runs as two stages in one session. **Stage 1** checks the criteria on the review items
-and records the resolution approach — how the change the criteria call for would be achieved.
-**Stage 2**, the impact analysis, takes that approach as applied and evaluates what the change does
-across the codebase. The order follows from what each stage can judge: the effect of a change can
-be evaluated once the approach to the change is set, and stage 1 is where it is set. Stage 2 works
-in the same session from stage 1's record, so what stage 1 confirmed — a cause, a policy in force,
-the approach — is its starting point.
+**Stage 1** checks the criteria on the review items, screens the cases each criterion applies to
+and selects the ones for in-depth analysis, and records the resolution approach — how the change the
+criteria call for would be achieved. **Stage 2**, the impact analysis, takes that approach as
+applied and evaluates what the change does across the codebase. The order follows from what each
+stage can judge: the effect of a change can be evaluated once the approach to the change is set,
+and stage 1 is where it is set. Stage 2 works in the same session from stage 1's record, so what
+stage 1 confirmed — a cause, a policy in force, the approach — is its starting point.
+
+Then the **in-depth analysis** examines the selected cases, criterion by criterion, and the
+**reconciliation** settles where an in-depth verdict differs from the record, each in a fresh
+context (*In-depth analysis and reconciliation* below). The screening is wide — every case a
+criterion applies to; the in-depth analysis is deep — the code that decides each selected case. A
+judgment made early in a session is carried through the rest of it: a later sign against it in the
+same session — or in a session handed its record — does not reliably overturn it. A single pass also
+leaves out cases the issue does not report, and rests a verdict that a behavior already exists on
+the point where it shows rather than on the code that decides it (issue #442). The in-depth analysis
+therefore receives the cases and their code locations but no earlier verdict or grounds. A
+criterion's in-depth analysis may start once the screening has selected its cases; the
+reconciliation runs after stage 2 and every in-depth analysis, since it updates their records too.
 
 ## Review items (stage 1)
 
@@ -104,9 +121,26 @@ document, its section heading and a quoted sentence for a provision of a policy 
 | Testability | Can the criterion be shown met or unmet by an observation, and does the environment provide what that observation needs? A criterion no observation can settle is a finding. |
 | Estimates verified | Is each estimate the body states as fact — a cause, a reproduction, an affected path — confirmed by the code or an observation? An estimate left unconfirmed is a finding, recorded as unconfirmed rather than as wrong. |
 
+## Screening (stage 1)
+
+After the review items, and before the resolution approach, stage 1 screens the cases each
+criterion applies to:
+
+- **Cases.** For each criterion, every case it applies to: the cases the issue reports, and every
+  case in which the object or the state the criterion's words name varies — another surface the
+  same cause operates on, or a path the approach would not touch where a rule already in the code
+  could prevent the required behavior.
+- **Locations.** For each case, where the required behavior shows, and the code that decides
+  whether and how it occurs — each as `path:line` at the commit read.
+- **Verdicts.** For each criterion and case: `finding`, `holds` or `unconfirmed`, with its grounds
+  and how far they reach — `shows` (the point where the behavior shows) or `decides` (the code that
+  decides it and the condition applied there).
+- **In-depth targets.** Every `finding`, and every `holds` or `unconfirmed` whose grounds do not
+  reach `decides`. A criterion with no target is recorded as such, and has no in-depth analysis.
+
 ## Resolution approach (stage 1)
 
-After the review items, stage 1 records how the change the criteria call for would be achieved,
+After the screening, stage 1 records how the change the criteria call for would be achieved,
 each element with its grounds:
 
 | Element | What it records |
@@ -144,6 +178,40 @@ criteria is recorded as a proposed change or an open question for the operator's
 cycle the review record is read as an input, and what binds the cycle is the criteria the operator
 confirmed ([U2 Analysis](units/analysis.md) > *Criterion review record*; *Authority* below).
 
+## In-depth analysis and reconciliation
+
+**In-depth analysis.** For each criterion with an in-depth target, a fresh context examines each
+target case: an `autoflow-criterion-analyzer` spawn the review session makes, which carries none of
+the session's conversation. The session hands it one target file,
+`.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review-target-<criterion>.md`, holding only the
+issue body, the criterion's text, the target cases, each case's code locations (`path:line`) and
+the commit they were read at — no verdict, grounds or conclusion. The verdict rests on the code
+that decides whether and how the required behavior occurs and the condition applied there, never
+on the point where it shows alone. Where the behavior occurs only under a condition, the analysis
+checks whether a situation that does not meet the condition actually arises — from which input,
+state or usage flow; where one does, the behavior does not hold in that situation. It writes
+`.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review-in-depth-<criterion>.md` — per case the
+verdict, the deciding code and condition, and the grounds — and returns that path and a one-line
+summary.
+
+**Reconciliation.** After stage 2 and every in-depth analysis, one `autoflow-criterion-reconciler`
+spawn — again a fresh context — receives the review record and the in-depth files. Where an
+in-depth verdict differs from the record, it confirms in the code which one holds and settles it.
+A criterion that does not hold in a case it applies to is a finding for that case, recorded with
+the rule or condition that prevents it — never summarized as holding conditionally. It updates
+`## Findings`, `## Screening`, `## Approach`, `## Impact analysis`, `## Proposed changes` and
+`## Open questions` to match, writes `## Reconciliation`, and returns the record's path and a
+one-line summary.
+
+**What the procedure fixes.** The artifacts — the screening, the in-depth verdicts and the
+reconciliation record — and the independence of the in-depth context: it receives the target file
+and nothing of the session's verdicts or grounds. What each context reads, in what order and with
+which tool, is its own (Rule Scope, principle 2 — [`CLAUDE.md`](../CLAUDE.md)). Each spawn
+declares its role by its `subagent_type` and the model its policy row names
+([`CLAUDE.md`](../CLAUDE.md) > Spawn Model), at most five are in flight at once
+([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Concurrent spawns*), and its prompt states the
+delivery as "return … as your report".
+
 ## Review record
 
 `.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review.md`, written by the reviewer in the
@@ -152,11 +220,13 @@ section with nothing to record says `none`.
 
 | Section | Holds |
 |---|---|
-| `## Inputs` | the issue body sha256 reviewed; the scope the reviewer set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; how the review was done; and the model and effort the session ran on |
+| `## Inputs` | the issue body sha256 reviewed; the scope the reviewer set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; how the review was done; and the model and effort the session and each in-depth analysis and reconciliation spawn ran on |
 | `## Findings` | stage 1 — per criterion, each review item: `holds` or the finding, with its grounds; and *Actual and expected behavior* and *Size and separation* for the issue as a whole |
+| `## Screening` | stage 1 — per criterion, each case it applies to: where the required behavior shows and the code that decides it (`path:line`), the verdict (`finding` / `holds` / `unconfirmed`), the reach of its grounds (`shows` / `decides`), and whether it is an in-depth target; a criterion with no target says so |
 | `## Approach` | stage 1 — the resolution approach: approach, change location, behavior change, premises and constraints, method and tools, each with its grounds |
 | `## Impact analysis` | stage 2 — each characteristic: `holds` or the finding, marked `stage 1` or `new`, with its grounds |
-| `## Proposed changes` | per finding that calls for one, from either stage: the criterion, the disposition (`excluded` / `revised` / `split` / `added`), the proposed text, the grounds and the stage the finding came from — or `none` |
+| `## Reconciliation` | per in-depth case: its verdict, how the reconciliation took it — `applied`, `rejected` or `unresolved` — and the grounds, with the in-depth file it came from; or `none` where no criterion had a target |
+| `## Proposed changes` | per finding that calls for one, from either stage or the reconciliation: the criterion, the disposition (`excluded` / `revised` / `split` / `added`), the proposed text, the grounds and where the finding came from (`stage 1`, `stage 2` or `in-depth`) — or `none` |
 | `## Open questions` | each question that neither the code nor a policy settles and that only the operator's intent can answer (what a term is meant to cover, which of two readings the issue intends): the question, why the code and policy do not settle it, and each option with what it changes in the criteria and the work — or `none` |
 | `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
 | `## Operator decisions` | written after the operator decides: each proposed change `accepted` / `rejected` / `modified`, each open question's answer (the option taken, or the operator's own), and the issue edit that applied them |
