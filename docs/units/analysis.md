@@ -107,10 +107,10 @@ The rules below are the ones other documents cite; everything else about the wor
   the review again (issue #291: DIAGNOSE takes the criteria as written), and a defect it observes as
   a fact is still raised as a decision point on the in-cycle path
   ([`decision-ledger.md`](../decision-ledger.md) > Decision-point entries > *A criterion can be
-  wrong*). The record's findings are the integrated ones: `## Case analysis` lists each case a
+  wrong*). The record's findings are the reconciled ones: `## Screening` lists each case a
   criterion applies to with the code that decides it, read like the findings as an earlier reading,
-  and `## Re-analysis integration` records, per re-judged case, whether the re-judgment was applied,
-  rejected or left unresolved. The record's `## Unchecked` items, and each case left `unresolved`,
+  and `## Reconciliation` records, per in-depth case, whether its verdict was applied, rejected or
+  left unresolved. The record's `## Unchecked` items, and each case left `unresolved`,
   are findings the analysis may close with its own checks (*Checking a finding* below). How the
   record was used is recorded under `## Method`.
 - **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,

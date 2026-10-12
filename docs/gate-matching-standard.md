@@ -263,7 +263,7 @@ the hook owns the role→gate mapping:
 
 | Channel | Declaration |
 |---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-reviewer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
+| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-reviewer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
 | Unit-agent caller | the hook input's caller `agent_type` is `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` — the spawn needs no declaration of its own |
 
@@ -285,6 +285,7 @@ Mapping (hook-owned — a spawn never selects its own gate): `planning` —
 GATE:HYPOTHESIS (skip-verdict bypass for non-bug issues); `implementation` —
 `autoflow-unit-build` → GATE:PLAN;
 `analysis` — `autoflow-analyzer`, `autoflow-reviewer`,
+`autoflow-criterion-analyzer`, `autoflow-criterion-reconciler`,
 `autoflow-unit-analysis` — / `evaluation` / `advisor` / research → pass.
 
 **Unit-agent caller inheritance**: a spawn whose caller is a unit agent is

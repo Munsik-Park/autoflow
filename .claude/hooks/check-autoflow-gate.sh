@@ -741,6 +741,8 @@ role_of_type() {
     Explore|Plan|claude-code-guide)              _role="research" ;;
     autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
     autoflow-reviewer|*:autoflow-reviewer)       _role="analysis" ;;
+    autoflow-criterion-analyzer|*:autoflow-criterion-analyzer)     _role="analysis" ;;
+    autoflow-criterion-reconciler|*:autoflow-criterion-reconciler) _role="analysis" ;;
     autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
     autoflow-advisor|*:autoflow-advisor)         _role="advisor" ;;
     *)
