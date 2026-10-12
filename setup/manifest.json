@@ -34,7 +34,7 @@
       "dest": ".claude/autoflow/docs/criterion-review.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "d4ee01f595d9375e62af0c0b34bb83fdc0b5708b6990d787a50baafe6656f03d"
+      "sha256": "f3117673bb1de056f8b70784abfcac0407bed130b5cbf4d33b375c4ff032190e"
     },
     {
       "source": "docs/decision-ledger.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/units/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cc339d4c438993b174eec6edcdb4a1f58bf18e107e7fc88147b5f7fe50b80637"
+      "sha256": "eca5ce102abc4c66d4aa28d9012bbc1d968f6015d304c98156c6e91819945cb2"
     },
     {
       "source": "docs/units/build.md",
