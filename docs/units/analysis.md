@@ -108,9 +108,10 @@ The rules below are the ones other documents cite; everything else about the wor
   a fact is still raised as a decision point on the in-cycle path
   ([`decision-ledger.md`](../decision-ledger.md) > Decision-point entries > *A criterion can be
   wrong*). The record's findings are the reconciled ones: `## Screening` lists each case a
-  criterion applies to with the code that decides it, read like the findings as an earlier reading,
-  and `## Reconciliation` records, per in-depth case, whether its verdict was applied, rejected or
-  left unresolved. The record's `## Unchecked` items, and each case left `unresolved`,
+  criterion applies to with the code that decides it, and `## Cause reach and rule conflict` where
+  a confirmed cause reaches beyond the reported points or a required behavior meets a rule in force,
+  each read like the findings as an earlier reading; `## Reconciliation` records, per stage 2
+  finding and per in-depth case, whether it was applied, rejected or left unresolved. The record's `## Unchecked` items, and each case left `unresolved`,
   are findings the analysis may close with its own checks (*Checking a finding* below). How the
   record was used is recorded under `## Method`.
 - **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,

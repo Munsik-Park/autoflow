@@ -17,11 +17,11 @@ Every role is an anonymous direct spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn Mod
 | Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
 | HANDOFF built-in reviewer (*Reviewer review*) | anonymous direct (`subagent_type: autoflow-reviewer`) | single-shot — reviews one pull request for one round, writes its review record, and returns; a fresh reviewer is spawned for every pull request and round |
 | HANDOFF review aggregator (*Review aggregation*) and CI-failure classifier (*CI-failure re-entry*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's review records into one comment, its findings file and its label, or reads the failing check's output, records the class and its grounds, and returns; the re-entry it feeds runs through the unit rows |
-| Criterion-review in-depth analyzer and reconciler (outside the cycle — [`criterion-review.md`](criterion-review.md) > *In-depth analysis and reconciliation*) | anonymous direct (`subagent_type: autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`) | single-shot — the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against every in-depth file once per review; each is spawned fresh by the review session |
+| Criterion-review tracer, in-depth analyzer and reconciler (outside the cycle — [`criterion-review.md`](criterion-review.md) > *Cause reach and rule conflict (stage 2)*, *In-depth analysis and reconciliation*) | anonymous direct (`subagent_type: autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`) | single-shot — the tracer judges stage 2 from the issue body and the stage 1 record and writes its stage 2 file once per review; the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against the stage 2 file and every in-depth file once per review; each is spawned fresh by the review session |
 | Advisor (a decision point in any phase — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its `A`-namespace ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
 | Functional-unit agents U2 / U3 / U4 (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per unit entry, prescribed by the unit's goal, artifact contract and verification (ADR-0025 D2); a FAIL returns its findings and the previous artifacts to a fresh unit spawn. Defined in the common frame (#372) and wired into the lifecycle by each unit's migration step (ADR-0025 D9): U2 runs DIAGNOSE, U3 runs ARCHITECT and U4 runs BUILD |
 
-Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its built-in reviewer — on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review` — and its review aggregator / Low-judgment subagent and CI-failure classifier — both on the model per key `handoff-review-triage`. Outside the cycle, the criterion review's in-depth analyzer and reconciler run on the model per keys `criterion-in-depth` and `criterion-reconciliation`.
+Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its built-in reviewer — on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review` — and its review aggregator / Low-judgment subagent and CI-failure classifier — both on the model per key `handoff-review-triage`. Outside the cycle, the criterion review's tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
 
 ### Model tier revert
 
@@ -115,8 +115,11 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
   a reviewer finding that repeats the previous attempt's complaint, a GATE:HYPOTHESIS PASS the
   orchestrator judges unreachable, an un-agreed design point, a `remedy_class: operator`, and a
   recommendation or finding the orchestrator cannot route with confidence (a pause criterion, a
-  rebuttal the re-score or the reviewer keeps while the two sides still disagree). Each is answered
-  by the advisor first.
+  rebuttal the re-score or the reviewer keeps while the two sides still disagree). Outside a cycle,
+  a point the criterion review cannot settle is one as well, put by the review session, which takes
+  the orchestrator's part in the procedure below with `cycle 0` and the phase `CRITERION-REVIEW`
+  ([`criterion-review.md`](criterion-review.md) > *Authority*). Each is answered by the advisor
+  first.
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
   denial), or a tool, credential, installation or material the environment does not provide — for a
   tool it has, what using it lacks (access, a purpose and permitted scope, a permission setting). Only

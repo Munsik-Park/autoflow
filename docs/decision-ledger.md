@@ -120,10 +120,11 @@ entry). The standing entries decide only when they agree: all `accepted` → the
 
 **Criterion-readiness confirmations** (`[criterion-ready]`). Before an issue's first `new-issue`
 cycle, its acceptance criteria are reviewed outside the cycle and the operator confirms them
-([`criterion-review.md`](criterion-review.md)). Outside a cycle there is no forward path for the
-advisor's first judgment to keep moving, so the confirmation is the **operator's** directly — the
-same authority over acceptance content as an override ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope,
-principle 1). It is recorded in the trailing-marker grammar: the heading
+([`criterion-review.md`](criterion-review.md) > *Authority*). The review records its
+dispositions, a point it cannot settle is answered by the advisor first as at any decision point,
+and the operator reviews and may override them; the confirmation that follows is the
+**operator's** — the same authority over acceptance content as an override
+([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 1). It is recorded in the trailing-marker grammar: the heading
 `## O<n> — <title> (cycle 0, CRITERION-REVIEW) [criterion-ready]`, followed by a `- Decision:`
 line, a `- Record:` line (the repository-relative path of the review record), an
 `- Issue body sha256:` line (the value `scripts/preflight/criterion-ready.sh hash --issue N` prints
