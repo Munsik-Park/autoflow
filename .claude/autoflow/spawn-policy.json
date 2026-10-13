@@ -80,6 +80,12 @@
       "effort": "max",
       "work_type": "first judgment at a decision point, recorded as an advisor-decision ledger entry (ADR-0025 D7) — highest-capability model at the highest effort; the effort is delivered by the definition's effort: line"
     },
+    "criterion-trace": {
+      "agent_type": "autoflow-criterion-tracer",
+      "model": "opus",
+      "effort": "high",
+      "work_type": "criterion review (outside the cycle) — stage 2: the reach of each confirmed cause and each required behavior's conflict with the rules in force, assuming no fix, in a context apart from the review session (issue #445); held at the review session's reference model and effort"
+    },
     "criterion-in-depth": {
       "agent_type": "autoflow-criterion-analyzer",
       "model": "opus",

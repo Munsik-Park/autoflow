@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "6d49a7e3351e4a5fb8ee307592023b5e6de8734c03dc3a8f1009fa849b2273bf"
+      "sha256": "99c33b3bd5ddac173f8c1a5e6dbfcf29a2b2993efa15e5684e5d7639afebaed8"
     },
     {
       "source": "docs/INDEX.md",
@@ -34,14 +34,14 @@
       "dest": ".claude/autoflow/docs/criterion-review.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "36107c90a15a26cc5febccbdcd180b7e64ca1f1eeed05898e6964fc8d6a00c54"
+      "sha256": "e0617fc2e38d1f6019b647e021b469c1a71d34b2e401ca0b7759e54d040f6ee6"
     },
     {
       "source": "docs/decision-ledger.md",
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "ce9061717a84fede7133fe45905a4414d3be7655651322909d7b0d219ea71d32"
+      "sha256": "434001112a367ec57aae67adb9a56d01a2933622dc5405bed12801060cb51c48"
     },
     {
       "source": "docs/development-guideline.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "8180c9ef68ad3016052efcf92050484074d792c7e862a3e91bbe56f0adfebd6f"
+      "sha256": "bd92724f370d9e5a89ce3a8204b98ab85da4602cab1a75cc6e875b76165ccf02"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/units/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "189fdccb0e8bf044cff9ddb33b5847c07e91383886403d809f525f18ef73737d"
+      "sha256": "5aa3c9f85ed14131bf0bca21739586dcb0d3957a8e8464955b48e47224d7e635"
     },
     {
       "source": "docs/units/build.md",
@@ -398,7 +398,7 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "25bfec6ae9211506f3773089c5fc2be20eb46051beff55e6560d266d15bbd1f4"
+      "sha256": "40f09d8ff5b0d42db4fccfd1cc4aad8b333701e403a87a106fa3a6de3671f02e"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
