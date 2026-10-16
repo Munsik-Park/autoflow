@@ -109,28 +109,32 @@ it and the unit documents cite it.
 
 ### Decision points and harness-level blocks
 
-- **A decision point** is any point that pauses for a decision the working AI is not the one to make:
-  an acceptance-criterion change the orchestrator cannot settle (below), a security-checklist change
-  (`[checklist-decision]`), a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the analysis records,
-  a reviewer finding that repeats the previous attempt's complaint, a GATE:HYPOTHESIS PASS the
-  orchestrator judges unreachable, an un-agreed design point, a `remedy_class: operator`, and a
-  recommendation or finding the orchestrator cannot route with confidence (a pause criterion, a
-  rebuttal the re-score or the reviewer keeps while the two sides still disagree). Outside a cycle,
+- **A decision point** is a decision the working AI cannot settle on the grounds at hand, or is not
+  confident of ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3). An acceptance-criterion
+  change, a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the
+  analysis records, a reviewer finding that repeats the previous attempt's complaint, and a
+  GATE:HYPOTHESIS PASS the orchestrator judges unreachable are where such a decision arises, not
+  decision points by their kind: the orchestrator judges each first, and where the grounds the
+  raising report, finding or evaluation carries settle it, it decides and records the decision with
+  those grounds in an `O` ledger entry under `orchestrator decision` — for an acceptance-criterion
+  change, its `[ac-decision]` entries ([`decision-ledger.md`](decision-ledger.md) >
+  *Acceptance-criterion decisions*); for a repeated complaint, the attempt's `[review-autofix]`
+  entry. An un-agreed design point, a `remedy_class: operator`, and a recommendation or finding the
+  orchestrator cannot route with confidence (a pause criterion, a rebuttal the re-score or the
+  reviewer keeps while the two sides still disagree) are already decisions the working AI could not
+  settle. A security-checklist change (`[checklist-decision]`) is the one decision point by its
+  kind: `scripts/gate/security-checklist.sh` counts only an advisor or an operator entry
+  ([`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*). Outside a cycle,
   a point the criterion review cannot settle is one as well, put by the review session, which takes
   the orchestrator's part in the procedure below with `cycle 0` and the phase `CRITERION-REVIEW`
-  ([`criterion-review.md`](criterion-review.md) > *Authority*). Each is answered by the advisor
-  first.
-- **An acceptance-criterion change** is the orchestrator's to judge first, wherever it surfaces:
-  where the grounds the raising report or recommendation carries settle it, the orchestrator decides
-  it and records its `[ac-decision]` entries ([`decision-ledger.md`](decision-ledger.md) >
-  *Acceptance-criterion decisions*); where they do not, or it is not confident, it is a decision
-  point ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3).
+  ([`criterion-review.md`](criterion-review.md) > *Authority*). Each decision point is answered by
+  the advisor first.
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
   denial), or a tool, credential, installation or material the environment does not provide — for a
   tool it has, what using it lacks (access, a purpose and permitted scope, a permission setting). Only
   such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
   `phase:"awaiting-user"` ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision
-  presentation). An advisor answer can end the cycle instead — a non-code lever or cause, a
+  presentation). A decision at one of those points can end the cycle instead — a non-code lever or cause, a
   prerequisite that comes first, a GATE:HYPOTHESIS PASS not reachable; the last asks the operator to
   confirm closing the issue, the cycle not closing it itself ([U2 Analysis](units/analysis.md) >
   *Verification — GATE:HYPOTHESIS*). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision

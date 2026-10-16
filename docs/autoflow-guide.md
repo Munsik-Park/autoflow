@@ -65,7 +65,7 @@ flowchart TD
     ANS[Answer judged<br/>close · reply · rebuttal → review round]:::phase
     DONE([Done]):::terminal
     HUMAN([Human Decision]):::terminal
-    ADV([Advisor decision<br/>recorded, applied]):::terminal
+    ADV([Orchestrator decision<br/>advisor where not settled]):::terminal
 
     PRE --> DIA
     DIA --> HYP
@@ -73,7 +73,7 @@ flowchart TD
     HYP -.->|PASS · non-code lever| ADV
     HYP -->|PASS · code change| ARC
     HYP -->|FAIL · re-entry judged, no count cap| DIA
-    HYP -.->|PASS judged unreachable<br/>advisor: not reachable → operator confirms close| HUMAN
+    HYP -.->|PASS judged unreachable<br/>not reachable → operator confirms close| HUMAN
     ARC --> PLAN
     PLAN -->|PASS| BLD
     PLAN -->|FAIL ≤3×| ARC
@@ -111,9 +111,9 @@ PREFLIGHT (new issue: reads the confirmation)
 DIAGNOSE
     │
     ▼
-GATE:HYPOTHESIS (one form) ◄── FAIL: re-entry judged, no count cap; PASS judged unreachable → advisor → operator confirms close
+GATE:HYPOTHESIS (one form) ◄── FAIL: re-entry judged, no count cap; PASS judged unreachable → operator confirms close
     ├─ PASS · no change needed ─► answer judged: Issue Closed (no PR) │ Reply on PR / rebuttal
-    ├─ PASS · non-code lever ───► advisor decides (code owed → continue │ non-code → end)
+    ├─ PASS · non-code lever ───► orchestrator decides, advisor where not settled (code owed → continue │ non-code → end)
     │  PASS · code change
     │
     ▼

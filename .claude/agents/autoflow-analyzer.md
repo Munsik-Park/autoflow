@@ -30,7 +30,7 @@ Hard rules:
   `docs/units/delivery.md` > *Whether a finding holds*.
 - In the same variant, read the ledger's previous `[review-autofix]` entry. When a
   finding repeats that attempt's complaint — the same property asserted, a different
-  witness case — say so in the finding's cell; the orchestrator then asks the advisor
+  witness case — say so in the finding's cell; the orchestrator then decides the re-entry
   (`docs/units/delivery.md` > *A repeated complaint*). Do not decide the re-entry.
 - Read-only with respect to source code: you analyze, you do not modify code.
 - Write your full analysis body to the `.autoflow/{repo-key}-issue-{N}/issue-{N}-*.md` artifact path

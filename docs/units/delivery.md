@@ -330,12 +330,14 @@ every attempt. Whoever reads the finding — the aggregator here, or the DIAGNOS
 attempt (the same property asserted, a different witness case; the previous attempt's
 `[review-autofix]` entry and the previous cycle's artifacts are what it compares against) says so
 where it writes the finding: in the finding's cell of the findings file, or under the analysis
-report's `## Decision points`. The orchestrator then puts it to the advisor
-([`role-contracts.md`](../role-contracts.md) > Advisor) with a request written situation-first —
+report's `## Decision points`. The orchestrator then decides the re-entry — its depth, or none;
 for example restating the acceptance criterion as one rule over the whole input, or a further
-case-specific change — and the advisor's `A` entry decides the re-entry: its depth, or none. A
+case-specific change — and records it with its grounds in the attempt's `[review-autofix]` entry;
+where those grounds do not settle it, or it is not confident, it puts it to the advisor
+([`role-contracts.md`](../role-contracts.md) > Advisor) with a request written situation-first,
+and the advisor's `A` entry decides it. A
 redefined criterion is recorded as `[ac-decision]` entries and the cycle restarts from DIAGNOSE on
-it. A complaint the advisor has already decided is not put again without a new verified fact
+it. A complaint already decided is not decided again without a new verified fact
 ([`CLAUDE.md`](../../CLAUDE.md) > Decision Ledger). The same finding with the same witness — a fix
 that did not take — is not this case; it is routed like any finding.
 
@@ -354,7 +356,7 @@ The `ARCHITECT` route is the one whose depth is judged. It re-enters within the 
 
 Every route is recorded in `.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` with a `review-autofix` marker — a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` ([`decision-ledger.md`](../decision-ledger.md) > *Entry identifier*) — and the entry names the routed class and, on the `ARCHITECT` route, the judged start with its grounds. The advisor criteria below take precedence over any route.
 
-- **Put to the advisor** (a request written situation-first per [`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not pause) when the attempt hits **any** of: (a) the fix needs a contract change, or an acceptance-criterion change — a finding that shows a criterion defective included — that the orchestrator cannot settle on the finding's grounds ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), (b) the fix direction is ambiguous, (c) the finding repeats the previous attempt's complaint (*A repeated complaint* above). The advisor's `A` entry selects re-entry. A rebutted finding kept while the two sides still disagree reaches the advisor by the orchestrator's judgment (*Whether a finding holds* above), not by a criterion here.
+- **Put to the advisor** (a request written situation-first per [`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not pause) when the attempt hits **any** of: (a) the fix needs a contract or acceptance-criterion change — a finding that shows a criterion defective included — that the orchestrator cannot settle on the finding's grounds ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), (b) the fix direction is ambiguous, (c) the finding repeats the previous attempt's complaint and its grounds do not settle the re-entry (*A repeated complaint* above). The advisor's `A` entry selects re-entry. A rebutted finding kept while the two sides still disagree reaches the advisor by the orchestrator's judgment (*Whether a finding holds* above), not by a criterion here.
 - **Attempt cap = 7.** The count is the number of auto-resolution attempts not yet checked with the user: the `[review-autofix]` entries in the ledger after the last entry whose heading ends in `[reentry-decision]`, or all of them when there is none. `review-gate.sh` prints it (`attempts: <k> of 7`) and exits `11` when a `Medium`+ verdict meets 7 on record: the orchestrator stops auto-resolving and pauses for the user (`active:false`, `phase:"awaiting-user"`). A gate's recommendation attempt carries its own marker, `[gate-autofix]`, on its own window ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*), and a `[rebuttal]` round is not an attempt, so neither is counted here. The user approving continuation at that pause is the **re-entry decision**: the orchestrator records it as an `O` entry under `operator decision` whose heading ends in `[reentry-decision]` and sets the cycle active again; the entry resets the window — the next auto-entry starts a fresh budget of 7. Nothing else resets it.
 - **Durable record (host PR).** Post a one-line comment on the **host PR** via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event).
 

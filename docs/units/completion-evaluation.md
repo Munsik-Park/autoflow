@@ -105,12 +105,12 @@ No separate disposition system exists for gate recommendations.
     `Medium`+ recommendation that **is** directly related is fixed on its route or put to the
     advisor; the orchestrator never separates one on its own judgment (advisor criterion (b)).
 - **Put to the advisor** (a request written situation-first — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not
-  pause) when the attempt hits any of: (a) the fix needs a contract change, or an
+  pause) when the attempt hits any of: (a) the fix needs a contract or
   acceptance-criterion change the orchestrator cannot settle on the grounds at hand (the criterion-defect bullet above);
   (b) the fix direction is ambiguous, or the orchestrator judges a directly related recommendation
   undesirable to fix in this cycle (question 2) and would separate it; (c) the re-score
   dispositions the previous attempt's finding `remains` after its fix (`rescore.prior_findings`)
-  — the same complaint answered twice. The advisor's `A` entry
+  — the same complaint answered twice — and the re-score's grounds do not settle the next fix. The advisor's `A` entry
   selects re-entry.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
   gate's verdict entry: fix now, or defer — to the PR body's known-gaps line

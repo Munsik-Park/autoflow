@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e51501bd2e23c8c0125971fc505d338a0714d9c99cb58540ec9d57963bbc596f"
+      "sha256": "c73c4a37389eb7058607e6db43f67c99d1d59ec32da41d01f39ca26f95b46828"
     },
     {
       "source": "docs/INDEX.md",
@@ -27,7 +27,7 @@
       "dest": ".claude/autoflow/docs/autoflow-guide.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "fdda337ddd286cd1077b1e17cc5f0f2447e5e04416b477c6c334f39e4088f5d0"
+      "sha256": "68513b1190575ee4517b659c0ce89f219135e33b1297b2ecc55ee9279756827b"
     },
     {
       "source": "docs/criterion-review.md",
@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "c6b029c55b895c5aee31b7401b6f32e5d19d0a1ac467ead65f296e7a26a005a8"
+      "sha256": "9cf7e88faf315441d6fc00c6cafc6c5760eb12c657dde9721058f02990eee441"
     },
     {
       "source": "docs/development-guideline.md",
@@ -55,7 +55,7 @@
       "dest": ".claude/autoflow/docs/evaluation-system.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "2a595f45f2129d4d871af6d0c25db68c9b7c1d33827157121b994e4ee8eff338"
+      "sha256": "b9fa3ccd6240b55baa1d0457df08324509209eaa3a0ba96062b65bf9e2b24c65"
     },
     {
       "source": "docs/external-review-sequencing.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7b56601edc8fbbf8be2445cc26c386f4f4f3f51476c145674ede06cc959d48cd"
+      "sha256": "cbfe1a9e83c486955fe51afd592035e3e49dc1f0b50d46cfd64b4e1a7ac7d1ff"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -146,7 +146,7 @@
       "dest": ".claude/autoflow/docs/units/analysis.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "148e6598fbf0b703af5124e0986171ccde7ca0d5d5baf1ac875b260c259f10e4"
+      "sha256": "afd0e4df55b5dacc76c03b7de5a7f56fce2cd1417252b545c512100aa933d1ae"
     },
     {
       "source": "docs/units/build.md",
@@ -160,14 +160,14 @@
       "dest": ".claude/autoflow/docs/units/completion-evaluation.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "be0abae3f875930e294135561d0e455b629b2c2d9d8804976d591a89f2bfa87a"
+      "sha256": "2a96764e4c2a03d04944dcf46c7a1ddcf788ee37d66ed51533c9da3de9f2969f"
     },
     {
       "source": "docs/units/delivery.md",
       "dest": ".claude/autoflow/docs/units/delivery.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "e5cf368ab36a1e80e01a584b191f196907aea4ff1de0bf8e26061535d03cc5c9"
+      "sha256": "0b308bf27dbd42649a5b0ac3cc1c2b07cf14e3e04dd05e5ea867044ce59ba867"
     },
     {
       "source": "docs/units/design.md",
