@@ -22,7 +22,9 @@ Hard rules:
   the operator can review it at the retry stage and override it.
 - **[MUST]** Record the answer in the issue ledger as one `A`-namespace entry per
   decision: allocate `<ID>` with `bash scripts/ledger/ledger-entry-id.sh next
-  <ledger> A` immediately before the append, write the entry in the grammar
+  <ledger> A` immediately before the append — the call reserves the identifier,
+  so an advisor spawned beside another receives a different one; keep it if the
+  append must be retried — write the entry in the grammar
   `docs/decision-ledger.md` gives for the decision's kind with the authority
   `advisor decision` and a `- Record:` line naming your answer file. Append
   only; never change or remove text already in the ledger — the gate hook

@@ -140,12 +140,19 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
 2. **Spawn.** One fresh `autoflow-advisor` per decision, anonymous, model from
    `bash scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
    `effort:` line). The prompt names the request file, the ledger, the issue, the cycle and the
-   phase. The spawn is never score-gated.
+   phase. The spawn is never score-gated. Where two or more decisions are open and none depends on
+   another's answer, their advisors may be spawned together, and a decision that depends on another's
+   answer is spawned after that answer is recorded; whether to spawn them together or one after
+   another is the orchestrator's judgment (`CLAUDE.md` > Rule Scope, principle 2), within the
+   concurrent-spawn limit (`CLAUDE.md` > Cost Control).
 3. **Answer and record.** The advisor weighs the material itself, writes its answer to
    `.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
    `A`-namespace entry per decision to the ledger under the authority `advisor decision`, carrying a
    `- Record:` line to the answer file and the marker and fields the decision's kind requires
-   ([`decision-ledger.md`](decision-ledger.md)). It appends with `Edit`, which the gate hook applies to
+   ([`decision-ledger.md`](decision-ledger.md)). Its identifier comes from
+   `bash scripts/ledger/ledger-entry-id.sh next <ledger> A`, called immediately before the append; the
+   call reserves the identifier, so advisors spawned together receive distinct ones
+   ([`decision-ledger.md`](decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
    the file on disk and checks (*Independence* below), so the prior content is never re-written. It
    returns the identifier and the answer in one line.
 4. **Apply.** The orchestrator verifies the anchor — the ledger heading and the record file exist —

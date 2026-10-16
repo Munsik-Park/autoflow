@@ -13,7 +13,7 @@
       "dest": ".claude/autoflow/CLAUDE.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "99c33b3bd5ddac173f8c1a5e6dbfcf29a2b2993efa15e5684e5d7639afebaed8"
+      "sha256": "de1ae2a535beb28d58de22175a66b402897fc0ccb886830f166068858960c331"
     },
     {
       "source": "docs/INDEX.md",
@@ -41,7 +41,7 @@
       "dest": ".claude/autoflow/docs/decision-ledger.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "434001112a367ec57aae67adb9a56d01a2933622dc5405bed12801060cb51c48"
+      "sha256": "38c3eae24127eae7d1af2c19767652081bc8a86923c7ddff1e641fe1e8e02340"
     },
     {
       "source": "docs/development-guideline.md",
@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "bd92724f370d9e5a89ce3a8204b98ab85da4602cab1a75cc6e875b76165ccf02"
+      "sha256": "f9a88d8840688890a86bab6d622ebd8f95310422b82f3c68b5342243fda3fd02"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -314,7 +314,7 @@
       "dest": "scripts/ledger/ledger-entry-id.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "0c4f77c967cdfc9b7031df2444350ee58554c77d092ff8fc7758cc1a98cda7c5"
+      "sha256": "b421fc620f20c0ebda46c69bfd726c68b5313e3e5205acd493c0e0861c275f06"
     },
     {
       "source": "scripts/gate/remedy-route.sh",
