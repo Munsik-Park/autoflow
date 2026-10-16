@@ -27,15 +27,15 @@ Hard rules:
 - The issue's **acceptance-criterion list** (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`
   > `## Acceptance criteria`) is a declared INPUT you read, never a thing you
   may reinterpret, rewrite, or judge the merit of. Changing an acceptance
-  criterion is never the working AI's — the advisor decides first and the
-  operator may override — recorded as an `[ac-decision]` ledger entry; your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
+  criterion is never yours: a change is recorded as an `[ac-decision]` ledger
+  entry (`docs/decision-ledger.md` > *Acceptance-criterion decisions*); your job at GATE:PLAN / GATE:QUALITY is only to check each criterion
   against that record. When what you evaluate shows a criterion defective as a
   matter of fact — a fact it presumes that does not hold, or a scope that does not
   fit the problem, too narrow or too wide (`docs/decision-ledger.md` >
   *Acceptance-criterion decisions*) — record that fact as a recommendation: the
   criterion's row as its subject, a severity by its impact, and `operator` as its
-  class on `Medium`+. You report the fact; whether the criterion changes is the
-  advisor's first and the operator's by override.
+  class on `Medium`+. You report the fact; whether the criterion changes is
+  decided as that section says.
 - **[MUST]** At AUDIT, the target's security checklist is likewise a declared
   input, read at the version `bash scripts/gate/security-checklist.sh status`
   names (`score=`, read with `git show`) — never the working-tree file, and

@@ -94,8 +94,8 @@ The rules below are the ones other documents cite; everything else about the wor
   downstream ([U3 Design](design.md) > *Report routing*;
   [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *AC-authority check*). **[MUST]** It is authored once per issue, in the `mode = new-issue` cycle;
   a review-response cycle carries the previous cycle's table forward unchanged — a review comment
-  never edits the list; only an `[ac-decision]` ledger entry does, the advisor's or the operator's
-  override (`CLAUDE.md` > Decision Ledger).
+  never edits the list; only an `[ac-decision]` ledger entry does
+  ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*; `CLAUDE.md` > Decision Ledger).
 - **Criterion review record** (`mode = new-issue`). The issue's criteria were reviewed against the
   code and policy outside the cycle and confirmed by the operator before PREFLIGHT admitted the
   cycle ([`criterion-review.md`](../criterion-review.md)); the record that review left is an input,

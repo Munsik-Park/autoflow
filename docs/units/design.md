@@ -263,14 +263,15 @@ reads the design to judge it: the full read-and-score is GATE:PLAN's.
   GATE:PLAN FAIL re-runs the unit (*Re-entry* below); that is the existing
   `GATE:PLAN FAIL → ARCHITECT (max 3×)` re-entry.
 - **An acceptance-criterion content change is requested.** Excluding, revising or splitting an
-  issue acceptance criterion, or adding one, is never the design's: the advisor decides first and
-  the operator may override at the retry stage ([`role-contracts.md`](../role-contracts.md) >
-  Advisor). The orchestrator writes the advisor request situation-first from the section's entry,
-  naming the affected criteria and what the design proposes for each, and does not spawn GATE:PLAN
-  until the advisor's `[ac-decision]` entries — one per decided AC in the grammar at
+  issue acceptance criterion, or adding one, is never the design's to apply. The orchestrator
+  decides it first from the section's entry — the affected criteria, what the design proposes for
+  each and its grounds; where those grounds do not settle it, or it is not confident, it writes the
+  advisor request situation-first from the same entry with its own reading, and the advisor's
+  answer is the decision ([`role-contracts.md`](../role-contracts.md) > Advisor). It does not spawn
+  GATE:PLAN until the `[ac-decision]` entries — one per decided AC in the grammar at
   [`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions* — are recorded;
   on `revised`, `split` or `added`, it edits the analysis report's acceptance-criterion table to match. It then
-  continues to GATE:PLAN where the answer is the design's proposal, or re-runs the unit on the
+  continues to GATE:PLAN where the decision is the design's proposal, or re-runs the unit on the
   `[ac-decision]` entries where it differs (*Re-entry* below). Neither consumes ARCHITECT re-entry
   budget.
 - **A design point is requested.** The orchestrator hands it to the advisor situation-first; the
@@ -282,9 +283,9 @@ reads the design to judge it: the full read-and-score is GATE:PLAN's.
   raises it in its report with the criterion, the proposed change and the fact that shows the need
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
   judgment*); a gate recommendation reaches the same point through the triage
-  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*). The orchestrator hands it to the
-  advisor situation-first; the advisor's entries use the same grammar with the phase the change
-  surfaced in, and the orchestrator edits the analysis report's table on `revised`, `split` or `added`. Where
+  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*). The orchestrator decides it as above,
+  the advisor where the raised grounds do not settle it; the entries use the same grammar with the
+  phase the change surfaced in, and the orchestrator edits the analysis report's table on `revised`, `split` or `added`. Where
   the cycle then re-enters is the orchestrator's judgment, recorded with its grounds in an `O`
   ledger entry: at ARCHITECT, a unit re-run naming the `[ac-decision]` entries, when a
   verification-design row must be added or rewritten — then GATE:PLAN's re-entry re-score and BUILD;
@@ -294,15 +295,15 @@ reads the design to judge it: the full read-and-score is GATE:PLAN's.
 **What the advisor is asked, and what it is not.** A reduction in *verification method* — an AC
 verified by an existing mechanism, a manual scenario, a delivery check, or by nothing at all — is a
 verification-method choice, not a change to the criterion. It passes three tiers, and only the third
-is the advisor (the operator by override at the retry stage):
+changes the criterion:
 
 1. **Design (ARCHITECT).** The design unit chooses any disposition in the *Test necessity*
    vocabulary for an issue AC, **with its reason stated in that row**; GATE:PLAN scores the reason.
 2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
    PR body ([U6 Delivery](delivery.md) > *Push and pull request*), so the reviewer judges each one on its stated reason.
-3. **Advisor, then operator.** The advisor is asked when the AC's **content** must change — at
-   ARCHITECT or later in the cycle
-   (*An acceptance-criterion change raised later in the cycle* above). The options offered are
+3. **Criterion decision.** The orchestrator decides, the advisor where it cannot settle it, when
+   the AC's **content** must change — at ARCHITECT or later in the cycle
+   (*An acceptance-criterion change raised later in the cycle* above). The options are
    exactly these: exclude the criterion, revise it in the proposed form, split it into a separate
    issue, or add a criterion the issue did not state.
 

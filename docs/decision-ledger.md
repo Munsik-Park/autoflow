@@ -11,7 +11,7 @@ allocation — are [`CLAUDE.md`](../CLAUDE.md) > Decision Ledger.
 - Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `advisor decision`, `GATE:PLAN PASS (avg 8.2)`, `operator decision`), and the cycle/phase.
 - **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the re-opening is **judged by the decision's original authority** — a gate verdict by a fresh Evaluation AI re-scoring that item, an ARCHITECT design decision — recorded in the feature design, not the ledger — by a U3 Design unit re-run naming its heading there (an ARCHITECT re-entry, consuming that counter, unless the design has not yet reached GATE:PLAN), an advisor decision by a fresh advisor, an operator decision by the operator — and when that authority cannot say with confidence that the error changes the decision, it asks the advisor ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3); (3) the correction records the reproducing command and its summary line in the grounds form above and names what it supersedes — for a ledger entry, in the superseding entry's grounds, by the superseded entry's identifier; for a feature-design decision, in the U3 re-run's delta item, as `supersedes <heading>` ([`units/design.md`](units/design.md) > *Re-entry*). A change of preference or a re-interpretation of the same material is not an error and stays barred.
 
-**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`units/design.md`](units/design.md), [`units/build.md`](units/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, each auto-resolution attempt and rebuttal round at a gate or at HANDOFF, an operator override of an advisor decision when the operator gives one, and — before the issue's first cycle — the operator's criterion-readiness confirmation (*Criterion-readiness confirmations* below).
+**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`units/design.md`](units/design.md), [`units/build.md`](units/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, each auto-resolution attempt and rebuttal round at a gate or at HANDOFF, its own decision of an acceptance-criterion change (*Acceptance-criterion decisions* below), an operator override of an advisor decision when the operator gives one, and — before the issue's first cycle — the operator's criterion-readiness confirmation (*Criterion-readiness confirmations* below).
 
 ## Entry identifier
 
@@ -37,8 +37,8 @@ This table is the mapping's only documentary home; other documents cite it rathe
 (`.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-<ID>.md`) and the marker and fields its kind requires below. Only the
 advisor writes that authority or an `A` heading, and the advisor never writes `operator decision` or
 an `O` / `F` / `E` heading — the gate hook denies both
-([`role-contracts.md`](role-contracts.md) > Advisor > *Independence*). The operator reviews the
-advisor's entries at the retry stage and may override one: the orchestrator — the main session, the
+([`role-contracts.md`](role-contracts.md) > Advisor > *Independence*). The operator may
+override an advisor's entry: the orchestrator — the main session, the
 only writer the gate hook admits for an `O` entry or the `operator decision` authority — records the
 override as an `O<n>` entry under the authority `operator decision`, with the same marker and fields
 and an `- Overrides: A<n>` line. An override supersedes the advisor's entry without a new verified
@@ -56,21 +56,24 @@ only the operator replaces. The same conclusion recorded twice is not a conflict
 already share is read as *Identifier collision* above says, never repaired by editing either entry.
 
 **Acceptance-criterion decisions** (`[ac-decision]`). Changing an issue's acceptance **content** is
-never the design's or a working role's: the **advisor** decides it first and the **operator** may
-override at the retry stage ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 1); choosing how a
+never the design's or a unit's to apply: the **orchestrator** decides it first, on the grounds the
+raising report or recommendation carries, and puts it to the **advisor** only where those grounds
+do not settle it or it is not confident ([`role-contracts.md`](role-contracts.md) > Advisor >
+*Decision points and harness-level blocks*); the **operator** may override. The change stands only
+as the entries below ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 1); choosing how a
 criterion is *verified* is the design's, provided the row states its reason, which the external
 reviewer then judges at HANDOFF (the three-tier guard — [`units/design.md`](units/design.md) >
-*Report routing*). A content change reaches the advisor from wherever it surfaces: the ARCHITECT design
+*Report routing*). A content change reaches the orchestrator from wherever it surfaces: the ARCHITECT design
 unit's `## Decision requests` section, before GATE:PLAN; a problem the BUILD unit meets and raises in
 its report; or a gate recommendation that records a criterion defect, or whose
 triage hits the acceptance-criterion pause criterion ([`units/design.md`](units/design.md) > *Report routing*,
 [`units/completion-evaluation.md`](units/completion-evaluation.md) > *Recommendation triage*). The change excludes, revises or splits a criterion, or adds one. The
-answer is recorded as one entry per decided AC, in the same trailing-marker grammar:
-the heading `## A<n> — <title> (cycle <C>, <PHASE>) [ac-decision]` (an override: `## O<n> — …`),
+decision is recorded as one entry per decided AC, in the same trailing-marker grammar:
+the heading `## O<n> — <title> (cycle <C>, <PHASE>) [ac-decision]` (the advisor's: `## A<n> — …`; an override: `## O<n> — …`),
 `<PHASE>` being the phase the change surfaced in, followed by the entry's own `- AC: <ac id>` line (for
 an added criterion, the id it takes), a `- Disposition:` line valued `excluded` / `revised` / `split` /
 `added`, and the ordinary Decision / Grounds / Authority lines with the authority value
-`advisor decision` (an override: `operator decision`).
+`orchestrator decision` (the advisor's: `advisor decision`; an override: `operator decision`).
 
 **A criterion can be wrong; from ARCHITECT on, the work tests it**. DIAGNOSE takes the criteria as written — it
 analyzes the problem as the issue states it and runs no test of the criteria of its own. That says how
@@ -83,15 +86,15 @@ it presumes does not hold — a device, a phase or a state it takes for granted;
 narrow, when the same cause reaches past what it names, and the question is then whether the issue saw
 the problem as local and the approach itself must change, not only whether to include the rest (a
 widening: `revised` / `added`); or too wide, when it binds in a problem separate from this issue (a
-split: `split` / `excluded`). A defect so judged is raised as a decision point — the advisor first;
+split: `split` / `excluded`). A defect so judged is raised for a decision — the orchestrator's first, the advisor's where it cannot settle it;
 it is never resolved by keeping the criterion's letter. One signal of a defect: a document has to add a rule the criterion did
 not state in order to keep the criterion's letter. This paragraph is the principle's single home;
 the unit documents and agent definitions cite it.
 
 The marker sits at the **end** of the heading. The authority over an acceptance criterion maps to
 these literals and nothing else: the entry's authority **value** is `advisor decision` on an `A<n>`
-entry or `operator decision` on an `O<n>` entry, and the entry is **located** by the `[ac-decision]`
-heading marker. The two gate backstops key on the marker. When the entries for one AC disagree, an operator entry wins. When the
+entry, or `orchestrator decision` or `operator decision` on an `O<n>` entry, and the entry is **located** by the `[ac-decision]`
+heading marker. The two gate backstops key on the marker. When the entries for one AC disagree, an `operator decision` entry wins. When the
 disposition is `revised`, `split` or `added`, the analysis report's acceptance-criterion table
 (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`) is edited to
 match before re-entry, and this entry is the record of who authorized the edit. An `added` entry

@@ -70,13 +70,14 @@ No separate disposition system exists for gate recommendations.
   `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
   severity, finding), is a report defect:
   reject and re-spawn the evaluator, as for a missing `fail_hypothesis`.
-- **A criterion defect goes to the advisor, at any severity.** A recommendation that records an
+- **A criterion defect is decided, at any severity.** A recommendation that records an
   acceptance criterion defective — the evaluator records one as a fact, the criterion as its subject
   ([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format) — or one whose fix
   could keep a criterion's letter only by adding a rule the criterion did not state
   ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), is neither
-  routed, separated nor deferred as a `Low`: it is put to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) and the
-  answer recorded as its `[ac-decision]` entries ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised
+  routed, separated nor deferred as a `Low`: the orchestrator decides the change — putting it to the advisor only where the
+  recommendation's grounds do not settle it or it is not confident ([`role-contracts.md`](../role-contracts.md) > Advisor) — and the
+  decision is recorded as its `[ac-decision]` entries ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised
   later in the cycle*).
 - **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
   the change:
@@ -104,14 +105,13 @@ No separate disposition system exists for gate recommendations.
     `Medium`+ recommendation that **is** directly related is fixed on its route or put to the
     advisor; the orchestrator never separates one on its own judgment (advisor criterion (b)).
 - **Put to the advisor** (a request written situation-first — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not
-  pause) when the attempt hits any of: (a) the fix needs a contract /
-  acceptance-criterion change — recorded as the advisor's `[ac-decision]` entry
-  ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the cycle*);
+  pause) when the attempt hits any of: (a) the fix needs a contract change, or an
+  acceptance-criterion change the orchestrator cannot settle on the grounds at hand (the criterion-defect bullet above);
   (b) the fix direction is ambiguous, or the orchestrator judges a directly related recommendation
   undesirable to fix in this cycle (question 2) and would separate it; (c) the re-score
   dispositions the previous attempt's finding `remains` after its fix (`rescore.prior_findings`)
   — the same complaint answered twice. The advisor's `A` entry
-  selects re-entry; the operator may override it at the retry stage.
+  selects re-entry.
 - **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
   gate's verdict entry: fix now, or defer — to the PR body's known-gaps line
   ([`pr-body-guide.md`](../pr-body-guide.md) > *한계와 known gaps*), or, for a `Low` below the decision
